@@ -1,0 +1,49 @@
+L0 CANONICAL 64-GAME RUN — PRE-RUN VERIFICATION
+===============================================
+date: 2026-08-27T13:28:45Z
+
+--- repository ---
+HEAD            : f5e358286928ea1f07f28a5e563b2bc48a2742b3
+HEAD short      : f5e3582
+expected        : f5e3582 (wiring), plan published at c7f87c9
+origin/main     : f5e358286928ea1f07f28a5e563b2bc48a2742b3
+server          : f5e358286928ea1f07f28a5e563b2bc48a2742b3
+tree changes    : 0
+gate in tree    : L0_EXECUTION_AUTHORIZED = False
+
+--- the plan, as published at c7f87c9 ---
+plan blob at c7f87c9 : 5f39ac3c4ec40a938aa55453f27e866a4cd7e750
+plan blob at HEAD    : 5f39ac3c4ec40a938aa55453f27e866a4cd7e750
+worktree sha256      : c8b9cba816852a6752bc9a8ae7f74fe06529dcb5af5a06ac4bb6bda716cf8a30
+pinned sha256        : c8b9cba816852a6752bc9a8ae7f74fe06529dcb5af5a06ac4bb6bda716cf8a30
+--- pinned artifacts ---
+JDK home        : /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home
+  bin/java       af8b122943345320b179c75c3404d56a981017739746b75f9caf583632f0bea0
+  bin/javac      6f5159301c750bba340390eda5fdd4a0959445355f97c40aa9c2addb00ede5ab
+  lib/modules    28745573641057e822a972f223fc8e40db5c9df11ae3f7402764780afc2f1951
+  release        cb6064fe4d7b87d9fbb8b8c7702047044d1bbeac38e0c5217f595579b6cc764b
+JAR             : /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/release/t1j.jar
+  sha256        : 53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7
+  pinned        : 53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7
+CHECKPOINT      : checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors
+  sha256        : 34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26
+  pinned        : 34c79c0d85a837f0281e90bb6a132c41535dc7830729fdd872af7df9612fcc26
+
+--- output paths MUST NOT EXIST ---
+results         : /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/l0run/l0_match_results.jsonl
+  exists?       : no
+  companion dir : no
+  parent writable: yes
+  outside repo? : yes
+
+--- the 64 seeds, BEFORE the run ---
+block           : [202613000, 202613064)  n=64
+any exposed     : False  (must be False)
+any retired     : False  (must be False)
+all accounted   : True  (reserved)
+schedule executable: True   n_tasks=64
+task digest     : 193d66bf5f1e4dca52dd967530182566176466ef8ff79d5151b403b2634085bc
+pinned digest   : 193d66bf5f1e4dca52dd967530182566176466ef8ff79d5151b403b2634085bc
+seeds in order  : [202613000, 202613001, 202613002] .. 202613063
+early stop      : None   may_stop_early: False
+ply cap         : 280   n_games: 64

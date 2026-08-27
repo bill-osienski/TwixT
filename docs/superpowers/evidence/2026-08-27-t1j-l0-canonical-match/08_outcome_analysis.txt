@@ -1,0 +1,59 @@
+THE L0 CANONICAL 64-GAME MATCH — OUTCOME
+==========================================================================
+executed once from 9805c19, 2026-08-27; gate restored in 9483948
+
+  games              64          cap terminations 0
+  T1j score          38.0       rate 0.593750
+  Hoeffding 95% PRIMARY  [0.4240, 0.7635]
+  Wilson 95%    nominal  [0.4715, 0.7054]
+  plies  min 25  median 41  max 88   (cap 280)
+
+  estimand: the equally weighted mean, over the 16 opening/colour cells, of T1j's expected score against calib02...
+  the 64 games are MODELLED as independent; this is an assumption, not a measurement. What was verifie...
+
+DESCRIPTIVE — no interval, no cross-cell comparison
+colour arm     games  score    rate
+t1j_black         32   13.0  0.4062
+t1j_red           32   25.0  0.7812
+
+opening          games  score    rate   plies
+o1_center            8    5.0  0.6250   29-88
+o2_offcenter         8    6.0  0.7500   25-64
+o3_low               8    6.0  0.7500   25-42
+o4_high              8    4.0  0.5000   27-49
+o5_wide_left         8    3.0  0.3750   25-60
+o6_wide_right        8    4.0  0.5000   27-58
+o7_diagonal          8    5.0  0.6250   25-51
+o8_contact           8    5.0  0.6250   26-71
+
+INTEGRITY
+--------------------------------------------------------------------------
+  run_header              1
+  setup_complete          1
+  task_start              64
+  opening_bound           64
+  ply                     2216
+  task_result             64
+  match_report            1
+  aborts 0   cleanup failures 0   skips 0   receipts 0
+  agents per task    [2]   (2 = one per colour, reused)
+  terminal reasons   ['win']
+  every ply bound    2216 ply records, 0 binding aborts
+  header early_stop  None   no_games False   mode match
+
+COMPARISON WITH THE E4 SCREEN'S STRONG ENDPOINT
+--------------------------------------------------------------------------
+  screen: 7.0/8 = 0.8750, EARLY-STOPPED at the earliest possible game
+  L0    : 38.0/64 = 0.5938, all 64 played, no early stop
+  The preregistration said, before any data existed, that the 8-game figure
+  was not an unbiased estimate of a larger match. It was not.
+
+SEED RECONCILIATION
+--------------------------------------------------------------------------
+  played 64: 202613000..202613063, contiguous=True
+  all EXPOSED (drawn)  : True
+  all RETIRED (one-shot): True
+  neighbours free      : True True
+
+  RECLASSIFIES IDENTICALLY from evidence: True
+  schedule executable: REFUSED (spent stops execution, not reading)

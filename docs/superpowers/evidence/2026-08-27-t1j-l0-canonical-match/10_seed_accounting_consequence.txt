@@ -1,0 +1,61 @@
+SEED-ACCOUNTING CONSEQUENCE — 25 TESTS NOW FAIL, AND I HAVE NOT REWRITTEN THEM
+==============================================================================
+
+Recording the 64 seeds as EXPOSED and RETIRED makes the L0 schedule
+unexecutable. That is correct and preregistered: the match was a ONE-SHOT.
+But 25 tests were written when the block was unspent, and their PREMISE has
+changed with the run.
+
+ALL 25 ARE IN THE TWO L0/L1 TEST FILES. ZERO ELSEWHERE:
+  21 FAILED tests/test_l0_match_runner.py
+   4 FAILED tests/test_l0_match.py
+
+THE SINGLE ROOT CAUSE: check_schedule / validate_schedule_executable now
+refuse the spent block, so the command exits 2 (precondition) where the test
+expects 5 (unauthorized), and the 'still unspent' assertions are false.
+
+THE FAILING TESTS:
+  test_l0_match.py::test_the_seed_block_is_disjoint_from_every_seed_category
+  test_l0_match.py::test_the_block_is_registered_as_reserved_and_is_not_exposed_or_retired
+  test_l0_match.py::test_the_block_is_still_executable_because_nothing_has_been_drawn
+  test_l0_match.py::test_zzz_the_L0_block_is_still_reserved_and_unspent_after_this_file
+  test_l0_match_runner.py::test_all_seven_preconditions_complete_before_the_refusal
+  test_l0_match_runner.py::test_no_results_file_or_class_dir_is_created_while_unauthorized
+  test_l0_match_runner.py::test_no_rng_is_constructed_anywhere_while_unauthorized
+  test_l0_match_runner.py::test_each_precondition_is_immediately_fatal_in_order[over1-jdk-completed1]
+  test_l0_match_runner.py::test_each_precondition_is_immediately_fatal_in_order[over2-jar-completed2]
+  test_l0_match_runner.py::test_the_verified_plan_object_is_carried_not_reread
+  test_l0_match_runner.py::test_cli_refuses_with_exit_5_after_every_precondition
+  test_l0_match_runner.py::test_no_environment_variable_enables_the_match[env0]
+  test_l0_match_runner.py::test_no_environment_variable_enables_the_match[env1]
+  test_l0_match_runner.py::test_no_environment_variable_enables_the_match[env2]
+  test_l0_match_runner.py::test_no_environment_variable_enables_the_match[env3]
+  test_l0_match_runner.py::test_no_environment_variable_enables_the_match[env4]
+  test_l0_match_runner.py::test_zzz_the_reserved_L0_block_is_untouched_by_this_file
+  test_l0_match_runner.py::test_the_enabled_path_hands_the_harness_the_frozen_64
+  test_l0_match_runner.py::test_the_enabled_path_uses_the_frozen_settings_not_a_budget
+  test_l0_match_runner.py::test_the_enabled_path_passes_the_verified_identities
+  test_l0_match_runner.py::test_the_enabled_path_setup_builds_the_qualified_collaborators
+  test_l0_match_runner.py::test_the_enabled_path_builds_the_REAL_state_factory_and_binder
+  test_l0_match_runner.py::test_the_enabled_path_setup_refuses_an_existing_class_directory
+  test_l0_match_runner.py::test_the_enabled_path_constructs_no_rng
+  test_l0_match_runner.py::test_the_enabled_path_touches_no_scheduled_seed
+
+WHAT I HAVE NOT DONE, AND WHY
+-----------------------------
+I have NOT rewritten them. Whether a spent one-shot should make its own
+wiring tests unrunnable is a design question, and the same question arose
+when the E4 canonical screen spent its block. There it was settled by an
+explicit ruling -- 'spent' stops EXECUTION, not parsing/verification/
+classification/replay -- and the fix was a structural/executable split, not
+a rewrite of the tests to match whichever answer I preferred.
+
+The same split already protects the READ path here, and it works:
+  * load_l0_plan still loads the 64 tasks
+  * the digest still binds
+  * match_report reclassifies the run to the IDENTICAL verdict
+What has legitimately changed is the EXECUTABLE half, and these 25 tests
+assert the executable half. Deciding how they should read after a one-shot
+completes is yours, not mine.
+
+The seeds are spent either way. That record stands.

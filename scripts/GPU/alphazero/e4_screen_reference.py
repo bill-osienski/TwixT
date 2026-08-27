@@ -108,6 +108,11 @@ EXPOSED_SEED_INTERVALS = (
                                      # four synthetic tasks each built a real
                                      # SeededReferenceAgent and drew from both
                                      # generators. Spent, model or no model.
+    (202613000, 202613064),          # THE L0 CANONICAL 64-GAME MATCH, executed
+                                     # once from 9805c19 on 2026-08-27. ALL 64
+                                     # tasks played -- L0 has no early stop -- so
+                                     # every seed in the block drove real
+                                     # generators. Drawn, not merely reserved.
     (90000001, 90000002),            # THE OLD `SYNTHETIC` TEST SEED, which was
                                      # SCHEDULABLE. Drawn from TWICE, both draws
                                      # preserved:
@@ -152,6 +157,11 @@ TEST_ONLY_SEED_INTERVALS = (
 #: WHOLE block retires together, drawn and undrawn alike.
 RETIRED_SEED_INTERVALS = (
     (202612128, 202612160),          # the canonical screen's 32-seed block
+    (202613000, 202613064),          # the L0 match's 64-seed block. Its
+                                     # preregistered ONE-SHOT schedule completed
+                                     # on 2026-08-27, so the block retires whole.
+                                     # Unlike the screen's, every seed here was
+                                     # also drawn: L0 played all 64.
 )
 
 

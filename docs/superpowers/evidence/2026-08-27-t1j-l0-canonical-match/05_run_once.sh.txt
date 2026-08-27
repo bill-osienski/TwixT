@@ -1,0 +1,10 @@
+#!/bin/zsh
+# THE ONE CANONICAL L0 64-GAME RUN. Executed exactly once. No retry.
+cd /Users/bill/projects/TwixT_Game
+exec .venv/bin/python -m scripts.GPU.alphazero.l0_match_command \
+  --plan docs/superpowers/evidence/2026-08-26-t1j-l0-larger-match/01_l0_match_plan.json \
+  --results "/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/l0run/l0_match_results.jsonl" \
+  --repo /Users/bill/projects/TwixT_Game \
+  --jdk "/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home" \
+  --jar "/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/release/t1j.jar" \
+  --checkpoint checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors

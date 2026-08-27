@@ -1,0 +1,54 @@
+COMMAND:
+#!/bin/zsh
+# THE ONE CANONICAL L0 64-GAME RUN. Executed exactly once. No retry.
+cd /Users/bill/projects/TwixT_Game
+exec .venv/bin/python -m scripts.GPU.alphazero.l0_match_command \
+  --plan docs/superpowers/evidence/2026-08-26-t1j-l0-larger-match/01_l0_match_plan.json \
+  --results "/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/l0run/l0_match_results.jsonl" \
+  --repo /Users/bill/projects/TwixT_Game \
+  --jdk "/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home" \
+  --jar "/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-d572-424f-a870-eef66233d641/scratchpad/e1/acq/release/t1j.jar" \
+  --checkpoint checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors
+
+HEAD: 9805c19ef1d04116ceaf38074b99a1fb9ccc2d99
+gate: L0_EXECUTION_AUTHORIZED = True
+started (UTC): 2026-08-27T13:29:56Z
+started (epoch): 1787837396
+
+ENVIRONMENT (filtered):
+__CFBundleIdentifier=com.apple.Terminal
+AI_AGENT=claude-code_2-1-241_agent
+CLAUDE_CODE_CHILD_SESSION=1
+CLAUDE_CODE_ENTRYPOINT=cli
+CLAUDE_CODE_EXECPATH=/Users/bill/.local/share/claude/versions/2.1.241
+CLAUDE_CODE_MESSAGING_SOCKET=/tmp/cc-socks/75833.sock
+CLAUDE_CODE_MESSAGING_TOKEN=141d26288ebad61ef9a10baa92bd27b7
+CLAUDE_CODE_SESSION_ID=d037040d-d572-424f-a870-eef66233d641
+CLAUDE_EFFORT=max
+CLAUDE_PID=75833
+CLAUDECODE=1
+COLORTERM=truecolor
+COREPACK_ENABLE_AUTO_PIN=0
+FPATH=/opt/homebrew/share/zsh/site-functions:/usr/local/share/zsh/site-functions:/usr/share/zsh/site-functions:/usr/share/zsh/5.9/functions
+GIT_EDITOR=true
+HOME=/Users/bill
+HOMEBREW_CELLAR=/opt/homebrew/Cellar
+HOMEBREW_PREFIX=/opt/homebrew
+HOMEBREW_REPOSITORY=/opt/homebrew
+INFOPATH=/opt/homebrew/share/info:
+LANG=en_US.UTF-8
+LOGNAME=bill
+NoDefaultCurrentDirectoryInExePath=1
+OSLogRateLimit=64
+PATH=/Users/bill/.local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin:/Library/Apple/usr/bin:/Applications/Little Snitch.app/Contents/Components:/Users/bill/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin:/Users/bill/.claude/plugins/cache/claude-plugins-official/superpowers/6.3.0/bin:/Users/bill/.claude/plugins/cache/claude-plugins-official/code-simplifier/1.0.0/bin:/Users/bill/.claude/plugins/cache/claude-plugins-official/context7/unknown/bin:/Users/bill/.claude/plugins/cache/claude-plugins-official/swift-lsp/1.0.0/bin:/Users/bill/.claude/plugins/cache/ponytail/ponytail/4.8.4/bin
+PWD=/Users/bill/projects/TwixT_Game
+SHELL=/bin/zsh
+SSH_AUTH_SOCK=/var/run/com.apple.launchd.8myEAkLw2W/Listeners
+TERM_PROGRAM_VERSION=470.2
+TERM_PROGRAM=Apple_Terminal
+TERM_SESSION_ID=D045CF30-E829-418F-8BD4-EE381A480687
+TERM=xterm-256color
+TMPDIR=/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/
+USER=bill
+XPC_FLAGS=0x0
+XPC_SERVICE_NAME=0
