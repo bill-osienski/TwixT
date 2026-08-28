@@ -56,7 +56,17 @@ how a pin stops meaning anything.
 - **Absent root fails loudly and actionably**, naming the lock file rather than
   guessing.
 
-Zero references to the old scratchpad path remain in the repository.
+**Zero references remain in active runtime or test resolution** — no `.py` or
+`.json` under `scripts/` or `tests/` mentions the old path.
+
+> ⚠ **Not "zero repository-wide", which an earlier version of this card and of
+> `c91bec0`'s commit message both claimed.** The path still appears **923
+> times across 70 files** under `docs/` — historical evidence, transcripts and
+> command provenance from runs that genuinely used it. That evidence is
+> **immutable and is deliberately not scrubbed**: rewriting it would falsify the
+> record of what those runs actually did. The original claim came from a grep
+> scoped to `--include='*.py' tests/ scripts/` and was then reported as though it
+> covered the whole repository.
 
 ## 5. Requalification
 
