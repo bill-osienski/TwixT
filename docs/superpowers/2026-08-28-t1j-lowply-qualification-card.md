@@ -70,10 +70,28 @@ across three openings (`o1_center`, `o3_low`, `o4_high`) and three tasks.
 generalises to the low plies D1 would actually query, not to "low ply" in
 general.
 
-## 3. Query count — 36 queries, 45 JVM invocations
+## 3. Process budget — 36 queries, 45 helper launches, 46 Java processes
 
-**9 prefixes × 2 depths (`mdPly` 3 and 6) × 2 invocations = 36 queries**, plus
-**9 replays**, so **45 JVM invocations**.
+Three different counts, and they are not interchangeable:
+
+| count | value | what it is |
+|---|---:|---|
+| **T1j queries** | **36** | 9 prefixes × 2 depths (`mdPly` 3 and 6) × 2 invocations. **This is the budget**, and it is what a query ceiling bounds. |
+| **T1j replay-helper launches** | **9** | one E3bDump replay per prefix, for the E3b binding. Not queries. |
+| **T1j helper launches** | **45** | 36 + 9 — every process that runs the T1j jar. |
+| **Java/JDK process launches** | **46** | 45 + **one `javac`** compiling the helper once, up front. |
+
+🔑 **`javac` is a JVM process too.** An earlier draft of this card said
+"45 JVM invocations", which either under-counts by one or silently means
+"launches of the T1j helper" — and the reader cannot tell which. A count whose
+unit is ambiguous is not a frozen number. The compilation is a single process
+(`compile_helper` invokes `javac` once over all four sources), it happens before
+the deadline's first stage check, and it is bounded by the whole-run supervisor
+rather than by any per-query timeout, because the adapter's `compile_helper`
+takes no timeout parameter at all.
+
+**The 36-query budget is unchanged by this correction**: replays and compilation
+were never queries, and a query ceiling was never counting them.
 
 Two invocations per depth, as **separate `query(..., repeats=1)` calls**, for
 §12.7's reason and no other: each is a fresh JVM and therefore an independently
@@ -103,7 +121,7 @@ either way — but this card uses **maxima throughout, and says so**.
 **Indicative T1j subtotal:** 9 × (2 × 215.7 + 2 × 2734.5) = **53,105 ms ≈ 53 s**.
 
 **It excludes** the 9 replays (E3bDump replay cost is **not measured anywhere in
-the record**), helper compilation, output and fsync.
+the record**), the single `javac` compilation, output and fsync.
 
 ⚠ **And one effect that could push the other way.** E4 measured positions of
 6–14 plies; these are 1–5. A sparser board has a **larger branching factor**, so

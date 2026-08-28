@@ -100,14 +100,67 @@ def test_only_odd_plies_appear_and_the_card_explains_why(frozen, card):
 
 # ─────────────────── the card's arithmetic, recomputed ──────────────────────
 
+#: The one `javac` that compiles the helper, once, before the first stage.
+JAVAC_PROCESSES = 1
+
+
 def test_the_card_states_the_query_count_the_frozen_list_implies(frozen, card):
     n = frozen["n_retained"]
     queries = n * len(DEPTHS) * INVOCATIONS_PER_DEPTH
-    invocations = queries + n                     # + one replay per prefix
-    assert queries == 36 and invocations == 45, (queries, invocations)
+    assert queries == 36, queries
     assert f"{queries} queries" in card
-    assert f"{invocations} JVM invocations" in card
     assert "9 prefixes × 2 depths" in card   # the literal the card carries
+
+
+def test_the_card_distinguishes_QUERIES_from_HELPER_LAUNCHES_from_JAVA_PROCESSES(
+        frozen, card):
+    """Three counts, three units, and they are NOT interchangeable.
+
+    An earlier draft said "45 JVM invocations", which either under-counts by one
+    or silently means "launches of the T1j helper" -- and the reader cannot tell
+    which. `javac` runs on a JVM too. A count whose unit is ambiguous is not a
+    frozen number, so each is stated separately and pinned here.
+    """
+    n = frozen["n_retained"]
+    queries = n * len(DEPTHS) * INVOCATIONS_PER_DEPTH
+    replays = n
+    helper_launches = queries + replays
+    java_processes = helper_launches + JAVAC_PROCESSES
+    assert (queries, replays, helper_launches, java_processes) == (36, 9, 45, 46)
+
+    assert "**36**" in card and "**9**" in card
+    assert "**45**" in card and "**46**" in card
+    assert "T1j helper launches" in card
+    assert "Java/JDK process launches" in card
+    assert "`javac` is a JVM process too" in card
+
+
+def test_the_ambiguous_phrasing_is_gone_from_the_card(card):
+    """NEGATIVE CONTROL on the correction itself. The card may quote the old
+    wording while explaining why it was wrong, but must not USE it as a count."""
+    import re
+    for m in re.finditer(r"JVM invocations", card):
+        window = card[max(0, m.start() - 120):m.start()]
+        assert '"' in window or "said" in window, (
+            "'JVM invocations' is used as a live count, not quoted as the "
+            f"corrected wording: ...{window[-80:]!r}")
+
+
+def test_the_query_BUDGET_is_unchanged_by_the_process_relabelling(frozen, card):
+    """Replays and compilation were never queries; relabelling the process
+    counts must not have moved the ceiling a query budget bounds."""
+    n = frozen["n_retained"]
+    assert n * len(DEPTHS) * INVOCATIONS_PER_DEPTH == 36
+    assert "The 36-query budget is unchanged" in card
+    assert "36 × 120 s = 4,320 s" in card, "the cap arithmetic must still use 36"
+
+
+def test_the_card_says_what_bounds_the_compilation(card):
+    """`compile_helper` takes no timeout parameter at all (12.9), so the only
+    thing bounding it is the whole-run supervisor. The card must say so rather
+    than leave a reader to assume the per-call timeout covers it."""
+    assert "takes no timeout parameter at all" in card
+    assert "bounded by the whole-run supervisor" in card
 
 
 def test_the_cost_basis_matches_the_E4_record_the_card_cites(card):
