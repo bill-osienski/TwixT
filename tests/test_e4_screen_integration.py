@@ -80,7 +80,7 @@ def fake_query(*, dump_state, dump_moves, refl_n=3, move=(15, 13), completed=Tru
 
 def agent_for(state, moves, **kw):
     ctx = _Ctx(moves)
-    rt = I.T1jRuntime(java="j", jar="j", classes="c", ply_cap=280)
+    rt = I.T1jRuntime(java="j", jar="j", classes="c", ply_cap=280, timeout_s=120)
     return I.T1jAgent(runtime=rt, ctx=ctx, depth=3, colour=state.to_move,
                       _query=fake_query(dump_state=state, dump_moves=moves, **kw))
 
@@ -97,7 +97,7 @@ def test_a_DIFFERENT_searched_position_is_refused():
     s = state_after(OPENING)
     other = state_after(OPENING[:-1] + [(20, 20)])       # same ply, different position
     ctx = _Ctx(OPENING)
-    rt = I.T1jRuntime(java="j", jar="j", classes="c", ply_cap=280)
+    rt = I.T1jRuntime(java="j", jar="j", classes="c", ply_cap=280, timeout_s=120)
     a = I.T1jAgent(runtime=rt, ctx=ctx, depth=3, colour=s.to_move,
                    _query=fake_query(dump_state=other, dump_moves=OPENING[:-1] + [(20, 20)]))
     with pytest.raises(AbortError) as e:
@@ -197,3 +197,20 @@ def test_stats_are_per_task_and_never_reset():
     assert set(ctx.stats) == {"a", "b", "c"}
     assert ctx.total("binds") == 6 and ctx.total("t1j_queries") == 3
     assert all(v["binds"] == 2 for v in ctx.stats.values())
+
+
+# ═════ the runtime's OWN refusal of an unbounded replay, reached alone ════════
+#
+# `t1j_adapter.replay` refuses `timeout_s=None` too, so an adapter-level test
+# passes whether or not T1jRuntime carries its own guard. An injected-defect
+# control proved exactly that: disabling the runtime's check changed nothing any
+# existing test could see. Each guard needs a case that reaches it alone.
+
+def test_the_runtime_refuses_an_unbounded_timeout_before_any_replay():
+    with pytest.raises(TypeError, match="timeout_s is required"):
+        I.T1jRuntime(java="j", jar="j", classes="c", ply_cap=280, timeout_s=None)
+
+
+def test_the_runtime_carries_the_timeout_it_was_given():
+    rt = I.T1jRuntime(java="j", jar="j", classes="c", ply_cap=280, timeout_s=120)
+    assert rt.timeout_s == 120 and rt.ply_cap == 280

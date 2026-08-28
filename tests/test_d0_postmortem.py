@@ -538,3 +538,44 @@ def test_d0_imports_no_model_runtime():
             mods.add((n.module or "").split(".")[0])
     banned = {"torch", "onnx", "onnxruntime", "mlx", "safetensors", "numpy"}
     assert not (mods & banned), sorted(mods & banned)
+
+
+# ═════════════ the incumbent-vs-T1j mover cut: ONE shared definition ═════════
+#
+# `by_system` computed this inline, so D1's selection rule -- which must pick
+# plies where OUR INCUMBENT is to move -- would have had to state it a second
+# time. Two copies of "which engine moved" is one copy too many: the cut decides
+# what D1 interrogates at all. It is extracted here and reused, not restated.
+
+BY_SYSTEM_RECORDED = ("docs/superpowers/evidence/2026-08-27-t1j-d0-postmortem/"
+                      "05_by_system.json")
+
+
+@pytest.fixture(scope="module")
+def discovery_rows():
+    return D0.run_d0(RECORD, PLAN_JSON)["rows"]
+
+
+def test_moved_by_reads_the_arm_suffix_as_t1js_colour():
+    assert D0.moved_by("t1j_red", "red") == "t1j"
+    assert D0.moved_by("t1j_red", "black") == "ours"
+    assert D0.moved_by("t1j_black", "black") == "t1j"
+    assert D0.moved_by("t1j_black", "red") == "ours"
+
+
+def test_by_system_classification_is_unchanged_by_the_extraction(discovery_rows):
+    """REGRESSION CONTROL against evidence written by the PRE-EXTRACTION code.
+
+    05_by_system.json was produced by the inline expression on 2026-08-27. If the
+    extracted helper classified even one ply differently, a hit count or a
+    denominator here would move.
+    """
+    recorded = json.load(open(BY_SYSTEM_RECORDED, encoding="utf-8"))
+    assert recorded, "the recorded evidence is empty; the comparison would be vacuous"
+    assert D0.by_system(discovery_rows) == recorded
+
+
+def test_every_discovery_ply_is_attributed_to_exactly_one_engine(discovery_rows):
+    """Non-vacuity: the cut must actually split, not label everything 'ours'."""
+    who = {D0.moved_by(r["colour_arm"], r["mover"]) for r in discovery_rows}
+    assert who == {"ours", "t1j"}

@@ -1,0 +1,47 @@
+NO MODEL WAS LOADED -- OBSERVED, NOT ASSUMED
+===========================================
+
+checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors is
+PRESENT in this tree (7,524,333 bytes), so a test that reached
+_default_load_evaluator would have quietly read a real model and the run
+would still have been green. This makes the load FATAL and observes the
+result.
+
+--- the guard ---
+"""A pytest plugin that makes loading the incumbent checkpoint FATAL.
+
+`checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors` exists
+in this tree, so a test that reached `_default_load_evaluator` would quietly
+load a real model and the run would still be green. Asserting "no model was
+loaded" is not the same as observing it. This turns the load into a failure, so
+a green run under this plugin is the observation.
+
+`e4_screen_command._default_load_evaluator` imports the loader INSIDE the
+function, so rebinding the module attribute here is seen at call time.
+"""
+
+
+def pytest_configure(config):
+    from scripts.GPU.alphazero import twixtbot_g3_reference as G3
+
+    def refuse(reference, repo_root):
+        raise AssertionError(
+            f"a test reached load_reference_evaluator({reference!r}) -- a real "
+            f"checkpoint would have been read from {repo_root!r}")
+
+    G3.load_reference_evaluator = refuse
+
+--- NEGATIVE CONTROL: the guard must fire on a real load ---
+$ pytest -p no_model_guard test_guard_binds.py
+    _default_load_evaluator('.') -> AssertionError "reached load_reference_evaluator"
+    1 passed
+
+--- the observation, over the 9 test files this work touches ---
+$ pytest -p no_model_guard tests/test_d1_probe.py tests/test_d1_incumbent.py \
+    tests/test_d1_selection.py tests/test_d0_postmortem.py tests/test_t1j_adapter.py \
+    tests/test_e4_screen_integration.py tests/test_e4_screen_reference.py \
+    tests/test_e4_screen_command.py tests/test_l0_match.py
+    425 passed in 115.45s
+
+SCOPE: those 9 files, not the whole suite. They are the only ones that can
+reach the loader through this change.

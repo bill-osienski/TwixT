@@ -1,0 +1,22 @@
+record sha256 42180c1f27406ad26e20d37247ee73184a3e48335b6aa97c6055af36a1f52369
+plan   sha256 c8b9cba816852a6752bc9a8ae7f74fe06529dcb5af5a06ac4bb6bda716cf8a30
+task   digest 193d66bf5f1e4dca52dd967530182566176466ef8ff79d5151b403b2634085bc
+discovery games 32
+
+signature              role         n  cells
+mover_fragmentation    position   101     36
+mover_fragmentation    control     60     24
+created_threat         position    30     12
+created_threat         control     36     12
+
+total positions      227   (12.4 froze 227)
+total queries        1135   = 227 x (1 incumbent + 2 at mdPly 3 + 2 at mdPly 6)
+
+seed block           (202614000, 202614227)  assigned in [['mover_fragmentation', 'position'], ['mover_fragmentation', 'control'], ['created_threat', 'position'], ['created_threat', 'control']]
+seeds assigned       227, distinct 227, exhausts the block True
+REGISTRY STATE OF THE BLOCK -- accounted/exposed/retired/test_only: 0/0/0/0   (all zero: RESERVED, NOT REGISTERED)
+
+distinct board states 203 of 227 retained positions
+states retained twice 24  -- 12.1/12.3 dedupe WITHIN a cohort and nothing in 12 dedupes across them
+ply range            1..59   empty prefixes 0
+phases               ['early', 'late', 'middle', 'opening']

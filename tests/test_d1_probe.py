@@ -19,8 +19,21 @@ from scripts.GPU.alphazero import d1_probe as D1
 from scripts.GPU.alphazero import t1j_adapter as A
 
 MOVES = [(11, 11), (12, 13), (13, 12), (10, 13), (12, 10), (14, 14)]
+
+
+def _moves_digest():
+    """12.7's recorded digest for MOVES, computed the way selection computes it."""
+    from scripts.GPU.alphazero import d1_selection as _SEL
+    from scripts.GPU.alphazero.game.twixt_state import TwixtState as _TS
+    st = _TS(active_size=24, to_move="red")
+    for m in MOVES:
+        st = st.apply_move(m)
+    return _SEL.canonical_digest(st)
+
+
+MOVES_DIGEST = _moves_digest()
 RUNTIME = D1.T1jPaths(java="/nonexistent/java", jar="/nonexistent/t1j.jar",
-                      classes="/nonexistent/classes")
+                      classes="/nonexistent/classes", ply_cap=280)
 
 
 @pytest.fixture
@@ -117,7 +130,7 @@ def test_deadline_breach_yields_void():
         d.check("mid-run")
 
 
-def test_the_deadline_starts_before_helper_compilation(tmp_path):
+def test_the_deadline_starts_before_helper_compilation(tmp_path, registered):
     """A window opened after compilation cannot bound compilation."""
     seen = {}
 
@@ -133,35 +146,35 @@ def test_the_deadline_starts_before_helper_compilation(tmp_path):
 
 # ------------------------------------------- VOID produces NO partial analysis
 
-def test_a_forced_query_timeout_is_void_and_writes_no_report(tmp_path, monkeypatch):
+def test_a_forced_query_timeout_is_void_and_writes_no_report(tmp_path, monkeypatch, registered):
     def boom(args, **kw):
         raise subprocess.TimeoutExpired(args, kw.get("timeout"))
     monkeypatch.setattr(subprocess, "run", boom)
     out = tmp_path / "r.json"
     with pytest.raises(D1.D1VoidError, match="timed out"):
         D1._run_d1_unguarded(positions=[{"task_id": "t", "ply": len(MOVES), "prefix": MOVES,
-                              "seed": D1.SEED_INTERVAL[0]}],
+                              "seed": D1.SEED_INTERVAL[0], "digest": MOVES_DIGEST}],
                   paths=RUNTIME, out_path=str(out), _compile=lambda d: None)
     assert not out.exists(), "a VOID run wrote a report -- that is partial analysis"
 
 
-def test_a_forced_deadline_breach_is_void_and_writes_no_report(tmp_path, spy):
+def test_a_forced_deadline_breach_is_void_and_writes_no_report(tmp_path, spy, registered):
     ticks = iter([0.0, 0.0, 99999.0, 99999.0, 99999.0, 99999.0])
     out = tmp_path / "r.json"
     with pytest.raises(D1.D1VoidError, match="deadline exceeded"):
         D1._run_d1_unguarded(positions=[{"task_id": "t", "ply": len(MOVES), "prefix": MOVES,
-                              "seed": D1.SEED_INTERVAL[0]}],
+                              "seed": D1.SEED_INTERVAL[0], "digest": MOVES_DIGEST}],
                   paths=RUNTIME, out_path=str(out), _compile=lambda d: None,
                   deadline=D1.Deadline(clock=lambda: next(ticks)))
     assert not out.exists(), "a VOID run wrote a report -- that is partial analysis"
 
 
-def test_void_is_raised_not_returned_so_a_caller_cannot_ignore_it(tmp_path, monkeypatch):
+def test_void_is_raised_not_returned_so_a_caller_cannot_ignore_it(tmp_path, monkeypatch, registered):
     monkeypatch.setattr(subprocess, "run",
                         lambda a, **k: (_ for _ in ()).throw(subprocess.TimeoutExpired(a, 1)))
     with pytest.raises(D1.D1VoidError):
         D1._run_d1_unguarded(positions=[{"task_id": "t", "ply": len(MOVES), "prefix": MOVES,
-                              "seed": D1.SEED_INTERVAL[0]}],
+                              "seed": D1.SEED_INTERVAL[0], "digest": MOVES_DIGEST}],
                   paths=RUNTIME, out_path=str(tmp_path / "r.json"), _compile=lambda d: None)
 
 
@@ -188,13 +201,13 @@ def test_probing_stops_at_the_cap_rather_than_overrunning_it(spy):
     assert len(spy) == 1, "the budget did not stop the second invocation"
 
 
-def test_a_position_without_a_retained_prefix_is_void(tmp_path):
+def test_a_position_without_a_retained_prefix_is_void(tmp_path, registered):
     with pytest.raises(D1.D1VoidError, match="no retained move prefix"):
         D1._run_d1_unguarded(positions=[{"task_id": "t", "ply": 6, "seed": D1.SEED_INTERVAL[0]}],
                   paths=RUNTIME, out_path=str(tmp_path / "r.json"), _compile=lambda d: None)
 
 
-def test_a_prefix_inconsistent_with_its_ply_is_void(tmp_path):
+def test_a_prefix_inconsistent_with_its_ply_is_void(tmp_path, registered):
     """A digest cannot be replayed; a prefix of the wrong length replays the
     WRONG POSITION, which is worse than refusing."""
     with pytest.raises(D1.D1VoidError, match="different position"):
@@ -204,7 +217,7 @@ def test_a_prefix_inconsistent_with_its_ply_is_void(tmp_path):
 
 
 @pytest.mark.parametrize("seed", [202613999, 202614227, 0, -1, True, "202614000", None])
-def test_a_seed_outside_the_reserved_interval_is_void(tmp_path, seed):
+def test_a_seed_outside_the_reserved_interval_is_void(tmp_path, seed, registered):
     with pytest.raises(D1.D1VoidError, match="outside the reserved"):
         D1._run_d1_unguarded(positions=[{"task_id": "t", "ply": len(MOVES), "prefix": MOVES,
                               "seed": seed}],
@@ -243,7 +256,7 @@ def test_the_d1_gate_never_reads_another_experiments_gate():
         assert other not in names, f"D1 reads {other}"
 
 
-def test_the_default_compile_step_refuses_while_the_gate_is_shut(tmp_path):
+def test_the_default_compile_step_refuses_while_the_gate_is_shut(tmp_path, registered):
     with pytest.raises(D1.D1Error, match="unauthorized"):
         D1._run_d1_unguarded(positions=[], paths=RUNTIME, out_path=str(tmp_path / "r.json"))
 
@@ -269,7 +282,7 @@ def test_no_environment_variable_opens_the_gate(tmp_path, env):
     assert r.returncode == 5, (env, r.returncode, r.stderr)
 
 
-def test_a_deadline_that_expires_only_at_the_write_step_still_voids(tmp_path):
+def test_a_deadline_that_expires_only_at_the_write_step_still_voids(tmp_path, monkeypatch):
     """Reaches the FINAL pre-write deadline check specifically.
 
     The other breach test trips a check inside the position loop, so it passes
@@ -277,11 +290,14 @@ def test_a_deadline_that_expires_only_at_the_write_step_still_voids(tmp_path):
     exactly that. With no positions, the loop cannot fire, so only the last check
     can catch a deadline that expires between compilation and writing.
     """
+    from scripts.GPU.alphazero import e4_screen_reference as _REF
+    monkeypatch.setattr(_REF, "ACCOUNTED_SEED_INTERVALS",
+                        _REF.ACCOUNTED_SEED_INTERVALS + (D1.SEED_INTERVAL,))
     ticks = iter([0.0, 1.0, 99999.0, 99999.0])
     out = tmp_path / "r.json"
     with pytest.raises(D1.D1VoidError, match="deadline exceeded"):
         D1._run_d1_unguarded(positions=[], paths=RUNTIME, out_path=str(out),
-                  _compile=lambda d: None,
+                  _compile=lambda d: None, _incumbent=lambda **kw: {},
                   deadline=D1.Deadline(clock=lambda: next(ticks)))
     assert not out.exists()
 
@@ -332,7 +348,7 @@ def test_run_d1_refuses_directly_while_the_gate_is_shut_and_makes_no_calls(tmp_p
     out = tmp_path / "r.json"
     with pytest.raises(D1.D1Error, match="UNAUTHORIZED|unauthorized"):
         D1.run_d1(positions=[{"task_id": "t", "ply": len(MOVES), "prefix": MOVES,
-                              "seed": D1.SEED_INTERVAL[0]}],
+                              "seed": D1.SEED_INTERVAL[0], "digest": MOVES_DIGEST}],
                   paths=RUNTIME, out_path=str(out),
                   _compile=lambda d: compiled.append(1))
     assert compiled == [], "compilation ran despite the shut gate"
@@ -399,7 +415,7 @@ def test_a_dump_whose_final_ply_disagrees_with_the_prefix_is_void(reply):
 
 # ---- defect 4: the deadline could not interrupt a hung stage -----------------
 
-def test_a_blocking_stage_is_terminated_by_an_outer_supervisor(tmp_path):
+def test_a_blocking_stage_is_terminated_by_an_outer_supervisor(tmp_path, registered):
     """Cooperative checks run BETWEEN stages and cannot interrupt one that hangs.
     A stage that blocks past the deadline must still be terminated."""
     import time as _t
@@ -413,21 +429,263 @@ def test_a_blocking_stage_is_terminated_by_an_outer_supervisor(tmp_path):
     assert not out.exists(), "a terminated run wrote a report"
 
 
+#: What "executes" means for the structural gate test. EVERY effectful surface
+#: D1 has, not just the T1j one: loading the incumbent checkpoint and running a
+#: 400-simulation search are executions too, and the first version of this list
+#: named only `A.query`, `compile_fn` and `_default_compile` -- so a public
+#: entry point that loaded a model and searched would have passed it.
+_EXECUTING_MARKERS = ("A.query(", "A.replay(", "compile_fn(", "_default_compile",
+                      "self._load(", "self._build(", "load_reference_evaluator",
+                      "_default_load_evaluator", "REF.build(")
+
+
 def test_no_public_callable_can_execute_without_reading_the_gate():
     """The CLI gate protected nothing because run_d1 was public and ungated.
-    The same hole exists one level down for any public function that queries T1j
-    or compiles. Enumerate them structurally rather than trusting a review."""
-    import ast, inspect, pathlib
+    The same hole exists one level down for any public function that queries
+    T1j, compiles, or loads and searches with the incumbent. Enumerate them
+    structurally rather than trusting a review.
+
+    CLASSES ARE WALKED TOO. Scanning only module-level `FunctionDef` left a
+    public class whose methods execute completely invisible to this check --
+    a structural test with a hole in exactly the shape of the code about to be
+    written is worse than no test, because it reads as coverage.
+    """
+    import ast, pathlib
     src = pathlib.Path(D1.__file__).read_text(encoding="utf-8")
     tree = ast.parse(src)
     offenders = []
+    scanned = 0
     for node in tree.body:
-        if not isinstance(node, ast.FunctionDef) or node.name.startswith("_"):
+        if isinstance(node, ast.FunctionDef):
+            candidates = [(node.name, node)]
+        elif isinstance(node, ast.ClassDef):
+            candidates = [(f"{node.name}.{m.name}", m) for m in node.body
+                          if isinstance(m, ast.FunctionDef)]
+        else:
             continue
-        body = ast.get_source_segment(src, node) or ""
-        executes = ("A.query(" in body) or ("compile_fn(" in body) or ("_default_compile" in body)
-        reads_gate = any(isinstance(n, ast.Name) and n.id == "D1_EXECUTION_AUTHORIZED"
-                         and isinstance(n.ctx, ast.Load) for n in ast.walk(node))
-        if executes and not reads_gate:
-            offenders.append(node.name)
+        if node.name.startswith("_"):
+            continue
+        for label, fn in candidates:
+            scanned += 1
+            body = ast.get_source_segment(src, fn) or ""
+            executes = any(m in body for m in _EXECUTING_MARKERS)
+            reads_gate = any(isinstance(n, ast.Name) and n.id == "D1_EXECUTION_AUTHORIZED"
+                             and isinstance(n.ctx, ast.Load) for n in ast.walk(fn))
+            if executes and not reads_gate:
+                offenders.append(label)
+    assert scanned, "no public callable was scanned; this check would pass vacuously"
     assert not offenders, f"public and executing but ungated: {offenders}"
+
+
+def test_the_structural_gate_check_notices_an_ungated_executing_entry_point(tmp_path):
+    """NEGATIVE CONTROL for the check above, over a SYNTHETIC module.
+
+    The real module is not edited. Without this the check could enumerate
+    nothing, or use a marker list that matches nothing, and still pass.
+    """
+    import ast
+    src = ("def run_it():\n"
+           "    return REF.build(task, evaluator=ev)\n"
+           "class Runner:\n"
+           "    def go(self):\n"
+           "        return A.query(m, depth=3)\n")
+    tree = ast.parse(src)
+    found = []
+    for node in tree.body:
+        if node.name.startswith("_"):
+            continue
+        fns = ([(node.name, node)] if isinstance(node, ast.FunctionDef)
+               else [(f"{node.name}.{m.name}", m) for m in node.body
+                     if isinstance(m, ast.FunctionDef)])
+        for label, fn in fns:
+            body = ast.get_source_segment(src, fn) or ""
+            if any(m in body for m in _EXECUTING_MARKERS):
+                found.append(label)
+    assert found == ["run_it", "Runner.go"], found
+
+
+# ═══════════ D1 INTEGRATION: registration, E3b binding, prefix identity ══════
+#
+# Still NO EXECUTION. `subprocess.run` is intercepted at the process boundary,
+# the seed registries are read but NEVER written, and every test that needs the
+# reserved block to look registered supplies a TEMPORARY FIXTURE registry --
+# a monkeypatched tuple, never an edit to the real one.
+
+from scripts.GPU.alphazero import d1_selection as SEL          # noqa: E402
+from scripts.GPU.alphazero import e4_screen_reference as REF   # noqa: E402
+from scripts.GPU.alphazero.e4_screen_runner import AbortError  # noqa: E402
+from scripts.GPU.alphazero.game.twixt_state import TwixtState  # noqa: E402
+
+CLEAN_POST = ("POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true "
+              "refl_ok=true refl_n={n} failures=0")
+PREFIX = [(11, 11), (12, 13), (13, 12), (10, 13), (12, 10), (14, 14)]
+
+
+def _state_after(moves):
+    st = TwixtState(active_size=24, to_move="red")
+    for mv in moves:
+        st = st.apply_move(tuple(mv))
+    return st
+
+
+def _ply_block(state, moves):
+    pegs, bridges = A.our_snapshot(state)
+    legal = {A.to_t1j(r, c) for (r, c) in state.legal_moves()}
+    bits = "".join("1" if (i // A.BOARD_N, i % A.BOARD_N) in legal else "0"
+                   for i in range(A.LEGAL_BITS))
+    hist = " ".join(f"{x},{y}" for x, y in (A.to_t1j(*m) for m in moves))
+    return (f"PLY {state.ply} moveNr={state.ply} "
+            f"next={A.PLAYER_TO_T1J[state.to_move]} "
+            f"termY={'true' if state.winner() == 'red' else 'false'} "
+            f"termX={'true' if state.winner() == 'black' else 'false'}\n"
+            f"  PEGS {' '.join(sorted(pegs))}\n"
+            f"  BRIDGES {' '.join(sorted(bridges))}\n"
+            f"  HIST {hist}\n  LEGAL {bits}\n")
+
+
+def _replay_stdout(prefix):
+    """A faithful E3bDump replay transcript: one PLY block per ply, 0..len."""
+    st, moves, out = _state_after([]), [], []
+    for mv in list(prefix) + [None]:
+        out.append(_ply_block(st, moves))
+        if mv is None:
+            break
+        moves.append(tuple(mv))
+        st = st.apply_move(tuple(mv))
+    return "".join(out) + CLEAN_POST.format(n=D1.INT.REPLAY_REFL_N) + "\n"
+
+
+def _position(prefix=PREFIX, seed=None, digest=None):
+    st = _state_after(prefix)
+    return {"task_id": "t", "ply": len(prefix), "prefix": list(prefix),
+            "seed": D1.SEED_INTERVAL[0] if seed is None else seed,
+            "digest": SEL.canonical_digest(st) if digest is None else digest}
+
+
+@pytest.fixture
+def registered(monkeypatch):
+    """A TEMPORARY FIXTURE registry. The real tuple is never edited."""
+    monkeypatch.setattr(REF, "ACCOUNTED_SEED_INTERVALS",
+                        REF.ACCOUNTED_SEED_INTERVALS + (D1.SEED_INTERVAL,))
+
+
+@pytest.fixture
+def wire(monkeypatch):
+    """Serve replay transcripts and query replies from the process boundary."""
+    box = {"calls": [], "prefix": PREFIX}
+
+    def fake_run(args, **kw):
+        box["calls"].append({"args": args, "kw": kw})
+        if "replay" in args:
+            return subprocess.CompletedProcess(args, 0, _replay_stdout(box["prefix"]), "")
+        depth = int(args[args.index("query") + 1])
+        return subprocess.CompletedProcess(
+            args, 0, _stdout(depth=depth, moveNr=len(box["prefix"]),
+                             hist=[A.to_t1j(*m) for m in box["prefix"]]), "")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    return box
+
+
+# ───────────────── 12.5: the block must be REGISTERED before a draw ──────────
+
+def test_the_reserved_block_is_unregistered_so_d1_refuses():
+    """The state of the repository RIGHT NOW: reserved on paper, in no registry."""
+    with pytest.raises(D1.D1Error, match="not registered"):
+        D1._check_seed_registration()
+
+
+def test_a_registered_block_satisfies_the_check(registered):
+    D1._check_seed_registration()
+
+
+def test_a_PARTLY_registered_block_is_still_refused(monkeypatch):
+    """NEGATIVE CONTROL. Registering all but the last seed must not pass: the
+    check is over the whole block, not over its first element."""
+    lo, hi = D1.SEED_INTERVAL
+    monkeypatch.setattr(REF, "ACCOUNTED_SEED_INTERVALS",
+                        REF.ACCOUNTED_SEED_INTERVALS + ((lo, hi - 1),))
+    with pytest.raises(D1.D1Error, match="not registered"):
+        D1._check_seed_registration()
+
+
+def test_the_check_reads_the_registry_and_never_writes_it(registered):
+    before = REF.ACCOUNTED_SEED_INTERVALS
+    D1._check_seed_registration()
+    assert REF.ACCOUNTED_SEED_INTERVALS is before
+
+
+def test_an_unregistered_block_stops_the_run_before_anything_is_compiled(tmp_path):
+    compiled = []
+    with pytest.raises(D1.D1Error, match="not registered"):
+        D1._run_d1_unguarded(positions=[], paths=RUNTIME,
+                             out_path=str(tmp_path / "r.json"),
+                             _compile=lambda d: compiled.append(1),
+                             _incumbent=lambda **kw: {})
+    assert compiled == [], "the helper was compiled before the registration check"
+
+
+# ─────────────────────── 5.5: the E3b binder, reused as-is ───────────────────
+
+def test_every_retained_prefix_is_replayed_through_the_e3b_binder(wire, registered, tmp_path):
+    D1._run_d1_unguarded(positions=[_position()], paths=RUNTIME,
+                         out_path=str(tmp_path / "r.json"),
+                         _compile=lambda d: None, _incumbent=lambda **kw: {"ok": True})
+    replays = [c for c in wire["calls"] if "replay" in c["args"]]
+    assert len(replays) == 1, [c["args"][-3:] for c in wire["calls"]]
+
+
+def test_the_binder_call_carries_the_frozen_timeout_and_the_explicit_ply_cap(
+        wire, registered, tmp_path):
+    D1._run_d1_unguarded(positions=[_position()], paths=RUNTIME,
+                         out_path=str(tmp_path / "r.json"),
+                         _compile=lambda d: None, _incumbent=lambda **kw: {"ok": True})
+    replays = [c for c in wire["calls"] if "replay" in c["args"]]
+    assert replays, "no replay reached the boundary; the assertions below are vacuous"
+    for c in replays:
+        assert c["kw"].get("timeout") == D1.PER_QUERY_TIMEOUT_S == 120
+        assert c["args"][c["args"].index("replay") + 1] == str(RUNTIME.ply_cap)
+
+
+def test_a_binder_divergence_becomes_a_VOID_not_an_unexpected_error(
+        monkeypatch, registered, tmp_path):
+    """`make_binder` raises e4_screen_runner.AbortError, which is NOT a D1Error.
+    Untranslated it escapes `main`'s handlers and exits 4 UNEXPECTED instead of
+    3 VOID -- a fully understood refusal reported as a crash."""
+    def diverging(args, **kw):
+        st = _state_after(PREFIX[:-1] + [(20, 20)])          # same ply, other position
+        blocks = _replay_stdout(PREFIX)
+        return subprocess.CompletedProcess(
+            args, 0, blocks.replace(_ply_block(_state_after(PREFIX), PREFIX),
+                                    _ply_block(st, PREFIX)), "")
+
+    monkeypatch.setattr(subprocess, "run", diverging)
+    with pytest.raises(D1.D1VoidError, match="E3b"):
+        D1._run_d1_unguarded(positions=[_position()], paths=RUNTIME,
+                             out_path=str(tmp_path / "r.json"),
+                             _compile=lambda d: None, _incumbent=lambda **kw: {})
+
+
+def test_the_abort_translation_is_reachable_only_through_a_real_abort(registered):
+    """The translated error must still name the phase the binder died in."""
+    assert issubclass(D1.D1VoidError, D1.D1Error)
+    assert not issubclass(AbortError, D1.D1Error)
+
+
+# ────────────────── 12.7: the prefix must replay to its digest ───────────────
+
+def test_a_prefix_that_does_not_replay_to_its_recorded_digest_voids(
+        wire, registered, tmp_path):
+    pos = _position(digest="0" * 64)
+    with pytest.raises(D1.D1VoidError, match="digest"):
+        D1._run_d1_unguarded(positions=[pos], paths=RUNTIME,
+                             out_path=str(tmp_path / "r.json"),
+                             _compile=lambda d: None, _incumbent=lambda **kw: {})
+
+
+def test_an_illegal_move_in_a_retained_prefix_voids(wire, registered, tmp_path):
+    pos = dict(_position(), prefix=PREFIX[:-1] + [PREFIX[0]])  # replays onto its own peg
+    with pytest.raises(D1.D1VoidError, match="illegal"):
+        D1._run_d1_unguarded(positions=[pos], paths=RUNTIME,
+                             out_path=str(tmp_path / "r.json"),
+                             _compile=lambda d: None, _incumbent=lambda **kw: {})

@@ -141,8 +141,18 @@ class IntegrationContext:
 class T1jRuntime:
     """The pinned runtime. Identity is the caller's business; this just carries it."""
 
-    def __init__(self, *, java: str, jar: str, classes: str, ply_cap: int):
+    def __init__(self, *, java: str, jar: str, classes: str, ply_cap: int,
+                 timeout_s: float):
+        """``ply_cap`` and ``timeout_s`` are both REQUIRED, for the same reason.
+
+        A missing cap silently defaults further up the stack, and a missing
+        timeout silently restores unbounded waiting at ``subprocess.run``. The
+        adapter refuses ``None`` for either; this refuses omitting them.
+        """
+        if timeout_s is None:
+            raise TypeError("timeout_s is required: an unbounded replay never returns")
         self.java, self.jar, self.classes, self.ply_cap = java, jar, classes, ply_cap
+        self.timeout_s = timeout_s
 
 
 def make_state_factory(openings: Dict[str, Sequence[Tuple[int, int]]],
@@ -181,7 +191,8 @@ def make_binder(runtime: T1jRuntime, ctx: IntegrationContext) -> Callable:
                              f"moves but our ply is {state.ply}")
 
         plies, rc, out = A.replay(ctx.moves, ply_cap=runtime.ply_cap, java=runtime.java,
-                                  jar=runtime.jar, classes=runtime.classes)
+                                  jar=runtime.jar, classes=runtime.classes,
+                                  timeout_s=runtime.timeout_s)
         if rc != 0:
             raise AbortError(PHASE_BIND, f"{task['task_id']} {where}: T1j replay exit {rc}")
         check_postcond(out, expected_refl=REPLAY_REFL_N,

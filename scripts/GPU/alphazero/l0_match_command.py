@@ -252,7 +252,8 @@ def _execute_match(*, plan: Dict[str, Any], plan_path: str, results_path: str,
         trace.append("t1j_runtime")
         runtime = INT.T1jRuntime(java=os.path.join(jdk_home, "bin", "java"),
                                  jar=jar_path, classes=classes_dir,
-                                 ply_cap=RULES.PLY_CAP)
+                                 ply_cap=RULES.PLY_CAP,
+                                 timeout_s=SCREEN_CMD.T1J_TIMEOUT_S)
         ctx = INT.IntegrationContext()
         trace.append("load_evaluator")
         evaluator = (_load_evaluator or SCREEN_CMD._default_load_evaluator)(repo_root)

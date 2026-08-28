@@ -26,7 +26,7 @@ advance across the game exactly as they do in `play_eval_game`.
 """
 from __future__ import annotations
 
-from typing import Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple
 
 from .twixtbot_g3_schedule import CONSUMED_SEEDS, OUR_SETTINGS, REFERENCE_CHECKPOINTS
 
@@ -120,7 +120,20 @@ class SeededReferenceAgent:
     SEARCH_MASK = {"red": 0xA5A5A5, "black": 0x5A5A5A}
     READOUT_MASK = {"red": 0xC3C3C3, "black": 0x3C3C3C}
 
-    def __init__(self, *, evaluator, colour: str, seed: int, config=None):
+    def __init__(self, *, evaluator, colour: str, seed: int, config=None,
+                 capture: bool = False):
+        """`capture` is OPT-IN and OFF by default: with it off this class is
+        byte-for-byte the agent that played G3, E4 and L0.
+
+        When on, `last_capture` exposes the values `__call__` HAS ALREADY
+        COMPUTED -- the visit counts, the root value, the root node, the top two
+        children and whether the readout overrode the leader. Nothing extra is
+        searched and no generator is drawn from, which is the same contract
+        `eval_runner.play_eval_game(capture=True)` keeps, so the move and both
+        RNG streams are identical either way. D1 needs those values because
+        plan 5.2 records them; without the seam it would have to re-run the
+        search or restate the readout path, and both are worse than a flag.
+        """
         import random
 
         from . import eval_readout
@@ -139,6 +152,8 @@ class SeededReferenceAgent:
         self.readout_rng = random.Random(self.seed ^ self.READOUT_MASK[colour])
         self.readout = readout_from_eval_config(self.config)
         self.moves_made = 0
+        self.capture = bool(capture)
+        self.last_capture: Optional[Dict[str, Any]] = None
 
     def __call__(self, state) -> Tuple[int, int]:
         """One move, by the frozen research path. Raises on anything unusable."""
@@ -151,14 +166,24 @@ class SeededReferenceAgent:
         counts, root_value, root = self.mcts.search_with_root(state, add_noise=False)
         top2 = self._eval_readout.top_two(root_child_stats(counts, root))
         validate_ply(state.ply, self.config.mcts_sims, root.visit_count, root_value, top2)
-        move, _overrode = self._eval_readout.select(
+        move, overrode = self._eval_readout.select(
             counts, state.ply, self.readout, self.readout_rng, top2=top2
         )
+        if self.capture:
+            # READS ONLY. Every value here was computed above for the move that
+            # is about to be returned; nothing is recomputed and nothing is
+            # drawn, so enabling capture cannot move the move or either stream.
+            self.last_capture = {
+                "ply": state.ply, "player": state.to_move, "move": move,
+                "counts": counts, "root_value": root_value, "root": root,
+                "top2": top2, "overrode_leader": bool(overrode),
+            }
         self.moves_made += 1
         return (int(move[0]), int(move[1]))
 
 
-def build_reference_agent(*, task: dict, evaluator, colour: str, config=None) -> SeededReferenceAgent:
+def build_reference_agent(*, task: dict, evaluator, colour: str, config=None,
+                          capture: bool = False) -> SeededReferenceAgent:
     """The one construction path. Binds the SCHEDULED seed AND asserts identity.
 
     An earlier version accepted any evaluator and any config and checked only the
@@ -195,5 +220,6 @@ def build_reference_agent(*, task: dict, evaluator, colour: str, config=None) ->
         raise ReferenceError(f"config is not the frozen research configuration: {cfg}")
 
     return SeededReferenceAgent(
-        evaluator=evaluator, colour=colour, seed=task["seed"], config=cfg
+        evaluator=evaluator, colour=colour, seed=task["seed"], config=cfg,
+        capture=capture
     )

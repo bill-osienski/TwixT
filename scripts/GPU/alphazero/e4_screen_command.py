@@ -59,6 +59,14 @@ CANONICAL_CHECKPOINT_REL = "checkpoints/alphazero-v2-calib020-from0409/model_ite
 #: yes forever -- a spent schedule is still evidence. `schedule` asks whether it
 #: may be RUN, and since 2026-08-26 the answer is no, because the block is spent.
 #: That refusal is a precondition, exit 2, not an unexpected error.
+#: The qualified per-invocation limit for a T1j process, from the E4 preflight:
+#: docs/superpowers/2026-08-25-t1j-e4-preflight.md:40 -- "per-query timeout 120 s".
+#: It bounds ONE call and bounds nothing about a whole run; that is a separate
+#: limit and a separate decision. Named here because the preflight that measured
+#: it is this command's, and read from here by anything else that needs it, so
+#: there is one source rather than a number retyped per call site.
+T1J_TIMEOUT_S = 120
+
 PRECONDITIONS = ("plan", "schedule", "repository", "jdk", "jar", "checkpoint",
                  "output_path")
 
@@ -369,7 +377,8 @@ def _execute_screen(*, plan: Dict[str, Any], plan_path: str, results_path: str,
             os.path.join(jdk_home, "bin", "javac"), jar_path, classes_dir)
         trace.append("t1j_runtime")
         runtime = _INT.T1jRuntime(java=os.path.join(jdk_home, "bin", "java"), jar=jar_path,
-                                  classes=classes_dir, ply_cap=H.PLY_CAP)
+                                  classes=classes_dir, ply_cap=H.PLY_CAP,
+                                  timeout_s=T1J_TIMEOUT_S)
         ctx = _INT.IntegrationContext()
         trace.append("load_evaluator")
         evaluator = (_load_evaluator or _default_load_evaluator)(repo_root)

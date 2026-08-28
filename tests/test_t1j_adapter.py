@@ -5,6 +5,8 @@ ours -- the coordinate transforms, the external cap semantics, and the dump
 parser. The lockstep behaviour against the real engine is covered by the E3b
 qualification run, whose evidence is committed under docs/superpowers/evidence/.
 """
+import subprocess
+
 import pytest
 
 from scripts.GPU.alphazero import t1j_adapter as A
@@ -60,7 +62,9 @@ def test_ply_cap_is_required_keyword_only():
     with pytest.raises(TypeError):
         A.terminal_with_cap(1, False, 10)          # type: ignore[misc]
     with pytest.raises(TypeError):
-        A.replay([], java="j", jar="j", classes="c")   # type: ignore[call-arg]
+        # timeout_s supplied, so this isolates the MISSING ply_cap; without it
+        # the call would raise for two reasons and prove neither.
+        A.replay([], java="j", jar="j", classes="c", timeout_s=1)  # type: ignore[call-arg]
 
 
 def test_negative_cap_rejected():
@@ -286,3 +290,41 @@ def test_a_dirty_postcond_is_not_clean(field, bad):
 def test_parse_postconds_rejects_a_missing_field():
     with pytest.raises(ValueError):
         A.parse_postconds(POSTCOND_LINE.replace(" prefs_ok=true", ""))
+
+
+# ═══════ the replay hole 12.9 recorded: no timeout parameter existed at all ═══
+#
+# `query` already took `timeout_s` and defaulted it to None -- protection present
+# but switched off. `replay` was worse: it had no parameter, so no caller could
+# bound it through the adapter's API at all, and `subprocess.run(timeout=None)`
+# waits forever. These assert at the PROCESS BOUNDARY, never at the call site.
+
+def _spy_run(monkeypatch):
+    calls = []
+
+    def fake(args, **kw):
+        calls.append(kw)
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    monkeypatch.setattr(subprocess, "run", fake)
+    return calls
+
+
+def test_replay_requires_a_timeout_and_refuses_an_unbounded_one():
+    with pytest.raises(TypeError, match="timeout_s"):
+        A.replay([(1, 1)], ply_cap=280, java="j", jar="j", classes="c")  # type: ignore[call-arg]
+    with pytest.raises(TypeError, match="timeout_s"):
+        A.replay([(1, 1)], ply_cap=280, java="j", jar="j", classes="c", timeout_s=None)
+
+
+def test_the_replay_timeout_reaches_subprocess_run(monkeypatch):
+    calls = _spy_run(monkeypatch)
+    A.replay([(1, 1)], ply_cap=280, java="j", jar="j", classes="c", timeout_s=42)
+    assert calls, "no subprocess call was observed; the assertion below is vacuous"
+    assert [c.get("timeout") for c in calls] == [42]
+
+
+def test_the_query_timeout_still_reaches_subprocess_run(monkeypatch):
+    calls = _spy_run(monkeypatch)
+    A.query([(1, 1)], depth=3, java="j", jar="j", classes="c", timeout_s=7)
+    assert calls and [c.get("timeout") for c in calls] == [7]

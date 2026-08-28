@@ -1,0 +1,216 @@
+"""Injected-defect controls for the D1 INTEGRATION work.
+
+For each defect: apply it to the SOURCE, run the test that must catch it, and
+require that test to FAIL. A control that never rejects has not been shown to
+bind, and a control whose anchor no longer matches has NOT RUN -- reported
+loudly rather than tallied as a miss, because a stale control proves nothing.
+
+Restoration happens in a `finally`, over EVERY touched file, and __pycache__ is
+purged with PYTHONDONTWRITEBYTECODE=1 so a same-length edit cannot leave a
+stale .pyc that makes the test import the OLD module and pass vacuously.
+
+NOTHING HERE EXECUTES D1: the gates stay False, the tests it runs mock the
+process boundary and the evaluator, and no registry is edited.
+"""
+import os
+import pathlib
+import shutil
+import subprocess
+import sys
+
+PROBE = "scripts/GPU/alphazero/d1_probe.py"
+SEL = "scripts/GPU/alphazero/d1_selection.py"
+G3 = "scripts/GPU/alphazero/twixtbot_g3_reference.py"
+ADAPTER = "scripts/GPU/alphazero/t1j_adapter.py"
+INTEG = "scripts/GPU/alphazero/e4_screen_integration.py"
+D0 = "scripts/GPU/alphazero/d0_postmortem.py"
+
+T_PROBE = "tests/test_d1_probe.py"
+T_SEL = "tests/test_d1_selection.py"
+T_INC = "tests/test_d1_incumbent.py"
+T_ADP = "tests/test_t1j_adapter.py"
+T_INTEG = "tests/test_e4_screen_integration.py"
+T_D0 = "tests/test_d0_postmortem.py"
+
+# (label, file, anchor, replacement, test node)
+DEFECTS = [
+    # ---------------------------------------------- 12.5 seed registration
+    ("registration check disabled", PROBE,
+     "    if missing:\n        raise D1Error(",
+     "    if False:\n        raise D1Error(",
+     f"{T_PROBE}::test_the_reserved_block_is_unregistered_so_d1_refuses"),
+    ("registration check looks only at the first seed", PROBE,
+     "    missing = [s for s in range(lo, hi) if not REF.seed_is_accounted(s)]",
+     "    missing = [s for s in [lo] if not REF.seed_is_accounted(s)]",
+     f"{T_PROBE}::test_a_PARTLY_registered_block_is_still_refused"),
+    ("registration checked only AFTER compilation", PROBE,
+     "    _check_seed_registration()\n\n    deadline.start()\n    compile_fn(deadline)",
+     "    deadline.start()\n    compile_fn(deadline)\n    _check_seed_registration()",
+     f"{T_PROBE}::test_an_unregistered_block_stops_the_run_before_anything_is_compiled"),
+
+    # ------------------------------------------- 12.7 prefix identity / E3b
+    ("digest re-check disabled", PROBE,
+     '    got = SEL.canonical_digest(state)\n    if got != pos.get("digest"):',
+     '    got = SEL.canonical_digest(state)\n    if False:',
+     f"{T_PROBE}::test_a_prefix_that_does_not_replay_to_its_recorded_digest_voids"),
+    ("prefix legality check disabled", PROBE,
+     "        if move not in set(state.legal_moves()):",
+     "        if False:",
+     f"{T_PROBE}::test_an_illegal_move_in_a_retained_prefix_voids"),
+    ("E3b binder never called", PROBE,
+     "        _bind_prefix(binder, ctx, task_id=where, state=state, prefix=prefix)",
+     "        pass",
+     f"{T_PROBE}::test_every_retained_prefix_is_replayed_through_the_e3b_binder"),
+    ("binder AbortError not translated to VOID", PROBE,
+     "    except AbortError as e:",
+     "    except ZeroDivisionError as e:",
+     f"{T_PROBE}::test_a_binder_divergence_becomes_a_VOID_not_an_unexpected_error"),
+    ("binder replay timeout not translated to VOID", PROBE,
+     "    except subprocess.TimeoutExpired as e:\n        # The binder's replay",
+     "    except ZeroDivisionError as e:\n        # The binder's replay",
+     f"{T_PROBE}::test_a_forced_query_timeout_is_void_and_writes_no_report"),
+    ("ply_cap not carried to the runtime", PROBE,
+     "ply_cap=paths.ply_cap, timeout_s=PER_QUERY_TIMEOUT_S)",
+     "ply_cap=999, timeout_s=PER_QUERY_TIMEOUT_S)",
+     f"{T_PROBE}::test_the_binder_call_carries_the_frozen_timeout_and_the_explicit_ply_cap"),
+    ("replay timeout widened at the runtime", PROBE,
+     "ply_cap=paths.ply_cap, timeout_s=PER_QUERY_TIMEOUT_S)",
+     "ply_cap=paths.ply_cap, timeout_s=99999)",
+     f"{T_PROBE}::test_the_binder_call_carries_the_frozen_timeout_and_the_explicit_ply_cap"),
+
+    # ------------------------------------------------- the adapter's new hole
+    ("replay's unbounded-wait guard removed", ADAPTER,
+     '    if timeout_s is None:\n        raise TypeError(\n'
+     '            "timeout_s is required: subprocess.run(timeout=None) waits forever")',
+     "    pass",
+     f"{T_ADP}::test_replay_requires_a_timeout_and_refuses_an_unbounded_one"),
+    ("replay timeout dropped at the last hop", ADAPTER,
+     '        HELPER_MAIN, "replay", str(ply_cap),\n    ] + [f"{x},{y}" for (x, y) in xy]\n'
+     "    p = subprocess.run(args, capture_output=True, text=True, timeout=timeout_s)",
+     '        HELPER_MAIN, "replay", str(ply_cap),\n    ] + [f"{x},{y}" for (x, y) in xy]\n'
+     "    p = subprocess.run(args, capture_output=True, text=True)",
+     f"{T_ADP}::test_the_replay_timeout_reaches_subprocess_run"),
+    ("T1jRuntime accepts an unbounded timeout", INTEG,
+     '        if timeout_s is None:\n            raise TypeError("timeout_s is required',
+     '        if False:\n            raise TypeError("timeout_s is required',
+     f"{T_INTEG}::test_the_runtime_refuses_an_unbounded_timeout_before_any_replay"),
+
+    # ------------------------------------------------ 12.6 incumbent capture
+    ("capture draws from the readout stream", G3,
+     "            self.last_capture = {",
+     "            self.readout_rng.random()\n            self.last_capture = {",
+     f"{T_INC}::test_capture_preserves_the_state_of_both_generators"),
+    ("capture switched on by default", G3,
+     "    def __init__(self, *, evaluator, colour: str, seed: int, config=None,\n"
+     "                 capture: bool = False):",
+     "    def __init__(self, *, evaluator, colour: str, seed: int, config=None,\n"
+     "                 capture: bool = True):",
+     f"{T_INC}::test_capture_is_off_by_default_and_exposes_nothing"),
+    ("capture flag not forwarded by the qualified builder", G3,
+     "        capture=capture\n    )",
+     "        capture=False\n    )",
+     f"{T_INC}::test_the_capture_flag_threads_through_the_qualified_builder"),
+    ("root-noise check disabled", PROBE,
+     "    if root.priors != root.priors_raw:",
+     "    if False:",
+     f"{T_INC}::test_a_root_policy_that_carries_noise_is_a_VOID"),
+    ("evaluator reloaded for every position", PROBE,
+     "        if self._evaluator is None:\n            self._evaluator = self._load(self.repo_root)",
+     "        if True:\n            self._evaluator = self._load(self.repo_root)",
+     f"{T_INC}::test_one_evaluator_is_loaded_for_the_entire_run"),
+    ("incumbent readout spends no query", PROBE,
+     "        budget.spend(1)                      # 12.4 funds ONE readout per position",
+     "        pass                                 # 12.4 funds ONE readout per position",
+     f"{T_INC}::test_the_incumbent_spends_exactly_one_query_per_position"),
+    ("policy rank tie-break reversed", PROBE,
+     "    ranked = sorted(policy.items(), key=lambda kv: (-kv[1], kv[0]))",
+     "    ranked = sorted(policy.items(), key=lambda kv: (kv[1], kv[0]))",
+     f"{T_INC}::test_the_raw_policy_covers_every_legal_move_and_ranks_the_chosen_one"),
+    ("incumbent identity typed instead of read from the frozen plan", PROBE,
+     '    reference, sha1 = pairs.pop()',
+     '    reference, sha1 = "0379", "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1"',
+     f"{T_INC}::test_the_incumbent_identity_comes_from_the_frozen_l0_plan"),
+
+    # ---------------------------------------------- 12.1-12.3 selection rule
+    ("digest downgraded to the sha1 superset helper", SEL,
+     "    return hashlib.sha256(payload.encode()).hexdigest()",
+     "    return hashlib.sha1(payload.encode()).hexdigest()",
+     f"{T_SEL}::test_the_digest_is_sha256_not_the_existing_sha1_helper"),
+    ("digest payload widened beyond the frozen three fields", SEL,
+     "    payload = json.dumps((to_move, pegs, bridges), sort_keys=True)",
+     "    payload = json.dumps((to_move, pegs, bridges, _limit), sort_keys=True)",
+     f"{T_SEL}::test_a_field_outside_the_frozen_three_does_not_enter_the_digest"),
+    ("per-cell cap loosened", SEL,
+     "PER_CELL_CAP = 3", "PER_CELL_CAP = 4",
+     f"{T_SEL}::test_the_frozen_counts_are_reproduced"),
+    ("deduplication disabled", SEL,
+     '        if row["digest"] in seen:\n            continue',
+     '        if False:\n            continue',
+     f"{T_SEL}::test_the_frozen_counts_are_reproduced"),
+    ("incumbent-to-move restriction dropped", SEL,
+     '        ours = [r for r in plies if r["system"] == "ours"]',
+     '        ours = list(plies)',
+     f"{T_SEL}::test_every_selected_position_has_our_incumbent_to_move"),
+    ("controls no longer matched to the position cells", SEL,
+     '            [r for r in ours if bool(r[col]) is False and cell(r) in cells])',
+     '            [r for r in ours if bool(r[col]) is False])',
+     f"{T_SEL}::test_controls_come_only_from_cells_that_hold_a_selected_position"),
+    ("seed written in place so a shared row is overwritten", SEL,
+     '        group["rows"] = [dict(r, seed=seed + i) for i, r in enumerate(group["rows"])]',
+     '        group["rows"] = [r.update({"seed": seed + i}) or r\n'
+     '                         for i, r in enumerate(group["rows"])]',
+     f"{T_SEL}::test_the_seed_assignment_is_injective_and_exhausts_the_block"),
+    ("frozen-count reconciliation removed", SEL,
+     "            if got != sig[want]:",
+     "            if False:",
+     f"{T_SEL}::test_a_cohort_that_departs_from_the_frozen_table_is_refused"),
+
+    # -------------------------------------------- the extracted D0 mover cut
+    ("mover cut inverted", D0,
+     '    return "t1j" if mover == colour_arm.split("_")[1] else "ours"',
+     '    return "ours" if mover == colour_arm.split("_")[1] else "t1j"',
+     f"{T_D0}::test_by_system_classification_is_unchanged_by_the_extraction"),
+]
+
+
+def purge():
+    for d in pathlib.Path(".").rglob("__pycache__"):
+        shutil.rmtree(d, ignore_errors=True)
+
+
+FILES = sorted({f for _l, f, _o, _n, _t in DEFECTS})
+ORIGINAL = {f: pathlib.Path(f).read_text() for f in FILES}
+
+ok = stale = missed = 0
+try:
+    for label, path, old, new, test in DEFECTS:
+        src = ORIGINAL[path]
+        n = src.count(old)
+        if n != 1:
+            print(f"  STALE CONTROL -- DID NOT RUN  {label}: anchor matched {n} times "
+                  f"in {path}")
+            stale += 1
+            continue
+        pathlib.Path(path).write_text(src.replace(old, new))
+        purge()
+        r = subprocess.run(
+            [sys.executable, "-m", "pytest", test, "-q", "-p", "no:cacheprovider"],
+            capture_output=True, text=True,
+            env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"})
+        pathlib.Path(path).write_text(src)
+        rejected = r.returncode != 0
+        print(f"  {'REJECTED' if rejected else 'NOT CAUGHT':11s}  {label}")
+        if rejected:
+            ok += 1
+        else:
+            missed += 1
+            print("      " + r.stdout.strip().splitlines()[-1][:160])
+finally:
+    for f in FILES:
+        pathlib.Path(f).write_text(ORIGINAL[f])
+    purge()
+
+print(f"\n{ok}/{len(DEFECTS)} defects rejected; {missed} not caught; {stale} stale")
+print("ALL CONTROLS RAN:", stale == 0)
+print("every source restored:",
+      all(pathlib.Path(f).read_text() == ORIGINAL[f] for f in FILES))

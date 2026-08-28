@@ -230,15 +230,26 @@ def replay(
     java: str,
     jar: str,
     classes: str,
+    timeout_s: Optional[float],
     transform: str = CANONICAL,
 ) -> Tuple[List[PlyState], int, str]:
     """Advance T1j through ``moves`` (ours, in order), one ply at a time.
 
     Returns (per-ply states, process exit status, raw stdout). The helper applies
     each move through T1j's own ``Match.setlastMove``.
+
+    ``timeout_s`` is REQUIRED and may not be ``None``, exactly as ``ply_cap`` is.
+    Until this parameter existed no caller could bound a replay through this API
+    at all, and ``subprocess.run(timeout=None)`` waits forever -- so a hung jvm
+    consumed no further query and blocked the run indefinitely. A default here
+    would put the protection back in the switched-off state that made ``query``'s
+    ``timeout_s: Optional[float] = None`` a protection in name only.
     """
     if ply_cap is None:
         raise TypeError("ply_cap is required")
+    if timeout_s is None:
+        raise TypeError(
+            "timeout_s is required: subprocess.run(timeout=None) waits forever")
     xy = [to_t1j(r, c, transform=transform) for (r, c) in moves]
     args = [
         java,
@@ -247,7 +258,7 @@ def replay(
         "-cp", f"{jar}:{classes}",
         HELPER_MAIN, "replay", str(ply_cap),
     ] + [f"{x},{y}" for (x, y) in xy]
-    p = subprocess.run(args, capture_output=True, text=True)
+    p = subprocess.run(args, capture_output=True, text=True, timeout=timeout_s)
     return parse_dump(p.stdout), p.returncode, p.stdout
 
 

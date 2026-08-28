@@ -370,7 +370,8 @@ def validate_schedule_executable(tasks: Sequence[Dict[str, Any]]) -> Dict[str, A
     return _injective_streams(tasks)
 
 
-def build(task: Dict[str, Any], *, evaluator, config=None) -> SeededReferenceAgent:
+def build(task: Dict[str, Any], *, evaluator, config=None,
+          capture: bool = False) -> SeededReferenceAgent:
     """The ONE construction path for the E4 screen. Delegates, never reimplements.
 
     AGENT CONSTRUCTION IS EXECUTION. It is the moment a seed becomes generators,
@@ -378,7 +379,8 @@ def build(task: Dict[str, Any], *, evaluator, config=None) -> SeededReferenceAge
     """
     validate_task_executable(task)
     return build_reference_agent(
-        task=task, evaluator=evaluator, colour=reference_colour(task), config=config
+        task=task, evaluator=evaluator, colour=reference_colour(task), config=config,
+        capture=capture
     )
 
 

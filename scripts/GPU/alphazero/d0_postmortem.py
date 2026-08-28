@@ -507,6 +507,22 @@ CANDIDATE_SIGNATURES = (
 )
 
 
+def moved_by(colour_arm: str, mover: str) -> str:
+    """Which engine moved: ``"ours"`` or ``"t1j"``. THE ONE DEFINITION.
+
+    The arm names the ANCHOR's colour -- ``t1j_red`` / ``t1j_black`` here, and
+    ``anchor_red`` / ``anchor_black`` in the E4 schedules -- so the mover is the
+    anchor exactly when its colour is the arm's suffix, and ours otherwise.
+
+    Extracted from `by_system`, where it was inline, because D1's selection rule
+    needs the same cut to pick plies where OUR INCUMBENT is to move. A second
+    statement of it could drift, and this cut decides what D1 interrogates at
+    all. The expression is preserved exactly; a regression test pins the
+    classification against evidence written before the extraction.
+    """
+    return "t1j" if mover == colour_arm.split("_")[1] else "ours"
+
+
 def by_system(rows: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
     """Split each boolean signature by WHICH ENGINE moved.
 
@@ -524,8 +540,7 @@ def by_system(rows: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
         plies = {"ours": 0, "t1j": 0}
         per_game: Dict[str, Dict[str, int]] = {}
         for r in rows:
-            arm, mover = r["colour_arm"], r["mover"]
-            who = "t1j" if mover == arm.split("_")[1] else "ours"
+            who = moved_by(r["colour_arm"], r["mover"])
             plies[who] += 1
             g = per_game.setdefault(r["task_id"], {"ours": 0, "t1j": 0})
             if r[col]:
