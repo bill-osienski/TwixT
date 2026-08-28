@@ -775,7 +775,46 @@ query and would block the run indefinitely. Required:
 2. **A whole-run wall-clock cap**, with the run aborting as a `VOID` on breach
    rather than truncating the cohort — a partial cohort is a filtered result.
 
-Neither limit is chosen here. Both are execution-authorization decisions, and
-this section exists so that authorization cannot be given without noticing they
-are missing.
+Both limits are now chosen, in §12.10.
+
+### 12.10 Frozen limits — 120 s per T1j query, 90 minutes whole run
+
+| Limit | Value | Source |
+|---|---|---|
+| Per-T1j-query timeout | **120 s** | the previously qualified preflight limit, `docs/superpowers/2026-08-25-t1j-e4-preflight.md:40`: "per-query timeout **120 s**, sweep budget 3600 s, determinism budget 900 s" |
+| Whole-run wall clock | **90 minutes** (5,400 s) | margin over §12.9's 1,302,980 ms T1j subtotal — about 68m 17s for startup, compilation, replay, binding, incumbent work and output — while still bounding a pathological run |
+
+**Neither limit is redundant, and the arithmetic shows why.** 908 queries × 120 s is
+108,960 s ≈ **30.3 hours**, roughly 20× the wall-clock cap: the per-query
+timeout alone does **not** bound the run. Conversely the wall-clock cap alone
+would let a single hung call consume the entire budget in one call, ending the
+run with almost no data and no indication of which query hung. Each limit closes
+what the other leaves open.
+
+**Implementation requirements for any later D1 execution:**
+
+1. **Pass `timeout_s=120` to every T1j query.** 🔴 **There are THREE default-`None`
+   hops between a D1 caller and `subprocess.run`, and every one of them defaults
+   the protection OFF:** `make_agent_factory(t1j_timeout_s=None)` →
+   `T1jAgent.__init__(timeout_s=None)` → `t1j_adapter.query(timeout_s=None)` →
+   `subprocess.run(timeout=None)`, which waits forever. A single unforwarded hop
+   silently restores unbounded waiting **and raises nothing**. Threading the value
+   in at the top is therefore not sufficient evidence that it arrives; the
+   execution card must prove arrival at the `subprocess.run` boundary, not at the
+   call site. If D1 instead calls `t1j_adapter.query` directly, that is one hop
+   rather than three, and the same proof obligation applies to it.
+2. **Enforce the 90-minute deadline OUTSIDE individual calls**, against a
+   monotonic clock started before helper compilation. A per-call timeout cannot
+   see time spent in compilation, prefix replay, E3b binding, incumbent search
+   and readout, or record output; a deadline that only wraps T1j calls would
+   leave most of the run unbounded.
+3. **A breach of either limit is `VOID`.** Not a truncated cohort, not a
+   partial-cohort analysis, not "the positions we got to" — those are filtered
+   results wearing a runtime excuse. §6's `VOID` rule applies: repair the
+   instrument, never reinterpret the data already seen.
+
+These limits are frozen here as *plan* values. D1 remains unauthorized until this
+amendment **and a fail-closed implementation with its tests** have been reviewed —
+in particular a negative control proving an exceeded deadline actually voids the
+run, since an unexercised abort is the defect §12.7 already had to correct once.
 
