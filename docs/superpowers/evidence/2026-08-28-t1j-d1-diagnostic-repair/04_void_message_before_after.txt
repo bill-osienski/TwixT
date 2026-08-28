@@ -1,0 +1,14 @@
+BEFORE — what the run actually reported, in full:
+
+    VOID: depth 3 invocation 0: exit 3 with 1 query records
+
+AFTER — same failure, same transcript:
+
+    VOID: l0match-000-strong6-o1_center-t1j_red-r0@ply1 [mover_fragmentation/position] digest=0ae621381af163f0: depth 3 invocation 0: exit 3 with 1 query records. T1j reported: FAIL q1: requested depth 3 completed | POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1
+
+excerpt length      141 chars (cap 800)
+legal map excluded  True
+names task          True
+names ply           True
+names cohort        True
+names digest        True

@@ -41,12 +41,28 @@ evidence I failed to read.** Two reporting faults, both mine:
    is built from `depth` and `i` only, so a VOID cannot be located in the
    cohort — not by task, not by ply, not by cohort label.
 
-A plausible reading of the four candidates is that `completed` was false —
-`completed = uab && cmp == depth + 1`, and the cohort reaches back to **ply 1**,
-where the helper itself labels the regime `early_moveNr_lt_8`, while every
-qualification to date (E3a, E4, L0) queried from six-ply openings or later.
-**That is a hypothesis, not a finding.** Confirming it means querying T1j again,
-which is execution this authorization does not cover.
+### 🔴 A hypothesis of mine, corrected
+
+I first wrote that `completed` was plausibly false because the cohort reaches
+**ply 1**, "where the helper labels the regime `early_moveNr_lt_8`, while every
+qualification to date queried from six-ply openings or later". **The inference
+was wrong, and the E4 record says so.**
+
+`03_results.jsonl` from the E4 preflight holds 30 query rows, and the early
+regime is among them:
+
+| `eval_regime` | queries | depths | completed | legal |
+|---|---:|---|---|---|
+| `early_moveNr_lt_8` | **10** (plies 6 and 7) | 3, 4, 5, 6, 7 | all `True` | all `True` |
+| `normal` | 20 | 3, 4, 5, 6, 7 | all `True` | all `True` |
+
+So **`moveNr < 8` is qualified**, at plies 6 and 7, including depth 6. "Early
+regime" does not explain this failure.
+
+What remains is narrower: **the lowest ply E4 ever queried is 6, and D1's cohort
+reaches down to ply 1**, so plies 1–5 are outside anything qualified. That is
+still only a possibility, and it is **unestablished** — confirming it means
+querying T1j again, which no authorization covers.
 
 ## 2. Seed accounting — what is certain, and what is not
 
@@ -111,17 +127,58 @@ artifacts for the first time:
 | Suite, gate **restored**, after the run | **3,539** passed / 4 skipped / 0 failed |
 | Gates now | `SCREEN` / `L0` / `D1` all `False` |
 
-## 5. What a repair would need — none of it authorized here
+## 5. The diagnostic repair — DONE, mocked only
 
-1. **Make the failure legible.** Carry the helper's stdout into the VOID message
-   and name the position. Without both, the next VOID is as opaque as this one.
-2. **Decide the ply-1 question.** Either establish that the qualified depths hold
-   at `moveNr < 8`, or freeze a selection rule that excludes those positions —
-   which changes §12.1's frozen counts and is a preregistration amendment, not
-   an implementation detail.
-3. **Reserve a fresh seed interval.** The old one is spent as a block.
-4. **Consider whether a VOID should leave a trace.** The create-only single write
-   is correct about not publishing a partial cohort, but it is why the seed
+Authorized as diagnostic-only: retain bounded helper output, identify the
+position, mocked regression tests only. **No Java, no model, no seed reserved or
+registered, no retry, no confirmation data, no training, no push.**
+
+`helper_failure_excerpt` carries the helper's own verdict lines (`FAIL`,
+`THREW`, `POSTCOND`), **bounded** to 12 lines and 800 characters, falling back to
+the transcript tail rather than to silence, and never carrying a dump body — the
+legal-cell map is 576 characters per ply and would bury what it exists to
+surface. `position_label` names task, ply, cohort and prefix digest, and never
+raises: a label that crashes while reporting a refusal reports nothing.
+
+`label` is a **required** parameter of `_probe_position`, not a defaulted one; a
+caller that forgot it would reproduce exactly the unlocatable refusal this
+repair exists to end. The same label is used by every per-position refusal in
+`_run_stages`, so a VOID anywhere in the loop is locatable.
+
+**The same failure, before and after** (the transcript is a reconstruction of
+the shape, not the lost original):
+
+```
+before:  VOID: depth 3 invocation 0: exit 3 with 1 query records
+
+after:   VOID: l0match-000-strong6-o1_center-t1j_red-r0@ply1
+         [mover_fragmentation/position] digest=0ae621381af163f0:
+         depth 3 invocation 0: exit 3 with 1 query records.
+         T1j reported: FAIL q1: requested depth 3 completed |
+         POSTCOND ... refl_n=3 failures=1
+```
+
+**Controls: 60 injected defects, 60 rejected, 0 stale.** 🔴 Three of the eight
+new ones were not caught first time, all because my tests could not reach the
+guard alone: the character cap was masked by the line cap (many short lines, so
+the line cap bounded the message first); the line cap was masked by the
+character cap; and the fallback branch was never entered, because `THREW` is
+itself a verdict prefix so a transcript containing one takes the primary path.
+Each now has a case that reaches it alone. **That is the seventh time in this
+workstream.**
+
+## 6. Still open — none of it authorized
+
+1. **Decide the ply 1–5 question.** Either qualify those plies or freeze a
+   selection rule excluding them — which changes §12.1's frozen counts and is a
+   **preregistration amendment**, not an implementation detail.
+2. **Reserve a fresh seed interval.** The old one is spent as a block.
+3. **Consider whether a VOID should leave a trace.** The create-only single write
+   is right about not publishing a partial cohort, and is exactly why the seed
    accounting above cannot be closed. A separate, clearly-marked progress log is
-   not a partial-cohort analysis — but that is a design decision for §12, not a
+   not a partial-cohort analysis — but that is a §12 design decision, not a
    change to make quietly.
+4. **The sibling defect, recorded not fixed.** `e4_screen_integration.make_binder`
+   discards T1j's stdout on a non-zero replay exit in exactly the same way
+   `_probe_position` did. It is a different module and outside this
+   authorization.

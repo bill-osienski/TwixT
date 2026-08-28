@@ -60,7 +60,7 @@ def spy(monkeypatch):
 
 def test_every_t1j_call_reaches_subprocess_run_with_the_frozen_timeout(spy):
     D1._probe_position(moves=MOVES, depth=6, paths=RUNTIME,
-                      state=_state_after(MOVES),
+                      state=_state_after(MOVES), label=LABEL,
                       budget=D1.QueryBudget(D1.QUERY_CAP), deadline=D1.Deadline())
     assert spy, "no subprocess call was observed -- the assertion below would be vacuous"
     for c in spy:
@@ -76,7 +76,7 @@ def test_the_boundary_check_catches_a_dropped_timeout_hop(spy, monkeypatch):
     real = A.query
     monkeypatch.setattr(A, "query", lambda *a, **k: real(*a, **{**k, "timeout_s": None}))
     D1._probe_position(moves=MOVES, depth=6, paths=RUNTIME,
-                      state=_state_after(MOVES),
+                      state=_state_after(MOVES), label=LABEL,
                       budget=D1.QueryBudget(D1.QUERY_CAP), deadline=D1.Deadline())
     assert spy
     assert any(c["kw"].get("timeout") is None for c in spy), \
@@ -87,7 +87,7 @@ def test_the_boundary_check_catches_a_dropped_timeout_hop(spy, monkeypatch):
 
 def test_each_depth_issues_two_separate_query_mode_invocations(spy):
     D1._probe_position(moves=MOVES, depth=6, paths=RUNTIME,
-                      state=_state_after(MOVES),
+                      state=_state_after(MOVES), label=LABEL,
                       budget=D1.QueryBudget(D1.QUERY_CAP), deadline=D1.Deadline())
     assert len(spy) == D1.INVOCATIONS_PER_DEPTH == 2, [c["args"] for c in spy]
     for c in spy:
@@ -99,7 +99,7 @@ def test_the_same_jvm_determinism_mode_is_never_used(spy):
     cross-process variable at all. The adapter puts the mode in argv, so the
     prohibition is observable at the boundary rather than asserted about a kwarg."""
     D1._probe_position(moves=MOVES, depth=6, paths=RUNTIME,
-                      state=_state_after(MOVES),
+                      state=_state_after(MOVES), label=LABEL,
                       budget=D1.QueryBudget(D1.QUERY_CAP), deadline=D1.Deadline())
     assert spy
     for c in spy:
@@ -108,7 +108,7 @@ def test_the_same_jvm_determinism_mode_is_never_used(spy):
 
 def test_two_invocations_are_distinct_processes_not_one_repeated(spy):
     D1._probe_position(moves=MOVES, depth=6, paths=RUNTIME,
-                      state=_state_after(MOVES),
+                      state=_state_after(MOVES), label=LABEL,
                       budget=D1.QueryBudget(D1.QUERY_CAP), deadline=D1.Deadline())
     assert len(spy) == 2 and spy[0]["args"] == spy[1]["args"], \
         "two identical invocations expected -- same argv, separate processes"
@@ -204,7 +204,7 @@ def test_probing_stops_at_the_cap_rather_than_overrunning_it(spy):
     b = D1.QueryBudget(cap=1)
     with pytest.raises(D1.D1BudgetError):
         D1._probe_position(moves=MOVES, depth=6, paths=RUNTIME,
-                      state=_state_after(MOVES),
+                      state=_state_after(MOVES), label=LABEL,
                           budget=b, deadline=D1.Deadline())
     assert len(spy) == 1, "the budget did not stop the second invocation"
 
@@ -407,17 +407,17 @@ def _stdout(depth=6, prefix=None, completed=True, legal=True, sentinel=False,
 @pytest.fixture
 def reply(monkeypatch):
     """Drive BOTH invocations from one stdout template."""
-    box = {"out": _stdout(), "calls": []}
+    box = {"out": _stdout(), "calls": [], "rc": 0}
     def fake_run(args, **kw):
         box["calls"].append({"args": args, "kw": kw})
-        return subprocess.CompletedProcess(args, 0, box["out"], "")
+        return subprocess.CompletedProcess(args, box["rc"], box["out"], "")
     monkeypatch.setattr(subprocess, "run", fake_run)
     return box
 
 
 def _probe(**kw):
     return D1._probe_position(moves=MOVES, depth=6, paths=RUNTIME,
-                      state=_state_after(MOVES),
+                      state=_state_after(MOVES), label=LABEL,
                              budget=D1.QueryBudget(D1.QUERY_CAP),
                              deadline=D1.Deadline(), **kw)
 
@@ -1004,9 +1004,12 @@ def test_an_unverifiable_toolchain_stops_the_compile(monkeypatch, javac, tmp_pat
 # exactly this reason: the per-prefix replay proves *a* jvm can rebuild the
 # history and says nothing about the jvm that actually searched.
 
-def _probe(prefix=None, state=None, **kw):
+LABEL = "t@ply6 [sig/role] digest=abc"
+
+
+def _probe(prefix=None, state=None, label=LABEL, **kw):
     prefix = MOVES if prefix is None else prefix
-    return D1._probe_position(moves=prefix, depth=6, paths=RUNTIME,
+    return D1._probe_position(moves=prefix, depth=6, paths=RUNTIME, label=label,
                               state=state if state is not None else _state_after(prefix),
                               budget=D1.QueryBudget(), deadline=D1.Deadline(), **kw)
 
@@ -1107,3 +1110,137 @@ def test_the_position_record_says_the_depths_DISAGREE_when_they_do(
     pos = report["positions"][0]
     assert pos["depths_agree"] is False, pos["depths"]
     assert {tuple(d["move"]) for d in pos["depths"]} == {a, b}
+
+
+# ═════ the repair the VOID demanded: say WHAT failed, and WHERE ══════════════
+#
+# The single authorized D1 run aborted with
+#   "VOID: depth 3 invocation 0: exit 3 with 1 query records"
+# and that sentence is the whole reason the failure is still unexplained. Exit 3
+# is E4Preflight's `System.exit(failures == 0 ? 0 : 3)`; it had PRINTED a `FAIL`
+# line naming the check that failed, and `_probe_position` threw the stdout
+# away. It also named the depth and invocation but never the position, so the
+# abort could not be located among 227 -- which is why the seed accounting could
+# not be closed either.
+#
+# MOCKED ONLY. No JVM, no model, no seed, no retry.
+
+FAILING_OUT = (
+    "PROC pid=1 java_version=17 vm=x headless=true prefs_factory=e2probe\n"
+    + _stdout()
+    + "FAIL q1: requested depth 3 completed\n"
+)
+
+
+def _pos_ref(**kw):
+    base = {"task_id": "l0match-000-strong6-o1_center-t1j_red-r0", "ply": len(MOVES),
+            "signature": "mover_fragmentation", "role": "position",
+            "digest": "a" * 64, "seed": D1.SEED_INTERVAL[0], "prefix": MOVES}
+    base.update(kw)
+    return base
+
+
+def test_a_nonzero_exit_carries_the_helpers_OWN_failure_lines(reply):
+    """The instrument said what was wrong; the probe must not drop it."""
+    reply["out"] = FAILING_OUT
+    reply["rc"] = 3
+    with pytest.raises(D1.D1VoidError) as e:
+        _probe(label=D1.position_label(_pos_ref()))
+    assert "FAIL q1: requested depth 3 completed" in str(e.value), str(e.value)
+
+
+def test_the_failure_excerpt_never_carries_the_legal_cell_map(reply):
+    """A dump carries a 576-character legal-cell map per ply; it must not reach
+    the refusal at all."""
+    reply["out"] = FAILING_OUT
+    reply["rc"] = 3
+    with pytest.raises(D1.D1VoidError) as e:
+        _probe(label=D1.position_label(_pos_ref()))
+    assert "1" * 100 not in str(e.value), "the legal-cell map leaked into the refusal"
+
+
+def test_the_CHARACTER_cap_truncates_one_enormous_failure_line():
+    """The character cap, REACHED ALONE. A previous version of this test used
+    many SHORT lines, so the LINE cap bounded the message first and the
+    character cap could be raised to 100,000 with nothing noticing."""
+    out = "FAIL " + "x" * 5000 + "\n"
+    excerpt = D1.helper_failure_excerpt(out)
+    assert len(excerpt) <= D1.FAILURE_EXCERPT_CHARS + 3, len(excerpt)
+    assert excerpt.endswith("...")
+
+
+def test_the_LINE_cap_drops_the_tail_of_a_long_verdict_list():
+    """The line cap, REACHED ALONE: short lines, so the character cap is never
+    the thing doing the bounding."""
+    out = "".join(f"FAIL check {i}\n" for i in range(40))
+    excerpt = D1.helper_failure_excerpt(out)
+    assert "FAIL check 0" in excerpt
+    assert f"FAIL check {D1.FAILURE_EXCERPT_LINES}" not in excerpt
+    assert excerpt.count("FAIL check") == D1.FAILURE_EXCERPT_LINES == 12
+
+
+def test_a_THREW_line_is_carried_because_it_is_a_verdict(reply):
+    reply["out"] = _stdout() + "THREW: java.lang.IllegalStateException: boom\n"
+    reply["rc"] = 3
+    with pytest.raises(D1.D1VoidError, match="IllegalStateException"):
+        _probe(label=D1.position_label(_pos_ref()))
+
+
+def test_output_with_NO_verdict_line_falls_back_to_the_tail_not_silence():
+    """The fallback, REACHED ALONE. `THREW` is itself a verdict prefix, so a
+    transcript containing one never exercises this branch -- which is how the
+    fallback could be deleted with every test still green."""
+    out = ("PROC pid=1 java_version=17 vm=x headless=true prefs_factory=e2probe\n"
+           "PLY 6 moveNr=6 next=Y termY=false termX=false\n"
+           "  PEGS 12,12,Y\n  LEGAL " + "1" * 576 + "\n")
+    excerpt = D1.helper_failure_excerpt(out)
+    assert "PROC pid=1" in excerpt, excerpt
+    assert "1" * 100 not in excerpt, "the dump body leaked through the fallback"
+
+
+def test_completely_empty_output_says_so_rather_than_nothing():
+    assert D1.helper_failure_excerpt("") == "(the helper produced no readable output)"
+
+
+@pytest.mark.parametrize("kw,pattern", [
+    ({}, "exit 3"),
+    ({"completed": False}, "did not complete"),
+    ({"legal": False}, "illegal move"),
+    ({"post": False}, "POSTCOND"),
+])
+def test_every_probe_refusal_identifies_the_position(reply, kw, pattern):
+    """task, ply, cohort and prefix digest, on EVERY refusal path -- not just the
+    one the real VOID happened to take."""
+    reply["out"] = _stdout(**kw)
+    reply["rc"] = 3 if not kw else 0
+    with pytest.raises(D1.D1VoidError) as e:
+        _probe(label=D1.position_label(_pos_ref()))
+    msg = str(e.value)
+    assert pattern in msg, msg
+    assert "l0match-000-strong6-o1_center-t1j_red-r0" in msg
+    assert "ply6" in msg and "mover_fragmentation/position" in msg
+    assert "a" * 16 in msg, "the prefix digest is absent"
+
+
+def test_the_label_names_all_four_fields():
+    label = D1.position_label(_pos_ref())
+    assert "l0match-000-strong6-o1_center-t1j_red-r0" in label
+    assert "ply6" in label and "mover_fragmentation/position" in label
+    assert "digest=" + "a" * 16 in label
+
+
+def test_a_position_missing_its_labels_still_produces_a_usable_label():
+    """A manifest row without cohort labels must not make the label crash --
+    a refusal that raises while reporting a refusal reports nothing."""
+    label = D1.position_label({"task_id": "t", "ply": 3})
+    assert "t" in label and "ply3" in label and "?" in label
+
+
+def test_run_stage_refusals_identify_the_position_too(wire, registered, tmp_path):
+    """The same label on the digest check, so every VOID is locatable."""
+    pos = dict(_position(), digest="0" * 64, signature="created_threat", role="control")
+    with pytest.raises(D1.D1VoidError) as e:
+        D1._run_d1_unguarded(positions=[pos], paths=RUNTIME,
+                             out_path=str(tmp_path / "r.json"),
+                             _compile=lambda d: None, _incumbent=lambda **kw: {})
+    assert "created_threat/control" in str(e.value), str(e.value)

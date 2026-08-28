@@ -247,6 +247,61 @@ def _validate_reply(rec, dumps, *, depth: int, n_moves: int, where: str) -> None
 AGREEMENT_FIELDS = ("move", "legal", "requested_depth", "completed_depth")
 
 
+#: How much of the helper's own transcript a refusal may carry. BOUNDED on
+#: purpose: each dump holds a 576-character legal-cell map, and an unbounded
+#: excerpt would bury the FAIL lines it exists to surface.
+FAILURE_EXCERPT_LINES = 12
+FAILURE_EXCERPT_CHARS = 800
+
+#: Lines that carry the helper's own verdict. `FAIL <what>` is printed by its
+#: `req()` for each failed check, `THREW` by its catch-all, and POSTCOND carries
+#: the failures counter that produced the exit status.
+_VERDICT_PREFIXES = ("FAIL ", "THREW", "POSTCOND ")
+
+
+def helper_failure_excerpt(out: str) -> str:
+    """The helper's OWN explanation of a non-zero exit, bounded.
+
+    E4Preflight exits 3 when its `failures` counter is non-zero, and it prints a
+    `FAIL <what>` line for every check that failed. This module used to raise
+    "exit {rc} with {n} query records" and DISCARD `out` -- so the one thing that
+    said WHY went in the bin.
+
+    That is not hypothetical. The single authorized D1 run aborted with exactly
+    that message on 2026-08-28, and the reason it failed is still unknown
+    because the transcript was dropped.
+
+    Falls back to the tail rather than to silence, skipping dump body lines,
+    because a refusal that reports nothing is worse than one that reports
+    roughly the right neighbourhood.
+    """
+    lines = [l.strip() for l in out.splitlines() if l.startswith(_VERDICT_PREFIXES)]
+    if not lines:
+        lines = [l.strip() for l in out.splitlines()
+                 if l.strip() and not l.startswith(("  ", "PLY "))][-FAILURE_EXCERPT_LINES:]
+    text = " | ".join(lines[:FAILURE_EXCERPT_LINES])
+    if not text:
+        return "(the helper produced no readable output)"
+    return text[:FAILURE_EXCERPT_CHARS] + ("..." if len(text) > FAILURE_EXCERPT_CHARS else "")
+
+
+def position_label(pos: Dict[str, Any]) -> str:
+    """WHICH position a refusal is about: task, ply, cohort, prefix digest.
+
+    The real VOID named "depth 3 invocation 0" and nothing else, so it could not
+    be located among 227 positions -- and that is also why the run's seed
+    accounting could not be closed: without knowing where it stopped, the number
+    of seeds drawn is undeterminable.
+
+    Never raises. A label that blows up while reporting a refusal reports
+    nothing, so a missing field becomes `?` rather than a `KeyError`.
+    """
+    digest = str(pos.get("digest") or "")
+    return (f"{pos.get('task_id', '?')}@ply{pos.get('ply', '?')} "
+            f"[{pos.get('signature') or '?'}/{pos.get('role') or '?'}] "
+            f"digest={digest[:16] or '?'}")
+
+
 def _postcond_dict(p) -> Dict[str, Any]:
     """The helper's safety surface, as recorded rather than summarised."""
     return {"no_throw": p.no_throw, "windows": p.windows, "frames": p.frames,
@@ -278,7 +333,8 @@ def _searched_state(dump, state, moves: Sequence[Pos], *, where: str) -> Dict[st
 
 
 def _probe_position(*, moves: Sequence[Pos], depth: int, paths: T1jPaths, state,
-                    budget: QueryBudget, deadline: Deadline) -> Dict[str, Any]:
+                    budget: QueryBudget, deadline: Deadline,
+                    label: str) -> Dict[str, Any]:
     """Query ONE prefix at ONE depth, twice, in two separate JVM processes.
 
     PRIVATE. It was public, which reopened the very hole the CLI gate was meant
@@ -290,7 +346,7 @@ def _probe_position(*, moves: Sequence[Pos], depth: int, paths: T1jPaths, state,
     cannot vary the cross-process variable the check exists to test.
     """
     if deadline.started:
-        deadline.check(f"before querying depth {depth}")
+        deadline.check(f"{label}: before querying depth {depth}")
     results = []
     for i in range(INVOCATIONS_PER_DEPTH):
         budget.spend(1)
@@ -300,12 +356,16 @@ def _probe_position(*, moves: Sequence[Pos], depth: int, paths: T1jPaths, state,
                 classes=paths.classes, repeats=1, timeout_s=PER_QUERY_TIMEOUT_S)
         except subprocess.TimeoutExpired as e:
             raise D1VoidError(
-                f"depth {depth} invocation {i}: T1j query timed out after "
+                f"{label}: depth {depth} invocation {i}: T1j query timed out after "
                 f"{PER_QUERY_TIMEOUT_S}s ({e}). The run is VOID: no partial-cohort "
                 f"analysis is produced.") from None
-        where = f"depth {depth} invocation {i}"
+        # `label` is REQUIRED, not defaulted: a caller that forgot it would
+        # produce exactly the unlocatable refusal this repair exists to end.
+        where = f"{label}: depth {depth} invocation {i}"
         if rc != 0 or len(recs) != 1:
-            raise D1VoidError(f"{where}: exit {rc} with {len(recs)} query records")
+            raise D1VoidError(
+                f"{where}: exit {rc} with {len(recs)} query records. "
+                f"T1j reported: {helper_failure_excerpt(out)}")
         _validate_reply(recs[0], dumps, depth=depth, n_moves=len(moves), where=where)
         # 5.3's reflection/postcondition surface, READ rather than assumed, and
         # translated like every other E3b refusal: an AbortError here would
@@ -329,12 +389,12 @@ def _probe_position(*, moves: Sequence[Pos], depth: int, paths: T1jPaths, state,
     for f in AGREEMENT_FIELDS:
         if getattr(a[0], f) != getattr(b[0], f):
             raise D1VoidError(
-                f"depth {depth}: the two independent JVM invocations disagree on {f!r} "
+                f"{label}: depth {depth}: the two independent JVM invocations disagree on {f!r} "
                 f"({getattr(a[0], f)!r} vs {getattr(b[0], f)!r}). Two Zobrist salts, two "
                 f"answers: VOID, never averaged and never tie-broken.")
     if a[1] != b[1]:
         raise D1VoidError(
-            f"depth {depth}: the two invocations replayed different states: VOID.")
+            f"{label}: depth {depth}: the two invocations replayed different states: VOID.")
     rec = a[0]
     return {"depth": depth, "record": rec, "dump": a[1],
             "invocations": INVOCATIONS_PER_DEPTH,
@@ -537,7 +597,7 @@ def _run_stages(positions, paths, out_path, deadline, budget, compile_fn, incumb
     for pos in positions:
         _check_seed(pos.get("seed"))
         prefix = _check_prefix(pos)
-        where = f"{pos.get('task_id')}@{pos.get('ply')}"
+        where = position_label(pos)
         deadline.check(f"before position {where}")
         state = _replay_prefix(prefix, where=where)
         _check_digest(state, pos, where=where)
@@ -546,7 +606,7 @@ def _run_stages(positions, paths, out_path, deadline, budget, compile_fn, incumb
         ours = incumbent(pos=pos, state=state, budget=budget)
         deadline.check(f"after the incumbent readout at {where}")
         per_depth = [_probe_position(moves=prefix, depth=d, paths=paths, state=state,
-                                    budget=budget, deadline=deadline)
+                                    budget=budget, deadline=deadline, label=where)
                      for d in T1J_DEPTHS]
         depths = [{k: v for k, v in r.items() if k not in ("record", "dump")}
                   for r in per_depth]
