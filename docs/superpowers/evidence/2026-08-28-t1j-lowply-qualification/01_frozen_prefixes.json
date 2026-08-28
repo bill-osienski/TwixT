@@ -1,0 +1,226 @@
+{
+ "dedup_removed": 0,
+ "n_retained": 9,
+ "n_rows_at_ply_le_5": 9,
+ "prefixes": [
+  {
+   "colour_arm": "t1j_red",
+   "digest": "487df111c9dbd7a3cd70c1ff0bd1316eee47cb950f7443fb15f5bff33927d2a7",
+   "opening": "o1_center",
+   "phase": "opening",
+   "ply": 1,
+   "prefix": [
+    [
+     11,
+     11
+    ]
+   ],
+   "role": "control",
+   "signature": "mover_fragmentation",
+   "task_id": "l0match-000-strong6-o1_center-t1j_red-r0"
+  },
+  {
+   "colour_arm": "t1j_red",
+   "digest": "470721202fb36f18040bc00152ae6fbaf2ae576f8941ae2e6a6fcf99de676fde",
+   "opening": "o1_center",
+   "phase": "opening",
+   "ply": 3,
+   "prefix": [
+    [
+     11,
+     11
+    ],
+    [
+     12,
+     13
+    ],
+    [
+     13,
+     12
+    ]
+   ],
+   "role": "control",
+   "signature": "mover_fragmentation",
+   "task_id": "l0match-000-strong6-o1_center-t1j_red-r0"
+  },
+  {
+   "colour_arm": "t1j_red",
+   "digest": "ea75792355b736c769b757b65bc8c475b6c7bc4c238e90c9c77c5669b59df372",
+   "opening": "o1_center",
+   "phase": "opening",
+   "ply": 5,
+   "prefix": [
+    [
+     11,
+     11
+    ],
+    [
+     12,
+     13
+    ],
+    [
+     13,
+     12
+    ],
+    [
+     10,
+     13
+    ],
+    [
+     12,
+     10
+    ]
+   ],
+   "role": "position",
+   "signature": "mover_fragmentation",
+   "task_id": "l0match-000-strong6-o1_center-t1j_red-r0"
+  },
+  {
+   "colour_arm": "t1j_red",
+   "digest": "69c2875679f3eb1b128c42daccdc28122ee7ec2556092333f61fcf6e11d3a473",
+   "opening": "o3_low",
+   "phase": "opening",
+   "ply": 1,
+   "prefix": [
+    [
+     15,
+     11
+    ]
+   ],
+   "role": "control",
+   "signature": "mover_fragmentation",
+   "task_id": "l0match-016-strong6-o3_low-t1j_red-r0"
+  },
+  {
+   "colour_arm": "t1j_red",
+   "digest": "4fba47bfca43d99f8b1c3fda801ec141d4013bdf7e135665fc4678a5047a002b",
+   "opening": "o3_low",
+   "phase": "opening",
+   "ply": 3,
+   "prefix": [
+    [
+     15,
+     11
+    ],
+    [
+     12,
+     12
+    ],
+    [
+     13,
+     10
+    ]
+   ],
+   "role": "control",
+   "signature": "mover_fragmentation",
+   "task_id": "l0match-016-strong6-o3_low-t1j_red-r0"
+  },
+  {
+   "colour_arm": "t1j_red",
+   "digest": "e41208a808b032634bbf842d9d466c63be9d0889c9285555a56aa5a3843ed423",
+   "opening": "o3_low",
+   "phase": "opening",
+   "ply": 5,
+   "prefix": [
+    [
+     15,
+     11
+    ],
+    [
+     12,
+     12
+    ],
+    [
+     13,
+     10
+    ],
+    [
+     14,
+     14
+    ],
+    [
+     11,
+     11
+    ]
+   ],
+   "role": "position",
+   "signature": "mover_fragmentation",
+   "task_id": "l0match-016-strong6-o3_low-t1j_red-r0"
+  },
+  {
+   "colour_arm": "t1j_red",
+   "digest": "7c326873cac4c1d7786dd2eb69b4ba4c4ba0c7631a24fe4855eee529beb0f6a4",
+   "opening": "o4_high",
+   "phase": "opening",
+   "ply": 1,
+   "prefix": [
+    [
+     8,
+     12
+    ]
+   ],
+   "role": "control",
+   "signature": "mover_fragmentation",
+   "task_id": "l0match-024-strong6-o4_high-t1j_red-r0"
+  },
+  {
+   "colour_arm": "t1j_red",
+   "digest": "5e2c1f8ab19effb5487c8edba19c35a6075538ddcbb2110dd798364b010272e6",
+   "opening": "o4_high",
+   "phase": "opening",
+   "ply": 3,
+   "prefix": [
+    [
+     8,
+     12
+    ],
+    [
+     11,
+     11
+    ],
+    [
+     10,
+     13
+    ]
+   ],
+   "role": "control",
+   "signature": "mover_fragmentation",
+   "task_id": "l0match-024-strong6-o4_high-t1j_red-r0"
+  },
+  {
+   "colour_arm": "t1j_red",
+   "digest": "14b23d6fe016a5788063ba62ee38273d0decaed70ebc52ba72467cefe31dba08",
+   "opening": "o4_high",
+   "phase": "opening",
+   "ply": 5,
+   "prefix": [
+    [
+     8,
+     12
+    ],
+    [
+     11,
+     11
+    ],
+    [
+     10,
+     13
+    ],
+    [
+     9,
+     9
+    ],
+    [
+     12,
+     12
+    ]
+   ],
+   "role": "position",
+   "signature": "mover_fragmentation",
+   "task_id": "l0match-024-strong6-o4_high-t1j_red-r0"
+  }
+ ],
+ "rule": "every position the FROZEN 12.1-12.3 selection retained at ply <= 5, deduplicated by canonical digest, earliest by (task_id, ply) -- the same total order 12.2 uses. NOTHING is re-selected here.",
+ "source": "docs/superpowers/evidence/2026-08-28-t1j-d1-execution/02_positions.json",
+ "source_sha256": "d5a3cdfa58844451ba21e0fb23781c6aedbda9ad3c239f1c83ea99c3e3d037e3"
+}
