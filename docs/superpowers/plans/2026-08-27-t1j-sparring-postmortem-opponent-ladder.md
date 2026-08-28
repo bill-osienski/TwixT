@@ -629,12 +629,42 @@ cost nothing to abandon.
 readout `eval_readout.select, never mcts.select_move` · search masks
 red `10855845` / black `5921370` ·
 readout masks red `12829635` / black `3947580`.
-One agent instance per position; no run-level RNG.
+**Evaluator lifetime — this resolves §12.6 against §5.5, which an earlier
+version of this section contradicted by saying only "one agent instance per
+position":**
+
+- **One compiled incumbent evaluator for the entire D1 run.** Loaded once,
+  compiled once, before the first position and after the query budget is fixed.
+- **No evaluator reload or recompile between positions** — not at a cohort
+  boundary, not at a cell boundary, not between the two T1j depths. There is no
+  reload-and-continue path at all, because §12.7 makes every integrity failure
+  void the run rather than restart part of it.
+- **A fresh per-position search/agent wrapper is permitted only if it is
+  stateless with respect to the evaluator**: it may carry that position's seed
+  and nothing else, and it must not reload, rebuild, recompile or re-seed the
+  evaluator. "One instance per game" in the frozen L0 settings describes an
+  *agent* lifetime across a game's plies; it is not an evaluator lifetime, and
+  D1 plays no games.
+- **No run-level RNG.** Each position's search and readout streams derive from
+  that position's own seed by the frozen XOR masks and from nothing else.
 
 ⚠ `cfg_from does NOT pass dirichlet_eps, so MCTSConfig keeps its default 0.25; noise is suppressed at the call site instead. A schedule that declares dirichlet_eps=0 is declaring nothing.`
 
-**T1j:** `mdFixedPly` true, at **both** qualified depths `3` and `6`. One
-evaluator instance, compilation enabled, no rebuilding per query (§5.5).
+**T1j:** `mdFixedPly` true, at **both** qualified depths `3` and `6`. The helper
+is compiled **once for the whole run** by `t1j_adapter.compile_helper`, and every
+query reuses that one classes directory — that is what §5.5's "compilation
+enabled; no rebuilding per query" requires. Each `t1j_adapter.query` call is one
+JVM invocation; that is the adapter's qualified shape and is not a rebuild. T1j
+itself is never modified or rebuilt: its jar is only a classpath entry.
+
+⚠ **A known, accepted, and hereby recorded consequence:** because each query runs
+in a fresh JVM, T1j seeds its `Zobrist` transposition salt from an **unseeded
+`Random` per process**, so the salt differs between the 454 T1j queries this run
+will issue. Nothing in this design controls or observes it. E3a measured 25/25
+identical answers across fresh JVMs, but at **one position and one ply** — that is
+descriptive evidence, not a proof of determinism across these positions. If two
+queries at the same depth from the same prefix ever disagree, that is an
+integrity abort under §12.7, not a result to average.
 
 **Captured per position** — §5.2 from our side (chosen move, raw legal-move
 policy, 400-simulation root visit distribution, root value from the
