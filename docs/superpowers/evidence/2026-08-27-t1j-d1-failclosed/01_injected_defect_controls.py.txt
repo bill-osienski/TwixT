@@ -1,0 +1,78 @@
+"""Injected-defect controls for the D1 fail-closed machinery.
+
+For each defect: apply it to the SOURCE, run the test that must catch it, and
+require that test to FAIL. A control that never rejects has not been shown to
+bind. Restoration happens in a `finally`, and __pycache__ is purged with
+PYTHONDONTWRITEBYTECODE=1 so a same-length edit cannot leave a stale .pyc that
+makes the test import the OLD module and pass vacuously.
+"""
+import pathlib, shutil, subprocess, sys, os
+
+SRC = pathlib.Path("scripts/GPU/alphazero/d1_probe.py")
+ORIGINAL = SRC.read_text()
+
+DEFECTS = [
+    ("timeout dropped at the last hop",
+     "classes=paths.classes, repeats=1, timeout_s=PER_QUERY_TIMEOUT_S)",
+     "classes=paths.classes, repeats=1, timeout_s=None)",
+     "test_every_t1j_call_reaches_subprocess_run_with_the_frozen_timeout"),
+    ("same-JVM determinism mode used instead of two processes",
+     "classes=paths.classes, repeats=1, timeout_s=PER_QUERY_TIMEOUT_S)",
+     "classes=paths.classes, repeats=2, timeout_s=PER_QUERY_TIMEOUT_S)",
+     "test_the_same_jvm_determinism_mode_is_never_used"),
+    ("only one invocation per depth",
+     "INVOCATIONS_PER_DEPTH = 2", "INVOCATIONS_PER_DEPTH = 1",
+     "test_each_depth_issues_two_separate_query_mode_invocations"),
+    ("deadline started AFTER compilation",
+     "    deadline = (deadline or Deadline()).start()\n    budget = budget or QueryBudget()\n"
+     "    compile_fn = _compile if _compile is not None else _default_compile\n\n    compile_fn(deadline)",
+     "    deadline = (deadline or Deadline())\n    budget = budget or QueryBudget()\n"
+     "    compile_fn = _compile if _compile is not None else _default_compile\n\n"
+     "    compile_fn(deadline)\n    deadline.start()",
+     "test_the_deadline_starts_before_helper_compilation"),
+    ("wall-clock limit widened",
+     "RUN_DEADLINE_S = 90 * 60", "RUN_DEADLINE_S = 900 * 60",
+     "test_deadline_limit_is_ninety_minutes"),
+    ("query cap loosened by one",
+     "QUERY_CAP = 1135", "QUERY_CAP = 1136",
+     "test_the_query_cap_is_the_frozen_value_and_its_arithmetic_holds"),
+    ("seed-interval check disabled",
+     "    if not isinstance(seed, int) or isinstance(seed, bool) or not lo <= seed < hi:",
+     "    if False:",
+     "test_a_seed_outside_the_reserved_interval_is_void"),
+    ("timeout no longer converted to VOID",
+     "        except subprocess.TimeoutExpired as e:",
+     "        except ZeroDivisionError as e:",
+     "test_a_forced_query_timeout_is_void_and_writes_no_report"),
+    ("final deadline check before writing removed",
+     '    deadline.check("before writing the report")', "    pass",
+     "test_a_deadline_that_expires_only_at_the_write_step_still_voids"),
+    ("gate flipped open",
+     "D1_EXECUTION_AUTHORIZED = False", "D1_EXECUTION_AUTHORIZED = True",
+     "test_the_d1_gate_is_false_as_published"),
+]
+
+def purge():
+    for d in pathlib.Path(".").rglob("__pycache__"):
+        shutil.rmtree(d, ignore_errors=True)
+
+ok = bad = 0
+try:
+    for name, old, new, test in DEFECTS:
+        n = ORIGINAL.count(old)
+        if n != 1:
+            print(f"  SKIP  {name}: anchor matched {n} times"); bad += 1; continue
+        SRC.write_text(ORIGINAL.replace(old, new)); purge()
+        r = subprocess.run(
+            [sys.executable, "-m", "pytest", f"tests/test_d1_probe.py::{test}", "-q",
+             "-p", "no:cacheprovider"],
+            capture_output=True, text=True,
+            env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"})
+        rejected = r.returncode != 0
+        print(f"  {'REJECTED' if rejected else 'NOT CAUGHT':10s}  {name}")
+        ok += rejected; bad += (not rejected)
+finally:
+    SRC.write_text(ORIGINAL); purge()
+
+print(f"\n{ok}/{len(DEFECTS)} defects rejected; {bad} not caught")
+print("source restored:", SRC.read_text() == ORIGINAL)

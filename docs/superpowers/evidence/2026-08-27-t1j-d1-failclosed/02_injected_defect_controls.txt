@@ -1,0 +1,13 @@
+  REJECTED    timeout dropped at the last hop
+  REJECTED    same-JVM determinism mode used instead of two processes
+  REJECTED    only one invocation per depth
+  REJECTED    deadline started AFTER compilation
+  REJECTED    wall-clock limit widened
+  REJECTED    query cap loosened by one
+  REJECTED    seed-interval check disabled
+  REJECTED    timeout no longer converted to VOID
+  REJECTED    final deadline check before writing removed
+  REJECTED    gate flipped open
+
+10/10 defects rejected; 0 not caught
+source restored: True
