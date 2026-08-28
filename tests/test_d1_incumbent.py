@@ -179,7 +179,24 @@ def identity():
 
 
 @pytest.fixture
-def incumbent(identity):
+def live_block(monkeypatch):
+    """A TEMPORARY FIXTURE registry in which the D1 block is not yet retired.
+
+    The real block was retired on 2026-08-28 when the single authorized run
+    VOIDED, so `validate_task_executable` now refuses it -- which is the whole
+    point of retiring it. These tests exercise the incumbent MECHANISM, not the
+    availability of that block, so they lift the retirement locally rather than
+    weaken `_check_seed` or the builder's executable question. The real tuple is
+    never edited, and `test_the_retired_block_can_no_longer_be_SCHEDULED` in
+    tests/test_d1_probe.py asserts the real refusal.
+    """
+    monkeypatch.setattr(REF, "RETIRED_SEED_INTERVALS",
+                        tuple(i for i in REF.RETIRED_SEED_INTERVALS
+                              if tuple(i) != tuple(D1.SEED_INTERVAL)))
+
+
+@pytest.fixture
+def incumbent(identity, live_block):
     loads = []
 
     def load(repo_root):
@@ -392,8 +409,8 @@ def test_no_evaluator_is_loaded_while_the_seed_block_is_unregistered(identity, t
     assert loads == [], "the incumbent checkpoint was read before the block was registered"
 
 
-def test_one_position_end_to_end_records_both_sides(identity, boundary, monkeypatch,
-                                                    tmp_path):
+def test_one_position_end_to_end_records_both_sides(identity, boundary, live_block,
+                                                    monkeypatch, tmp_path):
     """Selection output -> E3b binding -> incumbent readout -> T1j, all mocked.
 
     Five queries, exactly as 12.4 funds them: one incumbent readout plus two

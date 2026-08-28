@@ -1,0 +1,51 @@
+D1 SEED-ACCOUNTING CONSEQUENCE OF THE VOID
+==========================================
+
+THE RUN VOIDED. exit 3, 3m18s, no record written (correct: a VOID produces no
+partial-cohort artifact). stderr, in full:
+
+    VOID: depth 3 invocation 0: exit 3 with 1 query records
+
+WHAT IS CERTAIN
+---------------
+The VOID was raised inside _probe_position, which runs AFTER the incumbent
+readout for that same position. e4_screen_reference.build constructs a
+SeededReferenceAgent, which builds random.Random(seed ^ mask) for BOTH streams
+and then runs a 400-simulation search. So AT LEAST ONE seed in
+[202614000, 202614227) was drawn from. That is a real draw, model or no model.
+
+WHAT IS UNDETERMINED, AND WHY
+-----------------------------
+HOW MANY seeds were drawn cannot be determined from this run's evidence.
+
+  * The record is written ONCE, at the end, create-only. A VOID writes nothing
+    -- which is right, and which also means there is no per-position trace of
+    how far the run got.
+  * The VOID message names "depth 3 invocation 0" and NOT the position:
+    _probe_position builds its "where" from depth and invocation only, so a
+    failure cannot be located in the cohort.
+  * 3m18s of wall clock bounds nothing usefully: the incumbent's per-query cost
+    has never been measured in isolation (12.9 withdrew a figure for exactly
+    this reason) and the MLX model load is an unmeasured constant inside that
+    window.
+
+Claiming a specific number of drawn seeds would be a fabrication. Claiming zero
+would be false.
+
+THE CONSEQUENCE: THE WHOLE BLOCK RETIRES
+----------------------------------------
+[202614000, 202614227) is added to RETIRED_SEED_INTERVALS -- drawn and undrawn
+alike, exactly as the E4 canonical screen's 32-seed block retired whole after
+its early stop left 8 undrawn.
+
+  * RETIRED, not EXPOSED. Exposed records seeds that WERE drawn; marking all 227
+    exposed would claim 226 draws that may never have happened, which is the
+    overstatement the two registries are kept apart to prevent.
+  * Retiring is the claim that CAN be supported: this block may not be used
+    again. A preregistered one-shot schedule was started and did not complete;
+    replaying any part of it would select positions after having seen where it
+    failed.
+  * It stays ACCOUNTED as well: the reservation happened and is history.
+
+A future D1, if authorized, needs a FRESH interval. These seeds are spent as a
+block whether or not each was individually drawn.

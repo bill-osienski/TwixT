@@ -232,14 +232,19 @@ def test_a_seed_outside_the_reserved_interval_is_void(tmp_path, seed, registered
                   paths=RUNTIME, out_path=str(tmp_path / "r.json"), _compile=lambda d: None)
 
 
-def test_the_seed_interval_matches_the_plan_and_is_now_ACCOUNTED_and_unspent():
-    """REGISTERED 2026-08-28 as part of the D1 EXECUTION authorization (12.5).
+def test_the_seed_interval_is_ACCOUNTED_and_now_RETIRED_after_the_VOID():
+    """Registered 2026-08-28 for the execution authorization, then RETIRED the
+    same day when the single authorized run VOIDED at 3m18s.
 
-    It was deliberately absent from every registry through preregistration and
-    integration, so an unauthorized paper block cost nothing to abandon. Now that
-    execution is authorized it must be ACCOUNTED -- and it must still be
-    UNSPENT: accounted is a reservation, exposed and retired are claims about
-    draws and about the future, and D1 has not drawn yet.
+    Retired WHOLE, drawn and undrawn alike. At least one seed was drawn -- the
+    VOID came from `_probe_position`, which runs after that position's incumbent
+    readout -- and HOW MANY is undetermined, because a VOID writes no record and
+    the message names the depth, not the position.
+
+    NOT exposed: that list records seeds that WERE drawn, and marking all 227
+    would claim 226 draws that may never have happened. Retiring is the claim
+    the evidence supports -- these may not be used again -- and it is what makes
+    `validate_task_executable` refuse them.
     """
     from scripts.GPU.alphazero import e4_screen_reference as REF
     assert D1.SEED_INTERVAL == (202614000, 202614227)
@@ -249,8 +254,21 @@ def test_the_seed_interval_matches_the_plan_and_is_now_ACCOUNTED_and_unspent():
         assert getattr(REF, name), f"vacuous: {name} is empty"
     for seed in range(*D1.SEED_INTERVAL):
         st = REF.seed_status(seed)
-        assert st["accounted"], f"{seed} is not accounted"
-        assert not st["exposed"] and not st["retired"] and not st["test_only"], (seed, st)
+        assert st["accounted"] and st["retired"], (seed, st)
+        assert not st["exposed"] and not st["test_only"], (seed, st)
+        assert REF.seed_is_unavailable(seed), seed
+
+
+def test_the_retired_block_can_no_longer_be_SCHEDULED():
+    """The consequence that matters: a spent one-shot block must be refused by
+    the executable question, not merely annotated."""
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    task = {"seed": D1.SEED_INTERVAL[0], "reference": "calib020_0001",
+            "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+            "anchor_colour": "black"}
+    REF.validate_task_structure(task)                 # still WELL FORMED, forever
+    with pytest.raises(REF.E4ReferenceError, match="RETIRED"):
+        REF.validate_task_executable(task)            # but no longer RUNNABLE
 
 
 # ------------------------------------------------------------------ the gate

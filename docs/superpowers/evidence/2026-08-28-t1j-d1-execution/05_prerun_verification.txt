@@ -1,0 +1,35 @@
+D1 PRE-RUN VERIFICATION — 2026-08-28T20:01:09Z
+======================================================
+
+--- repository ---
+5eec1171c8ff8ca49119bce4f236bd2b562474d6
+dirty files:        1
+
+--- gates ---
+D1_EXECUTION_AUTHORIZED = True
+L0_EXECUTION_AUTHORIZED = False
+SCREEN_AUTHORIZED = False
+
+--- frozen limits, read from the code ---
+QUERY_CAP            1135
+N_POSITIONS          227
+PER_QUERY_TIMEOUT_S  120
+RUN_DEADLINE_S       5400  (90 min)
+T1J_DEPTHS           (3, 6)  x 2 invocations
+SEED_INTERVAL        (202614000, 202614227)
+
+--- seed block status, every seed ---
+accounted 227/227  exposed 0  retired 0  test_only 0
+registration check: PASSES
+
+--- toolchain, hash-verified ---
+root      /Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1
+source    recorded-default
+jar       /Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/t1j.jar
+jdk_home  /Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/jdk/jdk-17.0.20.1+1/Contents/Home
+verified  5 artifacts hashed
+
+--- run input ---
+d5a3cdfa58844451ba21e0fb23781c6aedbda9ad3c239f1c83ea99c3e3d037e3  docs/superpowers/evidence/2026-08-28-t1j-d1-execution/02_positions.json
+positions 227  distinct seeds 227  distinct digests 203
+expected queries 1135

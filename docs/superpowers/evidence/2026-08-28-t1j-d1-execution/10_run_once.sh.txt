@@ -1,0 +1,19 @@
+#!/bin/sh
+# THE D1 RUN. Once. The CLI is driven as a FRESH SUBPROCESS -- the qualified
+# shape -- with every path supplied explicitly, so `_default_compile` can
+# independently re-resolve the toolchain and refuse if they disagree.
+#
+# The classes directory must NOT exist: the compile step is create-only.
+set -u
+E=docs/superpowers/evidence/2026-08-28-t1j-d1-execution
+
+.venv/bin/python -m scripts.GPU.alphazero.d1_probe \
+    --positions "$E/02_positions.json" \
+    --out       "$E/06_d1_records.json" \
+    --java      "$JAVA" \
+    --jar       "$JAR" \
+    --classes   "$CLASSES" \
+    --ply-cap   280 \
+    --repo      . \
+    > "$E/07_stdout.txt" 2> "$E/08_stderr.txt"
+echo $? > "$E/09_exit.txt"

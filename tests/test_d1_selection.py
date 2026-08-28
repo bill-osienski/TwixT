@@ -207,11 +207,11 @@ def test_the_seed_assignment_is_deterministic(bound):
     assert key(a) == key(b)
 
 
-def test_the_block_is_ACCOUNTED_and_still_unspent():
-    """12.5 made registering part of the EXECUTION authorization, and it has now
-    been given: the block is accounted. It must still be unspent -- accounted is
-    a reservation, while exposed and retired are claims about draws and about the
-    future, and selection draws nothing.
+def test_the_block_is_ACCOUNTED_and_RETIRED_after_the_VOID():
+    """Registered for the execution authorization, then RETIRED when the single
+    authorized run VOIDED. Accounted records the reservation; retired records
+    that it may not be used again. NOT exposed: how many of the 227 were actually
+    drawn is undetermined, and claiming all of them would overstate the record.
 
     Each registry is asserted NON-EMPTY first; a check over an empty collection
     passes vacuously, which would make this test decorative.
@@ -222,8 +222,8 @@ def test_the_block_is_ACCOUNTED_and_still_unspent():
         assert getattr(REF, name), f"vacuous: {name} is empty"
     for seed in range(*SEL.SEED_INTERVAL):
         st = REF.seed_status(seed)
-        assert st["accounted"] and not (st["exposed"] or st["retired"] or st["test_only"]), \
-            (seed, st)
+        assert st["accounted"] and st["retired"], (seed, st)
+        assert not (st["exposed"] or st["test_only"]), (seed, st)
 
 
 def test_the_frozen_rule_retains_the_same_position_in_two_cohorts(selection):

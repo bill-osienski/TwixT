@@ -188,6 +188,34 @@ RETIRED_SEED_INTERVALS = (
                                      # on 2026-08-27, so the block retires whole.
                                      # Unlike the screen's, every seed here was
                                      # also drawn: L0 played all 64.
+    (202614000, 202614227),          # THE D1 BLOCK, retired 2026-08-28 after the
+                                     # single authorized run VOIDED at 3m18s
+                                     # (exit 3, no record written).
+                                     #
+                                     # AT LEAST ONE seed was drawn: the VOID came
+                                     # from _probe_position, which runs after that
+                                     # position's incumbent readout, and building
+                                     # that agent constructs both generators and
+                                     # runs a 400-simulation search.
+                                     #
+                                     # HOW MANY were drawn is UNDETERMINED. The
+                                     # record is written once at the end, so a
+                                     # VOID leaves no per-position trace, and the
+                                     # VOID message names the depth and invocation
+                                     # but not the position. So this is RETIRED
+                                     # and deliberately NOT listed as EXPOSED:
+                                     # claiming 227 draws would assert 226 that
+                                     # may never have happened, which is the
+                                     # overstatement these two lists are kept
+                                     # apart to prevent.
+                                     #
+                                     # Retired WHOLE, drawn and undrawn alike --
+                                     # the same rule the canonical screen's block
+                                     # retired under. A preregistered one-shot
+                                     # schedule was started and did not complete;
+                                     # replaying any part of it would select
+                                     # positions after seeing where it failed.
+                                     # A future D1 needs a FRESH interval.
 )
 
 
