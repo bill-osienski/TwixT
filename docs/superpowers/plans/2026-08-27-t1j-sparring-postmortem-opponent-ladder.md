@@ -596,9 +596,17 @@ cannot later be mistaken for a filtered result.
 
 ### 12.4 Hard query budget
 
-**227 positions. 681 queries — 227 × 3: one incumbent readout, one T1j at
-`mdPly` 3, one T1j at `mdPly` 6.** This is a **hard ceiling fixed before any
-model or JVM load**, not an estimate. If the selection rule yields more, the
+**227 positions. 1,135 queries — 227 × (1 incumbent readout + 2 T1j at
+`mdPly` 3 + 2 T1j at `mdPly` 6)**, i.e. 227 incumbent searches and 908 T1j
+queries. This is a **hard ceiling fixed before any model or JVM load**, not an
+estimate.
+
+> **Revised from 227 × 3 = 681.** The earlier figure allowed one T1j query per
+> `(prefix, depth)`, which made §12.7's cross-process determinism abort
+> **unobservable**: with a single query there is never a second answer to
+> disagree with. An abort condition that cannot fire is not a safeguard. The
+> duplicate invocations are what make that abort a real check, so they are part
+> of the budget rather than an optional extra. If the selection rule yields more, the
 excess is dropped by the frozen order and the drop is reported; the budget is
 never raised to fit the data.
 
@@ -616,6 +624,16 @@ queries even when the scheduled seeds differ):
   227 seeds × 5 derivations)
 - the enumeration is **exhaustive, not sampled**: the widest registered interval
   is 800 seeds, so every prior seed was enumerated individually
+
+**The interval stays at 227 seeds and does not scale with the query count.** There
+is still exactly **one incumbent search/readout per position**, and T1j has **no
+controlled seed at all** — its only stochastic input is the per-process `Zobrist`
+salt, which is unseeded and outside this design's control (§12.6). Duplicating a
+T1j query therefore consumes no seed.
+
+⚠ The 1,135 query ceiling and the 1,135 distinct stream values above are the
+same number **by coincidence** — 227 × 5 derivations and 227 × 5 queries — and are
+unrelated quantities. Neither is derived from the other.
 
 🔴 **This interval is NOT registered.** It appears in no registry tuple. Adding it
 to `ACCOUNTED_SEED_INTERVALS` is part of the D1 execution authorization, not of
@@ -657,14 +675,23 @@ enabled; no rebuilding per query" requires. Each `t1j_adapter.query` call is one
 JVM invocation; that is the adapter's qualified shape and is not a rebuild. T1j
 itself is never modified or rebuilt: its jar is only a classpath entry.
 
-⚠ **A known, accepted, and hereby recorded consequence:** because each query runs
-in a fresh JVM, T1j seeds its `Zobrist` transposition salt from an **unseeded
-`Random` per process**, so the salt differs between the 454 T1j queries this run
-will issue. Nothing in this design controls or observes it. E3a measured 25/25
-identical answers across fresh JVMs, but at **one position and one ply** — that is
-descriptive evidence, not a proof of determinism across these positions. If two
-queries at the same depth from the same prefix ever disagree, that is an
-integrity abort under §12.7, not a result to average.
+⚠ **A known consequence, and the check that makes it observable.** Because each
+query runs in a fresh JVM, T1j seeds its `Zobrist` transposition salt from an
+**unseeded `Random` per process**, so the salt differs between the 908 T1j
+queries this run would issue. Nothing in this design controls it. E3a measured
+25/25 identical answers across fresh JVMs, but at **one position and one ply** —
+descriptive evidence, not proof of determinism across these positions.
+
+So every retained prefix is queried **twice at `mdPly` 3 and twice at `mdPly` 6**,
+as **2 separate `t1j_adapter.query(..., repeats=1)` invocations per depth** —
+2 distinct JVM processes, hence 2 independently drawn Zobrist salts.
+
+🔴 **The same-JVM `repeats>1` mode is PROHIBITED as the cross-process determinism
+check.** `query(repeats=2)` rebuilds the position twice **inside one JVM**, which
+reuses that process's single salt and therefore tests nothing about the very
+variable at issue. Using it here would produce a check that agrees by
+construction — the same "gate that does not bind" failure as issuing one query
+and declaring the comparison passed.
 
 **Captured per position** — §5.2 from our side (chosen move, raw legal-move
 policy, 400-simulation root visit distribution, root value from the
@@ -681,6 +708,12 @@ Abort on the **first** occurrence, no retry, no partial-cohort rescue:
 
 - any E3b binder mismatch of state, legality, history, terminal or postcondition;
 - any T1j query that does not complete its requested depth;
+- **any disagreement between the 2 independent JVM invocations at the same
+  depth from the same prefix**, on *any* of: selected move, legality, requested
+  and completed depth, or the replayed state as parsed by `parse_dump`. This is
+  the cross-process determinism check; it is observable only because §12.4 funds
+  the second invocation. A disagreement is a `VOID`, never a result to average
+  and never a tie to break;
 - any illegal move or null sentinel from either side;
 - any position whose retained prefix does not replay to its recorded digest;
 - any identity mismatch of checkpoint, JAR or JDK component hash;
