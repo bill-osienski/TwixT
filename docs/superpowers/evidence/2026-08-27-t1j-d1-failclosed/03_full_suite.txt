@@ -3,7 +3,7 @@ platform darwin -- Python 3.14.7, pytest-9.0.2, pluggy-1.6.0
 rootdir: /Users/bill/projects/TwixT_Game
 configfile: pytest.ini
 testpaths: tests
-collected 3476 items / 53 deselected / 3423 selected
+collected 3488 items / 53 deselected / 3435 selected
 
 tests/test_a_predrop_trajectory_budget.py .......                        [  0%]
 tests/test_analyzer_closeout_diagnostics.py .....                        [  0%]
@@ -38,7 +38,7 @@ tests/test_atlas_readout_b.py ..............                             [  7%]
 tests/test_atlas_readout_c.py ..............................             [  8%]
 tests/test_atlas_readout_chain.py ...........                            [  8%]
 tests/test_atlas_row_facts.py .........                                  [  8%]
-tests/test_atlas_run.py .....................................            [ 10%]
+tests/test_atlas_run.py .....................................            [  9%]
 tests/test_batch_eval.py ..............                                  [ 10%]
 tests/test_bootstrap_probe_suite.py .......                              [ 10%]
 tests/test_bridge_equivalence.py .........                               [ 10%]
@@ -54,14 +54,14 @@ tests/test_build_v12b_continuation_guardrail_manifest.py .....           [ 12%]
 tests/test_calibration_cli_flags.py ............                         [ 13%]
 tests/test_calibration_loss.py ..................                        [ 13%]
 tests/test_calibration_pool.py ......................................... [ 14%]
-...                                                                      [ 15%]
+...                                                                      [ 14%]
 tests/test_calibration_pool_continuation.py ......................       [ 15%]
 tests/test_canonicalization.py ................                          [ 16%]
 tests/test_cc_optimization.py .....................                      [ 16%]
-tests/test_connectivity_channels.py ........                             [ 17%]
+tests/test_connectivity_channels.py ........                             [ 16%]
 tests/test_connectivity_goal_completion.py .....................         [ 17%]
 tests/test_connectivity_masks.py ......                                  [ 17%]
-tests/test_continuation_extraction.py .........                          [ 18%]
+tests/test_continuation_extraction.py .........                          [ 17%]
 tests/test_conversion_aux_tensors.py .....                               [ 18%]
 tests/test_conversion_cli_config.py ......                               [ 18%]
 tests/test_conversion_eligibility.py ......                              [ 18%]
@@ -74,12 +74,12 @@ tests/test_cpuct_sweep.py ......                                         [ 20%]
 tests/test_curriculum.py ........................                        [ 21%]
 tests/test_d0_postmortem.py ............................................ [ 22%]
 ......                                                                   [ 22%]
-tests/test_d1_probe.py ..................................                [ 23%]
-tests/test_e4_screen_command.py ........................................ [ 25%]
-..................                                                       [ 25%]
+tests/test_d1_probe.py ..............................................    [ 24%]
+tests/test_e4_screen_command.py ........FFF...FFFF...FFFFFF......FFFFFFF [ 25%]
+FF....F...........                                                       [ 25%]
 tests/test_e4_screen_integration.py ......................               [ 26%]
 tests/test_e4_screen_reference.py ...............................        [ 27%]
-tests/test_e4_screen_rules.py ........................                   [ 27%]
+tests/test_e4_screen_rules.py ........................                   [ 28%]
 tests/test_e4_screen_runner.py ......................................... [ 29%]
 ....................................................                     [ 30%]
 tests/test_eval_agent_identity.py ........................               [ 31%]
@@ -93,11 +93,11 @@ tests/test_eval_loss_replay_analysis.py ................................ [ 34%]
 ..........................                                               [ 35%]
 tests/test_eval_loss_replay_analyzer_cli.py .......                      [ 35%]
 tests/test_eval_match_replay.py .....                                    [ 35%]
-tests/test_eval_provenance.py .......                                    [ 35%]
+tests/test_eval_provenance.py .......                                    [ 36%]
 tests/test_eval_raw_nn_position_rows.py ..............                   [ 36%]
-tests/test_eval_readout.py .......................                       [ 36%]
+tests/test_eval_readout.py .......................                       [ 37%]
 tests/test_eval_readout_telemetry.py ......................              [ 37%]
-tests/test_eval_replay.py ..........                                     [ 37%]
+tests/test_eval_replay.py ..........                                     [ 38%]
 tests/test_eval_runner.py ....................                           [ 38%]
 tests/test_eval_runner_parallel.py ...                                   [ 38%]
 tests/test_eval_summary.py ......                                        [ 38%]
@@ -106,10 +106,10 @@ tests/test_fpu_corpus_preflight.py ..........                            [ 39%]
 tests/test_fpu_dev_corpus.py ...................................         [ 40%]
 tests/test_fpu_dev_corpus_v2.py ........................................ [ 41%]
 ........................................................................ [ 43%]
-........................................................................ [ 45%]
-....................................                                     [ 46%]
-tests/test_fpu_dev_reservoir_protocol.py ............................... [ 47%]
-........................................................................ [ 49%]
+........................................................................ [ 46%]
+....................................                                     [ 47%]
+tests/test_fpu_dev_reservoir_protocol.py ............................... [ 48%]
+........................................................................ [ 50%]
 ........................................................................ [ 52%]
 ........................................................................ [ 54%]
 ........................................................................ [ 56%]
@@ -122,7 +122,7 @@ tests/test_fpu_sweep.py ....                                             [ 59%]
 tests/test_fpu_sweep_v16a.py .................                           [ 59%]
 tests/test_fpu_trace_observer.py ...................                     [ 60%]
 tests/test_fpu_v2_repair.py ............................................ [ 61%]
-.............................................                            [ 62%]
+.............................................                            [ 63%]
 tests/test_fpu_value.py ...                                              [ 63%]
 tests/test_frozen_opponent_seam.py .........................             [ 63%]
 tests/test_frozen_opponent_transport.py ................................ [ 64%]
@@ -142,18 +142,18 @@ tests/test_goal_line_trigger_probe_cases.py .............                [ 71%]
 tests/test_goal_line_trigger_probe_cli.py ..........                     [ 71%]
 tests/test_gradient_projection.py .....                                  [ 72%]
 tests/test_inheritance_probe.py .........................                [ 72%]
-tests/test_inheritance_probe_identity.py .......                         [ 72%]
+tests/test_inheritance_probe_identity.py .......                         [ 73%]
 tests/test_inline_probe_observability.py ............................... [ 73%]
 .                                                                        [ 73%]
-tests/test_js_py_tensor_parity.py ..                                     [ 73%]
+tests/test_js_py_tensor_parity.py ..                                     [ 74%]
 tests/test_l0_match.py ................................................. [ 75%]
 ...............................................................          [ 77%]
-tests/test_l0_match_runner.py .......................................... [ 78%]
-...............................                                          [ 79%]
+tests/test_l0_match_runner.py ....................................FFF..F [ 78%]
+...FFFFFF.....FFFFFFFF.........                                          [ 79%]
 tests/test_local_evaluator_compile_default.py ...                        [ 79%]
-tests/test_long_tail_bucket_classifier.py .................              [ 79%]
+tests/test_long_tail_bucket_classifier.py .................              [ 80%]
 tests/test_marathon_termination_diagnostics.py .......................   [ 80%]
-tests/test_mcts.py ............                                          [ 80%]
+tests/test_mcts.py ............                                          [ 81%]
 tests/test_mcts_closeout_selection_tiebreak.py ...                       [ 81%]
 tests/test_mcts_force_root_visits.py .....                               [ 81%]
 tests/test_mcts_forced_root_visit_equivalence.py ..                      [ 81%]
@@ -169,7 +169,7 @@ tests/test_probe_suite_schema.py .ss....                                 [ 83%]
 tests/test_progress_weighted_loss.py ...                                 [ 83%]
 tests/test_readout_preflight.py ...................................      [ 84%]
 tests/test_recovery_retargeting_diagnostics.py ......................... [ 85%]
-...............................................                          [ 86%]
+...............................................                          [ 87%]
 tests/test_replay_buffer_conversion.py ..........                        [ 87%]
 tests/test_replay_warmup.py ...................                          [ 87%]
 tests/test_run_atlas_cli.py ..................                           [ 88%]
@@ -212,6 +212,473 @@ tests/test_verify_value_head_and_final_block_checkpoint.py .......       [ 98%]
 tests/test_verify_value_head_only_checkpoint.py ....                     [ 99%]
 tests/test_warm_prefix_replay.py ................................        [100%]
 
+=================================== FAILURES ===================================
+___________ test_all_seven_preconditions_complete_before_the_refusal ___________
+tests/test_e4_screen_command.py:205: in test_all_seven_preconditions_complete_before_the_refusal
+    C._run_screen(**repo_args(clean_repo, tmp_path),
+scripts/GPU/alphazero/e4_screen_command.py:305: in _run_screen
+    records[name] = checks[name]()
+                    ^^^^^^^^^^^^^^
+scripts/GPU/alphazero/e4_screen_command.py:298: in <lambda>
+    "jdk": lambda: check_jdk(jdk_home),
+                   ^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/e4_screen_command.py:223: in check_jdk
+    raise PreconditionError("jdk", e.message) from None
+E   scripts.GPU.alphazero.e4_screen_command.PreconditionError: [jdk] pinned JDK component missing: bin/java
+______________ test_no_results_file_is_created_while_unauthorized ______________
+tests/test_e4_screen_command.py:216: in test_no_results_file_is_created_while_unauthorized
+    C._run_screen(**repo_args(clean_repo, tmp_path, results_path=str(out)))
+scripts/GPU/alphazero/e4_screen_command.py:305: in _run_screen
+    records[name] = checks[name]()
+                    ^^^^^^^^^^^^^^
+scripts/GPU/alphazero/e4_screen_command.py:298: in <lambda>
+    "jdk": lambda: check_jdk(jdk_home),
+                   ^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/e4_screen_command.py:223: in check_jdk
+    raise PreconditionError("jdk", e.message) from None
+E   scripts.GPU.alphazero.e4_screen_command.PreconditionError: [jdk] pinned JDK component missing: bin/java
+____________ test_no_rng_is_constructed_anywhere_while_unauthorized ____________
+tests/test_e4_screen_command.py:239: in test_no_rng_is_constructed_anywhere_while_unauthorized
+    C._run_screen(**repo_args(clean_repo, tmp_path))
+scripts/GPU/alphazero/e4_screen_command.py:305: in _run_screen
+    records[name] = checks[name]()
+                    ^^^^^^^^^^^^^^
+scripts/GPU/alphazero/e4_screen_command.py:298: in <lambda>
+    "jdk": lambda: check_jdk(jdk_home),
+                   ^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/e4_screen_command.py:223: in check_jdk
+    raise PreconditionError("jdk", e.message) from None
+E   scripts.GPU.alphazero.e4_screen_command.PreconditionError: [jdk] pinned JDK component missing: bin/java
+_________________________ test_a_wrong_jar_is_refused __________________________
+tests/test_e4_screen_command.py:281: in test_a_wrong_jar_is_refused
+    assert e.value.which == "jar" and trace == ["plan", "schedule", "repository", "jdk"]
+E   AssertionError: assert ('jdk' == 'jar'
+E     
+E     - jar
+E     + jdk)
+___________ test_a_wrong_checkpoint_is_refused_without_being_loaded ____________
+tests/test_e4_screen_command.py:290: in test_a_wrong_checkpoint_is_refused_without_being_loaded
+    assert e.value.which == "checkpoint"
+E   AssertionError: assert 'jdk' == 'checkpoint'
+E     
+E     - checkpoint
+E     + jdk
+____________ test_an_existing_output_path_is_refused_and_left_alone ____________
+tests/test_e4_screen_command.py:300: in test_an_existing_output_path_is_refused_and_left_alone
+    assert e.value.which == "output_path"
+E   AssertionError: assert 'jdk' == 'output_path'
+E     
+E     - output_path
+E     + jdk
+__________________ test_a_missing_output_directory_is_refused __________________
+tests/test_e4_screen_command.py:309: in test_a_missing_output_directory_is_refused
+    assert e.value.which == "output_path"
+E   AssertionError: assert 'jdk' == 'output_path'
+E     
+E     - output_path
+E     + jdk
+_________ test_the_authorization_gate_still_exits_5_in_a_fresh_process _________
+tests/test_e4_screen_command.py:382: in test_the_authorization_gate_still_exits_5_in_a_fresh_process
+    assert r.returncode == C.EXIT_UNAUTHORIZED, r.stderr[:300]
+E   AssertionError: PRECONDITION REFUSED: [jdk] pinned JDK component missing: bin/java
+E     
+E   assert 2 == 5
+E    +  where 2 = CompletedProcess(args=['/Users/bill/projects/TwixT_Game/.venv/bin/python', '-c', 'import sys;from scripts.GPU.alphazer....safetensors'], returncode=2, stdout='', stderr='PRECONDITION REFUSED: [jdk] pinned JDK component missing: bin/java\n').returncode
+E    +  and   5 = C.EXIT_UNAUTHORIZED
+____________ test_no_environment_variable_enables_the_screen[env0] _____________
+tests/test_e4_screen_command.py:409: in test_no_environment_variable_enables_the_screen
+    assert gate_env.returncode == gate_base.returncode == C.EXIT_UNAUTHORIZED, (env, gate_env.stderr[:200])
+E   AssertionError: ({'SCREEN_AUTHORIZED': '1'}, 'PRECONDITION REFUSED: [jdk] pinned JDK component missing: bin/java
+E     ')
+E   assert 2 == 5
+E    +  where 2 = CompletedProcess(args=['/Users/bill/projects/TwixT_Game/.venv/bin/python', '-c', 'import sys;from scripts.GPU.alphazer....safetensors'], returncode=2, stdout='', stderr='PRECONDITION REFUSED: [jdk] pinned JDK component missing: bin/java\n').returncode
+E    +  and   5 = C.EXIT_UNAUTHORIZED
+____________ test_no_environment_variable_enables_the_screen[env1] _____________
+tests/test_e4_screen_command.py:409: in test_no_environment_variable_enables_the_screen
+    assert gate_env.returncode == gate_base.returncode == C.EXIT_UNAUTHORIZED, (env, gate_env.stderr[:200])
+E   AssertionError: ({'E4_SCREEN_AUTHORIZED': 'true'}, 'PRECONDITION REFUSED: [jdk] pinned JDK component missing: bin/java
+E     ')
+E   assert 2 == 5
+E    +  where 2 = CompletedProcess(args=['/Users/bill/projects/TwixT_Game/.venv/bin/python', '-c', 'import sys;from scripts.GPU.alphazer....safetensors'], returncode=2, stdout='', stderr='PRECONDITION REFUSED: [jdk] pinned JDK component missing: bin/java\n').returncode
+E    +  and   5 = C.EXIT_UNAUTHORIZED
+____________ test_no_environment_variable_enables_the_screen[env2] _____________
+tests/test_e4_screen_command.py:409: in test_no_environment_variable_enables_the_screen
+    assert gate_env.returncode == gate_base.returncode == C.EXIT_UNAUTHORIZED, (env, gate_env.stderr[:200])
+E   AssertionError: ({'AUTHORIZED': 'yes'}, 'PRECONDITION REFUSED: [jdk] pinned JDK component missing: bin/java
+E     ')
+E   assert 2 == 5
+E    +  where 2 = CompletedProcess(args=['/Users/bill/projects/TwixT_Game/.venv/bin/python', '-c', 'import sys;from scripts.GPU.alphazer....safetensors'], returncode=2, stdout='', stderr='PRECONDITION REFUSED: [jdk] pinned JDK component missing: bin/java\n').returncode
+E    +  and   5 = C.EXIT_UNAUTHORIZED
+____________ test_no_environment_variable_enables_the_screen[env3] _____________
+tests/test_e4_screen_command.py:409: in test_no_environment_variable_enables_the_screen
+    assert gate_env.returncode == gate_base.returncode == C.EXIT_UNAUTHORIZED, (env, gate_env.stderr[:200])
+E   AssertionError: ({'FORCE': '1'}, 'PRECONDITION REFUSED: [jdk] pinned JDK component missing: bin/java
+E     ')
+E   assert 2 == 5
+E    +  where 2 = CompletedProcess(args=['/Users/bill/projects/TwixT_Game/.venv/bin/python', '-c', 'import sys;from scripts.GPU.alphazer....safetensors'], returncode=2, stdout='', stderr='PRECONDITION REFUSED: [jdk] pinned JDK component missing: bin/java\n').returncode
+E    +  and   5 = C.EXIT_UNAUTHORIZED
+____________ test_no_environment_variable_enables_the_screen[env4] _____________
+tests/test_e4_screen_command.py:409: in test_no_environment_variable_enables_the_screen
+    assert gate_env.returncode == gate_base.returncode == C.EXIT_UNAUTHORIZED, (env, gate_env.stderr[:200])
+E   AssertionError: ({'PYTHONOPTIMIZE': '1'}, 'PRECONDITION REFUSED: [jdk] pinned JDK component missing: bin/java
+E     ')
+E   assert 2 == 5
+E    +  where 2 = CompletedProcess(args=['/Users/bill/projects/TwixT_Game/.venv/bin/python', '-c', 'import sys;from scripts.GPU.alphazer....safetensors'], returncode=2, stdout='', stderr='PRECONDITION REFUSED: [jdk] pinned JDK component missing: bin/java\n').returncode
+E    +  and   5 = C.EXIT_UNAUTHORIZED
+________________ test_the_scheduled_seed_block_is_never_touched ________________
+tests/test_e4_screen_command.py:440: in test_the_scheduled_seed_block_is_never_touched
+    C._run_screen(**repo_args(clean_repo, tmp_path))
+scripts/GPU/alphazero/e4_screen_command.py:305: in _run_screen
+    records[name] = checks[name]()
+                    ^^^^^^^^^^^^^^
+scripts/GPU/alphazero/e4_screen_command.py:298: in <lambda>
+    "jdk": lambda: check_jdk(jdk_home),
+                   ^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/e4_screen_command.py:223: in check_jdk
+    raise PreconditionError("jdk", e.message) from None
+E   scripts.GPU.alphazero.e4_screen_command.PreconditionError: [jdk] pinned JDK component missing: bin/java
+_________ test_the_authorized_path_hands_the_harness_the_canonical_32 __________
+tests/test_e4_screen_command.py:495: in test_the_authorized_path_hands_the_harness_the_canonical_32
+    rc, cap, sentinel, compiled, trace = authorized_call(tmp_path, clean_repo)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_e4_screen_command.py:471: in authorized_call
+    "jdk": C.check_jdk(JDK),
+           ^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/e4_screen_command.py:223: in check_jdk
+    raise PreconditionError("jdk", e.message) from None
+E   scripts.GPU.alphazero.e4_screen_command.PreconditionError: [jdk] pinned JDK component missing: bin/java
+________ test_the_authorized_path_supplies_the_qualified_collaborators _________
+tests/test_e4_screen_command.py:507: in test_the_authorized_path_supplies_the_qualified_collaborators
+    _, cap, sentinel, compiled, _ = authorized_call(tmp_path, clean_repo)
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_e4_screen_command.py:471: in authorized_call
+    "jdk": C.check_jdk(JDK),
+           ^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/e4_screen_command.py:223: in check_jdk
+    raise PreconditionError("jdk", e.message) from None
+E   scripts.GPU.alphazero.e4_screen_command.PreconditionError: [jdk] pinned JDK component missing: bin/java
+_________________ test_the_identity_records_reach_the_harness __________________
+tests/test_e4_screen_command.py:523: in test_the_identity_records_reach_the_harness
+    _, cap, _, _, _ = authorized_call(tmp_path, clean_repo)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_e4_screen_command.py:471: in authorized_call
+    "jdk": C.check_jdk(JDK),
+           ^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/e4_screen_command.py:223: in check_jdk
+    raise PreconditionError("jdk", e.message) from None
+E   scripts.GPU.alphazero.e4_screen_command.PreconditionError: [jdk] pinned JDK component missing: bin/java
+_____________ test_the_class_directory_is_run_unique_and_exclusive _____________
+tests/test_e4_screen_command.py:534: in test_the_class_directory_is_run_unique_and_exclusive
+    _, cap, _, _, _ = authorized_call(tmp_path, clean_repo)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_e4_screen_command.py:471: in authorized_call
+    "jdk": C.check_jdk(JDK),
+           ^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/e4_screen_command.py:223: in check_jdk
+    raise PreconditionError("jdk", e.message) from None
+E   scripts.GPU.alphazero.e4_screen_command.PreconditionError: [jdk] pinned JDK component missing: bin/java
+_ test_the_authorized_path_uses_the_screen_settings_not_a_qualification_budget _
+tests/test_e4_screen_command.py:544: in test_the_authorized_path_uses_the_screen_settings_not_a_qualification_budget
+    _, cap, _, _, _ = authorized_call(tmp_path, clean_repo)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_e4_screen_command.py:471: in authorized_call
+    "jdk": C.check_jdk(JDK),
+           ^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/e4_screen_command.py:223: in check_jdk
+    raise PreconditionError("jdk", e.message) from None
+E   scripts.GPU.alphazero.e4_screen_command.PreconditionError: [jdk] pinned JDK component missing: bin/java
+___________ test_the_authorized_path_lets_the_harness_own_recording ____________
+tests/test_e4_screen_command.py:552: in test_the_authorized_path_lets_the_harness_own_recording
+    _, cap, _, _, _ = authorized_call(tmp_path, clean_repo)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_e4_screen_command.py:471: in authorized_call
+    "jdk": C.check_jdk(JDK),
+           ^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/e4_screen_command.py:223: in check_jdk
+    raise PreconditionError("jdk", e.message) from None
+E   scripts.GPU.alphazero.e4_screen_command.PreconditionError: [jdk] pinned JDK component missing: bin/java
+___________________ test_the_authorized_path_creates_no_rng ____________________
+tests/test_e4_screen_command.py:568: in test_the_authorized_path_creates_no_rng
+    authorized_call(tmp_path, clean_repo)
+tests/test_e4_screen_command.py:471: in authorized_call
+    "jdk": C.check_jdk(JDK),
+           ^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/e4_screen_command.py:223: in check_jdk
+    raise PreconditionError("jdk", e.message) from None
+E   scripts.GPU.alphazero.e4_screen_command.PreconditionError: [jdk] pinned JDK component missing: bin/java
+______________ test_the_authorized_path_records_its_wiring_order _______________
+tests/test_e4_screen_command.py:574: in test_the_authorized_path_records_its_wiring_order
+    _, cap, _, _, trace = authorized_call(tmp_path, clean_repo)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_e4_screen_command.py:471: in authorized_call
+    "jdk": C.check_jdk(JDK),
+           ^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/e4_screen_command.py:223: in check_jdk
+    raise PreconditionError("jdk", e.message) from None
+E   scripts.GPU.alphazero.e4_screen_command.PreconditionError: [jdk] pinned JDK component missing: bin/java
+__________ test_the_authorized_path_is_unreachable_while_unauthorized __________
+tests/test_e4_screen_command.py:594: in test_the_authorized_path_is_unreachable_while_unauthorized
+    C._run_screen(**repo_args(clean_repo, tmp_path))
+scripts/GPU/alphazero/e4_screen_command.py:305: in _run_screen
+    records[name] = checks[name]()
+                    ^^^^^^^^^^^^^^
+scripts/GPU/alphazero/e4_screen_command.py:298: in <lambda>
+    "jdk": lambda: check_jdk(jdk_home),
+                   ^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/e4_screen_command.py:223: in check_jdk
+    raise PreconditionError("jdk", e.message) from None
+E   scripts.GPU.alphazero.e4_screen_command.PreconditionError: [jdk] pinned JDK component missing: bin/java
+___________ test_all_seven_preconditions_complete_before_the_refusal ___________
+tests/test_l0_match_runner.py:622: in test_all_seven_preconditions_complete_before_the_refusal
+    C._run_match(**args(clean_repo, tmp_path), _trace=trace,
+scripts/GPU/alphazero/l0_match_command.py:197: in _run_match
+    records[name] = checks[name]()
+                    ^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:190: in <lambda>
+    "jdk": lambda: check_jdk(jdk_home),
+                   ^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:149: in check_jdk
+    return _delegate("jdk", SCREEN_CMD.check_jdk, jdk_home)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:140: in _delegate
+    raise PreconditionError(which, e.message) from None
+E   scripts.GPU.alphazero.l0_match_command.PreconditionError: [jdk] pinned JDK component missing: bin/java
+_______ test_no_results_file_or_class_dir_is_created_while_unauthorized ________
+tests/test_l0_match_runner.py:635: in test_no_results_file_or_class_dir_is_created_while_unauthorized
+    C._run_match(**args(clean_repo, tmp_path, results_path=str(out)))
+scripts/GPU/alphazero/l0_match_command.py:197: in _run_match
+    records[name] = checks[name]()
+                    ^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:190: in <lambda>
+    "jdk": lambda: check_jdk(jdk_home),
+                   ^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:149: in check_jdk
+    return _delegate("jdk", SCREEN_CMD.check_jdk, jdk_home)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:140: in _delegate
+    raise PreconditionError(which, e.message) from None
+E   scripts.GPU.alphazero.l0_match_command.PreconditionError: [jdk] pinned JDK component missing: bin/java
+____________ test_no_rng_is_constructed_anywhere_while_unauthorized ____________
+tests/test_l0_match_runner.py:652: in test_no_rng_is_constructed_anywhere_while_unauthorized
+    C._run_match(**args(clean_repo, tmp_path))
+scripts/GPU/alphazero/l0_match_command.py:197: in _run_match
+    records[name] = checks[name]()
+                    ^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:190: in <lambda>
+    "jdk": lambda: check_jdk(jdk_home),
+                   ^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:149: in check_jdk
+    return _delegate("jdk", SCREEN_CMD.check_jdk, jdk_home)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:140: in _delegate
+    raise PreconditionError(which, e.message) from None
+E   scripts.GPU.alphazero.l0_match_command.PreconditionError: [jdk] pinned JDK component missing: bin/java
+__ test_each_precondition_is_immediately_fatal_in_order[over2-jar-completed2] __
+tests/test_l0_match_runner.py:666: in test_each_precondition_is_immediately_fatal_in_order
+    assert e.value.which == which
+E   AssertionError: assert 'jdk' == 'jar'
+E     
+E     - jar
+E     + jdk
+_________ test_the_authorization_gate_still_exits_5_in_a_fresh_process _________
+tests/test_l0_match_runner.py:752: in test_the_authorization_gate_still_exits_5_in_a_fresh_process
+    assert r.returncode == C.EXIT_UNAUTHORIZED, r.stderr[:300]
+E   AssertionError: PRECONDITION REFUSED: [jdk] pinned JDK component missing: bin/java
+E     
+E   assert 2 == 5
+E    +  where 2 = CompletedProcess(args=['/Users/bill/projects/TwixT_Game/.venv/bin/python', '-c', 'import sys;from scripts.GPU.alphazer....safetensors'], returncode=2, stdout='', stderr='PRECONDITION REFUSED: [jdk] pinned JDK component missing: bin/java\n').returncode
+E    +  and   5 = C.EXIT_UNAUTHORIZED
+_____________ test_no_environment_variable_enables_the_match[env0] _____________
+tests/test_l0_match_runner.py:779: in test_no_environment_variable_enables_the_match
+    assert genv.returncode == gbase.returncode == C.EXIT_UNAUTHORIZED, (env, genv.stderr[:200])
+E   AssertionError: ({'L0_EXECUTION_AUTHORIZED': '1'}, 'PRECONDITION REFUSED: [jdk] pinned JDK component missing: bin/java
+E     ')
+E   assert 2 == 5
+E    +  where 2 = CompletedProcess(args=['/Users/bill/projects/TwixT_Game/.venv/bin/python', '-c', 'import sys;from scripts.GPU.alphazer....safetensors'], returncode=2, stdout='', stderr='PRECONDITION REFUSED: [jdk] pinned JDK component missing: bin/java\n').returncode
+E    +  and   5 = C.EXIT_UNAUTHORIZED
+_____________ test_no_environment_variable_enables_the_match[env1] _____________
+tests/test_l0_match_runner.py:779: in test_no_environment_variable_enables_the_match
+    assert genv.returncode == gbase.returncode == C.EXIT_UNAUTHORIZED, (env, genv.stderr[:200])
+E   AssertionError: ({'AUTHORIZED': 'yes'}, 'PRECONDITION REFUSED: [jdk] pinned JDK component missing: bin/java
+E     ')
+E   assert 2 == 5
+E    +  where 2 = CompletedProcess(args=['/Users/bill/projects/TwixT_Game/.venv/bin/python', '-c', 'import sys;from scripts.GPU.alphazer....safetensors'], returncode=2, stdout='', stderr='PRECONDITION REFUSED: [jdk] pinned JDK component missing: bin/java\n').returncode
+E    +  and   5 = C.EXIT_UNAUTHORIZED
+_____________ test_no_environment_variable_enables_the_match[env2] _____________
+tests/test_l0_match_runner.py:779: in test_no_environment_variable_enables_the_match
+    assert genv.returncode == gbase.returncode == C.EXIT_UNAUTHORIZED, (env, genv.stderr[:200])
+E   AssertionError: ({'FORCE': '1'}, 'PRECONDITION REFUSED: [jdk] pinned JDK component missing: bin/java
+E     ')
+E   assert 2 == 5
+E    +  where 2 = CompletedProcess(args=['/Users/bill/projects/TwixT_Game/.venv/bin/python', '-c', 'import sys;from scripts.GPU.alphazer....safetensors'], returncode=2, stdout='', stderr='PRECONDITION REFUSED: [jdk] pinned JDK component missing: bin/java\n').returncode
+E    +  and   5 = C.EXIT_UNAUTHORIZED
+_____________ test_no_environment_variable_enables_the_match[env3] _____________
+tests/test_l0_match_runner.py:779: in test_no_environment_variable_enables_the_match
+    assert genv.returncode == gbase.returncode == C.EXIT_UNAUTHORIZED, (env, genv.stderr[:200])
+E   AssertionError: ({'SCREEN_AUTHORIZED': '1'}, 'PRECONDITION REFUSED: [jdk] pinned JDK component missing: bin/java
+E     ')
+E   assert 2 == 5
+E    +  where 2 = CompletedProcess(args=['/Users/bill/projects/TwixT_Game/.venv/bin/python', '-c', 'import sys;from scripts.GPU.alphazer....safetensors'], returncode=2, stdout='', stderr='PRECONDITION REFUSED: [jdk] pinned JDK component missing: bin/java\n').returncode
+E    +  and   5 = C.EXIT_UNAUTHORIZED
+_____________ test_no_environment_variable_enables_the_match[env4] _____________
+tests/test_l0_match_runner.py:779: in test_no_environment_variable_enables_the_match
+    assert genv.returncode == gbase.returncode == C.EXIT_UNAUTHORIZED, (env, genv.stderr[:200])
+E   AssertionError: ({'PYTHONOPTIMIZE': '1'}, 'PRECONDITION REFUSED: [jdk] pinned JDK component missing: bin/java
+E     ')
+E   assert 2 == 5
+E    +  where 2 = CompletedProcess(args=['/Users/bill/projects/TwixT_Game/.venv/bin/python', '-c', 'import sys;from scripts.GPU.alphazer....safetensors'], returncode=2, stdout='', stderr='PRECONDITION REFUSED: [jdk] pinned JDK component missing: bin/java\n').returncode
+E    +  and   5 = C.EXIT_UNAUTHORIZED
+____________ test_the_enabled_path_hands_the_harness_the_frozen_64 _____________
+tests/test_l0_match_runner.py:840: in test_the_enabled_path_hands_the_harness_the_frozen_64
+    rc, cap, sentinel, _ = enabled(tmp_path, clean_repo, monkeypatch)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_l0_match_runner.py:834: in enabled
+    rc = C._run_match(**kw)
+         ^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:197: in _run_match
+    records[name] = checks[name]()
+                    ^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:190: in <lambda>
+    "jdk": lambda: check_jdk(jdk_home),
+                   ^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:149: in check_jdk
+    return _delegate("jdk", SCREEN_CMD.check_jdk, jdk_home)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:140: in _delegate
+    raise PreconditionError(which, e.message) from None
+E   scripts.GPU.alphazero.l0_match_command.PreconditionError: [jdk] pinned JDK component missing: bin/java
+_________ test_the_enabled_path_uses_the_frozen_settings_not_a_budget __________
+tests/test_l0_match_runner.py:852: in test_the_enabled_path_uses_the_frozen_settings_not_a_budget
+    _, cap, _, _ = enabled(tmp_path, clean_repo, monkeypatch)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_l0_match_runner.py:834: in enabled
+    rc = C._run_match(**kw)
+         ^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:197: in _run_match
+    records[name] = checks[name]()
+                    ^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:190: in <lambda>
+    "jdk": lambda: check_jdk(jdk_home),
+                   ^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:149: in check_jdk
+    return _delegate("jdk", SCREEN_CMD.check_jdk, jdk_home)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:140: in _delegate
+    raise PreconditionError(which, e.message) from None
+E   scripts.GPU.alphazero.l0_match_command.PreconditionError: [jdk] pinned JDK component missing: bin/java
+_____________ test_the_enabled_path_passes_the_verified_identities _____________
+tests/test_l0_match_runner.py:861: in test_the_enabled_path_passes_the_verified_identities
+    _, cap, _, _ = enabled(tmp_path, clean_repo, monkeypatch)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_l0_match_runner.py:834: in enabled
+    rc = C._run_match(**kw)
+         ^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:197: in _run_match
+    records[name] = checks[name]()
+                    ^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:190: in <lambda>
+    "jdk": lambda: check_jdk(jdk_home),
+                   ^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:149: in check_jdk
+    return _delegate("jdk", SCREEN_CMD.check_jdk, jdk_home)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:140: in _delegate
+    raise PreconditionError(which, e.message) from None
+E   scripts.GPU.alphazero.l0_match_command.PreconditionError: [jdk] pinned JDK component missing: bin/java
+________ test_the_enabled_path_setup_builds_the_qualified_collaborators ________
+tests/test_l0_match_runner.py:883: in test_the_enabled_path_setup_builds_the_qualified_collaborators
+    rc, cap, sentinel, compiled = enabled(tmp_path, clean_repo, monkeypatch, _trace=trace)
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_l0_match_runner.py:834: in enabled
+    rc = C._run_match(**kw)
+         ^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:197: in _run_match
+    records[name] = checks[name]()
+                    ^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:190: in <lambda>
+    "jdk": lambda: check_jdk(jdk_home),
+                   ^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:149: in check_jdk
+    return _delegate("jdk", SCREEN_CMD.check_jdk, jdk_home)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:140: in _delegate
+    raise PreconditionError(which, e.message) from None
+E   scripts.GPU.alphazero.l0_match_command.PreconditionError: [jdk] pinned JDK component missing: bin/java
+________ test_the_enabled_path_builds_the_REAL_state_factory_and_binder ________
+tests/test_l0_match_runner.py:920: in test_the_enabled_path_builds_the_REAL_state_factory_and_binder
+    rc, cap, sentinel, _ = enabled(tmp_path, clean_repo, monkeypatch,
+tests/test_l0_match_runner.py:834: in enabled
+    rc = C._run_match(**kw)
+         ^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:197: in _run_match
+    records[name] = checks[name]()
+                    ^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:190: in <lambda>
+    "jdk": lambda: check_jdk(jdk_home),
+                   ^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:149: in check_jdk
+    return _delegate("jdk", SCREEN_CMD.check_jdk, jdk_home)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:140: in _delegate
+    raise PreconditionError(which, e.message) from None
+E   scripts.GPU.alphazero.l0_match_command.PreconditionError: [jdk] pinned JDK component missing: bin/java
+_______ test_the_enabled_path_setup_refuses_an_existing_class_directory ________
+tests/test_l0_match_runner.py:937: in test_the_enabled_path_setup_refuses_an_existing_class_directory
+    rc, cap, _, _ = enabled(tmp_path, clean_repo, monkeypatch)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_l0_match_runner.py:834: in enabled
+    rc = C._run_match(**kw)
+         ^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:197: in _run_match
+    records[name] = checks[name]()
+                    ^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:190: in <lambda>
+    "jdk": lambda: check_jdk(jdk_home),
+                   ^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:149: in check_jdk
+    return _delegate("jdk", SCREEN_CMD.check_jdk, jdk_home)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:140: in _delegate
+    raise PreconditionError(which, e.message) from None
+E   scripts.GPU.alphazero.l0_match_command.PreconditionError: [jdk] pinned JDK component missing: bin/java
+___________________ test_the_enabled_path_constructs_no_rng ____________________
+tests/test_l0_match_runner.py:955: in test_the_enabled_path_constructs_no_rng
+    rc, cap, _, _ = enabled(tmp_path, clean_repo, monkeypatch)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_l0_match_runner.py:834: in enabled
+    rc = C._run_match(**kw)
+         ^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:197: in _run_match
+    records[name] = checks[name]()
+                    ^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:190: in <lambda>
+    "jdk": lambda: check_jdk(jdk_home),
+                   ^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:149: in check_jdk
+    return _delegate("jdk", SCREEN_CMD.check_jdk, jdk_home)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:140: in _delegate
+    raise PreconditionError(which, e.message) from None
+E   scripts.GPU.alphazero.l0_match_command.PreconditionError: [jdk] pinned JDK component missing: bin/java
+_______________ test_the_enabled_path_touches_no_scheduled_seed ________________
+tests/test_l0_match_runner.py:969: in test_the_enabled_path_touches_no_scheduled_seed
+    rc, cap, _, _ = enabled(tmp_path, clean_repo, monkeypatch)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_l0_match_runner.py:834: in enabled
+    rc = C._run_match(**kw)
+         ^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:197: in _run_match
+    records[name] = checks[name]()
+                    ^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:190: in <lambda>
+    "jdk": lambda: check_jdk(jdk_home),
+                   ^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:149: in check_jdk
+    return _delegate("jdk", SCREEN_CMD.check_jdk, jdk_home)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/l0_match_command.py:140: in _delegate
+    raise PreconditionError(which, e.message) from None
+E   scripts.GPU.alphazero.l0_match_command.PreconditionError: [jdk] pinned JDK component missing: bin/java
 =============================== warnings summary ===============================
 tests/test_frozen_opponent_transport.py::test_either_model_failure_fails_the_run_closed[learner]
   /Users/bill/projects/TwixT_Game/.venv/lib/python3.14/site-packages/_pytest/threadexception.py:58: PytestUnhandledThreadExceptionWarning: Exception in thread Thread-5 (run_forever)
@@ -324,4 +791,46 @@ tests/test_onnx_export.py::test_move_order_invariance
     return cls.__new__(cls, *args)
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-==== 3419 passed, 4 skipped, 53 deselected, 8 warnings in 670.93s (0:11:10) ====
+=========================== short test summary info ============================
+FAILED tests/test_e4_screen_command.py::test_all_seven_preconditions_complete_before_the_refusal
+FAILED tests/test_e4_screen_command.py::test_no_results_file_is_created_while_unauthorized
+FAILED tests/test_e4_screen_command.py::test_no_rng_is_constructed_anywhere_while_unauthorized
+FAILED tests/test_e4_screen_command.py::test_a_wrong_jar_is_refused - Asserti...
+FAILED tests/test_e4_screen_command.py::test_a_wrong_checkpoint_is_refused_without_being_loaded
+FAILED tests/test_e4_screen_command.py::test_an_existing_output_path_is_refused_and_left_alone
+FAILED tests/test_e4_screen_command.py::test_a_missing_output_directory_is_refused
+FAILED tests/test_e4_screen_command.py::test_the_authorization_gate_still_exits_5_in_a_fresh_process
+FAILED tests/test_e4_screen_command.py::test_no_environment_variable_enables_the_screen[env0]
+FAILED tests/test_e4_screen_command.py::test_no_environment_variable_enables_the_screen[env1]
+FAILED tests/test_e4_screen_command.py::test_no_environment_variable_enables_the_screen[env2]
+FAILED tests/test_e4_screen_command.py::test_no_environment_variable_enables_the_screen[env3]
+FAILED tests/test_e4_screen_command.py::test_no_environment_variable_enables_the_screen[env4]
+FAILED tests/test_e4_screen_command.py::test_the_scheduled_seed_block_is_never_touched
+FAILED tests/test_e4_screen_command.py::test_the_authorized_path_hands_the_harness_the_canonical_32
+FAILED tests/test_e4_screen_command.py::test_the_authorized_path_supplies_the_qualified_collaborators
+FAILED tests/test_e4_screen_command.py::test_the_identity_records_reach_the_harness
+FAILED tests/test_e4_screen_command.py::test_the_class_directory_is_run_unique_and_exclusive
+FAILED tests/test_e4_screen_command.py::test_the_authorized_path_uses_the_screen_settings_not_a_qualification_budget
+FAILED tests/test_e4_screen_command.py::test_the_authorized_path_lets_the_harness_own_recording
+FAILED tests/test_e4_screen_command.py::test_the_authorized_path_creates_no_rng
+FAILED tests/test_e4_screen_command.py::test_the_authorized_path_records_its_wiring_order
+FAILED tests/test_e4_screen_command.py::test_the_authorized_path_is_unreachable_while_unauthorized
+FAILED tests/test_l0_match_runner.py::test_all_seven_preconditions_complete_before_the_refusal
+FAILED tests/test_l0_match_runner.py::test_no_results_file_or_class_dir_is_created_while_unauthorized
+FAILED tests/test_l0_match_runner.py::test_no_rng_is_constructed_anywhere_while_unauthorized
+FAILED tests/test_l0_match_runner.py::test_each_precondition_is_immediately_fatal_in_order[over2-jar-completed2]
+FAILED tests/test_l0_match_runner.py::test_the_authorization_gate_still_exits_5_in_a_fresh_process
+FAILED tests/test_l0_match_runner.py::test_no_environment_variable_enables_the_match[env0]
+FAILED tests/test_l0_match_runner.py::test_no_environment_variable_enables_the_match[env1]
+FAILED tests/test_l0_match_runner.py::test_no_environment_variable_enables_the_match[env2]
+FAILED tests/test_l0_match_runner.py::test_no_environment_variable_enables_the_match[env3]
+FAILED tests/test_l0_match_runner.py::test_no_environment_variable_enables_the_match[env4]
+FAILED tests/test_l0_match_runner.py::test_the_enabled_path_hands_the_harness_the_frozen_64
+FAILED tests/test_l0_match_runner.py::test_the_enabled_path_uses_the_frozen_settings_not_a_budget
+FAILED tests/test_l0_match_runner.py::test_the_enabled_path_passes_the_verified_identities
+FAILED tests/test_l0_match_runner.py::test_the_enabled_path_setup_builds_the_qualified_collaborators
+FAILED tests/test_l0_match_runner.py::test_the_enabled_path_builds_the_REAL_state_factory_and_binder
+FAILED tests/test_l0_match_runner.py::test_the_enabled_path_setup_refuses_an_existing_class_directory
+FAILED tests/test_l0_match_runner.py::test_the_enabled_path_constructs_no_rng
+FAILED tests/test_l0_match_runner.py::test_the_enabled_path_touches_no_scheduled_seed
+= 41 failed, 3390 passed, 4 skipped, 53 deselected, 8 warnings in 581.71s (0:09:41) =

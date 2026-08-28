@@ -24,10 +24,7 @@ DEFECTS = [
      "INVOCATIONS_PER_DEPTH = 2", "INVOCATIONS_PER_DEPTH = 1",
      "test_each_depth_issues_two_separate_query_mode_invocations"),
     ("deadline started AFTER compilation",
-     "    deadline = (deadline or Deadline()).start()\n    budget = budget or QueryBudget()\n"
-     "    compile_fn = _compile if _compile is not None else _default_compile\n\n    compile_fn(deadline)",
-     "    deadline = (deadline or Deadline())\n    budget = budget or QueryBudget()\n"
-     "    compile_fn = _compile if _compile is not None else _default_compile\n\n"
+     "    deadline.start()\n    compile_fn(deadline)",
      "    compile_fn(deadline)\n    deadline.start()",
      "test_the_deadline_starts_before_helper_compilation"),
     ("wall-clock limit widened",
@@ -50,6 +47,36 @@ DEFECTS = [
     ("gate flipped open",
      "D1_EXECUTION_AUTHORIZED = False", "D1_EXECUTION_AUTHORIZED = True",
      "test_the_d1_gate_is_false_as_published"),
+    # ---- round 2: the four guards that did not bind
+    ("public runner ungated (CLI-only gate)",
+     "    if not D1_EXECUTION_AUTHORIZED:\n        raise D1Error(\n            \"D1 execution is UNAUTHORIZED. The CLI gate",
+     "    if False:\n        raise D1Error(\n            \"D1 execution is UNAUTHORIZED. The CLI gate",
+     "test_run_d1_refuses_directly_while_the_gate_is_shut_and_makes_no_calls"),
+    ("null-sentinel reply accepted",
+     "    if rec.null_sentinel or rec.move is None:", "    if False:",
+     "test_two_identical_invalid_replies_are_void[kw2-null sentinel]"),
+    ("illegal reply accepted",
+     "    if not rec.legal:", "    if False:",
+     "test_two_identical_invalid_replies_are_void[kw1-illegal]"),
+    ("incomplete search accepted",
+     "    if not rec.completed:", "    if False:",
+     "test_two_identical_invalid_replies_are_void[kw0-did not complete]"),
+    ("wrong completed depth accepted",
+     "    if rec.requested_depth != depth or rec.completed_depth != depth:", "    if False:",
+     "test_two_identical_invalid_replies_are_void[kw3-completed depth]"),
+    ("missing dump accepted",
+     "    if not dumps:", "    if False:",
+     "test_two_empty_dumps_are_void_not_equal"),
+    ("dump for a different position accepted",
+     "    if dumps[-1].ply != n_moves:", "    if False:",
+     "test_a_dump_whose_final_ply_disagrees_with_the_prefix_is_void"),
+    ("outer supervisor never armed",
+     "    signal.setitimer(signal.ITIMER_REAL, deadline.limit_s)",
+     "    signal.setitimer(signal.ITIMER_REAL, 0)",
+     "test_a_blocking_stage_is_terminated_by_an_outer_supervisor"),
+    ("probing made public again (ungated execution surface)",
+     "_probe_position", "probe_position",
+     "test_no_public_callable_can_execute_without_reading_the_gate"),
 ]
 
 def purge():
@@ -60,8 +87,8 @@ ok = bad = 0
 try:
     for name, old, new, test in DEFECTS:
         n = ORIGINAL.count(old)
-        if n != 1:
-            print(f"  SKIP  {name}: anchor matched {n} times"); bad += 1; continue
+        if n != 1 and old != "_probe_position":
+            print(f"  🔴 STALE CONTROL — DID NOT RUN  {name}: anchor matched {n} times"); bad += 1; continue
         SRC.write_text(ORIGINAL.replace(old, new)); purge()
         r = subprocess.run(
             [sys.executable, "-m", "pytest", f"tests/test_d1_probe.py::{test}", "-q",
@@ -74,5 +101,6 @@ try:
 finally:
     SRC.write_text(ORIGINAL); purge()
 
-print(f"\n{ok}/{len(DEFECTS)} defects rejected; {bad} not caught")
+print(f"\n{ok}/{len(DEFECTS)} defects rejected; {bad} not caught or not run")
+print("ALL CONTROLS RAN:", ok + 0 == len(DEFECTS))
 print("source restored:", SRC.read_text() == ORIGINAL)

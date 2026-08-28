@@ -22,10 +22,13 @@ nothing, so the tests assert arrival at `subprocess.run`, never at the call site
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import os
+import signal
 import subprocess
 import sys
+import threading
 import time
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
@@ -113,6 +116,42 @@ class Deadline:
                 f"The run is VOID: no partial-cohort analysis is produced.")
 
 
+@contextlib.contextmanager
+def _supervisor(deadline: "Deadline"):
+    """Terminate the run at the deadline even if a stage is BLOCKED.
+
+    `Deadline.check` is cooperative: it runs between stages and cannot interrupt
+    a hung compilation, replay, readout or write. SIGALRM can, because it
+    interrupts the blocking call itself.
+
+    FAILS CLOSED. If the timer cannot be armed -- not the main thread, or no
+    SIGALRM on this platform -- the run REFUSES rather than silently falling back
+    to cooperative-only checking, which is how a safeguard becomes decorative.
+
+    ponytail: SIGALRM interrupts blocking syscalls and Python bytecode, not a
+    C extension that never returns; a subprocess-level supervisor is the upgrade
+    if that ever becomes the failure mode.
+    """
+    if not hasattr(signal, "SIGALRM") or threading.current_thread() is not \
+            threading.main_thread():
+        raise D1Error(
+            "the whole-run supervisor cannot be armed here (needs SIGALRM on the main "
+            "thread); refusing rather than degrading to cooperative checks only")
+
+    def _fire(_signum, _frame):
+        raise D1VoidError(
+            f"whole-run deadline of {deadline.limit_s}s exceeded and the run was "
+            f"TERMINATED mid-stage. VOID: no partial-cohort analysis is produced.")
+
+    previous = signal.signal(signal.SIGALRM, _fire)
+    signal.setitimer(signal.ITIMER_REAL, deadline.limit_s)
+    try:
+        yield
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous)
+
+
 class QueryBudget:
     """The frozen ceiling on queries MADE. It bounds no duration; see Deadline."""
 
@@ -128,13 +167,45 @@ class QueryBudget:
         self.spent += n
 
 
+def _validate_reply(rec, dumps, *, depth: int, n_moves: int, where: str) -> None:
+    """Each reply must be valid ON ITS OWN. AGREEMENT IS NOT VALIDITY.
+
+    Two equally invalid answers agree perfectly, and an earlier version of this
+    module accepted exactly that: it compared the pair and never asked whether
+    either was usable. Plan 12.7 requires legality, completion at the requested
+    depth, a real move, and a dump -- of every reply.
+    """
+    if rec.null_sentinel or rec.move is None:
+        raise D1VoidError(f"{where}: T1j returned the null sentinel, not a move: VOID")
+    if not rec.legal:
+        raise D1VoidError(f"{where}: T1j returned an illegal move {rec.move}: VOID")
+    if not rec.completed:
+        raise D1VoidError(f"{where}: T1j did not complete its search: VOID")
+    if rec.requested_depth != depth or rec.completed_depth != depth:
+        raise D1VoidError(
+            f"{where}: requested depth {depth} but the reply reports requested="
+            f"{rec.requested_depth} completed depth={rec.completed_depth}: VOID")
+    # A MISSING DUMP IS NOT AN AGREEING DUMP. Two empty dumps compare equal, so
+    # without a cardinality check an absent dump passed the pair comparison.
+    if not dumps:
+        raise D1VoidError(f"{where}: the reply carried no state dump at all: VOID")
+    if dumps[-1].ply != n_moves:
+        raise D1VoidError(
+            f"{where}: the dump ends at ply {dumps[-1].ply} but the retained prefix "
+            f"holds {n_moves} moves, so T1j searched a different position: VOID")
+
+
 #: Fields the two independent invocations must agree on (plan 12.7).
 AGREEMENT_FIELDS = ("move", "legal", "requested_depth", "completed_depth")
 
 
-def probe_position(*, moves: Sequence[Pos], depth: int, paths: T1jPaths,
-                   budget: QueryBudget, deadline: Deadline) -> Dict[str, Any]:
+def _probe_position(*, moves: Sequence[Pos], depth: int, paths: T1jPaths,
+                    budget: QueryBudget, deadline: Deadline) -> Dict[str, Any]:
     """Query ONE prefix at ONE depth, twice, in two separate JVM processes.
+
+    PRIVATE. It was public, which reopened the very hole the CLI gate was meant
+    to close: a direct caller could issue T1j queries without passing any gate.
+    `run_d1` is the single public execution entry and it checks the gate first.
 
     `repeats=1` on both calls is load-bearing: `repeats>1` runs the repeats
     INSIDE ONE JVM, reusing that process's single unseeded Zobrist salt, so it
@@ -157,6 +228,8 @@ def probe_position(*, moves: Sequence[Pos], depth: int, paths: T1jPaths,
         if rc != 0 or len(recs) != 1:
             raise D1VoidError(
                 f"depth {depth} invocation {i}: exit {rc} with {len(recs)} query records")
+        _validate_reply(recs[0], dumps, depth=depth, n_moves=len(moves),
+                        where=f"depth {depth} invocation {i}")
         results.append((recs[0], dumps))
         if deadline.started:
             deadline.check(f"after depth {depth} invocation {i}")
@@ -212,10 +285,37 @@ def run_d1(*, positions: Sequence[Dict[str, Any]], paths: T1jPaths, out_path: st
     that exists after a breach is a partial-cohort analysis wearing a runtime
     excuse.
     """
-    deadline = (deadline or Deadline()).start()
+    if not D1_EXECUTION_AUTHORIZED:
+        raise D1Error(
+            "D1 execution is UNAUTHORIZED. The CLI gate alone protected nothing: a "
+            "direct Python caller reached this runner without passing it. Nothing has "
+            "been compiled, queried or written.")
+    deadline = deadline or Deadline()
     budget = budget or QueryBudget()
     compile_fn = _compile if _compile is not None else _default_compile
 
+    return _run_d1_unguarded(positions=positions, paths=paths, out_path=out_path,
+                             deadline=deadline, budget=budget, _compile=compile_fn)
+
+
+def _run_d1_unguarded(*, positions, paths, out_path, deadline=None, budget=None,
+                      _compile=None):
+    """Everything below the gate. PRIVATE, and never a way around `run_d1`.
+
+    It exists so the machinery can be tested WITHOUT lifting the gate in a
+    fixture -- a fixture that flips an execution gate is the gate failing.
+    `run_d1` is the only public entry and it checks the gate first; the Load-context
+    AST test asserts both public entries read it.
+    """
+    deadline = deadline or Deadline()
+    budget = budget or QueryBudget()
+    compile_fn = _compile if _compile is not None else _default_compile
+    with _supervisor(deadline):
+        return _run_stages(positions, paths, out_path, deadline, budget, compile_fn)
+
+
+def _run_stages(positions, paths, out_path, deadline, budget, compile_fn):
+    deadline.start()
     compile_fn(deadline)
     deadline.check("after helper compilation")
 
@@ -224,7 +324,7 @@ def run_d1(*, positions: Sequence[Dict[str, Any]], paths: T1jPaths, out_path: st
         _check_seed(pos.get("seed"))
         prefix = _check_prefix(pos)
         deadline.check(f"before position {pos.get('task_id')}@{pos.get('ply')}")
-        per_depth = [probe_position(moves=prefix, depth=d, paths=paths,
+        per_depth = [_probe_position(moves=prefix, depth=d, paths=paths,
                                     budget=budget, deadline=deadline)
                      for d in T1J_DEPTHS]
         out.append({"task_id": pos.get("task_id"), "ply": pos.get("ply"),

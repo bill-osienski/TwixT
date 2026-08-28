@@ -8,6 +8,16 @@
   REJECTED    timeout no longer converted to VOID
   REJECTED    final deadline check before writing removed
   REJECTED    gate flipped open
+  REJECTED    public runner ungated (CLI-only gate)
+  REJECTED    null-sentinel reply accepted
+  REJECTED    illegal reply accepted
+  REJECTED    incomplete search accepted
+  REJECTED    wrong completed depth accepted
+  REJECTED    missing dump accepted
+  REJECTED    dump for a different position accepted
+  REJECTED    outer supervisor never armed
+  REJECTED    probing made public again (ungated execution surface)
 
-10/10 defects rejected; 0 not caught
+19/19 defects rejected; 0 not caught or not run
+ALL CONTROLS RAN: True
 source restored: True

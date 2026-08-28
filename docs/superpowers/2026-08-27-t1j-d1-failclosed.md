@@ -18,7 +18,7 @@ before compilation · **1,135 queries** ·
 
 ## 1. What the tests prove
 
-34 tests in `tests/test_d1_probe.py`.
+46 tests in `tests/test_d1_probe.py`.
 
 | Requirement | How it is proved |
 |---|---|
@@ -31,7 +31,7 @@ before compilation · **1,135 queries** ·
 | Retained prefixes | A missing prefix, a malformed prefix, and a prefix whose length disagrees with its ply are each `VOID` — a digest cannot be replayed, and a wrong-length prefix replays the **wrong position** |
 | The seed interval is enforced and unregistered | Seeds either side of the interval, zero, negative, `True`, a string and `None` are each refused; and every seed in the interval is asserted absent from all four registries |
 
-## 2. Controls — 10 injected defects, 10 rejected
+## 2. Controls — 19 injected defects, 19 rejected
 
 A test that has never failed has not been shown to bind. Each defect was applied
 to the source, the test that must catch it was run, and the test was **required
@@ -76,3 +76,45 @@ authorization.
 | `01_injected_defect_controls.py.txt` | the control harness, as run |
 | `02_injected_defect_controls.txt` | its output: 10/10 rejected, source restored |
 | `03_full_suite.txt` | full repository suite |
+
+---
+
+## 5. Review round 2 — four guards that did not bind
+
+| Defect | Fix |
+|---|---|
+| **`run_d1` was ungated** — only the CLI checked. A direct Python caller bypassed the gate entirely | `run_d1` reads the gate before compilation or probing. Machinery moved below it into `_run_d1_unguarded`, so tests exercise internals **without lifting the gate in a fixture** |
+| **The AST "own gate" test counted the assignment** — it passed with every guard read stripped | Counts only `Load`-context references, requires **≥2** (runner + CLI), with a negative control proving it fails when the reads are removed |
+| **`probe_position` was public and ungated** — the same hole one level down, found by the new structural test | Renamed `_probe_position`. A test enumerates every public function that queries or compiles and asserts each reads the gate |
+| **Identical invalid replies passed** — agreement was checked, validity never was | `_validate_reply` checks each reply alone: null sentinel, legality, completion, requested **and** completed depth, real move |
+| **Two empty dumps compared equal** — absence read as agreement; the fixture emitted no dump, which is what hid it | Missing dump is `VOID`; the dump's final ply must equal the retained prefix length. Fixture now emits a complete reply with a 576-bit legal map |
+| **The deadline was cooperative** — checks ran between stages and could not interrupt a hung one | External `SIGALRM` supervisor wrapping the whole run, **failing closed** if it cannot arm. The blocking-stage test went from 30 s to under 1 s |
+
+🔴 **A stale control reported as a miss.** The first expanded run showed 18/19
+with a `SKIP`: restructuring `run_d1` had broken that control's anchor, so it
+**silently never executed** and was counted as "not caught". A control that does
+not run proves nothing. Retargeted, and a stale anchor now reports loudly with an
+explicit `ALL CONTROLS RAN` line instead of blending into the tally.
+
+## 6. 🔴 The T1j toolchain is GONE — suite is 41 red for that reason alone
+
+**3390 passed, 41 failed, 4 skipped.** Every one of the 41 failures is
+`[jdk] pinned JDK component missing: bin/java` (48 occurrences), in exactly
+the two files that hardcode a path into a **previous session's scratchpad**:
+
+```
+/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d037040d-…/scratchpad
+    e2/jdk/home/jdk-17.0.20.1+1/Contents/Home   ← GONE
+    e1/acq/release/t1j.jar                      ← GONE
+```
+
+**Zero failures mention `d1_probe`**, and the immediately preceding committed run
+of the same suite, at `47493e7`, was 3,419 passed / 0 failed. The tests are behaving
+**correctly** — failing closed because a pinned artifact is absent. What broke is
+the environment, not a guard.
+
+**Consequence, which outranks everything else here:** D1 execution is blocked
+regardless of authorization. There is no JDK and no `t1j.jar`. Both must be
+re-acquired and re-verified against E1's pinned hashes before any T1j work, and
+the qualification suite is not reproducible until then. The checkpoint survives
+because it lives in the repository; the toolchain did not, because it never did.
