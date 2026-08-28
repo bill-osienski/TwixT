@@ -1,0 +1,36 @@
+T1j TOOLCHAIN RECOVERY — acquisition and verification
+==============================================================
+
+SOURCES (as recorded by E1/E2, not chosen here):
+  jar : https://github.com/johannesSchwagereit/T1j/releases/download/current/t1j.jar
+  jdk : https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.20.1%2B1/OpenJDK17U-jdk_aarch64_mac_hotspot_17.0.20.1_1.tar.gz
+
+DURABLE ROOT (out of repo, out of /tmp):
+  /Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1
+
+resolved from: recorded-default
+root:          /Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1
+realpath:      /Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1
+
+VERIFICATION
+  t1j.jar bytes  83990 == 83990  -> True
+  t1j.jar sha256 53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7
+          pinned 53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7  -> True
+  t1j.jar sha1   064370a89b8361cdb400732d8942b2cc31d31437
+          E1 rec 064370a89b8361cdb400732d8942b2cc31d31437  -> True
+  jdk bin/java     af8b122943345320b179c75c3404d56a981017739746b75f9caf583632f0bea0
+      pinned       af8b122943345320b179c75c3404d56a981017739746b75f9caf583632f0bea0  -> True
+  jdk bin/javac    6f5159301c750bba340390eda5fdd4a0959445355f97c40aa9c2addb00ede5ab
+      pinned       6f5159301c750bba340390eda5fdd4a0959445355f97c40aa9c2addb00ede5ab  -> True
+  jdk lib/modules  28745573641057e822a972f223fc8e40db5c9df11ae3f7402764780afc2f1951
+      pinned       28745573641057e822a972f223fc8e40db5c9df11ae3f7402764780afc2f1951  -> True
+  jdk release      cb6064fe4d7b87d9fbb8b8c7702047044d1bbeac38e0c5217f595579b6cc764b
+      pinned       cb6064fe4d7b87d9fbb8b8c7702047044d1bbeac38e0c5217f595579b6cc764b  -> True
+
+components verified: 5 (1 jar + 4 jdk)
+
+NOT COMMITTED: the jar and the JDK. Only t1j_toolchain_lock.json is.
+  jar 83,990 bytes · jdk tree 322,978,519 bytes
+
+EPHEMERAL-PATH REFERENCES REMAINING IN THE REPO:
+  none

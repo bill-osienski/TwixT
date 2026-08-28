@@ -16,10 +16,15 @@ from scripts.GPU.alphazero import e4_screen_reference as REF
 
 PLAN = "docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4/06_endpoint_screen_plan.json"
 REPO = os.path.abspath(".")
-SP = ("/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/"
-      "d037040d-d572-424f-a870-eef66233d641/scratchpad")
-JDK = f"{SP}/e2/jdk/home/jdk-17.0.20.1+1/Contents/Home"
-JAR = f"{SP}/e1/acq/release/t1j.jar"
+# The toolchain is resolved through an explicit setting and hash-verified before
+# use; it is NOT committed. These constants previously pointed into a session
+# scratchpad under /private/tmp, which was cleaned -- taking 41 qualification
+# tests red with it. See scripts/GPU/alphazero/t1j_toolchain.py.
+from scripts.GPU.alphazero import t1j_toolchain as TC
+
+_TOOLCHAIN = TC.verified_paths()
+JDK = _TOOLCHAIN["jdk_home"]
+JAR = _TOOLCHAIN["jar"]
 CKPT = "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
 SOURCE = open("scripts/GPU/alphazero/e4_screen_command.py").read()
 

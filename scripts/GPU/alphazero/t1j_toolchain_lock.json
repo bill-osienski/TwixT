@@ -1,0 +1,34 @@
+{
+  "jar": {
+    "bytes": 83990,
+    "published": "2022-01-09T08:59:12Z",
+    "recorded_by": "E1 artifact integrity, docs/superpowers/2026-08-24-t1j-e1-artifact-integrity.md",
+    "release_name": "v0.2",
+    "release_tag": "current",
+    "repository": "https://github.com/johannesSchwagereit/T1j",
+    "sha1": "064370a89b8361cdb400732d8942b2cc31d31437",
+    "sha256": "53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7",
+    "url": "https://github.com/johannesSchwagereit/T1j/releases/download/current/t1j.jar"
+  },
+  "jdk": {
+    "architecture": "aarch64",
+    "components": {
+      "bin/java": "af8b122943345320b179c75c3404d56a981017739746b75f9caf583632f0bea0",
+      "bin/javac": "6f5159301c750bba340390eda5fdd4a0959445355f97c40aa9c2addb00ede5ab",
+      "lib/modules": "28745573641057e822a972f223fc8e40db5c9df11ae3f7402764780afc2f1951",
+      "release": "cb6064fe4d7b87d9fbb8b8c7702047044d1bbeac38e0c5217f595579b6cc764b"
+    },
+    "jvm_impl": "hotspot",
+    "os": "mac",
+    "recorded_by": "E2 headless recipe; the component hashes are e4_screen_integration.PINNED_JDK and are not duplicated by hand",
+    "url": "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.20.1%2B1/OpenJDK17U-jdk_aarch64_mac_hotspot_17.0.20.1_1.tar.gz",
+    "vendor": "Eclipse Temurin",
+    "version": "17.0.20.1+1"
+  },
+  "layout": {
+    "jar": "t1j.jar",
+    "jdk_home": "jdk/jdk-17.0.20.1+1/Contents/Home"
+  },
+  "purpose": "Identity of the T1j toolchain. The ARTIFACTS ARE NOT COMMITTED -- only this record. The local root is resolved by t1j_toolchain.py through an explicit setting and every component is hash-verified before use.",
+  "schema": "t1j-toolchain-lock/1"
+}
