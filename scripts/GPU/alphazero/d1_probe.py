@@ -38,8 +38,11 @@ from . import t1j_adapter as A
 Pos = Tuple[int, int]
 
 #: D1 EXECUTION IS UNAUTHORIZED. Changing this is a reviewed code change. Read
-#: directly, in ONE place. No supported override exists -- not argv, not the
-#: environment, not a configuration file, not an import hook.
+#: directly, at BOTH public entry points -- `run_d1` and `main` -- because gating
+#: only the CLI protected nothing: a direct Python caller reached the runner
+#: without passing any gate. A test counts the Load-context reads and requires at
+#: least two, so dropping either one fails. No supported override exists -- not
+#: argv, not the environment, not a configuration file, not an import hook.
 #:
 #: This is D1's OWN gate. `l0_match_command.L0_EXECUTION_AUTHORIZED` and
 #: `e4_screen_command.SCREEN_AUTHORIZED` guard DIFFERENT experiments and nothing
@@ -361,9 +364,11 @@ EXIT_UNAUTHORIZED = 5
 def main(argv: Optional[Sequence[str]] = None) -> int:
     """CLI. Refuses while the gate is shut, BEFORE touching anything.
 
-    The gate is read exactly once, here, and nothing reads an environment
-    variable, a flag or a config file to reach it: opening D1 is a reviewed
-    one-line change to `D1_EXECUTION_AUTHORIZED` plus a separate authorization.
+    This is the SECOND of the two guard reads; `run_d1` carries the other, and
+    both are required -- gating only the CLI left the public runner reachable
+    directly. Nothing reads an environment variable, a flag or a config file to
+    reach the gate: opening D1 is a reviewed one-line change to
+    `D1_EXECUTION_AUTHORIZED` plus a separate authorization.
     """
     import argparse
     ap = argparse.ArgumentParser(description="D1 same-position interrogation")

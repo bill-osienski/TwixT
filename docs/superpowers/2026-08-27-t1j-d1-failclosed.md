@@ -4,8 +4,11 @@
 loaded, no JVM started, no T1j query issued, no seed registered or drawn, no
 position queried, no game played, nothing trained, nothing pushed.
 
-**Gate:** `d1_probe.D1_EXECUTION_AUTHORIZED = False`, read exactly once, in the
-CLI, before anything is touched. Opening D1 is a reviewed one-line change **plus**
+**Gate:** `d1_probe.D1_EXECUTION_AUTHORIZED = False`, read at **both** public
+entry points — `run_d1` before compilation or probing, and `main` before argument
+handling. An earlier version of this card said "exactly once, in the CLI"; that
+described the design **before** review found that gating only the CLI protected
+nothing, and it was wrong to leave standing. Opening D1 is a reviewed one-line change **plus**
 a separate authorization. Nothing reads an environment variable, flag, config
 file or import hook to reach it.
 
