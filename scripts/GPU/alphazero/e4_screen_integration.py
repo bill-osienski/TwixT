@@ -194,7 +194,15 @@ def make_binder(runtime: T1jRuntime, ctx: IntegrationContext) -> Callable:
                                   jar=runtime.jar, classes=runtime.classes,
                                   timeout_s=runtime.timeout_s)
         if rc != 0:
-            raise AbortError(PHASE_BIND, f"{task['task_id']} {where}: T1j replay exit {rc}")
+            # THE TRANSCRIPT IS THE DIAGNOSIS. This used to say only "replay exit
+            # {rc}" and drop `out`, the same defect that left a real D1 abort
+            # unexplained: E3bDump exits non-zero with its `failures` counter set
+            # and prints a FAIL line naming the check, and that line went in the
+            # bin. Bounded, because a dump carries a 576-character legal-cell map
+            # per ply and would bury what the excerpt exists to surface.
+            raise AbortError(PHASE_BIND,
+                             f"{task['task_id']} {where}: T1j replay exit {rc}. "
+                             f"T1j reported: {A.helper_failure_excerpt(out)}")
         check_postcond(out, expected_refl=REPLAY_REFL_N,
                        where=f"{task['task_id']} {where} replay", phase=PHASE_BIND)
         if len(plies) != state.ply + 1:
@@ -241,7 +249,12 @@ class T1jAgent:
         self.ctx.bump("t1j_queries")
         where = f"{self.ctx.task_id} query at ply {state.ply}"
         if rc != 0 or len(recs) != 1:
-            raise AbortError(PHASE_MOVE, f"{where}: exit {rc} with {len(recs)} record(s)")
+            # As on the binder's replay path: the helper's own FAIL line is the
+            # diagnosis, and dropping it is what left a real D1 abort
+            # unexplained. Bounded, and the dump body never travels.
+            raise AbortError(PHASE_MOVE,
+                             f"{where}: exit {rc} with {len(recs)} record(s). "
+                             f"T1j reported: {A.helper_failure_excerpt(out)}")
         check_postcond(out, expected_refl=QUERY_REFL_N, where=where, phase=PHASE_MOVE)
 
         # THE SEARCHED POSITION, re-bound against ours before the move is used.

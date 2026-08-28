@@ -214,3 +214,118 @@ def test_the_runtime_refuses_an_unbounded_timeout_before_any_replay():
 def test_the_runtime_carries_the_timeout_it_was_given():
     rt = I.T1jRuntime(java="j", jar="j", classes="c", ply_cap=280, timeout_s=120)
     assert rt.timeout_s == 120 and rt.ply_cap == 280
+
+
+# ═══ the sibling of the defect the D1 VOID exposed: a discarded transcript ════
+#
+# `_probe_position` used to raise "exit {rc} with {n} query records" and throw
+# the helper's stdout away, and a real D1 abort proved what that costs: the run
+# VOIDed on 2026-08-28 and the reason is still unknown because the FAIL line was
+# dropped. The binder had the identical hole on its replay path.
+#
+# MOCKED. `A.replay` is patched; no JVM is started.
+
+REPLAY_FAIL_OUT = (
+    "PROC pid=7 java_version=17 vm=OpenJDK headless=true prefs_factory=e2probe\n"
+    "PLY 0 moveNr=0 next=Y termY=false termX=false\n"
+    "  PEGS \n  BRIDGES \n  HIST \n  LEGAL " + "1" * 576 + "\n"
+    "FAIL replay: setlastMove 12,12 accepted\n"
+    "POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true "
+    "refl_ok=true refl_n=1 failures=1\n"
+)
+
+
+def _binder_with_replay(monkeypatch, *, rc, out):
+    monkeypatch.setattr(I.A, "replay", lambda *a, **k: ([], rc, out))
+    ctx = _Ctx(OPENING)
+    rt = I.T1jRuntime(java="j", jar="j", classes="c", ply_cap=280, timeout_s=120)
+    return I.make_binder(rt, ctx), ctx
+
+
+def test_a_nonzero_replay_exit_carries_the_helpers_OWN_failure_lines(monkeypatch):
+    binder, _ctx = _binder_with_replay(monkeypatch, rc=3, out=REPLAY_FAIL_OUT)
+    with pytest.raises(AbortError) as e:
+        binder({"task_id": "t"}, state_after(OPENING), len(OPENING))
+    assert e.value.phase == PHASE_BIND
+    assert "FAIL replay: setlastMove 12,12 accepted" in e.value.message, e.value.message
+    assert "exit 3" in e.value.message
+
+
+def test_the_replay_failure_excerpt_is_bounded_and_drops_the_dump_body(monkeypatch):
+    binder, _ctx = _binder_with_replay(monkeypatch, rc=1, out=REPLAY_FAIL_OUT)
+    with pytest.raises(AbortError) as e:
+        binder({"task_id": "t"}, state_after(OPENING), len(OPENING))
+    assert "1" * 100 not in e.value.message, "the legal-cell map leaked into the abort"
+    assert len(e.value.message) < 1200, len(e.value.message)
+
+
+def test_a_nonzero_replay_exit_with_an_empty_transcript_still_says_so(monkeypatch):
+    binder, _ctx = _binder_with_replay(monkeypatch, rc=2, out="")
+    with pytest.raises(AbortError, match="no readable output"):
+        binder({"task_id": "t"}, state_after(OPENING), len(OPENING))
+
+
+def test_a_successful_replay_is_unaffected(monkeypatch):
+    """The excerpt must not change the passing path at all."""
+    s = state_after(OPENING)
+    monkeypatch.setattr(I.A, "replay",
+                        lambda *a, **k: ([ply_state_for(s, OPENING)] * (s.ply + 1), 0,
+                                         CLEAN_POST.format(n=I.REPLAY_REFL_N)))
+    ctx = _Ctx(OPENING)
+    rt = I.T1jRuntime(java="j", jar="j", classes="c", ply_cap=280, timeout_s=120)
+    I.make_binder(rt, ctx)({"task_id": "t"}, s, len(OPENING))
+    assert ctx.stats["t"]["binds"] == 1
+
+
+# ─────────── the same defect on the AGENT's query path ──────────────────────
+#
+# `T1jAgent.__call__` raised "exit {rc} with {n} record(s)" and dropped `out`
+# exactly as the binder and `_probe_position` did. Third and last site of the
+# same class in this workstream.
+
+QUERY_FAIL_OUT = (
+    "PROC pid=9 java_version=17 vm=OpenJDK headless=true prefs_factory=e2probe\n"
+    "PLY 6 moveNr=6 next=Y termY=false termX=false\n"
+    "  PEGS 12,12,Y\n  BRIDGES \n  HIST \n  LEGAL " + "1" * 576 + "\n"
+    "FAIL q1: returned move is legal in T1j\n"
+    "POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true "
+    "refl_ok=true refl_n=3 failures=1\n"
+)
+
+
+def _agent_with_query(*, rc, out, recs=None):
+    ctx = _Ctx(OPENING)
+    rt = I.T1jRuntime(java="j", jar="j", classes="c", ply_cap=280, timeout_s=120)
+    return I.T1jAgent(runtime=rt, ctx=ctx, depth=3, colour="red",
+                      _query=lambda *a, **k: (recs if recs is not None else [], [], rc, out))
+
+
+def test_a_nonzero_query_exit_carries_the_helpers_OWN_failure_lines():
+    s = state_after(OPENING)
+    with pytest.raises(AbortError) as e:
+        _agent_with_query(rc=3, out=QUERY_FAIL_OUT)(s)
+    assert e.value.phase == PHASE_MOVE
+    assert "FAIL q1: returned move is legal in T1j" in e.value.message, e.value.message
+    assert "exit 3" in e.value.message
+
+
+def test_the_query_failure_excerpt_drops_the_dump_body():
+    s = state_after(OPENING)
+    with pytest.raises(AbortError) as e:
+        _agent_with_query(rc=3, out=QUERY_FAIL_OUT)(s)
+    assert "1" * 100 not in e.value.message, "the legal-cell map leaked into the abort"
+
+
+def test_a_wrong_record_COUNT_at_exit_zero_also_reports_the_transcript():
+    """The same branch fires on a bad record count even when the exit is 0, and
+    that path needs the transcript just as much."""
+    s = state_after(OPENING)
+    with pytest.raises(AbortError, match="FAIL q1"):
+        _agent_with_query(rc=0, out=QUERY_FAIL_OUT)(s)
+
+
+def test_a_successful_query_is_unaffected():
+    s = state_after(OPENING)
+    a = agent_for(s, OPENING)
+    assert a(s) == (15, 13)
+    assert a.ctx.stats["t"]["searched_binds"] == 1

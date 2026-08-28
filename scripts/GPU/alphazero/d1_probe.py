@@ -247,44 +247,6 @@ def _validate_reply(rec, dumps, *, depth: int, n_moves: int, where: str) -> None
 AGREEMENT_FIELDS = ("move", "legal", "requested_depth", "completed_depth")
 
 
-#: How much of the helper's own transcript a refusal may carry. BOUNDED on
-#: purpose: each dump holds a 576-character legal-cell map, and an unbounded
-#: excerpt would bury the FAIL lines it exists to surface.
-FAILURE_EXCERPT_LINES = 12
-FAILURE_EXCERPT_CHARS = 800
-
-#: Lines that carry the helper's own verdict. `FAIL <what>` is printed by its
-#: `req()` for each failed check, `THREW` by its catch-all, and POSTCOND carries
-#: the failures counter that produced the exit status.
-_VERDICT_PREFIXES = ("FAIL ", "THREW", "POSTCOND ")
-
-
-def helper_failure_excerpt(out: str) -> str:
-    """The helper's OWN explanation of a non-zero exit, bounded.
-
-    E4Preflight exits 3 when its `failures` counter is non-zero, and it prints a
-    `FAIL <what>` line for every check that failed. This module used to raise
-    "exit {rc} with {n} query records" and DISCARD `out` -- so the one thing that
-    said WHY went in the bin.
-
-    That is not hypothetical. The single authorized D1 run aborted with exactly
-    that message on 2026-08-28, and the reason it failed is still unknown
-    because the transcript was dropped.
-
-    Falls back to the tail rather than to silence, skipping dump body lines,
-    because a refusal that reports nothing is worse than one that reports
-    roughly the right neighbourhood.
-    """
-    lines = [l.strip() for l in out.splitlines() if l.startswith(_VERDICT_PREFIXES)]
-    if not lines:
-        lines = [l.strip() for l in out.splitlines()
-                 if l.strip() and not l.startswith(("  ", "PLY "))][-FAILURE_EXCERPT_LINES:]
-    text = " | ".join(lines[:FAILURE_EXCERPT_LINES])
-    if not text:
-        return "(the helper produced no readable output)"
-    return text[:FAILURE_EXCERPT_CHARS] + ("..." if len(text) > FAILURE_EXCERPT_CHARS else "")
-
-
 def position_label(pos: Dict[str, Any]) -> str:
     """WHICH position a refusal is about: task, ply, cohort, prefix digest.
 
@@ -365,7 +327,7 @@ def _probe_position(*, moves: Sequence[Pos], depth: int, paths: T1jPaths, state,
         if rc != 0 or len(recs) != 1:
             raise D1VoidError(
                 f"{where}: exit {rc} with {len(recs)} query records. "
-                f"T1j reported: {helper_failure_excerpt(out)}")
+                f"T1j reported: {A.helper_failure_excerpt(out)}")
         _validate_reply(recs[0], dumps, depth=depth, n_moves=len(moves), where=where)
         # 5.3's reflection/postcondition surface, READ rather than assumed, and
         # translated like every other E3b refusal: an AbortError here would

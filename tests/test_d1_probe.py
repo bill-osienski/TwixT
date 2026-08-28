@@ -1164,8 +1164,8 @@ def test_the_CHARACTER_cap_truncates_one_enormous_failure_line():
     many SHORT lines, so the LINE cap bounded the message first and the
     character cap could be raised to 100,000 with nothing noticing."""
     out = "FAIL " + "x" * 5000 + "\n"
-    excerpt = D1.helper_failure_excerpt(out)
-    assert len(excerpt) <= D1.FAILURE_EXCERPT_CHARS + 3, len(excerpt)
+    excerpt = A.helper_failure_excerpt(out)
+    assert len(excerpt) <= A.FAILURE_EXCERPT_CHARS + 3, len(excerpt)
     assert excerpt.endswith("...")
 
 
@@ -1173,10 +1173,10 @@ def test_the_LINE_cap_drops_the_tail_of_a_long_verdict_list():
     """The line cap, REACHED ALONE: short lines, so the character cap is never
     the thing doing the bounding."""
     out = "".join(f"FAIL check {i}\n" for i in range(40))
-    excerpt = D1.helper_failure_excerpt(out)
+    excerpt = A.helper_failure_excerpt(out)
     assert "FAIL check 0" in excerpt
-    assert f"FAIL check {D1.FAILURE_EXCERPT_LINES}" not in excerpt
-    assert excerpt.count("FAIL check") == D1.FAILURE_EXCERPT_LINES == 12
+    assert f"FAIL check {A.FAILURE_EXCERPT_LINES}" not in excerpt
+    assert excerpt.count("FAIL check") == A.FAILURE_EXCERPT_LINES == 12
 
 
 def test_a_THREW_line_is_carried_because_it_is_a_verdict(reply):
@@ -1193,13 +1193,13 @@ def test_output_with_NO_verdict_line_falls_back_to_the_tail_not_silence():
     out = ("PROC pid=1 java_version=17 vm=x headless=true prefs_factory=e2probe\n"
            "PLY 6 moveNr=6 next=Y termY=false termX=false\n"
            "  PEGS 12,12,Y\n  LEGAL " + "1" * 576 + "\n")
-    excerpt = D1.helper_failure_excerpt(out)
+    excerpt = A.helper_failure_excerpt(out)
     assert "PROC pid=1" in excerpt, excerpt
     assert "1" * 100 not in excerpt, "the dump body leaked through the fallback"
 
 
 def test_completely_empty_output_says_so_rather_than_nothing():
-    assert D1.helper_failure_excerpt("") == "(the helper produced no readable output)"
+    assert A.helper_failure_excerpt("") == "(the helper produced no readable output)"
 
 
 @pytest.mark.parametrize("kw,pattern", [
