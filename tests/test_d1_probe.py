@@ -10,6 +10,7 @@ site. There are three default-None hops between a caller and that boundary, and
 each one silently restores unbounded waiting; proving the value was passed in at
 the top proves nothing about whether it arrived.
 """
+import pathlib
 import signal
 import subprocess
 import sys
@@ -17,6 +18,7 @@ import sys
 import pytest
 
 from scripts.GPU.alphazero import d1_probe as D1
+from scripts.GPU.alphazero import e4_screen_integration as INT
 from scripts.GPU.alphazero import t1j_adapter as A
 
 MOVES = [(11, 11), (12, 13), (13, 12), (10, 13), (12, 10), (14, 14)]
@@ -48,8 +50,7 @@ def spy(monkeypatch):
         # A REALISTIC reply: completed, legal, real move, and a state dump. The
         # first version of this fixture emitted a QUERY line and no dump, which
         # is what let two empty dumps compare equal and pass.
-        return subprocess.CompletedProcess(args, 0, _stdout(depth=depth,
-                                                            moveNr=len(MOVES)), "")
+        return subprocess.CompletedProcess(args, 0, _stdout(depth=depth), "")
 
     monkeypatch.setattr(subprocess, "run", fake_run)
     return calls
@@ -59,6 +60,7 @@ def spy(monkeypatch):
 
 def test_every_t1j_call_reaches_subprocess_run_with_the_frozen_timeout(spy):
     D1._probe_position(moves=MOVES, depth=6, paths=RUNTIME,
+                      state=_state_after(MOVES),
                       budget=D1.QueryBudget(D1.QUERY_CAP), deadline=D1.Deadline())
     assert spy, "no subprocess call was observed -- the assertion below would be vacuous"
     for c in spy:
@@ -74,6 +76,7 @@ def test_the_boundary_check_catches_a_dropped_timeout_hop(spy, monkeypatch):
     real = A.query
     monkeypatch.setattr(A, "query", lambda *a, **k: real(*a, **{**k, "timeout_s": None}))
     D1._probe_position(moves=MOVES, depth=6, paths=RUNTIME,
+                      state=_state_after(MOVES),
                       budget=D1.QueryBudget(D1.QUERY_CAP), deadline=D1.Deadline())
     assert spy
     assert any(c["kw"].get("timeout") is None for c in spy), \
@@ -84,6 +87,7 @@ def test_the_boundary_check_catches_a_dropped_timeout_hop(spy, monkeypatch):
 
 def test_each_depth_issues_two_separate_query_mode_invocations(spy):
     D1._probe_position(moves=MOVES, depth=6, paths=RUNTIME,
+                      state=_state_after(MOVES),
                       budget=D1.QueryBudget(D1.QUERY_CAP), deadline=D1.Deadline())
     assert len(spy) == D1.INVOCATIONS_PER_DEPTH == 2, [c["args"] for c in spy]
     for c in spy:
@@ -95,6 +99,7 @@ def test_the_same_jvm_determinism_mode_is_never_used(spy):
     cross-process variable at all. The adapter puts the mode in argv, so the
     prohibition is observable at the boundary rather than asserted about a kwarg."""
     D1._probe_position(moves=MOVES, depth=6, paths=RUNTIME,
+                      state=_state_after(MOVES),
                       budget=D1.QueryBudget(D1.QUERY_CAP), deadline=D1.Deadline())
     assert spy
     for c in spy:
@@ -103,6 +108,7 @@ def test_the_same_jvm_determinism_mode_is_never_used(spy):
 
 def test_two_invocations_are_distinct_processes_not_one_repeated(spy):
     D1._probe_position(moves=MOVES, depth=6, paths=RUNTIME,
+                      state=_state_after(MOVES),
                       budget=D1.QueryBudget(D1.QUERY_CAP), deadline=D1.Deadline())
     assert len(spy) == 2 and spy[0]["args"] == spy[1]["args"], \
         "two identical invocations expected -- same argv, separate processes"
@@ -198,6 +204,7 @@ def test_probing_stops_at_the_cap_rather_than_overrunning_it(spy):
     b = D1.QueryBudget(cap=1)
     with pytest.raises(D1.D1BudgetError):
         D1._probe_position(moves=MOVES, depth=6, paths=RUNTIME,
+                      state=_state_after(MOVES),
                           budget=b, deadline=D1.Deadline())
     assert len(spy) == 1, "the budget did not stop the second invocation"
 
@@ -225,15 +232,25 @@ def test_a_seed_outside_the_reserved_interval_is_void(tmp_path, seed, registered
                   paths=RUNTIME, out_path=str(tmp_path / "r.json"), _compile=lambda d: None)
 
 
-def test_the_seed_interval_matches_the_plan_and_is_registered_nowhere():
+def test_the_seed_interval_matches_the_plan_and_is_now_ACCOUNTED_and_unspent():
+    """REGISTERED 2026-08-28 as part of the D1 EXECUTION authorization (12.5).
+
+    It was deliberately absent from every registry through preregistration and
+    integration, so an unauthorized paper block cost nothing to abandon. Now that
+    execution is authorized it must be ACCOUNTED -- and it must still be
+    UNSPENT: accounted is a reservation, exposed and retired are claims about
+    draws and about the future, and D1 has not drawn yet.
+    """
     from scripts.GPU.alphazero import e4_screen_reference as REF
     assert D1.SEED_INTERVAL == (202614000, 202614227)
     assert D1.SEED_INTERVAL[1] - D1.SEED_INTERVAL[0] == D1.N_POSITIONS
-    every = (REF.ACCOUNTED_SEED_INTERVALS + REF.EXPOSED_SEED_INTERVALS
-             + REF.RETIRED_SEED_INTERVALS + REF.TEST_ONLY_SEED_INTERVALS)
-    assert every, "no registry loaded -- the disjointness assertion would be vacuous"
-    for s in range(*D1.SEED_INTERVAL):
-        assert not any(lo <= s < hi for lo, hi in every), f"{s} is registered"
+    for name in ("ACCOUNTED_SEED_INTERVALS", "EXPOSED_SEED_INTERVALS",
+                 "RETIRED_SEED_INTERVALS", "TEST_ONLY_SEED_INTERVALS"):
+        assert getattr(REF, name), f"vacuous: {name} is empty"
+    for seed in range(*D1.SEED_INTERVAL):
+        st = REF.seed_status(seed)
+        assert st["accounted"], f"{seed} is not accounted"
+        assert not st["exposed"] and not st["retired"] and not st["test_only"], (seed, st)
 
 
 # ------------------------------------------------------------------ the gate
@@ -257,9 +274,16 @@ def test_the_d1_gate_never_reads_another_experiments_gate():
         assert other not in names, f"D1 reads {other}"
 
 
-def test_the_default_compile_step_refuses_while_the_gate_is_shut(tmp_path, registered):
-    with pytest.raises(D1.D1Error, match="unauthorized"):
+def test_the_default_compile_step_now_refuses_a_TOOLCHAIN_it_cannot_verify(
+        tmp_path, registered):
+    """`_default_compile` used to raise "unauthorized" unconditionally, which was
+    the truthful thing while it was unwritten. It now compiles, so what it must
+    refuse is a toolchain it cannot verify -- RUNTIME is a fabricated path, so
+    resolution fails before anything is built. The GATE is a separate refusal and
+    is asserted on `run_d1` and the CLI, where it belongs."""
+    with pytest.raises((TC.ToolchainError, D1.D1Error)):
         D1._run_d1_unguarded(positions=[], paths=RUNTIME, out_path=str(tmp_path / "r.json"))
+    assert not (tmp_path / "r.json").exists()
 
 
 def test_a_valid_cli_invocation_refuses_in_a_fresh_subprocess(tmp_path):
@@ -305,22 +329,61 @@ def test_a_deadline_that_expires_only_at_the_write_step_still_voids(tmp_path, mo
 
 # ═══════════════════ review round 2: four guards that did not bind ═══════════
 
-LEGAL_BITS_OK = "1" * 576
-def _dump(moveNr, hist_pts):
-    hist = " ".join(f"{x},{y}" for x, y in hist_pts)
-    return (f"PLY {moveNr} moveNr={moveNr} next=Y termY=false termX=false\n"
-            f"  PEGS 12,12,Y\n  BRIDGES \n  HIST {hist}\n  LEGAL {LEGAL_BITS_OK}\n")
+CLEAN_POST = ("POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true "
+              "refl_ok=true refl_n={n} failures=0")
 
-def _stdout(depth=6, moveNr=6, completed=True, legal=True, sentinel=False,
-            completed_depth=None, dump=True, hist=None):
+
+def _state_after(moves):
+    from scripts.GPU.alphazero.game.twixt_state import TwixtState as _TS
+    st = _TS(active_size=24, to_move="red")
+    for mv in moves:
+        st = st.apply_move(tuple(mv))
+    return st
+
+
+def _ply_block(state, moves):
+    """A dump that AGREES with `state`, in the helper's own vocabulary."""
+    pegs, bridges = A.our_snapshot(state)
+    legal = {A.to_t1j(r, c) for (r, c) in state.legal_moves()}
+    bits = "".join("1" if (i // A.BOARD_N, i % A.BOARD_N) in legal else "0"
+                   for i in range(A.LEGAL_BITS))
+    hist = " ".join(f"{x},{y}" for x, y in (A.to_t1j(*m) for m in moves))
+    return (f"PLY {state.ply} moveNr={state.ply} "
+            f"next={A.PLAYER_TO_T1J[state.to_move]} "
+            f"termY={'true' if state.winner() == 'red' else 'false'} "
+            f"termX={'true' if state.winner() == 'black' else 'false'}\n"
+            f"  PEGS {' '.join(sorted(pegs))}\n"
+            f"  BRIDGES {' '.join(sorted(bridges))}\n"
+            f"  HIST {hist}\n  LEGAL {bits}\n")
+
+
+def _dump(prefix):
+    return _ply_block(_state_after(prefix), list(prefix))
+
+
+def _stdout(depth=6, prefix=None, completed=True, legal=True, sentinel=False,
+            completed_depth=None, dump=True, post=True, refl_n=None,
+            dump_prefix=None, move=None, clean=True):
+    """One faithful E4Preflight query reply, with knobs for each injected defect."""
+    prefix = MOVES if prefix is None else list(prefix)
     cd = depth if completed_depth is None else completed_depth
-    line = (f"QUERY q=1 requested_depth={depth} move_x=11 move_y=12 to_move=Y "
+    st = _state_after(prefix)
+    mv = move if move is not None else sorted(st.legal_moves())[0]
+    x, y = A.to_t1j(*mv)
+    line = (f"QUERY q=1 requested_depth={depth} move_x={x} move_y={y} "
+            f"to_move={A.PLAYER_TO_T1J[st.to_move]} "
             f"usealphabeta=true currentMaxPly={depth} completed_depth={cd} "
             f"completed={'true' if completed else 'false'} legal={'true' if legal else 'false'} "
-            f"null_sentinel={'true' if sentinel else 'false'} moveNr={moveNr} "
+            f"null_sentinel={'true' if sentinel else 'false'} moveNr={len(prefix)} "
             f"eval_regime=fixed elapsed_us=1000\n")
-    h = hist if hist is not None else [(i + 1, i + 1) for i in range(moveNr)]
-    return line + (_dump(moveNr, h) if dump else "")
+    body = _dump(dump_prefix if dump_prefix is not None else prefix) if dump else ""
+    tail = ""
+    if post:
+        tail = CLEAN_POST.format(n=INT.QUERY_REFL_N if refl_n is None else refl_n)
+        if not clean:
+            tail = tail.replace("no_throw=true", "no_throw=false")
+        tail += "\n"
+    return line + body + tail
 
 
 @pytest.fixture
@@ -336,6 +399,7 @@ def reply(monkeypatch):
 
 def _probe(**kw):
     return D1._probe_position(moves=MOVES, depth=6, paths=RUNTIME,
+                      state=_state_after(MOVES),
                              budget=D1.QueryBudget(D1.QUERY_CAP),
                              deadline=D1.Deadline(), **kw)
 
@@ -409,7 +473,7 @@ def test_two_empty_dumps_are_void_not_equal(reply):
 
 
 def test_a_dump_whose_final_ply_disagrees_with_the_prefix_is_void(reply):
-    reply["out"] = _stdout(moveNr=3)
+    reply["out"] = _stdout(dump_prefix=MOVES[:3])
     with pytest.raises(D1.D1VoidError, match="dump"):
         _probe()
 
@@ -517,31 +581,7 @@ from scripts.GPU.alphazero import e4_screen_reference as REF   # noqa: E402
 from scripts.GPU.alphazero.e4_screen_runner import AbortError  # noqa: E402
 from scripts.GPU.alphazero.game.twixt_state import TwixtState  # noqa: E402
 
-CLEAN_POST = ("POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true "
-              "refl_ok=true refl_n={n} failures=0")
-PREFIX = [(11, 11), (12, 13), (13, 12), (10, 13), (12, 10), (14, 14)]
-
-
-def _state_after(moves):
-    st = TwixtState(active_size=24, to_move="red")
-    for mv in moves:
-        st = st.apply_move(tuple(mv))
-    return st
-
-
-def _ply_block(state, moves):
-    pegs, bridges = A.our_snapshot(state)
-    legal = {A.to_t1j(r, c) for (r, c) in state.legal_moves()}
-    bits = "".join("1" if (i // A.BOARD_N, i % A.BOARD_N) in legal else "0"
-                   for i in range(A.LEGAL_BITS))
-    hist = " ".join(f"{x},{y}" for x, y in (A.to_t1j(*m) for m in moves))
-    return (f"PLY {state.ply} moveNr={state.ply} "
-            f"next={A.PLAYER_TO_T1J[state.to_move]} "
-            f"termY={'true' if state.winner() == 'red' else 'false'} "
-            f"termX={'true' if state.winner() == 'black' else 'false'}\n"
-            f"  PEGS {' '.join(sorted(pegs))}\n"
-            f"  BRIDGES {' '.join(sorted(bridges))}\n"
-            f"  HIST {hist}\n  LEGAL {bits}\n")
+PREFIX = list(MOVES)
 
 
 def _replay_stdout(prefix):
@@ -553,7 +593,7 @@ def _replay_stdout(prefix):
             break
         moves.append(tuple(mv))
         st = st.apply_move(tuple(mv))
-    return "".join(out) + CLEAN_POST.format(n=D1.INT.REPLAY_REFL_N) + "\n"
+    return "".join(out) + CLEAN_POST.format(n=INT.REPLAY_REFL_N) + "\n"
 
 
 def _position(prefix=PREFIX, seed=None, digest=None):
@@ -564,10 +604,13 @@ def _position(prefix=PREFIX, seed=None, digest=None):
 
 
 @pytest.fixture
-def registered(monkeypatch):
-    """A TEMPORARY FIXTURE registry. The real tuple is never edited."""
-    monkeypatch.setattr(REF, "ACCOUNTED_SEED_INTERVALS",
-                        REF.ACCOUNTED_SEED_INTERVALS + (D1.SEED_INTERVAL,))
+def registered():
+    """The block IS registered in the real tuple now (12.5, execution
+    authorization), so this fixture no longer fakes anything. It is kept as the
+    name the tests below read by, and asserts the fact rather than arranging it:
+    a fixture that silently stopped arranging what its name claims would be the
+    quietest way for these tests to go vacuous."""
+    assert tuple(D1.SEED_INTERVAL) in {tuple(i) for i in REF.ACCOUNTED_SEED_INTERVALS}
 
 
 @pytest.fixture
@@ -581,8 +624,7 @@ def wire(monkeypatch):
             return subprocess.CompletedProcess(args, 0, _replay_stdout(box["prefix"]), "")
         depth = int(args[args.index("query") + 1])
         return subprocess.CompletedProcess(
-            args, 0, _stdout(depth=depth, moveNr=len(box["prefix"]),
-                             hist=[A.to_t1j(*m) for m in box["prefix"]]), "")
+            args, 0, _stdout(depth=depth, prefix=box["prefix"]), "")
 
     monkeypatch.setattr(subprocess, "run", fake_run)
     return box
@@ -590,14 +632,30 @@ def wire(monkeypatch):
 
 # ───────────────── 12.5: the block must be REGISTERED before a draw ──────────
 
-def test_the_reserved_block_is_unregistered_so_d1_refuses():
-    """The state of the repository RIGHT NOW: reserved on paper, in no registry."""
+def _registry_without_d1():
+    """The ACCOUNTED tuple as it stood BEFORE the D1 execution authorization.
+
+    The negative controls below need a registry that does not contain the block;
+    now that it is really registered, they must remove it rather than pretend.
+    """
+    out = tuple(i for i in REF.ACCOUNTED_SEED_INTERVALS
+                if tuple(i) != tuple(D1.SEED_INTERVAL))
+    assert len(out) == len(REF.ACCOUNTED_SEED_INTERVALS) - 1, \
+        "the D1 block is not in ACCOUNTED as a single interval; these controls are stale"
+    return out
+
+
+def test_the_registered_block_satisfies_the_check():
+    """The state of the repository RIGHT NOW: registered, and D1 may proceed."""
+    D1._check_seed_registration()
+
+
+def test_an_unregistered_block_is_refused(monkeypatch):
+    """NEGATIVE CONTROL. Strip the block and the check must refuse -- otherwise
+    it would pass for any registry at all."""
+    monkeypatch.setattr(REF, "ACCOUNTED_SEED_INTERVALS", _registry_without_d1())
     with pytest.raises(D1.D1Error, match="not registered"):
         D1._check_seed_registration()
-
-
-def test_a_registered_block_satisfies_the_check(registered):
-    D1._check_seed_registration()
 
 
 def test_a_PARTLY_registered_block_is_still_refused(monkeypatch):
@@ -605,7 +663,7 @@ def test_a_PARTLY_registered_block_is_still_refused(monkeypatch):
     check is over the whole block, not over its first element."""
     lo, hi = D1.SEED_INTERVAL
     monkeypatch.setattr(REF, "ACCOUNTED_SEED_INTERVALS",
-                        REF.ACCOUNTED_SEED_INTERVALS + ((lo, hi - 1),))
+                        _registry_without_d1() + ((lo, hi - 1),))
     with pytest.raises(D1.D1Error, match="not registered"):
         D1._check_seed_registration()
 
@@ -616,7 +674,9 @@ def test_the_check_reads_the_registry_and_never_writes_it(registered):
     assert REF.ACCOUNTED_SEED_INTERVALS is before
 
 
-def test_an_unregistered_block_stops_the_run_before_anything_is_compiled(tmp_path):
+def test_an_unregistered_block_stops_the_run_before_anything_is_compiled(tmp_path,
+                                                                          monkeypatch):
+    monkeypatch.setattr(REF, "ACCOUNTED_SEED_INTERVALS", _registry_without_d1())
     compiled = []
     with pytest.raises(D1.D1Error, match="not registered"):
         D1._run_d1_unguarded(positions=[], paths=RUNTIME,
@@ -711,10 +771,11 @@ def timer(monkeypatch):
     return calls
 
 
-def test_an_unregistered_block_arms_no_timer_at_all(tmp_path, timer):
+def test_an_unregistered_block_arms_no_timer_at_all(tmp_path, timer, monkeypatch):
     """The ordering, asserted at the effect. A block that is not registered must
     cost nothing -- not a compile, not a checkpoint read, and not an armed
     90-minute timer either."""
+    monkeypatch.setattr(REF, "ACCOUNTED_SEED_INTERVALS", _registry_without_d1())
     d = D1.Deadline()
     with pytest.raises(D1.D1Error, match="not registered"):
         D1._run_d1_unguarded(positions=[], paths=RUNTIME, deadline=d,
@@ -778,3 +839,253 @@ def test_the_reported_elapsed_and_the_enforced_timer_share_one_origin(
     assert timer[0] == D1.RUN_DEADLINE_S, "the timer did not start at the deadline's origin"
     assert report["elapsed_s"] == 60.0
     assert report["run_deadline_s"] == D1.RUN_DEADLINE_S
+
+
+# ═══════════════ the real compile step: verified toolchain, create-only ══════
+#
+# `_default_compile` used to raise unconditionally. It now compiles, so every
+# test below mocks BOTH the toolchain resolution and `compile_helper`: no javac
+# is started here. The real compile is exercised by the run itself, once.
+
+from scripts.GPU.alphazero import e4_screen_command as SCREEN_CMD  # noqa: E402
+from scripts.GPU.alphazero import t1j_toolchain as TC              # noqa: E402
+
+
+@pytest.fixture
+def toolchain(monkeypatch, tmp_path):
+    """A fake VERIFIED toolchain. `verified_paths` is the seam because it is the
+    only thing that hashes before returning a path."""
+    root = tmp_path / "tc"
+    (root / "jdk" / "bin").mkdir(parents=True)
+    (root / "t1j.jar").write_bytes(b"jar")
+    for exe in ("java", "javac"):
+        (root / "jdk" / "bin" / exe).write_text("#!/bin/sh\nexit 0\n")
+    info = {"root": str(root), "source": "explicit", "jar": str(root / "t1j.jar"),
+            "jdk_home": str(root / "jdk"), "verified": 5}
+    monkeypatch.setattr(TC, "verified_paths", lambda *a, **k: dict(info))
+    monkeypatch.setattr(SCREEN_CMD, "JAR_SHA256", D1.INT._sha256(info["jar"]))
+    monkeypatch.setattr(D1.INT, "verify_jdk_identity",
+                        lambda home, pinned=None: {"ok": home})
+    return info
+
+
+@pytest.fixture
+def javac(monkeypatch):
+    """Record compile_helper calls; never run javac."""
+    calls = []
+
+    def fake(javac_path, jar, out_dir, sources=None):
+        calls.append({"javac": javac_path, "jar": jar, "out": out_dir,
+                      "sources": tuple(sources or ())})
+        pathlib_ = __import__("pathlib")
+        pathlib_.Path(out_dir, "E4Preflight.class").write_bytes(b"\xca\xfe\xba\xbe")
+        return subprocess.CompletedProcess([], 0, "", "")
+
+    monkeypatch.setattr(A, "compile_helper", fake)
+    return calls
+
+
+def _paths_for(info, classes):
+    return D1.T1jPaths(java=str(pathlib.Path(info["jdk_home"], "bin", "java")),
+                       jar=info["jar"], classes=str(classes), ply_cap=280)
+
+
+def test_the_compile_step_verifies_the_toolchain_before_compiling(toolchain, javac,
+                                                                  tmp_path):
+    out = D1._default_compile(D1.Deadline().start(),
+                              paths=_paths_for(toolchain, tmp_path / "classes"))
+    assert javac, "compile_helper was never called"
+    assert out["toolchain"]["root"] == toolchain["root"]
+    assert out["toolchain"]["source"] == "explicit"
+    assert out["jar_sha256"] == SCREEN_CMD.JAR_SHA256
+    assert out["classes"], "no compiled class was recorded"
+    assert set(out["sources"]) == {p.name for p in A.PREFLIGHT_SOURCES}
+
+
+def test_the_compile_step_builds_the_PREFLIGHT_sources_d1_actually_queries(
+        toolchain, javac, tmp_path):
+    """D1 queries through `E4Preflight`, not the bare E3b dump helper. Compiling
+    the E3b set alone would leave the query main class absent and every query
+    would fail at the process boundary."""
+    D1._default_compile(D1.Deadline().start(),
+                        paths=_paths_for(toolchain, tmp_path / "classes"))
+    assert javac[0]["sources"] == tuple(A.PREFLIGHT_SOURCES)
+    assert any(p.name == "E4Preflight.java" for p in javac[0]["sources"])
+
+
+def test_a_jar_that_is_not_the_verified_one_is_refused(toolchain, javac, tmp_path):
+    other = tmp_path / "other.jar"
+    other.write_bytes(b"jar")
+    paths = D1.T1jPaths(java=str(pathlib.Path(toolchain["jdk_home"], "bin", "java")),
+                        jar=str(other), classes=str(tmp_path / "c"), ply_cap=280)
+    with pytest.raises(D1.D1Error, match="jar"):
+        D1._default_compile(D1.Deadline().start(), paths=paths)
+    assert javac == [], "it compiled against an unverified jar"
+
+
+def test_a_java_binary_outside_the_verified_jdk_is_refused(toolchain, javac, tmp_path):
+    paths = D1.T1jPaths(java="/usr/bin/java", jar=toolchain["jar"],
+                        classes=str(tmp_path / "c"), ply_cap=280)
+    with pytest.raises(D1.D1Error, match="java"):
+        D1._default_compile(D1.Deadline().start(), paths=paths)
+    assert javac == []
+
+
+def test_an_existing_class_directory_is_refused(toolchain, javac, tmp_path):
+    classes = tmp_path / "classes"
+    classes.mkdir()
+    with pytest.raises(D1.D1Error, match="already exists"):
+        D1._default_compile(D1.Deadline().start(), paths=_paths_for(toolchain, classes))
+    assert javac == [], "it compiled into a directory it did not create"
+
+
+def test_a_failing_javac_is_a_VOID(toolchain, monkeypatch, tmp_path):
+    """The exit-status guard, REACHED ALONE.
+
+    A javac that fails AND writes nothing is also caught by the no-.class guard
+    further down, so a fixture that writes nothing proves only whichever fires
+    first -- an injected-defect control showed the exit check could be deleted
+    with no test noticing. This one writes a class file and still fails.
+    """
+    def failing(javac_path, jar, out_dir, sources=None):
+        pathlib.Path(out_dir, "E4Preflight.class").write_bytes(b"\xca\xfe\xba\xbe")
+        return subprocess.CompletedProcess([], 1, "", "boom")
+
+    monkeypatch.setattr(A, "compile_helper", failing)
+    with pytest.raises(D1.D1VoidError, match="javac exit 1"):
+        D1._default_compile(D1.Deadline().start(),
+                            paths=_paths_for(toolchain, tmp_path / "classes"))
+
+
+def test_a_jar_that_disagrees_with_E4s_PIN_is_refused(toolchain, javac, monkeypatch,
+                                                      tmp_path):
+    """The acquisition lock says what was fetched; `JAR_SHA256` says what was
+    QUALIFIED. Comparing them is the only thing that shows they agree -- and the
+    earlier test cannot see this guard, because its fixture sets the pin FROM the
+    fake jar, so the two match however the code behaves."""
+    monkeypatch.setattr(SCREEN_CMD, "JAR_SHA256", "0" * 64)
+    with pytest.raises(D1.D1Error, match="qualified"):
+        D1._default_compile(D1.Deadline().start(),
+                            paths=_paths_for(toolchain, tmp_path / "classes"))
+    assert javac == [], "it compiled against a jar E4 never qualified"
+
+
+def test_an_unverifiable_toolchain_stops_the_compile(monkeypatch, javac, tmp_path):
+    monkeypatch.setattr(TC, "verified_paths",
+                        lambda *a, **k: (_ for _ in ()).throw(TC.ToolchainError("nope")))
+    paths = D1.T1jPaths(java="j", jar="j", classes=str(tmp_path / "c"), ply_cap=280)
+    with pytest.raises(TC.ToolchainError):
+        D1._default_compile(D1.Deadline().start(), paths=paths)
+    assert javac == []
+
+
+# ═══════ 5.3: the FULL T1j-side capture, and the checks that make it real ════
+#
+# Persisting a searched-position dump without comparing it to our state records
+# an answer to a question nobody asked. The qualified `T1jAgent` re-binds it for
+# exactly this reason: the per-prefix replay proves *a* jvm can rebuild the
+# history and says nothing about the jvm that actually searched.
+
+def _probe(prefix=None, state=None, **kw):
+    prefix = MOVES if prefix is None else prefix
+    return D1._probe_position(moves=prefix, depth=6, paths=RUNTIME,
+                              state=state if state is not None else _state_after(prefix),
+                              budget=D1.QueryBudget(), deadline=D1.Deadline(), **kw)
+
+
+def test_the_reply_record_carries_every_5_3_observable(reply):
+    r = _probe()
+    assert r["requested_depth"] == 6 and r["completed_depth"] == 6
+    assert r["completed"] is True and r["legal"] is True and r["null_sentinel"] is False
+    assert r["move"] and len(r["move"]) == 2
+    assert r["invocations"] == 2 and len(r["elapsed_us"]) == 2
+    assert r["searched_state"]["ply"] == len(MOVES)
+    assert r["searched_state"]["n_legal"] == len(_state_after(MOVES).legal_moves())
+    assert r["postcond"] and all(p["refl_n"] == INT.QUERY_REFL_N for p in r["postcond"])
+
+
+def test_the_postcondition_surface_is_read_on_every_invocation(reply):
+    assert len(_probe()["postcond"]) == D1.INVOCATIONS_PER_DEPTH == 2
+
+
+def test_a_reply_with_no_postcondition_line_is_VOID(reply):
+    reply["out"] = _stdout(post=False)
+    with pytest.raises(D1.D1VoidError, match="POSTCOND"):
+        _probe()
+
+
+def test_an_unclean_postcondition_is_VOID(reply):
+    reply["out"] = _stdout(clean=False)
+    with pytest.raises(D1.D1VoidError, match="postcondition"):
+        _probe()
+
+
+def test_a_wrong_reflection_COUNT_is_VOID(reply):
+    """Authorized NAMES are not an authorized COUNT: a repeated or missing
+    authorized access passes `PostCond.clean` and must still abort."""
+    reply["out"] = _stdout(refl_n=INT.QUERY_REFL_N + 1)
+    with pytest.raises(D1.D1VoidError, match="reflective"):
+        _probe()
+
+
+def test_a_SEARCH_jvm_that_rebuilt_a_different_position_is_VOID(reply):
+    """The prefix replay binds one jvm; this binds the one that searched."""
+    other = MOVES[:-1] + [(20, 20)]                 # same ply, different position
+    reply["out"] = _stdout(dump_prefix=other)
+    with pytest.raises(D1.D1VoidError, match="SEARCH jvm"):
+        _probe()
+
+
+def test_more_than_one_searched_dump_is_VOID(reply):
+    reply["out"] = _stdout() + _dump(MOVES)
+    with pytest.raises(D1.D1VoidError, match="dump"):
+        _probe()
+
+
+def test_a_move_illegal_in_OUR_engine_is_VOID(reply):
+    """T1j may report `legal=true` about its own board; the move still has to be
+    legal in ours, or the two engines are not describing one position."""
+    reply["out"] = _stdout(move=MOVES[0])           # already occupied
+    with pytest.raises(D1.D1VoidError, match="illegal in OUR"):
+        _probe()
+
+
+def _run_one(tmp_path, monkeypatch, *, moves_by_depth=None):
+    """One position end to end, with each depth's reply controllable."""
+    st = _state_after(MOVES)
+    legal = sorted(st.legal_moves())
+
+    def fake_run(args, **kw):
+        if "replay" in args:
+            return subprocess.CompletedProcess(args, 0, _replay_stdout(MOVES), "")
+        depth = int(args[args.index("query") + 1])
+        mv = (moves_by_depth or {}).get(depth, legal[0])
+        return subprocess.CompletedProcess(args, 0, _stdout(depth=depth, move=mv), "")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    return D1._run_d1_unguarded(
+        positions=[_position()], paths=RUNTIME, out_path=str(tmp_path / "r.json"),
+        _compile=lambda d: {"stub": True}, _incumbent=lambda **kw: {"ok": True})
+
+
+def test_the_position_record_says_the_depths_AGREE_when_they_do(
+        registered, tmp_path, monkeypatch):
+    report = _run_one(tmp_path, monkeypatch)
+    pos = report["positions"][0]
+    assert pos["depths_agree"] is True, pos["depths"]
+    assert [d["depth"] for d in pos["depths"]] == list(D1.T1J_DEPTHS)
+    assert report["toolchain_identity"] == {"stub": True}
+
+
+def test_the_position_record_says_the_depths_DISAGREE_when_they_do(
+        registered, tmp_path, monkeypatch):
+    """The discriminating half. Asserting only the agreeing case passes for a
+    field hard-coded to True -- an injected-defect control proved exactly that.
+    T1j's two qualified depths choosing different moves is a RESULT, not an
+    abort: 12.7's determinism check compares the two JVMs at ONE depth."""
+    st = _state_after(MOVES)
+    a, b = sorted(st.legal_moves())[:2]
+    report = _run_one(tmp_path, monkeypatch, moves_by_depth={3: a, 6: b})
+    pos = report["positions"][0]
+    assert pos["depths_agree"] is False, pos["depths"]
+    assert {tuple(d["move"]) for d in pos["depths"]} == {a, b}

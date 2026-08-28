@@ -81,6 +81,32 @@ ACCOUNTED_SEED_INTERVALS = (
                                      # reservation -- see the L0 card. Nothing has
                                      # been drawn from it; it is reserved, not
                                      # exposed.
+    (202614000, 202614227),          # D1 SAME-POSITION INTERROGATION. 227 seeds,
+                                     # one per retained position (plan 12.5), one
+                                     # incumbent search/readout each; T1j has no
+                                     # controlled seed at all, so duplicating a
+                                     # T1j query consumes none of these.
+                                     #
+                                     # REGISTERED 2026-08-28, as part of the D1
+                                     # EXECUTION authorization and not before.
+                                     # Through preregistration and integration it
+                                     # was reserved on paper and deliberately
+                                     # absent from this tuple, so a block that was
+                                     # never authorized would have cost nothing to
+                                     # abandon; `d1_probe._check_seed_registration`
+                                     # refused the run for exactly that reason.
+                                     #
+                                     # Disjointness was proved BEFORE reservation
+                                     # against 3,429 prior seeds across every
+                                     # category AND every derived RNG stream: 0
+                                     # direct overlaps, 0 stream collisions, own
+                                     # streams injective (1,135 distinct values
+                                     # from 227 seeds x 5 derivations). The
+                                     # enumeration was exhaustive, not sampled.
+                                     #
+                                     # Accounted, NOT exposed and NOT retired: a
+                                     # reservation is not a draw. Those move only
+                                     # once the run has actually drawn from it.
 )
 
 #: EXPERIMENTAL EXPOSURE: seeds drawn from OUTSIDE the permanently unschedulable

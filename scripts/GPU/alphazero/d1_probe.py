@@ -23,6 +23,7 @@ nothing, so the tests assert arrival at `subprocess.run`, never at the call site
 from __future__ import annotations
 
 import contextlib
+import functools
 import json
 import os
 import signal
@@ -246,7 +247,37 @@ def _validate_reply(rec, dumps, *, depth: int, n_moves: int, where: str) -> None
 AGREEMENT_FIELDS = ("move", "legal", "requested_depth", "completed_depth")
 
 
-def _probe_position(*, moves: Sequence[Pos], depth: int, paths: T1jPaths,
+def _postcond_dict(p) -> Dict[str, Any]:
+    """The helper's safety surface, as recorded rather than summarised."""
+    return {"no_throw": p.no_throw, "windows": p.windows, "frames": p.frames,
+            "headless": p.headless, "prefs_ok": p.prefs_ok, "refl_ok": p.refl_ok,
+            "refl_n": p.refl_n, "failures": p.failures, "clean": p.clean}
+
+
+def _searched_state(dump, state, moves: Sequence[Pos], *, where: str) -> Dict[str, Any]:
+    """RE-BIND the position the SEARCH jvm reconstructed, then describe it.
+
+    5.5's per-prefix replay proves that *a* jvm can rebuild the history; it says
+    nothing about the jvm that actually searched, because those are different
+    processes. Only this ties the returned move to our position -- and D1's whole
+    question is what T1j does FROM THIS POSITION, so a search that rebuilt a
+    different one has answered a question nobody asked.
+
+    `compare_state` is the ONE implementation, shared with the E3b binder, so the
+    two can never drift apart.
+    """
+    div = INT.compare_state(state, dump, moves)
+    if div:
+        raise D1VoidError(
+            f"{where}: the SEARCH jvm reconstructed a different position: "
+            + "; ".join(div) + ". VOID.")
+    return {"ply": dump.ply, "next_player": dump.next_player,
+            "term_y": dump.term_y, "term_x": dump.term_x,
+            "n_pegs": len(dump.pegs), "n_bridges": len(dump.bridges),
+            "n_legal": len(dump.legal), "history_len": len(dump.history)}
+
+
+def _probe_position(*, moves: Sequence[Pos], depth: int, paths: T1jPaths, state,
                     budget: QueryBudget, deadline: Deadline) -> Dict[str, Any]:
     """Query ONE prefix at ONE depth, twice, in two separate JVM processes.
 
@@ -272,12 +303,26 @@ def _probe_position(*, moves: Sequence[Pos], depth: int, paths: T1jPaths,
                 f"depth {depth} invocation {i}: T1j query timed out after "
                 f"{PER_QUERY_TIMEOUT_S}s ({e}). The run is VOID: no partial-cohort "
                 f"analysis is produced.") from None
+        where = f"depth {depth} invocation {i}"
         if rc != 0 or len(recs) != 1:
+            raise D1VoidError(f"{where}: exit {rc} with {len(recs)} query records")
+        _validate_reply(recs[0], dumps, depth=depth, n_moves=len(moves), where=where)
+        # 5.3's reflection/postcondition surface, READ rather than assumed, and
+        # translated like every other E3b refusal: an AbortError here would
+        # otherwise escape `main` as UNEXPECTED instead of VOID.
+        try:
+            post = INT.check_postcond(out, expected_refl=INT.QUERY_REFL_N,
+                                      where=where, phase="query")
+        except AbortError as e:
+            raise D1VoidError(f"{e.message}. VOID.") from None
+        if len(dumps) != 1:
             raise D1VoidError(
-                f"depth {depth} invocation {i}: exit {rc} with {len(recs)} query records")
-        _validate_reply(recs[0], dumps, depth=depth, n_moves=len(moves),
-                        where=f"depth {depth} invocation {i}")
-        results.append((recs[0], dumps))
+                f"{where}: {len(dumps)} searched-position dumps, expected exactly 1: VOID")
+        searched = _searched_state(dumps[0], state, moves, where=where)
+        if recs[0].move not in set(state.legal_moves()):
+            raise D1VoidError(
+                f"{where}: T1j returned {recs[0].move}, illegal in OUR engine: VOID")
+        results.append((recs[0], dumps, post, searched))
         if deadline.started:
             deadline.check(f"after depth {depth} invocation {i}")
     a, b = results
@@ -290,8 +335,19 @@ def _probe_position(*, moves: Sequence[Pos], depth: int, paths: T1jPaths,
     if a[1] != b[1]:
         raise D1VoidError(
             f"depth {depth}: the two invocations replayed different states: VOID.")
-    return {"depth": depth, "record": a[0], "dump": a[1],
-            "invocations": INVOCATIONS_PER_DEPTH}
+    rec = a[0]
+    return {"depth": depth, "record": rec, "dump": a[1],
+            "invocations": INVOCATIONS_PER_DEPTH,
+            "requested_depth": rec.requested_depth,
+            "completed_depth": rec.completed_depth,
+            "completed": rec.completed, "legal": rec.legal,
+            "null_sentinel": rec.null_sentinel,
+            "move": [int(rec.move[0]), int(rec.move[1])],
+            "to_move": rec.to_move, "current_max_ply": rec.current_max_ply,
+            "usealphabeta": rec.usealphabeta, "eval_regime": rec.eval_regime,
+            "elapsed_us": [r[0].elapsed_us for r in results],
+            "postcond": [_postcond_dict(r[2]) for r in results],
+            "searched_state": a[3]}
 
 
 def _check_seed(seed: Any) -> int:
@@ -445,7 +501,8 @@ def _run_d1_unguarded(*, positions, paths, out_path, repo_root=".", deadline=Non
     """
     deadline = deadline or Deadline()
     budget = budget or QueryBudget()
-    compile_fn = _compile if _compile is not None else _default_compile
+    compile_fn = (_compile if _compile is not None
+                  else functools.partial(_default_compile, paths=paths))
     # Constructing this reads the frozen L0 plan and nothing else; the EVALUATOR
     # is loaded on first use, which is after the registration check and after
     # compilation -- "loaded once, before the first position" (12.6).
@@ -466,7 +523,7 @@ def _run_stages(positions, paths, out_path, deadline, budget, compile_fn, incumb
     # The deadline is ALREADY started and the supervisor is ALREADY armed from
     # it; `_run_d1_unguarded` owns that order. Compilation is the first thing
     # inside the window, which is why the window has to open before it.
-    compile_fn(deadline)
+    artifacts = compile_fn(deadline)
     deadline.check("after helper compilation")
 
     # ONE runtime, ONE context, ONE binder for the whole run -- the E3b
@@ -488,20 +545,28 @@ def _run_stages(positions, paths, out_path, deadline, budget, compile_fn, incumb
         deadline.check(f"after binding {where}")
         ours = incumbent(pos=pos, state=state, budget=budget)
         deadline.check(f"after the incumbent readout at {where}")
-        per_depth = [_probe_position(moves=prefix, depth=d, paths=paths,
+        per_depth = [_probe_position(moves=prefix, depth=d, paths=paths, state=state,
                                     budget=budget, deadline=deadline)
                      for d in T1J_DEPTHS]
+        depths = [{k: v for k, v in r.items() if k not in ("record", "dump")}
+                  for r in per_depth]
+        # 5.3's last observable. T1j supplies ONE selected move and no
+        # distribution; whether its two qualified depths pick the same move is
+        # recorded as exactly that, and never expanded into a synthetic pi.
+        moves_by_depth = {d["depth"]: tuple(d["move"]) for d in depths}
         out.append({"task_id": pos.get("task_id"), "ply": pos.get("ply"),
                     "seed": pos["seed"], "prefix_len": len(prefix),
-                    "digest": pos.get("digest"), "incumbent": ours,
-                    "depths": [{"depth": r["depth"],
-                                "move": list(r["record"].move) if r["record"].move else None,
-                                "completed_depth": r["record"].completed_depth,
-                                "invocations": r["invocations"]} for r in per_depth]})
+                    "digest": pos.get("digest"), "prefix": [list(m) for m in prefix],
+                    "signature": pos.get("signature"), "role": pos.get("role"),
+                    "opening": pos.get("opening"), "colour_arm": pos.get("colour_arm"),
+                    "phase": pos.get("phase"), "incumbent": ours,
+                    "depths": depths,
+                    "depths_agree": len(set(moves_by_depth.values())) == 1})
     deadline.check("before writing the report")
 
     report = {"n_positions": len(out), "queries_spent": budget.spent,
               "incumbent_identity": getattr(incumbent, "identity", None),
+              "toolchain_identity": artifacts,
               "query_cap": budget.cap, "per_query_timeout_s": PER_QUERY_TIMEOUT_S,
               "run_deadline_s": deadline.limit_s, "elapsed_s": deadline.elapsed(),
               "seed_interval": list(SEED_INTERVAL), "positions": out}
@@ -513,9 +578,82 @@ def _run_stages(positions, paths, out_path, deadline, budget, compile_fn, incumb
     return report
 
 
-def _default_compile(deadline: Deadline) -> None:
-    """Production compile step. Unreachable while the gate is shut."""
-    raise D1Error("D1 execution is unauthorized; no helper is compiled")
+def _default_compile(deadline: Deadline, *, paths: T1jPaths) -> Dict[str, Any]:
+    """Compile the helper against the VERIFIED toolchain, once, for the whole run.
+
+    IDENTITY BEFORE ANYTHING ELSE (12.7: "any identity mismatch of checkpoint,
+    JAR or JDK component hash" is an abort). `t1j_toolchain.verified_paths`
+    hashes the jar and every pinned JDK component before returning a single
+    path, and refuses a root under /tmp whatever supplied it -- the failure that
+    once deleted the whole toolchain. The jar is then checked AGAIN against E4's
+    own pin, because the lock records what was acquired and `JAR_SHA256` records
+    what was qualified; agreeing is the point, and only comparing them shows it.
+
+    THE PATHS THE CALLER SUPPLIED MUST BE THE VERIFIED ONES. Verifying a
+    toolchain and then compiling against a different jar would be a hash check
+    that binds nothing -- the same shape as a gate that does not gate.
+
+    PREFLIGHT_SOURCES, not the bare E3b set: D1 queries through `E4Preflight`,
+    and compiling the E3b sources alone would leave that main class absent and
+    fail at the process boundary on every query instead of here.
+
+    CREATE-ONLY class directory. Reusing one would let a stale `.class` from
+    another build decide what actually ran.
+
+    ⚠ `compile_helper` takes no timeout and cannot be given one through the
+    adapter's API (12.9). The whole-run SIGALRM supervisor is what bounds it;
+    that is why the supervisor is armed before this is called.
+    """
+    from . import e4_screen_command as SCREEN_CMD
+    from . import t1j_toolchain as TC
+
+    tc = TC.verified_paths()
+    jar_sha = INT._sha256(tc["jar"])          # the one hash helper the JDK pin uses
+    if jar_sha != SCREEN_CMD.JAR_SHA256:
+        raise D1Error(
+            f"the verified toolchain's jar hashes {jar_sha}, but E4 qualified "
+            f"{SCREEN_CMD.JAR_SHA256}. The acquisition lock and the qualification pin "
+            f"describe different jars; D1 will not choose between them.")
+    if os.path.realpath(paths.jar) != os.path.realpath(tc["jar"]):
+        raise D1Error(
+            f"the run was given jar {paths.jar!r} but the verified toolchain's jar is "
+            f"{tc['jar']!r}. Verifying one jar and compiling against another is a hash "
+            f"check that binds nothing.")
+    java = os.path.join(tc["jdk_home"], "bin", "java")
+    if os.path.realpath(paths.java) != os.path.realpath(java):
+        raise D1Error(
+            f"the run was given java {paths.java!r}, which is not the verified JDK's "
+            f"{java!r}. A path named for Temurin 17 does not bind the runtime that "
+            f"executes anything.")
+    jdk = INT.verify_jdk_identity(tc["jdk_home"])
+
+    if os.path.exists(paths.classes):
+        raise D1Error(
+            f"the class directory already exists: {paths.classes}. It is create-only, "
+            f"so a stale .class from another build cannot decide what ran.")
+    os.makedirs(paths.classes)
+    deadline.check("before compiling the helper")
+    result = A.compile_helper(os.path.join(tc["jdk_home"], "bin", "javac"), tc["jar"],
+                              paths.classes, sources=A.PREFLIGHT_SOURCES)
+    if result.returncode != 0:
+        raise D1VoidError(
+            f"javac exit {result.returncode}: {result.stderr.strip()[:300]}. The run is "
+            f"VOID: no partial-cohort analysis is produced.")
+
+    classes: Dict[str, str] = {}
+    for root, _dirs, files in os.walk(paths.classes):
+        for name in sorted(files):
+            if name.endswith(".class"):
+                full = os.path.join(root, name)
+                classes[os.path.relpath(full, paths.classes)] = INT._sha256(full)
+    if not classes:
+        raise D1VoidError("javac reported success but produced no .class file: VOID")
+    return {"toolchain": {"root": tc["root"], "source": tc["source"],
+                          "verified": tc["verified"]},
+            "jar": tc["jar"], "jar_sha256": jar_sha, "jdk_home": tc["jdk_home"],
+            "jdk_components": jdk, "classes_dir": paths.classes, "classes": classes,
+            "sources": {p.name: INT._sha256(str(p)) for p in A.PREFLIGHT_SOURCES},
+            "main_class": A.PREFLIGHT_MAIN}
 
 
 def frozen_incumbent_identity(plan_path: Optional[str] = None) -> Dict[str, Any]:

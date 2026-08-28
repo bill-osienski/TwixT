@@ -229,7 +229,8 @@ def select_all(bound: Any) -> Dict[str, Any]:
         # A row can belong to one signature's positions AND the other's
         # controls, so the seed is written onto a COPY: assigning in place would
         # let the second group overwrite the first group's seed.
-        group["rows"] = [dict(r, seed=seed + i) for i, r in enumerate(group["rows"])]
+        group["rows"] = [dict(r, seed=seed + i, signature=key[0], role=key[1])
+                         for i, r in enumerate(group["rows"])]
         seed += len(group["rows"])
         ordered.extend(group["rows"])
 
@@ -237,3 +238,32 @@ def select_all(bound: Any) -> Dict[str, Any]:
             "seed_assignment_order": [list(k) for k in SEED_ASSIGNMENT_ORDER],
             "cohorts": [by_key[k] for k in SEED_ASSIGNMENT_ORDER],
             "positions": ordered}
+
+
+#: Exactly what a D1 run needs on its input, and nothing else. The D0 feature
+#: rows carry ~30 more columns; carrying them into the run record would invite a
+#: later analysis to read a column the preregistration never named.
+MANIFEST_FIELDS = ("task_id", "ply", "seed", "digest", "signature", "role",
+                   "opening", "colour_arm", "phase")
+
+
+def run_manifest(selection: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """The run's INPUT: the probe's requirements plus 5.4's cohort labels.
+
+    `prefix` is the only thing the E3b adapter can consume (12.2), `digest` is
+    the label 12.7 re-checks it against, `seed` is this position's own, and
+    `signature`/`role` are 5.4's "D0 structural signature and matched-control
+    label". The two frozen signature columns travel too, so a reader can see
+    which cohort a row belongs to without recomputing D0.
+
+    JSON-ready: tuples become lists here rather than wherever the file is written.
+    """
+    columns = {sig["name"]: sig["column"] for sig in SIGNATURES}
+    out: List[Dict[str, Any]] = []
+    for row in selection["positions"]:
+        entry = {field: row[field] for field in MANIFEST_FIELDS}
+        entry["prefix"] = [[int(a), int(b)] for a, b in row["prefix"]]
+        for column in columns.values():
+            entry[column] = bool(row[column])
+        out.append(entry)
+    return out

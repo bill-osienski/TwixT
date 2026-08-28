@@ -207,19 +207,23 @@ def test_the_seed_assignment_is_deterministic(bound):
     assert key(a) == key(b)
 
 
-def test_the_reserved_block_is_absent_from_every_real_registry():
-    """RESERVED here, REGISTERED nowhere: 12.5 makes registering part of the
-    execution authorization, not of preparation.
+def test_the_block_is_ACCOUNTED_and_still_unspent():
+    """12.5 made registering part of the EXECUTION authorization, and it has now
+    been given: the block is accounted. It must still be unspent -- accounted is
+    a reservation, while exposed and retired are claims about draws and about the
+    future, and selection draws nothing.
 
-    Each registry is asserted NON-EMPTY first. An absence check over an empty
-    collection passes vacuously, which would make this test decorative.
+    Each registry is asserted NON-EMPTY first; a check over an empty collection
+    passes vacuously, which would make this test decorative.
     """
     from scripts.GPU.alphazero import e4_screen_reference as REF
     for name in ("ACCOUNTED_SEED_INTERVALS", "EXPOSED_SEED_INTERVALS",
                  "RETIRED_SEED_INTERVALS", "TEST_ONLY_SEED_INTERVALS"):
         assert getattr(REF, name), f"vacuous: {name} is empty"
     for seed in range(*SEL.SEED_INTERVAL):
-        assert not any(REF.seed_status(seed).values()), seed
+        st = REF.seed_status(seed)
+        assert st["accounted"] and not (st["exposed"] or st["retired"] or st["test_only"]), \
+            (seed, st)
 
 
 def test_the_frozen_rule_retains_the_same_position_in_two_cohorts(selection):
@@ -266,3 +270,36 @@ def test_a_cohort_that_departs_from_the_frozen_table_is_refused(bound, monkeypat
     monkeypatch.setattr(SEL, "SIGNATURES", bad)
     with pytest.raises(SEL.D1SelectionError, match="12.1 froze"):
         SEL.select_all(bound)
+
+
+# ══════════════════════ the run's INPUT, projected from the selection ════════
+
+def test_the_run_manifest_carries_what_the_probe_and_5_4_both_need(selection):
+    m = SEL.run_manifest(selection)
+    assert len(m) == 227
+    required = {"task_id", "ply", "seed", "digest", "prefix", "signature", "role",
+                "opening", "colour_arm", "phase",
+                "mover_more_fragmented", "created_threat"}
+    for row in m:
+        assert required <= set(row), sorted(required - set(row))
+        assert len(row["prefix"]) == row["ply"] and row["prefix"]
+        assert all(isinstance(x, list) and len(x) == 2 for x in row["prefix"])
+
+
+def test_every_manifest_row_carries_its_cohort_label(selection):
+    """5.4 records the D0 structural signature and the matched-control label; a
+    row that cannot say which cohort it came from cannot be compared to one."""
+    m = SEL.run_manifest(selection)
+    seen = {(r["signature"], r["role"]) for r in m}
+    assert seen == set(SEL.SEED_ASSIGNMENT_ORDER)
+    for row in m:
+        want = row["role"] == "position"
+        assert bool(row[dict((s["name"], s["column"]) for s in SEL.SIGNATURES)[
+            row["signature"]]]) is want
+
+
+def test_the_manifest_is_json_round_trippable_and_deterministic(bound):
+    a = SEL.run_manifest(SEL.select_all(bound))
+    b = SEL.run_manifest(SEL.select_all(bound))
+    assert a == b
+    assert json.loads(json.dumps(a)) == a

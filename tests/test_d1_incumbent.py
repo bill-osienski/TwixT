@@ -154,6 +154,7 @@ from scripts.GPU.alphazero import d1_probe as D1                # noqa: E402
 from scripts.GPU.alphazero import e4_screen_reference as REF    # noqa: E402
 from scripts.GPU.alphazero import eval_replay as RPL            # noqa: E402
 from scripts.GPU.alphazero import l0_match_plan as PLAN         # noqa: E402
+from scripts.GPU.alphazero import t1j_adapter as A              # noqa: E402
 
 PREFIX = [(11, 11), (12, 13), (13, 12), (10, 13), (12, 10), (14, 14)]
 
@@ -309,21 +310,28 @@ def test_the_agent_moves_the_colour_that_is_to_move(incumbent):
 
 # ═════════════ order, and one position end to end with everything mocked ═════
 
+def _ply_block(state, moves):
+    """One dump block that AGREES with `state`, in the helper's vocabulary."""
+    pegs, bridges = A.our_snapshot(state)
+    legal = {A.to_t1j(r, c) for (r, c) in state.legal_moves()}
+    bits = "".join("1" if (i // A.BOARD_N, i % A.BOARD_N) in legal else "0"
+                   for i in range(A.LEGAL_BITS))
+    hist = " ".join(f"{x},{y}" for x, y in (A.to_t1j(*m) for m in moves))
+    return (f"PLY {state.ply} moveNr={state.ply} "
+            f"next={A.PLAYER_TO_T1J[state.to_move]} "
+            f"termY={'true' if state.winner() == 'red' else 'false'} "
+            f"termX={'true' if state.winner() == 'black' else 'false'}\n"
+            f"  PEGS {' '.join(sorted(pegs))}\n"
+            f"  BRIDGES {' '.join(sorted(bridges))}\n"
+            f"  HIST {hist}\n  LEGAL {bits}\n")
+
+
 def _replay_stdout(prefix):
-    from scripts.GPU.alphazero import t1j_adapter as A
     post = ("POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true "
             f"refl_ok=true refl_n={D1.INT.REPLAY_REFL_N} failures=0")
     st, moves, out = TwixtState(active_size=24, to_move="red"), [], []
     for mv in list(prefix) + [None]:
-        pegs, bridges = A.our_snapshot(st)
-        legal = {A.to_t1j(r, c) for (r, c) in st.legal_moves()}
-        bits = "".join("1" if (i // A.BOARD_N, i % A.BOARD_N) in legal else "0"
-                       for i in range(A.LEGAL_BITS))
-        hist = " ".join(f"{x},{y}" for x, y in (A.to_t1j(*m) for m in moves))
-        out.append(f"PLY {st.ply} moveNr={st.ply} next={A.PLAYER_TO_T1J[st.to_move]} "
-                   f"termY=false termX=false\n  PEGS {' '.join(sorted(pegs))}\n"
-                   f"  BRIDGES {' '.join(sorted(bridges))}\n  HIST {hist}\n"
-                   f"  LEGAL {bits}\n")
+        out.append(_ply_block(st, moves))
         if mv is None:
             break
         moves.append(tuple(mv))
@@ -335,7 +343,6 @@ def _replay_stdout(prefix):
 def boundary(monkeypatch):
     """The process boundary. Serves replays and query replies; spawns nothing."""
     import subprocess
-    from scripts.GPU.alphazero import t1j_adapter as A
     calls = []
     x, y = A.to_t1j(15, 15)
 
@@ -343,26 +350,37 @@ def boundary(monkeypatch):
         calls.append({"args": args, "kw": kw})
         if "replay" in args:
             return subprocess.CompletedProcess(args, 0, _replay_stdout(PREFIX), "")
+        # FAITHFUL, because D1 now re-binds the position the SEARCH jvm
+        # reconstructed and reads the helper's postcondition surface. A dump with
+        # no pegs and no POSTCOND line used to pass; it was the fixture
+        # concealing the checks, not the checks being absent.
         depth = int(args[args.index("query") + 1])
-        hist = " ".join(f"{a},{b}" for a, b in (A.to_t1j(*m) for m in PREFIX))
-        legal = {A.to_t1j(r, c) for (r, c) in _board().legal_moves()}
-        bits = "".join("1" if (i // A.BOARD_N, i % A.BOARD_N) in legal else "0"
-                       for i in range(A.LEGAL_BITS))
+        st = _board()
+        post = ("POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true "
+                f"refl_ok=true refl_n={D1.INT.QUERY_REFL_N} failures=0")
         return subprocess.CompletedProcess(args, 0, (
-            f"QUERY q=1 requested_depth={depth} move_x={x} move_y={y} to_move=Y "
+            f"QUERY q=1 requested_depth={depth} move_x={x} move_y={y} "
+            f"to_move={A.PLAYER_TO_T1J[st.to_move]} "
             f"usealphabeta=true currentMaxPly={depth} completed_depth={depth} "
             f"completed=true legal=true null_sentinel=false moveNr={len(PREFIX)} "
             f"eval_regime=fixed elapsed_us=1000\n"
-            f"PLY {len(PREFIX)} moveNr={len(PREFIX)} next=X termY=false termX=false\n"
-            f"  PEGS \n  BRIDGES \n  HIST {hist}\n  LEGAL {bits}\n"), "")
+            + _ply_block(st, PREFIX) + post + "\n"), "")
 
     monkeypatch.setattr(subprocess, "run", fake_run)
     return calls
 
 
-def test_no_evaluator_is_loaded_while_the_seed_block_is_unregistered(identity, tmp_path):
+def test_no_evaluator_is_loaded_while_the_seed_block_is_unregistered(identity, tmp_path,
+                                                                    monkeypatch):
     """ORDER, asserted at the effect. An unregistered block must cost nothing --
-    not a compile, and not a checkpoint read either."""
+    not a compile, and not a checkpoint read either.
+
+    The block IS registered now (12.5, execution authorization), so this strips
+    it rather than relying on it being absent.
+    """
+    monkeypatch.setattr(REF, "ACCOUNTED_SEED_INTERVALS",
+                        tuple(i for i in REF.ACCOUNTED_SEED_INTERVALS
+                              if tuple(i) != tuple(D1.SEED_INTERVAL)))
     loads = []
     inc = D1._Incumbent(".", _load=lambda r: loads.append(r) or _tagged_evaluator(identity))
     with pytest.raises(D1.D1Error, match="not registered"):
