@@ -1,0 +1,40 @@
+  REJECTED     registration check disabled
+  REJECTED     registration check looks only at the first seed
+  REJECTED     registration checked only after the clock starts
+  REJECTED     registration checked only after the supervisor is armed
+  REJECTED     registration no longer stops the run before compilation
+  REJECTED     supervisor armed from limit_s instead of the remaining time
+  REJECTED     supervisor arms from a deadline that was never started
+  REJECTED     supervisor arms a DISABLED timer when nothing remains
+  REJECTED     remaining() ignores elapsed time, so the window restarts
+  REJECTED     digest re-check disabled
+  REJECTED     prefix legality check disabled
+  REJECTED     E3b binder never called
+  REJECTED     binder AbortError not translated to VOID
+  REJECTED     binder replay timeout not translated to VOID
+  REJECTED     ply_cap not carried to the runtime
+  REJECTED     replay timeout widened at the runtime
+  REJECTED     replay's unbounded-wait guard removed
+  REJECTED     replay timeout dropped at the last hop
+  REJECTED     T1jRuntime accepts an unbounded timeout
+  REJECTED     capture draws from the readout stream
+  REJECTED     capture switched on by default
+  REJECTED     capture flag not forwarded by the qualified builder
+  REJECTED     root-noise check disabled
+  REJECTED     evaluator reloaded for every position
+  REJECTED     incumbent readout spends no query
+  REJECTED     policy rank tie-break reversed
+  REJECTED     incumbent identity typed instead of read from the frozen plan
+  REJECTED     digest downgraded to the sha1 superset helper
+  REJECTED     digest payload widened beyond the frozen three fields
+  REJECTED     per-cell cap loosened
+  REJECTED     deduplication disabled
+  REJECTED     incumbent-to-move restriction dropped
+  REJECTED     controls no longer matched to the position cells
+  REJECTED     seed written in place so a shared row is overwritten
+  REJECTED     frozen-count reconciliation removed
+  REJECTED     mover cut inverted
+
+36/36 defects rejected; 0 not caught; 0 stale
+ALL CONTROLS RAN: True
+every source restored: True

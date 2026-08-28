@@ -11,10 +11,10 @@ written.
 
 **A SECOND BARRIER now stands beside D1's gate.** `[202614000, 202614227)` is
 absent from `ACCOUNTED_SEED_INTERVALS`, and `_check_seed_registration` refuses
-the run on that ground alone — before the deadline starts and before anything is
-compiled. Opening the gate would not be enough; registering the block is a
-separate reviewed edit belonging to the D1 execution authorization. Neither
-barrier can be opened by opening the other.
+the run on that ground alone — before the clock starts, before the supervisor
+arms, and before anything is compiled. Opening the gate would not be enough;
+registering the block is a separate reviewed edit belonging to the D1 execution
+authorization. Neither barrier can be opened by opening the other.
 
 ---
 
@@ -118,7 +118,10 @@ Q. The raw legal-move policy comes from `root.priors_raw`, and its rank uses the
 rank, not a second visit rank. A root whose `priors` differ from its `priors_raw`
 is a `VOID`: §12.6 specifies `add_noise=False`, which leaves them identical.
 
-## 5. Controls — 30 injected defects, 30 rejected
+## 5. Controls at `e0cc492` — 30 injected defects, 30 rejected
+
+*(Superseded by §9's 36, which adds the deadline-ordering controls. This section
+records the set as it stood at `e0cc492`.)*
 
 Each defect was applied to the source, the test that must catch it was run, and
 that test was **required to fail**. `__pycache__` purged with
@@ -179,9 +182,10 @@ finds an ungated function *and* an ungated method.
 
 ## 8. Suite, and "no model was loaded" as an observation
 
-**3,512 passed, 4 skipped, 53 deselected, 0 failed** — from
-`3,447 / 4 / 53` at `0817fc2`, so **+65 tests**, none failing. Run with all
-three gates `False`.
+**3,517 passed, 4 skipped, 53 deselected, 0 failed** — from
+`3,447 / 4 / 53` at `0817fc2`, so **+70 tests**, none failing. Run with all
+three gates `False`. (`3,512` at `e0cc492`; §9's deadline-ordering fix adds the
+last five.)
 
 `model_iter_0001.safetensors` is present in this tree, so a test that reached
 `_default_load_evaluator` would have read a real model and the run would still
@@ -191,7 +195,49 @@ the plugin fires on a real load; the nine test files this work touches then pass
 **425/425** under it. *(Scope: those nine files, the only ones that can reach the
 loader through this change — not the whole suite.)*
 
-## 9. Deliberately absent
+## 9. 🔴 A CORRECTION: the enforced clock and the reported clock were not the same clock
+
+**As first committed at `e0cc492`, this card's claim above was FALSE for one of
+the two clocks, and I am correcting the record rather than quietly making it
+true.** The sentence said registration refuses "before the deadline starts".
+That held for the monotonic `Deadline` — and **not** for the `SIGALRM`
+supervisor, which `_run_d1_unguarded` armed for the full 90 minutes *before*
+`_check_seed_registration` ran and *before* `Deadline.start()` was called.
+
+So a refused registration had already armed a 90-minute timer, and more
+importantly the two clocks had **different origins**: the report's `elapsed_s`
+measured from `deadline.start()`, while the timer that could actually terminate
+the run measured from whenever the context manager was entered. Conservative in
+effect — the alarm could only fire early, never late — but **not one coherent,
+auditable deadline**, which is what §12.10.2 requires.
+
+**Fixed.** `_run_d1_unguarded` now does registration → `deadline.start()` →
+`_supervisor(deadline)`, and the supervisor arms from `deadline.remaining()` —
+the same clock, from the same origin. Three refusals make the order structural
+rather than conventional:
+
+- it refuses a deadline that was **never started**, so "start, then arm" cannot
+  be reversed without a test noticing;
+- it refuses when **nothing remains**, because `setitimer(ITIMER_REAL, 0)`
+  *disables* the timer — arming a non-positive remaining would switch the
+  supervisor off while looking armed;
+- it still refuses when SIGALRM cannot be armed at all.
+
+**Controls: 36 injected defects, 36 rejected, 0 stale.** The six new ones move
+registration after the clock, move it after the arm, remove it from the
+pre-compilation path, arm from `limit_s` instead of the remaining time, arm an
+unstarted deadline, arm a disabled timer, and make `remaining()` ignore elapsed
+time.
+
+🔑 **One of them was not caught first time, and the reason is the lesson again.**
+Deleting the supervisor's unstarted-deadline guard changed nothing my test could
+see, because `Deadline.remaining()` *also* refuses an unstarted clock with its
+own "deadline was never started" — and my test matched that phrase. Two guards,
+one condition: the second needed an assertion on wording only it can produce.
+That is the third time this phase that a later guard turned out to be proved by
+no test at all.
+
+## 10. Deliberately absent
 
 No D1 run. No seed registered. `_default_compile` still raises. The §5.4
 per-position comparisons are analysis, not capture, and are not built — the

@@ -119,6 +119,16 @@ class Deadline:
             raise D1Error("deadline was never started")
         return self._clock() - self._t0
 
+    def remaining(self) -> float:
+        """Time left on THIS clock, from THIS origin.
+
+        The supervisor arms from this rather than from `limit_s`, so the timer
+        that can terminate the run and the elapsed figure the report carries
+        measure from the same instant. Arming from `limit_s` after the clock had
+        already started would silently restart the window.
+        """
+        return self.limit_s - self.elapsed()
+
     def check(self, where: str) -> None:
         """Raise VOID if the window has closed. Called at every stage boundary."""
         if self._t0 is None:
@@ -138,9 +148,21 @@ def _supervisor(deadline: "Deadline"):
     a hung compilation, replay, readout or write. SIGALRM can, because it
     interrupts the blocking call itself.
 
-    FAILS CLOSED. If the timer cannot be armed -- not the main thread, or no
-    SIGALRM on this platform -- the run REFUSES rather than silently falling back
-    to cooperative-only checking, which is how a safeguard becomes decorative.
+    ONE DEADLINE, ONE ORIGIN. The alarm is armed from `deadline.remaining()`, so
+    the clock that can TERMINATE the run and the clock the report describes are
+    the same clock measured from the same instant. It used to arm from
+    `limit_s` before `Deadline.start()` had been called at all, which made the
+    enforced window and the reported window two different things -- conservative,
+    but not one auditable deadline. Requiring a STARTED deadline is what stops
+    "start, then arm" from being reversed again without a test noticing.
+
+    FAILS CLOSED, three ways. If the timer cannot be armed -- not the main
+    thread, or no SIGALRM on this platform -- the run REFUSES rather than
+    silently degrading to cooperative-only checking. If the deadline was never
+    started it refuses, because an alarm with no origin bounds nothing. And if
+    nothing remains it refuses, because `setitimer(ITIMER_REAL, 0)` DISABLES the
+    timer: arming a non-positive remaining would switch the supervisor off while
+    leaving every appearance of having armed it.
 
     ponytail: SIGALRM interrupts blocking syscalls and Python bytecode, not a
     C extension that never returns; a subprocess-level supervisor is the upgrade
@@ -151,6 +173,17 @@ def _supervisor(deadline: "Deadline"):
         raise D1Error(
             "the whole-run supervisor cannot be armed here (needs SIGALRM on the main "
             "thread); refusing rather than degrading to cooperative checks only")
+    if not deadline.started:
+        raise D1Error(
+            "the whole-run supervisor cannot arm from a deadline that was never "
+            "started: the alarm would measure from a different instant than the "
+            "elapsed time the run reports")
+    left = deadline.remaining()
+    if left <= 0:
+        raise D1VoidError(
+            f"no time remains on the whole-run deadline ({left:.1f}s of "
+            f"{deadline.limit_s}s) before the supervisor could arm. The run is VOID: "
+            f"setitimer(0) would DISABLE the timer rather than fire it.")
 
     def _fire(_signum, _frame):
         raise D1VoidError(
@@ -158,7 +191,7 @@ def _supervisor(deadline: "Deadline"):
             f"TERMINATED mid-stage. VOID: no partial-cohort analysis is produced.")
 
     previous = signal.signal(signal.SIGALRM, _fire)
-    signal.setitimer(signal.ITIMER_REAL, deadline.limit_s)
+    signal.setitimer(signal.ITIMER_REAL, left)
     try:
         yield
     finally:
@@ -417,18 +450,22 @@ def _run_d1_unguarded(*, positions, paths, out_path, repo_root=".", deadline=Non
     # is loaded on first use, which is after the registration check and after
     # compilation -- "loaded once, before the first position" (12.6).
     incumbent = _incumbent if _incumbent is not None else _Incumbent(repo_root)
+
+    # ORDER, and it is the whole point. Registration first: an unregistered seed
+    # block must cost nothing -- not a compile, not a checkpoint read, and not an
+    # armed 90-minute timer. Then the clock starts. Then the supervisor arms FROM
+    # THAT CLOCK, so the enforced window and the reported window are one window.
+    _check_seed_registration()
+    deadline.start()
     with _supervisor(deadline):
         return _run_stages(positions, paths, out_path, deadline, budget, compile_fn,
                            incumbent)
 
 
 def _run_stages(positions, paths, out_path, deadline, budget, compile_fn, incumbent):
-    # BEFORE the clock and before anything is compiled: an unregistered seed
-    # block must cost nothing, and a refusal after compilation has already
-    # spent time and written a class directory.
-    _check_seed_registration()
-
-    deadline.start()
+    # The deadline is ALREADY started and the supervisor is ALREADY armed from
+    # it; `_run_d1_unguarded` owns that order. Compilation is the first thing
+    # inside the window, which is why the window has to open before it.
     compile_fn(deadline)
     deadline.check("after helper compilation")
 

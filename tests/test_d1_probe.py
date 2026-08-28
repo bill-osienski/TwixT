@@ -10,6 +10,7 @@ site. There are three default-None hops between a caller and that boundary, and
 each one silently restores unbounded waiting; proving the value was passed in at
 the top proves nothing about whether it arrived.
 """
+import signal
 import subprocess
 import sys
 
@@ -689,3 +690,91 @@ def test_an_illegal_move_in_a_retained_prefix_voids(wire, registered, tmp_path):
         D1._run_d1_unguarded(positions=[pos], paths=RUNTIME,
                              out_path=str(tmp_path / "r.json"),
                              _compile=lambda d: None, _incumbent=lambda **kw: {})
+
+
+# ═══════════ ONE deadline, ONE origin: the enforced clock is the reported one ═
+#
+# The supervisor's SIGALRM was armed BEFORE `_check_seed_registration` and
+# BEFORE `Deadline.start()`, so the enforced clock and the reported clock had
+# different start points. Conservative, but not one coherent auditable deadline:
+# the report's `elapsed_s` and the timer that can actually terminate the run were
+# measuring from different instants, and a refused registration had already armed
+# a 90-minute timer.
+
+@pytest.fixture
+def timer(monkeypatch):
+    """Observe SIGALRM arming at the point it happens."""
+    calls = []
+    real = signal.setitimer
+    monkeypatch.setattr(signal, "setitimer",
+                        lambda which, value, *a: calls.append(value) or real(which, 0))
+    return calls
+
+
+def test_an_unregistered_block_arms_no_timer_at_all(tmp_path, timer):
+    """The ordering, asserted at the effect. A block that is not registered must
+    cost nothing -- not a compile, not a checkpoint read, and not an armed
+    90-minute timer either."""
+    d = D1.Deadline()
+    with pytest.raises(D1.D1Error, match="not registered"):
+        D1._run_d1_unguarded(positions=[], paths=RUNTIME, deadline=d,
+                             out_path=str(tmp_path / "r.json"),
+                             _compile=lambda x: None, _incumbent=lambda **kw: {})
+    assert timer == [], "a timer was armed before the registration check refused"
+    assert d.started is False, "the reported clock started before registration passed"
+
+
+def test_the_supervisor_arms_from_the_started_deadlines_REMAINING_time(
+        tmp_path, registered, timer):
+    """Same clock, same origin. Arming from `limit_s` would restart the window,
+    so the timer would fire later than the deadline the report describes."""
+    ticks = iter([1000.0, 1005.0] + [1005.0] * 50)
+    d = D1.Deadline(limit_s=100, clock=lambda: next(ticks))
+    D1._run_d1_unguarded(positions=[], paths=RUNTIME, deadline=d,
+                         out_path=str(tmp_path / "r.json"),
+                         _compile=lambda x: None, _incumbent=lambda **kw: {})
+    assert timer, "no timer was armed; the assertion below would be vacuous"
+    assert timer[0] == 95.0, (
+        f"armed with {timer[0]}, expected the started deadline's remaining 95.0 "
+        f"(limit 100 minus 5 elapsed). 100.0 means it armed from limit_s and "
+        f"restarted the window.")
+
+
+def test_the_supervisor_refuses_a_deadline_that_was_never_started(timer):
+    """Structural enforcement of the order: it cannot arm from a clock that has
+    no origin, so 'start, then arm' cannot be silently reversed.
+
+    MATCHED ON THE SUPERVISOR'S OWN WORDING. `Deadline.remaining()` also refuses
+    an unstarted clock, with its own "deadline was never started", so a test
+    matching that phrase passed with this guard deleted -- an injected-defect
+    control caught exactly that. Two guards, one condition: the second needs a
+    message only it can produce.
+    """
+    with pytest.raises(D1.D1Error, match="supervisor cannot arm.*different instant"):
+        with D1._supervisor(D1.Deadline()):
+            pass
+    assert timer == []
+
+
+def test_the_supervisor_refuses_when_no_time_remains(timer):
+    """`setitimer(ITIMER_REAL, 0)` DISABLES the timer. Arming with a non-positive
+    remaining would therefore switch the supervisor OFF while looking armed --
+    the exact shape of a guard that does not bind."""
+    ticks = iter([0.0, 20.0] + [20.0] * 10)
+    d = D1.Deadline(limit_s=10, clock=lambda: next(ticks)).start()
+    with pytest.raises(D1.D1VoidError, match="no time remain"):
+        with D1._supervisor(d):
+            pass
+    assert timer == [], "a disabled timer was armed instead of refusing"
+
+
+def test_the_reported_elapsed_and_the_enforced_timer_share_one_origin(
+        tmp_path, registered, timer):
+    ticks = iter([500.0, 500.0, 500.0] + [560.0] * 50)
+    d = D1.Deadline(limit_s=90 * 60, clock=lambda: next(ticks))
+    report = D1._run_d1_unguarded(positions=[], paths=RUNTIME, deadline=d,
+                                  out_path=str(tmp_path / "r.json"),
+                                  _compile=lambda x: None, _incumbent=lambda **kw: {})
+    assert timer[0] == D1.RUN_DEADLINE_S, "the timer did not start at the deadline's origin"
+    assert report["elapsed_s"] == 60.0
+    assert report["run_deadline_s"] == D1.RUN_DEADLINE_S
