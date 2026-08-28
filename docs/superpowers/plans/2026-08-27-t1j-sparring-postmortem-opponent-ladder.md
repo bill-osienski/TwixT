@@ -732,3 +732,50 @@ repair the instrument, never reinterpret the data already seen.
 
 Confirmation repetitions `2` and `3` stay closed throughout D1. Nothing in this
 section opens them.
+
+### 12.9 Indicative T1j cost, and what must be frozen before execution
+
+**T1j-only indicative subtotal.** Using the E4 preflight's measured per-query
+wall-clock:
+
+| Depth | Queries | Measured ms/query | Subtotal |
+|---|---:|---:|---:|
+| `mdPly` 3 | 454 | 121 | 54,934 ms |
+| `mdPly` 6 | 454 | 2,749 | 1,248,046 ms |
+| **Total** | **908** | | **1,302,980 ms ≈ 21m 43s** |
+
+🔴 **This is a T1j-query subtotal, NOT a whole-run estimate and NOT a promise.**
+It excludes, at minimum: JVM process startup for each of the 908
+invocations, helper compilation, prefix replay and E3b binding, record output and
+fsync, **the incumbent's 227 searches and readouts entirely**, and any effect of
+these positions differing from the ones the preflight measured.
+
+> **A withdrawn figure, recorded so it is not reconstructed.** An earlier draft of
+> this report offered "25–30 minutes" for the whole run, derived by dividing L0's
+> 28.6 s/game by a ply count to price one incumbent readout. **That derivation is
+> invalid**: 28.6 s/game covers many plies and *both* engines, so it cannot be
+> decomposed into the cost of a single incumbent search. No whole-run figure is
+> stated here, because none is currently defensible. The incumbent's per-query
+> cost has never been measured in isolation.
+
+**Before D1 execution is authorized, two limits must be frozen — a query COUNT
+does not fail closed.** 1,135 queries bounds how many calls are *made*; it bounds
+nothing about how long any one of them *runs*. A hung JVM consumes no additional
+query and would block the run indefinitely. Required:
+
+1. **A per-query timeout**, passed explicitly at every call site. Verified in the
+   adapter rather than assumed: `t1j_adapter.query` declares
+   `timeout_s: Optional[float] = None` and passes it straight into
+   `subprocess.run(timeout=timeout_s)`, and `timeout=None` **waits forever** — so
+   the protection is present but **defaults to off**, the same shape as
+   [A1]-2's `ply_cap`. Worse, `t1j_adapter.replay` and
+   `t1j_adapter.compile_helper` take **no timeout parameter at all** and cannot
+   be given one through the adapter's current API; if D1 uses either, closing
+   that hole is part of the execution card.
+2. **A whole-run wall-clock cap**, with the run aborting as a `VOID` on breach
+   rather than truncating the cohort — a partial cohort is a filtered result.
+
+Neither limit is chosen here. Both are execution-authorization decisions, and
+this section exists so that authorization cannot be given without noticing they
+are missing.
+
