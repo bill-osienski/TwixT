@@ -259,7 +259,12 @@ def replay(
         HELPER_MAIN, "replay", str(ply_cap),
     ] + [f"{x},{y}" for (x, y) in xy]
     p = subprocess.run(args, capture_output=True, text=True, timeout=timeout_s)
-    return parse_dump(p.stdout), p.returncode, p.stdout
+    try:
+        plies = parse_dump(p.stdout)
+    except (ValueError, KeyError) as e:
+        raise HelperOutputError(
+            f"the helper's replay output could not be parsed: {e}", p.stdout) from None
+    return plies, p.returncode, p.stdout
 
 
 def our_snapshot(state, *, transform: str = CANONICAL):
@@ -299,6 +304,23 @@ class QueryRecord:
 
 
 _KV_RE = re.compile(r"(\w+)=(\S+)")
+
+
+class HelperOutputError(ValueError):
+    """The helper's output could not be parsed. CARRIES THE TRANSCRIPT.
+
+    The parsers raise bare `ValueError`/`KeyError`, which discards the stdout
+    that would explain the failure -- and stdout is only in scope inside `query`
+    and `replay`, so no caller can recover it afterwards. This is raised there
+    instead, with the output attached, so a caller can refuse WITH the evidence.
+
+    Subclasses `ValueError` so nothing that already handled a parse failure
+    changes behaviour.
+    """
+
+    def __init__(self, message: str, stdout: str):
+        super().__init__(message)
+        self.stdout = stdout
 
 
 def parse_queries(text: str, *, transform: str = CANONICAL) -> List[QueryRecord]:
@@ -367,7 +389,13 @@ def query(
         PREFLIGHT_MAIN,
     ] + mode + [f"{x},{y}" for (x, y) in xy]
     p = subprocess.run(args, capture_output=True, text=True, timeout=timeout_s)
-    return parse_queries(p.stdout, transform=transform), parse_dump(p.stdout), p.returncode, p.stdout
+    try:
+        recs = parse_queries(p.stdout, transform=transform)
+        dumps = parse_dump(p.stdout)
+    except (ValueError, KeyError) as e:
+        raise HelperOutputError(
+            f"the helper's query output could not be parsed: {e}", p.stdout) from None
+    return recs, dumps, p.returncode, p.stdout
 
 
 @dataclass(frozen=True)

@@ -337,3 +337,98 @@ def test_the_runner_touches_no_model_and_no_seed_machinery(forbidden):
     import pathlib
     src = pathlib.Path(LP.__file__).read_text(encoding="utf-8")
     assert forbidden not in src, forbidden
+
+
+# ══════ malformed helper output is INSTRUMENT failure, so it must VOID ═══════
+#
+# The card defines unparseable output as instrument failure. But the adapter's
+# parsers raise bare ValueError/KeyError, and none of it was translated: a
+# malformed QUERY line, a malformed dump header or a malformed POSTCOND escaped
+# `main` entirely -- not even as EXIT_UNEXPECTED, since `main` has no catch-all,
+# so the process died on an uncaught traceback with no verdict at all.
+#
+# Each case below is ISOLATED to one parser, and each asserts NO RECORD IS
+# WRITTEN: a VOID that left a file behind would be the partial-cohort artifact
+# the card forbids.
+
+BAD_QUERY = "QUERY q=1 requested_depth=3 move_x=11\n"          # missing fields
+BAD_DUMP = "PLY 3 next=Y termY=false termX=false\n  PEGS \n  LEGAL 0101\n"
+BAD_POST = "POSTCOND no_throw=true windows=0\n"                # missing fields
+
+
+def _void_on(monkeypatch, tmp_path, *, query_out=None, replay_out=None, match=""):
+    def fake_run(args, **kw):
+        if "replay" in args:
+            return subprocess.CompletedProcess(
+                args, 0, replay_out if replay_out is not None else _replay_out(PREFIX), "")
+        depth = int(args[args.index("query") + 1])
+        return subprocess.CompletedProcess(
+            args, 0, query_out if query_out is not None else _query_out(PREFIX, depth), "")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    out = tmp_path / "r.json"
+    with pytest.raises(LP.LowPlyVoidError, match=match) as e:
+        LP._run_unguarded(prefixes=_prefixes(), paths=PATHS, out_path=str(out),
+                          _compile=lambda d: {"stub": True})
+    assert not out.exists(), "a VOID wrote a record"
+    return str(e.value)
+
+
+def test_a_malformed_QUERY_line_is_a_VOID_not_a_traceback(monkeypatch, tmp_path):
+    msg = _void_on(monkeypatch, tmp_path, query_out=BAD_QUERY,
+                   match="could not be parsed")
+    assert "QUERY" in msg
+
+
+def test_a_malformed_DUMP_header_is_a_VOID_not_a_traceback(monkeypatch, tmp_path):
+    """Reached alone: the QUERY line is well formed, only the dump is not."""
+    st = _state(PREFIX)
+    x, y = A.to_t1j(*sorted(st.legal_moves())[0])
+    good_query = (f"QUERY q=1 requested_depth=3 move_x={x} move_y={y} to_move=X "
+                  "usealphabeta=true currentMaxPly=3 completed_depth=3 completed=true "
+                  "legal=true null_sentinel=false moveNr=3 eval_regime=normal "
+                  "elapsed_us=1000\n")
+    _void_on(monkeypatch, tmp_path, query_out=good_query + BAD_DUMP,
+             match="could not be parsed")
+
+
+def test_a_malformed_POSTCOND_is_a_VOID_not_a_traceback(monkeypatch, tmp_path):
+    """Reached alone: QUERY and dump both parse; only POSTCOND is malformed, so
+    only `_observe_reply`'s parse can be the thing that fails."""
+    st = _state(PREFIX)
+    depth = 3
+    x, y = A.to_t1j(*sorted(st.legal_moves())[0])
+    good = (f"QUERY q=1 requested_depth={depth} move_x={x} move_y={y} to_move="
+            f"{A.PLAYER_TO_T1J[st.to_move]} usealphabeta=true currentMaxPly={depth} "
+            f"completed_depth={depth} completed=true legal=true null_sentinel=false "
+            f"moveNr={len(PREFIX)} eval_regime=normal elapsed_us=1000\n")
+    msg = _void_on(monkeypatch, tmp_path,
+                   query_out=good + _block(st, list(PREFIX)) + BAD_POST,
+                   match="could not be parsed")
+    assert "POSTCOND" in msg
+
+
+def test_a_malformed_REPLAY_dump_is_a_VOID_not_a_traceback(monkeypatch, tmp_path):
+    """The binder's own parse path, reached alone."""
+    _void_on(monkeypatch, tmp_path, replay_out=BAD_DUMP, match="could not be parsed")
+
+
+def test_every_malformed_case_carries_the_bounded_transcript(monkeypatch, tmp_path):
+    """The helper's own output is the diagnosis, bounded, and the dump body never
+    travels -- the same rule the discarded-transcript repair established."""
+    msg = _void_on(monkeypatch, tmp_path,
+                   query_out=BAD_QUERY + "  LEGAL " + "1" * 576 + "\n",
+                   match="could not be parsed")
+    assert "1" * 100 not in msg, "the legal-cell map leaked into the refusal"
+    assert len(msg) < 2000, len(msg)
+
+
+def test_main_reports_rather_than_escaping_on_an_unexpected_error(monkeypatch, tmp_path):
+    """`main` had no catch-all, so anything it did not name escaped as a
+    traceback with no verdict. A reported exit is the minimum."""
+    monkeypatch.setattr(LP, "LOWPLY_QUALIFICATION_AUTHORIZED", True)
+    monkeypatch.setattr(LP, "load_frozen_prefixes",
+                        lambda p=None: (_ for _ in ()).throw(RuntimeError("boom")))
+    rc = LP.main(["--out", str(tmp_path / "r.json")])
+    assert rc == LP.EXIT_UNEXPECTED == 4
+    assert not (tmp_path / "r.json").exists()

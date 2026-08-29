@@ -150,7 +150,15 @@ def _observe_reply(rec, dumps, out, state, moves, *, depth: int,
     if rec.move is not None and rec.move not in set(state.legal_moves()):
         failures.append(f"returned {rec.move}, illegal in OUR engine")
 
-    posts = A.parse_postconds(out)
+    try:
+        posts = A.parse_postconds(out)
+    except (ValueError, KeyError) as e:
+        # A MISSING postcondition line is an observation about T1j and is
+        # recorded below. A MALFORMED one means the instrument cannot be read at
+        # all, which the card defines as VOID.
+        raise LowPlyVoidError(
+            f"{where}: the helper's POSTCOND output could not be parsed: {e}. "
+            f"T1j reported: {A.helper_failure_excerpt(out)}. VOID.") from None
     post = None
     if len(posts) != 1:
         failures.append(f"{len(posts)} POSTCOND lines, expected exactly 1")
@@ -200,6 +208,10 @@ def _query_once(*, moves: Sequence[Pos], depth: int, paths: T1jPaths, state,
         raise LowPlyVoidError(
             f"{where}: T1j did not answer within {PER_CALL_TIMEOUT_S}s ({e}). "
             f"A hung process is an instrument failure: VOID.") from None
+    except A.HelperOutputError as e:
+        raise LowPlyVoidError(
+            f"{where}: the helper's QUERY output could not be parsed ({e}). "
+            f"T1j reported: {A.helper_failure_excerpt(e.stdout)}. VOID.") from None
 
     # A NON-ZERO EXIT IS EXPECTED HERE AND IS NOT A VOID. E4Preflight exits 3
     # when its own `failures` counter is set -- which is exactly the condition
@@ -228,6 +240,10 @@ def _bind_prefix(binder: Callable, ctx, *, label: str, state,
         raise LowPlyVoidError(
             f"{label}: the prefix replay did not answer within "
             f"{PER_CALL_TIMEOUT_S}s ({e}): VOID.") from None
+    except A.HelperOutputError as e:
+        raise LowPlyVoidError(
+            f"{label}: the replay output could not be parsed ({e}). "
+            f"T1j reported: {A.helper_failure_excerpt(e.stdout)}. VOID.") from None
     except AbortError as e:
         return {"bound": False, "detail": e.message}
     return {"bound": True, "detail": None}
@@ -402,6 +418,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return EXIT_VOID
     except LowPlyError as e:                                  # pragma: no cover
         print(f"refused: {e}", file=sys.stderr)
+        return EXIT_UNEXPECTED
+    except Exception as e:                                    # noqa: BLE001
+        # A CATCH-ALL, because there was none: anything unnamed escaped `main`
+        # as a traceback with no verdict at all -- worse than an UNEXPECTED exit,
+        # which at least reports. `l0_match_command` carries the same arm.
+        print(f"UNEXPECTED {type(e).__name__}: {e}", file=sys.stderr)
         return EXIT_UNEXPECTED
     return EXIT_OK                                            # pragma: no cover
 
