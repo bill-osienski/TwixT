@@ -818,3 +818,92 @@ amendment **and a fail-closed implementation with its tests** have been reviewed
 in particular a negative control proving an exceeded deadline actually voids the
 run, since an unexercised abort is the defect §12.7 already had to correct once.
 
+## 13. Amendment 2 — prospective low-ply eligibility correction
+
+**Status: PLAN ONLY.** This amendment changes neither the historical §12.1
+selection nor the 2026-08-28 D1 `VOID`. It governs only a separately authorized,
+future D1 run. It registers no seed interval, starts no JVM, loads no model, and
+does not authorize a retry.
+
+### 13.1 Evidence and the narrow conclusion
+
+The one authorized low-ply qualification is recorded at
+`docs/superpowers/2026-08-31-t1j-lowply-qualification-result.md`, using the
+hash-pinned D1 input
+`docs/superpowers/evidence/2026-08-28-t1j-d1-execution/02_positions.json`
+(`sha256 d5a3cdfa58844451ba21e0fb23781c6aedbda9ad3c239f1c83ea99c3e3d037e3`).
+It completed all 36 T1j queries and recorded `FAIL`, rather than `VOID`.
+
+**Within its nine frozen `t1j_red` prefixes, plies 1 and 3 failed the frozen
+completion condition and ply 5 passed it.** This does **not** establish a global
+T1j threshold, does not characterize plies 2 or 4, and does not establish that a
+low-ply position caused the earlier D1 `VOID`. The original D1 did not retain a
+position-level progress trace, so that causal link remains unproven.
+
+### 13.2 The correction — an explicit post-selection exclusion, not reselection
+
+Apply §12.1–§12.3 exactly as originally frozen, including the discovery-half,
+incumbent-to-move, digest-deduplication, per-cell cap, matched-control, and
+earliest-`(task_id, ply)` rules. **Only after that frozen selection is complete,**
+remove the following six already-retained rows:
+
+| task | ply | signature / role | digest |
+|---|---:|---|---|
+| `l0match-000-strong6-o1_center-t1j_red-r0` | 1 | `mover_fragmentation` / control | `487df111c9dbd7a3cd70c1ff0bd1316eee47cb950f7443fb15f5bff33927d2a7` |
+| `l0match-000-strong6-o1_center-t1j_red-r0` | 3 | `mover_fragmentation` / control | `470721202fb36f18040bc00152ae6fbaf2ae576f8941ae2e6a6fcf99de676fde` |
+| `l0match-016-strong6-o3_low-t1j_red-r0` | 1 | `mover_fragmentation` / control | `69c2875679f3eb1b128c42daccdc28122ee7ec2556092333f61fcf6e11d3a473` |
+| `l0match-016-strong6-o3_low-t1j_red-r0` | 3 | `mover_fragmentation` / control | `4fba47bfca43d99f8b1c3fda801ec141d4013bdf7e135665fc4678a5047a002b` |
+| `l0match-024-strong6-o4_high-t1j_red-r0` | 1 | `mover_fragmentation` / control | `7c326873cac4c1d7786dd2eb69b4ba4c4ba0c7631a24fe4855eee529beb0f6a4` |
+| `l0match-024-strong6-o4_high-t1j_red-r0` | 3 | `mover_fragmentation` / control | `5e2c1f8ab19effb5487c8edba19c35a6075538ddcbb2110dd798364b010272e6` |
+
+This is deliberately an **enumerated exclusion set**, not the new general rule
+`ply >= 5`: the qualification supports exclusion of these observed, retained
+prefixes and no broader engine claim. There is **no reselection, backfill,
+re-deduplication, or re-capping** after removal. Later candidate rows may not
+replace the six excluded rows; doing so would create a new selection rule after
+the low-ply result was seen.
+
+### 13.3 Recomputed prospective cohorts and budget
+
+Applied to the exact 227-row frozen D1 input above, §13.2 removes six rows and
+retains **221**. The revised, prospective table is:
+
+| Signature | Positions | Controls | Position cells | Control cells |
+|---|---:|---:|---:|---:|
+| `mover_fragmentation` | 101 | 54 | 36 | 21 |
+| `created_threat` | 30 | 36 | 12 | 12 |
+| **Total** | **131** | **90** | — | — |
+
+For `mover_fragmentation`, the six exclusions reduce control-bearing cells from
+24 to **21** and raise position cells with no matched control from 12 to **15 of
+36**. This widens the pre-existing availability imbalance; it does not create a
+new matching rule. Controls remain availability-capped, are not padded, and may
+not be backfilled after the observed low-ply result.
+
+The fixed prospective ceiling is therefore **1,105 queries**:
+
+```
+221 positions × (1 incumbent readout + 2 T1j depth-3 + 2 T1j depth-6)
+= 221 incumbent readouts + 884 T1j queries
+= 1,105 total queries
+```
+
+This lowers the old 227-position / 1,135-query ceiling; it is not permission to
+replace excluded rows, increase any cap, or spend the difference elsewhere.
+The frozen settings, depth pair, separate-process determinism check, 120-second
+per-call timeout, 90-minute whole-run cap, and every §12.7 integrity abort remain
+unchanged for any future run.
+
+### 13.4 Seeds and authorization remain separate
+
+`[202614000, 202614227)` was consumed administratively by the earlier D1 `VOID`
+and is retired. **This amendment reserves no replacement interval.** A later,
+separate seed-reservation authorization must choose and prove a fresh 221-seed
+interval disjoint from every then-current registry and derived stream. It must
+not reuse, revive, or partially reuse the retired block.
+
+Implementing this amendment requires a separately reviewed execution-card change
+that proves the runtime selection is the original frozen selection followed by
+exactly this six-row exclusion set, verifies the resulting table and 1,105-query
+ceiling, and preserves full prefixes. None of that implementation, registration,
+or execution is authorized by this document.
