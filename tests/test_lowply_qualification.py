@@ -432,3 +432,41 @@ def test_main_reports_rather_than_escaping_on_an_unexpected_error(monkeypatch, t
     rc = LP.main(["--out", str(tmp_path / "r.json")])
     assert rc == LP.EXIT_UNEXPECTED == 4
     assert not (tmp_path / "r.json").exists()
+
+
+def test_a_malformed_POSTCOND_in_the_REPLAY_output_is_a_VOID(monkeypatch, tmp_path):
+    """THE PATH THE QUERY-SIDE FIX DID NOT COVER.
+
+    `A.query` parses QUERY and dump records, so a malformed POSTCOND in a QUERY
+    reply is caught by `_observe_reply`'s wrapper. The REPLAY side is different:
+    the binder calls `check_postcond` internally, and the ValueError propagates
+    out of `make_binder` with the transcript no longer in scope for any caller.
+    Verified empirically before fixing -- the query path already VOIDed, this one
+    escaped raw.
+    """
+    st = _state(PREFIX)
+    blocks = "".join(_block(_state(PREFIX[:i]), list(PREFIX[:i]))
+                     for i in range(len(PREFIX) + 1))
+
+    def fake_run(args, **kw):
+        if "replay" in args:
+            return subprocess.CompletedProcess(args, 0, blocks + BAD_POST, "")
+        depth = int(args[args.index("query") + 1])
+        return subprocess.CompletedProcess(args, 0, _query_out(PREFIX, depth), "")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    out = tmp_path / "r.json"
+    with pytest.raises(LP.LowPlyVoidError, match="could not be parsed"):
+        LP._run_unguarded(prefixes=_prefixes(), paths=PATHS, out_path=str(out),
+                          _compile=lambda d: {"stub": True})
+    assert not out.exists()
+
+
+def test_parse_postconds_carries_the_transcript_when_it_refuses():
+    """The transcript is in scope inside `parse_postconds` and nowhere above it:
+    `check_postcond` consumes the text, so a bare ValueError leaves every caller
+    unable to say what was unreadable."""
+    with pytest.raises(A.HelperOutputError) as e:
+        A.parse_postconds("POSTCOND no_throw=true windows=0\n")
+    assert e.value.stdout == "POSTCOND no_throw=true windows=0\n"
+    assert isinstance(e.value, ValueError), "existing ValueError handlers must still work"

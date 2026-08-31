@@ -490,7 +490,15 @@ def parse_postconds(text: str) -> List[PostCond]:
         missing = {"no_throw", "windows", "frames", "headless", "prefs_ok", "refl_ok",
                    "refl_n", "failures"} - set(kv)
         if missing:
-            raise ValueError(f"POSTCOND line missing fields {sorted(missing)}: {line!r}")
+            # CARRIES THE TRANSCRIPT, like the query and replay parsers. This is
+            # the only scope that still has it: `check_postcond` consumes the
+            # text inside the binder, so a bare ValueError propagating out of
+            # `make_binder` leaves every caller unable to say what was
+            # unreadable -- and unable to tell an unreadable instrument from a
+            # T1j observation, which is the distinction the low-ply card turns on.
+            raise HelperOutputError(
+                f"the helper's POSTCOND output could not be parsed: line missing "
+                f"fields {sorted(missing)}: {line!r}", text)
         out.append(PostCond(
             no_throw=kv["no_throw"] == "true", windows=int(kv["windows"]),
             frames=int(kv["frames"]), headless=kv["headless"] == "true",
