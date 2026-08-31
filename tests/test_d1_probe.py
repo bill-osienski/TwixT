@@ -1581,16 +1581,65 @@ def test_the_timestamp_is_injected_and_cannot_be_supplied(tmp_path):
 # the PUBLIC entry; small fake cohorts stay reachable through the private seam.
 
 def _expected():
+    """The canonical ROWS, not merely their digests."""
     return D1.expected_cohort()
+
+
+def _rows(n=None):
+    return [dict(r) for r in _expected()][:n]
 
 
 def test_the_expected_cohort_is_the_frozen_227_minus_the_six_exclusions():
     exp = _expected()
     assert len(exp) == D1.N_POSITIONS == 221
-    assert not (set(exp) & set(SEL.AMENDMENT2_EXCLUDED))
+    assert not ({r["digest"] for r in exp} & set(SEL.AMENDMENT2_EXCLUDED))
     src = json.load(open(D1.COHORT_SOURCE_REL, encoding="utf-8"))
-    assert [r["digest"] for r in src if r["digest"] not in SEL.AMENDMENT2_EXCLUDED] == exp
     assert len(src) == 227
+    assert [r["digest"] for r in src if r["digest"] not in SEL.AMENDMENT2_EXCLUDED] \
+        == [r["digest"] for r in exp]
+
+
+def test_the_expected_cohort_carries_every_identity_and_grouping_field():
+    for row in _expected():
+        assert set(row) == set(D1.COHORT_IDENTITY_FIELDS), set(row)
+    assert set(D1.COHORT_IDENTITY_FIELDS) == {
+        "task_id", "ply", "prefix", "digest", "signature", "role", "opening",
+        "colour_arm", "phase", "mover_more_fragmented", "created_threat"}
+
+
+def test_SEED_is_the_only_source_field_left_unbound():
+    """THE GENERAL GUARD, and the one that was missing.
+
+    An earlier version bound nine fields and claimed to exclude only `seed`; it
+    silently also excluded `mover_more_fragmented` and `created_threat` -- the two
+    frozen §12.1 signature columns, which are the RAW EVIDENCE for a row's cohort
+    assignment. Enumerating the bound set by hand cannot catch that; comparing
+    against the source row can.
+    """
+    src = json.load(open(D1.COHORT_SOURCE_REL, encoding="utf-8"))
+    unbound = set(src[0]) - set(D1.COHORT_IDENTITY_FIELDS)
+    assert unbound == {"seed"}, (
+        f"{sorted(unbound)} are unbound. `seed` is the only field that may be: no "
+        f"interval is authorized and its assignment is a separate step.")
+    assert set(D1.COHORT_IDENTITY_FIELDS) <= set(src[0])
+
+
+@pytest.mark.parametrize("column", ["mover_more_fragmented", "created_threat"])
+def test_a_row_that_flips_a_RAW_SIGNATURE_COLUMN_is_refused(column):
+    """Independently, per column, with digest AND signature AND role intact.
+
+    `signature`/`role` is the cohort ASSIGNMENT; these booleans are the D0
+    evidence FOR it. Binding only the former let a row keep every label and still
+    lie about the measurement the label rests on.
+    """
+    rows = _rows()
+    original = rows[0][column]
+    rows[0] = dict(rows[0], **{column: not original})
+    assert rows[0]["digest"] == _expected()[0]["digest"]
+    assert rows[0]["signature"] == _expected()[0]["signature"]
+    assert rows[0]["role"] == _expected()[0]["role"]
+    with pytest.raises(D1.D1Error, match=column):
+        D1._check_cohort(rows)
 
 
 def test_the_cohort_source_is_pinned_by_hash():
@@ -1612,33 +1661,76 @@ def test_a_tampered_cohort_source_is_refused(tmp_path):
 
 def test_a_short_cohort_is_refused_at_the_public_boundary():
     """THE DEFECT. 220 rows fit the cap comfortably and would have run."""
-    rows = [{"digest": d} for d in _expected()[:220]]
     with pytest.raises(D1.D1Error, match="221"):
-        D1._check_cohort(rows)
+        D1._check_cohort(_rows(220))
 
 
 def test_a_single_row_cohort_is_refused():
     with pytest.raises(D1.D1Error, match="221"):
-        D1._check_cohort([{"digest": _expected()[0]}])
+        D1._check_cohort(_rows(1))
 
 
 def test_a_reordered_cohort_is_refused():
     """Frozen order is what makes a seed count identify WHICH seeds."""
-    rows = [{"digest": d} for d in _expected()]
+    rows = _rows()
     rows[0], rows[1] = rows[1], rows[0]
-    with pytest.raises(D1.D1Error, match="order"):
+    with pytest.raises(D1.D1Error):
         D1._check_cohort(rows)
 
 
 def test_a_cohort_containing_an_excluded_row_is_refused():
-    rows = [{"digest": d} for d in _expected()[:220]]
-    rows.append({"digest": SEL.AMENDMENT2_EXCLUDED[0]})
+    src = {r["digest"]: r for r in json.load(open(D1.COHORT_SOURCE_REL, encoding="utf-8"))}
+    rows = _rows(220) + [{k: src[SEL.AMENDMENT2_EXCLUDED[0]][k]
+                          for k in D1.COHORT_IDENTITY_FIELDS}]
     with pytest.raises(D1.D1Error, match="excluded"):
         D1._check_cohort(rows)
 
 
 def test_the_exact_cohort_is_accepted():
-    D1._check_cohort([{"digest": d} for d in _expected()])
+    D1._check_cohort(_rows())
+
+
+def test_a_cohort_carrying_a_seed_is_still_accepted():
+    """The seed is NOT an identity field: no interval is authorized, and the
+    assignment is a separate step that must not be pinned here."""
+    D1._check_cohort([dict(r, seed=None) for r in _expected()])
+
+
+# ─── the hole digests cannot see: a row that keeps its digest and lies ───────
+
+@pytest.mark.parametrize("field,forged", [
+    ("role", "control"),                # a position relabelled as a control
+    ("signature", "created_threat"),    # moved to the other cohort
+    ("opening", "o9_forged"),
+    ("colour_arm", "t1j_black"),
+    ("phase", "late"),
+    ("task_id", "l0match-999-forged"),
+    ("ply", 99),
+])
+def test_a_row_that_keeps_its_digest_but_alters_its_LABEL_is_refused(field, forged):
+    """THE HOLE. The state digest catches a different replayed BOARD later, but
+    never a changed cohort LABEL -- so an analysis would be attributed to the
+    wrong cohort while every board check passed."""
+    rows = _rows()
+    assert rows[0][field] != forged
+    rows[0] = dict(rows[0], **{field: forged})
+    assert rows[0]["digest"] == _expected()[0]["digest"], "the digest must be intact"
+    with pytest.raises(D1.D1Error, match=field):
+        D1._check_cohort(rows)
+
+
+def test_a_row_whose_stored_PREFIX_was_altered_is_refused():
+    rows = _rows()
+    rows[0] = dict(rows[0], prefix=[[0, 0]] + rows[0]["prefix"][1:])
+    with pytest.raises(D1.D1Error, match="prefix"):
+        D1._check_cohort(rows)
+
+
+def test_a_row_missing_an_identity_field_is_refused():
+    rows = _rows()
+    rows[0] = {k: v for k, v in rows[0].items() if k != "role"}
+    with pytest.raises(D1.D1Error, match="role"):
+        D1._check_cohort(rows)
 
 
 def test_run_d1_checks_the_cohort_and_the_private_seam_does_not():
@@ -1685,3 +1777,111 @@ def test_the_expected_spend_arithmetic_is_the_frozen_one():
     assert D1.QUERIES_PER_POSITION == 1 + len(D1.T1J_DEPTHS) * D1.INVOCATIONS_PER_DEPTH == 5
     assert D1.EXPECTED_QUERY_SPEND == D1.N_POSITIONS * D1.QUERIES_PER_POSITION == 1105
     assert D1.EXPECTED_QUERY_SPEND == D1.QUERY_CAP, "the run must SPEND its budget, not fit it"
+
+
+# ═══ the comparison must bind TYPES, not just values ════════════════════════
+#
+# `!=` does not bind a raw value in Python: False == 0, True == 1, 5 == 5.0. A
+# forged `created_threat=0` for a frozen `false` compares EQUAL and passes every
+# check above. And `int(...)` normalisation was itself a coercion channel: it
+# turns "11" and True into 11 and 1.
+
+@pytest.mark.parametrize("column", ["mover_more_fragmented", "created_threat"])
+def test_a_NUMERIC_boolean_is_refused_for_a_frozen_bool(column):
+    """0/1 for false/true: equal under `==`, and a different type."""
+    rows = _rows()
+    original = rows[0][column]
+    assert isinstance(original, bool), original
+    forged = int(original)                      # True -> 1, False -> 0
+    assert forged == original, "the forgery must compare EQUAL, or it proves nothing"
+    rows[0] = dict(rows[0], **{column: forged})
+    with pytest.raises(D1.D1Error, match=column):
+        D1._check_cohort(rows)
+
+
+def test_a_FLOAT_ply_is_refused_for_a_frozen_int():
+    rows = _rows()
+    original = rows[0]["ply"]
+    assert isinstance(original, int) and not isinstance(original, bool)
+    assert float(original) == original
+    rows[0] = dict(rows[0], ply=float(original))
+    with pytest.raises(D1.D1Error, match="ply"):
+        D1._check_cohort(rows)
+
+
+@pytest.mark.parametrize("coerced", [
+    "STRING", "FLOAT", "BOOL",
+])
+def test_a_COERCED_prefix_coordinate_is_refused(coerced):
+    """`int(...)` normalisation accepted every one of these and made them equal
+    to the frozen coordinate -- normalisation WAS the forgery channel."""
+    rows = _rows()
+    first = list(rows[0]["prefix"][0])
+    r, c = first
+    swap = {"STRING": [str(r), c], "FLOAT": [float(r), c], "BOOL": [bool(r), c]}[coerced]
+    rows[0] = dict(rows[0], prefix=[swap] + [list(m) for m in rows[0]["prefix"][1:]])
+    with pytest.raises(D1.D1Error, match="prefix"):
+        D1._check_cohort(rows)
+
+
+def test_a_tuple_prefix_is_still_accepted():
+    """Structural normalisation must survive: a prefix built in Python is a list
+    of tuples and one read from JSON is a list of lists. Refusing that would be a
+    false refusal about serialisation, not about identity."""
+    rows = _rows()
+    rows[0] = dict(rows[0], prefix=tuple(tuple(m) for m in rows[0]["prefix"]))
+    D1._check_cohort(rows)
+
+
+def test_the_comparison_helper_binds_type_as_well_as_value():
+    assert D1._same(5, 5) and D1._same([1, 2], [1, 2]) and D1._same(True, True)
+    assert not D1._same(False, 0), "False == 0 in Python; the types differ"
+    assert not D1._same(True, 1)
+    assert not D1._same(5, 5.0)
+    assert not D1._same("11", 11)
+    assert not D1._same([[1, 2]], [[1, 2.0]])
+    # tuples are normalised to lists by `_structural` BEFORE comparison, so the
+    # helper itself only ever sees lists.
+    assert D1._structural(((1, 2), (3, 4))) == [[1, 2], [3, 4]]
+    assert D1._structural("11") == "11" and D1._structural(True) is True
+
+
+def test_the_report_does_not_claim_5_4_requires_the_raw_columns():
+    """P2. §5.4 requires the D0 structural SIGNATURE and the matched-control
+    LABEL -- which the report writes. It does NOT require the raw booleans, and
+    the report does not carry them; binding them is FROZEN-INPUT PROVENANCE.
+    Adding them to the report would be a separate design decision."""
+    import pathlib
+    src = pathlib.Path(D1.__file__).read_text(encoding="utf-8")
+    assert "5.4 records both" not in src, "the withdrawn justification is back"
+    assert "provenance" in src
+    assert "would be a separate design decision" in src
+    # and the report genuinely carries the labels but not the raw columns
+    written = src[src.index('out.append({"task_id"'):src.index('"depths_agree"')]
+    assert '"signature": pos.get("signature")' in written
+    assert '"role": pos.get("role")' in written
+    assert "mover_more_fragmented" not in written
+    assert "created_threat" not in written
+
+
+def test_a_BOOL_forged_for_a_frozen_ZERO_OR_ONE_coordinate_is_refused():
+    """The direction `isinstance` would MISS, and `type(...) is type(...)` catches.
+
+    `isinstance(1, bool)` is False, so a forged int against a frozen bool is
+    refused either way. But `isinstance(True, int)` is True, so a forged BOOL
+    against a frozen 0 or 1 would slip -- and 242 rows carry such a coordinate.
+    An injected-defect control proved the earlier test could not see this.
+    """
+    exp = _expected()
+    i, j, k = next((i, j, k) for i, r in enumerate(exp)
+                   for j, m in enumerate(r["prefix"])
+                   for k, v in enumerate(m) if v in (0, 1))
+    rows = _rows()
+    prefix = [list(m) for m in rows[i]["prefix"]]
+    original = prefix[j][k]
+    forged = bool(original)                      # 0 -> False, 1 -> True
+    assert forged == original and type(forged) is not type(original)
+    prefix[j][k] = forged
+    rows[i] = dict(rows[i], prefix=prefix)
+    with pytest.raises(D1.D1Error, match="prefix"):
+        D1._check_cohort(rows)

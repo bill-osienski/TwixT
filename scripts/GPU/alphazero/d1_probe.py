@@ -75,6 +75,36 @@ QUERIES_PER_POSITION = 1 + len(T1J_DEPTHS) * INVOCATIONS_PER_DEPTH        # 5
 #: required, and the exact cohort with it.
 EXPECTED_QUERY_SPEND = N_POSITIONS * QUERIES_PER_POSITION                 # 1105
 
+#: EVERY field that fixes a row's identity or its ANALYSIS GROUPING.
+#:
+#: 🔑 Comparing digests alone was not enough. A supplied row can keep the correct
+#: digest and still alter `role`, `signature`, `opening`, `colour_arm`, `phase`,
+#: `task_id`, `ply` or its stored prefix. The state digest catches a different
+#: replayed BOARD at run time -- it never catches a changed cohort LABEL, so a
+#: control relabelled as a position would pass every board check and be analysed
+#: in the wrong cohort.
+#:
+#: 🔑 AND THE RAW SIGNATURE COLUMNS BELONG HERE TOO -- AS PROVENANCE, not because
+#: the report carries them. An earlier version bound `signature` and `role` but
+#: not `mover_more_fragmented` / `created_threat`, so a row could keep its digest
+#: AND its cohort labels while flipping the D0 boolean those labels rest on.
+#:
+#: ⚠ The justification stated here was wrong and is corrected: 5.4 requires the
+#: D0 structural SIGNATURE and the matched-control LABEL, which the report does
+#: write; it does NOT require the raw booleans, and the report does not carry
+#: them. Adding them to the report would be a separate design decision.
+#: What this binding does is prove THE SUPPLIED COHORT IS THE FROZEN INPUT in
+#: every field that defines it -- provenance -- so a row cannot arrive carrying a
+#: value the frozen selection never produced.
+#:
+#: `seed` is the ONLY field deliberately absent: no interval is authorized, and
+#: the assignment is a separate step that must not be pinned here. A test asserts
+#: that exclusion is exactly one field wide, by comparing against the source row
+#: rather than by re-listing this tuple -- re-listing is what hid the omission.
+COHORT_IDENTITY_FIELDS = ("task_id", "ply", "prefix", "digest", "signature",
+                          "role", "opening", "colour_arm", "phase",
+                          "mover_more_fragmented", "created_threat")
+
 #: The frozen §12 selection, from which §13 removes six rows. Pinned by content:
 #: a different file would define a different cohort while looking identical.
 COHORT_SOURCE_REL = ("docs/superpowers/evidence/2026-08-28-t1j-d1-execution/"
@@ -530,11 +560,53 @@ def _check_seed(seed: Any) -> int:
     return seed
 
 
-def expected_cohort(path: Optional[str] = None) -> List[str]:
-    """The §13 cohort's digests, IN FROZEN ORDER: §12's 227 minus the six.
+def _structural(value: Any) -> Any:
+    """Sequences to lists, recursively. NO VALUE COERCION.
+
+    A prefix read from JSON is a list of lists and one built in Python is a list
+    of tuples, so the SHAPE must be normalised or an identical cohort is refused
+    over serialisation. But the earlier version normalised with `int(a)`, and
+    that was itself a forgery channel: it turns "11" into 11 and True into 1, so
+    a coerced coordinate compared equal to the frozen one.
+    """
+    if isinstance(value, (list, tuple)):
+        return [_structural(v) for v in value]
+    return value
+
+
+def _same(a: Any, b: Any) -> bool:
+    """Exact equality: TYPE as well as value, recursively.
+
+    🔑 `!=` does not bind a raw value in Python. `False == 0`, `True == 1` and
+    `5 == 5.0` are all true, so a forged `created_threat=0` for a frozen `false`
+    compared EQUAL and passed. Booleans matter most here: `bool` is a subclass of
+    `int`, and `type(...) is type(...)` is what separates them.
+    """
+    if isinstance(a, list) and isinstance(b, list):
+        return len(a) == len(b) and all(_same(x, y) for x, y in zip(a, b))
+    return type(a) is type(b) and a == b
+
+
+def _canonical_row(row: Dict[str, Any]) -> Dict[str, Any]:
+    """One row projected to its identity fields, shape-normalised only."""
+    out: Dict[str, Any] = {}
+    for field in COHORT_IDENTITY_FIELDS:
+        if field not in row:
+            raise D1Error(
+                f"a cohort row is missing {field!r}, which fixes its identity or "
+                f"its analysis grouping. Required: {list(COHORT_IDENTITY_FIELDS)}")
+        out[field] = _structural(row[field])
+    return out
+
+
+def expected_cohort(path: Optional[str] = None) -> List[Dict[str, Any]]:
+    """The §13 cohort's ROWS, IN FROZEN ORDER: §12's 227 minus the six.
 
     Derived rather than restated, from the hash-pinned input the frozen
     selection produced, so the cohort cannot drift from what §12 retained.
+
+    Returns whole rows, not digests: the digest fixes the BOARD and nothing
+    else, and a row that keeps its digest can still carry a forged cohort label.
     """
     import hashlib
     p = COHORT_SOURCE_REL if path is None else path
@@ -548,7 +620,8 @@ def expected_cohort(path: Optional[str] = None) -> List[str]:
             f"{p}: sha256 {got} != the pinned {COHORT_SOURCE_SHA256}. A different "
             f"file defines a different cohort while looking identical.")
     excluded = set(SEL.AMENDMENT2_EXCLUDED)
-    return [r["digest"] for r in json.loads(raw) if r["digest"] not in excluded]
+    return [_canonical_row(r) for r in json.loads(raw)
+            if r["digest"] not in excluded]
 
 
 def _check_cohort(positions: Sequence[Dict[str, Any]]) -> None:
@@ -564,23 +637,29 @@ def _check_cohort(positions: Sequence[Dict[str, Any]]) -> None:
     what lets a count of seeds drawn identify WHICH seeds were drawn.
     """
     expected = expected_cohort()
-    got = [p.get("digest") for p in positions]
-    if len(got) != N_POSITIONS:
+    if len(positions) != N_POSITIONS:
         raise D1Error(
-            f"{len(got)} positions supplied, but the §13 cohort is exactly "
+            f"{len(positions)} positions supplied, but the §13 cohort is exactly "
             f"{N_POSITIONS}. The query budget is a ceiling and bounds nothing "
             f"below it, so a short cohort would run and report OK.")
-    present = set(got) & set(SEL.AMENDMENT2_EXCLUDED)
+    present = {p.get("digest") for p in positions} & set(SEL.AMENDMENT2_EXCLUDED)
     if present:
         raise D1Error(
             f"the cohort contains {len(present)} row(s) §13 excluded: "
             f"{sorted(present)}. Those are the rows the low-ply qualification "
             f"observed to fail.")
-    if got != expected:
-        first = next(i for i, (a, b) in enumerate(zip(got, expected)) if a != b)
-        raise D1Error(
-            f"the cohort is not the §13 selection in frozen order: position "
-            f"{first} is {got[first]!r}, expected {expected[first]!r}.")
+    # EVERY identity and grouping field, row by row and in order. Digests alone
+    # would let a control relabelled as a position through: the board would
+    # replay correctly and the analysis would sit in the wrong cohort.
+    for i, (got_row, want) in enumerate(zip(positions, expected)):
+        got = _canonical_row(got_row)
+        for field in COHORT_IDENTITY_FIELDS:
+            if not _same(got[field], want[field]):
+                raise D1Error(
+                    f"the cohort is not the §13 selection in frozen order: row {i} "
+                    f"has {field}={got[field]!r} ({type(got[field]).__name__}), "
+                    f"expected {want[field]!r} ({type(want[field]).__name__}). The "
+                    f"digest fixes the board; it does not fix the cohort label.")
 
 
 def _check_seed_registration() -> None:
