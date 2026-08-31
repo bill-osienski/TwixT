@@ -1,0 +1,37 @@
+schema: d1-void-trace/2
+events : ['run_start', 'position_start', 'position_stage', 'position_done', 'run_end']
+stages : ['bound', 'incumbent', 'depth3', 'depth6']   (derived from T1J_DEPTHS)
+verdict: ['OK', 'VOID']
+
+per-event field sets -- EXACTLY these, no more and no fewer:
+  position_done    ['index', 'positions_completed', 'queries_spent', 'seeds_drawn']
+  position_stage   ['index', 'seeds_drawn', 'stage']
+  position_start   ['index']
+  run_end          ['positions_completed', 'queries_spent', 'seeds_drawn', 'verdict']
+  run_start        ['n_positions', 'schema']
+
+counter ceilings (the run's REAL limits, not 'an int'):
+  index                0 .. 220
+  n_positions          0 .. 221
+  positions_completed  0 .. 221
+  queries_spent        0 .. 1105
+  seeds_drawn          0 .. 221
+
+🔴 v1 VALIDATED FIELD NAMES ONLY, so stage='move=(11,11)' passed it.
+   v2 attempts, all refused BEFORE any write:
+   stage     refused: stage 'move=(11,11)' is not one of ['bound', 'incumbent', 'depth3', 'depth6'
+   event     refused: 'root_value=0.42' is not a permitted trace event; permitted: ['run_start', '
+   verdict   refused: verdict 'visits=400' is not one of ['OK', 'VOID']
+   counter   refused: index must be a plain integer in [0, 220], got 'policy:0.1,0.2'
+   nested    refused: index must be a plain integer in [0, 220], got [1, 2]
+   bool      refused: index must be a plain integer in [0, 220], got True
+   task_id   refused: ['task_id'] is not permitted on a 'position_start' line. The trace carries c
+
+IDENTITY STRINGS REMOVED. task_id / digest / ply were free-form channels that
+bought nothing: positions run in the frozen assignment order, so the INDEX
+identifies the position and a COUNT of seeds drawn identifies which seeds.
+
+EXACT COHORT, NOT MERELY A FITTING ONE. QUERY_CAP is a ceiling and bounds
+nothing below, so `run_d1` requires exactly the 221-row §13 cohort in
+frozen order, and the run must spend exactly 1105 queries.
+

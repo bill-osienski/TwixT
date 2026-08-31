@@ -65,32 +65,83 @@ N_POSITIONS = 221
 QUERY_CAP = 1105
 T1J_DEPTHS = (3, 6)
 INVOCATIONS_PER_DEPTH = 2
+#: 12.4's shape, per position: one incumbent readout and two invocations at each
+#: of the two frozen depths.
+QUERIES_PER_POSITION = 1 + len(T1J_DEPTHS) * INVOCATIONS_PER_DEPTH        # 5
+
+#: 🔑 WHAT THE RUN MUST SPEND, not merely what it may. `QUERY_CAP` is a CEILING,
+#: and a ceiling permits a SHORT COHORT TO MASQUERADE AS A COMPLETED RUN: a
+#: one-row input spends 5 of 1,105 and writes verdict OK. The exact spend is
+#: required, and the exact cohort with it.
+EXPECTED_QUERY_SPEND = N_POSITIONS * QUERIES_PER_POSITION                 # 1105
+
+#: The frozen §12 selection, from which §13 removes six rows. Pinned by content:
+#: a different file would define a different cohort while looking identical.
+COHORT_SOURCE_REL = ("docs/superpowers/evidence/2026-08-28-t1j-d1-execution/"
+                     "02_positions.json")
+COHORT_SOURCE_SHA256 = "d5a3cdfa58844451ba21e0fb23781c6aedbda9ad3c239f1c83ea99c3e3d037e3"
+
 #: Reserved in 12.5 and DELIBERATELY NOT REGISTERED in any seed registry.
 SEED_INTERVAL = (202614000, 202614227)
 
 
-#: THE VOID TRACE. Predeclared schema; a run writes `<out_path>.trace.jsonl`.
+#: THE VOID TRACE. Predeclared, event-specific schema; a run writes
+#: `<out_path>.trace.jsonl`.
 #:
 #: WHY IT EXISTS. D1's 2026-08-28 VOID wrote nothing -- correctly, because a
 #: report after an abort is a partial-cohort analysis wearing a runtime excuse.
 #: But it also meant nobody could say HOW FAR the run got, so the seed accounting
 #: could not be closed: 227 seeds were retired of which an unknown number were
-#: actually drawn. The trace answers exactly that question and nothing else.
+#: actually drawn. The trace answers exactly that and nothing else.
 #:
-#: WHY IT IS NOT A PARTIAL COHORT. It carries COUNTERS AND IDENTITY ONLY -- never
-#: a move, a policy, a value, a visit count or a T1j reply. That is enforced by
-#: the allowlist below rather than by intention: `_trace` REFUSES any field
-#: outside it, so the file is structurally incapable of holding a measurement.
-#: A trace that could carry a move would be a partial-cohort analysis with a
-#: different filename.
+#: 🔴 WHY A NAME-ONLY ALLOWLIST WAS NOT ENOUGH. The first version validated field
+#: NAMES and let their values be arbitrary text, so `stage="move=(11,11)"` passed
+#: it. A measurement can be smuggled through any free-form string, and "cannot
+#: carry a measurement" was therefore false. Every permitted field is now
+#: VALUE-CHECKED:
 #:
-#: WHY THE SEED COUNT IS ENOUGH. Positions are processed in the frozen assignment
-#: order, so a count of seeds drawn identifies WHICH ones without recording any.
-#: The minimal fact that closes the accounting is the one recorded.
-TRACE_SCHEMA = "d1-void-trace/1"
-TRACE_FIELDS = frozenset({
-    "event", "ts", "schema", "index", "n_positions", "task_id", "ply", "digest",
-    "stage", "positions_completed", "queries_spent", "seeds_drawn", "verdict"})
+#:   * `event`, `stage`, `verdict` are CLOSED ENUMS -- no free text anywhere;
+#:   * every counter is a PLAIN int (bools rejected), finite, and bounded by its
+#:     own real ceiling, so it cannot hold a payload;
+#:   * `schema` must equal the declared constant exactly;
+#:   * each event carries EXACTLY its declared fields -- no more, no fewer;
+#:   * `ts` is INJECTED here, never accepted from a caller: one fewer channel;
+#:   * THE IDENTITY STRINGS ARE GONE. `task_id`, `digest` and `ply` were string
+#:     channels that bought nothing: positions run in the frozen assignment
+#:     order, so the INDEX already identifies the position, and a count of seeds
+#:     drawn already identifies which seeds without recording any.
+#:
+#: Validation happens BEFORE the write. A refusal that has already appended a
+#: line has not refused.
+TRACE_SCHEMA = "d1-void-trace/2"
+TRACE_EVENTS = ("run_start", "position_start", "position_stage", "position_done",
+                "run_end")
+TRACE_STAGES = ("bound", "incumbent") + tuple(f"depth{d}" for d in T1J_DEPTHS)
+TRACE_VERDICTS = ("OK", "VOID")
+
+#: Counter -> its own inclusive ceiling. A bound that is merely "an int" would
+#: still admit an encoded payload; these are the real limits of the run.
+TRACE_COUNTER_MAX = {
+    "index": N_POSITIONS - 1, "n_positions": N_POSITIONS,
+    "positions_completed": N_POSITIONS, "seeds_drawn": N_POSITIONS,
+    "queries_spent": QUERY_CAP,
+}
+
+#: event -> EXACTLY the fields it carries. Not a superset: an event that may omit
+#: a field is an event whose shape a reader cannot rely on.
+TRACE_EVENT_FIELDS = {
+    "run_start": frozenset({"schema", "n_positions"}),
+    "position_start": frozenset({"index"}),
+    "position_stage": frozenset({"index", "stage", "seeds_drawn"}),
+    "position_done": frozenset({"index", "positions_completed", "queries_spent",
+                                "seeds_drawn"}),
+    "run_end": frozenset({"verdict", "positions_completed", "queries_spent",
+                          "seeds_drawn"}),
+}
+
+#: The union, for readers. The per-event schema above is the gate.
+TRACE_FIELDS = frozenset({"event", "ts"}) | frozenset(
+    f for fs in TRACE_EVENT_FIELDS.values() for f in fs)
 
 
 class D1Error(Exception):
@@ -293,19 +344,58 @@ def position_label(pos: Dict[str, Any]) -> str:
             f"digest={digest[:16] or '?'}")
 
 
-def _trace(fh, **fields: Any) -> None:
-    """Append one trace line and fsync it, refusing any non-allowlisted field.
+def _check_trace(event: Any, fields: Dict[str, Any]) -> None:
+    """Validate one trace line COMPLETELY, before anything is written.
+
+    Names AND values. A name-only check let `stage="move=(11,11)"` through, which
+    made the non-analytic claim false; every field below is constrained to a
+    closed enum, an exact constant, or a bounded plain integer, so there is no
+    string a caller can steer.
+    """
+    if event not in TRACE_EVENTS:
+        raise D1Error(f"{event!r} is not a permitted trace event; "
+                      f"permitted: {list(TRACE_EVENTS)}")
+    allowed = TRACE_EVENT_FIELDS[event]
+    extra = sorted(set(fields) - allowed)
+    if extra:
+        raise D1Error(
+            f"{extra} is not permitted on a {event!r} line. The trace carries "
+            f"counters only; a free-form field would make it a partial-cohort "
+            f"analysis under a different filename. Permitted: {sorted(allowed)}")
+    missing = sorted(allowed - set(fields))
+    if missing:
+        raise D1Error(f"a {event!r} line is missing {missing}")
+
+    for name, value in fields.items():
+        if name == "schema":
+            if value != TRACE_SCHEMA:
+                raise D1Error(f"schema must be exactly {TRACE_SCHEMA!r}, got {value!r}")
+        elif name == "stage":
+            if value not in TRACE_STAGES:
+                raise D1Error(f"stage {value!r} is not one of {list(TRACE_STAGES)}")
+        elif name == "verdict":
+            if value not in TRACE_VERDICTS:
+                raise D1Error(f"verdict {value!r} is not one of {list(TRACE_VERDICTS)}")
+        else:
+            # `type(...) is int` rejects bool, which IS an int and would other-
+            # wise slip a two-valued channel through a "counter".
+            cap = TRACE_COUNTER_MAX[name]
+            if type(value) is not int or not 0 <= value <= cap:
+                raise D1Error(
+                    f"{name} must be a plain integer in [0, {cap}], got {value!r}")
+
+
+def _trace(fh, *, event: Any = None, **fields: Any) -> None:
+    """Append one validated trace line and fsync it.
+
+    VALIDATED FIRST. A refusal that has already appended has not refused.
 
     FSYNCED PER LINE on purpose: a trace that is lost when the run is terminated
-    mid-stage answers nothing, and the whole point is to survive exactly that.
+    mid-stage answers nothing, and surviving exactly that is the whole point.
     """
-    bad = sorted(set(fields) - TRACE_FIELDS)
-    if bad:
-        raise D1Error(
-            f"{bad} is not a permitted trace field. The trace carries counters and "
-            f"identity only; anything else would make it a partial-cohort analysis "
-            f"under a different filename. Permitted: {sorted(TRACE_FIELDS)}")
-    fh.write(json.dumps(dict(fields, ts=time.time()), sort_keys=True) + "\n")
+    _check_trace(event, fields)
+    fh.write(json.dumps(dict(fields, event=event, ts=time.time()),
+                        sort_keys=True) + "\n")
     fh.flush()
     os.fsync(fh.fileno())
 
@@ -440,6 +530,59 @@ def _check_seed(seed: Any) -> int:
     return seed
 
 
+def expected_cohort(path: Optional[str] = None) -> List[str]:
+    """The §13 cohort's digests, IN FROZEN ORDER: §12's 227 minus the six.
+
+    Derived rather than restated, from the hash-pinned input the frozen
+    selection produced, so the cohort cannot drift from what §12 retained.
+    """
+    import hashlib
+    p = COHORT_SOURCE_REL if path is None else path
+    try:
+        raw = open(p, "rb").read()
+    except OSError as e:
+        raise D1Error(f"cannot read the frozen selection: {e}") from None
+    got = hashlib.sha256(raw).hexdigest()
+    if got != COHORT_SOURCE_SHA256:
+        raise D1Error(
+            f"{p}: sha256 {got} != the pinned {COHORT_SOURCE_SHA256}. A different "
+            f"file defines a different cohort while looking identical.")
+    excluded = set(SEL.AMENDMENT2_EXCLUDED)
+    return [r["digest"] for r in json.loads(raw) if r["digest"] not in excluded]
+
+
+def _check_cohort(positions: Sequence[Dict[str, Any]]) -> None:
+    """The supplied positions must BE the §13 cohort, in order. Not a subset.
+
+    🔑 A BUDGET IS A CEILING AND BOUNDS NOTHING BELOW. Without this, a 220-row or
+    a one-row input runs to completion, spends far less than 1,105 queries and
+    writes verdict OK -- a short cohort wearing a finished run's clothes, which is
+    the same shape as a filtered result. Checked at the PUBLIC entry only, so the
+    private seam stays usable for the small fake cohorts the tests need.
+
+    ORDER IS PART OF IT: positions run in the frozen assignment order, which is
+    what lets a count of seeds drawn identify WHICH seeds were drawn.
+    """
+    expected = expected_cohort()
+    got = [p.get("digest") for p in positions]
+    if len(got) != N_POSITIONS:
+        raise D1Error(
+            f"{len(got)} positions supplied, but the §13 cohort is exactly "
+            f"{N_POSITIONS}. The query budget is a ceiling and bounds nothing "
+            f"below it, so a short cohort would run and report OK.")
+    present = set(got) & set(SEL.AMENDMENT2_EXCLUDED)
+    if present:
+        raise D1Error(
+            f"the cohort contains {len(present)} row(s) §13 excluded: "
+            f"{sorted(present)}. Those are the rows the low-ply qualification "
+            f"observed to fail.")
+    if got != expected:
+        first = next(i for i, (a, b) in enumerate(zip(got, expected)) if a != b)
+        raise D1Error(
+            f"the cohort is not the §13 selection in frozen order: position "
+            f"{first} is {got[first]!r}, expected {expected[first]!r}.")
+
+
 def _check_seed_registration() -> None:
     """The reserved block must be REGISTERED before D1 uses any of it (12.5).
 
@@ -570,6 +713,7 @@ def run_d1(*, positions: Sequence[Dict[str, Any]], paths: T1jPaths, out_path: st
             "D1 execution is UNAUTHORIZED. The CLI gate alone protected nothing: a "
             "direct Python caller reached this runner without passing it. Nothing has "
             "been compiled, queried or written.")
+    _check_cohort(positions)
     return _run_d1_unguarded(positions=positions, paths=paths, out_path=out_path,
                              repo_root=repo_root, deadline=deadline, budget=budget,
                              _compile=_compile, _incumbent=_incumbent)
@@ -638,14 +782,13 @@ def _run_traced(positions, paths, out_path, deadline, budget, compile_fn, incumb
             _check_seed(pos.get("seed"))
             prefix = _check_prefix(pos)
             where = position_label(pos)
-            _trace(trace, event="position_start", index=index,
-                   task_id=pos.get("task_id"), ply=pos.get("ply"),
-                   digest=pos.get("digest"))
+            _trace(trace, event="position_start", index=index)
             deadline.check(f"before position {where}")
             state = _replay_prefix(prefix, where=where)
             _check_digest(state, pos, where=where)
             _bind_prefix(binder, ctx, task_id=where, state=state, prefix=prefix)
-            _trace(trace, event="position_stage", index=index, stage="bound")
+            _trace(trace, event="position_stage", index=index, stage="bound",
+                   seeds_drawn=drawn)
             deadline.check(f"after binding {where}")
             # The incumbent DRAWS this position's seed, so the count is
             # incremented before the call: a draw that then failed still happened.
@@ -656,7 +799,8 @@ def _run_traced(positions, paths, out_path, deadline, budget, compile_fn, incumb
             deadline.check(f"after the incumbent readout at {where}")
             per_depth = []
             for d in T1J_DEPTHS:
-                _trace(trace, event="position_stage", index=index, stage=f"depth{d}")
+                _trace(trace, event="position_stage", index=index,
+                       stage=f"depth{d}", seeds_drawn=drawn)
                 per_depth.append(_probe_position(
                     moves=prefix, depth=d, paths=paths, state=state,
                     budget=budget, deadline=deadline, label=where))
@@ -679,6 +823,15 @@ def _run_traced(positions, paths, out_path, deadline, budget, compile_fn, incumb
                    positions_completed=completed, queries_spent=budget.spent,
                    seeds_drawn=drawn)
         deadline.check("before writing the report")
+        # A CEILING BOUNDS NOTHING BELOW. `_check_cohort` fixes how many
+        # positions run; this fixes that each of them actually spent its five
+        # queries, so a silently skipped invocation cannot report OK either.
+        want = len(positions) * QUERIES_PER_POSITION
+        if budget.spent != want:
+            raise D1VoidError(
+                f"the run spent {budget.spent} queries for {len(positions)} "
+                f"positions, expected exactly {want}. A short spend is an "
+                f"incomplete run, not a cheap one: VOID.")
 
         report = {"n_positions": len(out), "queries_spent": budget.spent,
                   "incumbent_identity": getattr(incumbent, "identity", None),

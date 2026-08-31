@@ -448,5 +448,5 @@ def test_the_end_to_end_report_is_create_only(identity, boundary, monkeypatch, t
         D1._run_d1_unguarded(positions=[], paths=D1.T1jPaths(java="j", jar="j",
                                                              classes="c", ply_cap=280),
                              out_path=str(out), _compile=lambda d: None,
-                             _incumbent=lambda **kw: {})
+                             _incumbent=lambda **kw: kw['budget'].spend(1) or {})
     assert out.read_text(encoding="utf-8") == "{}", "an existing record was overwritten"

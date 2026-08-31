@@ -360,7 +360,7 @@ def test_a_deadline_that_expires_only_at_the_write_step_still_voids(tmp_path, mo
     out = tmp_path / "r.json"
     with pytest.raises(D1.D1VoidError, match="deadline exceeded"):
         D1._run_d1_unguarded(positions=[], paths=RUNTIME, out_path=str(out),
-                  _compile=lambda d: None, _incumbent=lambda **kw: {},
+                  _compile=lambda d: None, _incumbent=lambda **kw: kw['budget'].spend(1) or {},
                   deadline=D1.Deadline(clock=lambda: next(ticks)))
     assert not out.exists()
 
@@ -720,7 +720,7 @@ def test_an_unregistered_block_stops_the_run_before_anything_is_compiled(tmp_pat
         D1._run_d1_unguarded(positions=[], paths=RUNTIME,
                              out_path=str(tmp_path / "r.json"),
                              _compile=lambda d: compiled.append(1),
-                             _incumbent=lambda **kw: {})
+                             _incumbent=lambda **kw: kw['budget'].spend(1) or {})
     assert compiled == [], "the helper was compiled before the registration check"
 
 
@@ -729,7 +729,7 @@ def test_an_unregistered_block_stops_the_run_before_anything_is_compiled(tmp_pat
 def test_every_retained_prefix_is_replayed_through_the_e3b_binder(wire, registered, tmp_path):
     D1._run_d1_unguarded(positions=[_position()], paths=RUNTIME,
                          out_path=str(tmp_path / "r.json"),
-                         _compile=lambda d: None, _incumbent=lambda **kw: {"ok": True})
+                         _compile=lambda d: None, _incumbent=lambda **kw: kw['budget'].spend(1) or {"ok": True})
     replays = [c for c in wire["calls"] if "replay" in c["args"]]
     assert len(replays) == 1, [c["args"][-3:] for c in wire["calls"]]
 
@@ -738,7 +738,7 @@ def test_the_binder_call_carries_the_frozen_timeout_and_the_explicit_ply_cap(
         wire, registered, tmp_path):
     D1._run_d1_unguarded(positions=[_position()], paths=RUNTIME,
                          out_path=str(tmp_path / "r.json"),
-                         _compile=lambda d: None, _incumbent=lambda **kw: {"ok": True})
+                         _compile=lambda d: None, _incumbent=lambda **kw: kw['budget'].spend(1) or {"ok": True})
     replays = [c for c in wire["calls"] if "replay" in c["args"]]
     assert replays, "no replay reached the boundary; the assertions below are vacuous"
     for c in replays:
@@ -762,7 +762,7 @@ def test_a_binder_divergence_becomes_a_VOID_not_an_unexpected_error(
     with pytest.raises(D1.D1VoidError, match="E3b"):
         D1._run_d1_unguarded(positions=[_position()], paths=RUNTIME,
                              out_path=str(tmp_path / "r.json"),
-                             _compile=lambda d: None, _incumbent=lambda **kw: {})
+                             _compile=lambda d: None, _incumbent=lambda **kw: kw['budget'].spend(1) or {})
 
 
 def test_the_abort_translation_is_reachable_only_through_a_real_abort(registered):
@@ -779,7 +779,7 @@ def test_a_prefix_that_does_not_replay_to_its_recorded_digest_voids(
     with pytest.raises(D1.D1VoidError, match="digest"):
         D1._run_d1_unguarded(positions=[pos], paths=RUNTIME,
                              out_path=str(tmp_path / "r.json"),
-                             _compile=lambda d: None, _incumbent=lambda **kw: {})
+                             _compile=lambda d: None, _incumbent=lambda **kw: kw['budget'].spend(1) or {})
 
 
 def test_an_illegal_move_in_a_retained_prefix_voids(wire, registered, tmp_path):
@@ -787,7 +787,7 @@ def test_an_illegal_move_in_a_retained_prefix_voids(wire, registered, tmp_path):
     with pytest.raises(D1.D1VoidError, match="illegal"):
         D1._run_d1_unguarded(positions=[pos], paths=RUNTIME,
                              out_path=str(tmp_path / "r.json"),
-                             _compile=lambda d: None, _incumbent=lambda **kw: {})
+                             _compile=lambda d: None, _incumbent=lambda **kw: kw['budget'].spend(1) or {})
 
 
 # ═══════════ ONE deadline, ONE origin: the enforced clock is the reported one ═
@@ -818,7 +818,7 @@ def test_an_unregistered_block_arms_no_timer_at_all(tmp_path, timer, monkeypatch
     with pytest.raises(D1.D1Error, match="not registered"):
         D1._run_d1_unguarded(positions=[], paths=RUNTIME, deadline=d,
                              out_path=str(tmp_path / "r.json"),
-                             _compile=lambda x: None, _incumbent=lambda **kw: {})
+                             _compile=lambda x: None, _incumbent=lambda **kw: kw['budget'].spend(1) or {})
     assert timer == [], "a timer was armed before the registration check refused"
     assert d.started is False, "the reported clock started before registration passed"
 
@@ -831,7 +831,7 @@ def test_the_supervisor_arms_from_the_started_deadlines_REMAINING_time(
     d = D1.Deadline(limit_s=100, clock=lambda: next(ticks))
     D1._run_d1_unguarded(positions=[], paths=RUNTIME, deadline=d,
                          out_path=str(tmp_path / "r.json"),
-                         _compile=lambda x: None, _incumbent=lambda **kw: {})
+                         _compile=lambda x: None, _incumbent=lambda **kw: kw['budget'].spend(1) or {})
     assert timer, "no timer was armed; the assertion below would be vacuous"
     assert timer[0] == 95.0, (
         f"armed with {timer[0]}, expected the started deadline's remaining 95.0 "
@@ -873,7 +873,7 @@ def test_the_reported_elapsed_and_the_enforced_timer_share_one_origin(
     d = D1.Deadline(limit_s=90 * 60, clock=lambda: next(ticks))
     report = D1._run_d1_unguarded(positions=[], paths=RUNTIME, deadline=d,
                                   out_path=str(tmp_path / "r.json"),
-                                  _compile=lambda x: None, _incumbent=lambda **kw: {})
+                                  _compile=lambda x: None, _incumbent=lambda **kw: kw['budget'].spend(1) or {})
     assert timer[0] == D1.RUN_DEADLINE_S, "the timer did not start at the deadline's origin"
     assert report["elapsed_s"] == 60.0
     assert report["run_deadline_s"] == D1.RUN_DEADLINE_S
@@ -1106,7 +1106,7 @@ def _run_one(tmp_path, monkeypatch, *, moves_by_depth=None):
     monkeypatch.setattr(subprocess, "run", fake_run)
     return D1._run_d1_unguarded(
         positions=[_position()], paths=RUNTIME, out_path=str(tmp_path / "r.json"),
-        _compile=lambda d: {"stub": True}, _incumbent=lambda **kw: {"ok": True})
+        _compile=lambda d: {"stub": True}, _incumbent=lambda **kw: kw['budget'].spend(1) or {"ok": True})
 
 
 def test_the_position_record_says_the_depths_AGREE_when_they_do(
@@ -1262,7 +1262,7 @@ def test_run_stage_refusals_identify_the_position_too(wire, registered, tmp_path
     with pytest.raises(D1.D1VoidError) as e:
         D1._run_d1_unguarded(positions=[pos], paths=RUNTIME,
                              out_path=str(tmp_path / "r.json"),
-                             _compile=lambda d: None, _incumbent=lambda **kw: {})
+                             _compile=lambda d: None, _incumbent=lambda **kw: kw['budget'].spend(1) or {})
     assert "created_threat/control" in str(e.value), str(e.value)
 
 
@@ -1305,7 +1305,7 @@ def test_a_malformed_REPLAY_dump_is_a_VOID_and_writes_nothing(
     with pytest.raises(D1.D1VoidError, match="could not be parsed"):
         D1._run_d1_unguarded(positions=[_position()], paths=RUNTIME,
                              out_path=str(out), _compile=lambda d: None,
-                             _incumbent=lambda **kw: {})
+                             _incumbent=lambda **kw: kw['budget'].spend(1) or {})
     assert not out.exists()
 
 
@@ -1339,10 +1339,13 @@ def test_d1_main_reports_rather_than_escaping_on_an_unexpected_error(
 # a predeclared allowlist rather than by intention.
 
 def test_the_trace_field_allowlist_is_predeclared_and_small():
+    """v2 dropped the identity STRINGS -- task_id, ply, digest -- because each
+    was a free-form channel and the index already identifies the position."""
     assert D1.TRACE_FIELDS == frozenset({
-        "event", "ts", "schema", "index", "n_positions", "task_id", "ply",
-        "digest", "stage", "positions_completed", "queries_spent",
-        "seeds_drawn", "verdict"})
+        "event", "ts", "schema", "index", "n_positions", "stage",
+        "positions_completed", "queries_spent", "seeds_drawn", "verdict"})
+    assert D1.TRACE_FIELDS.isdisjoint({"task_id", "ply", "digest"})
+    assert D1.TRACE_SCHEMA == "d1-void-trace/2"
 
 
 @pytest.mark.parametrize("analytic", [
@@ -1353,14 +1356,17 @@ def test_the_trace_refuses_every_analytic_field(tmp_path, analytic):
     """The non-analytic guarantee is STRUCTURAL. A trace that could carry a move
     or a value would be a partial-cohort analysis wearing a different filename."""
     with open(tmp_path / "t.jsonl", "w", encoding="utf-8") as fh:
-        with pytest.raises(D1.D1Error, match="not a permitted trace field"):
-            D1._trace(fh, event="position_done", **{analytic: "anything"})
+        with pytest.raises(D1.D1Error):
+            D1._trace(fh, event="position_done", index=0, positions_completed=0,
+                      queries_spent=0, seeds_drawn=0, **{analytic: "anything"})
+    assert (tmp_path / "t.jsonl").read_text(encoding="utf-8") == "", \
+        "it wrote before refusing"
 
 
 def test_the_trace_writes_only_allowlisted_keys(wire, registered, tmp_path):
     out = tmp_path / "r.json"
     D1._run_d1_unguarded(positions=[_position()], paths=RUNTIME, out_path=str(out),
-                         _compile=lambda d: None, _incumbent=lambda **kw: {"ok": 1})
+                         _compile=lambda d: None, _incumbent=lambda **kw: kw['budget'].spend(1) or {"ok": 1})
     lines = [json.loads(l) for l in open(str(out) + ".trace.jsonl", encoding="utf-8")]
     assert lines, "no trace was written"
     for row in lines:
@@ -1382,7 +1388,7 @@ def test_the_trace_SURVIVES_a_VOID_and_says_how_far_it_got(
     with pytest.raises(D1.D1VoidError):
         D1._run_d1_unguarded(positions=[_position()], paths=RUNTIME,
                              out_path=str(out), _compile=lambda d: None,
-                             _incumbent=lambda **kw: {"ok": 1})
+                             _incumbent=lambda **kw: kw['budget'].spend(1) or {"ok": 1})
     assert not out.exists(), "a VOID wrote a record"
     lines = [json.loads(l) for l in open(str(out) + ".trace.jsonl", encoding="utf-8")]
     events = [r["event"] for r in lines]
@@ -1404,7 +1410,7 @@ def test_the_trace_counts_seeds_drawn_so_the_accounting_can_close(
     out = tmp_path / "r.json"
     D1._run_d1_unguarded(positions=[_position(), dict(_position(), task_id="t2")],
                          paths=RUNTIME, out_path=str(out),
-                         _compile=lambda d: None, _incumbent=lambda **kw: {"ok": 1})
+                         _compile=lambda d: None, _incumbent=lambda **kw: kw['budget'].spend(1) or {"ok": 1})
     lines = [json.loads(l) for l in open(str(out) + ".trace.jsonl", encoding="utf-8")]
     end = [r for r in lines if r["event"] == "run_end"][0]
     assert end["verdict"] == "OK"
@@ -1418,14 +1424,14 @@ def test_the_trace_is_create_only(wire, registered, tmp_path):
     with pytest.raises(FileExistsError):
         D1._run_d1_unguarded(positions=[_position()], paths=RUNTIME,
                              out_path=str(out), _compile=lambda d: None,
-                             _incumbent=lambda **kw: {})
+                             _incumbent=lambda **kw: kw['budget'].spend(1) or {})
     assert trace.read_text(encoding="utf-8") == "{}\n"
 
 
 def test_the_trace_is_not_the_record_and_says_so(wire, registered, tmp_path):
     out = tmp_path / "r.json"
     D1._run_d1_unguarded(positions=[_position()], paths=RUNTIME, out_path=str(out),
-                         _compile=lambda d: None, _incumbent=lambda **kw: {"ok": 1})
+                         _compile=lambda d: None, _incumbent=lambda **kw: kw['budget'].spend(1) or {"ok": 1})
     first = json.loads(open(str(out) + ".trace.jsonl", encoding="utf-8").readline())
     assert first["event"] == "run_start" and first["schema"] == D1.TRACE_SCHEMA
     assert "void-trace" in D1.TRACE_SCHEMA
@@ -1444,3 +1450,238 @@ def test_every_trace_line_is_fsynced(tmp_path, monkeypatch):
         D1._trace(fh, event="run_start", schema=D1.TRACE_SCHEMA, n_positions=3)
         D1._trace(fh, event="position_start", index=0)
         assert len(calls) == 2, calls
+
+
+# ════════ the trace schema validates VALUES, not just field names ═══════════
+#
+# A name-only allowlist is NOT structural: `stage="move=(11,11)"` passes it. A
+# measurement can be smuggled through any free-form string. So every permitted
+# field is value-checked, the identity strings are gone entirely (the index
+# already identifies the frozen position), and validation happens BEFORE any
+# write -- a refusal that has already appended a line has not refused.
+
+def _fresh(tmp_path, name="t.jsonl"):
+    return open(tmp_path / name, "w", encoding="utf-8")
+
+
+@pytest.mark.parametrize("payload", [
+    "move=(11,11)", "root_value=0.42", "policy:0.1,0.2", "visits=400",
+    "(11,11)", "q=-0.3", "depth6->(9,11)",
+])
+@pytest.mark.parametrize("field", ["stage", "event", "verdict"])
+def test_no_measurement_can_be_encoded_through_any_free_form_field(
+        tmp_path, field, payload):
+    """The attack the name-only allowlist permitted, on every enum field."""
+    fh = _fresh(tmp_path)
+    # Each field must be exercised on an event that PERMITS it, or the
+    # "not permitted" arm fires first and the enum check is never reached --
+    # which is exactly what an injected-defect control caught for `verdict`.
+    base = {
+        "stage": {"event": "position_stage", "index": 0, "stage": "bound",
+                  "seeds_drawn": 0},
+        "event": {"event": "position_stage", "index": 0, "stage": "bound",
+                  "seeds_drawn": 0},
+        "verdict": {"event": "run_end", "verdict": "OK", "positions_completed": 0,
+                    "queries_spent": 0, "seeds_drawn": 0},
+    }[field]
+    kw = dict(base)
+    kw[field] = payload
+    with pytest.raises(D1.D1Error):
+        D1._trace(fh, **kw)
+    fh.close()
+    assert (tmp_path / "t.jsonl").read_text(encoding="utf-8") == "", \
+        "it wrote before refusing; a refusal that already appended has not refused"
+
+
+def test_the_event_enum_is_closed():
+    assert set(D1.TRACE_EVENTS) == {"run_start", "position_start", "position_stage",
+                                    "position_done", "run_end"}
+
+
+def test_the_stage_enum_is_closed_and_derived_from_the_frozen_depths():
+    assert set(D1.TRACE_STAGES) == {"bound", "incumbent"} | {
+        f"depth{d}" for d in D1.T1J_DEPTHS}
+
+
+def test_the_verdict_enum_is_closed():
+    assert set(D1.TRACE_VERDICTS) == {"OK", "VOID"}
+
+
+@pytest.mark.parametrize("field", ["task_id", "digest", "ply"])
+def test_the_free_form_identity_fields_are_gone(tmp_path, field):
+    """An index identifies the frozen position; a task id or digest is a string
+    channel and buys nothing the index does not already give."""
+    assert field not in D1.TRACE_FIELDS
+    fh = _fresh(tmp_path)
+    with pytest.raises(D1.D1Error):
+        D1._trace(fh, event="position_start", index=0, **{field: "x"})
+    fh.close()
+    assert (tmp_path / "t.jsonl").read_text(encoding="utf-8") == ""
+
+
+@pytest.mark.parametrize("bad", [
+    "3", 3.5, True, False, -1, None, [3], {"n": 3}, float("nan"), 10 ** 9,
+])
+def test_counters_must_be_bounded_plain_integers(tmp_path, bad):
+    fh = _fresh(tmp_path)
+    with pytest.raises(D1.D1Error):
+        D1._trace(fh, event="position_start", index=bad)
+    fh.close()
+    assert (tmp_path / "t.jsonl").read_text(encoding="utf-8") == ""
+
+
+def test_a_counter_beyond_its_own_ceiling_is_refused(tmp_path):
+    """`queries_spent` may not exceed the frozen query cap, and the position
+    counters may not exceed the cohort."""
+    fh = _fresh(tmp_path)
+    with pytest.raises(D1.D1Error, match="queries_spent"):
+        D1._trace(fh, event="run_end", verdict="OK", positions_completed=0,
+                  queries_spent=D1.QUERY_CAP + 1, seeds_drawn=0)
+    with pytest.raises(D1.D1Error, match="positions_completed"):
+        D1._trace(fh, event="run_end", verdict="OK",
+                  positions_completed=D1.N_POSITIONS + 1,
+                  queries_spent=0, seeds_drawn=0)
+    fh.close()
+    assert (tmp_path / "t.jsonl").read_text(encoding="utf-8") == ""
+
+
+def test_the_schema_string_must_be_exactly_the_declared_one(tmp_path):
+    fh = _fresh(tmp_path)
+    with pytest.raises(D1.D1Error, match="schema"):
+        D1._trace(fh, event="run_start", schema="d1-void-trace/1 move=(11,11)",
+                  n_positions=1)
+    fh.close()
+    assert (tmp_path / "t.jsonl").read_text(encoding="utf-8") == ""
+
+
+def test_each_event_carries_EXACTLY_its_declared_fields(tmp_path):
+    fh = _fresh(tmp_path)
+    with pytest.raises(D1.D1Error, match="missing"):          # too few
+        D1._trace(fh, event="position_done", index=0)
+    with pytest.raises(D1.D1Error, match="not permitted"):    # too many
+        D1._trace(fh, event="position_start", index=0, verdict="OK")
+    fh.close()
+    assert (tmp_path / "t.jsonl").read_text(encoding="utf-8") == ""
+
+
+def test_the_timestamp_is_injected_and_cannot_be_supplied(tmp_path):
+    """`ts` is not a caller-facing field at all -- one fewer channel."""
+    fh = _fresh(tmp_path)
+    with pytest.raises(D1.D1Error, match="not permitted"):
+        D1._trace(fh, event="position_start", index=0, ts=1.0)
+    fh.close()
+    assert (tmp_path / "t.jsonl").read_text(encoding="utf-8") == ""
+
+
+# ═══ the public boundary must require the EXACT cohort, not merely fit the cap ═
+#
+# `run_d1` accepted any list of positions. A 1-row input spends 5 of 1,105
+# queries and writes verdict OK: the budget is a CEILING, and a ceiling permits a
+# short cohort to masquerade as a completed run. The exact cohort is required at
+# the PUBLIC entry; small fake cohorts stay reachable through the private seam.
+
+def _expected():
+    return D1.expected_cohort()
+
+
+def test_the_expected_cohort_is_the_frozen_227_minus_the_six_exclusions():
+    exp = _expected()
+    assert len(exp) == D1.N_POSITIONS == 221
+    assert not (set(exp) & set(SEL.AMENDMENT2_EXCLUDED))
+    src = json.load(open(D1.COHORT_SOURCE_REL, encoding="utf-8"))
+    assert [r["digest"] for r in src if r["digest"] not in SEL.AMENDMENT2_EXCLUDED] == exp
+    assert len(src) == 227
+
+
+def test_the_cohort_source_is_pinned_by_hash():
+    import hashlib
+    got = hashlib.sha256(open(D1.COHORT_SOURCE_REL, "rb").read()).hexdigest()
+    assert got == D1.COHORT_SOURCE_SHA256
+
+
+def test_a_tampered_cohort_source_is_refused(tmp_path):
+    """REACHED ALONE. The test above recomputes the hash ITSELF, so it passes
+    whether or not `expected_cohort` checks anything -- an injected-defect
+    control proved the check could be deleted with nothing noticing."""
+    src = json.load(open(D1.COHORT_SOURCE_REL, encoding="utf-8"))
+    bad = tmp_path / "positions.json"
+    bad.write_text(json.dumps(src[:100]), encoding="utf-8")
+    with pytest.raises(D1.D1Error, match="sha256"):
+        D1.expected_cohort(str(bad))
+
+
+def test_a_short_cohort_is_refused_at_the_public_boundary():
+    """THE DEFECT. 220 rows fit the cap comfortably and would have run."""
+    rows = [{"digest": d} for d in _expected()[:220]]
+    with pytest.raises(D1.D1Error, match="221"):
+        D1._check_cohort(rows)
+
+
+def test_a_single_row_cohort_is_refused():
+    with pytest.raises(D1.D1Error, match="221"):
+        D1._check_cohort([{"digest": _expected()[0]}])
+
+
+def test_a_reordered_cohort_is_refused():
+    """Frozen order is what makes a seed count identify WHICH seeds."""
+    rows = [{"digest": d} for d in _expected()]
+    rows[0], rows[1] = rows[1], rows[0]
+    with pytest.raises(D1.D1Error, match="order"):
+        D1._check_cohort(rows)
+
+
+def test_a_cohort_containing_an_excluded_row_is_refused():
+    rows = [{"digest": d} for d in _expected()[:220]]
+    rows.append({"digest": SEL.AMENDMENT2_EXCLUDED[0]})
+    with pytest.raises(D1.D1Error, match="excluded"):
+        D1._check_cohort(rows)
+
+
+def test_the_exact_cohort_is_accepted():
+    D1._check_cohort([{"digest": d} for d in _expected()])
+
+
+def test_run_d1_checks_the_cohort_and_the_private_seam_does_not():
+    """Structural, because the gate stops a test from reaching it through the
+    public entry -- and a fixture that flips a gate IS the gate failing."""
+    import ast, pathlib
+    tree = ast.parse(pathlib.Path(D1.__file__).read_text(encoding="utf-8"))
+    bodies = {n.name: ast.get_source_segment(
+        pathlib.Path(D1.__file__).read_text(encoding="utf-8"), n)
+        for n in tree.body if isinstance(n, ast.FunctionDef)}
+    assert "_check_cohort(" in bodies["run_d1"], "the public entry does not require it"
+    assert "_check_cohort(" not in bodies["_run_d1_unguarded"], \
+        "the private seam must stay usable for small fake cohorts"
+
+
+def test_an_under_spend_cannot_produce_an_OK_report(wire, registered, tmp_path):
+    """A skipped query is a different defect from a short cohort, and the cap
+    catches neither: it is a maximum."""
+    real = D1._probe_position
+    calls = {"n": 0}
+
+    def skipping(**kw):
+        calls["n"] += 1
+        if calls["n"] == 2:              # silently skip the second depth
+            return {"depth": kw["depth"], "invocations": 0, "move": [0, 0],
+                    "requested_depth": kw["depth"], "completed_depth": kw["depth"],
+                    "completed": True, "legal": True, "null_sentinel": False,
+                    "to_move": "Y", "current_max_ply": 0, "usealphabeta": True,
+                    "eval_regime": "normal", "elapsed_us": [], "postcond": [],
+                    "searched_state": {}, "record": None, "dump": None}
+        return real(**kw)
+
+    import unittest.mock as m
+    with m.patch.object(D1, "_probe_position", skipping):
+        out = tmp_path / "r.json"
+        with pytest.raises(D1.D1VoidError, match="spent"):
+            D1._run_d1_unguarded(positions=[_position()], paths=RUNTIME,
+                                 out_path=str(out), _compile=lambda d: None,
+                                 _incumbent=lambda **kw: kw['budget'].spend(1) or {"ok": 1})
+        assert not out.exists()
+
+
+def test_the_expected_spend_arithmetic_is_the_frozen_one():
+    assert D1.QUERIES_PER_POSITION == 1 + len(D1.T1J_DEPTHS) * D1.INVOCATIONS_PER_DEPTH == 5
+    assert D1.EXPECTED_QUERY_SPEND == D1.N_POSITIONS * D1.QUERIES_PER_POSITION == 1105
+    assert D1.EXPECTED_QUERY_SPEND == D1.QUERY_CAP, "the run must SPEND its budget, not fit it"
