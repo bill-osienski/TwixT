@@ -78,6 +78,40 @@ N_POSITIONS = 227
 #: module adds it to a registry or draws from it; it assigns numbers on paper.
 SEED_INTERVAL = (202614000, 202614227)
 
+#: PLAN §13 AMENDMENT 2 -- the six already-retained rows the one authorized
+#: low-ply qualification OBSERVED to fail the frozen completion condition.
+#:
+#: ENUMERATED, not the rule `ply >= 5`. The qualification supports excluding
+#: these observed prefixes and no broader engine claim: nine prefixes in one
+#: colour arm at three plies is not a threshold located. A rule would also have
+#: excluded rows nobody tested.
+#:
+#: Applied ONLY AFTER §12.1-12.3 has run exactly as frozen. There is no
+#: reselection, backfill, re-deduplication or re-capping -- replacing these six
+#: would be a new selection rule written after the result was seen.
+AMENDMENT2_EXCLUDED = (
+    "487df111c9dbd7a3cd70c1ff0bd1316eee47cb950f7443fb15f5bff33927d2a7",  # ply 1
+    "470721202fb36f18040bc00152ae6fbaf2ae576f8941ae2e6a6fcf99de676fde",  # ply 3
+    "69c2875679f3eb1b128c42daccdc28122ee7ec2556092333f61fcf6e11d3a473",  # ply 1
+    "4fba47bfca43d99f8b1c3fda801ec141d4013bdf7e135665fc4678a5047a002b",  # ply 3
+    "7c326873cac4c1d7786dd2eb69b4ba4c4ba0c7631a24fe4855eee529beb0f6a4",  # ply 1
+    "5e2c1f8ab19effb5487c8edba19c35a6075538ddcbb2110dd798364b010272e6",  # ply 3
+)
+
+#: §13.3's prospective totals. 227 - 6.
+N_POSITIONS_AFTER_EXCLUSION = 227 - len(AMENDMENT2_EXCLUDED)          # 221
+
+#: The revised per-cohort counts. All six removals fall in one cohort.
+AMENDMENT2_COUNTS = {("mover_fragmentation", "position"): 101,
+                     ("mover_fragmentation", "control"): 54,
+                     ("created_threat", "position"): 30,
+                     ("created_threat", "control"): 36}
+
+#: The block D1 spent. RETIRED WHOLE after the 2026-08-28 VOID and never
+#: reusable -- §13 reserves no replacement, so a run needs a fresh interval that
+#: a separate authorization must choose and prove.
+RETIRED_SEED_INTERVAL = (202614000, 202614227)
+
 #: WHICH POSITION GETS WHICH SEED -- A CHOICE MADE HERE, NOT FROZEN IN 12.
 #: Section 12.5 fixes the interval and "one per position" and stops there, so the
 #: order is an execution decision and is recorded rather than left implicit. It
@@ -194,12 +228,42 @@ N_DISTINCT_STATES = 203
 N_STATES_IN_TWO_COHORTS = 24
 
 
-def select_all(bound: Any) -> Dict[str, Any]:
-    """The frozen selection, with one reserved seed per retained position.
+def _control_imbalance(frozen: Dict, kept: Dict) -> Dict[str, Any]:
+    """§13.3's recorded consequence: the exclusion empties cells of controls.
 
-    Refuses on any departure from the frozen counts. A selection that silently
-    came out at a different size would move the query budget with it, and 12.4
-    fixes that ceiling before any model or JVM load.
+    Backfilling would be reselection, so this is STATED rather than repaired --
+    before any run, exactly as 12.3 stated its own 101-vs-60 imbalance "so it
+    cannot later be mistaken for a filtered result". It widens a pre-existing
+    gap; it does not create a new matching rule.
+    """
+    out: Dict[str, Any] = {}
+    for sig in SIGNATURES:
+        name = sig["name"]
+        pos = {cell(r) for r in kept[(name, "position")]}
+        cb = {cell(r) for r in frozen[(name, "control")]}
+        ca = {cell(r) for r in kept[(name, "control")]}
+        out[name] = {
+            "position_cells": len(pos),
+            "control_cells_before": len(cb), "control_cells_after": len(ca),
+            "position_cells_without_control_before": len(pos - cb),
+            "position_cells_without_control_after": len(pos - ca),
+        }
+    return out
+
+
+def select_all(bound: Any,
+               seed_interval: Optional[Tuple[int, int]] = None) -> Dict[str, Any]:
+    """§12's frozen selection, THEN §13's enumerated exclusion.
+
+    THE ORDER IS THE POINT. §12.1-12.3 runs untouched and its frozen counts are
+    verified FIRST; only then are the six rows removed. Checking the counts after
+    removal instead would let a drifted rule hide inside the exclusion.
+
+    SEEDS ARE NOT ASSIGNED BY DEFAULT. §13 reserves no interval and the block D1
+    spent is retired whole, so a prospective manifest carries `seed: None` until
+    a separate authorization reserves and proves a fresh one. Supply
+    `seed_interval` only when that has happened; it is size-checked against the
+    cohort and refuses the retired block.
     """
     groups = cohorts(discovery_plies(bound))
     by_key = {(c["signature"], c["role"]): c for c in groups}
@@ -215,27 +279,71 @@ def select_all(bound: Any) -> Dict[str, Any]:
                     f"{sig[want]}. The budget is never raised or lowered to fit the "
                     f"data; the rule and the record must be reconciled instead.")
 
-    total = sum(len(by_key[k]["rows"]) for k in SEED_ASSIGNMENT_ORDER)
-    if total != N_POSITIONS:
-        raise D1SelectionError(f"{total} positions retained, 12.4 froze {N_POSITIONS}")
+    # The four per-cohort checks above pin every count, so a separate check that
+    # they sum to N_POSITIONS could not be reached alone -- a branch no test can
+    # reach is a branch to delete. That SIGNATURES sums to N_POSITIONS is a
+    # STATIC fact and is asserted as one, in the tests.
+    total_frozen = sum(len(by_key[k]["rows"]) for k in SEED_ASSIGNMENT_ORDER)
 
-    lo, hi = SEED_INTERVAL
-    if hi - lo != N_POSITIONS:
-        raise D1SelectionError(f"the reserved block holds {hi - lo} seeds for {N_POSITIONS}")
-    seed = lo
+    # ---- §12 has now been applied and verified EXACTLY as frozen. Only here
+    #      does §13's enumerated exclusion run.
+    frozen_rows = {k: list(by_key[k]["rows"]) for k in SEED_ASSIGNMENT_ORDER}
+    excluded = set(AMENDMENT2_EXCLUDED)
+    seen = {r["digest"] for rows in frozen_rows.values() for r in rows}
+    missing = excluded - seen
+    if missing:
+        raise D1SelectionError(
+            f"§13 names {len(missing)} rows the frozen selection did not retain: "
+            f"{sorted(missing)}. An exclusion that removes nothing is not an exclusion.")
+    for k in SEED_ASSIGNMENT_ORDER:
+        by_key[k]["n_frozen"] = len(frozen_rows[k])
+        by_key[k]["rows"] = [r for r in frozen_rows[k] if r["digest"] not in excluded]
+
+    for (name, role), want in AMENDMENT2_COUNTS.items():
+        got = len(by_key[(name, role)]["rows"])
+        if got != want:
+            raise D1SelectionError(
+                f"§13 {name} {role}s: {got} after exclusion, but §13.3 froze {want}")
+    total = sum(len(by_key[k]["rows"]) for k in SEED_ASSIGNMENT_ORDER)
+    if total != N_POSITIONS_AFTER_EXCLUSION:
+        raise D1SelectionError(
+            f"{total} positions after exclusion, §13.3 froze {N_POSITIONS_AFTER_EXCLUSION}")
+
+    if seed_interval is None:
+        seeds: List[Optional[int]] = [None] * total
+    else:
+        lo, hi = seed_interval
+        if tuple(seed_interval) == RETIRED_SEED_INTERVAL or (
+                lo < RETIRED_SEED_INTERVAL[1] and hi > RETIRED_SEED_INTERVAL[0]):
+            raise D1SelectionError(
+                f"{tuple(seed_interval)} overlaps the retired block "
+                f"{RETIRED_SEED_INTERVAL}, which the 2026-08-28 VOID consumed "
+                f"administratively. It may not be revived or partially reused.")
+        if hi - lo != total:
+            raise D1SelectionError(
+                f"the supplied interval holds {hi - lo} seeds for {total} positions")
+        seeds = list(range(lo, hi))
+
     ordered: List[Dict[str, Any]] = []
+    i = 0
     for key in SEED_ASSIGNMENT_ORDER:
         group = by_key[key]
         # A row can belong to one signature's positions AND the other's
         # controls, so the seed is written onto a COPY: assigning in place would
         # let the second group overwrite the first group's seed.
-        group["rows"] = [dict(r, seed=seed + i, signature=key[0], role=key[1])
-                         for i, r in enumerate(group["rows"])]
-        seed += len(group["rows"])
+        group["rows"] = [dict(r, seed=seeds[i + n], signature=key[0], role=key[1])
+                         for n, r in enumerate(group["rows"])]
+        i += len(group["rows"])
         ordered.extend(group["rows"])
 
-    return {"n_positions": total, "seed_interval": list(SEED_INTERVAL),
+    return {"n_positions": total, "n_positions_frozen": total_frozen,
+            "n_excluded": len(excluded),
+            "excluded_digests": sorted(excluded),
+            "seed_interval": None if seed_interval is None else list(seed_interval),
             "seed_assignment_order": [list(k) for k in SEED_ASSIGNMENT_ORDER],
+            "control_imbalance": _control_imbalance(
+                {k: frozen_rows[k] for k in SEED_ASSIGNMENT_ORDER},
+                {k: by_key[k]["rows"] for k in SEED_ASSIGNMENT_ORDER}),
             "cohorts": [by_key[k] for k in SEED_ASSIGNMENT_ORDER],
             "positions": ordered}
 

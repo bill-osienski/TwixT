@@ -10,6 +10,7 @@ site. There are three default-None hops between a caller and that boundary, and
 each one silently restores unbounded waiting; proving the value was passed in at
 the top proves nothing about whether it arrived.
 """
+import json
 import pathlib
 import signal
 import subprocess
@@ -187,9 +188,25 @@ def test_void_is_raised_not_returned_so_a_caller_cannot_ignore_it(tmp_path, monk
 
 # ---------------------------------------------- budget, prefix, seed interval
 
-def test_the_query_cap_is_the_frozen_value_and_its_arithmetic_holds():
-    assert D1.QUERY_CAP == 1135
+def test_the_query_cap_is_the_PROSPECTIVE_value_and_its_arithmetic_holds():
+    """§13.3 lowered 12.4's ceiling by excluding six observed-failing rows."""
+    assert D1.N_POSITIONS == 221 and D1.QUERY_CAP == 1105
     assert D1.QUERY_CAP == D1.N_POSITIONS * (1 + len(D1.T1J_DEPTHS) * D1.INVOCATIONS_PER_DEPTH)
+
+
+def test_the_frozen_12_4_figures_are_kept_as_the_historical_record():
+    """12.4's numbers are what the frozen rule yielded; §13 supersedes them
+    prospectively without erasing them."""
+    assert D1.N_POSITIONS_FROZEN_12 == 227 and D1.QUERY_CAP_FROZEN_12 == 1135
+    assert D1.QUERY_CAP_FROZEN_12 == D1.N_POSITIONS_FROZEN_12 * 5
+
+
+def test_the_ceiling_only_ever_moved_DOWN():
+    """§13: 'lowered, never raised, and the difference may not be spent
+    elsewhere.'"""
+    assert D1.N_POSITIONS < D1.N_POSITIONS_FROZEN_12
+    assert D1.QUERY_CAP < D1.QUERY_CAP_FROZEN_12
+    assert D1.N_POSITIONS_FROZEN_12 - D1.N_POSITIONS == 6
 
 
 def test_the_budget_refuses_the_query_that_would_exceed_the_cap():
@@ -248,7 +265,10 @@ def test_the_seed_interval_is_ACCOUNTED_and_now_RETIRED_after_the_VOID():
     """
     from scripts.GPU.alphazero import e4_screen_reference as REF
     assert D1.SEED_INTERVAL == (202614000, 202614227)
-    assert D1.SEED_INTERVAL[1] - D1.SEED_INTERVAL[0] == D1.N_POSITIONS
+    # It sized the FROZEN §12 cohort, not §13's. §13 reserves no replacement, so
+    # there is no interval matching 221 and a run cannot proceed without one.
+    assert D1.SEED_INTERVAL[1] - D1.SEED_INTERVAL[0] == D1.N_POSITIONS_FROZEN_12
+    assert D1.SEED_INTERVAL[1] - D1.SEED_INTERVAL[0] != D1.N_POSITIONS
     for name in ("ACCOUNTED_SEED_INTERVALS", "EXPOSED_SEED_INTERVALS",
                  "RETIRED_SEED_INTERVALS", "TEST_ONLY_SEED_INTERVALS"):
         assert getattr(REF, name), f"vacuous: {name} is empty"
@@ -1244,3 +1264,183 @@ def test_run_stage_refusals_identify_the_position_too(wire, registered, tmp_path
                              out_path=str(tmp_path / "r.json"),
                              _compile=lambda d: None, _incumbent=lambda **kw: {})
     assert "created_threat/control" in str(e.value), str(e.value)
+
+
+# ══════ the parse path the low-ply fix closed, still open in D1 ═════════════
+#
+# `A.query`/`A.replay` raise `HelperOutputError` (a ValueError) when the helper's
+# output cannot be parsed, and `parse_postconds` does too. D1 translated none of
+# them: they escaped `main`, which has no catch-all, as an uncaught traceback
+# with no verdict. Recorded as unfixed when the low-ply runner was built; closed
+# here. Mocked throughout -- no JVM.
+
+BAD_QUERY_LINE = "QUERY q=1 requested_depth=3 move_x=11\n"
+BAD_POSTCOND = "POSTCOND no_throw=true windows=0\n"
+
+
+def test_a_malformed_QUERY_line_is_a_VOID_naming_the_position(reply):
+    reply["out"] = BAD_QUERY_LINE
+    with pytest.raises(D1.D1VoidError, match="could not be parsed") as e:
+        _probe(label=LABEL)
+    assert LABEL in str(e.value), str(e.value)
+
+
+def test_a_malformed_POSTCOND_in_a_QUERY_reply_is_a_VOID(reply):
+    reply["out"] = _stdout(post=False) + BAD_POSTCOND
+    with pytest.raises(D1.D1VoidError, match="could not be parsed"):
+        _probe(label=LABEL)
+
+
+def test_a_malformed_REPLAY_dump_is_a_VOID_and_writes_nothing(
+        registered, monkeypatch, tmp_path):
+    """The binder's own parse path, reached alone."""
+    def fake_run(args, **kw):
+        if "replay" in args:
+            return subprocess.CompletedProcess(
+                args, 0, "PLY 3 next=Y termY=false termX=false\n  LEGAL 0101\n", "")
+        return subprocess.CompletedProcess(args, 0, _stdout(), "")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    out = tmp_path / "r.json"
+    with pytest.raises(D1.D1VoidError, match="could not be parsed"):
+        D1._run_d1_unguarded(positions=[_position()], paths=RUNTIME,
+                             out_path=str(out), _compile=lambda d: None,
+                             _incumbent=lambda **kw: {})
+    assert not out.exists()
+
+
+def test_the_parse_VOID_carries_the_bounded_transcript(reply):
+    reply["out"] = BAD_QUERY_LINE + "  LEGAL " + "1" * 576 + "\n"
+    with pytest.raises(D1.D1VoidError) as e:
+        _probe(label=LABEL)
+    assert "1" * 100 not in str(e.value), "the legal-cell map leaked into the refusal"
+    assert len(str(e.value)) < 2000
+
+
+def test_d1_main_reports_rather_than_escaping_on_an_unexpected_error(
+        monkeypatch, tmp_path):
+    """`main` had no catch-all, so anything it did not name escaped as a
+    traceback with no verdict at all."""
+    monkeypatch.setattr(D1, "D1_EXECUTION_AUTHORIZED", True)
+    monkeypatch.setattr(D1, "run_d1",
+                        lambda **kw: (_ for _ in ()).throw(RuntimeError("boom")))
+    rc = D1.main(["--out", str(tmp_path / "r.json"), "--positions", "/nonexistent",
+                  "--ply-cap", "280"])
+    assert rc == D1.EXIT_UNEXPECTED == 4
+    assert not (tmp_path / "r.json").exists()
+
+
+# ═══════════ the VOID trace: predeclared, and NON-ANALYTIC by construction ═══
+#
+# D1's VOID wrote nothing, so nobody could say how far it got -- which is why its
+# seed accounting could not be closed and had to retire 227 seeds of which an
+# unknown number were drawn. A trace fixes that. It must NOT become a way to
+# publish a partial cohort, so it carries ONLY counters and identity, enforced by
+# a predeclared allowlist rather than by intention.
+
+def test_the_trace_field_allowlist_is_predeclared_and_small():
+    assert D1.TRACE_FIELDS == frozenset({
+        "event", "ts", "schema", "index", "n_positions", "task_id", "ply",
+        "digest", "stage", "positions_completed", "queries_spent",
+        "seeds_drawn", "verdict"})
+
+
+@pytest.mark.parametrize("analytic", [
+    "move", "moves", "policy", "raw_policy", "root_value", "value", "visits",
+    "counts", "root_visits", "q_value", "top2", "depths", "record", "incumbent",
+])
+def test_the_trace_refuses_every_analytic_field(tmp_path, analytic):
+    """The non-analytic guarantee is STRUCTURAL. A trace that could carry a move
+    or a value would be a partial-cohort analysis wearing a different filename."""
+    with open(tmp_path / "t.jsonl", "w", encoding="utf-8") as fh:
+        with pytest.raises(D1.D1Error, match="not a permitted trace field"):
+            D1._trace(fh, event="position_done", **{analytic: "anything"})
+
+
+def test_the_trace_writes_only_allowlisted_keys(wire, registered, tmp_path):
+    out = tmp_path / "r.json"
+    D1._run_d1_unguarded(positions=[_position()], paths=RUNTIME, out_path=str(out),
+                         _compile=lambda d: None, _incumbent=lambda **kw: {"ok": 1})
+    lines = [json.loads(l) for l in open(str(out) + ".trace.jsonl", encoding="utf-8")]
+    assert lines, "no trace was written"
+    for row in lines:
+        assert set(row) <= D1.TRACE_FIELDS, set(row) - D1.TRACE_FIELDS
+
+
+def test_the_trace_SURVIVES_a_VOID_and_says_how_far_it_got(
+        registered, monkeypatch, tmp_path):
+    """THE POINT. D1's VOID left no trace and its seed accounting could not be
+    closed. Here the record is still absent -- no partial cohort -- but the trace
+    names the position it stopped on and the stage it reached."""
+    def fake_run(args, **kw):
+        if "replay" in args:
+            return subprocess.CompletedProcess(args, 0, _replay_stdout(PREFIX), "")
+        raise subprocess.TimeoutExpired(args, kw.get("timeout"))
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    out = tmp_path / "r.json"
+    with pytest.raises(D1.D1VoidError):
+        D1._run_d1_unguarded(positions=[_position()], paths=RUNTIME,
+                             out_path=str(out), _compile=lambda d: None,
+                             _incumbent=lambda **kw: {"ok": 1})
+    assert not out.exists(), "a VOID wrote a record"
+    lines = [json.loads(l) for l in open(str(out) + ".trace.jsonl", encoding="utf-8")]
+    events = [r["event"] for r in lines]
+    assert "position_start" in events and "run_end" in events
+    assert "position_done" not in events, "it did not finish that position"
+    end = [r for r in lines if r["event"] == "run_end"][0]
+    assert end["verdict"] == "VOID"
+    assert end["positions_completed"] == 0
+    assert end["seeds_drawn"] == 1, "one seed was drawn; the accounting must say so"
+    stages = [r["stage"] for r in lines if r["event"] == "position_stage"]
+    # The stub incumbent succeeded, so the run reached the FIRST T1j query before
+    # the timeout. The trace pins the exact stage -- which is the whole point,
+    # and is more than "somewhere in position 0".
+    assert stages == ["bound", "incumbent", "depth3"], stages
+
+
+def test_the_trace_counts_seeds_drawn_so_the_accounting_can_close(
+        wire, registered, tmp_path):
+    out = tmp_path / "r.json"
+    D1._run_d1_unguarded(positions=[_position(), dict(_position(), task_id="t2")],
+                         paths=RUNTIME, out_path=str(out),
+                         _compile=lambda d: None, _incumbent=lambda **kw: {"ok": 1})
+    lines = [json.loads(l) for l in open(str(out) + ".trace.jsonl", encoding="utf-8")]
+    end = [r for r in lines if r["event"] == "run_end"][0]
+    assert end["verdict"] == "OK"
+    assert end["positions_completed"] == 2 and end["seeds_drawn"] == 2
+
+
+def test_the_trace_is_create_only(wire, registered, tmp_path):
+    out = tmp_path / "r.json"
+    trace = tmp_path / "r.json.trace.jsonl"
+    trace.write_text("{}\n", encoding="utf-8")
+    with pytest.raises(FileExistsError):
+        D1._run_d1_unguarded(positions=[_position()], paths=RUNTIME,
+                             out_path=str(out), _compile=lambda d: None,
+                             _incumbent=lambda **kw: {})
+    assert trace.read_text(encoding="utf-8") == "{}\n"
+
+
+def test_the_trace_is_not_the_record_and_says_so(wire, registered, tmp_path):
+    out = tmp_path / "r.json"
+    D1._run_d1_unguarded(positions=[_position()], paths=RUNTIME, out_path=str(out),
+                         _compile=lambda d: None, _incumbent=lambda **kw: {"ok": 1})
+    first = json.loads(open(str(out) + ".trace.jsonl", encoding="utf-8").readline())
+    assert first["event"] == "run_start" and first["schema"] == D1.TRACE_SCHEMA
+    assert "void-trace" in D1.TRACE_SCHEMA
+
+
+def test_every_trace_line_is_fsynced(tmp_path, monkeypatch):
+    """Durability is why the trace exists: one that is lost when the run is
+    terminated mid-stage answers nothing. It is not observable after the fact --
+    a closed file looks identical either way -- so the call itself is observed.
+    """
+    import os as _os
+    calls = []
+    real = _os.fsync
+    monkeypatch.setattr(_os, "fsync", lambda fd: calls.append(fd) or real(fd))
+    with open(tmp_path / "t.jsonl", "w", encoding="utf-8") as fh:
+        D1._trace(fh, event="run_start", schema=D1.TRACE_SCHEMA, n_positions=3)
+        D1._trace(fh, event="position_start", index=0)
+        assert len(calls) == 2, calls

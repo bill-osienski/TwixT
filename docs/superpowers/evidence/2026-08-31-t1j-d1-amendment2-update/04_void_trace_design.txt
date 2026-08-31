@@ -1,0 +1,47 @@
+PREDECLARED SCHEMA: d1-void-trace/1
+PREDECLARED FIELD ALLOWLIST (the whole of it):
+    digest
+    event
+    index
+    n_positions
+    ply
+    positions_completed
+    queries_spent
+    schema
+    seeds_drawn
+    stage
+    task_id
+    ts
+    verdict
+
+total permitted fields: 13
+
+NON-ANALYTIC BY CONSTRUCTION -- `_trace` REFUSES anything else:
+    move         refused
+    raw_policy   refused
+    root_value   refused
+    visits       refused
+    top2         refused
+    depths       refused
+    incumbent    refused
+
+WHY IT EXISTS
+  D1's 2026-08-28 VOID wrote nothing -- correctly, because a report after an
+  abort is a partial-cohort analysis wearing a runtime excuse. But it also meant
+  nobody could say HOW FAR the run got, so its seed accounting could not be
+  closed: 227 seeds were retired of which an unknown number were actually drawn.
+
+WHY IT IS NOT A PARTIAL COHORT
+  Counters and identity only. The allowlist is the guarantee, not the intention:
+  a trace that could carry a move would be a partial-cohort analysis under a
+  different filename.
+
+WHY A SEED *COUNT* IS ENOUGH
+  Positions are processed in the frozen assignment order, so a count identifies
+  WHICH seeds were drawn without recording any. The minimal fact that closes the
+  accounting is the one recorded.
+
+DURABILITY
+  Create-only, append-only, fsynced PER LINE. A trace lost when the run is
+  terminated mid-stage answers nothing, and surviving that is the entire point.
+

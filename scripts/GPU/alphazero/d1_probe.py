@@ -56,12 +56,41 @@ D1_EXECUTION_AUTHORIZED = False
 #: Frozen in plan section 12.10.
 PER_QUERY_TIMEOUT_S = 120
 RUN_DEADLINE_S = 90 * 60
-QUERY_CAP = 1135
-N_POSITIONS = 227
+#: §13.3 lowered these from 12.4's 227 / 1,135 by excluding six observed-failing
+#: rows. LOWERED, never raised, and the difference may not be spent elsewhere.
+#: 12.4's figures remain the HISTORICAL record of what the frozen rule yielded.
+N_POSITIONS_FROZEN_12 = 227
+QUERY_CAP_FROZEN_12 = 1135
+N_POSITIONS = 221
+QUERY_CAP = 1105
 T1J_DEPTHS = (3, 6)
 INVOCATIONS_PER_DEPTH = 2
 #: Reserved in 12.5 and DELIBERATELY NOT REGISTERED in any seed registry.
 SEED_INTERVAL = (202614000, 202614227)
+
+
+#: THE VOID TRACE. Predeclared schema; a run writes `<out_path>.trace.jsonl`.
+#:
+#: WHY IT EXISTS. D1's 2026-08-28 VOID wrote nothing -- correctly, because a
+#: report after an abort is a partial-cohort analysis wearing a runtime excuse.
+#: But it also meant nobody could say HOW FAR the run got, so the seed accounting
+#: could not be closed: 227 seeds were retired of which an unknown number were
+#: actually drawn. The trace answers exactly that question and nothing else.
+#:
+#: WHY IT IS NOT A PARTIAL COHORT. It carries COUNTERS AND IDENTITY ONLY -- never
+#: a move, a policy, a value, a visit count or a T1j reply. That is enforced by
+#: the allowlist below rather than by intention: `_trace` REFUSES any field
+#: outside it, so the file is structurally incapable of holding a measurement.
+#: A trace that could carry a move would be a partial-cohort analysis with a
+#: different filename.
+#:
+#: WHY THE SEED COUNT IS ENOUGH. Positions are processed in the frozen assignment
+#: order, so a count of seeds drawn identifies WHICH ones without recording any.
+#: The minimal fact that closes the accounting is the one recorded.
+TRACE_SCHEMA = "d1-void-trace/1"
+TRACE_FIELDS = frozenset({
+    "event", "ts", "schema", "index", "n_positions", "task_id", "ply", "digest",
+    "stage", "positions_completed", "queries_spent", "seeds_drawn", "verdict"})
 
 
 class D1Error(Exception):
@@ -264,6 +293,23 @@ def position_label(pos: Dict[str, Any]) -> str:
             f"digest={digest[:16] or '?'}")
 
 
+def _trace(fh, **fields: Any) -> None:
+    """Append one trace line and fsync it, refusing any non-allowlisted field.
+
+    FSYNCED PER LINE on purpose: a trace that is lost when the run is terminated
+    mid-stage answers nothing, and the whole point is to survive exactly that.
+    """
+    bad = sorted(set(fields) - TRACE_FIELDS)
+    if bad:
+        raise D1Error(
+            f"{bad} is not a permitted trace field. The trace carries counters and "
+            f"identity only; anything else would make it a partial-cohort analysis "
+            f"under a different filename. Permitted: {sorted(TRACE_FIELDS)}")
+    fh.write(json.dumps(dict(fields, ts=time.time()), sort_keys=True) + "\n")
+    fh.flush()
+    os.fsync(fh.fileno())
+
+
 def _postcond_dict(p) -> Dict[str, Any]:
     """The helper's safety surface, as recorded rather than summarised."""
     return {"no_throw": p.no_throw, "windows": p.windows, "frames": p.frames,
@@ -321,6 +367,15 @@ def _probe_position(*, moves: Sequence[Pos], depth: int, paths: T1jPaths, state,
                 f"{label}: depth {depth} invocation {i}: T1j query timed out after "
                 f"{PER_QUERY_TIMEOUT_S}s ({e}). The run is VOID: no partial-cohort "
                 f"analysis is produced.") from None
+        except A.HelperOutputError as e:
+            # 12.7 treats unreadable output as an instrument failure. This used
+            # to escape `main` -- which had no catch-all -- as a traceback with
+            # no verdict at all. The same defect the low-ply runner closed, left
+            # recorded here at the time and closed now.
+            raise D1VoidError(
+                f"{label}: depth {depth} invocation {i}: the helper's output could "
+                f"not be parsed ({e}). T1j reported: "
+                f"{A.helper_failure_excerpt(e.stdout)}. VOID.") from None
         # `label` is REQUIRED, not defaulted: a caller that forgot it would
         # produce exactly the unlocatable refusal this repair exists to end.
         where = f"{label}: depth {depth} invocation {i}"
@@ -337,6 +392,10 @@ def _probe_position(*, moves: Sequence[Pos], depth: int, paths: T1jPaths, state,
                                       where=where, phase="query")
         except AbortError as e:
             raise D1VoidError(f"{e.message}. VOID.") from None
+        except A.HelperOutputError as e:
+            raise D1VoidError(
+                f"{where}: the helper's POSTCOND output could not be parsed ({e}). "
+                f"T1j reported: {A.helper_failure_excerpt(e.stdout)}. VOID.") from None
         if len(dumps) != 1:
             raise D1VoidError(
                 f"{where}: {len(dumps)} searched-position dumps, expected exactly 1: VOID")
@@ -469,6 +528,10 @@ def _bind_prefix(binder: Callable, ctx, *, task_id: str, state,
             f"{task_id}: the E3b prefix replay timed out after "
             f"{PER_QUERY_TIMEOUT_S}s ({e}). The run is VOID: no partial-cohort "
             f"analysis is produced.") from None
+    except A.HelperOutputError as e:
+        raise D1VoidError(
+            f"{task_id}: the replay output could not be parsed ({e}). "
+            f"T1j reported: {A.helper_failure_excerpt(e.stdout)}. VOID.") from None
 
 
 def _check_prefix(pos: Dict[str, Any]) -> List[Pos]:
@@ -542,62 +605,100 @@ def _run_d1_unguarded(*, positions, paths, out_path, repo_root=".", deadline=Non
 
 
 def _run_stages(positions, paths, out_path, deadline, budget, compile_fn, incumbent):
+    # Create-only, like the record. Opened BEFORE any work so a failure in the
+    # first position is still traced.
+    fd = os.open(out_path + ".trace.jsonl", os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+    with os.fdopen(fd, "w", encoding="utf-8") as trace:
+        return _run_traced(positions, paths, out_path, deadline, budget, compile_fn,
+                           incumbent, trace)
+
+
+def _run_traced(positions, paths, out_path, deadline, budget, compile_fn, incumbent,
+                trace):
     # The deadline is ALREADY started and the supervisor is ALREADY armed from
     # it; `_run_d1_unguarded` owns that order. Compilation is the first thing
     # inside the window, which is why the window has to open before it.
-    artifacts = compile_fn(deadline)
-    deadline.check("after helper compilation")
+    _trace(trace, event="run_start", schema=TRACE_SCHEMA, n_positions=len(positions))
+    completed = 0
+    drawn = 0
+    verdict = "VOID"
+    try:
+        artifacts = compile_fn(deadline)
+        deadline.check("after helper compilation")
 
-    # ONE runtime, ONE context, ONE binder for the whole run -- the E3b
-    # components exactly as the qualified commands construct them.
-    runtime = INT.T1jRuntime(java=paths.java, jar=paths.jar, classes=paths.classes,
-                             ply_cap=paths.ply_cap, timeout_s=PER_QUERY_TIMEOUT_S)
-    ctx = INT.IntegrationContext()
-    binder = INT.make_binder(runtime, ctx)
+        # ONE runtime, ONE context, ONE binder for the whole run -- the E3b
+        # components exactly as the qualified commands construct them.
+        runtime = INT.T1jRuntime(java=paths.java, jar=paths.jar, classes=paths.classes,
+                                 ply_cap=paths.ply_cap, timeout_s=PER_QUERY_TIMEOUT_S)
+        ctx = INT.IntegrationContext()
+        binder = INT.make_binder(runtime, ctx)
 
-    out: List[Dict[str, Any]] = []
-    for pos in positions:
-        _check_seed(pos.get("seed"))
-        prefix = _check_prefix(pos)
-        where = position_label(pos)
-        deadline.check(f"before position {where}")
-        state = _replay_prefix(prefix, where=where)
-        _check_digest(state, pos, where=where)
-        _bind_prefix(binder, ctx, task_id=where, state=state, prefix=prefix)
-        deadline.check(f"after binding {where}")
-        ours = incumbent(pos=pos, state=state, budget=budget)
-        deadline.check(f"after the incumbent readout at {where}")
-        per_depth = [_probe_position(moves=prefix, depth=d, paths=paths, state=state,
-                                    budget=budget, deadline=deadline, label=where)
-                     for d in T1J_DEPTHS]
-        depths = [{k: v for k, v in r.items() if k not in ("record", "dump")}
-                  for r in per_depth]
-        # 5.3's last observable. T1j supplies ONE selected move and no
-        # distribution; whether its two qualified depths pick the same move is
-        # recorded as exactly that, and never expanded into a synthetic pi.
-        moves_by_depth = {d["depth"]: tuple(d["move"]) for d in depths}
-        out.append({"task_id": pos.get("task_id"), "ply": pos.get("ply"),
-                    "seed": pos["seed"], "prefix_len": len(prefix),
-                    "digest": pos.get("digest"), "prefix": [list(m) for m in prefix],
-                    "signature": pos.get("signature"), "role": pos.get("role"),
-                    "opening": pos.get("opening"), "colour_arm": pos.get("colour_arm"),
-                    "phase": pos.get("phase"), "incumbent": ours,
-                    "depths": depths,
-                    "depths_agree": len(set(moves_by_depth.values())) == 1})
-    deadline.check("before writing the report")
+        out: List[Dict[str, Any]] = []
+        for index, pos in enumerate(positions):
+            _check_seed(pos.get("seed"))
+            prefix = _check_prefix(pos)
+            where = position_label(pos)
+            _trace(trace, event="position_start", index=index,
+                   task_id=pos.get("task_id"), ply=pos.get("ply"),
+                   digest=pos.get("digest"))
+            deadline.check(f"before position {where}")
+            state = _replay_prefix(prefix, where=where)
+            _check_digest(state, pos, where=where)
+            _bind_prefix(binder, ctx, task_id=where, state=state, prefix=prefix)
+            _trace(trace, event="position_stage", index=index, stage="bound")
+            deadline.check(f"after binding {where}")
+            # The incumbent DRAWS this position's seed, so the count is
+            # incremented before the call: a draw that then failed still happened.
+            drawn += 1
+            _trace(trace, event="position_stage", index=index, stage="incumbent",
+                   seeds_drawn=drawn)
+            ours = incumbent(pos=pos, state=state, budget=budget)
+            deadline.check(f"after the incumbent readout at {where}")
+            per_depth = []
+            for d in T1J_DEPTHS:
+                _trace(trace, event="position_stage", index=index, stage=f"depth{d}")
+                per_depth.append(_probe_position(
+                    moves=prefix, depth=d, paths=paths, state=state,
+                    budget=budget, deadline=deadline, label=where))
+            depths = [{k: v for k, v in r.items() if k not in ("record", "dump")}
+                      for r in per_depth]
+            # 5.3's last observable. T1j supplies ONE selected move and no
+            # distribution; whether its two qualified depths pick the same move
+            # is recorded as exactly that, never expanded into a synthetic pi.
+            moves_by_depth = {d["depth"]: tuple(d["move"]) for d in depths}
+            out.append({"task_id": pos.get("task_id"), "ply": pos.get("ply"),
+                        "seed": pos["seed"], "prefix_len": len(prefix),
+                        "digest": pos.get("digest"), "prefix": [list(m) for m in prefix],
+                        "signature": pos.get("signature"), "role": pos.get("role"),
+                        "opening": pos.get("opening"), "colour_arm": pos.get("colour_arm"),
+                        "phase": pos.get("phase"), "incumbent": ours,
+                        "depths": depths,
+                        "depths_agree": len(set(moves_by_depth.values())) == 1})
+            completed += 1
+            _trace(trace, event="position_done", index=index,
+                   positions_completed=completed, queries_spent=budget.spent,
+                   seeds_drawn=drawn)
+        deadline.check("before writing the report")
 
-    report = {"n_positions": len(out), "queries_spent": budget.spent,
-              "incumbent_identity": getattr(incumbent, "identity", None),
-              "toolchain_identity": artifacts,
-              "query_cap": budget.cap, "per_query_timeout_s": PER_QUERY_TIMEOUT_S,
-              "run_deadline_s": deadline.limit_s, "elapsed_s": deadline.elapsed(),
-              "seed_interval": list(SEED_INTERVAL), "positions": out}
-    fd = os.open(out_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
-    with os.fdopen(fd, "w", encoding="utf-8") as fh:
-        json.dump(report, fh, indent=1, sort_keys=True)
-        fh.flush()
-        os.fsync(fh.fileno())
-    return report
+        report = {"n_positions": len(out), "queries_spent": budget.spent,
+                  "incumbent_identity": getattr(incumbent, "identity", None),
+                  "toolchain_identity": artifacts,
+                  "query_cap": budget.cap, "per_query_timeout_s": PER_QUERY_TIMEOUT_S,
+                  "run_deadline_s": deadline.limit_s, "elapsed_s": deadline.elapsed(),
+                  "seed_interval": list(SEED_INTERVAL), "positions": out}
+        fd = os.open(out_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump(report, fh, indent=1, sort_keys=True)
+            fh.flush()
+            os.fsync(fh.fileno())
+        verdict = "OK"
+        return report
+    finally:
+        # ALWAYS, including when the supervisor terminates a hung stage. A trace
+        # that is lost on abort answers the one question it exists for.
+        _trace(trace, event="run_end", verdict=verdict,
+               positions_completed=completed, queries_spent=budget.spent,
+               seeds_drawn=drawn)
 
 
 def _default_compile(deadline: Deadline, *, paths: T1jPaths) -> Dict[str, Any]:
@@ -848,6 +949,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return EXIT_VOID
     except D1Error as e:                                      # pragma: no cover
         print(f"refused: {e}", file=sys.stderr)
+        return EXIT_UNEXPECTED
+    except Exception as e:                                    # noqa: BLE001
+        # A CATCH-ALL, because there was none: anything unnamed escaped as a
+        # traceback with no verdict. `l0_match_command` carries the same arm.
+        print(f"UNEXPECTED {type(e).__name__}: {e}", file=sys.stderr)
         return EXIT_UNEXPECTED
     return EXIT_OK                                            # pragma: no cover
 

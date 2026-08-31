@@ -96,6 +96,21 @@ def selection(bound):
     return SEL.select_all(bound)
 
 
+@pytest.fixture(scope="module")
+def frozen(bound, plies):
+    """§12.1-12.3's output, BEFORE §13's exclusion. The §12 facts below are
+    properties of the frozen rule and must keep being asserted against it."""
+    return {(c["signature"], c["role"]): c for c in SEL.cohorts(plies)}
+
+
+@pytest.fixture(scope="module")
+def seeded(bound):
+    """A prospective assignment over a hypothetical fresh interval. §13 reserves
+    none, so nothing here reserves, registers or draws anything -- it is
+    arithmetic over numbers that are not in any registry."""
+    return SEL.select_all(bound, seed_interval=(300000000, 300000221))
+
+
 def test_the_frozen_column_names_still_exist_in_ply_features():
     """12.1 asks for exactly this check: a frozen name that drifts from the code
     is a preregistration that no longer binds anything."""
@@ -123,14 +138,16 @@ def test_the_carried_prefix_replays_to_the_recorded_digest(plies):
         assert SEL.canonical_digest(_state(r["prefix"])) == r["digest"], r["task_id"]
 
 
-def test_the_frozen_counts_are_reproduced(selection):
-    """The numbers 12.1 and 12.4 froze, recomputed from the record."""
-    got = {(c["signature"], c["role"]): len(c["rows"]) for c in selection["cohorts"]}
+def test_the_frozen_counts_are_reproduced(frozen):
+    """The numbers 12.1 and 12.4 froze, recomputed from the record. Asserted
+    against §12's OWN output: §13 excludes afterwards and must not be able to
+    disguise a drifted rule."""
+    got = {k: len(c["rows"]) for k, c in frozen.items()}
     assert got == {("mover_fragmentation", "position"): 101,
                    ("mover_fragmentation", "control"): 60,
                    ("created_threat", "position"): 30,
                    ("created_threat", "control"): 36}
-    assert selection["n_positions"] == SEL.N_POSITIONS == 227
+    assert sum(got.values()) == SEL.N_POSITIONS == 227
 
 
 def test_the_frozen_cell_counts_are_reproduced(selection):
@@ -188,21 +205,21 @@ def test_controls_come_only_from_cells_that_hold_a_selected_position(selection):
 
 # ────────────────────────────── the seed assignment ──────────────────────────
 
-def test_every_position_draws_from_inside_the_reserved_interval(selection):
-    lo, hi = SEL.SEED_INTERVAL
-    seeds = [r["seed"] for c in selection["cohorts"] for r in c["rows"]]
-    assert len(seeds) == 227
+def test_every_position_draws_from_inside_a_supplied_interval(seeded):
+    lo, hi = 300000000, 300000221
+    seeds = [r["seed"] for c in seeded["cohorts"] for r in c["rows"]]
+    assert len(seeds) == 221
     assert all(lo <= s < hi for s in seeds)
 
 
-def test_the_seed_assignment_is_injective_and_exhausts_the_block(selection):
-    seeds = [r["seed"] for c in selection["cohorts"] for r in c["rows"]]
-    assert sorted(seeds) == list(range(*SEL.SEED_INTERVAL))
+def test_a_supplied_interval_is_assigned_injectively_and_exhausted(seeded):
+    seeds = [r["seed"] for c in seeded["cohorts"] for r in c["rows"]]
+    assert sorted(seeds) == list(range(300000000, 300000221))
 
 
 def test_the_seed_assignment_is_deterministic(bound):
-    a = SEL.select_all(bound)
-    b = SEL.select_all(bound)
+    a = SEL.select_all(bound, seed_interval=(300000000, 300000221))
+    b = SEL.select_all(bound, seed_interval=(300000000, 300000221))
     key = lambda s: [(r["task_id"], r["ply"], r["seed"]) for c in s["cohorts"] for r in c["rows"]]
     assert key(a) == key(b)
 
@@ -226,7 +243,7 @@ def test_the_block_is_ACCOUNTED_and_RETIRED_after_the_VOID():
         assert not (st["exposed"] or st["test_only"]), (seed, st)
 
 
-def test_the_frozen_rule_retains_the_same_position_in_two_cohorts(selection):
+def test_the_frozen_rule_retains_the_same_position_in_two_cohorts(frozen):
     """RECORDED, NOT HIDDEN, and PINNED so it cannot drift silently.
 
     12.1 and 12.3 deduplicate WITHIN a cohort; nothing in 12 deduplicates ACROSS
@@ -241,18 +258,18 @@ def test_the_frozen_rule_retains_the_same_position_in_two_cohorts(selection):
     12.7's determinism check compares only within a pair. The extra pair is not
     compared against the first.
     """
-    digests = [r["digest"] for r in selection["positions"]]
+    digests = [r["digest"] for c in frozen.values() for r in c["rows"]]
     assert len(digests) == 227
     assert len(set(digests)) == 203, "the cross-cohort overlap changed"
-    seeds_per_state: dict = {}
-    for r in selection["positions"]:
-        seeds_per_state.setdefault(r["digest"], []).append(r["seed"])
-    shared = {d: s for d, s in seeds_per_state.items() if len(s) > 1}
+    rows_by_digest: dict = {}
+    for c in frozen.values():
+        for r in c["rows"]:
+            rows_by_digest.setdefault(r["digest"], []).append(r)
+    shared = {d: rs for d, rs in rows_by_digest.items() if len(rs) > 1}
     assert len(shared) == 24
-    assert all(len(s) == 2 for s in shared.values())
+    assert all(len(rs) == 2 for rs in shared.values())
     # Every duplicate is the SAME ply of the SAME game seen from two cohorts.
-    for digest in shared:
-        rows = [r for r in selection["positions"] if r["digest"] == digest]
+    for digest, rows in shared.items():
         assert len({(r["task_id"], r["ply"]) for r in rows}) == 1, rows[0]["task_id"]
 
 
@@ -276,7 +293,7 @@ def test_a_cohort_that_departs_from_the_frozen_table_is_refused(bound, monkeypat
 
 def test_the_run_manifest_carries_what_the_probe_and_5_4_both_need(selection):
     m = SEL.run_manifest(selection)
-    assert len(m) == 227
+    assert len(m) == SEL.N_POSITIONS_AFTER_EXCLUSION == 221
     required = {"task_id", "ply", "seed", "digest", "prefix", "signature", "role",
                 "opening", "colour_arm", "phase",
                 "mover_more_fragmented", "created_threat"}
@@ -303,3 +320,146 @@ def test_the_manifest_is_json_round_trippable_and_deterministic(bound):
     b = SEL.run_manifest(SEL.select_all(bound))
     assert a == b
     assert json.loads(json.dumps(a)) == a
+
+
+# ══════════════ §13 Amendment 2: a post-selection exclusion ══════════════════
+#
+# §12.1-12.3 are applied EXACTLY as frozen and only then are six already-retained
+# rows removed. It is an ENUMERATED set, not the rule `ply >= 5`: the low-ply
+# qualification supports excluding these observed prefixes and no wider claim.
+# There is no reselection, backfill, re-deduplication or re-capping.
+
+PLAN = "docs/superpowers/plans/2026-08-27-t1j-sparring-postmortem-opponent-ladder.md"
+LOWPLY = ("docs/superpowers/evidence/2026-08-28-t1j-lowply-qualification/"
+          "19_lowply_records.json")
+
+
+def test_the_excluded_digests_are_exactly_the_ones_the_plan_enumerates():
+    """Code and plan must not drift: the plan is the authority."""
+    import re
+    plan = open(PLAN, encoding="utf-8").read()
+    sec = plan[plan.index("## 13. Amendment 2"):]
+    assert set(re.findall(r"`([0-9a-f]{64})`", sec)) == set(SEL.AMENDMENT2_EXCLUDED)
+    assert len(SEL.AMENDMENT2_EXCLUDED) == 6
+
+
+def test_the_excluded_digests_are_exactly_the_rows_that_FAILED_qualification():
+    """Not 'the low plies' -- the rows OBSERVED to fail. A passing ply-5 row must
+    survive, or the exclusion would be a rule invented after the result."""
+    rec = json.load(open(LOWPLY, encoding="utf-8"))
+    failed = {p["digest"] for p in rec["prefixes"] if not p["passed"]}
+    passed = {p["digest"] for p in rec["prefixes"] if p["passed"]}
+    assert set(SEL.AMENDMENT2_EXCLUDED) == failed
+    assert not (set(SEL.AMENDMENT2_EXCLUDED) & passed)
+
+
+def test_the_frozen_12_counts_are_still_verified_BEFORE_the_exclusion(selection):
+    """§13 applies §12 exactly as frozen and excludes afterwards. If the §12
+    counts were checked only after removal, a drifted rule could hide inside the
+    exclusion."""
+    sel = selection
+    assert sel["n_positions_frozen"] == 227
+    got = {(c["signature"], c["role"]): c["n_frozen"] for c in sel["cohorts"]}
+    assert got == {("mover_fragmentation", "position"): 101,
+                   ("mover_fragmentation", "control"): 60,
+                   ("created_threat", "position"): 30,
+                   ("created_threat", "control"): 36}
+
+
+def test_the_prospective_counts_after_exclusion(selection):
+    sel = selection
+    assert sel["n_positions"] == SEL.N_POSITIONS_AFTER_EXCLUSION == 221
+    assert sel["n_excluded"] == 6
+    got = {(c["signature"], c["role"]): len(c["rows"]) for c in sel["cohorts"]}
+    assert got == {("mover_fragmentation", "position"): 101,
+                   ("mover_fragmentation", "control"): 54,
+                   ("created_threat", "position"): 30,
+                   ("created_threat", "control"): 36}
+
+
+def test_no_excluded_row_survives_and_nothing_replaced_it(selection, frozen):
+    """NO BACKFILL. `frozen` is §12's INDEPENDENT output, not derived from the
+    kept set -- deriving it would make both assertions below vacuously true,
+    which is what an earlier version of this test did."""
+    kept = {r["digest"] for c in selection["cohorts"] for r in c["rows"]}
+    frozen_digests = {r["digest"] for c in frozen.values() for r in c["rows"]}
+    assert len(frozen_digests) == 203 and len(kept) < len(frozen_digests)
+    assert not (kept & set(SEL.AMENDMENT2_EXCLUDED))
+    assert kept <= frozen_digests, "a row appeared that frozen §12 did not retain"
+    assert frozen_digests - kept == set(SEL.AMENDMENT2_EXCLUDED), \
+        "the difference between frozen and kept must be EXACTLY the six excluded"
+
+
+def test_the_exclusion_records_the_matched_control_consequence(selection):
+    """§13.3 states it rather than repairing it: backfill would be reselection."""
+    sel = selection
+    imb = sel["control_imbalance"]
+    assert imb["mover_fragmentation"]["control_cells_before"] == 24
+    assert imb["mover_fragmentation"]["control_cells_after"] == 21
+    assert imb["mover_fragmentation"]["position_cells_without_control_before"] == 12
+    assert imb["mover_fragmentation"]["position_cells_without_control_after"] == 15
+    assert imb["mover_fragmentation"]["position_cells"] == 36
+
+
+def test_the_lowest_retained_ply_is_five_and_every_low_ply_row_was_tested(selection):
+    sel = selection
+    assert min(r["ply"] for r in sel["positions"]) == 5
+    low = [r for r in sel["positions"] if r["ply"] <= 5]
+    rec = {p["digest"] for p in json.load(open(LOWPLY, encoding="utf-8"))["prefixes"]}
+    assert all(r["digest"] in rec for r in low), "an untested low-ply row survived"
+
+
+# ─────────────────────────── seeds: none reserved ───────────────────────────
+
+def test_no_seed_is_assigned_because_no_interval_is_reserved(selection):
+    """§13 reserves nothing. The retired block may not be revived, so positions
+    carry no seed until a fresh interval is separately authorized."""
+    sel = selection
+    assert all(r.get("seed") is None for r in sel["positions"])
+    assert sel["seed_interval"] is None
+
+
+def test_an_explicitly_supplied_interval_must_match_the_cohort_size(bound):
+    with pytest.raises(SEL.D1SelectionError, match="221"):
+        SEL.select_all(bound, seed_interval=(300000000, 300000100))
+
+
+def test_a_supplied_interval_of_the_right_size_is_assigned_injectively(bound):
+    sel = SEL.select_all(bound, seed_interval=(300000000, 300000221))
+    seeds = [r["seed"] for r in sel["positions"]]
+    assert sorted(seeds) == list(range(300000000, 300000221))
+
+
+def test_the_retired_block_is_refused_as_a_seed_interval(bound):
+    """It was consumed administratively by the D1 VOID and retired whole."""
+    with pytest.raises(SEL.D1SelectionError, match="retired"):
+        SEL.select_all(bound, seed_interval=(202614000, 202614221))
+
+
+def test_the_frozen_signature_table_sums_to_the_frozen_total():
+    """The cross-check the deleted runtime branch was really doing, as the static
+    fact it is: 12.1's per-cohort numbers must add up to 12.4's 227."""
+    assert sum(sig["positions"] + sig["controls"] for sig in SEL.SIGNATURES) \
+        == SEL.N_POSITIONS == 227
+    assert SEL.N_POSITIONS - len(SEL.AMENDMENT2_EXCLUDED) \
+        == SEL.N_POSITIONS_AFTER_EXCLUSION == 221
+    assert sum(SEL.AMENDMENT2_COUNTS.values()) == SEL.N_POSITIONS_AFTER_EXCLUSION
+
+
+def test_a_post_exclusion_count_that_departs_from_13_3_is_refused(bound, monkeypatch):
+    """§13.3's reconciliation, REACHED ALONE. The count test above asserts the
+    numbers directly, so it passes whether or not `select_all` also checks them --
+    an injected-defect control proved exactly that."""
+    bad = dict(SEL.AMENDMENT2_COUNTS)
+    bad[("mover_fragmentation", "control")] = 55
+    monkeypatch.setattr(SEL, "AMENDMENT2_COUNTS", bad)
+    with pytest.raises(SEL.D1SelectionError, match="13.3 froze 55"):
+        SEL.select_all(bound)
+
+
+def test_a_12_1_count_that_departs_from_the_record_is_refused(bound, monkeypatch):
+    """The §12 reconciliation, reached alone and BEFORE any exclusion."""
+    bad = tuple(dict(sig, controls=sig["controls"] + 1) for sig in SEL.SIGNATURES)
+    monkeypatch.setattr(SEL, "SIGNATURES", bad)
+    with pytest.raises(SEL.D1SelectionError, match="12.1 froze"):
+        SEL.select_all(bound)
