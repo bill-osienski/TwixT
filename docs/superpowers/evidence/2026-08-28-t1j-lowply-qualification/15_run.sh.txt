@@ -1,0 +1,16 @@
+#!/bin/sh
+# THE LOW-PLY QUALIFICATION RUN. Once. The CLI is driven as a FRESH SUBPROCESS
+# -- the qualified shape -- with every path supplied explicitly, so the compile
+# step independently re-resolves the pinned toolchain and refuses on mismatch.
+# The classes directory must NOT exist: the compile step is create-only.
+set -u
+E=docs/superpowers/evidence/2026-08-28-t1j-lowply-qualification
+
+.venv/bin/python -m scripts.GPU.alphazero.lowply_qualification \
+    --out     "$E/19_lowply_records.json" \
+    --java    "$JAVA" \
+    --jar     "$JAR" \
+    --classes "$CLASSES" \
+    --ply-cap 280 \
+    > "$E/16_stdout.txt" 2> "$E/17_stderr.txt"
+echo $? > "$E/18_exit.txt"

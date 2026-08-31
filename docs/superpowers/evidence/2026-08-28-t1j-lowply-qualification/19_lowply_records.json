@@ -1,0 +1,1788 @@
+{
+ "depths": [
+  3,
+  6
+ ],
+ "elapsed_s": 6.9720167919876985,
+ "invocations_per_depth": 2,
+ "n_failures": 29,
+ "n_prefixes": 9,
+ "per_call_timeout_s": 120,
+ "prefixes": [
+  {
+   "bind": {
+    "bound": true,
+    "detail": null
+   },
+   "colour_arm": "t1j_red",
+   "depths": [
+    {
+     "agree": true,
+     "depth": 3,
+     "failures": [
+      "did not complete depth 3 (completed=False, completed_depth=-1)",
+      "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+     ],
+     "invocations": [
+      {
+       "completed": false,
+       "completed_depth": -1,
+       "current_max_ply": 0,
+       "elapsed_us": 25234,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 3,
+       "failures": [
+        "did not complete depth 3 (completed=False, completed_depth=-1)",
+        "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+       ],
+       "helper_report": "FAIL q1: requested depth 3 completed | POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1",
+       "legal": true,
+       "move": [
+        18,
+        11
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": false,
+        "failures": 1,
+        "refl_n": 3
+       },
+       "requested_depth": 3,
+       "searched_state": {
+        "history_len": 1,
+        "n_bridges": 0,
+        "n_legal": 527,
+        "n_pegs": 1,
+        "next_player": "X",
+        "ply": 1
+       },
+       "to_move": "X",
+       "usealphabeta": false,
+       "where": "l0match-000-strong6-o1_center-t1j_red-r0@ply1 [mover_fragmentation/control] digest=487df111c9dbd7a3: depth 3 invocation 0"
+      },
+      {
+       "completed": false,
+       "completed_depth": -1,
+       "current_max_ply": 0,
+       "elapsed_us": 25229,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 3,
+       "failures": [
+        "did not complete depth 3 (completed=False, completed_depth=-1)",
+        "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+       ],
+       "helper_report": "FAIL q1: requested depth 3 completed | POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1",
+       "legal": true,
+       "move": [
+        18,
+        11
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": false,
+        "failures": 1,
+        "refl_n": 3
+       },
+       "requested_depth": 3,
+       "searched_state": {
+        "history_len": 1,
+        "n_bridges": 0,
+        "n_legal": 527,
+        "n_pegs": 1,
+        "next_player": "X",
+        "ply": 1
+       },
+       "to_move": "X",
+       "usealphabeta": false,
+       "where": "l0match-000-strong6-o1_center-t1j_red-r0@ply1 [mover_fragmentation/control] digest=487df111c9dbd7a3: depth 3 invocation 1"
+      }
+     ]
+    },
+    {
+     "agree": false,
+     "depth": 6,
+     "failures": [
+      "did not complete depth 6 (completed=False, completed_depth=-1)",
+      "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)",
+      "the 2 independent JVM invocations disagree: [((18, 11), True, 6, -1), ((16, 11), True, 6, -1)]"
+     ],
+     "invocations": [
+      {
+       "completed": false,
+       "completed_depth": -1,
+       "current_max_ply": 0,
+       "elapsed_us": 25294,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 3,
+       "failures": [
+        "did not complete depth 6 (completed=False, completed_depth=-1)",
+        "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+       ],
+       "helper_report": "FAIL q1: requested depth 6 completed | POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1",
+       "legal": true,
+       "move": [
+        18,
+        11
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": false,
+        "failures": 1,
+        "refl_n": 3
+       },
+       "requested_depth": 6,
+       "searched_state": {
+        "history_len": 1,
+        "n_bridges": 0,
+        "n_legal": 527,
+        "n_pegs": 1,
+        "next_player": "X",
+        "ply": 1
+       },
+       "to_move": "X",
+       "usealphabeta": false,
+       "where": "l0match-000-strong6-o1_center-t1j_red-r0@ply1 [mover_fragmentation/control] digest=487df111c9dbd7a3: depth 6 invocation 0"
+      },
+      {
+       "completed": false,
+       "completed_depth": -1,
+       "current_max_ply": 0,
+       "elapsed_us": 25211,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 3,
+       "failures": [
+        "did not complete depth 6 (completed=False, completed_depth=-1)",
+        "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+       ],
+       "helper_report": "FAIL q1: requested depth 6 completed | POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1",
+       "legal": true,
+       "move": [
+        16,
+        11
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": false,
+        "failures": 1,
+        "refl_n": 3
+       },
+       "requested_depth": 6,
+       "searched_state": {
+        "history_len": 1,
+        "n_bridges": 0,
+        "n_legal": 527,
+        "n_pegs": 1,
+        "next_player": "X",
+        "ply": 1
+       },
+       "to_move": "X",
+       "usealphabeta": false,
+       "where": "l0match-000-strong6-o1_center-t1j_red-r0@ply1 [mover_fragmentation/control] digest=487df111c9dbd7a3: depth 6 invocation 1"
+      }
+     ]
+    }
+   ],
+   "digest": "487df111c9dbd7a3cd70c1ff0bd1316eee47cb950f7443fb15f5bff33927d2a7",
+   "failures": [
+    "did not complete depth 3 (completed=False, completed_depth=-1)",
+    "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)",
+    "did not complete depth 6 (completed=False, completed_depth=-1)",
+    "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)",
+    "the 2 independent JVM invocations disagree: [((18, 11), True, 6, -1), ((16, 11), True, 6, -1)]"
+   ],
+   "opening": "o1_center",
+   "passed": false,
+   "ply": 1,
+   "prefix": [
+    [
+     11,
+     11
+    ]
+   ],
+   "role": "control",
+   "signature": "mover_fragmentation",
+   "task_id": "l0match-000-strong6-o1_center-t1j_red-r0"
+  },
+  {
+   "bind": {
+    "bound": true,
+    "detail": null
+   },
+   "colour_arm": "t1j_red",
+   "depths": [
+    {
+     "agree": false,
+     "depth": 3,
+     "failures": [
+      "did not complete depth 3 (completed=False, completed_depth=-1)",
+      "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)",
+      "the 2 independent JVM invocations disagree: [((5, 12), True, 3, -1), ((7, 12), True, 3, -1)]"
+     ],
+     "invocations": [
+      {
+       "completed": false,
+       "completed_depth": -1,
+       "current_max_ply": 0,
+       "elapsed_us": 25229,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 3,
+       "failures": [
+        "did not complete depth 3 (completed=False, completed_depth=-1)",
+        "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+       ],
+       "helper_report": "FAIL q1: requested depth 3 completed | POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1",
+       "legal": true,
+       "move": [
+        5,
+        12
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": false,
+        "failures": 1,
+        "refl_n": 3
+       },
+       "requested_depth": 3,
+       "searched_state": {
+        "history_len": 3,
+        "n_bridges": 1,
+        "n_legal": 525,
+        "n_pegs": 3,
+        "next_player": "X",
+        "ply": 3
+       },
+       "to_move": "X",
+       "usealphabeta": false,
+       "where": "l0match-000-strong6-o1_center-t1j_red-r0@ply3 [mover_fragmentation/control] digest=470721202fb36f18: depth 3 invocation 0"
+      },
+      {
+       "completed": false,
+       "completed_depth": -1,
+       "current_max_ply": 0,
+       "elapsed_us": 25258,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 3,
+       "failures": [
+        "did not complete depth 3 (completed=False, completed_depth=-1)",
+        "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+       ],
+       "helper_report": "FAIL q1: requested depth 3 completed | POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1",
+       "legal": true,
+       "move": [
+        7,
+        12
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": false,
+        "failures": 1,
+        "refl_n": 3
+       },
+       "requested_depth": 3,
+       "searched_state": {
+        "history_len": 3,
+        "n_bridges": 1,
+        "n_legal": 525,
+        "n_pegs": 3,
+        "next_player": "X",
+        "ply": 3
+       },
+       "to_move": "X",
+       "usealphabeta": false,
+       "where": "l0match-000-strong6-o1_center-t1j_red-r0@ply3 [mover_fragmentation/control] digest=470721202fb36f18: depth 3 invocation 1"
+      }
+     ]
+    },
+    {
+     "agree": false,
+     "depth": 6,
+     "failures": [
+      "did not complete depth 6 (completed=False, completed_depth=-1)",
+      "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)",
+      "the 2 independent JVM invocations disagree: [((5, 12), True, 6, -1), ((7, 12), True, 6, -1)]"
+     ],
+     "invocations": [
+      {
+       "completed": false,
+       "completed_depth": -1,
+       "current_max_ply": 0,
+       "elapsed_us": 25239,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 3,
+       "failures": [
+        "did not complete depth 6 (completed=False, completed_depth=-1)",
+        "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+       ],
+       "helper_report": "FAIL q1: requested depth 6 completed | POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1",
+       "legal": true,
+       "move": [
+        5,
+        12
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": false,
+        "failures": 1,
+        "refl_n": 3
+       },
+       "requested_depth": 6,
+       "searched_state": {
+        "history_len": 3,
+        "n_bridges": 1,
+        "n_legal": 525,
+        "n_pegs": 3,
+        "next_player": "X",
+        "ply": 3
+       },
+       "to_move": "X",
+       "usealphabeta": false,
+       "where": "l0match-000-strong6-o1_center-t1j_red-r0@ply3 [mover_fragmentation/control] digest=470721202fb36f18: depth 6 invocation 0"
+      },
+      {
+       "completed": false,
+       "completed_depth": -1,
+       "current_max_ply": 0,
+       "elapsed_us": 25239,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 3,
+       "failures": [
+        "did not complete depth 6 (completed=False, completed_depth=-1)",
+        "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+       ],
+       "helper_report": "FAIL q1: requested depth 6 completed | POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1",
+       "legal": true,
+       "move": [
+        7,
+        12
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": false,
+        "failures": 1,
+        "refl_n": 3
+       },
+       "requested_depth": 6,
+       "searched_state": {
+        "history_len": 3,
+        "n_bridges": 1,
+        "n_legal": 525,
+        "n_pegs": 3,
+        "next_player": "X",
+        "ply": 3
+       },
+       "to_move": "X",
+       "usealphabeta": false,
+       "where": "l0match-000-strong6-o1_center-t1j_red-r0@ply3 [mover_fragmentation/control] digest=470721202fb36f18: depth 6 invocation 1"
+      }
+     ]
+    }
+   ],
+   "digest": "470721202fb36f18040bc00152ae6fbaf2ae576f8941ae2e6a6fcf99de676fde",
+   "failures": [
+    "did not complete depth 3 (completed=False, completed_depth=-1)",
+    "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)",
+    "the 2 independent JVM invocations disagree: [((5, 12), True, 3, -1), ((7, 12), True, 3, -1)]",
+    "did not complete depth 6 (completed=False, completed_depth=-1)",
+    "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)",
+    "the 2 independent JVM invocations disagree: [((5, 12), True, 6, -1), ((7, 12), True, 6, -1)]"
+   ],
+   "opening": "o1_center",
+   "passed": false,
+   "ply": 3,
+   "prefix": [
+    [
+     11,
+     11
+    ],
+    [
+     12,
+     13
+    ],
+    [
+     13,
+     12
+    ]
+   ],
+   "role": "control",
+   "signature": "mover_fragmentation",
+   "task_id": "l0match-000-strong6-o1_center-t1j_red-r0"
+  },
+  {
+   "bind": {
+    "bound": true,
+    "detail": null
+   },
+   "colour_arm": "t1j_red",
+   "depths": [
+    {
+     "agree": true,
+     "depth": 3,
+     "failures": [],
+     "invocations": [
+      {
+       "completed": true,
+       "completed_depth": 3,
+       "current_max_ply": 4,
+       "elapsed_us": 11039,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 0,
+       "failures": [],
+       "helper_report": "POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=0",
+       "legal": true,
+       "move": [
+        14,
+        12
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": true,
+        "failures": 0,
+        "refl_n": 3
+       },
+       "requested_depth": 3,
+       "searched_state": {
+        "history_len": 5,
+        "n_bridges": 2,
+        "n_legal": 523,
+        "n_pegs": 5,
+        "next_player": "X",
+        "ply": 5
+       },
+       "to_move": "X",
+       "usealphabeta": true,
+       "where": "l0match-000-strong6-o1_center-t1j_red-r0@ply5 [mover_fragmentation/position] digest=ea75792355b736c7: depth 3 invocation 0"
+      },
+      {
+       "completed": true,
+       "completed_depth": 3,
+       "current_max_ply": 4,
+       "elapsed_us": 10973,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 0,
+       "failures": [],
+       "helper_report": "POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=0",
+       "legal": true,
+       "move": [
+        14,
+        12
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": true,
+        "failures": 0,
+        "refl_n": 3
+       },
+       "requested_depth": 3,
+       "searched_state": {
+        "history_len": 5,
+        "n_bridges": 2,
+        "n_legal": 523,
+        "n_pegs": 5,
+        "next_player": "X",
+        "ply": 5
+       },
+       "to_move": "X",
+       "usealphabeta": true,
+       "where": "l0match-000-strong6-o1_center-t1j_red-r0@ply5 [mover_fragmentation/position] digest=ea75792355b736c7: depth 3 invocation 1"
+      }
+     ]
+    },
+    {
+     "agree": true,
+     "depth": 6,
+     "failures": [],
+     "invocations": [
+      {
+       "completed": true,
+       "completed_depth": 6,
+       "current_max_ply": 7,
+       "elapsed_us": 91695,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 0,
+       "failures": [],
+       "helper_report": "POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=0",
+       "legal": true,
+       "move": [
+        9,
+        11
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": true,
+        "failures": 0,
+        "refl_n": 3
+       },
+       "requested_depth": 6,
+       "searched_state": {
+        "history_len": 5,
+        "n_bridges": 2,
+        "n_legal": 523,
+        "n_pegs": 5,
+        "next_player": "X",
+        "ply": 5
+       },
+       "to_move": "X",
+       "usealphabeta": true,
+       "where": "l0match-000-strong6-o1_center-t1j_red-r0@ply5 [mover_fragmentation/position] digest=ea75792355b736c7: depth 6 invocation 0"
+      },
+      {
+       "completed": true,
+       "completed_depth": 6,
+       "current_max_ply": 7,
+       "elapsed_us": 93645,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 0,
+       "failures": [],
+       "helper_report": "POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=0",
+       "legal": true,
+       "move": [
+        9,
+        11
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": true,
+        "failures": 0,
+        "refl_n": 3
+       },
+       "requested_depth": 6,
+       "searched_state": {
+        "history_len": 5,
+        "n_bridges": 2,
+        "n_legal": 523,
+        "n_pegs": 5,
+        "next_player": "X",
+        "ply": 5
+       },
+       "to_move": "X",
+       "usealphabeta": true,
+       "where": "l0match-000-strong6-o1_center-t1j_red-r0@ply5 [mover_fragmentation/position] digest=ea75792355b736c7: depth 6 invocation 1"
+      }
+     ]
+    }
+   ],
+   "digest": "ea75792355b736c769b757b65bc8c475b6c7bc4c238e90c9c77c5669b59df372",
+   "failures": [],
+   "opening": "o1_center",
+   "passed": true,
+   "ply": 5,
+   "prefix": [
+    [
+     11,
+     11
+    ],
+    [
+     12,
+     13
+    ],
+    [
+     13,
+     12
+    ],
+    [
+     10,
+     13
+    ],
+    [
+     12,
+     10
+    ]
+   ],
+   "role": "position",
+   "signature": "mover_fragmentation",
+   "task_id": "l0match-000-strong6-o1_center-t1j_red-r0"
+  },
+  {
+   "bind": {
+    "bound": true,
+    "detail": null
+   },
+   "colour_arm": "t1j_red",
+   "depths": [
+    {
+     "agree": false,
+     "depth": 3,
+     "failures": [
+      "did not complete depth 3 (completed=False, completed_depth=-1)",
+      "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)",
+      "the 2 independent JVM invocations disagree: [((7, 11), True, 3, -1), ((6, 11), True, 3, -1)]"
+     ],
+     "invocations": [
+      {
+       "completed": false,
+       "completed_depth": -1,
+       "current_max_ply": 0,
+       "elapsed_us": 25232,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 3,
+       "failures": [
+        "did not complete depth 3 (completed=False, completed_depth=-1)",
+        "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+       ],
+       "helper_report": "FAIL q1: requested depth 3 completed | POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1",
+       "legal": true,
+       "move": [
+        7,
+        11
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": false,
+        "failures": 1,
+        "refl_n": 3
+       },
+       "requested_depth": 3,
+       "searched_state": {
+        "history_len": 1,
+        "n_bridges": 0,
+        "n_legal": 527,
+        "n_pegs": 1,
+        "next_player": "X",
+        "ply": 1
+       },
+       "to_move": "X",
+       "usealphabeta": false,
+       "where": "l0match-016-strong6-o3_low-t1j_red-r0@ply1 [mover_fragmentation/control] digest=69c2875679f3eb1b: depth 3 invocation 0"
+      },
+      {
+       "completed": false,
+       "completed_depth": -1,
+       "current_max_ply": 0,
+       "elapsed_us": 25252,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 3,
+       "failures": [
+        "did not complete depth 3 (completed=False, completed_depth=-1)",
+        "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+       ],
+       "helper_report": "FAIL q1: requested depth 3 completed | POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1",
+       "legal": true,
+       "move": [
+        6,
+        11
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": false,
+        "failures": 1,
+        "refl_n": 3
+       },
+       "requested_depth": 3,
+       "searched_state": {
+        "history_len": 1,
+        "n_bridges": 0,
+        "n_legal": 527,
+        "n_pegs": 1,
+        "next_player": "X",
+        "ply": 1
+       },
+       "to_move": "X",
+       "usealphabeta": false,
+       "where": "l0match-016-strong6-o3_low-t1j_red-r0@ply1 [mover_fragmentation/control] digest=69c2875679f3eb1b: depth 3 invocation 1"
+      }
+     ]
+    },
+    {
+     "agree": false,
+     "depth": 6,
+     "failures": [
+      "did not complete depth 6 (completed=False, completed_depth=-1)",
+      "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)",
+      "the 2 independent JVM invocations disagree: [((6, 11), True, 6, -1), ((8, 11), True, 6, -1)]"
+     ],
+     "invocations": [
+      {
+       "completed": false,
+       "completed_depth": -1,
+       "current_max_ply": 0,
+       "elapsed_us": 22138,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 3,
+       "failures": [
+        "did not complete depth 6 (completed=False, completed_depth=-1)",
+        "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+       ],
+       "helper_report": "FAIL q1: requested depth 6 completed | POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1",
+       "legal": true,
+       "move": [
+        6,
+        11
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": false,
+        "failures": 1,
+        "refl_n": 3
+       },
+       "requested_depth": 6,
+       "searched_state": {
+        "history_len": 1,
+        "n_bridges": 0,
+        "n_legal": 527,
+        "n_pegs": 1,
+        "next_player": "X",
+        "ply": 1
+       },
+       "to_move": "X",
+       "usealphabeta": false,
+       "where": "l0match-016-strong6-o3_low-t1j_red-r0@ply1 [mover_fragmentation/control] digest=69c2875679f3eb1b: depth 6 invocation 0"
+      },
+      {
+       "completed": false,
+       "completed_depth": -1,
+       "current_max_ply": 0,
+       "elapsed_us": 25215,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 3,
+       "failures": [
+        "did not complete depth 6 (completed=False, completed_depth=-1)",
+        "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+       ],
+       "helper_report": "FAIL q1: requested depth 6 completed | POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1",
+       "legal": true,
+       "move": [
+        8,
+        11
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": false,
+        "failures": 1,
+        "refl_n": 3
+       },
+       "requested_depth": 6,
+       "searched_state": {
+        "history_len": 1,
+        "n_bridges": 0,
+        "n_legal": 527,
+        "n_pegs": 1,
+        "next_player": "X",
+        "ply": 1
+       },
+       "to_move": "X",
+       "usealphabeta": false,
+       "where": "l0match-016-strong6-o3_low-t1j_red-r0@ply1 [mover_fragmentation/control] digest=69c2875679f3eb1b: depth 6 invocation 1"
+      }
+     ]
+    }
+   ],
+   "digest": "69c2875679f3eb1b128c42daccdc28122ee7ec2556092333f61fcf6e11d3a473",
+   "failures": [
+    "did not complete depth 3 (completed=False, completed_depth=-1)",
+    "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)",
+    "the 2 independent JVM invocations disagree: [((7, 11), True, 3, -1), ((6, 11), True, 3, -1)]",
+    "did not complete depth 6 (completed=False, completed_depth=-1)",
+    "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)",
+    "the 2 independent JVM invocations disagree: [((6, 11), True, 6, -1), ((8, 11), True, 6, -1)]"
+   ],
+   "opening": "o3_low",
+   "passed": false,
+   "ply": 1,
+   "prefix": [
+    [
+     15,
+     11
+    ]
+   ],
+   "role": "control",
+   "signature": "mover_fragmentation",
+   "task_id": "l0match-016-strong6-o3_low-t1j_red-r0"
+  },
+  {
+   "bind": {
+    "bound": true,
+    "detail": null
+   },
+   "colour_arm": "t1j_red",
+   "depths": [
+    {
+     "agree": true,
+     "depth": 3,
+     "failures": [
+      "did not complete depth 3 (completed=False, completed_depth=-1)",
+      "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+     ],
+     "invocations": [
+      {
+       "completed": false,
+       "completed_depth": -1,
+       "current_max_ply": 0,
+       "elapsed_us": 20386,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 3,
+       "failures": [
+        "did not complete depth 3 (completed=False, completed_depth=-1)",
+        "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+       ],
+       "helper_report": "FAIL q1: requested depth 3 completed | POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1",
+       "legal": true,
+       "move": [
+        6,
+        10
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": false,
+        "failures": 1,
+        "refl_n": 3
+       },
+       "requested_depth": 3,
+       "searched_state": {
+        "history_len": 3,
+        "n_bridges": 1,
+        "n_legal": 525,
+        "n_pegs": 3,
+        "next_player": "X",
+        "ply": 3
+       },
+       "to_move": "X",
+       "usealphabeta": false,
+       "where": "l0match-016-strong6-o3_low-t1j_red-r0@ply3 [mover_fragmentation/control] digest=4fba47bfca43d99f: depth 3 invocation 0"
+      },
+      {
+       "completed": false,
+       "completed_depth": -1,
+       "current_max_ply": 0,
+       "elapsed_us": 21421,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 3,
+       "failures": [
+        "did not complete depth 3 (completed=False, completed_depth=-1)",
+        "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+       ],
+       "helper_report": "FAIL q1: requested depth 3 completed | POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1",
+       "legal": true,
+       "move": [
+        6,
+        10
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": false,
+        "failures": 1,
+        "refl_n": 3
+       },
+       "requested_depth": 3,
+       "searched_state": {
+        "history_len": 3,
+        "n_bridges": 1,
+        "n_legal": 525,
+        "n_pegs": 3,
+        "next_player": "X",
+        "ply": 3
+       },
+       "to_move": "X",
+       "usealphabeta": false,
+       "where": "l0match-016-strong6-o3_low-t1j_red-r0@ply3 [mover_fragmentation/control] digest=4fba47bfca43d99f: depth 3 invocation 1"
+      }
+     ]
+    },
+    {
+     "agree": true,
+     "depth": 6,
+     "failures": [
+      "did not complete depth 6 (completed=False, completed_depth=-1)",
+      "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+     ],
+     "invocations": [
+      {
+       "completed": false,
+       "completed_depth": -1,
+       "current_max_ply": 0,
+       "elapsed_us": 21091,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 3,
+       "failures": [
+        "did not complete depth 6 (completed=False, completed_depth=-1)",
+        "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+       ],
+       "helper_report": "FAIL q1: requested depth 6 completed | POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1",
+       "legal": true,
+       "move": [
+        5,
+        10
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": false,
+        "failures": 1,
+        "refl_n": 3
+       },
+       "requested_depth": 6,
+       "searched_state": {
+        "history_len": 3,
+        "n_bridges": 1,
+        "n_legal": 525,
+        "n_pegs": 3,
+        "next_player": "X",
+        "ply": 3
+       },
+       "to_move": "X",
+       "usealphabeta": false,
+       "where": "l0match-016-strong6-o3_low-t1j_red-r0@ply3 [mover_fragmentation/control] digest=4fba47bfca43d99f: depth 6 invocation 0"
+      },
+      {
+       "completed": false,
+       "completed_depth": -1,
+       "current_max_ply": 0,
+       "elapsed_us": 23201,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 3,
+       "failures": [
+        "did not complete depth 6 (completed=False, completed_depth=-1)",
+        "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+       ],
+       "helper_report": "FAIL q1: requested depth 6 completed | POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1",
+       "legal": true,
+       "move": [
+        5,
+        10
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": false,
+        "failures": 1,
+        "refl_n": 3
+       },
+       "requested_depth": 6,
+       "searched_state": {
+        "history_len": 3,
+        "n_bridges": 1,
+        "n_legal": 525,
+        "n_pegs": 3,
+        "next_player": "X",
+        "ply": 3
+       },
+       "to_move": "X",
+       "usealphabeta": false,
+       "where": "l0match-016-strong6-o3_low-t1j_red-r0@ply3 [mover_fragmentation/control] digest=4fba47bfca43d99f: depth 6 invocation 1"
+      }
+     ]
+    }
+   ],
+   "digest": "4fba47bfca43d99f8b1c3fda801ec141d4013bdf7e135665fc4678a5047a002b",
+   "failures": [
+    "did not complete depth 3 (completed=False, completed_depth=-1)",
+    "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)",
+    "did not complete depth 6 (completed=False, completed_depth=-1)",
+    "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+   ],
+   "opening": "o3_low",
+   "passed": false,
+   "ply": 3,
+   "prefix": [
+    [
+     15,
+     11
+    ],
+    [
+     12,
+     12
+    ],
+    [
+     13,
+     10
+    ]
+   ],
+   "role": "control",
+   "signature": "mover_fragmentation",
+   "task_id": "l0match-016-strong6-o3_low-t1j_red-r0"
+  },
+  {
+   "bind": {
+    "bound": true,
+    "detail": null
+   },
+   "colour_arm": "t1j_red",
+   "depths": [
+    {
+     "agree": true,
+     "depth": 3,
+     "failures": [],
+     "invocations": [
+      {
+       "completed": true,
+       "completed_depth": 3,
+       "current_max_ply": 4,
+       "elapsed_us": 18972,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 0,
+       "failures": [],
+       "helper_report": "POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=0",
+       "legal": true,
+       "move": [
+        19,
+        11
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": true,
+        "failures": 0,
+        "refl_n": 3
+       },
+       "requested_depth": 3,
+       "searched_state": {
+        "history_len": 5,
+        "n_bridges": 2,
+        "n_legal": 523,
+        "n_pegs": 5,
+        "next_player": "X",
+        "ply": 5
+       },
+       "to_move": "X",
+       "usealphabeta": true,
+       "where": "l0match-016-strong6-o3_low-t1j_red-r0@ply5 [mover_fragmentation/position] digest=e41208a808b03263: depth 3 invocation 0"
+      },
+      {
+       "completed": true,
+       "completed_depth": 3,
+       "current_max_ply": 4,
+       "elapsed_us": 18938,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 0,
+       "failures": [],
+       "helper_report": "POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=0",
+       "legal": true,
+       "move": [
+        19,
+        11
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": true,
+        "failures": 0,
+        "refl_n": 3
+       },
+       "requested_depth": 3,
+       "searched_state": {
+        "history_len": 5,
+        "n_bridges": 2,
+        "n_legal": 523,
+        "n_pegs": 5,
+        "next_player": "X",
+        "ply": 5
+       },
+       "to_move": "X",
+       "usealphabeta": true,
+       "where": "l0match-016-strong6-o3_low-t1j_red-r0@ply5 [mover_fragmentation/position] digest=e41208a808b03263: depth 3 invocation 1"
+      }
+     ]
+    },
+    {
+     "agree": true,
+     "depth": 6,
+     "failures": [],
+     "invocations": [
+      {
+       "completed": true,
+       "completed_depth": 6,
+       "current_max_ply": 7,
+       "elapsed_us": 232050,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 0,
+       "failures": [],
+       "helper_report": "POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=0",
+       "legal": true,
+       "move": [
+        7,
+        11
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": true,
+        "failures": 0,
+        "refl_n": 3
+       },
+       "requested_depth": 6,
+       "searched_state": {
+        "history_len": 5,
+        "n_bridges": 2,
+        "n_legal": 523,
+        "n_pegs": 5,
+        "next_player": "X",
+        "ply": 5
+       },
+       "to_move": "X",
+       "usealphabeta": true,
+       "where": "l0match-016-strong6-o3_low-t1j_red-r0@ply5 [mover_fragmentation/position] digest=e41208a808b03263: depth 6 invocation 0"
+      },
+      {
+       "completed": true,
+       "completed_depth": 6,
+       "current_max_ply": 7,
+       "elapsed_us": 232082,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 0,
+       "failures": [],
+       "helper_report": "POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=0",
+       "legal": true,
+       "move": [
+        7,
+        11
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": true,
+        "failures": 0,
+        "refl_n": 3
+       },
+       "requested_depth": 6,
+       "searched_state": {
+        "history_len": 5,
+        "n_bridges": 2,
+        "n_legal": 523,
+        "n_pegs": 5,
+        "next_player": "X",
+        "ply": 5
+       },
+       "to_move": "X",
+       "usealphabeta": true,
+       "where": "l0match-016-strong6-o3_low-t1j_red-r0@ply5 [mover_fragmentation/position] digest=e41208a808b03263: depth 6 invocation 1"
+      }
+     ]
+    }
+   ],
+   "digest": "e41208a808b032634bbf842d9d466c63be9d0889c9285555a56aa5a3843ed423",
+   "failures": [],
+   "opening": "o3_low",
+   "passed": true,
+   "ply": 5,
+   "prefix": [
+    [
+     15,
+     11
+    ],
+    [
+     12,
+     12
+    ],
+    [
+     13,
+     10
+    ],
+    [
+     14,
+     14
+    ],
+    [
+     11,
+     11
+    ]
+   ],
+   "role": "position",
+   "signature": "mover_fragmentation",
+   "task_id": "l0match-016-strong6-o3_low-t1j_red-r0"
+  },
+  {
+   "bind": {
+    "bound": true,
+    "detail": null
+   },
+   "colour_arm": "t1j_red",
+   "depths": [
+    {
+     "agree": true,
+     "depth": 3,
+     "failures": [
+      "did not complete depth 3 (completed=False, completed_depth=-1)",
+      "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+     ],
+     "invocations": [
+      {
+       "completed": false,
+       "completed_depth": -1,
+       "current_max_ply": 0,
+       "elapsed_us": 25211,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 3,
+       "failures": [
+        "did not complete depth 3 (completed=False, completed_depth=-1)",
+        "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+       ],
+       "helper_report": "FAIL q1: requested depth 3 completed | POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1",
+       "legal": true,
+       "move": [
+        17,
+        12
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": false,
+        "failures": 1,
+        "refl_n": 3
+       },
+       "requested_depth": 3,
+       "searched_state": {
+        "history_len": 1,
+        "n_bridges": 0,
+        "n_legal": 527,
+        "n_pegs": 1,
+        "next_player": "X",
+        "ply": 1
+       },
+       "to_move": "X",
+       "usealphabeta": false,
+       "where": "l0match-024-strong6-o4_high-t1j_red-r0@ply1 [mover_fragmentation/control] digest=7c326873cac4c1d7: depth 3 invocation 0"
+      },
+      {
+       "completed": false,
+       "completed_depth": -1,
+       "current_max_ply": 0,
+       "elapsed_us": 25224,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 3,
+       "failures": [
+        "did not complete depth 3 (completed=False, completed_depth=-1)",
+        "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+       ],
+       "helper_report": "FAIL q1: requested depth 3 completed | POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1",
+       "legal": true,
+       "move": [
+        17,
+        12
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": false,
+        "failures": 1,
+        "refl_n": 3
+       },
+       "requested_depth": 3,
+       "searched_state": {
+        "history_len": 1,
+        "n_bridges": 0,
+        "n_legal": 527,
+        "n_pegs": 1,
+        "next_player": "X",
+        "ply": 1
+       },
+       "to_move": "X",
+       "usealphabeta": false,
+       "where": "l0match-024-strong6-o4_high-t1j_red-r0@ply1 [mover_fragmentation/control] digest=7c326873cac4c1d7: depth 3 invocation 1"
+      }
+     ]
+    },
+    {
+     "agree": true,
+     "depth": 6,
+     "failures": [
+      "did not complete depth 6 (completed=False, completed_depth=-1)",
+      "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+     ],
+     "invocations": [
+      {
+       "completed": false,
+       "completed_depth": -1,
+       "current_max_ply": 0,
+       "elapsed_us": 25214,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 3,
+       "failures": [
+        "did not complete depth 6 (completed=False, completed_depth=-1)",
+        "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+       ],
+       "helper_report": "FAIL q1: requested depth 6 completed | POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1",
+       "legal": true,
+       "move": [
+        15,
+        12
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": false,
+        "failures": 1,
+        "refl_n": 3
+       },
+       "requested_depth": 6,
+       "searched_state": {
+        "history_len": 1,
+        "n_bridges": 0,
+        "n_legal": 527,
+        "n_pegs": 1,
+        "next_player": "X",
+        "ply": 1
+       },
+       "to_move": "X",
+       "usealphabeta": false,
+       "where": "l0match-024-strong6-o4_high-t1j_red-r0@ply1 [mover_fragmentation/control] digest=7c326873cac4c1d7: depth 6 invocation 0"
+      },
+      {
+       "completed": false,
+       "completed_depth": -1,
+       "current_max_ply": 0,
+       "elapsed_us": 24761,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 3,
+       "failures": [
+        "did not complete depth 6 (completed=False, completed_depth=-1)",
+        "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+       ],
+       "helper_report": "FAIL q1: requested depth 6 completed | POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1",
+       "legal": true,
+       "move": [
+        15,
+        12
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": false,
+        "failures": 1,
+        "refl_n": 3
+       },
+       "requested_depth": 6,
+       "searched_state": {
+        "history_len": 1,
+        "n_bridges": 0,
+        "n_legal": 527,
+        "n_pegs": 1,
+        "next_player": "X",
+        "ply": 1
+       },
+       "to_move": "X",
+       "usealphabeta": false,
+       "where": "l0match-024-strong6-o4_high-t1j_red-r0@ply1 [mover_fragmentation/control] digest=7c326873cac4c1d7: depth 6 invocation 1"
+      }
+     ]
+    }
+   ],
+   "digest": "7c326873cac4c1d7786dd2eb69b4ba4c4ba0c7631a24fe4855eee529beb0f6a4",
+   "failures": [
+    "did not complete depth 3 (completed=False, completed_depth=-1)",
+    "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)",
+    "did not complete depth 6 (completed=False, completed_depth=-1)",
+    "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+   ],
+   "opening": "o4_high",
+   "passed": false,
+   "ply": 1,
+   "prefix": [
+    [
+     8,
+     12
+    ]
+   ],
+   "role": "control",
+   "signature": "mover_fragmentation",
+   "task_id": "l0match-024-strong6-o4_high-t1j_red-r0"
+  },
+  {
+   "bind": {
+    "bound": true,
+    "detail": null
+   },
+   "colour_arm": "t1j_red",
+   "depths": [
+    {
+     "agree": true,
+     "depth": 3,
+     "failures": [
+      "did not complete depth 3 (completed=False, completed_depth=-1)",
+      "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+     ],
+     "invocations": [
+      {
+       "completed": false,
+       "completed_depth": -1,
+       "current_max_ply": 0,
+       "elapsed_us": 21915,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 3,
+       "failures": [
+        "did not complete depth 3 (completed=False, completed_depth=-1)",
+        "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+       ],
+       "helper_report": "FAIL q1: requested depth 3 completed | POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1",
+       "legal": true,
+       "move": [
+        16,
+        13
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": false,
+        "failures": 1,
+        "refl_n": 3
+       },
+       "requested_depth": 3,
+       "searched_state": {
+        "history_len": 3,
+        "n_bridges": 1,
+        "n_legal": 525,
+        "n_pegs": 3,
+        "next_player": "X",
+        "ply": 3
+       },
+       "to_move": "X",
+       "usealphabeta": false,
+       "where": "l0match-024-strong6-o4_high-t1j_red-r0@ply3 [mover_fragmentation/control] digest=5e2c1f8ab19effb5: depth 3 invocation 0"
+      },
+      {
+       "completed": false,
+       "completed_depth": -1,
+       "current_max_ply": 0,
+       "elapsed_us": 24814,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 3,
+       "failures": [
+        "did not complete depth 3 (completed=False, completed_depth=-1)",
+        "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+       ],
+       "helper_report": "FAIL q1: requested depth 3 completed | POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1",
+       "legal": true,
+       "move": [
+        16,
+        13
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": false,
+        "failures": 1,
+        "refl_n": 3
+       },
+       "requested_depth": 3,
+       "searched_state": {
+        "history_len": 3,
+        "n_bridges": 1,
+        "n_legal": 525,
+        "n_pegs": 3,
+        "next_player": "X",
+        "ply": 3
+       },
+       "to_move": "X",
+       "usealphabeta": false,
+       "where": "l0match-024-strong6-o4_high-t1j_red-r0@ply3 [mover_fragmentation/control] digest=5e2c1f8ab19effb5: depth 3 invocation 1"
+      }
+     ]
+    },
+    {
+     "agree": true,
+     "depth": 6,
+     "failures": [
+      "did not complete depth 6 (completed=False, completed_depth=-1)",
+      "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+     ],
+     "invocations": [
+      {
+       "completed": false,
+       "completed_depth": -1,
+       "current_max_ply": 0,
+       "elapsed_us": 25246,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 3,
+       "failures": [
+        "did not complete depth 6 (completed=False, completed_depth=-1)",
+        "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+       ],
+       "helper_report": "FAIL q1: requested depth 6 completed | POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1",
+       "legal": true,
+       "move": [
+        16,
+        13
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": false,
+        "failures": 1,
+        "refl_n": 3
+       },
+       "requested_depth": 6,
+       "searched_state": {
+        "history_len": 3,
+        "n_bridges": 1,
+        "n_legal": 525,
+        "n_pegs": 3,
+        "next_player": "X",
+        "ply": 3
+       },
+       "to_move": "X",
+       "usealphabeta": false,
+       "where": "l0match-024-strong6-o4_high-t1j_red-r0@ply3 [mover_fragmentation/control] digest=5e2c1f8ab19effb5: depth 6 invocation 0"
+      },
+      {
+       "completed": false,
+       "completed_depth": -1,
+       "current_max_ply": 0,
+       "elapsed_us": 25274,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 3,
+       "failures": [
+        "did not complete depth 6 (completed=False, completed_depth=-1)",
+        "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+       ],
+       "helper_report": "FAIL q1: requested depth 6 completed | POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1",
+       "legal": true,
+       "move": [
+        16,
+        13
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": false,
+        "failures": 1,
+        "refl_n": 3
+       },
+       "requested_depth": 6,
+       "searched_state": {
+        "history_len": 3,
+        "n_bridges": 1,
+        "n_legal": 525,
+        "n_pegs": 3,
+        "next_player": "X",
+        "ply": 3
+       },
+       "to_move": "X",
+       "usealphabeta": false,
+       "where": "l0match-024-strong6-o4_high-t1j_red-r0@ply3 [mover_fragmentation/control] digest=5e2c1f8ab19effb5: depth 6 invocation 1"
+      }
+     ]
+    }
+   ],
+   "digest": "5e2c1f8ab19effb5487c8edba19c35a6075538ddcbb2110dd798364b010272e6",
+   "failures": [
+    "did not complete depth 3 (completed=False, completed_depth=-1)",
+    "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)",
+    "did not complete depth 6 (completed=False, completed_depth=-1)",
+    "postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1)"
+   ],
+   "opening": "o4_high",
+   "passed": false,
+   "ply": 3,
+   "prefix": [
+    [
+     8,
+     12
+    ],
+    [
+     11,
+     11
+    ],
+    [
+     10,
+     13
+    ]
+   ],
+   "role": "control",
+   "signature": "mover_fragmentation",
+   "task_id": "l0match-024-strong6-o4_high-t1j_red-r0"
+  },
+  {
+   "bind": {
+    "bound": true,
+    "detail": null
+   },
+   "colour_arm": "t1j_red",
+   "depths": [
+    {
+     "agree": true,
+     "depth": 3,
+     "failures": [],
+     "invocations": [
+      {
+       "completed": true,
+       "completed_depth": 3,
+       "current_max_ply": 4,
+       "elapsed_us": 20593,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 0,
+       "failures": [],
+       "helper_report": "POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=0",
+       "legal": true,
+       "move": [
+        16,
+        12
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": true,
+        "failures": 0,
+        "refl_n": 3
+       },
+       "requested_depth": 3,
+       "searched_state": {
+        "history_len": 5,
+        "n_bridges": 2,
+        "n_legal": 523,
+        "n_pegs": 5,
+        "next_player": "X",
+        "ply": 5
+       },
+       "to_move": "X",
+       "usealphabeta": true,
+       "where": "l0match-024-strong6-o4_high-t1j_red-r0@ply5 [mover_fragmentation/position] digest=14b23d6fe016a578: depth 3 invocation 0"
+      },
+      {
+       "completed": true,
+       "completed_depth": 3,
+       "current_max_ply": 4,
+       "elapsed_us": 20433,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 0,
+       "failures": [],
+       "helper_report": "POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=0",
+       "legal": true,
+       "move": [
+        16,
+        12
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": true,
+        "failures": 0,
+        "refl_n": 3
+       },
+       "requested_depth": 3,
+       "searched_state": {
+        "history_len": 5,
+        "n_bridges": 2,
+        "n_legal": 523,
+        "n_pegs": 5,
+        "next_player": "X",
+        "ply": 5
+       },
+       "to_move": "X",
+       "usealphabeta": true,
+       "where": "l0match-024-strong6-o4_high-t1j_red-r0@ply5 [mover_fragmentation/position] digest=14b23d6fe016a578: depth 3 invocation 1"
+      }
+     ]
+    },
+    {
+     "agree": true,
+     "depth": 6,
+     "failures": [],
+     "invocations": [
+      {
+       "completed": true,
+       "completed_depth": 6,
+       "current_max_ply": 7,
+       "elapsed_us": 210628,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 0,
+       "failures": [],
+       "helper_report": "POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=0",
+       "legal": true,
+       "move": [
+        16,
+        12
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": true,
+        "failures": 0,
+        "refl_n": 3
+       },
+       "requested_depth": 6,
+       "searched_state": {
+        "history_len": 5,
+        "n_bridges": 2,
+        "n_legal": 523,
+        "n_pegs": 5,
+        "next_player": "X",
+        "ply": 5
+       },
+       "to_move": "X",
+       "usealphabeta": true,
+       "where": "l0match-024-strong6-o4_high-t1j_red-r0@ply5 [mover_fragmentation/position] digest=14b23d6fe016a578: depth 6 invocation 0"
+      },
+      {
+       "completed": true,
+       "completed_depth": 6,
+       "current_max_ply": 7,
+       "elapsed_us": 212859,
+       "eval_regime": "early_moveNr_lt_8",
+       "exit_status": 0,
+       "failures": [],
+       "helper_report": "POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=0",
+       "legal": true,
+       "move": [
+        16,
+        12
+       ],
+       "null_sentinel": false,
+       "postcond": {
+        "clean": true,
+        "failures": 0,
+        "refl_n": 3
+       },
+       "requested_depth": 6,
+       "searched_state": {
+        "history_len": 5,
+        "n_bridges": 2,
+        "n_legal": 523,
+        "n_pegs": 5,
+        "next_player": "X",
+        "ply": 5
+       },
+       "to_move": "X",
+       "usealphabeta": true,
+       "where": "l0match-024-strong6-o4_high-t1j_red-r0@ply5 [mover_fragmentation/position] digest=14b23d6fe016a578: depth 6 invocation 1"
+      }
+     ]
+    }
+   ],
+   "digest": "14b23d6fe016a5788063ba62ee38273d0decaed70ebc52ba72467cefe31dba08",
+   "failures": [],
+   "opening": "o4_high",
+   "passed": true,
+   "ply": 5,
+   "prefix": [
+    [
+     8,
+     12
+    ],
+    [
+     11,
+     11
+    ],
+    [
+     10,
+     13
+    ],
+    [
+     9,
+     9
+    ],
+    [
+     12,
+     12
+    ]
+   ],
+   "role": "position",
+   "signature": "mover_fragmentation",
+   "task_id": "l0match-024-strong6-o4_high-t1j_red-r0"
+  }
+ ],
+ "queries_spent": 36,
+ "query_cap": 36,
+ "run_deadline_s": 900,
+ "toolchain_identity": {
+  "classes": {
+   "e2probe/ScratchPrefs.class": "aad79e9fc149d012209a53e6cad99cc7d97bf79ab03a56536934891d6dbf8f39",
+   "e2probe/ScratchPrefsFactory.class": "dff0e8f933c656f3d3e48c7b2519746508162b8fddd3db45066038c91480be7d",
+   "net/schwagereit/t1j/E3bDump.class": "d4c796067ed4ece22f8255821c87364225a3407951585664ee9a58a6407b0516",
+   "net/schwagereit/t1j/E4Preflight.class": "f7a9038cbd866556f07137d930e75014a4e9baabbaf979c50de86354f7b4ca9d"
+  },
+  "classes_dir": "/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/16b05c1a-2862-4076-85fe-0ced1bca4229/scratchpad/lowply_classes",
+  "jar": "/Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/t1j.jar",
+  "jar_sha256": "53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7",
+  "jdk_components": {
+   "bin/java": "af8b122943345320b179c75c3404d56a981017739746b75f9caf583632f0bea0",
+   "bin/javac": "6f5159301c750bba340390eda5fdd4a0959445355f97c40aa9c2addb00ede5ab",
+   "lib/modules": "28745573641057e822a972f223fc8e40db5c9df11ae3f7402764780afc2f1951",
+   "release": "cb6064fe4d7b87d9fbb8b8c7702047044d1bbeac38e0c5217f595579b6cc764b"
+  },
+  "jdk_home": "/Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/jdk/jdk-17.0.20.1+1/Contents/Home",
+  "main_class": "net.schwagereit.t1j.E4Preflight",
+  "sources": {
+   "E3bDump.java": "281664cf68fdd8561dd11ddf2114ec8be710de9244cc370a63ef25a8311ef5dc",
+   "E4Preflight.java": "23ed8106427710ba21e3ee38b6530396661e90eb22b9527ef96eb085d6724ae3",
+   "ScratchPrefs.java": "559fb9483cc34f4cc50a1c153fe6cabac6bb6129a977f42ba328b0cfad798f03",
+   "ScratchPrefsFactory.java": "09c0d74cf3c11130abfb810bd24cc433657b9dbba83152bd7c6f7e3f5858c244"
+  },
+  "toolchain": {
+   "root": "/Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1",
+   "source": "recorded-default",
+   "verified": 5
+  }
+ },
+ "verdict": "FAIL"
+}

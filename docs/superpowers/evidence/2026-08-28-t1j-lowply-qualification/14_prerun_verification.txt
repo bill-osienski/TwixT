@@ -1,0 +1,53 @@
+LOW-PLY QUALIFICATION — PRE-RUN VERIFICATION 2026-08-31T14:34:47Z
+==============================================================
+
+⚠ DEVIATION FROM THE CARD'S FROZEN FILE TABLE, recorded not hidden.
+   The card named 02_prerun_verification.txt .. 08_full_suite_after_gate_restored.txt.
+   Those numbers were consumed by the RUNNER-BUILD evidence (02-13) committed
+   between the card being frozen and the run being authorized, and evidence is
+   create-only, so they cannot be reused. The run's files take the next free
+   numbers with the card's SEMANTIC names. The output LOCATION is unchanged.
+     14_prerun_verification.txt   (card: 02)
+     15_run.sh.txt                (card: 03)
+     16_stdout.txt                (card: 04)
+     17_stderr.txt                (card: 05)
+     18_exit.txt                  (card: 06)
+     19_lowply_records.json       (card: 07)
+     20_full_suite_after_gate_restored.txt  (card: 08)
+
+--- repository ---
+3f7f5c1f5442dd70a7ed9658f42e699872e0db25
+dirty files:        1
+
+--- gates ---
+LOWPLY_QUALIFICATION_AUTHORIZED = True
+L0_EXECUTION_AUTHORIZED = False
+SCREEN_AUTHORIZED = False
+D1_EXECUTION_AUTHORIZED = False
+
+--- frozen limits, read from the code ---
+N_PREFIXES           9
+DEPTHS               (3, 6) x 2 invocations
+QUERY_CAP            36
+PER_CALL_TIMEOUT_S   120
+RUN_DEADLINE_S       900  (15 min)
+
+--- frozen input, hash-verified before use ---
+a9054cb2d56cf75f554292e47ac7e5b86a0c74f54b255ee9147fb65f92207acf  docs/superpowers/evidence/2026-08-28-t1j-lowply-qualification/01_frozen_prefixes.json
+prefixes 9  plies [1, 3, 5]  distinct digests 9
+expected queries 36, replays 9, javac 1
+
+--- toolchain, hash-verified ---
+root     /Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1
+source   recorded-default
+jar      /Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/t1j.jar
+jdk_home /Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/jdk/jdk-17.0.20.1+1/Contents/Home
+verified 5 artifacts hashed
+
+--- NO seed is used: the runner never invokes the incumbent ---
+  SEED_INTERVAL                present in runner: False
+  seed_is_accounted            present in runner: False
+  rng_stream_seeds             present in runner: False
+  random.Random                present in runner: False
+  load_reference_evaluator     present in runner: False
+  SeededReferenceAgent         present in runner: False
