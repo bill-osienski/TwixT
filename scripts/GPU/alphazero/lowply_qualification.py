@@ -52,7 +52,7 @@ Pos = Tuple[int, int]
 #: This is the qualification's OWN gate. It reads no other experiment's, and a
 #: test asserts the others appear nowhere in this file: one gate must never be
 #: openable by opening another.
-LOWPLY_QUALIFICATION_AUTHORIZED = False
+LOWPLY_QUALIFICATION_AUTHORIZED = True
 
 #: Frozen in the card. Nine prefixes, both qualified depths, two invocations per
 #: depth as SEPARATE processes -- the only way to vary T1j's per-process Zobrist
