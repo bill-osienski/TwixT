@@ -499,9 +499,19 @@ def parse_postconds(text: str) -> List[PostCond]:
             raise HelperOutputError(
                 f"the helper's POSTCOND output could not be parsed: line missing "
                 f"fields {sorted(missing)}: {line!r}", text)
-        out.append(PostCond(
-            no_throw=kv["no_throw"] == "true", windows=int(kv["windows"]),
-            frames=int(kv["frames"]), headless=kv["headless"] == "true",
-            prefs_ok=kv["prefs_ok"] == "true", refl_ok=kv["refl_ok"] == "true",
-            refl_n=int(kv["refl_n"]), failures=int(kv["failures"])))
+        try:
+            out.append(PostCond(
+                no_throw=kv["no_throw"] == "true", windows=int(kv["windows"]),
+                frames=int(kv["frames"]), headless=kv["headless"] == "true",
+                prefs_ok=kv["prefs_ok"] == "true", refl_ok=kv["refl_ok"] == "true",
+                refl_n=int(kv["refl_n"]), failures=int(kv["failures"])))
+        except (ValueError, KeyError) as e:
+            # A COMPLETE line whose numeric fields will not parse. The
+            # missing-field branch above was already wrapped; this one was not,
+            # so `int("bad")` escaped as a bare ValueError with no transcript --
+            # and on the replay path, where `check_postcond` has already consumed
+            # the text, that left every caller unable to say what was unreadable.
+            raise HelperOutputError(
+                f"the helper's POSTCOND output could not be parsed: {e} in "
+                f"{line!r}", text) from None
     return out

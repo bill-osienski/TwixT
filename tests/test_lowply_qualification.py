@@ -470,3 +470,49 @@ def test_parse_postconds_carries_the_transcript_when_it_refuses():
         A.parse_postconds("POSTCOND no_throw=true windows=0\n")
     assert e.value.stdout == "POSTCOND no_throw=true windows=0\n"
     assert isinstance(e.value, ValueError), "existing ValueError handlers must still work"
+
+
+NON_NUMERIC_POST = ("POSTCOND no_throw=true windows=0 frames=0 headless=true "
+                    "prefs_ok=true refl_ok=true refl_n=bad failures=0\n")
+
+
+def test_a_non_numeric_POSTCOND_field_carries_the_transcript():
+    """A COMPLETE line whose numeric field will not parse. The missing-field
+    branch was wrapped; `int(...)` on the PostCond construction was not, so this
+    still left `parse_postconds` as a bare ValueError with no transcript."""
+    with pytest.raises(A.HelperOutputError) as e:
+        A.parse_postconds(NON_NUMERIC_POST)
+    assert e.value.stdout == NON_NUMERIC_POST
+    assert "refl_n" in str(e.value) or "bad" in str(e.value)
+
+
+def test_a_non_numeric_POSTCOND_in_the_REPLAY_output_is_a_VOID(monkeypatch, tmp_path):
+    """REPLAY-SPECIFIC, and reached alone: the binder's `check_postcond` is the
+    only thing that parses this text, so nothing else can be what fails."""
+    blocks = "".join(_block(_state(PREFIX[:i]), list(PREFIX[:i]))
+                     for i in range(len(PREFIX) + 1))
+
+    def fake_run(args, **kw):
+        if "replay" in args:
+            return subprocess.CompletedProcess(args, 0, blocks + NON_NUMERIC_POST, "")
+        depth = int(args[args.index("query") + 1])
+        return subprocess.CompletedProcess(args, 0, _query_out(PREFIX, depth), "")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    out = tmp_path / "r.json"
+    with pytest.raises(LP.LowPlyVoidError, match="could not be parsed"):
+        LP._run_unguarded(prefixes=_prefixes(), paths=PATHS, out_path=str(out),
+                          _compile=lambda d: {"stub": True})
+    assert not out.exists()
+
+
+def test_a_non_numeric_POSTCOND_in_the_QUERY_output_is_a_VOID(monkeypatch, tmp_path):
+    st = _state(PREFIX)
+    x, y = A.to_t1j(*sorted(st.legal_moves())[0])
+    good = (f"QUERY q=1 requested_depth=3 move_x={x} move_y={y} "
+            f"to_move={A.PLAYER_TO_T1J[st.to_move]} usealphabeta=true currentMaxPly=3 "
+            "completed_depth=3 completed=true legal=true null_sentinel=false moveNr=3 "
+            "eval_regime=normal elapsed_us=1000\n")
+    _void_on(monkeypatch, tmp_path,
+             query_out=good + _block(st, list(PREFIX)) + NON_NUMERIC_POST,
+             match="could not be parsed")
