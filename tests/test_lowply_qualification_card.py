@@ -243,3 +243,51 @@ def test_the_card_does_not_claim_the_qualification_ran(card):
     assert "Nothing has run" in card
     for forbidden in ("PASS —", "we observed", "the run showed"):
         assert forbidden not in card, forbidden
+
+
+# ═════════ the RESULT card must not outrun its own evidence ═════════════════
+
+RESULT = "docs/superpowers/2026-08-31-t1j-lowply-qualification-result.md"
+
+
+@pytest.fixture(scope="module")
+def result_card():
+    return open(RESULT, encoding="utf-8").read()
+
+
+def test_the_result_states_its_claim_at_the_width_of_the_evidence(result_card):
+    """Nine prefixes, one colour arm, three plies. The claim may be no wider."""
+    assert "within these nine frozen `t1j_red` prefixes" in result_card.lower() \
+        or "Within these nine frozen `t1j_red` prefixes" in result_card
+    assert "does NOT establish a global T1j threshold" in result_card
+    assert "one colour arm (`t1j_red`)" in result_card
+    assert "says nothing about plies 2 and 4" in result_card
+
+
+def test_the_result_does_not_assert_a_boundary_as_a_live_claim(result_card):
+    """NEGATIVE CONTROL on the correction. The card may QUOTE the withdrawn
+    wording while explaining why it was withdrawn; it may not USE it.
+
+    Three plies observed is not a boundary located. This phrasing asserted a
+    property of the ENGINE from nine positions in one arm, and it would have
+    carried into a §12.1 amendment as if it were established.
+    """
+    import re
+    for m in re.finditer(r"boundary lies between|boundary is between", result_card):
+        window = result_card[max(0, m.start() - 160):m.start()]
+        assert '"' in window or "earlier version" in window or "withdrawn" in window, (
+            "a boundary is asserted as a live claim, not quoted as withdrawn: "
+            f"...{window[-100:]!r}")
+
+
+def test_the_result_keeps_the_D1_link_unproven(result_card):
+    """The one thing it would be easiest to overclaim, since it is the question
+    everyone wants answered."""
+    assert "Not established" in result_card or "not established" in result_card
+    assert "Unproven" in result_card
+    assert "cannot be settled retroactively" in result_card
+
+
+def test_the_result_documents_the_filename_deviation(result_card):
+    assert "Deviation from the card" in result_card
+    assert "create-only" in result_card

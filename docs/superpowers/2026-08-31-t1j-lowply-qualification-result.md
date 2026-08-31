@@ -37,9 +37,21 @@ and the two independent JVMs frequently return **different** moves, which is
 consistent with a non-search path rather than a search. At ply 5 it searches
 normally at both depths.
 
-**The boundary lies between ply 3 and ply 5.** E4's lowest previously qualified
-ply was 6, so ply 5 is newly qualified by this run and plies 1 and 3 are newly
-established as non-completing.
+### 🔴 What this establishes, stated at the width of the evidence
+
+**Within these nine frozen `t1j_red` prefixes: plies 1 and 3 fail the frozen
+completion condition, and ply 5 passes it.** That is the claim, and it is the
+whole claim.
+
+**It does NOT establish a global T1j threshold.** An earlier version of this card
+said "the boundary lies between ply 3 and ply 5", which asserts a property of the
+engine from nine positions in one colour arm at three plies. Three plies observed
+is not a boundary located; it is three plies observed. The corrected wording is
+above.
+
+E4's lowest previously queried ply was 6, so ply 5 had not been observed before
+this run — but "observed to complete in twelve invocations across three prefixes"
+is not the same as "qualified", and this card does not claim the latter.
 
 ⚠ **`eval_regime` is `early_moveNr_lt_8` for all nine prefixes — including the
 three that pass.** So that flag is *not* the discriminator, independently
