@@ -1,0 +1,17 @@
+REGISTRIES UNCHANGED -- verified at the moment of recording
+====================================================
+
+$ git diff --stat scripts/
+(empty = no registry tuple and no gate was touched)
+
+$ grep -rnE '202615[0-9]{3}' --include='*.py' scripts/ tests/ | wc -l
+       0
+POSITIVE CONTROL -- the retired block must be found by the same pattern:
+$ grep -rnE '202614000' --include='*.py' scripts/ | wc -l
+       5
+
+GATES, as on disk:
+scripts/GPU/alphazero/d1_probe.py:54:D1_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/e4_screen_command.py:44:SCREEN_AUTHORIZED = False
+scripts/GPU/alphazero/l0_match_command.py:41:L0_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/lowply_qualification.py:55:LOWPLY_QUALIFICATION_AUTHORIZED = False

@@ -1,0 +1,111 @@
+"""Prove a fresh 221-seed interval collision-free. READ-ONLY: nothing is drawn,
+nothing is registered, no registry tuple is edited.
+
+Registries and masks are IMPORTED, never retyped, so the proof cannot drift from
+what the code actually enforces -- the same discipline plan 12.5 used.
+"""
+from scripts.GPU.alphazero.e4_screen_reference import (
+    ACCOUNTED_SEED_INTERVALS, EXPOSED_SEED_INTERVALS,
+    TEST_ONLY_SEED_INTERVALS, RETIRED_SEED_INTERVALS)
+from scripts.GPU.alphazero.twixtbot_g3_schedule import CONSUMED_SEEDS
+from scripts.GPU.alphazero.twixtbot_g3_reference import SeededReferenceAgent
+
+CATEGORIES = {
+    "ACCOUNTED": ACCOUNTED_SEED_INTERVALS,
+    "EXPOSED": EXPOSED_SEED_INTERVALS,
+    "RETIRED": RETIRED_SEED_INTERVALS,
+    "TEST_ONLY": TEST_ONLY_SEED_INTERVALS,
+}
+
+# 4 masks + the seed itself = the 5 derivations plan 12.5 counts. Both colours
+# are enumerated because the colour a task gets is not fixed at reservation time.
+MASKS = sorted({*SeededReferenceAgent.SEARCH_MASK.values(),
+                *SeededReferenceAgent.READOUT_MASK.values()})
+assert len(MASKS) == 4, MASKS
+
+
+def enumerate_seeds(intervals):
+    return {s for lo, hi in intervals for s in range(lo, hi)}
+
+
+def derivations(seeds):
+    """seed itself + one value per mask. XOR ONLY -- no generator is built."""
+    return {v for s in seeds for v in (s, *(s ^ m for m in MASKS))}
+
+
+PRIOR_BY_CAT = {k: enumerate_seeds(v) for k, v in CATEGORIES.items()}
+PRIOR_BY_CAT["CONSUMED_SEEDS"] = set(CONSUMED_SEEDS)
+PRIOR_SEEDS = set().union(*PRIOR_BY_CAT.values())
+PRIOR_VALUES = derivations(PRIOR_SEEDS)
+
+WIDEST = max(hi - lo for v in CATEGORIES.values() for lo, hi in v)
+
+
+def check(lo, n=221):
+    hi = lo + n
+    ours = set(range(lo, hi))
+    our_values = derivations(ours)
+    direct = {k: sorted(ours & v)[:5] for k, v in PRIOR_BY_CAT.items()}
+    stream = sorted(our_values & PRIOR_VALUES)[:5]
+    return {
+        "interval": (lo, hi), "n": n,
+        "direct": {k: len(ours & v) for k, v in PRIOR_BY_CAT.items()},
+        "direct_examples": {k: v for k, v in direct.items() if v},
+        "stream_collisions": len(our_values & PRIOR_VALUES),
+        "stream_examples": stream,
+        "own_values": len(our_values),
+        "own_injective": len(our_values) == n * 5,
+        "clean": not (ours & PRIOR_SEEDS) and not (our_values & PRIOR_VALUES)
+                 and len(our_values) == n * 5,
+    }
+
+
+if __name__ == "__main__":
+    print(f"masks (imported): {[hex(m) for m in MASKS]}")
+    print(f"prior seeds enumerated: {len(PRIOR_SEEDS)}  "
+          f"({ {k: len(v) for k, v in PRIOR_BY_CAT.items()} })")
+    print(f"prior values incl. derivations: {len(PRIOR_VALUES)}")
+    print(f"widest registered interval: {WIDEST} seeds -> enumeration is EXHAUSTIVE")
+    print()
+    for lo in (202615000, 202614227, 202616000, 202620000):
+        r = check(lo)
+        print(f"[{r['interval'][0]}, {r['interval'][1]})  clean={r['clean']}  "
+              f"direct={r['direct']}  streams={r['stream_collisions']}  "
+              f"own_values={r['own_values']} injective={r['own_injective']}")
+        if r["direct_examples"]:
+            print(f"    direct hits: {r['direct_examples']}")
+        if r["stream_examples"]:
+            print(f"    stream hits: {r['stream_examples']}")
+
+
+def controls():
+    """A check that never rejects proves nothing. Each of these MUST be dirty."""
+    out = []
+
+    # 1. the retired D1 block itself -- direct overlap must fire
+    r = check(202614000)
+    out.append(("the RETIRED D1 block", not r["clean"], r["direct"], r["stream_collisions"]))
+
+    # 2. a block with NO direct overlap whose DERIVED STREAMS hit a prior seed.
+    #    Built by XORing a known prior seed with a mask: the interval sits
+    #    somewhere unregistered, but one of its derivations lands back on 202611000.
+    v = 202611000 ^ MASKS[0]
+    assert v not in PRIOR_SEEDS, "control is not testing what it claims"
+    r = check(v, n=1)
+    out.append((f"derived-stream collision at {v}", not r["clean"],
+                r["direct"], r["stream_collisions"]))
+
+    # 3. an interval overlapping the permanently-reserved test band
+    r = check(90009000, n=10)
+    out.append(("the TEST_ONLY band", not r["clean"], r["direct"], r["stream_collisions"]))
+
+    # 4. an interval straddling the retired block's END by one seed
+    r = check(202614226, n=221)
+    out.append(("straddles the retired block by ONE seed", not r["clean"],
+                r["direct"], r["stream_collisions"]))
+    return out
+
+
+for name, rejected, direct, streams in controls():
+    print(f"{'REJECTED' if rejected else '🔴 ACCEPTED -- CONTROL FAILED'}  {name}"
+          f"   direct={ {k: v for k, v in direct.items() if v} } streams={streams}")

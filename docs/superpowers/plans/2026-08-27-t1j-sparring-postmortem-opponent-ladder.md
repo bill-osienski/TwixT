@@ -907,3 +907,80 @@ that proves the runtime selection is the original frozen selection followed by
 exactly this six-row exclusion set, verifies the resulting table and 1,105-query
 ceiling, and preserves full prefixes. None of that implementation, registration,
 or execution is authorized by this document.
+
+## 14. Amendment 3 — prospective reservation of a fresh D1 seed interval
+
+**Plan-only and prospective.** §12 and §13 are preserved with no deleted lines.
+No registry tuple is edited, nothing is drawn, and no executable behaviour
+changes. §13.4 required that a *later, separate* authorization choose and prove a
+fresh 221-seed interval; this section is that choice and that proof, and nothing
+more.
+
+### 14.1 The interval
+
+**`[202615000, 202615221)`**, half-open, **221 seeds** — one per position in the
+§13 cohort, on the unchanged §12.5 rule of **one incumbent search/readout per
+position**. The interval does not scale with the 1,105-query ceiling: T1j still
+has no controlled seed at all, so duplicating a T1j query consumes none of these.
+
+It keeps the block convention of every prior reservation (`…11000`, `…12000`,
+`…13000`, `…14000`) and leaves a **773-seed gap** above the retired
+`[202614000, 202614227)`.
+
+🔑 **`[202614227, 202614448)` was also proved clean and was rejected anyway.**
+Starting exactly where the retired block ends makes an off-by-one at that
+boundary indistinguishable from a legitimate reservation — it would *revive the
+retired block's last seed* while still looking correct. §13.4 forbids partial
+reuse; the safe margin should not depend on a single correct comparison, so the
+gap is deliberate and load-bearing.
+
+### 14.2 Disjointness, proved before reservation
+
+Registries and the four XOR masks are **imported from the code, never retyped**,
+so the proof cannot drift from what `e4_screen_reference` actually enforces.
+Nothing in the proof constructs a generator: it is XOR and set arithmetic only.
+
+- **prior seeds enumerated: 3,440 distinct** — ACCOUNTED 3,331 · EXPOSED 129 ·
+  RETIRED 323 · TEST_ONLY 100 · CONSUMED_SEEDS 1, deduplicated
+- **direct overlap: ACCOUNTED 0 · EXPOSED 0 · RETIRED 0 · TEST_ONLY 0 ·
+  CONSUMED_SEEDS 0**
+- **derived-stream collisions: 0** against all **17,200** prior values (each prior
+  seed plus its four masked derivations — both colours, since the colour a task
+  receives is not fixed at reservation time)
+- **our own streams injective: True** — 1,105 distinct values from 221 seeds × 5
+  derivations
+- the enumeration is **exhaustive, not sampled**: the widest registered interval
+  is 800 seeds, so every prior seed was enumerated individually
+
+⚠ **The counting basis differs from §12.5 and the two figures are not
+comparable.** §12.5's "3429 prior seeds" reproduces exactly as the **sum across
+categories** — a seed both ACCOUNTED and RETIRED counted twice — less the one
+`CONSUMED` seed already inside ACCOUNTED. The **union** of distinct seeds at that
+same moment was **3,213**. The figure above is a union. Neither number is wrong;
+they measure different things, and this note exists so no one reads 3,429 → 3,440
+as a change of 11 seeds. On today's registries the corresponding sum is 3,883.
+
+⚠ **1,105 appears twice again, still by coincidence** — 221 × 5 derivations and
+221 × 5 queries. As in §12.5, neither is derived from the other.
+
+**The proof was checked against negative controls, all four rejected:** the
+retired D1 block itself (direct 221, streams 1,105); the TEST_ONLY band (direct
+10); an interval straddling the retired block's end **by one seed** (direct 1);
+and — the discriminating one — an interval with **no direct overlap whatsoever**
+whose derived stream lands back on prior seed `202611000` (direct 0, **streams
+2**). A direct-overlap-only check would have called that last one clean.
+
+### 14.3 What this section does NOT do
+
+🔴 **The interval is NOT registered.** It appears in no registry tuple:
+`ACCOUNTED_SEED_INTERVALS` is unchanged, as are EXPOSED, RETIRED and TEST_ONLY.
+`d1_probe._check_seed_registration` therefore still refuses a D1 run, and the
+D1 gate is still `False` — **two independent barriers, both standing.**
+
+Adding it to `ACCOUNTED_SEED_INTERVALS` is part of a D1 execution authorization,
+not of this reservation: a block reserved on paper and never authorized must cost
+nothing to abandon. That is precisely what happened to the previous block, and
+the discipline is what made abandoning it free.
+
+Registration, opening the gate, and the D1 retry remain a **separate**
+authorization. The push is independent of all of them.
