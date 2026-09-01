@@ -237,7 +237,7 @@ def test_the_block_is_ACCOUNTED_and_RETIRED_after_the_VOID():
     for name in ("ACCOUNTED_SEED_INTERVALS", "EXPOSED_SEED_INTERVALS",
                  "RETIRED_SEED_INTERVALS", "TEST_ONLY_SEED_INTERVALS"):
         assert getattr(REF, name), f"vacuous: {name} is empty"
-    for seed in range(*SEL.SEED_INTERVAL):
+    for seed in range(*SEL.RETIRED_SEED_INTERVAL):
         st = REF.seed_status(seed)
         assert st["accounted"] and st["retired"], (seed, st)
         assert not (st["exposed"] or st["test_only"]), (seed, st)
@@ -463,3 +463,32 @@ def test_a_12_1_count_that_departs_from_the_record_is_refused(bound, monkeypatch
     monkeypatch.setattr(SEL, "SIGNATURES", bad)
     with pytest.raises(SEL.D1SelectionError, match="12.1 froze"):
         SEL.select_all(bound)
+
+
+def test_selection_still_REFUSES_the_retired_block(bound):
+    """Requirement 3 of the handoff, written as a LITERAL.
+
+    🔑 An injected-defect control proved the first version of this test could not
+    fail: it passed `SEL.RETIRED_SEED_INTERVAL`, so when the defect MOVED that
+    constant the test moved with it and kept passing. A test that reads the
+    constant it is checking cannot see the constant change.
+
+    The interval below is 221 seeds -- the size the cohort wants -- so it clears
+    the length check and reaches the RETIREMENT guard alone. The exact 227-seed
+    block would be refused by length first, and would prove only that.
+    """
+    with pytest.raises(SEL.D1SelectionError, match="retired"):
+        SEL.select_all(bound, seed_interval=(202614000, 202614221))
+    with pytest.raises(SEL.D1SelectionError, match="retired"):
+        SEL.select_all(bound, seed_interval=(202614000, 202614227))
+
+
+def test_selection_assigned_seeds_ALL_pass_the_RUNTIME_seed_check(bound):
+    """Requirement 4, end to end: the seeds selection writes onto positions are
+    the seeds `d1_probe._check_seed` admits. Two modules, one block."""
+    from scripts.GPU.alphazero import d1_probe as D1
+    sel = SEL.select_all(bound, seed_interval=SEL.SEED_INTERVAL)
+    seeds = [p["seed"] for p in sel["positions"]]
+    assert len(seeds) == 221 and len(set(seeds)) == 221
+    for s in seeds:
+        assert D1._check_seed(s) == s

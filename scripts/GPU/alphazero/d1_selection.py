@@ -74,9 +74,20 @@ PER_CELL_CAP = 3
 #: 12.4: 227 positions, a hard ceiling fixed before any model or JVM load.
 N_POSITIONS = 227
 
-#: 12.5: RESERVED, UNSPENT, and deliberately NOT REGISTERED. Nothing in this
-#: module adds it to a registry or draws from it; it assigns numbers on paper.
-SEED_INTERVAL = (202614000, 202614227)
+#: THE CANONICAL D1 SEED INTERVAL -- plan §14's reservation, 221 seeds, one per
+#: §13 position. Defined HERE and nowhere else: `d1_probe` binds this object
+#: rather than retyping the pair, because two literals of one fact drift the
+#: moment either is edited and `==` cannot see the difference until they differ.
+#:
+#: RESERVED, UNSPENT, and deliberately NOT REGISTERED. Nothing in this module
+#: adds it to a registry or draws from it; it assigns numbers on paper, and
+#: `d1_probe._check_seed_registration` still refuses a run while it is absent
+#: from `ACCOUNTED_SEED_INTERVALS`.
+#:
+#: ⚠ This is NOT `RETIRED_SEED_INTERVAL` below, though the two were EQUAL until
+#: the §14 handoff. They must never be edited together: a retirement guard
+#: pointed at the new block would stop refusing the old one.
+SEED_INTERVAL = (202615000, 202615221)
 
 #: PLAN §13 AMENDMENT 2 -- the six already-retained rows the one authorized
 #: low-ply qualification OBSERVED to fail the frozen completion condition.

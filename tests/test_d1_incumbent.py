@@ -182,13 +182,14 @@ def identity():
 def live_block(monkeypatch):
     """A TEMPORARY FIXTURE registry in which the D1 block is not yet retired.
 
-    The real block was retired on 2026-08-28 when the single authorized run
-    VOIDED, so `validate_task_executable` now refuses it -- which is the whole
-    point of retiring it. These tests exercise the incumbent MECHANISM, not the
-    availability of that block, so they lift the retirement locally rather than
-    weaken `_check_seed` or the builder's executable question. The real tuple is
-    never edited, and `test_the_retired_block_can_no_longer_be_SCHEDULED` in
-    tests/test_d1_probe.py asserts the real refusal.
+    Kept GENERAL rather than pointed at a particular block: it lifts whatever
+    `D1.SEED_INTERVAL` currently names, if that block is retired. Since the §14
+    handoff it names the fresh reservation, which is NOT retired, so this lifts
+    nothing today -- and it will lift the right thing again if a future block is
+    ever retired mid-life. These tests exercise the incumbent MECHANISM, not the
+    availability of any block, and never edit the real tuple.
+    `test_the_retired_block_can_no_longer_be_SCHEDULED` in tests/test_d1_probe.py
+    asserts the real refusal, bound to `RETIRED_SEED_INTERVAL`.
     """
     monkeypatch.setattr(REF, "RETIRED_SEED_INTERVALS",
                         tuple(i for i in REF.RETIRED_SEED_INTERVALS

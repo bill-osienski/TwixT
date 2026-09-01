@@ -1,0 +1,39 @@
+THE INTERVAL HANDOFF -- one canonical source, retirement constant fixed
+======================================================================
+
+--- d1_selection.py: THE canonical definition (the only 202615 in scripts/) ---
+#: THE CANONICAL D1 SEED INTERVAL -- plan §14's reservation, 221 seeds, one per
+#: §13 position. Defined HERE and nowhere else: `d1_probe` binds this object
+#: rather than retyping the pair, because two literals of one fact drift the
+#: moment either is edited and `==` cannot see the difference until they differ.
+#:
+#: RESERVED, UNSPENT, and deliberately NOT REGISTERED. Nothing in this module
+#: adds it to a registry or draws from it; it assigns numbers on paper, and
+#: `d1_probe._check_seed_registration` still refuses a run while it is absent
+#: from `ACCOUNTED_SEED_INTERVALS`.
+#:
+#: ⚠ This is NOT `RETIRED_SEED_INTERVAL` below, though the two were EQUAL until
+#: the §14 handoff. They must never be edited together: a retirement guard
+#: pointed at the new block would stop refusing the old one.
+SEED_INTERVAL = (202615000, 202615221)
+
+--- d1_selection.py: the retirement constant, UNMOVED ---
+#: The block D1 spent. RETIRED WHOLE after the 2026-08-28 VOID and never
+#: reusable -- §13 reserves no replacement, so a run needs a fresh interval that
+#: a separate authorization must choose and prove.
+RETIRED_SEED_INTERVAL = (202614000, 202614227)
+
+--- d1_probe.py: BOUND, not retyped ---
+#: BOUND, NOT RETYPED. `d1_selection` is the single canonical source; this name
+#: is the same tuple object, so the two consumers -- `_check_seed`, which bounds
+#: every seed D1 draws, and `_check_seed_registration`, which requires the block
+#: registered -- cannot drift from the block selection actually assigns.
+#: Reserved in §14 and DELIBERATELY NOT REGISTERED in any seed registry.
+SEED_INTERVAL = SEL.SEED_INTERVAL
+
+--- every interval literal left in scripts/ ---
+$ grep -rnE '20261[45][0-9]{3}' --include='*.py' scripts/
+scripts/GPU/alphazero/e4_screen_reference.py:84:    (202614000, 202614227),          # D1 SAME-POSITION INTERROGATION. 227 seeds,
+scripts/GPU/alphazero/e4_screen_reference.py:191:    (202614000, 202614227),          # THE D1 BLOCK, retired 2026-08-28 after the
+scripts/GPU/alphazero/d1_selection.py:90:SEED_INTERVAL = (202615000, 202615221)
+scripts/GPU/alphazero/d1_selection.py:124:RETIRED_SEED_INTERVAL = (202614000, 202614227)

@@ -264,15 +264,17 @@ def test_the_seed_interval_is_ACCOUNTED_and_now_RETIRED_after_the_VOID():
     `validate_task_executable` refuse them.
     """
     from scripts.GPU.alphazero import e4_screen_reference as REF
-    assert D1.SEED_INTERVAL == (202614000, 202614227)
-    # It sized the FROZEN §12 cohort, not §13's. §13 reserves no replacement, so
-    # there is no interval matching 221 and a run cannot proceed without one.
-    assert D1.SEED_INTERVAL[1] - D1.SEED_INTERVAL[0] == D1.N_POSITIONS_FROZEN_12
-    assert D1.SEED_INTERVAL[1] - D1.SEED_INTERVAL[0] != D1.N_POSITIONS
+    assert SEL.RETIRED_SEED_INTERVAL == (202614000, 202614227)
+    # It sized the FROZEN §12 cohort, not §13's -- which is why it could not have
+    # been reused for §13 even had it not been retired. §14 reserved a separate
+    # 221-seed block; this test is about the retired one and must not follow it.
+    lo, hi = SEL.RETIRED_SEED_INTERVAL
+    assert hi - lo == D1.N_POSITIONS_FROZEN_12
+    assert hi - lo != D1.N_POSITIONS
     for name in ("ACCOUNTED_SEED_INTERVALS", "EXPOSED_SEED_INTERVALS",
                  "RETIRED_SEED_INTERVALS", "TEST_ONLY_SEED_INTERVALS"):
         assert getattr(REF, name), f"vacuous: {name} is empty"
-    for seed in range(*D1.SEED_INTERVAL):
+    for seed in range(*SEL.RETIRED_SEED_INTERVAL):
         st = REF.seed_status(seed)
         assert st["accounted"] and st["retired"], (seed, st)
         assert not st["exposed"] and not st["test_only"], (seed, st)
@@ -283,7 +285,7 @@ def test_the_retired_block_can_no_longer_be_SCHEDULED():
     """The consequence that matters: a spent one-shot block must be refused by
     the executable question, not merely annotated."""
     from scripts.GPU.alphazero import e4_screen_reference as REF
-    task = {"seed": D1.SEED_INTERVAL[0], "reference": "calib020_0001",
+    task = {"seed": SEL.RETIRED_SEED_INTERVAL[0], "reference": "calib020_0001",
             "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
             "anchor_colour": "black"}
     REF.validate_task_structure(task)                 # still WELL FORMED, forever
@@ -642,13 +644,21 @@ def _position(prefix=PREFIX, seed=None, digest=None):
 
 
 @pytest.fixture
-def registered():
-    """The block IS registered in the real tuple now (12.5, execution
-    authorization), so this fixture no longer fakes anything. It is kept as the
-    name the tests below read by, and asserts the fact rather than arranging it:
-    a fixture that silently stopped arranging what its name claims would be the
-    quietest way for these tests to go vacuous."""
-    assert tuple(D1.SEED_INTERVAL) in {tuple(i) for i in REF.ACCOUNTED_SEED_INTERVALS}
+def registered(monkeypatch):
+    """ARRANGES registration, because the §14 block is NOT registered.
+
+    This fixture used to assert the fact instead of arranging it, and that was
+    right at the time: the previous block really was in ACCOUNTED, put there by
+    the 2026-08-28 execution authorization. The §14 handoff points D1 at a fresh
+    block no authorization has registered, so arranging is correct again.
+
+    The assertion keeps it from going vacuous in EITHER direction: the day a real
+    authorization registers the block, this fails and must go back to asserting
+    rather than quietly patching in something already there."""
+    assert tuple(D1.SEED_INTERVAL) not in {tuple(i) for i in REF.ACCOUNTED_SEED_INTERVALS}, \
+        "the block is registered for real; this fixture must assert, not arrange"
+    monkeypatch.setattr(REF, "ACCOUNTED_SEED_INTERVALS",
+                        REF.ACCOUNTED_SEED_INTERVALS + (tuple(D1.SEED_INTERVAL),))
 
 
 @pytest.fixture
@@ -671,20 +681,22 @@ def wire(monkeypatch):
 # ───────────────── 12.5: the block must be REGISTERED before a draw ──────────
 
 def _registry_without_d1():
-    """The ACCOUNTED tuple as it stood BEFORE the D1 execution authorization.
+    """The real ACCOUNTED tuple, which does NOT contain the §14 block.
 
-    The negative controls below need a registry that does not contain the block;
-    now that it is really registered, they must remove it rather than pretend.
+    It used to STRIP the block, because the previous one really was registered.
+    Since the handoff there is nothing to strip -- so this asserts the absence
+    instead of assuming it. A negative control that quietly stops removing
+    anything is a control that has stopped controlling.
     """
-    out = tuple(i for i in REF.ACCOUNTED_SEED_INTERVALS
-                if tuple(i) != tuple(D1.SEED_INTERVAL))
-    assert len(out) == len(REF.ACCOUNTED_SEED_INTERVALS) - 1, \
-        "the D1 block is not in ACCOUNTED as a single interval; these controls are stale"
+    out = tuple(REF.ACCOUNTED_SEED_INTERVALS)
+    assert tuple(D1.SEED_INTERVAL) not in {tuple(i) for i in out}, \
+        "the D1 block IS registered now; these negative controls are stale"
     return out
 
 
-def test_the_registered_block_satisfies_the_check():
-    """The state of the repository RIGHT NOW: registered, and D1 may proceed."""
+def test_the_registered_block_satisfies_the_check(registered):
+    """Once the block is registered, the check passes -- so its refusal below is
+    about registration and not about something else in the way."""
     D1._check_seed_registration()
 
 
@@ -1885,3 +1897,41 @@ def test_a_BOOL_forged_for_a_frozen_ZERO_OR_ONE_coordinate_is_refused():
     rows[i] = dict(rows[i], prefix=prefix)
     with pytest.raises(D1.D1Error, match="prefix"):
         D1._check_cohort(rows)
+
+
+# ─────────────────────── the seed-interval handoff (§14 → runtime) ───────────
+
+def test_the_interval_has_ONE_canonical_source():
+    """IDENTITY, not equality. A re-typed literal in this module would be a
+    second source of the same fact, free to drift the moment one is edited, and
+    `==` cannot tell the two apart while their values happen to agree.
+    """
+    assert D1.SEED_INTERVAL is SEL.SEED_INTERVAL
+
+
+def test_the_canonical_interval_is_14s_reservation_sized_for_13():
+    assert SEL.SEED_INTERVAL == (202615000, 202615221)
+    lo, hi = SEL.SEED_INTERVAL
+    assert hi - lo == SEL.N_POSITIONS_AFTER_EXCLUSION == D1.N_POSITIONS == 221
+
+
+def test_the_RETIRED_interval_is_a_SEPARATE_constant_THAT_DID_NOT_MOVE():
+    """The two were equal before the handoff, so a blanket replace of the
+    literal would have moved BOTH -- and a retirement guard pointed at the new
+    block stops refusing the old one."""
+    assert SEL.RETIRED_SEED_INTERVAL == (202614000, 202614227)
+    assert SEL.RETIRED_SEED_INTERVAL != SEL.SEED_INTERVAL
+
+
+def test_every_seed_of_the_RETIRED_block_is_refused_by_the_runtime_check():
+    for seed in range(*SEL.RETIRED_SEED_INTERVAL):
+        with pytest.raises(D1.D1VoidError, match="outside the reserved"):
+            D1._check_seed(seed)
+
+
+def test_the_REAL_registry_still_refuses_the_new_block():
+    """NO monkeypatch: the repository AS IT STANDS. The handoff points D1 at the
+    §14 reservation and does not register it, so the barrier beside the gate is
+    still up. The control above proves the mechanism; this proves the state."""
+    with pytest.raises(D1.D1Error, match="not registered"):
+        D1._check_seed_registration()

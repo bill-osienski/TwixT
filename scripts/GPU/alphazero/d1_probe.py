@@ -111,8 +111,12 @@ COHORT_SOURCE_REL = ("docs/superpowers/evidence/2026-08-28-t1j-d1-execution/"
                      "02_positions.json")
 COHORT_SOURCE_SHA256 = "d5a3cdfa58844451ba21e0fb23781c6aedbda9ad3c239f1c83ea99c3e3d037e3"
 
-#: Reserved in 12.5 and DELIBERATELY NOT REGISTERED in any seed registry.
-SEED_INTERVAL = (202614000, 202614227)
+#: BOUND, NOT RETYPED. `d1_selection` is the single canonical source; this name
+#: is the same tuple object, so the two consumers -- `_check_seed`, which bounds
+#: every seed D1 draws, and `_check_seed_registration`, which requires the block
+#: registered -- cannot drift from the block selection actually assigns.
+#: Reserved in §14 and DELIBERATELY NOT REGISTERED in any seed registry.
+SEED_INTERVAL = SEL.SEED_INTERVAL
 
 
 #: THE VOID TRACE. Predeclared, event-specific schema; a run writes
