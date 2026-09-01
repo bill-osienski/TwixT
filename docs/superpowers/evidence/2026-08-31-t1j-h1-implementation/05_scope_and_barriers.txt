@@ -1,0 +1,24 @@
+H1 IMPLEMENTATION -- scope and barriers, verified at the moment of recording
+==========================================================================
+
+$ git status --short
+ M scripts/GPU/alphazero/l0_match_rules.py
+ M tests/test_l0_match.py
+?? docs/superpowers/evidence/2026-08-31-t1j-h1-implementation/
+?? scripts/GPU/alphazero/h1_viability_plan.py
+?? scripts/GPU/alphazero/h1_viability_rules.py
+?? tests/test_h1_viability.py
+
+GATES on disk (H1 declares none -- there is no runner to gate):
+scripts/GPU/alphazero/d1_probe.py:54:D1_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/e4_screen_command.py:44:SCREEN_AUTHORIZED = False
+scripts/GPU/alphazero/lowply_qualification.py:55:LOWPLY_QUALIFICATION_AUTHORIZED = False
+scripts/GPU/alphazero/l0_match_command.py:41:L0_EXECUTION_AUTHORIZED = False
+
+$ grep -rn '_AUTHORIZED' scripts/GPU/alphazero/h1_*.py
+(none)
+
+The H1 block in the registries (must be absent everywhere):
+  H1 block (202616000, 202616224) -> any registry flag set: False
+  D1 paper block (202615000, 202615221) -> disjoint from H1: True
+  registry module modified this phase: False

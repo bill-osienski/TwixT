@@ -1033,7 +1033,7 @@ def test_malformed_shapes_are_refused_before_any_comprehension(tasks, build, mat
 
 def test_the_outer_boundary_catches_what_the_shape_checks_do_not(tasks, monkeypatch):
     """The blanket is the last resort, and it must actually be reachable."""
-    def explode(results, tasks):
+    def explode(results, tasks, design):
         raise RuntimeError("something structural nobody anticipated")
 
     monkeypatch.setattr(L, "_bind_results", explode)

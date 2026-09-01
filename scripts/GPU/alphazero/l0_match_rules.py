@@ -89,6 +89,7 @@ mix. It is not a coverage guarantee and the report does not present it as one.
 """
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import json
 import math
@@ -350,7 +351,36 @@ def validate_result(row: Dict[str, Any], task: Dict[str, Any]) -> None:
                          f"terminal_reason={row['terminal_reason']!r}")
 
 
-def bind_results(results: Sequence[Dict[str, Any]], tasks: Sequence[Dict[str, Any]]):
+@dataclasses.dataclass(frozen=True)
+class Design:
+    """WHICH match is being bound: its size, its balance and its frozen identity.
+
+    `bind_results` used to read L0's `N_GAMES`, `N_REPS` and `L0_TASK_DIGEST`
+    directly, so it could bind exactly one design. H1 is the same protocol at 224
+    games, and duplicating this fail-closed boundary to change three numbers would
+    duplicate the three escapes its docstring records.
+
+    🔑 REQUIRED at every call, never defaulted. A default would let a caller bind
+    an H1 result set against the 64-game design by simply omitting the argument --
+    the defaultable-switch failure this workstream keeps finding, and the same
+    reason `validate_schedule_executable` is a separate function rather than a
+    `require_unspent=` keyword. Callers must name which design they are binding.
+    """
+    name: str
+    n_openings: int
+    n_arms: int
+    n_reps: int
+    n_games: int
+    task_digest: str
+
+
+#: L0's own design, unchanged: the values `bind_results` previously read inline.
+L0_DESIGN = Design(name="L0", n_openings=N_OPENINGS, n_arms=N_ARMS, n_reps=N_REPS,
+                   n_games=N_GAMES, task_digest=L0_TASK_DIGEST)
+
+
+def bind_results(results: Sequence[Dict[str, Any]], tasks: Sequence[Dict[str, Any]],
+                 *, design: Design):
     """Pair every result with its canonical task, or refuse. Returns (pairs, reason).
 
     THE FAIL-CLOSED BOUNDARY IS HERE, AROUND THE WHOLE BINDING PATH, not merely
@@ -365,7 +395,7 @@ def bind_results(results: Sequence[Dict[str, Any]], tasks: Sequence[Dict[str, An
     and the blanket below is the last resort for whatever has not been thought of.
     """
     try:
-        return _bind_results(results, tasks)
+        return _bind_results(results, tasks, design)
     except Exception as e:                               # noqa: BLE001
         return None, f"malformed input rejected ({type(e).__name__}: {e})"
 
@@ -395,7 +425,7 @@ def _shape_errors(results, tasks):
     return None
 
 
-def _bind_results(results, tasks):
+def _bind_results(results, tasks, design):
     shape = _shape_errors(results, tasks)
     if shape is not None:
         return None, shape
@@ -404,8 +434,9 @@ def _bind_results(results, tasks):
     by_id = {t["task_id"]: t for t in tasks}
     if len(by_id) != len(tasks):
         return None, "the schedule contains duplicate task identities"
-    if len(tasks) != N_GAMES:
-        return None, f"the design names {len(tasks)} tasks, expected {N_GAMES}"
+    if len(tasks) != design.n_games:
+        return None, (f"the design names {len(tasks)} tasks, expected "
+                      f"{design.n_games} for {design.name}")
     # THE SCHEDULE ITSELF MUST BE THE FROZEN ONE. Without this, a caller could
     # hand over a task list with an opening renamed, supply matching results, and
     # get a report about an invented cell -- reproduced, and the reason this
@@ -414,9 +445,9 @@ def _bind_results(results, tasks):
         digest = l0_task_digest(tasks)
     except ValueError as e:
         return None, str(e)
-    if digest != L0_TASK_DIGEST:
-        return None, (f"the schedule is not the frozen L0 design: task digest {digest} "
-                      f"!= pinned {L0_TASK_DIGEST}")
+    if digest != design.task_digest:
+        return None, (f"the schedule is not the frozen {design.name} design: task digest "
+                      f"{digest} != pinned {design.task_digest}")
     got = [r["task_id"] for r in results]
     if len(set(got)) != len(got):
         return None, "a task identity appears more than once in the results"
@@ -439,11 +470,13 @@ def _bind_results(results, tasks):
     for _, task in pairs:
         key = (task["opening"], task["colour_arm"])
         cells[key] = cells.get(key, 0) + 1
-    if len(cells) != N_OPENINGS * N_ARMS:
-        return None, f"{len(cells)} opening/colour cells, expected {N_OPENINGS * N_ARMS}"
-    bad = {k: v for k, v in cells.items() if v != N_REPS}
+    want_cells = design.n_openings * design.n_arms
+    if len(cells) != want_cells:
+        return None, f"{len(cells)} opening/colour cells, expected {want_cells}"
+    bad = {k: v for k, v in cells.items() if v != design.n_reps}
     if bad:
-        return None, f"cells without exactly {N_REPS} results: {sorted(bad.items())[:3]}"
+        return None, (f"cells without exactly {design.n_reps} results: "
+                      f"{sorted(bad.items())[:3]}")
     return pairs, None
 
 
@@ -482,7 +515,7 @@ def match_report(results: Sequence[Dict[str, Any]], tasks: Sequence[Dict[str, An
     8 and 32 games behind them, carry no interval, and support no comparison
     between cells. They exist to show the shape of the result.
     """
-    pairs, why = bind_results(results, tasks)
+    pairs, why = bind_results(results, tasks, design=L0_DESIGN)
     if pairs is None:
         return {"reported": False, "reason": why}
 
