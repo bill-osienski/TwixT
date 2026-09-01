@@ -1,0 +1,12 @@
+prior seeds incl. the S14 on-paper block: 3661 {'ACCOUNTED': 3331, 'EXPOSED': 129, 'RETIRED': 323, 'TEST_ONLY': 100, 'CONSUMED_SEEDS': 1, 'D1_ON_PAPER_S14': 221}
+[202616000, 202616224)  direct={}  streams=0  own=1120 injective=True  CLEAN=True
+[202615221, 202615445)  direct={}  streams=0  own=1120 injective=True  CLEAN=True
+[202617000, 202617224)  direct={}  streams=0  own=1120 injective=True  CLEAN=True
+
+n=  64  hw 0.1698  decisive VIABLE if observed < 0.5802  decisive NOT_VIABLE if >= 0.9198  est 31 min
+n= 128  hw 0.1200  decisive VIABLE if observed < 0.6300  decisive NOT_VIABLE if >= 0.8700  est 61 min
+n= 224  hw 0.0907  decisive VIABLE if observed < 0.6593  decisive NOT_VIABLE if >= 0.8407  est 107 min
+n= 400  hw 0.0679  decisive VIABLE if observed < 0.6821  decisive NOT_VIABLE if >= 0.8179  est 191 min
+
+L0 reproduction check, n=64: [0.4240, 0.7635]  (published [0.4240, 0.7635])
+Elo at score 0.75 (SIZING ONLY, forbidden in the report): 190.8

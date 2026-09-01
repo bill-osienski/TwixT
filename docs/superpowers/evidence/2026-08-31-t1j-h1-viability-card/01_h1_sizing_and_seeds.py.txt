@@ -1,0 +1,39 @@
+"""H1 card: the match-seed proof and the sizing table. READ-ONLY, XOR + arithmetic.
+
+Run from the repo root with PYTHONPATH=.:<dir holding seed_reservation_proof.py>
+(that helper is 01_seed_reservation_proof.py.txt in the §14 evidence directory).
+"""
+import math
+from seed_reservation_proof import PRIOR_BY_CAT, derivations
+from scripts.GPU.alphazero.d1_selection import SEED_INTERVAL as D1_ONPAPER
+
+# 🔴 §14's block is in NO registry by design, so a registry-only enumeration
+# cannot see it. Reserved-on-paper is still taken.
+cats = dict(PRIOR_BY_CAT)
+cats["D1_ON_PAPER_S14"] = set(range(*D1_ONPAPER))
+prior = set().union(*cats.values())
+prior_vals = derivations(prior)
+print("prior seeds incl. the S14 on-paper block:", len(prior),
+      {k: len(v) for k, v in cats.items()})
+
+N = 224
+for lo in (202616000, 202615221, 202617000):
+    ours = set(range(lo, lo + N)); vals = derivations(ours)
+    print(f"[{lo}, {lo+N})  direct={ {k: len(ours & v) for k, v in cats.items() if ours & v} }"
+          f"  streams={len(vals & prior_vals)}  own={len(vals)} injective={len(vals)==N*5}"
+          f"  CLEAN={not (ours & prior) and not (vals & prior_vals) and len(vals)==N*5}")
+
+print()
+L0_SECONDS, L0_GAMES = 1831, 64          # 30 m 31 s for 64 games, from the L0 record
+for n in (64, 128, 224, 400):
+    hw = math.sqrt(math.log(2 / 0.05) / (2 * n))
+    print(f"n={n:4d}  hw {hw:.4f}  decisive VIABLE if observed < {0.75-hw:.4f}"
+          f"  decisive NOT_VIABLE if >= {0.75+hw:.4f}"
+          f"  est {n*L0_SECONDS/L0_GAMES/60:.0f} min")
+# 38/64 EXACTLY, not the rounded 0.5938 -- rounding the input moves the upper
+# bound by 0.0001 and makes an exact reproduction look like a near miss.
+_p, _h = 38 / 64, math.sqrt(math.log(40) / 128)
+print(f"\nL0 reproduction check, n=64: [{_p-_h:.4f}, {_p+_h:.4f}]"
+      f"  (published [0.4240, 0.7635])")
+print(f"Elo at score 0.75 (SIZING ONLY, forbidden in the report): "
+      f"{-400*math.log10(1/0.75-1):.1f}")
