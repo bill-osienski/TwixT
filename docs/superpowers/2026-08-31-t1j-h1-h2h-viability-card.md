@@ -1,8 +1,9 @@
 # H1 — head-to-head viability screen, PLAN ONLY
 
 **Date:** 2026-08-31 · **Status:** CARD ONLY. **Nothing implemented, nothing executed.**
-No model loaded, no JVM started, no game played, no seed drawn, reserved or registered,
+No model loaded, no JVM started, no game played, **no seed drawn and none registered**,
 no gate opened, no training, no push. · Local, unpushed.
+The match block is **PAPER-RESERVED here and left UNREGISTERED**, on the §14 convention.
 
 Basis: `main` @ `5e0e99f`, clean, four gates `False`.
 
@@ -59,7 +60,15 @@ registry check called clean.
 - direct overlap: **0** in every category, the §14 block included
 - derived-stream collisions: **0**, against each prior seed plus its four masked derivations, both
   colours
-- own streams injective: **True** — 1,120 distinct values from 224 × 5
+- own derivations injective: **True** — **1,120** distinct values from 224 × 5
+
+⚠ **1,120 and the 448 in §7 count different things and neither is a typo.** **1,120** is the
+COLLISION-PROOF set: each of 224 seeds plus its four masked derivations, enumerated over both
+colours because a task's colour is not fixed at reservation time. **448** is the number of RNG
+streams the games ACTUALLY run: two per game — search and readout — for the colour each task is
+finally dealt. The proof is deliberately the wider set, so it holds whichever colour a seed draws.
+Calling both "streams" without this distinction would recreate the unit ambiguity already corrected
+for "45 helper launches" and for §12.5's coincident 1,105.
 - exhaustive, not sampled: the widest registered interval is 800 seeds
 
 The proof must be re-run and re-controlled at implementation time against the registries **as they
@@ -87,9 +96,15 @@ does bias a *rate*, and H1's verdict is a rate question. The five screen decisio
 remain uncallable on an H1 run, with a test asserting each still exists so the prohibition cannot
 rot into a reference to nothing.
 
-## 5. The viability threshold — PREDECLARED, one-sided
+## 5. The viability threshold — a PREDECLARED DIRECTIONAL RULE on a TWO-SIDED interval
 
-Decided by where **0.75** falls relative to the 95% **Hoeffding** interval on T1j's score rate:
+Decided by where **0.75** falls relative to the **two-sided 95% Hoeffding** interval on T1j's
+score rate — half-width `sqrt(ln(2/0.05)/(2n))` = `sqrt(ln(40)/448)` = **0.0907** at n=224:
+
+⚠ **The DECISION is directional; the INTERVAL is not.** Only the T1j-dominates direction can return
+`NOT VIABLE`, but both bounds come from a two-sided interval at α=0.05, so each bound individually
+carries at least 97.5% one-sided coverage. Reading a one-sided rule off a two-sided interval is
+CONSERVATIVE, not a coverage claim to bank — and the numbers below are unchanged by saying so.
 
 | verdict | condition | meaning |
 |---|---|---|
@@ -180,19 +195,25 @@ two additions specific to H1:
   nothing about what happened.
 
 **The independence caveat is inherited verbatim.** The games are *modelled* as independent. What
-verification establishes is that the tasks derive 448 distinct generator streams colliding with none
-used before — that rules out accidental stream **reuse**, not dependence. T1j seeds its own Zobrist
+verification establishes is that the tasks derive 448 distinct generator streams — two per game,
+search and readout — colliding with none used before — that rules out accidental stream **reuse**, not dependence. T1j seeds its own Zobrist
 table from an unseeded `Random` per process, which this design neither controls nor observes.
 
 ## 8. What this card does NOT do
 
-It implements nothing. It reserves nothing — `[202616000, 202616224)` appears in no registry tuple
-and in no runtime constant. It opens no gate, loads no model, starts no JVM, plays no game, trains
-nothing, and pushes nothing.
+It implements nothing. **It does NOT register the match block:** `[202616000, 202616224)` is
+reserved on paper by §3 and appears in no registry tuple and in no runtime constant. It opens no
+gate, loads no model, starts no JVM, plays no game, trains nothing, and pushes nothing.
 
-**Separate and unauthorized, each on its own:** implementing H1; reserving the match block on paper;
-registering it; opening an H1 execution gate; the run itself; and any training that a `VIABLE`
-verdict might later justify.
+⚠ **Paper-reserved is not "unreserved", and it is not "registered" either** — it is the §14 state,
+and the distinction is load-bearing in both directions. Downward: a block reserved on paper and
+never authorized must cost nothing to abandon, which is exactly what made abandoning the D1 block
+free. Upward: paper-reserved is still **taken**, so the next reservation must enumerate it
+explicitly (§3) even though no registry contains it.
+
+**Separate and unauthorized, each on its own:** implementing H1; **registering** the match block;
+opening an H1 execution gate; the run itself; and any training that a `VIABLE` verdict might later
+justify.
 
 **If H1 returns `NOT VIABLE`,** the targeted-improvement line stops and the next decision is which
 opponent or objective replaces it — not a D1 retry.

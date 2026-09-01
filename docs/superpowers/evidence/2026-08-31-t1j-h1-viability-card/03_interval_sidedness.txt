@@ -1,0 +1,16 @@
+H1 §5: a DIRECTIONAL decision rule read off a TWO-SIDED interval
+================================================================
+n = 224, alpha = 0.05
+half-width  sqrt(ln(2/alpha)/(2n)) = sqrt(ln(40)/448) = 0.090742
+
+Hoeffding, two-sided:  P(|Xbar-mu| >= t) <= 2exp(-2n t^2) = 0.0500
+Hoeffding, one-sided:  P( Xbar-mu  >= t) <=  exp(-2n t^2) = 0.0250
+  -> each bound INDIVIDUALLY carries >= 0.9750 one-sided coverage.
+
+So reading the one-sided VIABLE / NOT_VIABLE rule off this two-sided
+interval is CONSERVATIVE. It is not a licence to narrow the interval to a
+one-sided alpha=0.05 (t = sqrt(ln(20)/448) = 0.081773), which the card does NOT do:
+the decision bands are computed from the two-sided width throughout.
+
+  decisive VIABLE   observed < 0.6593
+  decisive NOT_VIABLE observed >= 0.8407
