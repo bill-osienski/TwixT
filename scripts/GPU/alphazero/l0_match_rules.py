@@ -158,10 +158,16 @@ def abort_rules(block_name: str) -> tuple:
 L0_ABORT_RULES = abort_rules("L0")
 
 #: NOT an abort rule, and named here so it cannot be quietly reintroduced.
+#: The ONE non-abort rule that names no design and no threshold, extracted so
+#: another match can reuse the PROHIBITION without importing L0's reasons. The
+#: other two explain themselves in terms of L0's protocol and are false of a
+#: design with a decision band -- see h1_viability_rules.NOT_ABORT_RULES.
+EARLY_STOP_NOT_ABORT_RULE = "any early stop of any kind"
+
 NOT_ABORT_RULES = (
     "cap-termination saturation: caps never stop an L0 match; see CAP_NO_RATE_THRESHOLD",
     "score saturation: L0 measures a rate and has no band to saturate",
-    "any early stop of any kind",
+    EARLY_STOP_NOT_ABORT_RULE,
 )
 
 #: There is no early stop. This is a constant, not a tunable.

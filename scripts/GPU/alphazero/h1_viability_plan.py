@@ -66,12 +66,14 @@ H1_SEED_BLOCK = RULES.H1_SEED_BLOCK          # defined in the rules layer:
 #: sha256 AND the ordered dimension-projected digest of the tasks inside it --
 #: the file hash alone would accept a correctly-hashed file whose tasks had been
 #: rebuilt from a different design.
-#: v2 after review. `01_h1_plan.json` is SUPERSEDED and deliberately PRESERVED
-#: rather than rewritten -- evidence is create-only, and the earlier artifact is
-#: the record of what the first version froze.
+#: v3 after review. `01_h1_plan.json` and `06_h1_plan_v2.json` are SUPERSEDED and
+#: deliberately PRESERVED rather than rewritten -- evidence is create-only, and
+#: each earlier artifact is the record of what that version actually froze.
+#: v2 corrected the abort rules, the denominators and cap saturation; v3 corrects
+#: the NON-ABORT rules, which still described L0's protocol rather than H1's.
 H1_PLAN_REL = ("docs/superpowers/evidence/2026-08-31-t1j-h1-implementation/"
-               "06_h1_plan_v2.json")
-H1_PLAN_SHA256 = "1c55fe2c2dcdfc4935d2b64809e2f2de80b2dd98921ee2880e5fcac6e3f81f2e"
+               "10_h1_plan_v3.json")
+H1_PLAN_SHA256 = "57565530c961d250f02934de4ea3cd6b5c11398df0a3fcc85b2fe836346b0a14"
 
 COLOUR_ARMS = L0PLAN.COLOUR_ARMS
 

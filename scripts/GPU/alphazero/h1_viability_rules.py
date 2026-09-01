@@ -122,7 +122,23 @@ H1_ABORT_RULES = L0.abort_rules("H1") + (
 )
 
 #: NOT abort rules, named so they cannot be quietly reintroduced.
-NOT_ABORT_RULES = L0.NOT_ABORT_RULES
+#:
+#: 🔴 NOT `L0.NOT_ABORT_RULES`. Inherited whole, it imported two statements that
+#: are FALSE OF H1 straight into the frozen artifact: that caps never stop an
+#: "L0 match", and that the design "has no band to saturate". H1 HAS a band --
+#: the 0.75 viability threshold -- and a cap-saturated no-rate branch past 112.
+#: The PROHIBITIONS are identical in substance; only the reasons differ, and a
+#: reason that describes the wrong match is a false statement in the protocol.
+NOT_ABORT_RULES = (
+    f"cap-termination saturation: caps never stop an H1 match -- all {N_GAMES} games "
+    f"are played. Past {CAP_NO_RATE_THRESHOLD} of them the report is "
+    f"CAP_SATURATED_NO_RATE, which is a POST-MATCH outcome and not a stop",
+    f"score saturation: H1 HAS a band -- the {VIABILITY_THRESHOLD} viability "
+    f"threshold -- but it is read off the interval only AFTER all {N_GAMES} games are "
+    f"played, and is never an early-stop criterion. A verdict reachable early is a "
+    f"verdict biased by when someone chose to look",
+    L0.EARLY_STOP_NOT_ABORT_RULE,
+)
 
 
 def decisive_bands(n: int = N_GAMES) -> tuple:

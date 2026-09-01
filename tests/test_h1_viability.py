@@ -466,3 +466,53 @@ def test_the_card_states_the_cap_saturation_branch_too():
     card = open("docs/superpowers/2026-08-31-t1j-h1-h2h-viability-card.md").read()
     assert "CAP_SATURATED_NO_RATE" in card
     assert "no rate and no\nviability verdict" in card.lower()
+
+
+# ═══════ [P2] H1's non-abort rules must describe H1's protocol, not L0's ══════
+
+def test_L0s_NOT_ABORT_RULES_are_unchanged():
+    assert L0RULES.NOT_ABORT_RULES == (
+        "cap-termination saturation: caps never stop an L0 match; see CAP_NO_RATE_THRESHOLD",
+        "score saturation: L0 measures a rate and has no band to saturate",
+        "any early stop of any kind",
+    )
+
+
+def test_H1s_NON_ABORT_RULES_CONTAIN_NO_L0_WORDING():
+    """🔴 Inherited whole, they imported two statements that are FALSE of H1: that
+    caps never stop an "L0 match", and that the design "has no band to saturate".
+    H1 HAS a band -- the 0.75 viability threshold -- and a >112 cap-saturated
+    no-rate branch. The prohibitions are right; the reasons named the wrong match.
+    """
+    for rule in R.NOT_ABORT_RULES:
+        assert "L0" not in rule, rule
+
+
+def test_H1s_non_abort_rules_state_H1s_ACTUAL_protocol():
+    joined = " ".join(R.NOT_ABORT_RULES)
+    assert "H1 match" in joined
+    assert "CAP_SATURATED_NO_RATE" in joined
+    assert str(R.CAP_NO_RATE_THRESHOLD) in joined
+    assert str(R.VIABILITY_THRESHOLD) in joined
+    assert "H1 HAS a band" in joined
+
+
+def test_the_substantive_early_stop_PROHIBITION_survives_verbatim():
+    """Rewording the reasons must not weaken the rule itself."""
+    assert L0RULES.EARLY_STOP_NOT_ABORT_RULE == "any early stop of any kind"
+    assert L0RULES.EARLY_STOP_NOT_ABORT_RULE in R.NOT_ABORT_RULES
+    assert L0RULES.EARLY_STOP_NOT_ABORT_RULE in L0RULES.NOT_ABORT_RULES
+
+
+def test_NO_L0_ONLY_WORDING_REACHES_THE_FROZEN_H1_ARTIFACT():
+    """The artifact is what a reader of the protocol actually sees. Scoped to the
+    rule lists: `forbidden_claims` names L0 legitimately, in the no-pooling
+    prohibition."""
+    plan = P.load_h1_plan()
+    for key in ("abort_rules", "not_abort_rules"):
+        for rule in plan[key]:
+            assert "L0" not in rule, (key, rule)
+    assert any("H1 HAS a band" in r for r in plan["not_abort_rules"])
+    assert any("CAP_SATURATED_NO_RATE" in r for r in plan["not_abort_rules"])
+    # the legitimate mention, still present
+    assert any(c.startswith("any pooling of H1 with L0") for c in plan["forbidden_claims"])
