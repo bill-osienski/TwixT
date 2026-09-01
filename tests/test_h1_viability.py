@@ -100,8 +100,12 @@ def test_a_rate_just_inside_each_band_gets_the_verdict_the_card_promises():
 
 # ─────────────────────────────── reporting rules ────────────────────────────
 
-def test_H1_inherits_every_L0_forbidden_claim_and_adds_two():
-    assert set(L0RULES.FORBIDDEN_CLAIMS) <= set(R.FORBIDDEN_CLAIMS)
+def test_H1_inherits_every_COUNT_FREE_claim_recounts_two_and_adds_two():
+    """⚠ CORRECTED: H1 does NOT inherit L0's list whole, and an earlier version
+    of this test asserted it did. Two of L0's prohibitions state denominators
+    that are false for a 224-game match."""
+    assert set(L0RULES.COUNT_FREE_FORBIDDEN_CLAIMS) <= set(R.FORBIDDEN_CLAIMS)
+    assert not set(L0RULES.FORBIDDEN_CLAIMS) <= set(R.FORBIDDEN_CLAIMS)
     assert len(R.FORBIDDEN_CLAIMS) == len(L0RULES.FORBIDDEN_CLAIMS) + 2
     # 🔴 EACH PROHIBITION IS BOUND BY ITS OPENING WORDS, not by a substring of the
     # joined list. A control that replaced the first line of the pooling claim with
@@ -231,7 +235,7 @@ def test_a_complete_result_set_reports_and_carries_its_verdict(tasks):
     assert rep["overall"]["games"] == 224
     assert round(rep["overall"]["t1j_rate"], 4) == 0.5938
     assert rep["verdict"] == "VIABLE"
-    assert set(L0RULES.FORBIDDEN_CLAIMS) <= set(rep["forbidden_claims"])
+    assert set(rep["forbidden_claims"]) == set(R.FORBIDDEN_CLAIMS)
 
 
 @pytest.mark.parametrize("wins,want", [
@@ -356,3 +360,109 @@ def test_a_plan_with_the_SAME_TASKS_but_a_REWRITTEN_THRESHOLD_is_refused(tmp_pat
     assert R.L0.l0_task_digest(plan["tasks"]) == R.H1_TASK_DIGEST      # digest agrees
     with pytest.raises(P.H1PlanError, match="sha256"):
         P.load_h1_plan(str(bad))
+
+
+# ═══════ review corrections: composed abort rules, H1's own denominators ═════
+
+def test_L0s_ABORT_RULES_are_unchanged_by_the_factoring():
+    """L0 is a completed, published measurement. Factoring the seed rule out so
+    H1 can name its OWN block must leave L0's tuple identical, ORDER included --
+    the seed rule sits fifth, not last."""
+    assert L0RULES.L0_ABORT_RULES == (
+        "any per-ply state divergence between the two engines",
+        "any T1j query that does not complete its requested depth",
+        "any illegal move, or the null sentinel, from either side",
+        "any postcondition failure: a Window/Frame, a non-headless jvm, a mutated host "
+        "preference store, or an unauthorized reflective access",
+        "any artifact identity mismatch: jar, JDK component, or checkpoint sha",
+        "any seed outside the reserved L0 block, or any seed used twice",
+        "any failure to write or fsync a durable record",
+    )
+
+
+def test_H1s_abort_rules_name_H1s_BLOCK_AND_ONLY_H1s():
+    """🔴 APPENDING H1's seed rule to L0's list left BOTH active, and every valid
+    H1 seed is outside the L0 block -- so the composed rule set aborted every H1
+    game. The seed rule is now composed, not appended."""
+    joined = " ".join(R.H1_ABORT_RULES)
+    assert "reserved H1 block" in joined
+    assert "L0 block" not in joined
+    assert sum("seed outside the reserved" in r for r in R.H1_ABORT_RULES) == 1
+
+
+def test_an_H1_SEED_is_accepted_and_an_L0_BLOCK_seed_is_refused(tasks):
+    """The rule as a PREDICATE, not only as prose. Prose cannot be run."""
+    for t in tasks:
+        assert R.seed_is_outside_the_reserved_block(t["seed"]) is False
+    for seed in (202613000, 202613063, 202614000, 202615000, 0):
+        assert R.seed_is_outside_the_reserved_block(seed) is True
+
+
+def test_L0s_FORBIDDEN_CLAIMS_are_unchanged_by_the_factoring():
+    """PINNED BY CONTENT DIGEST, not by three fragments.
+
+    🔴 The first version asserted only that two count-bearing phrases were still
+    present and that the list held 8 entries. A control that reworded the Elo
+    prohibition ("figure" -> "number") passed it: the fragments it checked were
+    untouched. "Unchanged" has to be checked over the whole thing.
+    """
+    import hashlib as _h, json as _j
+    assert len(L0RULES.FORBIDDEN_CLAIMS) == 8
+    got = _h.sha256(_j.dumps(list(L0RULES.FORBIDDEN_CLAIMS)).encode()).hexdigest()
+    assert got == "809f0ed8fa630a363c36f2fcb4a7277ac48f31fe453028927c7c8de54e0b2d7a"
+    # kept for legibility: the digest says WHETHER it changed, these say WHAT it holds
+    joined = " ".join(L0RULES.FORBIDDEN_CLAIMS)
+    assert "8 games per opening and 32 per colour arm" in joined
+    assert "the 64 games ARE independent" in joined
+
+
+def test_NO_H1_forbidden_claim_carries_an_L0_DENOMINATOR():
+    """🔴 TWO inherited claims were count-bearing, not one: the per-cell
+    prohibition says '8 games per opening and 32 per colour arm', and the
+    independence prohibition says 'the 64 games'. H1 has 28, 112 and 224. A
+    prohibition that states a false denominator puts that denominator in the
+    report, which is exactly what the prohibition exists to prevent."""
+    # ⚠ EXACT MEMBERSHIP, not a substring search. My first version asserted
+    # `"8 games per opening" not in joined` and failed on the CORRECT list,
+    # because "28 games per opening" CONTAINS "8 games per opening". The same
+    # loose-substring trap as grepping for a seed prefix.
+    assert L0RULES.per_cell_prohibition(8, 32) not in R.FORBIDDEN_CLAIMS
+    assert L0RULES.independence_prohibition(64) not in R.FORBIDDEN_CLAIMS
+    assert L0RULES.per_cell_prohibition(28, 112) in R.FORBIDDEN_CLAIMS
+    assert L0RULES.independence_prohibition(224) in R.FORBIDDEN_CLAIMS
+
+
+def test_H1_still_inherits_every_COUNT_FREE_L0_prohibition():
+    count_free = [c for c in L0RULES.FORBIDDEN_CLAIMS
+                  if "8 games per opening" not in c and "the 64 games" not in c]
+    assert len(count_free) == 6
+    assert set(count_free) <= set(R.FORBIDDEN_CLAIMS)
+    assert len(R.FORBIDDEN_CLAIMS) == 10           # 6 inherited + 2 recounted + 2 H1
+
+
+def test_the_frozen_plan_STATES_the_cap_saturation_branch():
+    """[P2] The card said cap terminations are always scored, counted and
+    reported, and stopped there -- but past 112 of 224 the code correctly reports
+    no rate AND NO VERDICT. An artifact that omits the branch describes a
+    protocol the code does not implement."""
+    cs = P.load_h1_plan()["cap_saturation"]
+    assert cs["threshold"] == R.CAP_NO_RATE_THRESHOLD == 112
+    assert cs["outcome"] == "CAP_SATURATED_NO_RATE"
+    assert cs["is_a_void"] is False
+    assert "NO VIABILITY VERDICT" in cs["rule"]
+    assert f"all {R.N_GAMES} games are played" in cs["rule"]
+
+
+def test_the_frozen_plan_carries_H1s_OWN_rules_not_L0s(tasks):
+    plan = P.load_h1_plan()
+    assert "reserved H1 block" in " ".join(plan["abort_rules"])
+    assert "L0 block" not in " ".join(plan["abort_rules"])
+    assert L0RULES.per_cell_prohibition(28, 112) in plan["forbidden_claims"]
+    assert L0RULES.per_cell_prohibition(8, 32) not in plan["forbidden_claims"]
+
+
+def test_the_card_states_the_cap_saturation_branch_too():
+    """The card and the artifact must not disagree about what happens."""
+    card = open("docs/superpowers/2026-08-31-t1j-h1-h2h-viability-card.md").read()
+    assert "CAP_SATURATED_NO_RATE" in card
+    assert "no rate and no\nviability verdict" in card.lower()

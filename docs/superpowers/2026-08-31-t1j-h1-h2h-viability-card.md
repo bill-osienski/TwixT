@@ -172,6 +172,16 @@ the reserved block, or the whole-run cap being exceeded.
 **Cap terminations are RESULTS, not VOIDs** — scored by L0's frozen rule, counted in all 224, and
 reported. L0 recorded zero of them with a maximum of 88 plies against a cap of 280.
 
+🔴 **BUT SATURATION IS A THIRD OUTCOME, AND IT IS NOT A VOID EITHER.** If **more than half** of the
+games — more than 112 of 224 — terminate at the cap, the match still **plays in full** (caps never
+stop it; that would be an early stop), and then reports **`CAP_SATURATED_NO_RATE`: no rate and no
+viability verdict.** A rate computed over mostly-unresolved positions measures the cap, not the
+players, and a verdict read off such a rate would be a decision about the ply limit wearing H1's
+name. This branch is inherited from L0's preregistered rule, applied only *after* all 224 games are
+played, and is stated here because an earlier version of this section said cap terminations are
+"always scored, counted, and reported" without naming the branch where they stop producing a
+verdict.
+
 ## 7. Reporting rules
 
 **PRIMARY, and the only quantity carrying a verdict:** T1j's overall score rate over all 224 games,

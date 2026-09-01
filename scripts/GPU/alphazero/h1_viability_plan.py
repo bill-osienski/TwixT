@@ -59,15 +59,19 @@ SOURCE_PLAN_SHA256 = H.CANONICAL_PLAN_SHA256
 #: registry-only enumeration would have called an overlapping block clean.
 #: 3,661 prior seeds, 0 direct overlaps, 0 derived-stream collisions, own
 #: derivations injective (1,120 = 224 x 5, both colours).
-H1_SEED_BLOCK = (202616000, 202616224)
+H1_SEED_BLOCK = RULES.H1_SEED_BLOCK          # defined in the rules layer:
+                                            # the seed abort rule must be runnable
 
 #: The frozen H1 plan, pinned once written. A loader verifies BOTH the file's
 #: sha256 AND the ordered dimension-projected digest of the tasks inside it --
 #: the file hash alone would accept a correctly-hashed file whose tasks had been
 #: rebuilt from a different design.
+#: v2 after review. `01_h1_plan.json` is SUPERSEDED and deliberately PRESERVED
+#: rather than rewritten -- evidence is create-only, and the earlier artifact is
+#: the record of what the first version froze.
 H1_PLAN_REL = ("docs/superpowers/evidence/2026-08-31-t1j-h1-implementation/"
-               "01_h1_plan.json")
-H1_PLAN_SHA256 = "194c0534c410e6cde50695dbfbc5a862cf4093169c6c4e600e05575716406b45"
+               "06_h1_plan_v2.json")
+H1_PLAN_SHA256 = "1c55fe2c2dcdfc4935d2b64809e2f2de80b2dd98921ee2880e5fcac6e3f81f2e"
 
 COLOUR_ARMS = L0PLAN.COLOUR_ARMS
 

@@ -56,6 +56,20 @@ N_ARMS = L0.N_ARMS
 N_REPS = 14
 N_GAMES = N_OPENINGS * N_ARMS * N_REPS                  # 224
 
+#: PAPER-RESERVED by the H1 card, DELIBERATELY UNREGISTERED: it appears in no
+#: registry tuple, so a run is refused by the seed barrier as well as by the gate.
+#: Defined HERE rather than in the plan module -- L0 keeps its block in the plan,
+#: but H1's abort rule has to be RUNNABLE, and the plan module imports these
+#: rules, so the rules cannot import the block back.
+H1_SEED_BLOCK = (202616000, 202616224)
+
+
+def seed_is_outside_the_reserved_block(seed: Any) -> bool:
+    """The seed abort rule AS A PREDICATE. Prose cannot be run, and a rule that
+    is only prose is a rule nothing checks."""
+    lo, hi = H1_SEED_BLOCK
+    return not lo <= int(seed) < hi
+
 #: THE PREDECLARED VIABILITY THRESHOLD, fixed before any H1 data exists.
 #:
 #: At a 0.75 score rate T1j wins three games in four. Converted ONCE, for sizing
@@ -98,9 +112,13 @@ def may_stop_early(*_args: Any, **_kwargs: Any) -> bool:
 #: distinction D1 destroyed by conflating FAIL with VOID, and the reason the
 #: low-ply qualification had to exist. A loss is data; only the instrument can
 #: VOID.
-H1_ABORT_RULES = L0.L0_ABORT_RULES + (
+#: 🔴 COMPOSED, NOT APPENDED. The first version was `L0.L0_ABORT_RULES + (...)`,
+#: which left L0's "any seed outside the reserved L0 block" active alongside
+#: H1's -- and EVERY VALID H1 SEED IS OUTSIDE THE L0 BLOCK, so the rule set
+#: aborted every game it governed. `L0.abort_rules` takes the block name, so H1
+#: gets exactly one seed rule and it names H1's block.
+H1_ABORT_RULES = L0.abort_rules("H1") + (
     "the whole-run wall-clock cap being exceeded",
-    "any seed outside the reserved H1 block",
 )
 
 #: NOT abort rules, named so they cannot be quietly reintroduced.
@@ -170,7 +188,13 @@ INDEPENDENCE_CAVEAT = (
 #: L0's list inherited WHOLE, plus two H1-specific prohibitions. Kept in committed
 #: code, not only in the card, so a reporting script cannot claim what the protocol
 #: forbids without editing a module.
-FORBIDDEN_CLAIMS = L0.FORBIDDEN_CLAIMS + (
+#: 🔴 NOT `L0.FORBIDDEN_CLAIMS + (...)`. TWO of L0's prohibitions state
+#: DENOMINATORS -- "8 games per opening and 32 per colour arm" and "the 64 games
+#: ARE independent" -- and H1's cells hold 28 and 112 over 224 games. Inheriting
+#: them verbatim would have put false denominators into H1's report, which is
+#: precisely what those prohibitions exist to prevent. `L0.forbidden_claims`
+#: rebuilds the list for THIS design, in the order L0 froze it.
+FORBIDDEN_CLAIMS = L0.forbidden_claims(N_GAMES, N_OPENINGS, N_ARMS) + (
     "any pooling of H1 with L0, or any combined rate across the two matches; they "
     "differ in n, were preregistered separately, and pooling after seeing both is a "
     "choice made with the data in hand",

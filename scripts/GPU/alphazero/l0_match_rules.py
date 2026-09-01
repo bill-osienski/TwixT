@@ -134,16 +134,28 @@ CAP_NO_RATE_THRESHOLD = N_GAMES // 2            # 32; "more than half" is > this
 #: contains a STATISTICAL abort (more than half of an endpoint cap-terminating
 #: makes it INCOMPLETE) which contradicts L0's no-early-stop rule and would give a
 #: runner two conflicting authorities. Everything below is an INTEGRITY failure.
-L0_ABORT_RULES = (
-    "any per-ply state divergence between the two engines",
-    "any T1j query that does not complete its requested depth",
-    "any illegal move, or the null sentinel, from either side",
-    "any postcondition failure: a Window/Frame, a non-headless jvm, a mutated host "
-    "preference store, or an unauthorized reflective access",
-    "any artifact identity mismatch: jar, JDK component, or checkpoint sha",
-    "any seed outside the reserved L0 block, or any seed used twice",
-    "any failure to write or fsync a durable record",
-)
+def abort_rules(block_name: str) -> tuple:
+    """The instrument-failure rules for a match on ITS OWN reserved seed block.
+
+    🔴 THE SEED RULE NAMES A BLOCK, SO IT CANNOT BE INHERITED. H1 first appended
+    its own seed rule to this list, which left BOTH active -- and every valid H1
+    seed is outside the L0 block, so the composed set aborted every game it
+    governed. Composed rather than appended: each match gets exactly one seed
+    rule, naming its own block, in the position the rule has always occupied.
+    """
+    return (
+        "any per-ply state divergence between the two engines",
+        "any T1j query that does not complete its requested depth",
+        "any illegal move, or the null sentinel, from either side",
+        "any postcondition failure: a Window/Frame, a non-headless jvm, a mutated host "
+        "preference store, or an unauthorized reflective access",
+        "any artifact identity mismatch: jar, JDK component, or checkpoint sha",
+        f"any seed outside the reserved {block_name} block, or any seed used twice",
+        "any failure to write or fsync a durable record",
+    )
+
+
+L0_ABORT_RULES = abort_rules("L0")
 
 #: NOT an abort rule, and named here so it cannot be quietly reintroduced.
 NOT_ABORT_RULES = (
@@ -587,18 +599,46 @@ INDEPENDENCE_CAVEAT = (
 
 #: Stated in the rules, not only in the card, so a reporting script cannot claim
 #: what the protocol forbids without editing committed code.
-FORBIDDEN_CLAIMS = (
+def per_cell_prohibition(per_opening: int, per_arm: int) -> str:
+    """The per-cell prohibition STATES ITS DENOMINATORS, so it is a function.
+
+    🔴 Inherited verbatim by H1 it read "8 games per opening and 32 per colour
+    arm" over a 224-game match whose cells hold 28 and 112. A prohibition that
+    states a false denominator puts that denominator in the report -- which is
+    the one thing the prohibition exists to prevent.
+    """
+    return (f"any per-cell comparison presented as a finding: {per_opening} games per "
+            f"opening and {per_arm} per colour arm carry no interval here and were not "
+            f"preregistered as tests")
+
+
+def independence_prohibition(n_games: int) -> str:
+    """Also count-bearing, and missed on the first pass at the one above."""
+    return (f"any statement that the {n_games} games ARE independent, or that "
+            f"independence was verified; distinct streams rule out reuse, not dependence")
+
+
+#: The prohibitions that carry no denominator and are inheritable as they stand.
+COUNT_FREE_FORBIDDEN_CLAIMS = (
     "any Elo figure, or any conversion of this rate into one",
     "any absolute strength placement -- T1j is uncalibrated, so this is an "
     "ORDERING against calib020_0001 in this stack, not a placement",
     "any generalisation beyond these 8 openings or beyond mdPly 6",
-    "any per-cell comparison presented as a finding: 8 games per opening and 32 "
-    "per colour arm carry no interval here and were not preregistered as tests",
     "any claim that a wider or narrower interval would follow from more games "
     "not actually played",
     "any description of the Wilson interval as conservative, exact or guaranteed; "
     "it is nominal, and hoeffding_interval is the primary",
     "any re-run, pooled or otherwise, of this design on these seeds",
-    "any statement that the 64 games ARE independent, or that independence was "
-    "verified; distinct streams rule out reuse, not dependence",
 )
+
+
+def forbidden_claims(n_games: int, n_openings: int, n_arms: int) -> tuple:
+    """The full list for a design, in the order L0 froze it."""
+    a, b, c, d, e, f = COUNT_FREE_FORBIDDEN_CLAIMS
+    return (a, b, c,
+            per_cell_prohibition(n_games // n_openings, n_games // n_arms),
+            d, e, f,
+            independence_prohibition(n_games))
+
+
+FORBIDDEN_CLAIMS = forbidden_claims(N_GAMES, N_OPENINGS, N_ARMS)
