@@ -52,7 +52,20 @@ SOURCE_PLAN_REL = L0PLAN.SOURCE_PLAN_REL
 SOURCE_PLAN_SHA256 = H.CANONICAL_PLAN_SHA256
 
 #: PAPER-RESERVED by the H1 card, DELIBERATELY UNREGISTERED. It appears in no
-#: registry tuple, so a run is refused by the seed barrier as well as by the gate.
+#: registry tuple.
+#:
+#: 🔴 CORRECTED CLAIM. This comment previously said "so a run is refused by the
+#: seed barrier as well as by the gate". BOTH OF THOSE BARRIERS ARE ABSENT: H1
+#: has no runner, so it has no gate, and nothing checks this block against
+#: ACCOUNTED_SEED_INTERVALS -- `validate_task_executable` asks about consumed,
+#: exposed and retired seeds, NOT accounted ones, and ACCEPTS an unregistered
+#: H1 seed today. The protection was written as present fact while being purely
+#: prospective, which is the exact defect class this workstream tracks.
+#:
+#: What is TRUE today: there is nothing to run, so there is nothing to refuse.
+#: An H1 RUNNER PHASE MUST ADD BOTH -- a gate defaulting to False and a
+#: registration precondition modelled on `d1_probe._check_seed_registration` --
+#: and neither exists until it does.
 #:
 #: 🔴 Proved disjoint against the registries PLUS `d1_selection.SEED_INTERVAL`,
 #: which is in NO registry by design -- reserved-on-paper is still TAKEN, and a

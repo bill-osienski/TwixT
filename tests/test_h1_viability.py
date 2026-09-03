@@ -516,3 +516,28 @@ def test_NO_L0_ONLY_WORDING_REACHES_THE_FROZEN_H1_ARTIFACT():
     assert any("CAP_SATURATED_NO_RATE" in r for r in plan["not_abort_rules"])
     # the legitimate mention, still present
     assert any(c.startswith("any pooling of H1 with L0") for c in plan["forbidden_claims"])
+
+
+def test_H1_HAS_NO_SEED_BARRIER_AND_NO_GATE_YET_and_says_so():
+    """🔴 Pins the CORRECTED claim, and fails the day a runner adds either.
+
+    The comment on H1_SEED_BLOCK used to say an unregistered block means "a run
+    is refused by the seed barrier as well as by the gate". Neither exists: H1
+    has no runner and therefore no gate, and `validate_task_executable` asks
+    about consumed/exposed/retired seeds -- NOT accounted ones -- so it accepts
+    an unregistered H1 seed. A protection written as present fact while being
+    purely prospective is the defect this workstream keeps finding.
+
+    When the runner phase adds the gate and the registration precondition, this
+    test must be REPLACED by one asserting they bind -- deliberately, not by the
+    claim quietly becoming true.
+    """
+    import scripts.GPU.alphazero.h1_viability_rules as _r
+    import scripts.GPU.alphazero.h1_viability_plan as _p
+    assert not any(n.endswith("_AUTHORIZED") for n in vars(_r)), "a gate appeared"
+    assert not any(n.endswith("_AUTHORIZED") for n in vars(_p)), "a gate appeared"
+    assert not hasattr(_p, "_check_seed_registration")
+    # and the reason the registry alone does not refuse it:
+    task = P.build_tasks(P.load_source_plan())[0]
+    assert REF.seed_is_accounted(task["seed"]) is False
+    REF.validate_task_executable(task)                 # accepted, today
