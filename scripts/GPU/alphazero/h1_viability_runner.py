@@ -157,6 +157,30 @@ def check_seed_registration() -> None:
             f"registry at runtime.")
 
 
+def check_output_paths(results_path: str, trace_path: Optional[str] = None) -> None:
+    """BARRIER 3, in kind if not in name: the outputs must not already exist.
+
+    🔴 THE EXCEPTION AND THE DURABLE VERDICT HAVE TO AGREE. Recorder construction
+    used to happen after `run_start` was traced, so a results path that already
+    existed wrote a VOID trace and then re-raised `H.HarnessError` unchanged: the
+    file said the instrument failed mid-run while the exception said the run was
+    never well formed. Both cannot be true.
+
+    A path that already exists is a PRECONDITION failure -- nothing has run, no
+    game was played, no seed drawn, no instrument engaged. It belongs with the
+    gate and the registration check, refusing BEFORE any output exists, and it
+    writes no trace at all. What remains inside the protected block is the
+    genuinely mid-run recorder failure -- a full disk, a revoked permission --
+    which IS a VOID and is translated to say so.
+    """
+    for label, path in (("results", results_path), ("trace", trace_path)):
+        if path and os.path.exists(path):
+            raise H1Error(
+                f"the {label} path already exists: {path}. A run writes NEW files; "
+                f"appending would merge two runs, and overwriting would destroy the "
+                f"record of one. Nothing has been written and no trace was opened.")
+
+
 # ─────────────────────────────── the VOID trace ──────────────────────────────
 
 TRACE_SCHEMA = "h1-void-trace/1"
@@ -244,21 +268,32 @@ def _verify_match_schedule(tasks: Sequence[Dict[str, Any]],
 
 
 class _PlyCountingRecorder:
-    """The qualified Recorder, plus the last ply it saw for the current task.
+    """The qualified Recorder, plus the ply the run is ATTEMPTING.
 
     Needed because the card requires a VOID to NAME THE POSITION IT DIED ON, and
     `play_task` reports the ply count only in its OUTCOME -- which a VOID never
-    produces. Counting the durable `ply` records is the only place that number
-    exists when the game did not finish. Delegation, not a subclass: nothing
-    about the recorder's own behaviour changes.
+    produces.
+
+    🔴 COUNTING `ply` RECORDS ALONE WAS WRONG IN BOTH DIRECTIONS:
+      * a failure on the FIRST searched move recorded `ply=None`, because no
+        `ply` record exists yet -- only `opening_bound`;
+      * a BINDER failure after a move applies happens BEFORE that move's `ply`
+        record is emitted, so it reported the PREVIOUS ply.
+    `opening_bound` is now read as well, and `note_bind` is called from a binder
+    wrapper BEFORE the real binder runs, so the ply on record is the one being
+    attempted rather than the last one that succeeded.
     """
 
     def __init__(self, path: str):
         self._rec = H.Recorder(path)
         self.last_ply: Optional[int] = None
 
+    def note_bind(self, ply: Optional[int]) -> None:
+        """The ply about to be bound. Called before the binder can fail."""
+        self.last_ply = ply
+
     def emit(self, record: Dict[str, Any]) -> None:
-        if record.get("record_type") == "ply":
+        if record.get("record_type") in ("ply", "opening_bound"):
             self.last_ply = record.get("ply")
         self._rec.emit(record)
 
@@ -292,17 +327,41 @@ def _void_diagnostic(task: Optional[Dict[str, Any]], index: Optional[int],
         "ply": ply,
         "error_type": type(error).__name__,
     }
-    # THE HELPER'S OWN WORDS, BOUNDED. D1's VOID discarded the transcript and the
-    # failure was opaque; the excerpt is capped so a diagnostic cannot become a
-    # channel for the measurement the trace refuses to carry.
-    stdout = getattr(error, "stdout", None)
-    d["helper_excerpt"] = A.helper_failure_excerpt(stdout) if stdout else None
+    d["helper_excerpt"] = _bounded_excerpt(error)
     return d
+
+
+def _bounded_excerpt(error: BaseException) -> Optional[str]:
+    """THE HELPER'S OWN WORDS, BOUNDED, however the failure was wrapped.
+
+    🔴 READING `error.stdout` ALONE PRODUCED `null` FOR REAL FAILURES. Only an
+    adapter parse or timeout error carries `stdout`; a postcondition failure, a
+    binder divergence or an illegal move arrives as `H.AbortError`, which has no
+    such attribute and puts the detail in `.message`. The earlier test made
+    `play_task` raise `HelperOutputError` directly and so never met the wrapper
+    that real failures pass through.
+
+    Three sources, in order of fidelity, every one capped: the exception's own
+    stdout; the stdout of anything in its `__cause__`/`__context__` chain; and
+    finally the AbortError's own message, which is where the integration layer
+    puts the POSTCOND line, the divergence or the rejected move.
+    """
+    seen, err = set(), error
+    while err is not None and id(err) not in seen:
+        seen.add(id(err))
+        stdout = getattr(err, "stdout", None)
+        if stdout:
+            return A.helper_failure_excerpt(stdout)
+        err = err.__cause__ or err.__context__
+    message = getattr(error, "message", None) or str(error)
+    if not message:
+        return None
+    return message[:A.FAILURE_EXCERPT_CHARS]
 
 
 # ─────────────────────── the production game setup, dormant ──────────────────
 
-def _production_setup(results_path: str) -> Callable[[], Dict[str, Any]]:
+def _production_setup(results_path: str, deadline: "D1.Deadline") -> Callable[[], Dict[str, Any]]:
     """Everything effectful, built EXACTLY as the qualified commands build it.
 
     🔴 THIS DID NOT EXIST, AND ITS ABSENCE WAS INVISIBLE. On the real path
@@ -332,9 +391,12 @@ def _production_setup(results_path: str) -> Callable[[], Dict[str, Any]]:
         java = os.path.join(tc["jdk_home"], "bin", "java")
         paths = D1.T1jPaths(java=java, jar=tc["jar"], classes=classes_dir,
                             ply_cap=RULES.PLY_CAP)
-        # The whole-run clock is already running; compilation is inside it.
-        artifacts = D1._default_compile(D1.Deadline(RUN_DEADLINE_S).start(),
-                                        paths=paths)
+        # 🔴 THE RUN'S OWN DEADLINE OBJECT, not a new one. The first version
+        # built `D1.Deadline(RUN_DEADLINE_S).start()` here, so compilation's
+        # cooperative checks measured from a DIFFERENT ORIGIN than the alarm and
+        # the run header -- reviving precisely the two-clock defect D1 was
+        # corrected for. One deadline, one origin, one auditable window.
+        artifacts = D1._default_compile(deadline, paths=paths)
         runtime = INT.T1jRuntime(java=java, jar=tc["jar"], classes=classes_dir,
                                  ply_cap=RULES.PLY_CAP,
                                  timeout_s=PER_CALL_TIMEOUT_S)
@@ -350,8 +412,14 @@ def _production_setup(results_path: str) -> Callable[[], Dict[str, Any]]:
         return {
             "state_factory": INT.make_state_factory(openings, ctx),
             "binder": INT.make_binder(runtime, ctx),            # the E3b binder
+            # 🔴 `t1j_timeout_s` IS A SEPARATE ARGUMENT AND DEFAULTS TO None.
+            # `T1jRuntime.timeout_s` bounds REPLAY only; the agent's per-QUERY
+            # timeout comes from here, and omitting it left the agent calling
+            # `query(..., timeout_s=None)` -- an unbounded wait -- while the
+            # runtime truthfully reported 120. Two timeouts, one supplied.
             "agent_factory": INT.make_agent_factory(
                 runtime=runtime, ctx=ctx, evaluator=evaluator,
+                t1j_timeout_s=PER_CALL_TIMEOUT_S,
                 reference_build=lambda task, evaluator: (
                     SCREEN_CMD._default_build_agent(task, evaluator=evaluator))),
             "evaluator": evaluator,
@@ -378,7 +446,7 @@ def run(results_path: str, *, mode: str = "qualify",
     # NOTE what is NOT here: no rejection of MATCH_MODE. The gate below refuses
     # it, and the gate is the thing a reviewer can see the state of.
     return _run(results_path, mode=mode, trace_path=trace_path,
-                _setup=_production_setup(results_path) if mode == MATCH_MODE else None)
+                _setup_factory=_production_setup if mode == MATCH_MODE else None)
 
 
 def _run(results_path: str, *, mode: str, trace_path: Optional[str] = None,
@@ -391,6 +459,7 @@ def _run(results_path: str, *, mode: str, trace_path: Optional[str] = None,
          _cleanup: Optional[Callable] = None,
          _identity: Optional[Dict[str, Any]] = None,
          _setup: Optional[Callable] = None,
+         _setup_factory: Optional[Callable] = None,
          _deadline: Optional[D1.Deadline] = None,
          _supervise: bool = True,
          _ply_cap: int = RULES.PLY_CAP,
@@ -406,6 +475,9 @@ def _run(results_path: str, *, mode: str, trace_path: Optional[str] = None,
     if match:
         check_gate()
         check_seed_registration()
+    # Authorization first, then the outputs: refuse an unauthorized run before
+    # inspecting the filesystem at all.
+    check_output_paths(results_path, trace_path)
 
     # MATCH MODE LOADS ONLY THE PINNED PLAN. `_plan_path` is a test seam and is
     # refused on the match path, because a supplied plan is a supplied design.
@@ -430,6 +502,10 @@ def _run(results_path: str, *, mode: str, trace_path: Optional[str] = None,
     if not deadline.started:
         deadline.start()
 
+    if _setup_factory is not None:
+        # BOUND TO THE CLOCK THAT IS ALREADY RUNNING, never to a fresh one.
+        _setup = _setup_factory(results_path, deadline)
+
     binder = _binder or H._refuse_binder
     cleanup = _cleanup or H._default_cleanup
     results: List[Dict[str, Any]] = []
@@ -440,8 +516,23 @@ def _run(results_path: str, *, mode: str, trace_path: Optional[str] = None,
     supervisor = D1._supervisor(deadline) if _supervise else contextlib.nullcontext()
     with _trace_file(trace_path) as tfh, supervisor:
         _trace(tfh, event="run_start", schema=TRACE_SCHEMA, n_games=len(tasks))
-        rec = _PlyCountingRecorder(results_path)
+        # 🔴 CONSTRUCTED INSIDE THE PROTECTED BLOCK. It used to be built between
+        # `run_start` and the `try`, so a results path that already existed left
+        # a trace holding `run_start` AND NOTHING ELSE -- no `run_end`, no
+        # diagnostic -- and the raw HarnessError escaped unclassified. The one
+        # failure that destroys the results file is the one the trace exists for.
+        rec = None
         try:
+            try:
+                rec = _PlyCountingRecorder(results_path)
+            except H.HarnessError as e:
+                # Past the preflight, so this is a full disk or a revoked
+                # permission -- the instrument failing mid-run. VOID, and the
+                # exception now says the same thing the trace does.
+                raise H1VoidError(
+                    f"the results file could not be created: {e} The H1 match is "
+                    f"VOID: no viability report is produced and the seed block "
+                    f"retires whole.") from None
             rec.emit({"record_type": "run_header", "mode": mode,
                       "harness": "h1_viability_runner",
                       "plan_sha256": PLAN.H1_PLAN_SHA256,
@@ -474,6 +565,16 @@ def _run(results_path: str, *, mode: str, trace_path: Optional[str] = None,
                 cleanup = collaborators.get("cleanup", cleanup)
                 rec.emit({"record_type": "setup_complete",
                           "artifacts": collaborators.get("artifacts", {})})
+
+            # THE BINDER IS WRAPPED HERE, after setup has supplied the real one.
+            # `note_bind` runs BEFORE the binder can fail, so a binder failure --
+            # which happens after a move applies but before that move's `ply`
+            # record -- names the ply it was attempting, not the last that worked.
+            _real_binder = binder
+
+            def binder(task, state, ply, move=None, _b=_real_binder):   # noqa: F811
+                rec.note_bind(ply)
+                return _b(task, state, ply, move)
 
             for index, task in enumerate(tasks):
                 current = (index, task)
@@ -561,21 +662,25 @@ def _run(results_path: str, *, mode: str, trace_path: Optional[str] = None,
                 e = H1VoidError(f"{e} The H1 match is VOID: no viability report is "
                                 f"produced and the seed block retires whole.")
             idx, tsk = (current if current is not None else (None, None))
-            rec.emit_terminal({"record_type": "void_diagnostic",
-                               **_void_diagnostic(tsk, idx, rec.last_ply, e),
-                               "games_completed": completed,
-                               "tasks_played": len(results)})
-            if isinstance(e, H.AbortError):
-                note = rec.emit_terminal({"record_type": "abort", "phase": e.phase,
-                                          "message": e.message,
-                                          "tasks_played": len(results)})
-                if note:
-                    import sys
-                    print(f"WARNING: could not record the abort ({note})",
-                          file=sys.stderr)
+            # `rec` is None only when the recorder itself could not be created --
+            # exactly the case the trace above is the sole record of.
+            if rec is not None:
+                rec.emit_terminal({"record_type": "void_diagnostic",
+                                   **_void_diagnostic(tsk, idx, rec.last_ply, e),
+                                   "games_completed": completed,
+                                   "tasks_played": len(results)})
+                if isinstance(e, H.AbortError):
+                    note = rec.emit_terminal({"record_type": "abort",
+                                              "phase": e.phase, "message": e.message,
+                                              "tasks_played": len(results)})
+                    if note:
+                        import sys
+                        print(f"WARNING: could not record the abort ({note})",
+                              file=sys.stderr)
             raise e from None
         finally:
-            rec.close()
+            if rec is not None:
+                rec.close()
 
 
 def _check_deadline(deadline, where: str) -> None:

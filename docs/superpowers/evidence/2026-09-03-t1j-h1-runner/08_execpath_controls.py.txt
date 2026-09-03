@@ -1,0 +1,1134 @@
+"""Injected-defect controls for the D1 INTEGRATION work.
+
+For each defect: apply it to the SOURCE, run the test that must catch it, and
+require that test to FAIL. A control that never rejects has not been shown to
+bind, and a control whose anchor no longer matches has NOT RUN -- reported
+loudly rather than tallied as a miss, because a stale control proves nothing.
+
+Restoration happens in a `finally`, over EVERY touched file, and __pycache__ is
+purged with PYTHONDONTWRITEBYTECODE=1 so a same-length edit cannot leave a
+stale .pyc that makes the test import the OLD module and pass vacuously.
+
+NOTHING HERE EXECUTES D1: the gates stay False, the tests it runs mock the
+process boundary and the evaluator, and no registry is edited.
+"""
+import os
+import pathlib
+import shutil
+import subprocess
+import sys
+
+PROBE = "scripts/GPU/alphazero/d1_probe.py"
+SEL = "scripts/GPU/alphazero/d1_selection.py"
+G3 = "scripts/GPU/alphazero/twixtbot_g3_reference.py"
+ADAPTER = "scripts/GPU/alphazero/t1j_adapter.py"
+INTEG = "scripts/GPU/alphazero/e4_screen_integration.py"
+D0 = "scripts/GPU/alphazero/d0_postmortem.py"
+REF_SRC = "scripts/GPU/alphazero/e4_screen_reference.py"
+LP = "scripts/GPU/alphazero/lowply_qualification.py"
+H1R = "scripts/GPU/alphazero/h1_viability_rules.py"
+H1RUN = "scripts/GPU/alphazero/h1_viability_runner.py"
+VTR = "scripts/GPU/alphazero/void_trace.py"
+H1P = "scripts/GPU/alphazero/h1_viability_plan.py"
+L0R = "scripts/GPU/alphazero/l0_match_rules.py"
+
+T_PROBE = "tests/test_d1_probe.py"
+T_SEL = "tests/test_d1_selection.py"
+T_INC = "tests/test_d1_incumbent.py"
+T_ADP = "tests/test_t1j_adapter.py"
+T_INTEG = "tests/test_e4_screen_integration.py"
+T_D0 = "tests/test_d0_postmortem.py"
+T_LP = "tests/test_lowply_qualification.py"
+T_H1 = "tests/test_h1_viability.py"
+T_H1R = "tests/test_h1_runner.py"
+
+# (label, file, anchor, replacement, test node)
+DEFECTS = [
+    # ---------------------------------------------- 12.5 seed registration
+    ("registration check disabled", PROBE,
+     "    if missing:\n        raise D1Error(\n"
+     '            f"the D1 diagnostic seed block',
+     "    if False:\n        raise D1Error(\n"
+     '            f"the D1 diagnostic seed block',
+     f"{T_PROBE}::test_an_unregistered_block_is_refused"),
+    ("registration check looks only at the first seed", PROBE,
+     "    missing = [s for s in range(lo, hi) if not REF.seed_is_accounted(s)]",
+     "    missing = [s for s in [lo] if not REF.seed_is_accounted(s)]",
+     f"{T_PROBE}::test_a_PARTLY_registered_block_is_still_refused"),
+    ("the D1 seed block un-registered from ACCOUNTED", REF_SRC,
+     "    (202614000, 202614227),          # D1 SAME-POSITION INTERROGATION. 227 seeds,",
+     "    # (202614000, 202614227),        # D1 SAME-POSITION INTERROGATION. 227 seeds,",
+     f"{T_PROBE}::test_the_seed_interval_matches_the_plan_and_is_now_ACCOUNTED_and_unspent"),
+    ("the D1 seed block marked EXPOSED as well as accounted", REF_SRC,
+     "EXPOSED_SEED_INTERVALS = (\n",
+     "EXPOSED_SEED_INTERVALS = (\n    (202614000, 202614227),\n",
+     f"{T_PROBE}::test_the_seed_interval_matches_the_plan_and_is_now_ACCOUNTED_and_unspent"),
+
+    # -------------------------------- the real, toolchain-backed compile step
+    ("compile step skips toolchain verification", PROBE,
+     "    tc = TC.verified_paths()",
+     "    tc = {'root': 'x', 'source': 'x', 'verified': 0, 'jar': paths.jar,\n"
+     "          'jdk_home': os.path.dirname(os.path.dirname(paths.java))}",
+     f"{T_PROBE}::test_an_unverifiable_toolchain_stops_the_compile"),
+    ("compile step accepts a jar that is not the verified one", PROBE,
+     "    if os.path.realpath(paths.jar) != os.path.realpath(tc[\"jar\"]):",
+     "    if False:",
+     f"{T_PROBE}::test_a_jar_that_is_not_the_verified_one_is_refused"),
+    ("compile step accepts a java outside the verified JDK", PROBE,
+     "    if os.path.realpath(paths.java) != os.path.realpath(java):",
+     "    if False:",
+     f"{T_PROBE}::test_a_java_binary_outside_the_verified_jdk_is_refused"),
+    ("compile step reuses an existing class directory", PROBE,
+     "    if os.path.exists(paths.classes):",
+     "    if False:",
+     f"{T_PROBE}::test_an_existing_class_directory_is_refused"),
+    ("compile step ignores a failing javac", PROBE,
+     "    if result.returncode != 0:",
+     "    if False:",
+     f"{T_PROBE}::test_a_failing_javac_is_a_VOID"),
+    ("compile step builds the E3b set, not the query path", PROBE,
+     "paths.classes, sources=A.PREFLIGHT_SOURCES)",
+     "paths.classes, sources=A.JAVA_SOURCES)",
+     f"{T_PROBE}::test_the_compile_step_builds_the_PREFLIGHT_sources_d1_actually_queries"),
+    ("compile step skips the E4 jar pin", PROBE,
+     "    if jar_sha != SCREEN_CMD.JAR_SHA256:",
+     "    if False:",
+     f"{T_PROBE}::test_a_jar_that_disagrees_with_E4s_PIN_is_refused"),
+
+    # ------------------------------------------- 5.3 the full T1j-side capture
+    ("postcondition surface never read", PROBE,
+     '            post = INT.check_postcond(out, expected_refl=INT.QUERY_REFL_N,\n'
+     '                                      where=where, phase="query")',
+     "            post = A.PostCond(True, 0, 0, True, True, True, INT.QUERY_REFL_N, 0)",
+     f"{T_PROBE}::test_a_reply_with_no_postcondition_line_is_VOID"),
+    ("reflection COUNT accepted as whatever came back", PROBE,
+     "expected_refl=INT.QUERY_REFL_N,",
+     "expected_refl=A.parse_postconds(out)[0].refl_n,",
+     f"{T_PROBE}::test_a_wrong_reflection_COUNT_is_VOID"),
+    ("searched position never re-bound", PROBE,
+     "        searched = _searched_state(dumps[0], state, moves, where=where)",
+     "        searched = {'ply': dumps[0].ply, 'next_player': dumps[0].next_player,\n"
+     "                    'term_y': False, 'term_x': False, 'n_pegs': 0,\n"
+     "                    'n_bridges': 0, 'n_legal': 0, 'history_len': 0}",
+     f"{T_PROBE}::test_a_SEARCH_jvm_that_rebuilt_a_different_position_is_VOID"),
+    ("more than one searched dump accepted", PROBE,
+     "        if len(dumps) != 1:",
+     "        if False:",
+     f"{T_PROBE}::test_more_than_one_searched_dump_is_VOID"),
+    ("a move illegal in OUR engine accepted", PROBE,
+     "        if recs[0].move not in set(state.legal_moves()):",
+     "        if False:",
+     f"{T_PROBE}::test_a_move_illegal_in_OUR_engine_is_VOID"),
+    ("depth agreement not recorded", PROBE,
+     '                    "depths_agree": len(set(moves_by_depth.values())) == 1})',
+     '                    "depths_agree": True})',
+     f"{T_PROBE}::test_the_position_record_says_the_depths_DISAGREE_when_they_do"),
+
+    # --------------- the diagnostic repair the 2026-08-28 VOID demanded
+    ("the helper's stdout discarded again on a non-zero query exit", PROBE,
+     '                f"T1j reported: {A.helper_failure_excerpt(out)}")',
+     '                f"")',
+     f"{T_PROBE}::test_a_nonzero_exit_carries_the_helpers_OWN_failure_lines"),
+    ("the failure excerpt unbounded", ADAPTER,
+     "FAILURE_EXCERPT_CHARS = 800", "FAILURE_EXCERPT_CHARS = 100000",
+     f"{T_PROBE}::test_the_CHARACTER_cap_truncates_one_enormous_failure_line"),
+    ("the excerpt line cap removed", ADAPTER,
+     "FAILURE_EXCERPT_LINES = 12", "FAILURE_EXCERPT_LINES = 100000",
+     f"{T_PROBE}::test_the_LINE_cap_drops_the_tail_of_a_long_verdict_list"),
+    ("the excerpt falls back to silence", ADAPTER,
+     "    if not lines:\n        lines = [l.strip() for l in out.splitlines()",
+     "    if False:\n        lines = [l.strip() for l in out.splitlines()",
+     f"{T_PROBE}::test_output_with_NO_verdict_line_falls_back_to_the_tail_not_silence"),
+    ("the label drops the cohort", PROBE,
+     '            f"[{pos.get(\'signature\') or \'?\'}/{pos.get(\'role\') or \'?\'}] "',
+     '            f""',
+     f"{T_PROBE}::test_the_label_names_all_four_fields"),
+    ("the label drops the prefix digest", PROBE,
+     '            f"digest={digest[:16] or \'?\'}")',
+     '            f"")',
+     f"{T_PROBE}::test_the_label_names_all_four_fields"),
+    ("the run loop stops labelling its refusals", PROBE,
+     "        where = position_label(pos)",
+     '        where = f"{pos.get(\'task_id\')}"',
+     f"{T_PROBE}::test_run_stage_refusals_identify_the_position_too"),
+    ("the probe refusal loses the position again", PROBE,
+     '        where = f"{label}: depth {depth} invocation {i}"',
+     '        where = f"depth {depth} invocation {i}"',
+     f"{T_PROBE}::test_every_probe_refusal_identifies_the_position"),
+
+    ("the BINDER discards the transcript on a non-zero replay exit", INTEG,
+     '                             f"{task[\'task_id\']} {where}: T1j replay exit {rc}. "\n'
+     '                             f"T1j reported: {A.helper_failure_excerpt(out)}")',
+     '                             f"{task[\'task_id\']} {where}: T1j replay exit {rc}.")',
+     f"{T_INTEG}::test_a_nonzero_replay_exit_carries_the_helpers_OWN_failure_lines"),
+    ("the AGENT discards the transcript on a non-zero query exit", INTEG,
+     '                             f"{where}: exit {rc} with {len(recs)} record(s). "\n'
+     '                             f"T1j reported: {A.helper_failure_excerpt(out)}")',
+     '                             f"{where}: exit {rc} with {len(recs)} record(s).")',
+     f"{T_INTEG}::test_a_nonzero_query_exit_carries_the_helpers_OWN_failure_lines"),
+    ("the binder's excerpt carries the dump body", ADAPTER,
+     '    lines = [l.strip() for l in out.splitlines() if l.startswith(_VERDICT_PREFIXES)]',
+     '    lines = [l.strip() for l in out.splitlines() if l.strip()]',
+     f"{T_INTEG}::test_the_replay_failure_excerpt_is_bounded_and_drops_the_dump_body"),
+
+    # ------------------------------------------------ the run manifest (5.4)
+    ("manifest drops the cohort label", SEL,
+     '        entry = {field: row[field] for field in MANIFEST_FIELDS}',
+     '        entry = {field: row[field] for field in MANIFEST_FIELDS\n'
+     '                 if field not in ("signature", "role")}',
+     f"{T_SEL}::test_the_run_manifest_carries_what_the_probe_and_5_4_both_need"),
+    ("registration checked only after the clock starts", PROBE,
+     "    _check_seed_registration()\n    deadline.start()",
+     "    deadline.start()\n    _check_seed_registration()",
+     f"{T_PROBE}::test_an_unregistered_block_arms_no_timer_at_all"),
+    ("registration checked only after the supervisor is armed", PROBE,
+     "    _check_seed_registration()\n    deadline.start()\n    with _supervisor(deadline):\n"
+     "        return _run_stages(",
+     "    deadline.start()\n    with _supervisor(deadline):\n"
+     "        _check_seed_registration()\n        return _run_stages(",
+     f"{T_PROBE}::test_an_unregistered_block_arms_no_timer_at_all"),
+    ("registration no longer stops the run before compilation", PROBE,
+     "    _check_seed_registration()\n    deadline.start()",
+     "    deadline.start()",
+     f"{T_PROBE}::test_an_unregistered_block_stops_the_run_before_anything_is_compiled"),
+
+    # ------------------------- ONE deadline, ONE origin: the supervisor's arm
+    ("supervisor armed from limit_s instead of the remaining time", PROBE,
+     "    signal.setitimer(signal.ITIMER_REAL, left)",
+     "    signal.setitimer(signal.ITIMER_REAL, deadline.limit_s)",
+     f"{T_PROBE}::test_the_supervisor_arms_from_the_started_deadlines_REMAINING_time"),
+    ("supervisor arms from a deadline that was never started", PROBE,
+     "    if not deadline.started:",
+     "    if False:",
+     f"{T_PROBE}::test_the_supervisor_refuses_a_deadline_that_was_never_started"),
+    ("supervisor arms a DISABLED timer when nothing remains", PROBE,
+     "    left = deadline.remaining()\n    if left <= 0:",
+     "    left = deadline.remaining()\n    if False:",
+     f"{T_PROBE}::test_the_supervisor_refuses_when_no_time_remains"),
+    ("remaining() ignores elapsed time, so the window restarts", PROBE,
+     "        return self.limit_s - self.elapsed()",
+     "        return self.limit_s",
+     f"{T_PROBE}::test_the_supervisor_arms_from_the_started_deadlines_REMAINING_time"),
+
+    # ------------------------------------------- 12.7 prefix identity / E3b
+    ("digest re-check disabled", PROBE,
+     '    got = SEL.canonical_digest(state)\n    if got != pos.get("digest"):',
+     '    got = SEL.canonical_digest(state)\n    if False:',
+     f"{T_PROBE}::test_a_prefix_that_does_not_replay_to_its_recorded_digest_voids"),
+    ("prefix legality check disabled", PROBE,
+     "        if move not in set(state.legal_moves()):",
+     "        if False:",
+     f"{T_PROBE}::test_an_illegal_move_in_a_retained_prefix_voids"),
+    ("E3b binder never called", PROBE,
+     "        _bind_prefix(binder, ctx, task_id=where, state=state, prefix=prefix)",
+     "        pass",
+     f"{T_PROBE}::test_every_retained_prefix_is_replayed_through_the_e3b_binder"),
+    ("binder AbortError not translated to VOID", PROBE,
+     '    except AbortError as e:\n        raise D1VoidError(\n'
+     '            f"{task_id}: the E3b binder refused',
+     '    except ZeroDivisionError as e:\n        raise D1VoidError(\n'
+     '            f"{task_id}: the E3b binder refused',
+     f"{T_PROBE}::test_a_binder_divergence_becomes_a_VOID_not_an_unexpected_error"),
+    ("binder replay timeout not translated to VOID", PROBE,
+     "    except subprocess.TimeoutExpired as e:\n        # The binder's replay",
+     "    except ZeroDivisionError as e:\n        # The binder's replay",
+     f"{T_PROBE}::test_a_forced_query_timeout_is_void_and_writes_no_report"),
+    ("ply_cap not carried to the runtime", PROBE,
+     "ply_cap=paths.ply_cap, timeout_s=PER_QUERY_TIMEOUT_S)",
+     "ply_cap=999, timeout_s=PER_QUERY_TIMEOUT_S)",
+     f"{T_PROBE}::test_the_binder_call_carries_the_frozen_timeout_and_the_explicit_ply_cap"),
+    ("replay timeout widened at the runtime", PROBE,
+     "ply_cap=paths.ply_cap, timeout_s=PER_QUERY_TIMEOUT_S)",
+     "ply_cap=paths.ply_cap, timeout_s=99999)",
+     f"{T_PROBE}::test_the_binder_call_carries_the_frozen_timeout_and_the_explicit_ply_cap"),
+
+    # ------------------------------------------------- the adapter's new hole
+    ("replay's unbounded-wait guard removed", ADAPTER,
+     '    if timeout_s is None:\n        raise TypeError(\n'
+     '            "timeout_s is required: subprocess.run(timeout=None) waits forever")',
+     "    pass",
+     f"{T_ADP}::test_replay_requires_a_timeout_and_refuses_an_unbounded_one"),
+    ("replay timeout dropped at the last hop", ADAPTER,
+     '        HELPER_MAIN, "replay", str(ply_cap),\n    ] + [f"{x},{y}" for (x, y) in xy]\n'
+     "    p = subprocess.run(args, capture_output=True, text=True, timeout=timeout_s)",
+     '        HELPER_MAIN, "replay", str(ply_cap),\n    ] + [f"{x},{y}" for (x, y) in xy]\n'
+     "    p = subprocess.run(args, capture_output=True, text=True)",
+     f"{T_ADP}::test_the_replay_timeout_reaches_subprocess_run"),
+    ("T1jRuntime accepts an unbounded timeout", INTEG,
+     '        if timeout_s is None:\n            raise TypeError("timeout_s is required',
+     '        if False:\n            raise TypeError("timeout_s is required',
+     f"{T_INTEG}::test_the_runtime_refuses_an_unbounded_timeout_before_any_replay"),
+
+    # ------------------------------------------------ 12.6 incumbent capture
+    ("capture draws from the readout stream", G3,
+     "            self.last_capture = {",
+     "            self.readout_rng.random()\n            self.last_capture = {",
+     f"{T_INC}::test_capture_preserves_the_state_of_both_generators"),
+    ("capture switched on by default", G3,
+     "    def __init__(self, *, evaluator, colour: str, seed: int, config=None,\n"
+     "                 capture: bool = False):",
+     "    def __init__(self, *, evaluator, colour: str, seed: int, config=None,\n"
+     "                 capture: bool = True):",
+     f"{T_INC}::test_capture_is_off_by_default_and_exposes_nothing"),
+    ("capture flag not forwarded by the qualified builder", G3,
+     "        capture=capture\n    )",
+     "        capture=False\n    )",
+     f"{T_INC}::test_the_capture_flag_threads_through_the_qualified_builder"),
+    ("root-noise check disabled", PROBE,
+     "    if root.priors != root.priors_raw:",
+     "    if False:",
+     f"{T_INC}::test_a_root_policy_that_carries_noise_is_a_VOID"),
+    ("evaluator reloaded for every position", PROBE,
+     "        if self._evaluator is None:\n            self._evaluator = self._load(self.repo_root)",
+     "        if True:\n            self._evaluator = self._load(self.repo_root)",
+     f"{T_INC}::test_one_evaluator_is_loaded_for_the_entire_run"),
+    ("incumbent readout spends no query", PROBE,
+     "        budget.spend(1)                      # 12.4 funds ONE readout per position",
+     "        pass                                 # 12.4 funds ONE readout per position",
+     f"{T_INC}::test_the_incumbent_spends_exactly_one_query_per_position"),
+    ("policy rank tie-break reversed", PROBE,
+     "    ranked = sorted(policy.items(), key=lambda kv: (-kv[1], kv[0]))",
+     "    ranked = sorted(policy.items(), key=lambda kv: (kv[1], kv[0]))",
+     f"{T_INC}::test_the_raw_policy_covers_every_legal_move_and_ranks_the_chosen_one"),
+    ("incumbent identity typed instead of read from the frozen plan", PROBE,
+     '    reference, sha1 = pairs.pop()',
+     '    reference, sha1 = "0379", "8ad62ac432c35c6ea9b0630b8a2b8c572a0b03a1"',
+     f"{T_INC}::test_the_incumbent_identity_comes_from_the_frozen_l0_plan"),
+
+    # ---------------------------------------------- 12.1-12.3 selection rule
+    ("digest downgraded to the sha1 superset helper", SEL,
+     "    return hashlib.sha256(payload.encode()).hexdigest()",
+     "    return hashlib.sha1(payload.encode()).hexdigest()",
+     f"{T_SEL}::test_the_digest_is_sha256_not_the_existing_sha1_helper"),
+    ("digest payload widened beyond the frozen three fields", SEL,
+     "    payload = json.dumps((to_move, pegs, bridges), sort_keys=True)",
+     "    payload = json.dumps((to_move, pegs, bridges, _limit), sort_keys=True)",
+     f"{T_SEL}::test_a_field_outside_the_frozen_three_does_not_enter_the_digest"),
+    ("per-cell cap loosened", SEL,
+     "PER_CELL_CAP = 3", "PER_CELL_CAP = 4",
+     f"{T_SEL}::test_the_frozen_counts_are_reproduced"),
+    ("deduplication disabled", SEL,
+     '        if row["digest"] in seen:\n            continue',
+     '        if False:\n            continue',
+     f"{T_SEL}::test_the_frozen_counts_are_reproduced"),
+    ("incumbent-to-move restriction dropped", SEL,
+     '        ours = [r for r in plies if r["system"] == "ours"]',
+     '        ours = list(plies)',
+     f"{T_SEL}::test_every_selected_position_has_our_incumbent_to_move"),
+    ("controls no longer matched to the position cells", SEL,
+     '            [r for r in ours if bool(r[col]) is False and cell(r) in cells])',
+     '            [r for r in ours if bool(r[col]) is False])',
+     f"{T_SEL}::test_controls_come_only_from_cells_that_hold_a_selected_position"),
+    ("seed written in place so a shared row is overwritten", SEL,
+     '        group["rows"] = [dict(r, seed=seeds[i + n], signature=key[0], role=key[1])\n'
+     '                         for n, r in enumerate(group["rows"])]',
+     '        group["rows"] = [r.update({"seed": seeds[i + n], "signature": key[0],\n'
+     '                                   "role": key[1]}) or r\n'
+     '                         for n, r in enumerate(group["rows"])]',
+     f"{T_SEL}::test_a_supplied_interval_is_assigned_injectively_and_exhausted"),
+    ("frozen-count reconciliation removed", SEL,
+     "            if got != sig[want]:",
+     "            if False:",
+     f"{T_SEL}::test_a_cohort_that_departs_from_the_frozen_table_is_refused"),
+
+
+    # ═════════ the low-ply qualification runner ═════════
+    ("lowply gate flipped open", LP,
+     "LOWPLY_QUALIFICATION_AUTHORIZED = False",
+     "LOWPLY_QUALIFICATION_AUTHORIZED = True",
+     f"{T_LP}::test_the_gate_is_false_as_published"),
+    ("lowply public runner ungated", LP,
+     "    if not LOWPLY_QUALIFICATION_AUTHORIZED:\n        raise LowPlyError(",
+     "    if False:\n        raise LowPlyError(",
+     f"{T_LP}::test_the_public_runner_refuses_while_the_gate_is_shut"),
+
+    # 🔴 THE CENTRAL REGRESSION: D1's exact defect, reintroduced. A non-zero exit
+    # becomes an abort again, so the measurement is destroyed instead of recorded.
+    ("lowply turns a non-zero exit back into a VOID (D1's defect)", LP,
+     "    if len(recs) != 1:",
+     "    if rc != 0 or len(recs) != 1:",
+     f"{T_LP}::test_a_reply_that_does_not_complete_its_depth_is_a_recorded_FAIL"),
+    ("lowply stops recording the incomplete-depth shortfall", LP,
+     "    if not rec.completed or rec.completed_depth != depth:",
+     "    if False:",
+     f"{T_LP}::test_a_reply_that_does_not_complete_its_depth_is_a_recorded_FAIL"),
+    ("lowply stops checking the move against OUR engine", LP,
+     "    if rec.move is not None and rec.move not in set(state.legal_moves()):",
+     "    if False:",
+     f"{T_LP}::test_an_illegal_move_is_a_FAIL_not_an_abort"),
+    ("lowply stops comparing the two invocations", LP,
+     "            agree = len(set(keys)) == 1",
+     "            agree = True",
+     f"{T_LP}::test_two_invocations_that_disagree_are_a_FAIL"),
+    ("lowply verdict always PASS", LP,
+     '"verdict": "PASS" if n_failures == 0 else "FAIL",',
+     '"verdict": "PASS",',
+     f"{T_LP}::test_a_reply_that_does_not_complete_its_depth_is_a_recorded_FAIL"),
+    ("lowply timeout no longer a VOID", LP,
+     "    except subprocess.TimeoutExpired as e:\n        raise LowPlyVoidError(\n"
+     '            f"{where}: T1j did not answer within',
+     "    except ZeroDivisionError as e:\n        raise LowPlyVoidError(\n"
+     '            f"{where}: T1j did not answer within',
+     f"{T_LP}::test_a_QUERY_timeout_is_a_VOID_and_writes_nothing"),
+    ("lowply D1 exception translation removed", LP,
+     "    except D1VoidError as e:",
+     "    except ZeroDivisionError as e:",
+     f"{T_LP}::test_a_deadline_breach_is_a_VOID_and_writes_nothing"),
+    ("lowply frozen-input hash check disabled", LP,
+     "    if got != FROZEN_PREFIXES_SHA256:",
+     "    if False:",
+     f"{T_LP}::test_a_tampered_prefix_file_is_refused"),
+    ("lowply per-call timeout dropped at the last hop", LP,
+     "classes=paths.classes, repeats=1, timeout_s=PER_CALL_TIMEOUT_S)",
+     "classes=paths.classes, repeats=1, timeout_s=None)",
+     f"{T_LP}::test_every_call_carries_the_frozen_timeout_at_the_boundary"),
+    ("lowply uses the same-JVM determinism mode", LP,
+     "classes=paths.classes, repeats=1, timeout_s=PER_CALL_TIMEOUT_S)",
+     "classes=paths.classes, repeats=2, timeout_s=PER_CALL_TIMEOUT_S)",
+     f"{T_LP}::test_each_depth_issues_two_separate_repeats_1_invocations"),
+    ("lowply query cap loosened", LP,
+     "QUERY_CAP = N_PREFIXES * len(DEPTHS) * INVOCATIONS_PER_DEPTH      # 36",
+     "QUERY_CAP = 99999      # 36",
+     f"{T_LP}::test_the_frozen_constants_match_the_card"),
+    ("lowply wall-clock cap widened", LP,
+     "RUN_DEADLINE_S = 900", "RUN_DEADLINE_S = 90000",
+     f"{T_LP}::test_the_frozen_constants_match_the_card"),
+    ("lowply reads D1's gate", LP,
+     "    if not LOWPLY_QUALIFICATION_AUTHORIZED:\n        raise LowPlyError(",
+     "    from .d1_probe import D1_EXECUTION_AUTHORIZED\n"
+     "    if not D1_EXECUTION_AUTHORIZED:\n        raise LowPlyError(",
+     f"{T_LP}::test_this_module_reads_NO_OTHER_experiments_gate"),
+
+
+    # ═════ malformed helper output must VOID, not escape as a traceback ═════
+    ("adapter query parse failure re-raised bare", ADAPTER,
+     '    except (ValueError, KeyError) as e:\n'
+     '        raise HelperOutputError(\n'
+     '            f"the helper\'s query output could not be parsed: {e}", p.stdout) from None',
+     '    except (ValueError, KeyError):\n        raise',
+     f"{T_LP}::test_a_malformed_QUERY_line_is_a_VOID_not_a_traceback"),
+    ("adapter replay parse failure re-raised bare", ADAPTER,
+     '    except (ValueError, KeyError) as e:\n'
+     '        raise HelperOutputError(\n'
+     '            f"the helper\'s replay output could not be parsed: {e}", p.stdout) from None',
+     '    except (ValueError, KeyError):\n        raise',
+     f"{T_LP}::test_a_malformed_REPLAY_dump_is_a_VOID_not_a_traceback"),
+    ("lowply query parse failure not translated", LP,
+     '    except A.HelperOutputError as e:\n'
+     '        raise LowPlyVoidError(\n'
+     '            f"{where}: the helper\'s QUERY output could not be parsed',
+     '    except ZeroDivisionError as e:\n'
+     '        raise LowPlyVoidError(\n'
+     '            f"{where}: the helper\'s QUERY output could not be parsed',
+     f"{T_LP}::test_a_malformed_QUERY_line_is_a_VOID_not_a_traceback"),
+    ("lowply replay parse failure not translated", LP,
+     '    except A.HelperOutputError as e:\n'
+     '        raise LowPlyVoidError(\n'
+     '            f"{label}: the replay output could not be parsed',
+     '    except ZeroDivisionError as e:\n'
+     '        raise LowPlyVoidError(\n'
+     '            f"{label}: the replay output could not be parsed',
+     f"{T_LP}::test_a_malformed_REPLAY_dump_is_a_VOID_not_a_traceback"),
+    ("lowply POSTCOND parse failure not translated", LP,
+     '        posts = A.parse_postconds(out)\n    except (ValueError, KeyError) as e:',
+     '        posts = A.parse_postconds(out)\n    except ZeroDivisionError as e:',
+     f"{T_LP}::test_a_malformed_POSTCOND_is_a_VOID_not_a_traceback"),
+    ("lowply parse VOID carries the whole dump body", LP,
+     '            f"{where}: the helper\'s QUERY output could not be parsed ({e}). "\n'
+     '            f"T1j reported: {A.helper_failure_excerpt(e.stdout)}. VOID.") from None',
+     '            f"{where}: the helper\'s QUERY output could not be parsed ({e}). "\n'
+     '            f"T1j reported: {e.stdout}. VOID.") from None',
+     f"{T_LP}::test_every_malformed_case_carries_the_bounded_transcript"),
+    ("lowply main has no catch-all again", LP,
+     '    except Exception as e:                                    # noqa: BLE001',
+     '    except ZeroDivisionError as e:',
+     f"{T_LP}::test_main_reports_rather_than_escaping_on_an_unexpected_error"),
+
+    ("parse_postconds raises a bare ValueError again", ADAPTER,
+     '            raise HelperOutputError(\n'
+     '                f"the helper\'s POSTCOND output could not be parsed: line missing "',
+     '            raise ValueError(\n'
+     '                f"the helper\'s POSTCOND output could not be parsed: line missing "',
+     f"{T_LP}::test_a_malformed_POSTCOND_in_the_REPLAY_output_is_a_VOID"),
+    ("parse_postconds drops the transcript it attaches", ADAPTER,
+     '                f"fields {sorted(missing)}: {line!r}", text)',
+     '                f"fields {sorted(missing)}: {line!r}", "")',
+     f"{T_LP}::test_parse_postconds_carries_the_transcript_when_it_refuses"),
+
+    ("PostCond construction raises a bare ValueError again", ADAPTER,
+     '        except (ValueError, KeyError) as e:\n'
+     '            # A COMPLETE line whose numeric fields will not parse.',
+     '        except ZeroDivisionError as e:\n'
+     '            # A COMPLETE line whose numeric fields will not parse.',
+     f"{T_LP}::test_a_non_numeric_POSTCOND_in_the_REPLAY_output_is_a_VOID"),
+    ("PostCond parse failure drops its transcript", ADAPTER,
+     '                f"the helper\'s POSTCOND output could not be parsed: {e} in "\n'
+     '                f"{line!r}", text) from None',
+     '                f"the helper\'s POSTCOND output could not be parsed: {e} in "\n'
+     '                f"{line!r}", "") from None',
+     f"{T_LP}::test_a_non_numeric_POSTCOND_field_carries_the_transcript"),
+
+    # ═════════════ §13 exclusion, D1 parse translation, VOID trace ═════════
+    ("§13 exclusion never applied", SEL,
+     '        by_key[k]["rows"] = [r for r in frozen_rows[k] if r["digest"] not in excluded]',
+     '        by_key[k]["rows"] = list(frozen_rows[k])',
+     f"{T_SEL}::test_the_prospective_counts_after_exclusion"),
+    ("§12 count reconciliation removed", SEL,
+     "            if got != sig[want]:",
+     "            if False:",
+     f"{T_SEL}::test_a_12_1_count_that_departs_from_the_record_is_refused"),
+    ("§13 post-exclusion counts not reconciled", SEL,
+     "        if got != want:",
+     "        if False:",
+     f"{T_SEL}::test_a_post_exclusion_count_that_departs_from_13_3_is_refused"),
+    ("§13 accepts the retired seed block", SEL,
+     "        if tuple(seed_interval) == RETIRED_SEED_INTERVAL or (",
+     "        if False and (",
+     f"{T_SEL}::test_the_retired_block_is_refused_as_a_seed_interval"),
+    ("§13 assigns seeds when none were reserved", SEL,
+     "    if seed_interval is None:\n        seeds: List[Optional[int]] = [None] * total",
+     "    if False:\n        seeds: List[Optional[int]] = [None] * total",
+     f"{T_SEL}::test_no_seed_is_assigned_because_no_interval_is_reserved"),
+    ("D1 query cap raised back to the frozen 12.4 figure", PROBE,
+     "N_POSITIONS = 221\nQUERY_CAP = 1105",
+     "N_POSITIONS = 227\nQUERY_CAP = 1135",
+     f"{T_PROBE}::test_the_query_cap_is_the_PROSPECTIVE_value_and_its_arithmetic_holds"),
+    ("D1 query parse failure not translated", PROBE,
+     "        except A.HelperOutputError as e:\n"
+     "            # 12.7 treats unreadable output as an instrument failure.",
+     "        except ZeroDivisionError as e:\n"
+     "            # 12.7 treats unreadable output as an instrument failure.",
+     f"{T_PROBE}::test_a_malformed_QUERY_line_is_a_VOID_naming_the_position"),
+    ("D1 replay parse failure not translated", PROBE,
+     '    except A.HelperOutputError as e:\n'
+     '        raise D1VoidError(\n'
+     '            f"{task_id}: the replay output could not be parsed',
+     '    except ZeroDivisionError as e:\n'
+     '        raise D1VoidError(\n'
+     '            f"{task_id}: the replay output could not be parsed',
+     f"{T_PROBE}::test_a_malformed_REPLAY_dump_is_a_VOID_and_writes_nothing"),
+    ("D1 main has no catch-all again", PROBE,
+     "    except Exception as e:                                    # noqa: BLE001",
+     "    except ZeroDivisionError as e:",
+     f"{T_PROBE}::test_d1_main_reports_rather_than_escaping_on_an_unexpected_error"),
+    ("the trace stops validating VALUES (name-only again)", VTR,
+     "    for name, value in fields.items():",
+     "    for name, value in []:",
+     f"{T_PROBE}::test_no_measurement_can_be_encoded_through_any_free_form_field"),
+    ("the enum check is opened to free text", VTR,
+     "            if value not in schema.enums[name]:",
+     "            if False:",
+     f"{T_PROBE}::test_no_measurement_can_be_encoded_through_any_free_form_field"),
+    ("the event enum is opened to free text", VTR,
+     "    if event not in schema.events:",
+     "    if False:",
+     f"{T_PROBE}::test_no_measurement_can_be_encoded_through_any_free_form_field"),
+    ("counters accept any type or magnitude", VTR,
+     "            if type(value) is not int or not 0 <= value <= cap:",
+     "            if False:",
+     f"{T_PROBE}::test_counters_must_be_bounded_plain_integers"),
+    ("counters accept bools as integers", VTR,
+     "            if type(value) is not int or not 0 <= value <= cap:",
+     "            if not isinstance(value, int) or not 0 <= value <= cap:",
+     f"{T_PROBE}::test_counters_must_be_bounded_plain_integers"),
+    ("counter ceilings widened past the run's real limits", PROBE,
+     '    "queries_spent": QUERY_CAP,',
+     '    "queries_spent": 10 ** 12,',
+     f"{T_PROBE}::test_a_counter_beyond_its_own_ceiling_is_refused"),
+    ("the schema string is no longer pinned", VTR,
+     "            if value != schema.schema:",
+     "            if False:",
+     f"{T_PROBE}::test_the_schema_string_must_be_exactly_the_declared_one"),
+    ("an event may carry extra fields", VTR,
+     "    if extra:",
+     "    if False:",
+     f"{T_PROBE}::test_each_event_carries_EXACTLY_its_declared_fields"),
+    ("an event may omit declared fields", VTR,
+     '    if missing:\n        raise schema.error(f"a {event!r} line is missing {missing}")',
+     '    if False:\n        raise schema.error(f"a {event!r} line is missing {missing}")',
+     f"{T_PROBE}::test_each_event_carries_EXACTLY_its_declared_fields"),
+    ("the identity strings are readmitted", PROBE,
+     '    "position_start": frozenset({"index"}),',
+     '    "position_start": frozenset({"index", "task_id", "digest", "ply"}),',
+     f"{T_PROBE}::test_the_free_form_identity_fields_are_gone"),
+    ("the trace validates AFTER writing", VTR,
+     "    check(schema, event, fields)\n    fh.write(",
+     "    fh.write(",
+     f"{T_PROBE}::test_no_measurement_can_be_encoded_through_any_free_form_field"),
+    ("the trace is not written on a VOID", PROBE,
+     "    finally:\n"
+     "        # ALWAYS, including when the supervisor terminates a hung stage.",
+     "    except ZeroDivisionError:\n"
+     "        # ALWAYS, including when the supervisor terminates a hung stage.",
+     f"{T_PROBE}::test_the_trace_SURVIVES_a_VOID_and_says_how_far_it_got"),
+    ("the trace stops counting seeds drawn", PROBE,
+     "            drawn += 1",
+     "            drawn += 0",
+     f"{T_PROBE}::test_the_trace_SURVIVES_a_VOID_and_says_how_far_it_got"),
+    ("the trace is not fsynced per line", VTR,
+     "    fh.flush()\n    os.fsync(fh.fileno())",
+     "    fh.flush()",
+     f"{T_PROBE}::test_every_trace_line_is_fsynced"),
+
+    # ═════ the public boundary must require the EXACT cohort, not fit the cap ═
+    ("run_d1 accepts any cohort (the ceiling-only defect)", PROBE,
+     "    _check_cohort(positions)\n    return _run_d1_unguarded(",
+     "    return _run_d1_unguarded(",
+     f"{T_PROBE}::test_run_d1_checks_the_cohort_and_the_private_seam_does_not"),
+    ("the cohort size check is dropped", PROBE,
+     "    if len(positions) != N_POSITIONS:",
+     "    if False:",
+     f"{T_PROBE}::test_a_short_cohort_is_refused_at_the_public_boundary"),
+    ("the cohort ORDER check is dropped", PROBE,
+     "    for i, (got_row, want) in enumerate(zip(positions, expected)):",
+     "    for i, (got_row, want) in enumerate([]):",
+     f"{T_PROBE}::test_a_reordered_cohort_is_refused"),
+    ("an excluded row is readmitted to the cohort", PROBE,
+     "    if present:",
+     "    if False:",
+     f"{T_PROBE}::test_a_cohort_containing_an_excluded_row_is_refused"),
+    ("the cohort source is no longer hash-pinned", PROBE,
+     "    if got != COHORT_SOURCE_SHA256:",
+     "    if False:",
+     f"{T_PROBE}::test_a_tampered_cohort_source_is_refused"),
+    ("the exact-spend check is dropped", PROBE,
+     "        if budget.spent != want:",
+     "        if False:",
+     f"{T_PROBE}::test_an_under_spend_cannot_produce_an_OK_report"),
+    ("the expected spend becomes a maximum again", PROBE,
+     "        want = len(positions) * QUERIES_PER_POSITION",
+     "        want = budget.spent",
+     f"{T_PROBE}::test_an_under_spend_cannot_produce_an_OK_report"),
+    ("the private seam starts enforcing the cohort too", PROBE,
+     "def _run_d1_unguarded(*, positions, paths, out_path, repo_root=\".\", deadline=None,",
+     "def _run_d1_unguarded(*, positions, paths, out_path, repo_root=\".\", deadline=None,  # _check_cohort(",
+     f"{T_PROBE}::test_run_d1_checks_the_cohort_and_the_private_seam_does_not"),
+
+    ("cohort binds digests only, not the labels", PROBE,
+     "        for field in COHORT_IDENTITY_FIELDS:\n"
+     "            if not _same(got[field], want[field]):",
+     '        for field in ("digest",):\n'
+     "            if not _same(got[field], want[field]):",
+     f"{T_PROBE}::test_a_row_that_keeps_its_digest_but_alters_its_LABEL_is_refused"),
+    ("cohort drops the grouping fields from the identity set", PROBE,
+     '                          "role", "opening", "colour_arm", "phase",\n'
+     '                          "mover_more_fragmented", "created_threat")',
+     '                          "role")',
+     f"{T_PROBE}::test_the_expected_cohort_carries_every_identity_and_grouping_field"),
+    ("the RAW mover_more_fragmented column is left unbound", PROBE,
+     '                          "mover_more_fragmented", "created_threat")',
+     '                          "created_threat")',
+     f"{T_PROBE}::test_a_row_that_flips_a_RAW_SIGNATURE_COLUMN_is_refused"),
+    ("the RAW created_threat column is left unbound", PROBE,
+     '                          "mover_more_fragmented", "created_threat")',
+     '                          "mover_more_fragmented")',
+     f"{T_PROBE}::test_a_row_that_flips_a_RAW_SIGNATURE_COLUMN_is_refused"),
+    ("a source field silently drops out of the binding", PROBE,
+     '                          "role", "opening", "colour_arm", "phase",',
+     '                          "role", "opening", "phase",',
+     f"{T_PROBE}::test_SEED_is_the_only_source_field_left_unbound"),
+    ("cohort tolerates a row missing an identity field", PROBE,
+     "        if field not in row:",
+     "        if False:",
+     f"{T_PROBE}::test_a_row_missing_an_identity_field_is_refused"),
+    ("cohort pins the SEED, which no interval authorizes yet", PROBE,
+     '                          "mover_more_fragmented", "created_threat")',
+     '                          "mover_more_fragmented", "created_threat", "seed")',
+     f"{T_PROBE}::test_a_cohort_carrying_a_seed_is_still_accepted"),
+
+    ("cohort comparison drops type-strictness (== again)", PROBE,
+     "            if not _same(got[field], want[field]):",
+     "            if got[field] != want[field]:",
+     f"{T_PROBE}::test_a_NUMERIC_boolean_is_refused_for_a_frozen_bool"),
+    ("the comparison helper stops checking type", PROBE,
+     "    return type(a) is type(b) and a == b",
+     "    return a == b",
+     f"{T_PROBE}::test_the_comparison_helper_binds_type_as_well_as_value"),
+    ("bools slip through as ints (isinstance instead of type)", PROBE,
+     "    return type(a) is type(b) and a == b",
+     "    return isinstance(a, type(b)) and a == b",
+     f"{T_PROBE}::test_a_BOOL_forged_for_a_frozen_ZERO_OR_ONE_coordinate_is_refused"),
+    ("prefix normalisation coerces through int() again", PROBE,
+     "    if isinstance(value, (list, tuple)):\n"
+     "        return [_structural(v) for v in value]\n"
+     "    return value",
+     "    if isinstance(value, (list, tuple)):\n"
+     "        return [_structural(v) for v in value]\n"
+     "    return int(value) if not isinstance(value, (str, bool)) else value",
+     f"{T_PROBE}::test_a_COERCED_prefix_coordinate_is_refused"),
+    ("structural normalisation dropped, so a tuple prefix is refused", PROBE,
+     "        out[field] = _structural(row[field])",
+     "        out[field] = row[field]",
+     f"{T_PROBE}::test_a_tuple_prefix_is_still_accepted"),
+    ("the corrected 5.4 justification is reinstated as the wrong one", PROBE,
+     "#: ⚠ The justification stated here was wrong and is corrected: 5.4 requires the",
+     "#: 5.4 records both. The justification stated here was wrong and is: 5.4 requires the",
+     f"{T_PROBE}::test_the_report_does_not_claim_5_4_requires_the_raw_columns"),
+
+
+    # ═════════ the §14 seed-interval handoff: ONE canonical source ═════════
+    ("the interval is RETYPED as a literal in d1_probe", PROBE,
+     "SEED_INTERVAL = SEL.SEED_INTERVAL",
+     "SEED_INTERVAL = (202615000, 202615221)",
+     f"{T_PROBE}::test_the_interval_has_ONE_canonical_source"),
+    ("the canonical interval points back at the RETIRED block", SEL,
+     "SEED_INTERVAL = (202615000, 202615221)",
+     "SEED_INTERVAL = (202614000, 202614227)",
+     f"{T_PROBE}::test_the_canonical_interval_is_14s_reservation_sized_for_13"),
+    ("the canonical interval is sized 227 again, not 221", SEL,
+     "SEED_INTERVAL = (202615000, 202615221)",
+     "SEED_INTERVAL = (202615000, 202615227)",
+     f"{T_PROBE}::test_the_canonical_interval_is_14s_reservation_sized_for_13"),
+
+    # 🔴 THE BLANKET-REPLACE DEFECT: the retirement constant moved with the
+    # reservation, so the guard compares the new block against itself and the
+    # OLD retired block is silently readmitted.
+    ("RETIRED_SEED_INTERVAL moved to the new block", SEL,
+     "RETIRED_SEED_INTERVAL = (202614000, 202614227)",
+     "RETIRED_SEED_INTERVAL = (202615000, 202615221)",
+     f"{T_PROBE}::test_the_RETIRED_interval_is_a_SEPARATE_constant_THAT_DID_NOT_MOVE"),
+    ("RETIRED_SEED_INTERVAL moved -- caught by the REFUSAL, not the constant", SEL,
+     "RETIRED_SEED_INTERVAL = (202614000, 202614227)",
+     "RETIRED_SEED_INTERVAL = (202615000, 202615221)",
+     f"{T_SEL}::test_selection_still_REFUSES_the_retired_block"),
+    ("the retirement guard is removed from select_all", SEL,
+     "        if tuple(seed_interval) == RETIRED_SEED_INTERVAL or (\n"
+     "                lo < RETIRED_SEED_INTERVAL[1] and hi > RETIRED_SEED_INTERVAL[0]):",
+     "        if False:",
+     f"{T_SEL}::test_selection_still_REFUSES_the_retired_block"),
+    ("the runtime seed check admits the retired block too", PROBE,
+     "    if not isinstance(seed, int) or isinstance(seed, bool) or not lo <= seed < hi:",
+     "    if not isinstance(seed, int) or isinstance(seed, bool) or not 202614000 <= seed < hi:",
+     f"{T_PROBE}::test_every_seed_of_the_RETIRED_block_is_refused_by_the_runtime_check"),
+    ("the registration barrier is satisfied without registering", PROBE,
+     "    missing = [s for s in range(lo, hi) if not REF.seed_is_accounted(s)]",
+     "    missing = []",
+     f"{T_PROBE}::test_the_REAL_registry_still_refuses_the_new_block"),
+
+
+    # ═══════════════ H1 head-to-head viability screen ═══════════════
+    ("bind_results design becomes defaultable", L0R,
+     "                 *, design: Design):",
+     "                 *, design: Design = L0_DESIGN):",
+     f"{T_H1}::test_bind_results_REQUIRES_a_design_and_has_no_default"),
+    ("H1 silently reverts to L0's 4 repetitions", H1R,
+     "N_REPS = 14", "N_REPS = 4",
+     f"{T_H1}::test_the_design_is_8_openings_2_arms_14_reps"),
+    ("the viability threshold moves to parity", H1R,
+     "VIABILITY_THRESHOLD = 0.75", "VIABILITY_THRESHOLD = 0.5",
+     f"{T_H1}::test_the_threshold_is_the_predeclared_0_75"),
+
+    # 🔴 THE BOUNDARY: an upper bound exactly AT the threshold does not exclude it.
+    ("the verdict admits an upper bound AT the threshold", H1R,
+     "    if hi < VIABILITY_THRESHOLD:", "    if hi <= VIABILITY_THRESHOLD:",
+     f"{T_H1}::test_the_verdict_is_where_0_75_falls_relative_to_the_interval"),
+    ("the verdict reads the bounds in the wrong order", H1R,
+     "    if lo >= VIABILITY_THRESHOLD:", "    if hi >= VIABILITY_THRESHOLD:",
+     f"{T_H1}::test_the_verdict_follows_the_predeclared_bands"),
+    ("the decisive bands are hardcoded instead of derived", H1R,
+     "    half_width = L0.hoeffding_interval(n / 2, n)[1] - 0.5",
+     "    half_width = 0.0907",
+     f"{T_H1}::test_the_decisive_bands_are_DERIVED_not_typed"),
+
+    # 🔴 THE ANTI-FABRICATION CONTROL: the hand-typed digest this module carried
+    # while it was being written. Plausible, 64 hex characters, matched nothing.
+    ("the task digest is a hand-typed constant again", H1R,
+     'H1_TASK_DIGEST = "058e62400849e17f0485c2505f562d948e06548ad33ec21ea7fd81854e8e8a21"',
+     'H1_TASK_DIGEST = "6ff6b6c69bbcbba49b4b1f6afc4b6e7b39ff3ac8f4a7f6bbb43e1e0a41b1a7dc"',
+     f"{T_H1}::test_the_task_digest_constant_IS_the_digest_of_the_built_tasks"),
+    ("H1 reuses L0's SPENT and retired seed block", H1R,
+     "H1_SEED_BLOCK = (202616000, 202616224)",
+     "H1_SEED_BLOCK = (202613000, 202613224)",
+     f"{T_H1}::test_the_H1_block_is_PAPER_RESERVED_and_in_NO_registry"),
+
+    # 🔴 THE BLOCK THE REGISTRIES CANNOT SEE: overlapping D1's paper reservation
+    # passes every registry check, because §14's block is in no registry.
+    ("H1's block overlaps D1's PAPER reservation", H1R,
+     "H1_SEED_BLOCK = (202616000, 202616224)",
+     "H1_SEED_BLOCK = (202615100, 202615324)",
+     f"{T_H1}::test_the_H1_block_is_disjoint_from_the_D1_paper_reservation"),
+    ("a shared vocabulary is RETYPED instead of re-exported", H1R,
+     "WINNERS = L0.WINNERS", 'WINNERS = ("red", "black", None)',
+     f"{T_H1}::test_H1_REDECLARES_ONLY_WHAT_DIFFERS_FROM_L0"),
+    ("H1 acquires an early stop", H1R,
+     '    """Always False. H1 plays all 224 games."""\n    return False',
+     '    """Always False. H1 plays all 224 games."""\n    return True',
+     f"{T_H1}::test_there_is_no_early_stop"),
+    ("cap saturation stops refusing a rate", H1R,
+     "    if caps > CAP_NO_RATE_THRESHOLD:", "    if False:",
+     f"{T_H1}::test_cap_saturation_yields_NO_RATE_AND_NO_VERDICT"),
+    ("the reporter binds H1 results to the 64-game design", H1R,
+     "    pairs, why = L0.bind_results(results, tasks, design=H1_DESIGN)",
+     "    pairs, why = L0.bind_results(results, tasks, design=L0.L0_DESIGN)",
+     f"{T_H1}::test_a_complete_result_set_reports_and_carries_its_verdict"),
+    ("the verdict is read off the WILSON interval", H1R,
+     "    verdict = viability_verdict(hl, hh)", "    verdict = viability_verdict(wl, wh)",
+     f"{T_H1}::test_the_verdict_reads_the_HOEFFDING_interval_and_nothing_else"),
+    ("the no-pooling prohibition is deleted", H1R,
+     '    "any pooling of H1 with L0, or any combined rate across the two matches; they "',
+     '    "POOLING IS FINE ACTUALLY; they "',
+     f"{T_H1}::test_H1_inherits_every_L0_forbidden_claim_and_adds_two"),
+    ("the repetition LABELS stop being checked", H1P,
+     "        if reps != list(range(RULES.N_REPS)):", "        if False:",
+     f"{T_H1}::test_a_cell_with_the_wrong_repetition_LABELS_is_refused"),
+    ("an incomplete match is reported instead of refused", H1R,
+     "    if pairs is None:", "    if pairs is None and False:",
+     f"{T_H1}::test_an_incomplete_match_is_REFUSED_not_reported"),
+
+
+    ("the H1 plan loader stops checking the TASK digest", H1P,
+     "    if digest != RULES.H1_TASK_DIGEST:", "    if False:",
+     f"{T_H1}::test_a_plan_whose_TASKS_were_swapped_is_refused_even_if_the_FILE_hashes"),
+    ("the H1 plan loader stops checking the FILE hash", H1P,
+     "    if got != H1_PLAN_SHA256:", "    if False:",
+     f"{T_H1}::test_a_plan_with_the_SAME_TASKS_but_a_REWRITTEN_THRESHOLD_is_refused"),
+
+
+    # ═════════ H1 review corrections: composed rules, own denominators ═════════
+
+    # 🔴 THE ORIGINAL DEFECT: append instead of compose. Both seed rules stay
+    # active and every valid H1 seed is outside the L0 block.
+    ("H1 APPENDS its seed rule to L0's instead of composing", H1R,
+     'H1_ABORT_RULES = L0.abort_rules("H1") + (\n'
+     '    "the whole-run wall-clock cap being exceeded",\n)',
+     'H1_ABORT_RULES = L0.L0_ABORT_RULES + (\n'
+     '    "the whole-run wall-clock cap being exceeded",\n'
+     '    "any seed outside the reserved H1 block",\n)',
+     f"{T_H1}::test_H1s_abort_rules_name_H1s_BLOCK_AND_ONLY_H1s"),
+    ("the block name stops reaching the seed rule", L0R,
+     '        f"any seed outside the reserved {block_name} block, or any seed used twice",',
+     '        "any seed outside the reserved L0 block, or any seed used twice",',
+     f"{T_H1}::test_H1s_abort_rules_name_H1s_BLOCK_AND_ONLY_H1s"),
+    ("L0's own abort rules change under the factoring", L0R,
+     '        "any failure to write or fsync a durable record",',
+     '        "any failure to write a durable record",',
+     f"{T_H1}::test_L0s_ABORT_RULES_are_unchanged_by_the_factoring"),
+
+    # the seed rule as a PREDICATE -- prose cannot be run
+    ("the H1 seed predicate admits the L0 block too", H1R,
+     "    return not lo <= int(seed) < hi", "    return not 202613000 <= int(seed) < hi",
+     f"{T_H1}::test_an_H1_SEED_is_accepted_and_an_L0_BLOCK_seed_is_refused"),
+    ("the H1 seed predicate refuses H1's own seeds", H1R,
+     "    return not lo <= int(seed) < hi", "    return lo <= int(seed) < hi",
+     f"{T_H1}::test_an_H1_SEED_is_accepted_and_an_L0_BLOCK_seed_is_refused"),
+
+    # 🔴 THE OTHER ORIGINAL DEFECT: inherit the count-bearing prohibitions whole
+    ("H1 INHERITS L0's count-bearing prohibitions", H1R,
+     "FORBIDDEN_CLAIMS = L0.forbidden_claims(N_GAMES, N_OPENINGS, N_ARMS) + (",
+     "FORBIDDEN_CLAIMS = L0.FORBIDDEN_CLAIMS + (",
+     f"{T_H1}::test_NO_H1_forbidden_claim_carries_an_L0_DENOMINATOR"),
+    ("the independence prohibition hardcodes 64 again", L0R,
+     'return (f"any statement that the {n_games} games ARE independent, or that "',
+     'return (f"any statement that the 64 games ARE independent, or that "',
+     f"{T_H1}::test_NO_H1_forbidden_claim_carries_an_L0_DENOMINATOR"),
+    ("the per-cell denominators are swapped", L0R,
+     "            per_cell_prohibition(n_games // n_openings, n_games // n_arms),",
+     "            per_cell_prohibition(n_games // n_arms, n_games // n_openings),",
+     f"{T_H1}::test_NO_H1_forbidden_claim_carries_an_L0_DENOMINATOR"),
+    ("L0's own forbidden claims change under the factoring", L0R,
+     '    "any Elo figure, or any conversion of this rate into one",',
+     '    "any Elo number, or any conversion of this rate into one",',
+     f"{T_H1}::test_L0s_FORBIDDEN_CLAIMS_are_unchanged_by_the_factoring"),
+
+    # the frozen artifact must not drift back to the superseded one
+    ("the plan pin reverts to the SUPERSEDED v1 artifact", H1P,
+     '               "10_h1_plan_v3.json")', '               "06_h1_plan_v2.json")',
+     f"{T_H1}::test_the_frozen_plan_STATES_the_cap_saturation_branch"),
+
+
+    # ═════ [P2] H1's NON-ABORT rules must describe H1's protocol, not L0's ═════
+    ("H1 INHERITS L0's non-abort rules whole", H1R,
+     "NOT_ABORT_RULES = (\n"
+     '    f"cap-termination saturation: caps never stop an H1 match',
+     "NOT_ABORT_RULES = L0.NOT_ABORT_RULES\nUNUSED = (\n"
+     '    f"cap-termination saturation: caps never stop an H1 match',
+     f"{T_H1}::test_H1s_NON_ABORT_RULES_CONTAIN_NO_L0_WORDING"),
+    ("H1 claims it has NO band, as L0 does", H1R,
+     'f"score saturation: H1 HAS a band -- the {VIABILITY_THRESHOLD} viability "',
+     'f"score saturation: H1 measures a rate and has no band to saturate "',
+     f"{T_H1}::test_H1s_non_abort_rules_state_H1s_ACTUAL_protocol"),
+    ("the early-stop prohibition is softened", H1R,
+     "    L0.EARLY_STOP_NOT_ABORT_RULE,\n)",
+     '    "any early stop after the verdict is clear",\n)',
+     f"{T_H1}::test_the_substantive_early_stop_PROHIBITION_survives_verbatim"),
+    ("L0's own non-abort rules change under the extraction", L0R,
+     '    "score saturation: L0 measures a rate and has no band to saturate",',
+     '    "score saturation: L0 measures a rate and has no band",',
+     f"{T_H1}::test_L0s_NOT_ABORT_RULES_are_unchanged"),
+    ("the artifact keeps L0-only wording", H1P,
+     '               "10_h1_plan_v3.json")', '               "06_h1_plan_v2.json")',
+     f"{T_H1}::test_NO_L0_ONLY_WORDING_REACHES_THE_FROZEN_H1_ARTIFACT"),
+
+
+    # ═════ the corrected barrier claim must NOTICE when a barrier appears ═════
+    ("an H1 gate appears without the claim being revisited", H1R,
+     "VIABILITY_THRESHOLD = 0.75",
+     "H1_EXECUTION_AUTHORIZED = False\nVIABILITY_THRESHOLD = 0.75",
+     f"{T_H1}::test_H1_HAS_NO_SEED_BARRIER_AND_NO_GATE_YET_and_says_so"),
+    ("an H1 registration precondition appears silently", H1P,
+     "class H1PlanError(Exception):",
+     "def _check_seed_registration():\n    pass\n\n\nclass H1PlanError(Exception):",
+     f"{T_H1}::test_H1_HAS_NO_SEED_BARRIER_AND_NO_GATE_YET_and_says_so"),
+
+
+    # ═══════════════════ the H1 runner: two independent barriers ═══════════════
+    ("the H1 gate is flipped open", H1RUN,
+     "H1_EXECUTION_AUTHORIZED = False", "H1_EXECUTION_AUTHORIZED = True",
+     f"{T_H1R}::test_the_gate_is_false_as_published"),
+    ("the H1 gate no longer binds the match path", H1RUN,
+     "    if not H1_EXECUTION_AUTHORIZED:", "    if False:",
+     f"{T_H1R}::test_THE_GATE_fires_before_plan_load_setup_recorder_or_play"),
+    ("the registration barrier no longer binds", H1RUN,
+     "    missing = [s for s in range(lo, hi) if not REF.seed_is_accounted(s)]",
+     "    missing = []",
+     f"{T_H1R}::test_THE_REGISTRATION_BARRIER_fires_before_plan_load_setup_recorder_or_play"),
+    ("the registration barrier checks only the endpoints", H1RUN,
+     "    missing = [s for s in range(lo, hi) if not REF.seed_is_accounted(s)]",
+     "    missing = [s for s in (lo, hi - 1) if not REF.seed_is_accounted(s)]",
+     f"{T_H1R}::test_a_PARTLY_registered_block_is_still_refused"),
+
+    # 🔴 ORDER IS THE GUARANTEE: a refusal that has already written has not refused.
+    ("the barriers move BELOW the plan load and the recorder", H1RUN,
+     "    if match:\n        check_gate()\n        check_seed_registration()",
+     "    if match:\n        pass",
+     f"{T_H1R}::test_THE_GATE_fires_before_plan_load_setup_recorder_or_play"),
+    ("the gate opens the registration barrier too", H1RUN,
+     "        check_gate()\n        check_seed_registration()",
+     "        check_gate()",
+     f"{T_H1R}::test_THE_REGISTRATION_BARRIER_fires_before_plan_load_setup_recorder_or_play"),
+    ("registering the block opens the gate too", H1RUN,
+     "        check_gate()\n        check_seed_registration()",
+     "        check_seed_registration()",
+     f"{T_H1R}::test_REGISTERING_THE_BLOCK_DOES_NOT_OPEN_THE_GATE"),
+
+    # the frozen design
+    ("match mode accepts a supplied plan", H1RUN,
+     "    if match and _plan_path is not None:", "    if False:",
+     f"{T_H1R}::test_match_mode_REFUSES_a_supplied_plan_path"),
+    ("the content binding narrows to the digest dimensions (dead again)", H1RUN,
+     "        if c is None or any(t.get(k) != c.get(k) for k in set(t) | set(c)):",
+     "        if c is None or any(t.get(k) != c.get(k)\n                            for k in RULES.L0.L0_TASK_DIMENSIONS):",
+     f"{T_H1R}::test_a_task_renamed_onto_synthetic_CONTENT_is_refused"),
+    ("the seed-block check is dropped from the PLAN validator", H1P,
+     "        if RULES.seed_is_outside_the_reserved_block(t[\"seed\"]):",
+     "        if False:",
+     f"{T_H1R}::test_a_seed_outside_the_reserved_block_is_refused"),
+    ("the whole-run deadline is widened", H1RUN,
+     "RUN_DEADLINE_S = 180 * 60", "RUN_DEADLINE_S = 180 * 6000",
+     f"{T_H1R}::test_the_frozen_limits_are_the_cards"),
+    ("the per-call timeout is dropped", H1RUN,
+     "PER_CALL_TIMEOUT_S = D1.PER_QUERY_TIMEOUT_S", "PER_CALL_TIMEOUT_S = None",
+     f"{T_H1R}::test_the_frozen_limits_are_the_cards"),
+    ("the cooperative deadline check is removed", H1RUN,
+     "    deadline.check(where)", "    pass",
+     f"{T_H1R}::test_a_deadline_breach_is_a_VOID_with_no_report"),
+    ("the deadline is never checked between games", H1RUN,
+     '                _check_deadline(deadline, f"before game {index}")',
+     "                pass",
+     f"{T_H1R}::test_a_deadline_breach_is_a_VOID_with_no_report"),
+
+    # create-only outputs and the non-analytic trace
+    ("the trace file stops being create-only", H1RUN,
+     "    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)",
+     "    fd = os.open(path, os.O_WRONLY | os.O_CREAT, 0o644)",
+     f"{T_H1R}::test_the_trace_file_is_CREATE_ONLY"),
+    ("the trace admits an identity string", H1RUN,
+     '    "task_start": frozenset({"index"}),',
+     '    "task_start": frozenset({"index", "task_id"}),',
+     f"{T_H1R}::test_the_trace_carries_ONLY_counters_and_closed_enums"),
+    ("the trace validates AFTER the write", VTR,
+     "    check(schema, event, fields)\n    fh.write(",
+     "    fh.write(",
+     f"{T_H1R}::test_a_refusal_writes_NOTHING_to_the_trace"),
+    ("the trace stops recording how far a VOID run got", H1RUN,
+     '            _trace(tfh, event="run_end", verdict="VOID", games_completed=completed)',
+     "            pass",
+     f"{T_H1R}::test_the_trace_records_HOW_FAR_a_void_run_got_and_nothing_else"),
+    ("cap saturation is reported as a verdict after all", H1RUN,
+     '        if report.get("outcome") == CAP_SATURATED_NO_RATE:',
+     "        if False:",
+     f"{T_H1R}::test_cap_saturation_exits_OK_and_publishes_NO_VERDICT"),
+
+    # 🔴 the ban that named functions which do not exist
+    ("the early-stop ban names a function that does not exist", H1R,
+     '    "e4_screen_rules.classify_joint",',
+     '    "e4_screen_rules.should_continue",',
+     f"{T_H1R}::test_the_screen_decision_functions_still_exist_and_are_not_imported"),
+
+
+    # ═════════ H1 runner review: public path, setup, alarm, VOID contract ═════
+    ("the match is hidden behind a mode list again", H1RUN,
+     'MODES = ("qualify", MATCH_MODE)', 'MODES = ("qualify",)',
+     f"{T_H1R}::test_the_PUBLIC_entry_point_reaches_the_GATE_not_a_mode_list"),
+    ("the public match path supplies no production setup", H1RUN,
+     "_setup_factory=_production_setup if mode == MATCH_MODE else None)",
+     "_setup_factory=None)",
+     f"{T_H1R}::test_the_public_match_path_supplies_the_PRODUCTION_setup"),
+    ("qualification builds production collaborators too", H1RUN,
+     "_setup_factory=_production_setup if mode == MATCH_MODE else None)",
+     "_setup_factory=_production_setup)",
+     f"{T_H1R}::test_the_public_match_path_supplies_the_PRODUCTION_setup"),
+    ("T1j loses the frozen per-call timeout in the setup", H1RUN,
+     "                                 timeout_s=PER_CALL_TIMEOUT_S)",
+     "                                 timeout_s=None)",
+     f"{T_H1R}::test_the_production_setup_wires_every_qualified_collaborator"),
+    ("the setup keeps the REFUSING binder", H1RUN,
+     '            "binder": INT.make_binder(runtime, ctx),            # the E3b binder',
+     '            "binder": H._refuse_binder,',
+     f"{T_H1R}::test_the_production_setup_wires_every_qualified_collaborator"),
+    ("the openings come from H1's plan again (KeyError on the real path)", H1RUN,
+     '        openings = PLAN.load_source_plan()["openings"]',
+     '        openings = PLAN.load_h1_plan()["openings"]',
+     f"{T_H1R}::test_the_production_setup_wires_every_qualified_collaborator"),
+    ("the incumbent is loaded per game instead of once", H1RUN,
+     '        evaluator = SCREEN_CMD._default_load_evaluator(".")     # the incumbent, ONCE',
+     '        evaluator = [SCREEN_CMD._default_load_evaluator("."),\n'
+     '                     SCREEN_CMD._default_load_evaluator(".")][0]',
+     f"{T_H1R}::test_the_production_setup_loads_the_incumbent_EXACTLY_ONCE"),
+
+    # 🔴 the asynchronous alarm must not escape as D1's exception
+    ("the SIGALRM void escapes as D1's exception", H1RUN,
+     "            if isinstance(e, D1.D1VoidError) and not isinstance(e, H1VoidError):",
+     "            if False:",
+     f"{T_H1R}::test_the_SIGALRM_supervisor_raises_H1s_void_not_D1s"),
+    ("the supervisor is never armed", H1RUN,
+     "    supervisor = D1._supervisor(deadline) if _supervise else contextlib.nullcontext()",
+     "    supervisor = contextlib.nullcontext()",
+     f"{T_H1R}::test_the_SIGALRM_supervisor_raises_H1s_void_not_D1s"),
+
+    # the VOID record contract
+    ("the VOID diagnostic stops naming the position", H1RUN,
+     '            rec.emit_terminal({"record_type": "void_diagnostic",',
+     '            _ = ({"record_type": "void_diagnostic",',
+     f"{T_H1R}::test_the_VOID_diagnostic_NAMES_THE_POSITION_structurally"),
+    ("the VOID diagnostic drops the helper transcript", H1RUN,
+     '    d["helper_excerpt"] = _bounded_excerpt(error)',
+     '    d["helper_excerpt"] = None',
+     f"{T_H1R}::test_the_VOID_diagnostic_NAMES_THE_POSITION_structurally"),
+    ("the VOID diagnostic carries the WHOLE transcript", H1RUN,
+     '    d["helper_excerpt"] = _bounded_excerpt(error)',
+     '    d["helper_excerpt"] = getattr(error, "stdout", None) or str(error)',
+     f"{T_H1R}::test_the_VOID_diagnostic_excerpt_is_BOUNDED"),
+    ("the ply counter stops observing durable ply records", H1RUN,
+     '        if record.get("record_type") in ("ply", "opening_bound"):',
+     "        if False:",
+     f"{T_H1R}::test_the_VOID_diagnostic_records_the_PLY_it_died_on"),
+    ("a partial vector can produce a report after all", H1R,
+     "    pairs, why = L0.bind_results(results, tasks, design=H1_DESIGN)",
+     "    pairs, why = (list(zip(results, tasks)), None)",
+     f"{T_H1R}::test_the_retained_rows_CANNOT_become_a_result"),
+
+
+    # ══════════ H1 runner review 2: the five execution-path findings ══════════
+    ("the agent's own query timeout is dropped again", H1RUN,
+     "                t1j_timeout_s=PER_CALL_TIMEOUT_S,\n", "",
+     f"{T_H1R}::test_the_production_setup_wires_every_qualified_collaborator"),
+    ("compilation gets a SECOND deadline (two clocks again)", H1RUN,
+     "        artifacts = D1._default_compile(deadline, paths=paths)",
+     "        artifacts = D1._default_compile(D1.Deadline(RUN_DEADLINE_S).start(),\n"
+     "                                        paths=paths)",
+     f"{T_H1R}::test_the_production_setup_wires_every_qualified_collaborator"),
+    ("the setup factory is never invoked", H1RUN,
+     "    if _setup_factory is not None:", "    if False:",
+     f"{T_H1R}::test_the_setup_FACTORY_is_invoked_with_the_running_clock"),
+
+    # 🔴 the excerpt must survive the AbortError wrapper real failures pass through
+    ("the excerpt reads only error.stdout again", H1RUN,
+     "    seen, err = set(), error\n"
+     "    while err is not None and id(err) not in seen:",
+     "    seen, err = set(), error\n"
+     "    while False and err is not None and id(err) not in seen:",
+     f"{T_H1R}::test_the_excerpt_walks_the_SUPPRESSED_context_chain"),
+    ("the excerpt drops the abort-message fallback", H1RUN,
+     "    return message[:A.FAILURE_EXCERPT_CHARS]", "    return None",
+     f"{T_H1R}::test_the_excerpt_falls_back_to_the_bounded_ABORT_MESSAGE"),
+    ("the abort-message fallback is unbounded", H1RUN,
+     "    return message[:A.FAILURE_EXCERPT_CHARS]", "    return message",
+     f"{T_H1R}::test_the_excerpt_falls_back_to_the_bounded_ABORT_MESSAGE"),
+
+    # 🔴 the ply must be the one being ATTEMPTED
+    ("the ply tracker ignores opening_bound again", H1RUN,
+     '        if record.get("record_type") in ("ply", "opening_bound"):',
+     '        if record.get("record_type") == "ply":',
+     f"{T_H1R}::test_a_failure_on_the_FIRST_searched_move_still_names_a_PLY"),
+    ("the binder wrapper stops noting the attempted ply", H1RUN,
+     "                rec.note_bind(ply)\n                return _b(task, state, ply, move)",
+     "                return _b(task, state, ply, move)",
+     f"{T_H1R}::test_a_BINDER_failure_after_a_move_names_the_ply_it_was_ATTEMPTING"),
+
+    # 🔴 recorder construction must be inside the protected boundary
+    ("the recorder is built OUTSIDE the protected try again", H1RUN,
+     "        rec = None\n        try:\n            try:\n"
+     "                rec = _PlyCountingRecorder(results_path)",
+     "        rec = _PlyCountingRecorder(results_path)\n        try:\n            try:\n"
+     "                pass",
+     f"{T_H1R}::test_a_MIDRUN_recorder_failure_is_a_VOID_and_the_TRACE_AGREES"),
+
+
+    # ═══════ the output preflight, and the verdict the exception must match ═══
+    ("the output preflight is removed", H1RUN,
+     "    check_output_paths(results_path, trace_path)", "    pass",
+     f"{T_H1R}::test_a_PREEXISTING_output_path_is_a_PRECONDITION_refusal"),
+    ("the preflight ignores the trace path", H1RUN,
+     '    for label, path in (("results", results_path), ("trace", trace_path)):',
+     '    for label, path in (("results", results_path),):',
+     f"{T_H1R}::test_a_PREEXISTING_TRACE_path_is_refused_too"),
+    ("a precondition refusal is reported as a VOID", H1RUN,
+     "            raise H1Error(\n"
+     '                f"the {label} path already exists: {path}. A run writes NEW files; "',
+     "            raise H1VoidError(\n"
+     '                f"the {label} path already exists: {path}. A run writes NEW files; "',
+     f"{T_H1R}::test_a_PREEXISTING_output_path_is_a_PRECONDITION_refusal"),
+    ("a mid-run recorder failure escapes unclassified again", H1RUN,
+     "            except H.HarnessError as e:", "            except ZeroDivisionError as e:",
+     f"{T_H1R}::test_a_MIDRUN_recorder_failure_is_a_VOID_and_the_TRACE_AGREES"),
+
+    # -------------------------------------------- the extracted D0 mover cut
+    ("mover cut inverted", D0,
+     '    return "t1j" if mover == colour_arm.split("_")[1] else "ours"',
+     '    return "ours" if mover == colour_arm.split("_")[1] else "t1j"',
+     f"{T_D0}::test_by_system_classification_is_unchanged_by_the_extraction"),
+]
+
+
+def purge():
+    for d in pathlib.Path(".").rglob("__pycache__"):
+        shutil.rmtree(d, ignore_errors=True)
+
+
+FILES = sorted({f for _l, f, _o, _n, _t in DEFECTS})
+ORIGINAL = {f: pathlib.Path(f).read_text() for f in FILES}
+
+ok = stale = missed = 0
+try:
+    for label, path, old, new, test in DEFECTS:
+        src = ORIGINAL[path]
+        n = src.count(old)
+        if n != 1:
+            print(f"  STALE CONTROL -- DID NOT RUN  {label}: anchor matched {n} times "
+                  f"in {path}")
+            stale += 1
+            continue
+        pathlib.Path(path).write_text(src.replace(old, new))
+        purge()
+        r = subprocess.run(
+            [sys.executable, "-m", "pytest", test, "-q", "-p", "no:cacheprovider"],
+            capture_output=True, text=True,
+            env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"})
+        pathlib.Path(path).write_text(src)
+        rejected = r.returncode != 0
+        print(f"  {'REJECTED' if rejected else 'NOT CAUGHT':11s}  {label}")
+        if rejected:
+            ok += 1
+        else:
+            missed += 1
+            print("      " + r.stdout.strip().splitlines()[-1][:160])
+finally:
+    for f in FILES:
+        pathlib.Path(f).write_text(ORIGINAL[f])
+    purge()
+
+print(f"\n{ok}/{len(DEFECTS)} defects rejected; {missed} not caught; {stale} stale")
+print("ALL CONTROLS RAN:", stale == 0)
+print("every source restored:",
+      all(pathlib.Path(f).read_text() == ORIGINAL[f] for f in FILES))

@@ -52,9 +52,10 @@ def test_the_public_match_path_supplies_the_PRODUCTION_setup(monkeypatch, tmp_pa
     seen = {}
     monkeypatch.setattr(RUN, "_run", lambda *a, **k: seen.update(k) or 0)
     RUN.run(str(tmp_path / "r.jsonl"), mode=RUN.MATCH_MODE)
-    assert callable(seen["_setup"]), "the public match path supplies no setup"
+    assert seen["_setup_factory"] is RUN._production_setup
     RUN.run(str(tmp_path / "q.jsonl"), mode="qualify")
-    assert seen["_setup"] is None, "qualification must not build production collaborators"
+    assert seen["_setup_factory"] is None, \
+        "qualification must not build production collaborators"
 
 
 def test_the_public_entry_point_takes_no_plan_and_no_collaborators():
@@ -285,13 +286,11 @@ def test_the_trace_file_is_CREATE_ONLY(tmp_path):
             pass
 
 
-def test_the_results_file_is_CREATE_ONLY(tmp_path, monkeypatch, openable, frozen):
-    out = tmp_path / "r.jsonl"
-    out.write_text("")
-    _drive(monkeypatch, frozen["tasks"], 10)
-    with pytest.raises(Exception):
-        RUN._run(str(out), mode=RUN.MATCH_MODE, _supervise=False, _cleanup=lambda: None)
-    assert out.read_text() == ""          # untouched
+# NOTE: the create-only results check lives in
+# `test_a_PREEXISTING_output_path_is_a_PRECONDITION_refusal`, which asserts the
+# EXACT exception type. The version here used `pytest.raises(Exception)` and so
+# could not tell a precondition refusal from a VOID -- which is precisely the
+# mismatch review found.
 
 
 def test_the_trace_carries_ONLY_counters_and_closed_enums():
@@ -505,6 +504,7 @@ def test_the_production_setup_wires_every_qualified_collaborator(monkeypatch,
                                          "root": "/root", "source": "s", "verified": True})
     def _compile(dl, *, paths):
         calls["compile"] = paths
+        calls["compile_deadline"] = dl
         return {"jar_sha256": "x"}
 
     monkeypatch.setattr(D1, "_default_compile", _compile)
@@ -520,9 +520,17 @@ def test_the_production_setup_wires_every_qualified_collaborator(monkeypatch,
     monkeypatch.setattr(SCREEN_CMD, "_default_load_evaluator", _load)
     monkeypatch.setattr(INT, "make_state_factory", lambda openings, ctx: "STATE")
     monkeypatch.setattr(INT, "make_binder", lambda runtime, ctx: "BINDER")
-    monkeypatch.setattr(INT, "make_agent_factory", lambda **kw: "AGENTS")
+    def _agents(**kw):
+        calls["agent_kw"] = kw
+        return "AGENTS"
 
-    got = RUN._production_setup(str(tmp_path / "r.jsonl"))()
+    monkeypatch.setattr(INT, "make_agent_factory", _agents)
+
+    dl = D1.Deadline(RUN.RUN_DEADLINE_S)
+    dl.start()
+    got = RUN._production_setup(str(tmp_path / "r.jsonl"), dl)()
+    assert calls["compile_deadline"] is dl, \
+        "compilation must use the RUN's clock, not a second one"
     assert got["state_factory"] == "STATE"
     assert got["binder"] == "BINDER"            # the E3b binder
     assert got["agent_factory"] == "AGENTS"
@@ -536,6 +544,11 @@ def test_the_production_setup_wires_every_qualified_collaborator(monkeypatch,
     assert calls["compile"].java == "/jdk/bin/java"
     assert calls["compile"].ply_cap == RULES.PLY_CAP
     assert got["artifacts"]["per_call_timeout_s"] == 120
+    # 🔴 THE AGENT'S OWN QUERY TIMEOUT. `T1jRuntime.timeout_s` bounds REPLAY;
+    # `make_agent_factory(t1j_timeout_s=...)` is a SEPARATE argument defaulting
+    # to None, and omitting it left the agent querying with no timeout at all
+    # while the runtime truthfully reported 120.
+    assert calls["agent_kw"]["t1j_timeout_s"] == 120
 
 
 def test_the_production_setup_loads_the_incumbent_EXACTLY_ONCE(monkeypatch, tmp_path):
@@ -557,7 +570,9 @@ def test_the_production_setup_loads_the_incumbent_EXACTLY_ONCE(monkeypatch, tmp_
         return "EVAL"
 
     monkeypatch.setattr(SCREEN_CMD, "_default_load_evaluator", load)
-    RUN._production_setup(str(tmp_path / "r.jsonl"))()
+    dl2 = D1.Deadline(RUN.RUN_DEADLINE_S)
+    dl2.start()
+    RUN._production_setup(str(tmp_path / "r.jsonl"), dl2)()
     assert n["loads"] == 1, "the incumbent must be loaded once for the whole match"
 
 
@@ -690,3 +705,184 @@ def test_the_VOID_diagnostic_records_the_PLY_it_died_on(tmp_path, monkeypatch,
     d = [json.loads(l) for l in open(out)
          if json.loads(l)["record_type"] == "void_diagnostic"][0]
     assert d["ply"] == 17
+
+
+# ═══════ [P1] real play_task, only the SUBPROCESS mocked: excerpt and ply ════
+
+def _real_wiring(monkeypatch, replay_stdout=None, query_raises=None):
+    """A REAL binder and REAL agents over a small board, with `subprocess.run`
+    the only thing mocked. The earlier tests made `play_task` raise
+    HelperOutputError directly and so never met the AbortError wrapper that real
+    failures pass through."""
+    import subprocess
+    from scripts.GPU.alphazero import e4_screen_integration as INT
+    from scripts.GPU.alphazero.game.twixt_state import TwixtState
+
+    runtime = INT.T1jRuntime(java="/j", jar="/x.jar", classes="/c",
+                             ply_cap=280, timeout_s=RUN.PER_CALL_TIMEOUT_S)
+    ctx = INT.IntegrationContext()
+
+    def fake_run(args, **kw):
+        if "replay" in args and replay_stdout is not None:
+            return subprocess.CompletedProcess(args, 0, replay_stdout, "")
+        raise AssertionError(f"unexpected subprocess call: {args}")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    return {"binder": INT.make_binder(runtime, ctx),
+            "state_factory": lambda task: TwixtState(active_size=6, to_move="red")}
+
+
+def test_a_REAL_helper_failure_keeps_a_BOUNDED_excerpt(tmp_path, monkeypatch,
+                                                       openable, frozen):
+    """🔴 Real query/replay failures arrive as H.AbortError, which has NO stdout.
+    Reading `error.stdout` alone produced `helper_excerpt: null` for exactly the
+    failures the diagnostic exists for."""
+    wiring = _real_wiring(monkeypatch, replay_stdout="GARBAGE NOT A DUMP\n")
+    out = str(tmp_path / "r.jsonl")
+    with pytest.raises(H.AbortError):
+        RUN._run(out, mode=RUN.MATCH_MODE, _supervise=False, _cleanup=lambda: None,
+                 _binder=wiring["binder"], _state_factory=wiring["state_factory"],
+                 _agent_factory=lambda t, m, e: (lambda s: (2, 2)))
+    d = [json.loads(l) for l in open(out)
+         if json.loads(l)["record_type"] == "void_diagnostic"][0]
+    assert d["helper_excerpt"], "a real helper failure lost its transcript"
+    assert len(d["helper_excerpt"]) <= A.FAILURE_EXCERPT_CHARS + 200
+    assert d["error_type"] == "AbortError"
+
+
+def test_the_excerpt_walks_the_SUPPRESSED_context_chain():
+    """`_bind` re-raises `from None`, which clears __cause__ but leaves
+    __context__ set. The transcript is still reachable, and this pins that."""
+    try:
+        try:
+            raise A.HelperOutputError("bad", "FAIL: postcond\nsecond line\n")
+        except Exception:
+            raise H.AbortError("bind", "binder raised HelperOutputError") from None
+    except H.AbortError as ab:
+        assert ab.__cause__ is None
+        got = RUN._bounded_excerpt(ab)
+    assert "FAIL: postcond" in got
+
+
+def test_the_excerpt_falls_back_to_the_bounded_ABORT_MESSAGE():
+    """A postcondition or illegal-move abort has no transcript at all; the
+    integration layer put the detail in the message, so that is what is kept."""
+    got = RUN._bounded_excerpt(H.AbortError("move", "X" * 100_000))
+    assert got and len(got) <= A.FAILURE_EXCERPT_CHARS
+
+
+def test_a_failure_on_the_FIRST_searched_move_still_names_a_PLY(
+        tmp_path, monkeypatch, openable, frozen):
+    """🔴 The tracker read `ply` records only, so a failure before the first one
+    recorded ply=None. `opening_bound` carries the opening's ply and is now read."""
+    def die_on_first_move(*, task, rec, **kw):
+        rec.emit({"record_type": "opening_bound", "task_id": task["task_id"],
+                  "ply": 6, "opening": task["opening"]})
+        raise H.AbortError(H.PHASE_MOVE, "T1j returned the null sentinel")
+
+    monkeypatch.setattr(RUN.H, "play_task", die_on_first_move)
+    out = str(tmp_path / "r.jsonl")
+    with pytest.raises(H.AbortError):
+        RUN._run(out, mode=RUN.MATCH_MODE, _supervise=False, _cleanup=lambda: None)
+    d = [json.loads(l) for l in open(out)
+         if json.loads(l)["record_type"] == "void_diagnostic"][0]
+    assert d["ply"] == 6, "a first-move failure must still name the position"
+
+
+def test_a_BINDER_failure_after_a_move_names_the_ply_it_was_ATTEMPTING(
+        tmp_path, monkeypatch, openable, frozen):
+    """🔴 A binder failure happens AFTER the move applies but BEFORE that move's
+    `ply` record, so counting records reported the PREVIOUS ply. `note_bind` runs
+    before the binder can fail."""
+    seen = {}
+
+    def binder(task, state, ply, move=None):
+        seen["ply"] = ply
+        if move is not None:
+            raise H.AbortError(H.PHASE_BIND, f"divergence at ply {ply}")
+
+    from scripts.GPU.alphazero.game.twixt_state import TwixtState
+    out = str(tmp_path / "r.jsonl")
+    with pytest.raises(H.AbortError):
+        RUN._run(out, mode=RUN.MATCH_MODE, _supervise=False, _cleanup=lambda: None,
+                 _binder=binder,
+                 _state_factory=lambda task: TwixtState(active_size=6, to_move="red"),
+                 _agent_factory=lambda t, m, e: (lambda s: (2, 2)))
+    d = [json.loads(l) for l in open(out)
+         if json.loads(l)["record_type"] == "void_diagnostic"][0]
+    assert d["ply"] == seen["ply"], "the diagnostic named a ply the binder was not on"
+
+
+# ═════════ [P1] recorder creation is under the protected boundary ════════════
+
+def test_a_PREEXISTING_output_path_is_a_PRECONDITION_refusal(tmp_path, openable):
+    """🔴 THE EXCEPTION AND THE DURABLE VERDICT MUST AGREE.
+
+    This used to write a VOID trace and re-raise `H.HarnessError` unchanged: the
+    file said the instrument failed mid-run, the exception said the run was never
+    well formed. Both cannot be true. A path that already exists is a
+    PRECONDITION failure -- nothing ran -- so it refuses beside the barriers,
+    writes NO trace, and touches nothing.
+    """
+    out = tmp_path / "r.jsonl"
+    out.write_text("")
+    tr = str(tmp_path / "t.jsonl")
+    with pytest.raises(RUN.H1Error, match="already exists") as exc:
+        RUN._run(str(out), mode=RUN.MATCH_MODE, trace_path=tr, _supervise=False,
+                 _cleanup=lambda: None)
+    assert type(exc.value) is RUN.H1Error, "a precondition refusal is not a VOID"
+    assert not os.path.exists(tr), "a refused run opened a trace"
+    assert out.read_text() == ""
+
+
+def test_a_PREEXISTING_TRACE_path_is_refused_too(tmp_path, openable):
+    tr = tmp_path / "t.jsonl"
+    tr.write_text("")
+    with pytest.raises(RUN.H1Error, match="already exists"):
+        RUN._run(str(tmp_path / "r.jsonl"), mode=RUN.MATCH_MODE, trace_path=str(tr),
+                 _supervise=False, _cleanup=lambda: None)
+    assert not os.path.exists(str(tmp_path / "r.jsonl"))
+
+
+def test_a_MIDRUN_recorder_failure_is_a_VOID_and_the_TRACE_AGREES(
+        tmp_path, monkeypatch, openable):
+    """What remains after the preflight -- a full disk, a revoked permission --
+    IS the instrument failing mid-run. The trace says VOID and now so does the
+    exception type."""
+    def explode(path):
+        raise H.HarnessError("cannot create the results file: [Errno 28] no space")
+
+    monkeypatch.setattr(RUN, "_PlyCountingRecorder", explode)
+    out, tr = str(tmp_path / "r.jsonl"), str(tmp_path / "t.jsonl")
+    with pytest.raises(RUN.H1VoidError) as exc:
+        RUN._run(out, mode=RUN.MATCH_MODE, trace_path=tr, _supervise=False,
+                 _cleanup=lambda: None)
+    assert type(exc.value) is RUN.H1VoidError
+    lines = [json.loads(l) for l in open(tr)]
+    assert [l["event"] for l in lines] == ["run_start", "run_end"]
+    assert lines[-1]["verdict"] == "VOID" and lines[-1]["games_completed"] == 0
+    assert not os.path.exists(out)
+
+
+def test_the_setup_FACTORY_is_invoked_with_the_running_clock(tmp_path, monkeypatch,
+                                                             openable, frozen):
+    """The factory exists so the setup can be bound to the clock that is ALREADY
+    RUNNING. Asserting only that `run()` passes a factory would not notice
+    `_run` never calling it -- a control proved exactly that."""
+    seen = {}
+
+    def factory(results_path, deadline):
+        seen["path"] = results_path
+        seen["deadline"] = deadline
+        return lambda: {"agent_factory": lambda *a: None, "state_factory": lambda t: None,
+                        "binder": lambda *a, **k: None, "evaluator": None,
+                        "cleanup": lambda: None, "artifacts": {}}
+
+    _drive(monkeypatch, frozen["tasks"], 5)
+    out = str(tmp_path / "r.jsonl")
+    RUN._run(out, mode=RUN.MATCH_MODE, _supervise=False, _setup_factory=factory)
+    assert seen["path"] == out
+    assert seen["deadline"].started, "the setup was bound to a clock that never started"
+    assert seen["deadline"].limit_s == RUN.RUN_DEADLINE_S
+    hdr = json.loads(open(out).readline())
+    assert hdr["run_deadline_s"] == seen["deadline"].limit_s   # one clock, one origin
