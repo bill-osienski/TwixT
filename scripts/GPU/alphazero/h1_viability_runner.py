@@ -31,6 +31,27 @@ and no incompleteness rule. The screen's decision functions named in
 `RULES.MUST_NEVER_BE_CALLED_ON_AN_H1_RUN` are not imported, and a test asserts
 each still exists so the prohibition cannot rot into a reference to nothing.
 
+🔑 THE VOID RECORD CONTRACT, DECIDED AND STATED
+A VOID produces NO REPORT: no rate, no interval, no viability verdict. It does
+NOT delete what already happened. The results file keeps every `task_start`,
+`ply` and `task_result` record written before the failure, DELIBERATELY:
+
+  * they are the durable evidence of what actually ran, and destroying evidence
+    on failure is a worse defect than keeping it;
+  * a record already fsynced cannot be unwritten honestly.
+
+So the trace is NOT the only surviving progress record, and this module does not
+claim it is. What the trace uniquely guarantees is a NON-ANALYTIC one that
+survives when the recorder itself is the thing that failed, or when SIGALRM ends
+the process mid-write.
+
+⚠ THE RETAINED ROWS MUST NOT BE ANALYSED, and that is enforced STRUCTURALLY
+rather than asked for: `viability_report` binds through `bind_results`, which
+refuses any vector that is not all 224 games. A partial vector cannot produce a
+rate, an interval or a verdict -- so the retained rows are evidence and cannot
+become a result. A test drives the real reporter over a truncated vector to
+prove it.
+
 THE VERDICT IS NOT COMPUTED HERE. Rates, intervals and the viability verdict are
 `h1_viability_rules.viability_report`'s alone. This module hands it the durable
 rows and the FROZEN plan tasks.
@@ -46,6 +67,7 @@ from . import e4_screen_reference as REF
 from . import e4_screen_runner as H
 from . import h1_viability_plan as PLAN
 from . import h1_viability_rules as RULES
+from . import t1j_adapter as A
 from . import void_trace as VT
 
 #: 🔴 THE EXECUTION GATE. One line, its own commit when it is ever opened, and
@@ -53,10 +75,19 @@ from . import void_trace as VT
 #: qualification runs on test-only seeds and plays no scheduled game.
 H1_EXECUTION_AUTHORIZED = False
 
-#: PUBLIC modes. The match is NOT selectable here.
-MODES = ("qualify",)
+#: 🔴 THE MATCH IS PUBLICLY REACHABLE, AND THE GATE IS WHAT REFUSES IT.
+#:
+#: An earlier version listed only "qualify" here, so `run(..., mode="match")` was
+#: rejected by a MODE LIST before either barrier was consulted -- and every match
+#: test had to reach the private `_run`. That is a gate whose branch is never
+#: exercised on the public path, which is exactly how L0's command grew three
+#: defects that only an enabled-path test found. Opening `H1_EXECUTION_AUTHORIZED`
+#: and registering the block must be SUFFICIENT to start the match through the
+#: public entry point; nothing else may stand in the way, and nothing else may
+#: substitute for them.
 MATCH_MODE = "match"
-_ALL_MODES = MODES + (MATCH_MODE,)
+MODES = ("qualify", MATCH_MODE)
+_ALL_MODES = MODES
 
 #: 180 minutes, from the card: a measured projection of 107 minutes (L0 played 64
 #: games in 30m31s = 28.6 s/game) plus 69% headroom. Exceeding it is a VOID, not
@@ -212,6 +243,126 @@ def _verify_match_schedule(tasks: Sequence[Dict[str, Any]],
                       f"{RULES.N_GAMES}")
 
 
+class _PlyCountingRecorder:
+    """The qualified Recorder, plus the last ply it saw for the current task.
+
+    Needed because the card requires a VOID to NAME THE POSITION IT DIED ON, and
+    `play_task` reports the ply count only in its OUTCOME -- which a VOID never
+    produces. Counting the durable `ply` records is the only place that number
+    exists when the game did not finish. Delegation, not a subclass: nothing
+    about the recorder's own behaviour changes.
+    """
+
+    def __init__(self, path: str):
+        self._rec = H.Recorder(path)
+        self.last_ply: Optional[int] = None
+
+    def emit(self, record: Dict[str, Any]) -> None:
+        if record.get("record_type") == "ply":
+            self.last_ply = record.get("ply")
+        self._rec.emit(record)
+
+    def emit_terminal(self, record: Dict[str, Any]):
+        return self._rec.emit_terminal(record)
+
+    def close(self):
+        return self._rec.close()
+
+    @property
+    def path(self):
+        return self._rec.path
+
+
+def _void_diagnostic(task: Optional[Dict[str, Any]], index: Optional[int],
+                     ply: Optional[int], error: BaseException) -> Dict[str, Any]:
+    """WHERE the run died, as FIELDS -- not buried in a message string.
+
+    🔴 D1's VOID named a depth and an invocation and nothing else, so its cause
+    could not be settled afterwards and still cannot be. A message a human must
+    parse is not a diagnostic; every item the card requires is a key here, and a
+    test asserts each is present rather than searching the prose.
+    """
+    d: Dict[str, Any] = {
+        "task_id": task["task_id"] if task else None,
+        "index": index,
+        "opening": task["opening"] if task else None,
+        "colour_arm": task["colour_arm"] if task else None,
+        "rep": task["rep"] if task else None,
+        "seed": task["seed"] if task else None,
+        "ply": ply,
+        "error_type": type(error).__name__,
+    }
+    # THE HELPER'S OWN WORDS, BOUNDED. D1's VOID discarded the transcript and the
+    # failure was opaque; the excerpt is capped so a diagnostic cannot become a
+    # channel for the measurement the trace refuses to carry.
+    stdout = getattr(error, "stdout", None)
+    d["helper_excerpt"] = A.helper_failure_excerpt(stdout) if stdout else None
+    return d
+
+
+# ─────────────────────── the production game setup, dormant ──────────────────
+
+def _production_setup(results_path: str) -> Callable[[], Dict[str, Any]]:
+    """Everything effectful, built EXACTLY as the qualified commands build it.
+
+    🔴 THIS DID NOT EXIST, AND ITS ABSENCE WAS INVISIBLE. On the real path
+    `_setup` was None, so the refusing binder, agent factory and state factory
+    stayed in place and a real match would have aborted on its first ply --
+    while every successful test replaced `play_task` and therefore never reached
+    them. A gate that is never opened hides its own branch, and L0's command grew
+    three defects in exactly this function before an enabled-path test found them.
+
+    Runs INSIDE the harness, after the identity header is fsynced and under the
+    harness's abort classification, so a setup failure still leaves a durable
+    record of what the run was.
+
+    THE TOOLCHAIN IS RESOLVED, NOT SUPPLIED. `D1._default_compile` hashes the jar
+    and every pinned JDK component through `t1j_toolchain.verified_paths`, which
+    refuses a root under /tmp -- the failure that once deleted the whole
+    toolchain -- and cross-checks the jar against E4's own qualification pin.
+    """
+    classes_dir = results_path + ".t1j_classes"
+
+    def setup() -> Dict[str, Any]:
+        from . import e4_screen_command as SCREEN_CMD
+        from . import e4_screen_integration as INT
+        from . import t1j_toolchain as TC
+
+        tc = TC.verified_paths()
+        java = os.path.join(tc["jdk_home"], "bin", "java")
+        paths = D1.T1jPaths(java=java, jar=tc["jar"], classes=classes_dir,
+                            ply_cap=RULES.PLY_CAP)
+        # The whole-run clock is already running; compilation is inside it.
+        artifacts = D1._default_compile(D1.Deadline(RUN_DEADLINE_S).start(),
+                                        paths=paths)
+        runtime = INT.T1jRuntime(java=java, jar=tc["jar"], classes=classes_dir,
+                                 ply_cap=RULES.PLY_CAP,
+                                 timeout_s=PER_CALL_TIMEOUT_S)
+        ctx = INT.IntegrationContext()
+        evaluator = SCREEN_CMD._default_load_evaluator(".")     # the incumbent, ONCE
+        # 🔴 THE OPENINGS COME FROM THE SOURCE PLAN, NOT H1's. H1's frozen plan
+        # records opening NAMES on its tasks; the MOVES live in the sha-pinned
+        # screen plan, which is why `load_source_plan` exists. The first version
+        # read `plan["openings"]` off H1's own plan and raised KeyError -- on the
+        # real path, at setup, after the header was written. Only an enabled-path
+        # test could reach it, which is the whole reason this setup is tested.
+        openings = PLAN.load_source_plan()["openings"]
+        return {
+            "state_factory": INT.make_state_factory(openings, ctx),
+            "binder": INT.make_binder(runtime, ctx),            # the E3b binder
+            "agent_factory": INT.make_agent_factory(
+                runtime=runtime, ctx=ctx, evaluator=evaluator,
+                reference_build=lambda task, evaluator: (
+                    SCREEN_CMD._default_build_agent(task, evaluator=evaluator))),
+            "evaluator": evaluator,
+            "cleanup": SCREEN_CMD._default_cleanup,
+            "artifacts": dict(artifacts or {}, classes_dir=classes_dir,
+                              per_call_timeout_s=PER_CALL_TIMEOUT_S),
+        }
+
+    return setup
+
+
 # ──────────────────────────────── entry points ───────────────────────────────
 
 def run(results_path: str, *, mode: str = "qualify",
@@ -223,10 +374,11 @@ def run(results_path: str, *, mode: str = "qualify",
     MATCH MODE IS NOT SELECTABLE HERE.
     """
     if mode not in MODES:
-        raise H1Error(
-            f"mode {mode!r} is not permitted; the {RULES.N_GAMES}-game match is "
-            f"UNAUTHORIZED through this entry point")
-    return _run(results_path, mode=mode, trace_path=trace_path)
+        raise H1Error(f"mode {mode!r} is not permitted; modes are {list(MODES)}")
+    # NOTE what is NOT here: no rejection of MATCH_MODE. The gate below refuses
+    # it, and the gate is the thing a reviewer can see the state of.
+    return _run(results_path, mode=mode, trace_path=trace_path,
+                _setup=_production_setup(results_path) if mode == MATCH_MODE else None)
 
 
 def _run(results_path: str, *, mode: str, trace_path: Optional[str] = None,
@@ -283,11 +435,12 @@ def _run(results_path: str, *, mode: str, trace_path: Optional[str] = None,
     results: List[Dict[str, Any]] = []
     cleanups = 0
     completed = 0
+    current = None                      # (index, task) in flight, for the VOID
 
     supervisor = D1._supervisor(deadline) if _supervise else contextlib.nullcontext()
     with _trace_file(trace_path) as tfh, supervisor:
         _trace(tfh, event="run_start", schema=TRACE_SCHEMA, n_games=len(tasks))
-        rec = H.Recorder(results_path)
+        rec = _PlyCountingRecorder(results_path)
         try:
             rec.emit({"record_type": "run_header", "mode": mode,
                       "harness": "h1_viability_runner",
@@ -323,6 +476,8 @@ def _run(results_path: str, *, mode: str, trace_path: Optional[str] = None,
                           "artifacts": collaborators.get("artifacts", {})})
 
             for index, task in enumerate(tasks):
+                current = (index, task)
+                rec.last_ply = None
                 # NO EARLY STOP AND NO SKIP PATH. Every scheduled game is played.
                 _check_deadline(deadline, f"before game {index}")
                 _trace(tfh, event="task_start", index=index)
@@ -396,6 +551,20 @@ def _run(results_path: str, *, mode: str, trace_path: Optional[str] = None,
             return code
         except BaseException as e:                            # noqa: BLE001
             _trace(tfh, event="run_end", verdict="VOID", games_completed=completed)
+            # 🔴 THE ASYNCHRONOUS ALARM RAISES D1's EXCEPTION. `_check_deadline`
+            # translates only the COOPERATIVE breach; the reused supervisor fires
+            # SIGALRM from inside whatever blocking call is running, and that
+            # D1VoidError escaped this runner under the wrong experiment's type.
+            # Translated here, at the boundary, so every deadline VOID -- however
+            # it was detected -- leaves as H1VoidError.
+            if isinstance(e, D1.D1VoidError) and not isinstance(e, H1VoidError):
+                e = H1VoidError(f"{e} The H1 match is VOID: no viability report is "
+                                f"produced and the seed block retires whole.")
+            idx, tsk = (current if current is not None else (None, None))
+            rec.emit_terminal({"record_type": "void_diagnostic",
+                               **_void_diagnostic(tsk, idx, rec.last_ply, e),
+                               "games_completed": completed,
+                               "tasks_played": len(results)})
             if isinstance(e, H.AbortError):
                 note = rec.emit_terminal({"record_type": "abort", "phase": e.phase,
                                           "message": e.message,
@@ -404,25 +573,27 @@ def _run(results_path: str, *, mode: str, trace_path: Optional[str] = None,
                     import sys
                     print(f"WARNING: could not record the abort ({note})",
                           file=sys.stderr)
-            raise
+            raise e from None
         finally:
             rec.close()
 
 
 def _check_deadline(deadline, where: str) -> None:
-    """Translate D1's clock refusal into H1's own VOID.
+    """The COOPERATIVE clock check, between stages.
+
+    🔑 IT DOES NOT TRANSLATE. It used to wrap `deadline.check` in its own
+    D1VoidError -> H1VoidError conversion, and once the run boundary began
+    translating the ASYNCHRONOUS alarm the two overlapped: the boundary caught
+    the cooperative breach as well, so this conversion could never fire and an
+    injected-defect control removing it was NOT CAUGHT. ONE translation point,
+    at the boundary, covering both ways a breach is detected.
 
     The `Deadline` and its SIGALRM supervisor are REUSED, not copied: their
     ordering was wrong once -- the alarm armed before the clock started, giving
     the enforced and reported windows two different origins -- and was fixed
     once. A second copy would be a second chance to get that ordering wrong.
-    Only the exception type is H1's.
     """
-    try:
-        deadline.check(where)
-    except D1.D1VoidError as e:
-        raise H1VoidError(f"{e} The H1 match is VOID: no partial-match report is "
-                          f"produced and the seed block retires whole.") from None
+    deadline.check(where)
 
 
 def _report(rec, plan, tasks, results, mode, cleanups) -> int:

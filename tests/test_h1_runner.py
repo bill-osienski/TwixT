@@ -15,6 +15,7 @@ from scripts.GPU.alphazero import e4_screen_runner as H
 from scripts.GPU.alphazero import h1_viability_plan as PLAN
 from scripts.GPU.alphazero import h1_viability_rules as RULES
 from scripts.GPU.alphazero import h1_viability_runner as RUN
+from scripts.GPU.alphazero import t1j_adapter as A
 from scripts.GPU.alphazero import void_trace as VT
 
 
@@ -24,9 +25,36 @@ def test_the_gate_is_false_as_published():
     assert RUN.H1_EXECUTION_AUTHORIZED is False
 
 
-def test_the_public_entry_point_cannot_select_match_mode():
-    with pytest.raises(RUN.H1Error, match="UNAUTHORIZED"):
+def test_the_PUBLIC_entry_point_reaches_the_GATE_not_a_mode_list():
+    """🔴 [P1] The match must be publicly REACHABLE, refused by the gate.
+
+    An earlier version listed only "qualify", so `mode="match"` was rejected by a
+    MODE LIST before either barrier was consulted, and every match test had to
+    reach the private `_run`. Opening the gate and registering the block must be
+    SUFFICIENT to start the match through `run()`; a hidden mode list would be a
+    third barrier nobody can see the state of.
+    """
+    assert RUN.MATCH_MODE in RUN.MODES
+    with pytest.raises(RUN.H1Error, match="H1_EXECUTION_AUTHORIZED is False"):
         RUN.run("/nonexistent/results.jsonl", mode=RUN.MATCH_MODE)
+
+
+def test_an_unknown_mode_is_still_refused():
+    with pytest.raises(RUN.H1Error, match="not permitted"):
+        RUN.run("/nonexistent/results.jsonl", mode="whatever")
+
+
+def test_the_public_match_path_supplies_the_PRODUCTION_setup(monkeypatch, tmp_path):
+    """🔴 [P1] On the real path `_setup` was None, leaving the REFUSING binder,
+    agent factory and state factory in place -- a match would have aborted on its
+    first ply, and no successful test could reveal it because they all replace
+    `play_task`."""
+    seen = {}
+    monkeypatch.setattr(RUN, "_run", lambda *a, **k: seen.update(k) or 0)
+    RUN.run(str(tmp_path / "r.jsonl"), mode=RUN.MATCH_MODE)
+    assert callable(seen["_setup"]), "the public match path supplies no setup"
+    RUN.run(str(tmp_path / "q.jsonl"), mode="qualify")
+    assert seen["_setup"] is None, "qualification must not build production collaborators"
 
 
 def test_the_public_entry_point_takes_no_plan_and_no_collaborators():
@@ -348,13 +376,17 @@ def test_a_deadline_breach_is_a_VOID_with_no_report(tmp_path, monkeypatch,
     assert json.loads(open(tr).read().splitlines()[-1])["verdict"] == "VOID"
 
 
-def test_the_deadline_translates_D1s_error_into_H1s_own(monkeypatch):
+def test_the_COOPERATIVE_check_does_not_translate_and_the_boundary_does(monkeypatch):
+    """ONE translation point. `_check_deadline` raises D1's type; the run
+    boundary converts it, so cooperative and asynchronous breaches leave by the
+    same door. Two conversions meant the inner one could never fire, and a
+    control removing it was NOT CAUGHT until they were collapsed."""
     from scripts.GPU.alphazero import d1_probe as D1
     dl = D1.Deadline(1.0, clock=lambda: 0.0)
     dl.start()
     monkeypatch.setattr(dl, "elapsed", lambda: 999.0)
-    with pytest.raises(RUN.H1VoidError):
-        RUN._check_deadline(dl, "here")
+    with pytest.raises(D1.D1VoidError):
+        RUN._check_deadline(dl, "here")          # unconverted, by design
 
 
 # ══════════════════ match mode loads ONLY the pinned v3 plan ═════════════════
@@ -454,3 +486,207 @@ def test_cap_saturation_exits_OK_and_publishes_NO_VERDICT(
     assert outcomes[0]["outcome"] == RUN.CAP_SATURATED_NO_RATE
     assert not any(r["record_type"] == "viability_report" for r in recs)
     assert all("verdict" not in r for r in recs)
+
+
+# ═══════════ [P1] the production setup, mocked at the real boundaries ════════
+
+def test_the_production_setup_wires_every_qualified_collaborator(monkeypatch,
+                                                                 tmp_path, frozen):
+    """Mocked at the PROCESS and MODEL boundaries only: no javac, no JVM, no
+    checkpoint. Everything between is the real wiring."""
+    from scripts.GPU.alphazero import e4_screen_command as SCREEN_CMD
+    from scripts.GPU.alphazero import e4_screen_integration as INT
+    from scripts.GPU.alphazero import t1j_toolchain as TC
+    from scripts.GPU.alphazero import d1_probe as D1
+
+    calls = {}
+    monkeypatch.setattr(TC, "verified_paths",
+                        lambda *a, **k: {"jdk_home": "/jdk", "jar": "/t1j.jar",
+                                         "root": "/root", "source": "s", "verified": True})
+    def _compile(dl, *, paths):
+        calls["compile"] = paths
+        return {"jar_sha256": "x"}
+
+    monkeypatch.setattr(D1, "_default_compile", _compile)
+    def _runtime(**kw):
+        calls["runtime"] = kw
+        return "RUNTIME"
+
+    monkeypatch.setattr(INT, "T1jRuntime", _runtime)
+    def _load(root):
+        calls["evaluator_loads"] = calls.get("evaluator_loads", 0) + 1
+        return "EVAL"
+
+    monkeypatch.setattr(SCREEN_CMD, "_default_load_evaluator", _load)
+    monkeypatch.setattr(INT, "make_state_factory", lambda openings, ctx: "STATE")
+    monkeypatch.setattr(INT, "make_binder", lambda runtime, ctx: "BINDER")
+    monkeypatch.setattr(INT, "make_agent_factory", lambda **kw: "AGENTS")
+
+    got = RUN._production_setup(str(tmp_path / "r.jsonl"))()
+    assert got["state_factory"] == "STATE"
+    assert got["binder"] == "BINDER"            # the E3b binder
+    assert got["agent_factory"] == "AGENTS"
+    assert got["evaluator"] == "EVAL"
+    assert callable(got["cleanup"])
+    # T1j gets the frozen 120-second timeout and the frozen ply cap
+    assert calls["runtime"]["timeout_s"] == 120
+    assert calls["runtime"]["ply_cap"] == RULES.PLY_CAP
+    # the toolchain is RESOLVED, not supplied, and compiled against
+    assert calls["compile"].jar == "/t1j.jar"
+    assert calls["compile"].java == "/jdk/bin/java"
+    assert calls["compile"].ply_cap == RULES.PLY_CAP
+    assert got["artifacts"]["per_call_timeout_s"] == 120
+
+
+def test_the_production_setup_loads_the_incumbent_EXACTLY_ONCE(monkeypatch, tmp_path):
+    from scripts.GPU.alphazero import e4_screen_command as SCREEN_CMD
+    from scripts.GPU.alphazero import e4_screen_integration as INT
+    from scripts.GPU.alphazero import t1j_toolchain as TC
+    from scripts.GPU.alphazero import d1_probe as D1
+    n = {"loads": 0}
+    monkeypatch.setattr(TC, "verified_paths", lambda *a, **k: {
+        "jdk_home": "/jdk", "jar": "/j.jar", "root": "/r", "source": "s", "verified": True})
+    monkeypatch.setattr(D1, "_default_compile", lambda dl, *, paths: {})
+    monkeypatch.setattr(INT, "T1jRuntime", lambda **kw: "R")
+    monkeypatch.setattr(INT, "make_state_factory", lambda o, c: "S")
+    monkeypatch.setattr(INT, "make_binder", lambda r, c: "B")
+    monkeypatch.setattr(INT, "make_agent_factory", lambda **kw: "A")
+
+    def load(root):
+        n["loads"] += 1
+        return "EVAL"
+
+    monkeypatch.setattr(SCREEN_CMD, "_default_load_evaluator", load)
+    RUN._production_setup(str(tmp_path / "r.jsonl"))()
+    assert n["loads"] == 1, "the incumbent must be loaded once for the whole match"
+
+
+# ═════════════ [P1] the ASYNCHRONOUS alarm must leave as H1's VOID ═══════════
+
+def test_the_SIGALRM_supervisor_raises_H1s_void_not_D1s(tmp_path, monkeypatch,
+                                                        openable, frozen):
+    """🔴 The REAL alarm, not `_supervise=False`.
+
+    `_check_deadline` translates only the COOPERATIVE breach. The reused
+    supervisor fires SIGALRM from inside whatever blocking call is running, and
+    that D1VoidError escaped this runner under the wrong experiment's type.
+    """
+    import time
+    from scripts.GPU.alphazero import d1_probe as D1
+
+    dl = D1.Deadline(0.25)
+    dl.start()
+
+    def blocks(**kw):
+        time.sleep(5)                       # interrupted by the alarm, not by us
+        raise AssertionError("the supervisor did not fire")
+
+    monkeypatch.setattr(RUN.H, "play_task", blocks)
+    out, tr = str(tmp_path / "r.jsonl"), str(tmp_path / "t.jsonl")
+    with pytest.raises(RUN.H1VoidError) as exc:
+        RUN._run(out, mode=RUN.MATCH_MODE, trace_path=tr, _deadline=dl,
+                 _supervise=True, _cleanup=lambda: None)
+    assert not isinstance(exc.value, D1.D1VoidError) or isinstance(exc.value,
+                                                                   RUN.H1VoidError)
+    assert type(exc.value) is RUN.H1VoidError
+    assert json.loads(open(tr).read().splitlines()[-1])["verdict"] == "VOID"
+
+
+# ═════════════════════ [P1] the VOID record contract ═════════════════════════
+
+@pytest.fixture
+def voided(tmp_path, monkeypatch, openable, frozen):
+    """A match that dies on game 4 with a helper-style failure."""
+    calls = {"n": 0}
+
+    def die(*, task, rec=None, **kw):
+        calls["n"] += 1
+        if calls["n"] > 3:
+            err = A.HelperOutputError("helper said no", "FAIL line 1\nFAIL line 2\n")
+            raise err
+        return {"winner": task["anchor_colour"], "terminal_reason": "win",
+                "plies": 40, "t1j_points": 1.0}
+
+    monkeypatch.setattr(RUN.H, "play_task", die)
+    out, tr = str(tmp_path / "r.jsonl"), str(tmp_path / "t.jsonl")
+    with pytest.raises(Exception):
+        RUN._run(out, mode=RUN.MATCH_MODE, trace_path=tr, _supervise=False,
+                 _cleanup=lambda: None)
+    return {"recs": [json.loads(l) for l in open(out)], "out": out, "tr": tr}
+
+
+def test_a_VOID_publishes_NO_REPORT_AND_NO_VERDICT(voided):
+    kinds = {r["record_type"] for r in voided["recs"]}
+    assert "viability_report" not in kinds
+    assert "match_outcome" not in kinds
+    assert not any("verdict" in r for r in voided["recs"]
+                   if r["record_type"] != "void_diagnostic")
+
+
+def test_a_VOID_RETAINS_the_raw_rows_it_already_wrote_and_says_so(voided):
+    """THE CONTRACT, stated in the module and asserted here: prior rows are KEPT.
+    Destroying fsynced evidence on failure would be the worse defect."""
+    results = [r for r in voided["recs"] if r["record_type"] == "task_result"]
+    assert len(results) == 3, "the three completed games must survive the VOID"
+    src = open("scripts/GPU/alphazero/h1_viability_runner.py").read()
+    assert "THE VOID RECORD CONTRACT" in src
+
+
+def test_the_retained_rows_CANNOT_become_a_result(voided, frozen):
+    """Enforced structurally, not asked for: the reporter refuses any vector that
+    is not all 224, so a partial match cannot yield a rate or a verdict."""
+    partial = [{k: v for k, v in r.items() if k != "record_type"}
+               for r in voided["recs"] if r["record_type"] == "task_result"]
+    rep = RULES.viability_report(partial, frozen["tasks"])
+    assert rep["reported"] is False and "unplayed" in rep["reason"]
+    assert "verdict" not in rep
+
+
+def test_the_VOID_diagnostic_NAMES_THE_POSITION_structurally(voided):
+    """🔴 D1's VOID named a depth and an invocation and nothing else, so its
+    cause could not be settled and still cannot be. Every item the card requires
+    is a FIELD here, not prose a human must parse."""
+    diag = [r for r in voided["recs"] if r["record_type"] == "void_diagnostic"]
+    assert len(diag) == 1
+    d = diag[0]
+    for field in ("task_id", "index", "opening", "colour_arm", "rep", "seed",
+                  "ply", "helper_excerpt", "error_type", "games_completed"):
+        assert field in d, field
+    assert d["index"] == 3 and d["games_completed"] == 3
+    assert d["opening"] and d["colour_arm"] and d["seed"]
+    assert d["error_type"] == "HelperOutputError"
+    assert "FAIL line 1" in d["helper_excerpt"]
+
+
+def test_the_VOID_diagnostic_excerpt_is_BOUNDED(tmp_path, monkeypatch, openable,
+                                                frozen):
+    """A diagnostic must not become the channel the trace refuses to be."""
+    huge = "X" * 100_000 + "\n"
+
+    def die(*, task, **kw):
+        raise A.HelperOutputError("boom", huge * 50)
+
+    monkeypatch.setattr(RUN.H, "play_task", die)
+    out = str(tmp_path / "r.jsonl")
+    with pytest.raises(Exception):
+        RUN._run(out, mode=RUN.MATCH_MODE, _supervise=False, _cleanup=lambda: None)
+    d = [json.loads(l) for l in open(out)
+         if json.loads(l)["record_type"] == "void_diagnostic"][0]
+    assert len(d["helper_excerpt"]) <= A.FAILURE_EXCERPT_CHARS + 200
+
+
+def test_the_VOID_diagnostic_records_the_PLY_it_died_on(tmp_path, monkeypatch,
+                                                        openable, frozen):
+    """`play_task` reports plies only in an OUTCOME, which a VOID never produces,
+    so the durable `ply` records are the only place that number exists."""
+    def die(*, task, rec, **kw):
+        rec.emit({"record_type": "ply", "task_id": task["task_id"], "ply": 17})
+        raise RuntimeError("mid-game instrument failure")
+
+    monkeypatch.setattr(RUN.H, "play_task", die)
+    out = str(tmp_path / "r.jsonl")
+    with pytest.raises(Exception):
+        RUN._run(out, mode=RUN.MATCH_MODE, _supervise=False, _cleanup=lambda: None)
+    d = [json.loads(l) for l in open(out)
+         if json.loads(l)["record_type"] == "void_diagnostic"][0]
+    assert d["ply"] == 17
