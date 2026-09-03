@@ -107,12 +107,18 @@ EARLY_STOP = None
 
 #: Named here so a runner cannot quietly acquire an early stop by importing the
 #: screen's rules instead. The H1 protocol names this function; it has one answer.
+#: 🔴 THE FIRST VERSION OF THIS TUPLE NAMED FIVE FUNCTIONS THAT DO NOT EXIST
+#: (`endpoint_decision`, `band_verdict`, `joint_verdict`, `should_continue`,
+#: and `e4_screen_rules.may_stop_early`). A ban on nothing is exactly the
+#: vacuous prohibition it was written to prevent, and only a test asserting
+#: that each name still RESOLVES could catch it. These are the real five --
+#: the same ones L0's runner names.
 MUST_NEVER_BE_CALLED_ON_AN_H1_RUN = (
-    "e4_screen_rules.may_stop_early",
-    "e4_screen_rules.endpoint_decision",
-    "e4_screen_rules.band_verdict",
-    "e4_screen_rules.joint_verdict",
-    "e4_screen_rules.should_continue",
+    "e4_screen_rules.early_in_band_forced",
+    "e4_screen_rules.saturation_reachable",
+    "e4_screen_rules.cap_incompleteness_reachable",
+    "e4_screen_rules.per_endpoint_decision",
+    "e4_screen_rules.classify_joint",
 )
 
 

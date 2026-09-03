@@ -1,0 +1,24 @@
+H1 RUNNER -- barriers, limits and scope, verified at the moment of recording
+==========================================================================
+
+GATES on disk (five, all False):
+scripts/GPU/alphazero/d1_probe.py:55:D1_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/e4_screen_command.py:44:SCREEN_AUTHORIZED = False
+scripts/GPU/alphazero/h1_viability_runner.py:54:H1_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/l0_match_command.py:41:L0_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/lowply_qualification.py:55:LOWPLY_QUALIFICATION_AUTHORIZED = False
+
+BOTH PAPER RESERVATIONS still unregistered, and the registry untouched:
+  H1 (202616000, 202616224): any registry flag -> False
+  D1 s14 (202615000, 202615221): any registry flag -> False
+
+  H1 gate            : False
+  run deadline       : 10800 s = 180 min
+  per-call timeout   : 120 s
+  games              : 224
+  early stop         : None
+  pinned plan        : docs/superpowers/evidence/2026-08-31-t1j-h1-implementation/10_h1_plan_v3.json
+  trace fields       : ['event', 'games_completed', 'index', 'n_games', 'schema', 'ts', 'verdict']
+
+$ git diff --stat scripts/GPU/alphazero/e4_screen_reference.py
+(empty = no registry tuple was touched)

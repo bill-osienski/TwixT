@@ -1,0 +1,469 @@
+"""The H1 viability screen's execution harness. THE MATCH IS NOT AUTHORIZED.
+
+This module wires the frozen 224-task v3 plan to machinery that is ALREADY
+QUALIFIED and rebuilds none of it. Everything effectful comes from the E4
+screen's harness, unchanged, exactly as L0's runner reuses it: `play_task`,
+`Recorder`, `AbortError`/`PHASE_*`, `_enforce_evaluator`, and the fail-closed
+`_refuse_*` defaults.
+
+🔴 TWO BARRIERS, AND THEY DID NOT EXIST BEFORE THIS MODULE
+Until now H1 was safe because NO EXECUTABLE PATH EXISTED -- not because anything
+protected one. An earlier comment claimed otherwise and was corrected. This
+module creates the path, so it must create both barriers with it:
+
+    1. `H1_EXECUTION_AUTHORIZED`, a gate defaulting to False;
+    2. `check_seed_registration()`, an INDEPENDENT precondition requiring the H1
+       block to be present in `ACCOUNTED_SEED_INTERVALS`.
+
+They are independent on purpose. Opening the gate does not register the block and
+registering the block does not open the gate, so neither one alone is enough, and
+neither can be opened by opening the other.
+
+🔑 BOTH FIRE BEFORE ANYTHING HAPPENS. Before helper compilation, before any model
+load, before any JVM launch, and BEFORE THE RECORDER CREATES ITS FILE -- a
+refusal that has already written output has not refused, and an empty results
+file is indistinguishable from a run that produced nothing.
+
+WHAT IS DELIBERATELY ABSENT
+No early stop of any kind. `h1_viability_rules.may_stop_early` is a constant
+False, `EARLY_STOP is None`, and this module consults no band, no saturation rule
+and no incompleteness rule. The screen's decision functions named in
+`RULES.MUST_NEVER_BE_CALLED_ON_AN_H1_RUN` are not imported, and a test asserts
+each still exists so the prohibition cannot rot into a reference to nothing.
+
+THE VERDICT IS NOT COMPUTED HERE. Rates, intervals and the viability verdict are
+`h1_viability_rules.viability_report`'s alone. This module hands it the durable
+rows and the FROZEN plan tasks.
+"""
+from __future__ import annotations
+
+import contextlib
+import os
+from typing import Any, Callable, Dict, List, Optional, Sequence
+
+from . import d1_probe as D1
+from . import e4_screen_reference as REF
+from . import e4_screen_runner as H
+from . import h1_viability_plan as PLAN
+from . import h1_viability_rules as RULES
+from . import void_trace as VT
+
+#: 🔴 THE EXECUTION GATE. One line, its own commit when it is ever opened, and
+#: restored to False immediately afterwards. It gates the MATCH path only:
+#: qualification runs on test-only seeds and plays no scheduled game.
+H1_EXECUTION_AUTHORIZED = False
+
+#: PUBLIC modes. The match is NOT selectable here.
+MODES = ("qualify",)
+MATCH_MODE = "match"
+_ALL_MODES = MODES + (MATCH_MODE,)
+
+#: 180 minutes, from the card: a measured projection of 107 minutes (L0 played 64
+#: games in 30m31s = 28.6 s/game) plus 69% headroom. Exceeding it is a VOID, not
+#: a truncated report.
+RUN_DEADLINE_S = 180 * 60
+
+#: 120 s per T1j call, the value §12.10 froze and E4/D1 already use.
+PER_CALL_TIMEOUT_S = D1.PER_QUERY_TIMEOUT_S
+
+#: Mirrored from the rules' reporter, and bound by a test that runs the real
+#: reporter over a cap-heavy vector rather than trusting this literal.
+CAP_SATURATED_NO_RATE = "CAP_SATURATED_NO_RATE"
+
+
+class H1Error(Exception):
+    """H1 refuses to run, or the run is not the frozen design."""
+
+
+class H1VoidError(H1Error):
+    """INSTRUMENT FAILURE. No report, no partial result, and the block retires.
+
+    🔑 NOT a losing game. A COMPLETED GAME IS A RESULT whoever wins -- the
+    distinction D1 destroyed by conflating FAIL with VOID, which is why the
+    low-ply qualification had to exist at all.
+    """
+
+
+# ───────────────────────────── the two barriers ──────────────────────────────
+
+def check_gate() -> None:
+    """BARRIER 1. Refuse unless the match has been explicitly authorized."""
+    if not H1_EXECUTION_AUTHORIZED:
+        raise H1Error(
+            "H1_EXECUTION_AUTHORIZED is False: the 224-game head-to-head match is "
+            "NOT AUTHORIZED. Opening this gate is a separate, reviewed decision, "
+            "and it does not register the seed block.")
+
+
+def check_seed_registration() -> None:
+    """BARRIER 2. The reserved block must be REGISTERED before H1 draws from it.
+
+    READS the registry; never writes one. Registering is a reviewed edit to
+    `e4_screen_reference.ACCOUNTED_SEED_INTERVALS` and belongs to the H1
+    EXECUTION authorization -- a block reserved on paper and never authorized
+    must cost nothing to abandon. A runtime mutation would make the registry
+    something the run can grant itself, which is the same shape as a gate that
+    opens its own gate.
+
+    EVERY seed is checked, not the endpoints: a partial registration would
+    otherwise pass and then draw an unaccounted seed halfway through.
+
+    ⚠ Availability -- exposed, retired, already consumed -- is a DIFFERENT
+    question, asked per task by `REF.validate_schedule_executable`. This asks
+    only whether the block has been accounted for at all. `validate_task_executable`
+    does NOT ask it: it inspects consumed/exposed/retired and accepts an
+    unregistered seed, which is precisely why this barrier has to exist
+    separately.
+    """
+    lo, hi = RULES.H1_SEED_BLOCK
+    missing = [s for s in range(lo, hi) if not REF.seed_is_accounted(s)]
+    if missing:
+        raise H1Error(
+            f"the H1 match seed block [{lo}, {hi}) is not registered: {len(missing)} "
+            f"of {hi - lo} seeds are absent from ACCOUNTED_SEED_INTERVALS (first "
+            f"{missing[0]}). Registering it is a reviewed edit to that registry, "
+            f"part of the H1 EXECUTION authorization; nothing here writes a "
+            f"registry at runtime.")
+
+
+# ─────────────────────────────── the VOID trace ──────────────────────────────
+
+TRACE_SCHEMA = "h1-void-trace/1"
+TRACE_EVENTS = ("run_start", "task_start", "task_done", "run_end")
+TRACE_VERDICTS = ("OK", "VOID")
+TRACE_COUNTER_MAX = {
+    "index": RULES.N_GAMES - 1,
+    "n_games": RULES.N_GAMES,
+    "games_completed": RULES.N_GAMES,
+}
+TRACE_EVENT_FIELDS = {
+    "run_start": frozenset({"schema", "n_games"}),
+    "task_start": frozenset({"index"}),
+    "task_done": frozenset({"index", "games_completed"}),
+    "run_end": frozenset({"verdict", "games_completed"}),
+}
+
+#: 🔑 NO IDENTITY STRINGS. No task_id, no opening, no colour arm, no seed, no
+#: score. Tasks run in the frozen order, so the INDEX identifies the game without
+#: recording anything about it -- and a count of games completed says how far the
+#: run got without saying what happened in any of them. A trace that could carry
+#: a result would be a partial-match report under a different filename.
+H1_TRACE = VT.TraceSchema(
+    schema=TRACE_SCHEMA, events=TRACE_EVENTS, event_fields=TRACE_EVENT_FIELDS,
+    counter_max=TRACE_COUNTER_MAX, enums={"verdict": TRACE_VERDICTS},
+    error=H1Error,
+    extra_field_note=("The trace carries counters only; a free-form field would "
+                      "make it a partial-match report under a different filename."))
+
+
+@contextlib.contextmanager
+def _trace_file(path: Optional[str]):
+    """CREATE-ONLY, like the recorder. Reusing a trace file would let one run's
+    progress be read as another's."""
+    if path is None:
+        yield None
+        return
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+    with os.fdopen(fd, "w") as fh:
+        yield fh
+
+
+def _trace(fh, **fields: Any) -> None:
+    if fh is not None:
+        VT.write(H1_TRACE, fh, **fields)
+
+
+# ────────────────────────────── schedule checks ──────────────────────────────
+
+# 🔑 THERE IS NO SEPARATE SEED LOOP HERE, AND THE ONE FIRST WRITTEN COULD NEVER
+# FIRE. `_verify_match_schedule` calls `validate_h1_schedule`, which already
+# refuses any seed outside the block -- through the rules' predicate -- so a
+# second loop below it was unreachable and an injected-defect control proved it:
+# deleting it changed no test. One enforcement point, in the plan validator.
+
+
+def _verify_match_schedule(tasks: Sequence[Dict[str, Any]],
+                           plan: Dict[str, Any]) -> None:
+    """The run must execute THE FROZEN 224, in order, unedited."""
+    try:
+        PLAN.validate_h1_schedule(tasks)
+    except PLAN.H1PlanError as e:
+        raise H1Error(str(e)) from None
+    digest = RULES.L0.l0_task_digest(tasks)
+    if digest != RULES.H1_TASK_DIGEST:
+        raise H1Error(
+            f"task digest {digest} != pinned {RULES.H1_TASK_DIGEST}: the schedule "
+            f"has been added to, removed from, reordered or edited")
+    # Bound by FULL CONTENT, not by task_id: canonical NAMES attached to synthetic
+    # CONTENT counted in an earlier workstream, and a test there proved exactly that.
+    by_id = {t["task_id"]: t for t in plan["tasks"]}
+    for t in tasks:
+        c = by_id.get(t["task_id"])
+        # EVERY KEY, not just the digest dimensions. Restricted to those, this
+        # check was strictly redundant with the digest comparison above it and
+        # could never fail -- a control proved exactly that. Widened, it covers
+        # what the digest does NOT: reference_sha256, reference_colour details
+        # and the derived rng_streams.
+        if c is None or any(t.get(k) != c.get(k) for k in set(t) | set(c)):
+            raise H1Error(
+                f"{t.get('task_id')} does not match the frozen plan's task of that name")
+    if len(tasks) != RULES.N_GAMES:
+        raise H1Error(f"the run schedules {len(tasks)} tasks, the design is "
+                      f"{RULES.N_GAMES}")
+
+
+# ──────────────────────────────── entry points ───────────────────────────────
+
+def run(results_path: str, *, mode: str = "qualify",
+        trace_path: Optional[str] = None) -> int:
+    """PUBLIC ENTRY POINT. Paths only.
+
+    No task, callable, evaluator, hook, reporter or schedule can be injected, no
+    plan path can be supplied -- match mode loads ONLY the pinned v3 plan -- and
+    MATCH MODE IS NOT SELECTABLE HERE.
+    """
+    if mode not in MODES:
+        raise H1Error(
+            f"mode {mode!r} is not permitted; the {RULES.N_GAMES}-game match is "
+            f"UNAUTHORIZED through this entry point")
+    return _run(results_path, mode=mode, trace_path=trace_path)
+
+
+def _run(results_path: str, *, mode: str, trace_path: Optional[str] = None,
+         _tasks: Optional[Sequence[Dict[str, Any]]] = None,
+         _plan_path: Optional[str] = None,
+         _agent_factory: Optional[Callable] = None,
+         _state_factory: Optional[Callable] = None,
+         _binder: Optional[Callable] = None,
+         _evaluator: Any = None,
+         _cleanup: Optional[Callable] = None,
+         _identity: Optional[Dict[str, Any]] = None,
+         _setup: Optional[Callable] = None,
+         _deadline: Optional[D1.Deadline] = None,
+         _supervise: bool = True,
+         _ply_cap: int = RULES.PLY_CAP,
+         _ply_budget: Optional[int] = None) -> int:
+    """PRIVATE. The underscore parameters exist ONLY to drive fail-closed tests."""
+    if mode not in _ALL_MODES:
+        raise H1Error(f"mode {mode!r} is not permitted")
+    match = mode == MATCH_MODE
+
+    # 🔴 BOTH BARRIERS FIRST, BEFORE THE PLAN IS EVEN READ -- and so before any
+    # compilation, model load, JVM launch or output. Order is the guarantee here:
+    # a refusal that has already created a results file has not refused.
+    if match:
+        check_gate()
+        check_seed_registration()
+
+    # MATCH MODE LOADS ONLY THE PINNED PLAN. `_plan_path` is a test seam and is
+    # refused on the match path, because a supplied plan is a supplied design.
+    if match and _plan_path is not None:
+        raise H1Error("match mode loads the pinned v3 plan only; a supplied plan "
+                      "path is a supplied design")
+    plan = PLAN.load_h1_plan(_plan_path or PLAN.H1_PLAN_REL)
+    tasks = list(_tasks) if _tasks is not None else (
+        list(plan["tasks"]) if match else [])
+
+    if match:
+        _verify_match_schedule(tasks, plan)
+        try:
+            REF.validate_schedule_executable(tasks)
+        except REF.E4ReferenceError as e:
+            raise H1Error(f"the H1 schedule may not be executed: {e}") from None
+    else:
+        for t in tasks:
+            H._assert_not_scheduled(t)
+
+    deadline = _deadline if _deadline is not None else D1.Deadline(RUN_DEADLINE_S)
+    if not deadline.started:
+        deadline.start()
+
+    binder = _binder or H._refuse_binder
+    cleanup = _cleanup or H._default_cleanup
+    results: List[Dict[str, Any]] = []
+    cleanups = 0
+    completed = 0
+
+    supervisor = D1._supervisor(deadline) if _supervise else contextlib.nullcontext()
+    with _trace_file(trace_path) as tfh, supervisor:
+        _trace(tfh, event="run_start", schema=TRACE_SCHEMA, n_games=len(tasks))
+        rec = H.Recorder(results_path)
+        try:
+            rec.emit({"record_type": "run_header", "mode": mode,
+                      "harness": "h1_viability_runner",
+                      "plan_sha256": PLAN.H1_PLAN_SHA256,
+                      "task_digest": RULES.H1_TASK_DIGEST,
+                      "frozen_tasks": len(plan["tasks"]),
+                      "scheduled_tasks": len(tasks),
+                      "synthetic_tasks": 0 if match else len(tasks),
+                      "ply_cap": _ply_cap, "ply_budget": _ply_budget,
+                      "no_games": not match,
+                      "early_stop": RULES.EARLY_STOP,
+                      "n_games": RULES.N_GAMES,
+                      "per_call_timeout_s": PER_CALL_TIMEOUT_S,
+                      "run_deadline_s": deadline.limit_s,
+                      "seed_block": list(RULES.H1_SEED_BLOCK),
+                      "identity": _identity or {}})
+
+            if _setup is not None:
+                _check_deadline(deadline, "setup")
+                try:
+                    collaborators = _setup()
+                except H.AbortError:
+                    raise
+                except Exception as e:                        # noqa: BLE001
+                    raise H.AbortError(H.PHASE_SETUP,
+                                       f"{type(e).__name__}: {e}") from None
+                _agent_factory = collaborators["agent_factory"]
+                _state_factory = collaborators["state_factory"]
+                binder = collaborators["binder"]
+                _evaluator = collaborators["evaluator"]
+                cleanup = collaborators.get("cleanup", cleanup)
+                rec.emit({"record_type": "setup_complete",
+                          "artifacts": collaborators.get("artifacts", {})})
+
+            for index, task in enumerate(tasks):
+                # NO EARLY STOP AND NO SKIP PATH. Every scheduled game is played.
+                _check_deadline(deadline, f"before game {index}")
+                _trace(tfh, event="task_start", index=index)
+                rec.emit({"record_type": "task_start", "task_id": task["task_id"],
+                          "seed": task["seed"], "opening": task["opening"],
+                          "colour_arm": task["colour_arm"], "rep": task["rep"]})
+
+                def agent_for(t, mover, _task=task):
+                    agent = (_agent_factory or H._refuse_factory)(_task, mover,
+                                                                 _evaluator)
+                    H._enforce_evaluator(agent, _evaluator, _task, mover)
+                    return agent
+
+                play_error = None
+                outcome = None
+                try:
+                    outcome = H.play_task(
+                        task=task, agent_for=agent_for,
+                        state_factory=_state_factory or H._refuse_state_factory,
+                        binder=binder, rec=rec, ply_cap=_ply_cap,
+                        ply_budget=_ply_budget)
+                except BaseException as e:                    # noqa: BLE001
+                    play_error = e
+
+                # A COMPLETED GAME IS PERSISTED AND COUNTED BEFORE CLEANUP RUNS,
+                # and a failure to WRITE it must not skip cleanup either. Both
+                # orderings were defects in the screen's harness before they were
+                # fixed there.
+                record_error = None
+                if play_error is None:
+                    row = {"record_type": "task_result", "task_id": task["task_id"],
+                           "seed": task["seed"], **outcome}
+                    try:
+                        rec.emit(row)
+                        results.append(row)      # counted only once it is durable
+                    except Exception as e:                    # noqa: BLE001
+                        record_error = e
+
+                cleanup_error = None
+                try:
+                    cleanup()
+                    cleanups += 1
+                except Exception as e:                        # noqa: BLE001
+                    cleanup_error = e
+
+                primary = play_error if play_error is not None else record_error
+                if primary is not None:
+                    if cleanup_error is not None:
+                        rec.emit_terminal(
+                            {"record_type": "cleanup_failure_after_abort",
+                             "task_id": task["task_id"],
+                             "cleanup_error": f"{type(cleanup_error).__name__}: "
+                                              f"{cleanup_error}"})
+                    if primary is record_error:
+                        raise H.AbortError(
+                            H.PHASE_RECORD,
+                            f"{task['task_id']} finished but its result could not be "
+                            f"recorded: {type(record_error).__name__}: {record_error}")
+                    raise primary
+                if cleanup_error is not None:
+                    raise H.AbortError(
+                        H.PHASE_CLEANUP,
+                        f"after {task['task_id']} (whose result is recorded): "
+                        f"{cleanup_error}")
+
+                completed += 1
+                _trace(tfh, event="task_done", index=index, games_completed=completed)
+
+            code = _report(rec, plan, tasks, results, mode, cleanups)
+            _trace(tfh, event="run_end", verdict="OK", games_completed=completed)
+            return code
+        except BaseException as e:                            # noqa: BLE001
+            _trace(tfh, event="run_end", verdict="VOID", games_completed=completed)
+            if isinstance(e, H.AbortError):
+                note = rec.emit_terminal({"record_type": "abort", "phase": e.phase,
+                                          "message": e.message,
+                                          "tasks_played": len(results)})
+                if note:
+                    import sys
+                    print(f"WARNING: could not record the abort ({note})",
+                          file=sys.stderr)
+            raise
+        finally:
+            rec.close()
+
+
+def _check_deadline(deadline, where: str) -> None:
+    """Translate D1's clock refusal into H1's own VOID.
+
+    The `Deadline` and its SIGALRM supervisor are REUSED, not copied: their
+    ordering was wrong once -- the alarm armed before the clock started, giving
+    the enforced and reported windows two different origins -- and was fixed
+    once. A second copy would be a second chance to get that ordering wrong.
+    Only the exception type is H1's.
+    """
+    try:
+        deadline.check(where)
+    except D1.D1VoidError as e:
+        raise H1VoidError(f"{e} The H1 match is VOID: no partial-match report is "
+                          f"produced and the seed block retires whole.") from None
+
+
+def _report(rec, plan, tasks, results, mode, cleanups) -> int:
+    """Post-run reporting, delegated ENTIRELY to the frozen H1 rules.
+
+    This module computes no rate, no interval and no verdict of its own.
+
+    THE MODE DECIDES WHAT A REFUSAL MEANS:
+      qualify   a refusal is EXPECTED -- synthetic tasks are not the frozen
+                design -- and is recorded as a receipt. Exit 0.
+      match     CAP_SATURATED_NO_RATE is a FROZEN, PREREGISTERED OUTCOME: the
+                match ran correctly and the rule says there is no rate and no
+                verdict, so it is recorded as an outcome and exits 0. ANY OTHER
+                refusal means the run did not produce the design it claimed to.
+    """
+    try:
+        report = RULES.viability_report(results, plan["tasks"])
+    except Exception as e:                                    # noqa: BLE001
+        raise H.AbortError(H.PHASE_CLASSIFY, f"{type(e).__name__}: {e}") from None
+
+    if report.get("reported"):
+        rec.emit({"record_type": "viability_report", **report,
+                  "tasks_played": len(results), "cleanups": cleanups})
+        return H.EXIT_OK
+
+    if mode == MATCH_MODE:
+        if report.get("outcome") == CAP_SATURATED_NO_RATE:
+            rec.emit({"record_type": "match_outcome",
+                      "outcome": report["outcome"], "reason": report.get("reason"),
+                      "cap_terminations": report.get("cap_terminations"),
+                      "games": report.get("games"),
+                      "tasks_played": len(results), "cleanups": cleanups})
+            return H.EXIT_OK
+        raise H.AbortError(
+            H.PHASE_CLASSIFY,
+            f"the match produced no report and no preregistered outcome: "
+            f"{report.get('reason')}")
+
+    rec.emit({"record_type": "qualification_receipt", "mode": mode,
+              "report_withheld": report.get("reason"),
+              "outcome": report.get("outcome"),
+              "tasks_scheduled": len(tasks), "tasks_played": len(results),
+              "cleanups": cleanups})
+    return H.EXIT_OK

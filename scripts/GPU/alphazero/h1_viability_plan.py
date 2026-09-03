@@ -164,7 +164,9 @@ def validate_h1_schedule(tasks: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
 
     lo, hi = H1_SEED_BLOCK
     for t in tasks:
-        if not lo <= int(t["seed"]) < hi:
+        # THE RULES' PREDICATE, not a re-derivation of the bounds: the abort rule
+        # that states this in prose and the check that enforces it are one thing.
+        if RULES.seed_is_outside_the_reserved_block(t["seed"]):
             raise H1PlanError(f"{t['task_id']} seed {t['seed']} outside [{lo}, {hi})")
         if t["t1j_mdPly"] != RULES.T1J_MDPLY:
             raise H1PlanError(f"{t['task_id']} is at mdPly {t['t1j_mdPly']}, "

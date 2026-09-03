@@ -35,6 +35,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 from . import d1_selection as SEL
+from . import void_trace as VT
 from . import e4_screen_integration as INT
 from . import t1j_adapter as A
 from .e4_screen_runner import AbortError
@@ -378,60 +379,28 @@ def position_label(pos: Dict[str, Any]) -> str:
             f"digest={digest[:16] or '?'}")
 
 
+#: D1's schema, handed to the SHARED validator. The validator was wrong once --
+#: v1 allowlisted field NAMES and let `stage="move=(11,11)"` through -- and was
+#: fixed once. A second copy for another design would be a second chance to
+#: reintroduce that, so the LOGIC is shared and only these tables differ.
+D1_TRACE = VT.TraceSchema(
+    schema=TRACE_SCHEMA, events=TRACE_EVENTS, event_fields=TRACE_EVENT_FIELDS,
+    counter_max=TRACE_COUNTER_MAX,
+    enums={"stage": TRACE_STAGES, "verdict": TRACE_VERDICTS},
+    error=D1Error,
+    extra_field_note=("The trace carries counters only; a free-form field would "
+                      "make it a partial-cohort analysis under a different "
+                      "filename."))
+
+
 def _check_trace(event: Any, fields: Dict[str, Any]) -> None:
-    """Validate one trace line COMPLETELY, before anything is written.
-
-    Names AND values. A name-only check let `stage="move=(11,11)"` through, which
-    made the non-analytic claim false; every field below is constrained to a
-    closed enum, an exact constant, or a bounded plain integer, so there is no
-    string a caller can steer.
-    """
-    if event not in TRACE_EVENTS:
-        raise D1Error(f"{event!r} is not a permitted trace event; "
-                      f"permitted: {list(TRACE_EVENTS)}")
-    allowed = TRACE_EVENT_FIELDS[event]
-    extra = sorted(set(fields) - allowed)
-    if extra:
-        raise D1Error(
-            f"{extra} is not permitted on a {event!r} line. The trace carries "
-            f"counters only; a free-form field would make it a partial-cohort "
-            f"analysis under a different filename. Permitted: {sorted(allowed)}")
-    missing = sorted(allowed - set(fields))
-    if missing:
-        raise D1Error(f"a {event!r} line is missing {missing}")
-
-    for name, value in fields.items():
-        if name == "schema":
-            if value != TRACE_SCHEMA:
-                raise D1Error(f"schema must be exactly {TRACE_SCHEMA!r}, got {value!r}")
-        elif name == "stage":
-            if value not in TRACE_STAGES:
-                raise D1Error(f"stage {value!r} is not one of {list(TRACE_STAGES)}")
-        elif name == "verdict":
-            if value not in TRACE_VERDICTS:
-                raise D1Error(f"verdict {value!r} is not one of {list(TRACE_VERDICTS)}")
-        else:
-            # `type(...) is int` rejects bool, which IS an int and would other-
-            # wise slip a two-valued channel through a "counter".
-            cap = TRACE_COUNTER_MAX[name]
-            if type(value) is not int or not 0 <= value <= cap:
-                raise D1Error(
-                    f"{name} must be a plain integer in [0, {cap}], got {value!r}")
+    """Validate one trace line COMPLETELY, before anything is written."""
+    VT.check(D1_TRACE, event, fields)
 
 
 def _trace(fh, *, event: Any = None, **fields: Any) -> None:
-    """Append one validated trace line and fsync it.
-
-    VALIDATED FIRST. A refusal that has already appended has not refused.
-
-    FSYNCED PER LINE on purpose: a trace that is lost when the run is terminated
-    mid-stage answers nothing, and surviving exactly that is the whole point.
-    """
-    _check_trace(event, fields)
-    fh.write(json.dumps(dict(fields, event=event, ts=time.time()),
-                        sort_keys=True) + "\n")
-    fh.flush()
-    os.fsync(fh.fileno())
+    """Append one validated trace line and fsync it."""
+    VT.write(D1_TRACE, fh, event=event, **fields)
 
 
 def _postcond_dict(p) -> Dict[str, Any]:
