@@ -468,9 +468,16 @@ def run(results_path: str, *, mode: str = "qualify",
         trace_path: Optional[str] = None) -> int:
     """PUBLIC ENTRY POINT. Paths only.
 
-    No task, callable, evaluator, hook, reporter or schedule can be injected, no
-    plan path can be supplied -- match mode loads ONLY the pinned v3 plan -- and
-    MATCH MODE IS NOT SELECTABLE HERE.
+    No task, callable, evaluator, hook, reporter or schedule can be injected, and
+    no plan path can be supplied: match mode loads ONLY the pinned v3 plan.
+
+    ⚠ CORRECTED: this said "MATCH MODE IS NOT SELECTABLE HERE", which stopped
+    being true when the match was made publicly reachable. MATCH MODE IS
+    SELECTABLE, DELIBERATELY, and what refuses it is `H1_EXECUTION_AUTHORIZED`
+    -- a constant a reviewer can read the state of -- rather than a mode list
+    that hides the gate's branch from every test. `mode="match"` therefore
+    reaches the two barriers and the output preconditions, and is refused by
+    them until the gate is opened and the seed block registered.
     """
     if mode not in MODES:
         raise H1Error(f"mode {mode!r} is not permitted; modes are {list(MODES)}")

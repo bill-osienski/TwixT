@@ -1026,3 +1026,24 @@ def test_the_precondition_agrees_with_what_CREATE_EXCLUSIVE_open_would_do(tmp_pa
         except FileExistsError:
             refused_by_open = True
         assert refused_by_check == refused_by_open is True, name
+
+
+def test_the_public_docstring_DESCRIBES_THE_TESTED_BEHAVIOUR():
+    """An operator-facing description that contradicts the code is a defect in
+    the same family as a guard that cannot fire: it documents a protection that
+    is not there, and the reader has no way to tell."""
+    doc = RUN.run.__doc__
+    # The withdrawn claim may appear ONLY as a QUOTED correction -- the same
+    # treatment the low-ply card's "boundary lies between" wording gets. Strip
+    # the quotation, then require the live text not to make the claim.
+    quoted = 'this said "MATCH MODE IS NOT SELECTABLE HERE"'
+    assert quoted in doc, "the correction should record what it corrects"
+    live = doc.replace(quoted, "")
+    assert "NOT SELECTABLE" not in live.upper(), "the live text still denies it"
+    assert "SELECTABLE, DELIBERATELY" in doc
+    assert "H1_EXECUTION_AUTHORIZED" in doc, "the docstring must name what refuses"
+    # and the behaviour it describes is the behaviour that is tested
+    assert RUN.MATCH_MODE in RUN.MODES
+    with pytest.raises(RUN.H1Error, match="H1_EXECUTION_AUTHORIZED is False"):
+        RUN.run("/nonexistent/r.jsonl", mode=RUN.MATCH_MODE,
+                trace_path="/nonexistent/t.jsonl")
