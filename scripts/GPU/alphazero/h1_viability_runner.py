@@ -157,7 +157,13 @@ def check_seed_registration() -> None:
             f"registry at runtime.")
 
 
-def check_output_paths(results_path: str, trace_path: Optional[str] = None) -> None:
+def _canonical(path: str) -> str:
+    """Absolute, symlink-resolved, normalised. Two names for one file are one file."""
+    return os.path.realpath(os.path.abspath(path))
+
+
+def check_output_paths(results_path: str, trace_path: Optional[str] = None, *,
+                       require_trace: bool = False) -> None:
     """BARRIER 3, in kind if not in name: the outputs must not already exist.
 
     🔴 THE EXCEPTION AND THE DURABLE VERDICT HAVE TO AGREE. Recorder construction
@@ -173,10 +179,35 @@ def check_output_paths(results_path: str, trace_path: Optional[str] = None) -> N
     genuinely mid-run recorder failure -- a full disk, a revoked permission --
     which IS a VOID and is translated to say so.
     """
+    # 🔴 A MATCH WITHOUT A TRACE IS NOT THE FROZEN DESIGN. The card requires a
+    # create-only VOID trace, and match mode accepted `trace_path=None` -- so a
+    # run could reach the games with the one record a VOID depends on absent.
+    if require_trace and not trace_path:
+        raise H1Error(
+            "match mode requires a trace path: the card freezes a create-only, "
+            "non-analytic VOID trace, and a match that cannot say how far it got "
+            "is not the design that was preregistered. Nothing has been written.")
+    # 🔴 AND THE TWO MUST BE DIFFERENT FILES. Given one path twice, the trace
+    # created it and the recorder then refused it -- turning a naming slip into a
+    # VOID that retires all 224 seeds. Compared after canonicalisation, because
+    # "r.jsonl", "./r.jsonl" and a symlink are the same file under three names.
+    if trace_path and _canonical(results_path) == _canonical(trace_path):
+        raise H1Error(
+            f"the results and trace paths are the same file: {results_path!r} and "
+            f"{trace_path!r} both resolve to {_canonical(results_path)}. Writing both "
+            f"streams to one file would make an avoidable naming error a VOID, and a "
+            f"VOID retires the whole seed block. Nothing has been written.")
+    # 🔴 `lexists`, NOT `exists`. `os.path.exists` FOLLOWS the link, so a DANGLING
+    # symlink reads as absent -- while the directory entry is already there and
+    # create-exclusive open refuses it with FileExistsError. The precheck passed,
+    # the trace opened, and recorder creation produced a VOID: another knowable
+    # path condition turned into a whole-block retirement.
     for label, path in (("results", results_path), ("trace", trace_path)):
-        if path and os.path.exists(path):
+        if path and os.path.lexists(path):
             raise H1Error(
-                f"the {label} path already exists: {path}. A run writes NEW files; "
+                f"the {label} path already exists: {path}"
+                f"{' (a dangling symlink -- the directory entry is present)' if not os.path.exists(path) else ''}"
+                f". A run writes NEW files; "
                 f"appending would merge two runs, and overwriting would destroy the "
                 f"record of one. Nothing has been written and no trace was opened.")
 
@@ -477,7 +508,7 @@ def _run(results_path: str, *, mode: str, trace_path: Optional[str] = None,
         check_seed_registration()
     # Authorization first, then the outputs: refuse an unauthorized run before
     # inspecting the filesystem at all.
-    check_output_paths(results_path, trace_path)
+    check_output_paths(results_path, trace_path, require_trace=match)
 
     # MATCH MODE LOADS ONLY THE PINNED PLAN. `_plan_path` is a test seam and is
     # refused on the match path, because a supplied plan is a supplied design.

@@ -110,11 +110,12 @@ def _setup_that_must_not_run(seen):
     return _s
 
 
-def test_THE_GATE_fires_before_plan_load_setup_recorder_or_play(spy):
+def test_THE_GATE_fires_before_plan_load_setup_recorder_or_play(spy, tmp_path):
     """Barrier 1, and the ORDER is the guarantee: a refusal that has already
     created a results file has not refused."""
     with pytest.raises(RUN.H1Error, match="NOT AUTHORIZED"):
-        RUN._run(spy["out"], mode=RUN.MATCH_MODE, _setup=_setup_that_must_not_run(spy))
+        RUN._run(spy["out"], mode=RUN.MATCH_MODE,
+                 trace_path=str(tmp_path / "auto_trace_1.jsonl"), _setup=_setup_that_must_not_run(spy))
     assert spy["plan_load"] == 0, "the plan was read before the gate"
     assert spy["setup"] == 0, "setup ran before the gate"
     assert spy["recorder"] == 0, "the recorder was constructed before the gate"
@@ -123,12 +124,13 @@ def test_THE_GATE_fires_before_plan_load_setup_recorder_or_play(spy):
 
 
 def test_THE_REGISTRATION_BARRIER_fires_before_plan_load_setup_recorder_or_play(
-        spy, monkeypatch):
+        spy, monkeypatch, tmp_path):
     """Barrier 2, with the gate OPEN, so it is reached alone. Opening one barrier
     must not open the other."""
     monkeypatch.setattr(RUN, "H1_EXECUTION_AUTHORIZED", True)
     with pytest.raises(RUN.H1Error, match="not registered"):
-        RUN._run(spy["out"], mode=RUN.MATCH_MODE, _setup=_setup_that_must_not_run(spy))
+        RUN._run(spy["out"], mode=RUN.MATCH_MODE,
+                 trace_path=str(tmp_path / "auto_trace_2.jsonl"), _setup=_setup_that_must_not_run(spy))
     assert spy["plan_load"] == 0 and spy["setup"] == 0
     assert spy["recorder"] == 0 and spy["play"] == 0
     assert not os.path.exists(spy["out"])
@@ -212,7 +214,8 @@ def test_a_complete_match_reports_and_carries_the_frozen_verdict(
         tmp_path, monkeypatch, openable, frozen):
     _drive(monkeypatch, frozen["tasks"], 133)          # 133/224 = 0.5938, L0's rate
     out = str(tmp_path / "r.jsonl")
-    assert RUN._run(out, mode=RUN.MATCH_MODE, _supervise=False,
+    assert RUN._run(out, mode=RUN.MATCH_MODE,
+                 trace_path=str(tmp_path / "auto_trace_4.jsonl"), _supervise=False,
                     _cleanup=lambda: None) == H.EXIT_OK
     recs = [json.loads(l) for l in open(out)]
     rep = [r for r in recs if r["record_type"] == "viability_report"]
@@ -265,7 +268,8 @@ def test_the_run_header_records_the_limits_it_ran_under(
         tmp_path, monkeypatch, openable, frozen):
     _drive(monkeypatch, frozen["tasks"], 100)
     out = str(tmp_path / "r.jsonl")
-    RUN._run(out, mode=RUN.MATCH_MODE, _supervise=False, _cleanup=lambda: None)
+    RUN._run(out, mode=RUN.MATCH_MODE,
+                 trace_path=str(tmp_path / "auto_trace_5.jsonl"), _supervise=False, _cleanup=lambda: None)
     hdr = json.loads(open(out).readline())
     assert hdr["record_type"] == "run_header"
     assert hdr["per_call_timeout_s"] == 120
@@ -393,6 +397,7 @@ def test_the_COOPERATIVE_check_does_not_translate_and_the_boundary_does(monkeypa
 def test_match_mode_REFUSES_a_supplied_plan_path(tmp_path, openable):
     with pytest.raises(RUN.H1Error, match="pinned v3 plan only"):
         RUN._run(str(tmp_path / "r.jsonl"), mode=RUN.MATCH_MODE,
+                 trace_path=str(tmp_path / "auto_trace_6.jsonl"),
                  _plan_path=str(tmp_path / "other.json"))
 
 
@@ -403,7 +408,8 @@ def test_match_mode_loads_the_pinned_plan_without_being_told_where(
     monkeypatch.setattr(RUN.PLAN, "load_h1_plan",
                         lambda p=PLAN.H1_PLAN_REL: (seen.setdefault("p", p), real(p))[1])
     _drive(monkeypatch, frozen["tasks"], 10)
-    RUN._run(str(tmp_path / "r.jsonl"), mode=RUN.MATCH_MODE, _supervise=False,
+    RUN._run(str(tmp_path / "r.jsonl"), mode=RUN.MATCH_MODE,
+                 trace_path=str(tmp_path / "auto_trace_7.jsonl"), _supervise=False,
              _cleanup=lambda: None)
     assert seen["p"] == PLAN.H1_PLAN_REL
 
@@ -411,7 +417,8 @@ def test_match_mode_loads_the_pinned_plan_without_being_told_where(
 def test_a_schedule_that_is_not_the_frozen_224_is_refused(tmp_path, openable, frozen):
     short = list(frozen["tasks"])[:-1]
     with pytest.raises(RUN.H1Error, match="expected exactly"):
-        RUN._run(str(tmp_path / "r.jsonl"), mode=RUN.MATCH_MODE, _tasks=short)
+        RUN._run(str(tmp_path / "r.jsonl"), mode=RUN.MATCH_MODE,
+                 trace_path=str(tmp_path / "auto_trace_8.jsonl"), _tasks=short)
 
 
 def test_a_task_renamed_onto_synthetic_CONTENT_is_refused(tmp_path, openable, frozen):
@@ -429,7 +436,8 @@ def test_a_task_renamed_onto_synthetic_CONTENT_is_refused(tmp_path, openable, fr
     assert RULES.L0.l0_task_digest(tasks) == RULES.H1_TASK_DIGEST   # digest blind
     PLAN.validate_h1_schedule(tasks)                                # validator blind
     with pytest.raises(RUN.H1Error, match="does not match the frozen plan"):
-        RUN._run(str(tmp_path / "r.jsonl"), mode=RUN.MATCH_MODE, _tasks=tasks)
+        RUN._run(str(tmp_path / "r.jsonl"), mode=RUN.MATCH_MODE,
+                 trace_path=str(tmp_path / "auto_trace_9.jsonl"), _tasks=tasks)
 
 
 def test_a_seed_outside_the_reserved_block_is_refused(tmp_path, openable, frozen):
@@ -447,7 +455,8 @@ def test_a_seed_outside_the_reserved_block_is_refused(tmp_path, openable, frozen
         PLAN.validate_h1_schedule(tasks)
     # and the runner refuses it too, by whichever guard reaches it first
     with pytest.raises(RUN.H1Error):
-        RUN._run(str(tmp_path / "r.jsonl"), mode=RUN.MATCH_MODE, _tasks=tasks)
+        RUN._run(str(tmp_path / "r.jsonl"), mode=RUN.MATCH_MODE,
+                 trace_path=str(tmp_path / "auto_trace_10.jsonl"), _tasks=tasks)
 
 
 # ══════════════════════ the preregistered no-rate outcome ════════════════════
@@ -477,7 +486,8 @@ def test_cap_saturation_exits_OK_and_publishes_NO_VERDICT(
 
     monkeypatch.setattr(RUN.H, "play_task", capped)
     out = str(tmp_path / "r.jsonl")
-    assert RUN._run(out, mode=RUN.MATCH_MODE, _supervise=False,
+    assert RUN._run(out, mode=RUN.MATCH_MODE,
+                 trace_path=str(tmp_path / "auto_trace_11.jsonl"), _supervise=False,
                     _cleanup=lambda: None) == H.EXIT_OK
     recs = [json.loads(l) for l in open(out)]
     outcomes = [r for r in recs if r["record_type"] == "match_outcome"]
@@ -684,7 +694,8 @@ def test_the_VOID_diagnostic_excerpt_is_BOUNDED(tmp_path, monkeypatch, openable,
     monkeypatch.setattr(RUN.H, "play_task", die)
     out = str(tmp_path / "r.jsonl")
     with pytest.raises(Exception):
-        RUN._run(out, mode=RUN.MATCH_MODE, _supervise=False, _cleanup=lambda: None)
+        RUN._run(out, mode=RUN.MATCH_MODE,
+                 trace_path=str(tmp_path / "auto_trace_12.jsonl"), _supervise=False, _cleanup=lambda: None)
     d = [json.loads(l) for l in open(out)
          if json.loads(l)["record_type"] == "void_diagnostic"][0]
     assert len(d["helper_excerpt"]) <= A.FAILURE_EXCERPT_CHARS + 200
@@ -701,7 +712,8 @@ def test_the_VOID_diagnostic_records_the_PLY_it_died_on(tmp_path, monkeypatch,
     monkeypatch.setattr(RUN.H, "play_task", die)
     out = str(tmp_path / "r.jsonl")
     with pytest.raises(Exception):
-        RUN._run(out, mode=RUN.MATCH_MODE, _supervise=False, _cleanup=lambda: None)
+        RUN._run(out, mode=RUN.MATCH_MODE,
+                 trace_path=str(tmp_path / "auto_trace_13.jsonl"), _supervise=False, _cleanup=lambda: None)
     d = [json.loads(l) for l in open(out)
          if json.loads(l)["record_type"] == "void_diagnostic"][0]
     assert d["ply"] == 17
@@ -740,7 +752,8 @@ def test_a_REAL_helper_failure_keeps_a_BOUNDED_excerpt(tmp_path, monkeypatch,
     wiring = _real_wiring(monkeypatch, replay_stdout="GARBAGE NOT A DUMP\n")
     out = str(tmp_path / "r.jsonl")
     with pytest.raises(H.AbortError):
-        RUN._run(out, mode=RUN.MATCH_MODE, _supervise=False, _cleanup=lambda: None,
+        RUN._run(out, mode=RUN.MATCH_MODE,
+                 trace_path=str(tmp_path / "auto_trace_14.jsonl"), _supervise=False, _cleanup=lambda: None,
                  _binder=wiring["binder"], _state_factory=wiring["state_factory"],
                  _agent_factory=lambda t, m, e: (lambda s: (2, 2)))
     d = [json.loads(l) for l in open(out)
@@ -783,7 +796,8 @@ def test_a_failure_on_the_FIRST_searched_move_still_names_a_PLY(
     monkeypatch.setattr(RUN.H, "play_task", die_on_first_move)
     out = str(tmp_path / "r.jsonl")
     with pytest.raises(H.AbortError):
-        RUN._run(out, mode=RUN.MATCH_MODE, _supervise=False, _cleanup=lambda: None)
+        RUN._run(out, mode=RUN.MATCH_MODE,
+                 trace_path=str(tmp_path / "auto_trace_15.jsonl"), _supervise=False, _cleanup=lambda: None)
     d = [json.loads(l) for l in open(out)
          if json.loads(l)["record_type"] == "void_diagnostic"][0]
     assert d["ply"] == 6, "a first-move failure must still name the position"
@@ -804,7 +818,8 @@ def test_a_BINDER_failure_after_a_move_names_the_ply_it_was_ATTEMPTING(
     from scripts.GPU.alphazero.game.twixt_state import TwixtState
     out = str(tmp_path / "r.jsonl")
     with pytest.raises(H.AbortError):
-        RUN._run(out, mode=RUN.MATCH_MODE, _supervise=False, _cleanup=lambda: None,
+        RUN._run(out, mode=RUN.MATCH_MODE,
+                 trace_path=str(tmp_path / "auto_trace_16.jsonl"), _supervise=False, _cleanup=lambda: None,
                  _binder=binder,
                  _state_factory=lambda task: TwixtState(active_size=6, to_move="red"),
                  _agent_factory=lambda t, m, e: (lambda s: (2, 2)))
@@ -880,9 +895,134 @@ def test_the_setup_FACTORY_is_invoked_with_the_running_clock(tmp_path, monkeypat
 
     _drive(monkeypatch, frozen["tasks"], 5)
     out = str(tmp_path / "r.jsonl")
-    RUN._run(out, mode=RUN.MATCH_MODE, _supervise=False, _setup_factory=factory)
+    RUN._run(out, mode=RUN.MATCH_MODE,
+                 trace_path=str(tmp_path / "auto_trace_17.jsonl"), _supervise=False, _setup_factory=factory)
     assert seen["path"] == out
     assert seen["deadline"].started, "the setup was bound to a clock that never started"
     assert seen["deadline"].limit_s == RUN.RUN_DEADLINE_S
     hdr = json.loads(open(out).readline())
     assert hdr["run_deadline_s"] == seen["deadline"].limit_s   # one clock, one origin
+
+
+# ═════════ [P1] a match needs a trace, and two DISTINCT output files ═════════
+
+def test_MATCH_MODE_REQUIRES_a_trace_path(tmp_path, openable):
+    """🔴 The card freezes a create-only VOID trace, and match mode accepted
+    `trace_path=None` -- a run could reach the games with the one record a VOID
+    depends on absent. Enforced in `_run`, not only in `run()`, so the private
+    seam cannot skip a card requirement."""
+    out = str(tmp_path / "r.jsonl")
+    with pytest.raises(RUN.H1Error, match="requires a trace path") as exc:
+        RUN._run(out, mode=RUN.MATCH_MODE, _supervise=False, _cleanup=lambda: None)
+    assert type(exc.value) is RUN.H1Error
+    assert os.listdir(tmp_path) == [], "a refused run created a file"
+
+
+def test_QUALIFICATION_does_not_require_a_trace(tmp_path):
+    """The requirement is the MATCH's: qualification plays no scheduled game."""
+    RUN.check_output_paths(str(tmp_path / "q.jsonl"), None, require_trace=False)
+
+
+def test_THE_TWO_OUTPUT_PATHS_MUST_BE_DIFFERENT_FILES(tmp_path, openable):
+    """🔴 Given one path twice, the trace CREATED it and the recorder then
+    refused it -- turning a naming slip into a VOID that retires all 224 seeds."""
+    same = str(tmp_path / "both.jsonl")
+    with pytest.raises(RUN.H1Error, match="same file") as exc:
+        RUN._run(same, mode=RUN.MATCH_MODE, trace_path=same, _supervise=False,
+                 _cleanup=lambda: None)
+    assert type(exc.value) is RUN.H1Error
+    assert os.listdir(tmp_path) == [], "a refused run created a file"
+
+
+@pytest.mark.parametrize("second", ["./{name}", "{name}", "sub/../{name}"])
+def test_TWO_NAMES_FOR_ONE_FILE_are_refused_after_canonicalisation(tmp_path, second):
+    """"r.jsonl", "./r.jsonl" and a path through a symlink are one file under
+    three names, so the comparison canonicalises before deciding."""
+    (tmp_path / "sub").mkdir()
+    results = str(tmp_path / "r.jsonl")
+    trace = str(tmp_path / second.format(name="r.jsonl"))
+    with pytest.raises(RUN.H1Error, match="same file"):
+        RUN.check_output_paths(results, trace, require_trace=True)
+
+
+def test_a_SYMLINKED_trace_path_is_refused_too(tmp_path):
+    real = tmp_path / "real.jsonl"
+    link = tmp_path / "link.jsonl"
+    real.write_text("")
+    link.symlink_to(real)
+    real.unlink()                       # a DANGLING link: neither path "exists"
+    assert not os.path.exists(str(link))
+    with pytest.raises(RUN.H1Error, match="same file"):
+        RUN.check_output_paths(str(real), str(link), require_trace=True)
+
+
+def test_the_distinctness_check_runs_BEFORE_either_file_is_opened(tmp_path, openable):
+    """Order again: the refusal must precede creation, not clean up after it."""
+    same = str(tmp_path / "x.jsonl")
+    with pytest.raises(RUN.H1Error):
+        RUN._run(same, mode=RUN.MATCH_MODE, trace_path=same, _supervise=False,
+                 _cleanup=lambda: None)
+    assert not os.path.exists(same)
+
+
+def _dangling(path):
+    """A symlink whose target does not exist: `exists` says False, `lexists` says
+    True, and create-exclusive open refuses it."""
+    os.symlink("/nonexistent/target", path)
+    assert not os.path.exists(path) and os.path.lexists(path)
+    return path
+
+
+def test_a_DANGLING_RESULTS_link_is_refused_by_the_precondition(tmp_path, openable):
+    """🔴 `os.path.exists` FOLLOWS the link, so a dangling one read as absent --
+    the precheck passed, the trace opened, and the recorder produced a VOID.
+    A knowable path condition must not cost the seed block.
+
+    The earlier symlink test cannot prove this: both its names resolve to one
+    target, so the SAME-FILE guard fires first.
+    """
+    results = _dangling(str(tmp_path / "r.jsonl"))
+    trace = str(tmp_path / "t.jsonl")                 # a genuinely different file
+    assert RUN._canonical(results) != RUN._canonical(trace)   # same-file guard idle
+    with pytest.raises(RUN.H1Error, match="already exists") as exc:
+        RUN._run(results, mode=RUN.MATCH_MODE, trace_path=trace, _supervise=False,
+                 _cleanup=lambda: None)
+    assert type(exc.value) is RUN.H1Error, "a knowable path condition became a VOID"
+    assert "dangling symlink" in str(exc.value)
+    assert not os.path.exists(trace), "a refused run opened the trace"
+    assert sorted(os.listdir(tmp_path)) == ["r.jsonl"]        # only the link we made
+
+
+def test_a_DANGLING_TRACE_link_is_refused_by_the_precondition(tmp_path, openable):
+    """The same check, on the other output name -- neither is covered by the other."""
+    results = str(tmp_path / "r.jsonl")
+    trace = _dangling(str(tmp_path / "t.jsonl"))
+    assert RUN._canonical(results) != RUN._canonical(trace)
+    with pytest.raises(RUN.H1Error, match="already exists") as exc:
+        RUN._run(results, mode=RUN.MATCH_MODE, trace_path=trace, _supervise=False,
+                 _cleanup=lambda: None)
+    assert type(exc.value) is RUN.H1Error
+    assert not os.path.exists(results)
+    assert sorted(os.listdir(tmp_path)) == ["t.jsonl"]
+
+
+def test_the_precondition_agrees_with_what_CREATE_EXCLUSIVE_open_would_do(tmp_path):
+    """The check exists to predict the open. Asserted against the real syscall."""
+    for name in ("plain", "dangling"):
+        path = str(tmp_path / f"{name}.jsonl")
+        if name == "dangling":
+            _dangling(path)
+        else:
+            open(path, "x").close()
+        refused_by_check = False
+        try:
+            RUN.check_output_paths(path, str(tmp_path / "other.jsonl"),
+                                   require_trace=True)
+        except RUN.H1Error:
+            refused_by_check = True
+        refused_by_open = False
+        try:
+            os.close(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644))
+        except FileExistsError:
+            refused_by_open = True
+        assert refused_by_check == refused_by_open is True, name
