@@ -1,0 +1,22 @@
+H1 PRE-EXECUTION VERIFICATION
+======================================================================
+  PASS  pinned v3 plan sha256  57565530c961d250...
+  PASS  plan loads: digest + design validate
+  PASS  224 tasks in frozen order
+  PASS  16 cells x 14 reps
+  PASS  H1 block fully ACCOUNTED  224/224
+  PASS  H1 block NOT exposed / NOT retired
+  PASS  registration barrier satisfied
+  PASS  schedule is EXECUTABLE (unspent)
+  PASS  D1 block still PAPER-ONLY
+  PASS  all five gates False
+  PASS  results path unused  docs/superpowers/evidence/2026-09-05-t1j-h1-match/01_h1_results.jsonl
+  PASS  trace path unused  docs/superpowers/evidence/2026-09-05-t1j-h1-match/02_h1_trace.jsonl
+  PASS  classes dir unused
+  PASS  check_output_paths accepts them
+  PASS  toolchain verified  5 artifacts
+  PASS  incumbent checkpoint present
+  PASS  frozen limits  180min / 120s / cap280 / mdPly6 / no early stop
+  PASS  gate STILL SHUT at the end of preflight
+======================================================================
+VERDICT: ALL CHECKS PASS -- may proceed
