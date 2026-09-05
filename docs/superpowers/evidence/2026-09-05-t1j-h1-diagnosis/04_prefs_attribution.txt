@@ -1,0 +1,39 @@
+WHAT prefs_ok=false ESTABLISHES -- and what it does not
+======================================================
+
+The qualified check, unchanged (E4Preflight.java):
+        int w = windows(), f = frames();
+        boolean headless = java.awt.GraphicsEnvironment.isHeadless();
+        boolean prefsOk = plistBefore != null && plistBefore.equals(plistHash())
+    private static String plistHash() {
+        try {
+            Path p = prefsDir().resolve("com.apple.java.util.prefs.plist");
+            if (!Files.exists(p)) return "ABSENT";
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(md.digest(Files.readAllBytes(p)));
+        } catch (Exception e) { return "ERROR"; }
+    }
+    private static long prefsCount() {
+        try (Stream<Path> s = Files.list(prefsDir())) { return s.count(); }
+        catch (Exception e) { return -1L; }
+    }
+    private static int windows() { try { return java.awt.Window.getWindows().length; } catch (Throwable t) { return -1; } }
+
+  * plistHash() -> "ERROR" on ANY exception, "ABSENT" if the file is missing
+  * prefsCount() -> -1 on ANY exception
+  * ~/Library/Preferences is SHARED with every process on the machine
+
+=> prefs_ok=false establishes: THE SURFACE DIFFERED ACROSS ONE JVM LIFETIME.
+=> it does NOT establish: which process changed it, or that a change
+   occurred at all (an ERROR-state flip suffices).
+
+The Python-side probe now distinguishes what the Java one collapses:
+{
+  "plist_path": "/Users/bill/Library/Preferences/com.apple.java.util.prefs.plist",
+  "plist_sha256": "6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d",
+  "plist_state": "PRESENT",
+  "entry_count": 527,
+  "dir_state": "PRESENT"
+}
+
+prefs_ok=false means the helper's before/after comparison of ~/Library/Preferences DIFFERED across this JVM's lifetime. It does NOT identify the responsible process, and does not establish that a mutation occurred at all: the directory is shared with every process on the machine, and plistHash()/prefsCount() also change value when a read merely starts or stops failing ("ERROR" / -1). Treating it as "T1j mutated the preference store" is an attribution the evidence does not carry.

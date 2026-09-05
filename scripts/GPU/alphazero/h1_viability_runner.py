@@ -339,6 +339,61 @@ class _PlyCountingRecorder:
         return self._rec.path
 
 
+#: The two probes `E4Preflight` compares, mirrored in Python so a failure can be
+#: examined instead of attributed. NOT a reimplementation of the check -- the
+#: Java check stays exactly as qualified, and stays an abort.
+PREFS_PLIST = "Library/Preferences/com.apple.java.util.prefs.plist"
+PREFS_DIR = "Library/Preferences"
+
+
+def preference_surface() -> Dict[str, Any]:
+    """Sample the same two surfaces the helper's postcondition compares.
+
+    `E4Preflight` computes
+        prefsOk = plistBefore.equals(plistHash()) && countBefore == prefsCount()
+    where `plistHash()` returns "ERROR" on ANY exception and "ABSENT" if the file
+    is missing, and `prefsCount()` returns -1 on ANY exception.
+
+    🔴 SO `prefs_ok=false` ESTABLISHES A DIFFERING PREFERENCE SURFACE ACROSS ONE
+    JVM LIFETIME, AND NOTHING ABOUT WHO CHANGED IT. `~/Library/Preferences` is
+    shared: any process on the machine writing there during those seconds trips
+    it, and so does a probe's ERROR state merely CHANGING -- which is not a
+    mutation at all. Sampling it here lets a later failure be examined rather
+    than attributed.
+    """
+    import hashlib as _h
+    home = os.path.expanduser("~")
+    plist = os.path.join(home, PREFS_PLIST)
+    out: Dict[str, Any] = {"plist_path": plist}
+    try:
+        with open(plist, "rb") as fh:
+            out["plist_sha256"] = _h.sha256(fh.read()).hexdigest()
+        out["plist_state"] = "PRESENT"
+    except FileNotFoundError:
+        out["plist_sha256"], out["plist_state"] = None, "ABSENT"
+    except OSError as e:
+        out["plist_sha256"], out["plist_state"] = None, f"ERROR:{type(e).__name__}"
+    try:
+        out["entry_count"] = len(os.listdir(os.path.join(home, PREFS_DIR)))
+        out["dir_state"] = "PRESENT"
+    except OSError as e:
+        out["entry_count"], out["dir_state"] = -1, f"ERROR:{type(e).__name__}"
+    return out
+
+
+#: What a failed preference postcondition does and does not support. Carried in
+#: the record so a reader cannot supply the missing half from intuition -- I did
+#: exactly that when I first reported this run.
+PREFS_ATTRIBUTION_NOTE = (
+    "prefs_ok=false means the helper's before/after comparison of "
+    "~/Library/Preferences DIFFERED across this JVM's lifetime. It does NOT "
+    "identify the responsible process, and does not establish that a mutation "
+    "occurred at all: the directory is shared with every process on the machine, "
+    "and plistHash()/prefsCount() also change value when a read merely starts or "
+    "stops failing (\"ERROR\" / -1). Treating it as \"T1j mutated the preference "
+    "store\" is an attribution the evidence does not carry.")
+
+
 def _void_diagnostic(task: Optional[Dict[str, Any]], index: Optional[int],
                      ply: Optional[int], error: BaseException) -> Dict[str, Any]:
     """WHERE the run died, as FIELDS -- not buried in a message string.
@@ -359,6 +414,12 @@ def _void_diagnostic(task: Optional[Dict[str, Any]], index: Optional[int],
         "error_type": type(error).__name__,
     }
     d["helper_excerpt"] = _bounded_excerpt(error)
+    # 🔴 A PREFERENCE POSTCONDITION FAILURE IS NOT AN ATTRIBUTION. Record what
+    # the surface looks like NOW, next to what the run header recorded at start,
+    # so the next reader can compare instead of concluding.
+    if "prefs_ok=false" in (d["helper_excerpt"] or ""):
+        d["prefs_attribution"] = PREFS_ATTRIBUTION_NOTE
+        d["prefs_surface_at_failure"] = preference_surface()
     return d
 
 
@@ -585,6 +646,8 @@ def _run(results_path: str, *, mode: str, trace_path: Optional[str] = None,
                       "per_call_timeout_s": PER_CALL_TIMEOUT_S,
                       "run_deadline_s": deadline.limit_s,
                       "seed_block": list(RULES.H1_SEED_BLOCK),
+                      # A BASELINE for the postcondition that has no author.
+                      "preference_surface_at_start": preference_surface(),
                       "identity": _identity or {}})
 
             if _setup is not None:
@@ -696,20 +759,46 @@ def _run(results_path: str, *, mode: str, trace_path: Optional[str] = None,
             # D1VoidError escaped this runner under the wrong experiment's type.
             # Translated here, at the boundary, so every deadline VOID -- however
             # it was detected -- leaves as H1VoidError.
+            # 🔴 THE EXCEPTION AND THE DURABLE VERDICT MUST SAY ONE THING. The
+            # trace writes run_end/VOID for ANY failure here, but the exception
+            # used to leave as whatever was raised -- so the 2026-09-05 run
+            # reported itself two ways: trace VOID, stdout "ABORT_AbortError",
+            # and an automated consumer could classify it either way.
+            #
+            # On the MATCH path every failure is a VOID: the match did not
+            # complete and no result may be published, whatever the cause. So an
+            # `Exception` is translated. `BaseException` is NOT -- a
+            # KeyboardInterrupt is the operator stopping the run, not the
+            # instrument failing, and relabelling it would be a lie about who
+            # ended the match.
+            original = e
+            # SPECIFIC FIRST, GENERAL SECOND -- otherwise the general rule
+            # swallows the deadline case and its message, and the branch that
+            # names the deadline becomes unreachable on the match path.
             if isinstance(e, D1.D1VoidError) and not isinstance(e, H1VoidError):
                 e = H1VoidError(f"{e} The H1 match is VOID: no viability report is "
                                 f"produced and the seed block retires whole.")
+            elif match and isinstance(e, Exception) and not isinstance(e, H1VoidError):
+                where = f"[{e.phase}] {e.message}" if isinstance(e, H.AbortError) else str(e)
+                e = H1VoidError(
+                    f"{where} The H1 match is VOID: no viability report is "
+                    f"produced and the seed block retires whole.")
             idx, tsk = (current if current is not None else (None, None))
             # `rec` is None only when the recorder itself could not be created --
             # exactly the case the trace above is the sole record of.
             if rec is not None:
                 rec.emit_terminal({"record_type": "void_diagnostic",
-                                   **_void_diagnostic(tsk, idx, rec.last_ply, e),
+                                   # the ORIGINAL failure, not the translation:
+                                   # "H1VoidError" says what it MEANS, the
+                                   # original says what actually went wrong.
+                                   **_void_diagnostic(tsk, idx, rec.last_ply,
+                                                      original),
                                    "games_completed": completed,
                                    "tasks_played": len(results)})
-                if isinstance(e, H.AbortError):
+                if isinstance(original, H.AbortError):
                     note = rec.emit_terminal({"record_type": "abort",
-                                              "phase": e.phase, "message": e.message,
+                                              "phase": original.phase,
+                                              "message": original.message,
                                               "tasks_played": len(results)})
                     if note:
                         import sys

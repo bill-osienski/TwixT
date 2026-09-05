@@ -427,7 +427,7 @@ def test_the_trace_records_HOW_FAR_a_void_run_got_and_nothing_else(
 
     monkeypatch.setattr(RUN.H, "play_task", explode)
     out, tr = str(tmp_path / "r.jsonl"), str(tmp_path / "t.jsonl")
-    with pytest.raises(H.AbortError):
+    with pytest.raises(RUN.H1VoidError):
         RUN._run(out, mode=RUN.MATCH_MODE, trace_path=tr, _supervise=False,
                  _cleanup=lambda: None)
     lines = [json.loads(l) for l in open(tr)]
@@ -699,6 +699,10 @@ def test_the_SIGALRM_supervisor_raises_H1s_void_not_D1s(tmp_path, monkeypatch,
     assert not isinstance(exc.value, D1.D1VoidError) or isinstance(exc.value,
                                                                    RUN.H1VoidError)
     assert type(exc.value) is RUN.H1VoidError
+    # ⚠ THE MESSAGE, not just the type. Every match Exception now becomes a
+    # VOID, so "raises H1VoidError" alone stopped distinguishing the
+    # supervisor firing from the test's own assertion failing.
+    assert "deadline" in str(exc.value).lower()
     assert json.loads(open(tr).read().splitlines()[-1])["verdict"] == "VOID"
 
 
@@ -836,7 +840,7 @@ def test_a_REAL_helper_failure_keeps_a_BOUNDED_excerpt(tmp_path, monkeypatch,
     failures the diagnostic exists for."""
     wiring = _real_wiring(monkeypatch, replay_stdout="GARBAGE NOT A DUMP\n")
     out = str(tmp_path / "r.jsonl")
-    with pytest.raises(H.AbortError):
+    with pytest.raises(RUN.H1VoidError):
         RUN._run(out, mode=RUN.MATCH_MODE,
                  trace_path=str(tmp_path / "auto_trace_14.jsonl"), _supervise=False, _cleanup=lambda: None,
                  _binder=wiring["binder"], _state_factory=wiring["state_factory"],
@@ -845,6 +849,8 @@ def test_a_REAL_helper_failure_keeps_a_BOUNDED_excerpt(tmp_path, monkeypatch,
          if json.loads(l)["record_type"] == "void_diagnostic"][0]
     assert d["helper_excerpt"], "a real helper failure lost its transcript"
     assert len(d["helper_excerpt"]) <= A.FAILURE_EXCERPT_CHARS + 200
+    # THE ORIGINAL type, not the translation. H1VoidError says what the failure
+    # MEANS for the experiment; the diagnostic must say what actually failed.
     assert d["error_type"] == "AbortError"
 
 
@@ -880,7 +886,7 @@ def test_a_failure_on_the_FIRST_searched_move_still_names_a_PLY(
 
     monkeypatch.setattr(RUN.H, "play_task", die_on_first_move)
     out = str(tmp_path / "r.jsonl")
-    with pytest.raises(H.AbortError):
+    with pytest.raises(RUN.H1VoidError):
         RUN._run(out, mode=RUN.MATCH_MODE,
                  trace_path=str(tmp_path / "auto_trace_15.jsonl"), _supervise=False, _cleanup=lambda: None)
     d = [json.loads(l) for l in open(out)
@@ -902,7 +908,7 @@ def test_a_BINDER_failure_after_a_move_names_the_ply_it_was_ATTEMPTING(
 
     from scripts.GPU.alphazero.game.twixt_state import TwixtState
     out = str(tmp_path / "r.jsonl")
-    with pytest.raises(H.AbortError):
+    with pytest.raises(RUN.H1VoidError):
         RUN._run(out, mode=RUN.MATCH_MODE,
                  trace_path=str(tmp_path / "auto_trace_16.jsonl"), _supervise=False, _cleanup=lambda: None,
                  _binder=binder,
@@ -958,6 +964,9 @@ def test_a_MIDRUN_recorder_failure_is_a_VOID_and_the_TRACE_AGREES(
         RUN._run(out, mode=RUN.MATCH_MODE, trace_path=tr, _supervise=False,
                  _cleanup=lambda: None)
     assert type(exc.value) is RUN.H1VoidError
+    # ⚠ the SPECIFIC message: the broad translation yields a VOID here too,
+    # so the type alone no longer reaches this branch.
+    assert "results file could not be created" in str(exc.value)
     lines = [json.loads(l) for l in open(tr)]
     assert [l["event"] for l in lines] == ["run_start", "run_end"]
     assert lines[-1]["verdict"] == "VOID" and lines[-1]["games_completed"] == 0
@@ -1132,3 +1141,193 @@ def test_the_public_docstring_DESCRIBES_THE_TESTED_BEHAVIOUR():
     with pytest.raises(RUN.H1Error, match="H1_EXECUTION_AUTHORIZED is False"):
         RUN.run("/nonexistent/r.jsonl", mode=RUN.MATCH_MODE,
                 trace_path="/nonexistent/t.jsonl")
+
+
+# ═══ the 2026-09-05 findings: prefs attribution, and outcome agreement ═══════
+
+def test_an_ABORT_on_the_match_path_leaves_as_a_VOID_so_the_TYPE_AGREES(
+        tmp_path, monkeypatch, openable, frozen):
+    """🔴 THE 2026-09-05 RUN REPORTED ITSELF TWO WAYS. The trace recorded VOID and
+    the exception left as `AbortError`, so an automated consumer could classify
+    the same event as an abort or a void depending which it read. Every abort on
+    the MATCH path is an instrument failure by the frozen rules; it now leaves as
+    H1VoidError, and the trace's verdict and the exception say one thing."""
+    def die(*, task, **kw):
+        raise H.AbortError(H.PHASE_MOVE, "postcondition failure")
+
+    monkeypatch.setattr(RUN.H, "play_task", die)
+    out, tr = str(tmp_path / "r.jsonl"), str(tmp_path / "t.jsonl")
+    with pytest.raises(RUN.H1VoidError) as exc:
+        RUN._run(out, mode=RUN.MATCH_MODE, trace_path=tr, _supervise=False,
+                 _cleanup=lambda: None)
+    assert type(exc.value) is RUN.H1VoidError
+    assert "[move]" in str(exc.value), "the phase must survive the translation"
+    assert json.loads(open(tr).read().splitlines()[-1])["verdict"] == "VOID"
+
+
+def test_QUALIFICATION_aborts_are_NOT_relabelled_as_voids(tmp_path, monkeypatch):
+    """The translation is scoped to the match. A qualification abort is an abort:
+    it has no seed block to retire and no match to void."""
+    def die(*, task, **kw):
+        raise H.AbortError(H.PHASE_MOVE, "synthetic")
+
+    monkeypatch.setattr(RUN.H, "play_task", die)
+    task = {"task_id": "q", "seed": 90009001, "opening": "o", "colour_arm": "t1j_red",
+            "rep": 0, "anchor_colour": "red", "reference_colour": "black"}
+    with pytest.raises(H.AbortError):
+        RUN._run(str(tmp_path / "r.jsonl"), mode="qualify", _tasks=[task],
+                 _supervise=False, _cleanup=lambda: None)
+
+
+def test_a_PREFS_failure_records_the_surface_and_REFUSES_to_attribute_it(
+        tmp_path, monkeypatch, openable, frozen):
+    """🔴 THE OVERCLAIM THIS FIXES. I reported "T1j mutated the host preference
+    store". The check compares a shared plist hash and the entry count of
+    ~/Library/Preferences: ANY process writing there trips it, and so does a
+    probe's ERROR state merely changing. The record now carries the surface and
+    an explicit statement of what the evidence does not support."""
+    def die(*, task, **kw):
+        raise A.HelperOutputError(
+            "postcond", "FAIL preference surfaces unchanged\n"
+            "POSTCOND no_throw=true windows=0 frames=0 headless=true "
+            "prefs_ok=false refl_ok=true refl_n=3 failures=1\n")
+
+    monkeypatch.setattr(RUN.H, "play_task", die)
+    out = str(tmp_path / "r.jsonl")
+    with pytest.raises(RUN.H1VoidError):
+        RUN._run(out, mode=RUN.MATCH_MODE, trace_path=str(tmp_path / "t.jsonl"),
+                 _supervise=False, _cleanup=lambda: None)
+    rows = [json.loads(l) for l in open(out)]
+    d = [r for r in rows if r["record_type"] == "void_diagnostic"][0]
+    note = d["prefs_attribution"]
+    # 🔴 SUBSTRING TRAP AGAIN. A control rewrote the note's FIRST line into an
+    # attribution and this passed, because the phrase looked for lives further
+    # down the same implicitly-concatenated string.
+    assert note.startswith("prefs_ok=false means the helper's before/after comparison")
+    # the claim may appear ONLY as the quoted thing the note rejects -- the same
+    # quoted-vs-live rule the run() docstring and the low-ply card use
+    quoted = ('Treating it as "T1j mutated the preference store" is an attribution '
+              'the evidence does not carry.')
+    assert quoted in note, "the note should name the reading it refuses"
+    assert "T1j mutated" not in note.replace(quoted, "")
+    assert "does NOT identify the responsible process" in note
+    assert set(d["prefs_surface_at_failure"]) >= {
+        "plist_sha256", "plist_state", "entry_count", "dir_state"}
+    hdr = [r for r in rows if r["record_type"] == "run_header"][0]
+    assert "preference_surface_at_start" in hdr, "no baseline to compare against"
+
+
+def test_a_NON_PREFS_failure_carries_no_attribution_note(tmp_path, monkeypatch,
+                                                         openable, frozen):
+    """The note is scoped: it would be noise on an unrelated failure, and noise
+    that reads as an excuse."""
+    def die(*, task, **kw):
+        raise H.AbortError(H.PHASE_BIND, "per-ply divergence at ply 12")
+
+    monkeypatch.setattr(RUN.H, "play_task", die)
+    out = str(tmp_path / "r.jsonl")
+    with pytest.raises(RUN.H1VoidError):
+        RUN._run(out, mode=RUN.MATCH_MODE, trace_path=str(tmp_path / "t.jsonl"),
+                 _supervise=False, _cleanup=lambda: None)
+    d = [json.loads(l) for l in open(out)
+         if json.loads(l)["record_type"] == "void_diagnostic"][0]
+    assert "prefs_attribution" not in d
+
+
+@pytest.mark.parametrize("exc,plist_state,count", [
+    (FileNotFoundError(), "ABSENT", None),
+    (PermissionError(), "ERROR:PermissionError", None),
+    (OSError("stale nfs"), "ERROR:OSError", None),
+])
+def test_the_surface_probe_DISTINGUISHES_absent_from_UNREADABLE(monkeypatch, exc,
+                                                                plist_state, count):
+    """🔑 THE DISTINCTION THAT MAKES ATTRIBUTION IMPOSSIBLE, made visible.
+
+    The Java probe collapses every failure to the string "ERROR" and every
+    directory failure to -1, so a plist that became UNREADABLE is indistinguishable
+    from one that was REWRITTEN -- both just flip prefs_ok. The Python probe
+    records which, so the next reader can tell a filesystem condition from a write.
+    """
+    import builtins
+    real_open = builtins.open
+
+    def fake_open(path, *a, **k):
+        if "com.apple.java.util.prefs.plist" in str(path):
+            raise exc
+        return real_open(path, *a, **k)
+
+    monkeypatch.setattr(builtins, "open", fake_open)
+    got = RUN.preference_surface()
+    assert got["plist_state"] == plist_state
+    assert got["plist_sha256"] is None
+
+
+def test_the_surface_probe_reports_an_UNREADABLE_DIRECTORY_as_such(monkeypatch):
+    def boom(path):
+        raise PermissionError("denied")
+
+    monkeypatch.setattr(os, "listdir", boom)
+    got = RUN.preference_surface()
+    assert got["entry_count"] == -1 and got["dir_state"] == "ERROR:PermissionError"
+
+
+def test_a_KEYBOARD_INTERRUPT_is_NOT_relabelled_as_an_instrument_failure(
+        tmp_path, monkeypatch, openable, frozen):
+    """🔑 THE LIMIT OF THE TRANSLATION. Every Exception on the match path becomes
+    a VOID, because the match did not complete and no result may be published.
+    A KeyboardInterrupt is the OPERATOR stopping the run, not the instrument
+    failing, and relabelling it would be a lie about who ended the match -- and
+    would make an operator's stop look like grounds to retire a seed block."""
+    def die(*, task, **kw):
+        raise KeyboardInterrupt()
+
+    monkeypatch.setattr(RUN.H, "play_task", die)
+    with pytest.raises(KeyboardInterrupt):
+        RUN._run(str(tmp_path / "r.jsonl"), mode=RUN.MATCH_MODE,
+                 trace_path=str(tmp_path / "t.jsonl"), _supervise=False,
+                 _cleanup=lambda: None)
+
+
+def test_the_diagnostic_records_the_ORIGINAL_failure_not_the_translation(
+        tmp_path, monkeypatch, openable, frozen):
+    def die(*, task, **kw):
+        raise A.HelperOutputError("bad", "FAIL something\n")
+
+    monkeypatch.setattr(RUN.H, "play_task", die)
+    out = str(tmp_path / "r.jsonl")
+    with pytest.raises(RUN.H1VoidError):
+        RUN._run(out, mode=RUN.MATCH_MODE, trace_path=str(tmp_path / "t.jsonl"),
+                 _supervise=False, _cleanup=lambda: None)
+    d = [json.loads(l) for l in open(out)
+         if json.loads(l)["record_type"] == "void_diagnostic"][0]
+    assert d["error_type"] == "HelperOutputError", "the translation hid the cause"
+    assert "FAIL something" in d["helper_excerpt"]
+
+
+def test_a_QUALIFY_mode_deadline_breach_is_STILL_translated(tmp_path, monkeypatch):
+    """🔑 THE ONLY PLACE THE DEADLINE BRANCH IS REACHABLE ALONE.
+
+    On the match path every Exception becomes a VOID, so the broad rule produces
+    an H1VoidError for a deadline breach whether or not the specific branch
+    exists -- a control disabling that branch was NOT CAUGHT. Qualification has
+    no broad rule, so only the deadline branch can translate there, and this is
+    what makes it a guard rather than decoration.
+    """
+    from scripts.GPU.alphazero import d1_probe as D1
+    clock = {"t": 0.0}
+    dl = D1.Deadline(1.0, clock=lambda: clock["t"])
+    dl.start()
+
+    def slow(*, task, **kw):
+        clock["t"] += 100.0
+        return {"winner": "red", "terminal_reason": "win", "plies": 5,
+                "t1j_points": 1.0}
+
+    monkeypatch.setattr(RUN.H, "play_task", slow)
+    task = {"task_id": "q0", "seed": 90009001, "opening": "o", "colour_arm": "t1j_red",
+            "rep": 0, "anchor_colour": "red", "reference_colour": "black"}
+    task2 = dict(task, task_id="q1", seed=90009002)
+    with pytest.raises(RUN.H1VoidError) as exc:
+        RUN._run(str(tmp_path / "r.jsonl"), mode="qualify", _tasks=[task, task2],
+                 _deadline=dl, _supervise=False, _cleanup=lambda: None)
+    assert "deadline" in str(exc.value).lower()
