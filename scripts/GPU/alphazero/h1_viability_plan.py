@@ -51,8 +51,9 @@ from . import l0_match_plan as L0PLAN
 SOURCE_PLAN_REL = L0PLAN.SOURCE_PLAN_REL
 SOURCE_PLAN_SHA256 = H.CANONICAL_PLAN_SHA256
 
-#: PAPER-RESERVED by the H1 card, DELIBERATELY UNREGISTERED. It appears in no
-#: registry tuple.
+#: RESERVED by the H1 card and REGISTERED 2026-09-04 in
+#: `e4_screen_reference.ACCOUNTED_SEED_INTERVALS` -- accounted, and NOT exposed
+#: and NOT retired, because nothing has been drawn.
 #:
 #: ⚠ THIS COMMENT HAS BEEN WRONG ONCE AND IS KEPT HONEST BY DATE. It first said
 #: an unregistered block means "a run is refused by the seed barrier as well as

@@ -56,8 +56,9 @@ N_ARMS = L0.N_ARMS
 N_REPS = 14
 N_GAMES = N_OPENINGS * N_ARMS * N_REPS                  # 224
 
-#: PAPER-RESERVED by the H1 card, DELIBERATELY UNREGISTERED: it appears in no
-#: registry tuple.
+#: RESERVED by the H1 card and REGISTERED 2026-09-04 in
+#: `e4_screen_reference.ACCOUNTED_SEED_INTERVALS` -- accounted, and NOT exposed
+#: and NOT retired, because nothing has been drawn.
 #:
 #: ⚠ THIS COMMENT HAS BEEN WRONG ONCE AND IS KEPT HONEST BY DATE. It first said
 #: an unregistered block means "a run is refused by the seed barrier as well as
