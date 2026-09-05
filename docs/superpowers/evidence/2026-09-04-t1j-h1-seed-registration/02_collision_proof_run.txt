@@ -1,0 +1,29 @@
+REGISTRIES AS THEY STAND, PLUS D1's PAPER RESERVATION
+==============================================================
+masks (imported): ['0x3c3c3c', '0x5a5a5a', '0xa5a5a5', '0xc3c3c3']
+prior seeds: 3661  {'ACCOUNTED': 3331, 'EXPOSED': 129, 'RETIRED': 323, 'TEST_ONLY': 100, 'CONSUMED_SEEDS': 1, 'D1_PAPER_S14': 221}
+prior values incl. derivations: 18305
+widest registered interval: 800 seeds -> enumeration is EXHAUSTIVE
+
+H1 (202616000, 202616224)  n=224
+  direct overlap      : {'ACCOUNTED': 0, 'EXPOSED': 0, 'RETIRED': 0, 'TEST_ONLY': 0, 'CONSUMED_SEEDS': 0, 'D1_PAPER_S14': 0}
+  stream collisions   : 0
+  own derivations     : 1120 (injective=True)
+  CLEAN               : True
+
+NEGATIVE CONTROLS -- a check that never rejects proves nothing
+--------------------------------------------------------------
+  REJECTED    D1's PAPER block (no registry can see it)
+                direct={'D1_PAPER_S14': 221} streams=1105
+  REJECTED    L0's spent/retired block
+                direct={'ACCOUNTED': 64, 'EXPOSED': 64, 'RETIRED': 64} streams=320
+  REJECTED    the retired D1 VOID block
+                direct={'ACCOUNTED': 224, 'RETIRED': 224} streams=1120
+  REJECTED    the TEST_ONLY band
+                direct={'TEST_ONLY': 10} streams=50
+  REJECTED    straddles D1's paper block by ONE seed
+                direct={'D1_PAPER_S14': 221} streams=1105
+  REJECTED    derived-stream collision at 204449028, NO direct overlap
+                direct={} streams=2
+
+VERDICT: H1 block clean = True; failed controls = 0

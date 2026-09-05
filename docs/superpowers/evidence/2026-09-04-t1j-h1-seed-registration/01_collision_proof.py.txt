@@ -1,0 +1,103 @@
+"""H1 collision re-proof against the CURRENT registries. READ-ONLY.
+
+Nothing is drawn, nothing is registered, no generator is built: XOR and set
+arithmetic only. Registries and the four masks are IMPORTED, never retyped, so
+the proof cannot drift from what the code enforces.
+
+🔴 THE TERM A REGISTRY-ONLY ENUMERATION CANNOT SEE. `d1_selection.SEED_INTERVAL`
+is D1's §14 reservation and is in NO registry BY DESIGN -- reserved-on-paper is
+still TAKEN. It is added explicitly. Without it every registry check would call
+an overlapping block clean.
+"""
+from scripts.GPU.alphazero.e4_screen_reference import (
+    ACCOUNTED_SEED_INTERVALS, EXPOSED_SEED_INTERVALS,
+    TEST_ONLY_SEED_INTERVALS, RETIRED_SEED_INTERVALS)
+from scripts.GPU.alphazero.twixtbot_g3_schedule import CONSUMED_SEEDS
+from scripts.GPU.alphazero.twixtbot_g3_reference import SeededReferenceAgent
+from scripts.GPU.alphazero.d1_selection import SEED_INTERVAL as D1_PAPER
+from scripts.GPU.alphazero.h1_viability_rules import H1_SEED_BLOCK
+
+MASKS = sorted({*SeededReferenceAgent.SEARCH_MASK.values(),
+                *SeededReferenceAgent.READOUT_MASK.values()})
+assert len(MASKS) == 4, MASKS
+
+CATS = {
+    "ACCOUNTED": {s for lo, hi in ACCOUNTED_SEED_INTERVALS for s in range(lo, hi)},
+    "EXPOSED": {s for lo, hi in EXPOSED_SEED_INTERVALS for s in range(lo, hi)},
+    "RETIRED": {s for lo, hi in RETIRED_SEED_INTERVALS for s in range(lo, hi)},
+    "TEST_ONLY": {s for lo, hi in TEST_ONLY_SEED_INTERVALS for s in range(lo, hi)},
+    "CONSUMED_SEEDS": set(CONSUMED_SEEDS),
+    "D1_PAPER_S14": set(range(*D1_PAPER)),          # in NO registry, still TAKEN
+}
+PRIOR = set().union(*CATS.values())
+
+
+def derivations(seeds):
+    """seed + one value per mask, both colours. XOR ONLY -- nothing is built."""
+    return {v for s in seeds for v in (s, *(s ^ m for m in MASKS))}
+
+
+PRIOR_VALUES = derivations(PRIOR)
+WIDEST = max(hi - lo for t in (ACCOUNTED_SEED_INTERVALS, EXPOSED_SEED_INTERVALS,
+                               RETIRED_SEED_INTERVALS, TEST_ONLY_SEED_INTERVALS)
+             for lo, hi in t)
+
+
+def check(block):
+    ours = set(range(*block))
+    vals = derivations(ours)
+    n = len(ours)
+    return {
+        "block": tuple(block), "n": n,
+        "direct": {k: len(ours & v) for k, v in CATS.items()},
+        "stream_collisions": len(vals & PRIOR_VALUES),
+        "own_values": len(vals), "injective": len(vals) == n * 5,
+        "clean": not (ours & PRIOR) and not (vals & PRIOR_VALUES) and len(vals) == n * 5,
+    }
+
+
+if __name__ == "__main__":
+    print("REGISTRIES AS THEY STAND, PLUS D1's PAPER RESERVATION")
+    print("=" * 62)
+    print(f"masks (imported): {[hex(m) for m in MASKS]}")
+    print(f"prior seeds: {len(PRIOR)}  { {k: len(v) for k, v in CATS.items()} }")
+    print(f"prior values incl. derivations: {len(PRIOR_VALUES)}")
+    print(f"widest registered interval: {WIDEST} seeds -> enumeration is EXHAUSTIVE")
+    print()
+    r = check(H1_SEED_BLOCK)
+    print(f"H1 {r['block']}  n={r['n']}")
+    print(f"  direct overlap      : {r['direct']}")
+    print(f"  stream collisions   : {r['stream_collisions']}")
+    print(f"  own derivations     : {r['own_values']} (injective={r['injective']})")
+    print(f"  CLEAN               : {r['clean']}")
+    print()
+    print("NEGATIVE CONTROLS -- a check that never rejects proves nothing")
+    print("-" * 62)
+    controls = [
+        ("D1's PAPER block (no registry can see it)", D1_PAPER),
+        ("L0's spent/retired block", (202613000, 202613224)),
+        ("the retired D1 VOID block", (202614000, 202614224)),
+        ("the TEST_ONLY band", (90009000, 90009010)),
+        ("straddles D1's paper block by ONE seed", (202614997, 202615221)),
+    ]
+    bad = 0
+    for label, blk in controls:
+        c = check(blk)
+        hit = {k: v for k, v in c["direct"].items() if v}
+        status = "REJECTED" if not c["clean"] else "🔴 ACCEPTED -- CONTROL FAILED"
+        if c["clean"]:
+            bad += 1
+        print(f"  {status:11s} {label}\n"
+              f"                direct={hit} streams={c['stream_collisions']}")
+    # a derived-stream collision with NO direct overlap: the discriminating case
+    v = 202611000 ^ MASKS[0]
+    assert v not in PRIOR, "control is not testing what it claims"
+    c = check((v, v + 1))
+    if c["clean"]:
+        bad += 1
+    print(f"  {'REJECTED' if not c['clean'] else '🔴 ACCEPTED -- CONTROL FAILED':11s} "
+          f"derived-stream collision at {v}, NO direct overlap\n"
+          f"                direct={ {k: n for k, n in c['direct'].items() if n} } "
+          f"streams={c['stream_collisions']}")
+    print()
+    print(f"VERDICT: H1 block clean = {r['clean']}; failed controls = {bad}")

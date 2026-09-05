@@ -59,18 +59,25 @@ N_GAMES = N_OPENINGS * N_ARMS * N_REPS                  # 224
 #: PAPER-RESERVED by the H1 card, DELIBERATELY UNREGISTERED: it appears in no
 #: registry tuple.
 #:
-#: 🔴 CORRECTED CLAIM. This comment previously said "so a run is refused by the
-#: seed barrier as well as by the gate". BOTH OF THOSE BARRIERS ARE ABSENT: H1
-#: has no runner, so it has no gate, and nothing checks this block against
-#: ACCOUNTED_SEED_INTERVALS -- `validate_task_executable` asks about consumed,
-#: exposed and retired seeds, NOT accounted ones, and ACCEPTS an unregistered
-#: H1 seed today. The protection was written as present fact while being purely
-#: prospective, which is the exact defect class this workstream tracks.
+#: ⚠ THIS COMMENT HAS BEEN WRONG ONCE AND IS KEPT HONEST BY DATE. It first said
+#: an unregistered block means "a run is refused by the seed barrier as well as
+#: by the gate" while NEITHER EXISTED -- a protection written as present fact
+#: while purely prospective, the defect class this workstream tracks.
 #:
-#: What is TRUE today: there is nothing to run, so there is nothing to refuse.
-#: An H1 RUNNER PHASE MUST ADD BOTH -- a gate defaulting to False and a
-#: registration precondition modelled on `d1_probe._check_seed_registration` --
-#: and neither exists until it does.
+#: WHAT IS TRUE NOW (2026-09-04): the runner exists and holds BOTH barriers --
+#: `h1_viability_runner.H1_EXECUTION_AUTHORIZED`, which is False, and
+#: `check_seed_registration`, which this block now SATISFIES: the seed-
+#: preparation authorization registered it in ACCOUNTED_SEED_INTERVALS as
+#: accounted, and NOT exposed and NOT retired, because nothing has been drawn.
+#:
+#: 🔑 SO ONE BARRIER IS DOWN AND ONE IS UP, WHICH IS THE POINT OF HAVING TWO.
+#: Registering the block did not open the gate and could not: they are separate
+#: constants in separate modules, and a test asserts the real repository state
+#: rather than a patched one.
+#:
+#: ⚠ `validate_task_executable` still does NOT ask the accounted question -- it
+#: inspects consumed, exposed and retired -- which is exactly why the
+#: registration barrier had to be a separate check and still is.
 #: Defined HERE rather than in the plan module -- L0 keeps its block in the plan,
 #: but H1's abort rule has to be RUNNABLE, and the plan module imports these
 #: rules, so the rules cannot import the block back.

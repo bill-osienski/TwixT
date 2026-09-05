@@ -107,6 +107,44 @@ ACCOUNTED_SEED_INTERVALS = (
                                      # Accounted, NOT exposed and NOT retired: a
                                      # reservation is not a draw. Those move only
                                      # once the run has actually drawn from it.
+    (202616000, 202616224),          # H1 HEAD-TO-HEAD VIABILITY SCREEN. 224
+                                     # seeds, one per game: 8 openings x 2 colour
+                                     # arms x 14 repetitions at mdPly 6.
+                                     #
+                                     # REGISTERED 2026-09-04, as the seed-
+                                     # preparation step of the H1 authorization
+                                     # and not before. Through the card, the plan
+                                     # and the runner it was reserved on paper and
+                                     # deliberately absent from this tuple, so a
+                                     # block that was never authorized would have
+                                     # cost nothing to abandon;
+                                     # `h1_viability_runner.check_seed_registration`
+                                     # refused the run for exactly that reason.
+                                     #
+                                     # 🔴 DISJOINTNESS WAS RE-PROVED AGAINST THE
+                                     # REGISTRIES AS THEY STOOD, PLUS
+                                     # `d1_selection.SEED_INTERVAL` AS AN EXPLICIT
+                                     # TERM. That D1 block is reserved on paper
+                                     # and is in NO registry by design, so a
+                                     # registry-only enumeration cannot see it --
+                                     # reserved-on-paper is still TAKEN, and
+                                     # without that term an overlapping block
+                                     # would have passed every check here.
+                                     #
+                                     # 3,661 prior seeds across six categories: 0
+                                     # direct overlaps, 0 derived-stream
+                                     # collisions against 18,305 prior values, own
+                                     # derivations injective (1,120 = 224 x 5,
+                                     # both colours). Exhaustive, not sampled.
+                                     # Six negative controls all rejected,
+                                     # including D1's paper block and a
+                                     # stream-only collision with NO direct
+                                     # overlap.
+                                     #
+                                     # Accounted, NOT exposed and NOT retired.
+                                     # Registering it does NOT open the gate:
+                                     # H1_EXECUTION_AUTHORIZED is a separate
+                                     # constant and remains False.
 )
 
 #: EXPERIMENTAL EXPOSURE: seeds drawn from OUTSIDE the permanently unschedulable

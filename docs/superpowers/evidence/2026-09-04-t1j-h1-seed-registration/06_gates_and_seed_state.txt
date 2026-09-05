@@ -1,0 +1,20 @@
+H1 SEED PREPARATION -- state verified at the moment of recording
+===============================================================
+
+ALL FIVE GATES:
+scripts/GPU/alphazero/d1_probe.py:55:D1_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/e4_screen_command.py:44:SCREEN_AUTHORIZED = False
+scripts/GPU/alphazero/h1_viability_runner.py:76:H1_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/l0_match_command.py:41:L0_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/lowply_qualification.py:55:LOWPLY_QUALIFICATION_AUTHORIZED = False
+
+SEED STATE:
+  H1     (202616000, 202616224): accounted=224/224 exposed=0 retired=0 test_only=0
+  D1 s14 (202615000, 202615221): accounted=0/221 exposed=0 retired=0 test_only=0
+
+THE TWO BARRIERS, unpatched:
+  barrier 2 registration: SATISFIED
+  barrier 1 gate      : REFUSES -> H1_EXECUTION_AUTHORIZED is False: the 224-game head-
+
+REGISTRY DIFF -- the only interval added:
++    (202616000, 202616224),          # H1 HEAD-TO-HEAD VIABILITY SCREEN. 224

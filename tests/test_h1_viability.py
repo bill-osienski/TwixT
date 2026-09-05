@@ -169,13 +169,28 @@ def test_seeds_are_the_reserved_block_one_per_task_in_order(tasks):
     assert [t["seed"] for t in tasks] == list(range(*P.H1_SEED_BLOCK))
 
 
-def test_the_H1_block_is_PAPER_RESERVED_and_in_NO_registry():
-    """§8 of the card: reserved on paper, deliberately unregistered, so both
-    barriers stand. A registry entry here would be a registration this phase is
-    not authorized to make."""
+def test_the_H1_block_is_ACCOUNTED_but_NOT_exposed_and_NOT_retired():
+    """⚠ INVERTED by the seed-preparation authorization of 2026-09-04.
+
+    It previously asserted the block was in NO registry, which was right while it
+    was reserved on paper only. It is now REGISTERED -- and registered means
+    ACCOUNTED and nothing else. Exposed and retired are claims about DRAWS, and
+    nothing has been drawn: a reservation is not a draw, and marking 224 seeds
+    exposed would assert 224 draws that never happened.
+    """
     for seed in range(*P.H1_SEED_BLOCK):
         st = REF.seed_status(seed)
-        assert not any(st.values()), (seed, st)
+        assert st["accounted"], (seed, st)
+        assert not st["exposed"] and not st["retired"] and not st["test_only"], (seed, st)
+
+
+def test_D1s_reservation_stays_PAPER_ONLY():
+    """The authorization registered ONE block. D1's §14 interval is in no
+    registry, exactly as before -- and that is why the collision proof has to
+    name it explicitly."""
+    from scripts.GPU.alphazero import d1_selection as SEL
+    for seed in range(*SEL.SEED_INTERVAL):
+        assert not any(REF.seed_status(seed).values()), seed
 
 
 def test_the_openings_come_from_the_pinned_plan_and_match_what_L0_PLAYED(tasks):
@@ -518,26 +533,69 @@ def test_NO_L0_ONLY_WORDING_REACHES_THE_FROZEN_H1_ARTIFACT():
     assert any(c.startswith("any pooling of H1 with L0") for c in plan["forbidden_claims"])
 
 
-def test_H1_HAS_NO_SEED_BARRIER_AND_NO_GATE_YET_and_says_so():
-    """🔴 Pins the CORRECTED claim, and fails the day a runner adds either.
+def test_the_DESIGN_layer_still_declares_no_gate_and_no_barrier():
+    """⚠ THE DELIBERATE REPLACEMENT the previous version of this test demanded.
 
-    The comment on H1_SEED_BLOCK used to say an unregistered block means "a run
-    is refused by the seed barrier as well as by the gate". Neither exists: H1
-    has no runner and therefore no gate, and `validate_task_executable` asks
-    about consumed/exposed/retired seeds -- NOT accounted ones -- so it accepts
-    an unregistered H1 seed. A protection written as present fact while being
-    purely prospective is the defect this workstream keeps finding.
+    It pinned the state in which H1 had NEITHER barrier and said, in its own
+    docstring, that when the runner added them it "must be REPLACED by one
+    asserting they bind -- deliberately, not by the claim quietly becoming true".
+    Both now exist and the block is registered, so this is that replacement.
 
-    When the runner phase adds the gate and the registration precondition, this
-    test must be REPLACED by one asserting they bind -- deliberately, not by the
-    claim quietly becoming true.
+    What is still true, and worth holding: the DESIGN layer declares neither. The
+    gate and the registration precondition live in the RUNNER, which is the only
+    module that can execute anything. A gate in the rules or the plan would be a
+    switch on a module that runs no games.
     """
     import scripts.GPU.alphazero.h1_viability_rules as _r
     import scripts.GPU.alphazero.h1_viability_plan as _p
-    assert not any(n.endswith("_AUTHORIZED") for n in vars(_r)), "a gate appeared"
-    assert not any(n.endswith("_AUTHORIZED") for n in vars(_p)), "a gate appeared"
-    assert not hasattr(_p, "_check_seed_registration")
-    # and the reason the registry alone does not refuse it:
-    task = P.build_tasks(P.load_source_plan())[0]
-    assert REF.seed_is_accounted(task["seed"]) is False
-    REF.validate_task_executable(task)                 # accepted, today
+    from scripts.GPU.alphazero import h1_viability_runner as _run
+    for mod in (_r, _p):
+        assert not any(n.endswith("_AUTHORIZED") for n in vars(mod))
+        # BOTH SPELLINGS. A control adding the PRIVATE `_check_seed_registration`
+        # was NOT CAUGHT while this looked only for the public name -- a barrier
+        # appearing in the design layer is the defect whatever it is called.
+        assert not any(n.lstrip("_") == "check_seed_registration" for n in vars(mod)), \
+            f"a registration barrier appeared in {mod.__name__}"
+    # and the runner holds BOTH, and they bind
+    assert _run.H1_EXECUTION_AUTHORIZED is False
+    with pytest.raises(_run.H1Error, match="H1_EXECUTION_AUTHORIZED is False"):
+        _run.check_gate()
+    _run.check_seed_registration()          # satisfied: the block IS registered
+
+
+def test_validate_task_executable_STILL_does_not_ask_the_accounted_question():
+    """The reason the registration barrier had to exist SEPARATELY, unchanged by
+    registration: `validate_task_executable` asks about consumed / exposed /
+    retired seeds and NOT accounted ones. It would have accepted an unregistered
+    H1 seed, and it accepts a registered one for the same reason -- it never
+    asked. Shown against a seed in no registry at all."""
+    task = dict(P.build_tasks(P.load_source_plan())[0], seed=202617000)
+    assert not any(REF.seed_status(202617000).values())     # in NO registry
+    REF.validate_task_executable(task)                      # and still accepted
+
+
+def test_the_FROZEN_artifacts_seed_status_is_a_FREEZE_TIME_record_not_a_LIVE_one():
+    """⚠ A DISCREPANCY THAT IS DELIBERATE, AND RECORDED RATHER THAN PAPERED OVER.
+
+    `10_h1_plan_v3.json` says `seed_block_status: "PAPER-RESERVED, DELIBERATELY
+    UNREGISTERED"`. That was true when the plan was frozen and is FALSE NOW: the
+    seed-preparation authorization registered the block.
+
+    The artifact is NOT rewritten. It is a frozen preregistration pinned by
+    sha256, and a document that is edited whenever the world moves is not frozen
+    -- the pin would then certify only that someone kept it current. The LIVE
+    status lives where state belongs: the registry, which this test reads.
+
+    So the field is a FREEZE-TIME record. This test exists so that reading is
+    explicit and cannot be mistaken for a stale claim nobody noticed.
+    """
+    plan = P.load_h1_plan()
+    assert plan["seed_block_status"] == "PAPER-RESERVED, DELIBERATELY UNREGISTERED"
+    lo, hi = P.H1_SEED_BLOCK
+    assert all(REF.seed_is_accounted(s) for s in range(lo, hi)), \
+        "the live registry disagrees with this test, not with the frozen artifact"
+    # and nothing in the RUNTIME reads that field to decide anything
+    import inspect
+    from scripts.GPU.alphazero import h1_viability_runner as _run
+    for mod in (P, _run):
+        assert "seed_block_status" not in inspect.getsource(mod)
