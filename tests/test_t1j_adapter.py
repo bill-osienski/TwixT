@@ -292,6 +292,84 @@ def test_parse_postconds_rejects_a_missing_field():
         A.parse_postconds(POSTCOND_LINE.replace(" prefs_ok=true", ""))
 
 
+# ═══ the helper's OWN preference observations (2026-09-05 reporting gap 1) ═══
+#
+# The H1 match VOIDED on `prefs_ok=false`, and nothing recorded WHAT the failing
+# JVM had compared: a Python sample at run start and another after the failure
+# can miss a transient Java read error entirely. The helper now emits its own
+# before/after values on the POSTCOND line, additively. The check is unchanged.
+
+SHA_A = "6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d"
+SHA_B = "0f9b9e9d3a6e1c2b4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4"
+PREFS_OBS = (" prefs_before={b} prefs_after={a} count_before={cb} count_after={ca}")
+POSTCOND_LINE_V2 = (POSTCOND_LINE.replace("prefs_ok=true", "prefs_ok=false")
+                    + PREFS_OBS.format(b=SHA_A, a="ERROR", cb=527, ca=-1))
+
+
+def test_parse_postconds_reads_the_helpers_OWN_prefs_observations():
+    (p,) = A.parse_postconds(POSTCOND_LINE_V2 + "\n")
+    assert (p.prefs_before, p.prefs_after) == (SHA_A, "ERROR")
+    assert (p.count_before, p.count_after) == (527, -1)
+    assert type(p.count_before) is int and type(p.count_after) is int
+    assert not p.prefs_ok and not p.clean
+
+
+def test_parse_postconds_tolerates_the_EARLIER_source_without_observations():
+    """E4, L0, D1, the low-ply qualification and the 2026-09-05 H1 match all ran
+    against the earlier E4Preflight source, and E3bDump still emits this shape.
+    Those transcripts must stay parseable: the observations are additive."""
+    (p,) = A.parse_postconds(POSTCOND_LINE + "\n")
+    assert (p.prefs_before, p.prefs_after, p.count_before, p.count_after) == (
+        None, None, None, None)
+    assert p.clean
+
+
+@pytest.mark.parametrize("ok,b,a,cb,ca", [
+    ("true", SHA_A, SHA_B, 527, 527),      # values differ, yet prefs_ok=true
+    ("true", SHA_A, SHA_A, 527, 526),      # counts differ, yet prefs_ok=true
+    ("false", SHA_A, SHA_A, 527, 527),     # nothing differs, yet prefs_ok=false
+])
+def test_a_POSTCOND_line_that_DISAGREES_WITH_ITSELF_is_refused(ok, b, a, cb, ca):
+    """🔑 TWO CHANNELS ON ONE LINE MUST SAY ONE THING. `prefs_ok` is the verdict
+    the helper computed from exactly these four values; a line where they
+    disagree is an unreadable instrument, not an observation."""
+    line = (POSTCOND_LINE.replace("prefs_ok=true", f"prefs_ok={ok}")
+            + PREFS_OBS.format(b=b, a=a, cb=cb, ca=ca))
+    with pytest.raises(A.HelperOutputError, match="disagrees with itself") as exc:
+        A.parse_postconds(line + "\n")
+    assert exc.value.stdout == line + "\n"
+
+
+@pytest.mark.parametrize("ok,b,a,cb,ca", [
+    ("false", SHA_A, SHA_B, 527, 527),
+    ("false", SHA_A, SHA_A, 527, -1),
+    ("false", "null", SHA_A, 527, 527),    # plistBefore was never taken
+    ("false", "ABSENT", SHA_A, 526, 527),
+    ("true", SHA_A, SHA_A, 527, 527),
+])
+def test_a_SELF_CONSISTENT_line_is_accepted(ok, b, a, cb, ca):
+    line = (POSTCOND_LINE.replace("prefs_ok=true", f"prefs_ok={ok}")
+            + PREFS_OBS.format(b=b, a=a, cb=cb, ca=ca))
+    (p,) = A.parse_postconds(line + "\n")
+    assert p.prefs_ok is (ok == "true")
+
+
+def test_the_prefs_observation_is_readable_from_a_BOUNDED_EXCERPT():
+    """The query path raises `AbortError` carrying only `helper_failure_excerpt`
+    -- FAIL lines and the POSTCOND line joined by " | " -- so the observation has
+    to be recoverable from that text, where POSTCOND does not start a line."""
+    excerpt = A.helper_failure_excerpt(
+        "PROC pid=1\nFAIL preference surfaces unchanged\n" + POSTCOND_LINE_V2 + "\n")
+    assert excerpt.startswith("FAIL preference")
+    assert A.postcond_prefs_observation(excerpt) == {
+        "prefs_before": SHA_A, "prefs_after": "ERROR",
+        "count_before": 527, "count_after": -1}
+    assert A.postcond_prefs_observation("FAIL x | " + POSTCOND_LINE) == {
+        "prefs_before": None, "prefs_after": None,
+        "count_before": None, "count_after": None}
+    assert A.postcond_prefs_observation("no postcond here") is None
+
+
 # ═══════ the replay hole 12.9 recorded: no timeout parameter existed at all ═══
 #
 # `query` already took `timeout_s` and defaulted it to None -- protection present

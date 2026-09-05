@@ -1271,21 +1271,164 @@ def test_the_surface_probe_reports_an_UNREADABLE_DIRECTORY_as_such(monkeypatch):
     assert got["entry_count"] == -1 and got["dir_state"] == "ERROR:PermissionError"
 
 
+def _interrupt_after(monkeypatch, frozen, n_games):
+    """play_task completes `n_games` games, then the operator presses Ctrl-C."""
+    _drive(monkeypatch, frozen["tasks"], 0)
+    real = RUN.H.play_task
+    calls = {"n": 0}
+
+    def play(*, task, **kw):
+        calls["n"] += 1
+        if calls["n"] > n_games:
+            raise KeyboardInterrupt()
+        return real(task=task, **kw)
+
+    monkeypatch.setattr(RUN.H, "play_task", play)
+
+
 def test_a_KEYBOARD_INTERRUPT_is_NOT_relabelled_as_an_instrument_failure(
         tmp_path, monkeypatch, openable, frozen):
-    """🔑 THE LIMIT OF THE TRANSLATION. Every Exception on the match path becomes
-    a VOID, because the match did not complete and no result may be published.
-    A KeyboardInterrupt is the OPERATOR stopping the run, not the instrument
-    failing, and relabelling it would be a lie about who ended the match -- and
-    would make an operator's stop look like grounds to retire a seed block."""
+    """🔑 THE LIMIT OF THE TRANSLATION, ON EVERY CHANNEL. Every Exception on the
+    match path becomes a VOID, because the match did not complete and no result
+    may be published. A KeyboardInterrupt is the OPERATOR stopping the run, not
+    the instrument failing, and relabelling it would be a lie about who ended the
+    match.
+
+    🔴 THE FIRST VERSION OF THIS TEST CHECKED ONLY THE EXCEPTION, AND PASSED WHILE
+    THE TRACE STILL WROTE `run_end/VOID`: the exception said "the operator
+    stopped" and the durable record said "the instrument failed". The exception,
+    the trace and the results file are asserted together here."""
+    _interrupt_after(monkeypatch, frozen, 2)
+    out, tr = str(tmp_path / "r.jsonl"), str(tmp_path / "t.jsonl")
+    with pytest.raises(KeyboardInterrupt) as exc:
+        RUN._run(out, mode=RUN.MATCH_MODE, trace_path=tr, _supervise=False,
+                 _cleanup=lambda: None)
+    assert type(exc.value) is KeyboardInterrupt
+
+    end = json.loads(open(tr).read().splitlines()[-1])
+    assert end["event"] == "run_end"
+    assert end["verdict"] == "INTERRUPTED", "the trace must not call a stop a VOID"
+    assert end["games_completed"] == 2
+
+    recs = [json.loads(l) for l in open(out)]
+    kinds = [r["record_type"] for r in recs]
+    assert "void_diagnostic" not in kinds and "abort" not in kinds
+    (d,) = [r for r in recs if r["record_type"] == "interrupt_diagnostic"]
+    assert d["error_type"] == "KeyboardInterrupt"
+    assert d["index"] == 2 and d["task_id"] == frozen["tasks"][2]["task_id"]
+    assert d["games_completed"] == 2 and d["tasks_played"] == 2
+    assert d["seed_accounting"] == RUN.INTERRUPT_ACCOUNTING_RULE
+
+
+def test_the_INTERRUPT_verdict_is_a_closed_enum_value_beside_OK_and_VOID():
+    assert RUN.TRACE_VERDICTS == ("OK", "VOID", "INTERRUPTED")
+    assert RUN.H1_TRACE.enums["verdict"] == RUN.TRACE_VERDICTS
+
+
+def test_the_interrupt_accounting_rule_says_drawn_seeds_are_NOT_reusable():
+    """🔑 A stop is not a VOID, but it does not give the seeds back either. Every
+    seed drawn before the interrupt is EXPOSED, and a one-shot schedule that has
+    started retires whole -- exactly as after a VOID. The verdict changes; the
+    accounting does not. Exact-string membership, not substrings of substrings."""
+    rule = RUN.INTERRUPT_ACCOUNTING_RULE
+    for phrase in ("is NOT an instrument failure",
+                   "does NOT make any drawn seed reusable",
+                   "EXPOSED", "retires whole",
+                   "exactly as after a VOID"):
+        assert phrase in rule, phrase
+    # The registry's refusal does not consult a verdict at all: an EXPOSED seed
+    # is refused whether the run that drew it ended VOID or INTERRUPTED.
+    import inspect
+    assert "verdict" not in inspect.signature(REF.seed_is_exposed).parameters
+    assert "verdict" not in inspect.signature(REF.seed_is_unavailable).parameters
+
+
+def test_an_interrupt_BEFORE_any_game_records_zero_and_names_the_first_task(
+        tmp_path, monkeypatch, openable, frozen):
+    _interrupt_after(monkeypatch, frozen, 0)
+    out, tr = str(tmp_path / "r.jsonl"), str(tmp_path / "t.jsonl")
+    with pytest.raises(KeyboardInterrupt):
+        RUN._run(out, mode=RUN.MATCH_MODE, trace_path=tr, _supervise=False,
+                 _cleanup=lambda: None)
+    end = json.loads(open(tr).read().splitlines()[-1])
+    assert (end["verdict"], end["games_completed"]) == ("INTERRUPTED", 0)
+    (d,) = [json.loads(l) for l in open(out)
+            if json.loads(l)["record_type"] == "interrupt_diagnostic"]
+    assert d["index"] == 0 and d["games_completed"] == 0
+
+
+def test_a_VOID_still_writes_VOID_and_a_void_diagnostic_beside_the_interrupt_path(
+        tmp_path, monkeypatch, openable, frozen):
+    """The negative control for the interrupt branch: an Exception is still a
+    VOID on every channel, and carries no interrupt accounting note."""
     def die(*, task, **kw):
-        raise KeyboardInterrupt()
+        raise A.HelperOutputError("bad", "FAIL something\n")
 
     monkeypatch.setattr(RUN.H, "play_task", die)
-    with pytest.raises(KeyboardInterrupt):
-        RUN._run(str(tmp_path / "r.jsonl"), mode=RUN.MATCH_MODE,
-                 trace_path=str(tmp_path / "t.jsonl"), _supervise=False,
+    out, tr = str(tmp_path / "r.jsonl"), str(tmp_path / "t.jsonl")
+    with pytest.raises(RUN.H1VoidError):
+        RUN._run(out, mode=RUN.MATCH_MODE, trace_path=tr, _supervise=False,
                  _cleanup=lambda: None)
+    assert json.loads(open(tr).read().splitlines()[-1])["verdict"] == "VOID"
+    recs = [json.loads(l) for l in open(out)]
+    assert [r["record_type"] for r in recs].count("void_diagnostic") == 1
+    assert "interrupt_diagnostic" not in [r["record_type"] for r in recs]
+    (d,) = [r for r in recs if r["record_type"] == "void_diagnostic"]
+    assert "seed_accounting" not in d
+
+
+# ═══ the helper's OWN prefs observations reach the diagnostic AS FIELDS ═══════
+
+_SHA = "6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d"
+_POSTCOND_OLD = ("POSTCOND no_throw=true windows=0 frames=0 headless=true "
+                 "prefs_ok=false refl_ok=true refl_n=3 failures=1")
+_POSTCOND_NEW = (_POSTCOND_OLD + f" prefs_before={_SHA} prefs_after=ERROR "
+                 "count_before=527 count_after=-1")
+
+
+def _void_on_prefs(tmp_path, monkeypatch, postcond_line):
+    """The REAL shape of the 2026-09-05 failure: the query path raises AbortError
+    whose message carries only the bounded excerpt -- no stdout anywhere in the
+    chain -- so the observation must be recoverable from that excerpt."""
+    stdout = "PROC pid=1\nFAIL preference surfaces unchanged\n" + postcond_line + "\n"
+
+    def die(*, task, **kw):
+        raise H.AbortError(H.PHASE_MOVE,
+                           f"{task['task_id']} query at ply 6: exit 3 with 1 record(s). "
+                           f"T1j reported: {A.helper_failure_excerpt(stdout)}")
+
+    monkeypatch.setattr(RUN.H, "play_task", die)
+    out = str(tmp_path / "r.jsonl")
+    with pytest.raises(RUN.H1VoidError):
+        RUN._run(out, mode=RUN.MATCH_MODE, trace_path=str(tmp_path / "t.jsonl"),
+                 _supervise=False, _cleanup=lambda: None)
+    (d,) = [json.loads(l) for l in open(out)
+            if json.loads(l)["record_type"] == "void_diagnostic"]
+    return d
+
+
+def test_the_VOID_diagnostic_carries_the_FAILING_JVMS_OWN_prefs_observation(
+        tmp_path, monkeypatch, openable, frozen):
+    """🔴 THE PYTHON SNAPSHOTS DO NOT SAY WHAT THE FAILING JVM SAW. Sampled at run
+    start and after the failure, they can miss a transient Java read error
+    entirely. The helper's own before/after values are what attribution needs,
+    and they are recorded as FIELDS, not left inside the excerpt string."""
+    d = _void_on_prefs(tmp_path, monkeypatch, _POSTCOND_NEW)
+    assert d["helper_prefs_observed"] == {
+        "prefs_before": _SHA, "prefs_after": "ERROR",
+        "count_before": 527, "count_after": -1}
+    assert "prefs_attribution" in d and "prefs_surface_at_failure" in d
+
+
+def test_a_transcript_from_the_EARLIER_source_records_that_it_had_no_observation(
+        tmp_path, monkeypatch, openable, frozen):
+    """The 2026-09-05 run's helper emitted no observation. That is recorded as
+    four explicit Nones -- "the helper did not say" -- not as a missing key that
+    a reader could mistake for "nothing to say"."""
+    d = _void_on_prefs(tmp_path, monkeypatch, _POSTCOND_OLD)
+    assert d["helper_prefs_observed"] == {
+        "prefs_before": None, "prefs_after": None,
+        "count_before": None, "count_after": None}
 
 
 def test_the_diagnostic_records_the_ORIGINAL_failure_not_the_translation(

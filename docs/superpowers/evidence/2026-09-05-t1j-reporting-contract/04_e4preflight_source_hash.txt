@@ -1,0 +1,73 @@
+E4Preflight.java -- A QUALIFIED ARTIFACT WAS EDITED. Source-hash record, computed at the moment of recording.
+======================================================================================================
+recorded 2026-09-05T20:52:41Z at HEAD 41898df (edit uncommitted at recording time)
+
+sha256 of the source at HEAD (what every run below executed): 23ed8106427710ba21e3ee38b6530396661e90eb22b9527ef96eb085d6724ae3
+sha256 of the edited working-tree source:                     fa6623390c0ee5f326e9cfa92af05581ec7234df1fe2a15af999e0203f7c94e3
+the earlier hash equals the one E4/L0/D1/low-ply/H1 recorded: TRUE
+
+WHAT CHANGED (additive; the check is byte-for-byte the same boolean):
+  post() reads plistHash()/prefsCount() ONCE into locals plistAfter/countAfter, compares them exactly as
+  before, and appends four fields to the POSTCOND line:
+    prefs_before=<sha256|ABSENT|ERROR|null> prefs_after=<sha256|ABSENT|ERROR> count_before=<N|-1> count_after=<N|-1>
+  prefs_ok is unchanged and still aborts. No T1j class is touched. No other Java source was edited:
+  E3bDump.java (the replay/binder path) still emits the earlier POSTCOND shape -- NOT in scope, reported.
+
+🔴 THE EDIT IS UNCOMPILED. No Java was run (not authorized). The next authorized run compiles it inside its
+   harness via _default_compile; a compile failure there is a SETUP abort and, on a match path, a VOID.
+   A compile-only check should precede any run that draws seeds.
+
+RUNS WHOSE EVIDENCE RECORDS THE EARLIER SOURCE (23ed8106427710ba21e3ee38b6530396661e90eb22b9527ef96eb085d6724ae3):
+  docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt2/00_transcript.txt
+  docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt2/15_committed_sources.sha256.txt
+  docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt2/16_source_binding.txt
+  docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt3/00_transcript.txt
+  docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt3/15_committed_sources.sha256.txt
+  docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt3/16_source_binding.txt
+  docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4/00_transcript.txt
+  docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4/15_committed_sources.sha256.txt
+  docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4/16_source_binding.txt
+  docs/superpowers/evidence/2026-08-25-t1j-e4-preflight/00_transcript.txt
+  docs/superpowers/evidence/2026-08-25-t1j-e4-preflight/15_committed_sources.sha256.txt
+  docs/superpowers/evidence/2026-08-25-t1j-e4-preflight/16_source_binding.txt
+  docs/superpowers/evidence/2026-08-26-t1j-e4-canonical-screen/07_e4_screen_results.jsonl
+  docs/superpowers/evidence/2026-08-26-t1j-e4-integration-attempt2/02_stdout.txt
+  docs/superpowers/evidence/2026-08-27-t1j-l0-canonical-match/06_l0_match_results.jsonl
+  docs/superpowers/evidence/2026-08-28-t1j-lowply-qualification/19_lowply_records.json
+  docs/superpowers/evidence/2026-09-05-t1j-h1-match/01_h1_results.jsonl
+  docs/superpowers/evidence/2026-09-05-t1j-reporting-contract/04_e4preflight_source_hash.txt
+
+Live pins of the earlier hash in scripts/, tests/ or docs/superpowers/*.md: 0 (the hash is recorded per run by the compile step, never pinned)
+
+Java diff (git diff HEAD -- E4Preflight.java):
+  diff --git a/scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E4Preflight.java b/scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E4Preflight.java
+  index 4a9f2a6..cc694a2 100644
+  --- a/scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E4Preflight.java
+  +++ b/scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E4Preflight.java
+  @@ -227,8 +227,14 @@ public final class E4Preflight {
+       private static void post(Throwable thrown) {
+           int w = windows(), f = frames();
+           boolean headless = java.awt.GraphicsEnvironment.isHeadless();
+  -        boolean prefsOk = plistBefore != null && plistBefore.equals(plistHash())
+  -                          && countBefore == prefsCount();
+  +        // ADDITIVE 2026-09-05: the two probes are read ONCE into locals so the
+  +        // values the check compared can be REPORTED. The check itself is the
+  +        // qualified one, unchanged; earlier evidence (E4, L0, D1, low-ply, the
+  +        // 2026-09-05 H1 match) ran the source without the four fields below.
+  +        String plistAfter = plistHash();
+  +        long countAfter = prefsCount();
+  +        boolean prefsOk = plistBefore != null && plistBefore.equals(plistAfter)
+  +                          && countBefore == countAfter;
+           Set<String> names = new LinkedHashSet<String>(REFLECTED);
+           boolean reflOk = !REFLECTED.isEmpty()
+               && new LinkedHashSet<String>(AUTHORIZED).containsAll(names);
+  @@ -240,6 +246,8 @@ public final class E4Preflight {
+           System.out.println("POSTCOND no_throw=" + (thrown == null) + " windows=" + w
+               + " frames=" + f + " headless=" + headless + " prefs_ok=" + prefsOk
+               + " refl_ok=" + reflOk + " refl_n=" + REFLECTED.size()
+  -            + " failures=" + failures);
+  +            + " failures=" + failures
+  +            + " prefs_before=" + plistBefore + " prefs_after=" + plistAfter
+  +            + " count_before=" + countBefore + " count_after=" + countAfter);
+       }
+   }

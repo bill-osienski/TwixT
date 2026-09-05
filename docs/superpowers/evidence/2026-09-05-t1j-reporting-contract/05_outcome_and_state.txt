@@ -1,0 +1,45 @@
+REPORTING-CONTRACT GAPS 1 + 2 -- code-and-mocked-test only. State verified at the moment of recording.
+======================================================================================================
+recorded 2026-09-05T21:12:41Z at HEAD 41898df; 36 commits unpushed before this one
+
+ALL FIVE GATES (grep at recording):
+scripts/GPU/alphazero/e4_screen_command.py:44:SCREEN_AUTHORIZED = False
+scripts/GPU/alphazero/h1_viability_runner.py:76:H1_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/d1_probe.py:55:D1_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/l0_match_command.py:41:L0_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/lowply_qualification.py:55:LOWPLY_QUALIFICATION_AUTHORIZED = False
+
+SEED REGISTRIES UNTOUCHED: git diff HEAD -- e4_screen_reference.py d1_selection.py h1_viability_rules.py h1_viability_plan.py -> 0 lines (0 = no change)
+  H1 (202616000, 202616224) accounted 224 exposed 60 retired 224
+  D1 (202615000, 202615221) accounted 0 exposed 0 retired 0 (paper-only)
+
+NO Java run, NO model load, NO seeds drawn/reserved/registered, NO gate change, NO retry, NO push.
+
+FULL SUITE (.venv/bin/python -m pytest tests -q): ==== 3916 passed, 4 skipped, 53 deselected, 8 warnings in 733.66s (0:12:13) ====
+  previous session: 3,899 passed / 4 skipped / 0 failed; +17 tests this step.
+  ⚠ a first run with the Homebrew python3 hit 30 COLLECTION ERRORS (no mlx) -- environment, not code; discarded, re-run under the venv the earlier logs used.
+
+INJECTED-DEFECT CONTROLS (scratchpad copy of 2026-09-05-t1j-h1-diagnosis/01_controls.py.txt + 14 new): 263/263 defects rejected; 0 not caught; 0 stale
+  ALL CONTROLS RAN: True; clean baseline over 207 distinct target tests: PASS
+clean baseline: PASS; every source restored: True
+  🔴 THE FIRST HARNESS RUN REPORTED 3 STALE (260/263, ALL CONTROLS RAN: False): my edits moved the anchors of
+     'the trace stops recording how far a VOID run got', 'the VOID diagnostic stops naming the position', and
+     'the excerpt reads only error.stdout again' (matched TWICE -- I had duplicated the chain walk). Repaired by
+     re-anchoring the first two and DEDUPING the loop into _chained_stdout, not by re-anchoring the duplicate.
+     Java cannot be controlled here (no Java authorized): the E4Preflight.java change has NO control and NO compile.
+
+GAP 1 -- helper-observed prefs values:
+  E4Preflight.java post(): additive fields prefs_before/prefs_after/count_before/count_after on POSTCOND; prefs_ok unchanged.
+  t1j_adapter.PostCond: four Optional fields (None for the earlier source and for E3bDump); parse_postconds refuses a
+  line whose prefs_ok contradicts its own observation (HelperOutputError, transcript attached); postcond_prefs_observation()
+  reads the observation from the bounded excerpt (the real query-path AbortError carries no stdout).
+  h1_viability_runner._void_diagnostic: helper_prefs_observed as FIELDS whenever prefs_ok=false; four Nones = 'the helper did not say'.
+  NOT DONE (out of scope, reported): E3bDump.java emits the earlier shape; ponytail ceiling -- a POSTCOND segment truncated by the 800-char excerpt reads None.
+
+GAP 2 -- INTERRUPT vs VOID:
+  TRACE_VERDICTS = (OK, VOID, INTERRUPTED); a non-Exception BaseException writes run_end/INTERRUPTED and an
+  interrupt_diagnostic record carrying INTERRUPT_ACCOUNTING_RULE; the exception propagates untranslated.
+  Accounting rule (explicit, in the record): drawn seeds stay EXPOSED and a started one-shot schedule retires whole, exactly as after a VOID.
+  NOT DONE (out of scope, reported): d1_probe._run_traced initialises verdict='VOID' in a finally -- a stop there still records VOID.
+
+GAP 3 (noted, untouched): the 2026-09-05 wrapper's unconditional sys.exit(0) is preserved evidence.

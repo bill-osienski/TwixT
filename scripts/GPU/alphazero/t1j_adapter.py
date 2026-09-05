@@ -36,7 +36,7 @@ import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence, Set, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
 BOARD_N = 24
 LEGAL_BITS = BOARD_N * BOARD_N   # the serialized legal-cell map is exactly this wide
@@ -473,11 +473,55 @@ class PostCond:
     refl_ok: bool
     refl_n: int
     failures: int
+    #: The helper's OWN preference observations -- the two values `prefs_ok`
+    #: compared, before and after, as it saw them. ADDITIVE (2026-09-05): None
+    #: when the helper ran the earlier E4Preflight source, or is E3bDump. They
+    #: are not part of `clean`; `prefs_ok` is still the verdict and the abort.
+    prefs_before: Optional[str] = None
+    prefs_after: Optional[str] = None
+    count_before: Optional[int] = None
+    count_after: Optional[int] = None
 
     @property
     def clean(self) -> bool:
         return (self.no_throw and self.windows == 0 and self.frames == 0 and self.headless
                 and self.prefs_ok and self.refl_ok and self.failures == 0)
+
+
+_PREFS_OBS_FIELDS = ("prefs_before", "prefs_after", "count_before", "count_after")
+
+
+def _prefs_observation(kv: Dict[str, str]) -> Dict[str, Any]:
+    """The four observation fields from one POSTCOND key/value map, typed;
+    None for each the helper did not emit."""
+    return {
+        "prefs_before": kv.get("prefs_before"),
+        "prefs_after": kv.get("prefs_after"),
+        "count_before": None if "count_before" not in kv else int(kv["count_before"]),
+        "count_after": None if "count_after" not in kv else int(kv["count_after"]),
+    }
+
+
+def postcond_prefs_observation(text: str) -> Optional[Dict[str, Any]]:
+    """The helper's prefs observation from ANY text holding a POSTCOND segment.
+
+    The query path raises `AbortError` carrying only `helper_failure_excerpt` --
+    FAIL lines and the POSTCOND line joined by " | " -- so on the real failure
+    path POSTCOND does not start a line and `parse_postconds` cannot see it.
+    Reads the LAST "POSTCOND " onwards (the helper prints it last). None if no
+    POSTCOND segment is present; four Nones if the segment carries no observation
+    (the earlier source). Unparseable counts also yield None for that field --
+    this is a diagnostic reader, not a gate.
+    """
+    at = text.rfind("POSTCOND ")
+    if at < 0:
+        return None
+    kv = dict(_KV_RE.findall(text[at:].split(" | ", 1)[0]))
+    try:
+        return _prefs_observation(kv)
+    except ValueError:
+        return {k: (kv.get(k) if k.startswith("prefs_") else None)
+                for k in _PREFS_OBS_FIELDS}
 
 
 def parse_postconds(text: str) -> List[PostCond]:
@@ -500,11 +544,12 @@ def parse_postconds(text: str) -> List[PostCond]:
                 f"the helper's POSTCOND output could not be parsed: line missing "
                 f"fields {sorted(missing)}: {line!r}", text)
         try:
-            out.append(PostCond(
+            obs = _prefs_observation(kv)
+            post = PostCond(
                 no_throw=kv["no_throw"] == "true", windows=int(kv["windows"]),
                 frames=int(kv["frames"]), headless=kv["headless"] == "true",
                 prefs_ok=kv["prefs_ok"] == "true", refl_ok=kv["refl_ok"] == "true",
-                refl_n=int(kv["refl_n"]), failures=int(kv["failures"])))
+                refl_n=int(kv["refl_n"]), failures=int(kv["failures"]), **obs)
         except (ValueError, KeyError) as e:
             # A COMPLETE line whose numeric fields will not parse. The
             # missing-field branch above was already wrapped; this one was not,
@@ -514,4 +559,18 @@ def parse_postconds(text: str) -> List[PostCond]:
             raise HelperOutputError(
                 f"the helper's POSTCOND output could not be parsed: {e} in "
                 f"{line!r}", text) from None
+        # 🔑 TWO CHANNELS ON ONE LINE MUST SAY ONE THING. `prefs_ok` is the
+        # verdict the helper computed from exactly these four values. When the
+        # observation is present and contradicts the verdict, the instrument is
+        # unreadable -- refused, with the transcript, not recorded as either.
+        if all(v is not None for v in obs.values()):
+            unchanged = (obs["prefs_before"] == obs["prefs_after"]
+                         and obs["count_before"] == obs["count_after"])
+            if unchanged != post.prefs_ok:
+                raise HelperOutputError(
+                    f"the helper's POSTCOND line disagrees with itself: prefs_ok="
+                    f"{str(post.prefs_ok).lower()} but the observation it was "
+                    f"computed from {'did not change' if unchanged else 'changed'}: "
+                    f"{line!r}", text)
+        out.append(post)
     return out

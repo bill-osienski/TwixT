@@ -216,7 +216,22 @@ def check_output_paths(results_path: str, trace_path: Optional[str] = None, *,
 
 TRACE_SCHEMA = "h1-void-trace/1"
 TRACE_EVENTS = ("run_start", "task_start", "task_done", "run_end")
-TRACE_VERDICTS = ("OK", "VOID")
+#: 🔑 THREE VERDICTS, NOT TWO. `OK` = all games played; `VOID` = the instrument
+#: failed and no result may be published; `INTERRUPTED` = the OPERATOR stopped
+#: the run (a `BaseException` that is not an `Exception`). The 2026-09-05 review
+#: found a KeyboardInterrupt propagating correctly while the trace still wrote
+#: `run_end/VOID` -- the exception said "the operator stopped", the durable
+#: record said "the instrument failed". They now say one thing.
+TRACE_VERDICTS = ("OK", "VOID", "INTERRUPTED")
+
+#: 🔑 WHAT AN INTERRUPT DOES TO THE SEEDS -- stated, and written into the record.
+INTERRUPT_ACCOUNTING_RULE = (
+    "An operator interruption is NOT an instrument failure and is not recorded as "
+    "a VOID. It does NOT make any drawn seed reusable: every seed drawn before the "
+    "interrupt is EXPOSED, and a one-shot schedule that has started retires whole, "
+    "exactly as after a VOID. The verdict differs; the seed accounting does not. "
+    "The registry refuses an EXPOSED seed without consulting how the run that drew "
+    "it ended.")
 TRACE_COUNTER_MAX = {
     "index": RULES.N_GAMES - 1,
     "n_games": RULES.N_GAMES,
@@ -420,7 +435,24 @@ def _void_diagnostic(task: Optional[Dict[str, Any]], index: Optional[int],
     if "prefs_ok=false" in (d["helper_excerpt"] or ""):
         d["prefs_attribution"] = PREFS_ATTRIBUTION_NOTE
         d["prefs_surface_at_failure"] = preference_surface()
+        # 🔴 THE PYTHON SAMPLES ABOVE ARE CONTEXT, NOT ATTRIBUTION: taken at run
+        # start and after the failure, they can miss a transient Java read error
+        # entirely. WHAT THE FAILING JVM ITSELF COMPARED is on its POSTCOND line
+        # (E4Preflight source 2026-09-05 onward), and travels here inside the
+        # bounded excerpt -- recorded as FIELDS. Four Nones = the helper ran the
+        # earlier source and did not say.
+        # ponytail: read from the 800-char excerpt; if many FAIL lines precede
+        # POSTCOND the segment can be truncated and this reads None. Attach the
+        # stdout to the query-path AbortError if that ever bites.
+        d["helper_prefs_observed"] = A.postcond_prefs_observation(
+            _helper_text(error) or "")
     return d
+
+
+def _helper_text(error: BaseException) -> Optional[str]:
+    """The fullest helper text reachable: chained stdout first, else the message."""
+    return (_chained_stdout(error) or getattr(error, "message", None)
+            or str(error) or None)
 
 
 def _bounded_excerpt(error: BaseException) -> Optional[str]:
@@ -438,17 +470,25 @@ def _bounded_excerpt(error: BaseException) -> Optional[str]:
     finally the AbortError's own message, which is where the integration layer
     puts the POSTCOND line, the divergence or the rejected move.
     """
+    stdout = _chained_stdout(error)
+    if stdout:
+        return A.helper_failure_excerpt(stdout)
+    message = getattr(error, "message", None) or str(error)
+    if not message:
+        return None
+    return message[:A.FAILURE_EXCERPT_CHARS]
+
+
+def _chained_stdout(error: BaseException) -> Optional[str]:
+    """The first helper stdout anywhere in the exception chain, or None."""
     seen, err = set(), error
     while err is not None and id(err) not in seen:
         seen.add(id(err))
         stdout = getattr(err, "stdout", None)
         if stdout:
-            return A.helper_failure_excerpt(stdout)
+            return stdout
         err = err.__cause__ or err.__context__
-    message = getattr(error, "message", None) or str(error)
-    if not message:
-        return None
-    return message[:A.FAILURE_EXCERPT_CHARS]
+    return None
 
 
 # ─────────────────────── the production game setup, dormant ──────────────────
@@ -752,7 +792,14 @@ def _run(results_path: str, *, mode: str, trace_path: Optional[str] = None,
             _trace(tfh, event="run_end", verdict="OK", games_completed=completed)
             return code
         except BaseException as e:                            # noqa: BLE001
-            _trace(tfh, event="run_end", verdict="VOID", games_completed=completed)
+            # 🔑 A STOP IS NOT A VOID. `Exception` = the instrument failed;
+            # anything else (KeyboardInterrupt, SystemExit) = the operator or the
+            # host ended the run. The trace, the record type below and the
+            # exception all say the same one of the two.
+            interrupted = not isinstance(e, Exception)
+            _trace(tfh, event="run_end",
+                   verdict="INTERRUPTED" if interrupted else "VOID",
+                   games_completed=completed)
             # 🔴 THE ASYNCHRONOUS ALARM RAISES D1's EXCEPTION. `_check_deadline`
             # translates only the COOPERATIVE breach; the reused supervisor fires
             # SIGALRM from inside whatever blocking call is running, and that
@@ -787,14 +834,19 @@ def _run(results_path: str, *, mode: str, trace_path: Optional[str] = None,
             # `rec` is None only when the recorder itself could not be created --
             # exactly the case the trace above is the sole record of.
             if rec is not None:
-                rec.emit_terminal({"record_type": "void_diagnostic",
+                rec.emit_terminal({"record_type": ("interrupt_diagnostic" if interrupted
+                                                   else "void_diagnostic"),
                                    # the ORIGINAL failure, not the translation:
                                    # "H1VoidError" says what it MEANS, the
                                    # original says what actually went wrong.
                                    **_void_diagnostic(tsk, idx, rec.last_ply,
                                                       original),
                                    "games_completed": completed,
-                                   "tasks_played": len(results)})
+                                   "tasks_played": len(results),
+                                   # the accounting rule travels WITH the record
+                                   # that could be misread as "seeds returned"
+                                   **({"seed_accounting": INTERRUPT_ACCOUNTING_RULE}
+                                      if interrupted else {})})
                 if isinstance(original, H.AbortError):
                     note = rec.emit_terminal({"record_type": "abort",
                                               "phase": original.phase,

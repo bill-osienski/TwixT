@@ -227,8 +227,14 @@ public final class E4Preflight {
     private static void post(Throwable thrown) {
         int w = windows(), f = frames();
         boolean headless = java.awt.GraphicsEnvironment.isHeadless();
-        boolean prefsOk = plistBefore != null && plistBefore.equals(plistHash())
-                          && countBefore == prefsCount();
+        // ADDITIVE 2026-09-05: the two probes are read ONCE into locals so the
+        // values the check compared can be REPORTED. The check itself is the
+        // qualified one, unchanged; earlier evidence (E4, L0, D1, low-ply, the
+        // 2026-09-05 H1 match) ran the source without the four fields below.
+        String plistAfter = plistHash();
+        long countAfter = prefsCount();
+        boolean prefsOk = plistBefore != null && plistBefore.equals(plistAfter)
+                          && countBefore == countAfter;
         Set<String> names = new LinkedHashSet<String>(REFLECTED);
         boolean reflOk = !REFLECTED.isEmpty()
             && new LinkedHashSet<String>(AUTHORIZED).containsAll(names);
@@ -240,6 +246,8 @@ public final class E4Preflight {
         System.out.println("POSTCOND no_throw=" + (thrown == null) + " windows=" + w
             + " frames=" + f + " headless=" + headless + " prefs_ok=" + prefsOk
             + " refl_ok=" + reflOk + " refl_n=" + REFLECTED.size()
-            + " failures=" + failures);
+            + " failures=" + failures
+            + " prefs_before=" + plistBefore + " prefs_after=" + plistAfter
+            + " count_before=" + countBefore + " count_after=" + countAfter);
     }
 }
