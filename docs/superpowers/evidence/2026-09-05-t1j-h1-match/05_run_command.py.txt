@@ -1,0 +1,19 @@
+"""THE H1 MATCH. Runs once, through the PUBLIC entry point, paths only."""
+import sys, time, traceback
+from scripts.GPU.alphazero import h1_viability_runner as RUN
+
+OUT = "docs/superpowers/evidence/2026-09-05-t1j-h1-match"
+res, tr = f"{OUT}/01_h1_results.jsonl", f"{OUT}/02_h1_trace.jsonl"
+t0 = time.time()
+try:
+    rc = RUN.run(res, mode=RUN.MATCH_MODE, trace_path=tr)
+    print(f"EXIT_CODE={rc}")
+    print(f"OUTCOME=COMPLETED")
+except RUN.H1VoidError as e:
+    print("OUTCOME=VOID"); print(f"VOID_MESSAGE={e}")
+    traceback.print_exc(); rc = 3
+except BaseException as e:
+    print(f"OUTCOME=ABORT_{type(e).__name__}"); print(f"MESSAGE={e}")
+    traceback.print_exc(); rc = 4
+print(f"ELAPSED_S={time.time() - t0:.1f}")
+sys.exit(0)

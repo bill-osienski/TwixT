@@ -1,0 +1,22 @@
+H1 MATCH -- OUTCOME: VOID.  State verified at the moment of recording
+====================================================================
+start 2026-09-05T14:29:13Z   gate restored 2026-09-05T15:03:43Z   elapsed 2042.2s (34m02s)
+deadline was 10800s (180 min) -- THE DEADLINE WAS NOT THE CAUSE
+
+ALL FIVE GATES:
+scripts/GPU/alphazero/d1_probe.py:55:D1_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/e4_screen_command.py:44:SCREEN_AUTHORIZED = False
+scripts/GPU/alphazero/h1_viability_runner.py:76:H1_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/l0_match_command.py:41:L0_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/lowply_qualification.py:55:LOWPLY_QUALIFICATION_AUTHORIZED = False
+
+SEED ACCOUNTING:
+  H1 (202616000, 202616224): accounted=224 exposed=60 retired=224 unavailable=224
+  D1 (202615000, 202615221): still paper-only -> True
+
+THE REPORTER REFUSES THE PARTIAL MATCH, STRUCTURALLY:
+  reported: False | verdict key present: False
+  reason  : 164 game(s) unplayed: ['h1match-060-strong6-o3_low-t1j_red-r4', 'h1match-061-str
+
+THE SPENT SCHEDULE CANNOT RUN AGAIN even with the gate open:
+  refused -> seed 202616000 was EXPOSED -- it has been drawn from -- and cannot be schedule

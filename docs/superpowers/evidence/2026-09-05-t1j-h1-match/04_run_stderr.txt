@@ -1,0 +1,23 @@
+Traceback (most recent call last):
+  File "/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/16b05c1a-2862-4076-85fe-0ced1bca4229/scratchpad/run_h1.py", line 9, in <module>
+    rc = RUN.run(res, mode=RUN.MATCH_MODE, trace_path=tr)
+  File "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/h1_viability_runner.py", line 486, in run
+    return _run(results_path, mode=mode, trace_path=trace_path,
+                _setup_factory=_production_setup if mode == MATCH_MODE else None)
+  File "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/h1_viability_runner.py", line 718, in _run
+    raise e from None
+  File "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/h1_viability_runner.py", line 678, in _run
+    raise primary
+  File "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/h1_viability_runner.py", line 636, in _run
+    outcome = H.play_task(
+        task=task, agent_for=agent_for,
+        state_factory=_state_factory or H._refuse_state_factory,
+        binder=binder, rec=rec, ply_cap=_ply_cap,
+        ply_budget=_ply_budget)
+  File "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/e4_screen_runner.py", line 312, in play_task
+    move = agent(state)
+  File "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/e4_screen_integration.py", line 255, in __call__
+    raise AbortError(PHASE_MOVE,
+                     f"{where}: exit {rc} with {len(recs)} record(s). "
+                     f"T1j reported: {A.helper_failure_excerpt(out)}")
+scripts.GPU.alphazero.e4_screen_runner.AbortError: [move] h1match-060-strong6-o3_low-t1j_red-r4 query at ply 6: exit 3 with 1 record(s). T1j reported: FAIL preference surfaces unchanged | POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=false refl_ok=true refl_n=3 failures=1

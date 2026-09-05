@@ -156,6 +156,28 @@ ACCOUNTED_SEED_INTERVALS = (
 #: strikes that seed off. A draw inside the test namespace strikes nothing off,
 #: because nothing there was ever available to schedule.
 EXPOSED_SEED_INTERVALS = (
+    (202616000, 202616060),          # THE H1 MATCH, run once 2026-09-05 and
+                                     # VOIDED at game 60 of 224. These 60 seeds
+                                     # built real SeededReferenceAgents and drove
+                                     # real generators: 60 games were played to a
+                                     # terminal state and recorded.
+                                     #
+                                     # 🔑 SIXTY, NOT SIXTY-ONE. Game 60 started
+                                     # and its opening was bound, but the arm is
+                                     # `t1j_red` and T1j was to move at ply 6; its
+                                     # query failed there, so our reference agent
+                                     # -- which plays black -- was never
+                                     # constructed and seed 202616060 was never
+                                     # drawn. The task has task_start and
+                                     # opening_bound records and ZERO ply records,
+                                     # which is what makes that checkable.
+                                     #
+                                     # D1's VOID could not be counted this way and
+                                     # was retired without an exposure claim,
+                                     # because claiming 227 draws would have
+                                     # asserted 226 that may never have happened.
+                                     # Here the record survives, so the count is
+                                     # exact rather than bounded.
     (202612128, 202612136),          # THE E4 CANONICAL SCREEN, strong endpoint,
     (202612144, 202612160),          # tasks 000-007, and the weak endpoint, tasks
                                      # 016-031: 24 tasks PLAYED on 2026-08-26 from
@@ -220,6 +242,29 @@ TEST_ONLY_SEED_INTERVALS = (
 #: seeing the first 24, which is selection bias however clean the RNG is. So the
 #: WHOLE block retires together, drawn and undrawn alike.
 RETIRED_SEED_INTERVALS = (
+    (202616000, 202616224),          # THE H1 BLOCK, retired WHOLE 2026-09-05
+                                     # after the single authorized match VOIDED
+                                     # at game 60 of 224 (34m02s of a 180-minute
+                                     # window; the deadline was not the cause).
+                                     #
+                                     # CAUSE, recorded because this VOID could
+                                     # name it: T1j MUTATED THE HOST PREFERENCE
+                                     # STORE. `prefs_ok=false, failures=1` on the
+                                     # ply-6 query of h1match-060, which is a
+                                     # frozen abort rule -- "any postcondition
+                                     # failure: a Window/Frame, a non-headless
+                                     # jvm, a mutated host preference store, or an
+                                     # unauthorized reflective access".
+                                     #
+                                     # RETIRED WHOLE, drawn and undrawn alike, on
+                                     # the rule the canonical screen's and D1's
+                                     # blocks retired under: a preregistered
+                                     # ONE-SHOT schedule was started and did not
+                                     # complete, so replaying any part of it would
+                                     # select games after seeing where it failed.
+                                     # The 164 undrawn seeds go with it.
+                                     #
+                                     # A future H1 needs a FRESH interval.
     (202612128, 202612160),          # the canonical screen's 32-seed block
     (202613000, 202613064),          # the L0 match's 64-seed block. Its
                                      # preregistered ONE-SHOT schedule completed

@@ -73,7 +73,7 @@ from . import void_trace as VT
 #: 🔴 THE EXECUTION GATE. One line, its own commit when it is ever opened, and
 #: restored to False immediately afterwards. It gates the MATCH path only:
 #: qualification runs on test-only seeds and plays no scheduled game.
-H1_EXECUTION_AUTHORIZED = True
+H1_EXECUTION_AUTHORIZED = False
 
 #: 🔴 THE MATCH IS PUBLICLY REACHABLE, AND THE GATE IS WHAT REFUSES IT.
 #:

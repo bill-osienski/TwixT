@@ -169,19 +169,34 @@ def test_seeds_are_the_reserved_block_one_per_task_in_order(tasks):
     assert [t["seed"] for t in tasks] == list(range(*P.H1_SEED_BLOCK))
 
 
-def test_the_H1_block_is_ACCOUNTED_but_NOT_exposed_and_NOT_retired():
-    """⚠ INVERTED by the seed-preparation authorization of 2026-09-04.
+def test_the_H1_block_is_ACCOUNTED_60_EXPOSED_and_RETIRED_WHOLE():
+    """⚠ INVERTED TWICE, and the second time by the match itself.
 
-    It previously asserted the block was in NO registry, which was right while it
-    was reserved on paper only. It is now REGISTERED -- and registered means
-    ACCOUNTED and nothing else. Exposed and retired are claims about DRAWS, and
-    nothing has been drawn: a reservation is not a draw, and marking 224 seeds
-    exposed would assert 224 draws that never happened.
+    Paper-reserved -> ACCOUNTED (2026-09-04 seed preparation) -> ACCOUNTED +
+    partly EXPOSED + wholly RETIRED (2026-09-05, when the single authorized match
+    VOIDED at game 60 of 224).
+
+    🔑 SIXTY EXPOSED, NOT 224 AND NOT 61. Exposure is a claim about DRAWS: 60
+    games built real agents and were recorded. Game 60 began and bound its
+    opening, but the arm is `t1j_red` and T1j was to move at ply 6 -- its query
+    failed there, so our reference agent (black) was never constructed and seed
+    202616060 was never drawn. Marking all 224 exposed would assert 164 draws
+    that never happened, which is the overstatement these lists are kept apart to
+    prevent.
+
+    🔑 RETIRED WHOLE, drawn and undrawn alike. A preregistered one-shot schedule
+    was started and did not complete, so replaying any part of it would select
+    games after seeing where it failed.
     """
-    for seed in range(*P.H1_SEED_BLOCK):
-        st = REF.seed_status(seed)
-        assert st["accounted"], (seed, st)
-        assert not st["exposed"] and not st["retired"] and not st["test_only"], (seed, st)
+    lo, hi = P.H1_SEED_BLOCK
+    st = [REF.seed_status(s) for s in range(lo, hi)]
+    assert all(x["accounted"] for x in st)
+    assert sum(x["exposed"] for x in st) == 60
+    assert all(REF.seed_is_exposed(s) for s in range(lo, lo + 60))
+    assert not any(REF.seed_is_exposed(s) for s in range(lo + 60, hi))
+    assert all(x["retired"] for x in st), "the block retires WHOLE"
+    assert all(REF.seed_is_unavailable(s) for s in range(lo, hi))
+    assert not any(x["test_only"] for x in st)
 
 
 def test_D1s_reservation_stays_PAPER_ONLY():

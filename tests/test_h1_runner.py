@@ -197,8 +197,66 @@ def _registry_without_h1():
     return out
 
 
+#: A SNAPSHOT of the seed registries at import, so the lift below is measured
+#: against something and `test_zzz_the_registries_are_restored` can prove it was
+#: undone.
+_REGISTRY_SNAPSHOT = {
+    "exposed": REF.EXPOSED_SEED_INTERVALS,
+    "retired": REF.RETIRED_SEED_INTERVALS,
+    "accounted": REF.ACCOUNTED_SEED_INTERVALS,
+}
+
+
 @pytest.fixture
-def openable(monkeypatch):
+def unspent_block(monkeypatch):
+    """Lifts the H1 block's ELIGIBILITY in process, and nothing else.
+
+    WHY THIS IS NOT RELAXING A GATE. The match ran on 2026-09-05 and VOIDED, so
+    the block is now EXPOSED (60 seeds drawn) and RETIRED (all 224), and
+    `validate_schedule_executable` refuses it before authorization is ever
+    consulted. Left alone, every test of a LATER precondition, of the GATE, and
+    of the enabled-path wiring would stop passing for a reason that has nothing
+    to do with what it tests -- and a safety gate whose tests all went vacuous is
+    the failure this workstream keeps finding.
+
+    The real-state refusal is asserted SEPARATELY and UNPATCHED, in
+    `test_the_SPENT_schedule_is_refused_in_the_REAL_state`.
+
+    IT TOUCHES ELIGIBILITY ONLY -- never H1_EXECUTION_AUTHORIZED, asserted on the
+    way in and on the way out.
+    """
+    gate = RUN.H1_EXECUTION_AUTHORIZED
+    blk = tuple(RULES.H1_SEED_BLOCK)
+    monkeypatch.setattr(REF, "EXPOSED_SEED_INTERVALS",
+                        tuple(i for i in REF.EXPOSED_SEED_INTERVALS
+                              if tuple(i) != (blk[0], blk[0] + 60)))
+    monkeypatch.setattr(REF, "RETIRED_SEED_INTERVALS",
+                        tuple(i for i in REF.RETIRED_SEED_INTERVALS
+                              if tuple(i) != blk))
+    assert not REF.seed_is_unavailable(blk[0]), "the lift did not take"
+    assert RUN.H1_EXECUTION_AUTHORIZED is gate is False
+    yield
+    assert RUN.H1_EXECUTION_AUTHORIZED is False or gate is False
+
+
+def test_the_SPENT_schedule_is_refused_in_the_REAL_state(tmp_path, monkeypatch):
+    """UNPATCHED. The block is spent, so the match cannot run again even with the
+    gate open -- which is the protection the fixture above deliberately lifts."""
+    monkeypatch.setattr(RUN, "H1_EXECUTION_AUTHORIZED", True)
+    with pytest.raises(RUN.H1Error, match="may not be executed"):
+        RUN._run(str(tmp_path / "r.jsonl"), mode=RUN.MATCH_MODE,
+                 trace_path=str(tmp_path / "t.jsonl"), _supervise=False)
+
+
+def test_zzz_the_registries_are_restored():
+    """Every lift above is undone. Runs last by name."""
+    assert REF.EXPOSED_SEED_INTERVALS == _REGISTRY_SNAPSHOT["exposed"]
+    assert REF.RETIRED_SEED_INTERVALS == _REGISTRY_SNAPSHOT["retired"]
+    assert REF.ACCOUNTED_SEED_INTERVALS == _REGISTRY_SNAPSHOT["accounted"]
+
+
+@pytest.fixture
+def openable(monkeypatch, unspent_block):
     """Gate open, INSIDE the test only. The real gate constant is never edited.
 
     ⚠ INVERTED by the seed-preparation authorization: this used to patch the
