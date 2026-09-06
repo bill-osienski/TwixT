@@ -1,0 +1,44 @@
+RUNTIME REQUALIFICATION -- PREPARATION ONLY (card + gated runner + mocked tests). NOTHING RAN. State at the moment of recording.
+==================================================================================================================
+recorded 2026-09-06T16:18:20Z at HEAD 89e66ad; 39 commits unpushed before this one
+
+ALL SIX GATES (grep at recording) -- the new one included:
+scripts/GPU/alphazero/e4_screen_command.py:44:SCREEN_AUTHORIZED = False
+scripts/GPU/alphazero/runtime_requalification.py:79:RUNTIME_REQUAL_AUTHORIZED = False
+scripts/GPU/alphazero/l0_match_command.py:41:L0_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/h1_viability_runner.py:76:H1_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/d1_probe.py:55:D1_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/lowply_qualification.py:55:LOWPLY_QUALIFICATION_AUTHORIZED = False
+
+NO helper executed, NO replay, NO T1j query, NO incumbent load, NO seed action, NO gate opened, NO game, NO push. NO Java process of any kind this step.
+Registries: git diff HEAD --stat over e4_screen_reference/d1_selection/h1 rules+plan -> 0 lines; no tracked file modified (all four paths are NEW).
+  H1 (202616000, 202616224) accounted 224 exposed 60 retired 224 
+  D1 (202615000, 202615221) accounted 0 exposed 0 retired 0  (paper-only)
+
+FROZEN INPUT: 86b9e73801b6d643625845aa9b6b82052c1993436c691b34d2ad53401f09a305  docs/superpowers/evidence/2026-09-06-t1j-runtime-requalification/01_frozen_prefixes.json
+  pinned in runtime_requalification.FROZEN_PREFIXES_SHA256 = 86b9e73801b6d643625845aa9b6b82052c1993436c691b34d2ad53401f09a305
+  8 prefixes = the sha-pinned screen plan's openings, plan order, ply 6; o3_low flagged as the 2026-09-05 H1 failure (task h1match-060-strong6-o3_low-t1j_red-r4, query at ply 6, zero ply records).
+FROZEN LIMITS: depth 6, 1 invocation/prefix, 8 queries / 16 helper launches / 17 Java processes; 120 s per call, 900 s inner deadline, 960 s outer process-tree cap.
+EXIT CODES: 0 PASS / 2 FAIL (a result) / 3 VOID / 4 UNEXPECTED / 5 UNAUTHORIZED / 6 TIMEOUT (group killed) / 7 REFUSED.
+
+FULL SUITE (.venv/bin/python -m pytest tests -q): ==== 3981 passed, 4 skipped, 53 deselected, 8 warnings in 794.07s (0:13:14) ====
+  previous step: 3,930 passed / 4 skipped / 0 failed; +51 tests (tests/test_runtime_requalification.py).
+CONTROLS: 288/288 defects rejected; 0 not caught; 0 stale; ALL CONTROLS RAN: True; clean baseline over 226 distinct target tests: PASS
+clean baseline: PASS
+  288 = 270 + 18 new, all on runtime_requalification.py.
+  🔴 THE FIRST HARNESS RUN REPORTED 287/288 -- 'the supervisor stops at SIGTERM and never SIGKILLs the group' was NOT CAUGHT:
+     the SIGTERM-ignoring fake worker simply ran out its own 300 s sleep, after which every assertion held. The test was
+     bounded in WALL TIME (must return within timeout + grace + 10 s), not only in outcome; re-run: 288/288. A test that
+     checks the outcome without the clock cannot see a supervisor that waits instead of killing.
+
+WHAT THE MOCKED TESTS PIN (subprocess.run intercepted; the supervisor exercised with a throwaway PYTHON child, never Java):
+  gate at all three entries incl. the CLI and the --worker entry as fresh subprocesses; no other gate named; no model/seed/game machinery named;
+  frozen constants; prefix file pinned by hash AND cross-checked with the pinned plan; exactly the frozen eight in order;
+  the observation recorded from a clean reply, parser and diagnostic reader agreeing; a reply WITHOUT the observation is a VOID;
+  a partial observation is a VOID; prefs_ok=false is a recorded FAIL whose full observation survives an 800-char-truncated excerpt
+  through the REAL T1jAgent -> AbortError-from-HelperOutputError -> _bounded_excerpt/_helper_text path; FAIL results for incomplete depth,
+  illegal move, searched-position mismatch, unbound replay; VOIDs write nothing; the outer supervisor kills a SIGTERM-ignoring
+  grandchild via the process group within bounded time and reports TIMEOUT; each exit code maps to one outcome.
+
+NOT DONE (outside this phase): E3bDump.java and d1_probe's finally-VOID. The historical 2026-09-05 wrapper untouched.
+NEXT (not authorized): authorizing the run itself -- open ONLY RUNTIME_REQUAL_AUTHORIZED, run once, restore, record under 2026-09-06-t1j-runtime-requalification/.

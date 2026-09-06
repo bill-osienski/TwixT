@@ -1,0 +1,44 @@
+"""Derive the frozen prefix list for the Java-only runtime requalification.
+
+READ-ONLY derivation from ONE already-frozen source: the sha256-pinned E4 screen
+plan's eight openings (h1_viability_plan.load_source_plan verifies the pin
+before a value is read). Nothing is selected: every opening is taken, in the
+plan's own order, at the opening ply -- the position T1j searches first in the
+t1j_red arm, which is where the 2026-09-05 H1 match VOIDed (o3_low, task 60,
+query at ply 6, zero ply records). Digests are Plan 12.2's canonical digest of
+the replayed position. No seed, no model, no JVM.
+"""
+import hashlib, json, os, sys
+from scripts.GPU.alphazero import h1_viability_plan as PLAN
+from scripts.GPU.alphazero.d1_selection import canonical_digest
+from scripts.GPU.alphazero.game.twixt_state import TwixtState
+from scripts.GPU.alphazero import t1j_adapter as A
+
+out_path = sys.argv[1]
+plan = PLAN.load_source_plan()
+openings = plan["openings"]
+H1_FAILED = {"task_id": "h1match-060-strong6-o3_low-t1j_red-r4", "opening": "o3_low",
+             "colour_arm": "t1j_red", "ply": 6, "date": "2026-09-05",
+             "evidence": "docs/superpowers/evidence/2026-09-05-t1j-h1-match/01_h1_results.jsonl"}
+prefixes = []
+for name, moves in openings.items():                      # dict order == plan order
+    st = TwixtState(active_size=A.BOARD_N, to_move="red")
+    for mv in moves:
+        assert tuple(mv) in set(st.legal_moves()), (name, mv)
+        st = st.apply_move(tuple(mv))
+    assert st.ply == len(moves) == plan["opening_plies"] == 6, (name, st.ply)
+    prefixes.append({"opening": name, "ply": st.ply, "to_move": st.to_move,
+                     "prefix": [list(m) for m in moves], "digest": canonical_digest(st),
+                     "h1_failed": name == H1_FAILED["opening"]})
+assert sum(p["h1_failed"] for p in prefixes) == 1
+doc = {"schema": "t1j-runtime-requalification-prefixes/1",
+       "source_plan": {"rel": PLAN.SOURCE_PLAN_REL, "sha256": PLAN.SOURCE_PLAN_SHA256},
+       "derivation": "every opening of the pinned screen plan, in plan order, at the opening ply; no selection",
+       "depth": 6, "h1_failed_query": H1_FAILED, "n_prefixes": len(prefixes), "prefixes": prefixes}
+raw = json.dumps(doc, indent=1, sort_keys=True) + "\n"
+fd = os.open(out_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)   # create-only
+with os.fdopen(fd, "w") as fh:
+    fh.write(raw)
+print(f"wrote {out_path}: {len(prefixes)} prefixes, sha256 {hashlib.sha256(raw.encode()).hexdigest()}")
+for p in prefixes:
+    print(f"  {p['opening']:14s} ply {p['ply']} {'H1-FAILED ' if p['h1_failed'] else '          '}{p['digest'][:12]}  {p['prefix']}")

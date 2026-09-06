@@ -1,0 +1,284 @@
+{
+ "depth": 6,
+ "derivation": "every opening of the pinned screen plan, in plan order, at the opening ply; no selection",
+ "h1_failed_query": {
+  "colour_arm": "t1j_red",
+  "date": "2026-09-05",
+  "evidence": "docs/superpowers/evidence/2026-09-05-t1j-h1-match/01_h1_results.jsonl",
+  "opening": "o3_low",
+  "ply": 6,
+  "task_id": "h1match-060-strong6-o3_low-t1j_red-r4"
+ },
+ "n_prefixes": 8,
+ "prefixes": [
+  {
+   "digest": "0ae621381af163f0a180f590ebd7333d6c6070f5d9a364047ac25647df2c3e49",
+   "h1_failed": false,
+   "opening": "o1_center",
+   "ply": 6,
+   "prefix": [
+    [
+     11,
+     11
+    ],
+    [
+     12,
+     13
+    ],
+    [
+     13,
+     12
+    ],
+    [
+     10,
+     13
+    ],
+    [
+     12,
+     10
+    ],
+    [
+     14,
+     14
+    ]
+   ],
+   "to_move": "red"
+  },
+  {
+   "digest": "4829a23c205dd45293bf81ca914c18ac6a554f49a49b3def54492bc0ecf0feb6",
+   "h1_failed": false,
+   "opening": "o2_offcenter",
+   "ply": 6,
+   "prefix": [
+    [
+     10,
+     12
+    ],
+    [
+     13,
+     10
+    ],
+    [
+     12,
+     13
+    ],
+    [
+     11,
+     9
+    ],
+    [
+     14,
+     12
+    ],
+    [
+     9,
+     11
+    ]
+   ],
+   "to_move": "red"
+  },
+  {
+   "digest": "0dc546b435a20e17cb6e4761d0df3d1609cb0224be8533522add7093d3ccb8a7",
+   "h1_failed": true,
+   "opening": "o3_low",
+   "ply": 6,
+   "prefix": [
+    [
+     15,
+     11
+    ],
+    [
+     12,
+     12
+    ],
+    [
+     13,
+     10
+    ],
+    [
+     14,
+     14
+    ],
+    [
+     11,
+     11
+    ],
+    [
+     16,
+     13
+    ]
+   ],
+   "to_move": "red"
+  },
+  {
+   "digest": "5fdb19f000a037c63864a83804be6df0b900206930ec9302e73123d681a95223",
+   "h1_failed": false,
+   "opening": "o4_high",
+   "ply": 6,
+   "prefix": [
+    [
+     8,
+     12
+    ],
+    [
+     11,
+     11
+    ],
+    [
+     10,
+     13
+    ],
+    [
+     9,
+     9
+    ],
+    [
+     12,
+     12
+    ],
+    [
+     13,
+     14
+    ]
+   ],
+   "to_move": "red"
+  },
+  {
+   "digest": "216282d7224bfc48f6c3dfd84d21cdb13f0ae14969d3bec1835f2d7af46dfed8",
+   "h1_failed": false,
+   "opening": "o5_wide_left",
+   "ply": 6,
+   "prefix": [
+    [
+     11,
+     7
+    ],
+    [
+     12,
+     10
+    ],
+    [
+     13,
+     8
+    ],
+    [
+     10,
+     11
+    ],
+    [
+     15,
+     9
+    ],
+    [
+     14,
+     12
+    ]
+   ],
+   "to_move": "red"
+  },
+  {
+   "digest": "e635a4ce4a63bc3042e29f68785c5f9dd185914b7987d1ad40dcc527f6a38f42",
+   "h1_failed": false,
+   "opening": "o6_wide_right",
+   "ply": 6,
+   "prefix": [
+    [
+     11,
+     16
+    ],
+    [
+     12,
+     13
+    ],
+    [
+     13,
+     15
+    ],
+    [
+     10,
+     12
+    ],
+    [
+     15,
+     14
+    ],
+    [
+     14,
+     11
+    ]
+   ],
+   "to_move": "red"
+  },
+  {
+   "digest": "a6603d7fcb09aa071ab8eb8cdd31b313b5ae599e9ec9384917b9be5696e9ba5b",
+   "h1_failed": false,
+   "opening": "o7_diagonal",
+   "ply": 6,
+   "prefix": [
+    [
+     9,
+     9
+    ],
+    [
+     12,
+     12
+    ],
+    [
+     11,
+     10
+    ],
+    [
+     14,
+     13
+    ],
+    [
+     13,
+     11
+    ],
+    [
+     16,
+     14
+    ]
+   ],
+   "to_move": "red"
+  },
+  {
+   "digest": "cd944495ebcd1811ea5ad2534e023deec0eb0bf4252739c68a9aac27bcb8fdd7",
+   "h1_failed": false,
+   "opening": "o8_contact",
+   "ply": 6,
+   "prefix": [
+    [
+     12,
+     11
+    ],
+    [
+     11,
+     12
+    ],
+    [
+     13,
+     13
+    ],
+    [
+     12,
+     14
+    ],
+    [
+     14,
+     12
+    ],
+    [
+     10,
+     10
+    ]
+   ],
+   "to_move": "red"
+  }
+ ],
+ "schema": "t1j-runtime-requalification-prefixes/1",
+ "source_plan": {
+  "rel": "docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4/06_endpoint_screen_plan.json",
+  "sha256": "10cd8c3156de7f8a6aec87b0b62318b6bb56c7a32fca56b76eb8448bfc065ac8"
+ }
+}
