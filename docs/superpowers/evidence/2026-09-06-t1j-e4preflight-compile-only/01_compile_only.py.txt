@@ -1,0 +1,65 @@
+"""COMPILE-ONLY verification of the committed helper sources (E4Preflight.java edited 2026-09-05).
+
+The SAME steps `d1_probe._default_compile` performs, in the same order, with the
+compiler's full output kept instead of truncated: hash-verify the pinned
+toolchain (refuses /tmp), re-check the jar against E4's own qualification pin,
+bind the JDK components, compile PREFLIGHT_SOURCES into a FRESH directory,
+hash every produced class. javac and its compiler JVM are the only processes
+started. NOTHING is executed: no helper, no replay, no query, no incumbent, no
+seeds, no gate. A successful compile establishes BUILDABILITY ONLY.
+"""
+import json, os, subprocess, sys, time
+
+from scripts.GPU.alphazero import e4_screen_command as SCREEN_CMD
+from scripts.GPU.alphazero import e4_screen_integration as INT
+from scripts.GPU.alphazero import t1j_adapter as A
+from scripts.GPU.alphazero import t1j_toolchain as TC
+
+out_dir, record_path = sys.argv[1], sys.argv[2]
+rec = {"purpose": "compile-only: buildability, NOT runtime qualification",
+       "git_head": subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True,
+                                  text=True).stdout.strip(),
+       "started_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+
+tc = TC.verified_paths()                                  # hashes jar + JDK, refuses /tmp
+rec["toolchain"] = {"root": tc["root"], "source": tc["source"], "verified": tc["verified"]}
+jar_sha = INT._sha256(tc["jar"])
+if jar_sha != SCREEN_CMD.JAR_SHA256:
+    raise SystemExit(f"REFUSED: jar {jar_sha} != E4 pin {SCREEN_CMD.JAR_SHA256}")
+rec["jar"], rec["jar_sha256"], rec["jar_pin_matches_e4"] = tc["jar"], jar_sha, True
+rec["jdk_home"] = tc["jdk_home"]
+rec["jdk_components"] = INT.verify_jdk_identity(tc["jdk_home"])   # sha256 only, no exec
+javac = os.path.join(tc["jdk_home"], "bin", "javac")
+rec["javac"], rec["javac_sha256"] = javac, INT._sha256(javac)
+rec["sources"] = {os.path.relpath(str(p)): INT._sha256(str(p)) for p in A.PREFLIGHT_SOURCES}
+
+if os.path.lexists(out_dir):
+    raise SystemExit(f"REFUSED: class directory already exists: {out_dir}")
+t0 = time.monotonic()
+r = A.compile_helper(javac, tc["jar"], out_dir, sources=A.PREFLIGHT_SOURCES)
+rec["javac_elapsed_s"] = round(time.monotonic() - t0, 3)
+rec["command"] = list(r.args)
+rec["javac_returncode"] = r.returncode
+rec["javac_stdout"], rec["javac_stderr"] = r.stdout, r.stderr
+
+classes = {}
+for root, _d, files in os.walk(out_dir):
+    for name in sorted(files):
+        if name.endswith(".class"):
+            full = os.path.join(root, name)
+            classes[os.path.relpath(full, out_dir)] = INT._sha256(full)
+rec["classes_dir"], rec["classes"] = out_dir, classes
+rec["finished_utc"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+rec["outcome"] = ("COMPILED" if r.returncode == 0 and classes else
+                  "COMPILE_FAILED" if r.returncode != 0 else "NO_CLASSES")
+
+fd = os.open(record_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)   # create-only
+with os.fdopen(fd, "w") as fh:
+    json.dump(rec, fh, indent=1, sort_keys=True)
+print(f"outcome={rec['outcome']} javac_rc={r.returncode} classes={len(classes)} "
+      f"elapsed={rec['javac_elapsed_s']}s")
+for k, v in rec["sources"].items():
+    print(f"  source {v}  {k}")
+for k, v in classes.items():
+    print(f"  class  {v}  {k}")
+sys.exit(0 if rec["outcome"] == "COMPILED" else 3)

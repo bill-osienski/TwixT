@@ -1,0 +1,11 @@
+outcome=COMPILED javac_rc=0 classes=4 elapsed=0.465s
+  source 559fb9483cc34f4cc50a1c153fe6cabac6bb6129a977f42ba328b0cfad798f03  scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefs.java
+  source 09c0d74cf3c11130abfb810bd24cc433657b9dbba83152bd7c6f7e3f5858c244  scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefsFactory.java
+  source 281664cf68fdd8561dd11ddf2114ec8be710de9244cc370a63ef25a8311ef5dc  scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E3bDump.java
+  source fa6623390c0ee5f326e9cfa92af05581ec7234df1fe2a15af999e0203f7c94e3  scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E4Preflight.java
+  class  aad79e9fc149d012209a53e6cad99cc7d97bf79ab03a56536934891d6dbf8f39  e2probe/ScratchPrefs.class
+  class  dff0e8f933c656f3d3e48c7b2519746508162b8fddd3db45066038c91480be7d  e2probe/ScratchPrefsFactory.class
+  class  d4c796067ed4ece22f8255821c87364225a3407951585664ee9a58a6407b0516  net/schwagereit/t1j/E3bDump.class
+  class  1f2425fd7b528ad4c1efbdc47331bd0d10261e4a0c7e8a149ecdabfbdcfc88a8  net/schwagereit/t1j/E4Preflight.class
+DRIVER: worker exit 0 in 0.7s (timeout 120s)
+driver exit 0

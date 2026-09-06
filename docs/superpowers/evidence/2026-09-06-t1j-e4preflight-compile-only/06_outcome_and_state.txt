@@ -1,0 +1,57 @@
+E4Preflight.java COMPILE-ONLY VERIFICATION -- outcome and state, computed at the moment of recording
+====================================================================================================
+recorded 2026-09-06T15:05:53Z at HEAD 4d7ad42 (38 unpushed before this commit)
+
+OUTCOME: COMPILED   javac exit 0   4 classes   javac 0.465s inside a 120 s EXTERNAL timeout (driver, separate process)
+javac stdout: ''   javac stderr: ''
+WHAT THIS ESTABLISHES: BUILDABILITY of the committed PREFLIGHT_SOURCES against the pinned jar with the pinned JDK. NOTHING ELSE.
+NOT established: runtime qualification -- no helper executed, no replay, no query, no incumbent, no seeds, no gate, no game, no push.
+
+TOOLCHAIN (hash-verified BEFORE any path was used; /tmp refused by t1j_toolchain.verified_paths):
+  root /Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1  source=recorded-default  artifacts verified=5
+  jar 53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7  == E4 qualification pin: True
+  jdk af8b122943345320b179c75c3404d56a981017739746b75f9caf583632f0bea0  bin/java
+  jdk 6f5159301c750bba340390eda5fdd4a0959445355f97c40aa9c2addb00ede5ab  bin/javac
+  jdk 28745573641057e822a972f223fc8e40db5c9df11ae3f7402764780afc2f1951  lib/modules
+  jdk cb6064fe4d7b87d9fbb8b8c7702047044d1bbeac38e0c5217f595579b6cc764b  release
+  javac 6f5159301c750bba340390eda5fdd4a0959445355f97c40aa9c2addb00ede5ab  /Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/jdk/jdk-17.0.20.1+1/Contents/Home/bin/javac
+
+COMMAND (recorded from the CompletedProcess, not retyped):
+  /Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/jdk/jdk-17.0.20.1+1/Contents/Home/bin/javac -Xlint:-options -encoding UTF-8 -cp /Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/t1j.jar -d docs/superpowers/evidence/2026-09-06-t1j-e4preflight-compile-only/05_classes /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefs.java /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefsFactory.java /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E3bDump.java /Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E4Preflight.java
+
+SOURCES compiled (sha256 at compile time):
+  559fb9483cc34f4cc50a1c153fe6cabac6bb6129a977f42ba328b0cfad798f03  scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefs.java
+  09c0d74cf3c11130abfb810bd24cc433657b9dbba83152bd7c6f7e3f5858c244  scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefsFactory.java
+  281664cf68fdd8561dd11ddf2114ec8be710de9244cc370a63ef25a8311ef5dc  scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E3bDump.java
+  fa6623390c0ee5f326e9cfa92af05581ec7234df1fe2a15af999e0203f7c94e3  scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E4Preflight.java
+
+CLASSES produced (sha256):
+  aad79e9fc149d012209a53e6cad99cc7d97bf79ab03a56536934891d6dbf8f39  e2probe/ScratchPrefs.class
+  dff0e8f933c656f3d3e48c7b2519746508162b8fddd3db45066038c91480be7d  e2probe/ScratchPrefsFactory.class
+  d4c796067ed4ece22f8255821c87364225a3407951585664ee9a58a6407b0516  net/schwagereit/t1j/E3bDump.class
+  1f2425fd7b528ad4c1efbdc47331bd0d10261e4a0c7e8a149ecdabfbdcfc88a8  net/schwagereit/t1j/E4Preflight.class
+
+CROSS-CHECK vs the 2026-09-05 H1 match compile (same jar/JDK pins, EARLIER E4Preflight source 23ed8106...):
+  jar identical: True   jdk components identical: True
+  IDENTICAL  e2probe/ScratchPrefs.class   (H1 aad79e9fc149... -> now aad79e9fc149...)
+  IDENTICAL  e2probe/ScratchPrefsFactory.class   (H1 dff0e8f933c6... -> now dff0e8f933c6...)
+  IDENTICAL  net/schwagereit/t1j/E3bDump.class   (H1 d4c796067ed4... -> now d4c796067ed4...)
+  CHANGED    net/schwagereit/t1j/E4Preflight.class   (H1 f7a9038cbd86... -> now 1f2425fd7b52...)
+  source IDENTICAL  ScratchPrefs.java
+  source IDENTICAL  ScratchPrefsFactory.java
+  source IDENTICAL  E3bDump.java
+  source CHANGED    E4Preflight.java
+  => the three UNCHANGED sources reproduce byte-identical classes; only E4Preflight.class changed, with its source.
+
+ALL FIVE GATES:
+scripts/GPU/alphazero/d1_probe.py:55:D1_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/e4_screen_command.py:44:SCREEN_AUTHORIZED = False
+scripts/GPU/alphazero/h1_viability_runner.py:76:H1_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/l0_match_command.py:41:L0_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/lowply_qualification.py:55:LOWPLY_QUALIFICATION_AUTHORIZED = False
+REGISTRIES: git diff HEAD --stat over e4_screen_reference/d1_selection/h1 rules+plan -> 0 lines
+  H1 (202616000, 202616224) accounted 224 exposed 60 retired 224
+  D1 (202615000, 202615221) accounted 0 exposed 0 retired 0 (paper-only)
+
+PROCESSES STARTED: the driver (python), the worker (python), git rev-parse, and ONE javac (its compiler JVM). No java launch.
+FIRST ATTEMPT (recorded honestly): the worker failed at import (`No module named 'scripts'` -- sys.path led with the scratchpad); nothing was compiled or written; the driver was given PYTHONPATH=repo root and re-run. This transcript is the second, successful attempt.

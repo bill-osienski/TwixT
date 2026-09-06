@@ -1,0 +1,16 @@
+"""EXTERNAL 120-second timeout around the compile-only worker: a separate process
+whose clock the worker cannot see or extend."""
+import os, subprocess, sys, time
+worker, out_dir, record = sys.argv[1:4]
+t0 = time.monotonic()
+try:
+    p = subprocess.run([sys.executable, worker, out_dir, record], capture_output=True,
+                       text=True, timeout=120,
+                       env={**os.environ, 'PYTHONPATH': os.getcwd()})
+    print(p.stdout, end=""); print(p.stderr, end="", file=sys.stderr)
+    print(f"DRIVER: worker exit {p.returncode} in {time.monotonic()-t0:.1f}s (timeout 120s)")
+    sys.exit(p.returncode)
+except subprocess.TimeoutExpired as e:
+    print(e.stdout or "", end=""); print(e.stderr or "", end="", file=sys.stderr)
+    print(f"DRIVER: TIMEOUT after {time.monotonic()-t0:.1f}s -- worker killed, outcome UNKNOWN")
+    sys.exit(4)

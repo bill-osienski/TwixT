@@ -1,0 +1,55 @@
+{
+ "classes": {
+  "e2probe/ScratchPrefs.class": "aad79e9fc149d012209a53e6cad99cc7d97bf79ab03a56536934891d6dbf8f39",
+  "e2probe/ScratchPrefsFactory.class": "dff0e8f933c656f3d3e48c7b2519746508162b8fddd3db45066038c91480be7d",
+  "net/schwagereit/t1j/E3bDump.class": "d4c796067ed4ece22f8255821c87364225a3407951585664ee9a58a6407b0516",
+  "net/schwagereit/t1j/E4Preflight.class": "1f2425fd7b528ad4c1efbdc47331bd0d10261e4a0c7e8a149ecdabfbdcfc88a8"
+ },
+ "classes_dir": "docs/superpowers/evidence/2026-09-06-t1j-e4preflight-compile-only/05_classes",
+ "command": [
+  "/Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/jdk/jdk-17.0.20.1+1/Contents/Home/bin/javac",
+  "-Xlint:-options",
+  "-encoding",
+  "UTF-8",
+  "-cp",
+  "/Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/t1j.jar",
+  "-d",
+  "docs/superpowers/evidence/2026-09-06-t1j-e4preflight-compile-only/05_classes",
+  "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefs.java",
+  "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefsFactory.java",
+  "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E3bDump.java",
+  "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E4Preflight.java"
+ ],
+ "finished_utc": "2026-09-06T15:05:17Z",
+ "git_head": "4d7ad4250e644a050bf1503b38f33c0ad5ea7b82",
+ "jar": "/Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/t1j.jar",
+ "jar_pin_matches_e4": true,
+ "jar_sha256": "53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7",
+ "javac": "/Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/jdk/jdk-17.0.20.1+1/Contents/Home/bin/javac",
+ "javac_elapsed_s": 0.465,
+ "javac_returncode": 0,
+ "javac_sha256": "6f5159301c750bba340390eda5fdd4a0959445355f97c40aa9c2addb00ede5ab",
+ "javac_stderr": "",
+ "javac_stdout": "",
+ "jdk_components": {
+  "bin/java": "af8b122943345320b179c75c3404d56a981017739746b75f9caf583632f0bea0",
+  "bin/javac": "6f5159301c750bba340390eda5fdd4a0959445355f97c40aa9c2addb00ede5ab",
+  "lib/modules": "28745573641057e822a972f223fc8e40db5c9df11ae3f7402764780afc2f1951",
+  "release": "cb6064fe4d7b87d9fbb8b8c7702047044d1bbeac38e0c5217f595579b6cc764b"
+ },
+ "jdk_home": "/Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/jdk/jdk-17.0.20.1+1/Contents/Home",
+ "outcome": "COMPILED",
+ "purpose": "compile-only: buildability, NOT runtime qualification",
+ "sources": {
+  "scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefs.java": "559fb9483cc34f4cc50a1c153fe6cabac6bb6129a977f42ba328b0cfad798f03",
+  "scripts/GPU/alphazero/t1j_java/e2probe/ScratchPrefsFactory.java": "09c0d74cf3c11130abfb810bd24cc433657b9dbba83152bd7c6f7e3f5858c244",
+  "scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E3bDump.java": "281664cf68fdd8561dd11ddf2114ec8be710de9244cc370a63ef25a8311ef5dc",
+  "scripts/GPU/alphazero/t1j_java/net/schwagereit/t1j/E4Preflight.java": "fa6623390c0ee5f326e9cfa92af05581ec7234df1fe2a15af999e0203f7c94e3"
+ },
+ "started_utc": "2026-09-06T15:05:16Z",
+ "toolchain": {
+  "root": "/Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1",
+  "source": "recorded-default",
+  "verified": 5
+ }
+}
