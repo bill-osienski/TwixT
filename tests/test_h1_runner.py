@@ -1407,6 +1407,124 @@ def _void_on_prefs(tmp_path, monkeypatch, postcond_line):
     return d
 
 
+# ═══ REVIEW 2026-09-06: through the REAL query-failure path, subprocess only ═══
+#
+# The tests above hand-build the AbortError. Review reproduced two holes they
+# could not see: (1) a PARTIAL observation parsed as clean; (2) a longer
+# transcript kept prefs_ok=false but the 800-char excerpt dropped count_after,
+# and the diagnostic read None although the helper had said it.
+
+def _empty_dump():
+    """A replay dump that agrees with the EMPTY 24-board, ply 0, in the helper's
+    own vocabulary -- so the real binder binds the (empty) opening and the real
+    T1j agent reaches its query."""
+    from tests.test_d1_probe import _ply_block, _state_after
+    return _ply_block(_state_after([]), []) + (
+        "POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true "
+        "refl_ok=true refl_n=1 failures=0\n")
+
+
+def _query_reply(postcond_line, *, fail_lines):
+    """One E4Preflight query reply: a legal QUERY record, the searched dump,
+    then the helper's own FAIL lines and its POSTCOND line, last."""
+    from tests.test_d1_probe import _dump
+    x, y = A.to_t1j(2, 2)
+    query = (f"QUERY q=1 requested_depth=6 move_x={x} move_y={y} to_move=Y "
+             "usealphabeta=true currentMaxPly=7 completed_depth=6 completed=true "
+             "legal=true null_sentinel=false moveNr=0 eval_regime=early_moveNr_lt_8 "
+             "elapsed_us=1000\n")
+    return query + _dump([]) + "".join(fail_lines) + postcond_line + "\n"
+
+
+def _real_query_wiring(monkeypatch, *, query_stdout, query_rc):
+    """REAL binder, REAL T1jAgent, REAL AbortError wrapper; `subprocess.run` is
+    the only thing mocked. Task 0 is t1j_red at ply 0, so T1j moves first."""
+    import subprocess
+    from scripts.GPU.alphazero import e4_screen_integration as INT
+    from scripts.GPU.alphazero.game.twixt_state import TwixtState
+
+    runtime = INT.T1jRuntime(java="/j", jar="/x.jar", classes="/c",
+                             ply_cap=280, timeout_s=RUN.PER_CALL_TIMEOUT_S)
+    ctx = INT.IntegrationContext()
+
+    def fake_run(args, **kw):
+        if "replay" in args:
+            return subprocess.CompletedProcess(args, 0, _empty_dump(), "")
+        if "query" in args:
+            return subprocess.CompletedProcess(args, query_rc, query_stdout, "")
+        raise AssertionError(f"unexpected subprocess call: {args}")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    factory = INT.make_agent_factory(
+        runtime=runtime, ctx=ctx, evaluator=None,
+        reference_build=lambda task, evaluator: (lambda s: (2, 2)),
+        t1j_timeout_s=RUN.PER_CALL_TIMEOUT_S)
+    def state_factory(task):
+        ctx.reset(task["task_id"], [])           # as the production factory does
+        return TwixtState(active_size=24, to_move="red")
+
+    return {"binder": INT.make_binder(runtime, ctx),
+            "state_factory": state_factory, "agent_factory": factory}
+
+
+def _run_real(tmp_path, wiring):
+    out = str(tmp_path / "r.jsonl")
+    with pytest.raises(RUN.H1VoidError) as exc:
+        RUN._run(out, mode=RUN.MATCH_MODE, trace_path=str(tmp_path / "t.jsonl"),
+                 _supervise=False, _cleanup=lambda: None,
+                 _binder=wiring["binder"], _state_factory=wiring["state_factory"],
+                 _agent_factory=wiring["agent_factory"])
+    (d,) = [json.loads(l) for l in open(out)
+            if json.loads(l)["record_type"] == "void_diagnostic"]
+    return d, exc.value
+
+
+def test_the_observation_SURVIVES_excerpt_truncation_on_the_REAL_query_path(
+        tmp_path, monkeypatch, openable, frozen):
+    """🔴 REVIEW REPRO: a longer failure transcript retained prefs_ok=false but
+    the bounded excerpt dropped count_after, and the diagnostic returned None
+    despite the helper supplying it. The structured observation must be parsed
+    from the FULL transcript, BEFORE the human-readable excerpt is bounded."""
+    fails = [f"FAIL q1: check number {i} did not hold for reason {'x' * 50}\n"
+             for i in range(11)]
+    wiring = _real_query_wiring(
+        monkeypatch, query_stdout=_query_reply(_POSTCOND_NEW, fail_lines=fails),
+        query_rc=3)
+    d, err = _run_real(tmp_path, wiring)
+    assert d["error_type"] == "AbortError"
+    # the human-readable excerpt IS truncated -- that is the scenario
+    assert d["helper_excerpt"].endswith("...")
+    assert "count_after=-1" not in d["helper_excerpt"]
+    # ...and the structured observation is complete anyway
+    assert d["helper_prefs_observed"] == {
+        "prefs_ok": False, "prefs_before": _SHA, "prefs_after": "ERROR",
+        "count_before": 527, "count_after": -1}
+    assert "prefs_attribution" in d and "prefs_surface_at_failure" in d
+
+
+def test_a_PARTIAL_observation_is_a_VOID_on_the_REAL_query_path(
+        tmp_path, monkeypatch, openable, frozen):
+    """🔴 REVIEW REPRO: prefs_ok=true, prefs_before=ABSENT, prefs_after=ERROR,
+    count_after missing -- accepted as clean. Now the postcondition check refuses
+    the line as unreadable, the failure is a VOID, and the record says why."""
+    partial = ("POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true "
+               "refl_ok=true refl_n=3 failures=0 prefs_before=ABSENT prefs_after=ERROR "
+               "count_before=527")
+    wiring = _real_query_wiring(
+        monkeypatch, query_stdout=_query_reply(partial, fail_lines=[]), query_rc=0)
+    d, err = _run_real(tmp_path, wiring)
+    assert type(err) is RUN.H1VoidError
+    assert "[move]" in str(err) and "partial preference observation" in str(err)
+    # the qualified runner wraps an agent's exception as AbortError (`from None`),
+    # so the ORIGINAL type on record is the wrapper's; the parser's refusal and
+    # the partial line itself both survive into the record.
+    assert d["error_type"] == "AbortError"
+    assert "prefs_before=ABSENT" in d["helper_excerpt"]
+    assert "count_after" not in d["helper_excerpt"]
+    assert d.get("helper_prefs_observed", "absent") == "absent", \
+        "prefs_ok=true on a refused line must not open the attribution branch"
+
+
 def test_the_VOID_diagnostic_carries_the_FAILING_JVMS_OWN_prefs_observation(
         tmp_path, monkeypatch, openable, frozen):
     """🔴 THE PYTHON SNAPSHOTS DO NOT SAY WHAT THE FAILING JVM SAW. Sampled at run
@@ -1415,7 +1533,7 @@ def test_the_VOID_diagnostic_carries_the_FAILING_JVMS_OWN_prefs_observation(
     and they are recorded as FIELDS, not left inside the excerpt string."""
     d = _void_on_prefs(tmp_path, monkeypatch, _POSTCOND_NEW)
     assert d["helper_prefs_observed"] == {
-        "prefs_before": _SHA, "prefs_after": "ERROR",
+        "prefs_ok": False, "prefs_before": _SHA, "prefs_after": "ERROR",
         "count_before": 527, "count_after": -1}
     assert "prefs_attribution" in d and "prefs_surface_at_failure" in d
 
@@ -1427,7 +1545,7 @@ def test_a_transcript_from_the_EARLIER_source_records_that_it_had_no_observation
     a reader could mistake for "nothing to say"."""
     d = _void_on_prefs(tmp_path, monkeypatch, _POSTCOND_OLD)
     assert d["helper_prefs_observed"] == {
-        "prefs_before": None, "prefs_after": None,
+        "prefs_ok": False, "prefs_before": None, "prefs_after": None,
         "count_before": None, "count_after": None}
 
 

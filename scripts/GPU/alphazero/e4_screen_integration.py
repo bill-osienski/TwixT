@@ -252,9 +252,14 @@ class T1jAgent:
             # As on the binder's replay path: the helper's own FAIL line is the
             # diagnosis, and dropping it is what left a real D1 abort
             # unexplained. Bounded, and the dump body never travels.
-            raise AbortError(PHASE_MOVE,
-                             f"{where}: exit {rc} with {len(recs)} record(s). "
-                             f"T1j reported: {A.helper_failure_excerpt(out)}")
+            #
+            # 🔴 THE FULL TRANSCRIPT TRAVELS AS THE CAUSE. The excerpt above is
+            # bounded for humans; the structured POSTCOND observation (2026-09-05)
+            # sits LAST on the transcript and review showed the bound dropping it.
+            # A diagnostic reads the chained `stdout` and parses BEFORE bounding.
+            message = (f"{where}: exit {rc} with {len(recs)} record(s). "
+                       f"T1j reported: {A.helper_failure_excerpt(out)}")
+            raise AbortError(PHASE_MOVE, message) from A.HelperOutputError(message, out)
         check_postcond(out, expected_refl=QUERY_REFL_N, where=where, phase=PHASE_MOVE)
 
         # THE SEARCHED POSITION, re-bound against ours before the move is used.

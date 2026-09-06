@@ -1,0 +1,36 @@
+REPORTING-CONTRACT CORRECTION (review 2026-09-06): partial observations + excerpt truncation. Python only.
+=======================================================================================================
+recorded 2026-09-06T14:53:50Z at HEAD 94ac32d; 37 commits unpushed before this one
+
+ALL FIVE GATES (grep at recording):
+scripts/GPU/alphazero/e4_screen_command.py:44:SCREEN_AUTHORIZED = False
+scripts/GPU/alphazero/l0_match_command.py:41:L0_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/h1_viability_runner.py:76:H1_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/d1_probe.py:55:D1_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/lowply_qualification.py:55:LOWPLY_QUALIFICATION_AUTHORIZED = False
+
+E4Preflight.java UNCHANGED this step: sha256 fa6623390c0ee5f326e9cfa92af05581ec7234df1fe2a15af999e0203f7c94e3 (== the 2026-09-05 edit, still UNCOMPILED)
+Registries untouched: git diff HEAD --stat over e4_screen_reference/d1_selection/h1 rules+plan -> 0 lines
+  H1 (202616000, 202616224) accounted 224 exposed 60 retired 224 
+  D1 (202615000, 202615221) accounted 0 exposed 0 retired 0  (paper-only)
+NO Java, NO fresh seeds, NO gameplay, NO model load, NO gate change, NO push. The 2026-09-05 wrapper's sys.exit(0) untouched.
+
+FULL SUITE (.venv/bin/python -m pytest tests -q): ==== 3930 passed, 4 skipped, 53 deselected, 8 warnings in 820.50s (0:13:40) ====
+  previous step: 3,916 passed / 4 skipped / 0 failed; +14 tests.
+CONTROLS: 270/270 defects rejected; 0 not caught; 0 stale; ALL CONTROLS RAN: True; clean baseline over 211 distinct target tests: PASS
+clean baseline: PASS
+  270 = 263 + 7 new. Five existing anchors moved with these edits and were re-anchored BEFORE the run (static pre-check: every anchor matches exactly once); no stale in the run.
+
+REVIEW GAP 1 -- partial observations bypassed validation (repro: prefs_ok=true prefs_before=ABSENT prefs_after=ERROR, count_after missing -> CLEAN).
+  t1j_adapter._prefs_observation: NONE or ALL FOUR; a partial observation is ValueError -> HelperOutputError with the transcript.
+  Proven on the REAL query path (subprocess only mocked): the line is refused by check_postcond -> AbortError -> H1VoidError; before the fix the game CONTINUED.
+REVIEW GAP 2 -- excerpt truncation lost the new evidence (a longer transcript kept prefs_ok=false, dropped count_after, diagnostic read None).
+  e4_screen_integration T1jAgent query path: raise AbortError(...) from HelperOutputError(message, out) -- the FULL transcript travels as the cause.
+  h1_viability_runner._void_diagnostic: parses the observation from the fullest text reachable BEFORE bounding; the trigger reads the parsed prefs_ok too.
+  t1j_adapter.postcond_prefs_observation: returns None for UNKNOWN (no segment / truncation marker / missing base field / partial); four Nones ONLY for a complete segment with no observation. Now carries prefs_ok.
+  Also found on the way: the diagnostic's message-fallback cut an already-bounded excerpt at 800 again and LOST the '...' marker; chaining the stdout makes the excerpt carry its marker.
+  Replay path (E3bDump, e4_screen_integration make_binder) NOT changed: it chains nothing; E3bDump emits no observation. Reported, not fixed.
+
+ONE TEST EXPECTATION OF MINE WAS WRONG (code right): the qualified runner wraps an agent's exception as AbortError from None, so error_type on record is AbortError, not HelperOutputError. The test was corrected; the parser's refusal text and the partial line are asserted in the record instead.
+
+NEXT (not authorized): compile-only verification of E4Preflight.java (buildability, not runtime qualification) -- not another match. A future execution wrapper needs tested exit codes.

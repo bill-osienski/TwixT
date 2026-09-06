@@ -432,20 +432,20 @@ def _void_diagnostic(task: Optional[Dict[str, Any]], index: Optional[int],
     # 🔴 A PREFERENCE POSTCONDITION FAILURE IS NOT AN ATTRIBUTION. Record what
     # the surface looks like NOW, next to what the run header recorded at start,
     # so the next reader can compare instead of concluding.
-    if "prefs_ok=false" in (d["helper_excerpt"] or ""):
+    # 🔴 THE PYTHON SAMPLES BELOW ARE CONTEXT, NOT ATTRIBUTION: taken at run
+    # start and after the failure, they can miss a transient Java read error
+    # entirely. WHAT THE FAILING JVM ITSELF COMPARED is on its POSTCOND line
+    # (E4Preflight source 2026-09-05 onward). It is parsed from the FULLEST text
+    # reachable -- the chained stdout the query path now attaches -- BEFORE any
+    # bounding, because review showed the 800-char excerpt dropping the fields
+    # the helper had supplied. Four Nones = a complete line with no observation
+    # (the earlier source). None = unknown: cut short, partial, or unparseable.
+    observed = A.postcond_prefs_observation(_helper_text(error) or "")
+    if ((observed is not None and observed["prefs_ok"] is False)
+            or "prefs_ok=false" in (d["helper_excerpt"] or "")):
         d["prefs_attribution"] = PREFS_ATTRIBUTION_NOTE
         d["prefs_surface_at_failure"] = preference_surface()
-        # 🔴 THE PYTHON SAMPLES ABOVE ARE CONTEXT, NOT ATTRIBUTION: taken at run
-        # start and after the failure, they can miss a transient Java read error
-        # entirely. WHAT THE FAILING JVM ITSELF COMPARED is on its POSTCOND line
-        # (E4Preflight source 2026-09-05 onward), and travels here inside the
-        # bounded excerpt -- recorded as FIELDS. Four Nones = the helper ran the
-        # earlier source and did not say.
-        # ponytail: read from the 800-char excerpt; if many FAIL lines precede
-        # POSTCOND the segment can be truncated and this reads None. Attach the
-        # stdout to the query-path AbortError if that ever bites.
-        d["helper_prefs_observed"] = A.postcond_prefs_observation(
-            _helper_text(error) or "")
+        d["helper_prefs_observed"] = observed
     return d
 
 

@@ -489,39 +489,60 @@ class PostCond:
 
 
 _PREFS_OBS_FIELDS = ("prefs_before", "prefs_after", "count_before", "count_after")
+_POSTCOND_BASE_FIELDS = frozenset({"no_throw", "windows", "frames", "headless", "prefs_ok",
+                                   "refl_ok", "refl_n", "failures"})
 
 
 def _prefs_observation(kv: Dict[str, str]) -> Dict[str, Any]:
-    """The four observation fields from one POSTCOND key/value map, typed;
-    None for each the helper did not emit."""
-    return {
-        "prefs_before": kv.get("prefs_before"),
-        "prefs_after": kv.get("prefs_after"),
-        "count_before": None if "count_before" not in kv else int(kv["count_before"]),
-        "count_after": None if "count_after" not in kv else int(kv["count_after"]),
-    }
+    """The four observation fields from one POSTCOND key/value map, typed.
+
+    🔴 NONE OR ALL FOUR. Review reproduced `prefs_ok=true prefs_before=ABSENT
+    prefs_after=ERROR` with count_after MISSING parsing as CLEAN: the
+    self-agreement check required all four and a partial line simply skipped
+    it. A partial observation is an unreadable instrument -> ValueError, which
+    `parse_postconds` wraps with the transcript. Four Nones = the helper emitted
+    no observation at all (the earlier E4Preflight source, or E3bDump).
+    """
+    present = [k for k in _PREFS_OBS_FIELDS if k in kv]
+    if present and len(present) != len(_PREFS_OBS_FIELDS):
+        raise ValueError(
+            f"partial preference observation: {present} present, "
+            f"{[k for k in _PREFS_OBS_FIELDS if k not in kv]} missing")
+    if not present:
+        return {k: None for k in _PREFS_OBS_FIELDS}
+    return {"prefs_before": kv["prefs_before"], "prefs_after": kv["prefs_after"],
+            "count_before": int(kv["count_before"]),
+            "count_after": int(kv["count_after"])}
 
 
 def postcond_prefs_observation(text: str) -> Optional[Dict[str, Any]]:
-    """The helper's prefs observation from ANY text holding a POSTCOND segment.
+    """The helper's prefs observation, plus `prefs_ok`, from ANY text holding a
+    POSTCOND segment -- a full transcript or a bounded excerpt, where POSTCOND
+    does not start a line. Reads the LAST "POSTCOND " onwards (the helper prints
+    it last).
 
-    The query path raises `AbortError` carrying only `helper_failure_excerpt` --
-    FAIL lines and the POSTCOND line joined by " | " -- so on the real failure
-    path POSTCOND does not start a line and `parse_postconds` cannot see it.
-    Reads the LAST "POSTCOND " onwards (the helper prints it last). None if no
-    POSTCOND segment is present; four Nones if the segment carries no observation
-    (the earlier source). Unparseable counts also yield None for that field --
-    this is a diagnostic reader, not a gate.
+    🔴 UNKNOWN IS None, NOT FOUR Nones. A segment cut short by the excerpt bound,
+    or a partial observation, used to read as four Nones -- indistinguishable
+    from "the helper ran the earlier source". Missing fields cannot identify an
+    older helper. So: None when there is no POSTCOND segment, when the segment
+    ends in the excerpt's truncation marker, when any BASE field is missing, or
+    when the observation is partial or unparseable. Four Nones ONLY for a
+    complete segment that carries no observation field at all.
     """
     at = text.rfind("POSTCOND ")
     if at < 0:
         return None
-    kv = dict(_KV_RE.findall(text[at:].split(" | ", 1)[0]))
+    segment = text[at:].split(" | ", 1)[0].strip()
+    if segment.endswith("..."):
+        return None
+    kv = dict(_KV_RE.findall(segment))
+    if _POSTCOND_BASE_FIELDS - set(kv):
+        return None
     try:
-        return _prefs_observation(kv)
+        obs = _prefs_observation(kv)
     except ValueError:
-        return {k: (kv.get(k) if k.startswith("prefs_") else None)
-                for k in _PREFS_OBS_FIELDS}
+        return None
+    return {"prefs_ok": kv["prefs_ok"] == "true", **obs}
 
 
 def parse_postconds(text: str) -> List[PostCond]:

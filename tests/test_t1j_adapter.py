@@ -357,17 +357,58 @@ def test_a_SELF_CONSISTENT_line_is_accepted(ok, b, a, cb, ca):
 def test_the_prefs_observation_is_readable_from_a_BOUNDED_EXCERPT():
     """The query path raises `AbortError` carrying only `helper_failure_excerpt`
     -- FAIL lines and the POSTCOND line joined by " | " -- so the observation has
-    to be recoverable from that text, where POSTCOND does not start a line."""
+    to be recoverable from that text, where POSTCOND does not start a line.
+    It carries `prefs_ok` too, so the reader does not need the excerpt to know
+    whether the check failed."""
     excerpt = A.helper_failure_excerpt(
         "PROC pid=1\nFAIL preference surfaces unchanged\n" + POSTCOND_LINE_V2 + "\n")
     assert excerpt.startswith("FAIL preference")
     assert A.postcond_prefs_observation(excerpt) == {
-        "prefs_before": SHA_A, "prefs_after": "ERROR",
+        "prefs_ok": False, "prefs_before": SHA_A, "prefs_after": "ERROR",
         "count_before": 527, "count_after": -1}
+    # the earlier source: a COMPLETE line with no observation = four Nones
     assert A.postcond_prefs_observation("FAIL x | " + POSTCOND_LINE) == {
-        "prefs_before": None, "prefs_after": None,
+        "prefs_ok": True, "prefs_before": None, "prefs_after": None,
         "count_before": None, "count_after": None}
     assert A.postcond_prefs_observation("no postcond here") is None
+
+
+@pytest.mark.parametrize("text", [
+    # TRUNCATED by the excerpt bound: the marker, or a base field cut off
+    "FAIL x | " + POSTCOND_LINE_V2[:-6] + "...",
+    "FAIL x | " + POSTCOND_LINE_V2.split(" count_after=")[0],
+    "FAIL x | " + POSTCOND_LINE.split(" failures=")[0],
+    # a COMPLETE-looking legacy line with the marker: the cut may have fallen
+    # exactly before the observation fields -- "older helper" is not knowable
+    "FAIL x | " + POSTCOND_LINE + "...",
+    # PARTIAL: some observation fields, not all four
+    "FAIL x | " + POSTCOND_LINE + " prefs_before=ABSENT prefs_after=ERROR",
+])
+def test_an_INCOMPLETE_segment_reads_as_UNKNOWN_not_as_the_earlier_source(text):
+    """🔴 MISSING FIELDS CANNOT IDENTIFY AN OLDER HELPER. A segment the excerpt
+    bound cut short, or a partial observation, used to read as four Nones --
+    the same answer as "the helper ran the earlier source". Unknown is None."""
+    assert A.postcond_prefs_observation(text) is None
+
+
+@pytest.mark.parametrize("present", [
+    ("prefs_before",), ("prefs_after",), ("count_before",), ("count_after",),
+    ("prefs_before", "prefs_after"),
+    ("prefs_before", "prefs_after", "count_before"),
+    ("prefs_after", "count_before", "count_after"),
+])
+def test_a_PARTIAL_observation_is_REFUSED_by_the_parser(present):
+    """🔴 REPRODUCED BY REVIEW: prefs_ok=true, prefs_before=ABSENT,
+    prefs_after=ERROR, count_after missing parsed as CLEAN, because the
+    self-agreement check required all four fields and a partial line skipped it.
+    Either NONE (the earlier source) or ALL FOUR; anything between is an
+    unreadable instrument."""
+    values = {"prefs_before": "ABSENT", "prefs_after": "ERROR",
+              "count_before": "527", "count_after": "527"}
+    line = POSTCOND_LINE + "".join(f" {k}={values[k]}" for k in present)
+    with pytest.raises(A.HelperOutputError, match="partial") as exc:
+        A.parse_postconds(line + "\n")
+    assert exc.value.stdout == line + "\n"
 
 
 # ═══════ the replay hole 12.9 recorded: no timeout parameter existed at all ═══
