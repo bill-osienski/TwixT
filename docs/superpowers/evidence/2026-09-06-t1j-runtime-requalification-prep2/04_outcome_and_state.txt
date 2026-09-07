@@ -1,0 +1,38 @@
+RUNTIME REQUALIFICATION -- REVIEW CORRECTIONS 2 (code-and-test only). NOTHING RAN. State at the moment of recording.
+=============================================================================================================
+recorded 2026-09-07T02:36:25Z at HEAD 12e77ff; 40 commits unpushed before this one
+
+ALL SIX GATES (grep at recording):
+scripts/GPU/alphazero/d1_probe.py:55:D1_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/l0_match_command.py:41:L0_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/e4_screen_command.py:44:SCREEN_AUTHORIZED = False
+scripts/GPU/alphazero/h1_viability_runner.py:76:H1_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/lowply_qualification.py:55:LOWPLY_QUALIFICATION_AUTHORIZED = False
+scripts/GPU/alphazero/runtime_requalification.py:79:RUNTIME_REQUAL_AUTHORIZED = False
+
+NO helper executed, NO replay, NO T1j query, NO incumbent load, NO seed action, NO gate opened, NO game, NO push, NO Java process.
+Registries untouched: git diff HEAD --stat over e4_screen_reference/d1_selection/h1 rules+plan -> 0 lines. Frozen prefix file unchanged: 86b9e73801b6d643...
+
+BLOCKER 1 -- a surviving child beside exit 0 (review repro: worker exits before the outer timeout; group_cleared=False observed; NO signal sent; main returned 0).
+  supervise(): the leader is reaped on every path, THEN the group is probed after EVERY exit; descendants get SIGTERM -> grace -> SIGKILL -> probe.
+  killpg(pgid, 0) -> EPERM is OCCUPIED, not cleared (a SIGKILLed descendant re-parented to launchd answers EPERM until reaped); found because the first
+  implementation raised PermissionError straight through the group-kill test.
+  main(): group_cleared=False -> EXIT_CLEANUP_FAILED = 8, whatever the worker's code (0, 2 or 3 tested); the worker's code goes to stderr.
+BLOCKER 2 -- the public entry bound only digests (review repro: every digest unchanged while opening/ply/h1_failed changed reached the stages).
+  _check_frozen_rows: exactly the frozen rows in order; every key of the frozen row present and TYPE-STRICTLY equal (False != 0, 6 != '6');
+  extra keys refused; tuple/list shape is the ONLY normalisation. Eight forgeries refused (relabel opening, drop/move h1_failed, ply 7, same
+  position in another move order, h1_failed=1, ply='6', extra key); the frozen rows with tuple-shaped moves still run to PASS.
+
+FULL SUITE (.venv/bin/python -m pytest tests -q): ==== 3997 passed, 4 skipped, 53 deselected, 8 warnings in 826.56s (0:13:46) ====
+  previous step: 3,981 passed / 4 skipped / 0 failed; +16 tests.
+CONTROLS: 295/295 defects rejected; 0 not caught; 0 stale; ALL CONTROLS RAN: True; clean baseline over 233 distinct target tests: PASS
+clean baseline: PASS
+  295 = 288 + 7 new; two anchors moved by these edits were re-anchored under the static exactly-once pre-check.
+  🔴 THE FIRST HARNESS RUN REPORTED 294/295: 'EPERM from the group probe read as CLEARED' was NOT CAUGHT -- its target test neutralised the kill
+     signals, so the surviving grandchild was our own descendant and answered the probe WITHOUT EPERM; the branch was never exercised. A direct
+     test with a probe that raises PermissionError (and must keep polling) now catches it: 295/295.
+
+CARD CORRECTED (docs/superpowers/2026-09-06-t1j-runtime-requalification-card.md): exit 8 added to the table; binding statement = every field,
+  type-strictly; outer-cap row describes cleanup after EVERY exit; the supervisor-test description names the SIGTERM-ignoring grandchild and the time bound.
+
+NOT DONE (outside this phase): E3bDump.java, d1_probe finally-VOID. THE RUN REMAINS UNAUTHORIZED.

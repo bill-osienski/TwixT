@@ -299,6 +299,78 @@ def test_the_public_runner_requires_EXACTLY_the_frozen_eight(wire, tmp_path, mon
     assert wire["calls"] == [] and not (tmp_path / "r.json").exists()
 
 
+def _forged(mutate):
+    rows = [dict(p) for p in _prefixes()]
+    mutate(rows)
+    return rows
+
+
+def _relabel_opening(rows):
+    rows[2]["opening"], rows[3]["opening"] = rows[3]["opening"], rows[2]["opening"]
+
+
+def _drop_h1_flag(rows):
+    rows[2]["h1_failed"] = False
+
+
+def _move_h1_flag(rows):
+    rows[2]["h1_failed"], rows[0]["h1_failed"] = False, True
+
+
+def _reply_ply(rows):
+    rows[2]["ply"] = 7
+
+
+def _same_position_other_move_order(rows):
+    m = rows[2]["prefix"]
+    rows[2]["prefix"] = [m[2], m[1], m[0]] + m[3:]     # same pegs, same digest
+
+
+def _bool_as_int(rows):
+    rows[2]["h1_failed"] = 1                            # == True, but is not True
+
+
+def _ply_as_str(rows):
+    rows[2]["ply"] = "6"
+
+
+def _extra_key(rows):
+    rows[2]["note"] = "the failed one is really o1_center"
+
+
+@pytest.mark.parametrize("mutate", [
+    _relabel_opening, _drop_h1_flag, _move_h1_flag, _reply_ply,
+    _same_position_other_move_order, _bool_as_int, _ply_as_str, _extra_key,
+], ids=lambda f: f.__name__)
+def test_a_DIGEST_PRESERVING_metadata_change_is_refused_by_the_public_entry(
+        wire, tmp_path, monkeypatch, mutate):
+    """🔴 REVIEW REPRO: every digest unchanged while `opening`, `ply` or
+    `h1_failed` changed reached the stages -- the output could be mislabelled or
+    lose the failed-H1 comparison. Every field of the frozen row is bound,
+    TYPE-STRICTLY (`False == 0`, `6 == 6.0`); only serialization shape is
+    normalised."""
+    rows = _forged(mutate)
+    assert [r["digest"] for r in rows] == [p["digest"] for p in _prefixes()]
+    monkeypatch.setattr(RQ, "RUNTIME_REQUAL_AUTHORIZED", True)
+    with pytest.raises(RQ.RequalError, match="frozen") as e:
+        RQ.run_requalification(prefixes=rows, paths=PATHS,
+                               out_path=str(tmp_path / "r.json"),
+                               _compile=lambda d: {"stub": True})
+    assert wire["calls"] == [] and not (tmp_path / "r.json").exists()
+
+
+def test_serialization_SHAPE_is_the_only_normalisation_the_public_entry_allows(
+        wire, tmp_path, monkeypatch):
+    """Tuples for moves (what a caller builds in Python) are the frozen rows'
+    lists; nothing else is coerced."""
+    rows = [dict(p, prefix=[tuple(m) for m in p["prefix"]]) for p in _prefixes()]
+    monkeypatch.setattr(RQ, "RUNTIME_REQUAL_AUTHORIZED", True)
+    rep = RQ.run_requalification(prefixes=rows, paths=PATHS,
+                                 out_path=str(tmp_path / "r.json"),
+                                 _compile=lambda d: {"stub": True})
+    assert rep["verdict"] == "PASS" and rep["h1_failed_prefix"]["opening"] == "o3_low"
+
+
 # ──────── the observation's ABSENCE is a VOID: the wrong class ran ──────────
 
 def test_a_reply_WITHOUT_the_observation_is_a_VOID_not_a_legacy_reading(wire, tmp_path):
@@ -520,15 +592,101 @@ def test_the_supervisor_starts_the_worker_in_a_NEW_SESSION(tmp_path):
     assert r["exit_code"] == 0, "the worker is not its own process-group leader"
 
 
+EARLY_EXIT_WORKER = textwrap.dedent("""
+    import signal, subprocess, sys
+    child = subprocess.Popen([sys.executable, "-c",
+        "import signal, time; signal.signal(signal.SIGTERM, signal.SIG_IGN); time.sleep(300)"])
+    open(sys.argv[1], "w").write(str(child.pid))
+    sys.exit(0)                                          # the WORKER is done; its child is not
+""")
+
+
+def test_a_child_that_OUTLIVES_a_finished_worker_is_killed_and_the_group_cleared(tmp_path):
+    """🔴 REVIEW REPRO: the worker exits 0 BEFORE the outer timeout, leaving a
+    descendant; `supervise` saw group_cleared=False and sent NO signal. Cleanup
+    must run after a normal exit exactly as after a timeout."""
+    pidfile = tmp_path / "grandchild.pid"
+    t0 = time.monotonic()
+    r = RQ.supervise([sys.executable, "-c", EARLY_EXIT_WORKER, str(pidfile)],
+                     timeout_s=30, kill_grace_s=1)
+    assert time.monotonic() - t0 < 15, "cleanup must not wait for the child's own sleep"
+    assert r["exit_code"] == 0 and r["timed_out"] is False
+    assert r["group_cleared"] is True
+    gpid = int(pidfile.read_text())
+    deadline = time.monotonic() + 5
+    while _alive(gpid) and time.monotonic() < deadline:
+        time.sleep(0.1)
+    assert not _alive(gpid), "the grandchild survived a finished worker"
+
+
+def test_a_group_that_CANNOT_be_cleared_is_reported_as_such(tmp_path, monkeypatch):
+    """The signals are neutralised (as an unkillable descendant would neutralise
+    them); the result must say the group did NOT clear, never that it did."""
+    pidfile = tmp_path / "grandchild.pid"
+    monkeypatch.setattr(RQ, "_killpg", lambda pgid, sig: None)
+    try:
+        r = RQ.supervise([sys.executable, "-c", EARLY_EXIT_WORKER, str(pidfile)],
+                         timeout_s=30, kill_grace_s=0.5)
+        assert r["exit_code"] == 0 and r["group_cleared"] is False
+    finally:
+        try:
+            os.kill(int(pidfile.read_text()), signal.SIGKILL)
+        except (ProcessLookupError, FileNotFoundError, ValueError):
+            pass
+
+
+def test_a_group_member_we_CANNOT_SIGNAL_counts_as_occupied_not_cleared(monkeypatch):
+    """🔴 EPERM from `killpg(pgid, 0)` means a member exists that this process
+    may not signal -- on macOS a SIGKILLed descendant re-parented to launchd,
+    until it is reaped. It was raised straight through once; and reading it as
+    "cleared" would report success beside a survivor. It is "occupied".
+    The previous test could not see this: its survivor was our own descendant,
+    which answers the probe without EPERM -- so the branch is exercised here
+    with a probe that refuses."""
+    calls = {"n": 0}
+
+    def refusing_killpg(pgid, sig):
+        assert sig == 0
+        calls["n"] += 1
+        raise PermissionError("Operation not permitted")
+
+    monkeypatch.setattr(RQ.os, "killpg", refusing_killpg)
+    t0 = time.monotonic()
+    assert RQ._group_cleared(4242, wait_s=0.3) is False
+    assert calls["n"] >= 2, "it must keep polling, not decide on the first EPERM"
+    assert time.monotonic() - t0 < 5
+
+
+@pytest.mark.parametrize("worker_code", [0, 2, 3])
+def test_main_NEVER_reports_the_workers_code_when_cleanup_failed(monkeypatch, tmp_path,
+                                                                worker_code):
+    """🔴 A surviving JVM beside exit 0 is a success report for a run that is
+    still running. Whatever the worker said, a failed cleanup is its own code."""
+    monkeypatch.setattr(RQ, "RUNTIME_REQUAL_AUTHORIZED", True)
+    monkeypatch.setattr(RQ, "supervise", lambda cmd, **k: {
+        "exit_code": worker_code, "timed_out": False, "group_cleared": False})
+    assert RQ.main(["--out", str(tmp_path / "r.json")]) == RQ.EXIT_CLEANUP_FAILED == 8
+
+
+def test_main_passes_the_workers_code_through_ONLY_when_the_group_cleared(monkeypatch,
+                                                                         tmp_path):
+    monkeypatch.setattr(RQ, "RUNTIME_REQUAL_AUTHORIZED", True)
+    monkeypatch.setattr(RQ, "supervise", lambda cmd, **k: {
+        "exit_code": 0, "timed_out": False, "group_cleared": True})
+    assert RQ.main(["--out", str(tmp_path / "r.json")]) == RQ.EXIT_PASS == 0
+
+
 # ────────────────────────────── exit codes mean one thing ───────────────────
 
 def test_exit_codes_are_distinct_and_named():
     codes = {RQ.EXIT_PASS: "PASS", RQ.EXIT_FAIL: "FAIL", RQ.EXIT_VOID: "VOID",
              RQ.EXIT_UNEXPECTED: "UNEXPECTED", RQ.EXIT_UNAUTHORIZED: "UNAUTHORIZED",
-             RQ.EXIT_TIMEOUT: "TIMEOUT", RQ.EXIT_REFUSED: "REFUSED"}
-    assert len(codes) == 7
+             RQ.EXIT_TIMEOUT: "TIMEOUT", RQ.EXIT_REFUSED: "REFUSED",
+             RQ.EXIT_CLEANUP_FAILED: "CLEANUP_FAILED"}
+    assert len(codes) == 8
     assert (RQ.EXIT_PASS, RQ.EXIT_FAIL, RQ.EXIT_VOID, RQ.EXIT_UNEXPECTED,
-            RQ.EXIT_UNAUTHORIZED, RQ.EXIT_TIMEOUT, RQ.EXIT_REFUSED) == (0, 2, 3, 4, 5, 6, 7)
+            RQ.EXIT_UNAUTHORIZED, RQ.EXIT_TIMEOUT, RQ.EXIT_REFUSED,
+            RQ.EXIT_CLEANUP_FAILED) == (0, 2, 3, 4, 5, 6, 7, 8)
 
 
 @pytest.mark.parametrize("outcome,code", [

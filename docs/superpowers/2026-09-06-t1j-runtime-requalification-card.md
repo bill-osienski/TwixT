@@ -70,7 +70,7 @@ ply-7 positions (the `t1j_black` arm's first query) or about mid-game plies.**
 |---|---:|---|
 | depth | **6** | the match's `mdPly`; the depth of the failed query. One depth, deliberately: this is a sample of operation, not an endpoint screen |
 | invocations per prefix | **1** | cross-process agreement was qualified by E3a; re-proving it is not this card's question |
-| **T1j queries** | **8** | 8 prefixes × 1. **This is the budget** (`QUERY_CAP`), and the public entry requires exactly the frozen eight in the frozen order |
+| **T1j queries** | **8** | 8 prefixes × 1. **This is the budget** (`QUERY_CAP`), and the public entry requires exactly the frozen eight rows, **every field, type-strictly**, in the frozen order (tuple/list shape is the only normalisation) |
 | replay launches | **8** | one E3bDump replay per prefix, for the E3b binding |
 | **helper launches** | **16** | 8 + 8 — every process that runs the T1j jar |
 | **Java processes** | **17** | 16 + **one `javac`**, compiling the four committed sources once, up front |
@@ -91,15 +91,23 @@ Indicative T1j subtotal: 8 × 2.73 s ≈ **22 s**, excluding the 8 replays
 |---|---|---|
 | per-call timeout | **120 s** | the qualified E4 limit, passed at **every** `subprocess.run` (replay and query); a test asserts every call carries it. `subprocess.run(timeout=)` kills the JVM, which is its direct child |
 | inner whole-run deadline | **900 s** | D1's `Deadline` + SIGALRM supervisor, reused not restated: one clock, one origin, armed from the remaining time. A breach is a **VOID** reported by the worker (exit 3) |
-| **outer process-tree cap** | **960 s** = 900 + 60 grace | `main` runs the stages in a **worker subprocess started in its own session**; on expiry it `SIGTERM`s the **process group**, waits 5 s, `SIGKILL`s the group, then **probes the group until empty** (`killpg(…, 0)` → ESRCH) and records whether it cleared. Exit **6** |
+| **outer process-tree cap** | **960 s** = 900 + 60 grace | `main` runs the stages in a **worker subprocess started in its own session**; on expiry it `SIGTERM`s the **process group**, waits 5 s, `SIGKILL`s the group. **After EVERY worker exit** — timeout or not — it probes the group (`killpg(…, 0)`; EPERM counts as occupied) and, if descendants remain, `SIGTERM`s then `SIGKILL`s them and probes until empty. A group that will not clear is exit **8**, whatever the worker said; a timeout is exit **6** |
 
 🔴 **Why the outer cap exists (review of the compile-only driver, 2026-09-06):**
 `subprocess.run(timeout=)` on a Python worker kills the worker, not necessarily
 its `javac`/`java` child. The worker here is a process-group leader, so the
 kill reaches every JDK descendant. A mocked test proves it with a Python
-grandchild (`sleep 300`) that must be dead after the supervisor fires. The
+grandchild that **ignores SIGTERM** and must be dead — within timeout + grace +
+10 s, not merely eventually — after the supervisor fires. The
 60-second grace lets the inner supervisor report a deadline VOID as a VOID
 before the outer one turns it into a kill.
+
+🔴 **Review 2026-09-06 found two gaps in the first build, both closed:** a worker
+that exited *before* the cap could leave a descendant behind with exit 0 reported
+(cleanup now runs after every exit and a survivor is exit 8); and the public
+entry bound only the eight **digests**, so `opening`, `ply` or `h1_failed` could
+be changed without changing the board (every field of every frozen row is now
+bound type-strictly).
 
 ## 5. What is verified about the new POSTCOND fields — through the REAL path
 
@@ -150,6 +158,7 @@ whose `_query` seam is used only to **keep** the raw reply; it still calls
 | **5** | `UNAUTHORIZED` | the gate, at whichever entry was reached; nothing spawned, nothing written |
 | **6** | `TIMEOUT` | the outer supervisor killed the worker's process group; whether it cleared is on stderr |
 | **7** | `REFUSED` | a precondition refusal by the harness (wrong prefixes, unreadable input, existing output) |
+| **8** | `CLEANUP_FAILED` | set by `main` only: a descendant of the worker survived SIGTERM and SIGKILL to its process group, so the run may still be executing. **Supersedes whatever the worker reported**, which goes to stderr — never a success beside a survivor |
 
 🔴 **A `FAIL` exits 2, not 0.** The low-ply runner exited 0 on FAIL ("a
 result"), and the 2026-09-05 match wrapper exited 0 unconditionally, so its VOID

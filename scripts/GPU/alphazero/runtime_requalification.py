@@ -111,6 +111,7 @@ EXIT_UNEXPECTED = 4
 EXIT_UNAUTHORIZED = 5
 EXIT_TIMEOUT = 6         # the outer supervisor killed the process group
 EXIT_REFUSED = 7         # a precondition refusal by the harness
+EXIT_CLEANUP_FAILED = 8  # a descendant of the worker SURVIVED cleanup; the run may still be running
 
 
 class RequalError(Exception):
@@ -356,13 +357,62 @@ def run_requalification(*, prefixes: Sequence[Dict[str, Any]], paths: T1jPaths,
             "the runtime requalification is UNAUTHORIZED. Gating only the CLI would "
             "protect nothing: a direct Python caller reaches this runner without "
             "passing it. Nothing has been compiled, queried or written.")
-    frozen = load_frozen_prefixes()
-    if [p["digest"] for p in prefixes] != [p["digest"] for p in frozen]:
-        raise RequalError("the run must execute EXACTLY the frozen eight prefixes, in "
-                          "the frozen order; a subset or a reordering answers a "
-                          "different question.")
+    _check_frozen_rows(prefixes, load_frozen_prefixes())
     return _run_unguarded(prefixes=prefixes, paths=paths, out_path=out_path,
                           deadline=deadline, budget=budget, _compile=_compile)
+
+
+def _normalise_shape(v):
+    """SERIALIZATION SHAPE ONLY: tuples become lists, recursively. Nothing else --
+    no int(), no bool(), no str() -- because each of those is a forgery channel
+    ("11" -> 11, True -> 1)."""
+    if isinstance(v, (list, tuple)):
+        return [_normalise_shape(x) for x in v]
+    return v
+
+
+def _same(a, b) -> bool:
+    """Equal AND of the same type. `False == 0`, `True == 1`, `6 == 6.0`: `!=`
+    does not bind a type, and a forged `h1_failed=1` compared EQUAL to True."""
+    a, b = _normalise_shape(a), _normalise_shape(b)
+    if type(a) is not type(b):
+        return False
+    if isinstance(a, list):
+        return len(a) == len(b) and all(_same(x, y) for x, y in zip(a, b))
+    if isinstance(a, dict):
+        return set(a) == set(b) and all(_same(a[k], b[k]) for k in a)
+    return a == b
+
+
+def _check_frozen_rows(prefixes: Sequence[Dict[str, Any]],
+                       frozen: Sequence[Dict[str, Any]]) -> None:
+    """EXACTLY the frozen eight, in order, EVERY FIELD of every row.
+
+    🔴 Binding digests alone bound the BOARD and not one label: every digest
+    unchanged while `opening`, `ply` or `h1_failed` changed reached the stages,
+    so the output could be mislabelled or lose the failed-H1 comparison (review,
+    2026-09-06). Each supplied row must carry the frozen row's own keys -- no
+    more, no fewer -- with type-strictly equal values; tuple/list shape is the
+    one normalisation.
+    """
+    if len(prefixes) != len(frozen):
+        raise RequalError(
+            f"the run must execute EXACTLY the frozen {len(frozen)} prefixes, in the "
+            f"frozen order; {len(prefixes)} were supplied.")
+    for i, (got, want) in enumerate(zip(prefixes, frozen)):
+        extra = sorted(set(got) - set(want))
+        if extra:
+            raise RequalError(
+                f"prefix {i}: keys {extra} are not in the frozen row; the run must "
+                f"execute EXACTLY the frozen rows, and a label the card did not freeze "
+                f"is not a label.")
+        for key in want:
+            if key not in got or not _same(got[key], want[key]):
+                raise RequalError(
+                    f"prefix {i}: field {key!r} differs from the frozen row "
+                    f"({got.get(key, '<missing>')!r} vs {want[key]!r}); the run must "
+                    f"execute EXACTLY the frozen eight prefixes, every field, in the "
+                    f"frozen order.")
 
 
 def _run_unguarded(*, prefixes, paths, out_path, deadline=None, budget=None,
@@ -472,33 +522,54 @@ def supervise(cmd: Sequence[str], *, timeout_s: float,
         rc = p.wait(timeout=timeout_s)
     except subprocess.TimeoutExpired:
         timed_out = True
+        rc = EXIT_TIMEOUT
         _killpg(pgid, signal.SIGTERM)
         try:
             p.wait(timeout=kill_grace_s)
         except subprocess.TimeoutExpired:
-            pass
-        _killpg(pgid, signal.SIGKILL)
-        p.wait()
-        rc = EXIT_TIMEOUT
-    return {"exit_code": rc, "timed_out": timed_out,
-            "group_cleared": _group_cleared(pgid, wait_s=kill_grace_s + 3.0)}
+            _killpg(pgid, signal.SIGKILL)
+            p.wait()
+    # THE LEADER IS REAPED ON EVERY PATH BY HERE, so what the probe sees is
+    # exclusively its descendants.
+    # 🔴 CLEANUP RUNS AFTER EVERY EXIT, NOT ONLY AFTER A TIMEOUT. A worker that
+    # finished (exit 0 included) can leave a JVM behind; the first version probed
+    # the group, saw it was not empty, and sent nothing (review, 2026-09-06).
+    cleared = _group_cleared(pgid, wait_s=0.5)
+    if not cleared:
+        _killpg(pgid, signal.SIGTERM)
+        cleared = _group_cleared(pgid, wait_s=kill_grace_s)
+        if not cleared:
+            _killpg(pgid, signal.SIGKILL)
+            cleared = _group_cleared(pgid, wait_s=kill_grace_s + 3.0)
+    return {"exit_code": rc, "timed_out": timed_out, "group_cleared": cleared}
 
 
 def _killpg(pgid: int, sig) -> None:
     try:
         os.killpg(pgid, sig)
-    except ProcessLookupError:
+    except (ProcessLookupError, PermissionError):
+        # ESRCH: nobody left. EPERM: only members we cannot signal remain --
+        # typically a killed descendant re-parented to init and not yet reaped;
+        # nothing more can be sent, and the probe below decides.
         pass
 
 
 def _group_cleared(pgid: int, *, wait_s: float) -> bool:
-    """True once NO process remains in the group (killpg(…, 0) -> ESRCH)."""
+    """True once NO process remains in the group (killpg(…, 0) -> ESRCH).
+
+    EPERM is NOT "cleared": it means a member still exists that this process
+    may not signal -- on macOS a SIGKILLed descendant re-parented to launchd
+    answers exactly that until it is reaped. Keep polling; a group that never
+    empties within `wait_s` is reported as NOT cleared, never as cleared.
+    """
     end = time.monotonic() + wait_s
     while True:
         try:
             os.killpg(pgid, 0)
         except ProcessLookupError:
             return True
+        except PermissionError:
+            pass
         if time.monotonic() >= end:
             return False
         time.sleep(0.05)
@@ -535,7 +606,7 @@ def _resolved_paths(a) -> T1jPaths:
 def worker_main(argv: Optional[Sequence[str]] = None) -> int:
     """The stages, in THIS process. Reads the gate itself: it does not trust
     the parent. Exit codes: PASS 0 / FAIL 2 / VOID 3 / UNEXPECTED 4 /
-    UNAUTHORIZED 5 / REFUSED 7."""
+    UNAUTHORIZED 5 / REFUSED 7 (8 = CLEANUP_FAILED, set by main only)."""
     a = _parser().parse_args(argv)
     if not RUNTIME_REQUAL_AUTHORIZED:
         print("the runtime requalification is UNAUTHORIZED. No JVM was started, no "
@@ -576,6 +647,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(f"TIMEOUT: the worker exceeded {RUN_DEADLINE_S + SUPERVISOR_GRACE_S}s; "
               f"its process group was killed (cleared={r['group_cleared']}).",
               file=sys.stderr)
+    if not r["group_cleared"]:
+        # 🔴 NEVER SUCCESS BESIDE A SURVIVOR. A descendant that outlived cleanup
+        # means the run may still be executing; whatever the worker reported is
+        # on stderr, and the exit status says the cleanup failed.
+        print(f"CLEANUP FAILED: a descendant of the worker survived SIGTERM and "
+              f"SIGKILL to its process group; the worker itself exited "
+              f"{r['exit_code']}. Nothing here is a success.", file=sys.stderr)
+        return EXIT_CLEANUP_FAILED
     return r["exit_code"]
 
 
