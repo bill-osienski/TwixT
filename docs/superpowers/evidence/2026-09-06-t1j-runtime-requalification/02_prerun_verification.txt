@@ -1,0 +1,53 @@
+RUNTIME REQUALIFICATION -- PRE-RUN VERIFICATION, computed at the moment of recording
+==========================================================================================
+recorded 2026-09-07T02:48:03Z at HEAD ec3f2e9; tree clean: False
+
+GATES (all must be False at this point; RUNTIME_REQUAL_AUTHORIZED is opened in the NEXT commit):
+scripts/GPU/alphazero/d1_probe.py:55:D1_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/e4_screen_command.py:44:SCREEN_AUTHORIZED = False
+scripts/GPU/alphazero/h1_viability_runner.py:76:H1_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/l0_match_command.py:41:L0_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/lowply_qualification.py:55:LOWPLY_QUALIFICATION_AUTHORIZED = False
+scripts/GPU/alphazero/runtime_requalification.py:79:RUNTIME_REQUAL_AUTHORIZED = False
+  RQ.RUNTIME_REQUAL_AUTHORIZED is False
+
+FROZEN INPUT:
+  docs/superpowers/evidence/2026-09-06-t1j-runtime-requalification/01_frozen_prefixes.json
+  sha256 86b9e73801b6d643625845aa9b6b82052c1993436c691b34d2ad53401f09a305  == pinned 86b9e73801b6d643625845aa9b6b82052c1993436c691b34d2ad53401f09a305: True
+  load_frozen_prefixes(): 8 rows; plan cross-check passed; h1_failed = ['o3_low']
+  source plan docs/superpowers/evidence/2026-08-25-t1j-e4-preflight-attempt4/06_endpoint_screen_plan.json sha 10cd8c3156de7f8a...
+    o1_center      ply 6 digest 0ae621381af1 
+    o2_offcenter   ply 6 digest 4829a23c205d 
+    o3_low         ply 6 digest 0dc546b435a2 H1-FAILED
+    o4_high        ply 6 digest 5fdb19f000a0 
+    o5_wide_left   ply 6 digest 216282d7224b 
+    o6_wide_right  ply 6 digest e635a4ce4a63 
+    o7_diagonal    ply 6 digest a6603d7fcb09 
+    o8_contact     ply 6 digest cd944495ebcd 
+
+TOOLCHAIN (hash-verified, no process started):
+  root /Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1 source=recorded-default verified=5
+  jar 53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7 == E4 pin: True
+  jdk af8b122943345320b179c75c3404d56a981017739746b75f9caf583632f0bea0 bin/java
+  jdk 6f5159301c750bba340390eda5fdd4a0959445355f97c40aa9c2addb00ede5ab bin/javac
+  jdk 28745573641057e822a972f223fc8e40db5c9df11ae3f7402764780afc2f1951 lib/modules
+  jdk cb6064fe4d7b87d9fbb8b8c7702047044d1bbeac38e0c5217f595579b6cc764b release
+  E4Preflight.java fa6623390c0ee5f326e9cfa92af05581ec7234df1fe2a15af999e0203f7c94e3 (the 2026-09-05 edit; compile-only verified @ 89e66ad)
+
+FROZEN LIMITS (from the module, not retyped):
+  DEPTH=6 INVOCATIONS_PER_PREFIX=1 QUERY_CAP=8 REPLAY_LAUNCHES=8 HELPER_LAUNCHES=16 JAVA_PROCESSES=17
+  PER_CALL_TIMEOUT_S=120 RUN_DEADLINE_S=900 outer cap=960
+
+OUTPUT PATHS UNUSED:
+  docs/superpowers/evidence/2026-09-06-t1j-runtime-requalification/07_requal_records.json: lexists=False
+  docs/superpowers/evidence/2026-09-06-t1j-runtime-requalification/07_requal_records.json.t1j_classes: lexists=False
+  docs/superpowers/evidence/2026-09-06-t1j-runtime-requalification/03_run_command.txt: lexists=False
+  docs/superpowers/evidence/2026-09-06-t1j-runtime-requalification/04_stdout.txt: lexists=False
+  docs/superpowers/evidence/2026-09-06-t1j-runtime-requalification/05_stderr.txt: lexists=False
+  docs/superpowers/evidence/2026-09-06-t1j-runtime-requalification/06_exit.txt: lexists=False
+
+NO T1j/JDK PROCESS RUNNING BEFORE THE RUN: ''
+
+PLANNED COMMAND (the supervised CLI; no --java/--jar/--classes -> the VERIFIED toolchain's paths, classes beside the record):
+  .venv/bin/python -m scripts.GPU.alphazero.runtime_requalification --out docs/superpowers/evidence/2026-09-06-t1j-runtime-requalification/07_requal_records.json
+BARRED, by construction and by this authorization: incumbent load, seed action, H1/D1 execution, training, sibling repairs, push. No retry.

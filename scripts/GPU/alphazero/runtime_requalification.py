@@ -76,7 +76,7 @@ MODULE = "scripts.GPU.alphazero.runtime_requalification"
 #: process, and a worker that trusted its parent to have checked would be a gate
 #: with a way around it. No override exists: not argv, not the environment, not
 #: a configuration file. This is the requalification's OWN gate.
-RUNTIME_REQUAL_AUTHORIZED = True
+RUNTIME_REQUAL_AUTHORIZED = False
 
 #: Frozen in the card. Eight prefixes = the eight sha-pinned screen openings at
 #: the opening ply, ONE depth (the match's mdPly 6), ONE invocation each.

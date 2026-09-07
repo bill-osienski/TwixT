@@ -1,0 +1,58 @@
+RUNTIME REQUALIFICATION -- OUTCOME: PASS.  State verified at the moment of recording
+==========================================================================================
+recorded 2026-09-07T03:04:22Z at HEAD ef9ba0a (the gate-open commit; the restore is committed with this file)
+cwd: /Users/bill/projects/TwixT_Game
+HEAD: ef9ba0a
+gate at start: 79:RUNTIME_REQUAL_AUTHORIZED = True
+start_utc: 2026-09-07T02:49:33Z
+command: .venv/bin/python -m scripts.GPU.alphazero.runtime_requalification --out docs/superpowers/evidence/2026-09-06-t1j-runtime-requalification/07_requal_records.json
+end_utc: 2026-09-07T02:49:37Z
+elapsed_s: 4
+exit_code: 0
+gate restored: 79:RUNTIME_REQUAL_AUTHORIZED = False at 2026-09-07T02:49:37Z
+surviving t1j/jdk processes after exit: ''
+exit code (06_exit.txt): 0  -> EXIT_PASS; the supervisor's process group CLEARED (a survivor would have been exit 8)
+
+WHAT RAN: one javac + 8 E3bDump replays + 8 E4Preflight depth-6 queries = 17 Java processes, through the supervised CLI (main -> worker in its own session).
+RECORD: verdict PASS | 8 prefixes | 0 failures | queries 8/8 | inner elapsed 4.12 s of 900 | per-call 120 s
+  h1_failed_prefix: {'failures': [], 'opening': 'o3_low', 'passed': True}
+  establishes: operation of THIS build on these prefixes, once each; NOT an explanation of the 2026-09-05 failure and NOT proof it cannot recur
+  per prefix: bound, depth 6 completed, legal in both engines, searched position re-bound, refl_n 3, prefs_ok true, clean, exit 0:
+    o1_center      move [15, 11] 0.238s  prefs 6cb3a052650f->6cb3a052650f count 527->527 
+    o2_offcenter   move [8, 11] 0.262s  prefs 6cb3a052650f->6cb3a052650f count 527->527 
+    o3_low         move [17, 10] 0.170s  prefs 6cb3a052650f->6cb3a052650f count 527->527 H1-FAILED-POSITION
+    o4_high        move [13, 12] 0.419s  prefs 6cb3a052650f->6cb3a052650f count 527->527 
+    o5_wide_left   move [8, 4] 0.279s  prefs 6cb3a052650f->6cb3a052650f count 527->527 
+    o6_wide_right  move [8, 19] 0.261s  prefs 6cb3a052650f->6cb3a052650f count 527->527 
+    o7_diagonal    move [15, 10] 0.238s  prefs 6cb3a052650f->6cb3a052650f count 527->527 
+    o8_contact     move [10, 6] 0.107s  prefs 6cb3a052650f->6cb3a052650f count 527->527 
+  THE NEW POSTCOND FIELDS SURVIVED THE REAL PATH: all 8 replies carry prefs_before/prefs_after/count_before/count_after; parser and diagnostic reader agree on all 8.
+  Corroboration: the values (plist sha 6cb3a052..., 527 entries) equal what the Python preference_surface() probe recorded on 2026-09-05 (h1-diagnosis/04_prefs_attribution.txt).
+
+TOOLCHAIN IDENTITY (from the record): jar 53ec95e421db2531 | E4Preflight.java fa6623390c0ee5f3 | classes byte-identical to the 2026-09-06 compile-only verification (all four sha256 equal).
+
+GATE: opened at ef9ba0a (its own commit), restored to False by the run's shell chain at process exit:
+  scripts/GPU/alphazero/d1_probe.py:55:D1_EXECUTION_AUTHORIZED = False
+  scripts/GPU/alphazero/e4_screen_command.py:44:SCREEN_AUTHORIZED = False
+  scripts/GPU/alphazero/h1_viability_runner.py:76:H1_EXECUTION_AUTHORIZED = False
+  scripts/GPU/alphazero/l0_match_command.py:41:L0_EXECUTION_AUTHORIZED = False
+  scripts/GPU/alphazero/lowply_qualification.py:55:LOWPLY_QUALIFICATION_AUTHORIZED = False
+  scripts/GPU/alphazero/runtime_requalification.py:79:RUNTIME_REQUAL_AUTHORIZED = False
+SURVIVING T1j/JDK PROCESSES NOW: ''
+
+SEED REGISTRIES UNTOUCHED: 0 diff lines
+  H1 (202616000, 202616224) accounted 224 exposed 60 retired 224
+  D1 (202615000, 202615221) accounted 0 exposed 0 retired 0 (paper-only)
+NO incumbent load, NO seed action, NO H1/D1 execution, NO training, NO sibling repair, NO push. No retry of the instrument.
+
+POST-RESTORATION SUITE (gate False): ==== 3997 passed, 4 skipped, 53 deselected, 8 warnings in 729.75s (0:12:09) ====
+
+RECORDED HONESTLY -- launch_attempt1_exit127_shell_error/: my first shell invocation put the whole command in a zsh variable, which zsh does NOT
+   word-split, so the SHELL returned 127 ('no such file or directory') in 0 s. No python, no worker, no JVM, no output. The chain restored the gate;
+   the working tree was reset to the gate-open HEAD (no new commit) and the command was issued directly. The instrument ran ONCE.
+   Also: writing THIS file failed twice (a quoting error leaving an empty 09 plus a manifest hashing it; then an import-path error leaving a partial 09);
+   each partial artefact was removed and the file regenerated with the repo root on sys.path. Nothing about the run changed between attempts.
+
+WHAT THIS ESTABLISHES: operation of the edited E4Preflight build on these eight ply-6 positions, once each, including the position the H1 match VOIDed on,
+with the preference observation carried through the real adapter/diagnostic path. It does NOT explain the 2026-09-05 failure, does NOT prove it cannot recur,
+and does NOT authorize another match.

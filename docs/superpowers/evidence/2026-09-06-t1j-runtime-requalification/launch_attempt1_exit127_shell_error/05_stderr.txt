@@ -1,0 +1,1 @@
+(eval):1: no such file or directory: .venv/bin/python -m scripts.GPU.alphazero.runtime_requalification --out docs/superpowers/evidence/2026-09-06-t1j-runtime-requalification/07_requal_records.json

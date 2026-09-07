@@ -1,0 +1,1 @@
+zsh did not word-split the $CMD variable: the string was looked up as ONE program name and the shell itself returned 127 in 0 s. No python, no worker, no JVM ran; 07_requal_records.json was not created. The gate was restored to False by the chain and is re-opened from HEAD ef9ba0a (no new commit) for the single authorized run.

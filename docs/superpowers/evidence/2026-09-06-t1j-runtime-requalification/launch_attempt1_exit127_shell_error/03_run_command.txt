@@ -1,0 +1,10 @@
+cwd: /Users/bill/projects/TwixT_Game
+HEAD: ef9ba0a
+gate at start: 79:RUNTIME_REQUAL_AUTHORIZED = True
+start_utc: 2026-09-07T02:48:40Z
+command: .venv/bin/python -m scripts.GPU.alphazero.runtime_requalification --out docs/superpowers/evidence/2026-09-06-t1j-runtime-requalification/07_requal_records.json
+end_utc: 2026-09-07T02:48:40Z
+elapsed_s: 0
+exit_code: 127
+gate restored: 79:RUNTIME_REQUAL_AUTHORIZED = False at 2026-09-07T02:48:40Z
+surviving t1j/jdk processes after exit: ''
