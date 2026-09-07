@@ -112,6 +112,7 @@ EXIT_UNAUTHORIZED = 5
 EXIT_TIMEOUT = 6         # the outer supervisor killed the process group
 EXIT_REFUSED = 7         # a precondition refusal by the harness
 EXIT_CLEANUP_FAILED = 8  # a descendant of the worker SURVIVED cleanup; the run may still be running
+EXIT_INTERRUPTED = 9     # the OPERATOR stopped the run (KeyboardInterrupt); not a VOID, not a success
 
 
 class RequalError(Exception):
@@ -504,8 +505,16 @@ def _stages(prefixes, paths, out_path, deadline, budget, compile_fn):
 # ───────────────── the OUTER supervisor: a whole process group ──────────────
 
 def supervise(cmd: Sequence[str], *, timeout_s: float,
-              kill_grace_s: float = 5.0) -> Dict[str, Any]:
+              kill_grace_s: float = 5.0, interrupt_grace_s: float = 30.0) -> Dict[str, Any]:
     """Run `cmd` in ITS OWN SESSION and, on timeout, terminate the WHOLE GROUP.
+
+    AN OPERATOR INTERRUPT IS FORWARDED. The worker is a session leader, so a
+    terminal Ctrl-C reaches only this process; unforwarded, the worker would keep
+    running with nobody watching. A KeyboardInterrupt here sends SIGINT to the
+    group, waits `interrupt_grace_s` for the worker to write its INTERRUPTED
+    record and exit, and then falls through to the same cleanup as every other
+    exit. The result says `interrupted`; the exit code is the worker's own if it
+    exited in time, else EXIT_INTERRUPTED after the group was killed.
 
     `subprocess.run(timeout=)` kills only the direct child. A Python worker
     whose javac or java child outlives it is exactly what the compile-only
@@ -517,7 +526,7 @@ def supervise(cmd: Sequence[str], *, timeout_s: float,
     """
     p = subprocess.Popen(list(cmd), start_new_session=True)
     pgid = p.pid                                   # its own session leader
-    timed_out = False
+    timed_out = interrupted = False
     try:
         rc = p.wait(timeout=timeout_s)
     except subprocess.TimeoutExpired:
@@ -529,6 +538,19 @@ def supervise(cmd: Sequence[str], *, timeout_s: float,
         except subprocess.TimeoutExpired:
             _killpg(pgid, signal.SIGKILL)
             p.wait()
+    except KeyboardInterrupt:
+        interrupted = True
+        _killpg(pgid, signal.SIGINT)               # forward the operator's stop
+        try:
+            rc = p.wait(timeout=interrupt_grace_s)
+        except subprocess.TimeoutExpired:
+            rc = EXIT_INTERRUPTED
+            _killpg(pgid, signal.SIGTERM)
+            try:
+                p.wait(timeout=kill_grace_s)
+            except subprocess.TimeoutExpired:
+                _killpg(pgid, signal.SIGKILL)
+                p.wait()
     # THE LEADER IS REAPED ON EVERY PATH BY HERE, so what the probe sees is
     # exclusively its descendants.
     # 🔴 CLEANUP RUNS AFTER EVERY EXIT, NOT ONLY AFTER A TIMEOUT. A worker that
@@ -541,7 +563,8 @@ def supervise(cmd: Sequence[str], *, timeout_s: float,
         if not cleared:
             _killpg(pgid, signal.SIGKILL)
             cleared = _group_cleared(pgid, wait_s=kill_grace_s + 3.0)
-    return {"exit_code": rc, "timed_out": timed_out, "group_cleared": cleared}
+    return {"exit_code": rc, "timed_out": timed_out, "interrupted": interrupted,
+            "group_cleared": cleared}
 
 
 def _killpg(pgid: int, sig) -> None:
@@ -621,6 +644,10 @@ def worker_main(argv: Optional[Sequence[str]] = None) -> int:
     except RequalError as e:
         print(f"refused: {e}", file=sys.stderr)
         return EXIT_REFUSED
+    except KeyboardInterrupt:
+        print("INTERRUPTED: the operator stopped the run; nothing was measured and "
+              "nothing here is a VOID.", file=sys.stderr)
+        return EXIT_INTERRUPTED
     except Exception as e:                                    # noqa: BLE001
         print(f"UNEXPECTED {type(e).__name__}: {e}", file=sys.stderr)
         return EXIT_UNEXPECTED
@@ -647,6 +674,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(f"TIMEOUT: the worker exceeded {RUN_DEADLINE_S + SUPERVISOR_GRACE_S}s; "
               f"its process group was killed (cleared={r['group_cleared']}).",
               file=sys.stderr)
+    if r["interrupted"]:
+        print(f"INTERRUPTED by the operator; forwarded to the worker, which exited "
+              f"{r['exit_code']}.", file=sys.stderr)
     if not r["group_cleared"]:
         # 🔴 NEVER SUCCESS BESIDE A SURVIVOR. A descendant that outlived cleanup
         # means the run may still be executing; whatever the worker reported is

@@ -228,3 +228,41 @@ justify.
 **If H1 returns `NOT VIABLE`,** the targeted-improvement line stops and the next decision is which
 opponent or objective replaces it — not a D1 retry.
 **If H1 returns `VIABLE` or `INCONCLUSIVE`,** D1 remains available exactly as §12–§14 leave it.
+
+---
+
+## Attempt 2 — retry preparation (2026-09-07), NOT AUTHORIZED, NOT RUN
+
+Attempt 1 ran once on 2026-09-05 and **VOIDed at game 60 of 224** on the
+preference-surface postcondition (attribution unproven); its block
+`[202616000, 202616224)` is ACCOUNTED 224 / EXPOSED 60 / RETIRED WHOLE and its
+plan `10_h1_plan_v3.json` is **preserved** under its own pins
+(`H1_ATTEMPT1_*`). The edited helper was compile-only verified (`89e66ad`) and
+runtime-requalified on the eight ply-6 openings (`2f8abd1`, PASS 8/8).
+
+**What changes for attempt 2 — and only this:**
+
+| item | attempt 1 | attempt 2 |
+|---|---|---|
+| seed block | `[202616000, 202616224)` spent | **`[202617000, 202617224)` PAPER-RESERVED, UNREGISTERED** — collision-proved read-only against every registry, D1's paper block and the spent block: 0 direct, 0 derived-stream collisions over 19,425 prior values, 1,120 own derivations injective; **776-seed gap** from the nearest prior boundary (`retry-prep/03_collision_proof_v3b.py.txt`; the v3 run is kept as the record of a mislabelled control) |
+| plan artifact | `10_h1_plan_v3.json` | **`2026-09-07-t1j-h1-retry-prep/06_h1_plan_v4.json`** — built by a recorded script; a test asserts it differs from v3 **only** in `seed_block`, `seed_block_status`, `supersedes`, `shape`, `tasks` (each task: `seed` and derived `rng_streams` only, +1000) and the provenance fields |
+| output | `2026-09-05-t1j-h1-match/` | **`2026-09-07-t1j-h1-match-attempt2/01_h1_results.jsonl`, `02_h1_trace.jsonl`**, create-only |
+| launcher | ad-hoc script, `sys.exit(0)` unconditional | **`h1_match_command.py`** — reads the runner's gate at both entries; refuses existing output before spawning; runs the match as a worker in its own process group under the shared supervisor (outer cap 180 min + 60 s, SIGINT forwarded, group cleaned after every exit); **restores the gate in the runner source after every exit** and treats a failed restoration as exit 10, superseding all |
+
+**Unchanged, by test:** 224 games = 8 openings × 2 arms × 14 reps at mdPly 6,
+ply cap 280, `calib020_0001` at 400 sims, the 0.75 threshold, the decisive
+bands, no early stop, the abort / non-abort rules, the estimand, the
+independence caveat, the forbidden claims including **no pooling with L0 —
+and no pooling with attempt 1's 60 retained games either**, which are a prefix
+of a balanced design and not a small version of it.
+
+**Exit codes (one meaning each):** 0 COMPLETED (verdict in the results file) ·
+3 VOID · 4 UNEXPECTED · 5 UNAUTHORIZED · 6 TIMEOUT · 7 REFUSED ·
+8 CLEANUP_FAILED · 9 INTERRUPTED (drawn seeds stay EXPOSED) ·
+10 GATE_NOT_RESTORED.
+
+**Both barriers are UP:** `H1_EXECUTION_AUTHORIZED = False` and the block is in
+no registry, so `check_seed_registration` refuses. Execution will need, as
+before and in this order: the collision re-proof at that time, registering
+ONLY this block, opening ONLY the H1 gate, one run through the wrapper, the
+gate restored by the wrapper and verified.

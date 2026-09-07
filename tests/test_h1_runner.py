@@ -128,7 +128,7 @@ def test_THE_REGISTRATION_BARRIER_fires_before_plan_load_setup_recorder_or_play(
     """Barrier 2, with the gate OPEN, so it is reached alone. Opening one barrier
     must not open the other."""
     monkeypatch.setattr(RUN, "H1_EXECUTION_AUTHORIZED", True)
-    monkeypatch.setattr(REF, "ACCOUNTED_SEED_INTERVALS", _registry_without_h1())
+    # the REAL registry: the attempt-2 block is paper-only, so this is unpatched
     with pytest.raises(RUN.H1Error, match="not registered"):
         RUN._run(spy["out"], mode=RUN.MATCH_MODE,
                  trace_path=str(tmp_path / "auto_trace_2.jsonl"), _setup=_setup_that_must_not_run(spy))
@@ -137,10 +137,12 @@ def test_THE_REGISTRATION_BARRIER_fires_before_plan_load_setup_recorder_or_play(
     assert not os.path.exists(spy["out"])
 
 
-def test_REGISTERING_THE_BLOCK_DOES_NOT_OPEN_THE_GATE(spy, monkeypatch):
-    """The two are independent, and this is now the REAL repository state: the
-    block is registered and the gate is still shut. Nothing is patched."""
-    RUN.check_seed_registration()                     # barrier 2 REALLY satisfied
+def test_BOTH_BARRIERS_are_UP_in_the_REAL_state_for_attempt_2(spy, monkeypatch):
+    """The two are independent, and this is the REAL repository state for the
+    attempt-2 block: NOT registered (barrier 2 refuses) AND the gate is shut
+    (barrier 1 refuses first). Nothing is patched."""
+    with pytest.raises(RUN.H1Error, match="not registered"):
+        RUN.check_seed_registration()                 # barrier 2 REALLY refusing
     assert RUN.H1_EXECUTION_AUTHORIZED is False
     with pytest.raises(RUN.H1Error, match="NOT AUTHORIZED"):
         RUN._run(spy["out"], mode=RUN.MATCH_MODE)
@@ -157,7 +159,7 @@ def test_a_PARTLY_registered_block_is_still_refused(monkeypatch):
     """
     lo, hi = RULES.H1_SEED_BLOCK
     monkeypatch.setattr(REF, "ACCOUNTED_SEED_INTERVALS",
-                        _registry_without_h1() + ((lo, lo + 1), (hi - 1, hi)))
+                        tuple(REF.ACCOUNTED_SEED_INTERVALS) + ((lo, lo + 1), (hi - 1, hi)))
     assert REF.seed_is_accounted(lo) and REF.seed_is_accounted(hi - 1)
     assert not REF.seed_is_accounted(lo + 1)          # the hole
     with pytest.raises(RUN.H1Error, match="not registered"):
@@ -166,9 +168,7 @@ def test_a_PARTLY_registered_block_is_still_refused(monkeypatch):
 
 def test_the_registration_check_READS_the_registry_and_never_writes_it(monkeypatch):
     """Driven through the REFUSING branch -- the one that could be tempted to fix
-    what it found. The block is registered now, so the refusal is arranged by
-    stripping it."""
-    monkeypatch.setattr(REF, "ACCOUNTED_SEED_INTERVALS", _registry_without_h1())
+    what it found. The attempt-2 block is unregistered, so this is the real state."""
     before = tuple(REF.ACCOUNTED_SEED_INTERVALS)
     with pytest.raises(RUN.H1Error, match="not registered"):
         RUN.check_seed_registration()
@@ -182,19 +182,20 @@ def frozen():
     return PLAN.load_h1_plan()
 
 
-def _registry_without_h1():
-    """The ACCOUNTED tuple as it stood BEFORE the seed-preparation authorization.
+def _registry_with_h1():
+    """The ACCOUNTED tuple AS IT WOULD STAND after the execution authorization
+    registers the attempt-2 block.
 
-    The negative controls below need a registry that does NOT contain the block.
-    It is really registered now, so they must REMOVE it rather than pretend --
-    and this asserts the removal happened, so a control cannot go vacuous if the
-    interval is ever restructured.
+    ⚠ INVERTED AGAIN (attempt 2). Attempt 1's block was registered, so these
+    fixtures STRIPPED it to reach the refusing branch. The attempt-2 block
+    [202617000, 202617224) is PAPER-ONLY, so the refusing branch is the REAL
+    state and the passing branch must be ARRANGED. This asserts the block is
+    really absent, so the arrangement cannot go vacuous the day it is registered.
     """
-    out = tuple(i for i in REF.ACCOUNTED_SEED_INTERVALS
-                if tuple(i) != tuple(RULES.H1_SEED_BLOCK))
-    assert len(out) == len(REF.ACCOUNTED_SEED_INTERVALS) - 1, \
-        "the H1 block is not in ACCOUNTED as a single interval; these controls are stale"
-    return out
+    blk = tuple(RULES.H1_SEED_BLOCK)
+    assert not any(REF.seed_is_accounted(s) for s in range(*blk)), \
+        "the attempt-2 block IS registered now; these fixtures must invert again"
+    return tuple(REF.ACCOUNTED_SEED_INTERVALS) + (blk,)
 
 
 #: A SNAPSHOT of the seed registries at import, so the lift below is measured
@@ -208,44 +209,35 @@ _REGISTRY_SNAPSHOT = {
 
 
 @pytest.fixture
-def unspent_block(monkeypatch):
-    """Lifts the H1 block's ELIGIBILITY in process, and nothing else.
+def unspent_block():
+    """The attempt-2 block is UNSPENT in the REAL registry -- nothing to lift.
 
-    WHY THIS IS NOT RELAXING A GATE. The match ran on 2026-09-05 and VOIDED, so
-    the block is now EXPOSED (60 seeds drawn) and RETIRED (all 224), and
-    `validate_schedule_executable` refuses it before authorization is ever
-    consulted. Left alone, every test of a LATER precondition, of the GATE, and
-    of the enabled-path wiring would stop passing for a reason that has nothing
-    to do with what it tests -- and a safety gate whose tests all went vacuous is
-    the failure this workstream keeps finding.
-
-    The real-state refusal is asserted SEPARATELY and UNPATCHED, in
-    `test_the_SPENT_schedule_is_refused_in_the_REAL_state`.
-
-    IT TOUCHES ELIGIBILITY ONLY -- never H1_EXECUTION_AUTHORIZED, asserted on the
-    way in and on the way out.
+    ⚠ Attempt 1's version of this fixture LIFTED the spent block's exposure and
+    retirement in process so later-precondition tests could run. Attempt 2 draws
+    from a fresh, paper-only block, so this asserts the real state instead and
+    patches nothing. The day it fails, the block has been drawn from.
     """
-    gate = RUN.H1_EXECUTION_AUTHORIZED
-    blk = tuple(RULES.H1_SEED_BLOCK)
-    monkeypatch.setattr(REF, "EXPOSED_SEED_INTERVALS",
-                        tuple(i for i in REF.EXPOSED_SEED_INTERVALS
-                              if tuple(i) != (blk[0], blk[0] + 60)))
-    monkeypatch.setattr(REF, "RETIRED_SEED_INTERVALS",
-                        tuple(i for i in REF.RETIRED_SEED_INTERVALS
-                              if tuple(i) != blk))
-    assert not REF.seed_is_unavailable(blk[0]), "the lift did not take"
-    assert RUN.H1_EXECUTION_AUTHORIZED is gate is False
+    lo, hi = RULES.H1_SEED_BLOCK
+    assert not any(REF.seed_is_unavailable(s) for s in range(lo, hi)), \
+        "the attempt-2 block is exposed or retired; a fresh interval is needed again"
     yield
-    assert RUN.H1_EXECUTION_AUTHORIZED is False or gate is False
 
 
-def test_the_SPENT_schedule_is_refused_in_the_REAL_state(tmp_path, monkeypatch):
-    """UNPATCHED. The block is spent, so the match cannot run again even with the
-    gate open -- which is the protection the fixture above deliberately lifts."""
+def test_the_UNREGISTERED_attempt2_block_is_refused_in_the_REAL_state(tmp_path, monkeypatch):
+    """UNPATCHED registry, gate opened in process only: barrier 2 refuses."""
     monkeypatch.setattr(RUN, "H1_EXECUTION_AUTHORIZED", True)
-    with pytest.raises(RUN.H1Error, match="may not be executed"):
+    with pytest.raises(RUN.H1Error, match="not registered"):
         RUN._run(str(tmp_path / "r.jsonl"), mode=RUN.MATCH_MODE,
                  trace_path=str(tmp_path / "t.jsonl"), _supervise=False)
+
+
+def test_the_SPENT_attempt1_schedule_is_refused_for_execution():
+    """The v3 schedule ran and VOIDed; every seed is retired. It stays loadable
+    under its own pins and is refused by the registry, not by a digest check."""
+    v3 = PLAN.load_h1_plan(PLAN.H1_ATTEMPT1_PLAN_REL, sha256=PLAN.H1_ATTEMPT1_PLAN_SHA256,
+                           task_digest=RULES.H1_ATTEMPT1_TASK_DIGEST)
+    with pytest.raises(REF.E4ReferenceError, match="EXPOSED .* cannot be scheduled"):
+        REF.validate_schedule_executable(v3["tasks"])
 
 
 def test_zzz_the_registries_are_restored():
@@ -257,17 +249,16 @@ def test_zzz_the_registries_are_restored():
 
 @pytest.fixture
 def openable(monkeypatch, unspent_block):
-    """Gate open, INSIDE the test only. The real gate constant is never edited.
+    """Gate open AND registration ARRANGED, INSIDE the test only. Neither the real
+    gate constant nor the real registry is edited.
 
-    ⚠ INVERTED by the seed-preparation authorization: this used to patch the
-    block into ACCOUNTED as well. The block is REGISTERED now, so arranging it
-    would hide a later de-registration behind a fixture that silently supplies
-    what it is meant to depend on. It asserts the fact instead -- and fails, on
-    purpose, the day the block leaves the registry.
+    ⚠ INVERTED AGAIN for attempt 2: the fresh block is paper-only, so the
+    registration barrier 2 REALLY refuses. Tests of later preconditions and of
+    the enabled path arrange it here through `_registry_with_h1`, which asserts
+    the block is genuinely absent -- so the day it is registered this fixture
+    fails on purpose and must invert back to asserting.
     """
-    assert tuple(RULES.H1_SEED_BLOCK) in {tuple(i)
-                                          for i in REF.ACCOUNTED_SEED_INTERVALS}, \
-        "the H1 block is no longer registered; this fixture must arrange again"
+    monkeypatch.setattr(REF, "ACCOUNTED_SEED_INTERVALS", _registry_with_h1())
     monkeypatch.setattr(RUN, "H1_EXECUTION_AUTHORIZED", True)
 
 
@@ -477,10 +468,10 @@ def test_the_COOPERATIVE_check_does_not_translate_and_the_boundary_does(monkeypa
         RUN._check_deadline(dl, "here")          # unconverted, by design
 
 
-# ══════════════════ match mode loads ONLY the pinned v3 plan ═════════════════
+# ═══════════ match mode loads ONLY the pinned plan (v4, attempt 2) ══════════
 
 def test_match_mode_REFUSES_a_supplied_plan_path(tmp_path, openable):
-    with pytest.raises(RUN.H1Error, match="pinned v3 plan only"):
+    with pytest.raises(RUN.H1Error, match="pinned plan only"):
         RUN._run(str(tmp_path / "r.jsonl"), mode=RUN.MATCH_MODE,
                  trace_path=str(tmp_path / "auto_trace_6.jsonl"),
                  _plan_path=str(tmp_path / "other.json"))
@@ -531,11 +522,11 @@ def test_a_seed_outside_the_reserved_block_is_refused(tmp_path, openable, frozen
     🔴 Through the runner alone this could not isolate the block check: a changed
     seed changes the DIGEST, and L0's block is additionally exposed and retired,
     so two other guards fire first and a control disabling the block check was
-    NOT CAUGHT. 202617000 is outside every registry, so only the block check can
-    refuse it.
+    NOT CAUGHT. 202618000 is outside every registry AND outside the attempt-2
+    block, so only the block check can refuse it.
     """
     tasks = [dict(t) for t in frozen["tasks"]]
-    tasks[3] = dict(tasks[3], seed=202617000)
+    tasks[3] = dict(tasks[3], seed=202618000)
     with pytest.raises(PLAN.H1PlanError, match="outside"):
         PLAN.validate_h1_schedule(tasks)
     # and the runner refuses it too, by whichever guard reaches it first

@@ -1,0 +1,54 @@
+"""Build the ATTEMPT-2 H1 plan artifact (v4) from the pinned sources. NO EXECUTION.
+
+Everything except the seed block and the provenance fields is COPIED from the
+preserved v3 artifact, then ASSERTED equal field by field, so v4 cannot drift
+in design, settings, threshold, bands, rules, estimand or forbidden claims. The
+224 tasks are rebuilt by `h1_viability_plan.build_tasks` from the sha-pinned
+screen plan with `h1_viability_rules.H1_SEED_BLOCK` = the fresh block; the
+builder draws nothing (XOR only). Create-only output.
+"""
+import hashlib, json, os, sys
+from scripts.GPU.alphazero import h1_viability_plan as P
+from scripts.GPU.alphazero import h1_viability_rules as R
+from scripts.GPU.alphazero import l0_match_rules as L0
+
+out = sys.argv[1]
+v3 = json.loads(open(P.H1_ATTEMPT1_PLAN_REL, "rb").read())
+assert hashlib.sha256(open(P.H1_ATTEMPT1_PLAN_REL, "rb").read()).hexdigest() == P.H1_ATTEMPT1_PLAN_SHA256
+assert L0.l0_task_digest(v3["tasks"]) == R.H1_ATTEMPT1_TASK_DIGEST
+assert v3["seed_block"] == list(R.H1_ATTEMPT1_SEED_BLOCK)
+
+tasks = P.build_tasks(P.load_source_plan())
+assert [t["seed"] for t in tasks] == list(range(*R.H1_SEED_BLOCK))
+digest = L0.l0_task_digest(tasks)
+shape = P.validate_h1_schedule(tasks)
+assert shape["task_digest"] == digest and shape["seed_block"] == list(R.H1_SEED_BLOCK)
+
+v4 = dict(v3)
+v4["attempt"] = 2
+v4["attempt_1"] = {"plan": P.H1_ATTEMPT1_PLAN_REL, "plan_sha256": P.H1_ATTEMPT1_PLAN_SHA256,
+                   "task_digest": R.H1_ATTEMPT1_TASK_DIGEST, "seed_block": list(R.H1_ATTEMPT1_SEED_BLOCK),
+                   "outcome": "VOID at game 60 of 224 on 2026-09-05 (preference-surface postcondition, "
+                              "attribution unproven); block ACCOUNTED 224 / EXPOSED 60 / RETIRED WHOLE",
+                   "evidence": "docs/superpowers/evidence/2026-09-05-t1j-h1-match/"}
+v4["supersedes"] = (f"{P.H1_ATTEMPT1_PLAN_REL} (attempt 1; its seeds are SPENT and RETIRED, the artifact "
+                    f"is PRESERVED). Earlier: {v3['supersedes']}")
+v4["seed_block"] = list(R.H1_SEED_BLOCK)
+v4["seed_block_status"] = ("PAPER-RESERVED, UNREGISTERED (attempt 2, 2026-09-07): collision-proved against "
+                           "every registry, D1's paper block and the spent attempt-1 block; 776-seed gap "
+                           "from the nearest prior boundary; registration is part of the EXECUTION "
+                           "authorization")
+v4["shape"] = shape
+v4["tasks"] = tasks
+for k in v3:
+    if k not in {"seed_block", "seed_block_status", "supersedes", "shape", "tasks"}:
+        assert v4[k] == v3[k], k
+for a, b in zip(v3["tasks"], tasks):
+    for k in a:
+        assert (a[k] != b[k]) if k in ("seed", "rng_streams") else (a[k] == b[k]), (a["task_id"], k)
+
+raw = json.dumps(v4, indent=2, sort_keys=False).encode()
+fd = os.open(out, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+with os.fdopen(fd, "wb") as fh:
+    fh.write(raw)
+print(f"wrote {out}\n  sha256      {hashlib.sha256(raw).hexdigest()}\n  task_digest {digest}\n  seed_block  {v4['seed_block']}  tasks {len(tasks)}")

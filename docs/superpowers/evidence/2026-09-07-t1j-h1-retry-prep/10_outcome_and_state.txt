@@ -1,0 +1,47 @@
+H1 RETRY PREPARATION (attempt 2) -- outcome and state, computed at the moment of recording. NOTHING RAN.
+====================================================================================================
+recorded 2026-09-07T16:00:33Z at HEAD 2f8abd1; 43 commits unpushed before this one
+
+ALL SIX GATES (the wrapper has none of its own; it reads the runner's):
+  scripts/GPU/alphazero/d1_probe.py:55:D1_EXECUTION_AUTHORIZED = False
+  scripts/GPU/alphazero/e4_screen_command.py:44:SCREEN_AUTHORIZED = False
+  scripts/GPU/alphazero/h1_viability_runner.py:77:H1_EXECUTION_AUTHORIZED = False
+  scripts/GPU/alphazero/l0_match_command.py:41:L0_EXECUTION_AUTHORIZED = False
+  scripts/GPU/alphazero/lowply_qualification.py:55:LOWPLY_QUALIFICATION_AUTHORIZED = False
+  scripts/GPU/alphazero/runtime_requalification.py:79:RUNTIME_REQUAL_AUTHORIZED = False
+  h1_match_command.gate_is_open() -> False
+
+FRESH SEED INTERVAL -- PAPER ONLY:
+  H1_SEED_BLOCK (attempt 2) = (202617000, 202617224)  registered anywhere: False
+  H1_ATTEMPT1_SEED_BLOCK    = (202616000, 202616224)  accounted 224 exposed 60 retired 224
+  D1 paper (202615000, 202615221): accounted 0 exposed 0 retired 0 (paper-only)
+  registries untouched: git diff HEAD --stat e4_screen_reference.py -> 0 lines
+  collision proof: 03_collision_proof_v3b.py.txt / 04_..._run.txt -- 0 direct in all six categories (3,885 prior seeds incl. the spent attempt-1 block and D1's paper block), 0 derived-stream collisions vs 19,425 values, 1,120 own derivations injective, 776-seed gap from the nearest boundary; 10 collision controls + 3 gap-policy controls all REJECTED.
+  RECORDED HONESTLY: 01/02 (v3) listed 'starts exactly where the spent block ends' as a COLLISION control and it was ACCEPTED -- correctly, by arithmetic. It is a POLICY rule (the gap), moved to its own check in v3b. Both runs kept.
+
+NEW PINNED SCHEDULE (v4):
+  docs/superpowers/evidence/2026-09-07-t1j-h1-retry-prep/06_h1_plan_v4.json  sha256 21cd2465d94d6c6a2e4834373c57f0e8e91a4e09d19f05c7c0db2bdf7ec9bc16 == pinned: True
+  task digest 23e3fa129b85c2669ef6d974e99c3fd0106735377298bc80c272346376db5c74 (attempt 1: 058e62400849e17f...); attempt 2; n_games 224; seed_block [202617000, 202617224]; threshold 0.75; bands [0.659258025565004, 0.840741974434996]; early_stop None
+  unchanged vs v3: 17 of 22 top-level fields (design, card, n_games, n_openings, n_arms, n_reps, t1j_mdPly, ply_cap, viability_threshold, decisive_bands, early_stop, cap_saturation, estimand, independence_caveat, forbidden_claims, abort_rules, not_abort_rules)
+  v3 PRESERVED: sha 57565530c961d250... == pinned 57565530c961d250..., loadable under its own pins, refused for execution by the registry.
+
+FRESH OUTPUT LOCATIONS (do not exist yet):
+  docs/superpowers/evidence/2026-09-07-t1j-h1-match-attempt2/01_h1_results.jsonl: lexists=False
+  docs/superpowers/evidence/2026-09-07-t1j-h1-match-attempt2/02_h1_trace.jsonl: lexists=False
+  attempt 1's evidence preserved: True
+
+EXECUTION WRAPPER (scripts/GPU/alphazero/h1_match_command.py): reads the runner's gate at both entries; check_output_paths before spawning; worker in its own process group under runtime_requalification.supervise (outer cap 10860 s; SIGINT forwarded; group cleaned after every exit); gate RESTORED in the runner source after every exit, a failed restoration = exit 10 superseding all.
+  exit codes: 0 COMPLETED / 3 VOID / 4 UNEXPECTED / 5 UNAUTHORIZED / 6 TIMEOUT / 7 REFUSED / 8 CLEANUP_FAILED / 9 INTERRUPTED / 10 GATE_NOT_RESTORED.
+  runtime_requalification.supervise gained interrupt forwarding (+EXIT_INTERRUPTED=9) -- shared, tested once, used by both CLIs.
+
+FULL SUITE (.venv/bin/python -m pytest tests -q): ==== 4033 passed, 4 skipped, 53 deselected, 8 warnings in 826.96s (0:13:46) ====
+  previous step: 3,997 passed / 4 skipped / 0 failed; +36 tests (test_h1_match_command.py 31 incl. params; viability/runner rewrites).
+CONTROLS: 308/308 defects rejected; 0 not caught; 0 stale | ALL CONTROLS RAN: True | clean baseline over 245 distinct target tests: PASS
+  308 = 295 + 15 new - 2 duplicates removed; anchors moved by these edits re-anchored under the static exactly-once pre-check.
+  RECORDED HONESTLY -- three harness rounds before this one:
+   round 1: baseline FAIL + 5 NOT CAUGHT. Cause: the interrupt test sent SIGINT to the pytest process itself and under the full run the signal was not delivered to the wait (60 s timeout); two old controls had re-anchored onto the attempt-1 pin line; the 'restore only on happy path' replacement still ran the finally; the 'no-verify' replacement was unreachable by its test.
+   round 2: baseline FAIL (a control named a test I had RENAMED -> pytest exit 4 = 'not found', the vacuous-control trap) + 1 NOT CAUGHT (without forwarding, the grace-timeout KILL path ALSO reports 9).
+   fixes: deterministic KeyboardInterrupt via a Popen whose first wait raises; the worker's SIGINT handler must leave a marker and exit within 4 s; a rewrite-verification test with os.replace neutralised; two controls retargeted to the renamed tests; a collect-only check of every target node added to my pre-check.
+
+NO incumbent load, NO Java, NO game, NO seed registration, NO gate opened, NO push. E3bDump/D1 siblings untouched.
+NEXT (not authorized): the execution authorization -- re-prove the interval then, register ONLY [202617000, 202617224), open ONLY H1_EXECUTION_AUTHORIZED, run once via h1_match_command, which restores the gate.

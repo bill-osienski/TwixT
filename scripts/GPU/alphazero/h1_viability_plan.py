@@ -40,7 +40,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Any, Dict, List, Sequence
+from typing import Any, Dict, List, Optional, Sequence
 
 from . import e4_screen_reference as REF
 from . import e4_screen_runner as H
@@ -51,35 +51,22 @@ from . import l0_match_plan as L0PLAN
 SOURCE_PLAN_REL = L0PLAN.SOURCE_PLAN_REL
 SOURCE_PLAN_SHA256 = H.CANONICAL_PLAN_SHA256
 
-#: RESERVED by the H1 card and REGISTERED 2026-09-04 in
-#: `e4_screen_reference.ACCOUNTED_SEED_INTERVALS` -- accounted, and NOT exposed
-#: and NOT retired, because nothing has been drawn.
+#: THE CURRENT ATTEMPT'S BLOCK, defined in the rules layer (the seed abort rule
+#: must be runnable, and this module imports the rules, so the rules cannot
+#: import it back). ATTEMPT 2 (2026-09-07): [202617000, 202617224),
+#: PAPER-RESERVED and DELIBERATELY UNREGISTERED -- see `h1_viability_rules`
+#: for the proof and the gap policy. Attempt 1's spent block lives under
+#: `RULES.H1_ATTEMPT1_SEED_BLOCK` with its own plan pins below.
 #:
-#: ⚠ THIS COMMENT HAS BEEN WRONG ONCE AND IS KEPT HONEST BY DATE. It first said
-#: an unregistered block means "a run is refused by the seed barrier as well as
-#: by the gate" while NEITHER EXISTED -- a protection written as present fact
-#: while purely prospective, the defect class this workstream tracks.
-#:
-#: WHAT IS TRUE NOW (2026-09-04): the runner exists and holds BOTH barriers --
-#: `h1_viability_runner.H1_EXECUTION_AUTHORIZED`, which is False, and
-#: `check_seed_registration`, which this block now SATISFIES: the seed-
-#: preparation authorization registered it in ACCOUNTED_SEED_INTERVALS as
-#: accounted, and NOT exposed and NOT retired, because nothing has been drawn.
-#:
-#: 🔑 SO ONE BARRIER IS DOWN AND ONE IS UP, WHICH IS THE POINT OF HAVING TWO.
-#: Registering the block did not open the gate and could not: they are separate
-#: constants in separate modules, and a test asserts the real repository state
-#: rather than a patched one.
-#:
-#: ⚠ `validate_task_executable` still does NOT ask the accounted question -- it
-#: inspects consumed, exposed and retired -- which is exactly why the
-#: registration barrier had to be a separate check and still is.
-#:
-#: 🔴 Proved disjoint against the registries PLUS `d1_selection.SEED_INTERVAL`,
-#: which is in NO registry by design -- reserved-on-paper is still TAKEN, and a
-#: registry-only enumeration would have called an overlapping block clean.
-#: 3,661 prior seeds, 0 direct overlaps, 0 derived-stream collisions, own
-#: derivations injective (1,120 = 224 x 5, both colours).
+#: ⚠ THIS COMMENT HAS BEEN WRONG TWICE AND IS KEPT HONEST BY DATE. It first
+#: claimed a barrier that did not exist; then it recorded attempt 1's block as
+#: REGISTERED (true 2026-09-04) and that statement outlived the block, which
+#: was drawn from and RETIRED on 2026-09-05. WHAT IS TRUE NOW (2026-09-07): the
+#: runner holds BOTH barriers -- `H1_EXECUTION_AUTHORIZED` False and
+#: `check_seed_registration`, which the attempt-2 block does NOT satisfy -- so
+#: BOTH ARE UP. Registering the block is part of the EXECUTION authorization.
+#: `validate_task_executable` still does not ask the accounted question, which
+#: is why the registration barrier is a separate check.
 H1_SEED_BLOCK = RULES.H1_SEED_BLOCK          # defined in the rules layer:
                                             # the seed abort rule must be runnable
 
@@ -92,9 +79,22 @@ H1_SEED_BLOCK = RULES.H1_SEED_BLOCK          # defined in the rules layer:
 #: each earlier artifact is the record of what that version actually froze.
 #: v2 corrected the abort rules, the denominators and cap saturation; v3 corrects
 #: the NON-ABORT rules, which still described L0's protocol rather than H1's.
-H1_PLAN_REL = ("docs/superpowers/evidence/2026-08-31-t1j-h1-implementation/"
-               "10_h1_plan_v3.json")
-H1_PLAN_SHA256 = "57565530c961d250f02934de4ea3cd6b5c11398df0a3fcc85b2fe836346b0a14"
+#: ATTEMPT 1 (v3): the schedule that RAN on 2026-09-05 and VOIDed at game 60.
+#: PRESERVED, pinned under its own names, loadable as a record with
+#: `load_h1_plan(H1_ATTEMPT1_PLAN_REL, sha256=..., task_digest=...)` and refused
+#: for execution by the registry (every seed retired).
+H1_ATTEMPT1_PLAN_REL = ("docs/superpowers/evidence/2026-08-31-t1j-h1-implementation/"
+                        "10_h1_plan_v3.json")
+H1_ATTEMPT1_PLAN_SHA256 = "57565530c961d250f02934de4ea3cd6b5c11398df0a3fcc85b2fe836346b0a14"
+
+#: ATTEMPT 2 (v4, 2026-09-07): the SAME design, settings, threshold, bands,
+#: rules, estimand and forbidden claims -- only the seed block (hence each task's
+#: seed and derived streams) and the provenance fields differ; a test asserts
+#: exactly that against v3. Built by a recorded script into the retry-prep
+#: evidence directory; v1-v3 are SUPERSEDED and PRESERVED.
+H1_PLAN_REL = ("docs/superpowers/evidence/2026-09-07-t1j-h1-retry-prep/"
+               "06_h1_plan_v4.json")
+H1_PLAN_SHA256 = "21cd2465d94d6c6a2e4834373c57f0e8e91a4e09d19f05c7c0db2bdf7ec9bc16"
 
 COLOUR_ARMS = L0PLAN.COLOUR_ARMS
 
@@ -155,13 +155,18 @@ def build_tasks(source_plan: Dict[str, Any]) -> List[Dict[str, Any]]:
     return tasks
 
 
-def validate_h1_schedule(tasks: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+def validate_h1_schedule(tasks: Sequence[Dict[str, Any]], *,
+                         seed_block: Optional[tuple] = None) -> Dict[str, Any]:
     """STRUCTURE and DESIGN. Says nothing about whether the seeds may be run.
 
     Execution eligibility is `e4_screen_reference.validate_schedule_executable`,
     a separate required function: a spent schedule must stay parseable, and only
     scheduling asks whether it may run.
+
+    `seed_block` defaults to the CURRENT attempt's block (the rules' predicate);
+    a spent attempt's plan names its own so it can be validated AS A RECORD.
     """
+    block = H1_SEED_BLOCK if seed_block is None else tuple(seed_block)
     if len(tasks) != RULES.N_GAMES:
         raise H1PlanError(f"{len(tasks)} tasks, expected exactly {RULES.N_GAMES}")
     ids = [t["task_id"] for t in tasks]
@@ -170,11 +175,14 @@ def validate_h1_schedule(tasks: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
 
     REF.validate_schedule_structure(tasks)         # fields, pins, injective streams
 
-    lo, hi = H1_SEED_BLOCK
+    lo, hi = block
     for t in tasks:
-        # THE RULES' PREDICATE, not a re-derivation of the bounds: the abort rule
-        # that states this in prose and the check that enforces it are one thing.
-        if RULES.seed_is_outside_the_reserved_block(t["seed"]):
+        # THE RULES' PREDICATE for the current block, not a re-derivation of the
+        # bounds: the abort rule that states this in prose and the check that
+        # enforces it are one thing. A foreign (spent) block is checked by bounds.
+        outside = (RULES.seed_is_outside_the_reserved_block(t["seed"])
+                   if block == tuple(H1_SEED_BLOCK) else not lo <= int(t["seed"]) < hi)
+        if outside:
             raise H1PlanError(f"{t['task_id']} seed {t['seed']} outside [{lo}, {hi})")
         if t["t1j_mdPly"] != RULES.T1J_MDPLY:
             raise H1PlanError(f"{t['task_id']} is at mdPly {t['t1j_mdPly']}, "
@@ -211,31 +219,43 @@ def validate_h1_schedule(tasks: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
             raise H1PlanError(f"cell ({opening}, {arm}) has repetitions {reps}")
 
     return {"n_tasks": len(tasks), "cells": len(cells), "reps_per_cell": RULES.N_REPS,
-            "seed_block": list(H1_SEED_BLOCK),
+            "seed_block": list(block),
             "task_digest": RULES.L0.l0_task_digest(tasks)}
 
 
-def load_h1_plan(path: str = H1_PLAN_REL) -> Dict[str, Any]:
+def load_h1_plan(path: str = H1_PLAN_REL, *, sha256: Optional[str] = None,
+                 task_digest: Optional[str] = None) -> Dict[str, Any]:
     """The frozen H1 plan. STRUCTURAL, like L0's loader.
 
     Verifies the file's sha256 AND the ordered task digest, then the design. It
     asks nothing about seed availability: that is
     `e4_screen_reference.validate_schedule_executable`, and keeping the two
     apart is what lets this plan stay readable after a match has been run.
+
+    `sha256` / `task_digest` default to the CURRENT attempt's pins. A SPENT
+    attempt's plan is loaded as a record by passing its own pins explicitly --
+    both, because a caller who relocates the file must still name what it is.
+    The design check below is the same for every attempt EXCEPT the seed-block
+    membership, which is attempt-specific and is skipped only when both foreign
+    pins are supplied (the registry, not this loader, refuses a spent block).
     """
+    sha256 = H1_PLAN_SHA256 if sha256 is None else sha256
+    task_digest = RULES.H1_TASK_DIGEST if task_digest is None else task_digest
     try:
         raw = open(path, "rb").read()
     except OSError as e:
         raise H1PlanError(f"cannot read the H1 plan: {e}") from None
     got = hashlib.sha256(raw).hexdigest()
-    if got != H1_PLAN_SHA256:
-        raise H1PlanError(f"H1 plan sha256 {got} != pinned {H1_PLAN_SHA256}")
+    if got != sha256:
+        raise H1PlanError(f"H1 plan sha256 {got} != pinned {sha256}")
     plan = json.loads(raw)
     tasks = plan.get("tasks", [])
     digest = RULES.L0.l0_task_digest(tasks)
-    if digest != RULES.H1_TASK_DIGEST:
-        raise H1PlanError(f"H1 task digest {digest} != pinned {RULES.H1_TASK_DIGEST}: "
+    if digest != task_digest:
+        raise H1PlanError(f"H1 task digest {digest} != pinned {task_digest}: "
                           f"the schedule has been added to, removed from, reordered "
                           f"or edited")
-    validate_h1_schedule(tasks)
+    current = sha256 == H1_PLAN_SHA256 and task_digest == RULES.H1_TASK_DIGEST
+    validate_h1_schedule(tasks, seed_block=(H1_SEED_BLOCK if current else
+                                            tuple(plan["seed_block"])))
     return plan

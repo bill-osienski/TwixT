@@ -164,12 +164,34 @@ def test_colours_are_RECIPROCAL_WITHIN_each_opening(tasks):
         assert per_arm == {"t1j_red": 14, "t1j_black": 14}, opening
 
 
-def test_seeds_are_the_reserved_block_one_per_task_in_order(tasks):
-    assert P.H1_SEED_BLOCK == (202616000, 202616224)
+def test_seeds_are_the_ATTEMPT2_block_one_per_task_in_order(tasks):
+    """🔴 ATTEMPT 2. The 2026-09-05 match VOIDed at game 60 and retired
+    [202616000, 202616224) WHOLE; a retry needs a FRESH interval. This is it:
+    the same one-thousand stride, a 776-seed gap from the spent block's end (so
+    an off-by-one at the boundary cannot masquerade as a reservation),
+    collision-proved 2026-09-07 against every registry AND D1's paper block."""
+    assert P.H1_SEED_BLOCK == R.H1_SEED_BLOCK == (202617000, 202617224)
+    assert R.H1_ATTEMPT1_SEED_BLOCK == (202616000, 202616224)
     assert [t["seed"] for t in tasks] == list(range(*P.H1_SEED_BLOCK))
 
 
-def test_the_H1_block_is_ACCOUNTED_60_EXPOSED_and_RETIRED_WHOLE():
+def test_the_ATTEMPT2_block_is_PAPER_ONLY_in_no_registry():
+    """Reserved on paper, DELIBERATELY UNREGISTERED: registering it is part of
+    the execution authorization, not of preparation. Exactly D1's convention."""
+    for seed in range(*R.H1_SEED_BLOCK):
+        assert not any(REF.seed_status(seed).values()), seed
+
+
+def test_the_ATTEMPT2_block_keeps_a_load_bearing_GAP_from_every_prior_boundary():
+    lo, hi = R.H1_SEED_BLOCK
+    from scripts.GPU.alphazero import d1_selection as SEL
+    ends = {b for reg in (REF.ACCOUNTED_SEED_INTERVALS, REF.EXPOSED_SEED_INTERVALS,
+                          REF.RETIRED_SEED_INTERVALS, REF.TEST_ONLY_SEED_INTERVALS,
+                          (SEL.SEED_INTERVAL,)) for a, b_ in reg for b in (a, b_)}
+    assert min(min(abs(lo - b), abs(hi - b)) for b in ends) >= 224
+
+
+def test_the_ATTEMPT1_block_is_ACCOUNTED_60_EXPOSED_and_RETIRED_WHOLE():
     """⚠ INVERTED TWICE, and the second time by the match itself.
 
     Paper-reserved -> ACCOUNTED (2026-09-04 seed preparation) -> ACCOUNTED +
@@ -188,7 +210,7 @@ def test_the_H1_block_is_ACCOUNTED_60_EXPOSED_and_RETIRED_WHOLE():
     was started and did not complete, so replaying any part of it would select
     games after seeing where it failed.
     """
-    lo, hi = P.H1_SEED_BLOCK
+    lo, hi = R.H1_ATTEMPT1_SEED_BLOCK
     st = [REF.seed_status(s) for s in range(lo, hi)]
     assert all(x["accounted"] for x in st)
     assert sum(x["exposed"] for x in st) == 60
@@ -348,11 +370,46 @@ def test_a_cell_with_the_wrong_repetition_LABELS_is_refused(tasks):
 
 def test_the_frozen_plan_loads_and_IS_the_built_schedule(tasks):
     plan = P.load_h1_plan()
-    assert plan["n_games"] == 224 and plan["seed_block"] == [202616000, 202616224]
+    assert plan["n_games"] == 224 and plan["seed_block"] == [202617000, 202617224]
+    assert plan["attempt"] == 2
     assert plan["shape"]["task_digest"] == R.H1_TASK_DIGEST
     assert [t["task_id"] for t in plan["tasks"]] == [t["task_id"] for t in tasks]
-    assert plan["seed_block_status"].startswith("PAPER-RESERVED")
+    assert plan["seed_block_status"].startswith("PAPER-RESERVED, UNREGISTERED")
     assert plan["early_stop"] is None
+
+
+def test_the_ATTEMPT1_plan_v3_is_PRESERVED_and_still_loads_under_its_own_pins():
+    """Evidence is create-only: v3 is the record of what attempt 1 froze and ran.
+    It loads structurally under its OWN pins -- and is refused for EXECUTION,
+    because every one of its seeds is retired."""
+    v3 = P.load_h1_plan(P.H1_ATTEMPT1_PLAN_REL, sha256=P.H1_ATTEMPT1_PLAN_SHA256,
+                        task_digest=R.H1_ATTEMPT1_TASK_DIGEST)
+    assert v3["seed_block"] == [202616000, 202616224]
+    assert R.L0.l0_task_digest(v3["tasks"]) == R.H1_ATTEMPT1_TASK_DIGEST != R.H1_TASK_DIGEST
+    with pytest.raises(REF.E4ReferenceError, match="EXPOSED .* cannot be scheduled"):
+        REF.validate_schedule_executable(v3["tasks"])
+
+
+def test_the_ATTEMPT2_plan_differs_from_v3_ONLY_in_seeds_streams_and_provenance():
+    """The 224-game design, settings, threshold, bands, rules, estimand and
+    forbidden claims are UNCHANGED; only the seed block (and therefore each
+    task's seed and derived streams) and the provenance fields differ."""
+    import json as _json
+    v3 = _json.loads(open(P.H1_ATTEMPT1_PLAN_REL, "rb").read())
+    v4 = P.load_h1_plan()
+    changed = {"seed_block", "seed_block_status", "supersedes", "shape", "tasks",
+               "attempt", "attempt_1"}
+    for k in set(v3) | set(v4):
+        if k in changed:
+            continue
+        assert v3.get(k) == v4.get(k), k
+    for a, b in zip(v3["tasks"], v4["tasks"]):
+        for k in a:
+            if k in ("seed", "rng_streams"):
+                assert a[k] != b[k], (a["task_id"], k)
+            else:
+                assert a[k] == b[k], (a["task_id"], k)
+        assert b["seed"] - a["seed"] == 1000
 
 
 def test_a_plan_whose_TASKS_were_swapped_is_refused_even_if_the_FILE_hashes(tmp_path,
@@ -575,7 +632,8 @@ def test_the_DESIGN_layer_still_declares_no_gate_and_no_barrier():
     assert _run.H1_EXECUTION_AUTHORIZED is False
     with pytest.raises(_run.H1Error, match="H1_EXECUTION_AUTHORIZED is False"):
         _run.check_gate()
-    _run.check_seed_registration()          # satisfied: the block IS registered
+    with pytest.raises(_run.H1Error, match="not registered"):
+        _run.check_seed_registration()      # barrier 2 REALLY up: attempt 2 is paper-only
 
 
 def test_validate_task_executable_STILL_does_not_ask_the_accounted_question():
@@ -584,31 +642,34 @@ def test_validate_task_executable_STILL_does_not_ask_the_accounted_question():
     retired seeds and NOT accounted ones. It would have accepted an unregistered
     H1 seed, and it accepts a registered one for the same reason -- it never
     asked. Shown against a seed in no registry at all."""
-    task = dict(P.build_tasks(P.load_source_plan())[0], seed=202617000)
-    assert not any(REF.seed_status(202617000).values())     # in NO registry
+    task = dict(P.build_tasks(P.load_source_plan())[0], seed=202618000)
+    assert not any(REF.seed_status(202618000).values())     # in NO registry
     REF.validate_task_executable(task)                      # and still accepted
 
 
 def test_the_FROZEN_artifacts_seed_status_is_a_FREEZE_TIME_record_not_a_LIVE_one():
     """⚠ A DISCREPANCY THAT IS DELIBERATE, AND RECORDED RATHER THAN PAPERED OVER.
 
-    `10_h1_plan_v3.json` says `seed_block_status: "PAPER-RESERVED, DELIBERATELY
-    UNREGISTERED"`. That was true when the plan was frozen and is FALSE NOW: the
-    seed-preparation authorization registered the block.
+    v3 (attempt 1) says `seed_block_status: "PAPER-RESERVED, DELIBERATELY
+    UNREGISTERED"`. That was true when it was frozen, FALSE after registration
+    (2026-09-04), and the block is now spent and RETIRED (2026-09-05). The
+    artifact is NOT rewritten: a preregistration edited whenever the world moves
+    is not frozen. The LIVE status lives in the registry, which this test reads.
 
-    The artifact is NOT rewritten. It is a frozen preregistration pinned by
-    sha256, and a document that is edited whenever the world moves is not frozen
-    -- the pin would then certify only that someone kept it current. The LIVE
-    status lives where state belongs: the registry, which this test reads.
-
-    So the field is a FREEZE-TIME record. This test exists so that reading is
-    explicit and cannot be mistaken for a stale claim nobody noticed.
+    v4 (attempt 2) says PAPER-RESERVED, UNREGISTERED -- and TODAY that is also
+    the live state. The field is still a FREEZE-TIME record, and nothing in the
+    runtime reads it to decide anything.
     """
-    plan = P.load_h1_plan()
-    assert plan["seed_block_status"] == "PAPER-RESERVED, DELIBERATELY UNREGISTERED"
-    lo, hi = P.H1_SEED_BLOCK
-    assert all(REF.seed_is_accounted(s) for s in range(lo, hi)), \
+    v3 = P.load_h1_plan(P.H1_ATTEMPT1_PLAN_REL, sha256=P.H1_ATTEMPT1_PLAN_SHA256,
+                        task_digest=R.H1_ATTEMPT1_TASK_DIGEST)
+    assert v3["seed_block_status"] == "PAPER-RESERVED, DELIBERATELY UNREGISTERED"
+    lo, hi = R.H1_ATTEMPT1_SEED_BLOCK
+    assert all(REF.seed_is_accounted(s) and REF.seed_is_retired(s) for s in range(lo, hi)), \
         "the live registry disagrees with this test, not with the frozen artifact"
+    v4 = P.load_h1_plan()
+    assert v4["seed_block_status"].startswith("PAPER-RESERVED, UNREGISTERED")
+    lo, hi = R.H1_SEED_BLOCK
+    assert not any(any(REF.seed_status(s).values()) for s in range(lo, hi))
     # and nothing in the RUNTIME reads that field to decide anything
     import inspect
     from scripts.GPU.alphazero import h1_viability_runner as _run

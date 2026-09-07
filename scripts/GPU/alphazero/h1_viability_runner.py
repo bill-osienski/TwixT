@@ -1,6 +1,7 @@
 """The H1 viability screen's execution harness. THE MATCH IS NOT AUTHORIZED.
 
-This module wires the frozen 224-task v3 plan to machinery that is ALREADY
+This module wires the frozen 224-task pinned plan (v4, attempt 2; v3 was
+attempt 1 and is preserved) to machinery that is ALREADY
 QUALIFIED and rebuilds none of it. Everything effectful comes from the E4
 screen's harness, unchanged, exactly as L0's runner reuses it: `play_task`,
 `Recorder`, `AbortError`/`PHASE_*`, `_enforce_evaluator`, and the fail-closed
@@ -570,7 +571,8 @@ def run(results_path: str, *, mode: str = "qualify",
     """PUBLIC ENTRY POINT. Paths only.
 
     No task, callable, evaluator, hook, reporter or schedule can be injected, and
-    no plan path can be supplied: match mode loads ONLY the pinned v3 plan.
+    no plan path can be supplied: match mode loads ONLY the pinned plan
+    (`PLAN.H1_PLAN_REL`, attempt 2's v4).
 
     ⚠ CORRECTED: this said "MATCH MODE IS NOT SELECTABLE HERE", which stopped
     being true when the match was made publicly reachable. MATCH MODE IS
@@ -621,7 +623,7 @@ def _run(results_path: str, *, mode: str, trace_path: Optional[str] = None,
     # MATCH MODE LOADS ONLY THE PINNED PLAN. `_plan_path` is a test seam and is
     # refused on the match path, because a supplied plan is a supplied design.
     if match and _plan_path is not None:
-        raise H1Error("match mode loads the pinned v3 plan only; a supplied plan "
+        raise H1Error("match mode loads the pinned plan only; a supplied plan "
                       "path is a supplied design")
     plan = PLAN.load_h1_plan(_plan_path or PLAN.H1_PLAN_REL)
     tasks = list(_tasks) if _tasks is not None else (

@@ -581,7 +581,7 @@ def test_the_supervisor_kills_the_WHOLE_process_group_on_timeout(tmp_path):
 def test_the_supervisor_passes_a_finished_workers_exit_code_through(tmp_path):
     r = RQ.supervise([sys.executable, "-c", "import sys; sys.exit(2)"],
                      timeout_s=30, kill_grace_s=1)
-    assert r == {"exit_code": 2, "timed_out": False, "group_cleared": True}
+    assert r == {"exit_code": 2, "timed_out": False, "interrupted": False, "group_cleared": True}
 
 
 def test_the_supervisor_starts_the_worker_in_a_NEW_SESSION(tmp_path):
@@ -664,7 +664,7 @@ def test_main_NEVER_reports_the_workers_code_when_cleanup_failed(monkeypatch, tm
     still running. Whatever the worker said, a failed cleanup is its own code."""
     monkeypatch.setattr(RQ, "RUNTIME_REQUAL_AUTHORIZED", True)
     monkeypatch.setattr(RQ, "supervise", lambda cmd, **k: {
-        "exit_code": worker_code, "timed_out": False, "group_cleared": False})
+        "exit_code": worker_code, "interrupted": False, "timed_out": False, "group_cleared": False})
     assert RQ.main(["--out", str(tmp_path / "r.json")]) == RQ.EXIT_CLEANUP_FAILED == 8
 
 
@@ -672,7 +672,7 @@ def test_main_passes_the_workers_code_through_ONLY_when_the_group_cleared(monkey
                                                                          tmp_path):
     monkeypatch.setattr(RQ, "RUNTIME_REQUAL_AUTHORIZED", True)
     monkeypatch.setattr(RQ, "supervise", lambda cmd, **k: {
-        "exit_code": 0, "timed_out": False, "group_cleared": True})
+        "exit_code": 0, "interrupted": False, "timed_out": False, "group_cleared": True})
     assert RQ.main(["--out", str(tmp_path / "r.json")]) == RQ.EXIT_PASS == 0
 
 
@@ -682,15 +682,15 @@ def test_exit_codes_are_distinct_and_named():
     codes = {RQ.EXIT_PASS: "PASS", RQ.EXIT_FAIL: "FAIL", RQ.EXIT_VOID: "VOID",
              RQ.EXIT_UNEXPECTED: "UNEXPECTED", RQ.EXIT_UNAUTHORIZED: "UNAUTHORIZED",
              RQ.EXIT_TIMEOUT: "TIMEOUT", RQ.EXIT_REFUSED: "REFUSED",
-             RQ.EXIT_CLEANUP_FAILED: "CLEANUP_FAILED"}
-    assert len(codes) == 8
+             RQ.EXIT_CLEANUP_FAILED: "CLEANUP_FAILED", RQ.EXIT_INTERRUPTED: "INTERRUPTED"}
+    assert len(codes) == 9
     assert (RQ.EXIT_PASS, RQ.EXIT_FAIL, RQ.EXIT_VOID, RQ.EXIT_UNEXPECTED,
             RQ.EXIT_UNAUTHORIZED, RQ.EXIT_TIMEOUT, RQ.EXIT_REFUSED,
-            RQ.EXIT_CLEANUP_FAILED) == (0, 2, 3, 4, 5, 6, 7, 8)
+            RQ.EXIT_CLEANUP_FAILED, RQ.EXIT_INTERRUPTED) == (0, 2, 3, 4, 5, 6, 7, 8, 9)
 
 
 @pytest.mark.parametrize("outcome,code", [
-    ("PASS", 0), ("FAIL", 2), ("void", 3), ("refused", 7), ("boom", 4)])
+    ("PASS", 0), ("FAIL", 2), ("void", 3), ("refused", 7), ("boom", 4), ("interrupt", 9)])
 def test_the_worker_maps_each_outcome_to_its_own_exit_code(monkeypatch, tmp_path,
                                                           outcome, code):
     """🔴 A FAIL VERDICT EXITS 2, NOT 0. The 2026-09-05 wrapper exited 0
@@ -705,6 +705,8 @@ def test_the_worker_maps_each_outcome_to_its_own_exit_code(monkeypatch, tmp_path
             raise RQ.RequalError("precondition")
         if outcome == "boom":
             raise RuntimeError("boom")
+        if outcome == "interrupt":
+            raise KeyboardInterrupt()
         return {"verdict": outcome, "n_failures": 0 if outcome == "PASS" else 3,
                 "n_prefixes": 8, "queries_spent": 8}
 
@@ -734,7 +736,7 @@ def test_main_supervises_a_WORKER_subprocess_under_the_outer_cap(monkeypatch, tm
 
     def fake_supervise(cmd, *, timeout_s, kill_grace_s):
         seen.update(cmd=cmd, timeout_s=timeout_s, kill_grace_s=kill_grace_s)
-        return {"exit_code": 2, "timed_out": False, "group_cleared": True}
+        return {"exit_code": 2, "interrupted": False, "timed_out": False, "group_cleared": True}
 
     monkeypatch.setattr(RQ, "supervise", fake_supervise)
     rc = RQ.main(["--out", str(tmp_path / "r.json")])
@@ -747,5 +749,5 @@ def test_main_supervises_a_WORKER_subprocess_under_the_outer_cap(monkeypatch, tm
 def test_main_reports_TIMEOUT_when_the_supervisor_killed_the_tree(monkeypatch, tmp_path):
     monkeypatch.setattr(RQ, "RUNTIME_REQUAL_AUTHORIZED", True)
     monkeypatch.setattr(RQ, "supervise", lambda cmd, **k: {
-        "exit_code": RQ.EXIT_TIMEOUT, "timed_out": True, "group_cleared": True})
+        "exit_code": RQ.EXIT_TIMEOUT, "interrupted": False, "timed_out": True, "group_cleared": True})
     assert RQ.main(["--out", str(tmp_path / "r.json")]) == RQ.EXIT_TIMEOUT == 6

@@ -82,7 +82,23 @@ N_GAMES = N_OPENINGS * N_ARMS * N_REPS                  # 224
 #: Defined HERE rather than in the plan module -- L0 keeps its block in the plan,
 #: but H1's abort rule has to be RUNNABLE, and the plan module imports these
 #: rules, so the rules cannot import the block back.
-H1_SEED_BLOCK = (202616000, 202616224)
+#: ATTEMPT 1's block: REGISTERED 2026-09-04, DRAWN FROM 2026-09-05 (60 games), and
+#: RETIRED WHOLE when the single authorized match VOIDed at game 60 of 224. Kept
+#: under its own name so the spent v3 schedule stays loadable as a RECORD and is
+#: refused for EXECUTION by the registry, never by a digest mismatch alone.
+H1_ATTEMPT1_SEED_BLOCK = (202616000, 202616224)
+
+#: ATTEMPT 2 (2026-09-07): a FRESH interval, PAPER-RESERVED and DELIBERATELY
+#: UNREGISTERED -- registering it is part of the EXECUTION authorization, not of
+#: preparation (D1's §14 convention). Collision-proved read-only against every
+#: registry PLUS D1's paper block PLUS the spent attempt-1 block: 0 direct, 0
+#: derived-stream collisions over 19,425 prior values, own 1,120 derivations
+#: injective; and a 776-seed GAP from the nearest prior boundary, so an
+#: off-by-one there cannot masquerade as a valid reservation
+#: (evidence/2026-09-07-t1j-h1-retry-prep/03_collision_proof_v3b.py.txt).
+#: 🔴 Until registered, `h1_viability_runner.check_seed_registration` REFUSES a
+#: run on it; the gate refuses first. Both barriers up.
+H1_SEED_BLOCK = (202617000, 202617224)
 
 
 def seed_is_outside_the_reserved_block(seed: Any) -> bool:
@@ -203,7 +219,12 @@ def viability_verdict(lo: float, hi: float) -> str:
 #: 64-hex string that looked entirely plausible and matched nothing. It is now
 #: the digest of the built schedule, and a test recomputes it from the tasks:
 #: a pinned digest never checked against the artifact it pins is decoration.
-H1_TASK_DIGEST = "058e62400849e17f0485c2505f562d948e06548ad33ec21ea7fd81854e8e8a21"
+#: Attempt 1's digest, kept for the v3 record (the schedule that ran and VOIDed).
+H1_ATTEMPT1_TASK_DIGEST = "058e62400849e17f0485c2505f562d948e06548ad33ec21ea7fd81854e8e8a21"
+#: Attempt 2's digest: the same 224 tasks with seeds from the fresh block, so
+#: only `seed` and the derived `rng_streams` differ per task. Recomputed by a
+#: test from the built schedule, as attempt 1's was.
+H1_TASK_DIGEST = "23e3fa129b85c2669ef6d974e99c3fd0106735377298bc80c272346376db5c74"
 
 #: WHICH design is being bound. Required at every `bind_results` call.
 H1_DESIGN = L0.Design(name="H1", n_openings=N_OPENINGS, n_arms=N_ARMS,
