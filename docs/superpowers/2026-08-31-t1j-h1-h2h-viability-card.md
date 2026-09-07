@@ -266,3 +266,37 @@ no registry, so `check_seed_registration` refuses. Execution will need, as
 before and in this order: the collision re-proof at that time, registering
 ONLY this block, opening ONLY the H1 gate, one run through the wrapper, the
 gate restored by the wrapper and verified.
+
+## Attempt 2 — RAN ONCE 2026-09-07, COMPLETED, verdict **INCONCLUSIVE**
+
+Gate opened `99152ff` (its own commit), one run through `h1_match_command`'s
+main entry, `18:53:52Z → 20:37:44Z` (**6232.6 s, 103m53s** of the 180-min
+window), **exit 0**, all **224** games played, trace `run_end/OK`. The wrapper
+restored the gate; no T1j, JDK or wrapper process survived. Evidence
+`2026-09-07-t1j-h1-match-attempt2/`.
+
+**Verdict INCONCLUSIVE, by the predeclared rule.** T1j **151.5 / 224 = 0.6763**;
+two-sided 95% Hoeffding **[0.5856, 0.7671]** — the upper bound is not below
+0.75 and the lower bound is not at or above it. Cap terminations 3 of 224
+(threshold 112; a cap warning is set, no rate is withheld). The observed rate
+0.6763 lies inside the predeclared INCONCLUSIVE band [0.6593, 0.8407).
+Wilson (secondary, decides nothing): [0.6125, 0.7342].
+
+**Descriptive only, not a finding:** by colour arm T1j scored 95.0/112
+(0.848) as red and 56.5/112 (0.504) as black; by opening the rates range
+0.500 (`o6_wide_right`) to 0.857 (`o3_low`), 28 games each. These are cells of a design balanced for one estimand and are
+reported as the protocol requires, not interpreted.
+
+**Seed accounting, from the records:** all 224 tasks have a `task_result` and
+at least one reference-agent ply, so all 224 seeds were drawn — **ACCOUNTED
+224 / EXPOSED 224 / RETIRED WHOLE** (a completed one-shot schedule; L0's rule).
+**No pooling** with L0 (64 games, 0.5938) or with attempt 1's 60 retained
+games: each was preregistered separately, and attempt 1's games are a prefix
+of a balanced design, not a small version of it.
+
+**What INCONCLUSIVE means here:** the question — is targeted improvement of
+`calib020_0001` against T1j worth pursuing? — is **not answered by this
+design at this n**. It neither excludes a T1j rate below 0.75 (VIABLE) nor
+one at or above it (NOT_VIABLE). Any next step (a larger n, a different
+threshold, a different question) is a **new preregistration**, not an
+extension of this one.

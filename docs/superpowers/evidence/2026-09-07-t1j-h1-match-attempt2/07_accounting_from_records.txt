@@ -1,0 +1,84 @@
+SEED ACCOUNTING FROM THE RECORDS, computed 2026-09-07T21:18:18Z BEFORE the registry edit (scratchpad script reproduced below the output)
+==============================================================================================================
+record types: {'run_header': 1, 'setup_complete': 1, 'task_start': 224, 'opening_bound': 224, 'ply': 8139, 'task_result': 224, 'viability_report': 1}
+trace run_end: {'event': 'run_end', 'games_completed': 224, 'ts': 1788813464.473737, 'verdict': 'OK'}
+tasks with a task_result: 224 | tasks with >=1 reference ply: 224 | DRAWN (exposed) tasks: 224
+exposed seeds: 224 of 224; contiguous from 202617000: True
+  EXPOSED interval to register: (202617000, 202617224)
+RETIRE WHOLE: (202617000, 202617224) -- started one-shot schedule
+{
+ "decisive_bands": {
+  "not_viable_at_or_above": 0.840741974434996,
+  "viable_below": 0.659258025565004
+ },
+ "record_type": "viability_report",
+ "tasks_played": 224,
+ "verdict": "INCONCLUSIVE",
+ "overall": {
+  "games": 224,
+  "t1j_score": 151.5,
+  "t1j_rate": 0.6763392857142857,
+  "cap_terminations": 3,
+  "ci95_hoeffding": [
+   0.5855973112792897,
+   0.7670812601492817
+  ],
+  "ci95_wilson": [
+   0.6125416769964754,
+   0.7341906534972963
+  ]
+ },
+ "by_colour_arm": {
+  "t1j_black": {
+   "games": 112,
+   "t1j_score": 56.5,
+   "t1j_rate": 0.5044642857142857
+  },
+  "t1j_red": {
+   "games": 112,
+   "t1j_score": 95.0,
+   "t1j_rate": 0.8482142857142857
+  }
+ }
+}
+
+--- script ---
+"""Seed accounting FROM THE RECORDS, computed at the moment of recording. Read-only.
+
+EXPOSURE is a claim about DRAWS: a task's seed is exposed once OUR reference agent was constructed,
+which happens at its first searched move -- so a task with >= 1 `ply` record whose mover is the
+reference, or a `task_result`, drew its seed. A task with only task_start/opening_bound did NOT
+(attempt 1, game 60: T1j failed at its own first query and seed 202616060 was never drawn).
+RETIREMENT is a claim about the SCHEDULE: a started one-shot schedule retires WHOLE, completed or not.
+"""
+import json, sys
+from scripts.GPU.alphazero import h1_viability_rules as H, h1_viability_plan as P
+E = "docs/superpowers/evidence/2026-09-07-t1j-h1-match-attempt2"
+recs = [json.loads(l) for l in open(f"{E}/01_h1_results.jsonl")]
+trace = [json.loads(l) for l in open(f"{E}/02_h1_trace.jsonl")]
+plan = P.load_h1_plan(); by_id = {t["task_id"]: t for t in plan["tasks"]}
+kinds = {}
+for r in recs: kinds[r["record_type"]] = kinds.get(r["record_type"], 0) + 1
+print("record types:", kinds)
+end = [t for t in trace if t["event"] == "run_end"]
+print("trace run_end:", end[-1] if end else "ABSENT (no run_end written)")
+results = {r["task_id"] for r in recs if r["record_type"] == "task_result"}
+ref_plies = {}
+for r in recs:
+    if r["record_type"] == "ply":
+        t = by_id.get(r["task_id"]); 
+        if t and r.get("mover") == t["reference_colour"]: ref_plies[r["task_id"]] = ref_plies.get(r["task_id"], 0) + 1
+drawn = {tid for tid in by_id if tid in results or ref_plies.get(tid, 0) > 0}
+seeds_drawn = sorted(by_id[t]["seed"] for t in drawn)
+lo, hi = H.H1_SEED_BLOCK
+print(f"tasks with a task_result: {len(results)} | tasks with >=1 reference ply: {len(ref_plies)} | DRAWN (exposed) tasks: {len(drawn)}")
+print(f"exposed seeds: {len(seeds_drawn)} of {hi-lo}; contiguous from {lo}: {seeds_drawn == list(range(lo, lo + len(seeds_drawn)))}")
+if seeds_drawn: print(f"  EXPOSED interval to register: ({seeds_drawn[0]}, {seeds_drawn[-1] + 1})" if seeds_drawn == list(range(seeds_drawn[0], seeds_drawn[-1] + 1)) else f"  NON-CONTIGUOUS exposure: {seeds_drawn}")
+print(f"RETIRE WHOLE: ({lo}, {hi}) -- started one-shot schedule")
+for r in recs:
+    if r["record_type"] in ("viability_report", "match_outcome", "void_diagnostic", "interrupt_diagnostic", "abort"):
+        keep = {k: v for k, v in r.items() if k in ("record_type", "verdict", "outcome", "reason", "tasks_played", "task_id", "index", "ply", "error_type", "helper_excerpt", "games_completed", "seed", "opening", "colour_arm", "rep", "cap_terminations", "games", "decisive_bands")}
+        if r["record_type"] == "viability_report":
+            ov = r["overall"]; keep["overall"] = {k: ov.get(k) for k in ("games", "t1j_score", "t1j_rate", "cap_terminations", "ci95_hoeffding", "ci95_wilson")}
+            keep["by_colour_arm"] = {k: {kk: v.get(kk) for kk in ("games", "t1j_score", "t1j_rate")} for k, v in r["by_colour_arm"].items()}
+        print(json.dumps(keep, indent=1)[:3000])

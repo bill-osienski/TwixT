@@ -175,15 +175,23 @@ def test_seeds_are_the_ATTEMPT2_block_one_per_task_in_order(tasks):
     assert [t["seed"] for t in tasks] == list(range(*P.H1_SEED_BLOCK))
 
 
-def test_the_ATTEMPT2_block_is_ACCOUNTED_ONLY_zero_exposed_zero_retired():
-    """⚠ INVERTED by the 2026-09-07 seed-registration authorization: paper-only
-    -> ACCOUNTED. A reservation is not a draw, so 0 exposed and 0 retired, and
-    nothing in the test band. Registering did NOT open the gate."""
+def test_the_ATTEMPT2_block_is_ACCOUNTED_EXPOSED_224_and_RETIRED_WHOLE():
+    """⚠ INVERTED THREE TIMES, the last by the match itself: paper-only (prep) ->
+    ACCOUNTED (registration) -> ACCOUNTED + EXPOSED 224 + RETIRED WHOLE (the
+    match ran once on 2026-09-07 and COMPLETED all 224 games).
+
+    🔑 224 EXPOSED, counted from the RECORDS: every task has a task_result and
+    at least one reference-agent ply, so every seed was drawn (attempt 1 had 60
+    for the same reason it did not have 61). RETIRED WHOLE because a
+    preregistered one-shot schedule completed; replaying any part would be
+    selection after seeing the verdict."""
     lo, hi = R.H1_SEED_BLOCK
     st = [REF.seed_status(s) for s in range(lo, hi)]
     assert all(x["accounted"] for x in st)
-    assert not any(x["exposed"] or x["retired"] or x["test_only"] for x in st)
-    assert not any(REF.seed_is_unavailable(s) for s in range(lo, hi))
+    assert sum(x["exposed"] for x in st) == 224
+    assert all(x["retired"] for x in st), "the block retires WHOLE"
+    assert all(REF.seed_is_unavailable(s) for s in range(lo, hi))
+    assert not any(x["test_only"] for x in st)
 
 
 def test_the_ATTEMPT2_block_keeps_a_load_bearing_GAP_from_every_prior_boundary():
@@ -662,9 +670,9 @@ def test_the_FROZEN_artifacts_seed_status_is_a_FREEZE_TIME_record_not_a_LIVE_one
     is not frozen. The LIVE status lives in the registry, which this test reads.
 
     v4 (attempt 2) says PAPER-RESERVED, UNREGISTERED. That was true when it was
-    frozen (2026-09-07 morning) and is FALSE since the seed-registration
-    authorization the same day: the block is ACCOUNTED. The artifact is not
-    rewritten, for the same reason. The field is a FREEZE-TIME record, and
+    frozen (2026-09-07 morning) and is FALSE since the same day's registration
+    and then the match itself: the block is ACCOUNTED, EXPOSED 224 and RETIRED
+    WHOLE. The artifact is not rewritten, for the same reason. The field is a FREEZE-TIME record, and
     nothing in the runtime reads it to decide anything.
     """
     v3 = P.load_h1_plan(P.H1_ATTEMPT1_PLAN_REL, sha256=P.H1_ATTEMPT1_PLAN_SHA256,
@@ -676,9 +684,10 @@ def test_the_FROZEN_artifacts_seed_status_is_a_FREEZE_TIME_record_not_a_LIVE_one
     v4 = P.load_h1_plan()
     assert v4["seed_block_status"].startswith("PAPER-RESERVED, UNREGISTERED")
     lo, hi = R.H1_SEED_BLOCK
-    assert all(REF.seed_is_accounted(s) for s in range(lo, hi)), \
+    # live: registered 2026-09-07, then the match ran and COMPLETED the same day
+    assert all(REF.seed_is_accounted(s) and REF.seed_is_exposed(s) and REF.seed_is_retired(s)
+               for s in range(lo, hi)), \
         "the live registry disagrees with this test, not with the frozen artifact"
-    assert not any(REF.seed_is_exposed(s) or REF.seed_is_retired(s) for s in range(lo, hi))
     # and nothing in the RUNTIME reads that field to decide anything
     import inspect
     from scripts.GPU.alphazero import h1_viability_runner as _run

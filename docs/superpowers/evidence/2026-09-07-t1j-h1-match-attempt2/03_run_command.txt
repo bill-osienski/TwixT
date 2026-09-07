@@ -1,0 +1,12 @@
+cwd: /Users/bill/projects/TwixT_Game
+HEAD: 99152ff
+gate at start: 77:H1_EXECUTION_AUTHORIZED = True
+start_utc: 2026-09-07T18:53:52Z
+command (argv list, no shell): .venv/bin/python -m scripts.GPU.alphazero.h1_match_command
+waiter pid 26545 (session leader)
+wrapper pid 26548
+end_utc: 2026-09-07T20:37:44Z
+elapsed_s: 6232.6
+exit_code: 0
+gate after (the WRAPPER restored it, not this waiter): 77:H1_EXECUTION_AUTHORIZED = False at 2026-09-07T20:37:46Z
+surviving t1j/jdk/wrapper processes after exit: ''

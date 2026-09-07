@@ -76,11 +76,16 @@ def test_the_wrapper_names_only_the_H1_gate():
 
 # ─────────────────────────── fresh output locations ─────────────────────────
 
-def test_the_default_output_paths_are_the_ATTEMPT2_evidence_dir_and_do_not_exist_yet():
+def test_the_default_output_paths_are_the_ATTEMPT2_evidence_dir_and_are_now_SPENT():
+    """⚠ INVERTED by the match: attempt 2 ran once on 2026-09-07 and COMPLETED,
+    so the default paths EXIST and the runner's precheck REFUSES them -- the
+    wrapper cannot re-run the spent attempt by accident, even with the gate open."""
     assert CMD.OUT_DIR == "docs/superpowers/evidence/2026-09-07-t1j-h1-match-attempt2"
     assert CMD.DEFAULT_RESULTS == f"{CMD.OUT_DIR}/01_h1_results.jsonl"
     assert CMD.DEFAULT_TRACE == f"{CMD.OUT_DIR}/02_h1_trace.jsonl"
-    assert not os.path.lexists(CMD.DEFAULT_RESULTS) and not os.path.lexists(CMD.DEFAULT_TRACE)
+    assert os.path.exists(CMD.DEFAULT_RESULTS) and os.path.exists(CMD.DEFAULT_TRACE)
+    with pytest.raises(RUN.H1Error, match="already exists"):
+        RUN.check_output_paths(CMD.DEFAULT_RESULTS, CMD.DEFAULT_TRACE)
     # attempt 1's paths are NOT the defaults, and still exist
     assert os.path.exists("docs/superpowers/evidence/2026-09-05-t1j-h1-match/01_h1_results.jsonl")
 

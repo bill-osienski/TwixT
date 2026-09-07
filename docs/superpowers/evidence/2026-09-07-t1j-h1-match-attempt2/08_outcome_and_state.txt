@@ -1,0 +1,64 @@
+H1 ATTEMPT 2 -- OUTCOME: COMPLETED, verdict INCONCLUSIVE.  State verified at the moment of recording
+====================================================================================================
+recorded 2026-09-07T22:00:53Z at HEAD 99152ff (the gate-open commit; the restore + accounting are committed with this file)
+cwd: /Users/bill/projects/TwixT_Game
+HEAD: 99152ff
+gate at start: 77:H1_EXECUTION_AUTHORIZED = True
+start_utc: 2026-09-07T18:53:52Z
+command (argv list, no shell): .venv/bin/python -m scripts.GPU.alphazero.h1_match_command
+waiter pid 26545 (session leader)
+wrapper pid 26548
+end_utc: 2026-09-07T20:37:44Z
+elapsed_s: 6232.6
+exit_code: 0
+gate after (the WRAPPER restored it, not this waiter): 77:H1_EXECUTION_AUTHORIZED = False at 2026-09-07T20:37:46Z
+surviving t1j/jdk/wrapper processes after exit: ''
+exit code (06_exit.txt): 0 = EXIT_COMPLETED; trace: {'event': 'run_end', 'games_completed': 224, 'ts': 1788813464.473737, 'verdict': 'OK'}
+
+PRECEDENCE CHECKS (both pass; either failing would have superseded the outcome):
+  gate restored by the WRAPPER: ['77:H1_EXECUTION_AUTHORIZED = False']
+  surviving t1j/jdk/wrapper/waiter processes now: ''  (exit 0, not 8: the supervisor's group cleared)
+
+VERDICT (from the viability_report record; computed by the frozen rules, nothing here recomputes):
+  INCONCLUSIVE  -- T1j 151.5 / 224 = 0.6763; Hoeffding95 [0.5856, 0.7671] straddles 0.75; bands VIABLE < 0.6593, NOT_VIABLE >= 0.8407
+  Wilson (secondary, decides nothing) [0.6125, 0.7342]; cap terminations 3 of 224 (threshold 112; cap_warning True); plies min/median/max 25/35/280
+  descriptive only (cells of one balanced design; not findings):
+    t1j_black: 56.5/112 = 0.504 (caps 3)
+    t1j_red: 95.0/112 = 0.848 (caps 0)
+    o1_center: 17.0/28 = 0.607
+    o2_offcenter: 17.5/28 = 0.625
+    o3_low: 24.0/28 = 0.857
+    o4_high: 19.0/28 = 0.679
+    o5_wide_left: 20.0/28 = 0.714
+    o6_wide_right: 14.0/28 = 0.500
+    o7_diagonal: 20.0/28 = 0.714
+    o8_contact: 20.0/28 = 0.714
+  bounded_to: these 8 frozen openings, this colour balance, mdPly 6, calib020_0001 at 400 simulations, ply cap 280, one run of 224 games
+  NO pooling with L0 (64 games, 0.5938) or attempt 1's 60 retained games. The ~191 Elo sizing figure is a forbidden claim and is not used.
+
+IDENTITY (from the run header / setup record):
+  plan sha 21cd2465d94d6c6a... == pinned 21cd2465d94d6c6a...: True | task digest == pinned: True | seed_block [202617000, 202617224] | deadline 10800 s | per-call 120 s
+  jar 53ec95e421db2531... | E4Preflight.java fa6623390c0ee5f3... | E4Preflight.class 1f2425fd7b528ad4... (== compile-only + requal builds) | main net.schwagereit.t1j.E4Preflight
+
+SEED ACCOUNTING (07_accounting_from_records.txt, computed BEFORE the registry edit; verified again now):
+  attempt 2 (202617000, 202617224): accounted/exposed/retired = (224, 224, 224)  <- EXPOSED 224 (every task drew: 224 task_result + >=1 reference ply each), RETIRED WHOLE (completed one-shot schedule)
+  attempt 1 (202616000, 202616224): (224, 60, 224) (unchanged) | D1 paper (202615000, 202615221): (0, 0, 0) (still paper-only)
+  the spent v4 schedule is refused: seed 202617000 was EXPOSED -- it has been drawn from -- and cannot be scheduled
+
+ALL SIX GATES:
+  scripts/GPU/alphazero/d1_probe.py:55:D1_EXECUTION_AUTHORIZED = False
+  scripts/GPU/alphazero/e4_screen_command.py:44:SCREEN_AUTHORIZED = False
+  scripts/GPU/alphazero/h1_viability_runner.py:77:H1_EXECUTION_AUTHORIZED = False
+  scripts/GPU/alphazero/l0_match_command.py:41:L0_EXECUTION_AUTHORIZED = False
+  scripts/GPU/alphazero/lowply_qualification.py:55:LOWPLY_QUALIFICATION_AUTHORIZED = False
+  scripts/GPU/alphazero/runtime_requalification.py:79:RUNTIME_REQUAL_AUTHORIZED = False
+
+POST-RESTORATION SUITE (gate False): ==== 4036 passed, 4 skipped, 53 deselected, 8 warnings in 744.54s (0:12:24) ====
+CONTROLS: 315/315 defects rejected; 0 not caught; 0 stale | ALL CONTROLS RAN: True | clean baseline over 249 distinct target tests: PASS
+  315 = 314 + 3 new (un-RETIRED, un-EXPOSED, runner stops asking the executable question) - 2 (one now-real injection dropped; one non-discriminating control replaced).
+  RECORDED HONESTLY: the first post-run harness reported 314/315 -- my control 'the spent schedule runs again' un-EXPOSED the block only; it stayed RETIRED, so the
+  schedule was still refused. A single anchor cannot un-spend two lists; the control now removes the runner's executable check instead. Harness re-run alone; the
+  suite result above is from the same unchanged tree. Also: my card note first gave the by-opening range as 0.518-0.893; the record says 0.500-0.857; corrected.
+
+WHAT THIS ESTABLISHES: at n=224 this design does not answer whether targeted improvement of calib020_0001 against T1j is worth pursuing -- it excludes
+neither a T1j rate below 0.75 nor one at or above it. Any next step is a NEW preregistration. No D1, no training, no new seed block, no sibling repair, no push.

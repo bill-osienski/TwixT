@@ -1,0 +1,47 @@
+H1 ATTEMPT 2 -- PRE-RUN VERIFICATION, computed at the moment of recording
+==========================================================================================
+recorded 2026-09-07T18:52:58Z at HEAD c8866c2; unpushed 46; tracked changes: none
+
+GATES (all False; the H1 gate is opened in the NEXT commit):
+  scripts/GPU/alphazero/d1_probe.py:55:D1_EXECUTION_AUTHORIZED = False
+  scripts/GPU/alphazero/e4_screen_command.py:44:SCREEN_AUTHORIZED = False
+  scripts/GPU/alphazero/h1_viability_runner.py:77:H1_EXECUTION_AUTHORIZED = False
+  scripts/GPU/alphazero/l0_match_command.py:41:L0_EXECUTION_AUTHORIZED = False
+  scripts/GPU/alphazero/lowply_qualification.py:55:LOWPLY_QUALIFICATION_AUTHORIZED = False
+  scripts/GPU/alphazero/runtime_requalification.py:79:RUNTIME_REQUAL_AUTHORIZED = False
+  wrapper gate_is_open() = False
+
+PINNED v4 PLAN:
+  docs/superpowers/evidence/2026-09-07-t1j-h1-retry-prep/06_h1_plan_v4.json
+  sha256 21cd2465d94d6c6a2e4834373c57f0e8e91a4e09d19f05c7c0db2bdf7ec9bc16 == pinned: True
+  task digest 23e3fa129b85c2669ef6d974e99c3fd0106735377298bc80c272346376db5c74 == pinned 23e3fa129b85c266...: True
+  attempt 2 | n_games 224 = 8x2x14 | mdPly 6 | ply_cap 280 | threshold 0.75 | bands [0.659258025565004, 0.840741974434996] | early_stop None
+  seed_block [202617000, 202617224] == RULES.H1_SEED_BLOCK [202617000, 202617224]: True
+  validate_schedule_executable: OK (224 tasks, streams injective)
+  check_seed_registration(): SATISFIED
+  block state: accounted 224 exposed 0 retired 0
+  attempt-1 block (202616000, 202616224): accounted 224 exposed 60 retired 224 (spent; the v3 schedule is refused)
+  D1 paper (202615000, 202615221): 0 seeds in any registry
+
+FRESH OUTPUT PATHS (the wrapper's defaults; create-only):
+  docs/superpowers/evidence/2026-09-07-t1j-h1-match-attempt2/01_h1_results.jsonl: lexists=False
+  docs/superpowers/evidence/2026-09-07-t1j-h1-match-attempt2/02_h1_trace.jsonl: lexists=False
+  check_output_paths: OK
+  attempt-1 evidence untouched: True
+
+TOOLCHAIN + INCUMBENT PINS (hash only, no process):
+  toolchain root /Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1 verified=5; jar 53ec95e421db2531... == E4 pin: True
+  jdk af8b122943345320... bin/java
+  jdk 6f5159301c750bba... bin/javac
+  jdk 28745573641057e8... lib/modules
+  jdk cb6064fe4d7b87d9... release
+  E4Preflight.java fa6623390c0ee5f3... (fa662339 = compile-only verified 89e66ad, runtime-requalified 2f8abd1)
+  incumbent checkpoint pin CHECKPOINT_SHA256 34c79c0d85a837f0... == plan reference_sha256 34c79c0d85a837f0...: True (reference calib020_0001)
+
+LIMITS (from the modules): per-call 120 s | run deadline 10800 s | outer cap 10860 s | interrupt grace 120 s | early stop None
+EXPECTED: attempt 1 played 60 games in 2042 s (34.0 s/game) -> 224 games ~ 7,620 s ~ 127 min of the 180-min deadline.
+NO T1j/JDK/wrapper PROCESS RUNNING NOW: ''
+
+PLANNED COMMAND (the supervised wrapper's MAIN entry, not --worker; defaults = the fresh paths above; called DIRECTLY, no shell variable):
+  .venv/bin/python -m scripts.GPU.alphazero.h1_match_command
+BARRED: early stop, automatic retry, pooling with L0 or attempt 1, D1, training, new seed block, unrelated repairs, push.

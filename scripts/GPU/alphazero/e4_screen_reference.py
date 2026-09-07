@@ -169,6 +169,12 @@ ACCOUNTED_SEED_INTERVALS = (
 #: strikes that seed off. A draw inside the test namespace strikes nothing off,
 #: because nothing there was ever available to schedule.
 EXPOSED_SEED_INTERVALS = (
+    (202617000, 202617224),          # H1 ATTEMPT 2, run once 2026-09-07 and
+                                     # COMPLETED: 224 of 224 games, every task
+                                     # built our reference agent (224 task_result
+                                     # records, >= 1 reference ply each), so ALL
+                                     # 224 seeds were DRAWN. Counted from the
+                                     # records, not asserted from the design.
     (202616000, 202616060),          # THE H1 MATCH, run once 2026-09-05 and
                                      # VOIDED at game 60 of 224. These 60 seeds
                                      # built real SeededReferenceAgents and drove
@@ -255,6 +261,11 @@ TEST_ONLY_SEED_INTERVALS = (
 #: seeing the first 24, which is selection bias however clean the RNG is. So the
 #: WHOLE block retires together, drawn and undrawn alike.
 RETIRED_SEED_INTERVALS = (
+    (202617000, 202617224),          # H1 ATTEMPT 2, retired WHOLE 2026-09-07:
+                                     # a preregistered ONE-SHOT schedule that
+                                     # COMPLETED (verdict INCONCLUSIVE). L0's
+                                     # rule: replaying any part of it would be
+                                     # selection after seeing the result.
     (202616000, 202616224),          # THE H1 BLOCK, retired WHOLE 2026-09-05
                                      # after the single authorized match VOIDED
                                      # at game 60 of 224 (34m02s of a 180-minute

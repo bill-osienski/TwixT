@@ -208,18 +208,38 @@ _REGISTRY_SNAPSHOT = {
 
 
 @pytest.fixture
-def unspent_block():
-    """The attempt-2 block is UNSPENT in the REAL registry -- nothing to lift.
+def unspent_block(monkeypatch):
+    """Lifts the attempt-2 block's ELIGIBILITY in process, and nothing else.
 
-    ⚠ Attempt 1's version of this fixture LIFTED the spent block's exposure and
-    retirement in process so later-precondition tests could run. Attempt 2 draws
-    from a fresh, paper-only block, so this asserts the real state instead and
-    patches nothing. The day it fails, the block has been drawn from.
+    ⚠ INVERTED AGAIN by the match: attempt 2 ran once on 2026-09-07 and
+    COMPLETED, so the block is EXPOSED (224) and RETIRED (whole), and
+    `validate_schedule_executable` refuses it before authorization is consulted.
+    Left alone, every test of a LATER precondition, of the GATE and of the
+    enabled path would stop passing for a reason unrelated to what it tests.
+    The real-state refusal is asserted SEPARATELY and UNPATCHED below.
+    Touches ELIGIBILITY ONLY -- never H1_EXECUTION_AUTHORIZED.
     """
-    lo, hi = RULES.H1_SEED_BLOCK
-    assert not any(REF.seed_is_unavailable(s) for s in range(lo, hi)), \
-        "the attempt-2 block is exposed or retired; a fresh interval is needed again"
+    gate = RUN.H1_EXECUTION_AUTHORIZED
+    blk = tuple(RULES.H1_SEED_BLOCK)
+    assert blk in {tuple(i) for i in REF.EXPOSED_SEED_INTERVALS}, "the lift targets a block that is not exposed"
+    assert blk in {tuple(i) for i in REF.RETIRED_SEED_INTERVALS}, "the lift targets a block that is not retired"
+    monkeypatch.setattr(REF, "EXPOSED_SEED_INTERVALS",
+                        tuple(i for i in REF.EXPOSED_SEED_INTERVALS if tuple(i) != blk))
+    monkeypatch.setattr(REF, "RETIRED_SEED_INTERVALS",
+                        tuple(i for i in REF.RETIRED_SEED_INTERVALS if tuple(i) != blk))
+    assert not REF.seed_is_unavailable(blk[0]), "the lift did not take"
+    assert RUN.H1_EXECUTION_AUTHORIZED is gate is False
     yield
+    assert RUN.H1_EXECUTION_AUTHORIZED is False or gate is False
+
+
+def test_the_SPENT_attempt2_schedule_is_refused_in_the_REAL_state(tmp_path, monkeypatch):
+    """UNPATCHED. Attempt 2's block is spent, so the match cannot run again even
+    with the gate open -- which is the protection the fixture above lifts."""
+    monkeypatch.setattr(RUN, "H1_EXECUTION_AUTHORIZED", True)
+    with pytest.raises(RUN.H1Error, match="may not be executed"):
+        RUN._run(str(tmp_path / "r.jsonl"), mode=RUN.MATCH_MODE,
+                 trace_path=str(tmp_path / "t.jsonl"), _supervise=False)
 
 
 def test_the_SPENT_attempt1_schedule_is_refused_for_execution():

@@ -1,0 +1,1 @@
+COMPLETED: the runner returned 0; the verdict is in docs/superpowers/evidence/2026-09-07-t1j-h1-match-attempt2/01_h1_results.jsonl
