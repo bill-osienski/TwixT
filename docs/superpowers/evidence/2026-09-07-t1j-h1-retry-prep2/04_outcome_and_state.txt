@@ -1,0 +1,33 @@
+H1 RETRY PREPARATION -- REVIEW CORRECTIONS (gate restoration). Code-and-test only. NOTHING RAN. State at recording.
+======================================================================================================
+recorded 2026-09-07T17:24:47Z at HEAD 63f4128; 44 commits unpushed before this one
+changed files:  2 files changed, 105 insertions(+), 40 deletions(-)
+
+ALL SIX GATES:
+scripts/GPU/alphazero/e4_screen_command.py:44:SCREEN_AUTHORIZED = False
+scripts/GPU/alphazero/d1_probe.py:55:D1_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/h1_viability_runner.py:77:H1_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/runtime_requalification.py:79:RUNTIME_REQUAL_AUTHORIZED = False
+scripts/GPU/alphazero/lowply_qualification.py:55:LOWPLY_QUALIFICATION_AUTHORIZED = False
+scripts/GPU/alphazero/l0_match_command.py:41:L0_EXECUTION_AUTHORIZED = False
+Seed block [202617000, 202617224) still PAPER ONLY: registered anywhere = False
+NO registration, NO gate opened, NO Java, NO game, NO push.
+
+BLOCKER 1 -- --runner-source could redirect restoration to a DECOY and report success while the real gate stayed open.
+  The override is REMOVED from the production CLI (argparse rejects it, exit 2, nothing restored); the restoration target is bound to
+  the IMPORTED runner's source (RUNNER_SOURCE = RUN.__file__); substitution exists only as main(_runner_source=...), keyword-only, never on argv.
+BLOCKER 2 -- an output refusal (exit 7) returned BEFORE the finally: zero restorations, real gate left open.
+  The precheck now sits INSIDE the restoration boundary: it still refuses before spawning, the finally restores the gate, and a failed
+  restoration supersedes the refusal with exit 10. No return inside try/finally (Python 3.14 SyntaxWarning avoided; module compiles under -W error).
+
+FULL SUITE (.venv/bin/python -m pytest tests -q): ==== 4036 passed, 4 skipped, 53 deselected, 8 warnings in 807.09s (0:13:27) ====
+  run on this exact tree (only the two files above differ from HEAD); +3 tests vs the previous step (4,033).
+CONTROLS: 312/312 defects rejected; 0 not caught; 0 stale; ALL CONTROLS RAN: True; clean baseline over 248 distinct target tests: PASS
+clean baseline: PASS
+  312 = 308 + 4 new. RECORDED HONESTLY: the first harness round reported 310/312 -- two of MY controls were defective: one 'returned before
+  the boundary' from INSIDE the try (where finally still runs) and so was not the defect it named; the other substituted an EQUIVALENT
+  expression (vacuous). Both rewritten to the real defects (precheck moved IN FRONT of the try; default target retargeted) and re-run: 312/312.
+  The harness was re-run alone; the suite result above is from the same unchanged tree (the harness file is not a source).
+
+TESTS ADDED: decoy via argv rejected + nothing restored; output refusal still closes the (substituted) target; refusal + failed restore = 10;
+  default target realpath == the imported runner's file.

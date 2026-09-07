@@ -117,8 +117,10 @@ def _parser():
                                  description="THE H1 MATCH (attempt 2). NOT AUTHORIZED.")
     ap.add_argument("--results", default=DEFAULT_RESULTS)
     ap.add_argument("--trace", default=DEFAULT_TRACE)
-    ap.add_argument("--runner-source", default=RUNNER_SOURCE,
-                    help="the runner source whose gate line is restored after the run")
+    # 🔴 NO `--runner-source`. A production override let a decoy path be
+    # "restored" while the real runner's gate stayed open (review, 2026-09-07).
+    # The restoration target is bound to the IMPORTED runner's source; tests
+    # substitute through the PRIVATE keyword of `main`, unreachable from argv.
     ap.add_argument("--worker", action="store_true",
                     help="internal: run the match in this process (spawned by main)")
     return ap
@@ -152,9 +154,21 @@ def worker_main(argv: Optional[Sequence[str]] = None) -> int:
     return EXIT_COMPLETED if rc == 0 else EXIT_UNEXPECTED
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
-    """CLI. Gate, output precheck, supervised worker, gate restoration -- in
-    that order, and the restoration runs whatever happened."""
+def main(argv: Optional[Sequence[str]] = None, *,
+         _runner_source: Optional[str] = None) -> int:
+    """CLI. Gate, then INSIDE the restoration boundary: output precheck,
+    supervised worker; then gate restoration, whatever happened.
+
+    `_runner_source` is a PRIVATE test seam (keyword-only, never on argv): the
+    file whose gate line is restored. Production always restores the imported
+    runner's own source.
+
+    🔴 EVERY POST-AUTHORIZATION STEP IS INSIDE THE BOUNDARY. The output precheck
+    used to return exit 7 BEFORE the `finally`, so an existing results file
+    left the gate open with zero restorations (review, 2026-09-07). It still
+    refuses before spawning; it no longer skips the restore, and a failed
+    restore supersedes the refusal.
+    """
     argv = list(sys.argv[1:] if argv is None else argv)
     a = _parser().parse_args(argv)
     if a.worker:
@@ -163,44 +177,48 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print("the H1 match is NOT AUTHORIZED (H1_EXECUTION_AUTHORIZED is False). No "
               "worker was spawned, no JVM started, no file written.", file=sys.stderr)
         return EXIT_UNAUTHORIZED
-    try:
-        RUN.check_output_paths(a.results, a.trace)
-    except RUN.H1Error as e:
-        print(f"refused before spawning: {e}", file=sys.stderr)
-        return EXIT_REFUSED
+    target = RUNNER_SOURCE if _runner_source is None else _runner_source
 
     code = EXIT_UNEXPECTED
     try:
-        r = supervise([sys.executable, "-m", MODULE, "--worker", *argv],
-                      timeout_s=RUN.RUN_DEADLINE_S + SUPERVISOR_GRACE_S,
-                      kill_grace_s=5.0, interrupt_grace_s=INTERRUPT_GRACE_S)
-        if r["timed_out"]:
-            print(f"TIMEOUT: the worker exceeded {RUN.RUN_DEADLINE_S + SUPERVISOR_GRACE_S}s; "
-                  f"its process group was killed (cleared={r['group_cleared']}).",
-                  file=sys.stderr)
-        if r["interrupted"]:
-            print(f"INTERRUPTED by the operator; forwarded to the worker, which exited "
-                  f"{r['exit_code']}.", file=sys.stderr)
-        if not r["group_cleared"]:
-            print(f"CLEANUP FAILED: a descendant of the worker survived; the worker "
-                  f"itself exited {r['exit_code']}. Nothing here is a success.",
-                  file=sys.stderr)
-            code = EXIT_CLEANUP_FAILED
-        elif r["timed_out"]:
-            code = EXIT_TIMEOUT
-        elif r["interrupted"]:
-            code = EXIT_INTERRUPTED
-        else:
-            code = r["exit_code"]
+        try:
+            RUN.check_output_paths(a.results, a.trace)
+            refused = False
+        except RUN.H1Error as e:
+            print(f"refused before spawning: {e}", file=sys.stderr)
+            code, refused = EXIT_REFUSED, True   # no return: the finally must run
+        if not refused:
+            r = supervise([sys.executable, "-m", MODULE, "--worker", *argv],
+                          timeout_s=RUN.RUN_DEADLINE_S + SUPERVISOR_GRACE_S,
+                          kill_grace_s=5.0, interrupt_grace_s=INTERRUPT_GRACE_S)
+            if r["timed_out"]:
+                print(f"TIMEOUT: the worker exceeded {RUN.RUN_DEADLINE_S + SUPERVISOR_GRACE_S}s; "
+                      f"its process group was killed (cleared={r['group_cleared']}).",
+                      file=sys.stderr)
+            if r["interrupted"]:
+                print(f"INTERRUPTED by the operator; forwarded to the worker, which exited "
+                      f"{r['exit_code']}.", file=sys.stderr)
+            if not r["group_cleared"]:
+                print(f"CLEANUP FAILED: a descendant of the worker survived; the worker "
+                      f"itself exited {r['exit_code']}. Nothing here is a success.",
+                      file=sys.stderr)
+                code = EXIT_CLEANUP_FAILED
+            elif r["timed_out"]:
+                code = EXIT_TIMEOUT
+            elif r["interrupted"]:
+                code = EXIT_INTERRUPTED
+            else:
+                code = r["exit_code"]
     except Exception as e:                                    # noqa: BLE001
         print(f"UNEXPECTED in the supervisor: {type(e).__name__}: {e}", file=sys.stderr)
         code = EXIT_UNEXPECTED
     finally:
-        # 🔴 THE GATE IS RESTORED WHATEVER HAPPENED, and a restoration that fails
-        # is its own outcome: an open gate beside any other code is the larger
-        # fact, so it supersedes.
-        if not restore_gate(a.runner_source):
-            print(f"GATE NOT RESTORED: {a.runner_source} could not be rewritten to "
+        # 🔴 THE GATE IS RESTORED WHATEVER HAPPENED -- refusal, timeout, interrupt,
+        # crash or completion -- and a restoration that fails is its own outcome:
+        # an open gate beside any other code is the larger fact, so it
+        # supersedes, INCLUDING a refusal.
+        if not restore_gate(target):
+            print(f"GATE NOT RESTORED: {target} could not be rewritten to "
                   f"H1_EXECUTION_AUTHORIZED = False. Restore it BY HAND before "
                   f"anything else.", file=sys.stderr)
             code = EXIT_GATE_NOT_RESTORED

@@ -90,9 +90,56 @@ def test_main_refuses_an_EXISTING_output_path_before_spawning(monkeypatch, tmp_p
     monkeypatch.setattr(CMD, "supervise",
                         lambda *a, **k: (_ for _ in ()).throw(AssertionError("spawned")))
     (tmp_path / "r.jsonl").write_text("")
-    rc = CMD.main(["--results", str(tmp_path / "r.jsonl"), "--trace", str(tmp_path / "t.jsonl"),
-                   "--runner-source", str(_runner_copy(tmp_path, "True"))])
+    copy = _runner_copy(tmp_path, "True")
+    rc = CMD.main(["--results", str(tmp_path / "r.jsonl"), "--trace", str(tmp_path / "t.jsonl")],
+                  _runner_source=str(copy))
     assert rc == CMD.EXIT_REFUSED == 7
+    # 🔴 REVIEW REPRO: the refusal used to return BEFORE the restoration boundary,
+    # leaving the real gate open. The refusal must still CLOSE the target.
+    assert "H1_EXECUTION_AUTHORIZED = False\n" in copy.read_text(), \
+        "output refusal skipped gate restoration"
+
+
+def test_output_refusal_with_a_FAILED_restoration_is_exit_10_not_7(monkeypatch, tmp_path):
+    monkeypatch.setattr(RUN, "H1_EXECUTION_AUTHORIZED", True)
+    monkeypatch.setattr(CMD, "supervise",
+                        lambda *a, **k: (_ for _ in ()).throw(AssertionError("spawned")))
+    monkeypatch.setattr(CMD, "restore_gate", lambda path: False)
+    (tmp_path / "r.jsonl").write_text("")
+    rc = CMD.main(["--results", str(tmp_path / "r.jsonl"), "--trace", str(tmp_path / "t.jsonl")],
+                  _runner_source=str(_runner_copy(tmp_path, "True")))
+    assert rc == CMD.EXIT_GATE_NOT_RESTORED == 10
+
+
+def test_the_CLI_has_NO_runner_source_override_and_a_decoy_is_rejected(monkeypatch, tmp_path):
+    """🔴 REVIEW REPRO: `--runner-source decoy` made the wrapper "restore" the
+    decoy and report success while the REAL runner's gate stayed open. The
+    override is gone from the CLI; the target is bound to the imported runner's
+    source, and substitution exists only as a PRIVATE keyword for tests."""
+    monkeypatch.setattr(RUN, "H1_EXECUTION_AUTHORIZED", True)
+    monkeypatch.setattr(CMD, "supervise",
+                        lambda *a, **k: (_ for _ in ()).throw(AssertionError("spawned")))
+    restored = []
+    monkeypatch.setattr(CMD, "restore_gate", lambda path: restored.append(path) or True)
+    decoy = _runner_copy(tmp_path, "True")
+    with pytest.raises(SystemExit) as exc:
+        CMD.main(["--results", str(tmp_path / "r.jsonl"), "--trace", str(tmp_path / "t.jsonl"),
+                  "--runner-source", str(decoy)])
+    assert exc.value.code == 2, "argparse must reject the unknown option"
+    assert restored == [], "nothing was restored on a rejected command line"
+    assert "H1_EXECUTION_AUTHORIZED = True" in decoy.read_text()
+    assert "--runner-source" not in CMD._parser().format_help()
+
+
+def test_restoration_targets_the_IMPORTED_runners_source_by_default(monkeypatch, tmp_path):
+    monkeypatch.setattr(RUN, "H1_EXECUTION_AUTHORIZED", True)
+    monkeypatch.setattr(CMD, "supervise", lambda cmd, **k: {
+        "exit_code": 0, "timed_out": False, "interrupted": False, "group_cleared": True})
+    restored = []
+    monkeypatch.setattr(CMD, "restore_gate", lambda path: restored.append(path) or True)
+    rc = CMD.main(["--results", str(tmp_path / "r.jsonl"), "--trace", str(tmp_path / "t.jsonl")])
+    assert rc == 0
+    assert [os.path.realpath(p) for p in restored] == [os.path.realpath(RUN.__file__)]
 
 
 # ─────────────────────────────── exit codes ─────────────────────────────────
@@ -205,8 +252,8 @@ def _open_main(monkeypatch, tmp_path, supervise_result, *, restore_ok=True):
     monkeypatch.setattr(CMD, "supervise", fake_supervise)
     monkeypatch.setattr(CMD, "restore_gate", fake_restore)
     runner_copy = _runner_copy(tmp_path, "True")
-    rc = CMD.main(["--results", str(tmp_path / "r.jsonl"), "--trace", str(tmp_path / "t.jsonl"),
-                   "--runner-source", str(runner_copy)])
+    rc = CMD.main(["--results", str(tmp_path / "r.jsonl"), "--trace", str(tmp_path / "t.jsonl")],
+                  _runner_source=str(runner_copy))
     return rc, calls, runner_copy
 
 
