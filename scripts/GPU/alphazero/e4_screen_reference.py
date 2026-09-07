@@ -145,6 +145,19 @@ ACCOUNTED_SEED_INTERVALS = (
                                      # Registering it does NOT open the gate:
                                      # H1_EXECUTION_AUTHORIZED is a separate
                                      # constant and remains False.
+    (202617000, 202617224),          # H1 ATTEMPT 2, registered 2026-09-07 as
+                                     # ACCOUNTED ONLY: 0 exposed, 0 retired --
+                                     # a reservation is not a draw. Attempt 1
+                                     # ([202616000, 202616224) above) VOIDed at
+                                     # game 60 and retired WHOLE; this is the
+                                     # fresh interval, collision-proved twice
+                                     # (retry-prep v3b; seed-registration v4,
+                                     # the spent block named by ITS OWN name)
+                                     # against every category incl. D1's paper
+                                     # block and the spent block, 0 direct,
+                                     # 0 derived-stream, with a 776-seed gap.
+                                     # Registering it does NOT open the gate:
+                                     # H1_EXECUTION_AUTHORIZED stays False.
 )
 
 #: EXPERIMENTAL EXPOSURE: seeds drawn from OUTSIDE the permanently unschedulable

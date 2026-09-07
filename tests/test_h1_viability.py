@@ -175,19 +175,25 @@ def test_seeds_are_the_ATTEMPT2_block_one_per_task_in_order(tasks):
     assert [t["seed"] for t in tasks] == list(range(*P.H1_SEED_BLOCK))
 
 
-def test_the_ATTEMPT2_block_is_PAPER_ONLY_in_no_registry():
-    """Reserved on paper, DELIBERATELY UNREGISTERED: registering it is part of
-    the execution authorization, not of preparation. Exactly D1's convention."""
-    for seed in range(*R.H1_SEED_BLOCK):
-        assert not any(REF.seed_status(seed).values()), seed
+def test_the_ATTEMPT2_block_is_ACCOUNTED_ONLY_zero_exposed_zero_retired():
+    """⚠ INVERTED by the 2026-09-07 seed-registration authorization: paper-only
+    -> ACCOUNTED. A reservation is not a draw, so 0 exposed and 0 retired, and
+    nothing in the test band. Registering did NOT open the gate."""
+    lo, hi = R.H1_SEED_BLOCK
+    st = [REF.seed_status(s) for s in range(lo, hi)]
+    assert all(x["accounted"] for x in st)
+    assert not any(x["exposed"] or x["retired"] or x["test_only"] for x in st)
+    assert not any(REF.seed_is_unavailable(s) for s in range(lo, hi))
 
 
 def test_the_ATTEMPT2_block_keeps_a_load_bearing_GAP_from_every_prior_boundary():
     lo, hi = R.H1_SEED_BLOCK
     from scripts.GPU.alphazero import d1_selection as SEL
+    # every PRIOR boundary: the block's own interval (registered now) is excluded
     ends = {b for reg in (REF.ACCOUNTED_SEED_INTERVALS, REF.EXPOSED_SEED_INTERVALS,
                           REF.RETIRED_SEED_INTERVALS, REF.TEST_ONLY_SEED_INTERVALS,
-                          (SEL.SEED_INTERVAL,)) for a, b_ in reg for b in (a, b_)}
+                          (SEL.SEED_INTERVAL,)) for a, b_ in reg
+            if (a, b_) != (lo, hi) for b in (a, b_)}
     assert min(min(abs(lo - b), abs(hi - b)) for b in ends) >= 224
 
 
@@ -632,8 +638,7 @@ def test_the_DESIGN_layer_still_declares_no_gate_and_no_barrier():
     assert _run.H1_EXECUTION_AUTHORIZED is False
     with pytest.raises(_run.H1Error, match="H1_EXECUTION_AUTHORIZED is False"):
         _run.check_gate()
-    with pytest.raises(_run.H1Error, match="not registered"):
-        _run.check_seed_registration()      # barrier 2 REALLY up: attempt 2 is paper-only
+    _run.check_seed_registration()          # satisfied: attempt 2's block IS registered (2026-09-07)
 
 
 def test_validate_task_executable_STILL_does_not_ask_the_accounted_question():
@@ -656,9 +661,11 @@ def test_the_FROZEN_artifacts_seed_status_is_a_FREEZE_TIME_record_not_a_LIVE_one
     artifact is NOT rewritten: a preregistration edited whenever the world moves
     is not frozen. The LIVE status lives in the registry, which this test reads.
 
-    v4 (attempt 2) says PAPER-RESERVED, UNREGISTERED -- and TODAY that is also
-    the live state. The field is still a FREEZE-TIME record, and nothing in the
-    runtime reads it to decide anything.
+    v4 (attempt 2) says PAPER-RESERVED, UNREGISTERED. That was true when it was
+    frozen (2026-09-07 morning) and is FALSE since the seed-registration
+    authorization the same day: the block is ACCOUNTED. The artifact is not
+    rewritten, for the same reason. The field is a FREEZE-TIME record, and
+    nothing in the runtime reads it to decide anything.
     """
     v3 = P.load_h1_plan(P.H1_ATTEMPT1_PLAN_REL, sha256=P.H1_ATTEMPT1_PLAN_SHA256,
                         task_digest=R.H1_ATTEMPT1_TASK_DIGEST)
@@ -669,7 +676,9 @@ def test_the_FROZEN_artifacts_seed_status_is_a_FREEZE_TIME_record_not_a_LIVE_one
     v4 = P.load_h1_plan()
     assert v4["seed_block_status"].startswith("PAPER-RESERVED, UNREGISTERED")
     lo, hi = R.H1_SEED_BLOCK
-    assert not any(any(REF.seed_status(s).values()) for s in range(lo, hi))
+    assert all(REF.seed_is_accounted(s) for s in range(lo, hi)), \
+        "the live registry disagrees with this test, not with the frozen artifact"
+    assert not any(REF.seed_is_exposed(s) or REF.seed_is_retired(s) for s in range(lo, hi))
     # and nothing in the RUNTIME reads that field to decide anything
     import inspect
     from scripts.GPU.alphazero import h1_viability_runner as _run

@@ -1,0 +1,44 @@
+H1 ATTEMPT-2 SEED REGISTRATION -- ACCOUNTED ONLY. Gates and seed state computed at the moment of recording.
+====================================================================================================
+recorded 2026-09-07T18:27:12Z at HEAD e440b87; 45 commits unpushed before this one
+changed:  3 files changed, 60 insertions(+), 48 deletions(-)
+
+RE-PROOF (01_collision_proof_v4.py.txt / 02_..._run.txt), run BEFORE editing the registry, the spent attempt-1 block referenced by ITS OWN NAME:
+  prior seeds: 3885  {'ACCOUNTED': 3555, 'EXPOSED': 189, 'RETIRED': 547, 'TEST_ONLY': 100, 'CONSUMED_SEEDS': 1, 'D1_PAPER_S14': 221}
+  H1 ATTEMPT 2 CANDIDATE (202617000, 202617224)  n=224
+    direct overlap      : {'ACCOUNTED': 0, 'EXPOSED': 0, 'RETIRED': 0, 'TEST_ONLY': 0, 'CONSUMED_SEEDS': 0, 'D1_PAPER_S14': 0}
+    stream collisions   : 0
+    CLEAN               : True
+    REJECTED    derived-stream collision at 204449028, NO direct overlap
+    candidate (202617000, 202617224): nearest prior boundary at distance 776 -> gap policy PASS
+  VERDICT: candidate (202617000, 202617224) collision-clean = True; gap policy = True; failed collision controls = 0; failed policy controls = 0
+
+ALL SIX GATES:
+  scripts/GPU/alphazero/d1_probe.py:55:D1_EXECUTION_AUTHORIZED = False
+  scripts/GPU/alphazero/e4_screen_command.py:44:SCREEN_AUTHORIZED = False
+  scripts/GPU/alphazero/h1_viability_runner.py:77:H1_EXECUTION_AUTHORIZED = False
+  scripts/GPU/alphazero/l0_match_command.py:41:L0_EXECUTION_AUTHORIZED = False
+  scripts/GPU/alphazero/lowply_qualification.py:55:LOWPLY_QUALIFICATION_AUTHORIZED = False
+  scripts/GPU/alphazero/runtime_requalification.py:79:RUNTIME_REQUAL_AUTHORIZED = False
+
+SEED STATE (accounted / exposed / retired / test_only):
+  H1 attempt 2 (202617000, 202617224): 224 / 0 / 0 / 0   <- REGISTERED NOW: ACCOUNTED 224, zero exposed, zero retired
+  H1 attempt 1 (202616000, 202616224): 224 / 60 / 224 / 0   (spent; unchanged)
+  D1 paper     (202615000, 202615221): 0 / 0 / 0 / 0   (still PAPER-ONLY)
+  runner check_seed_registration(): SATISFIED (barrier 2 down)
+  runner gate H1_EXECUTION_AUTHORIZED: False  (barrier 1 UP)
+  🔑 ONE BARRIER DOWN, ONE UP -- registering did not open the gate (asserted by test against the REAL state).
+
+ONLY the ACCOUNTED tuple changed (one entry + comment); EXPOSED, RETIRED, TEST_ONLY untouched:
+scripts/GPU/alphazero/e4_screen_reference.py | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+  added tuple lines: ['+    (202617000, 202617224),          # H1 ATTEMPT 2, registered 2026-09-07 as']
+
+FULL SUITE (.venv/bin/python -m pytest tests -q): ==== 4035 passed, 4 skipped, 53 deselected, 8 warnings in 730.84s (0:12:10) ==== (previous 4,036; one test deleted -- its real-state premise, the unregistered block, no longer holds)
+CONTROLS: 314/314 defects rejected; 0 not caught; 0 stale | ALL CONTROLS RAN: True | clean baseline over 248 distinct target tests: PASS
+  314 = 312 + 2 new (block un-registered; block marked RETIRED). Fixtures INVERTED back to the registered shape (strip to reach the refusing branch;
+  `openable` asserts registration). ⚠ One older control label reads 'the attempt-2 block quietly registered' but injects the block into EXPOSED;
+  it now discriminates 'marked EXPOSED' and was left unrenamed so the archived harness equals the one that ran.
+
+NO gate opened, NO Java, NO incumbent load, NO game, NO push. D1 stays paper-only.
+NEXT (not authorized): the single 224-game match -- open ONLY H1_EXECUTION_AUTHORIZED, run once via h1_match_command (which restores the gate), verify.
