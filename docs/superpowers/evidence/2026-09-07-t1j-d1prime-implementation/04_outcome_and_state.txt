@@ -1,0 +1,78 @@
+D1' ANALYSIS -- IMPLEMENTATION (code-and-test only). NOTHING RAN. State at the moment of recording.
+====================================================================================================
+recorded 2026-09-08T03:13:11Z at HEAD 5b1680d; 49 commits unpushed before this one
+new files only: docs/superpowers/evidence/2026-09-07-t1j-d1prime-implementation/, scripts/GPU/alphazero/d1prime_analysis.py, tests/test_d1prime_analysis.py
+
+BOUND TO THE FROZEN PLAN docs/superpowers/2026-09-07-t1j-d1prime-diagnostic-proposal.md
+  plan sha256 e08948fdd93d2a972ba9478234d5b9ba151d8bf9d701290c9d69cb7149b921a7 (committed 5b1680d, unmodified: True)
+  constants read from the module: K_LPRD=5 T_THRESHOLD=0.15 B=10000 seed=20260907
+    FLOOR={'cells': 8, 'positions': 40, 'controls': 30, 'games': 12} ceiling=240 min_ply=5 cap=3
+    primary=mover_fragmentation secondary=created_threat arms=('t1j_red', 't1j_black')
+
+ALL SIX GATES (this module has none -- it has nothing to gate):
+  scripts/GPU/alphazero/d1_probe.py:55:D1_EXECUTION_AUTHORIZED = False
+  scripts/GPU/alphazero/e4_screen_command.py:44:SCREEN_AUTHORIZED = False
+  scripts/GPU/alphazero/h1_viability_runner.py:77:H1_EXECUTION_AUTHORIZED = False
+  scripts/GPU/alphazero/l0_match_command.py:41:L0_EXECUTION_AUTHORIZED = False
+  scripts/GPU/alphazero/lowply_qualification.py:55:LOWPLY_QUALIFICATION_AUTHORIZED = False
+  scripts/GPU/alphazero/runtime_requalification.py:79:RUNTIME_REQUAL_AUTHORIZED = False
+
+NOTHING EXECUTED: no D1 run, no real readout analysed, no confirmation data read, no model, no JVM, no seed drawn/reserved/registered, no gate change, no training, no push.
+  Registries untouched: 0 diff lines
+  The module names no model loader, no subprocess, no adapter, no registry, no gate (asserted by a test).
+  The only randomness: numpy default_rng(20260907) (PCG64) on SYNTHETIC fixtures -- analysis-only, in no seed registry.
+
+IMPLEMENTED (scripts/GPU/alphazero/d1prime_analysis.py):
+  rank_raw                                   raw-policy ranks, ties by (row, col) only -- takes the policy and nothing else
+  position_row / rows_from_d1_report         LPRD = rank_raw(t1j mdPly-6 move) > 5; `agree` computed SEPARATELY
+  matched_statistic                          T = MH-weighted within-cell difference over common-support cells; unmatched rows retained descriptively
+  floors_met                                 the eligibility floor -- a COUNT rule, accepts AT the floor
+  design_strata / resample_once / replicates 16 opening x arm strata, 2 games drawn with replacement, WHOLE games, multiplicity retained
+  central_interval / stability_interval      type-7 central 95% range; undefined replicates COUNTED and KEPT -> interval UNDEFINED
+  development_decision                       floor -> bootstrap -> GO iff T >= 0.15 and lower bound > 0; secondary reported, cannot GO
+  confirmation_decision                      same statistic on a different cohort + both arms defined and > 0; undefined arm -> NO_GO - arm undefined
+  confirmation_select                        filter first (incumbent, ply < 5, within-half dedup, cross-half digests) then select once; ceiling 240 REFUSES
+  check_cohort                               type-strict binding to the frozen rows (_same: False != 0, 10 != '10' != 10.0)
+
+AMBIGUITIES IN THE PLAN, RESOLVED AND RECORDED (each named in the module docstring and asserted by a test):
+  1. 'contributing games' (floor) = games holding >= 1 row of EITHER role in a COMMON-SUPPORT cell;
+     unmatched rows make no game contribute. (The plan says 'contributing games' without scoping it.)
+  2. Resampling strata are the DESIGN's games (2 per opening x arm from a task list), including games that
+     contributed no selected row -- not games inferred from the cohort's rows, which would drop empty games.
+  3. The confirmation ceiling of '240 positions' is read as 240 SELECTED ROWS of both roles, since 240 x 5
+     queries = the 1,200 the plan pins in the same sentence.
+  4. Per-arm T in confirmation = T over that arm's own common-support cells with that arm's own weights;
+     the both-arm rule reads the point value only (the plan gives no per-arm interval).
+  None of these changes a frozen number; each was chosen before any real data exists and is testable.
+
+FULL SUITE (.venv/bin/python -m pytest tests -q): ==== 4080 passed, 4 skipped, 53 deselected, 8 warnings in 830.81s (0:13:50) ==== (previous 4,035; +45: 44 new + 1 test file)
+CONTROLS: 339/339 defects rejected; 0 not caught; 0 stale | ALL CONTROLS RAN: True | clean baseline over 270 distinct target tests: PASS
+  339 = 315 + 24 new, all on d1prime_analysis.py, one per Sec. 9 requirement:
+   REJECTED     rank ties broken in REVERSE (row, col)
+   REJECTED     agree coupled to lprd (the withdrawn implication)
+   REJECTED     k drifts from 5 to 6
+   REJECTED     the depth-3 move read instead of mdPly 6
+   REJECTED     MH weights replaced by equal weights
+   REJECTED     common support pooled: cells with ONE role enter the statistic
+   REJECTED     the direction flipped (controls minus positions)
+   REJECTED     the decision threshold lowered
+   REJECTED     the lower-bound condition dropped (T alone decides)
+   REJECTED     undefined replicates silently DISCARDED
+   REJECTED     a game drawn twice contributes its rows ONCE (re-deduplicated)
+   REJECTED     the second draw copies the first (no replacement)
+   REJECTED     the PRNG seed drifts
+   REJECTED     the quantile convention changes from type 7
+   REJECTED     the eligibility floor becomes strict (refuses AT the floor)
+   REJECTED     contributing games counted from UNMATCHED rows too
+   REJECTED     an undefined arm reported as plain NO_GO (treated as zero)
+   REJECTED     the both-arm rule dropped
+   REJECTED     cross-half duplicates no longer removed
+   REJECTED     the ply < 5 eligibility filter dropped
+   REJECTED     the ceiling drops silently instead of refusing
+   REJECTED     within-half dedup keeps the LATEST row
+   REJECTED     cohort binding loses type strictness
+   REJECTED     cohort binding stops checking the count
+  Clean baseline verified over 270 distinct target tests BEFORE any injection; every source restored.
+
+NEXT (not authorized): analysis of real D1 readouts (D1 has never produced a record -- its one run VOIDed),
+  confirmation inspection, D1 execution, seed registration, training, push.
