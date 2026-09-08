@@ -1,0 +1,79 @@
+D1' REPORT CONTRACT -- IDENTITY, ELAPSED, SHAPE (code-and-test only). NOTHING RAN.
+====================================================================================================
+recorded 2026-09-08T18:25:49Z at HEAD 5eb1795; 53 commits unpushed before this one
+changed:  2 files changed, 284 insertions(+), 29 deletions(-)
+
+ALL SIX GATES:
+  scripts/GPU/alphazero/d1_probe.py:55:D1_EXECUTION_AUTHORIZED = False
+  scripts/GPU/alphazero/e4_screen_command.py:44:SCREEN_AUTHORIZED = False
+  scripts/GPU/alphazero/h1_viability_runner.py:77:H1_EXECUTION_AUTHORIZED = False
+  scripts/GPU/alphazero/l0_match_command.py:41:L0_EXECUTION_AUTHORIZED = False
+  scripts/GPU/alphazero/lowply_qualification.py:55:LOWPLY_QUALIFICATION_AUTHORIZED = False
+  scripts/GPU/alphazero/runtime_requalification.py:79:RUNTIME_REQUAL_AUTHORIZED = False
+NOTHING EXECUTED: no D1 run, no Java, no model, no real analysis, no seed drawn or registered, no gate change, no training, no push.
+
+🔴 A CLAIM OF MINE WAS WRONG, AND THIS CORRECTS THE RECORD. The 5eb1795 commit message said the
+   contract 'binds each of those to the frozen value ... and both identities'. It did NOT: the two
+   identities were only required to be NON-EMPTY, so `{"anything": "accepted"}` passed, and
+   `elapsed_s` was not checked at all. The evidence file of that commit said 'present and non-empty',
+   which was accurate; the COMMIT MESSAGE overstated it. Both are now true as written.
+
+WHAT IS BOUND NOW (values read from the qualification's own constants, never retyped):
+  incumbent_identity  == d1_probe.frozen_incumbent_identity(), EXACTLY -- reference 'calib020_0001', its sha1, the L0 plan sha256, the eval config,
+                         the noise suppression, both RNG masks, the readout path and agent lifetime.
+  toolchain_identity     jar_sha256    == 53ec95e421db2531...  (e4_screen_command.JAR_SHA256)
+                         jdk_components == 4 pinned components (e4_screen_integration.PINNED_JDK)
+                         sources        == 4 helper sources, hashed from the committed files
+                             281664cf68fdd856...  E3bDump.java
+                             fa6623390c0ee5f3...  E4Preflight.java
+                             559fb9483cc34f4c...  ScratchPrefs.java
+                             09c0d74cf3c11130...  ScratchPrefsFactory.java
+                         main_class     == net.schwagereit.t1j.E4Preflight  (t1j_adapter.PREFLIGHT_MAIN)
+                         classes        == 4 compiled classes (QUALIFIED_CLASSES)
+                             aad79e9fc149d012...  e2probe/ScratchPrefs.class
+                             dff0e8f933c656f3...  e2probe/ScratchPrefsFactory.class
+                             d4c796067ed4ece2...  net/schwagereit/t1j/E3bDump.class
+                             1f2425fd7b528ad4...  net/schwagereit/t1j/E4Preflight.class
+  🔑 The compiled-class pin is CHECKED AGAINST ITS EVIDENCE by a test: it must equal both the
+     2026-09-06 compile-only record and the 2026-09-07 H1 attempt-2 setup record. A pinned digest
+     never compared with its artifact is decoration.
+  elapsed_s              a real, finite number in [0, 5400]
+  positions              REQUIRED, a list of per-position records; malformed input is refused BY NAME,
+                         never a raw KeyError or TypeError from inside the analysis.
+
+FULL SUITE (.venv/bin/python -m pytest tests -q): ==== 4152 passed, 4 skipped, 53 deselected, 8 warnings in 894.04s (0:14:54) ==== (previous 4,130; +22 tests)
+CONTROLS: 375/375 defects rejected; 0 not caught; 0 stale | ALL CONTROLS RAN: True | clean baseline over 304 distinct target tests: PASS
+  375 = 376 written, minus one the harness proved unreachable. New ones:
+   REJECTED     D1' stops requiring elapsed_s and positions to be present
+   REJECTED     D1' accepts any non-empty incumbent identity again
+   REJECTED     D1' accepts any non-empty toolchain identity again
+   REJECTED     D1' stops checking the compiled-class identity
+   REJECTED     D1' stops checking the helper SOURCE identity
+   REJECTED     D1' stops checking the MAIN CLASS
+   REJECTED     the compiled-class pin drifts from the qualified builds
+   REJECTED     a malformed toolchain identity raises a TypeError instead of a refusal
+   REJECTED     elapsed_s is no longer bounded by the deadline
+   REJECTED     malformed positions raise a TypeError instead of a refusal
+   REJECTED     the analysis reaches an EXECUTING adapter function
+
+  🔴 THE FIRST HARNESS RUN REPORTED 372/376 -- FOUR NOT CAUGHT, every one MY control or a redundant guard:
+     * `math.isfinite` was UNREACHABLE: the range comparison already excludes nan (which compares False
+       to everything) and both infinities. The guard and its control were DELETED, and the test now
+       asserts that property explicitly so what the range does stays visible.
+     * the 'no acquisition metadata' control removed the contract call from `analyse_development`, but
+       its target test had been converted to call the contract DIRECTLY -- retargeted to the ordering test.
+     * the malformed-toolchain control targeted the `a string` case, where `'jar_sha256' not in "a string"`
+       still refuses; retargeted to `42`, where the missing isinstance guard would raise TypeError.
+     * my adapter control merely ADDED AN UNUSED IMPORT, which the AST guard rightly ignores; it now
+       reaches an executing attribute (`A.query`), which the guard does catch.
+
+  ⚠ ALSO CHANGED, AND SAID PLAINLY: the blanket substring ban on 't1j_adapter' in the analysis module was
+    replaced by an AST guard. The identity contract MUST compare the record against the adapter's frozen
+    pins rather than retype them; what must stay true is that nothing executes, so the guard now requires
+    every attribute taken from the adapter to be one of {PREFLIGHT_SOURCES, PREFLIGHT_MAIN}.
+  ⚠ Test runtime: the contract's refusal tests were calling the full production entry (cohort resolution
+    + 10,000 replicates) once per case -- 8+ minutes for one file. They now exercise `check_report_contract`
+    directly; end-to-end acceptance and ordering keep their full runs. The file runs in ~78 s.
+
+NEXT, in order, none authorized here: re-prove and register [202615000, 202615221) -> open ONLY the D1
+  gate -> run the 221 positions / 1,105 queries once -> close the gate -> apply D1' to that record.

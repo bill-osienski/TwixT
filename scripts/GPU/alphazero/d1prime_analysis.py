@@ -492,9 +492,83 @@ def _acquisition_contract() -> Dict[str, Any]:
             "per_query_timeout_s": D1P.PER_QUERY_TIMEOUT_S,
             "run_deadline_s": D1P.RUN_DEADLINE_S}
 
-#: Present and non-empty, but not pinned to a value here: their content is the
-#: run's own identity, checked against the toolchain pins by the run itself.
-ACQUISITION_PRESENT_FIELDS = ("incumbent_identity", "toolchain_identity")
+#: The identities a completed record must carry. 🔴 An earlier version required
+#: them only to be NON-EMPTY, so `{"anything": "accepted"}` passed and a record
+#: from another model or another toolchain could be read as evidence about
+#: `calib020_0001`. Both are now bound to the qualification's own pins below.
+ACQUISITION_IDENTITY_FIELDS = ("incumbent_identity", "toolchain_identity")
+
+#: The compiled classes the qualified toolchain produces from the committed
+#: sources. Identical in the 2026-09-06 compile-only verification
+#: (`04_compile_record.json`) and in the 2026-09-07 H1 attempt-2 setup record;
+#: a test compares this pin with BOTH, so it cannot become decoration.
+QUALIFIED_CLASSES = {
+    "e2probe/ScratchPrefs.class":
+        "aad79e9fc149d012209a53e6cad99cc7d97bf79ab03a56536934891d6dbf8f39",
+    "e2probe/ScratchPrefsFactory.class":
+        "dff0e8f933c656f3d3e48c7b2519746508162b8fddd3db45066038c91480be7d",
+    "net/schwagereit/t1j/E3bDump.class":
+        "d4c796067ed4ece22f8255821c87364225a3407951585664ee9a58a6407b0516",
+    "net/schwagereit/t1j/E4Preflight.class":
+        "1f2425fd7b528ad4c1efbdc47331bd0d10261e4a0c7e8a149ecdabfbdcfc88a8",
+}
+
+
+def _expected_toolchain_identity() -> Dict[str, Any]:
+    """The pinned toolchain, read from the qualification's OWN constants."""
+    from . import e4_screen_command as SCREEN_CMD
+    from . import e4_screen_integration as INT
+    from . import t1j_adapter as A
+    return {"jar_sha256": SCREEN_CMD.JAR_SHA256,
+            "jdk_components": dict(INT.PINNED_JDK),
+            "sources": {p_.name: INT._sha256(str(p_)) for p_ in A.PREFLIGHT_SOURCES},
+            "main_class": A.PREFLIGHT_MAIN,
+            "classes": dict(QUALIFIED_CLASSES)}
+
+
+def _check_identities(d1_report: Mapping[str, Any]) -> None:
+    """Both identities, bound to frozen values -- not merely non-empty."""
+    from . import d1_probe as D1P
+    want_inc = D1P.frozen_incumbent_identity()
+    got_inc = d1_report["incumbent_identity"]
+    if not _same(got_inc, want_inc):
+        raise D1PrimeError(
+            f"incumbent_identity is not the frozen one: the record must describe "
+            f"{want_inc.get('reference')!r} at the frozen settings, exactly as "
+            f"`d1_probe.frozen_incumbent_identity()` states them. A record from "
+            f"another model is not evidence about this one.")
+    got_tc = d1_report["toolchain_identity"]
+    if not isinstance(got_tc, dict):
+        raise D1PrimeError(
+            f"toolchain_identity is {type(got_tc).__name__}, not a mapping of the "
+            f"pinned jar, jdk, sources, main class and compiled classes.")
+    for field, want in _expected_toolchain_identity().items():
+        if field not in got_tc:
+            raise D1PrimeError(
+                f"toolchain_identity carries no {field!r}: the record does not say "
+                f"which instrument produced it.")
+        if not _same(got_tc[field], want):
+            raise D1PrimeError(
+                f"toolchain_identity {field!r} does not match the qualification pin "
+                f"({got_tc[field]!r} vs {want!r}): this record was produced by a "
+                f"different instrument.")
+
+
+def _check_elapsed(d1_report: Mapping[str, Any], deadline: float) -> None:
+    """A completed run records how long it took, and it fits its own deadline."""
+    value = d1_report["elapsed_s"]
+    # 🔑 NON-FINITE VALUES ARE EXCLUDED BY THE RANGE ITSELF: `nan` compares False
+    # against everything and both infinities fall outside [0, deadline]. An
+    # explicit `math.isfinite` here was UNREACHABLE -- the harness proved no input
+    # could fail it while passing the range -- and a branch no test can reach is a
+    # branch to delete. The test asserts the non-finite cases explicitly, so what
+    # the range is doing for us stays visible.
+    if type(value) not in (int, float) or isinstance(value, bool) \
+            or not 0 <= value <= deadline:
+        raise D1PrimeError(
+            f"elapsed_s is {value!r}; a completed run records a real, finite "
+            f"duration in [0, {deadline}]. A record without one is not a completed "
+            f"run, and one outside the deadline did not finish inside it.")
 
 
 def check_report_contract(d1_report: Mapping[str, Any],
@@ -515,25 +589,28 @@ def check_report_contract(d1_report: Mapping[str, Any],
     is the canonical row's.
     """
     contract = _acquisition_contract()
-    missing = [k for k in (*contract, *ACQUISITION_PRESENT_FIELDS)
-               if k not in d1_report]
+    missing = [k for k in (*contract, *ACQUISITION_IDENTITY_FIELDS,
+                           "elapsed_s", "positions") if k not in d1_report]
     if missing:
         raise D1PrimeError(
             f"the input is not a completed D1 record: it states none of "
             f"{missing}. A completed run records its own acquisition -- position "
             f"count, queries spent, the cap, the seed interval, the per-query "
-            f"timeout, the run deadline and both identities.")
+            f"timeout, the run deadline, its elapsed time, both identities and its "
+            f"positions.")
     for key, want in contract.items():
         if not _same(d1_report[key], want):
             raise D1PrimeError(
                 f"{key} is {d1_report[key]!r}, but the frozen D1 acquisition is "
                 f"{want!r}: this record did not come from the frozen run.")
-    for key in ACQUISITION_PRESENT_FIELDS:
-        if not d1_report[key]:
-            raise D1PrimeError(
-                f"{key} is empty; a completed run records what it ran against.")
+    _check_identities(d1_report)
+    _check_elapsed(d1_report, contract["run_deadline_s"])
 
     positions = d1_report["positions"]
+    if not isinstance(positions, list) or not all(isinstance(p, dict) for p in positions):
+        raise D1PrimeError(
+            "positions must be a list of per-position records; a malformed input is "
+            "refused by name rather than raising a TypeError from inside the analysis.")
     if len(positions) != len(canonical_rows):
         raise D1PrimeError(
             f"the record holds {len(positions)} positions for a cohort of "
@@ -554,7 +631,8 @@ def check_report_contract(d1_report: Mapping[str, Any],
         if not _same(pos["prefix"], want_row["prefix"]):
             raise D1PrimeError(
                 f"row {i}'s prefix is not the canonical one for this position.")
-    return {k: d1_report[k] for k in (*contract, *ACQUISITION_PRESENT_FIELDS)}
+    return {k: d1_report[k] for k in (*contract, *ACQUISITION_IDENTITY_FIELDS,
+                                      "elapsed_s")}
 
 
 def _analyse(rows, *, frozen_cohort, tasks, reps, kernel, B, seed):

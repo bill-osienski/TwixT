@@ -6,6 +6,8 @@ The only randomness is the plan's analysis-only PRNG (PCG64, seed 20260907) on
 synthetic fixtures. Every §9 control of the plan has a test below whose failure
 mode is the named defect.
 """
+import copy
+import functools
 import inspect
 import itertools
 import re
@@ -766,13 +768,18 @@ def test_the_entries_report_what_they_bound():
 
 # ───────── the PRODUCTION entry: resolves the canonical cohort itself ───────
 
-@pytest.fixture(scope="module")
-def canonical():
-    """The canonical §13 cohort and design, resolved the way production must."""
+@functools.lru_cache(maxsize=1)
+def _canonical_cached():
     from scripts.GPU.alphazero import d0_postmortem as D0, d1_selection as SEL, l0_match_plan as L0P
     bound = D0.bind_record(DP.L0_RECORD_REL, DP.L0_PLAN_REL)
     rows = SEL.select_all(bound)["positions"]
     return {"rows": rows, "tasks": L0P.load_l0_plan(DP.L0_PLAN_REL)["tasks"]}
+
+
+@pytest.fixture(scope="module")
+def canonical():
+    """The canonical §13 cohort and design, resolved the way production must."""
+    return _canonical_cached()
 
 
 def _report_for(rows, *, lprd_positions, lprd_controls):
@@ -794,23 +801,40 @@ def _report_for(rows, *, lprd_positions, lprd_controls):
 
 # ───────── the report contract: D1' must consume a COMPLETED D1 record ──────
 
-def _complete_report(canon, *, lprd_positions=1.0, lprd_controls=0.0, **override):
-    """A D1 report as `run_d1` writes it: the acquisition metadata AND per-position
-    seeds and prefixes, not merely `positions`."""
+@functools.lru_cache(maxsize=4)
+def _positions_cached(n_rows, lprd_positions, lprd_controls):
+    """CACHED per (cohort, rates): building 221 mocked readouts through the real
+    record writer is the other half of the cost."""
+    canon = _canonical_cached()
     from scripts.GPU.alphazero import d1_probe as D1P
     rep = _report_for(canon["rows"], lprd_positions=lprd_positions,
                       lprd_controls=lprd_controls)
     lo, _hi = D1P.SEED_INTERVAL
-    rep["positions"] = [dict(p, seed=lo + i, prefix=[list(m) for m in r["prefix"]])
-                        for i, (p, r) in enumerate(zip(rep["positions"], canon["rows"]))]
+    return [dict(p, seed=lo + i, prefix=[list(m) for m in r["prefix"]])
+            for i, (p, r) in enumerate(zip(rep["positions"], canon["rows"]))]
+
+
+def _complete_report(canon, *, lprd_positions=1.0, lprd_controls=0.0, **override):
+    """A D1 report as `run_d1` writes it: the acquisition metadata AND per-position
+    seeds and prefixes, not merely `positions`."""
+    from scripts.GPU.alphazero import d1_probe as D1P
+    rep = {"positions": copy.deepcopy(
+        _positions_cached(len(canon["rows"]), lprd_positions, lprd_controls))}
     rep.update({"n_positions": D1P.N_POSITIONS, "queries_spent": D1P.EXPECTED_QUERY_SPEND,
                 "query_cap": D1P.QUERY_CAP, "seed_interval": list(D1P.SEED_INTERVAL),
                 "per_query_timeout_s": D1P.PER_QUERY_TIMEOUT_S,
                 "run_deadline_s": D1P.RUN_DEADLINE_S, "elapsed_s": 1234.5,
-                "incumbent_identity": {"reference": "calib020_0001"},
-                "toolchain_identity": {"jar_sha256": "53ec95e4"}})
+                "incumbent_identity": _frozen_identity(),
+                "toolchain_identity": _toolchain()})
     rep.update(override)
     return rep
+
+
+def _contract(canonical, rep):
+    """The contract ALONE. The production entry also resolves the cohort and runs
+    10,000 replicates; a refusal test that does all that is a slow test of the
+    wrong thing. Ordering and end-to-end acceptance are covered separately."""
+    return DP.check_report_contract(rep, canonical["rows"])
 
 
 def test_a_COMPLETED_report_is_accepted_and_its_acquisition_is_recorded(canonical):
@@ -829,7 +853,7 @@ def test_a_report_of_positions_ALONE_is_REFUSED(canonical):
     completed D1 run."""
     bare = {"positions": _complete_report(canonical)["positions"]}
     with pytest.raises(DP.D1PrimeError, match="not a completed D1 record"):
-        DP.analyse_development(bare)
+        _contract(canonical, bare)
 
 
 @pytest.mark.parametrize("field", ["n_positions", "queries_spent", "query_cap",
@@ -840,7 +864,7 @@ def test_every_acquisition_FIELD_is_required(canonical, field):
     rep = _complete_report(canonical)
     del rep[field]
     with pytest.raises(DP.D1PrimeError, match=field):
-        DP.analyse_development(rep)
+        _contract(canonical, rep)
 
 
 @pytest.mark.parametrize("field,value", [
@@ -853,7 +877,7 @@ def test_an_acquisition_field_that_DISAGREES_with_the_frozen_run_is_REFUSED(
     """A short spend, a widened cap, the retired interval, a shortened timeout:
     each would mean the record came from a run other than the frozen one."""
     with pytest.raises(DP.D1PrimeError):
-        DP.analyse_development(_complete_report(canonical, **{field: value}))
+        _contract(canonical, _complete_report(canonical, **{field: value}))
 
 
 def test_positions_must_carry_the_FROZEN_SEED_ASSIGNMENT_row_by_row(canonical):
@@ -865,24 +889,24 @@ def test_positions_must_carry_the_FROZEN_SEED_ASSIGNMENT_row_by_row(canonical):
     same = {"positions": [dict(p, seed=lo) for p in rep["positions"]],
             **{k: v for k, v in rep.items() if k != "positions"}}
     with pytest.raises(DP.D1PrimeError, match="row 1"):
-        DP.analyse_development(same)
+        _contract(canonical, same)
     swapped = _complete_report(canonical)
     ps = swapped["positions"]
     ps[0], ps[1] = dict(ps[0], seed=lo + 1), dict(ps[1], seed=lo)
     with pytest.raises(DP.D1PrimeError, match="row 0"):
-        DP.analyse_development(swapped)
+        _contract(canonical, swapped)
 
 
 def test_positions_must_carry_a_PREFIX_matching_the_canonical_row(canonical):
     rep = _complete_report(canonical)
     rep["positions"][3] = {k: v for k, v in rep["positions"][3].items() if k != "prefix"}
     with pytest.raises(DP.D1PrimeError, match="prefix"):
-        DP.analyse_development(rep)
+        _contract(canonical, rep)
     rep = _complete_report(canonical)
     rep["positions"][3] = dict(rep["positions"][3],
                                prefix=[[0, 0]] + rep["positions"][3]["prefix"][1:])
     with pytest.raises(DP.D1PrimeError, match="prefix"):
-        DP.analyse_development(rep)
+        _contract(canonical, rep)
 
 
 def test_the_report_contract_runs_BEFORE_the_statistic(canonical, monkeypatch):
@@ -894,6 +918,140 @@ def test_the_report_contract_runs_BEFORE_the_statistic(canonical, monkeypatch):
                         lambda *a, **k: pytest.fail("a row was built from an unchecked record"))
     with pytest.raises(DP.D1PrimeError, match="not a completed D1 record"):
         DP.analyse_development({"positions": _complete_report(canonical)["positions"]})
+
+
+# ───────────── identity: the record must be OUR model and OUR toolchain ─────
+
+def test_the_QUALIFIED_CLASS_PIN_matches_both_qualified_builds():
+    """The compiled-class pin is checked against the artifacts it claims to
+    describe -- a pinned digest never compared with its evidence is decoration."""
+    import json as _json
+    compile_only = _json.load(open("docs/superpowers/evidence/"
+                                   "2026-09-06-t1j-e4preflight-compile-only/"
+                                   "04_compile_record.json"))["classes"]
+    setup = [_json.loads(l) for l in open("docs/superpowers/evidence/"
+                                          "2026-09-07-t1j-h1-match-attempt2/"
+                                          "01_h1_results.jsonl")
+             if _json.loads(l)["record_type"] == "setup_complete"][0]["artifacts"]["classes"]
+    assert DP.QUALIFIED_CLASSES == compile_only == setup
+
+
+def test_the_incumbent_identity_must_EQUAL_the_frozen_one(canonical):
+    """🔴 THE DEFECT. `incumbent_identity` was only required to be NON-EMPTY, so
+    `{"anything": "accepted"}` passed -- a record from a different model could be
+    read as evidence about calib020_0001, which is the one thing the diagnostic
+    exists to say something about."""
+    frozen = _frozen_identity()
+    assert _contract(canonical, _complete_report(canonical, incumbent_identity=frozen))
+    for bad in ({"anything": "accepted"}, {}, "calib020_0001",
+                dict(frozen, reference="other_model"),
+                {k: v for k, v in frozen.items() if k != "reference"},
+                dict(frozen, extra="field")):
+        with pytest.raises(DP.D1PrimeError, match="incumbent"):
+            _contract(canonical, _complete_report(canonical, incumbent_identity=bad))
+
+
+@functools.lru_cache(maxsize=1)
+def _toolchain_cached():
+    from scripts.GPU.alphazero import e4_screen_command as SC, e4_screen_integration as INT
+    from scripts.GPU.alphazero import t1j_adapter as A
+    return {"jar_sha256": SC.JAR_SHA256, "jdk_components": dict(INT.PINNED_JDK),
+            "sources": {p.name: INT._sha256(str(p)) for p in A.PREFLIGHT_SOURCES},
+            "main_class": A.PREFLIGHT_MAIN, "classes": dict(DP.QUALIFIED_CLASSES),
+            "classes_dir": "somewhere", "jar": "/path/t1j.jar"}
+
+
+def _toolchain():
+    return copy.deepcopy(_toolchain_cached())
+
+
+@functools.lru_cache(maxsize=1)
+def _frozen_identity_cached():
+    """CACHED: deriving it reads and hashes the frozen L0 plan and rebuilds the
+    frozen settings -- about ten seconds, and every refusal test needs one."""
+    from scripts.GPU.alphazero import d1_probe as D1P
+    return D1P.frozen_incumbent_identity()
+
+
+def _frozen_identity():
+    return copy.deepcopy(_frozen_identity_cached())
+
+
+def test_a_toolchain_identity_matching_the_qualification_pins_is_accepted(canonical):
+    assert _contract(canonical, _complete_report(canonical, toolchain_identity=_toolchain()))
+
+
+@pytest.mark.parametrize("field,value", [
+    ("jar_sha256", "0" * 64),
+    ("jdk_components", {"bin/java": "0" * 64}),
+    ("sources", {"E4Preflight.java": "0" * 64}),
+    ("main_class", "net.schwagereit.t1j.E3bDump"),
+    ("classes", {"net/schwagereit/t1j/E4Preflight.class": "0" * 64}),
+])
+def test_a_toolchain_identity_that_FAILS_a_qualification_pin_is_REFUSED(
+        canonical, field, value):
+    """🔴 `{"anything": "accepted"}` passed. Each pinned component is compared
+    with the qualification's own constant: a record built against another jar,
+    JDK, helper source, main class or compiled class is not evidence about this
+    instrument."""
+    tc = dict(_toolchain(), **{field: value})
+    with pytest.raises(DP.D1PrimeError, match=field.split("_")[0]):
+        _contract(canonical, _complete_report(canonical, toolchain_identity=tc))
+
+
+@pytest.mark.parametrize("bad", ["a string", 42, [], None, {}])
+def test_a_MALFORMED_toolchain_identity_is_a_D1PrimeError_not_a_TypeError(canonical, bad):
+    with pytest.raises(DP.D1PrimeError):
+        _contract(canonical, _complete_report(canonical, toolchain_identity=bad))
+
+
+@pytest.mark.parametrize("field", ["jar_sha256", "jdk_components", "sources",
+                                   "main_class", "classes"])
+def test_a_toolchain_identity_MISSING_a_pinned_component_is_REFUSED(canonical, field):
+    tc = {k: v for k, v in _toolchain().items() if k != field}
+    with pytest.raises(DP.D1PrimeError, match=field.split("_")[0]):
+        _contract(canonical, _complete_report(canonical, toolchain_identity=tc))
+
+
+# ───────────────────────── elapsed_s and shape ──────────────────────────────
+
+def test_elapsed_s_must_be_a_real_finite_number_within_the_deadline(canonical):
+    for ok in (0, 1234.5, 5400, 0.0):
+        assert _contract(canonical,
+                         _complete_report(canonical, elapsed_s=ok))["elapsed_s"] == ok
+    # nan and the infinities are refused BY THE RANGE (nan compares False to
+    # everything, the infinities fall outside it) -- stated here because the
+    # module has no separate finiteness guard to point at.
+    assert not (0 <= float("nan") <= 5400) and not (0 <= float("inf") <= 5400)
+    for bad in (-0.1, 5400.1, float("nan"), float("inf"), float("-inf"),
+                "1234", True, None, [1234]):
+        with pytest.raises(DP.D1PrimeError, match="elapsed_s"):
+            _contract(canonical, _complete_report(canonical, elapsed_s=bad))
+
+
+def test_a_report_that_OMITS_elapsed_s_is_REFUSED(canonical):
+    """🔴 A record could omit it entirely and pass: a run with no recorded
+    duration is not a completed run."""
+    rep = _complete_report(canonical)
+    del rep["elapsed_s"]
+    with pytest.raises(DP.D1PrimeError, match="elapsed_s"):
+        _contract(canonical, rep)
+
+
+def test_positions_is_REQUIRED_and_malformed_input_is_a_D1PrimeError(canonical):
+    """Never a raw KeyError or TypeError: a refusal must name what is wrong."""
+    rep = _complete_report(canonical)
+    del rep["positions"]
+    with pytest.raises(DP.D1PrimeError, match="positions"):
+        _contract(canonical, rep)
+    for bad in ("not a list", 7, None, {"a": 1}):
+        with pytest.raises(DP.D1PrimeError, match="positions"):
+            _contract(canonical, _complete_report(canonical, positions=bad))
+    for bad_row in ("not a dict", None, 7):
+        rep = _complete_report(canonical)
+        rep["positions"][2] = bad_row
+        with pytest.raises(DP.D1PrimeError):
+            _contract(canonical, rep)
 
 
 def test_the_production_entry_EXPOSES_NO_KNOBS_at_all():
@@ -1034,6 +1192,25 @@ def test_the_analysis_refuses_a_cohort_that_is_not_the_frozen_one_field_by_field
 def test_the_analysis_touches_no_model_no_java_and_no_seed_registry():
     import pathlib
     src = pathlib.Path(DP.__file__).read_text(encoding="utf-8")
-    for forbidden in ("_default_load_evaluator", "subprocess", "t1j_adapter", "ACCOUNTED_SEED_INTERVALS",
+    for forbidden in ("_default_load_evaluator", "subprocess", "ACCOUNTED_SEED_INTERVALS",
                       "seed_is_accounted", "run_d1", "game_features", "D1_EXECUTION_AUTHORIZED"):
         assert forbidden not in src, forbidden
+
+
+def test_the_analysis_reads_only_PINS_from_the_adapter_and_calls_nothing_that_executes():
+    """⚠ A SUBSTRING BAN ON `t1j_adapter` WAS REPLACED BY A PRECISE ONE, because
+    the identity contract must compare the record against the adapter's FROZEN
+    PINS (`PREFLIGHT_SOURCES`, `PREFLIGHT_MAIN`) rather than retype them. What
+    must stay true is that nothing here EXECUTES: every attribute taken from the
+    adapter is one of those constants, so `query`, `replay` and `compile_helper`
+    cannot be reached."""
+    import ast, pathlib
+    tree = ast.parse(pathlib.Path(DP.__file__).read_text(encoding="utf-8"))
+    aliases = {a.asname or a.name for n in ast.walk(tree)
+               if isinstance(n, ast.ImportFrom)
+               for a in n.names if a.name == "t1j_adapter"}
+    assert aliases, "the adapter alias could not be found; this guard would be vacuous"
+    used = {n.attr for n in ast.walk(tree)
+            if isinstance(n, ast.Attribute) and isinstance(n.value, ast.Name)
+            and n.value.id in aliases}
+    assert used <= {"PREFLIGHT_SOURCES", "PREFLIGHT_MAIN"}, used
