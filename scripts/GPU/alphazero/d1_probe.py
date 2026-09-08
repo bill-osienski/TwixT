@@ -676,11 +676,15 @@ def _check_seed_registration() -> None:
     """The reserved block must be REGISTERED before D1 uses any of it (12.5).
 
     READS the registry; never writes one. Registering the interval is a reviewed
-    edit to `e4_screen_reference.ACCOUNTED_SEED_INTERVALS` and belongs to the D1
-    EXECUTION authorization -- "a reserved-on-paper block that is never
-    authorized must cost nothing to abandon". A runtime mutation would make the
-    registry a thing the run can grant itself, which is the same shape as a gate
-    that opens its own gate.
+    edit to `e4_screen_reference.ACCOUNTED_SEED_INTERVALS`, made under its OWN
+    authorization -- "a reserved-on-paper block that is never authorized must
+    cost nothing to abandon". A runtime mutation would make the registry a thing
+    the run can grant itself, which is the same shape as a gate that opens its
+    own gate.
+
+    Satisfying this check is NOT permission to run. Registration and
+    `D1_EXECUTION_AUTHORIZED` are separate reviews and the §14 block passed only
+    the first on 2026-09-08; `run_d1` still refuses.
 
     EVERY seed in the block is checked, not the endpoints: a partial registration
     would otherwise pass and then draw an unaccounted seed halfway through.

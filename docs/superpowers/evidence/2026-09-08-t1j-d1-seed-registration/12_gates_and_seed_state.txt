@@ -1,0 +1,44 @@
+GATES AND SEED STATE -- computed 2026-09-08T20:02:15Z, AFTER the harness restored every source
+
+== the six execution gates, read from source ==
+scripts/GPU/alphazero/d1_probe.py:55:D1_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/e4_screen_command.py:44:SCREEN_AUTHORIZED = False
+scripts/GPU/alphazero/h1_viability_runner.py:77:H1_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/l0_match_command.py:41:L0_EXECUTION_AUTHORIZED = False
+scripts/GPU/alphazero/h1_match_command.py:62:_GATE_OPEN = re.compile(r"^H1_EXECUTION_AUTHORIZED = True$", re.M)
+scripts/GPU/alphazero/h1_match_command.py:63:_GATE_CLOSED = "H1_EXECUTION_AUTHORIZED = False"
+scripts/GPU/alphazero/h1_match_command.py:88:    """Rewrite `H1_EXECUTION_AUTHORIZED = True` to False in the runner SOURCE and
+scripts/GPU/alphazero/h1_match_command.py:222:                  f"H1_EXECUTION_AUTHORIZED = False. Restore it BY HAND before "
+scripts/GPU/alphazero/runtime_requalification.py:79:RUNTIME_REQUAL_AUTHORIZED = False
+scripts/GPU/alphazero/lowply_qualification.py:55:LOWPLY_QUALIFICATION_AUTHORIZED = False
+
+== as IMPORTED, not merely as grepped ==
+  D1_EXECUTION_AUTHORIZED            False  (type bool)
+  SCREEN_AUTHORIZED                  False  (type bool)
+  H1_EXECUTION_AUTHORIZED            False  (type bool)
+  L0_EXECUTION_AUTHORIZED            False  (type bool)
+  LOWPLY_QUALIFICATION_AUTHORIZED    False  (type bool)
+  RUNTIME_REQUAL_AUTHORIZED          False  (type bool)
+  ALL SIX FALSE: True
+
+== the D1 block [202615000, 202615221), per seed ==
+  seeds: 221   accounted 221 / exposed 0 / retired 0 / test_only 0 / consumed 0
+  registration barrier: SATISFIED
+  run_d1 still REFUSES: D1 execution is UNAUTHORIZED. The CLI gate alone protected nothing: a di
+
+== every registry, sizes ==
+  ACCOUNTED_SEED_INTERVALS   13 intervals,  4000 seeds
+  EXPOSED_SEED_INTERVALS      9 intervals,   413 seeds
+  RETIRED_SEED_INTERVALS      5 intervals,   771 seeds
+  TEST_ONLY_SEED_INTERVALS    1 intervals,   100 seeds
+  CONSUMED_SEEDS             1 seed
+
+== git ==
+ M scripts/GPU/alphazero/d1_probe.py
+ M scripts/GPU/alphazero/d1_selection.py
+ M scripts/GPU/alphazero/e4_screen_reference.py
+ M tests/test_d1_incumbent.py
+ M tests/test_d1_probe.py
+ M tests/test_h1_viability.py
+?? docs/superpowers/evidence/2026-09-08-t1j-d1-seed-registration/
+HEAD 5f0eac9; unpushed 54

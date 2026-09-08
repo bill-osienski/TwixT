@@ -249,6 +249,36 @@ def test_a_seed_outside_the_reserved_interval_is_void(tmp_path, seed, registered
                   paths=RUNTIME, out_path=str(tmp_path / "r.json"), _compile=lambda d: None)
 
 
+def test_the_NEW_block_is_ACCOUNTED_ONLY_and_therefore_still_SCHEDULABLE():
+    """The 2026-09-08 seed preparation registered §14's block in ONE list.
+
+    Registration is a reservation, not a draw: EXPOSED records seeds that were
+    actually drawn and RETIRED records seeds that may never be used again, so a
+    block that has never been run must appear in neither. Marking it in either
+    would make its own 221 positions unschedulable before the run that is
+    supposed to draw them -- which is exactly what `validate_task_executable`
+    refuses, so the state is asserted at that effect too and not only in the
+    tuples.
+
+    Every seed is checked, not the endpoints, and each registry is asserted
+    NON-EMPTY first so a check over an empty collection cannot pass vacuously.
+    """
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    lo, hi = D1.SEED_INTERVAL
+    assert (lo, hi) == (202615000, 202615221)
+    assert hi - lo == D1.N_POSITIONS
+    assert (lo, hi) != SEL.RETIRED_SEED_INTERVAL, "the retired block is a DIFFERENT interval"
+    for name in ("ACCOUNTED_SEED_INTERVALS", "EXPOSED_SEED_INTERVALS",
+                 "RETIRED_SEED_INTERVALS", "TEST_ONLY_SEED_INTERVALS"):
+        assert getattr(REF, name), f"vacuous: {name} is empty"
+    for seed in range(lo, hi):
+        st = REF.seed_status(seed)
+        assert st["accounted"], (seed, st)
+        assert not (st["exposed"] or st["retired"] or st["test_only"]), (seed, st)
+        assert seed not in REF.CONSUMED_SEEDS, seed
+        D1._check_seed(seed)          # the runtime check accepts every one of them
+
+
 def test_the_seed_interval_is_ACCOUNTED_and_now_RETIRED_after_the_VOID():
     """Registered 2026-08-28 for the execution authorization, then RETIRED the
     same day when the single authorized run VOIDED at 3m18s.
@@ -347,7 +377,7 @@ def test_no_environment_variable_opens_the_gate(tmp_path, env):
     assert r.returncode == 5, (env, r.returncode, r.stderr)
 
 
-def test_a_deadline_that_expires_only_at_the_write_step_still_voids(tmp_path, monkeypatch):
+def test_a_deadline_that_expires_only_at_the_write_step_still_voids(tmp_path, registered):
     """Reaches the FINAL pre-write deadline check specifically.
 
     The other breach test trips a check inside the position loop, so it passes
@@ -355,9 +385,6 @@ def test_a_deadline_that_expires_only_at_the_write_step_still_voids(tmp_path, mo
     exactly that. With no positions, the loop cannot fire, so only the last check
     can catch a deadline that expires between compilation and writing.
     """
-    from scripts.GPU.alphazero import e4_screen_reference as _REF
-    monkeypatch.setattr(_REF, "ACCOUNTED_SEED_INTERVALS",
-                        _REF.ACCOUNTED_SEED_INTERVALS + (D1.SEED_INTERVAL,))
     ticks = iter([0.0, 1.0, 99999.0, 99999.0])
     out = tmp_path / "r.json"
     with pytest.raises(D1.D1VoidError, match="deadline exceeded"):
@@ -649,16 +676,16 @@ def registered(monkeypatch):
 
     This fixture used to assert the fact instead of arranging it, and that was
     right at the time: the previous block really was in ACCOUNTED, put there by
-    the 2026-08-28 execution authorization. The §14 handoff points D1 at a fresh
-    block no authorization has registered, so arranging is correct again.
+    the 2026-08-28 execution authorization. The §14 handoff pointed D1 at a fresh
+    block no authorization had registered, so arranging became correct -- and the
+    2026-09-08 seed-preparation authorization registered it, so this ASSERTS once
+    more, third state in the same sequence.
 
-    The assertion keeps it from going vacuous in EITHER direction: the day a real
-    authorization registers the block, this fails and must go back to asserting
-    rather than quietly patching in something already there."""
-    assert tuple(D1.SEED_INTERVAL) not in {tuple(i) for i in REF.ACCOUNTED_SEED_INTERVALS}, \
-        "the block is registered for real; this fixture must assert, not arrange"
-    monkeypatch.setattr(REF, "ACCOUNTED_SEED_INTERVALS",
-                        REF.ACCOUNTED_SEED_INTERVALS + (tuple(D1.SEED_INTERVAL),))
+    The assertion keeps it from going vacuous in EITHER direction: the day the
+    block leaves the registry this fails and must go back to arranging rather
+    than silently testing a barrier that nothing satisfies."""
+    assert tuple(D1.SEED_INTERVAL) in {tuple(i) for i in REF.ACCOUNTED_SEED_INTERVALS}, \
+        "the block is NOT registered; this fixture must arrange again, not assert"
 
 
 @pytest.fixture
@@ -683,14 +710,17 @@ def wire(monkeypatch):
 def _registry_without_d1():
     """The real ACCOUNTED tuple, which does NOT contain the §14 block.
 
-    It used to STRIP the block, because the previous one really was registered.
-    Since the handoff there is nothing to strip -- so this asserts the absence
-    instead of assuming it. A negative control that quietly stops removing
-    anything is a control that has stopped controlling.
+    It STRIPS the block, and asserts that the strip actually removed something.
+    Between the §14 handoff and the 2026-09-08 registration there was nothing to
+    strip and this asserted the absence instead; now that the block is registered
+    it removes it again. A negative control that quietly stops removing anything
+    is a control that has stopped controlling, in either direction.
     """
-    out = tuple(REF.ACCOUNTED_SEED_INTERVALS)
-    assert tuple(D1.SEED_INTERVAL) not in {tuple(i) for i in out}, \
-        "the D1 block IS registered now; these negative controls are stale"
+    out = tuple(i for i in REF.ACCOUNTED_SEED_INTERVALS
+                if tuple(i) != tuple(D1.SEED_INTERVAL))
+    assert len(out) < len(REF.ACCOUNTED_SEED_INTERVALS), \
+        "nothing was stripped: the D1 block is NOT registered, so these negative " \
+        "controls no longer control anything"
     return out
 
 
@@ -1997,9 +2027,22 @@ def test_every_seed_of_the_RETIRED_block_is_refused_by_the_runtime_check():
             D1._check_seed(seed)
 
 
-def test_the_REAL_registry_still_refuses_the_new_block():
-    """NO monkeypatch: the repository AS IT STANDS. The handoff points D1 at the
-    §14 reservation and does not register it, so the barrier beside the gate is
-    still up. The control above proves the mechanism; this proves the state."""
-    with pytest.raises(D1.D1Error, match="not registered"):
-        D1._check_seed_registration()
+def test_the_REAL_registry_now_SATISFIES_the_barrier_while_the_GATE_stays_shut():
+    """NO monkeypatch: the repository AS IT STANDS, INVERTED 2026-09-08.
+
+    Until the seed-preparation authorization this asserted the opposite -- the
+    §14 block was reserved on paper and absent from the registry, so the barrier
+    beside the gate was up. The authorization registered the block and ONLY the
+    block, so the state assertion must now be that the barrier is SATISFIED.
+
+    🔑 The two are independent and both are asserted here, because that
+    independence is the whole reason there are two: registration removes the seed
+    barrier and moves NOTHING else. `D1_EXECUTION_AUTHORIZED` is still False, so
+    the run is still refused -- by the gate, not by the registry. A registration
+    that also opened the gate would be a switch-off disguised as bookkeeping.
+    """
+    D1._check_seed_registration()
+    assert D1.D1_EXECUTION_AUTHORIZED is False, \
+        "registration must not open the gate; only an execution authorization does"
+    with pytest.raises(D1.D1Error, match="UNAUTHORIZED"):
+        D1.run_d1(positions=[], paths=RUNTIME, out_path="/dev/null")

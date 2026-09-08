@@ -235,13 +235,31 @@ def test_the_ATTEMPT1_block_is_ACCOUNTED_60_EXPOSED_and_RETIRED_WHOLE():
     assert not any(x["test_only"] for x in st)
 
 
-def test_D1s_reservation_stays_PAPER_ONLY():
-    """The authorization registered ONE block. D1's §14 interval is in no
-    registry, exactly as before -- and that is why the collision proof has to
-    name it explicitly."""
+def test_D1s_reservation_is_ACCOUNTED_ONLY_and_DISJOINT_from_both_H1_blocks():
+    """INVERTED 2026-09-08, because the fact it asserted stopped being true.
+
+    It used to say D1's §14 interval was in NO registry: the H1 authorizations
+    registered one block each and swept nothing else in, which is also why the
+    H1 collision proof had to name D1's paper reservation explicitly rather than
+    enumerate registries. D1's OWN seed-preparation authorization has since
+    registered it, so the paper-only claim is now false and this asserts what is
+    still true and still H1's business:
+
+    * D1's block is ACCOUNTED and nothing else -- no H1 round exposed, retired or
+      test-marked seeds outside its own block, and neither did D1's registration;
+    * it is disjoint from BOTH H1 blocks, so no H1 seed is a D1 seed.
+
+    Keeping this in the H1 file is deliberate: it fails if a future H1 round
+    reaches outside its own reservation.
+    """
     from scripts.GPU.alphazero import d1_selection as SEL
     for seed in range(*SEL.SEED_INTERVAL):
-        assert not any(REF.seed_status(seed).values()), seed
+        st = REF.seed_status(seed)
+        assert st["accounted"], seed
+        assert not (st["exposed"] or st["retired"] or st["test_only"]), (seed, st)
+    d1 = set(range(*SEL.SEED_INTERVAL))
+    for block in (R.H1_ATTEMPT1_SEED_BLOCK, R.H1_SEED_BLOCK):
+        assert not (d1 & set(range(*block))), block
 
 
 def test_the_openings_come_from_the_pinned_plan_and_match_what_L0_PLAYED(tasks):

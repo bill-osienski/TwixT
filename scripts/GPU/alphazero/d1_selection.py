@@ -79,10 +79,12 @@ N_POSITIONS = 227
 #: rather than retyping the pair, because two literals of one fact drift the
 #: moment either is edited and `==` cannot see the difference until they differ.
 #:
-#: RESERVED, UNSPENT, and deliberately NOT REGISTERED. Nothing in this module
-#: adds it to a registry or draws from it; it assigns numbers on paper, and
-#: `d1_probe._check_seed_registration` still refuses a run while it is absent
-#: from `ACCOUNTED_SEED_INTERVALS`.
+#: RESERVED and UNSPENT. REGISTERED as ACCOUNTED on 2026-09-08 by the seed-
+#: preparation authorization, so `d1_probe._check_seed_registration` is now
+#: satisfied -- and NOT exposed, NOT retired, NOT consumed, because registering a
+#: reservation is not drawing from it. Nothing in this module adds it to a
+#: registry or draws from it; it assigns numbers on paper. The seed barrier is
+#: down; `D1_EXECUTION_AUTHORIZED` is a separate gate and is still False.
 #:
 #: ⚠ This is NOT `RETIRED_SEED_INTERVAL` below, though the two were EQUAL until
 #: the §14 handoff. They must never be edited together: a retirement guard

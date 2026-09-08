@@ -107,6 +107,48 @@ ACCOUNTED_SEED_INTERVALS = (
                                      # Accounted, NOT exposed and NOT retired: a
                                      # reservation is not a draw. Those move only
                                      # once the run has actually drawn from it.
+    (202615000, 202615221),          # D1 SAME-POSITION INTERROGATION, §14 RETRY.
+                                     # 221 seeds, one per §13 Amendment 2 position,
+                                     # bound POSITIONALLY: row i carries exactly
+                                     # 202615000 + i, checked by `d1_probe`.
+                                     #
+                                     # REGISTERED 2026-09-08, as the seed-
+                                     # PREPARATION step and NOT as an execution
+                                     # authorization -- those are two separate
+                                     # reviews, and this is only the first. At the
+                                     # moment of this edit `D1_EXECUTION_AUTHORIZED`
+                                     # is False and stays False; the run is still
+                                     # refused, now by the gate alone. From §14 to
+                                     # here the block was reserved on paper and
+                                     # deliberately absent from this tuple, so a
+                                     # block that was never authorized would have
+                                     # cost nothing to abandon.
+                                     #
+                                     # RE-PROVED against the registries AS THEY
+                                     # STAND -- which by then included BOTH spent
+                                     # H1 blocks -- plus this paper reservation
+                                     # itself. 4,109 prior seeds across six
+                                     # categories, 20,545 prior values including
+                                     # derivations: 0 direct overlaps, 0 derived-
+                                     # stream collisions, own derivations
+                                     # injective (1,105 = 221 x 5). Exhaustive,
+                                     # not sampled. Eleven collision controls and
+                                     # four gap-policy controls all rejected.
+                                     #
+                                     # 🔑 The candidate IS this paper reservation,
+                                     # so it was excluded from the prior set BY
+                                     # IDENTITY -- not by subtracting its seeds,
+                                     # which would have excused any control equal
+                                     # to an existing reservation. The first run
+                                     # (v5) applied that exclusion to the overlap
+                                     # check but NOT to the gap policy, and so
+                                     # reported a distance-0 FAIL against itself;
+                                     # v6 applies it to both and the nearest OTHER
+                                     # boundary is 773 seeds away. Both runs are
+                                     # kept in the evidence directory.
+                                     #
+                                     # Accounted, NOT exposed and NOT retired: a
+                                     # reservation is not a draw.
     (202616000, 202616224),          # H1 HEAD-TO-HEAD VIABILITY SCREEN. 224
                                      # seeds, one per game: 8 openings x 2 colour
                                      # arms x 14 repetitions at mdPly 6.

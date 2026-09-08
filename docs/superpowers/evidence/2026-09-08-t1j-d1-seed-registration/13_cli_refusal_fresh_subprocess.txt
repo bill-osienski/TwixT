@@ -1,0 +1,13 @@
+THE CLI, AS A FRESH SUBPROCESS -- not imported, not mocked. 2026-09-08T20:02:54Z
+A registration that removed the seed barrier must still leave the ENTRY POINT refusing.
+The --out path below does not exist before or after: the gate refuses before anything is written.
+
+$ .venv/bin/python -m scripts.GPU.alphazero.d1_probe   (no --out: argparse refuses first, exit 2)
+exit=2
+python -m scripts.GPU.alphazero.d1_probe: error: the following arguments are required: --out
+
+$ .venv/bin/python -m scripts.GPU.alphazero.d1_probe --out /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/8bb941b5-4c12-46cb-8c9e-d95c5af5a9fd/scratchpad/never_written.json
+D1 execution is UNAUTHORIZED. No model was loaded, no JVM started, no seed drawn, no position queried, and no file was written.
+exit=5 (EXIT_UNAUTHORIZED=5)
+
+out path exists afterwards: no

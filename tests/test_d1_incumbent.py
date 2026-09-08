@@ -393,12 +393,16 @@ def test_no_evaluator_is_loaded_while_the_seed_block_is_unregistered(identity, t
     """ORDER, asserted at the effect. An unregistered block must cost nothing --
     not a compile, and not a checkpoint read either.
 
-    The block IS registered now (12.5, execution authorization), so this strips
-    it rather than relying on it being absent.
+    The block IS registered again (2026-09-08 seed preparation), so this strips
+    it rather than relying on it being absent -- and asserts the strip bit, since
+    a strip that removes nothing leaves this test asserting about a registry that
+    already refuses everything for the reason under test.
     """
-    monkeypatch.setattr(REF, "ACCOUNTED_SEED_INTERVALS",
-                        tuple(i for i in REF.ACCOUNTED_SEED_INTERVALS
-                              if tuple(i) != tuple(D1.SEED_INTERVAL)))
+    stripped = tuple(i for i in REF.ACCOUNTED_SEED_INTERVALS
+                     if tuple(i) != tuple(D1.SEED_INTERVAL))
+    assert len(stripped) < len(REF.ACCOUNTED_SEED_INTERVALS), \
+        "nothing stripped: the D1 block is not registered, so this no longer controls"
+    monkeypatch.setattr(REF, "ACCOUNTED_SEED_INTERVALS", stripped)
     loads = []
     inc = D1._Incumbent(".", _load=lambda r: loads.append(r) or _tagged_evaluator(identity))
     with pytest.raises(D1.D1Error, match="not registered"):
@@ -418,8 +422,6 @@ def test_one_position_end_to_end_records_both_sides(identity, boundary, live_blo
     invocations at each of the two depths.
     """
     from scripts.GPU.alphazero import d1_selection as SEL
-    monkeypatch.setattr(REF, "ACCOUNTED_SEED_INTERVALS",
-                        REF.ACCOUNTED_SEED_INTERVALS + (D1.SEED_INTERVAL,))
     inc = D1._Incumbent(".", _load=lambda r: _tagged_evaluator(identity))
     out = tmp_path / "r.json"
     report = D1._run_d1_unguarded(
@@ -440,9 +442,7 @@ def test_one_position_end_to_end_records_both_sides(identity, boundary, live_blo
     assert out.exists()
 
 
-def test_the_end_to_end_report_is_create_only(identity, boundary, monkeypatch, tmp_path):
-    monkeypatch.setattr(REF, "ACCOUNTED_SEED_INTERVALS",
-                        REF.ACCOUNTED_SEED_INTERVALS + (D1.SEED_INTERVAL,))
+def test_the_end_to_end_report_is_create_only(identity, boundary, tmp_path):
     out = tmp_path / "r.json"
     out.write_text("{}", encoding="utf-8")
     with pytest.raises(FileExistsError):
