@@ -88,11 +88,32 @@ def test_rank_raw_orders_by_mass_then_breaks_ties_by_row_col_only():
     assert list(inspect.signature(DP.rank_raw).parameters) == ["policy"]
 
 
+def _incumbent_record(*, policy, our_move, visits=None, overrode=False):
+    """The incumbent readout AS `d1_probe.IncumbentReadout` WRITES IT: the real
+    `eval_replay.ply_record` (synthetic values, no model) plus the same
+    `record.update(...)` d1_probe applies. Inventing the keys here is how a
+    field-name mismatch hides -- so the writer is real and only its inputs are
+    synthetic."""
+    from scripts.GPU.alphazero import eval_replay
+    counts = {_move(k): int(v) for k, v in (visits or {k: 1 for k in policy}).items()}
+    rec = eval_replay.ply_record(10, "red", tuple(our_move), counts, 0.1,
+                                 top2=None, overrode_leader=overrode)
+    rec.update({"seed": 1, "streams": {}, "raw_policy": dict(policy),
+                "root_visits": {f"{r},{c}": v for (r, c), v in sorted(counts.items())},
+                "selected_policy_rank": 1, "selected_policy_mass": 0.1})
+    return rec
+
+
+def _move(key):
+    if isinstance(key, str):
+        r, c = key.split(",")
+        return (int(r), int(c))
+    return (int(key[0]), int(key[1]))
+
+
 def _d1_position(*, policy, our_move, t1j_move_6, visits=None, overrode=False, **labels):
-    """A D1 per-position record in the shape `d1_probe` writes (mocked)."""
-    r, c = our_move
-    rec = {"row": r, "col": c, "raw_policy": dict(policy),
-           "root_visits": visits or {k: 1 for k in policy}, "overrode_leader": overrode}
+    """A D1 per-position record in the shape `d1_probe` writes."""
+    rec = _incumbent_record(policy=policy, our_move=our_move, visits=visits, overrode=overrode)
     depths = [{"depth": 3, "move": [t1j_move_6[0], t1j_move_6[1]]},
               {"depth": 6, "move": [t1j_move_6[0], t1j_move_6[1]]}]
     base = {"task_id": "g-o1_center-t1j_red-r0", "opening": "o1_center",
@@ -138,6 +159,31 @@ def test_position_row_refuses_a_t1j_move_outside_the_legal_policy():
     pol = _policy_with_ranks()
     with pytest.raises(DP.D1PrimeError, match="not in the raw policy"):
         DP.position_row(_d1_position(policy=pol, our_move=(0, 0), t1j_move_6=(9, 9)))
+
+
+def test_the_override_flag_is_read_from_the_REAL_writers_field_name():
+    """🔴 [P2] Production writes `readout_overrode_leader` (eval_replay.ply_record);
+    revision 1 read `overrode_leader` and turned a production True into None. The
+    fixture is built by the real writer, so the name cannot drift unnoticed."""
+    from scripts.GPU.alphazero import eval_replay
+    written = eval_replay.ply_record(10, "red", (0, 0), {(0, 0): 5, (0, 1): 3}, 0.1,
+                                     overrode_leader=True)
+    assert "readout_overrode_leader" in written and "overrode_leader" not in written
+    pol = _policy_with_ranks()
+    row = DP.position_row(_d1_position(policy=pol, our_move=(0, 0), t1j_move_6=(0, 6),
+                                       overrode=True))
+    assert row["overrode_leader"] is True
+    row2 = DP.position_row(_d1_position(policy=pol, our_move=(0, 0), t1j_move_6=(0, 6),
+                                        overrode=False))
+    assert row2["overrode_leader"] is False
+
+
+def test_a_record_without_the_override_field_is_REFUSED_not_silently_None():
+    pol = _policy_with_ranks()
+    pos = _d1_position(policy=pol, our_move=(0, 0), t1j_move_6=(0, 6))
+    del pos["incumbent"]["readout_overrode_leader"]
+    with pytest.raises(DP.D1PrimeError, match="readout_overrode_leader"):
+        DP.position_row(pos)
 
 
 def test_rows_from_d1_report_maps_every_position_and_keeps_labels():
@@ -337,7 +383,7 @@ def test_a_perfectly_balanced_cohort_gives_a_degenerate_interval_at_T():
 # ─────────────────────── development decision rule ──────────────────────────
 
 def _decide(rows, **kw):
-    return DP.development_decision(rows, _strata(), B=100, **kw)
+    return DP._development_decision(rows, _strata(), B=100, **kw)
 
 
 def test_a_symmetric_synthetic_cohort_is_NO_GO():
@@ -389,7 +435,7 @@ def test_an_effect_carried_by_ONE_game_has_a_lower_bound_at_zero_and_is_NO_GO():
         rows += [_row(o, a, ph, "position", gB, False) for _ in range(9)]
         rows += [_row(o, a, ph, "control", gA, False) for _ in range(9)]
         rows += [_row(o, a, ph, "control", gB, False) for _ in range(9)]
-    d = DP.development_decision(rows, strata, B=400)
+    d = DP._development_decision(rows, strata, B=400)
     assert d["T"] == pytest.approx(18 / 66)         # 4 cells x w=9 x 0.5 = 18, over 4x9 + 20x1.5 = 66
     assert d["interval"][0] == pytest.approx(0.0)
     assert d["outcome"] == "NO_GO"
@@ -421,7 +467,7 @@ def test_bootstrap_undefined_is_its_own_NO_GO():
     draws = _parallel_draws(DP.BOOTSTRAP_SEED, strata, B)
     expected_undefined = sum(1 for d in draws if all(i == j for i, j in d))
     assert expected_undefined > 0, "the pinned seed must yield an undefined replicate for this test to bind"
-    d = DP.development_decision(rows, strata, B=B)
+    d = DP._development_decision(rows, strata, B=B)
     assert d["outcome"] == "NO_GO — bootstrap undefined" and d["interval"] == "UNDEFINED"
     assert d["stability"]["undefined"] == expected_undefined
     assert len(d["stability"]["replicates"]) == B
@@ -438,7 +484,7 @@ def test_the_secondary_cohort_is_reported_but_cannot_produce_GO():
 # ─────────────────────── confirmation decision rule ─────────────────────────
 
 def _confirm(rows, **kw):
-    return DP.confirmation_decision(rows, _strata(), B=100, **kw)
+    return DP._confirmation_decision(rows, _strata(), B=100, **kw)
 
 
 def test_confirmation_GO_needs_both_arms_defined_and_positive():
@@ -476,9 +522,43 @@ def test_an_UNDEFINED_arm_is_NO_GO_arm_undefined_never_zero_never_skipped():
 # ───────────────── confirmation selection: filter first, select once ────────
 
 def _cand(task_id, ply, opening, arm, phase, digest, *, frag=False, threat=False, ours=True):
+    """A confirmation candidate in the PRODUCTION schema: the mover is identified
+    by `system` ("ours" / "t1j"), as `d1_selection` records it via `D0.moved_by`."""
     return {"task_id": task_id, "ply": ply, "opening": opening, "colour_arm": arm,
-            "phase": phase, "digest": digest, "incumbent_to_move": ours,
+            "phase": phase, "digest": digest, "system": "ours" if ours else "t1j",
             "mover_more_fragmented": frag, "created_threat": threat}
+
+
+def test_the_selector_uses_the_PRODUCTION_system_field_and_refuses_a_row_without_it():
+    """🔴 [P1] Revision 1 read `incumbent_to_move` and DEFAULTED a missing flag to
+    True, so a production row with `system="t1j"` was selected. Eligibility is
+    read from `system`, and a row carrying neither is REFUSED -- never accepted
+    by default."""
+    c = ("o1_center", "t1j_red", "middle")
+    ours = _cand("g1", 10, *c, "a", frag=True)
+    theirs = _cand("g1", 11, *c, "b", frag=True, ours=False)
+    assert ours["system"] == "ours" and theirs["system"] == "t1j"
+    out = DP.confirmation_select([ours, theirs], seen_digests=set())
+    assert {r["digest"] for r in out["rows"]} == {"a"}
+    assert out["removed"]["not_incumbent_to_move"] == 1
+    no_field = {k: v for k, v in ours.items() if k != "system"}
+    with pytest.raises(DP.D1PrimeError, match="system"):
+        DP.confirmation_select([no_field], seen_digests=set())
+    with pytest.raises(DP.D1PrimeError, match="system"):
+        DP.confirmation_select([dict(ours, system="incumbent")], seen_digests=set())
+
+
+def test_the_selector_matches_D0s_ONE_DEFINITION_of_which_engine_moved():
+    """`system` is produced by `d0_postmortem.moved_by`; the selector must agree
+    with it rather than restate the cut."""
+    from scripts.GPU.alphazero import d0_postmortem as D0
+    assert D0.moved_by("t1j_red", "red") == "t1j" and D0.moved_by("t1j_red", "black") == "ours"
+    c = ("o1_center", "t1j_red", "middle")
+    rows = [dict(_cand("g1", 10 + i, *c, f"d{i}", frag=True),
+                 system=D0.moved_by("t1j_red", mover))
+            for i, mover in enumerate(("red", "black"))]
+    out = DP.confirmation_select(rows, seen_digests=set())
+    assert {r["digest"] for r in out["rows"]} == {"d1"}
 
 
 def test_rows_below_ply_5_are_ineligible_for_BOTH_roles_before_anything_else():
@@ -541,6 +621,84 @@ def test_the_ceiling_refuses_241_rows_and_accepts_240_before_any_seed():
     with pytest.raises(DP.D1PrimeRefused, match="240"):
         DP.confirmation_select(cands(40) + [_cand("gx", 10, "o1_center", "t1j_red", "late", "extra", frag=True)],
                                seen_digests=set())
+
+
+# ────────────── the CHECKED entry point: binding before calculation ─────────
+
+def _frozen_and_rows(pos_rate=2 / 3, ctl_rate=1 / 3, per_role=6):
+    rows = _cohort(ALL_16, pos_rate=pos_rate, ctl_rate=ctl_rate, per_role=per_role)
+    frozen = [{k: r[k] for k in DP.COHORT_BINDING_FIELDS} for r in rows]
+    return rows, frozen
+
+
+def test_the_checked_entry_point_binds_the_cohort_BEFORE_any_calculation():
+    """🔴 [P1] `_development_decision` computes from whatever rows it is handed:
+    a cohort with every phase forged produced GO while `check_cohort` refused the
+    same rows. The checked entry binds first, so a forged label cannot reach the
+    statistic."""
+    rows, frozen = _frozen_and_rows()
+    ok = DP.analyse_development(rows, frozen_cohort=frozen, tasks=_design())
+    assert ok["outcome"] == "GO"
+    forged = [dict(r, phase="late") for r in rows]
+    assert DP._development_decision(forged, _strata(), B=50)["outcome"] == "GO"   # the kernel does not bind
+    with pytest.raises(DP.D1PrimeError, match="frozen"):
+        DP.analyse_development(forged, frozen_cohort=frozen, tasks=_design())
+
+
+def test_the_checked_entry_point_FIXES_the_primary_hypothesis():
+    """The secondary cohort cannot be made primary by an argument: the entry
+    point takes no cohort parameter, and a `created_threat`-only cohort is
+    refused rather than analysed as if it were the hypothesis."""
+    assert "cohort" not in inspect.signature(DP.analyse_development).parameters
+    assert "cohort" not in inspect.signature(DP.analyse_confirmation).parameters
+    rows = _cohort(ALL_16, pos_rate=1.0, ctl_rate=0.0, per_role=6, sig="created_threat")
+    frozen = [{k: r[k] for k in DP.COHORT_BINDING_FIELDS} for r in rows]
+    out = DP.analyse_development(rows, frozen_cohort=frozen, tasks=_design())
+    assert out["cohort"] == DP.PRIMARY_COHORT
+    assert out["outcome"] == "NO_GO — insufficient support"
+    assert out["secondary"]["T"] == pytest.approx(1.0)
+
+
+def test_the_checked_entry_point_builds_strata_from_the_DESIGN_not_from_the_rows():
+    """A game that contributed no selected row still exists in its stratum and
+    must be drawable; strata inferred from rows would silently drop it."""
+    rows, frozen = _frozen_and_rows()
+    thin = [r for r in rows if not r["task_id"].endswith("-r1")]
+    thin_frozen = [{k: r[k] for k in DP.COHORT_BINDING_FIELDS} for r in thin]
+    out = DP.analyse_development(thin, frozen_cohort=thin_frozen, tasks=_design())
+    assert out["strata"] == 16
+    assert {g for s in DP.design_strata(_design(), reps=(0, 1)) for g in s["games"]} > \
+        {r["task_id"] for r in thin}
+
+
+def test_the_checked_CONFIRMATION_entry_binds_and_keeps_the_arm_rules():
+    rows = _cohort(ALL_16, pos_rate=2 / 3, ctl_rate=1 / 3, per_role=6, reps=(2, 3))
+    frozen = [{k: r[k] for k in DP.COHORT_BINDING_FIELDS} for r in rows]
+    out = DP.analyse_confirmation(rows, frozen_cohort=frozen, tasks=_design(reps=(2, 3)),
+                                  reps=(2, 3))
+    assert out["outcome"] == "GO" and set(out["arms"]) == set(DP.ARMS)
+    assert out["bound"]["reps"] == [2, 3]
+    with pytest.raises(DP.D1PrimeError, match="frozen"):
+        DP.analyse_confirmation([dict(r, role="control") for r in rows],
+                                frozen_cohort=frozen, tasks=_design(reps=(2, 3)), reps=(2, 3))
+
+
+def test_a_cohort_whose_GAMES_are_not_in_the_designs_strata_is_REFUSED():
+    """Found by a fixture of mine that passed the wrong half's design: every
+    replicate would be empty and the run would report "bootstrap undefined" --
+    an instrument mismatch wearing a result's name."""
+    rows, frozen = _frozen_and_rows()                       # games from reps (0, 1)
+    with pytest.raises(DP.D1PrimeError, match="not in the design"):
+        DP.analyse_confirmation(rows, frozen_cohort=frozen, tasks=_design(reps=(2, 3)),
+                                reps=(2, 3))
+
+
+def test_the_checked_entries_report_what_they_bound():
+    rows, frozen = _frozen_and_rows()
+    out = DP.analyse_development(rows, frozen_cohort=frozen, tasks=_design())
+    assert out["bound"] == {"rows": len(rows), "cohort": DP.PRIMARY_COHORT,
+                            "reps": [0, 1], "strata": 16}
+    assert out["claim"].startswith("T describes matched LPRD in the frozen selected cohort")
 
 
 # ─────────────────────── cohort binding, type-strict ────────────────────────

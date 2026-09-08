@@ -1,0 +1,54 @@
+D1' ANALYSIS -- INTEGRATION REPAIR (code-and-test only). NOTHING RAN. State at the moment of recording.
+====================================================================================================
+recorded 2026-09-08T11:51:17Z at HEAD 812de66; 50 commits unpushed before this one
+changed:  2 files changed, 263 insertions(+), 19 deletions(-)
+
+ALL SIX GATES:
+  scripts/GPU/alphazero/d1_probe.py:55:D1_EXECUTION_AUTHORIZED = False
+  scripts/GPU/alphazero/e4_screen_command.py:44:SCREEN_AUTHORIZED = False
+  scripts/GPU/alphazero/h1_viability_runner.py:77:H1_EXECUTION_AUTHORIZED = False
+  scripts/GPU/alphazero/l0_match_command.py:41:L0_EXECUTION_AUTHORIZED = False
+  scripts/GPU/alphazero/lowply_qualification.py:55:LOWPLY_QUALIFICATION_AUTHORIZED = False
+  scripts/GPU/alphazero/runtime_requalification.py:79:RUNTIME_REQUAL_AUTHORIZED = False
+NOTHING EXECUTED: no D1 run, no real readout, no confirmation data, no model, no JVM, no seed action, no gate change, no training, no push.
+
+[P1] GAP 1 -- the decision path bypassed the frozen-cohort check, and `cohort=` let the secondary produce GO.
+  FIXED: `analyse_development` / `analyse_confirmation` are the entry points. They call `check_cohort` and
+  `design_strata` BEFORE any calculation and take NO cohort parameter, so the primary hypothesis is fixed:
+    analyse_development params: ['rows', 'frozen_cohort', 'tasks', 'reps', 'B', 'seed']
+    analyse_confirmation params: ['rows', 'frozen_cohort', 'tasks', 'reps', 'B', 'seed']
+  The configurable kernels are PRIVATE (`_development_decision` / `_confirmation_decision`), kept for synthetic
+  tests, and their docstrings say they bind nothing. A test shows the kernel still returns GO on forged rows
+  while the checked entry refuses them -- the difference is the point.
+  ALSO FOUND while fixing (my own test fixture passed the wrong half's design): a cohort whose games are absent
+  from the design's strata yields EMPTY replicates and would have been reported as 'bootstrap undefined' --
+  an instrument mismatch wearing a result's name. Now refused explicitly, with its own control.
+
+[P1] GAP 2 -- the selector defaulted a missing `incumbent_to_move` to True, so a production row with system='t1j' was selected.
+  FIXED: eligibility is read from the PRODUCTION field `system`, produced by d0_postmortem.moved_by --
+    moved_by('t1j_red','red') = 't1j'; moved_by('t1j_red','black') = 'ours'
+  A row without `system`, or with an unrecognised value, is REFUSED. No eligibility fact defaults to acceptance.
+
+[P2] GAP 3 -- the analysis read `overrode_leader`; the writer emits `readout_overrode_leader`.
+  eval_replay.ply_record keys include 'readout_overrode_leader': True; 'overrode_leader': False
+  FIXED: the production name is read, and a record missing it is REFUSED rather than silently None.
+  THE FIXTURE WAS THE CONCEALMENT: `_incumbent_record` now builds the record with the REAL writer
+  (`eval_replay.ply_record`, synthetic values, no model), so a field-name drift fails a test.
+
+FULL SUITE (.venv/bin/python -m pytest tests -q): ==== 4090 passed, 4 skipped, 53 deselected, 8 warnings in 842.35s (0:14:02) ==== (previous 4,080; +10 tests)
+CONTROLS: 348/348 defects rejected; 0 not caught; 0 stale | ALL CONTROLS RAN: True | clean baseline over 278 distinct target tests: PASS
+  348 = 339 + 9 new, one per repaired defect:
+   REJECTED     the checked entry stops binding the cohort
+   REJECTED     the checked entry takes a cohort argument again (secondary promotable)
+   REJECTED     the design/cohort game check removed
+   REJECTED     strata inferred from the ROWS instead of the design
+   REJECTED     eligibility defaults a missing 'system' to acceptance
+   REJECTED     eligibility reads an invented flag instead of 'system'
+   REJECTED     the opponent-to-move filter inverted
+   REJECTED     the override flag read from the invented field name
+   REJECTED     a record without the override field is silently None
+  Clean baseline verified over 278 distinct target tests BEFORE any injection; every source restored.
+
+NEXT (not authorized): a real D1' analysis still needs a D1 EXECUTION authorization -- D1 has never produced
+  a record (its one run VOIDed 2026-08-28). Also not authorized: confirmation inspection, seed registration,
+  training, push.

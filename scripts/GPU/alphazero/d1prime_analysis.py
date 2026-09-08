@@ -115,6 +115,15 @@ def position_row(pos: Mapping[str, Any]) -> Dict[str, Any]:
     if t1j not in ranks:
         raise D1PrimeError(f"{pos.get('task_id')}: T1j's move {t1j} is not in the raw policy "
                            f"({len(ranks)} legal moves); the position or the record is wrong")
+    # 🔴 THE PRODUCTION FIELD NAME. `eval_replay.ply_record` writes
+    # `readout_overrode_leader`; reading `overrode_leader` turned a production
+    # True into None, and a fixture that invented the shorter key hid it. Absent
+    # is a REFUSAL, never a silent None: this record did not come from the writer.
+    if "readout_overrode_leader" not in inc:
+        raise D1PrimeError(
+            f"{pos.get('task_id')}: the incumbent record has no "
+            f"'readout_overrode_leader'; eval_replay.ply_record writes that field, "
+            f"so this record did not come from the qualified writer")
     visits = {_move(k): float(v) for k, v in (inc.get("root_visits") or {}).items()}
     total = sum(visits.values())
     row = {k: pos.get(k) for k in COHORT_BINDING_FIELDS}
@@ -125,7 +134,7 @@ def position_row(pos: Mapping[str, Any]) -> Dict[str, Any]:
         "agree": ours == t1j,
         "rank_ours": ranks.get(ours),
         "visit_share_t1j": (visits.get(t1j, 0.0) / total) if total else None,
-        "overrode_leader": inc.get("overrode_leader"),
+        "overrode_leader": bool(inc["readout_overrode_leader"]),
     })
     return row
 
@@ -293,11 +302,17 @@ def _decide(stab: Mapping[str, Any]) -> str:
     return "GO" if (T >= T_THRESHOLD and lo > 0) else "NO_GO"
 
 
-def development_decision(rows: Sequence[Mapping[str, Any]], strata: Sequence[Mapping[str, Any]], *,
+def _development_decision(rows: Sequence[Mapping[str, Any]], strata: Sequence[Mapping[str, Any]], *,
                          cohort: str = PRIMARY_COHORT, B: int = B_REPLICATES,
                          seed: int = BOOTSTRAP_SEED) -> Dict[str, Any]:
-    """Plan §4.2-§4.3. The eligibility floor is checked BEFORE any replicate is
-    drawn; the secondary cohort is reported and cannot produce GO."""
+    """PRIVATE KERNEL -- plan §4.2-§4.3, computed from whatever rows it is given.
+
+    🔴 IT BINDS NOTHING. It exists so the statistic can be exercised on synthetic
+    cohorts; the checked entry point `analyse_development` is what production
+    calls, and it binds the cohort and the design FIRST. A forged label reaches
+    this function's arithmetic unchallenged, which is exactly why it is private.
+    The eligibility floor is checked BEFORE any replicate is drawn; the secondary
+    cohort is reported and cannot produce GO."""
     primary = matched_statistic(rows, cohort=cohort)
     met, detail = floors_met(primary)
     secondary = matched_statistic(rows, cohort=SECONDARY_COHORT if cohort == PRIMARY_COHORT
@@ -312,13 +327,14 @@ def development_decision(rows: Sequence[Mapping[str, Any]], strata: Sequence[Map
                         "confirmation run; not proof of a population effect")}
 
 
-def confirmation_decision(rows: Sequence[Mapping[str, Any]], strata: Sequence[Mapping[str, Any]], *,
+def _confirmation_decision(rows: Sequence[Mapping[str, Any]], strata: Sequence[Mapping[str, Any]], *,
                           cohort: str = PRIMARY_COHORT, B: int = B_REPLICATES,
                           seed: int = BOOTSTRAP_SEED) -> Dict[str, Any]:
-    """Plan §6.5: the same statistic on a DIFFERENT cohort, plus the both-arm
-    rule. An arm with no common-support cell has NO T: the outcome is
-    `NO_GO — arm undefined`, never zero, never skipped."""
-    dev = development_decision(rows, strata, cohort=cohort, B=B, seed=seed)
+    """PRIVATE KERNEL -- plan §6.5: the same statistic on a DIFFERENT cohort, plus
+    the both-arm rule. An arm with no common-support cell has NO T: the outcome
+    is `NO_GO — arm undefined`, never zero, never skipped. Binds nothing; see
+    `analyse_confirmation`."""
+    dev = _development_decision(rows, strata, cohort=cohort, B=B, seed=seed)
     arms = {a: matched_statistic(rows, cohort=cohort, arm=a)["T"] for a in ARMS}
     out = dict(dev, arms=arms)
     if dev["outcome"].startswith("NO_GO"):
@@ -342,6 +358,14 @@ def confirmation_select(candidates: Iterable[Mapping[str, Any]], *, seen_digests
     """Plan §6.2-§6.3 over FEATURE ROWS supplied by the caller (this module
     computes no features and opens no game).
 
+    ELIGIBILITY IS READ FROM THE PRODUCTION SCHEMA. A feature row identifies the
+    mover by `system` ("ours" / "t1j"), as `d1_selection` records it from
+    `d0_postmortem.moved_by` -- THE ONE DEFINITION of which engine moved. A row
+    without that field, or with an unrecognised value, is REFUSED. 🔴 An earlier
+    version read an invented `incumbent_to_move` flag and DEFAULTED a missing one
+    to True, so a production row with `system="t1j"` was selected: a missing
+    eligibility fact must never default to acceptance.
+
     FILTER FIRST: incumbent to move; ply >= CONFIRMATION_MIN_PLY (both roles);
     within-half dedup by digest, earliest by (task_id, ply); cross-half digests
     (development cohort + the six excluded) removed. THEN SELECT ONCE: per
@@ -354,7 +378,14 @@ def confirmation_select(candidates: Iterable[Mapping[str, Any]], *, seen_digests
                "seen_in_development": 0}
     pool = []
     for r in sorted(candidates, key=_order):
-        if not r.get("incumbent_to_move", True):
+        system = r.get("system")
+        if system not in ("ours", "t1j"):
+            raise D1PrimeError(
+                f"{r.get('task_id')} ply {r.get('ply')}: 'system' is {system!r}; a "
+                f"confirmation candidate must carry the production field produced by "
+                f"d0_postmortem.moved_by ('ours' or 't1j'). Eligibility is never "
+                f"defaulted to acceptance.")
+        if system != "ours":
             removed["not_incumbent_to_move"] += 1
             continue
         if int(r["ply"]) < CONFIRMATION_MIN_PLY:
@@ -400,6 +431,61 @@ def confirmation_select(candidates: Iterable[Mapping[str, Any]], *, seen_digests
             f"{ceiling} (1,200 queries). REFUSED before any seed or query; there is no drop rule "
             f"-- the overflow is resolved by a written amendment fixing a stricter cap first.")
     return {"rows": selected, "removed": removed, "counts": counts}
+
+
+# ─────────────────── the CHECKED entry points (what production calls) ───────
+
+CLAIM = ("T describes matched LPRD in the frozen selected cohort. The stratified "
+         "cluster resampling measures T's sensitivity to reweighting the observed "
+         "games. Its central 95% interval is an empirical stability interval, not "
+         "an established confidence interval for repeated L0 designs. GO means "
+         "enough effect and stability to justify ONE confirmation run, not proof "
+         "of a population effect.")
+
+
+def _checked(rows, frozen_cohort, tasks, reps, kernel, *, B, seed):
+    """Bind the cohort and the design, THEN compute. Never the other way round."""
+    check_cohort(rows, frozen_cohort)
+    strata = design_strata(tasks, reps=reps)
+    # 🔴 THE DESIGN MUST CONTAIN THE COHORT'S GAMES. A cohort whose task_ids are
+    # absent from the strata produces EMPTY replicates and would be reported as
+    # "bootstrap undefined" -- an instrument mismatch wearing a result's name.
+    in_design = {g for st in strata for g in st["games"]}
+    missing = sorted({r["task_id"] for r in rows} - in_design)
+    if missing:
+        raise D1PrimeError(
+            f"{len(missing)} cohort game(s) are not in the design's strata for reps "
+            f"{list(reps)} (first {missing[0]!r}): the cohort and the design halves "
+            f"do not match, and every replicate would be empty.")
+    out = dict(kernel(rows, strata, cohort=PRIMARY_COHORT, B=B, seed=seed))
+    out["cohort"] = PRIMARY_COHORT
+    out["bound"] = {"rows": len(rows), "cohort": PRIMARY_COHORT, "reps": list(reps),
+                    "strata": len(strata)}
+    out["strata"] = len(strata)
+    out["claim"] = CLAIM
+    return out
+
+
+def analyse_development(rows: Sequence[Mapping[str, Any]], *,
+                        frozen_cohort: Sequence[Mapping[str, Any]],
+                        tasks: Sequence[Mapping[str, Any]],
+                        reps: Sequence[int] = (0, 1),
+                        B: int = B_REPLICATES, seed: int = BOOTSTRAP_SEED) -> Dict[str, Any]:
+    """THE development entry point. Binds the cohort to the frozen manifest and
+    the strata to the design BEFORE any calculation, and FIXES the primary
+    hypothesis: there is no `cohort` parameter, so the secondary cohort cannot be
+    promoted by an argument."""
+    return _checked(rows, frozen_cohort, tasks, reps, _development_decision, B=B, seed=seed)
+
+
+def analyse_confirmation(rows: Sequence[Mapping[str, Any]], *,
+                         frozen_cohort: Sequence[Mapping[str, Any]],
+                         tasks: Sequence[Mapping[str, Any]],
+                         reps: Sequence[int] = (2, 3),
+                         B: int = B_REPLICATES, seed: int = BOOTSTRAP_SEED) -> Dict[str, Any]:
+    """THE confirmation entry point. Same binding, same fixed hypothesis, plus the
+    both-arm and undefined-arm rules of §6.5."""
+    return _checked(rows, frozen_cohort, tasks, reps, _confirmation_decision, B=B, seed=seed)
 
 
 # ──────────────────────────── cohort binding ────────────────────────────────
