@@ -68,6 +68,10 @@ ROLES = ("position", "control")
 COHORT_BINDING_FIELDS = ("task_id", "ply", "digest", "signature", "role",
                          "opening", "colour_arm", "phase")
 
+#: What a row's task id must agree with IN THE DESIGN. Membership alone let two
+#: whole opening strata be swapped with every count still valid.
+DESIGN_BINDING_FIELDS = ("opening", "colour_arm", "rep")
+
 
 class D1PrimeError(Exception):
     """A refusal by the analysis. Never a statement about the engines."""
@@ -337,10 +341,14 @@ def _confirmation_decision(rows: Sequence[Mapping[str, Any]], strata: Sequence[M
     dev = _development_decision(rows, strata, cohort=cohort, B=B, seed=seed)
     arms = {a: matched_statistic(rows, cohort=cohort, arm=a)["T"] for a in ARMS}
     out = dict(dev, arms=arms)
-    if dev["outcome"].startswith("NO_GO"):
-        return out
+    # 🔴 THE ARM CONDITION IS CHECKED FIRST. Returning the generic
+    # insufficient-support result before it gave an undefined arm the WRONG
+    # NAMED OUTCOME; the frozen plan requires `NO_GO — arm undefined` whenever an
+    # arm's T does not exist, whatever else is also true of the cohort.
     if any(arms[a] is None for a in ARMS):
         out["outcome"] = "NO_GO — arm undefined"
+        return out
+    if dev["outcome"].startswith("NO_GO"):
         return out
     if not all(arms[a] > 0 for a in ARMS):
         out["outcome"] = "NO_GO"
@@ -443,20 +451,77 @@ CLAIM = ("T describes matched LPRD in the frozen selected cohort. The stratified
          "of a population effect.")
 
 
-def _checked(rows, frozen_cohort, tasks, reps, kernel, *, B, seed):
-    """Bind the cohort and the design, THEN compute. Never the other way round."""
+#: THE CANONICAL INPUTS, resolved by the production entry and by nothing else.
+#: The record is the one D0 bound and pinned (its §1 identity); the plan is L0's
+#: frozen plan; `d1_selection.select_all` applies §12.1-§12.3 and §13 to them and
+#: verifies the frozen counts itself.
+L0_RECORD_REL = ("docs/superpowers/evidence/2026-08-27-t1j-l0-canonical-match/"
+                 "06_l0_match_results.jsonl")
+L0_PLAN_REL = ("docs/superpowers/evidence/2026-08-26-t1j-l0-larger-match/"
+               "01_l0_match_plan.json")
+DEVELOPMENT_REPS = (0, 1)                    # §4.2: D0's discovery half
+CONFIRMATION_REPS = (2, 3)                   # §4.2: the preregistered holdout
+
+
+def resolve_canonical_cohort() -> Dict[str, Any]:
+    """The frozen §13 cohort and the design, resolved HERE -- not supplied.
+
+    Read-only: binds the published L0 record by digest through D0 and applies the
+    frozen selection through `d1_selection`, which verifies §12's counts and
+    §13's exclusion itself. No model, no JVM, no seed, no confirmation data.
+    """
+    from . import d0_postmortem as D0
+    from . import d1_selection as SEL
+    from . import l0_match_plan as L0P
+    bound = D0.bind_record(L0_RECORD_REL, L0_PLAN_REL)
+    rows = SEL.select_all(bound)["positions"]
+    tasks = L0P.load_l0_plan(L0_PLAN_REL)["tasks"]
+    return {"rows": rows, "tasks": tasks, "reps": DEVELOPMENT_REPS,
+            "record": L0_RECORD_REL, "plan": L0_PLAN_REL,
+            "cohort_source": "d1_selection.select_all", "n_positions": len(rows)}
+
+
+def _analyse(rows, *, frozen_cohort, tasks, reps, kernel, B, seed):
+    """PRIVATE. Bind the cohort and the design, THEN compute -- never the other
+    way round. Configurable so synthetic cohorts can exercise the binding itself;
+    the production entries below supply canonical values and expose no knobs."""
     check_cohort(rows, frozen_cohort)
     strata = design_strata(tasks, reps=reps)
     # 🔴 THE DESIGN MUST CONTAIN THE COHORT'S GAMES. A cohort whose task_ids are
     # absent from the strata produces EMPTY replicates and would be reported as
     # "bootstrap undefined" -- an instrument mismatch wearing a result's name.
+    # THE FROZEN COHORT IS THE AUTHORITY ON THE DESIGN, and the analysis rows are
+    # already bound to it by `check_cohort` above. A D1 record carries no `rep`
+    # per position -- the manifest does -- so binding the design here rather than
+    # against the readout rows is what lets `rep` be bound at all.
     in_design = {g for st in strata for g in st["games"]}
-    missing = sorted({r["task_id"] for r in rows} - in_design)
+    missing = sorted({r["task_id"] for r in frozen_cohort} - in_design)
     if missing:
         raise D1PrimeError(
             f"{len(missing)} cohort game(s) are not in the design's strata for reps "
             f"{list(reps)} (first {missing[0]!r}): the cohort and the design halves "
             f"do not match, and every replicate would be empty.")
+    # 🔴 MEMBERSHIP IS NOT AGREEMENT. Two complete opening strata swapped in the
+    # design keep every task id and every count valid while putting each row in
+    # the wrong stratum -- so the strata a replicate reweights are not the strata
+    # the rows came from. Each row's task id is bound to the design's own
+    # opening, colour arm and repetition, TYPE-STRICTLY.
+    by_id = {t["task_id"]: t for t in tasks}
+    for r in frozen_cohort:
+        t = by_id[r["task_id"]]
+        for field in DESIGN_BINDING_FIELDS:
+            # PRESENCE IS REQUIRED, not merely agreement when present: a guard
+            # that skips a field the row happens to omit is a guard the row can
+            # escape by omission.
+            if field not in r:
+                raise D1PrimeError(
+                    f"{r['task_id']}: the cohort row does not carry {field!r}, so it "
+                    f"cannot be bound to the design; a canonical selection row carries it.")
+            if not _same(r[field], t.get(field)):
+                raise D1PrimeError(
+                    f"{r['task_id']}: the cohort row's {field!r} is {r[field]!r} but it "
+                    f"disagrees with the design's {t.get(field)!r}; the rows and the "
+                    f"design describe different games.")
     out = dict(kernel(rows, strata, cohort=PRIMARY_COHORT, B=B, seed=seed))
     out["cohort"] = PRIMARY_COHORT
     out["bound"] = {"rows": len(rows), "cohort": PRIMARY_COHORT, "reps": list(reps),
@@ -466,26 +531,57 @@ def _checked(rows, frozen_cohort, tasks, reps, kernel, *, B, seed):
     return out
 
 
-def analyse_development(rows: Sequence[Mapping[str, Any]], *,
-                        frozen_cohort: Sequence[Mapping[str, Any]],
-                        tasks: Sequence[Mapping[str, Any]],
-                        reps: Sequence[int] = (0, 1),
-                        B: int = B_REPLICATES, seed: int = BOOTSTRAP_SEED) -> Dict[str, Any]:
-    """THE development entry point. Binds the cohort to the frozen manifest and
-    the strata to the design BEFORE any calculation, and FIXES the primary
-    hypothesis: there is no `cohort` parameter, so the secondary cohort cannot be
-    promoted by an argument."""
-    return _checked(rows, frozen_cohort, tasks, reps, _development_decision, B=B, seed=seed)
+def analyse_development(d1_report: Mapping[str, Any]) -> Dict[str, Any]:
+    """THE production development entry. Takes the D1 report and NOTHING ELSE.
+
+    🔴 EVERY OTHER INPUT IS RESOLVED HERE, so none can be supplied: the cohort and
+    the design from `resolve_canonical_cohort`, the repetitions from the
+    development half, B and the PRNG seed from the plan's frozen constants. An
+    earlier version accepted `rows`, `frozen_cohort`, `tasks`, `reps`, `B` and
+    `seed`, so forged rows with a matching forged manifest -- or a changed
+    replicate count -- produced a GO that looked frozen. The knobs live in
+    `_analyse`, which is private and for synthetic cohorts only.
+    """
+    canon = resolve_canonical_cohort()
+    rows = rows_from_d1_report(d1_report)
+    out = _analyse(rows, frozen_cohort=canon["rows"], tasks=canon["tasks"],
+                   reps=canon["reps"], kernel=_development_decision,
+                   B=B_REPLICATES, seed=BOOTSTRAP_SEED)
+    out["resolved"] = {k: canon[k] for k in ("record", "plan", "cohort_source", "n_positions")}
+    out["prng"] = {"bit_generator": "PCG64", "seed": BOOTSTRAP_SEED, "B": B_REPLICATES}
+    return out
 
 
-def analyse_confirmation(rows: Sequence[Mapping[str, Any]], *,
-                         frozen_cohort: Sequence[Mapping[str, Any]],
-                         tasks: Sequence[Mapping[str, Any]],
-                         reps: Sequence[int] = (2, 3),
-                         B: int = B_REPLICATES, seed: int = BOOTSTRAP_SEED) -> Dict[str, Any]:
-    """THE confirmation entry point. Same binding, same fixed hypothesis, plus the
-    both-arm and undefined-arm rules of §6.5."""
-    return _checked(rows, frozen_cohort, tasks, reps, _confirmation_decision, B=B, seed=seed)
+def analyse_confirmation(d1_report: Mapping[str, Any], *,
+                         cohort_manifest_path: str) -> Dict[str, Any]:
+    """THE production confirmation entry. Takes the D1 report and the PATH of the
+    frozen confirmation manifest -- no numeric knobs at all.
+
+    🔑 WHY A PATH AND NOT A LIST, and why this is not the development entry's
+    shape. There is no canonical confirmation cohort to resolve today: it is
+    produced by `confirmation_select` over the held-out half at §6.2 step 8, a
+    step that is gated and has not run. The cohort must therefore be a WRITTEN
+    ARTIFACT that a review can pin, not a list a caller assembles in memory; its
+    sha256 is recorded in the result so the run and the artifact can be tied
+    together afterwards. The design and repetitions come from the frozen L0 plan,
+    and B and the seed from the plan's constants.
+    """
+    import hashlib
+    import json as _json
+    from . import l0_match_plan as L0P
+    raw = open(cohort_manifest_path, "rb").read()
+    manifest = _json.loads(raw)
+    frozen = manifest["rows"] if isinstance(manifest, dict) else manifest
+    tasks = L0P.load_l0_plan(L0_PLAN_REL)["tasks"]
+    rows = rows_from_d1_report(d1_report)
+    out = _analyse(rows, frozen_cohort=frozen, tasks=tasks, reps=CONFIRMATION_REPS,
+                   kernel=_confirmation_decision, B=B_REPLICATES, seed=BOOTSTRAP_SEED)
+    out["resolved"] = {"cohort_manifest": cohort_manifest_path,
+                       "cohort_manifest_sha256": hashlib.sha256(raw).hexdigest(),
+                       "plan": L0_PLAN_REL, "cohort_source": "frozen confirmation manifest",
+                       "n_positions": len(frozen)}
+    out["prng"] = {"bit_generator": "PCG64", "seed": BOOTSTRAP_SEED, "B": B_REPLICATES}
+    return out
 
 
 # ──────────────────────────── cohort binding ────────────────────────────────

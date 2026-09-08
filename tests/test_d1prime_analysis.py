@@ -8,6 +8,8 @@ mode is the named defect.
 """
 import inspect
 import itertools
+import re
+from collections import Counter
 
 import numpy as np
 import pytest
@@ -34,9 +36,15 @@ _digest_counter = itertools.count(1)
 
 
 def _row(opening, arm, phase, role, task_id, lprd, *, sig="mover_fragmentation",
-         ply=10, digest=None, agree=False):
+         ply=10, digest=None, agree=False, rep=None):
+    """A cohort row. `rep` is derived from the game id (`...-r<n>`) as the
+    canonical selection rows carry it, so the design binding has something to
+    bind; rows built with arbitrary game names default to 0."""
+    if rep is None:
+        m = re.search(r"-r(\d+)$", str(task_id))
+        rep = int(m.group(1)) if m else 0
     return {"task_id": task_id, "opening": opening, "colour_arm": arm, "phase": phase,
-            "signature": sig, "role": role, "ply": ply,
+            "signature": sig, "role": role, "ply": ply, "rep": rep,
             "digest": digest or f"d{next(_digest_counter):06d}",
             "lprd": bool(lprd), "agree": bool(agree)}
 
@@ -505,6 +513,22 @@ def test_a_ONE_ARM_effect_cannot_confirm():
     assert d["outcome"] == "NO_GO"
 
 
+def test_an_undefined_arm_is_named_EVEN_WHEN_support_is_insufficient():
+    """🔴 [P2] The generic insufficient-support result was returned BEFORE the arm
+    check, so an undefined arm could receive the wrong named outcome. The frozen
+    plan requires `NO_GO — arm undefined` for that condition; it is checked first."""
+    red = [(o, "t1j_red", "middle") for o in OPENINGS[:4]]        # 4 cells: below the floor
+    rows = _cohort(red, pos_rate=1.0, ctl_rate=0.0, per_role=3)
+    for o in OPENINGS[:4]:                                        # black: positions only
+        rows += [_row(o, "t1j_black", "middle", "position", _gid(o, "t1j_black", 0), True)]
+    st = DP.matched_statistic(rows, cohort="mover_fragmentation")
+    assert not DP.floors_met(st)[0], "the fixture must be below the floor"
+    assert DP.matched_statistic(rows, cohort="mover_fragmentation", arm="t1j_black")["T"] is None
+    d = _confirm(rows)
+    assert d["outcome"] == "NO_GO — arm undefined", d["outcome"]
+    assert d["arms"]["t1j_black"] is None
+
+
 def test_an_UNDEFINED_arm_is_NO_GO_arm_undefined_never_zero_never_skipped():
     """No common-support cell in the black arm: its T does not exist. The
     outcome must say exactly that -- not plain NO_GO (treated as zero) and not
@@ -625,62 +649,69 @@ def test_the_ceiling_refuses_241_rows_and_accepts_240_before_any_seed():
 
 # ────────────── the CHECKED entry point: binding before calculation ─────────
 
+MANIFEST_FIELDS = DP.COHORT_BINDING_FIELDS + ("rep",)      # as select_all's rows carry them
+
+
+def _manifest(rows):
+    return [{k: r[k] for k in MANIFEST_FIELDS} for r in rows]
+
+
 def _frozen_and_rows(pos_rate=2 / 3, ctl_rate=1 / 3, per_role=6):
     rows = _cohort(ALL_16, pos_rate=pos_rate, ctl_rate=ctl_rate, per_role=per_role)
-    frozen = [{k: r[k] for k in DP.COHORT_BINDING_FIELDS} for r in rows]
-    return rows, frozen
+    return rows, _manifest(rows)
 
 
-def test_the_checked_entry_point_binds_the_cohort_BEFORE_any_calculation():
+def _checked(rows, frozen, tasks, kernel=None, reps=(0, 1), B=50):
+    return DP._analyse(rows, frozen_cohort=frozen, tasks=tasks, reps=reps,
+                       kernel=kernel or DP._development_decision, B=B, seed=DP.BOOTSTRAP_SEED)
+
+
+def test_the_binding_layer_binds_the_cohort_BEFORE_any_calculation():
     """🔴 [P1] `_development_decision` computes from whatever rows it is handed:
     a cohort with every phase forged produced GO while `check_cohort` refused the
-    same rows. The checked entry binds first, so a forged label cannot reach the
-    statistic."""
+    same rows. `_analyse` binds first, so a forged label cannot reach the
+    statistic -- and the production entry resolves what it binds against."""
     rows, frozen = _frozen_and_rows()
-    ok = DP.analyse_development(rows, frozen_cohort=frozen, tasks=_design())
-    assert ok["outcome"] == "GO"
+    assert _checked(rows, frozen, _design())["outcome"] == "GO"
     forged = [dict(r, phase="late") for r in rows]
     assert DP._development_decision(forged, _strata(), B=50)["outcome"] == "GO"   # the kernel does not bind
     with pytest.raises(DP.D1PrimeError, match="frozen"):
-        DP.analyse_development(forged, frozen_cohort=frozen, tasks=_design())
+        _checked(forged, frozen, _design())
 
 
-def test_the_checked_entry_point_FIXES_the_primary_hypothesis():
-    """The secondary cohort cannot be made primary by an argument: the entry
-    point takes no cohort parameter, and a `created_threat`-only cohort is
-    refused rather than analysed as if it were the hypothesis."""
-    assert "cohort" not in inspect.signature(DP.analyse_development).parameters
-    assert "cohort" not in inspect.signature(DP.analyse_confirmation).parameters
+def test_the_binding_layer_FIXES_the_primary_hypothesis():
+    """The secondary cohort cannot be made primary: neither entry takes a cohort
+    parameter, and a `created_threat`-only cohort is reported as secondary."""
+    for fn in (DP.analyse_development, DP.analyse_confirmation):
+        assert "cohort" not in inspect.signature(fn).parameters
     rows = _cohort(ALL_16, pos_rate=1.0, ctl_rate=0.0, per_role=6, sig="created_threat")
-    frozen = [{k: r[k] for k in DP.COHORT_BINDING_FIELDS} for r in rows]
-    out = DP.analyse_development(rows, frozen_cohort=frozen, tasks=_design())
+    out = _checked(rows, _manifest(rows), _design())
     assert out["cohort"] == DP.PRIMARY_COHORT
     assert out["outcome"] == "NO_GO — insufficient support"
     assert out["secondary"]["T"] == pytest.approx(1.0)
 
 
-def test_the_checked_entry_point_builds_strata_from_the_DESIGN_not_from_the_rows():
+def test_the_binding_layer_builds_strata_from_the_DESIGN_not_from_the_rows():
     """A game that contributed no selected row still exists in its stratum and
     must be drawable; strata inferred from rows would silently drop it."""
     rows, frozen = _frozen_and_rows()
     thin = [r for r in rows if not r["task_id"].endswith("-r1")]
-    thin_frozen = [{k: r[k] for k in DP.COHORT_BINDING_FIELDS} for r in thin]
-    out = DP.analyse_development(thin, frozen_cohort=thin_frozen, tasks=_design())
+    thin_frozen = _manifest(thin)
+    out = _checked(thin, thin_frozen, _design())
     assert out["strata"] == 16
     assert {g for s in DP.design_strata(_design(), reps=(0, 1)) for g in s["games"]} > \
         {r["task_id"] for r in thin}
 
 
-def test_the_checked_CONFIRMATION_entry_binds_and_keeps_the_arm_rules():
+def test_the_CONFIRMATION_kernel_binds_and_keeps_the_arm_rules():
     rows = _cohort(ALL_16, pos_rate=2 / 3, ctl_rate=1 / 3, per_role=6, reps=(2, 3))
-    frozen = [{k: r[k] for k in DP.COHORT_BINDING_FIELDS} for r in rows]
-    out = DP.analyse_confirmation(rows, frozen_cohort=frozen, tasks=_design(reps=(2, 3)),
-                                  reps=(2, 3))
+    frozen = _manifest(rows)
+    out = _checked(rows, frozen, _design(reps=(2, 3)), DP._confirmation_decision, reps=(2, 3))
     assert out["outcome"] == "GO" and set(out["arms"]) == set(DP.ARMS)
     assert out["bound"]["reps"] == [2, 3]
     with pytest.raises(DP.D1PrimeError, match="frozen"):
-        DP.analyse_confirmation([dict(r, role="control") for r in rows],
-                                frozen_cohort=frozen, tasks=_design(reps=(2, 3)), reps=(2, 3))
+        _checked([dict(r, role="control") for r in rows], frozen, _design(reps=(2, 3)),
+                 DP._confirmation_decision, reps=(2, 3))
 
 
 def test_a_cohort_whose_GAMES_are_not_in_the_designs_strata_is_REFUSED():
@@ -689,16 +720,195 @@ def test_a_cohort_whose_GAMES_are_not_in_the_designs_strata_is_REFUSED():
     an instrument mismatch wearing a result's name."""
     rows, frozen = _frozen_and_rows()                       # games from reps (0, 1)
     with pytest.raises(DP.D1PrimeError, match="not in the design"):
-        DP.analyse_confirmation(rows, frozen_cohort=frozen, tasks=_design(reps=(2, 3)),
-                                reps=(2, 3))
+        _checked(rows, frozen, _design(reps=(2, 3)), DP._confirmation_decision, reps=(2, 3))
 
 
-def test_the_checked_entries_report_what_they_bound():
+def test_the_confirmation_entry_takes_a_MANIFEST_PATH_and_no_numeric_knobs(tmp_path, canonical):
+    """🔑 There is no canonical confirmation cohort to resolve: it is produced at
+    §6.2 step 8, a gated step that has not run. So the cohort must be a WRITTEN
+    ARTIFACT a review can pin -- not a list a caller assembles -- and its sha256
+    is recorded. No B, seed or reps parameter exists."""
+    import hashlib, json as _json
+    params = list(inspect.signature(DP.analyse_confirmation).parameters)
+    assert params == ["d1_report", "cohort_manifest_path"], params
+    # confirmation rows must live in the HOLDOUT half's games (reps 2 and 3)
+    conf_tasks = [t for t in canonical["tasks"] if int(t["rep"]) in (2, 3)]
+    by_stratum = {}
+    for t in conf_tasks:
+        by_stratum.setdefault((t["opening"], t["colour_arm"]), []).append(t)
+    rows = []
+    for (o, a), ts in by_stratum.items():
+        for role in ("position", "control"):
+            for i in range(6):
+                task = ts[i % 2]
+                rows.append(_row(o, a, "middle", role, task["task_id"],
+                                 i < (6 if role == "position" else 2)))
+    manifest = tmp_path / "cohort.json"
+    manifest.write_bytes(_json.dumps({"rows": _manifest(rows)}).encode())
+    rep = _report_for(rows, lprd_positions=1.0, lprd_controls=0.0)
+    out = DP.analyse_confirmation(rep, cohort_manifest_path=str(manifest))
+    assert out["resolved"]["cohort_manifest_sha256"] == \
+        hashlib.sha256(manifest.read_bytes()).hexdigest()
+    assert out["prng"]["B"] == DP.B_REPLICATES
+    forged = tmp_path / "forged.json"
+    forged.write_bytes(_json.dumps({"rows": [dict(m, phase="late") for m in _manifest(rows)]}).encode())
+    with pytest.raises(DP.D1PrimeError, match="frozen"):
+        DP.analyse_confirmation(rep, cohort_manifest_path=str(forged))
+
+
+def test_the_entries_report_what_they_bound():
     rows, frozen = _frozen_and_rows()
-    out = DP.analyse_development(rows, frozen_cohort=frozen, tasks=_design())
+    out = _checked(rows, frozen, _design())
     assert out["bound"] == {"rows": len(rows), "cohort": DP.PRIMARY_COHORT,
                             "reps": [0, 1], "strata": 16}
     assert out["claim"].startswith("T describes matched LPRD in the frozen selected cohort")
+
+
+# ───────── the PRODUCTION entry: resolves the canonical cohort itself ───────
+
+@pytest.fixture(scope="module")
+def canonical():
+    """The canonical §13 cohort and design, resolved the way production must."""
+    from scripts.GPU.alphazero import d0_postmortem as D0, d1_selection as SEL, l0_match_plan as L0P
+    bound = D0.bind_record(DP.L0_RECORD_REL, DP.L0_PLAN_REL)
+    rows = SEL.select_all(bound)["positions"]
+    return {"rows": rows, "tasks": L0P.load_l0_plan(DP.L0_PLAN_REL)["tasks"]}
+
+
+def _report_for(rows, *, lprd_positions, lprd_controls):
+    """A D1 report of MOCKED readouts carrying real cohort labels: the T1j move
+    ranks 7th (lprd) or 1st (not), per role, at the requested rates."""
+    pol = _policy_with_ranks()
+    out = []
+    per_role = {}
+    for r in rows:
+        i = per_role.get(r["role"], 0)
+        per_role[r["role"]] = i + 1
+        rate = lprd_positions if r["role"] == "position" else lprd_controls
+        lprd = (i % 100) < round(rate * 100)
+        labels = {k: r[k] for k in DP.COHORT_BINDING_FIELDS}
+        out.append(_d1_position(policy=pol, our_move=(0, 0),
+                                t1j_move_6=(0, 6) if lprd else (0, 0), **labels))
+    return {"positions": out}
+
+
+def test_the_production_entry_EXPOSES_NO_KNOBS_at_all():
+    """🔴 [P1] A caller could pass forged rows WITH a matching forged
+    frozen_cohort, and override B, the PRNG seed and the repetitions -- a GO from
+    a changed protocol wearing a frozen one's name. The production entry takes
+    the D1 report and nothing else."""
+    params = list(inspect.signature(DP.analyse_development).parameters)
+    assert params == ["d1_report"], params
+    for banned in ("rows", "frozen_cohort", "tasks", "reps", "B", "seed", "cohort"):
+        assert banned not in params, banned
+
+
+def test_the_production_entry_RESOLVES_the_canonical_cohort_and_design_itself(canonical):
+    """It does not restate the selection: the cohort it binds against is exactly
+    `d1_selection.select_all` over the digest-bound L0 record, and the design is
+    the frozen L0 plan's tasks."""
+    rep = _report_for(canonical["rows"], lprd_positions=1.0, lprd_controls=0.0)
+    out = DP.analyse_development(rep)
+    assert out["bound"] == {"rows": 221, "cohort": DP.PRIMARY_COHORT,
+                            "reps": [0, 1], "strata": 16}
+    assert out["resolved"]["cohort_source"] == "d1_selection.select_all"
+    assert out["resolved"]["n_positions"] == 221
+    assert out["resolved"]["record"] == DP.L0_RECORD_REL
+    assert out["resolved"]["plan"] == DP.L0_PLAN_REL
+    assert out["prng"] == {"bit_generator": "PCG64", "seed": DP.BOOTSTRAP_SEED,
+                           "B": DP.B_REPLICATES}
+
+
+def test_the_production_entry_REFUSES_a_report_that_is_not_the_canonical_cohort(canonical):
+    """Forged rows can no longer come with a matching forged manifest: there is
+    no manifest parameter, and the resolved cohort refuses them."""
+    rep = _report_for(canonical["rows"], lprd_positions=1.0, lprd_controls=0.0)
+    forged = {"positions": [dict(p, phase="late") for p in rep["positions"]]}
+    with pytest.raises(DP.D1PrimeError, match="frozen"):
+        DP.analyse_development(forged)
+    short = {"positions": rep["positions"][:-1]}
+    with pytest.raises(DP.D1PrimeError, match="frozen"):
+        DP.analyse_development(short)
+
+
+def test_the_production_entry_uses_the_FROZEN_B_and_seed(monkeypatch, canonical):
+    seen = {}
+    real = DP.stability_interval
+
+    def spy(rows, strata, **kw):
+        seen.update(kw)
+        return real(rows, strata, **kw)
+
+    monkeypatch.setattr(DP, "stability_interval", spy)
+    DP.analyse_development(_report_for(canonical["rows"], lprd_positions=1.0, lprd_controls=0.0))
+    assert seen["B"] == DP.B_REPLICATES == 10_000 and seen["seed"] == DP.BOOTSTRAP_SEED
+
+
+# ───────────── design binding: task metadata, not just membership ───────────
+
+def test_a_design_whose_task_METADATA_disagrees_with_the_rows_is_REFUSED():
+    """🔴 [P1] Two complete opening strata swapped in the design, counts still
+    valid: membership-only checking accepted it and returned GO. Each row's task
+    id is bound to the design's opening, colour arm and repetition."""
+    rows, frozen = _frozen_and_rows()
+    design = _design()
+    swapped = []
+    for t in design:
+        o = t["opening"]
+        o = "o2_offcenter" if o == "o1_center" else ("o1_center" if o == "o2_offcenter" else o)
+        swapped.append(dict(t, opening=o))
+    assert sorted(t["task_id"] for t in swapped) == sorted(t["task_id"] for t in design)
+    assert Counter(t["opening"] for t in swapped) == Counter(t["opening"] for t in design)
+    with pytest.raises(DP.D1PrimeError, match="disagrees with the design"):
+        DP._analyse(rows, frozen_cohort=frozen, tasks=swapped, reps=(0, 1),
+                    kernel=DP._development_decision, B=20, seed=1)
+
+
+def test_a_design_that_RELABELS_reps_within_a_stratum_is_REFUSED():
+    """Strata stay well formed (2 games each) and every task id is present, so
+    only the metadata binding can catch it: each game's `rep` is swapped with the
+    other game's in its stratum."""
+    rows, frozen = _frozen_and_rows()
+    design = [dict(t, rep=1 - int(t["rep"])) for t in _design()]
+    with pytest.raises(DP.D1PrimeError, match="disagrees with the design"):
+        _checked(rows, frozen, design)
+
+
+@pytest.mark.parametrize("value", ["0", 0.0, True])
+def test_the_design_binding_is_TYPE_STRICT_on_rep(value):
+    """`"0"`, `0.0` and `True` all compare equal to a rep of 0 under `==`; the
+    binding requires the same TYPE, so none of them passes as the design's rep."""
+    rows, frozen = _frozen_and_rows()
+    design = [dict(t, rep=value) if int(t["rep"]) == 0 else t for t in _design()]
+    with pytest.raises(DP.D1PrimeError, match="disagrees with the design"):
+        _checked(rows, frozen, design)
+
+
+def test_a_row_that_does_not_CARRY_a_bound_design_field_is_REFUSED():
+    """A guard that skips a field the row omits is a guard the row escapes by
+    omission -- found when synthetic rows without `rep` bound nothing."""
+    rows, frozen = _frozen_and_rows()
+    stripped = [{k: v for k, v in m.items() if k != "rep"} for m in frozen]
+    with pytest.raises(DP.D1PrimeError, match="does not carry 'rep'"):
+        _checked(rows, stripped, _design())
+
+
+def test_a_single_task_relabelled_is_caught_by_the_STRATA_construction_first():
+    """Recorded so the division of labour is explicit: moving ONE task to another
+    opening leaves a stratum with 1 game and another with 3, which
+    `design_strata` refuses before the metadata check is reached. Both refusals
+    are correct; this pins which one fires."""
+    rows, frozen = _frozen_and_rows()
+    design = [dict(t, opening="o3_low") if t["task_id"] == rows[0]["task_id"] else t
+              for t in _design()]
+    with pytest.raises(DP.D1PrimeError, match="exactly 2"):
+        _checked(rows, frozen, design)
+
+
+def test_rows_carry_rep_and_it_is_bound_too(canonical):
+    assert all("rep" in r for r in canonical["rows"])
+    by_id = {t["task_id"]: t for t in canonical["tasks"]}
+    assert all(r["rep"] == by_id[r["task_id"]]["rep"] for r in canonical["rows"])
 
 
 # ─────────────────────── cohort binding, type-strict ────────────────────────

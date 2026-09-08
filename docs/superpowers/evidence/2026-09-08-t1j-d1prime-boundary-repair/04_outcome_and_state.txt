@@ -1,0 +1,61 @@
+D1' ANALYSIS -- BOUNDARY REPAIR (code-and-test only). NOTHING RAN. State at the moment of recording.
+====================================================================================================
+recorded 2026-09-08T12:44:46Z at HEAD c55de97; 51 commits unpushed before this one
+changed:  2 files changed, 362 insertions(+), 56 deletions(-)
+
+ALL SIX GATES:
+  scripts/GPU/alphazero/d1_probe.py:55:D1_EXECUTION_AUTHORIZED = False
+  scripts/GPU/alphazero/e4_screen_command.py:44:SCREEN_AUTHORIZED = False
+  scripts/GPU/alphazero/h1_viability_runner.py:77:H1_EXECUTION_AUTHORIZED = False
+  scripts/GPU/alphazero/l0_match_command.py:41:L0_EXECUTION_AUTHORIZED = False
+  scripts/GPU/alphazero/lowply_qualification.py:55:LOWPLY_QUALIFICATION_AUTHORIZED = False
+  scripts/GPU/alphazero/runtime_requalification.py:79:RUNTIME_REQUAL_AUTHORIZED = False
+NOTHING EXECUTED: no D1 run, no real readout, no confirmation diagnostics, no model, no JVM, no seed action, no gate change, no training, no push.
+  (The canonical cohort is resolved READ-ONLY from the published L0 record via D0's digest binding and
+   d1_selection -- the development half D0 already used. No confirmation data is opened.)
+
+[P1] GAP 1 -- the 'frozen' inputs were supplied by the caller: forged rows WITH a matching forged
+  frozen_cohort returned GO, and B, the PRNG seed and the repetitions were overridable.
+  FIXED. Production entry signatures now: analyse_development('d1_report',)
+                                          analyse_confirmation('d1_report', 'cohort_manifest_path')
+  `resolve_canonical_cohort()` resolves them itself: 221 positions from
+    record docs/superpowers/evidence/2026-08-27-t1j-l0-canonical-match/06_l0_match_results.jsonl
+    plan   docs/superpowers/evidence/2026-08-26-t1j-l0-larger-match/01_l0_match_plan.json   via d1_selection.select_all, reps [0, 1]
+  B and the seed come from the frozen constants (10000, 20260907); no parameter exposes them.
+  The knobs remain in `_analyse` / `_development_decision` / `_confirmation_decision`, PRIVATE, for synthetic cohorts.
+  ⚠ CONFIRMATION IS DELIBERATELY DIFFERENT AND SAID SO: there is no canonical confirmation cohort to
+    resolve -- it is produced at Sec. 6.2 step 8, a gated step that has not run -- so the entry takes the
+    PATH of a frozen manifest (a written artifact a review can pin) and records its sha256. Still no
+    numeric knobs: design from the L0 plan, reps (2,3), B and seed from the constants.
+
+[P1] GAP 2 -- rows were checked for task-ID membership only: two complete opening strata swapped in the
+  design kept every id and count valid and returned GO.
+  FIXED. Each frozen-cohort row's task id is bound to the design's ['opening', 'colour_arm', 'rep'], TYPE-STRICTLY.
+  🔑 The binding runs over the FROZEN COHORT, not the readout rows: a D1 record carries no `rep` per
+     position (the manifest does), and the readout rows are already bound to the manifest by check_cohort.
+  🔑 PRESENCE IS REQUIRED, not merely agreement-when-present -- found when synthetic rows lacking `rep`
+     escaped the guard entirely. A missing bound field is now its own refusal.
+  Recorded: relabelling ONE task is caught earlier, by the strata construction (a stratum of 1 and one of 3);
+  both refusals are correct and a test pins which fires.
+
+[P2] GAP 3 -- an undefined confirmation arm could receive the wrong named outcome: the generic
+  insufficient-support result was returned BEFORE the arm check.
+  FIXED. The arm condition is checked FIRST, so `NO_GO — arm undefined` is returned whenever an arm's T
+  does not exist, whatever else is also true of the cohort. A test drives a cohort that is BOTH below the
+  floor AND missing an arm and requires the arm name.
+
+FULL SUITE (.venv/bin/python -m pytest tests -q): ==== 4104 passed, 4 skipped, 53 deselected, 8 warnings in 817.14s (0:13:37) ==== (previous 4,090; +14 tests)
+CONTROLS: 355/355 defects rejected; 0 not caught; 0 stale | ALL CONTROLS RAN: True | clean baseline over 285 distinct target tests: PASS
+  355 = 348 + 7 new, one per repaired defect:
+   REJECTED     the production entry takes the cohort from the caller again
+   REJECTED     the production entry uses a smaller B than the frozen one
+   REJECTED     the canonical cohort is resolved from a different record
+   REJECTED     the design metadata binding removed
+   REJECTED     the design binding loses type strictness on rep
+   REJECTED     the design binding skips a field the row omits
+   REJECTED     the undefined-arm check runs AFTER the generic NO_GO again
+  Clean baseline verified over 285 distinct target tests BEFORE any injection; every source restored.
+
+NEXT: the one-time 221-position D1 ACQUISITION -- not authorized here. D1 has never produced a record
+  (its one run VOIDed 2026-08-28). Also not authorized: confirmation inspection, seed registration,
+  training, push.
