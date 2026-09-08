@@ -1,0 +1,71 @@
+PRE-EXECUTION BINDING: seeds to positions (D1), report to a completed run (D1'). NOTHING RAN.
+====================================================================================================
+recorded 2026-09-08T15:48:44Z at HEAD 58bed84; 52 commits unpushed before this one
+changed:  4 files changed, 302 insertions(+), 15 deletions(-)
+
+ALL SIX GATES:
+  scripts/GPU/alphazero/d1_probe.py:55:D1_EXECUTION_AUTHORIZED = False
+  scripts/GPU/alphazero/e4_screen_command.py:44:SCREEN_AUTHORIZED = False
+  scripts/GPU/alphazero/h1_viability_runner.py:77:H1_EXECUTION_AUTHORIZED = False
+  scripts/GPU/alphazero/l0_match_command.py:41:L0_EXECUTION_AUTHORIZED = False
+  scripts/GPU/alphazero/lowply_qualification.py:55:LOWPLY_QUALIFICATION_AUTHORIZED = False
+  scripts/GPU/alphazero/runtime_requalification.py:79:RUNTIME_REQUAL_AUTHORIZED = False
+NOTHING EXECUTED: no D1 run, no Java, no model, no real analysis, no seed drawn or registered, no gate change, no training, no push.
+  D1's block [202615000, 202615221) is still PAPER-ONLY (registration is part of the execution authorization).
+
+[1] D1 DID NOT BIND SEEDS TO POSITIONS. `seed` is not a cohort IDENTITY field (the frozen source carries
+    none) and `_check_seed` only asked whether a value lies inside the interval -- so all 221 rows could
+    carry 202615000 and both checks passed: one seed reused 221 times, wearing a valid run's clothes.
+    Every position's search and readout streams derive from ITS OWN seed by the frozen XOR masks, so a
+    shared seed would make 221 readouts one readout repeated, and 12.5's injectivity proof (1,105 distinct
+    derived values from 221 seeds) would describe something the run did not do.
+    FIXED: `_check_seed_assignment`, called from `_check_cohort` at the PUBLIC entry -- row i must carry
+    exactly 202615000 + i, TYPE-STRICTLY (bool, float, str and None all refused).
+    🔑 THE 221 DISTINCT SEEDS ARE A CONSEQUENCE OF THAT RULE, NOT A SECOND GUARD. A separate distinctness
+       check was written first, and the harness proved it UNREACHABLE: no input can fail it while passing
+       the positional rule. It was deleted with its control -- a branch no test can reach is a branch to
+       delete -- and a test asserts the distinctness PROPERTY of the canonical assignment instead.
+
+[2] D1' DID NOT VALIDATE THAT ITS INPUT IS A COMPLETED D1 RECORD. It accepted `{"positions": [...]}`:
+    positions could omit seeds and prefixes, and every acquisition field could be absent.
+    FIXED: `check_report_contract`, run BEFORE any row is built from the record. It binds
+      n_positions            == 221
+      queries_spent          == 1105
+      query_cap              == 1105
+      seed_interval          == [202615000, 202615221]
+      per_query_timeout_s    == 120
+      run_deadline_s         == 5400
+      incumbent_identity     present and non-empty
+      toolchain_identity     present and non-empty
+    and, per position: the frozen seed assignment (row i -> lo + i, type-strict) and the canonical PREFIX.
+    Values are read from `d1_probe`, never retyped.
+
+FULL SUITE (.venv/bin/python -m pytest tests -q): === 4130 passed, 4 skipped, 53 deselected, 8 warnings in 1114.15s (0:18:34) ==== (previous 4,104; +26 tests)
+CONTROLS: 365/365 defects rejected; 0 not caught; 0 stale | ALL CONTROLS RAN: True | clean baseline over 295 distinct target tests: PASS
+  365 = 366 written, minus the one the harness proved unreachable. New ones:
+   REJECTED     D1 stops binding the seed assignment to positions
+   REJECTED     D1's seed rule stops being POSITIONAL (interval membership only)
+   REJECTED     D1's seed rule loses type strictness
+   REJECTED     D1' analyses a record with no acquisition metadata
+   REJECTED     D1' stops requiring the acquisition fields to be present
+   REJECTED     D1' accepts an acquisition value that disagrees with the frozen run
+   REJECTED     D1' accepts an EMPTY identity
+   REJECTED     D1' stops binding the per-position seed assignment
+   REJECTED     D1' stops binding the per-position prefix
+   REJECTED     D1' runs the contract AFTER the statistic
+
+  🔴 THE FIRST HARNESS RUN REPORTED 361/366 -- FIVE NOT CAUGHT, all weaknesses in MY OWN tests or a
+     redundant guard, each fixed rather than waived:
+     * the distinctness guard was unreachable (above) -- deleted with its control;
+     * `test_the_SAME_SEED_on_every_row_is_refused` matched '221 distinct|row 1', so a weakened rule that
+       only checked interval membership still passed it -- now it matches the exact row the rule names;
+     * the type-strictness test matched 'seed', which the distinctness message also contained -- now 'row 0';
+     * `test_a_reordered_cohort_is_refused` became blind: reordering moved the seeds too, so the NEW rule
+       caught it and the ORDER control could not be seen -- the test now reassigns seeds positionally so
+       only the identity/order comparison can object;
+     * `test_the_report_contract_runs_BEFORE_the_statistic` patched `matched_statistic`, but building the
+       LPRD rows already computes FROM the record -- it now patches `position_row`.
+     Also retargeted: the 'seed as an identity field' control, whose test no longer discriminated it.
+
+NEXT, in order, none authorized here: re-prove and register [202615000, 202615221) -> open ONLY the D1
+  gate -> run the 221 positions / 1,105 queries once -> close the gate -> apply D1' to that record.

@@ -792,6 +792,110 @@ def _report_for(rows, *, lprd_positions, lprd_controls):
     return {"positions": out}
 
 
+# ───────── the report contract: D1' must consume a COMPLETED D1 record ──────
+
+def _complete_report(canon, *, lprd_positions=1.0, lprd_controls=0.0, **override):
+    """A D1 report as `run_d1` writes it: the acquisition metadata AND per-position
+    seeds and prefixes, not merely `positions`."""
+    from scripts.GPU.alphazero import d1_probe as D1P
+    rep = _report_for(canon["rows"], lprd_positions=lprd_positions,
+                      lprd_controls=lprd_controls)
+    lo, _hi = D1P.SEED_INTERVAL
+    rep["positions"] = [dict(p, seed=lo + i, prefix=[list(m) for m in r["prefix"]])
+                        for i, (p, r) in enumerate(zip(rep["positions"], canon["rows"]))]
+    rep.update({"n_positions": D1P.N_POSITIONS, "queries_spent": D1P.EXPECTED_QUERY_SPEND,
+                "query_cap": D1P.QUERY_CAP, "seed_interval": list(D1P.SEED_INTERVAL),
+                "per_query_timeout_s": D1P.PER_QUERY_TIMEOUT_S,
+                "run_deadline_s": D1P.RUN_DEADLINE_S, "elapsed_s": 1234.5,
+                "incumbent_identity": {"reference": "calib020_0001"},
+                "toolchain_identity": {"jar_sha256": "53ec95e4"}})
+    rep.update(override)
+    return rep
+
+
+def test_a_COMPLETED_report_is_accepted_and_its_acquisition_is_recorded(canonical):
+    out = DP.analyse_development(_complete_report(canonical))
+    assert out["outcome"] == "GO"
+    acq = out["acquisition"]
+    assert acq["n_positions"] == 221 and acq["queries_spent"] == 1105
+    assert acq["query_cap"] == 1105 and acq["seed_interval"] == [202615000, 202615221]
+    assert acq["per_query_timeout_s"] == 120 and acq["run_deadline_s"] == 5400
+    assert acq["incumbent_identity"] and acq["toolchain_identity"]
+
+
+def test_a_report_of_positions_ALONE_is_REFUSED(canonical):
+    """🔴 [P1] The entry accepted `{"positions": [...]}` with no acquisition
+    metadata at all -- so an analysis could run on something that was never a
+    completed D1 run."""
+    bare = {"positions": _complete_report(canonical)["positions"]}
+    with pytest.raises(DP.D1PrimeError, match="not a completed D1 record"):
+        DP.analyse_development(bare)
+
+
+@pytest.mark.parametrize("field", ["n_positions", "queries_spent", "query_cap",
+                                   "seed_interval", "per_query_timeout_s",
+                                   "run_deadline_s", "incumbent_identity",
+                                   "toolchain_identity"])
+def test_every_acquisition_FIELD_is_required(canonical, field):
+    rep = _complete_report(canonical)
+    del rep[field]
+    with pytest.raises(DP.D1PrimeError, match=field):
+        DP.analyse_development(rep)
+
+
+@pytest.mark.parametrize("field,value", [
+    ("n_positions", 220), ("queries_spent", 1100), ("queries_spent", 1106),
+    ("query_cap", 1135), ("seed_interval", [202614000, 202614221]),
+    ("per_query_timeout_s", 60), ("run_deadline_s", 999),
+    ("incumbent_identity", None), ("toolchain_identity", None)])
+def test_an_acquisition_field_that_DISAGREES_with_the_frozen_run_is_REFUSED(
+        canonical, field, value):
+    """A short spend, a widened cap, the retired interval, a shortened timeout:
+    each would mean the record came from a run other than the frozen one."""
+    with pytest.raises(DP.D1PrimeError):
+        DP.analyse_development(_complete_report(canonical, **{field: value}))
+
+
+def test_positions_must_carry_the_FROZEN_SEED_ASSIGNMENT_row_by_row(canonical):
+    """The same defect D1 now refuses on its input side, refused again on the
+    record D1' consumes: one seed on every row, or a permutation of the right
+    ones, is not the frozen assignment."""
+    rep = _complete_report(canonical)
+    lo = 202615000
+    same = {"positions": [dict(p, seed=lo) for p in rep["positions"]],
+            **{k: v for k, v in rep.items() if k != "positions"}}
+    with pytest.raises(DP.D1PrimeError, match="row 1"):
+        DP.analyse_development(same)
+    swapped = _complete_report(canonical)
+    ps = swapped["positions"]
+    ps[0], ps[1] = dict(ps[0], seed=lo + 1), dict(ps[1], seed=lo)
+    with pytest.raises(DP.D1PrimeError, match="row 0"):
+        DP.analyse_development(swapped)
+
+
+def test_positions_must_carry_a_PREFIX_matching_the_canonical_row(canonical):
+    rep = _complete_report(canonical)
+    rep["positions"][3] = {k: v for k, v in rep["positions"][3].items() if k != "prefix"}
+    with pytest.raises(DP.D1PrimeError, match="prefix"):
+        DP.analyse_development(rep)
+    rep = _complete_report(canonical)
+    rep["positions"][3] = dict(rep["positions"][3],
+                               prefix=[[0, 0]] + rep["positions"][3]["prefix"][1:])
+    with pytest.raises(DP.D1PrimeError, match="prefix"):
+        DP.analyse_development(rep)
+
+
+def test_the_report_contract_runs_BEFORE_the_statistic(canonical, monkeypatch):
+    """A record that is not a completed run must be refused before anything is
+    computed from it."""
+    # `position_row`, not `matched_statistic`: building the LPRD rows already
+    # computes FROM the record, so the contract must precede even that.
+    monkeypatch.setattr(DP, "position_row",
+                        lambda *a, **k: pytest.fail("a row was built from an unchecked record"))
+    with pytest.raises(DP.D1PrimeError, match="not a completed D1 record"):
+        DP.analyse_development({"positions": _complete_report(canonical)["positions"]})
+
+
 def test_the_production_entry_EXPOSES_NO_KNOBS_at_all():
     """🔴 [P1] A caller could pass forged rows WITH a matching forged
     frozen_cohort, and override B, the PRNG seed and the repetitions -- a GO from
@@ -807,7 +911,7 @@ def test_the_production_entry_RESOLVES_the_canonical_cohort_and_design_itself(ca
     """It does not restate the selection: the cohort it binds against is exactly
     `d1_selection.select_all` over the digest-bound L0 record, and the design is
     the frozen L0 plan's tasks."""
-    rep = _report_for(canonical["rows"], lprd_positions=1.0, lprd_controls=0.0)
+    rep = _complete_report(canonical)
     out = DP.analyse_development(rep)
     assert out["bound"] == {"rows": 221, "cohort": DP.PRIMARY_COHORT,
                             "reps": [0, 1], "strata": 16}
@@ -822,12 +926,12 @@ def test_the_production_entry_RESOLVES_the_canonical_cohort_and_design_itself(ca
 def test_the_production_entry_REFUSES_a_report_that_is_not_the_canonical_cohort(canonical):
     """Forged rows can no longer come with a matching forged manifest: there is
     no manifest parameter, and the resolved cohort refuses them."""
-    rep = _report_for(canonical["rows"], lprd_positions=1.0, lprd_controls=0.0)
-    forged = {"positions": [dict(p, phase="late") for p in rep["positions"]]}
+    rep = _complete_report(canonical)
+    forged = dict(rep, positions=[dict(p, phase="late") for p in rep["positions"]])
     with pytest.raises(DP.D1PrimeError, match="frozen"):
         DP.analyse_development(forged)
-    short = {"positions": rep["positions"][:-1]}
-    with pytest.raises(DP.D1PrimeError, match="frozen"):
+    short = dict(rep, positions=rep["positions"][:-1], n_positions=220)
+    with pytest.raises(DP.D1PrimeError):
         DP.analyse_development(short)
 
 
@@ -840,7 +944,7 @@ def test_the_production_entry_uses_the_FROZEN_B_and_seed(monkeypatch, canonical)
         return real(rows, strata, **kw)
 
     monkeypatch.setattr(DP, "stability_interval", spy)
-    DP.analyse_development(_report_for(canonical["rows"], lprd_positions=1.0, lprd_controls=0.0))
+    DP.analyse_development(_complete_report(canonical))
     assert seen["B"] == DP.B_REPLICATES == 10_000 and seen["seed"] == DP.BOOTSTRAP_SEED
 
 

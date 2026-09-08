@@ -633,6 +633,43 @@ def _check_cohort(positions: Sequence[Dict[str, Any]]) -> None:
                     f"has {field}={got[field]!r} ({type(got[field]).__name__}), "
                     f"expected {want[field]!r} ({type(want[field]).__name__}). The "
                     f"digest fixes the board; it does not fix the cohort label.")
+    _check_seed_assignment(positions)
+
+
+def _check_seed_assignment(positions: Sequence[Dict[str, Any]]) -> None:
+    """§12.5 / §14: ONE SEED PER POSITION, in the frozen order -- row i carries
+    exactly `SEED_INTERVAL[0] + i`, and the 221 are distinct.
+
+    🔴 THE DEFECT THIS CLOSES. `seed` is not a COHORT IDENTITY field (the frozen
+    source carries none, so there is nothing to compare against) and `_check_seed`
+    only asks whether a value lies inside the interval. Between them, all 221 rows
+    could carry `202615000` and both checks passed: one seed reused 221 times,
+    wearing a valid run's clothes. Every position's search and readout streams
+    derive from ITS OWN seed by the frozen XOR masks, so a shared seed makes 221
+    readouts one readout repeated -- and the §12.5 injectivity proof, which counts
+    1,105 distinct derived values from 221 seeds, would describe something the run
+    did not do.
+
+    Positional, not compared against the source: the assignment is `d1_selection`'s
+    `SEED_ASSIGNMENT_ORDER` applied to §14's interval, and it is reproduced here
+    rather than trusted from the input.
+    """
+    lo, hi = SEED_INTERVAL
+    # ONE RULE, and the 221 distinct seeds are its CONSEQUENCE, not a second
+    # guard: if row i carries exactly lo + i then the seeds are distinct by
+    # construction. A separate distinctness check would be unreachable -- no
+    # input can fail it while passing this -- and a branch no test can reach is a
+    # branch to delete. `type(...) is int` rejects bool, float, str and None.
+    for i, p_ in enumerate(positions):
+        seed = p_.get("seed")
+        want = lo + i
+        if type(seed) is not int or seed != want:
+            raise D1Error(
+                f"row {i} carries seed {seed!r} ({type(seed).__name__}); the frozen "
+                f"assignment gives it {want} (§14's interval [{lo}, {hi}) in the "
+                f"frozen order). A seed that is merely inside the interval is not "
+                f"the seed this position was assigned, and one seed shared by many "
+                f"positions would make their derived streams identical.")
 
 
 def _check_seed_registration() -> None:

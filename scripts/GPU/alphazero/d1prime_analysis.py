@@ -481,6 +481,82 @@ def resolve_canonical_cohort() -> Dict[str, Any]:
             "cohort_source": "d1_selection.select_all", "n_positions": len(rows)}
 
 
+#: What a COMPLETED D1 record must state about its own acquisition, and the
+#: frozen value each must equal. Read from `d1_probe`, never retyped.
+def _acquisition_contract() -> Dict[str, Any]:
+    from . import d1_probe as D1P
+    return {"n_positions": D1P.N_POSITIONS,
+            "queries_spent": D1P.EXPECTED_QUERY_SPEND,
+            "query_cap": D1P.QUERY_CAP,
+            "seed_interval": list(D1P.SEED_INTERVAL),
+            "per_query_timeout_s": D1P.PER_QUERY_TIMEOUT_S,
+            "run_deadline_s": D1P.RUN_DEADLINE_S}
+
+#: Present and non-empty, but not pinned to a value here: their content is the
+#: run's own identity, checked against the toolchain pins by the run itself.
+ACQUISITION_PRESENT_FIELDS = ("incumbent_identity", "toolchain_identity")
+
+
+def check_report_contract(d1_report: Mapping[str, Any],
+                          canonical_rows: Sequence[Mapping[str, Any]]) -> Dict[str, Any]:
+    """The report must BE a completed D1 acquisition -- checked before anything
+    is computed from it.
+
+    🔴 THE DEFECT THIS CLOSES. The entry accepted `{"positions": [...]}`: the
+    positions could omit their seeds and prefixes, and `n_positions`,
+    `queries_spent`, the query cap, the seed interval, the per-query timeout, the
+    run deadline and both identities could be absent entirely. An analysis would
+    then run on something that was never a completed run, and report a verdict
+    for it.
+
+    Binds, per §12.4/§12.5/§12.10 and §14: the acquisition metadata to the frozen
+    values, and every position's SEED and PREFIX to the canonical assignment --
+    row i carries `SEED_INTERVAL[0] + i`, the 221 are distinct, and each prefix
+    is the canonical row's.
+    """
+    contract = _acquisition_contract()
+    missing = [k for k in (*contract, *ACQUISITION_PRESENT_FIELDS)
+               if k not in d1_report]
+    if missing:
+        raise D1PrimeError(
+            f"the input is not a completed D1 record: it states none of "
+            f"{missing}. A completed run records its own acquisition -- position "
+            f"count, queries spent, the cap, the seed interval, the per-query "
+            f"timeout, the run deadline and both identities.")
+    for key, want in contract.items():
+        if not _same(d1_report[key], want):
+            raise D1PrimeError(
+                f"{key} is {d1_report[key]!r}, but the frozen D1 acquisition is "
+                f"{want!r}: this record did not come from the frozen run.")
+    for key in ACQUISITION_PRESENT_FIELDS:
+        if not d1_report[key]:
+            raise D1PrimeError(
+                f"{key} is empty; a completed run records what it ran against.")
+
+    positions = d1_report["positions"]
+    if len(positions) != len(canonical_rows):
+        raise D1PrimeError(
+            f"the record holds {len(positions)} positions for a cohort of "
+            f"{len(canonical_rows)}: not a completed D1 record.")
+    lo, hi = contract["seed_interval"]
+    # ONE RULE; distinctness is its consequence (see `_check_seed_assignment`).
+    for i, (pos, want_row) in enumerate(zip(positions, canonical_rows)):
+        want_seed, seed = lo + i, pos.get("seed")
+        if type(seed) is not int or seed != want_seed:
+            raise D1PrimeError(
+                f"row {i} carries seed {seed!r}; the frozen assignment gives it "
+                f"{want_seed}. A seed inside the interval is not the seed this "
+                f"position was assigned.")
+        if "prefix" not in pos:
+            raise D1PrimeError(
+                f"row {i} carries no prefix; the prefix is what the adapter replays "
+                f"and the digest cannot substitute for it.")
+        if not _same(pos["prefix"], want_row["prefix"]):
+            raise D1PrimeError(
+                f"row {i}'s prefix is not the canonical one for this position.")
+    return {k: d1_report[k] for k in (*contract, *ACQUISITION_PRESENT_FIELDS)}
+
+
 def _analyse(rows, *, frozen_cohort, tasks, reps, kernel, B, seed):
     """PRIVATE. Bind the cohort and the design, THEN compute -- never the other
     way round. Configurable so synthetic cohorts can exercise the binding itself;
@@ -543,11 +619,13 @@ def analyse_development(d1_report: Mapping[str, Any]) -> Dict[str, Any]:
     `_analyse`, which is private and for synthetic cohorts only.
     """
     canon = resolve_canonical_cohort()
+    acquisition = check_report_contract(d1_report, canon["rows"])
     rows = rows_from_d1_report(d1_report)
     out = _analyse(rows, frozen_cohort=canon["rows"], tasks=canon["tasks"],
                    reps=canon["reps"], kernel=_development_decision,
                    B=B_REPLICATES, seed=BOOTSTRAP_SEED)
     out["resolved"] = {k: canon[k] for k in ("record", "plan", "cohort_source", "n_positions")}
+    out["acquisition"] = acquisition
     out["prng"] = {"bit_generator": "PCG64", "seed": BOOTSTRAP_SEED, "B": B_REPLICATES}
     return out
 

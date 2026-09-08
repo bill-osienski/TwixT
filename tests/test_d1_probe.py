@@ -1598,7 +1598,12 @@ def _expected():
 
 
 def _rows(n=None):
-    return [dict(r) for r in _expected()][:n]
+    """The canonical rows WITH the frozen seed assignment attached: one seed per
+    position, row i carrying SEED_INTERVAL[0] + i. A real run supplies them that
+    way (`select_all(seed_interval=...)`), and since 2026-09-08 `_check_cohort`
+    requires it."""
+    lo, _hi = D1.SEED_INTERVAL
+    return [dict(r, seed=lo + i) for i, r in enumerate(_expected())][:n]
 
 
 def test_the_expected_cohort_is_the_frozen_227_minus_the_six_exclusions():
@@ -1631,8 +1636,10 @@ def test_SEED_is_the_only_source_field_left_unbound():
     src = json.load(open(D1.COHORT_SOURCE_REL, encoding="utf-8"))
     unbound = set(src[0]) - set(D1.COHORT_IDENTITY_FIELDS)
     assert unbound == {"seed"}, (
-        f"{sorted(unbound)} are unbound. `seed` is the only field that may be: no "
-        f"interval is authorized and its assignment is a separate step.")
+        f"{sorted(unbound)} are unbound as an IDENTITY field. `seed` is the only "
+        f"one that may be, because the frozen source carries none: its assignment "
+        f"is bound POSITIONALLY instead, by `_check_seed_assignment` (row i must "
+        f"carry SEED_INTERVAL[0] + i), not by comparison with the source.")
     assert set(D1.COHORT_IDENTITY_FIELDS) <= set(src[0])
 
 
@@ -1683,10 +1690,17 @@ def test_a_single_row_cohort_is_refused():
 
 
 def test_a_reordered_cohort_is_refused():
-    """Frozen order is what makes a seed count identify WHICH seeds."""
+    """Frozen order is what makes a seed count identify WHICH seeds.
+
+    ⚠ THE SEEDS ARE REASSIGNED POSITIONALLY HERE, so the seed rule cannot object
+    and only the identity/order comparison can: swapping two rows while leaving
+    `seed = lo + i` intact is a reordering that the newer guard is blind to."""
+    lo, _hi = D1.SEED_INTERVAL
     rows = _rows()
     rows[0], rows[1] = rows[1], rows[0]
-    with pytest.raises(D1.D1Error):
+    rows = [dict(r, seed=lo + i) for i, r in enumerate(rows)]
+    assert [r["seed"] for r in rows] == [lo + i for i in range(len(rows))]
+    with pytest.raises(D1.D1Error, match="row 0"):
         D1._check_cohort(rows)
 
 
@@ -1702,10 +1716,64 @@ def test_the_exact_cohort_is_accepted():
     D1._check_cohort(_rows())
 
 
-def test_a_cohort_carrying_a_seed_is_still_accepted():
-    """The seed is NOT an identity field: no interval is authorized, and the
-    assignment is a separate step that must not be pinned here."""
-    D1._check_cohort([dict(r, seed=None) for r in _expected()])
+def test_a_cohort_WITHOUT_the_seed_assignment_is_now_REFUSED():
+    """⚠ INVERTED 2026-09-08, deliberately. This test previously asserted that a
+    cohort carrying `seed=None` was ACCEPTED, and that was right at the time: no
+    interval was authorized and the assignment was a later step.
+
+    §14 has since reserved `[202615000, 202615221)` and §12.5 fixes one seed per
+    position, so an unassigned cohort is no longer a valid run input -- and
+    accepting it is how 221 positions could share a single seed."""
+    with pytest.raises(D1.D1Error, match="seed"):
+        D1._check_cohort([dict(r, seed=None) for r in _expected()])
+
+
+def test_the_SAME_SEED_on_every_row_is_refused():
+    """🔴 THE DEFECT. All 221 rows carrying 202615000 passed both `_check_cohort`
+    and `_check_seed`: one seed reused 221 times, wearing a valid run's clothes.
+    Every position's search and readout streams derive from its own seed, so a
+    shared seed makes 221 readouts one readout repeated."""
+    lo, _hi = D1.SEED_INTERVAL
+    rows = [dict(r, seed=lo) for r in _expected()]
+    assert len({r["seed"] for r in rows}) == 1
+    # THE MESSAGE IS PART OF THE ASSERTION: row 1 is the first position whose
+    # assigned seed the shared value is not. A looser regex would pass under a
+    # weakened rule that only checked interval membership.
+    with pytest.raises(D1.D1Error, match="row 1"):
+        D1._check_cohort(rows)
+    # distinctness is a CONSEQUENCE of the positional rule, not a second guard
+    assert len({r["seed"] for r in _rows()}) == D1.N_POSITIONS == 221
+
+
+def test_row_i_must_carry_exactly_the_ith_seed_of_the_interval():
+    lo, hi = D1.SEED_INTERVAL
+    assert hi - lo == D1.N_POSITIONS == 221
+    D1._check_cohort(_rows())                      # the canonical assignment
+    # SWAPPED, so all 221 stay DISTINCT and only the positional rule can object:
+    # a permutation of the right seeds is still the wrong assignment.
+    for i, j in ((0, 1), (7, 8), (0, 220)):
+        rows = _rows()
+        rows[i], rows[j] = dict(rows[i], seed=lo + j), dict(rows[j], seed=lo + i)
+        assert len({r["seed"] for r in rows}) == 221
+        with pytest.raises(D1.D1Error, match=f"row {i}"):
+            D1._check_cohort(rows)
+
+
+def test_the_seed_assignment_is_TYPE_STRICT_and_inside_the_interval():
+    lo, _hi = D1.SEED_INTERVAL
+    for bad in (str(lo), float(lo), True, None, lo - 1, 202614000):
+        rows = _rows()
+        rows[0] = dict(rows[0], seed=bad)
+        # ROW-SPECIFIC: `float(lo)` and `True` compare EQUAL to the assigned seed,
+        # so only the type check can object, and only at row 0.
+        with pytest.raises(D1.D1Error, match="row 0"):
+            D1._check_cohort(rows)
+
+
+def test_a_cohort_MISSING_the_seed_field_entirely_is_refused():
+    rows = [{k: v for k, v in r.items() if k != "seed"} for r in _rows()]
+    with pytest.raises(D1.D1Error, match="seed"):
+        D1._check_cohort(rows)
 
 
 # ─── the hole digests cannot see: a row that keeps its digest and lies ───────
