@@ -7,7 +7,14 @@ the execution are **separate authorizations** and neither is requested by this d
 **H2 is not H1 continued.** It asks a different question of a **different incumbent configuration**
 with **different seeds**, and §8 forbids pooling or rate-comparison inference with either H1 attempt.
 
-**AMENDED 2026-09-09, before implementation, plan only.** Five corrections from pre-implementation
+**AMENDED TWICE, 2026-09-09, before implementation, plan only.**
+
+**Second amendment.** §2.2 freezes what a **transcript** is, structurally. Without it the per-cell
+screen is vacuous: hashing the whole record makes `seed`, `task_id` and `rep` give 46 distinct
+transcripts for a cell that played one game 46 times. Four controls are added with it. Nothing else
+changes — the parity rule, the 736 games and the per-cell threshold stand.
+
+**First amendment.** Five corrections from pre-implementation
 review, none touching the parity rule or the 736-game count: the title and question no longer claim
 argmax is the *strongest* deterministic use, only that it is *this* frozen configuration; the
 degeneracy screen is now **per cell** (≥42 of 46), because a global 90% rule passes a wholly collapsed
@@ -85,6 +92,34 @@ opening × colour cells**.
 **Frozen rule:** every cell must hold **at least 42 distinct transcripts of its 46** (the same 90%,
 applied where it binds). If any cell falls below that, the primary interval is **not computed** and
 the outcome is **`INCONCLUSIVE — DEGENERATE DESIGN`**, naming the offending cells.
+
+### 2.2 What a TRANSCRIPT IS — frozen structurally, because otherwise the gate is vacuous
+
+🔴 **THE FAILURE THIS CLOSES.** If the implementation hashes the whole game record, `seed`, `task_id`
+and `rep` make **all 46 games unique even when the gameplay is byte-identical** — the screen would
+report 46 of 46 distinct for a cell that played one game 46 times, and would pass every design it was
+built to catch. A screen whose diversity comes from the schedule rather than the play is not a screen.
+
+> **Within a cell, a transcript is the type-strict ordered sequence of post-opening `(mover, row,
+> col)` moves, followed by the terminal reason and the winner. It is EXACTLY that and nothing else.**
+
+**Included:** each post-opening ply's mover and its `(row, col)`, in played order; the terminal reason
+(win, resignation, ply-cap termination); the winner.
+
+**Excluded, explicitly:** `task_id`, `rep`, `seed` and every derived stream; timestamps and any
+timing; every diagnostic (visit counts, root values, policy ranks, override flags, `top2`); and all
+provenance (identities, digests, file paths, engine or plan versions). The **opening is excluded too**
+— it is constant within a cell, so including it could only add sameness, never diversity.
+
+**Type-strict**, like every other comparison in this programme: `mover` is one of the frozen colour
+values, `row` and `col` are `int`, and `"11"` is not `11`. A record whose moves arrive as strings
+describes a different thing and must refuse rather than silently compare unequal.
+
+**Malformed ply records REFUSE; they never manufacture diversity.** Ply indices must be present,
+strictly increasing, contiguous from the first post-opening ply, with no duplicates and no gaps, and
+movers must alternate. A missing, duplicated or out-of-order ply makes the transcript **undefined**,
+and an undefined transcript **VOIDs the run** — it must never be hashed into a novel value that
+inflates the distinct count.
 
 ⚠ **No blanket "effective n = 16" claim is made.** That would hold only if **all sixteen** cells
 collapsed completely; a partial collapse reduces the effective sample by an amount this design does
@@ -195,7 +230,7 @@ Under `docs/superpowers/evidence/<run-date>-t1j-h2-deterministic-readout/`, crea
 | `03_h2_results.jsonl` | one record per game |
 | `04_h2_trace.jsonl` | predeclared event schema, fsynced per line |
 | `05_run_command.txt`, `06_stdout.txt`, `07_stderr.txt`, `08_exit.txt` | the invocation and its outcome |
-| `09_report.json` | score, interval, outcome, distinct-game count, cap terminations, by-cell table |
+| `09_report.json` | score, interval (labelled nominal), outcome, **all 16 per-cell distinct-transcript counts**, cap terminations, by-cell table |
 | `10_accounting_from_records.txt` | seeds drawn, counted from the records |
 | `11_outcome.md` | the verdict and what it does not establish |
 
@@ -231,6 +266,15 @@ Under `docs/superpowers/evidence/<run-date>-t1j-h2-deterministic-readout/`, crea
    below 42 distinct **prevents** the interval from being computed at all — a screen that runs after
    the number it guards is decoration. A control must prove that a single collapsed cell refuses,
    including the case where the global distinct rate still exceeds 90%.
+6a. **The transcript is built from §2.2's fields and no others**, with controls that prove:
+   - **46 games with identical gameplay but different `seed`, `task_id` and `rep` count as ONE
+     transcript, and the cell FAILS** — the vacuity this definition exists to prevent;
+   - **changing a single played move creates a distinct transcript**, so the comparison is not inert
+     in the other direction;
+   - a **missing, duplicated or out-of-order ply record REFUSES by name**, and does not become a
+     novel transcript that inflates the count;
+   - the report carries **all 16 per-cell distinct counts**, not a global figure and not only the
+     minimum, so a reader can see which cell was thin.
 7. Every reported interval carries "nominal under the independence model" **in the report itself**,
    not only in this card.
 8. Injected-defect controls for each of the above, each proven to reject, over a clean baseline.
