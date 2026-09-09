@@ -14,6 +14,13 @@ measures is not a preregistration.
 
 **AMENDED TWICE, 2026-09-08, both before the analysis is run on real data.**
 
+**Third amendment (second pre-execution review).** Four residual validation gaps, none touching the
+hypothesis or the statistic: the depth records were coerced with `int()` and are now type-strict with
+the container checked first; the visit total is now bound to the frozen simulation budget, read from
+the configuration rather than retyped; `top2` is declared **inventory-only** so the plan and the code
+promise the same thing; and the two derived values are compared **exactly**, since an approximate
+comparison admitted an altered record.
+
 **Second amendment (pre-execution review).** Three gaps, none of which changes the primary metric,
 the denominator, the statistic, the threshold or the seed: §2 now requires a **full-record validation
 pass** before any row is built (it was implied, not specified); §3's claim that a small policy-eligible
@@ -85,6 +92,23 @@ is scored, so a partially-computed analysis never exists. It is **type-strict** 
 `raw_policy` and `root_visits` maps they claim to describe. Coercing a value with `float()` and
 ranking immediately would let a boolean, a negative count, a NaN or an inconsistent total reach the
 metric.
+
+**The root must have spent the FROZEN SEARCH BUDGET.** Every internal consistency check passes on a
+forged visit map totalling one, as long as `root_total_visits` is changed to agree — so the total is
+bound to the simulation count in the frozen incumbent configuration, **read from it, never retyped
+here**. The hypothesis is about what the search does to a move *after* that budget is spent; a root
+that ran a different budget is not evidence about it. **A real record that disagrees is a refusal to
+review, never a tolerance to widen after the fact.**
+
+**Derived values must agree EXACTLY, and no tolerance is frozen.** `selected_policy_mass` and
+`root_top1_share` are written *from* the very maps the record preserves, so recomputing them
+reproduces the same float bit for bit. An approximate comparison would admit an altered record, and a
+tolerance nobody froze is a tolerance an edited value can hide inside.
+
+**`top2` is INVENTORY-ONLY.** The list below says what the record *carries*; D1″ reads `top2`
+nowhere, so it is **not validated**, and the module declares that exclusion rather than leaving it as
+an absence. Validating a field no statistic reads would add a refusal path with nothing behind it,
+and the writer may legitimately record it as `None` ("not captured").
 
 **Feasibility rests on the schema, and is verified before any statistic is computed.** The writer
 records, per position: `raw_policy` (mass over every legal move), `root_visits` (visit count over the
@@ -220,7 +244,9 @@ Inherited from D1′ and non-negotiable, because they are what makes the entry c
 merely careful:
 
 0. **The full-record validation pass of §2 runs before any row is built**, type-strict and
-   consistency-checking, refusing by name.
+   consistency-checking, refusing by name — including the depth records, whose container and every
+   entry are validated before one is selected (`"6"` and `6.0` are not `6`), the frozen search
+   budget, and exact agreement for the derived values.
 1. **One public entry taking the D1 report and nothing else**, resolving cohort, design, reps, B and
    seed itself. No caller-supplied rows, cohort, tasks, reps, replicate count or seed.
 2. **The record must be a completed D1 run**: acquisition contract, both identities bound to their

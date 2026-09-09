@@ -86,8 +86,46 @@ REQUIRED_OBSERVABLES = ("raw_policy", "root_visits", "n_legal", "root_total_visi
                         "root_top1_share", "readout_overrode_leader")
 
 
+#: LISTED IN THE PLAN'S SCHEMA INVENTORY AND DELIBERATELY NOT VALIDATED, because
+#: D1″ reads it nowhere. The inventory says what the record CARRIES; this says
+#: what the analysis USES. Declared rather than merely absent, so the promise the
+#: plan makes and the promise this module keeps are the same one -- an unlisted
+#: omission is how a documented guarantee quietly stops existing. Validating a
+#: field no statistic reads would add a refusal path with nothing behind it, and
+#: the writer may legitimately record `top2` as None ("not captured").
+UNUSED_OBSERVABLES = ("top2",)
+
+
+def frozen_sim_budget() -> int:
+    """The search budget every root must have spent, READ from the frozen L0
+    plan's configuration through `d1_probe.frozen_incumbent_identity` -- never
+    retyped here, so this module cannot drift from the search that ran.
+
+    🔑 WHY THE TOTAL IS BOUND AT ALL. The hypothesis is about what the search does
+    to a move AFTER the frozen simulation budget is spent. A root that ran a
+    different budget is not evidence about that search, and every internal
+    consistency check passes on a forged map totalling one as long as
+    `root_total_visits` is changed to agree.
+
+    ⚠ A REAL RECORD THAT DISAGREES IS A REFUSAL TO REVIEW, never a tolerance to
+    widen after the fact.
+    """
+    from . import d1_probe as D1P
+    sims = D1P.frozen_incumbent_identity()["eval_config"]["mcts_sims"]
+    if type(sims) is not int or sims <= 0:
+        raise D1SecondError(f"the frozen configuration's mcts_sims is {sims!r}")
+    return sims
+
+
 def _real(x: Any) -> bool:
-    """A real number, TYPE-STRICTLY: `True` is not 1 and "3" is not three."""
+    """A real number, TYPE-STRICTLY: `True` is not 1 and "3" is not three.
+
+    🔑 THE SINGLE OWNER of that rule. `type(x) in (int, float)` already excludes
+    `bool`, so the callers below carried a redundant `isinstance(x, bool)` clause
+    that no control could reach -- and a control that deleted one was NOT CAUGHT
+    because the duplicate still refused. The clause is gone; this function is
+    where bools are rejected, and a control that weakens it is observable.
+    """
     return type(x) in (int, float) and math.isfinite(x)
 
 
@@ -108,7 +146,7 @@ def _validate_position(pos: Mapping[str, Any], where: str) -> None:
     if not isinstance(policy, dict) or not policy:
         raise D1SecondError(f"{where}: raw_policy is empty or not a mapping")
     for k, v in policy.items():
-        if not _real(v) or isinstance(v, bool) or v < 0:
+        if not _real(v) or v < 0:
             raise D1SecondError(
                 f"{where}: raw_policy[{k!r}] is {v!r} ({type(v).__name__}); every mass "
                 f"must be a finite non-negative real, and a bool is not one.")
@@ -133,8 +171,12 @@ def _validate_position(pos: Mapping[str, Any], where: str) -> None:
     counts = {DP._move(k): int(v) for k, v in visits.items()}
     masses = {DP._move(k): float(v) for k, v in policy.items()}
     total = sum(counts.values())
-    if total <= 0:
-        raise D1SecondError(f"{where}: root_total_visits is zero; nothing was searched")
+    budget = frozen_sim_budget()
+    if total != budget:
+        raise D1SecondError(
+            f"{where}: root_total_visits is {total}, but the frozen configuration spends "
+            f"{budget} simulations. A self-consistent map that totals something else "
+            f"describes a search this hypothesis is not about.")
     ours = (pos["incumbent"].get("row"), pos["incumbent"].get("col"))
     if type(ours[0]) is not int or type(ours[1]) is not int or ours not in counts:
         raise D1SecondError(
@@ -150,24 +192,44 @@ def _validate_position(pos: Mapping[str, Any], where: str) -> None:
     }
     for field, want in expect.items():
         got = inc[field]
-        if type(got) is not int or isinstance(got, bool) or got != want:
+        if type(got) is not int or got != want:
             raise D1SecondError(
                 f"{where}: {field} is {got!r} but the record's own maps give {want!r}; "
                 f"an observable that contradicts what it describes is not evidence.")
+    # 🔴 EXACT, NOT APPROXIMATE. These were compared with `math.isclose`, which
+    # admitted an altered record: both values are written FROM the very maps the
+    # record preserves, so recomputing them reproduces the same float bit for bit
+    # and no tolerance is needed. A tolerance nobody froze is a tolerance an
+    # edited value can hide inside.
     for field, want in (("selected_policy_mass", masses[ours]),
                         ("root_top1_share", max(counts.values()) / total)):
         got = inc[field]
-        if not _real(got) or isinstance(got, bool) or not math.isclose(got, want, rel_tol=1e-9,
-                                                                       abs_tol=1e-12):
+        if not _real(got) or got != want:
             raise D1SecondError(
-                f"{where}: {field} is {got!r} but the record's own maps give {want!r}")
+                f"{where}: {field} is {got!r} but the record's own maps give {want!r}; "
+                f"they are computed from the same maps, so they must agree exactly.")
     if type(inc["readout_overrode_leader"]) is not bool:
         raise D1SecondError(
             f"{where}: readout_overrode_leader is {inc['readout_overrode_leader']!r} "
             f"({type(inc['readout_overrode_leader']).__name__}); the writer writes a bool, "
             f"and a truthy int would be read as one.")
 
-    depth6 = [d for d in pos.get("depths", []) if int(d.get("depth", -1)) == 6]
+    # 🔴 THE CONTAINER AND EVERY ENTRY FIRST, THEN THE SELECTION. `int(d.get(
+    # "depth", -1))` coerced: "6" and 6.0 passed a type-strict contract, and a
+    # non-mapping entry escaped as AttributeError instead of a named refusal.
+    depths = pos.get("depths")
+    if not isinstance(depths, list) or not depths:
+        raise D1SecondError(f"{where}: depths is {depths!r}; it must be a non-empty list")
+    for j, d in enumerate(depths):
+        if not isinstance(d, dict):
+            raise D1SecondError(f"{where}: depth record {j} is {d!r}, not a mapping")
+        if "depth" not in d:
+            raise D1SecondError(f"{where}: depth record {j} carries no 'depth'")
+        if type(d["depth"]) is not int:
+            raise D1SecondError(
+                f"{where}: depth record {j} has depth {d['depth']!r} "
+                f"({type(d['depth']).__name__}); a depth is an int, and '6' is not 6.")
+    depth6 = [d for d in depths if d["depth"] == 6]
     if len(depth6) != 1:
         raise D1SecondError(f"{where}: expected exactly one depth-6 record, got {len(depth6)}")
     mv = depth6[0].get("move")

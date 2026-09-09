@@ -290,8 +290,11 @@ def test_the_public_entry_RUNS_the_disjointness_precondition(monkeypatch, canoni
 # ────────────────────────── the checked public entry ────────────────────────
 
 def _ss_report(canon, **override):
-    """A COMPLETE D1 report whose readouts carry visits, so ss is defined."""
-    return _complete_report(canon, **override)
+    """A COMPLETE D1 report whose readouts carry visits summing to the FROZEN
+    simulation budget, so `ss` is defined and the record describes the search the
+    hypothesis is about. The D1′ fixtures predate the budget rule and give one
+    visit per move, which D1″ now refuses -- correctly."""
+    return _budgeted(_complete_report(canon, **override))
 
 
 def test_the_public_entry_takes_the_REPORT_AND_NOTHING_ELSE():
@@ -408,6 +411,31 @@ def test_the_module_hardcodes_no_path_to_the_acquired_record():
 
 
 # ═══════ pre-execution repair 1: a full-record validation pass, FIRST ════════
+
+def _budgeted(rep):
+    """Rewrite every readout so the root visits sum to the FROZEN simulation
+    budget, through the REAL writer (`eval_replay.ply_record`), so every derived
+    observable stays consistent. The D1′ fixtures predate the budget rule and
+    give one visit per move; a D1″ record must spend the whole search.
+    """
+    from tests.test_d1prime_analysis import _incumbent_record
+    budget = DS.frozen_sim_budget()
+    for pos in rep["positions"]:
+        inc = pos["incumbent"]
+        policy = inc["raw_policy"]
+        ours = (inc["row"], inc["col"])
+        others = [k for k in policy if _mv(k) != ours]
+        counts = {f"{ours[0]},{ours[1]}": budget - len(others)}
+        counts.update({k: 1 for k in others})
+        pos["incumbent"] = {**_incumbent_record(policy=policy, our_move=ours, visits=counts),
+                            "seed": inc.get("seed", 1), "streams": inc.get("streams", {})}
+    return rep
+
+
+def _mv(key):
+    r, c = str(key).split(",")
+    return (int(r), int(c))
+
 
 def _valid_report(canon):
     """A complete, well-formed report -- the baseline every corruption below
@@ -622,3 +650,118 @@ def test_the_histogram_is_ordered_by_RANK_even_when_the_counts_disagree():
         r["selected_visit_rank"] = vr
     got = DS._readout_summary(rows, cohort=DS.PRIMARY_COHORT)["position"]["selected_visit_rank"]
     assert got == [[1, 1], [5, 2], [9, 1]]      # ascending by rank; ranks 2-4, 6-8 absent
+
+
+# ═══════════ pre-execution repair 2: four residual validation gaps ══════════
+
+# ── P1: the depth records are validated type-strictly, and FIRST ────────────
+
+@pytest.mark.parametrize("depths,msg", [
+    ("not-a-list", "depths"),
+    ([["depth", 6]], "depth record"),
+    # 🔴 "depth" alone did NOT discriminate: with the type check deleted, "6" != 6
+    # so no depth-6 record is found and the fallback message ("expected exactly
+    # one depth-6 record") contains the word too. The TYPE refusal is named.
+    ([{"depth": "6", "move": [0, 0]}], "a depth is an int"),
+    ([{"depth": 6.0, "move": [0, 0]}], "a depth is an int"),
+    ([{"move": [0, 0]}], "carries no 'depth'"),
+])
+def test_a_malformed_depths_container_or_entry_is_REFUSED_BY_NAME(canonical, depths, msg):
+    """🔑 A string or float depth contradicts the type-strict contract, and a
+    non-mapping entry must not escape as AttributeError or ValueError -- every
+    refusal here is a named D1SecondError."""
+    rep = _valid_report(canonical)
+    rep["positions"][3]["depths"] = depths
+    with pytest.raises(DS.D1SecondError, match=msg):
+        DS.validate_record(rep)
+
+
+def test_TWO_depth_six_records_are_refused(canonical):
+    rep = _valid_report(canonical)
+    d6 = [d for d in rep["positions"][3]["depths"] if d["depth"] == 6][0]
+    rep["positions"][3]["depths"] = rep["positions"][3]["depths"] + [dict(d6)]
+    with pytest.raises(DS.D1SecondError, match="exactly one depth-6"):
+        DS.validate_record(rep)
+
+
+# ── P1: the search budget is bound to the frozen configuration ──────────────
+
+def test_the_simulation_budget_is_READ_from_the_frozen_identity_not_retyped():
+    """The number lives in the frozen L0 plan's configuration, reached through
+    `d1_probe.frozen_incumbent_identity`. This module must not carry a literal."""
+    from scripts.GPU.alphazero import d1_probe as D1P
+    want = D1P.frozen_incumbent_identity()["eval_config"]["mcts_sims"]
+    assert DS.frozen_sim_budget() == want
+    # An AST scan, not a substring search: the docstrings SAY "400-simulation
+    # search" on purpose, and a text match would forbid explaining the rule while
+    # allowing `if total != 400` written as `4 * 100`. What must not exist is the
+    # integer CONSTANT.
+    import ast, pathlib as _p
+    tree = ast.parse(_p.Path(DS.__file__).read_text())
+    literals = [n for n in ast.walk(tree)
+                if isinstance(n, ast.Constant) and type(n.value) is int and n.value == want]
+    assert not literals, f"the budget is retyped as a literal on line {literals[0].lineno}"
+
+
+def test_a_SELF_CONSISTENT_but_under_searched_root_is_REFUSED(canonical):
+    """🔴 THE GAP THIS CLOSES. A forged map totalling 1 passed as long as
+    `root_total_visits` was changed to agree: every internal check was satisfied
+    and nothing bound the total to the search that was supposed to have run. The
+    hypothesis is about treatment AFTER the frozen search, so a root that did not
+    run it is not evidence about it."""
+    from tests.test_d1prime_analysis import _incumbent_record
+    rep = _valid_report(canonical)
+    inc = rep["positions"][3]["incumbent"]
+    policy = inc["raw_policy"]
+    ours = (inc["row"], inc["col"])
+    tiny = {k: (1 if _mv(k) == ours else 0) for k in policy}
+    rep["positions"][3]["incumbent"] = _incumbent_record(policy=policy, our_move=ours,
+                                                         visits=tiny)
+    with pytest.raises(DS.D1SecondError, match="root_total_visits"):
+        DS.validate_record(rep)
+
+
+def test_the_budgeted_baseline_itself_is_ACCEPTED(canonical):
+    """So the refusal above is about the budget and not about the fixture."""
+    DS.validate_record(_valid_report(canonical))
+
+
+# ── P2: top2 is inventory-only, and the code says so where the plan does ────
+
+def test_top2_is_declared_UNUSED_rather_than_silently_omitted():
+    """The plan's schema inventory lists `top2`; D1″ reads it nowhere. The
+    promise the documentation makes and the promise the code keeps must be the
+    same one, so the exclusion is DECLARED, not left as an absence."""
+    assert "top2" in DS.UNUSED_OBSERVABLES
+    assert "top2" not in DS.REQUIRED_OBSERVABLES
+    assert not set(DS.UNUSED_OBSERVABLES) & set(DS.REQUIRED_OBSERVABLES)
+
+
+def test_a_record_whose_top2_is_anything_at_all_is_still_accepted(canonical):
+    """The declared consequence of "inventory-only": D1″ neither reads nor
+    refuses it."""
+    rep = _valid_report(canonical)
+    rep["positions"][3]["incumbent"]["top2"] = "not even a list"
+    DS.validate_record(rep)
+
+
+# ── P2: derived values must agree EXACTLY ──────────────────────────────────
+
+@pytest.mark.parametrize("field", ["selected_policy_mass", "root_top1_share"])
+def test_a_derived_value_perturbed_BELOW_any_tolerance_is_still_refused(canonical, field):
+    """🔴 `math.isclose` admitted an altered record. Both values are written from
+    the very maps the record preserves, so recomputing them reproduces the same
+    float exactly; no tolerance is needed and none is frozen."""
+    rep = _valid_report(canonical)
+    inc = rep["positions"][3]["incumbent"]
+    inc[field] = inc[field] * (1 + 1e-13) + 1e-18
+    with pytest.raises(DS.D1SecondError, match=field):
+        DS.validate_record(rep)
+
+
+@pytest.mark.parametrize("field", ["selected_policy_mass", "root_top1_share"])
+def test_a_derived_value_of_the_WRONG_TYPE_is_refused(canonical, field):
+    rep = _valid_report(canonical)
+    rep["positions"][3]["incumbent"][field] = True
+    with pytest.raises(DS.D1SecondError, match=field):
+        DS.validate_record(rep)

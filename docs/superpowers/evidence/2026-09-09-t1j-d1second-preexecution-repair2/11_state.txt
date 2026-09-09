@@ -1,0 +1,31 @@
+STATE AFTER THE SECOND PRE-EXECUTION REPAIR -- 2026-09-09T14:33:25Z
+
+== the acquired record is STILL UNREAD and UNMODIFIED ==
+  files verifying: 19 of 19
+
+== six gates ==
+  ALL SIX FALSE: True
+
+== the four fixes, checked by AST rather than by substring ==
+  (my first probe here grepped the source and reported two false alarms: both
+   matches were in COMMENTS describing the removed code. A check that greps
+   source is not a check -- so this one parses.)
+  P1b budget read from the frozen identity : 400 == 400
+  P1b retyped as an int literal in code    : False
+  P2b math.isclose CALLS in the module      : 0
+  P1a int(d.get(...)) CALLS in validation   : 0
+  P2a top2 declared unused                 : ('top2',), in REQUIRED: False
+
+== controls ==
+  430/430 defects rejected; 0 not caught; 0 stale
+  ALL CONTROLS RAN: True
+  distinct injections: 430 | duplicate labels: 0
+  clean baseline: PASS
+  every source restored: True
+
+== git ==
+ M docs/superpowers/2026-09-08-t1j-d1second-search-readout-proposal.md
+ M scripts/GPU/alphazero/d1second_analysis.py
+ M tests/test_d1second_analysis.py
+?? docs/superpowers/evidence/2026-09-09-t1j-d1second-preexecution-repair2/
+HEAD 8f34854
