@@ -206,6 +206,12 @@ def _ss_cohort(cells, *, pos_rate, ctl_rate, per_role=3):
         # secondary test overrides them to prove they change no outcome.
         r.setdefault("ss0", False)
         r.setdefault("overrode_leader", False)
+        # The frozen readout summary histograms these and counts the complement,
+        # and REFUSES a row that omits any of them. `rank_t1j = 3` keeps the
+        # fixture internally consistent: <= K, so `lprd` is False as set above.
+        r.setdefault("selected_visit_rank", 1)
+        r.setdefault("selected_policy_rank", 1)
+        r.setdefault("rank_t1j", 3)
     return rows
 
 
@@ -249,7 +255,9 @@ def test_the_secondary_reports_are_present_and_CANNOT_produce_GO():
     out = _decide(rows)
     assert out["outcome"] == "NO_GO"                        # unmoved
     assert out["secondary"]["ss0"]["T"] > 0.9
-    assert out["secondary"]["readout"]["position"]["overrode_leader_rate"] == 1.0
+    # the frozen shape is a COUNT histogram, not a rate: every position row
+    assert out["secondary"]["readout"]["position"]["overrode_leader"] == \
+        [[False, 0], [True, out["secondary"]["readout"]["position"]["n"]]]
     assert "created_threat" in out["secondary"]
 
 
@@ -397,3 +405,220 @@ def test_the_module_hardcodes_no_path_to_the_acquired_record():
     src = pathlib.Path(DS.__file__).read_text()
     assert "2026-09-08-t1j-d1-acquisition" not in src
     assert "open(" not in src and "read_text" not in src
+
+
+# ═══════ pre-execution repair 1: a full-record validation pass, FIRST ════════
+
+def _valid_report(canon):
+    """A complete, well-formed report -- the baseline every corruption below
+    starts from, so each test changes exactly one thing."""
+    return _ss_report(canon)
+
+
+def _corrupt(canon, **changes):
+    rep = _valid_report(canon)
+    rep["positions"][3]["incumbent"].update(changes)
+    return rep
+
+
+def test_the_validation_pass_accepts_a_well_formed_record(canonical):
+    DS.validate_record(_valid_report(canonical))
+
+
+def test_validation_runs_over_the_WHOLE_record_BEFORE_a_single_row_is_scored(canonical, monkeypatch):
+    """🔑 A record that fails at row 200 must fail before row 0 is scored, so a
+    partially computed analysis never exists."""
+    rep = _valid_report(canonical)
+    rep["positions"][-1]["incumbent"]["n_legal"] = 99
+    monkeypatch.setattr(DS, "suppression_row",
+                        lambda p: pytest.fail("a row was scored before validation finished"))
+    with pytest.raises(DS.D1SecondError, match="n_legal"):
+        DS.analyse_search_suppression(rep)
+
+
+@pytest.mark.parametrize("field", [
+    "raw_policy", "root_visits", "n_legal", "root_total_visits", "selected_visit_rank",
+    "selected_visit_count", "selected_policy_rank", "selected_policy_mass",
+    "root_top1_share", "readout_overrode_leader"])
+def test_every_required_observable_is_REQUIRED_by_name(canonical, field):
+    rep = _valid_report(canonical)
+    rep["positions"][3]["incumbent"].pop(field)
+    with pytest.raises(DS.D1SecondError, match=field):
+        DS.validate_record(rep)
+
+
+def test_a_BOOLEAN_visit_count_is_refused_because_True_is_not_one_visit(canonical):
+    rep = _valid_report(canonical)
+    inc = rep["positions"][3]["incumbent"]
+    inc["root_visits"] = {k: (True if i == 0 else v)
+                          for i, (k, v) in enumerate(inc["root_visits"].items())}
+    with pytest.raises(DS.D1SecondError, match="root_visits"):
+        DS.validate_record(rep)
+
+
+@pytest.mark.parametrize("bad", [-1, 2.5, "3"])
+def test_a_visit_count_that_is_not_a_NON_NEGATIVE_INT_is_refused(canonical, bad):
+    rep = _valid_report(canonical)
+    inc = rep["positions"][3]["incumbent"]
+    k = next(iter(inc["root_visits"]))
+    inc["root_visits"] = {**inc["root_visits"], k: bad}
+    with pytest.raises(DS.D1SecondError, match="root_visits"):
+        DS.validate_record(rep)
+
+
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), -0.5, True])
+def test_a_policy_mass_that_is_not_a_FINITE_NON_NEGATIVE_REAL_is_refused(canonical, bad):
+    rep = _valid_report(canonical)
+    inc = rep["positions"][3]["incumbent"]
+    k = next(iter(inc["raw_policy"]))
+    inc["raw_policy"] = {**inc["raw_policy"], k: bad}
+    with pytest.raises(DS.D1SecondError, match="raw_policy"):
+        DS.validate_record(rep)
+
+
+def test_an_all_zero_policy_is_refused_because_its_ranking_would_be_arbitrary(canonical):
+    rep = _valid_report(canonical)
+    inc = rep["positions"][3]["incumbent"]
+    inc["raw_policy"] = {k: 0.0 for k in inc["raw_policy"]}
+    with pytest.raises(DS.D1SecondError, match="raw_policy"):
+        DS.validate_record(rep)
+
+
+def test_an_empty_root_is_refused_by_the_validation_pass_too(canonical):
+    with pytest.raises(DS.D1SecondError, match="raw_policy|root_visits"):
+        DS.validate_record(_corrupt(canonical, raw_policy={}, root_visits={}))
+
+
+@pytest.mark.parametrize("field,value", [
+    ("n_legal", 99), ("root_total_visits", 4242), ("selected_visit_count", 77),
+    ("selected_visit_rank", 9), ("selected_policy_rank", 9), ("selected_policy_mass", 0.99),
+    ("root_top1_share", 0.99)])
+def test_an_observable_that_CONTRADICTS_the_maps_it_describes_is_refused(canonical, field, value):
+    """PRESENCE IS NOT AGREEMENT. Each of these is recomputed from `raw_policy`
+    and `root_visits` and must match what the record claims."""
+    with pytest.raises(DS.D1SecondError, match=field):
+        DS.validate_record(_corrupt(canonical, **{field: value}))
+
+
+def test_a_BOOLEAN_rank_is_refused_even_when_it_EQUALS_the_right_number(canonical):
+    """🔴 A control proved the earlier test blind here: it changed the value to a
+    WRONG one, which a loose `got != want` also refuses. `True == 1` is the case
+    only a type-strict comparison catches, and rank 1 is the common case."""
+    rep = _valid_report(canonical)
+    inc = rep["positions"][3]["incumbent"]
+    assert inc["selected_visit_rank"] == 1                  # so True would compare equal
+    inc["selected_visit_rank"] = True
+    with pytest.raises(DS.D1SecondError, match="selected_visit_rank"):
+        DS.validate_record(rep)
+
+
+def test_a_non_boolean_override_flag_is_refused(canonical):
+    with pytest.raises(DS.D1SecondError, match="readout_overrode_leader"):
+        DS.validate_record(_corrupt(canonical, readout_overrode_leader=1))
+
+
+def test_the_policy_and_the_visits_must_cover_the_SAME_legal_set(canonical):
+    rep = _valid_report(canonical)
+    inc = rep["positions"][3]["incumbent"]
+    inc["root_visits"] = {**inc["root_visits"], "23,23": 0}
+    with pytest.raises(DS.D1SecondError, match="same legal set"):
+        DS.validate_record(rep)
+
+
+def test_a_depth6_move_that_is_not_a_PAIR_OF_INTS_is_refused(canonical):
+    rep = _valid_report(canonical)
+    # 🔴 The move below is ALSO illegal, so matching "depth" passed even with the
+    # type check deleted -- the legality message says "depth-6" too. The TYPE
+    # refusal must be named.
+    rep["positions"][3]["depths"] = [{"depth": 6, "move": ["0", "0"]}]
+    with pytest.raises(DS.D1SecondError, match="pair of ints"):
+        DS.validate_record(rep)
+
+
+# ════ pre-execution repair 2: the complement is DESCRIPTIVE, not a floor ════
+
+def test_a_TINY_complement_yields_an_ORDINARY_NO_GO_not_insufficient_support():
+    """🔴 THE PLAN SAID THE OPPOSITE AND WAS WRONG. The floors count rows in
+    common-support cells over the unconditional denominator; they never count
+    rows with rank_raw <= 5. A cohort with ample rows and almost no complement
+    passes every floor, and a complement that small mechanically holds `ss` near
+    zero -- which is an ordinary NO_GO."""
+    rows = _ss_cohort(ALL_CELLS, pos_rate=0.0, ctl_rate=0.0)
+    for i, r in enumerate(rows):
+        r["rank_t1j"] = 3 if i == 0 else 9        # one single eligible row
+        r["ss"] = i == 0
+    out = _decide(rows)
+    assert out["outcome"] == "NO_GO"
+    assert out["outcome"] != "NO_GO — insufficient support"
+    assert out["floor"]["positions"] >= DS.FLOOR["positions"]
+
+
+def test_the_complement_is_REPORTED_per_role_and_decides_nothing():
+    rows = _ss_cohort(ALL_CELLS, pos_rate=1 / 3, ctl_rate=1 / 3)
+    for i, r in enumerate(rows):
+        r["rank_t1j"] = 3 if i % 2 == 0 else 9
+    out = _decide(rows)
+    comp = out["secondary"]["readout"]["position"]["complement_rank_raw_le_k"]
+    n, rate = comp
+    assert n == sum(1 for r in rows if r["role"] == "position" and r["rank_t1j"] <= DS.K_SS)
+    assert 0.0 <= rate <= 1.0
+
+
+# ═════ pre-execution repair 3: the frozen descriptive representation ════════
+
+def test_the_row_carries_BOTH_rank_fields_the_summary_needs():
+    """🔴 My first version asserted both were 1 -- exactly what a control that
+    HARDCODES 1 produces, so it caught nothing. Both values are now non-trivial:
+    the T1j move takes visit rank 1, pushing ours to 2, and the policy rank is
+    set to a value no plausible constant would match."""
+    pos = _pos(t1j_rank=3, t1j_visit_rank=1)
+    pos["incumbent"]["selected_policy_rank"] = 4
+    row = DS.suppression_row(pos)
+    assert row["selected_visit_rank"] == 2       # T1j's move led the visits, not ours
+    assert row["selected_policy_rank"] == 4
+
+
+def test_the_readout_summary_has_EXACTLY_the_frozen_shape():
+    rows = _ss_cohort(ALL_CELLS, pos_rate=1 / 3, ctl_rate=1 / 3)
+    for i, r in enumerate(rows):
+        r["selected_visit_rank"] = 1 + (i % 3)
+        r["selected_policy_rank"] = 1 + (i % 2)
+        r["rank_t1j"] = 3
+    got = DS._readout_summary(rows, cohort=DS.PRIMARY_COHORT)
+    assert set(got) == {"position", "control"}
+    for role in ("position", "control"):
+        assert set(got[role]) == {"n", "overrode_leader", "selected_visit_rank",
+                                  "selected_policy_rank", "ss_rate",
+                                  "complement_rank_raw_le_k"}
+        assert got[role]["overrode_leader"] == [[False, got[role]["n"]], [True, 0]]
+        hist = got[role]["selected_visit_rank"]
+        assert hist == sorted(hist)                       # ascending by rank
+        assert all(c > 0 for _r, c in hist)               # zero counts omitted
+        assert sum(c for _r, c in hist) == got[role]["n"]  # every row counted once
+
+
+def test_the_histogram_counts_ranks_and_not_something_averaged():
+    rows = _ss_cohort([(OPENINGS[0], ARMS[0], PHASES[0])], pos_rate=0.0, ctl_rate=0.0, per_role=3)
+    for r, vr in zip([x for x in rows if x["role"] == "position"], (1, 1, 4)):
+        r["selected_visit_rank"] = vr
+        r["selected_policy_rank"] = 1
+        r["rank_t1j"] = 9
+    for r in [x for x in rows if x["role"] == "control"]:
+        r["selected_visit_rank"] = 2
+        r["selected_policy_rank"] = 1
+        r["rank_t1j"] = 9
+    got = DS._readout_summary(rows, cohort=DS.PRIMARY_COHORT)
+    assert got["position"]["selected_visit_rank"] == [[1, 2], [4, 1]]   # not a mean of 2.0
+
+
+def test_the_histogram_is_ordered_by_RANK_even_when_the_counts_disagree():
+    """🔴 Two controls were blind until this existed. With counts {1:2, 4:1},
+    ordering by descending COUNT gives the same list as ordering by rank, and
+    ranks 1..4 with no gap hides a zero-count filler. Here rank 1 is the RAREST
+    and the ranks are non-contiguous, so both defects change the answer."""
+    rows = _ss_cohort([(OPENINGS[0], ARMS[0], PHASES[0])], pos_rate=0.0, ctl_rate=0.0,
+                      per_role=4)
+    for r, vr in zip([x for x in rows if x["role"] == "position"], (1, 5, 5, 9)):
+        r["selected_visit_rank"] = vr
+    got = DS._readout_summary(rows, cohort=DS.PRIMARY_COHORT)["position"]["selected_visit_rank"]
+    assert got == [[1, 1], [5, 2], [9, 1]]      # ascending by rank; ranks 2-4, 6-8 absent

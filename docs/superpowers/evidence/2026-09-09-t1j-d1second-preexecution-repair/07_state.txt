@@ -1,0 +1,22 @@
+STATE AFTER THE PRE-EXECUTION REPAIR -- 2026-09-09T05:28:28Z
+
+== the acquired record is STILL UNREAD and UNMODIFIED ==
+  files verifying: 19
+  (of 19 listed)
+
+== six gates ==
+  ALL SIX FALSE: True
+
+== the three repairs, as the module now stands ==
+  P1 validate_record: (d1_report: 'Mapping[str, Any]') -> 'Dict[str, int]' | 10 observables required by name
+     called by the entry BEFORE rows are built: True
+     order: ['validated = validate_record(d1_report)        ', 'rows = rows_from_d1_report(d1_report)']
+  P2 complement reported, floors untouched: FLOOR is D1prime FLOOR = True
+  P3 frozen summary keys per role: ['complement_rank_raw_le_k', 'n', 'overrode_leader', 'selected_policy_rank', 'selected_visit_rank', 'ss_rate']
+
+== git ==
+ M docs/superpowers/2026-09-08-t1j-d1second-search-readout-proposal.md
+ M scripts/GPU/alphazero/d1second_analysis.py
+ M tests/test_d1second_analysis.py
+?? docs/superpowers/evidence/2026-09-09-t1j-d1second-preexecution-repair/
+HEAD 69191d1

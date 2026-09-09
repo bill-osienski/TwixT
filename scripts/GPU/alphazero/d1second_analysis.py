@@ -26,6 +26,7 @@ reused, not reimplemented.
 """
 from __future__ import annotations
 
+import math
 from typing import Any, Dict, Iterable, List, Mapping, Sequence, Tuple
 
 from . import d1prime_analysis as DP
@@ -77,6 +78,131 @@ def rank_visit(visits: Mapping[Any, float]) -> Dict[Move, int]:
     return {m: i + 1 for i, m in enumerate(order)}
 
 
+#: Every incumbent observable the analysis or its summary reads. Required BY
+#: NAME: a field that is merely absent would otherwise be scored as a value.
+REQUIRED_OBSERVABLES = ("raw_policy", "root_visits", "n_legal", "root_total_visits",
+                        "selected_visit_rank", "selected_visit_count",
+                        "selected_policy_rank", "selected_policy_mass",
+                        "root_top1_share", "readout_overrode_leader")
+
+
+def _real(x: Any) -> bool:
+    """A real number, TYPE-STRICTLY: `True` is not 1 and "3" is not three."""
+    return type(x) in (int, float) and math.isfinite(x)
+
+
+def _validate_position(pos: Mapping[str, Any], where: str) -> None:
+    """One position's observables: present, well typed, and AGREEING with the
+    maps they claim to describe."""
+    inc = pos.get("incumbent")
+    if not isinstance(inc, dict):
+        raise D1SecondError(f"{where}: the position carries no incumbent record")
+    missing = [f for f in REQUIRED_OBSERVABLES if f not in inc]
+    if missing:
+        raise D1SecondError(
+            f"{where}: the incumbent record is missing {missing}, which the analysis "
+            f"and its frozen summary read; `eval_replay.ply_record` and `d1_probe` "
+            f"write every one of them.")
+
+    policy = inc["raw_policy"]
+    if not isinstance(policy, dict) or not policy:
+        raise D1SecondError(f"{where}: raw_policy is empty or not a mapping")
+    for k, v in policy.items():
+        if not _real(v) or isinstance(v, bool) or v < 0:
+            raise D1SecondError(
+                f"{where}: raw_policy[{k!r}] is {v!r} ({type(v).__name__}); every mass "
+                f"must be a finite non-negative real, and a bool is not one.")
+    if sum(float(v) for v in policy.values()) <= 0:
+        raise D1SecondError(
+            f"{where}: raw_policy sums to zero, so its ranking would be pure tie-break "
+            f"over every legal move")
+
+    visits = inc["root_visits"]
+    if not isinstance(visits, dict) or not visits:
+        raise D1SecondError(f"{where}: root_visits is empty or not a mapping")
+    for k, v in visits.items():
+        if type(v) is not int or v < 0:
+            raise D1SecondError(
+                f"{where}: root_visits[{k!r}] is {v!r} ({type(v).__name__}); a visit "
+                f"count must be a non-negative int, and `True` is not one visit.")
+    if {DP._move(k) for k in policy} != {DP._move(k) for k in visits}:
+        raise D1SecondError(
+            f"{where}: raw_policy covers {len(policy)} moves and root_visits "
+            f"{len(visits)}; they must be the same legal set")
+
+    counts = {DP._move(k): int(v) for k, v in visits.items()}
+    masses = {DP._move(k): float(v) for k, v in policy.items()}
+    total = sum(counts.values())
+    if total <= 0:
+        raise D1SecondError(f"{where}: root_total_visits is zero; nothing was searched")
+    ours = (pos["incumbent"].get("row"), pos["incumbent"].get("col"))
+    if type(ours[0]) is not int or type(ours[1]) is not int or ours not in counts:
+        raise D1SecondError(
+            f"{where}: the selected move {ours!r} is not a legal move of this root")
+
+    # PRESENCE IS NOT AGREEMENT: each claim is recomputed and compared.
+    expect = {
+        "n_legal": len(counts),
+        "root_total_visits": total,
+        "selected_visit_count": counts[ours],
+        "selected_visit_rank": rank_visit(visits)[ours],
+        "selected_policy_rank": DP.rank_raw(policy)[ours],
+    }
+    for field, want in expect.items():
+        got = inc[field]
+        if type(got) is not int or isinstance(got, bool) or got != want:
+            raise D1SecondError(
+                f"{where}: {field} is {got!r} but the record's own maps give {want!r}; "
+                f"an observable that contradicts what it describes is not evidence.")
+    for field, want in (("selected_policy_mass", masses[ours]),
+                        ("root_top1_share", max(counts.values()) / total)):
+        got = inc[field]
+        if not _real(got) or isinstance(got, bool) or not math.isclose(got, want, rel_tol=1e-9,
+                                                                       abs_tol=1e-12):
+            raise D1SecondError(
+                f"{where}: {field} is {got!r} but the record's own maps give {want!r}")
+    if type(inc["readout_overrode_leader"]) is not bool:
+        raise D1SecondError(
+            f"{where}: readout_overrode_leader is {inc['readout_overrode_leader']!r} "
+            f"({type(inc['readout_overrode_leader']).__name__}); the writer writes a bool, "
+            f"and a truthy int would be read as one.")
+
+    depth6 = [d for d in pos.get("depths", []) if int(d.get("depth", -1)) == 6]
+    if len(depth6) != 1:
+        raise D1SecondError(f"{where}: expected exactly one depth-6 record, got {len(depth6)}")
+    mv = depth6[0].get("move")
+    if (not isinstance(mv, (list, tuple)) or len(mv) != 2
+            or any(type(x) is not int for x in mv)):
+        raise D1SecondError(
+            f"{where}: the depth-6 move is {mv!r}; it must be a pair of ints")
+    if tuple(mv) not in counts:
+        raise D1SecondError(
+            f"{where}: the depth-6 move {tuple(mv)} is not a legal move of this root")
+
+
+def validate_record(d1_report: Mapping[str, Any]) -> Dict[str, int]:
+    """EVERY position's observables, checked BEFORE any row is built.
+
+    🔑 A FULL PASS, NOT A PER-ROW CHECK INTERLEAVED WITH THE ARITHMETIC. A record
+    that fails at row 200 must fail before row 0 is scored, so a
+    partially-computed analysis never exists to be mistaken for a result.
+
+    Type-strict and consistency-checking: coercing a value with `float()` and
+    ranking immediately would let a boolean, a negative count, a NaN or a total
+    that contradicts its own map reach the metric.
+    """
+    positions = d1_report.get("positions")
+    if not isinstance(positions, list) or not positions:
+        raise D1SecondError("the report carries no positions to validate")
+    for i, pos in enumerate(positions):
+        if not isinstance(pos, dict):
+            raise D1SecondError(f"position {i} is not a record")
+        _validate_position(pos, f"position {i} ({pos.get('task_id')!r})")
+    return {"positions_validated": len(positions),
+            "observables_per_position": len(REQUIRED_OBSERVABLES)}
+
+
+
 def suppression_row(pos: Mapping[str, Any]) -> Dict[str, Any]:
     """One D1 per-position record -> one D1″ analysis row.
 
@@ -114,6 +240,11 @@ def suppression_row(pos: Mapping[str, Any]) -> Dict[str, Any]:
         # The tie-free strict variant: reported, never decisive.
         "ss0": rank_raw_t1j <= K_SS and visits_t1j == 0.0,
         "n_legal": len(ranks_raw),
+        # The two fields the frozen readout summary histograms. Carried onto the
+        # row so the summary reads what the RECORD says rather than recomputing
+        # it from a different map.
+        "selected_visit_rank": inc["selected_visit_rank"],
+        "selected_policy_rank": inc["selected_policy_rank"],
     })
     return row
 
@@ -140,26 +271,56 @@ def check_disjoint(rows: Iterable[Mapping[str, Any]]) -> None:
             f"`suppression_row`, or the record they describe is wrong.")
 
 
+def _histogram(rows: Sequence[Mapping[str, Any]], field: str) -> List[List[int]]:
+    """`[[value, count], ...]` ascending by value, values with no rows omitted.
+
+    🔑 A COUNT HISTOGRAM, NOT A MEAN, and the shape is frozen in the plan before
+    any real value was seen. A mean rank cannot distinguish "usually the visit
+    leader, occasionally something odd" from "drifts everywhere"; this can.
+    """
+    counts: Dict[int, int] = {}
+    for r in rows:
+        v = r[field]
+        if type(v) is not int or isinstance(v, bool):
+            raise D1SecondError(f"{field} is {v!r} ({type(v).__name__}); a rank is an int")
+        counts[v] = counts.get(v, 0) + 1
+    return [[v, counts[v]] for v in sorted(counts)]
+
+
 def _readout_summary(rows: Sequence[Mapping[str, Any]], *, cohort: str) -> Dict[str, Any]:
     """DESCRIPTIVE, per role: the OTHER mechanism -- the readout declining the
     move the search preferred. Deliberately not the primary metric: one frozen
     decision rule, one metric. Nothing here is consulted by the decision.
     """
     out: Dict[str, Any] = {}
+    fields = ("overrode_leader", "ss", "selected_visit_rank", "selected_policy_rank",
+              "rank_t1j")
     for role in DP.ROLES:
         sel = [r for r in rows if r["signature"] == cohort and r["role"] == role]
         if not sel:
-            out[role] = {"n": 0, "overrode_leader_rate": None, "ss_rate": None}
+            out[role] = {"n": 0, "overrode_leader": [[False, 0], [True, 0]],
+                         "selected_visit_rank": [], "selected_policy_rank": [],
+                         "ss_rate": None, "complement_rank_raw_le_k": [0, None]}
             continue
-        for field in ("overrode_leader", "ss"):
+        for field in fields:
             if any(field not in r for r in sel):
                 raise D1SecondError(
                     f"a {role} row carries no {field!r}; the readout summary would "
                     f"describe a measurement that is absent")
+        n_true = sum(1 for r in sel if bool(r["overrode_leader"]))
+        # 🔑 THE COMPLEMENT, REPORTED AND DECIDING NOTHING. The eligibility floors
+        # count rows in common-support cells over the UNCONDITIONAL denominator;
+        # they never count rows with rank_raw <= K. A small complement is not
+        # "insufficient support" -- it MECHANICALLY limits how large ss can be,
+        # which is an ordinary NO_GO. The reader needs the number to see that.
+        n_elig = sum(1 for r in sel if int(r["rank_t1j"]) <= K_SS)
         out[role] = {
             "n": len(sel),
-            "overrode_leader_rate": sum(bool(r["overrode_leader"]) for r in sel) / len(sel),
+            "overrode_leader": [[False, len(sel) - n_true], [True, n_true]],
+            "selected_visit_rank": _histogram(sel, "selected_visit_rank"),
+            "selected_policy_rank": _histogram(sel, "selected_policy_rank"),
             "ss_rate": sum(bool(r["ss"]) for r in sel) / len(sel),
+            "complement_rank_raw_le_k": [n_elig, n_elig / len(sel)],
         }
     return out
 
@@ -224,6 +385,7 @@ def analyse_search_suppression(d1_report: Mapping[str, Any]) -> Dict[str, Any]:
     """
     canon = DP.resolve_canonical_cohort()
     acquisition = DP.check_report_contract(d1_report, canon["rows"])
+    validated = validate_record(d1_report)          # EVERY position, BEFORE any row
     rows = rows_from_d1_report(d1_report)
     check_disjoint(rows)                       # precondition, on the REAL rows
     out = DP._analyse(rows, frozen_cohort=canon["rows"], tasks=canon["tasks"],
@@ -232,5 +394,6 @@ def analyse_search_suppression(d1_report: Mapping[str, Any]) -> Dict[str, Any]:
     out["resolved"] = {k: canon[k] for k in ("record", "plan", "cohort_source", "n_positions")}
     out["acquisition"] = acquisition
     out["prng"] = {"bit_generator": "PCG64", "seed": BOOTSTRAP_SEED, "B": B_REPLICATES}
+    out["validated"] = validated
     out["claim"] = CLAIM
     return out

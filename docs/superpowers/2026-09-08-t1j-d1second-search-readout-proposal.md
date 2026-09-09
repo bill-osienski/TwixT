@@ -12,7 +12,17 @@ carries. I did **not** read a single value of `raw_policy`, `root_visits`, `sele
 has been computed. That is the point of freezing first: a metric chosen after seeing the field it
 measures is not a preregistration.
 
-**AMENDED 2026-09-08, before implementation, documentation only.** One sentence of §1 claimed D1′
+**AMENDED TWICE, 2026-09-08, both before the analysis is run on real data.**
+
+**Second amendment (pre-execution review).** Three gaps, none of which changes the primary metric,
+the denominator, the statistic, the threshold or the seed: §2 now requires a **full-record validation
+pass** before any row is built (it was implied, not specified); §3's claim that a small policy-eligible
+complement yields `NO_GO — insufficient support` was **wrong** and is corrected — the floors cannot
+see the complement, a small complement mechanically limits `ss` and yields an **ordinary** `NO_GO`,
+and the complement is now reported descriptively; and §4's "summarised by role" is replaced by an
+**exact frozen representation**, count histograms, fixed before any real value is seen.
+
+**First amendment, documentation only.** One sentence of §1 claimed D1′
 had shown T1j's moves are "not conspicuously missing from our policy's top choices". That
 overstated a matched result: D1′ compared *roles*, so it constrains the fragmentation-associated
 **excess** and not the shared level. The sentence is replaced in §1 and its consequence is drawn out
@@ -66,6 +76,16 @@ development half is for.** It is also why nothing here can confirm anything: the
 looking twice is that confirmation happens on data that has never been looked at once. No threshold,
 floor or rule from D1′ is adjusted after seeing D1′'s result (§5).
 
+**A FULL-RECORD VALIDATION PASS RUNS FIRST, over every position, before any row is built.** Not a
+per-row check interleaved with the arithmetic: a record that fails at row 200 must fail before row 0
+is scored, so a partially-computed analysis never exists. It is **type-strict** (a `bool` is not an
+`int`, a string digit is not a number) and checks **internal consistency**, not merely presence —
+`n_legal`, `root_total_visits`, `selected_visit_count`, `selected_visit_rank`,
+`selected_policy_rank`, `selected_policy_mass` and `root_top1_share` must all agree with the
+`raw_policy` and `root_visits` maps they claim to describe. Coercing a value with `float()` and
+ranking immediately would let a boolean, a negative count, a NaN or an inconsistent total reach the
+metric.
+
 **Feasibility rests on the schema, and is verified before any statistic is computed.** The writer
 records, per position: `raw_policy` (mass over every legal move), `root_visits` (visit count over the
 same legal set), `n_legal`, `selected_visit_rank`, `selected_visit_count`, `root_total_visits`,
@@ -94,9 +114,22 @@ For each row, with `K = 5` **unchanged from D1′**:
 **How many rows can even be suppressed is UNKNOWN and deliberately unmeasured.** `ss` is defined on
 the complement of `lprd` — rows where `rank_raw ≤ 5` — and D1′ says nothing about the size of that
 complement in either role, for the reason given in §1. It may be most of the cohort or little of it.
-That is not a gap to be closed by peeking: the eligibility floors (§5) are exactly the instrument for
-refusing a statistic computed over too little, and they are checked before any replicate is drawn. If
-the complement is too small, the frozen answer is `NO_GO — insufficient support`, not a rescue.
+
+🔴 **AMENDED, because the first version of this paragraph was wrong.** It said that if the complement
+were too small the frozen answer would be `NO_GO — insufficient support`. **The eligibility floors
+cannot detect that.** They count positions, controls, cells and games in common-support cells over
+the *unconditional* denominator — every row, as §3 requires — and they never count how many rows
+satisfy `rank_raw ≤ 5`. A cohort with ample rows but a tiny complement passes every floor.
+
+**The correct statement:** a small complement **mechanically limits** how large `ss` can be in either
+role, so it pushes the matched difference toward zero and produces an **ordinary `NO_GO`** — not the
+insufficient-support one. That is the honest consequence and it needs no new machinery.
+
+**The complement is therefore reported DESCRIPTIVELY**, per role: the count and rate of rows with
+`rank_raw ≤ 5`. It is a number a reader needs in order to interpret a NO_GO, and it decides nothing.
+**Switching to a conditional denominator is refused**: it would change the preregistered statistic
+after the fact, and it would make the floors describe a different population than the one they were
+frozen against.
 
 **Denominator: every row in the cell, not only the policy-eligible ones.** A row where the policy
 never ranked T1j's move highly cannot have been suppressed, and scores `False` — which is correct,
@@ -126,10 +159,26 @@ strong opponent's move*, and claims nothing more.
 
 Reported alongside, deciding nothing — the same standing D1′ gives its secondary cohort:
 
-1. **Readout non-selection.** `readout_overrode_leader`, `selected_visit_rank` and
-   `selected_policy_rank`, summarised by role. This is the *other* mechanism — the readout declining
-   the move the search preferred — and it is deliberately **not** primary: one frozen decision rule,
-   one metric.
+1. **Readout non-selection**, summarised by role over the primary cohort. This is the *other*
+   mechanism — the readout declining the move the search preferred — and it is deliberately **not**
+   primary: one frozen decision rule, one metric.
+
+   **The representation is FROZEN HERE, before any real value is seen**, because "summarised" is not
+   a specification and a summary chosen after seeing the numbers is chosen to suit them. For each
+   role, exactly:
+
+   | key | value |
+   |---|---|
+   | `n` | rows of that role in the cohort |
+   | `overrode_leader` | `[[false, count], [true, count]]` |
+   | `selected_visit_rank` | `[[rank, count], …]`, ascending by rank, ranks with zero count omitted |
+   | `selected_policy_rank` | `[[rank, count], …]`, same shape |
+   | `ss_rate` | the role's own `ss` rate, for reading the primary alongside |
+   | `complement_rank_raw_le_k` | `[count, rate]` of rows with `rank_raw ≤ 5` (§3) |
+
+   **Count histograms, not means.** A mean rank hides whether the readout usually picks the visit
+   leader and occasionally does something odd, or drifts everywhere; the histogram cannot. Both rank
+   fields are carried onto the analysis row so the summary reads what the record actually says.
 2. **Strict variant.** `ss0 := rank_raw(t1j_move_6) ≤ 5 AND root_visits(t1j_move_6) == 0`, which needs
    no tie-break at all. Preregistered here as a **sensitivity report**, so that if the primary's
    zero-visit tie mass is later questioned, the answer already exists and was not chosen afterwards.
@@ -170,6 +219,8 @@ spend the sealed half on it, and the fragmentation line closes on the evidence a
 Inherited from D1′ and non-negotiable, because they are what makes the entry checkable rather than
 merely careful:
 
+0. **The full-record validation pass of §2 runs before any row is built**, type-strict and
+   consistency-checking, refusing by name.
 1. **One public entry taking the D1 report and nothing else**, resolving cohort, design, reps, B and
    seed itself. No caller-supplied rows, cohort, tasks, reps, replicate count or seed.
 2. **The record must be a completed D1 run**: acquisition contract, both identities bound to their
