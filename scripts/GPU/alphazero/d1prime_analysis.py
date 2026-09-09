@@ -154,8 +154,14 @@ def _cell(r: Mapping[str, Any]) -> Cell:
 
 
 def matched_statistic(rows: Iterable[Mapping[str, Any]], *, cohort: str,
-                      arm: Optional[str] = None) -> Dict[str, Any]:
+                      arm: Optional[str] = None, indicator: str = "lprd") -> Dict[str, Any]:
     """T over the cohort's common-support cells, Mantel-Haenszel weighted.
+
+    `indicator` names the per-row boolean being compared. It DEFAULTS to `lprd`,
+    so D1′'s result is untouched, and D1″ passes `ss` -- one statistic, two
+    questions, rather than a second implementation that could drift from this
+    one. A row missing the named field is REFUSED, never read as False: a silent
+    default would score an absent measurement as "no suppression".
 
     A cell is in common support iff BOTH roles are present. Weights
     w_c = n_pos * n_ctl / (n_pos + n_ctl) come from the cohort's OWN counts.
@@ -169,7 +175,11 @@ def matched_statistic(rows: Iterable[Mapping[str, Any]], *, cohort: str,
             continue
         if arm is not None and r["colour_arm"] != arm:
             continue
-        per_cell[_cell(r)][r["role"]].append(bool(r["lprd"]))
+        if indicator not in r:
+            raise D1PrimeError(
+                f"a row of {cohort!r} carries no {indicator!r} field, so the statistic "
+                f"would score an absent measurement; every row must carry it.")
+        per_cell[_cell(r)][r["role"]].append(bool(r[indicator]))
         games_by_cell[_cell(r)].add(r["task_id"])
 
     cells_out: List[Dict[str, Any]] = []
@@ -184,8 +194,8 @@ def matched_statistic(rows: Iterable[Mapping[str, Any]], *, cohort: str,
             w = len(pos) * len(ctl) / (len(pos) + len(ctl))
             diff = sum(pos) / len(pos) - sum(ctl) / len(ctl)
             cells_out.append({"cell": cell, "n_positions": len(pos), "n_controls": len(ctl),
-                              "lprd_positions": sum(pos) / len(pos),
-                              "lprd_controls": sum(ctl) / len(ctl),
+                              f"{indicator}_positions": sum(pos) / len(pos),
+                              f"{indicator}_controls": sum(ctl) / len(ctl),
                               "difference": diff, "weight": w})
             num += w * diff
             den += w
@@ -196,13 +206,14 @@ def matched_statistic(rows: Iterable[Mapping[str, Any]], *, cohort: str,
             unmatched_pos += pos
             unmatched_ctl += ctl
     return {
-        "cohort": cohort, "arm": arm,
+        "cohort": cohort, "arm": arm, "indicator": indicator,
         "T": (num / den) if den else None,
         "cells": cells_out, "n_cs_cells": len(cells_out),
         "n_positions_cs": n_pos, "n_controls_cs": n_ctl,
         "games_cs": len(games_cs),
         "unmatched": {"n_positions": len(unmatched_pos), "n_controls": len(unmatched_ctl),
-                      "lprd_rate": (sum(unmatched_pos) / len(unmatched_pos)) if unmatched_pos else None},
+                      f"{indicator}_rate": (sum(unmatched_pos) / len(unmatched_pos))
+                      if unmatched_pos else None},
     }
 
 
@@ -276,17 +287,17 @@ def central_interval(values: Sequence[float]) -> Tuple[float, float]:
 
 def stability_interval(rows: Sequence[Mapping[str, Any]], strata: Sequence[Mapping[str, Any]], *,
                        cohort: str, B: int = B_REPLICATES, seed: int = BOOTSTRAP_SEED,
-                       arm: Optional[str] = None) -> Dict[str, Any]:
+                       arm: Optional[str] = None, indicator: str = "lprd") -> Dict[str, Any]:
     """T on the cohort and its EMPIRICAL STABILITY INTERVAL across B whole-game
     reweightings. A replicate whose T is undefined (no cell with both roles) is
     COUNTED and KEPT; it is never dropped, redrawn or imputed, and if any exists
     the interval is UNDEFINED."""
-    full = matched_statistic(rows, cohort=cohort, arm=arm)
+    full = matched_statistic(rows, cohort=cohort, arm=arm, indicator=indicator)
     reps = replicates(rows, strata, B=B, seed=seed)
     values: List[Optional[float]] = []
     defined_cells: Counter = Counter()
     for rep in reps:
-        st = matched_statistic(rep["rows"], cohort=cohort, arm=arm)
+        st = matched_statistic(rep["rows"], cohort=cohort, arm=arm, indicator=indicator)
         values.append(st["T"])
         defined_cells[st["n_cs_cells"]] += 1
     undefined = sum(1 for v in values if v is None)
