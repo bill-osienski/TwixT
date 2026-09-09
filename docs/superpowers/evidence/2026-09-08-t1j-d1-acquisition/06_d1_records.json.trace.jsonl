@@ -1,0 +1,1328 @@
+{"event": "run_start", "n_positions": 221, "schema": "d1-void-trace/2", "ts": 1788913983.349334}
+{"event": "position_start", "index": 0, "ts": 1788913983.957556}
+{"event": "position_stage", "index": 0, "seeds_drawn": 0, "stage": "bound", "ts": 1788913984.112173}
+{"event": "position_stage", "index": 0, "seeds_drawn": 1, "stage": "incumbent", "ts": 1788913984.1123042}
+{"event": "position_stage", "index": 0, "seeds_drawn": 1, "stage": "depth3", "ts": 1788913985.291942}
+{"event": "position_stage", "index": 0, "seeds_drawn": 1, "stage": "depth6", "ts": 1788913985.5281541}
+{"event": "position_done", "index": 0, "positions_completed": 1, "queries_spent": 5, "seeds_drawn": 1, "ts": 1788913985.919062}
+{"event": "position_start", "index": 1, "ts": 1788913985.9195259}
+{"event": "position_stage", "index": 1, "seeds_drawn": 1, "stage": "bound", "ts": 1788913986.011898}
+{"event": "position_stage", "index": 1, "seeds_drawn": 2, "stage": "incumbent", "ts": 1788913986.012369}
+{"event": "position_stage", "index": 1, "seeds_drawn": 2, "stage": "depth3", "ts": 1788913987.0972512}
+{"event": "position_stage", "index": 1, "seeds_drawn": 2, "stage": "depth6", "ts": 1788913987.352299}
+{"event": "position_done", "index": 1, "positions_completed": 2, "queries_spent": 10, "seeds_drawn": 2, "ts": 1788913987.852374}
+{"event": "position_start", "index": 2, "ts": 1788913987.852822}
+{"event": "position_stage", "index": 2, "seeds_drawn": 2, "stage": "bound", "ts": 1788913987.958795}
+{"event": "position_stage", "index": 2, "seeds_drawn": 3, "stage": "incumbent", "ts": 1788913987.959208}
+{"event": "position_stage", "index": 2, "seeds_drawn": 3, "stage": "depth3", "ts": 1788913988.9405608}
+{"event": "position_stage", "index": 2, "seeds_drawn": 3, "stage": "depth6", "ts": 1788913989.1952682}
+{"event": "position_done", "index": 2, "positions_completed": 3, "queries_spent": 15, "seeds_drawn": 3, "ts": 1788913989.893287}
+{"event": "position_start", "index": 3, "ts": 1788913989.893471}
+{"event": "position_stage", "index": 3, "seeds_drawn": 3, "stage": "bound", "ts": 1788913989.9875169}
+{"event": "position_stage", "index": 3, "seeds_drawn": 4, "stage": "incumbent", "ts": 1788913989.987961}
+{"event": "position_stage", "index": 3, "seeds_drawn": 4, "stage": "depth3", "ts": 1788913990.9962828}
+{"event": "position_stage", "index": 3, "seeds_drawn": 4, "stage": "depth6", "ts": 1788913991.241209}
+{"event": "position_done", "index": 3, "positions_completed": 4, "queries_spent": 20, "seeds_drawn": 4, "ts": 1788913991.810845}
+{"event": "position_start", "index": 4, "ts": 1788913991.811313}
+{"event": "position_stage", "index": 4, "seeds_drawn": 4, "stage": "bound", "ts": 1788913991.917696}
+{"event": "position_stage", "index": 4, "seeds_drawn": 5, "stage": "incumbent", "ts": 1788913991.91813}
+{"event": "position_stage", "index": 4, "seeds_drawn": 5, "stage": "depth3", "ts": 1788913993.144083}
+{"event": "position_stage", "index": 4, "seeds_drawn": 5, "stage": "depth6", "ts": 1788913993.4859269}
+{"event": "position_done", "index": 4, "positions_completed": 5, "queries_spent": 25, "seeds_drawn": 5, "ts": 1788913995.796078}
+{"event": "position_start", "index": 5, "ts": 1788913995.7965498}
+{"event": "position_stage", "index": 5, "seeds_drawn": 5, "stage": "bound", "ts": 1788913995.909784}
+{"event": "position_stage", "index": 5, "seeds_drawn": 6, "stage": "incumbent", "ts": 1788913995.910275}
+{"event": "position_stage", "index": 5, "seeds_drawn": 6, "stage": "depth3", "ts": 1788913997.1863492}
+{"event": "position_stage", "index": 5, "seeds_drawn": 6, "stage": "depth6", "ts": 1788913997.482925}
+{"event": "position_done", "index": 5, "positions_completed": 6, "queries_spent": 30, "seeds_drawn": 6, "ts": 1788913998.4057841}
+{"event": "position_start", "index": 6, "ts": 1788913998.406232}
+{"event": "position_stage", "index": 6, "seeds_drawn": 6, "stage": "bound", "ts": 1788913998.5359738}
+{"event": "position_stage", "index": 6, "seeds_drawn": 7, "stage": "incumbent", "ts": 1788913998.5363588}
+{"event": "position_stage", "index": 6, "seeds_drawn": 7, "stage": "depth3", "ts": 1788913999.617507}
+{"event": "position_stage", "index": 6, "seeds_drawn": 7, "stage": "depth6", "ts": 1788913999.897186}
+{"event": "position_done", "index": 6, "positions_completed": 7, "queries_spent": 35, "seeds_drawn": 7, "ts": 1788914000.832153}
+{"event": "position_start", "index": 7, "ts": 1788914000.8326201}
+{"event": "position_stage", "index": 7, "seeds_drawn": 7, "stage": "bound", "ts": 1788914000.944919}
+{"event": "position_stage", "index": 7, "seeds_drawn": 8, "stage": "incumbent", "ts": 1788914000.945343}
+{"event": "position_stage", "index": 7, "seeds_drawn": 8, "stage": "depth3", "ts": 1788914002.2745888}
+{"event": "position_stage", "index": 7, "seeds_drawn": 8, "stage": "depth6", "ts": 1788914002.525829}
+{"event": "position_done", "index": 7, "positions_completed": 8, "queries_spent": 40, "seeds_drawn": 8, "ts": 1788914002.906688}
+{"event": "position_start", "index": 8, "ts": 1788914002.907132}
+{"event": "position_stage", "index": 8, "seeds_drawn": 8, "stage": "bound", "ts": 1788914003.032226}
+{"event": "position_stage", "index": 8, "seeds_drawn": 9, "stage": "incumbent", "ts": 1788914003.032663}
+{"event": "position_stage", "index": 8, "seeds_drawn": 9, "stage": "depth3", "ts": 1788914004.2426372}
+{"event": "position_stage", "index": 8, "seeds_drawn": 9, "stage": "depth6", "ts": 1788914004.481408}
+{"event": "position_done", "index": 8, "positions_completed": 9, "queries_spent": 45, "seeds_drawn": 9, "ts": 1788914004.766704}
+{"event": "position_start", "index": 9, "ts": 1788914004.76717}
+{"event": "position_stage", "index": 9, "seeds_drawn": 9, "stage": "bound", "ts": 1788914004.871201}
+{"event": "position_stage", "index": 9, "seeds_drawn": 10, "stage": "incumbent", "ts": 1788914004.8716512}
+{"event": "position_stage", "index": 9, "seeds_drawn": 10, "stage": "depth3", "ts": 1788914005.964229}
+{"event": "position_stage", "index": 9, "seeds_drawn": 10, "stage": "depth6", "ts": 1788914006.209549}
+{"event": "position_done", "index": 9, "positions_completed": 10, "queries_spent": 50, "seeds_drawn": 10, "ts": 1788914006.503975}
+{"event": "position_start", "index": 10, "ts": 1788914006.504404}
+{"event": "position_stage", "index": 10, "seeds_drawn": 10, "stage": "bound", "ts": 1788914006.593832}
+{"event": "position_stage", "index": 10, "seeds_drawn": 11, "stage": "incumbent", "ts": 1788914006.594215}
+{"event": "position_stage", "index": 10, "seeds_drawn": 11, "stage": "depth3", "ts": 1788914007.7000709}
+{"event": "position_stage", "index": 10, "seeds_drawn": 11, "stage": "depth6", "ts": 1788914007.938654}
+{"event": "position_done", "index": 10, "positions_completed": 11, "queries_spent": 55, "seeds_drawn": 11, "ts": 1788914008.3315961}
+{"event": "position_start", "index": 11, "ts": 1788914008.332042}
+{"event": "position_stage", "index": 11, "seeds_drawn": 11, "stage": "bound", "ts": 1788914008.4350138}
+{"event": "position_stage", "index": 11, "seeds_drawn": 12, "stage": "incumbent", "ts": 1788914008.435463}
+{"event": "position_stage", "index": 11, "seeds_drawn": 12, "stage": "depth3", "ts": 1788914009.386982}
+{"event": "position_stage", "index": 11, "seeds_drawn": 12, "stage": "depth6", "ts": 1788914009.628474}
+{"event": "position_done", "index": 11, "positions_completed": 12, "queries_spent": 60, "seeds_drawn": 12, "ts": 1788914010.1167722}
+{"event": "position_start", "index": 12, "ts": 1788914010.117238}
+{"event": "position_stage", "index": 12, "seeds_drawn": 12, "stage": "bound", "ts": 1788914010.2146518}
+{"event": "position_stage", "index": 12, "seeds_drawn": 13, "stage": "incumbent", "ts": 1788914010.2148302}
+{"event": "position_stage", "index": 12, "seeds_drawn": 13, "stage": "depth3", "ts": 1788914011.369459}
+{"event": "position_stage", "index": 12, "seeds_drawn": 13, "stage": "depth6", "ts": 1788914011.60968}
+{"event": "position_done", "index": 12, "positions_completed": 13, "queries_spent": 65, "seeds_drawn": 13, "ts": 1788914012.032806}
+{"event": "position_start", "index": 13, "ts": 1788914012.0332851}
+{"event": "position_stage", "index": 13, "seeds_drawn": 13, "stage": "bound", "ts": 1788914012.138282}
+{"event": "position_stage", "index": 13, "seeds_drawn": 14, "stage": "incumbent", "ts": 1788914012.138688}
+{"event": "position_stage", "index": 13, "seeds_drawn": 14, "stage": "depth3", "ts": 1788914013.084424}
+{"event": "position_stage", "index": 13, "seeds_drawn": 14, "stage": "depth6", "ts": 1788914013.331348}
+{"event": "position_done", "index": 13, "positions_completed": 14, "queries_spent": 70, "seeds_drawn": 14, "ts": 1788914013.698283}
+{"event": "position_start", "index": 14, "ts": 1788914013.698796}
+{"event": "position_stage", "index": 14, "seeds_drawn": 14, "stage": "bound", "ts": 1788914013.8024}
+{"event": "position_stage", "index": 14, "seeds_drawn": 15, "stage": "incumbent", "ts": 1788914013.802881}
+{"event": "position_stage", "index": 14, "seeds_drawn": 15, "stage": "depth3", "ts": 1788914014.765465}
+{"event": "position_stage", "index": 14, "seeds_drawn": 15, "stage": "depth6", "ts": 1788914015.003742}
+{"event": "position_done", "index": 14, "positions_completed": 15, "queries_spent": 75, "seeds_drawn": 15, "ts": 1788914015.35181}
+{"event": "position_start", "index": 15, "ts": 1788914015.3523011}
+{"event": "position_stage", "index": 15, "seeds_drawn": 15, "stage": "bound", "ts": 1788914015.456921}
+{"event": "position_stage", "index": 15, "seeds_drawn": 16, "stage": "incumbent", "ts": 1788914015.457393}
+{"event": "position_stage", "index": 15, "seeds_drawn": 16, "stage": "depth3", "ts": 1788914016.410165}
+{"event": "position_stage", "index": 15, "seeds_drawn": 16, "stage": "depth6", "ts": 1788914016.643492}
+{"event": "position_done", "index": 15, "positions_completed": 16, "queries_spent": 80, "seeds_drawn": 16, "ts": 1788914016.937815}
+{"event": "position_start", "index": 16, "ts": 1788914016.938302}
+{"event": "position_stage", "index": 16, "seeds_drawn": 16, "stage": "bound", "ts": 1788914017.0499341}
+{"event": "position_stage", "index": 16, "seeds_drawn": 17, "stage": "incumbent", "ts": 1788914017.050364}
+{"event": "position_stage", "index": 16, "seeds_drawn": 17, "stage": "depth3", "ts": 1788914018.0109901}
+{"event": "position_stage", "index": 16, "seeds_drawn": 17, "stage": "depth6", "ts": 1788914018.2475562}
+{"event": "position_done", "index": 16, "positions_completed": 17, "queries_spent": 85, "seeds_drawn": 17, "ts": 1788914018.53498}
+{"event": "position_start", "index": 17, "ts": 1788914018.5354502}
+{"event": "position_stage", "index": 17, "seeds_drawn": 17, "stage": "bound", "ts": 1788914018.6462662}
+{"event": "position_stage", "index": 17, "seeds_drawn": 18, "stage": "incumbent", "ts": 1788914018.646433}
+{"event": "position_stage", "index": 17, "seeds_drawn": 18, "stage": "depth3", "ts": 1788914019.731402}
+{"event": "position_stage", "index": 17, "seeds_drawn": 18, "stage": "depth6", "ts": 1788914019.954153}
+{"event": "position_done", "index": 17, "positions_completed": 18, "queries_spent": 90, "seeds_drawn": 18, "ts": 1788914020.192519}
+{"event": "position_start", "index": 18, "ts": 1788914020.192987}
+{"event": "position_stage", "index": 18, "seeds_drawn": 18, "stage": "bound", "ts": 1788914020.303282}
+{"event": "position_stage", "index": 18, "seeds_drawn": 19, "stage": "incumbent", "ts": 1788914020.303743}
+{"event": "position_stage", "index": 18, "seeds_drawn": 19, "stage": "depth3", "ts": 1788914021.2500339}
+{"event": "position_stage", "index": 18, "seeds_drawn": 19, "stage": "depth6", "ts": 1788914021.471116}
+{"event": "position_done", "index": 18, "positions_completed": 19, "queries_spent": 95, "seeds_drawn": 19, "ts": 1788914021.688861}
+{"event": "position_start", "index": 19, "ts": 1788914021.689337}
+{"event": "position_stage", "index": 19, "seeds_drawn": 19, "stage": "bound", "ts": 1788914021.781425}
+{"event": "position_stage", "index": 19, "seeds_drawn": 20, "stage": "incumbent", "ts": 1788914021.7818592}
+{"event": "position_stage", "index": 19, "seeds_drawn": 20, "stage": "depth3", "ts": 1788914022.8259048}
+{"event": "position_stage", "index": 19, "seeds_drawn": 20, "stage": "depth6", "ts": 1788914023.076997}
+{"event": "position_done", "index": 19, "positions_completed": 20, "queries_spent": 100, "seeds_drawn": 20, "ts": 1788914023.773142}
+{"event": "position_start", "index": 20, "ts": 1788914023.7736242}
+{"event": "position_stage", "index": 20, "seeds_drawn": 20, "stage": "bound", "ts": 1788914023.863193}
+{"event": "position_stage", "index": 20, "seeds_drawn": 21, "stage": "incumbent", "ts": 1788914023.863659}
+{"event": "position_stage", "index": 20, "seeds_drawn": 21, "stage": "depth3", "ts": 1788914024.858186}
+{"event": "position_stage", "index": 20, "seeds_drawn": 21, "stage": "depth6", "ts": 1788914025.107805}
+{"event": "position_done", "index": 20, "positions_completed": 21, "queries_spent": 105, "seeds_drawn": 21, "ts": 1788914025.7306828}
+{"event": "position_start", "index": 21, "ts": 1788914025.731123}
+{"event": "position_stage", "index": 21, "seeds_drawn": 21, "stage": "bound", "ts": 1788914025.8198988}
+{"event": "position_stage", "index": 21, "seeds_drawn": 22, "stage": "incumbent", "ts": 1788914025.8203762}
+{"event": "position_stage", "index": 21, "seeds_drawn": 22, "stage": "depth3", "ts": 1788914027.218312}
+{"event": "position_stage", "index": 21, "seeds_drawn": 22, "stage": "depth6", "ts": 1788914027.5257862}
+{"event": "position_done", "index": 21, "positions_completed": 22, "queries_spent": 110, "seeds_drawn": 22, "ts": 1788914028.054688}
+{"event": "position_start", "index": 22, "ts": 1788914028.0551429}
+{"event": "position_stage", "index": 22, "seeds_drawn": 22, "stage": "bound", "ts": 1788914028.164611}
+{"event": "position_stage", "index": 22, "seeds_drawn": 23, "stage": "incumbent", "ts": 1788914028.165051}
+{"event": "position_stage", "index": 22, "seeds_drawn": 23, "stage": "depth3", "ts": 1788914029.331717}
+{"event": "position_stage", "index": 22, "seeds_drawn": 23, "stage": "depth6", "ts": 1788914029.590752}
+{"event": "position_done", "index": 22, "positions_completed": 23, "queries_spent": 115, "seeds_drawn": 23, "ts": 1788914029.982529}
+{"event": "position_start", "index": 23, "ts": 1788914029.982979}
+{"event": "position_stage", "index": 23, "seeds_drawn": 23, "stage": "bound", "ts": 1788914030.082905}
+{"event": "position_stage", "index": 23, "seeds_drawn": 24, "stage": "incumbent", "ts": 1788914030.083354}
+{"event": "position_stage", "index": 23, "seeds_drawn": 24, "stage": "depth3", "ts": 1788914031.085172}
+{"event": "position_stage", "index": 23, "seeds_drawn": 24, "stage": "depth6", "ts": 1788914031.360384}
+{"event": "position_done", "index": 23, "positions_completed": 24, "queries_spent": 120, "seeds_drawn": 24, "ts": 1788914031.808461}
+{"event": "position_start", "index": 24, "ts": 1788914031.808938}
+{"event": "position_stage", "index": 24, "seeds_drawn": 24, "stage": "bound", "ts": 1788914031.922935}
+{"event": "position_stage", "index": 24, "seeds_drawn": 25, "stage": "incumbent", "ts": 1788914031.923386}
+{"event": "position_stage", "index": 24, "seeds_drawn": 25, "stage": "depth3", "ts": 1788914033.014975}
+{"event": "position_stage", "index": 24, "seeds_drawn": 25, "stage": "depth6", "ts": 1788914033.2771451}
+{"event": "position_done", "index": 24, "positions_completed": 25, "queries_spent": 125, "seeds_drawn": 25, "ts": 1788914033.619893}
+{"event": "position_start", "index": 25, "ts": 1788914033.620373}
+{"event": "position_stage", "index": 25, "seeds_drawn": 25, "stage": "bound", "ts": 1788914033.741714}
+{"event": "position_stage", "index": 25, "seeds_drawn": 26, "stage": "incumbent", "ts": 1788914033.742203}
+{"event": "position_stage", "index": 25, "seeds_drawn": 26, "stage": "depth3", "ts": 1788914034.7487411}
+{"event": "position_stage", "index": 25, "seeds_drawn": 26, "stage": "depth6", "ts": 1788914035.012119}
+{"event": "position_done", "index": 25, "positions_completed": 26, "queries_spent": 130, "seeds_drawn": 26, "ts": 1788914035.3680809}
+{"event": "position_start", "index": 26, "ts": 1788914035.368552}
+{"event": "position_stage", "index": 26, "seeds_drawn": 26, "stage": "bound", "ts": 1788914035.484149}
+{"event": "position_stage", "index": 26, "seeds_drawn": 27, "stage": "incumbent", "ts": 1788914035.484619}
+{"event": "position_stage", "index": 26, "seeds_drawn": 27, "stage": "depth3", "ts": 1788914036.486184}
+{"event": "position_stage", "index": 26, "seeds_drawn": 27, "stage": "depth6", "ts": 1788914036.7371001}
+{"event": "position_done", "index": 26, "positions_completed": 27, "queries_spent": 135, "seeds_drawn": 27, "ts": 1788914037.025346}
+{"event": "position_start", "index": 27, "ts": 1788914037.0257778}
+{"event": "position_stage", "index": 27, "seeds_drawn": 27, "stage": "bound", "ts": 1788914037.144578}
+{"event": "position_stage", "index": 27, "seeds_drawn": 28, "stage": "incumbent", "ts": 1788914037.1450539}
+{"event": "position_stage", "index": 27, "seeds_drawn": 28, "stage": "depth3", "ts": 1788914038.137114}
+{"event": "position_stage", "index": 27, "seeds_drawn": 28, "stage": "depth6", "ts": 1788914038.3911061}
+{"event": "position_done", "index": 27, "positions_completed": 28, "queries_spent": 140, "seeds_drawn": 28, "ts": 1788914038.649434}
+{"event": "position_start", "index": 28, "ts": 1788914038.649908}
+{"event": "position_stage", "index": 28, "seeds_drawn": 28, "stage": "bound", "ts": 1788914038.835531}
+{"event": "position_stage", "index": 28, "seeds_drawn": 29, "stage": "incumbent", "ts": 1788914038.8359869}
+{"event": "position_stage", "index": 28, "seeds_drawn": 29, "stage": "depth3", "ts": 1788914039.82611}
+{"event": "position_stage", "index": 28, "seeds_drawn": 29, "stage": "depth6", "ts": 1788914040.072957}
+{"event": "position_done", "index": 28, "positions_completed": 29, "queries_spent": 145, "seeds_drawn": 29, "ts": 1788914040.3223581}
+{"event": "position_start", "index": 29, "ts": 1788914040.322793}
+{"event": "position_stage", "index": 29, "seeds_drawn": 29, "stage": "bound", "ts": 1788914040.4371042}
+{"event": "position_stage", "index": 29, "seeds_drawn": 30, "stage": "incumbent", "ts": 1788914040.437546}
+{"event": "position_stage", "index": 29, "seeds_drawn": 30, "stage": "depth3", "ts": 1788914041.483859}
+{"event": "position_stage", "index": 29, "seeds_drawn": 30, "stage": "depth6", "ts": 1788914041.8110552}
+{"event": "position_done", "index": 29, "positions_completed": 30, "queries_spent": 150, "seeds_drawn": 30, "ts": 1788914042.7632582}
+{"event": "position_start", "index": 30, "ts": 1788914042.7637188}
+{"event": "position_stage", "index": 30, "seeds_drawn": 30, "stage": "bound", "ts": 1788914042.876435}
+{"event": "position_stage", "index": 30, "seeds_drawn": 31, "stage": "incumbent", "ts": 1788914042.87687}
+{"event": "position_stage", "index": 30, "seeds_drawn": 31, "stage": "depth3", "ts": 1788914043.8705862}
+{"event": "position_stage", "index": 30, "seeds_drawn": 31, "stage": "depth6", "ts": 1788914044.168867}
+{"event": "position_done", "index": 30, "positions_completed": 31, "queries_spent": 155, "seeds_drawn": 31, "ts": 1788914045.2571929}
+{"event": "position_start", "index": 31, "ts": 1788914045.257625}
+{"event": "position_stage", "index": 31, "seeds_drawn": 31, "stage": "bound", "ts": 1788914045.37021}
+{"event": "position_stage", "index": 31, "seeds_drawn": 32, "stage": "incumbent", "ts": 1788914045.370652}
+{"event": "position_stage", "index": 31, "seeds_drawn": 32, "stage": "depth3", "ts": 1788914046.327923}
+{"event": "position_stage", "index": 31, "seeds_drawn": 32, "stage": "depth6", "ts": 1788914046.582175}
+{"event": "position_done", "index": 31, "positions_completed": 32, "queries_spent": 160, "seeds_drawn": 32, "ts": 1788914047.1324742}
+{"event": "position_start", "index": 32, "ts": 1788914047.132684}
+{"event": "position_stage", "index": 32, "seeds_drawn": 32, "stage": "bound", "ts": 1788914047.2518022}
+{"event": "position_stage", "index": 32, "seeds_drawn": 33, "stage": "incumbent", "ts": 1788914047.252249}
+{"event": "position_stage", "index": 32, "seeds_drawn": 33, "stage": "depth3", "ts": 1788914048.207526}
+{"event": "position_stage", "index": 32, "seeds_drawn": 33, "stage": "depth6", "ts": 1788914048.446934}
+{"event": "position_done", "index": 32, "positions_completed": 33, "queries_spent": 165, "seeds_drawn": 33, "ts": 1788914048.725835}
+{"event": "position_start", "index": 33, "ts": 1788914048.726293}
+{"event": "position_stage", "index": 33, "seeds_drawn": 33, "stage": "bound", "ts": 1788914048.829858}
+{"event": "position_stage", "index": 33, "seeds_drawn": 34, "stage": "incumbent", "ts": 1788914048.830289}
+{"event": "position_stage", "index": 33, "seeds_drawn": 34, "stage": "depth3", "ts": 1788914049.777664}
+{"event": "position_stage", "index": 33, "seeds_drawn": 34, "stage": "depth6", "ts": 1788914050.0093818}
+{"event": "position_done", "index": 33, "positions_completed": 34, "queries_spent": 170, "seeds_drawn": 34, "ts": 1788914050.27145}
+{"event": "position_start", "index": 34, "ts": 1788914050.271925}
+{"event": "position_stage", "index": 34, "seeds_drawn": 34, "stage": "bound", "ts": 1788914050.384036}
+{"event": "position_stage", "index": 34, "seeds_drawn": 35, "stage": "incumbent", "ts": 1788914050.3845088}
+{"event": "position_stage", "index": 34, "seeds_drawn": 35, "stage": "depth3", "ts": 1788914051.399725}
+{"event": "position_stage", "index": 34, "seeds_drawn": 35, "stage": "depth6", "ts": 1788914051.631535}
+{"event": "position_done", "index": 34, "positions_completed": 35, "queries_spent": 175, "seeds_drawn": 35, "ts": 1788914051.886137}
+{"event": "position_start", "index": 35, "ts": 1788914051.8866088}
+{"event": "position_stage", "index": 35, "seeds_drawn": 35, "stage": "bound", "ts": 1788914051.974899}
+{"event": "position_stage", "index": 35, "seeds_drawn": 36, "stage": "incumbent", "ts": 1788914051.975355}
+{"event": "position_stage", "index": 35, "seeds_drawn": 36, "stage": "depth3", "ts": 1788914052.9744499}
+{"event": "position_stage", "index": 35, "seeds_drawn": 36, "stage": "depth6", "ts": 1788914053.241215}
+{"event": "position_done", "index": 35, "positions_completed": 36, "queries_spent": 180, "seeds_drawn": 36, "ts": 1788914053.873114}
+{"event": "position_start", "index": 36, "ts": 1788914053.873599}
+{"event": "position_stage", "index": 36, "seeds_drawn": 36, "stage": "bound", "ts": 1788914053.976}
+{"event": "position_stage", "index": 36, "seeds_drawn": 37, "stage": "incumbent", "ts": 1788914053.976494}
+{"event": "position_stage", "index": 36, "seeds_drawn": 37, "stage": "depth3", "ts": 1788914054.941906}
+{"event": "position_stage", "index": 36, "seeds_drawn": 37, "stage": "depth6", "ts": 1788914055.225687}
+{"event": "position_done", "index": 36, "positions_completed": 37, "queries_spent": 185, "seeds_drawn": 37, "ts": 1788914056.352174}
+{"event": "position_start", "index": 37, "ts": 1788914056.3526678}
+{"event": "position_stage", "index": 37, "seeds_drawn": 37, "stage": "bound", "ts": 1788914056.443051}
+{"event": "position_stage", "index": 37, "seeds_drawn": 38, "stage": "incumbent", "ts": 1788914056.443506}
+{"event": "position_stage", "index": 37, "seeds_drawn": 38, "stage": "depth3", "ts": 1788914057.3983738}
+{"event": "position_stage", "index": 37, "seeds_drawn": 38, "stage": "depth6", "ts": 1788914057.662914}
+{"event": "position_done", "index": 37, "positions_completed": 38, "queries_spent": 190, "seeds_drawn": 38, "ts": 1788914058.490068}
+{"event": "position_start", "index": 38, "ts": 1788914058.490529}
+{"event": "position_stage", "index": 38, "seeds_drawn": 38, "stage": "bound", "ts": 1788914058.5858}
+{"event": "position_stage", "index": 38, "seeds_drawn": 39, "stage": "incumbent", "ts": 1788914058.586255}
+{"event": "position_stage", "index": 38, "seeds_drawn": 39, "stage": "depth3", "ts": 1788914059.574089}
+{"event": "position_stage", "index": 38, "seeds_drawn": 39, "stage": "depth6", "ts": 1788914059.865254}
+{"event": "position_done", "index": 38, "positions_completed": 39, "queries_spent": 195, "seeds_drawn": 39, "ts": 1788914061.420865}
+{"event": "position_start", "index": 39, "ts": 1788914061.4213471}
+{"event": "position_stage", "index": 39, "seeds_drawn": 39, "stage": "bound", "ts": 1788914061.5437062}
+{"event": "position_stage", "index": 39, "seeds_drawn": 40, "stage": "incumbent", "ts": 1788914061.544223}
+{"event": "position_stage", "index": 39, "seeds_drawn": 40, "stage": "depth3", "ts": 1788914062.4763389}
+{"event": "position_stage", "index": 39, "seeds_drawn": 40, "stage": "depth6", "ts": 1788914062.757976}
+{"event": "position_done", "index": 39, "positions_completed": 40, "queries_spent": 200, "seeds_drawn": 40, "ts": 1788914064.750165}
+{"event": "position_start", "index": 40, "ts": 1788914064.750592}
+{"event": "position_stage", "index": 40, "seeds_drawn": 40, "stage": "bound", "ts": 1788914064.857364}
+{"event": "position_stage", "index": 40, "seeds_drawn": 41, "stage": "incumbent", "ts": 1788914064.857842}
+{"event": "position_stage", "index": 40, "seeds_drawn": 41, "stage": "depth3", "ts": 1788914065.837248}
+{"event": "position_stage", "index": 40, "seeds_drawn": 41, "stage": "depth6", "ts": 1788914066.1223512}
+{"event": "position_done", "index": 40, "positions_completed": 41, "queries_spent": 205, "seeds_drawn": 41, "ts": 1788914067.056275}
+{"event": "position_start", "index": 41, "ts": 1788914067.056767}
+{"event": "position_stage", "index": 41, "seeds_drawn": 41, "stage": "bound", "ts": 1788914067.171197}
+{"event": "position_stage", "index": 41, "seeds_drawn": 42, "stage": "incumbent", "ts": 1788914067.171683}
+{"event": "position_stage", "index": 41, "seeds_drawn": 42, "stage": "depth3", "ts": 1788914068.1452549}
+{"event": "position_stage", "index": 41, "seeds_drawn": 42, "stage": "depth6", "ts": 1788914068.397829}
+{"event": "position_done", "index": 41, "positions_completed": 42, "queries_spent": 210, "seeds_drawn": 42, "ts": 1788914068.814324}
+{"event": "position_start", "index": 42, "ts": 1788914068.81481}
+{"event": "position_stage", "index": 42, "seeds_drawn": 42, "stage": "bound", "ts": 1788914068.917759}
+{"event": "position_stage", "index": 42, "seeds_drawn": 43, "stage": "incumbent", "ts": 1788914068.9182642}
+{"event": "position_stage", "index": 42, "seeds_drawn": 43, "stage": "depth3", "ts": 1788914069.8873448}
+{"event": "position_stage", "index": 42, "seeds_drawn": 43, "stage": "depth6", "ts": 1788914070.140424}
+{"event": "position_done", "index": 42, "positions_completed": 43, "queries_spent": 215, "seeds_drawn": 43, "ts": 1788914070.60228}
+{"event": "position_start", "index": 43, "ts": 1788914070.602767}
+{"event": "position_stage", "index": 43, "seeds_drawn": 43, "stage": "bound", "ts": 1788914070.7192278}
+{"event": "position_stage", "index": 43, "seeds_drawn": 44, "stage": "incumbent", "ts": 1788914070.719664}
+{"event": "position_stage", "index": 43, "seeds_drawn": 44, "stage": "depth3", "ts": 1788914071.679469}
+{"event": "position_stage", "index": 43, "seeds_drawn": 44, "stage": "depth6", "ts": 1788914071.916123}
+{"event": "position_done", "index": 43, "positions_completed": 44, "queries_spent": 220, "seeds_drawn": 44, "ts": 1788914072.182753}
+{"event": "position_start", "index": 44, "ts": 1788914072.183233}
+{"event": "position_stage", "index": 44, "seeds_drawn": 44, "stage": "bound", "ts": 1788914072.3213}
+{"event": "position_stage", "index": 44, "seeds_drawn": 45, "stage": "incumbent", "ts": 1788914072.321804}
+{"event": "position_stage", "index": 44, "seeds_drawn": 45, "stage": "depth3", "ts": 1788914073.34505}
+{"event": "position_stage", "index": 44, "seeds_drawn": 45, "stage": "depth6", "ts": 1788914073.581153}
+{"event": "position_done", "index": 44, "positions_completed": 45, "queries_spent": 225, "seeds_drawn": 45, "ts": 1788914073.837031}
+{"event": "position_start", "index": 45, "ts": 1788914073.837486}
+{"event": "position_stage", "index": 45, "seeds_drawn": 45, "stage": "bound", "ts": 1788914073.934287}
+{"event": "position_stage", "index": 45, "seeds_drawn": 46, "stage": "incumbent", "ts": 1788914073.934731}
+{"event": "position_stage", "index": 45, "seeds_drawn": 46, "stage": "depth3", "ts": 1788914074.956963}
+{"event": "position_stage", "index": 45, "seeds_drawn": 46, "stage": "depth6", "ts": 1788914075.214703}
+{"event": "position_done", "index": 45, "positions_completed": 46, "queries_spent": 230, "seeds_drawn": 46, "ts": 1788914075.889697}
+{"event": "position_start", "index": 46, "ts": 1788914075.890194}
+{"event": "position_stage", "index": 46, "seeds_drawn": 46, "stage": "bound", "ts": 1788914075.981236}
+{"event": "position_stage", "index": 46, "seeds_drawn": 47, "stage": "incumbent", "ts": 1788914075.9817111}
+{"event": "position_stage", "index": 46, "seeds_drawn": 47, "stage": "depth3", "ts": 1788914076.9581282}
+{"event": "position_stage", "index": 46, "seeds_drawn": 47, "stage": "depth6", "ts": 1788914077.225683}
+{"event": "position_done", "index": 46, "positions_completed": 47, "queries_spent": 235, "seeds_drawn": 47, "ts": 1788914078.156003}
+{"event": "position_start", "index": 47, "ts": 1788914078.156457}
+{"event": "position_stage", "index": 47, "seeds_drawn": 47, "stage": "bound", "ts": 1788914078.254944}
+{"event": "position_stage", "index": 47, "seeds_drawn": 48, "stage": "incumbent", "ts": 1788914078.255372}
+{"event": "position_stage", "index": 47, "seeds_drawn": 48, "stage": "depth3", "ts": 1788914079.238985}
+{"event": "position_stage", "index": 47, "seeds_drawn": 48, "stage": "depth6", "ts": 1788914079.505399}
+{"event": "position_done", "index": 47, "positions_completed": 48, "queries_spent": 240, "seeds_drawn": 48, "ts": 1788914080.632473}
+{"event": "position_start", "index": 48, "ts": 1788914080.6327}
+{"event": "position_stage", "index": 48, "seeds_drawn": 48, "stage": "bound", "ts": 1788914080.740847}
+{"event": "position_stage", "index": 48, "seeds_drawn": 49, "stage": "incumbent", "ts": 1788914080.741277}
+{"event": "position_stage", "index": 48, "seeds_drawn": 49, "stage": "depth3", "ts": 1788914081.70158}
+{"event": "position_stage", "index": 48, "seeds_drawn": 49, "stage": "depth6", "ts": 1788914081.984118}
+{"event": "position_done", "index": 48, "positions_completed": 49, "queries_spent": 245, "seeds_drawn": 49, "ts": 1788914083.313778}
+{"event": "position_start", "index": 49, "ts": 1788914083.3142242}
+{"event": "position_stage", "index": 49, "seeds_drawn": 49, "stage": "bound", "ts": 1788914083.4338791}
+{"event": "position_stage", "index": 49, "seeds_drawn": 50, "stage": "incumbent", "ts": 1788914083.43429}
+{"event": "position_stage", "index": 49, "seeds_drawn": 50, "stage": "depth3", "ts": 1788914084.47313}
+{"event": "position_stage", "index": 49, "seeds_drawn": 50, "stage": "depth6", "ts": 1788914084.721937}
+{"event": "position_done", "index": 49, "positions_completed": 50, "queries_spent": 250, "seeds_drawn": 50, "ts": 1788914085.322818}
+{"event": "position_start", "index": 50, "ts": 1788914085.323285}
+{"event": "position_stage", "index": 50, "seeds_drawn": 50, "stage": "bound", "ts": 1788914085.4349408}
+{"event": "position_stage", "index": 50, "seeds_drawn": 51, "stage": "incumbent", "ts": 1788914085.4354072}
+{"event": "position_stage", "index": 50, "seeds_drawn": 51, "stage": "depth3", "ts": 1788914086.437058}
+{"event": "position_stage", "index": 50, "seeds_drawn": 51, "stage": "depth6", "ts": 1788914086.6845891}
+{"event": "position_done", "index": 50, "positions_completed": 51, "queries_spent": 255, "seeds_drawn": 51, "ts": 1788914086.997292}
+{"event": "position_start", "index": 51, "ts": 1788914086.997536}
+{"event": "position_stage", "index": 51, "seeds_drawn": 51, "stage": "bound", "ts": 1788914087.1106071}
+{"event": "position_stage", "index": 51, "seeds_drawn": 52, "stage": "incumbent", "ts": 1788914087.110833}
+{"event": "position_stage", "index": 51, "seeds_drawn": 52, "stage": "depth3", "ts": 1788914088.168798}
+{"event": "position_stage", "index": 51, "seeds_drawn": 52, "stage": "depth6", "ts": 1788914088.428046}
+{"event": "position_done", "index": 51, "positions_completed": 52, "queries_spent": 260, "seeds_drawn": 52, "ts": 1788914088.694248}
+{"event": "position_start", "index": 52, "ts": 1788914088.6947122}
+{"event": "position_stage", "index": 52, "seeds_drawn": 52, "stage": "bound", "ts": 1788914088.798273}
+{"event": "position_stage", "index": 52, "seeds_drawn": 53, "stage": "incumbent", "ts": 1788914088.798754}
+{"event": "position_stage", "index": 52, "seeds_drawn": 53, "stage": "depth3", "ts": 1788914089.772313}
+{"event": "position_stage", "index": 52, "seeds_drawn": 53, "stage": "depth6", "ts": 1788914089.9969862}
+{"event": "position_done", "index": 52, "positions_completed": 53, "queries_spent": 265, "seeds_drawn": 53, "ts": 1788914090.234493}
+{"event": "position_start", "index": 53, "ts": 1788914090.2349281}
+{"event": "position_stage", "index": 53, "seeds_drawn": 53, "stage": "bound", "ts": 1788914090.334996}
+{"event": "position_stage", "index": 53, "seeds_drawn": 54, "stage": "incumbent", "ts": 1788914090.335432}
+{"event": "position_stage", "index": 53, "seeds_drawn": 54, "stage": "depth3", "ts": 1788914091.546099}
+{"event": "position_stage", "index": 53, "seeds_drawn": 54, "stage": "depth6", "ts": 1788914091.793971}
+{"event": "position_done", "index": 53, "positions_completed": 54, "queries_spent": 270, "seeds_drawn": 54, "ts": 1788914092.505627}
+{"event": "position_start", "index": 54, "ts": 1788914092.5060868}
+{"event": "position_stage", "index": 54, "seeds_drawn": 54, "stage": "bound", "ts": 1788914092.597486}
+{"event": "position_stage", "index": 54, "seeds_drawn": 55, "stage": "incumbent", "ts": 1788914092.597942}
+{"event": "position_stage", "index": 54, "seeds_drawn": 55, "stage": "depth3", "ts": 1788914093.5746171}
+{"event": "position_stage", "index": 54, "seeds_drawn": 55, "stage": "depth6", "ts": 1788914093.820385}
+{"event": "position_done", "index": 54, "positions_completed": 55, "queries_spent": 275, "seeds_drawn": 55, "ts": 1788914094.417325}
+{"event": "position_start", "index": 55, "ts": 1788914094.4177952}
+{"event": "position_stage", "index": 55, "seeds_drawn": 55, "stage": "bound", "ts": 1788914094.509941}
+{"event": "position_stage", "index": 55, "seeds_drawn": 56, "stage": "incumbent", "ts": 1788914094.510396}
+{"event": "position_stage", "index": 55, "seeds_drawn": 56, "stage": "depth3", "ts": 1788914095.488694}
+{"event": "position_stage", "index": 55, "seeds_drawn": 56, "stage": "depth6", "ts": 1788914095.744609}
+{"event": "position_done", "index": 55, "positions_completed": 56, "queries_spent": 280, "seeds_drawn": 56, "ts": 1788914096.164449}
+{"event": "position_start", "index": 56, "ts": 1788914096.164895}
+{"event": "position_stage", "index": 56, "seeds_drawn": 56, "stage": "bound", "ts": 1788914096.262618}
+{"event": "position_stage", "index": 56, "seeds_drawn": 57, "stage": "incumbent", "ts": 1788914096.2630332}
+{"event": "position_stage", "index": 56, "seeds_drawn": 57, "stage": "depth3", "ts": 1788914097.223992}
+{"event": "position_stage", "index": 56, "seeds_drawn": 57, "stage": "depth6", "ts": 1788914097.476691}
+{"event": "position_done", "index": 56, "positions_completed": 57, "queries_spent": 285, "seeds_drawn": 57, "ts": 1788914097.865227}
+{"event": "position_start", "index": 57, "ts": 1788914097.865705}
+{"event": "position_stage", "index": 57, "seeds_drawn": 57, "stage": "bound", "ts": 1788914097.97162}
+{"event": "position_stage", "index": 57, "seeds_drawn": 58, "stage": "incumbent", "ts": 1788914097.972073}
+{"event": "position_stage", "index": 57, "seeds_drawn": 58, "stage": "depth3", "ts": 1788914098.945935}
+{"event": "position_stage", "index": 57, "seeds_drawn": 58, "stage": "depth6", "ts": 1788914099.189944}
+{"event": "position_done", "index": 57, "positions_completed": 58, "queries_spent": 290, "seeds_drawn": 58, "ts": 1788914099.5725892}
+{"event": "position_start", "index": 58, "ts": 1788914099.573059}
+{"event": "position_stage", "index": 58, "seeds_drawn": 58, "stage": "bound", "ts": 1788914099.679859}
+{"event": "position_stage", "index": 58, "seeds_drawn": 59, "stage": "incumbent", "ts": 1788914099.680321}
+{"event": "position_stage", "index": 58, "seeds_drawn": 59, "stage": "depth3", "ts": 1788914100.6489758}
+{"event": "position_stage", "index": 58, "seeds_drawn": 59, "stage": "depth6", "ts": 1788914100.8866801}
+{"event": "position_done", "index": 58, "positions_completed": 59, "queries_spent": 295, "seeds_drawn": 59, "ts": 1788914101.518207}
+{"event": "position_start", "index": 59, "ts": 1788914101.51869}
+{"event": "position_stage", "index": 59, "seeds_drawn": 59, "stage": "bound", "ts": 1788914101.633357}
+{"event": "position_stage", "index": 59, "seeds_drawn": 60, "stage": "incumbent", "ts": 1788914101.633825}
+{"event": "position_stage", "index": 59, "seeds_drawn": 60, "stage": "depth3", "ts": 1788914102.597364}
+{"event": "position_stage", "index": 59, "seeds_drawn": 60, "stage": "depth6", "ts": 1788914102.838069}
+{"event": "position_done", "index": 59, "positions_completed": 60, "queries_spent": 300, "seeds_drawn": 60, "ts": 1788914103.1910558}
+{"event": "position_start", "index": 60, "ts": 1788914103.1915169}
+{"event": "position_stage", "index": 60, "seeds_drawn": 60, "stage": "bound", "ts": 1788914103.305622}
+{"event": "position_stage", "index": 60, "seeds_drawn": 61, "stage": "incumbent", "ts": 1788914103.3060732}
+{"event": "position_stage", "index": 60, "seeds_drawn": 61, "stage": "depth3", "ts": 1788914104.276157}
+{"event": "position_stage", "index": 60, "seeds_drawn": 61, "stage": "depth6", "ts": 1788914104.51096}
+{"event": "position_done", "index": 60, "positions_completed": 61, "queries_spent": 305, "seeds_drawn": 61, "ts": 1788914104.7701209}
+{"event": "position_start", "index": 61, "ts": 1788914104.770599}
+{"event": "position_stage", "index": 61, "seeds_drawn": 61, "stage": "bound", "ts": 1788914104.878758}
+{"event": "position_stage", "index": 61, "seeds_drawn": 62, "stage": "incumbent", "ts": 1788914104.879194}
+{"event": "position_stage", "index": 61, "seeds_drawn": 62, "stage": "depth3", "ts": 1788914105.9091241}
+{"event": "position_stage", "index": 61, "seeds_drawn": 62, "stage": "depth6", "ts": 1788914106.140343}
+{"event": "position_done", "index": 61, "positions_completed": 62, "queries_spent": 310, "seeds_drawn": 62, "ts": 1788914106.392698}
+{"event": "position_start", "index": 62, "ts": 1788914106.393137}
+{"event": "position_stage", "index": 62, "seeds_drawn": 62, "stage": "bound", "ts": 1788914106.4910982}
+{"event": "position_stage", "index": 62, "seeds_drawn": 63, "stage": "incumbent", "ts": 1788914106.4915378}
+{"event": "position_stage", "index": 62, "seeds_drawn": 63, "stage": "depth3", "ts": 1788914107.457054}
+{"event": "position_stage", "index": 62, "seeds_drawn": 63, "stage": "depth6", "ts": 1788914107.676662}
+{"event": "position_done", "index": 62, "positions_completed": 63, "queries_spent": 315, "seeds_drawn": 63, "ts": 1788914107.897346}
+{"event": "position_start", "index": 63, "ts": 1788914107.897803}
+{"event": "position_stage", "index": 63, "seeds_drawn": 63, "stage": "bound", "ts": 1788914108.0040472}
+{"event": "position_stage", "index": 63, "seeds_drawn": 64, "stage": "incumbent", "ts": 1788914108.004481}
+{"event": "position_stage", "index": 63, "seeds_drawn": 64, "stage": "depth3", "ts": 1788914109.162217}
+{"event": "position_stage", "index": 63, "seeds_drawn": 64, "stage": "depth6", "ts": 1788914109.419976}
+{"event": "position_done", "index": 63, "positions_completed": 64, "queries_spent": 320, "seeds_drawn": 64, "ts": 1788914110.3513548}
+{"event": "position_start", "index": 64, "ts": 1788914110.3517709}
+{"event": "position_stage", "index": 64, "seeds_drawn": 64, "stage": "bound", "ts": 1788914110.468888}
+{"event": "position_stage", "index": 64, "seeds_drawn": 65, "stage": "incumbent", "ts": 1788914110.469335}
+{"event": "position_stage", "index": 64, "seeds_drawn": 65, "stage": "depth3", "ts": 1788914111.50036}
+{"event": "position_stage", "index": 64, "seeds_drawn": 65, "stage": "depth6", "ts": 1788914111.7612422}
+{"event": "position_done", "index": 64, "positions_completed": 65, "queries_spent": 325, "seeds_drawn": 65, "ts": 1788914112.550289}
+{"event": "position_start", "index": 65, "ts": 1788914112.550766}
+{"event": "position_stage", "index": 65, "seeds_drawn": 65, "stage": "bound", "ts": 1788914112.6661818}
+{"event": "position_stage", "index": 65, "seeds_drawn": 66, "stage": "incumbent", "ts": 1788914112.666645}
+{"event": "position_stage", "index": 65, "seeds_drawn": 66, "stage": "depth3", "ts": 1788914113.69073}
+{"event": "position_stage", "index": 65, "seeds_drawn": 66, "stage": "depth6", "ts": 1788914113.960428}
+{"event": "position_done", "index": 65, "positions_completed": 66, "queries_spent": 330, "seeds_drawn": 66, "ts": 1788914114.762079}
+{"event": "position_start", "index": 66, "ts": 1788914114.762559}
+{"event": "position_stage", "index": 66, "seeds_drawn": 66, "stage": "bound", "ts": 1788914114.881361}
+{"event": "position_stage", "index": 66, "seeds_drawn": 67, "stage": "incumbent", "ts": 1788914114.881828}
+{"event": "position_stage", "index": 66, "seeds_drawn": 67, "stage": "depth3", "ts": 1788914115.872215}
+{"event": "position_stage", "index": 66, "seeds_drawn": 67, "stage": "depth6", "ts": 1788914116.1444411}
+{"event": "position_done", "index": 66, "positions_completed": 67, "queries_spent": 335, "seeds_drawn": 67, "ts": 1788914116.6966882}
+{"event": "position_start", "index": 67, "ts": 1788914116.6971562}
+{"event": "position_stage", "index": 67, "seeds_drawn": 67, "stage": "bound", "ts": 1788914116.823275}
+{"event": "position_stage", "index": 67, "seeds_drawn": 68, "stage": "incumbent", "ts": 1788914116.823711}
+{"event": "position_stage", "index": 67, "seeds_drawn": 68, "stage": "depth3", "ts": 1788914117.933683}
+{"event": "position_stage", "index": 67, "seeds_drawn": 68, "stage": "depth6", "ts": 1788914118.196301}
+{"event": "position_done", "index": 67, "positions_completed": 68, "queries_spent": 340, "seeds_drawn": 68, "ts": 1788914118.6984909}
+{"event": "position_start", "index": 68, "ts": 1788914118.6989682}
+{"event": "position_stage", "index": 68, "seeds_drawn": 68, "stage": "bound", "ts": 1788914118.8269582}
+{"event": "position_stage", "index": 68, "seeds_drawn": 69, "stage": "incumbent", "ts": 1788914118.827444}
+{"event": "position_stage", "index": 68, "seeds_drawn": 69, "stage": "depth3", "ts": 1788914119.847348}
+{"event": "position_stage", "index": 68, "seeds_drawn": 69, "stage": "depth6", "ts": 1788914120.08951}
+{"event": "position_done", "index": 68, "positions_completed": 69, "queries_spent": 345, "seeds_drawn": 69, "ts": 1788914120.3688362}
+{"event": "position_start", "index": 69, "ts": 1788914120.36933}
+{"event": "position_stage", "index": 69, "seeds_drawn": 69, "stage": "bound", "ts": 1788914120.462394}
+{"event": "position_stage", "index": 69, "seeds_drawn": 70, "stage": "incumbent", "ts": 1788914120.4628649}
+{"event": "position_stage", "index": 69, "seeds_drawn": 70, "stage": "depth3", "ts": 1788914121.4446561}
+{"event": "position_stage", "index": 69, "seeds_drawn": 70, "stage": "depth6", "ts": 1788914121.686677}
+{"event": "position_done", "index": 69, "positions_completed": 70, "queries_spent": 350, "seeds_drawn": 70, "ts": 1788914122.071739}
+{"event": "position_start", "index": 70, "ts": 1788914122.072172}
+{"event": "position_stage", "index": 70, "seeds_drawn": 70, "stage": "bound", "ts": 1788914122.170751}
+{"event": "position_stage", "index": 70, "seeds_drawn": 71, "stage": "incumbent", "ts": 1788914122.171194}
+{"event": "position_stage", "index": 70, "seeds_drawn": 71, "stage": "depth3", "ts": 1788914123.2632298}
+{"event": "position_stage", "index": 70, "seeds_drawn": 71, "stage": "depth6", "ts": 1788914123.507036}
+{"event": "position_done", "index": 70, "positions_completed": 71, "queries_spent": 355, "seeds_drawn": 71, "ts": 1788914123.8261602}
+{"event": "position_start", "index": 71, "ts": 1788914123.826609}
+{"event": "position_stage", "index": 71, "seeds_drawn": 71, "stage": "bound", "ts": 1788914123.933446}
+{"event": "position_stage", "index": 71, "seeds_drawn": 72, "stage": "incumbent", "ts": 1788914123.933923}
+{"event": "position_stage", "index": 71, "seeds_drawn": 72, "stage": "depth3", "ts": 1788914125.1957068}
+{"event": "position_stage", "index": 71, "seeds_drawn": 72, "stage": "depth6", "ts": 1788914125.4561}
+{"event": "position_done", "index": 71, "positions_completed": 72, "queries_spent": 360, "seeds_drawn": 72, "ts": 1788914125.967116}
+{"event": "position_start", "index": 72, "ts": 1788914125.9675462}
+{"event": "position_stage", "index": 72, "seeds_drawn": 72, "stage": "bound", "ts": 1788914126.080129}
+{"event": "position_stage", "index": 72, "seeds_drawn": 73, "stage": "incumbent", "ts": 1788914126.080534}
+{"event": "position_stage", "index": 72, "seeds_drawn": 73, "stage": "depth3", "ts": 1788914127.05188}
+{"event": "position_stage", "index": 72, "seeds_drawn": 73, "stage": "depth6", "ts": 1788914127.319139}
+{"event": "position_done", "index": 72, "positions_completed": 73, "queries_spent": 365, "seeds_drawn": 73, "ts": 1788914127.705837}
+{"event": "position_start", "index": 73, "ts": 1788914127.706348}
+{"event": "position_stage", "index": 73, "seeds_drawn": 73, "stage": "bound", "ts": 1788914127.821994}
+{"event": "position_stage", "index": 73, "seeds_drawn": 74, "stage": "incumbent", "ts": 1788914127.822463}
+{"event": "position_stage", "index": 73, "seeds_drawn": 74, "stage": "depth3", "ts": 1788914128.800632}
+{"event": "position_stage", "index": 73, "seeds_drawn": 74, "stage": "depth6", "ts": 1788914129.040365}
+{"event": "position_done", "index": 73, "positions_completed": 74, "queries_spent": 370, "seeds_drawn": 74, "ts": 1788914129.3077419}
+{"event": "position_start", "index": 74, "ts": 1788914129.30821}
+{"event": "position_stage", "index": 74, "seeds_drawn": 74, "stage": "bound", "ts": 1788914129.422976}
+{"event": "position_stage", "index": 74, "seeds_drawn": 75, "stage": "incumbent", "ts": 1788914129.423435}
+{"event": "position_stage", "index": 74, "seeds_drawn": 75, "stage": "depth3", "ts": 1788914130.3987682}
+{"event": "position_stage", "index": 74, "seeds_drawn": 75, "stage": "depth6", "ts": 1788914130.6273978}
+{"event": "position_done", "index": 74, "positions_completed": 75, "queries_spent": 375, "seeds_drawn": 75, "ts": 1788914130.864769}
+{"event": "position_start", "index": 75, "ts": 1788914130.865251}
+{"event": "position_stage", "index": 75, "seeds_drawn": 75, "stage": "bound", "ts": 1788914130.9639099}
+{"event": "position_stage", "index": 75, "seeds_drawn": 76, "stage": "incumbent", "ts": 1788914130.964364}
+{"event": "position_stage", "index": 75, "seeds_drawn": 76, "stage": "depth3", "ts": 1788914131.938847}
+{"event": "position_stage", "index": 75, "seeds_drawn": 76, "stage": "depth6", "ts": 1788914132.171788}
+{"event": "position_done", "index": 75, "positions_completed": 76, "queries_spent": 380, "seeds_drawn": 76, "ts": 1788914132.421207}
+{"event": "position_start", "index": 76, "ts": 1788914132.421694}
+{"event": "position_stage", "index": 76, "seeds_drawn": 76, "stage": "bound", "ts": 1788914132.5146098}
+{"event": "position_stage", "index": 76, "seeds_drawn": 77, "stage": "incumbent", "ts": 1788914132.514997}
+{"event": "position_stage", "index": 76, "seeds_drawn": 77, "stage": "depth3", "ts": 1788914133.676319}
+{"event": "position_stage", "index": 76, "seeds_drawn": 77, "stage": "depth6", "ts": 1788914133.924711}
+{"event": "position_done", "index": 76, "positions_completed": 77, "queries_spent": 385, "seeds_drawn": 77, "ts": 1788914134.405969}
+{"event": "position_start", "index": 77, "ts": 1788914134.406466}
+{"event": "position_stage", "index": 77, "seeds_drawn": 77, "stage": "bound", "ts": 1788914134.500792}
+{"event": "position_stage", "index": 77, "seeds_drawn": 78, "stage": "incumbent", "ts": 1788914134.501251}
+{"event": "position_stage", "index": 77, "seeds_drawn": 78, "stage": "depth3", "ts": 1788914135.479538}
+{"event": "position_stage", "index": 77, "seeds_drawn": 78, "stage": "depth6", "ts": 1788914135.719829}
+{"event": "position_done", "index": 77, "positions_completed": 78, "queries_spent": 390, "seeds_drawn": 78, "ts": 1788914136.105501}
+{"event": "position_start", "index": 78, "ts": 1788914136.105973}
+{"event": "position_stage", "index": 78, "seeds_drawn": 78, "stage": "bound", "ts": 1788914136.219886}
+{"event": "position_stage", "index": 78, "seeds_drawn": 79, "stage": "incumbent", "ts": 1788914136.2200708}
+{"event": "position_stage", "index": 78, "seeds_drawn": 79, "stage": "depth3", "ts": 1788914137.483895}
+{"event": "position_stage", "index": 78, "seeds_drawn": 79, "stage": "depth6", "ts": 1788914137.729813}
+{"event": "position_done", "index": 78, "positions_completed": 79, "queries_spent": 395, "seeds_drawn": 79, "ts": 1788914138.3219478}
+{"event": "position_start", "index": 79, "ts": 1788914138.32243}
+{"event": "position_stage", "index": 79, "seeds_drawn": 79, "stage": "bound", "ts": 1788914138.416407}
+{"event": "position_stage", "index": 79, "seeds_drawn": 80, "stage": "incumbent", "ts": 1788914138.416901}
+{"event": "position_stage", "index": 79, "seeds_drawn": 80, "stage": "depth3", "ts": 1788914139.4104378}
+{"event": "position_stage", "index": 79, "seeds_drawn": 80, "stage": "depth6", "ts": 1788914139.680385}
+{"event": "position_done", "index": 79, "positions_completed": 80, "queries_spent": 400, "seeds_drawn": 80, "ts": 1788914140.874261}
+{"event": "position_start", "index": 80, "ts": 1788914140.874725}
+{"event": "position_stage", "index": 80, "seeds_drawn": 80, "stage": "bound", "ts": 1788914140.982542}
+{"event": "position_stage", "index": 80, "seeds_drawn": 81, "stage": "incumbent", "ts": 1788914140.9830132}
+{"event": "position_stage", "index": 80, "seeds_drawn": 81, "stage": "depth3", "ts": 1788914141.967656}
+{"event": "position_stage", "index": 80, "seeds_drawn": 81, "stage": "depth6", "ts": 1788914142.218747}
+{"event": "position_done", "index": 80, "positions_completed": 81, "queries_spent": 405, "seeds_drawn": 81, "ts": 1788914143.035622}
+{"event": "position_start", "index": 81, "ts": 1788914143.036034}
+{"event": "position_stage", "index": 81, "seeds_drawn": 81, "stage": "bound", "ts": 1788914143.1544619}
+{"event": "position_stage", "index": 81, "seeds_drawn": 82, "stage": "incumbent", "ts": 1788914143.15468}
+{"event": "position_stage", "index": 81, "seeds_drawn": 82, "stage": "depth3", "ts": 1788914144.2758331}
+{"event": "position_stage", "index": 81, "seeds_drawn": 82, "stage": "depth6", "ts": 1788914144.5348449}
+{"event": "position_done", "index": 81, "positions_completed": 82, "queries_spent": 410, "seeds_drawn": 82, "ts": 1788914145.322634}
+{"event": "position_start", "index": 82, "ts": 1788914145.3230588}
+{"event": "position_stage", "index": 82, "seeds_drawn": 82, "stage": "bound", "ts": 1788914145.455821}
+{"event": "position_stage", "index": 82, "seeds_drawn": 83, "stage": "incumbent", "ts": 1788914145.456317}
+{"event": "position_stage", "index": 82, "seeds_drawn": 83, "stage": "depth3", "ts": 1788914146.6680262}
+{"event": "position_stage", "index": 82, "seeds_drawn": 83, "stage": "depth6", "ts": 1788914146.927927}
+{"event": "position_done", "index": 82, "positions_completed": 83, "queries_spent": 415, "seeds_drawn": 83, "ts": 1788914147.695932}
+{"event": "position_start", "index": 83, "ts": 1788914147.6964061}
+{"event": "position_stage", "index": 83, "seeds_drawn": 83, "stage": "bound", "ts": 1788914147.8048482}
+{"event": "position_stage", "index": 83, "seeds_drawn": 84, "stage": "incumbent", "ts": 1788914147.805314}
+{"event": "position_stage", "index": 83, "seeds_drawn": 84, "stage": "depth3", "ts": 1788914148.881292}
+{"event": "position_stage", "index": 83, "seeds_drawn": 84, "stage": "depth6", "ts": 1788914149.206134}
+{"event": "position_done", "index": 83, "positions_completed": 84, "queries_spent": 420, "seeds_drawn": 84, "ts": 1788914152.0566652}
+{"event": "position_start", "index": 84, "ts": 1788914152.057132}
+{"event": "position_stage", "index": 84, "seeds_drawn": 84, "stage": "bound", "ts": 1788914152.170528}
+{"event": "position_stage", "index": 84, "seeds_drawn": 85, "stage": "incumbent", "ts": 1788914152.1709728}
+{"event": "position_stage", "index": 84, "seeds_drawn": 85, "stage": "depth3", "ts": 1788914153.1574552}
+{"event": "position_stage", "index": 84, "seeds_drawn": 85, "stage": "depth6", "ts": 1788914153.502175}
+{"event": "position_done", "index": 84, "positions_completed": 85, "queries_spent": 425, "seeds_drawn": 85, "ts": 1788914155.293563}
+{"event": "position_start", "index": 85, "ts": 1788914155.294035}
+{"event": "position_stage", "index": 85, "seeds_drawn": 85, "stage": "bound", "ts": 1788914155.4051101}
+{"event": "position_stage", "index": 85, "seeds_drawn": 86, "stage": "incumbent", "ts": 1788914155.4055429}
+{"event": "position_stage", "index": 85, "seeds_drawn": 86, "stage": "depth3", "ts": 1788914156.614828}
+{"event": "position_stage", "index": 85, "seeds_drawn": 86, "stage": "depth6", "ts": 1788914156.865937}
+{"event": "position_done", "index": 85, "positions_completed": 86, "queries_spent": 430, "seeds_drawn": 86, "ts": 1788914157.3027682}
+{"event": "position_start", "index": 86, "ts": 1788914157.3032079}
+{"event": "position_stage", "index": 86, "seeds_drawn": 86, "stage": "bound", "ts": 1788914157.465261}
+{"event": "position_stage", "index": 86, "seeds_drawn": 87, "stage": "incumbent", "ts": 1788914157.465749}
+{"event": "position_stage", "index": 86, "seeds_drawn": 87, "stage": "depth3", "ts": 1788914158.43424}
+{"event": "position_stage", "index": 86, "seeds_drawn": 87, "stage": "depth6", "ts": 1788914158.678035}
+{"event": "position_done", "index": 86, "positions_completed": 87, "queries_spent": 435, "seeds_drawn": 87, "ts": 1788914158.970046}
+{"event": "position_start", "index": 87, "ts": 1788914158.970526}
+{"event": "position_stage", "index": 87, "seeds_drawn": 87, "stage": "bound", "ts": 1788914159.0864131}
+{"event": "position_stage", "index": 87, "seeds_drawn": 88, "stage": "incumbent", "ts": 1788914159.086875}
+{"event": "position_stage", "index": 87, "seeds_drawn": 88, "stage": "depth3", "ts": 1788914160.3044338}
+{"event": "position_stage", "index": 87, "seeds_drawn": 88, "stage": "depth6", "ts": 1788914160.572085}
+{"event": "position_done", "index": 87, "positions_completed": 88, "queries_spent": 440, "seeds_drawn": 88, "ts": 1788914161.5210292}
+{"event": "position_start", "index": 88, "ts": 1788914161.5214982}
+{"event": "position_stage", "index": 88, "seeds_drawn": 88, "stage": "bound", "ts": 1788914161.626625}
+{"event": "position_stage", "index": 88, "seeds_drawn": 89, "stage": "incumbent", "ts": 1788914161.627074}
+{"event": "position_stage", "index": 88, "seeds_drawn": 89, "stage": "depth3", "ts": 1788914162.857408}
+{"event": "position_stage", "index": 88, "seeds_drawn": 89, "stage": "depth6", "ts": 1788914163.149229}
+{"event": "position_done", "index": 88, "positions_completed": 89, "queries_spent": 445, "seeds_drawn": 89, "ts": 1788914164.547874}
+{"event": "position_start", "index": 89, "ts": 1788914164.548372}
+{"event": "position_stage", "index": 89, "seeds_drawn": 89, "stage": "bound", "ts": 1788914164.667302}
+{"event": "position_stage", "index": 89, "seeds_drawn": 90, "stage": "incumbent", "ts": 1788914164.6677802}
+{"event": "position_stage", "index": 89, "seeds_drawn": 90, "stage": "depth3", "ts": 1788914165.7010581}
+{"event": "position_stage", "index": 89, "seeds_drawn": 90, "stage": "depth6", "ts": 1788914165.971607}
+{"event": "position_done", "index": 89, "positions_completed": 90, "queries_spent": 450, "seeds_drawn": 90, "ts": 1788914166.999753}
+{"event": "position_start", "index": 90, "ts": 1788914167.000234}
+{"event": "position_stage", "index": 90, "seeds_drawn": 90, "stage": "bound", "ts": 1788914167.110123}
+{"event": "position_stage", "index": 90, "seeds_drawn": 91, "stage": "incumbent", "ts": 1788914167.110615}
+{"event": "position_stage", "index": 90, "seeds_drawn": 91, "stage": "depth3", "ts": 1788914168.1974652}
+{"event": "position_stage", "index": 90, "seeds_drawn": 91, "stage": "depth6", "ts": 1788914168.467572}
+{"event": "position_done", "index": 90, "positions_completed": 91, "queries_spent": 455, "seeds_drawn": 91, "ts": 1788914169.288934}
+{"event": "position_start", "index": 91, "ts": 1788914169.2894}
+{"event": "position_stage", "index": 91, "seeds_drawn": 91, "stage": "bound", "ts": 1788914169.4032981}
+{"event": "position_stage", "index": 91, "seeds_drawn": 92, "stage": "incumbent", "ts": 1788914169.4037728}
+{"event": "position_stage", "index": 91, "seeds_drawn": 92, "stage": "depth3", "ts": 1788914170.4489868}
+{"event": "position_stage", "index": 91, "seeds_drawn": 92, "stage": "depth6", "ts": 1788914170.711158}
+{"event": "position_done", "index": 91, "positions_completed": 92, "queries_spent": 460, "seeds_drawn": 92, "ts": 1788914171.256574}
+{"event": "position_start", "index": 92, "ts": 1788914171.256753}
+{"event": "position_stage", "index": 92, "seeds_drawn": 92, "stage": "bound", "ts": 1788914171.3585742}
+{"event": "position_stage", "index": 92, "seeds_drawn": 93, "stage": "incumbent", "ts": 1788914171.358997}
+{"event": "position_stage", "index": 92, "seeds_drawn": 93, "stage": "depth3", "ts": 1788914172.455863}
+{"event": "position_stage", "index": 92, "seeds_drawn": 93, "stage": "depth6", "ts": 1788914172.713498}
+{"event": "position_done", "index": 92, "positions_completed": 93, "queries_spent": 465, "seeds_drawn": 93, "ts": 1788914173.549597}
+{"event": "position_start", "index": 93, "ts": 1788914173.550082}
+{"event": "position_stage", "index": 93, "seeds_drawn": 93, "stage": "bound", "ts": 1788914173.657072}
+{"event": "position_stage", "index": 93, "seeds_drawn": 94, "stage": "incumbent", "ts": 1788914173.657511}
+{"event": "position_stage", "index": 93, "seeds_drawn": 94, "stage": "depth3", "ts": 1788914174.774744}
+{"event": "position_stage", "index": 93, "seeds_drawn": 94, "stage": "depth6", "ts": 1788914175.0195}
+{"event": "position_done", "index": 93, "positions_completed": 94, "queries_spent": 470, "seeds_drawn": 94, "ts": 1788914175.412086}
+{"event": "position_start", "index": 94, "ts": 1788914175.4126039}
+{"event": "position_stage", "index": 94, "seeds_drawn": 94, "stage": "bound", "ts": 1788914175.519255}
+{"event": "position_stage", "index": 94, "seeds_drawn": 95, "stage": "incumbent", "ts": 1788914175.5196512}
+{"event": "position_stage", "index": 94, "seeds_drawn": 95, "stage": "depth3", "ts": 1788914176.489412}
+{"event": "position_stage", "index": 94, "seeds_drawn": 95, "stage": "depth6", "ts": 1788914176.72971}
+{"event": "position_done", "index": 94, "positions_completed": 95, "queries_spent": 475, "seeds_drawn": 95, "ts": 1788914177.068}
+{"event": "position_start", "index": 95, "ts": 1788914177.068243}
+{"event": "position_stage", "index": 95, "seeds_drawn": 95, "stage": "bound", "ts": 1788914177.1893718}
+{"event": "position_stage", "index": 95, "seeds_drawn": 96, "stage": "incumbent", "ts": 1788914177.189613}
+{"event": "position_stage", "index": 95, "seeds_drawn": 96, "stage": "depth3", "ts": 1788914178.161911}
+{"event": "position_stage", "index": 95, "seeds_drawn": 96, "stage": "depth6", "ts": 1788914178.4073741}
+{"event": "position_done", "index": 95, "positions_completed": 96, "queries_spent": 480, "seeds_drawn": 96, "ts": 1788914178.682536}
+{"event": "position_start", "index": 96, "ts": 1788914178.6829948}
+{"event": "position_stage", "index": 96, "seeds_drawn": 96, "stage": "bound", "ts": 1788914178.799099}
+{"event": "position_stage", "index": 96, "seeds_drawn": 97, "stage": "incumbent", "ts": 1788914178.799523}
+{"event": "position_stage", "index": 96, "seeds_drawn": 97, "stage": "depth3", "ts": 1788914179.771211}
+{"event": "position_stage", "index": 96, "seeds_drawn": 97, "stage": "depth6", "ts": 1788914180.008854}
+{"event": "position_done", "index": 96, "positions_completed": 97, "queries_spent": 485, "seeds_drawn": 97, "ts": 1788914180.296374}
+{"event": "position_start", "index": 97, "ts": 1788914180.2968278}
+{"event": "position_stage", "index": 97, "seeds_drawn": 97, "stage": "bound", "ts": 1788914180.410028}
+{"event": "position_stage", "index": 97, "seeds_drawn": 98, "stage": "incumbent", "ts": 1788914180.410517}
+{"event": "position_stage", "index": 97, "seeds_drawn": 98, "stage": "depth3", "ts": 1788914181.3878589}
+{"event": "position_stage", "index": 97, "seeds_drawn": 98, "stage": "depth6", "ts": 1788914181.6173172}
+{"event": "position_done", "index": 97, "positions_completed": 98, "queries_spent": 490, "seeds_drawn": 98, "ts": 1788914181.855087}
+{"event": "position_start", "index": 98, "ts": 1788914181.855607}
+{"event": "position_stage", "index": 98, "seeds_drawn": 98, "stage": "bound", "ts": 1788914181.9661162}
+{"event": "position_stage", "index": 98, "seeds_drawn": 99, "stage": "incumbent", "ts": 1788914181.966552}
+{"event": "position_stage", "index": 98, "seeds_drawn": 99, "stage": "depth3", "ts": 1788914182.944532}
+{"event": "position_stage", "index": 98, "seeds_drawn": 99, "stage": "depth6", "ts": 1788914183.1748118}
+{"event": "position_done", "index": 98, "positions_completed": 99, "queries_spent": 495, "seeds_drawn": 99, "ts": 1788914183.41936}
+{"event": "position_start", "index": 99, "ts": 1788914183.4198568}
+{"event": "position_stage", "index": 99, "seeds_drawn": 99, "stage": "bound", "ts": 1788914183.547953}
+{"event": "position_stage", "index": 99, "seeds_drawn": 100, "stage": "incumbent", "ts": 1788914183.548474}
+{"event": "position_stage", "index": 99, "seeds_drawn": 100, "stage": "depth3", "ts": 1788914184.533772}
+{"event": "position_stage", "index": 99, "seeds_drawn": 100, "stage": "depth6", "ts": 1788914184.7896519}
+{"event": "position_done", "index": 99, "positions_completed": 100, "queries_spent": 500, "seeds_drawn": 100, "ts": 1788914185.359267}
+{"event": "position_start", "index": 100, "ts": 1788914185.359757}
+{"event": "position_stage", "index": 100, "seeds_drawn": 100, "stage": "bound", "ts": 1788914185.468031}
+{"event": "position_stage", "index": 100, "seeds_drawn": 101, "stage": "incumbent", "ts": 1788914185.4684942}
+{"event": "position_stage", "index": 100, "seeds_drawn": 101, "stage": "depth3", "ts": 1788914186.556824}
+{"event": "position_stage", "index": 100, "seeds_drawn": 101, "stage": "depth6", "ts": 1788914186.8357592}
+{"event": "position_done", "index": 100, "positions_completed": 101, "queries_spent": 505, "seeds_drawn": 101, "ts": 1788914187.800747}
+{"event": "position_start", "index": 101, "ts": 1788914187.801258}
+{"event": "position_stage", "index": 101, "seeds_drawn": 101, "stage": "bound", "ts": 1788914187.9080331}
+{"event": "position_stage", "index": 101, "seeds_drawn": 102, "stage": "incumbent", "ts": 1788914187.908499}
+{"event": "position_stage", "index": 101, "seeds_drawn": 102, "stage": "depth3", "ts": 1788914189.20485}
+{"event": "position_stage", "index": 101, "seeds_drawn": 102, "stage": "depth6", "ts": 1788914189.483166}
+{"event": "position_done", "index": 101, "positions_completed": 102, "queries_spent": 510, "seeds_drawn": 102, "ts": 1788914190.993682}
+{"event": "position_start", "index": 102, "ts": 1788914190.993848}
+{"event": "position_stage", "index": 102, "seeds_drawn": 102, "stage": "bound", "ts": 1788914191.0967}
+{"event": "position_stage", "index": 102, "seeds_drawn": 103, "stage": "incumbent", "ts": 1788914191.097205}
+{"event": "position_stage", "index": 102, "seeds_drawn": 103, "stage": "depth3", "ts": 1788914192.155862}
+{"event": "position_stage", "index": 102, "seeds_drawn": 103, "stage": "depth6", "ts": 1788914192.425259}
+{"event": "position_done", "index": 102, "positions_completed": 103, "queries_spent": 515, "seeds_drawn": 103, "ts": 1788914193.0661309}
+{"event": "position_start", "index": 103, "ts": 1788914193.066615}
+{"event": "position_stage", "index": 103, "seeds_drawn": 103, "stage": "bound", "ts": 1788914193.1760268}
+{"event": "position_stage", "index": 103, "seeds_drawn": 104, "stage": "incumbent", "ts": 1788914193.176488}
+{"event": "position_stage", "index": 103, "seeds_drawn": 104, "stage": "depth3", "ts": 1788914194.3661828}
+{"event": "position_stage", "index": 103, "seeds_drawn": 104, "stage": "depth6", "ts": 1788914194.658088}
+{"event": "position_done", "index": 103, "positions_completed": 104, "queries_spent": 520, "seeds_drawn": 104, "ts": 1788914195.327266}
+{"event": "position_start", "index": 104, "ts": 1788914195.327753}
+{"event": "position_stage", "index": 104, "seeds_drawn": 104, "stage": "bound", "ts": 1788914195.4409862}
+{"event": "position_stage", "index": 104, "seeds_drawn": 105, "stage": "incumbent", "ts": 1788914195.44147}
+{"event": "position_stage", "index": 104, "seeds_drawn": 105, "stage": "depth3", "ts": 1788914196.498656}
+{"event": "position_stage", "index": 104, "seeds_drawn": 105, "stage": "depth6", "ts": 1788914196.757493}
+{"event": "position_done", "index": 104, "positions_completed": 105, "queries_spent": 525, "seeds_drawn": 105, "ts": 1788914197.663347}
+{"event": "position_start", "index": 105, "ts": 1788914197.663829}
+{"event": "position_stage", "index": 105, "seeds_drawn": 105, "stage": "bound", "ts": 1788914197.775328}
+{"event": "position_stage", "index": 105, "seeds_drawn": 106, "stage": "incumbent", "ts": 1788914197.7758}
+{"event": "position_stage", "index": 105, "seeds_drawn": 106, "stage": "depth3", "ts": 1788914198.897791}
+{"event": "position_stage", "index": 105, "seeds_drawn": 106, "stage": "depth6", "ts": 1788914199.156786}
+{"event": "position_done", "index": 105, "positions_completed": 106, "queries_spent": 530, "seeds_drawn": 106, "ts": 1788914199.851607}
+{"event": "position_start", "index": 106, "ts": 1788914199.852077}
+{"event": "position_stage", "index": 106, "seeds_drawn": 106, "stage": "bound", "ts": 1788914199.971759}
+{"event": "position_stage", "index": 106, "seeds_drawn": 107, "stage": "incumbent", "ts": 1788914199.972221}
+{"event": "position_stage", "index": 106, "seeds_drawn": 107, "stage": "depth3", "ts": 1788914201.049071}
+{"event": "position_stage", "index": 106, "seeds_drawn": 107, "stage": "depth6", "ts": 1788914201.319186}
+{"event": "position_done", "index": 106, "positions_completed": 107, "queries_spent": 535, "seeds_drawn": 107, "ts": 1788914202.012442}
+{"event": "position_start", "index": 107, "ts": 1788914202.012884}
+{"event": "position_stage", "index": 107, "seeds_drawn": 107, "stage": "bound", "ts": 1788914202.144256}
+{"event": "position_stage", "index": 107, "seeds_drawn": 108, "stage": "incumbent", "ts": 1788914202.1444638}
+{"event": "position_stage", "index": 107, "seeds_drawn": 108, "stage": "depth3", "ts": 1788914203.2257931}
+{"event": "position_stage", "index": 107, "seeds_drawn": 108, "stage": "depth6", "ts": 1788914203.480394}
+{"event": "position_done", "index": 107, "positions_completed": 108, "queries_spent": 540, "seeds_drawn": 108, "ts": 1788914203.921302}
+{"event": "position_start", "index": 108, "ts": 1788914203.921778}
+{"event": "position_stage", "index": 108, "seeds_drawn": 108, "stage": "bound", "ts": 1788914204.040243}
+{"event": "position_stage", "index": 108, "seeds_drawn": 109, "stage": "incumbent", "ts": 1788914204.040718}
+{"event": "position_stage", "index": 108, "seeds_drawn": 109, "stage": "depth3", "ts": 1788914205.084983}
+{"event": "position_stage", "index": 108, "seeds_drawn": 109, "stage": "depth6", "ts": 1788914205.353067}
+{"event": "position_done", "index": 108, "positions_completed": 109, "queries_spent": 545, "seeds_drawn": 109, "ts": 1788914205.760606}
+{"event": "position_start", "index": 109, "ts": 1788914205.761087}
+{"event": "position_stage", "index": 109, "seeds_drawn": 109, "stage": "bound", "ts": 1788914205.8874938}
+{"event": "position_stage", "index": 109, "seeds_drawn": 110, "stage": "incumbent", "ts": 1788914205.888}
+{"event": "position_stage", "index": 109, "seeds_drawn": 110, "stage": "depth3", "ts": 1788914206.926817}
+{"event": "position_stage", "index": 109, "seeds_drawn": 110, "stage": "depth6", "ts": 1788914207.1804569}
+{"event": "position_done", "index": 109, "positions_completed": 110, "queries_spent": 550, "seeds_drawn": 110, "ts": 1788914207.553514}
+{"event": "position_start", "index": 110, "ts": 1788914207.553963}
+{"event": "position_stage", "index": 110, "seeds_drawn": 110, "stage": "bound", "ts": 1788914207.6624188}
+{"event": "position_stage", "index": 110, "seeds_drawn": 111, "stage": "incumbent", "ts": 1788914207.662849}
+{"event": "position_stage", "index": 110, "seeds_drawn": 111, "stage": "depth3", "ts": 1788914209.174044}
+{"event": "position_stage", "index": 110, "seeds_drawn": 111, "stage": "depth6", "ts": 1788914209.4707358}
+{"event": "position_done", "index": 110, "positions_completed": 111, "queries_spent": 555, "seeds_drawn": 111, "ts": 1788914210.7901409}
+{"event": "position_start", "index": 111, "ts": 1788914210.790613}
+{"event": "position_stage", "index": 111, "seeds_drawn": 111, "stage": "bound", "ts": 1788914210.900801}
+{"event": "position_stage", "index": 111, "seeds_drawn": 112, "stage": "incumbent", "ts": 1788914210.901257}
+{"event": "position_stage", "index": 111, "seeds_drawn": 112, "stage": "depth3", "ts": 1788914211.976471}
+{"event": "position_stage", "index": 111, "seeds_drawn": 112, "stage": "depth6", "ts": 1788914212.261798}
+{"event": "position_done", "index": 111, "positions_completed": 112, "queries_spent": 560, "seeds_drawn": 112, "ts": 1788914213.8599942}
+{"event": "position_start", "index": 112, "ts": 1788914213.860472}
+{"event": "position_stage", "index": 112, "seeds_drawn": 112, "stage": "bound", "ts": 1788914213.971089}
+{"event": "position_stage", "index": 112, "seeds_drawn": 113, "stage": "incumbent", "ts": 1788914213.971541}
+{"event": "position_stage", "index": 112, "seeds_drawn": 113, "stage": "depth3", "ts": 1788914215.0387268}
+{"event": "position_stage", "index": 112, "seeds_drawn": 113, "stage": "depth6", "ts": 1788914215.333045}
+{"event": "position_done", "index": 112, "positions_completed": 113, "queries_spent": 565, "seeds_drawn": 113, "ts": 1788914216.493762}
+{"event": "position_start", "index": 113, "ts": 1788914216.494185}
+{"event": "position_stage", "index": 113, "seeds_drawn": 113, "stage": "bound", "ts": 1788914216.616744}
+{"event": "position_stage", "index": 113, "seeds_drawn": 114, "stage": "incumbent", "ts": 1788914216.617182}
+{"event": "position_stage", "index": 113, "seeds_drawn": 114, "stage": "depth3", "ts": 1788914217.663785}
+{"event": "position_stage", "index": 113, "seeds_drawn": 114, "stage": "depth6", "ts": 1788914217.905714}
+{"event": "position_done", "index": 113, "positions_completed": 114, "queries_spent": 570, "seeds_drawn": 114, "ts": 1788914218.213693}
+{"event": "position_start", "index": 114, "ts": 1788914218.2141252}
+{"event": "position_stage", "index": 114, "seeds_drawn": 114, "stage": "bound", "ts": 1788914218.3403}
+{"event": "position_stage", "index": 114, "seeds_drawn": 115, "stage": "incumbent", "ts": 1788914218.3407629}
+{"event": "position_stage", "index": 114, "seeds_drawn": 115, "stage": "depth3", "ts": 1788914218.759097}
+{"event": "position_stage", "index": 114, "seeds_drawn": 115, "stage": "depth6", "ts": 1788914218.989258}
+{"event": "position_done", "index": 114, "positions_completed": 115, "queries_spent": 575, "seeds_drawn": 115, "ts": 1788914219.299616}
+{"event": "position_start", "index": 115, "ts": 1788914219.3000681}
+{"event": "position_stage", "index": 115, "seeds_drawn": 115, "stage": "bound", "ts": 1788914219.39793}
+{"event": "position_stage", "index": 115, "seeds_drawn": 116, "stage": "incumbent", "ts": 1788914219.398371}
+{"event": "position_stage", "index": 115, "seeds_drawn": 116, "stage": "depth3", "ts": 1788914220.422247}
+{"event": "position_stage", "index": 115, "seeds_drawn": 116, "stage": "depth6", "ts": 1788914220.669991}
+{"event": "position_done", "index": 115, "positions_completed": 116, "queries_spent": 580, "seeds_drawn": 116, "ts": 1788914221.205489}
+{"event": "position_start", "index": 116, "ts": 1788914221.205951}
+{"event": "position_stage", "index": 116, "seeds_drawn": 116, "stage": "bound", "ts": 1788914221.3141792}
+{"event": "position_stage", "index": 116, "seeds_drawn": 117, "stage": "incumbent", "ts": 1788914221.314642}
+{"event": "position_stage", "index": 116, "seeds_drawn": 117, "stage": "depth3", "ts": 1788914222.376144}
+{"event": "position_stage", "index": 116, "seeds_drawn": 117, "stage": "depth6", "ts": 1788914222.619532}
+{"event": "position_done", "index": 116, "positions_completed": 117, "queries_spent": 585, "seeds_drawn": 117, "ts": 1788914223.244462}
+{"event": "position_start", "index": 117, "ts": 1788914223.244951}
+{"event": "position_stage", "index": 117, "seeds_drawn": 117, "stage": "bound", "ts": 1788914223.373816}
+{"event": "position_stage", "index": 117, "seeds_drawn": 118, "stage": "incumbent", "ts": 1788914223.3743172}
+{"event": "position_stage", "index": 117, "seeds_drawn": 118, "stage": "depth3", "ts": 1788914224.6152508}
+{"event": "position_stage", "index": 117, "seeds_drawn": 118, "stage": "depth6", "ts": 1788914224.871433}
+{"event": "position_done", "index": 117, "positions_completed": 118, "queries_spent": 590, "seeds_drawn": 118, "ts": 1788914225.571533}
+{"event": "position_start", "index": 118, "ts": 1788914225.5720189}
+{"event": "position_stage", "index": 118, "seeds_drawn": 118, "stage": "bound", "ts": 1788914225.692118}
+{"event": "position_stage", "index": 118, "seeds_drawn": 119, "stage": "incumbent", "ts": 1788914225.69258}
+{"event": "position_stage", "index": 118, "seeds_drawn": 119, "stage": "depth3", "ts": 1788914226.7529569}
+{"event": "position_stage", "index": 118, "seeds_drawn": 119, "stage": "depth6", "ts": 1788914226.998663}
+{"event": "position_done", "index": 118, "positions_completed": 119, "queries_spent": 595, "seeds_drawn": 119, "ts": 1788914227.3819442}
+{"event": "position_start", "index": 119, "ts": 1788914227.382411}
+{"event": "position_stage", "index": 119, "seeds_drawn": 119, "stage": "bound", "ts": 1788914227.511554}
+{"event": "position_stage", "index": 119, "seeds_drawn": 120, "stage": "incumbent", "ts": 1788914227.511755}
+{"event": "position_stage", "index": 119, "seeds_drawn": 120, "stage": "depth3", "ts": 1788914228.757508}
+{"event": "position_stage", "index": 119, "seeds_drawn": 120, "stage": "depth6", "ts": 1788914228.993771}
+{"event": "position_done", "index": 119, "positions_completed": 120, "queries_spent": 600, "seeds_drawn": 120, "ts": 1788914229.2767072}
+{"event": "position_start", "index": 120, "ts": 1788914229.277154}
+{"event": "position_stage", "index": 120, "seeds_drawn": 120, "stage": "bound", "ts": 1788914229.3909051}
+{"event": "position_stage", "index": 120, "seeds_drawn": 121, "stage": "incumbent", "ts": 1788914229.3913789}
+{"event": "position_stage", "index": 120, "seeds_drawn": 121, "stage": "depth3", "ts": 1788914230.4390552}
+{"event": "position_stage", "index": 120, "seeds_drawn": 121, "stage": "depth6", "ts": 1788914230.675199}
+{"event": "position_done", "index": 120, "positions_completed": 121, "queries_spent": 605, "seeds_drawn": 121, "ts": 1788914230.954303}
+{"event": "position_start", "index": 121, "ts": 1788914230.954771}
+{"event": "position_stage", "index": 121, "seeds_drawn": 121, "stage": "bound", "ts": 1788914231.065832}
+{"event": "position_stage", "index": 121, "seeds_drawn": 122, "stage": "incumbent", "ts": 1788914231.066292}
+{"event": "position_stage", "index": 121, "seeds_drawn": 122, "stage": "depth3", "ts": 1788914232.120974}
+{"event": "position_stage", "index": 121, "seeds_drawn": 122, "stage": "depth6", "ts": 1788914232.369038}
+{"event": "position_done", "index": 121, "positions_completed": 122, "queries_spent": 610, "seeds_drawn": 122, "ts": 1788914232.689305}
+{"event": "position_start", "index": 122, "ts": 1788914232.6897888}
+{"event": "position_stage", "index": 122, "seeds_drawn": 122, "stage": "bound", "ts": 1788914232.780236}
+{"event": "position_stage", "index": 122, "seeds_drawn": 123, "stage": "incumbent", "ts": 1788914232.780695}
+{"event": "position_stage", "index": 122, "seeds_drawn": 123, "stage": "depth3", "ts": 1788914233.7789671}
+{"event": "position_stage", "index": 122, "seeds_drawn": 123, "stage": "depth6", "ts": 1788914234.0284579}
+{"event": "position_done", "index": 122, "positions_completed": 123, "queries_spent": 615, "seeds_drawn": 123, "ts": 1788914234.594384}
+{"event": "position_start", "index": 123, "ts": 1788914234.5948641}
+{"event": "position_stage", "index": 123, "seeds_drawn": 123, "stage": "bound", "ts": 1788914234.7020218}
+{"event": "position_stage", "index": 123, "seeds_drawn": 124, "stage": "incumbent", "ts": 1788914234.702496}
+{"event": "position_stage", "index": 123, "seeds_drawn": 124, "stage": "depth3", "ts": 1788914235.7432802}
+{"event": "position_stage", "index": 123, "seeds_drawn": 124, "stage": "depth6", "ts": 1788914235.9931939}
+{"event": "position_done", "index": 123, "positions_completed": 124, "queries_spent": 620, "seeds_drawn": 124, "ts": 1788914236.507877}
+{"event": "position_start", "index": 124, "ts": 1788914236.5083609}
+{"event": "position_stage", "index": 124, "seeds_drawn": 124, "stage": "bound", "ts": 1788914236.617343}
+{"event": "position_stage", "index": 124, "seeds_drawn": 125, "stage": "incumbent", "ts": 1788914236.617831}
+{"event": "position_stage", "index": 124, "seeds_drawn": 125, "stage": "depth3", "ts": 1788914237.644578}
+{"event": "position_stage", "index": 124, "seeds_drawn": 125, "stage": "depth6", "ts": 1788914237.893286}
+{"event": "position_done", "index": 124, "positions_completed": 125, "queries_spent": 625, "seeds_drawn": 125, "ts": 1788914238.380554}
+{"event": "position_start", "index": 125, "ts": 1788914238.381016}
+{"event": "position_stage", "index": 125, "seeds_drawn": 125, "stage": "bound", "ts": 1788914238.492616}
+{"event": "position_stage", "index": 125, "seeds_drawn": 126, "stage": "incumbent", "ts": 1788914238.493098}
+{"event": "position_stage", "index": 125, "seeds_drawn": 126, "stage": "depth3", "ts": 1788914239.523235}
+{"event": "position_stage", "index": 125, "seeds_drawn": 126, "stage": "depth6", "ts": 1788914239.7678988}
+{"event": "position_done", "index": 125, "positions_completed": 126, "queries_spent": 630, "seeds_drawn": 126, "ts": 1788914240.135607}
+{"event": "position_start", "index": 126, "ts": 1788914240.136076}
+{"event": "position_stage", "index": 126, "seeds_drawn": 126, "stage": "bound", "ts": 1788914240.248367}
+{"event": "position_stage", "index": 126, "seeds_drawn": 127, "stage": "incumbent", "ts": 1788914240.248807}
+{"event": "position_stage", "index": 126, "seeds_drawn": 127, "stage": "depth3", "ts": 1788914241.30732}
+{"event": "position_stage", "index": 126, "seeds_drawn": 127, "stage": "depth6", "ts": 1788914241.56125}
+{"event": "position_done", "index": 126, "positions_completed": 127, "queries_spent": 635, "seeds_drawn": 127, "ts": 1788914241.8825831}
+{"event": "position_start", "index": 127, "ts": 1788914241.883084}
+{"event": "position_stage", "index": 127, "seeds_drawn": 127, "stage": "bound", "ts": 1788914242.001089}
+{"event": "position_stage", "index": 127, "seeds_drawn": 128, "stage": "incumbent", "ts": 1788914242.001338}
+{"event": "position_stage", "index": 127, "seeds_drawn": 128, "stage": "depth3", "ts": 1788914243.011154}
+{"event": "position_stage", "index": 127, "seeds_drawn": 128, "stage": "depth6", "ts": 1788914243.248805}
+{"event": "position_done", "index": 127, "positions_completed": 128, "queries_spent": 640, "seeds_drawn": 128, "ts": 1788914243.519989}
+{"event": "position_start", "index": 128, "ts": 1788914243.520457}
+{"event": "position_stage", "index": 128, "seeds_drawn": 128, "stage": "bound", "ts": 1788914243.612025}
+{"event": "position_stage", "index": 128, "seeds_drawn": 129, "stage": "incumbent", "ts": 1788914243.612479}
+{"event": "position_stage", "index": 128, "seeds_drawn": 129, "stage": "depth3", "ts": 1788914244.874089}
+{"event": "position_stage", "index": 128, "seeds_drawn": 129, "stage": "depth6", "ts": 1788914245.124406}
+{"event": "position_done", "index": 128, "positions_completed": 129, "queries_spent": 645, "seeds_drawn": 129, "ts": 1788914245.817405}
+{"event": "position_start", "index": 129, "ts": 1788914245.8178968}
+{"event": "position_stage", "index": 129, "seeds_drawn": 129, "stage": "bound", "ts": 1788914245.9094558}
+{"event": "position_stage", "index": 129, "seeds_drawn": 130, "stage": "incumbent", "ts": 1788914245.909909}
+{"event": "position_stage", "index": 129, "seeds_drawn": 130, "stage": "depth3", "ts": 1788914246.922244}
+{"event": "position_stage", "index": 129, "seeds_drawn": 130, "stage": "depth6", "ts": 1788914247.1748831}
+{"event": "position_done", "index": 129, "positions_completed": 130, "queries_spent": 650, "seeds_drawn": 130, "ts": 1788914247.78713}
+{"event": "position_start", "index": 130, "ts": 1788914247.787616}
+{"event": "position_stage", "index": 130, "seeds_drawn": 130, "stage": "bound", "ts": 1788914247.882386}
+{"event": "position_stage", "index": 130, "seeds_drawn": 131, "stage": "incumbent", "ts": 1788914247.8828218}
+{"event": "position_stage", "index": 130, "seeds_drawn": 131, "stage": "depth3", "ts": 1788914248.922979}
+{"event": "position_stage", "index": 130, "seeds_drawn": 131, "stage": "depth6", "ts": 1788914249.174399}
+{"event": "position_done", "index": 130, "positions_completed": 131, "queries_spent": 655, "seeds_drawn": 131, "ts": 1788914249.6803179}
+{"event": "position_start", "index": 131, "ts": 1788914249.680801}
+{"event": "position_stage", "index": 131, "seeds_drawn": 131, "stage": "bound", "ts": 1788914249.801586}
+{"event": "position_stage", "index": 131, "seeds_drawn": 132, "stage": "incumbent", "ts": 1788914249.802059}
+{"event": "position_stage", "index": 131, "seeds_drawn": 132, "stage": "depth3", "ts": 1788914250.793816}
+{"event": "position_stage", "index": 131, "seeds_drawn": 132, "stage": "depth6", "ts": 1788914251.076695}
+{"event": "position_done", "index": 131, "positions_completed": 132, "queries_spent": 660, "seeds_drawn": 132, "ts": 1788914252.9183738}
+{"event": "position_start", "index": 132, "ts": 1788914252.918842}
+{"event": "position_stage", "index": 132, "seeds_drawn": 132, "stage": "bound", "ts": 1788914253.030667}
+{"event": "position_stage", "index": 132, "seeds_drawn": 133, "stage": "incumbent", "ts": 1788914253.031175}
+{"event": "position_stage", "index": 132, "seeds_drawn": 133, "stage": "depth3", "ts": 1788914254.0923688}
+{"event": "position_stage", "index": 132, "seeds_drawn": 133, "stage": "depth6", "ts": 1788914254.370261}
+{"event": "position_done", "index": 132, "positions_completed": 133, "queries_spent": 665, "seeds_drawn": 133, "ts": 1788914255.42692}
+{"event": "position_start", "index": 133, "ts": 1788914255.4273732}
+{"event": "position_stage", "index": 133, "seeds_drawn": 133, "stage": "bound", "ts": 1788914255.5526772}
+{"event": "position_stage", "index": 133, "seeds_drawn": 134, "stage": "incumbent", "ts": 1788914255.553189}
+{"event": "position_stage", "index": 133, "seeds_drawn": 134, "stage": "depth3", "ts": 1788914256.494891}
+{"event": "position_stage", "index": 133, "seeds_drawn": 134, "stage": "depth6", "ts": 1788914256.762995}
+{"event": "position_done", "index": 133, "positions_completed": 134, "queries_spent": 670, "seeds_drawn": 134, "ts": 1788914257.653119}
+{"event": "position_start", "index": 134, "ts": 1788914257.6535969}
+{"event": "position_stage", "index": 134, "seeds_drawn": 134, "stage": "bound", "ts": 1788914257.744174}
+{"event": "position_stage", "index": 134, "seeds_drawn": 135, "stage": "incumbent", "ts": 1788914257.744668}
+{"event": "position_stage", "index": 134, "seeds_drawn": 135, "stage": "depth3", "ts": 1788914258.697844}
+{"event": "position_stage", "index": 134, "seeds_drawn": 135, "stage": "depth6", "ts": 1788914258.9407418}
+{"event": "position_done", "index": 134, "positions_completed": 135, "queries_spent": 675, "seeds_drawn": 135, "ts": 1788914259.417121}
+{"event": "position_start", "index": 135, "ts": 1788914259.417624}
+{"event": "position_stage", "index": 135, "seeds_drawn": 135, "stage": "bound", "ts": 1788914259.5298188}
+{"event": "position_stage", "index": 135, "seeds_drawn": 136, "stage": "incumbent", "ts": 1788914259.530335}
+{"event": "position_stage", "index": 135, "seeds_drawn": 136, "stage": "depth3", "ts": 1788914260.482485}
+{"event": "position_stage", "index": 135, "seeds_drawn": 136, "stage": "depth6", "ts": 1788914260.7456481}
+{"event": "position_done", "index": 135, "positions_completed": 136, "queries_spent": 680, "seeds_drawn": 136, "ts": 1788914261.62462}
+{"event": "position_start", "index": 136, "ts": 1788914261.625107}
+{"event": "position_stage", "index": 136, "seeds_drawn": 136, "stage": "bound", "ts": 1788914261.716296}
+{"event": "position_stage", "index": 136, "seeds_drawn": 137, "stage": "incumbent", "ts": 1788914261.716714}
+{"event": "position_stage", "index": 136, "seeds_drawn": 137, "stage": "depth3", "ts": 1788914262.7193038}
+{"event": "position_stage", "index": 136, "seeds_drawn": 137, "stage": "depth6", "ts": 1788914262.967526}
+{"event": "position_done", "index": 136, "positions_completed": 137, "queries_spent": 685, "seeds_drawn": 137, "ts": 1788914263.655484}
+{"event": "position_start", "index": 137, "ts": 1788914263.6559832}
+{"event": "position_stage", "index": 137, "seeds_drawn": 137, "stage": "bound", "ts": 1788914263.775393}
+{"event": "position_stage", "index": 137, "seeds_drawn": 138, "stage": "incumbent", "ts": 1788914263.7758322}
+{"event": "position_stage", "index": 137, "seeds_drawn": 138, "stage": "depth3", "ts": 1788914264.755222}
+{"event": "position_stage", "index": 137, "seeds_drawn": 138, "stage": "depth6", "ts": 1788914265.0396018}
+{"event": "position_done", "index": 137, "positions_completed": 138, "queries_spent": 690, "seeds_drawn": 138, "ts": 1788914266.47105}
+{"event": "position_start", "index": 138, "ts": 1788914266.4715378}
+{"event": "position_stage", "index": 138, "seeds_drawn": 138, "stage": "bound", "ts": 1788914266.57928}
+{"event": "position_stage", "index": 138, "seeds_drawn": 139, "stage": "incumbent", "ts": 1788914266.57976}
+{"event": "position_stage", "index": 138, "seeds_drawn": 139, "stage": "depth3", "ts": 1788914267.569103}
+{"event": "position_stage", "index": 138, "seeds_drawn": 139, "stage": "depth6", "ts": 1788914267.827809}
+{"event": "position_done", "index": 138, "positions_completed": 139, "queries_spent": 695, "seeds_drawn": 139, "ts": 1788914268.862505}
+{"event": "position_start", "index": 139, "ts": 1788914268.8629692}
+{"event": "position_stage", "index": 139, "seeds_drawn": 139, "stage": "bound", "ts": 1788914268.972534}
+{"event": "position_stage", "index": 139, "seeds_drawn": 140, "stage": "incumbent", "ts": 1788914268.973012}
+{"event": "position_stage", "index": 139, "seeds_drawn": 140, "stage": "depth3", "ts": 1788914269.95519}
+{"event": "position_stage", "index": 139, "seeds_drawn": 140, "stage": "depth6", "ts": 1788914270.198294}
+{"event": "position_done", "index": 139, "positions_completed": 140, "queries_spent": 700, "seeds_drawn": 140, "ts": 1788914270.633864}
+{"event": "position_start", "index": 140, "ts": 1788914270.634366}
+{"event": "position_stage", "index": 140, "seeds_drawn": 140, "stage": "bound", "ts": 1788914270.744583}
+{"event": "position_stage", "index": 140, "seeds_drawn": 141, "stage": "incumbent", "ts": 1788914270.745033}
+{"event": "position_stage", "index": 140, "seeds_drawn": 141, "stage": "depth3", "ts": 1788914271.738513}
+{"event": "position_stage", "index": 140, "seeds_drawn": 141, "stage": "depth6", "ts": 1788914271.993603}
+{"event": "position_done", "index": 140, "positions_completed": 141, "queries_spent": 705, "seeds_drawn": 141, "ts": 1788914272.5607092}
+{"event": "position_start", "index": 141, "ts": 1788914272.561188}
+{"event": "position_stage", "index": 141, "seeds_drawn": 141, "stage": "bound", "ts": 1788914272.731211}
+{"event": "position_stage", "index": 141, "seeds_drawn": 142, "stage": "incumbent", "ts": 1788914272.731699}
+{"event": "position_stage", "index": 141, "seeds_drawn": 142, "stage": "depth3", "ts": 1788914273.718018}
+{"event": "position_stage", "index": 141, "seeds_drawn": 142, "stage": "depth6", "ts": 1788914273.974633}
+{"event": "position_done", "index": 141, "positions_completed": 142, "queries_spent": 710, "seeds_drawn": 142, "ts": 1788914274.452204}
+{"event": "position_start", "index": 142, "ts": 1788914274.452705}
+{"event": "position_stage", "index": 142, "seeds_drawn": 142, "stage": "bound", "ts": 1788914274.5701408}
+{"event": "position_stage", "index": 142, "seeds_drawn": 143, "stage": "incumbent", "ts": 1788914274.570575}
+{"event": "position_stage", "index": 142, "seeds_drawn": 143, "stage": "depth3", "ts": 1788914275.5657961}
+{"event": "position_stage", "index": 142, "seeds_drawn": 143, "stage": "depth6", "ts": 1788914275.829097}
+{"event": "position_done", "index": 142, "positions_completed": 143, "queries_spent": 715, "seeds_drawn": 143, "ts": 1788914276.751393}
+{"event": "position_start", "index": 143, "ts": 1788914276.751885}
+{"event": "position_stage", "index": 143, "seeds_drawn": 143, "stage": "bound", "ts": 1788914276.860707}
+{"event": "position_stage", "index": 143, "seeds_drawn": 144, "stage": "incumbent", "ts": 1788914276.8611798}
+{"event": "position_stage", "index": 143, "seeds_drawn": 144, "stage": "depth3", "ts": 1788914277.857156}
+{"event": "position_stage", "index": 143, "seeds_drawn": 144, "stage": "depth6", "ts": 1788914278.138887}
+{"event": "position_done", "index": 143, "positions_completed": 144, "queries_spent": 720, "seeds_drawn": 144, "ts": 1788914279.410317}
+{"event": "position_start", "index": 144, "ts": 1788914279.410817}
+{"event": "position_stage", "index": 144, "seeds_drawn": 144, "stage": "bound", "ts": 1788914279.520567}
+{"event": "position_stage", "index": 144, "seeds_drawn": 145, "stage": "incumbent", "ts": 1788914279.521064}
+{"event": "position_stage", "index": 144, "seeds_drawn": 145, "stage": "depth3", "ts": 1788914280.51573}
+{"event": "position_stage", "index": 144, "seeds_drawn": 145, "stage": "depth6", "ts": 1788914280.8024042}
+{"event": "position_done", "index": 144, "positions_completed": 145, "queries_spent": 725, "seeds_drawn": 145, "ts": 1788914282.2904289}
+{"event": "position_start", "index": 145, "ts": 1788914282.290914}
+{"event": "position_stage", "index": 145, "seeds_drawn": 145, "stage": "bound", "ts": 1788914282.38171}
+{"event": "position_stage", "index": 145, "seeds_drawn": 146, "stage": "incumbent", "ts": 1788914282.382176}
+{"event": "position_stage", "index": 145, "seeds_drawn": 146, "stage": "depth3", "ts": 1788914283.398607}
+{"event": "position_stage", "index": 145, "seeds_drawn": 146, "stage": "depth6", "ts": 1788914283.64316}
+{"event": "position_done", "index": 145, "positions_completed": 146, "queries_spent": 730, "seeds_drawn": 146, "ts": 1788914284.299855}
+{"event": "position_start", "index": 146, "ts": 1788914284.300318}
+{"event": "position_stage", "index": 146, "seeds_drawn": 146, "stage": "bound", "ts": 1788914284.4060512}
+{"event": "position_stage", "index": 146, "seeds_drawn": 147, "stage": "incumbent", "ts": 1788914284.4064798}
+{"event": "position_stage", "index": 146, "seeds_drawn": 147, "stage": "depth3", "ts": 1788914285.441351}
+{"event": "position_stage", "index": 146, "seeds_drawn": 147, "stage": "depth6", "ts": 1788914285.6922529}
+{"event": "position_done", "index": 146, "positions_completed": 147, "queries_spent": 735, "seeds_drawn": 147, "ts": 1788914286.5419168}
+{"event": "position_start", "index": 147, "ts": 1788914286.542403}
+{"event": "position_stage", "index": 147, "seeds_drawn": 147, "stage": "bound", "ts": 1788914286.635869}
+{"event": "position_stage", "index": 147, "seeds_drawn": 148, "stage": "incumbent", "ts": 1788914286.6363368}
+{"event": "position_stage", "index": 147, "seeds_drawn": 148, "stage": "depth3", "ts": 1788914287.6248472}
+{"event": "position_stage", "index": 147, "seeds_drawn": 148, "stage": "depth6", "ts": 1788914287.8689332}
+{"event": "position_done", "index": 147, "positions_completed": 148, "queries_spent": 740, "seeds_drawn": 148, "ts": 1788914288.659701}
+{"event": "position_start", "index": 148, "ts": 1788914288.6601942}
+{"event": "position_stage", "index": 148, "seeds_drawn": 148, "stage": "bound", "ts": 1788914288.764364}
+{"event": "position_stage", "index": 148, "seeds_drawn": 149, "stage": "incumbent", "ts": 1788914288.764847}
+{"event": "position_stage", "index": 148, "seeds_drawn": 149, "stage": "depth3", "ts": 1788914289.759532}
+{"event": "position_stage", "index": 148, "seeds_drawn": 149, "stage": "depth6", "ts": 1788914290.032405}
+{"event": "position_done", "index": 148, "positions_completed": 149, "queries_spent": 745, "seeds_drawn": 149, "ts": 1788914291.15856}
+{"event": "position_start", "index": 149, "ts": 1788914291.159033}
+{"event": "position_stage", "index": 149, "seeds_drawn": 149, "stage": "bound", "ts": 1788914291.2688751}
+{"event": "position_stage", "index": 149, "seeds_drawn": 150, "stage": "incumbent", "ts": 1788914291.26933}
+{"event": "position_stage", "index": 149, "seeds_drawn": 150, "stage": "depth3", "ts": 1788914292.260332}
+{"event": "position_stage", "index": 149, "seeds_drawn": 150, "stage": "depth6", "ts": 1788914292.5364852}
+{"event": "position_done", "index": 149, "positions_completed": 150, "queries_spent": 750, "seeds_drawn": 150, "ts": 1788914293.780721}
+{"event": "position_start", "index": 150, "ts": 1788914293.7812119}
+{"event": "position_stage", "index": 150, "seeds_drawn": 150, "stage": "bound", "ts": 1788914293.890676}
+{"event": "position_stage", "index": 150, "seeds_drawn": 151, "stage": "incumbent", "ts": 1788914293.891198}
+{"event": "position_stage", "index": 150, "seeds_drawn": 151, "stage": "depth3", "ts": 1788914294.9755929}
+{"event": "position_stage", "index": 150, "seeds_drawn": 151, "stage": "depth6", "ts": 1788914295.277374}
+{"event": "position_done", "index": 150, "positions_completed": 151, "queries_spent": 755, "seeds_drawn": 151, "ts": 1788914296.464771}
+{"event": "position_start", "index": 151, "ts": 1788914296.464947}
+{"event": "position_stage", "index": 151, "seeds_drawn": 151, "stage": "bound", "ts": 1788914296.558857}
+{"event": "position_stage", "index": 151, "seeds_drawn": 152, "stage": "incumbent", "ts": 1788914296.559298}
+{"event": "position_stage", "index": 151, "seeds_drawn": 152, "stage": "depth3", "ts": 1788914297.616218}
+{"event": "position_stage", "index": 151, "seeds_drawn": 152, "stage": "depth6", "ts": 1788914297.8594198}
+{"event": "position_done", "index": 151, "positions_completed": 152, "queries_spent": 760, "seeds_drawn": 152, "ts": 1788914298.304988}
+{"event": "position_start", "index": 152, "ts": 1788914298.3051898}
+{"event": "position_stage", "index": 152, "seeds_drawn": 152, "stage": "bound", "ts": 1788914298.410045}
+{"event": "position_stage", "index": 152, "seeds_drawn": 153, "stage": "incumbent", "ts": 1788914298.4105}
+{"event": "position_stage", "index": 152, "seeds_drawn": 153, "stage": "depth3", "ts": 1788914299.4753149}
+{"event": "position_stage", "index": 152, "seeds_drawn": 153, "stage": "depth6", "ts": 1788914299.7352939}
+{"event": "position_done", "index": 152, "positions_completed": 153, "queries_spent": 765, "seeds_drawn": 153, "ts": 1788914300.518464}
+{"event": "position_start", "index": 153, "ts": 1788914300.518944}
+{"event": "position_stage", "index": 153, "seeds_drawn": 153, "stage": "bound", "ts": 1788914300.6245859}
+{"event": "position_stage", "index": 153, "seeds_drawn": 154, "stage": "incumbent", "ts": 1788914300.6250648}
+{"event": "position_stage", "index": 153, "seeds_drawn": 154, "stage": "depth3", "ts": 1788914301.673544}
+{"event": "position_stage", "index": 153, "seeds_drawn": 154, "stage": "depth6", "ts": 1788914301.978584}
+{"event": "position_done", "index": 153, "positions_completed": 154, "queries_spent": 770, "seeds_drawn": 154, "ts": 1788914303.455332}
+{"event": "position_start", "index": 154, "ts": 1788914303.455786}
+{"event": "position_stage", "index": 154, "seeds_drawn": 154, "stage": "bound", "ts": 1788914303.594644}
+{"event": "position_stage", "index": 154, "seeds_drawn": 155, "stage": "incumbent", "ts": 1788914303.594898}
+{"event": "position_stage", "index": 154, "seeds_drawn": 155, "stage": "depth3", "ts": 1788914303.656963}
+{"event": "position_stage", "index": 154, "seeds_drawn": 155, "stage": "depth6", "ts": 1788914303.883338}
+{"event": "position_done", "index": 154, "positions_completed": 155, "queries_spent": 775, "seeds_drawn": 155, "ts": 1788914304.108466}
+{"event": "position_start", "index": 155, "ts": 1788914304.108949}
+{"event": "position_stage", "index": 155, "seeds_drawn": 155, "stage": "bound", "ts": 1788914304.232068}
+{"event": "position_stage", "index": 155, "seeds_drawn": 156, "stage": "incumbent", "ts": 1788914304.232519}
+{"event": "position_stage", "index": 155, "seeds_drawn": 156, "stage": "depth3", "ts": 1788914305.240969}
+{"event": "position_stage", "index": 155, "seeds_drawn": 156, "stage": "depth6", "ts": 1788914305.473975}
+{"event": "position_done", "index": 155, "positions_completed": 156, "queries_spent": 780, "seeds_drawn": 156, "ts": 1788914305.7204218}
+{"event": "position_start", "index": 156, "ts": 1788914305.720882}
+{"event": "position_stage", "index": 156, "seeds_drawn": 156, "stage": "bound", "ts": 1788914305.832706}
+{"event": "position_stage", "index": 156, "seeds_drawn": 157, "stage": "incumbent", "ts": 1788914305.833199}
+{"event": "position_stage", "index": 156, "seeds_drawn": 157, "stage": "depth3", "ts": 1788914306.818909}
+{"event": "position_stage", "index": 156, "seeds_drawn": 157, "stage": "depth6", "ts": 1788914307.049767}
+{"event": "position_done", "index": 156, "positions_completed": 157, "queries_spent": 785, "seeds_drawn": 157, "ts": 1788914307.3020952}
+{"event": "position_start", "index": 157, "ts": 1788914307.302562}
+{"event": "position_stage", "index": 157, "seeds_drawn": 157, "stage": "bound", "ts": 1788914307.414933}
+{"event": "position_stage", "index": 157, "seeds_drawn": 158, "stage": "incumbent", "ts": 1788914307.4153888}
+{"event": "position_stage", "index": 157, "seeds_drawn": 158, "stage": "depth3", "ts": 1788914307.4771168}
+{"event": "position_stage", "index": 157, "seeds_drawn": 158, "stage": "depth6", "ts": 1788914307.698003}
+{"event": "position_done", "index": 157, "positions_completed": 158, "queries_spent": 790, "seeds_drawn": 158, "ts": 1788914307.9178638}
+{"event": "position_start", "index": 158, "ts": 1788914307.918327}
+{"event": "position_stage", "index": 158, "seeds_drawn": 158, "stage": "bound", "ts": 1788914308.037785}
+{"event": "position_stage", "index": 158, "seeds_drawn": 159, "stage": "incumbent", "ts": 1788914308.038254}
+{"event": "position_stage", "index": 158, "seeds_drawn": 159, "stage": "depth3", "ts": 1788914309.0230951}
+{"event": "position_stage", "index": 158, "seeds_drawn": 159, "stage": "depth6", "ts": 1788914309.272955}
+{"event": "position_done", "index": 158, "positions_completed": 159, "queries_spent": 795, "seeds_drawn": 159, "ts": 1788914309.6217558}
+{"event": "position_start", "index": 159, "ts": 1788914309.622249}
+{"event": "position_stage", "index": 159, "seeds_drawn": 159, "stage": "bound", "ts": 1788914309.746569}
+{"event": "position_stage", "index": 159, "seeds_drawn": 160, "stage": "incumbent", "ts": 1788914309.747017}
+{"event": "position_stage", "index": 159, "seeds_drawn": 160, "stage": "depth3", "ts": 1788914310.1056159}
+{"event": "position_stage", "index": 159, "seeds_drawn": 160, "stage": "depth6", "ts": 1788914310.350518}
+{"event": "position_done", "index": 159, "positions_completed": 160, "queries_spent": 800, "seeds_drawn": 160, "ts": 1788914310.6538491}
+{"event": "position_start", "index": 160, "ts": 1788914310.654342}
+{"event": "position_stage", "index": 160, "seeds_drawn": 160, "stage": "bound", "ts": 1788914310.80721}
+{"event": "position_stage", "index": 160, "seeds_drawn": 161, "stage": "incumbent", "ts": 1788914310.807688}
+{"event": "position_stage", "index": 160, "seeds_drawn": 161, "stage": "depth3", "ts": 1788914311.791689}
+{"event": "position_stage", "index": 160, "seeds_drawn": 161, "stage": "depth6", "ts": 1788914312.0489469}
+{"event": "position_done", "index": 160, "positions_completed": 161, "queries_spent": 805, "seeds_drawn": 161, "ts": 1788914312.527435}
+{"event": "position_start", "index": 161, "ts": 1788914312.527926}
+{"event": "position_stage", "index": 161, "seeds_drawn": 161, "stage": "bound", "ts": 1788914312.6468968}
+{"event": "position_stage", "index": 161, "seeds_drawn": 162, "stage": "incumbent", "ts": 1788914312.647404}
+{"event": "position_stage", "index": 161, "seeds_drawn": 162, "stage": "depth3", "ts": 1788914313.6331918}
+{"event": "position_stage", "index": 161, "seeds_drawn": 162, "stage": "depth6", "ts": 1788914313.872154}
+{"event": "position_done", "index": 161, "positions_completed": 162, "queries_spent": 810, "seeds_drawn": 162, "ts": 1788914314.216469}
+{"event": "position_start", "index": 162, "ts": 1788914314.216704}
+{"event": "position_stage", "index": 162, "seeds_drawn": 162, "stage": "bound", "ts": 1788914314.3319612}
+{"event": "position_stage", "index": 162, "seeds_drawn": 163, "stage": "incumbent", "ts": 1788914314.332457}
+{"event": "position_stage", "index": 162, "seeds_drawn": 163, "stage": "depth3", "ts": 1788914315.324966}
+{"event": "position_stage", "index": 162, "seeds_drawn": 163, "stage": "depth6", "ts": 1788914315.563102}
+{"event": "position_done", "index": 162, "positions_completed": 163, "queries_spent": 815, "seeds_drawn": 163, "ts": 1788914315.83846}
+{"event": "position_start", "index": 163, "ts": 1788914315.8386738}
+{"event": "position_stage", "index": 163, "seeds_drawn": 163, "stage": "bound", "ts": 1788914315.954286}
+{"event": "position_stage", "index": 163, "seeds_drawn": 164, "stage": "incumbent", "ts": 1788914315.954785}
+{"event": "position_stage", "index": 163, "seeds_drawn": 164, "stage": "depth3", "ts": 1788914316.016098}
+{"event": "position_stage", "index": 163, "seeds_drawn": 164, "stage": "depth6", "ts": 1788914316.236896}
+{"event": "position_done", "index": 163, "positions_completed": 164, "queries_spent": 820, "seeds_drawn": 164, "ts": 1788914316.458739}
+{"event": "position_start", "index": 164, "ts": 1788914316.459221}
+{"event": "position_stage", "index": 164, "seeds_drawn": 164, "stage": "bound", "ts": 1788914316.577644}
+{"event": "position_stage", "index": 164, "seeds_drawn": 165, "stage": "incumbent", "ts": 1788914316.5780869}
+{"event": "position_stage", "index": 164, "seeds_drawn": 165, "stage": "depth3", "ts": 1788914317.564585}
+{"event": "position_stage", "index": 164, "seeds_drawn": 165, "stage": "depth6", "ts": 1788914317.8072472}
+{"event": "position_done", "index": 164, "positions_completed": 165, "queries_spent": 825, "seeds_drawn": 165, "ts": 1788914318.296596}
+{"event": "position_start", "index": 165, "ts": 1788914318.297075}
+{"event": "position_stage", "index": 165, "seeds_drawn": 165, "stage": "bound", "ts": 1788914318.4051032}
+{"event": "position_stage", "index": 165, "seeds_drawn": 166, "stage": "incumbent", "ts": 1788914318.4055731}
+{"event": "position_stage", "index": 165, "seeds_drawn": 166, "stage": "depth3", "ts": 1788914319.394791}
+{"event": "position_stage", "index": 165, "seeds_drawn": 166, "stage": "depth6", "ts": 1788914319.635301}
+{"event": "position_done", "index": 165, "positions_completed": 166, "queries_spent": 830, "seeds_drawn": 166, "ts": 1788914319.942711}
+{"event": "position_start", "index": 166, "ts": 1788914319.943189}
+{"event": "position_stage", "index": 166, "seeds_drawn": 166, "stage": "bound", "ts": 1788914320.061545}
+{"event": "position_stage", "index": 166, "seeds_drawn": 167, "stage": "incumbent", "ts": 1788914320.062027}
+{"event": "position_stage", "index": 166, "seeds_drawn": 167, "stage": "depth3", "ts": 1788914320.471648}
+{"event": "position_stage", "index": 166, "seeds_drawn": 167, "stage": "depth6", "ts": 1788914320.7013419}
+{"event": "position_done", "index": 166, "positions_completed": 167, "queries_spent": 835, "seeds_drawn": 167, "ts": 1788914321.0073678}
+{"event": "position_start", "index": 167, "ts": 1788914321.0078511}
+{"event": "position_stage", "index": 167, "seeds_drawn": 167, "stage": "bound", "ts": 1788914321.173159}
+{"event": "position_stage", "index": 167, "seeds_drawn": 168, "stage": "incumbent", "ts": 1788914321.1736739}
+{"event": "position_stage", "index": 167, "seeds_drawn": 168, "stage": "depth3", "ts": 1788914322.156457}
+{"event": "position_stage", "index": 167, "seeds_drawn": 168, "stage": "depth6", "ts": 1788914322.385463}
+{"event": "position_done", "index": 167, "positions_completed": 168, "queries_spent": 840, "seeds_drawn": 168, "ts": 1788914322.620211}
+{"event": "position_start", "index": 168, "ts": 1788914322.620689}
+{"event": "position_stage", "index": 168, "seeds_drawn": 168, "stage": "bound", "ts": 1788914322.747913}
+{"event": "position_stage", "index": 168, "seeds_drawn": 169, "stage": "incumbent", "ts": 1788914322.7484028}
+{"event": "position_stage", "index": 168, "seeds_drawn": 169, "stage": "depth3", "ts": 1788914322.8106902}
+{"event": "position_stage", "index": 168, "seeds_drawn": 169, "stage": "depth6", "ts": 1788914323.027693}
+{"event": "position_done", "index": 168, "positions_completed": 169, "queries_spent": 845, "seeds_drawn": 169, "ts": 1788914323.2445068}
+{"event": "position_start", "index": 169, "ts": 1788914323.244998}
+{"event": "position_stage", "index": 169, "seeds_drawn": 169, "stage": "bound", "ts": 1788914323.367755}
+{"event": "position_stage", "index": 169, "seeds_drawn": 170, "stage": "incumbent", "ts": 1788914323.368213}
+{"event": "position_stage", "index": 169, "seeds_drawn": 170, "stage": "depth3", "ts": 1788914324.345859}
+{"event": "position_stage", "index": 169, "seeds_drawn": 170, "stage": "depth6", "ts": 1788914324.586224}
+{"event": "position_done", "index": 169, "positions_completed": 170, "queries_spent": 850, "seeds_drawn": 170, "ts": 1788914324.92281}
+{"event": "position_start", "index": 170, "ts": 1788914324.923289}
+{"event": "position_stage", "index": 170, "seeds_drawn": 170, "stage": "bound", "ts": 1788914325.042479}
+{"event": "position_stage", "index": 170, "seeds_drawn": 171, "stage": "incumbent", "ts": 1788914325.0429409}
+{"event": "position_stage", "index": 170, "seeds_drawn": 171, "stage": "depth3", "ts": 1788914326.0368}
+{"event": "position_stage", "index": 170, "seeds_drawn": 171, "stage": "depth6", "ts": 1788914326.265753}
+{"event": "position_done", "index": 170, "positions_completed": 171, "queries_spent": 855, "seeds_drawn": 171, "ts": 1788914326.51778}
+{"event": "position_start", "index": 171, "ts": 1788914326.5182562}
+{"event": "position_stage", "index": 171, "seeds_drawn": 171, "stage": "bound", "ts": 1788914326.639505}
+{"event": "position_stage", "index": 171, "seeds_drawn": 172, "stage": "incumbent", "ts": 1788914326.640002}
+{"event": "position_stage", "index": 171, "seeds_drawn": 172, "stage": "depth3", "ts": 1788914327.124757}
+{"event": "position_stage", "index": 171, "seeds_drawn": 172, "stage": "depth6", "ts": 1788914327.35847}
+{"event": "position_done", "index": 171, "positions_completed": 172, "queries_spent": 860, "seeds_drawn": 172, "ts": 1788914327.6173818}
+{"event": "position_start", "index": 172, "ts": 1788914327.617863}
+{"event": "position_stage", "index": 172, "seeds_drawn": 172, "stage": "bound", "ts": 1788914327.730335}
+{"event": "position_stage", "index": 172, "seeds_drawn": 173, "stage": "incumbent", "ts": 1788914327.7308302}
+{"event": "position_stage", "index": 172, "seeds_drawn": 173, "stage": "depth3", "ts": 1788914328.709444}
+{"event": "position_stage", "index": 172, "seeds_drawn": 173, "stage": "depth6", "ts": 1788914328.95746}
+{"event": "position_done", "index": 172, "positions_completed": 173, "queries_spent": 865, "seeds_drawn": 173, "ts": 1788914329.283694}
+{"event": "position_start", "index": 173, "ts": 1788914329.284152}
+{"event": "position_stage", "index": 173, "seeds_drawn": 173, "stage": "bound", "ts": 1788914329.409966}
+{"event": "position_stage", "index": 173, "seeds_drawn": 174, "stage": "incumbent", "ts": 1788914329.410435}
+{"event": "position_stage", "index": 173, "seeds_drawn": 174, "stage": "depth3", "ts": 1788914329.472584}
+{"event": "position_stage", "index": 173, "seeds_drawn": 174, "stage": "depth6", "ts": 1788914329.6983109}
+{"event": "position_done", "index": 173, "positions_completed": 174, "queries_spent": 870, "seeds_drawn": 174, "ts": 1788914329.920746}
+{"event": "position_start", "index": 174, "ts": 1788914329.921186}
+{"event": "position_stage", "index": 174, "seeds_drawn": 174, "stage": "bound", "ts": 1788914330.0316658}
+{"event": "position_stage", "index": 174, "seeds_drawn": 175, "stage": "incumbent", "ts": 1788914330.0321229}
+{"event": "position_stage", "index": 174, "seeds_drawn": 175, "stage": "depth3", "ts": 1788914331.076106}
+{"event": "position_stage", "index": 174, "seeds_drawn": 175, "stage": "depth6", "ts": 1788914331.309176}
+{"event": "position_done", "index": 174, "positions_completed": 175, "queries_spent": 875, "seeds_drawn": 175, "ts": 1788914331.5454059}
+{"event": "position_start", "index": 175, "ts": 1788914331.545836}
+{"event": "position_stage", "index": 175, "seeds_drawn": 175, "stage": "bound", "ts": 1788914331.6676538}
+{"event": "position_stage", "index": 175, "seeds_drawn": 176, "stage": "incumbent", "ts": 1788914331.668142}
+{"event": "position_stage", "index": 175, "seeds_drawn": 176, "stage": "depth3", "ts": 1788914332.677087}
+{"event": "position_stage", "index": 175, "seeds_drawn": 176, "stage": "depth6", "ts": 1788914332.9065511}
+{"event": "position_done", "index": 175, "positions_completed": 176, "queries_spent": 880, "seeds_drawn": 176, "ts": 1788914333.150334}
+{"event": "position_start", "index": 176, "ts": 1788914333.150806}
+{"event": "position_stage", "index": 176, "seeds_drawn": 176, "stage": "bound", "ts": 1788914333.271691}
+{"event": "position_stage", "index": 176, "seeds_drawn": 177, "stage": "incumbent", "ts": 1788914333.27214}
+{"event": "position_stage", "index": 176, "seeds_drawn": 177, "stage": "depth3", "ts": 1788914333.3327382}
+{"event": "position_stage", "index": 176, "seeds_drawn": 177, "stage": "depth6", "ts": 1788914333.5556}
+{"event": "position_done", "index": 176, "positions_completed": 177, "queries_spent": 885, "seeds_drawn": 177, "ts": 1788914333.776507}
+{"event": "position_start", "index": 177, "ts": 1788914333.776994}
+{"event": "position_stage", "index": 177, "seeds_drawn": 177, "stage": "bound", "ts": 1788914333.885919}
+{"event": "position_stage", "index": 177, "seeds_drawn": 178, "stage": "incumbent", "ts": 1788914333.8863292}
+{"event": "position_stage", "index": 177, "seeds_drawn": 178, "stage": "depth3", "ts": 1788914334.869171}
+{"event": "position_stage", "index": 177, "seeds_drawn": 178, "stage": "depth6", "ts": 1788914335.1257842}
+{"event": "position_done", "index": 177, "positions_completed": 178, "queries_spent": 890, "seeds_drawn": 178, "ts": 1788914335.605772}
+{"event": "position_start", "index": 178, "ts": 1788914335.606006}
+{"event": "position_stage", "index": 178, "seeds_drawn": 178, "stage": "bound", "ts": 1788914335.717925}
+{"event": "position_stage", "index": 178, "seeds_drawn": 179, "stage": "incumbent", "ts": 1788914335.718396}
+{"event": "position_stage", "index": 178, "seeds_drawn": 179, "stage": "depth3", "ts": 1788914335.779947}
+{"event": "position_stage", "index": 178, "seeds_drawn": 179, "stage": "depth6", "ts": 1788914336.020478}
+{"event": "position_done", "index": 178, "positions_completed": 179, "queries_spent": 895, "seeds_drawn": 179, "ts": 1788914336.292813}
+{"event": "position_start", "index": 179, "ts": 1788914336.293291}
+{"event": "position_stage", "index": 179, "seeds_drawn": 179, "stage": "bound", "ts": 1788914336.4167948}
+{"event": "position_stage", "index": 179, "seeds_drawn": 180, "stage": "incumbent", "ts": 1788914336.417035}
+{"event": "position_stage", "index": 179, "seeds_drawn": 180, "stage": "depth3", "ts": 1788914337.3578591}
+{"event": "position_stage", "index": 179, "seeds_drawn": 180, "stage": "depth6", "ts": 1788914337.612481}
+{"event": "position_done", "index": 179, "positions_completed": 180, "queries_spent": 900, "seeds_drawn": 180, "ts": 1788914338.056163}
+{"event": "position_start", "index": 180, "ts": 1788914338.056658}
+{"event": "position_stage", "index": 180, "seeds_drawn": 180, "stage": "bound", "ts": 1788914338.169889}
+{"event": "position_stage", "index": 180, "seeds_drawn": 181, "stage": "incumbent", "ts": 1788914338.170327}
+{"event": "position_stage", "index": 180, "seeds_drawn": 181, "stage": "depth3", "ts": 1788914338.409157}
+{"event": "position_stage", "index": 180, "seeds_drawn": 181, "stage": "depth6", "ts": 1788914338.6472478}
+{"event": "position_done", "index": 180, "positions_completed": 181, "queries_spent": 905, "seeds_drawn": 181, "ts": 1788914338.90293}
+{"event": "position_start", "index": 181, "ts": 1788914338.903403}
+{"event": "position_stage", "index": 181, "seeds_drawn": 181, "stage": "bound", "ts": 1788914339.030161}
+{"event": "position_stage", "index": 181, "seeds_drawn": 182, "stage": "incumbent", "ts": 1788914339.030625}
+{"event": "position_stage", "index": 181, "seeds_drawn": 182, "stage": "depth3", "ts": 1788914340.0623648}
+{"event": "position_stage", "index": 181, "seeds_drawn": 182, "stage": "depth6", "ts": 1788914340.29267}
+{"event": "position_done", "index": 181, "positions_completed": 182, "queries_spent": 910, "seeds_drawn": 182, "ts": 1788914340.531698}
+{"event": "position_start", "index": 182, "ts": 1788914340.532193}
+{"event": "position_stage", "index": 182, "seeds_drawn": 182, "stage": "bound", "ts": 1788914340.645188}
+{"event": "position_stage", "index": 182, "seeds_drawn": 183, "stage": "incumbent", "ts": 1788914340.6456509}
+{"event": "position_stage", "index": 182, "seeds_drawn": 183, "stage": "depth3", "ts": 1788914340.709214}
+{"event": "position_stage", "index": 182, "seeds_drawn": 183, "stage": "depth6", "ts": 1788914340.932332}
+{"event": "position_done", "index": 182, "positions_completed": 183, "queries_spent": 915, "seeds_drawn": 183, "ts": 1788914341.162014}
+{"event": "position_start", "index": 183, "ts": 1788914341.162497}
+{"event": "position_stage", "index": 183, "seeds_drawn": 183, "stage": "bound", "ts": 1788914341.2904189}
+{"event": "position_stage", "index": 183, "seeds_drawn": 184, "stage": "incumbent", "ts": 1788914341.290913}
+{"event": "position_stage", "index": 183, "seeds_drawn": 184, "stage": "depth3", "ts": 1788914342.269542}
+{"event": "position_stage", "index": 183, "seeds_drawn": 184, "stage": "depth6", "ts": 1788914342.499694}
+{"event": "position_done", "index": 183, "positions_completed": 184, "queries_spent": 920, "seeds_drawn": 184, "ts": 1788914342.732429}
+{"event": "position_start", "index": 184, "ts": 1788914342.732917}
+{"event": "position_stage", "index": 184, "seeds_drawn": 184, "stage": "bound", "ts": 1788914342.851419}
+{"event": "position_stage", "index": 184, "seeds_drawn": 185, "stage": "incumbent", "ts": 1788914342.851928}
+{"event": "position_stage", "index": 184, "seeds_drawn": 185, "stage": "depth3", "ts": 1788914342.913496}
+{"event": "position_stage", "index": 184, "seeds_drawn": 185, "stage": "depth6", "ts": 1788914343.1399748}
+{"event": "position_done", "index": 184, "positions_completed": 185, "queries_spent": 925, "seeds_drawn": 185, "ts": 1788914343.365392}
+{"event": "position_start", "index": 185, "ts": 1788914343.3658612}
+{"event": "position_stage", "index": 185, "seeds_drawn": 185, "stage": "bound", "ts": 1788914343.469256}
+{"event": "position_stage", "index": 185, "seeds_drawn": 186, "stage": "incumbent", "ts": 1788914343.469472}
+{"event": "position_stage", "index": 185, "seeds_drawn": 186, "stage": "depth3", "ts": 1788914344.414428}
+{"event": "position_stage", "index": 185, "seeds_drawn": 186, "stage": "depth6", "ts": 1788914344.66115}
+{"event": "position_done", "index": 185, "positions_completed": 186, "queries_spent": 930, "seeds_drawn": 186, "ts": 1788914345.040333}
+{"event": "position_start", "index": 186, "ts": 1788914345.04083}
+{"event": "position_stage", "index": 186, "seeds_drawn": 186, "stage": "bound", "ts": 1788914345.1607308}
+{"event": "position_stage", "index": 186, "seeds_drawn": 187, "stage": "incumbent", "ts": 1788914345.1612082}
+{"event": "position_stage", "index": 186, "seeds_drawn": 187, "stage": "depth3", "ts": 1788914346.231976}
+{"event": "position_stage", "index": 186, "seeds_drawn": 187, "stage": "depth6", "ts": 1788914346.4714382}
+{"event": "position_done", "index": 186, "positions_completed": 187, "queries_spent": 935, "seeds_drawn": 187, "ts": 1788914346.759655}
+{"event": "position_start", "index": 187, "ts": 1788914346.760124}
+{"event": "position_stage", "index": 187, "seeds_drawn": 187, "stage": "bound", "ts": 1788914346.879425}
+{"event": "position_stage", "index": 187, "seeds_drawn": 188, "stage": "incumbent", "ts": 1788914346.879902}
+{"event": "position_stage", "index": 187, "seeds_drawn": 188, "stage": "depth3", "ts": 1788914347.894258}
+{"event": "position_stage", "index": 187, "seeds_drawn": 188, "stage": "depth6", "ts": 1788914348.135848}
+{"event": "position_done", "index": 187, "positions_completed": 188, "queries_spent": 940, "seeds_drawn": 188, "ts": 1788914348.425895}
+{"event": "position_start", "index": 188, "ts": 1788914348.426398}
+{"event": "position_stage", "index": 188, "seeds_drawn": 188, "stage": "bound", "ts": 1788914348.530331}
+{"event": "position_stage", "index": 188, "seeds_drawn": 189, "stage": "incumbent", "ts": 1788914348.5308402}
+{"event": "position_stage", "index": 188, "seeds_drawn": 189, "stage": "depth3", "ts": 1788914349.57532}
+{"event": "position_stage", "index": 188, "seeds_drawn": 189, "stage": "depth6", "ts": 1788914349.847968}
+{"event": "position_done", "index": 188, "positions_completed": 189, "queries_spent": 945, "seeds_drawn": 189, "ts": 1788914350.4924722}
+{"event": "position_start", "index": 189, "ts": 1788914350.492949}
+{"event": "position_stage", "index": 189, "seeds_drawn": 189, "stage": "bound", "ts": 1788914350.597524}
+{"event": "position_stage", "index": 189, "seeds_drawn": 190, "stage": "incumbent", "ts": 1788914350.597949}
+{"event": "position_stage", "index": 189, "seeds_drawn": 190, "stage": "depth3", "ts": 1788914351.585286}
+{"event": "position_stage", "index": 189, "seeds_drawn": 190, "stage": "depth6", "ts": 1788914351.869542}
+{"event": "position_done", "index": 189, "positions_completed": 190, "queries_spent": 950, "seeds_drawn": 190, "ts": 1788914352.930939}
+{"event": "position_start", "index": 190, "ts": 1788914352.931424}
+{"event": "position_stage", "index": 190, "seeds_drawn": 190, "stage": "bound", "ts": 1788914353.051615}
+{"event": "position_stage", "index": 190, "seeds_drawn": 191, "stage": "incumbent", "ts": 1788914353.052115}
+{"event": "position_stage", "index": 190, "seeds_drawn": 191, "stage": "depth3", "ts": 1788914354.037729}
+{"event": "position_stage", "index": 190, "seeds_drawn": 191, "stage": "depth6", "ts": 1788914354.3015091}
+{"event": "position_done", "index": 190, "positions_completed": 191, "queries_spent": 955, "seeds_drawn": 191, "ts": 1788914355.139096}
+{"event": "position_start", "index": 191, "ts": 1788914355.139549}
+{"event": "position_stage", "index": 191, "seeds_drawn": 191, "stage": "bound", "ts": 1788914355.2502909}
+{"event": "position_stage", "index": 191, "seeds_drawn": 192, "stage": "incumbent", "ts": 1788914355.2507799}
+{"event": "position_stage", "index": 191, "seeds_drawn": 192, "stage": "depth3", "ts": 1788914356.242809}
+{"event": "position_stage", "index": 191, "seeds_drawn": 192, "stage": "depth6", "ts": 1788914356.50898}
+{"event": "position_done", "index": 191, "positions_completed": 192, "queries_spent": 960, "seeds_drawn": 192, "ts": 1788914357.0017788}
+{"event": "position_start", "index": 192, "ts": 1788914357.002251}
+{"event": "position_stage", "index": 192, "seeds_drawn": 192, "stage": "bound", "ts": 1788914357.115584}
+{"event": "position_stage", "index": 192, "seeds_drawn": 193, "stage": "incumbent", "ts": 1788914357.115788}
+{"event": "position_stage", "index": 192, "seeds_drawn": 193, "stage": "depth3", "ts": 1788914358.131052}
+{"event": "position_stage", "index": 192, "seeds_drawn": 193, "stage": "depth6", "ts": 1788914358.369685}
+{"event": "position_done", "index": 192, "positions_completed": 193, "queries_spent": 965, "seeds_drawn": 193, "ts": 1788914358.7883961}
+{"event": "position_start", "index": 193, "ts": 1788914358.788873}
+{"event": "position_stage", "index": 193, "seeds_drawn": 193, "stage": "bound", "ts": 1788914358.914001}
+{"event": "position_stage", "index": 193, "seeds_drawn": 194, "stage": "incumbent", "ts": 1788914358.914475}
+{"event": "position_stage", "index": 193, "seeds_drawn": 194, "stage": "depth3", "ts": 1788914360.074513}
+{"event": "position_stage", "index": 193, "seeds_drawn": 194, "stage": "depth6", "ts": 1788914360.31647}
+{"event": "position_done", "index": 193, "positions_completed": 194, "queries_spent": 970, "seeds_drawn": 194, "ts": 1788914360.7156549}
+{"event": "position_start", "index": 194, "ts": 1788914360.716154}
+{"event": "position_stage", "index": 194, "seeds_drawn": 194, "stage": "bound", "ts": 1788914360.814985}
+{"event": "position_stage", "index": 194, "seeds_drawn": 195, "stage": "incumbent", "ts": 1788914360.815464}
+{"event": "position_stage", "index": 194, "seeds_drawn": 195, "stage": "depth3", "ts": 1788914361.7376199}
+{"event": "position_stage", "index": 194, "seeds_drawn": 195, "stage": "depth6", "ts": 1788914361.97198}
+{"event": "position_done", "index": 194, "positions_completed": 195, "queries_spent": 975, "seeds_drawn": 195, "ts": 1788914362.2503622}
+{"event": "position_start", "index": 195, "ts": 1788914362.250829}
+{"event": "position_stage", "index": 195, "seeds_drawn": 195, "stage": "bound", "ts": 1788914362.3511}
+{"event": "position_stage", "index": 195, "seeds_drawn": 196, "stage": "incumbent", "ts": 1788914362.351496}
+{"event": "position_stage", "index": 195, "seeds_drawn": 196, "stage": "depth3", "ts": 1788914363.371789}
+{"event": "position_stage", "index": 195, "seeds_drawn": 196, "stage": "depth6", "ts": 1788914363.6153972}
+{"event": "position_done", "index": 195, "positions_completed": 196, "queries_spent": 980, "seeds_drawn": 196, "ts": 1788914363.8691351}
+{"event": "position_start", "index": 196, "ts": 1788914363.869596}
+{"event": "position_stage", "index": 196, "seeds_drawn": 196, "stage": "bound", "ts": 1788914363.969716}
+{"event": "position_stage", "index": 196, "seeds_drawn": 197, "stage": "incumbent", "ts": 1788914363.9701939}
+{"event": "position_stage", "index": 196, "seeds_drawn": 197, "stage": "depth3", "ts": 1788914364.942803}
+{"event": "position_stage", "index": 196, "seeds_drawn": 197, "stage": "depth6", "ts": 1788914365.192804}
+{"event": "position_done", "index": 196, "positions_completed": 197, "queries_spent": 985, "seeds_drawn": 197, "ts": 1788914365.464597}
+{"event": "position_start", "index": 197, "ts": 1788914365.465034}
+{"event": "position_stage", "index": 197, "seeds_drawn": 197, "stage": "bound", "ts": 1788914365.576354}
+{"event": "position_stage", "index": 197, "seeds_drawn": 198, "stage": "incumbent", "ts": 1788914365.576819}
+{"event": "position_stage", "index": 197, "seeds_drawn": 198, "stage": "depth3", "ts": 1788914366.62849}
+{"event": "position_stage", "index": 197, "seeds_drawn": 198, "stage": "depth6", "ts": 1788914366.886951}
+{"event": "position_done", "index": 197, "positions_completed": 198, "queries_spent": 990, "seeds_drawn": 198, "ts": 1788914367.6011891}
+{"event": "position_start", "index": 198, "ts": 1788914367.60166}
+{"event": "position_stage", "index": 198, "seeds_drawn": 198, "stage": "bound", "ts": 1788914367.713716}
+{"event": "position_stage", "index": 198, "seeds_drawn": 199, "stage": "incumbent", "ts": 1788914367.7142222}
+{"event": "position_stage", "index": 198, "seeds_drawn": 199, "stage": "depth3", "ts": 1788914368.755182}
+{"event": "position_stage", "index": 198, "seeds_drawn": 199, "stage": "depth6", "ts": 1788914368.994158}
+{"event": "position_done", "index": 198, "positions_completed": 199, "queries_spent": 995, "seeds_drawn": 199, "ts": 1788914369.336123}
+{"event": "position_start", "index": 199, "ts": 1788914369.336545}
+{"event": "position_stage", "index": 199, "seeds_drawn": 199, "stage": "bound", "ts": 1788914369.4542289}
+{"event": "position_stage", "index": 199, "seeds_drawn": 200, "stage": "incumbent", "ts": 1788914369.4547}
+{"event": "position_stage", "index": 199, "seeds_drawn": 200, "stage": "depth3", "ts": 1788914370.490141}
+{"event": "position_stage", "index": 199, "seeds_drawn": 200, "stage": "depth6", "ts": 1788914370.741472}
+{"event": "position_done", "index": 199, "positions_completed": 200, "queries_spent": 1000, "seeds_drawn": 200, "ts": 1788914371.2185721}
+{"event": "position_start", "index": 200, "ts": 1788914371.2190468}
+{"event": "position_stage", "index": 200, "seeds_drawn": 200, "stage": "bound", "ts": 1788914371.3201852}
+{"event": "position_stage", "index": 200, "seeds_drawn": 201, "stage": "incumbent", "ts": 1788914371.320649}
+{"event": "position_stage", "index": 200, "seeds_drawn": 201, "stage": "depth3", "ts": 1788914372.321884}
+{"event": "position_stage", "index": 200, "seeds_drawn": 201, "stage": "depth6", "ts": 1788914372.5789309}
+{"event": "position_done", "index": 200, "positions_completed": 201, "queries_spent": 1005, "seeds_drawn": 201, "ts": 1788914372.8950028}
+{"event": "position_start", "index": 201, "ts": 1788914372.8954592}
+{"event": "position_stage", "index": 201, "seeds_drawn": 201, "stage": "bound", "ts": 1788914372.991422}
+{"event": "position_stage", "index": 201, "seeds_drawn": 202, "stage": "incumbent", "ts": 1788914372.9918861}
+{"event": "position_stage", "index": 201, "seeds_drawn": 202, "stage": "depth3", "ts": 1788914374.124668}
+{"event": "position_stage", "index": 201, "seeds_drawn": 202, "stage": "depth6", "ts": 1788914374.3792121}
+{"event": "position_done", "index": 201, "positions_completed": 202, "queries_spent": 1010, "seeds_drawn": 202, "ts": 1788914374.650697}
+{"event": "position_start", "index": 202, "ts": 1788914374.651148}
+{"event": "position_stage", "index": 202, "seeds_drawn": 202, "stage": "bound", "ts": 1788914374.7507231}
+{"event": "position_stage", "index": 202, "seeds_drawn": 203, "stage": "incumbent", "ts": 1788914374.751201}
+{"event": "position_stage", "index": 202, "seeds_drawn": 203, "stage": "depth3", "ts": 1788914375.733814}
+{"event": "position_stage", "index": 202, "seeds_drawn": 203, "stage": "depth6", "ts": 1788914375.957383}
+{"event": "position_done", "index": 202, "positions_completed": 203, "queries_spent": 1015, "seeds_drawn": 203, "ts": 1788914376.1922078}
+{"event": "position_start", "index": 203, "ts": 1788914376.192381}
+{"event": "position_stage", "index": 203, "seeds_drawn": 203, "stage": "bound", "ts": 1788914376.302793}
+{"event": "position_stage", "index": 203, "seeds_drawn": 204, "stage": "incumbent", "ts": 1788914376.3032691}
+{"event": "position_stage", "index": 203, "seeds_drawn": 204, "stage": "depth3", "ts": 1788914377.570418}
+{"event": "position_stage", "index": 203, "seeds_drawn": 204, "stage": "depth6", "ts": 1788914377.816233}
+{"event": "position_done", "index": 203, "positions_completed": 204, "queries_spent": 1020, "seeds_drawn": 204, "ts": 1788914378.167819}
+{"event": "position_start", "index": 204, "ts": 1788914378.168261}
+{"event": "position_stage", "index": 204, "seeds_drawn": 204, "stage": "bound", "ts": 1788914378.2880871}
+{"event": "position_stage", "index": 204, "seeds_drawn": 205, "stage": "incumbent", "ts": 1788914378.288528}
+{"event": "position_stage", "index": 204, "seeds_drawn": 205, "stage": "depth3", "ts": 1788914379.414819}
+{"event": "position_stage", "index": 204, "seeds_drawn": 205, "stage": "depth6", "ts": 1788914379.684939}
+{"event": "position_done", "index": 204, "positions_completed": 205, "queries_spent": 1025, "seeds_drawn": 205, "ts": 1788914380.2088928}
+{"event": "position_start", "index": 205, "ts": 1788914380.2091131}
+{"event": "position_stage", "index": 205, "seeds_drawn": 205, "stage": "bound", "ts": 1788914380.420728}
+{"event": "position_stage", "index": 205, "seeds_drawn": 206, "stage": "incumbent", "ts": 1788914380.4209301}
+{"event": "position_stage", "index": 205, "seeds_drawn": 206, "stage": "depth3", "ts": 1788914381.566058}
+{"event": "position_stage", "index": 205, "seeds_drawn": 206, "stage": "depth6", "ts": 1788914381.81275}
+{"event": "position_done", "index": 205, "positions_completed": 206, "queries_spent": 1030, "seeds_drawn": 206, "ts": 1788914382.189898}
+{"event": "position_start", "index": 206, "ts": 1788914382.190377}
+{"event": "position_stage", "index": 206, "seeds_drawn": 206, "stage": "bound", "ts": 1788914382.304725}
+{"event": "position_stage", "index": 206, "seeds_drawn": 207, "stage": "incumbent", "ts": 1788914382.305181}
+{"event": "position_stage", "index": 206, "seeds_drawn": 207, "stage": "depth3", "ts": 1788914383.2807438}
+{"event": "position_stage", "index": 206, "seeds_drawn": 207, "stage": "depth6", "ts": 1788914383.5203142}
+{"event": "position_done", "index": 206, "positions_completed": 207, "queries_spent": 1035, "seeds_drawn": 207, "ts": 1788914383.78095}
+{"event": "position_start", "index": 207, "ts": 1788914383.78144}
+{"event": "position_stage", "index": 207, "seeds_drawn": 207, "stage": "bound", "ts": 1788914383.892205}
+{"event": "position_stage", "index": 207, "seeds_drawn": 208, "stage": "incumbent", "ts": 1788914383.892619}
+{"event": "position_stage", "index": 207, "seeds_drawn": 208, "stage": "depth3", "ts": 1788914384.873947}
+{"event": "position_stage", "index": 207, "seeds_drawn": 208, "stage": "depth6", "ts": 1788914385.1036081}
+{"event": "position_done", "index": 207, "positions_completed": 208, "queries_spent": 1040, "seeds_drawn": 208, "ts": 1788914385.360042}
+{"event": "position_start", "index": 208, "ts": 1788914385.36053}
+{"event": "position_stage", "index": 208, "seeds_drawn": 208, "stage": "bound", "ts": 1788914385.466648}
+{"event": "position_stage", "index": 208, "seeds_drawn": 209, "stage": "incumbent", "ts": 1788914385.467156}
+{"event": "position_stage", "index": 208, "seeds_drawn": 209, "stage": "depth3", "ts": 1788914386.4445848}
+{"event": "position_stage", "index": 208, "seeds_drawn": 209, "stage": "depth6", "ts": 1788914386.667815}
+{"event": "position_done", "index": 208, "positions_completed": 209, "queries_spent": 1045, "seeds_drawn": 209, "ts": 1788914386.89077}
+{"event": "position_start", "index": 209, "ts": 1788914386.89126}
+{"event": "position_stage", "index": 209, "seeds_drawn": 209, "stage": "bound", "ts": 1788914387.0054872}
+{"event": "position_stage", "index": 209, "seeds_drawn": 210, "stage": "incumbent", "ts": 1788914387.005975}
+{"event": "position_stage", "index": 209, "seeds_drawn": 210, "stage": "depth3", "ts": 1788914388.0584269}
+{"event": "position_stage", "index": 209, "seeds_drawn": 210, "stage": "depth6", "ts": 1788914388.3591812}
+{"event": "position_done", "index": 209, "positions_completed": 210, "queries_spent": 1050, "seeds_drawn": 210, "ts": 1788914390.213299}
+{"event": "position_start", "index": 210, "ts": 1788914390.2137809}
+{"event": "position_stage", "index": 210, "seeds_drawn": 210, "stage": "bound", "ts": 1788914390.3311338}
+{"event": "position_stage", "index": 210, "seeds_drawn": 211, "stage": "incumbent", "ts": 1788914390.3316338}
+{"event": "position_stage", "index": 210, "seeds_drawn": 211, "stage": "depth3", "ts": 1788914391.440713}
+{"event": "position_stage", "index": 210, "seeds_drawn": 211, "stage": "depth6", "ts": 1788914391.715776}
+{"event": "position_done", "index": 210, "positions_completed": 211, "queries_spent": 1055, "seeds_drawn": 211, "ts": 1788914392.783913}
+{"event": "position_start", "index": 211, "ts": 1788914392.784368}
+{"event": "position_stage", "index": 211, "seeds_drawn": 211, "stage": "bound", "ts": 1788914392.90925}
+{"event": "position_stage", "index": 211, "seeds_drawn": 212, "stage": "incumbent", "ts": 1788914392.9096682}
+{"event": "position_stage", "index": 211, "seeds_drawn": 212, "stage": "depth3", "ts": 1788914393.908231}
+{"event": "position_stage", "index": 211, "seeds_drawn": 212, "stage": "depth6", "ts": 1788914394.181727}
+{"event": "position_done", "index": 211, "positions_completed": 212, "queries_spent": 1060, "seeds_drawn": 212, "ts": 1788914395.119186}
+{"event": "position_start", "index": 212, "ts": 1788914395.119662}
+{"event": "position_stage", "index": 212, "seeds_drawn": 212, "stage": "bound", "ts": 1788914395.244728}
+{"event": "position_stage", "index": 212, "seeds_drawn": 213, "stage": "incumbent", "ts": 1788914395.245196}
+{"event": "position_stage", "index": 212, "seeds_drawn": 213, "stage": "depth3", "ts": 1788914396.309085}
+{"event": "position_stage", "index": 212, "seeds_drawn": 213, "stage": "depth6", "ts": 1788914396.575812}
+{"event": "position_done", "index": 212, "positions_completed": 213, "queries_spent": 1065, "seeds_drawn": 213, "ts": 1788914397.476117}
+{"event": "position_start", "index": 213, "ts": 1788914397.4766011}
+{"event": "position_stage", "index": 213, "seeds_drawn": 213, "stage": "bound", "ts": 1788914397.655467}
+{"event": "position_stage", "index": 213, "seeds_drawn": 214, "stage": "incumbent", "ts": 1788914397.655981}
+{"event": "position_stage", "index": 213, "seeds_drawn": 214, "stage": "depth3", "ts": 1788914398.7816908}
+{"event": "position_stage", "index": 213, "seeds_drawn": 214, "stage": "depth6", "ts": 1788914399.056768}
+{"event": "position_done", "index": 213, "positions_completed": 214, "queries_spent": 1070, "seeds_drawn": 214, "ts": 1788914399.835146}
+{"event": "position_start", "index": 214, "ts": 1788914399.835636}
+{"event": "position_stage", "index": 214, "seeds_drawn": 214, "stage": "bound", "ts": 1788914399.955519}
+{"event": "position_stage", "index": 214, "seeds_drawn": 215, "stage": "incumbent", "ts": 1788914399.95598}
+{"event": "position_stage", "index": 214, "seeds_drawn": 215, "stage": "depth3", "ts": 1788914400.972318}
+{"event": "position_stage", "index": 214, "seeds_drawn": 215, "stage": "depth6", "ts": 1788914401.262367}
+{"event": "position_done", "index": 214, "positions_completed": 215, "queries_spent": 1075, "seeds_drawn": 215, "ts": 1788914402.534425}
+{"event": "position_start", "index": 215, "ts": 1788914402.53491}
+{"event": "position_stage", "index": 215, "seeds_drawn": 215, "stage": "bound", "ts": 1788914402.651219}
+{"event": "position_stage", "index": 215, "seeds_drawn": 216, "stage": "incumbent", "ts": 1788914402.651737}
+{"event": "position_stage", "index": 215, "seeds_drawn": 216, "stage": "depth3", "ts": 1788914403.7023392}
+{"event": "position_stage", "index": 215, "seeds_drawn": 216, "stage": "depth6", "ts": 1788914403.986989}
+{"event": "position_done", "index": 215, "positions_completed": 216, "queries_spent": 1080, "seeds_drawn": 216, "ts": 1788914404.724823}
+{"event": "position_start", "index": 216, "ts": 1788914404.725306}
+{"event": "position_stage", "index": 216, "seeds_drawn": 216, "stage": "bound", "ts": 1788914404.8456802}
+{"event": "position_stage", "index": 216, "seeds_drawn": 217, "stage": "incumbent", "ts": 1788914404.846144}
+{"event": "position_stage", "index": 216, "seeds_drawn": 217, "stage": "depth3", "ts": 1788914405.8972769}
+{"event": "position_stage", "index": 216, "seeds_drawn": 217, "stage": "depth6", "ts": 1788914406.226933}
+{"event": "position_done", "index": 216, "positions_completed": 217, "queries_spent": 1085, "seeds_drawn": 217, "ts": 1788914407.118763}
+{"event": "position_start", "index": 217, "ts": 1788914407.118999}
+{"event": "position_stage", "index": 217, "seeds_drawn": 217, "stage": "bound", "ts": 1788914407.246007}
+{"event": "position_stage", "index": 217, "seeds_drawn": 218, "stage": "incumbent", "ts": 1788914407.24648}
+{"event": "position_stage", "index": 217, "seeds_drawn": 218, "stage": "depth3", "ts": 1788914408.296476}
+{"event": "position_stage", "index": 217, "seeds_drawn": 218, "stage": "depth6", "ts": 1788914408.551786}
+{"event": "position_done", "index": 217, "positions_completed": 218, "queries_spent": 1090, "seeds_drawn": 218, "ts": 1788914408.9604962}
+{"event": "position_start", "index": 218, "ts": 1788914408.960983}
+{"event": "position_stage", "index": 218, "seeds_drawn": 218, "stage": "bound", "ts": 1788914409.077491}
+{"event": "position_stage", "index": 218, "seeds_drawn": 219, "stage": "incumbent", "ts": 1788914409.077981}
+{"event": "position_stage", "index": 218, "seeds_drawn": 219, "stage": "depth3", "ts": 1788914410.060317}
+{"event": "position_stage", "index": 218, "seeds_drawn": 219, "stage": "depth6", "ts": 1788914410.31022}
+{"event": "position_done", "index": 218, "positions_completed": 219, "queries_spent": 1095, "seeds_drawn": 219, "ts": 1788914410.5945442}
+{"event": "position_start", "index": 219, "ts": 1788914410.595022}
+{"event": "position_stage", "index": 219, "seeds_drawn": 219, "stage": "bound", "ts": 1788914410.6978948}
+{"event": "position_stage", "index": 219, "seeds_drawn": 220, "stage": "incumbent", "ts": 1788914410.6983922}
+{"event": "position_stage", "index": 219, "seeds_drawn": 220, "stage": "depth3", "ts": 1788914411.6769438}
+{"event": "position_stage", "index": 219, "seeds_drawn": 220, "stage": "depth6", "ts": 1788914411.906396}
+{"event": "position_done", "index": 219, "positions_completed": 220, "queries_spent": 1100, "seeds_drawn": 220, "ts": 1788914412.141732}
+{"event": "position_start", "index": 220, "ts": 1788914412.142211}
+{"event": "position_stage", "index": 220, "seeds_drawn": 220, "stage": "bound", "ts": 1788914412.264106}
+{"event": "position_stage", "index": 220, "seeds_drawn": 221, "stage": "incumbent", "ts": 1788914412.2645671}
+{"event": "position_stage", "index": 220, "seeds_drawn": 221, "stage": "depth3", "ts": 1788914413.245078}
+{"event": "position_stage", "index": 220, "seeds_drawn": 221, "stage": "depth6", "ts": 1788914413.483724}
+{"event": "position_done", "index": 220, "positions_completed": 221, "queries_spent": 1105, "seeds_drawn": 221, "ts": 1788914413.72084}
+{"event": "run_end", "positions_completed": 221, "queries_spent": 1105, "seeds_drawn": 221, "ts": 1788914413.921449, "verdict": "OK"}
