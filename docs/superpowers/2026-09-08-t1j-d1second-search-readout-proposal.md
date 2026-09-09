@@ -12,6 +12,16 @@ carries. I did **not** read a single value of `raw_policy`, `root_visits`, `sele
 has been computed. That is the point of freezing first: a metric chosen after seeing the field it
 measures is not a preregistration.
 
+**AMENDED 2026-09-08, before implementation, documentation only.** One sentence of §1 claimed D1′
+had shown T1j's moves are "not conspicuously missing from our policy's top choices". That
+overstated a matched result: D1′ compared *roles*, so it constrains the fragmentation-associated
+**excess** and not the shared level. The sentence is replaced in §1 and its consequence is drawn out
+in §3. **No metric, denominator, statistic, threshold, resampling seed, secondary report or budget
+changed** — the amendment removes an unsupported claim about D1′ and adds a caveat about what D1″
+does not know in advance. The same overstatement stands uncorrected in commit `7f4a0f9`'s message and
+in my summary to the reviewer; this note is the correction of record for both, and history is not
+rewritten.
+
 ---
 
 ## 1. Where D1′ left the question
@@ -23,9 +33,14 @@ answer was **NO_GO**: support was adequate, the matched excess was **small but p
 (−0.1944 to 0.1827). Per the frozen wording correction, that is *not* a null and *not* a finding of
 "no excess" — it is an effect too small and too unstable to justify a confirmation run.
 
-What D1′ therefore did **not** find is strong evidence that T1j's moves are missing from our
-policy's top choices. That leaves a different mechanism unexamined, and it is the one worth asking
-next:
+**Stated precisely, because a looser version of this sentence was wrong.** D1′ did **not** establish
+that T1j's moves generally appear among our policy's top five. It established only that the
+fragmentation cohort did not show a sufficiently large and stable **excess** of outside-top-five
+moves *relative to its matched controls*. LPRD could still be common — even predominant — in **both**
+roles; a matched design measures the difference between roles and is silent about the level shared by
+them. Nothing in D1′ licenses a claim about how often our policy ranks T1j's move highly overall.
+
+What D1′ leaves unexamined is a different mechanism, and it is the one worth asking next:
 
 > **D1″'s question.** When our raw policy *does* rank T1j's move among its top choices, does the
 > 400-simulation search then fail to carry that move through — never visiting it, or visiting it so
@@ -75,6 +90,13 @@ For each row, with `K = 5` **unchanged from D1′**:
 >
 > In words: our policy put T1j's move in its top five, and after 400 simulations the visit
 > distribution did not.
+
+**How many rows can even be suppressed is UNKNOWN and deliberately unmeasured.** `ss` is defined on
+the complement of `lprd` — rows where `rank_raw ≤ 5` — and D1′ says nothing about the size of that
+complement in either role, for the reason given in §1. It may be most of the cohort or little of it.
+That is not a gap to be closed by peeking: the eligibility floors (§5) are exactly the instrument for
+refusing a statistic computed over too little, and they are checked before any replicate is drawn. If
+the complement is too small, the frozen answer is `NO_GO — insufficient support`, not a rescue.
 
 **Denominator: every row in the cell, not only the policy-eligible ones.** A row where the policy
 never ranked T1j's move highly cannot have been suppressed, and scores `False` — which is correct,
