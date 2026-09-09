@@ -9,6 +9,12 @@ with **different seeds**, and §8 forbids pooling or rate-comparison inference w
 
 **AMENDED TWICE, 2026-09-09, before implementation, plan only.**
 
+**Third amendment.** §2.2 narrowed twice more: the terminal reason is exactly `win` or `cap` (this
+protocol has **no resignation**, which my first draft listed), and the ply sequence must be exactly
+`opening_bound + 1 … task_result.plies` with each mover **equal to its expected colour** — contiguity
+cannot see a missing first or final record, and alternation cannot see every mover flipped. Three
+controls added.
+
 **Second amendment.** §2.2 freezes what a **transcript** is, structurally. Without it the per-cell
 screen is vacuous: hashing the whole record makes `seed`, `task_id` and `rep` give 46 distinct
 transcripts for a cell that played one game 46 times. Four controls are added with it. Nothing else
@@ -103,8 +109,14 @@ built to catch. A screen whose diversity comes from the schedule rather than the
 > **Within a cell, a transcript is the type-strict ordered sequence of post-opening `(mover, row,
 > col)` moves, followed by the terminal reason and the winner. It is EXACTLY that and nothing else.**
 
-**Included:** each post-opening ply's mover and its `(row, col)`, in played order; the terminal reason
-(win, resignation, ply-cap termination); the winner.
+**Included:** each post-opening ply's `mover` and its `(row, col)`, in played order; the terminal
+reason; the winner.
+
+**The terminal reason is one of exactly two values: `win` or `cap`.** `l0_match_rules.TERMINAL_REASONS`
+is `("win", "cap")` and refuses anything else. **This protocol has no resignation** — an earlier draft
+of this section listed one, which would have written a state the runner cannot produce into the
+definition of a transcript. A third value appearing in a record is a **refusal**, not a new
+transcript.
 
 **Excluded, explicitly:** `task_id`, `rep`, `seed` and every derived stream; timestamps and any
 timing; every diagnostic (visit counts, root values, policy ranks, override flags, `top2`); and all
@@ -115,11 +127,29 @@ provenance (identities, digests, file paths, engine or plan versions). The **ope
 values, `row` and `col` are `int`, and `"11"` is not `11`. A record whose moves arrive as strings
 describes a different thing and must refuse rather than silently compare unequal.
 
-**Malformed ply records REFUSE; they never manufacture diversity.** Ply indices must be present,
-strictly increasing, contiguous from the first post-opening ply, with no duplicates and no gaps, and
-movers must alternate. A missing, duplicated or out-of-order ply makes the transcript **undefined**,
-and an undefined transcript **VOIDs the run** — it must never be hashed into a novel value that
-inflates the distinct count.
+**Malformed ply records REFUSE; they never manufacture diversity.**
+
+🔴 **"Contiguous from the first post-opening ply" was not enough**, and the gap is at both ends: a
+sequence missing its FIRST post-opening record is still contiguous from whatever record survives, and
+one missing its LAST is still contiguous up to there. Contiguity is a property of the interior; it
+cannot see a truncated boundary.
+
+**Frozen instead — the sequence must be EXACTLY:**
+
+> `opening_bound.ply + 1` … `task_result.plies`
+
+— every index present, once, in increasing order, with **both endpoints anchored to records the run
+itself wrote**. The first index is fixed by the game's own `opening_bound` and the last by its own
+`task_result`, so a missing record at either end is a **count mismatch against a declared boundary**,
+not a judgement call.
+
+**Each mover must EQUAL THE COLOUR EXPECTED FOR ITS PLY**, derived from the task's colour arm and the
+ply's parity — not merely alternate. Alternation is preserved by flipping every mover in a game, which
+would swap which side played every move while passing an alternation check, and would silently turn
+one transcript into a different one.
+
+An undefined transcript **VOIDs the run** — it is never hashed into a novel value that inflates the
+distinct count.
 
 ⚠ **No blanket "effective n = 16" claim is made.** That would hold only if **all sixteen** cells
 collapsed completely; a partial collapse reduces the effective sample by an amount this design does
@@ -272,7 +302,11 @@ Under `docs/superpowers/evidence/<run-date>-t1j-h2-deterministic-readout/`, crea
    - **changing a single played move creates a distinct transcript**, so the comparison is not inert
      in the other direction;
    - a **missing, duplicated or out-of-order ply record REFUSES by name**, and does not become a
-     novel transcript that inflates the count;
+     novel transcript that inflates the count — with separate controls that **remove the FIRST ply**,
+     **remove the FINAL ply**, and **flip every mover while preserving alternation**. All three must
+     VOID; the first two are the cases plain contiguity cannot see, and the third is the one an
+     alternation check cannot see;
+   - a terminal reason outside `("win", "cap")` **refuses**;
    - the report carries **all 16 per-cell distinct counts**, not a global figure and not only the
      minimum, so a reader can see which cell was thin.
 7. Every reported interval carries "nominal under the independence model" **in the report itself**,
