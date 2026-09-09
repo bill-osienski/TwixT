@@ -1,0 +1,38 @@
+EXECUTION RECORD -- 2026-09-09T21:55:14Z
+
+command : PYTHONPATH=. .venv/bin/python docs/superpowers/evidence/2026-09-09-t1j-d1second-execution/01_run_once.py.txt
+exit    : exit=0
+commit  : 2c608acb8969f44a127453aa89fa67ca0f215aae
+input   : docs/superpowers/evidence/2026-09-08-t1j-d1-acquisition/06_d1_records.json
+input sha256: 8aec1da395ce0eb09b695e5fc6085f00bc63664fbb7325afbb4b980b8a27f81c
+result  : 03_d1second_result.json, sha256 c891184c5c2d139933cea7e34a1f2d3ee5229add76394baa553ff8ae1dee63bb
+
+== the acquisition manifest, verified IMMEDIATELY BEFORE USE, inside the run ==
+  acquisition manifest: 19 OK, 0 not OK, shasum exit 0
+
+== the record is UNCHANGED by the analysis ==
+  files verifying after the run: 19 of 19
+
+== tree state at run time ==
+  tracked modifications: 0
+  The run printed 'tree clean: False' because THIS ROUND'S OWN evidence files were
+  still untracked. No tracked file differed from the commit above.
+
+== six gates, after ==
+  D1_EXECUTION_AUTHORIZED            False
+  SCREEN_AUTHORIZED                  False
+  H1_EXECUTION_AUTHORIZED            False
+  L0_EXECUTION_AUTHORIZED            False
+  LOWPLY_QUALIFICATION_AUTHORIZED    False
+  RUNTIME_REQUAL_AUTHORIZED          False
+  ALL SIX FALSE: True
+
+== seeds, unchanged by this round ==
+  [202615000, 202615221): accounted 221 / exposed 221 / retired 221
+
+== no JVM was started (matching the java BINARY, not command text) ==
+  none
+
+  ⚠ My first version of this check grepped for 'java|t1j' and matched THIS OWN
+    COMMAND, whose text contains both. A pattern that matches the observer is
+    not an observation.

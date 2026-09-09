@@ -1,0 +1,67 @@
+"""THE D1'' ANALYSIS. ONCE.
+
+Verifies the acquisition manifest IMMEDIATELY BEFORE USE, hashes the record it is
+about to read, then calls the checked public entry exactly once and writes the
+complete result create-only. Nothing is tuned, and nothing is re-run: a refusal
+is recorded as the outcome.
+
+No model, no JVM, no query, no game, no seed, no registry, no gate.
+"""
+import hashlib
+import json
+import pathlib
+import subprocess
+import sys
+import time
+
+ACQ = pathlib.Path("docs/superpowers/evidence/2026-09-08-t1j-d1-acquisition")
+RECORD = ACQ / "06_d1_records.json"
+OUT = pathlib.Path("docs/superpowers/evidence/2026-09-09-t1j-d1second-execution")
+
+# ── 1. the acquisition manifest, verified NOW, not trusted from a prior run ──
+mani = subprocess.run(["shasum", "-a", "256", "-c", "A_MANIFEST.sha256.txt"],
+                      cwd=ACQ, capture_output=True, text=True)
+ok = [l for l in mani.stdout.splitlines() if l.endswith(": OK")]
+bad = [l for l in mani.stdout.splitlines() if not l.endswith(": OK")]
+print(f"acquisition manifest: {len(ok)} OK, {len(bad)} not OK, shasum exit {mani.returncode}")
+for l in bad:
+    print("   ", l)
+if mani.returncode != 0 or bad:
+    print("REFUSING: the sealed acquisition does not verify")
+    raise SystemExit(2)
+
+digest = hashlib.sha256(RECORD.read_bytes()).hexdigest()
+print(f"input record: {RECORD}")
+print(f"input sha256: {digest}")
+commit = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+dirty = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True).stdout
+print(f"code commit : {commit}")
+print(f"tree clean  : {not dirty.strip()}")
+
+# ── 2. the checked public entry, ONCE ───────────────────────────────────────
+from scripts.GPU.alphazero import d1second_analysis as DS
+
+report = json.loads(RECORD.read_text())
+t0 = time.time()
+try:
+    result = DS.analyse_search_suppression(report)
+except Exception as e:                                   # recorded, never repaired
+    print(f"\nREFUSED after {time.time() - t0:.1f}s: {type(e).__name__}: {e}")
+    raise SystemExit(3)
+elapsed = time.time() - t0
+print(f"\nanalyse_search_suppression: returned in {elapsed:.1f}s")
+
+path = OUT / "03_d1second_result.json"
+if path.exists():
+    print("REFUSING: the result file already exists; this is create-only")
+    raise SystemExit(4)
+path.write_text(json.dumps(result, indent=1, sort_keys=True, default=str) + "\n")
+print(f"wrote {path.name}, sha256 {hashlib.sha256(path.read_bytes()).hexdigest()}")
+
+print("\n=== THE FROZEN VERDICT ===")
+print(f"outcome  : {result['outcome']}")
+print(f"T        : {result['T']}")
+print(f"interval : {result['interval']}")
+print(f"floor    : {result['floor']}")
+print(f"prng     : {result['prng']}")
+print(f"validated: {result.get('validated')}")

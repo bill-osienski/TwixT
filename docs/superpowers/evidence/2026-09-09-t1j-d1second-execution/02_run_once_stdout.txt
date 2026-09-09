@@ -1,0 +1,16 @@
+acquisition manifest: 19 OK, 0 not OK, shasum exit 0
+input record: docs/superpowers/evidence/2026-09-08-t1j-d1-acquisition/06_d1_records.json
+input sha256: 8aec1da395ce0eb09b695e5fc6085f00bc63664fbb7325afbb4b980b8a27f81c
+code commit : 2c608acb8969f44a127453aa89fa67ca0f215aae
+tree clean  : False
+
+analyse_search_suppression: returned in 12.3s
+wrote 03_d1second_result.json, sha256 c891184c5c2d139933cea7e34a1f2d3ee5229add76394baa553ff8ae1dee63bb
+
+=== THE FROZEN VERDICT ===
+outcome  : NO_GO
+T        : -0.0231729055258467
+interval : (-0.07819287576020853, 0.012437810945273632)
+floor    : {'cells': 21, 'positions': 62, 'controls': 54, 'games': 17}
+prng     : {'bit_generator': 'PCG64', 'seed': 20260908, 'B': 10000}
+validated: {'positions_validated': 221, 'observables_per_position': 10}
