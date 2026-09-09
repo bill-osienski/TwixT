@@ -1,0 +1,24 @@
+#!/bin/sh
+# THE D1 ACQUISITION. ONCE. Driven as a FRESH SUBPROCESS through the public CLI,
+# with every path written out LITERALLY -- no shell variables. A $CMD that zsh
+# did not word-split produced a 0-second exit-127 non-launch on 2026-09-06, and
+# an unset variable here would silently become an empty argument.
+#
+# The classes directory must NOT exist beforehand: the compile step is
+# create-only, and so are --out and its sibling <out>.trace.jsonl.
+#
+# Bounds are the frozen module constants -- per-query 120 s, whole-run 5400 s.
+# No flag exists to change either, which is the point. --ply-cap is REQUIRED and
+# named explicitly because 5.5 [A1] forbids a silently defaulted cap.
+set -u
+
+.venv/bin/python -m scripts.GPU.alphazero.d1_probe \
+    --positions "docs/superpowers/evidence/2026-09-08-t1j-d1-acquisition/02_positions_221.json" \
+    --out       "docs/superpowers/evidence/2026-09-08-t1j-d1-acquisition/06_d1_records.json" \
+    --java      "/Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/jdk/jdk-17.0.20.1+1/Contents/Home/bin/java" \
+    --jar       "/Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/t1j.jar" \
+    --classes   "/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/8bb941b5-4c12-46cb-8c9e-d95c5af5a9fd/scratchpad/d1_classes_20260908" \
+    --ply-cap   280 \
+    --repo      . \
+    > "docs/superpowers/evidence/2026-09-08-t1j-d1-acquisition/07_stdout.txt" 2> "docs/superpowers/evidence/2026-09-08-t1j-d1-acquisition/08_stderr.txt"
+echo $? > "docs/superpowers/evidence/2026-09-08-t1j-d1-acquisition/09_exit.txt"

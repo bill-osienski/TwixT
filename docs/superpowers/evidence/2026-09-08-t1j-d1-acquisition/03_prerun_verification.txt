@@ -1,0 +1,36 @@
+PRE-RUN VERIFICATION -- 2026-09-09T00:32:18Z. Nothing has been executed.
+
+== output, trace and classes paths must all be ABSENT (create-only) ==
+  docs/superpowers/evidence/2026-09-08-t1j-d1-acquisition/06_d1_records.json                 absent
+  docs/superpowers/evidence/2026-09-08-t1j-d1-acquisition/06_d1_records.json.trace.jsonl     absent
+  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/8bb941b5-4c12-46cb-8c9e-d95c5af5a9fd/scratchpad/d1_classes_20260908 absent
+
+== the manifest ==
+  afe8b953b575b797f5e51e6044d45bb3dbdacc9bdf870655b15aef1790f0d0ee  docs/superpowers/evidence/2026-09-08-t1j-d1-acquisition/02_positions_221.json
+  rows 221; seeds 202615000..202615220; distinct 221
+  positional (row i == 202615000+i): True
+
+== registration and gates, as IMPORTED ==
+  block [202615000, 202615221): accounted 221 / exposed 0 / retired 0
+  registration barrier: SATISFIED
+  D1_EXECUTION_AUTHORIZED            False
+  SCREEN_AUTHORIZED                  False
+  H1_EXECUTION_AUTHORIZED            False
+  L0_EXECUTION_AUTHORIZED            False
+  LOWPLY_QUALIFICATION_AUTHORIZED    False
+  RUNTIME_REQUAL_AUTHORIZED          False
+  ALL SIX FALSE: True
+
+== the verified pinned toolchain ==
+  jar      /Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/t1j.jar
+  jar sha  53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7 == E4 pin: True
+  jdk_home /Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/jdk/jdk-17.0.20.1+1/Contents/Home
+  java     /Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/jdk/jdk-17.0.20.1+1/Contents/Home/bin/java
+  jdk identity: {'bin/java': 'af8b122943345320b179c75c3404d56a981017739746b75f9caf583632f0bea0', 'bin/javac': '6f5159301c750bba340390eda5fdd4a0959445355f97c40aa9c2addb00ede5ab', 'lib/modules': '28745573641057e822a972f223fc8e40db5c9df11ae3f7402764780afc2f1951', 'release': 'cb6064fe4d7b87d9fbb8b8c7702047044d1bbeac38e0c5217f595579b6cc764b'}
+
+== bounds that will apply (frozen constants, no CLI flag exists to change them) ==
+  per-query timeout 120s; run deadline 5400s (90 min); query cap 1105; expected spend 1105
+
+== git ==
+?? docs/superpowers/evidence/2026-09-08-t1j-d1-acquisition/
+HEAD 2049419

@@ -1,0 +1,16 @@
+frozen constants, read from d1_probe:
+  N_POSITIONS            221
+  EXPECTED_QUERY_SPEND   1105
+  QUERY_CAP              1105
+  PER_QUERY_TIMEOUT_S    120
+  RUN_DEADLINE_S         5400
+  SEED_INTERVAL          (202615000, 202615221)
+  D1_EXECUTION_AUTHORIZED False
+
+select_all: n_positions=221 frozen=227 excluded=6 seed_interval=[202615000, 202615221]
+seeds: 202615000 .. 202615220, 221 distinct, positional -> OK
+every one of 221 rows matches the pinned frozen selection on all 11 identity fields, in order
+
+wrote 02_positions_221.json: 235670 bytes
+sha256 afe8b953b575b797f5e51e6044d45bb3dbdacc9bdf870655b15aef1790f0d0ee
+_check_cohort on the written file: ACCEPTED
