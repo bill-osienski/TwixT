@@ -1,4 +1,4 @@
-# H2 — Plan-Only Preregistration: is T1j stronger than the **strongest deterministic use** of our current model?
+# H2 — Plan-Only Preregistration: is T1j stronger than our incumbent in the **deterministic visit-count-argmax configuration**?
 
 **Status: PLAN ONLY. Nothing here has run.** No code, no runner, no gate, no model load, no JVM, no
 game, no seed registration, no training, no confirmation inspection, no push. The implementation and
@@ -6,6 +6,15 @@ the execution are **separate authorizations** and neither is requested by this d
 
 **H2 is not H1 continued.** It asks a different question of a **different incumbent configuration**
 with **different seeds**, and §8 forbids pooling or rate-comparison inference with either H1 attempt.
+
+**AMENDED 2026-09-09, before implementation, plan only.** Five corrections from pre-implementation
+review, none touching the parity rule or the 736-game count: the title and question no longer claim
+argmax is the *strongest* deterministic use, only that it is *this* frozen configuration; the
+degeneracy screen is now **per cell** (≥42 of 46), because a global 90% rule passes a wholly collapsed
+cell, and the blanket "effective n = 16" claim is withdrawn; the independence Hoeffding requires is
+now **stated as a model** and the interval called **nominal under it**, with the transcript screen
+explicitly not a validity proof; the sentence attributing H1's 0.6763 to the readout is **removed** as
+the very inference §8 forbids; and "exactly one change" is narrowed to **one gameplay-rule change**.
 
 ---
 
@@ -19,15 +28,23 @@ playing strength is untested, and it is a cheap thing to change: the same model,
 different selection rule.
 
 > **PRIMARY QUESTION.** With the incumbent playing **visit-count argmax** after each fixed opening, is
-> T1j stronger than our incumbent under otherwise matched conditions?
+> T1j stronger than our incumbent **in that configuration**, under otherwise matched conditions?
 
-**Why this is the shortest path.** If T1j is *not* stronger than the deterministic incumbent, the
-premise for training against T1j weakens sharply, and the earlier 0.6763 result would be attributable
-to the readout rather than to the model. If T1j *is* stronger, we know it beats the strongest
-deterministic use of what we already have, and a training question becomes worth designing. Either
+⚠ **"Argmax" is not "the strongest deterministic use", and this card does not claim it is.** Visit-
+count argmax is a clear, already-qualified deterministic rule; **nothing establishes it as the best
+one**, and another deterministic rule (an LCB readout, a policy-weighted rule, a deeper search) could
+do better. `T1J_STRONGER` therefore means **stronger than this frozen configuration** — never
+stronger than every deterministic use of the model.
+
+**Why this is the shortest path.** A `NOT_STRONGER` outcome would establish that **H1 did not show
+our model to be inferior under argmax** — the premise for training against T1j would rest on a
+configuration we had already improved on, and would weaken sharply. 🔴 **It would NOT make H1's 0.6763
+attributable to the readout**: the readout *and* the seeds differ between the two runs, so that
+attribution is confounded by construction and §8 forbids it. A `T1J_STRONGER` outcome would establish
+that T1j beats this configuration, and a training question would become worth designing. Either
 answer is worth more than another diagnostic on the same games.
 
-## 2. The design — H1's, with exactly ONE change
+## 2. The design — H1's, with one GAMEPLAY-RULE change
 
 | | |
 |---|---|
@@ -36,7 +53,12 @@ answer is worth more than another diagnostic on the same games.
 | T1j | **mdPly 6**, the pinned jar and JDK, unchanged |
 | incumbent | `calib020_0001`, **400 simulations**, board 24, batch 14, stall-flush 48 — unchanged |
 | ply cap | **280** |
-| **THE ONE CHANGE** | incumbent readout `selection_mode`: `opening_temperature` → **`argmax`** |
+| **THE GAMEPLAY-RULE CHANGE** | incumbent readout `selection_mode`: `opening_temperature` → **`argmax`** |
+
+⚠ **"One change" means one change to how a game is PLAYED.** Four other things necessarily differ and
+are listed so the phrase cannot mislead: the **sample size** (736, not 224), the **seed block** (a
+fresh paper reservation), the **incumbent identity** (which records the new mode), and the **output
+locations**. Only the readout changes what either side does at the board.
 
 `eval_readout.MODE_ARGMAX` already exists and is one of the three qualified modes. Under it,
 `temp_high`, `temp_low` and `opening_temp_plies` become inert; the card records them as **not
@@ -52,11 +74,21 @@ T1j is deterministic at fixed depth (E3a: 25 identical queries). With argmax, ou
 deterministic too. **The remaining source of variation between repetitions of one cell is the search
 stream** — the seeded RNG driving prior shuffle and PUCT tie-breaks — which differs per game seed.
 
-If that were not so, all repetitions in a cell would be one game repeated and the effective sample
-size would be **16, not 736**. The run must therefore record, and the report must state, the number of
-**distinct game transcripts**. **Frozen rule:** if fewer than **90%** of games are distinct, the
-primary interval is **not computed** and the outcome is **`INCONCLUSIVE — DEGENERATE DESIGN`**. This
-is a validity gate, not a result.
+If that were not so, the repetitions in a cell would be one game repeated.
+
+🔴 **THE SCREEN IS PER CELL, because the variation it checks is per cell.** A global 90% rule does not
+bind: one completely collapsed cell beside fifteen fully distinct ones gives 691/736 = **93.9%
+distinct and passes**, while a sixteenth of the design carries no information at all. The run must
+record, and the report must state, the count of **distinct game transcripts WITHIN EACH of the 16
+opening × colour cells**.
+
+**Frozen rule:** every cell must hold **at least 42 distinct transcripts of its 46** (the same 90%,
+applied where it binds). If any cell falls below that, the primary interval is **not computed** and
+the outcome is **`INCONCLUSIVE — DEGENERATE DESIGN`**, naming the offending cells.
+
+⚠ **No blanket "effective n = 16" claim is made.** That would hold only if **all sixteen** cells
+collapsed completely; a partial collapse reduces the effective sample by an amount this design does
+not quantify, which is exactly why the screen refuses rather than adjusts.
 
 ## 3. Sample size, and what it can resolve
 
@@ -65,7 +97,7 @@ is a validity gate, not a result.
 | repetitions per cell | **46** |
 | cells | 16 (8 openings × 2 colour arms) |
 | **exact task count** | **736 games**, one seed each |
-| primary interval | **Hoeffding 95%, two-sided**, distribution-free |
+| primary interval | **Hoeffding 95%, two-sided**, distribution-free, **nominal under the independence model of §3.1** |
 | half-width at n=736 | **±0.0501** |
 
 The score resolves parity only if it falls **below 0.4499** or **above 0.5501** — the interval must
@@ -78,17 +110,33 @@ to rescue it.
 hours. Hoeffding is distribution-free, so this reach does not depend on any variance assumption,
 including the lower per-game variance argmax is likely to produce.
 
+### 3.1 The independence assumption, stated rather than assumed away
+
+🔴 **Hoeffding needs bounded outcomes AND INDEPENDENT ones.** It is distribution-free about the
+*shape* of the outcome, not about dependence between games. The games here are driven by
+**predetermined pseudorandom seed streams** from one generator, against a deterministic opponent, over
+a design that repeats each opening 46 times. **Independence is a MODEL we are relying on, not a fact
+the design establishes.** The interval is therefore reported as **nominal under that model** — every
+statement of it must carry that phrase — and the outcome names a decision under the model, not a
+proven coverage guarantee.
+
+⚠ **The per-cell transcript screen (§2.1) does NOT validate this assumption.** Distinct transcripts
+detect gross schedule degeneracy — the same game replayed — and nothing more. Games can be entirely
+distinct and still be dependent, for instance through a shared opening, a shared model, or correlated
+seed derivations. The screen is a **degeneracy check**, kept deliberately separate from the
+independence model, and neither substitutes for the other.
+
 ## 4. The primary rule — parity, frozen
 
 Let **S** = T1j's score (win 1, draw or cap-termination ½, loss 0) divided by 736, and let
-**[lo, hi]** be its two-sided Hoeffding 95% interval.
+**[lo, hi]** be its two-sided Hoeffding 95% interval, **nominal under §3.1's independence model**.
 
 | outcome | condition |
 |---|---|
 | **T1J_STRONGER** | `lo > 0.50` |
 | **NOT_STRONGER** | `hi < 0.50` |
 | **INCONCLUSIVE** | the interval contains 0.50 |
-| **INCONCLUSIVE — DEGENERATE DESIGN** | distinct games < 90% of 736 (§2.1) |
+| **INCONCLUSIVE — DEGENERATE DESIGN** | **any** cell holds < 42 distinct transcripts of its 46 (§2.1) |
 | **VOID** | any abort, cap breach, identity mismatch, or incomplete schedule |
 
 **One rule, one threshold, decided in advance.** No secondary statistic may override it, and a
@@ -163,6 +211,11 @@ Under `docs/superpowers/evidence/<run-date>-t1j-h2-deterministic-readout/`, crea
 - **No claim about the readout's effect on our model's strength**, which would need a matched
   argmax-vs-temperature comparison this design does not run.
 - **No claim beyond these frozen conditions** — 8 openings, mdPly 6, 400 simulations, ply cap 280.
+- **No claim that argmax is the best deterministic readout.** `T1J_STRONGER` and `NOT_STRONGER` are
+  statements about *this* configuration; another deterministic rule could beat it, and comparing them
+  is a different study.
+- **No coverage guarantee.** The interval is nominal under §3.1's independence model; the design does
+  not establish that model, and the transcript screen does not test it.
 
 ## 9. Refusals the implementation must carry (for its own authorization)
 
@@ -174,7 +227,13 @@ Under `docs/superpowers/evidence/<run-date>-t1j-h2-deterministic-readout/`, crea
 4. The recorded incumbent identity must carry `selection_mode: "argmax"`; anything else VOIDs.
 5. The gate is restored **immediately and unconditionally** after the process exits, whatever the
    outcome, and process-tree cleanup is verified.
-6. Injected-defect controls for each of the above, each proven to reject, over a clean baseline.
+6. The per-cell transcript screen of §2.1 is computed **before** the primary interval, and a cell
+   below 42 distinct **prevents** the interval from being computed at all — a screen that runs after
+   the number it guards is decoration. A control must prove that a single collapsed cell refuses,
+   including the case where the global distinct rate still exceeds 90%.
+7. Every reported interval carries "nominal under the independence model" **in the report itself**,
+   not only in this card.
+8. Injected-defect controls for each of the above, each proven to reject, over a clean baseline.
 
 ## 10. What this document does NOT do
 
