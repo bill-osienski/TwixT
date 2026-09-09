@@ -1,0 +1,18 @@
+SEED ACCOUNTING, DERIVED FROM THE EVIDENCE -- the trace and the record, not from intent.
+
+trace lines: 1328; run_start 1; run_end 1
+run_end: {'event': 'run_end', 'positions_completed': 221, 'queries_spent': 1105, 'seeds_drawn': 221, 'ts': 1788914413.921449, 'verdict': 'OK'}
+
+max seeds_drawn in the trace : 221
+seeds present in the RECORD  : 221 (202615000..202615220), distinct 221
+declared interval            : [202615000, 202615221)  size 221
+
+Every position carries an incumbent readout, so every seed listed was DRAWN:
+  positions with an incumbent readout: 221 of 221
+
+CONSEQUENCE
+  EXPOSED : all 221 -- each was drawn for an incumbent search/readout
+  RETIRED : the WHOLE block [202615000, 202615221) -- a preregistered ONE-SHOT schedule that
+            COMPLETED (verdict OK, 221/221, 1105/1105). L0's rule: it retires whole,
+            drawn and undrawn alike; here there are no undrawn seeds.
+  CONSUMED_SEEDS / TEST_ONLY: unchanged.

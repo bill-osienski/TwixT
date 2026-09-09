@@ -1,0 +1,37 @@
+POST-RUN STATE -- computed 2026-09-09T01:38:25Z, after the harness restored every source
+
+== gates, as imported ==
+  D1_EXECUTION_AUTHORIZED            False
+  SCREEN_AUTHORIZED                  False
+  H1_EXECUTION_AUTHORIZED            False
+  L0_EXECUTION_AUTHORIZED            False
+  LOWPLY_QUALIFICATION_AUTHORIZED    False
+  RUNTIME_REQUAL_AUTHORIZED          False
+  ALL SIX FALSE: True
+
+== the block, per seed ==
+  [202615000, 202615221): accounted 221 / exposed 221 / retired 221 / test_only 0
+  CONSUMED_SEEDS: 1 (unchanged)
+  a spent seed is refused: seed 202615000 was EXPOSED -- it has been drawn from -- and cannot be scheduled
+
+== surviving processes ==
+  none
+
+== classes directory the compile created (outside the repo) ==
+  e2probe
+  net
+
+== git ==
+ M scripts/GPU/alphazero/e4_screen_reference.py
+ M tests/test_d1_incumbent.py
+ M tests/test_d1_probe.py
+ M tests/test_h1_viability.py
+?? docs/superpowers/evidence/2026-09-08-t1j-d1-acquisition/12_d1prime_run.txt
+?? docs/superpowers/evidence/2026-09-08-t1j-d1-acquisition/13_d1prime_result.json
+?? docs/superpowers/evidence/2026-09-08-t1j-d1-acquisition/14_seed_accounting.txt
+?? docs/superpowers/evidence/2026-09-08-t1j-d1-acquisition/15_controls.py.txt
+?? docs/superpowers/evidence/2026-09-08-t1j-d1-acquisition/16_controls_run.txt
+?? docs/superpowers/evidence/2026-09-08-t1j-d1-acquisition/17_controls_run2.txt
+?? docs/superpowers/evidence/2026-09-08-t1j-d1-acquisition/18_full_suite_after.txt
+?? docs/superpowers/evidence/2026-09-08-t1j-d1-acquisition/19_postrun_state.txt
+HEAD 0277e4a

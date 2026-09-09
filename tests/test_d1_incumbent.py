@@ -180,20 +180,31 @@ def identity():
 
 @pytest.fixture
 def live_block(monkeypatch):
-    """A TEMPORARY FIXTURE registry in which the D1 block is not yet retired.
+    """A TEMPORARY FIXTURE registry in which the D1 block is not yet SPENT.
 
     Kept GENERAL rather than pointed at a particular block: it lifts whatever
-    `D1.SEED_INTERVAL` currently names, if that block is retired. Since the §14
-    handoff it names the fresh reservation, which is NOT retired, so this lifts
-    nothing today -- and it will lift the right thing again if a future block is
-    ever retired mid-life. These tests exercise the incumbent MECHANISM, not the
-    availability of any block, and never edit the real tuple.
-    `test_the_retired_block_can_no_longer_be_SCHEDULED` in tests/test_d1_probe.py
-    asserts the real refusal, bound to `RETIRED_SEED_INTERVAL`.
+    `D1.SEED_INTERVAL` currently names from BOTH spent lists. Since the §14 block
+    ran on 2026-09-08 it is exposed AND retired, so this lifts both; between the
+    handoff and that run it lifted nothing, and it lifted only retirement before
+    that. These tests exercise the incumbent MECHANISM, not the availability of
+    any block, and never edit the real tuples.
+
+    🔴 EXPOSED WAS MISSING and the run exposed the block, so two mechanism tests
+    began failing on CLEAN source -- the clean-baseline check found them. Lifting
+    one of two spent lists is the same defect as un-spending one of two.
+    `test_the_SPENT_block_can_no_longer_be_SCHEDULED` in tests/test_d1_probe.py
+    asserts the REAL refusal, and nothing here weakens it.
     """
-    monkeypatch.setattr(REF, "RETIRED_SEED_INTERVALS",
-                        tuple(i for i in REF.RETIRED_SEED_INTERVALS
-                              if tuple(i) != tuple(D1.SEED_INTERVAL)))
+    lifted = 0
+    for name in ("RETIRED_SEED_INTERVALS", "EXPOSED_SEED_INTERVALS"):
+        before = getattr(REF, name)
+        after = tuple(i for i in before if tuple(i) != tuple(D1.SEED_INTERVAL))
+        lifted += len(before) - len(after)
+        monkeypatch.setattr(REF, name, after)
+    # Not asserted non-zero: this fixture is deliberately valid in every state of
+    # the block, including the reserved-but-unspent one where it lifts nothing.
+    # The real refusal is asserted elsewhere, against the real tuples.
+    return lifted
 
 
 @pytest.fixture

@@ -1,0 +1,4 @@
+analyse_development: 11.7s, B=10000, seed=20260907
+wrote 13_d1prime_result.json
+
+top-level keys: ['T', 'acquisition', 'bound', 'claim', 'cohort', 'floor', 'interval', 'meaning', 'outcome', 'prng', 'resolved', 'secondary', 'stability', 'statistic', 'strata']

@@ -211,6 +211,22 @@ ACCOUNTED_SEED_INTERVALS = (
 #: strikes that seed off. A draw inside the test namespace strikes nothing off,
 #: because nothing there was ever available to schedule.
 EXPOSED_SEED_INTERVALS = (
+    (202615000, 202615221),          # D1 SAME-POSITION INTERROGATION, §14 RETRY,
+                                     # run once 2026-09-08 and COMPLETED: 221 of
+                                     # 221 positions, 1,105 of 1,105 queries,
+                                     # trace verdict OK.
+                                     #
+                                     # ALL 221 DRAWN, COUNTED FROM THE RECORD,
+                                     # not asserted from the design: every one of
+                                     # the 221 position entries carries an
+                                     # incumbent readout, and the readout is what
+                                     # draws the seed. The trace agrees
+                                     # independently (`seeds_drawn: 221` at
+                                     # run_end). Unlike the 2026-08-28 VOID, which
+                                     # was retired with NO exposure claim because
+                                     # claiming 227 draws would have asserted 226
+                                     # that may never have happened, here the
+                                     # record survives, so the count is exact.
     (202617000, 202617224),          # H1 ATTEMPT 2, run once 2026-09-07 and
                                      # COMPLETED: 224 of 224 games, every task
                                      # built our reference agent (224 task_result
@@ -303,6 +319,14 @@ TEST_ONLY_SEED_INTERVALS = (
 #: seeing the first 24, which is selection bias however clean the RNG is. So the
 #: WHOLE block retires together, drawn and undrawn alike.
 RETIRED_SEED_INTERVALS = (
+    (202615000, 202615221),          # D1 §14, retired WHOLE 2026-09-08: a
+                                     # preregistered ONE-SHOT schedule that
+                                     # COMPLETED (analysis outcome NO_GO). L0's
+                                     # rule -- replaying any part of it would be
+                                     # selection after seeing the result. Here
+                                     # every seed was also drawn, so "whole" and
+                                     # "drawn" coincide; the rule is the reason
+                                     # regardless.
     (202617000, 202617224),          # H1 ATTEMPT 2, retired WHOLE 2026-09-07:
                                      # a preregistered ONE-SHOT schedule that
                                      # COMPLETED (verdict INCONCLUSIVE). L0's

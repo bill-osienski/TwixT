@@ -235,7 +235,7 @@ def test_the_ATTEMPT1_block_is_ACCOUNTED_60_EXPOSED_and_RETIRED_WHOLE():
     assert not any(x["test_only"] for x in st)
 
 
-def test_D1s_reservation_is_ACCOUNTED_ONLY_and_DISJOINT_from_both_H1_blocks():
+def test_D1s_reservation_is_SPENT_and_DISJOINT_from_both_H1_blocks():
     """INVERTED 2026-09-08, because the fact it asserted stopped being true.
 
     It used to say D1's §14 interval was in NO registry: the H1 authorizations
@@ -255,8 +255,10 @@ def test_D1s_reservation_is_ACCOUNTED_ONLY_and_DISJOINT_from_both_H1_blocks():
     from scripts.GPU.alphazero import d1_selection as SEL
     for seed in range(*SEL.SEED_INTERVAL):
         st = REF.seed_status(seed)
-        assert st["accounted"], seed
-        assert not (st["exposed"] or st["retired"] or st["test_only"]), (seed, st)
+        # accounted -> +exposed +retired, as D1 ran once on 2026-09-08 and
+        # completed. What stays H1's business is that no H1 round put it there.
+        assert st["accounted"] and st["exposed"] and st["retired"], (seed, st)
+        assert not st["test_only"], (seed, st)
     d1 = set(range(*SEL.SEED_INTERVAL))
     for block in (R.H1_ATTEMPT1_SEED_BLOCK, R.H1_SEED_BLOCK):
         assert not (d1 & set(range(*block))), block

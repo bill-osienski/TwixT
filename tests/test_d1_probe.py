@@ -249,34 +249,57 @@ def test_a_seed_outside_the_reserved_interval_is_void(tmp_path, seed, registered
                   paths=RUNTIME, out_path=str(tmp_path / "r.json"), _compile=lambda d: None)
 
 
-def test_the_NEW_block_is_ACCOUNTED_ONLY_and_therefore_still_SCHEDULABLE():
-    """The 2026-09-08 seed preparation registered §14's block in ONE list.
+def test_the_NEW_block_is_now_EXPOSED_AND_RETIRED_after_the_COMPLETED_run():
+    """INVERTED 2026-09-08, second time in one day, and both inversions are the
+    point: the block moved ACCOUNTED -> ACCOUNTED+EXPOSED+RETIRED as the run
+    actually happened, and each state was asserted while it held.
 
-    Registration is a reservation, not a draw: EXPOSED records seeds that were
-    actually drawn and RETIRED records seeds that may never be used again, so a
-    block that has never been run must appear in neither. Marking it in either
-    would make its own 221 positions unschedulable before the run that is
-    supposed to draw them -- which is exactly what `validate_task_executable`
-    refuses, so the state is asserted at that effect too and not only in the
-    tuples.
+    * EXPOSED all 221, COUNTED FROM THE RECORD: every position entry carries an
+      incumbent readout and the readout is what draws the seed. The trace agrees
+      independently at `run_end` (`seeds_drawn: 221`).
+    * RETIRED WHOLE: a preregistered ONE-SHOT schedule that completed. Replaying
+      any part of it would be selection after seeing the result. Here every seed
+      was drawn too, so "whole" and "drawn" coincide -- but the rule is the
+      reason, not the coincidence.
 
-    Every seed is checked, not the endpoints, and each registry is asserted
-    NON-EMPTY first so a check over an empty collection cannot pass vacuously.
+    The consequence is asserted at the EFFECT, not only in the tuples: the block
+    is no longer schedulable, so a second D1 over these seeds is refused even
+    with the gate open. A future D1 needs a FRESH interval.
     """
     from scripts.GPU.alphazero import e4_screen_reference as REF
     lo, hi = D1.SEED_INTERVAL
-    assert (lo, hi) == (202615000, 202615221)
-    assert hi - lo == D1.N_POSITIONS
-    assert (lo, hi) != SEL.RETIRED_SEED_INTERVAL, "the retired block is a DIFFERENT interval"
     for name in ("ACCOUNTED_SEED_INTERVALS", "EXPOSED_SEED_INTERVALS",
                  "RETIRED_SEED_INTERVALS", "TEST_ONLY_SEED_INTERVALS"):
         assert getattr(REF, name), f"vacuous: {name} is empty"
     for seed in range(lo, hi):
         st = REF.seed_status(seed)
-        assert st["accounted"], (seed, st)
-        assert not (st["exposed"] or st["retired"] or st["test_only"]), (seed, st)
+        assert st["accounted"] and st["exposed"] and st["retired"], (seed, st)
+        assert not st["test_only"], (seed, st)
         assert seed not in REF.CONSUMED_SEEDS, seed
-        D1._check_seed(seed)          # the runtime check accepts every one of them
+
+
+def test_the_SPENT_block_can_no_longer_be_SCHEDULED():
+    """NEGATIVE CONTROL ON THE CONSEQUENCE. Retirement that does not refuse the
+    next schedule is a comment, not a state.
+
+    🔴 My first version of this passed for the WRONG REASON: the task I built was
+    missing `reference_sha1` and `anchor_colour`, so it was refused as MALFORMED
+    and would have kept passing with the block un-retired. The task is now
+    asserted WELL FORMED first, exactly as the older retired-block test does, so
+    the only thing left to refuse it is retirement.
+    """
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    for seed in (D1.SEED_INTERVAL[0], D1.SEED_INTERVAL[1] - 1):
+        task = {"seed": seed, "reference": "calib020_0001",
+                "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+                "anchor_colour": "black"}
+        REF.validate_task_structure(task)              # well formed, forever
+        # EXPOSED is checked BEFORE RETIRED, so that is the message here; both
+        # are true of this block and either one refuses. The older test matches
+        # "RETIRED" because the 2026-08-28 block was retired WITHOUT an exposure
+        # claim -- the difference between the two records, in one word.
+        with pytest.raises(REF.E4ReferenceError, match="EXPOSED|RETIRED"):
+            REF.validate_task_executable(task)         # but no longer runnable
 
 
 def test_the_seed_interval_is_ACCOUNTED_and_now_RETIRED_after_the_VOID():
