@@ -52,7 +52,7 @@ Pos = Tuple[int, int]
 #: This is D1's OWN gate. `l0_match_command.L0_EXECUTION_AUTHORIZED` and
 #: `e4_screen_command.SCREEN_AUTHORIZED` guard DIFFERENT experiments and nothing
 #: here reads either: one gate must never be openable by opening another.
-D1_EXECUTION_AUTHORIZED = False
+D1_EXECUTION_AUTHORIZED = True
 
 #: Frozen in plan section 12.10.
 PER_QUERY_TIMEOUT_S = 120
