@@ -1,0 +1,22 @@
+H2 EXECUTION-BLOCKER REPAIR -- 2026-09-10T13:35:23Z
+
+ALL SEVEN GATES FALSE: True
+H2 seeds accounted: 0 of 736
+
+the four blockers:
+  1 compile gets the run's deadline: True; unstarted refused: True
+  2 report persisted + mapped: True; codes 11/12/7
+  3 interrupt verdict: True; deadline ARMED: True
+  4 cleanup after every game: True
+
+hardening:
+  full-field digest pinned: 08d44fb84851e6fe...
+  worker bypass closed: True
+
+git:
+M scripts/GPU/alphazero/h2_match_command.py
+ M scripts/GPU/alphazero/h2_match_rules.py
+ M scripts/GPU/alphazero/h2_match_runner.py
+ M tests/test_h2_match.py
+?? docs/superpowers/evidence/2026-09-10-t1j-h2-execution-blockers/
+HEAD 19e3e5a

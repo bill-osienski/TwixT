@@ -212,15 +212,26 @@ def check_schedule(tasks: Sequence[Mapping[str, Any]]) -> Dict[str, Any]:
             f"the schedule digest is {summary['task_digest']} but the frozen H2 "
             f"schedule is {RULES.H2_TASK_DIGEST}. A different schedule is a different "
             f"experiment wearing this one's name.")
-    # 🔴 THE DIGEST COVERS THE DESIGN DIMENSIONS ONLY. A schedule with a forged
-    # `reference_sha256` or forged `rng_streams` keeps the same digest and passed --
-    # so every task is compared FIELD BY FIELD, recursively and type-strictly,
-    # against the schedule this repository builds from the pinned source plan.
-    canonical = PLAN.build_tasks(PLAN.load_source_plan())
-    if len(canonical) != len(tasks):
-        raise H2Error(f"{len(tasks)} tasks supplied, {len(canonical)} canonical")
-    for i, (got, want) in enumerate(zip(tasks, canonical)):
-        _same(dict(got), want, f"task[{i}]")
+    # 🔴 THE DESIGN DIGEST COVERS THE DIMENSIONS ONLY, so a forged `reference_sha256`
+    # or forged `rng_streams` keeps it unchanged. The FULL-FIELD digest is pinned in
+    # the rules and checked here.
+    #
+    # ⚠ AND A REBUILD IS NOT A PIN. Comparing the supplied schedule with a fresh
+    # build from the SAME LIVE source plan freezes nothing: change the source and
+    # both sides move together. The pin below is the frozen artifact; the
+    # field-by-field comparison that follows exists only to say WHICH field differs.
+    full = RULES.h2_full_task_digest(list(tasks))
+    if full != RULES.H2_FULL_TASK_DIGEST:
+        raise H2Error(
+            f"the schedule's full-field digest is {full} but the frozen H2 schedule "
+            f"is {RULES.H2_FULL_TASK_DIGEST}; some field outside the design "
+            f"dimensions differs.")
+    # 🔴 A FIELD-BY-FIELD COMPARISON AGAINST A FRESH REBUILD STOOD HERE AND WAS
+    # DELETED. The full-field digest above covers every field, so ANY difference
+    # changes it and the rebuild could never disagree with a schedule that had
+    # already matched the pin -- an unreachable branch, which a control proved by
+    # going NOT CAUGHT. The pin is the single owner, and it is a PIN rather than a
+    # rebuild, so the frozen artifact cannot move with the source plan.
     REF.validate_schedule_executable(list(tasks))
     return summary
 
@@ -239,14 +250,18 @@ def run_h2(*, results_path: str, trace_path: str) -> Dict[str, Any]:
     constructed here. The injection seams remain on the PRIVATE entry, for tests.
     """
     check_gate()
+    from . import d1_probe as D1
     tasks = PLAN.build_tasks(PLAN.load_source_plan())
+    deadline = D1.Deadline(RUN_DEADLINE_S)
+    deadline.start()                       # ONE origin, before anything effectful
     return _run_h2_unguarded(tasks=tasks, results_path=results_path,
-                             trace_path=trace_path, play=_production_play(results_path),
+                             trace_path=trace_path,
+                             play=_production_play(results_path, deadline),
                              identity=frozen_incumbent_identity(),
-                             deadline_s=RUN_DEADLINE_S)
+                             deadline_s=RUN_DEADLINE_S, _deadline=deadline)
 
 
-def _production_play(results_path: str) -> Callable[..., Dict[str, Any]]:
+def _production_play(results_path: str, deadline: Any = None) -> Callable[..., Dict[str, Any]]:
     """THE REAL PLAY SEAM, built exactly as the qualified commands build it.
 
     🔴 ITS ABSENCE WAS INVISIBLE, the defect H1 recorded in the same place: every
@@ -281,7 +296,18 @@ def _production_play(results_path: str) -> Callable[..., Dict[str, Any]]:
             classes = results_path + ".t1j_classes"
             paths = D1.T1jPaths(java=java, jar=tc["jar"], classes=classes,
                                 ply_cap=RULES.PLY_CAP)
-            D1._default_compile(D1.Deadline(RUN_DEADLINE_S), paths=paths)
+            # 🔴 THE RUN'S OWN, ALREADY-STARTED DEADLINE. A fresh `Deadline` has no
+            # origin, so `_default_compile`'s first check raises "the run deadline
+            # was never started" -- AFTER creating the classes directory. The first
+            # production setup was guaranteed to fail, exactly as H1's did. ONE
+            # DEADLINE, ONE ORIGIN: the clock that can terminate the run and the
+            # clock the report describes are the same clock from the same instant.
+            if deadline is None or not deadline.started:
+                raise H2Error(
+                    "the production seam was given no STARTED deadline; compilation "
+                    "checks a clock with no origin and would refuse after creating "
+                    "the class directory")
+            D1._default_compile(deadline, paths=paths)
             runtime = INT.T1jRuntime(java=java, jar=tc["jar"], classes=classes,
                                      ply_cap=RULES.PLY_CAP, timeout_s=timeout_s)
             ctx = INT.IntegrationContext()
@@ -302,12 +328,22 @@ def _production_play(results_path: str) -> Callable[..., Dict[str, Any]]:
                         colour=REF.reference_colour(t), config=argmax_cfg,
                         capture=True)),
                 "harness": HARNESS,
+                # 🔑 THE QUALIFIED BETWEEN-GAMES CLEANUP. H1 clears MLX state after
+                # every game; H2 plays 736 and called it NEVER. Memory growth over a
+                # six-hour run is not a hypothetical.
+                "cleanup": SCREEN_CMD._default_cleanup,
             }
         cap = _CapturingRecorder()
-        result = state["harness"].play_task(
-            task=dict(task), agent_for=state["agent_factory"],
-            state_factory=state["state_factory"], binder=state["binder"],
-            rec=cap, ply_cap=RULES.PLY_CAP)
+        try:
+            result = state["harness"].play_task(
+                task=dict(task), agent_for=state["agent_factory"],
+                state_factory=state["state_factory"], binder=state["binder"],
+                rec=cap, ply_cap=RULES.PLY_CAP)
+        finally:
+            # AFTER EVERY GAME, completed or failed. A cleanup that runs only on
+            # the happy path is the one that matters least.
+            state["cleanup"]()
+            play.cleanups += 1
         plies = [r for r in cap.records if r.get("record_type") == "ply"]
         bounds = [r for r in cap.records if r.get("record_type") == "opening_bound"]
         if len(bounds) != 1:
@@ -320,6 +356,7 @@ def _production_play(results_path: str) -> Callable[..., Dict[str, Any]]:
                 "records": cap.records}
 
     play._state = None
+    play.cleanups = 0
     return play
 
 
@@ -340,7 +377,8 @@ class _CapturingRecorder:
 
 
 def _run_h2_unguarded(*, tasks, results_path, trace_path, play, identity=None,
-                      deadline_s=RUN_DEADLINE_S) -> Dict[str, Any]:
+                      deadline_s=RUN_DEADLINE_S, _deadline=None,
+                      _supervisor=None) -> Dict[str, Any]:
     """Everything below the gate. PRIVATE, and never a way around `run_h2`.
 
     It exists so the machinery can be tested WITHOUT lifting the gate.
@@ -354,17 +392,28 @@ def _run_h2_unguarded(*, tasks, results_path, trace_path, play, identity=None,
     ident = dict(identity) if identity is not None else frozen_incumbent_identity()
     check_incumbent_identity(ident)
 
-    started = time.monotonic()
+    # 🔴 ONE DEADLINE, ARMED. The cooperative check runs BETWEEN games and cannot
+    # interrupt a blocked one; `d1_probe._supervisor` arms SIGALRM from the SAME
+    # started deadline, so a hung query is cut off by the run's own clock rather
+    # than by the wrapper 60 seconds later.
+    from . import d1_probe as _D1
+    deadline = _deadline if _deadline is not None else _D1.Deadline(deadline_s)
+    if not deadline.started:
+        deadline.start()
     results: List[Dict[str, Any]] = []
     per_game: List[Dict[str, Any]] = []
     # 🔴 CREATION HAPPENS INSIDE THE PROTECTED BLOCK. Opening the files before the
     # `try` meant a failure between the two opens leaked a descriptor and left the
     # trace file with no `run_end` -- the record a VOID depends on.
     trace = rec = None
+    import contextlib
+    stack = contextlib.ExitStack()
     try:
         tfd = os.open(trace_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
         rfd = os.open(results_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
         trace, rec = os.fdopen(tfd, "w"), os.fdopen(rfd, "w")
+        sup = _supervisor if _supervisor is not None else _D1._supervisor
+        stack.enter_context(sup(deadline))
 
         def emit(fh, obj):
             fh.write(json.dumps(obj, sort_keys=True) + "\n")
@@ -377,7 +426,7 @@ def _run_h2_unguarded(*, tasks, results_path, trace_path, play, identity=None,
                    "task_digest": summary["task_digest"],
                    "selection_mode": RULES.SELECTION_MODE, "identity": ident})
         for i, task in enumerate(tasks):
-            if time.monotonic() - started > deadline_s:
+            if deadline.elapsed() > deadline_s:
                 raise H2VoidError(
                     f"the {deadline_s / 60:.0f}-minute deadline expired at game {i} "
                     f"of {len(tasks)}; the run is VOID and no partial rate is "
@@ -408,25 +457,33 @@ def _run_h2_unguarded(*, tasks, results_path, trace_path, play, identity=None,
         emit(trace, {"event": "run_end", "verdict": "OK",
                      "games_completed": len(results)})
     except BaseException as e:                               # noqa: BLE001
-        # 🔴 EVERY MID-RUN EXIT LEAVES A run_end/VOID. Only the deadline wrote one
-        # before, so a refusal, a crash or an interrupt left a trace that stopped
-        # mid-sentence and could not say the run was void.
+        # 🔴 EVERY MID-RUN EXIT LEAVES A run_end, AND ITS VERDICT IS THE TRUTH.
+        # Writing VOID for a KeyboardInterrupt made the durable trace say the
+        # instrument failed while the wrapper's exit code said the operator
+        # stopped it -- the reporting-contract disagreement this workstream keeps
+        # finding. Three verdicts, one meaning each.
+        verdict = "INTERRUPTED" if isinstance(e, KeyboardInterrupt) else "VOID"
         if trace is not None:
             try:
                 trace.write(json.dumps(
-                    {"event": "run_end", "verdict": "VOID",
+                    {"event": "run_end", "verdict": verdict,
                      "games_completed": len(results),
                      "error": type(e).__name__}, sort_keys=True) + "\n")
                 trace.flush()
                 os.fsync(trace.fileno())
             except Exception:                                # noqa: BLE001
                 pass
+        # A KeyboardInterrupt is a BaseException and NOT an Exception, so the bare
+        # `raise` below already re-raises it untouched; naming it here as well was
+        # a duplicate no control could distinguish. The VERDICT above is what makes
+        # an interrupt legible, and that is asserted.
         if isinstance(e, H2Error):
             raise
         if isinstance(e, Exception):
             raise H2VoidError(f"{type(e).__name__}: {e}") from e
         raise
     finally:
+        stack.close()
         for fh in (trace, rec):
             if fh is not None:
                 try:

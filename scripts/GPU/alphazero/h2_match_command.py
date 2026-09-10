@@ -10,10 +10,11 @@ restoration runs after EVERY exit including a refusal.
 """
 from __future__ import annotations
 
+import json
 import os
 import re
 import sys
-from typing import Optional, Sequence
+from typing import Any, Mapping, Optional, Sequence
 
 from . import h2_match_runner as RUN
 from . import runtime_requalification as RQ
@@ -22,6 +23,14 @@ from .runtime_requalification import supervise                     # shared, tes
 OUT_DIR = "docs/superpowers/evidence/2026-09-09-t1j-h2-deterministic-readout"
 DEFAULT_RESULTS = f"{OUT_DIR}/03_h2_results.jsonl"
 DEFAULT_TRACE = f"{OUT_DIR}/04_h2_trace.jsonl"
+#: The frozen report location from the card's §7. Create-only, like every output.
+DEFAULT_REPORT = f"{OUT_DIR}/09_report.json"
+
+#: 🔴 NOT A PUBLIC FLAG. The supervisor sets this in the child's environment; the
+#: worker refuses without it. `--worker` alone was a usable bypass around BOTH the
+#: supervision and the gate restoration -- anyone could run the unsupervised path
+#: by typing it. This is not a gate (it grants nothing); it closes a bypass.
+SUPERVISED_ENV = "H2_SUPERVISED_WORKER"
 
 #: The file whose gate line is restored: the runner's own source, resolved from
 #: the imported module and never retyped as a path.
@@ -47,6 +56,9 @@ EXIT_REFUSED = RQ.EXIT_REFUSED                 # 7
 EXIT_CLEANUP_FAILED = RQ.EXIT_CLEANUP_FAILED   # 8
 EXIT_INTERRUPTED = RQ.EXIT_INTERRUPTED         # 9
 EXIT_GATE_NOT_RESTORED = 10
+#: Outcomes that are RESULTS, not failures, and are not "COMPLETED" either.
+EXIT_DEGENERATE = 11
+EXIT_NO_RATE = 12
 
 
 def gate_is_open() -> bool:
@@ -95,9 +107,10 @@ def _parser():
         description="THE H2 DETERMINISTIC-READOUT MATCH. NOT AUTHORIZED.")
     ap.add_argument("--results", default=DEFAULT_RESULTS)
     ap.add_argument("--trace", default=DEFAULT_TRACE)
+    ap.add_argument("--report", default=DEFAULT_REPORT)
     ap.add_argument("--worker", action="store_true",
-                    help="internal: run the match in this process (spawned by the "
-                         "supervisor, never by hand)")
+                    help="internal: run the match in this process. Refused unless the "
+                         "supervisor set its environment marker.")
     # 🔴 NO --runner-source, and no flag that reaches the gate. Opening H2 is a
     # reviewed one-line edit plus a separate authorization, and nothing here
     # accepts an environment variable or a config file either.
@@ -107,13 +120,26 @@ def _parser():
 def worker_main(argv: Sequence[str]) -> int:
     """THE SUPERVISED CHILD. Calls the public entry, which resolves its own
     schedule, identity, deadline and play seam -- this passes only the outputs.
+
+    🔴 IT REFUSES UNLESS THE SUPERVISOR SPAWNED IT. `--worker` was a public bypass
+    around supervision AND gate restoration: typing it ran the match in-process,
+    unbounded, with nothing to restore the gate afterwards.
     """
     a = _parser().parse_args(list(argv))
+    if os.environ.get(SUPERVISED_ENV) != "1":
+        print(f"refused: --worker runs the match UNSUPERVISED and outside the gate "
+              f"restoration boundary. It is spawned by the supervisor, which sets "
+              f"{SUPERVISED_ENV}; it is not a way to run H2 by hand.", file=sys.stderr)
+        return EXIT_REFUSED
     if not gate_is_open():
         print("the H2 match is NOT AUTHORIZED inside the worker.", file=sys.stderr)
         return EXIT_UNAUTHORIZED
     try:
         report = RUN.run_h2(results_path=a.results, trace_path=a.trace)
+    except KeyboardInterrupt:
+        print("INTERRUPTED by the operator; the trace records INTERRUPTED.",
+              file=sys.stderr)
+        return EXIT_INTERRUPTED
     except RUN.H2VoidError as e:
         print(f"VOID: {e}", file=sys.stderr)
         return EXIT_VOID
@@ -123,7 +149,44 @@ def worker_main(argv: Sequence[str]) -> int:
     except Exception as e:                                    # noqa: BLE001
         print(f"UNEXPECTED {type(e).__name__}: {e}", file=sys.stderr)
         return EXIT_UNEXPECTED
-    print(f"COMPLETED: outcome {report.get('outcome')!r}; the verdict is in {a.results}")
+    return _persist_and_classify(report, a.report)
+
+
+def _persist_and_classify(report: Mapping[str, Any], report_path: str) -> int:
+    """WRITE THE REPORT, THEN SAY WHAT IT WAS.
+
+    🔴 The report was RETURNED AND DISCARDED: the worker printed that the verdict
+    was "in" the results file, which held only per-game rows, and the frozen
+    `09_report.json` was never written at all. A refusal also exited 0 as
+    COMPLETED -- the loudest possible disagreement between a record and its code.
+    """
+    try:
+        fd = os.open(report_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+        with os.fdopen(fd, "w") as fh:
+            json.dump(dict(report), fh, indent=1, sort_keys=True, default=str)
+            fh.write("\n")
+            fh.flush()
+            os.fsync(fh.fileno())
+    except FileExistsError:
+        print(f"refused: the report path already exists: {report_path}. Outputs are "
+              f"create-only. The match itself completed; its report is NOT written.",
+              file=sys.stderr)
+        return EXIT_REFUSED
+    except OSError as e:
+        print(f"VOID: the report could not be written: {e}", file=sys.stderr)
+        return EXIT_VOID
+
+    outcome = report.get("outcome")
+    if not report.get("reported"):
+        if outcome == "INCONCLUSIVE — DEGENERATE DESIGN":
+            print(f"DEGENERATE DESIGN: {report.get('reason')}", file=sys.stderr)
+            return EXIT_DEGENERATE
+        if outcome == "CAP_SATURATED_NO_RATE":
+            print(f"NO RATE: {report.get('reason')}", file=sys.stderr)
+            return EXIT_NO_RATE
+        print(f"REFUSED: {report.get('reason')}", file=sys.stderr)
+        return EXIT_REFUSED
+    print(f"COMPLETED: outcome {outcome!r}; the report is in {report_path}")
     return EXIT_COMPLETED
 
 
@@ -165,9 +228,13 @@ def main(argv: Optional[Sequence[str]] = None, *,
             print(f"refused before spawning: {e}", file=sys.stderr)
             code, refused = EXIT_REFUSED, True   # no return: the finally must run
         if not refused:
-            r = supervise([sys.executable, "-m", MODULE, "--worker", *argv],
-                          timeout_s=RUN.RUN_DEADLINE_S + SUPERVISOR_GRACE_S,
-                          kill_grace_s=5.0, interrupt_grace_s=INTERRUPT_GRACE_S)
+            os.environ[SUPERVISED_ENV] = "1"     # the child's only way in
+            try:
+                r = supervise([sys.executable, "-m", MODULE, "--worker", *argv],
+                              timeout_s=RUN.RUN_DEADLINE_S + SUPERVISOR_GRACE_S,
+                              kill_grace_s=5.0, interrupt_grace_s=INTERRUPT_GRACE_S)
+            finally:
+                os.environ.pop(SUPERVISED_ENV, None)
             if r["timed_out"]:
                 print(f"TIMEOUT: the worker exceeded "
                       f"{RUN.RUN_DEADLINE_S + SUPERVISOR_GRACE_S}s; its process group was "

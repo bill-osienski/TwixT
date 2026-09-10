@@ -70,6 +70,20 @@ H2_SEED_BLOCK = (202618000, 202618000 + N_GAMES)        # [202618000, 202618736)
 #: it pins is decoration.
 H2_TASK_DIGEST = "3c0a0ae12c61dae69b134b30d0f4adb7dc97b9e46478cebe679784996d7172d2"
 
+#: 🔴 AND A DIGEST OVER **EVERY FIELD**, because the one above does not cover them.
+#: `l0_task_digest` projects the DESIGN DIMENSIONS, so a forged `reference_sha256`
+#: or forged `rng_streams` leaves it unchanged. Comparing a supplied schedule with
+#: a fresh build from the same live source plan does not fix that either: both
+#: sides move together if the source changes. This pins the whole artifact.
+H2_FULL_TASK_DIGEST = "08d44fb84851e6fe91ca6510192ef7f3dd57d7ea0997e59d4e4d5d7c60384235"
+
+
+def h2_full_task_digest(tasks: Sequence[Mapping[str, Any]]) -> str:
+    """sha256 over EVERY field of every task, in order. Nothing projected away."""
+    return hashlib.sha256(json.dumps([dict(t) for t in tasks], sort_keys=True,
+                                     separators=(",", ":"),
+                                     default=str).encode()).hexdigest()
+
 #: THE PRIMARY QUESTION IS PARITY. Not 0.75 -- that asked whether T1j is far
 #: enough ahead to justify targeted work, a different question that may be
 #: REPORTED here but can never replace this one.

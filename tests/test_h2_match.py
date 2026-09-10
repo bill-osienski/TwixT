@@ -6,6 +6,7 @@ no seed registered or drawn, and no gate opened. The play seam is a fixture; the
 gate is asserted CLOSED in the real repository, never patched open.
 """
 import inspect
+import os
 import json
 
 import pytest
@@ -592,11 +593,26 @@ def test_a_run_whose_games_are_all_IDENTICAL_is_DEGENERATE_not_a_verdict(registe
 
 
 def test_the_deadline_VOIDS_mid_run_and_reports_no_partial_rate(registered, tmp_path):
-    with pytest.raises(RUN.H2VoidError, match="deadline"):
+    """🔴 The COOPERATIVE check is what this exercises, so the supervisor is stood
+    down: with the real one a non-positive remaining refuses FIRST and masks it --
+    a control went NOT CAUGHT proving exactly that."""
+    with pytest.raises(RUN.H2VoidError, match="deadline expired"):
         RUN._run_h2_unguarded(
             tasks=_tasks(), results_path=str(tmp_path / "r.jsonl"),
             trace_path=str(tmp_path / "t.jsonl"), play=_play_factory(),
-            deadline_s=-1)
+            deadline_s=-1, _supervisor=_NoSupervisor)
+
+
+def test_the_REAL_supervisor_refuses_a_deadline_with_nothing_remaining(registered,
+                                                                       tmp_path):
+    """And the supervisor's own refusal is asserted separately, so standing it down
+    above does not lose it: arming `setitimer` with a non-positive remaining would
+    DISABLE the timer while appearing to arm it."""
+    with pytest.raises(Exception) as e:
+        RUN._run_h2_unguarded(
+            tasks=_tasks(), results_path=str(tmp_path / "r.jsonl"),
+            trace_path=str(tmp_path / "t.jsonl"), play=_play_factory(), deadline_s=-1)
+    assert "deadline" in str(e.value).lower()
 
 
 def test_the_trace_and_the_results_are_both_written_and_fsynced(registered, tmp_path):
@@ -849,11 +865,21 @@ def test_ANY_mid_run_failure_still_writes_run_end_VOID(registered, tmp_path):
                     "games_completed": 0, "verdict": "VOID"}
 
 
+class _NoSupervisor:
+    """A no-op stand-in, so the COOPERATIVE deadline check is what is exercised.
+    🔴 With the real supervisor a non-positive remaining refuses FIRST, masking the
+    between-games check entirely -- a control proved it by going NOT CAUGHT."""
+    def __init__(self, deadline): pass
+    def __enter__(self): return None
+    def __exit__(self, *a): return False
+
+
 def test_the_DEADLINE_void_also_leaves_a_run_end_VOID(registered, tmp_path):
     t = tmp_path / "t.jsonl"
-    with pytest.raises(RUN.H2VoidError, match="deadline"):
+    with pytest.raises(RUN.H2VoidError, match="deadline expired"):
         RUN._run_h2_unguarded(tasks=_tasks(), results_path=str(tmp_path / "r.jsonl"),
-                              trace_path=str(t), play=_play_factory(), deadline_s=-1)
+                              trace_path=str(t), play=_play_factory(), deadline_s=-1,
+                              _supervisor=_NoSupervisor)
     last = json.loads(t.read_text().splitlines()[-1])
     assert last["event"] == "run_end" and last["verdict"] == "VOID"
 
@@ -863,12 +889,266 @@ def test_a_forged_reference_sha256_is_REFUSED_though_the_DIGEST_still_matches(re
     rng_streams kept the same digest and passed."""
     tasks = [dict(t) for t in _tasks()]
     tasks[9]["reference_sha256"] = "f" * 64
-    with pytest.raises(RUN.H2VoidError, match="reference_sha256"):
+    with pytest.raises(RUN.H2Error, match="full-field digest|reference_sha256"):
         RUN.check_schedule(tasks)
+
+
+def test_THE_FULL_FIELD_DIGEST_ITSELF_distinguishes_a_forged_field():
+    """🔴 A control that projected the digest down to `task_id` went NOT CAUGHT:
+    any change to the function breaks the pin comparison, so the schedule was
+    refused for the wrong reason. The DIGEST is exercised directly here."""
+    tasks = _tasks()
+    forged = [dict(t) for t in tasks]
+    forged[9]["reference_sha256"] = "f" * 64
+    assert R.h2_full_task_digest(tasks) != R.h2_full_task_digest(forged)
+    streams = [dict(t) for t in tasks]
+    streams[3]["rng_streams"] = {"search": 1, "readout": 2}
+    assert R.h2_full_task_digest(tasks) != R.h2_full_task_digest(streams)
+    assert R.h2_full_task_digest(tasks) == R.H2_FULL_TASK_DIGEST
+
+
+def test_the_WORKER_persists_the_report_and_returns_its_mapped_code(monkeypatch,
+                                                                    tmp_path, capsys):
+    """🔴 A control that made `worker_main` print-and-return-0 went NOT CAUGHT,
+    because the persistence test called `_persist_and_classify` directly. The
+    worker path itself is driven here."""
+    monkeypatch.setenv(CMD.SUPERVISED_ENV, "1")
+    monkeypatch.setattr(CMD, "gate_is_open", lambda: True)
+    monkeypatch.setattr(RUN, "run_h2",
+                        lambda **kw: {"reported": False, "outcome": "REFUSED",
+                                      "reason": "bad rows"})
+    report = tmp_path / "09_report.json"
+    code = CMD.worker_main(["--worker", "--results", str(tmp_path / "r.jsonl"),
+                            "--trace", str(tmp_path / "t.jsonl"),
+                            "--report", str(report)])
+    assert code == CMD.EXIT_REFUSED
+    assert json.loads(report.read_text())["outcome"] == "REFUSED"
 
 
 def test_forged_rng_streams_are_REFUSED(registered):
     tasks = [dict(t) for t in _tasks()]
     tasks[3]["rng_streams"] = {"search": 1, "readout": 2}
-    with pytest.raises(RUN.H2VoidError, match="rng_streams"):
+    with pytest.raises(RUN.H2Error, match="full-field digest|rng_streams"):
         RUN.check_schedule(tasks)
+
+
+# ══════ the production setup, DRIVEN through mocked effectful boundaries ═════
+# 🔴 AST inspection proved the seam was WIRED; it could not prove the wiring
+# WORKS. These tests replace only the effectful boundaries -- toolchain, compile,
+# evaluator, factories, harness, cleanup -- and then RUN the seam, so the clock,
+# the argmax config, the cleanup and the game loop are reached together. No JVM
+# starts, no model loads, no game is played.
+
+@pytest.fixture
+def seam_boundaries(monkeypatch, tmp_path):
+    from scripts.GPU.alphazero import d1_probe as D1
+    from scripts.GPU.alphazero import e4_screen_command as SCREEN_CMD
+    from scripts.GPU.alphazero import e4_screen_integration as INT
+    from scripts.GPU.alphazero import e4_screen_runner as HARNESS
+    from scripts.GPU.alphazero import t1j_toolchain as TC
+    from scripts.GPU.alphazero import twixtbot_g3_reference as G3
+
+    seen = {"compile_deadlines": [], "configs": [], "cleanups": 0, "play_calls": [],
+            "loads": 0}
+
+    monkeypatch.setattr(TC, "verified_paths",
+                        lambda: {"jar": str(tmp_path / "t1j.jar"),
+                                 "jdk_home": str(tmp_path / "jdk")})
+    monkeypatch.setattr(D1, "_default_compile",
+                        lambda deadline, paths: seen["compile_deadlines"].append(deadline))
+    monkeypatch.setattr(INT, "T1jRuntime", lambda **kw: ("runtime", kw))
+    monkeypatch.setattr(INT, "IntegrationContext", lambda: "ctx")
+    monkeypatch.setattr(INT, "make_state_factory", lambda openings, ctx: "state_factory")
+    monkeypatch.setattr(INT, "make_binder", lambda runtime, ctx: "binder")
+
+    def fake_agent_factory(*, runtime, ctx, evaluator, t1j_timeout_s, reference_build):
+        seen["reference_build"] = reference_build
+        return "agent_factory"
+    monkeypatch.setattr(INT, "make_agent_factory", fake_agent_factory)
+    monkeypatch.setattr(SCREEN_CMD, "_default_load_evaluator",
+                        lambda root: seen.__setitem__("loads", seen["loads"] + 1) or "evaluator")
+    monkeypatch.setattr(SCREEN_CMD, "_default_cleanup",
+                        lambda: seen.__setitem__("cleanups", seen["cleanups"] + 1))
+    monkeypatch.setattr(G3, "build_reference_agent",
+                        lambda **kw: seen["configs"].append(kw.get("config")) or "agent")
+
+    def fake_play_task(*, task, agent_for, state_factory, binder, rec, ply_cap):
+        seen["play_calls"].append({"task_id": task["task_id"], "agent_for": agent_for,
+                                   "state_factory": state_factory, "binder": binder,
+                                   "ply_cap": ply_cap})
+        rec.emit({"record_type": "opening_bound", "task_id": task["task_id"], "ply": 6})
+        for k in range(4):
+            ply = 7 + k
+            rec.emit({"record_type": "ply", "task_id": task["task_id"], "ply": ply,
+                      "mover": R.colour_at_ply(ply), "move": [ply, 0]})
+        return {"winner": task["anchor_colour"], "terminal_reason": "win",
+                "plies": 10, "t1j_points": 1.0, "agents_built": 2}
+    monkeypatch.setattr(HARNESS, "play_task", fake_play_task)
+    return seen
+
+
+def _started_deadline():
+    from scripts.GPU.alphazero import d1_probe as D1
+    return D1.Deadline(RUN.RUN_DEADLINE_S).start()
+
+
+def test_the_seam_HANDS_COMPILE_THE_RUNS_OWN_STARTED_CLOCK(seam_boundaries, tmp_path):
+    """🔴 THE DEFECT THIS CLOSES. A fresh `Deadline` has no origin, so the first
+    production setup was guaranteed to refuse -- after creating the classes
+    directory -- with "the run deadline was never started"."""
+    d = _started_deadline()
+    play = RUN._production_play(str(tmp_path / "r.jsonl"), d)
+    play(task=_tasks()[0], identity={}, timeout_s=120)
+    assert seam_boundaries["compile_deadlines"] == [d]
+    assert d.started is True
+
+
+def test_the_seam_REFUSES_an_unstarted_or_absent_clock(seam_boundaries, tmp_path):
+    from scripts.GPU.alphazero import d1_probe as D1
+    for bad in (None, D1.Deadline(RUN.RUN_DEADLINE_S)):        # absent, then unstarted
+        play = RUN._production_play(str(tmp_path / "r.jsonl"), bad)
+        with pytest.raises(RUN.H2Error, match="STARTED deadline"):
+            play(task=_tasks()[0], identity={}, timeout_s=120)
+    assert seam_boundaries["compile_deadlines"] == [], "nothing compiled"
+
+
+def test_the_incumbent_IS_ACTUALLY_BUILT_WITH_AN_ARGMAX_CONFIG(seam_boundaries, tmp_path):
+    """The whole gameplay change, reached rather than read: the config handed to
+    the incumbent's builder must carry `selection_mode = "argmax"`."""
+    play = RUN._production_play(str(tmp_path / "r.jsonl"), _started_deadline())
+    play(task=_tasks()[0], identity={}, timeout_s=120)
+    build = seam_boundaries["reference_build"]
+    build(_tasks()[0], "evaluator")                 # what the harness would call
+    assert len(seam_boundaries["configs"]) == 1
+    cfg = seam_boundaries["configs"][0]
+    assert cfg.selection_mode == "argmax"
+    assert cfg.mcts_sims == 400, "only the READOUT changes"
+
+
+def test_THE_CLEANUP_RUNS_AFTER_EVERY_GAME_including_a_failed_one(seam_boundaries,
+                                                                  tmp_path):
+    """🔴 H1 clears MLX state after every game; H2 plays 736 and called it NEVER."""
+    from scripts.GPU.alphazero import e4_screen_runner as HARNESS
+    play = RUN._production_play(str(tmp_path / "r.jsonl"), _started_deadline())
+    for t in _tasks()[:3]:
+        play(task=t, identity={}, timeout_s=120)
+    assert seam_boundaries["cleanups"] == 3 == play.cleanups
+
+    def exploding(**kw):
+        raise RuntimeError("the game fell over")
+    HARNESS.play_task = exploding
+    with pytest.raises(RuntimeError):
+        play(task=_tasks()[3], identity={}, timeout_s=120)
+    assert seam_boundaries["cleanups"] == 4, "a failed game must still clean up"
+
+
+def test_the_evaluator_is_loaded_ONCE_for_the_whole_run(seam_boundaries, tmp_path):
+    play = RUN._production_play(str(tmp_path / "r.jsonl"), _started_deadline())
+    for t in _tasks()[:5]:
+        play(task=t, identity={}, timeout_s=120)
+    assert seam_boundaries["loads"] == 1
+    assert len(seam_boundaries["play_calls"]) == 5
+
+
+def test_the_seam_RETURNS_the_shape_the_transcript_needs(seam_boundaries, tmp_path):
+    play = RUN._production_play(str(tmp_path / "r.jsonl"), _started_deadline())
+    out = play(task=_tasks()[0], identity={}, timeout_s=120)
+    assert out["opening_bound"] == 6 and len(out["plies"]) == 4
+    t = R.transcript(out["plies"], out["result"], opening_bound=out["opening_bound"])
+    assert len(R.transcript_digest(t)) == 64
+
+
+# ───────────── the report is PERSISTED, and the outcome is MAPPED ────────────
+
+@pytest.mark.parametrize("report,want", [
+    ({"reported": True, "outcome": "T1J_STRONGER"}, "EXIT_COMPLETED"),
+    ({"reported": True, "outcome": "INCONCLUSIVE"}, "EXIT_COMPLETED"),
+    ({"reported": False, "outcome": "INCONCLUSIVE — DEGENERATE DESIGN",
+      "reason": "one cell"}, "EXIT_DEGENERATE"),
+    ({"reported": False, "outcome": "CAP_SATURATED_NO_RATE", "reason": "caps"},
+     "EXIT_NO_RATE"),
+    ({"reported": False, "outcome": "REFUSED", "reason": "bad rows"}, "EXIT_REFUSED"),
+])
+def test_the_report_IS_WRITTEN_and_the_outcome_MAPPED(tmp_path, report, want):
+    """🔴 The report was returned and DISCARDED: the worker printed that the verdict
+    was "in" the results file, which holds only per-game rows, and the frozen
+    report path was never written. A refusal also exited 0 as COMPLETED."""
+    path = tmp_path / "09_report.json"
+    code = CMD._persist_and_classify(report, str(path))
+    assert code == getattr(CMD, want)
+    assert json.loads(path.read_text())["outcome"] == report["outcome"]
+
+
+def test_the_report_path_is_CREATE_ONLY(tmp_path):
+    path = tmp_path / "09_report.json"
+    path.write_text("{}")
+    code = CMD._persist_and_classify({"reported": True, "outcome": "T1J_STRONGER"},
+                                     str(path))
+    assert code == CMD.EXIT_REFUSED
+    assert path.read_text() == "{}", "an existing report was overwritten"
+
+
+# ─────────────────── the worker is not a public bypass ──────────────────────
+
+def test_WORKER_REFUSES_unless_the_supervisor_spawned_it(monkeypatch, capsys):
+    """🔴 `--worker` ran the match in-process, unbounded, outside the gate
+    restoration boundary -- a usable bypass around both."""
+    monkeypatch.delenv(CMD.SUPERVISED_ENV, raising=False)
+    monkeypatch.setattr(CMD, "gate_is_open", lambda: True)
+    monkeypatch.setattr(RUN, "run_h2", lambda **kw: pytest.fail("the match RAN"))
+    assert CMD.worker_main(["--worker"]) == CMD.EXIT_REFUSED
+    assert "not a way to run H2 by hand" in capsys.readouterr().err
+
+
+def test_the_supervisor_MARKS_the_child_and_clears_the_marker(monkeypatch, tmp_path):
+    seen = {}
+
+    def fake_supervise(cmd, **kw):
+        seen["marker"] = os.environ.get(CMD.SUPERVISED_ENV)
+        return {"exit_code": 0, "timed_out": False, "interrupted": False,
+                "group_cleared": True}
+    monkeypatch.setattr(CMD, "gate_is_open", lambda: True)
+    monkeypatch.setattr(CMD, "supervise", fake_supervise)
+    decoy = tmp_path / "runner.py"
+    decoy.write_text("H2_EXECUTION_AUTHORIZED = True\n")
+    CMD.main(["--results", str(tmp_path / "r.jsonl"), "--trace", str(tmp_path / "t.jsonl")],
+             _runner_source=str(decoy))
+    assert seen["marker"] == "1"
+    assert CMD.SUPERVISED_ENV not in os.environ, "the marker must not outlive the run"
+
+
+# ──────────────── the interrupt contract: OK / VOID / INTERRUPTED ───────────
+
+def test_an_OPERATOR_INTERRUPT_records_INTERRUPTED_not_VOID(registered, tmp_path):
+    """🔴 Every BaseException wrote VOID, so the durable trace said the instrument
+    failed while the wrapper's exit code said the operator stopped it."""
+    def interrupting(*, task, identity, timeout_s):
+        raise KeyboardInterrupt()
+    t = tmp_path / "t.jsonl"
+    with pytest.raises(KeyboardInterrupt):
+        RUN._run_h2_unguarded(tasks=_tasks(), results_path=str(tmp_path / "r.jsonl"),
+                              trace_path=str(t), play=interrupting)
+    last = json.loads(t.read_text().splitlines()[-1])
+    assert last["verdict"] == "INTERRUPTED", last
+    assert last["error"] == "KeyboardInterrupt"
+
+
+def test_the_run_ARMS_the_deadline_so_a_BLOCKED_game_can_be_cut_off(registered,
+                                                                    tmp_path):
+    """The cooperative check runs BETWEEN games; the supervisor arms SIGALRM from
+    the SAME started deadline so a hung query is cut off by the run's own clock."""
+    armed = {}
+
+    class _Sup:
+        def __init__(self, deadline):
+            armed["deadline"] = deadline
+        def __enter__(self):
+            armed["entered"] = True
+        def __exit__(self, *a):
+            armed["exited"] = True
+            return False
+    RUN._run_h2_unguarded(tasks=_tasks(), results_path=str(tmp_path / "r.jsonl"),
+                          trace_path=str(tmp_path / "t.jsonl"), play=_play_factory(),
+                          _supervisor=_Sup)
+    assert armed["entered"] and armed["exited"]
+    assert armed["deadline"].started is True
