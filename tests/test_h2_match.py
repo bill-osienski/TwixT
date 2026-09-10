@@ -74,11 +74,27 @@ def test_the_0_75_threshold_is_carried_but_is_NOT_the_rule():
 
 # ───────────────────────── the frozen transcript identity ───────────────────
 
-def _plies(n=4, *, first=7, anchor="red", flip=False):
+#: 🔴 THE MOVERS COME FROM THE PRODUCTION STATE MACHINE, NOT FROM `colour_at_ply`.
+#: My first fixtures called the same helper the transcript uses, so the test and
+#: the code shared one bug and agreed with each other -- and the bug was real: the
+#: helper derived the mover from the ARM, which is wrong for every `t1j_black`
+#: task. `TwixtState` is the authority on turn order.
+def _engine_movers(n, first):
+    from scripts.GPU.alphazero.game.twixt_state import TwixtState
+    st, out = TwixtState(), {}
+    while st.ply < first + n - 1:
+        mover = st.to_move
+        st = st.apply_move(sorted(st.legal_moves())[0])
+        out[st.ply] = mover
+    return out
+
+
+def _plies(n=4, *, first=7, flip=False):
+    movers = _engine_movers(n, first)
     out = []
     for k in range(n):
         ply = first + k
-        mover = R.expected_mover(ply, anchor)
+        mover = movers[ply]
         if flip:
             mover = "black" if mover == "red" else "red"
         out.append({"ply": ply, "mover": mover, "move": [ply, k]})
@@ -89,10 +105,10 @@ def _result(n=4, *, first=7, reason="win", winner="red"):
     return {"plies": first + n - 1, "terminal_reason": reason, "winner": winner}
 
 
-def _t(plies=None, result=None, *, bound=6, anchor="red"):
-    return R.transcript(plies if plies is not None else _plies(anchor=anchor),
+def _t(plies=None, result=None, *, bound=6):
+    return R.transcript(plies if plies is not None else _plies(),
                         result if result is not None else _result(),
-                        opening_bound=bound, anchor_colour=anchor)
+                        opening_bound=bound)
 
 
 def test_a_transcript_is_the_moves_the_reason_and_the_winner_and_NOTHING_ELSE():
@@ -124,31 +140,29 @@ def test_a_different_terminal_reason_or_winner_creates_a_distinct_transcript():
 
 
 def test_the_ply_sequence_must_be_EXACTLY_opening_bound_plus_one_to_result_plies():
-    R.transcript(_plies(), _result(), opening_bound=6, anchor_colour="red")
+    R.transcript(_plies(), _result(), opening_bound=6)
     with pytest.raises(R.H2RulesError, match="declare exactly"):
-        R.transcript(_plies(), _result(), opening_bound=5, anchor_colour="red")
+        R.transcript(_plies(), _result(), opening_bound=5)
 
 
 def test_REMOVING_THE_FIRST_ply_REFUSES_though_the_rest_stays_contiguous():
     """🔴 Contiguity is a property of the INTERIOR: a sequence missing its first
     record is still contiguous from whatever survives."""
     with pytest.raises(R.H2RulesError, match="declare exactly"):
-        R.transcript(_plies()[1:], _result(), opening_bound=6, anchor_colour="red")
+        R.transcript(_plies()[1:], _result(), opening_bound=6)
 
 
 def test_REMOVING_THE_FINAL_ply_REFUSES_though_the_rest_stays_contiguous():
     with pytest.raises(R.H2RulesError, match="declare exactly"):
-        R.transcript(_plies()[:-1], _result(), opening_bound=6, anchor_colour="red")
+        R.transcript(_plies()[:-1], _result(), opening_bound=6)
 
 
 def test_a_DUPLICATED_or_OUT_OF_ORDER_ply_REFUSES(  ):
     p = _plies()
     with pytest.raises(R.H2RulesError, match="declare exactly"):
-        R.transcript(p[:2] + [p[1]] + p[2:], _result(), opening_bound=6,
-                     anchor_colour="red")
+        R.transcript(p[:2] + [p[1]] + p[2:], _result(), opening_bound=6)
     with pytest.raises(R.H2RulesError, match="declare exactly"):
-        R.transcript([p[1], p[0]] + p[2:], _result(), opening_bound=6,
-                     anchor_colour="red")
+        R.transcript([p[1], p[0]] + p[2:], _result(), opening_bound=6)
 
 
 def test_FLIPPING_EVERY_MOVER_refuses_even_though_alternation_is_preserved():
@@ -157,19 +171,35 @@ def test_FLIPPING_EVERY_MOVER_refuses_even_though_alternation_is_preserved():
     flipped = _plies(flip=True)
     movers = [p["mover"] for p in flipped]
     assert all(a != b for a, b in zip(movers, movers[1:])), "still alternating"
-    with pytest.raises(R.H2RulesError, match="bound to the ARM"):
-        R.transcript(flipped, _result(), opening_bound=6, anchor_colour="red")
+    with pytest.raises(R.H2RulesError, match="PLY PARITY"):
+        R.transcript(flipped, _result(), opening_bound=6)
 
 
-def test_the_mover_is_derived_from_the_ARM_so_both_arms_expect_opposite_colours():
-    assert R.expected_mover(7, "red") == "red" and R.expected_mover(8, "red") == "black"
-    assert R.expected_mover(7, "black") == "black" and R.expected_mover(8, "black") == "red"
+def test_THE_MOVER_FOLLOWS_PLY_PARITY_AND_NOT_THE_ARM_checked_against_the_engine():
+    """🔴 THE DEFECT THIS CLOSES, and it would have VOIDed half the schedule. Red
+    moves first in every game; `colour_arm` only says which SYSTEM plays which
+    colour. The expectation is taken from `TwixtState` itself, so this test cannot
+    agree with a wrong helper the way my first one did."""
+    from scripts.GPU.alphazero.game.twixt_state import TwixtState
+    st = TwixtState()
+    assert st.to_move == R.STARTING_COLOUR == "red"
+    for _ in range(8):
+        mover = st.to_move
+        st = st.apply_move(sorted(st.legal_moves())[0])
+        assert R.colour_at_ply(st.ply) == mover, (st.ply, mover)
+    assert R.colour_at_ply(7) == "red" and R.colour_at_ply(8) == "black"
+    assert not hasattr(R, "expected_mover"), "the arm-derived helper must be gone"
+
+
+def test_a_BLACK_ARM_transcript_is_accepted_with_the_SAME_parity_movers():
+    """The half of the schedule the old rule would have refused."""
+    t = R.transcript(_plies(), _result(), opening_bound=6)
+    assert t[0][0] == "red", "ply 7 is red in BOTH arms"
 
 
 def test_a_terminal_reason_outside_the_two_is_REFUSED():
     with pytest.raises(R.H2RulesError, match="no resignation"):
-        R.transcript(_plies(), _result(reason="resignation"), opening_bound=6,
-                     anchor_colour="red")
+        R.transcript(_plies(), _result(reason="resignation"), opening_bound=6)
 
 
 @pytest.mark.parametrize("bad", ["7", 7.0, True])
@@ -177,14 +207,14 @@ def test_a_ply_index_that_is_not_an_INT_is_refused(bad):
     p = _plies()
     p[0] = dict(p[0], ply=bad)
     with pytest.raises(R.H2RulesError):
-        R.transcript(p, _result(), opening_bound=6, anchor_colour="red")
+        R.transcript(p, _result(), opening_bound=6)
 
 
 def test_a_move_whose_coordinates_are_STRINGS_is_refused():
     p = _plies()
     p[1] = dict(p[1], move=["8", "1"])
     with pytest.raises(R.H2RulesError, match="int is required"):
-        R.transcript(p, _result(), opening_bound=6, anchor_colour="red")
+        R.transcript(p, _result(), opening_bound=6)
 
 
 def test_the_excluded_fields_are_DECLARED_not_merely_absent():
@@ -197,15 +227,20 @@ def test_the_excluded_fields_are_DECLARED_not_merely_absent():
 CELLS = [(f"o{i}", arm) for i in range(1, 9) for arm in ("t1j_red", "t1j_black")]
 
 
-def _per_game(distinct_per_cell):
+def _per_game(distinct_per_cell, *, task_ids=None, reps=None):
     """One entry per game; `distinct_per_cell` maps a cell to how many distinct
-    transcripts it should hold."""
+    transcripts it should hold. Task ids are carried because the screen BINDS its
+    input to the canonical task list."""
     out = []
-    for cell in CELLS:
+    for c, cell in enumerate(CELLS):
         k = distinct_per_cell.get(cell, R.N_REPS)
-        for i in range(R.N_REPS):
-            out.append({"opening": cell[0], "colour_arm": cell[1],
+        for i in range(reps if reps is not None else R.N_REPS):
+            out.append({"task_id": f"t-{c}-{i}", "opening": cell[0],
+                        "colour_arm": cell[1],
                         "transcript_digest": f"{cell}-{min(i, k - 1)}"})
+    if task_ids is not None:
+        for row, tid in zip(out, task_ids):
+            row["task_id"] = tid
     return out
 
 
@@ -231,9 +266,37 @@ def test_the_per_cell_threshold_accepts_AT_42_and_refuses_one_below(k, passes):
     assert s["passes"] is passes
 
 
-def test_a_missing_cell_fails_the_screen_rather_than_passing_vacuously():
+def test_a_missing_cell_is_REFUSED_now_that_the_screen_binds_its_input():
+    """It used to return `passes: False`; binding the input makes it a REFUSAL,
+    which is stronger: a vector that is not the design cannot be screened at all."""
     games = [g for g in _per_game({}) if (g["opening"], g["colour_arm"]) != CELLS[0]]
-    assert R.degeneracy_screen(games)["passes"] is False
+    with pytest.raises(R.H2RulesError, match="not 736|rows for"):
+        R.degeneracy_screen(games)
+
+
+def test_a_SHORT_VECTOR_of_42_per_cell_is_REFUSED_not_passed():
+    """🔴 THE DEFECT THIS CLOSES. 672 rows -- exactly 42 per cell -- satisfied "16
+    cells and at least 42 distinct" while missing 64 games entirely."""
+    games = _per_game({}, reps=42)
+    assert len(games) == 672
+    with pytest.raises(R.H2RulesError, match="not 736|rows for"):
+        R.degeneracy_screen(games)
+
+
+def test_A_FULL_LENGTH_vector_with_UNEQUAL_CELLS_is_REFUSED():
+    """🔴 The short-vector test could not see this: 736 rows in total, but 47 games
+    in one cell and 45 in another. Only the per-cell game count catches it."""
+    games = _per_game({})
+    games[0] = dict(games[0], opening=CELLS[1][0], colour_arm=CELLS[1][1])
+    assert len(games) == 736
+    with pytest.raises(R.H2RulesError, match="exactly 46 games"):
+        R.degeneracy_screen(games)
+
+
+def test_a_vector_whose_TASK_IDS_are_not_the_canonical_ones_is_REFUSED():
+    games = _per_game({})
+    with pytest.raises(R.H2RulesError, match="not exactly theirs|rows for"):
+        R.degeneracy_screen(games, canonical_task_ids=[f"other-{i}" for i in range(736)])
 
 
 # ─────────────────────── the report, and the ORDER of its checks ────────────
@@ -258,8 +321,10 @@ def _results(tasks, *, t1j_wins):
 def test_a_FAILING_SCREEN_PREVENTS_THE_INTERVAL_FROM_BEING_COMPUTED():
     """🔑 A screen that runs after the number it guards is decoration."""
     tasks = _tasks()
+    ids = [t["task_id"] for t in tasks]
     out = R.h2_report(_results(tasks, t1j_wins=700), tasks,
-                      _per_game({CELLS[0]: 1}), task_digest=R.H2_TASK_DIGEST)
+                      _per_game({CELLS[0]: 1}, task_ids=ids),
+                      task_digest=R.H2_TASK_DIGEST)
     assert out["reported"] is False
     assert out["outcome"] == "INCONCLUSIVE — DEGENERATE DESIGN"
     assert out["interval"] is None and out["score"] is None
@@ -271,7 +336,8 @@ def test_a_FAILING_SCREEN_PREVENTS_THE_INTERVAL_FROM_BEING_COMPUTED():
 ])
 def test_the_verdict_follows_the_parity_rule_end_to_end(wins, want):
     tasks = _tasks()
-    out = R.h2_report(_results(tasks, t1j_wins=wins), tasks, _per_game({}),
+    out = R.h2_report(_results(tasks, t1j_wins=wins), tasks,
+                      _per_game({}, task_ids=[t["task_id"] for t in tasks]),
                       task_digest=R.H2_TASK_DIGEST)
     assert out["reported"] is True
     assert out["outcome"] == want == out["verdict"]
@@ -279,7 +345,8 @@ def test_the_verdict_follows_the_parity_rule_end_to_end(wins, want):
 
 def test_the_report_carries_the_interval_STANDING_and_all_sixteen_counts():
     tasks = _tasks()
-    out = R.h2_report(_results(tasks, t1j_wins=400), tasks, _per_game({}),
+    out = R.h2_report(_results(tasks, t1j_wins=400), tasks,
+                      _per_game({}, task_ids=[t["task_id"] for t in tasks]),
                       task_digest=R.H2_TASK_DIGEST)
     assert "NOMINAL UNDER THE INDEPENDENCE MODEL" in out["interval_standing"]
     assert len(out["degeneracy_screen"]["cells"]) == 16
@@ -339,9 +406,59 @@ def test_THE_GATE_IS_SHUT_IN_THE_REAL_REPOSITORY():
 def test_the_public_entry_READS_THE_GATE_before_anything_else(tmp_path):
     out = tmp_path / "r.jsonl"
     with pytest.raises(RUN.H2Error, match="UNAUTHORIZED"):
-        RUN.run_h2(tasks=[], results_path=str(out), trace_path=str(tmp_path / "t.jsonl"),
-                   play=lambda **kw: pytest.fail("a game was played behind a shut gate"))
+        RUN.run_h2(results_path=str(out), trace_path=str(tmp_path / "t.jsonl"))
     assert not out.exists()
+
+
+def test_the_public_entry_TAKES_ONLY_THE_OUTPUT_PATHS():
+    """🔴 THE DEFECT THIS CLOSES. It used to accept `tasks`, `play`, `identity` and
+    `deadline_s`, so opening the gate would have authorized CALLER-SUPPLIED
+    GAMEPLAY through the API while the CLI could not run the real match at all."""
+    assert list(inspect.signature(RUN.run_h2).parameters) == ["results_path", "trace_path"]
+    seams = list(inspect.signature(RUN._run_h2_unguarded).parameters)
+    assert {"play", "identity", "deadline_s", "tasks"} <= set(seams), \
+        "the seams must survive on the PRIVATE entry, for tests"
+
+
+def _seam_tree():
+    import ast, textwrap
+    outer = ast.parse(textwrap.dedent(inspect.getsource(RUN._production_play))).body[0]
+    return outer, next(n for n in outer.body
+                       if isinstance(n, ast.FunctionDef) and n.name == "play")
+
+
+def test_the_production_play_seam_EXISTS_and_is_built_lazily():
+    """A refusing stub is not a production path. The factory must construct
+    nothing effectful, and the seam must not refuse before doing its work."""
+    import ast
+    play = RUN._production_play("/tmp/h2-never-written")
+    assert callable(play) and play._state is None
+    _outer, fn = _seam_tree()
+    raises = [n for n in fn.body if isinstance(n, ast.Raise)]
+    assert not raises, "the seam refuses before playing: that is a stub, not a path"
+
+
+def test_the_seam_WIRES_THE_HARNESS_GAME_LOOP():
+    """🔴 A control that inserted a refusal above the loop went unseen, because the
+    test only read the source. The call itself is asserted, by AST."""
+    import ast
+    _outer, fn = _seam_tree()
+    calls = [n for n in ast.walk(fn) if isinstance(n, ast.Call)]
+    assert any(getattr(c.func, "attr", "") == "play_task" for c in calls), \
+        "the seam must call e4_screen_runner.play_task"
+
+
+def test_the_seam_BUILDS_AN_ARGMAX_CONFIG_rather_than_reusing_the_frozen_one():
+    """🔴 `argmax_cfg = cfg` passed a source check that only looked for the NAME.
+    The assignment must be a CALL that sets selection_mode."""
+    import ast
+    _outer, fn = _seam_tree()
+    assigns = [n for n in ast.walk(fn) if isinstance(n, ast.Assign)
+               and any(getattr(t, "id", "") == "argmax_cfg" for t in n.targets)]
+    assert len(assigns) == 1, "exactly one argmax config is built"
+    value = assigns[0].value
+    assert isinstance(value, ast.Call), "the config must be REBUILT, not aliased"
+    assert "selection_mode" in ast.dump(value), "and it must set selection_mode"
 
 
 def test_THE_SEED_BLOCK_IS_REGISTERED_NOWHERE_and_the_barrier_says_so():
@@ -391,7 +508,10 @@ def test_the_frozen_identity_carries_ARGMAX_and_records_the_inert_settings():
 def test_an_identity_that_still_says_opening_temperature_VOIDS():
     i = RUN.frozen_incumbent_identity()
     i["eval_config"] = dict(i["eval_config"], selection_mode="opening_temperature")
-    with pytest.raises(RUN.H2VoidError, match="selection_mode"):
+    # 🔴 The generic recursive comparison ALSO reports a selection_mode mismatch, so
+    # matching that word could not tell the two apart and a control on the early
+    # check went unseen. The early check exists for its MESSAGE; assert it.
+    with pytest.raises(RUN.H2VoidError, match="H2 IS the readout change"):
         RUN.check_incumbent_identity(i)
 
 
@@ -442,7 +562,7 @@ def _play_factory(*, distinct=True, wins=368):
         t1j_won = i < wins
         winner = anchor if t1j_won else ("black" if anchor == "red" else "red")
         tag = i if distinct else 0
-        plies = [{"ply": 7 + k, "mover": R.expected_mover(7 + k, anchor),
+        plies = [{"ply": 7 + k, "mover": R.colour_at_ply(7 + k),
                   "move": [7 + k, tag]} for k in range(4)]
         return {"result": {"task_id": task["task_id"], "winner": winner,
                            "terminal_reason": "win",
@@ -499,7 +619,7 @@ def test_a_malformed_ply_record_VOIDS_the_run_rather_than_being_counted(register
         return {"result": {"task_id": task["task_id"], "winner": anchor,
                            "terminal_reason": "win", "t1j_points": 1.0,
                            "plies": 10, "seed": task["seed"]},
-                "plies": [{"ply": 8, "mover": R.expected_mover(8, anchor),
+                "plies": [{"ply": 8, "mover": R.colour_at_ply(8),
                            "move": [8, 1]}],       # the FIRST ply is missing
                 "opening_bound": 6}
     with pytest.raises(RUN.H2VoidError):
@@ -512,7 +632,7 @@ def test_a_malformed_ply_record_VOIDS_the_run_rather_than_being_counted(register
 def test_the_wrapper_refuses_with_the_shut_gate_and_verifies_it_closed(capsys):
     assert CMD.gate_is_open() is False
     assert CMD.main([]) == CMD.EXIT_UNAUTHORIZED
-    assert "UNAUTHORIZED" in capsys.readouterr().err
+    assert "NOT AUTHORIZED" in capsys.readouterr().err
 
 
 def test_the_wrapper_has_NO_runner_source_flag():
@@ -567,9 +687,54 @@ def test_the_finally_path_restores_a_REAL_open_gate_after_a_refusal(monkeypatch,
     decoy = tmp_path / "runner.py"
     decoy.write_text("H2_EXECUTION_AUTHORIZED = True\n")
     monkeypatch.setattr(CMD, "gate_is_open", lambda: True)
-    code = CMD.main([], _runner_source=str(decoy))
-    assert code in (CMD.EXIT_REFUSED, CMD.EXIT_VOID, CMD.EXIT_UNEXPECTED)
+    monkeypatch.setattr(CMD, "supervise",
+                        lambda *a, **k: {"exit_code": CMD.EXIT_REFUSED, "timed_out": False,
+                                         "interrupted": False, "group_cleared": True})
+    code = CMD.main(["--results", str(tmp_path / "r.jsonl"),
+                     "--trace", str(tmp_path / "t.jsonl")], _runner_source=str(decoy))
+    assert code == CMD.EXIT_REFUSED
     assert decoy.read_text() == "H2_EXECUTION_AUTHORIZED = False\n"
+
+
+def test_the_worker_is_SUPERVISED_in_its_own_group_under_an_OUTER_cap(monkeypatch,
+                                                                     tmp_path):
+    """🔴 THE DEADLINE IS POLLED BETWEEN GAMES, so one blocked game could overrun
+    it indefinitely. The wrapper caps the WORKER and kills its whole group."""
+    seen = {}
+
+    def fake_supervise(cmd, *, timeout_s, kill_grace_s, interrupt_grace_s):
+        seen.update(cmd=cmd, timeout_s=timeout_s)
+        return {"exit_code": 0, "timed_out": False, "interrupted": False,
+                "group_cleared": True}
+    monkeypatch.setattr(CMD, "gate_is_open", lambda: True)
+    monkeypatch.setattr(CMD, "supervise", fake_supervise)
+    decoy = tmp_path / "runner.py"
+    decoy.write_text("H2_EXECUTION_AUTHORIZED = True\n")
+    CMD.main(["--results", str(tmp_path / "r.jsonl"), "--trace", str(tmp_path / "t.jsonl")],
+             _runner_source=str(decoy))
+    assert "--worker" in seen["cmd"] and CMD.MODULE in seen["cmd"]
+    assert seen["timeout_s"] == RUN.RUN_DEADLINE_S + CMD.SUPERVISOR_GRACE_S
+
+
+@pytest.mark.parametrize("r,want", [
+    ({"exit_code": 0, "timed_out": True, "interrupted": False, "group_cleared": True},
+     "EXIT_TIMEOUT"),
+    ({"exit_code": 0, "timed_out": False, "interrupted": True, "group_cleared": True},
+     "EXIT_INTERRUPTED"),
+    ({"exit_code": 0, "timed_out": False, "interrupted": False, "group_cleared": False},
+     "EXIT_CLEANUP_FAILED"),
+])
+def test_a_timeout_an_interrupt_and_a_SURVIVING_DESCENDANT_each_get_their_own_code(
+        monkeypatch, tmp_path, r, want):
+    """A surviving child must never accompany a success -- the runtime
+    requalification's own lesson."""
+    monkeypatch.setattr(CMD, "gate_is_open", lambda: True)
+    monkeypatch.setattr(CMD, "supervise", lambda *a, **k: r)
+    decoy = tmp_path / "runner.py"
+    decoy.write_text("H2_EXECUTION_AUTHORIZED = True\n")
+    code = CMD.main(["--results", str(tmp_path / "r.jsonl"),
+                     "--trace", str(tmp_path / "t.jsonl")], _runner_source=str(decoy))
+    assert code == getattr(CMD, want)
 
 
 def test_restore_gate_is_FALSE_when_the_READBACK_disagrees(monkeypatch, tmp_path):
@@ -587,9 +752,123 @@ def test_restore_gate_is_FALSE_when_the_READBACK_disagrees(monkeypatch, tmp_path
 # ─────────────────────── nothing here can execute anything ──────────────────
 
 @pytest.mark.parametrize("mod", [R, PLAN, RUN, CMD])
-def test_no_H2_module_imports_gameplay_or_registry_machinery(mod):
+def test_no_H2_module_WRITES_a_registry_or_runs_a_bare_subprocess(mod):
     import pathlib
     src = pathlib.Path(mod.__file__).read_text()
-    for forbidden in ("ACCOUNTED_SEED_INTERVALS = ", "compile_helper",
-                      "_default_load_evaluator", "subprocess.run("):
+    for forbidden in ("ACCOUNTED_SEED_INTERVALS = ", "subprocess.run("):
         assert forbidden not in src, (mod.__name__, forbidden)
+
+
+def test_NOTHING_EFFECTFUL_IS_IMPORTED_AT_MODULE_LEVEL():
+    """🔑 The production seam names the evaluator loader, the toolchain and the
+    compile step -- it must, or there is no production path. What matters is that
+    importing the module touches NONE of them: every such import sits inside a
+    function, checked by AST rather than by grepping."""
+    import ast
+    import pathlib
+    tree = ast.parse(pathlib.Path(RUN.__file__).read_text())
+    # 🔴 `from . import e4_screen_runner` has module=None and the NAME in `names`,
+    # so reading only `.module` missed an eager import entirely -- a control proved
+    # it. Both are collected now, plus plain `import x`.
+    top = set()
+    for n in tree.body:
+        if isinstance(n, ast.ImportFrom):
+            top.add(n.module or "")
+            top.update(a.name for a in n.names)
+        elif isinstance(n, ast.Import):
+            top.update(a.name for a in n.names)
+    for effectful in ("d1_probe", "e4_screen_runner", "e4_screen_command",
+                      "t1j_toolchain", "e4_screen_integration",
+                      "twixtbot_g3_reference"):
+        assert not any(effectful in m for m in top), (effectful, sorted(top))
+
+
+# ─────────────── the four production defects the review reproduced ──────────
+
+def test_a_DANGLING_SYMLINK_at_an_output_path_is_REFUSED(tmp_path):
+    """🔴 H1's own correction, which I had repeated as a defect. `os.path.exists`
+    FOLLOWS the link, so a dangling symlink reads as absent; `O_EXCL` then fails on
+    the link itself and a create-only guarantee becomes a mid-run error."""
+    r, t = tmp_path / "r.jsonl", tmp_path / "t.jsonl"
+    r.symlink_to(tmp_path / "nowhere")
+    assert not r.exists() and r.is_symlink(), "the fixture must be a DANGLING link"
+    with pytest.raises(RUN.H2Error, match="already exists"):
+        RUN.check_output_paths(str(r), str(t))
+
+
+def test_INVALID_RESULTS_are_REFUSED_not_reported_as_degenerate():
+    """🔴 Screening first let a schedule of INVALID results be reported as
+    `DEGENERATE DESIGN` -- a data-integrity failure wearing a design-validity
+    name. The bind now speaks first."""
+    tasks = _tasks()
+    bad = _results(tasks, t1j_wins=368)
+    for row in bad:
+        row["t1j_points"] = 0.25            # a score no rule can produce
+    out = R.h2_report(bad, tasks,
+                      _per_game({CELLS[0]: 1}, task_ids=[t["task_id"] for t in tasks]),
+                      task_digest=R.H2_TASK_DIGEST)
+    assert out["reported"] is False
+    assert out["outcome"] == "REFUSED", out["outcome"]
+    assert out["degeneracy_screen"] is None, "the screen must not have spoken"
+
+
+def test_THE_PLIES_AND_DIGESTS_ARE_PERSISTED_so_the_screen_can_be_recomputed(registered,
+                                                                             tmp_path):
+    """🔴 Only the task result was written, so the reported diversity could not be
+    recomputed by anyone who was not there."""
+    r = tmp_path / "r.jsonl"
+    RUN._run_h2_unguarded(tasks=_tasks(), results_path=str(r),
+                          trace_path=str(tmp_path / "t.jsonl"), play=_play_factory())
+    rows = [json.loads(l) for l in r.read_text().splitlines()]
+    kinds = {x["record_type"] for x in rows}
+    assert {"header", "task_result", "ply", "transcript"} <= kinds, kinds
+    tr = [x for x in rows if x["record_type"] == "transcript"]
+    assert len(tr) == 736
+    assert all(len(x["transcript_digest"]) == 64 for x in tr)
+    # the persisted digests reproduce the screen's own counts, independently
+    recomputed = R.degeneracy_screen(
+        [{"task_id": x["task_id"], "opening": x["opening"],
+          "colour_arm": x["colour_arm"], "transcript_digest": x["transcript_digest"]}
+         for x in tr],
+        canonical_task_ids=[t["task_id"] for t in _tasks()])
+    assert recomputed["passes"] is True
+    assert all(c["n_distinct"] == 46 for c in recomputed["cells"])
+
+
+def test_ANY_mid_run_failure_still_writes_run_end_VOID(registered, tmp_path):
+    """🔴 Only the deadline wrote one, so a crash left a trace that stopped
+    mid-sentence and could not say the run was void."""
+    def exploding(*, task, identity, timeout_s):
+        raise RuntimeError("the instrument fell over")
+    t = tmp_path / "t.jsonl"
+    with pytest.raises(RUN.H2VoidError):
+        RUN._run_h2_unguarded(tasks=_tasks(), results_path=str(tmp_path / "r.jsonl"),
+                              trace_path=str(t), play=exploding)
+    last = json.loads(t.read_text().splitlines()[-1])
+    assert last == {"error": "RuntimeError", "event": "run_end",
+                    "games_completed": 0, "verdict": "VOID"}
+
+
+def test_the_DEADLINE_void_also_leaves_a_run_end_VOID(registered, tmp_path):
+    t = tmp_path / "t.jsonl"
+    with pytest.raises(RUN.H2VoidError, match="deadline"):
+        RUN._run_h2_unguarded(tasks=_tasks(), results_path=str(tmp_path / "r.jsonl"),
+                              trace_path=str(t), play=_play_factory(), deadline_s=-1)
+    last = json.loads(t.read_text().splitlines()[-1])
+    assert last["event"] == "run_end" and last["verdict"] == "VOID"
+
+
+def test_a_forged_reference_sha256_is_REFUSED_though_the_DIGEST_still_matches(registered):
+    """🔴 The design digest covers the dimensions only: a forged pin or forged
+    rng_streams kept the same digest and passed."""
+    tasks = [dict(t) for t in _tasks()]
+    tasks[9]["reference_sha256"] = "f" * 64
+    with pytest.raises(RUN.H2VoidError, match="reference_sha256"):
+        RUN.check_schedule(tasks)
+
+
+def test_forged_rng_streams_are_REFUSED(registered):
+    tasks = [dict(t) for t in _tasks()]
+    tasks[3]["rng_streams"] = {"search": 1, "readout": 2}
+    with pytest.raises(RUN.H2VoidError, match="rng_streams"):
+        RUN.check_schedule(tasks)

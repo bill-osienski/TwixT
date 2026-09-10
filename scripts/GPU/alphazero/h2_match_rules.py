@@ -132,22 +132,40 @@ def _int(value: Any, what: str) -> int:
     return value
 
 
-def expected_mover(ply: int, anchor_colour: str) -> str:
-    """WHOSE MOVE ply `ply` IS, from the design rather than from the record.
+#: THE PRODUCTION GAME ALWAYS STARTS RED. `TwixtState.to_move` defaults to "red"
+#: ("Red moves first"), the runner records `mover` as the side that moved and
+#: `ply` as the count AFTER the move, so recorded ODD plies are red and EVEN plies
+#: are black -- in every task, in both arms.
+STARTING_COLOUR = "red"
+
+#: 🔴 WHAT `colour_arm` DOES, AND WHAT IT DOES NOT. It assigns SYSTEMS to colours
+#: -- `t1j_red` means T1j plays red and our incumbent plays black -- and it has NO
+#: bearing on turn order. My first version derived the expected mover from the
+#: ARM, so every `t1j_black` task expected black at ply 7 while the real state says
+#: red: HALF THE SCHEDULE WOULD HAVE VOIDED. The synthetic tests passed because
+#: they built their fixtures from that same helper, so the test and the code shared
+#: one bug and agreed with each other. The test now derives its expectation from
+#: `TwixtState` itself.
+ARM_ASSIGNS_SYSTEMS_NOT_TURN_ORDER = (
+    "colour_arm names which SYSTEM plays which COLOUR; red moves first in every "
+    "game regardless. Turn order comes from the frozen starting colour and ply "
+    "parity, never from the arm.")
+
+
+def colour_at_ply(ply: int) -> str:
+    """WHOSE MOVE recorded ply `ply` IS: odd = red, even = black, always.
 
     🔑 NOT "the movers alternate". Flipping EVERY mover in a game preserves
     alternation while swapping which side played every move, turning one
-    transcript silently into a different one. The expected colour is derived from
-    the arm and the ply's parity, so a flipped game disagrees at ply one.
+    transcript silently into a different one. Parity from a fixed starting colour
+    is what a flipped game disagrees with at ply one.
     """
-    if anchor_colour not in WINNERS:
-        raise H2RulesError(f"anchor_colour {anchor_colour!r} is not one of {WINNERS}")
-    first, second = ("red", "black") if anchor_colour == "red" else ("black", "red")
-    return first if _int(ply, "ply") % 2 == 1 else second
+    return STARTING_COLOUR if _int(ply, "ply") % 2 == 1 else (
+        "black" if STARTING_COLOUR == "red" else "red")
 
 
 def transcript(plies: Sequence[Mapping[str, Any]], result: Mapping[str, Any], *,
-               opening_bound: int, anchor_colour: str) -> Tuple[Any, ...]:
+               opening_bound: int) -> Tuple[Any, ...]:
     """THE FROZEN TRANSCRIPT: the type-strict ordered post-opening
     `(mover, row, col)` moves, then the terminal reason and the winner.
 
@@ -162,7 +180,8 @@ def transcript(plies: Sequence[Mapping[str, Any]], result: Mapping[str, Any], *,
       record is still contiguous from whatever survives, and one missing its LAST
       is still contiguous up to there. Both endpoints are anchored to records the
       run itself wrote, so a truncation is a count mismatch, not a judgement call.
-    * every mover must EQUAL its expected colour (see `expected_mover`).
+    * every mover must EQUAL the colour whose turn that ply is (`colour_at_ply`),
+      which depends on PLY PARITY and not on the colour arm.
     * the terminal reason must be one of the two the protocol has.
     """
     lo = _int(opening_bound, "opening_bound") + 1
@@ -188,11 +207,12 @@ def transcript(plies: Sequence[Mapping[str, Any]], result: Mapping[str, Any], *,
     for p in plies:
         ply = _int(p["ply"], "ply")
         mover = p.get("mover")
-        want_mover = expected_mover(ply, anchor_colour)
+        want_mover = colour_at_ply(ply)
         if mover != want_mover:
             raise H2RulesError(
-                f"ply {ply} records mover {mover!r} but the design gives "
-                f"{want_mover!r}; movers are bound to the ARM, not merely alternating")
+                f"ply {ply} records mover {mover!r} but the game's turn order gives "
+                f"{want_mover!r}; movers are bound to PLY PARITY from a fixed "
+                f"starting colour, not merely alternating and not to the arm")
         move = p.get("move")
         if not isinstance(move, (list, tuple)) or len(move) != 2:
             raise H2RulesError(f"ply {ply}: move {move!r} is not a (row, col) pair")
@@ -213,7 +233,8 @@ def cell_key(task: Mapping[str, Any]) -> Tuple[str, str]:
     return (str(task["opening"]), str(task["colour_arm"]))
 
 
-def degeneracy_screen(per_game: Sequence[Mapping[str, Any]]) -> Dict[str, Any]:
+def degeneracy_screen(per_game: Sequence[Mapping[str, Any]], *,
+                      canonical_task_ids: Optional[Sequence[str]] = None) -> Dict[str, Any]:
     """Distinct transcripts WITHIN EACH of the 16 cells (card §2.1).
 
     `per_game` carries one entry per game: `opening`, `colour_arm` and the
@@ -224,6 +245,22 @@ def degeneracy_screen(per_game: Sequence[Mapping[str, Any]]) -> Dict[str, Any]:
     collapse; a partial collapse costs an amount this design does not quantify,
     which is why the screen REFUSES rather than adjusts.
     """
+    # 🔴 THE INPUT IS BOUND FIRST. Thresholding alone accepted 672 rows -- exactly
+    # 42 per cell -- because "16 cells and >= 42 distinct" is true of a set that is
+    # missing 64 games. A screen that does not know how many games there were
+    # cannot say how many were distinct.
+    if canonical_task_ids is not None:
+        want = list(canonical_task_ids)
+        got = [g.get("task_id") for g in per_game]
+        if len(got) != len(want) or sorted(map(str, got)) != sorted(map(str, want)):
+            raise H2RulesError(
+                f"the transcript vector holds {len(got)} rows for {len(want)} canonical "
+                f"tasks and its task ids are not exactly theirs; one transcript per "
+                f"task, no more and no fewer.")
+    elif len(per_game) != N_GAMES:
+        raise H2RulesError(
+            f"the transcript vector holds {len(per_game)} rows, not {N_GAMES}")
+
     counts: Dict[Tuple[str, str], set] = {}
     totals: Counter = Counter()
     for g in per_game:
@@ -235,6 +272,12 @@ def degeneracy_screen(per_game: Sequence[Mapping[str, Any]]) -> Dict[str, Any]:
         n_distinct, n_games = len(counts[key]), totals[key]
         cells.append({"cell": list(key), "n_games": n_games, "n_distinct": n_distinct,
                       "passes": n_distinct >= MIN_DISTINCT_PER_CELL})
+    # EVERY cell must hold exactly the frozen number of GAMES as well: a cell with
+    # 42 games all distinct is not a cell with 46 games of which 42 differ.
+    short = [c["cell"] for c in cells if c["n_games"] != N_REPS]
+    if short:
+        raise H2RulesError(
+            f"{len(short)} cell(s) do not hold exactly {N_REPS} games: {short[:3]}")
     failing = [c for c in cells if not c["passes"]]
     return {
         "min_distinct_required": MIN_DISTINCT_PER_CELL,
@@ -242,7 +285,11 @@ def degeneracy_screen(per_game: Sequence[Mapping[str, Any]]) -> Dict[str, Any]:
         "cells": cells,
         "n_cells": len(cells),
         "failing_cells": [c["cell"] for c in failing],
-        "passes": not failing and len(cells) == N_OPENINGS * N_ARMS,
+        # 🔴 `and len(cells) == 16` STOOD HERE AND WAS DELETED: once the vector is
+        # bound to 736 rows AND every cell must hold exactly 46 games, sixteen cells
+        # follow arithmetically, so no control could distinguish the clause. A
+        # branch nothing can reach proves nothing; the binding above owns the rule.
+        "passes": not failing,
         "global_distinct_rate_NOT_THE_RULE": (
             sum(c["n_distinct"] for c in cells) / sum(c["n_games"] for c in cells)
             if cells else None),
@@ -311,7 +358,20 @@ def h2_report(results: Sequence[Mapping[str, Any]], tasks: Sequence[Mapping[str,
     runs after the number it guards is decoration. The refusal carries the failing
     cells by name and every cell's count.
     """
-    screen = degeneracy_screen(per_game)
+    # 🔴 RESULT INTEGRITY BINDS FIRST. Screening first let a schedule of INVALID
+    # results be reported as `DEGENERATE DESIGN` -- a data-integrity failure wearing
+    # a design-validity name. The bind refuses on its own terms; only then does the
+    # screen speak, and only then can the interval be computed.
+    pairs, why = L0.bind_results(list(results), list(tasks), design=h2_design(task_digest))
+    if pairs is None:
+        return {"reported": False, "reason": why, "outcome": "REFUSED",
+                "verdict": "REFUSED", "degeneracy_screen": None,
+                "interval": None, "score": None,
+                "interval_standing": INTERVAL_STANDING,
+                "forbidden_claims": FORBIDDEN_CLAIMS}
+
+    screen = degeneracy_screen(per_game,
+                               canonical_task_ids=[t["task_id"] for t in tasks])
     if not screen["passes"]:
         return {
             "reported": False,
@@ -327,13 +387,6 @@ def h2_report(results: Sequence[Mapping[str, Any]], tasks: Sequence[Mapping[str,
             "interval_standing": INTERVAL_STANDING,
             "forbidden_claims": FORBIDDEN_CLAIMS,
         }
-
-    pairs, why = L0.bind_results(list(results), list(tasks), design=h2_design(task_digest))
-    if pairs is None:
-        return {"reported": False, "reason": why, "degeneracy_screen": screen,
-                "interval": None, "score": None,
-                "interval_standing": INTERVAL_STANDING,
-                "forbidden_claims": FORBIDDEN_CLAIMS}
 
     overall = L0._summary(pairs)
     caps = overall["cap_terminations"]

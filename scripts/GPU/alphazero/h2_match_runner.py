@@ -110,7 +110,11 @@ def check_output_paths(results_path: str, trace_path: Optional[str]) -> None:
             f"recorder would then refuse it, turning a naming slip into a VOID that "
             f"spends every seed.")
     for label, path in (("results", results_path), ("trace", trace_path)):
-        if os.path.exists(path):
+        # 🔴 `lexists`, NOT `exists` -- H1's own correction, which I repeated as a
+        # defect. `os.path.exists` FOLLOWS the link, so a DANGLING symlink reads as
+        # absent, `O_EXCL` then fails on the link itself, and a create-only
+        # guarantee turns into a mid-run error.
+        if os.path.lexists(path):
             raise H2Error(
                 f"the {label} path already exists: {path}. Outputs are create-only, so "
                 f"an earlier run's file cannot be mistaken for this one's. Nothing has "
@@ -145,8 +149,45 @@ def frozen_incumbent_identity() -> Dict[str, Any]:
     return out
 
 
+def _same(a: Any, b: Any, where: str) -> None:
+    """RECURSIVE and TYPE-STRICT equality, refusing by path.
+
+    🔑 `False == 0` and `6 == 6.0` are refusals here, as everywhere else in this
+    programme: a recorded configuration that merely compares equal to the frozen
+    one is not the frozen one.
+    """
+    if isinstance(a, Mapping) or isinstance(b, Mapping):
+        if not (isinstance(a, Mapping) and isinstance(b, Mapping)):
+            raise H2VoidError(f"{where}: {a!r} and {b!r} are not both mappings")
+        extra, missing = set(a) - set(b), set(b) - set(a)
+        if extra or missing:
+            raise H2VoidError(
+                f"{where}: the recorded identity has extra {sorted(extra)} and is "
+                f"missing {sorted(missing)} against the frozen configuration")
+        for k in sorted(b):
+            _same(a[k], b[k], f"{where}.{k}")
+        return
+    if isinstance(a, (list, tuple)) or isinstance(b, (list, tuple)):
+        if len(list(a or [])) != len(list(b or [])):
+            raise H2VoidError(f"{where}: sequence lengths differ ({a!r} vs {b!r})")
+        for i, (x, y) in enumerate(zip(list(a), list(b))):
+            _same(x, y, f"{where}[{i}]")
+        return
+    if type(a) is not type(b) or a != b:
+        raise H2VoidError(
+            f"{where}: recorded {a!r} ({type(a).__name__}) but the frozen "
+            f"configuration gives {b!r} ({type(b).__name__})")
+
+
 def check_incumbent_identity(identity: Mapping[str, Any]) -> None:
-    """The recorded identity must BE H2's, field by field."""
+    """The recorded identity must BE H2's -- THE WHOLE OF IT.
+
+    🔴 An earlier version compared three top-level fields and three eval fields, so
+    a changed evaluation batch size, stall-flush count, noise suppression, RNG mask,
+    readout path or agent lifetime all passed. Everything the frozen identity
+    carries is now compared recursively and type-strictly, and `selection_mode` is
+    reported FIRST because it is the study.
+    """
     want = frozen_incumbent_identity()
     got_mode = (identity.get("eval_config") or {}).get("selection_mode")
     if got_mode != RULES.SELECTION_MODE:
@@ -155,16 +196,7 @@ def check_incumbent_identity(identity: Mapping[str, Any]) -> None:
             f"{RULES.SELECTION_MODE!r}. H2 IS the readout change: a run recording the "
             f"old readout did not make it, and reporting it as H2 would attribute a "
             f"result to a configuration that never played.")
-    for field in ("reference", "reference_sha1", "plan_sha256"):
-        if identity.get(field) != want.get(field):
-            raise H2VoidError(
-                f"the recorded incumbent identity's {field!r} is {identity.get(field)!r}, "
-                f"not the frozen {want.get(field)!r}")
-    for field in ("mcts_sims", "board_size", "max_moves"):
-        if (identity.get("eval_config") or {}).get(field) != want["eval_config"][field]:
-            raise H2VoidError(
-                f"the recorded eval_config's {field!r} disagrees with the frozen "
-                f"configuration; this is not the H2 incumbent")
+    _same(dict(identity), want, "incumbent_identity")
 
 
 def check_schedule(tasks: Sequence[Mapping[str, Any]]) -> Dict[str, Any]:
@@ -180,24 +212,131 @@ def check_schedule(tasks: Sequence[Mapping[str, Any]]) -> Dict[str, Any]:
             f"the schedule digest is {summary['task_digest']} but the frozen H2 "
             f"schedule is {RULES.H2_TASK_DIGEST}. A different schedule is a different "
             f"experiment wearing this one's name.")
+    # 🔴 THE DIGEST COVERS THE DESIGN DIMENSIONS ONLY. A schedule with a forged
+    # `reference_sha256` or forged `rng_streams` keeps the same digest and passed --
+    # so every task is compared FIELD BY FIELD, recursively and type-strictly,
+    # against the schedule this repository builds from the pinned source plan.
+    canonical = PLAN.build_tasks(PLAN.load_source_plan())
+    if len(canonical) != len(tasks):
+        raise H2Error(f"{len(tasks)} tasks supplied, {len(canonical)} canonical")
+    for i, (got, want) in enumerate(zip(tasks, canonical)):
+        _same(dict(got), want, f"task[{i}]")
     REF.validate_schedule_executable(list(tasks))
     return summary
 
 
-def run_h2(*, tasks: Sequence[Mapping[str, Any]], results_path: str, trace_path: str,
-           play: Callable[..., Mapping[str, Any]],
-           identity: Optional[Mapping[str, Any]] = None,
-           deadline_s: float = RUN_DEADLINE_S) -> Dict[str, Any]:
-    """THE PUBLIC ENTRY. Checks the gate FIRST, then every other barrier.
+def run_h2(*, results_path: str, trace_path: str) -> Dict[str, Any]:
+    """THE PUBLIC ENTRY. Takes the two OUTPUT PATHS and nothing else.
 
-    `play` is the injected seam that actually plays one game. This module never
-    imports one: the seam is what keeps the gate meaningful in tests, and a
-    fixture that lifts an execution gate is the gate failing.
+    🔴 EVERY OTHER INPUT IS RESOLVED HERE, so none can be supplied. An earlier
+    version accepted `tasks`, `play`, `identity` and `deadline_s`, which meant
+    opening the gate would have authorized CALLER-SUPPLIED GAMEPLAY through the
+    API while the CLI could not run the real match at all: forged play with a
+    real verdict on one side, no production path on the other.
+
+    The schedule comes from the pinned source plan, the identity from the frozen
+    configuration, the deadline from this module's constant, and the play seam is
+    constructed here. The injection seams remain on the PRIVATE entry, for tests.
     """
     check_gate()
+    tasks = PLAN.build_tasks(PLAN.load_source_plan())
     return _run_h2_unguarded(tasks=tasks, results_path=results_path,
-                             trace_path=trace_path, play=play, identity=identity,
-                             deadline_s=deadline_s)
+                             trace_path=trace_path, play=_production_play(results_path),
+                             identity=frozen_incumbent_identity(),
+                             deadline_s=RUN_DEADLINE_S)
+
+
+def _production_play(results_path: str) -> Callable[..., Dict[str, Any]]:
+    """THE REAL PLAY SEAM, built exactly as the qualified commands build it.
+
+    🔴 ITS ABSENCE WAS INVISIBLE, the defect H1 recorded in the same place: every
+    passing test replaced the seam, so a missing production path could not fail a
+    test. It is constructed lazily -- importing this module starts no JVM and
+    loads no model -- and the collaborators are the qualified ones:
+    `t1j_toolchain.verified_paths` for the pinned jar and JDK, `d1_probe`'s
+    compile step, `e4_screen_integration` for the binder, state and agent
+    factories, and `e4_screen_runner.play_task` for the game loop.
+
+    🔑 THE ONE H2 DIFFERENCE IS THE CONFIG PASSED TO THE INCUMBENT'S BUILDER: an
+    `EvalConfig` whose `selection_mode` is `argmax`, which `readout_from_eval_config`
+    turns into `ReadoutConfig(mode=MODE_ARGMAX)`. That is the whole gameplay change,
+    applied at the one place the readout is chosen.
+
+    ⚠ NEVER EXERCISED END TO END. Only its construction and its refusals are
+    tested; nothing in this repository has played a game with it.
+    """
+    def play(*, task: Mapping[str, Any], identity: Mapping[str, Any],
+             timeout_s: float) -> Dict[str, Any]:
+        from . import d1_probe as D1
+        from . import e4_screen_command as SCREEN_CMD
+        from . import e4_screen_integration as INT
+        from . import e4_screen_runner as HARNESS
+        from . import t1j_toolchain as TC
+        from . import twixtbot_g3_reference as G3
+
+        state = play._state
+        if state is None:
+            tc = TC.verified_paths()
+            java = os.path.join(tc["jdk_home"], "bin", "java")
+            classes = results_path + ".t1j_classes"
+            paths = D1.T1jPaths(java=java, jar=tc["jar"], classes=classes,
+                                ply_cap=RULES.PLY_CAP)
+            D1._default_compile(D1.Deadline(RUN_DEADLINE_S), paths=paths)
+            runtime = INT.T1jRuntime(java=java, jar=tc["jar"], classes=classes,
+                                     ply_cap=RULES.PLY_CAP, timeout_s=timeout_s)
+            ctx = INT.IntegrationContext()
+            evaluator = SCREEN_CMD._default_load_evaluator(".")   # the incumbent, ONCE
+            cfg = G3.eval_config()
+            # THE GAMEPLAY-RULE CHANGE, at the one place the readout is chosen.
+            argmax_cfg = cfg.__class__(**{**cfg.__dict__,
+                                          "selection_mode": RULES.SELECTION_MODE})
+            openings = PLAN.load_source_plan()["openings"]
+            state = play._state = {
+                "state_factory": INT.make_state_factory(openings, ctx),
+                "binder": INT.make_binder(runtime, ctx),
+                "agent_factory": INT.make_agent_factory(
+                    runtime=runtime, ctx=ctx, evaluator=evaluator,
+                    t1j_timeout_s=timeout_s,
+                    reference_build=lambda t, evaluator: G3.build_reference_agent(
+                        task=t, evaluator=evaluator,
+                        colour=REF.reference_colour(t), config=argmax_cfg,
+                        capture=True)),
+                "harness": HARNESS,
+            }
+        cap = _CapturingRecorder()
+        result = state["harness"].play_task(
+            task=dict(task), agent_for=state["agent_factory"],
+            state_factory=state["state_factory"], binder=state["binder"],
+            rec=cap, ply_cap=RULES.PLY_CAP)
+        plies = [r for r in cap.records if r.get("record_type") == "ply"]
+        bounds = [r for r in cap.records if r.get("record_type") == "opening_bound"]
+        if len(bounds) != 1:
+            raise H2VoidError(
+                f"{task['task_id']}: {len(bounds)} opening_bound records; the transcript's "
+                f"first ply is anchored to exactly one, and without it the ply span "
+                f"cannot be checked at all")
+        return {"result": {"task_id": task["task_id"], "seed": task["seed"], **result},
+                "plies": plies, "opening_bound": bounds[0]["ply"],
+                "records": cap.records}
+
+    play._state = None
+    return play
+
+
+class _CapturingRecorder:
+    """The harness's recorder interface, captured IN MEMORY.
+
+    The harness emits `opening_bound` and one `ply` record per move; H2 needs both
+    to build a transcript, and the run needs them PERSISTED so the reported
+    diversity can be recomputed by someone who was not there. This collects them
+    and the caller writes them out.
+    """
+
+    def __init__(self) -> None:
+        self.records: List[Dict[str, Any]] = []
+
+    def emit(self, obj: Mapping[str, Any]) -> None:
+        self.records.append(dict(obj))
 
 
 def _run_h2_unguarded(*, tasks, results_path, trace_path, play, identity=None,
@@ -218,47 +357,82 @@ def _run_h2_unguarded(*, tasks, results_path, trace_path, play, identity=None,
     started = time.monotonic()
     results: List[Dict[str, Any]] = []
     per_game: List[Dict[str, Any]] = []
-    tfd = os.open(trace_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
-    rfd = os.open(results_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+    # 🔴 CREATION HAPPENS INSIDE THE PROTECTED BLOCK. Opening the files before the
+    # `try` meant a failure between the two opens leaked a descriptor and left the
+    # trace file with no `run_end` -- the record a VOID depends on.
+    trace = rec = None
     try:
-        with os.fdopen(tfd, "w") as trace, os.fdopen(rfd, "w") as rec:
-            def emit(fh, obj):
-                fh.write(json.dumps(obj, sort_keys=True) + "\n")
-                fh.flush()
-                os.fsync(fh.fileno())
+        tfd = os.open(trace_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+        rfd = os.open(results_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+        trace, rec = os.fdopen(tfd, "w"), os.fdopen(rfd, "w")
 
-            emit(trace, {"event": "run_start", "n_tasks": len(tasks),
-                         "selection_mode": RULES.SELECTION_MODE})
-            emit(rec, {"record_type": "header", "design": "H2",
-                       "task_digest": summary["task_digest"],
-                       "selection_mode": RULES.SELECTION_MODE, "identity": ident})
-            for i, task in enumerate(tasks):
-                if time.monotonic() - started > deadline_s:
-                    emit(trace, {"event": "run_end", "verdict": "VOID",
-                                 "games_completed": len(results)})
-                    raise H2VoidError(
-                        f"the {deadline_s / 60:.0f}-minute deadline expired at game {i} "
-                        f"of {len(tasks)}; the run is VOID and no partial rate is "
-                        f"reported -- a partial schedule is not a smaller design.")
-                emit(trace, {"event": "task_start", "index": i})
-                out = play(task=task, identity=ident, timeout_s=PER_CALL_TIMEOUT_S)
-                row = dict(out["result"])
-                results.append(row)
-                emit(rec, {"record_type": "task_result", **row})
-                t = RULES.transcript(out["plies"], row,
-                                     opening_bound=out["opening_bound"],
-                                     anchor_colour=task["anchor_colour"])
-                per_game.append({"task_id": task["task_id"], "opening": task["opening"],
-                                 "colour_arm": task["colour_arm"],
-                                 "transcript_digest": RULES.transcript_digest(t)})
-                emit(trace, {"event": "task_done", "index": i,
-                             "games_completed": len(results)})
-            emit(trace, {"event": "run_end", "verdict": "OK",
+        def emit(fh, obj):
+            fh.write(json.dumps(obj, sort_keys=True) + "\n")
+            fh.flush()
+            os.fsync(fh.fileno())
+
+        emit(trace, {"event": "run_start", "n_tasks": len(tasks),
+                     "selection_mode": RULES.SELECTION_MODE})
+        emit(rec, {"record_type": "header", "design": "H2",
+                   "task_digest": summary["task_digest"],
+                   "selection_mode": RULES.SELECTION_MODE, "identity": ident})
+        for i, task in enumerate(tasks):
+            if time.monotonic() - started > deadline_s:
+                raise H2VoidError(
+                    f"the {deadline_s / 60:.0f}-minute deadline expired at game {i} "
+                    f"of {len(tasks)}; the run is VOID and no partial rate is "
+                    f"reported -- a partial schedule is not a smaller design.")
+            emit(trace, {"event": "task_start", "index": i})
+            out = play(task=task, identity=ident, timeout_s=PER_CALL_TIMEOUT_S)
+            row = dict(out["result"])
+            results.append(row)
+            emit(rec, {"record_type": "task_result", **row})
+            t = RULES.transcript(out["plies"], row,
+                                 opening_bound=out["opening_bound"])
+            digest = RULES.transcript_digest(t)
+            # 🔴 THE TRANSCRIPT EVIDENCE IS PERSISTED, not just used. Only the task
+            # result was written, so the reported diversity could not be recomputed
+            # by anyone who was not there -- a screen whose input is unrecorded is a
+            # number to be taken on trust.
+            for r in out.get("records", out["plies"]):
+                emit(rec, {"record_type": r.get("record_type", "ply"), **r})
+            emit(rec, {"record_type": "transcript", "task_id": task["task_id"],
+                       "opening": task["opening"], "colour_arm": task["colour_arm"],
+                       "opening_bound": out["opening_bound"],
+                       "n_plies": len(out["plies"]), "transcript_digest": digest})
+            per_game.append({"task_id": task["task_id"], "opening": task["opening"],
+                             "colour_arm": task["colour_arm"],
+                             "transcript_digest": digest})
+            emit(trace, {"event": "task_done", "index": i,
                          "games_completed": len(results)})
-    except H2Error:
+        emit(trace, {"event": "run_end", "verdict": "OK",
+                     "games_completed": len(results)})
+    except BaseException as e:                               # noqa: BLE001
+        # 🔴 EVERY MID-RUN EXIT LEAVES A run_end/VOID. Only the deadline wrote one
+        # before, so a refusal, a crash or an interrupt left a trace that stopped
+        # mid-sentence and could not say the run was void.
+        if trace is not None:
+            try:
+                trace.write(json.dumps(
+                    {"event": "run_end", "verdict": "VOID",
+                     "games_completed": len(results),
+                     "error": type(e).__name__}, sort_keys=True) + "\n")
+                trace.flush()
+                os.fsync(trace.fileno())
+            except Exception:                                # noqa: BLE001
+                pass
+        if isinstance(e, H2Error):
+            raise
+        if isinstance(e, Exception):
+            raise H2VoidError(f"{type(e).__name__}: {e}") from e
         raise
-    except Exception as e:                                   # noqa: BLE001
-        raise H2VoidError(f"{type(e).__name__}: {e}") from e
+    finally:
+        for fh in (trace, rec):
+            if fh is not None:
+                try:
+                    fh.close()
+                except Exception:                            # noqa: BLE001
+                    pass
 
     if len(results) != RULES.N_GAMES:
         raise H2VoidError(

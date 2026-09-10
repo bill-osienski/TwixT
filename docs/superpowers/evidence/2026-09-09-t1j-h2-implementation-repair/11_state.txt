@@ -1,0 +1,25 @@
+H2 REPAIR STATE -- 2026-09-10T03:00:15Z
+
+== SEVEN gates ==
+  ALL SEVEN FALSE: True
+  H2 block [202618000, 202618736) accounted anywhere: False
+
+== the seven findings ==
+  1 mover rule agrees with TwixtState over 8 plies: True; expected_mover removed: True
+  2 public entry parameters: ['results_path', 'trace_path']
+    production seam calls play_task: True; builds an argmax config: True
+  3 forged search_mask refused: incumbent_identity.search_mask.black: recorded 2 (in...
+  4 wrapper supervises: True; outer cap 28860s
+  5 lexists used: True
+  6 screen binds its input: True
+    report binds results FIRST: True
+  7 transcripts persisted: True
+
+== git ==
+M docs/superpowers/2026-09-09-t1j-h2-deterministic-readout-card.md
+ M scripts/GPU/alphazero/h2_match_command.py
+ M scripts/GPU/alphazero/h2_match_rules.py
+ M scripts/GPU/alphazero/h2_match_runner.py
+ M tests/test_h2_match.py
+?? docs/superpowers/evidence/2026-09-09-t1j-h2-implementation-repair/
+HEAD 092700f

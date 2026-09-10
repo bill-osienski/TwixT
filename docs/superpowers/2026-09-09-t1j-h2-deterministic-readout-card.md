@@ -9,6 +9,11 @@ with **different seeds**, and §8 forbids pooling or rate-comparison inference w
 
 **AMENDED TWICE, 2026-09-09, before implementation, plan only.**
 
+**Fourth amendment (implementation review).** The mover rule in §2.2 was WRONG: turn colour derives
+from the frozen starting player and ply parity, **not** from `colour_arm`. Corrected in place, with the
+consequence recorded — the first implementation would have voided every black-arm transcript, half the
+schedule. Nothing else in the card changes.
+
 **Third amendment.** §2.2 narrowed twice more: the terminal reason is exactly `win` or `cap` (this
 protocol has **no resignation**, which my first draft listed), and the ply sequence must be exactly
 `opening_bound + 1 … task_result.plies` with each mover **equal to its expected colour** — contiguity
@@ -143,10 +148,18 @@ itself wrote**. The first index is fixed by the game's own `opening_bound` and t
 `task_result`, so a missing record at either end is a **count mismatch against a declared boundary**,
 not a judgement call.
 
-**Each mover must EQUAL THE COLOUR EXPECTED FOR ITS PLY**, derived from the task's colour arm and the
-ply's parity — not merely alternate. Alternation is preserved by flipping every mover in a game, which
-would swap which side played every move while passing an alternation check, and would silently turn
-one transcript into a different one.
+**Each mover must EQUAL THE COLOUR WHOSE TURN THAT PLY IS**, derived from the **frozen starting colour
+and the ply's parity** — not merely alternate. Alternation is preserved by flipping every mover in a
+game, which would swap which side played every move while passing an alternation check, and would
+silently turn one transcript into a different one.
+
+🔴 **CORRECTED: NOT FROM THE COLOUR ARM.** `TwixtState.to_move` defaults to red ("Red moves first"),
+the runner records `mover` as the side that moved and `ply` as the count after it, so **recorded odd
+plies are red and even plies are black in every task, in both arms**. `colour_arm` assigns **systems to
+colours** — `t1j_red` means T1j plays red and our incumbent black — and has no bearing on turn order.
+The first implementation derived the expected mover from the arm, so **every `t1j_black` transcript
+would have VOIDed: half the schedule.** Its tests agreed with it because they built their fixtures
+from the same helper; the tests now take their expectation from `TwixtState` itself.
 
 An undefined transcript **VOIDs the run** — it is never hashed into a novel value that inflates the
 distinct count.
