@@ -1,0 +1,38 @@
+H2 IMPLEMENTATION STATE -- 2026-09-10T00:22:36Z
+
+== SEVEN gates, as imported (H2's is new) ==
+  D1_EXECUTION_AUTHORIZED            False
+  SCREEN_AUTHORIZED                  False
+  H1_EXECUTION_AUTHORIZED            False
+  L0_EXECUTION_AUTHORIZED            False
+  LOWPLY_QUALIFICATION_AUTHORIZED    False
+  RUNTIME_REQUAL_AUTHORIZED          False
+  H2_EXECUTION_AUTHORIZED            False
+  ALL SEVEN FALSE: True
+
+== H2's seed block: PAPER ONLY, registered nowhere ==
+  [202618000, 202618736) sampled at both ends and the middle:
+    202618000: accounted=False exposed=False retired=False
+    202618368: accounted=False exposed=False retired=False
+    202618735: accounted=False exposed=False retired=False
+  accounted anywhere in the block: False
+
+== the frozen design, from the modules ==
+  tasks 736 | cells 16 x 46 reps | mode argmax
+  digest 3c0a0ae12c61dae69b134b30d0f4adb7dc97b9e46478cebe679784996d7172d2
+  digest == pinned H2_TASK_DIGEST: True
+  parity 0.5 | bands (0.4499, 0.5501) | min distinct/cell 42
+  deadline 28800s (480 min) | per call 120s
+
+== the wrapper exposes no gate flag ==
+  CLI flags: ['--results', '--trace']
+  'runner-source' among them: False
+
+== git ==
+?? docs/superpowers/evidence/2026-09-09-t1j-h2-implementation/
+?? scripts/GPU/alphazero/h2_match_command.py
+?? scripts/GPU/alphazero/h2_match_plan.py
+?? scripts/GPU/alphazero/h2_match_rules.py
+?? scripts/GPU/alphazero/h2_match_runner.py
+?? tests/test_h2_match.py
+HEAD 5aa5db4
