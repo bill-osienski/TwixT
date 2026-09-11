@@ -674,10 +674,19 @@ def test_validate_task_executable_STILL_does_not_ask_the_accounted_question():
     registration: `validate_task_executable` asks about consumed / exposed /
     retired seeds and NOT accounted ones. It would have accepted an unregistered
     H1 seed, and it accepts a registered one for the same reason -- it never
-    asked. Shown against a seed in no registry at all."""
-    task = dict(P.build_tasks(P.load_source_plan())[0], seed=202618000)
-    assert not any(REF.seed_status(202618000).values())     # in NO registry
-    REF.validate_task_executable(task)                      # and still accepted
+    asked. Shown against a seed in no registry at all.
+
+    🔴 THE SEED IS FOUND, NOT TYPED. This named 202618000, which was in no registry
+    when it was written and became H2's FIRST SEED on 2026-09-11 -- so the test
+    broke the moment that block was registered, and it would have broken again on
+    the next one. It now searches upward for a seed no registry holds and asserts
+    that it found one, so it cannot rot into a test of the wrong thing."""
+    unregistered = next((s for s in range(202618000, 202630000)
+                         if not any(REF.seed_status(s).values())), None)
+    assert unregistered is not None, "no unregistered seed in the search range"
+    task = dict(P.build_tasks(P.load_source_plan())[0], seed=unregistered)
+    assert not any(REF.seed_status(unregistered).values())   # in NO registry
+    REF.validate_task_executable(task)                       # and still accepted
 
 
 def test_the_FROZEN_artifacts_seed_status_is_a_FREEZE_TIME_record_not_a_LIVE_one():

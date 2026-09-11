@@ -1,0 +1,37 @@
+H2 SEED REGISTRATION STATE -- 2026-09-11T17:32:58Z
+
+== the SEVEN gates, as IMPORTED ==
+  D1_EXECUTION_AUTHORIZED            False  (type bool)
+  SCREEN_AUTHORIZED                  False  (type bool)
+  H1_EXECUTION_AUTHORIZED            False  (type bool)
+  L0_EXECUTION_AUTHORIZED            False  (type bool)
+  LOWPLY_QUALIFICATION_AUTHORIZED    False  (type bool)
+  RUNTIME_REQUAL_AUTHORIZED          False  (type bool)
+  H2_EXECUTION_AUTHORIZED            False  (type bool)
+  ALL SEVEN FALSE: True
+
+== H2's block, PER SEED ==
+  [202618000, 202618736): accounted 736 / exposed 0 / retired 0 / test_only 0
+  consumed: 0
+  registration barrier: SATISFIED
+  run_h2 still REFUSES: H2 execution is UNAUTHORIZED. No model was loaded, no JVM st
+
+== D1's block, UNCHANGED by this round ==
+  (202615000, 202615221): accounted 221 / exposed 221 / retired 221
+
+== every registry ==
+  ACCOUNTED_SEED_INTERVALS   14 intervals,  4736 seeds
+  EXPOSED_SEED_INTERVALS     10 intervals,   634 seeds
+  RETIRED_SEED_INTERVALS      6 intervals,   992 seeds
+  TEST_ONLY_SEED_INTERVALS    1 intervals,   100 seeds
+  CONSUMED_SEEDS             1 seed
+
+== the registry diff is a PURE INSERTION ==
+  lines removed from the registry file: 0
+
+git:
+M scripts/GPU/alphazero/e4_screen_reference.py
+ M tests/test_h1_viability.py
+ M tests/test_h2_match.py
+?? docs/superpowers/evidence/2026-09-11-t1j-h2-seed-registration/
+HEAD 9984757

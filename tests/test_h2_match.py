@@ -464,26 +464,57 @@ def test_the_seam_BUILDS_AN_ARGMAX_CONFIG_rather_than_reusing_the_frozen_one():
     assert "selection_mode" in ast.dump(value), "and it must set selection_mode"
 
 
-def test_THE_SEED_BLOCK_IS_REGISTERED_NOWHERE_and_the_barrier_says_so():
+def test_THE_BLOCK_IS_NOW_ACCOUNTED_and_the_barrier_is_SATISFIED():
+    """INVERTED 2026-09-11 by the seed-preparation authorization.
+
+    🔑 The two barriers are independent and BOTH are asserted here, because that
+    independence is the whole reason there are two: registration removes the seed
+    barrier and moves NOTHING else. The gate is still False, so the run is still
+    refused -- by the gate, not by the registry. A registration that also opened
+    the gate would be a switch-off disguised as bookkeeping.
+    """
     lo, hi = R.H2_SEED_BLOCK
-    assert not any(REF.seed_is_accounted(s) for s in (lo, hi - 1))
+    for name in ("ACCOUNTED_SEED_INTERVALS", "EXPOSED_SEED_INTERVALS",
+                 "RETIRED_SEED_INTERVALS", "TEST_ONLY_SEED_INTERVALS"):
+        assert getattr(REF, name), f"vacuous: {name} is empty"
+    for seed in range(lo, hi):
+        st = REF.seed_status(seed)
+        assert st["accounted"], (seed, st)
+        assert not (st["exposed"] or st["retired"] or st["test_only"]), (seed, st)
+        assert seed not in REF.CONSUMED_SEEDS, seed
+    RUN.check_seed_registration()                     # the barrier is down
+    assert RUN.H2_EXECUTION_AUTHORIZED is False       # the gate is not
+    with pytest.raises(RUN.H2Error, match="UNAUTHORIZED"):
+        RUN.run_h2(results_path="/dev/null/x", trace_path="/dev/null/y",
+                   report_path="/dev/null/z")
+
+
+def _registry_without_h2():
+    """The real ACCOUNTED tuple, MINUS H2's block, with the strip asserted.
+
+    A negative control that quietly stops removing anything is a control that has
+    stopped controlling -- the D1 round's lesson, in the opposite direction."""
+    out = tuple(i for i in REF.ACCOUNTED_SEED_INTERVALS
+                if tuple(i) != tuple(R.H2_SEED_BLOCK))
+    assert len(out) < len(REF.ACCOUNTED_SEED_INTERVALS), \
+        "nothing was stripped: H2's block is NOT registered, so this controls nothing"
+    return out
+
+
+def test_an_UNREGISTERED_block_is_still_refused(monkeypatch):
+    """NEGATIVE CONTROL. Strip the block and the barrier must refuse again."""
+    monkeypatch.setattr(REF, "ACCOUNTED_SEED_INTERVALS", _registry_without_h2())
     with pytest.raises(RUN.H2Error, match="not registered"):
         RUN.check_seed_registration()
 
 
 def test_the_registration_barrier_checks_EVERY_seed_not_the_endpoints(monkeypatch):
+    """A PARTIAL registration must still refuse: all but the last seed."""
     lo, hi = R.H2_SEED_BLOCK
     monkeypatch.setattr(REF, "ACCOUNTED_SEED_INTERVALS",
-                        REF.ACCOUNTED_SEED_INTERVALS + ((lo, hi - 1),))
+                        _registry_without_h2() + ((lo, hi - 1),))
     with pytest.raises(RUN.H2Error, match="not registered"):
         RUN.check_seed_registration()
-
-
-def test_a_fully_registered_block_satisfies_the_barrier_and_NOT_the_gate(monkeypatch):
-    monkeypatch.setattr(REF, "ACCOUNTED_SEED_INTERVALS",
-                        REF.ACCOUNTED_SEED_INTERVALS + (R.H2_SEED_BLOCK,))
-    RUN.check_seed_registration()
-    assert RUN.H2_EXECUTION_AUTHORIZED is False
 
 
 def test_the_output_paths_are_CREATE_ONLY_and_must_be_two_files(tmp_path):

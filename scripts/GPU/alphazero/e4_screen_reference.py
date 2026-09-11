@@ -149,6 +149,47 @@ ACCOUNTED_SEED_INTERVALS = (
                                      #
                                      # Accounted, NOT exposed and NOT retired: a
                                      # reservation is not a draw.
+    (202618000, 202618736),          # H2 DETERMINISTIC-READOUT HEAD-TO-HEAD. 736
+                                     # seeds, one per game: 8 openings x 2 colour
+                                     # arms x 46 repetitions at mdPly 6, bound
+                                     # POSITIONALLY (row i carries 202618000 + i).
+                                     #
+                                     # REGISTERED 2026-09-11, as the seed-
+                                     # PREPARATION step and NOT as an execution
+                                     # authorization -- two separate reviews, and
+                                     # this is only the first. At the moment of
+                                     # this edit `H2_EXECUTION_AUTHORIZED` is
+                                     # False and stays False; the run is refused
+                                     # by the gate alone. From the card to here
+                                     # the block was reserved on paper and
+                                     # deliberately absent from this tuple.
+                                     #
+                                     # RE-PROVED against the registries AS THEY
+                                     # STAND -- which now include EVERY earlier
+                                     # block, D1's §14 among them, spent and
+                                     # retired on 2026-09-08 -- plus this paper
+                                     # reservation itself. 4,845 prior seeds
+                                     # across six categories, 24,225 prior values
+                                     # including derivations: 0 direct overlaps,
+                                     # 0 derived-stream collisions, own
+                                     # derivations injective (3,680 = 736 x 5).
+                                     # Exhaustive, not sampled. Thirteen collision
+                                     # controls and four gap-policy controls all
+                                     # rejected.
+                                     #
+                                     # 🔑 The candidate IS this paper reservation,
+                                     # so it was excluded from the prior set BY
+                                     # IDENTITY -- in the GAP check as well as the
+                                     # overlap check, which is the correction the
+                                     # D1 round had to make mid-proof.
+                                     #
+                                     # 🔑 THE GAP FLOOR IS THE CANDIDATE'S OWN
+                                     # SIZE (736, not the old fixed 224), so the
+                                     # gap can never be smaller than the block it
+                                     # protects. Nearest other boundary: 776.
+                                     #
+                                     # Accounted, NOT exposed and NOT retired: a
+                                     # reservation is not a draw.
     (202616000, 202616224),          # H1 HEAD-TO-HEAD VIABILITY SCREEN. 224
                                      # seeds, one per game: 8 openings x 2 colour
                                      # arms x 14 repetitions at mdPly 6.
