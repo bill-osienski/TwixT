@@ -26,18 +26,30 @@ DEFAULT_TRACE = f"{OUT_DIR}/04_h2_trace.jsonl"
 #: The frozen report location from the card's §7. Create-only, like every output.
 DEFAULT_REPORT = f"{OUT_DIR}/09_report.json"
 
-#: 🔴 A SINGLE-USE CAPABILITY, NOT AN ENVIRONMENT FLAG. The first version used
-#: `H2_SUPERVISED_WORKER=1`, which any caller could set: it proved no provenance
-#: and contradicted this module's own claim that no environment variable reaches
-#: this path. The supervisor now creates a 0600 file containing a random token and
-#: passes its PATH on argv; the worker reads the token and DELETES the file, so the
-#: capability is consumed and a second `--worker` on the same one refuses.
+#: 🔴 AN INHERITED ANONYMOUS PIPE. THE TWO VERSIONS BEFORE THIS WERE BOTH WRONG.
 #:
-#: ⚠ WHAT THIS IS AND IS NOT. It removes the accidental bypass -- typing `--worker`
-#: no longer runs an unsupervised match outside the restoration boundary -- and it
-#: makes the capability single-use. It is NOT an authentication boundary: a
-#: determined local caller with write access can fabricate a file. Nothing here
-#: pretends otherwise, and the gate remains the thing that authorizes a run.
+#: `H2_SUPERVISED_WORKER=1` was caller-settable and contradicted this module's own
+#: claim that no environment variable reaches the path.
+#:
+#: Then a FILE holding a random token, whose path came in on argv. That was worse
+#: in one specific way: the worker accepted ANY file of the right length -- the
+#: token was never compared with anything -- and it UNLINKED whatever path it was
+#: given, valid or not. `--worker --capability <ordinary-file>` DELETED that file
+#: with the gate still closed. A bypass guard that destroys data is not a guard.
+#:
+#: Now: the supervisor makes an anonymous pipe, writes a random token into it and
+#: passes the READ END to the child through `pass_fds`. Everything above fd 2 is
+#: closed on exec by default, so the descriptor exists in the child ONLY because
+#: the parent chose to pass it. THERE IS NO PATH, so there is nothing to delete,
+#: and no file of any length can stand in for it.
+#:
+#: ⚠ WHAT THIS IS AND IS NOT, precisely. It removes the accidental bypass -- typing
+#: `--worker` cannot run an unsupervised match -- and it cannot damage anything. It
+#: is NOT an authentication boundary: a caller who deliberately constructs a pipe,
+#: writes 64 hex characters into it and passes the descriptor number can still
+#: reach the worker. No local mechanism proves parentage without a secret shared
+#: out of band, and nothing here pretends otherwise. THE GATE is what authorizes a
+#: run; this only stops the path being reached by accident or by typing.
 CAPABILITY_BYTES = 32
 
 #: The file whose gate line is restored: the runner's own source, resolved from
@@ -119,43 +131,46 @@ def _parser():
     ap.add_argument("--worker", action="store_true",
                     help="internal: run the match in this process. Refused without the "
                          "supervisor's single-use capability.")
-    ap.add_argument("--capability", default=None,
-                    help="internal: path to the supervisor's single-use capability")
+    ap.add_argument("--capability-fd", type=int, default=None, dest="capability_fd",
+                    help="internal: the inherited read end of the supervisor's "
+                         "capability pipe. NOT a path: nothing here opens or deletes "
+                         "a file the caller names.")
     # 🔴 NO --runner-source, and no flag that reaches the gate. Opening H2 is a
     # reviewed one-line edit plus a separate authorization, and nothing here
     # accepts an environment variable or a config file either.
     return ap
 
 
-def _make_capability() -> str:
-    """Create the single-use capability file: 0600, random, in a private directory."""
+def _make_capability() -> int:
+    """An anonymous pipe carrying one random token. Returns the READ end.
+
+    The write end is closed here, so the child reads the token and then EOF; the
+    channel cannot be reused and there is no file anywhere.
+    """
     import secrets
-    import tempfile
-    d = tempfile.mkdtemp(prefix="h2-cap-")
-    path = os.path.join(d, "capability")
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    with os.fdopen(fd, "w") as fh:
+    r_fd, w_fd = os.pipe()
+    with os.fdopen(w_fd, "w") as fh:
         fh.write(secrets.token_hex(CAPABILITY_BYTES))
-        fh.flush()
-        os.fsync(fh.fileno())
-    return path
+    return r_fd
 
 
-def _consume_capability(path: Optional[str]) -> bool:
-    """Read the capability and DELETE it. False if absent, empty, or already used."""
-    if not path:
+def _consume_capability(fd: Optional[int]) -> bool:
+    """Read the token from an INHERITED descriptor. DELETES NOTHING, EVER.
+
+    🔴 The previous version unlinked whatever path it was handed, including one
+    that failed validation, so a mistyped `--capability` destroyed an ordinary
+    file while the gate was shut. There is no path here to destroy, and this
+    function's only effect is to close the descriptor it was given.
+    """
+    if fd is None:
         return False
     try:
-        with open(path, encoding="utf-8") as fh:
+        with os.fdopen(int(fd), "r", closefd=True) as fh:
             token = fh.read().strip()
-    except OSError:
+    except (OSError, ValueError, TypeError):
         return False
-    finally:
-        try:
-            os.unlink(path)                # consumed, whatever happens next
-        except OSError:
-            pass
-    return len(token) == CAPABILITY_BYTES * 2
+    return len(token) == CAPABILITY_BYTES * 2 and all(
+        c in "0123456789abcdef" for c in token)
 
 
 def worker_main(argv: Sequence[str]) -> int:
@@ -167,7 +182,7 @@ def worker_main(argv: Sequence[str]) -> int:
     unbounded, with nothing to restore the gate afterwards.
     """
     a = _parser().parse_args(list(argv))
-    if not _consume_capability(a.capability):
+    if not _consume_capability(a.capability_fd):
         print("refused: --worker runs the match UNSUPERVISED and outside the gate "
               "restoration boundary. It is spawned by the supervisor, which hands it "
               "a single-use capability; it is not a way to run H2 by hand.",
@@ -263,21 +278,16 @@ def main(argv: Optional[Sequence[str]] = None, *,
             print(f"refused before spawning: {e}", file=sys.stderr)
             code, refused = EXIT_REFUSED, True   # no return: the finally must run
         if not refused:
-            cap = _make_capability()             # the child's only way in
+            cap_fd = _make_capability()          # the child's only way in
             try:
                 r = supervise([sys.executable, "-m", MODULE, "--worker",
-                               "--capability", cap, *argv],
+                               "--capability-fd", str(cap_fd), *argv],
                               timeout_s=RUN.RUN_DEADLINE_S + SUPERVISOR_GRACE_S,
-                              kill_grace_s=5.0, interrupt_grace_s=INTERRUPT_GRACE_S)
+                              kill_grace_s=5.0, interrupt_grace_s=INTERRUPT_GRACE_S,
+                              pass_fds=[cap_fd])
             finally:
-                # The worker consumes it; remove it and its directory if it did not
-                # get that far, so no capability outlives the run.
                 try:
-                    os.unlink(cap)
-                except OSError:
-                    pass
-                try:
-                    os.rmdir(os.path.dirname(cap))
+                    os.close(cap_fd)         # nothing on disk, nothing to unlink
                 except OSError:
                     pass
             if r["timed_out"]:

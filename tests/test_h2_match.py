@@ -724,8 +724,9 @@ def test_the_worker_is_SUPERVISED_in_its_own_group_under_an_OUTER_cap(monkeypatc
     it indefinitely. The wrapper caps the WORKER and kills its whole group."""
     seen = {}
 
-    def fake_supervise(cmd, *, timeout_s, kill_grace_s, interrupt_grace_s):
-        seen.update(cmd=cmd, timeout_s=timeout_s)
+    def fake_supervise(cmd, *, timeout_s, kill_grace_s, interrupt_grace_s,
+                       pass_fds=()):
+        seen.update(cmd=cmd, timeout_s=timeout_s, pass_fds=list(pass_fds))
         return {"exit_code": 0, "timed_out": False, "interrupted": False,
                 "group_cleared": True}
     monkeypatch.setattr(CMD, "gate_is_open", lambda: True)
@@ -926,7 +927,7 @@ def test_the_WORKER_persists_the_report_and_returns_its_mapped_code(monkeypatch,
                                       "reason": "bad rows"})
     report = tmp_path / "09_report.json"
     report.write_text('{"reported": false, "outcome": "REFUSED"}')   # the runner's
-    code = CMD.worker_main(["--worker", "--capability", cap,
+    code = CMD.worker_main(["--worker", "--capability-fd", str(cap),
                             "--results", str(tmp_path / "r.jsonl"),
                             "--trace", str(tmp_path / "t.jsonl"),
                             "--report", str(report)])
@@ -1190,31 +1191,74 @@ def test_NO_ENVIRONMENT_VARIABLE_reaches_the_worker_path():
     assert not reads, "an environment variable is being read"
 
 
-def test_THE_CAPABILITY_IS_SINGLE_USE(tmp_path):
-    path = CMD._make_capability()
-    assert os.path.exists(path)
-    assert CMD._consume_capability(path) is True
-    assert not os.path.exists(path), "the capability must be consumed"
-    assert CMD._consume_capability(path) is False, "a second use must refuse"
+def test_THE_CAPABILITY_IS_A_PIPE_AND_IS_SINGLE_USE():
+    """Single-use because the pipe is DRAINED, not because the descriptor is closed.
 
-
-def test_the_capability_is_PRIVATE_and_RANDOM():
+    ⚠ A control that duplicated the descriptor instead of closing it went NOT
+    CAUGHT, and it was right to: a second read finds EOF and an empty token either
+    way. The write end is closed at creation, so the token can be read exactly
+    once -- that is the property, and it is what this asserts.
+    """
     import stat
+    fd = CMD._make_capability()
+    assert stat.S_ISFIFO(os.fstat(fd).st_mode), "it must be an anonymous pipe"
+    dup = os.dup(fd)
+    assert CMD._consume_capability(fd) is True
+    assert CMD._consume_capability(dup) is False, "the token is drained, not reusable"
+
+
+def test_the_capability_is_RANDOM_and_carries_no_path():
     a, b = CMD._make_capability(), CMD._make_capability()
-    mode = stat.S_IMODE(os.stat(a).st_mode)
-    assert mode == 0o600, oct(mode)
-    ta, tb = open(a).read(), open(b).read()
+    ta = os.fdopen(os.dup(a)).read()
+    tb = os.fdopen(os.dup(b)).read()
     assert ta != tb and len(ta) == CMD.CAPABILITY_BYTES * 2
-    for p in (a, b):
-        CMD._consume_capability(p)
+    assert all(c in "0123456789abcdef" for c in ta)
+    for fd in (a, b):
+        CMD._consume_capability(fd)
 
 
-@pytest.mark.parametrize("bad", ["", "short", "x" * 10])
-def test_a_FORGED_or_EMPTY_capability_is_refused(tmp_path, bad):
-    path = tmp_path / "cap"
-    path.write_text(bad)
-    assert CMD._consume_capability(str(path)) is False
-    assert not path.exists(), "even a refused capability is consumed"
+@pytest.mark.parametrize("bad", ["", "short", "x" * 10, "g" * 64, "A" * 64])
+def test_a_FORGED_capability_is_refused_INCLUDING_one_of_the_RIGHT_LENGTH(bad):
+    """🔴 THE DEFECT THIS CLOSES. The old test tried only empty and short values, so
+    it missed the real forgery: ANY file of exactly 64 characters was accepted,
+    because the token was never compared with anything. Length alone is not a
+    check -- the content must be what the supervisor writes."""
+    r_fd, w_fd = os.pipe()
+    with os.fdopen(w_fd, "w") as fh:
+        fh.write(bad)
+    assert CMD._consume_capability(r_fd) is False, f"{bad!r} was accepted"
+
+
+def test_NOTHING_IS_EVER_DELETED_by_the_capability_check(tmp_path):
+    """🔴 THE DESTRUCTIVE FAULT. The old check UNLINKED whatever path it was handed,
+    valid or not, so `--worker --capability <ordinary-file>` deleted that file while
+    the gate was shut. There is no path now -- and the flag that took one is gone."""
+    victim = tmp_path / "important.txt"
+    victim.write_text("x" * 64)          # exactly the length the old check accepted
+    flags = [s for a in CMD._parser()._actions for s in a.option_strings]
+    assert "--capability" not in flags, flags
+    assert "--capability-fd" in flags
+    with pytest.raises(SystemExit):      # the path form cannot even be expressed
+        CMD._parser().parse_args(["--capability", str(victim)])
+    assert victim.exists() and victim.read_text() == "x" * 64
+
+
+def test_the_capability_check_TAKES_A_DESCRIPTOR_not_a_path():
+    import ast
+    import inspect as _i
+    import textwrap
+    assert list(_i.signature(CMD._consume_capability).parameters) == ["fd"]
+    # 🔴 BY AST, NOT BY GREP: the docstring SAYS "unlinked" on purpose, describing
+    # the fault it closes, and a substring check failed on its own explanation.
+    fn = ast.parse(textwrap.dedent(_i.getsource(CMD._consume_capability))).body[0]
+    calls = [n for n in ast.walk(fn) if isinstance(n, ast.Call)]
+    assert not [c for c in calls if getattr(c.func, "attr", "") in ("unlink", "remove",
+                                                                    "rmdir", "rmtree")]
+
+
+def test_a_capability_descriptor_that_does_not_exist_is_refused():
+    assert CMD._consume_capability(9999) is False
+    assert CMD._consume_capability(None) is False
 
 
 def test_the_supervisor_HANDS_the_child_a_capability_and_leaves_none_behind(monkeypatch,
@@ -1223,9 +1267,10 @@ def test_the_supervisor_HANDS_the_child_a_capability_and_leaves_none_behind(monk
 
     def fake_supervise(cmd, **kw):
         seen["cmd"] = list(cmd)
-        i = cmd.index("--capability")
-        seen["path"] = cmd[i + 1]
-        seen["existed"] = os.path.exists(seen["path"])
+        i = cmd.index("--capability-fd")
+        seen["fd"] = int(cmd[i + 1])
+        seen["passed"] = list(kw.get("pass_fds", ()))
+        seen["token"] = os.fdopen(os.dup(seen["fd"])).read()
         return {"exit_code": 0, "timed_out": False, "interrupted": False,
                 "group_cleared": True}
     monkeypatch.setattr(CMD, "gate_is_open", lambda: True)
@@ -1234,8 +1279,10 @@ def test_the_supervisor_HANDS_the_child_a_capability_and_leaves_none_behind(monk
     decoy.write_text("H2_EXECUTION_AUTHORIZED = True\n")
     CMD.main(["--results", str(tmp_path / "r.jsonl"), "--trace", str(tmp_path / "t.jsonl"),
               "--report", str(tmp_path / "rep.json")], _runner_source=str(decoy))
-    assert seen["existed"] is True, "the child must be handed a live capability"
-    assert not os.path.exists(seen["path"]), "none may outlive the run"
+    assert seen["passed"] == [seen["fd"]], "the descriptor must be INHERITED"
+    assert len(seen["token"]) == CMD.CAPABILITY_BYTES * 2
+    with pytest.raises(OSError):
+        os.fstat(seen["fd"])             # closed after the run; none outlives it
 
 
 # ──────────────── the interrupt contract: OK / VOID / INTERRUPTED ───────────

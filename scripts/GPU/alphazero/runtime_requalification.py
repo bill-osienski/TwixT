@@ -505,7 +505,8 @@ def _stages(prefixes, paths, out_path, deadline, budget, compile_fn):
 # ───────────────── the OUTER supervisor: a whole process group ──────────────
 
 def supervise(cmd: Sequence[str], *, timeout_s: float,
-              kill_grace_s: float = 5.0, interrupt_grace_s: float = 30.0) -> Dict[str, Any]:
+              kill_grace_s: float = 5.0, interrupt_grace_s: float = 30.0,
+              pass_fds: Sequence[int] = ()) -> Dict[str, Any]:
     """Run `cmd` in ITS OWN SESSION and, on timeout, terminate the WHOLE GROUP.
 
     AN OPERATOR INTERRUPT IS FORWARDED. The worker is a session leader, so a
@@ -524,7 +525,11 @@ def supervise(cmd: Sequence[str], *, timeout_s: float,
     period, then SIGKILL, then the group is PROBED (signal 0) until it is empty
     or a bounded wait runs out; the result says which.
     """
-    p = subprocess.Popen(list(cmd), start_new_session=True)
+    # `pass_fds` is how a caller hands the child a PARENT-BOUND channel: everything
+    # above fd 2 is closed by default, so an inherited descriptor exists only if the
+    # parent chose to pass it. Empty by default, so every existing caller is
+    # unaffected.
+    p = subprocess.Popen(list(cmd), start_new_session=True, pass_fds=tuple(pass_fds))
     pgid = p.pid                                   # its own session leader
     timed_out = interrupted = False
     try:

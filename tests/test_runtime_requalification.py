@@ -751,3 +751,55 @@ def test_main_reports_TIMEOUT_when_the_supervisor_killed_the_tree(monkeypatch, t
     monkeypatch.setattr(RQ, "supervise", lambda cmd, **k: {
         "exit_code": RQ.EXIT_TIMEOUT, "interrupted": False, "timed_out": True, "group_cleared": True})
     assert RQ.main(["--out", str(tmp_path / "r.json")]) == RQ.EXIT_TIMEOUT == 6
+
+
+def test_supervise_PASSES_AN_INHERITED_DESCRIPTOR_to_the_child():
+    """`pass_fds` is how a caller hands the child a PARENT-BOUND channel.
+
+    Everything above fd 2 is closed on exec by default, so the child can only read
+    this because the parent chose to pass it. The child here reads the token and
+    exits 0 on a match -- the whole point of the mechanism, exercised with a real
+    process rather than a mock.
+    """
+    import os
+    import sys
+    r_fd, w_fd = os.pipe()
+    with os.fdopen(w_fd, "w") as fh:
+        fh.write("cafebabe")
+    prog = ("import os,sys;"
+            "sys.exit(0 if os.fdopen(int(sys.argv[1])).read()=='cafebabe' else 9)")
+    try:
+        r = RQ.supervise([sys.executable, "-c", prog, str(r_fd)], timeout_s=30,
+                      pass_fds=[r_fd])
+        assert r["exit_code"] == 0, r
+        assert r["group_cleared"] is True
+    finally:
+        try:
+            os.close(r_fd)
+        except OSError:
+            pass
+
+
+def test_WITHOUT_pass_fds_the_child_CANNOT_read_the_descriptor():
+    """The negative half: the same child, the same fd number, not passed -- so the
+    descriptor does not exist in the child and it exits non-zero. Without this the
+    test above would pass even if `pass_fds` did nothing."""
+    import os
+    import sys
+    r_fd, w_fd = os.pipe()
+    with os.fdopen(w_fd, "w") as fh:
+        fh.write("cafebabe")
+    prog = ("import os,sys\n"
+            "try:\n"
+            "    ok = os.fdopen(int(sys.argv[1])).read()=='cafebabe'\n"
+            "except OSError:\n"
+            "    ok = False\n"
+            "sys.exit(0 if ok else 9)")
+    try:
+        r = RQ.supervise([sys.executable, "-c", prog, str(r_fd)], timeout_s=30)
+        assert r["exit_code"] == 9, r
+    finally:
+        try:
+            os.close(r_fd)
+        except OSError:
+            pass

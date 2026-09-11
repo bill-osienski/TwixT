@@ -1,0 +1,27 @@
+H2 CAPABILITY REPAIR -- 2026-09-11T15:04:13Z
+
+ALL SEVEN GATES FALSE: True
+H2 seeds accounted: 0 of 736
+
+the capability, exercised:
+  channel is an anonymous pipe: True
+  the supervisor's token is accepted: True
+  a second read is REFUSED (the pipe is drained): True
+    ⚠ the probe that produced this line first printed the raw return value under
+      a 'refused:' label, so it read 'refused: False' for a refusal. Corrected.
+  a forged token of length 64 (g) refused: True
+  a forged token of length 64 (A) refused: True
+  a forged token of length 64 (x) refused: True
+  a forged token of length  0 (-) refused: True
+  CLI flags: ['-h', '--help', '--results', '--trace', '--report', '--worker', '--capability-fd']
+  a caller-supplied PATH cannot be expressed: True
+  deletions anywhere in the check: 0
+  environment reads in the wrapper: 0
+
+git:
+M scripts/GPU/alphazero/h2_match_command.py
+ M scripts/GPU/alphazero/runtime_requalification.py
+ M tests/test_h2_match.py
+ M tests/test_runtime_requalification.py
+?? docs/superpowers/evidence/2026-09-11-t1j-h2-capability/
+HEAD b363ade
