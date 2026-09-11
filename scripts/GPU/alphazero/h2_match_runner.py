@@ -37,7 +37,7 @@ class H2VoidError(H2Error):
 #: 🔴 THE GATE. A reviewed one-line change plus a separate authorization, and
 #: nothing reads an environment variable, a flag or a config file to reach it.
 #: Both public entries read it, so gating one leaves the other reachable.
-H2_EXECUTION_AUTHORIZED = False
+H2_EXECUTION_AUTHORIZED = True
 
 #: Whole-run wall clock, and the per-call bound the helper already carries.
 RUN_DEADLINE_S = 480 * 60                               # 8 hours, card §5
