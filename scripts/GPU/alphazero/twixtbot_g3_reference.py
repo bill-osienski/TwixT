@@ -182,6 +182,56 @@ class SeededReferenceAgent:
         return (int(move[0]), int(move[1]))
 
 
+#: THE ONLY CONFIGURATION FIELD A STUDY MAY VARY, and the only values it may take.
+#:
+#: 🔴 WHY THIS EXISTS. `build_reference_agent` compared the supplied config with
+#: `eval_config()` and refused ANY difference. That is the right instinct and it
+#: was too blunt: H2 -- the deterministic-readout head-to-head -- is a ONE-FIELD
+#: change to the readout, so the qualified construction path could not build its
+#: incumbent at all, and the authorized 736-game match VOIDED AT TASK 0, before a
+#: single move (2026-09-11).
+#:
+#: 🔑 ADMITTING A FIELD IS NOT ADMITTING EVERY VALUE OF IT. `hoeffding_lcb` is a
+#: real, qualified readout mode and is REFUSED here anyway: a study that wants it
+#: must name it, in a preregistration, and add it to this tuple under review.
+#: Everything else -- simulations, batch size, stall flush, board size, the
+#: temperature settings, the ply cap -- must still equal the frozen research
+#: configuration EXACTLY.
+ADMISSIBLE_SELECTION_MODES = ("opening_temperature", "argmax")
+
+
+def _check_config(cfg) -> None:
+    """The supplied config must BE the frozen one, except for an admitted readout.
+
+    Compared FIELD BY FIELD rather than by equality, so the refusal names the field
+    that differs -- "config is not the frozen research configuration" said only
+    that something was wrong, which is how a one-field change looked identical to a
+    wholesale substitution.
+    """
+    import dataclasses
+
+    frozen = eval_config()
+    if type(cfg) is not type(frozen):
+        raise ReferenceError(
+            f"config is a {type(cfg).__name__}, not the {type(frozen).__name__} the "
+            f"frozen research configuration is expressed in")
+    for f in dataclasses.fields(frozen):
+        got, want = getattr(cfg, f.name), getattr(frozen, f.name)
+        if f.name == "selection_mode":
+            if got not in ADMISSIBLE_SELECTION_MODES:
+                raise ReferenceError(
+                    f"selection_mode {got!r} is not one of the admitted readouts "
+                    f"{ADMISSIBLE_SELECTION_MODES}. Admitting the FIELD is not "
+                    f"admitting every value of it: a study that needs another mode "
+                    f"names it in a preregistration and adds it here under review.")
+            continue
+        if type(got) is not type(want) or got != want:
+            raise ReferenceError(
+                f"{f.name} is {got!r} ({type(got).__name__}) but the frozen research "
+                f"configuration gives {want!r} ({type(want).__name__}). Only the "
+                f"readout may vary; every other field must match exactly.")
+
+
 def build_reference_agent(*, task: dict, evaluator, colour: str, config=None,
                           capture: bool = False) -> SeededReferenceAgent:
     """The one construction path. Binds the SCHEDULED seed AND asserts identity.
@@ -214,10 +264,8 @@ def build_reference_agent(*, task: dict, evaluator, colour: str, config=None,
             f"reference colour {colour} contradicts anchor_colour {task['anchor_colour']}"
         )
 
-    cfg = config or eval_config()
-    frozen = eval_config()
-    if cfg != frozen:
-        raise ReferenceError(f"config is not the frozen research configuration: {cfg}")
+    cfg = config if config is not None else eval_config()
+    _check_config(cfg)
 
     return SeededReferenceAgent(
         evaluator=evaluator, colour=colour, seed=task["seed"], config=cfg,

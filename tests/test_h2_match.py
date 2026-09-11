@@ -1016,7 +1016,7 @@ def seam_boundaries(monkeypatch, tmp_path):
     from scripts.GPU.alphazero import twixtbot_g3_reference as G3
 
     seen = {"compile_deadlines": [], "configs": [], "cleanups": 0, "play_calls": [],
-            "loads": 0}
+            "loads": 0, "real_build": G3.build_reference_agent}
 
     monkeypatch.setattr(TC, "verified_paths",
                         lambda: {"jar": str(tmp_path / "t1j.jar"),
@@ -1051,6 +1051,8 @@ def seam_boundaries(monkeypatch, tmp_path):
         return {"winner": task["anchor_colour"], "terminal_reason": "win",
                 "plies": 10, "t1j_points": 1.0, "agents_built": 2}
     monkeypatch.setattr(HARNESS, "play_task", fake_play_task)
+    # the test may put the real builder back; monkeypatch restores it either way
+    monkeypatch.setattr(G3, "build_reference_agent", G3.build_reference_agent)
     return seen
 
 
@@ -1427,56 +1429,163 @@ def test_the_degeneracy_refusal_CLAIMS_NO_DEPENDENCE():
 
 # ═══════ THE BLOCKER THE RUN FOUND: the builder refuses a non-frozen config ══
 
-def test_THE_QUALIFIED_BUILDER_REFUSES_H2s_ARGMAX_CONFIG():
-    """🔴 WHY THE MATCH VOIDED AT TASK 0, PINNED AS A TEST.
+# 🔴 TWO TESTS STOOD HERE AND ARE GONE, AS THEY PROMISED THEY WOULD.
+# `test_THE_QUALIFIED_BUILDER_REFUSES_H2s_ARGMAX_CONFIG` pinned the defect that
+# VOIDed the match at task 0 -- the builder refusing any non-frozen config -- and
+# its own docstring said: "When the readout change is made admissible, this test
+# must be inverted, and its failure is the reminder." The repair made it fail, on
+# cue. It and its frozen-config partner are replaced by the section below, which
+# asserts the REPAIRED behaviour on both sides: argmax constructs, everything else
+# still refuses. The history lives in the evidence and the commit record, which are
+# not rewritten.
 
-    `twixtbot_g3_reference.build_reference_agent` compares the supplied config
-    with `eval_config()` and refuses ANY difference. H2 IS a one-field difference
-    -- `selection_mode` -- so the qualified construction path cannot build the H2
-    incumbent at all, and the match aborted at `agent_construction`, task 0, ply 7,
-    before a single move.
 
-    🔑 WHY NO TEST CAUGHT IT: every test of the seam MOCKED `build_reference_agent`,
-    including the ones written specifically to "drive the production setup through
-    mocked effectful boundaries". Mocking the collaborator that ENFORCES a
-    constraint is how the constraint stays invisible. This test uses the real one.
+# ═════ the qualified builder, REPAIRED to admit H2's readout and nothing else ═
 
-    It asserts the CURRENT behaviour, which is a REFUSAL. When the readout change
-    is made admissible -- a separate authorization -- this test must be inverted,
-    and its failure is the reminder.
+def _stub_evaluator():
+    class _Eval:
+        _g3_reference = "calib020_0001"
+        _g3_sha1 = "209cf2d4fd24a48553d259dd71b4954867b9473e"
+    return _Eval()
+
+
+def _task(anchor="red"):
+    return {"seed": R.H2_SEED_BLOCK[0], "reference": "calib020_0001",
+            "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+            "anchor_colour": anchor}
+
+
+def _cfg(**changes):
+    from scripts.GPU.alphazero import twixtbot_g3_reference as G3
+    base = G3.eval_config()
+    return base.__class__(**{**base.__dict__, **changes})
+
+
+def test_THE_BUILDER_CONSTRUCTS_AN_AGENT_WITH_H2s_ARGMAX_CONFIG():
+    """🔴 THE REPAIR. The builder refused any difference from the frozen research
+    configuration, and H2 IS a one-field difference -- so the match VOIDed at task
+    0 before its first move. The readout may now vary, within an admitted set, and
+    NOTHING else may.
+
+    This constructs through the REAL builder, not a mock: mocking the collaborator
+    that enforces the constraint is exactly how the constraint stayed invisible.
+    """
+    from scripts.GPU.alphazero import eval_readout as RO
+    from scripts.GPU.alphazero import twixtbot_g3_reference as G3
+    agent = G3.build_reference_agent(task=_task(), evaluator=_stub_evaluator(),
+                                     colour="black", config=_cfg(selection_mode="argmax"),
+                                     capture=True)
+    assert agent.config.selection_mode == "argmax"
+    assert agent.readout.mode == RO.MODE_ARGMAX, "the readout must BE argmax, not merely named"
+    assert agent.config.mcts_sims == 400, "only the readout changes"
+
+
+def test_the_UNCHANGED_frozen_configuration_still_constructs():
+    """The reference case, unchanged: the repair must not have loosened the path
+    every earlier study used."""
+    from scripts.GPU.alphazero import eval_readout as RO
+    from scripts.GPU.alphazero import twixtbot_g3_reference as G3
+    agent = G3.build_reference_agent(task=_task(), evaluator=_stub_evaluator(),
+                                     colour="black", config=G3.eval_config(), capture=True)
+    assert agent.config == G3.eval_config()
+    assert agent.readout.mode == RO.MODE_OPENING_TEMPERATURE
+
+
+def test_omitting_the_config_still_uses_the_frozen_one():
+    from scripts.GPU.alphazero import twixtbot_g3_reference as G3
+    agent = G3.build_reference_agent(task=_task(), evaluator=_stub_evaluator(),
+                                     colour="black", config=None, capture=True)
+    assert agent.config == G3.eval_config()
+
+
+@pytest.mark.parametrize("field,value", [
+    ("mcts_sims", 800), ("board_size", 19), ("mcts_eval_batch_size", 7),
+    ("mcts_stall_flush_sims", 1), ("opening_temp_plies", 4), ("temp_high", 0.5),
+    ("temp_low", 0.9), ("max_moves", 100),
+])
+def test_EVERY_UNRELATED_FIELD_is_still_REFUSED(field, value):
+    """🔑 THE OTHER HALF OF THE REPAIR. Admitting the readout must not admit
+    anything else -- one field may vary, and it is named."""
+    from scripts.GPU.alphazero import twixtbot_g3_reference as G3
+    with pytest.raises(G3.ReferenceError, match=field):
+        G3.build_reference_agent(task=_task(), evaluator=_stub_evaluator(),
+                                 colour="black", config=_cfg(**{field: value}),
+                                 capture=True)
+
+
+def test_a_field_that_differs_ALONGSIDE_the_readout_is_still_refused():
+    """The combination a lax check would wave through: the admitted change plus an
+    unrelated one."""
+    from scripts.GPU.alphazero import twixtbot_g3_reference as G3
+    with pytest.raises(G3.ReferenceError, match="mcts_sims"):
+        G3.build_reference_agent(
+            task=_task(), evaluator=_stub_evaluator(), colour="black",
+            config=_cfg(selection_mode="argmax", mcts_sims=800), capture=True)
+
+
+@pytest.mark.parametrize("mode", ["hoeffding_lcb", "ARGMAX", "", None, 1])
+def test_an_UNADMITTED_readout_mode_is_REFUSED(mode):
+    """Only the modes a preregistered study has named are admissible. `hoeffding_lcb`
+    is a real qualified mode and is refused here ANYWAY: admitting a field is not
+    admitting every value of it, and a study that wants it must say so."""
+    from scripts.GPU.alphazero import twixtbot_g3_reference as G3
+    with pytest.raises(G3.ReferenceError, match="selection_mode"):
+        G3.build_reference_agent(task=_task(), evaluator=_stub_evaluator(),
+                                 colour="black", config=_cfg(selection_mode=mode),
+                                 capture=True)
+
+
+def test_the_ADMITTED_MODES_are_DECLARED_and_are_exactly_two():
+    from scripts.GPU.alphazero import twixtbot_g3_reference as G3
+    assert G3.ADMISSIBLE_SELECTION_MODES == ("opening_temperature", "argmax")
+    assert G3.eval_config().selection_mode in G3.ADMISSIBLE_SELECTION_MODES
+
+
+@pytest.mark.parametrize("field,value", [("mcts_sims", 400.0), ("temp_high", 1),
+                                         ("board_size", 24.0), ("max_moves", 280.0)])
+def test_a_field_whose_VALUE_MATCHES_but_whose_TYPE_DIFFERS_is_refused(field, value):
+    """🔑 TYPE-STRICT, like every other comparison in this programme. `400 == 400.0`
+    and `1 == 1.0`, so a loose check waves these through -- and a control proved the
+    earlier tests could not see it, because every one of them changed the VALUE too.
     """
     from scripts.GPU.alphazero import twixtbot_g3_reference as G3
-    cfg = G3.eval_config()
-    argmax_cfg = cfg.__class__(**{**cfg.__dict__, "selection_mode": "argmax"})
-    assert argmax_cfg != cfg, "the fixture must differ in exactly the one field"
-    assert argmax_cfg.mcts_sims == cfg.mcts_sims == 400
-
-    class _Eval:
-        _g3_reference = "calib020_0001"
-        _g3_sha1 = "209cf2d4fd24a48553d259dd71b4954867b9473e"
-
-    task = {"seed": R.H2_SEED_BLOCK[0], "reference": "calib020_0001",
-            "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
-            "anchor_colour": "red"}
-    with pytest.raises(G3.ReferenceError, match="not the frozen research configuration"):
-        G3.build_reference_agent(task=task, evaluator=_Eval(), colour="black",
-                                 config=argmax_cfg, capture=True)
+    frozen = G3.eval_config()
+    assert getattr(frozen, field) == value, "the fixture must differ only in TYPE"
+    assert type(getattr(frozen, field)) is not type(value)
+    with pytest.raises(G3.ReferenceError, match=field):
+        G3.build_reference_agent(task=_task(), evaluator=_stub_evaluator(),
+                                 colour="black", config=_cfg(**{field: value}),
+                                 capture=True)
 
 
-def test_the_FROZEN_config_is_still_accepted_so_the_refusal_is_about_THE_CHANGE():
-    """The negative control: the same call with the frozen config gets past the
-    config check, so the refusal above is about the readout and nothing else."""
+def test_a_config_of_the_WRONG_TYPE_is_refused():
     from scripts.GPU.alphazero import twixtbot_g3_reference as G3
+    with pytest.raises(G3.ReferenceError):
+        G3.build_reference_agent(task=_task(), evaluator=_stub_evaluator(),
+                                 colour="black", config={"selection_mode": "argmax"},
+                                 capture=True)
 
-    class _Eval:
-        _g3_reference = "calib020_0001"
-        _g3_sha1 = "209cf2d4fd24a48553d259dd71b4954867b9473e"
 
-    task = {"seed": R.H2_SEED_BLOCK[0], "reference": "calib020_0001",
-            "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
-            "anchor_colour": "red"}
-    try:
-        G3.build_reference_agent(task=task, evaluator=_Eval(), colour="black",
-                                 config=G3.eval_config(), capture=True)
-    except G3.ReferenceError as e:
-        assert "frozen research configuration" not in str(e), e
+def test_the_H2_SEAM_and_THE_BUILDER_now_agree(seam_boundaries, tmp_path):
+    """END TO END ACROSS THE SEAM, WITH THE BUILDER UNMOCKED -- the exact path that
+    VOIDed at task 0, ply 7.
+
+    🔑 The fixture keeps a reference to the REAL builder precisely so this test can
+    put it back. Every other effectful boundary stays mocked, so no JVM starts and
+    no model loads; the one collaborator that ENFORCES the constraint is real,
+    because mocking it is what hid the defect for four review rounds.
+    """
+    from scripts.GPU.alphazero import twixtbot_g3_reference as G3
+    play = RUN._production_play(str(tmp_path / "r.jsonl"), _started_deadline())
+    play(task=_tasks()[0], identity={}, timeout_s=120)
+    build = seam_boundaries["reference_build"]      # the seam's OWN closure
+
+    # put the REAL builder back, then drive the seam's closure through it: this is
+    # the call the harness makes at ply 7, and the one that aborted the match.
+    G3.build_reference_agent = seam_boundaries["real_build"]
+    task = dict(_tasks()[0])                        # a t1j_red task: we play black
+    agent = build(task, _stub_evaluator())
+    assert agent.config.selection_mode == "argmax"
+    assert agent.config.mcts_sims == 400
+    from scripts.GPU.alphazero import eval_readout as RO
+    assert agent.readout.mode == RO.MODE_ARGMAX

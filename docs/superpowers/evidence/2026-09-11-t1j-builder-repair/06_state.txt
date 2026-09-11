@@ -1,0 +1,28 @@
+QUALIFIED-BUILDER REPAIR -- 2026-09-11T21:57:46Z
+
+ALL SEVEN GATES FALSE: True
+H2 block: accounted 736 / exposed 0 / retired 736  (retirement STANDS)
+
+== CONSTRUCTION THROUGH THE REAL BUILDER ==
+  argmax: CONSTRUCTED -- config.selection_mode='argmax', readout.mode='argmax' (MODE_ARGMAX='argmax'), sims=400
+  frozen: CONSTRUCTED -- readout.mode='opening_temperature' (unchanged reference path)
+
+== REJECTIONS, through the same real builder ==
+  refused: mcts_sims 800
+             -> mcts_sims is 800 (int) but the frozen research configuration gives 400 (int). Only the r
+  refused: mcts_sims 400.0 (VALUE equal, TYPE differs)
+             -> mcts_sims is 400.0 (float) but the frozen research configuration gives 400 (int). Only t
+  refused: temp_high 1 (int for float)
+             -> temp_high is 1 (int) but the frozen research configuration gives 1.0 (float). Only the r
+  refused: argmax PLUS mcts_sims 800
+             -> mcts_sims is 800 (int) but the frozen research configuration gives 400 (int). Only the r
+  refused: selection_mode 'hoeffding_lcb' (real mode, not admitted)
+             -> selection_mode 'hoeffding_lcb' is not one of the admitted readouts ('opening_temperature
+
+  ADMISSIBLE_SELECTION_MODES = ('opening_temperature', 'argmax')
+
+git:
+M scripts/GPU/alphazero/twixtbot_g3_reference.py
+ M tests/test_h2_match.py
+?? docs/superpowers/evidence/2026-09-11-t1j-builder-repair/
+HEAD ac8e2f9
