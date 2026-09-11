@@ -26,11 +26,19 @@ DEFAULT_TRACE = f"{OUT_DIR}/04_h2_trace.jsonl"
 #: The frozen report location from the card's §7. Create-only, like every output.
 DEFAULT_REPORT = f"{OUT_DIR}/09_report.json"
 
-#: 🔴 NOT A PUBLIC FLAG. The supervisor sets this in the child's environment; the
-#: worker refuses without it. `--worker` alone was a usable bypass around BOTH the
-#: supervision and the gate restoration -- anyone could run the unsupervised path
-#: by typing it. This is not a gate (it grants nothing); it closes a bypass.
-SUPERVISED_ENV = "H2_SUPERVISED_WORKER"
+#: 🔴 A SINGLE-USE CAPABILITY, NOT AN ENVIRONMENT FLAG. The first version used
+#: `H2_SUPERVISED_WORKER=1`, which any caller could set: it proved no provenance
+#: and contradicted this module's own claim that no environment variable reaches
+#: this path. The supervisor now creates a 0600 file containing a random token and
+#: passes its PATH on argv; the worker reads the token and DELETES the file, so the
+#: capability is consumed and a second `--worker` on the same one refuses.
+#:
+#: ⚠ WHAT THIS IS AND IS NOT. It removes the accidental bypass -- typing `--worker`
+#: no longer runs an unsupervised match outside the restoration boundary -- and it
+#: makes the capability single-use. It is NOT an authentication boundary: a
+#: determined local caller with write access can fabricate a file. Nothing here
+#: pretends otherwise, and the gate remains the thing that authorizes a run.
+CAPABILITY_BYTES = 32
 
 #: The file whose gate line is restored: the runner's own source, resolved from
 #: the imported module and never retyped as a path.
@@ -109,12 +117,45 @@ def _parser():
     ap.add_argument("--trace", default=DEFAULT_TRACE)
     ap.add_argument("--report", default=DEFAULT_REPORT)
     ap.add_argument("--worker", action="store_true",
-                    help="internal: run the match in this process. Refused unless the "
-                         "supervisor set its environment marker.")
+                    help="internal: run the match in this process. Refused without the "
+                         "supervisor's single-use capability.")
+    ap.add_argument("--capability", default=None,
+                    help="internal: path to the supervisor's single-use capability")
     # 🔴 NO --runner-source, and no flag that reaches the gate. Opening H2 is a
     # reviewed one-line edit plus a separate authorization, and nothing here
     # accepts an environment variable or a config file either.
     return ap
+
+
+def _make_capability() -> str:
+    """Create the single-use capability file: 0600, random, in a private directory."""
+    import secrets
+    import tempfile
+    d = tempfile.mkdtemp(prefix="h2-cap-")
+    path = os.path.join(d, "capability")
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, "w") as fh:
+        fh.write(secrets.token_hex(CAPABILITY_BYTES))
+        fh.flush()
+        os.fsync(fh.fileno())
+    return path
+
+
+def _consume_capability(path: Optional[str]) -> bool:
+    """Read the capability and DELETE it. False if absent, empty, or already used."""
+    if not path:
+        return False
+    try:
+        with open(path, encoding="utf-8") as fh:
+            token = fh.read().strip()
+    except OSError:
+        return False
+    finally:
+        try:
+            os.unlink(path)                # consumed, whatever happens next
+        except OSError:
+            pass
+    return len(token) == CAPABILITY_BYTES * 2
 
 
 def worker_main(argv: Sequence[str]) -> int:
@@ -126,16 +167,18 @@ def worker_main(argv: Sequence[str]) -> int:
     unbounded, with nothing to restore the gate afterwards.
     """
     a = _parser().parse_args(list(argv))
-    if os.environ.get(SUPERVISED_ENV) != "1":
-        print(f"refused: --worker runs the match UNSUPERVISED and outside the gate "
-              f"restoration boundary. It is spawned by the supervisor, which sets "
-              f"{SUPERVISED_ENV}; it is not a way to run H2 by hand.", file=sys.stderr)
+    if not _consume_capability(a.capability):
+        print("refused: --worker runs the match UNSUPERVISED and outside the gate "
+              "restoration boundary. It is spawned by the supervisor, which hands it "
+              "a single-use capability; it is not a way to run H2 by hand.",
+              file=sys.stderr)
         return EXIT_REFUSED
     if not gate_is_open():
         print("the H2 match is NOT AUTHORIZED inside the worker.", file=sys.stderr)
         return EXIT_UNAUTHORIZED
     try:
-        report = RUN.run_h2(results_path=a.results, trace_path=a.trace)
+        report = RUN.run_h2(results_path=a.results, trace_path=a.trace,
+                            report_path=a.report)
     except KeyboardInterrupt:
         print("INTERRUPTED by the operator; the trace records INTERRUPTED.",
               file=sys.stderr)
@@ -153,27 +196,19 @@ def worker_main(argv: Sequence[str]) -> int:
 
 
 def _persist_and_classify(report: Mapping[str, Any], report_path: str) -> int:
-    """WRITE THE REPORT, THEN SAY WHAT IT WAS.
+    """SAY WHAT THE REPORT WAS. The RUNNER writes it.
 
-    🔴 The report was RETURNED AND DISCARDED: the worker printed that the verdict
-    was "in" the results file, which held only per-game rows, and the frozen
-    `09_report.json` was never written at all. A refusal also exited 0 as
-    COMPLETED -- the loudest possible disagreement between a record and its code.
+    🔴 Two corrections live here. The report was once RETURNED AND DISCARDED, with
+    the worker printing that the verdict was "in" the results file and the frozen
+    report never written. It was then written HERE -- after the runner had already
+    committed `run_end/OK`, so a write failure exited VOID while the durable trace
+    said OK. The runner now persists and fsyncs it BEFORE the terminal record, and
+    this function only classifies. It verifies the file exists rather than assuming
+    it: a classification that cannot see its own artifact is a claim, not a check.
     """
-    try:
-        fd = os.open(report_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
-        with os.fdopen(fd, "w") as fh:
-            json.dump(dict(report), fh, indent=1, sort_keys=True, default=str)
-            fh.write("\n")
-            fh.flush()
-            os.fsync(fh.fileno())
-    except FileExistsError:
-        print(f"refused: the report path already exists: {report_path}. Outputs are "
-              f"create-only. The match itself completed; its report is NOT written.",
-              file=sys.stderr)
-        return EXIT_REFUSED
-    except OSError as e:
-        print(f"VOID: the report could not be written: {e}", file=sys.stderr)
+    if not os.path.lexists(report_path):
+        print(f"VOID: the runner returned a report but {report_path} does not exist; "
+              f"the verdict has no durable record.", file=sys.stderr)
         return EXIT_VOID
 
     outcome = report.get("outcome")
@@ -222,19 +257,29 @@ def main(argv: Optional[Sequence[str]] = None, *,
     code = EXIT_UNEXPECTED
     try:
         try:
-            RUN.check_output_paths(a.results, a.trace)
+            RUN.check_output_paths(a.results, a.trace, a.report)
             refused = False
         except RUN.H2Error as e:
             print(f"refused before spawning: {e}", file=sys.stderr)
             code, refused = EXIT_REFUSED, True   # no return: the finally must run
         if not refused:
-            os.environ[SUPERVISED_ENV] = "1"     # the child's only way in
+            cap = _make_capability()             # the child's only way in
             try:
-                r = supervise([sys.executable, "-m", MODULE, "--worker", *argv],
+                r = supervise([sys.executable, "-m", MODULE, "--worker",
+                               "--capability", cap, *argv],
                               timeout_s=RUN.RUN_DEADLINE_S + SUPERVISOR_GRACE_S,
                               kill_grace_s=5.0, interrupt_grace_s=INTERRUPT_GRACE_S)
             finally:
-                os.environ.pop(SUPERVISED_ENV, None)
+                # The worker consumes it; remove it and its directory if it did not
+                # get that far, so no capability outlives the run.
+                try:
+                    os.unlink(cap)
+                except OSError:
+                    pass
+                try:
+                    os.rmdir(os.path.dirname(cap))
+                except OSError:
+                    pass
             if r["timed_out"]:
                 print(f"TIMEOUT: the worker exceeded "
                       f"{RUN.RUN_DEADLINE_S + SUPERVISOR_GRACE_S}s; its process group was "

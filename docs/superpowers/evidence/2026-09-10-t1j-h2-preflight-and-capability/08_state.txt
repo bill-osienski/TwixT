@@ -1,0 +1,19 @@
+H2 PREFLIGHT/CAPABILITY REPAIR -- 2026-09-11T02:22:40Z
+
+ALL SEVEN GATES FALSE: True
+H2 seeds accounted: 0 of 736
+
+the five items:
+  1 preflight covers all three outputs: ['results_path', 'trace_path', 'report_path']
+  2 report persisted BEFORE the terminal OK: True
+  3 each descriptor registered as acquired: True
+  4 environment reads in the wrapper: 0; capability is single-use: True
+  5 refusal claims no dependence: True
+
+git:
+M scripts/GPU/alphazero/h2_match_command.py
+ M scripts/GPU/alphazero/h2_match_rules.py
+ M scripts/GPU/alphazero/h2_match_runner.py
+ M tests/test_h2_match.py
+?? docs/superpowers/evidence/2026-09-10-t1j-h2-preflight-and-capability/
+HEAD e58eb35

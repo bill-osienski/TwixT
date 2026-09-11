@@ -91,25 +91,38 @@ def _canonical(path: str) -> str:
     return os.path.normcase(os.path.realpath(os.path.abspath(path)))
 
 
-def check_output_paths(results_path: str, trace_path: Optional[str]) -> None:
-    """BARRIER 3. The outputs must not already exist, and must be two files.
+def check_output_paths(results_path: str, trace_path: Optional[str],
+                       report_path: Optional[str] = None) -> None:
+    """BARRIER 3. ALL THREE outputs must be absent, and must be three files.
 
     A path that already exists is a PRECONDITION failure -- nothing has run, no
     game was played, no seed drawn -- so it refuses BEFORE any output exists and
     writes no trace at all.
+
+    🔴 THE REPORT WAS NOT CHECKED HERE. An existing or aliased `09_report.json`
+    was discovered only AFTER all 736 games, so a knowable path error spent the
+    entire seed block. All three are now required and pairwise distinct.
     """
     if not trace_path:
         raise H2Error(
             "H2 requires a trace path: the card freezes a create-only, non-analytic "
             "trace, and a match that cannot say how far it got is not the design that "
             "was preregistered. Nothing has been written.")
-    if _canonical(results_path) == _canonical(trace_path):
+    if not report_path:
         raise H2Error(
-            f"the results and trace paths name ONE file ({results_path!r} and "
-            f"{trace_path!r} canonicalise together); the trace would create it and the "
-            f"recorder would then refuse it, turning a naming slip into a VOID that "
-            f"spends every seed.")
-    for label, path in (("results", results_path), ("trace", trace_path)):
+            "H2 requires a report path: the verdict is the point of the run, and a "
+            "match whose report has nowhere to go must refuse BEFORE it plays, not "
+            "after 736 games. Nothing has been written.")
+    named = (("results", results_path), ("trace", trace_path), ("report", report_path))
+    for i, (la, pa) in enumerate(named):
+        for lb, pb in named[i + 1:]:
+            if _canonical(pa) == _canonical(pb):
+                raise H2Error(
+                    f"the {la} and {lb} paths name ONE file ({pa!r} and {pb!r} "
+                    f"canonicalise together); one would create it and the other would "
+                    f"then refuse it, turning a naming slip into a VOID that spends "
+                    f"every seed.")
+    for label, path in named:
         # 🔴 `lexists`, NOT `exists` -- H1's own correction, which I repeated as a
         # defect. `os.path.exists` FOLLOWS the link, so a DANGLING symlink reads as
         # absent, `O_EXCL` then fails on the link itself, and a create-only
@@ -236,7 +249,7 @@ def check_schedule(tasks: Sequence[Mapping[str, Any]]) -> Dict[str, Any]:
     return summary
 
 
-def run_h2(*, results_path: str, trace_path: str) -> Dict[str, Any]:
+def run_h2(*, results_path: str, trace_path: str, report_path: str) -> Dict[str, Any]:
     """THE PUBLIC ENTRY. Takes the two OUTPUT PATHS and nothing else.
 
     🔴 EVERY OTHER INPUT IS RESOLVED HERE, so none can be supplied. An earlier
@@ -258,6 +271,7 @@ def run_h2(*, results_path: str, trace_path: str) -> Dict[str, Any]:
                              trace_path=trace_path,
                              play=_production_play(results_path, deadline),
                              identity=frozen_incumbent_identity(),
+                             report_path=report_path,
                              deadline_s=RUN_DEADLINE_S, _deadline=deadline)
 
 
@@ -376,8 +390,8 @@ class _CapturingRecorder:
         self.records.append(dict(obj))
 
 
-def _run_h2_unguarded(*, tasks, results_path, trace_path, play, identity=None,
-                      deadline_s=RUN_DEADLINE_S, _deadline=None,
+def _run_h2_unguarded(*, tasks, results_path, trace_path, report_path, play,
+                      identity=None, deadline_s=RUN_DEADLINE_S, _deadline=None,
                       _supervisor=None) -> Dict[str, Any]:
     """Everything below the gate. PRIVATE, and never a way around `run_h2`.
 
@@ -387,7 +401,7 @@ def _run_h2_unguarded(*, tasks, results_path, trace_path, play, identity=None,
     import time
 
     check_seed_registration()
-    check_output_paths(results_path, trace_path)
+    check_output_paths(results_path, trace_path, report_path)
     summary = check_schedule(tasks)
     ident = dict(identity) if identity is not None else frozen_incumbent_identity()
     check_incumbent_identity(ident)
@@ -409,9 +423,13 @@ def _run_h2_unguarded(*, tasks, results_path, trace_path, play, identity=None,
     import contextlib
     stack = contextlib.ExitStack()
     try:
-        tfd = os.open(trace_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
-        rfd = os.open(results_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
-        trace, rec = os.fdopen(tfd, "w"), os.fdopen(rfd, "w")
+        # 🔴 ONE AT A TIME, EACH REGISTERED AS IT IS ACQUIRED. Opening both before
+        # tracking either meant a failure on the SECOND open left the first
+        # descriptor untracked: not closed, not given a terminal record, leaked.
+        trace = stack.enter_context(os.fdopen(
+            os.open(trace_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644), "w"))
+        rec = stack.enter_context(os.fdopen(
+            os.open(results_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644), "w"))
         sup = _supervisor if _supervisor is not None else _D1._supervisor
         stack.enter_context(sup(deadline))
 
@@ -454,8 +472,25 @@ def _run_h2_unguarded(*, tasks, results_path, trace_path, play, identity=None,
                              "transcript_digest": digest})
             emit(trace, {"event": "task_done", "index": i,
                          "games_completed": len(results)})
+        # 🔴 THE TERMINAL OK COMES LAST, AFTER THE REPORT IS DURABLE. `run_end/OK`
+        # used to be written before the report was built or persisted, so a report
+        # failure exited VOID or REFUSED while the trace still said OK -- the
+        # durable record and the exit code disagreeing about the same run.
+        if len(results) != RULES.N_GAMES:
+            raise H2VoidError(
+                f"{len(results)} of {RULES.N_GAMES} games completed; a partial "
+                f"schedule produces no analysis.")
+        report = RULES.h2_report(results, list(tasks), per_game,
+                                 task_digest=summary["task_digest"])
+        fd = os.open(report_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+        with os.fdopen(fd, "w") as fh:
+            json.dump(report, fh, indent=1, sort_keys=True, default=str)
+            fh.write("\n")
+            fh.flush()
+            os.fsync(fh.fileno())
         emit(trace, {"event": "run_end", "verdict": "OK",
-                     "games_completed": len(results)})
+                     "games_completed": len(results),
+                     "outcome": report.get("outcome")})
     except BaseException as e:                               # noqa: BLE001
         # 🔴 EVERY MID-RUN EXIT LEAVES A run_end, AND ITS VERDICT IS THE TRUTH.
         # Writing VOID for a KeyboardInterrupt made the durable trace say the
@@ -483,19 +518,9 @@ def _run_h2_unguarded(*, tasks, results_path, trace_path, play, identity=None,
             raise H2VoidError(f"{type(e).__name__}: {e}") from e
         raise
     finally:
-        stack.close()
-        for fh in (trace, rec):
-            if fh is not None:
-                try:
-                    fh.close()
-                except Exception:                            # noqa: BLE001
-                    pass
+        stack.close()                     # every acquired descriptor, in reverse
 
-    if len(results) != RULES.N_GAMES:
-        raise H2VoidError(
-            f"{len(results)} of {RULES.N_GAMES} games completed; a partial schedule "
-            f"produces no analysis.")
-    # 🔑 THE SCREEN RUNS INSIDE THE REPORT, BEFORE THE INTERVAL. A screen that runs
-    # after the number it guards is decoration -- see `h2_match_rules.h2_report`.
-    return RULES.h2_report(results, list(tasks), per_game,
-                           task_digest=summary["task_digest"])
+    # 🔑 THE SCREEN RUNS INSIDE THE REPORT, BEFORE THE INTERVAL (see
+    # `h2_match_rules.h2_report`), and the report is built, PERSISTED and fsynced
+    # above -- inside the protected block -- before the terminal OK is committed.
+    return report

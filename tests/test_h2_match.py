@@ -407,7 +407,8 @@ def test_THE_GATE_IS_SHUT_IN_THE_REAL_REPOSITORY():
 def test_the_public_entry_READS_THE_GATE_before_anything_else(tmp_path):
     out = tmp_path / "r.jsonl"
     with pytest.raises(RUN.H2Error, match="UNAUTHORIZED"):
-        RUN.run_h2(results_path=str(out), trace_path=str(tmp_path / "t.jsonl"))
+        RUN.run_h2(results_path=str(out), trace_path=str(tmp_path / "t.jsonl"),
+                   report_path=str(tmp_path / "rep.json"))
     assert not out.exists()
 
 
@@ -415,7 +416,8 @@ def test_the_public_entry_TAKES_ONLY_THE_OUTPUT_PATHS():
     """🔴 THE DEFECT THIS CLOSES. It used to accept `tasks`, `play`, `identity` and
     `deadline_s`, so opening the gate would have authorized CALLER-SUPPLIED
     GAMEPLAY through the API while the CLI could not run the real match at all."""
-    assert list(inspect.signature(RUN.run_h2).parameters) == ["results_path", "trace_path"]
+    assert list(inspect.signature(RUN.run_h2).parameters) == \
+        ["results_path", "trace_path", "report_path"]
     seams = list(inspect.signature(RUN._run_h2_unguarded).parameters)
     assert {"play", "identity", "deadline_s", "tasks"} <= set(seams), \
         "the seams must survive on the PRIVATE entry, for tests"
@@ -486,14 +488,14 @@ def test_a_fully_registered_block_satisfies_the_barrier_and_NOT_the_gate(monkeyp
 
 def test_the_output_paths_are_CREATE_ONLY_and_must_be_two_files(tmp_path):
     r, t = tmp_path / "r.jsonl", tmp_path / "t.jsonl"
-    RUN.check_output_paths(str(r), str(t))
+    RUN.check_output_paths(str(r), str(t), str(tmp_path / "rep.json"))
     with pytest.raises(RUN.H2Error, match="requires a trace"):
-        RUN.check_output_paths(str(r), None)
+        RUN.check_output_paths(str(r), None, str(tmp_path / "rep.json"))
     with pytest.raises(RUN.H2Error, match="ONE file"):
-        RUN.check_output_paths(str(r), str(r))
+        RUN.check_output_paths(str(r), str(r), str(tmp_path / "rep.json"))
     r.write_text("x")
     with pytest.raises(RUN.H2Error, match="already exists"):
-        RUN.check_output_paths(str(r), str(t))
+        RUN.check_output_paths(str(r), str(t), str(tmp_path / "rep.json"))
 
 
 # ───────────────────────── the incumbent identity binding ───────────────────
@@ -576,7 +578,8 @@ def _play_factory(*, distinct=True, wins=368):
 def test_a_complete_mocked_run_reports_a_parity_verdict(registered, tmp_path):
     out = RUN._run_h2_unguarded(
         tasks=_tasks(), results_path=str(tmp_path / "r.jsonl"),
-        trace_path=str(tmp_path / "t.jsonl"), play=_play_factory(wins=736))
+        trace_path=str(tmp_path / "t.jsonl"),
+                          report_path=str(tmp_path / "rep.json"), play=_play_factory(wins=736))
     assert out["reported"] is True and out["outcome"] == "T1J_STRONGER"
     assert out["degeneracy_screen"]["passes"] is True
 
@@ -585,7 +588,7 @@ def test_a_run_whose_games_are_all_IDENTICAL_is_DEGENERATE_not_a_verdict(registe
                                                                         tmp_path):
     out = RUN._run_h2_unguarded(
         tasks=_tasks(), results_path=str(tmp_path / "r.jsonl"),
-        trace_path=str(tmp_path / "t.jsonl"),
+        trace_path=str(tmp_path / "t.jsonl"), report_path=str(tmp_path / "rep.json"),
         play=_play_factory(distinct=False, wins=736))
     assert out["outcome"] == "INCONCLUSIVE — DEGENERATE DESIGN"
     assert out["interval"] is None
@@ -599,7 +602,8 @@ def test_the_deadline_VOIDS_mid_run_and_reports_no_partial_rate(registered, tmp_
     with pytest.raises(RUN.H2VoidError, match="deadline expired"):
         RUN._run_h2_unguarded(
             tasks=_tasks(), results_path=str(tmp_path / "r.jsonl"),
-            trace_path=str(tmp_path / "t.jsonl"), play=_play_factory(),
+            trace_path=str(tmp_path / "t.jsonl"),
+                          report_path=str(tmp_path / "rep.json"), play=_play_factory(),
             deadline_s=-1, _supervisor=_NoSupervisor)
 
 
@@ -611,14 +615,15 @@ def test_the_REAL_supervisor_refuses_a_deadline_with_nothing_remaining(registere
     with pytest.raises(Exception) as e:
         RUN._run_h2_unguarded(
             tasks=_tasks(), results_path=str(tmp_path / "r.jsonl"),
-            trace_path=str(tmp_path / "t.jsonl"), play=_play_factory(), deadline_s=-1)
+            trace_path=str(tmp_path / "t.jsonl"),
+                          report_path=str(tmp_path / "rep.json"), play=_play_factory(), deadline_s=-1)
     assert "deadline" in str(e.value).lower()
 
 
 def test_the_trace_and_the_results_are_both_written_and_fsynced(registered, tmp_path):
     r, t = tmp_path / "r.jsonl", tmp_path / "t.jsonl"
     RUN._run_h2_unguarded(tasks=_tasks(), results_path=str(r), trace_path=str(t),
-                          play=_play_factory())
+                          report_path=str(tmp_path / "rep.json"), play=_play_factory())
     trace = [json.loads(l) for l in t.read_text().splitlines()]
     assert trace[0]["event"] == "run_start" and trace[-1]["event"] == "run_end"
     assert trace[-1]["verdict"] == "OK" and trace[-1]["games_completed"] == 736
@@ -640,7 +645,8 @@ def test_a_malformed_ply_record_VOIDS_the_run_rather_than_being_counted(register
                 "opening_bound": 6}
     with pytest.raises(RUN.H2VoidError):
         RUN._run_h2_unguarded(tasks=_tasks(), results_path=str(tmp_path / "r.jsonl"),
-                              trace_path=str(tmp_path / "t.jsonl"), play=play)
+                              trace_path=str(tmp_path / "t.jsonl"),
+                          report_path=str(tmp_path / "rep.json"), play=play)
 
 
 # ────────────────────────────────── the wrapper ─────────────────────────────
@@ -809,7 +815,7 @@ def test_a_DANGLING_SYMLINK_at_an_output_path_is_REFUSED(tmp_path):
     r.symlink_to(tmp_path / "nowhere")
     assert not r.exists() and r.is_symlink(), "the fixture must be a DANGLING link"
     with pytest.raises(RUN.H2Error, match="already exists"):
-        RUN.check_output_paths(str(r), str(t))
+        RUN.check_output_paths(str(r), str(t), str(tmp_path / "rep.json"))
 
 
 def test_INVALID_RESULTS_are_REFUSED_not_reported_as_degenerate():
@@ -834,7 +840,8 @@ def test_THE_PLIES_AND_DIGESTS_ARE_PERSISTED_so_the_screen_can_be_recomputed(reg
     recomputed by anyone who was not there."""
     r = tmp_path / "r.jsonl"
     RUN._run_h2_unguarded(tasks=_tasks(), results_path=str(r),
-                          trace_path=str(tmp_path / "t.jsonl"), play=_play_factory())
+                          trace_path=str(tmp_path / "t.jsonl"),
+                          report_path=str(tmp_path / "rep.json"), play=_play_factory())
     rows = [json.loads(l) for l in r.read_text().splitlines()]
     kinds = {x["record_type"] for x in rows}
     assert {"header", "task_result", "ply", "transcript"} <= kinds, kinds
@@ -859,7 +866,7 @@ def test_ANY_mid_run_failure_still_writes_run_end_VOID(registered, tmp_path):
     t = tmp_path / "t.jsonl"
     with pytest.raises(RUN.H2VoidError):
         RUN._run_h2_unguarded(tasks=_tasks(), results_path=str(tmp_path / "r.jsonl"),
-                              trace_path=str(t), play=exploding)
+                              trace_path=str(t), report_path=str(tmp_path / "rep.json"), play=exploding)
     last = json.loads(t.read_text().splitlines()[-1])
     assert last == {"error": "RuntimeError", "event": "run_end",
                     "games_completed": 0, "verdict": "VOID"}
@@ -878,7 +885,7 @@ def test_the_DEADLINE_void_also_leaves_a_run_end_VOID(registered, tmp_path):
     t = tmp_path / "t.jsonl"
     with pytest.raises(RUN.H2VoidError, match="deadline expired"):
         RUN._run_h2_unguarded(tasks=_tasks(), results_path=str(tmp_path / "r.jsonl"),
-                              trace_path=str(t), play=_play_factory(), deadline_s=-1,
+                              trace_path=str(t), report_path=str(tmp_path / "rep.json"), play=_play_factory(), deadline_s=-1,
                               _supervisor=_NoSupervisor)
     last = json.loads(t.read_text().splitlines()[-1])
     assert last["event"] == "run_end" and last["verdict"] == "VOID"
@@ -912,13 +919,15 @@ def test_the_WORKER_persists_the_report_and_returns_its_mapped_code(monkeypatch,
     """🔴 A control that made `worker_main` print-and-return-0 went NOT CAUGHT,
     because the persistence test called `_persist_and_classify` directly. The
     worker path itself is driven here."""
-    monkeypatch.setenv(CMD.SUPERVISED_ENV, "1")
+    cap = CMD._make_capability()
     monkeypatch.setattr(CMD, "gate_is_open", lambda: True)
     monkeypatch.setattr(RUN, "run_h2",
                         lambda **kw: {"reported": False, "outcome": "REFUSED",
                                       "reason": "bad rows"})
     report = tmp_path / "09_report.json"
-    code = CMD.worker_main(["--worker", "--results", str(tmp_path / "r.jsonl"),
+    report.write_text('{"reported": false, "outcome": "REFUSED"}')   # the runner's
+    code = CMD.worker_main(["--worker", "--capability", cap,
+                            "--results", str(tmp_path / "r.jsonl"),
                             "--trace", str(tmp_path / "t.jsonl"),
                             "--report", str(report)])
     assert code == CMD.EXIT_REFUSED
@@ -1069,52 +1078,164 @@ def test_the_seam_RETURNS_the_shape_the_transcript_needs(seam_boundaries, tmp_pa
      "EXIT_NO_RATE"),
     ({"reported": False, "outcome": "REFUSED", "reason": "bad rows"}, "EXIT_REFUSED"),
 ])
-def test_the_report_IS_WRITTEN_and_the_outcome_MAPPED(tmp_path, report, want):
-    """🔴 The report was returned and DISCARDED: the worker printed that the verdict
-    was "in" the results file, which holds only per-game rows, and the frozen
-    report path was never written. A refusal also exited 0 as COMPLETED."""
+def test_every_outcome_gets_ITS_OWN_exit_code(tmp_path, report, want):
+    """🔴 A refusal once exited 0 as COMPLETED. Each outcome is now mapped."""
     path = tmp_path / "09_report.json"
-    code = CMD._persist_and_classify(report, str(path))
-    assert code == getattr(CMD, want)
-    assert json.loads(path.read_text())["outcome"] == report["outcome"]
+    path.write_text(json.dumps(report))          # the RUNNER wrote it
+    assert CMD._persist_and_classify(report, str(path)) == getattr(CMD, want)
 
 
-def test_the_report_path_is_CREATE_ONLY(tmp_path):
-    path = tmp_path / "09_report.json"
-    path.write_text("{}")
+def test_a_MISSING_report_file_is_VOID_not_a_completed_run(tmp_path):
+    """The classifier verifies its own artifact: a verdict with no durable record
+    is a claim, not a result."""
     code = CMD._persist_and_classify({"reported": True, "outcome": "T1J_STRONGER"},
-                                     str(path))
-    assert code == CMD.EXIT_REFUSED
-    assert path.read_text() == "{}", "an existing report was overwritten"
+                                     str(tmp_path / "absent.json"))
+    assert code == CMD.EXIT_VOID
+
+
+def test_THE_RUNNER_WRITES_THE_REPORT_BEFORE_THE_TERMINAL_OK(registered, tmp_path):
+    """🔴 `run_end/OK` was committed BEFORE the report existed, so a report failure
+    exited VOID while the durable trace said OK."""
+    rep, tr = tmp_path / "rep.json", tmp_path / "t.jsonl"
+    out = RUN._run_h2_unguarded(tasks=_tasks(), results_path=str(tmp_path / "r.jsonl"),
+                                trace_path=str(tr), report_path=str(rep),
+                                play=_play_factory(wins=736))
+    assert json.loads(rep.read_text())["outcome"] == out["outcome"]
+    last = json.loads(tr.read_text().splitlines()[-1])
+    assert last["event"] == "run_end" and last["verdict"] == "OK"
+    assert last["outcome"] == out["outcome"], "the trace names the verdict it committed"
+
+
+def test_A_REPORT_THAT_CANNOT_BE_WRITTEN_LEAVES_NO_OK_TRACE(registered, tmp_path):
+    """The ordering, asserted at the EFFECT, through the only case the preflight
+    cannot cover: the report path is free when the run starts and OCCUPIED by the
+    time the run finishes. Six hours pass in production, so this is the real race
+    -- and the trace must then say VOID, never OK.
+    """
+    rep, tr = tmp_path / "rep.json", tmp_path / "t.jsonl"
+    base = _play_factory(wins=736)
+
+    def play(*, task, identity, timeout_s):
+        out = base(task=task, identity=identity, timeout_s=timeout_s)
+        if task["task_id"].startswith("h2match-735"):
+            rep.write_text("{}")          # someone else got there first
+        return out
+
+    with pytest.raises(RUN.H2VoidError):
+        RUN._run_h2_unguarded(tasks=_tasks(), results_path=str(tmp_path / "r.jsonl"),
+                              trace_path=str(tr), report_path=str(rep), play=play)
+    assert rep.read_text() == "{}", "an existing report was overwritten"
+    # 🔴 NO `OK` ANYWHERE, not merely a VOID at the end. A control that emitted an
+    # early OK and then let the failure append its VOID satisfied a last-line
+    # assertion while the trace carried both verdicts -- which is the disagreement
+    # this test exists to forbid.
+    ends = [json.loads(l) for l in tr.read_text().splitlines()
+            if json.loads(l).get("event") == "run_end"]
+    assert [e["verdict"] for e in ends] == ["VOID"], ends
+
+
+def test_an_EXISTING_report_is_refused_by_the_PREFLIGHT_before_any_game(registered,
+                                                                       tmp_path):
+    """And the ordinary case is caught before a single game is played."""
+    rep = tmp_path / "rep.json"
+    rep.write_text("{}")
+    with pytest.raises(RUN.H2Error, match="report path already exists"):
+        RUN._run_h2_unguarded(tasks=_tasks(), results_path=str(tmp_path / "r.jsonl"),
+                              trace_path=str(tmp_path / "t.jsonl"), report_path=str(rep),
+                              play=lambda **kw: pytest.fail("a game was played"))
+
+
+def test_ALL_THREE_OUTPUTS_are_preflighted_before_any_game(tmp_path):
+    """🔴 THE DEFECT THIS CLOSES. The report was not checked, so an existing or
+    aliased report path was discovered only AFTER 736 games -- spending the whole
+    seed block for a knowable path error."""
+    r, t, rep = (tmp_path / "r.jsonl"), (tmp_path / "t.jsonl"), (tmp_path / "rep.json")
+    RUN.check_output_paths(str(r), str(t), str(rep))
+    with pytest.raises(RUN.H2Error, match="requires a report path"):
+        RUN.check_output_paths(str(r), str(t), None)
+    rep.write_text("{}")
+    with pytest.raises(RUN.H2Error, match="report path already exists"):
+        RUN.check_output_paths(str(r), str(t), str(rep))
+
+
+@pytest.mark.parametrize("pair", [("results", "report"), ("trace", "report")])
+def test_NO_TWO_OUTPUTS_MAY_BE_THE_SAME_FILE(tmp_path, pair):
+    paths = {"results": str(tmp_path / "r.jsonl"), "trace": str(tmp_path / "t.jsonl"),
+             "report": str(tmp_path / "rep.json")}
+    paths[pair[1]] = "./" + os.path.relpath(paths[pair[0]])   # an ALIAS of the other
+    with pytest.raises(RUN.H2Error, match="name ONE file"):
+        RUN.check_output_paths(paths["results"], paths["trace"], paths["report"])
 
 
 # ─────────────────── the worker is not a public bypass ──────────────────────
 
-def test_WORKER_REFUSES_unless_the_supervisor_spawned_it(monkeypatch, capsys):
+def test_WORKER_REFUSES_without_the_supervisors_CAPABILITY(monkeypatch, capsys):
     """🔴 `--worker` ran the match in-process, unbounded, outside the gate
-    restoration boundary -- a usable bypass around both."""
-    monkeypatch.delenv(CMD.SUPERVISED_ENV, raising=False)
+    restoration boundary. The first fix used `H2_SUPERVISED_WORKER=1`, which any
+    caller could set -- no provenance at all, and it contradicted this module's own
+    claim that no environment variable reaches the path."""
     monkeypatch.setattr(CMD, "gate_is_open", lambda: True)
     monkeypatch.setattr(RUN, "run_h2", lambda **kw: pytest.fail("the match RAN"))
     assert CMD.worker_main(["--worker"]) == CMD.EXIT_REFUSED
     assert "not a way to run H2 by hand" in capsys.readouterr().err
 
 
-def test_the_supervisor_MARKS_the_child_and_clears_the_marker(monkeypatch, tmp_path):
+def test_NO_ENVIRONMENT_VARIABLE_reaches_the_worker_path():
+    """The claim in the source, checked: nothing here reads os.environ."""
+    import ast
+    import pathlib
+    tree = ast.parse(pathlib.Path(CMD.__file__).read_text())
+    reads = [n for n in ast.walk(tree) if isinstance(n, ast.Attribute)
+             and n.attr in ("environ", "getenv")]
+    assert not reads, "an environment variable is being read"
+
+
+def test_THE_CAPABILITY_IS_SINGLE_USE(tmp_path):
+    path = CMD._make_capability()
+    assert os.path.exists(path)
+    assert CMD._consume_capability(path) is True
+    assert not os.path.exists(path), "the capability must be consumed"
+    assert CMD._consume_capability(path) is False, "a second use must refuse"
+
+
+def test_the_capability_is_PRIVATE_and_RANDOM():
+    import stat
+    a, b = CMD._make_capability(), CMD._make_capability()
+    mode = stat.S_IMODE(os.stat(a).st_mode)
+    assert mode == 0o600, oct(mode)
+    ta, tb = open(a).read(), open(b).read()
+    assert ta != tb and len(ta) == CMD.CAPABILITY_BYTES * 2
+    for p in (a, b):
+        CMD._consume_capability(p)
+
+
+@pytest.mark.parametrize("bad", ["", "short", "x" * 10])
+def test_a_FORGED_or_EMPTY_capability_is_refused(tmp_path, bad):
+    path = tmp_path / "cap"
+    path.write_text(bad)
+    assert CMD._consume_capability(str(path)) is False
+    assert not path.exists(), "even a refused capability is consumed"
+
+
+def test_the_supervisor_HANDS_the_child_a_capability_and_leaves_none_behind(monkeypatch,
+                                                                           tmp_path):
     seen = {}
 
     def fake_supervise(cmd, **kw):
-        seen["marker"] = os.environ.get(CMD.SUPERVISED_ENV)
+        seen["cmd"] = list(cmd)
+        i = cmd.index("--capability")
+        seen["path"] = cmd[i + 1]
+        seen["existed"] = os.path.exists(seen["path"])
         return {"exit_code": 0, "timed_out": False, "interrupted": False,
                 "group_cleared": True}
     monkeypatch.setattr(CMD, "gate_is_open", lambda: True)
     monkeypatch.setattr(CMD, "supervise", fake_supervise)
     decoy = tmp_path / "runner.py"
     decoy.write_text("H2_EXECUTION_AUTHORIZED = True\n")
-    CMD.main(["--results", str(tmp_path / "r.jsonl"), "--trace", str(tmp_path / "t.jsonl")],
-             _runner_source=str(decoy))
-    assert seen["marker"] == "1"
-    assert CMD.SUPERVISED_ENV not in os.environ, "the marker must not outlive the run"
+    CMD.main(["--results", str(tmp_path / "r.jsonl"), "--trace", str(tmp_path / "t.jsonl"),
+              "--report", str(tmp_path / "rep.json")], _runner_source=str(decoy))
+    assert seen["existed"] is True, "the child must be handed a live capability"
+    assert not os.path.exists(seen["path"]), "none may outlive the run"
 
 
 # ──────────────── the interrupt contract: OK / VOID / INTERRUPTED ───────────
@@ -1127,7 +1248,7 @@ def test_an_OPERATOR_INTERRUPT_records_INTERRUPTED_not_VOID(registered, tmp_path
     t = tmp_path / "t.jsonl"
     with pytest.raises(KeyboardInterrupt):
         RUN._run_h2_unguarded(tasks=_tasks(), results_path=str(tmp_path / "r.jsonl"),
-                              trace_path=str(t), play=interrupting)
+                              trace_path=str(t), report_path=str(tmp_path / "rep.json"), play=interrupting)
     last = json.loads(t.read_text().splitlines()[-1])
     assert last["verdict"] == "INTERRUPTED", last
     assert last["error"] == "KeyboardInterrupt"
@@ -1148,7 +1269,53 @@ def test_the_run_ARMS_the_deadline_so_a_BLOCKED_game_can_be_cut_off(registered,
             armed["exited"] = True
             return False
     RUN._run_h2_unguarded(tasks=_tasks(), results_path=str(tmp_path / "r.jsonl"),
-                          trace_path=str(tmp_path / "t.jsonl"), play=_play_factory(),
+                          trace_path=str(tmp_path / "t.jsonl"),
+                          report_path=str(tmp_path / "rep.json"), play=_play_factory(),
                           _supervisor=_Sup)
     assert armed["entered"] and armed["exited"]
     assert armed["deadline"].started is True
+
+
+def test_A_PARTIAL_OUTPUT_ACQUISITION_REFUSES_CLEANLY(registered, tmp_path,
+                                                      monkeypatch):
+    """A failure on the SECOND output must VOID, play nothing, and leave the
+    descriptor it already took registered for close.
+
+    ⚠ WHAT THIS CANNOT SHOW, stated rather than implied: whether the first
+    descriptor was registered with the ExitStack is NOT observable here, because
+    CPython's refcounting closes the file object as soon as it goes out of scope.
+    The stack makes the close DETERMINISTIC and exception-safe, which is why the
+    code does it; no control can distinguish it, so none pretends to.
+    """
+    real_open = os.open
+    opened = []
+
+    def failing_open(path, flags, mode=0o777):
+        if str(path).endswith("r.jsonl"):
+            raise OSError(28, "no space left on device")
+        fd = real_open(path, flags, mode)
+        opened.append(str(path))
+        return fd
+    monkeypatch.setattr(RUN.os, "open", failing_open)
+    with pytest.raises(RUN.H2VoidError):
+        RUN._run_h2_unguarded(tasks=_tasks(), results_path=str(tmp_path / "r.jsonl"),
+                              trace_path=str(tmp_path / "t.jsonl"),
+                              report_path=str(tmp_path / "rep.json"),
+                              play=lambda **kw: pytest.fail("a game was played"))
+    assert opened == [str(tmp_path / "t.jsonl")], opened
+    assert not (tmp_path / "r.jsonl").exists()
+    assert not (tmp_path / "rep.json").exists()
+
+
+def test_the_degeneracy_refusal_CLAIMS_NO_DEPENDENCE():
+    """🔴 P2 WORDING. The refusal said the repetitions "are not independent plays",
+    which the screen cannot establish: independent seeded games can produce
+    identical transcripts, and §3.1 says the screen does not test independence."""
+    tasks = _tasks()
+    out = R.h2_report(_results(tasks, t1j_wins=368), tasks,
+                      _per_game({CELLS[0]: 1}, task_ids=[t["task_id"] for t in tasks]),
+                      task_digest=R.H2_TASK_DIGEST)
+    reason = out["reason"]
+    assert "DIVERSITY screen failed" in reason
+    assert "does NOT establish" in reason and "non-independent" in reason
+    assert "are not independent plays" not in reason

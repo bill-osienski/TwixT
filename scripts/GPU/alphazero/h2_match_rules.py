@@ -394,8 +394,12 @@ def h2_report(results: Sequence[Mapping[str, Any]], tasks: Sequence[Mapping[str,
             "reason": (f"{len(screen['failing_cells'])} of {screen['n_cells']} cell(s) "
                        f"hold fewer than {MIN_DISTINCT_PER_CELL} distinct transcripts "
                        f"of {N_REPS}: {screen['failing_cells']}. The primary interval "
-                       f"is NOT computed; those repetitions are not independent plays "
-                       f"but the same game returned."),
+                       f"is NOT computed: the preregistered DIVERSITY screen failed. "
+                       f"⚠ This does NOT establish that the games were statistically "
+                       f"non-independent -- independent seeded games can produce "
+                       f"identical transcripts, and §3.1 says plainly that this screen "
+                       f"cannot test independence. What failed is the design's own "
+                       f"diversity requirement."),
             "degeneracy_screen": screen,
             "interval": None, "score": None,
             "interval_standing": INTERVAL_STANDING,
