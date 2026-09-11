@@ -1,0 +1,39 @@
+STATE AFTER THE H2 VOID -- 2026-09-11T19:02:55Z
+
+== the SEVEN gates, AFTER the run ==
+  D1_EXECUTION_AUTHORIZED            False
+  SCREEN_AUTHORIZED                  False
+  H1_EXECUTION_AUTHORIZED            False
+  L0_EXECUTION_AUTHORIZED            False
+  LOWPLY_QUALIFICATION_AUTHORIZED    False
+  RUNTIME_REQUAL_AUTHORIZED          False
+  H2_EXECUTION_AUTHORIZED            False
+  ALL SEVEN FALSE: True
+  (restored by the wrapper, unconditionally, as soon as the worker exited)
+
+== H2's block, per seed ==
+  [202618000, 202618736): accounted 736 / exposed 0 / retired 736
+  a spent seed is refused: seed 202618000 belongs to a RETIRED block: its one-shot schedule completed, so reusing any part of it would select tasks after seeing the result
+
+== other blocks, unchanged ==
+  D1 (202615000, 202615221): accounted 221 / exposed 221 / retired 221
+
+== surviving processes ==
+  none
+
+git:
+M scripts/GPU/alphazero/e4_screen_reference.py
+ M scripts/GPU/alphazero/h2_match_runner.py
+ M tests/test_h2_match.py
+?? docs/superpowers/evidence/2026-09-09-t1j-h2-deterministic-readout/01_run_once.sh.txt
+?? docs/superpowers/evidence/2026-09-09-t1j-h2-deterministic-readout/02_timing.txt
+?? docs/superpowers/evidence/2026-09-09-t1j-h2-deterministic-readout/03_h2_results.jsonl
+?? docs/superpowers/evidence/2026-09-09-t1j-h2-deterministic-readout/03_h2_results.jsonl.t1j_classes/
+?? docs/superpowers/evidence/2026-09-09-t1j-h2-deterministic-readout/04_h2_trace.jsonl
+?? docs/superpowers/evidence/2026-09-09-t1j-h2-deterministic-readout/05_stdout.txt
+?? docs/superpowers/evidence/2026-09-09-t1j-h2-deterministic-readout/06_stderr.txt
+?? docs/superpowers/evidence/2026-09-09-t1j-h2-deterministic-readout/07_exit.txt
+?? docs/superpowers/evidence/2026-09-09-t1j-h2-deterministic-readout/08_accounting_from_records.txt
+?? docs/superpowers/evidence/2026-09-11-t1j-h2-match-void/
+HEAD 5fc1517
+unpushed: 79

@@ -360,6 +360,28 @@ TEST_ONLY_SEED_INTERVALS = (
 #: seeing the first 24, which is selection bias however clean the RNG is. So the
 #: WHOLE block retires together, drawn and undrawn alike.
 RETIRED_SEED_INTERVALS = (
+    (202618000, 202618736),          # H2, retired WHOLE 2026-09-11 after the single
+                                     # authorized match VOIDed at task 0, ply 7:
+                                     # `build_reference_agent` refuses any config
+                                     # that is not the frozen research one, and
+                                     # H2 IS a one-field change to it. No agent was
+                                     # constructed, no move played, no seed drawn.
+                                     #
+                                     # NOT EXPOSED: zero ply records exist, so
+                                     # claiming any draw would assert something
+                                     # that did not happen -- the same evidence
+                                     # test H1 used at its game 60.
+                                     #
+                                     # RETIRED WHOLE on the frozen one-shot rule:
+                                     # a preregistered schedule was STARTED and did
+                                     # not complete. ⚠ The rule's stated reason --
+                                     # that replaying part of it would select after
+                                     # seeing where it failed -- arguably does not
+                                     # bite here, since nothing was played and
+                                     # nothing learned about any game. The rule is
+                                     # applied anyway: relaxing one the moment it
+                                     # costs something is how rules stop binding.
+                                     # A FUTURE H2 NEEDS A FRESH INTERVAL.
     (202615000, 202615221),          # D1 §14, retired WHOLE 2026-09-08: a
                                      # preregistered ONE-SHOT schedule that
                                      # COMPLETED (analysis outcome NO_GO). L0's

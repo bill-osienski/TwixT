@@ -1,0 +1,3 @@
+{"event": "run_start", "n_tasks": 736, "selection_mode": "argmax"}
+{"event": "task_start", "index": 0}
+{"error": "AbortError", "event": "run_end", "games_completed": 0, "verdict": "VOID"}

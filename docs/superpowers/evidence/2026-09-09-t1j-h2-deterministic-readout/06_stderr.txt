@@ -1,0 +1,1 @@
+VOID: AbortError: [agent_construction] h2match-000-strong6-o1_center-t1j_red-r0 ply 7: config is not the frozen research configuration: EvalConfig(board_size=24, mcts_sims=400, mcts_eval_batch_size=14, mcts_stall_flush_sims=48, selection_mode='argmax', opening_temp_plies=20, temp_high=1.0, temp_low=0.1, max_moves=280)

@@ -464,14 +464,19 @@ def test_the_seam_BUILDS_AN_ARGMAX_CONFIG_rather_than_reusing_the_frozen_one():
     assert "selection_mode" in ast.dump(value), "and it must set selection_mode"
 
 
-def test_THE_BLOCK_IS_NOW_ACCOUNTED_and_the_barrier_is_SATISFIED():
-    """INVERTED 2026-09-11 by the seed-preparation authorization.
+def test_THE_BLOCK_IS_NOW_SPENT_accounted_NOT_exposed_and_RETIRED_WHOLE():
+    """INVERTED AGAIN 2026-09-11, hours after the registration, because the single
+    authorized match VOIDed at task 0.
 
-    🔑 The two barriers are independent and BOTH are asserted here, because that
-    independence is the whole reason there are two: registration removes the seed
-    barrier and moves NOTHING else. The gate is still False, so the run is still
-    refused -- by the gate, not by the registry. A registration that also opened
-    the gate would be a switch-off disguised as bookkeeping.
+    * ACCOUNTED, from the registration.
+    * NOT EXPOSED: `build_reference_agent` refused before any agent was built, so
+      zero ply records exist and no seed was ever drawn. Marking 736 draws would
+      assert something that did not happen.
+    * RETIRED WHOLE: a preregistered one-shot schedule was STARTED and did not
+      complete. A future H2 needs a FRESH interval.
+
+    🔑 The gate is False again -- restored by the wrapper, unconditionally, as soon
+    as the worker exited -- and the run is refused by it, not by the registry.
     """
     lo, hi = R.H2_SEED_BLOCK
     for name in ("ACCOUNTED_SEED_INTERVALS", "EXPOSED_SEED_INTERVALS",
@@ -479,14 +484,35 @@ def test_THE_BLOCK_IS_NOW_ACCOUNTED_and_the_barrier_is_SATISFIED():
         assert getattr(REF, name), f"vacuous: {name} is empty"
     for seed in range(lo, hi):
         st = REF.seed_status(seed)
-        assert st["accounted"], (seed, st)
-        assert not (st["exposed"] or st["retired"] or st["test_only"]), (seed, st)
+        assert st["accounted"] and st["retired"], (seed, st)
+        assert not (st["exposed"] or st["test_only"]), (seed, st)
         assert seed not in REF.CONSUMED_SEEDS, seed
-    RUN.check_seed_registration()                     # the barrier is down
-    assert RUN.H2_EXECUTION_AUTHORIZED is False       # the gate is not
+    RUN.check_seed_registration()                     # the barrier is still down
+    assert RUN.H2_EXECUTION_AUTHORIZED is False       # and the gate is shut again
     with pytest.raises(RUN.H2Error, match="UNAUTHORIZED"):
         RUN.run_h2(results_path="/dev/null/x", trace_path="/dev/null/y",
                    report_path="/dev/null/z")
+
+
+def test_THE_SPENT_BLOCK_CANNOT_BE_SCHEDULED_AGAIN():
+    """Retirement that does not refuse the next schedule is a comment, not a state."""
+    lo, hi = R.H2_SEED_BLOCK
+    for seed in (lo, hi - 1):
+        task = {"seed": seed, "reference": "calib020_0001",
+                "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+                "anchor_colour": "black"}
+        REF.validate_task_structure(task)              # well formed, forever
+        with pytest.raises(REF.E4ReferenceError, match="RETIRED|EXPOSED"):
+            REF.validate_task_executable(task)         # but no longer runnable
+
+
+def test_THE_FROZEN_SCHEDULE_IS_REFUSED_FOR_EXECUTION_though_it_still_PARSES():
+    """The plan stays loadable as a RECORD and is refused for EXECUTION by the
+    registry -- never by a digest mismatch alone."""
+    tasks = PLAN.build_tasks(PLAN.load_source_plan())
+    PLAN.validate_h2_schedule(tasks)                   # structure: still valid
+    with pytest.raises(Exception, match="RETIRED|EXPOSED|retired|exposed"):
+        REF.validate_schedule_executable(tasks)
 
 
 def _registry_without_h2():
@@ -1397,3 +1423,60 @@ def test_the_degeneracy_refusal_CLAIMS_NO_DEPENDENCE():
     assert "DIVERSITY screen failed" in reason
     assert "does NOT establish" in reason and "non-independent" in reason
     assert "are not independent plays" not in reason
+
+
+# ═══════ THE BLOCKER THE RUN FOUND: the builder refuses a non-frozen config ══
+
+def test_THE_QUALIFIED_BUILDER_REFUSES_H2s_ARGMAX_CONFIG():
+    """🔴 WHY THE MATCH VOIDED AT TASK 0, PINNED AS A TEST.
+
+    `twixtbot_g3_reference.build_reference_agent` compares the supplied config
+    with `eval_config()` and refuses ANY difference. H2 IS a one-field difference
+    -- `selection_mode` -- so the qualified construction path cannot build the H2
+    incumbent at all, and the match aborted at `agent_construction`, task 0, ply 7,
+    before a single move.
+
+    🔑 WHY NO TEST CAUGHT IT: every test of the seam MOCKED `build_reference_agent`,
+    including the ones written specifically to "drive the production setup through
+    mocked effectful boundaries". Mocking the collaborator that ENFORCES a
+    constraint is how the constraint stays invisible. This test uses the real one.
+
+    It asserts the CURRENT behaviour, which is a REFUSAL. When the readout change
+    is made admissible -- a separate authorization -- this test must be inverted,
+    and its failure is the reminder.
+    """
+    from scripts.GPU.alphazero import twixtbot_g3_reference as G3
+    cfg = G3.eval_config()
+    argmax_cfg = cfg.__class__(**{**cfg.__dict__, "selection_mode": "argmax"})
+    assert argmax_cfg != cfg, "the fixture must differ in exactly the one field"
+    assert argmax_cfg.mcts_sims == cfg.mcts_sims == 400
+
+    class _Eval:
+        _g3_reference = "calib020_0001"
+        _g3_sha1 = "209cf2d4fd24a48553d259dd71b4954867b9473e"
+
+    task = {"seed": R.H2_SEED_BLOCK[0], "reference": "calib020_0001",
+            "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+            "anchor_colour": "red"}
+    with pytest.raises(G3.ReferenceError, match="not the frozen research configuration"):
+        G3.build_reference_agent(task=task, evaluator=_Eval(), colour="black",
+                                 config=argmax_cfg, capture=True)
+
+
+def test_the_FROZEN_config_is_still_accepted_so_the_refusal_is_about_THE_CHANGE():
+    """The negative control: the same call with the frozen config gets past the
+    config check, so the refusal above is about the readout and nothing else."""
+    from scripts.GPU.alphazero import twixtbot_g3_reference as G3
+
+    class _Eval:
+        _g3_reference = "calib020_0001"
+        _g3_sha1 = "209cf2d4fd24a48553d259dd71b4954867b9473e"
+
+    task = {"seed": R.H2_SEED_BLOCK[0], "reference": "calib020_0001",
+            "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+            "anchor_colour": "red"}
+    try:
+        G3.build_reference_agent(task=task, evaluator=_Eval(), colour="black",
+                                 config=G3.eval_config(), capture=True)
+    except G3.ReferenceError as e:
+        assert "frozen research configuration" not in str(e), e

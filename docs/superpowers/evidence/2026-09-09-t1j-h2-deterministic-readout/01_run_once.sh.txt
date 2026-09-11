@@ -1,0 +1,10 @@
+#!/bin/sh
+# THE H2 MATCH. ONCE. Through the wrapper, which supervises the worker in its own
+# process group under a 28,860 s cap and restores the gate after EVERY exit.
+# Paths are the card's frozen defaults; no flag reaches the gate.
+set -u
+E=docs/superpowers/evidence/2026-09-09-t1j-h2-deterministic-readout
+
+.venv/bin/python -m scripts.GPU.alphazero.h2_match_command \
+    > "$E/05_stdout.txt" 2> "$E/06_stderr.txt"
+echo $? > "$E/07_exit.txt"

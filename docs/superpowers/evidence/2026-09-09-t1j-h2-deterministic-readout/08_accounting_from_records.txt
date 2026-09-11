@@ -1,0 +1,36 @@
+SEED ACCOUNTING, DERIVED FROM THE RECORDS -- not from intent.
+
+== the trace ==
+   {"event": "run_start", "n_tasks": 736, "selection_mode": "argmax"}
+   {"event": "task_start", "index": 0}
+   {"error": "AbortError", "event": "run_end", "games_completed": 0, "verdict": "VOID"}
+
+== the results file ==
+  1 record(s): ['header']
+  task_result records : 0
+  ply records         : 0
+  transcript records  : 0
+
+== WHAT WAS DRAWN ==
+  The abort is `agent_construction` at task 0, ply 7. `build_reference_agent`
+  refuses BEFORE constructing a SeededReferenceAgent, so NO RNG stream was
+  seeded, no move was played, and no ply record exists for any task.
+  H1's rule, applied to the same evidence: a task with a task_start but ZERO
+  ply records had its agent never constructed and its seed NEVER DRAWN.
+
+  EXPOSED : 0 of 736. Claiming otherwise would assert draws that did not happen.
+
+== WHAT IS RETIRED ==
+  RETIRED WHOLE: 736 of 736, on the frozen one-shot rule -- a preregistered
+  ONE-SHOT schedule was STARTED (run_start, task_start) and did not complete,
+  and L0/H1/D1 all retired whole on exactly that. A FUTURE H2 NEEDS A FRESH
+  INTERVAL.
+
+  ⚠ THE COUNTER-READING, STATED RATHER THAN BURIED: the rule's stated reason is
+  that replaying part of a schedule after seeing WHERE it failed is selection.
+  Here nothing was played and nothing was learned about any game -- the failure
+  is in the instrument, before game 0's first move. A case could be made that
+  the hazard is nil and the block could stand. I am applying the FROZEN RULE
+  rather than the argument, because relaxing a rule the moment it costs
+  something is how rules stop binding. Overruling it is the reviewer's call,
+  and this paragraph exists so that call is possible.

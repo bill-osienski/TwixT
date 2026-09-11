@@ -1,0 +1,530 @@
+clean baseline over 430 distinct target tests: PASS
+  REJECTED     registration check disabled
+  REJECTED     registration check looks only at the first seed
+  REJECTED     the D1 seed block un-registered from ACCOUNTED
+  REJECTED     the D1 seed block marked EXPOSED as well as accounted
+  REJECTED     the §14 block un-registered from ACCOUNTED (the edit reverted)
+  REJECTED     the §14 block un-registered -- caught at the STATE assertion too
+  REJECTED     the spent §14 block is NOT exposed -- 221 draws unrecorded
+  REJECTED     the spent §14 block is NOT retired -- a one-shot schedule left replayable
+  REJECTED     a spent seed is schedulable because availability is never checked
+  REJECTED     registration ALSO opened the D1 execution gate
+  REJECTED     compile step skips toolchain verification
+  REJECTED     compile step accepts a jar that is not the verified one
+  REJECTED     compile step accepts a java outside the verified JDK
+  REJECTED     compile step reuses an existing class directory
+  REJECTED     compile step ignores a failing javac
+  REJECTED     compile step builds the E3b set, not the query path
+  REJECTED     compile step skips the E4 jar pin
+  REJECTED     postcondition surface never read
+  REJECTED     reflection COUNT accepted as whatever came back
+  REJECTED     searched position never re-bound
+  REJECTED     more than one searched dump accepted
+  REJECTED     a move illegal in OUR engine accepted
+  REJECTED     depth agreement not recorded
+  REJECTED     the helper's stdout discarded again on a non-zero query exit
+  REJECTED     the failure excerpt unbounded
+  REJECTED     the excerpt line cap removed
+  REJECTED     the excerpt falls back to silence
+  REJECTED     the label drops the cohort
+  REJECTED     the label drops the prefix digest
+  REJECTED     the run loop stops labelling its refusals
+  REJECTED     the probe refusal loses the position again
+  REJECTED     the BINDER discards the transcript on a non-zero replay exit
+  REJECTED     the AGENT discards the transcript on a non-zero query exit
+  REJECTED     the binder's excerpt carries the dump body
+  REJECTED     manifest drops the cohort label
+  REJECTED     registration checked only after the clock starts
+  REJECTED     registration checked only after the supervisor is armed
+  REJECTED     registration no longer stops the run before compilation
+  REJECTED     supervisor armed from limit_s instead of the remaining time
+  REJECTED     supervisor arms from a deadline that was never started
+  REJECTED     supervisor arms a DISABLED timer when nothing remains
+  REJECTED     remaining() ignores elapsed time, so the window restarts
+  REJECTED     digest re-check disabled
+  REJECTED     prefix legality check disabled
+  REJECTED     E3b binder never called
+  REJECTED     binder AbortError not translated to VOID
+  REJECTED     binder replay timeout not translated to VOID
+  REJECTED     ply_cap not carried to the runtime
+  REJECTED     replay timeout widened at the runtime
+  REJECTED     replay's unbounded-wait guard removed
+  REJECTED     replay timeout dropped at the last hop
+  REJECTED     T1jRuntime accepts an unbounded timeout
+  REJECTED     capture draws from the readout stream
+  REJECTED     capture switched on by default
+  REJECTED     capture flag not forwarded by the qualified builder
+  REJECTED     root-noise check disabled
+  REJECTED     evaluator reloaded for every position
+  REJECTED     incumbent readout spends no query
+  REJECTED     policy rank tie-break reversed
+  REJECTED     incumbent identity typed instead of read from the frozen plan
+  REJECTED     digest downgraded to the sha1 superset helper
+  REJECTED     digest payload widened beyond the frozen three fields
+  REJECTED     per-cell cap loosened
+  REJECTED     deduplication disabled
+  REJECTED     incumbent-to-move restriction dropped
+  REJECTED     controls no longer matched to the position cells
+  REJECTED     seed written in place so a shared row is overwritten
+  REJECTED     frozen-count reconciliation removed
+  REJECTED     lowply gate flipped open
+  REJECTED     lowply public runner ungated
+  REJECTED     lowply turns a non-zero exit back into a VOID (D1's defect)
+  REJECTED     lowply stops recording the incomplete-depth shortfall
+  REJECTED     lowply stops checking the move against OUR engine
+  REJECTED     lowply stops comparing the two invocations
+  REJECTED     lowply verdict always PASS
+  REJECTED     lowply timeout no longer a VOID
+  REJECTED     lowply D1 exception translation removed
+  REJECTED     lowply frozen-input hash check disabled
+  REJECTED     lowply per-call timeout dropped at the last hop
+  REJECTED     lowply uses the same-JVM determinism mode
+  REJECTED     lowply query cap loosened
+  REJECTED     lowply wall-clock cap widened
+  REJECTED     lowply reads D1's gate
+  REJECTED     adapter query parse failure re-raised bare
+  REJECTED     adapter replay parse failure re-raised bare
+  REJECTED     lowply query parse failure not translated
+  REJECTED     lowply replay parse failure not translated
+  REJECTED     lowply POSTCOND parse failure not translated
+  REJECTED     lowply parse VOID carries the whole dump body
+  REJECTED     lowply main has no catch-all again
+  REJECTED     parse_postconds raises a bare ValueError again
+  REJECTED     parse_postconds drops the transcript it attaches
+  REJECTED     PostCond construction raises a bare ValueError again
+  REJECTED     PostCond parse failure drops its transcript
+  REJECTED     §13 exclusion never applied
+  REJECTED     §12 count reconciliation removed
+  REJECTED     §13 post-exclusion counts not reconciled
+  REJECTED     §13 accepts the retired seed block
+  REJECTED     §13 assigns seeds when none were reserved
+  REJECTED     D1 query cap raised back to the frozen 12.4 figure
+  REJECTED     D1 query parse failure not translated
+  REJECTED     D1 replay parse failure not translated
+  REJECTED     D1 main has no catch-all again
+  REJECTED     the trace stops validating VALUES (name-only again)
+  REJECTED     the enum check is opened to free text
+  REJECTED     the event enum is opened to free text
+  REJECTED     counters accept any type or magnitude
+  REJECTED     counters accept bools as integers
+  REJECTED     counter ceilings widened past the run's real limits
+  REJECTED     the schema string is no longer pinned
+  REJECTED     an event may carry extra fields
+  REJECTED     an event may omit declared fields
+  REJECTED     the identity strings are readmitted
+  REJECTED     the trace validates AFTER writing
+  REJECTED     the trace is not written on a VOID
+  REJECTED     the trace stops counting seeds drawn
+  REJECTED     the trace is not fsynced per line
+  REJECTED     run_d1 accepts any cohort (the ceiling-only defect)
+  REJECTED     the cohort size check is dropped
+  REJECTED     the cohort ORDER check is dropped
+  REJECTED     an excluded row is readmitted to the cohort
+  REJECTED     the cohort source is no longer hash-pinned
+  REJECTED     the exact-spend check is dropped
+  REJECTED     the expected spend becomes a maximum again
+  REJECTED     the private seam starts enforcing the cohort too
+  REJECTED     cohort binds digests only, not the labels
+  REJECTED     cohort drops the grouping fields from the identity set
+  REJECTED     the RAW mover_more_fragmented column is left unbound
+  REJECTED     the RAW created_threat column is left unbound
+  REJECTED     a source field silently drops out of the binding
+  REJECTED     cohort tolerates a row missing an identity field
+  REJECTED     cohort pins the SEED as an IDENTITY field (the frozen source carries none)
+  REJECTED     cohort comparison drops type-strictness (== again)
+  REJECTED     the comparison helper stops checking type
+  REJECTED     bools slip through as ints (isinstance instead of type)
+  REJECTED     prefix normalisation coerces through int() again
+  REJECTED     structural normalisation dropped, so a tuple prefix is refused
+  REJECTED     the corrected 5.4 justification is reinstated as the wrong one
+  REJECTED     the interval is RETYPED as a literal in d1_probe
+  REJECTED     the canonical interval points back at the RETIRED block
+  REJECTED     the canonical interval is sized 227 again, not 221
+  REJECTED     RETIRED_SEED_INTERVAL moved to the new block
+  REJECTED     RETIRED_SEED_INTERVAL moved -- caught by the REFUSAL, not the constant
+  REJECTED     the retirement guard is removed from select_all
+  REJECTED     the runtime seed check admits the retired block too
+  REJECTED     the registration barrier computes nothing and so is always satisfied
+  REJECTED     bind_results design becomes defaultable
+  REJECTED     H1 silently reverts to L0's 4 repetitions
+  REJECTED     the viability threshold moves to parity
+  REJECTED     the verdict admits an upper bound AT the threshold
+  REJECTED     the verdict reads the bounds in the wrong order
+  REJECTED     the decisive bands are hardcoded instead of derived
+  REJECTED     the task digest is a hand-typed constant again
+  REJECTED     H1 reuses L0's SPENT and retired seed block
+  REJECTED     H1's block overlaps D1's PAPER reservation
+  REJECTED     a shared vocabulary is RETYPED instead of re-exported
+  REJECTED     H1 acquires an early stop
+  REJECTED     cap saturation stops refusing a rate
+  REJECTED     the reporter binds H1 results to the 64-game design
+  REJECTED     the verdict is read off the WILSON interval
+  REJECTED     the no-pooling prohibition is deleted
+  REJECTED     the repetition LABELS stop being checked
+  REJECTED     an incomplete match is reported instead of refused
+  REJECTED     H1 APPENDS its seed rule to L0's instead of composing
+  REJECTED     the block name stops reaching the seed rule
+  REJECTED     L0's own abort rules change under the factoring
+  REJECTED     the H1 seed predicate admits the L0 block too
+  REJECTED     the H1 seed predicate refuses H1's own seeds
+  REJECTED     H1 INHERITS L0's count-bearing prohibitions
+  REJECTED     the independence prohibition hardcodes 64 again
+  REJECTED     the per-cell denominators are swapped
+  REJECTED     L0's own forbidden claims change under the factoring
+  REJECTED     the plan pin reverts to the SUPERSEDED v1 artifact
+  REJECTED     H1 INHERITS L0's non-abort rules whole
+  REJECTED     H1 claims it has NO band, as L0 does
+  REJECTED     the early-stop prohibition is softened
+  REJECTED     L0's own non-abort rules change under the extraction
+  REJECTED     the artifact keeps L0-only wording
+  REJECTED     an H1 gate appears without the claim being revisited
+  REJECTED     an H1 registration precondition appears silently
+  REJECTED     the H1 gate is flipped open
+  REJECTED     the H1 gate no longer binds the match path
+  REJECTED     the registration barrier no longer binds
+  REJECTED     the registration barrier checks only the endpoints
+  REJECTED     the barriers move BELOW the plan load and the recorder
+  REJECTED     the gate opens the registration barrier too
+  REJECTED     registering the block opens the gate too
+  REJECTED     match mode accepts a supplied plan
+  REJECTED     the content binding narrows to the digest dimensions (dead again)
+  REJECTED     the seed-block check is dropped from the PLAN validator
+  REJECTED     the whole-run deadline is widened
+  REJECTED     the per-call timeout is dropped
+  REJECTED     the cooperative deadline check is removed
+  REJECTED     the deadline is never checked between games
+  REJECTED     the trace file stops being create-only
+  REJECTED     the trace admits an identity string
+  REJECTED     the trace validates AFTER the write
+  REJECTED     the trace stops recording how far a VOID run got
+  REJECTED     cap saturation is reported as a verdict after all
+  REJECTED     the early-stop ban names a function that does not exist
+  REJECTED     the match is hidden behind a mode list again
+  REJECTED     the public match path supplies no production setup
+  REJECTED     qualification builds production collaborators too
+  REJECTED     T1j loses the frozen per-call timeout in the setup
+  REJECTED     the setup keeps the REFUSING binder
+  REJECTED     the openings come from H1's plan again (KeyError on the real path)
+  REJECTED     the incumbent is loaded per game instead of once
+  REJECTED     the SIGALRM void escapes as D1's exception
+  REJECTED     the supervisor is never armed
+  REJECTED     the VOID diagnostic stops naming the position
+  REJECTED     the VOID diagnostic drops the helper transcript
+  REJECTED     the VOID diagnostic carries the WHOLE transcript
+  REJECTED     the ply counter stops observing durable ply records
+  REJECTED     a partial vector can produce a report after all
+  REJECTED     the agent's own query timeout is dropped again
+  REJECTED     compilation gets a SECOND deadline (two clocks again)
+  REJECTED     the setup factory is never invoked
+  REJECTED     the excerpt reads only error.stdout again
+  REJECTED     the excerpt drops the abort-message fallback
+  REJECTED     the abort-message fallback is unbounded
+  REJECTED     the ply tracker ignores opening_bound again
+  REJECTED     the binder wrapper stops noting the attempted ply
+  REJECTED     the recorder is built OUTSIDE the protected try again
+  REJECTED     the output preflight is removed
+  REJECTED     the preflight ignores the trace path
+  REJECTED     a precondition refusal is reported as a VOID
+  REJECTED     a mid-run recorder failure escapes unclassified again
+  REJECTED     match mode accepts a missing trace path again
+  REJECTED     the trace requirement is not applied to the match
+  REJECTED     results and trace may be the same file
+  REJECTED     the paths are compared WITHOUT canonicalisation
+  REJECTED     canonicalisation stops resolving symlinks
+  REJECTED     the output precheck follows symlinks again (exists, not lexists)
+  REJECTED     the precheck stops agreeing with create-exclusive open
+  REJECTED     only the results name is checked for existence
+  REJECTED     the public docstring denies that match mode is selectable
+  REJECTED     the H1 block is un-registered from ACCOUNTED
+  REJECTED     the H1 exposure overstates the draws (all 224, not the 60 taken)
+  REJECTED     the H1 retirement covers only the seeds actually drawn
+  REJECTED     D1's spent block loses its ACCOUNTED entry, from the H1 side
+  REJECTED     an H1 block is made to overlap D1's spent block
+  REJECTED     registering the block also opens the gate
+  REJECTED     a match abort escapes without becoming a VOID
+  REJECTED     qualification aborts are relabelled as voids too
+  REJECTED     a KeyboardInterrupt is relabelled as an instrument failure
+  REJECTED     the diagnostic records the TRANSLATION instead of the cause
+  REJECTED     a prefs failure is reported without the attribution note
+  REJECTED     the attribution note claims T1j did it
+  REJECTED     the note is attached to every failure, not just prefs ones
+  REJECTED     the surface probe collapses ABSENT and UNREADABLE, as Java does
+  REJECTED     the directory probe hides a read failure
+  REJECTED     no baseline surface is recorded at run start
+  REJECTED     mover cut inverted
+  REJECTED     the observation fields are never read from the POSTCOND line
+  REJECTED     the observation is parsed but not attached to PostCond
+  REJECTED     the POSTCOND self-agreement check disabled
+  REJECTED     the self-agreement check compares the hash only, not the count
+  REJECTED     the excerpt reader returns None when the earlier source said nothing
+  REJECTED     the excerpt reader requires POSTCOND to start a line
+  REJECTED     the VOID diagnostic drops the helper's own observation
+  REJECTED     the diagnostic reads only chained stdout, never the AbortError message
+  REJECTED     an operator interrupt is traced as VOID again
+  REJECTED     every failure is classified as an interrupt
+  REJECTED     the interrupt record is still called a void_diagnostic
+  REJECTED     the accounting rule no longer travels with the interrupt record
+  REJECTED     INTERRUPTED removed from the closed verdict enum
+  REJECTED     the accounting rule softened: drawn seeds become reusable
+  REJECTED     the partial-observation refusal removed
+  REJECTED     the partial-observation refusal removed, seen from the REAL query path
+  REJECTED     a truncated segment ending in the marker reads as the earlier source
+  REJECTED     a segment missing a BASE field reads as the earlier source
+  REJECTED     the query path stops chaining the full transcript
+  REJECTED     the diagnostic parses the BOUNDED excerpt instead of the full text
+  REJECTED     the attribution trigger reads only the bounded excerpt
+  REJECTED     requal gate removed at the public runner
+  REJECTED     requal gate removed at the worker entry
+  REJECTED     requal gate removed at main (the worker still refuses, so only the no-spawn test sees it)
+  REJECTED     the frozen prefix file's hash pin removed
+  REJECTED     the prefix-file vs plan cross-check removed
+  REJECTED     a reply without the observation is read as legacy instead of VOID
+  REJECTED     the parser/reader agreement check removed
+  REJECTED     a dirty preference surface no longer recorded as a failure
+  REJECTED     the diagnostic observation read from the bounded excerpt, not the chain
+  REJECTED     the exact-eight requirement removed from the public runner
+  REJECTED     the create-only precheck removed (O_EXCL still fails, but after 16 launches)
+  REJECTED     the supervisor no longer starts the worker in its own session
+  REJECTED     the supervisor stops at SIGTERM and never SIGKILLs the group
+  REJECTED     a supervisor kill is reported as VOID instead of TIMEOUT
+  REJECTED     a FAIL result exits 0 like a pass
+  REJECTED     the outer cap shrinks to the inner deadline (no grace for the inner VOID)
+  REJECTED     main spawns itself without --worker
+  REJECTED     every call no longer carries the frozen per-call timeout
+  REJECTED     no cleanup after a worker that exits before the timeout
+  REJECTED     main reports the worker's code although cleanup failed
+  REJECTED     EPERM from the group probe read as CLEARED
+  REJECTED     row binding compares digests only again
+  REJECTED     row binding drops the TYPE check (False == 0)
+  REJECTED     row binding accepts extra keys
+  REJECTED     row binding normalises VALUES, not only shape
+  REJECTED     the attempt-2 block moved back onto the SPENT attempt-1 block
+  REJECTED     the plan loader stops verifying the v4 file hash
+  REJECTED     the plan loader stops verifying the task digest
+  REJECTED     the wrapper's main stops reading the runner's gate
+  REJECTED     the wrapper's worker stops reading the runner's gate
+  REJECTED     the wrapper skips the output-path precheck
+  REJECTED     a failed gate restoration no longer supersedes
+  REJECTED     the gate is restored only on the happy path (else, not finally)
+  REJECTED     restore_gate reports success without verifying the rewrite
+  REJECTED     the wrapper reports the worker's code although cleanup failed
+  REJECTED     an operator interrupt in the worker exits 0
+  REJECTED     the supervisor no longer forwards an operator interrupt
+  REJECTED     the wrapper's outer cap shrinks to the runner deadline
+  REJECTED     the output precheck moves back IN FRONT of the restoration boundary
+  REJECTED     a failed restoration no longer supersedes a refusal
+  REJECTED     the --runner-source override returns to the production CLI
+  REJECTED     the default restoration target is not the imported runner's source
+  REJECTED     the attempt-2 block un-registered from ACCOUNTED
+  REJECTED     the attempt-2 block un-RETIRED after the completed match
+  REJECTED     the attempt-2 block un-EXPOSED after the completed match
+  REJECTED     the runner stops asking whether the schedule may be RUN (spent block accepted)
+  REJECTED     rank ties broken in REVERSE (row, col)
+  REJECTED     agree coupled to lprd (the withdrawn implication)
+  REJECTED     k drifts from 5 to 6
+  REJECTED     the depth-3 move read instead of mdPly 6
+  REJECTED     MH weights replaced by equal weights
+  REJECTED     common support pooled: cells with ONE role enter the statistic
+  REJECTED     the direction flipped (controls minus positions)
+  REJECTED     the decision threshold lowered
+  REJECTED     the lower-bound condition dropped (T alone decides)
+  REJECTED     undefined replicates silently DISCARDED
+  REJECTED     a game drawn twice contributes its rows ONCE (re-deduplicated)
+  REJECTED     the second draw copies the first (no replacement)
+  REJECTED     the PRNG seed drifts
+  REJECTED     the quantile convention changes from type 7
+  REJECTED     the eligibility floor becomes strict (refuses AT the floor)
+  REJECTED     contributing games counted from UNMATCHED rows too
+  REJECTED     an undefined arm reported as plain NO_GO (treated as zero)
+  REJECTED     the both-arm rule dropped
+  REJECTED     cross-half duplicates no longer removed
+  REJECTED     the ply < 5 eligibility filter dropped
+  REJECTED     the ceiling drops silently instead of refusing
+  REJECTED     within-half dedup keeps the LATEST row
+  REJECTED     cohort binding loses type strictness
+  REJECTED     cohort binding stops checking the count
+  REJECTED     the checked entry stops binding the cohort
+  REJECTED     the checked entry takes a cohort argument again (secondary promotable)
+  REJECTED     the design/cohort game check removed
+  REJECTED     strata inferred from the ROWS instead of the design
+  REJECTED     eligibility defaults a missing 'system' to acceptance
+  REJECTED     eligibility reads an invented flag instead of 'system'
+  REJECTED     the opponent-to-move filter inverted
+  REJECTED     the override flag read from the invented field name
+  REJECTED     a record without the override field is silently None
+  REJECTED     the production entry takes the cohort from the caller again
+  REJECTED     the production entry uses a smaller B than the frozen one
+  REJECTED     the canonical cohort is resolved from a different record
+  REJECTED     the design metadata binding removed
+  REJECTED     the design binding loses type strictness on rep
+  REJECTED     the design binding skips a field the row omits
+  REJECTED     the undefined-arm check runs AFTER the generic NO_GO again
+  REJECTED     D1 stops binding the seed assignment to positions
+  REJECTED     D1's seed rule stops being POSITIONAL (interval membership only)
+  REJECTED     D1's seed rule loses type strictness
+  REJECTED     D1' analyses a record with no acquisition metadata
+  REJECTED     D1' stops requiring the acquisition fields to be present
+  REJECTED     D1' stops requiring elapsed_s and positions to be present
+  REJECTED     D1' accepts an acquisition value that disagrees with the frozen run
+  REJECTED     D1' stops binding the per-position seed assignment
+  REJECTED     D1' stops binding the per-position prefix
+  REJECTED     D1' runs the contract AFTER the statistic
+  REJECTED     D1' accepts any non-empty incumbent identity again
+  REJECTED     D1' accepts any non-empty toolchain identity again
+  REJECTED     D1' stops checking the compiled-class identity
+  REJECTED     D1' stops checking the helper SOURCE identity
+  REJECTED     D1' stops checking the MAIN CLASS
+  REJECTED     the compiled-class pin drifts from the qualified builds
+  REJECTED     a malformed toolchain identity raises a TypeError instead of a refusal
+  REJECTED     elapsed_s is no longer bounded by the deadline
+  REJECTED     malformed positions raise a TypeError instead of a refusal
+  REJECTED     the analysis reaches an EXECUTING adapter function
+  REJECTED     rank_visit breaks ties by DESCENDING move order
+  REJECTED     rank_visit orders by ASCENDING visits
+  REJECTED     rank_visit DROPS zero-visit moves
+  REJECTED     rank_visit accepts an empty root instead of refusing
+  REJECTED     ss is EXCLUSIVE at five on the policy side
+  REJECTED     ss is INCLUSIVE at five on the visit side
+  REJECTED     ss ignores the VISITS entirely -- the whole question
+  REJECTED     ss drops the policy condition, so it OVERLAPS lprd
+  REJECTED     the strict variant fires on ANY visit count
+  REJECTED     the policy and the visits may cover DIFFERENT legal sets
+  REJECTED     rank_visit accepts an empty root, so an empty record is scored
+  REJECTED     the disjointness precondition checks nothing
+  REJECTED     the public entry never RUNS the precondition
+  REJECTED     the entry skips the completed-D1 contract
+  REJECTED     the entry exposes B and the seed as knobs again
+  REJECTED     D1″ reuses D1′'s bootstrap seed, so the draw repeats it
+  REJECTED     the threshold is RETYPED and drifts below D1′'s
+  REJECTED     the eligibility floor is never enforced
+  REJECTED     the SECONDARY strict variant decides the outcome
+  REJECTED     the readout summary tolerates an absent measurement
+  REJECTED     the matched statistic IGNORES the requested indicator
+  REJECTED     a missing indicator field is read as False
+  REJECTED     the indicator changes D1′'s own default result
+  REJECTED     the validation pass is never RUN by the entry
+  REJECTED     validation runs PER ROW, interleaved with the scoring
+  REJECTED     a required observable is optional again
+  REJECTED     a visit count is coerced with int() instead of type-checked
+  REJECTED     a negative or fractional visit count is accepted
+  REJECTED     a NaN or infinite policy mass reaches the ranking
+  REJECTED     an all-zero policy is ranked by tie-break alone
+  REJECTED     an observable may CONTRADICT the map it describes
+  REJECTED     a truthy int passes as the override flag
+  REJECTED     validation lets the policy and the visits differ
+  REJECTED     a depth-6 move of strings is accepted
+  REJECTED     a small complement is reported as INSUFFICIENT SUPPORT
+  REJECTED     the complement count is never reported
+  REJECTED     the summary averages the ranks instead of counting them
+  REJECTED     the histogram is ordered by COUNT instead of by rank
+  REJECTED     the histogram emits zero-count ranks
+  REJECTED     the row drops the rank fields the summary histograms
+  REJECTED     the row hardcodes the POLICY rank the summary histograms
+  REJECTED     the depth is coerced, so '6' and 6.0 pass a type-strict contract
+  REJECTED     a non-mapping depth entry escapes as an AttributeError
+  REJECTED     a rank comparison admits a bool equal to the right number
+  REJECTED     the depths container itself is never validated
+  REJECTED     the search budget is not bound at all
+  REJECTED     the budget is retyped in this module instead of read
+  REJECTED     derived values are compared APPROXIMATELY again
+  REJECTED     _real accepts bools, so True passes as a number
+  REJECTED     top2 is silently omitted rather than declared unused
+  REJECTED     the parity rule reads 0.75 instead of parity
+  REJECTED     the verdict is decided at the wrong side of the interval
+  REJECTED     AT parity counts as above it
+  REJECTED     the sample size drifts from the card
+  REJECTED     the per-cell threshold is relaxed by one
+  REJECTED     the transcript carries the SEED, so identical play looks distinct
+  REJECTED     the transcript drops the moves, so every game looks the same
+  REJECTED     the ply sequence is checked for CONTIGUITY, not for its exact span
+  REJECTED     a truncated tail passes because only the head is anchored
+  REJECTED     movers must merely ALTERNATE, not match the arm
+  REJECTED     the terminal reason is not checked against the two the protocol has
+  REJECTED     coordinates are coerced instead of type-checked
+  REJECTED     the degeneracy screen counts GLOBALLY instead of per cell
+  REJECTED     the interval is computed even when the screen fails
+  REJECTED     the report drops the interval's standing
+  REJECTED     the plan assigns seeds by membership, not POSITION
+  REJECTED     the plan omits the readout mode from its tasks
+  REJECTED     the schedule accepts a task without the readout mode
+  REJECTED     a short schedule is accepted
+  REJECTED     the gate defaults OPEN
+  REJECTED     the public entry never reads the gate
+  REJECTED     the registration barrier checks only the first seed
+  REJECTED     the registration barrier is disabled
+  REJECTED     outputs are overwritten instead of refused
+  REJECTED     one path may serve as both results and trace
+  REJECTED     the identity keeps the OLD readout
+  REJECTED     the inert settings are left looking ACTIVE
+  REJECTED     a run recording the OLD readout is reported as H2
+  REJECTED     the identity is compared SHALLOWLY again
+  REJECTED     the schedule digest is not compared with the pin
+  REJECTED     the deadline never fires
+  REJECTED     a malformed ply record is skipped instead of VOIDing
+  REJECTED     the wrapper reports success without verifying the gate
+  REJECTED     restoration claims success without reading the file back
+  REJECTED     the wrapper gains a --runner-source override
+  REJECTED     the mover is derived from the ARM again
+  REJECTED     the starting colour drifts from the engine's
+  REJECTED     the public entry accepts caller-supplied play again
+  REJECTED     the production seam is a refusing stub again
+  REJECTED     the seam no longer calls the harness game loop
+  REJECTED     the production seam loads the model AT IMPORT
+  REJECTED     the incumbent keeps the temperature config in production
+  REJECTED     a DANGLING SYMLINK reads as absent
+  REJECTED     the screen accepts a SHORT transcript vector
+  REJECTED     the screen ignores the canonical task ids
+  REJECTED     a cell with fewer than 46 GAMES is screened anyway
+  REJECTED     invalid results are masked as a DEGENERATE DESIGN
+  REJECTED     the transcript evidence is not persisted
+  REJECTED     a mid-run failure leaves no run_end VOID
+  REJECTED     the wrapper runs the match IN PROCESS, unsupervised
+  REJECTED     the outer cap is unbounded
+  REJECTED     a surviving descendant accompanies a success
+  REJECTED     a timeout is reported as the worker's own exit code
+  REJECTED     compile is handed a fresh, unstarted clock again
+  REJECTED     the seam accepts an unstarted clock
+  REJECTED     the run never starts its deadline
+  REJECTED     the deadline is never ARMED, so a blocked game runs on
+  REJECTED     the outcome is never classified
+  REJECTED     a REFUSED report still exits COMPLETED
+  REJECTED     a degenerate design is reported as a completed match
+  REJECTED     the report overwrites an existing one
+  REJECTED     the preflight lets an existing report through to the games
+  REJECTED     an operator interrupt is recorded as VOID
+  REJECTED     no cleanup runs between games
+  REJECTED     cleanup runs only after a SUCCESSFUL game
+  REJECTED     the evaluator is reloaded for every game
+  REJECTED     the incumbent is built with the frozen TEMPERATURE config
+  REJECTED     the schedule is pinned only by its DESIGN digest
+  REJECTED     the full-field digest projects fields away
+  REJECTED     --worker is a public bypass again
+  REJECTED     the report is left out of the preflight
+  REJECTED     only two outputs are compared for aliasing
+  REJECTED     the terminal OK is committed BEFORE the report is durable
+  REJECTED     the trace does not name the verdict it committed
+  REJECTED     the capability is a fixed, caller-settable value
+  REJECTED     the capability is not an anonymous pipe
+  REJECTED     any token of the RIGHT LENGTH is accepted
+  REJECTED     any capability at all is accepted
+  REJECTED     the capability check DELETES the thing it was given
+  REJECTED     an environment variable reaches the worker path
+  REJECTED     a capability outlives the run
+  REJECTED     the descriptor is not PASSED to the child at all
+  REJECTED     the shared supervisor drops pass_fds
+  REJECTED     the classifier assumes the report exists
+  REJECTED     the degeneracy refusal claims the games were non-independent
+  REJECTED     H2's block un-registered from ACCOUNTED (the edit reverted)
+  REJECTED     H2's block ALSO marked EXPOSED -- a reservation claimed as a draw
+  REJECTED     the SPENT block is not retired, so it can be scheduled again
+  REJECTED     a spent seed is schedulable because availability is never checked
+  REJECTED     the builder stops refusing a non-frozen config
+  REJECTED     the builder refuses the FROZEN config too, so the refusal says nothing
+  REJECTED     registration ALSO opened the H2 gate
+  REJECTED     the negative control stops stripping anything
+
+523/523 defects rejected; 0 not caught; 0 stale
+ALL CONTROLS RAN: True
+distinct injections: 523 | duplicate labels: 0
+clean baseline: PASS
+every source restored: True
