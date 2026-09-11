@@ -1,0 +1,53 @@
+H2 PRE-RUN VERIFICATION -- 2026-09-11T18:16:28Z
+Nothing has been executed. The gate is still shut at this moment.
+
+== the SEVEN gates ==
+  D1_EXECUTION_AUTHORIZED            False
+  SCREEN_AUTHORIZED                  False
+  H1_EXECUTION_AUTHORIZED            False
+  L0_EXECUTION_AUTHORIZED            False
+  LOWPLY_QUALIFICATION_AUTHORIZED    False
+  RUNTIME_REQUAL_AUTHORIZED          False
+  H2_EXECUTION_AUTHORIZED            False
+
+== the seed block ==
+  [202618000, 202618736): accounted 736 / exposed 0 / retired 0
+  registration barrier: SATISFIED
+
+== the schedule ==
+  736 tasks, 16 cells x 46 reps, mode argmax
+  design digest     : 3c0a0ae12c61dae69b134b30d0f4adb7dc97b9e46478cebe679784996d7172d2 == pin: True
+  full-field digest : 08d44fb84851e6fe91ca6510192ef7f3dd57d7ea0997e59d4e4d5d7c60384235 == pin: True
+  seeds positional  : True
+
+== the incumbent identity H2 will record ==
+  reference     : calib020_0001 / 209cf2d4fd24a48553d259dd71b4954867b9473e
+  selection_mode: argmax
+  mcts_sims     : 400   board 24
+  inert         : ['opening_temp_plies', 'temp_high', 'temp_low']
+
+== the toolchain ==
+  jar /Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/t1j.jar
+  jar sha == E4 pin: True
+  jdk /Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/jdk/jdk-17.0.20.1+1/Contents/Home
+
+== the three outputs must be ABSENT ==
+  absent     docs/superpowers/evidence/2026-09-09-t1j-h2-deterministic-readout/03_h2_results.jsonl
+  absent     docs/superpowers/evidence/2026-09-09-t1j-h2-deterministic-readout/04_h2_trace.jsonl
+  absent     docs/superpowers/evidence/2026-09-09-t1j-h2-deterministic-readout/09_report.json
+  check_output_paths: ACCEPTED
+
+== bounds ==
+  runner deadline 28800s (480 min); per call 120s
+  supervisor cap  28860s
+  no early stop   : True
+
+⚠ RISK RECORDED BEFORE THE RUN, NOT AFTER: the production seam has NEVER
+  played a game. Only its construction, wiring and refusals are tested. If it
+  fails at game 1, the run VOIDs and the one-shot rule retires all 736 seeds --
+  the same cost as a failure at game 735. That cost is accepted by proceeding;
+  it is not a surprise to be discovered afterwards.
+
+git:
+?? docs/superpowers/evidence/2026-09-09-t1j-h2-deterministic-readout/
+HEAD 3608879
