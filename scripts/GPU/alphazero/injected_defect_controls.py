@@ -2648,4 +2648,1092 @@ DEFECTS = [
 # failing at a different assertion than the one it was shown to reach -- and they
 # do not independently prove that the assertion reached is the right one.
 # A label with no entry here is INDETERMINATE; there is no permissive default.
-EXPECTED_REASONS = {}
+#
+# 🔴 SIX ENTRIES BELOW ARE ERROR TEXT, NOT ASSERTION TEXT, and are marked where they
+# stand. Under their defect the named test NEVER RUNS -- four fail in fixture setup,
+# one on module import, and one ("the seam no longer calls the harness game loop")
+# leaves a SyntaxError so nothing collects at all. Every one of them exits nonzero,
+# which is why `rejected = r.returncode != 0` scored all six as successful controls
+# in the run packaged at 144a141. They REPORT INDETERMINATE, by name, every run.
+# Declaring a reason is not passing: re-aiming them is separate work, because it
+# changes what each control claims to bind.
+EXPECTED_REASONS = {
+    'registration check disabled':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
+    'registration check looks only at the first seed':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
+    'the D1 seed block un-registered from ACCOUNTED':
+        "AssertionError: (202614000, {'accounted': False, 'exposed': False, 'retired': True, 'test_only': False})",
+    'the D1 seed block marked EXPOSED as well as accounted':
+        "AssertionError: (202614000, {'accounted': True, 'exposed': True, 'retired': True, 'test_only': False})",
+    'the §14 block un-registered from ACCOUNTED (the edit reverted)':
+        'scripts.GPU.alphazero.d1_probe.D1Error: the D1 diagnostic seed block [202615000, 202615221) is not registered: 221 of 221 seeds are absent from ACCOUNTED_SEED_INTERVALS (first 202615000). Registering it is a reviewed edit to that registry, part of the D1 EXECUTION authorization; nothing here writes a registry at runtime.',
+    'the §14 block un-registered -- caught at the STATE assertion too':
+        "AssertionError: (202615000, {'accounted': False, 'exposed': True, 'retired': True, 'test_only': False})",
+    'the spent §14 block is NOT exposed -- 221 draws unrecorded':
+        "AssertionError: (202615000, {'accounted': True, 'exposed': False, 'retired': True, 'test_only': False})",
+    'the spent §14 block is NOT retired -- a one-shot schedule left replayable':
+        "AssertionError: (202615000, {'accounted': True, 'exposed': True, 'retired': False, 'test_only': False})",
+    'a spent seed is schedulable because availability is never checked':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.e4_screen_reference.E4ReferenceError'>",
+    'registration ALSO opened the D1 execution gate':
+        'AssertionError: registration must not open the gate; only an execution authorization does',
+    'compile step skips toolchain verification':
+        "FileNotFoundError: [Errno 2] No such file or directory: 'j'",
+    'compile step accepts a jar that is not the verified one':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
+    'compile step accepts a java outside the verified JDK':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
+    'compile step reuses an existing class directory':
+        "FileExistsError: [Errno 17] File exists: '/private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/pytest-of-bill/pytest-16280/test_an_existing_class_directo0/classes'",
+    'compile step ignores a failing javac':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1VoidError'>",
+    'compile step builds the E3b set, not the query path':
+        "AssertionError: assert (PosixPath('/...3bDump.java')) == (PosixPath('/...flight.java'))",
+    'compile step skips the E4 jar pin':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
+    'postcondition surface never read':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1VoidError'>",
+    'reflection COUNT accepted as whatever came back':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1VoidError'>",
+    'searched position never re-bound':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1VoidError'>",
+    'more than one searched dump accepted':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1VoidError'>",
+    'a move illegal in OUR engine accepted':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1VoidError'>",
+    'depth agreement not recorded':
+        "AssertionError: [{'completed': True, 'completed_depth': 3, 'current_max_ply': 3, 'depth': 3, ...}, {'completed': True, 'completed_depth': 6, 'current_max_ply': 6, 'depth': 6, ...}]",
+    "the helper's stdout discarded again on a non-zero query exit":
+        'AssertionError: l0match-000-strong6-o1_center-t1j_red-r0@ply6 [mover_fragmentation/position] digest=aaaaaaaaaaaaaaaa: depth 6 invocation 0: exit 3 with 1 query records.',
+    'the failure excerpt unbounded':
+        'AssertionError: assert False',
+    'the excerpt line cap removed':
+        'AssertionError: assert 40 == 100000',
+    'the excerpt falls back to silence':
+        'AssertionError: (the helper produced no readable output)',
+    'the label drops the cohort':
+        "AssertionError: assert ('ply6' in 'l0match-000-strong6-o1_center-t1j_red-r0@ply6 digest=aaaaaaaaaaaaaaaa' and 'mover_fragmentation/position' in 'l0match-000-strong6-o1_center-t1j_red-r0@ply6 digest=aaaaaaaaaaaaaaaa')",
+    'the label drops the prefix digest':
+        "AssertionError: assert ('digest=' + ('a' * 16)) in 'l0match-000-strong6-o1_center-t1j_red-r0@ply6 [mover_fragmentation/position] '",
+    'the run loop stops labelling its refusals':
+        "AssertionError: t: the retained prefix replays to digest 0ae621381af163f0a180f590ebd7333d6c6070f5d9a364047ac25647df2c3e49, not the recorded '0000000000000000000000000000000000000000000000000000000000000000'. It is a different position: VOID.",
+    'the probe refusal loses the position again':
+        "AssertionError: assert 'l0match-000-strong6-o1_center-t1j_red-r0' in 'depth 6 invocation 0: exit 3 with 1 query records. T1j reported: POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=0'",
+    'the BINDER discards the transcript on a non-zero replay exit':
+        'AssertionError: t opening: T1j replay exit 3.',
+    'the AGENT discards the transcript on a non-zero query exit':
+        'AssertionError: t query at ply 6: exit 3 with 0 record(s).',
+    "the binder's excerpt carries the dump body":
+        'AssertionError: the legal-cell map leaked into the abort',
+    'manifest drops the cohort label':
+        "AssertionError: ['role', 'signature']",
+    'registration checked only after the clock starts':
+        'AssertionError: the reported clock started before registration passed',
+    'registration checked only after the supervisor is armed':
+        'AssertionError: a timer was armed before the registration check refused',
+    'registration no longer stops the run before compilation':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
+    'supervisor armed from limit_s instead of the remaining time':
+        "AssertionError: armed with 100, expected the started deadline's remaining 95.0 (limit 100 minus 5 elapsed). 100.0 means it armed from limit_s and restarted the window.",
+    'supervisor arms from a deadline that was never started':
+        'scripts.GPU.alphazero.d1_probe.D1Error: deadline was never started',
+    'supervisor arms a DISABLED timer when nothing remains':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1VoidError'>",
+    'remaining() ignores elapsed time, so the window restarts':
+        "AssertionError: armed with 100, expected the started deadline's remaining 95.0 (limit 100 minus 5 elapsed). 100.0 means it armed from limit_s and restarted the window.",
+    'digest re-check disabled':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1VoidError'>",
+    'prefix legality check disabled':
+        'ValueError: Illegal move (11, 11) for active_size=24, to_move=black',
+    'E3b binder never called':
+        "AssertionError: [['13,10', '10,12', '14,14'], ['13,10', '10,12', '14,14'], ['13,10', '10,12', '14,14'], ['13,10', '10,12', '14,14']]",
+    'binder AbortError not translated to VOID':
+        "scripts.GPU.alphazero.e4_screen_runner.AbortError: [per_ply_binding] t@ply6 [?/?] digest=0ae621381af163f0 opening: pegs (ours-only ['14,14,X'], t1j-only ['20,20,X']); bridges (ours-only ['13,12|14,14|X'], t1j-only []); legal set |ours|=522 |t1j|=522",
+    'binder replay timeout not translated to VOID':
+        "subprocess.TimeoutExpired: Command '['/nonexistent/java', '-Djava.util.prefs.PreferencesFactory=e2probe.ScratchPrefsFactory', '-Djava.awt.headless=true', '-cp', '/nonexistent/t1j.jar:/nonexistent/classes', 'net.schwagereit.t1j.E3bDump', 'replay', '280', '11,11', '13,12', '12,13', '13,10', '10,12', '14,14']' timed out after 120 seconds",
+    'ply_cap not carried to the runtime':
+        "AssertionError: assert '999' == '280'",
+    'replay timeout widened at the runtime':
+        'AssertionError: assert 99999 == 120',
+    "replay's unbounded-wait guard removed":
+        "FileNotFoundError: [Errno 2] No such file or directory: 'j'",
+    'replay timeout dropped at the last hop':
+        'assert [None] == [42]',
+    'T1jRuntime accepts an unbounded timeout':
+        "Failed: DID NOT RAISE <class 'TypeError'>",
+    'capture draws from the readout stream':
+        'AssertionError: assert (3, (16201903...1, ...), None) == (3, (16201903...1, ...), None)',
+    'capture switched on by default':
+        'assert True is False',
+    'capture flag not forwarded by the qualified builder':
+        'assert False is True',
+    'root-noise check disabled':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1VoidError'>",
+    'evaluator reloaded for every position':
+        "AssertionError: ['.', '.', '.']",
+    'incumbent readout spends no query':
+        'AssertionError: 12.4 funds ONE incumbent readout per position',
+    'policy rank tie-break reversed':
+        'assert 152 == (298 + 1)',
+    'incumbent identity typed instead of read from the frozen plan':
+        "AssertionError: assert {('calib020_0...54867b9473e')} == {('0379', '8a...c572a0b03a1')}",
+    'digest downgraded to the sha1 superset helper':
+        'AssertionError: assert (40 == 64)',
+    'digest payload widened beyond the frozen three fields':
+        "AssertionError: assert 'e64bef4b7176...dcafdce401860' == 'c6c8f50152b9...8926c44efcc07'",
+    'per-cell cap loosened':
+        "AssertionError: assert {('created_th...sition'): 129} == {('created_th...sition'): 101}",
+    'deduplication disabled':
+        "AssertionError: assert {('created_th...sition'): 104} == {('created_th...sition'): 101}",
+    'incumbent-to-move restriction dropped':   # ⚠ ERROR, not a failure: this control is INDETERMINATE
+        'scripts.GPU.alphazero.d1_selection.D1SelectionError: mover_fragmentation positions: the rule retained 147, but 12.1 froze 101. The budget is never raised or lowered to fit the data; the rule and the record must be reconciled instead.',
+    'controls no longer matched to the position cells':   # ⚠ ERROR, not a failure: this control is INDETERMINATE
+        'scripts.GPU.alphazero.d1_selection.D1SelectionError: mover_fragmentation controls: the rule retained 137, but 12.1 froze 60. The budget is never raised or lowered to fit the data; the rule and the record must be reconciled instead.',
+    'seed written in place so a shared row is overwritten':
+        'assert [300000000, 3...00000005, ...] == [300000000, 3...00000005, ...]',
+    'frozen-count reconciliation removed':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_selection.D1SelectionError'>",
+    'lowply gate flipped open':
+        'assert True is False',
+    'lowply public runner ungated':
+        "scripts.GPU.alphazero.lowply_qualification.LowPlyVoidError: toolchain or compilation failed: the run was given jar '/nonexistent/t1j.jar' but the verified toolchain's jar is '/Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/t1j.jar'. Verifying one jar and compiling against another is a hash check that binds nothing.. VOID.",
+    "lowply turns a non-zero exit back into a VOID (D1's defect)":
+        'scripts.GPU.alphazero.lowply_qualification.LowPlyVoidError: t0@ply3 [mover_fragmentation/position] digest=470721202fb36f18: depth 3 invocation 0: exit 3 and no usable query record (1 parsed). T1j reported: FAIL q1: requested depth 3 completed | POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1. VOID.',
+    'lowply stops recording the incomplete-depth shortfall':
+        "AssertionError: assert 'did not complete' in 'postcondition surface not clean: PostCond(no_throw=True, windows=0, frames=0, headless=True, prefs_ok=True, refl_ok=True, refl_n=3, failures=1, prefs_before=None, prefs_after=None, count_before=None, count_after=None)'",
+    'lowply stops checking the move against OUR engine':
+        "AssertionError: assert 'PASS' == 'FAIL'",
+    'lowply stops comparing the two invocations':
+        "AssertionError: assert 'PASS' == 'FAIL'",
+    'lowply verdict always PASS':
+        "AssertionError: assert 'PASS' == 'FAIL'",
+    'lowply timeout no longer a VOID':
+        "subprocess.TimeoutExpired: Command '['/nonexistent/java', '-Djava.util.prefs.PreferencesFactory=e2probe.ScratchPrefsFactory', '-Djava.awt.headless=true', '-cp', '/nonexistent/t1j.jar:/nonexistent/classes', 'net.schwagereit.t1j.E4Preflight', 'query', '3', '11,11', '13,12', '12,13']' timed out after 120 seconds",
+    'lowply D1 exception translation removed':
+        'scripts.GPU.alphazero.lowply_qualification.LowPlyError: before t0@ply3 [mover_fragmentation/position] digest=470721202fb36f18: whole-run deadline exceeded (99999.0s > 900s). The run is VOID: no partial-cohort analysis is produced.',
+    'lowply frozen-input hash check disabled':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.lowply_qualification.LowPlyError'>",
+    'lowply per-call timeout dropped at the last hop':
+        "AssertionError: {'capture_output': True, 'text': True, 'timeout': None}",
+    'lowply uses the same-JVM determinism mode':
+        'ValueError: list.index(x): x not in list',
+    'lowply query cap loosened':
+        'assert 99999 == 36',
+    'lowply wall-clock cap widened':
+        'assert 90000 == 900',
+    "lowply reads D1's gate":
+        'AssertionError: D1_EXECUTION_AUTHORIZED',
+    'adapter query parse failure re-raised bare':
+        "ValueError: QUERY line missing fields ['completed', 'completed_depth', 'currentMaxPly', 'elapsed_us', 'eval_regime', 'legal', 'moveNr', 'move_y', 'null_sentinel', 'to_move', 'usealphabeta']: 'QUERY q=1 requested_depth=3 move_x=11'",
+    'adapter replay parse failure re-raised bare':
+        'ValueError: legal map is 4 bits, expected exactly 576',
+    'lowply query parse failure not translated':
+        "scripts.GPU.alphazero.t1j_adapter.HelperOutputError: the helper's query output could not be parsed: QUERY line missing fields ['completed', 'completed_depth', 'currentMaxPly', 'elapsed_us', 'eval_regime', 'legal', 'moveNr', 'move_y', 'null_sentinel', 'to_move', 'usealphabeta']: 'QUERY q=1 requested_depth=3 move_x=11'",
+    'lowply replay parse failure not translated':
+        "scripts.GPU.alphazero.t1j_adapter.HelperOutputError: the helper's replay output could not be parsed: legal map is 4 bits, expected exactly 576",
+    'lowply POSTCOND parse failure not translated':
+        "scripts.GPU.alphazero.t1j_adapter.HelperOutputError: the helper's POSTCOND output could not be parsed: line missing fields ['failures', 'frames', 'headless', 'prefs_ok', 'refl_n', 'refl_ok']: 'POSTCOND no_throw=true windows=0'",
+    'lowply parse VOID carries the whole dump body':
+        'AssertionError: the legal-cell map leaked into the refusal',
+    'lowply main has no catch-all again':
+        'RuntimeError: boom',
+    'parse_postconds raises a bare ValueError again':
+        'ValueError: ("the helper\'s POSTCOND output could not be parsed: line missing fields [\'failures\', \'frames\', \'headless\', \'prefs_ok\', \'refl_n\', \'refl_ok\']: \'POSTCOND no_throw=true windows=0\'", \'PLY 0 moveNr=0 next=Y termY=false termX=false\\n  PEGS \\n  BRIDGES \\n  HIST \\n  LEGAL 000000000000000000000000111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111000000000000000000000000\\nPLY 1 moveNr=1 next=X termY=false termX=false\\n  PEGS 11,11,Y\\n  BRIDGES \\n  HIST 11,11\\n  LEGAL 011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111110111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110\\nPLY 2 moveNr=2 next=Y termY=false termX=false\\n  PEGS 11,11,Y 13,12,X\\n  BRIDGES \\n  HIST 11,11 13,12\\n  LEGAL 000000000000000000000000111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111110111111111111111111111111111111111111111111111111011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111000000000000000000000000\\nPLY 3 moveNr=3 next=X termY=false termX=false\\n  PEGS 11,11,Y 12,13,Y 13,12,X\\n  BRIDGES 11,11|12,13|Y\\n  HIST 11,11 13,12 12,13\\n  LEGAL 011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111110111111111110011111111111101111111110011111111111011111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110\\nPOSTCOND no_throw=true windows=0\\n\')',
+    'parse_postconds drops the transcript it attaches':
+        "AssertionError: assert '' == 'POSTCOND no_...e windows=0\\n'",
+    'PostCond construction raises a bare ValueError again':
+        "ValueError: invalid literal for int() with base 10: 'bad'",
+    'PostCond parse failure drops its transcript':
+        "AssertionError: assert '' == 'POSTCOND no_... failures=0\\n'",
+    '§13 exclusion never applied':   # ⚠ ERROR, not a failure: this control is INDETERMINATE
+        'scripts.GPU.alphazero.d1_selection.D1SelectionError: §13 mover_fragmentation controls: 60 after exclusion, but §13.3 froze 54',
+    '§12 count reconciliation removed':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_selection.D1SelectionError'>",
+    '§13 post-exclusion counts not reconciled':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_selection.D1SelectionError'>",
+    '§13 accepts the retired seed block':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_selection.D1SelectionError'>",
+    '§13 assigns seeds when none were reserved':   # ⚠ ERROR, not a failure: this control is INDETERMINATE
+        'TypeError: cannot unpack non-iterable NoneType object',
+    'D1 query cap raised back to the frozen 12.4 figure':
+        'assert (227 == 221)',
+    'D1 query parse failure not translated':
+        "scripts.GPU.alphazero.t1j_adapter.HelperOutputError: the helper's query output could not be parsed: QUERY line missing fields ['completed', 'completed_depth', 'currentMaxPly', 'elapsed_us', 'eval_regime', 'legal', 'moveNr', 'move_y', 'null_sentinel', 'to_move', 'usealphabeta']: 'QUERY q=1 requested_depth=3 move_x=11'",
+    'D1 replay parse failure not translated':
+        "scripts.GPU.alphazero.t1j_adapter.HelperOutputError: the helper's replay output could not be parsed: legal map is 4 bits, expected exactly 576",
+    'D1 main has no catch-all again':
+        "FileNotFoundError: [Errno 2] No such file or directory: '/nonexistent'",
+    'the trace stops validating VALUES (name-only again)':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
+    'the enum check is opened to free text':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
+    'the event enum is opened to free text':
+        "KeyError: 'move=(11,11)'",
+    'counters accept any type or magnitude':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
+    'counters accept bools as integers':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
+    "counter ceilings widened past the run's real limits":
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
+    'the schema string is no longer pinned':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
+    'an event may carry extra fields':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
+    'an event may omit declared fields':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
+    'the identity strings are readmitted':
+        "AssertionError: assert 'task_id' not in frozenset({'digest', 'event', 'index', 'n_positions', 'ply', 'positions_completed', ...})",
+    'the trace validates AFTER writing':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
+    'the trace is not written on a VOID':
+        "AssertionError: assert ('position_start' in ['run_start', 'position_start', 'position_stage', 'position_stage', 'position_stage'] and 'run_end' in ['run_start', 'position_start', 'position_stage', 'position_stage', 'position_stage'])",
+    'the trace stops counting seeds drawn':
+        'AssertionError: one seed was drawn; the accounting must say so',
+    'the trace is not fsynced per line':
+        'AssertionError: []',
+    'run_d1 accepts any cohort (the ceiling-only defect)':
+        'AssertionError: the public entry does not require it',
+    'the cohort size check is dropped':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
+    'the cohort ORDER check is dropped':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
+    'an excluded row is readmitted to the cohort':
+        "scripts.GPU.alphazero.d1_probe.D1Error: the cohort is not the §13 selection in frozen order: row 220 has task_id='l0match-000-strong6-o1_center-t1j_red-r0' (str), expected 'l0match-060-strong6-o8_contact-t1j_black-r0' (str). The digest fixes the board; it does not fix the cohort label.",
+    'the cohort source is no longer hash-pinned':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
+    'the exact-spend check is dropped':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1VoidError'>",
+    'the expected spend becomes a maximum again':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1VoidError'>",
+    'the private seam starts enforcing the cohort too':
+        'AssertionError: the private seam must stay usable for small fake cohorts',
+    'cohort binds digests only, not the labels':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
+    'cohort drops the grouping fields from the identity set':
+        "AssertionError: assert {'digest', 'p...e', 'task_id'} == {'colour_arm'... 'phase', ...}",
+    'the RAW mover_more_fragmented column is left unbound':
+        "KeyError: 'mover_more_fragmented'",
+    'the RAW created_threat column is left unbound':
+        "KeyError: 'created_threat'",
+    'a source field silently drops out of the binding':
+        "AssertionError: ['colour_arm', 'seed'] are unbound as an IDENTITY field. `seed` is the only one that may be, because the frozen source carries none: its assignment is bound POSITIONALLY instead, by `_check_seed_assignment` (row i must carry SEED_INTERVAL[0] + i), not by comparison with the source.",
+    'cohort tolerates a row missing an identity field':
+        "KeyError: 'role'",
+    'cohort pins the SEED as an IDENTITY field (the frozen source carries none)':
+        'scripts.GPU.alphazero.d1_probe.D1Error: the cohort is not the §13 selection in frozen order: row 0 has seed=202615000 (int), expected 202614000 (int). The digest fixes the board; it does not fix the cohort label.',
+    'cohort comparison drops type-strictness (== again)':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
+    'the comparison helper stops checking type':
+        'AssertionError: False == 0 in Python; the types differ',
+    'bools slip through as ints (isinstance instead of type)':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
+    'prefix normalisation coerces through int() again':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
+    'structural normalisation dropped, so a tuple prefix is refused':
+        'scripts.GPU.alphazero.d1_probe.D1Error: the cohort is not the §13 selection in frozen order: row 0 has prefix=((11, 11), (12, 13), (13, 12), (10, 13), (12, 10)) (tuple), expected [[11, 11], [12, 13], [13, 12], [10, 13], [12, 10]] (list). The digest fixes the board; it does not fix the cohort label.',
+    'the corrected 5.4 justification is reinstated as the wrong one':
+        'AssertionError: the withdrawn justification is back',
+    'the interval is RETYPED as a literal in d1_probe':
+        'assert (202615000, 202615221) is (202615000, 202615221)',
+    'the canonical interval points back at the RETIRED block':
+        'assert (202614000, 202614227) == (202615000, 202615221)',
+    'the canonical interval is sized 227 again, not 221':
+        'assert (202615000, 202615227) == (202615000, 202615221)',
+    'RETIRED_SEED_INTERVAL moved to the new block':
+        'assert (202615000, 202615221) == (202614000, 202614227)',
+    'RETIRED_SEED_INTERVAL moved -- caught by the REFUSAL, not the constant':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_selection.D1SelectionError'>",
+    'the retirement guard is removed from select_all':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_selection.D1SelectionError'>",
+    'the runtime seed check admits the retired block too':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1VoidError'>",
+    'the registration barrier computes nothing and so is always satisfied':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
+    'bind_results design becomes defaultable':
+        "Failed: DID NOT RAISE <class 'TypeError'>",
+    "H1 silently reverts to L0's 4 repetitions":
+        'assert (8, 2, 4) == (8, 2, 14)',
+    'the viability threshold moves to parity':
+        'assert 0.5 == 0.75',
+    'the verdict admits an upper bound AT the threshold':
+        "AssertionError: assert 'VIABLE' == 'INCONCLUSIVE'",
+    'the verdict reads the bounds in the wrong order':
+        'AssertionError: (149, 0.6651785714285714, [0.5744365969935754, 0.7559205458635674])',
+    'the decisive bands are hardcoded instead of derived':
+        'assert 4.1974434995983856e-05 < 1e-12',
+    'the task digest is a hand-typed constant again':
+        "AssertionError: assert '6ff6b6c69bbc...e1e0a41b1a7dc' == '23e3fa129b85...2346376db5c74'",
+    "H1 reuses L0's SPENT and retired seed block":
+        'assert False',
+    "H1's block overlaps D1's PAPER reservation":
+        'AssertionError: ((202615100, 202615324), (202615000, 202615221))',
+    'a shared vocabulary is RETYPED instead of re-exported':
+        'AssertionError: WINNERS',
+    'H1 acquires an early stop':
+        'assert True is False',
+    'cap saturation stops refusing a rate':
+        'assert True is False',
+    'the reporter binds H1 results to the 64-game design':
+        'assert False is True',
+    'the verdict is read off the WILSON interval':
+        "AssertionError: assert 'VIABLE' == 'INCONCLUSIVE'",
+    'the no-pooling prohibition is deleted':
+        'assert False',
+    'the repetition LABELS stop being checked':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h1_viability_plan.H1PlanError'>",
+    'an incomplete match is reported instead of refused':
+        "TypeError: 'NoneType' object is not iterable",
+    "H1 APPENDS its seed rule to L0's instead of composing":
+        "AssertionError: assert 'L0 block' not in 'any per-ply...ved H1 block'",
+    'the block name stops reaching the seed rule':
+        "AssertionError: assert 'reserved H1 block' in 'any per-ply state divergence between the two engines any T1j query that does not complete its requested depth any ill...ock, or any seed used twice any failure to write or fsync a durable record the whole-run wall-clock cap being exceeded'",
+    "L0's own abort rules change under the factoring":
+        "AssertionError: assert ('any per-ply...d twice', ...) == ('any per-ply...d twice', ...)",
+    'the H1 seed predicate admits the L0 block too':
+        'assert False is True',
+    "the H1 seed predicate refuses H1's own seeds":
+        'assert True is False',
+    "H1 INHERITS L0's count-bearing prohibitions":
+        "AssertionError: assert 'any per-cell comparison presented as a finding: 8 games per opening and 32 per colour arm carry no interval here and were not preregistered as tests' not in ('any Elo figure, or any conversion of this rate into one', 'any absolute strength placement -- T1j is uncalibrated, s...f the Wilson interval as conservative, exact or guaranteed; it is nominal, and hoeffding_interval is the primary', ...)",
+    'the independence prohibition hardcodes 64 again':
+        "AssertionError: assert 'any statement that the 64 games ARE independent, or that independence was verified; distinct streams rule out reuse, not dependence' not in ('any Elo figure, or any conversion of this rate into one', 'any absolute strength placement -- T1j is uncalibrated, s...f the Wilson interval as conservative, exact or guaranteed; it is nominal, and hoeffding_interval is the primary', ...)",
+    'the per-cell denominators are swapped':
+        "AssertionError: assert 'any per-cell comparison presented as a finding: 28 games per opening and 112 per colour arm carry no interval here and were not preregistered as tests' in ('any Elo figure, or any conversion of this rate into one', 'any absolute strength placement -- T1j is uncalibrated, s...f the Wilson interval as conservative, exact or guaranteed; it is nominal, and hoeffding_interval is the primary', ...)",
+    "L0's own forbidden claims change under the factoring":
+        "AssertionError: assert 'ca91ab858948...687f4661f0071' == '809f0ed8fa63...c8de54e0b2d7a'",
+    'the plan pin reverts to the SUPERSEDED v1 artifact':
+        "scripts.GPU.alphazero.h1_viability_plan.H1PlanError: cannot read the H1 plan: [Errno 2] No such file or directory: 'docs/superpowers/evidence/2026-09-07-t1j-h1-retry-prep/06_h1_plan_v2.json'",
+    "H1 INHERITS L0's non-abort rules whole":
+        'AssertionError: cap-termination saturation: caps never stop an L0 match; see CAP_NO_RATE_THRESHOLD',
+    'H1 claims it has NO band, as L0 does':
+        "AssertionError: assert '0.75' in 'cap-termination saturation: caps never stop an H1 match -- all 224 games are played. Past 112 of them the report is C...stop criterion. A verdict reachable early is a verdict biased by when someone chose to look any early stop of any kind'",
+    'the early-stop prohibition is softened':
+        "AssertionError: assert 'any early stop of any kind' in ('cap-termination saturation: caps never stop an H1 match -- all 224 games are played. Past 112 of them the report is ...erdict reachable early is a verdict biased by when someone chose to look', 'any early stop after the verdict is clear')",
+    "L0's own non-abort rules change under the extraction":
+        "AssertionError: assert ('cap-termina... of any kind') == ('cap-termina... of any kind')",
+    'the artifact keeps L0-only wording':
+        "scripts.GPU.alphazero.h1_viability_plan.H1PlanError: cannot read the H1 plan: [Errno 2] No such file or directory: 'docs/superpowers/evidence/2026-09-07-t1j-h1-retry-prep/06_h1_plan_v2.json'",
+    'an H1 gate appears without the claim being revisited':
+        'assert not True',
+    'an H1 registration precondition appears silently':
+        'AssertionError: a registration barrier appeared in scripts.GPU.alphazero.h1_viability_plan',
+    'the H1 gate is flipped open':
+        'assert True is False',
+    'the H1 gate no longer binds the match path':
+        'scripts.GPU.alphazero.h1_viability_runner.H1Error: the H1 schedule may not be executed: seed 202617000 was EXPOSED -- it has been drawn from -- and cannot be scheduled',
+    'the registration barrier no longer binds':
+        'scripts.GPU.alphazero.h1_viability_runner.H1Error: the H1 schedule may not be executed: seed 202617000 was EXPOSED -- it has been drawn from -- and cannot be scheduled',
+    'the registration barrier checks only the endpoints':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h1_viability_runner.H1Error'>",
+    'the barriers move BELOW the plan load and the recorder':
+        'scripts.GPU.alphazero.h1_viability_runner.H1Error: the H1 schedule may not be executed: seed 202617000 was EXPOSED -- it has been drawn from -- and cannot be scheduled',
+    'the gate opens the registration barrier too':
+        'scripts.GPU.alphazero.h1_viability_runner.H1Error: the H1 schedule may not be executed: seed 202617000 was EXPOSED -- it has been drawn from -- and cannot be scheduled',
+    'registering the block opens the gate too':
+        'scripts.GPU.alphazero.h1_viability_runner.H1Error: match mode requires a trace path: the card freezes a create-only, non-analytic VOID trace, and a match that cannot say how far it got is not the design that was preregistered. Nothing has been written.',
+    'match mode accepts a supplied plan':
+        "scripts.GPU.alphazero.h1_viability_plan.H1PlanError: cannot read the H1 plan: [Errno 2] No such file or directory: '/private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/pytest-of-bill/pytest-16342/test_match_mode_REFUSES_a_supp0/other.json'",
+    'the content binding narrows to the digest dimensions (dead again)':
+        'scripts.GPU.alphazero.h1_viability_runner.H1VoidError: [precondition] no state factory: the public runner opens no games The H1 match is VOID: no viability report is produced and the seed block retires whole.',
+    'the seed-block check is dropped from the PLAN validator':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h1_viability_plan.H1PlanError'>",
+    'the whole-run deadline is widened':
+        'assert 1080000 == (180 * 60)',
+    'the per-call timeout is dropped':
+        'assert None == 120',
+    'the cooperative deadline check is removed':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h1_viability_runner.H1VoidError'>",
+    'the deadline is never checked between games':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h1_viability_runner.H1VoidError'>",
+    'the trace file stops being create-only':
+        "Failed: DID NOT RAISE <class 'FileExistsError'>",
+    'the trace admits an identity string':
+        "AssertionError: assert {'event', 'ga...task_id', ...} == {'event', 'ga...a', 'ts', ...}",
+    'the trace validates AFTER the write':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h1_viability_runner.H1Error'>",
+    'the trace stops recording how far a VOID run got':
+        "AssertionError: assert 'task_start' == 'run_end'",
+    'cap saturation is reported as a verdict after all':
+        'scripts.GPU.alphazero.h1_viability_runner.H1VoidError: [classification] the match produced no report and no preregistered outcome: 113 of 224 games terminated at the ply cap, more than the preregistered threshold of 112; the positions did not resolve and there is no rate to report, and so no viability verdict The H1 match is VOID: no viability report is produced and the seed block retires whole.',
+    'the early-stop ban names a function that does not exist':
+        'AssertionError: e4_screen_rules.should_continue no longer exists; the ban is vacuous',
+    'the match is hidden behind a mode list again':
+        "AssertionError: assert 'match' in ('qualify',)",
+    'the public match path supplies no production setup':
+        'assert None is <function _production_setup at 0x107e0d010>',
+    'qualification builds production collaborators too':
+        'AssertionError: qualification must not build production collaborators',
+    'T1j loses the frozen per-call timeout in the setup':
+        'assert None == 120',
+    'the setup keeps the REFUSING binder':
+        "AssertionError: assert <function _refuse_binder at 0x10b44d7a0> == 'BINDER'",
+    "the openings come from H1's plan again (KeyError on the real path)":
+        "KeyError: 'openings'",
+    'the incumbent is loaded per game instead of once':
+        'AssertionError: the incumbent must be loaded once for the whole match',
+    "the SIGALRM void escapes as D1's exception":
+        'scripts.GPU.alphazero.d1_probe.D1VoidError: before game 1: whole-run deadline exceeded (100.0s > 1.0s). The run is VOID: no partial-cohort analysis is produced.',
+    'the supervisor is never armed':
+        "AssertionError: assert 'deadline' in 'the supervisor did not fire the h1 match is void: no viability report is produced and the seed block retires whole.'",
+    'the VOID diagnostic stops naming the position':
+        'assert 0 == 1',
+    'the VOID diagnostic drops the helper transcript':
+        "TypeError: argument of type 'NoneType' is not a container or iterable",
+    'the VOID diagnostic carries the WHOLE transcript':
+        'AssertionError: assert 5000050 <= (800 + 200)',
+    'the ply counter stops observing durable ply records':
+        'assert None == 17',
+    'a partial vector can produce a report after all':
+        'assert (True is False)',
+    "the agent's own query timeout is dropped again":
+        "KeyError: 't1j_timeout_s'",
+    'compilation gets a SECOND deadline (two clocks again)':
+        "AssertionError: compilation must use the RUN's clock, not a second one",
+    'the setup factory is never invoked':
+        "KeyError: 'path'",
+    'the excerpt reads only error.stdout again':
+        "AssertionError: assert 'FAIL: postcond' in 'binder raised HelperOutputError'",
+    'the excerpt drops the abort-message fallback':
+        'assert (None)',
+    'the abort-message fallback is unbounded':
+        "AssertionError: assert ('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX...XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX' and 100000 <= 800)",
+    'the ply tracker ignores opening_bound again':
+        'AssertionError: a first-move failure must still name the position',
+    'the binder wrapper stops noting the attempted ply':
+        'AssertionError: the diagnostic named a ply the binder was not on',
+    'the recorder is built OUTSIDE the protected try again':
+        'scripts.GPU.alphazero.e4_screen_runner.HarnessError: cannot create the results file: [Errno 28] no space',
+    'the output preflight is removed':
+        'AssertionError: a precondition refusal is not a VOID',
+    'the preflight ignores the trace path':
+        "FileExistsError: [Errno 17] File exists: '/private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/pytest-of-bill/pytest-16371/test_a_PREEXISTING_TRACE_path_0/t.jsonl'",
+    'a precondition refusal is reported as a VOID':
+        'AssertionError: a precondition refusal is not a VOID',
+    'a mid-run recorder failure escapes unclassified again':
+        "AssertionError: assert 'results file could not be created' in 'cannot create the results file: [Errno 28] no space The H1 match is VOID: no viability report is produced and the seed block retires whole.'",
+    'match mode accepts a missing trace path again':
+        'scripts.GPU.alphazero.h1_viability_runner.H1VoidError: [precondition] no state factory: the public runner opens no games The H1 match is VOID: no viability report is produced and the seed block retires whole.',
+    'the trace requirement is not applied to the match':
+        'scripts.GPU.alphazero.h1_viability_runner.H1VoidError: [precondition] no state factory: the public runner opens no games The H1 match is VOID: no viability report is produced and the seed block retires whole.',
+    'results and trace may be the same file':
+        'scripts.GPU.alphazero.h1_viability_runner.H1VoidError: the results file could not be created: results path already exists: /private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/pytest-of-bill/pytest-16376/test_THE_TWO_OUTPUT_PATHS_MUST0/both.jsonl. A run writes a NEW file; appending would merge two runs. The H1 match is VOID: no viability report is produced and the seed block retires whole.',
+    'the paths are compared WITHOUT canonicalisation':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h1_viability_runner.H1Error'>",
+    'canonicalisation stops resolving symlinks':
+        'scripts.GPU.alphazero.h1_viability_runner.H1Error: the trace path already exists: /private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/pytest-of-bill/pytest-16378/test_a_SYMLINKED_trace_path_is0/link.jsonl (a dangling symlink -- the directory entry is present). A run writes NEW files; appending would merge two runs, and overwriting would destroy the record of one. Nothing has been written and no trace was opened.',
+    'the output precheck follows symlinks again (exists, not lexists)':
+        'AssertionError: a knowable path condition became a VOID',
+    'the precheck stops agreeing with create-exclusive open':
+        'AssertionError: dangling',
+    'only the results name is checked for existence':
+        "FileExistsError: [Errno 17] File exists: '/private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/pytest-of-bill/pytest-16381/test_a_DANGLING_TRACE_link_is_0/t.jsonl'",
+    'the public docstring denies that match mode is selectable':
+        'AssertionError: the correction should record what it corrects',
+    'the H1 block is un-registered from ACCOUNTED':
+        'assert False',
+    'the H1 exposure overstates the draws (all 224, not the 60 taken)':
+        'assert 224 == 60',
+    'the H1 retirement covers only the seeds actually drawn':
+        'AssertionError: the block retires WHOLE',
+    "D1's spent block loses its ACCOUNTED entry, from the H1 side":
+        "AssertionError: (202615000, {'accounted': False, 'exposed': True, 'retired': True, 'test_only': False})",
+    "an H1 block is made to overlap D1's spent block":
+        'AssertionError: (202615100, 202615324)',
+    'registering the block also opens the gate':
+        'AssertionError: assert True is False',
+    'a match abort escapes without becoming a VOID':
+        'scripts.GPU.alphazero.e4_screen_runner.AbortError: [move] postcondition failure',
+    'qualification aborts are relabelled as voids too':
+        'scripts.GPU.alphazero.h1_viability_runner.H1VoidError: [move] synthetic The H1 match is VOID: no viability report is produced and the seed block retires whole.',
+    'a KeyboardInterrupt is relabelled as an instrument failure':
+        'scripts.GPU.alphazero.h1_viability_runner.H1VoidError:  The H1 match is VOID: no viability report is produced and the seed block retires whole.',
+    'the diagnostic records the TRANSLATION instead of the cause':
+        'AssertionError: the translation hid the cause',
+    'a prefs failure is reported without the attribution note':
+        "KeyError: 'prefs_attribution'",
+    'the attribution note claims T1j did it':
+        'assert False',
+    'the note is attached to every failure, not just prefs ones':
+        "AssertionError: assert 'prefs_attribution' not in {'colour_arm': 't1j_red', 'error_type': 'AbortError', 'games_completed': 0, 'helper_excerpt': 'per-ply divergence at ply 12', ...}",
+    'the surface probe collapses ABSENT and UNREADABLE, as Java does':
+        "AssertionError: assert 'ABSENT' == 'ERROR:PermissionError'",
+    'the directory probe hides a read failure':
+        "AssertionError: assert (-1 == -1 and 'PRESENT' == 'ERROR:PermissionError'",
+    'no baseline surface is recorded at run start':
+        'AssertionError: no baseline to compare against',
+    'mover cut inverted':
+        "AssertionError: assert {'created_thr...7710843373}}}} == {'created_thr...6541353385}}}}",
+    'the observation fields are never read from the POSTCOND line':
+        "AssertionError: assert (None, 'ERROR') == ('6cb3a052650...28d', 'ERROR')",
+    'the observation is parsed but not attached to PostCond':
+        "AssertionError: assert (None, None) == ('6cb3a052650...28d', 'ERROR')",
+    'the POSTCOND self-agreement check disabled':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.t1j_adapter.HelperOutputError'>",
+    'the self-agreement check compares the hash only, not the count':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.t1j_adapter.HelperOutputError'>",
+    'the excerpt reader returns None when the earlier source said nothing':
+        "AssertionError: assert None == {'count_after': None, 'count_before': None, 'prefs_after': None, 'prefs_before': None, ...}",
+    'the excerpt reader requires POSTCOND to start a line':
+        "AssertionError: assert None == {'count_after': -1, 'count_before': 527, 'prefs_after': 'ERROR', 'prefs_before': '6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d', ...}",
+    "the VOID diagnostic drops the helper's own observation":
+        "KeyError: 'helper_prefs_observed'",
+    'the diagnostic reads only chained stdout, never the AbortError message':
+        "AssertionError: assert None == {'count_after': -1, 'count_before': 527, 'prefs_after': 'ERROR', 'prefs_before': '6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d', ...}",
+    'an operator interrupt is traced as VOID again':
+        'AssertionError: the trace must not call a stop a VOID',
+    'every failure is classified as an interrupt':
+        "AssertionError: assert 'INTERRUPTED' == 'VOID'",
+    'the interrupt record is still called a void_diagnostic':
+        "AssertionError: assert ('void_diagnostic' not in ['run_header', 'task_start', 'task_result', 'task_start', 'task_result', 'task_start', ...])",
+    'the accounting rule no longer travels with the interrupt record':
+        "KeyError: 'seed_accounting'",
+    'INTERRUPTED removed from the closed verdict enum':
+        'KeyboardInterrupt',
+    'the accounting rule softened: drawn seeds become reusable':
+        'AssertionError: does NOT make any drawn seed reusable',
+    'the partial-observation refusal removed':
+        "scripts.GPU.alphazero.t1j_adapter.HelperOutputError: the helper's POSTCOND output could not be parsed: 'prefs_after' in 'POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=0 prefs_before=ABSENT'",
+    'the partial-observation refusal removed, seen from the REAL query path':
+        "scripts.GPU.alphazero.e4_screen_runner.AbortError: [move] h1match-000-strong6-o1_center-t1j_red-r0 ply 0: red raised the helper's POSTCOND output could not be parsed: 'count_after' in 'POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=0 prefs_before=ABSENT prefs_after=ERROR count_before=527'",
+    'a truncated segment ending in the marker reads as the earlier source':
+        "AssertionError: assert {'count_after': None, 'count_before': None, 'prefs_after': None, 'prefs_before': None, ...} is None",
+    'a segment missing a BASE field reads as the earlier source':
+        "AssertionError: assert {'count_after': None, 'count_before': None, 'prefs_after': None, 'prefs_before': None, ...} is None",
+    'the query path stops chaining the full transcript':
+        'AssertionError: assert False',
+    'the diagnostic parses the BOUNDED excerpt instead of the full text':
+        "KeyError: 'helper_prefs_observed'",
+    'the attribution trigger reads only the bounded excerpt':
+        "KeyError: 'helper_prefs_observed'",
+    'requal gate removed at the public runner':
+        "scripts.GPU.alphazero.runtime_requalification.RequalVoidError: toolchain or compilation failed: the run was given jar '/nonexistent/t1j.jar' but the verified toolchain's jar is '/Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/t1j.jar'. Verifying one jar and compiling against another is a hash check that binds nothing.. VOID.",
+    'requal gate removed at the worker entry':
+        "AssertionError: (7, 'refused: the runtime requalification is UNAUTHORIZED. Gating only the CLI would protect nothing: a direct Python caller reaches this runner without passing it. Nothing has been compiled, queried or written.",
+    'requal gate removed at main (the worker still refuses, so only the no-spawn test sees it)':
+        'AssertionError: spawned',
+    "the frozen prefix file's hash pin removed":
+        'scripts.GPU.alphazero.runtime_requalification.RequalError: the frozen prefix file and the pinned screen plan disagree on the openings; two frozen sources must say one thing.',
+    'the prefix-file vs plan cross-check removed':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.runtime_requalification.RequalError'>",
+    'a reply without the observation is read as legacy instead of VOID':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.runtime_requalification.RequalVoidError'>",
+    'the parser/reader agreement check removed':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.runtime_requalification.RequalVoidError'>",
+    'a dirty preference surface no longer recorded as a failure':
+        "AssertionError: ['the agent refused the reply: [move] o3_low@ply6 [H1-FAILED] digest=0dc546b435a20e17 query at ply 6: exit 3 with 1 re...xxxxxxxxxxxxxxxxxx | FAIL q1: check number 7 did not hold for reason xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx...']",
+    'the diagnostic observation read from the bounded excerpt, not the chain':
+        "AssertionError: assert None == {'count_after': -1, 'count_before': 527, 'prefs_after': 'ERROR', 'prefs_before': '6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d', ...}",
+    'the exact-eight requirement removed from the public runner':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.runtime_requalification.RequalError'>",
+    'the create-only precheck removed (O_EXCL still fails, but after 16 launches)':
+        'AssertionError: it ran the whole sample and then failed to write',
+    'the supervisor no longer starts the worker in its own session':
+        'AssertionError: the worker is not its own process-group leader',
+    'the supervisor stops at SIGTERM and never SIGKILLs the group':
+        'AssertionError: the supervisor did not KILL',
+    'a supervisor kill is reported as VOID instead of TIMEOUT':
+        'assert (True is True and 3 == 6)',
+    'a FAIL result exits 0 like a pass':
+        'assert 0 == 2',
+    'the outer cap shrinks to the inner deadline (no grace for the inner VOID)':
+        'assert 900 == (900 + 60)',
+    'main spawns itself without --worker':
+        "AssertionError: assert ('--worker' in ['/Users/bill/projects/TwixT_Game/.venv/bin/python', '-m', 'scripts.GPU.alphazero.runtime_requalification', '--out', '...te/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/pytest-of-bill/pytest-16417/test_main_supervises_a_WORKER_0/r.json'])",
+    'every call no longer carries the frozen per-call timeout':
+        'assert False',
+    'no cleanup after a worker that exits before the timeout':
+        'assert False is True',
+    "main reports the worker's code although cleanup failed":
+        'AssertionError: assert 0 == 8',
+    'EPERM from the group probe read as CLEARED':
+        'assert True is False',
+    'row binding compares digests only again':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.runtime_requalification.RequalError'>",
+    'row binding drops the TYPE check (False == 0)':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.runtime_requalification.RequalError'>",
+    'row binding accepts extra keys':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.runtime_requalification.RequalError'>",
+    'row binding normalises VALUES, not only shape':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.runtime_requalification.RequalError'>",
+    'the attempt-2 block moved back onto the SPENT attempt-1 block':
+        'assert (202616000, 202616224) == (202617000, 202617224)',
+    'the plan loader stops verifying the v4 file hash':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h1_viability_plan.H1PlanError'>",
+    'the plan loader stops verifying the task digest':
+        'scripts.GPU.alphazero.h1_viability_plan.H1PlanError: 17 opening/colour cells, expected 16',
+    "the wrapper's main stops reading the runner's gate":
+        'AssertionError: restored',
+    "the wrapper's worker stops reading the runner's gate":
+        'assert 4 == 5',
+    'the wrapper skips the output-path precheck':
+        'assert 4 == 7',
+    'a failed gate restoration no longer supersedes':
+        'assert 0 == 10',
+    'the gate is restored only on the happy path (else, not finally)':
+        'AssertionError: an exception in the supervisor skipped the restore',
+    'restore_gate reports success without verifying the rewrite':
+        'AssertionError: assert True is False',
+    "the wrapper reports the worker's code although cleanup failed":
+        'assert (0 == 8)',
+    'an operator interrupt in the worker exits 0':
+        'assert 0 == 9',
+    'the supervisor no longer forwards an operator interrupt':
+        'AssertionError: the worker did not exit on the forwarded SIGINT',
+    "the wrapper's outer cap shrinks to the runner deadline":
+        'assert 10800 == (10800 + 60)',
+    'the output precheck moves back IN FRONT of the restoration boundary':
+        'AssertionError: output refusal skipped gate restoration',
+    'a failed restoration no longer supersedes a refusal':
+        'assert 7 == 10',
+    'the --runner-source override returns to the production CLI':
+        "Failed: DID NOT RAISE <class 'SystemExit'>",
+    "the default restoration target is not the imported runner's source":
+        "AssertionError: assert ['/private/va...ner.py.decoy'] == ['/private/va...ty_runner.py']",
+    'the attempt-2 block un-registered from ACCOUNTED':
+        'assert False',
+    'the attempt-2 block un-RETIRED after the completed match':
+        'AssertionError: the block retires WHOLE',
+    'the attempt-2 block un-EXPOSED after the completed match':
+        'assert 0 == 224',
+    'the runner stops asking whether the schedule may be RUN (spent block accepted)':
+        'scripts.GPU.alphazero.h1_viability_runner.H1VoidError: [precondition] no state factory: the public runner opens no games The H1 match is VOID: no viability report is produced and the seed block retires whole.',
+    'rank ties broken in REVERSE (row, col)':
+        'assert (4 == 2)',
+    'agree coupled to lprd (the withdrawn implication)':
+        'assert (True is True and False is True)',
+    'k drifts from 5 to 6':
+        'assert False is True',
+    'the depth-3 move read instead of mdPly 6':
+        'assert (0, 1) == (0, 8)',
+    'MH weights replaced by equal weights':
+        'assert 0.5 == 0.42857142857142855 ± 4.3e-07',
+    'common support pooled: cells with ONE role enter the statistic':
+        'ZeroDivisionError: division by zero',
+    'the direction flipped (controls minus positions)':
+        'assert (0.3333333333333333 == -0.3333333333333333 ± 3.3e-07',
+    'the decision threshold lowered':
+        'AssertionError: assert (0.08333333333333333 == 0.08333333333333333 ± 8.3e-08',
+    'the lower-bound condition dropped (T alone decides)':
+        "AssertionError: assert 'GO' == 'NO_GO'",
+    'undefined replicates silently DISCARDED':
+        'assert 0 == 109',
+    'a game drawn twice contributes its rows ONCE (re-deduplicated)':
+        'AssertionError: assert 72 == 96',
+    'the second draw copies the first (no replacement)':
+        'AssertionError: 0',
+    'the PRNG seed drifts':
+        'AssertionError: 0',
+    'the quantile convention changes from type 7':
+        'assert (1.0, 4.0) == approx((1.075...25 ± 3.9e-06))',
+    'the eligibility floor becomes strict (refuses AT the floor)':
+        "AssertionError: {'cells': 8, 'controls': 30, 'games': 12, 'positions': 40}",
+    'contributing games counted from UNMATCHED rows too':
+        'assert 3 == 2',
+    'an undefined arm reported as plain NO_GO (treated as zero)':
+        "AssertionError: assert 'NO_GO' == 'NO_GO — arm undefined'",
+    'the both-arm rule dropped':
+        "AssertionError: assert 'GO' == 'NO_GO'",
+    'cross-half duplicates no longer removed':
+        "AssertionError: assert {'x0', 'x1', 'x2'} == {'x1', 'x2', 'x3'}",
+    'the ply < 5 eligibility filter dropped':
+        "AssertionError: assert {'a', 'b', 'c', 'd'} == {'c', 'd'}",
+    'the ceiling drops silently instead of refusing':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1prime_analysis.D1PrimeRefused'>",
+    'within-half dedup keeps the LATEST row':
+        "AssertionError: assert [('g2', 10)] == [('g1', 12)]",
+    'cohort binding loses type strictness':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1prime_analysis.D1PrimeError'>",
+    'cohort binding stops checking the count':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1prime_analysis.D1PrimeError'>",
+    'the checked entry stops binding the cohort':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1prime_analysis.D1PrimeError'>",
+    'the checked entry takes a cohort argument again (secondary promotable)':
+        "AssertionError: assert 'GO' == 'NO_GO — insufficient support'",
+    'the design/cohort game check removed':
+        "KeyError: 'g-o1_center-t1j_red-r0'",
+    'strata inferred from the ROWS instead of the design':
+        "scripts.GPU.alphazero.d1prime_analysis.D1PrimeError: stratum ('o1_center', 't1j_red') holds 1 games; the design has exactly 2 per stratum in a half",
+    "eligibility defaults a missing 'system' to acceptance":
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1prime_analysis.D1PrimeError'>",
+    "eligibility reads an invented flag instead of 'system'":
+        "AssertionError: assert {'a', 'b'} == {'a'}",
+    'the opponent-to-move filter inverted':
+        "AssertionError: assert {'d0'} == {'d1'}",
+    'the override flag read from the invented field name':
+        'assert None is True',
+    'a record without the override field is silently None':
+        "KeyError: 'readout_overrode_leader'",
+    'the production entry takes the cohort from the caller again':
+        "KeyError: 'prefix'",
+    'the production entry uses a smaller B than the frozen one':
+        'assert (100 == 10000)',
+    'the canonical cohort is resolved from a different record':   # ⚠ ERROR, not a failure: this control is INDETERMINATE
+        "scripts.GPU.alphazero.d0_postmortem.D0BindingError: cannot read the record: [Errno 2] No such file or directory: 'docs/superpowers/evidence/2026-09-07-t1j-h1-match-attempt2/06_l0_match_results.jsonl'",
+    'the design metadata binding removed':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1prime_analysis.D1PrimeError'>",
+    'the design binding loses type strictness on rep':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1prime_analysis.D1PrimeError'>",
+    'the design binding skips a field the row omits':
+        "KeyError: 'rep'",
+    'the undefined-arm check runs AFTER the generic NO_GO again':
+        'AssertionError: NO_GO — insufficient support',
+    'D1 stops binding the seed assignment to positions':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
+    "D1's seed rule stops being POSITIONAL (interval membership only)":
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
+    "D1's seed rule loses type strictness":
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
+    "D1' analyses a record with no acquisition metadata":
+        'Failed: a row was built from an unchecked record',
+    "D1' stops requiring the acquisition fields to be present":
+        "KeyError: 'queries_spent'",
+    "D1' stops requiring elapsed_s and positions to be present":
+        "KeyError: 'elapsed_s'",
+    "D1' accepts an acquisition value that disagrees with the frozen run":
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1prime_analysis.D1PrimeError'>",
+    "D1' stops binding the per-position seed assignment":
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1prime_analysis.D1PrimeError'>",
+    "D1' stops binding the per-position prefix":
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1prime_analysis.D1PrimeError'>",
+    "D1' runs the contract AFTER the statistic":
+        'Failed: a row was built from an unchecked record',
+    "D1' accepts any non-empty incumbent identity again":
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1prime_analysis.D1PrimeError'>",
+    "D1' accepts any non-empty toolchain identity again":
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1prime_analysis.D1PrimeError'>",
+    "D1' stops checking the compiled-class identity":
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1prime_analysis.D1PrimeError'>",
+    "D1' stops checking the helper SOURCE identity":
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1prime_analysis.D1PrimeError'>",
+    "D1' stops checking the MAIN CLASS":
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1prime_analysis.D1PrimeError'>",
+    'the compiled-class pin drifts from the qualified builds':
+        "AssertionError: assert {'e2probe/Scr...000000000000'} == {'e2probe/Scr...abfbdcfc88a8'}",
+    'a malformed toolchain identity raises a TypeError instead of a refusal':
+        "TypeError: argument of type 'int' is not a container or iterable",
+    'elapsed_s is no longer bounded by the deadline':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1prime_analysis.D1PrimeError'>",
+    'malformed positions raise a TypeError instead of a refusal':
+        "TypeError: object of type 'int' has no len()",
+    'the analysis reaches an EXECUTING adapter function':
+        "AssertionError: {'PREFLIGHT_SOURCES', 'query'}",
+    'rank_visit breaks ties by DESCENDING move order':
+        'assert (3 == 2)',
+    'rank_visit orders by ASCENDING visits':
+        'assert 3 == 1',
+    'rank_visit DROPS zero-visit moves':
+        'KeyError: (1, 1)',
+    'rank_visit accepts an empty root instead of refusing':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1second_analysis.D1SecondError'>",
+    'ss is EXCLUSIVE at five on the policy side':
+        'assert False is True',
+    'ss is INCLUSIVE at five on the visit side':
+        'assert True is False',
+    'ss ignores the VISITS entirely -- the whole question':
+        'assert True is False',
+    'ss drops the policy condition, so it OVERLAPS lprd':
+        "AssertionError: (6, 6, {'agree': False, 'colour_arm': 't1j_red', 'digest': 'dX', 'lprd': True, ...})",
+    'the strict variant fires on ANY visit count':
+        'assert True is False',
+    'the policy and the visits may cover DIFFERENT legal sets':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1second_analysis.D1SecondError'>",
+    'rank_visit accepts an empty root, so an empty record is scored':
+        'scripts.GPU.alphazero.d1second_analysis.D1SecondError: g-o1_center-t1j_red-r0: the raw policy covers 10 moves and the root visits 0; they must be the same legal set',
+    'the disjointness precondition checks nothing':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1second_analysis.D1SecondError'>",
+    'the public entry never RUNS the precondition':
+        "KeyError: 'n'",
+    'the entry skips the completed-D1 contract':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1prime_analysis.D1PrimeError'>",
+    'the entry exposes B and the seed as knobs again':
+        "AssertionError: ['d1_report', 'B', 'seed']",
+    "D1″ reuses D1′'s bootstrap seed, so the draw repeats it":
+        'assert 20260907 == 20260908',
+    "the threshold is RETYPED and drifts below D1′'s":
+        'assert 0.05 is 0.15',
+    'the eligibility floor is never enforced':
+        "AssertionError: assert 'GO' == 'NO_GO — insufficient support'",
+    'the SECONDARY strict variant decides the outcome':
+        "AssertionError: assert 'GO' == 'NO_GO'",
+    'the readout summary tolerates an absent measurement':
+        "KeyError: 'overrode_leader'",
+    'the matched statistic IGNORES the requested indicator':
+        'assert 1.0 == -1.0',
+    'a missing indicator field is read as False':
+        "KeyError: 'ss'",
+    "the indicator changes D1′'s own default result":
+        "scripts.GPU.alphazero.d1prime_analysis.D1PrimeError: a row of 'mover_fragmentation' carries no 'ss' field, so the statistic would score an absent measurement; every row must carry it.",
+    'the validation pass is never RUN by the entry':
+        'Failed: a row was scored before validation finished',
+    'validation runs PER ROW, interleaved with the scoring':
+        'Failed: a row was scored before validation finished',
+    'a required observable is optional again':
+        "KeyError: 'selected_policy_rank'",
+    'a visit count is coerced with int() instead of type-checked':
+        "scripts.GPU.alphazero.d1second_analysis.D1SecondError: position 3 ('l0match-000-strong6-o1_center-t1j_red-r0'): root_total_visits is 10, but the frozen configuration spends 400 simulations. A self-consistent map that totals something else describes a search this hypothesis is not about.",
+    'a negative or fractional visit count is accepted':
+        "scripts.GPU.alphazero.d1second_analysis.D1SecondError: position 3 ('l0match-000-strong6-o1_center-t1j_red-r0'): root_total_visits is 8, but the frozen configuration spends 400 simulations. A self-consistent map that totals something else describes a search this hypothesis is not about.",
+    'a NaN or infinite policy mass reaches the ranking':
+        "scripts.GPU.alphazero.d1second_analysis.D1SecondError: position 3 ('l0match-000-strong6-o1_center-t1j_red-r0'): selected_policy_mass is 0.1 but the record's own maps give nan; they are computed from the same maps, so they must agree exactly.",
+    'an all-zero policy is ranked by tie-break alone':
+        "scripts.GPU.alphazero.d1second_analysis.D1SecondError: position 3 ('l0match-000-strong6-o1_center-t1j_red-r0'): selected_policy_mass is 0.1 but the record's own maps give 0.0; they are computed from the same maps, so they must agree exactly.",
+    'an observable may CONTRADICT the map it describes':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1second_analysis.D1SecondError'>",
+    'a truthy int passes as the override flag':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1second_analysis.D1SecondError'>",
+    'validation lets the policy and the visits differ':
+        "scripts.GPU.alphazero.d1second_analysis.D1SecondError: position 3 ('l0match-000-strong6-o1_center-t1j_red-r0'): n_legal is 10 but the record's own maps give 11; an observable that contradicts what it describes is not evidence.",
+    'a depth-6 move of strings is accepted':
+        "scripts.GPU.alphazero.d1second_analysis.D1SecondError: position 3 ('l0match-000-strong6-o1_center-t1j_red-r0'): the depth-6 move ('0', '0') is not a legal move of this root",
+    'a small complement is reported as INSUFFICIENT SUPPORT':
+        "AssertionError: assert 'NO_GO — insufficient support' == 'NO_GO'",
+    'the complement count is never reported':
+        'assert 0 == 64',
+    'the summary averages the ranks instead of counting them':
+        'assert [[2.5, 3]] == [[1, 2], [4, 1]]',
+    'the histogram is ordered by COUNT instead of by rank':
+        'assert [[5, 2], [1, 1], [9, 1]] == [[1, 1], [5, 2], [9, 1]]',
+    'the histogram emits zero-count ranks':
+        'assert [[1, 1], [2, ..., [6, 0], ...] == [[1, 1], [5, 2], [9, 1]]',
+    'the row drops the rank fields the summary histograms':
+        'assert 1 == 2',
+    'the row hardcodes the POLICY rank the summary histograms':
+        'assert 1 == 4',
+    "the depth is coerced, so '6' and 6.0 pass a type-strict contract":
+        "scripts.GPU.alphazero.d1second_analysis.D1SecondError: position 3 ('l0match-000-strong6-o1_center-t1j_red-r0'): expected exactly one depth-6 record, got 0",
+    'a non-mapping depth entry escapes as an AttributeError':
+        'TypeError: list indices must be integers or slices, not str',
+    'a rank comparison admits a bool equal to the right number':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1second_analysis.D1SecondError'>",
+    'the depths container itself is never validated':
+        "scripts.GPU.alphazero.d1second_analysis.D1SecondError: position 3 ('l0match-000-strong6-o1_center-t1j_red-r0'): depth record 0 is 'n', not a mapping",
+    'the search budget is not bound at all':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1second_analysis.D1SecondError'>",
+    'the budget is retyped in this module instead of read':
+        'AssertionError: the budget is retyped as a literal on line 114',
+    'derived values are compared APPROXIMATELY again':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1second_analysis.D1SecondError'>",
+    '_real accepts bools, so True passes as a number':
+        "scripts.GPU.alphazero.d1second_analysis.D1SecondError: position 3 ('l0match-000-strong6-o1_center-t1j_red-r0'): selected_policy_mass is 0.1 but the record's own maps give 1.0; they are computed from the same maps, so they must agree exactly.",
+    'top2 is silently omitted rather than declared unused':
+        "AssertionError: assert 'top2' in ()",
+    'the parity rule reads 0.75 instead of parity':
+        'assert 0.75 == 0.5',
+    'the verdict is decided at the wrong side of the interval':
+        "AssertionError: assert 'T1J_STRONGER' == 'INCONCLUSIVE'",
+    'AT parity counts as above it':
+        "AssertionError: assert 'T1J_STRONGER' == 'INCONCLUSIVE'",
+    'the sample size drifts from the card':
+        'assert (14, 8, 2, 224) == (46, 8, 2, 736)',
+    'the per-cell threshold is relaxed by one':
+        'assert True is False',
+    'the transcript carries the SEED, so identical play looks distinct':
+        "AssertionError: assert '5833cb96c1d7...677aac4920fcc' == 'db3014c9d890...53ce3c412f74e'",
+    'the transcript drops the moves, so every game looks the same':
+        "AssertionError: assert 'b5d7c9900cf4e353104d8a4eaf49467f2f8f03b2afc5a7b3835e81e217c89de1' != 'b5d7c9900cf4e353104d8a4eaf49467f2f8f03b2afc5a7b3835e81e217c89de1'",
+    'the ply sequence is checked for CONTIGUITY, not for its exact span':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h2_match_rules.H2RulesError'>",
+    'a truncated tail passes because only the head is anchored':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h2_match_rules.H2RulesError'>",
+    'movers must merely ALTERNATE, not match the arm':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h2_match_rules.H2RulesError'>",
+    'the terminal reason is not checked against the two the protocol has':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h2_match_rules.H2RulesError'>",
+    'coordinates are coerced instead of type-checked':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h2_match_rules.H2RulesError'>",
+    'the degeneracy screen counts GLOBALLY instead of per cell':
+        "scripts.GPU.alphazero.h2_match_rules.H2RulesError: 1 cell(s) do not hold exactly 46 games: [['all', 'cells']]",
+    'the interval is computed even when the screen fails':
+        'assert True is False',
+    "the report drops the interval's standing":
+        "KeyError: 'interval_standing'",
+    'the plan assigns seeds by membership, not POSITION':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h2_match_plan.H2PlanError'>",
+    'the plan omits the readout mode from its tasks':
+        "KeyError: 'selection_mode'",
+    'the schedule accepts a task without the readout mode':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h2_match_plan.H2PlanError'>",
+    'a short schedule is accepted':
+        "scripts.GPU.alphazero.h2_match_plan.H2PlanError: cells without exactly 46 repetitions: [(('o8_contact', 't1j_black'), 45)]",
+    'the gate defaults OPEN':
+        'assert True is False',
+    'the registration barrier checks only the first seed':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h2_match_runner.H2Error'>",
+    'the registration barrier is disabled':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h2_match_runner.H2Error'>",
+    'outputs are overwritten instead of refused':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h2_match_runner.H2Error'>",
+    'one path may serve as both results and trace':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h2_match_runner.H2Error'>",
+    'the identity keeps the OLD readout':
+        "AssertionError: assert 'opening_temperature' == 'argmax'",
+    'the inert settings are left looking ACTIVE':
+        'AssertionError: an inert setting must not look active',
+    'a run recording the OLD readout is reported as H2':
+        "scripts.GPU.alphazero.h2_match_runner.H2VoidError: incumbent_identity.eval_config.selection_mode: recorded 'opening_temperature' (str) but the frozen configuration gives 'argmax' (str)",
+    'the identity is compared SHALLOWLY again':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h2_match_runner.H2VoidError'>",
+    'the schedule digest is not compared with the pin':
+        'scripts.GPU.alphazero.e4_screen_reference.E4ReferenceError: seed 202620000 was EXPOSED -- it has been drawn from -- and cannot be scheduled',
+    'the deadline never fires':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h2_match_runner.H2VoidError'>",
+    'a malformed ply record is skipped instead of VOIDing':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h2_match_runner.H2VoidError'>",
+    'the wrapper reports success without verifying the gate':
+        'assert 7 == 10',
+    'restoration claims success without reading the file back':
+        'AssertionError: assert True is False',
+    'the wrapper gains a --runner-source override':
+        "Failed: DID NOT RAISE <class 'SystemExit'>",
+    'the mover is derived from the ARM again':
+        "AssertionError: (1, 'red')",
+    "the starting colour drifts from the engine's":
+        "AssertionError: assert 'red' == 'black'",
+    'the public entry accepts caller-supplied play again':
+        "AssertionError: assert ['results_pat...', 'identity'] == ['results_pat...'report_path']",
+    'the production seam is a refusing stub again':
+        'AssertionError: the seam refuses before playing: that is a stub, not a path',
+    'the seam no longer calls the harness game loop':   # ⚠ ERROR, not a failure: this control is INDETERMINATE
+        '  File "/private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/injected-defect-controls-dlq1b_4r/checkout/scripts/GPU/alphazero/h2_match_runner.py", line 406',
+    'the production seam loads the model AT IMPORT':
+        "AssertionError: ('e4_screen_runner', ['', 'Any', 'Callable', 'Dict', 'List', 'Mapping', ...])",
+    'the incumbent keeps the temperature config in production':
+        'AssertionError: the config must be REBUILT, not aliased',
+    'a DANGLING SYMLINK reads as absent':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h2_match_runner.H2Error'>",
+    'the screen accepts a SHORT transcript vector':
+        "scripts.GPU.alphazero.h2_match_rules.H2RulesError: 16 cell(s) do not hold exactly 46 games: [['o1', 't1j_black'], ['o1', 't1j_red'], ['o2', 't1j_black']]",
+    'the screen ignores the canonical task ids':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h2_match_rules.H2RulesError'>",
+    'a cell with fewer than 46 GAMES is screened anyway':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h2_match_rules.H2RulesError'>",
+    'invalid results are masked as a DEGENERATE DESIGN':
+        'AssertionError: INCONCLUSIVE — DEGENERATE DESIGN',
+    'the transcript evidence is not persisted':
+        "AssertionError: {'header', 'ply', 'task_result'}",
+    'a mid-run failure leaves no run_end VOID':
+        "AssertionError: assert {'event': 'ta...', 'index': 0} == {'error': 'Ru...dict': 'VOID'}",
+    'the wrapper runs the match IN PROCESS, unsupervised':
+        "KeyError: 'cmd'",
+    'the outer cap is unbounded':
+        'assert None == (28800 + 60)',
+    'a surviving descendant accompanies a success':
+        'AssertionError: assert 0 == 8',
+    "a timeout is reported as the worker's own exit code":
+        'AssertionError: assert 0 == 6',
+    'compile is handed a fresh, unstarted clock again':
+        'assert [<scripts.GPU... 0x106c1b9d0>] == [<scripts.GPU... 0x107b03770>]',
+    'the seam accepts an unstarted clock':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h2_match_runner.H2Error'>",
+    'the run never starts its deadline':
+        'scripts.GPU.alphazero.d1_probe.D1Error: deadline was never started',
+    'the deadline is never ARMED, so a blocked game runs on':
+        "KeyError: 'entered'",
+    'the outcome is never classified':
+        'assert 0 == 7',
+    'a REFUSED report still exits COMPLETED':
+        'AssertionError: assert 0 == 7',
+    'a degenerate design is reported as a completed match':
+        'AssertionError: assert 7 == 11',
+    'the report overwrites an existing one':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h2_match_runner.H2VoidError'>",
+    'the preflight lets an existing report through to the games':
+        'Failed: a game was played',
+    'an operator interrupt is recorded as VOID':
+        "AssertionError: {'error': 'KeyboardInterrupt', 'event': 'run_end', 'games_completed': 0, 'verdict': 'VOID'}",
+    'no cleanup runs between games':
+        'assert 0 == 3',
+    'cleanup runs only after a SUCCESSFUL game':
+        'AssertionError: a failed game must still clean up',
+    'the evaluator is reloaded for every game':
+        'assert 5 == 1',
+    'the incumbent is built with the frozen TEMPERATURE config':
+        "AssertionError: assert 'opening_temperature' == 'argmax'",
+    'the schedule is pinned only by its DESIGN digest':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h2_match_runner.H2Error'>",
+    'the full-field digest projects fields away':
+        "AssertionError: assert '14328238f88046b995fb65bab9dc7be2f60cb026122440440899bcdb2d2a1a71' != '14328238f88046b995fb65bab9dc7be2f60cb026122440440899bcdb2d2a1a71'",
+    '--worker is a public bypass again':
+        'Failed: the match RAN',
+    'the report is left out of the preflight':
+        'TypeError: expected str, bytes or os.PathLike object, not NoneType',
+    'only two outputs are compared for aliasing':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h2_match_runner.H2Error'>",
+    'the terminal OK is committed BEFORE the report is durable':
+        "AssertionError: [{'event': 'run_end', 'games_completed': 736, 'verdict': 'OK'}, {'error': 'FileExistsError', 'event': 'run_end', 'games_completed': 736, 'verdict': 'VOID'}]",
+    'the trace does not name the verdict it committed':
+        "KeyError: 'outcome'",
+    'the capability is a fixed, caller-settable value':
+        "AssertionError: assert ('1111111111111111111111111111111111111111111111111111111111111111' != '1111111111111111111111111111111111111111111111111111111111111111')",
+    'the capability is not an anonymous pipe':
+        'AssertionError: it must be an anonymous pipe',
+    'any token of the RIGHT LENGTH is accepted':
+        "AssertionError: 'gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg' was accepted",
+    'any capability at all is accepted':
+        "AssertionError: 'short' was accepted",
+    'the capability check DELETES the thing it was given':
+        "AssertionError: assert not [Call(func=Attribute(value=Name(id='_o', ctx=Load(...)), attr='unlink', ctx=Load()), args=[Call(func=Name(id='str', ctx=Load(...)), args=[Name(id='fd', ctx=Load(...))], keywords=[])], keywords=[])]",
+    'an environment variable reaches the worker path':
+        'AssertionError: an environment variable is being read',
+    'a capability outlives the run':
+        "Failed: DID NOT RAISE <class 'OSError'>",
+    'the descriptor is not PASSED to the child at all':
+        'AssertionError: the descriptor must be INHERITED',
+    'the shared supervisor drops pass_fds':
+        "AssertionError: {'exit_code': 1, 'group_cleared': True, 'interrupted': False, 'timed_out': False}",
+    'the classifier assumes the report exists':
+        'assert 0 == 3',
+    'the degeneracy refusal claims the games were non-independent':
+        'assert \'DIVERSITY screen failed\' in "1 of 16 cell(s) hold fewer than 42 distinct transcripts of 46: [[\'o1\', \'t1j_red\']]. The primary interval is NOT compu...nd §3.1 says plainly that this screen cannot test independence. What failed is the design\'s own diversity requirement."',
+    "H2's block un-registered from ACCOUNTED (the edit reverted)":
+        "AssertionError: (202618000, {'accounted': False, 'exposed': False, 'retired': True, 'test_only': False})",
+    "H2's block ALSO marked EXPOSED -- a reservation claimed as a draw":
+        "AssertionError: (202618000, {'accounted': True, 'exposed': True, 'retired': True, 'test_only': False})",
+    'the SPENT block is not retired, so it can be scheduled again':
+        "AssertionError: (202618000, {'accounted': True, 'exposed': False, 'retired': False, 'test_only': False})",
+    'a spent seed is schedulable because availability is never checked (H2)':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.e4_screen_reference.E4ReferenceError'>",
+    'registration ALSO opened the H2 gate':
+        'assert True is False',
+    'the negative control stops stripping anything':
+        "AssertionError: nothing was stripped: H2's block is NOT registered, so this controls nothing",
+    "the builder refuses H2's readout again":
+        "scripts.GPU.alphazero.twixtbot_g3_reference.ReferenceError: selection_mode 'argmax' is not one of the admitted readouts ('opening_temperature', 'argmax'). Admitting the FIELD is not admitting every value of it: a study that needs another mode names it in a preregistration and adds it here under review.",
+    'the admitted set loses argmax':
+        "AssertionError: assert ('opening_temperature',) == ('opening_tem...re', 'argmax')",
+    'the readout is named argmax but the AGENT is built from the frozen config':
+        "AssertionError: assert 'opening_temperature' == 'argmax'",
+    'admitting the readout admits every other field too':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.twixtbot_g3_reference.ReferenceError'>",
+    'the simulation budget may drift alongside the readout':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.twixtbot_g3_reference.ReferenceError'>",
+    'fields are compared loosely, so 400 and 400.0 agree':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.twixtbot_g3_reference.ReferenceError'>",
+    'any selection_mode string is admitted':
+        "ValueError: unknown selection_mode 'hoeffding_lcb'",
+    'a config of the wrong TYPE is accepted':
+        "AttributeError: 'dict' object has no attribute 'board_size'",
+    'the check is skipped entirely':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.twixtbot_g3_reference.ReferenceError'>",
+    'omitting the config no longer falls back to the frozen one':
+        'scripts.GPU.alphazero.twixtbot_g3_reference.ReferenceError: config is a NoneType, not the EvalConfig the frozen research configuration is expressed in',
+    'the retry block un-registered from ACCOUNTED':
+        "AssertionError: (202620000, {'accounted': False, 'exposed': True, 'retired': True, 'test_only': False})",
+    'the WHOLE-BLOCK retirement is dropped':
+        "AssertionError: (202620000, {'accounted': True, 'exposed': True, 'retired': False, 'test_only': False})",
+    "the exposure is widened to the WHOLE block, claiming task 383's seed as drawn":
+        "AssertionError: (202620383, {'accounted': True, 'exposed': True, 'retired': True, 'test_only': False})",
+    'the 383 confirmed draws are not recorded as EXPOSED at all':
+        "AssertionError: (202620000, {'accounted': True, 'exposed': False, 'retired': True, 'test_only': False})",
+    "the retry reuses attempt 1's SPENT block":
+        'assert (202618000, 202618736) == (202620000, 202620736)',
+    "attempt 1's digest is overwritten, so its record stops verifying":
+        "AssertionError: attempt 1's digest must still verify, or its record is unverifiable",
+    "the retry's own digest is not re-pinned":
+        "AssertionError: assert 'ef68cb9962d1...4cbe35c435c69' == '3c0a0ae12c61...784996d7172d2'",
+    "the seam's readout mode is not the rules' one":
+        "AssertionError: assert 'opening_temperature' == 'argmax'",
+    'our side is built with the WRONG colour for the arm':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.twixtbot_g3_reference.ReferenceError'>",
+}
