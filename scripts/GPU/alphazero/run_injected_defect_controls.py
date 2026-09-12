@@ -269,7 +269,10 @@ def main(argv):
             print(f"  {outcome:13s}  {label}")
             if outcome != "REJECTED":
                 print(f"      {reason}")
-            if outcome == "REJECTED" or (rc == 1 and failed_lines(node, out)):
+            # Harvest evidence from ANY nonzero run, including one whose named test
+            # never ran: a control that errors still has to DECLARE what it produces,
+            # and it will still be INDETERMINATE when it is measured.
+            if rc != 0:
                 ev = evidence_lines(out)
                 if ev:
                     observed_reasons[label] = ev[0]

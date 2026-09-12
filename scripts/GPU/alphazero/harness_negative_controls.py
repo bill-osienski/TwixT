@@ -191,6 +191,18 @@ control("NC10 the driver runs without being asked to",
                       "    if False:\n",
                       "nc10_runs_without_the_flag.py"))
 
+control("NC14 a fixture-setup ERROR counts as a rejection",
+        "test_A_FIXTURE_SETUP_ERROR_IS_INDETERMINATE_NOT_REJECTED",
+        "A FIXTURE SETUP ERROR WAS NOT REPORTED AS INDETERMINATE",
+        driver=broken(DRIVER,
+                      '    failed = failed_lines(node, out)\n'
+                      '    if not failed:\n'
+                      '        return "INDETERMINATE", f"{node} is not in the FAILED summary"\n'
+                      '    if any(l.startswith("ERROR") for l in out.splitlines()):\n'
+                      '        return "INDETERMINATE", "pytest reported an ERROR as well as the failure"\n',
+                      '    failed = failed_lines(node, out) or ["FAILED (assumed)"]\n',
+                      "nc14_error_counts_as_rejection.py"))
+
 control("NC13 the reason is taken from the FITTED summary line, not the traceback",
         "test_THE_RECORDED_REASON_IS_THE_WHOLE_ASSERTION_TEXT",
         "assert {} == {",        # a long node id gets NO reason appended at all

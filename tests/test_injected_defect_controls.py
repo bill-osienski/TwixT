@@ -74,6 +74,23 @@ def test_a_deliberately_long_name_that_pushes_the_summary_line_past_eighty_colum
     assert src.VALUE == "good", LONG
 '''
 
+FIXTURE_TEST = '''\
+import pytest
+
+import src
+
+
+@pytest.fixture
+def loaded():
+    if src.VALUE != "good":
+        raise RuntimeError("THE FIXTURE COULD NOT BUILD ITS STATE")
+    return src.VALUE
+
+
+def test_with_a_fixture(loaded):
+    assert loaded == "good", "THE VALUE IS WRONG"
+'''
+
 MEDDLE_TEST = '''\
 import pathlib
 
@@ -102,6 +119,7 @@ def sandbox(tmp_path):
     (repo / "src.py").write_text('VALUE = "good"\n')
     (repo / "tests" / "test_target.py").write_text(TARGET_TEST)
     (repo / "tests" / "test_meddle.py").write_text(MEDDLE_TEST)
+    (repo / "tests" / "test_fixture.py").write_text(FIXTURE_TEST)
     (repo / "tests" / "test_long.py").write_text(LONG_TEST)
     (repo / "conftest.py").write_text(
         "import pathlib, sys\n"
@@ -476,3 +494,28 @@ def test_THE_RECORDED_REASON_IS_THE_WHOLE_ASSERTION_TEXT(sandbox, tmp_path):
     # than the message alone, and the whole message must survive
     assert recorded == {
         "a long name and a long message": "AssertionError: " + LONG_REASON}, recorded
+
+
+def test_A_FIXTURE_SETUP_ERROR_IS_INDETERMINATE_NOT_REJECTED(sandbox):
+    """🔴 THE SHAPE THAT WAS ACTUALLY THERE. Of the 539 real controls, six make the
+    target test ERROR rather than fail -- five at fixture setup or import, one by
+    leaving a SyntaxError in the module under test. pytest still exits nonzero, so
+    `rejected = r.returncode != 0` counted all six as successful controls. The named
+    test never ran, so nothing was shown to reject anything.
+
+    Note this errors with rc == 1 and an ERROR summary rather than a FAILED one --
+    an exit code alone cannot tell it from a real failure.
+    """
+    ctl = [("breaks the fixture, not the assertion", "src.py",
+            'VALUE = "good"', 'VALUE = "bad"',
+            "tests/test_fixture.py::test_with_a_fixture")]
+    # 🔑 the control DECLARES THE ERROR'S OWN TEXT, so the reason check cannot be
+    # what rejects it. What must reject it is that the named test never ran.
+    r = drive(sandbox, write_defects(
+        sandbox, ctl,
+        {"breaks the fixture, not the assertion": "THE FIXTURE COULD NOT BUILD ITS STATE"}))
+    assert "INDETERMINATE" in r.stdout, (
+        "A FIXTURE SETUP ERROR WAS NOT REPORTED AS INDETERMINATE:\n" + r.stdout)
+    assert "REJECTED" not in r.stdout, (
+        "A FIXTURE SETUP ERROR SCORED AS A REJECTION:\n" + r.stdout)
+    assert r.returncode == PROBLEMS, (r.returncode, r.stdout)
