@@ -2681,14 +2681,15 @@ DEFECTS = [
 # do not independently prove that the assertion reached is the right one.
 # A label with no entry here is INDETERMINATE; there is no permissive default.
 #
-# 🔴 SIX ENTRIES BELOW ARE ERROR TEXT, NOT ASSERTION TEXT, and are marked where they
-# stand. Under their defect the named test NEVER RUNS -- four fail in fixture setup,
-# one on module import, and one ("the seam no longer calls the harness game loop")
-# leaves a SyntaxError so nothing collects at all. Every one of them exits nonzero,
-# which is why `rejected = r.returncode != 0` scored all six as successful controls
-# in the run packaged at 144a141. They REPORT INDETERMINATE, by name, every run.
-# Declaring a reason is not passing: re-aiming them is separate work, because it
-# changes what each control claims to bind.
+# 🔴 SIX OF THESE WERE REPAIRED ON 2026-09-12 AND THEIR REASONS ARE NOT HARVESTED.
+# Under their defect the named test NEVER RAN: five raised during FIXTURE SETUP and
+# one left a SyntaxError so nothing collected. All six exited nonzero, which is why
+# `rejected = r.returncode != 0` scored all six as successful controls in the run
+# packaged at 144a141 -- "539/539 rejected" overstated by six. Each kept its claim;
+# what changed is the mutation, the target, or both, so that setup and collection
+# complete and the named test reaches the behaviour. Their reasons below were
+# DERIVED from the requirement and its assertion and then verified against a run,
+# which is why each names a count or a sentence rather than a first line.
 EXPECTED_REASONS = {
     'registration check disabled':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
@@ -2818,10 +2819,17 @@ EXPECTED_REASONS = {
         "AssertionError: assert {('created_th...sition'): 129} == {('created_th...sition'): 101}",
     'deduplication disabled':
         "AssertionError: assert {('created_th...sition'): 104} == {('created_th...sition'): 101}",
-    'incumbent-to-move restriction dropped':   # ⚠ ERROR, not a failure: this control is INDETERMINATE
-        'scripts.GPU.alphazero.d1_selection.D1SelectionError: mover_fragmentation positions: the rule retained 147, but 12.1 froze 101. The budget is never raised or lowered to fit the data; the rule and the record must be reconciled instead.',
-    'controls no longer matched to the position cells':   # ⚠ ERROR, not a failure: this control is INDETERMINATE
-        'scripts.GPU.alphazero.d1_selection.D1SelectionError: mover_fragmentation controls: the rule retained 137, but 12.1 froze 60. The budget is never raised or lowered to fit the data; the rule and the record must be reconciled instead.',
+    # §12.1 froze 101 mover_fragmentation positions BECAUSE the rule keeps only
+    # plies where OUR incumbent moved. Without the restriction it keeps 147.
+    'incumbent-to-move restriction dropped':
+        "{('mover_fragmentation', 'position'): 147} != "
+        "{('mover_fragmentation', 'position'): 101}",
+    # 12.3 matches controls to the position cells BY CONSTRUCTION, so its
+    # observable is the CONTROL count alone -- both position counts are
+    # untouched by this defect, which is what distinguishes it from the one above.
+    'controls no longer matched to the position cells':
+        "{('mover_fragmentation', 'control'): 137} != "
+        "{('mover_fragmentation', 'control'): 60}",
     'seed written in place so a shared row is overwritten':
         'assert [300000000, 3...00000005, ...] == [300000000, 3...00000005, ...]',
     'frozen-count reconciliation removed':
@@ -2878,7 +2886,8 @@ EXPECTED_REASONS = {
         "ValueError: invalid literal for int() with base 10: 'bad'",
     'PostCond parse failure drops its transcript':
         "AssertionError: assert '' == 'POSTCOND no_... failures=0\\n'",
-    '§13 exclusion never applied':   # ⚠ ERROR, not a failure: this control is INDETERMINATE
+    # §13.3's own reconciliation, raised where the test can see it fail.
+    '§13 exclusion never applied':
         'scripts.GPU.alphazero.d1_selection.D1SelectionError: §13 mover_fragmentation controls: 60 after exclusion, but §13.3 froze 54',
     '§12 count reconciliation removed':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_selection.D1SelectionError'>",
@@ -2886,8 +2895,8 @@ EXPECTED_REASONS = {
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_selection.D1SelectionError'>",
     '§13 accepts the retired seed block':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_selection.D1SelectionError'>",
-    '§13 assigns seeds when none were reserved':   # ⚠ ERROR, not a failure: this control is INDETERMINATE
-        'TypeError: cannot unpack non-iterable NoneType object',
+    '§13 assigns seeds when none were reserved':
+        'AssertionError: a position carries a seed although §13 reserved no interval',
     'D1 query cap raised back to the frozen 12.4 figure':
         'assert (227 == 221)',
     'D1 query parse failure not translated':
@@ -3400,8 +3409,9 @@ EXPECTED_REASONS = {
         "KeyError: 'prefix'",
     'the production entry uses a smaller B than the frozen one':
         'assert (100 == 10000)',
-    'the canonical cohort is resolved from a different record':   # ⚠ ERROR, not a failure: this control is INDETERMINATE
-        "scripts.GPU.alphazero.d0_postmortem.D0BindingError: cannot read the record: [Errno 2] No such file or directory: 'docs/superpowers/evidence/2026-09-07-t1j-h1-match-attempt2/06_l0_match_results.jsonl'",
+    # The record D1' actually resolved from. It can only appear if the constant moved.
+    'the canonical cohort is resolved from a different record':
+        'docs/superpowers/evidence/2026-09-07-t1j-h1-match-attempt2/01_h1_results.jsonl',
     'the design metadata binding removed':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1prime_analysis.D1PrimeError'>",
     'the design binding loses type strictness on rep':
@@ -3626,8 +3636,8 @@ EXPECTED_REASONS = {
         "AssertionError: assert ['results_pat...', 'identity'] == ['results_pat...'report_path']",
     'the production seam is a refusing stub again':
         'AssertionError: the seam refuses before playing: that is a stub, not a path',
-    'the seam no longer calls the harness game loop':   # ⚠ ERROR, not a failure: this control is INDETERMINATE
-        '  File "/private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/injected-defect-controls-<x>/checkout/scripts/GPU/alphazero/h2_match_runner.py", line 406',
+    'the seam no longer calls the harness game loop':
+        'AssertionError: the seam must call e4_screen_runner.play_task',
     'the production seam loads the model AT IMPORT':
         "AssertionError: ('e4_screen_runner', ['', 'Any', 'Callable', 'Dict', 'List', 'Mapping', ...])",
     'the incumbent keeps the temperature config in production':
