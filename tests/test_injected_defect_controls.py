@@ -289,6 +289,18 @@ def test_A_CONTROL_WITH_NO_EXPECTED_REASON_IS_INDETERMINATE(sandbox):
     assert r.returncode == PROBLEMS, (r.returncode, r.stdout)
 
 
+def test_AN_ORPHAN_EXPECTED_REASON_EXITS_NONZERO(sandbox):
+    """The other direction from a missing reason: one declared for a control that
+    no longer exists. It binds nothing and it HIDES a rename -- found by hand on
+    2026-09-12, when two controls were re-anchored for the third seed block and
+    their old reasons stayed behind, still looking like coverage."""
+    r = drive(sandbox, write_defects(
+        sandbox, [GOOD], {**GOOD_REASON, "a control that was renamed away": "x"}))
+    assert "ORPHAN REASON" in r.stdout, r.stdout
+    assert r.returncode == PROBLEMS, (
+        f"AN ORPHAN REASON EXITED {r.returncode}, NOT {PROBLEMS}")
+
+
 def test_EVERY_REAL_CONTROL_DECLARES_AN_EXPECTED_REASON():
     """...and the real control list is held to it, not only the fixtures."""
     import importlib.util
@@ -297,6 +309,9 @@ def test_EVERY_REAL_CONTROL_DECLARES_AN_EXPECTED_REASON():
     spec.loader.exec_module(mod)
     missing = [lab for lab, *_ in mod.DEFECTS if lab not in mod.EXPECTED_REASONS]
     assert not missing, missing
+    orphans = [k for k in mod.EXPECTED_REASONS
+               if k not in {lab for lab, *_ in mod.DEFECTS}]
+    assert not orphans, orphans
     assert len(mod.DEFECTS) == len({lab for lab, *_ in mod.DEFECTS}), "duplicate labels"
 
 

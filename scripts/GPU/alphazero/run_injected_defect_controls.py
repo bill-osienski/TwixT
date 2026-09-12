@@ -225,6 +225,12 @@ def main(argv):
     dupe_labels = sorted({l for l in labels if labels.count(l) > 1})
     for lab in dupe_labels:
         print(f"🔴 DUPLICATE LABEL -- one expected reason for two controls: {lab!r}")
+    # 🔴 AND THE OTHER DIRECTION. A declared reason whose control has been renamed
+    # or removed binds nothing and hides the rename: found by hand on 2026-09-12
+    # after two controls were re-anchored and their old reasons stayed behind.
+    orphans = sorted(set(reasons) - set(labels))
+    for lab in orphans:
+        print(f"🔴 ORPHAN REASON -- declared for a control that does not exist: {lab!r}")
 
     for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
         try:
@@ -310,11 +316,12 @@ def main(argv):
         print(f"recorded {len(observed_reasons)} observed reasons -> {a.record}")
 
     problems = (counts["NOT CAUGHT"] + counts["INDETERMINATE"] + stale
-                + len(dupes) + len(dupe_labels))
+                + len(dupes) + len(dupe_labels) + len(orphans))
     print(f"\n{counts['REJECTED']}/{len(defects)} defects rejected; "
           f"{counts['NOT CAUGHT']} not caught; {counts['INDETERMINATE']} "
           f"indeterminate; {stale} stale")
-    print("distinct injections:", len(seen), "| duplicate labels:", len(dupe_labels))
+    print("distinct injections:", len(seen), "| duplicate labels:", len(dupe_labels),
+          "| orphan reasons:", len(orphans))
     print("clean baseline: PASS")   # the only path that reaches here
     print("PROBLEMS:", problems)
     return OK if problems == 0 else PROBLEMS

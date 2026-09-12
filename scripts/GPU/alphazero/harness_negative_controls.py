@@ -220,6 +220,14 @@ control("NC15 the reason is compared raw, so per-run content never matches twice
                       '    if expected not in "\\n".join(evidence):\n',
                       "nc15_reason_compared_raw.py"))
 
+control("NC16 an expected reason whose control was renamed away is ignored",
+        "test_AN_ORPHAN_EXPECTED_REASON_EXITS_NONZERO",
+        "ORPHAN REASON",
+        driver=broken(DRIVER,
+                      "    orphans = sorted(set(reasons) - set(labels))\n",
+                      "    orphans = []\n",
+                      "nc16_orphan_reason_ignored.py"))
+
 # ═════════ THE OTHER DIRECTION: a check nothing can satisfy is an outage, not
 # containment. The 2026-09-12 lesson from the H2 boundary, applied here.
 

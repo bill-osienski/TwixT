@@ -3809,14 +3809,35 @@ EXPECTED_REASONS = {
         "AssertionError: (202620383, {'accounted': True, 'exposed': True, 'retired': True, 'test_only': False})",
     'the 383 confirmed draws are not recorded as EXPOSED at all':
         "AssertionError: (202620000, {'accounted': True, 'exposed': False, 'retired': True, 'test_only': False})",
-    "the retry reuses attempt 1's SPENT block":
-        'assert (202618000, 202618736) == (202620000, 202620736)',
     "attempt 1's digest is overwritten, so its record stops verifying":
         "AssertionError: attempt 1's digest must still verify, or its record is unverifiable",
-    "the retry's own digest is not re-pinned":
-        "AssertionError: assert 'ef68cb9962d1...4cbe35c435c69' == '3c0a0ae12c61...784996d7172d2'",
     "the seam's readout mode is not the rules' one":
         "AssertionError: assert 'opening_temperature' == 'argmax'",
     'our side is built with the WRONG colour for the arm':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.twixtbot_g3_reference.ReferenceError'>",
+    # ── 2026-09-12: attempt 3's reservation and registration. Derived from each
+    #    requirement and its assertion, then verified against a run.
+    "attempt 3 reuses attempt 2's SPENT block":
+        'assert (202620000, 202620736) == (202622000, 202622736)',
+    "attempt 3's own digest is not re-pinned":
+        "AssertionError: assert '4cec38c75a42...996078b94c332' == 'ef68cb9962d1...4cbe35c435c69'",
+    "attempt 3's FULL-FIELD digest is not re-pinned":
+        "AssertionError: assert '2d330ede735b...c36ee84a3e2da' == 'e513b479824c...54bb7bf830a65'",
+    "attempt 2's digest is overwritten, so the INCIDENT's record stops verifying":
+        "AssertionError: attempt 2's digest must still verify, or the incident's "
+        "record is unverifiable",
+    # a reservation is not a draw: ACCOUNTED yes, EXPOSED and RETIRED no
+    'the third block un-registered from ACCOUNTED':
+        "AssertionError: (202622000, {'accounted': False, 'exposed': False, "
+        "'retired': False, 'test_only': False})",
+    'the third block is ALSO marked EXPOSED before anything is drawn':
+        "AssertionError: (202622000, {'accounted': True, 'exposed': True, "
+        "'retired': False, 'test_only': False})",
+    'the third block is ALSO marked RETIRED before anything is drawn':
+        "AssertionError: (202622000, {'accounted': True, 'exposed': False, "
+        "'retired': True, 'test_only': False})",
+    'registering the third block ALSO opened the H2 execution gate':
+        'AssertionError: registering a block ALSO opened the execution gate',
+    'the third schedule is not actually executable by the registry':
+        'scripts.GPU.alphazero.e4_screen_reference.E4ReferenceError: RETIRED',
 }

@@ -606,7 +606,9 @@ def test_THE_THIRD_BLOCK_IS_ACCOUNTED_ONLY_and_the_barrier_is_SATISFIED():
         assert not (st["exposed"] or st["retired"] or st["test_only"]), (seed, st)
         assert seed not in REF.CONSUMED_SEEDS, seed
     RUN.check_seed_registration()                     # the barrier is down
-    assert RUN.H2_EXECUTION_AUTHORIZED is False       # and the gate is NOT
+    assert RUN.H2_EXECUTION_AUTHORIZED is False, (
+        "registering a block ALSO opened the execution gate -- registration is "
+        "bookkeeping, and permission is a separate review")
     with pytest.raises(RUN.H2Error, match="UNAUTHORIZED"):
         RUN.run_h2(results_path="/dev/null/x", trace_path="/dev/null/y",
                    report_path="/dev/null/z")
