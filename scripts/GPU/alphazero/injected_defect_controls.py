@@ -2685,7 +2685,7 @@ EXPECTED_REASONS = {
     'compile step accepts a java outside the verified JDK':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
     'compile step reuses an existing class directory':
-        "FileExistsError: [Errno 17] File exists: '/private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/pytest-of-bill/pytest-16280/test_an_existing_class_directo0/classes'",
+        "FileExistsError: [Errno 17] File exists: '/private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/pytest-of-bill/pytest-<n>/test_an_existing_class_directo0/classes'",
     'compile step ignores a failing javac':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1VoidError'>",
     'compile step builds the E3b set, not the query path':
@@ -3033,7 +3033,7 @@ EXPECTED_REASONS = {
     'registering the block opens the gate too':
         'scripts.GPU.alphazero.h1_viability_runner.H1Error: match mode requires a trace path: the card freezes a create-only, non-analytic VOID trace, and a match that cannot say how far it got is not the design that was preregistered. Nothing has been written.',
     'match mode accepts a supplied plan':
-        "scripts.GPU.alphazero.h1_viability_plan.H1PlanError: cannot read the H1 plan: [Errno 2] No such file or directory: '/private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/pytest-of-bill/pytest-16342/test_match_mode_REFUSES_a_supp0/other.json'",
+        "scripts.GPU.alphazero.h1_viability_plan.H1PlanError: cannot read the H1 plan: [Errno 2] No such file or directory: '/private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/pytest-of-bill/pytest-<n>/test_match_mode_REFUSES_a_supp0/other.json'",
     'the content binding narrows to the digest dimensions (dead again)':
         'scripts.GPU.alphazero.h1_viability_runner.H1VoidError: [precondition] no state factory: the public runner opens no games The H1 match is VOID: no viability report is produced and the seed block retires whole.',
     'the seed-block check is dropped from the PLAN validator':
@@ -3061,13 +3061,13 @@ EXPECTED_REASONS = {
     'the match is hidden behind a mode list again':
         "AssertionError: assert 'match' in ('qualify',)",
     'the public match path supplies no production setup':
-        'assert None is <function _production_setup at 0x107e0d010>',
+        'assert None is <function _production_setup at 0x<addr>>',
     'qualification builds production collaborators too':
         'AssertionError: qualification must not build production collaborators',
     'T1j loses the frozen per-call timeout in the setup':
         'assert None == 120',
     'the setup keeps the REFUSING binder':
-        "AssertionError: assert <function _refuse_binder at 0x10b44d7a0> == 'BINDER'",
+        "AssertionError: assert <function _refuse_binder at 0x<addr>> == 'BINDER'",
     "the openings come from H1's plan again (KeyError on the real path)":
         "KeyError: 'openings'",
     'the incumbent is loaded per game instead of once':
@@ -3107,7 +3107,7 @@ EXPECTED_REASONS = {
     'the output preflight is removed':
         'AssertionError: a precondition refusal is not a VOID',
     'the preflight ignores the trace path':
-        "FileExistsError: [Errno 17] File exists: '/private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/pytest-of-bill/pytest-16371/test_a_PREEXISTING_TRACE_path_0/t.jsonl'",
+        "FileExistsError: [Errno 17] File exists: '/private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/pytest-of-bill/pytest-<n>/test_a_PREEXISTING_TRACE_path_0/t.jsonl'",
     'a precondition refusal is reported as a VOID':
         'AssertionError: a precondition refusal is not a VOID',
     'a mid-run recorder failure escapes unclassified again':
@@ -3117,17 +3117,17 @@ EXPECTED_REASONS = {
     'the trace requirement is not applied to the match':
         'scripts.GPU.alphazero.h1_viability_runner.H1VoidError: [precondition] no state factory: the public runner opens no games The H1 match is VOID: no viability report is produced and the seed block retires whole.',
     'results and trace may be the same file':
-        'scripts.GPU.alphazero.h1_viability_runner.H1VoidError: the results file could not be created: results path already exists: /private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/pytest-of-bill/pytest-16376/test_THE_TWO_OUTPUT_PATHS_MUST0/both.jsonl. A run writes a NEW file; appending would merge two runs. The H1 match is VOID: no viability report is produced and the seed block retires whole.',
+        'scripts.GPU.alphazero.h1_viability_runner.H1VoidError: the results file could not be created: results path already exists: /private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/pytest-of-bill/pytest-<n>/test_THE_TWO_OUTPUT_PATHS_MUST0/both.jsonl. A run writes a NEW file; appending would merge two runs. The H1 match is VOID: no viability report is produced and the seed block retires whole.',
     'the paths are compared WITHOUT canonicalisation':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h1_viability_runner.H1Error'>",
     'canonicalisation stops resolving symlinks':
-        'scripts.GPU.alphazero.h1_viability_runner.H1Error: the trace path already exists: /private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/pytest-of-bill/pytest-16378/test_a_SYMLINKED_trace_path_is0/link.jsonl (a dangling symlink -- the directory entry is present). A run writes NEW files; appending would merge two runs, and overwriting would destroy the record of one. Nothing has been written and no trace was opened.',
+        'scripts.GPU.alphazero.h1_viability_runner.H1Error: the trace path already exists: /private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/pytest-of-bill/pytest-<n>/test_a_SYMLINKED_trace_path_is0/link.jsonl (a dangling symlink -- the directory entry is present). A run writes NEW files; appending would merge two runs, and overwriting would destroy the record of one. Nothing has been written and no trace was opened.',
     'the output precheck follows symlinks again (exists, not lexists)':
         'AssertionError: a knowable path condition became a VOID',
     'the precheck stops agreeing with create-exclusive open':
         'AssertionError: dangling',
     'only the results name is checked for existence':
-        "FileExistsError: [Errno 17] File exists: '/private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/pytest-of-bill/pytest-16381/test_a_DANGLING_TRACE_link_is_0/t.jsonl'",
+        "FileExistsError: [Errno 17] File exists: '/private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/pytest-of-bill/pytest-<n>/test_a_DANGLING_TRACE_link_is_0/t.jsonl'",
     'the public docstring denies that match mode is selectable':
         'AssertionError: the correction should record what it corrects',
     'the H1 block is un-registered from ACCOUNTED':
@@ -3239,7 +3239,7 @@ EXPECTED_REASONS = {
     'the outer cap shrinks to the inner deadline (no grace for the inner VOID)':
         'assert 900 == (900 + 60)',
     'main spawns itself without --worker':
-        "AssertionError: assert ('--worker' in ['/Users/bill/projects/TwixT_Game/.venv/bin/python', '-m', 'scripts.GPU.alphazero.runtime_requalification', '--out', '...te/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/pytest-of-bill/pytest-16417/test_main_supervises_a_WORKER_0/r.json'])",
+        "AssertionError: assert ('--worker' in ['/Users/bill/projects/TwixT_Game/.venv/bin/python', '-m', 'scripts.GPU.alphazero.runtime_requalification', '--out', '...te/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/pytest-of-bill/pytest-<n>/test_main_supervises_a_WORKER_0/r.json'])",
     'every call no longer carries the frozen per-call timeout':
         'assert False',
     'no cleanup after a worker that exits before the timeout':
@@ -3595,7 +3595,7 @@ EXPECTED_REASONS = {
     'the production seam is a refusing stub again':
         'AssertionError: the seam refuses before playing: that is a stub, not a path',
     'the seam no longer calls the harness game loop':   # ⚠ ERROR, not a failure: this control is INDETERMINATE
-        '  File "/private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/injected-defect-controls-dlq1b_4r/checkout/scripts/GPU/alphazero/h2_match_runner.py", line 406',
+        '  File "/private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/injected-defect-controls-<x>/checkout/scripts/GPU/alphazero/h2_match_runner.py", line 406',
     'the production seam loads the model AT IMPORT':
         "AssertionError: ('e4_screen_runner', ['', 'Any', 'Callable', 'Dict', 'List', 'Mapping', ...])",
     'the incumbent keeps the temperature config in production':
@@ -3623,7 +3623,7 @@ EXPECTED_REASONS = {
     "a timeout is reported as the worker's own exit code":
         'AssertionError: assert 0 == 6',
     'compile is handed a fresh, unstarted clock again':
-        'assert [<scripts.GPU... 0x106c1b9d0>] == [<scripts.GPU... 0x107b03770>]',
+        'assert [<scripts.GPU... 0x<addr>>] == [<scripts.GPU... 0x<addr>>]',
     'the seam accepts an unstarted clock':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h2_match_runner.H2Error'>",
     'the run never starts its deadline':

@@ -91,6 +91,16 @@ def test_with_a_fixture(loaded):
     assert loaded == "good", "THE VALUE IS WRONG"
 '''
 
+VOLATILE_TEST = '''\
+import src
+
+
+def test_volatile(tmp_path):
+    """Its failure message carries a per-run tmp path AND an object address --
+    the two shapes that made frozen reasons unmatchable on a second run."""
+    assert src.VALUE == "good", f"WRONG under {tmp_path} for {object()!r}"
+'''
+
 MEDDLE_TEST = '''\
 import pathlib
 
@@ -120,6 +130,7 @@ def sandbox(tmp_path):
     (repo / "tests" / "test_target.py").write_text(TARGET_TEST)
     (repo / "tests" / "test_meddle.py").write_text(MEDDLE_TEST)
     (repo / "tests" / "test_fixture.py").write_text(FIXTURE_TEST)
+    (repo / "tests" / "test_volatile.py").write_text(VOLATILE_TEST)
     (repo / "tests" / "test_long.py").write_text(LONG_TEST)
     (repo / "conftest.py").write_text(
         "import pathlib, sys\n"
@@ -519,3 +530,29 @@ def test_A_FIXTURE_SETUP_ERROR_IS_INDETERMINATE_NOT_REJECTED(sandbox):
     assert "REJECTED" not in r.stdout, (
         "A FIXTURE SETUP ERROR SCORED AS A REJECTION:\n" + r.stdout)
     assert r.returncode == PROBLEMS, (r.returncode, r.stdout)
+
+
+def test_A_REASON_RECORDED_ON_ONE_RUN_MATCHES_ON_THE_NEXT(sandbox, tmp_path):
+    """🔴 A reason that cannot match twice is not a check. The frozen reasons are
+    compared as text, and pytest's diagnostics carry content that changes every run
+    -- the numbered tmp session, object repr addresses, and this driver's own
+    randomly named checkout. Ten of the 539 real controls drifted on exactly those
+    when the frozen reasons were first measured, reported INDETERMINATE, and none
+    of the ten had anything wrong with it.
+
+    Records on one run and requires the recorded value to hold on the NEXT one,
+    which is the only way to ask this question honestly.
+    """
+    import json
+    ctl = [("a message with per-run content", "src.py",
+            'VALUE = "good"', 'VALUE = "bad"', "tests/test_volatile.py::test_volatile")]
+    out = tmp_path / "observed.json"
+    drive(sandbox, write_defects(sandbox, ctl, {}), "--record", str(out))
+    recorded = json.loads(out.read_text())
+    assert recorded, "nothing was recorded to re-check"
+
+    r = drive(sandbox, write_defects(sandbox, ctl, recorded))
+    assert "REJECTED" in r.stdout, (
+        "A REASON RECORDED ON ONE RUN DID NOT MATCH ON THE NEXT:\n"
+        + f"recorded: {recorded}\n" + r.stdout)
+    assert r.returncode == OK, (r.returncode, r.stdout)

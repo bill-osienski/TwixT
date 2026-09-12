@@ -39,6 +39,7 @@ import importlib.util
 import json
 import os
 import pathlib
+import re
 import shutil
 import signal
 import subprocess
@@ -94,6 +95,29 @@ def failed_lines(node, out):
             if l.startswith(want) and (len(l) == len(want) or l[len(want)] in " [")]
 
 
+# 🔴 A REASON THAT CANNOT MATCH TWICE IS NOT A CHECK. Frozen reasons are compared
+# as text, and pytest's own diagnostics carry content that differs every run: the
+# numbered tmp session (`pytest-16280` vs `pytest-16522`), object repr addresses,
+# and this driver's own randomly named checkout. Ten of 539 controls drifted on
+# exactly these three shapes the first time the frozen reasons were measured.
+_VOLATILE = (
+    (re.compile(r"pytest-\d+"), "pytest-<n>"),
+    (re.compile(r"0x[0-9a-f]{4,}"), "0x<addr>"),
+    (re.compile(r"injected-defect-controls-\w+"), "injected-defect-controls-<x>"),
+)
+
+
+def stable(text):
+    """`text` with the parts that differ run to run replaced by placeholders.
+
+    Applied to BOTH sides of every comparison and at recording time, so a reason
+    frozen before this existed still matches.
+    """
+    for pattern, placeholder in _VOLATILE:
+        text = pattern.sub(placeholder, text)
+    return text
+
+
 def evidence_lines(out):
     """The `E   ` lines of the traceback -- the assertion text as pytest printed it.
 
@@ -131,7 +155,7 @@ def classify(node, expected, rc, out):
     observed = evidence[0] if evidence else failed[0]
     # against the ASSERTION TEXT, not the whole output: a string that happens to
     # appear in a source-context line is not the reason the test failed.
-    if expected not in "\n".join(evidence):
+    if stable(expected) not in stable("\n".join(evidence)):
         return "INDETERMINATE", f"failed for another reason: {observed[:200]}"
     return "REJECTED", observed[:200]
 
@@ -275,7 +299,7 @@ def main(argv):
             if rc != 0:
                 ev = evidence_lines(out)
                 if ev:
-                    observed_reasons[label] = ev[0]
+                    observed_reasons[label] = stable(ev[0])
     finally:
         if not _PRESERVE:        # a violated or signalled checkout is EVIDENCE
             discard()

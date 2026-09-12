@@ -117,7 +117,7 @@ control("NC5 the declared reason is never actually looked for",
         "test_A_FAILURE_FOR_THE_WRONG_REASON_IS_INDETERMINATE",
         "A FAILURE AT A DIFFERENT ASSERTION SCORED AS A REJECTION",
         driver=broken(DRIVER,
-                      '    if expected not in "\\n".join(evidence):\n',
+                      '    if stable(expected) not in stable("\\n".join(evidence)):\n',
                       "    if False:\n",
                       "nc5_reason_never_checked.py"))
 
@@ -211,6 +211,14 @@ control("NC13 the reason is taken from the FITTED summary line, not the tracebac
                       '                ev = [l.split(" - ", 1)[1] for l in failed_lines(node, out)\n'
                       '                      if " - " in l]\n',
                       "nc13_reason_from_the_summary.py"))
+
+control("NC15 the reason is compared raw, so per-run content never matches twice",
+        "test_A_REASON_RECORDED_ON_ONE_RUN_MATCHES_ON_THE_NEXT",
+        "A REASON RECORDED ON ONE RUN DID NOT MATCH ON THE NEXT",
+        driver=broken(DRIVER,
+                      '    if stable(expected) not in stable("\\n".join(evidence)):\n',
+                      '    if expected not in "\\n".join(evidence):\n',
+                      "nc15_reason_compared_raw.py"))
 
 # ═════════ THE OTHER DIRECTION: a check nothing can satisfy is an outage, not
 # containment. The 2026-09-12 lesson from the H2 boundary, applied here.
