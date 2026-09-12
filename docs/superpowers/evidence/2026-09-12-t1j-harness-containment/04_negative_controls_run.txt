@@ -1,0 +1,20 @@
+CAUGHT   NC1
+CAUGHT   NC2 H2 guards moved below the toolchain
+CAUGHT   NC3 H1 seam boundary deleted while its gate-removal controls remain
+CAUGHT   NC4
+CAUGHT   NC5
+CAUGHT   NC6 the boundary made unconditional (blocks honest seam tests)
+
+=== negative controls: 6/6 caught ===
+  [x] NC1 the boundary is the ONLY stop for an open-gate seam
+      NC1 intact=H2ContainmentError boundary-no-op=REACHED THE TOOLCHAIN
+  [x] NC2 H2 guards moved below the toolchain
+      E   AssertionError: gate after verified_paths
+  [x] NC3 H1 seam boundary deleted while its gate-removal controls remain
+      E   AssertionError: scripts/GPU/alphazero/h1_viability_runner.py has gate-removal controls ['the barriers move BELOW the plan load and the recorder', 'registering the block opens the gate too'] but its production seam has NO containment boundary -- that is the incident, again
+  [x] NC4 a control that deletes H2's gate is in the harness
+          assert "scripts/GPU/alphazero/h2_match_runner.py" not in offenders, offenders
+  [x] NC5 the harness import guard removed
+          assert 'if __name__ != "__main__":' in src
+  [x] NC6 the boundary made unconditional (blocks honest seam tests)
+          raise ContainmentError(

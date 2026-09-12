@@ -1,0 +1,42 @@
+INCIDENT -- 2026-09-12T12:46:59Z
+THE CONTROL HARNESS RAN AN UNAUTHORIZED MATCH.
+
+WHAT HAPPENED
+  The injected-defect control 'the public entry never reads the gate' deletes
+  `check_gate()` from `run_h2`. Until this round that was harmless: the public
+  entry had no production path, so the target test just saw a different error.
+  The builder repair completed the production seam -- so with the gate check
+  removed, `run_h2` resolved the toolchain, COMPILED the helper, LOADED the
+  model and PLAYED REAL GAMES against T1j, inside a pytest subprocess, for
+  about three hours, until I killed it.
+
+WHAT IT DID, FROM ITS OWN RECORDS
+  games completed   : 383 of 736
+  seeds DRAWN       : 202620000..202620382  (383 distinct)
+  ply records       : 14708
+  transcripts       : 383
+  last trace line   : {"event": "task_start", "index": 383}
+  terminal verdict  : NONE -- it was killed mid-game 383, so no run_end exists
+
+WHAT WAS DAMAGED
+  1. 383 seeds of the RETRY block [202620000, 202620736) were DRAWN by a run
+     nobody authorized. Those seeds are spent.
+  2. The block was registered hours earlier as accounted/unspent. That record is
+     now FALSE and is corrected in the same edit as this note.
+  3. Nothing else: no registry was written by the run, no gate was left open, the
+     sources it injected were restored (I had to do that by hand -- SIGKILL skips
+     the harness's own `finally`), and all seven gates read False.
+
+WHAT IS *NOT* DAMAGED, STATED SO IT IS NOT ASSUMED
+  The 383 games' records are preserved here as INCIDENT evidence and are NOT H2
+  data. They were not produced under the frozen protocol -- no authorization, no
+  preflight, an interrupted one-shot schedule -- and using them as a partial
+  result would be exactly the 'partial schedule wearing a finished run's clothes'
+  the design forbids. No rate, no verdict, and no analysis is computed from them.
+
+THE DEFECT IN MY OWN MACHINERY, which is the real finding
+  A control that DELETES THE ONLY GATE can now reach production collaborators.
+  The gate was the single thing standing between an injected defect and a real
+  match, and the harness's job is to delete exactly that kind of thing. The
+  harness must not be run again until the production seam ALSO reads the gate,
+  so that removing one check refuses instead of executing.

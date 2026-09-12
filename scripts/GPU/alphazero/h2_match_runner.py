@@ -275,6 +275,53 @@ def run_h2(*, results_path: str, trace_path: str, report_path: str) -> Dict[str,
                              deadline_s=RUN_DEADLINE_S, _deadline=deadline)
 
 
+#: 🔴 THE TRIPWIRE, AND WHY IT EXISTS. On 2026-09-12 an injected-defect control
+#: deleted `check_gate()` from `run_h2`. The gate was the ONLY thing between that
+#: control and a real match, and deleting safeguards is precisely what the harness
+#: does -- so the control resolved the toolchain, compiled the helper, loaded the
+#: model and PLAYED 383 REAL GAMES, spending a seed block nobody had authorized it
+#: to touch.
+#:
+#: A second gate check is necessary and NOT SUFFICIENT: a control can delete two
+#: checks as easily as one. So the effectful boundary is ALSO INERT INSIDE A TEST
+#: PROCESS. A test may reach it and must then FAIL LOUDLY; it can never proceed.
+#: The real run is a fresh subprocess with no test framework loaded.
+PRODUCTION_BOUNDARY_NOTE = (
+    "the production seam is inert under a test runner: reaching it from a test is a "
+    "failure, not a match")
+
+
+class H2ContainmentError(H2Error):
+    """The production boundary was reached from a test process. Nothing ran."""
+
+
+def _assert_the_production_acts_are_inert(TC, D1, SCREEN_CMD, HARNESS) -> None:
+    """Refuse if, in a test process, ANY of the four production acts is still real.
+
+    🔑 NOT a gate and not a substitute for one: it grants nothing and blocks nothing
+    a real run does. It exists so that a control which removes every authorization
+    check still cannot reach a toolchain, a javac, a model or a seed -- it hits an
+    inert boundary and fails immediately, which is what a control SHOULD do.
+
+    ⚠ AND IT MUST NOT BLOCK AN HONEST TEST. The first version of this repair refused
+    every test process outright at the top of the seam; it took eleven passing tests
+    with it, including the real-builder compatibility tests that caught the defect
+    which VOIDed H2's first attempt. The distinction is structural, not intentional:
+    a seam test replaces all four acts, a gate-removal control leaves them all real.
+    """
+    from . import e4_screen_command as CMD
+    try:
+        # ONE OWNER, shared with H1 and every other match path.
+        CMD.assert_production_acts_are_inert("H2's production seam", (
+            (TC, "verified_paths"),                     # toolchain resolution
+            (D1, "_default_compile"),                   # javac
+            (SCREEN_CMD, "_default_load_evaluator"),    # the incumbent checkpoint
+            (HARNESS, "play_task"),                     # the game, and its seed
+        ))
+    except CMD.ContainmentError as e:
+        raise H2ContainmentError(str(e)) from None
+
+
 def _production_play(results_path: str, deadline: Any = None) -> Callable[..., Dict[str, Any]]:
     """THE REAL PLAY SEAM, built exactly as the qualified commands build it.
 
@@ -305,6 +352,10 @@ def _production_play(results_path: str, deadline: Any = None) -> Callable[..., D
 
         state = play._state
         if state is None:
+            # 🔴 BOTH CHECKS, HERE, BEFORE ANY EFFECT. Not because the entry's check
+            # is redundant -- because a control can delete it, and did.
+            check_gate()
+            _assert_the_production_acts_are_inert(TC, D1, SCREEN_CMD, HARNESS)
             tc = TC.verified_paths()
             java = os.path.join(tc["jdk_home"], "bin", "java")
             classes = results_path + ".t1j_classes"
@@ -347,6 +398,7 @@ def _production_play(results_path: str, deadline: Any = None) -> Callable[..., D
                 # six-hour run is not a hypothetical.
                 "cleanup": SCREEN_CMD._default_cleanup,
             }
+        check_gate()                       # every game, not only the first
         cap = _CapturingRecorder()
         try:
             result = state["harness"].play_task(

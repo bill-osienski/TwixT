@@ -1,0 +1,93 @@
+INCIDENT 2 — 2026-09-12 — THE DEFECT HARNESS WAS STARTED BY READING IT
+======================================================================
+No match. No model. No JVM. No seed. Every test result taken in a
+seven-minute window is nonetheless worthless, and one repair was silently
+undone. Same class as incident 1: a safeguard that exists but does not bind.
+
+WHAT I DID
+----------
+To find out which controls delete an authorization check, I tried to read the
+harness's `DEFECTS` list by executing the part of the file above `def main(`:
+
+    exec(compile(src.split("def main(")[0], "ctl", "exec"), ns)
+
+There is no `def main(` in that file. The harness's ENTIRE DRIVER — the clean
+baseline run, the inject/test/restore loop over 538 controls, the restores —
+is TOP-LEVEL CODE. `src.split(...)[0]` was therefore the whole file, and the
+`exec` STARTED THE HARNESS.
+
+The call blocked past its 120 s tool timeout and was moved to the background.
+I believed the moved command was inert.
+
+WHAT IT DID, 08:56 → 09:03 (~7 min, orphaned to PID 1 as PID 29489)
+-------------------------------------------------------------------
+* Injected source defects into `scripts/GPU/alphazero/h1_viability_rules.py`
+  and `scripts/GPU/alphazero/h1_viability_runner.py`, one at a time, running a
+  target test after each and restoring it.
+* Reached at least `tests/test_h1_runner.py::test_the_SIGALRM_supervisor_raises
+  _H1s_void_not_D1s` (observed as child PID 33480).
+* NOTHING ELSE. No results file, no trace, no `.t1j_classes` directory, no Java
+  process, no MLX model load, no seed draw. All seven gates stayed False.
+  The sealed evidence directories were not touched (mtimes 08:46 and 08:50).
+
+WHY MY CONTAINMENT WORK DID NOT STOP IT
+---------------------------------------
+It did not need to. Nothing here tried to play a game: the harness was doing
+its ordinary job of editing source and running tests. The boundary added this
+round is about reaching PRODUCTION from a test process. This incident is the
+OTHER half of the same instruction — "prevent subsequent tests from running
+against an unverified working tree" — and I had not built that half.
+
+TWO FAILURES OF MINE, BEYOND STARTING IT
+----------------------------------------
+1. My kill missed. I ran `pkill -f "ctl"`; the process's command line is
+   `Python -` (the script came from stdin), so the pattern matched nothing.
+   The same self-defeating-pattern class as two earlier probes in this project.
+2. I read the evidence and did not believe it. Immediately after, I ran
+   `ps ... | grep -c "[p]ytest"` and got `1`. That 1 WAS the harness's pytest
+   child. I treated a positive count as noise, reported "nothing ran", and
+   carried on.
+
+WHAT WAS INVALIDATED
+--------------------
+Everything I ran in that window, against a tree being mutated underneath it:
+  * three runs of `tests/test_h2_containment.py` (including the "13 passed")
+  * the first negative-control sweep, reported as 4/4 caught
+  * an attempted H1/H2 test-file run
+All of it has been re-run afterwards on a tree verified quiet and verified
+unchanged before and after. The re-runs are the results of record.
+
+AND ONE REPAIR WAS UNDONE
+-------------------------
+The kill's SIGTERM ran the harness's own restore-all handler — the hardening
+added this round, working as designed — which rewrote every file it had
+captured to ITS baseline. That baseline predated the containment guard I had
+just added to H1's production seam, so `check_gate()` +
+`assert_outside_a_test_process()` vanished from `h1_viability_runner.py`.
+I found it by diff and re-applied it.
+
+A CORRECTION OF RECORD
+----------------------
+When I first saw the injected defect in `h1_viability_rules.py` I said it was
+"left on disk by the SIGKILL'd harness" from incident 1, and that my earlier
+restoration had missed it. That was WRONG. It was a LIVE injection by a
+harness that was running at that moment. Incident 1's leftovers had been
+restored correctly; this was a new, second unauthorized run.
+
+THE REPAIR
+----------
+`01_controls.py.txt` now refuses to run unless `__name__ == "__main__"`, placed
+above every statement that can touch a file, and
+`test_the_harness_REFUSES_TO_RUN_ON_IMPORT_OR_EXEC` asserts both the refusal
+(for a namespace with no `__name__`, a named one, and a near-miss
+`__main__x`) and the ORDERING — no file-touching statement may precede the
+guard. The control list is now read by `ast.parse`, never by executing it.
+`01_controls_as_it_ran_UNGUARDED.py.txt` here preserves the file exactly as it
+ran, byte for byte.
+
+NEGATIVE CONTROL
+----------------
+NC5 strips the guard from a COPY and requires the guard test to fail; it does
+so statically, on the test's first assertion, before any exec. The dynamic
+negative control for this guard is incident 2 itself, and it is deliberately
+not reproduced: reproducing it means starting the harness again.

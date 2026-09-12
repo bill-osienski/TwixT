@@ -1,0 +1,12 @@
+MANIFEST -- 2026-09-12-t1j-harness-containment
+9 files
+
+2468451afbf8e2c78186c5e8e23364ee964856c343c06043c3596d70d5e30772     177676  01_controls.py.txt
+dde43884d825994c0b1f7004965b90af84fda7c6634512be5adcfa238670e8a2       6918  02_negative_controls.py.txt
+e71ab1929313f24739a716a438be31bd593719a4ff058bb7c8067244f68ca35b       1819  03_nc1_inside_pytest.py.txt
+a958a284750c7ecc083d38f1c8c3cd42939c1e1af8883995c78636039b5ba438       1214  04_negative_controls_run.txt
+a8c5f271609691a63363f0edfed58c1826a4f8d8a2c65b515044e146b4f5b70f        388  05_containment_tests_run.txt
+4e0eae3d09bf4323e291b574bfb9148a175de010e476c9c1e2cccec7760e7563       6681  06_containment.txt
+bcb4a33ab5be45938c0cd689fa4ea4af549a6b32ef7b85419aa96dd3d6c98902      33761  07_harness_run.txt
+ba1e604452fa1c9b192cc2cf7b07fcfcf165dfe8c1ab54ccd5ade7778636c6cd      34087  08_harness_run_FAILED_BASELINE.txt
+6e56d5f5c7e508dab6bcf1fb5e25f95620dc4177708e4a9070b9217493414105      25846  09_full_suite_run.txt

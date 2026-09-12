@@ -1,0 +1,108 @@
+HARNESS AND SEAM CONTAINMENT — 2026-09-12
+=========================================
+Authorized scope: retire the whole retry block, repair the harness, verify with
+narrow tests before restarting the full harness. No match, no push.
+
+WHAT WENT WRONG (incident 1, recorded separately)
+-------------------------------------------------
+An injected-defect control, "the public entry never reads the gate", deleted
+`check_gate()` from `run_h2`. `run_h2`'s gate was the ONLY check between that
+control and a real match, so the control resolved the toolchain, compiled the
+helper, loaded the incumbent and played 383 of 736 real games over ~3 hours
+before it was killed. A SIGKILL skipped the harness's `finally`, leaving
+injected source on disk, and the surviving shell then ran the full suite
+against it.
+
+THE SEED ACCOUNTING, CORRECTED
+------------------------------
+Block [202620000, 202620736):
+  * ACCOUNTED 736 — unchanged, from its registration.
+  * EXPOSED 383 — [202620000, 202620383). Each of those seeds has a
+    `task_result` AND ply records in the preserved rogue output.
+  * NOT claimed: seed 202620383. Zero-based task 383 emitted a trace
+    `task_start` and nothing else — no `opening_bound`, no ply, no result. It
+    may have been drawn; the record cannot say. The uncertainty is recorded
+    rather than resolved.
+  * RETIRED 736 — THE WHOLE BLOCK. A started one-shot schedule retires whole,
+    and the whole-block retirement covers the uncertainty about task 383
+    without a claim either way.
+Verified: accounted 736 / exposed 383 / retired 736;
+`seed_status(202620383)` = exposed False, retired True.
+`check_seed_registration()` still PASSES (retirement does not un-account a
+block, by design); `validate_schedule_executable` now REFUSES the schedule.
+
+FOUR PROTECTIONS, AND WHAT EACH ONE BINDS
+-----------------------------------------
+1. A SECOND GATE CHECK AT THE PRODUCTION SEAM, before toolchain resolution,
+   compilation, model loading or seed use — in H2's `play` and in H1's
+   `setup`. Deleting one gate check now leaves the other.
+2. AN ACT-AWARE CONTAINMENT BOUNDARY, `e4_screen_command.
+   assert_production_acts_are_inert(what, acts)`, called at both seams
+   immediately after the gate. In a process with `pytest`/`_pytest`/`unittest`
+   loaded it refuses if ANY declared production act is still the genuine
+   function — naming every one that is. The declared acts are the toolchain
+   resolver, the compile step, the checkpoint load and the game loop (H1
+   declares the first three; its setup plays nothing).
+   🔑 THIS IS THE LINE BETWEEN A SEAM TEST AND A GATE-REMOVAL CONTROL, and it
+   is structural, not a matter of intent: an honest seam test replaces every
+   act, a control that deletes the gate leaves them all real.
+   ⚠ MY FIRST VERSION OF THIS REPAIR WAS WRONG. It refused any test process
+   outright at the top of the seam. That contained the incident and broke
+   eleven honest tests with it — including the real-builder compatibility
+   tests, which are the ones that caught the defect that VOIDed H2's first
+   attempt. A containment check that cannot tell the two apart is an outage,
+   and the full suite is what exposed it.
+3. THE UNCONDITIONAL BOUNDARY AT THE MODEL LOAD stays, inside
+   `_default_load_evaluator`: the last-ditch chokepoint every match path (L0,
+   H1, H2, D1) shares. No test calls it for real.
+4. THE HARNESS RESTORES RELIABLY AND REFUSES TO RUN ON IMPORT.
+   * The gate-removal control is REMOVED, not re-aimed.
+   * SIGTERM/SIGINT/SIGHUP handlers restore every injected source and exit 130.
+   * Every restore is verified by hash; a mismatch prints "RESTORATION FAILED"
+     and raises SystemExit(2) rather than running the next control against an
+     unverified tree.
+   * `if __name__ != "__main__": raise ImportError(...)`, above every statement
+     that can touch a file — see incident 2, where reading the file ran it.
+
+WHERE AUTHORIZATION IS RELAXED FOR A TEST, AND WHY THAT IS SAFE
+---------------------------------------------------------------
+Because the seam re-reads its gate, a seam test must open it. That happens in
+exactly three places — H2's `seam_boundaries` fixture and H1's two
+production-setup tests — and each one calls
+`assert_production_acts_are_inert` FIRST, so the relaxation cannot coexist with
+a real production act. Those places are the real-builder compatibility tests,
+kept as required, and they are separated from the harness's gate-removal
+controls by construction: the controls edit production source and leave the
+acts real, which the boundary refuses.
+
+THREE INHERITED H1 CONTROLS STILL REMOVE AN AUTHORIZATION CHECK
+---------------------------------------------------------------
+"the barriers move BELOW the plan load and the recorder", "the gate opens the
+registration barrier too" and "registering the block opens the gate too" move
+or delete H1's barriers — that IS the defect they inject, and they are worth
+keeping. They are admissible only because H1's seam now carries the boundary,
+and `test_NO_CONTROL_DELETES_AN_AUTHORIZATION_CHECK` enforces exactly that: no
+control may remove a check from H2's runner at all, and any OTHER file with
+such a control must have a containment boundary ahead of every production act
+in its seam, located structurally rather than by name.
+
+VERIFICATION — NARROW TESTS FIRST, AS REQUIRED
+----------------------------------------------
+`tests/test_h2_containment.py`, 17 tests, all passing. Six negative controls
+(`02_negative_controls.py.txt`, run in `04_negative_controls_run.txt`), each
+required to fail FOR ITS STATED REASON rather than merely to fail:
+  NC1 the boundary is the only thing stopping an open-gate seam — with it
+      intact the seam raises H2ContainmentError; with it no-op'd the seam
+      reaches the toolchain. Run INSIDE pytest: the first version ran under
+      plain `python`, where the boundary is SUPPOSED to allow execution, and
+      so reported "not caught" for a protection that works.
+  NC2 H2's guards moved below the toolchain -> the ordering test fails.
+  NC3 H1's boundary deleted while its gate-removal controls remain -> the
+      control-admissibility test fails, naming both controls.
+  NC4 a control that deletes H2's gate put back into the harness -> refused.
+  NC5 the harness's import guard stripped -> the guard test fails. Statically
+      only: executing an unguarded harness IS incident 2 and is not reproduced.
+  NC6 the boundary made unconditional -> the honest seam tests fail. The
+      mistake I actually made, kept as a control in the other direction.
+Every control restores its file and re-hashes it; a failed restore is
+SystemExit(2).

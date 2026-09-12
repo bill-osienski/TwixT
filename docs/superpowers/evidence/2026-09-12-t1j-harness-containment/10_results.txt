@@ -1,0 +1,41 @@
+RESULTS OF RECORD — containment round, 2026-09-12
+=================================================
+All figures below were read from the runs packaged here, not from memory.
+
+NARROW CONTAINMENT TESTS  tests/test_h2_containment.py -> 17 passed (05)
+NEGATIVE CONTROLS         6 / 6 caught, each required to fail FOR ITS STATED
+                          REASON and not merely to fail (02, 04)
+FULL SUITE                4,434 passed / 0 failed / 4 skipped / 53 deselected,
+                          894.72 s (09)
+FULL DEFECT HARNESS       539 / 539 defects rejected; 0 not caught; 0 stale;
+                          539 distinct injections; 0 duplicate labels;
+                          clean baseline over 441 distinct target tests PASS;
+                          ALL CONTROLS RAN True; every source restored True (07)
+
+THE FIRST HARNESS RUN FAILED ITS BASELINE, AND THAT IS PRESERVED (08)
+---------------------------------------------------------------------
+Run 1 also printed "538/538 defects rejected; 0 not caught; 0 stale" — and it
+was WORTHLESS, because `clean baseline: FAIL`. Two controls still named target
+tests I had renamed hours earlier when the incident inverted their claims:
+    test_THE_RETRY_BLOCK_IS_ACCOUNTED_ONLY_and_the_barrier_is_SATISFIED
+    test_THE_RETRY_SCHEDULE_IS_EXECUTABLE_and_matches_BOTH_new_pins
+pytest exits non-zero for a node id it cannot find, so those four controls
+scored REJECTED FOR FREE. `ALL CONTROLS RAN` was correspondingly False. This is
+the third round in which the clean-baseline check caught exactly this, and it is
+the reason a headline count is never the verdict.
+
+Repair, in the harness: two controls repointed to the renamed tests, and two
+INVERTED, because the incident changed what the defect is —
+  * "the retry block ALSO marked RETIRED before it is drawn" is now the truth,
+    so the control became "the WHOLE-BLOCK retirement is dropped";
+  * "ALSO marked EXPOSED before it is drawn" split into "the exposure is widened
+    to the WHOLE block, claiming task 383's seed as drawn" and "the 383
+    confirmed draws are not recorded as EXPOSED at all".
+538 controls became 539.
+
+SCOPE OF THESE CHECKS
+---------------------
+They establish that the protections REJECT what they claim to reject, on this
+working tree, at this commit. They establish nothing about H2 itself: no match
+ran, no model was loaded, no JVM started, no seed drawn. All seven gates are
+False. The third seed block has NOT been prepared.

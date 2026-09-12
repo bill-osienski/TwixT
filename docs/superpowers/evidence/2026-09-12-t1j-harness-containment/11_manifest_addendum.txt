@@ -1,0 +1,5 @@
+MANIFEST ADDENDUM -- 2026-09-12-t1j-harness-containment
+`00_manifest.txt` was written before this file existed and is create-only, so
+it is NOT edited. This addendum covers the one file added after it.
+
+5278d3884163452597cbf129f23ee48cfe907cdaaedd8097d45381b5a16080c9       2470  10_results.txt

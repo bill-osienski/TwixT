@@ -432,9 +432,81 @@ def _default_compile(javac: str, jar: str, out_dir: str) -> Dict[str, Any]:
     return {"compile_inputs": sources, "compiled_classes": classes}
 
 
+#: 🔴 THE SYSTEMIC BOUNDARY, added after the 2026-09-12 incident. An injected-defect
+#: control deleted H2's gate check; with the production seam wired, the run compiled
+#: the helper, LOADED THE MODEL and played 383 real games, spending a registered seed
+#: block. Three H1 controls delete H1's gate the same way.
+#:
+#: Every match path -- L0, H1, H2, D1 -- must load the incumbent through the function
+#: below, and NO test loads it for real (every reference in the test suite is a name
+#: check). So this is where a test process is stopped, whatever authorization checks a
+#: control has removed. It grants nothing and blocks nothing a real run does: a real
+#: run is a fresh subprocess with no test framework loaded.
+class ContainmentError(Exception):
+    """A test process reached an irreversible production act. Nothing ran.
+
+    🔑 ITS OWN CLASS, and not `AuthorizationError`: that one replaces any message
+    with the screen's fixed text, so the REASON for this refusal would have been
+    swallowed -- the first version of this repair did exactly that, and a two-line
+    check turned the refusal into a misleading one.
+    """
+
+
+def assert_outside_a_test_process(what: str = "the model") -> None:
+    """Refuse if a test framework is loaded in THIS interpreter.
+
+    NOT a gate and no substitute for one. A gate says whether a run is authorized;
+    this says that a TEST may not perform the run's irreversible acts. Reaching it
+    from a test means an authorization check has been removed -- a FAILURE to report,
+    never a match to continue.
+    """
+    import sys
+    for name in ("pytest", "_pytest", "unittest"):
+        if name in sys.modules:
+            raise ContainmentError(
+                f"refusing to load {what} from a process with {name!r} loaded. "
+                f"Nothing was loaded, compiled, drawn or played. A test that reaches "
+                f"this point has removed an authorization check: on 2026-09-12 exactly "
+                f"that happened and it played 383 real games before it was killed.")
+
+
+def assert_production_acts_are_inert(what: str, acts) -> None:
+    """In a TEST PROCESS, refuse if ANY declared production act is still the genuine
+    function. `acts` is (module, attribute) pairs.
+
+    🔑 THIS IS THE LINE BETWEEN A SEAM TEST AND A GATE-REMOVAL CONTROL, and it is
+    not a matter of intent. A legitimate seam test replaces every effectful
+    collaborator -- the toolchain resolver, the compile step, the checkpoint load,
+    the game loop -- and asserts on the wiring in between; it never reaches a real
+    one. A control that deletes an authorization check leaves them ALL real, and
+    that is exactly what it took to play 383 games on 2026-09-12.
+
+    ⚠ An earlier version of this repair refused a test process OUTRIGHT at the top of
+    the seam. That contained the incident and broke eleven honest tests with it --
+    including the real-builder compatibility tests, which are the ones that caught
+    the defect that VOIDed H2's first attempt. A containment check that cannot tell
+    the two apart is not finished.
+    """
+    import sys
+    if not any(name in sys.modules for name in ("pytest", "_pytest", "unittest")):
+        return
+    live = [f"{mod.__name__}.{name}" for mod, name in acts
+            if getattr(getattr(mod, name, None), "__module__", None) == mod.__name__
+            and getattr(getattr(mod, name, None), "__qualname__", None) == name]
+    if live:
+        raise ContainmentError(
+            f"refusing to run {what} from a test process: "
+            f"{', '.join(live)} {'is' if len(live) == 1 else 'are'} still the REAL "
+            f"production function. Nothing was resolved, compiled, loaded, drawn or "
+            f"played. A test that reaches this point has removed an authorization "
+            f"check: on 2026-09-12 exactly that happened and 383 real games were "
+            f"played before it was killed.")
+
+
 def _default_load_evaluator(repo_root: str):
     """Loads the checkpoint the precondition verified -- the same path, by
     construction: check_checkpoint refuses any other."""
+    assert_outside_a_test_process('the incumbent checkpoint')
     from .twixtbot_g3_reference import load_reference_evaluator
     return load_reference_evaluator("calib020_0001", repo_root)
 

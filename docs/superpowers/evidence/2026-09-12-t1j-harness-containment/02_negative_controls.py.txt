@@ -1,0 +1,140 @@
+"""NEGATIVE CONTROLS for the containment tests. Each one breaks exactly one
+protection and requires the matching test to FAIL. Nothing here can reach
+production: the toolchain resolver is replaced by a sentinel raiser before any
+guard is relaxed, and every source edit is restored and re-hashed.
+"""
+import ast, hashlib, os, pathlib, subprocess, sys, tempfile
+
+ROOT = pathlib.Path("/Users/bill/projects/TwixT_Game")
+PY = str(ROOT / ".venv/bin/python")
+TEST = "tests/test_h2_containment.py"
+results = []
+
+
+def sha(p): return hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()
+
+
+def run(node, harness_override=None):
+    env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
+    env.pop("H2_CONTAINMENT_HARNESS", None)
+    if harness_override:
+        env["H2_CONTAINMENT_HARNESS"] = harness_override
+    r = subprocess.run([PY, "-m", "pytest", node, "-q", "-s", "--no-header"],
+                       cwd=ROOT, capture_output=True, text=True, env=env)
+    return r.returncode, (r.stdout + r.stderr)
+
+
+def control(label, path, old, new, node, expect=None):
+    """Inject, require the named test to FAIL, restore, verify the restore."""
+    p = ROOT / path
+    before_bytes, before = p.read_bytes(), sha(p)
+    src = before_bytes.decode()
+    assert src.count(old) == 1, f"{label}: anchor is STALE ({src.count(old)} matches)"
+    try:
+        p.write_bytes(src.replace(old, new).encode())
+        code, out = run(node)
+    finally:
+        p.write_bytes(before_bytes)
+        if sha(p) != before:
+            print(f"RESTORATION FAILED for {path}", file=sys.stderr)
+            raise SystemExit(2)
+    caught = code != 0
+    if caught and expect is not None and expect not in out:
+        caught = False                 # failed, but NOT for the reason claimed
+        label += f"  [FAILED FOR THE WRONG REASON: {expect!r} absent]"
+    detail = next((l for l in out.splitlines() if expect and expect in l),
+                  out.strip().splitlines()[-1] if out else "")
+    results.append((label, caught, detail))
+    print(f"{'CAUGHT  ' if caught else 'NOT CAUGHT'} {label}")
+
+
+# ── NC1: the boundary is the ONLY stop for an open-gate seam -- RUN INSIDE PYTEST.
+# 🔴 The first version of this control ran under plain `python`, where the boundary
+# is SUPPOSED to allow execution (that is how a real match runs), so it reported
+# "NOT CAUGHT" for a protection that works. A boundary that triggers on test
+# frameworks can only be exercised from a test framework.
+NC1 = pathlib.Path(__file__).with_name("nc1_inside_pytest.py")
+code, out = run(str(NC1))
+ok = code == 0
+results.append(("NC1 the boundary is the ONLY stop for an open-gate seam", ok,
+                next((l for l in out.splitlines() if l.startswith("NC1 ")), "")))
+print(f"{'CAUGHT  ' if ok else 'NOT CAUGHT'} NC1")
+
+
+# ── NC2: guards moved BELOW the toolchain -> the order test must fail
+control("NC2 H2 guards moved below the toolchain",
+        "scripts/GPU/alphazero/h2_match_runner.py",
+        """            check_gate()
+            _assert_the_production_acts_are_inert(TC, D1, SCREEN_CMD, HARNESS)
+            tc = TC.verified_paths()""",
+        """            tc = TC.verified_paths()
+            check_gate()
+            _assert_the_production_acts_are_inert(TC, D1, SCREEN_CMD, HARNESS)""",
+        f"{TEST}::test_the_seam_checks_BEFORE_anything_effectful",
+        expect="gate after verified_paths")
+
+# ── NC3: H1's boundary deleted -> the gate-removal-control test must fail
+control("NC3 H1 seam boundary deleted while its gate-removal controls remain",
+        "scripts/GPU/alphazero/h1_viability_runner.py",
+        '''        SCREEN_CMD.assert_production_acts_are_inert("H1's production seam", (
+            (TC, "verified_paths"), (D1, "_default_compile"),
+            (SCREEN_CMD, "_default_load_evaluator")))\n''',
+        "",
+        f"{TEST}::test_NO_CONTROL_DELETES_AN_AUTHORIZATION_CHECK",
+        expect="NO containment boundary")
+
+# ── NC4: H2's own gate-removal control restored to the harness
+HARNESS = ROOT / ("docs/superpowers/evidence/2026-09-12-t1j-harness-containment"
+                  "/01_controls.py.txt")
+src = HARNESS.read_text()
+i = src.index("DEFECTS = [")
+rogue = ('DEFECTS = [\n    ("THE INCIDENT CONTROL, restored",\n'
+         '     "scripts/GPU/alphazero/h2_match_runner.py",\n'
+         '     "    check_gate()\\n", "", "tests/test_h2_match.py"),\n')
+tmp = pathlib.Path(tempfile.mkdtemp()) / "01_controls.py.txt"
+tmp.write_text(src[:i] + rogue + src[i + len("DEFECTS = [\n"):])
+before = sha(HARNESS)
+env_node = f"{TEST}::test_NO_CONTROL_DELETES_AN_AUTHORIZATION_CHECK"
+code, out = run(env_node, harness_override=str(tmp))
+assert sha(HARNESS) == before, "the evidence harness was modified"
+want4 = "h2_match_runner.py"
+caught = code != 0 and want4 in out
+results.append(("NC4 a control that deletes H2's gate is in the harness", caught,
+                next((l for l in out.splitlines() if want4 in l), "")))
+print(f"{'CAUGHT  ' if caught else 'NOT CAUGHT'} NC4")
+
+# ── NC5: the harness's import guard removed -> the guard test must fail.
+# 🔑 STATICALLY ONLY. That test's FIRST assertion is the textual one, so stripping the
+# guard fails it before it ever `exec`s the copy. Executing an unguarded harness is
+# exactly incident 2, and is not reproduced: the unguarded file is preserved as a
+# record instead.
+src5 = HARNESS.read_text()
+tmp5 = pathlib.Path(tempfile.mkdtemp()) / "01_controls.py.txt"
+i5 = src5.index('if __name__ != "__main__":')
+j5 = src5.index("\n\n", i5)
+tmp5.write_text(src5[:i5] + src5[j5 + 2:])
+assert 'if __name__ != "__main__":' not in tmp5.read_text()
+before5 = sha(HARNESS)
+code, out = run(f"{TEST}::test_the_harness_REFUSES_TO_RUN_ON_IMPORT_OR_EXEC",
+                harness_override=str(tmp5))
+assert sha(HARNESS) == before5, "the harness was modified"
+want5 = 'if __name__ != "__main__":'
+caught = code != 0 and want5 in out
+results.append(("NC5 the harness import guard removed", caught,
+                next((l for l in out.splitlines() if want5 in l), "")))
+print(f"{'CAUGHT  ' if caught else 'NOT CAUGHT'} NC5")
+
+# ── NC6: THE OTHER DIRECTION. Make the boundary unconditional -- the mistake I
+# actually made -- and the honest seam tests must fail. A containment check nobody
+# can get past is not containment, it is an outage.
+control("NC6 the boundary made unconditional (blocks honest seam tests)",
+        "scripts/GPU/alphazero/e4_screen_command.py",
+        """    live = [f"{mod.__name__}.{name}" for mod, name in acts""",
+        """    live = ["EVERYTHING"] + [f"{mod.__name__}.{name}" for mod, name in acts""",
+        "tests/test_h2_match.py", expect="ContainmentError")
+
+print("\n=== negative controls:",
+      f"{sum(1 for _, c, _ in results if c)}/{len(results)} caught ===")
+for label, c, detail in results:
+    print(f"  [{'x' if c else ' '}] {label}\n      {detail}")
+raise SystemExit(0 if all(c for _, c, _ in results) else 1)

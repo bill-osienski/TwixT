@@ -1,0 +1,6 @@
+MANIFEST -- 2026-09-12-t1j-INCIDENT-control-harness-ran-a-match
+3 files
+
+7878d5737a67bda35b93531a2c811417f1261ccc1a3f208e0db7988d0ff348be    2056391  01_rogue_results.jsonl
+90af33ba3c969e15f67efb73118bd018735c6781319b4a61100f8a7397230379      37694  02_rogue_trace.jsonl
+0459583f3131f48fa0367605f43c18b85567def73786b8e33f12dd677e5f8d07       2321  03_what_happened.txt

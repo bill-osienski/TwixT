@@ -22,7 +22,9 @@ from scripts.GPU.alphazero import h2_match_runner as RUN
 
 def test_the_card_numbers_are_the_module_numbers():
     assert (R.N_REPS, R.N_OPENINGS, R.N_ARMS, R.N_GAMES) == (46, 8, 2, 736)
-    assert R.H2_SEED_BLOCK == (202618000, 202618736)
+    assert R.H2_SEED_BLOCK == (202620000, 202620736)          # attempt 2, the RETRY
+    assert R.H2_ATTEMPT1_SEED_BLOCK == (202618000, 202618736)  # spent, retired whole
+    assert R.H2_SEED_BLOCK != R.H2_ATTEMPT1_SEED_BLOCK
     assert R.H2_SEED_BLOCK[1] - R.H2_SEED_BLOCK[0] == R.N_GAMES
     assert R.PARITY == 0.50
     assert R.MIN_DISTINCT_PER_CELL == 42
@@ -464,21 +466,70 @@ def test_the_seam_BUILDS_AN_ARGMAX_CONFIG_rather_than_reusing_the_frozen_one():
     assert "selection_mode" in ast.dump(value), "and it must set selection_mode"
 
 
-def test_THE_BLOCK_IS_NOW_SPENT_accounted_NOT_exposed_and_RETIRED_WHOLE():
+def test_THE_RETRY_BLOCK_IS_EXPOSED_383_AND_RETIRED_WHOLE():
+    """🔴 INVERTED 2026-09-12, the day after registration, by the INCIDENT: an
+    injected-defect control deleted `check_gate()` from `run_h2` and the harness
+    played 383 of the 736 games before it was killed.
+
+    * ACCOUNTED, from its registration.
+    * EXPOSED for the FIRST 383 seeds ONLY -- 202620000..202620382 -- each of which
+      has a `task_result` and ply records in the preserved rogue output. Zero-based
+      task 383 reached only a trace `task_start`: no `opening_bound`, no ply, no
+      result, so seed 202620383 is NOT claimed as a confirmed draw.
+    * RETIRED WHOLE, all 736. The one-shot rule does not care how far a started
+      schedule got, and the uncertainty about task 383 is covered by the
+      whole-block retirement rather than by a claim either way.
+
+    ⚠ The 383 preserved games are INCIDENT EVIDENCE. They are not an H2 verdict:
+    they are an unauthorized partial run of a design that requires all 736.
+    """
+    lo, hi = R.H2_SEED_BLOCK
+    for name in ("ACCOUNTED_SEED_INTERVALS", "EXPOSED_SEED_INTERVALS",
+                 "RETIRED_SEED_INTERVALS", "TEST_ONLY_SEED_INTERVALS"):
+        assert getattr(REF, name), f"vacuous: {name} is empty"
+    for seed in range(lo, hi):
+        st = REF.seed_status(seed)
+        assert st["accounted"] and st["retired"], (seed, st)
+        assert st["exposed"] is (seed < lo + 383), (seed, st)
+        assert not st["test_only"], (seed, st)
+    # the FIRST seed of the interrupted game: retired, but NOT claimed as drawn
+    assert REF.seed_status(lo + 383)["exposed"] is False
+    assert REF.seed_status(lo + 383)["retired"] is True
+    assert RUN.H2_EXECUTION_AUTHORIZED is False
+    with pytest.raises(RUN.H2Error, match="UNAUTHORIZED"):
+        RUN.run_h2(results_path="/dev/null/x", trace_path="/dev/null/y",
+                   report_path="/dev/null/z")
+
+
+def test_THE_RETRY_BLOCK_CANNOT_BE_SCHEDULED_AGAIN_but_STAYS_ACCOUNTED():
+    """Which barrier refuses, and which does not. `check_seed_registration` asks only
+    whether the block is ACCOUNTED -- retirement does not un-account it, so that
+    barrier still PASSES, by design. Availability is a different question, and
+    `validate_schedule_executable` is the one that now refuses.
+
+    🔑 Asserting the wrong barrier would have hidden the real protection: my first
+    version of this test expected `check_seed_registration` to raise, and it does
+    not. The refusal that matters is the per-task one."""
+    RUN.check_seed_registration()                       # still satisfied
+    tasks = PLAN.build_tasks(PLAN.load_source_plan())
+    with pytest.raises(REF.E4ReferenceError, match="EXPOSED|RETIRED|retired"):
+        REF.validate_schedule_executable(tasks)
+
+
+def test_ATTEMPT_ONES_BLOCK_IS_STILL_SPENT_and_the_retirement_STANDS():
     """INVERTED AGAIN 2026-09-11, hours after the registration, because the single
     authorized match VOIDed at task 0.
 
-    * ACCOUNTED, from the registration.
+    * ACCOUNTED, from its registration.
     * NOT EXPOSED: `build_reference_agent` refused before any agent was built, so
-      zero ply records exist and no seed was ever drawn. Marking 736 draws would
-      assert something that did not happen.
-    * RETIRED WHOLE: a preregistered one-shot schedule was STARTED and did not
-      complete. A future H2 needs a FRESH interval.
+      zero ply records exist and no seed was ever drawn.
+    * RETIRED WHOLE: a one-shot schedule was STARTED and did not complete.
 
-    🔑 The gate is False again -- restored by the wrapper, unconditionally, as soon
-    as the worker exited -- and the run is refused by it, not by the registry.
+    ⚠ The retirement was REVIEWED AND KEPT on 2026-09-11 rather than overruled, so
+    this must keep asserting it: the retry uses a FRESH block, and this one stays
+    spent.
     """
-    lo, hi = R.H2_SEED_BLOCK
+    lo, hi = R.H2_ATTEMPT1_SEED_BLOCK
     for name in ("ACCOUNTED_SEED_INTERVALS", "EXPOSED_SEED_INTERVALS",
                  "RETIRED_SEED_INTERVALS", "TEST_ONLY_SEED_INTERVALS"):
         assert getattr(REF, name), f"vacuous: {name} is empty"
@@ -496,7 +547,7 @@ def test_THE_BLOCK_IS_NOW_SPENT_accounted_NOT_exposed_and_RETIRED_WHOLE():
 
 def test_THE_SPENT_BLOCK_CANNOT_BE_SCHEDULED_AGAIN():
     """Retirement that does not refuse the next schedule is a comment, not a state."""
-    lo, hi = R.H2_SEED_BLOCK
+    lo, hi = R.H2_ATTEMPT1_SEED_BLOCK
     for seed in (lo, hi - 1):
         task = {"seed": seed, "reference": "calib020_0001",
                 "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
@@ -506,12 +557,29 @@ def test_THE_SPENT_BLOCK_CANNOT_BE_SCHEDULED_AGAIN():
             REF.validate_task_executable(task)         # but no longer runnable
 
 
-def test_THE_FROZEN_SCHEDULE_IS_REFUSED_FOR_EXECUTION_though_it_still_PARSES():
-    """The plan stays loadable as a RECORD and is refused for EXECUTION by the
-    registry -- never by a digest mismatch alone."""
-    tasks = PLAN.build_tasks(PLAN.load_source_plan())
-    PLAN.validate_h2_schedule(tasks)                   # structure: still valid
+def test_ATTEMPT_ONES_SCHEDULE_IS_REFUSED_FOR_EXECUTION_though_it_still_PARSES():
+    """The voided attempt's plan stays loadable AS A RECORD and is refused for
+    EXECUTION by the registry -- never by a digest mismatch alone. Rebuilt here with
+    attempt 1's seeds, which is what its records hold."""
+    lo = R.H2_ATTEMPT1_SEED_BLOCK[0]
+    tasks = [dict(t, seed=lo + i, rng_streams=REF.rng_stream_seeds(dict(t, seed=lo + i)))
+             for i, t in enumerate(PLAN.build_tasks(PLAN.load_source_plan()))]
+    assert R.L0.l0_task_digest(tasks) == R.H2_ATTEMPT1_TASK_DIGEST, \
+        "attempt 1's digest must still verify, or its record is unverifiable"
+    assert R.h2_full_task_digest(tasks) == R.H2_ATTEMPT1_FULL_TASK_DIGEST
     with pytest.raises(Exception, match="RETIRED|EXPOSED|retired|exposed"):
+        REF.validate_schedule_executable(tasks)
+
+
+def test_THE_RETRY_SCHEDULE_STILL_MATCHES_BOTH_PINS_BUT_IS_NOW_SPENT():
+    """The pins are unchanged -- a spent schedule is still the same schedule -- and
+    the registry now REFUSES it, naming the first seed it will not re-issue."""
+    tasks = PLAN.build_tasks(PLAN.load_source_plan())
+    summary = PLAN.validate_h2_schedule(tasks)
+    assert summary["task_digest"] == R.H2_TASK_DIGEST
+    assert R.h2_full_task_digest(tasks) == R.H2_FULL_TASK_DIGEST
+    assert summary["task_digest"] != R.H2_ATTEMPT1_TASK_DIGEST, "a NEW schedule"
+    with pytest.raises(REF.E4ReferenceError, match="EXPOSED|RETIRED|retired"):
         REF.validate_schedule_executable(tasks)
 
 
@@ -1053,6 +1121,18 @@ def seam_boundaries(monkeypatch, tmp_path):
     monkeypatch.setattr(HARNESS, "play_task", fake_play_task)
     # the test may put the real builder back; monkeypatch restores it either way
     monkeypatch.setattr(G3, "build_reference_agent", G3.build_reference_agent)
+
+    # 🔑 THE ONE PLACE A SEAM TEST RELAXES AUTHORIZATION, and it is safe only
+    # BECAUSE of the mocks above. The seam re-reads the gate (the second check added
+    # after the 2026-09-12 incident), so a seam test cannot run without opening it --
+    # and the line between this fixture and the control that played 383 real games is
+    # that every production act here has been replaced. That is ASSERTED, not
+    # assumed: `assert_production_acts_are_inert` raises if any of the four is still
+    # the genuine function, so this fixture cannot become a way to reach production.
+    SCREEN_CMD.assert_production_acts_are_inert("the H2 seam fixture", (
+        (TC, "verified_paths"), (D1, "_default_compile"),
+        (SCREEN_CMD, "_default_load_evaluator"), (HARNESS, "play_task")))
+    monkeypatch.setattr(RUN, "H2_EXECUTION_AUTHORIZED", True)
     return seen
 
 
@@ -1589,3 +1669,66 @@ def test_the_H2_SEAM_and_THE_BUILDER_now_agree(seam_boundaries, tmp_path):
     assert agent.config.mcts_sims == 400
     from scripts.GPU.alphazero import eval_readout as RO
     assert agent.readout.mode == RO.MODE_ARGMAX
+
+
+def test_THE_EXACT_RETRY_TASK_CONSTRUCTS_THROUGH_THE_REAL_BUILDER():
+    """🔴 THE CHECK THE VOID MADE NECESSARY, on the retry's OWN first task.
+
+    Not a synthetic task and not a mock: task 0 of the retry schedule, with its
+    fresh seed, handed to the real `build_reference_agent` with the config the
+    production seam builds. This is the call that aborted at ply 7 on attempt 1.
+    """
+    from scripts.GPU.alphazero import eval_readout as RO
+    from scripts.GPU.alphazero import twixtbot_g3_reference as G3
+    task = PLAN.build_tasks(PLAN.load_source_plan())[0]
+    assert task["seed"] == R.H2_SEED_BLOCK[0] == 202620000
+    assert task["colour_arm"] == "t1j_red" and task["anchor_colour"] == "red"
+    assert task["selection_mode"] == "argmax"
+
+    cfg = G3.eval_config()
+    argmax = cfg.__class__(**{**cfg.__dict__, "selection_mode": R.SELECTION_MODE})
+    agent = G3.build_reference_agent(task=task, evaluator=_stub_evaluator(),
+                                    colour=REF.reference_colour(task),
+                                    config=argmax, capture=True)
+    assert agent.readout.mode == RO.MODE_ARGMAX
+    assert agent.config.mcts_sims == 400 and agent.config.board_size == 24
+    assert agent.seed == task["seed"], "the SCHEDULED seed, not another"
+
+
+def test_EVERY_CELLS_FIRST_TASK_constructs_through_the_real_builder():
+    """Both colour arms, all eight openings: our side plays red in half of them, and
+    `build_reference_agent` checks the colour against the arm. One task would have
+    proved only one arm."""
+    from scripts.GPU.alphazero import twixtbot_g3_reference as G3
+    cfg = G3.eval_config()
+    argmax = cfg.__class__(**{**cfg.__dict__, "selection_mode": "argmax"})
+    seen = set()
+    for task in PLAN.build_tasks(PLAN.load_source_plan()):
+        key = (task["opening"], task["colour_arm"])
+        if key in seen:
+            continue
+        seen.add(key)
+        agent = G3.build_reference_agent(task=task, evaluator=_stub_evaluator(),
+                                         colour=REF.reference_colour(task),
+                                         config=argmax, capture=True)
+        assert agent.config.selection_mode == "argmax"
+    assert len(seen) == 16, seen
+
+
+def test_THE_BUILDER_STILL_REFUSES_THE_WRONG_COLOUR_FOR_THE_ARM():
+    """Our side plays the colour T1j does not. `build_reference_agent` checks that
+    against `anchor_colour`, and the repair must not have loosened it.
+
+    🔴 A control that made the check vacuous went NOT CAUGHT, because every existing
+    test passed the CORRECT colour -- there was no mismatch to detect. This passes
+    the wrong one deliberately.
+    """
+    from scripts.GPU.alphazero import twixtbot_g3_reference as G3
+    cfg = G3.eval_config()
+    argmax = cfg.__class__(**{**cfg.__dict__, "selection_mode": "argmax"})
+    task = PLAN.build_tasks(PLAN.load_source_plan())[0]      # t1j_red: we play black
+    right = REF.reference_colour(task)
+    wrong = "red" if right == "black" else "black"
+    with pytest.raises(G3.ReferenceError, match="contradicts anchor_colour"):
+        G3.build_reference_agent(task=task, evaluator=_stub_evaluator(), colour=wrong,
+                                 config=argmax, capture=True)

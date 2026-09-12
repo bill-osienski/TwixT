@@ -1,0 +1,44 @@
+"""NC1, RUN INSIDE PYTEST -- where the boundary is supposed to bite.
+
+Inert by construction: `verified_paths` is replaced by a sentinel raiser BEFORE the
+gate is forced open, so the furthest this can get is the first line of the toolchain
+resolution. Nothing compiles, loads, draws a seed or plays.
+"""
+from scripts.GPU.alphazero import d1_probe as D1
+from scripts.GPU.alphazero import h2_match_plan as PLAN
+from scripts.GPU.alphazero import h2_match_runner as RUN
+from scripts.GPU.alphazero import t1j_toolchain as TC
+
+
+class Sentinel(Exception):
+    pass
+
+
+def _outcome(play, task):
+    try:
+        play(task=task, identity={}, timeout_s=1)
+        return "NO REFUSAL"
+    except RUN.H2ContainmentError:
+        return "H2ContainmentError"
+    except Sentinel:
+        return "REACHED THE TOOLCHAIN"
+
+
+def test_nc1_the_boundary_is_the_only_stop(monkeypatch):
+    # 🔑 ONLY the toolchain is replaced, and only to keep this INERT. The other three
+    # production acts stay REAL, which is exactly the state a gate-removal control
+    # creates and the state the boundary must refuse.
+    monkeypatch.setattr(TC, "verified_paths",
+                        lambda *a, **k: (_ for _ in ()).throw(Sentinel()))
+    monkeypatch.setattr(RUN, "H2_EXECUTION_AUTHORIZED", True)   # gate forced OPEN
+    task = PLAN.build_tasks(PLAN.load_source_plan())[0]
+    play = RUN._production_play("/tmp/h2-never-written", D1.Deadline(60).start())
+
+    intact = _outcome(play, task)
+    monkeypatch.setattr(RUN, "_assert_the_production_acts_are_inert",
+                        lambda *a: None)
+    without = _outcome(play, RUN.PLAN.build_tasks(PLAN.load_source_plan())[1])
+
+    print(f"NC1 intact={intact} boundary-no-op={without}")
+    assert intact == "H2ContainmentError", intact
+    assert without == "REACHED THE TOOLCHAIN", without

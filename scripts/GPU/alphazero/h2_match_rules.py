@@ -56,26 +56,49 @@ INERT_UNDER_ARGMAX = ("temp_high", "temp_low", "opening_temp_plies")
 T1J_MDPLY = 6
 MCTS_SIMS = 400
 
-#: 🔴 RESERVED ON PAPER AND REGISTERED NOWHERE. Registering it is a separate
-#: reviewed edit under its own authorization, so a block that is never authorized
-#: costs nothing to abandon. `h2_match_runner.check_seed_registration` REFUSES a
-#: run while it is absent from `ACCOUNTED_SEED_INTERVALS`, and the gate refuses
-#: first: two barriers, both up.
-H2_SEED_BLOCK = (202618000, 202618000 + N_GAMES)        # [202618000, 202618736)
+#: ATTEMPT 1's BLOCK. Registered 2026-09-11, then RETIRED WHOLE the same day when
+#: the single authorized match VOIDed at task 0 -- `build_reference_agent` refused
+#: H2's own readout, so no agent was built and NO SEED WAS DRAWN (exposed 0).
+#: Kept under its own name so the voided attempt's plan stays loadable AS A RECORD
+#: and is refused for EXECUTION by the registry, never by a digest mismatch alone.
+#: ⚠ The retirement was REVIEWED AND KEPT on 2026-09-11: nothing was learned about
+#: gameplay, and fresh seeds cost less than a retrospective exception.
+H2_ATTEMPT1_SEED_BLOCK = (202618000, 202618000 + N_GAMES)   # [202618000, 202618736)
+
+#: ATTEMPT 2 (2026-09-11): a FRESH interval for the retry against the REPAIRED
+#: builder. Re-proved against the registries as they stand -- attempt 1's spent
+#: block included -- plus this reservation itself and every derived stream. The gap
+#: floor is the candidate's OWN SIZE (736); the nearest other boundary is 1,264 away.
+#:
+#: 🔴 RESERVED ON PAPER until the seed-preparation step registers it. Registering is
+#: a reviewed edit under its own authorization, so a block that is never authorized
+#: costs nothing to abandon. `h2_match_runner.check_seed_registration` REFUSES a run
+#: while it is absent from `ACCOUNTED_SEED_INTERVALS`, and the gate refuses first.
+H2_SEED_BLOCK = (202620000, 202620000 + N_GAMES)        # [202620000, 202620736)
 
 #: THE FROZEN H2 SCHEDULE IDENTITY, pinned once the plan is built. It lives here
 #: for L0's reason: `bind_results` must verify it, and the plan module imports
 #: these rules, so the rules cannot import the plan back. Recomputed by a test
 #: from the built schedule -- a pinned digest never checked against the artifact
 #: it pins is decoration.
-H2_TASK_DIGEST = "3c0a0ae12c61dae69b134b30d0f4adb7dc97b9e46478cebe679784996d7172d2"
+#: ATTEMPT 1's digests, kept for the voided attempt's record. Its schedule must
+#: stay verifiable AS A RECORD: a spent plan is refused for execution by the
+#: registry, and a digest that no longer matches anything would hide that.
+H2_ATTEMPT1_TASK_DIGEST = "3c0a0ae12c61dae69b134b30d0f4adb7dc97b9e46478cebe679784996d7172d2"
+H2_ATTEMPT1_FULL_TASK_DIGEST = ("08d44fb84851e6fe91ca6510192ef7f3dd"
+                                "57d7ea0997e59d4e4d5d7c60384235")
+
+#: ATTEMPT 2's digests: the SAME 736 tasks with seeds from the fresh block, so only
+#: `seed`, the derived `rng_streams` and the task ids differ. Recomputed by a test
+#: from the built schedule, as attempt 1's were.
+H2_TASK_DIGEST = "ef68cb9962d1a8d42092ddf329dbdcb27a51f5594567e3f21c14cbe35c435c69"
 
 #: 🔴 AND A DIGEST OVER **EVERY FIELD**, because the one above does not cover them.
 #: `l0_task_digest` projects the DESIGN DIMENSIONS, so a forged `reference_sha256`
 #: or forged `rng_streams` leaves it unchanged. Comparing a supplied schedule with
 #: a fresh build from the same live source plan does not fix that either: both
 #: sides move together if the source changes. This pins the whole artifact.
-H2_FULL_TASK_DIGEST = "08d44fb84851e6fe91ca6510192ef7f3dd57d7ea0997e59d4e4d5d7c60384235"
+H2_FULL_TASK_DIGEST = "e513b479824c069f02b984ace95799d3c9fefdfac48c80f2f8154bb7bf830a65"
 
 
 def h2_full_task_digest(tasks: Sequence[Mapping[str, Any]]) -> str:

@@ -622,6 +622,13 @@ def test_the_production_setup_wires_every_qualified_collaborator(monkeypatch,
 
     monkeypatch.setattr(INT, "make_agent_factory", _agents)
 
+    # 🔑 THE ONE PLACE THIS TEST RELAXES AUTHORIZATION -- see the sibling test: safe
+    # only because every production act above is replaced, asserted not assumed.
+    SCREEN_CMD.assert_production_acts_are_inert("H1's seam test", (
+        (TC, "verified_paths"), (D1, "_default_compile"),
+        (SCREEN_CMD, "_default_load_evaluator")))
+    monkeypatch.setattr(RUN, "H1_EXECUTION_AUTHORIZED", True)
+
     dl = D1.Deadline(RUN.RUN_DEADLINE_S)
     dl.start()
     got = RUN._production_setup(str(tmp_path / "r.jsonl"), dl)()
@@ -666,6 +673,14 @@ def test_the_production_setup_loads_the_incumbent_EXACTLY_ONCE(monkeypatch, tmp_
         return "EVAL"
 
     monkeypatch.setattr(SCREEN_CMD, "_default_load_evaluator", load)
+    # 🔑 THE ONE PLACE THIS TEST RELAXES AUTHORIZATION. H1's seam re-reads its gate
+    # (added 2026-09-12), so a seam test cannot run without opening it -- and it is
+    # safe only because every production act above has been replaced, which is
+    # ASSERTED here rather than assumed.
+    SCREEN_CMD.assert_production_acts_are_inert("H1's seam test", (
+        (TC, "verified_paths"), (D1, "_default_compile"),
+        (SCREEN_CMD, "_default_load_evaluator")))
+    monkeypatch.setattr(RUN, "H1_EXECUTION_AUTHORIZED", True)
     dl2 = D1.Deadline(RUN.RUN_DEADLINE_S)
     dl2.start()
     RUN._production_setup(str(tmp_path / "r.jsonl"), dl2)()

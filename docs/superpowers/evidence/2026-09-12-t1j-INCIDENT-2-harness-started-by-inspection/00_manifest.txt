@@ -1,0 +1,5 @@
+MANIFEST -- 2026-09-12-t1j-INCIDENT-2-harness-started-by-inspection
+2 files
+
+e54a3013e0247e84569e45e5fb595e27d1f210123cd0afbf888cc9f9af65227e     175510  01_controls_as_it_ran_UNGUARDED.py.txt
+041bc30049350db56318ef353e3f22d7f460aeff743fd690fd4eeaf89fc9cd78       4878  02_what_happened.txt

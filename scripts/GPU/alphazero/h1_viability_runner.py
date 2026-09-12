@@ -520,6 +520,15 @@ def _production_setup(results_path: str, deadline: "D1.Deadline") -> Callable[[]
         from . import e4_screen_integration as INT
         from . import t1j_toolchain as TC
 
+        # 🔴 BOTH CHECKS, BEFORE TOOLCHAIN RESOLUTION. H1's entry check is not
+        # enough: three of this repository's own controls DELETE or MOVE it, and on
+        # 2026-09-12 the H2 equivalent of that control played 383 real games. The
+        # gate is re-read here, and the shared boundary makes this seam inert to any
+        # test process whatever the gate says.
+        check_gate()
+        SCREEN_CMD.assert_production_acts_are_inert("H1's production seam", (
+            (TC, "verified_paths"), (D1, "_default_compile"),
+            (SCREEN_CMD, "_default_load_evaluator")))
         tc = TC.verified_paths()
         java = os.path.join(tc["jdk_home"], "bin", "java")
         paths = D1.T1jPaths(java=java, jar=tc["jar"], classes=classes_dir,

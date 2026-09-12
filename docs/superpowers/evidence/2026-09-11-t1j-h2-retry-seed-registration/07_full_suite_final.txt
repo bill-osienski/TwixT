@@ -1,0 +1,24 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.0.2, pluggy-1.6.0
+rootdir: /Users/bill/projects/TwixT_Game
+configfile: pytest.ini
+testpaths: tests
+collected 4473 items / 53 deselected / 4420 selected
+
+tests/test_a_predrop_trajectory_budget.py .......                        [  0%]
+tests/test_analyzer_closeout_diagnostics.py .....                        [  0%]
+tests/test_analyzer_closeout_selection_tiebreak_summary.py ..            [  0%]
+tests/test_analyzer_closeout_td1_visit_forcing_summary.py ..             [  0%]
+tests/test_analyzer_goal_completion.py .......ss...........              [  0%]
+tests/test_analyzer_goal_completion_recompute.py .......                 [  0%]
+tests/test_analyzer_goal_completion_records.py .........                 [  1%]
+tests/test_analyzer_long_tail_buckets.py ....                            [  1%]
+tests/test_analyzer_marathon_termination.py .....                        [  1%]
+tests/test_analyzer_per_game_stats.py .....................              [  1%]
+tests/test_analyzer_per_move_stats.py .....                              [  1%]
+tests/test_analyzer_per_ply_perf_regression.py .                         [  1%]
+tests/test_analyzer_phase2_sidecar_fields.py .........                   [  2%]
+tests/test_analyzer_phase2_smoke.py .....                                [  2%]
+tests/test_analyzer_recovery_events.py .........                         [  2%]
+tests/test_analyzer_recovery_retargeting.py ...........                  [  2%]
+tests/test_analyzer_replay_probe_scoring_end_to_end.py ....

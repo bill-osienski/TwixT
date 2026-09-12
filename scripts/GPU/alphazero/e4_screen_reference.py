@@ -149,6 +149,40 @@ ACCOUNTED_SEED_INTERVALS = (
                                      #
                                      # Accounted, NOT exposed and NOT retired: a
                                      # reservation is not a draw.
+    (202620000, 202620736),          # H2 ATTEMPT 2 -- THE RETRY against the
+                                     # REPAIRED builder. 736 seeds, one per game,
+                                     # bound POSITIONALLY (row i = 202620000 + i).
+                                     #
+                                     # REGISTERED 2026-09-11 as the seed-PREPARATION
+                                     # step, NOT an execution authorization: at the
+                                     # moment of this edit `H2_EXECUTION_AUTHORIZED`
+                                     # is False and stays False.
+                                     #
+                                     # WHY A FRESH BLOCK. Attempt 1's block below was
+                                     # registered and then RETIRED WHOLE the same day:
+                                     # its match VOIDed at task 0 because
+                                     # `build_reference_agent` refused H2's own
+                                     # readout. No seed was drawn (exposed 0), and the
+                                     # retirement was REVIEWED AND KEPT -- fresh seeds
+                                     # cost less than a retrospective exception.
+                                     #
+                                     # RE-PROVED against the registries as they stand,
+                                     # attempt 1's spent block INCLUDED, plus this
+                                     # reservation itself: 5,581 prior seeds across six
+                                     # categories, 27,905 prior values with
+                                     # derivations, 0 direct overlaps, 0 derived-stream
+                                     # collisions, own derivations injective
+                                     # (3,680 = 736 x 5). Exhaustive, not sampled.
+                                     # Fourteen collision controls and four gap-policy
+                                     # controls all rejected, attempt 1's block among
+                                     # them.
+                                     #
+                                     # 🔑 Excluded from the prior set BY IDENTITY, in
+                                     # the GAP check as well as the overlap check. The
+                                     # gap floor is the candidate's OWN SIZE (736);
+                                     # nearest other boundary 1,264.
+                                     #
+                                     # Accounted, NOT exposed and NOT retired.
     (202618000, 202618736),          # H2 DETERMINISTIC-READOUT HEAD-TO-HEAD. 736
                                      # seeds, one per game: 8 openings x 2 colour
                                      # arms x 46 repetitions at mdPly 6, bound
@@ -252,6 +286,29 @@ ACCOUNTED_SEED_INTERVALS = (
 #: strikes that seed off. A draw inside the test namespace strikes nothing off,
 #: because nothing there was ever available to schedule.
 EXPOSED_SEED_INTERVALS = (
+    (202620000, 202620383),          # H2 ATTEMPT 2's block, DRAWN BY AN
+                                     # UNAUTHORIZED RUN on 2026-09-12: an
+                                     # injected-defect control deleted the gate
+                                     # check from the public entry, and with the
+                                     # production seam now wired the entry compiled
+                                     # the helper, loaded the model and PLAYED 383
+                                     # REAL GAMES before it was killed.
+                                     #
+                                     # 383 CONFIRMED, COUNTED FROM THE RECORDS: 383
+                                     # task_result records, 383 opening_bound, 383
+                                     # transcripts and 14,708 ply records, seeds
+                                     # 202620000..202620382 inclusive.
+                                     #
+                                     # ⚠ SEED 202620383 IS UNCERTAIN AND DELIBERATELY
+                                     # NOT CLAIMED HERE. Task 383 has a `task_start`
+                                     # trace line and NOTHING else -- no
+                                     # opening_bound, no ply, no result -- which by
+                                     # H1's rule means its agent was never built and
+                                     # its seed never drawn. But this run was KILLED
+                                     # rather than aborted, so construction could
+                                     # have been in flight. Exposure records what the
+                                     # evidence SHOWS; the whole-block retirement
+                                     # below covers what it cannot rule out.
     (202615000, 202615221),          # D1 SAME-POSITION INTERROGATION, §14 RETRY,
                                      # run once 2026-09-08 and COMPLETED: 221 of
                                      # 221 positions, 1,105 of 1,105 queries,
@@ -360,6 +417,22 @@ TEST_ONLY_SEED_INTERVALS = (
 #: seeing the first 24, which is selection bias however clean the RNG is. So the
 #: WHOLE block retires together, drawn and undrawn alike.
 RETIRED_SEED_INTERVALS = (
+    (202620000, 202620736),          # H2 ATTEMPT 2, RETIRED WHOLE 2026-09-12.
+                                     # 383 of its seeds were drawn by an
+                                     # UNAUTHORIZED run (see EXPOSED above) and the
+                                     # remaining 353 go with them: a one-shot
+                                     # schedule was started and did not complete.
+                                     # This also covers the one seed whose use
+                                     # cannot be ruled out, 202620383.
+                                     #
+                                     # 🔴 THE BLOCK WAS REGISTERED THE DAY BEFORE AND
+                                     # SPENT BY MY OWN TEST HARNESS, not by an
+                                     # authorized match. The games it played are
+                                     # INCIDENT evidence and yield no H2 verdict.
+                                     # A third block may not be reserved until the
+                                     # harness containment is verified -- otherwise
+                                     # it is just another resource for the same
+                                     # failure to consume.
     (202618000, 202618736),          # H2, retired WHOLE 2026-09-11 after the single
                                      # authorized match VOIDed at task 0, ply 7:
                                      # `build_reference_agent` refuses any config
