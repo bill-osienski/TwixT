@@ -2640,10 +2640,12 @@ DEFECTS = [
      "    (202620000, 202620383),          # H2 ATTEMPT 2's block, DRAWN BY AN",
      "    # (202620000, 202620383),        # H2 ATTEMPT 2's block, DRAWN BY AN",
      f"{T_H2}::test_THE_RETRY_BLOCK_IS_EXPOSED_383_AND_RETIRED_WHOLE"),
-    # 🔴 THE RETRY MUST NOT REUSE THE SPENT BLOCK -- the whole reason for a fresh one.
-    ("the retry reuses attempt 1's SPENT block", H2R,
-     "H2_SEED_BLOCK = (202620000, 202620000 + N_GAMES)        # [202620000, 202620736)",
-     "H2_SEED_BLOCK = (202618000, 202618000 + N_GAMES)        # the SPENT block",
+    # 🔴 THE FRESH BLOCK MUST NOT BE A SPENT ONE -- the whole reason for a third.
+    # RE-ANCHORED 2026-09-12: `H2_SEED_BLOCK` is attempt 3's now, and attempt 2 is
+    # the most recently spent block, so it is the sharpest thing to try to reuse.
+    ("attempt 3 reuses attempt 2's SPENT block", H2R,
+     "H2_SEED_BLOCK = (202622000, 202622000 + N_GAMES)        # [202622000, 202622736)",
+     "H2_SEED_BLOCK = (202620000, 202620000 + N_GAMES)        # the SPENT block",
      f"{T_H2}::test_the_card_numbers_are_the_module_numbers"),
     # (removed: byte-identical to "the SPENT block is not retired, so it can be
     #  scheduled again" -- one injection, one control.)
@@ -2651,10 +2653,49 @@ DEFECTS = [
      'H2_ATTEMPT1_TASK_DIGEST = "3c0a0ae12c61dae69b134b30d0f4adb7dc97b9e46478cebe679784996d7172d2"',
      'H2_ATTEMPT1_TASK_DIGEST = "0" * 64',
      f"{T_H2}::test_ATTEMPT_ONES_SCHEDULE_IS_REFUSED_FOR_EXECUTION_though_it_still_PARSES"),
-    ("the retry's own digest is not re-pinned", H2R,
-     'H2_TASK_DIGEST = "ef68cb9962d1a8d42092ddf329dbdcb27a51f5594567e3f21c14cbe35c435c69"',
-     'H2_TASK_DIGEST = H2_ATTEMPT1_TASK_DIGEST',
+    ("attempt 3's own digest is not re-pinned", H2R,
+     'H2_TASK_DIGEST = "4cec38c75a4297d1b494df1c5754215962b138767d8f4c38fc4996078b94c332"',
+     'H2_TASK_DIGEST = H2_ATTEMPT2_TASK_DIGEST',
+     f"{T_H2}::test_THE_THIRD_SCHEDULE_MATCHES_BOTH_PINS_and_IS_EXECUTABLE_by_the_registry"),
+    ("attempt 3's FULL-FIELD digest is not re-pinned", H2R,
+     'H2_FULL_TASK_DIGEST = ("2d330ede735b578ea83ab68ebbb22611a7"\n'
+     '                       "b1e41c1af64ca9f98c36ee84a3e2da")',
+     'H2_FULL_TASK_DIGEST = H2_ATTEMPT2_FULL_TASK_DIGEST',
+     f"{T_H2}::test_THE_THIRD_SCHEDULE_MATCHES_BOTH_PINS_and_IS_EXECUTABLE_by_the_registry"),
+    ("attempt 2's digest is overwritten, so the INCIDENT's record stops verifying", H2R,
+     'H2_ATTEMPT2_TASK_DIGEST = "ef68cb9962d1a8d42092ddf329dbdcb27a51f5594567e3f21c14cbe35c435c69"',
+     'H2_ATTEMPT2_TASK_DIGEST = "0" * 64',
      f"{T_H2}::test_THE_RETRY_SCHEDULE_STILL_MATCHES_BOTH_PINS_BUT_IS_NOW_SPENT"),
+
+    # ═════════ 2026-09-12: ATTEMPT 3's REGISTRATION -- bookkeeping, not permission
+    ("the third block un-registered from ACCOUNTED", REF_SRC,
+     "    (202622000, 202622736),          # H2 ATTEMPT 3 -- the match H2 has still not",
+     "    # (202622000, 202622736),        # H2 ATTEMPT 3 -- the match H2 has still not",
+     f"{T_H2}::test_THE_THIRD_BLOCK_IS_ACCOUNTED_ONLY_and_the_barrier_is_SATISFIED"),
+    # 🔑 A RESERVATION IS NOT A DRAW. Marking the block exposed or retired before a
+    # single game has been played would spend it on paper.
+    ("the third block is ALSO marked EXPOSED before anything is drawn", REF_SRC,
+     "EXPOSED_SEED_INTERVALS = (\n",
+     "EXPOSED_SEED_INTERVALS = (\n    (202622000, 202622736),\n",
+     f"{T_H2}::test_THE_THIRD_BLOCK_IS_ACCOUNTED_ONLY_and_the_barrier_is_SATISFIED"),
+    ("the third block is ALSO marked RETIRED before anything is drawn", REF_SRC,
+     "RETIRED_SEED_INTERVALS = (\n",
+     "RETIRED_SEED_INTERVALS = (\n    (202622000, 202622736),\n",
+     f"{T_H2}::test_THE_THIRD_BLOCK_IS_ACCOUNTED_ONLY_and_the_barrier_is_SATISFIED"),
+    # 🔑 THE ONE THAT MATTERS MOST: registration is bookkeeping, not permission. If
+    # the seed edit had also flipped the gate, the barrier test's second half must
+    # say so -- otherwise "the gate stays False" is a claim no test can contradict.
+    ("registering the third block ALSO opened the H2 execution gate", H2RUN,
+     "H2_EXECUTION_AUTHORIZED = False",
+     "H2_EXECUTION_AUTHORIZED = True",
+     f"{T_H2}::test_THE_THIRD_BLOCK_IS_ACCOUNTED_ONLY_and_the_barrier_is_SATISFIED"),
+    # 🔑 AND THE OTHER HALF: a block that is registered but whose schedule the
+    # registry still refuses is a reservation that buys nothing.
+    ("the third schedule is not actually executable by the registry", REF_SRC,
+     "def validate_schedule_executable(tasks: Sequence[Dict[str, Any]]) -> Dict[str, Any]:",
+     "def validate_schedule_executable(tasks: Sequence[Dict[str, Any]]) -> Dict[str, Any]:\n"
+     "    raise E4ReferenceError('RETIRED')",
+     f"{T_H2}::test_THE_THIRD_SCHEDULE_MATCHES_BOTH_PINS_and_IS_EXECUTABLE_by_the_registry"),
     # the retry's EXACT configuration, through the REAL builder
     ("the seam's readout mode is not the rules' one", H2R,
      'SELECTION_MODE = "argmax"',

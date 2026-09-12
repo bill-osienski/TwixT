@@ -65,16 +65,28 @@ MCTS_SIMS = 400
 #: gameplay, and fresh seeds cost less than a retrospective exception.
 H2_ATTEMPT1_SEED_BLOCK = (202618000, 202618000 + N_GAMES)   # [202618000, 202618736)
 
-#: ATTEMPT 2 (2026-09-11): a FRESH interval for the retry against the REPAIRED
-#: builder. Re-proved against the registries as they stand -- attempt 1's spent
-#: block included -- plus this reservation itself and every derived stream. The gap
-#: floor is the candidate's OWN SIZE (736); the nearest other boundary is 1,264 away.
+#: ATTEMPT 2's BLOCK, SPENT. Reserved 2026-09-11 for the retry against the repaired
+#: builder, then ACCOUNTED 736 / EXPOSED 383 / RETIRED WHOLE on 2026-09-12 -- not by
+#: an authorized match but by the INCIDENT: an injected-defect control deleted
+#: `check_gate()` from `run_h2` and played 383 of the 736 games. Kept under its own
+#: name so that run's records stay verifiable AS EVIDENCE and are refused for
+#: EXECUTION by the registry.
+#: ⚠ Seed 202620383 is deliberately NOT claimed as drawn -- task 383 emitted a trace
+#: `task_start` only -- and the whole-block retirement covers that uncertainty
+#: instead of a claim either way.
+H2_ATTEMPT2_SEED_BLOCK = (202620000, 202620000 + N_GAMES)   # [202620000, 202620736)
+
+#: ATTEMPT 3 (2026-09-12): a FRESH interval for the match H2 still has not had.
+#: Re-proved against the registries AS THEY STAND -- attempts 1 and 2 both spent and
+#: both now reachable as controls -- plus every paper reservation no registry can see
+#: and every derived stream. The gap floor is the candidate's OWN SIZE (736); the
+#: nearest other boundary is 1,264 below and there is nothing above.
 #:
 #: 🔴 RESERVED ON PAPER until the seed-preparation step registers it. Registering is
 #: a reviewed edit under its own authorization, so a block that is never authorized
 #: costs nothing to abandon. `h2_match_runner.check_seed_registration` REFUSES a run
 #: while it is absent from `ACCOUNTED_SEED_INTERVALS`, and the gate refuses first.
-H2_SEED_BLOCK = (202620000, 202620000 + N_GAMES)        # [202620000, 202620736)
+H2_SEED_BLOCK = (202622000, 202622000 + N_GAMES)        # [202622000, 202622736)
 
 #: THE FROZEN H2 SCHEDULE IDENTITY, pinned once the plan is built. It lives here
 #: for L0's reason: `bind_results` must verify it, and the plan module imports
@@ -88,17 +100,24 @@ H2_ATTEMPT1_TASK_DIGEST = "3c0a0ae12c61dae69b134b30d0f4adb7dc97b9e46478cebe67978
 H2_ATTEMPT1_FULL_TASK_DIGEST = ("08d44fb84851e6fe91ca6510192ef7f3dd"
                                 "57d7ea0997e59d4e4d5d7c60384235")
 
-#: ATTEMPT 2's digests: the SAME 736 tasks with seeds from the fresh block, so only
+#: ATTEMPT 2's digests, kept for the incident's record: its 383 preserved games must
+#: stay verifiable against the schedule they came from.
+H2_ATTEMPT2_TASK_DIGEST = "ef68cb9962d1a8d42092ddf329dbdcb27a51f5594567e3f21c14cbe35c435c69"
+
+#: ATTEMPT 3's digests: the SAME 736 tasks with seeds from the fresh block, so only
 #: `seed`, the derived `rng_streams` and the task ids differ. Recomputed by a test
-#: from the built schedule, as attempt 1's were.
-H2_TASK_DIGEST = "ef68cb9962d1a8d42092ddf329dbdcb27a51f5594567e3f21c14cbe35c435c69"
+#: from the built schedule, as attempts 1 and 2 were.
+H2_TASK_DIGEST = "4cec38c75a4297d1b494df1c5754215962b138767d8f4c38fc4996078b94c332"
 
 #: 🔴 AND A DIGEST OVER **EVERY FIELD**, because the one above does not cover them.
 #: `l0_task_digest` projects the DESIGN DIMENSIONS, so a forged `reference_sha256`
 #: or forged `rng_streams` leaves it unchanged. Comparing a supplied schedule with
 #: a fresh build from the same live source plan does not fix that either: both
 #: sides move together if the source changes. This pins the whole artifact.
-H2_FULL_TASK_DIGEST = "e513b479824c069f02b984ace95799d3c9fefdfac48c80f2f8154bb7bf830a65"
+H2_ATTEMPT2_FULL_TASK_DIGEST = ("e513b479824c069f02b984ace95799d3c9fefdf"
+                                "ac48c80f2f8154bb7bf830a65")
+H2_FULL_TASK_DIGEST = ("2d330ede735b578ea83ab68ebbb22611a7"
+                       "b1e41c1af64ca9f98c36ee84a3e2da")
 
 
 def h2_full_task_digest(tasks: Sequence[Mapping[str, Any]]) -> str:

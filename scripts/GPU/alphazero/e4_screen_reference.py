@@ -149,6 +149,45 @@ ACCOUNTED_SEED_INTERVALS = (
                                      #
                                      # Accounted, NOT exposed and NOT retired: a
                                      # reservation is not a draw.
+    (202622000, 202622736),          # H2 ATTEMPT 3 -- the match H2 has still not
+                                     # had. 736 seeds, one per game, bound
+                                     # POSITIONALLY (row i = 202622000 + i).
+                                     #
+                                     # REGISTERED 2026-09-12 as the seed-PREPARATION
+                                     # step, NOT an execution authorization: at the
+                                     # moment of this edit `H2_EXECUTION_AUTHORIZED`
+                                     # is False and stays False, and no match is
+                                     # authorized. Two separate reviews; this is the
+                                     # first.
+                                     #
+                                     # WHY A THIRD BLOCK. Attempt 1 VOIDed at task 0
+                                     # (the builder refused H2's own readout) and was
+                                     # retired whole with 0 exposed. Attempt 2 was
+                                     # never authorized to run at all: on 2026-09-12
+                                     # an injected-defect control deleted
+                                     # `check_gate()` from `run_h2` and played 383 of
+                                     # its 736 games, so it is ACCOUNTED 736 /
+                                     # EXPOSED 383 / RETIRED WHOLE and its 383 games
+                                     # are INCIDENT EVIDENCE, not an H2 verdict.
+                                     #
+                                     # RE-PROVED (collision proof v9) against the
+                                     # registries as they stand, BOTH spent blocks
+                                     # included: 6,317 prior seeds across six
+                                     # categories, 31,585 prior values with
+                                     # derivations, 0 direct overlaps, 0 derived-
+                                     # stream collisions, own derivations injective
+                                     # (3,680 = 736 x 5). Exhaustive, not sampled.
+                                     # Seventeen collision controls and four gap-
+                                     # policy controls all rejected, both spent H2
+                                     # blocks among them.
+                                     #
+                                     # 🔑 Excluded from the prior set BY IDENTITY, in
+                                     # the GAP check as well as the overlap check. The
+                                     # gap floor is the candidate's OWN SIZE (736);
+                                     # nearest other boundary 1,264, nothing above.
+                                     #
+                                     # Accounted, NOT exposed and NOT retired: a
+                                     # reservation is not a draw.
     (202620000, 202620736),          # H2 ATTEMPT 2 -- THE RETRY against the
                                      # REPAIRED builder. 736 seeds, one per game,
                                      # bound POSITIONALLY (row i = 202620000 + i).

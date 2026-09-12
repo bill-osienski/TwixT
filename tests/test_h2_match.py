@@ -22,9 +22,11 @@ from scripts.GPU.alphazero import h2_match_runner as RUN
 
 def test_the_card_numbers_are_the_module_numbers():
     assert (R.N_REPS, R.N_OPENINGS, R.N_ARMS, R.N_GAMES) == (46, 8, 2, 736)
-    assert R.H2_SEED_BLOCK == (202620000, 202620736)          # attempt 2, the RETRY
+    assert R.H2_SEED_BLOCK == (202622000, 202622736)           # attempt 3
+    assert R.H2_ATTEMPT2_SEED_BLOCK == (202620000, 202620736)  # spent by the INCIDENT
     assert R.H2_ATTEMPT1_SEED_BLOCK == (202618000, 202618736)  # spent, retired whole
-    assert R.H2_SEED_BLOCK != R.H2_ATTEMPT1_SEED_BLOCK
+    assert len({R.H2_SEED_BLOCK, R.H2_ATTEMPT1_SEED_BLOCK,
+                R.H2_ATTEMPT2_SEED_BLOCK}) == 3, "three attempts, three blocks"
     assert R.H2_SEED_BLOCK[1] - R.H2_SEED_BLOCK[0] == R.N_GAMES
     assert R.PARITY == 0.50
     assert R.MIN_DISTINCT_PER_CELL == 42
@@ -483,7 +485,7 @@ def test_THE_RETRY_BLOCK_IS_EXPOSED_383_AND_RETIRED_WHOLE():
     ⚠ The 383 preserved games are INCIDENT EVIDENCE. They are not an H2 verdict:
     they are an unauthorized partial run of a design that requires all 736.
     """
-    lo, hi = R.H2_SEED_BLOCK
+    lo, hi = R.H2_ATTEMPT2_SEED_BLOCK
     for name in ("ACCOUNTED_SEED_INTERVALS", "EXPOSED_SEED_INTERVALS",
                  "RETIRED_SEED_INTERVALS", "TEST_ONLY_SEED_INTERVALS"):
         assert getattr(REF, name), f"vacuous: {name} is empty"
@@ -511,7 +513,9 @@ def test_THE_RETRY_BLOCK_CANNOT_BE_SCHEDULED_AGAIN_but_STAYS_ACCOUNTED():
     version of this test expected `check_seed_registration` to raise, and it does
     not. The refusal that matters is the per-task one."""
     RUN.check_seed_registration()                       # still satisfied
-    tasks = PLAN.build_tasks(PLAN.load_source_plan())
+    lo = R.H2_ATTEMPT2_SEED_BLOCK[0]
+    tasks = [dict(t, seed=lo + i, rng_streams=REF.rng_stream_seeds(dict(t, seed=lo + i)))
+             for i, t in enumerate(PLAN.build_tasks(PLAN.load_source_plan()))]
     with pytest.raises(REF.E4ReferenceError, match="EXPOSED|RETIRED|retired"):
         REF.validate_schedule_executable(tasks)
 
@@ -572,15 +576,56 @@ def test_ATTEMPT_ONES_SCHEDULE_IS_REFUSED_FOR_EXECUTION_though_it_still_PARSES()
 
 
 def test_THE_RETRY_SCHEDULE_STILL_MATCHES_BOTH_PINS_BUT_IS_NOW_SPENT():
-    """The pins are unchanged -- a spent schedule is still the same schedule -- and
-    the registry now REFUSES it, naming the first seed it will not re-issue."""
-    tasks = PLAN.build_tasks(PLAN.load_source_plan())
-    summary = PLAN.validate_h2_schedule(tasks)
-    assert summary["task_digest"] == R.H2_TASK_DIGEST
-    assert R.h2_full_task_digest(tasks) == R.H2_FULL_TASK_DIGEST
-    assert summary["task_digest"] != R.H2_ATTEMPT1_TASK_DIGEST, "a NEW schedule"
+    """Attempt 2's schedule stays verifiable AS THE INCIDENT'S RECORD -- its 383
+    preserved games must remain checkable against the schedule they came from --
+    and the registry REFUSES it for execution. Rebuilt with attempt 2's seeds,
+    which is what those records hold."""
+    lo = R.H2_ATTEMPT2_SEED_BLOCK[0]
+    tasks = [dict(t, seed=lo + i, rng_streams=REF.rng_stream_seeds(dict(t, seed=lo + i)))
+             for i, t in enumerate(PLAN.build_tasks(PLAN.load_source_plan()))]
+    assert R.L0.l0_task_digest(tasks) == R.H2_ATTEMPT2_TASK_DIGEST, \
+        "attempt 2's digest must still verify, or the incident's record is unverifiable"
+    assert R.h2_full_task_digest(tasks) == R.H2_ATTEMPT2_FULL_TASK_DIGEST
+    assert R.H2_ATTEMPT2_TASK_DIGEST != R.H2_ATTEMPT1_TASK_DIGEST
     with pytest.raises(REF.E4ReferenceError, match="EXPOSED|RETIRED|retired"):
         REF.validate_schedule_executable(tasks)
+
+
+def test_THE_THIRD_BLOCK_IS_ACCOUNTED_ONLY_and_the_barrier_is_SATISFIED():
+    """THE SEED-PREPARATION STEP, and only that. Registering is bookkeeping, not
+    permission: the block is ACCOUNTED so the registration barrier is satisfied,
+    and NOT exposed and NOT retired because a reservation is not a draw. The gate
+    is the separate review and it is still shut."""
+    lo, hi = R.H2_SEED_BLOCK
+    for name in ("ACCOUNTED_SEED_INTERVALS", "EXPOSED_SEED_INTERVALS",
+                 "RETIRED_SEED_INTERVALS", "TEST_ONLY_SEED_INTERVALS"):
+        assert getattr(REF, name), f"vacuous: {name} is empty"
+    for seed in range(lo, hi):
+        st = REF.seed_status(seed)
+        assert st["accounted"], (seed, st)
+        assert not (st["exposed"] or st["retired"] or st["test_only"]), (seed, st)
+        assert seed not in REF.CONSUMED_SEEDS, seed
+    RUN.check_seed_registration()                     # the barrier is down
+    assert RUN.H2_EXECUTION_AUTHORIZED is False       # and the gate is NOT
+    with pytest.raises(RUN.H2Error, match="UNAUTHORIZED"):
+        RUN.run_h2(results_path="/dev/null/x", trace_path="/dev/null/y",
+                   report_path="/dev/null/z")
+
+
+def test_THE_THIRD_SCHEDULE_MATCHES_BOTH_PINS_and_IS_EXECUTABLE_by_the_registry():
+    """The other half of the registration: a block that is registered but whose
+    schedule the registry still refuses would be a reservation that buys nothing.
+    Both pins are recomputed from the BUILT schedule -- a pinned digest never
+    checked against the artifact it pins is decoration."""
+    tasks = PLAN.build_tasks(PLAN.load_source_plan())
+    summary = PLAN.validate_h2_schedule(tasks)
+    assert summary["seed_block"] == list(R.H2_SEED_BLOCK)
+    assert summary["task_digest"] == R.H2_TASK_DIGEST
+    assert R.h2_full_task_digest(tasks) == R.H2_FULL_TASK_DIGEST
+    assert R.H2_TASK_DIGEST not in (R.H2_ATTEMPT1_TASK_DIGEST,
+                                    R.H2_ATTEMPT2_TASK_DIGEST), "a NEW schedule"
+    assert [t["seed"] for t in tasks] == list(range(*R.H2_SEED_BLOCK))
+    REF.validate_schedule_executable(tasks)           # raises nothing
 
 
 def _registry_without_h2():
@@ -1681,7 +1726,7 @@ def test_THE_EXACT_RETRY_TASK_CONSTRUCTS_THROUGH_THE_REAL_BUILDER():
     from scripts.GPU.alphazero import eval_readout as RO
     from scripts.GPU.alphazero import twixtbot_g3_reference as G3
     task = PLAN.build_tasks(PLAN.load_source_plan())[0]
-    assert task["seed"] == R.H2_SEED_BLOCK[0] == 202620000
+    assert task["seed"] == R.H2_SEED_BLOCK[0] == 202622000
     assert task["colour_arm"] == "t1j_red" and task["anchor_colour"] == "red"
     assert task["selection_mode"] == "argmax"
 
