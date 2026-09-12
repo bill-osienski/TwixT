@@ -2566,11 +2566,14 @@ DEFECTS = [
      "H2_EXECUTION_AUTHORIZED = False",
      "H2_EXECUTION_AUTHORIZED = True",
      f"{T_H2}::test_ATTEMPT_ONES_BLOCK_IS_STILL_SPENT_and_the_retirement_STANDS"),
-    # ⚠ RE-ANCHORED to the RETRY's line: stripping a block that is not registered
-    # removes nothing, and `_registry_without_h2` asserts the strip bit.
+    # ⚠ RE-ANCHORED AGAIN 2026-09-12, onto ATTEMPT 3's line. `_registry_without_h2`
+    # strips whatever `H2_SEED_BLOCK` currently is, so once that became attempt 3
+    # this control was removing an entry the strip no longer touches and went NOT
+    # CAUGHT. Stripping a block that is not registered removes nothing, and
+    # `_registry_without_h2` asserts the strip bit.
     ("the negative control stops stripping anything", REF_SRC,
-     "    (202620000, 202620736),          # H2 ATTEMPT 2 -- THE RETRY against the",
-     "    # (202620000, 202620736),        # H2 ATTEMPT 2 -- THE RETRY against the",
+     "    (202622000, 202622736),          # H2 ATTEMPT 3 -- the match H2 has still not",
+     "    # (202622000, 202622736),        # H2 ATTEMPT 3 -- the match H2 has still not",
      f"{T_H2}::test_an_UNREGISTERED_block_is_still_refused"),
     # ══════════ 2026-09-11: the qualified-builder repair, both halves ════════
     # HALF ONE -- H2's readout must be ADMITTED.
@@ -3657,8 +3660,14 @@ EXPECTED_REASONS = {
         "scripts.GPU.alphazero.h2_match_runner.H2VoidError: incumbent_identity.eval_config.selection_mode: recorded 'opening_temperature' (str) but the frozen configuration gives 'argmax' (str)",
     'the identity is compared SHALLOWLY again':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h2_match_runner.H2VoidError'>",
+    # 🔴 CORRECTED 2026-09-12. The frozen reason was an E4ReferenceError saying seed
+    # 202620000 was EXPOSED: with the digest comparison removed, `check_schedule`
+    # ran on to the AVAILABILITY check and was refused there, because attempt 2's
+    # block had been drawn from. So this control was passing on a refusal that had
+    # nothing to do with the digest. A fresh, unexposed block removes that
+    # accident and the test now catches the thing it names.
     'the schedule digest is not compared with the pin':
-        'scripts.GPU.alphazero.e4_screen_reference.E4ReferenceError: seed 202620000 was EXPOSED -- it has been drawn from -- and cannot be scheduled',
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h2_match_runner.H2Error'>",
     'the deadline never fires':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h2_match_runner.H2VoidError'>",
     'a malformed ply record is skipped instead of VOIDing':
