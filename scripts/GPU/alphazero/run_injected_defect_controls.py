@@ -49,6 +49,7 @@ OK, REFUSED, BASELINE_FAILED, PROBLEMS, TREE_VIOLATED = 0, 2, 3, 4, 5
 
 _CHILD = None          # the pytest subprocess, so a signal can stop it explicitly
 _CHECKOUT = None       # the disposable checkout, so a signal can name it
+_PRESERVE = False      # a checkout we announced as kept must not then be discarded
 
 
 def load_defects(path):
@@ -73,13 +74,38 @@ def run_pytest(cwd, nodes):
     """A fresh subprocess, held in a global so `_on_signal` can shut it down."""
     global _CHILD
     _CHILD = subprocess.Popen(
-        [sys.executable, "-m", "pytest", *nodes, "-q", "-rf",
+        [sys.executable, "-m", "pytest", *nodes, "-q", "-rf", "--tb=short",
          "-p", "no:cacheprovider"],
         cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+        # `--tb=short` explicitly: the evidence this driver reads is the traceback,
+        # and it must not depend on what an ini file happens to say about it.
         env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"})
     out, err = _CHILD.communicate()
     rc, _CHILD = _CHILD.returncode, None
     return rc, out + "\n" + err
+
+
+def failed_lines(node, out):
+    """The short-summary lines for THIS node. `startswith` alone would also match a
+    LONGER test name that begins with this one (`::test_value` vs `::test_value_2`);
+    the next character must end the id or open a parametrisation."""
+    want = f"FAILED {node}"
+    return [l for l in out.splitlines()
+            if l.startswith(want) and (len(l) == len(want) or l[len(want)] in " [")]
+
+
+def evidence_lines(out):
+    """The `E   ` lines of the traceback -- the assertion text as pytest printed it.
+
+    🔴 NOT the `FAILED <node> - <reason>` summary line. pytest fits that line to the
+    terminal, which is 80 columns when stdout is a pipe, and it does so in two ways:
+    a short node id keeps its reason but TRUNCATED ("Failed..."), and a node id that
+    is already too long gets NO reason appended at all. This programme's test names
+    are mostly in the second class, so the first recording run on 2026-09-12
+    harvested 31 reasons out of 539 -- and those 31 were stubs. The traceback is not
+    fitted to anything.
+    """
+    return [l[4:].rstrip() for l in out.splitlines() if l.startswith("E   ")]
 
 
 def classify(node, expected, rc, out):
@@ -96,18 +122,22 @@ def classify(node, expected, rc, out):
         return "NOT CAUGHT", (out.strip().splitlines() or [""])[-1][:160]
     if rc != 1:
         return "INDETERMINATE", f"pytest exited {rc}, which is not a test failure"
-    failed = [l for l in out.splitlines() if l.startswith(f"FAILED {node}")]
+    failed = failed_lines(node, out)
     if not failed:
         return "INDETERMINATE", f"{node} is not in the FAILED summary"
     if any(l.startswith("ERROR") for l in out.splitlines()):
         return "INDETERMINATE", "pytest reported an ERROR as well as the failure"
-    observed = failed[0].split(" - ", 1)[1].strip() if " - " in failed[0] else failed[0]
-    if expected not in out:
-        return "INDETERMINATE", f"failed for another reason: {observed[:160]}"
-    return "REJECTED", observed[:160]
+    evidence = evidence_lines(out)
+    observed = evidence[0] if evidence else failed[0]
+    # against the ASSERTION TEXT, not the whole output: a string that happens to
+    # appear in a source-context line is not the reason the test failed.
+    if expected not in "\n".join(evidence):
+        return "INDETERMINATE", f"failed for another reason: {observed[:200]}"
+    return "REJECTED", observed[:200]
 
 
 def _on_signal(sig, _frame):
+    global _PRESERVE
     print(f"\n🔴 SIGNAL {sig}: stopping the test subprocess and keeping the checkout",
           flush=True)
     if _CHILD is not None:
@@ -118,12 +148,13 @@ def _on_signal(sig, _frame):
             _CHILD.kill()
             _CHILD.wait()
     if _CHECKOUT is not None:
+        _PRESERVE = True
         print(f"checkout PRESERVED: {_CHECKOUT}", flush=True)
     raise SystemExit(130)
 
 
 def main(argv):
-    global _CHECKOUT
+    global _CHECKOUT, _PRESERVE
     ap = argparse.ArgumentParser(add_help=True)
     ap.add_argument("--run", action="store_true",
                     help="REQUIRED. Without it this driver does nothing.")
@@ -208,7 +239,6 @@ def main(argv):
     counts = {"REJECTED": 0, "NOT CAUGHT": 0, "INDETERMINATE": 0}
     stale = 0
     observed_reasons = {}
-    preserve = False          # a violated checkout is EVIDENCE, not litter
     try:
         for label, path, old, new, node in defects:
             f = checkout / path
@@ -230,7 +260,7 @@ def main(argv):
                 print(f"🔴 {path} does not hold the content this driver injected -- "
                       f"something else wrote it. STOPPING rather than overwrite it.")
                 print(f"checkout PRESERVED: {checkout}")
-                preserve = True
+                _PRESERVE = True
                 return TREE_VIOLATED
             f.write_text(src)
 
@@ -239,12 +269,12 @@ def main(argv):
             print(f"  {outcome:13s}  {label}")
             if outcome != "REJECTED":
                 print(f"      {reason}")
-            if rc == 1:
-                hit = [l for l in out.splitlines() if l.startswith(f"FAILED {node}")]
-                if hit and " - " in hit[0]:
-                    observed_reasons[label] = hit[0].split(" - ", 1)[1].strip()
+            if outcome == "REJECTED" or (rc == 1 and failed_lines(node, out)):
+                ev = evidence_lines(out)
+                if ev:
+                    observed_reasons[label] = ev[0]
     finally:
-        if not preserve:
+        if not _PRESERVE:        # a violated or signalled checkout is EVIDENCE
             discard()
 
     if a.record:
@@ -258,7 +288,7 @@ def main(argv):
           f"{counts['NOT CAUGHT']} not caught; {counts['INDETERMINATE']} "
           f"indeterminate; {stale} stale")
     print("distinct injections:", len(seen), "| duplicate labels:", len(dupe_labels))
-    print("clean baseline: PASS")
+    print("clean baseline: PASS")   # the only path that reaches here
     print("PROBLEMS:", problems)
     return OK if problems == 0 else PROBLEMS
 

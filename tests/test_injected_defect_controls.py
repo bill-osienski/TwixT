@@ -32,8 +32,13 @@ import sys
 import pytest
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-DRIVER = ROOT / "scripts/GPU/alphazero/run_injected_defect_controls.py"
-DEFS = ROOT / "scripts/GPU/alphazero/injected_defect_controls.py"
+DRIVER_DEFAULT = "scripts/GPU/alphazero/run_injected_defect_controls.py"
+DEFS_DEFAULT = "scripts/GPU/alphazero/injected_defect_controls.py"
+# The overrides exist ONLY so a negative control can re-introduce a gap in a COPY
+# and require the matching test below to fail. The defaults are the live files and
+# `test_THE_PATHS_DEFAULT_TO_THE_LIVE_HARNESS` pins them.
+DRIVER = pathlib.Path(os.environ.get("IDC_DRIVER", str(ROOT / DRIVER_DEFAULT)))
+DEFS = pathlib.Path(os.environ.get("IDC_DEFECTS", str(ROOT / DEFS_DEFAULT)))
 
 # the driver's exit statuses, which are part of its contract
 OK, REFUSED, BASELINE_FAILED, PROBLEMS, TREE_VIOLATED = 0, 2, 3, 4, 5
@@ -45,6 +50,28 @@ import src
 def test_value():
     assert src.VALUE != "", "THE VALUE IS EMPTY"
     assert src.VALUE == "good", "THE VALUE IS WRONG"
+'''
+
+SLOW_TEST = '''\
+import os
+import pathlib
+import time
+
+
+def test_slow():
+    if 'VALUE = "bad"' in pathlib.Path("src.py").read_text():
+        pathlib.Path("SLEEPING").write_text(str(os.getpid()))
+        time.sleep(30)
+'''
+
+LONG_TEST = '''\
+import src
+
+LONG = "THE VALUE IS WRONG AND THIS MESSAGE IS DELIBERATELY LONGER THAN EIGHTY COLUMNS SO THAT A TRUNCATED SUMMARY LINE CANNOT CARRY IT"
+
+
+def test_a_deliberately_long_name_that_pushes_the_summary_line_past_eighty_columns():
+    assert src.VALUE == "good", LONG
 '''
 
 MEDDLE_TEST = '''\
@@ -75,9 +102,14 @@ def sandbox(tmp_path):
     (repo / "src.py").write_text('VALUE = "good"\n')
     (repo / "tests" / "test_target.py").write_text(TARGET_TEST)
     (repo / "tests" / "test_meddle.py").write_text(MEDDLE_TEST)
+    (repo / "tests" / "test_long.py").write_text(LONG_TEST)
     (repo / "conftest.py").write_text(
         "import pathlib, sys\n"
         "sys.path.insert(0, str(pathlib.Path(__file__).parent))\n")
+    # Slow ONLY while the defect is held, so the clean baseline stays instant --
+    # and it publishes ITS OWN PID, which is the only honest way to ask later
+    # whether the driver really stopped it or merely orphaned it.
+    (repo / "tests" / "test_slow.py").write_text(SLOW_TEST)
     (repo / "pytest.ini").write_text("[pytest]\ntestpaths = tests\n")
     for cmd in (["init", "-q", "-b", "main"], ["add", "-A"],
                 ["-c", "user.email=t@t", "-c", "user.name=t",
@@ -111,6 +143,13 @@ GOOD_REASON = {"the value is wrong": "THE VALUE IS WRONG"}
 
 # ═══════════════ GAP 1: a failed baseline must ABORT, and problems must EXIT NONZERO
 
+def test_THE_PATHS_DEFAULT_TO_THE_LIVE_HARNESS():
+    """The override is for negative controls only; the default is what will run."""
+    assert DRIVER_DEFAULT == "scripts/GPU/alphazero/run_injected_defect_controls.py"
+    assert DEFS_DEFAULT == "scripts/GPU/alphazero/injected_defect_controls.py"
+    assert (ROOT / DRIVER_DEFAULT).is_file() and (ROOT / DEFS_DEFAULT).is_file()
+
+
 def test_a_FAILED_BASELINE_ABORTS_BEFORE_THE_FIRST_INJECTION(sandbox):
     """🔴 THE WORKED EXAMPLE, 2026-09-12 run 1: two controls named tests that had
     been renamed, pytest exits nonzero for a node id it cannot find, and those
@@ -124,13 +163,21 @@ def test_a_FAILED_BASELINE_ABORTS_BEFORE_THE_FIRST_INJECTION(sandbox):
 
     r = drive(sandbox, write_defects(sandbox, ctl, {"names a test that does not exist": "x"}))
 
-    assert r.returncode == BASELINE_FAILED, (r.returncode, r.stdout, r.stderr)
     assert "baseline" in r.stdout.lower() and "FAIL" in r.stdout
-    assert "REJECTED" not in r.stdout and "NOT CAUGHT" not in r.stdout, (
-        "a control ran after the baseline failed: " + r.stdout)
+    # 🔑 EVERY outcome word, not just the two that mean "pass"/"fail". With the
+    # checkout in place a driver that ignores its baseline no longer touches the
+    # shared tree, so mtime cannot see it -- what it still does is REPORT on
+    # controls whose targets were never shown to work, in any of the four shapes.
+    for marker in ("REJECTED", "NOT CAUGHT", "INDETERMINATE", "STALE CONTROL"):
+        assert marker not in r.stdout, (
+            f"A CONTROL RAN AFTER THE BASELINE FAILED ({marker})")
+    assert "ABORTED before the first injection." in r.stdout, (
+        "THE DRIVER DID NOT SAY IT ABORTED")
     assert (_sha(sandbox / "src.py"),
             (sandbox / "src.py").stat().st_mtime_ns) == before, (
-        "the driver injected a defect after its baseline failed")
+        "A DEFECT WAS INJECTED AFTER THE BASELINE FAILED")
+    assert r.returncode == BASELINE_FAILED, (
+        f"A FAILED BASELINE EXITED {r.returncode}, NOT {BASELINE_FAILED}")
 
 
 def test_A_NOT_CAUGHT_DEFECT_EXITS_NONZERO(sandbox):
@@ -141,7 +188,8 @@ def test_A_NOT_CAUGHT_DEFECT_EXITS_NONZERO(sandbox):
             "tests/test_target.py::test_value")]
     r = drive(sandbox, write_defects(sandbox, ctl, {"nothing checks the comment": "x"}))
     assert "NOT CAUGHT" in r.stdout, r.stdout
-    assert r.returncode == PROBLEMS, (r.returncode, r.stdout)
+    assert r.returncode == PROBLEMS, (
+        f"A NOT CAUGHT DEFECT EXITED {r.returncode}, NOT {PROBLEMS}")
 
 
 def test_A_STALE_CONTROL_EXITS_NONZERO(sandbox):
@@ -152,7 +200,8 @@ def test_A_STALE_CONTROL_EXITS_NONZERO(sandbox):
             "tests/test_target.py::test_value")]
     r = drive(sandbox, write_defects(sandbox, ctl, {"anchor no longer present": "x"}))
     assert "STALE" in r.stdout, r.stdout
-    assert r.returncode == PROBLEMS, (r.returncode, r.stdout)
+    assert r.returncode == PROBLEMS, (
+        f"A STALE CONTROL EXITED {r.returncode}, NOT {PROBLEMS}")
 
 
 def test_A_DUPLICATE_INJECTION_EXITS_NONZERO(sandbox):
@@ -168,7 +217,9 @@ def test_A_DUPLICATE_INJECTION_EXITS_NONZERO(sandbox):
 def test_A_RUN_WITH_NO_PROBLEMS_EXITS_ZERO(sandbox):
     """The other half. A driver that always exits nonzero has no verdict either."""
     r = drive(sandbox, write_defects(sandbox, [GOOD], GOOD_REASON))
-    assert r.returncode == OK, (r.returncode, r.stdout, r.stderr)
+    assert r.returncode == OK, (
+        f"A RUN WITH NOTHING WRONG DID NOT EXIT ZERO (exit {r.returncode})\n"
+        + r.stdout)
     assert "REJECTED" in r.stdout
 
 
@@ -181,8 +232,10 @@ def test_A_COLLECTION_ERROR_IS_INDETERMINATE_NOT_REJECTED(sandbox):
     ctl = [("breaks the module outright", "src.py",
             'VALUE = "good"', 'VALUE = (', "tests/test_target.py::test_value")]
     r = drive(sandbox, write_defects(sandbox, ctl, {"breaks the module outright": "THE VALUE IS WRONG"}))
-    assert "INDETERMINATE" in r.stdout, r.stdout
-    assert "REJECTED" not in r.stdout, r.stdout
+    assert "INDETERMINATE" in r.stdout, (
+        "A COLLECTION ERROR WAS NOT REPORTED AS INDETERMINATE:\n" + r.stdout)
+    assert "REJECTED" not in r.stdout, (
+        "A COLLECTION ERROR SCORED AS A REJECTION:\n" + r.stdout)
     assert r.returncode == PROBLEMS, (r.returncode, r.stdout)
 
 
@@ -192,7 +245,8 @@ def test_A_FAILURE_FOR_THE_WRONG_REASON_IS_INDETERMINATE(sandbox):
     ctl = [("empties the value", "src.py", 'VALUE = "good"', 'VALUE = ""',
             "tests/test_target.py::test_value")]
     r = drive(sandbox, write_defects(sandbox, ctl, {"empties the value": "THE VALUE IS WRONG"}))
-    assert "INDETERMINATE" in r.stdout, r.stdout
+    assert "INDETERMINATE" in r.stdout, (
+        "A FAILURE AT A DIFFERENT ASSERTION SCORED AS A REJECTION:\n" + r.stdout)
     assert "THE VALUE IS EMPTY" in r.stdout, "the observed reason is not reported"
     assert r.returncode == PROBLEMS, (r.returncode, r.stdout)
 
@@ -201,7 +255,8 @@ def test_A_CONTROL_WITH_NO_EXPECTED_REASON_IS_INDETERMINATE(sandbox):
     """FAIL CLOSED on absence. An expectation that defaults to "anything" is a
     switch-off wearing the name of a check."""
     r = drive(sandbox, write_defects(sandbox, [GOOD], {}))
-    assert "INDETERMINATE" in r.stdout, r.stdout
+    assert "INDETERMINATE" in r.stdout, (
+        "A CONTROL WITH NO DECLARED REASON WAS NOT INDETERMINATE:\n" + r.stdout)
     assert r.returncode == PROBLEMS, (r.returncode, r.stdout)
 
 
@@ -227,7 +282,7 @@ def test_THE_SHARED_WORKING_TREE_IS_NEVER_WRITTEN(sandbox):
     r = drive(sandbox, write_defects(sandbox, [GOOD], GOOD_REASON))
     assert r.returncode == OK, (r.returncode, r.stdout, r.stderr)
     assert (src.read_bytes(), src.stat().st_mtime_ns) == before, (
-        "the shared working tree was written during the run")
+        "THE SHARED WORKING TREE WAS WRITTEN DURING THE RUN")
 
 
 def test_A_CONCURRENT_EDIT_IS_NOT_OVERWRITTEN_and_the_run_STOPS(sandbox):
@@ -241,7 +296,8 @@ def test_A_CONCURRENT_EDIT_IS_NOT_OVERWRITTEN_and_the_run_STOPS(sandbox):
     r = drive(sandbox, write_defects(
         sandbox, ctl, {"a control whose test edits the source": "irrelevant"}))
 
-    assert r.returncode == TREE_VIOLATED, (r.returncode, r.stdout, r.stderr)
+    assert r.returncode == TREE_VIOLATED, (
+        f"A CONCURRENT EDIT DID NOT STOP THE RUN (exit {r.returncode})\n" + r.stdout)
     assert "does not hold" in r.stdout, r.stdout
     line = next((l for l in r.stdout.splitlines()
                  if l.startswith("checkout PRESERVED: ")), None)
@@ -297,7 +353,8 @@ def test_EXECING_THE_CONTROL_LIST_AS___main___RUNS_NOTHING(sandbox):
     assert r.returncode == 0, r.stderr
     assert r.stdout.startswith("DEFECTS "), r.stdout
     assert int(r.stdout.split()[1]) > 0, "the control list did not come back readable"
-    assert (src.read_bytes(), src.stat().st_mtime_ns) == before
+    assert (src.read_bytes(), src.stat().st_mtime_ns) == before, (
+        "EXECING THE CONTROL LIST AS __main__ WROTE TO A SOURCE FILE")
 
 
 def test_THE_CONTROL_LIST_HAS_NO_DRIVER_IN_IT():
@@ -319,6 +376,103 @@ def test_EXECING_THE_DRIVER_AS___main___WITHOUT_THE_RUN_FLAG_REFUSES(sandbox):
     src = sandbox / "src.py"
     before = (src.read_bytes(), src.stat().st_mtime_ns)
     r = drive(sandbox, write_defects(sandbox, [GOOD], GOOD_REASON), run_flag=False)
-    assert r.returncode == REFUSED, (r.returncode, r.stdout, r.stderr)
+    assert r.returncode == REFUSED, (
+        f"THE DRIVER RAN WITHOUT --run (exit {r.returncode})\n{r.stdout}{r.stderr}")
     assert "--run" in (r.stdout + r.stderr)
     assert (src.read_bytes(), src.stat().st_mtime_ns) == before
+
+
+def test_A_SIGNAL_STOPS_THE_TEST_SUBPROCESS_AND_KEEPS_THE_CHECKOUT(sandbox):
+    """"Manage child-process shutdown explicitly."
+
+    🔑 THE OBSERVABLE IS THE CHILD'S PID, NOT THE PARENT'S EXIT TIME. My first
+    version signalled as soon as the injection appeared and asserted the driver
+    exited quickly -- which it does either way, because a parent that unwinds
+    simply ORPHANS its child. It passed in 0.007 s having proved nothing. The
+    driver spends the run blocked on a pytest subprocess holding an injected tree;
+    what must be true is that THAT PROCESS IS GONE.
+    """
+    import signal as _sig
+    import time as _t
+
+    ctl = [("a control with a slow test", "src.py", 'VALUE = "good"', 'VALUE = "bad"',
+            "tests/test_slow.py::test_slow")]
+    defects = write_defects(sandbox, ctl, {"a control with a slow test": "irrelevant"})
+    proc = subprocess.Popen(
+        [sys.executable, str(DRIVER), "--run", "--defects", str(defects)],
+        cwd=sandbox, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+        env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"})
+
+    marker, deadline = None, _t.time() + 60
+    while _t.time() < deadline:               # wait until the child is IN the sleep
+        listing = subprocess.run(["git", "worktree", "list"], cwd=sandbox,
+                                 capture_output=True, text=True).stdout
+        if listing.strip().count("\n") >= 1:
+            cand = pathlib.Path(listing.splitlines()[1].split()[0]) / "SLEEPING"
+            if cand.exists() and cand.read_text().strip():
+                marker = cand
+                break
+        _t.sleep(0.05)
+    if marker is None:
+        proc.kill()
+        pytest.fail("the child never reached the sleep, so nothing was signalled")
+    child_pid = int(marker.read_text().strip())
+
+    proc.send_signal(_sig.SIGTERM)
+    out, err = proc.communicate(timeout=25)
+
+    assert proc.returncode == 130, (proc.returncode, out, err)
+    assert "SIGNAL" in out, out
+    gone, until = False, _t.time() + 15
+    while _t.time() < until:
+        try:
+            os.kill(child_pid, 0)
+        except (ProcessLookupError, PermissionError):
+            gone = True
+            break
+        _t.sleep(0.1)
+    assert gone, (f"pytest {child_pid} is STILL RUNNING against the injected "
+                  f"checkout -- the driver unwound and orphaned it")
+    line = next((l for l in out.splitlines() if l.startswith("checkout PRESERVED: ")), None)
+    assert line, out
+    kept = pathlib.Path(line.split(": ", 1)[1].strip()) / "src.py"
+    assert kept.read_text().strip() == 'VALUE = "bad"', (
+        "the checkout was discarded after being announced as preserved")
+
+
+LONG_NODE = ("tests/test_long.py::"
+             "test_a_deliberately_long_name_that_pushes_the_summary_line_past_eighty_columns")
+LONG_REASON = ("THE VALUE IS WRONG AND THIS MESSAGE IS DELIBERATELY LONGER THAN EIGHTY "
+               "COLUMNS SO THAT A TRUNCATED SUMMARY LINE CANNOT CARRY IT")
+
+
+def test_THE_REASON_IS_READ_FROM_UNTRUNCATED_EVIDENCE(sandbox):
+    """🔴 pytest fits its `FAILED <node> - <reason>` line to the terminal -- 80
+    columns when stdout is a pipe -- and when the node id alone is already too long
+    it appends NO reason at all. That is most of this programme's test names, which
+    is why the first recording run on 2026-09-12 harvested 31 reasons out of 539,
+    all of them stubs. The reason must come from the traceback, which is not fitted
+    to anything, so a message longer than the line still arrives whole."""
+    ctl = [("a long name and a long message", "src.py",
+            'VALUE = "good"', 'VALUE = "bad"', LONG_NODE)]
+    r = drive(sandbox, write_defects(sandbox, ctl,
+                                     {"a long name and a long message": LONG_REASON}))
+    assert "REJECTED" in r.stdout, (
+        "A LONG NODE ID OR MESSAGE WAS LOST TO TRUNCATION:\n" + r.stdout)
+    assert r.returncode == OK, (r.returncode, r.stdout)
+
+
+def test_THE_RECORDED_REASON_IS_THE_WHOLE_ASSERTION_TEXT(sandbox, tmp_path):
+    """--record is how EXPECTED_REASONS gets populated, so a truncated recording
+    would freeze a stub as the thing every later run compares against."""
+    ctl = [("a long name and a long message", "src.py",
+            'VALUE = "good"', 'VALUE = "bad"', LONG_NODE)]
+    out = tmp_path / "observed.json"
+    drive(sandbox, write_defects(sandbox, ctl, {"a long name and a long message": LONG_REASON}),
+          "--record", str(out))
+    import json
+    recorded = json.loads(out.read_text())
+    # the exception TYPE is part of the reason -- "AssertionError: ..." pins more
+    # than the message alone, and the whole message must survive
+    assert recorded == {
+        "a long name and a long message": "AssertionError: " + LONG_REASON}, recorded

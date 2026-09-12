@@ -194,40 +194,32 @@ def test_the_boundary_NAMES_EVERY_act_that_is_still_real():
 
 # ────────────── 3. the gate-removal CONTROL is gone from the harness ─────────
 
-HARNESS_DEFAULT = ("docs/superpowers/evidence/2026-09-12-t1j-harness-containment"
-                   "/01_controls.py.txt")
+# 🔴 RETARGETED 2026-09-12. This pointed at the harness PACKAGED AS EVIDENCE, which
+# is create-only and will never run again. The control list that WILL run is the live
+# one; a test that inspects a museum piece binds nothing.
+HARNESS_DEFAULT = "scripts/GPU/alphazero/injected_defect_controls.py"
 # The override exists ONLY so a negative control can point this read-only inspection
-# at a copy carrying a rogue control; the default is the real harness, and
-# `test_the_harness_path_DEFAULTS_to_the_evidence_copy` pins it.
+# at a copy carrying a rogue control; the default is the real control list, and
+# `test_the_harness_path_DEFAULTS_to_the_live_control_list` pins it.
 HARNESS = pathlib.Path(os.environ.get("H2_CONTAINMENT_HARNESS", HARNESS_DEFAULT))
 
 
-def test_the_harness_path_DEFAULTS_to_the_evidence_copy():
-    assert HARNESS_DEFAULT == ("docs/superpowers/evidence/"
-                               "2026-09-12-t1j-harness-containment/01_controls.py.txt")
+def test_the_harness_path_DEFAULTS_to_the_live_control_list():
+    assert HARNESS_DEFAULT == "scripts/GPU/alphazero/injected_defect_controls.py"
     assert pathlib.Path(HARNESS_DEFAULT).is_file()
 
 
 def _defects():
-    """The control list, read WITHOUT running the harness -- whose whole job is to
-    edit this repository's source files. Only top-level assignments are evaluated,
-    and only those containing no call at all: the module's constants (`PROBE`, the
-    file paths) resolve, its `main()` and its file writes cannot run.
+    """The control list. It is now DATA -- a module with no driver in it -- so this
+    reads it by importing it, which is also the point: on 2026-09-12 reading the old
+    harness STARTED it, and the `ast` dance that used to stand here was the
+    workaround. `test_THE_CONTROL_LIST_HAS_NO_DRIVER_IN_IT` is what makes this safe.
     """
-    ns = {}
-    for node in ast.parse(HARNESS.read_text()).body:
-        if not isinstance(node, ast.Assign):
-            continue
-        if any(isinstance(n, (ast.Call, ast.Await)) for n in ast.walk(node)):
-            continue                       # nothing that could RUN anything
-        try:
-            exec(compile(ast.Module(body=[node], type_ignores=[]),
-                         str(HARNESS), "exec"), ns)
-        except NameError:
-            continue                       # depends on a value we refused to compute
-        if "DEFECTS" in ns:
-            return ns["DEFECTS"]
-    raise AssertionError("no literal DEFECTS list in the harness")
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_h2_containment_defects", HARNESS)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.DEFECTS
 
 
 def test_NO_CONTROL_DELETES_AN_AUTHORIZATION_CHECK():
@@ -261,39 +253,23 @@ def test_NO_CONTROL_DELETES_AN_AUTHORIZATION_CHECK():
                 f"{f}: boundary after {effect}")
 
 
-def test_the_harness_REFUSES_TO_RUN_ON_IMPORT_OR_EXEC():
-    """🔴 INCIDENT 2. The harness's driver is top-level code, so `exec`ing the file to
-    READ its control list STARTED it: it injected defects into H1's source for seven
-    minutes while other tests ran against the tree it was mutating. The guard must
-    reject every namespace shape whose `__name__` is not exactly `__main__` --
-    including a namespace with no `__name__` at all."""
-    src = HARNESS.read_text()
-    assert 'if __name__ != "__main__":' in src
-    # and the guard must come BEFORE the driver: no statement that edits a file may
-    # precede it.
-    mod = ast.parse(src)
-    guard_line = min(n.lineno for n in mod.body
-                     if isinstance(n, ast.If) and "__main__" in ast.dump(n.test))
-    for node in mod.body:
-        if node.lineno >= guard_line:
-            break
-        assert isinstance(node, (ast.Expr, ast.Import, ast.ImportFrom, ast.Assign,
-                                 ast.AnnAssign)), (
-            f"line {node.lineno}: {type(node).__name__} runs BEFORE the import guard")
-
-    for ns in ({}, {"__name__": "ctl"}, {"__name__": "__main__x"}):
-        with pytest.raises(ImportError, match="ONLY as __main__"):
-            exec(compile(src, str(HARNESS), "exec"), dict(ns))
-
-
-def test_the_harness_RESTORES_ON_A_SIGNAL_and_VERIFIES_the_restore():
-    """A SIGKILL cannot be caught, but SIGTERM/SIGINT/SIGHUP can -- and the harness
-    now verifies every restore and stops rather than running the next control against
-    an unverified tree."""
-    src = HARNESS.read_text()
-    assert "SIGTERM" in src and "SIGINT" in src and "SIGHUP" in src
-    assert "RESTORATION FAILED" in src
-    assert "raise SystemExit(2)" in src
+def test_THE_HARNESS_CONTAINMENT_PROPERTIES_MOVED_AND_ARE_STILL_PROVEN():
+    """🔴 TWO TESTS STOOD HERE and are gone, because what they asserted is gone with
+    the harness that had it: an import guard reading `__name__ != "__main__"` (which
+    never stopped the `exec` that started incident 2), and a restore-on-signal over
+    the SHARED tree (which no longer happens anywhere). Both properties are now held
+    BEHAVIOURALLY, in the file named below, with negative controls. This test exists
+    so that removal is visible rather than silent."""
+    new = pathlib.Path("tests/test_injected_defect_controls.py")
+    assert new.is_file(), "the harness containment tests are gone entirely"
+    src = new.read_text()
+    for name in ("test_THE_CONTROL_LIST_HAS_NO_DRIVER_IN_IT",
+                 "test_EXECING_THE_CONTROL_LIST_AS___main___RUNS_NOTHING",
+                 "test_EXECING_THE_DRIVER_AS___main___WITHOUT_THE_RUN_FLAG_REFUSES",
+                 "test_A_SIGNAL_STOPS_THE_TEST_SUBPROCESS_AND_KEEPS_THE_CHECKOUT",
+                 "test_A_CONCURRENT_EDIT_IS_NOT_OVERWRITTEN_and_the_run_STOPS",
+                 "test_THE_SHARED_WORKING_TREE_IS_NEVER_WRITTEN"):
+        assert f"def {name}(" in src, f"{name} is not there to hold it"
 
 
 # ─────────── 4. the entry's own gate check, asserted without executing ───────
