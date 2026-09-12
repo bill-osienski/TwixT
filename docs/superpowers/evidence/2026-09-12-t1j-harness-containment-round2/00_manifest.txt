@@ -1,0 +1,15 @@
+MANIFEST -- 2026-09-12-t1j-harness-containment-round2
+12 files
+
+7ab01e6ecc2daf5ba4d53e12bd3d89d4231aef5114745acd777c5c7f6ddce08f    259289  01_injected_defect_controls.py.txt
+8b05684c0b6445fc016c0c811e636feeed7d8abe84b7a5788364a2658ae3d248     14450  02_run_injected_defect_controls.py.txt
+470c765da3b6e916213c0ee026fa7633bd7c0b7c0f004efeafd9633faad5dc32     11817  03_harness_negative_controls.py.txt
+ffc2335ebd844ca7f8ea532ec1094a884ba570b06bedbdf1344e6099f0be2cf5     26695  04_test_injected_defect_controls.py.txt
+0033bad34df767e85f2f4ec2309270900758ef052ed6e5e60f1f5cea0469e6ab      4203  05_narrow_tests_run.txt
+5b74e1fe8ec91728aeb9373ed5c79d5954735164b9ff5f31433c88b080f4d5e6      3324  06_negative_controls_run.txt
+5b3602d00ed4b85010de8e1e24698a6cb1fb9b682fd1e2e5bdb7c96c8a60e70a     59878  07_recording_run_1_TRUNCATED_31_of_539.txt
+54609848beaf5d75f84ef99de7af5fca69eb9f50b9e51d56c54323849b3a4f4d     59879  08_recording_run_2.txt
+b90f8a60dbf1b13b20cb62ecce4582eb2c5b6d684b87cb73ec2bff7c590a6b3a     37443  09_harness_run_DRIFT_16_indeterminate.txt
+9e509c36b090f6e99915070ba93fb1ed29c6b5e5d7db3372265afb385107c18b     35596  10_harness_run.txt
+66679efec08d88639008b9bcfe8e6a6100ccc312168a987088982d6f5a02f403     25950  11_full_suite_run.txt
+3070d442b4b81baaadf5a33087c57e84e4898d58342f7f200fbae17e5c20a2d3      8729  12_results.txt

@@ -1,0 +1,1086 @@
+checkout: /var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/injected-defect-controls-v59mbff6/checkout
+clean baseline over 441 distinct target tests: PASS
+  INDETERMINATE  registration check disabled
+      the control declares no expected reason
+  INDETERMINATE  registration check looks only at the first seed
+      the control declares no expected reason
+  INDETERMINATE  the D1 seed block un-registered from ACCOUNTED
+      the control declares no expected reason
+  INDETERMINATE  the D1 seed block marked EXPOSED as well as accounted
+      the control declares no expected reason
+  INDETERMINATE  the §14 block un-registered from ACCOUNTED (the edit reverted)
+      the control declares no expected reason
+  INDETERMINATE  the §14 block un-registered -- caught at the STATE assertion too
+      the control declares no expected reason
+  INDETERMINATE  the spent §14 block is NOT exposed -- 221 draws unrecorded
+      the control declares no expected reason
+  INDETERMINATE  the spent §14 block is NOT retired -- a one-shot schedule left replayable
+      the control declares no expected reason
+  INDETERMINATE  a spent seed is schedulable because availability is never checked
+      the control declares no expected reason
+  INDETERMINATE  registration ALSO opened the D1 execution gate
+      the control declares no expected reason
+  INDETERMINATE  compile step skips toolchain verification
+      the control declares no expected reason
+  INDETERMINATE  compile step accepts a jar that is not the verified one
+      the control declares no expected reason
+  INDETERMINATE  compile step accepts a java outside the verified JDK
+      the control declares no expected reason
+  INDETERMINATE  compile step reuses an existing class directory
+      the control declares no expected reason
+  INDETERMINATE  compile step ignores a failing javac
+      the control declares no expected reason
+  INDETERMINATE  compile step builds the E3b set, not the query path
+      the control declares no expected reason
+  INDETERMINATE  compile step skips the E4 jar pin
+      the control declares no expected reason
+  INDETERMINATE  postcondition surface never read
+      the control declares no expected reason
+  INDETERMINATE  reflection COUNT accepted as whatever came back
+      the control declares no expected reason
+  INDETERMINATE  searched position never re-bound
+      the control declares no expected reason
+  INDETERMINATE  more than one searched dump accepted
+      the control declares no expected reason
+  INDETERMINATE  a move illegal in OUR engine accepted
+      the control declares no expected reason
+  INDETERMINATE  depth agreement not recorded
+      the control declares no expected reason
+  INDETERMINATE  the helper's stdout discarded again on a non-zero query exit
+      the control declares no expected reason
+  INDETERMINATE  the failure excerpt unbounded
+      the control declares no expected reason
+  INDETERMINATE  the excerpt line cap removed
+      the control declares no expected reason
+  INDETERMINATE  the excerpt falls back to silence
+      the control declares no expected reason
+  INDETERMINATE  the label drops the cohort
+      the control declares no expected reason
+  INDETERMINATE  the label drops the prefix digest
+      the control declares no expected reason
+  INDETERMINATE  the run loop stops labelling its refusals
+      the control declares no expected reason
+  INDETERMINATE  the probe refusal loses the position again
+      the control declares no expected reason
+  INDETERMINATE  the BINDER discards the transcript on a non-zero replay exit
+      the control declares no expected reason
+  INDETERMINATE  the AGENT discards the transcript on a non-zero query exit
+      the control declares no expected reason
+  INDETERMINATE  the binder's excerpt carries the dump body
+      the control declares no expected reason
+  INDETERMINATE  manifest drops the cohort label
+      the control declares no expected reason
+  INDETERMINATE  registration checked only after the clock starts
+      the control declares no expected reason
+  INDETERMINATE  registration checked only after the supervisor is armed
+      the control declares no expected reason
+  INDETERMINATE  registration no longer stops the run before compilation
+      the control declares no expected reason
+  INDETERMINATE  supervisor armed from limit_s instead of the remaining time
+      the control declares no expected reason
+  INDETERMINATE  supervisor arms from a deadline that was never started
+      the control declares no expected reason
+  INDETERMINATE  supervisor arms a DISABLED timer when nothing remains
+      the control declares no expected reason
+  INDETERMINATE  remaining() ignores elapsed time, so the window restarts
+      the control declares no expected reason
+  INDETERMINATE  digest re-check disabled
+      the control declares no expected reason
+  INDETERMINATE  prefix legality check disabled
+      the control declares no expected reason
+  INDETERMINATE  E3b binder never called
+      the control declares no expected reason
+  INDETERMINATE  binder AbortError not translated to VOID
+      the control declares no expected reason
+  INDETERMINATE  binder replay timeout not translated to VOID
+      the control declares no expected reason
+  INDETERMINATE  ply_cap not carried to the runtime
+      the control declares no expected reason
+  INDETERMINATE  replay timeout widened at the runtime
+      the control declares no expected reason
+  INDETERMINATE  replay's unbounded-wait guard removed
+      the control declares no expected reason
+  INDETERMINATE  replay timeout dropped at the last hop
+      the control declares no expected reason
+  INDETERMINATE  T1jRuntime accepts an unbounded timeout
+      the control declares no expected reason
+  INDETERMINATE  capture draws from the readout stream
+      the control declares no expected reason
+  INDETERMINATE  capture switched on by default
+      the control declares no expected reason
+  INDETERMINATE  capture flag not forwarded by the qualified builder
+      the control declares no expected reason
+  INDETERMINATE  root-noise check disabled
+      the control declares no expected reason
+  INDETERMINATE  evaluator reloaded for every position
+      the control declares no expected reason
+  INDETERMINATE  incumbent readout spends no query
+      the control declares no expected reason
+  INDETERMINATE  policy rank tie-break reversed
+      the control declares no expected reason
+  INDETERMINATE  incumbent identity typed instead of read from the frozen plan
+      the control declares no expected reason
+  INDETERMINATE  digest downgraded to the sha1 superset helper
+      the control declares no expected reason
+  INDETERMINATE  digest payload widened beyond the frozen three fields
+      the control declares no expected reason
+  INDETERMINATE  per-cell cap loosened
+      the control declares no expected reason
+  INDETERMINATE  deduplication disabled
+      the control declares no expected reason
+  INDETERMINATE  incumbent-to-move restriction dropped
+      the control declares no expected reason
+  INDETERMINATE  controls no longer matched to the position cells
+      the control declares no expected reason
+  INDETERMINATE  seed written in place so a shared row is overwritten
+      the control declares no expected reason
+  INDETERMINATE  frozen-count reconciliation removed
+      the control declares no expected reason
+  INDETERMINATE  lowply gate flipped open
+      the control declares no expected reason
+  INDETERMINATE  lowply public runner ungated
+      the control declares no expected reason
+  INDETERMINATE  lowply turns a non-zero exit back into a VOID (D1's defect)
+      the control declares no expected reason
+  INDETERMINATE  lowply stops recording the incomplete-depth shortfall
+      the control declares no expected reason
+  INDETERMINATE  lowply stops checking the move against OUR engine
+      the control declares no expected reason
+  INDETERMINATE  lowply stops comparing the two invocations
+      the control declares no expected reason
+  INDETERMINATE  lowply verdict always PASS
+      the control declares no expected reason
+  INDETERMINATE  lowply timeout no longer a VOID
+      the control declares no expected reason
+  INDETERMINATE  lowply D1 exception translation removed
+      the control declares no expected reason
+  INDETERMINATE  lowply frozen-input hash check disabled
+      the control declares no expected reason
+  INDETERMINATE  lowply per-call timeout dropped at the last hop
+      the control declares no expected reason
+  INDETERMINATE  lowply uses the same-JVM determinism mode
+      the control declares no expected reason
+  INDETERMINATE  lowply query cap loosened
+      the control declares no expected reason
+  INDETERMINATE  lowply wall-clock cap widened
+      the control declares no expected reason
+  INDETERMINATE  lowply reads D1's gate
+      the control declares no expected reason
+  INDETERMINATE  adapter query parse failure re-raised bare
+      the control declares no expected reason
+  INDETERMINATE  adapter replay parse failure re-raised bare
+      the control declares no expected reason
+  INDETERMINATE  lowply query parse failure not translated
+      the control declares no expected reason
+  INDETERMINATE  lowply replay parse failure not translated
+      the control declares no expected reason
+  INDETERMINATE  lowply POSTCOND parse failure not translated
+      the control declares no expected reason
+  INDETERMINATE  lowply parse VOID carries the whole dump body
+      the control declares no expected reason
+  INDETERMINATE  lowply main has no catch-all again
+      the control declares no expected reason
+  INDETERMINATE  parse_postconds raises a bare ValueError again
+      the control declares no expected reason
+  INDETERMINATE  parse_postconds drops the transcript it attaches
+      the control declares no expected reason
+  INDETERMINATE  PostCond construction raises a bare ValueError again
+      the control declares no expected reason
+  INDETERMINATE  PostCond parse failure drops its transcript
+      the control declares no expected reason
+  INDETERMINATE  §13 exclusion never applied
+      the control declares no expected reason
+  INDETERMINATE  §12 count reconciliation removed
+      the control declares no expected reason
+  INDETERMINATE  §13 post-exclusion counts not reconciled
+      the control declares no expected reason
+  INDETERMINATE  §13 accepts the retired seed block
+      the control declares no expected reason
+  INDETERMINATE  §13 assigns seeds when none were reserved
+      the control declares no expected reason
+  INDETERMINATE  D1 query cap raised back to the frozen 12.4 figure
+      the control declares no expected reason
+  INDETERMINATE  D1 query parse failure not translated
+      the control declares no expected reason
+  INDETERMINATE  D1 replay parse failure not translated
+      the control declares no expected reason
+  INDETERMINATE  D1 main has no catch-all again
+      the control declares no expected reason
+  INDETERMINATE  the trace stops validating VALUES (name-only again)
+      the control declares no expected reason
+  INDETERMINATE  the enum check is opened to free text
+      the control declares no expected reason
+  INDETERMINATE  the event enum is opened to free text
+      the control declares no expected reason
+  INDETERMINATE  counters accept any type or magnitude
+      the control declares no expected reason
+  INDETERMINATE  counters accept bools as integers
+      the control declares no expected reason
+  INDETERMINATE  counter ceilings widened past the run's real limits
+      the control declares no expected reason
+  INDETERMINATE  the schema string is no longer pinned
+      the control declares no expected reason
+  INDETERMINATE  an event may carry extra fields
+      the control declares no expected reason
+  INDETERMINATE  an event may omit declared fields
+      the control declares no expected reason
+  INDETERMINATE  the identity strings are readmitted
+      the control declares no expected reason
+  INDETERMINATE  the trace validates AFTER writing
+      the control declares no expected reason
+  INDETERMINATE  the trace is not written on a VOID
+      the control declares no expected reason
+  INDETERMINATE  the trace stops counting seeds drawn
+      the control declares no expected reason
+  INDETERMINATE  the trace is not fsynced per line
+      the control declares no expected reason
+  INDETERMINATE  run_d1 accepts any cohort (the ceiling-only defect)
+      the control declares no expected reason
+  INDETERMINATE  the cohort size check is dropped
+      the control declares no expected reason
+  INDETERMINATE  the cohort ORDER check is dropped
+      the control declares no expected reason
+  INDETERMINATE  an excluded row is readmitted to the cohort
+      the control declares no expected reason
+  INDETERMINATE  the cohort source is no longer hash-pinned
+      the control declares no expected reason
+  INDETERMINATE  the exact-spend check is dropped
+      the control declares no expected reason
+  INDETERMINATE  the expected spend becomes a maximum again
+      the control declares no expected reason
+  INDETERMINATE  the private seam starts enforcing the cohort too
+      the control declares no expected reason
+  INDETERMINATE  cohort binds digests only, not the labels
+      the control declares no expected reason
+  INDETERMINATE  cohort drops the grouping fields from the identity set
+      the control declares no expected reason
+  INDETERMINATE  the RAW mover_more_fragmented column is left unbound
+      the control declares no expected reason
+  INDETERMINATE  the RAW created_threat column is left unbound
+      the control declares no expected reason
+  INDETERMINATE  a source field silently drops out of the binding
+      the control declares no expected reason
+  INDETERMINATE  cohort tolerates a row missing an identity field
+      the control declares no expected reason
+  INDETERMINATE  cohort pins the SEED as an IDENTITY field (the frozen source carries none)
+      the control declares no expected reason
+  INDETERMINATE  cohort comparison drops type-strictness (== again)
+      the control declares no expected reason
+  INDETERMINATE  the comparison helper stops checking type
+      the control declares no expected reason
+  INDETERMINATE  bools slip through as ints (isinstance instead of type)
+      the control declares no expected reason
+  INDETERMINATE  prefix normalisation coerces through int() again
+      the control declares no expected reason
+  INDETERMINATE  structural normalisation dropped, so a tuple prefix is refused
+      the control declares no expected reason
+  INDETERMINATE  the corrected 5.4 justification is reinstated as the wrong one
+      the control declares no expected reason
+  INDETERMINATE  the interval is RETYPED as a literal in d1_probe
+      the control declares no expected reason
+  INDETERMINATE  the canonical interval points back at the RETIRED block
+      the control declares no expected reason
+  INDETERMINATE  the canonical interval is sized 227 again, not 221
+      the control declares no expected reason
+  INDETERMINATE  RETIRED_SEED_INTERVAL moved to the new block
+      the control declares no expected reason
+  INDETERMINATE  RETIRED_SEED_INTERVAL moved -- caught by the REFUSAL, not the constant
+      the control declares no expected reason
+  INDETERMINATE  the retirement guard is removed from select_all
+      the control declares no expected reason
+  INDETERMINATE  the runtime seed check admits the retired block too
+      the control declares no expected reason
+  INDETERMINATE  the registration barrier computes nothing and so is always satisfied
+      the control declares no expected reason
+  INDETERMINATE  bind_results design becomes defaultable
+      the control declares no expected reason
+  INDETERMINATE  H1 silently reverts to L0's 4 repetitions
+      the control declares no expected reason
+  INDETERMINATE  the viability threshold moves to parity
+      the control declares no expected reason
+  INDETERMINATE  the verdict admits an upper bound AT the threshold
+      the control declares no expected reason
+  INDETERMINATE  the verdict reads the bounds in the wrong order
+      the control declares no expected reason
+  INDETERMINATE  the decisive bands are hardcoded instead of derived
+      the control declares no expected reason
+  INDETERMINATE  the task digest is a hand-typed constant again
+      the control declares no expected reason
+  INDETERMINATE  H1 reuses L0's SPENT and retired seed block
+      the control declares no expected reason
+  INDETERMINATE  H1's block overlaps D1's PAPER reservation
+      the control declares no expected reason
+  INDETERMINATE  a shared vocabulary is RETYPED instead of re-exported
+      the control declares no expected reason
+  INDETERMINATE  H1 acquires an early stop
+      the control declares no expected reason
+  INDETERMINATE  cap saturation stops refusing a rate
+      the control declares no expected reason
+  INDETERMINATE  the reporter binds H1 results to the 64-game design
+      the control declares no expected reason
+  INDETERMINATE  the verdict is read off the WILSON interval
+      the control declares no expected reason
+  INDETERMINATE  the no-pooling prohibition is deleted
+      the control declares no expected reason
+  INDETERMINATE  the repetition LABELS stop being checked
+      the control declares no expected reason
+  INDETERMINATE  an incomplete match is reported instead of refused
+      the control declares no expected reason
+  INDETERMINATE  H1 APPENDS its seed rule to L0's instead of composing
+      the control declares no expected reason
+  INDETERMINATE  the block name stops reaching the seed rule
+      the control declares no expected reason
+  INDETERMINATE  L0's own abort rules change under the factoring
+      the control declares no expected reason
+  INDETERMINATE  the H1 seed predicate admits the L0 block too
+      the control declares no expected reason
+  INDETERMINATE  the H1 seed predicate refuses H1's own seeds
+      the control declares no expected reason
+  INDETERMINATE  H1 INHERITS L0's count-bearing prohibitions
+      the control declares no expected reason
+  INDETERMINATE  the independence prohibition hardcodes 64 again
+      the control declares no expected reason
+  INDETERMINATE  the per-cell denominators are swapped
+      the control declares no expected reason
+  INDETERMINATE  L0's own forbidden claims change under the factoring
+      the control declares no expected reason
+  INDETERMINATE  the plan pin reverts to the SUPERSEDED v1 artifact
+      the control declares no expected reason
+  INDETERMINATE  H1 INHERITS L0's non-abort rules whole
+      the control declares no expected reason
+  INDETERMINATE  H1 claims it has NO band, as L0 does
+      the control declares no expected reason
+  INDETERMINATE  the early-stop prohibition is softened
+      the control declares no expected reason
+  INDETERMINATE  L0's own non-abort rules change under the extraction
+      the control declares no expected reason
+  INDETERMINATE  the artifact keeps L0-only wording
+      the control declares no expected reason
+  INDETERMINATE  an H1 gate appears without the claim being revisited
+      the control declares no expected reason
+  INDETERMINATE  an H1 registration precondition appears silently
+      the control declares no expected reason
+  INDETERMINATE  the H1 gate is flipped open
+      the control declares no expected reason
+  INDETERMINATE  the H1 gate no longer binds the match path
+      the control declares no expected reason
+  INDETERMINATE  the registration barrier no longer binds
+      the control declares no expected reason
+  INDETERMINATE  the registration barrier checks only the endpoints
+      the control declares no expected reason
+  INDETERMINATE  the barriers move BELOW the plan load and the recorder
+      the control declares no expected reason
+  INDETERMINATE  the gate opens the registration barrier too
+      the control declares no expected reason
+  INDETERMINATE  registering the block opens the gate too
+      the control declares no expected reason
+  INDETERMINATE  match mode accepts a supplied plan
+      the control declares no expected reason
+  INDETERMINATE  the content binding narrows to the digest dimensions (dead again)
+      the control declares no expected reason
+  INDETERMINATE  the seed-block check is dropped from the PLAN validator
+      the control declares no expected reason
+  INDETERMINATE  the whole-run deadline is widened
+      the control declares no expected reason
+  INDETERMINATE  the per-call timeout is dropped
+      the control declares no expected reason
+  INDETERMINATE  the cooperative deadline check is removed
+      the control declares no expected reason
+  INDETERMINATE  the deadline is never checked between games
+      the control declares no expected reason
+  INDETERMINATE  the trace file stops being create-only
+      the control declares no expected reason
+  INDETERMINATE  the trace admits an identity string
+      the control declares no expected reason
+  INDETERMINATE  the trace validates AFTER the write
+      the control declares no expected reason
+  INDETERMINATE  the trace stops recording how far a VOID run got
+      the control declares no expected reason
+  INDETERMINATE  cap saturation is reported as a verdict after all
+      the control declares no expected reason
+  INDETERMINATE  the early-stop ban names a function that does not exist
+      the control declares no expected reason
+  INDETERMINATE  the match is hidden behind a mode list again
+      the control declares no expected reason
+  INDETERMINATE  the public match path supplies no production setup
+      the control declares no expected reason
+  INDETERMINATE  qualification builds production collaborators too
+      the control declares no expected reason
+  INDETERMINATE  T1j loses the frozen per-call timeout in the setup
+      the control declares no expected reason
+  INDETERMINATE  the setup keeps the REFUSING binder
+      the control declares no expected reason
+  INDETERMINATE  the openings come from H1's plan again (KeyError on the real path)
+      the control declares no expected reason
+  INDETERMINATE  the incumbent is loaded per game instead of once
+      the control declares no expected reason
+  INDETERMINATE  the SIGALRM void escapes as D1's exception
+      the control declares no expected reason
+  INDETERMINATE  the supervisor is never armed
+      the control declares no expected reason
+  INDETERMINATE  the VOID diagnostic stops naming the position
+      the control declares no expected reason
+  INDETERMINATE  the VOID diagnostic drops the helper transcript
+      the control declares no expected reason
+  INDETERMINATE  the VOID diagnostic carries the WHOLE transcript
+      the control declares no expected reason
+  INDETERMINATE  the ply counter stops observing durable ply records
+      the control declares no expected reason
+  INDETERMINATE  a partial vector can produce a report after all
+      the control declares no expected reason
+  INDETERMINATE  the agent's own query timeout is dropped again
+      the control declares no expected reason
+  INDETERMINATE  compilation gets a SECOND deadline (two clocks again)
+      the control declares no expected reason
+  INDETERMINATE  the setup factory is never invoked
+      the control declares no expected reason
+  INDETERMINATE  the excerpt reads only error.stdout again
+      the control declares no expected reason
+  INDETERMINATE  the excerpt drops the abort-message fallback
+      the control declares no expected reason
+  INDETERMINATE  the abort-message fallback is unbounded
+      the control declares no expected reason
+  INDETERMINATE  the ply tracker ignores opening_bound again
+      the control declares no expected reason
+  INDETERMINATE  the binder wrapper stops noting the attempted ply
+      the control declares no expected reason
+  INDETERMINATE  the recorder is built OUTSIDE the protected try again
+      the control declares no expected reason
+  INDETERMINATE  the output preflight is removed
+      the control declares no expected reason
+  INDETERMINATE  the preflight ignores the trace path
+      the control declares no expected reason
+  INDETERMINATE  a precondition refusal is reported as a VOID
+      the control declares no expected reason
+  INDETERMINATE  a mid-run recorder failure escapes unclassified again
+      the control declares no expected reason
+  INDETERMINATE  match mode accepts a missing trace path again
+      the control declares no expected reason
+  INDETERMINATE  the trace requirement is not applied to the match
+      the control declares no expected reason
+  INDETERMINATE  results and trace may be the same file
+      the control declares no expected reason
+  INDETERMINATE  the paths are compared WITHOUT canonicalisation
+      the control declares no expected reason
+  INDETERMINATE  canonicalisation stops resolving symlinks
+      the control declares no expected reason
+  INDETERMINATE  the output precheck follows symlinks again (exists, not lexists)
+      the control declares no expected reason
+  INDETERMINATE  the precheck stops agreeing with create-exclusive open
+      the control declares no expected reason
+  INDETERMINATE  only the results name is checked for existence
+      the control declares no expected reason
+  INDETERMINATE  the public docstring denies that match mode is selectable
+      the control declares no expected reason
+  INDETERMINATE  the H1 block is un-registered from ACCOUNTED
+      the control declares no expected reason
+  INDETERMINATE  the H1 exposure overstates the draws (all 224, not the 60 taken)
+      the control declares no expected reason
+  INDETERMINATE  the H1 retirement covers only the seeds actually drawn
+      the control declares no expected reason
+  INDETERMINATE  D1's spent block loses its ACCOUNTED entry, from the H1 side
+      the control declares no expected reason
+  INDETERMINATE  an H1 block is made to overlap D1's spent block
+      the control declares no expected reason
+  INDETERMINATE  registering the block also opens the gate
+      the control declares no expected reason
+  INDETERMINATE  a match abort escapes without becoming a VOID
+      the control declares no expected reason
+  INDETERMINATE  qualification aborts are relabelled as voids too
+      the control declares no expected reason
+  INDETERMINATE  a KeyboardInterrupt is relabelled as an instrument failure
+      the control declares no expected reason
+  INDETERMINATE  the diagnostic records the TRANSLATION instead of the cause
+      the control declares no expected reason
+  INDETERMINATE  a prefs failure is reported without the attribution note
+      the control declares no expected reason
+  INDETERMINATE  the attribution note claims T1j did it
+      the control declares no expected reason
+  INDETERMINATE  the note is attached to every failure, not just prefs ones
+      the control declares no expected reason
+  INDETERMINATE  the surface probe collapses ABSENT and UNREADABLE, as Java does
+      the control declares no expected reason
+  INDETERMINATE  the directory probe hides a read failure
+      the control declares no expected reason
+  INDETERMINATE  no baseline surface is recorded at run start
+      the control declares no expected reason
+  INDETERMINATE  mover cut inverted
+      the control declares no expected reason
+  INDETERMINATE  the observation fields are never read from the POSTCOND line
+      the control declares no expected reason
+  INDETERMINATE  the observation is parsed but not attached to PostCond
+      the control declares no expected reason
+  INDETERMINATE  the POSTCOND self-agreement check disabled
+      the control declares no expected reason
+  INDETERMINATE  the self-agreement check compares the hash only, not the count
+      the control declares no expected reason
+  INDETERMINATE  the excerpt reader returns None when the earlier source said nothing
+      the control declares no expected reason
+  INDETERMINATE  the excerpt reader requires POSTCOND to start a line
+      the control declares no expected reason
+  INDETERMINATE  the VOID diagnostic drops the helper's own observation
+      the control declares no expected reason
+  INDETERMINATE  the diagnostic reads only chained stdout, never the AbortError message
+      the control declares no expected reason
+  INDETERMINATE  an operator interrupt is traced as VOID again
+      the control declares no expected reason
+  INDETERMINATE  every failure is classified as an interrupt
+      the control declares no expected reason
+  INDETERMINATE  the interrupt record is still called a void_diagnostic
+      the control declares no expected reason
+  INDETERMINATE  the accounting rule no longer travels with the interrupt record
+      the control declares no expected reason
+  INDETERMINATE  INTERRUPTED removed from the closed verdict enum
+      the control declares no expected reason
+  INDETERMINATE  the accounting rule softened: drawn seeds become reusable
+      the control declares no expected reason
+  INDETERMINATE  the partial-observation refusal removed
+      the control declares no expected reason
+  INDETERMINATE  the partial-observation refusal removed, seen from the REAL query path
+      the control declares no expected reason
+  INDETERMINATE  a truncated segment ending in the marker reads as the earlier source
+      the control declares no expected reason
+  INDETERMINATE  a segment missing a BASE field reads as the earlier source
+      the control declares no expected reason
+  INDETERMINATE  the query path stops chaining the full transcript
+      the control declares no expected reason
+  INDETERMINATE  the diagnostic parses the BOUNDED excerpt instead of the full text
+      the control declares no expected reason
+  INDETERMINATE  the attribution trigger reads only the bounded excerpt
+      the control declares no expected reason
+  INDETERMINATE  requal gate removed at the public runner
+      the control declares no expected reason
+  INDETERMINATE  requal gate removed at the worker entry
+      the control declares no expected reason
+  INDETERMINATE  requal gate removed at main (the worker still refuses, so only the no-spawn test sees it)
+      the control declares no expected reason
+  INDETERMINATE  the frozen prefix file's hash pin removed
+      the control declares no expected reason
+  INDETERMINATE  the prefix-file vs plan cross-check removed
+      the control declares no expected reason
+  INDETERMINATE  a reply without the observation is read as legacy instead of VOID
+      the control declares no expected reason
+  INDETERMINATE  the parser/reader agreement check removed
+      the control declares no expected reason
+  INDETERMINATE  a dirty preference surface no longer recorded as a failure
+      the control declares no expected reason
+  INDETERMINATE  the diagnostic observation read from the bounded excerpt, not the chain
+      the control declares no expected reason
+  INDETERMINATE  the exact-eight requirement removed from the public runner
+      the control declares no expected reason
+  INDETERMINATE  the create-only precheck removed (O_EXCL still fails, but after 16 launches)
+      the control declares no expected reason
+  INDETERMINATE  the supervisor no longer starts the worker in its own session
+      the control declares no expected reason
+  INDETERMINATE  the supervisor stops at SIGTERM and never SIGKILLs the group
+      the control declares no expected reason
+  INDETERMINATE  a supervisor kill is reported as VOID instead of TIMEOUT
+      the control declares no expected reason
+  INDETERMINATE  a FAIL result exits 0 like a pass
+      the control declares no expected reason
+  INDETERMINATE  the outer cap shrinks to the inner deadline (no grace for the inner VOID)
+      the control declares no expected reason
+  INDETERMINATE  main spawns itself without --worker
+      the control declares no expected reason
+  INDETERMINATE  every call no longer carries the frozen per-call timeout
+      the control declares no expected reason
+  INDETERMINATE  no cleanup after a worker that exits before the timeout
+      the control declares no expected reason
+  INDETERMINATE  main reports the worker's code although cleanup failed
+      the control declares no expected reason
+  INDETERMINATE  EPERM from the group probe read as CLEARED
+      the control declares no expected reason
+  INDETERMINATE  row binding compares digests only again
+      the control declares no expected reason
+  INDETERMINATE  row binding drops the TYPE check (False == 0)
+      the control declares no expected reason
+  INDETERMINATE  row binding accepts extra keys
+      the control declares no expected reason
+  INDETERMINATE  row binding normalises VALUES, not only shape
+      the control declares no expected reason
+  INDETERMINATE  the attempt-2 block moved back onto the SPENT attempt-1 block
+      the control declares no expected reason
+  INDETERMINATE  the plan loader stops verifying the v4 file hash
+      the control declares no expected reason
+  INDETERMINATE  the plan loader stops verifying the task digest
+      the control declares no expected reason
+  INDETERMINATE  the wrapper's main stops reading the runner's gate
+      the control declares no expected reason
+  INDETERMINATE  the wrapper's worker stops reading the runner's gate
+      the control declares no expected reason
+  INDETERMINATE  the wrapper skips the output-path precheck
+      the control declares no expected reason
+  INDETERMINATE  a failed gate restoration no longer supersedes
+      the control declares no expected reason
+  INDETERMINATE  the gate is restored only on the happy path (else, not finally)
+      the control declares no expected reason
+  INDETERMINATE  restore_gate reports success without verifying the rewrite
+      the control declares no expected reason
+  INDETERMINATE  the wrapper reports the worker's code although cleanup failed
+      the control declares no expected reason
+  INDETERMINATE  an operator interrupt in the worker exits 0
+      the control declares no expected reason
+  INDETERMINATE  the supervisor no longer forwards an operator interrupt
+      the control declares no expected reason
+  INDETERMINATE  the wrapper's outer cap shrinks to the runner deadline
+      the control declares no expected reason
+  INDETERMINATE  the output precheck moves back IN FRONT of the restoration boundary
+      the control declares no expected reason
+  INDETERMINATE  a failed restoration no longer supersedes a refusal
+      the control declares no expected reason
+  INDETERMINATE  the --runner-source override returns to the production CLI
+      the control declares no expected reason
+  INDETERMINATE  the default restoration target is not the imported runner's source
+      the control declares no expected reason
+  INDETERMINATE  the attempt-2 block un-registered from ACCOUNTED
+      the control declares no expected reason
+  INDETERMINATE  the attempt-2 block un-RETIRED after the completed match
+      the control declares no expected reason
+  INDETERMINATE  the attempt-2 block un-EXPOSED after the completed match
+      the control declares no expected reason
+  INDETERMINATE  the runner stops asking whether the schedule may be RUN (spent block accepted)
+      the control declares no expected reason
+  INDETERMINATE  rank ties broken in REVERSE (row, col)
+      the control declares no expected reason
+  INDETERMINATE  agree coupled to lprd (the withdrawn implication)
+      the control declares no expected reason
+  INDETERMINATE  k drifts from 5 to 6
+      the control declares no expected reason
+  INDETERMINATE  the depth-3 move read instead of mdPly 6
+      the control declares no expected reason
+  INDETERMINATE  MH weights replaced by equal weights
+      the control declares no expected reason
+  INDETERMINATE  common support pooled: cells with ONE role enter the statistic
+      the control declares no expected reason
+  INDETERMINATE  the direction flipped (controls minus positions)
+      the control declares no expected reason
+  INDETERMINATE  the decision threshold lowered
+      the control declares no expected reason
+  INDETERMINATE  the lower-bound condition dropped (T alone decides)
+      the control declares no expected reason
+  INDETERMINATE  undefined replicates silently DISCARDED
+      the control declares no expected reason
+  INDETERMINATE  a game drawn twice contributes its rows ONCE (re-deduplicated)
+      the control declares no expected reason
+  INDETERMINATE  the second draw copies the first (no replacement)
+      the control declares no expected reason
+  INDETERMINATE  the PRNG seed drifts
+      the control declares no expected reason
+  INDETERMINATE  the quantile convention changes from type 7
+      the control declares no expected reason
+  INDETERMINATE  the eligibility floor becomes strict (refuses AT the floor)
+      the control declares no expected reason
+  INDETERMINATE  contributing games counted from UNMATCHED rows too
+      the control declares no expected reason
+  INDETERMINATE  an undefined arm reported as plain NO_GO (treated as zero)
+      the control declares no expected reason
+  INDETERMINATE  the both-arm rule dropped
+      the control declares no expected reason
+  INDETERMINATE  cross-half duplicates no longer removed
+      the control declares no expected reason
+  INDETERMINATE  the ply < 5 eligibility filter dropped
+      the control declares no expected reason
+  INDETERMINATE  the ceiling drops silently instead of refusing
+      the control declares no expected reason
+  INDETERMINATE  within-half dedup keeps the LATEST row
+      the control declares no expected reason
+  INDETERMINATE  cohort binding loses type strictness
+      the control declares no expected reason
+  INDETERMINATE  cohort binding stops checking the count
+      the control declares no expected reason
+  INDETERMINATE  the checked entry stops binding the cohort
+      the control declares no expected reason
+  INDETERMINATE  the checked entry takes a cohort argument again (secondary promotable)
+      the control declares no expected reason
+  INDETERMINATE  the design/cohort game check removed
+      the control declares no expected reason
+  INDETERMINATE  strata inferred from the ROWS instead of the design
+      the control declares no expected reason
+  INDETERMINATE  eligibility defaults a missing 'system' to acceptance
+      the control declares no expected reason
+  INDETERMINATE  eligibility reads an invented flag instead of 'system'
+      the control declares no expected reason
+  INDETERMINATE  the opponent-to-move filter inverted
+      the control declares no expected reason
+  INDETERMINATE  the override flag read from the invented field name
+      the control declares no expected reason
+  INDETERMINATE  a record without the override field is silently None
+      the control declares no expected reason
+  INDETERMINATE  the production entry takes the cohort from the caller again
+      the control declares no expected reason
+  INDETERMINATE  the production entry uses a smaller B than the frozen one
+      the control declares no expected reason
+  INDETERMINATE  the canonical cohort is resolved from a different record
+      the control declares no expected reason
+  INDETERMINATE  the design metadata binding removed
+      the control declares no expected reason
+  INDETERMINATE  the design binding loses type strictness on rep
+      the control declares no expected reason
+  INDETERMINATE  the design binding skips a field the row omits
+      the control declares no expected reason
+  INDETERMINATE  the undefined-arm check runs AFTER the generic NO_GO again
+      the control declares no expected reason
+  INDETERMINATE  D1 stops binding the seed assignment to positions
+      the control declares no expected reason
+  INDETERMINATE  D1's seed rule stops being POSITIONAL (interval membership only)
+      the control declares no expected reason
+  INDETERMINATE  D1's seed rule loses type strictness
+      the control declares no expected reason
+  INDETERMINATE  D1' analyses a record with no acquisition metadata
+      the control declares no expected reason
+  INDETERMINATE  D1' stops requiring the acquisition fields to be present
+      the control declares no expected reason
+  INDETERMINATE  D1' stops requiring elapsed_s and positions to be present
+      the control declares no expected reason
+  INDETERMINATE  D1' accepts an acquisition value that disagrees with the frozen run
+      the control declares no expected reason
+  INDETERMINATE  D1' stops binding the per-position seed assignment
+      the control declares no expected reason
+  INDETERMINATE  D1' stops binding the per-position prefix
+      the control declares no expected reason
+  INDETERMINATE  D1' runs the contract AFTER the statistic
+      the control declares no expected reason
+  INDETERMINATE  D1' accepts any non-empty incumbent identity again
+      the control declares no expected reason
+  INDETERMINATE  D1' accepts any non-empty toolchain identity again
+      the control declares no expected reason
+  INDETERMINATE  D1' stops checking the compiled-class identity
+      the control declares no expected reason
+  INDETERMINATE  D1' stops checking the helper SOURCE identity
+      the control declares no expected reason
+  INDETERMINATE  D1' stops checking the MAIN CLASS
+      the control declares no expected reason
+  INDETERMINATE  the compiled-class pin drifts from the qualified builds
+      the control declares no expected reason
+  INDETERMINATE  a malformed toolchain identity raises a TypeError instead of a refusal
+      the control declares no expected reason
+  INDETERMINATE  elapsed_s is no longer bounded by the deadline
+      the control declares no expected reason
+  INDETERMINATE  malformed positions raise a TypeError instead of a refusal
+      the control declares no expected reason
+  INDETERMINATE  the analysis reaches an EXECUTING adapter function
+      the control declares no expected reason
+  INDETERMINATE  rank_visit breaks ties by DESCENDING move order
+      the control declares no expected reason
+  INDETERMINATE  rank_visit orders by ASCENDING visits
+      the control declares no expected reason
+  INDETERMINATE  rank_visit DROPS zero-visit moves
+      the control declares no expected reason
+  INDETERMINATE  rank_visit accepts an empty root instead of refusing
+      the control declares no expected reason
+  INDETERMINATE  ss is EXCLUSIVE at five on the policy side
+      the control declares no expected reason
+  INDETERMINATE  ss is INCLUSIVE at five on the visit side
+      the control declares no expected reason
+  INDETERMINATE  ss ignores the VISITS entirely -- the whole question
+      the control declares no expected reason
+  INDETERMINATE  ss drops the policy condition, so it OVERLAPS lprd
+      the control declares no expected reason
+  INDETERMINATE  the strict variant fires on ANY visit count
+      the control declares no expected reason
+  INDETERMINATE  the policy and the visits may cover DIFFERENT legal sets
+      the control declares no expected reason
+  INDETERMINATE  rank_visit accepts an empty root, so an empty record is scored
+      the control declares no expected reason
+  INDETERMINATE  the disjointness precondition checks nothing
+      the control declares no expected reason
+  INDETERMINATE  the public entry never RUNS the precondition
+      the control declares no expected reason
+  INDETERMINATE  the entry skips the completed-D1 contract
+      the control declares no expected reason
+  INDETERMINATE  the entry exposes B and the seed as knobs again
+      the control declares no expected reason
+  INDETERMINATE  D1″ reuses D1′'s bootstrap seed, so the draw repeats it
+      the control declares no expected reason
+  INDETERMINATE  the threshold is RETYPED and drifts below D1′'s
+      the control declares no expected reason
+  INDETERMINATE  the eligibility floor is never enforced
+      the control declares no expected reason
+  INDETERMINATE  the SECONDARY strict variant decides the outcome
+      the control declares no expected reason
+  INDETERMINATE  the readout summary tolerates an absent measurement
+      the control declares no expected reason
+  INDETERMINATE  the matched statistic IGNORES the requested indicator
+      the control declares no expected reason
+  INDETERMINATE  a missing indicator field is read as False
+      the control declares no expected reason
+  INDETERMINATE  the indicator changes D1′'s own default result
+      the control declares no expected reason
+  INDETERMINATE  the validation pass is never RUN by the entry
+      the control declares no expected reason
+  INDETERMINATE  validation runs PER ROW, interleaved with the scoring
+      the control declares no expected reason
+  INDETERMINATE  a required observable is optional again
+      the control declares no expected reason
+  INDETERMINATE  a visit count is coerced with int() instead of type-checked
+      the control declares no expected reason
+  INDETERMINATE  a negative or fractional visit count is accepted
+      the control declares no expected reason
+  INDETERMINATE  a NaN or infinite policy mass reaches the ranking
+      the control declares no expected reason
+  INDETERMINATE  an all-zero policy is ranked by tie-break alone
+      the control declares no expected reason
+  INDETERMINATE  an observable may CONTRADICT the map it describes
+      the control declares no expected reason
+  INDETERMINATE  a truthy int passes as the override flag
+      the control declares no expected reason
+  INDETERMINATE  validation lets the policy and the visits differ
+      the control declares no expected reason
+  INDETERMINATE  a depth-6 move of strings is accepted
+      the control declares no expected reason
+  INDETERMINATE  a small complement is reported as INSUFFICIENT SUPPORT
+      the control declares no expected reason
+  INDETERMINATE  the complement count is never reported
+      the control declares no expected reason
+  INDETERMINATE  the summary averages the ranks instead of counting them
+      the control declares no expected reason
+  INDETERMINATE  the histogram is ordered by COUNT instead of by rank
+      the control declares no expected reason
+  INDETERMINATE  the histogram emits zero-count ranks
+      the control declares no expected reason
+  INDETERMINATE  the row drops the rank fields the summary histograms
+      the control declares no expected reason
+  INDETERMINATE  the row hardcodes the POLICY rank the summary histograms
+      the control declares no expected reason
+  INDETERMINATE  the depth is coerced, so '6' and 6.0 pass a type-strict contract
+      the control declares no expected reason
+  INDETERMINATE  a non-mapping depth entry escapes as an AttributeError
+      the control declares no expected reason
+  INDETERMINATE  a rank comparison admits a bool equal to the right number
+      the control declares no expected reason
+  INDETERMINATE  the depths container itself is never validated
+      the control declares no expected reason
+  INDETERMINATE  the search budget is not bound at all
+      the control declares no expected reason
+  INDETERMINATE  the budget is retyped in this module instead of read
+      the control declares no expected reason
+  INDETERMINATE  derived values are compared APPROXIMATELY again
+      the control declares no expected reason
+  INDETERMINATE  _real accepts bools, so True passes as a number
+      the control declares no expected reason
+  INDETERMINATE  top2 is silently omitted rather than declared unused
+      the control declares no expected reason
+  INDETERMINATE  the parity rule reads 0.75 instead of parity
+      the control declares no expected reason
+  INDETERMINATE  the verdict is decided at the wrong side of the interval
+      the control declares no expected reason
+  INDETERMINATE  AT parity counts as above it
+      the control declares no expected reason
+  INDETERMINATE  the sample size drifts from the card
+      the control declares no expected reason
+  INDETERMINATE  the per-cell threshold is relaxed by one
+      the control declares no expected reason
+  INDETERMINATE  the transcript carries the SEED, so identical play looks distinct
+      the control declares no expected reason
+  INDETERMINATE  the transcript drops the moves, so every game looks the same
+      the control declares no expected reason
+  INDETERMINATE  the ply sequence is checked for CONTIGUITY, not for its exact span
+      the control declares no expected reason
+  INDETERMINATE  a truncated tail passes because only the head is anchored
+      the control declares no expected reason
+  INDETERMINATE  movers must merely ALTERNATE, not match the arm
+      the control declares no expected reason
+  INDETERMINATE  the terminal reason is not checked against the two the protocol has
+      the control declares no expected reason
+  INDETERMINATE  coordinates are coerced instead of type-checked
+      the control declares no expected reason
+  INDETERMINATE  the degeneracy screen counts GLOBALLY instead of per cell
+      the control declares no expected reason
+  INDETERMINATE  the interval is computed even when the screen fails
+      the control declares no expected reason
+  INDETERMINATE  the report drops the interval's standing
+      the control declares no expected reason
+  INDETERMINATE  the plan assigns seeds by membership, not POSITION
+      the control declares no expected reason
+  INDETERMINATE  the plan omits the readout mode from its tasks
+      the control declares no expected reason
+  INDETERMINATE  the schedule accepts a task without the readout mode
+      the control declares no expected reason
+  INDETERMINATE  a short schedule is accepted
+      the control declares no expected reason
+  INDETERMINATE  the gate defaults OPEN
+      the control declares no expected reason
+  INDETERMINATE  the registration barrier checks only the first seed
+      the control declares no expected reason
+  INDETERMINATE  the registration barrier is disabled
+      the control declares no expected reason
+  INDETERMINATE  outputs are overwritten instead of refused
+      the control declares no expected reason
+  INDETERMINATE  one path may serve as both results and trace
+      the control declares no expected reason
+  INDETERMINATE  the identity keeps the OLD readout
+      the control declares no expected reason
+  INDETERMINATE  the inert settings are left looking ACTIVE
+      the control declares no expected reason
+  INDETERMINATE  a run recording the OLD readout is reported as H2
+      the control declares no expected reason
+  INDETERMINATE  the identity is compared SHALLOWLY again
+      the control declares no expected reason
+  INDETERMINATE  the schedule digest is not compared with the pin
+      the control declares no expected reason
+  INDETERMINATE  the deadline never fires
+      the control declares no expected reason
+  INDETERMINATE  a malformed ply record is skipped instead of VOIDing
+      the control declares no expected reason
+  INDETERMINATE  the wrapper reports success without verifying the gate
+      the control declares no expected reason
+  INDETERMINATE  restoration claims success without reading the file back
+      the control declares no expected reason
+  INDETERMINATE  the wrapper gains a --runner-source override
+      the control declares no expected reason
+  INDETERMINATE  the mover is derived from the ARM again
+      the control declares no expected reason
+  INDETERMINATE  the starting colour drifts from the engine's
+      the control declares no expected reason
+  INDETERMINATE  the public entry accepts caller-supplied play again
+      the control declares no expected reason
+  INDETERMINATE  the production seam is a refusing stub again
+      the control declares no expected reason
+  INDETERMINATE  the seam no longer calls the harness game loop
+      the control declares no expected reason
+  INDETERMINATE  the production seam loads the model AT IMPORT
+      the control declares no expected reason
+  INDETERMINATE  the incumbent keeps the temperature config in production
+      the control declares no expected reason
+  INDETERMINATE  a DANGLING SYMLINK reads as absent
+      the control declares no expected reason
+  INDETERMINATE  the screen accepts a SHORT transcript vector
+      the control declares no expected reason
+  INDETERMINATE  the screen ignores the canonical task ids
+      the control declares no expected reason
+  INDETERMINATE  a cell with fewer than 46 GAMES is screened anyway
+      the control declares no expected reason
+  INDETERMINATE  invalid results are masked as a DEGENERATE DESIGN
+      the control declares no expected reason
+  INDETERMINATE  the transcript evidence is not persisted
+      the control declares no expected reason
+  INDETERMINATE  a mid-run failure leaves no run_end VOID
+      the control declares no expected reason
+  INDETERMINATE  the wrapper runs the match IN PROCESS, unsupervised
+      the control declares no expected reason
+  INDETERMINATE  the outer cap is unbounded
+      the control declares no expected reason
+  INDETERMINATE  a surviving descendant accompanies a success
+      the control declares no expected reason
+  INDETERMINATE  a timeout is reported as the worker's own exit code
+      the control declares no expected reason
+  INDETERMINATE  compile is handed a fresh, unstarted clock again
+      the control declares no expected reason
+  INDETERMINATE  the seam accepts an unstarted clock
+      the control declares no expected reason
+  INDETERMINATE  the run never starts its deadline
+      the control declares no expected reason
+  INDETERMINATE  the deadline is never ARMED, so a blocked game runs on
+      the control declares no expected reason
+  INDETERMINATE  the outcome is never classified
+      the control declares no expected reason
+  INDETERMINATE  a REFUSED report still exits COMPLETED
+      the control declares no expected reason
+  INDETERMINATE  a degenerate design is reported as a completed match
+      the control declares no expected reason
+  INDETERMINATE  the report overwrites an existing one
+      the control declares no expected reason
+  INDETERMINATE  the preflight lets an existing report through to the games
+      the control declares no expected reason
+  INDETERMINATE  an operator interrupt is recorded as VOID
+      the control declares no expected reason
+  INDETERMINATE  no cleanup runs between games
+      the control declares no expected reason
+  INDETERMINATE  cleanup runs only after a SUCCESSFUL game
+      the control declares no expected reason
+  INDETERMINATE  the evaluator is reloaded for every game
+      the control declares no expected reason
+  INDETERMINATE  the incumbent is built with the frozen TEMPERATURE config
+      the control declares no expected reason
+  INDETERMINATE  the schedule is pinned only by its DESIGN digest
+      the control declares no expected reason
+  INDETERMINATE  the full-field digest projects fields away
+      the control declares no expected reason
+  INDETERMINATE  --worker is a public bypass again
+      the control declares no expected reason
+  INDETERMINATE  the report is left out of the preflight
+      the control declares no expected reason
+  INDETERMINATE  only two outputs are compared for aliasing
+      the control declares no expected reason
+  INDETERMINATE  the terminal OK is committed BEFORE the report is durable
+      the control declares no expected reason
+  INDETERMINATE  the trace does not name the verdict it committed
+      the control declares no expected reason
+  INDETERMINATE  the capability is a fixed, caller-settable value
+      the control declares no expected reason
+  INDETERMINATE  the capability is not an anonymous pipe
+      the control declares no expected reason
+  INDETERMINATE  any token of the RIGHT LENGTH is accepted
+      the control declares no expected reason
+  INDETERMINATE  any capability at all is accepted
+      the control declares no expected reason
+  INDETERMINATE  the capability check DELETES the thing it was given
+      the control declares no expected reason
+  INDETERMINATE  an environment variable reaches the worker path
+      the control declares no expected reason
+  INDETERMINATE  a capability outlives the run
+      the control declares no expected reason
+  INDETERMINATE  the descriptor is not PASSED to the child at all
+      the control declares no expected reason
+  INDETERMINATE  the shared supervisor drops pass_fds
+      the control declares no expected reason
+  INDETERMINATE  the classifier assumes the report exists
+      the control declares no expected reason
+  INDETERMINATE  the degeneracy refusal claims the games were non-independent
+      the control declares no expected reason
+  INDETERMINATE  H2's block un-registered from ACCOUNTED (the edit reverted)
+      the control declares no expected reason
+  INDETERMINATE  H2's block ALSO marked EXPOSED -- a reservation claimed as a draw
+      the control declares no expected reason
+  INDETERMINATE  the SPENT block is not retired, so it can be scheduled again
+      the control declares no expected reason
+  INDETERMINATE  a spent seed is schedulable because availability is never checked (H2)
+      the control declares no expected reason
+  INDETERMINATE  registration ALSO opened the H2 gate
+      the control declares no expected reason
+  INDETERMINATE  the negative control stops stripping anything
+      the control declares no expected reason
+  INDETERMINATE  the builder refuses H2's readout again
+      the control declares no expected reason
+  INDETERMINATE  the admitted set loses argmax
+      the control declares no expected reason
+  INDETERMINATE  the readout is named argmax but the AGENT is built from the frozen config
+      the control declares no expected reason
+  INDETERMINATE  admitting the readout admits every other field too
+      the control declares no expected reason
+  INDETERMINATE  the simulation budget may drift alongside the readout
+      the control declares no expected reason
+  INDETERMINATE  fields are compared loosely, so 400 and 400.0 agree
+      the control declares no expected reason
+  INDETERMINATE  any selection_mode string is admitted
+      the control declares no expected reason
+  INDETERMINATE  a config of the wrong TYPE is accepted
+      the control declares no expected reason
+  INDETERMINATE  the check is skipped entirely
+      the control declares no expected reason
+  INDETERMINATE  omitting the config no longer falls back to the frozen one
+      the control declares no expected reason
+  INDETERMINATE  the retry block un-registered from ACCOUNTED
+      the control declares no expected reason
+  INDETERMINATE  the WHOLE-BLOCK retirement is dropped
+      the control declares no expected reason
+  INDETERMINATE  the exposure is widened to the WHOLE block, claiming task 383's seed as drawn
+      the control declares no expected reason
+  INDETERMINATE  the 383 confirmed draws are not recorded as EXPOSED at all
+      the control declares no expected reason
+  INDETERMINATE  the retry reuses attempt 1's SPENT block
+      the control declares no expected reason
+  INDETERMINATE  attempt 1's digest is overwritten, so its record stops verifying
+      the control declares no expected reason
+  INDETERMINATE  the retry's own digest is not re-pinned
+      the control declares no expected reason
+  INDETERMINATE  the seam's readout mode is not the rules' one
+      the control declares no expected reason
+  INDETERMINATE  our side is built with the WRONG colour for the arm
+      the control declares no expected reason
+recorded 31 observed reasons -> /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/7aa6491a-34da-430f-b936-aae7b747b312/scratchpad/observed_reasons.json
+
+0/539 defects rejected; 0 not caught; 539 indeterminate; 0 stale
+distinct injections: 539 | duplicate labels: 0
+clean baseline: PASS
+PROBLEMS: 539

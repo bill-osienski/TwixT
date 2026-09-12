@@ -1,0 +1,134 @@
+RESULTS OF RECORD -- harness containment round 2, 2026-09-12
+============================================================
+Every figure below was read from the runs packaged here, not from memory.
+
+WHAT WAS AUTHORIZED. Fix and narrowly verify four behaviours of the injected-
+defect harness packaged at `144a141`, found by reviewing it without running it.
+Nothing about H2 itself: no gate opened, no seed prepared, no match, no model, no
+JVM, no game. All seven gates remain False and the third seed block is still held.
+
+THE HARNESS IS NOW TWO FILES, AND NEITHER IS THE EVIDENCE COPY
+--------------------------------------------------------------
+The version that ran is `docs/superpowers/evidence/2026-09-12-t1j-harness-
+containment/01_controls.py.txt`. It is create-only and is NOT edited; it stays as
+the evidence of that run. The corrected harness is live code:
+
+  scripts/GPU/alphazero/injected_defect_controls.py       the control list: DATA
+  scripts/GPU/alphazero/run_injected_defect_controls.py   the driver
+  scripts/GPU/alphazero/harness_negative_controls.py      the negative controls
+  tests/test_injected_defect_controls.py                  the narrow tests
+
+THE FOUR, EACH WITH THE SCOPE OF ITS CHECK
+------------------------------------------
+1. A FAILED BASELINE NOW ABORTS BEFORE THE FIRST INJECTION, AND EVERY REPORTED
+   PROBLEM EXITS NONZERO.  Run 1 of the old harness printed `clean baseline: FAIL`
+   and `538/538 defects rejected` and returned 0 (preserved as `08_harness_run_
+   FAILED_BASELINE.txt` in the round-1 directory). Checked by running the driver
+   as a FRESH SUBPROCESS against a throwaway git repository, because an exit status
+   cannot be qualified from inside the process that sets it. Scope: the driver's
+   own control flow on synthetic controls; it says nothing about the 539.
+
+2. ONLY THE INTENDED FAILURE, FOR ITS STATED REASON, IS A PASS.  `rejected =
+   r.returncode != 0` is gone. A control is REJECTED only when the NAMED node
+   FAILS -- not errors, not "no tests ran", not interrupted -- and the traceback
+   carries the reason the control declares. Everything else is INDETERMINATE, a
+   third outcome, never folded into the pass count. Scope: this binds what the
+   harness REPORTS; it does not re-aim any control.
+
+3. THE SHARED WORKING TREE IS NO LONGER MUTATED.  Injections happen in a
+   `git worktree` made for the run and removed after it. The narrow test checks
+   this BY MTIME, not by content -- the old harness also ended with the right bytes
+   on disk, because it wrote the defect and wrote the original back. Where a file
+   is still restored in place, inside the checkout, the driver first verifies it
+   holds exactly what IT injected and STOPS rather than overwrite, preserving the
+   checkout; that overwrite is how incident 2 wiped a guard added mid-run. The
+   pytest subprocess is held explicitly and a signal stops it -- checked by the
+   CHILD'S PID, not by how fast the parent exits, because a parent that merely
+   unwinds ORPHANS its child. Scope: a clean tree is REFUSED-if-dirty, stated in
+   the code; uncommitted work is not carried into the checkout.
+
+4. READING THE CONTROL LIST CANNOT START A RUN.  `if __name__ != "__main__"` does
+   not fire in a namespace where __name__ is ALREADY "__main__", which is what
+   `exec(path.read_text())` gives you and how incident 2 started. There is now no
+   driver in the control list at all -- checked behaviourally by execing it as
+   __main__ and by AST -- and the driver refuses without `--run`.
+
+WHAT THE RUNS SAY
+-----------------
+NARROW TESTS       39 passed -- 23 in test_injected_defect_controls.py and 16 in
+                   test_h2_containment.py, 0 failed (05)
+NEGATIVE CONTROLS  15 / 15 caught. Each re-introduces ONE gap in a COPY and
+                   requires the matching test to fail FOR ITS STATED REASON, not
+                   merely to fail. Live files hashed before and after: unchanged
+                   (06). NC11 is the other direction -- a classifier that can
+                   never pass anything is an outage, not containment.
+FULL HARNESS       533 / 539 defects rejected; 0 not caught; 6 INDETERMINATE;
+                   0 stale; 539 distinct injections; 0 duplicate labels; clean
+                   baseline over 441 distinct target tests PASS; EXIT 4 (10)
+FULL SUITE         4,456 passed / 0 failed / 4 skipped / 53 deselected, 996.90 s,
+                   exit 0 (11). The 144a141 baseline was 4,434/0/4; the difference
+                   is +23 new narrow tests and -1 net in test_h2_containment.
+
+🔴 THE HARNESS EXITS 4, AND THAT IS THE RESULT
+-----------------------------------------------
+SIX OF THE 539 CONTROLS DO NOT DEMONSTRATE WHAT THEY CLAIM. Under their defect the
+named test NEVER RUNS, so nothing was shown to reject anything -- yet every one of
+them exits nonzero, which is why the old rule counted all six as successful:
+
+  incumbent-to-move restriction dropped              fixture setup raises
+  controls no longer matched to the position cells   fixture setup raises
+  §13 exclusion never applied                        fixture setup raises
+  §13 assigns seeds when none were reserved          fixture setup raises
+  the canonical cohort is resolved from a diff...    module import raises
+  the seam no longer calls the harness game loop     the REPLACEMENT leaves a
+                                                     SyntaxError in the module, so
+                                                     pytest collects nothing (rc=4)
+
+So "539/539 defects rejected" in the run packaged at 144a141 OVERSTATED BY AT
+LEAST SIX. They are NOT re-aimed here: re-aiming a control changes what it claims
+to bind, which is separate work under a separate authorization. They report
+INDETERMINATE, by name, every run, and the driver exits 4 until they are fixed.
+
+TWO DEFECTS I INTRODUCED AND THEN FOUND, BOTH PRESERVED
+-------------------------------------------------------
+* RECORDING RUN 1 HARVESTED 31 REASONS OUT OF 539 (07). Not the controls' fault:
+  pytest FITS its `FAILED <node> - <reason>` summary line to the terminal, 80
+  columns when stdout is a pipe, and does it two ways -- a short node id keeps a
+  TRUNCATED reason, a node id already too long gets NO reason appended at all.
+  This programme's test names are nearly all the second kind. The 31 it did get
+  were stubs ("Failed..."). The reason now comes from the traceback's `E   `
+  lines, which are fitted to nothing. A COLUMNS=200 fix was tried FIRST and
+  REMOVED, because its negative control did not catch -- which is the evidence
+  that it was not the mechanism.
+* THE FIRST MEASURED RUN REPORTED 16 INDETERMINATE (09), and TEN had nothing
+  wrong with them: the frozen reasons carried content that differs every run --
+  pytest's numbered tmp session (7), object repr addresses (3) and the driver's
+  own randomly named checkout (1). A reason that cannot match twice is not a
+  check. `stable()` now normalises those three on BOTH sides and at recording
+  time; the test records on one run and requires the value to hold on the NEXT.
+
+SCOPE OF EXPECTED_REASONS. The 539 reasons were RECORDED from runs of the driver
+and frozen, not authored from the tests. They therefore detect DRIFT -- a control
+that begins failing at a different assertion than the one it was observed to
+reach -- and they do NOT independently prove that the assertion reached is the
+right one. Six of them are ERROR text, marked where they stand.
+
+ALSO CHANGED, AND WHY IT IS NOT SCOPE CREEP
+-------------------------------------------
+* ONE LABEL WAS DUPLICATED across two distinct controls (same injection, different
+  target tests). Reasons are keyed by label, so one is relabelled; both stay. The
+  old duplicate check keyed on the injection and could not see it.
+* THE H2 CONTAINMENT TESTS ARE RETARGETED from the packaged evidence copy -- which
+  will never run again -- to the live control list. Two tests there asserted
+  properties of a harness shape that no longer exists (an import guard reading
+  `__name__ != "__main__"`; a restore-on-signal over the shared tree). They are
+  replaced by one test that names where those properties are now held
+  behaviourally, so the removal is visible rather than silent.
+
+WHAT THIS ESTABLISHES, AND WHAT IT DOES NOT
+-------------------------------------------
+It establishes that the harness's own protections REJECT what they claim to
+reject, on this working tree, at this commit, with a negative control for each. It
+establishes NOTHING about H2: no match ran, no model was loaded, no JVM started,
+no seed was drawn. All seven gates are False. The third seed block has NOT been
+prepared. The push of 1b850c1..HEAD is not authorized and has not happened.
