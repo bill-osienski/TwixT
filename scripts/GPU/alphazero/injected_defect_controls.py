@@ -371,14 +371,24 @@ DEFECTS = [
      '        if row["digest"] in seen:\n            continue',
      '        if False:\n            continue',
      f"{T_SEL}::test_the_frozen_counts_are_reproduced"),
+    # 🔴 RE-AIMED 2026-09-12. It named `test_every_selected_position_has_our_
+    # incumbent_to_move`, which takes the `selection` FIXTURE: dropping the
+    # restriction changes the cohort sizes, `select_all` refuses them against
+    # §12.1's frozen budget, and the test ERRORS in setup without ever running.
+    # The requirement's observable is that budget, and the frozen-count test
+    # reads §12's OWN output (`cohorts`), so it runs and fails on the numbers.
     ("incumbent-to-move restriction dropped", SEL,
      '        ours = [r for r in plies if r["system"] == "ours"]',
      '        ours = list(plies)',
-     f"{T_SEL}::test_every_selected_position_has_our_incumbent_to_move"),
+     f"{T_SEL}::test_the_frozen_counts_are_reproduced"),
+    # 🔴 RE-AIMED 2026-09-12, for the same reason as the control above. 12.3 says
+    # controls are matched to the position cells BY CONSTRUCTION, so its
+    # observable is the control count alone: this defect leaves both POSITION
+    # counts untouched and moves only the two control counts.
     ("controls no longer matched to the position cells", SEL,
      '            [r for r in ours if bool(r[col]) is False and cell(r) in cells])',
      '            [r for r in ours if bool(r[col]) is False])',
-     f"{T_SEL}::test_controls_come_only_from_cells_that_hold_a_selected_position"),
+     f"{T_SEL}::test_the_frozen_counts_are_reproduced"),
     ("seed written in place so a shared row is overwritten", SEL,
      '        group["rows"] = [dict(r, seed=seeds[i + n], signature=key[0], role=key[1])\n'
      '                         for n, r in enumerate(group["rows"])]',
@@ -529,10 +539,15 @@ DEFECTS = [
      f"{T_LP}::test_a_non_numeric_POSTCOND_field_carries_the_transcript"),
 
     # ═════════════ §13 exclusion, D1 parse translation, VOID trace ═════════
+    # 🔴 RE-AIMED 2026-09-12. Every §13 test took the `selection` FIXTURE, so
+    # §13.3's reconciliation refused the un-excluded counts during SETUP and each
+    # one ERRORED without running. `test_the_enumerated_exclusion_IS_APPLIED` was
+    # added to call `select_all` in its own body, where that refusal is the
+    # test's own failure.
     ("§13 exclusion never applied", SEL,
      '        by_key[k]["rows"] = [r for r in frozen_rows[k] if r["digest"] not in excluded]',
      '        by_key[k]["rows"] = list(frozen_rows[k])',
-     f"{T_SEL}::test_the_prospective_counts_after_exclusion"),
+     f"{T_SEL}::test_the_enumerated_exclusion_IS_APPLIED"),
     ("§12 count reconciliation removed", SEL,
      "            if got != sig[want]:",
      "            if False:",
@@ -545,9 +560,14 @@ DEFECTS = [
      "        if tuple(seed_interval) == RETIRED_SEED_INTERVAL or (",
      "        if False and (",
      f"{T_SEL}::test_the_retired_block_is_refused_as_a_seed_interval"),
+    # 🔴 MUTATION REWRITTEN 2026-09-12. `if False:` sent the None case down the
+    # `else` branch, which unpacked `lo, hi = None` and raised TypeError inside
+    # the `selection` fixture -- the named test never ran. This one ASSIGNS
+    # seeds, which is what the label claims, and the test reaches its assertion.
     ("§13 assigns seeds when none were reserved", SEL,
      "    if seed_interval is None:\n        seeds: List[Optional[int]] = [None] * total",
-     "    if False:\n        seeds: List[Optional[int]] = [None] * total",
+     "    if seed_interval is None:\n        seeds: List[Optional[int]] = "
+     "list(range(300000000, 300000000 + total))",
      f"{T_SEL}::test_no_seed_is_assigned_because_no_interval_is_reserved"),
     ("D1 query cap raised back to the frozen 12.4 figure", PROBE,
      "N_POSITIONS = 221\nQUERY_CAP = 1105",
@@ -1728,10 +1748,19 @@ DEFECTS = [
      "                   B=B_REPLICATES, seed=BOOTSTRAP_SEED)\n    out[\"resolved\"] = {k: canon[k] for k in",
      "                   B=100, seed=BOOTSTRAP_SEED)\n    out[\"resolved\"] = {k: canon[k] for k in",
      f"{T_DP}::test_the_production_entry_uses_the_FROZEN_B_and_seed"),
+    # 🔴 MUTATION AND TARGET BOTH REWRITTEN 2026-09-12. The old replacement changed
+    # the DIRECTORY and kept the L0 filename, so the path did not exist at all;
+    # and the old target asserted `out["resolved"]["record"] == DP.L0_RECORD_REL`,
+    # which READS THE CONSTANT IT IS CHECKING and would have moved with the
+    # defect. It never got that far regardless: `D0.bind_record` pins the
+    # record's header plan digest, so the fixture raised during SETUP. This names
+    # a record that EXISTS, and a target that pins both paths as LITERALS.
     ("the canonical cohort is resolved from a different record", DP,
-     'L0_RECORD_REL = ("docs/superpowers/evidence/2026-08-27-t1j-l0-canonical-match/"',
-     'L0_RECORD_REL = ("docs/superpowers/evidence/2026-09-07-t1j-h1-match-attempt2/"',
-     f"{T_DP}::test_the_production_entry_RESOLVES_the_canonical_cohort_and_design_itself"),
+     'L0_RECORD_REL = ("docs/superpowers/evidence/2026-08-27-t1j-l0-canonical-match/"\n'
+     '                 "06_l0_match_results.jsonl")',
+     'L0_RECORD_REL = ("docs/superpowers/evidence/2026-09-07-t1j-h1-match-attempt2/"\n'
+     '                 "01_h1_results.jsonl")',
+     f"{T_DP}::test_the_canonical_RECORD_AND_PLAN_are_the_L0_ONES_written_as_LITERALS"),
     ("the design metadata binding removed", DP,
      "            if not _same(r[field], t.get(field)):",
      "            if False:",
@@ -2263,10 +2292,13 @@ DEFECTS = [
      f"{T_H2}::test_the_production_play_seam_EXISTS_and_is_built_lazily"),
     ("the seam no longer calls the harness game loop", H2RUN,
      '        result = state["harness"].play_task(',
-     # ⚠ REWRITTEN: the first replacement still CONTAINED the call, behind an
-     # `if False`, so the AST test found it and the control injured nothing.
-     '        result = dict(winner=None, terminal_reason="cap", plies=280,\n'
-     '                      t1j_points=0.5); _unused = (',
+     # ⚠ REWRITTEN TWICE. v1 still CONTAINED the call behind an `if False`, so the
+     # AST test found it and the control injured nothing. v2 removed the call but
+     # left its keyword arguments dangling after `_unused = (` -- a SYNTAX ERROR,
+     # so `h2_match_runner` would not import and pytest collected nothing (rc=4).
+     # The call is all-keyword, so swapping the callee for `dict` is valid Python,
+     # executes, and leaves no `play_task` anywhere for the AST test to find.
+     '        result = dict(',
      f"{T_H2}::test_the_seam_WIRES_THE_HARNESS_GAME_LOOP"),
     ("the production seam loads the model AT IMPORT", H2RUN,
      "from . import h2_match_plan as PLAN",

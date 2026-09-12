@@ -1065,6 +1065,31 @@ def test_the_production_entry_EXPOSES_NO_KNOBS_at_all():
         assert banned not in params, banned
 
 
+def test_the_canonical_RECORD_AND_PLAN_are_the_L0_ONES_written_as_LITERALS():
+    """WHICH record D1' resolves its cohort from, pinned so the constant cannot
+    move with the check.
+
+    🔑 The test below asserts `out["resolved"]["record"] == DP.L0_RECORD_REL`,
+    which READS THE CONSTANT IT IS CHECKING: repoint D1' at another record and
+    that assertion repoints with it. It could not fail -- and could not even be
+    reached, because `D0.bind_record` pins the record's header plan digest, so a
+    different record raises during FIXTURE SETUP and every test in this module
+    reports ERROR without running. Same lesson as
+    `test_selection_still_REFUSES_the_retired_block`: a test that reads the
+    constant it is checking cannot see the constant change.
+    """
+    assert DP.L0_RECORD_REL == ("docs/superpowers/evidence/"
+                                "2026-08-27-t1j-l0-canonical-match/"
+                                "06_l0_match_results.jsonl")
+    assert DP.L0_PLAN_REL == ("docs/superpowers/evidence/"
+                              "2026-08-26-t1j-l0-larger-match/"
+                              "01_l0_match_plan.json")
+    resolved = DP.resolve_canonical_cohort()
+    assert resolved["record"] == DP.L0_RECORD_REL
+    assert resolved["cohort_source"] == "d1_selection.select_all"
+    assert resolved["n_positions"] == 221
+
+
 def test_the_production_entry_RESOLVES_the_canonical_cohort_and_design_itself(canonical):
     """It does not restate the selection: the cohort it binds against is exactly
     `d1_selection.select_all` over the digest-bound L0 record, and the design is

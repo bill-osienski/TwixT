@@ -377,6 +377,25 @@ def test_the_prospective_counts_after_exclusion(selection):
                    ("created_threat", "control"): 36}
 
 
+def test_the_enumerated_exclusion_IS_APPLIED(bound):
+    """§13's exclusion, asserted where `select_all` is called in THIS TEST'S OWN
+    BODY rather than taken from a fixture.
+
+    🔑 Every other §13 test above reads the module-scoped `selection` fixture. A
+    defect that makes the exclusion a no-op does not reach any of their
+    assertions: §13.3's reconciliation refuses it first, during SETUP, so all of
+    them report ERROR and none of them RUNS. An injected-defect control aimed at
+    them therefore demonstrated nothing while exiting nonzero -- which is exactly
+    how a harness that reads only the exit code scores a free pass. Called here,
+    the same refusal is this test's own failure.
+    """
+    sel = SEL.select_all(bound)
+    kept = {r["digest"] for c in sel["cohorts"] for r in c["rows"]}
+    assert sel["n_excluded"] == len(SEL.AMENDMENT2_EXCLUDED) == 6
+    assert not (kept & set(SEL.AMENDMENT2_EXCLUDED)), "an excluded row survived"
+    assert sel["n_positions"] == SEL.N_POSITIONS_AFTER_EXCLUSION == 221
+
+
 def test_no_excluded_row_survives_and_nothing_replaced_it(selection, frozen):
     """NO BACKFILL. `frozen` is §12's INDEPENDENT output, not derived from the
     kept set -- deriving it would make both assertions below vacuously true,
@@ -415,8 +434,9 @@ def test_no_seed_is_assigned_because_no_interval_is_reserved(selection):
     """§13 reserves nothing. The retired block may not be revived, so positions
     carry no seed until a fresh interval is separately authorized."""
     sel = selection
-    assert all(r.get("seed") is None for r in sel["positions"])
-    assert sel["seed_interval"] is None
+    assert all(r.get("seed") is None for r in sel["positions"]), (
+        "a position carries a seed although §13 reserved no interval")
+    assert sel["seed_interval"] is None, sel["seed_interval"]
 
 
 def test_an_explicitly_supplied_interval_must_match_the_cohort_size(bound):
