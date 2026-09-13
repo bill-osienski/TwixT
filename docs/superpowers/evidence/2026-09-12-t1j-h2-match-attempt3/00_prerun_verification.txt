@@ -1,0 +1,119 @@
+H2 ATTEMPT 3 PRE-RUN VERIFICATION -- bound to c58b13d
+Nothing has been executed. The gate is shut at this moment.
+==========================================================================
+
+== the tree ==
+  HEAD 00ebe90, descends from c58b13d
+  PASS     HEAD descends from the bound commit (c58b13d)
+  🔴 FAIL   the working tree is clean  1 path(s) modified
+
+== the SEVEN gates ==
+  PASS     D1_EXECUTION_AUTHORIZED            False
+  PASS     SCREEN_AUTHORIZED                  False
+  PASS     H1_EXECUTION_AUTHORIZED            False
+  PASS     L0_EXECUTION_AUTHORIZED            False
+  PASS     LOWPLY_QUALIFICATION_AUTHORIZED    False
+  PASS     RUNTIME_REQUAL_AUTHORIZED          False
+  PASS     H2_EXECUTION_AUTHORIZED            False
+
+== the seed block ==
+  [202622000, 202622736): accounted 736 / exposed 0 / retired 0 / test_only 0
+  PASS     the block is 736 seeds
+  PASS     every seed ACCOUNTED
+  PASS     NOT exposed, NOT retired, NOT test-only -- a reservation is not a draw
+  PASS     no seed is in CONSUMED_SEEDS
+  PASS     the registration barrier is SATISFIED
+  PASS     it is NOT either spent block
+
+== the frozen schedule ==
+  736 tasks, 16 cells x 46 reps, mode argmax
+  design digest     : 4cec38c75a4297d1b494df1c5754215962b138767d8f4c38fc4996078b94c332
+  full-field digest : 2d330ede735b578ea83ab68ebbb22611a7b1e41c1af64ca9f98c36ee84a3e2da
+  PASS     736 tasks
+  PASS     16 cells x 46 reps
+  PASS     the design digest matches the pin
+  PASS     the FULL-FIELD digest matches the pin
+  PASS     neither digest is a previous attempt's
+  PASS     seeds are POSITIONAL (row i carries lo + i)
+  PASS     every task carries selection_mode argmax
+  PASS     the registry admits this schedule for EXECUTION
+
+== the ACTUAL argmax configuration, through the REAL builder ==
+  (the call that aborted at ply 7 on attempt 1; stub evaluator, no JVM)
+  PASS     the frozen config is NOT already argmax, so the override is real  frozen='opening_temperature'
+  PASS     all 16 cells' first task construct (both colour arms, eight openings)
+  task 0: seed 202622000 arm t1j_red anchor red our colour black
+          readout 'argmax' sims 400 board 24
+  PASS     task 0's agent carries the SCHEDULED seed
+  PASS     task 0's readout mode is ARGMAX
+  PASS     BOTH colour arms were constructed  arms=['t1j_black', 't1j_red']
+
+== the incumbent identity H2 will record ==
+  agent_lifetime      : one instance per game; both streams advance across the game
+  eval_config         : {'board_size': 24, 'mcts_sims': 400, 'mcts_eval_batch_size': 14, 'mcts_stall_flush_sims': 48, 'selection_mode': 'argmax', 'max_moves': 280}
+  inert_under_argmax  : {'temp_high': 1.0, 'temp_low': 0.1, 'opening_temp_plies': 20}
+  noise_note          : cfg_from does NOT pass dirichlet_eps, so MCTSConfig keeps its default 0.25; noise is suppressed at the call site instead. A schedule that declares dirichlet_eps=0 is declaring nothing.
+  noise_suppression   : search_with_root(state, add_noise=False)
+  plan_sha256         : c8b9cba816852a6752bc9a8ae7f74fe06529dcb5af5a06ac4bb6bda716cf8a30
+  readout_mask        : {'red': 12829635, 'black': 3947580}
+  readout_note        : H2's ONE gameplay-rule change: the incumbent plays the visit-count maximum. The listed settings are INERT under argmax and are recorded as such, never as 'unchanged'.
+  readout_path        : eval_readout.select, never mcts.select_move
+  reference           : calib020_0001
+  reference_sha1      : 209cf2d4fd24a48553d259dd71b4954867b9473e
+  search_mask         : {'red': 10855845, 'black': 5921370}
+  PASS     the identity's eval_config records selection_mode argmax  'argmax'
+  PASS     it records mcts_sims 400 on a board of 24
+  PASS     the readout path is eval_readout.select, not mcts.select_move
+  PASS     the identity pins the source plan's digest
+  PASS     the temperature settings are recorded as INERT, not as unchanged  {'temp_high': 1.0, 'temp_low': 0.1, 'opening_temp_plies': 20}
+  PASS     the runner ACCEPTS its own frozen identity
+
+== the toolchain ==
+  jar /Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/t1j.jar
+  jar sha256 53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7
+  PASS     the jar resolves and is readable
+
+== the three outputs must be UNUSED ==
+  absent   docs/superpowers/evidence/2026-09-12-t1j-h2-match-attempt3/03_h2_results.jsonl
+  absent   docs/superpowers/evidence/2026-09-12-t1j-h2-match-attempt3/04_h2_trace.jsonl
+  absent   docs/superpowers/evidence/2026-09-12-t1j-h2-match-attempt3/09_report.json
+  PASS     all three are DISTINCT files
+  PASS     all three are ABSENT
+  PASS     none is inside a SPENT attempt's directory
+  PASS     the output DIRECTORY exists (nothing creates it at run time)  docs/superpowers/evidence/2026-09-12-t1j-h2-match-attempt3
+  PASS     check_output_paths ACCEPTS them
+
+== the wrapper: gate restoration and child cleanup ==
+  exit codes: 0 completed | 3 VOID | 4 unexpected | 5 unauthorized |
+              6 timeout | 7 refused | 8 cleanup failed | 9 interrupted |
+              10 GATE NOT RESTORED | 11 degenerate | 12 no rate
+  PASS     restore_gate() is True on the already-closed real source
+  PASS     the parser has NO --runner-source flag
+  PASS     no environment variable reaches the worker path
+  the refusal it printed: the H2 match is NOT AUTHORIZED (H2_EXECUTION_AUTHORIZED is False). No worker was spawned, no JVM sta
+  PASS     main() with the gate shut returns EXIT_UNAUTHORIZED  got 5
+  PASS     and the gate is STILL closed afterwards
+  PASS     restore_gate is called in main()'s finally, and sets the code there
+  PASS     the supervisor checks group_cleared and maps it to EXIT_CLEANUP_FAILED
+
+  the tests that BIND those claims, run here rather than cited:
+    ============================== 16 passed in 0.22s ==============================
+  PASS     all 12 wrapper tests pass
+
+== bounds ==
+  runner deadline   28800s (480 min)
+  supervisor cap    28860s (grace 60s)
+  interrupt grace   120s
+  PASS     the supervisor cap EXCEEDS the runner deadline, so a deadline VOID is reported as a VOID rather than killed
+
+==========================================================================
+⚠ RISK RECORDED BEFORE THE RUN, NOT AFTER. The production seam has still
+  never played a game: construction, wiring and refusals are tested, and
+  the only two things that ever reached a board were attempt 1 (VOID at
+  task 0) and the 383 games an unauthorized control played. If it fails at
+  game 1 the run VOIDs and the one-shot rule retires all 736 seeds -- the
+  same cost as a failure at game 735. Proceeding accepts that knowingly.
+
+48/49 checks PASS
+🔴 FAILED CHECKS -- the match must NOT be authorized:
+    the working tree is clean

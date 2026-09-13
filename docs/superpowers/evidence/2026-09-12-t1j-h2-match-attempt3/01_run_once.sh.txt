@@ -1,0 +1,28 @@
+#!/bin/sh
+# H2 ATTEMPT 3 -- THE MATCH, ONCE. NOT AUTHORIZED AS THIS FILE STANDS.
+#
+# Through the wrapper, which supervises the worker in its own process group under a
+# 28,860 s cap and RESTORES THE GATE AFTER EVERY EXIT -- refusal, timeout,
+# interrupt, crash or completion -- with a failed restoration superseding every
+# other exit code. Paths are the card's frozen defaults; no flag reaches the gate.
+#
+# BEFORE THIS RUNS, TWO THINGS MUST HAPPEN, IN THIS ORDER:
+#   1. the pre-run verification must PASS (it exits nonzero if it does not):
+#        .venv/bin/python -m scripts.GPU.alphazero.h2_prerun_verification
+#   2. `H2_EXECUTION_AUTHORIZED = False` must be changed to `True` in
+#        scripts/GPU/alphazero/h2_match_runner.py
+#      That is a reviewed one-line edit under a SEPARATE authorization. The wrapper
+#      closes it again afterwards; nothing here opens it.
+set -u
+E=docs/superpowers/evidence/2026-09-12-t1j-h2-match-attempt3
+mkdir -p "$E"          # nothing creates it at run time
+
+.venv/bin/python -m scripts.GPU.alphazero.h2_match_command \
+    > "$E/05_stdout.txt" 2> "$E/06_stderr.txt"
+echo $? > "$E/07_exit.txt"
+
+# EXIT CODES: 0 completed | 3 VOID | 4 unexpected | 5 unauthorized | 6 timeout
+#             7 refused | 8 cleanup failed | 9 interrupted | 10 GATE NOT RESTORED
+#             11 degenerate design | 12 no rate
+# Anything other than 0 is NOT a verdict. 10 means the gate must be closed BY HAND
+# before anything else happens.
