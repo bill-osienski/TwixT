@@ -2678,9 +2678,15 @@ DEFECTS = [
      'OUT_DIR = "docs/superpowers/evidence/2026-09-12-t1j-h2-match-attempt3"',
      'OUT_DIR = "docs/superpowers/evidence/2026-09-09-t1j-h2-deterministic-readout"',
      f"{T_H2}::test_THE_OUTPUT_DESTINATION_IS_NOT_A_SPENT_ATTEMPTS_DIRECTORY"),
+    # ⚠ The first version of this control inserted a COMMENT inside the tuple and
+    # emptied nothing, so the test passed and it injured nothing. The tuple itself
+    # has to go.
     ("the SPENT output directories are no longer named, so nothing is excluded", H2CMD,
-     "SPENT_OUT_DIRS = (\n",
-     "SPENT_OUT_DIRS = (\n    # emptied\n",
+     'SPENT_OUT_DIRS = (\n'
+     '    "docs/superpowers/evidence/2026-09-09-t1j-h2-deterministic-readout",   # attempt 1\n'
+     '    "docs/superpowers/evidence/2026-09-12-t1j-INCIDENT-control-harness-ran-a-match",\n'
+     ')',
+     'SPENT_OUT_DIRS = ()',
      f"{T_H2}::test_THE_OUTPUT_DESTINATION_IS_NOT_A_SPENT_ATTEMPTS_DIRECTORY"),
 
     # ═════════ 2026-09-12: ATTEMPT 3's REGISTRATION -- bookkeeping, not permission
