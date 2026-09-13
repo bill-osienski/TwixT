@@ -1,0 +1,160 @@
+RESULTS OF RECORD -- the six control repairs, then H2's THIRD SEED BLOCK, 2026-09-12
+====================================================================================
+Every figure below was read from the runs packaged here, not from memory.
+
+WHAT WAS AUTHORIZED, IN ORDER
+  1. Repair the six controls that demonstrated nothing, preserving their claims.
+  2. Verify the six narrowly, then run the complete harness once.
+  3. If that succeeded with no unresolved controls, prepare and REGISTER a third
+     seed block under the existing conditional authorization.
+Another match and the push of 1b850c1..HEAD remain UNAUTHORIZED and have not
+happened. `H2_EXECUTION_AUTHORIZED` is False and every one of the seven gates is
+False. No model was loaded, no JVM started, no game played and NO SEED DRAWN.
+
+PART 1 -- THE SIX CONTROLS THAT DEMONSTRATED NOTHING
+----------------------------------------------------
+Under its own defect each one's named test NEVER RAN: five raised during FIXTURE
+SETUP and one left a SyntaxError so pytest collected nothing. All six exited
+nonzero, which is why `rejected = r.returncode != 0` scored all six as successful
+controls at 144a141 -- "539/539 rejected" there overstated by six.
+
+⚠ CORRECTION. An earlier commit message (ea6421b) said one of the six failed on
+MODULE IMPORT. It did not; it failed in FIXTURE SETUP like four of the others.
+Five setup errors and one collection failure, not four, one and one.
+
+Each kept its claim. What changed was the mutation, the target, or both:
+
+  RE-AIMED (mutation unchanged). `select_all` refuses a changed cohort against
+  §12.1's frozen budget, so every test taking the `selection` FIXTURE errors in
+  setup. `test_the_frozen_counts_are_reproduced` reads §12's OWN output through
+  `cohorts`, so it runs:
+    * incumbent-to-move restriction dropped -- positions 147 vs the frozen 101.
+    * controls no longer matched to the position cells -- and this defect leaves
+      BOTH position counts untouched and moves only the two CONTROL counts, which
+      is 12.3's "matched by construction" stated exactly.
+
+  RE-AIMED at a test added for it:
+    * §13 exclusion never applied -> test_the_enumerated_exclusion_IS_APPLIED,
+      which calls `select_all` in its OWN BODY so §13.3's refusal is the test's
+      failure rather than a fixture error. Every pre-existing §13 test reads the
+      fixture.
+
+  MUTATION REWRITTEN:
+    * §13 assigns seeds when none were reserved. `if False:` sent the None case
+      down the `else` branch and unpacked `lo, hi = None` -- a TypeError. It now
+      ASSIGNS seeds, which is what the label claims.
+    * the seam no longer calls the harness game loop. The replacement left the
+      call's keyword arguments dangling after `_unused = (`. The call is
+      all-keyword, so the callee becomes `dict` -- valid, executable, and no
+      `play_task` remains for the AST test to find.
+
+  BOTH REWRITTEN:
+    * the canonical cohort is resolved from a different record. The old
+      replacement changed the directory and kept the L0 filename, naming a path
+      that does not exist; and the old target asserted `out["resolved"]["record"]
+      == DP.L0_RECORD_REL`, which READS THE CONSTANT IT IS CHECKING and would
+      have moved with the defect. It never reached it anyway: `D0.bind_record`
+      pins the record's header plan digest, so the fixture raised during setup.
+      Now a record that EXISTS, and a target that pins both paths as LITERALS.
+
+THE SIX REASONS ARE DERIVED, NOT HARVESTED -- each names the observable its
+requirement names (a frozen count, §13.3's reconciliation sentence, the seed
+assertion's own message, the wrong record's path, the AST test's message) rather
+than the first line pytest happened to print, which for three of them is a
+shortened repr that says nothing.
+
+  six verified narrowly    6/6 rejected, exit 0
+  COMPLETE HARNESS         539/539 rejected, 0 not caught, 0 INDETERMINATE,
+                           0 stale, clean baseline over 439 target tests PASS,
+                           EXIT 0 (08)
+  full suite               4,458 passed / 0 failed / 4 skipped
+
+That 539/539 and the one at 144a141 are not the same fact. There, six controls
+exited nonzero without their named test running. Here every one named a test that
+RAN, FAILED, and carried the reason the control declares.
+
+PART 2 -- THE THIRD SEED BLOCK: [202622000, 202622736)
+-------------------------------------------------------
+REGISTERED ACCOUNTED-ONLY, as the seed-PREPARATION step and NOT an execution
+authorization. Not exposed, not retired: a reservation is not a draw.
+
+WHY A THIRD. Attempt 1 VOIDed at task 0 (the builder refused H2's own readout)
+and was retired whole with 0 exposed. Attempt 2 was never authorized to run at
+all -- on 2026-09-12 an injected-defect control deleted `check_gate()` from
+`run_h2` and played 383 of its 736 games -- so it is ACCOUNTED 736 / EXPOSED 383
+/ RETIRED WHOLE, and those 383 games are INCIDENT EVIDENCE, not an H2 verdict.
+
+COLLISION PROOF v9 (01, 02), read-only, run BEFORE registering, against the
+registries AS THEY STAND with both spent blocks included and every paper
+reservation no registry can see:
+    6,317 prior seeds across six categories; 31,585 prior values with
+    derivations; 0 direct overlaps; 0 derived-stream collisions; own derivations
+    injective (3,680 = 736 x 5); exhaustive, not sampled.
+    SEVENTEEN collision controls and FOUR gap-policy controls ALL REJECTED, both
+    spent H2 blocks among them.
+    Gap floor is the candidate's OWN SIZE (736); nearest other boundary 1,264
+    below and nothing above. The candidate is excluded from the prior set BY
+    IDENTITY, in the GAP check as well as the overlap check.
+
+THE RULES now name three attempts. Attempt 2's block and BOTH its digests keep
+their own names so the incident's 383 preserved games stay verifiable against the
+schedule they came from. Attempt 3's digests were recomputed from the BUILT
+schedule and pinned, and a test recomputes them.
+
+TESTS: five repaired for the rename, two added -- the block is ACCOUNTED ONLY and
+the barrier is SATISFIED while the GATE IS NOT, and the new schedule matches both
+pins AND is executable by the registry (a block that is registered but whose
+schedule the registry still refuses is a reservation that buys nothing).
+
+CONTROLS: 546. Two re-anchored onto attempt 3; seven added -- un-registered, ALSO
+exposed, ALSO retired, the gate opened by the registration, the schedule not
+executable, and both digests left un-re-pinned.
+
+🔴 MY REGISTRATION EDIT BROKE TWO CONTROLS AND THE HARNESS CAUGHT BOTH (09)
+---------------------------------------------------------------------------
+The first complete run after registering reported 544/546, exit 4:
+
+  NOT CAUGHT  "the negative control stops stripping anything". It commented out
+  ATTEMPT 2's registry line, but `_registry_without_h2` strips whatever
+  `H2_SEED_BLOCK` currently is -- now attempt 3 -- so it removed an entry the
+  strip no longer touches. Re-anchored onto attempt 3's line.
+
+  INDETERMINATE  "the schedule digest is not compared with the pin". Its frozen
+  reason was an E4ReferenceError saying seed 202620000 was EXPOSED: with the
+  digest comparison removed, `check_schedule` ran on to the AVAILABILITY check and
+  was refused THERE, because attempt 2's block had been drawn from. The control
+  was passing on a refusal that had nothing to do with the digest. A fresh,
+  unexposed block removed that accident, and the test now fails with DID NOT RAISE
+  -- catching the thing it names. The frozen reason is what surfaced the drift;
+  this is the case EXPECTED_REASONS exists for.
+
+ALSO: an EXPECTED REASON DECLARED FOR A CONTROL THAT NO LONGER EXISTS binds
+nothing and hides the rename. Re-anchoring left two such orphans and I found them
+BY HAND. The driver now reports orphan reasons and exits nonzero; NC16
+re-introduces the gap.
+
+WHAT THE FINAL RUNS SAY
+-----------------------
+NARROW TESTS       210 passed (24 harness containment, 16 H2 containment,
+                   170 H2 match), 0 failed (07)
+NEGATIVE CONTROLS  16 / 16 caught, each required to fail FOR ITS STATED REASON
+                   and not merely to fail; live files hashed unchanged (06)
+COMPLETE HARNESS   546 / 546 defects rejected; 0 not caught; 0 indeterminate;
+                   0 stale; 546 distinct injections; 0 duplicate labels;
+                   0 orphan reasons; clean baseline PASS; EXIT 0 (10)
+FULL SUITE         4,461 passed / 0 failed / 4 skipped / 53 deselected,
+                   993.56 s, exit 0 (11)
+
+SCOPE
+-----
+This establishes that the protections REJECT what they claim to reject, on this
+working tree, at this commit, with a negative control for each; and that the
+third block is disjoint from every reservation and derived stream known to the
+registries at the moment it was registered. It establishes NOTHING about H2: the
+match has not been authorized and has not run. The seed block is ACCOUNTED and
+UNSPENT. All seven gates are False. The push is not authorized.
+
+The 546 expected reasons remain RECORDED-then-frozen except the fifteen written
+this round, which were derived from their requirement and then verified against a
+run. They detect DRIFT; they do not independently prove that the assertion a
+control reaches is the right one.

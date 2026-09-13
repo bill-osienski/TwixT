@@ -1,0 +1,15 @@
+MANIFEST -- 2026-09-12-t1j-h2-third-seed-registration
+12 files
+
+b3339012b73474dbe562bcaa6a67d612b57457f14c070b5417fed8e0a44886b6     13746  01_collision_proof_v9.py.txt
+f3ef81d6fc76bf0dc4d8116435ae8bb282ee2c334c0a8ef67dfaee49b726e251      4066  02_collision_proof_v9_run.txt
+e40f7c21b06acc25980a58a8566075ea14c0ea615da8521ab32a19cef3e5c232    266533  03_injected_defect_controls.py.txt
+491c19dc81d359b8f2a407ee2ef57dc447931b5dd3da580c47dbe4ce1ecd105b     14920  04_run_injected_defect_controls.py.txt
+e984c98d8170030f88f221925c0ae2f7567e474e341a870a1762c136e180c9a0     12182  05_harness_negative_controls.py.txt
+7b0894322f7a2d265266031299274413e34a20fccf49f90071c2c83f7f584ecd      3524  06_negative_controls_run.txt
+6e132a41373dbc50e8832c62bb7c6fdd4d01f829cd6218310d2ad3446869e981     21633  07_narrow_tests_run.txt
+e53b6633afbfeff0d9cb6afe28578dabf42f21b9056a3214e60f62e9647890bc     34931  08_harness_run_AFTER_THE_SIX_REPAIRS.txt
+38b9a9cc583ea6c6500d22fac98d7293f241d2ed74400c68a151d2dba1815f03     35688  09_harness_run_REGISTRATION_BROKE_TWO.txt
+702f8b1f834fec7583a5c4926465a3dc5c705330e6aeeb8f40da97e5b741d16a     35490  10_harness_run.txt
+605742e30c738c22a1876767f2127b67e1af18695d9beebd32f9f489559d2648     26110  11_full_suite_run.txt
+468d468fbbae5f268550fa369d22a29256d9270f69b0e6e9fa282410064dec47      9309  12_results.txt

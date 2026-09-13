@@ -1,0 +1,51 @@
+CAUGHT     NC1 the baseline failure prints but does not abort (the 2026-09-12 run 1 shape)
+CAUGHT     NC2 a reported problem leaves the exit status at 0
+CAUGHT     NC3 any nonzero pytest exit counts as a rejection
+CAUGHT     NC4 a control with no declared reason is allowed to pass anyway
+CAUGHT     NC5 the declared reason is never actually looked for
+CAUGHT     NC6 the injections go back into the shared working tree
+CAUGHT     NC7 the start-up snapshot is written back over a concurrent edit
+CAUGHT     NC8 a signal unwinds the driver and ORPHANS the pytest subprocess
+CAUGHT     NC9 a driver put back into the control list, behind incident 2's own guard
+CAUGHT     NC9b the same driver, caught structurally instead of behaviourally
+CAUGHT     NC10 the driver runs without being asked to
+CAUGHT     NC14 a fixture-setup ERROR counts as a rejection
+CAUGHT     NC13 the reason is taken from the FITTED summary line, not the traceback
+CAUGHT     NC15 the reason is compared raw, so per-run content never matches twice
+CAUGHT     NC16 an expected reason whose control was renamed away is ignored
+CAUGHT     NC11 nothing can ever be REJECTED, so a clean run never exits 0
+
+=== negative controls: 16/16 caught ===
+  [x] NC1 the baseline failure prints but does not abort (the 2026-09-12 run 1 shape)
+      E   AssertionError: A CONTROL RAN AFTER THE BASELINE FAILED (INDETERMINATE)
+  [x] NC2 a reported problem leaves the exit status at 0
+      E   AssertionError: A NOT CAUGHT DEFECT EXITED 0, NOT 4
+  [x] NC3 any nonzero pytest exit counts as a rejection
+      E   AssertionError: A COLLECTION ERROR WAS NOT REPORTED AS INDETERMINATE:
+  [x] NC4 a control with no declared reason is allowed to pass anyway
+      E   AssertionError: A CONTROL WITH NO DECLARED REASON WAS NOT INDETERMINATE:
+  [x] NC5 the declared reason is never actually looked for
+      E   AssertionError: A FAILURE AT A DIFFERENT ASSERTION SCORED AS A REJECTION:
+  [x] NC6 the injections go back into the shared working tree
+      E   AssertionError: THE SHARED WORKING TREE WAS WRITTEN DURING THE RUN
+  [x] NC7 the start-up snapshot is written back over a concurrent edit
+      E   AssertionError: A CONCURRENT EDIT DID NOT STOP THE RUN (exit 4)
+  [x] NC8 a signal unwinds the driver and ORPHANS the pytest subprocess
+      assert gone, (f"pytest {child_pid} is STILL RUNNING against the injected "
+  [x] NC9 a driver put back into the control list, behind incident 2's own guard
+      E   AssertionError: EXECING THE CONTROL LIST AS __main__ WROTE TO A SOURCE FILE
+  [x] NC9b the same driver, caught structurally instead of behaviourally
+      E   AssertionError: line 3855: a top-level If in the control list
+  [x] NC10 the driver runs without being asked to
+      E   AssertionError: THE DRIVER RAN WITHOUT --run (exit 0)
+  [x] NC14 a fixture-setup ERROR counts as a rejection
+      E   AssertionError: A FIXTURE SETUP ERROR WAS NOT REPORTED AS INDETERMINATE:
+  [x] NC13 the reason is taken from the FITTED summary line, not the traceback
+      E   assert {} == {'a long name...NOT CARRY IT'}
+  [x] NC15 the reason is compared raw, so per-run content never matches twice
+      E   AssertionError: A REASON RECORDED ON ONE RUN DID NOT MATCH ON THE NEXT:
+  [x] NC16 an expected reason whose control was renamed away is ignored
+      assert "ORPHAN REASON" in r.stdout, r.stdout
+  [x] NC11 nothing can ever be REJECTED, so a clean run never exits 0
+      E   AssertionError: A RUN WITH NOTHING WRONG DID NOT EXIT ZERO (exit 4)
+live files unchanged: True 
