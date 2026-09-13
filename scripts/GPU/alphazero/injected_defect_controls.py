@@ -3878,4 +3878,21 @@ EXPECTED_REASONS = {
         "deterministic-readout')",
     'the SPENT output directories are no longer named, so nothing is excluded':
         'AssertionError: vacuous: no spent directory is named',
+    # ── 2026-09-13: attempt 3's block after the VOID -- 693 drawn, retired whole
+    "the third block's exposure is dropped -- 693 draws unrecorded":
+        "AssertionError: (202622000, {'accounted': True, 'exposed': False, "
+        "'retired': True, 'test_only': False})",
+    # the boundary seed: 202622693 is the FIRST UNDRAWN one, so widening the
+    # exposure to the whole block claims a draw the record does not support
+    "the third block's exposure is widened to the WHOLE block":
+        "AssertionError: (202622693, {'accounted': True, 'exposed': True, "
+        "'retired': True, 'test_only': False})",
+    "the third block's WHOLE-BLOCK retirement is dropped":
+        "AssertionError: (202622000, {'accounted': True, 'exposed': True, "
+        "'retired': False, 'test_only': False})",
+    'the H2 execution gate was left OPEN after the run':
+        'assert True is False',
+    'the spent third schedule is schedulable because availability is never checked':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.e4_screen_reference."
+        "E4ReferenceError'>",
 }
