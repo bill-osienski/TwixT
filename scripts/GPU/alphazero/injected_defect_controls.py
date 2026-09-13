@@ -3686,14 +3686,18 @@ EXPECTED_REASONS = {
         "scripts.GPU.alphazero.h2_match_runner.H2VoidError: incumbent_identity.eval_config.selection_mode: recorded 'opening_temperature' (str) but the frozen configuration gives 'argmax' (str)",
     'the identity is compared SHALLOWLY again':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h2_match_runner.H2VoidError'>",
-    # 🔴 CORRECTED 2026-09-12. The frozen reason was an E4ReferenceError saying seed
-    # 202620000 was EXPOSED: with the digest comparison removed, `check_schedule`
-    # ran on to the AVAILABILITY check and was refused there, because attempt 2's
-    # block had been drawn from. So this control was passing on a refusal that had
-    # nothing to do with the digest. A fresh, unexposed block removes that
-    # accident and the test now catches the thing it names.
+    # 🔴 CORRECTED THREE TIMES, AND THE PATTERN IS THE POINT. With the digest
+    # comparison removed, `check_schedule` runs on to the AVAILABILITY check, so
+    # WHAT THIS CONTROL OBSERVES DEPENDS ON WHETHER THE BLOCK HAS BEEN DRAWN FROM:
+    #   attempt 2 spent -> E4ReferenceError, seed 202620000 EXPOSED
+    #   attempt 3 fresh -> DID NOT RAISE (the digest check was the only guard left)
+    #   attempt 3 spent -> E4ReferenceError, seed 202622000 EXPOSED   <- now
+    # Only the middle state actually exercised the digest comparison. That is a
+    # property of the TARGET TEST, not of this control, and it is recorded here
+    # rather than papered over.
     'the schedule digest is not compared with the pin':
-        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h2_match_runner.H2Error'>",
+        'scripts.GPU.alphazero.e4_screen_reference.E4ReferenceError: seed 202622000 '
+        'was EXPOSED -- it has been drawn from -- and cannot be scheduled',
     'the deadline never fires':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h2_match_runner.H2VoidError'>",
     'a malformed ply record is skipped instead of VOIDing':
@@ -3868,9 +3872,11 @@ EXPECTED_REASONS = {
         "AssertionError: attempt 2's digest must still verify, or the incident's "
         "record is unverifiable",
     # a reservation is not a draw: ACCOUNTED yes, EXPOSED and RETIRED no
+    # 🔴 CORRECTED 2026-09-13: the target inverted with the block, so the state
+    # printed alongside `accounted: False` is now the SPENT one.
     'the third block un-registered from ACCOUNTED':
-        "AssertionError: (202622000, {'accounted': False, 'exposed': False, "
-        "'retired': False, 'test_only': False})",
+        "AssertionError: (202622000, {'accounted': False, 'exposed': True, "
+        "'retired': True, 'test_only': False})",
     # ── the output destination, found by attempt 3's pre-run verification
     "the outputs point back into a SPENT attempt's directory":
         "AssertionError: ('docs/superpowers/evidence/2026-09-09-t1j-h2-deterministic-"
