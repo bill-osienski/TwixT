@@ -3691,8 +3691,14 @@ EXPECTED_REASONS = {
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h2_match_runner.H2VoidError'>",
     'a malformed ply record is skipped instead of VOIDing':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h2_match_runner.H2VoidError'>",
+    # 🔴 CORRECTED TWICE-OVER 2026-09-12. The frozen reason was `assert 7 == 10`:
+    # with the gate forced open the wrapper was REFUSED at the output precheck,
+    # because the defaults pointed at attempt 1's occupied directory -- so the
+    # control was observing a refusal, not the finally. The target test is hermetic
+    # now (tmp outputs, stubbed supervisor) and the wrapper returns the supervised
+    # code 0 with the finally's check disabled, instead of EXIT_GATE_NOT_RESTORED.
     'the wrapper reports success without verifying the gate':
-        'assert 7 == 10',
+        'AssertionError: assert 0 == 10',
     'restoration claims success without reading the file back':
         'AssertionError: assert True is False',
     'the wrapper gains a --runner-source override':
