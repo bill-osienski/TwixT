@@ -3,9 +3,9 @@ Nothing has been executed. The gate is shut at this moment.
 ==========================================================================
 
 == the tree ==
-  HEAD c08c375, descends from c58b13d
+  HEAD 00ebe90, descends from c58b13d
   PASS     HEAD descends from the bound commit (c58b13d)
-  🔴 FAIL   the working tree is clean  2 path(s) modified
+  🔴 FAIL   the working tree is clean  1 path(s) modified
 
 == the SEVEN gates ==
   PASS     D1_EXECUTION_AUTHORIZED            False
@@ -97,7 +97,7 @@ Nothing has been executed. The gate is shut at this moment.
   PASS     the supervisor checks group_cleared and maps it to EXIT_CLEANUP_FAILED
 
   the tests that BIND those claims, run here rather than cited:
-    ============================== 16 passed in 0.08s ==============================
+    ============================== 16 passed in 0.22s ==============================
   PASS     all 12 wrapper tests pass
 
 == bounds ==

@@ -87,15 +87,25 @@ def main() -> int:
 
     head = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
                           capture_output=True, text=True).stdout.strip()
-    dirty = subprocess.run(["git", "status", "--porcelain"],
-                           capture_output=True, text=True).stdout.strip()
+    porcelain = subprocess.run(["git", "status", "--porcelain"],
+                               capture_output=True, text=True).stdout.splitlines()
+    # 🔑 THE OUTPUT DIRECTORY IS THIS TOOL'S OWN PRODUCT and cannot be part of the
+    # cleanliness it reports -- writing the record would otherwise dirty the tree it
+    # is checking, and the check could never pass. Everything that is CODE must
+    # match the commit exactly; nothing under the output directory affects behaviour.
+    ignored = [l for l in porcelain if l[3:].strip().startswith(CMD.OUT_DIR)]
+    dirty = "\n".join(l for l in porcelain if l not in ignored).strip()
     print("\n== the tree ==")
     descends = subprocess.run(
         ["git", "merge-base", "--is-ancestor", BOUND_COMMIT, "HEAD"]).returncode == 0
     print(f"  HEAD {head}, descends from {BOUND_COMMIT}")
     check(f"HEAD descends from the bound commit ({BOUND_COMMIT})", descends)
-    check("the working tree is clean", not dirty,
-          "" if not dirty else f"{len(dirty.splitlines())} path(s) modified")
+    if ignored:
+        print(f"  ignoring {len(ignored)} path(s) under {CMD.OUT_DIR} "
+              f"(this tool's own output)")
+    check("no SOURCE differs from the commit", not dirty,
+          "" if not dirty else f"{len(dirty.splitlines())} path(s): "
+                               f"{[l[3:] for l in dirty.splitlines()][:3]}")
 
     print("\n== the SEVEN gates ==")
     import importlib
