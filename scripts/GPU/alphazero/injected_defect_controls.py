@@ -2670,6 +2670,19 @@ DEFECTS = [
      'H2_ATTEMPT2_TASK_DIGEST = "0" * 64',
      f"{T_H2}::test_THE_RETRY_SCHEDULE_STILL_MATCHES_BOTH_PINS_BUT_IS_NOW_SPENT"),
 
+    # 🔴 THE PRE-RUN VERIFICATION FOUND THIS: the outputs pointed at attempt 1's
+    # directory, where two of the three already exist. Create-only would have
+    # refused the launch AFTER the gate was opened -- an authorization spent on a
+    # run that could not start. Nothing bound the destination until now.
+    ("the outputs point back into a SPENT attempt's directory", H2CMD,
+     'OUT_DIR = "docs/superpowers/evidence/2026-09-12-t1j-h2-match-attempt3"',
+     'OUT_DIR = "docs/superpowers/evidence/2026-09-09-t1j-h2-deterministic-readout"',
+     f"{T_H2}::test_THE_OUTPUT_DESTINATION_IS_NOT_A_SPENT_ATTEMPTS_DIRECTORY"),
+    ("the SPENT output directories are no longer named, so nothing is excluded", H2CMD,
+     "SPENT_OUT_DIRS = (\n",
+     "SPENT_OUT_DIRS = (\n    # emptied\n",
+     f"{T_H2}::test_THE_OUTPUT_DESTINATION_IS_NOT_A_SPENT_ATTEMPTS_DIRECTORY"),
+
     # ═════════ 2026-09-12: ATTEMPT 3's REGISTRATION -- bookkeeping, not permission
     ("the third block un-registered from ACCOUNTED", REF_SRC,
      "    (202622000, 202622736),          # H2 ATTEMPT 3 -- the match H2 has still not",

@@ -20,11 +20,27 @@ from . import h2_match_runner as RUN
 from . import runtime_requalification as RQ
 from .runtime_requalification import supervise                     # shared, tested
 
-OUT_DIR = "docs/superpowers/evidence/2026-09-09-t1j-h2-deterministic-readout"
+#: 🔴 PER ATTEMPT, AND THE PRE-RUN VERIFICATION FOUND WHY. This pointed at attempt
+#: 1's directory, where `03_h2_results.jsonl` and `04_h2_trace.jsonl` ALREADY EXIST
+#: -- that VOIDed attempt's records. Outputs are create-only, so the launch would
+#: have been REFUSED before spawning (exit 7) with the gate already opened and then
+#: restored: not a data loss, but an authorization spent on a run that could not
+#: start. Nothing bound the destination, which is why nobody noticed; a test binds
+#: it now, and `SPENT_OUT_DIRS` names the directories a new attempt must never
+#: write into.
+OUT_DIR = "docs/superpowers/evidence/2026-09-12-t1j-h2-match-attempt3"
 DEFAULT_RESULTS = f"{OUT_DIR}/03_h2_results.jsonl"
 DEFAULT_TRACE = f"{OUT_DIR}/04_h2_trace.jsonl"
 #: The frozen report location from the card's §7. Create-only, like every output.
 DEFAULT_REPORT = f"{OUT_DIR}/09_report.json"
+
+#: Directories holding a SPENT H2 attempt's records. A new attempt writing here
+#: would either be refused by the create-only check or -- worse, if a name happened
+#: to be free -- drop its records beside another attempt's.
+SPENT_OUT_DIRS = (
+    "docs/superpowers/evidence/2026-09-09-t1j-h2-deterministic-readout",   # attempt 1
+    "docs/superpowers/evidence/2026-09-12-t1j-INCIDENT-control-harness-ran-a-match",
+)
 
 #: 🔴 AN INHERITED ANONYMOUS PIPE. THE TWO VERSIONS BEFORE THIS WERE BOTH WRONG.
 #:

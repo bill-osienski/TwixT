@@ -829,6 +829,29 @@ def test_the_wrapper_refuses_with_the_shut_gate_and_verifies_it_closed(capsys):
     assert "NOT AUTHORIZED" in capsys.readouterr().err
 
 
+def test_THE_OUTPUT_DESTINATION_IS_NOT_A_SPENT_ATTEMPTS_DIRECTORY():
+    """🔴 THE PRE-RUN VERIFICATION FOR ATTEMPT 3 FOUND THIS. `OUT_DIR` still pointed
+    at attempt 1's directory, where two of the three outputs already exist -- that
+    VOIDed run's records. Create-only would have refused the launch BEFORE spawning,
+    so the cost was an authorization spent on a run that could not start rather than
+    a lost file. Nothing bound the destination, which is why it went unnoticed
+    through a registration and a re-proof.
+
+    Three invariants, none of which depends on what exists on disk right now: the
+    three outputs are DISTINCT, none of them sits in a directory holding a spent
+    attempt's records, and the spent list is not empty."""
+    import os
+    defaults = (CMD.DEFAULT_RESULTS, CMD.DEFAULT_TRACE, CMD.DEFAULT_REPORT)
+    assert len(set(defaults)) == 3, defaults
+    assert CMD.SPENT_OUT_DIRS, "vacuous: no spent directory is named"
+    for spent in CMD.SPENT_OUT_DIRS:
+        assert os.path.isdir(spent), f"{spent} is named as spent but does not exist"
+        for d in defaults:
+            assert not d.startswith(spent.rstrip("/") + "/"), (d, spent)
+    for d in defaults:
+        assert d.startswith(CMD.OUT_DIR.rstrip("/") + "/"), (d, CMD.OUT_DIR)
+
+
 def test_the_wrapper_has_NO_runner_source_flag():
     """🔴 H1's lesson: an overridable path lets a decoy be restored while the real
     gate stays open, and the exit code then reports success."""
