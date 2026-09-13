@@ -591,34 +591,48 @@ def test_THE_RETRY_SCHEDULE_STILL_MATCHES_BOTH_PINS_BUT_IS_NOW_SPENT():
         REF.validate_schedule_executable(tasks)
 
 
-def test_THE_THIRD_BLOCK_IS_ACCOUNTED_ONLY_and_the_barrier_is_SATISFIED():
-    """THE SEED-PREPARATION STEP, and only that. Registering is bookkeeping, not
-    permission: the block is ACCOUNTED so the registration barrier is satisfied,
-    and NOT exposed and NOT retired because a reservation is not a draw. The gate
-    is the separate review and it is still shut."""
+def test_THE_THIRD_BLOCK_IS_EXPOSED_693_AND_RETIRED_WHOLE():
+    """🔴 INVERTED 2026-09-13, by the run itself. The single authorized match VOIDED
+    ON ITS OWN 28,800 s DEADLINE at game 692 of 736.
+
+    * ACCOUNTED, from its registration.
+    * EXPOSED for the FIRST 693 seeds -- 202622000..202622692. 692 carry a completed
+      game; the 693rd is claimed as drawn because the run aborted INSIDE task 692
+      at ply 9, so an agent was built on that seed and nine plies were played with
+      it. Its ply records did not survive (they are persisted per completed game).
+      An unrecorded draw is still a draw, and this is a DIFFERENT judgement from
+      attempt 2's, where the uncertain seed emitted a `task_start` and nothing else.
+    * RETIRED WHOLE: a one-shot schedule was STARTED and did not complete, so the
+      remaining 43 go with the 693.
+
+    ⚠ The 692 completed games are FAILURE EVIDENCE, not an H2 verdict: the design
+    requires all 736 and the frozen rules produce no verdict from a VOID.
+    """
     lo, hi = R.H2_SEED_BLOCK
     for name in ("ACCOUNTED_SEED_INTERVALS", "EXPOSED_SEED_INTERVALS",
                  "RETIRED_SEED_INTERVALS", "TEST_ONLY_SEED_INTERVALS"):
         assert getattr(REF, name), f"vacuous: {name} is empty"
     for seed in range(lo, hi):
         st = REF.seed_status(seed)
-        assert st["accounted"], (seed, st)
-        assert not (st["exposed"] or st["retired"] or st["test_only"]), (seed, st)
-        assert seed not in REF.CONSUMED_SEEDS, seed
-    RUN.check_seed_registration()                     # the barrier is down
-    assert RUN.H2_EXECUTION_AUTHORIZED is False, (
-        "registering a block ALSO opened the execution gate -- registration is "
-        "bookkeeping, and permission is a separate review")
+        assert st["accounted"] and st["retired"], (seed, st)
+        assert st["exposed"] is (seed < lo + 693), (seed, st)
+        assert not st["test_only"], (seed, st)
+    # the boundary, both sides: the last drawn seed and the first undrawn one
+    assert REF.seed_status(lo + 692)["exposed"] is True
+    assert REF.seed_status(lo + 693)["exposed"] is False
+    assert REF.seed_status(lo + 693)["retired"] is True
+    RUN.check_seed_registration()                     # accounting is not availability
+    assert RUN.H2_EXECUTION_AUTHORIZED is False
     with pytest.raises(RUN.H2Error, match="UNAUTHORIZED"):
         RUN.run_h2(results_path="/dev/null/x", trace_path="/dev/null/y",
                    report_path="/dev/null/z")
 
 
-def test_THE_THIRD_SCHEDULE_MATCHES_BOTH_PINS_and_IS_EXECUTABLE_by_the_registry():
-    """The other half of the registration: a block that is registered but whose
-    schedule the registry still refuses would be a reservation that buys nothing.
-    Both pins are recomputed from the BUILT schedule -- a pinned digest never
-    checked against the artifact it pins is decoration."""
+def test_THE_THIRD_SCHEDULE_STILL_MATCHES_BOTH_PINS_BUT_IS_NOW_SPENT():
+    """🔴 INVERTED 2026-09-13 with the block. The pins are unchanged -- a spent
+    schedule is still the same schedule, and the 692 games must stay verifiable
+    against the one they came from -- and the registry now REFUSES it, naming the
+    first seed it will not re-issue."""
     tasks = PLAN.build_tasks(PLAN.load_source_plan())
     summary = PLAN.validate_h2_schedule(tasks)
     assert summary["seed_block"] == list(R.H2_SEED_BLOCK)
@@ -627,7 +641,8 @@ def test_THE_THIRD_SCHEDULE_MATCHES_BOTH_PINS_and_IS_EXECUTABLE_by_the_registry(
     assert R.H2_TASK_DIGEST not in (R.H2_ATTEMPT1_TASK_DIGEST,
                                     R.H2_ATTEMPT2_TASK_DIGEST), "a NEW schedule"
     assert [t["seed"] for t in tasks] == list(range(*R.H2_SEED_BLOCK))
-    REF.validate_schedule_executable(tasks)           # raises nothing
+    with pytest.raises(REF.E4ReferenceError, match="EXPOSED|RETIRED|retired"):
+        REF.validate_schedule_executable(tasks)
 
 
 def _registry_without_h2():

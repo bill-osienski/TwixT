@@ -325,6 +325,26 @@ ACCOUNTED_SEED_INTERVALS = (
 #: strikes that seed off. A draw inside the test namespace strikes nothing off,
 #: because nothing there was ever available to schedule.
 EXPOSED_SEED_INTERVALS = (
+    (202622000, 202622693),          # H2 ATTEMPT 3, DRAWN BY THE ONE AUTHORIZED
+                                     # RUN on 2026-09-13. 693 seeds, bound
+                                     # POSITIONALLY: 202622000..202622692.
+                                     #
+                                     # 692 of them carry a COMPLETED game -- a
+                                     # task_result, an opening_bound, a transcript
+                                     # and ply records each, indices 0..691.
+                                     #
+                                     # 🔑 THE 693rd IS CLAIMED AS DRAWN, and that is
+                                     # a DIFFERENT judgement from attempt 2's. There
+                                     # the uncertain seed emitted a trace
+                                     # `task_start` and NOTHING else, so it was not
+                                     # claimed. Here task 692 emitted `task_start`
+                                     # AND the run aborted inside it -- "[move]
+                                     # h2match-692-strong6-o8_contact-t1j_black-r2
+                                     # ply 9" -- so an agent was built on seed
+                                     # 202622692 and nine plies were played with it.
+                                     # Its records did not survive, because ply
+                                     # records are persisted per COMPLETED game; the
+                                     # draw did. An unrecorded draw is still a draw.
     (202620000, 202620383),          # H2 ATTEMPT 2's block, DRAWN BY AN
                                      # UNAUTHORIZED RUN on 2026-09-12: an
                                      # injected-defect control deleted the gate
@@ -456,6 +476,25 @@ TEST_ONLY_SEED_INTERVALS = (
 #: seeing the first 24, which is selection bias however clean the RNG is. So the
 #: WHOLE block retires together, drawn and undrawn alike.
 RETIRED_SEED_INTERVALS = (
+    (202622000, 202622736),          # H2 ATTEMPT 3, RETIRED WHOLE 2026-09-13.
+                                     # 693 of its seeds were drawn by the single
+                                     # authorized run (see EXPOSED above) and the
+                                     # remaining 43 go with them: a one-shot
+                                     # schedule was STARTED and did not complete.
+                                     #
+                                     # THE RUN VOIDED ON ITS OWN DEADLINE at game
+                                     # 692 of 736 -- 28,800 s exceeded, exit 3, the
+                                     # durable trace's `run_end` reading
+                                     # verdict VOID / games_completed 692. The gate
+                                     # was restored by the wrapper and every gate
+                                     # reads False.
+                                     #
+                                     # ⚠ NO STRENGTH CONCLUSION IS DRAWN FROM THE
+                                     # 692 GAMES. The design requires all 736 and
+                                     # the frozen rules produce no verdict from a
+                                     # VOID: no report was written. They are
+                                     # FAILURE EVIDENCE -- what the authorized
+                                     # launch path did -- and nothing else.
     (202620000, 202620736),          # H2 ATTEMPT 2, RETIRED WHOLE 2026-09-12.
                                      # 383 of its seeds were drawn by an
                                      # UNAUTHORIZED run (see EXPOSED above) and the

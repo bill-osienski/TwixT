@@ -2659,12 +2659,12 @@ DEFECTS = [
     ("attempt 3's own digest is not re-pinned", H2R,
      'H2_TASK_DIGEST = "4cec38c75a4297d1b494df1c5754215962b138767d8f4c38fc4996078b94c332"',
      'H2_TASK_DIGEST = H2_ATTEMPT2_TASK_DIGEST',
-     f"{T_H2}::test_THE_THIRD_SCHEDULE_MATCHES_BOTH_PINS_and_IS_EXECUTABLE_by_the_registry"),
+     f"{T_H2}::test_THE_THIRD_SCHEDULE_STILL_MATCHES_BOTH_PINS_BUT_IS_NOW_SPENT"),
     ("attempt 3's FULL-FIELD digest is not re-pinned", H2R,
      'H2_FULL_TASK_DIGEST = ("2d330ede735b578ea83ab68ebbb22611a7"\n'
      '                       "b1e41c1af64ca9f98c36ee84a3e2da")',
      'H2_FULL_TASK_DIGEST = H2_ATTEMPT2_FULL_TASK_DIGEST',
-     f"{T_H2}::test_THE_THIRD_SCHEDULE_MATCHES_BOTH_PINS_and_IS_EXECUTABLE_by_the_registry"),
+     f"{T_H2}::test_THE_THIRD_SCHEDULE_STILL_MATCHES_BOTH_PINS_BUT_IS_NOW_SPENT"),
     ("attempt 2's digest is overwritten, so the INCIDENT's record stops verifying", H2R,
      'H2_ATTEMPT2_TASK_DIGEST = "ef68cb9962d1a8d42092ddf329dbdcb27a51f5594567e3f21c14cbe35c435c69"',
      'H2_ATTEMPT2_TASK_DIGEST = "0" * 64',
@@ -2693,31 +2693,38 @@ DEFECTS = [
     ("the third block un-registered from ACCOUNTED", REF_SRC,
      "    (202622000, 202622736),          # H2 ATTEMPT 3 -- the match H2 has still not",
      "    # (202622000, 202622736),        # H2 ATTEMPT 3 -- the match H2 has still not",
-     f"{T_H2}::test_THE_THIRD_BLOCK_IS_ACCOUNTED_ONLY_and_the_barrier_is_SATISFIED"),
-    # 🔑 A RESERVATION IS NOT A DRAW. Marking the block exposed or retired before a
-    # single game has been played would spend it on paper.
-    ("the third block is ALSO marked EXPOSED before anything is drawn", REF_SRC,
-     "EXPOSED_SEED_INTERVALS = (\n",
-     "EXPOSED_SEED_INTERVALS = (\n    (202622000, 202622736),\n",
-     f"{T_H2}::test_THE_THIRD_BLOCK_IS_ACCOUNTED_ONLY_and_the_barrier_is_SATISFIED"),
-    ("the third block is ALSO marked RETIRED before anything is drawn", REF_SRC,
-     "RETIRED_SEED_INTERVALS = (\n",
-     "RETIRED_SEED_INTERVALS = (\n    (202622000, 202622736),\n",
-     f"{T_H2}::test_THE_THIRD_BLOCK_IS_ACCOUNTED_ONLY_and_the_barrier_is_SATISFIED"),
+     f"{T_H2}::test_THE_THIRD_BLOCK_IS_EXPOSED_693_AND_RETIRED_WHOLE"),
+    # 🔴 BOTH INVERTED 2026-09-13 BY THE RUN. "ALSO marked EXPOSED / RETIRED before
+    # anything is drawn" were the defects while the block was unspent. 693 seeds are
+    # now drawn and the block is retired whole, so what must fail is DROPPING either
+    # record -- and claiming draws the record does not support.
+    ("the third block's exposure is dropped -- 693 draws unrecorded", REF_SRC,
+     "    (202622000, 202622693),          # H2 ATTEMPT 3, DRAWN BY THE ONE AUTHORIZED",
+     "    # (202622000, 202622693),        # H2 ATTEMPT 3, DRAWN BY THE ONE AUTHORIZED",
+     f"{T_H2}::test_THE_THIRD_BLOCK_IS_EXPOSED_693_AND_RETIRED_WHOLE"),
+    ("the third block's exposure is widened to the WHOLE block", REF_SRC,
+     "    (202622000, 202622693),          # H2 ATTEMPT 3, DRAWN BY THE ONE AUTHORIZED",
+     "    (202622000, 202622736),          # H2 ATTEMPT 3, DRAWN BY THE ONE AUTHORIZED",
+     f"{T_H2}::test_THE_THIRD_BLOCK_IS_EXPOSED_693_AND_RETIRED_WHOLE"),
+    ("the third block's WHOLE-BLOCK retirement is dropped", REF_SRC,
+     "    (202622000, 202622736),          # H2 ATTEMPT 3, RETIRED WHOLE 2026-09-13.",
+     "    # (202622000, 202622736),        # H2 ATTEMPT 3, RETIRED WHOLE 2026-09-13.",
+     f"{T_H2}::test_THE_THIRD_BLOCK_IS_EXPOSED_693_AND_RETIRED_WHOLE"),
     # 🔑 THE ONE THAT MATTERS MOST: registration is bookkeeping, not permission. If
     # the seed edit had also flipped the gate, the barrier test's second half must
     # say so -- otherwise "the gate stays False" is a claim no test can contradict.
-    ("registering the third block ALSO opened the H2 execution gate", H2RUN,
+    ("the H2 execution gate was left OPEN after the run", H2RUN,
      "H2_EXECUTION_AUTHORIZED = False",
      "H2_EXECUTION_AUTHORIZED = True",
-     f"{T_H2}::test_THE_THIRD_BLOCK_IS_ACCOUNTED_ONLY_and_the_barrier_is_SATISFIED"),
-    # 🔑 AND THE OTHER HALF: a block that is registered but whose schedule the
-    # registry still refuses is a reservation that buys nothing.
-    ("the third schedule is not actually executable by the registry", REF_SRC,
-     "def validate_schedule_executable(tasks: Sequence[Dict[str, Any]]) -> Dict[str, Any]:",
-     "def validate_schedule_executable(tasks: Sequence[Dict[str, Any]]) -> Dict[str, Any]:\n"
-     "    raise E4ReferenceError('RETIRED')",
-     f"{T_H2}::test_THE_THIRD_SCHEDULE_MATCHES_BOTH_PINS_and_IS_EXECUTABLE_by_the_registry"),
+     f"{T_H2}::test_THE_THIRD_BLOCK_IS_EXPOSED_693_AND_RETIRED_WHOLE"),
+    # 🔴 INVERTED 2026-09-13. It used to be "the registry refuses a schedule it
+    # should admit". The block is SPENT now, so the defect is the opposite: a
+    # retirement that does not refuse the next schedule is a comment, not a state.
+    ("the spent third schedule is schedulable because availability is never checked",
+     REF_SRC,
+     "def validate_task_executable(task: Dict[str, Any]) -> None:",
+     "def validate_task_executable(task: Dict[str, Any]) -> None:\n    return None",
+     f"{T_H2}::test_THE_THIRD_SCHEDULE_STILL_MATCHES_BOTH_PINS_BUT_IS_NOW_SPENT"),
     # the retry's EXACT configuration, through the REAL builder
     ("the seam's readout mode is not the rules' one", H2R,
      'SELECTION_MODE = "argmax"',
@@ -3864,16 +3871,6 @@ EXPECTED_REASONS = {
     'the third block un-registered from ACCOUNTED':
         "AssertionError: (202622000, {'accounted': False, 'exposed': False, "
         "'retired': False, 'test_only': False})",
-    'the third block is ALSO marked EXPOSED before anything is drawn':
-        "AssertionError: (202622000, {'accounted': True, 'exposed': True, "
-        "'retired': False, 'test_only': False})",
-    'the third block is ALSO marked RETIRED before anything is drawn':
-        "AssertionError: (202622000, {'accounted': True, 'exposed': False, "
-        "'retired': True, 'test_only': False})",
-    'registering the third block ALSO opened the H2 execution gate':
-        'AssertionError: registering a block ALSO opened the execution gate',
-    'the third schedule is not actually executable by the registry':
-        'scripts.GPU.alphazero.e4_screen_reference.E4ReferenceError: RETIRED',
     # ── the output destination, found by attempt 3's pre-run verification
     "the outputs point back into a SPENT attempt's directory":
         "AssertionError: ('docs/superpowers/evidence/2026-09-09-t1j-h2-deterministic-"
