@@ -3868,4 +3868,11 @@ EXPECTED_REASONS = {
         'AssertionError: registering a block ALSO opened the execution gate',
     'the third schedule is not actually executable by the registry':
         'scripts.GPU.alphazero.e4_screen_reference.E4ReferenceError: RETIRED',
+    # ── the output destination, found by attempt 3's pre-run verification
+    "the outputs point back into a SPENT attempt's directory":
+        "AssertionError: ('docs/superpowers/evidence/2026-09-09-t1j-h2-deterministic-"
+        "readout/03_h2_results.jsonl', 'docs/superpowers/evidence/2026-09-09-t1j-h2-"
+        "deterministic-readout')",
+    'the SPENT output directories are no longer named, so nothing is excluded':
+        'AssertionError: vacuous: no spent directory is named',
 }
