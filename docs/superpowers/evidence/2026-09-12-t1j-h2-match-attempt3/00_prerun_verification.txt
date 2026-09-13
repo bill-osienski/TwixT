@@ -3,7 +3,7 @@ Nothing has been executed. The gate is shut at this moment.
 ==========================================================================
 
 == the tree ==
-  HEAD 3ce8ae5, descends from c58b13d
+  HEAD f9a391a, descends from c58b13d
   PASS     HEAD descends from the bound commit (c58b13d)
   ignoring 1 path(s) under docs/superpowers/evidence/2026-09-12-t1j-h2-match-attempt3 (this tool's own output)
   PASS     no SOURCE differs from the commit
@@ -108,11 +108,13 @@ Nothing has been executed. The gate is shut at this moment.
   PASS     the supervisor cap EXCEEDS the runner deadline, so a deadline VOID is reported as a VOID rather than killed
 
 ==========================================================================
-⚠ RISK RECORDED BEFORE THE RUN, NOT AFTER. The production seam has still
-  never played a game: construction, wiring and refusals are tested, and
-  the only two things that ever reached a board were attempt 1 (VOID at
-  task 0) and the 383 games an unauthorized control played. If it fails at
-  game 1 the run VOIDs and the one-shot rule retires all 736 seeds -- the
-  same cost as a failure at game 735. Proceeding accepts that knowingly.
+⚠ RISK RECORDED BEFORE THE RUN, NOT AFTER. THE AUTHORIZED LAUNCH PATH HAS
+  NEVER COMPLETED. Attempt 1 VOIDed at task 0 and never reached a board:
+  the builder refused H2's own readout before a move was made. The only
+  games ever played were the 383 an UNAUTHORIZED control ran, outside this
+  path and outside the gate. Construction, wiring and refusals are tested;
+  what is unproven is this path running to the end. If it fails at game 1
+  the run VOIDs and the one-shot rule retires all 736 seeds -- the same
+  cost as a failure at game 735. Proceeding accepts that knowingly.
 
 49/49 checks PASS
