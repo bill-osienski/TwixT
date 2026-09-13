@@ -3,7 +3,7 @@ Nothing has been executed. The gate is shut at this moment.
 ==========================================================================
 
 == the tree ==
-  HEAD 113249b, descends from c58b13d
+  HEAD 3ce8ae5, descends from c58b13d
   PASS     HEAD descends from the bound commit (c58b13d)
   ignoring 1 path(s) under docs/superpowers/evidence/2026-09-12-t1j-h2-match-attempt3 (this tool's own output)
   PASS     no SOURCE differs from the commit

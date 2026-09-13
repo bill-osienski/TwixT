@@ -1,0 +1,9 @@
+MANIFEST -- 2026-09-12-t1j-h2-match-attempt3 (PRE-RUN ONLY; nothing has run)
+6 files
+
+cab63b81dbf4b526744a3af7e5d3c02c8ef1cf232eaabf44f714d1304a0dbe4b      6743  00_prerun_verification.txt
+69cfb9d43ed66ec6923329dbb301d20995f6ad26a7751d4158f9bc65d0688366      6733  00a_prerun_verification_DIRTY_TREE.txt
+a25e869a20d9f6bced771e4c06bcfd3a135f7b0e5f15a1499c01d75c215d514e      1464  01_run_once.sh.txt
+51e6ff66e4ed2b6ee197eb67fdff8a77df29dc777a9a4e6eb3dddeeed8e861df     35661  02_harness_run.txt
+5940c780d978d40c88f11a5c92185be6d77195b0b5502b6c9c94c81c4018dbd6     26116  03_full_suite_run.txt
+eb8f3df2de490c4a425ad38f91206a62a8a328b808a05dba7be2f71768daa368     17046  04_h2_prerun_verification.py.txt
