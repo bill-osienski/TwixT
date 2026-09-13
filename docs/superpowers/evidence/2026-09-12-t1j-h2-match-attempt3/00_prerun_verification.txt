@@ -3,9 +3,10 @@ Nothing has been executed. The gate is shut at this moment.
 ==========================================================================
 
 == the tree ==
-  HEAD c08c375, descends from c58b13d
+  HEAD 113249b, descends from c58b13d
   PASS     HEAD descends from the bound commit (c58b13d)
-  🔴 FAIL   the working tree is clean  2 path(s) modified
+  ignoring 1 path(s) under docs/superpowers/evidence/2026-09-12-t1j-h2-match-attempt3 (this tool's own output)
+  PASS     no SOURCE differs from the commit
 
 == the SEVEN gates ==
   PASS     D1_EXECUTION_AUTHORIZED            False
@@ -114,6 +115,4 @@ Nothing has been executed. The gate is shut at this moment.
   game 1 the run VOIDs and the one-shot rule retires all 736 seeds -- the
   same cost as a failure at game 735. Proceeding accepts that knowingly.
 
-48/49 checks PASS
-🔴 FAILED CHECKS -- the match must NOT be authorized:
-    the working tree is clean
+49/49 checks PASS
