@@ -1,0 +1,75 @@
+H2 ATTEMPT 3 -- ACCOUNTING FROM THE RECORDS, 2026-09-13
+Recomputed from the durable output, not from memory. NO VERDICT IS DRAWN.
+==========================================================================
+
+== what the run did ==
+  verdict (durable trace run_end) : {'error': 'AbortError', 'event': 'run_end', 'games_completed': 692, 'verdict': 'VOID'}
+  wrapper exit code              : 3 (EXIT_VOID)
+  games completed                : 692 of 736
+  cause                          : the 28,800 s whole-run deadline was
+                                   exceeded inside task 692 at ply 9
+
+== record counts ==
+  header           1
+  opening_bound    692
+  ply              36988
+  task_result      692
+  transcript       692
+  task_start events 693 (max index 692)
+  task_done  events 692 (max index 691)
+
+== SEED ACCOUNTING ==
+  block                : [202622000, 202622736)  736 seeds
+  seeds with a COMPLETED game : 692  [202622000, 202622691]
+  seed 202622692       : DRAWN. task_start emitted AND the run aborted
+                         inside it at ply 9, so an agent was built on it
+                         and nine plies were played. Its ply records did
+                         not survive -- they persist per COMPLETED game --
+                         but the draw did. An unrecorded draw is a draw.
+  EXPOSED              : 693  [202622000, 202622693)
+  NOT DRAWN            : 43   [202622693, 202622736)
+  RETIRED              : 736  THE WHOLE BLOCK -- a one-shot schedule was
+                         started and did not complete.
+
+== STRUCTURE OF THE GAMES THAT WERE PLAYED ==
+  Reported because it bears on whether any further attempt is worth
+  authorizing. It is NOT a verdict and NOT a strength statement.
+
+  opening          arm         games distinct   floor 42
+  o1_center        t1j_black      46        1   BELOW
+  o1_center        t1j_red        46        1   BELOW
+  o2_offcenter     t1j_black      46        1   BELOW
+  o2_offcenter     t1j_red        46        1   BELOW
+  o3_low           t1j_black      46        1   BELOW
+  o3_low           t1j_red        46        1   BELOW
+  o4_high          t1j_black      46        1   BELOW
+  o4_high          t1j_red        46        1   BELOW
+  o5_wide_left     t1j_black      46        1   BELOW
+  o5_wide_left     t1j_red        46        1   BELOW
+  o6_wide_right    t1j_black      46        1   BELOW
+  o6_wide_right    t1j_red        46       46   at/above
+  o7_diagonal      t1j_black      46        1   BELOW
+  o7_diagonal      t1j_red        46        1   BELOW
+  o8_contact       t1j_black       2        1   BELOW
+  o8_contact       t1j_red        46        1   BELOW
+
+  692 games -> 61 DISTINCT transcripts.
+  14 of the 15 COMPLETE cells hold exactly ONE distinct game in 46
+  repetitions. The single exception is o6_wide_right / t1j_red, which is
+  also the only cell where every game hit the 280-ply cap (46 of the 46
+  cap terminations in the whole run).
+
+  🔴 THE FROZEN DEGENERACY GATE WAS NOT RUN: a VOID produces no report,
+  and none was written. But its floor is MIN_DISTINCT_PER_CELL = 42 of 46,
+  and these counts are 1. Had the run completed, the counts above are what
+  the gate would have been given. A deterministic argmax readout against a
+  deterministic opponent repeats one game per cell; repetition then adds
+  no information. THE DEADLINE IS NOT THE ONLY THING THAT WENT WRONG, and
+  a fourth block would meet the same structure unless the DESIGN changes.
+
+== WHAT IS NOT HERE ==
+  No win rate, no score, no interval, no per-arm split, no comparison with
+  the incumbent. The design requires all 736 games; 692 of them are an
+  interrupted run, and the frozen rules produce no verdict from a VOID.
+  These 692 games are FAILURE EVIDENCE about the launch path and about the
+  design's structure. They are not a measurement of strength.
