@@ -315,12 +315,14 @@ def main() -> int:
           "reported as a VOID rather than killed", CMD.SUPERVISOR_GRACE_S > 0)
 
     print("\n" + "=" * 74)
-    print("⚠ RISK RECORDED BEFORE THE RUN, NOT AFTER. The production seam has still")
-    print("  never played a game: construction, wiring and refusals are tested, and")
-    print("  the only two things that ever reached a board were attempt 1 (VOID at")
-    print("  task 0) and the 383 games an unauthorized control played. If it fails at")
-    print("  game 1 the run VOIDs and the one-shot rule retires all 736 seeds -- the")
-    print("  same cost as a failure at game 735. Proceeding accepts that knowingly.")
+    print("⚠ RISK RECORDED BEFORE THE RUN, NOT AFTER. THE AUTHORIZED LAUNCH PATH HAS")
+    print("  NEVER COMPLETED. Attempt 1 VOIDed at task 0 and never reached a board:")
+    print("  the builder refused H2's own readout before a move was made. The only")
+    print("  games ever played were the 383 an UNAUTHORIZED control ran, outside this")
+    print("  path and outside the gate. Construction, wiring and refusals are tested;")
+    print("  what is unproven is this path running to the end. If it fails at game 1")
+    print("  the run VOIDs and the one-shot rule retires all 736 seeds -- the same")
+    print("  cost as a failure at game 735. Proceeding accepts that knowingly.")
     failed = [lab for lab, ok in _checks if not ok]
     print(f"\n{len(_checks) - len(failed)}/{len(_checks)} checks PASS")
     if failed:
