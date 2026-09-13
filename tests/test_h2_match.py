@@ -886,16 +886,33 @@ def test_a_failed_restoration_becomes_the_wrappers_OWN_exit_code(monkeypatch, ca
     assert "BY HAND" in capsys.readouterr().err
 
 
-def test_THE_FINALLY_PATH_also_restores_and_reports_its_own_failure(monkeypatch, capsys):
+def test_THE_FINALLY_PATH_also_restores_and_reports_its_own_failure(
+        monkeypatch, capsys, tmp_path):
     """🔴 A control proved the earlier test blind here: with the gate shut, `main`
     returns on the UNAUTHORIZED branch and never reaches the `finally`, so
     disabling the finally's check changed nothing. This drives the OTHER path --
     gate open, restoration failing -- which is the one that matters, because it is
-    the path a real run takes."""
+    the path a real run takes.
+
+    🔑 HERMETIC, and it was not always. With the gate forced open this reaches the
+    output precheck, and it used to be REFUSED there because the frozen defaults
+    pointed at attempt 1's directory, where two outputs already existed -- so it
+    never reached `supervise` and the whole test silently depended on a destination
+    being occupied. Repointing the defaults at a FREE directory made it spawn a
+    real supervised worker instead. Its subject is the `finally`, not the
+    destination and not the supervisor, so both are supplied here: tmp outputs and
+    a stubbed `supervise`. Otherwise this test's path changes the day a match runs.
+    """
     monkeypatch.setattr(CMD, "gate_is_open", lambda: True)
     monkeypatch.setattr(CMD, "restore_gate", lambda *a, **k: False)
-    assert CMD.main([]) == CMD.EXIT_GATE_NOT_RESTORED
+    monkeypatch.setattr(CMD, "supervise", lambda *a, **k: {
+        "exit_code": 0, "timed_out": False, "interrupted": False,
+        "group_cleared": True})
+    argv = ["--results", str(tmp_path / "r.jsonl"), "--trace", str(tmp_path / "t.jsonl"),
+            "--report", str(tmp_path / "rep.json")]
+    assert CMD.main(argv) == CMD.EXIT_GATE_NOT_RESTORED
     assert "BY HAND" in capsys.readouterr().err
+    assert not list(tmp_path.iterdir()), "the stubbed supervisor wrote nothing"
 
 
 def test_the_finally_path_restores_a_REAL_open_gate_after_a_refusal(monkeypatch, tmp_path):
