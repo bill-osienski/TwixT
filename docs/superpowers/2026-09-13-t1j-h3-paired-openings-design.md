@@ -9,6 +9,22 @@ authorizations**. The push stays held.
 structure. §7 forbids pooling its results with H1, either H2 attempt, or the 692
 games attempt 3 played.
 
+**AMENDED 2026-09-13, before any pilot card was frozen, from design review. Two
+analysis rules were wrong.**
+
+**First amendment — deduplication was defined at the wrong level.** §7 said
+"deduplicate by transcript digest", while §5 makes the **pair** the unit.
+Dropping one game breaks its pair and leaves a half-observation with no paired
+score. §7.1 now defines duplicate **pairs** and keeps every paired score intact:
+**a game is never dropped on its own.**
+
+**Second amendment — "whether outcomes vary at all" is withdrawn as a stop
+condition.** It would stop the programme on its best possible result: if
+independently generated openings give diverse games, few caps, and T1j wins every
+pair, that is **strong evidence, not degeneracy**. What must be screened is
+evidence made **uninformative** — by repeated play or by caps. Outcome uniformity
+is now **reported and never a stop**; §6.3 states the screens.
+
 ---
 
 ## 1. The question
@@ -109,21 +125,66 @@ measure three things the full design cannot assume:
    cap games ran ~6× the 51-ply mean and are what exhausted its deadline. A
    deadline must be **derived from measured runtime with the tail included**,
    never assumed.
-3. **Whether outcomes vary at all**, not merely transcripts — the lesson of the
-   cap cell.
+3. **The outcome distribution** — reported, and see §6.3 for what it may and may
+   not decide.
 
-**Declared STOP conditions, frozen before the pilot runs.** If distinct openings
-still yield degenerate games, or caps dominate, **no full match is scheduled**
-and H3 closes. The pilot is allowed to end the line; that is its point.
+### 6.3 What is screened, and what is only reported
+
+⚠ **Outcome uniformity is NOT a stop condition.** A unanimous result is what a
+real strength difference looks like. If diverse openings give diverse games with
+few caps and one side wins every pair, that is **evidence, not degeneracy**, and
+stopping on it would discard the programme's best outcome. It is **reported**;
+it decides nothing by itself, and the pilot is too small to weigh it.
+
+**The screens are on evidence made UNINFORMATIVE**, which has exactly two known
+causes and one practical one:
+
+| screen | what it catches |
+|---|---|
+| **duplicate-pair rate** | repeated play — the same pair of games counted again |
+| **cap rate** | a rate that measures the 280-ply cap rather than the players |
+| **runtime tail** | a full study that cannot be scheduled inside any deadline |
+
+**Numerical thresholds are frozen in the pilot's own card, before play begins.**
+The pilot is allowed to end the line on those three; it is not allowed to end it
+because the answer came out one-sided.
 
 ## 7. Analysis
 
-* **Deduplicate by transcript digest before any rate is computed.** Identical
-  games contribute **once**.
-* Report **effective n (distinct) beside nominal n**, always. A gap between them
-  is a finding, not a footnote.
-* **Rates and intervals are over PAIRS**, under an independence model **stated as
-  a model** and called nominal under it — H2's wording, kept deliberately.
+### 7.1 Duplicates are detected and collapsed AT THE PAIR
+
+**A game is never dropped on its own.** Dropping one game of a pair destroys the
+paired score, which is the whole unit of evidence.
+
+* Each game carries a **transcript digest**, frozen structurally as H2's §2.2
+  froze it — the move sequence with its movers, never the whole record, or
+  `seed`/`task_id`/`rep` would make every repetition look distinct.
+* A pair's identity is the **ordered** pair
+  `(digest(incumbent-as-red), digest(incumbent-as-black))`, keyed **by role**, so
+  it does not depend on which game was played first.
+* **Duplicate pairs** — equal pair keys — collapse to **one** observation. The
+  surviving pair keeps **both** its games and its paired score intact.
+* An **incomplete pair** (one game missing, VOID or unscoreable) is **excluded
+  whole** and reported. Never half-counted.
+* **Partial overlap** — two pairs sharing exactly one game digest — is **NOT**
+  deduplicated: they remain distinct observations. It **is reported**, because
+  they are not fully independent and the interval's model should be read knowing
+  that.
+* **Within-pair identity** — a pair whose two games have equal digests — is
+  **flagged**: reversing the colours changed nothing observable, which is a
+  degeneracy the pair-level key cannot otherwise show.
+
+### 7.2 What is reported, always
+
+`pairs_nominal` · `pairs_scored` · `pairs_distinct` · `duplicate_pairs` ·
+`partial_overlap_pairs` · `within_pair_identical` · `capped_games`.
+
+**Effective n is `pairs_distinct`**, and it is reported **beside** the nominal
+count every time. A gap between them is a finding, not a footnote.
+* **Rates and intervals are over `pairs_distinct`**, under an independence model
+  **stated as a model** and called nominal under it — H2's wording, kept
+  deliberately. Partial overlap is a known departure from that model and is
+  reported alongside.
 * **Caps are declared in advance**: scored 0.5 under the inherited rule, *and*
   with a pre-set threshold above which the run reports **no rate**, because a
   rate over mostly-unresolved games measures the cap.
