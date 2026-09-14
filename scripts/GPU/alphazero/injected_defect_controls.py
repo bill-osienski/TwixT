@@ -4183,4 +4183,17 @@ EXPECTED_REASONS = {
         'AssertionError: assert 13 == 14',
     "the pilot's outputs point into a SPENT run's directory":
         "AssertionError: ('docs/superpowers/evidence/2026-09-12-t1j-h2-match-attempt3/03_pilot_results.jsonl', 'docs/superpowers/evidence/2026-09-12-t1j-h2-match-attempt3')",
+    # ── 2026-09-14: the seam INTERFACE and the seeded pin
+    'the harness is handed no recorder':
+        "AttributeError: 'NoneType' object has no attribute 'emit'",
+    "the seam returns the harness's flat result instead of the contract":
+        "AssertionError: assert {'elapsed_s',...s', 'records'} >= {'elapsed_s',...ds', 'result'}",
+    'two opening_bound records are accepted, so the ply span is unanchored':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_pilot_runner.H3PilotVoidError'>",
+    'a seeded schedule is checked against the UNSEEDED pin':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_pilot_rules.H3PilotError'>",
+    'a half-seeded schedule is admitted':
+        'scripts.GPU.alphazero.h3_pilot_rules.H3PilotError: this schedule carries seeds, but SEEDED_TASK_DIGEST is None. The full-field digest changes when seeds are assigned, so the pin must be RECOMPUTED FROM THE SEEDED SCHEDULE and set at seed registration before any run. Nothing may execute against the unseeded pin.',
+    'the runner ignores which pin applies':
+        "scripts.GPU.alphazero.h3_pilot_runner.H3PilotRunError: the schedule digest is 272ef664169b85925f93432854c2bb983356fdbbc649f2db5fb3c20137c98aba but the frozen pilot schedule is 17516342892f0be35d9c282c4cbea2bf792449a02084d35a2904c0256110dd43. A different schedule is a different experiment wearing this one's name.",
 }
