@@ -117,16 +117,84 @@ def check_schedule(tasks: Sequence[Mapping[str, Any]]) -> Dict[str, Any]:
     if len(tasks) != RULES.N_GAMES:
         raise H3PilotRunError(f"{len(tasks)} tasks, expected {RULES.N_GAMES}")
     got = RULES.task_digest(tasks)
-    if got != RULES.TASK_DIGEST:
+    # 🔑 WHICH pin, decided by whether the schedule carries seeds. Assigning 40
+    # seeds changes the full-field digest, so a seeded schedule compared against
+    # the unseeded pin would be refused -- the real thing rejected by its own
+    # check. `expected_task_digest` refuses outright while the seeded pin is unset.
+    try:
+        want = RULES.expected_task_digest(tasks)
+    except RULES.H3PilotError as e:
+        raise H3PilotRunError(str(e)) from None
+    if got != want:
         raise H3PilotRunError(
             f"the schedule digest is {got} but the frozen pilot schedule is "
-            f"{RULES.TASK_DIGEST}. A different schedule is a different experiment "
-            f"wearing this one's name.")
+            f"{want}. A different schedule is a different experiment wearing this "
+            f"one's name.")
     return {"n_tasks": len(tasks), "task_digest": got,
             "pairs": len({t["pair_id"] for t in tasks})}
 
 
 # ═══════════════════ the production seam ═══════════════════════════════════
+def _capturing_recorder():
+    """The harness's recorder, capturing IN MEMORY.
+
+    🔴 `rec=None` WAS PASSED HERE AND WOULD HAVE FAILED ON THE FIRST GAME:
+    `play_task` calls `rec.emit(...)` for the `opening_bound` before a single move
+    and once per ply after it. The inert play fixture could not see that, because
+    it replaced `play_task` itself.
+
+    H2's recorder is REUSED rather than copied: it is the same harness interface,
+    and two copies of it would drift apart exactly where a drift is invisible.
+    """
+    from . import h2_match_runner as H2RUN
+    return H2RUN._CapturingRecorder()
+
+
+def _play_one(*, task: Mapping[str, Any], state: Mapping[str, Any],
+              timeout_s: float, _count: Any = None) -> Dict[str, Any]:
+    """ONE game through the harness, returning THE CONTRACT THE RUN BODY READS.
+
+    🔴 `play_task` RETURNS A FLAT DICT -- `winner`, `terminal_reason`, `plies` --
+    and the run body needs `result`, `plies` and `opening_bound`. The seam returned
+    the flat dict with `elapsed_s` bolted on, so the body's `out["result"]` would
+    have raised on game one. H2's structured contract is adopted whole, with the
+    duration added.
+
+    SEPARATE FROM `_production_play` ON PURPOSE: the wrapping is what the fixtures
+    replaced, so it must be reachable with the REAL harness and inert agents. It
+    takes a prepared `state` and builds nothing.
+    """
+    from . import h2_match_rules as H2R
+    # 🔑 MONOTONIC, not wall clock. A wall clock can step backwards over an NTP
+    # correction and produce a negative duration; the analysis refuses those, so a
+    # clock that can emit one would void a game for the weather.
+    t0 = time.monotonic()
+    cap = _capturing_recorder()
+    try:
+        result = state["harness"].play_task(
+            task=dict(task), agent_for=state["agent_factory"],
+            state_factory=state["state_factory"], binder=state["binder"],
+            rec=cap, ply_cap=H2R.PLY_CAP)
+    finally:
+        # AFTER EVERY GAME, completed or failed. A cleanup that runs only on the
+        # happy path is the one that matters least.
+        state["cleanup"]()
+        if _count is not None:
+            _count.cleanups += 1
+    elapsed = time.monotonic() - t0
+    plies = [r for r in cap.records if r.get("record_type") == "ply"]
+    bounds = [r for r in cap.records if r.get("record_type") == "opening_bound"]
+    if len(bounds) != 1:
+        raise H3PilotVoidError(
+            f"{task['task_id']}: {len(bounds)} opening_bound records; the "
+            f"transcript's first ply is anchored to exactly one, and without it "
+            f"the ply span cannot be checked at all")
+    return {"result": {"task_id": task["task_id"], "seed": task.get("seed"),
+                       **result},
+            "plies": plies, "opening_bound": bounds[0]["ply"],
+            "records": cap.records, "elapsed_s": elapsed}
+
+
 def _production_play(results_path: str, deadline: Any = None,
                      openings: Optional[Sequence[Dict[str, Any]]] = None
                      ) -> Callable[..., Dict[str, Any]]:
@@ -206,20 +274,8 @@ def _production_play(results_path: str, deadline: Any = None,
                 "cleanup": SCREEN_CMD._default_cleanup,
             }
         check_gate()                      # EVERY game, not only the first
-        # 🔑 MONOTONIC, not wall clock. A wall clock can step backwards over an
-        # NTP correction and produce a negative duration; the analysis refuses
-        # those, so a clock that can emit one would void a game for the weather.
-        t0 = time.monotonic()
-        try:
-            from . import h2_match_rules as H2R
-            out = state["harness"].play_task(
-                task=dict(task), agent_for=state["agent_factory"],
-                state_factory=state["state_factory"], binder=state["binder"],
-                rec=None, ply_cap=H2R.PLY_CAP)
-        finally:
-            state["cleanup"]()
-            play.cleanups += 1
-        return {**dict(out), "elapsed_s": time.monotonic() - t0}
+        return _play_one(task=task, state=state, timeout_s=timeout_s,
+                         _count=play)
 
     play._state = None
     play.cleanups = 0

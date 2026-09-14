@@ -2911,6 +2911,35 @@ DEFECTS = [
      'OUT_DIR = "docs/superpowers/evidence/2026-09-14-t1j-h3-pilot"',
      'OUT_DIR = "docs/superpowers/evidence/2026-09-12-t1j-h2-match-attempt3"',
      f"{T_H3RUN}::test_THE_OUTPUT_DESTINATION_IS_NOT_A_SPENT_RUNS_DIRECTORY"),
+    # ───────── the INTERFACE the fixtures replaced (2026-09-14) ─────────
+    # 🔴 THE TWO DEFECTS THAT WOULD HAVE FAILED ON GAME ONE and that no fixture
+    # could see, because every fixture replaced `play_task` itself.
+    ("the harness is handed no recorder", H3RUN,
+     "            rec=cap, ply_cap=H2R.PLY_CAP)",
+     "            rec=None, ply_cap=H2R.PLY_CAP)",
+     f"{T_H3RUN}::test_THE_RECORDER_IS_REAL_and_receives_the_openings_bound_first"),
+    ("the seam returns the harness's flat result instead of the contract", H3RUN,
+     '    return {"result": {"task_id": task["task_id"], "seed": task.get("seed"),\n'
+     "                       **result},",
+     '    return {"flat": dict(result),',
+     f"{T_H3RUN}::test_THE_SEAM_DRIVES_THE_REAL_HARNESS_AND_RETURNS_THE_RUN_BODYS_CONTRACT"),
+    ("two opening_bound records are accepted, so the ply span is unanchored", H3RUN,
+     "    if len(bounds) != 1:",
+     "    if False:",
+     f"{T_H3RUN}::test_MORE_THAN_ONE_opening_bound_is_a_VOID"),
+    # THE SEEDED PIN.
+    ("a seeded schedule is checked against the UNSEEDED pin", H3R,
+     "    if SEEDED_TASK_DIGEST is None:",
+     "    if False:",
+     f"{T_H3O}::test_a_SEEDED_schedule_is_REFUSED_while_the_seeded_pin_is_unset"),
+    ("a half-seeded schedule is admitted", H3R,
+     "    if len(seeded) != len(tasks):",
+     "    if False:",
+     f"{T_H3O}::test_a_HALF_SEEDED_schedule_matches_NEITHER_pin"),
+    ("the runner ignores which pin applies", H3RUN,
+     "        want = RULES.expected_task_digest(tasks)",
+     "        want = RULES.TASK_DIGEST",
+     f"{T_H3O}::test_a_SEEDED_schedule_is_REFUSED_while_the_seeded_pin_is_unset"),
 ]
 
 # ═══════════════════════════ THE EXPECTED REASONS ════════════════════════════

@@ -255,9 +255,7 @@ def test_the_seam_WIRES_THE_HARNESS_GAME_LOOP():
     """By AST, not by reading source: a refusal inserted above the loop went
     unseen when the test only grepped."""
     import textwrap
-    outer = ast.parse(textwrap.dedent(inspect.getsource(RUN._production_play))).body[0]
-    fn = next(n for n in ast.walk(outer)
-              if isinstance(n, ast.FunctionDef) and n.name == "play")
+    fn = ast.parse(textwrap.dedent(inspect.getsource(RUN._play_one))).body[0]
     calls = [n for n in ast.walk(fn) if isinstance(n, ast.Call)]
     assert any(getattr(c.func, "attr", "") == "play_task" for c in calls), \
         "the seam must call e4_screen_runner.play_task"
@@ -267,18 +265,16 @@ def test_THE_SEAM_TIMES_EVERY_GAME_ON_A_MONOTONIC_CLOCK():
     """🔑 A wall clock can step backwards over an NTP correction and emit a
     negative duration, which the analysis refuses -- a game voided for the
     weather."""
-    src = inspect.getsource(RUN._production_play)
+    src = inspect.getsource(RUN._play_one)
     assert "time.monotonic()" in src
     assert "time.time()" not in src, "a wall clock must not time a game"
-    assert '"elapsed_s": time.monotonic() - t0' in src
+    assert "elapsed = time.monotonic() - t0" in src
 
 
 def test_the_cleanup_runs_after_EVERY_game_including_a_failed_one():
     """H1 clears state after every game; H2 played 736 and called it never."""
     import textwrap
-    outer = ast.parse(textwrap.dedent(inspect.getsource(RUN._production_play))).body[0]
-    fn = next(n for n in ast.walk(outer)
-              if isinstance(n, ast.FunctionDef) and n.name == "play")
+    fn = ast.parse(textwrap.dedent(inspect.getsource(RUN._play_one))).body[0]
     tries = [n for n in ast.walk(fn) if isinstance(n, ast.Try) and n.finalbody]
     assert tries, "the game loop must clean up in a finally"
     body = "\n".join(ast.dump(n) for t in tries for n in t.finalbody)
@@ -628,3 +624,124 @@ def test_THE_OUTPUT_DESTINATION_IS_NOT_A_SPENT_RUNS_DIRECTORY():
             assert not d.startswith(spent.rstrip("/") + "/"), (d, spent)
     for d in defaults:
         assert d.startswith(CMD.OUT_DIR.rstrip("/") + "/")
+
+
+# ════════ THE ACTUAL SEAM, DRIVEN INTO THE REAL HARNESS ═════════════════════
+# 🔴 THE INTERFACE THE FIXTURES REPLACED. Every test above supplies its own
+# `play`, so neither of these could be seen:
+#   * `rec=None` was passed, and `play_task` calls `rec.emit(...)` for the
+#     `opening_bound` BEFORE A SINGLE MOVE -- it would have failed on game one;
+#   * `play_task` returns a FLAT dict, while the run body reads `result`, `plies`
+#     and `opening_bound`, so `out["result"]` would have raised on game one.
+# These drive `RUN._play_one` into the REAL `e4_screen_runner.play_task` with
+# inert agents, an inert binder and no toolchain, model or JVM anywhere.
+
+def _inert_state(openings, *, cleanups):
+    """A prepared seam state whose HARNESS IS REAL and whose players are not."""
+    from scripts.GPU.alphazero import e4_screen_runner as HARNESS
+    from scripts.GPU.alphazero.game.twixt_state import TwixtState
+    mapping = R.openings_mapping(openings)
+
+    def state_factory(task):
+        st = TwixtState()
+        for mv in mapping[task["opening"]]:
+            st = st.apply_move(tuple(mv))
+        return st
+
+    def agent_for(task, mover):
+        # the first legal move, deterministically: a player, not a strategy
+        return lambda state: sorted(state.legal_moves())[0]
+
+    return {"harness": HARNESS, "state_factory": state_factory,
+            "agent_factory": agent_for, "binder": lambda *a, **k: None,
+            "cleanup": lambda: cleanups.append(1)}
+
+
+def test_THE_SEAM_DRIVES_THE_REAL_HARNESS_AND_RETURNS_THE_RUN_BODYS_CONTRACT():
+    """The real `play_task`, a real recorder, real records -- and the exact shape
+    `_run_pilot_unguarded` consumes."""
+    openings = R.generate_openings()
+    task = dict(R.build_tasks(openings)[0], seed=777000000)
+    cleanups = []
+    out = RUN._play_one(task=task, state=_inert_state(openings, cleanups=cleanups),
+                        timeout_s=1.0)
+
+    assert set(out) >= {"result", "plies", "opening_bound", "records", "elapsed_s"}
+    assert out["opening_bound"] == R.OPENING_PLIES == 6
+    assert out["result"]["task_id"] == task["task_id"]
+    assert out["result"]["seed"] == 777000000
+    assert out["result"]["terminal_reason"] in ("win", "cap")
+    assert isinstance(out["result"]["plies"], int)
+    assert out["plies"], "the harness emitted no ply records"
+    assert out["elapsed_s"] >= 0
+    assert cleanups == [1], "cleanup runs after the game"
+
+
+def test_THE_RECORDER_IS_REAL_and_receives_the_openings_bound_first():
+    """`rec=None` would have raised here, before a single move."""
+    openings = R.generate_openings()
+    task = dict(R.build_tasks(openings)[0], seed=777000000)
+    out = RUN._play_one(task=task, state=_inert_state(openings, cleanups=[]),
+                        timeout_s=1.0)
+    kinds = [r["record_type"] for r in out["records"]]
+    assert kinds[0] == "opening_bound", kinds[:3]
+    assert kinds.count("opening_bound") == 1
+    assert set(kinds) == {"opening_bound", "ply"}
+
+
+def test_THE_RECORDS_THE_SEAM_RETURNS_BUILD_A_TRANSCRIPT():
+    """The end of the chain: what the harness emits must satisfy H2's transcript
+    contract, which the run body applies to every game."""
+    openings = R.generate_openings()
+    task = dict(R.build_tasks(openings)[0], seed=777000000)
+    out = RUN._play_one(task=task, state=_inert_state(openings, cleanups=[]),
+                        timeout_s=1.0)
+    from scripts.GPU.alphazero import h3_pilot_analysis as A
+    t = A.transcript(out["plies"], out["result"],
+                     opening_bound=out["opening_bound"])
+    assert t[-1][0] == "terminal"
+    assert len(A.transcript_digest(t)) == 64
+
+
+def test_MORE_THAN_ONE_opening_bound_is_a_VOID():
+    """The anchor the ply span is measured from must be unique."""
+    openings = R.generate_openings()
+    task = dict(R.build_tasks(openings)[0], seed=777000000)
+    state = dict(_inert_state(openings, cleanups=[]))
+
+    real = RUN._capturing_recorder          # captured BEFORE the patch, or the
+                                            # doubling recorder builds itself
+
+    class _Doubling:
+        def __init__(self):
+            self.inner = real()
+
+        def emit(self, obj):
+            self.inner.emit(obj)
+            if obj.get("record_type") == "opening_bound":
+                self.inner.emit(dict(obj))
+
+        @property
+        def records(self):
+            return self.inner.records
+
+    import unittest.mock as _m
+    with _m.patch.object(RUN, "_capturing_recorder", _Doubling):
+        with pytest.raises(RUN.H3PilotVoidError, match="opening_bound"):
+            RUN._play_one(task=task, state=state, timeout_s=1.0)
+
+
+def test_THE_RUN_BODY_CONSUMES_THE_REAL_SEAMS_OUTPUT(tmp_path):
+    """End to end over the interface: the real harness's records, through the real
+    run body, into a real report -- with only the players inert."""
+    openings = R.generate_openings()
+    cleanups = []
+    state = _inert_state(openings, cleanups=cleanups)
+    rep = _run(tmp_path, lambda *, task, identity, timeout_s: RUN._play_one(
+        task=task, state=state, timeout_s=timeout_s))
+    assert rep["games_completed"] == 40 and rep["complete"] is True
+    assert len(cleanups) == 40, "cleanup after every game"
+    results = [r for r in _lines(tmp_path / "r.jsonl")
+               if r["record_type"] == "task_result"]
+    assert len(results) == 40
+    assert all(len(r["transcript_digest"]) == 64 for r in results)

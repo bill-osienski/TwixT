@@ -279,3 +279,44 @@ def test_the_TERMINAL_rejection_is_reached_alone(monkeypatch):
                         lambda self: len(self.pegs) >= R.OPENING_PLIES)
     with pytest.raises(RuntimeError, match="only 0 of 1"):
         R.generate_openings(n=1)
+
+
+# ═══════════ the seeded pin: it cannot exist yet, and that is enforced ══════
+
+def test_ASSIGNING_SEEDS_CHANGES_THE_FULL_FIELD_DIGEST(openings):
+    """🔴 The reason a second pin must exist at all. `task_digest` covers EVERY
+    field, so the unseeded pin does NOT describe the schedule that would run."""
+    unseeded = R.task_digest(R.build_tasks(openings))
+    seeded = R.task_digest(R.build_tasks(openings,
+                                         seed_interval=(777000000, 777000040)))
+    assert unseeded == R.TASK_DIGEST
+    assert seeded != unseeded
+
+
+def test_THE_SEEDED_PIN_IS_UNSET_because_no_block_is_reserved():
+    assert R.SEEDED_TASK_DIGEST is None
+
+
+def test_an_UNSEEDED_schedule_expects_the_unseeded_pin(openings):
+    assert R.expected_task_digest(R.build_tasks(openings)) == R.TASK_DIGEST
+
+
+def test_a_SEEDED_schedule_is_REFUSED_while_the_seeded_pin_is_unset(openings):
+    """It must be recomputed at registration; until then nothing may execute."""
+    seeded = R.build_tasks(openings, seed_interval=(777000000, 777000040))
+    with pytest.raises(R.H3PilotError, match="SEEDED_TASK_DIGEST is None"):
+        R.expected_task_digest(seeded)
+
+
+def test_a_HALF_SEEDED_schedule_matches_NEITHER_pin(openings):
+    tasks = R.build_tasks(openings, seed_interval=(777000000, 777000040))
+    tasks[0] = dict(tasks[0], seed=None)
+    with pytest.raises(R.H3PilotError, match="half-seeded"):
+        R.expected_task_digest(tasks)
+
+
+def test_once_the_seeded_pin_IS_set_the_seeded_schedule_matches(openings, monkeypatch):
+    """The other half: if nothing were ever accepted the check would be an outage."""
+    seeded = R.build_tasks(openings, seed_interval=(777000000, 777000040))
+    monkeypatch.setattr(R, "SEEDED_TASK_DIGEST", R.task_digest(seeded))
+    assert R.expected_task_digest(seeded) == R.task_digest(seeded)

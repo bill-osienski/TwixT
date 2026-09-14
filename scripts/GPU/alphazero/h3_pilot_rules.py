@@ -249,5 +249,40 @@ def task_digest(tasks: Sequence[Dict[str, Any]]) -> str:
                                      default=str).encode()).hexdigest()
 
 
-#: Recomputed from the BUILT schedule by a test.
+#: THE UNSEEDED DESIGN IDENTITY, recomputed from the BUILT schedule by a test.
+#: This is the schedule as the card fixes it, with `seed: None` on every task.
 TASK_DIGEST = "17516342892f0be35d9c282c4cbea2bf792449a02084d35a2904c0256110dd43"
+
+#: 🔴 THE SEEDED PIN, AND IT CANNOT EXIST YET. `task_digest` covers EVERY field,
+#: so assigning 40 seeds changes it: the unseeded pin above does NOT describe the
+#: schedule that would actually run, and comparing a seeded schedule against it
+#: would refuse the real thing at execution time.
+#:
+#: It is None because no block is reserved. At seed registration it must be
+#: RECOMPUTED FROM THE SEEDED SCHEDULE and pinned here, and `check_schedule`
+#: refuses a seeded schedule until it is -- so this cannot be forgotten, which is
+#: the only reason it is a constant rather than a note. H2 re-pinned BOTH its
+#: digests for every attempt, for exactly this reason.
+SEEDED_TASK_DIGEST: Optional[str] = None
+
+
+def expected_task_digest(tasks: Sequence[Dict[str, Any]]) -> str:
+    """Which pin this schedule must match -- the seeded one if it carries seeds.
+
+    Refuses rather than choosing a pin that does not exist, and refuses a schedule
+    that carries SOME seeds: a half-seeded schedule is neither artifact.
+    """
+    seeded = [t for t in tasks if t.get("seed") is not None]
+    if not seeded:
+        return TASK_DIGEST
+    if len(seeded) != len(tasks):
+        raise H3PilotError(
+            f"{len(seeded)} of {len(tasks)} tasks carry a seed; a half-seeded "
+            f"schedule matches neither pin")
+    if SEEDED_TASK_DIGEST is None:
+        raise H3PilotError(
+            "this schedule carries seeds, but SEEDED_TASK_DIGEST is None. The "
+            "full-field digest changes when seeds are assigned, so the pin must be "
+            "RECOMPUTED FROM THE SEEDED SCHEDULE and set at seed registration "
+            "before any run. Nothing may execute against the unseeded pin.")
+    return SEEDED_TASK_DIGEST
