@@ -93,7 +93,98 @@ def check_seed_registration() -> None:
             f"(first {missing[0]}).")
 
 
-# ═══════════════════ BARRIER 3: create-only outputs ════════════════════════
+# ═══════════════════ BARRIER 3: the incumbent's IDENTITY ═══════════════════
+def frozen_argmax_config():
+    """THE ONE construction of the configuration the incumbent plays under.
+
+    🔑 THE PRODUCTION SEAM PASSES THIS OBJECT TO THE REAL BUILDER AND THE RECORDED
+    IDENTITY IS READ OFF THIS OBJECT. They were two independent expressions of the
+    same override until 2026-09-14 -- the seam built its own in `_production_play`,
+    the pre-run verification built a third, a test built a fourth -- and four
+    copies of a configuration are four chances for the record to describe a run
+    that did not happen. Nothing here loads a model.
+    """
+    from . import h2_match_rules as H2R
+    from . import twixtbot_g3_reference as G3
+    cfg = G3.eval_config()
+    return cfg.__class__(**{**cfg.__dict__, "selection_mode": H2R.SELECTION_MODE})
+
+
+def frozen_incumbent_identity() -> Dict[str, Any]:
+    """H2's frozen argmax identity, INHERITED, plus the CONFIG OBJECT's own fields.
+
+    H3 changes the evidence structure, not the player, so the identity is H2's --
+    read from the qualified path through H2's own function and never retyped. A
+    second derivation of the same identity is a second thing to drift, which is
+    the mistake `h3_pilot_analysis` already avoids by inheriting `transcript`.
+
+    `argmax_config` is the ARM'S-LENGTH HALF: `eval_config` comes from
+    `frozen_settings()` reading the qualified path, while these values are read
+    off the object the builder is actually handed. Two routes to the same numbers,
+    so comparing them is worth something; one route compared with itself is not.
+    """
+    from . import e4_screen_reference as REF
+    from . import h2_match_runner as H2RUN
+    ident = dict(H2RUN.frozen_incumbent_identity())
+    cfg = frozen_argmax_config()
+    # the frozen settings' OWN field list, never retyped here
+    ident["argmax_config"] = {f: getattr(cfg, f)
+                              for f in REF.frozen_settings()["eval_config"]}
+    ident["design"] = "H3_PILOT"
+    return ident
+
+
+def check_incumbent_identity(identity: Mapping[str, Any]) -> None:
+    """The recorded identity must BE H3's -- the whole of it, type-strictly.
+
+    Three questions in order, each a different fact:
+      1. THE CROSS-CHECK, first: the object the builder is handed against the
+         qualified path's frozen settings. Two routes to the same numbers; either
+         one compared with itself would report itself consistent.
+      2. `selection_mode` IS the study. A record naming the old readout describes
+         a run that did not make the change.
+      3. The WHOLE recorded identity against the frozen one, recursively and
+         type-strictly, through H2's own `_same` -- `False == 0` and `6 == 6.0`
+         are refusals.
+    """
+    from . import h2_match_rules as H2R
+    from . import h2_match_runner as H2RUN
+    want = frozen_incumbent_identity()
+
+    # ── (3) FIRST, because it is a question about the FROZEN identity itself and
+    # nothing downstream means anything if the answer is no. 🔴 It was written
+    # last and was DEAD CODE there: `_same` recurses into `argmax_config` and
+    # compares it with a FRESH DERIVATION OF ITSELF, which is route-against-itself
+    # and cannot see the drift this exists to catch -- the object the seam hands
+    # the builder parting company with the qualified path's frozen settings.
+    merged = {**want["eval_config"], **want["inert_under_argmax"]}
+    if set(want["argmax_config"]) != set(merged):
+        raise H3PilotRunError(
+            f"the configuration object and the frozen settings do not describe the "
+            f"same fields ({sorted(set(want['argmax_config']) ^ set(merged))}); "
+            f"comparing them would establish nothing")
+    try:
+        H2RUN._same(want["argmax_config"], merged, "argmax_config")
+    except H2RUN.H2VoidError as e:
+        raise H3PilotRunError(
+            f"the configuration the builder is handed disagrees with the qualified "
+            f"path's frozen settings: {e}") from None
+
+    got_mode = (identity.get("eval_config") or {}).get("selection_mode")
+    if got_mode != H2R.SELECTION_MODE:
+        raise H3PilotRunError(
+            f"the recorded incumbent identity carries selection_mode {got_mode!r}, "
+            f"not {H2R.SELECTION_MODE!r}. The pilot plays H2's frozen argmax "
+            f"configuration; a record naming the old readout describes a run that "
+            f"did not make the change, and reporting it as the pilot would "
+            f"attribute diagnostics to a configuration that never played.")
+    try:
+        H2RUN._same(dict(identity), want, "incumbent_identity")
+    except H2RUN.H2VoidError as e:
+        raise H3PilotRunError(str(e)) from None
+
+
+# ═══════════════════ BARRIER 4: create-only outputs ════════════════════════
 def check_output_paths(results_path: str, trace_path: Optional[str],
                        report_path: str) -> None:
     """Three DISTINCT files, none of which may already exist.
@@ -279,9 +370,7 @@ def _production_play(results_path: str, deadline: Any = None,
                                      ply_cap=H2R.PLY_CAP, timeout_s=timeout_s)
             ctx = INT.IntegrationContext()
             evaluator = SCREEN_CMD._default_load_evaluator(".")
-            cfg = G3.eval_config()
-            argmax_cfg = cfg.__class__(**{**cfg.__dict__,
-                                          "selection_mode": H2R.SELECTION_MODE})
+            argmax_cfg = frozen_argmax_config()   # THE ONE construction
             from . import e4_screen_reference as REF
             if openings is None:
                 raise H3PilotRunError(
@@ -342,8 +431,8 @@ def run_pilot(*, results_path: str, trace_path: str,
 
 
 def _run_pilot_unguarded(*, tasks, openings, results_path, trace_path,
-                         report_path, play, deadline_s=None, _deadline=None,
-                         _supervisor=None) -> Dict[str, Any]:
+                         report_path, play, deadline_s=None, identity=None,
+                         _deadline=None, _supervisor=None) -> Dict[str, Any]:
     """Everything below the gate. PRIVATE, and never a way around `run_pilot`.
 
     It exists so the machinery can be tested WITHOUT lifting the gate, with inert
@@ -362,6 +451,11 @@ def _run_pilot_unguarded(*, tasks, openings, results_path, trace_path,
     check_seed_registration()
     check_output_paths(results_path, trace_path, report_path)
     summary = check_schedule(tasks)
+    # 🔑 BEFORE A SINGLE OUTPUT IS OPENED. A refusal after the create-only files
+    # exist has spent the run's destination on a run that never started -- the
+    # shape the pre-run verification caught on H2's attempt 3.
+    ident = dict(identity) if identity is not None else frozen_incumbent_identity()
+    check_incumbent_identity(ident)
     deadline_s = RULES.RUN_DEADLINE_S if deadline_s is None else deadline_s
 
     from . import d1_probe as _D1
@@ -390,10 +484,15 @@ def _run_pilot_unguarded(*, tasks, openings, results_path, trace_path,
             os.fsync(fh.fileno())
 
         emit(trace, {"event": "run_start", "n_tasks": len(tasks),
-                     "pairs": summary["pairs"]})
+                     "pairs": summary["pairs"],
+                     "selection_mode": ident["eval_config"]["selection_mode"]})
         emit(rec, {"record_type": "header", "design": "H3_PILOT",
                    "task_digest": summary["task_digest"],
-                   "opening_set_digest": RULES.opening_set_digest(openings)})
+                   "opening_set_digest": RULES.opening_set_digest(openings),
+                   # THE WHOLE IDENTITY, not a summary of it: a header that names
+                   # three fields cannot show that the fourth drifted.
+                   "selection_mode": ident["eval_config"]["selection_mode"],
+                   "identity": ident})
 
         for i, task in enumerate(tasks):
             if deadline.elapsed() > deadline_s:

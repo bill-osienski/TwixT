@@ -174,10 +174,15 @@ def main() -> int:
     check("the SCHEDULED tasks already carry the identity fields, unpatched",
           not missing, f"missing {missing}")
 
+    # 🔑 THE SEAM'S OWN CONSTRUCTION, not a third expression of the same override.
+    # This built its own until 2026-09-14, so it could have reported a config the
+    # pilot would never pass.
     cfg = G3.eval_config()
-    argmax = cfg.__class__(**{**cfg.__dict__, "selection_mode": H2R.SELECTION_MODE})
+    argmax = RUN.frozen_argmax_config()
     check("the frozen config is NOT already argmax, so the override is real",
           cfg.selection_mode != "argmax", f"frozen={cfg.selection_mode!r}")
+    check("the argmax override IS applied by the seam's own construction",
+          argmax.selection_mode == H2R.SELECTION_MODE == "argmax")
     failures, arms, seeds_seen = [], set(), set()
     for task in tasks:
         try:
@@ -204,6 +209,37 @@ def main() -> int:
           all(REF.reference_colour(t) == t["incumbent_colour"] for t in tasks))
     check("and the task's OWN reference_colour field says the same",
           all(t["reference_colour"] == REF.reference_colour(t) for t in tasks))
+
+    print("\n== the incumbent identity the record will carry ==")
+    ident = RUN.frozen_incumbent_identity()
+    print(f"  {ident['reference']} {ident['reference_sha1'][:12]}… "
+          f"selection_mode {ident['eval_config']['selection_mode']!r} "
+          f"sims {ident['eval_config']['mcts_sims']}")
+    print(f"  inert under argmax: {sorted(ident['inert_under_argmax'])}")
+    try:
+        RUN.check_incumbent_identity(ident)
+        check("the identity barrier ACCEPTS the frozen identity", True)
+    except Exception as e:                                    # noqa: BLE001
+        check("the identity barrier ACCEPTS the frozen identity", False, str(e)[:110])
+    check("it is H2's frozen argmax identity, INHERITED not reimplemented",
+          all(ident[k] == v for k, v in
+              __import__("importlib").import_module(
+                  "scripts.GPU.alphazero.h2_match_runner")
+              .frozen_incumbent_identity().items()))
+    # 🔑 AGAINST THE OBJECT THE BUILDER WAS ACTUALLY HANDED above, not against a
+    # re-derivation: the record must describe the configuration that would play.
+    drift = [f for f, v in ident["argmax_config"].items()
+             if getattr(argmax, f) != v or type(getattr(argmax, f)) is not type(v)]
+    check("the recorded identity IS the config passed to the real builder",
+          not drift, f"drifted {drift}")
+    bad = {**ident, "eval_config": {**ident["eval_config"],
+                                    "selection_mode": "opening_temperature"}}
+    try:
+        RUN.check_incumbent_identity(bad)
+        check("and it REFUSES a reverted readout (negative control)", False,
+              "it accepted an identity naming the old readout")
+    except Exception:                                         # noqa: BLE001
+        check("and it REFUSES a reverted readout (negative control)", True)
 
     print("\n== the three outputs must be UNUSED ==")
     outs = (CMD.DEFAULT_RESULTS, CMD.DEFAULT_TRACE, CMD.DEFAULT_REPORT)

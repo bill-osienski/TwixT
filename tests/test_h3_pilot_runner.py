@@ -228,6 +228,143 @@ def test_a_SHORT_schedule_is_refused_because_a_budget_bounds_nothing_below():
         RUN.check_schedule(tasks[:30])
 
 
+# ═══════════════ BARRIER 4: the incumbent's identity ════════════════════════
+# 🔴 H2's run body verifies the recorded identity and writes it into the durable
+# header; H3 passed `identity={}` and recorded neither it nor `selection_mode`.
+# The configuration was pinned per task and checked by the pre-run builder call,
+# so nothing would have played WRONG -- but the results file could not say which
+# readout produced the games, and provenance that lives only in a preparation
+# log is provenance the artifact does not carry.
+
+def test_the_incumbent_identity_IS_H2s_FROZEN_ARGMAX_ONE():
+    """INHERITED, never reimplemented: H3 changes the evidence structure, not the
+    player. A second derivation of the same identity is a second thing to drift."""
+    from scripts.GPU.alphazero import h2_match_rules as H2R
+    from scripts.GPU.alphazero import h2_match_runner as H2RUN
+    ident = RUN.frozen_incumbent_identity()
+    for k, v in H2RUN.frozen_incumbent_identity().items():
+        assert ident[k] == v, k
+    assert ident["eval_config"]["selection_mode"] == H2R.SELECTION_MODE == "argmax"
+    assert ident["design"] == "H3_PILOT"
+    assert set(ident["inert_under_argmax"]) == set(H2R.INERT_UNDER_ARGMAX)
+
+
+def test_the_identity_CARRIES_THE_CONFIG_OBJECT_S_OWN_FIELDS():
+    """`argmax_config` is read OFF the constructed object, and `eval_config` comes
+    from `frozen_settings()` reading the qualified path. TWO ROUTES to the same
+    values, which is what makes comparing them worth anything."""
+    ident = RUN.frozen_incumbent_identity()
+    cfg = RUN.frozen_argmax_config()
+    assert ident["argmax_config"], "the identity must carry the object's fields"
+    for f, v in ident["argmax_config"].items():
+        got = getattr(cfg, f)
+        assert got == v and type(got) is type(v), f
+    merged = {**ident["eval_config"], **ident["inert_under_argmax"]}
+    assert set(ident["argmax_config"]) == set(merged), \
+        "the two routes must describe the SAME field set or they compare nothing"
+
+
+def test_the_identity_barrier_ACCEPTS_the_frozen_one():
+    """The other half: if nothing were accepted the refusals below would be an
+    outage rather than a check."""
+    RUN.check_incumbent_identity(RUN.frozen_incumbent_identity())
+
+
+@pytest.mark.parametrize("mutate,match,what", [
+    (lambda d: d["eval_config"].__setitem__("selection_mode", "opening_temperature"),
+     "selection_mode", "the readout reverted -- the run did not make the change"),
+    (lambda d: d["eval_config"].__setitem__("mcts_sims", 400.0),
+     "mcts_sims", "400.0 is not 400: TYPE-STRICT, as everywhere else"),
+    (lambda d: d["eval_config"].pop("board_size"),
+     "missing", "a dropped field"),
+    (lambda d: d.__setitem__("smuggled", 1),
+     "extra", "an added field"),
+    (lambda d: d.__setitem__("readout_path", "mcts.select_move"),
+     "readout_path", "the readout PATH swapped for the one H2 forbids"),
+])
+def test_a_DRIFTED_identity_is_REFUSED(mutate, match, what):
+    import copy
+    ident = copy.deepcopy(RUN.frozen_incumbent_identity())
+    mutate(ident)
+    with pytest.raises(RUN.H3PilotRunError, match=match):
+        RUN.check_incumbent_identity(ident)
+
+
+def test_the_ARGMAX_CONFIG_CROSS_CHECK_refuses_a_DRIFTED_CONFIG_OBJECT():
+    """🔴 THE CHECK THAT WAS DEAD CODE WHEN I WROTE IT LAST.
+
+    Tampering the RECORDED `argmax_config` proves nothing: `_same` compares it
+    with a fresh derivation of itself. The drift that matters is the CONFIG
+    OBJECT parting company with the qualified path's frozen settings, so that is
+    what is moved here -- and the barrier must refuse whatever was recorded.
+    """
+    import unittest.mock as _m
+    real = RUN.frozen_argmax_config()
+    drifted = real.__class__(**{**real.__dict__,
+                                "selection_mode": "opening_temperature"})
+    with _m.patch.object(RUN, "frozen_argmax_config", lambda: drifted):
+        with pytest.raises(RUN.H3PilotRunError, match="disagrees with the qualified"):
+            RUN.check_incumbent_identity(RUN.frozen_incumbent_identity())
+
+
+def test_the_cross_check_also_refuses_a_DIFFERENT_FIELD_SET(monkeypatch):
+    """A field set that does not line up makes the comparison vacuous for the
+    fields it misses, so it is refused rather than compared."""
+    ident = RUN.frozen_incumbent_identity()
+    short = dict(ident["argmax_config"])
+    short.pop("board_size")
+    monkeypatch.setattr(RUN, "frozen_incumbent_identity",
+                        lambda: {**ident, "argmax_config": short})
+    with pytest.raises(RUN.H3PilotRunError, match="same fields"):
+        RUN.check_incumbent_identity(ident)
+
+
+def test_THE_RECORDED_IDENTITY_IS_THE_CONFIG_PASSED_TO_THE_REAL_BUILDER(monkeypatch):
+    """🔑 THE POINT OF THE WHOLE BARRIER, and it is behavioural, not structural.
+
+    The seam is driven with EVERY production act inert -- the line
+    `assert_production_acts_are_inert` draws -- and the configuration is captured
+    at `build_reference_agent`, the call the agent factory actually makes. What
+    the header will record must BE that object's fields.
+    """
+    from scripts.GPU.alphazero import d1_probe as D1
+    from scripts.GPU.alphazero import e4_screen_command as SCREEN_CMD
+    from scripts.GPU.alphazero import e4_screen_runner as HARNESS
+    from scripts.GPU.alphazero import t1j_toolchain as TC
+    from scripts.GPU.alphazero import twixtbot_g3_reference as G3
+
+    captured = {}
+
+    def fake_build(*, task, evaluator, colour, config, capture=False):
+        captured["config"], captured["colour"] = config, colour
+        return "AGENT"
+
+    monkeypatch.setattr(TC, "verified_paths",
+                        lambda: {"jdk_home": "/nonexistent", "jar": "/nonexistent.jar"})
+    monkeypatch.setattr(D1, "_default_compile", lambda deadline, paths: None)
+    monkeypatch.setattr(SCREEN_CMD, "_default_load_evaluator", lambda root: _stub_evaluator())
+    monkeypatch.setattr(HARNESS, "play_task", lambda **kw: (_ for _ in ()).throw(
+        AssertionError("no game is played by this test")))
+    monkeypatch.setattr(G3, "build_reference_agent", fake_build)
+    monkeypatch.setattr(RUN, "H3_PILOT_EXECUTION_AUTHORIZED", True)
+
+    openings = R.generate_openings()
+    tasks = R.build_tasks(openings, seed_interval=RUN.PILOT_SEED_BLOCK)
+    deadline = D1.Deadline(60)
+    deadline.start()
+    play = RUN._production_play("/tmp/h3-never-written", deadline, openings)
+    with pytest.raises(AssertionError, match="no game is played"):
+        play(task=tasks[0], identity={}, timeout_s=1.0)
+
+    factory = play._state["agent_factory"]
+    assert factory(tasks[0], tasks[0]["reference_colour"]) == "AGENT"
+    cfg, ident = captured["config"], RUN.frozen_incumbent_identity()
+    for f, v in ident["argmax_config"].items():
+        got = getattr(cfg, f)
+        assert got == v and type(got) is type(v), \
+            f"{f}: the builder got {got!r} but the header would record {v!r}"
+
+
 # ═══════════════ the production seam is INERT under a test runner ═══════════
 
 def test_THE_SEAM_CHECKS_THE_GATE_ITSELF_not_only_the_entry():
@@ -312,17 +449,19 @@ def test_EVERY_PAIRS_BOTH_TASKS_construct_through_the_REAL_builder():
     from scripts.GPU.alphazero import eval_readout as RO
     from scripts.GPU.alphazero import h2_match_rules as H2R
     from scripts.GPU.alphazero import twixtbot_g3_reference as G3
-    cfg = G3.eval_config()
-    argmax = cfg.__class__(**{**cfg.__dict__, "selection_mode": H2R.SELECTION_MODE})
+    # 🔑 THE SEAM'S OWN CONFIG, not a fifth expression of the same override --
+    # otherwise this proves the builder accepts SOME argmax config, not the one
+    # the pilot will pass. And the tasks go in UNPATCHED: this test used to add
+    # `reference` and `reference_sha1` itself, which is exactly how the schedule
+    # went 40-for-40 without either field.
+    argmax = RUN.frozen_argmax_config()
     # 🔑 THE REGISTERED SCHEDULE, with its REAL seeds -- not synthetic ones. The
     # seed reaches `build_reference_agent` and seeds the agent, so building with a
     # placeholder would test a different agent than the one the pilot would use.
     tasks = R.build_tasks(R.generate_openings(),
                           seed_interval=RUN.PILOT_SEED_BLOCK)
     seen_colours = set()
-    for t in tasks:
-        task = dict(t, reference="calib020_0001",
-                    reference_sha1="209cf2d4fd24a48553d259dd71b4954867b9473e")
+    for task in tasks:
         # 🔑 ASSERTED INDEPENDENTLY, not derived. `reference_colour` reads
         # `anchor_colour`, so passing its own output back in is self-consistent
         # however wrong the anchor is -- a control that moved the anchor went NOT
@@ -342,14 +481,10 @@ def test_EVERY_PAIRS_BOTH_TASKS_construct_through_the_REAL_builder():
 
 def test_the_builder_REFUSES_the_WRONG_COLOUR_for_the_arm():
     """The negative half: if it accepted any colour the test above proves nothing."""
-    from scripts.GPU.alphazero import h2_match_rules as H2R
     from scripts.GPU.alphazero import twixtbot_g3_reference as G3
-    cfg = G3.eval_config()
-    argmax = cfg.__class__(**{**cfg.__dict__, "selection_mode": H2R.SELECTION_MODE})
-    t = R.build_tasks(R.generate_openings(),
-                      seed_interval=RUN.PILOT_SEED_BLOCK)[0]
-    task = dict(t, reference="calib020_0001",
-                reference_sha1="209cf2d4fd24a48553d259dd71b4954867b9473e")
+    argmax = RUN.frozen_argmax_config()
+    task = R.build_tasks(R.generate_openings(),
+                         seed_interval=RUN.PILOT_SEED_BLOCK)[0]
     wrong = "red" if REF.reference_colour(task) == "black" else "black"
     with pytest.raises(Exception):
         G3.build_reference_agent(task=task, evaluator=_stub_evaluator(),
@@ -445,7 +580,7 @@ def _no_supervisor(deadline):
     yield
 
 
-def _run(tmp_path, play, deadline=None):
+def _run(tmp_path, play, deadline=None, identity=None):
     from scripts.GPU.alphazero import h3_pilot_rules as RULES
     ops = RULES.generate_openings()
     tasks = RULES.build_tasks(ops, seed_interval=(777000000, 777000040))
@@ -461,7 +596,7 @@ def _run(tmp_path, play, deadline=None):
             results_path=str(tmp_path / "r.jsonl"),
             trace_path=str(tmp_path / "t.jsonl"),
             report_path=str(tmp_path / "rep.json"),
-            play=play, deadline_s=7200,
+            play=play, deadline_s=7200, identity=identity,
             _deadline=deadline or _FakeDeadline(7200),
             _supervisor=_no_supervisor)
 
@@ -494,6 +629,48 @@ def test_the_results_file_carries_the_transcripts_and_the_durations(tmp_path):
     assert len(results) == 40
     assert all("elapsed_s" in r and r["elapsed_s"] >= 0 for r in results)
     assert all(len(r["transcript_digest"]) == 64 for r in results)
+
+
+def test_THE_DURABLE_HEADER_CARRIES_THE_FULL_IDENTITY_AND_THE_READOUT(tmp_path):
+    """🔴 The header used to carry the two digests and nothing else, so the
+    results file could not say which readout produced the games. A record whose
+    provenance lives only in a preparation log does not carry its provenance."""
+    _run(tmp_path, _inert_play())
+    header = json.loads((tmp_path / "r.jsonl").read_text().splitlines()[0])
+    assert header["record_type"] == "header"
+    assert header["selection_mode"] == "argmax"
+    assert header["identity"] == json.loads(
+        json.dumps(RUN.frozen_incumbent_identity(), sort_keys=True, default=str)), \
+        "the WHOLE identity, not a summary of it"
+    trace = json.loads((tmp_path / "t.jsonl").read_text().splitlines()[0])
+    assert trace["event"] == "run_start" and trace["selection_mode"] == "argmax"
+
+
+def test_the_identity_is_VERIFIED_BEFORE_ANY_OUTPUT_IS_OPENED(tmp_path):
+    """Order matters: a refusal after the outputs exist has spent the run's
+    create-only destination on a run that never started."""
+    import copy
+    bad = copy.deepcopy(RUN.frozen_incumbent_identity())
+    bad["eval_config"]["selection_mode"] = "opening_temperature"
+    with pytest.raises(RUN.H3PilotRunError, match="selection_mode"):
+        _run(tmp_path, _inert_play(), identity=bad)
+    assert not list(tmp_path.iterdir()), \
+        "it refused before creating a single output"
+
+
+def test_THE_DEFAULT_IDENTITY_IS_CHECKED_TOO_not_only_a_supplied_one(tmp_path):
+    """🔑 `identity=None` RESOLVES the frozen one; it does not SKIP the check.
+    The difference is the whole recurring defect class -- a default that switches
+    a check off. Proven behaviourally: drift what the default resolves to, and the
+    run must still refuse."""
+    import copy
+    import unittest.mock as _m
+    bad = copy.deepcopy(RUN.frozen_incumbent_identity())
+    bad["eval_config"]["mcts_sims"] = 401
+    with _m.patch.object(RUN, "frozen_incumbent_identity", lambda: bad):
+        with pytest.raises(RUN.H3PilotRunError, match="mcts_sims"):
+            _run(tmp_path, _inert_play())          # identity NOT supplied
+    assert not list(tmp_path.iterdir())
 
 
 def test_the_report_on_disk_IS_the_report_returned(tmp_path):
