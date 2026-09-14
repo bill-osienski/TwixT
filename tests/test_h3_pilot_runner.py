@@ -203,9 +203,15 @@ def test_EVERY_PAIRS_BOTH_TASKS_construct_through_the_REAL_builder():
         task = dict(t, seed=777000000 + t["index"],
                     reference="calib020_0001",
                     reference_sha1="209cf2d4fd24a48553d259dd71b4954867b9473e")
+        # 🔑 ASSERTED INDEPENDENTLY, not derived. `reference_colour` reads
+        # `anchor_colour`, so passing its own output back in is self-consistent
+        # however wrong the anchor is -- a control that moved the anchor went NOT
+        # CAUGHT against the first version of this line.
+        assert REF.reference_colour(task) == task["incumbent_colour"], (
+            f"{task['task_id']}: the anchor and the incumbent's colour disagree")
         agent = G3.build_reference_agent(
             task=task, evaluator=_stub_evaluator(),
-            colour=REF.reference_colour(task), config=argmax, capture=True)
+            colour=task["incumbent_colour"], config=argmax, capture=True)
         assert agent.readout.mode == RO.MODE_ARGMAX
         assert agent.config.mcts_sims == H2R.MCTS_SIMS
         assert agent.seed == task["seed"], "the SCHEDULED seed, not another"

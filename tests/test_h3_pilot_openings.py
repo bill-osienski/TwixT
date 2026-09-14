@@ -228,3 +228,43 @@ def test_a_TYPE_DIFFERENT_seed_endpoint_is_REFUSED(openings, iv, what):
     a float has been through arithmetic that an int would not survive."""
     with pytest.raises(R.H3PilotError, match="int"):
         R.build_tasks(openings, seed_interval=iv)
+
+
+# ══════════ the rejection branches, REACHED ALONE ═══════════════════════════
+# 🔴 Three injected-defect controls went NOT CAUGHT against the generated set:
+# disabling deduplication, disabling the prior-opening exclusion and admitting
+# terminal positions all changed NOTHING observable, because at 6 plies on a 24x24
+# board a collision never occurs and a game is never over. The checks are real and
+# the SAMPLE cannot exercise them. Each is driven directly here, the way
+# `test_a_cohort_that_departs_from_the_frozen_table_is_refused` drives D1's.
+
+def test_the_DEDUPLICATION_branch_is_reached_alone(monkeypatch):
+    """Every candidate made to collide: the generator accepts the FIRST and can
+    never accept a second, so it gives up rather than emit a duplicate.
+
+    ⚠ The prior-opening set is emptied too. `prior_opening_digests` computes its
+    eight digests with the SAME function, so patching the digest alone turned all
+    eight into the constant and the first candidate was rejected as a PRIOR
+    opening -- the other branch, and the test would have passed for the wrong
+    reason.
+    """
+    monkeypatch.setattr(SEL, "canonical_digest", lambda st: "c" * 64)
+    monkeypatch.setattr(R, "prior_opening_digests", frozenset)
+    with pytest.raises(RuntimeError, match="only 1 of 2"):
+        R.generate_openings(n=2)
+
+
+def test_the_PRIOR_OPENING_exclusion_is_reached_alone(monkeypatch):
+    """Every candidate made to equal an H1/H2 opening: nothing may be accepted."""
+    monkeypatch.setattr(SEL, "canonical_digest", lambda st: "p" * 64)
+    monkeypatch.setattr(R, "prior_opening_digests", lambda: frozenset({"p" * 64}))
+    with pytest.raises(RuntimeError, match="only 0 of 1"):
+        R.generate_openings(n=1)
+
+
+def test_the_TERMINAL_rejection_is_reached_alone(monkeypatch):
+    """Every candidate made terminal: a finished game is not an opening."""
+    from scripts.GPU.alphazero.game.twixt_state import TwixtState
+    monkeypatch.setattr(TwixtState, "is_terminal", lambda self: True)
+    with pytest.raises(RuntimeError, match="only 0 of 1"):
+        R.generate_openings(n=1)
