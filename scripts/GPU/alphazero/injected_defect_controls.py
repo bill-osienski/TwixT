@@ -43,6 +43,9 @@ H2P = "scripts/GPU/alphazero/h2_match_plan.py"
 H2RUN = "scripts/GPU/alphazero/h2_match_runner.py"
 H2CMD = "scripts/GPU/alphazero/h2_match_command.py"
 G3SRC = "scripts/GPU/alphazero/twixtbot_g3_reference.py"
+H3R = "scripts/GPU/alphazero/h3_pilot_rules.py"
+H3A = "scripts/GPU/alphazero/h3_pilot_analysis.py"
+H3RUN = "scripts/GPU/alphazero/h3_pilot_runner.py"
 
 T_PROBE = "tests/test_d1_probe.py"
 T_SEL = "tests/test_d1_selection.py"
@@ -59,6 +62,9 @@ T_DP = "tests/test_d1prime_analysis.py"
 T_DS = "tests/test_d1second_analysis.py"
 T_H2 = "tests/test_h2_match.py"
 T_H1V = "tests/test_h1_viability.py"
+T_H3O = "tests/test_h3_pilot_openings.py"
+T_H3A = "tests/test_h3_pilot_analysis.py"
+T_H3RUN = "tests/test_h3_pilot_runner.py"
 
 # (label, file, anchor, replacement, test node)
 DEFECTS = [
@@ -2737,6 +2743,97 @@ DEFECTS = [
      '    expected_colour = "black" if task["anchor_colour"] == "red" else "red"',
      '    expected_colour = colour',
      f"{T_H2}::test_THE_BUILDER_STILL_REFUSES_THE_WRONG_COLOUR_FOR_THE_ARM"),
+    # ═════════════ 2026-09-14: the H3 PILOT -- closed, seedless, contained ═══
+    ("the H3 pilot gate is opened", H3RUN,
+     "H3_PILOT_EXECUTION_AUTHORIZED = False",
+     "H3_PILOT_EXECUTION_AUTHORIZED = True",
+     f"{T_H3RUN}::test_THE_GATE_IS_SHUT_IN_THE_REAL_REPOSITORY"),
+    # 🔑 A gate opens with one edit; a seed block cannot be conjured by one. The
+    # pilot is closed TWICE OVER, and each barrier is controlled separately.
+    ("the H3 pilot names a seed block that was never reserved", H3RUN,
+     "PILOT_SEED_BLOCK: Optional[tuple] = None",
+     "PILOT_SEED_BLOCK: Optional[tuple] = (777000000, 777000040)",
+     f"{T_H3RUN}::test_NO_SEED_BLOCK_IS_RESERVED_and_that_is_a_SECOND_barrier"),
+    ("the pilot entry no longer reads the gate first", H3RUN,
+     "    check_gate()\n    check_seed_registration()",
+     "    check_seed_registration()\n    check_gate()",
+     f"{T_H3RUN}::test_run_pilot_CALLS_check_gate_FIRST_by_AST"),
+    ("the pilot seam trusts the entry's gate check", H3RUN,
+     "            check_gate()\n            _assert_the_production_acts_are_inert(",
+     "            _assert_the_production_acts_are_inert(",
+     f"{T_H3RUN}::test_THE_SEAM_CHECKS_THE_GATE_ITSELF_not_only_the_entry"),
+    ("the pilot's containment boundary is removed", H3RUN,
+     "            _assert_the_production_acts_are_inert(TC, D1, SCREEN_CMD, HARNESS)\n",
+     "",
+     f"{T_H3RUN}::test_THE_BOUNDARY_REFUSES_INSIDE_A_TEST_PROCESS_even_with_the_gate_OPEN"),
+    ("the pilot checks the gate once instead of every game", H3RUN,
+     "        check_gate()                      # EVERY game, not only the first",
+     "        pass                              # EVERY game, not only the first",
+     f"{T_H3RUN}::test_the_gate_is_checked_for_EVERY_GAME_not_only_the_first"),
+    ("the pilot's create-only precheck follows symlinks", H3RUN,
+     "        if os.path.lexists(p):",
+     "        if os.path.exists(p):",
+     f"{T_H3RUN}::test_a_DANGLING_SYMLINK_at_an_output_path_is_REFUSED"),
+    ("the pilot admits two outputs that are the same file", H3RUN,
+     "    if len({os.path.abspath(p) for p in paths}) != 3:",
+     "    if False:",
+     f"{T_H3RUN}::test_the_output_paths_are_CREATE_ONLY_and_must_be_THREE_files"),
+    ("the pilot schedule digest is not compared with the pin", H3RUN,
+     "    if got != RULES.TASK_DIGEST:",
+     "    if False:",
+     f"{T_H3RUN}::test_a_DIFFERENT_schedule_is_REFUSED"),
+    # THE REAL BUILDER -- the check attempt 1's VOID made necessary.
+    ("the pilot's tasks carry the wrong anchor for the incumbent's colour", H3R,
+     '"anchor_colour": "black" if colour == "red" else "red",',
+     '"anchor_colour": colour,',
+     f"{T_H3RUN}::test_EVERY_PAIRS_BOTH_TASKS_construct_through_the_REAL_builder"),
+    # GENERATION.
+    ("the pilot's openings are no longer deduplicated", H3R,
+     "        if digest in seen or digest in prior:",
+     "        if False:",
+     f"{T_H3O}::test_every_position_is_DISTINCT_by_canonical_digest"),
+    ("the pilot reuses H1/H2's openings", H3R,
+     "        if digest in seen or digest in prior:",
+     "        if digest in seen:",
+     f"{T_H3O}::test_none_duplicates_an_H1_or_H2_OPENING"),
+    ("terminal positions are admitted as pilot openings", H3R,
+     "        if len(moves) != OPENING_PLIES or st.is_terminal():",
+     "        if len(moves) != OPENING_PLIES:",
+     f"{T_H3O}::test_no_position_is_already_won"),
+    ("the opening generator ignores its seed, so it is not reproducible", H3R,
+     "    rng = np.random.Generator(np.random.PCG64(seed))",
+     "    rng = np.random.Generator(np.random.PCG64())",
+     f"{T_H3O}::test_GENERATION_IS_DETERMINISTIC"),
+    # SEEDS.
+    ("the pilot coerces its seed endpoints again", H3R,
+     "            if type(v) is not int:",
+     "            if not isinstance(v, (int, float, str)):",
+     f"{T_H3O}::test_a_TYPE_DIFFERENT_seed_endpoint_is_REFUSED[iv0-a string endpoint]"),
+    ("a spent block is schedulable because availability is never checked", H3R,
+     '            if st["exposed"] or st["retired"] or st["test_only"]:',
+     "            if False:",
+     f"{T_H3O}::test_a_RETIRED_or_EXPOSED_interval_is_REFUSED[202622000-H2 attempt 3: exposed AND retired]"),
+    # THE ANALYSIS.
+    ("a duplicated task is counted twice instead of refused", H3A,
+     "        if tid in seen:",
+     "        if False:",
+     f"{T_H3A}::test_a_DUPLICATED_task_id_is_REFUSED"),
+    ("an unexpected pair_id is admitted", H3A,
+     "        if not 0 <= pid < R.N_OPENINGS:",
+     "        if False:",
+     f"{T_H3A}::test_an_UNEXPECTED_pair_id_is_REFUSED"),
+    ("duplicate pairs are counted as fresh evidence", H3A,
+     "        if key in seen:\n            duplicates += 1\n            continue",
+     "        if False:\n            duplicates += 1\n            continue",
+     f"{T_H3A}::test_DUPLICATE_PAIRS_collapse_to_one_and_keep_BOTH_their_games"),
+    ("a NaN duration reaches the quantiles", H3A,
+     "    if not math.isfinite(v):",
+     "    if False:",
+     f"{T_H3A}::test_a_NON_FINITE_per_game_duration_is_REFUSED[nan]"),
+    ("a partial run declares its stop rules CLEAR", H3A,
+     '        return {"status": CLEAR if complete else UNDETERMINED,',
+     '        return {"status": CLEAR,',
+     f"{T_H3A}::test_on_a_partial_run_NOTHING_is_ever_declared_CLEAR"),
 ]
 
 # ═══════════════════════════ THE EXPECTED REASONS ════════════════════════════

@@ -151,6 +151,17 @@ def opening_set_digest(openings: Sequence[Dict[str, Any]]) -> str:
 OPENING_SET_DIGEST = "4027efe39c78ceca8e2b6ea808940e940ca795c269e5d0c8a807cfc974f01cc6"
 
 
+def opening_name(index: int) -> str:
+    """The opening's NAME, which the shared state factory keys on."""
+    return f"p{int(index):02d}"
+
+
+def openings_mapping(openings: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+    """`{name: moves}`, the shape `e4_screen_integration.make_state_factory` wants."""
+    return {opening_name(op["index"]): [tuple(m) for m in op["moves"]]
+            for op in openings}
+
+
 class H3PilotError(RuntimeError):
     """A refusal from the pilot's own rules. Never a verdict."""
 
@@ -207,6 +218,11 @@ def build_tasks(openings: Sequence[Dict[str, Any]],
                 "index": i,
                 "pair_id": op["index"],
                 "incumbent_colour": colour,
+                # the shared machinery keys on these two: `make_state_factory`
+                # looks the opening up by NAME, and `reference_colour` derives OUR
+                # colour as the opposite of the anchor's -- so the anchor is T1j's.
+                "opening": opening_name(op["index"]),
+                "anchor_colour": "black" if colour == "red" else "red",
                 "opening_digest": op["digest"],
                 "opening_moves": [list(m) for m in op["moves"]],
                 "opening_plies": OPENING_PLIES,
@@ -234,4 +250,4 @@ def task_digest(tasks: Sequence[Dict[str, Any]]) -> str:
 
 
 #: Recomputed from the BUILT schedule by a test.
-TASK_DIGEST = "002b21849589ab44c910dc71e7d4d238e57e6b45e0aeba1ca0e02661de427414"
+TASK_DIGEST = "17516342892f0be35d9c282c4cbea2bf792449a02084d35a2904c0256110dd43"
