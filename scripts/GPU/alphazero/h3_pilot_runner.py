@@ -59,11 +59,17 @@ def check_gate() -> None:
 
 
 # ═══════════════════ BARRIER 2: a seed block that does not exist ═══════════
-#: 🔴 DELIBERATELY None. The card reserves nothing, and a runner that names a block
-#: before one is reserved has spent it on paper. Setting this is a separate
-#: authorization that must carry its own collision re-proof against the registries
-#: as they stand.
-PILOT_SEED_BLOCK: Optional[tuple] = None
+#: THE PILOT'S 40 SEEDS, one per game, bound POSITIONALLY (row i = 202624000 + i).
+#:
+#: RESERVED ON PAPER 2026-09-14 and registered as ACCOUNTED in the same reviewed
+#: step. Re-proved by collision proof v10 against the registries AS THEY STAND --
+#: every spent block included, this reservation excluded BY IDENTITY, and every
+#: derived stream enumerated rather than sampled.
+#:
+#: ⚠ REGISTRATION IS BOOKKEEPING, NOT PERMISSION. `H3_PILOT_EXECUTION_AUTHORIZED`
+#: is False above and stays False; the gate is a separate review. Accounting a
+#: block does not draw from it, and no seed here has been drawn.
+PILOT_SEED_BLOCK: Optional[tuple] = (202624000, 202624040)
 
 
 def check_seed_registration() -> None:
@@ -300,8 +306,9 @@ def run_pilot(*, results_path: str, trace_path: str,
             f"the generated opening set does not match the frozen pin "
             f"{RULES.OPENING_SET_DIGEST}; the positions are not the ones the card "
             f"fixed and the pilot would answer a different question.")
-    if PILOT_SEED_BLOCK is None:
-        check_seed_registration()                  # refuses: no block is reserved
+    # (a conditional `check_seed_registration()` stood here and became UNREACHABLE
+    #  once a block was registered: `_run_pilot_unguarded` calls it unconditionally
+    #  anyway. A branch no test can reach is a branch to delete.)
     tasks = RULES.build_tasks(openings, seed_interval=PILOT_SEED_BLOCK)
     deadline = D1.Deadline(RULES.RUN_DEADLINE_S)
     deadline.start()                    # ONE origin, before anything effectful

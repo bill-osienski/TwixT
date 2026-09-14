@@ -149,6 +149,52 @@ ACCOUNTED_SEED_INTERVALS = (
                                      #
                                      # Accounted, NOT exposed and NOT retired: a
                                      # reservation is not a draw.
+    (202624000, 202624040),          # H3 PILOT. 40 seeds, one per game: 20
+                                     # independently generated openings, each
+                                     # played BOTH WAYS, bound POSITIONALLY
+                                     # (row i = 202624000 + i).
+                                     #
+                                     # REGISTERED 2026-09-14 as the seed-PREPARATION
+                                     # step and NOT an execution authorization. At
+                                     # the moment of this edit
+                                     # `H3_PILOT_EXECUTION_AUTHORIZED` is False and
+                                     # stays False, and no pilot run is authorized.
+                                     # Two separate reviews; this is the first.
+                                     #
+                                     # WHY A PILOT AT ALL. H2 is CLOSED: its
+                                     # attempt 3 VOIDed on the deadline, and the
+                                     # decisive fact was not the deadline -- 14 of
+                                     # its 15 COMPLETE cells held ONE distinct game
+                                     # in 46 repetitions, so 736 nominal games
+                                     # carried ~61 distinct ones. The pilot tests
+                                     # whether diversity from independently
+                                     # generated POSITIONS works where repetition
+                                     # did not, and it is deliberately small enough
+                                     # that a pathological result costs two hours.
+                                     #
+                                     # RE-PROVED (collision proof v10) against the
+                                     # registries as they stand, ALL THREE spent H2
+                                     # blocks included: 6,357 prior seeds across six
+                                     # categories, 31,785 prior values with
+                                     # derivations, 0 direct overlaps, 0 derived-
+                                     # stream collisions, own derivations injective
+                                     # (200 = 40 x 5). Exhaustive, not sampled.
+                                     # Seventeen collision controls and four gap-
+                                     # policy controls all rejected.
+                                     #
+                                     # 🔑 Excluded from the prior set BY IDENTITY, in
+                                     # the GAP check as well as the overlap check.
+                                     # The gap floor is the candidate's OWN SIZE,
+                                     # which is 40 here -- smaller than any earlier
+                                     # round's because every earlier candidate was
+                                     # larger. The policy is unchanged and the
+                                     # NEAREST ACTUAL BOUNDARY IS 1,264 away, with
+                                     # nothing above; the distance is reported so a
+                                     # narrow choice could not hide behind a small
+                                     # threshold.
+                                     #
+                                     # Accounted, NOT exposed and NOT retired: a
+                                     # reservation is not a draw.
     (202622000, 202622736),          # H2 ATTEMPT 3 -- the match H2 has still not
                                      # had. 736 seeds, one per game, bound
                                      # POSITIONALLY (row i = 202622000 + i).

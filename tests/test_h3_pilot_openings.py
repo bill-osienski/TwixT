@@ -293,16 +293,24 @@ def test_ASSIGNING_SEEDS_CHANGES_THE_FULL_FIELD_DIGEST(openings):
     assert seeded != unseeded
 
 
-def test_THE_SEEDED_PIN_IS_UNSET_because_no_block_is_reserved():
-    assert R.SEEDED_TASK_DIGEST is None
+def test_THE_SEEDED_PIN_IS_SET_now_that_a_block_is_REGISTERED():
+    """🔴 INVERTED 2026-09-14 by the registration. It read "is None" while no
+    block existed; a block is reserved and accounted now, so the pin that names
+    its schedule must exist."""
+    assert isinstance(R.SEEDED_TASK_DIGEST, str)
+    assert len(R.SEEDED_TASK_DIGEST) == 64
 
 
 def test_an_UNSEEDED_schedule_expects_the_unseeded_pin(openings):
     assert R.expected_task_digest(R.build_tasks(openings)) == R.TASK_DIGEST
 
 
-def test_a_SEEDED_schedule_is_REFUSED_while_the_seeded_pin_is_unset(openings):
-    """It must be recomputed at registration; until then nothing may execute."""
+def test_a_SEEDED_schedule_is_REFUSED_while_the_seeded_pin_is_unset(
+        openings, monkeypatch):
+    """THE GUARD, REACHED ALONE. The pin is set now, so the branch that refuses an
+    unpinned seeded schedule is only reachable by unsetting it -- and it must stay
+    reachable, because that is the state every future block starts in."""
+    monkeypatch.setattr(R, "SEEDED_TASK_DIGEST", None)
     seeded = R.build_tasks(openings, seed_interval=(777000000, 777000040))
     with pytest.raises(R.H3PilotError, match="SEEDED_TASK_DIGEST is None"):
         R.expected_task_digest(seeded)
@@ -320,3 +328,50 @@ def test_once_the_seeded_pin_IS_set_the_seeded_schedule_matches(openings, monkey
     seeded = R.build_tasks(openings, seed_interval=(777000000, 777000040))
     monkeypatch.setattr(R, "SEEDED_TASK_DIGEST", R.task_digest(seeded))
     assert R.expected_task_digest(seeded) == R.task_digest(seeded)
+
+
+# ═══════════ the REGISTERED schedule and its pin ════════════════════════════
+
+def test_THE_SEEDED_PIN_IS_RECOMPUTED_FROM_THE_REGISTERED_BLOCK(openings):
+    """The pin names a schedule; rebuild that schedule and it must agree."""
+    from scripts.GPU.alphazero import h3_pilot_runner as RUN
+    tasks = R.build_tasks(openings, seed_interval=RUN.PILOT_SEED_BLOCK)
+    assert R.task_digest(tasks) == R.SEEDED_TASK_DIGEST
+    assert R.expected_task_digest(tasks) == R.SEEDED_TASK_DIGEST
+    assert R.SEEDED_TASK_DIGEST != R.TASK_DIGEST, "seeds change the full-field digest"
+
+
+def test_THE_REGISTERED_BLOCK_IS_ACCOUNTED_ONLY_and_the_barrier_is_SATISFIED():
+    """THE SEED-PREPARATION STEP, and only that. Registering is bookkeeping, not
+    permission: ACCOUNTED so the barrier is satisfied, and NOT exposed and NOT
+    retired because a reservation is not a draw. The gate is the separate review
+    and it is still shut."""
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    from scripts.GPU.alphazero import h3_pilot_runner as RUN
+    lo, hi = RUN.PILOT_SEED_BLOCK
+    assert (lo, hi) == (202624000, 202624040)
+    assert hi - lo == R.N_GAMES == 40
+    for name in ("ACCOUNTED_SEED_INTERVALS", "EXPOSED_SEED_INTERVALS",
+                 "RETIRED_SEED_INTERVALS", "TEST_ONLY_SEED_INTERVALS"):
+        assert getattr(REF, name), f"vacuous: {name} is empty"
+    for seed in range(lo, hi):
+        st = REF.seed_status(seed)
+        assert st["accounted"], (seed, st)
+        assert not (st["exposed"] or st["retired"] or st["test_only"]), (seed, st)
+        assert seed not in REF.CONSUMED_SEEDS, seed
+    RUN.check_seed_registration()                      # the barrier is down
+    assert RUN.H3_PILOT_EXECUTION_AUTHORIZED is False, (
+        "registering a block ALSO opened the execution gate -- registration is "
+        "bookkeeping, and permission is a separate review")
+
+
+def test_the_registered_block_is_DISJOINT_from_every_spent_one():
+    """Recomputed here, not taken from the proof's output."""
+    from scripts.GPU.alphazero import h2_match_rules as H2R
+    from scripts.GPU.alphazero import h3_pilot_runner as RUN
+    from scripts.GPU.alphazero.d1_selection import SEED_INTERVAL as D1
+    ours = set(range(*RUN.PILOT_SEED_BLOCK))
+    for name, blk in (("H2 a1", H2R.H2_ATTEMPT1_SEED_BLOCK),
+                      ("H2 a2", H2R.H2_ATTEMPT2_SEED_BLOCK),
+                      ("H2 a3", H2R.H2_SEED_BLOCK), ("D1 §14", D1)):
+        assert not (ours & set(range(*blk))), name

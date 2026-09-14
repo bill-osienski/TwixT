@@ -258,12 +258,13 @@ TASK_DIGEST = "17516342892f0be35d9c282c4cbea2bf792449a02084d35a2904c0256110dd43"
 #: schedule that would actually run, and comparing a seeded schedule against it
 #: would refuse the real thing at execution time.
 #:
-#: It is None because no block is reserved. At seed registration it must be
-#: RECOMPUTED FROM THE SEEDED SCHEDULE and pinned here, and `check_schedule`
-#: refuses a seeded schedule until it is -- so this cannot be forgotten, which is
-#: the only reason it is a constant rather than a note. H2 re-pinned BOTH its
+#: PINNED 2026-09-14 at seed registration, RECOMPUTED FROM THE 40 SEEDED TASKS on
+#: block [202624000, 202624040) -- not derived from the unseeded pin, which is a
+#: different artifact. A test rebuilds the seeded schedule and recomputes it, so a
+#: pin that drifts from the schedule it names fails loudly. H2 re-pinned BOTH its
 #: digests for every attempt, for exactly this reason.
-SEEDED_TASK_DIGEST: Optional[str] = None
+SEEDED_TASK_DIGEST: Optional[str] = (
+    "9ba079456c89eac7502f68b8d090ded4e9488bcad1b2fec1dde843193d07e3e8")
 
 
 def expected_task_digest(tasks: Sequence[Dict[str, Any]]) -> str:

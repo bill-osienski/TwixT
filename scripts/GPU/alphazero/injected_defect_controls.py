@@ -2749,12 +2749,49 @@ DEFECTS = [
      "H3_PILOT_EXECUTION_AUTHORIZED = False",
      "H3_PILOT_EXECUTION_AUTHORIZED = True",
      f"{T_H3RUN}::test_THE_GATE_IS_SHUT_IN_THE_REAL_REPOSITORY"),
-    # 🔑 A gate opens with one edit; a seed block cannot be conjured by one. The
-    # pilot is closed TWICE OVER, and each barrier is controlled separately.
-    ("the H3 pilot names a seed block that was never reserved", H3RUN,
-     "PILOT_SEED_BLOCK: Optional[tuple] = None",
+    # 🔴 RE-AIMED 2026-09-14 by the registration. It injected "a block that was
+    # never reserved" while none existed; one is reserved and ACCOUNTED now, so the
+    # defect is naming a DIFFERENT block than the registered one -- which would
+    # draw from seeds no registry accounts for.
+    ("the H3 pilot names a block other than the registered one", H3RUN,
+     "PILOT_SEED_BLOCK: Optional[tuple] = (202624000, 202624040)",
      "PILOT_SEED_BLOCK: Optional[tuple] = (777000000, 777000040)",
-     f"{T_H3RUN}::test_NO_SEED_BLOCK_IS_RESERVED_and_that_is_a_SECOND_barrier"),
+     f"{T_H3RUN}::test_THE_SEED_BLOCK_IS_RESERVED_AND_REGISTERED_but_the_GATE_IS_STILL_SHUT"),
+    ("the NO-BLOCK refusal is removed, so an unnamed block runs", H3RUN,
+     '    if PILOT_SEED_BLOCK is None:\n        raise H3PilotRunError(\n'
+     '            "NO SEED BLOCK IS RESERVED',
+     '    if False:\n        raise H3PilotRunError(\n'
+     '            "NO SEED BLOCK IS RESERVED',
+     f"{T_H3RUN}::test_the_NO_BLOCK_refusal_is_still_REACHED_ALONE"),
+    # ───────── the REGISTRATION itself: bookkeeping, not permission ─────────
+    ("the pilot block un-registered from ACCOUNTED", REF_SRC,
+     "    (202624000, 202624040),          # H3 PILOT. 40 seeds, one per game: 20",
+     "    # (202624000, 202624040),        # H3 PILOT. 40 seeds, one per game: 20",
+     f"{T_H3RUN}::test_an_UNREGISTERED_block_is_still_refused"),
+    # 🔑 A RESERVATION IS NOT A DRAW. Marking the block exposed or retired before a
+    # single game would spend it on paper.
+    ("the pilot block is ALSO marked EXPOSED before anything is drawn", REF_SRC,
+     "EXPOSED_SEED_INTERVALS = (\n",
+     "EXPOSED_SEED_INTERVALS = (\n    (202624000, 202624040),\n",
+     f"{T_H3O}::test_THE_REGISTERED_BLOCK_IS_ACCOUNTED_ONLY_and_the_barrier_is_SATISFIED"),
+    ("the pilot block is ALSO marked RETIRED before anything is drawn", REF_SRC,
+     "RETIRED_SEED_INTERVALS = (\n",
+     "RETIRED_SEED_INTERVALS = (\n    (202624000, 202624040),\n",
+     f"{T_H3O}::test_THE_REGISTERED_BLOCK_IS_ACCOUNTED_ONLY_and_the_barrier_is_SATISFIED"),
+    # 🔑 THE ONE THAT MATTERS MOST: registration is bookkeeping, not permission.
+    ("registering the pilot block ALSO opened the execution gate", H3RUN,
+     "H3_PILOT_EXECUTION_AUTHORIZED = False",
+     "H3_PILOT_EXECUTION_AUTHORIZED = True",
+     f"{T_H3O}::test_THE_REGISTERED_BLOCK_IS_ACCOUNTED_ONLY_and_the_barrier_is_SATISFIED"),
+    ("the seeded pin is not recomputed from the registered block", H3R,
+     'SEEDED_TASK_DIGEST: Optional[str] = (\n'
+     '    "9ba079456c89eac7502f68b8d090ded4e9488bcad1b2fec1dde843193d07e3e8")',
+     "SEEDED_TASK_DIGEST: Optional[str] = TASK_DIGEST",
+     f"{T_H3O}::test_THE_SEEDED_PIN_IS_RECOMPUTED_FROM_THE_REGISTERED_BLOCK"),
+    ("the registered block overlaps a spent one", H3RUN,
+     "PILOT_SEED_BLOCK: Optional[tuple] = (202624000, 202624040)",
+     "PILOT_SEED_BLOCK: Optional[tuple] = (202622000, 202622040)",
+     f"{T_H3O}::test_the_registered_block_is_DISJOINT_from_every_spent_one"),
     ("the pilot entry no longer reads the gate first", H3RUN,
      "    check_gate()\n    from . import d1_probe as D1",
      "    from . import d1_probe as D1\n    check_gate()",
@@ -4108,8 +4145,6 @@ EXPECTED_REASONS = {
     #    create-only outputs, the pinned schedule, generation, seeds, analysis
     'the H3 pilot gate is opened':
         'assert True is False',
-    'the H3 pilot names a seed block that was never reserved':
-        'assert (777000000, 777000040) is None',
     'the pilot entry no longer reads the gate first':
         'AssertionError: THE FIRST STATEMENT IN run_pilot IS A ImportFrom, NOT A CALL',
     "the pilot seam trusts the entry's gate check":

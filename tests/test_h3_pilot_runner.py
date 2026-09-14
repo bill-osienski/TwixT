@@ -25,11 +25,49 @@ def test_THE_GATE_IS_SHUT_IN_THE_REAL_REPOSITORY():
     assert "H3_PILOT_EXECUTION_AUTHORIZED = True" not in src
 
 
-def test_NO_SEED_BLOCK_IS_RESERVED_and_that_is_a_SECOND_barrier():
-    """🔑 A gate opens with one reviewed edit. A seed block cannot be conjured by
-    one, so the pilot is closed twice over."""
-    assert RUN.PILOT_SEED_BLOCK is None
+def test_THE_SEED_BLOCK_IS_RESERVED_AND_REGISTERED_but_the_GATE_IS_STILL_SHUT():
+    """🔴 INVERTED 2026-09-14 by the registration. It read "no block is reserved";
+    one is now reserved and ACCOUNTED, and the barrier it guards is satisfied.
+
+    🔑 THE POINT SURVIVES THE INVERSION: registering is bookkeeping. The gate is a
+    separate review and is still False, so the pilot is still closed."""
+    assert RUN.PILOT_SEED_BLOCK == (202624000, 202624040)
+    RUN.check_seed_registration()                     # satisfied, not refusing
+    assert RUN.H3_PILOT_EXECUTION_AUTHORIZED is False
+    with pytest.raises(RUN.H3PilotRunError, match="NOT AUTHORIZED"):
+        RUN.run_pilot(results_path="/dev/null/x", trace_path="/dev/null/y",
+                      report_path="/dev/null/z")
+
+
+def test_the_NO_BLOCK_refusal_is_still_REACHED_ALONE(monkeypatch):
+    """The branch that refuses when no block is named must stay reachable: it is
+    the state every future block starts in."""
+    monkeypatch.setattr(RUN, "PILOT_SEED_BLOCK", None)
     with pytest.raises(RUN.H3PilotRunError, match="NO SEED BLOCK IS RESERVED"):
+        RUN.check_seed_registration()
+
+
+def test_an_UNREGISTERED_block_is_still_refused(monkeypatch):
+    """NEGATIVE CONTROL on the registry half: strip the block and the barrier must
+    refuse again. A strip that removes nothing controls nothing, so it is asserted."""
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    stripped = tuple(i for i in REF.ACCOUNTED_SEED_INTERVALS
+                     if tuple(i) != tuple(RUN.PILOT_SEED_BLOCK))
+    assert len(stripped) < len(REF.ACCOUNTED_SEED_INTERVALS), \
+        "nothing was stripped: the block is NOT registered, so this controls nothing"
+    monkeypatch.setattr(REF, "ACCOUNTED_SEED_INTERVALS", stripped)
+    with pytest.raises(RUN.H3PilotRunError, match="not registered"):
+        RUN.check_seed_registration()
+
+
+def test_the_registration_barrier_checks_EVERY_seed_not_the_endpoints(monkeypatch):
+    """A PARTIAL registration must still refuse: all but the last seed."""
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    lo, hi = RUN.PILOT_SEED_BLOCK
+    stripped = tuple(i for i in REF.ACCOUNTED_SEED_INTERVALS
+                     if tuple(i) != (lo, hi)) + ((lo, hi - 1),)
+    monkeypatch.setattr(REF, "ACCOUNTED_SEED_INTERVALS", stripped)
+    with pytest.raises(RUN.H3PilotRunError, match="not registered"):
         RUN.check_seed_registration()
 
 
@@ -126,10 +164,14 @@ def test_check_schedule_REFUSES_a_seeded_schedule_while_the_pin_is_unset():
     """🔴 Assigning 40 seeds changes the full-field digest, so the runner must
     know WHICH pin applies. Compared against the unseeded one, the real schedule
     would be refused by its own check at execution time."""
+    import unittest.mock as _m
     tasks = R.build_tasks(R.generate_openings(),
                           seed_interval=(777000000, 777000040))
-    with pytest.raises(RUN.H3PilotRunError, match="SEEDED_TASK_DIGEST is None"):
-        RUN.check_schedule(tasks)
+    # REACHED ALONE: the pin is set now, so unsetting it is the only way in -- and
+    # it must stay reachable, being the state every future block starts in.
+    with _m.patch.object(R, "SEEDED_TASK_DIGEST", None):
+        with pytest.raises(RUN.H3PilotRunError, match="SEEDED_TASK_DIGEST is None"):
+            RUN.check_schedule(tasks)
 
 
 def test_a_SHORT_schedule_is_refused_because_a_budget_bounds_nothing_below():
@@ -224,11 +266,14 @@ def test_EVERY_PAIRS_BOTH_TASKS_construct_through_the_REAL_builder():
     from scripts.GPU.alphazero import twixtbot_g3_reference as G3
     cfg = G3.eval_config()
     argmax = cfg.__class__(**{**cfg.__dict__, "selection_mode": H2R.SELECTION_MODE})
-    tasks = R.build_tasks(R.generate_openings())
+    # 🔑 THE REGISTERED SCHEDULE, with its REAL seeds -- not synthetic ones. The
+    # seed reaches `build_reference_agent` and seeds the agent, so building with a
+    # placeholder would test a different agent than the one the pilot would use.
+    tasks = R.build_tasks(R.generate_openings(),
+                          seed_interval=RUN.PILOT_SEED_BLOCK)
     seen_colours = set()
     for t in tasks:
-        task = dict(t, seed=777000000 + t["index"],
-                    reference="calib020_0001",
+        task = dict(t, reference="calib020_0001",
                     reference_sha1="209cf2d4fd24a48553d259dd71b4954867b9473e")
         # 🔑 ASSERTED INDEPENDENTLY, not derived. `reference_colour` reads
         # `anchor_colour`, so passing its own output back in is self-consistent
@@ -242,6 +287,7 @@ def test_EVERY_PAIRS_BOTH_TASKS_construct_through_the_REAL_builder():
         assert agent.readout.mode == RO.MODE_ARGMAX
         assert agent.config.mcts_sims == H2R.MCTS_SIMS
         assert agent.seed == task["seed"], "the SCHEDULED seed, not another"
+        assert 202624000 <= agent.seed < 202624040, "and it is the REGISTERED block"
         seen_colours.add(REF.reference_colour(task))
     assert seen_colours == {"red", "black"}, "one arm would prove only one arm"
 
@@ -252,8 +298,9 @@ def test_the_builder_REFUSES_the_WRONG_COLOUR_for_the_arm():
     from scripts.GPU.alphazero import twixtbot_g3_reference as G3
     cfg = G3.eval_config()
     argmax = cfg.__class__(**{**cfg.__dict__, "selection_mode": H2R.SELECTION_MODE})
-    t = R.build_tasks(R.generate_openings())[0]
-    task = dict(t, seed=777000000, reference="calib020_0001",
+    t = R.build_tasks(R.generate_openings(),
+                      seed_interval=RUN.PILOT_SEED_BLOCK)[0]
+    task = dict(t, reference="calib020_0001",
                 reference_sha1="209cf2d4fd24a48553d259dd71b4954867b9473e")
     wrong = "red" if REF.reference_colour(task) == "black" else "black"
     with pytest.raises(Exception):
