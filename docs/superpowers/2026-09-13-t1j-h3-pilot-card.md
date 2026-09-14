@@ -104,33 +104,57 @@ game**. No product of an observed average and a game count bounds anything.
 | per-call bound | 120 s, inherited |
 | **may it time out?** | **YES.** This is a real possibility, not a residual one. |
 
-**A timeout is an informative outcome, not a failure.** Unlike H2 — whose verdict
-needed all 736 games — **this pilot's outputs are diagnostics, and diagnostics
-over completed pairs stay valid.** §4.4 fixes what a partial run reports.
+**A timeout still measures what the COMPLETED games cost.** That much is a real
+measurement, and in that sense a timeout is informative. **It does NOT establish
+the full schedule's cap rate or its runtime tail** — those are properties of all
+40 games, and a timeout leaves some unplayed. §4.4 fixes the line exactly.
 
 ### 4.4 What a partial run may and may not report
 
-**MAY**, computed over completed pairs only, with `pairs_nominal` and the number
-actually completed reported side by side:
+🔴 **CORRECTED 2026-09-13, a second time.** The previous version said the
+unfinished games "are precisely the slow ones", so the observed cap rate and p90
+**understate** the truth, and that p90 is therefore a **lower bound**. **All of
+that is wrong.** Unstarted games have **unknown** durations — they were never
+reached, not observed to be slow. Only the single in-flight game at the timeout is
+known to have been cut off. And **a quantile is not monotone under adding
+observations**: the remaining games could be mostly fast and pull the full-sample
+p90 **below** the truncated one. Nor is the truncation random — the schedule is
+played in order, and H2's caps arrived in one contiguous cell — so the completed
+games are not even an unbiased subsample.
 
-* every §5 count and the per-game timing statistics;
-* **S1, S2, S4a and S4b may FIRE** on a truncated run — S4a trivially so, since a
-  timeout means the limit was reached.
+**THE RULE THAT DECIDES EVERY CASE: a monotone COUNT may fire; a RATIO or a
+QUANTILE may not.** An event already observed cannot be un-observed by playing
+more games, so a count that has already crossed its threshold has crossed it for
+the full schedule too. A ratio or a quantile can move in either direction.
+
+| rule | quantity | on a timeout |
+|---|---|---|
+| **S1** `duplicate_pairs > 2` | monotone count | **MAY FIRE** conclusively once exceeded |
+| **S2** `capped_games > 8` | monotone count | **MAY FIRE** conclusively once exceeded |
+| **S3** `within_pair_identical > 2` | monotone count | **MAY FIRE** conclusively once exceeded |
+| **S4a** `total elapsed > 3,600 s` | monotone, directly observed | **MAY FIRE** — trivially, since a timeout means 7,200 s was reached |
+| **S4b** `p90 > 4 × median` | ratio of two quantiles | **UNRESOLVED.** Not evaluated unless the full schedule completes. |
+
+**MAY**, over completed pairs only, with the completed count reported beside
+`pairs_nominal`:
+
+* every §5 count and the per-game timing statistics, **every one labelled
+  PARTIAL** — they describe the games that finished and nothing beyond them;
+* **S1, S2, S3 and S4a**, firing on absolute counts that already exceed their
+  thresholds.
 
 **MAY NOT:**
 
-* **no stop rule may be declared CLEAR on a truncated run.** The games that did
-  not finish are **precisely the slow ones**, so truncation biases every statistic
-  in the same direction: the observed cap rate and the observed p90 both
-  **understate** the truth. A rule that fires on truncated data fires *a
-  fortiori*; a rule that does not fire has **not been shown to be clear**.
-* **p90 from a truncated run is a LOWER BOUND on the tail**, and must be labelled
-  as one wherever it appears.
+* **declare any rule CLEAR.** A count below its threshold may still cross it in
+  the games that were never played. Firing is conclusive; not firing is not.
+* **evaluate S4b at all.**
+* **state a cap RATE or a runtime TAIL for the full schedule.** The cap *count*
+  may fire S2; the *rate* over 40 games is not established by fewer than 40.
+* **call any observed timing a bound**, in either direction.
 
-**Floor.** Below **10 completed pairs** the run reports *"ran out of time"* and
-nothing else: with fewer than half the pairs the diagnostics are too thin to read,
-and the honest report is that the runtime alone closed the question for now — which
-is itself an S4-shaped finding.
+**Floor.** Below **10 completed pairs** the run reports *"ran out of time"*, the
+completed count, and the observed timings labelled partial — and **no stop-rule
+evaluation at all** except S4a, which the timeout itself decides.
 
 🔴 **Per-game elapsed MUST be recorded by the pilot's runner.** Attempt 3's
 records make §4.1 unanswerable after the fact, and that gap is why this section
@@ -146,11 +170,15 @@ Per H3 §7.2, plus the timing this pilot exists to gather:
 `within_pair_identical` · `capped_games` · per-game elapsed
 **min / median / p90 / max** · total elapsed · the **outcome distribution over
 pairs** · and, on a truncated run, the completed-pair count beside
-`pairs_nominal` with p90 labelled **a lower bound** (§4.4).
+`pairs_nominal`, with **every count and timing labelled PARTIAL** and no timing
+called a bound in either direction (§4.4).
 
 ## 6. STOP RULES — numerical, frozen before play begins
 
-Evaluated **after** the run, on the recorded numbers, in this order:
+Evaluated **after** the run, on the recorded numbers, in this order. **On a
+truncated run §4.4 governs**: S1, S2, S3 and S4a may fire on absolute counts that
+already exceed their thresholds, **S4b is not evaluated at all**, and **no rule
+may be declared clear**.
 
 | # | rule | if it fires |
 |---|---|---|
