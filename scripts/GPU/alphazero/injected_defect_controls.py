@@ -4273,4 +4273,21 @@ EXPECTED_REASONS = {
         "AssertionError: assert '9ba079456c89...843193d07e3e8' == '17516342892f...4c0256110dd43'",
     'the registered block overlaps a spent one':
         'AssertionError: H2 a3',
+    # ── 2026-09-14: the IDENTITY FIELDS the qualified construction READS, and
+    # the two checks H3's `check_schedule` was missing beside H2's.
+    "the pilot's tasks carry no reference identity":
+        "scripts.GPU.alphazero.e4_screen_reference.E4ReferenceError: task is missing ['reference', 'reference_sha1']; build_reference_agent would refuse it",
+    'the task names no reference_colour, so the factory cannot route':
+        "KeyError: 'reference_colour'",
+    "the reference colour is the ANCHOR's, so the sides are swapped":
+        'AssertionError: h3pilot-000-p00-inc_red: reference_colour is not OUR side',
+    'the pilot never asks the registry whether the seeds may RUN':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_pilot_runner.H3PilotRunError'>",
+    # 🔑 THE OBSERVED FAILURE IS THE CRASH THE GUARD PREVENTS, not a quiet
+    # admission: with the guard off, the seedless schedule reaches
+    # `validate_schedule_executable`, which does `int(task["seed"])` on None. The
+    # test names an `H3PilotRunError` refusal and gets a TypeError instead, which
+    # is precisely the difference between a refusal and an accident.
+    'a seedless schedule is admitted, so it bypasses the registry':
+        "TypeError: int() argument must be a string, a bytes-like object or a real number, not 'NoneType'",
 }
