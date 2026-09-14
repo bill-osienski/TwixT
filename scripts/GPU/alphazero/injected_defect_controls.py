@@ -4026,8 +4026,14 @@ EXPECTED_REASONS = {
         "Failed: DID NOT RAISE <class 'RuntimeError'>",
     'terminal positions are admitted as pilot openings':
         "Failed: DID NOT RAISE <class 'RuntimeError'>",
+    # 🔑 THE DECLARED REASON MUST NOT BE RANDOM. This control removes the
+    # generator's seed, so the set it produces DIFFERS EVERY RUN -- the frozen
+    # reason carried the digests of one particular random set and could never
+    # match a second time. The target now asserts with a MESSAGE, which is the
+    # stable part of the failure.
     'the opening generator ignores its seed, so it is not reproducible':
-        "AssertionError: assert ['6748e10a266...0c20629', ...] == ['f943b6e8894...874cee8', ...]",
+        'AssertionError: GENERATION IS NOT REPRODUCIBLE: the same constant gave a '
+        'different set',
     'the pilot coerces its seed endpoints again':
         "TypeError: unsupported operand type(s) for -: 'int' and 'str'",
     'a spent block is schedulable because availability is never checked':

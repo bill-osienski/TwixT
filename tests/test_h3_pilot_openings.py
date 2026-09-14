@@ -95,8 +95,10 @@ def test_none_duplicates_an_H1_or_H2_OPENING(openings):
 def test_GENERATION_IS_DETERMINISTIC(openings):
     """Same constant, same set -- or the digest pins nothing."""
     again = R.generate_openings()
-    assert [o["digest"] for o in again] == [o["digest"] for o in openings]
-    assert [o["moves"] for o in again] == [o["moves"] for o in openings]
+    assert [o["digest"] for o in again] == [o["digest"] for o in openings], \
+        "GENERATION IS NOT REPRODUCIBLE: the same constant gave a different set"
+    assert [o["moves"] for o in again] == [o["moves"] for o in openings], \
+        "GENERATION IS NOT REPRODUCIBLE: the same constant gave different moves"
 
 
 def test_A_DIFFERENT_SEED_GIVES_A_DIFFERENT_SET(openings):
