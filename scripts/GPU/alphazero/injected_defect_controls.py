@@ -4231,4 +4231,21 @@ EXPECTED_REASONS = {
         'scripts.GPU.alphazero.h3_pilot_rules.H3PilotError: this schedule carries seeds, but SEEDED_TASK_DIGEST is None. The full-field digest changes when seeds are assigned, so the pin must be RECOMPUTED FROM THE SEEDED SCHEDULE and set at seed registration before any run. Nothing may execute against the unseeded pin.',
     'the runner ignores which pin applies':
         "scripts.GPU.alphazero.h3_pilot_runner.H3PilotRunError: the schedule digest is 272ef664169b85925f93432854c2bb983356fdbbc649f2db5fb3c20137c98aba but the frozen pilot schedule is 17516342892f0be35d9c282c4cbea2bf792449a02084d35a2904c0256110dd43. A different schedule is a different experiment wearing this one's name.",
+    # ── 2026-09-14: the pilot's SEED REGISTRATION -- bookkeeping, not permission
+    'the H3 pilot names a block other than the registered one':
+        'assert (777000000, 777000040) == (202624000, 202624040)',
+    'the NO-BLOCK refusal is removed, so an unnamed block runs':
+        'TypeError: cannot unpack non-iterable NoneType object',
+    'the pilot block un-registered from ACCOUNTED':
+        'AssertionError: nothing was stripped: the block is NOT registered, so this controls nothing',
+    'the pilot block is ALSO marked EXPOSED before anything is drawn':
+        "AssertionError: (202624000, {'accounted': True, 'exposed': True, 'retired': False, 'test_only': False})",
+    'the pilot block is ALSO marked RETIRED before anything is drawn':
+        "AssertionError: (202624000, {'accounted': True, 'exposed': False, 'retired': True, 'test_only': False})",
+    'registering the pilot block ALSO opened the execution gate':
+        'AssertionError: registering a block ALSO opened the execution gate -- registration is bookkeeping, and permission is a separate review',
+    'the seeded pin is not recomputed from the registered block':
+        "AssertionError: assert '9ba079456c89...843193d07e3e8' == '17516342892f...4c0256110dd43'",
+    'the registered block overlaps a spent one':
+        'AssertionError: H2 a3',
 }
