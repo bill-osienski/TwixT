@@ -2744,6 +2744,23 @@ DEFECTS = [
      '    expected_colour = "black" if task["anchor_colour"] == "red" else "red"',
      '    expected_colour = colour',
      f"{T_H2}::test_THE_BUILDER_STILL_REFUSES_THE_WRONG_COLOUR_FOR_THE_ARM"),
+    # ── 2026-09-14: THE IDENTITY FIELDS THE QUALIFIED CONSTRUCTION READS.
+    # Found by the pre-run verification, not by the suite: 597 controls and a
+    # green suite said nothing, because every seam test supplied its OWN agent
+    # factory and so never subscripted the fields the real one does.
+    ("the pilot's tasks carry no reference identity", H3R,
+     '                "reference": ref["name"],\n'
+     '                "reference_sha1": ref["sha1"],\n',
+     "",
+     f"{T_H3O}::test_THE_REGISTERED_SCHEDULE_IS_EXECUTABLE_through_the_REAL_registry"),
+    ("the task names no reference_colour, so the factory cannot route", H3R,
+     '            t["reference_colour"] = REF.reference_colour(t)',
+     "            pass",
+     f"{T_H3RUN}::test_THE_REAL_AGENT_FACTORY_ROUTES_BY_THE_TASKS_OWN_reference_colour"),
+    ("the reference colour is the ANCHOR's, so the sides are swapped", H3R,
+     '            t["reference_colour"] = REF.reference_colour(t)',
+     '            t["reference_colour"] = t["anchor_colour"]',
+     f"{T_H3O}::test_every_task_NAMES_the_colour_OUR_SIDE_plays"),
     # ═════════════ 2026-09-14: the H3 PILOT -- closed, seedless, contained ═══
     ("the H3 pilot gate is opened", H3RUN,
      "H3_PILOT_EXECUTION_AUTHORIZED = False",
@@ -2785,7 +2802,7 @@ DEFECTS = [
      f"{T_H3O}::test_THE_REGISTERED_BLOCK_IS_ACCOUNTED_ONLY_and_the_barrier_is_SATISFIED"),
     ("the seeded pin is not recomputed from the registered block", H3R,
      'SEEDED_TASK_DIGEST: Optional[str] = (\n'
-     '    "9ba079456c89eac7502f68b8d090ded4e9488bcad1b2fec1dde843193d07e3e8")',
+     '    "aa527cc9a1a7b1e657911171c63f19fc006909dd64518bd96de3ce4ddfabfba9")',
      "SEEDED_TASK_DIGEST: Optional[str] = TASK_DIGEST",
      f"{T_H3O}::test_THE_SEEDED_PIN_IS_RECOMPUTED_FROM_THE_REGISTERED_BLOCK"),
     ("the registered block overlaps a spent one", H3RUN,

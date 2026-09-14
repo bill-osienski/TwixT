@@ -179,9 +179,17 @@ def build_tasks(openings: Sequence[Dict[str, Any]],
     """
     from . import e4_screen_reference as REF
     from . import h2_match_rules as H2R
+    from . import l0_match_plan as L0PLAN
 
     if len(openings) != N_OPENINGS:
         raise H3PilotError(f"{len(openings)} openings, expected {N_OPENINGS}")
+
+    # 🔑 THE IDENTITY THE QUALIFIED CONSTRUCTION READS OFF A TASK, from the
+    # sha256-VERIFIED source plan L0, H1 and H2 all use. Not retyped, and
+    # deliberately NOT taken from `REFERENCE_CHECKPOINTS` -- that registry is what
+    # `validate_task_structure` compares the task against, so sourcing it there
+    # would leave the check comparing a value with itself.
+    ref = L0PLAN.load_source_plan()["reference"]
 
     seeds: List[Optional[int]] = [None] * N_GAMES
     if seed_interval is not None:
@@ -213,7 +221,7 @@ def build_tasks(openings: Sequence[Dict[str, Any]],
     for op in openings:
         for colour in ("red", "black"):
             i = len(out)
-            out.append({
+            t = {
                 "task_id": f"h3pilot-{i:03d}-p{op['index']:02d}-inc_{colour}",
                 "index": i,
                 "pair_id": op["index"],
@@ -223,6 +231,8 @@ def build_tasks(openings: Sequence[Dict[str, Any]],
                 # colour as the opposite of the anchor's -- so the anchor is T1j's.
                 "opening": opening_name(op["index"]),
                 "anchor_colour": "black" if colour == "red" else "red",
+                "reference": ref["name"],
+                "reference_sha1": ref["sha1"],
                 "opening_digest": op["digest"],
                 "opening_moves": [list(m) for m in op["moves"]],
                 "opening_plies": OPENING_PLIES,
@@ -233,7 +243,14 @@ def build_tasks(openings: Sequence[Dict[str, Any]],
                 "t1j_mdPly": H2R.T1J_MDPLY,
                 "t1j_mdFixedPly": True,
                 "ply_cap": H2R.PLY_CAP,
-            })
+            }
+            # 🔴 READ, NOT DERIVED, by the two callers that matter:
+            # `make_agent_factory` routes on `task["reference_colour"]` by
+            # subscript, and `_enforce_evaluator` refuses a task that names none.
+            # Its absence killed every game at ply 6 -- which no seam test could
+            # see, because each supplied its own agent factory.
+            t["reference_colour"] = REF.reference_colour(t)
+            out.append(t)
     if len(out) != N_GAMES:
         raise H3PilotError(f"built {len(out)} tasks, expected {N_GAMES}")
     return out
@@ -251,20 +268,23 @@ def task_digest(tasks: Sequence[Dict[str, Any]]) -> str:
 
 #: THE UNSEEDED DESIGN IDENTITY, recomputed from the BUILT schedule by a test.
 #: This is the schedule as the card fixes it, with `seed: None` on every task.
-TASK_DIGEST = "17516342892f0be35d9c282c4cbea2bf792449a02084d35a2904c0256110dd43"
+TASK_DIGEST = "b972ce46beb637d45a56fe3b002eb88932652fc5134b5db3dbbf6702de192337"
 
-#: 🔴 THE SEEDED PIN, AND IT CANNOT EXIST YET. `task_digest` covers EVERY field,
-#: so assigning 40 seeds changes it: the unseeded pin above does NOT describe the
-#: schedule that would actually run, and comparing a seeded schedule against it
-#: would refuse the real thing at execution time.
+#: 🔴 THE SEEDED PIN. `task_digest` covers EVERY field, so assigning 40 seeds
+#: changes it: the unseeded pin above does NOT describe the schedule that would
+#: actually run, and comparing a seeded schedule against it would refuse the real
+#: thing at execution time.
 #:
-#: PINNED 2026-09-14 at seed registration, RECOMPUTED FROM THE 40 SEEDED TASKS on
-#: block [202624000, 202624040) -- not derived from the unseeded pin, which is a
-#: different artifact. A test rebuilds the seeded schedule and recomputes it, so a
-#: pin that drifts from the schedule it names fails loudly. H2 re-pinned BOTH its
-#: digests for every attempt, for exactly this reason.
+#: PINNED 2026-09-14 at seed registration on block [202624000, 202624040), then
+#: RE-PINNED THE SAME DAY -- both digests above -- when the tasks gained the
+#: `reference`, `reference_sha1` and `reference_colour` fields the qualified
+#: construction path reads. A full-field digest moves whenever the task shape
+#: does, and a pin carried over from a schedule with a different shape would name
+#: something that no longer exists. Recomputed from the 40 SEEDED tasks, never
+#: derived from the unseeded pin. A test rebuilds the seeded schedule and
+#: recomputes both, so a pin that drifts from the schedule it names fails loudly.
 SEEDED_TASK_DIGEST: Optional[str] = (
-    "9ba079456c89eac7502f68b8d090ded4e9488bcad1b2fec1dde843193d07e3e8")
+    "aa527cc9a1a7b1e657911171c63f19fc006909dd64518bd96de3ce4ddfabfba9")
 
 
 def expected_task_digest(tasks: Sequence[Dict[str, Any]]) -> str:

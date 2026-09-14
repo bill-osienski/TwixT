@@ -706,12 +706,46 @@ def _inert_state(openings, *, cleanups):
         return st
 
     def agent_for(task, mover):
+        # 🔑 ROUTES THE WAY `make_agent_factory` DOES -- off the task's OWN
+        # `reference_colour`, by subscript. The first version took (task, mover)
+        # and used neither, so it never touched the field the real factory reads,
+        # and the missing identity fields survived five "real harness" tests.
+        which = ("incumbent" if mover == task["reference_colour"] else "anchor")
+        assert which in ("incumbent", "anchor")
         # the first legal move, deterministically: a player, not a strategy
         return lambda state: sorted(state.legal_moves())[0]
 
     return {"harness": HARNESS, "state_factory": state_factory,
             "agent_factory": agent_for, "binder": lambda *a, **k: None,
             "cleanup": lambda: cleanups.append(1)}
+
+
+def test_THE_REAL_AGENT_FACTORY_ROUTES_BY_THE_TASKS_OWN_reference_colour():
+    """🔴 `make_agent_factory` subscripts `task["reference_colour"]` DIRECTLY, so
+    an H3 task without it raised KeyError on the first move of the first game.
+
+    Inert underneath: no runtime is touched (T1jAgent only stores it), no
+    evaluator is loaded and `reference_build` returns a sentinel.
+    """
+    from scripts.GPU.alphazero import e4_screen_integration as INT
+    openings = R.generate_openings()
+    built = []
+
+    def reference_build(t, evaluator):
+        built.append((t["task_id"], evaluator))
+        return "REFERENCE_AGENT"
+
+    factory = INT.make_agent_factory(runtime=object(), ctx=INT.IntegrationContext(),
+                                     evaluator="THE_ONE_EVALUATOR",
+                                     reference_build=reference_build)
+    pair = R.build_tasks(openings)[:2]
+    assert {t["incumbent_colour"] for t in pair} == {"red", "black"}, "one pair, both arms"
+    for t in pair:
+        anchor_side = "black" if t["incumbent_colour"] == "red" else "red"
+        assert factory(t, t["incumbent_colour"]) == "REFERENCE_AGENT"
+        t1j = factory(t, anchor_side)
+        assert isinstance(t1j, INT.T1jAgent) and t1j.colour == anchor_side
+    assert [e for _, e in built] == ["THE_ONE_EVALUATOR"] * 2
 
 
 def test_THE_SEAM_DRIVES_THE_REAL_HARNESS_AND_RETURNS_THE_RUN_BODYS_CONTRACT():

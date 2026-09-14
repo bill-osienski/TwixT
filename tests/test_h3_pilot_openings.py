@@ -209,6 +209,66 @@ def test_the_schedule_pin_CHANGES_when_any_field_changes(tasks):
     assert R.task_digest(tampered) != R.TASK_DIGEST
 
 
+# ══════════ the reference identity the REAL harness reads off a task ════════
+# 🔴 THE GAP THE PRE-RUN VERIFICATION FOUND. H3's tasks carried none of the
+# fields the qualified construction path reads, so `validate_schedule_executable`
+# refused all 40 -- and `make_agent_factory` subscripts `reference_colour`
+# DIRECTLY, so the first move of the first game would have raised KeyError. Every
+# seam test supplied its own agent factory, which is precisely why none of them
+# could see it.
+
+def test_THE_REGISTERED_SCHEDULE_IS_EXECUTABLE_through_the_REAL_registry(openings):
+    """Not `validate_schedule_structure`: the executable question, against the
+    registered block, which is the question the runner asks before it plays."""
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    from scripts.GPU.alphazero import h3_pilot_runner as RUN
+    tasks = R.build_tasks(openings, seed_interval=RUN.PILOT_SEED_BLOCK)
+    out = REF.validate_schedule_executable(tasks)
+    assert out["n_tasks"] == 40
+    assert out["distinct_seeds"] == 40 and out["distinct_stream_pairs"] == 40
+
+
+def test_the_REFERENCE_IDENTITY_AGREES_WITH_BOTH_PINS(tasks):
+    """Two independently pinned sources saying the same thing.
+
+    🔑 The sha1 is read from the sha256-VERIFIED source plan, never from
+    `REFERENCE_CHECKPOINTS` -- because `validate_task_structure` compares the task
+    against that registry, and sourcing it there would leave the check comparing a
+    value with itself.
+    """
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    from scripts.GPU.alphazero import h2_match_plan as H2PLAN
+    ref = H2PLAN.load_source_plan()["reference"]
+    for t in tasks:
+        assert t["reference"] == ref["name"]
+        assert t["reference_sha1"] == ref["sha1"]
+        assert t["reference_sha1"] == REF.REFERENCE_CHECKPOINTS[t["reference"]]["sha1"]
+
+
+def test_every_task_NAMES_the_colour_OUR_SIDE_plays(tasks):
+    """`make_agent_factory` routes on this field and `_enforce_evaluator` refuses
+    a task without it; both read it, neither derives it."""
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    for t in tasks:
+        assert t["reference_colour"] == t["incumbent_colour"]
+        assert t["reference_colour"] == REF.reference_colour(t)
+        assert t["reference_colour"] != t["anchor_colour"]
+
+
+def test_the_task_carries_NEITHER_reference_sha256_NOR_rng_streams(tasks):
+    """H2's tasks carry both; H3's deliberately do not, and this records why.
+
+    Nothing reads either one: `build_reference_agent` checks the sha1, and
+    `_injective_streams` DERIVES the streams from the seed rather than trusting a
+    recorded copy. An unread field under a full-field digest is a value that can
+    disagree with the truth without anything noticing. The seed->stream binding
+    for this block is proved in the registration evidence instead.
+    """
+    for t in tasks:
+        assert "reference_sha256" not in t
+        assert "rng_streams" not in t
+
+
 def test_the_incumbent_configuration_is_H2s_FROZEN_ONE(tasks):
     """Unchanged, deliberately: H3 changes the evidence structure, not the player."""
     from scripts.GPU.alphazero import h2_match_rules as H2R
