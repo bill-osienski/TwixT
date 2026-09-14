@@ -31,7 +31,7 @@ from . import h3_pilot_runner as RUN
 #: The commit whose work this verifies. HEAD must DESCEND from it with a clean
 #: SOURCE tree -- asserting equality would be circular, since this file and
 #: anything it finds are commits on top.
-BOUND_COMMIT = "f87e5d1"
+BOUND_COMMIT = "6a88b94"          # the commit that gave the tasks their identity
 
 GATES: Tuple[Tuple[str, str], ...] = (
     ("d1_probe", "D1_EXECUTION_AUTHORIZED"),

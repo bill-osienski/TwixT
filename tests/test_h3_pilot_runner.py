@@ -98,10 +98,17 @@ def test_run_pilot_REFUSES_a_set_that_does_not_match_the_pin(monkeypatch, tmp_pa
     refusal happens long before any seam, seed or file."""
     monkeypatch.setattr(RUN, "check_gate", lambda: None)
     monkeypatch.setattr(RUN.RULES, "OPENING_SET_DIGEST", "0" * 64)
-    with pytest.raises(RUN.H3PilotRunError, match="does not match the frozen pin"):
+    with pytest.raises(RUN.H3PilotRunError) as ei:
         RUN.run_pilot(results_path=str(tmp_path / "r.jsonl"),
                       trace_path=str(tmp_path / "t.jsonl"),
                       report_path=str(tmp_path / "rep.json"))
+    # 🔑 WHICH refusal, not merely that one happened. Registering a seed block
+    # took `run_pilot` past the barrier that used to stop it here, so without
+    # this assertion the run sails on to the containment boundary and the test
+    # still "passes" -- on a refusal that says nothing about the openings pin.
+    assert "does not match the frozen pin" in str(ei.value), \
+        (f"it ran PAST the openings pin and was stopped later, by "
+         f"{type(ei.value).__name__}")
     assert not list(tmp_path.iterdir()), "it refused before writing anything"
 
 
@@ -165,8 +172,16 @@ def test_a_SEEDLESS_schedule_is_REFUSED_because_it_cannot_be_RUN():
 
 
 def test_a_DIFFERENT_schedule_is_REFUSED():
-    tasks = R.build_tasks(R.generate_openings())
-    tasks[0] = dict(tasks[0], anchor_colour="red")
+    """SEEDED, and tampered in a field the REGISTRY does not look at, so the
+    DIGEST is the only thing that can reject it.
+
+    🔴 It used to tamper an UNSEEDED schedule. Once `check_schedule` learned to
+    refuse a seedless schedule, that refusal came first -- and the control for
+    "the digest is not compared with the pin" went INDETERMINATE, because the
+    test still failed but no longer for the reason it names.
+    """
+    tasks = R.build_tasks(R.generate_openings(), seed_interval=RUN.PILOT_SEED_BLOCK)
+    tasks[0] = dict(tasks[0], ply_cap=tasks[0]["ply_cap"] + 1)
     with pytest.raises(RUN.H3PilotRunError, match="different schedule"):
         RUN.check_schedule(tasks)
 
