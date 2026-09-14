@@ -4182,6 +4182,9 @@ EXPECTED_REASONS = {
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_pilot_runner.H3PilotRunError'>",
     'the pilot admits two outputs that are the same file':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_pilot_runner.H3PilotRunError'>",
+    # 🔑 RE-OBSERVED after the target was repaired: it tampers a SEEDED schedule
+    # in a field the registry ignores, so nothing but the digest can reject it and
+    # removing the comparison leaves NOTHING raising at all.
     'the pilot schedule digest is not compared with the pin':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_pilot_runner.H3PilotRunError'>",
     "the pilot's tasks carry the wrong anchor for the incumbent's colour":
@@ -4227,8 +4230,12 @@ EXPECTED_REASONS = {
         'scripts.GPU.alphazero.h3_pilot_analysis.H3AnalysisError: h3pilot-000-p00-inc_red: no elapsed_s. Per-game timing is REQUIRED; without it the pilot cannot answer its own runtime question.',
     'the outputs are no longer create-only inside the run':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_pilot_runner.H3PilotVoidError'>",
+    # 🔴 THE OLD REASON WAS NOT EVIDENCE ABOUT THE OPENINGS PIN AT ALL: it was the
+    # NO-SEED-BLOCK refusal, which fired whether or not the check existed.
+    # Registering a block moved the symptom to the containment boundary and the
+    # harness reported it INDETERMINATE. The target now asserts WHICH refusal.
     'the generated openings are not checked against the frozen pin':
-        'scripts.GPU.alphazero.h3_pilot_runner.H3PilotRunError: NO SEED BLOCK IS RESERVED for the H3 pilot. The card reserves none, and 40 games need 40 accounted seeds. Reserving one is a separate authorization carrying its own collision re-proof.',
+        'AssertionError: it ran PAST the openings pin and was stopped later, by H3PilotContainmentError',
     'the PILOT wrapper reports success without verifying the gate':
         'AssertionError: assert 0 == 10',
     'a surviving descendant is reported as a success':
@@ -4252,10 +4259,15 @@ EXPECTED_REASONS = {
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_pilot_runner.H3PilotVoidError'>",
     'a seeded schedule is checked against the UNSEEDED pin':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_pilot_rules.H3PilotError'>",
+    # 🔑 MORE CORRECT THAN THE REASON IT REPLACES. The old one was the
+    # "SEEDED_TASK_DIGEST is None" message, recorded while no seeded pin existed --
+    # so the control was demonstrating the missing pin, not the missing guard. With
+    # the pin set, removing the guard hands a half-seeded schedule the seeded pin
+    # in silence, and the target sees exactly that: nothing raised.
     'a half-seeded schedule is admitted':
-        'scripts.GPU.alphazero.h3_pilot_rules.H3PilotError: this schedule carries seeds, but SEEDED_TASK_DIGEST is None. The full-field digest changes when seeds are assigned, so the pin must be RECOMPUTED FROM THE SEEDED SCHEDULE and set at seed registration before any run. Nothing may execute against the unseeded pin.',
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_pilot_rules.H3PilotError'>",
     'the runner ignores which pin applies':
-        "scripts.GPU.alphazero.h3_pilot_runner.H3PilotRunError: the schedule digest is 272ef664169b85925f93432854c2bb983356fdbbc649f2db5fb3c20137c98aba but the frozen pilot schedule is 17516342892f0be35d9c282c4cbea2bf792449a02084d35a2904c0256110dd43. A different schedule is a different experiment wearing this one's name.",
+        "scripts.GPU.alphazero.h3_pilot_runner.H3PilotRunError: the schedule digest is 0ed4514ad6b324d18ce7a2dc8959b24bcf1a45515de274c8ef5840cc03b87a32 but the frozen pilot schedule is b972ce46beb637d45a56fe3b002eb88932652fc5134b5db3dbbf6702de192337. A different schedule is a different experiment wearing this one's name.",
     # ── 2026-09-14: the pilot's SEED REGISTRATION -- bookkeeping, not permission
     'the H3 pilot names a block other than the registered one':
         'assert (777000000, 777000040) == (202624000, 202624040)',
@@ -4270,7 +4282,7 @@ EXPECTED_REASONS = {
     'registering the pilot block ALSO opened the execution gate':
         'AssertionError: registering a block ALSO opened the execution gate -- registration is bookkeeping, and permission is a separate review',
     'the seeded pin is not recomputed from the registered block':
-        "AssertionError: assert '9ba079456c89...843193d07e3e8' == '17516342892f...4c0256110dd43'",
+        "AssertionError: assert 'aa527cc9a1a7...3ce4ddfabfba9' == 'b972ce46beb6...f6702de192337'",
     'the registered block overlaps a spent one':
         'AssertionError: H2 a3',
     # ── 2026-09-14: the IDENTITY FIELDS the qualified construction READS, and
