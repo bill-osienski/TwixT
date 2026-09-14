@@ -1,0 +1,5 @@
+MANIFEST ADDENDUM -- 2026-09-12-t1j-h2-match-attempt3
+A_MANIFEST.sha256.txt was written before this file existed and is create-only, so
+it is NOT edited. This addendum covers the one file added after it.
+
+754ca06df8b1bbe324f036de87f3f310e46e86fcd5b500bab72d6b060f35e7aa  2277  12_correction.md
