@@ -4345,6 +4345,17 @@ EXPECTED_REASONS = {
     # `validate_schedule_executable`, which does `int(task["seed"])` on None. The
     # test names an `H3PilotRunError` refusal and gets a TypeError instead, which
     # is precisely the difference between a refusal and an accident.
+    # ── 2026-09-14: THE OBJECT, not an equal one.
+    # 🔑 The third reason is the whole point in one line: with the seam building
+    # its own, the captured config COMPARED EQUAL and only an `is` caught it.
+    "the identity is read off a FRESH config, not the seam's":
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_pilot_runner.H3PilotRunError'>",
+    'a seam that declares no config is given one anyway':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_pilot_runner.H3PilotRunError'>",
+    'the seam builds a config instead of using the one it was given':
+        'AssertionError: the builder must receive THE object the identity was read off, not an equal one',
+    'the pilot entry builds the config twice':
+        'AssertionError: the config was constructed 2 times, not once',
     # ── 2026-09-14: the INCUMBENT'S IDENTITY. Three share a DID NOT RAISE, and
     # that is not a weakness: `classify` binds a reason to the NAMED node, so each
     # is the absence of a refusal in a different test.
