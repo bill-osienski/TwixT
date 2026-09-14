@@ -152,9 +152,31 @@ the full schedule too. A ratio or a quantile can move in either direction.
   may fire S2; the *rate* over 40 games is not established by fewer than 40.
 * **call any observed timing a bound**, in either direction.
 
-**Floor.** Below **10 completed pairs** the run reports *"ran out of time"*, the
-completed count, and the observed timings labelled partial — and **no stop-rule
-evaluation at all** except S4a, which the timeout itself decides.
+**Floor — it suppresses INTERPRETATION, not monotone firing.**
+
+🔴 **CORRECTED.** The floor previously said that below 10 completed pairs *no*
+stop rule is evaluated except S4a. **That contradicts the rule directly above
+it.** Nine completed pairs can already hold three duplicate pairs or nine capped
+games, and **later games cannot undo either event** — the counts have crossed
+their thresholds for the full schedule whether or not the schedule was finished.
+Suppressing them would discard a conclusive finding for having too little data,
+which is exactly backwards.
+
+Below **10 completed pairs**:
+
+* **S1, S2, S3 and S4a ARE evaluated and may fire**, on absolute counts, exactly
+  as §4.4's table says. A monotone count does not become less conclusive because
+  fewer games were played.
+* **S4b is not evaluated** — as at any other size.
+* What is suppressed is **descriptive interpretation beyond the completed
+  counts**: no characterisation of diversity, no statement that the openings
+  "look adequate", no rate, no comparison, and no reading of the outcome
+  distribution. The report is the completed counts, the partial timings, whichever
+  rules fired, and the sentence that the run ran out of time.
+* **A rule that does not fire is reported as `not fired — undetermined`**, never
+  as clear. That is true at every size (§4.4) and it is the whole content of the
+  floor: too few pairs cannot make a threshold *clear*, but they can still make
+  one *crossed*.
 
 🔴 **Per-game elapsed MUST be recorded by the pilot's runner.** Attempt 3's
 records make §4.1 unanswerable after the fact, and that gap is why this section
@@ -167,7 +189,8 @@ Per H3 §7.2, plus the timing this pilot exists to gather:
 
 `pairs_nominal` (20) · `pairs_scored` · `pairs_informative` ·
 **`pairs_distinct`** · `duplicate_pairs` · `partial_overlap_pairs` ·
-`within_pair_identical` · `capped_games` · per-game elapsed
+`partial_overlap_relations` · `within_pair_identical` · `capped_games` ·
+per-game elapsed
 **min / median / p90 / max** · total elapsed · the **outcome distribution over
 pairs** · and, on a truncated run, the completed-pair count beside
 `pairs_nominal`, with **every count and timing labelled PARTIAL** and no timing
@@ -187,6 +210,28 @@ may be declared clear**.
 | **S3** | `within_pair_identical > 2` of 20 (**> 10 %**) | **CLOSE H3.** The pairing itself carries no information often enough to matter. Below the threshold, each affected pair is **excluded whole** (§6.1) and the count reported — it is not a closure. |
 | **S4a** | **total elapsed > 3,600 s** for the 40 games | **NO full study is scheduled** on this runtime without re-scoping. Double the ≈1,700 s that attempt 3's observed mean suggests for 40 games — the one timing figure its records do support. |
 | **S4b** | **p90 per-game > 4 × median per-game** | **NO full study is scheduled** without re-scoping. A heavy tail, not a slow mean, is what exhausted H2's deadline: 46 cap games clustered in one cell consumed it while the median game stayed fast. Stated as a SHAPE ratio because the pilot measures its own median; no absolute per-game threshold is available, the earlier 180 s figure having been withdrawn (§4.1). |
+
+### 5.1 `partial_overlap_pairs` — defined, because two readings differ
+
+Two pairs *overlap* when they share a game transcript digest. Two different things
+can be counted, and they are not equal: with pairs A, B, C where A shares a game
+with B and A shares a different game with C, **three pairs are involved** but
+there are **two relationships**. Both are reported, under distinct names:
+
+| field | definition |
+|---|---|
+| **`partial_overlap_pairs`** | the number of pairs **in `pairs_distinct`** that share a game digest with **at least one other** pair in `pairs_distinct`. **Counts OBSERVATIONS affected** — the headline, because it is what bears on the independence model. |
+| **`partial_overlap_relations`** | the number of **unordered {pair, pair} couples** in `pairs_distinct` sharing a game digest. Counts RELATIONSHIPS, i.e. the degree of entanglement. |
+
+**Computed among `pairs_distinct`** — after incomplete and within-pair-identical
+pairs are excluded and duplicates collapsed (§6.1) — so an already-collapsed
+duplicate cannot masquerade as an overlap.
+
+**Each remaining overlap shares exactly ONE game**, and that is a consequence, not
+an assumption: two pairs sharing *both* games would have equal pair keys and would
+already have collapsed as duplicates; and because the transcript digest carries
+**movers** (H3 §7.1), a game our incumbent played as red can never share a digest
+with one it played as black, so the red slot can only collide with a red slot.
 
 ### 6.1 Within-pair identity: exclude the pair, do not close on one
 

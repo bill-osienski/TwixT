@@ -166,18 +166,24 @@ paired score, which is the whole unit of evidence.
   surviving pair keeps **both** its games and its paired score intact.
 * An **incomplete pair** (one game missing, VOID or unscoreable) is **excluded
   whole** and reported. Never half-counted.
-* **Partial overlap** — two pairs sharing exactly one game digest — is **NOT**
+* **Partial overlap** — two distinct pairs sharing a game digest — is **NOT**
   deduplicated: they remain distinct observations. It **is reported**, because
   they are not fully independent and the interval's model should be read knowing
-  that.
+  that. **Two counts, because they differ:** `partial_overlap_pairs` is the number
+  of pairs involved in at least one overlap (observations affected, the headline);
+  `partial_overlap_relations` is the number of unordered pair-to-pair couples that
+  overlap (relationships). Computed among `pairs_distinct`, where each overlap
+  shares exactly one game — sharing both would have collapsed as a duplicate, and
+  the digest carries movers, so a red-slot game cannot equal a black-slot one.
 * **Within-pair identity** — a pair whose two games have equal digests — is
   **flagged**: reversing the colours changed nothing observable, which is a
   degeneracy the pair-level key cannot otherwise show.
 
 ### 7.2 What is reported, always
 
-`pairs_nominal` · `pairs_scored` · `pairs_distinct` · `duplicate_pairs` ·
-`partial_overlap_pairs` · `within_pair_identical` · `capped_games`.
+`pairs_nominal` · `pairs_scored` · `pairs_informative` · `pairs_distinct` ·
+`duplicate_pairs` · `partial_overlap_pairs` · `partial_overlap_relations` ·
+`within_pair_identical` · `capped_games`.
 
 **Effective n is `pairs_distinct`**, and it is reported **beside** the nominal
 count every time. A gap between them is a finding, not a footnote.
