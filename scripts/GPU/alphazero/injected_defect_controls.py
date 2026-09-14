@@ -3998,4 +3998,48 @@ EXPECTED_REASONS = {
     'the spent third schedule is schedulable because availability is never checked':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.e4_screen_reference."
         "E4ReferenceError'>",
+    # ── 2026-09-14: the H3 pilot -- gate, seedless barrier, containment,
+    #    create-only outputs, the pinned schedule, generation, seeds, analysis
+    'the H3 pilot gate is opened':
+        'assert True is False',
+    'the H3 pilot names a seed block that was never reserved':
+        'assert (777000000, 777000040) is None',
+    'the pilot entry no longer reads the gate first':
+        "AssertionError: Expr(value=Call(func=Name(id='check_seed_registration', ctx=Load())))",
+    "the pilot seam trusts the entry's gate check":
+        "scripts.GPU.alphazero.h3_pilot_runner.H3PilotContainmentError: refusing to run the H3 pilot's production seam from a test process: scripts.GPU.alphazero.t1j_toolchain.verified_paths, scripts.GPU.alphazero.d1_probe._default_compile, scripts.GPU.alphazero.e4_screen_command._default_load_evaluator, scripts.GPU.alphazero.e4_screen_runner.play_task are still the REAL production function. Nothing was resolved, compiled, loaded, drawn or played. A test that reaches this point has removed an authorization check: on 2026-09-12 exactly that happened and 383 real games were played before it was killed.",
+    "the pilot's containment boundary is removed":
+        'scripts.GPU.alphazero.h3_pilot_runner.H3PilotRunError: the production seam was given no STARTED deadline; compilation checks a clock with no origin and would refuse after creating the class directory',
+    'the pilot checks the gate once instead of every game':
+        'AssertionError: 1',
+    "the pilot's create-only precheck follows symlinks":
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_pilot_runner.H3PilotRunError'>",
+    'the pilot admits two outputs that are the same file':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_pilot_runner.H3PilotRunError'>",
+    'the pilot schedule digest is not compared with the pin':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_pilot_runner.H3PilotRunError'>",
+    "the pilot's tasks carry the wrong anchor for the incumbent's colour":
+        "AssertionError: h3pilot-000-p00-inc_red: the anchor and the incumbent's colour disagree",
+    "the pilot's openings are no longer deduplicated":
+        "Failed: DID NOT RAISE <class 'RuntimeError'>",
+    "the pilot reuses H1/H2's openings":
+        "Failed: DID NOT RAISE <class 'RuntimeError'>",
+    'terminal positions are admitted as pilot openings':
+        "Failed: DID NOT RAISE <class 'RuntimeError'>",
+    'the opening generator ignores its seed, so it is not reproducible':
+        "AssertionError: assert ['6748e10a266...0c20629', ...] == ['f943b6e8894...874cee8', ...]",
+    'the pilot coerces its seed endpoints again':
+        "TypeError: unsupported operand type(s) for -: 'int' and 'str'",
+    'a spent block is schedulable because availability is never checked':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_pilot_rules.H3PilotError'>",
+    'a duplicated task is counted twice instead of refused':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_pilot_analysis.H3AnalysisError'>",
+    'an unexpected pair_id is admitted':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_pilot_analysis.H3AnalysisError'>",
+    'duplicate pairs are counted as fresh evidence':
+        'assert 0 == 1',
+    'a NaN duration reaches the quantiles':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_pilot_analysis.H3AnalysisError'>",
+    'a partial run declares its stop rules CLEAR':
+        "AssertionError: assert 'CLEAR' == 'NOT FIRED -- UNDETERMINED'",
 }
