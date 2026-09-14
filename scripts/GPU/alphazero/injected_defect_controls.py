@@ -4324,6 +4324,19 @@ EXPECTED_REASONS = {
     # `validate_schedule_executable`, which does `int(task["seed"])` on None. The
     # test names an `H3PilotRunError` refusal and gets a TypeError instead, which
     # is precisely the difference between a refusal and an accident.
+    # ── 2026-09-14: the INCUMBENT'S IDENTITY. Three share a DID NOT RAISE, and
+    # that is not a weakness: `classify` binds a reason to the NAMED node, so each
+    # is the absence of a refusal in a different test.
+    'the pilot never checks the recorded identity':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_pilot_runner.H3PilotRunError'>",
+    'the identity is checked only when one is SUPPLIED':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_pilot_runner.H3PilotRunError'>",
+    'the durable header records no identity':
+        "KeyError: 'identity'",
+    'the seam builds its OWN argmax config again':
+        "AssertionError: selection_mode: the builder got 'opening_temperature' but the header would record 'argmax'",
+    'the config object is never compared with the qualified path':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_pilot_runner.H3PilotRunError'>",
     'a seedless schedule is admitted, so it bypasses the registry':
         "TypeError: int() argument must be a string, a bytes-like object or a real number, not 'NoneType'",
 }
