@@ -1,0 +1,64 @@
+REGISTRIES AS THEY STAND, PLUS THE PILOT'S PAPER RESERVATION
+==============================================================
+masks (imported): ['0x3c3c3c', '0x5a5a5a', '0xa5a5a5', '0xc3c3c3']
+prior seeds: 6357  {'ACCOUNTED': 6208, 'EXPOSED': 1710, 'RETIRED': 3200, 'TEST_ONLY': 100, 'CONSUMED_SEEDS': 1, 'H3_PAPER': 40}
+prior values incl. derivations: 31785
+widest registered interval: 800 seeds -> enumeration is EXHAUSTIVE
+
+H3 PILOT CANDIDATE (202624000, 202624040)  n=40
+  direct overlap      : {'ACCOUNTED': 0, 'EXPOSED': 0, 'RETIRED': 0, 'TEST_ONLY': 0, 'CONSUMED_SEEDS': 0, 'H3_PAPER': 0}
+  stream collisions   : 0
+  own derivations     : 200 (injective=True)
+  CLEAN               : True
+
+NEGATIVE CONTROLS -- a check that never rejects proves nothing
+--------------------------------------------------------------
+  REJECTED    the SPENT H1 attempt-1 block (accounted/exposed/retired)
+                direct={'ACCOUNTED': 224, 'EXPOSED': 60, 'RETIRED': 224} streams=1120
+  REJECTED    the SPENT H1 attempt-2 block (accounted/exposed/retired)
+                direct={'ACCOUNTED': 224, 'EXPOSED': 224, 'RETIRED': 224} streams=1120
+  REJECTED    D1's own RETIRED block, consumed by the 2026-08-28 VOID
+                direct={'ACCOUNTED': 227, 'RETIRED': 227} streams=1135
+  REJECTED    D1's SPENT §14 block, drawn and retired whole 2026-09-08
+                direct={'ACCOUNTED': 221, 'EXPOSED': 221, 'RETIRED': 221} streams=1105
+  REJECTED    H2 ATTEMPT 1's SPENT block, retired whole after its VOID at task 0
+                direct={'ACCOUNTED': 736, 'RETIRED': 736} streams=3680
+  REJECTED    H2 ATTEMPT 2's SPENT block, 383 EXPOSED by the 2026-09-12 incident
+                direct={'ACCOUNTED': 736, 'EXPOSED': 383, 'RETIRED': 736} streams=3680
+  REJECTED    H2 ATTEMPT 3's SPENT block, 693 EXPOSED, retired whole on the deadline VOID
+                direct={'ACCOUNTED': 736, 'EXPOSED': 693, 'RETIRED': 736} streams=3680
+  REJECTED    straddles attempt 3's END by exactly one seed
+                direct={'ACCOUNTED': 1, 'RETIRED': 1} streams=5
+  REJECTED    straddles attempt 3's EXPOSED prefix by exactly one seed
+                direct={'ACCOUNTED': 40, 'EXPOSED': 1, 'RETIRED': 40} streams=200
+  REJECTED    straddles attempt 1's END by exactly one seed
+                direct={'ACCOUNTED': 1, 'RETIRED': 1} streams=5
+  REJECTED    straddles D1's spent §14 block's END by exactly one seed
+                direct={'ACCOUNTED': 1, 'EXPOSED': 1, 'RETIRED': 1} streams=5
+  REJECTED    straddles the spent H1 block's END by exactly one seed
+                direct={'ACCOUNTED': 1, 'RETIRED': 1} streams=5
+  REJECTED    L0's spent/retired block
+                direct={'ACCOUNTED': 64, 'EXPOSED': 64, 'RETIRED': 64} streams=320
+  REJECTED    the retired D1 VOID block
+                direct={'ACCOUNTED': 224, 'RETIRED': 224} streams=1120
+  REJECTED    the TEST_ONLY band
+                direct={'TEST_ONLY': 10} streams=50
+  REJECTED    overlaps the CANDIDATE wholly but is a DIFFERENT interval (41 seeds)
+                direct={'H3_PAPER': 40} streams=200
+  REJECTED    straddles the candidate by EXACTLY ONE seed
+                direct={'H3_PAPER': 1} streams=5
+  REJECTED    derived-stream collision at 204449028, NO direct overlap
+                direct={} streams=2
+
+POLICY: a load-bearing GAP from every prior boundary of at least 40 seeds --
+the CANDIDATE'S OWN SIZE (40 here), so the gap can never be smaller than the
+block it protects. The NEAREST ACTUAL DISTANCE is reported below, so a
+narrow choice could not hide behind a small threshold.
+--------------------------------------------------------------
+  candidate (202624000, 202624040): 2 boundary value(s) dropped as ITS OWN paper reservation; nearest OTHER boundary at distance 1264 -> gap policy PASS
+  REJECTED    the CANDIDATE ITSELF, WITHOUT the identity exclusion (v5's artefact) (202624000, 202624040)
+  REJECTED    starts exactly where H2 attempt 3's spent block ends (202622736, 202622776)
+  REJECTED    ends exactly where the CANDIDATE starts (202623960, 202624000)
+  REJECTED    one seed after attempt 3's spent block ends (202622737, 202622777)
+
+VERDICT: candidate (202624000, 202624040) collision-clean = True; gap policy = True; failed collision controls = 0; failed policy controls = 0

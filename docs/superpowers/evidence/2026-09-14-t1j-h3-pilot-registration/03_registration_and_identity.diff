@@ -1,0 +1,217 @@
+diff --git a/scripts/GPU/alphazero/e4_screen_reference.py b/scripts/GPU/alphazero/e4_screen_reference.py
+index 1d26183..4270172 100644
+--- a/scripts/GPU/alphazero/e4_screen_reference.py
++++ b/scripts/GPU/alphazero/e4_screen_reference.py
+@@ -149,6 +149,52 @@ ACCOUNTED_SEED_INTERVALS = (
+                                      #
+                                      # Accounted, NOT exposed and NOT retired: a
+                                      # reservation is not a draw.
++    (202624000, 202624040),          # H3 PILOT. 40 seeds, one per game: 20
++                                     # independently generated openings, each
++                                     # played BOTH WAYS, bound POSITIONALLY
++                                     # (row i = 202624000 + i).
++                                     #
++                                     # REGISTERED 2026-09-14 as the seed-PREPARATION
++                                     # step and NOT an execution authorization. At
++                                     # the moment of this edit
++                                     # `H3_PILOT_EXECUTION_AUTHORIZED` is False and
++                                     # stays False, and no pilot run is authorized.
++                                     # Two separate reviews; this is the first.
++                                     #
++                                     # WHY A PILOT AT ALL. H2 is CLOSED: its
++                                     # attempt 3 VOIDed on the deadline, and the
++                                     # decisive fact was not the deadline -- 14 of
++                                     # its 15 COMPLETE cells held ONE distinct game
++                                     # in 46 repetitions, so 736 nominal games
++                                     # carried ~61 distinct ones. The pilot tests
++                                     # whether diversity from independently
++                                     # generated POSITIONS works where repetition
++                                     # did not, and it is deliberately small enough
++                                     # that a pathological result costs two hours.
++                                     #
++                                     # RE-PROVED (collision proof v10) against the
++                                     # registries as they stand, ALL THREE spent H2
++                                     # blocks included: 6,357 prior seeds across six
++                                     # categories, 31,785 prior values with
++                                     # derivations, 0 direct overlaps, 0 derived-
++                                     # stream collisions, own derivations injective
++                                     # (200 = 40 x 5). Exhaustive, not sampled.
++                                     # Seventeen collision controls and four gap-
++                                     # policy controls all rejected.
++                                     #
++                                     # 🔑 Excluded from the prior set BY IDENTITY, in
++                                     # the GAP check as well as the overlap check.
++                                     # The gap floor is the candidate's OWN SIZE,
++                                     # which is 40 here -- smaller than any earlier
++                                     # round's because every earlier candidate was
++                                     # larger. The policy is unchanged and the
++                                     # NEAREST ACTUAL BOUNDARY IS 1,264 away, with
++                                     # nothing above; the distance is reported so a
++                                     # narrow choice could not hide behind a small
++                                     # threshold.
++                                     #
++                                     # Accounted, NOT exposed and NOT retired: a
++                                     # reservation is not a draw.
+     (202622000, 202622736),          # H2 ATTEMPT 3 -- the match H2 has still not
+                                      # had. 736 seeds, one per game, bound
+                                      # POSITIONALLY (row i = 202622000 + i).
+diff --git a/scripts/GPU/alphazero/h3_pilot_rules.py b/scripts/GPU/alphazero/h3_pilot_rules.py
+index d365aa9..69a6adc 100644
+--- a/scripts/GPU/alphazero/h3_pilot_rules.py
++++ b/scripts/GPU/alphazero/h3_pilot_rules.py
+@@ -179,10 +179,18 @@ def build_tasks(openings: Sequence[Dict[str, Any]],
+     """
+     from . import e4_screen_reference as REF
+     from . import h2_match_rules as H2R
++    from . import l0_match_plan as L0PLAN
+ 
+     if len(openings) != N_OPENINGS:
+         raise H3PilotError(f"{len(openings)} openings, expected {N_OPENINGS}")
+ 
++    # 🔑 THE IDENTITY THE QUALIFIED CONSTRUCTION READS OFF A TASK, from the
++    # sha256-VERIFIED source plan L0, H1 and H2 all use. Not retyped, and
++    # deliberately NOT taken from `REFERENCE_CHECKPOINTS` -- that registry is what
++    # `validate_task_structure` compares the task against, so sourcing it there
++    # would leave the check comparing a value with itself.
++    ref = L0PLAN.load_source_plan()["reference"]
++
+     seeds: List[Optional[int]] = [None] * N_GAMES
+     if seed_interval is not None:
+         # 🔴 TYPE-STRICT, not coerced. `int()` accepted "777000000" and
+@@ -213,7 +221,7 @@ def build_tasks(openings: Sequence[Dict[str, Any]],
+     for op in openings:
+         for colour in ("red", "black"):
+             i = len(out)
+-            out.append({
++            t = {
+                 "task_id": f"h3pilot-{i:03d}-p{op['index']:02d}-inc_{colour}",
+                 "index": i,
+                 "pair_id": op["index"],
+@@ -223,6 +231,8 @@ def build_tasks(openings: Sequence[Dict[str, Any]],
+                 # colour as the opposite of the anchor's -- so the anchor is T1j's.
+                 "opening": opening_name(op["index"]),
+                 "anchor_colour": "black" if colour == "red" else "red",
++                "reference": ref["name"],
++                "reference_sha1": ref["sha1"],
+                 "opening_digest": op["digest"],
+                 "opening_moves": [list(m) for m in op["moves"]],
+                 "opening_plies": OPENING_PLIES,
+@@ -233,7 +243,14 @@ def build_tasks(openings: Sequence[Dict[str, Any]],
+                 "t1j_mdPly": H2R.T1J_MDPLY,
+                 "t1j_mdFixedPly": True,
+                 "ply_cap": H2R.PLY_CAP,
+-            })
++            }
++            # 🔴 READ, NOT DERIVED, by the two callers that matter:
++            # `make_agent_factory` routes on `task["reference_colour"]` by
++            # subscript, and `_enforce_evaluator` refuses a task that names none.
++            # Its absence killed every game at ply 6 -- which no seam test could
++            # see, because each supplied its own agent factory.
++            t["reference_colour"] = REF.reference_colour(t)
++            out.append(t)
+     if len(out) != N_GAMES:
+         raise H3PilotError(f"built {len(out)} tasks, expected {N_GAMES}")
+     return out
+@@ -251,19 +268,23 @@ def task_digest(tasks: Sequence[Dict[str, Any]]) -> str:
+ 
+ #: THE UNSEEDED DESIGN IDENTITY, recomputed from the BUILT schedule by a test.
+ #: This is the schedule as the card fixes it, with `seed: None` on every task.
+-TASK_DIGEST = "17516342892f0be35d9c282c4cbea2bf792449a02084d35a2904c0256110dd43"
++TASK_DIGEST = "b972ce46beb637d45a56fe3b002eb88932652fc5134b5db3dbbf6702de192337"
+ 
+-#: 🔴 THE SEEDED PIN, AND IT CANNOT EXIST YET. `task_digest` covers EVERY field,
+-#: so assigning 40 seeds changes it: the unseeded pin above does NOT describe the
+-#: schedule that would actually run, and comparing a seeded schedule against it
+-#: would refuse the real thing at execution time.
++#: 🔴 THE SEEDED PIN. `task_digest` covers EVERY field, so assigning 40 seeds
++#: changes it: the unseeded pin above does NOT describe the schedule that would
++#: actually run, and comparing a seeded schedule against it would refuse the real
++#: thing at execution time.
+ #:
+-#: It is None because no block is reserved. At seed registration it must be
+-#: RECOMPUTED FROM THE SEEDED SCHEDULE and pinned here, and `check_schedule`
+-#: refuses a seeded schedule until it is -- so this cannot be forgotten, which is
+-#: the only reason it is a constant rather than a note. H2 re-pinned BOTH its
+-#: digests for every attempt, for exactly this reason.
+-SEEDED_TASK_DIGEST: Optional[str] = None
++#: PINNED 2026-09-14 at seed registration on block [202624000, 202624040), then
++#: RE-PINNED THE SAME DAY -- both digests above -- when the tasks gained the
++#: `reference`, `reference_sha1` and `reference_colour` fields the qualified
++#: construction path reads. A full-field digest moves whenever the task shape
++#: does, and a pin carried over from a schedule with a different shape would name
++#: something that no longer exists. Recomputed from the 40 SEEDED tasks, never
++#: derived from the unseeded pin. A test rebuilds the seeded schedule and
++#: recomputes both, so a pin that drifts from the schedule it names fails loudly.
++SEEDED_TASK_DIGEST: Optional[str] = (
++    "aa527cc9a1a7b1e657911171c63f19fc006909dd64518bd96de3ce4ddfabfba9")
+ 
+ 
+ def expected_task_digest(tasks: Sequence[Dict[str, Any]]) -> str:
+diff --git a/scripts/GPU/alphazero/h3_pilot_runner.py b/scripts/GPU/alphazero/h3_pilot_runner.py
+index 9e58664..3684342 100644
+--- a/scripts/GPU/alphazero/h3_pilot_runner.py
++++ b/scripts/GPU/alphazero/h3_pilot_runner.py
+@@ -59,11 +59,17 @@ def check_gate() -> None:
+ 
+ 
+ # ═══════════════════ BARRIER 2: a seed block that does not exist ═══════════
+-#: 🔴 DELIBERATELY None. The card reserves nothing, and a runner that names a block
+-#: before one is reserved has spent it on paper. Setting this is a separate
+-#: authorization that must carry its own collision re-proof against the registries
+-#: as they stand.
+-PILOT_SEED_BLOCK: Optional[tuple] = None
++#: THE PILOT'S 40 SEEDS, one per game, bound POSITIONALLY (row i = 202624000 + i).
++#:
++#: RESERVED ON PAPER 2026-09-14 and registered as ACCOUNTED in the same reviewed
++#: step. Re-proved by collision proof v10 against the registries AS THEY STAND --
++#: every spent block included, this reservation excluded BY IDENTITY, and every
++#: derived stream enumerated rather than sampled.
++#:
++#: ⚠ REGISTRATION IS BOOKKEEPING, NOT PERMISSION. `H3_PILOT_EXECUTION_AUTHORIZED`
++#: is False above and stays False; the gate is a separate review. Accounting a
++#: block does not draw from it, and no seed here has been drawn.
++PILOT_SEED_BLOCK: Optional[tuple] = (202624000, 202624040)
+ 
+ 
+ def check_seed_registration() -> None:
+@@ -130,6 +136,28 @@ def check_schedule(tasks: Sequence[Mapping[str, Any]]) -> Dict[str, Any]:
+             f"the schedule digest is {got} but the frozen pilot schedule is "
+             f"{want}. A different schedule is a different experiment wearing this "
+             f"one's name.")
++    # 🔑 THE PIN IS NOT THE WHOLE ANSWER. It fixes the schedule forever, but the
++    # REGISTRY moves: these seeds become EXPOSED and RETIRED the moment the pilot
++    # draws from them, and re-running the identical frozen schedule would match
++    # its digest perfectly. H2's `check_schedule` ends with this call; H3's did
++    # not, which left the digest as the only thing between a spent block and a
++    # second run of it.
++    # 🔴 AND A SEEDLESS SCHEDULE IS REFUSED RATHER THAN SKIPPED. The unseeded pin
++    # is a DESIGN IDENTITY, not a runnable plan, and it still matches its own
++    # digest -- so passing the registry check "only when seeds are present" would
++    # make a seedless schedule the way around the registry. It is exactly the
++    # default-that-switches-the-check-off shape.
++    seedless = [t["task_id"] for t in tasks if t.get("seed") is None]
++    if seedless:
++        raise H3PilotRunError(
++            f"{len(seedless)} of {len(tasks)} tasks carry no seed (first "
++            f"{seedless[0]}). The unseeded schedule is the design identity, not a "
++            f"runnable plan; nothing may execute against it.")
++    from . import e4_screen_reference as REF
++    try:
++        REF.validate_schedule_executable(list(tasks))
++    except REF.E4ReferenceError as e:
++        raise H3PilotRunError(f"the registry refuses this schedule: {e}") from None
+     return {"n_tasks": len(tasks), "task_digest": got,
+             "pairs": len({t["pair_id"] for t in tasks})}
+ 
+@@ -300,8 +328,9 @@ def run_pilot(*, results_path: str, trace_path: str,
+             f"the generated opening set does not match the frozen pin "
+             f"{RULES.OPENING_SET_DIGEST}; the positions are not the ones the card "
+             f"fixed and the pilot would answer a different question.")
+-    if PILOT_SEED_BLOCK is None:
+-        check_seed_registration()                  # refuses: no block is reserved
++    # (a conditional `check_seed_registration()` stood here and became UNREACHABLE
++    #  once a block was registered: `_run_pilot_unguarded` calls it unconditionally
++    #  anyway. A branch no test can reach is a branch to delete.)
+     tasks = RULES.build_tasks(openings, seed_interval=PILOT_SEED_BLOCK)
+     deadline = D1.Deadline(RULES.RUN_DEADLINE_S)
+     deadline.start()                    # ONE origin, before anything effectful

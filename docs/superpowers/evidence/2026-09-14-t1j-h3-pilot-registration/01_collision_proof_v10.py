@@ -1,0 +1,230 @@
+"""H3 PILOT collision proof for a FRESH 40-seed interval against the CURRENT registries. READ-ONLY.
+
+v10 (2026-09-14, H3 PILOT pre-registration re-proof): the pilot needs 40 seeds, one per game, for a
+20-pair schedule. EVERY H2 block is now SPENT -- attempt 3 was ACCOUNTED 736 / EXPOSED 693 / RETIRED
+WHOLE when its match VOIDed on the deadline -- so all three are CONTROLS here, reachable through the
+registries they sit in. The candidate is the pilot's own paper reservation and is the ONLY paper
+block left, excluded BY IDENTITY.
+⚠ THE GAP FLOOR IS THE CANDIDATE'S OWN SIZE, which for 40 seeds is 40 -- a smaller number than any
+earlier round used, because every earlier candidate was larger. The policy is unchanged and the
+chosen interval clears it by a wide margin; the actual nearest distance is reported rather than the
+floor, so a narrow choice could not hide behind a small threshold.
+v8 (2026-09-11, H2 RETRY pre-registration re-proof; the gap floor is now the candidate's own size): run against the registries AS THEY STAND immediately before
+registering the candidate; the candidate is in NO registry, so nothing is excluded by identity.
+v3b (2026-09-07): v3 listed "starts exactly where the spent block ends" as a COLLISION control and it was
+ACCEPTED -- correctly, by arithmetic: such an interval overlaps nothing. The point of the gap is POLICY
+(an off-by-one at the boundary must be DISTINGUISHABLE from a valid reservation), so it is checked below
+as a policy rule with its own controls, not as a collision. The v3 run is kept as the record of that.
+v3 (2026-09-07): the candidate is registered NOWHERE, so nothing is excluded by identity; the spent
+H1 block [202616000, 202616224) is now in ACCOUNTED / EXPOSED / RETIRED and must reject as a control.
+
+Nothing is drawn, nothing is registered, no generator is built: XOR and set
+arithmetic only. Registries and the four masks are IMPORTED, never retyped, so
+the proof cannot drift from what the code enforces.
+
+🔴 THE TERM A REGISTRY-ONLY ENUMERATION CANNOT SEE. `d1_selection.SEED_INTERVAL`
+is D1's §14 reservation and is in NO registry BY DESIGN -- reserved-on-paper is
+still TAKEN. It is added explicitly. Without it every registry check would call
+an overlapping block clean.
+"""
+from scripts.GPU.alphazero.e4_screen_reference import (
+    ACCOUNTED_SEED_INTERVALS, EXPOSED_SEED_INTERVALS,
+    TEST_ONLY_SEED_INTERVALS, RETIRED_SEED_INTERVALS)
+from scripts.GPU.alphazero.twixtbot_g3_schedule import CONSUMED_SEEDS
+from scripts.GPU.alphazero.twixtbot_g3_reference import SeededReferenceAgent
+from scripts.GPU.alphazero.d1_selection import SEED_INTERVAL as D1_PAPER
+from scripts.GPU.alphazero.h1_viability_rules import H1_ATTEMPT1_SEED_BLOCK as H1_ATTEMPT1_BLOCK
+from scripts.GPU.alphazero.h1_viability_rules import H1_SEED_BLOCK as H1_ATTEMPT2_BLOCK
+from scripts.GPU.alphazero.h2_match_rules import H2_SEED_BLOCK as H2_ATTEMPT3
+from scripts.GPU.alphazero.h2_match_rules import H2_ATTEMPT1_SEED_BLOCK as H2_ATTEMPT1
+from scripts.GPU.alphazero.h2_match_rules import H2_ATTEMPT2_SEED_BLOCK as H2_ATTEMPT2
+from scripts.GPU.alphazero.h3_pilot_runner import PILOT_SEED_BLOCK as H3_PAPER
+# v7 (H2 registration re-proof): the CANDIDATE is H2's OWN paper reservation, excluded from the paper
+# category BY IDENTITY -- otherwise it collides with itself 736 times. Every earlier block is now
+# SPENT and serves as a control, D1's included: its 221 seeds were drawn and retired on 2026-09-08,
+# so it is no longer a paper reservation and belongs in the registries it now sits in.
+assert H1_ATTEMPT1_BLOCK == (202616000, 202616224), H1_ATTEMPT1_BLOCK
+assert H1_ATTEMPT2_BLOCK == (202617000, 202617224), H1_ATTEMPT2_BLOCK
+assert D1_PAPER == (202615000, 202615221), D1_PAPER
+# v10 (H3 PILOT): all three H2 blocks are SPENT and all three are controls below.
+assert H2_ATTEMPT1 == (202618000, 202618736), H2_ATTEMPT1
+assert H2_ATTEMPT2 == (202620000, 202620736), H2_ATTEMPT2
+assert H2_ATTEMPT3 == (202622000, 202622736), H2_ATTEMPT3
+CANDIDATE = H3_PAPER
+assert CANDIDATE == (202624000, 202624040), CANDIDATE   # the interval being registered
+assert CANDIDATE[1] - CANDIDATE[0] == 40, "one seed per game, 20 openings x 2 colours"
+
+MASKS = sorted({*SeededReferenceAgent.SEARCH_MASK.values(),
+                *SeededReferenceAgent.READOUT_MASK.values()})
+assert len(MASKS) == 4, MASKS
+
+CATS = {
+    "ACCOUNTED": {s for lo, hi in ACCOUNTED_SEED_INTERVALS for s in range(lo, hi)},
+    "EXPOSED": {s for lo, hi in EXPOSED_SEED_INTERVALS for s in range(lo, hi)},
+    "RETIRED": {s for lo, hi in RETIRED_SEED_INTERVALS for s in range(lo, hi)},
+    "TEST_ONLY": {s for lo, hi in TEST_ONLY_SEED_INTERVALS for s in range(lo, hi)},
+    "CONSUMED_SEEDS": set(CONSUMED_SEEDS),
+    # 🔑 D1's block is NO LONGER PAPER: it was registered, drawn and retired whole on
+    # 2026-09-08, so it is already inside ACCOUNTED/EXPOSED/RETIRED above. Listing it
+    # here as well would be double-counting, not extra safety -- but it MUST still be
+    # reachable as a control, which it is, through those registries.
+    "H3_PAPER": set(range(*H3_PAPER)),             # in NO registry, still TAKEN
+}
+PRIOR = set().union(*CATS.values())
+
+
+def derivations(seeds):
+    """seed + one value per mask, both colours. XOR ONLY -- nothing is built."""
+    return {v for s in seeds for v in (s, *(s ^ m for m in MASKS))}
+
+
+PRIOR_VALUES = derivations(PRIOR)
+WIDEST = max(hi - lo for t in (ACCOUNTED_SEED_INTERVALS, EXPOSED_SEED_INTERVALS,
+                               RETIRED_SEED_INTERVALS, TEST_ONLY_SEED_INTERVALS)
+             for lo, hi in t)
+
+
+def check(block, *, own_registration=None):
+    """Is `block` disjoint from every OTHER reservation?
+
+    ⚠ `own_registration` NAMES THE INTERVAL THIS BLOCK IS ITSELF REGISTERED AS,
+    and is excluded BY IDENTITY. Once H1 was registered, re-running this found
+    H1's own interval in ACCOUNTED and reported a 224-seed overlap -- with
+    itself -- and a verdict of NOT CLEAN. That was an artefact of WHEN it ran.
+
+    🔴 THE FIRST FIX WAS WRONG AND THE CONTROLS SAID SO. Subtracting the block's
+    SEEDS from the prior set excused any control that EQUALS an existing
+    reservation: D1's paper block stopped colliding with D1's paper block, and
+    all six negative controls went green at once. Excluding one named INTERVAL is
+    the narrow thing that was meant; subtracting a seed set is a different and
+    much larger claim.
+    """
+    ours = set(range(*block))
+    cats = dict(CATS)
+    if own_registration is not None:
+        drop = set(range(*own_registration))
+        cats = {k: (v - drop if set(v) >= drop else v) for k, v in CATS.items()}
+        # only the categories that hold EXACTLY this interval lose it; anything
+        # else overlapping it still counts, because that would be a real clash.
+    prior = set().union(*cats.values())
+    prior_values = derivations(prior)
+    vals = derivations(ours)
+    n = len(ours)
+    return {
+        "block": tuple(block), "n": n,
+        "direct": {k: len(ours & v) for k, v in cats.items()},
+        "stream_collisions": len(vals & prior_values),
+        "own_values": len(vals), "injective": len(vals) == n * 5,
+        "clean": not (ours & prior) and not (vals & prior_values) and len(vals) == n * 5,
+    }
+
+
+if __name__ == "__main__":
+    print("REGISTRIES AS THEY STAND, PLUS THE PILOT'S PAPER RESERVATION")
+    print("=" * 62)
+    print(f"masks (imported): {[hex(m) for m in MASKS]}")
+    print(f"prior seeds: {len(PRIOR)}  { {k: len(v) for k, v in CATS.items()} }")
+    print(f"prior values incl. derivations: {len(PRIOR_VALUES)}")
+    print(f"widest registered interval: {WIDEST} seeds -> enumeration is EXHAUSTIVE")
+    print()
+    # 🔑 EXCLUDED BY IDENTITY, not by subtracting its seeds: the candidate IS the D1_PAPER_S14
+    # category, and subtracting a seed SET would excuse any control equal to an existing
+    # reservation (the 2026-09-04 correction). Only the category holding exactly this interval
+    # loses it; anything else overlapping it still counts.
+    r = check(CANDIDATE, own_registration=CANDIDATE)
+    print(f"H3 PILOT CANDIDATE {r['block']}  n={r['n']}")
+    print(f"  direct overlap      : {r['direct']}")
+    print(f"  stream collisions   : {r['stream_collisions']}")
+    print(f"  own derivations     : {r['own_values']} (injective={r['injective']})")
+    print(f"  CLEAN               : {r['clean']}")
+    print()
+    print("NEGATIVE CONTROLS -- a check that never rejects proves nothing")
+    print("-" * 62)
+    controls = [
+        ("the SPENT H1 attempt-1 block (accounted/exposed/retired)", H1_ATTEMPT1_BLOCK),
+        ("the SPENT H1 attempt-2 block (accounted/exposed/retired)", H1_ATTEMPT2_BLOCK),
+        ("D1's own RETIRED block, consumed by the 2026-08-28 VOID", (202614000, 202614227)),
+        ("D1's SPENT §14 block, drawn and retired whole 2026-09-08", (202615000, 202615221)),
+        ("H2 ATTEMPT 1's SPENT block, retired whole after its VOID at task 0", H2_ATTEMPT1),
+        ("H2 ATTEMPT 2's SPENT block, 383 EXPOSED by the 2026-09-12 incident", H2_ATTEMPT2),
+        ("H2 ATTEMPT 3's SPENT block, 693 EXPOSED, retired whole on the deadline VOID", H2_ATTEMPT3),
+        ("straddles attempt 3's END by exactly one seed", (202622735, 202622775)),
+        ("straddles attempt 3's EXPOSED prefix by exactly one seed", (202622692, 202622732)),
+        ("straddles attempt 1's END by exactly one seed", (202618735, 202619471)),
+        # (a duplicate of the entry above stood here -- same interval, same rejection,
+        #  counted twice. One injection, one control: the same rule the defect harness
+        #  enforces.)
+        ("straddles D1's spent §14 block's END by exactly one seed", (202615220, 202615441)),
+        ("straddles the spent H1 block's END by exactly one seed", (202616223, 202616447)),
+        ("L0's spent/retired block", (202613000, 202613224)),
+        ("the retired D1 VOID block", (202614000, 202614224)),
+        ("the TEST_ONLY band", (90009000, 90009010)),
+        # ⚠ LABEL CORRECTED: this read "straddles ... by ONE seed" while
+        # (202614997, 202615221) covers ALL 221. The rejection was valid and
+        # the label was not -- and a gross overlap is the EASY case. This is a
+        # genuine one-seed straddle: 224 seeds meeting D1's block at exactly
+        # 202615000, which is the minimum a boundary check must still catch.
+        ("overlaps the CANDIDATE wholly but is a DIFFERENT interval (41 seeds)", (202623999, 202624040)),
+        ("straddles the candidate by EXACTLY ONE seed", (202623961, 202624001)),
+    ]
+    bad = 0
+    for label, blk in controls:
+        c = check(blk)
+        hit = {k: v for k, v in c["direct"].items() if v}
+        status = "REJECTED" if not c["clean"] else "🔴 ACCEPTED -- CONTROL FAILED"
+        if c["clean"]:
+            bad += 1
+        print(f"  {status:11s} {label}\n"
+              f"                direct={hit} streams={c['stream_collisions']}")
+    # a derived-stream collision with NO direct overlap: the discriminating case
+    v = 202611000 ^ MASKS[0]
+    assert v not in PRIOR, "control is not testing what it claims"
+    c = check((v, v + 1))
+    if c["clean"]:
+        bad += 1
+    print(f"  {'REJECTED' if not c['clean'] else '🔴 ACCEPTED -- CONTROL FAILED':11s} "
+          f"derived-stream collision at {v}, NO direct overlap\n"
+          f"                direct={ {k: n for k, n in c['direct'].items() if n} } "
+          f"streams={c['stream_collisions']}")
+    print()
+    print("POLICY: a load-bearing GAP from every prior boundary of at least 40 seeds --")
+    print("the CANDIDATE'S OWN SIZE (40 here), so the gap can never be smaller than the")
+    print("block it protects. The NEAREST ACTUAL DISTANCE is reported below, so a")
+    print("narrow choice could not hide behind a small threshold.")
+    print("-" * 62)
+    ENDS = sorted({b for t in (ACCOUNTED_SEED_INTERVALS, EXPOSED_SEED_INTERVALS,
+                                RETIRED_SEED_INTERVALS, TEST_ONLY_SEED_INTERVALS, (H3_PAPER,))
+                   for lo, hi in t for b in (lo, hi)})
+    # 🔑 v6 FIX (v5 recorded a FAIL that was an ARTEFACT): the candidate IS D1's own paper
+    # reservation, so v5 measured its distance to ITSELF and got 0. The identity exclusion
+    # already used for collisions must apply here too -- and ONLY here: the controls below
+    # keep the FULL boundary set, so D1_PAPER's boundaries still reject an off-by-one.
+    def gap_ok(block, need=40, *, own_registration=None):
+        lo, hi = block
+        ends = ENDS if own_registration is None else \
+            [b for b in ENDS if b not in set(own_registration)] + \
+            [b for t in (ACCOUNTED_SEED_INTERVALS, EXPOSED_SEED_INTERVALS, RETIRED_SEED_INTERVALS,
+                         TEST_ONLY_SEED_INTERVALS, (D1_PAPER,))
+             for iv in t if tuple(iv) != tuple(own_registration) for b in iv
+             if b in set(own_registration)]
+        return all(abs(lo - b) >= need and abs(hi - b) >= need for b in ends), ends
+    lo, hi = CANDIDATE
+    ok_c, ends_c = gap_ok(CANDIDATE, own_registration=CANDIDATE)
+    nearest = min(min(abs(lo - b), abs(hi - b)) for b in ends_c)
+    print(f"  candidate {CANDIDATE}: {len(ENDS) - len(ends_c)} boundary value(s) dropped as ITS OWN "
+          f"paper reservation; nearest OTHER boundary at distance {nearest} -> "
+          f"gap policy {'PASS' if ok_c else 'FAIL'}")
+    pbad = 0
+    for label, blk in [("the CANDIDATE ITSELF, WITHOUT the identity exclusion (v5's artefact)", CANDIDATE),
+                       ("starts exactly where H2 attempt 3's spent block ends",
+                        (202622736, 202622776)),
+                       ("ends exactly where the CANDIDATE starts", (202623960, 202624000)),
+                       ("one seed after attempt 3's spent block ends",
+                        (202622737, 202622777))]:
+        ok, _ = gap_ok(blk)          # controls measured against the FULL boundary set
+        if ok:
+            pbad += 1
+        print(f"  {'REJECTED' if not ok else '🔴 ACCEPTED -- CONTROL FAILED':11s} {label} {blk}")
+    print()
+    print(f"VERDICT: candidate {CANDIDATE} collision-clean = {r['clean']}; gap policy = {ok_c}; "
+          f"failed collision controls = {bad}; failed policy controls = {pbad}")

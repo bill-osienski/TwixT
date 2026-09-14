@@ -1,0 +1,12 @@
+MANIFEST -- 2026-09-14-t1j-h3-pilot-registration
+sha256 and size READ FROM DISK at the moment of recording.
+
+3b3e55e53a2b5c5ab5401a4722084bda97fdc98dc1a9f03bec8e8d838cb7d81a      14261  01_collision_proof_v10.py
+d9a2511e17e0037c7cc68adfaed6f5378c65c576e0c0ac290c599f2e524047ee       4279  02_collision_proof_run.txt
+21e16e2bfd6a596d20c2190d41522c53d602f014686433811645bf375dae0eb0      13385  03_registration_and_identity.diff
+75bcb68e24b4ac763ce5f563a4cff740a46b9fcb9515acc96fbe912bad2a8943      39359  04_defect_harness.txt
+575848bf6c7ea6f40ae16eec52204bae1cf663f1e441d30cd66acab76728a11e      26583  05_full_suite.txt
+300d9c31ab7fd334826b349ff49220d45fe4f5b03457c7f0fb196ca0f545641d       5155  06_prerun_verification.txt
+6cdff835f3a3f55be573be6e65bb1d788e3dd2eb63797b154faabadc0343c3e1       9570  07_results.md
+
+7 files. The manifest itself is not listed: it cannot hash itself.
