@@ -2759,13 +2759,20 @@ DEFECTS = [
      "    check_seed_registration()\n    check_gate()",
      f"{T_H3RUN}::test_run_pilot_CALLS_check_gate_FIRST_by_AST"),
     ("the pilot seam trusts the entry's gate check", H3RUN,
-     "            check_gate()\n            _assert_the_production_acts_are_inert(",
-     "            _assert_the_production_acts_are_inert(",
+     "            check_gate()\n            # 🔑 CALLED DIRECTLY IN THE SEAM",
+     "            # 🔑 CALLED DIRECTLY IN THE SEAM",
      f"{T_H3RUN}::test_THE_SEAM_CHECKS_THE_GATE_ITSELF_not_only_the_entry"),
+    # 🔴 RE-AIMED BEFORE IT EVER RAN, by `test_NO_CONTROL_DELETES_AN_AUTHORIZATION_
+    # CHECK`. It named the test that FORCES THE GATE OPEN, so with the boundary
+    # deleted the seam would have run on to `TC.verified_paths()` -- a real
+    # production act, and the exact shape of the 2026-09-12 incident. Its target is
+    # now the AST test, which detects the boundary's absence WITHOUT EXECUTING THE
+    # SEAM. The behavioural half is covered by the forced-gate test itself, which
+    # needs no control: it fails if the boundary stops refusing.
     ("the pilot's containment boundary is removed", H3RUN,
-     "            _assert_the_production_acts_are_inert(TC, D1, SCREEN_CMD, HARNESS)\n",
-     "",
-     f"{T_H3RUN}::test_THE_BOUNDARY_REFUSES_INSIDE_A_TEST_PROCESS_even_with_the_gate_OPEN"),
+     "                SCREEN_CMD.assert_production_acts_are_inert(\n",
+     "                _noop(\n",
+     f"{T_H3RUN}::test_the_seam_checks_BEFORE_anything_effectful"),
     ("the pilot checks the gate once instead of every game", H3RUN,
      "        check_gate()                      # EVERY game, not only the first",
      "        pass                              # EVERY game, not only the first",

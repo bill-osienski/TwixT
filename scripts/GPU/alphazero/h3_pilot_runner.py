@@ -127,26 +127,6 @@ def check_schedule(tasks: Sequence[Mapping[str, Any]]) -> Dict[str, Any]:
 
 
 # ═══════════════════ the production seam ═══════════════════════════════════
-def _assert_the_production_acts_are_inert(TC, D1, SCREEN_CMD, HARNESS) -> None:
-    """Refuse if, in a test process, ANY production act is still real.
-
-    ONE OWNER, shared with H1 and H2: `e4_screen_command`. Not a gate -- it grants
-    nothing and blocks nothing a real run does -- but a control that deletes every
-    authorization check still cannot reach a toolchain, a javac, a model or a seed.
-    An honest seam test replaces every act and passes through.
-    """
-    from . import e4_screen_command as CMD
-    try:
-        CMD.assert_production_acts_are_inert("the H3 pilot's production seam", (
-            (TC, "verified_paths"),
-            (D1, "_default_compile"),
-            (SCREEN_CMD, "_default_load_evaluator"),
-            (HARNESS, "play_task"),
-        ))
-    except CMD.ContainmentError as e:
-        raise H3PilotContainmentError(str(e)) from None
-
-
 def _production_play(results_path: str, deadline: Any = None,
                      openings: Optional[Sequence[Dict[str, Any]]] = None
                      ) -> Callable[..., Dict[str, Any]]:
@@ -170,7 +150,22 @@ def _production_play(results_path: str, deadline: Any = None,
             # BOTH CHECKS, HERE, BEFORE ANY EFFECT -- not because the entry's is
             # redundant, but because a control can delete it, and did.
             check_gate()
-            _assert_the_production_acts_are_inert(TC, D1, SCREEN_CMD, HARNESS)
+            # 🔑 CALLED DIRECTLY IN THE SEAM, as H1 calls it -- not behind a private
+            # wrapper. `test_NO_CONTROL_DELETES_AN_AUTHORIZATION_CHECK` reads the
+            # seam's own call names to decide whether a gate-removal control is
+            # admissible here, and a wrapper hides the boundary from it. ONE OWNER,
+            # shared with H1 and H2: it grants nothing and blocks nothing a real run
+            # does, but a control that deletes every authorization check still
+            # cannot reach a toolchain, a javac, a model or a seed.
+            try:
+                SCREEN_CMD.assert_production_acts_are_inert(
+                    "the H3 pilot's production seam", (
+                        (TC, "verified_paths"),
+                        (D1, "_default_compile"),
+                        (SCREEN_CMD, "_default_load_evaluator"),
+                        (HARNESS, "play_task")))
+            except SCREEN_CMD.ContainmentError as e:
+                raise H3PilotContainmentError(str(e)) from None
             tc = TC.verified_paths()
             java = os.path.join(tc["jdk_home"], "bin", "java")
             classes = results_path + ".t1j_classes"

@@ -241,7 +241,15 @@ def test_NO_CONTROL_DELETES_AN_AUTHORIZATION_CHECK():
     # IS the defect they inject. They are admissible ONLY because H1's production
     # seam is INERT to a test process whatever the gate says. Any other file with
     # such a control must earn the same, or the control must go.
-    assert set(offenders) <= {"scripts/GPU/alphazero/h1_viability_runner.py"}, offenders
+    # H3's pilot runner joins H1's on the same terms and for the same reason: its
+    # controls remove authorization checks, and that is admissible ONLY because its
+    # production seam carries the containment boundary before every effect -- which
+    # the loop below verifies structurally rather than taking on trust.
+    # ⚠ One H3 control was RE-AIMED to earn this. It removed the boundary itself
+    # while naming the test that forces the gate OPEN, so the seam would have
+    # reached `verified_paths`. This test caught it before it ran.
+    assert set(offenders) <= {"scripts/GPU/alphazero/h1_viability_runner.py",
+                              "scripts/GPU/alphazero/h3_pilot_runner.py"}, offenders
     for f in offenders:
         lines = _seam_lines(f)
         assert "assert_production_acts_are_inert" in lines, (

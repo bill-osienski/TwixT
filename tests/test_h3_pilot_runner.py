@@ -152,12 +152,12 @@ def test_the_seam_checks_BEFORE_anything_effectful():
             name = getattr(node.func, "id", "") or getattr(node.func, "attr", "")
             if name:
                 lines[name] = min(lines.get(name, node.lineno), node.lineno)
-    for guard in ("check_gate", "_assert_the_production_acts_are_inert"):
+    for guard in ("check_gate", "assert_production_acts_are_inert"):
         assert guard in lines, guard
     for effect in ("verified_paths", "_default_compile", "_default_load_evaluator"):
         assert effect in lines, effect
         assert lines["check_gate"] < lines[effect], f"gate after {effect}"
-        assert lines["_assert_the_production_acts_are_inert"] < lines[effect], effect
+        assert lines["assert_production_acts_are_inert"] < lines[effect], effect
 
 
 def test_the_gate_is_checked_for_EVERY_GAME_not_only_the_first():
