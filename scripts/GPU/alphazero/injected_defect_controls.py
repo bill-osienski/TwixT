@@ -4125,4 +4125,33 @@ EXPECTED_REASONS = {
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_pilot_analysis.H3AnalysisError'>",
     'a partial run declares its stop rules CLEAR':
         "AssertionError: assert 'CLEAR' == 'NOT FIRED -- UNDETERMINED'",
+    # ── 2026-09-14: the H3 pilot's RUN BODY and WRAPPER
+    'the pilot VOIDs on its deadline instead of reporting PARTIAL':
+        'scripts.GPU.alphazero.h3_pilot_runner.H3PilotVoidError: deadline',
+    'the pilot keeps playing past its deadline':
+        'AssertionError: it stopped at the deadline, not after 40',
+    'an exception is reported as a partial run rather than a VOID':
+        "AssertionError: assert 'PARTIAL' == 'VOID'",
+    'the durable transcript evidence is never written':
+        "AssertionError: assert {'header', 'p... 'transcript'} <= {'header', 'p...'task_result'}",
+    'the per-game duration is dropped from the record':
+        'scripts.GPU.alphazero.h3_pilot_analysis.H3AnalysisError: h3pilot-000-p00-inc_red: no elapsed_s. Per-game timing is REQUIRED; without it the pilot cannot answer its own runtime question.',
+    'the outputs are no longer create-only inside the run':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_pilot_runner.H3PilotVoidError'>",
+    'the generated openings are not checked against the frozen pin':
+        'scripts.GPU.alphazero.h3_pilot_runner.H3PilotRunError: NO SEED BLOCK IS RESERVED for the H3 pilot. The card reserves none, and 40 games need 40 accounted seeds. Reserving one is a separate authorization carrying its own collision re-proof.',
+    'the PILOT wrapper reports success without verifying the gate':
+        'AssertionError: assert 0 == 10',
+    'a surviving descendant is reported as a success':
+        'AssertionError: assert 0 == 8',
+    "the worker runs without the supervisor's capability":
+        'AssertionError: assert 5 == 7',
+    'a forged capability of the right length is accepted':
+        'assert True is False',
+    'the wrapper spawns before checking the outputs':
+        'AssertionError: assert 0 == 7',
+    'a fired stop rule is masked by the partial-run code':
+        'AssertionError: assert 13 == 14',
+    "the pilot's outputs point into a SPENT run's directory":
+        "AssertionError: ('docs/superpowers/evidence/2026-09-12-t1j-h2-match-attempt3/03_pilot_results.jsonl', 'docs/superpowers/evidence/2026-09-12-t1j-h2-match-attempt3')",
 }
