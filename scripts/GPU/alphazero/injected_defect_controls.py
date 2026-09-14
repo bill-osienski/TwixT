@@ -46,6 +46,7 @@ G3SRC = "scripts/GPU/alphazero/twixtbot_g3_reference.py"
 H3R = "scripts/GPU/alphazero/h3_pilot_rules.py"
 H3A = "scripts/GPU/alphazero/h3_pilot_analysis.py"
 H3RUN = "scripts/GPU/alphazero/h3_pilot_runner.py"
+H3CMD = "scripts/GPU/alphazero/h3_pilot_command.py"
 
 T_PROBE = "tests/test_d1_probe.py"
 T_SEL = "tests/test_d1_selection.py"
@@ -2755,8 +2756,8 @@ DEFECTS = [
      "PILOT_SEED_BLOCK: Optional[tuple] = (777000000, 777000040)",
      f"{T_H3RUN}::test_NO_SEED_BLOCK_IS_RESERVED_and_that_is_a_SECOND_barrier"),
     ("the pilot entry no longer reads the gate first", H3RUN,
-     "    check_gate()\n    check_seed_registration()",
-     "    check_seed_registration()\n    check_gate()",
+     "    check_gate()\n    from . import d1_probe as D1",
+     "    from . import d1_probe as D1\n    check_gate()",
      f"{T_H3RUN}::test_run_pilot_CALLS_check_gate_FIRST_by_AST"),
     ("the pilot seam trusts the entry's gate check", H3RUN,
      "            check_gate()\n            # 🔑 CALLED DIRECTLY IN THE SEAM",
@@ -2841,6 +2842,75 @@ DEFECTS = [
      '        return {"status": CLEAR if complete else UNDETERMINED,',
      '        return {"status": CLEAR,',
      f"{T_H3A}::test_on_a_partial_run_NOTHING_is_ever_declared_CLEAR"),
+    # ───────── the RUN BODY and the WRAPPER (2026-09-14) ─────────
+    # 🔑 A DEADLINE IS NOT A VOID for this design: the pilot's outputs are
+    # diagnostics and a partial run is informative. H2 raises here; the pilot
+    # must not.
+    ("the pilot VOIDs on its deadline instead of reporting PARTIAL", H3RUN,
+     "                timed_out = True",
+     "                raise H3PilotVoidError('deadline')",
+     f"{T_H3RUN}::test_A_TIMEOUT_STOPS_CLEANLY_and_still_reports_PARTIAL"),
+    ("the pilot keeps playing past its deadline", H3RUN,
+     "            if deadline.elapsed() > deadline_s:",
+     "            if False:",
+     f"{T_H3RUN}::test_A_TIMEOUT_STOPS_CLEANLY_and_still_reports_PARTIAL"),
+    ("an exception is reported as a partial run rather than a VOID", H3RUN,
+     '        verdict = "INTERRUPTED" if isinstance(e, KeyboardInterrupt) else "VOID"',
+     '        verdict = "PARTIAL"',
+     f"{T_H3RUN}::test_AN_EXCEPTION_IS_A_VOID_and_the_trace_says_so"),
+    ("the durable transcript evidence is never written", H3RUN,
+     '            emit(rec, {"record_type": "transcript", "task_id": task["task_id"],',
+     '            _skip = ({"record_type": "transcript", "task_id": task["task_id"],',
+     f"{T_H3RUN}::test_the_results_file_carries_the_transcripts_and_the_durations"),
+    ("the per-game duration is dropped from the record", H3RUN,
+     '                    "elapsed_s": out["elapsed_s"]}',
+     '                    "plies_again": row.get("plies")}',
+     f"{T_H3RUN}::test_the_results_file_carries_the_transcripts_and_the_durations"),
+    ("the outputs are no longer create-only inside the run", H3RUN,
+     "            os.open(results_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644), \"w\"))",
+     "            os.open(results_path, os.O_WRONLY | os.O_CREAT, 0o644), \"w\"))",
+     f"{T_H3RUN}::test_the_run_REFUSES_when_an_output_already_exists"),
+    ("the generated openings are not checked against the frozen pin", H3RUN,
+     "    if RULES.opening_set_digest(openings) != RULES.OPENING_SET_DIGEST:",
+     "    if False:",
+     f"{T_H3RUN}::test_run_pilot_REFUSES_a_set_that_does_not_match_the_pin"),
+    # THE WRAPPER.
+    ("the wrapper reports success without verifying the gate", H3CMD,
+     "        if not restore_gate(_runner_source):\n"
+     "            print(f\"GATE NOT RESTORED:",
+     "        if False:\n            print(f\"GATE NOT RESTORED:",
+     f"{T_H3RUN}::test_THE_FINALLY_PATH_also_restores_and_reports_its_own_failure"),
+    ("a surviving descendant is reported as a success", H3CMD,
+     '            if not r["group_cleared"]:',
+     "            if False:",
+     f"{T_H3RUN}::test_a_SURVIVING_DESCENDANT_is_a_CLEANUP_FAILURE_not_a_success"),
+    ("the worker runs without the supervisor's capability", H3CMD,
+     "    if not _consume_capability(a.capability_fd):",
+     "    if False:",
+     f"{T_H3RUN}::test_WORKER_REFUSES_without_the_supervisors_CAPABILITY"),
+    ("a forged capability of the right length is accepted", H3CMD,
+     '    return len(token) == CAPABILITY_BYTES * 2 and all(\n'
+     '        c in "0123456789abcdef" for c in token)',
+     "    return len(token) == CAPABILITY_BYTES * 2",
+     f"{T_H3RUN}::test_a_FORGED_capability_is_refused_INCLUDING_one_of_the_RIGHT_LENGTH"),
+    ("the wrapper spawns before checking the outputs", H3CMD,
+     "            RUN.check_output_paths(a.results, a.trace, a.report)",
+     "            pass",
+     f"{T_H3RUN}::test_the_wrapper_REFUSES_BEFORE_SPAWNING_when_an_output_exists"),
+    # 🔑 A CROSSED MONOTONE COUNT IS CONCLUSIVE; A PARTIAL RUN IS NOT. The order
+    # of these two branches is the whole claim.
+    ("a fired stop rule is masked by the partial-run code", H3CMD,
+     '    if report.get("any_fired"):\n        return EXIT_STOP_RULE_FIRED\n'
+     '    if report.get("timed_out") or not report.get("complete"):\n'
+     "        return EXIT_PARTIAL",
+     '    if report.get("timed_out") or not report.get("complete"):\n'
+     "        return EXIT_PARTIAL\n"
+     '    if report.get("any_fired"):\n        return EXIT_STOP_RULE_FIRED',
+     f"{T_H3RUN}::test_the_classifier_separates_RESULTS_from_failures[report3-14]"),
+    ("the pilot's outputs point into a SPENT run's directory", H3CMD,
+     'OUT_DIR = "docs/superpowers/evidence/2026-09-14-t1j-h3-pilot"',
+     'OUT_DIR = "docs/superpowers/evidence/2026-09-12-t1j-h2-match-attempt3"',
+     f"{T_H3RUN}::test_THE_OUTPUT_DESTINATION_IS_NOT_A_SPENT_RUNS_DIRECTORY"),
 ]
 
 # ═══════════════════════════ THE EXPECTED REASONS ════════════════════════════

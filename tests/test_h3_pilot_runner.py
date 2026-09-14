@@ -51,6 +51,21 @@ def test_run_pilot_CALLS_check_gate_FIRST_by_AST():
     assert getattr(first.value.func, "id", "") == "check_gate", ast.dump(first)
 
 
+def test_run_pilot_REFUSES_a_set_that_does_not_match_the_pin(monkeypatch, tmp_path):
+    """The positions are the experiment. If the generator drifts from the pinned
+    set the pilot answers a different question, so it refuses rather than run.
+
+    The gate is neutralised here ONLY so the check after it can be reached; the
+    refusal happens long before any seam, seed or file."""
+    monkeypatch.setattr(RUN, "check_gate", lambda: None)
+    monkeypatch.setattr(RUN.RULES, "OPENING_SET_DIGEST", "0" * 64)
+    with pytest.raises(RUN.H3PilotRunError, match="does not match the frozen pin"):
+        RUN.run_pilot(results_path=str(tmp_path / "r.jsonl"),
+                      trace_path=str(tmp_path / "t.jsonl"),
+                      report_path=str(tmp_path / "rep.json"))
+    assert not list(tmp_path.iterdir()), "it refused before writing anything"
+
+
 def test_the_entry_TAKES_ONLY_THE_OUTPUT_PATHS():
     """Nothing on the signature can reach the gate, the schedule or the seeds."""
     sig = inspect.signature(RUN.run_pilot)
