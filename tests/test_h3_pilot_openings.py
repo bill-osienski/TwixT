@@ -263,8 +263,17 @@ def test_the_PRIOR_OPENING_exclusion_is_reached_alone(monkeypatch):
 
 
 def test_the_TERMINAL_rejection_is_reached_alone(monkeypatch):
-    """Every candidate made terminal: a finished game is not an opening."""
+    """A candidate terminal ONLY ONCE IT IS COMPLETE: a finished game is not an
+    opening.
+
+    ⚠ `is_terminal -> True` outright does NOT reach this branch. The walk checks
+    it each ply, so it breaks at move 0, the position comes back short, and the
+    LENGTH check rejects it -- with or without the terminal check, so a control
+    aimed here went NOT CAUGHT. Terminal at exactly `OPENING_PLIES` pegs lets the
+    walk finish and leaves the terminal check as the only thing that can refuse.
+    """
     from scripts.GPU.alphazero.game.twixt_state import TwixtState
-    monkeypatch.setattr(TwixtState, "is_terminal", lambda self: True)
+    monkeypatch.setattr(TwixtState, "is_terminal",
+                        lambda self: len(self.pegs) >= R.OPENING_PLIES)
     with pytest.raises(RuntimeError, match="only 0 of 1"):
         R.generate_openings(n=1)
