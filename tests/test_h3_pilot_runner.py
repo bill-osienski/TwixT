@@ -122,6 +122,16 @@ def test_a_DIFFERENT_schedule_is_REFUSED():
         RUN.check_schedule(tasks)
 
 
+def test_check_schedule_REFUSES_a_seeded_schedule_while_the_pin_is_unset():
+    """🔴 Assigning 40 seeds changes the full-field digest, so the runner must
+    know WHICH pin applies. Compared against the unseeded one, the real schedule
+    would be refused by its own check at execution time."""
+    tasks = R.build_tasks(R.generate_openings(),
+                          seed_interval=(777000000, 777000040))
+    with pytest.raises(RUN.H3PilotRunError, match="SEEDED_TASK_DIGEST is None"):
+        RUN.check_schedule(tasks)
+
+
 def test_a_SHORT_schedule_is_refused_because_a_budget_bounds_nothing_below():
     tasks = R.build_tasks(R.generate_openings())
     with pytest.raises(RUN.H3PilotRunError, match="expected"):

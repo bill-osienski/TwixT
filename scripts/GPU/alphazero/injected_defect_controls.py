@@ -2787,7 +2787,7 @@ DEFECTS = [
      "    if False:",
      f"{T_H3RUN}::test_the_output_paths_are_CREATE_ONLY_and_must_be_THREE_files"),
     ("the pilot schedule digest is not compared with the pin", H3RUN,
-     "    if got != RULES.TASK_DIGEST:",
+     "    if got != want:",
      "    if False:",
      f"{T_H3RUN}::test_a_DIFFERENT_schedule_is_REFUSED"),
     # THE REAL BUILDER -- the check attempt 1's VOID made necessary.
@@ -2939,7 +2939,7 @@ DEFECTS = [
     ("the runner ignores which pin applies", H3RUN,
      "        want = RULES.expected_task_digest(tasks)",
      "        want = RULES.TASK_DIGEST",
-     f"{T_H3O}::test_a_SEEDED_schedule_is_REFUSED_while_the_seeded_pin_is_unset"),
+     f"{T_H3RUN}::test_check_schedule_REFUSES_a_seeded_schedule_while_the_pin_is_unset"),
 ]
 
 # ═══════════════════════════ THE EXPECTED REASONS ════════════════════════════
