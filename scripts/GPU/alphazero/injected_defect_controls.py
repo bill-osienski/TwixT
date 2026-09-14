@@ -4016,7 +4016,7 @@ EXPECTED_REASONS = {
     "the pilot seam trusts the entry's gate check":
         "scripts.GPU.alphazero.h3_pilot_runner.H3PilotContainmentError: refusing to run the H3 pilot's production seam from a test process: scripts.GPU.alphazero.t1j_toolchain.verified_paths, scripts.GPU.alphazero.d1_probe._default_compile, scripts.GPU.alphazero.e4_screen_command._default_load_evaluator, scripts.GPU.alphazero.e4_screen_runner.play_task are still the REAL production function. Nothing was resolved, compiled, loaded, drawn or played. A test that reaches this point has removed an authorization check: on 2026-09-12 exactly that happened and 383 real games were played before it was killed.",
     "the pilot's containment boundary is removed":
-        'scripts.GPU.alphazero.h3_pilot_runner.H3PilotRunError: the production seam was given no STARTED deadline; compilation checks a clock with no origin and would refuse after creating the class directory',
+        'AssertionError: assert_production_acts_are_inert',
     'the pilot checks the gate once instead of every game':
         'AssertionError: 1',
     "the pilot's create-only precheck follows symlinks":
