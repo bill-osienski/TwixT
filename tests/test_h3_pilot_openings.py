@@ -250,7 +250,10 @@ def test_every_task_NAMES_the_colour_OUR_SIDE_plays(tasks):
     a task without it; both read it, neither derives it."""
     from scripts.GPU.alphazero import e4_screen_reference as REF
     for t in tasks:
-        assert t["reference_colour"] == t["incumbent_colour"]
+        # 🔑 WITH A MESSAGE, so the failure names the defect rather than printing
+        # `assert 'black' == 'red'` -- a reason that could be almost anything.
+        assert t["reference_colour"] == t["incumbent_colour"], \
+            f"{t['task_id']}: reference_colour is not OUR side"
         assert t["reference_colour"] == REF.reference_colour(t)
         assert t["reference_colour"] != t["anchor_colour"]
 
