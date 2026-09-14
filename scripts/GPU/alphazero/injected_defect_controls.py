@@ -2841,6 +2841,27 @@ DEFECTS = [
      "    if False:",
      f"{T_H3RUN}::test_the_output_paths_are_CREATE_ONLY_and_must_be_THREE_files"),
     # ── 2026-09-14: THE INCUMBENT'S IDENTITY -- provenance the record carries.
+    # ── 2026-09-14: THE OBJECT, not an equal one. The identity was read off one
+    # config and the seam built another later, after the outputs were already
+    # open -- same function, same values, two objects.
+    ("the identity is read off a FRESH config, not the seam's", H3RUN,
+     '    config = getattr(play, "config", None)',
+     "    config = frozen_argmax_config()",
+     f"{T_H3RUN}::test_a_SEAM_WHOSE_CONFIG_DIFFERS_IS_REFUSED_BEFORE_ANY_PLAY"),
+    ("a seam that declares no config is given one anyway", H3RUN,
+     '    config = getattr(play, "config", None)\n    if config is None:',
+     '    config = getattr(play, "config", None) or frozen_argmax_config()\n'
+     "    if False:",
+     f"{T_H3RUN}::test_a_seam_that_DECLARES_NO_CONFIG_is_REFUSED"),
+    ("the seam builds a config instead of using the one it was given", H3RUN,
+     "            argmax_cfg = play.config",
+     "            argmax_cfg = frozen_argmax_config()",
+     f"{T_H3RUN}::test_THE_RECORDED_IDENTITY_IS_THE_CONFIG_PASSED_TO_THE_REAL_BUILDER"),
+    ("the pilot entry builds the config twice", H3RUN,
+     "        play=_production_play(results_path, deadline, openings, argmax_cfg),",
+     "        play=_production_play(results_path, deadline, openings,\n"
+     "                              frozen_argmax_config()),",
+     f"{T_H3RUN}::test_run_pilot_CONSTRUCTS_THE_CONFIG_ONCE_and_hands_it_to_the_seam"),
     ("the pilot never checks the recorded identity", H3RUN,
      "    check_incumbent_identity(ident)",
      "    pass",

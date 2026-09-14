@@ -241,7 +241,7 @@ def test_the_incumbent_identity_IS_H2s_FROZEN_ARGMAX_ONE():
     player. A second derivation of the same identity is a second thing to drift."""
     from scripts.GPU.alphazero import h2_match_rules as H2R
     from scripts.GPU.alphazero import h2_match_runner as H2RUN
-    ident = RUN.frozen_incumbent_identity()
+    ident = RUN.frozen_incumbent_identity(RUN.frozen_argmax_config())
     for k, v in H2RUN.frozen_incumbent_identity().items():
         assert ident[k] == v, k
     assert ident["eval_config"]["selection_mode"] == H2R.SELECTION_MODE == "argmax"
@@ -253,8 +253,8 @@ def test_the_identity_CARRIES_THE_CONFIG_OBJECT_S_OWN_FIELDS():
     """`argmax_config` is read OFF the constructed object, and `eval_config` comes
     from `frozen_settings()` reading the qualified path. TWO ROUTES to the same
     values, which is what makes comparing them worth anything."""
-    ident = RUN.frozen_incumbent_identity()
     cfg = RUN.frozen_argmax_config()
+    ident = RUN.frozen_incumbent_identity(cfg)
     assert ident["argmax_config"], "the identity must carry the object's fields"
     for f, v in ident["argmax_config"].items():
         got = getattr(cfg, f)
@@ -267,7 +267,8 @@ def test_the_identity_CARRIES_THE_CONFIG_OBJECT_S_OWN_FIELDS():
 def test_the_identity_barrier_ACCEPTS_the_frozen_one():
     """The other half: if nothing were accepted the refusals below would be an
     outage rather than a check."""
-    RUN.check_incumbent_identity(RUN.frozen_incumbent_identity())
+    cfg = RUN.frozen_argmax_config()
+    RUN.check_incumbent_identity(RUN.frozen_incumbent_identity(cfg), cfg)
 
 
 @pytest.mark.parametrize("mutate,match,what", [
@@ -284,10 +285,11 @@ def test_the_identity_barrier_ACCEPTS_the_frozen_one():
 ])
 def test_a_DRIFTED_identity_is_REFUSED(mutate, match, what):
     import copy
-    ident = copy.deepcopy(RUN.frozen_incumbent_identity())
+    cfg = RUN.frozen_argmax_config()
+    ident = copy.deepcopy(RUN.frozen_incumbent_identity(cfg))
     mutate(ident)
     with pytest.raises(RUN.H3PilotRunError, match=match):
-        RUN.check_incumbent_identity(ident)
+        RUN.check_incumbent_identity(ident, cfg)
 
 
 def test_the_ARGMAX_CONFIG_CROSS_CHECK_refuses_a_DRIFTED_CONFIG_OBJECT():
@@ -298,25 +300,25 @@ def test_the_ARGMAX_CONFIG_CROSS_CHECK_refuses_a_DRIFTED_CONFIG_OBJECT():
     OBJECT parting company with the qualified path's frozen settings, so that is
     what is moved here -- and the barrier must refuse whatever was recorded.
     """
-    import unittest.mock as _m
     real = RUN.frozen_argmax_config()
     drifted = real.__class__(**{**real.__dict__,
                                 "selection_mode": "opening_temperature"})
-    with _m.patch.object(RUN, "frozen_argmax_config", lambda: drifted):
-        with pytest.raises(RUN.H3PilotRunError, match="disagrees with the qualified"):
-            RUN.check_incumbent_identity(RUN.frozen_incumbent_identity())
+    with pytest.raises(RUN.H3PilotRunError, match="disagrees with the qualified"):
+        RUN.check_incumbent_identity(RUN.frozen_incumbent_identity(drifted), drifted)
 
 
-def test_the_cross_check_also_refuses_a_DIFFERENT_FIELD_SET(monkeypatch):
-    """A field set that does not line up makes the comparison vacuous for the
-    fields it misses, so it is refused rather than compared."""
-    ident = RUN.frozen_incumbent_identity()
-    short = dict(ident["argmax_config"])
-    short.pop("board_size")
-    monkeypatch.setattr(RUN, "frozen_incumbent_identity",
-                        lambda: {**ident, "argmax_config": short})
-    with pytest.raises(RUN.H3PilotRunError, match="same fields"):
-        RUN.check_incumbent_identity(ident)
+def test_a_RECORD_MISSING_A_CONFIG_FIELD_is_refused_BY_PATH():
+    """The record's own field set -- a different question from the cross-check's,
+    and the one `_same` answers, by path. 🔴 I guarded the cross-check's field
+    sets too, and that guard was UNREACHABLE: both sides take their keys from
+    `frozen_settings()["eval_config"]`, so no input could separate them."""
+    import copy
+    cfg = RUN.frozen_argmax_config()
+    ident = copy.deepcopy(RUN.frozen_incumbent_identity(cfg))
+    ident["argmax_config"].pop("board_size")
+    with pytest.raises(RUN.H3PilotRunError,
+                       match=r"argmax_config.*missing \['board_size'\]"):
+        RUN.check_incumbent_identity(ident, cfg)
 
 
 def test_THE_RECORDED_IDENTITY_IS_THE_CONFIG_PASSED_TO_THE_REAL_BUILDER(monkeypatch):
@@ -352,15 +354,21 @@ def test_THE_RECORDED_IDENTITY_IS_THE_CONFIG_PASSED_TO_THE_REAL_BUILDER(monkeypa
     tasks = R.build_tasks(openings, seed_interval=RUN.PILOT_SEED_BLOCK)
     deadline = D1.Deadline(60)
     deadline.start()
-    play = RUN._production_play("/tmp/h3-never-written", deadline, openings)
+    cfg = RUN.frozen_argmax_config()
+    play = RUN._production_play("/tmp/h3-never-written", deadline, openings, cfg)
     with pytest.raises(AssertionError, match="no game is played"):
         play(task=tasks[0], identity={}, timeout_s=1.0)
 
     factory = play._state["agent_factory"]
     assert factory(tasks[0], tasks[0]["reference_colour"]) == "AGENT"
-    cfg, ident = captured["config"], RUN.frozen_incumbent_identity()
+    # 🔑 `is`, NOT `==`. Equality was satisfied by a SECOND object built from the
+    # same function -- which is exactly the gap: the record described an object
+    # that never reached the builder.
+    assert captured["config"] is cfg, \
+        "the builder must receive THE object the identity was read off, not an equal one"
+    ident = RUN.frozen_incumbent_identity(cfg)
     for f, v in ident["argmax_config"].items():
-        got = getattr(cfg, f)
+        got = getattr(captured["config"], f)
         assert got == v and type(got) is type(v), \
             f"{f}: the builder got {got!r} but the header would record {v!r}"
 
@@ -555,6 +563,8 @@ def _inert_play(*, cap_every=None, fail_at=None, slow_after=None, elapsed=1.0):
                 "elapsed_s": elapsed}
 
     play.calls = calls
+
+    play.calls = calls
     return play
 
 
@@ -581,6 +591,11 @@ def _no_supervisor(deadline):
 
 
 def _run(tmp_path, play, deadline=None, identity=None):
+    # EVERY seam declares the config it represents -- the production one carries
+    # the object it was handed, and an inert one stands in for the frozen one. A
+    # test that has already set a drifted config keeps it.
+    if getattr(play, "config", None) is None:
+        play.config = RUN.frozen_argmax_config()
     from scripts.GPU.alphazero import h3_pilot_rules as RULES
     ops = RULES.generate_openings()
     tasks = RULES.build_tasks(ops, seed_interval=(777000000, 777000040))
@@ -640,7 +655,8 @@ def test_THE_DURABLE_HEADER_CARRIES_THE_FULL_IDENTITY_AND_THE_READOUT(tmp_path):
     assert header["record_type"] == "header"
     assert header["selection_mode"] == "argmax"
     assert header["identity"] == json.loads(
-        json.dumps(RUN.frozen_incumbent_identity(), sort_keys=True, default=str)), \
+        json.dumps(RUN.frozen_incumbent_identity(RUN.frozen_argmax_config()),
+                   sort_keys=True, default=str)), \
         "the WHOLE identity, not a summary of it"
     trace = json.loads((tmp_path / "t.jsonl").read_text().splitlines()[0])
     assert trace["event"] == "run_start" and trace["selection_mode"] == "argmax"
@@ -650,7 +666,7 @@ def test_the_identity_is_VERIFIED_BEFORE_ANY_OUTPUT_IS_OPENED(tmp_path):
     """Order matters: a refusal after the outputs exist has spent the run's
     create-only destination on a run that never started."""
     import copy
-    bad = copy.deepcopy(RUN.frozen_incumbent_identity())
+    bad = copy.deepcopy(RUN.frozen_incumbent_identity(RUN.frozen_argmax_config()))
     bad["eval_config"]["selection_mode"] = "opening_temperature"
     with pytest.raises(RUN.H3PilotRunError, match="selection_mode"):
         _run(tmp_path, _inert_play(), identity=bad)
@@ -665,12 +681,92 @@ def test_THE_DEFAULT_IDENTITY_IS_CHECKED_TOO_not_only_a_supplied_one(tmp_path):
     run must still refuse."""
     import copy
     import unittest.mock as _m
-    bad = copy.deepcopy(RUN.frozen_incumbent_identity())
+    bad = copy.deepcopy(RUN.frozen_incumbent_identity(RUN.frozen_argmax_config()))
     bad["eval_config"]["mcts_sims"] = 401
-    with _m.patch.object(RUN, "frozen_incumbent_identity", lambda: bad):
+    with _m.patch.object(RUN, "frozen_incumbent_identity", lambda _cfg: bad):
         with pytest.raises(RUN.H3PilotRunError, match="mcts_sims"):
             _run(tmp_path, _inert_play())          # identity NOT supplied
     assert not list(tmp_path.iterdir())
+
+
+# ══ THE STRONGER CLAIM: the record describes THE OBJECT THAT PLAYS ══════════
+# Two fresh derivations agreeing with the frozen settings is not it. The identity
+# was read off one object and the seam built another later, AFTER the outputs
+# were open -- same function, same values, two objects. These bind the object.
+
+def test_a_SEAM_WHOSE_CONFIG_DIFFERS_IS_REFUSED_BEFORE_ANY_PLAY(tmp_path):
+    """The OBJECT drifts. The identity is read off the seam's own configuration,
+    so a seam holding a different one is refused -- before an output exists and
+    before a game is played."""
+    real = RUN.frozen_argmax_config()
+    drifted = real.__class__(**{**real.__dict__, "mcts_sims": 401})
+    play = _inert_play()
+    play.config = drifted
+    with pytest.raises(RUN.H3PilotRunError, match="mcts_sims"):
+        _run(tmp_path, play)
+    assert not list(tmp_path.iterdir()), "no output was created"
+    assert play.calls["n"] == 0, "and not one game was played"
+
+
+def test_a_RECORD_that_describes_ANOTHER_OBJECT_is_REFUSED(tmp_path):
+    """The RECORD drifts while the object is fine -- the other direction, and the
+    one that makes `argmax_config` worth carrying at all."""
+    import copy
+    real = RUN.frozen_argmax_config()
+    play = _inert_play()
+    play.config = real
+    bad = copy.deepcopy(RUN.frozen_incumbent_identity(real))
+    bad["argmax_config"]["mcts_sims"] = 401
+    with pytest.raises(RUN.H3PilotRunError, match="mcts_sims"):
+        _run(tmp_path, play, identity=bad)
+    assert not list(tmp_path.iterdir())
+    assert play.calls["n"] == 0
+
+
+def test_a_seam_that_DECLARES_NO_CONFIG_is_REFUSED(tmp_path):
+    """Not defaulted to a fresh one: that is how the record came to describe an
+    object nothing played with."""
+    play = _inert_play()
+    play.config = None
+    import unittest.mock as _m
+    with _m.patch.object(RUN, "PILOT_SEED_BLOCK", (777000000, 777000040)), \
+         _m.patch.object(RUN, "check_seed_registration", lambda: None), \
+         _m.patch.object(RUN, "check_schedule", lambda t: {
+             "n_tasks": len(t), "task_digest": "x" * 64, "pairs": 20}):
+        with pytest.raises(RUN.H3PilotRunError, match="no configuration object"):
+            RUN._run_pilot_unguarded(
+                tasks=R.build_tasks(R.generate_openings(),
+                                    seed_interval=(777000000, 777000040)),
+                openings=R.generate_openings(),
+                results_path=str(tmp_path / "r.jsonl"),
+                trace_path=str(tmp_path / "t.jsonl"),
+                report_path=str(tmp_path / "rep.json"),
+                play=play, deadline_s=7200,
+                _deadline=_FakeDeadline(7200), _supervisor=_no_supervisor)
+    assert not list(tmp_path.iterdir())
+
+
+def test_run_pilot_CONSTRUCTS_THE_CONFIG_ONCE_and_hands_it_to_the_seam(
+        monkeypatch, tmp_path):
+    """ONE ORIGIN, like the deadline's. Behavioural: the constructor is counted
+    and the seam's object is compared by IDENTITY, not equality."""
+    real = RUN.frozen_argmax_config()
+    made = []
+
+    def once():
+        made.append(object())
+        return real
+
+    captured = {}
+    monkeypatch.setattr(RUN, "frozen_argmax_config", once)
+    monkeypatch.setattr(RUN, "check_gate", lambda: None)
+    monkeypatch.setattr(RUN, "_run_pilot_unguarded",
+                        lambda **kw: captured.update(kw) or {"verdict": "STUB"})
+    RUN.run_pilot(results_path=str(tmp_path / "r.jsonl"),
+                  trace_path=str(tmp_path / "t.jsonl"),
+                  report_path=str(tmp_path / "rep.json"))
+    assert len(made) == 1, f"the config was constructed {len(made)} times, not once"
+    assert captured["play"].config is real, "the seam must hold THAT object"
 
 
 def test_the_report_on_disk_IS_the_report_returned(tmp_path):

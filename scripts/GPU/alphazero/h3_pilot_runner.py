@@ -110,37 +110,44 @@ def frozen_argmax_config():
     return cfg.__class__(**{**cfg.__dict__, "selection_mode": H2R.SELECTION_MODE})
 
 
-def frozen_incumbent_identity() -> Dict[str, Any]:
-    """H2's frozen argmax identity, INHERITED, plus the CONFIG OBJECT's own fields.
+def frozen_incumbent_identity(config) -> Dict[str, Any]:
+    """H2's frozen argmax identity, INHERITED, read off THE OBJECT THAT WILL PLAY.
 
     H3 changes the evidence structure, not the player, so the identity is H2's --
     read from the qualified path through H2's own function and never retyped. A
     second derivation of the same identity is a second thing to drift, which is
     the mistake `h3_pilot_analysis` already avoids by inheriting `transcript`.
 
+    🔴 `config` IS REQUIRED, and this function will not make one. It made its own
+    until 2026-09-14, and the seam made another later, after the outputs were
+    already open: the same function, the same values, TWO OBJECTS. That
+    establishes only that two fresh derivations agree with the frozen settings --
+    never the claim the record has to support, which is that it describes THE
+    OBJECT ACTUALLY HANDED TO THE BUILDER.
+
     `argmax_config` is the ARM'S-LENGTH HALF: `eval_config` comes from
     `frozen_settings()` reading the qualified path, while these values are read
-    off the object the builder is actually handed. Two routes to the same numbers,
-    so comparing them is worth something; one route compared with itself is not.
+    off `config` itself. Two routes to the same numbers, so comparing them is
+    worth something; one route compared with itself is not.
     """
     from . import e4_screen_reference as REF
     from . import h2_match_runner as H2RUN
     ident = dict(H2RUN.frozen_incumbent_identity())
-    cfg = frozen_argmax_config()
     # the frozen settings' OWN field list, never retyped here
-    ident["argmax_config"] = {f: getattr(cfg, f)
+    ident["argmax_config"] = {f: getattr(config, f)
                               for f in REF.frozen_settings()["eval_config"]}
     ident["design"] = "H3_PILOT"
     return ident
 
 
-def check_incumbent_identity(identity: Mapping[str, Any]) -> None:
+def check_incumbent_identity(identity: Mapping[str, Any], config) -> None:
     """The recorded identity must BE H3's -- the whole of it, type-strictly.
 
     Three questions in order, each a different fact:
-      1. THE CROSS-CHECK, first: the object the builder is handed against the
-         qualified path's frozen settings. Two routes to the same numbers; either
-         one compared with itself would report itself consistent.
+      1. THE CROSS-CHECK, first: `config` -- THE OBJECT THE SEAM WILL HAND THE
+         BUILDER -- against the qualified path's frozen settings. Two routes to
+         the same numbers; either one compared with itself reports itself
+         consistent, which is why the object is passed in rather than made here.
       2. `selection_mode` IS the study. A record naming the old readout describes
          a run that did not make the change.
       3. The WHOLE recorded identity against the frozen one, recursively and
@@ -149,7 +156,7 @@ def check_incumbent_identity(identity: Mapping[str, Any]) -> None:
     """
     from . import h2_match_rules as H2R
     from . import h2_match_runner as H2RUN
-    want = frozen_incumbent_identity()
+    want = frozen_incumbent_identity(config)
 
     # ── (3) FIRST, because it is a question about the FROZEN identity itself and
     # nothing downstream means anything if the answer is no. 🔴 It was written
@@ -157,12 +164,12 @@ def check_incumbent_identity(identity: Mapping[str, Any]) -> None:
     # compares it with a FRESH DERIVATION OF ITSELF, which is route-against-itself
     # and cannot see the drift this exists to catch -- the object the seam hands
     # the builder parting company with the qualified path's frozen settings.
+    # 🔴 A FIELD-SET COMPARISON STOOD HERE AND WAS DELETED AS UNREACHABLE. Both
+    # sides derive their keys from `frozen_settings()["eval_config"]` -- H2's
+    # identity only MOVES the inert three into their own dict -- so the two sets
+    # are equal by construction and no input can separate them. The record's own
+    # field set is a different question and `_same` answers it below, by path.
     merged = {**want["eval_config"], **want["inert_under_argmax"]}
-    if set(want["argmax_config"]) != set(merged):
-        raise H3PilotRunError(
-            f"the configuration object and the frozen settings do not describe the "
-            f"same fields ({sorted(set(want['argmax_config']) ^ set(merged))}); "
-            f"comparing them would establish nothing")
     try:
         H2RUN._same(want["argmax_config"], merged, "argmax_config")
     except H2RUN.H2VoidError as e:
@@ -315,13 +322,18 @@ def _play_one(*, task: Mapping[str, Any], state: Mapping[str, Any],
 
 
 def _production_play(results_path: str, deadline: Any = None,
-                     openings: Optional[Sequence[Dict[str, Any]]] = None
-                     ) -> Callable[..., Dict[str, Any]]:
+                     openings: Optional[Sequence[Dict[str, Any]]] = None,
+                     config: Any = None) -> Callable[..., Dict[str, Any]]:
     """THE REAL PLAY SEAM, built as the qualified commands build it.
 
     Constructed LAZILY: importing this module starts no JVM and loads no model.
     The one pilot difference from H2 is the opening source -- the GENERATED set,
     keyed by name -- and that each game is TIMED on a MONOTONIC clock.
+
+    🔑 `config` IS CARRIED, NOT CONSTRUCTED. It is exposed as `play.config` so the
+    run body can read the identity off THE SAME OBJECT this seam will hand the
+    builder, before it opens a single output. A seam that built its own would put
+    the recorded configuration and the played one one function call apart.
     """
     def play(*, task: Mapping[str, Any], identity: Mapping[str, Any],
              timeout_s: float) -> Dict[str, Any]:
@@ -370,7 +382,14 @@ def _production_play(results_path: str, deadline: Any = None,
                                      ply_cap=H2R.PLY_CAP, timeout_s=timeout_s)
             ctx = INT.IntegrationContext()
             evaluator = SCREEN_CMD._default_load_evaluator(".")
-            argmax_cfg = frozen_argmax_config()   # THE ONE construction
+            # THE OBJECT THIS SEAM WAS GIVEN. Not `frozen_argmax_config()`:
+            # that would be a second object, equal to the recorded one and not it.
+            argmax_cfg = play.config
+            if argmax_cfg is None:
+                raise H3PilotRunError(
+                    "the production seam was given no configuration object. The "
+                    "identity records the object the builder is handed, so the seam "
+                    "may not construct one of its own.")
             from . import e4_screen_reference as REF
             if openings is None:
                 raise H3PilotRunError(
@@ -396,6 +415,7 @@ def _production_play(results_path: str, deadline: Any = None,
 
     play._state = None
     play.cleanups = 0
+    play.config = config
     return play
 
 
@@ -423,10 +443,13 @@ def run_pilot(*, results_path: str, trace_path: str,
     tasks = RULES.build_tasks(openings, seed_interval=PILOT_SEED_BLOCK)
     deadline = D1.Deadline(RULES.RUN_DEADLINE_S)
     deadline.start()                    # ONE origin, before anything effectful
+    # ONE OBJECT, constructed here and handed to the seam; the run body reads the
+    # identity off it before opening anything. One origin, like the deadline.
+    argmax_cfg = frozen_argmax_config()
     return _run_pilot_unguarded(
         tasks=tasks, openings=openings, results_path=results_path,
         trace_path=trace_path, report_path=report_path,
-        play=_production_play(results_path, deadline, openings),
+        play=_production_play(results_path, deadline, openings, argmax_cfg),
         deadline_s=RULES.RUN_DEADLINE_S, _deadline=deadline)
 
 
@@ -451,11 +474,18 @@ def _run_pilot_unguarded(*, tasks, openings, results_path, trace_path,
     check_seed_registration()
     check_output_paths(results_path, trace_path, report_path)
     summary = check_schedule(tasks)
-    # 🔑 BEFORE A SINGLE OUTPUT IS OPENED. A refusal after the create-only files
-    # exist has spent the run's destination on a run that never started -- the
-    # shape the pre-run verification caught on H2's attempt 3.
-    ident = dict(identity) if identity is not None else frozen_incumbent_identity()
-    check_incumbent_identity(ident)
+    # 🔑 THE SEAM'S OWN OBJECT, and BEFORE A SINGLE OUTPUT IS OPENED. Reading a
+    # fresh `frozen_argmax_config()` here would describe an object that never
+    # plays; a refusal after the create-only files exist has spent the run's
+    # destination on a run that never started.
+    config = getattr(play, "config", None)
+    if config is None:
+        raise H3PilotRunError(
+            "the play seam carries no configuration object, so the identity would "
+            "describe something other than what plays. Every seam -- production or "
+            "inert -- must declare the configuration it represents.")
+    ident = dict(identity) if identity is not None else frozen_incumbent_identity(config)
+    check_incumbent_identity(ident, config)
     deadline_s = RULES.RUN_DEADLINE_S if deadline_s is None else deadline_s
 
     from . import d1_probe as _D1

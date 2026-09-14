@@ -211,13 +211,15 @@ def main() -> int:
           all(t["reference_colour"] == REF.reference_colour(t) for t in tasks))
 
     print("\n== the incumbent identity the record will carry ==")
-    ident = RUN.frozen_incumbent_identity()
+    # 🔑 READ OFF `argmax` -- THE OBJECT the builder was handed above -- not a
+    # fresh derivation. Two fresh derivations agreeing proves only that.
+    ident = RUN.frozen_incumbent_identity(argmax)
     print(f"  {ident['reference']} {ident['reference_sha1'][:12]}… "
           f"selection_mode {ident['eval_config']['selection_mode']!r} "
           f"sims {ident['eval_config']['mcts_sims']}")
     print(f"  inert under argmax: {sorted(ident['inert_under_argmax'])}")
     try:
-        RUN.check_incumbent_identity(ident)
+        RUN.check_incumbent_identity(ident, argmax)
         check("the identity barrier ACCEPTS the frozen identity", True)
     except Exception as e:                                    # noqa: BLE001
         check("the identity barrier ACCEPTS the frozen identity", False, str(e)[:110])
@@ -235,11 +237,18 @@ def main() -> int:
     bad = {**ident, "eval_config": {**ident["eval_config"],
                                     "selection_mode": "opening_temperature"}}
     try:
-        RUN.check_incumbent_identity(bad)
+        RUN.check_incumbent_identity(bad, argmax)
         check("and it REFUSES a reverted readout (negative control)", False,
               "it accepted an identity naming the old readout")
     except Exception:                                         # noqa: BLE001
         check("and it REFUSES a reverted readout (negative control)", True)
+    drifted = argmax.__class__(**{**argmax.__dict__, "mcts_sims": 401})
+    try:
+        RUN.check_incumbent_identity(RUN.frozen_incumbent_identity(drifted), drifted)
+        check("and it REFUSES a DRIFTED CONFIG OBJECT (negative control)", False,
+              "it accepted a configuration the qualified path does not give")
+    except Exception:                                         # noqa: BLE001
+        check("and it REFUSES a DRIFTED CONFIG OBJECT (negative control)", True)
 
     print("\n== the three outputs must be UNUSED ==")
     outs = (CMD.DEFAULT_RESULTS, CMD.DEFAULT_TRACE, CMD.DEFAULT_REPORT)
