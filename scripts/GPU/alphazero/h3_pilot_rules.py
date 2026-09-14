@@ -174,7 +174,16 @@ def build_tasks(openings: Sequence[Dict[str, Any]],
 
     seeds: List[Optional[int]] = [None] * N_GAMES
     if seed_interval is not None:
-        lo, hi = (int(seed_interval[0]), int(seed_interval[1]))
+        # 🔴 TYPE-STRICT, not coerced. `int()` accepted "777000000" and
+        # 777000000.0 silently; the programme refuses those everywhere else,
+        # because a seed that arrives as a float or a string has been through a
+        # conversion an int would not have survived. `True` is not 1 either.
+        lo, hi = seed_interval
+        for name, v in (("lo", lo), ("hi", hi)):
+            if type(v) is not int:
+                raise H3PilotError(
+                    f"seed interval {name} is {v!r} ({type(v).__name__}); an int "
+                    f"is required and no value is coerced into one")
         if hi - lo != N_GAMES:
             raise H3PilotError(
                 f"the supplied interval holds {hi - lo} seeds for {N_GAMES} games")

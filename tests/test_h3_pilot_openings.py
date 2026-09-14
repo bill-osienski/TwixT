@@ -214,3 +214,17 @@ def test_the_incumbent_configuration_is_H2s_FROZEN_ONE(tasks):
         assert t["selection_mode"] == H2R.SELECTION_MODE == "argmax"
         assert t["mcts_sims"] == H2R.MCTS_SIMS == 400
         assert t["t1j_mdPly"] == H2R.T1J_MDPLY == 6
+
+
+@pytest.mark.parametrize("iv,what", [
+    (("777000000", 777000040), "a string endpoint"),
+    ((777000000.0, 777000040), "a float endpoint"),
+    ((777000000, 777000040.0), "a float endpoint"),
+    ((True, 41), "a bool endpoint"),
+])
+def test_a_TYPE_DIFFERENT_seed_endpoint_is_REFUSED(openings, iv, what):
+    """🔴 `int()` coercion accepted "777000000" and 777000000.0 silently. The
+    programme is type-strict about seeds everywhere else -- a seed that arrives as
+    a float has been through arithmetic that an int would not survive."""
+    with pytest.raises(R.H3PilotError, match="int"):
+        R.build_tasks(openings, seed_interval=iv)

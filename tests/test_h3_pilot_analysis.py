@@ -7,14 +7,23 @@ Nothing here plays a game. Every record below is constructed.
 """
 import pytest
 
+from scripts.GPU.alphazero import h2_match_rules as H2R
 from scripts.GPU.alphazero import h3_pilot_analysis as A
 from scripts.GPU.alphazero import h3_pilot_rules as R
+
+
+def _d(label):
+    """A REAL sha256 hex digest keyed by a readable label -- the validator is
+    type-strict about the digest's shape, so a fixture cannot fake one."""
+    import hashlib
+    return hashlib.sha256(str(label).encode()).hexdigest()
 
 
 def _g(pair, colour, *, digest, capped=False, points=1.0, elapsed=30.0):
     """One game record, as the runner writes it."""
     return {"task_id": f"h3pilot-x-p{pair:02d}-inc_{colour}", "pair_id": pair,
-            "incumbent_colour": colour, "transcript_digest": digest,
+            "incumbent_colour": colour,
+            "transcript_digest": _d(digest),
             "terminal_reason": "cap" if capped else "win",
             "winner": None if capped else "red",
             "t1j_points": 0.5 if capped else points, "elapsed_s": elapsed,
@@ -32,27 +41,58 @@ def _n_pairs(n, **kw):
     return out
 
 
-# ═════════════════ the transcript digest is structural, and carries movers ═══
+# ══════════ the transcript contract is H2's, INHERITED not reimplemented ════
 
-def test_the_digest_covers_MOVES_AND_MOVERS_not_the_whole_record():
-    """H2's §2.2 lesson: hashing the whole record makes `seed`/`task_id` give a
-    distinct digest for a cell that played one game many times."""
-    moves = [("red", 3, 4), ("black", 5, 6)]
-    a = A.transcript_digest(moves)
-    assert a == A.transcript_digest(list(moves)), "must not depend on identity"
-    assert a != A.transcript_digest([("red", 3, 4), ("black", 5, 7)]), "moves matter"
-    assert a != A.transcript_digest([("black", 3, 4), ("red", 5, 6)]), "MOVERS matter"
+def _plies(n, bound=6):
+    """Post-opening plies with movers bound to PLY PARITY, as H2 requires."""
+    return [{"ply": bound + i + 1, "mover": H2R.colour_at_ply(bound + i + 1),
+             "move": [i, i + 1]} for i in range(n)]
 
 
-def test_a_red_slot_game_can_NEVER_share_a_digest_with_a_black_slot_one():
-    """The card's §5.1 derivation depends on this: because movers are in the
-    digest, the red slot can only collide with a red slot."""
-    same_squares = [(3, 4), (5, 6), (7, 8)]
-    as_red = A.transcript_digest([("red" if i % 2 == 0 else "black", r, c)
-                                  for i, (r, c) in enumerate(same_squares)])
-    as_black = A.transcript_digest([("black" if i % 2 == 0 else "red", r, c)
-                                    for i, (r, c) in enumerate(same_squares)])
-    assert as_red != as_black
+def test_the_transcript_contract_IS_H2s():
+    """Not a second implementation. H2's is type-strict, anchors the ply sequence
+    at BOTH ends, binds movers to ply parity, and carries the terminal reason and
+    winner -- every one of those a lesson this pilot would otherwise repeat."""
+    assert A.transcript is H2R.transcript
+    assert A.transcript_digest is H2R.transcript_digest
+
+
+def test_the_transcript_CARRIES_the_terminal_reason_and_winner():
+    """🔴 My first version hashed the MOVES ALONE, so two games with identical
+    moves and opposite results collided."""
+    pl = _plies(4)
+    win = A.transcript(pl, {"plies": 10, "terminal_reason": "win",
+                            "winner": "red"}, opening_bound=6)
+    cap = A.transcript(pl, {"plies": 10, "terminal_reason": "cap",
+                            "winner": None}, opening_bound=6)
+    assert win != cap
+    assert A.transcript_digest(win) != A.transcript_digest(cap)
+    assert win[-1] == ("terminal", "win", "red")
+
+
+@pytest.mark.parametrize("bad,what", [
+    ({"plies": "10", "terminal_reason": "win", "winner": "red"}, "a string ply count"),
+    ({"plies": 10.0, "terminal_reason": "win", "winner": "red"}, "a float ply count"),
+    ({"plies": True, "terminal_reason": "win", "winner": "red"}, "a bool ply count"),
+    ({"plies": 10, "terminal_reason": "resign", "winner": "red"}, "no such reason"),
+    ({"plies": 10, "terminal_reason": "win", "winner": "green"}, "no such winner"),
+])
+def test_a_MALFORMED_result_is_REFUSED_not_normalised(bad, what):
+    """🔴 My first version coerced with str() and int(), so a malformed record
+    normalised into a valid-looking transcript."""
+    with pytest.raises(H2R.H2RulesError):
+        A.transcript(_plies(4), bad, opening_bound=6)
+
+
+def test_a_flipped_or_truncated_ply_sequence_is_REFUSED():
+    pl = _plies(4)
+    flipped = [dict(p, mover=("black" if p["mover"] == "red" else "red")) for p in pl]
+    with pytest.raises(H2R.H2RulesError, match="parity|mover"):
+        A.transcript(flipped, {"plies": 10, "terminal_reason": "win",
+                               "winner": "red"}, opening_bound=6)
+    with pytest.raises(H2R.H2RulesError, match="ply sequence"):
+        A.transcript(pl[:-1], {"plies": 10, "terminal_reason": "win",
+                               "winner": "red"}, opening_bound=6)
 
 
 # ═════════════════════ the exclusion pipeline, in order ══════════════════════
@@ -89,8 +129,8 @@ def test_DUPLICATE_PAIRS_collapse_to_one_and_keep_BOTH_their_games():
     rep = A.summarise(games, total_elapsed_s=1200.0)
     assert rep["duplicate_pairs"] == 1
     assert rep["pairs_informative"] == 20 and rep["pairs_distinct"] == 19
-    survivor = [p for p in rep["pairs"] if p["red_digest"] == "dup_r"]
-    assert len(survivor) == 1 and survivor[0]["black_digest"] == "dup_b"
+    survivor = [p for p in rep["pairs"] if p["red_digest"] == _d("dup_r")]
+    assert len(survivor) == 1 and survivor[0]["black_digest"] == _d("dup_b")
     assert survivor[0]["n_games"] == 2, "the survivor kept BOTH games"
 
 
@@ -309,3 +349,110 @@ def test_THE_REPORT_CARRIES_NO_RATE_NO_INTERVAL_NO_VERDICT():
     # must not aggregate them anywhere. A summed points column IS a strength
     # quantity whatever it is called.
     assert "t1j_points" not in repr(rep), "the report aggregates the points"
+
+
+# ═══════════ records that are REFUSED vs pairs that are EXCLUDED ════════════
+
+def test_a_DUPLICATED_task_id_is_REFUSED():
+    """A harness fault, not a data property: continuing would report on a corrupt
+    input. Refuse rather than quietly counting the game twice."""
+    games = _n_pairs(20)
+    games.append(dict(games[0]))
+    with pytest.raises(A.H3AnalysisError, match="duplicate task_id"):
+        A.summarise(games, total_elapsed_s=1200.0)
+
+
+def test_an_UNEXPECTED_pair_id_is_REFUSED():
+    games = _n_pairs(20) + _pair(99, "r99", "b99")
+    with pytest.raises(A.H3AnalysisError, match="pair_id"):
+        A.summarise(games, total_elapsed_s=1200.0)
+
+
+@pytest.mark.parametrize("field,value", [
+    ("pair_id", "3"), ("pair_id", 3.0), ("incumbent_colour", "green"),
+    ("transcript_digest", "nothex" * 10), ("transcript_digest", 12345),
+    ("terminal_reason", "resign"), ("winner", "green"), ("plies", "50"),
+])
+def test_a_MALFORMED_record_is_REFUSED(field, value):
+    games = _n_pairs(20)
+    games[0][field] = value
+    with pytest.raises(A.H3AnalysisError):
+        A.summarise(games, total_elapsed_s=1200.0)
+
+
+def test_a_VOID_game_EXCLUDES_ITS_PAIR_WHOLE_and_is_counted():
+    """A VOID is a legitimate run outcome, not a corrupt record: the pair is
+    excluded whole -- never half -- and reported."""
+    games = _n_pairs(19) + _pair(19, "r19", "b19")
+    games[-1]["terminal_reason"] = "void"
+    games[-1]["winner"] = None
+    rep = A.summarise(games, total_elapsed_s=1200.0)
+    assert rep["pairs_excluded_void"] == 1
+    assert rep["pairs_scored"] == 19
+    assert 19 not in {p["pair_id"] for p in rep["pairs"]}
+
+
+def test_an_UNSCOREABLE_game_excludes_its_pair_whole():
+    """`win` with no winner names no result; it cannot be scored and must not be
+    guessed at."""
+    games = _n_pairs(19) + _pair(19, "r19", "b19")
+    games[-1]["winner"] = None                       # terminal_reason stays "win"
+    rep = A.summarise(games, total_elapsed_s=1200.0)
+    assert rep["pairs_excluded_unscoreable"] == 1
+    assert rep["pairs_scored"] == 19
+
+
+# ═══════════════ the outcome distribution is over PAIRS ═════════════════════
+
+def test_the_outcome_distribution_is_PAIRED_and_ORDERED():
+    """The card asks for paired categorical outcomes -- the ordered outcome with
+    the incumbent as red and as black -- not a per-game terminal-reason tally."""
+    games = []
+    for i in range(18):
+        games += _pair(i, f"r{i}", f"b{i}")          # incumbent loses both (winner red)
+    games += _pair(18, "r18", "b18", capped=True)    # cap, cap
+    games += [_g(19, "red", digest="r19", points=0.0),
+              _g(19, "black", digest="b19", points=0.0)]
+    for g in games[-2:]:
+        g["winner"] = g["incumbent_colour"]          # incumbent wins both
+    rep = A.summarise(games, total_elapsed_s=1200.0)
+    dist = rep["outcome_distribution"]
+    assert dist["unit"] == "pair"
+    assert sum(dist["by_ordered_pair_outcome"].values()) == rep["pairs_distinct"]
+    assert dist["by_ordered_pair_outcome"]["cap|cap"] == 1
+    assert dist["by_ordered_pair_outcome"]["incumbent_win|incumbent_win"] == 1
+    # 🔑 The 18 default pairs have RED winning both games, so the incumbent wins
+    # as red and loses as black. That ordered category IS the colour bias the
+    # pairing exists to put inside the pair instead of inside the result.
+    assert dist["by_ordered_pair_outcome"]["incumbent_win|incumbent_loss"] == 18
+
+
+def test_the_outcome_distribution_carries_NO_RATE():
+    rep = A.summarise(_n_pairs(20), total_elapsed_s=1200.0)
+    d = rep["outcome_distribution"]
+    assert all(isinstance(v, int) for v in d["by_ordered_pair_outcome"].values())
+    assert "decides nothing" in d["note"].lower()
+
+
+# ═══════════════════════ timing must be FINITE ══════════════════════════════
+
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), float("-inf")])
+def test_a_NON_FINITE_per_game_duration_is_REFUSED(bad):
+    games = _n_pairs(20)
+    games[0]["elapsed_s"] = bad
+    with pytest.raises(A.H3AnalysisError, match="finite"):
+        A.summarise(games, total_elapsed_s=1200.0)
+
+
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), -1.0])
+def test_a_NON_FINITE_or_NEGATIVE_total_elapsed_is_REFUSED(bad):
+    with pytest.raises(A.H3AnalysisError, match="finite|negative"):
+        A.summarise(_n_pairs(20), total_elapsed_s=bad)
+
+
+def test_a_BOOL_duration_is_REFUSED():
+    """`True` is not 1.0 second."""
+    games = _n_pairs(20)
+    games[0]["elapsed_s"] = True
+    with pytest.raises(A.H3AnalysisError):
+        A.summarise(games, total_elapsed_s=1200.0)

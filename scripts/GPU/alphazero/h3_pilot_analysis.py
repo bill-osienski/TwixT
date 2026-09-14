@@ -18,6 +18,7 @@ import hashlib
 import json
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+from . import h2_match_rules as H2R
 from . import h3_pilot_rules as R
 
 FIRED = "FIRED"
@@ -30,19 +31,23 @@ class H3AnalysisError(RuntimeError):
     """A refusal from the pilot's analysis. Never a verdict."""
 
 
-def transcript_digest(moves: Sequence[Tuple[str, int, int]]) -> str:
-    """sha256 over the ordered `(mover, row, col)` sequence -- AND NOTHING ELSE.
+# 🔴 H2'S TRANSCRIPT CONTRACT, INHERITED WHOLE -- not reimplemented.
+#
+# My first version hashed the ordered `(mover, row, col)` moves and NOTHING ELSE,
+# coercing with `str()` and `int()`. Three defects in one:
+#   * it OMITTED the terminal reason and winner, so two games with identical moves
+#     and opposite results collided into one transcript;
+#   * it COERCED, so a malformed record normalised into a valid-looking transcript
+#     instead of being refused -- `"10"` became 10 and `True` became 1;
+#   * it validated no ply sequence and no mover parity at all.
+# `h2_match_rules.transcript` already does all of it, type-strictly, with both
+# ends of the ply sequence anchored to records the run itself wrote. Binding to it
+# also means a later correction there cannot silently pass this module by.
+transcript = H2R.transcript
+transcript_digest = H2R.transcript_digest
 
-    🔑 H2's §2.2 lesson, inherited: hashing the whole record makes `seed`,
-    `task_id` and `rep` give a distinct digest for a cell that played ONE game
-    many times, which is exactly the degeneracy the screen exists to find.
-
-    MOVERS ARE IN THE KEY. That is what makes §5.1's derivation hold: a game our
-    incumbent played as red can never share a digest with one it played as black,
-    so a red slot can only collide with a red slot.
-    """
-    payload = [[str(m), int(r), int(c)] for (m, r, c) in moves]
-    return hashlib.sha256(json.dumps(payload, separators=(",", ":")).encode()).hexdigest()
+#: A game record must carry a digest of this shape; anything else is malformed.
+_HEX = set("0123456789abcdef")
 
 
 def _percentile(values: Sequence[float], q: float) -> float:
@@ -59,43 +64,134 @@ def _percentile(values: Sequence[float], q: float) -> float:
     return float(xs[lo] + (xs[hi] - xs[lo]) * (pos - lo))
 
 
+def _duration(value: Any, what: str) -> float:
+    """A FINITE, NON-NEGATIVE duration from a monotonic clock, or a refusal.
+
+    🔴 `float()` alone accepted `nan`, `inf` and `True`. A NaN duration poisons
+    every quantile silently -- a median of NaN is not a slow run, it is a broken
+    record -- and `True` is not one second. A monotonic clock also cannot run
+    backwards, so a negative is not a datum either.
+    """
+    import math
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise H3AnalysisError(
+            f"{what} is {value!r} ({type(value).__name__}); a real number is required")
+    v = float(value)
+    if not math.isfinite(v):
+        raise H3AnalysisError(f"{what} is {v}; a finite duration is required")
+    if v < 0:
+        raise H3AnalysisError(
+            f"{what} is {v}; negative -- a monotonic clock does not run backwards")
+    return v
+
+
 def _check_timing(games: Sequence[Dict[str, Any]]) -> None:
     """FAIL CLOSED on a missing or impossible duration.
 
     Attempt 3's records carried NO timing at all, which is why the card's §4.1 was
-    unanswerable after the fact. A monotonic clock cannot run backwards, so a
-    negative elapsed is not a slow game -- it is a broken record.
+    unanswerable after the fact.
     """
     for g in games:
         if "elapsed_s" not in g:
             raise H3AnalysisError(
                 f"{g.get('task_id')}: no elapsed_s. Per-game timing is REQUIRED; "
                 f"without it the pilot cannot answer its own runtime question.")
-        try:
-            v = float(g["elapsed_s"])
-        except (TypeError, ValueError):
-            raise H3AnalysisError(f"{g.get('task_id')}: elapsed_s is not a number")
-        if v < 0:
+        _duration(g["elapsed_s"], f"{g.get('task_id')}: elapsed_s")
+
+
+#: A game whose `terminal_reason` is one of these did not produce a result. Its
+#: PAIR is excluded whole -- never half -- and counted.
+NOT_SCOREABLE_REASONS = ("void", "VOID", "interrupted", "error")
+
+
+def _validate_records(games: Sequence[Dict[str, Any]]) -> None:
+    """REFUSE a corrupt input. Distinct from EXCLUSION, which is for legitimate
+    run outcomes: a duplicated task or an unknown pair is a HARNESS fault, and
+    reporting over it would describe something that never happened.
+    """
+    seen = set()
+    for g in games:
+        tid = g.get("task_id")
+        if not isinstance(tid, str) or not tid:
+            raise H3AnalysisError(f"a record has task_id {tid!r}; a string is required")
+        if tid in seen:
             raise H3AnalysisError(
-                f"{g.get('task_id')}: elapsed_s {v} is negative; a monotonic clock "
-                f"does not run backwards")
+                f"duplicate task_id {tid!r}: the same game appears twice, which "
+                f"would count it twice. This is a harness fault, not a result.")
+        seen.add(tid)
+        pid = g.get("pair_id")
+        if type(pid) is not int or isinstance(pid, bool):
+            raise H3AnalysisError(
+                f"{tid}: pair_id is {pid!r} ({type(pid).__name__}); an int is required")
+        if not 0 <= pid < R.N_OPENINGS:
+            raise H3AnalysisError(
+                f"{tid}: pair_id {pid} is outside the planned 0..{R.N_OPENINGS - 1}; "
+                f"an unexpected pair means the record does not belong to this run")
+        if g.get("incumbent_colour") not in ("red", "black"):
+            raise H3AnalysisError(
+                f"{tid}: incumbent_colour {g.get('incumbent_colour')!r}")
+        d = g.get("transcript_digest")
+        if not isinstance(d, str) or len(d) != 64 or not set(d) <= _HEX:
+            raise H3AnalysisError(
+                f"{tid}: transcript_digest {d!r} is not a sha256 hex digest")
+        reason = g.get("terminal_reason")
+        if reason not in tuple(H2R.TERMINAL_REASONS) + NOT_SCOREABLE_REASONS:
+            raise H3AnalysisError(
+                f"{tid}: terminal_reason {reason!r} is not one this protocol has")
+        winner = g.get("winner")
+        if winner is not None and winner not in H2R.WINNERS:
+            raise H3AnalysisError(f"{tid}: winner {winner!r}")
+        if type(g.get("plies")) is not int or isinstance(g.get("plies"), bool):
+            raise H3AnalysisError(
+                f"{tid}: plies is {g.get('plies')!r}; an int is required")
+
+
+def _scoreable(g: Dict[str, Any]) -> bool:
+    """Did this game produce a result at all?
+
+    A VOID or an interrupted game did not. Nor did a `win` with no winner: that
+    names no outcome and must not be guessed at.
+    """
+    if g.get("terminal_reason") in NOT_SCOREABLE_REASONS:
+        return False
+    if g.get("terminal_reason") == "win" and g.get("winner") not in ("red", "black"):
+        return False
+    return True
+
+
+def _pair_outcome(g: Dict[str, Any]) -> str:
+    """This game's CATEGORICAL outcome from the incumbent's side. Never a score."""
+    if g.get("terminal_reason") == "cap":
+        return "cap"
+    return ("incumbent_win" if g.get("winner") == g.get("incumbent_colour")
+            else "incumbent_loss")
 
 
 def summarise(games: Sequence[Dict[str, Any]], *,
               total_elapsed_s: float) -> Dict[str, Any]:
     """The whole report. `games` are per-game records as the runner writes them."""
     games = [dict(g) for g in games]
+    _validate_records(games)          # REFUSE a corrupt input before anything else
     _check_timing(games)
+    total = _duration(total_elapsed_s, "total_elapsed_s")
 
     # ── nominal → drop incomplete → drop within-pair-identical → collapse dups
     by_pair: Dict[Any, List[Dict[str, Any]]] = {}
     for g in games:
         by_pair.setdefault(g["pair_id"], []).append(g)
 
-    incomplete = [p for p, gs in by_pair.items()
-                  if len(gs) != 2
-                  or {x["incumbent_colour"] for x in gs} != {"red", "black"}]
-    scored = {p: gs for p, gs in by_pair.items() if p not in incomplete}
+    # EXCLUDED WHOLE, never half, with the reason kept separate: a pair missing a
+    # game is a different fact from one whose game VOIDed.
+    incomplete, voided, unscoreable = [], [], []
+    for pid, gs in by_pair.items():
+        if len(gs) != 2 or {x["incumbent_colour"] for x in gs} != {"red", "black"}:
+            incomplete.append(pid)
+        elif any(x.get("terminal_reason") in NOT_SCOREABLE_REASONS for x in gs):
+            voided.append(pid)
+        elif not all(_scoreable(x) for x in gs):
+            unscoreable.append(pid)
+    excluded = set(incomplete) | set(voided) | set(unscoreable)
+    scored = {p: gs for p, gs in by_pair.items() if p not in excluded}
 
     def _slot(gs, colour):
         return next(x for x in gs if x["incumbent_colour"] == colour)
@@ -106,6 +202,9 @@ def summarise(games: Sequence[Dict[str, Any]], *,
         pairs.append({"pair_id": p, "n_games": 2,
                       "red_digest": red["transcript_digest"],
                       "black_digest": black["transcript_digest"],
+                      # the ORDERED categorical outcome: incumbent as red, then as
+                      # black. A category, never a score.
+                      "ordered_outcome": f"{_pair_outcome(red)}|{_pair_outcome(black)}",
                       "capped": sum(1 for x in gs if x.get("terminal_reason") == "cap"),
                       "elapsed_s": float(red["elapsed_s"]) + float(black["elapsed_s"])})
 
@@ -140,7 +239,7 @@ def summarise(games: Sequence[Dict[str, Any]], *,
               "median": _percentile(elapsed, 0.5) if elapsed else None,
               "p90": _percentile(elapsed, 0.9) if elapsed else None,
               "max": max(elapsed) if elapsed else None,
-              "total_elapsed_s": float(total_elapsed_s)}
+              "total_elapsed_s": total}
 
     capped = sum(1 for g in games if g.get("terminal_reason") == "cap")
     complete = (len(games) == R.N_GAMES and not incomplete
@@ -161,7 +260,7 @@ def summarise(games: Sequence[Dict[str, Any]], *,
         "S2": _count_rule("S2", capped, R.MAX_CAPPED_GAMES, "capped games"),
         "S3": _count_rule("S3", len(identical), R.MAX_WITHIN_PAIR_IDENTICAL,
                           "within-pair-identical pairs"),
-        "S4a": _count_rule("S4a", float(total_elapsed_s), float(R.MAX_TOTAL_ELAPSED_S),
+        "S4a": _count_rule("S4a", total, float(R.MAX_TOTAL_ELAPSED_S),
                            "total elapsed seconds"),
     }
     # ── S4b is a RATIO OF TWO QUANTILES and is NOT monotone: the games that were
@@ -182,13 +281,20 @@ def summarise(games: Sequence[Dict[str, Any]], *,
     withheld = len(pairs) < R.REPORT_FLOOR_PAIRS
     outcomes = None
     if not withheld:
+        # 🔴 OVER PAIRS, not over games. The pair is the unit (H3 §5), so a
+        # per-game terminal-reason tally answers a question the design does not
+        # ask -- and my first version reported exactly that.
         tally: Dict[str, int] = {}
-        for g in games:
-            tally[str(g.get("terminal_reason"))] = \
-                tally.get(str(g.get("terminal_reason")), 0) + 1
-        outcomes = {"by_terminal_reason": tally,
-                    "note": "REPORTED, AND IT DECIDES NOTHING. Not a stop rule "
-                            "(card §6) and not evidence of strength."}
+        for pr in distinct:
+            tally[pr["ordered_outcome"]] = tally.get(pr["ordered_outcome"], 0) + 1
+        outcomes = {
+            "unit": "pair",
+            "by_ordered_pair_outcome": tally,
+            "categories": "incumbent_win | incumbent_loss | cap, ordered as "
+                          "(incumbent as red)|(incumbent as black)",
+            "note": "REPORTED, AND IT DECIDES NOTHING. Categorical counts over "
+                    "pairs: no rate, no interval, no comparison. Not a stop rule "
+                    "(card §6) and not evidence of strength."}
 
     return {
         "is_strength_verdict": False,
@@ -198,6 +304,8 @@ def summarise(games: Sequence[Dict[str, Any]], *,
         "pairs_nominal": R.N_OPENINGS,
         "pairs_scored": len(pairs),
         "incomplete_pairs": len(incomplete),
+        "pairs_excluded_void": len(voided),
+        "pairs_excluded_unscoreable": len(unscoreable),
         "within_pair_identical": len(identical),
         "pairs_informative": len(informative),
         "duplicate_pairs": duplicates,
