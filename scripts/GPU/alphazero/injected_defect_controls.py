@@ -2869,13 +2869,13 @@ DEFECTS = [
     ("the outputs are no longer create-only inside the run", H3RUN,
      "            os.open(results_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644), \"w\"))",
      "            os.open(results_path, os.O_WRONLY | os.O_CREAT, 0o644), \"w\"))",
-     f"{T_H3RUN}::test_the_run_REFUSES_when_an_output_already_exists"),
+     f"{T_H3RUN}::test_O_EXCL_refuses_even_with_the_precheck_disabled"),
     ("the generated openings are not checked against the frozen pin", H3RUN,
      "    if RULES.opening_set_digest(openings) != RULES.OPENING_SET_DIGEST:",
      "    if False:",
      f"{T_H3RUN}::test_run_pilot_REFUSES_a_set_that_does_not_match_the_pin"),
     # THE WRAPPER.
-    ("the wrapper reports success without verifying the gate", H3CMD,
+    ("the PILOT wrapper reports success without verifying the gate", H3CMD,
      "        if not restore_gate(_runner_source):\n"
      "            print(f\"GATE NOT RESTORED:",
      "        if False:\n            print(f\"GATE NOT RESTORED:",

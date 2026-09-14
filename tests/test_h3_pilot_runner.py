@@ -446,6 +446,23 @@ def test_the_run_REFUSES_when_an_output_already_exists(tmp_path):
         _run(tmp_path, _inert_play())
 
 
+def test_O_EXCL_refuses_even_with_the_precheck_disabled(tmp_path, monkeypatch):
+    """The create-only OPEN, REACHED ALONE.
+
+    🔑 `check_output_paths` refuses an existing file first, so removing `O_EXCL`
+    from the open changes nothing any ordinary test can see -- a control aimed at
+    the precheck's test went NOT CAUGHT. The open is defence in depth against the
+    gap BETWEEN the precheck and the write, and the only way to exercise it is to
+    disable the check in front of it.
+    """
+    monkeypatch.setattr(RUN, "check_output_paths", lambda *a, **k: None)
+    (tmp_path / "r.jsonl").write_text("an earlier run's file")
+    with pytest.raises(RUN.H3PilotVoidError, match="FileExistsError"):
+        _run(tmp_path, _inert_play())
+    assert (tmp_path / "r.jsonl").read_text() == "an earlier run's file", \
+        "the existing file must not be truncated"
+
+
 def test_a_capped_game_is_recorded_and_counted(tmp_path):
     rep = _run(tmp_path, _inert_play(cap_every=4))
     assert rep["capped_games"] == 10
