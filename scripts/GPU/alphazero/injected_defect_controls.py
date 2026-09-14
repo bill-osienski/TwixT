@@ -4082,7 +4082,7 @@ EXPECTED_REASONS = {
     'the H3 pilot names a seed block that was never reserved':
         'assert (777000000, 777000040) is None',
     'the pilot entry no longer reads the gate first':
-        "AssertionError: Expr(value=Call(func=Name(id='check_seed_registration', ctx=Load())))",
+        'AssertionError: THE FIRST STATEMENT IN run_pilot IS A ImportFrom, NOT A CALL',
     "the pilot seam trusts the entry's gate check":
         "scripts.GPU.alphazero.h3_pilot_runner.H3PilotContainmentError: refusing to run the H3 pilot's production seam from a test process: scripts.GPU.alphazero.t1j_toolchain.verified_paths, scripts.GPU.alphazero.d1_probe._default_compile, scripts.GPU.alphazero.e4_screen_command._default_load_evaluator, scripts.GPU.alphazero.e4_screen_runner.play_task are still the REAL production function. Nothing was resolved, compiled, loaded, drawn or played. A test that reaches this point has removed an authorization check: on 2026-09-12 exactly that happened and 383 real games were played before it was killed.",
     "the pilot's containment boundary is removed":

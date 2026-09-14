@@ -47,7 +47,8 @@ def test_run_pilot_CALLS_check_gate_FIRST_by_AST():
     stmts = [n for n in fn.body
              if not (isinstance(n, ast.Expr) and isinstance(n.value, ast.Constant))]
     first = stmts[0]
-    assert isinstance(first, ast.Expr) and isinstance(first.value, ast.Call)
+    assert isinstance(first, ast.Expr) and isinstance(first.value, ast.Call), (
+        f"THE FIRST STATEMENT IN run_pilot IS A {type(first).__name__}, NOT A CALL")
     assert getattr(first.value.func, "id", "") == "check_gate", ast.dump(first)
 
 
