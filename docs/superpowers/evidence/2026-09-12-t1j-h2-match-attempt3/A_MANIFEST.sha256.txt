@@ -1,9 +1,22 @@
-MANIFEST -- 2026-09-12-t1j-h2-match-attempt3 (PRE-RUN ONLY; nothing has run)
-6 files
+MANIFEST -- 2026-09-12-t1j-h2-match-attempt3
+THE MATCH RAN ONCE ON 2026-09-13 AND VOIDED ON ITS DEADLINE AT GAME 692/736.
+P* = qualification BEFORE the run. 0-9 = the run and its accounting.
+10/11 = harness and suite AFTER the seed accounting was recorded.
 
-cab63b81dbf4b526744a3af7e5d3c02c8ef1cf232eaabf44f714d1304a0dbe4b      6743  00_prerun_verification.txt
+9f236ba59a65f9472a6fd18c97001d5d2b104f4209ae7bc89563d91a515b15c5      6886  00_prerun_verification.txt
 69cfb9d43ed66ec6923329dbb301d20995f6ad26a7751d4158f9bc65d0688366      6733  00a_prerun_verification_DIRTY_TREE.txt
 a25e869a20d9f6bced771e4c06bcfd3a135f7b0e5f15a1499c01d75c215d514e      1464  01_run_once.sh.txt
-51e6ff66e4ed2b6ee197eb67fdff8a77df29dc777a9a4e6eb3dddeeed8e861df     35661  02_harness_run.txt
-5940c780d978d40c88f11a5c92185be6d77195b0b5502b6c9c94c81c4018dbd6     26116  03_full_suite_run.txt
-eb8f3df2de490c4a425ad38f91206a62a8a328b808a05dba7be2f71768daa368     17046  04_h2_prerun_verification.py.txt
+807de030d8695d646a26523399119a0fa5ccc04d812df519168a93dfeff21d25        54  02_timing.txt
+94440b8c8ad939f9e66302f4081c68ccfd3a7dfa7ca41926c301c75d761e1ace   5094096  03_h2_results.jsonl
+(directory)                                                             -  03_h2_results.jsonl.t1j_classes/
+0d982e626a60f6673ee1f2137ea0e816798f42f1ef810992ab36d3908036f5a0     68372  04_h2_trace.jsonl
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855         0  05_stdout.txt
+6427871bb3fdcadb7eb9eb6b79389201b9f00c9e8362910cf596bd4f73cc6398       211  06_stderr.txt
+1121cfccd5913f0a63fec40a6ffd44ea64f9dc135c66634ba001d10bcf4302a2         2  07_exit.txt
+0fe7a852cc20df635a096b446f76c01fe9af4322ee3386cf3af6f6784d95bdbf      3840  08_accounting_from_records.txt
+f7b45e6d0840ea2b0feb1eb5697ac6e38e59ed1fbff86db43caa5c1c818d1da3      3123  09_outcome.md
+fc978358f4d860da6f6d83de123f6dc01719436cd1fda4fe28cfee0f8b5f7e6a     35725  10_harness_run_AFTER.txt
+72e12d10053c19fe8c23de8e1c4e14ee08d9608cad08fcb3bf8008cf11cff23b     26116  11_full_suite_run_AFTER.txt
+51e6ff66e4ed2b6ee197eb67fdff8a77df29dc777a9a4e6eb3dddeeed8e861df     35661  P2_harness_run_BEFORE.txt
+5940c780d978d40c88f11a5c92185be6d77195b0b5502b6c9c94c81c4018dbd6     26116  P3_full_suite_run_BEFORE.txt
+eb8f3df2de490c4a425ad38f91206a62a8a328b808a05dba7be2f71768daa368     17046  P4_h2_prerun_verification.py.txt
