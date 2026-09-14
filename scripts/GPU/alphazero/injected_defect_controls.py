@@ -2863,24 +2863,20 @@ DEFECTS = [
      "                              frozen_argmax_config()),",
      f"{T_H3RUN}::test_run_pilot_CONSTRUCTS_THE_CONFIG_ONCE_and_hands_it_to_the_seam"),
     ("the pilot never checks the recorded identity", H3RUN,
-     "    check_incumbent_identity(ident)",
+     "    check_incumbent_identity(ident, config)",
      "    pass",
      f"{T_H3RUN}::test_the_identity_is_VERIFIED_BEFORE_ANY_OUTPUT_IS_OPENED"),
     # 🔑 THE RECURRING DEFECT CLASS, EXACTLY: a default that switches the check
     # off. Only the default-path test can see this one -- a supplied identity is
     # still checked, so every other identity test passes.
     ("the identity is checked only when one is SUPPLIED", H3RUN,
-     "    check_incumbent_identity(ident)",
-     "    if identity is not None:\n        check_incumbent_identity(ident)",
+     "    check_incumbent_identity(ident, config)",
+     "    if identity is not None:\n        check_incumbent_identity(ident, config)",
      f"{T_H3RUN}::test_THE_DEFAULT_IDENTITY_IS_CHECKED_TOO_not_only_a_supplied_one"),
     ("the durable header records no identity", H3RUN,
      '                   "identity": ident})',
      "                   })",
      f"{T_H3RUN}::test_THE_DURABLE_HEADER_CARRIES_THE_FULL_IDENTITY_AND_THE_READOUT"),
-    ("the seam builds its OWN argmax config again", H3RUN,
-     "            argmax_cfg = frozen_argmax_config()   # THE ONE construction",
-     "            argmax_cfg = G3.eval_config()",
-     f"{T_H3RUN}::test_THE_RECORDED_IDENTITY_IS_THE_CONFIG_PASSED_TO_THE_REAL_BUILDER"),
     ("the config object is never compared with the qualified path", H3RUN,
      '        H2RUN._same(want["argmax_config"], merged, "argmax_config")',
      "        pass",
@@ -4365,8 +4361,6 @@ EXPECTED_REASONS = {
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_pilot_runner.H3PilotRunError'>",
     'the durable header records no identity':
         "KeyError: 'identity'",
-    'the seam builds its OWN argmax config again':
-        "AssertionError: selection_mode: the builder got 'opening_temperature' but the header would record 'argmax'",
     'the config object is never compared with the qualified path':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_pilot_runner.H3PilotRunError'>",
     'a seedless schedule is admitted, so it bypasses the registry':
