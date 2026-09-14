@@ -212,16 +212,14 @@ def _production_play(results_path: str, deadline: Any = None,
         t0 = time.monotonic()
         try:
             from . import h2_match_rules as H2R
-            result = state["harness"].play_task(
+            out = state["harness"].play_task(
                 task=dict(task), agent_for=state["agent_factory"],
                 state_factory=state["state_factory"], binder=state["binder"],
                 rec=None, ply_cap=H2R.PLY_CAP)
         finally:
             state["cleanup"]()
             play.cleanups += 1
-        result = dict(result)
-        result["elapsed_s"] = time.monotonic() - t0
-        return result
+        return {**dict(out), "elapsed_s": time.monotonic() - t0}
 
     play._state = None
     play.cleanups = 0
@@ -230,15 +228,157 @@ def _production_play(results_path: str, deadline: Any = None,
 
 def run_pilot(*, results_path: str, trace_path: str,
               report_path: str) -> Dict[str, Any]:
-    """THE PUBLIC ENTRY. Gate FIRST, then the barriers, then nothing else yet.
+    """THE PUBLIC ENTRY. Takes the three OUTPUT PATHS and nothing else.
 
-    🔴 It refuses before it can reach a seam: the gate is shut and no seed block
-    exists. The body beyond the barriers is deliberately unbuilt -- wiring a game
-    loop that cannot be authorized would be code no test could exercise.
+    🔴 EVERY OTHER INPUT IS RESOLVED HERE, so none can be supplied. H2 records why:
+    an entry that accepted `tasks`, `play` or `identity` would let an opened gate
+    authorize CALLER-SUPPLIED GAMEPLAY through the API while the CLI could not run
+    the real thing -- forged play with a real report on one side, no production
+    path on the other. The injection seams live on the PRIVATE entry, for tests.
     """
     check_gate()
+    from . import d1_probe as D1
+    openings = RULES.generate_openings()
+    if RULES.opening_set_digest(openings) != RULES.OPENING_SET_DIGEST:
+        raise H3PilotRunError(
+            f"the generated opening set does not match the frozen pin "
+            f"{RULES.OPENING_SET_DIGEST}; the positions are not the ones the card "
+            f"fixed and the pilot would answer a different question.")
+    if PILOT_SEED_BLOCK is None:
+        check_seed_registration()                  # refuses: no block is reserved
+    tasks = RULES.build_tasks(openings, seed_interval=PILOT_SEED_BLOCK)
+    deadline = D1.Deadline(RULES.RUN_DEADLINE_S)
+    deadline.start()                    # ONE origin, before anything effectful
+    return _run_pilot_unguarded(
+        tasks=tasks, openings=openings, results_path=results_path,
+        trace_path=trace_path, report_path=report_path,
+        play=_production_play(results_path, deadline, openings),
+        deadline_s=RULES.RUN_DEADLINE_S, _deadline=deadline)
+
+
+def _run_pilot_unguarded(*, tasks, openings, results_path, trace_path,
+                         report_path, play, deadline_s=None, _deadline=None,
+                         _supervisor=None) -> Dict[str, Any]:
+    """Everything below the gate. PRIVATE, and never a way around `run_pilot`.
+
+    It exists so the machinery can be tested WITHOUT lifting the gate, with inert
+    collaborators.
+
+    🔑 THE ONE PLACE THIS DIFFERS FROM H2, AND IT IS THE CARD'S POINT. H2 raises
+    VOID on a short schedule because its verdict needs all 736 games. THE PILOT'S
+    OUTPUTS ARE DIAGNOSTICS, and diagnostics over completed pairs stay valid, so
+    running out of time STOPS CLEANLY and still reports -- verdict PARTIAL, never
+    OK. An EXCEPTION is still a VOID; a deadline is not.
+    """
+    import contextlib
+    import json
+    import time
+
     check_seed_registration()
     check_output_paths(results_path, trace_path, report_path)
-    raise H3PilotRunError(
-        "the H3 pilot run body is not implemented: execution is a separate "
-        "authorization and the seed block it needs does not exist.")
+    summary = check_schedule(tasks)
+    deadline_s = RULES.RUN_DEADLINE_S if deadline_s is None else deadline_s
+
+    from . import d1_probe as _D1
+    deadline = _deadline if _deadline is not None else _D1.Deadline(deadline_s)
+    if not deadline.started:
+        deadline.start()
+
+    games: list = []
+    timed_out = False
+    trace = rec = None
+    stack = contextlib.ExitStack()
+    t_start = time.monotonic()
+    try:
+        # ONE AT A TIME, EACH REGISTERED AS IT IS ACQUIRED: opening both before
+        # tracking either leaks the first descriptor when the second open fails.
+        trace = stack.enter_context(os.fdopen(
+            os.open(trace_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644), "w"))
+        rec = stack.enter_context(os.fdopen(
+            os.open(results_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644), "w"))
+        sup = _supervisor if _supervisor is not None else _D1._supervisor
+        stack.enter_context(sup(deadline))
+
+        def emit(fh, obj):
+            fh.write(json.dumps(obj, sort_keys=True, default=str) + "\n")
+            fh.flush()
+            os.fsync(fh.fileno())
+
+        emit(trace, {"event": "run_start", "n_tasks": len(tasks),
+                     "pairs": summary["pairs"]})
+        emit(rec, {"record_type": "header", "design": "H3_PILOT",
+                   "task_digest": summary["task_digest"],
+                   "opening_set_digest": RULES.opening_set_digest(openings)})
+
+        for i, task in enumerate(tasks):
+            if deadline.elapsed() > deadline_s:
+                # 🔑 NOT A VOID. The card says so: a timeout still measures what
+                # the completed games cost, and the diagnostics over completed
+                # PAIRS stay valid. It stops, and the report says PARTIAL.
+                timed_out = True
+                emit(trace, {"event": "deadline_reached", "index": i,
+                             "games_completed": len(games)})
+                break
+            emit(trace, {"event": "task_start", "index": i})
+            out = play(task=task, identity={}, timeout_s=RULES.PER_CALL_TIMEOUT_S)
+            row = dict(out["result"])
+            t = ANALYSIS.transcript(out["plies"], row,
+                                    opening_bound=out["opening_bound"])
+            digest = ANALYSIS.transcript_digest(t)
+            # THE TRANSCRIPT EVIDENCE IS PERSISTED, not merely used: a screen whose
+            # input is unrecorded is a number to be taken on trust.
+            for r in out.get("records", out["plies"]):
+                emit(rec, {"record_type": r.get("record_type", "ply"), **r})
+            emit(rec, {"record_type": "transcript", "task_id": task["task_id"],
+                       "pair_id": task["pair_id"],
+                       "incumbent_colour": task["incumbent_colour"],
+                       "opening_bound": out["opening_bound"],
+                       "n_plies": len(out["plies"]), "transcript_digest": digest})
+            game = {"task_id": task["task_id"], "pair_id": task["pair_id"],
+                    "incumbent_colour": task["incumbent_colour"],
+                    "transcript_digest": digest,
+                    "terminal_reason": row.get("terminal_reason"),
+                    "winner": row.get("winner"),
+                    "t1j_points": row.get("t1j_points"),
+                    "plies": row.get("plies"),
+                    "elapsed_s": out["elapsed_s"]}
+            games.append(game)
+            emit(rec, {"record_type": "task_result", **game})
+            emit(trace, {"event": "task_done", "index": i,
+                         "games_completed": len(games)})
+
+        report = ANALYSIS.summarise(games, total_elapsed_s=time.monotonic() - t_start)
+        report["timed_out"] = timed_out
+        fd = os.open(report_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+        with os.fdopen(fd, "w") as fh:
+            json.dump(report, fh, indent=1, sort_keys=True, default=str)
+            fh.write("\n")
+            fh.flush()
+            os.fsync(fh.fileno())
+        # THE TERMINAL RECORD COMES LAST, AFTER THE REPORT IS DURABLE -- H2's
+        # lesson, where run_end/OK preceded the report and a write failure left
+        # the trace and the exit code disagreeing about the same run.
+        emit(trace, {"event": "run_end",
+                     "verdict": "PARTIAL" if timed_out else "OK",
+                     "games_completed": len(games),
+                     "any_stop_rule_fired": report["any_fired"]})
+        return report
+    except BaseException as e:                               # noqa: BLE001
+        verdict = "INTERRUPTED" if isinstance(e, KeyboardInterrupt) else "VOID"
+        if trace is not None:
+            try:
+                trace.write(json.dumps(
+                    {"event": "run_end", "verdict": verdict,
+                     "games_completed": len(games),
+                     "error": type(e).__name__}, sort_keys=True) + "\n")
+                trace.flush()
+                os.fsync(trace.fileno())
+            except Exception:                                # noqa: BLE001
+                pass
+        if isinstance(e, H3PilotRunError):
+            raise
+        if isinstance(e, Exception):
+            raise H3PilotVoidError(f"{type(e).__name__}: {e}") from e
+        raise
+    finally:
+        stack.close()                     # every acquired descriptor, in reverse

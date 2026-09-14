@@ -11,6 +11,7 @@ import sys
 import pytest
 
 from scripts.GPU.alphazero import e4_screen_reference as REF
+from scripts.GPU.alphazero import h2_match_rules as H2R
 from scripts.GPU.alphazero import h3_pilot_rules as R
 from scripts.GPU.alphazero import h3_pilot_runner as RUN
 
@@ -253,7 +254,7 @@ def test_THE_SEAM_TIMES_EVERY_GAME_ON_A_MONOTONIC_CLOCK():
     src = inspect.getsource(RUN._production_play)
     assert "time.monotonic()" in src
     assert "time.time()" not in src, "a wall clock must not time a game"
-    assert 'result["elapsed_s"]' in src
+    assert '"elapsed_s": time.monotonic() - t0' in src
 
 
 def test_the_cleanup_runs_after_EVERY_game_including_a_failed_one():
@@ -266,3 +267,331 @@ def test_the_cleanup_runs_after_EVERY_game_including_a_failed_one():
     assert tries, "the game loop must clean up in a finally"
     body = "\n".join(ast.dump(n) for t in tries for n in t.finalbody)
     assert "cleanup" in body
+
+
+# ═══════════ THE RUN BODY, driven with INERT COLLABORATORS ══════════════════
+# Nothing below touches a toolchain, a model, a JVM or a seed: the play seam is
+# supplied, and the private entry exists precisely so the machinery can be
+# exercised WITHOUT lifting the gate.
+
+import contextlib
+import json
+
+
+def _inert_play(*, cap_every=None, fail_at=None, slow_after=None, elapsed=1.0):
+    """A play seam that plays nothing. Returns the shape the harness returns."""
+    calls = {"n": 0}
+
+    def play(*, task, identity, timeout_s):
+        i = calls["n"]
+        calls["n"] += 1
+        if fail_at is not None and i == fail_at:
+            raise RuntimeError("the inert seam was told to fail")
+        capped = cap_every is not None and i % cap_every == 0
+        bound = task["opening_plies"]
+        n_plies = 4
+        # 🔑 DISTINCT PER TASK. The first version used `i % 20`, which made pairs
+        # 0 and 10, 1 and 11 ... byte-identical -- ten duplicate pairs, and S1
+        # fired on what was supposed to be a CLEAN run. The fixture, not the code.
+        plies = [{"ply": bound + k + 1, "mover": H2R.colour_at_ply(bound + k + 1),
+                  "move": [i, k], "record_type": "ply"} for k in range(n_plies)]
+        winner = None if capped else task["incumbent_colour"]
+        row = {"terminal_reason": "cap" if capped else "win", "winner": winner,
+               "plies": bound + n_plies, "seed": task["seed"],
+               "t1j_points": 0.5 if capped else 0.0}
+        return {"result": row, "plies": plies, "opening_bound": bound,
+                "elapsed_s": elapsed}
+
+    play.calls = calls
+    return play
+
+
+class _FakeDeadline:
+    """A deadline whose clock the test drives. `elapsed` is read, never wall time."""
+    def __init__(self, budget, expire_after=None):
+        self.budget, self.expire_after, self.n = budget, expire_after, 0
+        self.started = False
+
+    def start(self):
+        self.started = True
+        return self
+
+    def elapsed(self):
+        self.n += 1
+        if self.expire_after is not None and self.n > self.expire_after:
+            return self.budget + 1
+        return 0.0
+
+
+@contextlib.contextmanager
+def _no_supervisor(deadline):
+    yield
+
+
+def _run(tmp_path, play, deadline=None):
+    from scripts.GPU.alphazero import h3_pilot_rules as RULES
+    ops = RULES.generate_openings()
+    tasks = RULES.build_tasks(ops, seed_interval=(777000000, 777000040))
+    # the seed barrier is the runner's, and these tasks are not from a real block
+    import unittest.mock as _m
+    with _m.patch.object(RUN, "PILOT_SEED_BLOCK", (777000000, 777000040)), \
+         _m.patch.object(RUN, "check_seed_registration", lambda: None), \
+         _m.patch.object(RUN, "check_schedule", lambda t: {
+             "n_tasks": len(t), "task_digest": "x" * 64,
+             "pairs": len({x["pair_id"] for x in t})}):
+        return RUN._run_pilot_unguarded(
+            tasks=tasks, openings=ops,
+            results_path=str(tmp_path / "r.jsonl"),
+            trace_path=str(tmp_path / "t.jsonl"),
+            report_path=str(tmp_path / "rep.json"),
+            play=play, deadline_s=7200,
+            _deadline=deadline or _FakeDeadline(7200),
+            _supervisor=_no_supervisor)
+
+
+def _lines(p):
+    return [json.loads(l) for l in open(p) if l.strip()]
+
+
+def test_A_COMPLETE_RUN_plays_all_40_writes_all_three_and_reports(tmp_path):
+    play = _inert_play()
+    rep = _run(tmp_path, play)
+    assert play.calls["n"] == 40
+    assert rep["complete"] is True and rep["timed_out"] is False
+    assert rep["games_completed"] == 40 and rep["pairs_scored"] == 20
+    for name in ("r.jsonl", "t.jsonl", "rep.json"):
+        assert (tmp_path / name).exists(), name
+    trace = _lines(tmp_path / "t.jsonl")
+    assert trace[0]["event"] == "run_start"
+    assert trace[-1] == {"event": "run_end", "verdict": "OK",
+                         "games_completed": 40, "any_stop_rule_fired": False}
+
+
+def test_the_results_file_carries_the_transcripts_and_the_durations(tmp_path):
+    """A screen whose input is unrecorded is a number taken on trust."""
+    _run(tmp_path, _inert_play())
+    rows = _lines(tmp_path / "r.jsonl")
+    kinds = {r["record_type"] for r in rows}
+    assert {"header", "ply", "transcript", "task_result"} <= kinds
+    results = [r for r in rows if r["record_type"] == "task_result"]
+    assert len(results) == 40
+    assert all("elapsed_s" in r and r["elapsed_s"] >= 0 for r in results)
+    assert all(len(r["transcript_digest"]) == 64 for r in results)
+
+
+def test_the_report_on_disk_IS_the_report_returned(tmp_path):
+    rep = _run(tmp_path, _inert_play())
+    on_disk = json.load(open(tmp_path / "rep.json"))
+    assert on_disk["pairs_distinct"] == rep["pairs_distinct"]
+    assert on_disk["is_strength_verdict"] is False
+
+
+def test_A_TIMEOUT_STOPS_CLEANLY_and_still_reports_PARTIAL(tmp_path):
+    """🔑 THE CARD'S POINT, and the one place this differs from H2: a partial run
+    is informative, so the deadline is not a VOID."""
+    play = _inert_play()
+    rep = _run(tmp_path, play, deadline=_FakeDeadline(7200, expire_after=12))
+    assert play.calls["n"] == 12, "it stopped at the deadline, not after 40"
+    assert rep["timed_out"] is True and rep["complete"] is False
+    trace = _lines(tmp_path / "t.jsonl")
+    assert any(e["event"] == "deadline_reached" for e in trace)
+    assert trace[-1]["verdict"] == "PARTIAL", "a deadline is not a VOID"
+    assert (tmp_path / "rep.json").exists(), "a partial run still reports"
+
+
+def test_a_partial_report_declares_NOTHING_clear(tmp_path):
+    rep = _run(tmp_path, _inert_play(), deadline=_FakeDeadline(7200, expire_after=12))
+    assert rep["stop_rules"]["S4b"]["status"] == "UNRESOLVED -- SCHEDULE INCOMPLETE"
+    for rule in ("S1", "S2", "S3", "S4a"):
+        assert rep["stop_rules"][rule]["status"] != "CLEAR"
+
+
+def test_AN_EXCEPTION_IS_A_VOID_and_the_trace_says_so(tmp_path):
+    """A deadline stops cleanly; a fault does not."""
+    with pytest.raises(RUN.H3PilotVoidError, match="RuntimeError"):
+        _run(tmp_path, _inert_play(fail_at=7))
+    trace = _lines(tmp_path / "t.jsonl")
+    assert trace[-1]["verdict"] == "VOID"
+    assert trace[-1]["games_completed"] == 7
+    assert not (tmp_path / "rep.json").exists(), "a VOID writes no report"
+
+
+def test_the_terminal_record_is_written_AFTER_the_report_is_durable(tmp_path):
+    """H2's lesson: run_end/OK before the report meant a write failure left the
+    trace and the exit code disagreeing about the same run."""
+    _run(tmp_path, _inert_play())
+    src = inspect.getsource(RUN._run_pilot_unguarded)
+    assert src.index("json.dump(report") < src.index('"event": "run_end",\n'
+                                                     '                     "verdict"')
+
+
+def test_the_run_REFUSES_when_an_output_already_exists(tmp_path):
+    (tmp_path / "r.jsonl").write_text("x")
+    with pytest.raises(RUN.H3PilotRunError, match="already exists"):
+        _run(tmp_path, _inert_play())
+
+
+def test_a_capped_game_is_recorded_and_counted(tmp_path):
+    rep = _run(tmp_path, _inert_play(cap_every=4))
+    assert rep["capped_games"] == 10
+    assert rep["stop_rules"]["S2"]["status"] == "FIRED", "10 > 8"
+    assert rep["any_fired"] is True
+
+
+# ═════════════ THE WRAPPER: gate restoration and process cleanup ════════════
+
+from scripts.GPU.alphazero import h3_pilot_command as CMD
+
+
+def test_the_wrapper_refuses_with_the_shut_gate_and_verifies_it_closed(capsys):
+    assert CMD.main([]) == CMD.EXIT_UNAUTHORIZED
+    assert "NOT AUTHORIZED" in capsys.readouterr().err
+    assert RUN.H3_PILOT_EXECUTION_AUTHORIZED is False
+
+
+def test_the_wrapper_has_NO_runner_source_flag():
+    assert "--runner-source" not in CMD._parser().format_help()
+    assert "os.environ" not in open(CMD.__file__, encoding="utf-8").read()
+
+
+def test_restore_gate_is_TRUE_when_the_gate_is_already_closed():
+    assert CMD.restore_gate() is True
+
+
+def test_restore_gate_REWRITES_an_open_gate_and_VERIFIES_it(tmp_path):
+    f = tmp_path / "runner.py"
+    f.write_text("x = 1\nH3_PILOT_EXECUTION_AUTHORIZED = True\ny = 2\n")
+    assert CMD.restore_gate(str(f)) is True
+    assert "H3_PILOT_EXECUTION_AUTHORIZED = False" in f.read_text()
+    assert "= True" not in f.read_text()
+
+
+def test_restore_gate_is_FALSE_when_it_cannot_verify(tmp_path):
+    missing = tmp_path / "nope.py"
+    assert CMD.restore_gate(str(missing)) is False
+    two = tmp_path / "two.py"
+    two.write_text("H3_PILOT_EXECUTION_AUTHORIZED = True\n" * 2)
+    assert CMD.restore_gate(str(two)) is False, "two open lines: which is the gate?"
+
+
+def test_a_failed_restoration_becomes_the_wrappers_OWN_exit_code(monkeypatch, capsys):
+    monkeypatch.setattr(CMD, "restore_gate", lambda *a, **k: False)
+    assert CMD.main([]) == CMD.EXIT_GATE_NOT_RESTORED
+    assert "BY HAND" in capsys.readouterr().err
+
+
+def test_THE_FINALLY_PATH_also_restores_and_reports_its_own_failure(
+        monkeypatch, capsys, tmp_path):
+    """The OTHER path -- gate open, restoration failing -- which is the one a real
+    run takes. Hermetic: tmp outputs and a stubbed supervisor, so its behaviour
+    cannot change the day a real run occupies the defaults."""
+    monkeypatch.setattr(CMD, "gate_is_open", lambda: True)
+    monkeypatch.setattr(CMD, "restore_gate", lambda *a, **k: False)
+    monkeypatch.setattr(CMD, "supervise", lambda *a, **k: {
+        "exit_code": 0, "timed_out": False, "interrupted": False,
+        "group_cleared": True})
+    argv = ["--results", str(tmp_path / "r.jsonl"), "--trace", str(tmp_path / "t.jsonl"),
+            "--report", str(tmp_path / "rep.json")]
+    assert CMD.main(argv) == CMD.EXIT_GATE_NOT_RESTORED
+    assert "BY HAND" in capsys.readouterr().err
+    assert not list(tmp_path.iterdir()), "the stubbed supervisor wrote nothing"
+
+
+def test_a_SURVIVING_DESCENDANT_is_a_CLEANUP_FAILURE_not_a_success(
+        monkeypatch, capsys, tmp_path):
+    """🔑 `group_cleared` False outranks the worker's own exit code: an orphaned
+    JVM is not a completed run."""
+    monkeypatch.setattr(CMD, "gate_is_open", lambda: True)
+    monkeypatch.setattr(CMD, "supervise", lambda *a, **k: {
+        "exit_code": 0, "timed_out": False, "interrupted": False,
+        "group_cleared": False})
+    argv = ["--results", str(tmp_path / "r.jsonl"), "--trace", str(tmp_path / "t.jsonl"),
+            "--report", str(tmp_path / "rep.json")]
+    assert CMD.main(argv) == CMD.EXIT_CLEANUP_FAILED
+    assert "CLEANUP FAILED" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("r,want", [
+    ({"timed_out": False, "interrupted": False, "group_cleared": True,
+      "exit_code": 0}, CMD.EXIT_COMPLETED),
+    ({"timed_out": True, "interrupted": False, "group_cleared": True,
+      "exit_code": 0}, CMD.EXIT_TIMEOUT),
+    ({"timed_out": False, "interrupted": True, "group_cleared": True,
+      "exit_code": 0}, CMD.EXIT_INTERRUPTED),
+    ({"timed_out": False, "interrupted": False, "group_cleared": False,
+      "exit_code": 0}, CMD.EXIT_CLEANUP_FAILED),
+])
+def test_every_supervisor_outcome_gets_ITS_OWN_exit_code(monkeypatch, tmp_path, r, want):
+    monkeypatch.setattr(CMD, "gate_is_open", lambda: True)
+    monkeypatch.setattr(CMD, "supervise", lambda *a, **k: dict(r))
+    argv = ["--results", str(tmp_path / "r.jsonl"), "--trace", str(tmp_path / "t.jsonl"),
+            "--report", str(tmp_path / "rep.json")]
+    assert CMD.main(argv) == want
+
+
+def test_the_wrapper_REFUSES_BEFORE_SPAWNING_when_an_output_exists(
+        monkeypatch, tmp_path, capsys):
+    monkeypatch.setattr(CMD, "gate_is_open", lambda: True)
+    spawned = []
+    monkeypatch.setattr(CMD, "supervise", lambda *a, **k: spawned.append(1) or {
+        "exit_code": 0, "timed_out": False, "interrupted": False,
+        "group_cleared": True})
+    (tmp_path / "r.jsonl").write_text("x")
+    argv = ["--results", str(tmp_path / "r.jsonl"), "--trace", str(tmp_path / "t.jsonl"),
+            "--report", str(tmp_path / "rep.json")]
+    assert CMD.main(argv) == CMD.EXIT_REFUSED
+    assert not spawned, "it must refuse BEFORE spawning a worker"
+
+
+def test_WORKER_REFUSES_without_the_supervisors_CAPABILITY(capsys):
+    assert CMD.worker_main(["--worker"]) == CMD.EXIT_REFUSED
+    assert "not a way to run the pilot by hand" in capsys.readouterr().err
+
+
+def test_a_FORGED_capability_is_refused_INCLUDING_one_of_the_RIGHT_LENGTH(tmp_path):
+    r_fd, w_fd = os.pipe()
+    with os.fdopen(w_fd, "w") as fh:
+        fh.write("z" * (CMD.CAPABILITY_BYTES * 2))     # right length, not hex
+    assert CMD._consume_capability(r_fd) is False
+
+
+def test_the_capability_is_a_PIPE_and_is_SINGLE_USE():
+    fd = CMD._make_capability()
+    assert CMD._consume_capability(fd) is True
+    assert CMD._consume_capability(fd) is False, "the descriptor is closed after use"
+
+
+def test_NOTHING_IS_EVER_DELETED_by_the_capability_check(tmp_path):
+    """🔴 A previous design UNLINKED whatever path it was handed, valid or not."""
+    victim = tmp_path / "precious.txt"
+    victim.write_text("keep me")
+    assert CMD._consume_capability(12345) is False       # not a real descriptor
+    assert victim.read_text() == "keep me"
+
+
+# ══════════ the outcome classifier: results, not failures ═══════════════════
+
+@pytest.mark.parametrize("report,want", [
+    ({"complete": True, "timed_out": False, "any_fired": False}, CMD.EXIT_COMPLETED),
+    ({"complete": False, "timed_out": True, "any_fired": False}, CMD.EXIT_PARTIAL),
+    ({"complete": True, "timed_out": False, "any_fired": True},
+     CMD.EXIT_STOP_RULE_FIRED),
+    # 🔑 A FIRED RULE OUTRANKS PARTIAL: a monotone count that has crossed its
+    # threshold is CONCLUSIVE; a partial run is not.
+    ({"complete": False, "timed_out": True, "any_fired": True},
+     CMD.EXIT_STOP_RULE_FIRED),
+])
+def test_the_classifier_separates_RESULTS_from_failures(report, want):
+    assert CMD._classify(report) == want
+
+
+def test_THE_OUTPUT_DESTINATION_IS_NOT_A_SPENT_RUNS_DIRECTORY():
+    defaults = (CMD.DEFAULT_RESULTS, CMD.DEFAULT_TRACE, CMD.DEFAULT_REPORT)
+    assert len(set(defaults)) == 3
+    assert CMD.SPENT_OUT_DIRS, "vacuous: no spent directory is named"
+    for spent in CMD.SPENT_OUT_DIRS:
+        assert os.path.isdir(spent), f"{spent} is named as spent but does not exist"
+        for d in defaults:
+            assert not d.startswith(spent.rstrip("/") + "/"), (d, spent)
+    for d in defaults:
+        assert d.startswith(CMD.OUT_DIR.rstrip("/") + "/")
