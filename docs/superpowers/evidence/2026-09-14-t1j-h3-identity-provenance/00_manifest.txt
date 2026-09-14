@@ -1,0 +1,15 @@
+MANIFEST -- 2026-09-14-t1j-h3-identity-provenance
+sha256 and size READ FROM DISK at the moment of recording.
+
+4f846a39a0505acca6f59acc59f64268edd2c248438963642a4cb607addb6e20      16387  01_runner_and_prerun.diff
+7d36417a49bacfc44c920911e87ae0b18cc6d167d9d5e34ccb23619706f4a1b9      39682  02_harness_at_the_barrier.txt
+998d759d344b5efb2e10f7fd149633e50049dcfbec9c62b07dd86e462fb278aa      26583  03_suite_at_the_barrier.txt
+71db480b3da3730037c5f9eb682c0ab098feb2836e143af9a77782813e415c17      40209  04_harness_threaded_EXIT4.txt
+2c55b2a02ed617575da4bde71101d2246abbdb9e7ba54432e174de7fb893aef6      26583  05_suite_threaded.txt
+12990eec69009e9aed9bb4c66d1aff4700e18fd3c737795296f3197ea74613cb      39899  06_harness_final.txt
+824ad96e3ca5464bee8a2c322cb548a0530c590e46b1668cab70f95e4e022a13      26583  07_suite_final.txt
+773718f243a953b8b28a500e9e720dc5f8894f8b370fecfac42187b82e39ed72       5768  08_prerun_verification.txt
+1f1779f3d8f37e138b19ec88f0bdae79fa7bba34c8173cafa6dd1aac87c47c78       7025  08_results.md
+da39eaf5702b7fbb9f865314d498931c47a8e634e3ed312224496be9d3136157       2533  09_correction.md
+
+10 files. The manifest itself is not listed: it cannot hash itself.
