@@ -150,22 +150,41 @@ def main() -> int:
     from . import eval_readout as RO
     from . import twixtbot_g3_reference as G3
 
+    # 🔑 THE STUB'S IDENTITY IS RETYPED ON PURPOSE. It stands in for the model
+    # that will be LOADED, and `build_reference_agent` compares that identity
+    # against the TASK's. Reading it off the task would leave the comparison
+    # comparing a value with itself; the literal is checked against the registry
+    # pin just below, so a drift surfaces here rather than quietly agreeing.
     class _StubEvaluator:
         _g3_reference = "calib020_0001"
         _g3_sha1 = "209cf2d4fd24a48553d259dd71b4954867b9473e"
+
+    check("the stub's identity IS the registry's pin",
+          REF.REFERENCE_CHECKPOINTS[_StubEvaluator._g3_reference]["sha1"]
+          == _StubEvaluator._g3_sha1)
+    # 🔴 THIS CHECK USED TO PATCH THE FIELDS IN:
+    #     task = dict(t, reference="calib020_0001", reference_sha1="209cf2d4...")
+    # so it reported all 40 tasks building through the real builder while the
+    # SCHEDULED tasks carried neither field and the registry refused every one of
+    # them. A check that supplies what the thing under test is missing is not a
+    # check. The tasks are now passed exactly as the runner will pass them.
+    missing = sorted({f for t in tasks
+                      for f in ("reference", "reference_sha1", "reference_colour")
+                      if f not in t})
+    check("the SCHEDULED tasks already carry the identity fields, unpatched",
+          not missing, f"missing {missing}")
 
     cfg = G3.eval_config()
     argmax = cfg.__class__(**{**cfg.__dict__, "selection_mode": H2R.SELECTION_MODE})
     check("the frozen config is NOT already argmax, so the override is real",
           cfg.selection_mode != "argmax", f"frozen={cfg.selection_mode!r}")
     failures, arms, seeds_seen = [], set(), set()
-    for t in tasks:
-        task = dict(t, reference="calib020_0001",
-                    reference_sha1="209cf2d4fd24a48553d259dd71b4954867b9473e")
+    for task in tasks:
         try:
             agent = G3.build_reference_agent(
                 task=task, evaluator=_StubEvaluator(),
-                colour=task["incumbent_colour"], config=argmax, capture=True)
+                # the SEAM's own expression, not a re-derivation
+                colour=REF.reference_colour(task), config=argmax, capture=True)
             if not (agent.readout.mode == RO.MODE_ARGMAX
                     and agent.config.mcts_sims == H2R.MCTS_SIMS
                     and agent.config.board_size == 24
@@ -183,6 +202,8 @@ def main() -> int:
           seeds_seen == set(range(lo, hi)), f"{len(seeds_seen)} distinct seeds")
     check("the anchor and the incumbent's colour agree on every task",
           all(REF.reference_colour(t) == t["incumbent_colour"] for t in tasks))
+    check("and the task's OWN reference_colour field says the same",
+          all(t["reference_colour"] == REF.reference_colour(t) for t in tasks))
 
     print("\n== the three outputs must be UNUSED ==")
     outs = (CMD.DEFAULT_RESULTS, CMD.DEFAULT_TRACE, CMD.DEFAULT_REPORT)

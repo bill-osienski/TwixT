@@ -136,6 +136,28 @@ def check_schedule(tasks: Sequence[Mapping[str, Any]]) -> Dict[str, Any]:
             f"the schedule digest is {got} but the frozen pilot schedule is "
             f"{want}. A different schedule is a different experiment wearing this "
             f"one's name.")
+    # 🔑 THE PIN IS NOT THE WHOLE ANSWER. It fixes the schedule forever, but the
+    # REGISTRY moves: these seeds become EXPOSED and RETIRED the moment the pilot
+    # draws from them, and re-running the identical frozen schedule would match
+    # its digest perfectly. H2's `check_schedule` ends with this call; H3's did
+    # not, which left the digest as the only thing between a spent block and a
+    # second run of it.
+    # 🔴 AND A SEEDLESS SCHEDULE IS REFUSED RATHER THAN SKIPPED. The unseeded pin
+    # is a DESIGN IDENTITY, not a runnable plan, and it still matches its own
+    # digest -- so passing the registry check "only when seeds are present" would
+    # make a seedless schedule the way around the registry. It is exactly the
+    # default-that-switches-the-check-off shape.
+    seedless = [t["task_id"] for t in tasks if t.get("seed") is None]
+    if seedless:
+        raise H3PilotRunError(
+            f"{len(seedless)} of {len(tasks)} tasks carry no seed (first "
+            f"{seedless[0]}). The unseeded schedule is the design identity, not a "
+            f"runnable plan; nothing may execute against it.")
+    from . import e4_screen_reference as REF
+    try:
+        REF.validate_schedule_executable(list(tasks))
+    except REF.E4ReferenceError as e:
+        raise H3PilotRunError(f"the registry refuses this schedule: {e}") from None
     return {"n_tasks": len(tasks), "task_digest": got,
             "pairs": len({t["pair_id"] for t in tasks})}
 

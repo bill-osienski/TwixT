@@ -147,10 +147,21 @@ def test_a_DANGLING_SYMLINK_at_an_output_path_is_REFUSED(tmp_path):
 # ═══════════════════════ the schedule is pinned ═════════════════════════════
 
 def test_the_schedule_must_BE_the_frozen_40_by_digest():
-    tasks = R.build_tasks(R.generate_openings())
+    """THE REGISTERED schedule against THE SEEDED pin -- the one that would run."""
+    tasks = R.build_tasks(R.generate_openings(), seed_interval=RUN.PILOT_SEED_BLOCK)
     got = RUN.check_schedule(tasks)
     assert got["n_tasks"] == 40 and got["pairs"] == 20
-    assert got["task_digest"] == R.TASK_DIGEST
+    assert got["task_digest"] == R.SEEDED_TASK_DIGEST
+
+
+def test_a_SEEDLESS_schedule_is_REFUSED_because_it_cannot_be_RUN():
+    """It matches the UNSEEDED pin, so the digest comparison passes it. Skipping
+    the registry check "when there are no seeds" would make seedlessness the way
+    around the registry -- the default-that-switches-the-check-off shape."""
+    tasks = R.build_tasks(R.generate_openings())
+    assert R.task_digest(tasks) == R.TASK_DIGEST, "it does match its own pin"
+    with pytest.raises(RUN.H3PilotRunError, match="carry no seed"):
+        RUN.check_schedule(tasks)
 
 
 def test_a_DIFFERENT_schedule_is_REFUSED():
@@ -171,6 +182,28 @@ def test_check_schedule_REFUSES_a_seeded_schedule_while_the_pin_is_unset():
     # it must stay reachable, being the state every future block starts in.
     with _m.patch.object(R, "SEEDED_TASK_DIGEST", None):
         with pytest.raises(RUN.H3PilotRunError, match="SEEDED_TASK_DIGEST is None"):
+            RUN.check_schedule(tasks)
+
+
+def test_check_schedule_ALSO_ASKS_THE_REGISTRY_whether_the_seeds_MAY_RUN():
+    """🔴 H2's `check_schedule` ends with `REF.validate_schedule_executable`;
+    H3's did not, so the digest pin was the ONLY thing standing between a frozen
+    schedule and a second run of it.
+
+    THE BRANCH IS REACHABLE, and it is the case that matters: the pin fixes the
+    schedule forever, but the REGISTRY moves -- this block becomes EXPOSED and
+    RETIRED the moment the pilot draws from it. Re-running the identical frozen
+    schedule would match its digest perfectly and must still be refused.
+    """
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    openings = R.generate_openings()
+    tasks = R.build_tasks(openings, seed_interval=RUN.PILOT_SEED_BLOCK)
+    assert RUN.check_schedule(tasks)["n_tasks"] == 40, "it passes while unspent"
+
+    import unittest.mock as _m
+    spent = REF.EXPOSED_SEED_INTERVALS + (tuple(RUN.PILOT_SEED_BLOCK),)
+    with _m.patch.object(REF, "EXPOSED_SEED_INTERVALS", spent):
+        with pytest.raises(RUN.H3PilotRunError, match="EXPOSED"):
             RUN.check_schedule(tasks)
 
 
