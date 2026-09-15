@@ -105,6 +105,24 @@ REPORT_FLOOR_PAIRS = N_PAIRS // 2                # 148
 #: preregistered reason to fire is a gate that suppresses sound results.
 
 
+def reference_identity() -> Dict[str, str]:
+    """The incumbent's name and sha1, from the sha256-VERIFIED source plan.
+
+    NOT from `REFERENCE_CHECKPOINTS`, which is what `validate_task_structure`
+    compares a task against — sourcing it there would leave that check comparing a
+    value with itself.
+    """
+    from . import l0_match_plan as L0PLAN
+    ref = L0PLAN.load_source_plan()["reference"]
+    return {"name": ref["name"], "sha1": ref["sha1"]}
+
+
+def t1j_depth() -> int:
+    """T1j's fixed search depth, READ from H2's frozen rules, never retyped."""
+    from . import h2_match_rules as H2R
+    return H2R.T1J_MDPLY
+
+
 def half_width(n: int) -> float:
     """The two-sided Hoeffding half-width at `n` pair scores in [0, 1].
 
