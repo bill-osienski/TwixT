@@ -432,27 +432,51 @@ def test_the_registry_admits_a_FRESH_schedule_for_EXECUTION(tasks):
 
 # ═══════════ the generator's walk, driven with INERT movers ════════════════
 
-def _inert_movers(config=None):
-    """Movers that play the first legal move, deterministically — but READ the
-    arguments the real ones read, so a contract change is visible here."""
-    calls = {"incumbent": 0, "t1j": 0, "seeds": []}
+class _Ctx:
+    """The move log a T1jAgent requires: it refuses when the log length and the
+    state's ply disagree."""
 
-    def incumbent(state, *, seed, colour):
-        # 🔑 IT USES THE SEED, because the real one does: the incumbent is the
-        # ONLY source of entropy in this stratum. A fixture that ignored it would
-        # stand in for a player that cannot exist under this protocol.
-        calls["incumbent"] += 1
+    def __init__(self):
+        self.moves = []
+
+
+def _inert_movers(config=None):
+    """FACTORIES, not move functions — because the card gives each opening ONE
+    agent whose streams advance across its plies, and a per-move function cannot
+    have streams at all."""
+    calls = {"built_incumbent": 0, "built_t1j": 0, "moves": 0, "seeds": [],
+             "ctxs": []}
+
+    def incumbent_agent(*, seed, colour):
+        calls["built_incumbent"] += 1
         calls["seeds"].append(seed)
         assert colour in ("red", "black")
-        legal = sorted(state.legal_moves())
-        return legal[seed % len(legal)]
+        state = {"n": 0}
 
-    def t1j(state, *, colour):
-        calls["t1j"] += 1
+        def agent(st):
+            # 🔑 STREAM-LIKE: the move depends on the seed AND on how many moves
+            # this agent has already made, exactly as a persisting generator does.
+            calls["moves"] += 1
+            state["n"] += 1
+            legal = sorted(st.legal_moves())
+            return legal[(seed + state["n"]) % len(legal)]
+
+        return agent
+
+    def t1j_agent(*, colour, ctx):
+        calls["built_t1j"] += 1
+        calls["ctxs"].append(ctx)
         assert colour in ("red", "black")
-        return sorted(state.legal_moves())[-1 - (calls["t1j"] % 3)]
 
-    return {"incumbent": incumbent, "t1j": t1j,
+        def agent(st):
+            calls["moves"] += 1
+            assert len(ctx.moves) == st.ply, (len(ctx.moves), st.ply)
+            return sorted(st.legal_moves())[-1]
+
+        return agent
+
+    return {"incumbent_agent": incumbent_agent, "t1j_agent": t1j_agent,
+            "new_context": _Ctx,
             "config": config or R.generation_config(), "calls": calls}
 
 
@@ -480,16 +504,61 @@ def test_generate_one_WALKS_BOTH_ENGINES_and_records_its_attempt_seed():
     assert op["stratum"] == R.STRATUM_CO_PRODUCED
     assert op["order"] == R.ORDER_INCUMBENT_FIRST
     assert op["stub"] is False
-    assert movers["calls"]["incumbent"] == 3 and movers["calls"]["t1j"] == 3
+    assert movers["calls"]["moves"] == R.OPENING_PLIES
     assert op["seed"] == R.attempt_seed(R.GEN_SEED_CO_PRODUCED, 0, op["attempts"] - 1)
     assert not op["state"].is_terminal()
 
 
-def test_the_incumbent_MOVER_GETS_A_SEED_and_t1j_does_not():
+def test_ONE_AGENT_PER_OPENING_not_one_per_ply():
+    """🔴 CARD §1.7.4. My first version built a FRESH agent every ply, so no
+    stream advanced across an opening — and, to differentiate the plies, it
+    offset the seed by `ply * 7919`, which pushed the seeds 47,514 BEYOND the
+    declared generation range. That overrun is larger than the 40,800 gap between
+    the two strata's ranges, so the collision proof over the declared ranges
+    would have missed it and the two strata would have shared seeds."""
+    movers = _inert_movers()
+    GEN.generate_one(index=0, order=R.ORDER_INCUMBENT_FIRST, movers=movers)
+    assert movers["calls"]["built_incumbent"] == 1, "ONE incumbent agent"
+    assert movers["calls"]["built_t1j"] == 1, "ONE T1j agent"
+    assert movers["calls"]["moves"] == R.OPENING_PLIES
+
+
+def test_THE_AGENT_IS_SEEDED_WITH_THE_ATTEMPT_SEED_EXACTLY():
+    """No offset, no derivation: the seed the registry accounts for is the seed
+    the agent gets, so `generation_seed_range` describes what is touched."""
+    movers = _inert_movers()
+    op = GEN.generate_one(index=7, order=R.ORDER_T1J_FIRST, movers=movers)
+    assert movers["calls"]["seeds"] == [op["seed"]]
+    lo, hi = R.generation_seed_range(R.GEN_SEED_CO_PRODUCED)
+    assert lo <= op["seed"] < hi
+
+
+def test_the_INCUMBENT_PLAYS_ONE_COLOUR_THROUGHOUT_AN_OPENING():
+    """Plies 1/3/5 are all red and 2/4/6 all black, so the alternating order
+    fixes each engine's colour for the whole opening — which is what lets one
+    agent serve all three of its moves."""
+    for order, want in ((R.ORDER_INCUMBENT_FIRST, "red"),
+                        (R.ORDER_T1J_FIRST, "black")):
+        assert GEN.incumbent_colour(order) == want
+        plies = [p for p in range(1, 7) if GEN.mover_at_ply(order, p) == "incumbent"]
+        assert plies == ([1, 3, 5] if want == "red" else [2, 4, 6])
+
+
+def test_the_T1J_AGENT_GETS_A_MOVE_LOG_THAT_TRACKS_THE_WALK():
+    """T1jAgent refuses when the log length and the state's ply disagree, so the
+    walk must maintain it — the inert agent asserts the same thing."""
+    movers = _inert_movers()
+    GEN.generate_one(index=0, order=R.ORDER_T1J_FIRST, movers=movers)
+    ctx = movers["calls"]["ctxs"][0]
+    assert len(ctx.moves) == R.OPENING_PLIES
+
+
+def test_the_incumbent_FACTORY_TAKES_A_SEED_and_t1j_does_not():
     """🔑 The asymmetry IS the finding: only the incumbent supplies entropy."""
     import inspect as _i
-    assert "seed" in _i.signature(_inert_movers()["incumbent"]).parameters
-    assert "seed" not in _i.signature(_inert_movers()["t1j"]).parameters
+    m = _inert_movers()
+    assert "seed" in _i.signature(m["incumbent_agent"]).parameters
+    assert "seed" not in _i.signature(m["t1j_agent"]).parameters
 
 
 def test_A_DETERMINISTIC_INCUMBENT_PRODUCES_DUPLICATES_AND_IS_REFUSED(tmp_path):
@@ -502,8 +571,8 @@ def test_A_DETERMINISTIC_INCUMBENT_PRODUCES_DUPLICATES_AND_IS_REFUSED(tmp_path):
     prevent, reproduced in one test.
     """
     movers = _inert_movers()
-    movers["incumbent"] = lambda state, *, seed, colour: sorted(
-        state.legal_moves())[0]                      # deterministic: no seed
+    movers["incumbent_agent"] = lambda *, seed, colour: (
+        lambda st: sorted(st.legal_moves())[0])      # deterministic: no seed
     with pytest.raises(GEN.H3GenerationError, match="duplicates an accepted"):
         GEN._generate_unguarded(movers=movers, out_path=str(tmp_path / "o.json"),
                                 trace_path=str(tmp_path / "t.jsonl"), n=2)
@@ -511,7 +580,7 @@ def test_A_DETERMINISTIC_INCUMBENT_PRODUCES_DUPLICATES_AND_IS_REFUSED(tmp_path):
 
 def test_an_ILLEGAL_move_from_either_engine_is_REFUSED():
     movers = _inert_movers()
-    movers["incumbent"] = lambda state, *, seed, colour: (99, 99)
+    movers["incumbent_agent"] = lambda *, seed, colour: (lambda st: (99, 99))
     with pytest.raises(GEN.H3GenerationError, match="illegal"):
         GEN.generate_one(index=0, order=R.ORDER_INCUMBENT_FIRST, movers=movers)
 

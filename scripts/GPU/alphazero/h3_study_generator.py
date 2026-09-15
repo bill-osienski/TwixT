@@ -142,30 +142,52 @@ def generate_co_produced(*, out_path: str = DEFAULT_OUT,
                                trace_path=trace_path, cleanup=SCREEN_CMD._default_cleanup)
 
 
+def incumbent_colour(order: str) -> str:
+    """The colour the INCUMBENT plays for a whole opening.
+
+    Plies 1/3/5 are red and 2/4/6 black, so the alternating order fixes each
+    engine's colour for the entire opening — which is what lets ONE agent serve
+    all three of its moves, streams advancing, as the card requires.
+    """
+    if order not in (RULES.ORDER_INCUMBENT_FIRST, RULES.ORDER_T1J_FIRST):
+        raise H3GenerationError(f"order {order!r}")
+    return "red" if order == RULES.ORDER_INCUMBENT_FIRST else "black"
+
+
 def production_movers(*, evaluator, runtime, config) -> Dict[str, Any]:
-    """The two real movers. SEPARATE FROM THE WALK so the walk can be driven with
-    inert ones — the pilot's lesson, where every seam test replaced the thing it
-    was meant to exercise."""
+    """FACTORIES for the two real agents, plus the move-log context.
+
+    🔴 FACTORIES, NOT PER-MOVE FUNCTIONS, and the difference is not stylistic.
+    The card gives each opening ONE agent whose streams advance across its plies
+    (§1.7.4). My first version built a FRESH agent every ply and, to stop the
+    three moves being identical, offset the seed by `ply * 7919` — which pushed
+    the seeds 47,514 BEYOND the declared generation range. That overrun is larger
+    than the 40,800-seed gap between the two strata's ranges, so a collision proof
+    over the DECLARED ranges would have passed while the two strata quietly shared
+    seeds. Preparing the proof is what found it.
+
+    SEPARATE FROM THE WALK so the walk can be driven with inert factories.
+    """
     from . import e4_screen_integration as INT
     from . import twixtbot_g3_reference as G3
-    _REF = RULES.reference_identity()
-    _DEPTH = RULES.t1j_depth()
+    ref = RULES.reference_identity()
+    depth = RULES.t1j_depth()
 
-    def incumbent_move(state, *, seed: int, colour: str):
-        agent = G3.build_reference_agent(
+    def incumbent_agent(*, seed: int, colour: str):
+        """ONE agent for the whole opening, seeded with the ATTEMPT SEED EXACTLY
+        — no offset, so `generation_seed_range` describes what is touched."""
+        return G3.build_reference_agent(
             task={"seed": seed, "anchor_colour": ("black" if colour == "red"
                                                   else "red"),
-                  "reference": _REF["name"], "reference_sha1": _REF["sha1"]},
+                  "reference": ref["name"], "reference_sha1": ref["sha1"]},
             evaluator=evaluator, colour=colour, config=config, capture=False)
-        return agent(state)
 
-    def t1j_move(state, *, colour: str):
-        ctx = INT.IntegrationContext()
-        return INT.T1jAgent(runtime=runtime, ctx=ctx, depth=_DEPTH,
-                            colour=colour,
-                            timeout_s=RULES.PER_CALL_TIMEOUT_S)(state)
+    def t1j_agent(*, colour: str, ctx):
+        return INT.T1jAgent(runtime=runtime, ctx=ctx, depth=depth, colour=colour,
+                            timeout_s=RULES.PER_CALL_TIMEOUT_S)
 
-    return {"incumbent": incumbent_move, "t1j": t1j_move, "config": config}
+    return {"incumbent_agent": incumbent_agent, "t1j_agent": t1j_agent,
+            "new_context": INT.IntegrationContext, "config": config}
 
 
 def generate_one(*, index: int, order: str, movers: Dict[str, Any]) -> Dict[str, Any]:
@@ -182,22 +204,29 @@ def generate_one(*, index: int, order: str, movers: Dict[str, Any]) -> Dict[str,
     """
     from . import d1_selection as SEL
     excluded = RULES.excluded_digests()
+    inc_colour = incumbent_colour(order)
+    t1j_colour = "black" if inc_colour == "red" else "red"
     for attempt in range(RULES.MAX_ATTEMPTS):
         seed = RULES.attempt_seed(RULES.GEN_SEED_CO_PRODUCED, index, attempt)
         st = RULES._fresh_state()
+        # 🔑 ONE AGENT EACH, BUILT ONCE FOR THIS OPENING (card §1.7.4). A fresh
+        # agent per ply would carry no stream across the opening, and a fresh one
+        # per ATTEMPT is right: a rejected candidate must leave nothing behind.
+        ctx = movers["new_context"]()
+        inc = movers["incumbent_agent"](seed=seed, colour=inc_colour)
+        t1j = movers["t1j_agent"](colour=t1j_colour, ctx=ctx)
         moves = []
         for ply in range(1, RULES.OPENING_PLIES + 1):
             if st.is_terminal() or not st.legal_moves():
                 break
             who = mover_at_ply(order, ply)
-            colour = st.to_move
-            mv = (movers["incumbent"](st, seed=seed + ply * 7919, colour=colour)
-                  if who == "incumbent" else movers["t1j"](st, colour=colour))
+            mv = (inc if who == "incumbent" else t1j)(st)
             mv = (int(mv[0]), int(mv[1]))
             if mv not in [tuple(m) for m in st.legal_moves()]:
                 raise H3GenerationError(
                     f"opening {index} ply {ply}: {who} returned {mv}, illegal")
             moves.append(mv)
+            ctx.moves.append(mv)     # the log T1jAgent checks against the ply
             st = st.apply_move(mv)
         if len(moves) != RULES.OPENING_PLIES or st.is_terminal():
             continue
