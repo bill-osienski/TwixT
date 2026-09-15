@@ -76,6 +76,7 @@ T_H3SR = "tests/test_h3_study_rules.py"
 T_H3SA = "tests/test_h3_study_analysis.py"
 T_H3SRUN = "tests/test_h3_study_runner.py"
 H3SCMD = "scripts/GPU/alphazero/h3_study_command.py"
+H3SPF = "scripts/GPU/alphazero/h3_generation_preflight.py"
 
 # (label, file, anchor, replacement, test node)
 DEFECTS = [
@@ -2987,15 +2988,15 @@ DEFECTS = [
      "    missing = [k for k in ARTIFACT_KEYS if k not in doc]",
      "    missing = []",
      f"{T_H3SRUN}::test_the_ARTIFACT_SCHEMA_is_frozen_and_enforced"),
-    ("the preflight asks the movers for a MOVE", H3SGEN,
+    ("the preflight asks the movers for a MOVE", H3SPF,
      '        built.append({"order": order, "incumbent_colour": inc_colour,',
      '        t1j(RULES._fresh_state())\n'
      '        built.append({"order": order, "incumbent_colour": inc_colour,',
      f"{T_H3SRUN}::test_THE_PREFLIGHT_BUILDS_BOTH_MOVERS_AND_NEVER_MOVES"),
-    ("the preflight builds an equal runtime rather than sharing one", H3SGEN,
-     "    movers = production_movers(evaluator=evaluator or _StubEvaluator(),\n"
+    ("the preflight builds an equal runtime rather than sharing one", H3SPF,
+     "    movers = GEN.production_movers(evaluator=evaluator or _StubEvaluator(),\n"
      "                               runtime=runtime, config=cfg)",
-     "    movers = production_movers(evaluator=evaluator or _StubEvaluator(),\n"
+     "    movers = GEN.production_movers(evaluator=evaluator or _StubEvaluator(),\n"
      "                               runtime=INT.T1jRuntime(\n"
      "                                   java=runtime.java, jar=runtime.jar,\n"
      "                                   classes=runtime.classes,\n"

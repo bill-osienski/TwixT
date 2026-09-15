@@ -11,6 +11,7 @@ import pytest
 from scripts.GPU.alphazero import h3_study_rules as R
 from scripts.GPU.alphazero import h3_study_runner as RUN
 from scripts.GPU.alphazero import h3_study_generator as GEN
+from scripts.GPU.alphazero import h3_generation_preflight as PF
 
 FRESH = (777000000, 777000000 + R.N_GAMES)
 
@@ -686,7 +687,7 @@ def test_the_artifact_REFUSES_a_STUB_opening_and_an_EDITED_digest():
 def test_THE_PREFLIGHT_BUILDS_BOTH_MOVERS_AND_NEVER_MOVES():
     """🔑 REAL: verified_paths, a real T1jRuntime, a real T1jAgent, and the REAL
     `build_reference_agent`. NOT real: no model, no compile, no JVM, NO MOVE."""
-    out = GEN.preflight_movers()
+    out = PF.preflight_movers()
     assert len(out["built"]) == 2
     orders = {b["order"] for b in out["built"]}
     assert orders == {R.ORDER_INCUMBENT_FIRST, R.ORDER_T1J_FIRST}
@@ -702,7 +703,7 @@ def test_THE_PREFLIGHT_BUILDS_BOTH_MOVERS_AND_NEVER_MOVES():
 
 
 def test_the_preflight_agents_HOLD_THE_ONE_RUNTIME():
-    out = GEN.preflight_movers()
+    out = PF.preflight_movers()
     ctx = out["movers"]["new_context"]()
     agent = out["movers"]["t1j_agent"](colour="red", ctx=ctx)
     assert agent.runtime is out["runtime"], "an equal runtime is not the runtime"
@@ -715,7 +716,7 @@ def test_the_preflight_REFUSES_if_the_generating_config_became_argmax(monkeypatc
                         lambda: real.__class__(**{**real.__dict__,
                                                   "selection_mode": "argmax"}))
     with pytest.raises(R.H3StudyError, match="no entropy|two positions"):
-        GEN.preflight_movers()
+        PF.preflight_movers()
 
 
 def test_the_toolchain_identity_names_the_VERIFIED_jar_and_jdk():

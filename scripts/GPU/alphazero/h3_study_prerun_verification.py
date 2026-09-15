@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Tuple
 from . import e4_screen_reference as REF
 from . import h3_study_analysis as ANALYSIS
 from . import h3_study_command as CMD
+from . import h3_generation_preflight as PF
 from . import h3_study_generator as GEN
 from . import h3_study_rules as RULES
 from . import h3_study_runner as RUN
@@ -168,7 +169,7 @@ def main() -> int:
           and not any(GEN.OUT_DIR.startswith(d.rstrip("/") + "/")
                       for d in CMD.SPENT_OUT_DIRS))
     try:
-        pf = GEN.preflight_movers()
+        pf = PF.preflight_movers()
         for b in pf["built"]:
             print(f"  {b['order']:16s} incumbent {b['incumbent_colour']:5s} "
                   f"seed {b['incumbent_seed']} readout {b['readout']!r} | "
