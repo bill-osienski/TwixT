@@ -1,0 +1,24 @@
+MANIFEST -- 2026-09-14-t1j-h3-pilot  (THE RUN)
+sha256 and size READ FROM DISK at the moment of recording.
+
+-- written BY THE RUN ITSELF, create-only, never edited --
+b9ce6bef152d53c7488eb8e5e884a36ac7c3d9cddce37e9f38f6f9128e206538     223903  03_pilot_results.jsonl
+d4bc81fe7f6e87469706818c2493cdb45796c17c5902bab79f1f18fee87c4123       3981  04_pilot_trace.jsonl
+b655d5d227c089d7be6f37834f4eb148aa4069057c7a6cd9e2e5775f7fede379       8187  09_report.json
+
+-- added afterwards: preconditions, accounting, outcome, after-runs --
+4ae93a9a7354c690dec05da0aa6e63b2125683417f02ebe6e208a5b25f4d7efb       5768  00_prerun_verification.txt
+ec16d6cf828c9076387ef6c64d16a3af087ca935828dd001f479c011e44d0d56        178  01_launch_and_exit.txt
+beb5032c7b8d90b0f8710a848c5c10917213c9eb85408517cccd092c61dbdbfd        261  02_timing.txt
+62b594ebc50def3b6be50ad3b2e14ffa419c59f272db8059ca7124d09ea5f447       1122  08_accounting_from_records.txt
+9b5ddba3b5cc5e075d859e3390f93020333098c510fcf7740968aa9355bc1c0c       5723  10_outcome.md
+3aefd5311ce79986b4ed41ec3796c25b22f24503135e6fbb3919b55948cfa3a3        400  11_diversity_vs_h2.txt
+4d81fc3ce53447929b9003ff7e0d2a6672ee0d7fed8f601f1da73959df7156d4        767  12_harness_AFTER_baseline_FAIL.txt
+8591ee3914dd62218e572ddbc2afce384b8c3ffa531ca37020ab2eac9dd386c6      40074  13_harness_AFTER_indeterminate.txt
+207cdde3ef20cd185cdbd947bf3cac5bc5d6eba7a18a6628d537395cffe0d15e      39866  14_harness_FINAL.txt
+7d5ad5489f6e559d165c4990a225eac2489086883f2d1131b0c47b4e2459af8b      26583  15_suite_FINAL.txt
+
+NOT LISTED: 03_pilot_results.jsonl.t1j_classes/ -- the compile artifact the
+run's own toolchain step produced beside its results. Kept, as H2 attempt 3
+kept its own, and not hashed here: it is a build output, not a record.
+The manifest cannot hash itself either.

@@ -1,0 +1,107 @@
+H3 PILOT PRE-RUN VERIFICATION -- bound to 6a88b94
+Nothing has been executed. The gate is shut at this moment.
+==========================================================================
+
+== the tree ==
+  HEAD 95ecfc0, descends from 6a88b94
+  PASS     HEAD descends from the bound commit (6a88b94)
+  PASS     no SOURCE differs from the commit
+
+== the EIGHT gates ==
+  PASS     D1_EXECUTION_AUTHORIZED            False
+  PASS     SCREEN_AUTHORIZED                  False
+  PASS     H1_EXECUTION_AUTHORIZED            False
+  PASS     L0_EXECUTION_AUTHORIZED            False
+  PASS     LOWPLY_QUALIFICATION_AUTHORIZED    False
+  PASS     RUNTIME_REQUAL_AUTHORIZED          False
+  PASS     H2_EXECUTION_AUTHORIZED            False
+  PASS     H3_PILOT_EXECUTION_AUTHORIZED      False
+
+== the registered seed block ==
+  [202624000, 202624040): accounted 40 / exposed 0 / retired 0 / test_only 0
+  PASS     the block is 40 seeds
+  PASS     every seed ACCOUNTED
+  PASS     NOT exposed, NOT retired, NOT test-only -- a reservation is not a draw
+  PASS     no seed is in CONSUMED_SEEDS
+  PASS     the registration barrier is SATISFIED
+  PASS     DISJOINT from every spent block, recomputed here
+
+== the openings, and the schedule they fix ==
+  PASS     20 distinct openings at the frozen depth
+  PASS     the opening SET matches its pin
+  seeded task digest : aa527cc9a1a7b1e657911171c63f19fc006909dd64518bd96de3ce4ddfabfba9
+  PASS     40 tasks in 20 colour-reversed pairs
+  PASS     seeds are POSITIONAL (row i carries lo + i)
+  PASS     the SEEDED digest matches its pin
+  PASS     and it is NOT the unseeded pin -- seeds change the full-field digest
+  PASS     the runner ADMITS the registered schedule  pairs=20
+  PASS     the registry admits the schedule for EXECUTION
+
+== the REAL builder, on the REGISTERED tasks ==
+  (the call that aborted H2's attempt 1; stub evaluator, no JVM)
+  PASS     the stub's identity IS the registry's pin
+  PASS     the SCHEDULED tasks already carry the identity fields, unpatched  missing []
+  PASS     the frozen config is NOT already argmax, so the override is real  frozen='opening_temperature'
+  PASS     the argmax override IS applied by the seam's own construction
+  PASS     all 40 REGISTERED tasks construct through the real builder
+  PASS     BOTH colour assignments were built  arms=['black', 'red']
+  PASS     every agent carries its own REGISTERED seed  40 distinct seeds
+  PASS     the anchor and the incumbent's colour agree on every task
+  PASS     and the task's OWN reference_colour field says the same
+
+== the incumbent identity the record will carry ==
+  calib020_0001 209cf2d4fd24… selection_mode 'argmax' sims 400
+  inert under argmax: ['opening_temp_plies', 'temp_high', 'temp_low']
+  PASS     the identity barrier ACCEPTS the frozen identity
+  PASS     it is H2's frozen argmax identity, INHERITED not reimplemented
+  PASS     the recorded identity IS the config passed to the real builder  drifted []
+  PASS     and it REFUSES a reverted readout (negative control)
+  PASS     and it REFUSES a DRIFTED CONFIG OBJECT (negative control)
+
+== the three outputs must be UNUSED ==
+  absent   docs/superpowers/evidence/2026-09-14-t1j-h3-pilot/03_pilot_results.jsonl
+  absent   docs/superpowers/evidence/2026-09-14-t1j-h3-pilot/04_pilot_trace.jsonl
+  absent   docs/superpowers/evidence/2026-09-14-t1j-h3-pilot/09_report.json
+  PASS     all three are DISTINCT files
+  PASS     all three are ABSENT
+  PASS     none is inside a SPENT run's directory
+  PASS     the output DIRECTORY exists (nothing creates it at run time)  docs/superpowers/evidence/2026-09-14-t1j-h3-pilot
+  PASS     check_output_paths ACCEPTS them
+
+== the wrapper: gate restoration and child cleanup ==
+  exit codes: 0 completed | 3 VOID | 4 unexpected | 5 unauthorized |
+              6 timeout | 7 refused | 8 cleanup failed | 9 interrupted |
+              10 GATE NOT RESTORED | 13 PARTIAL | 14 STOP RULE FIRED
+  PASS     restore_gate() is True on the already-closed real source
+  PASS     the parser has NO --runner-source flag
+  PASS     no environment variable reaches the worker path
+  the refusal it printed: the H3 pilot is NOT AUTHORIZED (H3_PILOT_EXECUTION_AUTHORIZED is False). No worker was spawned, 
+  PASS     main() with the gate shut returns EXIT_UNAUTHORIZED  got 5
+  PASS     and the gate is STILL closed afterwards
+  PASS     restore_gate is called in main()'s finally and sets the code there
+  PASS     the supervisor maps a surviving descendant to EXIT_CLEANUP_FAILED
+  PASS     a PARTIAL run and a FIRED rule are RESULTS with their own codes
+
+== bounds and the stop rules, frozen before play ==
+  whole-run limit 7200s (CHOSEN, and it MAY time out)
+  per-call bound  120s
+  S1 duplicate_pairs > 2 | S2 caps > 8 | S3 within-pair identical > 2
+  S4a total > 3600s | S4b p90 > 4.0x median | floor 10 pairs
+  PASS     the analysis refuses a report with no per-game timing
+
+  the tests that BIND these claims, run here rather than cited:
+    ============================= 191 passed in 6.21s ==============================
+  PASS     every binding test passes
+
+==========================================================================
+⚠ RISK RECORDED BEFORE THE RUN, NOT AFTER. THE AUTHORIZED LAUNCH PATH HAS
+  NEVER COMPLETED A PILOT. H2's attempt 3 proved the path end to end and
+  then VOIDED on its own deadline; this design is new, its runner has
+  never played a game, and the pilot MAY TIME OUT BY CONSTRUCTION -- 7,200 s
+  is a CHOSEN limit, not a bound. A timeout is a reportable outcome, not a
+  failure; an exception is a VOID and retires the block whole. Proceeding
+  accepts both knowingly.
+  IT CANNOT PRODUCE A STRENGTH VERDICT. Its outcomes are 'authorize design
+  work on a full study' or 'close H3'.
+
+53/53 checks PASS

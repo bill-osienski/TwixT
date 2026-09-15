@@ -1,0 +1,7 @@
+checkout: /var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/injected-defect-controls-wt9127a3/checkout
+🔴 BASELINE FAILURES -- these tests do not pass on CLEAN source, so every control naming them is meaningless:
+    ERROR: not found: /private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/injected-defect-controls-wt9127a3/checkout/tests/test_h3_pilot_openings.py:
+    ERROR: not found: /private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/injected-defect-controls-wt9127a3/checkout/tests/test_h3_pilot_openings.py:
+    ERROR: not found: /private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/injected-defect-controls-wt9127a3/checkout/tests/test_h3_pilot_openings.py:
+clean baseline over 499 distinct target tests: FAIL
+ABORTED before the first injection.

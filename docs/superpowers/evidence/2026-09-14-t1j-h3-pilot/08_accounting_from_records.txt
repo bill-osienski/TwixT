@@ -1,0 +1,20 @@
+SEED ACCOUNTING, DERIVED FROM THE DURABLE EVIDENCE
+==================================================================
+🔴 DERIVED, NOT READ. H2's task_result carried `seed`; H3's does NOT --
+   the seam returns it and the run body's projection drops it. The
+   binding below is sound but it is a derivation:
+     * the header pins the SEEDED schedule by full-field digest, and
+     * `build_tasks` assigns seeds POSITIONALLY, row i -> lo + i.
+
+header task_digest      : aa527cc9a1a7b1e657911171c63f19fc006909dd64518bd96de3ce4ddfabfba9
+SEEDED_TASK_DIGEST pin  : aa527cc9a1a7b1e657911171c63f19fc006909dd64518bd96de3ce4ddfabfba9
+they match              : True
+completed task indices  : 0..39 count 40 | exactly 0..39: True
+
+ACCOUNTED  40   [202624000, 202624040)
+EXPOSED    40   [202624000, 202624040)  -- every seed carries a COMPLETED game
+RETIRED    40   WHOLE BLOCK, one-shot rule
+
+no partially-drawn seed: the run COMPLETED, 40/40, and every task_start
+has a matching task_done -- starts 40 dones 40
+run_end record          : [{'any_stop_rule_fired': False, 'event': 'run_end', 'games_completed': 40, 'verdict': 'OK'}]

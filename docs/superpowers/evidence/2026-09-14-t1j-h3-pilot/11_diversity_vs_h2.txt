@@ -1,0 +1,9 @@
+H3 PILOT vs H2 ATTEMPT 3 -- DIVERSITY, the thing the pilot exists to measure
+======================================================================
+H3: 40 games -> 40 DISTINCT transcripts
+H2: 692 games -> 61 DISTINCT transcripts
+
+H3 per-PAIR (the unit of evidence): both arms distinct in every pair?
+  pairs: 20 | pairs whose two games differ: 20
+
+H3 ply lengths: min 33 median 51 max 88 | capped: 0

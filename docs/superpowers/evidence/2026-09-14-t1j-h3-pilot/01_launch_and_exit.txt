@@ -1,0 +1,4 @@
+LAUNCH 2026-09-15T00:47:15Z
+COMPLETED: pairs_distinct=20 fired=[] report=docs/superpowers/evidence/2026-09-14-t1j-h3-pilot/09_report.json
+WRAPPER_EXIT=0
+END 2026-09-15T01:14:44Z
