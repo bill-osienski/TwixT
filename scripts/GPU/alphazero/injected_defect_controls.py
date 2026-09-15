@@ -2777,10 +2777,15 @@ DEFECTS = [
      "N_PAIRS = 296",
      "N_PAIRS = 288",
      f"{T_H3SR}::test_THE_PRECISION_TARGET_IS_ACTUALLY_MET"),
-    ("the segment composition is left to emerge", H3SR,
+    # 🔴 RE-AIMED: it named the per-segment composition test, but the injection
+    # breaks `assemble_opening_set`, so the module-scope openings FIXTURE raised in
+    # SETUP and the named test NEVER RAN -- the "control that demonstrates nothing"
+    # class, which the INDETERMINATE outcome exists to surface. The constants test
+    # reads them directly, in its own body, with no fixture in the way.
+    ("the DECLARED order allocation is changed", H3SR,
      "INCUMBENT_FIRST_PER_SEGMENT = (19, 18, 19, 18)",
      "INCUMBENT_FIRST_PER_SEGMENT = (19, 19, 18, 18)",
-     f"{T_H3SR}::test_EVERY_SEGMENT_CARRIES_THE_DECLARED_COMPOSITION"),
+     f"{T_H3SR}::test_the_alternating_order_allocation_is_DECLARED_not_derived"),
     ("the two generation seed ranges overlap again", H3SR,
      "GEN_SEED_CO_PRODUCED = 20_261_100_000",
      "GEN_SEED_CO_PRODUCED = 20_261_000_500",
@@ -4580,8 +4585,6 @@ EXPECTED_REASONS = {
         "AssertionError: h=0.08002689927666005 exceeds the declared target",
     'the sampling window need not cover every generated ply':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_rules.H3StudyError'>",
-    'the segment composition is left to emerge':
-        "scripts.GPU.alphazero.h3_study_rules.H3StudyError: segment 1 assembled 75 pairs",
     'the study gate is opened':
         "assert True is False",
     "the study population no longer excludes the PILOT's openings":
