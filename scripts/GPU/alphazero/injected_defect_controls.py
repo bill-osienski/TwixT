@@ -2947,8 +2947,6 @@ DEFECTS = [
      '    return "incumbent" if (odd == incumbent_moves_first) else "t1j"',
      '    return "incumbent"',
      f"{T_H3SRUN}::test_the_alternating_protocol_gives_each_engine_THREE_of_SIX_plies"),
-    'the two generation seed ranges overlap again':
-        'AssertionError: ((20261000000, 20261059200), (20261000500, 20261059700))',
     # ── 2026-09-15: PREPARATION for the opening-generation run.
     ("the opening-set pin is invented before the artifact exists", H3SR,
      "OPENING_SET_DIGEST: Optional[str] = None",
@@ -4595,6 +4593,8 @@ EXPECTED_REASONS = {
     # is precisely the difference between a refusal and an accident.
     'the DECLARED order allocation is changed':
         'assert (19, 19, 18, 18) == (19, 18, 19, 18)',
+    'the two generation seed ranges overlap again':
+        'AssertionError: ((20261000000, 20261059200), (20261000500, 20261059700))',
     # ── 2026-09-15: PREPARATION for the opening-generation run.
     # Every reason observed in a throwaway worktree, never predicted.
     'a STUB opening may be written into the artifact':
