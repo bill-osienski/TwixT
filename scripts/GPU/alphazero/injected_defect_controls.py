@@ -4525,6 +4525,8 @@ EXPECTED_REASONS = {
     # `validate_schedule_executable`, which does `int(task["seed"])` on None. The
     # test names an `H3PilotRunError` refusal and gets a TypeError instead, which
     # is precisely the difference between a refusal and an accident.
+    'the DECLARED order allocation is changed':
+        'assert (19, 19, 18, 18) == (19, 18, 19, 18)',
     # ── 2026-09-15: the H3 FULL STUDY. Every reason observed in a throwaway
     # worktree through the driver's own classify path, never predicted.
     'a STUB opening set can be pinned and played against':
