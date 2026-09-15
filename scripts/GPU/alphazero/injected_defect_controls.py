@@ -4339,6 +4339,17 @@ EXPECTED_REASONS = {
     # `validate_schedule_executable`, which does `int(task["seed"])` on None. The
     # test names an `H3PilotRunError` refusal and gets a TypeError instead, which
     # is precisely the difference between a refusal and an accident.
+    # ── 2026-09-15: RE-DECLARED BY THE RUN. Four labels changed when the run
+    # inverted what they claim, so their old reasons were removed in the same edit
+    # rather than left to become orphans.
+    'the 40 confirmed draws are not recorded as EXPOSED at all':
+        "AssertionError: (202624000, {'accounted': True, 'exposed': False, 'retired': True, 'test_only': False})",
+    "the PILOT block's whole-block retirement is dropped":
+        "AssertionError: (202624000, {'accounted': True, 'exposed': True, 'retired': False, 'test_only': False})",
+    'the pilot gate is left OPEN after the run':
+        'AssertionError: the wrapper must restore the gate on every exit path',
+    'the seeded pin no longer matches the digest the run recorded':
+        "AssertionError: assert 'aa527cc9a1a7...3ce4ddfabfba9' == 'b972ce46beb6...f6702de192337'",
     # ── 2026-09-14: THE OBJECT, not an equal one.
     # 🔑 The third reason is the whole point in one line: with the seam building
     # its own, the captured config COMPARED EQUAL and only an `is` caught it.
