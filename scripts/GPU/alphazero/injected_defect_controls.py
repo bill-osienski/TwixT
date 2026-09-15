@@ -2752,7 +2752,7 @@ DEFECTS = [
      '                "reference": ref["name"],\n'
      '                "reference_sha1": ref["sha1"],\n',
      "",
-     f"{T_H3O}::test_THE_REGISTERED_SCHEDULE_IS_EXECUTABLE_through_the_REAL_registry"),
+     f"{T_H3O}::test_the_EXECUTABLE_PATH_still_admits_an_UNSPENT_block"),
     ("the task names no reference_colour, so the factory cannot route", H3R,
      '            t["reference_colour"] = REF.reference_colour(t)',
      "            pass",
@@ -2785,26 +2785,32 @@ DEFECTS = [
      "    (202624000, 202624040),          # H3 PILOT. 40 seeds, one per game: 20",
      "    # (202624000, 202624040),        # H3 PILOT. 40 seeds, one per game: 20",
      f"{T_H3RUN}::test_an_UNREGISTERED_block_is_still_refused"),
-    # 🔑 A RESERVATION IS NOT A DRAW. Marking the block exposed or retired before a
-    # single game would spend it on paper.
-    ("the pilot block is ALSO marked EXPOSED before anything is drawn", REF_SRC,
-     "EXPOSED_SEED_INTERVALS = (\n",
-     "EXPOSED_SEED_INTERVALS = (\n    (202624000, 202624040),\n",
-     f"{T_H3O}::test_THE_REGISTERED_BLOCK_IS_ACCOUNTED_ONLY_and_the_barrier_is_SATISFIED"),
-    ("the pilot block is ALSO marked RETIRED before anything is drawn", REF_SRC,
-     "RETIRED_SEED_INTERVALS = (\n",
-     "RETIRED_SEED_INTERVALS = (\n    (202624000, 202624040),\n",
-     f"{T_H3O}::test_THE_REGISTERED_BLOCK_IS_ACCOUNTED_ONLY_and_the_barrier_is_SATISFIED"),
+    # 🔴 BOTH INVERTED 2026-09-15 BY THE RUN. They said "a reservation is not a
+    # draw" -- true until 00:47Z that day. They injected "ALSO marked EXPOSED /
+    # RETIRED before anything is drawn" -- which is now simply TRUE and correct, so
+    # the injection would add a duplicate line rather than a defect. The live
+    # defects are the opposite ones: draws left unrecorded, and a spent one-shot
+    # schedule left replayable. H2's blocks took exactly this turn after their runs.
+    ("the 40 confirmed draws are not recorded as EXPOSED at all", REF_SRC,
+     "    (202624000, 202624040),          # H3 PILOT, DRAWN BY THE ONE AUTHORIZED RUN on\n",
+     "",
+     f"{T_H3O}::test_THE_BLOCK_IS_EXPOSED_40_AND_RETIRED_WHOLE"),
+    ("the PILOT block's whole-block retirement is dropped", REF_SRC,
+     "    (202624000, 202624040),          # H3 PILOT, RETIRED WHOLE 2026-09-15. All 40\n",
+     "",
+     f"{T_H3O}::test_THE_BLOCK_IS_EXPOSED_40_AND_RETIRED_WHOLE"),
     # 🔑 THE ONE THAT MATTERS MOST: registration is bookkeeping, not permission.
-    ("registering the pilot block ALSO opened the execution gate", H3RUN,
+    # 🔴 RE-AIMED AND RE-LABELLED 2026-09-15. Registration is long past and the RUN
+    # has happened, so the live claim is that the wrapper left the gate shut behind it.
+    ("the pilot gate is left OPEN after the run", H3RUN,
      "H3_PILOT_EXECUTION_AUTHORIZED = False",
      "H3_PILOT_EXECUTION_AUTHORIZED = True",
-     f"{T_H3O}::test_THE_REGISTERED_BLOCK_IS_ACCOUNTED_ONLY_and_the_barrier_is_SATISFIED"),
-    ("the seeded pin is not recomputed from the registered block", H3R,
+     f"{T_H3O}::test_THE_BLOCK_IS_EXPOSED_40_AND_RETIRED_WHOLE"),
+    ("the seeded pin no longer matches the digest the run recorded", H3R,
      'SEEDED_TASK_DIGEST: Optional[str] = (\n'
      '    "aa527cc9a1a7b1e657911171c63f19fc006909dd64518bd96de3ce4ddfabfba9")',
      "SEEDED_TASK_DIGEST: Optional[str] = TASK_DIGEST",
-     f"{T_H3O}::test_THE_SEEDED_PIN_IS_RECOMPUTED_FROM_THE_REGISTERED_BLOCK"),
+     f"{T_H3O}::test_THE_SEEDED_PIN_IS_WITNESSED_BY_THE_RUNS_OWN_DURABLE_HEADER"),
     ("the registered block overlaps a spent one", H3RUN,
      "PILOT_SEED_BLOCK: Optional[tuple] = (202624000, 202624040)",
      "PILOT_SEED_BLOCK: Optional[tuple] = (202622000, 202622040)",
@@ -4316,14 +4322,6 @@ EXPECTED_REASONS = {
         'TypeError: cannot unpack non-iterable NoneType object',
     'the pilot block un-registered from ACCOUNTED':
         'AssertionError: nothing was stripped: the block is NOT registered, so this controls nothing',
-    'the pilot block is ALSO marked EXPOSED before anything is drawn':
-        "AssertionError: (202624000, {'accounted': True, 'exposed': True, 'retired': False, 'test_only': False})",
-    'the pilot block is ALSO marked RETIRED before anything is drawn':
-        "AssertionError: (202624000, {'accounted': True, 'exposed': False, 'retired': True, 'test_only': False})",
-    'registering the pilot block ALSO opened the execution gate':
-        'AssertionError: registering a block ALSO opened the execution gate -- registration is bookkeeping, and permission is a separate review',
-    'the seeded pin is not recomputed from the registered block':
-        "AssertionError: assert 'aa527cc9a1a7...3ce4ddfabfba9' == 'b972ce46beb6...f6702de192337'",
     'the registered block overlaps a spent one':
         'AssertionError: H2 a3',
     # ── 2026-09-14: the IDENTITY FIELDS the qualified construction READS, and
