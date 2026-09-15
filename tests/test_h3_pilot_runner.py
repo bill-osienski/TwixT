@@ -155,10 +155,12 @@ def test_a_DANGLING_SYMLINK_at_an_output_path_is_REFUSED(tmp_path):
 
 def test_the_schedule_must_BE_the_frozen_40_by_digest():
     """THE REGISTERED schedule against THE SEEDED pin -- the one that would run."""
-    tasks = R.build_tasks(R.generate_openings(), seed_interval=RUN.PILOT_SEED_BLOCK)
-    got = RUN.check_schedule(tasks)
+    import unittest.mock as _m
+    tasks = R.build_tasks(R.generate_openings(), seed_interval=FRESH)
+    with _m.patch.object(R, "SEEDED_TASK_DIGEST", R.task_digest(tasks)):
+        got = RUN.check_schedule(tasks)
     assert got["n_tasks"] == 40 and got["pairs"] == 20
-    assert got["task_digest"] == R.SEEDED_TASK_DIGEST
+    assert got["task_digest"] == R.task_digest(tasks)
 
 
 def test_a_SEEDLESS_schedule_is_REFUSED_because_it_cannot_be_RUN():
@@ -180,10 +182,13 @@ def test_a_DIFFERENT_schedule_is_REFUSED():
     "the digest is not compared with the pin" went INDETERMINATE, because the
     test still failed but no longer for the reason it names.
     """
-    tasks = R.build_tasks(R.generate_openings(), seed_interval=RUN.PILOT_SEED_BLOCK)
-    tasks[0] = dict(tasks[0], ply_cap=tasks[0]["ply_cap"] + 1)
-    with pytest.raises(RUN.H3PilotRunError, match="different schedule"):
-        RUN.check_schedule(tasks)
+    import unittest.mock as _m
+    tasks = R.build_tasks(R.generate_openings(), seed_interval=FRESH)
+    with _m.patch.object(R, "SEEDED_TASK_DIGEST", R.task_digest(tasks)):
+        assert RUN.check_schedule(tasks)["n_tasks"] == 40, "it passes untampered"
+        tasks[0] = dict(tasks[0], ply_cap=tasks[0]["ply_cap"] + 1)
+        with pytest.raises(RUN.H3PilotRunError, match="different schedule"):
+            RUN.check_schedule(tasks)
 
 
 def test_check_schedule_REFUSES_a_seeded_schedule_while_the_pin_is_unset():
@@ -211,15 +216,17 @@ def test_check_schedule_ALSO_ASKS_THE_REGISTRY_whether_the_seeds_MAY_RUN():
     schedule would match its digest perfectly and must still be refused.
     """
     from scripts.GPU.alphazero import e4_screen_reference as REF
-    openings = R.generate_openings()
-    tasks = R.build_tasks(openings, seed_interval=RUN.PILOT_SEED_BLOCK)
-    assert RUN.check_schedule(tasks)["n_tasks"] == 40, "it passes while unspent"
-
     import unittest.mock as _m
-    spent = REF.EXPOSED_SEED_INTERVALS + (tuple(RUN.PILOT_SEED_BLOCK),)
-    with _m.patch.object(REF, "EXPOSED_SEED_INTERVALS", spent):
-        with pytest.raises(RUN.H3PilotRunError, match="EXPOSED"):
-            RUN.check_schedule(tasks)
+    openings = R.generate_openings()
+    tasks = R.build_tasks(openings, seed_interval=FRESH)
+    with _m.patch.object(R, "SEEDED_TASK_DIGEST", R.task_digest(tasks)):
+        assert RUN.check_schedule(tasks)["n_tasks"] == 40, "it passes while unspent"
+        # 🔑 NO LONGER HYPOTHETICAL. The real block reached exactly this state on
+        # 2026-09-15; this keeps the branch reachable now that it cannot be built.
+        spent = REF.EXPOSED_SEED_INTERVALS + (tuple(FRESH),)
+        with _m.patch.object(REF, "EXPOSED_SEED_INTERVALS", spent):
+            with pytest.raises(RUN.H3PilotRunError, match="EXPOSED"):
+                RUN.check_schedule(tasks)
 
 
 def test_a_SHORT_schedule_is_refused_because_a_budget_bounds_nothing_below():
@@ -351,7 +358,7 @@ def test_THE_RECORDED_IDENTITY_IS_THE_CONFIG_PASSED_TO_THE_REAL_BUILDER(monkeypa
     monkeypatch.setattr(RUN, "H3_PILOT_EXECUTION_AUTHORIZED", True)
 
     openings = R.generate_openings()
-    tasks = R.build_tasks(openings, seed_interval=RUN.PILOT_SEED_BLOCK)
+    tasks = R.build_tasks(openings, seed_interval=FRESH)
     deadline = D1.Deadline(60)
     deadline.start()
     cfg = RUN.frozen_argmax_config()
@@ -443,6 +450,16 @@ def test_NOTHING_EFFECTFUL_IS_IMPORTED_AT_MODULE_LEVEL():
 
 # ═══════════════ the REAL builder accepts the pilot's own tasks ═════════════
 
+#: 🔴 THE REGISTERED BLOCK IS SPENT. The pilot ran once on 2026-09-15, drew all
+#: 40 seeds, and the block was retired whole -- so `build_tasks` refuses it by
+#: STATUS and no test may schedule it again. Tests whose CLAIM is about the
+#: machinery (the builder, the seam, the config object) use a fresh unspent
+#: interval; the claims that were about THE REGISTERED SCHEDULE were inverted, or
+#: superseded outright by the run, which played all 40 through the real builder
+#: with the real seeds -- the strongest form of the thing they were standing in for.
+FRESH = (777000000, 777000040)
+
+
 def _stub_evaluator():
     class _Eval:
         _g3_reference = "calib020_0001"
@@ -463,11 +480,12 @@ def test_EVERY_PAIRS_BOTH_TASKS_construct_through_the_REAL_builder():
     # `reference` and `reference_sha1` itself, which is exactly how the schedule
     # went 40-for-40 without either field.
     argmax = RUN.frozen_argmax_config()
-    # 🔑 THE REGISTERED SCHEDULE, with its REAL seeds -- not synthetic ones. The
-    # seed reaches `build_reference_agent` and seeds the agent, so building with a
-    # placeholder would test a different agent than the one the pilot would use.
-    tasks = R.build_tasks(R.generate_openings(),
-                          seed_interval=RUN.PILOT_SEED_BLOCK)
+    # 🔴 THIS USED THE REGISTERED SCHEDULE WITH ITS REAL SEEDS, and said so,
+    # because building with a placeholder tests a different agent. That block is
+    # SPENT now -- and the claim is superseded rather than weakened: the pilot
+    # played all 40 of those tasks through this builder with those seeds on
+    # 2026-09-15. What survives here is the SHAPE, on a fresh interval.
+    tasks = R.build_tasks(R.generate_openings(), seed_interval=FRESH)
     seen_colours = set()
     for task in tasks:
         # 🔑 ASSERTED INDEPENDENTLY, not derived. `reference_colour` reads
@@ -482,7 +500,7 @@ def test_EVERY_PAIRS_BOTH_TASKS_construct_through_the_REAL_builder():
         assert agent.readout.mode == RO.MODE_ARGMAX
         assert agent.config.mcts_sims == H2R.MCTS_SIMS
         assert agent.seed == task["seed"], "the SCHEDULED seed, not another"
-        assert 202624000 <= agent.seed < 202624040, "and it is the REGISTERED block"
+        assert FRESH[0] <= agent.seed < FRESH[1], "and it is the block scheduled"
         seen_colours.add(REF.reference_colour(task))
     assert seen_colours == {"red", "black"}, "one arm would prove only one arm"
 
@@ -491,8 +509,7 @@ def test_the_builder_REFUSES_the_WRONG_COLOUR_for_the_arm():
     """The negative half: if it accepted any colour the test above proves nothing."""
     from scripts.GPU.alphazero import twixtbot_g3_reference as G3
     argmax = RUN.frozen_argmax_config()
-    task = R.build_tasks(R.generate_openings(),
-                         seed_interval=RUN.PILOT_SEED_BLOCK)[0]
+    task = R.build_tasks(R.generate_openings(), seed_interval=FRESH)[0]
     wrong = "red" if REF.reference_colour(task) == "black" else "black"
     with pytest.raises(Exception):
         G3.build_reference_agent(task=task, evaluator=_stub_evaluator(),
@@ -762,6 +779,9 @@ def test_run_pilot_CONSTRUCTS_THE_CONFIG_ONCE_and_hands_it_to_the_seam(
     monkeypatch.setattr(RUN, "check_gate", lambda: None)
     monkeypatch.setattr(RUN, "_run_pilot_unguarded",
                         lambda **kw: captured.update(kw) or {"verdict": "STUB"})
+    # the registered block is SPENT, so `build_tasks` would refuse it before the
+    # config is ever constructed; the claim here is about the CONSTRUCTION count
+    monkeypatch.setattr(RUN, "PILOT_SEED_BLOCK", FRESH)
     RUN.run_pilot(results_path=str(tmp_path / "r.jsonl"),
                   trace_path=str(tmp_path / "t.jsonl"),
                   report_path=str(tmp_path / "rep.json"))

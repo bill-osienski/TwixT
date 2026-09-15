@@ -217,12 +217,21 @@ def test_the_schedule_pin_CHANGES_when_any_field_changes(tasks):
 # seam test supplied its own agent factory, which is precisely why none of them
 # could see it.
 
-def test_THE_REGISTERED_SCHEDULE_IS_EXECUTABLE_through_the_REAL_registry(openings):
-    """Not `validate_schedule_structure`: the executable question, against the
-    registered block, which is the question the runner asks before it plays."""
-    from scripts.GPU.alphazero import e4_screen_reference as REF
+def test_THE_SPENT_BLOCK_CAN_NO_LONGER_BE_SCHEDULED_AT_ALL(openings):
+    """🔴 INVERTED 2026-09-15 BY THE RUN ITSELF. This asserted that the registered
+    schedule was EXECUTABLE. The pilot ran on 2026-09-15, drew all 40 seeds and
+    the block was retired whole, so the schedule may never be built again --
+    `build_tasks` refuses by STATUS, before the registry is even consulted."""
     from scripts.GPU.alphazero import h3_pilot_runner as RUN
-    tasks = R.build_tasks(openings, seed_interval=RUN.PILOT_SEED_BLOCK)
+    with pytest.raises(R.H3PilotError, match="spent|EXPOSED|RETIRED"):
+        R.build_tasks(openings, seed_interval=RUN.PILOT_SEED_BLOCK)
+
+
+def test_the_EXECUTABLE_PATH_still_admits_an_UNSPENT_block(openings):
+    """The other half, kept REACHABLE so the inversion above is a check and not
+    an outage: on a fresh interval the whole path still says yes."""
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    tasks = R.build_tasks(openings, seed_interval=(777000000, 777000040))
     out = REF.validate_schedule_executable(tasks)
     assert out["n_tasks"] == 40
     assert out["distinct_seeds"] == 40 and out["distinct_stream_pairs"] == 40
@@ -395,20 +404,53 @@ def test_once_the_seeded_pin_IS_set_the_seeded_schedule_matches(openings, monkey
 
 # ═══════════ the REGISTERED schedule and its pin ════════════════════════════
 
-def test_THE_SEEDED_PIN_IS_RECOMPUTED_FROM_THE_REGISTERED_BLOCK(openings):
-    """The pin names a schedule; rebuild that schedule and it must agree."""
-    from scripts.GPU.alphazero import h3_pilot_runner as RUN
-    tasks = R.build_tasks(openings, seed_interval=RUN.PILOT_SEED_BLOCK)
-    assert R.task_digest(tasks) == R.SEEDED_TASK_DIGEST
-    assert R.expected_task_digest(tasks) == R.SEEDED_TASK_DIGEST
+def test_THE_SEEDED_PIN_IS_WITNESSED_BY_THE_RUNS_OWN_DURABLE_HEADER():
+    """🔴 INVERTED 2026-09-15 BY THE RUN. This rebuilt the seeded schedule and
+    compared digests; the block is spent, so it can never be rebuilt.
+
+    🔑 THE REPLACEMENT IS STRONGER EVIDENCE, not a weaker substitute: the pin is
+    now checked against the digest THE RUN ITSELF WROTE into its durable header
+    before playing. A rebuild could only ever show the pin agrees with today's
+    source; the header shows it agrees with what actually ran.
+
+    ⚠ It also records a gap. H2's `task_result` carried `seed`; H3's does not, so
+    this header digest plus the POSITIONAL binding is the whole provenance chain
+    from the games back to the seeds.
+    """
+    import json
+    hdr = json.loads(open("docs/superpowers/evidence/2026-09-14-t1j-h3-pilot/"
+                          "03_pilot_results.jsonl", encoding="utf-8").readline())
+    assert hdr["record_type"] == "header" and hdr["design"] == "H3_PILOT"
+    assert hdr["task_digest"] == R.SEEDED_TASK_DIGEST
     assert R.SEEDED_TASK_DIGEST != R.TASK_DIGEST, "seeds change the full-field digest"
+    assert hdr["selection_mode"] == "argmax"
 
 
-def test_THE_REGISTERED_BLOCK_IS_ACCOUNTED_ONLY_and_the_barrier_is_SATISFIED():
-    """THE SEED-PREPARATION STEP, and only that. Registering is bookkeeping, not
-    permission: ACCOUNTED so the barrier is satisfied, and NOT exposed and NOT
-    retired because a reservation is not a draw. The gate is the separate review
-    and it is still shut."""
+def test_the_seeded_pin_STILL_GOVERNS_which_pin_applies(openings):
+    """`expected_task_digest` must still pick the seeded pin for a seeded
+    schedule -- kept reachable on a fresh interval, since the real one is spent."""
+    tasks = R.build_tasks(openings, seed_interval=(777000000, 777000040))
+    assert R.expected_task_digest(tasks) == R.SEEDED_TASK_DIGEST
+    assert R.expected_task_digest(R.build_tasks(openings)) == R.TASK_DIGEST
+
+
+def test_THE_BLOCK_IS_EXPOSED_40_AND_RETIRED_WHOLE():
+    """🔴 INVERTED 2026-09-15 BY THE RUN. It asserted ACCOUNTED-ONLY -- a
+    reservation is not a draw. The pilot then ran ONCE and COMPLETED, 40/40,
+    wrapper exit 0.
+
+    * ACCOUNTED, from its registration.
+    * EXPOSED, ALL 40. Every seed carries a completed game: 40 `task_result`, 40
+      `opening_bound`, 40 transcripts, and 40 `task_start` each with a matching
+      `task_done`. There is NO partially-drawn seed to judge -- the question H2's
+      attempts 2 and 3 each had to answer differently, and the first time this
+      programme has not had to answer it.
+    * RETIRED WHOLE. Exposure and retirement coincide here for the first time,
+      because this is the first one-shot schedule to COMPLETE. The rule applies
+      regardless: re-running it would be choosing tasks after seeing the result.
+
+    The gate is shut again -- restored by the wrapper, not by hand.
+    """
     from scripts.GPU.alphazero import e4_screen_reference as REF
     from scripts.GPU.alphazero import h3_pilot_runner as RUN
     lo, hi = RUN.PILOT_SEED_BLOCK
@@ -419,13 +461,15 @@ def test_THE_REGISTERED_BLOCK_IS_ACCOUNTED_ONLY_and_the_barrier_is_SATISFIED():
         assert getattr(REF, name), f"vacuous: {name} is empty"
     for seed in range(lo, hi):
         st = REF.seed_status(seed)
-        assert st["accounted"], (seed, st)
-        assert not (st["exposed"] or st["retired"] or st["test_only"]), (seed, st)
-        assert seed not in REF.CONSUMED_SEEDS, seed
-    RUN.check_seed_registration()                      # the barrier is down
+        assert st["accounted"] and st["exposed"] and st["retired"], (seed, st)
+        assert not st["test_only"], (seed, st)
+        assert REF.seed_is_unavailable(seed), seed
+    RUN.check_seed_registration()        # accounting is not availability
     assert RUN.H3_PILOT_EXECUTION_AUTHORIZED is False, (
-        "registering a block ALSO opened the execution gate -- registration is "
-        "bookkeeping, and permission is a separate review")
+        "the wrapper must restore the gate on every exit path")
+    with pytest.raises(RUN.H3PilotRunError, match="NOT AUTHORIZED"):
+        RUN.run_pilot(results_path="/dev/null/x", trace_path="/dev/null/y",
+                      report_path="/dev/null/z")
 
 
 def test_the_registered_block_is_DISJOINT_from_every_spent_one():

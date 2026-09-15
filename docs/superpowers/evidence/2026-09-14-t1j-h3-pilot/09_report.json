@@ -1,0 +1,255 @@
+{
+ "any_fired": false,
+ "capped_games": 0,
+ "complete": true,
+ "duplicate_pairs": 0,
+ "games_completed": 40,
+ "games_nominal": 40,
+ "incomplete_pairs": 0,
+ "interpretation_withheld": false,
+ "is_strength_verdict": false,
+ "outcome_distribution": {
+  "by_ordered_pair_outcome": {
+   "incumbent_loss|incumbent_loss": 1,
+   "incumbent_loss|incumbent_win": 1,
+   "incumbent_win|incumbent_loss": 7,
+   "incumbent_win|incumbent_win": 11
+  },
+  "categories": "incumbent_win | incumbent_loss | cap, ordered as (incumbent as red)|(incumbent as black)",
+  "note": "REPORTED, AND IT DECIDES NOTHING. Categorical counts over pairs: no rate, no interval, no comparison. Not a stop rule (card \u00a76) and not evidence of strength.",
+  "unit": "pair"
+ },
+ "pairs": [
+  {
+   "black_digest": "46a3548d19bb6ba28eece8288f6aa78f536f3f362fb80db2318854015a3ebed8",
+   "capped": 0,
+   "elapsed_s": 86.27100737486035,
+   "n_games": 2,
+   "ordered_outcome": "incumbent_win|incumbent_win",
+   "pair_id": 0,
+   "red_digest": "a7f2f2bdfbfffdc601d90426aea7bce90f3f1df261720be30efbafdcd1ec1efa"
+  },
+  {
+   "black_digest": "52d45139d8fb41c2749e5a5726d61ff172a68e6f95c3d18bed6d0e91d924bcf1",
+   "capped": 0,
+   "elapsed_s": 96.94329141685739,
+   "n_games": 2,
+   "ordered_outcome": "incumbent_win|incumbent_win",
+   "pair_id": 1,
+   "red_digest": "4c7aebe73e6b139098222e0d03a69ca6892e9a46cd9813ad3bf54c4080008e69"
+  },
+  {
+   "black_digest": "0b644490b6f9a482f88e6e9166a1eb78641b67e2601aa253c0de75d0f2eb2428",
+   "capped": 0,
+   "elapsed_s": 84.78461874998175,
+   "n_games": 2,
+   "ordered_outcome": "incumbent_win|incumbent_win",
+   "pair_id": 2,
+   "red_digest": "071ac08ac105535c625d48e2a4aa886f3661276c537b30f9f9677ecbf24c542d"
+  },
+  {
+   "black_digest": "37466d0b8bc2382785ea16761f16e64532a41df20dbf0bf9894801280917bcf5",
+   "capped": 0,
+   "elapsed_s": 81.37928970926441,
+   "n_games": 2,
+   "ordered_outcome": "incumbent_win|incumbent_win",
+   "pair_id": 3,
+   "red_digest": "7d229b4134fbe4af6c6c467cb5fd76e7cb3fc94f4cb91522034ee6cdc67cd49b"
+  },
+  {
+   "black_digest": "82c71d7bd707154689ca341fe499de047768e659f318ccbe02bf4e8ff8d5c535",
+   "capped": 0,
+   "elapsed_s": 85.94777425006032,
+   "n_games": 2,
+   "ordered_outcome": "incumbent_win|incumbent_win",
+   "pair_id": 4,
+   "red_digest": "90a867cd4d249a6f6bdd7ca5b1fdef0944c297102cd0cc89c580302a320fcaae"
+  },
+  {
+   "black_digest": "3c9c20a0593580f97bbdf2c61b235f8cd3bc01c4a4fe81ca80b1ea0a116daf4b",
+   "capped": 0,
+   "elapsed_s": 75.75426258309744,
+   "n_games": 2,
+   "ordered_outcome": "incumbent_win|incumbent_loss",
+   "pair_id": 5,
+   "red_digest": "b22d524763f8739baf8d8f97795b7a5c8e35881582b4c857d51bfb697703a300"
+  },
+  {
+   "black_digest": "722c1e5ca95ad5d78f5ecbadb49efbbd1b9d64053a3d2a3fc504ef4698fe4061",
+   "capped": 0,
+   "elapsed_s": 85.48340479214676,
+   "n_games": 2,
+   "ordered_outcome": "incumbent_win|incumbent_loss",
+   "pair_id": 6,
+   "red_digest": "884a3843aeb2c99cd0ee1d6655b3cbebde312492af0f702f350e03508a735a11"
+  },
+  {
+   "black_digest": "3ff656c06bc43d60d48edc939141ae8c3ce9f35190dd29f49297d83f3e76be91",
+   "capped": 0,
+   "elapsed_s": 67.42901720805094,
+   "n_games": 2,
+   "ordered_outcome": "incumbent_win|incumbent_loss",
+   "pair_id": 7,
+   "red_digest": "28de59e0d3a103bade0e351bb1f68b0e90583749fa2ebfcd2da7f98f3676cfce"
+  },
+  {
+   "black_digest": "a7335e262fd42b37b57cca09117fe457b83cb5bc9aef7e4e5bd00c4850aec98b",
+   "capped": 0,
+   "elapsed_s": 62.02112599997781,
+   "n_games": 2,
+   "ordered_outcome": "incumbent_win|incumbent_win",
+   "pair_id": 8,
+   "red_digest": "4078118576270728adf40d8606a698bf378ce0332fe68eee72f255887eb3d60b"
+  },
+  {
+   "black_digest": "ce9f7c189706069174312df7dc916bd493e1774358ee3a156fd61d87f4fa6805",
+   "capped": 0,
+   "elapsed_s": 93.81497016712092,
+   "n_games": 2,
+   "ordered_outcome": "incumbent_loss|incumbent_win",
+   "pair_id": 9,
+   "red_digest": "4f302b1b49f694fe7283b2241179524f29b965cf223e31602700aa22b69d4ef6"
+  },
+  {
+   "black_digest": "2bd078ea3fd28e0b9fea738b09f8a5ff7b54545c65c218d61de50172462d1296",
+   "capped": 0,
+   "elapsed_s": 62.03859633393586,
+   "n_games": 2,
+   "ordered_outcome": "incumbent_win|incumbent_loss",
+   "pair_id": 10,
+   "red_digest": "0b1c4320c3c82d9a0bd9ee6579c584d9057cb04921cfe157d7b1a5416c47e54e"
+  },
+  {
+   "black_digest": "994744e65f6e2c47d03113ddc1349c4e3815b5e9a52ef1ac8b98b49c93014a7d",
+   "capped": 0,
+   "elapsed_s": 74.61492083291523,
+   "n_games": 2,
+   "ordered_outcome": "incumbent_win|incumbent_win",
+   "pair_id": 11,
+   "red_digest": "521a72c2c3668bc4d25a2d92783f04911489a043ee15d3ff0eb4bf29fe6ff3c7"
+  },
+  {
+   "black_digest": "b47089e6c4590261507ad5030fe7157fc3fd3a1a2bc251871ef74a7d9c268149",
+   "capped": 0,
+   "elapsed_s": 89.03361566714011,
+   "n_games": 2,
+   "ordered_outcome": "incumbent_win|incumbent_loss",
+   "pair_id": 12,
+   "red_digest": "63a889fe749ff67344b387287a41553d1011f81e9f476365d426990d4e8a5763"
+  },
+  {
+   "black_digest": "4ec5fa46ec0f27d255837000e7ed860471a9f40312e5cb9c46be0e4a53e6bff5",
+   "capped": 0,
+   "elapsed_s": 119.07718829088844,
+   "n_games": 2,
+   "ordered_outcome": "incumbent_win|incumbent_win",
+   "pair_id": 13,
+   "red_digest": "4696310cd365a25f4ea12bdc6fd7ed3f95a556df50b2fa73a346b3cd02263872"
+  },
+  {
+   "black_digest": "91634043ae5523896d6dd5a1c0cf9d2bbe721c07c71d9fac2c0984bd9a8b2b3a",
+   "capped": 0,
+   "elapsed_s": 77.81323695904575,
+   "n_games": 2,
+   "ordered_outcome": "incumbent_win|incumbent_win",
+   "pair_id": 14,
+   "red_digest": "a106b330ffc990dae21dd75751afae122d40a023e9abc35ea0ebb634005b074a"
+  },
+  {
+   "black_digest": "dd3c7dfd7700d152be91af016bc80ac6f34d29f45c3301fe6b62244aafa17c4c",
+   "capped": 0,
+   "elapsed_s": 75.48317554220557,
+   "n_games": 2,
+   "ordered_outcome": "incumbent_win|incumbent_loss",
+   "pair_id": 15,
+   "red_digest": "b1305c152aa4a9995ee71922a935d0223a4ef288d3aa7070b24a09d06961e36c"
+  },
+  {
+   "black_digest": "2b37ecc7846a5cbc2ae03159612e1c6d9c59a6f5ab90407753af3adf84effc7d",
+   "capped": 0,
+   "elapsed_s": 84.34037383296527,
+   "n_games": 2,
+   "ordered_outcome": "incumbent_loss|incumbent_loss",
+   "pair_id": 16,
+   "red_digest": "851d84b255fbf5ca7446d3c9136240a7055d9c1bdefe4e0eb470afea8f1980bb"
+  },
+  {
+   "black_digest": "e5e2fdb8a219279f6b17a02e48844daea3253c44196a077ddd8bdf65784d756d",
+   "capped": 0,
+   "elapsed_s": 85.00353083317168,
+   "n_games": 2,
+   "ordered_outcome": "incumbent_win|incumbent_win",
+   "pair_id": 17,
+   "red_digest": "cafdcdce25ad40cd2c005b6d2df990baf69d2bb36f23bb1d3b973967f3ff615e"
+  },
+  {
+   "black_digest": "3dcacefb637cfe7c210717fe4f793ff61b6dc800cf1d7d0f0b9f37dfee5542f4",
+   "capped": 0,
+   "elapsed_s": 79.748485959135,
+   "n_games": 2,
+   "ordered_outcome": "incumbent_win|incumbent_loss",
+   "pair_id": 18,
+   "red_digest": "1842c07616f2010cfbbe5523b96509be364e645caf95382b386c7f187b8256d7"
+  },
+  {
+   "black_digest": "6f93baf1e0e87e6632c064ccd265dfc11d0d82c44de0fb7480ac1cd505d99128",
+   "capped": 0,
+   "elapsed_s": 80.9537192909047,
+   "n_games": 2,
+   "ordered_outcome": "incumbent_win|incumbent_win",
+   "pair_id": 19,
+   "red_digest": "296c5a1cd851d5d90110a31d4795cdef86efb4daca20c2fe0f1339ce99268edb"
+  }
+ ],
+ "pairs_distinct": 20,
+ "pairs_excluded_unscoreable": 0,
+ "pairs_excluded_void": 0,
+ "pairs_informative": 20,
+ "pairs_nominal": 20,
+ "pairs_scored": 20,
+ "partial_note": null,
+ "partial_overlap_pairs": 0,
+ "partial_overlap_relations": 0,
+ "stop_rules": {
+  "S1": {
+   "ceiling": 2,
+   "observed": 0,
+   "status": "CLEAR",
+   "what": "duplicate pairs"
+  },
+  "S2": {
+   "ceiling": 8,
+   "observed": 0,
+   "status": "CLEAR",
+   "what": "capped games"
+  },
+  "S3": {
+   "ceiling": 2,
+   "observed": 0,
+   "status": "CLEAR",
+   "what": "within-pair-identical pairs"
+  },
+  "S4a": {
+   "ceiling": 3600.0,
+   "observed": 1648.6746175829321,
+   "status": "CLEAR",
+   "what": "total elapsed seconds"
+  },
+  "S4b": {
+   "ceiling": 4.0,
+   "observed": 1.2291934417207402,
+   "status": "CLEAR",
+   "what": "p90 / median"
+  }
+ },
+ "timed_out": false,
+ "timing": {
+  "max": 70.76835458283313,
+  "median": 40.51042220857926,
+  "min": 25.851039041997865,
+  "n": 40,
+  "p90": 49.79514530012385,
+  "total_elapsed_s": 1648.6746175829321
+ },
+ "within_pair_identical": 0
+}

@@ -371,6 +371,32 @@ ACCOUNTED_SEED_INTERVALS = (
 #: strikes that seed off. A draw inside the test namespace strikes nothing off,
 #: because nothing there was ever available to schedule.
 EXPOSED_SEED_INTERVALS = (
+    (202624000, 202624040),          # H3 PILOT, DRAWN BY THE ONE AUTHORIZED RUN on
+                                     # 2026-09-15 (00:47:15Z -> 01:14:44Z, 27m29s).
+                                     # ALL 40 seeds, bound POSITIONALLY:
+                                     # 202624000..202624039.
+                                     #
+                                     # THE RUN COMPLETED, 40/40, wrapper exit 0.
+                                     # Every seed carries a COMPLETED game: 40
+                                     # task_result records, 40 opening_bound, 40
+                                     # transcripts, 40 task_start each with a
+                                     # matching task_done. There is no
+                                     # partially-drawn seed to judge, which is the
+                                     # question attempts 2 and 3 of H2 each had to
+                                     # answer differently.
+                                     #
+                                     # 🔴 DERIVED, NOT READ OFF THE RECORDS. H2's
+                                     # `task_result` carried `seed`; H3's does not --
+                                     # `_play_one` returns it and the run body's
+                                     # projection drops it. The binding is sound and
+                                     # pinned: the durable header carries the SEEDED
+                                     # full-field task digest
+                                     # aa527cc9a1a7b1e657911171c63f19fc006909dd64518bd96de3ce4ddfabfba9,
+                                     # which matches SEEDED_TASK_DIGEST, and
+                                     # `build_tasks` assigns row i -> lo + i. But it
+                                     # is a DERIVATION from a pin, where H2's was a
+                                     # value in the record. Recorded here so the
+                                     # accounting states its own provenance.
     (202622000, 202622693),          # H2 ATTEMPT 3, DRAWN BY THE ONE AUTHORIZED
                                      # RUN on 2026-09-13. 693 seeds, bound
                                      # POSITIONALLY: 202622000..202622692.
@@ -522,6 +548,18 @@ TEST_ONLY_SEED_INTERVALS = (
 #: seeing the first 24, which is selection bias however clean the RNG is. So the
 #: WHOLE block retires together, drawn and undrawn alike.
 RETIRED_SEED_INTERVALS = (
+    (202624000, 202624040),          # H3 PILOT, RETIRED WHOLE 2026-09-15. All 40
+                                     # were drawn (see EXPOSED above), so whole-block
+                                     # retirement and exposure coincide here for the
+                                     # first time in this programme -- the pilot is
+                                     # the first one-shot schedule to COMPLETE.
+                                     #
+                                     # The one-shot rule applies regardless: a
+                                     # schedule that has run may not be re-run, and
+                                     # selecting any part of it again would be
+                                     # choosing tasks after seeing the result. A
+                                     # second pilot needs a FRESH block with its own
+                                     # collision re-proof.
     (202622000, 202622736),          # H2 ATTEMPT 3, RETIRED WHOLE 2026-09-13.
                                      # 693 of its seeds were drawn by the single
                                      # authorized run (see EXPOSED above) and the
