@@ -2954,8 +2954,10 @@ DEFECTS = [
      f"{T_H3SRUN}::test_THE_DESTINATION_IS_ABSENT_AND_OUTSIDE_EVERY_SPENT_DIRECTORY"),
     # the same line appears in the PREFLIGHT, so the anchor carries the line above
     ("the incumbent agent is re-seeded per ply again", H3SGEN,
+     "        # per ATTEMPT is right: a rejected candidate must leave nothing behind.\n"
      "        ctx = movers[\"new_context\"]()\n"
      "        inc = movers[\"incumbent_agent\"](seed=seed, colour=inc_colour)",
+     "        # per ATTEMPT is right: a rejected candidate must leave nothing behind.\n"
      "        ctx = movers[\"new_context\"]()\n"
      "        inc = movers[\"incumbent_agent\"](seed=seed + 7919, colour=inc_colour)",
      f"{T_H3SRUN}::test_THE_AGENT_IS_SEEDED_WITH_THE_ATTEMPT_SEED_EXACTLY"),
