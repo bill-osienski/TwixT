@@ -33,6 +33,42 @@ openings engine-independent (§1.3).
 
 ---
 
+## AMENDMENT 2 — 2026-09-15, on review of Amendment 1
+
+`N = 296` and the balanced 37+37 segment composition are confirmed. Three
+further changes, and one finding that came out of making them.
+
+| # | change | where |
+|---|---|---|
+| 8 | **Shared continuations are DESCRIPTIVE ONLY — the `> 7` gate is removed.** Two games from different openings are distinct observations even when their move sequences match, because the opening changes the board those moves are played on. Nothing preregistered says identical continuations invalidate evidence, so nothing gates on them | §4.3, §4.6 |
+| 9 | **Two verdict edge cases made explicit**: a sensitivity estimate of exactly 0.50 does **not** support the primary direction and suppresses the verdict; and if any required sensitivity **cannot be computed**, no strength verdict issues | §4.7 |
+| 10 | **The CO-PRODUCED generation protocol is frozen** — configurations, PRNG streams, tree lifetime, rejection behaviour, alternating order, pinned artifacts | **§1.7 (new)** |
+
+### 🔴 THE FINDING: THE CO-PRODUCED GENERATOR AS SPECIFIED PRODUCES **TWO**
+### OPENINGS, NOT 148
+
+Freezing the protocol immediately exposed why it had to be frozen.
+
+* Under the **match** configuration the incumbent plays `selection_mode:
+  "argmax"` — its move is a **deterministic function of the position**.
+* **E3a established that T1j is deterministic** at fixed depth: 25 queries, 20
+  in one JVM and 5 in fresh JVMs, all returned the same move.
+
+An alternating generator built from those two players has **no entropy anywhere
+in it.** Every incumbent-first opening would be the same opening, and every
+T1j-first opening would be the same one. Stratum B would contain **2 distinct
+positions repeated 74 times each**, and the whole study would rest on two
+positions.
+
+This is exactly the class of defect the reviewer's instruction anticipated: it
+could not have been caught by inspection of the first draft, and it would have
+surfaced as a bewildering result *during generation*, after implementation.
+
+**The resolution is in §1.7.2**, and it changes what stratum B *is*, so it is
+recorded as a design decision and not a detail.
+
+---
+
 ## 0. 🔴 WHAT THE PILOT MAY AND MAY NOT CONTRIBUTE
 
 The pilot established two things and only two: **gameplay diversity** (40 games
@@ -128,7 +164,8 @@ would distort the distribution it claims to draw from.
 ⚠ **Rejection sampling is itself a coupling.** It makes the realised population
 a *conditioned* one, not the raw generator's, and the conditioning is shared
 across all openings. This is one of the reasons §2.1 treats independence as a
-model rather than a fact.
+model rather than a fact. The rejection mechanics — attempt seeds,
+attempt caps, and the recording of every attempt count — are frozen in §1.7.5.
 
 ### 1.4 Independence from every earlier experiment
 The study's 296 openings must be disjoint, up to symmetry, from:
@@ -158,6 +195,108 @@ It will **not** support a claim about tournament play, about human-like
 positions, about a population these two engines did not make, or about any
 configuration other than the frozen one. That sentence belongs in the report
 verbatim.
+
+### 1.7 🔴 THE FROZEN GENERATION PROTOCOL
+
+Fixed here, in full, **before implementation**. These details define the study
+population; they cannot safely emerge while generating it, and §1.7.2 is the
+proof of that — the first version of this design had no entropy in it at all.
+
+#### 1.7.1 Engine configurations — and the one that is NOT the match one
+
+| | configuration |
+|---|---|
+| incumbent, **when PLAYING** the study | the frozen **argmax** match configuration, unchanged |
+| incumbent, **when GENERATING** stratum B | the **frozen research configuration** — `selection_mode: "opening_temperature"`, `opening_temp_plies 20`, `temp_high 1.0`, `temp_low 0.1`, `mcts_sims 400` |
+| T1j, generating and playing | `mdPly 6`, `mdFixedPly true` — identical to the match |
+
+#### 1.7.2 🔴 Why the generator's incumbent is NOT the match incumbent
+Under argmax the incumbent's move is a deterministic function of the position,
+and **E3a proved T1j deterministic** at fixed depth (25/25 identical moves). An
+argmax-vs-T1j alternating generator therefore yields **exactly one** position per
+order — stratum B would be two positions repeated 74 times each.
+
+The frozen research configuration **samples**: `temp_high = 1.0` applies for the
+first 20 plies and generation is only 6, so all six plies are drawn from the
+visit distribution at full temperature. That is the programme's own qualified
+mechanism for opening diversity, and it is used unmodified.
+
+**Consequences, stated rather than buried:**
+
+* the incumbent that **generates** is configured differently from the incumbent
+  that **plays**. Stratum B is therefore "positions reachable when the incumbent
+  explores at temperature and T1j replies", not "positions from argmax play";
+* **all the variation in stratum B comes from one engine.** T1j is deterministic,
+  so it contributes *content* to every position but no *entropy*. Both engines
+  shape each opening; only one supplies the diversity. This narrows
+  "symmetrically co-produced" further and the report must say so;
+* stratum A remains the untouched uniform comparator, which is part of why the
+  design keeps two strata rather than betting on one.
+
+#### 1.7.3 PRNG stream assignment
+* Generation seeds are **declared constants**: `GEN_SEED_A` and `GEN_SEED_B`,
+  asserted absent from every registry — accounted, exposed, retired and
+  test-only — by a test. **Generation never consumes a drawable seed** (the
+  pilot's rule).
+* Opening *i*, attempt *j*, uses `GEN_SEED_X + i × MAX_ATTEMPTS + j`. Attempts
+  therefore occupy **disjoint, pre-computable** seed ranges; a rejection never
+  re-draws the seed that produced the rejected position.
+* The incumbent's search and readout streams derive by the programme's existing
+  masks — `seed ^ SEARCH_MASK[colour]`, `seed ^ READOUT_MASK[colour]` — imported
+  from `SeededReferenceAgent` and **never retyped**.
+* 🔑 **The collision re-proof must cover the generation constants and their whole
+  attempt range alongside the 592 match seeds**, because generation seeds derive
+  streams too. A proof over the match block alone would miss a collision between
+  a generation stream and a match stream.
+
+#### 1.7.4 Tree lifetime and reset
+* **One agent instance per opening**, never per stratum and never per run.
+* **No search tree is carried across openings.** Reusing a tree would make
+  opening *i+1* depend on opening *i*, and the population would become
+  order-dependent — a coupling far worse than the ones §2.1 already declares.
+* `between_games_cleanup()` runs after every opening, exactly as between games.
+* Within one opening's six plies the agent persists and both streams advance, as
+  they do within a game.
+
+#### 1.7.5 Rejection behaviour
+* **Whole-position rejection**: a candidate failing any §1.3 filter is discarded
+  entire and regenerated from the next attempt seed. Never per-move resampling,
+  which would distort the distribution it claims to draw from.
+* `MAX_ATTEMPTS` per opening is a **declared constant**. Exhausting it is a
+  **hard failure that aborts generation** — it never yields fewer openings, and
+  it never relaxes a filter.
+* **The attempt count for every opening is recorded** in the pinned artifact. A
+  high rejection rate changes the conditioning of the population, so it is
+  evidence about the population, not a private detail of the loop.
+* A global cap on total attempts, also declared, aborts a generator that wanders.
+
+#### 1.7.6 Alternating order, and how it lands in the segments
+Stratum B is **74 incumbent-first and 74 T1j-first**. Each segment takes 37
+stratum-B openings, which is odd and so cannot split evenly; the allocation is
+therefore **declared, not derived at run time**:
+
+| segment | 1 | 2 | 3 | 4 | total |
+|---|---|---|---|---|---|
+| incumbent-first | 19 | 18 | 19 | 18 | **74** |
+| T1j-first | 18 | 19 | 18 | 19 | **74** |
+| stratum B | 37 | 37 | 37 | 37 | 148 |
+| stratum A | 37 | 37 | 37 | 37 | 148 |
+
+#### 1.7.7 The artifacts that get pinned
+Frozen and committed **before a single match seed is reserved**:
+
+1. **The opening set**, both strata, with `OPENING_SET_DIGEST` over all 296.
+2. **Per-opening provenance**: stratum, alternating order, generation seed,
+   **attempt count**, the move sequence, and the canonical (symmetry-reduced)
+   digest.
+3. **The generator's identity record** — both engines' full configurations, the
+   RNG masks, the toolchain pins, the model name and sha1 — written the way the
+   match header now writes the incumbent's identity: read off the objects
+   actually used, one origin, compared by identity.
+4. **The generation run's durable trace and exit code.**
+
+A regenerated set that does not reproduce `OPENING_SET_DIGEST` is a different
+population and may not be substituted for this one.
 
 ---
 
@@ -330,7 +469,17 @@ informative and it is **not duplication**:
   a pair from a different opening;
 * `shared_continuation_relations` — the number of such sharing relations.
 
-Both are descriptive. Neither collapses a pair, and neither is a duplicate.
+🔴 **BOTH ARE DESCRIPTIVE ONLY, AND NEITHER GATES ANYTHING.** Two games played
+from **different** openings are **distinct observations** even when their move
+sequences match: the opening changes the board those moves are played on, so the
+resulting positions differ. A matching continuation is a coincidence of move
+coordinates, not a repeated game.
+
+Amendment 1 put a `> 7` ceiling here. **It is removed.** Nothing preregistered
+says that identical continuations invalidate evidence, and a gate without a
+stated reason to fire is a gate that would have suppressed a sound result.
+Neither count collapses a pair, neither is a duplicate, and neither can suppress
+interpretation.
 
 *(These replace the pilot's `partial_overlap_pairs` / `partial_overlap_relations`,
 which were computed on transcript digests alone. The two counts stay distinct
@@ -359,13 +508,15 @@ fire; a RATIO or QUANTILE may not.**
 | gate | threshold | what it means |
 |---|---|---|
 | **duplicate pairs** | **> 0** | 🔴 a **HARNESS FAULT** — the same opening twice. Not a population property. Any occurrence voids interpretation until explained |
-| shared-continuation pairs | > 7 (2.5% of 296) | many different openings converging on the same play: the openings are not differentiating the games |
 | within-pair-identical pairs | > 7 | pairs contributing no discrimination |
 | capped games | > 118 (20% of 592) | the configuration is not producing decisive games |
 | completed pairs | < 148 (half) | below this, counts only — no interval interpretation |
 
 A fired gate **suppresses interpretation, not the counts.** The counts are always
 reported.
+
+🔑 **Shared continuations are deliberately ABSENT from this table** (§4.3): they
+are reported, and they gate nothing.
 
 ### 4.7 🔴 SENSITIVITY DISAGREEMENT — the joint rule, over BOTH analyses
 Three analyses beside the primary **P** (all scoreable pairs):
@@ -378,15 +529,27 @@ Each is reported with its own N, X̄ and Hoeffding interval at *its* N. Their
 intervals are wider than P's simply because they drop pairs; that alone is not
 disagreement.
 
-**A strength verdict issues only if all three hold:**
+**A strength verdict issues only if all four hold:**
 
 1. **P excludes 0.5**; and
-2. **no sensitivity's point estimate crosses 0.5** — `sign(X̄ − 0.5)` is the same
-   for P, C, I and J; and
-3. **no sensitivity's interval is decisive in the opposite direction to P.**
+2. **every sensitivity is COMPUTABLE**; and
+3. **every sensitivity's point estimate lies strictly on P's side of 0.5** —
+   `sign(X̄ − 0.5)` is identical and non-zero for P, C, I and J; and
+4. **no sensitivity's interval is decisive in the opposite direction to P.**
 
-If any fails, the study **reports all four analyses and declares nothing.** In
-particular:
+If any fails, the study **reports all four analyses and declares nothing.** Two
+edge cases, made explicit because each would otherwise fall through a gap:
+
+* 🔴 **A sensitivity estimate of EXACTLY 0.50 suppresses the verdict.** It does
+  not "cross" to the other side, so a rule phrased as crossing would have let it
+  pass — and an estimate sitting on the null supports neither direction. `sign`
+  must be non-zero, not merely unchanged.
+* 🔴 **A sensitivity that CANNOT BE COMPUTED suppresses the verdict.** If an
+  exclusion set leaves no pairs, or too few to form the analysis at all, there is
+  no estimate — and an absent check is not a passed check. The study reports the
+  analyses it has and declares nothing. Fail-closed, as everywhere else here.
+
+In particular:
 
 * **two decisive intervals pointing opposite ways suppress the verdict** — this
   was undefined in the first draft, and it is the most dangerous case, because
@@ -532,6 +695,9 @@ a fresh block and its own re-proof.
 
 ## 8. THE DECIDED QUESTIONS
 
+Amendment 2's three changes and the §1.7 protocol were settled on review,
+2026-09-15, together with the finding in the Amendment 2 header.
+
 The first draft's four open questions were decided on review, 2026-09-15:
 
 1. **Keep stratum B.** Without it the study retains the unrealistic-position
@@ -540,7 +706,8 @@ The first draft's four open questions were decided on review, 2026-09-15:
 2. **Keep `h ≤ 0.08`** — with the arithmetic corrected to 296 pairs (§3.3).
 3. **Four segments.**
 4. **Keep both alternating orders**, and describe stratum B as **symmetrically
-   co-produced** rather than neutral (§1.3).
+   co-produced** rather than neutral (§1.3) — narrowed again by §1.7.2, which
+   establishes that only one of the two engines supplies any variation.
 
 ---
 
@@ -551,5 +718,9 @@ proved or registered; no opening set is generated; no gate is opened; no game is
 played. The pilot's block stays EXPOSED 40 / RETIRED WHOLE, all eight gates stay
 False, and the push stays held.
 
-Implementation, seed reservation, stratum-B generation and each segment's
-execution are separate authorizations, and none is requested here.
+**Implementation may proceed GATE-SHUT** for the generator, the schedules, the
+analysis, the reporting, the pre-run verification and the controls, now that
+Amendment 2 is recorded.
+
+**Opening generation, seed registration, match execution and the push remain
+separate and UNAUTHORIZED.**
