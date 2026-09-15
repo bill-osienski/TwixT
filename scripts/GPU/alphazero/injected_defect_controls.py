@@ -4281,8 +4281,14 @@ EXPECTED_REASONS = {
     # NO-SEED-BLOCK refusal, which fired whether or not the check existed.
     # Registering a block moved the symptom to the containment boundary and the
     # harness reported it INDETERMINATE. The target now asserts WHICH refusal.
+    # 🔑 RE-OBSERVED A THIRD TIME, 2026-09-15. This control's target keeps being
+    # reached by a DIFFERENT refusal as the surrounding truth moves: first the
+    # NO-SEED-BLOCK message (which was never evidence about the openings pin at
+    # all), then the containment boundary once a block was registered, and now the
+    # spent-block refusal once the pilot had run. The target asks WHICH refusal, so
+    # each move changes the reason and none of them weakens the claim.
     'the generated openings are not checked against the frozen pin':
-        'AssertionError: it ran PAST the openings pin and was stopped later, by H3PilotContainmentError',
+        'AssertionError: it ran PAST the openings pin and was stopped later, by H3PilotError',
     'the PILOT wrapper reports success without verifying the gate':
         'AssertionError: assert 0 == 10',
     'a surviving descendant is reported as a success':
