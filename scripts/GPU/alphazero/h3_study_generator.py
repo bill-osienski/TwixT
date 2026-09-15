@@ -87,24 +87,6 @@ def order_for_index(index: int) -> str:
             else RULES.ORDER_T1J_FIRST)
 
 
-def _assert_inert() -> None:
-    """The containment boundary, the match seam's exactly. A generation run is a
-    run: nothing here may reach a real toolchain, model or JVM from a test."""
-    from . import d1_probe as D1
-    from . import e4_screen_command as SCREEN_CMD
-    from . import t1j_toolchain as TC
-    from . import twixtbot_g3_reference as G3
-    try:
-        SCREEN_CMD.assert_production_acts_are_inert(
-            "H3 study's OPENING GENERATION", (
-                (TC, "verified_paths"),
-                (D1, "_default_compile"),
-                (SCREEN_CMD, "_default_load_evaluator"),
-                (G3, "build_reference_agent")))
-    except SCREEN_CMD.ContainmentError as e:
-        raise H3GenerationContainmentError(str(e)) from None
-
-
 def generate_co_produced(*, out_path: str = DEFAULT_OUT,
                          trace_path: str = DEFAULT_TRACE) -> Dict[str, Any]:
     """THE PUBLIC ENTRY. Produces the 148 co-produced openings and pins them.
@@ -115,10 +97,26 @@ def generate_co_produced(*, out_path: str = DEFAULT_OUT,
     caller-supplied population.
     """
     check_gate()
-    _assert_inert()
     from . import d1_probe as D1
     from . import e4_screen_command as SCREEN_CMD
     from . import t1j_toolchain as TC
+    from . import twixtbot_g3_reference as G3
+
+    # 🔴 THE BOUNDARY IS INLINE, NOT BEHIND A HELPER. It was one call away in
+    # `_assert_inert()`, and `test_NO_CONTROL_DELETES_AN_AUTHORIZATION_CHECK`
+    # could not SEE it: that test finds the innermost function calling
+    # `verified_paths` and looks for the boundary IN IT, structurally, precisely
+    # so a boundary cannot be taken on trust. An indirection the checker cannot
+    # follow is, to the checker, no boundary at all.
+    try:
+        SCREEN_CMD.assert_production_acts_are_inert(
+            "H3 study's OPENING GENERATION", (
+                (TC, "verified_paths"),
+                (D1, "_default_compile"),
+                (SCREEN_CMD, "_default_load_evaluator"),
+                (G3, "build_reference_agent")))
+    except SCREEN_CMD.ContainmentError as e:
+        raise H3GenerationContainmentError(str(e)) from None
 
     if os.path.lexists(out_path) or os.path.lexists(trace_path):
         raise H3GenerationError(

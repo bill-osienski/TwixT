@@ -248,8 +248,15 @@ def test_NO_CONTROL_DELETES_AN_AUTHORIZATION_CHECK():
     # ⚠ One H3 control was RE-AIMED to earn this. It removed the boundary itself
     # while naming the test that forces the gate OPEN, so the seam would have
     # reached `verified_paths`. This test caught it before it ran.
+    # H3's FULL STUDY runner and its opening GENERATOR join on the same terms.
+    # ⚠ The generator had to EARN it: its boundary sat one call away in a helper,
+    # and the structural loop below -- which reads the innermost function that
+    # resolves the toolchain -- could not see it. An indirection the checker
+    # cannot follow is, to the checker, no boundary at all, so it was inlined.
     assert set(offenders) <= {"scripts/GPU/alphazero/h1_viability_runner.py",
-                              "scripts/GPU/alphazero/h3_pilot_runner.py"}, offenders
+                              "scripts/GPU/alphazero/h3_pilot_runner.py",
+                              "scripts/GPU/alphazero/h3_study_runner.py",
+                              "scripts/GPU/alphazero/h3_study_generator.py"}, offenders
     for f in offenders:
         lines = _seam_lines(f)
         assert "assert_production_acts_are_inert" in lines, (
