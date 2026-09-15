@@ -2787,8 +2787,13 @@ DEFECTS = [
      "INCUMBENT_FIRST_PER_SEGMENT = (19, 18, 19, 18)",
      "INCUMBENT_FIRST_PER_SEGMENT = (19, 19, 18, 18)",
      f"{T_H3SR}::test_the_alternating_order_allocation_is_DECLARED_not_derived"),
+    # 🔴 RE-ANCHORED TWICE by one change: widening the separation moved the
+    # constant this injects into AND renamed the test it targets. The base is now
+    # 20_261_200_000, so the overlap control puts it back INSIDE the uniform
+    # range, while a separate control puts it merely inside the GAP FLOOR -- two
+    # distinct claims, one target, different injections.
     ("the two generation seed ranges overlap again", H3SR,
-     "GEN_SEED_CO_PRODUCED = 20_261_100_000",
+     "GEN_SEED_CO_PRODUCED = 20_261_200_000",
      "GEN_SEED_CO_PRODUCED = 20_261_000_500",
      f"{T_H3SR}::test_the_two_generation_RANGES_ARE_SEPARATED_BY_MORE_THAN_THEIR_OWN_SIZE"),
     ("a rejection re-draws the seed that caused it", H3SR,
@@ -2942,6 +2947,8 @@ DEFECTS = [
      '    return "incumbent" if (odd == incumbent_moves_first) else "t1j"',
      '    return "incumbent"',
      f"{T_H3SRUN}::test_the_alternating_protocol_gives_each_engine_THREE_of_SIX_plies"),
+    'the two generation seed ranges overlap again':
+        'AssertionError: ((20261000000, 20261059200), (20261000500, 20261059700))',
     # ── 2026-09-15: PREPARATION for the opening-generation run.
     ("the opening-set pin is invented before the artifact exists", H3SR,
      "OPENING_SET_DIGEST: Optional[str] = None",
