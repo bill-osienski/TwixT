@@ -98,7 +98,11 @@ def test_run_pilot_REFUSES_a_set_that_does_not_match_the_pin(monkeypatch, tmp_pa
     refusal happens long before any seam, seed or file."""
     monkeypatch.setattr(RUN, "check_gate", lambda: None)
     monkeypatch.setattr(RUN.RULES, "OPENING_SET_DIGEST", "0" * 64)
-    with pytest.raises(RUN.H3PilotRunError) as ei:
+    # 🔑 BOTH REFUSAL TYPES. `run_pilot` can refuse as either -- `build_tasks`
+    # raises `H3PilotError`, which is NOT an `H3PilotRunError` -- and a test whose
+    # point is WHICH refusal must be able to see every one of them. Catching only
+    # one meant the assertion below never ran when the other fired.
+    with pytest.raises((RUN.H3PilotRunError, R.H3PilotError)) as ei:
         RUN.run_pilot(results_path=str(tmp_path / "r.jsonl"),
                       trace_path=str(tmp_path / "t.jsonl"),
                       report_path=str(tmp_path / "rep.json"))
