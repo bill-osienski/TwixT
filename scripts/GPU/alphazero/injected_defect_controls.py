@@ -4588,6 +4588,30 @@ EXPECTED_REASONS = {
     # is precisely the difference between a refusal and an accident.
     'the DECLARED order allocation is changed':
         'assert (19, 19, 18, 18) == (19, 18, 19, 18)',
+    # ── 2026-09-15: PREPARATION for the opening-generation run.
+    # Every reason observed in a throwaway worktree, never predicted.
+    'a STUB opening may be written into the artifact':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
+    'a fresh agent is built for every ply':
+        'AssertionError: ONE incumbent agent',
+    'the T1j move log is not maintained across the walk':
+        'AssertionError: (0, 2)',
+    'the artifact may claim an ARGMAX provenance':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
+    "the artifact's schema is not enforced":
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
+    'the generation destination is marked spent before any run':
+        "AssertionError: assert 'docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings' != 'docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings'",
+    'the incumbent agent is re-seeded per ply again':
+        'assert [20261210719] == [20261202800]',
+    'the opening-set pin is invented before the artifact exists':
+        "AssertionError: assert '0000000000000000000000000000000000000000000000000000000000000000' is None",
+    'the preflight asks the movers for a MOVE':
+        'scripts.GPU.alphazero.e4_screen_runner.AbortError: [move] T1j asked to move as black but red is to move',
+    'the preflight builds an equal runtime rather than sharing one':
+        'scripts.GPU.alphazero.h3_study_generator.H3GenerationError: the T1j agent holds a different runtime',
+    'the two generation ranges sit inside their own gap floor':
+        'AssertionError: gap 40800 is inside the floor 59200',
     # ── 2026-09-15: the H3 FULL STUDY. Every reason observed in a throwaway
     # worktree through the driver's own classify path, never predicted.
     'a STUB opening set can be pinned and played against':
