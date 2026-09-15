@@ -4520,6 +4520,84 @@ EXPECTED_REASONS = {
     # `validate_schedule_executable`, which does `int(task["seed"])` on None. The
     # test names an `H3PilotRunError` refusal and gets a TypeError instead, which
     # is precisely the difference between a refusal and an accident.
+    # ── 2026-09-15: the H3 FULL STUDY. Every reason observed in a throwaway
+    # worktree through the driver's own classify path, never predicted.
+    'a STUB opening set can be pinned and played against':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_rules.H3StudyError'>",
+    'a VOIDed segment is treated as a clean exclusion':
+        "assert True is False",
+    'a duplicate pair is tolerated instead of being a harness fault':
+        "assert (7 == 0)",
+    'a record without its SEED is admitted':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_analysis.H3StudyAnalysisError'>",
+    'a rejection re-draws the seed that caused it':
+        "AssertionError: (0, 1, 20261000000)",
+    'a seam declaring no config is given one anyway':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_runner.H3StudyRunError'>",
+    'a seedless segment schedule is admitted':
+        "TypeError: int() argument must be a string, a bytes-like object or a real number, not 'NoneType'",
+    'a segment never asks the registry whether its seeds may RUN':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_runner.H3StudyRunError'>",
+    'a segment schedule is not compared with its own digest':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_runner.H3StudyRunError'>",
+    'a segment withheld after inspecting outcomes still permits a verdict':
+        "assert True is False",
+    'a sensitivity DECISIVE the other way is allowed through':
+        "assert 'opposite' in \"the cap_free sensitivity's estimate lies on the other side of parity from the primary\"",
+    'a sensitivity sitting EXACTLY on parity is allowed through':
+        "AssertionError: the cap_free sensitivity's estimate lies on the other side of parity from the primary",
+    'an UNCOMPUTABLE sensitivity is treated as a passed check':
+        "AssertionError: assert 'comput' in 'the cap_free sensitivity has no mean'",
+    'caps are EXCLUDED from the primary instead of scoring 0.5':
+        "AssertionError: 1 + 0.5, over two",
+    'exhausting the attempts yields a SHORT set instead of aborting':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_rules.H3StudyError'>",
+    'segments share one output directory':
+        "AssertionError: assert 1 == 4",
+    'the GENERATION gate is opened':
+        "assert True is False",
+    "the GENERATOR's containment boundary is removed":
+        "NameError: name '_noop' is not defined",
+    'the alternating protocol gives one engine every ply':
+        "AssertionError: incumbent_first",
+    'the create-only precheck follows symlinks':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_runner.H3StudyRunError'>",
+    'the generator accepts an ILLEGAL move from an engine':
+        "ValueError: Illegal move (99, 99) for active_size=24, to_move=red",
+    'the generator admits DUPLICATE openings':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
+    'the generator carries a tree across openings':
+        "AssertionError: cleanup between EVERY opening -- no tree carried",
+    'the generator is allowed to play ARGMAX':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_rules.H3StudyError'>",
+    'the interval is described as PROVEN rather than nominal':
+        "AssertionError: assert ('nominal' in 'the pairs are independent by construction. rejection sampling conditions the population jointly, the strata are fixed...stic. what the pairing buys is narrower and real: the two games of a pair are not counted as",
+    'the opening is dropped from the GAME identity':
+        "AssertionError: same continuation, different openings -- different games",
+    'the opening is dropped from the pair identity':
+        "assert 1 == 0",
+    'the sample size is rounded DOWN and misses its own target':
+        "AssertionError: h=0.08002689927666005 exceeds the declared target",
+    'the sampling window need not cover every generated ply':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_rules.H3StudyError'>",
+    'the segment composition is left to emerge':
+        "scripts.GPU.alphazero.h3_study_rules.H3StudyError: segment 1 assembled 75 pairs",
+    'the study gate is opened':
+        "assert True is False",
+    "the study population no longer excludes the PILOT's openings":
+        "AssertionError: 8",
+    'the study seam builds its own config instead of using the given one':
+        "AssertionError: the builder must receive THE object the identity was read off, not an equal one",
+    "the study seam trusts the entry's gate check":
+        "scripts.GPU.alphazero.h3_study_runner.H3StudyContainmentError: refusing to run H3 study's production seam from a test process: scripts.GPU.alphazero.t1j_toolchain.verified_paths, scripts.GPU.alphazero.d1_probe._default_compile, scripts.GPU.alphazero.",
+    "the study's containment boundary is removed":
+        "AssertionError: assert_production_acts_are_inert",
+    "the study's tasks carry no reference identity":
+        "KeyError: 'reference'",
+    "the study's tasks name no reference_colour":
+        "KeyError: 'reference_colour'",
+    'the two generation seed ranges overlap again':
+        "AssertionError: ((20261000000, 20261059200), (20261000500, 20261059700))",
     # ── 2026-09-15: RE-DECLARED BY THE RUN. Four labels changed when the run
     # inverted what they claim, so their old reasons were removed in the same edit
     # rather than left to become orphans.
