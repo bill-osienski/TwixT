@@ -256,7 +256,11 @@ def test_a_sensitivity_estimate_of_EXACTLY_ONE_HALF_suppresses_the_verdict():
         sensitivities={"cap_free": {"computable": True, "mean": 0.5,
                                     "favours": None, "decisive": False}})
     assert forced["verdict"] == A.NO_VERDICT
-    assert "0.5" in forced["why"] or "parity" in forced["why"].lower()
+    # 🔴 THE MESSAGE MUST NAME THIS CASE. Dropping the guard still yields
+    # NO_VERDICT -- the sign check catches it, since 0.5 is not > 0.5 -- so a
+    # test that only checked the verdict could not see the guard at all, and a
+    # loose `"parity" in why` matched the sign check's own wording.
+    assert "exactly on parity" in forced["why"].lower(), forced["why"]
 
 
 def test_an_UNCOMPUTABLE_sensitivity_suppresses_the_verdict():

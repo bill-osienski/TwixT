@@ -131,6 +131,33 @@ def test_THE_GENERATOR_S_INCUMBENT_IS_NOT_THE_MATCH_INCUMBENT():
     assert gen.temp_high > 0, "temperature zero is argmax by another name"
 
 
+def test_generation_config_REFUSES_an_argmax_frozen_configuration(monkeypatch):
+    """🔴 THE GUARD IS FOR A FUTURE CHANGE, so only a driven test can see it.
+
+    Today's frozen configuration is `opening_temperature`, so the refusal never
+    fires and asserting the mode alone cannot tell whether the guard exists. If
+    the frozen research config ever became argmax, the generator would silently
+    produce ONE opening per order -- the finding this whole design turns on.
+    """
+    from scripts.GPU.alphazero import twixtbot_g3_reference as G3
+    real = G3.eval_config()
+    argmaxed = real.__class__(**{**real.__dict__, "selection_mode": "argmax"})
+    monkeypatch.setattr(G3, "eval_config", lambda: argmaxed)
+    with pytest.raises(R.H3StudyError, match="no entropy|two positions"):
+        R.generation_config()
+
+
+def test_generation_config_REFUSES_a_sampling_window_that_is_too_short(monkeypatch):
+    """The other half of the same guard: if the window stopped covering all six
+    generated plies, the later ones would be deterministic."""
+    from scripts.GPU.alphazero import twixtbot_g3_reference as G3
+    real = G3.eval_config()
+    short = real.__class__(**{**real.__dict__, "opening_temp_plies": 2})
+    monkeypatch.setattr(G3, "eval_config", lambda: short)
+    with pytest.raises(R.H3StudyError, match="deterministic"):
+        R.generation_config()
+
+
 def test_the_generator_and_the_match_share_EVERYTHING_ELSE():
     """Only the readout differs. A generator that also changed the search would
     be producing positions from a different player altogether."""

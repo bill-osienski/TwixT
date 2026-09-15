@@ -150,6 +150,53 @@ def test_the_argmax_config_has_ONE_construction_and_the_seam_CARRIES_it():
     assert play.config is cfg, "the seam holds THE object, not an equal one"
 
 
+def test_THE_BUILDER_RECEIVES_THE_SEAM_S_OWN_CONFIG_OBJECT(monkeypatch):
+    """🔴 THE PILOT'S STRONGEST TEST, AND I DROPPED IT. `play.config is cfg` says
+    only what the seam HOLDS; this says what the builder GETS.
+
+    Every production act is inert -- the line the containment boundary draws --
+    and the configuration is captured at `build_reference_agent`, the call the
+    agent factory actually makes. `is`, not `==`: an equal object built by a
+    second call is exactly the defect.
+    """
+    from scripts.GPU.alphazero import d1_probe as D1
+    from scripts.GPU.alphazero import e4_screen_command as SCREEN_CMD
+    from scripts.GPU.alphazero import e4_screen_runner as HARNESS
+    from scripts.GPU.alphazero import t1j_toolchain as TC
+    from scripts.GPU.alphazero import twixtbot_g3_reference as G3
+
+    captured = {}
+
+    def fake_build(*, task, evaluator, colour, config, capture=False):
+        captured["config"] = config
+        return "AGENT"
+
+    monkeypatch.setattr(TC, "verified_paths",
+                        lambda: {"jdk_home": "/nonexistent", "jar": "/none.jar"})
+    monkeypatch.setattr(D1, "_default_compile", lambda deadline, paths: None)
+    monkeypatch.setattr(SCREEN_CMD, "_default_load_evaluator",
+                        lambda root: _stub_evaluator())
+    monkeypatch.setattr(HARNESS, "play_task", lambda **kw: (_ for _ in ()).throw(
+        AssertionError("no game is played by this test")))
+    monkeypatch.setattr(G3, "build_reference_agent", fake_build)
+    monkeypatch.setattr(RUN, "H3_STUDY_EXECUTION_AUTHORIZED", True)
+
+    openings = R.stub_opening_set()
+    seeded = R.build_tasks(openings, seed_interval=FRESH)
+    deadline = D1.Deadline(60)
+    deadline.start()
+    cfg = RUN.frozen_argmax_config()
+    play = RUN._production_play("/tmp/h3-study-never-written", deadline,
+                                openings, cfg)
+    with pytest.raises(AssertionError, match="no game is played"):
+        play(task=seeded[0], identity={}, timeout_s=1.0)
+    factory = play._state["agent_factory"]
+    assert factory(seeded[0], seeded[0]["reference_colour"]) == "AGENT"
+    assert captured["config"] is cfg, (
+        "the builder must receive THE object the identity was read off, not an "
+        "equal one")
+
+
 def test_the_identity_is_read_off_the_SEAM_S_OWN_config():
     cfg = RUN.frozen_argmax_config()
     ident = RUN.frozen_incumbent_identity(cfg)
