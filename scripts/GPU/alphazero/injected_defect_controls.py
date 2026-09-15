@@ -2790,7 +2790,7 @@ DEFECTS = [
     ("the two generation seed ranges overlap again", H3SR,
      "GEN_SEED_CO_PRODUCED = 20_261_100_000",
      "GEN_SEED_CO_PRODUCED = 20_261_000_500",
-     f"{T_H3SR}::test_the_two_generation_RANGES_DO_NOT_OVERLAP_each_other"),
+     f"{T_H3SR}::test_the_two_generation_RANGES_ARE_SEPARATED_BY_MORE_THAN_THEIR_OWN_SIZE"),
     ("a rejection re-draws the seed that caused it", H3SR,
      "    return base + index * MAX_ATTEMPTS + attempt",
      "    return base + index",
@@ -4686,8 +4686,6 @@ EXPECTED_REASONS = {
         "KeyError: 'reference'",
     "the study's tasks name no reference_colour":
         "KeyError: 'reference_colour'",
-    'the two generation seed ranges overlap again':
-        "AssertionError: ((20261000000, 20261059200), (20261000500, 20261059700))",
     # ── 2026-09-15: RE-DECLARED BY THE RUN. Four labels changed when the run
     # inverted what they claim, so their old reasons were removed in the same edit
     # rather than left to become orphans.
