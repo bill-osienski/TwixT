@@ -1,13 +1,35 @@
 # H3 FULL STUDY — DESIGN CARD
 
-**DESIGN ONLY, 2026-09-15.** Nothing here is implemented, no seeds are reserved,
-no block is registered, and no execution is authorized. Every number below is
-fixed *before* any full-study game exists, which is the only time it can be
-fixed honestly.
+**DESIGN ONLY.** Nothing here is implemented, no seeds are reserved, no block is
+registered, no opening set is generated, and no execution is authorized. Every
+number below is fixed *before* any full-study game exists, which is the only time
+it can be fixed honestly.
 
 Predecessor: the H3 pilot, which ran once on 2026-09-15 and COMPLETED (40/40,
 exit 0, all five preregistered stop rules CLEAR). Evidence
 `docs/superpowers/evidence/2026-09-14-t1j-h3-pilot/`.
+
+---
+
+## AMENDMENT 1 — 2026-09-15, on review of the first draft
+
+Six corrections, recorded here rather than silently folded in. **Four open
+questions in §8 of the first draft were decided by the reviewer** and are now
+design constants: keep stratum B, keep `h ≤ 0.08`, keep four segments, keep both
+alternating orders.
+
+| # | correction | where |
+|---|---|---|
+| 1 | **The sample size missed its own target.** `N ≥ 288.194` needs 289, not 288; 288 gives `h = 0.08003 > 0.08`. **N = 296**, which also divides cleanly by stratum and segment | §3 |
+| 2 | **Precision was described as power.** The table read as if a *true* μ guaranteed a decisive interval. It is about the **observed mean**; and an INCONCLUSIVE result does **not** bound the true difference | §3.4 |
+| 3 | **Independence was claimed, not modelled.** Distinct seeds and openings do not *prove* independence — rejection sampling, fixed strata, shared engines and deterministic software all couple things. The interval is **nominal under a declared model** | §2.1 |
+| 4 | **The duplicate-pair rule could not see duplicate games.** H2's transcript excludes the opening, because H2 compared repetitions *within one fixed opening*. In H3 two different openings can share a post-opening digest and still be different games. **`opening_digest` enters game and pair identity**; exact duplicate pairs then become a **harness fault**, and equal continuations are reported, never collapsed | §4.1, §4.3, §4.6 |
+| 5 | **Segmenting left room for outcome-driven stopping.** Withholding a later segment after inspecting earlier outcomes now **prevents a strength verdict** | §5.5 |
+| 6 | **Sensitivity disagreement was defined for one analysis and one failure mode.** A joint rule now covers both sensitivities and both failure modes, including two decisive intervals pointing **opposite** ways | §4.7 |
+
+A seventh, from the same review: **stratum B is "symmetrically co-produced", not
+"neutral"** — the mirror balances each engine's role; it does not make the
+openings engine-independent (§1.3).
 
 ---
 
@@ -67,23 +89,29 @@ openings are drawn from the incumbent's own play and the incumbent is stronger i
 the positions it prefers, the study overstates the incumbent in both arms of
 every pair.
 
-### 1.3 The design: two strata, fixed 50/50, neither engine's alone
+### 1.3 The design: two strata, fixed 50/50
 
-| | **Stratum A — NEUTRAL** | **Stratum B — REACHED** |
+| | **Stratum A — UNIFORM** | **Stratum B — CO-PRODUCED** |
 |---|---|---|
 | generation | uniform random legal play to 6 plies | the two engines **alternating**, 6 plies |
 | who moves | nobody; the PRNG | incumbent on plies 1,3,5 and T1j on 2,4,6 — **and the mirror**, half each |
-| neutrality | by construction | by symmetry: neither engine alone defines it |
+| standing | engine-neutral by construction | **symmetrically co-produced** |
 | realism | low | positions the two engines actually produce together |
-| pairs | 144 | 144 |
+| pairs | **148** | **148** |
 
-Each stratum supplies **144 of the 288 pairs**, fixed by design before
+🔴 **STRATUM B IS NOT "NEUTRAL", AND THE CARD WILL NOT CALL IT THAT.** Running
+both alternating orders balances each engine's *role* in generation; it does not
+make the resulting positions **engine-independent**. Every stratum-B opening is
+a product of these two engines' preferences, and a third engine would produce a
+different population. The claim in §1.6 is worded accordingly.
+
+Each stratum supplies **148 of the 296 pairs**, fixed by design before
 generation. The 50/50 split is a design constant, not a post-hoc weighting.
 
 **Admissibility filters, applied identically to both strata and stated in
 ENGINE-NEUTRAL structural terms** — no evaluator is consulted, because "the
 incumbent thinks this position is already decided" is the incumbent's judgement
-and would re-import the bias the strata exist to avoid:
+and would re-import the bias the strata exist to limit:
 
 * the position is legal and not already won by either side;
 * both colours have placed all three of their pegs (no side has passed);
@@ -97,8 +125,13 @@ A generated candidate failing any filter is rejected **whole** and regenerated �
 whole-position rejection, as the pilot does, never per-move resampling, which
 would distort the distribution it claims to draw from.
 
+⚠ **Rejection sampling is itself a coupling.** It makes the realised population
+a *conditioned* one, not the raw generator's, and the conditioning is shared
+across all openings. This is one of the reasons §2.1 treats independence as a
+model rather than a fact.
+
 ### 1.4 Independence from every earlier experiment
-The study's 288 openings must be disjoint, up to symmetry, from:
+The study's 296 openings must be disjoint, up to symmetry, from:
 * the **20 pilot openings** — otherwise the pilot's games leak into the study;
 * the **8 openings** H1, L0 and H2 played.
 
@@ -114,26 +147,41 @@ block (the pilot's rule: generation must never consume a drawable seed).
 
 Its output — the opening set and its digest — must be **frozen and committed
 before a single match seed is reserved.** Cost estimate from the pilot's timing:
-~864 engine moves, well under an hour; this is a small run, but it is a run.
+~888 engine moves, well under an hour; this is a small run, but it is a run.
 
 ### 1.6 What the study will therefore support
 > Over **structurally admissible ply-6 positions**, half drawn uniformly at
-> random and half reached by the two engines alternating, played in the frozen
-> deterministic argmax configuration: [the result].
+> random and half **co-produced by these two engines alternating**, played in the
+> frozen deterministic argmax configuration: [the result].
 
 It will **not** support a claim about tournament play, about human-like
-positions, or about any configuration other than the frozen one. That sentence
-belongs in the report verbatim.
+positions, about a population these two engines did not make, or about any
+configuration other than the frozen one. That sentence belongs in the report
+verbatim.
 
 ---
 
 ## 2. THE PAIRED SCORE AND THE PRIMARY RULE
 
-### 2.1 The unit is the pair, and the pairs are independent
+### 2.1 The unit is the pair — and independence is a MODEL, not a fact
 Each opening is played **twice**: once with the incumbent as red, once as black.
-That pair is the unit of evidence. Distinct openings and distinct seeds make
-pair scores **independent across pairs** — which is a real improvement over H1
-and H2, whose intervals were nominal under an independence model applied to
+That pair is the unit of evidence.
+
+🔴 **The interval is NOMINAL UNDER A DECLARED PAIR-INDEPENDENCE MODEL.** Distinct
+openings and distinct PRNG seeds do not *prove* that pair scores are independent.
+At least four things couple them:
+
+* **rejection sampling** conditions the whole population jointly (§1.3);
+* **fixed strata** make the composition deterministic, not a random draw;
+* **the same two engines** play every game, so a systematic weakness of either
+  affects every pair in the same direction;
+* the software is **deterministic**: given the seed and the position, nothing is
+  random in the probabilistic sense at all.
+
+The model is a *declaration about how the interval is to be read*, and it is
+stated in the report next to the interval. What the pairing does buy, concretely,
+is that the two games of a pair are not treated as independent observations —
+which is a real improvement over H1 and H2, whose intervals were nominal over
 *games* that shared openings and repetitions.
 
 ### 2.2 The score
@@ -146,8 +194,8 @@ is
 X_i = p_i / 2   ∈ [0, 1]
 ```
 
-The estimand is **μ = E[X]**, the incumbent's expected paired score. `μ > 0.5`
-favours the incumbent; `μ < 0.5` favours T1j.
+The estimand is **μ = E[X]** under the declared model, the incumbent's expected
+paired score. `μ > 0.5` favours the incumbent; `μ < 0.5` favours T1j.
 
 ### 2.3 The primary rule: PARITY AT 0.50
 The null is **μ = 0.5** — the two engines are equal. This comes from the question
@@ -166,7 +214,7 @@ Three outcomes, declared now:
 |---|---|
 | entirely **above** 0.5 | the incumbent is stronger over this population, at this precision |
 | entirely **below** 0.5 | **T1j is stronger** over this population, at this precision |
-| **straddles** 0.5 | **INCONCLUSIVE** at this precision. Not "no difference." |
+| **straddles** 0.5 | **INCONCLUSIVE at this precision.** Not "no difference", and not a bound on the difference |
 
 No other summary is a verdict. Per-stratum, per-colour and per-outcome-category
 figures are **descriptive only**, as H1's per-colour split was.
@@ -176,15 +224,14 @@ figures are **descriptive only**, as H1's per-colour split was.
 ## 3. SAMPLE SIZE, FROM PRECISION ALONE
 
 ### 3.1 Why Hoeffding, specifically
-Hoeffding's bound needs only that `X_i ∈ [0,1]` and that the pairs are
-independent. It needs **no variance estimate and no anticipated effect size** —
-so the pilot's outcome distribution has no route into the sample size. A
-variance-based calculation would have needed exactly the number this design is
-forbidden to use. The conservatism is the price of that guarantee, and it is
-worth paying here.
+Hoeffding's bound needs only that `X_i ∈ [0,1]` and the independence model of
+§2.1. It needs **no variance estimate and no anticipated effect size** — so the
+pilot's outcome distribution has no route into the sample size. A variance-based
+calculation would have needed exactly the number this design is forbidden to
+use. The conservatism is the price of that guarantee, and it is worth paying.
 
 ### 3.2 The declared precision target
-**h ≤ 0.08 at 95% confidence.**
+**h ≤ 0.08 at 95% confidence** — kept on review.
 
 Its basis, fixed independently of any observation:
 * a paired-score margin of 0.08 is roughly 0.58 vs 0.42 — the smallest
@@ -194,85 +241,160 @@ Its basis, fixed independently of any observation:
   does not improve on the precision of the design that already failed has not
   addressed why it failed.
 
-### 3.3 The arithmetic
+### 3.3 The arithmetic — corrected
 
 ```
 ln(2/0.05) = ln 40 = 3.68888
-N ≥ 3.68888 / (2 × 0.08²) = 288.2
+N ≥ 3.68888 / (2 × 0.08²) = 288.194     →  N ≥ 289
 ```
 
-**N = 288 pairs = 576 games**, giving `h = sqrt(3.68888 / 576) = 0.08003`.
+🔴 **The first draft wrote 288 and claimed `h = 0.08003`, which is ABOVE the
+target it had just declared.** Rounding 288.194 down does not satisfy `h ≤ 0.08`;
+a target missed by the arithmetic meant to enforce it is exactly the defect class
+this programme keeps finding. 289 satisfies it (`h = 0.07989`) and is prime — it
+divides by neither stratum nor segment.
 
-144 pairs per stratum. 288 is divisible by the 4 segments of §5.3.
+**N = 296 pairs = 592 games**, `h = sqrt(3.68888 / 592) = 0.07894 ≤ 0.08`, and it
+preserves every balance without remainder:
 
-### 3.4 What this can and cannot resolve — stated in advance
-The study resolves a true μ at least ~0.08 from parity; it does **not** resolve
-a smaller one, and will correctly return INCONCLUSIVE there.
+| | |
+|---|---|
+| per stratum | **148** + 148 |
+| segments | **4 × 74 pairs** |
+| per segment, per stratum | **37 + 37 = 74 pairs** |
+| games per segment | **148** |
+| **total games and seeds** | **592** |
 
-| true μ | interval at N=288 | outcome |
+### 3.4 What this can and cannot resolve — about the OBSERVED mean
+An interval is decisive when `|X̄ − 0.5| > h = 0.07894`, i.e. `X̄ > 0.5789` or
+`X̄ < 0.4211`.
+
+| **observed** X̄ | interval at N = 296 | outcome |
 |---|---|---|
-| 0.60 | ≈ [0.52, 0.68] | resolved |
-| 0.58 | ≈ [0.50, 0.66] | marginal |
-| 0.55 | ≈ [0.47, 0.63] | **inconclusive, by design** |
+| 0.60 | [0.521, 0.679] | decisive |
+| 0.58 | [0.501, 0.659] | decisive, marginally |
+| 0.57 | [0.491, 0.649] | straddles 0.5 |
+| 0.55 | [0.471, 0.629] | straddles 0.5 |
 
-An INCONCLUSIVE result at this size is a *result*: it says the difference, if
-any, is smaller than the programme declared worth acting on.
+🔴 **THIS IS PRECISION, NOT POWER.** The table says what an *observed* mean
+implies. It does **not** say that a true μ of 0.58 will produce a decisive
+interval — sampling variation can put the observed mean anywhere, and a true
+difference can be missed at any size.
+
+🔴 **AND AN INCONCLUSIVE RESULT BOUNDS NOTHING.** It does not establish that the
+true difference is smaller than 0.08, nor that it is small, nor that there is
+none. It establishes exactly one thing: **this study did not separate the paired
+score from parity.** The first draft said the difference "is smaller than the
+programme declared worth acting on" — that was a claim about the world made from
+a failure to measure, and it is withdrawn.
 
 ---
 
-## 4. DEDUPLICATION, EXCLUSIONS, OVERLAP, CAPS
+## 4. IDENTITY, DEDUPLICATION, EXCLUSIONS, OVERLAP, CAPS
 
 Inherited from the pilot card, which was reviewed and is in force; the
 full-study specifics follow.
 
-### 4.1 Deduplication happens AT THE PAIR
-Two pairs are duplicates when their **ordered** transcript-digest pair
-`(red_digest, black_digest)` is identical. Duplicates collapse to one scored
-pair. **A game is never dropped alone** — dropping half a pair destroys the
-colour balance that makes the pair the unit.
+### 4.1 🔴 GAME AND PAIR IDENTITY MUST INCLUDE THE OPENING
+H2's `transcript` — moves, movers, terminal reason, winner from `opening_bound`
+onward — **excludes the opening**, because H2 compared **repetitions within one
+fixed opening**, where the opening was a constant and carried no information.
 
-### 4.2 Exclusions, all counted and reported
+**In H3 the opening is the variable.** Two *different* opening positions can
+produce the same post-opening continuation and therefore the same transcript
+digest, while being entirely different games. A rule keyed on the transcript
+digest alone would collapse them.
+
+```
+game identity = ( opening_digest, incumbent_colour, transcript_digest )
+pair identity = ( opening_digest, red_digest, black_digest )
+```
+
+### 4.2 Deduplication happens AT THE PAIR
+Two pairs are duplicates when their **pair identity** is identical. Duplicates
+collapse to one scored pair. **A game is never dropped alone** — dropping half a
+pair destroys the colour balance that makes the pair the unit.
+
+🔑 **AND WITH `opening_digest` IN THE IDENTITY, THIS SHOULD NEVER FIRE.** The 296
+openings are distinct up to symmetry by construction (§1.3), so two distinct
+pairs cannot share a pair identity. **A duplicate pair is therefore a HARNESS
+FAULT** — the same opening scheduled or recorded twice — not a property of the
+population. It is treated as one in §4.6.
+
+### 4.3 Shared continuations are REPORTED, never collapsed
+Two pairs from **different** openings whose games share a post-opening transcript
+digest have converged to the same continuation from different starts. That is
+informative and it is **not duplication**:
+
+* `shared_continuation_pairs` — pairs sharing at least one transcript digest with
+  a pair from a different opening;
+* `shared_continuation_relations` — the number of such sharing relations.
+
+Both are descriptive. Neither collapses a pair, and neither is a duplicate.
+
+*(These replace the pilot's `partial_overlap_pairs` / `partial_overlap_relations`,
+which were computed on transcript digests alone. The two counts stay distinct
+because they answer different questions, and are never merged into one figure.)*
+
+### 4.4 Exclusions, all counted and reported
 Excluded before scoring: VOID games, unscoreable results, duplicated `task_id`,
 malformed records (bad digest, reason, winner or ply count), records naming an
 unknown `pair_id`, and any pair missing a colour. A pair with an excluded game is
 excluded **whole**.
 
-### 4.3 Overlap reporting, with the two counts kept distinct
-* `partial_overlap_pairs` — pairs sharing **exactly one** transcript with some
-  other pair;
-* `partial_overlap_relations` — the number of such sharing relations.
+### 4.5 Caps and within-pair-identical pairs stay IN the primary
+A capped game has no winner. **It scores 0.5 and stays in the primary.** A pair
+whose two games have the same identity contributed no discrimination; it is
+**also retained**. Excluding either would be an outcome-dependent exclusion —
+cap frequency and transcript identity are properties of *play*, and removing them
+selects on how the games went.
 
-They answer different questions and are never merged into one figure.
+Reported: `capped_games`, `pairs_with_a_cap`, `within_pair_identical`.
+Two preregistered sensitivity analyses, plus their intersection, in §4.7.
 
-### 4.4 Caps
-A capped game has no winner. **It scores 0.5 and stays in the primary.**
-Excluding caps would be an outcome-dependent exclusion: cap frequency is a
-property of play, and removing capped games selects on how the games went.
-
-* `capped_games` and `pairs_with_a_cap` are reported;
-* a **preregistered sensitivity analysis** recomputes the interval over pairs
-  with no cap;
-* if the primary and the sensitivity **disagree qualitatively** — one excludes
-  0.5 and the other does not — the study reports both and **declares nothing**.
-
-### 4.5 Within-pair-identical pairs
-A pair whose two games have the same transcript contributed no discrimination.
-Counted and reported; **retained in the primary** (excluding them selects on
-play, as with caps); a preregistered sensitivity excludes them.
-
-### 4.6 Degeneracy gates — ceilings, declared now
+### 4.6 Degeneracy gates — declared now
 The rule the pilot card fixed still governs a partial run: **a monotone COUNT may
 fire; a RATIO or QUANTILE may not.**
 
-| gate | ceiling | basis |
+| gate | threshold | what it means |
 |---|---|---|
-| duplicate pairs | > 7 (2.5% of 288) | the population is not delivering distinct positions |
+| **duplicate pairs** | **> 0** | 🔴 a **HARNESS FAULT** — the same opening twice. Not a population property. Any occurrence voids interpretation until explained |
+| shared-continuation pairs | > 7 (2.5% of 296) | many different openings converging on the same play: the openings are not differentiating the games |
 | within-pair-identical pairs | > 7 | pairs contributing no discrimination |
-| capped games | > 115 (20% of 576) | the configuration is not producing decisive games |
-| completed pairs | < 144 (half) | below this, counts only — no interval interpretation |
+| capped games | > 118 (20% of 592) | the configuration is not producing decisive games |
+| completed pairs | < 148 (half) | below this, counts only — no interval interpretation |
 
 A fired gate **suppresses interpretation, not the counts.** The counts are always
 reported.
+
+### 4.7 🔴 SENSITIVITY DISAGREEMENT — the joint rule, over BOTH analyses
+Three analyses beside the primary **P** (all scoreable pairs):
+
+* **C** — pairs containing no capped game;
+* **I** — pairs whose two games are not identical;
+* **J** — pairs satisfying both.
+
+Each is reported with its own N, X̄ and Hoeffding interval at *its* N. Their
+intervals are wider than P's simply because they drop pairs; that alone is not
+disagreement.
+
+**A strength verdict issues only if all three hold:**
+
+1. **P excludes 0.5**; and
+2. **no sensitivity's point estimate crosses 0.5** — `sign(X̄ − 0.5)` is the same
+   for P, C, I and J; and
+3. **no sensitivity's interval is decisive in the opposite direction to P.**
+
+If any fails, the study **reports all four analyses and declares nothing.** In
+particular:
+
+* **two decisive intervals pointing opposite ways suppress the verdict** — this
+  was undefined in the first draft, and it is the most dangerous case, because
+  each looks conclusive alone;
+* a sensitivity that merely widens to straddle 0.5 **while keeping P's sign** is
+  reported as reduced precision from the dropped pairs, and does not by itself
+  suppress the verdict — suppressing there would penalise the study for the
+  mechanical loss of n rather than for a real disagreement.
 
 ---
 
@@ -281,29 +403,49 @@ reported.
 ### 5.1 The measurements (the pilot's, and the only pilot numbers used here)
 mean **41.22 s/game**, median 40.5, p90 49.8, max 70.8; 40 games in 1,648.7 s.
 
-### 5.2 Why a single 576-game run is the wrong shape
-576 games ≈ **6.6 h** at the mean, **8.0 h** at p90. H2's attempt 3 VOIDed on its
-own 28,800 s deadline at game **692 of 736** — 94% complete, and it produced no
-verdict at all. A long single-shot schedule converts a late failure into total
+### 5.2 Why a single 592-game run is the wrong shape
+592 games ≈ **6.78 h** at the mean, **8.19 h** at p90. H2's attempt 3 VOIDed on
+its own 28,800 s deadline at game **692 of 736** — 94% complete, and it produced
+no verdict at all. A long single-shot schedule converts a late failure into total
 loss.
 
 ### 5.3 Four segments, fixed in advance
-**4 segments × 72 pairs = 144 games each.**
+**4 segments × 74 pairs = 148 games each**, each segment carrying 37 pairs from
+each stratum so the 50/50 composition holds *within* every segment as well as
+across the study.
 
 | per segment | |
 |---|---|
-| expected | 1.65 h at the mean, 1.99 h at p90 |
-| **deadline (CHOSEN)** | **10,800 s (3.0 h)** — 1.8× the mean estimate, 1.5× the p90 estimate |
-| seeds | its own contiguous quarter of the block |
+| expected | **1.69 h** at the mean, **2.05 h** at p90 |
+| **deadline (CHOSEN)** | **10,800 s (3.0 h)** — 1.77× the mean estimate, 1.47× the p90 estimate |
+| seeds | its own contiguous **148-seed** quarter of the block |
 | outputs | its own create-only directory |
 | schedule digest | its own |
 
-🔑 **The segments, their order, their openings and their seeds are all fixed by
-the frozen plan.** Segments run in order; the analysis uses every completed
-segment; no segment may be re-run. This is what stops segmentation from becoming
-a way to choose data after seeing it.
+### 5.4 The schedules are frozen before the first segment runs
+🔑 **The segments, their order, their openings, their stratum composition and
+their seeds are all fixed by the frozen plan, in one artifact, before any segment
+executes.** Segments run in order; the analysis uses every completed segment; no
+segment may be re-run.
 
-### 5.4 🔴 A VOIDed segment is NOT a clean exclusion, and the card says so
+### 5.5 🔴 WITHHOLDING A SEGMENT AFTER SEEING OUTCOMES PREVENTS A VERDICT
+The four executions are separately authorized *operationally* — that is what
+makes a late failure survivable — and that same separation is the opening for
+outcome-driven stopping. So it is closed explicitly:
+
+* **Early results must not inform whether a later segment runs.** Stopping
+  because the first two segments "look decided" is optional stopping, and it
+  invalidates the interval.
+* **If any segment is withheld after its predecessors' outcomes were inspected,
+  no strength verdict may issue.** The study reports counts and intervals,
+  flagged, and declares nothing.
+* Operational reasons to stop that are **independent of outcomes** — hardware
+  loss, a toolchain failure, a withdrawal of authorization — are recorded with
+  their cause, and §5.6 governs.
+* The report states, for every segment: authorized, executed, completed or
+  withheld, and **whether any outcome had been inspected at the time**.
+
+### 5.6 🔴 A VOIDed segment is NOT a clean exclusion, and the card says so
 If a segment VOIDs, the study reports the realized N with its **wider** interval,
 recomputed — not the interval it planned for.
 
@@ -343,7 +485,8 @@ transcript_digest, terminal_reason, winner, plies, elapsed_s
 * **seed accounting is READ, not derived** — the exposure count comes from the
   records themselves;
 * every game names the position it was played from, so a game is verifiable
-  without reconstructing the plan;
+  without reconstructing the plan — and §4.1's identity rule is computable **from
+  a single record**, which is what makes it enforceable;
 * stratum analysis needs no join against the schedule.
 
 ### 6.3 The header keeps what the provenance repair added
@@ -357,7 +500,7 @@ exists and is exercised; the full study inherits it unchanged.
 ## 7. SEED ACCOUNTING, OUTPUT PATHS, ONE-SHOT RULES
 
 ### 7.1 Fresh seeds, and nothing recycled
-* **576 match seeds**, a fresh contiguous interval, never any part of
+* **592 match seeds**, a fresh contiguous interval, never any part of
   `[202624000, 202624040)` (the pilot's — EXPOSED 40 / RETIRED WHOLE) or any
   other spent block.
 * A **collision re-proof** against the registries as they then stand, with the
@@ -369,10 +512,10 @@ exists and is exercised; the full study inherits it unchanged.
   are asserted absent from every registry.
 
 ### 7.2 Segment sub-blocks
-Segment *k* uses `[lo + 144k, lo + 144(k+1))`. On start, that quarter is retired
-whole under the one-shot rule; exposure within it is read from the records. A
-VOIDed segment retires its own quarter and leaves the others usable — which is
-the point of segmenting.
+Segment *k* uses `[lo + 148k, lo + 148(k+1))`, four blocks of **148 seeds**. On
+start, that quarter is retired whole under the one-shot rule; exposure within it
+is read from the records (§6.2). A VOIDed segment retires its own quarter and
+leaves the others usable — which is the point of segmenting.
 
 ### 7.3 Output paths
 A fresh evidence directory per segment, create-only (`O_EXCL` plus `lexists`, so
@@ -381,28 +524,23 @@ afterwards. No segment writes into another's directory, and none writes into any
 earlier experiment's.
 
 ### 7.4 One-shot execution
-Each segment is authorized separately. No retry, no replacement block, no
-re-run of a completed or VOIDed segment. A second full study would need a fresh
-block and its own re-proof.
+Each segment is authorized separately, subject to §5.5. No retry, no replacement
+block, no re-run of a completed or VOIDed segment. A second full study would need
+a fresh block and its own re-proof.
 
 ---
 
-## 8. WHAT THIS DESIGN DOES NOT SETTLE
+## 8. THE DECIDED QUESTIONS
 
-Open questions for review **before** any implementation is scoped:
+The first draft's four open questions were decided on review, 2026-09-15:
 
-1. **Is stratum B worth its cost?** It requires a separate authorized generation
-   run with model and JVM (§1.5). The alternative is a single neutral stratum at
-   288 pairs, which is cheaper and narrower: it would support only the
-   uniform-random claim, which is the criticism that opened this design.
-2. **Is h ≤ 0.08 the right target?** It is a declared decision threshold. h ≤ 0.10
-   costs 185 pairs (~4.2 h) and resolves only differences ≥ 0.10; h ≤ 0.05 costs
-   738 pairs (~16.9 h).
-3. **Four segments, or more?** Smaller segments lose less to a VOID and add
-   per-run overhead and authorizations.
-4. **The alternating order in stratum B** — incumbent-first vs T1j-first is split
-   half and half here; whether that is sufficient to call the population neutral
-   deserves a second opinion.
+1. **Keep stratum B.** Without it the study retains the unrealistic-position
+   limitation that motivated H3 in the first place. It costs a separate
+   authorized generation run (§1.5), and that cost is accepted.
+2. **Keep `h ≤ 0.08`** — with the arithmetic corrected to 296 pairs (§3.3).
+3. **Four segments.**
+4. **Keep both alternating orders**, and describe stratum B as **symmetrically
+   co-produced** rather than neutral (§1.3).
 
 ---
 
@@ -411,7 +549,7 @@ Open questions for review **before** any implementation is scoped:
 This is **design only**. Nothing is implemented; no seed block is chosen,
 proved or registered; no opening set is generated; no gate is opened; no game is
 played. The pilot's block stays EXPOSED 40 / RETIRED WHOLE, all eight gates stay
-False, and the 162-commit push stays held.
+False, and the push stays held.
 
-Implementation, seed reservation, generation and execution are each a separate
-authorization.
+Implementation, seed reservation, stratum-B generation and each segment's
+execution are separate authorizations, and none is requested here.
