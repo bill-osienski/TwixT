@@ -91,10 +91,17 @@ def test_the_generation_seeds_are_DECLARED_and_in_NO_registry():
             assert s not in REF.CONSUMED_SEEDS
 
 
-def test_the_two_generation_RANGES_DO_NOT_OVERLAP_each_other():
+def test_the_two_generation_RANGES_ARE_SEPARATED_BY_MORE_THAN_THEIR_OWN_SIZE():
+    """🔴 DISJOINT IS NOT SEPARATED. The second attempt at these constants put the
+    ranges 40,800 apart -- no overlap, but inside the gap floor this programme
+    sets at the candidate's OWN SIZE, and collision proof v11 rejected them. The
+    floor exists so that extending either range later cannot silently collide."""
     a = R.generation_seed_range(R.GEN_SEED_UNIFORM)
     b = R.generation_seed_range(R.GEN_SEED_CO_PRODUCED)
     assert a[1] <= b[0] or b[1] <= a[0], (a, b)
+    gap = b[0] - a[1] if a[1] <= b[0] else a[0] - b[1]
+    floor = max(a[1] - a[0], b[1] - b[0])
+    assert gap >= floor, f"gap {gap} is inside the floor {floor}"
 
 
 def test_the_attempt_seed_rule_never_reuses_a_REJECTED_seed():

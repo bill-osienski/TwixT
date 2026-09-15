@@ -21,7 +21,7 @@ SYMMETRICALLY CO-PRODUCED and never "neutral", and the report must say so too.
 from __future__ import annotations
 
 import os
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 from . import h3_study_rules as RULES
 
@@ -43,6 +43,68 @@ EXIT_UNAUTHORIZED = 5
 OUT_DIR = "docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings"
 DEFAULT_OUT = f"{OUT_DIR}/01_opening_set.json"
 DEFAULT_TRACE = f"{OUT_DIR}/02_generation_trace.jsonl"
+
+
+#: 🔴 THE ARTIFACT'S SCHEMA, frozen before the run that writes it. A record whose
+#: shape is decided while writing it is a record nobody can check.
+ARTIFACT_KEYS = ("design", "stratum", "n", "selection_mode", "generation_note",
+                 "config_pins", "toolchain", "openings", "opening_set_digest")
+OPENING_KEYS = ("index", "stratum", "order", "stub", "moves", "digest", "seed",
+                "attempts")
+
+#: The configuration fields the artifact must pin, so a reader can tell WHICH
+#: player produced the population without re-deriving anything.
+CONFIG_PIN_FIELDS = ("board_size", "mcts_sims", "mcts_eval_batch_size",
+                     "mcts_stall_flush_sims", "selection_mode",
+                     "opening_temp_plies", "temp_high", "temp_low", "max_moves")
+
+
+def config_pins(config) -> Dict[str, Any]:
+    """The generating configuration, read off the OBJECT that will generate."""
+    return {f: getattr(config, f) for f in CONFIG_PIN_FIELDS}
+
+
+def toolchain_identity(paths: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """The jar and JDK the generation used, by their VERIFIED pins.
+
+    `t1j_toolchain.verified_paths` hashes both and refuses a mismatch; it starts
+    no process. Recording its answer means the artifact names the T1j that helped
+    produce the population, not merely 'T1j'.
+    """
+    from . import t1j_toolchain as TC
+    p = dict(paths if paths is not None else TC.verified_paths())
+    return {"jar": p.get("jar"), "jdk_home": p.get("jdk_home"),
+            "root": p.get("root"), "verified": p.get("verified"),
+            "t1j_mdPly": RULES.t1j_depth(),
+            "reference": RULES.reference_identity()}
+
+
+def validate_artifact(doc: Mapping[str, Any]) -> Dict[str, Any]:
+    """The artifact must carry its whole frozen schema, and its digest must be
+    the one its own openings give."""
+    missing = [k for k in ARTIFACT_KEYS if k not in doc]
+    if missing:
+        raise H3GenerationError(f"the artifact is missing {missing}")
+    if doc["stratum"] != RULES.STRATUM_CO_PRODUCED:
+        raise H3GenerationError(f"stratum {doc['stratum']!r}")
+    if doc["selection_mode"] == "argmax":
+        raise H3GenerationError(
+            "the artifact says it was generated under argmax, which has no "
+            "entropy: that population would be one position per order")
+    for o in doc["openings"]:
+        gaps = [k for k in OPENING_KEYS if k not in o]
+        if gaps:
+            raise H3GenerationError(f"opening {o.get('index')} is missing {gaps}")
+        if o.get("stub"):
+            raise H3GenerationError(
+                f"opening {o.get('index')} is a STUB; a placeholder may never be "
+                f"pinned or played against")
+    got = RULES.opening_set_digest(doc["openings"])
+    if got != doc["opening_set_digest"]:
+        raise H3GenerationError(
+            f"the artifact's openings give {got} but it claims "
+            f"{doc['opening_set_digest']}; it has been edited")
+    return {"n": len(doc["openings"]), "opening_set_digest": got}
 
 
 def check_gate() -> None:
@@ -187,7 +249,8 @@ def production_movers(*, evaluator, runtime, config) -> Dict[str, Any]:
                             timeout_s=RULES.PER_CALL_TIMEOUT_S)
 
     return {"incumbent_agent": incumbent_agent, "t1j_agent": t1j_agent,
-            "new_context": INT.IntegrationContext, "config": config}
+            "new_context": INT.IntegrationContext, "config": config,
+            "toolchain": toolchain_identity()}
 
 
 def generate_one(*, index: int, order: str, movers: Dict[str, Any]) -> Dict[str, Any]:
@@ -287,10 +350,13 @@ def _generate_unguarded(*, movers: Dict[str, Any], out_path: str,
                     "not make the positions engine-independent. And only the "
                     "incumbent supplies variation: T1j is deterministic at fixed "
                     "depth, so it contributes content and no entropy.",
+                "config_pins": config_pins(movers["config"]),
+                "toolchain": movers.get("toolchain"),
                 "openings": [{k: v for k, v in o.items() if k != "state"}
                              for o in openings],
                 "opening_set_digest": RULES.opening_set_digest(openings),
             }
+            validate_artifact(doc)          # the schema, before it is written
             fd = os.open(out_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
             with os.fdopen(fd, "w") as fh:
                 json.dump(doc, fh, indent=1, sort_keys=True, default=str)
@@ -299,3 +365,71 @@ def _generate_unguarded(*, movers: Dict[str, Any], out_path: str,
         return doc
     except BaseException:
         raise
+
+
+# ═══════════════════════ the PREFLIGHT: construct, never invoke ════════════
+class _StubEvaluator:
+    """Stands in for the checkpoint that will be LOADED, carrying the identity
+    tags `build_reference_agent` checks. Retyped on purpose: reading them off the
+    task would leave that check comparing a value with itself."""
+    _g3_reference = "calib020_0001"
+    _g3_sha1 = "209cf2d4fd24a48553d259dd71b4954867b9473e"
+
+
+def preflight_movers(*, evaluator=None, classes: Optional[str] = None
+                     ) -> Dict[str, Any]:
+    """Build BOTH movers through the REAL production path and NEVER ask for a move.
+
+    🔑 WHAT IS REAL HERE: `t1j_toolchain.verified_paths` (which hashes the jar and
+    the JDK and refuses a mismatch, and starts no process), a real
+    `e4_screen_integration.T1jRuntime`, a real `T1jAgent`, and a real
+    `twixtbot_g3_reference.build_reference_agent` — the call that VOIDed H2's
+    attempt 1 and which the pilot then found a second way to fail.
+
+    🔑 WHAT IS NOT: no model is loaded (a stub evaluator carries the identity
+    tags), nothing is compiled, no JVM starts, and neither agent is CALLED. The
+    T1j classes directory is deliberately a path that need not exist: compiling
+    is a production act and this is a preflight.
+
+    🔴 IT DOES NOT TOUCH THE GATE, and it must not: it generates nothing, so
+    gating it would only discourage running it. What it must never do is move.
+    """
+    from . import e4_screen_integration as INT
+    from . import t1j_toolchain as TC
+    import os as _os
+
+    cfg = RULES.generation_config()                # refuses an argmax config
+    paths = TC.verified_paths()
+    runtime = INT.T1jRuntime(
+        java=_os.path.join(paths["jdk_home"], "bin", "java"), jar=paths["jar"],
+        classes=classes or (DEFAULT_OUT + ".t1j_classes"),
+        ply_cap=RULES.t1j_ply_cap(), timeout_s=RULES.PER_CALL_TIMEOUT_S)
+    movers = production_movers(evaluator=evaluator or _StubEvaluator(),
+                               runtime=runtime, config=cfg)
+
+    built = []
+    for order in (RULES.ORDER_INCUMBENT_FIRST, RULES.ORDER_T1J_FIRST):
+        inc_colour = incumbent_colour(order)
+        t1j_colour = "black" if inc_colour == "red" else "red"
+        seed = RULES.attempt_seed(RULES.GEN_SEED_CO_PRODUCED, 0, 0)
+        ctx = movers["new_context"]()
+        inc = movers["incumbent_agent"](seed=seed, colour=inc_colour)
+        t1j = movers["t1j_agent"](colour=t1j_colour, ctx=ctx)
+        if getattr(inc, "seed", None) != seed:
+            raise H3GenerationError(
+                f"the incumbent agent carries seed {getattr(inc, 'seed', None)}, "
+                f"not the attempt seed {seed}")
+        if t1j.colour != t1j_colour or t1j.depth != RULES.t1j_depth():
+            raise H3GenerationError(
+                f"the T1j agent is {t1j.colour} at depth {t1j.depth}")
+        if t1j.runtime is not runtime:
+            raise H3GenerationError("the T1j agent holds a different runtime")
+        built.append({"order": order, "incumbent_colour": inc_colour,
+                      "t1j_colour": t1j_colour, "seed": seed,
+                      "incumbent_seed": getattr(inc, "seed", None),
+                      "readout": getattr(getattr(inc, "readout", None), "mode",
+                                         None),
+                      "t1j_depth": t1j.depth, "moves_made": t1j.moves_made})
+    return {"built": built, "config_pins": config_pins(cfg),
+            "toolchain": toolchain_identity(paths), "runtime": runtime,
+            "movers": movers}

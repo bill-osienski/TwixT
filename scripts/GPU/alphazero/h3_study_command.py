@@ -37,8 +37,13 @@ SPENT_OUT_DIRS = (
     "docs/superpowers/evidence/2026-09-12-t1j-h2-match-attempt3",
     "docs/superpowers/evidence/2026-09-12-t1j-INCIDENT-control-harness-ran-a-match",
     "docs/superpowers/evidence/2026-09-14-t1j-h3-pilot",
-    "docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings",
 )
+#: 🔴 THE OPENING-GENERATION DESTINATION IS NOT LISTED HERE, and that is
+#: deliberate. `docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings` is
+#: ABSENT and UNSPENT: a directory is marked spent only once an attempted run has
+#: CONSUMED it. Listing it in advance would refuse the very run it is for, which
+#: is the mirror of H2's defect -- there the default pointed INTO a spent
+#: directory and the launch would have been refused after the gate was opened.
 
 CAPABILITY_BYTES = 32
 RUNNER_SOURCE = RUN.__file__

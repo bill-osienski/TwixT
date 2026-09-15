@@ -157,6 +157,52 @@ def main() -> int:
           f"max {max(o['attempts'] for o in uniform)} "
           f"(recorded per opening, because the rejection rate conditions the set)")
 
+    print("\n== the GENERATION RUN's preparation ==")
+    check("OPENING_SET_DIGEST is UNSET and refuses",
+          RULES.OPENING_SET_DIGEST is None
+          and _refuses(RULES.expected_opening_set_digest, "does not exist yet"))
+    check("the destination is ABSENT", not os.path.lexists(GEN.OUT_DIR),
+          GEN.OUT_DIR)
+    check("the destination is NOT yet marked spent (only a run consumes it)",
+          GEN.OUT_DIR not in CMD.SPENT_OUT_DIRS
+          and not any(GEN.OUT_DIR.startswith(d.rstrip("/") + "/")
+                      for d in CMD.SPENT_OUT_DIRS))
+    try:
+        pf = GEN.preflight_movers()
+        for b in pf["built"]:
+            print(f"  {b['order']:16s} incumbent {b['incumbent_colour']:5s} "
+                  f"seed {b['incumbent_seed']} readout {b['readout']!r} | "
+                  f"T1j {b['t1j_colour']:5s} depth {b['t1j_depth']} "
+                  f"moves_made {b['moves_made']}")
+        check("BOTH movers construct through the REAL production path",
+              len(pf["built"]) == 2)
+        check("the incumbent agent carries the ATTEMPT SEED, unoffset",
+              all(b["incumbent_seed"] == b["seed"] for b in pf["built"]))
+        check("its readout is the SAMPLING one, on the REAL builder's agent",
+              all(b["readout"] == "opening_temperature" for b in pf["built"]))
+        check("NO MOVE WAS REQUESTED",
+              all(b["moves_made"] == 0 for b in pf["built"]))
+        t = pf["toolchain"]
+        print(f"  toolchain: jar {os.path.basename(t['jar'])} | jdk "
+              f"{t['jdk_home']} | verified {t['verified']}")
+        check("the toolchain identity names the VERIFIED jar and JDK",
+              bool(t["jar"]) and bool(t["jdk_home"]) and bool(t["verified"]))
+        print(f"  config pins: {pf['config_pins']}")
+        check("the config pins record the GENERATING configuration",
+              pf["config_pins"]["selection_mode"] == "opening_temperature")
+    except Exception as e:                                    # noqa: BLE001
+        check("BOTH movers construct through the REAL production path", False,
+              f"{type(e).__name__}: {e}")
+    check("the artifact SCHEMA is frozen",
+          set(GEN.ARTIFACT_KEYS) >= {"config_pins", "toolchain", "openings",
+                                     "opening_set_digest", "selection_mode"})
+    check("an ARGMAX-provenance artifact is REFUSED",
+          _refuses(lambda: GEN.validate_artifact(
+              {"design": "d", "stratum": RULES.STRATUM_CO_PRODUCED, "n": 0,
+               "selection_mode": "argmax", "generation_note": "",
+               "config_pins": {}, "toolchain": {}, "openings": [],
+               "opening_set_digest": RULES.opening_set_digest([])}), "entropy"))
+
     print("\n== the CO-PRODUCED stratum ==")
     if os.path.lexists(RUN.OPENING_SET_PATH):
         check("the pinned opening set loads and passes its own checks",

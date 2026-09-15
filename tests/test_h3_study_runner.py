@@ -619,3 +619,107 @@ def test_the_artifact_is_CREATE_ONLY(tmp_path):
         GEN._generate_unguarded(movers=_inert_movers(),
                                 out_path=str(tmp_path / "o.json"),
                                 trace_path=str(tmp_path / "t.jsonl"), n=1)
+
+
+# ═══════════ PREPARATION for the generation run (card §1.7.7) ══════════════
+
+def test_THE_OPENING_SET_DIGEST_IS_UNSET_AND_REFUSES():
+    """🔴 A pin invented before the artifact exists pins nothing — it is either a
+    guess the real set must match, or a value the generator is tempted to
+    reproduce."""
+    assert R.OPENING_SET_DIGEST is None
+    with pytest.raises(R.H3StudyError, match="does not exist yet|AUTHORIZED"):
+        R.expected_opening_set_digest()
+
+
+def test_THE_DESTINATION_IS_ABSENT_AND_OUTSIDE_EVERY_SPENT_DIRECTORY():
+    """It is marked spent only AFTER an attempted run consumes it."""
+    import os
+    from scripts.GPU.alphazero import h3_study_command as CMD
+    assert not os.path.lexists(GEN.OUT_DIR)
+    assert not os.path.lexists(GEN.DEFAULT_OUT)
+    assert not os.path.lexists(GEN.DEFAULT_TRACE)
+    for spent in CMD.SPENT_OUT_DIRS:
+        assert GEN.OUT_DIR != spent
+        assert not GEN.OUT_DIR.startswith(spent.rstrip("/") + "/")
+    assert GEN.OUT_DIR not in CMD.SPENT_OUT_DIRS, (
+        "the destination is marked spent only after a run consumes it")
+
+
+def test_the_ARTIFACT_SCHEMA_is_frozen_and_enforced():
+    doc = {"design": "H3_FULL_STUDY_OPENINGS", "stratum": R.STRATUM_CO_PRODUCED,
+           "n": 0, "selection_mode": "opening_temperature",
+           "generation_note": "x", "config_pins": {}, "toolchain": {},
+           "openings": [], "opening_set_digest": R.opening_set_digest([])}
+    assert GEN.validate_artifact(doc)["n"] == 0
+    for k in GEN.ARTIFACT_KEYS:
+        short = {x: v for x, v in doc.items() if x != k}
+        with pytest.raises(GEN.H3GenerationError, match="missing"):
+            GEN.validate_artifact(short)
+
+
+def test_the_artifact_REFUSES_an_ARGMAX_provenance():
+    doc = {"design": "d", "stratum": R.STRATUM_CO_PRODUCED, "n": 0,
+           "selection_mode": "argmax", "generation_note": "x",
+           "config_pins": {}, "toolchain": {}, "openings": [],
+           "opening_set_digest": R.opening_set_digest([])}
+    with pytest.raises(GEN.H3GenerationError, match="no entropy"):
+        GEN.validate_artifact(doc)
+
+
+def test_the_artifact_REFUSES_a_STUB_opening_and_an_EDITED_digest():
+    base = {"design": "d", "stratum": R.STRATUM_CO_PRODUCED, "n": 1,
+            "selection_mode": "opening_temperature", "generation_note": "x",
+            "config_pins": {}, "toolchain": {}}
+    op = {"index": 0, "stratum": R.STRATUM_CO_PRODUCED, "order": "incumbent_first",
+          "stub": True, "moves": [], "digest": "a" * 64, "seed": 1, "attempts": 1}
+    doc = {**base, "openings": [op],
+           "opening_set_digest": R.opening_set_digest([op])}
+    with pytest.raises(GEN.H3GenerationError, match="STUB"):
+        GEN.validate_artifact(doc)
+    doc2 = {**base, "openings": [{**op, "stub": False}],
+            "opening_set_digest": "b" * 64}
+    with pytest.raises(GEN.H3GenerationError, match="edited"):
+        GEN.validate_artifact(doc2)
+
+
+def test_THE_PREFLIGHT_BUILDS_BOTH_MOVERS_AND_NEVER_MOVES():
+    """🔑 REAL: verified_paths, a real T1jRuntime, a real T1jAgent, and the REAL
+    `build_reference_agent`. NOT real: no model, no compile, no JVM, NO MOVE."""
+    out = GEN.preflight_movers()
+    assert len(out["built"]) == 2
+    orders = {b["order"] for b in out["built"]}
+    assert orders == {R.ORDER_INCUMBENT_FIRST, R.ORDER_T1J_FIRST}
+    for b in out["built"]:
+        assert b["incumbent_seed"] == b["seed"], "the ATTEMPT seed, unoffset"
+        assert b["t1j_depth"] == R.t1j_depth() == 6
+        assert b["t1j_colour"] != b["incumbent_colour"]
+        assert b["moves_made"] == 0, "NO MOVE WAS REQUESTED"
+        # 🔑 the entropy fix, confirmed on the REAL builder's own agent
+        assert b["readout"] == "opening_temperature" != "argmax"
+    assert out["config_pins"]["selection_mode"] == "opening_temperature"
+    assert out["toolchain"]["reference"]["name"] == "calib020_0001"
+
+
+def test_the_preflight_agents_HOLD_THE_ONE_RUNTIME():
+    out = GEN.preflight_movers()
+    ctx = out["movers"]["new_context"]()
+    agent = out["movers"]["t1j_agent"](colour="red", ctx=ctx)
+    assert agent.runtime is out["runtime"], "an equal runtime is not the runtime"
+
+
+def test_the_preflight_REFUSES_if_the_generating_config_became_argmax(monkeypatch):
+    from scripts.GPU.alphazero import twixtbot_g3_reference as G3
+    real = G3.eval_config()
+    monkeypatch.setattr(G3, "eval_config",
+                        lambda: real.__class__(**{**real.__dict__,
+                                                  "selection_mode": "argmax"}))
+    with pytest.raises(R.H3StudyError, match="no entropy|two positions"):
+        GEN.preflight_movers()
+
+
+def test_the_toolchain_identity_names_the_VERIFIED_jar_and_jdk():
+    t = GEN.toolchain_identity()
+    assert t["jar"].endswith(".jar") and t["jdk_home"]
+    assert t["verified"], "verified_paths reports what it checked"
+    assert t["t1j_mdPly"] == R.t1j_depth()

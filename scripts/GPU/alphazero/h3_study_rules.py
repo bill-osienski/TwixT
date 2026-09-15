@@ -72,16 +72,20 @@ PRECISION_TARGET = 0.08
 #: drawable seed. Attempt j of opening i uses `base + i*MAX_ATTEMPTS + j`, so the
 #: ranges below are reserved whole and a test asserts they sit in no registry.
 #:
-#: 🔴 THE BASES MUST BE SPACED BY MORE THAN A WHOLE RANGE. My first pair were 500
-#: apart while each range is 148 x 400 = 59,200 wide, so stratum B's generation
-#: would have drawn from inside stratum A's -- the two strata sharing streams, in
-#: the very constants meant to keep them apart. A test compares the RANGES, not
-#: the bases, which is what caught it.
-#: Both sit far above every registry's extent (max 202,624,040) and are checked
-#: against all four registries across their whole span.
+#: 🔴 THE SPACING HAS BEEN WRONG TWICE, each time caught by a different check.
+#:   1. The first pair were 500 apart while each range is 148 x 400 = 59,200
+#:      wide, so stratum B would have drawn from INSIDE stratum A's range. A test
+#:      comparing the RANGES rather than the bases caught it.
+#:   2. The second pair were 40,800 apart -- disjoint, but INSIDE THE GAP FLOOR,
+#:      which this programme sets at the candidate's OWN SIZE. Collision proof
+#:      v11 rejected them: disjoint is not the same as separated, and the floor
+#:      exists so that extending either range later cannot silently collide.
+#: They are now 140,800 apart, and both sit far above every registry's extent
+#: (max 202,624,040), checked across their whole span against all four registries
+#: and against each other, directly and through the derived streams.
 MAX_ATTEMPTS = 400
 GEN_SEED_UNIFORM = 20_261_000_000
-GEN_SEED_CO_PRODUCED = 20_261_100_000
+GEN_SEED_CO_PRODUCED = 20_261_200_000
 
 # ═══════════════════════ bounds (card §5) ══════════════════════════════════
 #: CHOSEN, from the pilot's measured mean of 41.22 s/game: 148 games is ~1.69 h,
@@ -115,6 +119,12 @@ def reference_identity() -> Dict[str, str]:
     from . import l0_match_plan as L0PLAN
     ref = L0PLAN.load_source_plan()["reference"]
     return {"name": ref["name"], "sha1": ref["sha1"]}
+
+
+def t1j_ply_cap() -> int:
+    """The ply cap, READ from H2's frozen rules, never retyped."""
+    from . import h2_match_rules as H2R
+    return H2R.PLY_CAP
 
 
 def t1j_depth() -> int:
@@ -288,6 +298,25 @@ def opening_set_digest(openings: Sequence[Dict[str, Any]]) -> str:
     """sha256 over the openings' canonical digests, in order. Pins the SET."""
     return hashlib.sha256(
         "\n".join(o["digest"] for o in openings).encode()).hexdigest()
+
+
+#: 🔴 UNSET, AND IT MUST STAY UNSET UNTIL THE AUTHORIZED GENERATION PRODUCES IT.
+#: A pin invented before the artifact exists pins nothing: it would either be a
+#: guess the real set has to match, or -- worse -- a value the generator is
+#: tempted to reproduce. The co-produced stratum comes from a run that has not
+#: happened, so there is nothing to pin yet and this says so.
+OPENING_SET_DIGEST: Optional[str] = None
+
+
+def expected_opening_set_digest() -> str:
+    """The pin, or a refusal. Never a default and never a computed stand-in."""
+    if OPENING_SET_DIGEST is None:
+        raise H3StudyError(
+            "OPENING_SET_DIGEST is None. The study's population does not exist "
+            "yet: the co-produced stratum is produced by a separate AUTHORIZED "
+            "GENERATION RUN, and the pin is recorded FROM that run's artifact "
+            "afterwards. Nothing may execute against an unpinned population.")
+    return OPENING_SET_DIGEST
 
 
 # ═══════════════════════ the study order and the segments ══════════════════

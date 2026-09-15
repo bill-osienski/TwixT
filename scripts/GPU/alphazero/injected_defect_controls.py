@@ -75,6 +75,7 @@ H3SGEN = "scripts/GPU/alphazero/h3_study_generator.py"
 T_H3SR = "tests/test_h3_study_rules.py"
 T_H3SA = "tests/test_h3_study_analysis.py"
 T_H3SRUN = "tests/test_h3_study_runner.py"
+H3SCMD = "scripts/GPU/alphazero/h3_study_command.py"
 
 # (label, file, anchor, replacement, test node)
 DEFECTS = [
@@ -2941,6 +2942,64 @@ DEFECTS = [
      '    return "incumbent" if (odd == incumbent_moves_first) else "t1j"',
      '    return "incumbent"',
      f"{T_H3SRUN}::test_the_alternating_protocol_gives_each_engine_THREE_of_SIX_plies"),
+    # ── 2026-09-15: PREPARATION for the opening-generation run.
+    ("the opening-set pin is invented before the artifact exists", H3SR,
+     "OPENING_SET_DIGEST: Optional[str] = None",
+     'OPENING_SET_DIGEST: Optional[str] = "' + "0" * 64 + '"',
+     f"{T_H3SRUN}::test_THE_OPENING_SET_DIGEST_IS_UNSET_AND_REFUSES"),
+    ("the generation destination is marked spent before any run", H3SCMD,
+     '    "docs/superpowers/evidence/2026-09-14-t1j-h3-pilot",\n)',
+     '    "docs/superpowers/evidence/2026-09-14-t1j-h3-pilot",\n'
+     '    "docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings",\n)',
+     f"{T_H3SRUN}::test_THE_DESTINATION_IS_ABSENT_AND_OUTSIDE_EVERY_SPENT_DIRECTORY"),
+    # the same line appears in the PREFLIGHT, so the anchor carries the line above
+    ("the incumbent agent is re-seeded per ply again", H3SGEN,
+     "        ctx = movers[\"new_context\"]()\n"
+     "        inc = movers[\"incumbent_agent\"](seed=seed, colour=inc_colour)",
+     "        ctx = movers[\"new_context\"]()\n"
+     "        inc = movers[\"incumbent_agent\"](seed=seed + 7919, colour=inc_colour)",
+     f"{T_H3SRUN}::test_THE_AGENT_IS_SEEDED_WITH_THE_ATTEMPT_SEED_EXACTLY"),
+    ("a fresh agent is built for every ply", H3SGEN,
+     "            mv = (inc if who == \"incumbent\" else t1j)(st)",
+     "            mv = (movers[\"incumbent_agent\"](seed=seed, colour=inc_colour)\n"
+     "                  if who == \"incumbent\" else t1j)(st)",
+     f"{T_H3SRUN}::test_ONE_AGENT_PER_OPENING_not_one_per_ply"),
+    ("the T1j move log is not maintained across the walk", H3SGEN,
+     "            ctx.moves.append(mv)     # the log T1jAgent checks against the ply",
+     "            pass",
+     f"{T_H3SRUN}::test_the_T1J_AGENT_GETS_A_MOVE_LOG_THAT_TRACKS_THE_WALK"),
+    ("the artifact may claim an ARGMAX provenance", H3SGEN,
+     '    if doc["selection_mode"] == "argmax":',
+     "    if False:",
+     f"{T_H3SRUN}::test_the_artifact_REFUSES_an_ARGMAX_provenance"),
+    ("a STUB opening may be written into the artifact", H3SGEN,
+     '        if o.get("stub"):',
+     "        if False:",
+     f"{T_H3SRUN}::test_the_artifact_REFUSES_a_STUB_opening_and_an_EDITED_digest"),
+    ("the artifact's schema is not enforced", H3SGEN,
+     "    missing = [k for k in ARTIFACT_KEYS if k not in doc]",
+     "    missing = []",
+     f"{T_H3SRUN}::test_the_ARTIFACT_SCHEMA_is_frozen_and_enforced"),
+    ("the preflight asks the movers for a MOVE", H3SGEN,
+     '        built.append({"order": order, "incumbent_colour": inc_colour,',
+     '        t1j(RULES._fresh_state())\n'
+     '        built.append({"order": order, "incumbent_colour": inc_colour,',
+     f"{T_H3SRUN}::test_THE_PREFLIGHT_BUILDS_BOTH_MOVERS_AND_NEVER_MOVES"),
+    ("the preflight builds an equal runtime rather than sharing one", H3SGEN,
+     "    movers = production_movers(evaluator=evaluator or _StubEvaluator(),\n"
+     "                               runtime=runtime, config=cfg)",
+     "    movers = production_movers(evaluator=evaluator or _StubEvaluator(),\n"
+     "                               runtime=INT.T1jRuntime(\n"
+     "                                   java=runtime.java, jar=runtime.jar,\n"
+     "                                   classes=runtime.classes,\n"
+     "                                   ply_cap=runtime.ply_cap,\n"
+     "                                   timeout_s=runtime.timeout_s),\n"
+     "                               config=cfg)",
+     f"{T_H3SRUN}::test_the_preflight_agents_HOLD_THE_ONE_RUNTIME"),
+    ("the two generation ranges sit inside their own gap floor", H3SR,
+     "GEN_SEED_CO_PRODUCED = 20_261_200_000",
+     "GEN_SEED_CO_PRODUCED = 20_261_100_000",
+     f"{T_H3SR}::test_the_two_generation_RANGES_ARE_SEPARATED_BY_MORE_THAN_THEIR_OWN_SIZE"),
     # ═════════════ 2026-09-14: the H3 PILOT -- closed, seedless, contained ═══
     ("the H3 pilot gate is opened", H3RUN,
      "H3_PILOT_EXECUTION_AUTHORIZED = False",
