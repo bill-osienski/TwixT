@@ -607,7 +607,10 @@ def test_the_walk_PINS_ITS_ARTIFACT_and_names_what_the_stratum_IS(tmp_path):
     assert "not neutral" in note and "only the incumbent" in note
     assert "state" not in doc["openings"][0], "the engine state is not serialisable"
     assert all("attempts" in o and "seed" in o for o in doc["openings"])
-    assert len(cleanups) == 3, "cleanup between EVERY opening -- no tree carried"
+    # 3 between openings (no tree carried across one) + 1 unconditional teardown
+    # in the `finally`. Two cleanups for two different reasons; dropping either is
+    # its own defect, and each has its own control.
+    assert len(cleanups) == 4, cleanups
     trace = [json.loads(l) for l in open(tmp_path / "t.jsonl")]
     assert trace[0]["event"] == "generation_start"
     assert trace[-1]["event"] == "generation_end"

@@ -34,6 +34,12 @@ class H3GenerationContainmentError(H3GenerationError):
     """The generation seam was reached from a test process."""
 
 
+class H3GenerationCleanupError(H3GenerationError):
+    """Teardown failed. 🔑 ITS OWN TERMINAL OUTCOME, never a footnote to the
+    body's: a run that produced a population and then left a JVM alive has not
+    succeeded, and the wrapper gives this priority over the worker's result."""
+
+
 # ═══════════════════════ BARRIER 1: its OWN gate ═══════════════════════════
 H3_GENERATION_AUTHORIZED = False
 
@@ -201,7 +207,10 @@ def generate_co_produced(*, out_path: str = DEFAULT_OUT,
                              timeout_s=RULES.PER_CALL_TIMEOUT_S)
     movers = production_movers(evaluator=evaluator, runtime=runtime, config=cfg)
     return _generate_unguarded(movers=movers, out_path=out_path,
-                               trace_path=trace_path, cleanup=SCREEN_CMD._default_cleanup)
+                               trace_path=trace_path,
+                               cleanup=SCREEN_CMD._default_cleanup,
+                               deadline=deadline,
+                               deadline_s=RULES.SEGMENT_DEADLINE_S)
 
 
 def incumbent_colour(order: str) -> str:
@@ -305,27 +314,59 @@ def generate_one(*, index: int, order: str, movers: Dict[str, Any]) -> Dict[str,
 
 
 def _generate_unguarded(*, movers: Dict[str, Any], out_path: str,
-                        trace_path: str, cleanup=None,
+                        trace_path: str, cleanup=None, deadline=None,
+                        deadline_s: Optional[float] = None,
                         n: Optional[int] = None) -> Dict[str, Any]:
     """The walk, the rejection loop and the pinned artifact. PRIVATE, and never a
-    way around the gate — it takes prepared movers and builds no engine."""
+    way around the gate — it takes prepared movers and builds no engine.
+
+    🔴 CLEANUP IS UNCONDITIONAL AND FINAL. It used to run only after an opening
+    was ACCEPTED, so an exception anywhere — agent construction, a move, the
+    rejection loop, artifact validation — or an operator interrupt skipped it and
+    could leave production collaborators alive. It now runs in a `finally`,
+    whatever happened, and ITS OWN FAILURE IS A TERMINAL OUTCOME rather than a
+    footnote to someone else's.
+
+    🔴 THE DEADLINE CAPS THE WHOLE LOOP. The only deadline used to be the
+    compile's, which said nothing about a generation that walks for ever.
+
+    🔴 A TERMINAL RECORD IS WRITTEN ON EVERY PATH. Success, timeout, void and
+    cleanup failure each leave a durable `generation_end` naming the verdict; a
+    run whose trace simply stops cannot be told from one that never started.
+    """
     import json
     n = RULES.PAIRS_PER_STRATUM if n is None else n
+    deadline_s = RULES.SEGMENT_DEADLINE_S if deadline_s is None else deadline_s
+    if deadline is not None and not deadline.started:
+        deadline.start()
+
     os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
     tfd = os.open(trace_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+    trace = os.fdopen(tfd, "w")
+
+    def emit(obj):
+        trace.write(json.dumps(obj, sort_keys=True, default=str) + "\n")
+        trace.flush()
+        os.fsync(trace.fileno())
+
     seen = set()
     openings: List[Dict[str, Any]] = []
+    verdict = "VOID"
+    failure: Optional[str] = None
+    timed_out = False
+    doc: Optional[Dict[str, Any]] = None
     try:
-        with os.fdopen(tfd, "w") as trace:
-            def emit(obj):
-                trace.write(json.dumps(obj, sort_keys=True, default=str) + "\n")
-                trace.flush()
-                os.fsync(trace.fileno())
-
+        try:
             emit({"event": "generation_start", "n": n,
+                  "deadline_s": deadline_s,
                   "selection_mode": movers["config"].selection_mode,
                   "note": "the generating incumbent is NOT the playing one"})
             for index in range(n):
+                if deadline is not None and deadline.elapsed() > deadline_s:
+                    timed_out = True
+                    emit({"event": "deadline", "index": index,
+                          "accepted": len(openings)})
+                    break
                 op = generate_one(index=index, order=order_for_index(index),
                                   movers=movers)
                 if op["digest"] in seen:
@@ -337,31 +378,80 @@ def _generate_unguarded(*, movers: Dict[str, Any], out_path: str,
                 emit({"event": "opening", "index": index, "order": op["order"],
                       "attempts": op["attempts"], "seed": op["seed"],
                       "digest": op["digest"]})
+                # 🔑 BETWEEN OPENINGS, so no search tree is carried across one
+                # (card §1.7.4). This is NOT the teardown: that is unconditional
+                # and lives in the `finally`. The two exist for different reasons
+                # and dropping either one is a different defect.
                 if cleanup is not None:
-                    cleanup()          # between openings, as between games
-            doc = {
-                "design": "H3_FULL_STUDY_OPENINGS",
-                "stratum": RULES.STRATUM_CO_PRODUCED,
-                "n": len(openings),
-                "selection_mode": movers["config"].selection_mode,
-                "generation_note":
-                    "SYMMETRICALLY CO-PRODUCED, NOT NEUTRAL. Both orders are run "
-                    "half and half, which balances each engine's ROLE; it does "
-                    "not make the positions engine-independent. And only the "
-                    "incumbent supplies variation: T1j is deterministic at fixed "
-                    "depth, so it contributes content and no entropy.",
-                "config_pins": config_pins(movers["config"]),
-                "toolchain": movers.get("toolchain"),
-                "openings": [{k: v for k, v in o.items() if k != "state"}
-                             for o in openings],
-                "opening_set_digest": RULES.opening_set_digest(openings),
-            }
-            validate_artifact(doc)          # the schema, before it is written
-            fd = os.open(out_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
-            with os.fdopen(fd, "w") as fh:
-                json.dump(doc, fh, indent=1, sort_keys=True, default=str)
-            emit({"event": "generation_end", "n": len(openings),
-                  "opening_set_digest": doc["opening_set_digest"]})
-        return doc
-    except BaseException:
+                    cleanup()
+            if timed_out:
+                # 🔑 A PARTIAL POPULATION IS NOT A POPULATION. The study is
+                # defined over all 148; a short set is evidence of a failed run,
+                # never a set to play against, so NO ARTIFACT IS WRITTEN.
+                verdict = "TIMEOUT"
+                failure = (f"the generation deadline of {deadline_s}s expired "
+                           f"after {len(openings)} of {n} openings; a partial "
+                           f"population is not a population and none is written")
+            else:
+                doc = {
+                    "design": "H3_FULL_STUDY_OPENINGS",
+                    "stratum": RULES.STRATUM_CO_PRODUCED,
+                    "n": len(openings),
+                    "selection_mode": movers["config"].selection_mode,
+                    "generation_note":
+                        "SYMMETRICALLY CO-PRODUCED, NOT NEUTRAL. Both orders are "
+                        "run half and half, which balances each engine's ROLE; it "
+                        "does not make the positions engine-independent. And only "
+                        "the incumbent supplies variation: T1j is deterministic at "
+                        "fixed depth, so it contributes content and no entropy.",
+                    "config_pins": config_pins(movers["config"]),
+                    "toolchain": movers.get("toolchain"),
+                    "openings": [{k: v for k, v in o.items() if k != "state"}
+                                 for o in openings],
+                    "opening_set_digest": RULES.opening_set_digest(openings),
+                }
+                validate_artifact(doc)      # the schema, before it is written
+                fd = os.open(out_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+                with os.fdopen(fd, "w") as fh:
+                    json.dump(doc, fh, indent=1, sort_keys=True, default=str)
+                verdict = "OK"
+        except BaseException as e:          # noqa: BLE001 -- interrupts included
+            verdict = ("INTERRUPTED" if isinstance(e, KeyboardInterrupt)
+                       else "VOID")
+            failure = f"{type(e).__name__}: {e}"
+            raise
+        finally:
+            # 🔴 UNCONDITIONAL. Whatever happened above -- success, timeout,
+            # refusal, crash, Ctrl-C -- the collaborators are torn down here, and
+            # a teardown that ITSELF fails becomes the terminal verdict.
+            cleanup_ok = True
+            cleanup_error = None
+            if cleanup is not None:
+                try:
+                    cleanup()
+                except BaseException as ce:                   # noqa: BLE001
+                    cleanup_ok, cleanup_error = False, f"{type(ce).__name__}: {ce}"
+            if not cleanup_ok:
+                verdict = "CLEANUP_FAILED"
+                failure = (f"teardown failed after a {verdict!r} body: "
+                           f"{cleanup_error}")
+            emit({"event": "generation_end", "verdict": verdict,
+                  "accepted": len(openings), "expected": n,
+                  "timed_out": timed_out, "cleanup_ok": cleanup_ok,
+                  "cleanup_error": cleanup_error, "failure": failure,
+                  "opening_set_digest": (doc or {}).get("opening_set_digest"),
+                  # 🔴 ANY ATTEMPT RETIRES THE WHOLE RANGE. Attempts consume
+                  # generation seeds whether or not the opening was accepted, and
+                  # a rejected candidate drew from its seed exactly as an accepted
+                  # one did. There is no partial retirement to argue about.
+                  "retires": list(RULES.generation_seed_range(
+                      RULES.GEN_SEED_CO_PRODUCED)),
+                  "retirement_rule": "WHOLE RANGE, on ANY attempted generation"})
+            trace.close()
+            if not cleanup_ok:
+                raise H3GenerationCleanupError(failure)
+    except H3GenerationCleanupError:
         raise
+    if verdict != "OK":
+        raise H3GenerationError(failure or verdict)
+    return doc
