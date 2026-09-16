@@ -3009,17 +3009,15 @@ DEFECTS = [
      "        pass",
      f"{T_H3SRUN}::test_a_FAILED_RESTORATION_becomes_the_wrappers_OWN_exit_code"),
     ("a failed gate restoration does not become the wrapper's exit code", H3GCMD,
-     "        if not restore_gate(_runner_source):\n"
-     "            print(f\"GATE NOT RESTORED: {_runner_source} could not be rewritten to \"",
-     "        if False:\n"
-     "            print(f\"GATE NOT RESTORED: {_runner_source} could not be rewritten to \"",
+     "        restored = restore_gate(_runner_source)\n        if not restored:",
+     "        restored = restore_gate(_runner_source)\n        if False:",
      f"{T_H3SRUN}::test_THE_FINALLY_PATH_also_restores_the_generation_gate"),
     ("a surviving descendant of the generator is reported as success", H3GCMD,
      '            if not r["group_cleared"]:',
      "            if False:",
      f"{T_H3SRUN}::test_every_supervisor_outcome_gets_ITS_OWN_exit_code"),
     ("the generation wrapper spawns before checking the destination", H3GCMD,
-     "            _check_destination(*_resolve_paths(a))",
+     "            _check_destination(out_path, trace_path)",
      "            pass",
      f"{T_H3SRUN}::test_the_wrapper_REFUSES_BEFORE_SPAWNING_when_the_destination_exists"),
     ("the generation worker runs without the supervisor's capability", H3GCMD,
@@ -4737,8 +4735,6 @@ EXPECTED_REASONS = {
     # generator's terminal semantics. Every reason observed, never predicted.
     "a PARTIAL population is written as the study's set":
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
-    "a failed gate restoration does not become the wrapper's exit code":
-        "AssertionError: a failed restoration SUPERSEDES the worker's own exit 0",
     'a failed teardown is a footnote rather than the verdict':
         "AssertionError: assert ('VOID' == 'CLEANUP_FAILED'",
     'a surviving descendant of the generator is reported as success':
@@ -4755,8 +4751,6 @@ EXPECTED_REASONS = {
         'AssertionError: assert 5 == 7',
     'the generation wrapper reports success without verifying the gate':
         'assert 5 == 10',
-    'the generation wrapper spawns before checking the destination':
-        'assert 0 == 7',
     'the terminal record does not name the retired range':
         'assert [] == [20261200000, 20261259200]',
     # ── 2026-09-15: PREPARATION for the opening-generation run.

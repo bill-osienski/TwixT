@@ -571,3 +571,51 @@ def test_A_REASON_RECORDED_ON_ONE_RUN_MATCHES_ON_THE_NEXT(sandbox, tmp_path):
         "A REASON RECORDED ON ONE RUN DID NOT MATCH ON THE NEXT:\n"
         + f"recorded: {recorded}\n" + r.stdout)
     assert r.returncode == OK, (r.returncode, r.stdout)
+
+
+def test_EVERY_CONTROLS_ANCHOR_MATCHES_ITS_SOURCE_EXACTLY_ONCE():
+    """🔴 TWO CONTROLS WENT STALE AND THE SUITE COULD NOT SEE IT.
+
+    Editing the wrapper changed two lines that existing controls anchor on, and
+    only the HARNESS noticed -- twenty minutes later. My pre-check looked at the
+    controls needing REASONS, which are the new ones, and a control that already
+    has a reason is exactly the one whose anchor has had time to rot.
+
+    A zero-match anchor means the control DID NOT RUN. A multi-match anchor means
+    it injected somewhere ambiguous. Both are checked here, for every control, on
+    every suite run.
+    """
+    import importlib.util
+    import pathlib
+    spec = importlib.util.spec_from_file_location("_idc_anchor", DEFS)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    offenders = []
+    for label, rel, old, _new, _node in mod.DEFECTS:
+        path = pathlib.Path(rel)
+        if not path.exists():
+            offenders.append((label, rel, "FILE MISSING"))
+            continue
+        n = path.read_text().count(old)
+        if n != 1:
+            offenders.append((label, rel, f"{n} matches"))
+    assert offenders == [], offenders
+
+
+def test_EVERY_CONTROLS_TARGET_TEST_EXISTS():
+    """A control naming a test that no longer exists scores REJECTED FOR FREE:
+    pytest exits non-zero for a node id it cannot find. The clean-baseline check
+    catches it at run time; this catches it at edit time."""
+    import importlib.util
+    import pathlib
+    spec = importlib.util.spec_from_file_location("_idc_target", DEFS)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    missing = []
+    for label, _rel, _old, _new, node in mod.DEFECTS:
+        f, _, t = node.partition("::")
+        t = t.split("[")[0]
+        if f.startswith("tests/") and pathlib.Path(f).exists():
+            if f"def {t}(" not in pathlib.Path(f).read_text():
+                missing.append((label, node))
+    assert missing == [], missing
