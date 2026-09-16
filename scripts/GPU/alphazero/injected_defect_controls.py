@@ -2957,13 +2957,13 @@ DEFECTS = [
      "                  file=sys.stderr)\n"
      "            return EXIT_GATE_NOT_RESTORED",
      "        pass",
-     f"{T_H3SRUN}::test_the_generation_wrapper_REFUSES_with_the_gate_shut_and_verifies_it"),
+     f"{T_H3SRUN}::test_a_FAILED_RESTORATION_becomes_the_wrappers_OWN_exit_code"),
     ("a failed gate restoration does not become the wrapper's exit code", H3GCMD,
      "        if not restore_gate(_runner_source):\n"
      "            print(f\"GATE NOT RESTORED: {_runner_source} could not be rewritten to \"",
      "        if False:\n"
      "            print(f\"GATE NOT RESTORED: {_runner_source} could not be rewritten to \"",
-     f"{T_H3SRUN}::test_a_FAILED_RESTORATION_becomes_the_wrappers_OWN_exit_code"),
+     f"{T_H3SRUN}::test_THE_FINALLY_PATH_also_restores_the_generation_gate"),
     ("a surviving descendant of the generator is reported as success", H3GCMD,
      '            if not r["group_cleared"]:',
      "            if False:",

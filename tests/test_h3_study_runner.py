@@ -938,3 +938,19 @@ def test_EVERY_TERMINAL_RECORD_NAMES_THE_WHOLE_RANGE_AS_RETIRED(tmp_path):
         GEN._generate_unguarded(movers=movers, out_path=out2, trace_path=trace2,
                                 cleanup=lambda: None, n=1)
     assert _trace(trace2)[-1]["retires"] == end["retires"]
+
+
+def test_THE_FINALLY_PATH_also_restores_the_generation_gate(monkeypatch, tmp_path):
+    """🔑 A DIFFERENT PATH FROM THE REFUSAL'S. With the gate SHUT the wrapper
+    returns before the try/finally, so only a run that gets past the gate
+    exercises the `finally`'s restoration — and a control that removes it is
+    invisible to the refusal test."""
+    monkeypatch.setattr(GCMD, "gate_is_open", lambda: True)
+    monkeypatch.setattr(GCMD, "supervise", lambda *a, **k: {
+        "timed_out": False, "interrupted": False, "group_cleared": True,
+        "exit_code": 0})
+    monkeypatch.setattr(GCMD, "restore_gate", lambda *a, **k: False)
+    code = GCMD.main(["--out", str(tmp_path / "o.json"),
+                      "--trace", str(tmp_path / "t.jsonl")])
+    assert code == GCMD.EXIT_GATE_NOT_RESTORED, (
+        "a failed restoration SUPERSEDES the worker's own exit 0")
