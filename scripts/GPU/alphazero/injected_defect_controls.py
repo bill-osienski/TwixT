@@ -4659,6 +4659,32 @@ EXPECTED_REASONS = {
         'assert (19, 19, 18, 18) == (19, 18, 19, 18)',
     'the two generation seed ranges overlap again':
         'AssertionError: ((20261000000, 20261059200), (20261000500, 20261059700))',
+    # ── 2026-09-15: the SUPERVISED GENERATION LAUNCH PATH and the
+    # generator's terminal semantics. Every reason observed, never predicted.
+    "a PARTIAL population is written as the study's set":
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
+    "a failed gate restoration does not become the wrapper's exit code":
+        "AssertionError: a failed restoration SUPERSEDES the worker's own exit 0",
+    'a failed teardown is a footnote rather than the verdict':
+        "AssertionError: assert ('VOID' == 'CLEANUP_FAILED'",
+    'a surviving descendant of the generator is reported as success':
+        'assert 0 == 8',
+    'an interrupt is recorded as an ordinary VOID':
+        "AssertionError: assert 'VOID' == 'INTERRUPTED'",
+    'generation teardown runs only on the happy path again':
+        'AssertionError: the finally tore down exactly once',
+    'the generation destination may sit in a SPENT directory':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
+    'the generation loop is not capped by a deadline':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
+    "the generation worker runs without the supervisor's capability":
+        'AssertionError: assert 5 == 7',
+    'the generation wrapper reports success without verifying the gate':
+        'assert 5 == 10',
+    'the generation wrapper spawns before checking the destination':
+        'assert 0 == 7',
+    'the terminal record does not name the retired range':
+        'assert [] == [20261200000, 20261259200]',
     # ── 2026-09-15: PREPARATION for the opening-generation run.
     # Every reason observed in a throwaway worktree, never predicted.
     'a STUB opening may be written into the artifact':
