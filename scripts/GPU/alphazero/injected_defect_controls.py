@@ -2981,7 +2981,7 @@ DEFECTS = [
     ("the launch receipt is not create-only", H3GCMD,
      "        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)",
      "        fd = os.open(path, os.O_WRONLY | os.O_CREAT, 0o644)",
-     f"{T_H3SRUN}::test_THE_RECEIPT_IS_CREATE_ONLY_and_a_SECOND_LAUNCH_is_refused"),
+     f"{T_H3SRUN}::test_O_EXCL_refuses_the_receipt_EVEN_WITH_THE_PRECHECK_DISABLED"),
     ("the receipt omits the retired range", H3GCMD,
      '            "retires": list(RUN.RULES.generation_seed_range(\n'
      "                RUN.RULES.GEN_SEED_CO_PRODUCED)),",

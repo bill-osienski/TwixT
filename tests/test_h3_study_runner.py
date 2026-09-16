@@ -1141,3 +1141,26 @@ def test_NO_TEST_MAY_WRITE_INTO_THE_RUNS_OWN_DESTINATION():
     import os
     assert not os.path.lexists(GEN.OUT_DIR), (
         f"{GEN.OUT_DIR} exists: a test wrote into the run's destination")
+
+
+def test_O_EXCL_refuses_the_receipt_EVEN_WITH_THE_PRECHECK_DISABLED(monkeypatch,
+                                                                    tmp_path):
+    """🔑 THE PRECHECK CATCHES THE SECOND LAUNCH FIRST, so the create-only flag on
+    the write itself is never exercised by that path — and a control removing
+    `O_EXCL` went NOT CAUGHT. This reaches it alone: with `_check_destination`
+    neutralised, the write must STILL refuse rather than overwrite a receipt that
+    is the durable record of an earlier launch."""
+    receipt = tmp_path / "receipt.json"
+    receipt.write_text('{"outcome": "AN EARLIER LAUNCH"}')
+    monkeypatch.setattr(GCMD, "RECEIPT", str(receipt))
+    monkeypatch.setattr(GCMD, "_check_destination", lambda *a, **k: None)
+    monkeypatch.setattr(GCMD, "gate_is_open", lambda: True)
+    monkeypatch.setattr(GCMD, "restore_gate", lambda *a, **k: True)
+    monkeypatch.setattr(GCMD, "supervise", lambda *a, **k: dict(OK_SUP))
+    code = GCMD.main(["--out", str(tmp_path / "o.json"),
+                      "--trace", str(tmp_path / "t.jsonl")])
+    import json
+    assert json.loads(receipt.read_text())["outcome"] == "AN EARLIER LAUNCH", (
+        "the earlier launch's receipt was OVERWRITTEN")
+    assert code == GCMD.EXIT_UNEXPECTED, (
+        "a receipt that could not be written must not report success")
