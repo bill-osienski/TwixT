@@ -4659,6 +4659,8 @@ EXPECTED_REASONS = {
         'assert (19, 19, 18, 18) == (19, 18, 19, 18)',
     'the two generation seed ranges overlap again':
         'AssertionError: ((20261000000, 20261059200), (20261000500, 20261059700))',
+    'the generator carries a tree across openings':
+        'AssertionError: expected 3 BETWEEN openings + 1 final teardown, got [1]',
     # ── 2026-09-15: the SUPERVISED GENERATION LAUNCH PATH and the
     # generator's terminal semantics. Every reason observed, never predicted.
     "a PARTIAL population is written as the study's set":
