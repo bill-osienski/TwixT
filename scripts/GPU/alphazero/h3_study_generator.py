@@ -197,7 +197,7 @@ def generate_co_produced(*, out_path: str = DEFAULT_OUT,
     classes = out_path + ".t1j_classes"
     from . import e4_screen_integration as INT
     from . import h2_match_rules as H2R
-    deadline = D1.Deadline(RULES.SEGMENT_DEADLINE_S)
+    deadline = D1.Deadline(RULES.GENERATION_DEADLINE_S)
     deadline.start()
     D1._default_compile(deadline, paths=D1.T1jPaths(
         java=java, jar=tc["jar"], classes=classes, ply_cap=H2R.PLY_CAP))
@@ -210,7 +210,7 @@ def generate_co_produced(*, out_path: str = DEFAULT_OUT,
                                trace_path=trace_path,
                                cleanup=SCREEN_CMD._default_cleanup,
                                deadline=deadline,
-                               deadline_s=RULES.SEGMENT_DEADLINE_S)
+                               deadline_s=RULES.GENERATION_DEADLINE_S)
 
 
 def incumbent_colour(order: str) -> str:
@@ -336,7 +336,7 @@ def _generate_unguarded(*, movers: Dict[str, Any], out_path: str,
     """
     import json
     n = RULES.PAIRS_PER_STRATUM if n is None else n
-    deadline_s = RULES.SEGMENT_DEADLINE_S if deadline_s is None else deadline_s
+    deadline_s = RULES.GENERATION_DEADLINE_S if deadline_s is None else deadline_s
     if deadline is not None and not deadline.started:
         deadline.start()
 

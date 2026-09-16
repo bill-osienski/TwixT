@@ -30,7 +30,7 @@ from __future__ import annotations
 import os
 import re
 import sys
-from typing import Any, Mapping, Optional, Sequence
+from typing import Any, Dict, Mapping, Optional, Sequence
 
 from . import h3_study_generator as RUN
 from . import runtime_requalification as RQ
@@ -75,6 +75,14 @@ EXIT_REFUSED = RQ.EXIT_REFUSED                 # 7
 EXIT_CLEANUP_FAILED = RQ.EXIT_CLEANUP_FAILED   # 8
 EXIT_INTERRUPTED = RQ.EXIT_INTERRUPTED         # 9
 EXIT_GATE_NOT_RESTORED = 10
+
+#: The name each exit code carries into the receipt, so the record reads as a
+#: statement rather than a number.
+_OUTCOMES = {
+    0: "COMPLETED", 3: "VOID", 4: "UNEXPECTED", 5: "UNAUTHORIZED",
+    6: "TIMEOUT", 7: "REFUSED", 8: "CLEANUP_FAILED", 9: "INTERRUPTED",
+    10: "GATE_NOT_RESTORED",
+}
 #: OUTCOMES THAT ARE RESULTS, not failures. The pilot's job is to answer three
 #: questions; a fired stop rule IS the answer, and a partial run is informative.
 EXIT_PARTIAL = 13
@@ -161,6 +169,47 @@ def _consume_capability(fd: Optional[int]) -> bool:
         c in "0123456789abcdef" for c in token)
 
 
+#: 🔴 THE PARENT'S OWN TERMINAL RECORD. The worker writes `generation_end` in its
+#: `finally` -- but the OUTER SUPERVISOR can kill its process group before that
+#: `finally` ever runs, and the outcomes that SUPERSEDE the worker's (timeout,
+#: surviving descendant, interruption, failed gate restoration) are decided HERE,
+#: by the parent, after the worker may already be dead. Printing them to a console
+#: is not a durable record of anything.
+RECEIPT = f"{RUN.OUT_DIR}/00_launch_receipt.json"
+
+
+def _gate_readback(src: str) -> str:
+    """What the gate line ACTUALLY SAYS NOW, read from the file — not what
+    `restore_gate` returned. A receipt that records its own opinion of the gate
+    records nothing."""
+    try:
+        text = open(src, encoding="utf-8").read()
+    except OSError:
+        return "UNREADABLE"
+    if _GATE_OPEN.search(text):
+        return "True"
+    if text.count(_GATE_CLOSED + "\n") == 1:
+        return "False"
+    return "AMBIGUOUS"
+
+
+def _write_receipt(path: str, doc: Mapping[str, Any]) -> bool:
+    """CREATE-ONLY, like every other record. Returns False if it could not be
+    written, which is itself reportable: the receipt IS the record, and its
+    absence is a finding rather than a silence."""
+    import json
+    try:
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+        with os.fdopen(fd, "w") as fh:
+            json.dump(dict(doc), fh, indent=1, sort_keys=True, default=str)
+            fh.flush()
+            os.fsync(fh.fileno())
+        return True
+    except OSError:
+        return False
+
+
 def _resolve_paths(a):
     out, trace = default_paths()
     return (a.out or out, a.trace or trace)
@@ -170,7 +219,7 @@ def _check_destination(out: str, trace: str) -> None:
     """CREATE-ONLY, and never inside a SPENT directory."""
     if os.path.abspath(out) == os.path.abspath(trace):
         raise RUN.H3GenerationError("the two outputs must be two files")
-    for p in (out, trace):
+    for p in (out, trace, RECEIPT):
         if os.path.lexists(p):
             raise RUN.H3GenerationError(
                 f"the output path already exists: {p}. The opening set is "
@@ -259,19 +308,23 @@ def main(argv: Optional[Sequence[str]] = None, *,
         return EXIT_UNAUTHORIZED
 
     code = EXIT_UNEXPECTED
+    out_path, trace_path = _resolve_paths(a)
+    sup: Dict[str, Any] = {}
+    note = None
     try:
         try:
-            _check_destination(*_resolve_paths(a))
+            _check_destination(out_path, trace_path)
             refused = False
         except RUN.H3GenerationError as e:
             print(f"refused before spawning: {e}", file=sys.stderr)
-            code, refused = EXIT_REFUSED, True   # no return: the finally must run
+            code, refused, note = EXIT_REFUSED, True, str(e)
         if not refused:
             cap_fd = _make_capability()
             try:
-                r = supervise([sys.executable, "-m", MODULE, "--worker",
+                r = sup = supervise([sys.executable, "-m", MODULE, "--worker",
                                "--capability-fd", str(cap_fd), *argv],
-                              timeout_s=RUN.RULES.SEGMENT_DEADLINE_S + SUPERVISOR_GRACE_S,
+                              timeout_s=(RUN.RULES.GENERATION_DEADLINE_S
+                                         + SUPERVISOR_GRACE_S),
                               kill_grace_s=5.0, interrupt_grace_s=INTERRUPT_GRACE_S,
                               pass_fds=[cap_fd])
             finally:
@@ -300,16 +353,55 @@ def main(argv: Optional[Sequence[str]] = None, *,
     except Exception as e:                                    # noqa: BLE001
         print(f"UNEXPECTED in the supervisor: {type(e).__name__}: {e}",
               file=sys.stderr)
-        code = EXIT_UNEXPECTED
+        code, note = EXIT_UNEXPECTED, f"{type(e).__name__}: {e}"
     finally:
         # 🔴 RESTORED WHATEVER HAPPENED -- refusal, timeout, interrupt, crash or
         # completion -- and a failed restoration SUPERSEDES every other code,
         # including a refusal: an open gate is the larger fact.
-        if not restore_gate(_runner_source):
+        restored = restore_gate(_runner_source)
+        if not restored:
             print(f"GATE NOT RESTORED: {_runner_source} could not be rewritten to "
                   f"{_GATE_CLOSED}. Restore it BY HAND before anything else.",
                   file=sys.stderr)
             code = EXIT_GATE_NOT_RESTORED
+            note = note or "the generation gate could not be verified closed"
+
+        # 🔴 THE RECEIPT, WRITTEN AFTER SUPERVISION AND AFTER RESTORATION, so it
+        # can record the outcome that SUPERSEDED everything -- including a failed
+        # restoration, which is decided one line above. It exists even when the
+        # worker was killed before writing, or never opened, its own trace.
+        import time as _t
+        wrote = _write_receipt(RECEIPT, {
+            "design": "H3_OPENING_GENERATION_LAUNCH",
+            "outcome": _OUTCOMES.get(code, f"EXIT_{code}"),
+            "exit_code": code,
+            "note": note,
+            "worker_exit": sup.get("exit_code"),
+            "timed_out": sup.get("timed_out"),
+            "interrupted": sup.get("interrupted"),
+            "group_cleared": sup.get("group_cleared"),
+            "supervised": bool(sup),
+            "gate_restored": restored,
+            # read from the FILE, not from restore_gate's own answer
+            "gate_readback": _gate_readback(_runner_source),
+            "deadline_s": RUN.RULES.GENERATION_DEADLINE_S,
+            "outer_cap_s": RUN.RULES.GENERATION_DEADLINE_S + SUPERVISOR_GRACE_S,
+            "out_path": out_path,
+            "trace_path": trace_path,
+            "artifact_exists": os.path.lexists(out_path),
+            "trace_exists": os.path.lexists(trace_path),
+            "retires": list(RUN.RULES.generation_seed_range(
+                RUN.RULES.GEN_SEED_CO_PRODUCED)),
+            "retirement_rule": ("WHOLE RANGE, on ANY attempted generation -- a "
+                                "timeout is not 'try again with more time'"),
+            "recorded_at": _t.strftime("%Y-%m-%dT%H:%M:%SZ", _t.gmtime()),
+        })
+        if not wrote:
+            print(f"🔴 THE LAUNCH RECEIPT COULD NOT BE WRITTEN to {RECEIPT}. The "
+                  f"receipt IS the durable record of this launch; without it the "
+                  f"outcome exists only in this console.", file=sys.stderr)
+            if code == EXIT_COMPLETED:
+                code = EXIT_UNEXPECTED
     return code
 
 

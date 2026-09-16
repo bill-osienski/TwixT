@@ -792,6 +792,11 @@ def test_a_FAILED_RESTORATION_becomes_the_wrappers_OWN_exit_code(monkeypatch, ca
 ])
 def test_every_supervisor_outcome_gets_ITS_OWN_exit_code(monkeypatch, tmp_path,
                                                          r, want):
+    # 🔴 THE RECEIPT PATH MUST BE REDIRECTED. Without this the test wrote a real
+    # 00_launch_receipt.json into the RUN'S OWN DESTINATION -- a test artifact
+    # sitting exactly where the authorized generation is meant to write, which
+    # would then have refused the real launch as "already exists".
+    monkeypatch.setattr(GCMD, "RECEIPT", str(tmp_path / "receipt.json"))
     monkeypatch.setattr(GCMD, "gate_is_open", lambda: True)
     monkeypatch.setattr(GCMD, "supervise", lambda *a, **k: dict(r))
     monkeypatch.setattr(GCMD, "restore_gate", lambda *a, **k: True)
@@ -803,6 +808,7 @@ def test_every_supervisor_outcome_gets_ITS_OWN_exit_code(monkeypatch, tmp_path,
 def test_the_wrapper_REFUSES_BEFORE_SPAWNING_when_the_destination_exists(
         monkeypatch, tmp_path):
     spawned = []
+    monkeypatch.setattr(GCMD, "RECEIPT", str(tmp_path / "receipt.json"))
     monkeypatch.setattr(GCMD, "gate_is_open", lambda: True)
     monkeypatch.setattr(GCMD, "supervise",
                         lambda *a, **k: spawned.append(1) or {
@@ -946,6 +952,7 @@ def test_THE_FINALLY_PATH_also_restores_the_generation_gate(monkeypatch, tmp_pat
     returns before the try/finally, so only a run that gets past the gate
     exercises the `finally`'s restoration — and a control that removes it is
     invisible to the refusal test."""
+    monkeypatch.setattr(GCMD, "RECEIPT", str(tmp_path / "receipt.json"))
     monkeypatch.setattr(GCMD, "gate_is_open", lambda: True)
     monkeypatch.setattr(GCMD, "supervise", lambda *a, **k: {
         "timed_out": False, "interrupted": False, "group_cleared": True,
@@ -955,3 +962,182 @@ def test_THE_FINALLY_PATH_also_restores_the_generation_gate(monkeypatch, tmp_pat
                       "--trace", str(tmp_path / "t.jsonl")])
     assert code == GCMD.EXIT_GATE_NOT_RESTORED, (
         "a failed restoration SUPERSEDES the worker's own exit 0")
+
+
+# ═══════════ the GENERATION DEADLINE, preregistered on its own ═════════════
+
+def test_GENERATION_HAS_ITS_OWN_PREREGISTERED_DEADLINE():
+    """🔴 It was reusing SEGMENT_DEADLINE_S — a cap frozen for 148 GAMES at the
+    pilot's 41.22 s/game, which says nothing about 148 six-ply generation walks.
+    Same number, different quantity: a bound borrowed from something else."""
+    assert R.GENERATION_DEADLINE_S == 10800
+    assert "GENERATION_DEADLINE_S" in open(
+        GEN.__file__, encoding="utf-8").read()
+    src = open(GCMD.__file__, encoding="utf-8").read()
+    assert "GENERATION_DEADLINE_S" in src
+    assert "SEGMENT_DEADLINE_S" not in src, (
+        "the generation wrapper must not borrow the match segment's cap")
+
+
+def test_the_generation_deadline_RATIONALE_is_recorded_and_arithmetically_sound():
+    """~0.81 s/ply from the pilot -> ~4.85 s per 6-ply attempt -> ~718 s for 148
+    at one attempt each, so 10,800 s allows ~15 attempts per opening."""
+    per_ply = 41.22 / 51
+    one_pass = R.PAIRS_PER_STRATUM * R.OPENING_PLIES * per_ply
+    assert 700 < one_pass < 740, one_pass
+    assert 14 < R.GENERATION_DEADLINE_S / one_pass < 16
+    doc = open("scripts/GPU/alphazero/h3_study_rules.py", encoding="utf-8").read()
+    i = doc.index("GENERATION_DEADLINE_S = ")
+    rationale = doc[max(0, i - 1600):i]
+    assert "CHOSEN" in rationale and "MAY EXPIRE" in rationale
+    assert "RETIRES THE WHOLE GENERATION RANGE" in rationale
+
+
+# ═══════════ the PARENT-OWNED DURABLE RECEIPT ══════════════════════════════
+# 🔴 The worker writes `generation_end` in its own `finally` -- but the outer
+# supervisor can kill its process group before that runs, and the outcomes that
+# SUPERSEDE the worker's are decided by the PARENT afterwards.
+
+def _launch(monkeypatch, tmp_path, *, sup=None, restore=True, gate=True):
+    """Drive the wrapper's parent path with the supervisor stubbed."""
+    monkeypatch.setattr(GCMD, "RECEIPT", str(tmp_path / "00_launch_receipt.json"))
+    monkeypatch.setattr(GCMD, "gate_is_open", lambda: gate)
+    monkeypatch.setattr(GCMD, "restore_gate", lambda *a, **k: restore)
+    if sup is not None:
+        monkeypatch.setattr(GCMD, "supervise", lambda *a, **k: dict(sup))
+    code = GCMD.main(["--out", str(tmp_path / "o.json"),
+                      "--trace", str(tmp_path / "t.jsonl")])
+    import json
+    path = tmp_path / "00_launch_receipt.json"
+    doc = json.loads(path.read_text()) if path.exists() else None
+    return code, doc
+
+
+OK_SUP = {"timed_out": False, "interrupted": False, "group_cleared": True,
+          "exit_code": 0}
+
+
+def test_NO_RECEIPT_WHEN_THE_GATE_WAS_SHUT(monkeypatch, tmp_path):
+    """Nothing was attempted and nothing consumed; a receipt would claim a launch
+    that never happened."""
+    code, doc = _launch(monkeypatch, tmp_path, gate=False)
+    assert code == GCMD.EXIT_UNAUTHORIZED and doc is None
+
+
+def test_THE_RECEIPT_EXISTS_EVEN_WHEN_THE_WORKER_WROTE_NO_TRACE(monkeypatch,
+                                                                tmp_path):
+    """🔑 THE CASE THE WORKER'S OWN `finally` CANNOT COVER: killed before it ever
+    opened its trace."""
+    code, doc = _launch(monkeypatch, tmp_path,
+                        sup={"timed_out": True, "interrupted": False,
+                             "group_cleared": True, "exit_code": -9})
+    assert code == GCMD.EXIT_TIMEOUT
+    assert doc is not None
+    assert doc["outcome"] == "TIMEOUT" and doc["timed_out"] is True
+    assert doc["trace_exists"] is False and doc["artifact_exists"] is False
+    assert doc["worker_exit"] == -9
+
+
+@pytest.mark.parametrize("sup,restore,outcome,code_name", [
+    (OK_SUP, True, "COMPLETED", "EXIT_COMPLETED"),
+    ({**OK_SUP, "timed_out": True, "exit_code": 6}, True, "TIMEOUT", "EXIT_TIMEOUT"),
+    ({**OK_SUP, "interrupted": True, "exit_code": 9}, True, "INTERRUPTED",
+     "EXIT_INTERRUPTED"),
+    ({**OK_SUP, "group_cleared": False}, True, "CLEANUP_FAILED",
+     "EXIT_CLEANUP_FAILED"),
+    (OK_SUP, False, "GATE_NOT_RESTORED", "EXIT_GATE_NOT_RESTORED"),
+])
+def test_THE_RECEIPT_RECORDS_THE_SUPERSEDING_OUTCOME(monkeypatch, tmp_path, sup,
+                                                     restore, outcome, code_name):
+    code, doc = _launch(monkeypatch, tmp_path, sup=sup, restore=restore)
+    assert code == getattr(GCMD, code_name)
+    assert doc["outcome"] == outcome
+    assert doc["exit_code"] == code
+    assert doc["gate_restored"] is restore
+    assert doc["group_cleared"] is sup["group_cleared"]
+
+
+def test_A_SURVIVING_DESCENDANT_SUPERSEDES_THE_WORKERS_OWN_SUCCESS(monkeypatch,
+                                                                   tmp_path):
+    """The worker exited 0; a descendant lived. The receipt says CLEANUP_FAILED
+    and keeps the worker's 0 beside it, so neither fact is lost."""
+    code, doc = _launch(monkeypatch, tmp_path,
+                        sup={**OK_SUP, "group_cleared": False, "exit_code": 0})
+    assert code == GCMD.EXIT_CLEANUP_FAILED
+    assert doc["outcome"] == "CLEANUP_FAILED"
+    assert doc["worker_exit"] == 0, "the worker's own result is still recorded"
+
+
+def test_THE_RECEIPT_READS_THE_GATE_BACK_FROM_THE_FILE(monkeypatch, tmp_path):
+    """🔑 Not `restore_gate`'s opinion of itself: a receipt that records its own
+    say-so records nothing."""
+    code, doc = _launch(monkeypatch, tmp_path, sup=OK_SUP)
+    assert doc["gate_readback"] == "False"
+    assert GCMD._gate_readback(str(tmp_path / "absent.py")) == "UNREADABLE"
+    open_src = tmp_path / "open.py"
+    open_src.write_text("H3_GENERATION_AUTHORIZED = True\n")
+    assert GCMD._gate_readback(str(open_src)) == "True"
+
+
+def test_THE_RECEIPT_NAMES_THE_WHOLE_RANGE_AS_RETIRED(monkeypatch, tmp_path):
+    for sup in (OK_SUP, {**OK_SUP, "timed_out": True, "exit_code": 6}):
+        d = tmp_path / str(sup["exit_code"])
+        d.mkdir()
+        _, doc = _launch(monkeypatch, d, sup=sup)
+        assert doc["retires"] == list(
+            R.generation_seed_range(R.GEN_SEED_CO_PRODUCED))
+        assert "WHOLE RANGE" in doc["retirement_rule"]
+        assert doc["deadline_s"] == R.GENERATION_DEADLINE_S
+        assert doc["outer_cap_s"] == (R.GENERATION_DEADLINE_S
+                                      + GCMD.SUPERVISOR_GRACE_S), (
+            "the OUTER cap must exceed the worker's own deadline, or the "
+            "supervisor kills a worker that was about to stop cleanly")
+
+
+def test_a_REFUSAL_BEFORE_SPAWNING_still_leaves_a_receipt(monkeypatch, tmp_path):
+    """An authorization was spent on a run that could not start -- H2's lesson,
+    where exactly that went unrecorded."""
+    (tmp_path / "o.json").write_text("{}")
+    code, doc = _launch(monkeypatch, tmp_path, sup=OK_SUP)
+    assert code == GCMD.EXIT_REFUSED
+    assert doc["outcome"] == "REFUSED" and doc["supervised"] is False
+    assert "already exists" in doc["note"]
+
+
+def test_THE_RECEIPT_IS_CREATE_ONLY_and_a_SECOND_LAUNCH_is_refused(monkeypatch,
+                                                                   tmp_path):
+    code, doc = _launch(monkeypatch, tmp_path, sup=OK_SUP)
+    assert code == GCMD.EXIT_COMPLETED and doc is not None
+    # the receipt now occupies the destination: a second launch must refuse
+    code2, _ = _launch(monkeypatch, tmp_path, sup=OK_SUP)
+    assert code2 == GCMD.EXIT_REFUSED
+
+
+def test_NO_TEST_MAY_WRITE_INTO_THE_RUNS_OWN_DESTINATION():
+    """🔴 A test DID. `test_every_supervisor_outcome_gets_ITS_OWN_exit_code` did
+    not redirect `RECEIPT`, so running the suite created a real
+    `00_launch_receipt.json` in the destination the authorized generation is
+    meant to write — which would then have refused the real launch as "already
+    exists". An authorization spent because a TEST occupied the destination is
+    exactly H2's defect, arriving by a new road.
+
+    Every wrapper test that reaches the receipt must patch the path first.
+    """
+    import ast
+    import inspect as _i
+    src = open(__file__, encoding="utf-8").read()
+    tree = ast.parse(src)
+    offenders = []
+    for fn in [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)]:
+        body = ast.get_source_segment(src, fn) or ""
+        # only a test that FORCES THE GATE OPEN can reach the receipt at all:
+        # with the gate shut the wrapper returns before the try/finally.
+        reaches_receipt = ("GCMD.main(" in body
+                           and 'GCMD, "gate_is_open", lambda: True' in body)
+        redirects = 'GCMD, "RECEIPT"' in body or "_launch(" in body
+        if reaches_receipt and not redirects:
+            offenders.append(fn.name)
+    assert offenders == [], offenders
+    import os
+    assert not os.path.lexists(GEN.OUT_DIR), (
+        f"{GEN.OUT_DIR} exists: a test wrote into the run's destination")

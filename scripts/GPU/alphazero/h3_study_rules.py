@@ -93,6 +93,31 @@ GEN_SEED_CO_PRODUCED = 20_261_200_000
 SEGMENT_DEADLINE_S = 10800
 PER_CALL_TIMEOUT_S = 120
 
+#: 🔴 THE GENERATION RUN'S OWN DEADLINE, PREREGISTERED SEPARATELY. It happens to
+#: be the same number as `SEGMENT_DEADLINE_S`, and that is a coincidence of
+#: rounding, not a shared derivation: the segment cap is for 148 GAMES at the
+#: pilot's measured 41.22 s/game, and says nothing about 148 six-ply GENERATION
+#: walks. Reusing it would have been a bound borrowed from a different quantity.
+#:
+#: ITS OWN RATIONALE, from the pilot's measured per-ply cost of 41.22/51 = 0.81 s
+#: (both engines, one ply):
+#:   * an opening is 6 plies  ->  ~4.85 s per ATTEMPT
+#:   * 148 openings at one attempt each  ->  ~718 s
+#:   * 10,800 s therefore allows ~15 ATTEMPTS PER OPENING on average, against a
+#:     MAX_ATTEMPTS ceiling of 400.
+#:
+#: 🔑 THE REJECTION RATE IS NOT KNOWN AND IS NOT ESTIMATED HERE. The uniform
+#: stratum needs 1 attempt per opening, but it is engine-free and says nothing
+#: about a co-produced walk. So this is a CHOSEN limit, exactly as the pilot's
+#: was, and IT MAY EXPIRE.
+#:
+#: 🔴 AND EXPIRY RETIRES THE WHOLE GENERATION RANGE. A timeout does not mean "try
+#: again with more time": the attempts made drew from their seeds, and every
+#: terminal record says so. A second generation needs a FRESH range with its own
+#: collision re-proof. That cost is accepted in advance, here, rather than argued
+#: about afterwards.
+GENERATION_DEADLINE_S = 10800
+
 # ═══════════════════════ degeneracy gates (card §4.6) ══════════════════════
 #: 🔴 > 0, and a HARNESS FAULT rather than a population property: `opening_digest`
 #: is part of the pair identity and the openings are distinct by construction, so

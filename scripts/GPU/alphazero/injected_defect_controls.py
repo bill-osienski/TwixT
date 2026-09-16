@@ -2949,6 +2949,56 @@ DEFECTS = [
      '    return "incumbent" if (odd == incumbent_moves_first) else "t1j"',
      '    return "incumbent"',
      f"{T_H3SRUN}::test_the_alternating_protocol_gives_each_engine_THREE_of_SIX_plies"),
+    # ── 2026-09-16: the GENERATION DEADLINE, preregistered separately, and the
+    # PARENT-OWNED LAUNCH RECEIPT. The worker's own `finally` cannot record an
+    # outcome decided after the parent has killed it.
+    ("the generation wrapper borrows the match segment's deadline", H3GCMD,
+     "                              timeout_s=(RUN.RULES.GENERATION_DEADLINE_S\n"
+     "                                         + SUPERVISOR_GRACE_S),",
+     "                              timeout_s=(RUN.RULES.SEGMENT_DEADLINE_S\n"
+     "                                         + SUPERVISOR_GRACE_S),",
+     f"{T_H3SRUN}::test_GENERATION_HAS_ITS_OWN_PREREGISTERED_DEADLINE"),
+    ("the outer cap no longer exceeds the worker's own deadline", H3GCMD,
+     '            "outer_cap_s": RUN.RULES.GENERATION_DEADLINE_S + SUPERVISOR_GRACE_S,',
+     '            "outer_cap_s": RUN.RULES.GENERATION_DEADLINE_S,',
+     f"{T_H3SRUN}::test_THE_RECEIPT_NAMES_THE_WHOLE_RANGE_AS_RETIRED"),
+    ("the deadline no longer accepts whole-range retirement", H3SR,
+     "#: 🔴 AND EXPIRY RETIRES THE WHOLE GENERATION RANGE.",
+     "#: 🔴 AND EXPIRY MEANS NOTHING IN PARTICULAR.",
+     f"{T_H3SRUN}::test_the_generation_deadline_RATIONALE_is_recorded_and_arithmetically_sound"),
+    ("no launch receipt is written at all", H3GCMD,
+     "        wrote = _write_receipt(RECEIPT, {",
+     "        wrote = True or _write_receipt(RECEIPT, {",
+     f"{T_H3SRUN}::test_THE_RECEIPT_EXISTS_EVEN_WHEN_THE_WORKER_WROTE_NO_TRACE"),
+    ("a refusal before spawning leaves no receipt", H3GCMD,
+     "        wrote = _write_receipt(RECEIPT, {",
+     "        wrote = (not sup) or _write_receipt(RECEIPT, {",
+     f"{T_H3SRUN}::test_a_REFUSAL_BEFORE_SPAWNING_still_leaves_a_receipt"),
+    ("the receipt records restore_gate's own answer, not the file", H3GCMD,
+     '            "gate_readback": _gate_readback(_runner_source),',
+     '            "gate_readback": str(restored),',
+     f"{T_H3SRUN}::test_THE_RECEIPT_READS_THE_GATE_BACK_FROM_THE_FILE"),
+    ("the launch receipt is not create-only", H3GCMD,
+     "        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)",
+     "        fd = os.open(path, os.O_WRONLY | os.O_CREAT, 0o644)",
+     f"{T_H3SRUN}::test_THE_RECEIPT_IS_CREATE_ONLY_and_a_SECOND_LAUNCH_is_refused"),
+    ("the receipt omits the retired range", H3GCMD,
+     '            "retires": list(RUN.RULES.generation_seed_range(\n'
+     "                RUN.RULES.GEN_SEED_CO_PRODUCED)),",
+     '            "retires": [],',
+     f"{T_H3SRUN}::test_THE_RECEIPT_NAMES_THE_WHOLE_RANGE_AS_RETIRED"),
+    ("the receipt is not part of the destination check", H3GCMD,
+     "    for p in (out, trace, RECEIPT):",
+     "    for p in (out, trace):",
+     f"{T_H3SRUN}::test_THE_RECEIPT_IS_CREATE_ONLY_and_a_SECOND_LAUNCH_is_refused"),
+    # 🔴 A TEST WROTE INTO THE RUN'S OWN DESTINATION. This control puts that back.
+    ("a wrapper test writes its receipt into the REAL destination", T_H3SRUN,
+     '    monkeypatch.setattr(GCMD, "RECEIPT", str(tmp_path / "receipt.json"))\n'
+     '    monkeypatch.setattr(GCMD, "gate_is_open", lambda: True)\n'
+     '    monkeypatch.setattr(GCMD, "supervise", lambda *a, **k: dict(r))',
+     '    monkeypatch.setattr(GCMD, "gate_is_open", lambda: True)\n'
+     '    monkeypatch.setattr(GCMD, "supervise", lambda *a, **k: dict(r))',
+     f"{T_H3SRUN}::test_NO_TEST_MAY_WRITE_INTO_THE_RUNS_OWN_DESTINATION"),
     # ── 2026-09-15: the SUPERVISED GENERATION LAUNCH PATH. Generation had none:
     # the public entry drove the production collaborators directly.
     ("the generation wrapper reports success without verifying the gate", H3GCMD,
