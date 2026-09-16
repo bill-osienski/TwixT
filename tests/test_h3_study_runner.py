@@ -727,3 +727,214 @@ def test_the_toolchain_identity_names_the_VERIFIED_jar_and_jdk():
     assert t["jar"].endswith(".jar") and t["jdk_home"]
     assert t["verified"], "verified_paths reports what it checked"
     assert t["t1j_mdPly"] == R.t1j_depth()
+
+
+# ═══════════ THE SUPERVISED GENERATION WRAPPER ═════════════════════════════
+# 🔴 Generation had NO launch path: the public entry drove the production
+# collaborators directly, with no outer deadline, no process group, nothing to
+# stop a surviving JVM and no unconditional gate restoration.
+
+from scripts.GPU.alphazero import h3_generation_command as GCMD
+
+
+def test_the_generation_wrapper_REFUSES_with_the_gate_shut_and_verifies_it(capsys):
+    assert GCMD.main([]) == GCMD.EXIT_UNAUTHORIZED
+    assert "NOT AUTHORIZED" in capsys.readouterr().err
+    assert GEN.H3_GENERATION_AUTHORIZED is False
+    assert GCMD.restore_gate() is True
+
+
+def test_the_generation_wrapper_has_NO_gate_or_source_override():
+    help_text = GCMD._parser().format_help()
+    for flag in ("--authorize", "--force", "--gate", "--runner-source"):
+        assert flag not in help_text, flag
+    assert "os.environ" not in open(GCMD.__file__, encoding="utf-8").read()
+
+
+def test_restore_gate_REWRITES_an_open_gate_and_VERIFIES_it(tmp_path):
+    src = tmp_path / "gen.py"
+    src.write_text("x = 1\nH3_GENERATION_AUTHORIZED = True\ny = 2\n")
+    assert GCMD.restore_gate(str(src)) is True
+    back = src.read_text()
+    assert "H3_GENERATION_AUTHORIZED = False" in back
+    assert "H3_GENERATION_AUTHORIZED = True" not in back
+
+
+def test_restore_gate_is_FALSE_when_it_cannot_verify(tmp_path):
+    missing = tmp_path / "nope.py"
+    assert GCMD.restore_gate(str(missing)) is False
+    two = tmp_path / "two.py"
+    two.write_text("H3_GENERATION_AUTHORIZED = True\nH3_GENERATION_AUTHORIZED = True\n")
+    assert GCMD.restore_gate(str(two)) is False
+
+
+def test_a_FAILED_RESTORATION_becomes_the_wrappers_OWN_exit_code(monkeypatch, capsys):
+    """🔑 IT SUPERSEDES EVERY OTHER CODE, including a refusal: an open gate is the
+    larger fact."""
+    monkeypatch.setattr(GCMD, "restore_gate", lambda *a, **k: False)
+    assert GCMD.main([]) == GCMD.EXIT_GATE_NOT_RESTORED
+    assert "BY HAND" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("r,want", [
+    ({"timed_out": False, "interrupted": False, "group_cleared": True,
+      "exit_code": 0}, 0),
+    ({"timed_out": True, "interrupted": False, "group_cleared": True,
+      "exit_code": 6}, 6),
+    ({"timed_out": False, "interrupted": True, "group_cleared": True,
+      "exit_code": 9}, 9),
+    # 🔴 A SURVIVING DESCENDANT OUTRANKS EVERYTHING, even exit 0
+    ({"timed_out": False, "interrupted": False, "group_cleared": False,
+      "exit_code": 0}, 8),
+    ({"timed_out": True, "interrupted": False, "group_cleared": False,
+      "exit_code": 6}, 8),
+])
+def test_every_supervisor_outcome_gets_ITS_OWN_exit_code(monkeypatch, tmp_path,
+                                                         r, want):
+    monkeypatch.setattr(GCMD, "gate_is_open", lambda: True)
+    monkeypatch.setattr(GCMD, "supervise", lambda *a, **k: dict(r))
+    monkeypatch.setattr(GCMD, "restore_gate", lambda *a, **k: True)
+    code = GCMD.main(["--out", str(tmp_path / "o.json"),
+                      "--trace", str(tmp_path / "t.jsonl")])
+    assert code == want
+
+
+def test_the_wrapper_REFUSES_BEFORE_SPAWNING_when_the_destination_exists(
+        monkeypatch, tmp_path):
+    spawned = []
+    monkeypatch.setattr(GCMD, "gate_is_open", lambda: True)
+    monkeypatch.setattr(GCMD, "supervise",
+                        lambda *a, **k: spawned.append(1) or {
+                            "timed_out": False, "interrupted": False,
+                            "group_cleared": True, "exit_code": 0})
+    monkeypatch.setattr(GCMD, "restore_gate", lambda *a, **k: True)
+    (tmp_path / "o.json").write_text("{}")
+    code = GCMD.main(["--out", str(tmp_path / "o.json"),
+                      "--trace", str(tmp_path / "t.jsonl")])
+    assert code == GCMD.EXIT_REFUSED
+    assert spawned == [], "nothing may be spawned once the destination is taken"
+
+
+def test_the_destination_INSIDE_A_SPENT_DIRECTORY_is_refused(monkeypatch):
+    monkeypatch.setattr(GCMD, "gate_is_open", lambda: True)
+    monkeypatch.setattr(GCMD, "restore_gate", lambda *a, **k: True)
+    spent = GCMD.SPENT_OUT_DIRS[0]
+    with pytest.raises(GEN.H3GenerationError, match="SPENT"):
+        GCMD._check_destination(f"{spent}/o.json", f"{spent}/t.jsonl")
+
+
+def test_THE_WORKER_REFUSES_without_the_supervisors_CAPABILITY(capsys):
+    assert GCMD.worker_main(["--worker"]) == GCMD.EXIT_REFUSED
+    assert "UNSUPERVISED" in capsys.readouterr().err
+
+
+def test_the_capability_is_a_PIPE_and_DELETES_NOTHING(tmp_path):
+    fd = GCMD._make_capability()
+    assert GCMD._consume_capability(fd) is True
+    assert GCMD._consume_capability(None) is False
+    victim = tmp_path / "precious.txt"
+    victim.write_text("x" * (GCMD.CAPABILITY_BYTES * 2))
+    assert GCMD._consume_capability(str(victim)) is False
+    assert victim.exists(), "the capability check must never delete a file"
+
+
+# ── the generator's own terminal semantics, driven with INERT collaborators
+
+def _gen_paths(tmp_path):
+    return str(tmp_path / "o.json"), str(tmp_path / "t.jsonl")
+
+
+def _trace(path):
+    import json
+    return [json.loads(l) for l in open(path)]
+
+
+def test_CLEANUP_RUNS_EVEN_WHEN_THE_WALK_RAISES(tmp_path):
+    """🔴 It used to run only after an ACCEPTED opening, so a raise anywhere --
+    agent construction, a move, validation, Ctrl-C -- skipped it and could leave
+    production collaborators alive."""
+    cleanups = []
+    movers = _inert_movers()
+    movers["incumbent_agent"] = lambda *, seed, colour: (_ for _ in ()).throw(
+        RuntimeError("agent construction failed"))
+    out, trace = _gen_paths(tmp_path)
+    with pytest.raises(RuntimeError, match="agent construction"):
+        GEN._generate_unguarded(movers=movers, out_path=out, trace_path=trace,
+                                cleanup=lambda: cleanups.append(1), n=2)
+    assert cleanups == [1], "the finally tore down exactly once"
+    end = _trace(trace)[-1]
+    assert end["event"] == "generation_end" and end["verdict"] == "VOID"
+    assert "agent construction failed" in end["failure"]
+
+
+def test_AN_INTERRUPT_IS_A_TERMINAL_STATUS_and_still_cleans_up(tmp_path):
+    cleanups = []
+    movers = _inert_movers()
+    movers["incumbent_agent"] = lambda *, seed, colour: (_ for _ in ()).throw(
+        KeyboardInterrupt())
+    out, trace = _gen_paths(tmp_path)
+    with pytest.raises(KeyboardInterrupt):
+        GEN._generate_unguarded(movers=movers, out_path=out, trace_path=trace,
+                                cleanup=lambda: cleanups.append(1), n=2)
+    assert cleanups == [1]
+    end = _trace(trace)[-1]
+    assert end["verdict"] == "INTERRUPTED"
+
+
+def test_A_CLEANUP_FAILURE_IS_ITS_OWN_TERMINAL_OUTCOME(tmp_path):
+    """Even when the body SUCCEEDED: a population made and a JVM left alive is
+    not a success."""
+    def boom():
+        raise OSError("the JVM would not die")
+    out, trace = _gen_paths(tmp_path)
+    with pytest.raises(GEN.H3GenerationCleanupError, match="would not die"):
+        GEN._generate_unguarded(movers=_inert_movers(), out_path=out,
+                                trace_path=trace, cleanup=boom, n=2)
+    end = _trace(trace)[-1]
+    assert end["verdict"] == "CLEANUP_FAILED" and end["cleanup_ok"] is False
+
+
+def test_A_DEADLINE_CAPS_THE_WHOLE_LOOP_and_writes_NO_artifact(tmp_path):
+    """🔴 The only deadline used to be the COMPILE's, which said nothing about a
+    generation that walks for ever. And a partial population is not a population:
+    the artifact is not written at all."""
+    import os as _os
+
+    class _Expired:
+        started = True
+
+        def start(self):
+            pass
+
+        def elapsed(self):
+            return 1e9
+
+    out, trace = _gen_paths(tmp_path)
+    with pytest.raises(GEN.H3GenerationError, match="deadline"):
+        GEN._generate_unguarded(movers=_inert_movers(), out_path=out,
+                                trace_path=trace, cleanup=lambda: None,
+                                deadline=_Expired(), deadline_s=1.0, n=3)
+    assert not _os.path.lexists(out), "no partial population is ever written"
+    end = _trace(trace)[-1]
+    assert end["verdict"] == "TIMEOUT" and end["timed_out"] is True
+
+
+def test_EVERY_TERMINAL_RECORD_NAMES_THE_WHOLE_RANGE_AS_RETIRED(tmp_path):
+    """🔴 Attempts consume generation seeds whether or not the opening was
+    accepted, so there is no partial retirement to argue about."""
+    out, trace = _gen_paths(tmp_path)
+    GEN._generate_unguarded(movers=_inert_movers(), out_path=out,
+                            trace_path=trace, cleanup=lambda: None, n=2)
+    end = _trace(trace)[-1]
+    assert end["verdict"] == "OK"
+    assert end["retires"] == list(R.generation_seed_range(R.GEN_SEED_CO_PRODUCED))
+    assert "WHOLE RANGE" in end["retirement_rule"]
+    # and on a failure path too
+    out2, trace2 = str(tmp_path / "o2.json"), str(tmp_path / "t2.jsonl")
+    movers = _inert_movers()
+    movers["incumbent_agent"] = lambda *, seed, colour: (_ for _ in ()).throw(
+        RuntimeError("x"))
+    with pytest.raises(RuntimeError):
+        GEN._generate_unguarded(movers=movers, out_path=out2, trace_path=trace2,
+                                cleanup=lambda: None, n=1)
+    assert _trace(trace2)[-1]["retires"] == end["retires"]

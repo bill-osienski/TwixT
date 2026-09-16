@@ -77,6 +77,7 @@ T_H3SA = "tests/test_h3_study_analysis.py"
 T_H3SRUN = "tests/test_h3_study_runner.py"
 H3SCMD = "scripts/GPU/alphazero/h3_study_command.py"
 H3SPF = "scripts/GPU/alphazero/h3_generation_preflight.py"
+H3GCMD = "scripts/GPU/alphazero/h3_generation_command.py"
 
 # (label, file, anchor, replacement, test node)
 DEFECTS = [
@@ -2948,6 +2949,68 @@ DEFECTS = [
      '    return "incumbent" if (odd == incumbent_moves_first) else "t1j"',
      '    return "incumbent"',
      f"{T_H3SRUN}::test_the_alternating_protocol_gives_each_engine_THREE_of_SIX_plies"),
+    # ── 2026-09-15: the SUPERVISED GENERATION LAUNCH PATH. Generation had none:
+    # the public entry drove the production collaborators directly.
+    ("the generation wrapper reports success without verifying the gate", H3GCMD,
+     "        if not restore_gate(_runner_source):\n"
+     "            print(\"🔴 THE GATE COULD NOT BE VERIFIED CLOSED. Restore it BY HAND.\",\n"
+     "                  file=sys.stderr)\n"
+     "            return EXIT_GATE_NOT_RESTORED",
+     "        pass",
+     f"{T_H3SRUN}::test_the_generation_wrapper_REFUSES_with_the_gate_shut_and_verifies_it"),
+    ("a failed gate restoration does not become the wrapper's exit code", H3GCMD,
+     "        if not restore_gate(_runner_source):\n"
+     "            print(f\"GATE NOT RESTORED: {_runner_source} could not be rewritten to \"",
+     "        if False:\n"
+     "            print(f\"GATE NOT RESTORED: {_runner_source} could not be rewritten to \"",
+     f"{T_H3SRUN}::test_a_FAILED_RESTORATION_becomes_the_wrappers_OWN_exit_code"),
+    ("a surviving descendant of the generator is reported as success", H3GCMD,
+     '            if not r["group_cleared"]:',
+     "            if False:",
+     f"{T_H3SRUN}::test_every_supervisor_outcome_gets_ITS_OWN_exit_code"),
+    ("the generation wrapper spawns before checking the destination", H3GCMD,
+     "            _check_destination(*_resolve_paths(a))",
+     "            pass",
+     f"{T_H3SRUN}::test_the_wrapper_REFUSES_BEFORE_SPAWNING_when_the_destination_exists"),
+    ("the generation worker runs without the supervisor's capability", H3GCMD,
+     "    if not _consume_capability(a.capability_fd):",
+     "    if False:",
+     f"{T_H3SRUN}::test_THE_WORKER_REFUSES_without_the_supervisors_CAPABILITY"),
+    ("the generation destination may sit in a SPENT directory", H3GCMD,
+     "            if p.startswith(spent.rstrip(\"/\") + \"/\"):",
+     "            if False:",
+     f"{T_H3SRUN}::test_the_destination_INSIDE_A_SPENT_DIRECTORY_is_refused"),
+    # ── the generator's terminal semantics
+    ("generation teardown runs only on the happy path again", H3SGEN,
+     "            cleanup_ok = True\n            cleanup_error = None\n"
+     "            if cleanup is not None:",
+     "            cleanup_ok = True\n            cleanup_error = None\n"
+     "            if False:",
+     f"{T_H3SRUN}::test_CLEANUP_RUNS_EVEN_WHEN_THE_WALK_RAISES"),
+    ("a failed teardown is a footnote rather than the verdict", H3SGEN,
+     '            if not cleanup_ok:\n                verdict = "CLEANUP_FAILED"',
+     '            if False:\n                verdict = "CLEANUP_FAILED"',
+     f"{T_H3SRUN}::test_A_CLEANUP_FAILURE_IS_ITS_OWN_TERMINAL_OUTCOME"),
+    ("the generation loop is not capped by a deadline", H3SGEN,
+     "                if deadline is not None and deadline.elapsed() > deadline_s:",
+     "                if False:",
+     f"{T_H3SRUN}::test_A_DEADLINE_CAPS_THE_WHOLE_LOOP_and_writes_NO_artifact"),
+    ("a PARTIAL population is written as the study's set", H3SGEN,
+     '            if timed_out:\n'
+     '                # 🔑 A PARTIAL POPULATION IS NOT A POPULATION.',
+     '            if False:\n'
+     '                # 🔑 A PARTIAL POPULATION IS NOT A POPULATION.',
+     f"{T_H3SRUN}::test_A_DEADLINE_CAPS_THE_WHOLE_LOOP_and_writes_NO_artifact"),
+    ("the terminal record does not name the retired range", H3SGEN,
+     '                  "retires": list(RULES.generation_seed_range(\n'
+     "                      RULES.GEN_SEED_CO_PRODUCED)),",
+     '                  "retires": [],',
+     f"{T_H3SRUN}::test_EVERY_TERMINAL_RECORD_NAMES_THE_WHOLE_RANGE_AS_RETIRED"),
+    ("an interrupt is recorded as an ordinary VOID", H3SGEN,
+     '            verdict = ("INTERRUPTED" if isinstance(e, KeyboardInterrupt)\n'
+     '                       else "VOID")',
+     '            verdict = "VOID"',
+     f"{T_H3SRUN}::test_AN_INTERRUPT_IS_A_TERMINAL_STATUS_and_still_cleans_up"),
     # ── 2026-09-15: PREPARATION for the opening-generation run.
     ("the opening-set pin is invented before the artifact exists", H3SR,
      "OPENING_SET_DIGEST: Optional[str] = None",
