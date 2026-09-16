@@ -4711,6 +4711,28 @@ EXPECTED_REASONS = {
         'AssertionError: ((20261000000, 20261059200), (20261000500, 20261059700))',
     'the generator carries a tree across openings':
         'AssertionError: expected 3 BETWEEN openings + 1 final teardown, got [1]',
+    # ── 2026-09-16: the preregistered GENERATION deadline and the
+    # PARENT-OWNED LAUNCH RECEIPT. Every reason observed, never predicted.
+    'a refusal before spawning leaves no receipt':
+        "TypeError: 'NoneType' object is not subscriptable",
+    'a wrapper test writes its receipt into the REAL destination':
+        "AssertionError: ['test_every_supervisor_outcome_gets_ITS_OWN_exit_code']",
+    'no launch receipt is written at all':
+        'assert None is not None',
+    'the deadline no longer accepts whole-range retirement':
+        'assert \'RETIRES THE WHOLE GENERATION RANGE\' in "═══ bounds (card §5) ══════════════════════════════════\\n#: CHOSEN, from the pilot\'s measured mean of 41.22 s/game: 1...ith its own\\n#: collision re-proof. That cost is accepted in advance, here, rather',
+    "the generation wrapper borrows the match segment's deadline":
+        "AssertionError: the generation wrapper must not borrow the match segment's cap",
+    'the launch receipt is not create-only':
+        "AssertionError: the earlier launch's receipt was OVERWRITTEN",
+    "the outer cap no longer exceeds the worker's own deadline":
+        "AssertionError: the OUTER cap must exceed the worker's own deadline, or the supervisor kills a worker that was about to stop cleanly",
+    'the receipt is not part of the destination check':
+        'assert 4 == 7',
+    'the receipt omits the retired range':
+        'assert [] == [20261200000, 20261259200]',
+    "the receipt records restore_gate's own answer, not the file":
+        "AssertionError: assert 'True' == 'False'",
     # ── 2026-09-15: the SUPERVISED GENERATION LAUNCH PATH and the
     # generator's terminal semantics. Every reason observed, never predicted.
     "a PARTIAL population is written as the study's set":
