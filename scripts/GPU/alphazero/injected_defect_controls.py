@@ -4709,6 +4709,10 @@ EXPECTED_REASONS = {
         'AssertionError: ((20261000000, 20261059200), (20261000500, 20261059700))',
     'the generator carries a tree across openings':
         'AssertionError: expected 3 BETWEEN openings + 1 final teardown, got [1]',
+    "a failed gate restoration does not become the wrapper's exit code":
+        "AssertionError: a failed restoration SUPERSEDES the worker's own exit 0",
+    'the generation wrapper spawns before checking the destination':
+        'assert 0 == 7',
     # ── 2026-09-16: the preregistered GENERATION deadline and the
     # PARENT-OWNED LAUNCH RECEIPT. Every reason observed, never predicted.
     'a refusal before spawning leaves no receipt':
