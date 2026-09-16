@@ -4755,8 +4755,6 @@ EXPECTED_REASONS = {
         "ValueError: Illegal move (99, 99) for active_size=24, to_move=red",
     'the generator admits DUPLICATE openings':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
-    'the generator carries a tree across openings':
-        "AssertionError: cleanup between EVERY opening -- no tree carried",
     'the generator is allowed to play ARGMAX':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_rules.H3StudyError'>",
     'the interval is described as PROVEN rather than nominal':

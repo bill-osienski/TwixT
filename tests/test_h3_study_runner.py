@@ -610,7 +610,8 @@ def test_the_walk_PINS_ITS_ARTIFACT_and_names_what_the_stratum_IS(tmp_path):
     # 3 between openings (no tree carried across one) + 1 unconditional teardown
     # in the `finally`. Two cleanups for two different reasons; dropping either is
     # its own defect, and each has its own control.
-    assert len(cleanups) == 4, cleanups
+    assert len(cleanups) == 4, (
+        f"expected 3 BETWEEN openings + 1 final teardown, got {cleanups}")
     trace = [json.loads(l) for l in open(tmp_path / "t.jsonl")]
     assert trace[0]["event"] == "generation_start"
     assert trace[-1]["event"] == "generation_end"
