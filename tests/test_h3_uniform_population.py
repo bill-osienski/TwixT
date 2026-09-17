@@ -708,6 +708,7 @@ def RULES_set_digest(doc):
     (lambda d: d["openings"][4].__setitem__("seed", 20_261_600_000), "disagree"),
     (lambda d: d["openings"][4].__setitem__("attempts", 2), "disagree"),
     (lambda d: d.__setitem__("extra", 1), "unknown keys"),
+    (lambda d: d["openings"][4].__setitem__("note", "x"), "unknown keys"),
     (lambda d: d["generator"].__setitem__("bit_generator", "MT19937"), "disagrees"),
     (lambda d: d["generator"].__setitem__("gen_seed_base", 1), "disagrees"),
     (lambda d: d["generator"]["source_pins"].__setitem__(
@@ -804,3 +805,54 @@ def test_THE_COMMIT_IS_RECORDED_BUT_NOT_ENFORCED():
     assert "commit" not in GEN.IDENTITY_MUST_MATCH
     assert "source_pins" in GEN.IDENTITY_MUST_MATCH
     assert "commit" in GEN.generator_identity()
+
+
+def test_A_SUBSTITUTED_OPENING_IS_CAUGHT_ONLY_BY_THE_WALK():
+    """🔴 THE CASE THE PRNG RE-DERIVATION EXISTS FOR, and the only one that
+    reaches it.
+
+    Put opening 7's moves AND its digest into opening 4's row, leaving index,
+    segment, seed and attempts alone, then re-hash the set. Every earlier check
+    passes: the moves replay to the digest recorded beside them, and the seed
+    still matches its own attempt count. Only re-running the walk from that seed
+    shows the row now holds a position the generator did not produce there.
+
+    The control harness found this gap: injecting `if False` over the walk check
+    changed nothing, because no test reached it.
+    """
+    import copy
+    doc = copy.deepcopy(GEN.artifact_document(GEN.build_population()))
+    donor = copy.deepcopy(doc["openings"][7])
+    doc["openings"][4]["moves"] = donor["moves"]
+    doc["openings"][4]["digest"] = donor["digest"]
+    doc["opening_set_digest"] = R.opening_set_digest(doc["openings"])
+
+    # every earlier check is satisfied -- shown, not assumed
+    st = R._replay([tuple(m) for m in doc["openings"][4]["moves"]])
+    from scripts.GPU.alphazero import d1_selection as SEL
+    assert SEL.canonical_digest(st) == doc["openings"][4]["digest"]
+    assert doc["openings"][4]["seed"] == R.attempt_seed(
+        R.GEN_SEED_UNIFORM, 4, doc["openings"][4]["attempts"] - 1)
+
+    with pytest.raises(GEN.H3GenerationError,
+                       match="does NOT produce the recorded moves"):
+        GEN.validate_artifact(doc)
+
+
+def test_A_LYING_RESTORATION_IS_CAUGHT_BY_THE_READBACK(monkeypatch, tmp_path):
+    """🔴 `restore_barrier` RETURNING TRUE IS NOT EVIDENCE THE FILE CLOSED.
+
+    The other restoration test forces `restore_barrier` False, so `not restored`
+    fires first and the READBACK is never consulted -- injecting a constant
+    "False" readback changed nothing. Here the rewrite claims success while the
+    file still says True, which is the case the readback exists for.
+    """
+    src = tmp_path / "gen.py"
+    src.write_text("H3_POPULATION_FREEZE_AUTHORIZED = True\n", encoding="utf-8")
+    monkeypatch.setattr(FCMD, "GENERATOR_SOURCE", str(src))
+    monkeypatch.setattr(FCMD, "barrier_is_open", lambda: True)
+    monkeypatch.setattr(FCMD, "restore_barrier", lambda *a, **k: True)   # lies
+    monkeypatch.setattr(GEN, "freeze_population",
+                        lambda: {"n": 296, "opening_set_digest": "d" * 64})
+    assert FCMD.main(["--run"]) == FCMD.EXIT_BARRIER_NOT_RESTORED
+    assert FCMD.barrier_readback(str(src)) == "True", "the file really is open"

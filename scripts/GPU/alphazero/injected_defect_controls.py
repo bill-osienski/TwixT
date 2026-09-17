@@ -101,7 +101,7 @@ DEFECTS = [
     ("restoration is trusted instead of verified from the file",
      H3FCMD, "        readback = barrier_readback(GENERATOR_SOURCE)",
      '        readback = "False"',
-     f"{T_H3POP}::test_A_FAILED_RESTORATION_SUPERSEDES_EVEN_A_SUCCESSFUL_FREEZE"),
+     f"{T_H3POP}::test_A_LYING_RESTORATION_IS_CAUGHT_BY_THE_READBACK"),
     ("a failed restoration no longer supersedes the freeze",
      H3FCMD, "        if not restored or readback != \"False\":",
      "        if False:",
@@ -164,7 +164,7 @@ DEFECTS = [
     ("the walk need not reproduce the recorded moves",
      H3SGEN, "            if [tuple(m) for m in derived_moves] != moves:",
      "            if False:",
-     f"{T_H3POP}::test_THE_BOUND_VALIDATOR_REFUSES"),
+     f"{T_H3POP}::test_A_SUBSTITUTED_OPENING_IS_CAUGHT_ONLY_BY_THE_WALK"),
     ("provenance binding is off by default",
      H3SGEN, "                      bind_provenance: bool = True) -> Dict[str, Any]:",
      "                      bind_provenance: bool = False) -> Dict[str, Any]:",
@@ -3492,6 +3492,57 @@ DEFECTS = [
 # DERIVED from the requirement and its assertion and then verified against a run,
 # which is why each names a count or a sentence rather than a first line.
 EXPECTED_REASONS = {
+    # ── the three P1 repairs (2026-09-17 review). Reasons OBSERVED by the
+    # ── harness, never guessed.
+    'freeze_population takes a caller-supplied destination again':
+        "AssertionError: <Signature (out_path='docs/superpowers/evidence/2026-09-17-t1j-h3-study-openings-uniform/01_opening_set.json', trace_path='docs/superpowers/evidence/2026-09-17-t1j-h3-study-openings-uniform/02_generation_trace.jsonl') -> 'Dict[str, Any]'>",
+    'the freeze command does not restore the barrier':
+        'AssertionError: None',
+    'a failed restoration no longer supersedes the freeze':
+        'AssertionError: assert 0 == 9',
+    'the freeze command runs without --run':
+        'assert 5 == 2',
+    'the freeze command ignores the barrier':
+        'AssertionError: assert 8 == 5',
+    'restore_barrier reports success on an unreadable source':
+        'AssertionError: assert True is False',
+    'the deadline is not checked inside the candidate loop':
+        'scripts.GPU.alphazero.h3_study_generator.H3GenerationDeadline: the 0s runaway guard expired after 0.6s at opening 296, attempt 0 (296 accepted) of an ENGINE-FREE generation. This is a DEFECT REPORT, not a capacity result: the whole population builds in under a second.',
+    'build_population swallows the deadline hook':
+        'assert 0 == 296',
+    'the runaway guard is reported as an ordinary VOID':
+        'AssertionError: a timeout must not be reported as VOID',
+    'the clock goes back to wall time':
+        "AssertionError: assert 'time.time' not in {'fh.fileno', 'fh.flush', 'json.dump', 'json.dumps', 'o.get', 'os.fdopen', ...}",
+    'the artifact is not fsynced before OK is recorded':
+        'ValueError: substring not found',
+    'write_artifact accepts both a builder and a set':
+        "TypeError: 'NoneType' object is not callable",
+    "the validator trusts each row's declared digest":
+        'scripts.GPU.alphazero.h3_study_generator.H3GenerationError: opening 5: re-running the PRNG walk from seed 20261602000 does NOT produce the recorded moves. The population cannot be re-derived from its own provenance.',
+    'the moves are never replayed through the engine':
+        'scripts.GPU.alphazero.h3_study_generator.H3GenerationError: opening 0: replaying its moves gives canonical digest c1ea6b8891e06135c7905d64d8f56d761355c85971706f392ca86e35e4e3c5ee but the record claims fbb90a54ca869ae357cef316cb535256baae665c6d8b4c6cdc9471a7859a027f. The moves have been changed and the digest left behind -- which is invisible to any check that only re-hashes the declared digests.',
+    'a coordinate may be a bool or a float':
+        'scripts.GPU.alphazero.h3_study_generator.H3GenerationError: opening 4: its moves are NOT LEGAL on a real board (ValueError: Illegal move (True, 1) for active_size=24, to_move=black)',
+    'the declared index need not be the study order':
+        'scripts.GPU.alphazero.h3_study_generator.H3GenerationError: opening 0 records seed 20261600400 but attempt_seed(20261600000, 0, 0) is 20261600000; the seed and the attempt count disagree',
+    'the segment need not match the frozen plan':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
+    'the seed need not match its own attempt count':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
+    'provenance binding is off by default':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
+    'the artifact schema admits unknown keys':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
+    'the generator identity is not compared with the running code':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
+    "the walk's source pins are dropped from the identity":
+        "AssertionError: assert 'source_pins' in ('kind', 'engine_free', 'gen_seed_base', 'seed_range', 'max_attempts', 'opening_plies', ...)",
+    'the loader does not validate the artifact at all':
+        'assert \'GEN.validate_artifact(doc)\' in \'def load_opening_set(path: str) -> List[Dict[str, Any]]:\\n    """The FROZEN population, VALIDATED AND BOUND, from the...tudy is pinned to {pinned}. A different population is a different "\\n            f"study.")\\n    return openings\\n\\n\\n\'',
+    'the loader accepts any self-consistent population':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_runner.H3StudyRunError'>",
+
     # ── AMENDMENT 3: the uniform-only population. Reasons OBSERVED by the
     # ── harness on 2026-09-17, never guessed.
     'the 148-opening uniform range becomes reusable':
