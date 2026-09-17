@@ -19,6 +19,8 @@ import pathlib
 
 import pytest
 
+from scripts.GPU.alphazero import gate_inventory as INVENTORY
+
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "scripts"
 
@@ -43,33 +45,16 @@ EXPECTED_GATES = {
 }
 
 
-def discover_gates():
-    """Every MODULE-LEVEL assignment of a bool to a name containing AUTHORIZED.
-
-    Module level only: a local variable named `..._AUTHORIZED` inside a function
-    is not a gate, and counting one would make the total meaningless. Bool only:
-    `EXIT_UNAUTHORIZED = 5` is an exit code, not an authorization.
-    """
-    out = {}
-    for path in sorted(SCRIPTS.rglob("*.py")):
-        try:
-            tree = ast.parse(path.read_text(encoding="utf-8"))
-        except SyntaxError:                      # not ours to police here
-            continue
-        for node in tree.body:
-            if not isinstance(node, ast.Assign):
-                continue
-            if not (isinstance(node.value, ast.Constant)
-                    and isinstance(node.value.value, bool)):
-                continue
-            for target in node.targets:
-                if isinstance(target, ast.Name) and "AUTHORIZED" in target.id:
-                    out[(path.name, target.id)] = (node.value.value, path, node.lineno)
-    return out
+#: 🔴 IMPORTED, NEVER REIMPLEMENTED. This file used to carry its OWN copy of the
+#: discovery walk. Two injected-defect controls -- blanking the AUTHORIZED match,
+#: and scanning only the first statement of each module -- were NOT CAUGHT,
+#: because breaking `gate_inventory` could not affect a test that never called
+#: it. A test that reimplements its subject tests the copy.
+discover_gates = INVENTORY.discover_gates
 
 
 def test_THE_GATE_INVENTORY_IS_EXACTLY_WHAT_THE_SOURCE_CONTAINS():
-    found = {k[0]: k[1] for k in discover_gates()}
+    found = {f"{stem}.py": name for stem, name in discover_gates()}
     assert found == EXPECTED_GATES, (
         "the source and the declared inventory disagree; a gate was added or "
         "removed without updating EXPECTED_GATES\n"
@@ -78,18 +63,17 @@ def test_THE_GATE_INVENTORY_IS_EXACTLY_WHAT_THE_SOURCE_CONTAINS():
 
 
 def test_THE_COUNT_IS_TEN_AND_ANY_REPORT_SAYING_OTHERWISE_IS_WRONG():
-    assert len(discover_gates()) == 10 == len(EXPECTED_GATES)
+    assert INVENTORY.gate_count() == len(discover_gates()) == 10 == len(EXPECTED_GATES)
 
 
 def test_EVERY_GATE_IN_THE_INVENTORY_IS_CLOSED():
-    open_gates = [(name, path, ln) for (fn, name), (val, path, ln)
-                  in discover_gates().items() if val is not False]
-    assert not open_gates, f"OPEN GATES IN THE SOURCE: {open_gates}"
+    assert INVENTORY.open_gates() == [], (
+        f"OPEN GATES IN THE SOURCE: {INVENTORY.open_gates()}")
 
 
 def test_A_RETIRED_GATE_STILL_COUNTS():
     """The two that were missed, named so their absence cannot recur silently."""
-    found = {k[1] for k in discover_gates()}
+    found = {name for _stem, name in discover_gates()}
     assert "LOWPLY_QUALIFICATION_AUTHORIZED" in found
     assert "RUNTIME_REQUAL_AUTHORIZED" in found
 

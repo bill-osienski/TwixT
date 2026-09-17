@@ -422,3 +422,62 @@ def test_NOTHING_IS_PINNED_RESERVED_OR_OPEN():
     assert GEN.H3_POPULATION_FREEZE_AUTHORIZED is False
     with pytest.raises(R.H3StudyError, match="not FROZEN yet"):
         R.expected_opening_set_digest()
+
+
+# ═══════ gaps the injected-defect harness found in THESE tests ═════════════
+# 🔴 Four controls were NOT CAUGHT on the first harness pass. Each injected a
+# real defect that the tests above could not see, because each test exercised a
+# path that routed around the guard it was meant to bind. The tests below close
+# those four, and the reason is recorded next to each.
+
+def test_THE_GENERATORS_DEFAULT_POPULATION_SIZE_IS_296():
+    """NOT CAUGHT: `n: int = N_PAIRS` -> `n: int = 148`.
+
+    Every test above called `build_population()`, which passes `n` EXPLICITLY, so
+    the DEFAULT was never exercised and could be changed freely. A default nobody
+    calls is a switch-off waiting to happen.
+    """
+    import inspect
+    sig = inspect.signature(R.generate_uniform_openings)
+    assert sig.parameters["n"].default == R.N_PAIRS == 296
+    assert sig.parameters["seed"].default == R.GEN_SEED_UNIFORM
+    assert len(R.generate_uniform_openings()) == 296      # the default, called
+
+
+def test_assemble_opening_set_REFUSES_A_SHORT_POPULATION():
+    """NOT CAUGHT: `if len(uniform) != N_PAIRS:` -> `if False:`.
+
+    Nothing above ever handed it a short set, so removing the guard changed no
+    observable behaviour. A guard no test feeds is a guard no test binds.
+    """
+    ops = GEN.build_population()
+    with pytest.raises(R.H3StudyError, match="expected 296"):
+        R.assemble_opening_set(ops[:148])
+    with pytest.raises(R.H3StudyError, match="expected 296"):
+        R.assemble_opening_set(ops + ops[:1])
+    assert len(R.assemble_opening_set(ops)) == 296        # positive control
+
+
+def test_check_opening_set_REFUSES_A_STALE_ORDER_FIELD():
+    """NOT CAUGHT: the control injected into `check_opening_set`, but the test it
+    named exercised `validate_artifact` -- a different function with its own copy
+    of the rule. Two guards, one test, and the control found the gap."""
+    ops = [dict(o) for o in GEN.build_population()]
+    ops[7]["order"] = "incumbent_first"
+    with pytest.raises(R.H3StudyError, match="order"):
+        R.check_opening_set(ops)
+
+
+def test_THE_FREEZE_BARRIER_REFUSES_A_TRUTHY_NON_TRUE_VALUE(monkeypatch):
+    """NOT CAUGHT: `is not True` -> `not`.
+
+    The tests above only ever saw `False`, which is falsy under both spellings.
+    The difference appears for a truthy non-True value -- `1`, `"yes"`, a stray
+    object -- and `is not True` is the spelling that refuses them.
+    """
+    for truthy in (1, "True", "yes", [1], object()):
+        monkeypatch.setattr(GEN, "H3_POPULATION_FREEZE_AUTHORIZED", truthy)
+        with pytest.raises(GEN.H3GenerationError, match="NOT AUTHORIZED"):
+            GEN.check_freeze_barrier()
+    monkeypatch.setattr(GEN, "H3_POPULATION_FREEZE_AUTHORIZED", True)
+    GEN.check_freeze_barrier()                             # positive control
