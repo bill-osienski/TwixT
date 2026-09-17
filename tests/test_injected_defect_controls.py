@@ -619,3 +619,26 @@ def test_EVERY_CONTROLS_TARGET_TEST_EXISTS():
             if f"def {t}(" not in pathlib.Path(f).read_text():
                 missing.append((label, node))
     assert missing == [], missing
+
+
+def test_NO_DECLARED_REASON_NAMES_A_SPENT_GENERATION_RANGE():
+    """🔴 TWO REASONS WENT INDETERMINATE because they quoted the co-produced
+    range's numbers, and the range MOVED when attempt 1 was retired.
+
+    A reason is compared as TEXT, so any literal it quotes is a hostage to the
+    constant behind it. The generation range is the one constant that moves every
+    time an attempt is spent, and it will move again on the next retirement, so
+    this checks the whole reason table against every spent range rather than
+    waiting twenty minutes for the harness to say so.
+    """
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_idc_spent", DEFS)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    from scripts.GPU.alphazero import h3_study_rules as R
+    stale = []
+    for label, reason in mod.EXPECTED_REASONS.items():
+        for lo, hi in R.SPENT_GENERATION_RANGES:
+            if str(lo) in str(reason) or str(hi) in str(reason):
+                stale.append((label, f"{lo}..{hi}"))
+    assert stale == [], stale

@@ -4778,7 +4778,7 @@ EXPECTED_REASONS = {
     'the receipt is not part of the destination check':
         'assert 4 == 7',
     'the receipt omits the retired range':
-        'assert [] == [20261200000, 20261259200]',
+        'assert [] == [20261400000, 20261459200]',
     "the receipt records restore_gate's own answer, not the file":
         "AssertionError: assert 'True' == 'False'",
     # ── 2026-09-15: the SUPERVISED GENERATION LAUNCH PATH and the
@@ -4802,7 +4802,7 @@ EXPECTED_REASONS = {
     'the generation wrapper reports success without verifying the gate':
         'assert 5 == 10',
     'the terminal record does not name the retired range':
-        'assert [] == [20261200000, 20261259200]',
+        'assert [] == [20261400000, 20261459200]',
     # ── 2026-09-15: PREPARATION for the opening-generation run.
     # Every reason observed in a throwaway worktree, never predicted.
     'a STUB opening may be written into the artifact':
