@@ -3386,6 +3386,69 @@ DEFECTS = [
 # DERIVED from the requirement and its assertion and then verified against a run,
 # which is why each names a count or a sentence rather than a first line.
 EXPECTED_REASONS = {
+    # ── AMENDMENT 3: the uniform-only population. Reasons OBSERVED by the
+    # ── harness on 2026-09-17, never guessed.
+    'the 148-opening uniform range becomes reusable':
+        'assert False is True',
+    "attempt 1's spent co-produced range becomes reusable":
+        'assert False is True',
+    "attempt 2's spent co-produced range becomes reusable":
+        'assert False is True',
+    'the spent-range check is disabled entirely':
+        'assert False is True',
+    'the generation range covers openings, not candidates':
+        'assert (20261600296 - 20261600000) == (296 * 400)',
+    'the generation base slides back onto a retired range':
+        'assert (20261000000, 20261118400) == (20261600000, 20261718400)',
+    'the population reverts to 148 openings':
+        'assert 148 == 296',
+    'the assembled set need not be the full population':
+        'scripts.GPU.alphazero.h3_study_rules.H3StudyError: segment 2 assembled 0 pairs',
+    'the artifact may record a short population':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
+    'the artifact may name the co-produced stratum':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
+    'an opening may carry a stale alternating order':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
+    'check_opening_set stops refusing a stale order field':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_rules.H3StudyError'>",
+    'the analysis scores records from another population':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_analysis.H3StudyAnalysisError'>",
+    'the analysis accepts a record carrying an order':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_analysis.H3StudyAnalysisError'>",
+    'the narrowed claim is softened in the artifact':
+        "AssertionError: assert ('NOTHING' in 'Over legal six-ply TwixT positions drawn UNIFORMLY AT RANDOM and filtered only by the structural admissibility rules ...ly reach, or about any engine-produced population. A uniformly random six-ply position is not a position anyone plays.')",
+    'the artifact stops requiring its claim':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
+    'a report may omit the narrowed claim':
+        "scripts.GPU.alphazero.h3_study_analysis.H3StudyAnalysisError: the report's claim has been altered. It must reproduce the narrowed uniform-position claim VERBATIM -- softening it is how a result about uniformly random positions becomes a result about play.",
+    'a report may alter the narrowed claim':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_analysis.H3StudyAnalysisError'>",
+    'the disclaimer that nobody plays these positions is dropped':
+        "AssertionError: assert 'not a position anyone plays' in 'Over legal six-ply TwixT positions drawn UNIFORMLY AT RANDOM and filtered only by the structural admissibility rules ...ly reach, or about any engine-produced population. A uniformly random six-ply position is a reasonable proxy for play.'",
+    'a live module imports the retired engine generator':
+        "AssertionError: h3_study_runner imports {'h3_coproduced_generator_retired'}",
+    'the analysis imports the retired JVM supervisor':
+        "AssertionError: h3_study_analysis imports {'h3_generation_command'}",
+    'the population freeze barrier is opened':
+        'assert True is False',
+    'the freeze barrier stops being read first':
+        'AssertionError: assert (False)',
+    'the barrier accepts any truthy value':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
+    'the artifact may be overwritten':
+        "FileExistsError: [Errno 17] File exists: '/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/tmpm3jkrh18/a.json'",
+    'attempt provenance becomes optional':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
+    'the official destination moves into a spent directory':
+        'AssertionError: assert not True',
+    'the runner repeats the destination instead of reading it':
+        "AssertionError: assert 'docs/superpo...ning_set.json' == 'docs/superpo...ning_set.json'",
+    'the gate inventory stops seeing gates at all':
+        'assert 0 == 10',
+    'the inventory scans only the first statement of each module':
+        "AssertionError: assert 'LOWPLY_QUALIFICATION_AUTHORIZED' in set()",
+
     'registration check disabled':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
     'registration check looks only at the first seed':
