@@ -96,15 +96,53 @@ GENERATION_NOTE = (
 )
 
 
+#: 🔴 THE SOURCES THE WALK ACTUALLY DEPENDS ON. `walk()` is deterministic in its
+#: seed GIVEN these three: the walk itself, the engine's `legal_moves()` ordering,
+#: and the canonical digest. Change any one and the same seed gives a different
+#: opening, so the artifact pins all three by content.
+_IDENTITY_SOURCES = ("h3_study_rules.py", "game/twixt_state.py", "d1_selection.py")
+
+
+def _source_pins() -> Dict[str, str]:
+    """sha256 of each source the walk depends on. Read, never retyped."""
+    import hashlib
+    here = os.path.dirname(os.path.abspath(__file__))
+    out = {}
+    for rel in _IDENTITY_SOURCES:
+        with open(os.path.join(here, rel), "rb") as fh:
+            out[rel] = hashlib.sha256(fh.read()).hexdigest()
+    return out
+
+
+def _commit() -> Optional[str]:
+    """The commit the population was produced at, or None. Never fabricated."""
+    import subprocess
+    try:
+        r = subprocess.run(["git", "rev-parse", "HEAD"],
+                           cwd=os.path.dirname(os.path.abspath(__file__)),
+                           capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return r.stdout.strip() or None if r.returncode == 0 else None
+
+
 def generator_identity() -> Dict[str, Any]:
     """WHAT produced the population — and it is not an engine.
 
     The co-produced artifact pinned two engine configurations and a toolchain.
-    None of that exists here, and recording it anyway would be provenance for a
-    process that did not happen. What DOES determine this population is the seed
-    base, the attempt ceiling, the ply count and the filter set, so those are
-    what the artifact names.
+    Neither exists here, and recording them anyway would be provenance for a
+    process that did not happen.
+
+    🔴 BUT "NO ENGINE" IS NOT "NO TOOLCHAIN", AND THE FIRST VERSION CONFUSED THE
+    TWO. It recorded the seed base, the attempt ceiling and the filter names --
+    the DESIGN -- and nothing that would let anyone reproduce the walk. The same
+    seed gives a different opening under a different NumPy bit generator, a
+    different `legal_moves()` ordering, or a different canonical digest, so the
+    artifact now pins the interpreter, NumPy, the bit generator by NAME, the
+    three sources the walk depends on by CONTENT, and the commit.
     """
+    import sys
+    import numpy as np
     return {
         "kind": "uniform_random_legal_play",
         "engine_free": True,
@@ -117,62 +155,218 @@ def generator_identity() -> Dict[str, Any]:
         "filters": ["legal_and_not_won", "all_pegs_placed",
                     "no_depth1_forced_win", "distinct_up_to_symmetry",
                     "not_a_pilot_or_h1_h2_opening"],
+        # ── the toolchain the walk is deterministic UNDER ──
+        "python": "%d.%d.%d" % sys.version_info[:3],
+        "numpy": np.__version__,
+        "bit_generator": "PCG64",
+        "source_pins": _source_pins(),
+        "commit": _commit(),
     }
 
 
-def validate_artifact(doc: Mapping[str, Any]) -> Dict[str, Any]:
-    """The artifact must carry its whole frozen schema, name ONE population, and
-    its digest must be the one its own openings give."""
+#: Identity fields that MUST match the running code for an artifact to be played.
+#: 🔑 `commit` IS DEPRECATED FROM THIS LIST ON PURPOSE. A frozen population stays
+#: valid across later commits that do not touch the walk; pinning the commit
+#: would refuse the artifact on the next unrelated edit. `source_pins` is the
+#: honest version of the same check -- it refuses exactly when the walk changed.
+IDENTITY_MUST_MATCH = ("kind", "engine_free", "gen_seed_base", "seed_range",
+                       "max_attempts", "opening_plies", "board_size", "n_pairs",
+                       "filters", "bit_generator", "source_pins")
+
+
+def _typed_moves(o) -> list:
+    """`moves` as a list of six (int, int) pairs, TYPE-STRICTLY.
+
+    🔴 `True == 1` AND `6 == 6.0` IN PYTHON, so a bool or a float in a
+    coordinate would replay, compare equal, and produce the declared digest --
+    while the artifact says something the study cannot reproduce from JSON. Type
+    is checked before value, everywhere.
+    """
+    mv = o.get("moves")
+    if not isinstance(mv, list) or len(mv) != RULES.OPENING_PLIES:
+        raise H3GenerationError(
+            f"opening {o.get('index')}: moves must be a list of "
+            f"{RULES.OPENING_PLIES}, got {mv!r}")
+    out = []
+    for m in mv:
+        if not isinstance(m, (list, tuple)) or len(m) != 2:
+            raise H3GenerationError(
+                f"opening {o.get('index')}: move {m!r} is not a pair")
+        r, c = m
+        for v in (r, c):
+            if type(v) is not int or isinstance(v, bool):
+                raise H3GenerationError(
+                    f"opening {o.get('index')}: coordinate {v!r} is "
+                    f"{type(v).__name__}, not int -- `True == 1` and `6 == 6.0`, "
+                    f"so an equal value is not the same value")
+            if not 0 <= v < RULES.BOARD_SIZE:
+                raise H3GenerationError(
+                    f"opening {o.get('index')}: coordinate {v} is off a "
+                    f"{RULES.BOARD_SIZE}-point board")
+        out.append((r, c))
+    return out
+
+
+def validate_artifact(doc: Mapping[str, Any], *,
+                      bind_provenance: bool = True) -> Dict[str, Any]:
+    """The artifact must BE the population it claims to be.
+
+    🔴 THE FIRST VERSION TRUSTED EVERY ROW'S OWN `digest`. It recomputed
+    `opening_set_digest` -- a hash OF THE DECLARED DIGESTS -- and never replayed a
+    single move. An opening's `moves` could therefore be rewritten while its
+    `digest` and the set digest stayed untouched, and the runner would accept and
+    play a different position. A digest that is never recomputed from the thing
+    it digests is a label, not a checksum.
+
+    So validation now BINDS, in this order:
+
+      schema      exact artifact keys and exact opening keys, nothing extra
+      position    index and segment are the study's, not the artifact's opinion
+      replay      six moves, type-strict, replayed through the REAL engine
+      digest      recomputed canonical digest, compared to the declared one
+      provenance  seed == attempt_seed(base, index, attempts - 1)
+      derivation  the PRNG walk from that seed REPRODUCES these exact moves
+      identity    claim, generation note and generator identity, exactly
+
+    `bind_provenance=False` drops only the last two rows of that list, for the
+    one case where they cannot hold: a test constructing a deliberately broken
+    artifact. It never relaxes schema, replay or digest.
+    """
     missing = [k for k in ARTIFACT_KEYS if k not in doc]
     if missing:
         raise H3GenerationError(f"the artifact is missing {missing}")
+    extra = [k for k in doc if k not in ARTIFACT_KEYS]
+    if extra:
+        raise H3GenerationError(
+            f"the artifact carries unknown keys {extra}; the schema is exact so "
+            f"a field nothing validates cannot ride along")
     if doc["stratum"] != RULES.STRATUM_UNIFORM:
         raise H3GenerationError(
             f"stratum {doc['stratum']!r}: Amendment 3 closed every stratum but "
             f"{RULES.STRATUM_UNIFORM!r}, and an artifact naming another is not "
             f"this study's population")
-    if doc["n"] != RULES.N_PAIRS:
+    if type(doc["n"]) is not int or doc["n"] != RULES.N_PAIRS:
         raise H3GenerationError(
-            f"the artifact holds n={doc['n']}; the study is defined over "
+            f"the artifact holds n={doc['n']!r}; the study is defined over "
             f"{RULES.N_PAIRS} openings and a partial population is not a "
             f"population")
-    if len(doc["openings"]) != RULES.N_PAIRS:
+    openings = doc["openings"]
+    if not isinstance(openings, list) or len(openings) != RULES.N_PAIRS:
         raise H3GenerationError(
-            f"{len(doc['openings'])} openings recorded against a claimed "
-            f"n={doc['n']}")
+            f"{len(openings) if isinstance(openings, list) else openings!r} "
+            f"openings recorded against a claimed n={doc['n']}")
     if doc.get("claim") != CLAIM:
         raise H3GenerationError(
             "the artifact's claim is missing or altered; the narrowed "
             "uniform-position claim travels WITH the population, so a reader "
             "who never opens the card still cannot overstate it")
-    for o in doc["openings"]:
+    if doc.get("generation_note") != GENERATION_NOTE:
+        raise H3GenerationError(
+            "the artifact's generation note is missing or altered")
+
+    ident = doc.get("generator")
+    if not isinstance(ident, Mapping):
+        raise H3GenerationError("the artifact carries no generator identity")
+    live = generator_identity()
+    drift = [k for k in IDENTITY_MUST_MATCH if ident.get(k) != live[k]]
+    if drift:
+        raise H3GenerationError(
+            f"the generator identity disagrees with the running code on {drift}. "
+            f"The same seed gives a DIFFERENT opening under a different walk, "
+            f"bit generator or engine, so this population cannot be reproduced "
+            f"here and may not be played.")
+    base = ident["gen_seed_base"]
+
+    for pos, o in enumerate(openings):
+        if not isinstance(o, Mapping):
+            raise H3GenerationError(f"opening at position {pos} is not a record")
         gaps = [k for k in OPENING_KEYS if k not in o]
         if gaps:
             raise H3GenerationError(f"opening {o.get('index')} is missing {gaps}")
-        if o.get("stub"):
+        spare = [k for k in o if k not in OPENING_KEYS]
+        if spare:
             raise H3GenerationError(
-                f"opening {o.get('index')} is a STUB; a placeholder may never be "
-                f"pinned or played against")
-        if o.get("order") is not None:
-            raise H3GenerationError(
-                f"opening {o.get('index')} carries an `order`; alternating order "
-                f"was removed with the co-produced stratum and a stale field is "
-                f"one nothing validates")
+                f"opening {o.get('index')} carries unknown keys {spare}; "
+                f"`order` and `stub` are gone, and a field nothing validates is "
+                f"a field that can say anything")
         if o.get("stratum") != RULES.STRATUM_UNIFORM:
             raise H3GenerationError(
                 f"opening {o.get('index')} is stratum {o.get('stratum')!r}")
-        if type(o.get("attempts")) is not int or o["attempts"] < 1:
+        # ── position: the study's, not the artifact's opinion ──
+        if type(o["index"]) is not int or isinstance(o["index"], bool) \
+                or o["index"] != pos:
             raise H3GenerationError(
-                f"opening {o.get('index')} records attempts="
-                f"{o.get('attempts')!r}; every opening cost at least one "
-                f"attempt and the count is evidence about the population's "
-                f"conditioning, not an optional detail")
-    got = RULES.opening_set_digest(doc["openings"])
+                f"opening at position {pos} declares index {o['index']!r}; the "
+                f"study order is positional and a reordered set is a different "
+                f"population")
+        if o["segment"] != RULES.segment_of(pos):
+            raise H3GenerationError(
+                f"opening {pos} declares segment {o['segment']!r}, but the "
+                f"frozen plan puts it in segment {RULES.segment_of(pos)}")
+        if type(o["attempts"]) is not int or isinstance(o["attempts"], bool) \
+                or o["attempts"] < 1:
+            raise H3GenerationError(
+                f"opening {pos} records attempts={o['attempts']!r}; every "
+                f"opening cost at least one attempt and the count is evidence "
+                f"about the population's conditioning, not an optional detail")
+        if type(o["seed"]) is not int or isinstance(o["seed"], bool):
+            raise H3GenerationError(
+                f"opening {pos} records seed={o['seed']!r}, which is not an int")
+
+        # ── replay: through the REAL engine, and recompute the digest ──
+        moves = _typed_moves(o)
+        try:
+            st = RULES._replay(moves)
+        except Exception as e:                            # noqa: BLE001
+            raise H3GenerationError(
+                f"opening {pos}: its moves are NOT LEGAL on a real board "
+                f"({type(e).__name__}: {e})") from None
+        from . import d1_selection as SEL
+        recomputed = SEL.canonical_digest(st)
+        if recomputed != o["digest"]:
+            raise H3GenerationError(
+                f"opening {pos}: replaying its moves gives canonical digest "
+                f"{recomputed} but the record claims {o['digest']}. The moves "
+                f"have been changed and the digest left behind -- which is "
+                f"invisible to any check that only re-hashes the declared "
+                f"digests.")
+
+        if bind_provenance:
+            # ── provenance: the seed is the one its own attempt count implies ──
+            want_seed = RULES.attempt_seed(base, pos, o["attempts"] - 1)
+            if o["seed"] != want_seed:
+                raise H3GenerationError(
+                    f"opening {pos} records seed {o['seed']} but "
+                    f"attempt_seed({base}, {pos}, {o['attempts'] - 1}) is "
+                    f"{want_seed}; the seed and the attempt count disagree")
+            # ── derivation: the walk from that seed REPRODUCES these moves ──
+            derived_moves, derived_digest = RULES.verify_candidate(
+                base, pos, o["attempts"])
+            if [tuple(m) for m in derived_moves] != moves:
+                raise H3GenerationError(
+                    f"opening {pos}: re-running the PRNG walk from seed "
+                    f"{want_seed} does NOT produce the recorded moves. The "
+                    f"population cannot be re-derived from its own provenance.")
+            if derived_digest != o["digest"]:
+                raise H3GenerationError(
+                    f"opening {pos}: the re-derived digest is {derived_digest}, "
+                    f"not {o['digest']}")
+
+    # ── and only now the set digest, over digests every one of which was
+    # ── recomputed from replayed moves above
+    got = RULES.opening_set_digest(openings)
     if got != doc["opening_set_digest"]:
         raise H3GenerationError(
             f"the artifact's openings give {got} but it claims "
             f"{doc['opening_set_digest']}; it has been edited")
-    return {"n": len(doc["openings"]), "opening_set_digest": got}
+    if len({o["digest"] for o in openings}) != len(openings):
+        raise H3GenerationError("two openings share a canonical digest")
+    clash = {o["digest"] for o in openings} & RULES.excluded_digests()
+    if clash:
+        raise H3GenerationError(
+            f"{len(clash)} openings duplicate a PILOT or H1/H2 position")
+    return {"n": len(openings), "opening_set_digest": got,
+            "bound": bool(bind_provenance)}
 
 
 def check_freeze_barrier() -> None:
@@ -188,18 +382,25 @@ def check_freeze_barrier() -> None:
 
 
 # ═══════════════════════ the population itself ═════════════════════════════
-def build_population(*, n: Optional[int] = None,
+def build_population(check_deadline=None, *, n: Optional[int] = None,
                      seed: Optional[int] = None) -> List[Dict[str, Any]]:
     """The study's openings, in STUDY ORDER, with segments stamped.
 
     UNGATED AND SIDE-EFFECT-FREE. It draws from a PRNG, applies the structural
     filters and returns dictionaries. It writes nothing, loads nothing and starts
     nothing, so the suite calls it freely.
+
+    🔴 `check_deadline` IS POSITIONAL AND FIRST, so `build=build_population`
+    threads it with no lambda in between. A lambda that took the hook and dropped
+    it -- `lambda cd: build_population()` -- is how the guard ends up checked only
+    after the walk it was meant to bound, which is the shape this repair exists
+    to remove. It is passed straight through to the candidate loop.
     """
     n = RULES.N_PAIRS if n is None else n
     base = RULES.GEN_SEED_UNIFORM if seed is None else seed
     return RULES.assemble_opening_set(
-        RULES.generate_uniform_openings(seed=base, n=n))
+        RULES.generate_uniform_openings(seed=base, n=n,
+                                        check_deadline=check_deadline))
 
 
 def artifact_document(openings: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
@@ -231,24 +432,45 @@ def _create_only(path: str) -> int:
     return os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
 
 
-def write_artifact(*, openings: Sequence[Dict[str, Any]], out_path: str,
-                   trace_path: str,
-                   deadline_s: Optional[float] = None) -> Dict[str, Any]:
-    """Write the artifact and a terminal trace to an EXPLICIT destination.
+class H3GenerationDeadline(H3GenerationError):
+    """The runaway guard fired. 🔑 ITS OWN TYPE, so a timeout cannot be reported
+    as an ordinary refusal and the trace cannot call it VOID."""
 
-    🔑 THE DESTINATION IS ALWAYS EXPLICIT — there is no default here. Only
-    `freeze_population` knows the official path and it is the only caller that
-    passes it. A helper that defaulted to the official destination would leave
-    every test one missing argument away from freezing the population.
+
+def write_artifact(*, out_path: str, trace_path: str,
+                   build=None, openings: Optional[Sequence[Dict[str, Any]]] = None,
+                   deadline_s: Optional[float] = None) -> Dict[str, Any]:
+    """Build the population and write it, with the trace and the clock around
+    BOTH. The destination is always EXPLICIT.
+
+    🔴 GENERATION USED TO HAPPEN OUTSIDE THIS FUNCTION ENTIRELY. The caller wrote
+    `write_artifact(openings=build_population(), ...)`, and Python evaluates the
+    argument first -- so the whole walk ran BEFORE the trace was opened and before
+    the clock started. A hang or a crash inside generation produced NO terminal
+    record and could not trip the runaway guard the card promises. The guard was
+    real, and it guarded only the part that never takes any time.
+
+    So `build` is a CALLABLE taking `check_deadline`, invoked here, after the
+    trace exists and the clock is running. The deadline is checked INSIDE the
+    candidate loop, not between openings.
+
+    `openings=` remains for the one case that has no walk to time: a test writing
+    a set it constructed itself. It is mutually exclusive with `build`.
 
     🔴 A TERMINAL RECORD IS WRITTEN ON EVERY PATH. A trace that simply stops
     cannot be told from one that never started, so success, refusal, timeout and
     interrupt each leave a durable `generation_end` naming the verdict.
     """
+    if (build is None) == (openings is None):
+        raise H3GenerationError("pass exactly one of `build` or `openings`")
     deadline_s = RULES.GENERATION_DEADLINE_S if deadline_s is None else deadline_s
     if os.path.dirname(out_path):
         os.makedirs(os.path.dirname(out_path), exist_ok=True)
-    started = time.time()
+
+    # 🔑 MONOTONIC. `time.time()` can step backwards over an NTP correction or a
+    # DST change, which would silently extend or collapse the window a runaway
+    # guard exists to bound.
+    started = time.monotonic()
     trace = os.fdopen(_create_only(trace_path), "w")
 
     def emit(obj):
@@ -256,40 +478,56 @@ def write_artifact(*, openings: Sequence[Dict[str, Any]], out_path: str,
         trace.flush()
         os.fsync(trace.fileno())
 
-    verdict, failure, doc = "VOID", None, None
+    def check_deadline(index, attempt, accepted):
+        spent = time.monotonic() - started
+        if spent > deadline_s:
+            raise H3GenerationDeadline(
+                f"the {deadline_s}s runaway guard expired after {spent:.1f}s at "
+                f"opening {index}, attempt {attempt} ({accepted} accepted) of an "
+                f"ENGINE-FREE generation. This is a DEFECT REPORT, not a "
+                f"capacity result: the whole population builds in under a "
+                f"second.")
+
+    verdict, failure, doc, built = "VOID", None, None, None
     try:
         try:
-            emit({"event": "generation_start", "n": len(openings),
+            emit({"event": "generation_start", "n": RULES.N_PAIRS,
                   "engine_free": True, "deadline_s": deadline_s,
+                  "clock": "monotonic",
+                  "generates_here": build is not None,
                   "generator": generator_identity()})
-            doc = artifact_document(openings)
-            elapsed = time.time() - started
-            if elapsed > deadline_s:
-                # 🔑 EXPECTED TO BE UNREACHABLE BY THREE ORDERS OF MAGNITUDE.
-                # If this fires it is a DEFECT REPORT, not a capacity result.
-                verdict = "TIMEOUT"
-                failure = (f"the {deadline_s}s runaway guard expired after "
-                           f"{elapsed:.1f}s writing an ENGINE-FREE population; "
-                           f"this is a defect report, not a capacity result")
-                raise H3GenerationError(failure)
-            with os.fdopen(_create_only(out_path), "w") as fh:
+            built = list(openings) if openings is not None else build(check_deadline)
+            emit({"event": "population_built", "accepted": len(built),
+                  "elapsed_s": round(time.monotonic() - started, 3)})
+            doc = artifact_document(built)
+            check_deadline(RULES.N_PAIRS, 0, len(built))     # and after, too
+            fd = _create_only(out_path)
+            with os.fdopen(fd, "w") as fh:
                 json.dump(doc, fh, indent=1, sort_keys=True, default=str)
+                fh.flush()
+                # 🔴 FSYNC BEFORE THE VERDICT. `OK` in the trace asserts the
+                # artifact is ON DISK. Without this the process could report OK
+                # and lose the file to a crash, leaving a trace that swears to a
+                # population nobody has.
+                os.fsync(fh.fileno())
             verdict = "OK"
         except BaseException as e:               # noqa: BLE001 -- interrupts too
             if isinstance(e, KeyboardInterrupt):
                 verdict = "INTERRUPTED"
-            elif verdict != "TIMEOUT":
+            elif isinstance(e, H3GenerationDeadline):
+                verdict = "TIMEOUT"
+            else:
                 verdict = "VOID"
-            failure = failure or f"{type(e).__name__}: {e}"
+            failure = f"{type(e).__name__}: {e}"
             raise
         finally:
             emit({"event": "generation_end", "verdict": verdict,
-                  "accepted": len(doc["openings"]) if doc else 0,
+                  "accepted": len(built) if built else 0,
                   "expected": RULES.N_PAIRS,
-                  "elapsed_s": round(time.time() - started, 3),
+                  "elapsed_s": round(time.monotonic() - started, 3),
                   "failure": failure,
                   "opening_set_digest": (doc or {}).get("opening_set_digest"),
-                  "attempts_total": sum(o.get("attempts", 0) for o in openings),
+                  "attempts_total": sum(o.get("attempts", 0) for o in (built or [])),
                   # 🔴 NO RANGE IS RETIRED BY A WRITE, and this is the one place
                   # the uniform path differs from the co-produced one, so it is
                   # said out loud. A co-produced attempt retired its WHOLE range
@@ -311,15 +549,24 @@ def write_artifact(*, openings: Sequence[Dict[str, Any]], out_path: str,
     return doc
 
 
-def freeze_population(*, out_path: Optional[str] = None,
-                      trace_path: Optional[str] = None) -> Dict[str, Any]:
-    """Write the OFFICIAL artifact. BARRIER FIRST, before anything durable.
+def freeze_population() -> Dict[str, Any]:
+    """Write the OFFICIAL artifact. NO ARGUMENTS, and that is the repair.
 
-    🔴 THE BARRIER IS READ BEFORE THE DESTINATION IS TOUCHED, so a refusal leaves
-    no directory, no trace and no partial file behind.
+    🔴 IT USED TO ACCEPT `out_path` AND `trace_path`. With the barrier open, a
+    caller could therefore write any number of different "official" populations
+    to any number of destinations -- and the barrier, never restored, stayed open
+    for all of them. An entry that takes a destination is an entry whose
+    authorization does not name what it authorizes.
+
+    Every input is resolved here: the destination is `DEFAULT_OUT`, the
+    population is `build_population`, and the deadline is the frozen constant.
+    Temporary writing lives in `write_artifact`, which is not this.
+
+    🔑 THE BARRIER IS NOT RESTORED HERE. This function must not close the thing
+    that let it run -- a body that reopens and re-closes its own authorization is
+    a body that can be re-entered. `h3_freeze_command` opens nothing, calls this
+    once, and restores and VERIFIES the barrier in a `finally`.
     """
     check_freeze_barrier()
-    return write_artifact(openings=build_population(),
-                          out_path=DEFAULT_OUT if out_path is None else out_path,
-                          trace_path=(DEFAULT_TRACE if trace_path is None
-                                      else trace_path))
+    return write_artifact(out_path=DEFAULT_OUT, trace_path=DEFAULT_TRACE,
+                          build=build_population)

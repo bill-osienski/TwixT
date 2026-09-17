@@ -81,12 +81,116 @@ H3GCMD = "scripts/GPU/alphazero/h3_generation_command.py"
 #: AMENDMENT 3 -- the uniform population writer, the retired path, the gates
 H3OLD = "scripts/GPU/alphazero/h3_coproduced_generator_retired.py"
 GINV = "scripts/GPU/alphazero/gate_inventory.py"
+H3FCMD = "scripts/GPU/alphazero/h3_freeze_command.py"
 T_H3POP = "tests/test_h3_uniform_population.py"
 T_H3OLD = "tests/test_h3_coproduced_retired.py"
 T_GATES = "tests/test_gate_inventory.py"
 
 # (label, file, anchor, replacement, test node)
 DEFECTS = [
+    # ═════════ P1 REPAIRS, 2026-09-17 review ═══════════════════════════════
+    # 🔴 P1-1: THE BARRIER MUST BE ONE-SHOT.
+    ("freeze_population takes a caller-supplied destination again",
+     H3SGEN, "def freeze_population() -> Dict[str, Any]:",
+     "def freeze_population(out_path=DEFAULT_OUT, trace_path=DEFAULT_TRACE) -> Dict[str, Any]:",
+     f"{T_H3POP}::test_freeze_population_ACCEPTS_NO_PATHS"),
+    ("the freeze command does not restore the barrier",
+     H3FCMD, "        restored = restore_barrier(GENERATOR_SOURCE)",
+     "        restored = True",
+     f"{T_H3POP}::test_THE_FREEZE_COMMAND_RESTORES_THE_BARRIER_ON_EVERY_OUTCOME"),
+    ("restoration is trusted instead of verified from the file",
+     H3FCMD, "        readback = barrier_readback(GENERATOR_SOURCE)",
+     '        readback = "False"',
+     f"{T_H3POP}::test_A_FAILED_RESTORATION_SUPERSEDES_EVEN_A_SUCCESSFUL_FREEZE"),
+    ("a failed restoration no longer supersedes the freeze",
+     H3FCMD, "        if not restored or readback != \"False\":",
+     "        if False:",
+     f"{T_H3POP}::test_A_FAILED_RESTORATION_SUPERSEDES_EVEN_A_SUCCESSFUL_FREEZE"),
+    ("the freeze command runs without --run",
+     H3FCMD, "    if not a.run:", "    if False:",
+     f"{T_H3POP}::test_THE_COMMAND_NEVER_OPENS_ITS_OWN_BARRIER"),
+    ("the freeze command ignores the barrier",
+     H3FCMD, "    if not barrier_is_open():", "    if False:",
+     f"{T_H3POP}::test_THE_COMMAND_NEVER_OPENS_ITS_OWN_BARRIER"),
+    ("restore_barrier reports success on an unreadable source",
+     H3FCMD, "    except OSError:\n        return False\n    if src.count",
+     "    except OSError:\n        return True\n    if src.count",
+     f"{T_H3POP}::test_THE_RESTORATION_IS_VERIFIED_FROM_THE_FILE_NOT_FROM_MEMORY"),
+
+    # 🔴 P1-2: GENERATION MUST HAPPEN INSIDE THE DEADLINE AND THE TRACE.
+    ("the deadline is not checked inside the candidate loop",
+     H3SR, "            if check_deadline is not None:", "            if False:",
+     f"{T_H3POP}::test_THE_DEADLINE_IS_CHECKED_INSIDE_THE_CANDIDATE_LOOP"),
+    ("build_population swallows the deadline hook",
+     H3SGEN, "        RULES.generate_uniform_openings(seed=base, n=n,\n                                        check_deadline=check_deadline))",
+     "        RULES.generate_uniform_openings(seed=base, n=n))",
+     f"{T_H3POP}::test_build_population_THREADS_THE_HOOK_WITH_NO_LAMBDA_IN_BETWEEN"),
+    ("the runaway guard is reported as an ordinary VOID",
+     H3SGEN, "            elif isinstance(e, H3GenerationDeadline):\n                verdict = \"TIMEOUT\"",
+     "            elif False:\n                verdict = \"TIMEOUT\"",
+     f"{T_H3POP}::test_THE_DEADLINE_IS_CHECKED_INSIDE_THE_CANDIDATE_LOOP"),
+    ("the clock goes back to wall time",
+     H3SGEN, "    started = time.monotonic()", "    started = time.time()",
+     f"{T_H3POP}::test_THE_CLOCK_IS_MONOTONIC"),
+    ("the artifact is not fsynced before OK is recorded",
+     H3SGEN, "                os.fsync(fh.fileno())\n            verdict = \"OK\"",
+     "            verdict = \"OK\"",
+     f"{T_H3POP}::test_THE_ARTIFACT_IS_FSYNCED_BEFORE_OK_IS_RECORDED"),
+    ("write_artifact accepts both a builder and a set",
+     H3SGEN, "    if (build is None) == (openings is None):", "    if False:",
+     f"{T_H3POP}::test_write_artifact_REFUSES_BOTH_OR_NEITHER_SOURCE"),
+
+    # 🔴 P1-3: THE DIGEST MUST BIND THE MOVES.
+    ("the validator trusts each row's declared digest",
+     H3SGEN, "        if recomputed != o[\"digest\"]:", "        if False:",
+     f"{T_H3POP}::test_ALTERED_MOVES_WITH_AN_UNTOUCHED_DIGEST_ARE_REFUSED"),
+    ("the moves are never replayed through the engine",
+     H3SGEN, "        moves = _typed_moves(o)\n        try:\n            st = RULES._replay(moves)",
+     "        moves = _typed_moves(o)\n        try:\n            st = RULES._replay([])",
+     f"{T_H3POP}::test_ALTERED_MOVES_WITH_AN_UNTOUCHED_DIGEST_ARE_REFUSED"),
+    ("a coordinate may be a bool or a float",
+     H3SGEN, "            if type(v) is not int or isinstance(v, bool):",
+     "            if not isinstance(v, (int, float)):",
+     f"{T_H3POP}::test_THE_BOUND_VALIDATOR_REFUSES"),
+    ("the declared index need not be the study order",
+     H3SGEN, "                or o[\"index\"] != pos:", "                or False:",
+     f"{T_H3POP}::test_A_SWAPPED_PAIR_OF_OPENINGS_IS_REFUSED"),
+    ("the segment need not match the frozen plan",
+     H3SGEN, "        if o[\"segment\"] != RULES.segment_of(pos):", "        if False:",
+     f"{T_H3POP}::test_THE_BOUND_VALIDATOR_REFUSES"),
+    ("the seed need not match its own attempt count",
+     H3SGEN, "            if o[\"seed\"] != want_seed:", "            if False:",
+     f"{T_H3POP}::test_THE_BOUND_VALIDATOR_REFUSES"),
+    ("the walk need not reproduce the recorded moves",
+     H3SGEN, "            if [tuple(m) for m in derived_moves] != moves:",
+     "            if False:",
+     f"{T_H3POP}::test_THE_BOUND_VALIDATOR_REFUSES"),
+    ("provenance binding is off by default",
+     H3SGEN, "                      bind_provenance: bool = True) -> Dict[str, Any]:",
+     "                      bind_provenance: bool = False) -> Dict[str, Any]:",
+     f"{T_H3POP}::test_THE_BOUND_VALIDATOR_REFUSES"),
+    ("the artifact schema admits unknown keys",
+     H3SGEN, "    extra = [k for k in doc if k not in ARTIFACT_KEYS]", "    extra = []",
+     f"{T_H3POP}::test_THE_BOUND_VALIDATOR_REFUSES"),
+    ("an opening may carry unknown keys",
+     H3SGEN, "        spare = [k for k in o if k not in OPENING_KEYS]", "        spare = []",
+     f"{T_H3POP}::test_THE_BOUND_VALIDATOR_REFUSES"),
+    ("the generator identity is not compared with the running code",
+     H3SGEN, "    drift = [k for k in IDENTITY_MUST_MATCH if ident.get(k) != live[k]]",
+     "    drift = []",
+     f"{T_H3POP}::test_THE_BOUND_VALIDATOR_REFUSES"),
+    ("the walk's source pins are dropped from the identity",
+     H3SGEN, '                       "filters", "bit_generator", "source_pins")',
+     '                       "filters", "bit_generator")',
+     f"{T_H3POP}::test_THE_COMMIT_IS_RECORDED_BUT_NOT_ENFORCED"),
+    ("the loader does not validate the artifact at all",
+     H3SRUN, "        bound = GEN.validate_artifact(doc)",
+     "        bound = {\"opening_set_digest\": doc[\"opening_set_digest\"]}",
+     f"{T_H3POP}::test_THE_LOADER_VALIDATES_AND_DOES_NOT_REIMPLEMENT"),
+    ("the loader accepts any self-consistent population",
+     H3SRUN, "    if bound[\"opening_set_digest\"] != pinned:", "    if False:",
+     f"{T_H3POP}::test_THE_LOADER_REFUSES_A_SELF_CONSISTENT_BUT_UNPINNED_POPULATION"),
+
     # ═════════ AMENDMENT 3: the uniform-only population (card §1, §1.7) ═══════
     # 🔴 THE OLD RANGES. Each retired range must stay refused. The first is the
     # 148-opening uniform range -- superseded, not spent -- and the other two were
@@ -119,14 +223,13 @@ DEFECTS = [
     # 🔴 WRONG POPULATION SIZE. 296 is what the precision target fixed; 148 is the
     # two-stratum design's half -- exactly what a half-finished migration leaves.
     ("the population reverts to 148 openings",
-     H3SR, "                              n: int = N_PAIRS) -> List[Dict[str, Any]]:",
-     "                              n: int = 148) -> List[Dict[str, Any]]:",
+     H3SR, "                              n: int = N_PAIRS,", "                              n: int = 148,",
      f"{T_H3POP}::test_THE_GENERATORS_DEFAULT_POPULATION_SIZE_IS_296"),
     ("the assembled set need not be the full population",
      H3SR, "    if len(uniform) != N_PAIRS:", "    if False:",
      f"{T_H3POP}::test_assemble_opening_set_REFUSES_A_SHORT_POPULATION"),
     ("the artifact may record a short population",
-     H3SGEN, '    if doc["n"] != RULES.N_PAIRS:', "    if False:",
+     H3SGEN, '    if type(doc["n"]) is not int or doc["n"] != RULES.N_PAIRS:', "    if False:",
      f"{T_H3POP}::test_THE_ARTIFACT_VALIDATOR_REFUSES"),
 
     # 🔴 STALE STRATUM AND ORDER FIELDS. One population means one stratum value and
@@ -134,9 +237,13 @@ DEFECTS = [
     ("the artifact may name the co-produced stratum",
      H3SGEN, '    if doc["stratum"] != RULES.STRATUM_UNIFORM:', "    if False:",
      f"{T_H3POP}::test_THE_ARTIFACT_VALIDATOR_REFUSES"),
+    # 🔑 RE-ANCHORED. The `order`-specific branch was subsumed by the EXACT-KEY
+    # rule and removed rather than left unreachable, so the control now injects
+    # into the rule that actually refuses a stale `order`.
     ("an opening may carry a stale alternating order",
-     H3SGEN, '        if o.get("order") is not None:', "        if False:",
-     f"{T_H3POP}::test_THE_ARTIFACT_VALIDATOR_REFUSES"),
+     H3SGEN, "        spare = [k for k in o if k not in OPENING_KEYS]",
+     "        spare = [k for k in o if k not in OPENING_KEYS + ('order',)]",
+     f"{T_H3POP}::test_NO_ORDER_FIELD_ANYWHERE_IN_THE_SCHEDULE_OR_THE_OPENINGS"),
     ("check_opening_set stops refusing a stale order field",
      H3SR, '    stale = [o["index"] for o in openings if o.get("order") is not None]',
      "    stale = []",
@@ -172,8 +279,8 @@ DEFECTS = [
     # 🔴 THE CO-PRODUCED PATHS. Retired code must stay unreachable; an import from
     # a live module makes "retired" a label rather than a fact.
     ("a live module imports the retired engine generator",
-     H3SRUN, "from . import h3_study_generator as GEN",
-     "from . import h3_study_generator as GEN\nfrom . import h3_coproduced_generator_retired as OLD",
+     H3SRUN, "from . import h3_study_generator as GEN\nfrom . import h3_study_rules as RULES",
+     "from . import h3_study_generator as GEN\nfrom . import h3_coproduced_generator_retired as OLD\nfrom . import h3_study_rules as RULES",
      f"{T_H3POP}::test_NO_ACTIVE_MODULE_REACHES_THE_RETIRED_ENGINE_PATH"),
     ("the analysis imports the retired JVM supervisor",
      H3SA, "from . import h3_study_rules as R",
@@ -200,8 +307,7 @@ DEFECTS = [
      H3SGEN, "    if os.path.lexists(path):", "    if False:",
      f"{T_H3POP}::test_A_DANGLING_SYMLINK_IS_REFUSED_NOT_WRITTEN_THROUGH"),
     ("attempt provenance becomes optional",
-     H3SGEN, '        if type(o.get("attempts")) is not int or o["attempts"] < 1:',
-     "        if False:",
+     H3SGEN, '                or o["attempts"] < 1:', "                or False:",
      f"{T_H3POP}::test_THE_ARTIFACT_VALIDATOR_REFUSES"),
     ("the official destination moves into a spent directory",
      H3SGEN, 'OUT_DIR = "docs/superpowers/evidence/2026-09-17-t1j-h3-study-openings-uniform"',

@@ -162,7 +162,10 @@ def test_THE_ARTIFACT_CARRIES_COMPLETE_ATTEMPT_PROVENANCE():
     (lambda d: d.update(claim=""), "claim"),
     (lambda d: d["openings"][0].update(order="incumbent_first"), "order"),
     (lambda d: d["openings"][0].update(attempts=0), "attempts"),
-    (lambda d: d["openings"][0].update(stub=True), "STUB"),
+    # 🔑 the EXACT-SCHEMA check now subsumes the stub-specific one and refuses
+    # EARLIER, on the unknown key. The stub branch survives in
+    # `check_opening_set`, which does no key check -- see the test below.
+    (lambda d: d["openings"][0].update(stub=True), "unknown keys"),
     (lambda d: d["openings"][0].update(stratum="co_produced"), "stratum"),
     (lambda d: d.update(opening_set_digest="0" * 64), "edited"),
 ])
@@ -481,3 +484,323 @@ def test_THE_FREEZE_BARRIER_REFUSES_A_TRUTHY_NON_TRUE_VALUE(monkeypatch):
             GEN.check_freeze_barrier()
     monkeypatch.setattr(GEN, "H3_POPULATION_FREEZE_AUTHORIZED", True)
     GEN.check_freeze_barrier()                             # positive control
+
+
+def test_check_opening_set_STILL_REFUSES_A_STUB():
+    """The stub guard moved, it did not die.
+
+    `validate_artifact` refuses a `stub` key on the EXACT-SCHEMA rule, before it
+    can reach a stub-specific branch -- so that branch would be dead there and
+    was removed. `check_opening_set` does no key check, so its stub guard is the
+    reachable one and is tested here rather than assumed.
+    """
+    ops = [dict(o) for o in GEN.build_population()]
+    ops[3]["stub"] = True
+    with pytest.raises(R.H3StudyError, match="STUB"):
+        R.check_opening_set(ops)
+
+
+# ═══════════ P1 REPAIRS (2026-09-17 review) ════════════════════════════════
+from scripts.GPU.alphazero import h3_freeze_command as FCMD    # noqa: E402
+
+
+# ── P1-1: the barrier is ONE-SHOT ──────────────────────────────────────────
+def test_freeze_population_ACCEPTS_NO_PATHS():
+    """🔴 IT USED TO TAKE `out_path` AND `trace_path`. With the barrier open a
+    caller could write any number of different 'official' populations to any
+    number of destinations. An entry that takes a destination is an entry whose
+    authorization does not name what it authorizes."""
+    import inspect
+    sig = inspect.signature(GEN.freeze_population)
+    assert list(sig.parameters) == [], sig
+
+
+def test_THE_FREEZE_COMMAND_RESTORES_THE_BARRIER_ON_EVERY_OUTCOME(monkeypatch,
+                                                                  tmp_path):
+    """The `finally` must run after success, refusal, timeout and interrupt."""
+    src = tmp_path / "gen.py"
+    calls = []
+
+    def outcome(exc):
+        src.write_text("H3_POPULATION_FREEZE_AUTHORIZED = True\n", encoding="utf-8")
+        monkeypatch.setattr(FCMD, "GENERATOR_SOURCE", str(src))
+        monkeypatch.setattr(FCMD, "barrier_is_open", lambda: True)
+
+        def boom():
+            calls.append(exc)
+            if exc is None:
+                return {"n": 296, "opening_set_digest": "d" * 64}
+            raise exc
+        monkeypatch.setattr(GEN, "freeze_population", boom)
+        return FCMD.main(["--run"])
+
+    for exc, want in ((None, FCMD.EXIT_OK),
+                      (GEN.H3GenerationDeadline("slow"), FCMD.EXIT_TIMEOUT),
+                      (KeyboardInterrupt(), FCMD.EXIT_INTERRUPTED),
+                      (GEN.H3GenerationError("no"), FCMD.EXIT_FAILED)):
+        assert outcome(exc) == want, exc
+        assert src.read_text(encoding="utf-8").strip() == \
+            "H3_POPULATION_FREEZE_AUTHORIZED = False", f"not restored after {exc!r}"
+    assert len(calls) == 4
+
+
+def test_A_FAILED_RESTORATION_SUPERSEDES_EVEN_A_SUCCESSFUL_FREEZE(monkeypatch,
+                                                                  tmp_path):
+    """🔴 A POPULATION WRITTEN WITH THE BARRIER LEFT OPEN IS NOT A COMPLETED
+    FREEZE -- the next invocation would freeze again. So this outcome overrides
+    the worker's own success, and gets its own exit code."""
+    src = tmp_path / "gen.py"
+    src.write_text("H3_POPULATION_FREEZE_AUTHORIZED = True\n", encoding="utf-8")
+    monkeypatch.setattr(FCMD, "GENERATOR_SOURCE", str(src))
+    monkeypatch.setattr(FCMD, "barrier_is_open", lambda: True)
+    monkeypatch.setattr(FCMD, "restore_barrier", lambda *a, **k: False)
+    monkeypatch.setattr(GEN, "freeze_population",
+                        lambda: {"n": 296, "opening_set_digest": "d" * 64})
+    assert FCMD.main(["--run"]) == FCMD.EXIT_BARRIER_NOT_RESTORED
+
+
+def test_THE_RESTORATION_IS_VERIFIED_FROM_THE_FILE_NOT_FROM_MEMORY(tmp_path):
+    """The imported module still holds the pre-rewrite value; reporting that
+    would report what we hoped rather than what is on disk."""
+    src = tmp_path / "gen.py"
+    src.write_text("x = 1\nH3_POPULATION_FREEZE_AUTHORIZED = True\ny = 2\n",
+                   encoding="utf-8")
+    assert FCMD.barrier_readback(str(src)) == "True"
+    assert FCMD.restore_barrier(str(src)) is True
+    assert FCMD.barrier_readback(str(src)) == "False"
+    assert "H3_POPULATION_FREEZE_AUTHORIZED = False" in src.read_text(encoding="utf-8")
+    # already closed -> True, and still closed
+    assert FCMD.restore_barrier(str(src)) is True
+    # unreadable / absent -> False, never an optimistic True
+    assert FCMD.restore_barrier(str(tmp_path / "nope.py")) is False
+    assert FCMD.barrier_readback(str(tmp_path / "nope.py")) is None
+
+
+def test_THE_COMMAND_NEVER_OPENS_ITS_OWN_BARRIER():
+    """A command that could open its own barrier makes the barrier a formality."""
+    src = pathlib.Path(FCMD.__file__).read_text(encoding="utf-8")
+    assert "H3_POPULATION_FREEZE_AUTHORIZED = True" not in src.replace(
+        '_BARRIER_OPEN = re.compile(r"^H3_POPULATION_FREEZE_AUTHORIZED = True$", re.M)', "")
+    assert FCMD.main([]) == FCMD.EXIT_REFUSED            # --run is required
+    assert FCMD.main(["--run"]) == FCMD.EXIT_NOT_AUTHORIZED   # and the barrier binds
+
+
+def test_THE_LIVE_BARRIER_IS_SHUT_AND_THE_DESTINATION_ABSENT():
+    assert FCMD.barrier_is_open() is False
+    assert FCMD.barrier_readback() == "False"
+    assert not os.path.lexists(GEN.OUT_DIR)
+
+
+# ── P1-2: generation happens INSIDE the deadline and the trace ─────────────
+def test_THE_DEADLINE_IS_CHECKED_INSIDE_THE_CANDIDATE_LOOP():
+    """🔴 THE REPAIRED DEFECT. `write_artifact(openings=build_population())`
+    evaluated the whole walk BEFORE the trace opened and the clock started, so a
+    hang inside generation left no terminal record and could not trip the guard.
+    A zero deadline must now fire at opening 0, attempt 0 -- before any opening
+    is accepted."""
+    import json
+    with tempfile.TemporaryDirectory() as d:
+        with pytest.raises(GEN.H3GenerationDeadline, match="opening 0, attempt 0"):
+            GEN.write_artifact(out_path=f"{d}/a.json", trace_path=f"{d}/t.jsonl",
+                               build=GEN.build_population, deadline_s=0)
+        end = [json.loads(l) for l in open(f"{d}/t.jsonl")][-1]
+        assert end["event"] == "generation_end"
+        assert end["verdict"] == "TIMEOUT", "a timeout must not be reported as VOID"
+        assert end["accepted"] == 0
+        assert not os.path.lexists(f"{d}/a.json"), "a partial population is not one"
+
+
+def test_THE_TRACE_IS_OPEN_BEFORE_ANY_GENERATION_HAPPENS():
+    """A failure DURING generation must still leave a terminal record."""
+    import json
+    with tempfile.TemporaryDirectory() as d:
+        def explode(check_deadline=None):
+            raise RuntimeError("boom during the walk")
+        # 🔑 THE ORIGINAL EXCEPTION PROPAGATES, deliberately: wrapping a
+        # RuntimeError from inside the walk in an H3GenerationError would lose
+        # the traceback that says WHERE. What matters here is that the terminal
+        # record exists anyway.
+        with pytest.raises(RuntimeError, match="boom during the walk"):
+            GEN.write_artifact(out_path=f"{d}/a.json", trace_path=f"{d}/t.jsonl",
+                               build=explode)
+        events = [json.loads(l) for l in open(f"{d}/t.jsonl")]
+        assert [e["event"] for e in events] == ["generation_start", "generation_end"]
+        assert events[-1]["verdict"] == "VOID" and events[-1]["failure"]
+
+
+def test_build_population_THREADS_THE_HOOK_WITH_NO_LAMBDA_IN_BETWEEN():
+    """🔑 `lambda cd: build_population()` -- taking the hook and dropping it -- is
+    how the guard ends up checked only after the walk it was meant to bound. The
+    hook is positional and first so `build=build_population` works directly."""
+    import inspect
+    params = list(inspect.signature(GEN.build_population).parameters)
+    assert params[0] == "check_deadline"
+    seen = []
+    R.generate_uniform_openings(n=3, check_deadline=lambda i, a, acc:
+                                seen.append((i, a)))
+    assert seen == [(0, 0), (1, 0), (2, 0)], seen
+    # and build_population passes it through rather than swallowing it
+    got = []
+    GEN.build_population(lambda i, a, acc: got.append(i))
+    assert len(got) == R.N_PAIRS
+
+
+def test_THE_CLOCK_IS_MONOTONIC():
+    """`time.time()` steps backwards over an NTP correction, silently extending
+    the window a runaway guard exists to bound."""
+    src = (ALPHAZERO / "h3_study_generator.py").read_text(encoding="utf-8")
+    fn = next(n for n in ast.parse(src).body
+              if isinstance(n, ast.FunctionDef) and n.name == "write_artifact")
+    # 🔑 THE CALLS, not the file text. The docstring EXPLAINS why time.time() is
+    # wrong, and a grep cannot tell an explanation from a use.
+    calls = {f"{n.func.value.id}.{n.func.attr}" for n in ast.walk(fn)
+             if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+             and isinstance(n.func.value, ast.Name)}
+    assert "time.monotonic" in calls
+    assert "time.time" not in calls
+
+
+def test_THE_ARTIFACT_IS_FSYNCED_BEFORE_OK_IS_RECORDED():
+    """`OK` in the trace asserts the artifact is ON DISK. Without the fsync the
+    process could report OK and lose the file to a crash."""
+    src = (ALPHAZERO / "h3_study_generator.py").read_text(encoding="utf-8")
+    body = src[src.index("def write_artifact("):src.index("def freeze_population(")]
+    fsync_at = body.index("os.fsync(fh.fileno())")
+    assert fsync_at < body.index('verdict = "OK"')
+
+
+def test_write_artifact_REFUSES_BOTH_OR_NEITHER_SOURCE():
+    with tempfile.TemporaryDirectory() as d:
+        for kw in ({}, {"build": GEN.build_population,
+                        "openings": GEN.build_population()}):
+            with pytest.raises(GEN.H3GenerationError, match="exactly one"):
+                GEN.write_artifact(out_path=f"{d}/a.json",
+                                   trace_path=f"{d}/t.jsonl", **kw)
+
+
+# ── P1-3: the digest BINDS the moves ───────────────────────────────────────
+def test_ALTERED_MOVES_WITH_AN_UNTOUCHED_DIGEST_ARE_REFUSED():
+    """🔴 THE DEFECT, EXACTLY. Both checks trusted each row's DECLARED digest and
+    neither replayed the moves, so an opening could be rewritten while its digest
+    -- and `OPENING_SET_DIGEST` -- stayed valid, and the runner would play the
+    altered position."""
+    import copy
+    doc = copy.deepcopy(GEN.artifact_document(GEN.build_population()))
+    before = doc["opening_set_digest"]
+    doc["openings"][5]["moves"][0] = [3, 4]          # digest untouched
+    assert RULES_set_digest(doc) == before, "the set digest is deliberately unchanged"
+    with pytest.raises(GEN.H3GenerationError, match="replaying its moves"):
+        GEN.validate_artifact(doc)
+
+
+def RULES_set_digest(doc):
+    return R.opening_set_digest(doc["openings"])
+
+
+@pytest.mark.parametrize("break_it,match", [
+    (lambda d: d["openings"][4]["moves"].pop(), "moves must be a list"),
+    (lambda d: d["openings"][4]["moves"].append([1, 1]), "moves must be a list"),
+    (lambda d: d["openings"][4].__setitem__("moves", [[True, 1]] * 6), "not int"),
+    (lambda d: d["openings"][4].__setitem__("moves", [[1.0, 1]] * 6), "not int"),
+    (lambda d: d["openings"][4].__setitem__("moves", [[99, 1]] * 6), "off a"),
+    (lambda d: d["openings"][4].__setitem__("index", 7), "study order is positional"),
+    (lambda d: d["openings"][4].__setitem__("segment", 3), "frozen plan"),
+    (lambda d: d["openings"][4].__setitem__("seed", 20_261_600_000), "disagree"),
+    (lambda d: d["openings"][4].__setitem__("attempts", 2), "disagree"),
+    (lambda d: d.__setitem__("extra", 1), "unknown keys"),
+    (lambda d: d["generator"].__setitem__("bit_generator", "MT19937"), "disagrees"),
+    (lambda d: d["generator"].__setitem__("gen_seed_base", 1), "disagrees"),
+    (lambda d: d["generator"]["source_pins"].__setitem__(
+        "h3_study_rules.py", "0" * 64), "disagrees"),
+    (lambda d: d.__setitem__("generation_note", "engine-assisted"), "generation note"),
+    (lambda d: d.__setitem__("generator", None), "no generator identity"),
+])
+def test_THE_BOUND_VALIDATOR_REFUSES(break_it, match):
+    import copy
+    doc = copy.deepcopy(GEN.artifact_document(GEN.build_population()))
+    break_it(doc)
+    doc["opening_set_digest"] = R.opening_set_digest(doc["openings"])   # re-hash!
+    with pytest.raises(GEN.H3GenerationError, match=match):
+        GEN.validate_artifact(doc)
+
+
+def test_A_SWAPPED_PAIR_OF_OPENINGS_IS_REFUSED():
+    """Reordering leaves every digest valid and changes the set digest only in
+    order -- but index and segment then disagree with position."""
+    import copy
+    doc = copy.deepcopy(GEN.artifact_document(GEN.build_population()))
+    doc["openings"][0], doc["openings"][1] = doc["openings"][1], doc["openings"][0]
+    doc["opening_set_digest"] = R.opening_set_digest(doc["openings"])
+    with pytest.raises(GEN.H3GenerationError, match="study order is positional"):
+        GEN.validate_artifact(doc)
+
+
+def test_verify_candidate_REDERIVES_EVERY_OPENING_FROM_ITS_PROVENANCE():
+    """The binding, end to end: seed -> walk -> moves -> digest, for all 296."""
+    for o in GEN.build_population():
+        moves, digest = R.verify_candidate(R.GEN_SEED_UNIFORM, o["index"],
+                                           o["attempts"])
+        assert moves == o["moves"] and digest == o["digest"], o["index"]
+        assert o["seed"] == R.attempt_seed(R.GEN_SEED_UNIFORM, o["index"],
+                                           o["attempts"] - 1)
+
+
+def test_THE_LOADER_VALIDATES_AND_DOES_NOT_REIMPLEMENT():
+    """🔴 `load_opening_set` never called `validate_artifact` at all. It now
+    delegates: a loader with its own copy of the rules checks the copy."""
+    src = (ALPHAZERO / "h3_study_runner.py").read_text(encoding="utf-8")
+    body = src[src.index("def load_opening_set("):src.index("def run_segment(")]
+    assert "GEN.validate_artifact(doc)" in body
+    assert "expected_opening_set_digest()" in body, "must also be THE pinned set"
+    assert "co-produced" not in body, "the stale co-produced message must be gone"
+
+
+def test_THE_LOADER_REFUSES_AN_ALTERED_ARTIFACT(tmp_path, monkeypatch):
+    import json
+    doc = GEN.artifact_document(GEN.build_population())
+    monkeypatch.setattr(R, "OPENING_SET_DIGEST", doc["opening_set_digest"])
+    good = tmp_path / "ok.json"
+    good.write_text(json.dumps(doc), encoding="utf-8")
+    assert len(RUN.load_opening_set(str(good))) == R.N_PAIRS   # positive control
+
+    doc["openings"][9]["moves"][0] = [5, 5]
+    doc["opening_set_digest"] = R.opening_set_digest(doc["openings"])
+    bad = tmp_path / "bad.json"
+    bad.write_text(json.dumps(doc), encoding="utf-8")
+    with pytest.raises(RUN.H3StudyRunError, match="FAILED validation"):
+        RUN.load_opening_set(str(bad))
+
+
+def test_THE_LOADER_REFUSES_A_SELF_CONSISTENT_BUT_UNPINNED_POPULATION(tmp_path,
+                                                                      monkeypatch):
+    """A population can be perfectly re-derivable and still not be THE one."""
+    import json
+    doc = GEN.artifact_document(GEN.build_population())
+    monkeypatch.setattr(R, "OPENING_SET_DIGEST", "f" * 64)
+    f = tmp_path / "a.json"
+    f.write_text(json.dumps(doc), encoding="utf-8")
+    with pytest.raises(RUN.H3StudyRunError, match="different population"):
+        RUN.load_opening_set(str(f))
+
+
+# ── the generator identity now pins what reproduces the walk ───────────────
+def test_THE_GENERATOR_IDENTITY_PINS_THE_TOOLCHAIN():
+    """🔴 'NO ENGINE' IS NOT 'NO TOOLCHAIN'. The first version recorded the
+    DESIGN -- seed base, attempt ceiling, filter names -- and nothing that would
+    let anyone reproduce the walk."""
+    i = GEN.generator_identity()
+    assert i["bit_generator"] == "PCG64"
+    assert i["python"].count(".") == 2 and i["numpy"]
+    assert set(i["source_pins"]) == {"h3_study_rules.py", "game/twixt_state.py",
+                                     "d1_selection.py"}
+    assert all(len(v) == 64 for v in i["source_pins"].values())
+    assert i["commit"] is None or len(i["commit"]) == 40
+
+
+def test_THE_COMMIT_IS_RECORDED_BUT_NOT_ENFORCED():
+    """A frozen population stays valid across later commits that do not touch the
+    walk. `source_pins` refuses exactly when the walk changed, which is the
+    honest version of the same check."""
+    assert "commit" not in GEN.IDENTITY_MUST_MATCH
+    assert "source_pins" in GEN.IDENTITY_MUST_MATCH
+    assert "commit" in GEN.generator_identity()

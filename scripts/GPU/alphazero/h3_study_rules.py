@@ -286,8 +286,61 @@ def _admissible(st, moves: Sequence[Tuple[int, int]]) -> bool:
     return True
 
 
+def walk(seed: int) -> Tuple[List[Tuple[int, int]], Any]:
+    """THE CANDIDATE WALK: six uniformly random legal plies from ONE seed.
+
+    🔴 FACTORED OUT SO IT CAN BE REPLAYED. Generation and verification must run
+    the SAME code: a verifier with its own copy of the walk checks that the copy
+    agrees with itself. `verify_candidate` calls this, and so does the generator.
+
+    Deterministic in `seed` alone -- `PCG64(seed)`, the engine's own
+    `legal_moves()` ordering, and nothing else. That determinism is what lets the
+    frozen artifact be re-derived from its seeds years later, and what makes the
+    digest a pin rather than a snapshot.
+    """
+    import numpy as np
+    if type(seed) is not int or isinstance(seed, bool):
+        raise H3StudyError(f"seed must be an int, got {seed!r}")
+    rng = np.random.Generator(np.random.PCG64(seed))
+    st = _fresh_state()
+    moves: List[Tuple[int, int]] = []
+    for _ in range(OPENING_PLIES):
+        legal = st.legal_moves()
+        if not legal or st.is_terminal():
+            break
+        r, c = legal[int(rng.integers(len(legal)))]
+        moves.append((int(r), int(c)))
+        st = st.apply_move((int(r), int(c)))
+    return moves, st
+
+
+def verify_candidate(base: int, index: int, attempts: int
+                     ) -> Tuple[List[Tuple[int, int]], str]:
+    """Re-derive opening `index` from its DECLARED provenance and return what the
+    generator must have produced: the moves, and the canonical digest.
+
+    🔑 THIS IS THE BINDING. An artifact row asserts "these moves, this digest,
+    this seed, this many attempts". Only re-running the walk from
+    `attempt_seed(base, index, attempts - 1)` can show those four agree; comparing
+    a row's digest to its own digest shows nothing at all.
+    """
+    for name, v in (("index", index), ("attempts", attempts)):
+        if type(v) is not int or isinstance(v, bool):
+            raise H3StudyError(f"{name} must be an int, got {v!r}")
+    if attempts < 1:
+        raise H3StudyError(f"attempts must be >= 1, got {attempts}")
+    seed = attempt_seed(base, index, attempts - 1)
+    moves, st = walk(seed)
+    if not _admissible(st, moves):
+        raise H3StudyError(
+            f"opening {index}: the candidate re-derived from seed {seed} is NOT "
+            f"admissible, so the generator cannot have accepted it there")
+    return moves, SEL.canonical_digest(st)
+
+
 def generate_uniform_openings(seed: int = GEN_SEED_UNIFORM,
-                              n: int = N_PAIRS) -> List[Dict[str, Any]]:
+                              n: int = N_PAIRS,
+                              check_deadline=None) -> List[Dict[str, Any]]:
     """THE STUDY'S POPULATION: `n` admissible positions from UNIFORMLY RANDOM
     legal play. Engine-free — a PRNG and structural filters, no model, no JVM.
 
@@ -302,25 +355,22 @@ def generate_uniform_openings(seed: int = GEN_SEED_UNIFORM,
     and the next ATTEMPT SEED is used. Never per-move resampling, which would
     distort the distribution it claims to draw from. Exhausting `MAX_ATTEMPTS`
     ABORTS; it never returns a short set and never relaxes a filter.
-    """
-    import numpy as np
 
+    🔴 `check_deadline` IS CALLED INSIDE THE CANDIDATE LOOP, not around it. A
+    guard that only runs between openings cannot stop a walk that hangs, and a
+    guard evaluated before the loop starts cannot stop anything at all -- which
+    is exactly the defect this parameter exists to close. It is called once per
+    ATTEMPT and may raise; nothing here catches it.
+    """
     excluded = excluded_digests()
     out: List[Dict[str, Any]] = []
     seen = set()
     for index in range(n):
         for attempt in range(MAX_ATTEMPTS):
+            if check_deadline is not None:
+                check_deadline(index, attempt, len(out))
             s = attempt_seed(seed, index, attempt)
-            rng = np.random.Generator(np.random.PCG64(s))
-            st = _fresh_state()
-            moves: List[Tuple[int, int]] = []
-            for _ in range(OPENING_PLIES):
-                legal = st.legal_moves()
-                if not legal or st.is_terminal():
-                    break
-                r, c = legal[int(rng.integers(len(legal)))]
-                moves.append((int(r), int(c)))
-                st = st.apply_move((int(r), int(c)))
+            moves, st = walk(s)
             if not _admissible(st, moves):
                 continue
             digest = SEL.canonical_digest(st)

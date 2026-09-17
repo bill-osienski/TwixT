@@ -394,30 +394,56 @@ def _production_play(results_path: str, deadline: Any = None,
 
 
 def load_opening_set(path: str) -> List[Dict[str, Any]]:
-    """The PINNED opening set — ONE uniform population — from the frozen artifact.
+    """The FROZEN population, VALIDATED AND BOUND, from the pinned artifact.
 
-    🔴 IT DOES NOT EXIST YET, and this refuses rather than inventing one.
-    Uniform generation is deterministic and engine-free, so the set can be
-    RECOMPUTED at any moment -- and that is exactly why the runner will not
-    recompute it. A study must play the population that was FROZEN and pinned,
-    not one regenerated at start-up that happens to match today.
+    🔴 THIS USED TO TRUST THE FILE. It called `check_opening_set` and re-hashed
+    the openings' DECLARED digests -- so an opening's `moves` could be rewritten
+    while its `digest` and `opening_set_digest` stayed untouched, and the runner
+    would accept and PLAY a different position than the one the study is defined
+    over. A digest that is never recomputed from the thing it digests is a label.
+    It also never called `validate_artifact` at all, so the artifact's schema,
+    claim and generator identity were unchecked on the path that matters most.
+
+    It now delegates to `GEN.validate_artifact`, which replays every opening's
+    six moves through the real engine, recomputes each canonical digest, checks
+    `seed == attempt_seed(base, index, attempts - 1)`, and re-derives the whole
+    candidate from the PRNG. Nothing here re-implements those checks: a loader
+    with its own copy of the rules checks the copy.
+
+    🔑 AND IT STILL WILL NOT REGENERATE. Uniform generation is deterministic, so
+    the set could be recomputed at start-up -- and that is exactly why it is not.
+    A study must play the population that was FROZEN, not one rebuilt today that
+    happens to match.
     """
     import json
+    from . import h3_study_generator as GEN
     if not os.path.lexists(path):
         raise H3StudyRunError(
-            f"the pinned opening set {path} does not exist. The co-produced "
-            f"stratum is produced by a separate AUTHORIZED GENERATION RUN; until "
-            f"it has run there is no study population, and a stub may never stand "
-            f"in for one.")
+            f"the frozen opening set {path} does not exist. The population is "
+            f"produced by a separate authorized POPULATION-FREEZE step "
+            f"(`h3_freeze_command`); until that has run there is no study "
+            f"population, and a recomputed set may never stand in for one.")
     with open(path, encoding="utf-8") as fh:
         doc = json.load(fh)
-    openings = doc["openings"]
-    RULES.check_opening_set(openings)          # refuses stubs, composition, orders
-    got = RULES.opening_set_digest(openings)
-    if got != doc.get("opening_set_digest"):
+    if not isinstance(doc, dict):
+        raise H3StudyRunError(f"{path} does not hold an artifact object")
+    try:
+        bound = GEN.validate_artifact(doc)
+    except GEN.H3GenerationError as e:
         raise H3StudyRunError(
-            f"the opening set digest is {got} but the artifact says "
-            f"{doc.get('opening_set_digest')}; the population has been edited")
+            f"the frozen opening set {path} FAILED validation: {e}") from None
+    openings = doc["openings"]
+    RULES.check_opening_set(openings)      # the study's own rules, over the same set
+
+    # 🔴 AND IT MUST BE THE PINNED POPULATION, not merely a self-consistent one.
+    # `validate_artifact` proves the artifact is internally sound and re-derivable;
+    # only OPENING_SET_DIGEST says it is THE one the study was defined over.
+    pinned = RULES.expected_opening_set_digest()
+    if bound["opening_set_digest"] != pinned:
+        raise H3StudyRunError(
+            f"{path} holds population {bound['opening_set_digest']}, but the "
+            f"study is pinned to {pinned}. A different population is a different "
+            f"study.")
     return openings
 
 
