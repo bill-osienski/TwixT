@@ -3437,7 +3437,7 @@ EXPECTED_REASONS = {
     'the barrier accepts any truthy value':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
     'the artifact may be overwritten':
-        "FileExistsError: [Errno 17] File exists: '/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/tmpm3jkrh18/a.json'",
+        "FileExistsError: [Errno 17] File exists: '/<tmp>/tmp<x>/a.json'",
     'attempt provenance becomes optional':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
     'the official destination moves into a spent directory':
@@ -4744,7 +4744,7 @@ EXPECTED_REASONS = {
     'a surviving descendant of the generator is reported as success':
         'assert 0 == 8',
     'the generation destination may sit in a SPENT directory':
-        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_coproduced_generator_retired.H3GenerationError'>",
     "the generation worker runs without the supervisor's capability":
         'AssertionError: assert 5 == 7',
     # ── 2026-09-15: PREPARATION for the opening-generation run.
