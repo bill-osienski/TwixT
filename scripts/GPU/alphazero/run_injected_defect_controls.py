@@ -104,6 +104,14 @@ _VOLATILE = (
     (re.compile(r"pytest-\d+"), "pytest-<n>"),
     (re.compile(r"0x[0-9a-f]{4,}"), "0x<addr>"),
     (re.compile(r"injected-defect-controls-\w+"), "injected-defect-controls-<x>"),
+    # 🔴 `tempfile` NAMES. A control whose target test writes under a temp
+    # directory records a reason containing that directory's RANDOM name, so it
+    # can never match on replay: it went INDETERMINATE every run while the test
+    # was doing exactly what it should. The reason is the same reason; only the
+    # path differs. Both the mkdtemp/TemporaryDirectory leaf and macOS's
+    # /var/folders prefix vary, so both are normalised.
+    (re.compile(r"/var/folders/[^/]+/[^/]+/T/"), "/<tmp>/"),
+    (re.compile(r"\btmp[0-9A-Za-z_]{6,}\b"), "tmp<x>"),
 )
 
 

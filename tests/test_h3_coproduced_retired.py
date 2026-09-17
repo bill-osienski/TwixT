@@ -99,9 +99,22 @@ def test_the_wrapper_REFUSES_BEFORE_SPAWNING_when_the_destination_exists(
     assert code == GCMD.EXIT_REFUSED
     assert spawned == [], "nothing may be spawned once the destination is taken"
 
-def test_the_destination_INSIDE_A_SPENT_DIRECTORY_is_refused(monkeypatch):
+def test_the_destination_INSIDE_A_SPENT_DIRECTORY_is_refused(monkeypatch, tmp_path):
+    """🔴 THE RECEIPT CHECK NOW FIRES FIRST, so it has to be redirected.
+
+    `_check_destination` also refuses an existing RECEIPT. Attempt 2 CONSUMED
+    that path on 2026-09-16, so the receipt exists and the refusal that arrives
+    is "the output path already exists" -- not the SPENT-directory refusal this
+    test names. It passed `pytest.raises(H3GenerationError)` on the wrong
+    exception and only the `match=` saved it, which the control harness reported
+    as INDETERMINATE rather than as a pass.
+
+    Redirecting RECEIPT to a temp path makes the spent-directory check the thing
+    actually under test.
+    """
     monkeypatch.setattr(GCMD, "gate_is_open", lambda: True)
     monkeypatch.setattr(GCMD, "restore_gate", lambda *a, **k: True)
+    monkeypatch.setattr(GCMD, "RECEIPT", str(tmp_path / "receipt.json"))
     spent = GCMD.SPENT_OUT_DIRS[0]
     with pytest.raises(GEN.H3GenerationError, match="SPENT"):
         GCMD._check_destination(f"{spent}/o.json", f"{spent}/t.jsonl")
