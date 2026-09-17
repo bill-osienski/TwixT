@@ -636,9 +636,23 @@ def test_NO_DECLARED_REASON_NAMES_A_SPENT_GENERATION_RANGE():
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     from scripts.GPU.alphazero import h3_study_rules as R
+
+    # 🔑 EXEMPT THE CONTROLS THAT ARE *ABOUT* RETIREMENT, by what they inject
+    # rather than by a hand-kept list of names. A control that mutates
+    # SPENT_GENERATION_RANGES is by definition asserting about a spent range, so
+    # its reason naming those numbers is CORRECT -- and a spent range never moves
+    # again, which is exactly why quoting one is safe there and rot anywhere else.
+    # My first version forbade the numbers outright and failed on the one control
+    # that must contain them.
+    about_retirement = {lab for lab, _f, old_s, new_s, _t in mod.DEFECTS
+                        if "SPENT_GENERATION_RANGES" in old_s + new_s}
     stale = []
     for label, reason in mod.EXPECTED_REASONS.items():
+        if label in about_retirement:
+            continue
         for lo, hi in R.SPENT_GENERATION_RANGES:
             if str(lo) in str(reason) or str(hi) in str(reason):
                 stale.append((label, f"{lo}..{hi}"))
     assert stale == [], stale
+    assert about_retirement, (
+        "the exemption matched nothing -- it would pass vacuously")
