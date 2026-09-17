@@ -434,11 +434,22 @@ def test_the_registry_admits_a_FRESH_schedule_for_EXECUTION(tasks):
 # ═══════════ the generator's walk, driven with INERT movers ════════════════
 
 class _Ctx:
-    """The move log a T1jAgent requires: it refuses when the log length and the
-    state's ply disagree."""
+    """The move log a T1jAgent requires — and `reset`, because the REAL
+    `IntegrationContext` has it and the walk must call it before either agent can
+    move. A double without `reset` would have hidden the very defect that VOIDed
+    the one authorized generation attempt."""
 
     def __init__(self):
         self.moves = []
+        self.task_id = None
+        self.stats = {}
+
+    def reset(self, task_id, opening):
+        assert isinstance(task_id, str) and task_id, task_id
+        self.task_id = task_id
+        self.moves = [tuple(m) for m in opening]
+        self.stats.setdefault(task_id, {"binds": 0, "t1j_queries": 0,
+                                        "searched_binds": 0})
 
 
 def _inert_movers(config=None):
@@ -635,6 +646,22 @@ def test_THE_OPENING_SET_DIGEST_IS_UNSET_AND_REFUSES():
     assert R.OPENING_SET_DIGEST is None
     with pytest.raises(R.H3StudyError, match="does not exist yet|AUTHORIZED"):
         R.expected_opening_set_digest()
+
+
+def test_ATTEMPT_1s_DIRECTORY_AND_RANGE_ARE_BOTH_SPENT():
+    """🔴 RECORDED BY THE VOID OF 2026-09-16. It produced no opening, and it is
+    spent all the same: the first attempt BUILT AN AGENT on 20261200000 and put a
+    query to T1j from it. A drawn seed is drawn whether or not an opening
+    survived, and the directory holds the receipt and trace that prove it."""
+    from scripts.GPU.alphazero import h3_generation_command as C
+    failed = "docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings"
+    assert failed in C.SPENT_OUT_DIRS
+    assert (20261200000, 20261259200) in R.SPENT_GENERATION_RANGES
+    assert R.is_spent_generation_range(20261200000) is True
+    with pytest.raises(R.H3StudyError, match="SPENT"):
+        R.attempt_seed(20261200000, 0, 0)
+    # and attempt 2's range is NOT spent
+    assert R.is_spent_generation_range(R.GEN_SEED_CO_PRODUCED) is False
 
 
 def test_THE_DESTINATION_IS_ABSENT_AND_OUTSIDE_EVERY_SPENT_DIRECTORY():
@@ -1164,3 +1191,115 @@ def test_O_EXCL_refuses_the_receipt_EVEN_WITH_THE_PRECHECK_DISABLED(monkeypatch,
         "the earlier launch's receipt was OVERWRITTEN")
     assert code == GCMD.EXIT_UNEXPECTED, (
         "a receipt that could not be written must not report success")
+
+
+# ═══════════ THE CONTEXT RESET — the defect that VOIDed the one attempt ════
+
+def _t1j_record(move, depth):
+    class _R:
+        completed = True
+        requested_depth = depth
+        completed_depth = depth
+        null_sentinel = False
+        legal = True
+    r = _R()
+    r.move = move
+    return r
+
+
+def _drive_t1j_agent(monkeypatch, ctx, *, depth=6):
+    """The FIRST REAL `T1jAgent.__call__`, with an inert runtime: no JVM, no
+    process, no toolchain — but the real control flow, including the counter."""
+    from scripts.GPU.alphazero import e4_screen_integration as INT
+    st = R._fresh_state()
+    move = sorted(st.legal_moves())[0]
+    monkeypatch.setattr(INT, "check_postcond", lambda *a, **k: None)
+    monkeypatch.setattr(INT, "compare_state", lambda *a, **k: [])
+    agent = INT.T1jAgent(
+        runtime=INT.T1jRuntime(java="/nonexistent", jar="/none.jar",
+                               classes="/none", ply_cap=280, timeout_s=1.0),
+        ctx=ctx, depth=depth, colour=st.to_move, timeout_s=1.0,
+        _query=lambda *a, **k: ([_t1j_record(move, depth)], [object()], 0, ""))
+    return agent, agent(st), move
+
+
+def test_A_BARE_CONTEXT_RAISES_ON_THE_FIRST_T1J_MOVE(monkeypatch):
+    """🔴 THE DEFECT ITSELF, bound as a test. It cost the one authorized
+    generation attempt: 0 of 148 openings, VOID in 3 seconds.
+
+    Construction succeeds — which is why a preflight that stops at construction
+    cannot see it. `bump` runs during the MOVE.
+    """
+    from scripts.GPU.alphazero import e4_screen_integration as INT
+    bare = INT.IntegrationContext()
+    assert bare.task_id is None and bare.stats == {}
+    with pytest.raises(KeyError):
+        _drive_t1j_agent(monkeypatch, bare)
+
+
+def test_THE_FIRST_REAL_T1J_CALL_COUNTS_ITS_QUERY(monkeypatch):
+    """🔑 `t1j_queries == 1`, through the real `__call__`, not construction."""
+    from scripts.GPU.alphazero import e4_screen_integration as INT
+    ctx = INT.IntegrationContext()
+    ctx.reset("h3gen-000-a000-s20261400000", [])
+    agent, got, want = _drive_t1j_agent(monkeypatch, ctx)
+    assert got == want
+    assert ctx.stats["h3gen-000-a000-s20261400000"]["t1j_queries"] == 1
+    assert ctx.stats["h3gen-000-a000-s20261400000"]["searched_binds"] == 1
+    assert agent.moves_made == 1
+
+
+def test_THE_WALK_RESETS_ITS_CONTEXT_BEFORE_EITHER_AGENT_MOVES():
+    """The reset must happen between creating the context and building the
+    agents — an agent built first could be called before the reset."""
+    import ast
+    import inspect as _i
+    import textwrap
+    src = textwrap.dedent(_i.getsource(GEN.generate_one))
+    fn = ast.parse(src).body[0]
+    lines = {}
+    for node in ast.walk(fn):
+        if not isinstance(node, ast.Call):
+            continue
+        # `movers["new_context"]()` is a SUBSCRIPT call, not an attribute or a
+        # name -- my first version looked only at the latter two and saw nothing.
+        name = getattr(node.func, "attr", "") or getattr(node.func, "id", "")
+        if isinstance(node.func, ast.Subscript):
+            key = getattr(node.func.slice, "value", None)
+            name = key if isinstance(key, str) else name
+        if name in ("new_context", "reset", "incumbent_agent", "t1j_agent"):
+            lines.setdefault(name, node.lineno)
+    for needed in ("new_context", "reset", "incumbent_agent", "t1j_agent"):
+        assert needed in lines, (needed, lines)
+    assert lines["new_context"] < lines["reset"], lines
+    assert lines["reset"] < lines["incumbent_agent"], lines
+    assert lines["reset"] < lines["t1j_agent"], lines
+
+
+def test_EVERY_ATTEMPT_GETS_ITS_OWN_CONTEXT_IDENTITY():
+    """🔴 NOT A SHARED CONSTANT. `stats` is keyed by task_id and never cleared,
+    so one shared identity would pool every attempt's counters into one bucket —
+    the very defect `IntegrationContext` documents."""
+    ids = []
+
+    class _Ctx2:
+        def __init__(self):
+            self.moves = []
+            self.task_id = None
+            self.stats = {}
+
+        def reset(self, task_id, opening):
+            ids.append(task_id)
+            self.task_id = task_id
+            self.moves = list(opening)
+            self.stats.setdefault(task_id, {"binds": 0, "t1j_queries": 0,
+                                            "searched_binds": 0})
+
+    movers = _inert_movers()
+    movers["new_context"] = _Ctx2
+    GEN.generate_one(index=3, order=R.ORDER_INCUMBENT_FIRST, movers=movers)
+    GEN.generate_one(index=4, order=R.ORDER_T1J_FIRST, movers=movers)
+    assert len(ids) == len(set(ids)) == 2, ids
+    assert all(i and isinstance(i, str) for i in ids)
+    assert "003" in ids[0] and "004" in ids[1], ids
+    assert all(str(R.GEN_SEED_CO_PRODUCED) in i or "-s" in i for i in ids)

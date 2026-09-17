@@ -91,6 +91,16 @@ def test_the_generation_seeds_are_DECLARED_and_in_NO_registry():
             assert s not in REF.CONSUMED_SEEDS
 
 
+def test_attempt_2s_RANGE_CLEARS_THE_SPENT_ONE_BY_MORE_THAN_ITS_OWN_SIZE():
+    """The spent range is a PRIOR now, on the same terms as any retired block."""
+    lo, hi = R.generation_seed_range(R.GEN_SEED_CO_PRODUCED)
+    floor = hi - lo
+    for s_lo, s_hi in R.SPENT_GENERATION_RANGES:
+        assert hi <= s_lo or s_hi <= lo, "attempt 2 overlaps a spent range"
+        gap = s_lo - hi if hi <= s_lo else lo - s_hi
+        assert gap >= floor, f"gap {gap} to the spent range is inside floor {floor}"
+
+
 def test_the_two_generation_RANGES_ARE_SEPARATED_BY_MORE_THAN_THEIR_OWN_SIZE():
     """🔴 DISJOINT IS NOT SEPARATED. The second attempt at these constants put the
     ranges 40,800 apart -- no overlap, but inside the gap floor this programme

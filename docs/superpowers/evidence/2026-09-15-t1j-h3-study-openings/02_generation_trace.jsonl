@@ -1,0 +1,2 @@
+{"deadline_s": 10800, "event": "generation_start", "n": 148, "note": "the generating incumbent is NOT the playing one", "selection_mode": "opening_temperature"}
+{"accepted": 0, "cleanup_error": null, "cleanup_ok": true, "event": "generation_end", "expected": 148, "failure": "KeyError: None", "opening_set_digest": null, "retirement_rule": "WHOLE RANGE, on ANY attempted generation", "retires": [20261200000, 20261259200], "timed_out": false, "verdict": "VOID"}

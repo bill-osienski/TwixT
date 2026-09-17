@@ -85,7 +85,21 @@ PRECISION_TARGET = 0.08
 #: and against each other, directly and through the derived streams.
 MAX_ATTEMPTS = 400
 GEN_SEED_UNIFORM = 20_261_000_000
-GEN_SEED_CO_PRODUCED = 20_261_200_000
+
+#: 🔴 ATTEMPT 1's CO-PRODUCED RANGE, SPENT WHOLE ON 2026-09-16.
+#: The single authorized generation VOIDed at opening 0 on `KeyError: None` --
+#: a bare `IntegrationContext` whose `bump` had no bucket -- and produced NOTHING.
+#: It is retired all the same, and the reason is not ceremony: the first attempt
+#: USED its seed. It built the incumbent's agent on 20261200000 and put a query
+#: to T1j from it. A drawn seed is drawn whether or not an opening survived.
+SPENT_GENERATION_RANGES = (
+    (20_261_200_000, 20_261_259_200),        # attempt 1, VOID at opening 0
+)
+
+#: ATTEMPT 2's range. 140,800 clear of the uniform range and 140,800 clear of
+#: attempt 1's, both above the gap floor of 59,200 (a candidate's own size), and
+#: proved directly and through the derived streams by collision proof v12.
+GEN_SEED_CO_PRODUCED = 20_261_400_000
 
 # ═══════════════════════ bounds (card §5) ══════════════════════════════════
 #: CHOSEN, from the pilot's measured mean of 41.22 s/game: 148 games is ~1.69 h,
@@ -178,6 +192,11 @@ def attempt_seed(base: int, index: int, attempt: int) -> int:
     from the seed that produced it, so the loop cannot spin; and the ranges can be
     checked against the registries before a single one is used.
     """
+    if is_spent_generation_range(base):
+        raise H3StudyError(
+            f"the generation range at {base} is SPENT: it was attempted and its "
+            f"seeds were drawn. A further attempt needs a FRESH range with its "
+            f"own collision re-proof.")
     for name, v in (("index", index), ("attempt", attempt)):
         if type(v) is not int or isinstance(v, bool) or v < 0:
             raise H3StudyError(f"{name} must be a non-negative int, got {v!r}")
@@ -186,6 +205,14 @@ def attempt_seed(base: int, index: int, attempt: int) -> int:
             f"attempt {attempt} is beyond MAX_ATTEMPTS={MAX_ATTEMPTS}; exhausting "
             f"the attempts ABORTS generation and never relaxes a filter")
     return base + index * MAX_ATTEMPTS + attempt
+
+
+def is_spent_generation_range(base: int) -> bool:
+    """Has a generation range already been attempted? A spent range may never be
+    used again: its seeds were drawn the moment an agent was built on one."""
+    lo, hi = base, base + PAIRS_PER_STRATUM * MAX_ATTEMPTS
+    return any(not (hi <= s_lo or s_hi <= lo)
+               for s_lo, s_hi in SPENT_GENERATION_RANGES)
 
 
 def generation_seed_range(base: int) -> Tuple[int, int]:

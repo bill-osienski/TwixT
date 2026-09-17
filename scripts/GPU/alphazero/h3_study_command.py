@@ -37,6 +37,7 @@ SPENT_OUT_DIRS = (
     "docs/superpowers/evidence/2026-09-12-t1j-h2-match-attempt3",
     "docs/superpowers/evidence/2026-09-12-t1j-INCIDENT-control-harness-ran-a-match",
     "docs/superpowers/evidence/2026-09-14-t1j-h3-pilot",
+    "docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings",
 )
 #: 🔴 THE OPENING-GENERATION DESTINATION IS NOT LISTED HERE, and that is
 #: deliberate. `docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings` is

@@ -49,6 +49,11 @@ SPENT_OUT_DIRS = (
     "docs/superpowers/evidence/2026-09-12-t1j-h2-match-attempt3",
     "docs/superpowers/evidence/2026-09-12-t1j-INCIDENT-control-harness-ran-a-match",
     "docs/superpowers/evidence/2026-09-14-t1j-h3-pilot",
+    # 🔴 ATTEMPT 1's generation directory. The run VOIDed at opening 0 and wrote
+    # no artifact, but it DID write a launch receipt, a terminal trace and a
+    # compiled helper -- and it spent its authorization. Those records are the
+    # evidence that it happened; nothing may write over them.
+    "docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings",
 )
 #: 🔴 THE OPENING-GENERATION DESTINATION IS NOT LISTED HERE, and that is
 #: deliberate. `docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings` is

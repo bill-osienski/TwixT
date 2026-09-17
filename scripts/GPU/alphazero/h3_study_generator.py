@@ -46,7 +46,11 @@ H3_GENERATION_AUTHORIZED = False
 EXIT_UNAUTHORIZED = 5
 
 #: Create-only, and never inside a spent run's directory.
-OUT_DIR = "docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings"
+#: 🔴 ATTEMPT 2. Attempt 1's directory
+#: (`2026-09-15-t1j-h3-study-openings`) holds a VOID's records -- a launch
+#: receipt, a terminal trace and a compiled helper -- and is now in
+#: SPENT_OUT_DIRS. Nothing may write into it again, and this run must not try.
+OUT_DIR = "docs/superpowers/evidence/2026-09-16-t1j-h3-study-openings-attempt2"
 DEFAULT_OUT = f"{OUT_DIR}/01_opening_set.json"
 DEFAULT_TRACE = f"{OUT_DIR}/02_generation_trace.jsonl"
 
@@ -285,6 +289,22 @@ def generate_one(*, index: int, order: str, movers: Dict[str, Any]) -> Dict[str,
         # agent per ply would carry no stream across the opening, and a fresh one
         # per ATTEMPT is right: a rejected candidate must leave nothing behind.
         ctx = movers["new_context"]()
+        # 🔴 RESET BEFORE EITHER AGENT CAN MOVE. A bare IntegrationContext has
+        # `task_id = None` and `stats = {}`, and `T1jAgent.__call__` ends with
+        # `ctx.bump("t1j_queries")`, which is `self.stats[self.task_id][key] += 1`
+        # -- so the FIRST T1j move raised `KeyError: None` and the one authorized
+        # generation attempt VOIDed at opening 0 having produced nothing.
+        #
+        # In the MATCH nothing had to do this: `make_state_factory` resets the
+        # context per task. The generator builds its own positions, so it has no
+        # state factory, and nothing reset it.
+        #
+        # 🔑 A DISTINCT IDENTITY PER ATTEMPT, never a shared constant. `stats` is
+        # keyed by task_id and is "PER TASK and NEVER cleared" by its own
+        # contract; one shared id would accumulate every attempt's counters into
+        # a single bucket, which is the defect that comment already records.
+        # The opening prefix is EMPTY: the walk starts from an empty board.
+        ctx.reset(f"h3gen-{index:03d}-a{attempt:03d}-s{seed}", [])
         inc = movers["incumbent_agent"](seed=seed, colour=inc_colour)
         t1j = movers["t1j_agent"](colour=t1j_colour, ctx=ctx)
         moves = []

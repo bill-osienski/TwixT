@@ -2795,7 +2795,7 @@ DEFECTS = [
     # range, while a separate control puts it merely inside the GAP FLOOR -- two
     # distinct claims, one target, different injections.
     ("the two generation seed ranges overlap again", H3SR,
-     "GEN_SEED_CO_PRODUCED = 20_261_200_000",
+     "GEN_SEED_CO_PRODUCED = 20_261_400_000",
      "GEN_SEED_CO_PRODUCED = 20_261_000_500",
      f"{T_H3SR}::test_the_two_generation_RANGES_ARE_SEPARATED_BY_MORE_THAN_THEIR_OWN_SIZE"),
     ("a rejection re-draws the seed that caused it", H3SR,
@@ -2949,6 +2949,34 @@ DEFECTS = [
      '    return "incumbent" if (odd == incumbent_moves_first) else "t1j"',
      '    return "incumbent"',
      f"{T_H3SRUN}::test_the_alternating_protocol_gives_each_engine_THREE_of_SIX_plies"),
+    # ── 2026-09-16: the CONTEXT RESET (the defect that VOIDed attempt 1) and
+    # the spent range / destination it left behind.
+    ("the generation walk does not reset its context", H3SGEN,
+     '        ctx.reset(f"h3gen-{index:03d}-a{attempt:03d}-s{seed}", [])',
+     "        pass",
+     f"{T_H3SRUN}::test_THE_WALK_RESETS_ITS_CONTEXT_BEFORE_EITHER_AGENT_MOVES"),
+    ("every attempt shares one context identity", H3SGEN,
+     '        ctx.reset(f"h3gen-{index:03d}-a{attempt:03d}-s{seed}", [])',
+     '        ctx.reset("h3gen", [])',
+     f"{T_H3SRUN}::test_EVERY_ATTEMPT_GETS_ITS_OWN_CONTEXT_IDENTITY"),
+    ("attempt 1's spent generation range may be reused", H3SR,
+     "SPENT_GENERATION_RANGES = (\n"
+     "    (20_261_200_000, 20_261_259_200),        # attempt 1, VOID at opening 0\n"
+     ")",
+     "SPENT_GENERATION_RANGES = ()",
+     f"{T_H3SRUN}::test_ATTEMPT_1s_DIRECTORY_AND_RANGE_ARE_BOTH_SPENT"),
+    ("attempt 1's VOIDED directory is not marked spent", H3GCMD,
+     '    "docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings",\n)',
+     ")",
+     f"{T_H3SRUN}::test_ATTEMPT_1s_DIRECTORY_AND_RANGE_ARE_BOTH_SPENT"),
+    ("attempt 2 writes into attempt 1's directory", H3SGEN,
+     'OUT_DIR = "docs/superpowers/evidence/2026-09-16-t1j-h3-study-openings-attempt2"',
+     'OUT_DIR = "docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings"',
+     f"{T_H3SRUN}::test_THE_DESTINATION_IS_ABSENT_AND_OUTSIDE_EVERY_SPENT_DIRECTORY"),
+    ("attempt 2's range sits inside the spent one's gap floor", H3SR,
+     "GEN_SEED_CO_PRODUCED = 20_261_400_000",
+     "GEN_SEED_CO_PRODUCED = 20_261_280_000",
+     f"{T_H3SR}::test_attempt_2s_RANGE_CLEARS_THE_SPENT_ONE_BY_MORE_THAN_ITS_OWN_SIZE"),
     # ── 2026-09-16: the GENERATION DEADLINE, preregistered separately, and the
     # PARENT-OWNED LAUNCH RECEIPT. The worker's own `finally` cannot record an
     # outcome decided after the parent has killed it.
@@ -3065,17 +3093,15 @@ DEFECTS = [
      'OPENING_SET_DIGEST: Optional[str] = "' + "0" * 64 + '"',
      f"{T_H3SRUN}::test_THE_OPENING_SET_DIGEST_IS_UNSET_AND_REFUSES"),
     ("the generation destination is marked spent before any run", H3SCMD,
-     '    "docs/superpowers/evidence/2026-09-14-t1j-h3-pilot",\n)',
-     '    "docs/superpowers/evidence/2026-09-14-t1j-h3-pilot",\n'
      '    "docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings",\n)',
+     '    "docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings",\n'
+     '    "docs/superpowers/evidence/2026-09-16-t1j-h3-study-openings-attempt2",\n)',
      f"{T_H3SRUN}::test_THE_DESTINATION_IS_ABSENT_AND_OUTSIDE_EVERY_SPENT_DIRECTORY"),
     # the same line appears in the PREFLIGHT, so the anchor carries the line above
     ("the incumbent agent is re-seeded per ply again", H3SGEN,
-     "        # per ATTEMPT is right: a rejected candidate must leave nothing behind.\n"
-     "        ctx = movers[\"new_context\"]()\n"
+     '        ctx.reset(f"h3gen-{index:03d}-a{attempt:03d}-s{seed}", [])\n'
      "        inc = movers[\"incumbent_agent\"](seed=seed, colour=inc_colour)",
-     "        # per ATTEMPT is right: a rejected candidate must leave nothing behind.\n"
-     "        ctx = movers[\"new_context\"]()\n"
+     '        ctx.reset(f"h3gen-{index:03d}-a{attempt:03d}-s{seed}", [])\n'
      "        inc = movers[\"incumbent_agent\"](seed=seed + 7919, colour=inc_colour)",
      f"{T_H3SRUN}::test_THE_AGENT_IS_SEEDED_WITH_THE_ATTEMPT_SEED_EXACTLY"),
     ("a fresh agent is built for every ply", H3SGEN,
@@ -3116,8 +3142,8 @@ DEFECTS = [
      "                               config=cfg)",
      f"{T_H3SRUN}::test_the_preflight_agents_HOLD_THE_ONE_RUNTIME"),
     ("the two generation ranges sit inside their own gap floor", H3SR,
-     "GEN_SEED_CO_PRODUCED = 20_261_200_000",
-     "GEN_SEED_CO_PRODUCED = 20_261_100_000",
+     "GEN_SEED_CO_PRODUCED = 20_261_400_000",
+     "GEN_SEED_CO_PRODUCED = 20_261_080_000",
      f"{T_H3SR}::test_the_two_generation_RANGES_ARE_SEPARATED_BY_MORE_THAN_THEIR_OWN_SIZE"),
     # ═════════════ 2026-09-14: the H3 PILOT -- closed, seedless, contained ═══
     ("the H3 pilot gate is opened", H3RUN,
@@ -4705,8 +4731,6 @@ EXPECTED_REASONS = {
     # is precisely the difference between a refusal and an accident.
     'the DECLARED order allocation is changed':
         'assert (19, 19, 18, 18) == (19, 18, 19, 18)',
-    'the two generation seed ranges overlap again':
-        'AssertionError: ((20261000000, 20261059200), (20261000500, 20261059700))',
     'the generator carries a tree across openings':
         'AssertionError: expected 3 BETWEEN openings + 1 final teardown, got [1]',
     "a failed gate restoration does not become the wrapper's exit code":
@@ -4769,18 +4793,12 @@ EXPECTED_REASONS = {
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
     "the artifact's schema is not enforced":
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
-    'the generation destination is marked spent before any run':
-        "AssertionError: assert 'docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings' != 'docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings'",
-    'the incumbent agent is re-seeded per ply again':
-        'assert [20261210719] == [20261202800]',
     'the opening-set pin is invented before the artifact exists':
         "AssertionError: assert '0000000000000000000000000000000000000000000000000000000000000000' is None",
     'the preflight asks the movers for a MOVE':
         'scripts.GPU.alphazero.e4_screen_runner.AbortError: [move] T1j asked to move as black but red is to move',
     'the preflight builds an equal runtime rather than sharing one':
         'scripts.GPU.alphazero.h3_study_generator.H3GenerationError: the T1j agent holds a different runtime',
-    'the two generation ranges sit inside their own gap floor':
-        'AssertionError: gap 40800 is inside the floor 59200',
     # ── 2026-09-15: the H3 FULL STUDY. Every reason observed in a throwaway
     # worktree through the driver's own classify path, never predicted.
     'a STUB opening set can be pinned and played against':

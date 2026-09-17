@@ -1,0 +1,25 @@
+{
+ "artifact_exists": false,
+ "deadline_s": 10800,
+ "design": "H3_OPENING_GENERATION_LAUNCH",
+ "exit_code": 4,
+ "gate_readback": "False",
+ "gate_restored": true,
+ "group_cleared": true,
+ "interrupted": false,
+ "note": null,
+ "out_path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings/01_opening_set.json",
+ "outcome": "UNEXPECTED",
+ "outer_cap_s": 10860,
+ "recorded_at": "2026-09-16T12:31:40Z",
+ "retirement_rule": "WHOLE RANGE, on ANY attempted generation -- a timeout is not 'try again with more time'",
+ "retires": [
+  20261200000,
+  20261259200
+ ],
+ "supervised": true,
+ "timed_out": false,
+ "trace_exists": true,
+ "trace_path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings/02_generation_trace.jsonl",
+ "worker_exit": 4
+}
