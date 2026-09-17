@@ -446,34 +446,6 @@ OK_SUP = {"timed_out": False, "interrupted": False, "group_cleared": True,
 
 
 
-def test_NO_TEST_MAY_WRITE_INTO_THE_RUNS_OWN_DESTINATION():
-    """🔴 A test DID. `test_every_supervisor_outcome_gets_ITS_OWN_exit_code` did
-    not redirect `RECEIPT`, so running the suite created a real
-    `00_launch_receipt.json` in the destination the authorized generation is
-    meant to write — which would then have refused the real launch as "already
-    exists". An authorization spent because a TEST occupied the destination is
-    exactly H2's defect, arriving by a new road.
-
-    Every wrapper test that reaches the receipt must patch the path first.
-    """
-    import ast
-    import inspect as _i
-    src = open(__file__, encoding="utf-8").read()
-    tree = ast.parse(src)
-    offenders = []
-    for fn in [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)]:
-        body = ast.get_source_segment(src, fn) or ""
-        # only a test that FORCES THE GATE OPEN can reach the receipt at all:
-        # with the gate shut the wrapper returns before the try/finally.
-        reaches_receipt = ("GCMD.main(" in body
-                           and 'GCMD, "gate_is_open", lambda: True' in body)
-        redirects = 'GCMD, "RECEIPT"' in body or "_launch(" in body
-        if reaches_receipt and not redirects:
-            offenders.append(fn.name)
-    assert offenders == [], offenders
-    import os
-    assert not os.path.lexists(GEN.OUT_DIR), (
-        f"{GEN.OUT_DIR} exists: a test wrote into the run's destination")
 
 
 

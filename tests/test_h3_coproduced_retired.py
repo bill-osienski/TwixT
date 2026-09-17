@@ -379,3 +379,54 @@ def test_THE_SUPERVISOR_CAN_NO_LONGER_OPEN_ANYTHING():
     assert "\nH3_GENERATION_AUTHORIZED" not in gen_src
     with pytest.raises(GEN.H3GenerationError, match="RETIRED"):
         GEN.check_gate()
+
+
+def test_NO_TEST_MAY_WRITE_INTO_THE_RUNS_OWN_DESTINATION():
+    """🔴 A test DID. `test_every_supervisor_outcome_gets_ITS_OWN_exit_code` did
+    not redirect `RECEIPT`, so running the suite created a real
+    `00_launch_receipt.json` in the destination the authorized generation is
+    meant to write — which would then have refused the real launch as "already
+    exists". An authorization spent because a TEST occupied the destination is
+    exactly H2's defect, arriving by a new road.
+
+    Every wrapper test that reaches the receipt must patch the path first.
+    """
+    import ast
+    import inspect as _i
+    src = open(__file__, encoding="utf-8").read()
+    tree = ast.parse(src)
+    offenders = []
+    reaching = []
+    for fn in [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)]:
+        body = ast.get_source_segment(src, fn) or ""
+        # only a test that FORCES THE GATE OPEN can reach the receipt at all:
+        # with the gate shut the wrapper returns before the try/finally.
+        reaches_receipt = ("GCMD.main(" in body
+                           and 'GCMD, "gate_is_open", lambda: True' in body)
+        redirects = 'GCMD, "RECEIPT"' in body or "_launch(" in body
+        if reaches_receipt:
+            reaching.append(fn.name)
+            if not redirects:
+                offenders.append(fn.name)
+    assert offenders == [], offenders
+    # 🔴 NON-VACUITY. This test used to live in `test_h3_study_runner.py` and
+    # scanned that file. When the supervisor tests moved here it kept passing --
+    # against a file with nothing left to police. A scan of the wrong file is
+    # indistinguishable from a clean one, so it now proves it saw its subject.
+    assert reaching, (
+        "this scan found no test that reaches the receipt at all; it is "
+        "scanning the wrong file and would pass however dirty that file got")
+    # 🔑 AND THE INVARIANT ITSELF CHANGED WHEN THE DESTINATION WAS CONSUMED.
+    # It used to assert the receipt was ABSENT, which was right while the
+    # destination was unspent: a test creating one would have refused the real
+    # launch as "already exists". Attempt 2 then CONSUMED it, so absence is now
+    # the wrong thing to want -- that receipt is the VOID's own record and must
+    # stay exactly as the run left it.
+    import json
+    import os
+    assert os.path.lexists(GCMD.RECEIPT), "the VOID's receipt must be preserved"
+    receipt = json.load(open(GCMD.RECEIPT, encoding="utf-8"))
+    assert receipt["outcome"] == "UNEXPECTED" and receipt["worker_exit"] == 4, (
+        "the preserved receipt no longer records attempt 2's VOID; a test has "
+        "overwritten spent evidence")
+    assert receipt["artifact_exists"] is False and receipt["gate_restored"] is True

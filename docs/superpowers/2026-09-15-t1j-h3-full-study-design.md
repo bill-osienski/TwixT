@@ -920,51 +920,59 @@ The first draft's four open questions were decided on review, 2026-09-15:
 
 ## 9. SCOPE OF THIS DOCUMENT
 
-This is **design only**. Nothing is implemented; no seed block is chosen,
-proved or registered; no opening set is generated; no gate is opened; no game is
-played. The pilot's block stays EXPOSED 40 / RETIRED WHOLE, all eight gates stay
-False, and the push stays held.
+No seed block is chosen, proved or registered; no OFFICIAL opening set is
+generated; no gate is opened; no game is played. The pilot's block stays EXPOSED
+40 / RETIRED WHOLE, **all TEN gates stay False** (§9.1 — earlier drafts of this
+line said eight, and were wrong), and the push stays held.
 
-🔴 **AMENDMENT 3 IS DESIGN ONLY, AND NOTHING IN IT IS IMPLEMENTED.** The code
-still carries the two-stratum design: `h3_study_rules.py` still declares
-`STRATUM_CO_PRODUCED`, `PAIRS_PER_STRATUM = 148`, `INCUMBENT_FIRST_PER_SEGMENT`,
-`GEN_SEED_CO_PRODUCED` and a 59,200-wide uniform range; `h3_study_generator.py`
-still builds engine movers behind a closed gate; the analysis still validates a
-`stratum` it may no longer compare across. **The card and the code disagree, and
-this sentence is the record of that** until an implementation step is separately
-authorized.
+✅ **AMENDMENT 3 IS NOW IMPLEMENTED, GATE-SHUT** (2026-09-17). The card and the
+code agree again. `h3_study_rules` carries one population and one generation
+range; `h3_study_generator` is engine-free; the analysis refuses a record from
+any other population and a report that weakens the claim; the schedules are four
+segments of 74 pairs with no composition to balance.
 
-🔴 **AND THE SUITE NOW SHOWS THAT DISAGREEMENT AS TWO RED TESTS.** Full suite at
-this commit: **4,799 passed, 2 failed, 4 skipped** (the injected-defect control
-harness excluded — 687 controls, unrun here because nothing executable changed).
-Both failures are in `tests/test_h3_study_runner.py`:
+**The retired engine path is preserved and unreachable.**
+`h3_coproduced_generator_retired`, `h3_generation_command` and
+`h3_generation_preflight` keep the protocol, the entropy finding and both VOID
+post-mortems. `check_gate` refuses unconditionally, and the retirement is
+enforced by arithmetic rather than prose: both co-produced ranges are spent, so
+`attempt_seed` refuses before a mover can exist. A test asserts no active module
+imports any of the three, with a control proving the files are still there.
 
-* `test_THE_DESTINATION_IS_ABSENT_AND_OUTSIDE_EVERY_SPENT_DIRECTORY`
-* `test_NO_TEST_MAY_WRITE_INTO_THE_RUNS_OWN_DESTINATION`
+### 9.1 🔴 THE GATE COUNT IS TEN, AND MY REPORTS SAID EIGHT
 
-**Neither is caused by this amendment, and neither is a defect in the test.** Both
-assert that `h3_study_generator.OUT_DIR` — the *next* generation destination — is
-absent. Attempt 2 consumed it on 2026-09-16, so the directory now exists and the
-assertion correctly fails. **The tests are right and the code is stale.**
+Every report in this programme said "all EIGHT gates are False". **There were
+ten.** The two omitted — `LOWPLY_QUALIFICATION_AUTHORIZED` and
+`RUNTIME_REQUAL_AUTHORIZED` — belong to qualifications that had already run, so
+nobody thought about them. A retired gate is still a closed authorization
+constant in the source.
 
-Attribution was checked rather than assumed: reverting only this card, with the
-evidence directories left in place, reproduces both failures; stashing the
-evidence directories makes both pass. The failures date from attempt 2's run, not
-from this edit, and they were not reported in that run's post-run verification —
-that verification covered the receipt, trace, artifact, gates and processes, and
-did not re-run the suite. **This is that correction.**
+**The number was never the defect.** Three pre-run checkers each kept their own
+hand-typed list and the three disagreed — H2's said **seven**, the pilot's said
+**eight**, the study's said **ten** — and reports quoted whichever was nearest. A
+hand-kept list cannot see a gate nobody remembered to add to it, which is the one
+case a gate count exists to catch.
 
-They are left failing. Repointing `OUT_DIR` at a fresh destination is an
-implementation change, and implementation changes are not authorized here. **A
-red test that correctly reports a spent destination is the right state for a
-gate-shut tree to be in** — it is a standing blocker on any future generation,
-which is exactly what it should be until a destination is chosen under its own
-authorization.
+`gate_inventory` now **derives** the inventory from source by AST — parsed, never
+imported, so taking an inventory cannot trip a gate — and all three checkers
+import it. `tests/test_gate_inventory.py` pins the expected set, so adding or
+removing a gate is a deliberate edit rather than a drift.
 
-The one thing this amendment DID run is **collision proof v13** — XOR and set
-arithmetic over declared constants, drawing nothing, registering nothing, building
-no generator — because an allocation that has not been proved separate is not a
-design, it is a proposal.
+**Ten, and Amendment 3 SWAPPED one rather than removing it:** the generation
+EXECUTION gate went, because engine-free generation runs nothing; the
+**population-freeze barrier** took its place, guarding the one act that is still
+irreversible — declaring a population THE population.
 
-**Uniform-opening generation, implementation changes, seed registration, study
-execution and the push all remain separate and UNAUTHORIZED.**
+### 9.2 What is still not done
+
+| | |
+|---|---|
+| `OPENING_SET_DIGEST` | **unset** |
+| `STUDY_SEED_BLOCK` | **unset** |
+| the official destination | **absent** |
+| all ten gates | **False** |
+
+**Official opening generation, seed registration, study execution and the push
+all remain separate and UNAUTHORIZED.** Building the population in memory is
+free and the suite does it on every run; writing the official artifact and
+fixing its digest is not.
