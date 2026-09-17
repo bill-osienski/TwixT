@@ -1,0 +1,40 @@
+H3 AMENDMENT 3 -- UNIFORM-ONLY GENERATION ALLOCATION
+================================================================
+masks (imported)  : ['0x3c3c3c', '0x5a5a5a', '0xa5a5a5', '0xc3c3c3']
+prior seeds       : 183957  {'ACCOUNTED': 6248, 'EXPOSED': 1750, 'RETIRED': 3240, 'TEST_ONLY': 100, 'CONSUMED_SEEDS': 1, 'D1_PAPER_S14': 221, 'H3_PILOT': 40, 'GEN_UNIFORM_OLD': 59200, 'GEN_CO_ATTEMPT1': 59200, 'GEN_CO_ATTEMPT2': 59200}
+prior values      : 919785 (incl. derivations)
+candidates needed : 296 openings x 400 attempts = 118400
+standing uniform  : 59200  -> SHORT BY 59200
+
+CANDIDATE (20261600000, 20261718400)  n=118400
+  direct overlap    : NONE
+  stream collisions : 0
+  own derivations   : 592000 (injective=True)
+  nearest gap       : 140800  (floor 118400)  ok=True
+  CLEAN             : True
+
+NEGATIVE CONTROLS -- a check that never rejects proves nothing
+----------------------------------------------------------------
+      REJECTED  attempt 1's SPENT co-produced range
+                (20261200000, 20261259200)  -> overlap {'GEN_CO_ATTEMPT1': 59200}
+      REJECTED  attempt 2's SPENT co-produced range
+                (20261400000, 20261459200)  -> overlap {'GEN_CO_ATTEMPT2': 59200}
+      REJECTED  the standing 148-opening uniform range, retired unused by Amendment 3
+                (20261000000, 20261059200)  -> overlap {'GEN_UNIFORM_OLD': 59200}
+      REJECTED  the standing uniform range EXTENDED to 118,400 -- the naive fix
+                (20261000000, 20261118400)  -> overlap {'GEN_UNIFORM_OLD': 59200}
+      REJECTED  straddles attempt 2's END by exactly one seed
+                (20261459199, 20261577599)  -> overlap {'GEN_CO_ATTEMPT2': 1}
+      REJECTED  starts exactly where attempt 2 ends -- no overlap, INSIDE the gap floor
+                (20261459200, 20261577600)  -> gap 0 < floor 118400
+      REJECTED  clear of everything but 1 seed inside the gap floor
+                (20261577599, 20261695999)  -> gap 118399 < floor 118400
+      REJECTED  the SPENT H3 pilot match block
+                (202624000, 202624040)  -> overlap {'ACCOUNTED': 40, 'EXPOSED': 40, 'RETIRED': 40, 'H3_PILOT': 40}
+      REJECTED  D1's SPENT paper reservation
+                (202615000, 202615221)  -> overlap {'ACCOUNTED': 221, 'EXPOSED': 221, 'RETIRED': 221, 'D1_PAPER_S14': 221}
+      REJECTED  straddles the pilot block's END by exactly one seed
+                (202624039, 202624079)  -> overlap {'ACCOUNTED': 1, 'EXPOSED': 1, 'RETIRED': 1, 'H3_PILOT': 1}
+
+controls rejected : 10/10
+VERDICT           : CLEAN

@@ -69,6 +69,63 @@ recorded as a design decision and not a detail.
 
 ---
 
+## AMENDMENT 3 — 2026-09-17, THE CO-PRODUCED STRATUM IS CLOSED
+
+**This amendment makes the study UNIFORM-ONLY.** Stratum B is removed, not
+deferred. `N = 296` pairs / 592 games, `h ≤ 0.08`, the colour-reversed pair, the
+four segments, the sensitivity rules, the deadlines and the optional-stopping
+rule are all **unchanged**; what changes is the population those 296 pairs are
+drawn from, and — necessarily — the claim they support.
+
+### 🔴 THE FINDING THAT CLOSED IT: T1j CANNOT MOVE AT THE PLIES THE PROTOCOL NEEDS
+
+Two authorized generation attempts ran, and both VOIDed at opening 0 with **zero
+openings accepted**:
+
+| attempt | range | destination | outcome |
+|---|---|---|---|
+| 1, 2026-09-16 | `[20261200000, 20261259200)` | `…-study-openings` | **VOID** — `KeyError: None`, a bare `IntegrationContext`. Repaired by `ctx.reset(...)` |
+| 2, 2026-09-16 | `[20261400000, 20261459200)` | `…-study-openings-attempt2` | **VOID** — T1j `exit 3` at board-ply 1: `FAIL q1: requested depth 6 completed … failures=1` |
+
+Attempt 2's failure is not a bug. It is the **2026-08-31 low-ply qualification**,
+which is this programme's own recorded evidence: *T1j never enters alpha-beta at
+plies 1 and 3* (12/12 fail at each); ply 5 completes (0/12 fail). §1.7.6 asked
+T1j to move at 1/3/5 stones under `incumbent_first` and at 0/2/4 under
+`t1j_first` — **precisely where it is known not to search.**
+
+🔴 **This was discoverable from the programme's own evidence without running
+anything.** Freezing §1.7 checked the generator for *entropy* (Amendment 2's
+finding) and never checked it against the *qualification record of the engine it
+scheduled*. Two ranges and two destinations were spent to learn something already
+written down.
+
+**Delaying T1j's first move to ply 5+ would not rescue the protocol** — it would
+define a *different* opening population, which would need its own pilot. A third
+attempt at this design is not authorized, and this amendment does not seek one.
+
+### What changes
+
+| # | change | where |
+|---|---|---|
+| 11 | **Stratum B is removed.** One population: 296 fresh, distinct, uniformly generated legal six-ply openings. No stratum comparison is computed, no `order` field exists, and no two-population language survives | §1, §1.3, §1.6, §1.7, §5.3, §6.2 |
+| 12 | **The supported claim is narrowed explicitly** to performance over *uniformly random legal six-ply openings*. It says **nothing** about realistic or engine-reached positions, and §1.1's objection to that population now stands **unanswered and declared** rather than mitigated | §1.6 |
+| 13 | **A generation allocation covering all `296 × 400 = 118,400` candidates**, separation re-proved directly and through the derived streams (v13). The standing 148-opening uniform range is **59,200 — short by exactly half** — and is retired unused rather than extended or combined | §1.7.3, §7.1 |
+| 14 | **Generation is engine-free, and therefore is no longer a run.** No checkpoint, no JVM, no gate, no supervised wrapper. `GENERATION_DEADLINE_S` is retained as a value but its cost-based rationale is **void** and replaced | §1.5, §1.7.5 |
+| 15 | **Both VOID attempts, their retirement records and their evidence directories are preserved unchanged.** Both ranges and both destinations stay spent whole | §7.1, §7.3 |
+
+### What this amendment costs, stated plainly
+
+The study loses the only reason it had for claiming relevance to play. §1.1
+identified the pilot's uniform population as *unrealistic* — "those positions are
+not ones either engine would reach" — and stratum B existed to answer exactly
+that. Removing it does not answer the objection; it **accepts** it. What remains
+is a well-powered, well-controlled measurement over a population nobody plays.
+That is a real result and a narrow one, and §1.6 says so in the words the report
+must use.
+
+---
+
+
 ## 0. 🔴 WHAT THE PILOT MAY AND MAY NOT CONTRIBUTE
 
 The pilot established two things and only two: **gameplay diversity** (40 games
@@ -98,207 +155,314 @@ or any exclusion rule. Two structural guarantees, not just an intention:
 `is_strength_verdict` was `false` in the pilot report and stays false: the pilot
 supplies no prior about who is stronger, because it never measured that.
 
+### 0.1 🔴 WHAT AMENDMENT 3 CHANGES HERE — IT CUTS BOTH WAYS
+
+Under the two-stratum design the pilot's population was **half** the study's.
+Uniform-only makes it **the whole of it**: the pilot and the study now sample the
+same distribution, by the same generator, under the same filters.
+
+**One way that helps.** The pilot's diversity evidence — 40 games → 40 distinct
+transcripts, 20/20 pairs differing internally, zero capped — was always the
+weaker half of the case for stratum A and said nothing about stratum B. It is now
+direct evidence about **the study's actual and only population.** The
+viability question is answered for the whole study, not for half of it.
+
+**One way it costs.** Every separation argument between the pilot and the study
+now rests on **exactly two things**: the 20 pilot openings are excluded by
+canonical digest (§1.4), and the match seeds are a fresh disjoint block (§7.1).
+There is no longer a *population* difference doing any of that work. Those two
+mechanisms were always the load-bearing ones; the difference is that nothing else
+is standing behind them now, and a failure of either is no longer partially
+absorbed by a second stratum the pilot never touched.
+
+🔑 **The prohibition is unchanged and is if anything more important.** A shared
+population is not a licence to pool: the pilot's 40 games stay out of the
+study's analysis, and its outcome distribution stays out of every threshold.
+Same population, separate experiments.
+
 ---
 
 ## 1. THE OPENING POPULATION, AND THE CLAIM IT SUPPORTS
 
-### 1.1 The problem with the pilot's population
-The pilot used **uniform random legal play to 6 plies**. That is diverse and
-engine-neutral by construction, and it is *unrealistic*: those positions are not
-ones either engine would reach. A result over them supports the claim
+> **Amendment 3 rewrote this whole section.** The two-stratum design it replaced
+> is not deleted from the record — Amendments 1 and 2 above, and the two VOID
+> attempts' evidence, are what it was and why it ended.
+
+### 1.1 The population, and the objection it does not answer
+The study uses **uniform random legal play to 6 plies** — the pilot's population,
+now the only one. It is diverse and engine-neutral by construction, and it is
+**unrealistic**: those positions are not ones either engine would reach.
+
+🔴 **That objection stood in the first draft of this card, it was the entire
+reason stratum B existed, and Amendment 3 does not answer it — it accepts it.**
+The card said then that a result over these positions supports the claim
 
 > over positions reachable by uniform random legal play at ply 6, …
 
-and not the claim anyone actually wants, which is about positions that arise in
-play. The pilot needed only diversity, so this did not matter. A strength study
-answers a question about play, so it does.
+and *not* the claim anyone actually wants, which is about positions that arise in
+play. That remains exactly true. §1.6 is worded so the report cannot quietly
+widen it back.
 
-### 1.2 The constraint that rules out the obvious fix
-There is no opening book available. **R1 closed as NO_GO**: a read-only search
-for an independent TwixT data source found none. So a "realistic" population
-cannot be borrowed; it has to be generated, and anything generated by one engine
-is biased toward that engine's preferences.
+### 1.2 Why the realistic population is not available
+There is no opening book. **R1 closed as NO_GO**: a read-only search for an
+independent TwixT data source found none. So a realistic population cannot be
+borrowed; it would have to be generated — and the two attempts at generating one
+are recorded in the Amendment 3 header. T1j cannot move at the plies an
+alternating generator requires, and moving its first move later would define a
+*different* population needing its own pilot.
 
-🔑 **The pairing does not rescue this.** Colour-reversed pairing cancels a
-*colour* advantage. It does **not** cancel a *position-family* advantage: if the
-openings are drawn from the incumbent's own play and the incumbent is stronger in
-the positions it prefers, the study overstates the incumbent in both arms of
-every pair.
+🔑 **The pairing does not rescue this either way.** Colour-reversed pairing
+cancels a *colour* advantage. It does **not** cancel a *position-family*
+advantage. Under Amendment 3 that matters less, because no engine chose these
+positions — but it is the reason a single-engine-generated population was never
+an acceptable substitute for the co-produced one.
 
-### 1.3 The design: two strata, fixed 50/50
+### 1.3 The design: ONE population, 296 openings
+| | **UNIFORM** |
+|---|---|
+| generation | uniform random legal play to 6 plies |
+| who moves | nobody; the PRNG |
+| standing | engine-neutral by construction |
+| realism | **low, and declared** |
+| pairs | **296** |
 
-| | **Stratum A — UNIFORM** | **Stratum B — CO-PRODUCED** |
-|---|---|---|
-| generation | uniform random legal play to 6 plies | the two engines **alternating**, 6 plies |
-| who moves | nobody; the PRNG | incumbent on plies 1,3,5 and T1j on 2,4,6 — **and the mirror**, half each |
-| standing | engine-neutral by construction | **symmetrically co-produced** |
-| realism | low | positions the two engines actually produce together |
-| pairs | **148** | **148** |
+There is **no second stratum, no stratum comparison, and no alternating order.**
+`stratum` survives in the durable record (§6.2) as the frozen constant
+`"uniform"` — a record that names its own population is better provenance than
+one that assumes it — but **no analysis may condition on it, split by it, or
+compare across it.** There is nothing to compare it to.
 
-🔴 **STRATUM B IS NOT "NEUTRAL", AND THE CARD WILL NOT CALL IT THAT.** Running
-both alternating orders balances each engine's *role* in generation; it does not
-make the resulting positions **engine-independent**. Every stratum-B opening is
-a product of these two engines' preferences, and a third engine would produce a
-different population. The claim in §1.6 is worded accordingly.
-
-Each stratum supplies **148 of the 296 pairs**, fixed by design before
-generation. The 50/50 split is a design constant, not a post-hoc weighting.
-
-**Admissibility filters, applied identically to both strata and stated in
-ENGINE-NEUTRAL structural terms** — no evaluator is consulted, because "the
-incumbent thinks this position is already decided" is the incumbent's judgement
-and would re-import the bias the strata exist to limit:
+**Admissibility filters**, stated in ENGINE-NEUTRAL structural terms — no
+evaluator is consulted, because "the incumbent thinks this position is already
+decided" is the incumbent's judgement and would import exactly the bias a uniform
+population exists to avoid:
 
 * the position is legal and not already won by either side;
 * both colours have placed all three of their pegs (no side has passed);
 * no immediate forced win exists for the side to move at depth 1;
 * the position is distinct from every other opening in the study **up to the
   board's symmetry group**, by canonical digest;
-* the position is distinct from the 20 pilot openings and the 8 H1/H2 openings,
-  again up to symmetry (§1.4).
+* the position is distinct from every excluded earlier opening (§1.4), again up
+  to symmetry.
 
-A generated candidate failing any filter is rejected **whole** and regenerated —
+A candidate failing any filter is rejected **whole** and regenerated —
 whole-position rejection, as the pilot does, never per-move resampling, which
 would distort the distribution it claims to draw from.
 
-⚠ **Rejection sampling is itself a coupling.** It makes the realised population
-a *conditioned* one, not the raw generator's, and the conditioning is shared
-across all openings. This is one of the reasons §2.1 treats independence as a
-model rather than a fact. The rejection mechanics — attempt seeds,
-attempt caps, and the recording of every attempt count — are frozen in §1.7.5.
+⚠ **Rejection sampling is itself a coupling.** It makes the realised population a
+*conditioned* one, not the raw generator's, and the conditioning is shared across
+all openings. This is one reason §2.1 treats independence as a model rather than
+a fact. Attempt seeds, attempt caps and the recording of every attempt count are
+frozen in §1.7.
 
 ### 1.4 Independence from every earlier experiment
 The study's 296 openings must be disjoint, up to symmetry, from:
+
 * the **20 pilot openings** — otherwise the pilot's games leak into the study;
-* the **8 openings** H1, L0 and H2 played.
+* the **8 openings** H1, L0 and H2 played;
+* **every opening produced by the two co-produced generation attempts.**
 
-Checked at generation time and pinned by `OPENING_SET_DIGEST` before any match
-seed exists.
+🔑 **The third exclusion is VACUOUS AS TO POSITIONS, and the card says so rather
+than letting a reader infer coverage it does not have.** Both attempts VOIDed at
+opening 0 and accepted **zero** openings; there is nothing to exclude. The
+substantive residue of those attempts is in the **seed ranges**, which are spent
+whole (§7.1) — not in the position set.
 
-### 1.5 🔴 Stratum B's generation IS AN EXECUTION, and needs its own authorization
-Generating stratum B loads the incumbent's checkpoint and starts a JVM. It is
-therefore a **run**, not a planning step, and it carries the full apparatus:
-its own gate, its own pre-run verification, its own create-only output, its own
-one-shot rule, and a declared PRNG constant that is **not** drawn from any seed
-block (the pilot's rule: generation must never consume a drawable seed).
+So the exclusion set is **28 positions**, not 30 and not 324. Checked at
+generation time and pinned by `OPENING_SET_DIGEST` before any match seed exists.
 
-Its output — the opening set and its digest — must be **frozen and committed
-before a single match seed is reserved.** Cost estimate from the pilot's timing:
-~888 engine moves, well under an hour; this is a small run, but it is a run.
+### 1.5 🔴 GENERATION IS NO LONGER A RUN
+Stratum B's generation loaded the incumbent's checkpoint and started a JVM, so it
+was an execution and carried the full apparatus: its own gate, its own supervised
+wrapper, its own pre-run verification, its own one-shot rule.
 
-### 1.6 What the study will therefore support
-> Over **structurally admissible ply-6 positions**, half drawn uniformly at
-> random and half **co-produced by these two engines alternating**, played in the
-> frozen deterministic argmax configuration: [the result].
+**Uniform generation does none of that.** It draws from a PRNG and applies
+structural filters. No model is loaded, no JVM starts, no engine is consulted,
+no move is requested. It is a deterministic computation over declared constants —
+the pilot generated its 20 openings exactly this way, ungated, and both
+`tests/test_h3_study_rules.py` and `h3_study_prerun_verification.py` have been
+calling `generate_uniform_openings()` on every invocation for days.
 
-It will **not** support a claim about tournament play, about human-like
-positions, about a population these two engines did not make, or about any
-configuration other than the frozen one. That sentence belongs in the report
-verbatim.
+**What it therefore does NOT need:** a gate, a supervised wrapper, a launch
+receipt, a process-group cleanup, or an execution authorization.
+
+**What it still DOES need, and these are not negotiable:**
+
+* the output is **create-only** (`O_EXCL` plus `lexists`, so a dangling symlink
+  cannot be written through);
+* the opening set and its `OPENING_SET_DIGEST` are **frozen and committed before
+  a single match seed is reserved**;
+* every attempt count is recorded (§1.7);
+* the generation constant is **declared, never drawn from a registry**, and
+  asserted absent from all of them.
+
+⚠ **This is a genuine reduction in apparatus, and it is worth naming as one.**
+The gate, wrapper and receipt machinery built for stratum B is not deleted —
+attempts 1 and 2 are the record of why it existed and it caught both failures
+cleanly — it is simply not on this path, because there is no longer an engine on
+this path to contain.
+
+### 1.6 🔴 WHAT THE STUDY WILL SUPPORT — AND THE REPORT USES THESE WORDS
+
+> Over **legal six-ply TwixT positions drawn uniformly at random** and filtered
+> only by the structural admissibility rules of §1.3, played in the frozen
+> deterministic argmax configuration: [the result].
+
+**It will NOT support — and the report must not imply — any claim about:**
+
+* positions either engine would actually reach;
+* realistic, human-like, or tournament play;
+* positions arising from an opening book, a repertoire, or any curated set;
+* a co-produced, engine-neutral, or two-population population — **there is one
+  population and it is uniform**;
+* any configuration other than the frozen one.
+
+🔴 **A uniformly random six-ply position is not a position anyone plays.** An
+engine that is stronger over this population may be weaker over the positions it
+actually reaches, and this study cannot distinguish those cases. That sentence
+belongs in the report verbatim, next to the result, not in a limitations
+appendix.
 
 ### 1.7 🔴 THE FROZEN GENERATION PROTOCOL
+Fixed here, before implementation.
 
-Fixed here, in full, **before implementation**. These details define the study
-population; they cannot safely emerge while generating it, and §1.7.2 is the
-proof of that — the first version of this design had no entropy in it at all.
+#### 1.7.1 No engine configuration
+No engine participates in generation. There is no generator configuration to
+freeze, no tree lifetime, no reset rule, and no alternating order — §1.7.1,
+§1.7.2, §1.7.4 and §1.7.6 of the pre-amendment protocol are **void**, along with
+the frozen research configuration they named. The incumbent's argmax match
+configuration is unchanged and applies **only to play**.
 
-#### 1.7.1 Engine configurations — and the one that is NOT the match one
+#### 1.7.2 PRNG stream assignment — ONE CONTIGUOUS RANGE FOR ALL 296 × 400
+* The generation seed is a **declared constant**, asserted absent from every
+  registry — accounted, exposed, retired, test-only and consumed — by a test.
+  **Generation never consumes a drawable seed** (the pilot's rule).
+* Opening *i*, attempt *j*, uses `base + i × MAX_ATTEMPTS + j`. Attempts occupy
+  **disjoint, pre-computable** ranges; a rejection never re-draws the seed that
+  produced the rejected position.
 
-| | configuration |
+🔴 **THE STANDING UNIFORM RANGE IS INSUFFICIENT AND IS NOT EXTENDED.**
+
+```
+candidates needed :  296 openings × 400 attempts  =  118,400
+standing range    :  [20261000000, 20261059200)   =   59,200   (sized for 148)
+                                                      SHORT BY 59,200
+```
+
+The allocation is **one fresh contiguous range of 118,400**:
+
+```
+GEN_SEED_UNIFORM_296 = 20_261_600_000
+range                = [20261600000, 20261718400)
+```
+
+**Why one fresh range and not the standing one extended, nor two ranges
+combined:**
+
+* *extended* — `[20261000000, 20261118400)` overlaps the standing range by all
+  59,200 of its seeds. It is the same range with a different end, not a new one.
+  Rejected as control 4 of v13;
+* *combined* — `attempt_seed` is `base + i × MAX_ATTEMPTS + j`, total only over a
+  **contiguous** base. A piecewise base introduces a seam in the one function
+  whose whole job is to make attempt seeds disjoint and pre-computable. This
+  programme's recurring defect is a seam that looks like a gate; buying 59,200
+  seeds with one is a bad trade when a clean range costs nothing;
+* the standing range is therefore **retired unused**. No authorized run drew from
+  it, but `tests/test_h3_study_rules.py` and `h3_study_prerun_verification.py`
+  have drawn on it in-process on every invocation. Those draws built no agent and
+  derived no search or readout stream — uniform generation is engine-free — so
+  retiring rather than reusing it is conservatism, not necessity. It is free
+  conservatism, because the range is superseded either way.
+
+#### 1.7.3 The separation re-proof — v13, RUN
+Collision proof **v13**, `docs/superpowers/evidence/2026-09-17-t1j-h3-uniform-only-amendment/`.
+Registries and the four masks are **imported, never retyped**. Nothing is drawn,
+nothing is registered, no generator is built: XOR and set arithmetic only.
+
+**Three generation ranges are now prior and NO REGISTRY CAN SEE ANY OF THEM.**
+They are added explicitly — the same term v10 had to add by hand for D1's paper
+reservation, and a registry-only enumeration would call an overlapping candidate
+clean:
+
+| prior range | standing |
 |---|---|
-| incumbent, **when PLAYING** the study | the frozen **argmax** match configuration, unchanged |
-| incumbent, **when GENERATING** stratum B | the **frozen research configuration** — `selection_mode: "opening_temperature"`, `opening_temp_plies 20`, `temp_high 1.0`, `temp_low 0.1`, `mcts_sims 400` |
-| T1j, generating and playing | `mdPly 6`, `mdFixedPly true` — identical to the match |
+| `[20261000000, 20261059200)` | the 148-opening uniform range — **retired unused** by this amendment |
+| `[20261200000, 20261259200)` | co-produced attempt 1 — **SPENT WHOLE**, VOID, 0 accepted |
+| `[20261400000, 20261459200)` | co-produced attempt 2 — **SPENT WHOLE**, VOID, 0 accepted |
 
-#### 1.7.2 🔴 Why the generator's incumbent is NOT the match incumbent
-Under argmax the incumbent's move is a deterministic function of the position,
-and **E3a proved T1j deterministic** at fixed depth (25/25 identical moves). An
-argmax-vs-T1j alternating generator therefore yields **exactly one** position per
-order — stratum B would be two positions repeated 74 times each.
+Result, against 183,957 prior seeds and 919,785 prior values:
 
-The frozen research configuration **samples**: `temp_high = 1.0` applies for the
-first 20 plies and generation is only 6, so all six plies are drawn from the
-visit distribution at full temperature. That is the programme's own qualified
-mechanism for opening diversity, and it is used unmodified.
+| check | result |
+|---|---|
+| direct overlap | **NONE**, in all ten categories |
+| derived-stream collisions | **0** over 592,000 derived values |
+| injectivity of the candidate's own derivations | **592,000 = 118,400 × 5** |
+| nearest gap to any other reservation | **140,800**, floor **118,400** (the candidate's own size) |
+| negative controls rejected | **10 / 10** |
+| **verdict** | **CLEAN** |
 
-**Consequences, stated rather than buried:**
+The two boundary controls are the ones that matter: a range **starting exactly
+where attempt 2 ends** rejects at gap 0, and a range **one seed inside the floor**
+rejects at gap 118,399 < 118,400. The actual nearest distance is reported, not
+just the floor, so a narrow choice could not hide behind a small threshold.
 
-* the incumbent that **generates** is configured differently from the incumbent
-  that **plays**. Stratum B is therefore "positions reachable when the incumbent
-  explores at temperature and T1j replies", not "positions from argmax play";
-* **all the variation in stratum B comes from one engine.** T1j is deterministic,
-  so it contributes *content* to every position but no *entropy*. Both engines
-  shape each opening; only one supplies the diversity. This narrows
-  "symmetrically co-produced" further and the report must say so;
-* stratum A remains the untouched uniform comparator, which is part of why the
-  design keeps two strata rather than betting on one.
+🔑 **The derived-stream half of the proof is conservative, and deliberately so.**
+Uniform generation feeds its seed to a PRNG and never builds a
+`SeededReferenceAgent`, so it derives no search or readout stream and a collision
+between a generation seed and a match seed's XOR image would be harmless today.
+It is proved anyway, at no cost, so the range stays clean if any future
+implementation on this path ever does construct an agent — and so the proof does
+not depend on the "engine-free" claim being permanently true.
 
-#### 1.7.3 PRNG stream assignment
-* Generation seeds are **declared constants**: `GEN_SEED_A` and `GEN_SEED_B`,
-  asserted absent from every registry — accounted, exposed, retired and
-  test-only — by a test. **Generation never consumes a drawable seed** (the
-  pilot's rule).
-* Opening *i*, attempt *j*, uses `GEN_SEED_X + i × MAX_ATTEMPTS + j`. Attempts
-  therefore occupy **disjoint, pre-computable** seed ranges; a rejection never
-  re-draws the seed that produced the rejected position.
-* The incumbent's search and readout streams derive by the programme's existing
-  masks — `seed ^ SEARCH_MASK[colour]`, `seed ^ READOUT_MASK[colour]` — imported
-  from `SeededReferenceAgent` and **never retyped**.
-* 🔑 **The collision re-proof must cover the generation constants and their whole
-  attempt range alongside the 592 match seeds**, because generation seeds derive
-  streams too. A proof over the match block alone would miss a collision between
-  a generation stream and a match stream.
-
-#### 1.7.4 Tree lifetime and reset
-* **One agent instance per opening**, never per stratum and never per run.
-* **No search tree is carried across openings.** Reusing a tree would make
-  opening *i+1* depend on opening *i*, and the population would become
-  order-dependent — a coupling far worse than the ones §2.1 already declares.
-* `between_games_cleanup()` runs after every opening, exactly as between games.
-* Within one opening's six plies the agent persists and both streams advance, as
-  they do within a game.
-
-#### 1.7.5 Rejection behaviour
+#### 1.7.4 Rejection behaviour
 * **Whole-position rejection**: a candidate failing any §1.3 filter is discarded
-  entire and regenerated from the next attempt seed. Never per-move resampling,
-  which would distort the distribution it claims to draw from.
-* `MAX_ATTEMPTS` per opening is a **declared constant**. Exhausting it is a
-  **hard failure that aborts generation** — it never yields fewer openings, and
-  it never relaxes a filter.
+  entire and regenerated from the next attempt seed. Never per-move resampling.
+* `MAX_ATTEMPTS = 400` per opening is a **declared constant**. Exhausting it is a
+  **hard failure that aborts generation** — it never yields fewer than 296
+  openings, and it never relaxes a filter.
 * **The attempt count for every opening is recorded** in the pinned artifact. A
   high rejection rate changes the conditioning of the population, so it is
   evidence about the population, not a private detail of the loop.
 * A global cap on total attempts, also declared, aborts a generator that wanders.
 
-#### 1.7.6 Alternating order, and how it lands in the segments
-Stratum B is **74 incumbent-first and 74 T1j-first**. Each segment takes 37
-stratum-B openings, which is odd and so cannot split evenly; the allocation is
-therefore **declared, not derived at run time**:
+#### 1.7.5 🔴 THE GENERATION DEADLINE IS RETAINED, ITS RATIONALE IS VOID
+`GENERATION_DEADLINE_S = 10800` is **kept as a value**. Its recorded rationale is
+**not** kept, and the correction is recorded rather than folded in silently:
 
-| segment | 1 | 2 | 3 | 4 | total |
-|---|---|---|---|---|---|
-| incumbent-first | 19 | 18 | 19 | 18 | **74** |
-| T1j-first | 18 | 19 | 18 | 19 | **74** |
-| stratum B | 37 | 37 | 37 | 37 | 148 |
-| stratum A | 37 | 37 | 37 | 37 | 148 |
+> the old rationale derived the bound from the pilot's measured **41.22 s/game**,
+> i.e. ~0.81 s per engine ply → ~4.85 s per six-ply *co-produced* attempt →
+> ~718 s for 148 openings at one attempt each.
 
-#### 1.7.7 The artifacts that get pinned
+**Every term in that derivation is an engine cost, and there is no engine on this
+path.** Uniform generation of 148 openings completes inside the test suite in
+about a second. Reusing the co-produced rationale for uniform generation would be
+a bound borrowed from a different quantity — precisely the defect Amendment 2's
+review caught when the generation deadline was first borrowed from the match
+segment.
+
+**Its rationale now:** it is a **runaway guard, not a cost estimate.** The real
+bound on generation work is `MAX_ATTEMPTS` × 296; the deadline exists only so a
+generator that wanders cannot run unbounded. It is expected to be unreachable by
+three orders of magnitude, and if it ever fires that is a **defect report**, not
+a capacity result.
+
+#### 1.7.6 The artifacts that get pinned
 Frozen and committed **before a single match seed is reserved**:
 
-1. **The opening set**, both strata, with `OPENING_SET_DIGEST` over all 296.
-2. **Per-opening provenance**: stratum, alternating order, generation seed,
-   **attempt count**, the move sequence, and the canonical (symmetry-reduced)
-   digest.
-3. **The generator's identity record** — both engines' full configurations, the
-   RNG masks, the toolchain pins, the model name and sha1 — written the way the
-   match header now writes the incumbent's identity: read off the objects
-   actually used, one origin, compared by identity.
-4. **The generation run's durable trace and exit code.**
+1. **The opening set** — all 296 — with `OPENING_SET_DIGEST` over it.
+2. **Per-opening provenance**: generation seed, **attempt count**, the move
+   sequence, and the canonical (symmetry-reduced) digest. **No `order` field and
+   no `stratum` discriminator** — there is one population, and `stratum` is the
+   constant `"uniform"`.
+3. **The generator's identity record** — the declared seed constant, the filter
+   set, and the toolchain pins. No engine configuration, because no engine runs.
+4. **The generation trace and exit code.**
 
 A regenerated set that does not reproduce `OPENING_SET_DIGEST` is a different
 population and may not be substituted for this one.
 
 ---
+
 
 ## 2. THE PAIRED SCORE AND THE PRIMARY RULE
 
@@ -398,11 +562,14 @@ preserves every balance without remainder:
 
 | | |
 |---|---|
-| per stratum | **148** + 148 |
 | segments | **4 × 74 pairs** |
-| per segment, per stratum | **37 + 37 = 74 pairs** |
 | games per segment | **148** |
 | **total games and seeds** | **592** |
+
+**Amendment 3 changes nothing here.** `N = 296` was chosen to satisfy `h ≤ 0.08`
+and it still does; it divided cleanly by stratum *and* segment, and losing the
+stratum constraint does not disturb the segment one — 296 = 4 × 74 either way.
+The sample size was never derived from the number of strata.
 
 ### 3.4 What this can and cannot resolve — about the OBSERVED mean
 An interval is decisive when `|X̄ − 0.5| > h = 0.07894`, i.e. `X̄ > 0.5789` or
@@ -573,9 +740,10 @@ no verdict at all. A long single-shot schedule converts a late failure into tota
 loss.
 
 ### 5.3 Four segments, fixed in advance
-**4 segments × 74 pairs = 148 games each**, each segment carrying 37 pairs from
-each stratum so the 50/50 composition holds *within* every segment as well as
-across the study.
+**4 segments × 74 pairs = 148 games each.** Under Amendment 3 there is one
+population, so a segment has no composition to balance: it is 74 consecutive
+pairs of the frozen plan. The per-stratum and alternating-order allocations that
+stood here — 37 + 37 per segment, 19/18/19/18 incumbent-first — are **void**.
 
 | per segment | |
 |---|---|
@@ -644,13 +812,21 @@ task_id, seed, pair_id, stratum, incumbent_colour, opening_digest,
 transcript_digest, terminal_reason, winner, plies, elapsed_s
 ```
 
-`seed`, `stratum` and `opening_digest` are the additions. With them:
+`seed`, `stratum` and `opening_digest` are the additions.
+
+🔑 **`stratum` is now the frozen constant `"uniform"`, and it stays** — a record
+that names its own population is better provenance than one that assumes it. But
+it is a label, **not a factor**: no analysis may condition on it, split by it, or
+compare across it, because there is nothing to compare it to. **There is no
+`order` field**; the alternating-order machinery went with stratum B.
+
+With these fields:
 * **seed accounting is READ, not derived** — the exposure count comes from the
   records themselves;
 * every game names the position it was played from, so a game is verifiable
   without reconstructing the plan — and §4.1's identity rule is computable **from
   a single record**, which is what makes it enforceable;
-* stratum analysis needs no join against the schedule.
+* the population is named in the record rather than inferred from the schedule.
 
 ### 6.3 The header keeps what the provenance repair added
 The durable header carries the **whole** incumbent identity and
@@ -671,8 +847,27 @@ exists and is exercised; the full study inherits it unchanged.
   check, and the gap floor equal to the candidate's own size.
 * Registered **ACCOUNTED only**. Registration is bookkeeping; permission is a
   separate review.
-* **Generation PRNG constants are declared, not drawn** — for both strata — and
-  are asserted absent from every registry.
+* **The generation PRNG constant is declared, not drawn**, and is asserted absent
+  from every registry. **One constant now, not two.**
+
+🔴 **THREE GENERATION RANGES ARE SPENT OR RETIRED, AND NO REGISTRY HOLDS ANY OF
+THEM.** Any future re-proof must add them by hand, exactly as v13 does:
+
+| range | standing | preserved at |
+|---|---|---|
+| `[20261000000, 20261059200)` | **retired unused** — the 148-opening uniform range, superseded by §1.7.2 | — |
+| `[20261200000, 20261259200)` | **SPENT WHOLE** — co-produced attempt 1, VOID, 0 accepted | `evidence/2026-09-15-t1j-h3-study-openings/` |
+| `[20261400000, 20261459200)` | **SPENT WHOLE** — co-produced attempt 2, VOID, 0 accepted | `evidence/2026-09-16-t1j-h3-study-openings-attempt2/` |
+
+**Both VOID attempts, their receipts, traces and retirement records are preserved
+unchanged.** Neither is amended, reinterpreted, or partially reclaimed by this
+amendment. A range that was drawn on is spent whether or not an opening survived
+— attempt 1 built the incumbent on its first seed and put a query to T1j from it;
+attempt 2 got a T1j `exit 3` from its own.
+
+* **The new uniform generation range `[20261600000, 20261718400)` is proved clean
+  by v13** (§1.7.3), directly and through the derived streams, with the gap floor
+  at its own size of 118,400 and 10/10 negative controls rejected.
 
 ### 7.2 Segment sub-blocks
 Segment *k* uses `[lo + 148k, lo + 148(k+1))`, four blocks of **148 seeds**. On
@@ -685,6 +880,9 @@ A fresh evidence directory per segment, create-only (`O_EXCL` plus `lexists`, so
 a dangling symlink cannot be written through), added to `SPENT_OUT_DIRS`
 afterwards. No segment writes into another's directory, and none writes into any
 earlier experiment's.
+
+Both co-produced destinations remain in `SPENT_OUT_DIRS` and are **never reused
+or reopened**, VOID or not.
 
 ### 7.4 One-shot execution
 Each segment is authorized separately, subject to §5.5. No retry, no replacement
@@ -700,14 +898,23 @@ Amendment 2's three changes and the §1.7 protocol were settled on review,
 
 The first draft's four open questions were decided on review, 2026-09-15:
 
-1. **Keep stratum B.** Without it the study retains the unrealistic-position
-   limitation that motivated H3 in the first place. It costs a separate
-   authorized generation run (§1.5), and that cost is accepted.
+1. ~~**Keep stratum B.**~~ 🔴 **REVERSED BY AMENDMENT 3, 2026-09-17, on
+   evidence rather than on reflection.** The decision was right when it was made
+   and the reasoning still holds: without stratum B the study *does* retain the
+   unrealistic-position limitation that motivated H3. It was not reversed because
+   the cost was reconsidered — it was reversed because **the population cannot be
+   built.** T1j cannot move at the plies the protocol requires, two authorized
+   attempts VOIDed proving it, and a protocol that moved T1j later would define a
+   different population needing its own pilot. **The limitation is now accepted
+   and declared (§1.1, §1.6), not mitigated.**
 2. **Keep `h ≤ 0.08`** — with the arithmetic corrected to 296 pairs (§3.3).
 3. **Four segments.**
-4. **Keep both alternating orders**, and describe stratum B as **symmetrically
-   co-produced** rather than neutral (§1.3) — narrowed again by §1.7.2, which
-   establishes that only one of the two engines supplies any variation.
+4. ~~**Keep both alternating orders.**~~ 🔴 **VOID UNDER AMENDMENT 3** — there is
+   no alternating order, because there is no co-produced stratum. The narrowing
+   this question produced (*symmetrically co-produced*, then narrowed again by
+   the old §1.7.2 to *only one engine supplies any variation*) is kept in the
+   record as the reasoning that led here, and applies to nothing in the current
+   design.
 
 ---
 
@@ -718,9 +925,46 @@ proved or registered; no opening set is generated; no gate is opened; no game is
 played. The pilot's block stays EXPOSED 40 / RETIRED WHOLE, all eight gates stay
 False, and the push stays held.
 
-**Implementation may proceed GATE-SHUT** for the generator, the schedules, the
-analysis, the reporting, the pre-run verification and the controls, now that
-Amendment 2 is recorded.
+🔴 **AMENDMENT 3 IS DESIGN ONLY, AND NOTHING IN IT IS IMPLEMENTED.** The code
+still carries the two-stratum design: `h3_study_rules.py` still declares
+`STRATUM_CO_PRODUCED`, `PAIRS_PER_STRATUM = 148`, `INCUMBENT_FIRST_PER_SEGMENT`,
+`GEN_SEED_CO_PRODUCED` and a 59,200-wide uniform range; `h3_study_generator.py`
+still builds engine movers behind a closed gate; the analysis still validates a
+`stratum` it may no longer compare across. **The card and the code disagree, and
+this sentence is the record of that** until an implementation step is separately
+authorized.
 
-**Opening generation, seed registration, match execution and the push remain
-separate and UNAUTHORIZED.**
+🔴 **AND THE SUITE NOW SHOWS THAT DISAGREEMENT AS TWO RED TESTS.** Full suite at
+this commit: **4,799 passed, 2 failed, 4 skipped** (the injected-defect control
+harness excluded — 687 controls, unrun here because nothing executable changed).
+Both failures are in `tests/test_h3_study_runner.py`:
+
+* `test_THE_DESTINATION_IS_ABSENT_AND_OUTSIDE_EVERY_SPENT_DIRECTORY`
+* `test_NO_TEST_MAY_WRITE_INTO_THE_RUNS_OWN_DESTINATION`
+
+**Neither is caused by this amendment, and neither is a defect in the test.** Both
+assert that `h3_study_generator.OUT_DIR` — the *next* generation destination — is
+absent. Attempt 2 consumed it on 2026-09-16, so the directory now exists and the
+assertion correctly fails. **The tests are right and the code is stale.**
+
+Attribution was checked rather than assumed: reverting only this card, with the
+evidence directories left in place, reproduces both failures; stashing the
+evidence directories makes both pass. The failures date from attempt 2's run, not
+from this edit, and they were not reported in that run's post-run verification —
+that verification covered the receipt, trace, artifact, gates and processes, and
+did not re-run the suite. **This is that correction.**
+
+They are left failing. Repointing `OUT_DIR` at a fresh destination is an
+implementation change, and implementation changes are not authorized here. **A
+red test that correctly reports a spent destination is the right state for a
+gate-shut tree to be in** — it is a standing blocker on any future generation,
+which is exactly what it should be until a destination is chosen under its own
+authorization.
+
+The one thing this amendment DID run is **collision proof v13** — XOR and set
+arithmetic over declared constants, drawing nothing, registering nothing, building
+no generator — because an allocation that has not been proved separate is not a
+design, it is a proposal.
+
+**Uniform-opening generation, implementation changes, seed registration, study
+execution and the push all remain separate and UNAUTHORIZED.**
