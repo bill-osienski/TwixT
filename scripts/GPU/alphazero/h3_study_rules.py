@@ -1,14 +1,22 @@
-"""H3 FULL STUDY — the frozen constants, the strata, the segments, the schedule.
+"""H3 FULL STUDY — the frozen constants, the ONE population, the segments, the
+schedule.
 
 Everything here is fixed by
-`docs/superpowers/2026-09-15-t1j-h3-full-study-design.md` (AMENDED TWICE) BEFORE
-any study game exists, because fixing it afterwards is how a study becomes a
-result hunt.
+`docs/superpowers/2026-09-15-t1j-h3-full-study-design.md` (AMENDED THREE TIMES)
+BEFORE any study game exists, because fixing it afterwards is how a study becomes
+a result hunt.
 
-🔴 NOTHING HERE PLAYS, LOADS A MODEL, STARTS A JVM OR DRAWS A MATCH SEED.
-Stratum A is generated here — uniform random legal play needs no engine.
-Stratum B is NOT: generating it is a RUN, and it lives behind its own gate in
-`h3_study_generator`.
+🔴 AMENDMENT 3 — ONE POPULATION, UNIFORM. The co-produced stratum is CLOSED. Two
+authorized generation attempts VOIDed at opening 0 with zero openings accepted;
+the second established that T1j cannot move at the plies the protocol required
+(the 2026-08-31 low-ply qualification: no alpha-beta at plies 1 and 3). There is
+no stratum B, no alternating order, and no stratum comparison. `STRATUM_UNIFORM`
+survives as a CONSTANT LABEL in the record, never a factor.
+
+🔴 NOTHING HERE PLAYS, LOADS A MODEL, STARTS A JVM OR DRAWS A MATCH SEED, AND NOW
+NOTHING ANYWHERE DOES FOR GENERATION EITHER. Uniform generation is engine-free:
+a PRNG and structural filters. It needs no gate and no supervisor, which is why
+Amendment 3 removed both.
 
 🔴 NO SEED BLOCK IS RESERVED BY THIS MODULE. `build_tasks` refuses to hand out
 seeds unless an interval is supplied, and refuses any interval whose seeds are
@@ -47,19 +55,12 @@ N_SEGMENTS = 4
 PAIRS_PER_SEGMENT = N_PAIRS // N_SEGMENTS       # 74
 GAMES_PER_SEGMENT = PAIRS_PER_SEGMENT * N_ARMS  # 148
 
+#: 🔑 A LABEL, NEVER A FACTOR. One population, so every record carries the same
+#: value. It stays because a record that names its own population is better
+#: provenance than one that assumes it -- but NO analysis may condition on it,
+#: split by it, or compare across it. `h3_study_analysis` enforces that.
 STRATUM_UNIFORM = "uniform"
-STRATUM_CO_PRODUCED = "co_produced"
-STRATA = (STRATUM_UNIFORM, STRATUM_CO_PRODUCED)
-PAIRS_PER_STRATUM = N_PAIRS // len(STRATA)                    # 148
-STRATUM_PAIRS_PER_SEGMENT = PAIRS_PER_SEGMENT // len(STRATA)  # 37
-
-#: 🔑 37 PER SEGMENT IS ODD, so the alternating orders cannot split evenly and the
-#: allocation is DECLARED rather than derived at run time (card §1.7.6).
-INCUMBENT_FIRST_PER_SEGMENT = (19, 18, 19, 18)
-T1J_FIRST_PER_SEGMENT = (18, 19, 18, 19)
-
-ORDER_INCUMBENT_FIRST = "incumbent_first"
-ORDER_T1J_FIRST = "t1j_first"
+STRATA = (STRATUM_UNIFORM,)
 
 # ═══════════════════════ precision (card §3) ═══════════════════════════════
 ALPHA = 0.05
@@ -68,38 +69,57 @@ ALPHA = 0.05
 PRECISION_TARGET = 0.08
 
 # ═══════════════════════ generation (card §1.7) ════════════════════════════
-#: 🔑 DECLARED CONSTANTS, NOT MATCH SEEDS. Generation must never consume a
+#: 🔴 PER-OPENING ATTEMPT CEILING. Exhausting it ABORTS generation: it never
+#: returns a short population and never relaxes a filter. It is also the term
+#: that sizes the seed range -- N_PAIRS x MAX_ATTEMPTS is the number of
+#: CANDIDATES, and a range sized for openings instead of candidates is the exact
+#: shortfall Amendment 3 had to repair.
+MAX_ATTEMPTS = 400
+
+#: 🔑 DECLARED CONSTANT, NOT A MATCH SEED. Generation must never consume a
 #: drawable seed. Attempt j of opening i uses `base + i*MAX_ATTEMPTS + j`, so the
-#: ranges below are reserved whole and a test asserts they sit in no registry.
+#: range is reserved whole and a test asserts it sits in no registry.
+#:
+#: 🔴 THE RANGE MUST COVER EVERY CANDIDATE, NOT EVERY OPENING: 296 openings x 400
+#: attempts = 118,400 seeds. The previous uniform range was 59,200 -- sized for
+#: the 148 openings of the two-stratum design -- and was SHORT BY EXACTLY HALF.
 #:
 #: 🔴 THE SPACING HAS BEEN WRONG TWICE, each time caught by a different check.
-#:   1. The first pair were 500 apart while each range is 148 x 400 = 59,200
-#:      wide, so stratum B would have drawn from INSIDE stratum A's range. A test
+#:   1. The first pair were 500 apart while each range is tens of thousands wide,
+#:      so one stratum would have drawn from INSIDE the other's range. A test
 #:      comparing the RANGES rather than the bases caught it.
 #:   2. The second pair were 40,800 apart -- disjoint, but INSIDE THE GAP FLOOR,
 #:      which this programme sets at the candidate's OWN SIZE. Collision proof
-#:      v11 rejected them: disjoint is not the same as separated, and the floor
-#:      exists so that extending either range later cannot silently collide.
-#: They are now 140,800 apart, and both sit far above every registry's extent
-#: (max 202,624,040), checked across their whole span against all four registries
-#: and against each other, directly and through the derived streams.
-MAX_ATTEMPTS = 400
-GEN_SEED_UNIFORM = 20_261_000_000
+#:      v11 rejected them: disjoint is not the same as separated.
+#: This range clears every retired range by 140,800, above its own floor of
+#: 118,400, proved directly and through the derived streams by collision proof
+#: v13 (evidence/2026-09-17-t1j-h3-uniform-only-amendment/), 10/10 controls.
+GEN_SEED_UNIFORM = 20_261_600_000
 
-#: 🔴 ATTEMPT 1's CO-PRODUCED RANGE, SPENT WHOLE ON 2026-09-16.
-#: The single authorized generation VOIDed at opening 0 on `KeyError: None` --
-#: a bare `IntegrationContext` whose `bump` had no bucket -- and produced NOTHING.
-#: It is retired all the same, and the reason is not ceremony: the first attempt
-#: USED its seed. It built the incumbent's agent on 20261200000 and put a query
-#: to T1j from it. A drawn seed is drawn whether or not an opening survived.
-SPENT_GENERATION_RANGES = (
-    (20_261_200_000, 20_261_259_200),        # attempt 1, VOID at opening 0
+#: 🔴 EVERY RETIRED GENERATION RANGE, AND NO REGISTRY HOLDS ANY OF THEM.
+#: A collision re-proof that enumerates only the registries will call an
+#: overlapping candidate clean, so these are carried here and added by hand --
+#: the same term v10 needed for D1's paper reservation.
+RETIRED_GENERATION_RANGES = (
+    (20_261_000_000, 20_261_059_200,
+     "the 148-opening uniform range, RETIRED UNUSED by Amendment 3: superseded "
+     "because 296 openings need 118,400 candidates, not 59,200. No authorized "
+     "run drew from it, but the test suite and the pre-run verification have "
+     "drawn on it in-process; retiring rather than reusing it is free."),
+    (20_261_200_000, 20_261_259_200,
+     "co-produced attempt 1, SPENT WHOLE 2026-09-16. VOID at opening 0 on "
+     "`KeyError: None` (a bare IntegrationContext), 0 openings accepted -- but "
+     "it BUILT the incumbent on its first seed and queried T1j from it. A drawn "
+     "seed is drawn whether or not an opening survived."),
+    (20_261_400_000, 20_261_459_200,
+     "co-produced attempt 2, SPENT WHOLE 2026-09-16. VOID at opening 0 on T1j "
+     "`exit 3` at board-ply 1, 0 openings accepted. The protocol required T1j "
+     "to move where the 2026-08-31 low-ply qualification had already recorded "
+     "it cannot search. The co-produced stratum is CLOSED."),
 )
 
-#: ATTEMPT 2's range. 140,800 clear of the uniform range and 140,800 clear of
-#: attempt 1's, both above the gap floor of 59,200 (a candidate's own size), and
-#: proved directly and through the derived streams by collision proof v12.
-GEN_SEED_CO_PRODUCED = 20_261_400_000
+#: the (lo, hi) pairs alone, for the arithmetic
+SPENT_GENERATION_RANGES = tuple((lo, hi) for lo, hi, _ in RETIRED_GENERATION_RANGES)
 
 # ═══════════════════════ bounds (card §5) ══════════════════════════════════
 #: CHOSEN, from the pilot's measured mean of 41.22 s/game: 148 games is ~1.69 h,
@@ -107,29 +127,24 @@ GEN_SEED_CO_PRODUCED = 20_261_400_000
 SEGMENT_DEADLINE_S = 10800
 PER_CALL_TIMEOUT_S = 120
 
-#: 🔴 THE GENERATION RUN'S OWN DEADLINE, PREREGISTERED SEPARATELY. It happens to
-#: be the same number as `SEGMENT_DEADLINE_S`, and that is a coincidence of
-#: rounding, not a shared derivation: the segment cap is for 148 GAMES at the
-#: pilot's measured 41.22 s/game, and says nothing about 148 six-ply GENERATION
-#: walks. Reusing it would have been a bound borrowed from a different quantity.
+#: 🔴 RETAINED AS A VALUE BY AMENDMENT 3. ITS OLD RATIONALE IS VOID, AND THE
+#: CORRECTION IS RECORDED HERE RATHER THAN FOLDED IN SILENTLY.
 #:
-#: ITS OWN RATIONALE, from the pilot's measured per-ply cost of 41.22/51 = 0.81 s
-#: (both engines, one ply):
-#:   * an opening is 6 plies  ->  ~4.85 s per ATTEMPT
-#:   * 148 openings at one attempt each  ->  ~718 s
-#:   * 10,800 s therefore allows ~15 ATTEMPTS PER OPENING on average, against a
-#:     MAX_ATTEMPTS ceiling of 400.
+#: The old rationale derived this bound from the pilot's measured 41.22 s/game
+#: -- ~0.81 s per engine ply -> ~4.85 s per six-ply CO-PRODUCED attempt -> ~718 s
+#: for 148 openings at one attempt each, leaving room for ~15 attempts apiece.
 #:
-#: 🔑 THE REJECTION RATE IS NOT KNOWN AND IS NOT ESTIMATED HERE. The uniform
-#: stratum needs 1 attempt per opening, but it is engine-free and says nothing
-#: about a co-produced walk. So this is a CHOSEN limit, exactly as the pilot's
-#: was, and IT MAY EXPIRE.
+#: EVERY TERM IN THAT DERIVATION IS AN ENGINE COST, AND THERE IS NO ENGINE ON
+#: THIS PATH. Uniform generation of the whole population completes inside the
+#: test suite in about a second. Carrying the co-produced rationale forward would
+#: be a bound borrowed from a different quantity -- exactly the defect the review
+#: caught when this deadline was first borrowed from the match segment.
 #:
-#: 🔴 AND EXPIRY RETIRES THE WHOLE GENERATION RANGE. A timeout does not mean "try
-#: again with more time": the attempts made drew from their seeds, and every
-#: terminal record says so. A second generation needs a FRESH range with its own
-#: collision re-proof. That cost is accepted in advance, here, rather than argued
-#: about afterwards.
+#: ITS RATIONALE NOW: a RUNAWAY GUARD, not a cost estimate. The real bound on
+#: generation work is MAX_ATTEMPTS x N_PAIRS; this exists only so a generator
+#: that wanders cannot run unbounded. It is expected to be unreachable by three
+#: orders of magnitude, and IF IT EVER FIRES THAT IS A DEFECT REPORT, not a
+#: capacity result.
 GENERATION_DEADLINE_S = 10800
 
 # ═══════════════════════ degeneracy gates (card §4.6) ══════════════════════
@@ -210,51 +225,25 @@ def attempt_seed(base: int, index: int, attempt: int) -> int:
 def is_spent_generation_range(base: int) -> bool:
     """Has a generation range already been attempted? A spent range may never be
     used again: its seeds were drawn the moment an agent was built on one."""
-    lo, hi = base, base + PAIRS_PER_STRATUM * MAX_ATTEMPTS
+    lo, hi = base, base + N_PAIRS * MAX_ATTEMPTS
     return any(not (hi <= s_lo or s_hi <= lo)
                for s_lo, s_hi in SPENT_GENERATION_RANGES)
 
 
 def generation_seed_range(base: int) -> Tuple[int, int]:
-    """The whole half-open range a stratum's generation can touch.
+    """The whole half-open range generation can touch: EVERY candidate, not every
+    opening. 296 x 400 = 118,400.
 
-    🔑 THE COLLISION RE-PROOF MUST COVER THIS, not just the match block:
-    generation seeds derive search and readout streams by the same masks, so a
-    proof over the match seeds alone would miss a generation/match collision.
+    🔑 THE COLLISION RE-PROOF MUST COVER THIS WHOLE SPAN, not just the match
+    block, and must cover it through the derived streams too. Uniform generation
+    builds no agent and derives no stream today, so a stream collision would be
+    harmless -- it is proved anyway, free, so the range stays clean if that ever
+    changes and so the proof does not rest on "engine-free" staying true.
     """
-    return (base, base + PAIRS_PER_STRATUM * MAX_ATTEMPTS)
+    return (base, base + N_PAIRS * MAX_ATTEMPTS)
 
 
-def generation_config():
-    """The configuration the incumbent GENERATES under — and it is NOT the one it
-    PLAYS under.
-
-    🔴 THE ENTROPY FINDING (card §1.7.2). Under the match's `argmax` the
-    incumbent's move is a deterministic function of the position, and E3a proved
-    T1j deterministic at fixed depth. An alternating generator built from those
-    two players has NO ENTROPY ANYWHERE: every incumbent-first opening would be
-    the same opening and every T1j-first one the same, so stratum B would hold two
-    positions repeated 74 times each.
-
-    The FROZEN RESEARCH configuration samples instead: `temp_high` applies for the
-    first `opening_temp_plies` plies and generation is only six, so every
-    generated ply is drawn from the visit distribution. It is the programme's own
-    qualified mechanism for opening diversity, used unmodified and NOT retyped.
-    """
-    from . import twixtbot_g3_reference as G3
-    cfg = G3.eval_config()
-    if cfg.selection_mode == "argmax":
-        raise H3StudyError(
-            "the frozen research configuration is already argmax, so generation "
-            "would have no entropy and stratum B would be two positions")
-    if cfg.opening_temp_plies < OPENING_PLIES:
-        raise H3StudyError(
-            f"opening_temp_plies={cfg.opening_temp_plies} does not cover all "
-            f"{OPENING_PLIES} generated plies, so some would be deterministic")
-    return cfg
-
-
-# ═══════════════════════ stratum A: uniform, engine-free ═══════════════════
+# ═══════════════════════ the population: uniform, ENGINE-FREE ═════════════════
 def _fresh_state():
     """The ENGINE's state — `TwixtState`, the one `canonical_digest` keys on."""
     from .game.twixt_state import TwixtState
@@ -298,12 +287,16 @@ def _admissible(st, moves: Sequence[Tuple[int, int]]) -> bool:
 
 
 def generate_uniform_openings(seed: int = GEN_SEED_UNIFORM,
-                              n: int = PAIRS_PER_STRATUM) -> List[Dict[str, Any]]:
-    """Stratum A: `n` admissible positions from UNIFORMLY RANDOM legal play.
+                              n: int = N_PAIRS) -> List[Dict[str, Any]]:
+    """THE STUDY'S POPULATION: `n` admissible positions from UNIFORMLY RANDOM
+    legal play. Engine-free — a PRNG and structural filters, no model, no JVM.
 
-    Engine-independent by construction and unrealistic — which is exactly why the
-    design keeps it as the comparator beside the co-produced stratum rather than
-    betting on either alone.
+    🔴 ENGINE-INDEPENDENT BY CONSTRUCTION AND UNREALISTIC, AND UNDER AMENDMENT 3
+    THE SECOND HALF IS NO LONGER OFFSET BY ANYTHING. These are not positions
+    either engine would reach. The co-produced stratum existed to answer that and
+    is closed, so the limitation is ACCEPTED and declared: the study supports a
+    claim about uniformly random legal six-ply positions and NOTHING about
+    realistic or engine-reached ones.
 
     WHOLE-POSITION REJECTION: a candidate failing any filter is discarded entire
     and the next ATTEMPT SEED is used. Never per-move resampling, which would
@@ -334,7 +327,7 @@ def generate_uniform_openings(seed: int = GEN_SEED_UNIFORM,
             if digest in seen or digest in excluded:
                 continue
             seen.add(digest)
-            out.append({"index": index, "stratum": STRATUM_UNIFORM, "order": None,
+            out.append({"index": index, "stratum": STRATUM_UNIFORM,
                         "moves": moves, "digest": digest, "state": st,
                         "seed": s, "attempts": attempt + 1})
             break
@@ -352,11 +345,16 @@ def opening_set_digest(openings: Sequence[Dict[str, Any]]) -> str:
         "\n".join(o["digest"] for o in openings).encode()).hexdigest()
 
 
-#: 🔴 UNSET, AND IT MUST STAY UNSET UNTIL THE AUTHORIZED GENERATION PRODUCES IT.
+#: 🔴 UNSET, AND IT MUST STAY UNSET UNTIL THE POPULATION-FREEZE STEP PRODUCES IT.
 #: A pin invented before the artifact exists pins nothing: it would either be a
 #: guess the real set has to match, or -- worse -- a value the generator is
-#: tempted to reproduce. The co-produced stratum comes from a run that has not
-#: happened, so there is nothing to pin yet and this says so.
+#: tempted to reproduce.
+#:
+#: 🔑 UNIFORM GENERATION IS DETERMINISTIC AND ENGINE-FREE, SO THE SET CAN BE
+#: COMPUTED AT ANY TIME -- AND THAT IS PRECISELY WHY THE PIN NEEDS ITS OWN STEP.
+#: When producing the population costs nothing, "just regenerate it" becomes an
+#: easy way to slide a different population under a study that already started.
+#: Freezing the artifact and recording its digest is a SEPARATE, REVIEWED ACT.
 OPENING_SET_DIGEST: Optional[str] = None
 
 
@@ -364,10 +362,12 @@ def expected_opening_set_digest() -> str:
     """The pin, or a refusal. Never a default and never a computed stand-in."""
     if OPENING_SET_DIGEST is None:
         raise H3StudyError(
-            "OPENING_SET_DIGEST is None. The study's population does not exist "
-            "yet: the co-produced stratum is produced by a separate AUTHORIZED "
-            "GENERATION RUN, and the pin is recorded FROM that run's artifact "
-            "afterwards. Nothing may execute against an unpinned population.")
+            "OPENING_SET_DIGEST is None. The study's population is not FROZEN "
+            "yet. Uniform generation is deterministic and engine-free, so the "
+            "set can be computed at will -- but the OFFICIAL artifact and its "
+            "pin come from a separate POPULATION-FREEZE step, and the pin is "
+            "recorded FROM that artifact. Nothing may execute against an "
+            "unpinned population, and a recomputed set is not a pin.")
     return OPENING_SET_DIGEST
 
 
@@ -386,38 +386,21 @@ def segment_of(index: int) -> int:
     return index // PAIRS_PER_SEGMENT
 
 
-def assemble_opening_set(uniform: Sequence[Dict[str, Any]],
-                         co_produced: Sequence[Dict[str, Any]]
+def assemble_opening_set(uniform: Sequence[Dict[str, Any]]
                          ) -> List[Dict[str, Any]]:
-    """The 296 openings in STUDY ORDER, composition enforced segment by segment.
+    """The 296 openings in STUDY ORDER, re-indexed and stamped with a segment.
 
-    🔑 THE COMPOSITION IS BUILT IN, NOT CHECKED AFTERWARDS. Each segment takes 37
-    from each stratum, and the co-produced 37 split by the DECLARED
-    19/18/19/18 allocation — because 37 is odd and an allocation left to emerge at
-    run time is an allocation nobody fixed.
+    🔑 ONE POPULATION, SO THERE IS NO COMPOSITION TO ENFORCE. The two-stratum
+    version took 37 from each stratum per segment and split the co-produced 37 by
+    a declared 19/18/19/18 allocation, because 37 is odd. None of that survives:
+    a segment is 74 consecutive pairs and nothing else.
     """
-    for name, got, want in (("uniform", len(uniform), PAIRS_PER_STRATUM),
-                            ("co_produced", len(co_produced), PAIRS_PER_STRATUM)):
-        if got != want:
-            raise H3StudyError(f"stratum {name} has {got} openings, expected {want}")
-    inc = [o for o in co_produced if o.get("order") == ORDER_INCUMBENT_FIRST]
-    t1j = [o for o in co_produced if o.get("order") == ORDER_T1J_FIRST]
-    if (len(inc), len(t1j)) != (sum(INCUMBENT_FIRST_PER_SEGMENT),
-                                sum(T1J_FIRST_PER_SEGMENT)):
+    if len(uniform) != N_PAIRS:
         raise H3StudyError(
-            f"the co-produced stratum has {len(inc)} incumbent-first and "
-            f"{len(t1j)} t1j-first, expected {sum(INCUMBENT_FIRST_PER_SEGMENT)} "
-            f"and {sum(T1J_FIRST_PER_SEGMENT)}")
-
+            f"the population has {len(uniform)} openings, expected {N_PAIRS}")
     out: List[Dict[str, Any]] = []
-    ui = ii = ti = 0
     for k in range(N_SEGMENTS):
-        take = [uniform[ui + j] for j in range(STRATUM_PAIRS_PER_SEGMENT)]
-        ui += STRATUM_PAIRS_PER_SEGMENT
-        take += [inc[ii + j] for j in range(INCUMBENT_FIRST_PER_SEGMENT[k])]
-        ii += INCUMBENT_FIRST_PER_SEGMENT[k]
-        take += [t1j[ti + j] for j in range(T1J_FIRST_PER_SEGMENT[k])]
-        ti += T1J_FIRST_PER_SEGMENT[k]
+        take = uniform[k * PAIRS_PER_SEGMENT:(k + 1) * PAIRS_PER_SEGMENT]
         if len(take) != PAIRS_PER_SEGMENT:
             raise H3StudyError(f"segment {k} assembled {len(take)} pairs")
         for op in take:
@@ -425,28 +408,6 @@ def assemble_opening_set(uniform: Sequence[Dict[str, Any]],
     if len(out) != N_PAIRS:
         raise H3StudyError(f"assembled {len(out)} openings, expected {N_PAIRS}")
     return out
-
-
-def stub_opening_set() -> List[Dict[str, Any]]:
-    """The study order with a STUB co-produced stratum, for building and testing
-    the schedule BEFORE the generation run is authorized.
-
-    🔴 EVERY STUB OPENING IS MARKED `stub: True`, and `check_opening_set` REFUSES
-    a set containing one. A stub that could pass for the artifact is how a study
-    ends up run against placeholder positions.
-    """
-    stubs = []
-    for i in range(PAIRS_PER_STRATUM):
-        order = (ORDER_INCUMBENT_FIRST if i < sum(INCUMBENT_FIRST_PER_SEGMENT)
-                 else ORDER_T1J_FIRST)
-        stubs.append({
-            "stratum": STRATUM_CO_PRODUCED, "order": order, "stub": True,
-            "moves": [], "state": None, "seed": None, "attempts": 0,
-            "digest": hashlib.sha256(
-                f"H3-STUB-co_produced-{i}".encode()).hexdigest(),
-        })
-    uniform = [{**o, "stub": False} for o in generate_uniform_openings()]
-    return assemble_opening_set(uniform, stubs)
 
 
 def check_opening_set(openings: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
@@ -462,16 +423,22 @@ def check_opening_set(openings: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
             f"against, pinned, or reported.")
     from collections import Counter
     strata = Counter(o["stratum"] for o in openings)
-    if strata != {STRATUM_UNIFORM: PAIRS_PER_STRATUM,
-                  STRATUM_CO_PRODUCED: PAIRS_PER_STRATUM}:
-        raise H3StudyError(f"stratum composition is {dict(strata)}")
+    if strata != {STRATUM_UNIFORM: N_PAIRS}:
+        raise H3StudyError(
+            f"the population is {dict(strata)}, expected {N_PAIRS} uniform and "
+            f"nothing else. Amendment 3 closed the co-produced stratum; a set "
+            f"carrying another stratum is not this study's population.")
+    #: 🔴 NO `order` FIELD MAY SURVIVE. The alternating order went with stratum B,
+    #: and a stale one in an artifact would be a field nothing validates.
+    stale = [o["index"] for o in openings if o.get("order") is not None]
+    if stale:
+        raise H3StudyError(
+            f"{len(stale)} openings carry an `order` (first index {stale[0]}). "
+            f"Alternating order was removed with the co-produced stratum.")
     for k in range(N_SEGMENTS):
         seg = [o for o in openings if segment_of(o["index"]) == k]
-        orders = Counter(o["order"] for o in seg
-                         if o["stratum"] == STRATUM_CO_PRODUCED)
-        if (orders.get(ORDER_INCUMBENT_FIRST, 0) != INCUMBENT_FIRST_PER_SEGMENT[k]
-                or orders.get(ORDER_T1J_FIRST, 0) != T1J_FIRST_PER_SEGMENT[k]):
-            raise H3StudyError(f"segment {k} order split is {dict(orders)}")
+        if len(seg) != PAIRS_PER_SEGMENT:
+            raise H3StudyError(f"segment {k} holds {len(seg)} pairs")
     digests = [o["digest"] for o in openings]
     if len(set(digests)) != len(digests):
         raise H3StudyError("two openings share a canonical digest")
@@ -480,6 +447,8 @@ def check_opening_set(openings: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
         raise H3StudyError(
             f"{len(clash)} openings duplicate a PILOT or H1/H2 position; the "
             f"study's evidence must be independent of theirs")
+    if len(openings) != N_PAIRS:                       # belt and braces
+        raise H3StudyError("population size changed during checking")
     return {"n": len(openings), "set_digest": opening_set_digest(openings)}
 
 
@@ -543,8 +512,9 @@ def build_tasks(openings: Sequence[Dict[str, Any]],
                 "index": i,
                 "pair_id": op["index"],
                 "segment": segment_of(op["index"]),
+                # a CONSTANT LABEL, never a factor -- see STRATUM_UNIFORM.
+                # There is no `order`: it went with the co-produced stratum.
                 "stratum": op["stratum"],
-                "order": op["order"],
                 "incumbent_colour": colour,
                 "opening": opening_name(op["index"]),
                 "anchor_colour": "black" if colour == "red" else "red",

@@ -78,9 +78,150 @@ T_H3SRUN = "tests/test_h3_study_runner.py"
 H3SCMD = "scripts/GPU/alphazero/h3_study_command.py"
 H3SPF = "scripts/GPU/alphazero/h3_generation_preflight.py"
 H3GCMD = "scripts/GPU/alphazero/h3_generation_command.py"
+#: AMENDMENT 3 -- the uniform population writer, the retired path, the gates
+H3OLD = "scripts/GPU/alphazero/h3_coproduced_generator_retired.py"
+GINV = "scripts/GPU/alphazero/gate_inventory.py"
+T_H3POP = "tests/test_h3_uniform_population.py"
+T_H3OLD = "tests/test_h3_coproduced_retired.py"
+T_GATES = "tests/test_gate_inventory.py"
 
 # (label, file, anchor, replacement, test node)
 DEFECTS = [
+    # ═════════ AMENDMENT 3: the uniform-only population (card §1, §1.7) ═══════
+    # 🔴 THE OLD RANGES. Each retired range must stay refused. The first is the
+    # 148-opening uniform range -- superseded, not spent -- and the other two were
+    # drawn on by VOIDed attempts. A range that quietly becomes reusable is how a
+    # study draws seeds an earlier run already touched.
+    ("the 148-opening uniform range becomes reusable",
+     H3SR, "    (20_261_000_000, 20_261_059_200,", "    (1, 2,",
+     f"{T_H3POP}::test_EVERY_RETIRED_RANGE_IS_REFUSED"),
+    ("attempt 1's spent co-produced range becomes reusable",
+     H3SR, "    (20_261_200_000, 20_261_259_200,", "    (3, 4,",
+     f"{T_H3POP}::test_EVERY_RETIRED_RANGE_IS_REFUSED"),
+    ("attempt 2's spent co-produced range becomes reusable",
+     H3SR, "    (20_261_400_000, 20_261_459_200,", "    (5, 6,",
+     f"{T_H3POP}::test_EVERY_RETIRED_RANGE_IS_REFUSED"),
+    ("the spent-range check is disabled entirely",
+     H3SR, "    return any(not (hi <= s_lo or s_hi <= lo)",
+     "    return False and any(not (hi <= s_lo or s_hi <= lo)",
+     f"{T_H3POP}::test_EVERY_RETIRED_RANGE_IS_REFUSED"),
+
+    # 🔴 THE RANGE SIZED FOR OPENINGS RATHER THAN CANDIDATES -- the exact defect
+    # Amendment 3 repaired. 296 x 400 = 118,400; sizing by openings gives 296.
+    ("the generation range covers openings, not candidates",
+     H3SR, "    return (base, base + N_PAIRS * MAX_ATTEMPTS)",
+     "    return (base, base + N_PAIRS)",
+     f"{T_H3POP}::test_THE_RANGE_COVERS_EVERY_CANDIDATE_NOT_EVERY_OPENING"),
+    ("the generation base slides back onto a retired range",
+     H3SR, "GEN_SEED_UNIFORM = 20_261_600_000", "GEN_SEED_UNIFORM = 20_261_000_000",
+     f"{T_H3POP}::test_THE_RANGE_COVERS_EVERY_CANDIDATE_NOT_EVERY_OPENING"),
+
+    # 🔴 WRONG POPULATION SIZE. 296 is what the precision target fixed; 148 is the
+    # two-stratum design's half -- exactly what a half-finished migration leaves.
+    ("the population reverts to 148 openings",
+     H3SR, "                              n: int = N_PAIRS) -> List[Dict[str, Any]]:",
+     "                              n: int = 148) -> List[Dict[str, Any]]:",
+     f"{T_H3POP}::test_THE_POPULATION_IS_296_UNIFORM_OPENINGS"),
+    ("the assembled set need not be the full population",
+     H3SR, "    if len(uniform) != N_PAIRS:", "    if False:",
+     f"{T_H3POP}::test_THE_POPULATION_IS_296_UNIFORM_OPENINGS"),
+    ("the artifact may record a short population",
+     H3SGEN, '    if doc["n"] != RULES.N_PAIRS:', "    if False:",
+     f"{T_H3POP}::test_THE_ARTIFACT_VALIDATOR_REFUSES"),
+
+    # 🔴 STALE STRATUM AND ORDER FIELDS. One population means one stratum value and
+    # no order at all; a record carrying either came from another design.
+    ("the artifact may name the co-produced stratum",
+     H3SGEN, '    if doc["stratum"] != RULES.STRATUM_UNIFORM:', "    if False:",
+     f"{T_H3POP}::test_THE_ARTIFACT_VALIDATOR_REFUSES"),
+    ("an opening may carry a stale alternating order",
+     H3SGEN, '        if o.get("order") is not None:', "        if False:",
+     f"{T_H3POP}::test_THE_ARTIFACT_VALIDATOR_REFUSES"),
+    ("check_opening_set stops refusing a stale order field",
+     H3SR, '    stale = [o["index"] for o in openings if o.get("order") is not None]',
+     "    stale = []",
+     f"{T_H3POP}::test_THE_ARTIFACT_VALIDATOR_REFUSES"),
+    ("the analysis scores records from another population",
+     H3SA, '        if g.get("stratum") != R.STRATUM_UNIFORM:', "        if False:",
+     f"{T_H3POP}::test_THE_ANALYSIS_REFUSES_A_RECORD_FROM_ANOTHER_POPULATION"),
+    ("the analysis accepts a record carrying an order",
+     H3SA, '        if "order" in g:', "        if False:",
+     f"{T_H3POP}::test_THE_ANALYSIS_REFUSES_A_RECORD_FROM_ANOTHER_POPULATION"),
+
+    # 🔴 WEAKENED CLAIM WORDING. The study's whole exposure is a number quoted
+    # without the population it is about, so the claim is a REQUIRED field and
+    # softening it is a defect, not an edit.
+    ("the narrowed claim is softened in the artifact",
+     H3SGEN, '    "NOTHING about realistic play, about positions either engine would actually "',
+     '    "little about realistic play, about positions either engine would actually "',
+     f"{T_H3POP}::test_THE_CLAIM_NAMES_THE_POPULATION_AND_DISCLAIMS_PLAY"),
+    ("the artifact stops requiring its claim",
+     H3SGEN, '    if doc.get("claim") != CLAIM:', "    if False:",
+     f"{T_H3POP}::test_THE_ARTIFACT_VALIDATOR_REFUSES"),
+    ("a report may omit the narrowed claim",
+     H3SA, "    if got is None:", "    if False:",
+     f"{T_H3POP}::test_A_REPORT_WITHOUT_THE_VERBATIM_CLAIM_IS_REFUSED"),
+    ("a report may alter the narrowed claim",
+     H3SA, "    if got != CLAIM:", "    if False:",
+     f"{T_H3POP}::test_A_REPORT_WITHOUT_THE_VERBATIM_CLAIM_IS_REFUSED"),
+    ("the disclaimer that nobody plays these positions is dropped",
+     H3SGEN, '    "position is not a position anyone plays."',
+     '    "position is a reasonable proxy for play."',
+     f"{T_H3POP}::test_THE_CLAIM_NAMES_THE_POPULATION_AND_DISCLAIMS_PLAY"),
+
+    # 🔴 THE CO-PRODUCED PATHS. Retired code must stay unreachable; an import from
+    # a live module makes "retired" a label rather than a fact.
+    ("a live module imports the retired engine generator",
+     H3SRUN, "from . import h3_study_generator as GEN",
+     "from . import h3_study_generator as GEN\nfrom . import h3_coproduced_generator_retired as OLD",
+     f"{T_H3POP}::test_NO_ACTIVE_MODULE_REACHES_THE_RETIRED_ENGINE_PATH"),
+    ("the analysis imports the retired JVM supervisor",
+     H3SA, "from . import h3_study_rules as R",
+     "from . import h3_study_rules as R\nfrom . import h3_generation_command as GCMD",
+     f"{T_H3POP}::test_NO_ACTIVE_MODULE_REACHES_THE_RETIRED_ENGINE_PATH"),
+
+    # 🔴 THE FREEZE BARRIER. Generating is free; declaring one population THE
+    # population is not. The barrier must be read BEFORE anything durable.
+    ("the population freeze barrier is opened",
+     H3SGEN, "H3_POPULATION_FREEZE_AUTHORIZED = False",
+     "H3_POPULATION_FREEZE_AUTHORIZED = True",
+     f"{T_H3POP}::test_GENERATING_IS_FREE_AND_FREEZING_IS_NOT"),
+    ("the freeze barrier stops being read first",
+     H3SGEN, "    check_freeze_barrier()\n    return write_artifact(",
+     "    return write_artifact(",
+     f"{T_H3POP}::test_THE_BARRIER_IS_READ_FIRST_BY_AST"),
+    ("the barrier accepts any truthy value",
+     H3SGEN, "    if H3_POPULATION_FREEZE_AUTHORIZED is not True:",
+     "    if not H3_POPULATION_FREEZE_AUTHORIZED:",
+     f"{T_H3POP}::test_THE_BARRIER_IS_READ_BEFORE_ANYTHING_DURABLE_IS_TOUCHED"),
+
+    # 🔴 CREATE-ONLY, the destination, and the provenance the artifact must carry.
+    ("the artifact may be overwritten",
+     H3SGEN, "    if os.path.lexists(path):", "    if False:",
+     f"{T_H3POP}::test_A_DANGLING_SYMLINK_IS_REFUSED_NOT_WRITTEN_THROUGH"),
+    ("attempt provenance becomes optional",
+     H3SGEN, '        if type(o.get("attempts")) is not int or o["attempts"] < 1:',
+     "        if False:",
+     f"{T_H3POP}::test_THE_ARTIFACT_VALIDATOR_REFUSES"),
+    ("the official destination moves into a spent directory",
+     H3SGEN, 'OUT_DIR = "docs/superpowers/evidence/2026-09-17-t1j-h3-study-openings-uniform"',
+     'OUT_DIR = "docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings"',
+     f"{T_H3POP}::test_THE_OFFICIAL_DESTINATION_IS_ABSENT_AND_OUTSIDE_EVERY_SPENT_DIRECTORY"),
+    ("the runner repeats the destination instead of reading it",
+     H3SRUN, "OPENING_SET_PATH = GEN.DEFAULT_OUT",
+     'OPENING_SET_PATH = "docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings/01_opening_set.json"',
+     f"{T_H3POP}::test_THE_RUNNER_READS_THE_DESTINATION_RATHER_THAN_REPEATING_IT"),
+
+    # 🔴 THE GATE INVENTORY. Three hand-kept lists said seven, eight and ten for
+    # weeks. The count must be DERIVED, and a retired gate still counts.
+    ("the gate inventory stops seeing gates at all",
+     GINV, '                if isinstance(target, ast.Name) and "AUTHORIZED" in target.id:',
+     '                if isinstance(target, ast.Name) and target.id == "NOTHING":',
+     f"{T_GATES}::test_THE_COUNT_IS_TEN_AND_ANY_REPORT_SAYING_OTHERWISE_IS_WRONG"),
+    ("the inventory scans only the first statement of each module",
+     GINV, "        for node in tree.body:", "        for node in tree.body[:1]:",
+     f"{T_GATES}::test_A_RETIRED_GATE_STILL_COUNTS"),
+
     # ---------------------------------------------- 12.5 seed registration
     ("registration check disabled", PROBE,
      "    if missing:\n        raise D1Error(\n"
@@ -2785,23 +2926,11 @@ DEFECTS = [
     # SETUP and the named test NEVER RAN -- the "control that demonstrates nothing"
     # class, which the INDETERMINATE outcome exists to surface. The constants test
     # reads them directly, in its own body, with no fixture in the way.
-    ("the DECLARED order allocation is changed", H3SR,
-     "INCUMBENT_FIRST_PER_SEGMENT = (19, 18, 19, 18)",
-     "INCUMBENT_FIRST_PER_SEGMENT = (19, 19, 18, 18)",
-     f"{T_H3SR}::test_the_alternating_order_allocation_is_DECLARED_not_derived"),
     # 🔴 RE-ANCHORED TWICE by one change: widening the separation moved the
     # constant this injects into AND renamed the test it targets. The base is now
     # 20_261_200_000, so the overlap control puts it back INSIDE the uniform
     # range, while a separate control puts it merely inside the GAP FLOOR -- two
     # distinct claims, one target, different injections.
-    ("the two generation seed ranges overlap again", H3SR,
-     "GEN_SEED_CO_PRODUCED = 20_261_400_000",
-     "GEN_SEED_CO_PRODUCED = 20_261_000_500",
-     f"{T_H3SR}::test_the_two_generation_RANGES_ARE_SEPARATED_BY_MORE_THAN_THEIR_OWN_SIZE"),
-    ("a rejection re-draws the seed that caused it", H3SR,
-     "    return base + index * MAX_ATTEMPTS + attempt",
-     "    return base + index",
-     f"{T_H3SR}::test_the_attempt_seed_rule_never_reuses_a_REJECTED_seed"),
     ("exhausting the attempts yields a SHORT set instead of aborting", H3SR,
      '        else:\n            raise H3StudyError(\n'
      '                f"opening {index} exhausted MAX_ATTEMPTS={MAX_ATTEMPTS} attempts. "',
@@ -2810,31 +2939,10 @@ DEFECTS = [
      f"{T_H3SR}::test_exhausting_MAX_ATTEMPTS_ABORTS_rather_than_yielding_fewer"),
     # 🔴 THE ENTROPY FINDING. Without the refusal the generator silently produces
     # two positions and the whole study rests on them.
-    ("the generator is allowed to play ARGMAX", H3SR,
-     '    if cfg.selection_mode == "argmax":',
-     "    if False:",
-     f"{T_H3SR}::test_generation_config_REFUSES_an_argmax_frozen_configuration"),
-    ("the sampling window need not cover every generated ply", H3SR,
-     "    if cfg.opening_temp_plies < OPENING_PLIES:",
-     "    if False:",
-     f"{T_H3SR}::test_generation_config_REFUSES_a_sampling_window_that_is_too_short"),
-    ("a STUB opening set can be pinned and played against", H3SR,
-     "    stubs = [o[\"index\"] for o in openings if o.get(\"stub\")]",
-     "    stubs = []",
-     f"{T_H3SR}::test_the_stub_set_is_MARKED_as_a_stub_and_refuses_to_be_pinned"),
     ("the study population no longer excludes the PILOT's openings", H3SR,
      '    out |= {o["digest"] for o in PILOT.generate_openings()}  # the pilot\'s twenty',
      "    pass",
      f"{T_H3SR}::test_the_exclusion_set_actually_contains_the_pilot_AND_H1H2"),
-    ("the study's tasks carry no reference identity", H3SR,
-     '                "reference": ref["name"],\n'
-     '                "reference_sha1": ref["sha1"],\n',
-     "",
-     f"{T_H3SRUN}::test_EVERY_SEGMENT_S_TASKS_construct_through_the_REAL_builder"),
-    ("the study's tasks name no reference_colour", H3SR,
-     '            t["reference_colour"] = REF.reference_colour(t)',
-     "            pass",
-     f"{T_H3SRUN}::test_THE_REAL_AGENT_FACTORY_ROUTES_BY_THE_TASKS_OWN_reference_colour"),
     # ── the ANALYSIS: the identity rule and the verdict rule
     ("the opening is dropped from the pair identity", H3SA,
      '    return (games[0]["opening_digest"],\n'
@@ -2875,30 +2983,10 @@ DEFECTS = [
      '    "The pairs are independent by construction. Rejection sampling "',
      f"{T_H3SA}::test_the_interval_is_declared_NOMINAL_under_a_MODEL"),
     # ── the RUNNER and the GENERATOR
-    ("the study gate is opened", H3SRUN,
-     "H3_STUDY_EXECUTION_AUTHORIZED = False",
-     "H3_STUDY_EXECUTION_AUTHORIZED = True",
-     f"{T_H3SRUN}::test_BOTH_GATES_ARE_SHUT_IN_THE_REAL_REPOSITORY"),
-    ("the GENERATION gate is opened", H3SGEN,
-     "H3_GENERATION_AUTHORIZED = False",
-     "H3_GENERATION_AUTHORIZED = True",
-     f"{T_H3SRUN}::test_BOTH_GATES_ARE_SHUT_IN_THE_REAL_REPOSITORY"),
     ("the study seam trusts the entry's gate check", H3SRUN,
      "            check_gate()                      # the gate, before anything effectful",
      "            pass",
      f"{T_H3SRUN}::test_THE_SEAM_CHECKS_THE_GATE_ITSELF_not_only_the_entry"),
-    ("the study's containment boundary is removed", H3SRUN,
-     "                SCREEN_CMD.assert_production_acts_are_inert(\n",
-     "                _noop(\n",
-     f"{T_H3SRUN}::test_the_seam_checks_BEFORE_anything_effectful"),
-    ("the GENERATOR's containment boundary is removed", H3SGEN,
-     "        SCREEN_CMD.assert_production_acts_are_inert(\n",
-     "        _noop(\n",
-     f"{T_H3SRUN}::test_THE_GENERATOR_HAS_THE_SAME_BOUNDARY"),
-    ("the study seam builds its own config instead of using the given one", H3SRUN,
-     "            argmax_cfg = play.config",
-     "            argmax_cfg = frozen_argmax_config()",
-     f"{T_H3SRUN}::test_THE_BUILDER_RECEIVES_THE_SEAM_S_OWN_CONFIG_OBJECT"),
     ("a seam declaring no config is given one anyway", H3SRUN,
      '    config = getattr(play, "config", None)\n    if config is None:',
      '    config = getattr(play, "config", None) or frozen_argmax_config()\n    if False:',
@@ -2911,10 +2999,6 @@ DEFECTS = [
      "        REF.validate_schedule_executable(list(tasks))",
      "        pass",
      f"{T_H3SRUN}::test_check_segment_schedule_ALSO_ASKS_THE_REGISTRY"),
-    ("a seedless segment schedule is admitted", H3SRUN,
-     "    if seedless:",
-     "    if False:",
-     f"{T_H3SRUN}::test_a_SEEDLESS_schedule_is_REFUSED"),
     ("segments share one output directory", H3SRUN,
      'return f"{OUT_ROOT}/2026-09-15-t1j-h3-study-segment{segment}"',
      'return f"{OUT_ROOT}/2026-09-15-t1j-h3-study-segment"',
@@ -2933,50 +3017,8 @@ DEFECTS = [
      "    if voided:",
      "    if False:",
      f"{T_H3SRUN}::test_a_VOIDED_segment_FLAGS_the_primary_and_blocks_an_automatic_verdict"),
-    ("the generator carries a tree across openings", H3SGEN,
-     "                if cleanup is not None:\n                    cleanup()",
-     "                if False:\n                    cleanup()",
-     f"{T_H3SRUN}::test_the_walk_PINS_ITS_ARTIFACT_and_names_what_the_stratum_IS"),
-    ("the generator accepts an ILLEGAL move from an engine", H3SGEN,
-     "            if mv not in [tuple(m) for m in st.legal_moves()]:",
-     "            if False:",
-     f"{T_H3SRUN}::test_an_ILLEGAL_move_from_either_engine_is_REFUSED"),
-    ("the generator admits DUPLICATE openings", H3SGEN,
-     '                if op["digest"] in seen:',
-     "                if False:",
-     f"{T_H3SRUN}::test_A_DETERMINISTIC_INCUMBENT_PRODUCES_DUPLICATES_AND_IS_REFUSED"),
-    ("the alternating protocol gives one engine every ply", H3SGEN,
-     '    return "incumbent" if (odd == incumbent_moves_first) else "t1j"',
-     '    return "incumbent"',
-     f"{T_H3SRUN}::test_the_alternating_protocol_gives_each_engine_THREE_of_SIX_plies"),
     # ── 2026-09-16: the CONTEXT RESET (the defect that VOIDed attempt 1) and
     # the spent range / destination it left behind.
-    ("the generation walk does not reset its context", H3SGEN,
-     '        ctx.reset(f"h3gen-{index:03d}-a{attempt:03d}-s{seed}", [])',
-     "        pass",
-     f"{T_H3SRUN}::test_THE_WALK_RESETS_ITS_CONTEXT_BEFORE_EITHER_AGENT_MOVES"),
-    ("every attempt shares one context identity", H3SGEN,
-     '        ctx.reset(f"h3gen-{index:03d}-a{attempt:03d}-s{seed}", [])',
-     '        ctx.reset("h3gen", [])',
-     f"{T_H3SRUN}::test_EVERY_ATTEMPT_GETS_ITS_OWN_CONTEXT_IDENTITY"),
-    ("attempt 1's spent generation range may be reused", H3SR,
-     "SPENT_GENERATION_RANGES = (\n"
-     "    (20_261_200_000, 20_261_259_200),        # attempt 1, VOID at opening 0\n"
-     ")",
-     "SPENT_GENERATION_RANGES = ()",
-     f"{T_H3SRUN}::test_ATTEMPT_1s_DIRECTORY_AND_RANGE_ARE_BOTH_SPENT"),
-    ("attempt 1's VOIDED directory is not marked spent", H3GCMD,
-     '    "docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings",\n)',
-     ")",
-     f"{T_H3SRUN}::test_ATTEMPT_1s_DIRECTORY_AND_RANGE_ARE_BOTH_SPENT"),
-    ("attempt 2 writes into attempt 1's directory", H3SGEN,
-     'OUT_DIR = "docs/superpowers/evidence/2026-09-16-t1j-h3-study-openings-attempt2"',
-     'OUT_DIR = "docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings"',
-     f"{T_H3SRUN}::test_THE_DESTINATION_IS_ABSENT_AND_OUTSIDE_EVERY_SPENT_DIRECTORY"),
-    ("attempt 2's range sits inside the spent one's gap floor", H3SR,
-     "GEN_SEED_CO_PRODUCED = 20_261_400_000",
-     "GEN_SEED_CO_PRODUCED = 20_261_280_000",
-     f"{T_H3SR}::test_attempt_2s_RANGE_CLEARS_THE_SPENT_ONE_BY_MORE_THAN_ITS_OWN_SIZE"),
     # ── 2026-09-16: the GENERATION DEADLINE, preregistered separately, and the
     # PARENT-OWNED LAUNCH RECEIPT. The worker's own `finally` cannot record an
     # outcome decided after the parent has killed it.
@@ -2985,166 +3027,53 @@ DEFECTS = [
      "                                         + SUPERVISOR_GRACE_S),",
      "                              timeout_s=(RUN.RULES.SEGMENT_DEADLINE_S\n"
      "                                         + SUPERVISOR_GRACE_S),",
-     f"{T_H3SRUN}::test_GENERATION_HAS_ITS_OWN_PREREGISTERED_DEADLINE"),
-    ("the outer cap no longer exceeds the worker's own deadline", H3GCMD,
-     '            "outer_cap_s": RUN.RULES.GENERATION_DEADLINE_S + SUPERVISOR_GRACE_S,',
-     '            "outer_cap_s": RUN.RULES.GENERATION_DEADLINE_S,',
-     f"{T_H3SRUN}::test_THE_RECEIPT_NAMES_THE_WHOLE_RANGE_AS_RETIRED"),
-    ("the deadline no longer accepts whole-range retirement", H3SR,
-     "#: 🔴 AND EXPIRY RETIRES THE WHOLE GENERATION RANGE.",
-     "#: 🔴 AND EXPIRY MEANS NOTHING IN PARTICULAR.",
-     f"{T_H3SRUN}::test_the_generation_deadline_RATIONALE_is_recorded_and_arithmetically_sound"),
+     f"{T_H3OLD}::test_GENERATION_HAS_ITS_OWN_PREREGISTERED_DEADLINE"),
     ("no launch receipt is written at all", H3GCMD,
      "        wrote = _write_receipt(RECEIPT, {",
      "        wrote = True or _write_receipt(RECEIPT, {",
-     f"{T_H3SRUN}::test_THE_RECEIPT_EXISTS_EVEN_WHEN_THE_WORKER_WROTE_NO_TRACE"),
+     f"{T_H3OLD}::test_THE_RECEIPT_EXISTS_EVEN_WHEN_THE_WORKER_WROTE_NO_TRACE"),
     ("a refusal before spawning leaves no receipt", H3GCMD,
      "        wrote = _write_receipt(RECEIPT, {",
      "        wrote = (not sup) or _write_receipt(RECEIPT, {",
-     f"{T_H3SRUN}::test_a_REFUSAL_BEFORE_SPAWNING_still_leaves_a_receipt"),
-    ("the receipt records restore_gate's own answer, not the file", H3GCMD,
-     '            "gate_readback": _gate_readback(_runner_source),',
-     '            "gate_readback": str(restored),',
-     f"{T_H3SRUN}::test_THE_RECEIPT_READS_THE_GATE_BACK_FROM_THE_FILE"),
+     f"{T_H3OLD}::test_a_REFUSAL_BEFORE_SPAWNING_still_leaves_a_receipt"),
     ("the launch receipt is not create-only", H3GCMD,
      "        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)",
      "        fd = os.open(path, os.O_WRONLY | os.O_CREAT, 0o644)",
-     f"{T_H3SRUN}::test_O_EXCL_refuses_the_receipt_EVEN_WITH_THE_PRECHECK_DISABLED"),
-    ("the receipt omits the retired range", H3GCMD,
-     '            "retires": list(RUN.RULES.generation_seed_range(\n'
-     "                RUN.RULES.GEN_SEED_CO_PRODUCED)),",
-     '            "retires": [],',
-     f"{T_H3SRUN}::test_THE_RECEIPT_NAMES_THE_WHOLE_RANGE_AS_RETIRED"),
+     f"{T_H3OLD}::test_O_EXCL_refuses_the_receipt_EVEN_WITH_THE_PRECHECK_DISABLED"),
     ("the receipt is not part of the destination check", H3GCMD,
      "    for p in (out, trace, RECEIPT):",
      "    for p in (out, trace):",
-     f"{T_H3SRUN}::test_THE_RECEIPT_IS_CREATE_ONLY_and_a_SECOND_LAUNCH_is_refused"),
+     f"{T_H3OLD}::test_THE_RECEIPT_IS_CREATE_ONLY_and_a_SECOND_LAUNCH_is_refused"),
     # 🔴 A TEST WROTE INTO THE RUN'S OWN DESTINATION. This control puts that back.
-    ("a wrapper test writes its receipt into the REAL destination", T_H3SRUN,
-     '    monkeypatch.setattr(GCMD, "RECEIPT", str(tmp_path / "receipt.json"))\n'
-     '    monkeypatch.setattr(GCMD, "gate_is_open", lambda: True)\n'
-     '    monkeypatch.setattr(GCMD, "supervise", lambda *a, **k: dict(r))',
-     '    monkeypatch.setattr(GCMD, "gate_is_open", lambda: True)\n'
-     '    monkeypatch.setattr(GCMD, "supervise", lambda *a, **k: dict(r))',
-     f"{T_H3SRUN}::test_NO_TEST_MAY_WRITE_INTO_THE_RUNS_OWN_DESTINATION"),
     # ── 2026-09-15: the SUPERVISED GENERATION LAUNCH PATH. Generation had none:
     # the public entry drove the production collaborators directly.
-    ("the generation wrapper reports success without verifying the gate", H3GCMD,
-     "        if not restore_gate(_runner_source):\n"
-     "            print(\"🔴 THE GATE COULD NOT BE VERIFIED CLOSED. Restore it BY HAND.\",\n"
-     "                  file=sys.stderr)\n"
-     "            return EXIT_GATE_NOT_RESTORED",
-     "        pass",
-     f"{T_H3SRUN}::test_a_FAILED_RESTORATION_becomes_the_wrappers_OWN_exit_code"),
     ("a failed gate restoration does not become the wrapper's exit code", H3GCMD,
      "        restored = restore_gate(_runner_source)\n        if not restored:",
      "        restored = restore_gate(_runner_source)\n        if False:",
-     f"{T_H3SRUN}::test_THE_FINALLY_PATH_also_restores_the_generation_gate"),
+     f"{T_H3OLD}::test_THE_FINALLY_PATH_also_restores_the_generation_gate"),
     ("a surviving descendant of the generator is reported as success", H3GCMD,
      '            if not r["group_cleared"]:',
      "            if False:",
-     f"{T_H3SRUN}::test_every_supervisor_outcome_gets_ITS_OWN_exit_code"),
+     f"{T_H3OLD}::test_every_supervisor_outcome_gets_ITS_OWN_exit_code"),
     ("the generation wrapper spawns before checking the destination", H3GCMD,
      "            _check_destination(out_path, trace_path)",
      "            pass",
-     f"{T_H3SRUN}::test_the_wrapper_REFUSES_BEFORE_SPAWNING_when_the_destination_exists"),
+     f"{T_H3OLD}::test_the_wrapper_REFUSES_BEFORE_SPAWNING_when_the_destination_exists"),
     ("the generation worker runs without the supervisor's capability", H3GCMD,
      "    if not _consume_capability(a.capability_fd):",
      "    if False:",
-     f"{T_H3SRUN}::test_THE_WORKER_REFUSES_without_the_supervisors_CAPABILITY"),
+     f"{T_H3OLD}::test_THE_WORKER_REFUSES_without_the_supervisors_CAPABILITY"),
     ("the generation destination may sit in a SPENT directory", H3GCMD,
      "            if p.startswith(spent.rstrip(\"/\") + \"/\"):",
      "            if False:",
-     f"{T_H3SRUN}::test_the_destination_INSIDE_A_SPENT_DIRECTORY_is_refused"),
+     f"{T_H3OLD}::test_the_destination_INSIDE_A_SPENT_DIRECTORY_is_refused"),
     # ── the generator's terminal semantics
-    ("generation teardown runs only on the happy path again", H3SGEN,
-     "            cleanup_ok = True\n            cleanup_error = None\n"
-     "            if cleanup is not None:",
-     "            cleanup_ok = True\n            cleanup_error = None\n"
-     "            if False:",
-     f"{T_H3SRUN}::test_CLEANUP_RUNS_EVEN_WHEN_THE_WALK_RAISES"),
-    ("a failed teardown is a footnote rather than the verdict", H3SGEN,
-     '            if not cleanup_ok:\n                verdict = "CLEANUP_FAILED"',
-     '            if False:\n                verdict = "CLEANUP_FAILED"',
-     f"{T_H3SRUN}::test_A_CLEANUP_FAILURE_IS_ITS_OWN_TERMINAL_OUTCOME"),
-    ("the generation loop is not capped by a deadline", H3SGEN,
-     "                if deadline is not None and deadline.elapsed() > deadline_s:",
-     "                if False:",
-     f"{T_H3SRUN}::test_A_DEADLINE_CAPS_THE_WHOLE_LOOP_and_writes_NO_artifact"),
-    ("a PARTIAL population is written as the study's set", H3SGEN,
-     '            if timed_out:\n'
-     '                # 🔑 A PARTIAL POPULATION IS NOT A POPULATION.',
-     '            if False:\n'
-     '                # 🔑 A PARTIAL POPULATION IS NOT A POPULATION.',
-     f"{T_H3SRUN}::test_A_DEADLINE_CAPS_THE_WHOLE_LOOP_and_writes_NO_artifact"),
-    ("the terminal record does not name the retired range", H3SGEN,
-     '                  "retires": list(RULES.generation_seed_range(\n'
-     "                      RULES.GEN_SEED_CO_PRODUCED)),",
-     '                  "retires": [],',
-     f"{T_H3SRUN}::test_EVERY_TERMINAL_RECORD_NAMES_THE_WHOLE_RANGE_AS_RETIRED"),
-    ("an interrupt is recorded as an ordinary VOID", H3SGEN,
-     '            verdict = ("INTERRUPTED" if isinstance(e, KeyboardInterrupt)\n'
-     '                       else "VOID")',
-     '            verdict = "VOID"',
-     f"{T_H3SRUN}::test_AN_INTERRUPT_IS_A_TERMINAL_STATUS_and_still_cleans_up"),
     # ── 2026-09-15: PREPARATION for the opening-generation run.
     ("the opening-set pin is invented before the artifact exists", H3SR,
      "OPENING_SET_DIGEST: Optional[str] = None",
      'OPENING_SET_DIGEST: Optional[str] = "' + "0" * 64 + '"',
      f"{T_H3SRUN}::test_THE_OPENING_SET_DIGEST_IS_UNSET_AND_REFUSES"),
-    ("the generation destination is marked spent before any run", H3SCMD,
-     '    "docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings",\n)',
-     '    "docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings",\n'
-     '    "docs/superpowers/evidence/2026-09-16-t1j-h3-study-openings-attempt2",\n)',
-     f"{T_H3SRUN}::test_THE_DESTINATION_IS_ABSENT_AND_OUTSIDE_EVERY_SPENT_DIRECTORY"),
     # the same line appears in the PREFLIGHT, so the anchor carries the line above
-    ("the incumbent agent is re-seeded per ply again", H3SGEN,
-     '        ctx.reset(f"h3gen-{index:03d}-a{attempt:03d}-s{seed}", [])\n'
-     "        inc = movers[\"incumbent_agent\"](seed=seed, colour=inc_colour)",
-     '        ctx.reset(f"h3gen-{index:03d}-a{attempt:03d}-s{seed}", [])\n'
-     "        inc = movers[\"incumbent_agent\"](seed=seed + 7919, colour=inc_colour)",
-     f"{T_H3SRUN}::test_THE_AGENT_IS_SEEDED_WITH_THE_ATTEMPT_SEED_EXACTLY"),
-    ("a fresh agent is built for every ply", H3SGEN,
-     "            mv = (inc if who == \"incumbent\" else t1j)(st)",
-     "            mv = (movers[\"incumbent_agent\"](seed=seed, colour=inc_colour)\n"
-     "                  if who == \"incumbent\" else t1j)(st)",
-     f"{T_H3SRUN}::test_ONE_AGENT_PER_OPENING_not_one_per_ply"),
-    ("the T1j move log is not maintained across the walk", H3SGEN,
-     "            ctx.moves.append(mv)     # the log T1jAgent checks against the ply",
-     "            pass",
-     f"{T_H3SRUN}::test_the_T1J_AGENT_GETS_A_MOVE_LOG_THAT_TRACKS_THE_WALK"),
-    ("the artifact may claim an ARGMAX provenance", H3SGEN,
-     '    if doc["selection_mode"] == "argmax":',
-     "    if False:",
-     f"{T_H3SRUN}::test_the_artifact_REFUSES_an_ARGMAX_provenance"),
-    ("a STUB opening may be written into the artifact", H3SGEN,
-     '        if o.get("stub"):',
-     "        if False:",
-     f"{T_H3SRUN}::test_the_artifact_REFUSES_a_STUB_opening_and_an_EDITED_digest"),
-    ("the artifact's schema is not enforced", H3SGEN,
-     "    missing = [k for k in ARTIFACT_KEYS if k not in doc]",
-     "    missing = []",
-     f"{T_H3SRUN}::test_the_ARTIFACT_SCHEMA_is_frozen_and_enforced"),
-    ("the preflight asks the movers for a MOVE", H3SPF,
-     '        built.append({"order": order, "incumbent_colour": inc_colour,',
-     '        t1j(RULES._fresh_state())\n'
-     '        built.append({"order": order, "incumbent_colour": inc_colour,',
-     f"{T_H3SRUN}::test_THE_PREFLIGHT_BUILDS_BOTH_MOVERS_AND_NEVER_MOVES"),
-    ("the preflight builds an equal runtime rather than sharing one", H3SPF,
-     "    movers = GEN.production_movers(evaluator=evaluator or _StubEvaluator(),\n"
-     "                               runtime=runtime, config=cfg)",
-     "    movers = GEN.production_movers(evaluator=evaluator or _StubEvaluator(),\n"
-     "                               runtime=INT.T1jRuntime(\n"
-     "                                   java=runtime.java, jar=runtime.jar,\n"
-     "                                   classes=runtime.classes,\n"
-     "                                   ply_cap=runtime.ply_cap,\n"
-     "                                   timeout_s=runtime.timeout_s),\n"
-     "                               config=cfg)",
-     f"{T_H3SRUN}::test_the_preflight_agents_HOLD_THE_ONE_RUNTIME"),
-    ("the two generation ranges sit inside their own gap floor", H3SR,
-     "GEN_SEED_CO_PRODUCED = 20_261_400_000",
-     "GEN_SEED_CO_PRODUCED = 20_261_080_000",
-     f"{T_H3SR}::test_the_two_generation_RANGES_ARE_SEPARATED_BY_MORE_THAN_THEIR_OWN_SIZE"),
     # ═════════════ 2026-09-14: the H3 PILOT -- closed, seedless, contained ═══
     ("the H3 pilot gate is opened", H3RUN,
      "H3_PILOT_EXECUTION_AUTHORIZED = False",
@@ -4729,114 +4658,46 @@ EXPECTED_REASONS = {
     # `validate_schedule_executable`, which does `int(task["seed"])` on None. The
     # test names an `H3PilotRunError` refusal and gets a TypeError instead, which
     # is precisely the difference between a refusal and an accident.
-    'the DECLARED order allocation is changed':
-        'assert (19, 19, 18, 18) == (19, 18, 19, 18)',
-    'the generator carries a tree across openings':
-        'AssertionError: expected 3 BETWEEN openings + 1 final teardown, got [1]',
     "a failed gate restoration does not become the wrapper's exit code":
         "AssertionError: a failed restoration SUPERSEDES the worker's own exit 0",
     'the generation wrapper spawns before checking the destination':
         'assert 0 == 7',
     # ── 2026-09-16: the CONTEXT RESET that attempt 1's VOID demanded, and
     # the spent range and destination it left behind.
-    "attempt 1's VOIDED directory is not marked spent":
-        "AssertionError: assert 'docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings' in ('docs/superpowers/evidence/2026-09-09-t1j-h2-deterministic-readout', 'docs/superpowers/evidence/2026-09-12-t1j-h2-mat...ers/evidence/2026-09-12-t1j-INCIDENT-contr",
-    "attempt 1's spent generation range may be reused":
-        'assert (20261200000, 20261259200) in ()',
-    "attempt 2 writes into attempt 1's directory":
-        'AssertionError: assert not True',
-    "attempt 2's range sits inside the spent one's gap floor":
-        'AssertionError: gap 20800 to the spent range is inside floor 59200',
-    'every attempt shares one context identity':
-        "AssertionError: ['h3gen', 'h3gen']",
-    'the generation destination is marked spent before any run':
-        "AssertionError: assert 'docs/superpowers/evidence/2026-09-16-t1j-h3-study-openings-attempt2' != 'docs/superpowers/evidence/2026-09-16-t1j-h3-study-openings-attempt2'",
-    'the generation walk does not reset its context':
-        "AssertionError: ('reset', {'incumbent_agent': 40, 'new_context': 23, 't1j_agent': 41})",
-    'the incumbent agent is re-seeded per ply again':
-        'assert [20261410719] == [20261402800]',
-    'the two generation ranges sit inside their own gap floor':
-        'AssertionError: gap 20800 is inside the floor 59200',
-    'the two generation seed ranges overlap again':
-        'AssertionError: ((20261000000, 20261059200), (20261000500, 20261059700))',
     # ── 2026-09-16: the preregistered GENERATION deadline and the
     # PARENT-OWNED LAUNCH RECEIPT. Every reason observed, never predicted.
     'a refusal before spawning leaves no receipt':
         "TypeError: 'NoneType' object is not subscriptable",
-    'a wrapper test writes its receipt into the REAL destination':
-        "AssertionError: ['test_every_supervisor_outcome_gets_ITS_OWN_exit_code']",
     'no launch receipt is written at all':
         'assert None is not None',
-    'the deadline no longer accepts whole-range retirement':
-        'assert \'RETIRES THE WHOLE GENERATION RANGE\' in "═══ bounds (card §5) ══════════════════════════════════\\n#: CHOSEN, from the pilot\'s measured mean of 41.22 s/game: 1...ith its own\\n#: collision re-proof. That cost is accepted in advance, here, rather',
     "the generation wrapper borrows the match segment's deadline":
         "AssertionError: the generation wrapper must not borrow the match segment's cap",
     'the launch receipt is not create-only':
         "AssertionError: the earlier launch's receipt was OVERWRITTEN",
-    "the outer cap no longer exceeds the worker's own deadline":
-        "AssertionError: the OUTER cap must exceed the worker's own deadline, or the supervisor kills a worker that was about to stop cleanly",
     'the receipt is not part of the destination check':
         'assert 4 == 7',
-    'the receipt omits the retired range':
-        'assert [] == [20261400000, 20261459200]',
-    "the receipt records restore_gate's own answer, not the file":
-        "AssertionError: assert 'True' == 'False'",
     # ── 2026-09-15: the SUPERVISED GENERATION LAUNCH PATH and the
     # generator's terminal semantics. Every reason observed, never predicted.
-    "a PARTIAL population is written as the study's set":
-        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
-    'a failed teardown is a footnote rather than the verdict':
-        "AssertionError: assert ('VOID' == 'CLEANUP_FAILED'",
     'a surviving descendant of the generator is reported as success':
         'assert 0 == 8',
-    'an interrupt is recorded as an ordinary VOID':
-        "AssertionError: assert 'VOID' == 'INTERRUPTED'",
-    'generation teardown runs only on the happy path again':
-        'AssertionError: the finally tore down exactly once',
     'the generation destination may sit in a SPENT directory':
-        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
-    'the generation loop is not capped by a deadline':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
     "the generation worker runs without the supervisor's capability":
         'AssertionError: assert 5 == 7',
-    'the generation wrapper reports success without verifying the gate':
-        'assert 5 == 10',
-    'the terminal record does not name the retired range':
-        'assert [] == [20261400000, 20261459200]',
     # ── 2026-09-15: PREPARATION for the opening-generation run.
     # Every reason observed in a throwaway worktree, never predicted.
-    'a STUB opening may be written into the artifact':
-        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
-    'a fresh agent is built for every ply':
-        'AssertionError: ONE incumbent agent',
-    'the T1j move log is not maintained across the walk':
-        'AssertionError: (0, 2)',
-    'the artifact may claim an ARGMAX provenance':
-        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
-    "the artifact's schema is not enforced":
-        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
     'the opening-set pin is invented before the artifact exists':
         "AssertionError: assert '0000000000000000000000000000000000000000000000000000000000000000' is None",
-    'the preflight asks the movers for a MOVE':
-        'scripts.GPU.alphazero.e4_screen_runner.AbortError: [move] T1j asked to move as black but red is to move',
-    'the preflight builds an equal runtime rather than sharing one':
-        'scripts.GPU.alphazero.h3_study_generator.H3GenerationError: the T1j agent holds a different runtime',
     # ── 2026-09-15: the H3 FULL STUDY. Every reason observed in a throwaway
     # worktree through the driver's own classify path, never predicted.
-    'a STUB opening set can be pinned and played against':
-        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_rules.H3StudyError'>",
     'a VOIDed segment is treated as a clean exclusion':
         "assert True is False",
     'a duplicate pair is tolerated instead of being a harness fault':
         "assert (7 == 0)",
     'a record without its SEED is admitted':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_analysis.H3StudyAnalysisError'>",
-    'a rejection re-draws the seed that caused it':
-        "AssertionError: (0, 1, 20261000000)",
     'a seam declaring no config is given one anyway':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_runner.H3StudyRunError'>",
-    'a seedless segment schedule is admitted':
-        "TypeError: int() argument must be a string, a bytes-like object or a real number, not 'NoneType'",
     'a segment never asks the registry whether its seeds may RUN':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_runner.H3StudyRunError'>",
     'a segment schedule is not compared with its own digest':
@@ -4855,20 +4716,8 @@ EXPECTED_REASONS = {
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_rules.H3StudyError'>",
     'segments share one output directory':
         "AssertionError: assert 1 == 4",
-    'the GENERATION gate is opened':
-        "assert True is False",
-    "the GENERATOR's containment boundary is removed":
-        "NameError: name '_noop' is not defined",
-    'the alternating protocol gives one engine every ply':
-        "AssertionError: incumbent_first",
     'the create-only precheck follows symlinks':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_runner.H3StudyRunError'>",
-    'the generator accepts an ILLEGAL move from an engine':
-        "ValueError: Illegal move (99, 99) for active_size=24, to_move=red",
-    'the generator admits DUPLICATE openings':
-        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
-    'the generator is allowed to play ARGMAX':
-        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_rules.H3StudyError'>",
     'the interval is described as PROVEN rather than nominal':
         "AssertionError: assert ('nominal' in 'the pairs are independent by construction. rejection sampling conditions the population jointly, the strata are fixed...stic. what the pairing buys is narrower and real: the two games of a pair are not counted as",
     'the opening is dropped from the GAME identity':
@@ -4877,22 +4726,10 @@ EXPECTED_REASONS = {
         "assert 1 == 0",
     'the sample size is rounded DOWN and misses its own target':
         "AssertionError: h=0.08002689927666005 exceeds the declared target",
-    'the sampling window need not cover every generated ply':
-        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_rules.H3StudyError'>",
-    'the study gate is opened':
-        "assert True is False",
     "the study population no longer excludes the PILOT's openings":
         "AssertionError: 8",
-    'the study seam builds its own config instead of using the given one':
-        "AssertionError: the builder must receive THE object the identity was read off, not an equal one",
     "the study seam trusts the entry's gate check":
         "scripts.GPU.alphazero.h3_study_runner.H3StudyContainmentError: refusing to run H3 study's production seam from a test process: scripts.GPU.alphazero.t1j_toolchain.verified_paths, scripts.GPU.alphazero.d1_probe._default_compile, scripts.GPU.alphazero.",
-    "the study's containment boundary is removed":
-        "AssertionError: assert_production_acts_are_inert",
-    "the study's tasks carry no reference identity":
-        "KeyError: 'reference'",
-    "the study's tasks name no reference_colour":
-        "KeyError: 'reference_colour'",
     # ── 2026-09-15: RE-DECLARED BY THE RUN. Four labels changed when the run
     # inverted what they claim, so their old reasons were removed in the same edit
     # rather than left to become orphans.

@@ -8,9 +8,11 @@ THREE BARRIERS, and none of them is the other's fault:
   3. The production seam re-checks the gate and hits a containment boundary that
      refuses inside a test process.
 
-Generating the co-produced stratum is a SEPARATE run behind a SEPARATE gate in
-`h3_study_generator` — one switch for both would let a generation approval
-authorize a match.
+The population is UNIFORM and ENGINE-FREE (Amendment 3), produced by
+`h3_study_generator`, which has no execution gate because it runs no engine.
+Playing the study IS a run and keeps this module's gate; freezing the population
+has its own separate barrier. One switch for all three would let a population
+approval authorize a match.
 
 ⚠ NEVER EXERCISED END TO END. Only construction, wiring and refusals are tested.
 """
@@ -21,6 +23,7 @@ import time
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
 
 from . import h3_study_analysis as ANALYSIS
+from . import h3_study_generator as GEN
 from . import h3_study_rules as RULES
 
 
@@ -185,7 +188,7 @@ def _check_segment(segment: Any) -> int:
 
 def segment_schedule(tasks: Sequence[Mapping[str, Any]],
                      segment: int) -> List[Dict[str, Any]]:
-    """The 148 tasks of one segment, in plan order."""
+    """The 148 tasks (74 pairs) of one segment, in plan order."""
     _check_segment(segment)
     out = [dict(t) for t in tasks if t["segment"] == segment]
     if len(out) != RULES.GAMES_PER_SEGMENT:
@@ -391,11 +394,13 @@ def _production_play(results_path: str, deadline: Any = None,
 
 
 def load_opening_set(path: str) -> List[Dict[str, Any]]:
-    """The PINNED opening set, both strata, from the generation run's artifact.
+    """The PINNED opening set — ONE uniform population — from the frozen artifact.
 
-    🔴 IT DOES NOT EXIST YET, and this refuses rather than inventing one. The
-    co-produced stratum comes from an authorized generation run (`h3_study_
-    generator`), and until that has happened there is no population to play over.
+    🔴 IT DOES NOT EXIST YET, and this refuses rather than inventing one.
+    Uniform generation is deterministic and engine-free, so the set can be
+    RECOMPUTED at any moment -- and that is exactly why the runner will not
+    recompute it. A study must play the population that was FROZEN and pinned,
+    not one regenerated at start-up that happens to match today.
     """
     import json
     if not os.path.lexists(path):
@@ -548,7 +553,11 @@ def _run_segment_unguarded(*, segment: int, tasks, openings, results_path,
         stack.close()
 
 
-#: 🔴 WHERE THE PINNED OPENING SET WILL LIVE. It does not exist: producing it is a
-#: separate authorized generation run.
-OPENING_SET_PATH = (f"{OUT_ROOT}/2026-09-15-t1j-h3-study-openings/"
-                    f"01_opening_set.json")
+#: 🔴 WHERE THE FROZEN POPULATION WILL LIVE. It does not exist: freezing it is a
+#: separate authorized step.
+#:
+#: 🔴 READ FROM THE WRITER, NEVER RETYPED. This was a literal naming attempt 1's
+#: directory. It was correct when typed and became silently wrong the moment
+#: Amendment 3 moved the destination -- pointing the runner at a SPENT directory
+#: while every test still passed, because nothing compared the two.
+OPENING_SET_PATH = GEN.DEFAULT_OUT

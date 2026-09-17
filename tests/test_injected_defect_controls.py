@@ -644,8 +644,22 @@ def test_NO_DECLARED_REASON_NAMES_A_SPENT_GENERATION_RANGE():
     # again, which is exactly why quoting one is safe there and rot anywhere else.
     # My first version forbade the numbers outright and failed on the one control
     # that must contain them.
-    about_retirement = {lab for lab, _f, old_s, new_s, _t in mod.DEFECTS
-                        if "SPENT_GENERATION_RANGES" in old_s + new_s}
+    #: 🔴 DERIVED FROM WHAT THE CONTROL TOUCHES, NOT FROM A CONSTANT'S NAME.
+    #: The first version matched the name `SPENT_GENERATION_RANGES` in the
+    #: injected text. Amendment 3 made that a derived view of
+    #: `RETIRED_GENERATION_RANGES`, and the new controls inject into the tuple's
+    #: ENTRIES -- `(20_261_000_000, 20_261_059_200,` -- so no injection contains
+    #: either name and the exemption matched nothing. Matching the second name
+    #: too would have failed the same way, for the same reason.
+    #:
+    #: A control is about retirement when it INJECTS a retired bound. That is the
+    #: property that actually licenses its reason to quote one, and it survives
+    #: the constant being renamed again. Underscores are stripped because the
+    #: source writes `20_261_000_000` and `str(lo)` gives `20261000000`.
+    _bounds = {str(b) for lo, hi in R.SPENT_GENERATION_RANGES for b in (lo, hi)}
+    about_retirement = {
+        lab for lab, _f, old_s, new_s, _t in mod.DEFECTS
+        if any(b in (old_s + new_s).replace("_", "") for b in _bounds)}
     stale = []
     for label, reason in mod.EXPECTED_REASONS.items():
         if label in about_retirement:

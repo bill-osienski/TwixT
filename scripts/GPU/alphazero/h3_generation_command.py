@@ -1,4 +1,14 @@
-"""H3 FULL STUDY — the supervised WRAPPER for the OPENING-GENERATION RUN.
+"""🔴 RETIRED 2026-09-17 with the co-produced generator it served.
+
+Preserved for history. NO ACTIVE STUDY PATH MAY IMPORT THIS MODULE --
+`tests/test_h3_uniform_population.py` asserts none does. The uniform
+population writer is engine-free, so it needs neither a JVM supervisor nor
+a preflight that constructs engine movers: there is no engine to supervise
+and no mover to construct. See `h3_coproduced_generator_retired` for why
+the stratum closed.
+
+ORIGINAL DOCSTRING FOLLOWS.
+H3 FULL STUDY — the supervised WRAPPER for the OPENING-GENERATION RUN.
 
 TRANSPOSED FROM `h3_pilot_command`, NOT REWRITTEN. That launch path ran end to
 end on 2026-09-15 -- 40/40, exit 0, the gate restored by its own `finally` -- and
@@ -32,7 +42,7 @@ import re
 import sys
 from typing import Any, Dict, Mapping, Optional, Sequence
 
-from . import h3_study_generator as RUN
+from . import h3_coproduced_generator_retired as RUN
 from . import runtime_requalification as RQ
 from .runtime_requalification import supervise                 # shared, tested
 
@@ -95,8 +105,14 @@ EXIT_STOP_RULE_FIRED = 14
 
 
 def gate_is_open() -> bool:
-    """The RUNNER's gate, read live. This module has none of its own."""
-    return RUN.H3_GENERATION_AUTHORIZED is True
+    """🔴 ALWAYS FALSE. The gate this read no longer exists.
+
+    It used to return `RUN.H3_GENERATION_AUTHORIZED is True`. That constant was
+    removed when the stratum was retired, because `check_gate` had stopped
+    reading it and a constant nothing reads is a control in appearance only.
+    There is no gate to open, so the supervisor can never find one open.
+    """
+    return False
 
 
 def restore_gate(_runner_source: str = RUNNER_SOURCE) -> bool:
@@ -396,7 +412,7 @@ def main(argv: Optional[Sequence[str]] = None, *,
             "artifact_exists": os.path.lexists(out_path),
             "trace_exists": os.path.lexists(trace_path),
             "retires": list(RUN.RULES.generation_seed_range(
-                RUN.RULES.GEN_SEED_CO_PRODUCED)),
+                RUN.GEN_SEED_CO_PRODUCED)),
             "retirement_rule": ("WHOLE RANGE, on ANY attempted generation -- a "
                                 "timeout is not 'try again with more time'"),
             "recorded_at": _t.strftime("%Y-%m-%dT%H:%M:%SZ", _t.gmtime()),

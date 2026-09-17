@@ -14,7 +14,7 @@ COUNT may fire; a RATIO or a QUANTILE may not.**
 from __future__ import annotations
 
 import math
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from . import h2_match_rules as H2R
 from . import h3_study_rules as R
@@ -117,8 +117,21 @@ def _validate(games: Sequence[Dict[str, Any]]) -> None:
             raise H3StudyAnalysisError(
                 f"{tid}: seed is {s!r}; every record must carry its own seed so "
                 f"accounting is READ and not derived from a plan")
-        if g.get("stratum") not in R.STRATA:
-            raise H3StudyAnalysisError(f"{tid}: stratum {g.get('stratum')!r}")
+        #: 🔴 ONE POPULATION. A record naming any other stratum is not from this
+        #: study: Amendment 3 closed the co-produced one, so `co_produced` in a
+        #: record means a stale schedule, a stale artifact, or records from a
+        #: different design pooled in by accident.
+        if g.get("stratum") != R.STRATUM_UNIFORM:
+            raise H3StudyAnalysisError(
+                f"{tid}: stratum {g.get('stratum')!r}, expected "
+                f"{R.STRATUM_UNIFORM!r}. Amendment 3 made this study "
+                f"uniform-only; a record from another population may not be "
+                f"scored with these.")
+        if "order" in g:
+            raise H3StudyAnalysisError(
+                f"{tid}: carries an `order` field. Alternating order was removed "
+                f"with the co-produced stratum; a record still carrying it came "
+                f"from a schedule this analysis must not score.")
         od = g.get("opening_digest")
         if not isinstance(od, str) or len(od) != 64:
             raise H3StudyAnalysisError(
@@ -234,6 +247,43 @@ def evaluate_verdict(*, primary: Dict[str, Any],
 
 
 # ═══════════════════════ the report ════════════════════════════════════════
+#: 🔴 THE NARROWED CLAIM, READ FROM THE GENERATOR AND NEVER RETYPED. A second
+#: copy is a second thing to forget to update, and the one that drifts is always
+#: the copy in the report.
+def _claim() -> str:
+    from . import h3_study_generator as GEN
+    return GEN.CLAIM
+
+
+CLAIM = _claim()
+
+
+def check_report_claim(report: Mapping[str, Any]) -> str:
+    """🔴 A FINAL REPORT MUST CARRY THE NARROWED CLAIM, VERBATIM.
+
+    The study's whole exposure is that someone quotes the number without the
+    population it is about. "T1j scores 0.61" is true and useless; "T1j scores
+    0.61 over uniformly random six-ply positions, which nobody plays" is the
+    result. So the claim is not advice in a docstring -- it is a required field,
+    and a report that omits, truncates or softens it is REFUSED.
+    """
+    got = (report.get("population") or {}).get("claim")
+    if got is None:
+        raise H3StudyAnalysisError(
+            "the report carries no claim. The narrowed uniform-position claim "
+            "is a REQUIRED field: a result quoted without its population "
+            "overstates itself, and this study's population is one nobody plays.")
+    if got != CLAIM:
+        raise H3StudyAnalysisError(
+            "the report's claim has been altered. It must reproduce the "
+            "narrowed uniform-position claim VERBATIM -- softening it is how a "
+            "result about uniformly random positions becomes a result about "
+            "play.\n"
+            f"  expected: {CLAIM}\n"
+            f"  got     : {got}")
+    return got
+
+
 def summarise(games: Sequence[Dict[str, Any]], *,
               total_elapsed_s: float) -> Dict[str, Any]:
     """The whole report."""
@@ -334,13 +384,6 @@ def summarise(games: Sequence[Dict[str, Any]], *,
     else:
         decision = evaluate_verdict(primary=primary, sensitivities=sens)
 
-    by_stratum = {}
-    for s in R.STRATA:
-        xs = [p["score"] for p in scored if p["stratum"] == s]
-        by_stratum[s] = {"n": len(xs),
-                         "mean": (sum(xs) / len(xs)) if xs else None,
-                         "note": "DESCRIPTIVE ONLY -- no interval, no verdict"}
-
     return {
         "design": "H3_FULL_STUDY",
         "games_seen": len(games),
@@ -360,7 +403,11 @@ def summarise(games: Sequence[Dict[str, Any]], *,
             "match: the opening changes the board those moves are played on.",
         "primary": primary,
         "sensitivities": sens,
-        "by_stratum": by_stratum,
+        #: 🔴 NO `by_stratum`. There is ONE population, so a per-stratum split
+        #: would be a table with one row that invites a comparison there is
+        #: nothing to compare. `population` names it once instead.
+        "population": {"stratum": R.STRATUM_UNIFORM, "n_pairs": R.N_PAIRS,
+                       "claim": CLAIM},
         "gates": gates,
         "below_report_floor": below_floor,
         "interpretation_withheld": withheld,

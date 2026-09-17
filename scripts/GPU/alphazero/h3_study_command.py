@@ -38,6 +38,10 @@ SPENT_OUT_DIRS = (
     "docs/superpowers/evidence/2026-09-12-t1j-INCIDENT-control-harness-ran-a-match",
     "docs/superpowers/evidence/2026-09-14-t1j-h3-pilot",
     "docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings",
+    #: 🔴 co-produced attempt 2, CONSUMED 2026-09-16. VOID at opening 0, zero
+    #: openings accepted -- and spent all the same. A destination is spent when a
+    #: run has touched it, not when a run has succeeded.
+    "docs/superpowers/evidence/2026-09-16-t1j-h3-study-openings-attempt2",
 )
 #: 🔴 THE OPENING-GENERATION DESTINATION IS NOT LISTED HERE, and that is
 #: deliberate. `docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings` is

@@ -22,6 +22,7 @@ import subprocess
 import sys
 from typing import Any, Dict, List, Tuple
 
+from . import gate_inventory as INVENTORY
 from . import e4_screen_reference as REF
 from . import h2_match_command as CMD
 from . import h2_match_plan as PLAN
@@ -36,15 +37,9 @@ from . import h2_match_runner as RUN
 BOUND_COMMIT = "c58b13d"
 
 #: Every gate in the programme, by module attribute. All seven must be False.
-GATES: Tuple[Tuple[str, str], ...] = (
-    ("d1_probe", "D1_EXECUTION_AUTHORIZED"),
-    ("e4_screen_command", "SCREEN_AUTHORIZED"),
-    ("h1_viability_runner", "H1_EXECUTION_AUTHORIZED"),
-    ("l0_match_command", "L0_EXECUTION_AUTHORIZED"),
-    ("lowply_qualification", "LOWPLY_QUALIFICATION_AUTHORIZED"),
-    ("runtime_requalification", "RUNTIME_REQUAL_AUTHORIZED"),
-    ("h2_match_runner", "H2_EXECUTION_AUTHORIZED"),
-)
+#: 🔴 DERIVED FROM SOURCE, never hand-kept. This module's own list said
+#: the wrong number for weeks; see `gate_inventory` for why.
+GATES: Tuple[Tuple[str, str], ...] = INVENTORY.gates()
 
 #: The wrapper tests that bind the gate-restoration and child-cleanup claims. They
 #: are RUN here rather than cited: a named test that does not pass proves nothing.
@@ -107,7 +102,7 @@ def main() -> int:
           "" if not dirty else f"{len(dirty.splitlines())} path(s): "
                                f"{[l[3:] for l in dirty.splitlines()][:3]}")
 
-    print("\n== the SEVEN gates ==")
+    print(f"\n== the {INVENTORY.gate_count()} gates ==")
     import importlib
     for mod_name, attr in GATES:
         mod = importlib.import_module(f"scripts.GPU.alphazero.{mod_name}")

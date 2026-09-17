@@ -16,10 +16,10 @@ import subprocess
 import sys
 from typing import Any, Dict, List, Tuple
 
+from . import gate_inventory as INVENTORY
 from . import e4_screen_reference as REF
 from . import h3_study_analysis as ANALYSIS
 from . import h3_study_command as CMD
-from . import h3_generation_preflight as PF
 from . import h3_study_generator as GEN
 from . import h3_study_rules as RULES
 from . import h3_study_runner as RUN
@@ -28,18 +28,9 @@ from . import h3_study_runner as RUN
 #: SOURCE tree; asserting equality would be circular.
 BOUND_COMMIT = "f691294"
 
-GATES: Tuple[Tuple[str, str], ...] = (
-    ("d1_probe", "D1_EXECUTION_AUTHORIZED"),
-    ("e4_screen_command", "SCREEN_AUTHORIZED"),
-    ("h1_viability_runner", "H1_EXECUTION_AUTHORIZED"),
-    ("l0_match_command", "L0_EXECUTION_AUTHORIZED"),
-    ("lowply_qualification", "LOWPLY_QUALIFICATION_AUTHORIZED"),
-    ("runtime_requalification", "RUNTIME_REQUAL_AUTHORIZED"),
-    ("h2_match_runner", "H2_EXECUTION_AUTHORIZED"),
-    ("h3_pilot_runner", "H3_PILOT_EXECUTION_AUTHORIZED"),
-    ("h3_study_runner", "H3_STUDY_EXECUTION_AUTHORIZED"),
-    ("h3_study_generator", "H3_GENERATION_AUTHORIZED"),
-)
+#: 🔴 DERIVED FROM SOURCE, never hand-kept. This module's own list said
+#: the wrong number for weeks; see `gate_inventory` for why.
+GATES: Tuple[Tuple[str, str], ...] = INVENTORY.gates()
 
 _FAILED: List[str] = []
 _NOT_READY: List[str] = []
@@ -105,48 +96,55 @@ def main() -> int:
           math.ceil(math.log(2 / RULES.ALPHA)
                     / (2 * RULES.PRECISION_TARGET ** 2)) == 289)
     check("every balance divides without remainder",
-          RULES.PAIRS_PER_STRATUM * 2 == RULES.N_PAIRS
-          and RULES.PAIRS_PER_SEGMENT * RULES.N_SEGMENTS == RULES.N_PAIRS
-          and RULES.STRATUM_PAIRS_PER_SEGMENT * 2 == RULES.PAIRS_PER_SEGMENT)
-    check("the DECLARED order allocation sums to 74 and 74",
-          sum(RULES.INCUMBENT_FIRST_PER_SEGMENT) == 74
-          and sum(RULES.T1J_FIRST_PER_SEGMENT) == 74
-          and all(a + b == RULES.STRATUM_PAIRS_PER_SEGMENT
-                  for a, b in zip(RULES.INCUMBENT_FIRST_PER_SEGMENT,
-                                  RULES.T1J_FIRST_PER_SEGMENT)))
+          RULES.PAIRS_PER_SEGMENT * RULES.N_SEGMENTS == RULES.N_PAIRS
+          and RULES.GAMES_PER_SEGMENT * RULES.N_SEGMENTS == RULES.N_GAMES)
+    check("ONE population, and nothing survives of the second",
+          RULES.STRATA == (RULES.STRATUM_UNIFORM,)
+          and not any(hasattr(RULES, a) for a in
+                      ("STRATUM_CO_PRODUCED", "PAIRS_PER_STRATUM",
+                       "STRATUM_PAIRS_PER_SEGMENT", "INCUMBENT_FIRST_PER_SEGMENT",
+                       "T1J_FIRST_PER_SEGMENT", "ORDER_INCUMBENT_FIRST",
+                       "ORDER_T1J_FIRST", "generation_config")))
 
-    print("\n== the generating configuration: THE ENTROPY FINDING ==")
-    gen_cfg = RULES.generation_config()
-    match_cfg = RUN.frozen_argmax_config()
-    print(f"  generating {gen_cfg.selection_mode!r} | playing "
-          f"{match_cfg.selection_mode!r}")
-    check("the GENERATOR does not play argmax",
-          gen_cfg.selection_mode != "argmax",
-          "argmax + deterministic T1j = ONE opening per order")
-    check("all six generated plies fall inside the sampling window",
-          gen_cfg.opening_temp_plies >= RULES.OPENING_PLIES)
-    check("the temperature is non-zero", gen_cfg.temp_high > 0)
-    differing = [f for f in vars(gen_cfg)
-                 if getattr(gen_cfg, f) != getattr(match_cfg, f)]
-    check("ONLY the readout differs between generating and playing",
-          differing == ["selection_mode"], str(differing))
+    print("\n== generation is ENGINE-FREE ==")
+    check("the population writer has NO execution gate",
+          not hasattr(GEN, "H3_GENERATION_AUTHORIZED"),
+          "no engine runs, so there is nothing to gate")
+    check("it has a POPULATION-FREEZE barrier instead",
+          GEN.H3_POPULATION_FREEZE_AUTHORIZED is False)
+    check("the generator declares itself engine-free",
+          GEN.generator_identity()["engine_free"] is True)
+    check("no active study module reaches the retired engine path",
+          not any("coproduced" in getattr(m, "__name__", "")
+                  for m in (RULES, GEN, ANALYSIS, RUN)))
 
     print("\n== the generation seeds: declared, and in NO registry ==")
-    for name, base in (("uniform", RULES.GEN_SEED_UNIFORM),
-                       ("co_produced", RULES.GEN_SEED_CO_PRODUCED)):
-        lo, hi = RULES.generation_seed_range(base)
-        bad = [s for s in (lo, (lo + hi) // 2, hi - 1)
-               if any(REF.seed_status(s).values()) or s in REF.CONSUMED_SEEDS]
-        check(f"{name} range [{lo}, {hi}) is in no registry", not bad, str(bad))
-    a = RULES.generation_seed_range(RULES.GEN_SEED_UNIFORM)
-    b = RULES.generation_seed_range(RULES.GEN_SEED_CO_PRODUCED)
-    check("the two generation RANGES do not overlap each other",
-          a[1] <= b[0] or b[1] <= a[0], f"{a} {b}")
+    lo, hi = RULES.generation_seed_range(RULES.GEN_SEED_UNIFORM)
+    bad = [x for x in (lo, (lo + hi) // 2, hi - 1)
+           if any(REF.seed_status(x).values()) or x in REF.CONSUMED_SEEDS]
+    check(f"the range [{lo}, {hi}) is in no registry", not bad, str(bad))
+    check(f"it covers every candidate: {RULES.N_PAIRS} x {RULES.MAX_ATTEMPTS} "
+          f"= {RULES.N_PAIRS * RULES.MAX_ATTEMPTS}",
+          hi - lo == RULES.N_PAIRS * RULES.MAX_ATTEMPTS)
+    #: 🔴 THE THREE RETIRED RANGES ARE IN NO REGISTRY EITHER, so they are checked
+    #: by hand. Skipping them is how an overlapping candidate reads as clean.
+    for r_lo, r_hi, why in RULES.RETIRED_GENERATION_RANGES:
+        check(f"clear of the retired range [{r_lo}, {r_hi})",
+              hi <= r_lo or r_hi <= lo, why.split(".")[0])
+        check(f"  ... and separated from it by the gap floor "
+              f"({RULES.N_PAIRS * RULES.MAX_ATTEMPTS})",
+              (lo - r_hi if lo >= r_hi else r_lo - hi)
+              >= RULES.N_PAIRS * RULES.MAX_ATTEMPTS)
+    check("every retired range is REFUSED by the spent check",
+          all(RULES.is_spent_generation_range(r_lo)
+              for r_lo, _, _ in RULES.RETIRED_GENERATION_RANGES))
+    check("the live range is NOT refused",
+          RULES.is_spent_generation_range(RULES.GEN_SEED_UNIFORM) is False)
 
-    print("\n== stratum A, generated here (no engine needed) ==")
+    print("\n== THE population, generated here in memory ==")
     uniform = RULES.generate_uniform_openings()
-    check(f"{RULES.PAIRS_PER_STRATUM} uniform openings at ply "
-          f"{RULES.OPENING_PLIES}", len(uniform) == RULES.PAIRS_PER_STRATUM)
+    check(f"{RULES.N_PAIRS} uniform openings at ply {RULES.OPENING_PLIES}",
+          len(uniform) == RULES.N_PAIRS)
     check("all distinct up to symmetry",
           len({o["digest"] for o in uniform}) == len(uniform))
     excluded = RULES.excluded_digests()
@@ -158,92 +156,80 @@ def main() -> int:
           f"max {max(o['attempts'] for o in uniform)} "
           f"(recorded per opening, because the rejection rate conditions the set)")
 
-    print("\n== the GENERATION RUN's preparation ==")
-    check("OPENING_SET_DIGEST is UNSET and refuses",
-          RULES.OPENING_SET_DIGEST is None
-          and _refuses(RULES.expected_opening_set_digest, "does not exist yet"))
-    check("the destination is ABSENT", not os.path.lexists(GEN.OUT_DIR),
-          GEN.OUT_DIR)
-    check("the destination is NOT yet marked spent (only a run consumes it)",
-          GEN.OUT_DIR not in CMD.SPENT_OUT_DIRS
-          and not any(GEN.OUT_DIR.startswith(d.rstrip("/") + "/")
-                      for d in CMD.SPENT_OUT_DIRS))
-    try:
-        pf = PF.preflight_movers()
-        for b in pf["built"]:
-            print(f"  {b['order']:16s} incumbent {b['incumbent_colour']:5s} "
-                  f"seed {b['incumbent_seed']} readout {b['readout']!r} | "
-                  f"T1j {b['t1j_colour']:5s} depth {b['t1j_depth']} "
-                  f"moves_made {b['moves_made']}")
-        check("BOTH movers construct through the REAL production path",
-              len(pf["built"]) == 2)
-        check("the incumbent agent carries the ATTEMPT SEED, unoffset",
-              all(b["incumbent_seed"] == b["seed"] for b in pf["built"]))
-        check("its readout is the SAMPLING one, on the REAL builder's agent",
-              all(b["readout"] == "opening_temperature" for b in pf["built"]))
-        check("NO MOVE WAS REQUESTED",
-              all(b["moves_made"] == 0 for b in pf["built"]))
-        t = pf["toolchain"]
-        print(f"  toolchain: jar {os.path.basename(t['jar'])} | jdk "
-              f"{t['jdk_home']} | verified {t['verified']}")
-        check("the toolchain identity names the VERIFIED jar and JDK",
-              bool(t["jar"]) and bool(t["jdk_home"]) and bool(t["verified"]))
-        print(f"  config pins: {pf['config_pins']}")
-        check("the config pins record the GENERATING configuration",
-              pf["config_pins"]["selection_mode"] == "opening_temperature")
-    except Exception as e:                                    # noqa: BLE001
-        check("BOTH movers construct through the REAL production path", False,
-              f"{type(e).__name__}: {e}")
+    print("\n== the population writer: ENGINE-FREE, and its artifact schema ==")
     check("the artifact SCHEMA is frozen",
-          set(GEN.ARTIFACT_KEYS) >= {"config_pins", "toolchain", "openings",
-                                     "opening_set_digest", "selection_mode"})
-    check("an ARGMAX-provenance artifact is REFUSED",
-          _refuses(lambda: GEN.validate_artifact(
-              {"design": "d", "stratum": RULES.STRATUM_CO_PRODUCED, "n": 0,
-               "selection_mode": "argmax", "generation_note": "",
-               "config_pins": {}, "toolchain": {}, "openings": [],
-               "opening_set_digest": RULES.opening_set_digest([])}), "entropy"))
+          set(GEN.ARTIFACT_KEYS) == {"design", "stratum", "n", "generation_note",
+                                     "generator", "claim", "openings",
+                                     "opening_set_digest"},
+          str(sorted(GEN.ARTIFACT_KEYS)))
+    check("NO generating-engine configuration is pinned, because none generates",
+          "config_pins" not in GEN.ARTIFACT_KEYS
+          and "selection_mode" not in GEN.ARTIFACT_KEYS)
+    check("every opening must carry its ATTEMPT COUNT",
+          "attempts" in GEN.OPENING_KEYS and "order" not in GEN.OPENING_KEYS)
+    _bad_stratum = dict(_good_doc := GEN.artifact_document(GEN.build_population()))
+    _bad_stratum["stratum"] = "co_produced"
+    check("a CO-PRODUCED artifact is REFUSED",
+          _refuses(lambda: GEN.validate_artifact(_bad_stratum), "stratum"))
+    _short = dict(_good_doc); _short["n"] = 148
+    check("a 148-opening artifact is REFUSED (wrong population size)",
+          _refuses(lambda: GEN.validate_artifact(_short), "296"))
+    _weak = dict(_good_doc); _weak["claim"] = _good_doc["claim"].replace("NOTHING", "little")
+    check("a WEAKENED claim is REFUSED",
+          _refuses(lambda: GEN.validate_artifact(_weak), "claim"))
+    _ordered = dict(_good_doc)
+    _ordered["openings"] = [{**_good_doc["openings"][0], "order": "incumbent_first"}] \
+        + list(_good_doc["openings"][1:])
+    check("a stale `order` field is REFUSED",
+          _refuses(lambda: GEN.validate_artifact(_ordered), "order"))
+    check("the good artifact passes",
+          GEN.validate_artifact(_good_doc)["n"] == RULES.N_PAIRS)
 
-    print("\n== the CO-PRODUCED stratum ==")
+    print("\n== the FROZEN population ==")
+    check("the official destination is ABSENT", not os.path.lexists(GEN.OUT_DIR))
+    check("freezing is BARRED, and a refusal creates nothing",
+          _refuses(lambda: GEN.freeze_population(), "NOT AUTHORIZED")
+          and not os.path.lexists(GEN.OUT_DIR))
     if os.path.lexists(RUN.OPENING_SET_PATH):
         check("the pinned opening set loads and passes its own checks",
               bool(RUN.load_opening_set(RUN.OPENING_SET_PATH)))
     else:
-        pending("the opening set has been GENERATED",
-                f"{RUN.OPENING_SET_PATH} does not exist -- generation is a "
-                f"separate authorized run")
+        pending("the population has been FROZEN",
+                f"{RUN.OPENING_SET_PATH} does not exist -- freezing the "
+                f"population is a separate authorized step")
+    pending("OPENING_SET_DIGEST is pinned",
+            "unset until the freeze step produces the artifact"
+            if RULES.OPENING_SET_DIGEST is None else "")
 
-    print("\n== the schedule (over a STUB co-produced stratum) ==")
-    stub = RULES.stub_opening_set()
-    check("a STUB set is REFUSED by check_opening_set",
-          _refuses(lambda: RULES.check_opening_set(stub), "stub"))
-    tasks = RULES.build_tasks(stub)
+    print("\n== the schedule, over the in-memory population ==")
+    population = GEN.build_population()
+    check("it passes check_opening_set",
+          RULES.check_opening_set(population)["n"] == RULES.N_PAIRS)
+    tasks = RULES.build_tasks(population)
     check(f"{RULES.N_GAMES} tasks in {RULES.N_PAIRS} pairs",
           len(tasks) == RULES.N_GAMES
           and len({t["pair_id"] for t in tasks}) == RULES.N_PAIRS)
     check("no seed is assigned", all(t["seed"] is None for t in tasks))
     check("every task carries stratum, segment and opening_digest",
-          all(t["stratum"] in RULES.STRATA and t["segment"] in range(4)
+          all(t["stratum"] == RULES.STRATUM_UNIFORM and t["segment"] in range(4)
               and len(t["opening_digest"]) == 64 for t in tasks))
+    check("NO task carries an `order`", not any("order" in t for t in tasks))
     check("every task carries the reference identity the builder READS",
           all(t.get("reference") and t.get("reference_sha1")
               and t.get("reference_colour") == REF.reference_colour(t)
               for t in tasks))
     for k in range(RULES.N_SEGMENTS):
         seg = RUN.segment_schedule(tasks, k)
-        strata = {s: sum(1 for t in seg if t["stratum"] == s) for s in RULES.STRATA}
-        check(f"segment {k}: {RULES.GAMES_PER_SEGMENT} games = "
-              f"{RULES.STRATUM_PAIRS_PER_SEGMENT}+{RULES.STRATUM_PAIRS_PER_SEGMENT} "
-              f"pairs x 2 arms, by stratum (GAMES shown)",
+        check(f"segment {k}: {RULES.PAIRS_PER_SEGMENT} pairs x 2 arms = "
+              f"{RULES.GAMES_PER_SEGMENT} games, one population",
               len(seg) == RULES.GAMES_PER_SEGMENT
-              and strata == {RULES.STRATUM_UNIFORM: 74,
-                             RULES.STRATUM_CO_PRODUCED: 74},
-              str(strata))
+              and len({t["pair_id"] for t in seg}) == RULES.PAIRS_PER_SEGMENT
+              and {t["stratum"] for t in seg} == {RULES.STRATUM_UNIFORM})
     check("each segment's digest is its OWN",
           len({RUN.segment_digest(tasks, k)
                for k in range(RULES.N_SEGMENTS)}) == RULES.N_SEGMENTS)
 
-    print("\n== the REAL builder, on the stub schedule's tasks ==")
+    print("\n== the REAL builder, on the population's tasks ==")
     from . import eval_readout as RO
     from . import twixtbot_g3_reference as G3
 
@@ -251,7 +237,7 @@ def main() -> int:
         _g3_reference = "calib020_0001"
         _g3_sha1 = "209cf2d4fd24a48553d259dd71b4954867b9473e"
 
-    check("the stub's identity IS the registry's pin",
+    check("the schedule's identity IS the registry's pin",
           REF.REFERENCE_CHECKPOINTS[_StubEvaluator._g3_reference]["sha1"]
           == _StubEvaluator._g3_sha1)
     seeded = RULES.build_tasks(stub, seed_interval=(777000000,

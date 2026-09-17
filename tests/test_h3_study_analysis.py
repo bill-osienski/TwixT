@@ -12,6 +12,8 @@ from scripts.GPU.alphazero import h3_study_rules as R
 HEX = "a" * 64
 
 
+
+
 def _game(pair, colour, *, winner=None, reason="win", digest=None, stratum=None,
           seed=None, elapsed=40.0, plies=51, opening=None):
     """One record in the shape §6.2 requires — seed, stratum and opening_digest
@@ -373,14 +375,3 @@ def test_a_VOID_game_excludes_its_pair_WHOLE():
     assert rep["pairs_excluded_void"] == 1
 
 
-def test_the_stratum_split_is_DESCRIPTIVE_and_never_a_verdict():
-    pairs = [_pair(i, True, True, stratum=R.STRATUM_UNIFORM) for i in range(6)]
-    pairs += [_pair(6 + i, False, False, stratum=R.STRATUM_CO_PRODUCED)
-              for i in range(6)]
-    rep = _run(pairs)
-    assert set(rep["by_stratum"]) == set(R.STRATA)
-    assert rep["by_stratum"][R.STRATUM_UNIFORM]["mean"] == 1.0
-    assert rep["by_stratum"][R.STRATUM_CO_PRODUCED]["mean"] == 0.0
-    for s in rep["by_stratum"].values():
-        assert "interval" not in s and "decisive" not in s, (
-            "a stratum figure is descriptive; an interval would invite a verdict")

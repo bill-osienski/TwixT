@@ -1,4 +1,14 @@
-"""H3 FULL STUDY — the OPENING-GENERATION PREFLIGHT. Constructs, never invokes.
+"""🔴 RETIRED 2026-09-17 with the co-produced generator it served.
+
+Preserved for history. NO ACTIVE STUDY PATH MAY IMPORT THIS MODULE --
+`tests/test_h3_uniform_population.py` asserts none does. The uniform
+population writer is engine-free, so it needs neither a JVM supervisor nor
+a preflight that constructs engine movers: there is no engine to supervise
+and no mover to construct. See `h3_coproduced_generator_retired` for why
+the stratum closed.
+
+ORIGINAL DOCSTRING FOLLOWS.
+H3 FULL STUDY — the OPENING-GENERATION PREFLIGHT. Constructs, never invokes.
 
 🔴 IT LIVES IN ITS OWN MODULE, AND THAT IS STRUCTURAL, NOT TIDINESS.
 `test_NO_CONTROL_DELETES_AN_AUTHORIZATION_CHECK` identifies a module's production
@@ -20,7 +30,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
-from . import h3_study_generator as GEN
+from . import h3_coproduced_generator_retired as GEN
 from . import h3_study_rules as RULES
 
 
@@ -55,7 +65,7 @@ def preflight_movers(*, evaluator=None, classes: Optional[str] = None
     from . import t1j_toolchain as TC
     import os as _os
 
-    cfg = RULES.generation_config()                # refuses an argmax config
+    cfg = GEN.generation_config()                # refuses an argmax config
     paths = TC.verified_paths()
     runtime = INT.T1jRuntime(
         java=_os.path.join(paths["jdk_home"], "bin", "java"), jar=paths["jar"],
@@ -65,10 +75,10 @@ def preflight_movers(*, evaluator=None, classes: Optional[str] = None
                                runtime=runtime, config=cfg)
 
     built = []
-    for order in (RULES.ORDER_INCUMBENT_FIRST, RULES.ORDER_T1J_FIRST):
+    for order in (GEN.ORDER_INCUMBENT_FIRST, GEN.ORDER_T1J_FIRST):
         inc_colour = GEN.incumbent_colour(order)
         t1j_colour = "black" if inc_colour == "red" else "red"
-        seed = RULES.attempt_seed(RULES.GEN_SEED_CO_PRODUCED, 0, 0)
+        seed = RULES.attempt_seed(GEN.GEN_SEED_CO_PRODUCED, 0, 0)
         ctx = movers["new_context"]()
         inc = movers["incumbent_agent"](seed=seed, colour=inc_colour)
         t1j = movers["t1j_agent"](colour=t1j_colour, ctx=ctx)
