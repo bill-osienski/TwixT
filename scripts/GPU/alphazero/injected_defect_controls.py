@@ -3492,6 +3492,12 @@ DEFECTS = [
 # DERIVED from the requirement and its assertion and then verified against a run,
 # which is why each names a count or a sentence rather than a first line.
 EXPECTED_REASONS = {
+    'restoration is trusted instead of verified from the file':
+        'AssertionError: assert 0 == 9',
+    'the walk need not reproduce the recorded moves':
+        'scripts.GPU.alphazero.h3_study_generator.H3GenerationError: opening 4: the re-derived digest is b2595f7c7ce921d3dcdbb3d20e7a5264ceac57ba1bbd246a7cce03b5777a8e2b, not 733ea8a5827888dfe53b52c44810ca0fdafcf8bc4254405a921a89b844a78c44',
+    'an opening may carry unknown keys':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
     # ── the three P1 repairs (2026-09-17 review). Reasons OBSERVED by the
     # ── harness, never guessed.
     'freeze_population takes a caller-supplied destination again':
