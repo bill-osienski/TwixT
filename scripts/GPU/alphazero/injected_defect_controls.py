@@ -4737,6 +4737,28 @@ EXPECTED_REASONS = {
         "AssertionError: a failed restoration SUPERSEDES the worker's own exit 0",
     'the generation wrapper spawns before checking the destination':
         'assert 0 == 7',
+    # ── 2026-09-16: the CONTEXT RESET that attempt 1's VOID demanded, and
+    # the spent range and destination it left behind.
+    "attempt 1's VOIDED directory is not marked spent":
+        "AssertionError: assert 'docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings' in ('docs/superpowers/evidence/2026-09-09-t1j-h2-deterministic-readout', 'docs/superpowers/evidence/2026-09-12-t1j-h2-mat...ers/evidence/2026-09-12-t1j-INCIDENT-contr",
+    "attempt 1's spent generation range may be reused":
+        'assert (20261200000, 20261259200) in ()',
+    "attempt 2 writes into attempt 1's directory":
+        'AssertionError: assert not True',
+    "attempt 2's range sits inside the spent one's gap floor":
+        'AssertionError: gap 20800 to the spent range is inside floor 59200',
+    'every attempt shares one context identity':
+        "AssertionError: ['h3gen', 'h3gen']",
+    'the generation destination is marked spent before any run':
+        "AssertionError: assert 'docs/superpowers/evidence/2026-09-16-t1j-h3-study-openings-attempt2' != 'docs/superpowers/evidence/2026-09-16-t1j-h3-study-openings-attempt2'",
+    'the generation walk does not reset its context':
+        "AssertionError: ('reset', {'incumbent_agent': 40, 'new_context': 23, 't1j_agent': 41})",
+    'the incumbent agent is re-seeded per ply again':
+        'assert [20261410719] == [20261402800]',
+    'the two generation ranges sit inside their own gap floor':
+        'AssertionError: gap 20800 is inside the floor 59200',
+    'the two generation seed ranges overlap again':
+        'AssertionError: ((20261000000, 20261059200), (20261000500, 20261059700))',
     # ── 2026-09-16: the preregistered GENERATION deadline and the
     # PARENT-OWNED LAUNCH RECEIPT. Every reason observed, never predicted.
     'a refusal before spawning leaves no receipt':
