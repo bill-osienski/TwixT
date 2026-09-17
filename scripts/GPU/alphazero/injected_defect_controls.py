@@ -243,7 +243,12 @@ DEFECTS = [
     ("an opening may carry a stale alternating order",
      H3SGEN, "        spare = [k for k in o if k not in OPENING_KEYS]",
      "        spare = [k for k in o if k not in OPENING_KEYS + ('order',)]",
-     f"{T_H3POP}::test_NO_ORDER_FIELD_ANYWHERE_IN_THE_SCHEDULE_OR_THE_OPENINGS"),
+     # 🔴 RETARGETED AGAIN, and the harness is why. The first target checked
+     # `build_population()`'s OUTPUT and `OPENING_KEYS` -- neither of which the
+     # validator's allow-list touches -- so widening that list changed nothing
+     # the test could see. NOT CAUGHT. The test that actually feeds an artifact
+     # carrying `order` to the validator is the one that binds it.
+     f"{T_H3POP}::test_THE_ARTIFACT_VALIDATOR_REFUSES"),
     ("check_opening_set stops refusing a stale order field",
      H3SR, '    stale = [o["index"] for o in openings if o.get("order") is not None]',
      "    stale = []",

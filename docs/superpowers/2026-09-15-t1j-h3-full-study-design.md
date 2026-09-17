@@ -963,14 +963,73 @@ EXECUTION gate went, because engine-free generation runs nothing; the
 **population-freeze barrier** took its place, guarding the one act that is still
 irreversible — declaring a population THE population.
 
-### 9.2 What is still not done
+### 9.2 🔴 THREE INTEGRITY GAPS, FOUND ON REVIEW AND REPAIRED (2026-09-17)
+
+The uniform-only structure was sound and the population was **not ready to
+freeze**. Each gap was a control that existed and did not bind.
+
+**1. The barrier was not one-shot.** `freeze_population()` accepted
+`out_path`/`trace_path` and never restored the constant. Once opened it stayed
+open, so repeated calls could write any number of candidate "official"
+populations — and because generation is deterministic they would be
+*byte-identical*, which is worse, not better: several indistinguishable
+artifacts, none of them the one the study is defined over.
+
+> The entry now takes **no arguments**. `h3_freeze_command` restores and
+> **verifies** the barrier in a `finally` — verified by reading the source file
+> back, because the imported module still holds the pre-rewrite value. A failed
+> restoration **supersedes every other outcome** and has its own exit code: a
+> population written with the barrier open is not a completed freeze.
+
+**2. Generation happened outside the deadline and the terminal trace.** Python
+evaluates arguments first, so `write_artifact(openings=build_population())` ran
+the entire walk **before** the trace opened and the clock started. A hang or
+crash inside generation left no terminal record and could not trip the runaway
+guard §1.7.5 promises. **The guard was real, and it guarded only the part that
+never takes any time.**
+
+> `build` is now a callable invoked inside, after the trace exists and the clock
+> runs; the deadline is checked once per **attempt** inside the candidate loop.
+> The clock is `monotonic` — wall time steps backwards over an NTP correction.
+> The artifact is **fsynced before `OK` is recorded**, because `OK` asserts the
+> file is on disk.
+
+**3. 🔴 THE DIGEST DID NOT BIND THE MOVES.** Both checks trusted each row's
+**declared** digest and neither replayed the moves, so an opening could be
+rewritten while its digest *and* `OPENING_SET_DIGEST` stayed valid — and the
+runner would accept and play the altered position. `load_opening_set` never
+called `validate_artifact` at all. **A digest that is never recomputed from the
+thing it digests is a label, not a checksum.**
+
+> Validation now binds, in order: exact artifact and opening schemas; index and
+> segment from the **study's** plan, not the artifact's opinion; type-strict
+> six-move replay through the real engine; **recomputed** canonical digest;
+> `seed == attempt_seed(base, index, attempts − 1)`; the PRNG walk re-derived
+> from that seed reproducing the exact moves; and the claim, generation note and
+> generator identity exactly. The loader delegates to it, then requires the set
+> to be **the pinned one** — self-consistent is not the same as pinned.
+
+**And the generator identity now pins what reproduces the walk.** "No engine" is
+not "no toolchain": it recorded the *design* — seed base, attempt ceiling, filter
+names — and nothing that could reproduce anything. It now pins the interpreter,
+NumPy, the bit generator by name, the three sources the walk depends on **by
+content**, and the commit. The commit is recorded but **not enforced**: a frozen
+population stays valid across later commits that do not touch the walk, and the
+source pins refuse exactly when it changed.
+
+### 9.3 What is still not done
 
 | | |
 |---|---|
 | `OPENING_SET_DIGEST` | **unset** |
 | `STUDY_SEED_BLOCK` | **unset** |
 | the official destination | **absent** |
-| all ten gates | **False** |
+| all ten gates, the freeze barrier included | **False** |
+
+🔑 **AND FREEZING IS TWO STEPS, NOT ONE.** `h3_freeze_command` writes the
+artifact; recording its digest as `OPENING_SET_DIGEST` is a **separate reviewed
+edit**, made after the artifact has been inspected. Freezing produces the
+population; pinning is what makes the study play it. Both are unauthorized.
 
 **Official opening generation, seed registration, study execution and the push
 all remain separate and UNAUTHORIZED.** Building the population in memory is
