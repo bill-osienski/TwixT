@@ -3607,7 +3607,7 @@ EXPECTED_REASONS = {
     'the artifact may be overwritten':
         "FileExistsError: [Errno 17] File exists: '/<tmp>/tmp<x>/a.json'",
     'attempt provenance becomes optional':
-        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
+        'scripts.GPU.alphazero.h3_study_rules.H3StudyError: attempt must be a non-negative int, got -1',
     'the official destination moves into a spent directory':
         'AssertionError: assert not True',
     'the runner repeats the destination instead of reading it':
