@@ -94,13 +94,13 @@ DEFECTS = [
     # 🔴 MISSING PARENT DIRECTORIES -- the defect that VOIDed segment 0 in one
     # second, spending an authorization and retiring a seed quarter for nothing.
     ("the runner stops creating its output directory",
-     H3SRUN, "        if _d:\n            os.makedirs(_d, exist_ok=True)",
-     "        if False:\n            os.makedirs(_d, exist_ok=True)",
-     f"{T_H3POP}::test_THE_RUNNER_NOW_CREATES_ITS_OUTPUT_DIRECTORY"),
+     H3SRUN, "        if d:\n            os.makedirs(d, exist_ok=True)",
+     "        if False:\n            os.makedirs(d, exist_ok=True)",
+     f"{T_H3POP}::test_ensure_parent_dirs_ACTUALLY_CREATES_THEM"),
     ("the directory is created AFTER the create-only open",
-     H3SRUN, "    for _p in (trace_path, results_path, report_path):",
-     "    for _p in ():",
-     f"{T_H3POP}::test_THE_RUNNER_NOW_CREATES_ITS_OUTPUT_DIRECTORY"),
+     H3SRUN, "    ensure_parent_dirs(trace_path, results_path, report_path)",
+     "    pass  # noqa",
+     f"{T_H3POP}::test_THE_RUN_BODY_CALLS_ensure_parent_dirs_BEFORE_ITS_CREATE_ONLY_OPEN"),
 
     # 🔴 THE PARENT RECEIPT on an EARLY failure -- before any worker trace exists.
     ("no launch receipt is written at all",
@@ -126,19 +126,19 @@ DEFECTS = [
     ("a retired earlier segment blocks every later one again",
      H3SRUN, "    todo = range(RULES.N_SEGMENTS) if segment is None else [segment]",
      "    todo = range(RULES.N_SEGMENTS)",
-     f"{T_H3SRUN}::test_A_RETIRED_SEGMENT_DOES_NOT_BLOCK_A_LATER_ONE"),
+     f"{T_H3SRUN}::test_REGISTRATION_IS_ASKED_OF_ONE_SEGMENT_WHEN_ONE_IS_NAMED"),
     ("the RETIRED block may be relaunched",
      H3SRUN, "        if lo < retired_hi and retired_lo < hi:", "        if False:",
-     f"{T_H3SRUN}::test_A_RETIRED_SEGMENT_DOES_NOT_BLOCK_A_LATER_ONE"),
+     f"{T_H3SRUN}::test_THE_RETIRED_OVERLAP_CHECK_IS_ITS_OWN_GUARD"),
     ("the launch check stops asking whether the seeds are spent",
      H3SRUN, '''    bad = [(x, st) for x, st in spent
            if st["exposed"] or st["retired"] or st["test_only"]]''',
      "    bad = []",
-     f"{T_H3SRUN}::test_A_RETIRED_SEGMENT_DOES_NOT_BLOCK_A_LATER_ONE"),
+     f"{T_H3SRUN}::test_THE_RETIRED_OVERLAP_CHECK_IS_ITS_OWN_GUARD"),
     ("the launch check is not run before a segment starts",
      H3SRUN, "    check_segment_seeds(segment)\n    from . import d1_probe as D1",
      "    from . import d1_probe as D1",
-     f"{T_H3SRUN}::test_THE_RETIRED_BLOCK_CAN_NEVER_BE_RELAUNCHED"),
+     f"{T_H3SRUN}::test_run_segment_CHECKS_THE_SEGMENTS_SEEDS_BEFORE_ANYTHING_ELSE"),
 
     # 🔴 SEGMENT-LOCAL AVAILABILITY: construction must not consult seed status.
     ("build_tasks consults seed status again",

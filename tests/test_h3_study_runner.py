@@ -663,3 +663,75 @@ def test_THE_RETIRED_BLOCK_CAN_NEVER_BE_RELAUNCHED():
         assert not any(REF.seed_status(s)["exposed"] for s in range(lo, hi))
         for a, b in RUN.SEGMENT_SEED_BLOCKS:
             assert hi <= a or b <= lo, "a live block overlaps the retired one"
+
+
+def test_THE_RETIRED_OVERLAP_CHECK_IS_ITS_OWN_GUARD(monkeypatch):
+    """🔴 TWO GUARDS REFUSE THE RETIRED BLOCK, and the harness showed a test that
+    could not tell them apart.
+
+    `check_segment_seeds` refuses on (a) overlapping RETIRED_SEGMENT_BLOCKS and
+    (b) the seeds' registry STATUS. The retired quarter trips BOTH, so removing
+    either one still produced a refusal whose message matched "RETIRED" -- and
+    the injections were NOT CAUGHT.
+
+    Each is now driven alone: a block that overlaps the retired range but whose
+    seeds are NOT registry-retired, and a block that is registry-spent but
+    overlaps nothing.
+    """
+    # (a) overlaps the retired range, seeds NOT retired in the registry
+    monkeypatch.setattr(RUN, "RETIRED_SEGMENT_BLOCKS",
+                        ((202_628_000, 202_628_148),))       # segment 0's LIVE block
+    with pytest.raises(RUN.H3StudyRunError, match="may never be revived"):
+        RUN.check_segment_seeds(0)
+
+    # (b) registry-spent, overlapping no declared retired range
+    monkeypatch.setattr(RUN, "RETIRED_SEGMENT_BLOCKS", ())
+    monkeypatch.setattr(RUN, "SEGMENT_SEED_BLOCKS",
+                        ((202_626_000, 202_626_148),) + RUN.SEGMENT_SEED_BLOCKS[1:])
+    with pytest.raises(RUN.H3StudyRunError, match="is SPENT"):
+        RUN.check_segment_seeds(0)
+
+
+def test_REGISTRATION_IS_ASKED_OF_ONE_SEGMENT_WHEN_ONE_IS_NAMED(monkeypatch):
+    """🔴 `check_seed_registration(segment)` must look at THAT segment only.
+
+    The harness caught this: with every block registered, widening the loop back
+    to all four changed nothing observable. It needs a segment whose block is
+    UNREGISTERED while the others are fine.
+    """
+    unreg = (909_090_000, 909_090_148)
+    monkeypatch.setattr(RUN, "SEGMENT_SEED_BLOCKS",
+                        (unreg,) + RUN.SEGMENT_SEED_BLOCKS[1:])
+    with pytest.raises(RUN.H3StudyRunError, match="not registered"):
+        RUN.check_seed_registration(0)
+    for k in (1, 2, 3):
+        RUN.check_seed_registration(k)          # unaffected -- the repair
+    with pytest.raises(RUN.H3StudyRunError, match="not registered"):
+        RUN.check_seed_registration()           # None = all four, so it still fires
+
+
+def test_run_segment_CHECKS_THE_SEGMENTS_SEEDS_BEFORE_ANYTHING_ELSE():
+    """🔴 THE LAUNCH CHECK MUST BE ON THE LAUNCH PATH.
+
+    Removing `check_segment_seeds(segment)` from `run_segment` was NOT CAUGHT:
+    no test drove that entry. It is checked structurally here -- it must be
+    called, and before the openings are loaded.
+    """
+    import ast
+    src = open(RUN.__file__, encoding="utf-8").read()
+    fn = next(n for n in ast.parse(src).body
+              if isinstance(n, ast.FunctionDef) and n.name == "run_segment")
+    body = ast.get_source_segment(src, fn) or ""
+    assert "check_segment_seeds(segment)" in body
+    assert body.index("check_segment_seeds(segment)") < body.index("load_opening_set")
+
+
+def test_run_segment_REFUSES_A_SEGMENT_WHOSE_SEEDS_ARE_SPENT(monkeypatch):
+    """…and behaviourally: with the gate forced open, a spent segment refuses
+    before any output is touched."""
+    monkeypatch.setattr(RUN, "H3_STUDY_EXECUTION_AUTHORIZED", True)
+    monkeypatch.setattr(RUN, "SEGMENT_SEED_BLOCKS",
+                        ((202_626_000, 202_626_148),) + RUN.SEGMENT_SEED_BLOCKS[1:])
+    with pytest.raises(RUN.H3StudyRunError, match="SPENT|may never be revived"):
+        RUN.run_segment(segment=0, results_path="/dev/null/r",
+                        trace_path="/dev/null/t", report_path="/dev/null/p")

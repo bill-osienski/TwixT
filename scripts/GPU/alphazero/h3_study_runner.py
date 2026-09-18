@@ -308,6 +308,33 @@ def segment_out_dir(segment: int) -> str:
     return f"{OUT_ROOT}/2026-09-15-t1j-h3-study-segment{segment}"
 
 
+def ensure_parent_dirs(*paths: str) -> list:
+    """Create each path's parent directory. Returns the directories it ensured.
+
+    🔴 THE DEFECT THAT VOIDED SEGMENT 0. The run body opened its trace with
+    `O_EXCL` and never created the parent, so the whole segment died in one
+    second on `FileNotFoundError` -- spending an authorization and retiring a
+    seed quarter for nothing. `h3_study_generator.write_artifact` had learned
+    this; the segment runner had not.
+
+    🔑 `exist_ok=True` DOES NOT WEAKEN CREATE-ONLY. The DIRECTORY may already
+    exist; the FILES may not, and the `O_EXCL` opens are what say so.
+
+    🔑 A NAMED FUNCTION, not four lines inline, so a test can exercise it
+    directly. Inline, the only way to reach it was to drive the whole run body
+    past its validation -- so the first test grepped the source instead, and the
+    harness showed that disabling the guard left the text in place and the grep
+    passing. A check that greps source is not a test.
+    """
+    made = []
+    for p in paths:
+        d = os.path.dirname(p)
+        if d:
+            os.makedirs(d, exist_ok=True)
+            made.append(d)
+    return made
+
+
 def check_output_paths(results_path: str, trace_path: Optional[str],
                        report_path: str) -> None:
     """CREATE-ONLY. `lexists`, not `exists`: a dangling symlink is a path that
@@ -671,10 +698,7 @@ def _run_segment_unguarded(*, segment: int, tasks, openings, results_path,
     #:
     #: 🔑 `exist_ok=True` DOES NOT WEAKEN CREATE-ONLY. The directory may exist;
     #: the FILES may not, and `O_EXCL` below is what says so.
-    for _p in (trace_path, results_path, report_path):
-        _d = os.path.dirname(_p)
-        if _d:
-            os.makedirs(_d, exist_ok=True)
+    ensure_parent_dirs(trace_path, results_path, report_path)
     try:
         trace = stack.enter_context(os.fdopen(
             os.open(trace_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644), "w"))

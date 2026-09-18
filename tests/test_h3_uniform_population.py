@@ -1346,20 +1346,6 @@ def test_SEGMENTS_1_TO_3_PINS_ARE_UNCHANGED_BY_SEGMENT_0S_REPLACEMENT():
         "segment 0 has a new block, so its pin MUST have moved")
 
 
-def test_THE_RUNNER_NOW_CREATES_ITS_OUTPUT_DIRECTORY():
-    """🔴 THE DEFECT THAT VOIDED SEGMENT 0, REPAIRED. It opened its trace with
-    O_EXCL and never created the parent, so the segment died in one second on
-    FileNotFoundError -- spending an authorization and retiring a seed quarter
-    for nothing.
-
-    The test that asserted the defect was PRESENT is deleted, exactly as its own
-    docstring instructed.
-    """
-    src = (ALPHAZERO / "h3_study_runner.py").read_text(encoding="utf-8")
-    assert "os.makedirs(_d, exist_ok=True)" in src
-    body = src[src.index("def _run_segment_unguarded("):]
-    assert body.index("os.makedirs") < body.index("os.O_EXCL"), (
-        "the directory must be created BEFORE the create-only open")
 
 
 def test_SEGMENT_0S_FIRST_DESTINATION_IS_SPENT_AND_THE_RETRY_IS_FRESH():
@@ -1414,3 +1400,35 @@ def test_AN_UNAUTHORIZED_INVOCATION_WRITES_NO_RECEIPT(monkeypatch):
     assert CMD.main(["--segment", "0"]) == CMD.EXIT_UNAUTHORIZED
     assert not os.path.lexists(CMD.receipt_path(0))
     assert not os.path.lexists(RUN.segment_out_dir(0))
+
+
+
+
+
+
+def test_ensure_parent_dirs_ACTUALLY_CREATES_THEM(tmp_path):
+    """🔴 THE DEFECT THAT VOIDED SEGMENT 0, TESTED BY RUNNING IT.
+
+    The first version GREPPED THE SOURCE for `os.makedirs`. The harness showed it
+    useless twice over: disabling the guard and emptying the loop both leave the
+    TEXT in place, so the grep passed either way. **A check that greps source is
+    not a test.**
+    """
+    deep = tmp_path / "a" / "b" / "c"
+    assert not deep.exists()
+    made = RUN.ensure_parent_dirs(str(deep / "t.jsonl"), str(deep / "r.jsonl"))
+    assert deep.is_dir(), "the parent directory was not created"
+    assert made and all(m == str(deep) for m in made)
+    # idempotent: an existing directory is fine, and create-only still applies
+    RUN.ensure_parent_dirs(str(deep / "t.jsonl"))
+    assert deep.is_dir()
+    # a bare filename has no parent and must not explode
+    assert RUN.ensure_parent_dirs("bare.json") == []
+
+
+def test_THE_RUN_BODY_CALLS_ensure_parent_dirs_BEFORE_ITS_CREATE_ONLY_OPEN():
+    """Ordering: makedirs after O_EXCL is makedirs that never runs."""
+    src_ = (ALPHAZERO / "h3_study_runner.py").read_text(encoding="utf-8")
+    body = src_[src_.index("def _run_segment_unguarded("):]
+    assert "ensure_parent_dirs(trace_path, results_path, report_path)" in body
+    assert body.index("ensure_parent_dirs(") < body.index("os.O_EXCL")
