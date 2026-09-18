@@ -1,0 +1,122 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 203, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/h3_study_prerun_verification.py", line 506, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/h3_study_prerun_verification.py", line 373, in main
+    _seeded = RULES.build_tasks(_ops, seed_interval=RUN.STUDY_SEED_BLOCK)
+  File "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/h3_study_rules.py", line 487, in build_tasks
+    raise H3StudyError(
+    ...<2 lines>...
+        f"test_only={st['test_only']}); a spent block may not be revived")
+scripts.GPU.alphazero.h3_study_rules.H3StudyError: seed 202626000 is spent or reserved for tests (exposed=False RETIRED=True test_only=False); a spent block may not be revived
+H3 FULL STUDY PRE-RUN VERIFICATION -- bound to f691294
+Nothing has been executed. Both gates are shut at this moment.
+==========================================================================
+
+== the tree ==
+  HEAD e8684e7, descends from f691294
+  PASS     HEAD descends from the bound commit (f691294)
+  FAIL     no SOURCE differs from the commit  ['cripts/GPU/alphazero/e4_screen_reference.py', 'scripts/GPU/alphazero/injected_defect_controls.py', 'tests/test_h3_uniform_population.py']
+
+== the TEN gates ==
+  PASS     D1_EXECUTION_AUTHORIZED            False
+  PASS     SCREEN_AUTHORIZED                  False
+  PASS     H1_EXECUTION_AUTHORIZED            False
+  PASS     H2_EXECUTION_AUTHORIZED            False
+  PASS     H3_PILOT_EXECUTION_AUTHORIZED      False
+  PASS     H3_POPULATION_FREEZE_AUTHORIZED    False
+  PASS     H3_STUDY_EXECUTION_AUTHORIZED      False
+  PASS     L0_EXECUTION_AUTHORIZED            False
+  PASS     LOWPLY_QUALIFICATION_AUTHORIZED    False
+  PASS     RUNTIME_REQUAL_AUTHORIZED          False
+  PASS     the study and generation gates are SEPARATE constants
+
+== the design's arithmetic, recomputed here ==
+  N 296 pairs / 592 games | h = 0.07894
+  PASS     h <= the declared precision target  0.07894 <= 0.08
+  PASS     288 would NOT have met it (the Amendment 1 correction)  0.08003
+  PASS     the ceiling of the requirement is 289
+  PASS     every balance divides without remainder
+  PASS     ONE population, and nothing survives of the second
+
+== generation is ENGINE-FREE ==
+  PASS     the population writer has NO execution gate  no engine runs, so there is nothing to gate
+  PASS     it has a POPULATION-FREEZE barrier instead
+  PASS     the generator declares itself engine-free
+  PASS     no active study module reaches the retired engine path
+
+== the generation seeds: declared, and in NO registry ==
+  PASS     the range [20261600000, 20261718400) is in no registry  []
+  PASS     it covers every candidate: 296 x 400 = 118400
+  PASS     clear of the retired range [20261000000, 20261059200)  the 148-opening uniform range, RETIRED UNUSED by Amendment 3: superseded because 296 openings need 118,400 candidates, not 59,200
+  PASS       ... and separated from it by the gap floor (118400)
+  PASS     clear of the retired range [20261200000, 20261259200)  co-produced attempt 1, SPENT WHOLE 2026-09-16
+  PASS       ... and separated from it by the gap floor (118400)
+  PASS     clear of the retired range [20261400000, 20261459200)  co-produced attempt 2, SPENT WHOLE 2026-09-16
+  PASS       ... and separated from it by the gap floor (118400)
+  PASS     every retired range is REFUSED by the spent check
+  PASS     the live range is NOT refused
+
+== THE population, generated here in memory ==
+  PASS     296 uniform openings at ply 6
+  PASS     all distinct up to symmetry
+  PASS     none duplicates a PILOT or H1/H2 position  exclusion set holds 28
+  PASS     the exclusion set is NOT vacuous
+  attempts: min 1 max 1 (recorded per opening, because the rejection rate conditions the set)
+
+== the population writer: ENGINE-FREE, and its artifact schema ==
+  PASS     the artifact SCHEMA is frozen  ['claim', 'design', 'generation_note', 'generator', 'n', 'opening_set_digest', 'openings', 'stratum']
+  PASS     NO generating-engine configuration is pinned, because none generates
+  PASS     every opening must carry its ATTEMPT COUNT
+  PASS     a CO-PRODUCED artifact is REFUSED
+  PASS     a 148-opening artifact is REFUSED (wrong population size)
+  PASS     a WEAKENED claim is REFUSED
+  PASS     a stale `order` field is REFUSED
+  PASS     the good artifact passes
+
+== the FROZEN population ==
+  PASS     the destination holds the FROZEN population  3 file(s)
+  PASS     freezing is BARRED, and a refusal leaves the artifact BYTE-IDENTICAL
+  PASS     a SECOND freeze to the same destination is refused (create-only)
+  PASS     every PINNED source still hashes to what the artifact recorded
+  PASS     h3_study_rules.py is NOT pinned -- the file the pin edit touched
+  PASS     the frozen population loads, validates and IS the pinned one
+
+== the schedule, over the in-memory population ==
+  PASS     it passes check_opening_set
+  PASS     592 tasks in 296 pairs
+  PASS     no seed is assigned
+  PASS     every task carries stratum, segment and opening_digest
+  PASS     NO task carries an `order`
+  PASS     every task carries the reference identity the builder READS
+  PASS     segment 0: 74 pairs x 2 arms = 148 games, one population
+  PASS     segment 1: 74 pairs x 2 arms = 148 games, one population
+  PASS     segment 2: 74 pairs x 2 arms = 148 games, one population
+  PASS     segment 3: 74 pairs x 2 arms = 148 games, one population
+  PASS     each segment's digest is its OWN
+
+== the REAL builder, on the population's tasks ==
+  PASS     the schedule's identity IS the registry's pin
+  PASS     the SCHEDULED tasks already carry the identity fields, UNPATCHED  missing []
+  PASS     32 tasks construct through the real builder  []
+  PASS     BOTH colour assignments were built
+
+== the incumbent identity the record will carry ==
+  calib020_0001 selection_mode 'argmax' sims 400
+  PASS     the identity barrier ACCEPTS the frozen identity
+  PASS     the recorded identity IS the config passed to the builder
+  PASS     and it REFUSES a DRIFTED config object (negative control)
+
+== the seed block ==
+  [202626000, 202626592)
+  PASS     the block is registered
+  PASS     it is 592 seeds -- one per game
+  PASS     EVERY seed is ACCOUNTED
+  FAIL     NOT exposed, NOT retired, NOT test-only -- a reservation is not a draw
+  PASS     no seed is in CONSUMED_SEEDS
+  PASS     clear of all FOUR generation ranges, none of them in a registry  4 ranges
+  PASS     0 derived-stream collisions, and own derivations injective  2960 values
+
+== the seeded schedule and its pins ==

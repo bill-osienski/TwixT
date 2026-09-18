@@ -735,6 +735,26 @@ RETIRED_SEED_INTERVALS = (
                                      # replaying any part of it would select
                                      # positions after seeing where it failed.
                                      # A future D1 needs a FRESH interval.
+    (202626000, 202626148),          # 🔴 H3 SEGMENT 0's QUARTER, RETIRED WHOLE
+                                     # 2026-09-18 on a VOID. The single
+                                     # authorized attempt died in ONE SECOND at
+                                     # its first durable write:
+                                     # `_run_segment_unguarded` opens the trace
+                                     # with O_EXCL and never creates the parent
+                                     # directory, which did not exist.
+                                     #
+                                     # EXPOSED 0. No model was loaded, no JVM
+                                     # started, no agent seeded, no game began --
+                                     # the failure is strictly before the first
+                                     # game. The same accounting H2 attempt 1
+                                     # took when it VOIDed at task 0.
+                                     #
+                                     # RETIRED ALL THE SAME, because the
+                                     # authorization said so in advance: the
+                                     # quarter retires whole ON START, not on
+                                     # success. A future segment 0 needs a FRESH
+                                     # quarter with its own collision re-proof.
+                                     # Segments 1-3 keep [202626148, 202626592).
 )
 
 

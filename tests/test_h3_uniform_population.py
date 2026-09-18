@@ -1163,15 +1163,6 @@ def test_THE_BLOCK_IS_592_SEEDS_ONE_PER_GAME():
     assert hi - lo == R.N_GAMES == 592 == R.N_PAIRS * 2
 
 
-def test_EVERY_SEED_IS_ACCOUNTED_AND_NOT_EXPOSED_RETIRED_OR_TEST_ONLY():
-    """🔑 A RESERVATION IS NOT A DRAW. Registering the block did not spend it."""
-    from scripts.GPU.alphazero import e4_screen_reference as REF
-    lo, hi = BLOCK
-    st = [REF.seed_status(s) for s in range(lo, hi)]
-    assert all(x["accounted"] for x in st)
-    assert not any(x["exposed"] or x["retired"] or x["test_only"] for x in st)
-    assert not any(s in REF.CONSUMED_SEEDS for s in range(lo, hi))
-    RUN.check_seed_registration()
 
 
 def test_THE_BLOCK_OVERLAPS_NOTHING_DIRECTLY_OR_THROUGH_ITS_STREAMS():
@@ -1229,60 +1220,13 @@ def test_THE_GAP_FLOOR_IS_THE_BLOCKS_OWN_SIZE_AND_IT_CLEARS_IT():
     assert min(gaps) == 1960, "the nearest actual boundary"
 
 
-def test_SEEDS_ARE_POSITIONAL_ACROSS_FOUR_CONTIGUOUS_QUARTERS():
-    ops = RUN.load_opening_set(RUN.OPENING_SET_PATH)
-    tasks = R.build_tasks(ops, seed_interval=RUN.STUDY_SEED_BLOCK)
-    lo, _ = BLOCK
-    assert [t["seed"] for t in tasks] == list(range(lo, lo + R.N_GAMES)), (
-        "row i must bind to lo + i")
-    for k in range(R.N_SEGMENTS):
-        seg = [t for t in tasks if t["segment"] == k]
-        ss = [t["seed"] for t in seg]
-        assert len(seg) == R.GAMES_PER_SEGMENT == 148
-        assert ss == list(range(lo + 148 * k, lo + 148 * (k + 1))), k
-        assert len({t["pair_id"] for t in seg}) == R.PAIRS_PER_SEGMENT == 74
-    # the quarters partition the block exactly, with no seed in two of them
-    quarters = [{t["seed"] for t in tasks if t["segment"] == k} for k in range(4)]
-    assert set().union(*quarters) == set(range(lo, lo + 592))
-    assert sum(len(q) for q in quarters) == 592, "a seed is in two quarters"
 
 
-def test_A_PAIRS_TWO_ARMS_SIT_ADJACENT_AND_SHARE_A_SEGMENT():
-    """The colour-reversed pair is the unit of analysis; splitting one across
-    segments would make a pair unscoreable if a segment VOIDed."""
-    ops = RUN.load_opening_set(RUN.OPENING_SET_PATH)
-    tasks = R.build_tasks(ops, seed_interval=RUN.STUDY_SEED_BLOCK)
-    for i in range(0, len(tasks), 2):
-        a, b = tasks[i], tasks[i + 1]
-        assert a["pair_id"] == b["pair_id"] and a["segment"] == b["segment"]
-        assert {a["incumbent_colour"], b["incumbent_colour"]} == {"red", "black"}
-        assert b["seed"] == a["seed"] + 1
 
 
 # ── the schedule pins ──────────────────────────────────────────────────────
-def test_THE_SEEDED_SCHEDULE_REPRODUCES_ITS_PINS():
-    ops = RUN.load_opening_set(RUN.OPENING_SET_PATH)
-    tasks = R.build_tasks(ops, seed_interval=RUN.STUDY_SEED_BLOCK)
-    assert RUN.check_schedule_digest(tasks) == RUN.SCHEDULE_DIGEST
-    assert len(RUN.SEGMENT_DIGESTS) == R.N_SEGMENTS == 4
-    assert len(set(RUN.SEGMENT_DIGESTS)) == 4, "each segment's pin is its OWN"
-    for k in range(4):
-        assert RUN.segment_digest(tasks, k) == RUN.SEGMENT_DIGESTS[k]
 
 
-@pytest.mark.parametrize("tamper", [
-    lambda t: t[0].update(seed=t[0]["seed"] + 1),
-    lambda t: t[0].update(incumbent_colour="black"),
-    lambda t: t[0].update(ply_cap=t[0]["ply_cap"] + 1),
-    lambda t: t[0].update(opening_digest="0" * 64),
-    lambda t: t[0].update(mcts_sims=401),
-])
-def test_THE_SCHEDULE_PIN_REFUSES_A_TAMPERED_SCHEDULE(tamper):
-    ops = RUN.load_opening_set(RUN.OPENING_SET_PATH)
-    tasks = [dict(t) for t in R.build_tasks(ops, seed_interval=RUN.STUDY_SEED_BLOCK)]
-    tamper(tasks)
-    with pytest.raises(RUN.H3StudyRunError, match="different experiment"):
-        RUN.check_schedule_digest(tasks)
 
 
 def test_THE_SEGMENT_PIN_IS_NOT_COMPUTED_FROM_THE_TASKS_IT_CHECKS():
@@ -1317,3 +1261,90 @@ def test_REGISTERING_THE_BLOCK_OPENED_NOTHING():
     for k in range(R.N_SEGMENTS):
         from scripts.GPU.alphazero import h3_study_command as CMD
         assert not any(os.path.lexists(p) for p in CMD.default_paths(k)), k
+
+
+# ═══════ SEGMENT 0 VOIDED, AND ITS QUARTER IS RETIRED (2026-09-18) ═════════
+# 🔴 THE CONSEQUENCE THESE TESTS NOW RECORD. The one authorized segment-0 run
+# VOIDed in a second -- the runner opens its trace with O_EXCL and never creates
+# the parent directory -- and the authorization said the quarter retires WHOLE ON
+# START. It does. `build_tasks` then refuses the whole 592-seed interval, because
+# a spent block may not be revived.
+#
+# Five tests above asserted a seeded schedule could be built from this block.
+# That is no longer true, and the RIGHT response is to record what IS true, not
+# to rebuild the assertion around a block a quarter of which is spent.
+SEG0_QUARTER = (202_626_000, 202_626_148)
+REMAINING = (202_626_148, 202_626_592)
+
+
+def test_SEGMENT_0_QUARTER_IS_RETIRED_WHOLE_WITH_ZERO_EXPOSED():
+    """EXPOSED 0 / RETIRED WHOLE -- the accounting H2 attempt 1 took when it
+    VOIDed at task 0. Nothing was drawn: no model, no JVM, no game."""
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    st = [REF.seed_status(s) for s in range(*SEG0_QUARTER)]
+    assert len(st) == 148
+    assert all(x["accounted"] for x in st)
+    assert all(x["retired"] for x in st), "the quarter retires whole ON START"
+    assert not any(x["exposed"] for x in st), "no seed was ever drawn"
+
+
+def test_SEGMENTS_1_TO_3_KEEP_THEIR_QUARTERS_UNSPENT():
+    """The point of segmenting: one segment's failure does not spend the others."""
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    st = [REF.seed_status(s) for s in range(*REMAINING)]
+    assert len(st) == 444
+    assert all(x["accounted"] for x in st)
+    assert not any(x["retired"] or x["exposed"] for x in st)
+
+
+def test_THE_SEEDED_SCHEDULE_CAN_NO_LONGER_BE_BUILT_ON_THIS_BLOCK():
+    """🔴 THE BLOCKER, ASSERTED SO IT CANNOT BE FORGOTTEN.
+
+    `build_tasks` takes the WHOLE 592-seed interval and refuses any seed that is
+    retired, so no seeded schedule exists for this block any more -- for segment 0
+    or for segments 1-3. `SCHEDULE_DIGEST` and `SEGMENT_DIGESTS` now describe a
+    plan that cannot be constructed.
+
+    This is the refusal working, not failing: a spent block may not be revived.
+    Resolving it means a fresh quarter and recomputed pins, which is a separate
+    authorization.
+    """
+    ops = RUN.load_opening_set(RUN.OPENING_SET_PATH)
+    with pytest.raises(R.H3StudyError, match="spent block may not be revived"):
+        R.build_tasks(ops, seed_interval=RUN.STUDY_SEED_BLOCK)
+
+
+def test_THE_UNSEEDED_SCHEDULE_AND_THE_POPULATION_ARE_UNAFFECTED():
+    """The design identity and the frozen population survive the VOID intact --
+    only the seed binding is spent."""
+    ops = RUN.load_opening_set(RUN.OPENING_SET_PATH)
+    assert len(ops) == R.N_PAIRS == 296
+    tasks = R.build_tasks(ops)                       # unseeded: still fine
+    assert len(tasks) == R.N_GAMES == 592
+    assert all(t["seed"] is None for t in tasks)
+    assert R.OPENING_SET_DIGEST == (
+        "35932b3fabd9c6463d615b0b3af380134dadd700e2ca1e882a0c863faf772e46")
+
+
+def test_THE_SEGMENT_0_DESTINATION_WAS_NEVER_CREATED():
+    """The VOID's own signature: the run died at its first durable write, so the
+    directory it was writing into does not exist."""
+    assert not os.path.lexists(RUN.segment_out_dir(0))
+    from scripts.GPU.alphazero import h3_study_command as CMD
+    assert not any(os.path.lexists(p) for k in range(4) for p in CMD.default_paths(k))
+
+
+def test_THE_SEGMENT_RUNNER_STILL_DOES_NOT_CREATE_ITS_OUTPUT_DIRECTORY():
+    """🔴 THE DEFECT, RECORDED AND NOT REPAIRED -- repair is not authorized.
+
+    `h3_study_generator.write_artifact` calls `os.makedirs` before its create-only
+    open; the segment runner never learned it. This test asserts the defect is
+    STILL THERE so that fixing it must delete this test deliberately, rather than
+    the defect quietly surviving a future edit.
+    """
+    import ast as _ast
+    src = (ALPHAZERO / "h3_study_runner.py").read_text(encoding="utf-8")
+    assert "os.makedirs" not in src, (
+        "the runner now creates its directory -- delete this test and its note")
+    gen = (ALPHAZERO / "h3_study_generator.py").read_text(encoding="utf-8")
+    assert "os.makedirs" in gen, "the generator DOES create its directory"

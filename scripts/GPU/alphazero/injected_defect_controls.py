@@ -98,7 +98,7 @@ DEFECTS = [
     ("the study seed block slides onto the SPENT pilot block",
      H3SRUN, "STUDY_SEED_BLOCK: Optional[tuple] = (202_626_000, 202_626_592)",
      "STUDY_SEED_BLOCK: Optional[tuple] = (202_624_000, 202_624_592)",
-     f"{T_H3POP}::test_EVERY_SEED_IS_ACCOUNTED_AND_NOT_EXPOSED_RETIRED_OR_TEST_ONLY"),
+     f"{T_H3POP}::test_SEGMENT_0_QUARTER_IS_RETIRED_WHOLE_WITH_ZERO_EXPOSED"),
     ("the block is short of one seed per game",
      H3SRUN, "STUDY_SEED_BLOCK: Optional[tuple] = (202_626_000, 202_626_592)",
      "STUDY_SEED_BLOCK: Optional[tuple] = (202_626_000, 202_626_296)",
@@ -114,11 +114,11 @@ DEFECTS = [
     ("the block is registered as EXPOSED as well as accounted",
      SCREEN, "EXPOSED_SEED_INTERVALS = (",
      "EXPOSED_SEED_INTERVALS = (\n    (202626000, 202626592),",
-     f"{T_H3POP}::test_EVERY_SEED_IS_ACCOUNTED_AND_NOT_EXPOSED_RETIRED_OR_TEST_ONLY"),
+     f"{T_H3POP}::test_SEGMENT_0_QUARTER_IS_RETIRED_WHOLE_WITH_ZERO_EXPOSED"),
     ("the block is registered as RETIRED as well as accounted",
      SCREEN, "RETIRED_SEED_INTERVALS = (",
      "RETIRED_SEED_INTERVALS = (\n    (202626000, 202626592),",
-     f"{T_H3POP}::test_EVERY_SEED_IS_ACCOUNTED_AND_NOT_EXPOSED_RETIRED_OR_TEST_ONLY"),
+     f"{T_H3POP}::test_SEGMENTS_1_TO_3_KEEP_THEIR_QUARTERS_UNSPENT"),
 
     # 🔴 THE SEEDED SCHEDULE'S PINS. Without them the segment check compared a
     # digest to one computed from the same tasks: one source, two sides.
@@ -130,25 +130,8 @@ DEFECTS = [
      H3SRUN, "        want_digest=SEGMENT_DIGESTS[segment],",
      "        want_digest=segment_digest(tasks, segment),",
      f"{T_H3POP}::test_THE_SEGMENT_PIN_IS_NOT_COMPUTED_FROM_THE_TASKS_IT_CHECKS"),
-    ("the full-schedule pin is a different schedule's",
-     H3SRUN, '    "e374a95f885656ea27caa88359437e4c035de0e0e0c027cf861ce5e613362350")',
-     '    "0000000000000000000000000000000000000000000000000000000000000000")',
-     f"{T_H3POP}::test_THE_SEEDED_SCHEDULE_REPRODUCES_ITS_PINS"),
-    ("two segments share one pin",
-     H3SRUN, '    "14aaefb3a01cc1d08bdfd7f0c4c21599414d0dc68fee8f51584e1e4a50660a41",',
-     '    "cde6d04ce52e07088e437754e1ee60b750542de08c6b6e9fbc4744bc2c795d31",',
-     f"{T_H3POP}::test_THE_SEEDED_SCHEDULE_REPRODUCES_ITS_PINS"),
-    ("the schedule digest stops refusing a tampered plan",
-     H3SRUN, "    if got != SCHEDULE_DIGEST:", "    if False:",
-     f"{T_H3POP}::test_THE_SCHEDULE_PIN_REFUSES_A_TAMPERED_SCHEDULE"),
 
     # 🔴 POSITIONAL SEED BINDING across four contiguous quarters.
-    ("the seeds are assigned in reverse",
-     H3SR, "        seeds = list(range(lo, hi))", "        seeds = list(range(hi - 1, lo - 1, -1))",
-     f"{T_H3POP}::test_SEEDS_ARE_POSITIONAL_ACROSS_FOUR_CONTIGUOUS_QUARTERS"),
-    ("a pair's two arms are no longer adjacent",
-     H3SR, '        for colour in ("red", "black"):', '        for colour in ("red",):',
-     f"{T_H3POP}::test_A_PAIRS_TWO_ARMS_SIT_ADJACENT_AND_SHARE_A_SEGMENT"),
 
     # ═════════ THE SELF-INVALIDATING PIN (2026-09-17 review) ═══════════════
     # 🔴 An OUTPUT must never live inside a PINNED INPUT. Pinning the module that
@@ -3622,16 +3605,6 @@ EXPECTED_REASONS = {
         "AssertionError: assert 'check_schedule_digest(tasks)' in 'def run_segment(*, segment: int, results_path: str, trace_path: str,\\n                report_path: str) -> Dict[str, ...cfg),\\n        want_digest=SEGMENT_DIGESTS[segment],\\n        deadline_s=RULES.SEGMENT_DEADLINE_S, _deadline=deadline)'",
     'the segment pin is computed from the tasks it checks':
         "AssertionError: assert 'want_digest=SEGMENT_DIGESTS[segment]' in 'def run_segment(*, segment: int, results_path: str, trace_path: str,\\n                report_path: str) -> Dict[str, ...n        want_digest=segment_digest(tasks, segment),\\n        deadline_s=RULES.SEGMENT_DEADLINE_S, _deadline=deadline)'",
-    "the full-schedule pin is a different schedule's":
-        "scripts.GPU.alphazero.h3_study_runner.H3StudyRunError: the full schedule digest is e374a95f885656ea27caa88359437e4c035de0e0e0c027cf861ce5e613362350 but the frozen schedule is 0000000000000000000000000000000000000000000000000000000000000000. A different schedule is a different experiment wearing this one's name.",
-    'two segments share one pin':
-        "AssertionError: each segment's pin is its OWN",
-    'the schedule digest stops refusing a tampered plan':
-        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_runner.H3StudyRunError'>",
-    'the seeds are assigned in reverse':
-        'AssertionError: row i must bind to lo + i',
-    "a pair's two arms are no longer adjacent":
-        'scripts.GPU.alphazero.h3_study_rules.H3StudyError: built 296 tasks, expected 592',
 
     "the opening-set pin is not the frozen artifact's own digest":
         "AssertionError: assert '000000000000...0000000000000' == '35932b3fabd9...c863faf772e46'",
