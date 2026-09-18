@@ -33,6 +33,7 @@ import math
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from . import d1_selection as SEL
+from . import h3_generation_protocol as PROTO
 
 
 class H3StudyError(RuntimeError):
@@ -40,14 +41,19 @@ class H3StudyError(RuntimeError):
 
 
 # ═══════════════════════ the frozen design (card §1, §3, §5) ═══════════════
-BOARD_SIZE = 24
-OPENING_PLIES = 6
+#: 🔴 READ FROM THE PINNED PROTOCOL, NEVER RETYPED. These determine the walk, so
+#: they live in `h3_generation_protocol` -- the module the artifact pins by
+#: content -- and this module only re-exports them. A second copy here could
+#: drift from the pinned one, and the artifact would pin the copy that did not
+#: move.
+BOARD_SIZE = PROTO.BOARD_SIZE
+OPENING_PLIES = PROTO.OPENING_PLIES
 
 #: 🔴 296, NOT 288. `ln(40)/(2·0.08²) = 288.194` needs 289, and 289 is PRIME --
 #: it divides by neither stratum nor segment. 296 meets the target AND leaves no
 #: remainder anywhere. The first draft rounded 288.194 DOWN and reported
 #: h = 0.08003, above the target the arithmetic existed to enforce.
-N_PAIRS = 296
+N_PAIRS = PROTO.N_PAIRS
 N_ARMS = 2
 N_GAMES = N_PAIRS * N_ARMS                      # 592
 
@@ -74,7 +80,7 @@ PRECISION_TARGET = 0.08
 #: that sizes the seed range -- N_PAIRS x MAX_ATTEMPTS is the number of
 #: CANDIDATES, and a range sized for openings instead of candidates is the exact
 #: shortfall Amendment 3 had to repair.
-MAX_ATTEMPTS = 400
+MAX_ATTEMPTS = PROTO.MAX_ATTEMPTS
 
 #: 🔑 DECLARED CONSTANT, NOT A MATCH SEED. Generation must never consume a
 #: drawable seed. Attempt j of opening i uses `base + i*MAX_ATTEMPTS + j`, so the
@@ -94,7 +100,7 @@ MAX_ATTEMPTS = 400
 #: This range clears every retired range by 140,800, above its own floor of
 #: 118,400, proved directly and through the derived streams by collision proof
 #: v13 (evidence/2026-09-17-t1j-h3-uniform-only-amendment/), 10/10 controls.
-GEN_SEED_UNIFORM = 20_261_600_000
+GEN_SEED_UNIFORM = PROTO.GEN_SEED_UNIFORM
 
 #: 🔴 EVERY RETIRED GENERATION RANGE, AND NO REGISTRY HOLDS ANY OF THEM.
 #: A collision re-proof that enumerates only the registries will call an
@@ -206,20 +212,21 @@ def attempt_seed(base: int, index: int, attempt: int) -> int:
     🔑 DISJOINT AND PRE-COMPUTABLE. A rejected candidate is never regenerated
     from the seed that produced it, so the loop cannot spin; and the ranges can be
     checked against the registries before a single one is used.
+
+    🔴 THE POLICY GUARD IS HERE AND THE ARITHMETIC IS NOT. Retiring a range
+    changes THIS module -- which no artifact pins -- and leaves the pinned
+    protocol untouched. If the allocation lived here instead, every retirement
+    would invalidate every frozen population.
     """
     if is_spent_generation_range(base):
         raise H3StudyError(
             f"the generation range at {base} is SPENT: it was attempted and its "
             f"seeds were drawn. A further attempt needs a FRESH range with its "
             f"own collision re-proof.")
-    for name, v in (("index", index), ("attempt", attempt)):
-        if type(v) is not int or isinstance(v, bool) or v < 0:
-            raise H3StudyError(f"{name} must be a non-negative int, got {v!r}")
-    if attempt >= MAX_ATTEMPTS:
-        raise H3StudyError(
-            f"attempt {attempt} is beyond MAX_ATTEMPTS={MAX_ATTEMPTS}; exhausting "
-            f"the attempts ABORTS generation and never relaxes a filter")
-    return base + index * MAX_ATTEMPTS + attempt
+    try:
+        return PROTO.seed_for(base, index, attempt)
+    except PROTO.H3ProtocolError as e:
+        raise H3StudyError(str(e)) from None
 
 
 def is_spent_generation_range(base: int) -> bool:
@@ -244,20 +251,23 @@ def generation_seed_range(base: int) -> Tuple[int, int]:
 
 
 # ═══════════════════════ the population: uniform, ENGINE-FREE ═════════════════
-def _fresh_state():
-    """The ENGINE's state — `TwixtState`, the one `canonical_digest` keys on."""
-    from .game.twixt_state import TwixtState
-    st = TwixtState()
-    if st.board_size != BOARD_SIZE:
-        raise H3StudyError(f"engine board is {st.board_size}, not {BOARD_SIZE}")
-    return st
+#: 🔴 EVERY WALK-DETERMINING FUNCTION NOW LIVES IN THE PINNED PROTOCOL and is
+#: re-exported here so existing callers keep working. This module holds the
+#: policy and the OUTPUTS -- the retired ranges, `OPENING_SET_DIGEST` -- and is
+#: deliberately NOT pinned, because the freeze sequence must edit it.
+_fresh_state = PROTO.fresh_state
+_replay = PROTO.replay
+_admissible = PROTO.admissible
+walk = PROTO.walk
 
 
-def _replay(moves: Sequence[Tuple[int, int]]):
-    st = _fresh_state()
-    for m in moves:
-        st = st.apply_move(tuple(m))
-    return st
+def verify_candidate(base: int, index: int, attempts: int
+                     ) -> Tuple[List[Tuple[int, int]], str]:
+    """Re-derive opening `index` from its declared provenance. See the protocol."""
+    try:
+        return PROTO.verify_candidate(base, index, attempts)
+    except PROTO.H3ProtocolError as e:
+        raise H3StudyError(str(e)) from None
 
 
 def excluded_digests() -> frozenset:
@@ -265,6 +275,11 @@ def excluded_digests() -> frozenset:
     and H1/H2's 8, both resolved from their own frozen artifacts, never retyped.
 
     Without this the pilot's games would leak into the study.
+
+    🔑 THE ARTIFACT PINS THE RESOLVED SET BY VALUE, NOT THIS CODE. The population
+    depends on WHICH 28 digests are excluded; a refactor of the pilot's module
+    that leaves them identical must not invalidate a frozen population, and a
+    change that moves one must.
     """
     from . import h3_pilot_rules as PILOT
     out = set(PILOT.prior_opening_digests())                 # H1/H2's eight
@@ -272,77 +287,15 @@ def excluded_digests() -> frozenset:
     return frozenset(out)
 
 
-def _admissible(st, moves: Sequence[Tuple[int, int]]) -> bool:
-    """The card's §1.3 structural filters. ENGINE-NEUTRAL BY CONSTRUCTION: no
-    evaluator is consulted, because "the incumbent thinks this is decided" is the
-    incumbent's judgement and would re-import the bias the strata exist to limit.
-    """
-    if len(moves) != OPENING_PLIES:
-        return False
-    if st.is_terminal():
-        return False
-    if not st.legal_moves():
-        return False
-    return True
-
-
-def walk(seed: int) -> Tuple[List[Tuple[int, int]], Any]:
-    """THE CANDIDATE WALK: six uniformly random legal plies from ONE seed.
-
-    🔴 FACTORED OUT SO IT CAN BE REPLAYED. Generation and verification must run
-    the SAME code: a verifier with its own copy of the walk checks that the copy
-    agrees with itself. `verify_candidate` calls this, and so does the generator.
-
-    Deterministic in `seed` alone -- `PCG64(seed)`, the engine's own
-    `legal_moves()` ordering, and nothing else. That determinism is what lets the
-    frozen artifact be re-derived from its seeds years later, and what makes the
-    digest a pin rather than a snapshot.
-    """
-    import numpy as np
-    if type(seed) is not int or isinstance(seed, bool):
-        raise H3StudyError(f"seed must be an int, got {seed!r}")
-    rng = np.random.Generator(np.random.PCG64(seed))
-    st = _fresh_state()
-    moves: List[Tuple[int, int]] = []
-    for _ in range(OPENING_PLIES):
-        legal = st.legal_moves()
-        if not legal or st.is_terminal():
-            break
-        r, c = legal[int(rng.integers(len(legal)))]
-        moves.append((int(r), int(c)))
-        st = st.apply_move((int(r), int(c)))
-    return moves, st
-
-
-def verify_candidate(base: int, index: int, attempts: int
-                     ) -> Tuple[List[Tuple[int, int]], str]:
-    """Re-derive opening `index` from its DECLARED provenance and return what the
-    generator must have produced: the moves, and the canonical digest.
-
-    🔑 THIS IS THE BINDING. An artifact row asserts "these moves, this digest,
-    this seed, this many attempts". Only re-running the walk from
-    `attempt_seed(base, index, attempts - 1)` can show those four agree; comparing
-    a row's digest to its own digest shows nothing at all.
-    """
-    for name, v in (("index", index), ("attempts", attempts)):
-        if type(v) is not int or isinstance(v, bool):
-            raise H3StudyError(f"{name} must be an int, got {v!r}")
-    if attempts < 1:
-        raise H3StudyError(f"attempts must be >= 1, got {attempts}")
-    seed = attempt_seed(base, index, attempts - 1)
-    moves, st = walk(seed)
-    if not _admissible(st, moves):
-        raise H3StudyError(
-            f"opening {index}: the candidate re-derived from seed {seed} is NOT "
-            f"admissible, so the generator cannot have accepted it there")
-    return moves, SEL.canonical_digest(st)
+def excluded_digest_set_pin() -> str:
+    """sha256 over the sorted exclusion digests. THE value the artifact pins."""
+    return hashlib.sha256("\n".join(sorted(excluded_digests())).encode()).hexdigest()
 
 
 def generate_uniform_openings(seed: int = GEN_SEED_UNIFORM,
                               n: int = N_PAIRS,
                               check_deadline=None) -> List[Dict[str, Any]]:
-    """THE STUDY'S POPULATION: `n` admissible positions from UNIFORMLY RANDOM
-    legal play. Engine-free — a PRNG and structural filters, no model, no JVM.
+    """THE STUDY'S POPULATION, produced by the PINNED protocol.
 
     🔴 ENGINE-INDEPENDENT BY CONSTRUCTION AND UNREALISTIC, AND UNDER AMENDMENT 3
     THE SECOND HALF IS NO LONGER OFFSET BY ANYTHING. These are not positions
@@ -351,42 +304,17 @@ def generate_uniform_openings(seed: int = GEN_SEED_UNIFORM,
     claim about uniformly random legal six-ply positions and NOTHING about
     realistic or engine-reached ones.
 
-    WHOLE-POSITION REJECTION: a candidate failing any filter is discarded entire
-    and the next ATTEMPT SEED is used. Never per-move resampling, which would
-    distort the distribution it claims to draw from. Exhausting `MAX_ATTEMPTS`
-    ABORTS; it never returns a short set and never relaxes a filter.
-
-    🔴 `check_deadline` IS CALLED INSIDE THE CANDIDATE LOOP, not around it. A
-    guard that only runs between openings cannot stop a walk that hangs, and a
-    guard evaluated before the loop starts cannot stop anything at all -- which
-    is exactly the defect this parameter exists to close. It is called once per
-    ATTEMPT and may raise; nothing here catches it.
+    This body is orchestration only. The walk, the filters, the allocation and
+    the acceptance loop are `h3_generation_protocol`, which the artifact pins;
+    the spent-range refusal is injected as `guard` so policy can bind without
+    joining the pinned surface.
     """
-    excluded = excluded_digests()
-    out: List[Dict[str, Any]] = []
-    seen = set()
-    for index in range(n):
-        for attempt in range(MAX_ATTEMPTS):
-            if check_deadline is not None:
-                check_deadline(index, attempt, len(out))
-            s = attempt_seed(seed, index, attempt)
-            moves, st = walk(s)
-            if not _admissible(st, moves):
-                continue
-            digest = SEL.canonical_digest(st)
-            if digest in seen or digest in excluded:
-                continue
-            seen.add(digest)
-            out.append({"index": index, "stratum": STRATUM_UNIFORM,
-                        "moves": moves, "digest": digest, "state": st,
-                        "seed": s, "attempts": attempt + 1})
-            break
-        else:
-            raise H3StudyError(
-                f"opening {index} exhausted MAX_ATTEMPTS={MAX_ATTEMPTS} attempts. "
-                f"Generation ABORTS rather than delivering {len(out)} of {n} or "
-                f"relaxing a filter.")
-    return out
+    try:
+        return PROTO.generate(seed, n, excluded=excluded_digests(),
+                              guard=lambda b: attempt_seed(b, 0, 0),
+                              check_deadline=check_deadline)
+    except PROTO.H3ProtocolError as e:
+        raise H3StudyError(str(e)) from None
 
 
 def opening_set_digest(openings: Sequence[Dict[str, Any]]) -> str:

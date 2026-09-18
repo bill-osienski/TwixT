@@ -96,11 +96,21 @@ GENERATION_NOTE = (
 )
 
 
-#: 🔴 THE SOURCES THE WALK ACTUALLY DEPENDS ON. `walk()` is deterministic in its
-#: seed GIVEN these three: the walk itself, the engine's `legal_moves()` ordering,
-#: and the canonical digest. Change any one and the same seed gives a different
-#: opening, so the artifact pins all three by content.
-_IDENTITY_SOURCES = ("h3_study_rules.py", "game/twixt_state.py", "d1_selection.py")
+#: 🔴 THE SOURCES THE WALK DEPENDS ON — AND *ONLY* THOSE.
+#:
+#: This used to pin `h3_study_rules.py`, which also holds `OPENING_SET_DIGEST`.
+#: The freeze sequence is: write the artifact (digest None), then RECORD the
+#: digest in that same file. Its hash moved, and `load_opening_set` then refused
+#: the population it had just frozen, for source drift caused by its own
+#: procedure. **A pin that covers the file it will be written into is a trap, not
+#: a pin.**
+#:
+#: The rule now: AN OUTPUT MAY NEVER LIVE INSIDE A PINNED INPUT. Everything that
+#: determines what the walk produces is in `h3_generation_protocol`; everything
+#: that records what it produced -- the digest, the retired ranges, the
+#: destinations -- is in modules that are NOT pinned.
+_IDENTITY_SOURCES = ("h3_generation_protocol.py", "game/twixt_state.py",
+                     "d1_selection.py")
 
 
 def _source_pins() -> Dict[str, str]:
@@ -160,18 +170,41 @@ def generator_identity() -> Dict[str, Any]:
         "numpy": np.__version__,
         "bit_generator": "PCG64",
         "source_pins": _source_pins(),
+        # 🔑 THE EXCLUSION SET BY VALUE, NOT BY SOURCE. The population depends on
+        # WHICH 28 digests are excluded. Pinning `h3_pilot_rules.py` would pin the
+        # code that computes them, so a refactor leaving them identical would
+        # invalidate a frozen population and a change that moved one might not be
+        # noticed at all. The resolved set is the thing that matters.
+        "excluded_digest_set": RULES.excluded_digest_set_pin(),
         "commit": _commit(),
     }
 
 
-#: Identity fields that MUST match the running code for an artifact to be played.
-#: 🔑 `commit` IS DEPRECATED FROM THIS LIST ON PURPOSE. A frozen population stays
-#: valid across later commits that do not touch the walk; pinning the commit
-#: would refuse the artifact on the next unrelated edit. `source_pins` is the
-#: honest version of the same check -- it refuses exactly when the walk changed.
+#: 🔴 ENFORCED: the artifact is REFUSED if any of these disagrees with the
+#: running code, because each one changes what a seed produces.
+#:
+#: `numpy` IS ENFORCED, deliberately. NumPy guarantees stream compatibility for
+#: the legacy `RandomState` and explicitly does NOT for `Generator`/`PCG64`, so a
+#: NumPy upgrade may silently change every opening. Refusing on a version bump is
+#: fail-closed and forces a human to check; accepting would let the study play a
+#: population it can no longer re-derive.
 IDENTITY_MUST_MATCH = ("kind", "engine_free", "gen_seed_base", "seed_range",
                        "max_attempts", "opening_plies", "board_size", "n_pairs",
-                       "filters", "bit_generator", "source_pins")
+                       "filters", "bit_generator", "source_pins",
+                       "excluded_digest_set", "numpy")
+
+#: 🔑 RECORDED ONLY, and named EXPLICITLY so the split is a stated policy rather
+#: than an omission. Every identity field is in exactly one of these two sets --
+#: a test asserts that, so a new field cannot arrive unclassified.
+#:
+#: `python`  -- the walk does not depend on it. `legal_moves()` builds its list
+#:              with nested `range` loops, so its order does not vary with the
+#:              interpreter's hashing, and `PCG64` is NumPy's. Enforcing it would
+#:              refuse a population on a patch bump that cannot change a move.
+#: `commit`  -- a frozen population stays valid across later commits that do not
+#:              touch the walk. `source_pins` refuses exactly when it changed,
+#:              which is the honest version of the same check.
+IDENTITY_RECORDED_ONLY = ("python", "commit")
 
 
 def _typed_moves(o) -> list:

@@ -82,12 +82,57 @@ H3GCMD = "scripts/GPU/alphazero/h3_generation_command.py"
 H3OLD = "scripts/GPU/alphazero/h3_coproduced_generator_retired.py"
 GINV = "scripts/GPU/alphazero/gate_inventory.py"
 H3FCMD = "scripts/GPU/alphazero/h3_freeze_command.py"
+H3PROTO = "scripts/GPU/alphazero/h3_generation_protocol.py"
 T_H3POP = "tests/test_h3_uniform_population.py"
 T_H3OLD = "tests/test_h3_coproduced_retired.py"
 T_GATES = "tests/test_gate_inventory.py"
 
 # (label, file, anchor, replacement, test node)
 DEFECTS = [
+    # ═════════ THE SELF-INVALIDATING PIN (2026-09-17 review) ═══════════════
+    # 🔴 An OUTPUT must never live inside a PINNED INPUT. Pinning the module that
+    # holds OPENING_SET_DIGEST made the freeze sequence invalidate its own
+    # artifact on the one edit it requires.
+    ("the pinned sources include the module holding OPENING_SET_DIGEST",
+     H3SGEN, '_IDENTITY_SOURCES = ("h3_generation_protocol.py", "game/twixt_state.py",\n                     "d1_selection.py")',
+     '_IDENTITY_SOURCES = ("h3_study_rules.py", "game/twixt_state.py",\n                     "d1_selection.py")',
+     f"{T_H3POP}::test_AN_ARTIFACT_VALIDATES_ACROSS_THE_SOLE_OPENING_SET_DIGEST_EDIT"),
+    ("the walk's own module is dropped from the pins",
+     H3SGEN, '_IDENTITY_SOURCES = ("h3_generation_protocol.py", "game/twixt_state.py",\n                     "d1_selection.py")',
+     '_IDENTITY_SOURCES = ("game/twixt_state.py", "d1_selection.py")',
+     f"{T_H3POP}::test_THE_PINNED_SET_IS_NOT_VACUOUS"),
+    ("the exclusion set is no longer pinned by value",
+     H3SGEN, '        "excluded_digest_set": RULES.excluded_digest_set_pin(),',
+     '        "excluded_digest_set": "",',
+     f"{T_H3POP}::test_CHANGING_THE_EXCLUSION_SET_STILL_INVALIDATES"),
+    ("numpy stops being enforced",
+     H3SGEN, '                       "excluded_digest_set", "numpy")',
+     '                       "excluded_digest_set")',
+     f"{T_H3POP}::test_NUMPY_IS_ENFORCED_BECAUSE_GENERATOR_STREAMS_ARE_NOT_GUARANTEED"),
+    ("an identity field is left unclassified",
+     H3SGEN, 'IDENTITY_RECORDED_ONLY = ("python", "commit")',
+     'IDENTITY_RECORDED_ONLY = ("commit",)',
+     f"{T_H3POP}::test_EVERY_IDENTITY_FIELD_IS_CLASSIFIED"),
+    ("python becomes enforced despite not determining the walk",
+     H3SGEN, 'IDENTITY_RECORDED_ONLY = ("python", "commit")',
+     'IDENTITY_RECORDED_ONLY = ("python", "commit")\nIDENTITY_MUST_MATCH = IDENTITY_MUST_MATCH + ("python",)',
+     f"{T_H3POP}::test_PYTHON_AND_COMMIT_ARE_RECORDED_ONLY_AND_DO_NOT_REFUSE"),
+    ("an output constant moves into the pinned protocol",
+     H3PROTO, "GEN_SEED_UNIFORM = 20_261_600_000",
+     'GEN_SEED_UNIFORM = 20_261_600_000\nOPENING_SET_DIGEST = None',
+     f"{T_H3POP}::test_NO_OUTPUT_CONSTANT_LIVES_INSIDE_A_PINNED_SOURCE"),
+    ("the seed allocation leaves the pinned protocol",
+     H3SR, "    try:\n        return PROTO.seed_for(base, index, attempt)",
+     "    try:\n        return base + index * MAX_ATTEMPTS + attempt  # noqa\n        return PROTO.seed_for(base, index, attempt)",
+     f"{T_H3POP}::test_EVERY_SEED_THE_GENERATOR_ACTUALLY_USES_LIES_INSIDE_THE_RANGE"),
+    ("the rules re-exports drift from the pinned protocol",
+     H3SR, "MAX_ATTEMPTS = PROTO.MAX_ATTEMPTS", "MAX_ATTEMPTS = 401",
+     f"{T_H3SR}::test_THE_RULES_RE_EXPORTS_ARE_THE_PROTOCOL_S_OWN_VALUES"),
+    ("the spent-range guard is no longer injected into the loop",
+     H3SR, "                              guard=lambda b: attempt_seed(b, 0, 0),",
+     "                              guard=None,",
+     f"{T_H3POP}::test_EVERY_RETIRED_RANGE_IS_REFUSED"),
+
     # ═════════ P1 REPAIRS, 2026-09-17 review ═══════════════════════════════
     # 🔴 P1-1: THE BARRIER MUST BE ONE-SHOT.
     ("freeze_population takes a caller-supplied destination again",
@@ -119,7 +164,7 @@ DEFECTS = [
 
     # 🔴 P1-2: GENERATION MUST HAPPEN INSIDE THE DEADLINE AND THE TRACE.
     ("the deadline is not checked inside the candidate loop",
-     H3SR, "            if check_deadline is not None:", "            if False:",
+     H3PROTO, "            if check_deadline is not None:", "            if False:",
      f"{T_H3POP}::test_THE_DEADLINE_IS_CHECKED_INSIDE_THE_CANDIDATE_LOOP"),
     ("build_population swallows the deadline hook",
      H3SGEN, "        RULES.generate_uniform_openings(seed=base, n=n,\n                                        check_deadline=check_deadline))",
@@ -180,8 +225,8 @@ DEFECTS = [
      "    drift = []",
      f"{T_H3POP}::test_THE_BOUND_VALIDATOR_REFUSES"),
     ("the walk's source pins are dropped from the identity",
-     H3SGEN, '                       "filters", "bit_generator", "source_pins")',
-     '                       "filters", "bit_generator")',
+     H3SGEN, '                       "filters", "bit_generator", "source_pins",',
+     '                       "filters", "bit_generator",',
      f"{T_H3POP}::test_THE_COMMIT_IS_RECORDED_BUT_NOT_ENFORCED"),
     ("the loader does not validate the artifact at all",
      H3SRUN, "        bound = GEN.validate_artifact(doc)",
@@ -217,7 +262,7 @@ DEFECTS = [
      "    return (base, base + N_PAIRS)",
      f"{T_H3POP}::test_THE_RANGE_COVERS_EVERY_CANDIDATE_NOT_EVERY_OPENING"),
     ("the generation base slides back onto a retired range",
-     H3SR, "GEN_SEED_UNIFORM = 20_261_600_000", "GEN_SEED_UNIFORM = 20_261_000_000",
+     H3PROTO, "GEN_SEED_UNIFORM = 20_261_600_000", "GEN_SEED_UNIFORM = 20_261_000_000",
      f"{T_H3POP}::test_THE_RANGE_COVERS_EVERY_CANDIDATE_NOT_EVERY_OPENING"),
 
     # 🔴 WRONG POPULATION SIZE. 296 is what the precision target fixed; 148 is the
@@ -3028,7 +3073,7 @@ DEFECTS = [
     # ═════════════ 2026-09-15: the H3 FULL STUDY -- design-only, gate-shut ═══
     # 🔑 THE DESIGN'S OWN ARITHMETIC IS CONTROLLED, not just its plumbing. Every
     # number in the card was wrong once before it was right, so each is injected.
-    ("the sample size is rounded DOWN and misses its own target", H3SR,
+    ("the sample size is rounded DOWN and misses its own target", H3PROTO,
      "N_PAIRS = 296",
      "N_PAIRS = 288",
      f"{T_H3SR}::test_THE_PRECISION_TARGET_IS_ACTUALLY_MET"),
@@ -3042,14 +3087,11 @@ DEFECTS = [
     # 20_261_200_000, so the overlap control puts it back INSIDE the uniform
     # range, while a separate control puts it merely inside the GAP FLOOR -- two
     # distinct claims, one target, different injections.
-    ("exhausting the attempts yields a SHORT set instead of aborting", H3SR,
-     '        else:\n            raise H3StudyError(\n'
-     '                f"opening {index} exhausted MAX_ATTEMPTS={MAX_ATTEMPTS} attempts. "',
-     '        else:\n            break\n        if False:\n            raise H3StudyError(\n'
-     '                f"opening {index} exhausted MAX_ATTEMPTS={MAX_ATTEMPTS} attempts. "',
+    ("exhausting the attempts yields a SHORT set instead of aborting",
+     H3PROTO,
+     '        else:\n            raise H3ProtocolError(',
+     '        else:\n            break\n        if False:\n            raise H3ProtocolError(',
      f"{T_H3SR}::test_exhausting_MAX_ATTEMPTS_ABORTS_rather_than_yielding_fewer"),
-    # 🔴 THE ENTROPY FINDING. Without the refusal the generator silently produces
-    # two positions and the whole study rests on them.
     ("the study population no longer excludes the PILOT's openings", H3SR,
      '    out |= {o["digest"] for o in PILOT.generate_openings()}  # the pilot\'s twenty',
      "    pass",

@@ -792,8 +792,12 @@ def test_THE_GENERATOR_IDENTITY_PINS_THE_TOOLCHAIN():
     i = GEN.generator_identity()
     assert i["bit_generator"] == "PCG64"
     assert i["python"].count(".") == 2 and i["numpy"]
-    assert set(i["source_pins"]) == {"h3_study_rules.py", "game/twixt_state.py",
-                                     "d1_selection.py"}
+    # 🔴 THE PROTOCOL, NOT THE RULES. `h3_study_rules.py` holds
+    # OPENING_SET_DIGEST and must stay OUT of the pinned set, or the freeze
+    # sequence invalidates its own artifact on the pin edit.
+    assert set(i["source_pins"]) == {"h3_generation_protocol.py",
+                                     "game/twixt_state.py", "d1_selection.py"}
+    assert i["excluded_digest_set"] and len(i["excluded_digest_set"]) == 64
     assert all(len(v) == 64 for v in i["source_pins"].values())
     assert i["commit"] is None or len(i["commit"]) == 40
 
@@ -856,3 +860,182 @@ def test_A_LYING_RESTORATION_IS_CAUGHT_BY_THE_READBACK(monkeypatch, tmp_path):
                         lambda: {"n": 296, "opening_set_digest": "d" * 64})
     assert FCMD.main(["--run"]) == FCMD.EXIT_BARRIER_NOT_RESTORED
     assert FCMD.barrier_readback(str(src)) == "True", "the file really is open"
+
+
+# ═══════ THE FREEZE/PIN SEQUENCE MUST NOT INVALIDATE ITSELF ════════════════
+# 🔴 THE BUG THIS SECTION EXISTS FOR. `generator_identity` pinned the whole of
+# `h3_study_rules.py` -- which also holds `OPENING_SET_DIGEST`. Freezing recorded
+# that file's hash with the constant still None; the next required step edits the
+# constant; the hash moves; `load_opening_set` then refuses the population it had
+# just frozen, for source drift caused by its own procedure. Nothing could ever
+# have been played.
+
+import hashlib                                                    # noqa: E402
+from scripts.GPU.alphazero import h3_generation_protocol as PROTO  # noqa: E402
+
+ALL_PINNED = ("h3_generation_protocol.py", "game/twixt_state.py",
+              "d1_selection.py")
+
+
+def _frozen_doc():
+    return GEN.artifact_document(GEN.build_population())
+
+
+def test_AN_ARTIFACT_VALIDATES_ACROSS_THE_SOLE_OPENING_SET_DIGEST_EDIT(monkeypatch):
+    """🔴 THE BINDING TEST. Freeze, then make the one edit the pin step requires,
+    and the artifact must still validate.
+
+    The edit is applied to the REAL `h3_study_rules.py` text and its hash
+    compared, so this cannot pass by the constant happening to live elsewhere --
+    it passes only because that file is no longer pinned.
+    """
+    doc = _frozen_doc()
+    assert GEN.validate_artifact(doc)["n"] == R.N_PAIRS           # before
+
+    rules_src = (ALPHAZERO / "h3_study_rules.py").read_text(encoding="utf-8")
+    edited = rules_src.replace('OPENING_SET_DIGEST: Optional[str] = None',
+                               f'OPENING_SET_DIGEST: Optional[str] = '
+                               f'"{doc["opening_set_digest"]}"')
+    assert edited != rules_src, "the pin edit must actually change the file"
+    assert hashlib.sha256(edited.encode()).hexdigest() != \
+        hashlib.sha256(rules_src.encode()).hexdigest(), "…and its hash"
+
+    # the pinned surface is untouched by that edit
+    assert "h3_study_rules.py" not in GEN.generator_identity()["source_pins"]
+    assert set(GEN.generator_identity()["source_pins"]) == set(ALL_PINNED)
+
+    # and the artifact still validates with the digest recorded
+    monkeypatch.setattr(R, "OPENING_SET_DIGEST", doc["opening_set_digest"])
+    assert GEN.validate_artifact(doc)["n"] == R.N_PAIRS            # after
+    assert R.expected_opening_set_digest() == doc["opening_set_digest"]
+
+
+def test_NO_OUTPUT_CONSTANT_LIVES_INSIDE_A_PINNED_SOURCE():
+    """The rule, checked structurally: a pinned input may not contain an output.
+
+    🔑 THIS IS THE GENERAL FORM OF THE BUG. `OPENING_SET_DIGEST` was the instance
+    that bit; the retired seed ranges and the destination paths are the same
+    shape -- each moves after a run, and pinning any of them would make a routine
+    retirement invalidate every frozen population.
+    """
+    import ast
+    here = ALPHAZERO
+    FORBIDDEN = {"OPENING_SET_DIGEST", "RETIRED_GENERATION_RANGES",
+                 "SPENT_GENERATION_RANGES", "OUT_DIR", "DEFAULT_OUT",
+                 "DEFAULT_TRACE", "SPENT_OUT_DIRS", "STUDY_SEED_BLOCK"}
+    for rel in ALL_PINNED:
+        tree = ast.parse((here / rel).read_text(encoding="utf-8"))
+        names = {t.id for n in tree.body if isinstance(n, ast.Assign)
+                 for t in n.targets if isinstance(t, ast.Name)}
+        names |= {n.target.id for n in tree.body if isinstance(n, ast.AnnAssign)
+                  and isinstance(n.target, ast.Name)}
+        clash = names & FORBIDDEN
+        assert not clash, f"{rel} holds output constant(s) {clash}"
+
+
+def test_THE_PINNED_SET_IS_NOT_VACUOUS():
+    """NEGATIVE CONTROL: the check above would pass trivially over an empty set,
+    and the pins must actually cover the three walk-determining sources."""
+    pins = GEN.generator_identity()["source_pins"]
+    assert set(pins) == set(ALL_PINNED) and len(pins) == 3
+    for rel in ALL_PINNED:
+        assert (ALPHAZERO / rel).exists(), rel
+        assert len(pins[rel]) == 64
+
+
+@pytest.mark.parametrize("rel,find,repl,why", [
+    ("h3_generation_protocol.py", "rng = np.random.Generator(np.random.PCG64(seed))",
+     "rng = np.random.Generator(np.random.PCG64(seed + 1))", "the walk"),
+    ("h3_generation_protocol.py", "return base + index * MAX_ATTEMPTS + attempt",
+     "return base + index * MAX_ATTEMPTS + attempt + 1", "the seed allocation"),
+    ("h3_generation_protocol.py", "    if st.is_terminal():\n        return False",
+     "    if False:\n        return False", "a structural filter"),
+    ("h3_generation_protocol.py", "OPENING_PLIES = 6", "OPENING_PLIES = 4",
+     "the ply count"),
+    ("game/twixt_state.py", "                    moves.append((row, col))",
+     "                    moves.insert(0, (row, col))", "the legal-move order"),
+])
+def test_CHANGING_A_WALK_DETERMINING_SOURCE_STILL_INVALIDATES(rel, find, repl, why):
+    """🔴 NARROWING THE PIN MUST NOT HAVE BLUNTED IT.
+
+    Each edit below would change the population. The pin must move for every one
+    of them, or the repair traded a self-invalidating artifact for one that
+    validates under code that produces something else.
+
+    The files are read and hashed, never written: this asks whether the PIN would
+    notice, not whether the suite survives a mutated tree.
+    """
+    src = (ALPHAZERO / rel).read_text(encoding="utf-8")
+    assert src.count(find) >= 1, f"anchor gone from {rel}: {find!r}"
+    mutated = src.replace(find, repl, 1)
+    assert mutated != src
+    before = hashlib.sha256(src.encode()).hexdigest()
+    after = hashlib.sha256(mutated.encode()).hexdigest()
+    assert before != after, why
+    assert GEN.generator_identity()["source_pins"][rel] == before, (
+        f"{rel} is not pinned at its current content")
+
+
+def test_CHANGING_THE_CANONICAL_DIGEST_STILL_INVALIDATES():
+    """`d1_selection.canonical_digest` decides which candidates count as
+    distinct, so the file is pinned whole."""
+    rel = "d1_selection.py"
+    src = (ALPHAZERO / rel).read_text(encoding="utf-8")
+    assert "def canonical_digest" in src
+    assert GEN.generator_identity()["source_pins"][rel] == \
+        hashlib.sha256(src.encode()).hexdigest()
+
+
+def test_CHANGING_THE_EXCLUSION_SET_STILL_INVALIDATES(monkeypatch):
+    """The exclusions are pinned BY VALUE, so a changed set refuses even though
+    no pinned source moved."""
+    doc = _frozen_doc()
+    monkeypatch.setattr(R, "excluded_digest_set_pin", lambda: "0" * 64)
+    with pytest.raises(GEN.H3GenerationError, match="excluded_digest_set"):
+        GEN.validate_artifact(doc)
+
+
+def test_A_REFACTOR_THAT_LEAVES_THE_EXCLUSIONS_IDENTICAL_DOES_NOT_INVALIDATE():
+    """…and the converse, which is why the set is pinned by value rather than by
+    pinning `h3_pilot_rules.py`: the population depends on WHICH digests are
+    excluded, not on the code that computed them."""
+    a = R.excluded_digest_set_pin()
+    assert a == hashlib.sha256(
+        "\n".join(sorted(R.excluded_digests())).encode()).hexdigest()
+    assert len(R.excluded_digests()) == 28
+    assert R.excluded_digest_set_pin() == a          # stable across calls
+
+
+# ── the enforced / recorded-only split is a STATED policy ──────────────────
+def test_EVERY_IDENTITY_FIELD_IS_CLASSIFIED():
+    """🔑 NO FIELD MAY BE UNCLASSIFIED. `python` and `numpy` were recorded and
+    silently unenforced while the contract said identity was checked exactly and
+    only `commit` was informational. A field in neither set is a claim nobody
+    made."""
+    fields = set(GEN.generator_identity())
+    enforced = set(GEN.IDENTITY_MUST_MATCH)
+    recorded = set(GEN.IDENTITY_RECORDED_ONLY)
+    assert enforced & recorded == set(), "a field cannot be both"
+    assert enforced | recorded == fields, (
+        f"unclassified: {fields - enforced - recorded}")
+
+
+def test_NUMPY_IS_ENFORCED_BECAUSE_GENERATOR_STREAMS_ARE_NOT_GUARANTEED():
+    """NumPy guarantees stream compatibility for legacy RandomState and
+    explicitly NOT for Generator/PCG64, so a version bump may change every
+    opening. Refusing is fail-closed."""
+    assert "numpy" in GEN.IDENTITY_MUST_MATCH
+    doc = _frozen_doc()
+    doc["generator"]["numpy"] = "0.0.1"
+    with pytest.raises(GEN.H3GenerationError, match="numpy"):
+        GEN.validate_artifact(doc)
+
+
+def test_PYTHON_AND_COMMIT_ARE_RECORDED_ONLY_AND_DO_NOT_REFUSE():
+    """Stated policy, tested: neither changes what a seed produces."""
+    assert set(GEN.IDENTITY_RECORDED_ONLY) == {"python", "commit"}
+    doc = _frozen_doc()
+    doc["generator"]["python"] = "1.2.3"
+    doc["generator"]["commit"] = "0" * 40
+    assert GEN.validate_artifact(doc)["n"] == R.N_PAIRS
+    assert doc["generator"]["python"] and doc["generator"]["commit"]   # still recorded

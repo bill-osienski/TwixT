@@ -101,10 +101,28 @@ def test_the_attempt_seeds_used_are_RECORDED(uniform):
 
 
 def test_exhausting_MAX_ATTEMPTS_ABORTS_rather_than_yielding_fewer(monkeypatch):
-    """It never returns a short set and never relaxes a filter."""
-    monkeypatch.setattr(R, "MAX_ATTEMPTS", 0)
+    """It never returns a short set and never relaxes a filter.
+
+    🔑 PATCHED ON THE PROTOCOL, not on the rules module's re-export. The loop
+    moved into `h3_generation_protocol` (so the artifact can pin it without
+    pinning `OPENING_SET_DIGEST`), and `R.MAX_ATTEMPTS` is now a copy taken at
+    import. Patching the copy changed nothing and this test silently stopped
+    exercising the abort.
+    """
+    from scripts.GPU.alphazero import h3_generation_protocol as PROTO
+    monkeypatch.setattr(PROTO, "MAX_ATTEMPTS", 0)
     with pytest.raises(R.H3StudyError, match="attempts"):
         R.generate_uniform_openings(n=1)
+
+
+def test_THE_RULES_RE_EXPORTS_ARE_THE_PROTOCOL_S_OWN_VALUES():
+    """🔴 A RE-EXPORT THAT DRIFTS IS WORSE THAN A SECOND COPY, because it looks
+    authoritative. The artifact pins the protocol; if this module's copies said
+    something else, the schedule and the pinned walk would disagree."""
+    from scripts.GPU.alphazero import h3_generation_protocol as PROTO
+    for name in ("BOARD_SIZE", "OPENING_PLIES", "N_PAIRS", "MAX_ATTEMPTS",
+                 "GEN_SEED_UNIFORM"):
+        assert getattr(R, name) == getattr(PROTO, name), name
 
 
 # ───────────────────────── the segmented schedule ──────────────────────────
