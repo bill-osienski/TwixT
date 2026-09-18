@@ -190,16 +190,21 @@ def main() -> int:
     check("freezing is BARRED, and a refusal creates nothing",
           _refuses(lambda: GEN.freeze_population(), "NOT AUTHORIZED")
           and not os.path.lexists(GEN.OUT_DIR))
-    if os.path.lexists(RUN.OPENING_SET_PATH):
-        check("the pinned opening set loads and passes its own checks",
+    #: 🔑 ONE PENDING, NOT TWO. The artifact and its digest are a single step in
+    #: the only sense that matters: until BOTH have happened there is no study
+    #: population. Reporting them separately made the preflight look two
+    #: authorizations away from running when it is one.
+    frozen = os.path.lexists(RUN.OPENING_SET_PATH)
+    pinned = RULES.OPENING_SET_DIGEST is not None
+    if frozen and pinned:
+        check("the frozen population loads, validates and IS the pinned one",
               bool(RUN.load_opening_set(RUN.OPENING_SET_PATH)))
     else:
-        pending("the population has been FROZEN",
-                f"{RUN.OPENING_SET_PATH} does not exist -- freezing the "
-                f"population is a separate authorized step")
-    pending("OPENING_SET_DIGEST is pinned",
-            "unset until the freeze step produces the artifact"
-            if RULES.OPENING_SET_DIGEST is None else "")
+        pending("the population is FROZEN and PINNED",
+                f"artifact {'present' if frozen else 'ABSENT'}, "
+                f"OPENING_SET_DIGEST {'set' if pinned else 'UNSET'} -- freezing "
+                f"writes the artifact and recording its digest is a separate "
+                f"reviewed edit")
 
     print("\n== the schedule, over the in-memory population ==")
     population = GEN.build_population()
@@ -373,7 +378,7 @@ def main() -> int:
     print("⚠ SCOPE. This establishes that the study's machinery refuses, computes")
     print("  and constructs as the card says -- on this tree, at this commit, with")
     print("  every gate shut. It establishes NOTHING about strength, and the study")
-    print("  CANNOT RUN: the co-produced stratum has not been generated and no seed")
+    print("  CANNOT RUN: the population is not frozen and pinned, and no seed")
     print("  block is reserved. Each is a separate authorization.")
     total = len(_FAILED) + len(_NOT_READY)
     print(f"\n{len(_FAILED)} FAILED | {len(_NOT_READY)} PENDING BY DESIGN")
