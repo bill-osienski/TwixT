@@ -1039,3 +1039,46 @@ def test_PYTHON_AND_COMMIT_ARE_RECORDED_ONLY_AND_DO_NOT_REFUSE():
     doc["generator"]["commit"] = "0" * 40
     assert GEN.validate_artifact(doc)["n"] == R.N_PAIRS
     assert doc["generator"]["python"] and doc["generator"]["commit"]   # still recorded
+
+
+def test_attempt_seed_DELEGATES_THE_ARITHMETIC_TO_THE_PINNED_PROTOCOL():
+    """🔴 THE ALLOCATION MUST LIVE IN THE PINNED MODULE.
+
+    A copy of the formula in `h3_study_rules` would compute the same seeds today
+    and be unpinned tomorrow -- so no behavioural test can tell the two apart,
+    and the harness reported exactly that (injecting an identical inline formula
+    was NOT CAUGHT). The check is therefore structural: the guard is here, the
+    arithmetic is there.
+    """
+    import ast
+    src = (ALPHAZERO / "h3_study_rules.py").read_text(encoding="utf-8")
+    fn = next(n for n in ast.parse(src).body
+              if isinstance(n, ast.FunctionDef) and n.name == "attempt_seed")
+    calls = {f"{n.func.value.id}.{n.func.attr}" for n in ast.walk(fn)
+             if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+             and isinstance(n.func.value, ast.Name)}
+    assert "PROTO.seed_for" in calls, "the arithmetic is not delegated"
+    # …and no arithmetic of its own: no BinOp anywhere in the body
+    assert not [n for n in ast.walk(fn) if isinstance(n, ast.BinOp)], (
+        "attempt_seed computes a seed itself; the allocation must be pinned")
+    # the values still agree with the protocol's
+    for i, a in ((0, 0), (7, 3), (R.N_PAIRS - 1, R.MAX_ATTEMPTS - 1)):
+        assert R.attempt_seed(R.GEN_SEED_UNIFORM, i, a) == \
+            PROTO.seed_for(R.GEN_SEED_UNIFORM, i, a)
+
+
+@pytest.mark.parametrize("retired_lo", [20_261_000_000, 20_261_200_000,
+                                        20_261_400_000])
+def test_GENERATION_ITSELF_REFUSES_A_RETIRED_BASE(retired_lo):
+    """🔴 THE GUARD MUST BIND WHERE GENERATION HAPPENS, not only where a caller
+    asks for one seed.
+
+    The existing test called `attempt_seed` directly, so removing the guard the
+    LOOP injects was invisible -- NOT CAUGHT. This drives the loop.
+    """
+    with pytest.raises(R.H3StudyError, match="SPENT"):
+        R.generate_uniform_openings(seed=retired_lo, n=1)
+
+
+def test_GENERATION_ACCEPTS_THE_LIVE_BASE_OR_THE_REFUSALS_PROVE_NOTHING():
+    assert len(R.generate_uniform_openings(seed=R.GEN_SEED_UNIFORM, n=2)) == 2

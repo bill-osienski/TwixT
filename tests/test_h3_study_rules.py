@@ -103,16 +103,33 @@ def test_the_attempt_seeds_used_are_RECORDED(uniform):
 def test_exhausting_MAX_ATTEMPTS_ABORTS_rather_than_yielding_fewer(monkeypatch):
     """It never returns a short set and never relaxes a filter.
 
-    🔑 PATCHED ON THE PROTOCOL, not on the rules module's re-export. The loop
-    moved into `h3_generation_protocol` (so the artifact can pin it without
-    pinning `OPENING_SET_DIGEST`), and `R.MAX_ATTEMPTS` is now a copy taken at
-    import. Patching the copy changed nothing and this test silently stopped
-    exercising the abort.
+    🔴 THIS TEST NEVER REACHED THE PATH IT NAMES. It set `MAX_ATTEMPTS = 0` and
+    matched "attempts" in the refusal -- but with the ceiling at zero the SEED
+    ALLOCATION refuses first ("attempt 0 is beyond MAX_ATTEMPTS=0"), the loop is
+    never entered, and the exhaustion abort never runs. The message happened to
+    contain the same word. The injected-defect harness found it: replacing the
+    abort with a `break` that returns a short set changed nothing this test saw.
+
+    It now leaves the ceiling usable and makes every candidate INADMISSIBLE, so
+    the loop really does exhaust its attempts.
     """
     from scripts.GPU.alphazero import h3_generation_protocol as PROTO
-    monkeypatch.setattr(PROTO, "MAX_ATTEMPTS", 0)
-    with pytest.raises(R.H3StudyError, match="attempts"):
+    monkeypatch.setattr(PROTO, "MAX_ATTEMPTS", 3)
+    monkeypatch.setattr(PROTO, "admissible", lambda st, moves: False)
+    with pytest.raises(R.H3StudyError, match="exhausted MAX_ATTEMPTS"):
         R.generate_uniform_openings(n=1)
+
+
+def test_the_ABORT_MESSAGE_NAMES_THE_OPENING_AND_THE_SHORTFALL(monkeypatch):
+    """A refusal that does not say WHICH opening and HOW FAR it got is a refusal
+    nobody can act on."""
+    from scripts.GPU.alphazero import h3_generation_protocol as PROTO
+    monkeypatch.setattr(PROTO, "MAX_ATTEMPTS", 2)
+    monkeypatch.setattr(PROTO, "admissible", lambda st, moves: False)
+    with pytest.raises(R.H3StudyError) as ei:
+        R.generate_uniform_openings(n=4)
+    msg = str(ei.value)
+    assert "opening 0" in msg and "0 of 4" in msg
 
 
 def test_THE_RULES_RE_EXPORTS_ARE_THE_PROTOCOL_S_OWN_VALUES():

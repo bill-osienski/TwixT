@@ -124,14 +124,14 @@ DEFECTS = [
     ("the seed allocation leaves the pinned protocol",
      H3SR, "    try:\n        return PROTO.seed_for(base, index, attempt)",
      "    try:\n        return base + index * MAX_ATTEMPTS + attempt  # noqa\n        return PROTO.seed_for(base, index, attempt)",
-     f"{T_H3POP}::test_EVERY_SEED_THE_GENERATOR_ACTUALLY_USES_LIES_INSIDE_THE_RANGE"),
+     f"{T_H3POP}::test_attempt_seed_DELEGATES_THE_ARITHMETIC_TO_THE_PINNED_PROTOCOL"),
     ("the rules re-exports drift from the pinned protocol",
      H3SR, "MAX_ATTEMPTS = PROTO.MAX_ATTEMPTS", "MAX_ATTEMPTS = 401",
      f"{T_H3SR}::test_THE_RULES_RE_EXPORTS_ARE_THE_PROTOCOL_S_OWN_VALUES"),
     ("the spent-range guard is no longer injected into the loop",
      H3SR, "                              guard=lambda b: attempt_seed(b, 0, 0),",
      "                              guard=None,",
-     f"{T_H3POP}::test_EVERY_RETIRED_RANGE_IS_REFUSED"),
+     f"{T_H3POP}::test_GENERATION_ITSELF_REFUSES_A_RETIRED_BASE"),
 
     # ═════════ P1 REPAIRS, 2026-09-17 review ═══════════════════════════════
     # 🔴 P1-1: THE BARRIER MUST BE ONE-SHOT.
