@@ -5165,7 +5165,7 @@ EXPECTED_REASONS = {
     'exhausting the attempts yields a SHORT set instead of aborting':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_rules.H3StudyError'>",
     'segments share one output directory':
-        "AssertionError: assert 1 == 4",
+        "AssertionError: assert 2 == 4",
     'the create-only precheck follows symlinks':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_runner.H3StudyRunError'>",
     'the interval is described as PROVEN rather than nominal':
