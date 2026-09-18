@@ -103,10 +103,10 @@ DEFECTS = [
      f"{T_H3POP}::test_THE_RUN_BODY_CALLS_ensure_parent_dirs_BEFORE_ITS_CREATE_ONLY_OPEN"),
 
     # 🔴 THE PARENT RECEIPT on an EARLY failure -- before any worker trace exists.
-    ("no launch receipt is written at all",
+    ("the SEGMENT command writes no launch receipt at all",
      H3SCMD, "        write_receipt(a.segment, {", "        _skip = ({",
      f"{T_H3POP}::test_THE_COMMAND_WRITES_A_PARENT_OWNED_RECEIPT_ON_AN_EARLY_FAILURE"),
-    ("a refusal before spawning leaves no receipt",
+    ("a SEGMENT refusal before spawning leaves no receipt",
      H3SCMD, '            outcome, detail = "REFUSED_BEFORE_SPAWN", f"{type(e).__name__}: {e}"',
      '            return code',
      f"{T_H3POP}::test_THE_COMMAND_WRITES_A_PARENT_OWNED_RECEIPT_ON_AN_EARLY_FAILURE"),
