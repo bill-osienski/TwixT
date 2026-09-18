@@ -1017,7 +1017,54 @@ content**, and the commit. The commit is recorded but **not enforced**: a frozen
 population stays valid across later commits that do not touch the walk, and the
 source pins refuse exactly when it changed.
 
-### 9.3 What is still not done
+### 9.3 🔴 THE PIN THAT INVALIDATED ITS OWN ARTIFACT (2026-09-17)
+
+The freeze is two steps — write the artifact, then record its digest — and the
+provenance pin covered the file the second step must edit.
+
+```
+freeze  →  the artifact pins h3_study_rules.py, OPENING_SET_DIGEST = None
+           sha256 4f970cc44d8d751a…
+pin     →  record the digest in h3_study_rules.py
+           sha256 7d720a5cb47313c3…
+play    →  load_opening_set REFUSES: source_pins drift
+```
+
+**The population invalidated itself on the one edit its own procedure required,
+and nothing could ever have been played.** A pin that covers the file it will be
+written into is a trap, not a pin.
+
+**The rule, now enforced structurally: AN OUTPUT MAY NEVER LIVE INSIDE A PINNED
+INPUT.** `OPENING_SET_DIGEST` was the instance that bit; the retired seed ranges
+and the destination paths are the same shape — each moves after a run, and
+pinning any of them would make a routine retirement invalidate every frozen
+population.
+
+`h3_generation_protocol.py` now holds everything that determines what the walk
+**produces** and nothing that records what it produced. The pinned set is that
+module, `game/twixt_state.py` and `d1_selection.py` — plus the resolved exclusion
+set **by value**, because the population depends on *which* 28 digests are
+excluded, not on the code that computed them.
+
+🔑 **The spent-range refusal deliberately stayed out.** It lives in
+`h3_study_rules.attempt_seed`, which delegates the arithmetic to the protocol, so
+retiring a range changes a module no artifact pins. The loop takes the guard as
+an injected callable: policy binds without joining the pinned surface.
+
+**And the identity split is now a stated policy.** `python` and `numpy` were
+recorded and silently unenforced while §9.2 claimed identity was checked exactly
+and only `commit` was informational.
+
+| field | status | why |
+|---|---|---|
+| `numpy` | **ENFORCED** | NumPy guarantees stream compatibility for the legacy `RandomState` and **not** for `Generator`/`PCG64`. A version bump may change every opening; refusing is fail-closed |
+| `python` | recorded only | `legal_moves()` builds its list with nested `range` loops, so its order does not vary with the interpreter, and `PCG64` is NumPy's |
+| `commit` | recorded only | a frozen population stays valid across commits that do not touch the walk; `source_pins` refuses exactly when it did |
+
+A test asserts every identity field is in exactly one of the two sets, so a new
+field cannot arrive unclassified.
+
+### 9.4 What is still not done
 
 | | |
 |---|---|
