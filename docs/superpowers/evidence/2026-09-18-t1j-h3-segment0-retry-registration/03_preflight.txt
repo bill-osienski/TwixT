@@ -3,9 +3,9 @@ Nothing has been executed. Both gates are shut at this moment.
 ==========================================================================
 
 == the tree ==
-  HEAD 5292225, descends from f691294
+  HEAD 8be5676, descends from f691294
   PASS     HEAD descends from the bound commit (f691294)
-  FAIL     no SOURCE differs from the commit  ['cripts/GPU/alphazero/e4_screen_reference.py', 'scripts/GPU/alphazero/h3_study_command.py', 'scripts/GPU/alphazero/h3_study_prerun_verification.py']
+  FAIL     no SOURCE differs from the commit  ['cripts/GPU/alphazero/h3_study_prerun_verification.py']
 
 == the TEN gates ==
   PASS     D1_EXECUTION_AUTHORIZED            False
@@ -140,7 +140,8 @@ Nothing has been executed. Both gates are shut at this moment.
   PASS     the pin is NOT computed from the tasks it checks
 
 == the two defects that VOIDed segment 0 ==
-  PASS     the runner CREATES its output directory before the create-only write
+  PASS     the runner CREATES its output directory (run, not grepped)
+  PASS     …and it does so BEFORE the create-only open
   PASS     the command writes a PARENT-OWNED launch receipt
   PASS     the receipt is written AFTER gate restoration, in the finally
   PASS     segment 0's FIRST destination is marked SPENT
@@ -173,8 +174,8 @@ Nothing has been executed. Both gates are shut at this moment.
   PASS     a VOIDed segment blocks an automatic verdict
 
   the tests that BIND these claims, run here rather than cited:
-    ==================== 9 failed, 69 passed, 7 errors in 2.06s ====================
-  FAIL     every binding test passes
+    ============================== 94 passed in 5.22s ==============================
+  PASS     every binding test passes
 
 ==========================================================================
 ⚠ SCOPE. This establishes that the study's machinery refuses, computes
@@ -183,6 +184,5 @@ Nothing has been executed. Both gates are shut at this moment.
   CANNOT RUN: the population is not frozen and pinned, and no seed
   block is reserved. Each is a separate authorization.
 
-2 FAILED | 0 PENDING BY DESIGN
+1 FAILED | 0 PENDING BY DESIGN
     🔴 FAILED: no SOURCE differs from the commit
-    🔴 FAILED: every binding test passes

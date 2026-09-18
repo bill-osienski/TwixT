@@ -420,8 +420,20 @@ def main() -> int:
 
     print("\n== the two defects that VOIDed segment 0 ==")
     _runner_src = open(RUN.__file__, encoding="utf-8").read()
-    check("the runner CREATES its output directory before the create-only write",
-          "os.makedirs(_d, exist_ok=True)" in _runner_src)
+    #: 🔴 EXERCISED, NOT GREPPED. The first version searched the source for
+    #: `os.makedirs`; the injected-defect harness showed that disabling the guard
+    #: leaves the text in place, so the search passed either way -- and the
+    #: search then broke anyway when the code moved into a named helper. A check
+    #: that greps source is not a test.
+    import tempfile as _tf
+    with _tf.TemporaryDirectory() as _td:
+        _deep = os.path.join(_td, "a", "b")
+        RUN.ensure_parent_dirs(os.path.join(_deep, "t.jsonl"))
+        check("the runner CREATES its output directory (run, not grepped)",
+              os.path.isdir(_deep))
+    _body = _runner_src[_runner_src.index("def _run_segment_unguarded("):]
+    check("…and it does so BEFORE the create-only open",
+          _body.index("ensure_parent_dirs(") < _body.index("os.O_EXCL"))
     check("the command writes a PARENT-OWNED launch receipt",
           hasattr(CMD, "write_receipt") and hasattr(CMD, "receipt_path"))
     check("the receipt is written AFTER gate restoration, in the finally",
