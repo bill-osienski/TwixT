@@ -3539,6 +3539,26 @@ DEFECTS = [
 # DERIVED from the requirement and its assertion and then verified against a run,
 # which is why each names a count or a sentence rather than a first line.
 EXPECTED_REASONS = {
+    'the spent-range guard is no longer injected into the loop':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_rules.H3StudyError'>",
+    'the rules re-exports drift from the pinned protocol':
+        'AssertionError: MAX_ATTEMPTS',
+    'the seed allocation leaves the pinned protocol':
+        'AssertionError: attempt_seed computes a seed itself; the allocation must be pinned',
+    'an output constant moves into the pinned protocol':
+        "AssertionError: h3_generation_protocol.py holds output constant(s) {'OPENING_SET_DIGEST'}",
+    'python becomes enforced despite not determining the walk':
+        "scripts.GPU.alphazero.h3_study_generator.H3GenerationError: the generator identity disagrees with the running code on ['python']. The same seed gives a DIFFERENT opening under a different walk, bit generator or engine, so this population cannot be reproduced here and may not be played.",
+    'an identity field is left unclassified':
+        "AssertionError: unclassified: {'python'}",
+    'numpy stops being enforced':
+        "AssertionError: assert 'numpy' in ('kind', 'engine_free', 'gen_seed_base', 'seed_range', 'max_attempts', 'opening_plies', ...)",
+    'the exclusion set is no longer pinned by value':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_generator.H3GenerationError'>",
+    "the walk's own module is dropped from the pins":
+        "AssertionError: assert ({'d1_selectio...ixt_state.py'} == {'d1_selectio..._protocol.py'}",
+    'the pinned sources include the module holding OPENING_SET_DIGEST':
+        "AssertionError: assert 'h3_study_rules.py' not in {'d1_selection.py': 'ebea796093bdd7cbecb17ce719df50404fef7eba905309f3f27b3d7b56076e7d', 'game/twixt_state.py': '291275...3c8f585275770f4c72e651cba5e2', 'h3_study_rules.py': 'fb9060eb4b50b7050426eea4685c40e36fa6952d0054db03852192ffe9e54748'}",
     'restoration is trusted instead of verified from the file':
         'AssertionError: assert 0 == 9',
     'the walk need not reproduce the recorded moves':
@@ -3560,7 +3580,7 @@ EXPECTED_REASONS = {
     'restore_barrier reports success on an unreadable source':
         'AssertionError: assert True is False',
     'the deadline is not checked inside the candidate loop':
-        'scripts.GPU.alphazero.h3_study_generator.H3GenerationDeadline: the 0s runaway guard expired after 0.6s at opening 296, attempt 0 (296 accepted) of an ENGINE-FREE generation. This is a DEFECT REPORT, not a capacity result: the whole population builds in under a second.',
+        'scripts.GPU.alphazero.h3_study_generator.H3GenerationDeadline: the 0s runaway guard expired after 0.7s at opening 296, attempt 0 (296 accepted) of an ENGINE-FREE generation. This is a DEFECT REPORT, not a capacity result: the whole population builds in under a second.',
     'build_population swallows the deadline hook':
         'assert 0 == 296',
     'the runaway guard is reported as an ordinary VOID':
