@@ -10,6 +10,14 @@ import pytest
 from scripts.GPU.alphazero import h3_study_rules as R
 
 
+#: 🔴 FOUR BLOCKS, ONE PER SEGMENT. The study no longer uses a single interval,
+#: so a test schedule must not either.
+FRESH_BLOCKS = tuple(
+    (777000000 + R.GAMES_PER_SEGMENT * k,
+     777000000 + R.GAMES_PER_SEGMENT * (k + 1))
+    for k in range(R.N_SEGMENTS))
+
+
 # ───────────────────────── the card's numbers ──────────────────────────────
 
 
@@ -175,43 +183,14 @@ def test_NO_SEED_IS_ASSIGNED_because_no_block_is_reserved(openings):
 
 
 
-def test_a_SUPPLIED_interval_is_assigned_POSITIONALLY(openings):
-    lo = 777000000
-    seeded = R.build_tasks(openings, seed_interval=(lo, lo + R.N_GAMES))
-    assert [t["seed"] for t in seeded] == list(range(lo, lo + R.N_GAMES))
 
 
-def test_a_SEGMENT_takes_a_CONTIGUOUS_quarter_of_the_block(openings):
-    lo = 777000000
-    seeded = R.build_tasks(openings, seed_interval=(lo, lo + R.N_GAMES))
-    for k in range(R.N_SEGMENTS):
-        seg = [t for t in seeded if t["segment"] == k]
-        assert len(seg) == R.GAMES_PER_SEGMENT
-        seeds = sorted(t["seed"] for t in seg)
-        assert seeds == list(range(lo + k * R.GAMES_PER_SEGMENT,
-                                   lo + (k + 1) * R.GAMES_PER_SEGMENT))
 
 
-@pytest.mark.parametrize("iv,what", [
-    (("777000000", 777000592), "a string endpoint"),
-    ((777000000.0, 777000592), "a float endpoint"),
-    ((True, 592), "a bool endpoint"),
-])
-def test_a_TYPE_DIFFERENT_seed_endpoint_is_REFUSED(openings, iv, what):
-    with pytest.raises(R.H3StudyError, match="int"):
-        R.build_tasks(openings, seed_interval=iv)
 
 
-def test_an_interval_of_the_WRONG_SIZE_is_refused(openings):
-    with pytest.raises(R.H3StudyError, match="592"):
-        R.build_tasks(openings, seed_interval=(777000000, 777000591))
 
 
-def test_a_SPENT_interval_is_REFUSED_by_STATUS(openings):
-    """Exactly 592 seeds so it clears the length check and reaches the guard
-    alone — the pilot's trap, where a too-long block was refused by size first."""
-    with pytest.raises(R.H3StudyError, match="spent|EXPOSED|RETIRED"):
-        R.build_tasks(openings, seed_interval=(202624000, 202624000 + R.N_GAMES))
 
 
 def test_the_schedule_is_PINNED_BY_A_FULL_FIELD_DIGEST(openings):
@@ -227,3 +206,51 @@ def test_the_schedule_is_PINNED_BY_A_FULL_FIELD_DIGEST(openings):
 def openings():
     """THE population: 296 uniform openings in study order. One call, reused."""
     return R.assemble_opening_set(R.generate_uniform_openings())
+
+
+# ═══════ FOUR SEGMENT BLOCKS, AND STATUS IS A LAUNCH QUESTION ══════════════
+# 🔴 `build_tasks` took ONE 592-seed interval and refused it if ANY seed in it
+# was spent. Segment 0's quarter was retired on its VOID and the whole study
+# became unbuildable -- segments 1-3 too, though their seeds were untouched.
+# Segmenting exists so one segment's failure costs ONE segment.
+
+def test_FOUR_BLOCKS_ARE_ASSIGNED_POSITIONALLY_WITHIN_EACH_SEGMENT():
+    ops = R.assemble_opening_set(R.generate_uniform_openings())
+    t = R.build_tasks(ops, seed_blocks=FRESH_BLOCKS)
+    assert len(t) == R.N_GAMES
+    for k, (lo, hi) in enumerate(FRESH_BLOCKS):
+        seg = [x["seed"] for x in t if x["segment"] == k]
+        assert seg == list(range(lo, hi)), k
+        assert len(seg) == R.GAMES_PER_SEGMENT == 148
+
+
+def test_build_tasks_DOES_NOT_CONSULT_SEED_STATUS():
+    """🔴 THE DECOUPLING. A frozen schedule must exist whether or not a segment
+    has since been spent -- otherwise retiring one segment deletes the plan for
+    the other three. Status is checked at LAUNCH, per segment."""
+    ops = R.assemble_opening_set(R.generate_uniform_openings())
+    retired = (202_626_000, 202_626_148)          # segment 0's VOIDed quarter
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    assert all(REF.seed_status(s)["retired"] for s in range(*retired))
+    t = R.build_tasks(ops, seed_blocks=(retired,) + FRESH_BLOCKS[1:])
+    assert len(t) == R.N_GAMES, "construction must not care that a block is spent"
+
+
+@pytest.mark.parametrize("blocks,match", [
+    (FRESH_BLOCKS[:3], "3 seed blocks for 4 segments"),
+    (FRESH_BLOCKS + FRESH_BLOCKS[:1], "5 seed blocks for 4 segments"),
+    (((777000000, 777000010),) + FRESH_BLOCKS[1:], "holds 10 seeds"),
+    ((("x", 777000148),) + FRESH_BLOCKS[1:], "an int is required"),
+    (((777000000.0, 777000148),) + FRESH_BLOCKS[1:], "an int is required"),
+    (((True, 777000148),) + FRESH_BLOCKS[1:], "an int is required"),
+    ((FRESH_BLOCKS[0], FRESH_BLOCKS[0]) + FRESH_BLOCKS[2:], "overlaps an earlier"),
+])
+def test_THE_SEED_BLOCKS_ARE_REFUSED_WHEN_MALFORMED(blocks, match):
+    ops = R.assemble_opening_set(R.generate_uniform_openings())
+    with pytest.raises(R.H3StudyError, match=match):
+        R.build_tasks(ops, seed_blocks=blocks)
+
+
+def test_A_GOOD_SET_OF_BLOCKS_IS_ACCEPTED_OR_THE_REFUSALS_PROVE_NOTHING():
+    ops = R.assemble_opening_set(R.generate_uniform_openings())
+    assert len(R.build_tasks(ops, seed_blocks=FRESH_BLOCKS)) == R.N_GAMES

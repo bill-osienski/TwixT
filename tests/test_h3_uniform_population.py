@@ -1065,17 +1065,6 @@ def test_THE_PIN_IS_READ_FROM_THE_ARTIFACT_NOT_RECOMPUTED_AT_START_UP():
     assert "build_population" not in body and "generate_uniform" not in body
 
 
-def test_RESERVED_BUT_NOTHING_IS_OPEN():
-    """What registration did NOT authorize.
-
-    The block is now reserved -- ACCOUNTED only -- and that changed nothing about
-    permission. A reservation is not a draw and it is not a gate.
-    """
-    assert RUN.STUDY_SEED_BLOCK == (202_626_000, 202_626_592)
-    assert RUN.H3_STUDY_EXECUTION_AUTHORIZED is False
-    assert GEN.H3_POPULATION_FREEZE_AUTHORIZED is False
-    from scripts.GPU.alphazero import gate_inventory as INV
-    assert INV.gate_count() == 10 and INV.open_gates() == []
 
 
 def test_THE_FROZEN_DESTINATION_IS_SPENT_AND_A_SECOND_FREEZE_REFUSES():
@@ -1157,67 +1146,12 @@ def test_THE_COMMITTED_ARTIFACT_LOADS_THROUGH_THE_REAL_RUNNER():
 BLOCK = (202_626_000, 202_626_592)
 
 
-def test_THE_BLOCK_IS_592_SEEDS_ONE_PER_GAME():
-    assert RUN.STUDY_SEED_BLOCK == BLOCK
-    lo, hi = BLOCK
-    assert hi - lo == R.N_GAMES == 592 == R.N_PAIRS * 2
 
 
 
 
-def test_THE_BLOCK_OVERLAPS_NOTHING_DIRECTLY_OR_THROUGH_ITS_STREAMS():
-    """Collision proof v14, re-run here so the suite owns it too.
-
-    🔴 THE FOUR GENERATION RANGES ARE IN NO REGISTRY and are added by hand. A
-    registry-only enumeration would call an overlapping block clean.
-    """
-    from scripts.GPU.alphazero import e4_screen_reference as REF
-    from scripts.GPU.alphazero.twixtbot_g3_reference import SeededReferenceAgent
-    masks = sorted({*SeededReferenceAgent.SEARCH_MASK.values(),
-                    *SeededReferenceAgent.READOUT_MASK.values()})
-    assert len(masks) == 4
-    lo, hi = BLOCK
-    ours = set(range(lo, hi))
-
-    prior = set()
-    for t in (REF.ACCOUNTED_SEED_INTERVALS, REF.EXPOSED_SEED_INTERVALS,
-              REF.RETIRED_SEED_INTERVALS, REF.TEST_ONLY_SEED_INTERVALS):
-        prior |= {s for a, b in t for s in range(a, b)}
-    prior -= ours                       # 🔑 excluded BY IDENTITY: it is registered
-    prior |= set(REF.CONSUMED_SEEDS)
-    gen = [(a, b) for a, b, _ in R.RETIRED_GENERATION_RANGES]
-    gen.append(R.generation_seed_range(R.GEN_SEED_UNIFORM))
-    assert len(gen) == 4, "all four generation ranges, none of them in a registry"
-    for a, b in gen:
-        prior |= set(range(a, b))
-
-    assert not (ours & prior), "direct overlap"
-    derive = lambda ss: {v for s in ss for v in (s, *(s ^ m for m in masks))}
-    mine, theirs = derive(ours), derive(prior)
-    assert not (mine & theirs), "derived-stream collision"
-    assert len(mine) == len(ours) * 5, "derivations not injective"
 
 
-def test_THE_GAP_FLOOR_IS_THE_BLOCKS_OWN_SIZE_AND_IT_CLEARS_IT():
-    """592, and the ACTUAL nearest distance is checked, not just the floor, so a
-    narrow choice could not hide behind a small threshold."""
-    from scripts.GPU.alphazero import e4_screen_reference as REF
-    lo, hi = BLOCK
-    floor = hi - lo
-    assert floor == 592
-    intervals = [iv for t in (REF.ACCOUNTED_SEED_INTERVALS,
-                              REF.EXPOSED_SEED_INTERVALS,
-                              REF.RETIRED_SEED_INTERVALS,
-                              REF.TEST_ONLY_SEED_INTERVALS) for iv in t]
-    intervals += [(a, b) for a, b, _ in R.RETIRED_GENERATION_RANGES]
-    intervals += [R.generation_seed_range(R.GEN_SEED_UNIFORM)]
-    gaps = [a - hi if a >= hi else lo - b
-            for a, b in intervals
-            if (a, b) != BLOCK and not (a < hi and lo < b)]
-    # 🔑 BY IDENTITY IN THE GAP CHECK TOO. Without excluding BLOCK itself the
-    # registered block measures its own distance as zero and fails its own floor.
-    assert gaps and min(gaps) >= floor, min(gaps)
-    assert min(gaps) == 1960, "the nearest actual boundary"
 
 
 
@@ -1297,21 +1231,6 @@ def test_SEGMENTS_1_TO_3_KEEP_THEIR_QUARTERS_UNSPENT():
     assert not any(x["retired"] or x["exposed"] for x in st)
 
 
-def test_THE_SEEDED_SCHEDULE_CAN_NO_LONGER_BE_BUILT_ON_THIS_BLOCK():
-    """🔴 THE BLOCKER, ASSERTED SO IT CANNOT BE FORGOTTEN.
-
-    `build_tasks` takes the WHOLE 592-seed interval and refuses any seed that is
-    retired, so no seeded schedule exists for this block any more -- for segment 0
-    or for segments 1-3. `SCHEDULE_DIGEST` and `SEGMENT_DIGESTS` now describe a
-    plan that cannot be constructed.
-
-    This is the refusal working, not failing: a spent block may not be revived.
-    Resolving it means a fresh quarter and recomputed pins, which is a separate
-    authorization.
-    """
-    ops = RUN.load_opening_set(RUN.OPENING_SET_PATH)
-    with pytest.raises(R.H3StudyError, match="spent block may not be revived"):
-        R.build_tasks(ops, seed_interval=RUN.STUDY_SEED_BLOCK)
 
 
 def test_THE_UNSEEDED_SCHEDULE_AND_THE_POPULATION_ARE_UNAFFECTED():
@@ -1334,17 +1253,164 @@ def test_THE_SEGMENT_0_DESTINATION_WAS_NEVER_CREATED():
     assert not any(os.path.lexists(p) for k in range(4) for p in CMD.default_paths(k))
 
 
-def test_THE_SEGMENT_RUNNER_STILL_DOES_NOT_CREATE_ITS_OUTPUT_DIRECTORY():
-    """🔴 THE DEFECT, RECORDED AND NOT REPAIRED -- repair is not authorized.
 
-    `h3_study_generator.write_artifact` calls `os.makedirs` before its create-only
-    open; the segment runner never learned it. This test asserts the defect is
-    STILL THERE so that fixing it must delete this test deliberately, rather than
-    the defect quietly surviving a future edit.
+
+# ═══════ THE SEGMENT-ISOLATION REPAIR (2026-09-18) ═════════════════════════
+SEG0_FRESH = (202_628_000, 202_628_148)
+
+
+def test_FOUR_SEGMENT_BLOCKS_EACH_148_SEEDS():
+    assert len(RUN.SEGMENT_SEED_BLOCKS) == R.N_SEGMENTS == 4
+    assert all(hi - lo == R.GAMES_PER_SEGMENT for lo, hi in RUN.SEGMENT_SEED_BLOCKS)
+    assert sum(hi - lo for lo, hi in RUN.SEGMENT_SEED_BLOCKS) == R.N_GAMES == 592
+    assert RUN.SEGMENT_SEED_BLOCKS[0] == SEG0_FRESH, "segment 0 is the fresh block"
+    assert RUN.SEGMENT_SEED_BLOCKS[1:] == ((202_626_148, 202_626_296),
+                                           (202_626_296, 202_626_444),
+                                           (202_626_444, 202_626_592)), (
+        "segments 1-3 keep the quarters they already had")
+
+
+def test_EVERY_BLOCK_IS_ACCOUNTED_UNSPENT_AND_MUTUALLY_DISJOINT():
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    seen = set()
+    for k, (lo, hi) in enumerate(RUN.SEGMENT_SEED_BLOCKS):
+        st = [REF.seed_status(s) for s in range(lo, hi)]
+        assert all(x["accounted"] for x in st), k
+        assert not any(x["exposed"] or x["retired"] or x["test_only"] for x in st), k
+        rng = set(range(lo, hi))
+        assert not (rng & seen), f"segment {k} overlaps an earlier block"
+        seen |= rng
+
+
+def test_THE_FRESH_SEGMENT_0_BLOCK_COLLIDES_WITH_NOTHING():
+    """Collision proof v15, re-run here. The four generation ranges are in NO
+    registry and are added by hand."""
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    from scripts.GPU.alphazero.twixtbot_g3_reference import SeededReferenceAgent
+    masks = sorted({*SeededReferenceAgent.SEARCH_MASK.values(),
+                    *SeededReferenceAgent.READOUT_MASK.values()})
+    lo, hi = SEG0_FRESH
+    ours = set(range(lo, hi))
+    prior = set()
+    for t in (REF.ACCOUNTED_SEED_INTERVALS, REF.EXPOSED_SEED_INTERVALS,
+              REF.RETIRED_SEED_INTERVALS, REF.TEST_ONLY_SEED_INTERVALS):
+        prior |= {s for a, b in t for s in range(a, b)}
+    prior -= ours                                  # excluded BY IDENTITY
+    prior |= set(REF.CONSUMED_SEEDS)
+    gen = [(a, b) for a, b, _ in R.RETIRED_GENERATION_RANGES]
+    gen.append(R.generation_seed_range(R.GEN_SEED_UNIFORM))
+    assert len(gen) == 4
+    for a, b in gen:
+        prior |= set(range(a, b))
+    assert not (ours & prior), "direct overlap"
+    d = lambda ss: {v for s in ss for v in (s, *(s ^ m for m in masks))}
+    mine = d(ours)
+    assert not (mine & d(prior)), "derived-stream collision"
+    assert len(mine) == len(ours) * 5, "not injective"
+    # gap floor = its own size, 148; and the ACTUAL nearest distance is checked
+    ivs = [iv for t in (REF.ACCOUNTED_SEED_INTERVALS, REF.EXPOSED_SEED_INTERVALS,
+                        REF.RETIRED_SEED_INTERVALS, REF.TEST_ONLY_SEED_INTERVALS)
+           for iv in t] + gen
+    gaps = [a - hi if a >= hi else lo - b for a, b in ivs
+            if (a, b) != SEG0_FRESH and not (a < hi and lo < b)]
+    assert gaps and min(gaps) >= 148, min(gaps)
+
+
+def test_SEGMENT_0S_OLD_QUARTER_IS_RETIRED_AND_UNREACHABLE():
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    lo, hi = RUN.RETIRED_SEGMENT_BLOCKS[0]
+    assert (lo, hi) == (202_626_000, 202_626_148)
+    assert all(REF.seed_status(s)["retired"] for s in range(lo, hi))
+    assert not any(REF.seed_status(s)["exposed"] for s in range(lo, hi))
+    assert all(hi <= a or b <= lo for a, b in RUN.SEGMENT_SEED_BLOCKS)
+
+
+def test_THE_SEEDED_SCHEDULE_BUILDS_AGAIN_AND_REPRODUCES_ITS_PINS():
+    """🔴 THE STUDY IS UNBLOCKED. With one interval this raised; construction no
+    longer consults status, so the frozen plan exists again."""
+    ops = RUN.load_opening_set(RUN.OPENING_SET_PATH)
+    t = R.build_tasks(ops, seed_blocks=RUN.SEGMENT_SEED_BLOCKS)
+    assert len(t) == R.N_GAMES
+    assert RUN.check_schedule_digest(t) == RUN.SCHEDULE_DIGEST
+    for k in range(4):
+        assert RUN.segment_digest(t, k) == RUN.SEGMENT_DIGESTS[k], k
+
+
+def test_SEGMENTS_1_TO_3_PINS_ARE_UNCHANGED_BY_SEGMENT_0S_REPLACEMENT():
+    """🔴 THE REPAIR MUST NOT REACH PAST SEGMENT 0. If any of the three had
+    moved, segments 1-3 would be different experiments than the ones planned."""
+    assert (RUN.SEGMENT_DIGESTS[1:]
+            == RUN.SEGMENT_DIGESTS_BEFORE_SEG0_REPLACEMENT[1:])
+    assert (RUN.SEGMENT_DIGESTS[0]
+            != RUN.SEGMENT_DIGESTS_BEFORE_SEG0_REPLACEMENT[0]), (
+        "segment 0 has a new block, so its pin MUST have moved")
+
+
+def test_THE_RUNNER_NOW_CREATES_ITS_OUTPUT_DIRECTORY():
+    """🔴 THE DEFECT THAT VOIDED SEGMENT 0, REPAIRED. It opened its trace with
+    O_EXCL and never created the parent, so the segment died in one second on
+    FileNotFoundError -- spending an authorization and retiring a seed quarter
+    for nothing.
+
+    The test that asserted the defect was PRESENT is deleted, exactly as its own
+    docstring instructed.
     """
-    import ast as _ast
     src = (ALPHAZERO / "h3_study_runner.py").read_text(encoding="utf-8")
-    assert "os.makedirs" not in src, (
-        "the runner now creates its directory -- delete this test and its note")
-    gen = (ALPHAZERO / "h3_study_generator.py").read_text(encoding="utf-8")
-    assert "os.makedirs" in gen, "the generator DOES create its directory"
+    assert "os.makedirs(_d, exist_ok=True)" in src
+    body = src[src.index("def _run_segment_unguarded("):]
+    assert body.index("os.makedirs") < body.index("os.O_EXCL"), (
+        "the directory must be created BEFORE the create-only open")
+
+
+def test_SEGMENT_0S_FIRST_DESTINATION_IS_SPENT_AND_THE_RETRY_IS_FRESH():
+    from scripts.GPU.alphazero import h3_study_command as CMD
+    assert ("docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment0"
+            in CMD.SPENT_OUT_DIRS)
+    retry = RUN.segment_out_dir(0)
+    assert retry.endswith("2026-09-18-t1j-h3-study-segment0-retry")
+    assert retry not in CMD.SPENT_OUT_DIRS
+    for spent in CMD.SPENT_OUT_DIRS:
+        assert not retry.startswith(spent.rstrip("/") + "/")
+    assert not os.path.lexists(retry)
+
+
+def test_THE_COMMAND_WRITES_A_PARENT_OWNED_RECEIPT_ON_AN_EARLY_FAILURE(tmp_path,
+                                                                       monkeypatch):
+    """🔴 THE SECOND DEFECT. Segment 0's VOID left NOTHING durable: the worker
+    died before creating its trace and the command wrote no record of its own.
+    A run consumed its authorization, retired a seed quarter, and the only
+    evidence was stdout."""
+    from scripts.GPU.alphazero import h3_study_command as CMD
+    monkeypatch.setattr(CMD, "gate_is_open", lambda: True)
+    monkeypatch.setattr(CMD, "restore_gate", lambda *a, **k: True)
+    monkeypatch.setattr(RUN, "segment_out_dir", lambda k: str(tmp_path))
+    (tmp_path / "03_results.jsonl").write_text("", encoding="utf-8")  # force refusal
+    code = CMD.main(["--segment", "0"])
+    assert code == CMD.EXIT_REFUSED
+    rp = CMD.receipt_path(0)
+    assert os.path.lexists(rp), "no receipt on a pre-spawn refusal"
+    r = json.loads(pathlib.Path(rp).read_text(encoding="utf-8"))
+    assert r["outcome"] == "REFUSED_BEFORE_SPAWN"
+    assert r["exit_code"] == CMD.EXIT_REFUSED
+    assert r["trace_exists"] is False, "the worker never wrote a trace"
+    assert r["gate_restored"] is True and r["segment"] == 0
+    assert r["retires"] == list(RUN.SEGMENT_SEED_BLOCKS[0])
+
+
+def test_THE_RECEIPT_IS_CREATE_ONLY(tmp_path, monkeypatch):
+    from scripts.GPU.alphazero import h3_study_command as CMD
+    monkeypatch.setattr(RUN, "segment_out_dir", lambda k: str(tmp_path))
+    assert CMD.write_receipt(0, {"a": 1}) is not None
+    assert CMD.write_receipt(0, {"a": 2}) is None, "a second write must refuse"
+    assert json.loads((tmp_path / "00_launch_receipt.json").read_text())["a"] == 1
+
+
+def test_AN_UNAUTHORIZED_INVOCATION_WRITES_NO_RECEIPT(monkeypatch):
+    """🔑 DELIBERATE. Nothing was attempted and nothing consumed -- and a receipt
+    here would CREATE THE DESTINATION, so the next real launch would be refused
+    for an occupied output directory. H2's defect by a new road."""
+    from scripts.GPU.alphazero import h3_study_command as CMD
+    assert RUN.H3_STUDY_EXECUTION_AUTHORIZED is False
+    assert CMD.main(["--segment", "0"]) == CMD.EXIT_UNAUTHORIZED
+    assert not os.path.lexists(CMD.receipt_path(0))
+    assert not os.path.lexists(RUN.segment_out_dir(0))

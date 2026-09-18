@@ -1,0 +1,74 @@
+H3 SEGMENT 0 RETRY -- A FRESH 148-SEED BLOCK
+==================================================================
+masks (imported)  : ['0x3c3c3c', '0x5a5a5a', '0xa5a5a5', '0xc3c3c3']
+prior seeds       : 302949
+    ACCOUNTED           6840
+    EXPOSED             1750
+    RETIRED             3388
+    TEST_ONLY            100
+    CONSUMED_SEEDS         1
+    D1_PAPER_S14         221
+    H3_PILOT              40
+    H3_SEG0_RETIRED      148
+    H3_SEGMENTS_1_TO_3     444
+    GEN_RANGE_0        59200
+    GEN_RANGE_1        59200
+    GEN_RANGE_2        59200
+    GEN_RANGE_3       118400
+prior values      : 1514745 (incl. derivations)
+gap floor         : 148 (the candidate's OWN size)
+
+THE FOUR GENERATION RANGES NO REGISTRY CAN SEE:
+    [20261000000, 20261059200)  the 148-opening uniform range, RETIRED UNUSED by Amendme
+    [20261200000, 20261259200)  co-produced attempt 1, SPENT WHOLE 2026-09-16
+    [20261400000, 20261459200)  co-produced attempt 2, SPENT WHOLE 2026-09-16
+    [20261600000, 20261718400)  the LIVE uniform range -- it produced the population fro
+
+CANDIDATE (202628000, 202628148)  n=148
+  direct overlap      : NONE
+  stream collisions   : 0
+  own derivations     : 740 (injective=True)
+  nearest gap         : 1408  (floor 148)  ok=True
+  CLEAN               : True
+
+NEGATIVE CONTROLS -- a check that never rejects proves nothing
+------------------------------------------------------------------
+      REJECTED  segment 0's RETIRED quarter -- the VOID of 2026-09-18
+                (202626000, 202626148) -> overlap {'ACCOUNTED': 148, 'RETIRED': 148, 'H3_SEG0_RETIRED': 148}
+      REJECTED  the quarters still held for segments 1-3
+                (202626148, 202626592) -> overlap {'ACCOUNTED': 444, 'H3_SEGMENTS_1_TO_3': 444}
+      REJECTED  the whole original 592-seed block
+                (202626000, 202626592) -> overlap {'ACCOUNTED': 592, 'RETIRED': 148, 'H3_SEG0_RETIRED': 148, 'H3_SEGMENTS_1_TO_3': 444}
+      REJECTED  the SPENT H3 pilot block
+                (202624000, 202624040) -> overlap {'ACCOUNTED': 40, 'EXPOSED': 40, 'RETIRED': 40, 'H3_PILOT': 40}
+      REJECTED  the SPENT H1 attempt-1 block
+                (202616000, 202616224) -> overlap {'ACCOUNTED': 224, 'EXPOSED': 60, 'RETIRED': 224}
+      REJECTED  the SPENT H1 attempt-2 block
+                (202617000, 202617224) -> overlap {'ACCOUNTED': 224, 'EXPOSED': 224, 'RETIRED': 224}
+      REJECTED  the SPENT H2 attempt-1 block
+                (202618000, 202618736) -> overlap {'ACCOUNTED': 736, 'RETIRED': 736}
+      REJECTED  the SPENT H2 attempt-2 block
+                (202620000, 202620736) -> overlap {'ACCOUNTED': 736, 'EXPOSED': 383, 'RETIRED': 736}
+      REJECTED  the SPENT H2 attempt-3 block
+                (202622000, 202622736) -> overlap {'ACCOUNTED': 736, 'EXPOSED': 693, 'RETIRED': 736}
+      REJECTED  D1's SPENT paper reservation
+                (202615000, 202615221) -> overlap {'ACCOUNTED': 221, 'EXPOSED': 221, 'RETIRED': 221, 'D1_PAPER_S14': 221}
+      REJECTED  L0's spent block
+                (202613000, 202613064) -> overlap {'ACCOUNTED': 64, 'EXPOSED': 64, 'RETIRED': 64}
+      REJECTED  straddles the study block's END by exactly one seed
+                (202626591, 202626739) -> overlap {'ACCOUNTED': 1, 'H3_SEGMENTS_1_TO_3': 1}
+      REJECTED  starts exactly where the study block ends -- INSIDE the floor
+                (202626592, 202626740) -> gap 0 < floor 148
+      REJECTED  clear of everything but ONE SEED inside the gap floor
+                (202626739, 202626887) -> gap 147 < floor 148
+      REJECTED  inside the LIVE uniform GENERATION range
+                (20261600000, 20261600148) -> overlap {'GEN_RANGE_3': 148}
+      REJECTED  inside co-produced attempt 2's SPENT generation range
+                (20261400000, 20261400148) -> overlap {'GEN_RANGE_2': 148}
+      REJECTED  inside the retired 148-opening uniform range
+                (20261000000, 20261000148) -> overlap {'GEN_RANGE_0': 148}
+      REJECTED  the TEST_ONLY reservation
+                (90009000, 90009100) -> overlap {'TEST_ONLY': 100}
+
+controls rejected : 18/18
+VERDICT           : CLEAN

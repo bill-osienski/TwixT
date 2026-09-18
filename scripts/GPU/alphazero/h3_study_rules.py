@@ -451,12 +451,31 @@ def openings_mapping(openings: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
 
 
 def build_tasks(openings: Sequence[Dict[str, Any]],
-                seed_interval: Optional[Tuple[int, int]] = None
+                seed_blocks: Optional[Sequence[Tuple[int, int]]] = None
                 ) -> List[Dict[str, Any]]:
     """The 592 tasks: each opening played BOTH WAYS, the pair kept adjacent.
 
     SEEDS ARE NOT ASSIGNED BY DEFAULT. A plan that hands out seeds before a block
     is authorized has spent it on paper.
+
+    🔴 FOUR SEGMENT BLOCKS, NOT ONE INTERVAL -- AND NO STATUS CHECK HERE.
+
+    This took ONE contiguous 592-seed interval and refused it if ANY seed in it
+    was spent. Segment 0's quarter was then retired on its VOID, and the whole
+    study became unbuildable: segments 1-3 could not be constructed either, even
+    though their seeds were untouched. **That is the opposite of what segmenting
+    is for** -- the point of four one-shot quarters is that one segment's failure
+    costs one segment.
+
+    So the frozen schedule is built from FOUR EXPLICIT BLOCKS, one per segment,
+    and **construction does not consult seed status at all**. Whether a segment's
+    seeds are still runnable is a LAUNCH question, answered for the ONE segment
+    being launched by `h3_study_runner.check_segment_seeds`.
+
+    🔑 THIS IS A NARROWING, NOT A REMOVAL. The old check ran at construction, so
+    it fired for segments nobody was launching and could not fire per segment.
+    The new one refuses exactly the segment whose seeds are spent, and a control
+    proves it still refuses.
     """
     from . import e4_screen_reference as REF
     from . import h2_match_rules as H2R
@@ -471,24 +490,37 @@ def build_tasks(openings: Sequence[Dict[str, Any]],
     ref = L0PLAN.load_source_plan()["reference"]
 
     seeds: List[Optional[int]] = [None] * N_GAMES
-    if seed_interval is not None:
-        lo, hi = seed_interval
-        for name, v in (("lo", lo), ("hi", hi)):
-            if type(v) is not int or isinstance(v, bool):
-                raise H3StudyError(
-                    f"seed interval {name} is {v!r} ({type(v).__name__}); an int "
-                    f"is required and no value is coerced into one")
-        if hi - lo != N_GAMES:
+    if seed_blocks is not None:
+        blocks = [tuple(b) for b in seed_blocks]
+        if len(blocks) != N_SEGMENTS:
             raise H3StudyError(
-                f"the supplied interval holds {hi - lo} seeds for {N_GAMES} games")
-        for s_ in range(lo, hi):
-            st = REF.seed_status(s_)
-            if st["exposed"] or st["retired"] or st["test_only"]:
+                f"{len(blocks)} seed blocks for {N_SEGMENTS} segments; each "
+                f"segment carries its OWN one-shot block")
+        for k, (lo, hi) in enumerate(blocks):
+            for name, v in (("lo", lo), ("hi", hi)):
+                if type(v) is not int or isinstance(v, bool):
+                    raise H3StudyError(
+                        f"segment {k} seed block {name} is {v!r} "
+                        f"({type(v).__name__}); an int is required and no value "
+                        f"is coerced into one")
+            if hi - lo != GAMES_PER_SEGMENT:
                 raise H3StudyError(
-                    f"seed {s_} is spent or reserved for tests "
-                    f"(exposed={st['exposed']} RETIRED={st['retired']} "
-                    f"test_only={st['test_only']}); a spent block may not be revived")
-        seeds = list(range(lo, hi))
+                    f"segment {k}'s block holds {hi - lo} seeds for "
+                    f"{GAMES_PER_SEGMENT} games")
+        #: 🔴 THE BLOCKS MUST NOT OVERLAP EACH OTHER. Four separate blocks make a
+        #: collision between two of them possible in a way one interval never was.
+        seen = set()
+        for k, (lo, hi) in enumerate(blocks):
+            rng = set(range(lo, hi))
+            if rng & seen:
+                raise H3StudyError(
+                    f"segment {k}'s block overlaps an earlier segment's; two "
+                    f"segments would play the same seeds")
+            seen |= rng
+        seeds = [x for lo, hi in blocks for x in range(lo, hi)]
+        if len(seeds) != N_GAMES:
+            raise H3StudyError(f"{len(seeds)} seeds for {N_GAMES} games")
+
 
     out: List[Dict[str, Any]] = []
     for op in openings:

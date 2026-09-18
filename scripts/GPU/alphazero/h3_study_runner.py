@@ -56,21 +56,34 @@ def check_gate() -> None:
 
 
 # ═══════════════════════ BARRIER 2: the seeds ══════════════════════════════
-#: 🔴 RESERVED AND REGISTERED 2026-09-18, ACCOUNTED ONLY. 592 seeds, one per
-#: game, bound POSITIONALLY (row i -> lo + i) across four contiguous 148-seed
-#: quarters, one per segment:
+#: 🔴 FOUR SEGMENT BLOCKS, ONE PER SEGMENT. NOT one interval.
 #:
-#:     segment 0  [202626000, 202626148)      segment 2  [202626296, 202626444)
-#:     segment 1  [202626148, 202626296)      segment 3  [202626444, 202626592)
+#: The study had a single 592-seed block whose four quarters all had to be
+#: unspent to construct ANY segment. Segment 0's quarter was retired on its VOID
+#: of 2026-09-18 and the whole study became unbuildable -- segments 1-3 included,
+#: though their seeds were untouched. **Segmenting exists so that one segment's
+#: failure costs one segment**, and that coupling took the property away.
 #:
-#: PROVED by collision proof v14 -- 302,357 prior seeds, 1,511,785 values with
-#: derivations, 0 direct, 0 derived-stream, injective, nearest boundary 1,960
-#: against a gap floor of 592 (the block's own size), 15/15 controls rejected.
-#: The proof covers the FOUR GENERATION RANGES, which no registry holds.
+#: segment 0  [202628000, 202628148)  FRESH, registered 2026-09-18 (proof v15)
+#:            replacing [202626000, 202626148), RETIRED WHOLE on the VOID.
+#:            No strength information was produced by that VOID -- 0 games, 0
+#:            seeds exposed -- so replacing these seeds introduces no
+#:            outcome-based selection.
+#: segment 1  [202626148, 202626296)  unchanged, unspent
+#: segment 2  [202626296, 202626444)  unchanged, unspent
+#: segment 3  [202626444, 202626592)  unchanged, unspent
 #:
 #: 🔑 ACCOUNTED IS NOT EXPOSED AND NOT RETIRED: a reservation is not a draw.
-#: Registering this block did NOT open the study gate, which is still False.
-STUDY_SEED_BLOCK: Optional[tuple] = (202_626_000, 202_626_592)
+SEGMENT_SEED_BLOCKS: tuple = (
+    (202_628_000, 202_628_148),
+    (202_626_148, 202_626_296),
+    (202_626_296, 202_626_444),
+    (202_626_444, 202_626_592),
+)
+
+#: 🔴 SEGMENT 0's RETIRED QUARTER, kept by name so nothing can quietly re-use it
+#: and so the preflight can say WHY a retired block is refused.
+RETIRED_SEGMENT_BLOCKS: tuple = ((202_626_000, 202_626_148),)
 
 #: 🔴 THE SEEDED SCHEDULE'S PINS, RECOMPUTED AND FROZEN 2026-09-18.
 #:
@@ -85,10 +98,25 @@ STUDY_SEED_BLOCK: Optional[tuple] = (202_626_000, 202_626_592)
 #: existed and did not bind, which is this programme's recurring shape. The pin
 #: is what gives the comparison a second, INDEPENDENT side.
 SCHEDULE_DIGEST = (
-    "e374a95f885656ea27caa88359437e4c035de0e0e0c027cf861ce5e613362350")
+    "158cc080da26d5bb39ae3a9dd3422234b842b962e7d65b40d2eb322fcdc8f272")
 
 #: One per segment, in order. Each segment is its own one-shot schedule.
 SEGMENT_DIGESTS = (
+    # 🔴 SEGMENT 0's PIN MOVED, and ONLY segment 0's. Its block was replaced
+    # after the VOID; segments 1-3 play the same openings, colours and seeds they
+    # always did, so their digests are BYTE-IDENTICAL to the pre-repair ones and
+    # a test asserts it. If any of the three had moved, the repair would have
+    # reached further than segment 0 and the study's other segments would be
+    # different experiments.
+    "b82bbb08e8bff4df22284100ac6b3777d4a16ed75d77525d5c72f5c707091b23",  # 0, NEW
+    "14aaefb3a01cc1d08bdfd7f0c4c21599414d0dc68fee8f51584e1e4a50660a41",  # 1, same
+    "1764471c5b95042726b9a3bbeca92309ff703d734d73f448adf2f548d96a1855",  # 2, same
+    "44576a71042ff6b7c9118d3e36f18d62d1d0dfc4d01aeb7eec318d0a4b8753f0",  # 3, same
+)
+
+#: the pins as they stood BEFORE segment 0's block was replaced, kept so the
+#: "1-3 did not move" assertion has something to compare against.
+SEGMENT_DIGESTS_BEFORE_SEG0_REPLACEMENT = (
     "cde6d04ce52e07088e437754e1ee60b750542de08c6b6e9fbc4744bc2c795d31",
     "14aaefb3a01cc1d08bdfd7f0c4c21599414d0dc68fee8f51584e1e4a50660a41",
     "1764471c5b95042726b9a3bbeca92309ff703d734d73f448adf2f548d96a1855",
@@ -107,25 +135,89 @@ def check_schedule_digest(tasks: Sequence[Mapping[str, Any]]) -> str:
     return got
 
 
-def check_seed_registration() -> None:
-    """Refuse while no block is reserved, and again while it is unregistered."""
-    if STUDY_SEED_BLOCK is None:
-        raise H3StudyRunError(
-            f"NO SEED BLOCK IS RESERVED for the H3 full study. The card reserves "
-            f"none, and {RULES.N_GAMES} games need {RULES.N_GAMES} accounted "
-            f"seeds. Reserving one is a separate authorization carrying its own "
-            f"collision re-proof, which must cover the GENERATION ranges too.")
+def check_seed_registration(segment: Optional[int] = None) -> None:
+    """Refuse unless the seeds THIS LAUNCH needs are accounted and unspent.
+
+    🔴 SEGMENT-LOCAL, AND THAT IS THE REPAIR. It used to demand the whole 592-seed
+    interval be clean, so a retired segment blocked every other segment. Now it
+    answers about ONE segment -- the one being launched -- and says nothing about
+    the others.
+
+    `segment=None` checks that every segment's block is REGISTERED, which is a
+    planning question and never a launch one: it deliberately does NOT ask
+    whether a block is spent, because a spent earlier segment must not block a
+    later launch.
+    """
     from . import e4_screen_reference as REF
-    lo, hi = STUDY_SEED_BLOCK
-    missing = [s for s in range(lo, hi) if not REF.seed_is_accounted(s)]
-    if missing:
+    if not SEGMENT_SEED_BLOCKS or len(SEGMENT_SEED_BLOCKS) != RULES.N_SEGMENTS:
         raise H3StudyRunError(
-            f"the study seed block [{lo}, {hi}) is not registered: {len(missing)} "
-            f"of {hi - lo} seeds are absent from ACCOUNTED_SEED_INTERVALS "
-            f"(first {missing[0]}).")
+            f"NO SEED BLOCKS ARE RESERVED for the H3 full study. Each of the "
+            f"{RULES.N_SEGMENTS} segments needs its OWN {RULES.GAMES_PER_SEGMENT}"
+            f"-seed block, with a collision re-proof covering the GENERATION "
+            f"ranges too.")
+    todo = range(RULES.N_SEGMENTS) if segment is None else [segment]
+    for k in todo:
+        _check_segment(k)
+        lo, hi = SEGMENT_SEED_BLOCKS[k]
+        if hi - lo != RULES.GAMES_PER_SEGMENT:
+            raise H3StudyRunError(
+                f"segment {k}'s block holds {hi - lo} seeds for "
+                f"{RULES.GAMES_PER_SEGMENT} games")
+        missing = [x for x in range(lo, hi) if not REF.seed_is_accounted(x)]
+        if missing:
+            raise H3StudyRunError(
+                f"segment {k}'s block [{lo}, {hi}) is not registered: "
+                f"{len(missing)} of {hi - lo} seeds are absent from "
+                f"ACCOUNTED_SEED_INTERVALS (first {missing[0]}).")
 
 
-# ═══════════════════════ BARRIER 3: the incumbent's identity ═══════════════
+def check_segment_seeds(segment: int) -> Dict[str, Any]:
+    """🔴 THE LAUNCH CHECK, for ONE segment and no other.
+
+    Accounted, and not exposed, retired or test-only. This is where "a spent
+    block may not be revived" now lives: `build_tasks` no longer consults status,
+    because construction is not a launch and a frozen schedule must exist whether
+    or not a segment has since been spent.
+
+    A RETIRED EARLIER SEGMENT MUST NOT REACH THIS FOR A LATER ONE -- and cannot,
+    because it only ever looks at `SEGMENT_SEED_BLOCKS[segment]`.
+    """
+    from . import e4_screen_reference as REF
+    _check_segment(segment)
+    check_seed_registration(segment)
+    lo, hi = SEGMENT_SEED_BLOCKS[segment]
+    for retired_lo, retired_hi in RETIRED_SEGMENT_BLOCKS:
+        if lo < retired_hi and retired_lo < hi:
+            raise H3StudyRunError(
+                f"segment {segment}'s block [{lo}, {hi}) overlaps the RETIRED "
+                f"block [{retired_lo}, {retired_hi}). That block was spent on a "
+                f"one-shot launch and may never be revived; a retry needs a "
+                f"FRESH block with its own collision re-proof.")
+    spent = [(x, REF.seed_status(x)) for x in range(lo, hi)]
+    bad = [(x, st) for x, st in spent
+           if st["exposed"] or st["retired"] or st["test_only"]]
+    if bad:
+        x, st = bad[0]
+        raise H3StudyRunError(
+            f"segment {segment}'s block [{lo}, {hi}) is SPENT: {len(bad)} of "
+            f"{hi - lo} seeds are exposed, retired or test-only (first {x}: "
+            f"exposed={st['exposed']} RETIRED={st['retired']} "
+            f"test_only={st['test_only']}). A spent block may not be revived.")
+    return {"segment": segment, "block": (lo, hi), "n": hi - lo}
+
+
+# ═══════════════════ RESTORED: THE INCUMBENT IDENTITY BARRIER ══════════════
+# 🔴 THESE FOUR WERE DELETED BY ACCIDENT and the preflight caught it.
+# Rewriting the span between `check_seed_registration` and `segment_out_dir`
+# swallowed the whole identity barrier along with `OUT_ROOT`. NOTHING FAILED AT
+# IMPORT -- they are only referenced inside function bodies -- and the H3 test
+# suite would have needed to reach them to notice. The preflight did, on its
+# very next run, because it exercises the real builder.
+#
+# They are restored VERBATIM from the commit, not retyped: this barrier is what
+# makes the recorded identity describe the object the builder actually received,
+# and a paraphrase of it would be a different guard wearing its name.
+
 def frozen_argmax_config():
     """THE ONE construction of the configuration the incumbent PLAYS under.
 
@@ -194,7 +286,11 @@ def _require_seam_config(play) -> Any:
     return config
 
 
-# ═══════════════════════ BARRIER 4: create-only outputs ════════════════════
+#: 🔴 RESTORED. This constant sat between `check_seed_registration` and
+#: `segment_out_dir` and was swallowed when that span was rewritten. Nothing
+#: failed at import -- `OUT_ROOT` is only read inside an f-string at call time --
+#: so it took actually CALLING `segment_out_dir` to find it. A module that
+#: imports cleanly is not a module that works.
 OUT_ROOT = "docs/superpowers/evidence"
 
 
@@ -202,6 +298,13 @@ def segment_out_dir(segment: int) -> str:
     """Each segment writes into ITS OWN directory, so no segment can overwrite
     another's record or an earlier experiment's."""
     _check_segment(segment)
+    #: 🔴 SEGMENT 0's FIRST DESTINATION IS SPENT. The VOID of 2026-09-18
+    #: consumed `2026-09-15-t1j-h3-study-segment0` -- consumed by ATTEMPT, not by
+    #: success: the run died before creating it, but the authorization was spent
+    #: and a retry must not write where a spent attempt was aimed. Its retry has
+    #: its own place; segments 1-3 keep theirs.
+    if segment == 0:
+        return f"{OUT_ROOT}/2026-09-18-t1j-h3-study-segment0-retry"
     return f"{OUT_ROOT}/2026-09-15-t1j-h3-study-segment{segment}"
 
 
@@ -503,9 +606,13 @@ def run_segment(*, segment: int, results_path: str, trace_path: str,
     """
     check_gate()
     _check_segment(segment)
+    #: 🔴 SEGMENT-LOCAL. The seeds THIS launch needs must be accounted and
+    #: unspent; the other three segments' status is not consulted, so a retired
+    #: earlier segment cannot block a later one.
+    check_segment_seeds(segment)
     from . import d1_probe as D1
     openings = load_opening_set(OPENING_SET_PATH)
-    tasks = RULES.build_tasks(openings, seed_interval=STUDY_SEED_BLOCK)
+    tasks = RULES.build_tasks(openings, seed_blocks=SEGMENT_SEED_BLOCKS)
     #: 🔴 AGAINST THE PIN, NOT AGAINST ITSELF. The digest handed to
     #: `check_segment_schedule` used to be computed from `tasks` two lines above
     #: it, so the comparison had one source and could not fail.
@@ -556,6 +663,18 @@ def _run_segment_unguarded(*, segment: int, tasks, openings, results_path,
     timed_out = False
     stack = contextlib.ExitStack()
     t_start = time.monotonic()
+    #: 🔴 THE DIRECTORY, BEFORE THE FIRST CREATE-ONLY WRITE. Without this the
+    #: whole segment VOIDs in one second on `FileNotFoundError` at `os.open` --
+    #: which is exactly what happened on 2026-09-18, spending an authorization
+    #: and retiring a seed quarter for nothing. `h3_study_generator.write_artifact`
+    #: had learned this; the segment runner had not.
+    #:
+    #: 🔑 `exist_ok=True` DOES NOT WEAKEN CREATE-ONLY. The directory may exist;
+    #: the FILES may not, and `O_EXCL` below is what says so.
+    for _p in (trace_path, results_path, report_path):
+        _d = os.path.dirname(_p)
+        if _d:
+            os.makedirs(_d, exist_ok=True)
     try:
         trace = stack.enter_context(os.fdopen(
             os.open(trace_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644), "w"))

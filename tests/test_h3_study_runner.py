@@ -14,6 +14,12 @@ from scripts.GPU.alphazero import h3_study_generator as GEN
 from scripts.GPU.alphazero import h3_generation_preflight as PF
 
 FRESH = (777000000, 777000000 + R.N_GAMES)
+#: four blocks now, one per segment -- the study no longer uses a
+#: single interval, so a test schedule must not either.
+FRESH_BLOCKS = tuple(
+    (777000000 + R.GAMES_PER_SEGMENT * k,
+     777000000 + R.GAMES_PER_SEGMENT * (k + 1))
+    for k in range(R.N_SEGMENTS))
 
 
 # ───────────────────────── BOTH gates are shut ─────────────────────────────
@@ -22,33 +28,6 @@ FRESH = (777000000, 777000000 + R.N_GAMES)
 
 
 
-def test_THE_SEED_BLOCK_IS_RESERVED_AND_REGISTERED(monkeypatch):
-    """Registered 2026-09-18, ACCOUNTED only. The two refusal paths it replaced
-    are still tested by unsetting it and by unregistering it: both are what stop
-    a study running on seeds nobody accounted for."""
-    assert RUN.STUDY_SEED_BLOCK == (202_626_000, 202_626_592)
-    RUN.check_seed_registration()
-
-    monkeypatch.setattr(RUN, "STUDY_SEED_BLOCK", None)
-    with pytest.raises(RUN.H3StudyRunError, match="NO SEED BLOCK"):
-        RUN.check_seed_registration()
-
-    # …and a block that is reserved but NOT in the registry is refused too
-    monkeypatch.setattr(RUN, "STUDY_SEED_BLOCK", (909_090_000, 909_090_592))
-    with pytest.raises(RUN.H3StudyRunError, match="not registered"):
-        RUN.check_seed_registration()
-
-    # 🔴 AND A BLOCK WHOSE FIRST SEED IS ACCOUNTED BUT WHOSE TAIL IS NOT.
-    # The case above is caught even by a barrier that looks only at `lo`, so it
-    # could not tell a full scan from a first-seed one -- the injected-defect
-    # harness reported exactly that. This block starts INSIDE the registered
-    # interval and runs 8 seeds past its end.
-    monkeypatch.setattr(RUN, "STUDY_SEED_BLOCK", (202_626_000, 202_626_600))
-    from scripts.GPU.alphazero import e4_screen_reference as REF
-    assert REF.seed_is_accounted(202_626_000), "its first seed IS accounted"
-    assert not REF.seed_is_accounted(202_626_592), "…and its last is not"
-    with pytest.raises(RUN.H3StudyRunError, match="not registered"):
-        RUN.check_seed_registration()
 
 
 
@@ -557,7 +536,7 @@ def tasks():
     population came from a run that had not happened. Uniform generation is
     engine-free, so the schedule is now built over the REAL openings.
     """
-    return R.build_tasks(GEN.build_population(), seed_interval=FRESH)
+    return R.build_tasks(GEN.build_population(), seed_blocks=FRESH_BLOCKS)
 
 
 def test_THE_GATE_AND_THE_BARRIER_ARE_BOTH_SHUT_IN_THE_REAL_REPOSITORY():
@@ -614,7 +593,7 @@ def test_THE_BUILDER_RECEIVES_THE_SEAM_S_OWN_CONFIG_OBJECT(monkeypatch):
     monkeypatch.setattr(RUN, "H3_STUDY_EXECUTION_AUTHORIZED", True)
 
     openings = GEN.build_population()
-    seeded = R.build_tasks(openings, seed_interval=FRESH)
+    seeded = R.build_tasks(openings, seed_blocks=FRESH_BLOCKS)
     deadline = D1.Deadline(60)
     deadline.start()
     cfg = RUN.frozen_argmax_config()
@@ -634,3 +613,53 @@ def test_a_SEEDLESS_schedule_is_REFUSED():
     seg = RUN.segment_schedule(tasks, 0)
     with pytest.raises(RUN.H3StudyRunError, match="carry no seed"):
         RUN.check_segment_schedule(seg, 0, RUN.segment_digest(tasks, 0))
+
+
+def test_EVERY_SEGMENT_BLOCK_IS_RESERVED_AND_REGISTERED(monkeypatch):
+    """Four blocks, one per segment. Registration is a PLANNING question and is
+    asked of all four; whether a block is still runnable is a LAUNCH question and
+    is asked of one."""
+    assert len(RUN.SEGMENT_SEED_BLOCKS) == R.N_SEGMENTS == 4
+    RUN.check_seed_registration()
+    for k in range(4):
+        assert RUN.check_segment_seeds(k)["n"] == R.GAMES_PER_SEGMENT
+
+    monkeypatch.setattr(RUN, "SEGMENT_SEED_BLOCKS", ())
+    with pytest.raises(RUN.H3StudyRunError, match="NO SEED BLOCKS"):
+        RUN.check_seed_registration()
+
+    # a block that is reserved but NOT in the registry
+    monkeypatch.setattr(RUN, "SEGMENT_SEED_BLOCKS",
+                        ((909_090_000, 909_090_148),) + RUN.SEGMENT_SEED_BLOCKS[1:]
+                        if False else
+                        ((909_090_000, 909_090_148), (202_626_148, 202_626_296),
+                         (202_626_296, 202_626_444), (202_626_444, 202_626_592)))
+    with pytest.raises(RUN.H3StudyRunError, match="not registered"):
+        RUN.check_seed_registration(0)
+    #: 🔴 AND SEGMENTS 1-3 ARE STILL FINE. Segment 0's problem is segment 0's.
+    for k in (1, 2, 3):
+        RUN.check_seed_registration(k)
+        RUN.check_segment_seeds(k)
+
+
+def test_A_RETIRED_SEGMENT_DOES_NOT_BLOCK_A_LATER_ONE(monkeypatch):
+    """🔴 THE COUPLING THIS REPAIR REMOVED. Segment 0's quarter was retired on
+    its VOID and the whole study became unlaunchable -- segments 1-3 included,
+    though their seeds were untouched."""
+    retired = RUN.RETIRED_SEGMENT_BLOCKS[0]
+    monkeypatch.setattr(RUN, "SEGMENT_SEED_BLOCKS",
+                        (retired,) + RUN.SEGMENT_SEED_BLOCKS[1:])
+    with pytest.raises(RUN.H3StudyRunError, match="RETIRED"):
+        RUN.check_segment_seeds(0)
+    for k in (1, 2, 3):
+        assert RUN.check_segment_seeds(k)["segment"] == k
+
+
+def test_THE_RETIRED_BLOCK_CAN_NEVER_BE_RELAUNCHED():
+    """The decoupling did not make a spent block revivable."""
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    for lo, hi in RUN.RETIRED_SEGMENT_BLOCKS:
+        assert all(REF.seed_status(s)["retired"] for s in range(lo, hi))
+        assert not any(REF.seed_status(s)["exposed"] for s in range(lo, hi))
+        for a, b in RUN.SEGMENT_SEED_BLOCKS:
+            assert hi <= a or b <= lo, "a live block overlaps the retired one"

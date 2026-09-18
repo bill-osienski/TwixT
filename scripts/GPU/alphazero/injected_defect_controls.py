@@ -90,27 +90,91 @@ T_GATES = "tests/test_gate_inventory.py"
 
 # (label, file, anchor, replacement, test node)
 DEFECTS = [
+    # ═════════ THE SEGMENT-ISOLATION REPAIR (2026-09-18) ═══════════════════
+    # 🔴 MISSING PARENT DIRECTORIES -- the defect that VOIDed segment 0 in one
+    # second, spending an authorization and retiring a seed quarter for nothing.
+    ("the runner stops creating its output directory",
+     H3SRUN, "        if _d:\n            os.makedirs(_d, exist_ok=True)",
+     "        if False:\n            os.makedirs(_d, exist_ok=True)",
+     f"{T_H3POP}::test_THE_RUNNER_NOW_CREATES_ITS_OUTPUT_DIRECTORY"),
+    ("the directory is created AFTER the create-only open",
+     H3SRUN, "    for _p in (trace_path, results_path, report_path):",
+     "    for _p in ():",
+     f"{T_H3POP}::test_THE_RUNNER_NOW_CREATES_ITS_OUTPUT_DIRECTORY"),
+
+    # 🔴 THE PARENT RECEIPT on an EARLY failure -- before any worker trace exists.
+    ("no launch receipt is written at all",
+     H3SCMD, "        write_receipt(a.segment, {", "        _skip = ({",
+     f"{T_H3POP}::test_THE_COMMAND_WRITES_A_PARENT_OWNED_RECEIPT_ON_AN_EARLY_FAILURE"),
+    ("a refusal before spawning leaves no receipt",
+     H3SCMD, '            outcome, detail = "REFUSED_BEFORE_SPAWN", f"{type(e).__name__}: {e}"',
+     '            return code',
+     f"{T_H3POP}::test_THE_COMMAND_WRITES_A_PARENT_OWNED_RECEIPT_ON_AN_EARLY_FAILURE"),
+    ("the receipt is not create-only",
+     H3SCMD, "        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)",
+     "        fd = os.open(path, os.O_WRONLY | os.O_CREAT, 0o644)",
+     f"{T_H3POP}::test_THE_RECEIPT_IS_CREATE_ONLY"),
+    ("an UNAUTHORIZED invocation writes a receipt and occupies the destination",
+     H3SCMD,
+     '        print("the H3 study is NOT AUTHORIZED (H3_STUDY_EXECUTION_AUTHORIZED is "',
+     '        write_receipt(a.segment, {})\n'
+     '        print("the H3 study is NOT AUTHORIZED (H3_STUDY_EXECUTION_AUTHORIZED is "',
+     f"{T_H3POP}::test_AN_UNAUTHORIZED_INVOCATION_WRITES_NO_RECEIPT"),
+
+    # 🔴 PRIOR-SEGMENT RETIREMENT must not block a later segment -- and the
+    # retired block must still refuse to be relaunched.
+    ("a retired earlier segment blocks every later one again",
+     H3SRUN, "    todo = range(RULES.N_SEGMENTS) if segment is None else [segment]",
+     "    todo = range(RULES.N_SEGMENTS)",
+     f"{T_H3SRUN}::test_A_RETIRED_SEGMENT_DOES_NOT_BLOCK_A_LATER_ONE"),
+    ("the RETIRED block may be relaunched",
+     H3SRUN, "        if lo < retired_hi and retired_lo < hi:", "        if False:",
+     f"{T_H3SRUN}::test_A_RETIRED_SEGMENT_DOES_NOT_BLOCK_A_LATER_ONE"),
+    ("the launch check stops asking whether the seeds are spent",
+     H3SRUN, '''    bad = [(x, st) for x, st in spent
+           if st["exposed"] or st["retired"] or st["test_only"]]''',
+     "    bad = []",
+     f"{T_H3SRUN}::test_A_RETIRED_SEGMENT_DOES_NOT_BLOCK_A_LATER_ONE"),
+    ("the launch check is not run before a segment starts",
+     H3SRUN, "    check_segment_seeds(segment)\n    from . import d1_probe as D1",
+     "    from . import d1_probe as D1",
+     f"{T_H3SRUN}::test_THE_RETIRED_BLOCK_CAN_NEVER_BE_RELAUNCHED"),
+
+    # 🔴 SEGMENT-LOCAL AVAILABILITY: construction must not consult seed status.
+    ("build_tasks consults seed status again",
+     H3SR, "        seeds = [x for lo, hi in blocks for x in range(lo, hi)]",
+     '''        from . import e4_screen_reference as _REF
+        for _lo, _hi in blocks:
+            for _x in range(_lo, _hi):
+                if any(_REF.seed_status(_x).values()):
+                    raise H3StudyError("spent")
+        seeds = [x for lo, hi in blocks for x in range(lo, hi)]''',
+     f"{T_H3SR}::test_build_tasks_DOES_NOT_CONSULT_SEED_STATUS"),
+    ("two segments may share one seed block",
+     H3SR, "            if rng & seen:", "            if False:",
+     f"{T_H3SR}::test_THE_SEED_BLOCKS_ARE_REFUSED_WHEN_MALFORMED"),
+    ("a segment block may be the wrong size",
+     H3SR, "            if hi - lo != GAMES_PER_SEGMENT:", "            if False:",
+     f"{T_H3SR}::test_THE_SEED_BLOCKS_ARE_REFUSED_WHEN_MALFORMED"),
+    ("the number of blocks need not match the segments",
+     H3SR, "        if len(blocks) != N_SEGMENTS:", "        if False:",
+     f"{T_H3SR}::test_THE_SEED_BLOCKS_ARE_REFUSED_WHEN_MALFORMED"),
+
+    # 🔴 THE REPAIR MUST NOT REACH PAST SEGMENT 0.
+    ("segment 1-3's pins are changed by segment 0's replacement",
+     H3SRUN, '    "14aaefb3a01cc1d08bdfd7f0c4c21599414d0dc68fee8f51584e1e4a50660a41",  # 1, same',
+     '    "cde6d04ce52e07088e437754e1ee60b750542de08c6b6e9fbc4744bc2c795d31",  # 1, same',
+     f"{T_H3POP}::test_SEGMENTS_1_TO_3_PINS_ARE_UNCHANGED_BY_SEGMENT_0S_REPLACEMENT"),
+    ("segment 0 reuses its RETIRED block",
+     H3SRUN, "    (202_628_000, 202_628_148),\n    (202_626_148, 202_626_296),",
+     "    (202_626_000, 202_626_148),\n    (202_626_148, 202_626_296),",
+     f"{T_H3POP}::test_FOUR_SEGMENT_BLOCKS_EACH_148_SEEDS"),
+    ("segment 0's retry writes into its SPENT destination",
+     H3SRUN, '        return f"{OUT_ROOT}/2026-09-18-t1j-h3-study-segment0-retry"',
+     '        return f"{OUT_ROOT}/2026-09-15-t1j-h3-study-segment0"',
+     f"{T_H3POP}::test_SEGMENT_0S_FIRST_DESTINATION_IS_SPENT_AND_THE_RETRY_IS_FRESH"),
+
     # ═════════ THE MATCH SEED BLOCK, registered 2026-09-18 ═════════════════
-    ("the study seed block is unreserved again",
-     H3SRUN, "STUDY_SEED_BLOCK: Optional[tuple] = (202_626_000, 202_626_592)",
-     "STUDY_SEED_BLOCK: Optional[tuple] = None",
-     f"{T_H3POP}::test_THE_BLOCK_IS_592_SEEDS_ONE_PER_GAME"),
-    ("the study seed block slides onto the SPENT pilot block",
-     H3SRUN, "STUDY_SEED_BLOCK: Optional[tuple] = (202_626_000, 202_626_592)",
-     "STUDY_SEED_BLOCK: Optional[tuple] = (202_624_000, 202_624_592)",
-     f"{T_H3POP}::test_SEGMENT_0_QUARTER_IS_RETIRED_WHOLE_WITH_ZERO_EXPOSED"),
-    ("the block is short of one seed per game",
-     H3SRUN, "STUDY_SEED_BLOCK: Optional[tuple] = (202_626_000, 202_626_592)",
-     "STUDY_SEED_BLOCK: Optional[tuple] = (202_626_000, 202_626_296)",
-     f"{T_H3POP}::test_THE_BLOCK_IS_592_SEEDS_ONE_PER_GAME"),
-    ("the registration barrier stops asking the registry",
-     H3SRUN, "    missing = [s for s in range(lo, hi) if not REF.seed_is_accounted(s)]",
-     "    missing = []",
-     f"{T_H3SRUN}::test_THE_SEED_BLOCK_IS_RESERVED_AND_REGISTERED"),
-    ("the registration barrier checks only the FIRST seed",
-     H3SRUN, "    missing = [s for s in range(lo, hi) if not REF.seed_is_accounted(s)]",
-     "    missing = [s for s in [lo] if not REF.seed_is_accounted(s)]",
-     f"{T_H3SRUN}::test_THE_SEED_BLOCK_IS_RESERVED_AND_REGISTERED"),
     ("the block is registered as EXPOSED as well as accounted",
      SCREEN, "EXPOSED_SEED_INTERVALS = (",
      "EXPOSED_SEED_INTERVALS = (\n    (202626000, 202626592),",
@@ -3587,16 +3651,6 @@ DEFECTS = [
 # which is why each names a count or a sentence rather than a first line.
 EXPECTED_REASONS = {
     # ── the 592-seed match block (2026-09-18). OBSERVED, never guessed.
-    'the study seed block is unreserved again':
-        'assert None == (202626000, 202626592)',
-    'the study seed block slides onto the SPENT pilot block':
-        'scripts.GPU.alphazero.h3_study_runner.H3StudyRunError: the study seed block [202624000, 202624592) is not registered: 552 of 592 seeds are absent from ACCOUNTED_SEED_INTERVALS (first 202624040).',
-    'the block is short of one seed per game':
-        'assert (202626000, 202626296) == (202626000, 202626592)',
-    'the registration barrier stops asking the registry':
-        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_runner.H3StudyRunError'>",
-    'the registration barrier checks only the FIRST seed':
-        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_runner.H3StudyRunError'>",
     'the block is registered as EXPOSED as well as accounted':
         'assert not True',
     'the block is registered as RETIRED as well as accounted':

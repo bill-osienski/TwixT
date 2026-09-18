@@ -290,8 +290,10 @@ def main() -> int:
     #: (the seed block, the output paths, the wrapper, the VERDICT) never ran and
     #: the exit code was 1. Reading the tail showed PASS lines and nothing wrong.
     #: A checker that dies mid-way looks exactly like one that finished.
-    seeded = RULES.build_tasks(population, seed_interval=(777000000,
-                                                          777000000 + RULES.N_GAMES))
+    _b = 777000000
+    seeded = RULES.build_tasks(population, seed_blocks=tuple(
+        (_b + RULES.GAMES_PER_SEGMENT * k, _b + RULES.GAMES_PER_SEGMENT * (k + 1))
+        for k in range(RULES.N_SEGMENTS)))
     missing = sorted({f for t in seeded
                       for f in ("reference", "reference_sha1", "reference_colour")
                       if f not in t})
@@ -328,75 +330,109 @@ def main() -> int:
           _refuses(lambda: RUN.check_incumbent_identity(
               RUN.frozen_incumbent_identity(bad_cfg), bad_cfg), "disagrees"))
 
-    print("\n== the seed block ==")
-    if RUN.STUDY_SEED_BLOCK is None:
-        pending("a seed block is reserved and registered",
-                f"{RULES.N_GAMES} seeds, four 148-seed quarters, with a "
-                f"collision re-proof covering the GENERATION ranges too")
-    else:
-        _lo, _hi = RUN.STUDY_SEED_BLOCK
-        print(f"  [{_lo}, {_hi})")
-        check("the block is registered", _accepts(RUN.check_seed_registration))
-        check(f"it is {RULES.N_GAMES} seeds -- one per game",
-              _hi - _lo == RULES.N_GAMES)
+    print("\n== the seed blocks: ONE PER SEGMENT ==")
+    #: 🔴 FOUR BLOCKS, AND SEGMENT-LOCAL STATUS. The study had one 592-seed
+    #: interval whose four quarters ALL had to be unspent to construct ANY
+    #: segment, so retiring segment 0's blocked segments 1-3 too. Segmenting
+    #: exists so one segment's failure costs one segment.
+    check(f"there are {RULES.N_SEGMENTS} blocks, one per segment",
+          len(RUN.SEGMENT_SEED_BLOCKS) == RULES.N_SEGMENTS)
+    check("every block is registered (a planning question, not a launch one)",
+          _accepts(RUN.check_seed_registration))
+    _all = set()
+    for _k, (_lo, _hi) in enumerate(RUN.SEGMENT_SEED_BLOCKS):
         _st = [REF.seed_status(x) for x in range(_lo, _hi)]
-        check("EVERY seed is ACCOUNTED", all(x["accounted"] for x in _st))
-        check("NOT exposed, NOT retired, NOT test-only -- a reservation is not "
-              "a draw",
-              not any(x["exposed"] or x["retired"] or x["test_only"] for x in _st))
-        check("no seed is in CONSUMED_SEEDS",
-              not any(x in REF.CONSUMED_SEEDS for x in range(_lo, _hi)))
-        #: 🔴 THE FOUR GENERATION RANGES ARE IN NO REGISTRY. Checked by hand, as
-        #: collision proof v14 does, or an overlapping block reads as clean.
-        _gen = [(a, b) for a, b, _ in RULES.RETIRED_GENERATION_RANGES]
-        _gen.append(RULES.generation_seed_range(RULES.GEN_SEED_UNIFORM))
-        check("clear of all FOUR generation ranges, none of them in a registry",
-              all(_hi <= a or b <= _lo for a, b in _gen), f"{len(_gen)} ranges")
-        #: derived streams, exhaustively
-        from .twixtbot_g3_reference import SeededReferenceAgent as _SRA
-        _masks = sorted({*_SRA.SEARCH_MASK.values(), *_SRA.READOUT_MASK.values()})
-        _prior = set()
-        for _t in (REF.ACCOUNTED_SEED_INTERVALS, REF.EXPOSED_SEED_INTERVALS,
-                   REF.RETIRED_SEED_INTERVALS, REF.TEST_ONLY_SEED_INTERVALS):
-            _prior |= {x for a, b in _t for x in range(a, b)}
-        _prior -= set(range(_lo, _hi))          # 🔑 BY IDENTITY: it is registered
-        for a, b in _gen:
-            _prior |= set(range(a, b))
-        _d = lambda ss: {v for x in ss for v in (x, *(x ^ m for m in _masks))}
-        _mine = _d(range(_lo, _hi))
-        check("0 derived-stream collisions, and own derivations injective",
-              not (_mine & _d(_prior)) and len(_mine) == (_hi - _lo) * 5,
-              f"{len(_mine)} values")
+        _spent = sum(x["exposed"] or x["retired"] or x["test_only"] for x in _st)
+        print(f"  segment {_k}: [{_lo}, {_hi})  "
+              f"accounted {sum(x['accounted'] for x in _st)}/{_hi - _lo}  "
+              f"spent {_spent}")
+        check(f"segment {_k}: {RULES.GAMES_PER_SEGMENT} seeds, all ACCOUNTED",
+              _hi - _lo == RULES.GAMES_PER_SEGMENT
+              and all(x["accounted"] for x in _st))
+        check(f"segment {_k}: LAUNCHABLE -- accounted and unspent",
+              _accepts(lambda k=_k: RUN.check_segment_seeds(k)))
+        _rng = set(range(_lo, _hi))
+        check(f"segment {_k}'s block overlaps no other segment's",
+              not (_rng & _all))
+        _all |= _rng
+    check(f"the four blocks hold {RULES.N_GAMES} seeds between them",
+          len(_all) == RULES.N_GAMES)
 
-        print("\n== the seeded schedule and its pins ==")
-        _ops = RUN.load_opening_set(RUN.OPENING_SET_PATH)
-        _seeded = RULES.build_tasks(_ops, seed_interval=RUN.STUDY_SEED_BLOCK)
-        check("the seeds bind POSITIONALLY, row i -> lo + i",
-              [t["seed"] for t in _seeded] == list(range(_lo, _hi)))
-        for _k in range(RULES.N_SEGMENTS):
-            _s = [t["seed"] for t in _seeded if t["segment"] == _k]
-            check(f"segment {_k}: contiguous quarter "
-                  f"[{_lo + 148 * _k}, {_lo + 148 * (_k + 1)})",
-                  _s == list(range(_lo + 148 * _k, _lo + 148 * (_k + 1))))
-        check("a pair's two arms are adjacent and share a segment",
-              all(_seeded[i]["pair_id"] == _seeded[i + 1]["pair_id"]
-                  and _seeded[i]["segment"] == _seeded[i + 1]["segment"]
-                  and _seeded[i + 1]["seed"] == _seeded[i]["seed"] + 1
-                  for i in range(0, len(_seeded), 2)))
-        check("the full schedule reproduces its PIN",
-              _accepts(lambda: RUN.check_schedule_digest(_seeded)))
-        check("each segment reproduces its OWN pin, and the four differ",
-              all(RUN.segment_digest(_seeded, _k) == RUN.SEGMENT_DIGESTS[_k]
-                  for _k in range(RULES.N_SEGMENTS))
-              and len(set(RUN.SEGMENT_DIGESTS)) == RULES.N_SEGMENTS)
-        _bad = [dict(t) for t in _seeded]
-        _bad[0]["seed"] += 1
-        check("a TAMPERED schedule is REFUSED (negative control)",
-              _refuses(lambda: RUN.check_schedule_digest(_bad),
-                       "different experiment"))
-        check("the pin is NOT computed from the tasks it checks",
-              "want_digest=SEGMENT_DIGESTS[segment]" in
-              open(RUN.__file__, encoding="utf-8").read())
+    print("\n== the RETIRED block, and what it must and must not do ==")
+    for _lo, _hi in RUN.RETIRED_SEGMENT_BLOCKS:
+        _st = [REF.seed_status(x) for x in range(_lo, _hi)]
+        print(f"  [{_lo}, {_hi})  retired {sum(x['retired'] for x in _st)}/"
+              f"{_hi - _lo}  exposed {sum(x['exposed'] for x in _st)}")
+        check("it is RETIRED in the registry", all(x["retired"] for x in _st))
+        check("EXPOSED 0 -- the VOID drew nothing",
+              not any(x["exposed"] for x in _st))
+        check("NO live segment block overlaps it",
+              all(_hi <= a or b <= _lo for a, b in RUN.SEGMENT_SEED_BLOCKS))
+    #: 🔴 IT MUST STILL REFUSE TO BE LAUNCHED AGAIN. Pointing a segment at the
+    #: retired block has to fail -- the repair decoupled the segments, it did not
+    #: make a spent block revivable.
+    _saved = RUN.SEGMENT_SEED_BLOCKS
+    try:
+        RUN.SEGMENT_SEED_BLOCKS = (RUN.RETIRED_SEGMENT_BLOCKS[0],) + _saved[1:]
+        check("relaunching the RETIRED block is REFUSED (negative control)",
+              _refuses(lambda: RUN.check_segment_seeds(0), "RETIRED"))
+        check("…and segments 1-3 are STILL launchable while it is (the repair)",
+              all(_accepts(lambda k=k: RUN.check_segment_seeds(k))
+                  for k in (1, 2, 3)))
+    finally:
+        RUN.SEGMENT_SEED_BLOCKS = _saved
+
+    print("\n== the seeded schedule and its pins ==")
+    _ops = RUN.load_opening_set(RUN.OPENING_SET_PATH)
+    _seeded = RULES.build_tasks(_ops, seed_blocks=RUN.SEGMENT_SEED_BLOCKS)
+    check("the frozen schedule builds WITHOUT consulting seed status",
+          len(_seeded) == RULES.N_GAMES)
+    for _k in range(RULES.N_SEGMENTS):
+        _lo, _hi = RUN.SEGMENT_SEED_BLOCKS[_k]
+        _s = [t["seed"] for t in _seeded if t["segment"] == _k]
+        check(f"segment {_k}: seeds bind POSITIONALLY across [{_lo}, {_hi})",
+              _s == list(range(_lo, _hi)))
+    check("a pair's two arms are adjacent and share a segment",
+          all(_seeded[i]["pair_id"] == _seeded[i + 1]["pair_id"]
+              and _seeded[i]["segment"] == _seeded[i + 1]["segment"]
+              and _seeded[i + 1]["seed"] == _seeded[i]["seed"] + 1
+              for i in range(0, len(_seeded), 2)))
+    check("the full schedule reproduces its PIN",
+          _accepts(lambda: RUN.check_schedule_digest(_seeded)))
+    check("each segment reproduces its OWN pin, and the four differ",
+          all(RUN.segment_digest(_seeded, _k) == RUN.SEGMENT_DIGESTS[_k]
+              for _k in range(RULES.N_SEGMENTS))
+          and len(set(RUN.SEGMENT_DIGESTS)) == RULES.N_SEGMENTS)
+    #: 🔴 THE REPAIR MUST NOT HAVE REACHED PAST SEGMENT 0.
+    check("segments 1-3's pins are UNCHANGED by segment 0's replacement",
+          RUN.SEGMENT_DIGESTS[1:]
+          == RUN.SEGMENT_DIGESTS_BEFORE_SEG0_REPLACEMENT[1:])
+    check("segment 0's pin DID move (it has a new block)",
+          RUN.SEGMENT_DIGESTS[0]
+          != RUN.SEGMENT_DIGESTS_BEFORE_SEG0_REPLACEMENT[0])
+    _bad = [dict(t) for t in _seeded]
+    _bad[0]["seed"] += 1
+    check("a TAMPERED schedule is REFUSED (negative control)",
+          _refuses(lambda: RUN.check_schedule_digest(_bad), "different experiment"))
+    check("the pin is NOT computed from the tasks it checks",
+          "want_digest=SEGMENT_DIGESTS[segment]" in
+          open(RUN.__file__, encoding="utf-8").read())
+
+    print("\n== the two defects that VOIDed segment 0 ==")
+    _runner_src = open(RUN.__file__, encoding="utf-8").read()
+    check("the runner CREATES its output directory before the create-only write",
+          "os.makedirs(_d, exist_ok=True)" in _runner_src)
+    check("the command writes a PARENT-OWNED launch receipt",
+          hasattr(CMD, "write_receipt") and hasattr(CMD, "receipt_path"))
+    check("the receipt is written AFTER gate restoration, in the finally",
+          _runner_src is not None
+          and "write_receipt(a.segment" in open(CMD.__file__, encoding="utf-8").read())
+    check("segment 0's FIRST destination is marked SPENT",
+          "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment0"
+          in CMD.SPENT_OUT_DIRS)
+    check("its retry destination is FRESH and not spent",
+          RUN.segment_out_dir(0) not in CMD.SPENT_OUT_DIRS
+          and RUN.segment_out_dir(0).endswith("segment0-retry"))
 
     print("\n== the outputs must be UNUSED ==")
     for k in range(RULES.N_SEGMENTS):

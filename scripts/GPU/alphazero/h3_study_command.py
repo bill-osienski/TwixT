@@ -13,10 +13,13 @@ the opening set does not exist; this wrapper refuses with them.
 """
 from __future__ import annotations
 
+import datetime
+import json
 import os
 import re
 import sys
-from typing import Any, Mapping, Optional, Sequence
+import time
+from typing import Any, Dict, Mapping, Optional, Sequence
 
 from . import h3_study_runner as RUN
 from . import runtime_requalification as RQ
@@ -42,6 +45,13 @@ SPENT_OUT_DIRS = (
     #: openings accepted -- and spent all the same. A destination is spent when a
     #: run has touched it, not when a run has succeeded.
     "docs/superpowers/evidence/2026-09-16-t1j-h3-study-openings-attempt2",
+    #: 🔴 SEGMENT 0's FIRST DESTINATION, CONSUMED 2026-09-18 BY AN ATTEMPT that
+    #: never created it. The run VOIDed on `FileNotFoundError` opening its trace,
+    #: so the directory does not exist -- and it is spent all the same: the
+    #: authorization was consumed and the seed quarter retired. A destination is
+    #: spent when a run has been AIMED at it, not when a run has written to it.
+    #: Segment 0's retry writes to `2026-09-18-t1j-h3-study-segment0-retry`.
+    "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment0",
 )
 #: 🔴 THE OPENING-GENERATION DESTINATION IS NOT LISTED HERE, and that is
 #: deliberate. `docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings` is
@@ -217,6 +227,86 @@ def worker_main(argv: Sequence[str]) -> int:
     return code
 
 
+#: exit code -> the word the receipt records. One name per outcome, so a reader
+#: never has to map a number back to a meaning.
+_OUTCOMES = {
+    EXIT_COMPLETED: "COMPLETED",
+    EXIT_VOID: "VOID",
+    EXIT_UNEXPECTED: "UNEXPECTED",
+    EXIT_UNAUTHORIZED: "UNAUTHORIZED",
+    EXIT_TIMEOUT: "TIMEOUT",
+    EXIT_REFUSED: "REFUSED",
+    EXIT_CLEANUP_FAILED: "CLEANUP_FAILED",
+    EXIT_INTERRUPTED: "INTERRUPTED",
+    EXIT_GATE_NOT_RESTORED: "GATE_NOT_RESTORED",
+    EXIT_PARTIAL: "PARTIAL",
+    EXIT_STOP_RULE_FIRED: "STOP_RULE_FIRED",
+}
+
+
+def _utc(ts: float) -> str:
+    return datetime.datetime.fromtimestamp(
+        ts, datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def receipt_path(segment: int) -> str:
+    """The PARENT's own record, beside the segment's other outputs."""
+    return f"{RUN.segment_out_dir(segment)}/00_launch_receipt.json"
+
+
+def _gate_readback(_runner_source: str = RUNNER_SOURCE) -> Optional[str]:
+    """What the SOURCE FILE says the gate is.
+
+    🔑 READ FROM THE FILE, not from this process's imported module, which still
+    holds the value it had at import.
+    """
+    try:
+        with open(_runner_source, encoding="utf-8") as fh:
+            text = fh.read()
+    except OSError:
+        return None
+    if _GATE_OPEN.search(text):
+        return "True"
+    if text.count(_GATE_CLOSED + "\n") == 1:
+        return "False"
+    return None
+
+
+def write_receipt(segment: int, payload: Dict[str, Any]) -> Optional[str]:
+    """🔴 THE PARENT'S TERMINAL RECEIPT, CREATE-ONLY, ON EVERY ATTEMPTED OUTCOME.
+
+    Segment 0's VOID of 2026-09-18 left NOTHING durable: the worker died before
+    creating its trace, and this command wrote no record of its own. A run
+    consumed its authorization, retired a seed quarter, and the only evidence was
+    stdout -- recoverable only because it happened to be redirected to a file.
+
+    `h3_generation_command` already had this. The study command did not, and the
+    difference was invisible until a run failed EARLY -- which is precisely the
+    case a parent-owned receipt exists for.
+
+    Written in the `finally`, AFTER gate restoration, so it can record whether
+    the gate really closed. Its own failure is reported and never raises: a
+    receipt that could abort the outcome it describes would be a new way to lose
+    the record.
+    """
+    path = receipt_path(segment)
+    try:
+        d = os.path.dirname(path)
+        if d:
+            os.makedirs(d, exist_ok=True)
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+        with os.fdopen(fd, "w") as fh:
+            json.dump(payload, fh, indent=1, sort_keys=True, default=str)
+            fh.flush()
+            os.fsync(fh.fileno())
+        return path
+    except Exception as e:                                    # noqa: BLE001
+        print(f"🔴 THE LAUNCH RECEIPT COULD NOT BE WRITTEN ({path}): "
+              f"{type(e).__name__}: {e}. The outcome above stands; this run has "
+              f"no parent-owned record.", file=sys.stderr)
+        return None
+
+
 def main(argv: Optional[Sequence[str]] = None, *,
          _runner_source: str = RUNNER_SOURCE) -> int:
     """CLI. Gate, then INSIDE the restoration boundary: output precheck and a
@@ -230,6 +320,13 @@ def main(argv: Optional[Sequence[str]] = None, *,
     a = _parser().parse_args(argv)
     if a.worker:
         return worker_main(argv)
+    #: 🔴 THE UNAUTHORIZED PATH WRITES NO RECEIPT, DELIBERATELY. It returns
+    #: before the launch boundary: nothing was attempted, nothing was consumed,
+    #: and no seed block was retired. Writing a receipt here would CREATE THE
+    #: DESTINATION on every accidental invocation, and the next real launch would
+    #: then be refused because its output directory was already occupied -- H2's
+    #: defect, arriving by a new road. The receipt covers every outcome from the
+    #: point the gate was OPEN, which is the point an attempt begins.
     if not gate_is_open():
         print("the H3 study is NOT AUTHORIZED (H3_STUDY_EXECUTION_AUTHORIZED is "
               "False). No worker was spawned, no JVM started, no file written.",
@@ -241,6 +338,8 @@ def main(argv: Optional[Sequence[str]] = None, *,
         return EXIT_UNAUTHORIZED
 
     code = EXIT_UNEXPECTED
+    started = time.time()
+    outcome, detail, sup = "UNEXPECTED", None, {}
     try:
         try:
             RUN.check_output_paths(*_resolve_paths(a))
@@ -248,6 +347,7 @@ def main(argv: Optional[Sequence[str]] = None, *,
         except RUN.H3StudyRunError as e:
             print(f"refused before spawning: {e}", file=sys.stderr)
             code, refused = EXIT_REFUSED, True   # no return: the finally must run
+            outcome, detail = "REFUSED_BEFORE_SPAWN", f"{type(e).__name__}: {e}"
         if not refused:
             cap_fd = _make_capability()
             try:
@@ -279,19 +379,56 @@ def main(argv: Optional[Sequence[str]] = None, *,
                 code = EXIT_INTERRUPTED
             else:
                 code = r["exit_code"]
+            sup = dict(r)
+            outcome = _OUTCOMES.get(code, "UNEXPECTED")
     except Exception as e:                                    # noqa: BLE001
         print(f"UNEXPECTED in the supervisor: {type(e).__name__}: {e}",
               file=sys.stderr)
         code = EXIT_UNEXPECTED
+        outcome, detail = "UNEXPECTED", f"{type(e).__name__}: {e}"
     finally:
         # 🔴 RESTORED WHATEVER HAPPENED -- refusal, timeout, interrupt, crash or
         # completion -- and a failed restoration SUPERSEDES every other code,
         # including a refusal: an open gate is the larger fact.
-        if not restore_gate(_runner_source):
+        restored = restore_gate(_runner_source)
+        if not restored:
             print(f"GATE NOT RESTORED: {_runner_source} could not be rewritten to "
                   f"{_GATE_CLOSED}. Restore it BY HAND before anything else.",
                   file=sys.stderr)
             code = EXIT_GATE_NOT_RESTORED
+            outcome = "GATE_NOT_RESTORED"
+        # 🔴 AFTER RESTORATION, so the receipt can record whether the gate really
+        # closed -- and on EVERY attempted outcome, including a refusal that
+        # never spawned a worker and a worker that died before its trace existed.
+        results, trace, report = _resolve_paths(a)
+        write_receipt(a.segment, {
+            "design": "H3_FULL_STUDY_SEGMENT",
+            "segment": a.segment,
+            "started_utc": _utc(started),
+            "ended_utc": _utc(time.time()),
+            "elapsed_s": round(time.time() - started, 3),
+            "outcome": outcome,
+            "exit_code": code,
+            "detail": detail,
+            "worker_exit": sup.get("exit_code"),
+            "timed_out": sup.get("timed_out"),
+            "interrupted": sup.get("interrupted"),
+            "group_cleared": sup.get("group_cleared"),
+            "gate_restored": restored,
+            "gate_readback": _gate_readback(_runner_source),
+            "seed_block": list(RUN.SEGMENT_SEED_BLOCKS[a.segment])
+                          if 0 <= a.segment < len(RUN.SEGMENT_SEED_BLOCKS) else None,
+            "segment_digest": (RUN.SEGMENT_DIGESTS[a.segment]
+                               if 0 <= a.segment < len(RUN.SEGMENT_DIGESTS) else None),
+            "results_exists": os.path.lexists(results),
+            "trace_exists": os.path.lexists(trace),
+            "report_exists": os.path.lexists(report),
+            "retires": list(RUN.SEGMENT_SEED_BLOCKS[a.segment])
+                       if 0 <= a.segment < len(RUN.SEGMENT_SEED_BLOCKS) else None,
+            "retirement_rule":
+                "WHOLE BLOCK, on ANY attempted launch -- the quarter retires on "
+                "START, not on success.",
+        })
     return code
 
 

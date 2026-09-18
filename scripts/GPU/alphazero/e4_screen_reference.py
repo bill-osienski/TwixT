@@ -408,6 +408,46 @@ ACCOUNTED_SEED_INTERVALS = (
                                      #
                                      # Accounted, NOT exposed and NOT retired: a
                                      # reservation is not a draw.
+    (202628000, 202628148),          # 🔴 H3 SEGMENT 0's REPLACEMENT BLOCK. 148
+                                     # seeds, one per game, bound POSITIONALLY
+                                     # (row i = 202628000 + i within segment 0).
+                                     #
+                                     # WHY A REPLACEMENT. Segment 0's original
+                                     # quarter [202626000, 202626148) RETIRED
+                                     # WHOLE on the VOID of 2026-09-18 -- exposed
+                                     # 0, retired all the same, because the
+                                     # authorization said the quarter retires ON
+                                     # START. No strength information was
+                                     # produced, so replacing these seeds
+                                     # introduces no outcome-based selection.
+                                     #
+                                     # 🔑 AND THE BLOCK IS NOW FOUR, NOT ONE. The
+                                     # study used a single 592-seed interval whose
+                                     # four quarters were ALL required unspent to
+                                     # construct ANY segment, so retiring segment
+                                     # 0's blocked segments 1-3 too -- the
+                                     # opposite of what segmenting is for.
+                                     # Segments 1-3 keep [202626148, 202626592);
+                                     # this replaces segment 0 alone.
+                                     #
+                                     # PROVED by collision proof v15: 302,505
+                                     # prior seeds across thirteen categories,
+                                     # 1,514,745 prior values with derivations, 0
+                                     # direct overlaps, 0 derived-stream
+                                     # collisions, own derivations injective
+                                     # (740 = 148 x 5). Exhaustive, not sampled.
+                                     # EIGHTEEN negative controls all rejected,
+                                     # segment 0's own retired quarter and the
+                                     # whole original 592-seed block among them.
+                                     #
+                                     # 🔑 Excluded BY IDENTITY in the GAP check as
+                                     # well as the overlap check. Gap floor is the
+                                     # candidate's OWN SIZE, 148; nearest actual
+                                     # boundary is 1,408 away.
+                                     #
+                                     # Accounted, NOT exposed and NOT retired.
+                                     # Registering it does not open the gate:
+                                     # H3_STUDY_EXECUTION_AUTHORIZED stays False.
 )
 
 #: EXPERIMENTAL EXPOSURE: seeds drawn from OUTSIDE the permanently unschedulable
