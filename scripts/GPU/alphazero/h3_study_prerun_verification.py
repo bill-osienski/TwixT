@@ -230,6 +230,14 @@ def main() -> int:
                for k in range(RULES.N_SEGMENTS)}) == RULES.N_SEGMENTS)
 
     print("\n== the REAL builder, on the population's tasks ==")
+    #: 🔴 THE SECOND DEAD REFERENCE. `match_cfg` was defined in the
+    #: entropy-finding block, which went when generation became engine-free --
+    #: but it is the PLAYING configuration and everything below still needs it.
+    #: Both NameErrors survived because the crash killed the run before the
+    #: verdict, and a checker that dies mid-way looks like one that finished.
+    #: ONE OBJECT, constructed here and handed to the builder AND to the identity
+    #: derivation, so the recorded identity describes the object that was used.
+    match_cfg = RUN.frozen_argmax_config()
     from . import eval_readout as RO
     from . import twixtbot_g3_reference as G3
 
@@ -240,8 +248,13 @@ def main() -> int:
     check("the schedule's identity IS the registry's pin",
           REF.REFERENCE_CHECKPOINTS[_StubEvaluator._g3_reference]["sha1"]
           == _StubEvaluator._g3_sha1)
-    seeded = RULES.build_tasks(stub, seed_interval=(777000000,
-                                                    777000000 + RULES.N_GAMES))
+    #: 🔴 `stub` -- a NameError since the uniform rewrite renamed it to
+    #: `population`. The preflight CRASHED here, so everything below this line
+    #: (the seed block, the output paths, the wrapper, the VERDICT) never ran and
+    #: the exit code was 1. Reading the tail showed PASS lines and nothing wrong.
+    #: A checker that dies mid-way looks exactly like one that finished.
+    seeded = RULES.build_tasks(population, seed_interval=(777000000,
+                                                          777000000 + RULES.N_GAMES))
     missing = sorted({f for t in seeded
                       for f in ("reference", "reference_sha1", "reference_colour")
                       if f not in t})
