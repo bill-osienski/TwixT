@@ -612,6 +612,18 @@ EXPOSED_SEED_INTERVALS = (
                                      # a test asserted it must stay usable -- the
                                      # exact reuse this registry exists to prevent.
                                      # Recorded 2026-08-26.
+    (202628000, 202628148),          # 🔴 H3 SEGMENT 0 -- RAN AND COMPLETED
+                                     # 2026-09-18. 148/148 games, wrapper exit 0,
+                                     # verdict OK, 2.12 h of a 3.00 h cap. EVERY
+                                     # one of the 148 seeds was DRAWN, read from
+                                     # the records themselves (each task_result
+                                     # carries its own seed), not derived from
+                                     # the plan.
+                                     #
+                                     # RETIRED WHOLE under the one-shot rule.
+                                     # Segments 1-3 keep [202626148, 202626592),
+                                     # untouched -- which is the point of the
+                                     # 2026-09-18 isolation repair.
 )
 
 #: Seeds RESERVED PERMANENTLY FOR TESTS. Unit tests must draw from something, and
@@ -795,6 +807,18 @@ RETIRED_SEED_INTERVALS = (
                                      # success. A future segment 0 needs a FRESH
                                      # quarter with its own collision re-proof.
                                      # Segments 1-3 keep [202626148, 202626592).
+    (202628000, 202628148),          # 🔴 H3 SEGMENT 0 -- RAN AND COMPLETED
+                                     # 2026-09-18. 148/148 games, wrapper exit 0,
+                                     # verdict OK, 2.12 h of a 3.00 h cap. EVERY
+                                     # one of the 148 seeds was DRAWN, read from
+                                     # the records themselves (each task_result
+                                     # carries its own seed), not derived from
+                                     # the plan.
+                                     #
+                                     # RETIRED WHOLE under the one-shot rule.
+                                     # Segments 1-3 keep [202626148, 202626592),
+                                     # untouched -- which is the point of the
+                                     # 2026-09-18 isolation repair.
 )
 
 

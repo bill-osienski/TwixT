@@ -1,0 +1,298 @@
+{"event": "run_start", "n_tasks": 148, "pairs": 74, "segment": 0, "selection_mode": "argmax"}
+{"event": "task_start", "index": 0}
+{"event": "task_done", "games_completed": 1, "index": 0}
+{"event": "task_start", "index": 1}
+{"event": "task_done", "games_completed": 2, "index": 1}
+{"event": "task_start", "index": 2}
+{"event": "task_done", "games_completed": 3, "index": 2}
+{"event": "task_start", "index": 3}
+{"event": "task_done", "games_completed": 4, "index": 3}
+{"event": "task_start", "index": 4}
+{"event": "task_done", "games_completed": 5, "index": 4}
+{"event": "task_start", "index": 5}
+{"event": "task_done", "games_completed": 6, "index": 5}
+{"event": "task_start", "index": 6}
+{"event": "task_done", "games_completed": 7, "index": 6}
+{"event": "task_start", "index": 7}
+{"event": "task_done", "games_completed": 8, "index": 7}
+{"event": "task_start", "index": 8}
+{"event": "task_done", "games_completed": 9, "index": 8}
+{"event": "task_start", "index": 9}
+{"event": "task_done", "games_completed": 10, "index": 9}
+{"event": "task_start", "index": 10}
+{"event": "task_done", "games_completed": 11, "index": 10}
+{"event": "task_start", "index": 11}
+{"event": "task_done", "games_completed": 12, "index": 11}
+{"event": "task_start", "index": 12}
+{"event": "task_done", "games_completed": 13, "index": 12}
+{"event": "task_start", "index": 13}
+{"event": "task_done", "games_completed": 14, "index": 13}
+{"event": "task_start", "index": 14}
+{"event": "task_done", "games_completed": 15, "index": 14}
+{"event": "task_start", "index": 15}
+{"event": "task_done", "games_completed": 16, "index": 15}
+{"event": "task_start", "index": 16}
+{"event": "task_done", "games_completed": 17, "index": 16}
+{"event": "task_start", "index": 17}
+{"event": "task_done", "games_completed": 18, "index": 17}
+{"event": "task_start", "index": 18}
+{"event": "task_done", "games_completed": 19, "index": 18}
+{"event": "task_start", "index": 19}
+{"event": "task_done", "games_completed": 20, "index": 19}
+{"event": "task_start", "index": 20}
+{"event": "task_done", "games_completed": 21, "index": 20}
+{"event": "task_start", "index": 21}
+{"event": "task_done", "games_completed": 22, "index": 21}
+{"event": "task_start", "index": 22}
+{"event": "task_done", "games_completed": 23, "index": 22}
+{"event": "task_start", "index": 23}
+{"event": "task_done", "games_completed": 24, "index": 23}
+{"event": "task_start", "index": 24}
+{"event": "task_done", "games_completed": 25, "index": 24}
+{"event": "task_start", "index": 25}
+{"event": "task_done", "games_completed": 26, "index": 25}
+{"event": "task_start", "index": 26}
+{"event": "task_done", "games_completed": 27, "index": 26}
+{"event": "task_start", "index": 27}
+{"event": "task_done", "games_completed": 28, "index": 27}
+{"event": "task_start", "index": 28}
+{"event": "task_done", "games_completed": 29, "index": 28}
+{"event": "task_start", "index": 29}
+{"event": "task_done", "games_completed": 30, "index": 29}
+{"event": "task_start", "index": 30}
+{"event": "task_done", "games_completed": 31, "index": 30}
+{"event": "task_start", "index": 31}
+{"event": "task_done", "games_completed": 32, "index": 31}
+{"event": "task_start", "index": 32}
+{"event": "task_done", "games_completed": 33, "index": 32}
+{"event": "task_start", "index": 33}
+{"event": "task_done", "games_completed": 34, "index": 33}
+{"event": "task_start", "index": 34}
+{"event": "task_done", "games_completed": 35, "index": 34}
+{"event": "task_start", "index": 35}
+{"event": "task_done", "games_completed": 36, "index": 35}
+{"event": "task_start", "index": 36}
+{"event": "task_done", "games_completed": 37, "index": 36}
+{"event": "task_start", "index": 37}
+{"event": "task_done", "games_completed": 38, "index": 37}
+{"event": "task_start", "index": 38}
+{"event": "task_done", "games_completed": 39, "index": 38}
+{"event": "task_start", "index": 39}
+{"event": "task_done", "games_completed": 40, "index": 39}
+{"event": "task_start", "index": 40}
+{"event": "task_done", "games_completed": 41, "index": 40}
+{"event": "task_start", "index": 41}
+{"event": "task_done", "games_completed": 42, "index": 41}
+{"event": "task_start", "index": 42}
+{"event": "task_done", "games_completed": 43, "index": 42}
+{"event": "task_start", "index": 43}
+{"event": "task_done", "games_completed": 44, "index": 43}
+{"event": "task_start", "index": 44}
+{"event": "task_done", "games_completed": 45, "index": 44}
+{"event": "task_start", "index": 45}
+{"event": "task_done", "games_completed": 46, "index": 45}
+{"event": "task_start", "index": 46}
+{"event": "task_done", "games_completed": 47, "index": 46}
+{"event": "task_start", "index": 47}
+{"event": "task_done", "games_completed": 48, "index": 47}
+{"event": "task_start", "index": 48}
+{"event": "task_done", "games_completed": 49, "index": 48}
+{"event": "task_start", "index": 49}
+{"event": "task_done", "games_completed": 50, "index": 49}
+{"event": "task_start", "index": 50}
+{"event": "task_done", "games_completed": 51, "index": 50}
+{"event": "task_start", "index": 51}
+{"event": "task_done", "games_completed": 52, "index": 51}
+{"event": "task_start", "index": 52}
+{"event": "task_done", "games_completed": 53, "index": 52}
+{"event": "task_start", "index": 53}
+{"event": "task_done", "games_completed": 54, "index": 53}
+{"event": "task_start", "index": 54}
+{"event": "task_done", "games_completed": 55, "index": 54}
+{"event": "task_start", "index": 55}
+{"event": "task_done", "games_completed": 56, "index": 55}
+{"event": "task_start", "index": 56}
+{"event": "task_done", "games_completed": 57, "index": 56}
+{"event": "task_start", "index": 57}
+{"event": "task_done", "games_completed": 58, "index": 57}
+{"event": "task_start", "index": 58}
+{"event": "task_done", "games_completed": 59, "index": 58}
+{"event": "task_start", "index": 59}
+{"event": "task_done", "games_completed": 60, "index": 59}
+{"event": "task_start", "index": 60}
+{"event": "task_done", "games_completed": 61, "index": 60}
+{"event": "task_start", "index": 61}
+{"event": "task_done", "games_completed": 62, "index": 61}
+{"event": "task_start", "index": 62}
+{"event": "task_done", "games_completed": 63, "index": 62}
+{"event": "task_start", "index": 63}
+{"event": "task_done", "games_completed": 64, "index": 63}
+{"event": "task_start", "index": 64}
+{"event": "task_done", "games_completed": 65, "index": 64}
+{"event": "task_start", "index": 65}
+{"event": "task_done", "games_completed": 66, "index": 65}
+{"event": "task_start", "index": 66}
+{"event": "task_done", "games_completed": 67, "index": 66}
+{"event": "task_start", "index": 67}
+{"event": "task_done", "games_completed": 68, "index": 67}
+{"event": "task_start", "index": 68}
+{"event": "task_done", "games_completed": 69, "index": 68}
+{"event": "task_start", "index": 69}
+{"event": "task_done", "games_completed": 70, "index": 69}
+{"event": "task_start", "index": 70}
+{"event": "task_done", "games_completed": 71, "index": 70}
+{"event": "task_start", "index": 71}
+{"event": "task_done", "games_completed": 72, "index": 71}
+{"event": "task_start", "index": 72}
+{"event": "task_done", "games_completed": 73, "index": 72}
+{"event": "task_start", "index": 73}
+{"event": "task_done", "games_completed": 74, "index": 73}
+{"event": "task_start", "index": 74}
+{"event": "task_done", "games_completed": 75, "index": 74}
+{"event": "task_start", "index": 75}
+{"event": "task_done", "games_completed": 76, "index": 75}
+{"event": "task_start", "index": 76}
+{"event": "task_done", "games_completed": 77, "index": 76}
+{"event": "task_start", "index": 77}
+{"event": "task_done", "games_completed": 78, "index": 77}
+{"event": "task_start", "index": 78}
+{"event": "task_done", "games_completed": 79, "index": 78}
+{"event": "task_start", "index": 79}
+{"event": "task_done", "games_completed": 80, "index": 79}
+{"event": "task_start", "index": 80}
+{"event": "task_done", "games_completed": 81, "index": 80}
+{"event": "task_start", "index": 81}
+{"event": "task_done", "games_completed": 82, "index": 81}
+{"event": "task_start", "index": 82}
+{"event": "task_done", "games_completed": 83, "index": 82}
+{"event": "task_start", "index": 83}
+{"event": "task_done", "games_completed": 84, "index": 83}
+{"event": "task_start", "index": 84}
+{"event": "task_done", "games_completed": 85, "index": 84}
+{"event": "task_start", "index": 85}
+{"event": "task_done", "games_completed": 86, "index": 85}
+{"event": "task_start", "index": 86}
+{"event": "task_done", "games_completed": 87, "index": 86}
+{"event": "task_start", "index": 87}
+{"event": "task_done", "games_completed": 88, "index": 87}
+{"event": "task_start", "index": 88}
+{"event": "task_done", "games_completed": 89, "index": 88}
+{"event": "task_start", "index": 89}
+{"event": "task_done", "games_completed": 90, "index": 89}
+{"event": "task_start", "index": 90}
+{"event": "task_done", "games_completed": 91, "index": 90}
+{"event": "task_start", "index": 91}
+{"event": "task_done", "games_completed": 92, "index": 91}
+{"event": "task_start", "index": 92}
+{"event": "task_done", "games_completed": 93, "index": 92}
+{"event": "task_start", "index": 93}
+{"event": "task_done", "games_completed": 94, "index": 93}
+{"event": "task_start", "index": 94}
+{"event": "task_done", "games_completed": 95, "index": 94}
+{"event": "task_start", "index": 95}
+{"event": "task_done", "games_completed": 96, "index": 95}
+{"event": "task_start", "index": 96}
+{"event": "task_done", "games_completed": 97, "index": 96}
+{"event": "task_start", "index": 97}
+{"event": "task_done", "games_completed": 98, "index": 97}
+{"event": "task_start", "index": 98}
+{"event": "task_done", "games_completed": 99, "index": 98}
+{"event": "task_start", "index": 99}
+{"event": "task_done", "games_completed": 100, "index": 99}
+{"event": "task_start", "index": 100}
+{"event": "task_done", "games_completed": 101, "index": 100}
+{"event": "task_start", "index": 101}
+{"event": "task_done", "games_completed": 102, "index": 101}
+{"event": "task_start", "index": 102}
+{"event": "task_done", "games_completed": 103, "index": 102}
+{"event": "task_start", "index": 103}
+{"event": "task_done", "games_completed": 104, "index": 103}
+{"event": "task_start", "index": 104}
+{"event": "task_done", "games_completed": 105, "index": 104}
+{"event": "task_start", "index": 105}
+{"event": "task_done", "games_completed": 106, "index": 105}
+{"event": "task_start", "index": 106}
+{"event": "task_done", "games_completed": 107, "index": 106}
+{"event": "task_start", "index": 107}
+{"event": "task_done", "games_completed": 108, "index": 107}
+{"event": "task_start", "index": 108}
+{"event": "task_done", "games_completed": 109, "index": 108}
+{"event": "task_start", "index": 109}
+{"event": "task_done", "games_completed": 110, "index": 109}
+{"event": "task_start", "index": 110}
+{"event": "task_done", "games_completed": 111, "index": 110}
+{"event": "task_start", "index": 111}
+{"event": "task_done", "games_completed": 112, "index": 111}
+{"event": "task_start", "index": 112}
+{"event": "task_done", "games_completed": 113, "index": 112}
+{"event": "task_start", "index": 113}
+{"event": "task_done", "games_completed": 114, "index": 113}
+{"event": "task_start", "index": 114}
+{"event": "task_done", "games_completed": 115, "index": 114}
+{"event": "task_start", "index": 115}
+{"event": "task_done", "games_completed": 116, "index": 115}
+{"event": "task_start", "index": 116}
+{"event": "task_done", "games_completed": 117, "index": 116}
+{"event": "task_start", "index": 117}
+{"event": "task_done", "games_completed": 118, "index": 117}
+{"event": "task_start", "index": 118}
+{"event": "task_done", "games_completed": 119, "index": 118}
+{"event": "task_start", "index": 119}
+{"event": "task_done", "games_completed": 120, "index": 119}
+{"event": "task_start", "index": 120}
+{"event": "task_done", "games_completed": 121, "index": 120}
+{"event": "task_start", "index": 121}
+{"event": "task_done", "games_completed": 122, "index": 121}
+{"event": "task_start", "index": 122}
+{"event": "task_done", "games_completed": 123, "index": 122}
+{"event": "task_start", "index": 123}
+{"event": "task_done", "games_completed": 124, "index": 123}
+{"event": "task_start", "index": 124}
+{"event": "task_done", "games_completed": 125, "index": 124}
+{"event": "task_start", "index": 125}
+{"event": "task_done", "games_completed": 126, "index": 125}
+{"event": "task_start", "index": 126}
+{"event": "task_done", "games_completed": 127, "index": 126}
+{"event": "task_start", "index": 127}
+{"event": "task_done", "games_completed": 128, "index": 127}
+{"event": "task_start", "index": 128}
+{"event": "task_done", "games_completed": 129, "index": 128}
+{"event": "task_start", "index": 129}
+{"event": "task_done", "games_completed": 130, "index": 129}
+{"event": "task_start", "index": 130}
+{"event": "task_done", "games_completed": 131, "index": 130}
+{"event": "task_start", "index": 131}
+{"event": "task_done", "games_completed": 132, "index": 131}
+{"event": "task_start", "index": 132}
+{"event": "task_done", "games_completed": 133, "index": 132}
+{"event": "task_start", "index": 133}
+{"event": "task_done", "games_completed": 134, "index": 133}
+{"event": "task_start", "index": 134}
+{"event": "task_done", "games_completed": 135, "index": 134}
+{"event": "task_start", "index": 135}
+{"event": "task_done", "games_completed": 136, "index": 135}
+{"event": "task_start", "index": 136}
+{"event": "task_done", "games_completed": 137, "index": 136}
+{"event": "task_start", "index": 137}
+{"event": "task_done", "games_completed": 138, "index": 137}
+{"event": "task_start", "index": 138}
+{"event": "task_done", "games_completed": 139, "index": 138}
+{"event": "task_start", "index": 139}
+{"event": "task_done", "games_completed": 140, "index": 139}
+{"event": "task_start", "index": 140}
+{"event": "task_done", "games_completed": 141, "index": 140}
+{"event": "task_start", "index": 141}
+{"event": "task_done", "games_completed": 142, "index": 141}
+{"event": "task_start", "index": 142}
+{"event": "task_done", "games_completed": 143, "index": 142}
+{"event": "task_start", "index": 143}
+{"event": "task_done", "games_completed": 144, "index": 143}
+{"event": "task_start", "index": 144}
+{"event": "task_done", "games_completed": 145, "index": 144}
+{"event": "task_start", "index": 145}
+{"event": "task_done", "games_completed": 146, "index": 145}
+{"event": "task_start", "index": 146}
+{"event": "task_done", "games_completed": 147, "index": 146}
+{"event": "task_start", "index": 147}
+{"event": "task_done", "games_completed": 148, "index": 147}
+{"event": "run_end", "games_completed": 148, "segment": 0, "verdict": "OK"}
