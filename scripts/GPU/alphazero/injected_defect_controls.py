@@ -3542,6 +3542,8 @@ DEFECTS = [
 # DERIVED from the requirement and its assertion and then verified against a run,
 # which is why each names a count or a sentence rather than a first line.
 EXPECTED_REASONS = {
+    "the opening-set pin is not the frozen artifact's own digest":
+        "AssertionError: assert '000000000000...0000000000000' == '35932b3fabd9...c863faf772e46'",
     'the spent-range guard is no longer injected into the loop':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_rules.H3StudyError'>",
     'the rules re-exports drift from the pinned protocol':
@@ -3561,7 +3563,7 @@ EXPECTED_REASONS = {
     "the walk's own module is dropped from the pins":
         "AssertionError: assert ({'d1_selectio...ixt_state.py'} == {'d1_selectio..._protocol.py'}",
     'the pinned sources include the module holding OPENING_SET_DIGEST':
-        "AssertionError: assert 'h3_study_rules.py' not in {'d1_selection.py': 'ebea796093bdd7cbecb17ce719df50404fef7eba905309f3f27b3d7b56076e7d', 'game/twixt_state.py': '291275...3c8f585275770f4c72e651cba5e2', 'h3_study_rules.py': 'fb9060eb4b50b7050426eea4685c40e36fa6952d0054db03852192ffe9e54748'}",
+        "scripts.GPU.alphazero.h3_study_generator.H3GenerationError: the generator identity disagrees with the running code on ['source_pins']. The same seed gives a DIFFERENT opening under a different walk, bit generator or engine, so this population cannot be reproduced here and may not be played.",
     'restoration is trusted instead of verified from the file':
         'AssertionError: assert 0 == 9',
     'the walk need not reproduce the recorded moves':
@@ -3674,7 +3676,7 @@ EXPECTED_REASONS = {
     'attempt provenance becomes optional':
         'scripts.GPU.alphazero.h3_study_rules.H3StudyError: attempt must be a non-negative int, got -1',
     'the official destination moves into a spent directory':
-        'AssertionError: assert not True',
+        'AssertionError: assert (False)',
     'the runner repeats the destination instead of reading it':
         "AssertionError: assert 'docs/superpo...ning_set.json' == 'docs/superpo...ning_set.json'",
     'the gate inventory stops seeing gates at all':
@@ -4982,8 +4984,6 @@ EXPECTED_REASONS = {
         'AssertionError: assert 5 == 7',
     # ── 2026-09-15: PREPARATION for the opening-generation run.
     # Every reason observed in a throwaway worktree, never predicted.
-    'the opening-set pin is invented before the artifact exists':
-        "AssertionError: assert '0000000000000000000000000000000000000000000000000000000000000000' is None",
     # ── 2026-09-15: the H3 FULL STUDY. Every reason observed in a throwaway
     # worktree through the driver's own classify path, never predicted.
     'a VOIDed segment is treated as a clean exclusion':
