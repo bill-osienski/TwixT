@@ -1,0 +1,10104 @@
+{
+ "claim": "Over legal six-ply TwixT positions drawn UNIFORMLY AT RANDOM and filtered only by the structural admissibility rules of card section 1.3, played in the frozen deterministic argmax configuration. This population says NOTHING about realistic play, about positions either engine would actually reach, or about any engine-produced population. A uniformly random six-ply position is not a position anyone plays.",
+ "design": "H3_FULL_STUDY_OPENINGS",
+ "generation_note": "ENGINE-FREE. Uniform random legal play to six plies, whole-position rejection against the structural filters, one contiguous declared seed range covering every candidate. No model was loaded, no JVM started, no engine consulted and no move requested.",
+ "generator": {
+  "bit_generator": "PCG64",
+  "board_size": 24,
+  "commit": "725a2857e153152c935c16af4738751006bfd318",
+  "engine_free": true,
+  "excluded_digest_set": "b35736b28d936e0aa93a450b4bfaa61720a8b67cb9f1f45c8f457b86cdc5d05d",
+  "filters": [
+   "legal_and_not_won",
+   "all_pegs_placed",
+   "no_depth1_forced_win",
+   "distinct_up_to_symmetry",
+   "not_a_pilot_or_h1_h2_opening"
+  ],
+  "gen_seed_base": 20261600000,
+  "kind": "uniform_random_legal_play",
+  "max_attempts": 400,
+  "n_pairs": 296,
+  "numpy": "2.4.1",
+  "opening_plies": 6,
+  "python": "3.14.7",
+  "seed_range": [
+   20261600000,
+   20261718400
+  ],
+  "source_pins": {
+   "d1_selection.py": "ebea796093bdd7cbecb17ce719df50404fef7eba905309f3f27b3d7b56076e7d",
+   "game/twixt_state.py": "291275223b71b522a19181ae33a34518c0ca3c8f585275770f4c72e651cba5e2",
+   "h3_generation_protocol.py": "f371cf1817c7272cc7d7443952a8ad0a63e192bffbd3274172a7b6e8e4786457"
+  }
+ },
+ "n": 296,
+ "opening_set_digest": "35932b3fabd9c6463d615b0b3af380134dadd700e2ca1e882a0c863faf772e46",
+ "openings": [
+  {
+   "attempts": 1,
+   "digest": "fbb90a54ca869ae357cef316cb535256baae665c6d8b4c6cdc9471a7859a027f",
+   "index": 0,
+   "moves": [
+    [
+     4,
+     10
+    ],
+    [
+     19,
+     18
+    ],
+    [
+     7,
+     8
+    ],
+    [
+     16,
+     9
+    ],
+    [
+     15,
+     17
+    ],
+    [
+     15,
+     7
+    ]
+   ],
+   "seed": 20261600000,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "5681be15a280a64b27d323dffa1894c40c4bd88a2d833cd7c159a6be29fc1f82",
+   "index": 1,
+   "moves": [
+    [
+     16,
+     21
+    ],
+    [
+     3,
+     16
+    ],
+    [
+     9,
+     3
+    ],
+    [
+     16,
+     5
+    ],
+    [
+     23,
+     10
+    ],
+    [
+     22,
+     12
+    ]
+   ],
+   "seed": 20261600400,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "1d6c0c0f15de68f267548c3496f5f758f730b7a225a881f72334e26a5b59e504",
+   "index": 2,
+   "moves": [
+    [
+     1,
+     13
+    ],
+    [
+     9,
+     21
+    ],
+    [
+     5,
+     9
+    ],
+    [
+     15,
+     17
+    ],
+    [
+     0,
+     3
+    ],
+    [
+     13,
+     9
+    ]
+   ],
+   "seed": 20261600800,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "4fec94b7028fef29cfdf188c8688db2a3d877cd23f2ff5faea4440b8381cf3a8",
+   "index": 3,
+   "moves": [
+    [
+     12,
+     14
+    ],
+    [
+     4,
+     20
+    ],
+    [
+     18,
+     18
+    ],
+    [
+     1,
+     1
+    ],
+    [
+     21,
+     20
+    ],
+    [
+     6,
+     9
+    ]
+   ],
+   "seed": 20261601200,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "b2595f7c7ce921d3dcdbb3d20e7a5264ceac57ba1bbd246a7cce03b5777a8e2b",
+   "index": 4,
+   "moves": [
+    [
+     16,
+     18
+    ],
+    [
+     18,
+     22
+    ],
+    [
+     3,
+     1
+    ],
+    [
+     6,
+     13
+    ],
+    [
+     12,
+     11
+    ],
+    [
+     1,
+     6
+    ]
+   ],
+   "seed": 20261601600,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "ec88ea7093597e90038ba70498b0b06624014d880a8896d82909ad674d78bf6c",
+   "index": 5,
+   "moves": [
+    [
+     4,
+     20
+    ],
+    [
+     13,
+     17
+    ],
+    [
+     2,
+     4
+    ],
+    [
+     12,
+     17
+    ],
+    [
+     16,
+     2
+    ],
+    [
+     19,
+     0
+    ]
+   ],
+   "seed": 20261602000,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "0472eb7a03d2f359cf0d3cda9b9668169295300154457a5ecdc5ec6015f19a7d",
+   "index": 6,
+   "moves": [
+    [
+     8,
+     5
+    ],
+    [
+     14,
+     19
+    ],
+    [
+     11,
+     2
+    ],
+    [
+     13,
+     16
+    ],
+    [
+     21,
+     20
+    ],
+    [
+     8,
+     3
+    ]
+   ],
+   "seed": 20261602400,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "733ea8a5827888dfe53b52c44810ca0fdafcf8bc4254405a921a89b844a78c44",
+   "index": 7,
+   "moves": [
+    [
+     13,
+     1
+    ],
+    [
+     4,
+     12
+    ],
+    [
+     11,
+     21
+    ],
+    [
+     1,
+     17
+    ],
+    [
+     15,
+     12
+    ],
+    [
+     9,
+     19
+    ]
+   ],
+   "seed": 20261602800,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "8f1f38fa1c32f464574ab82349ead8aeb87bbad73bfd5f87e87412c9ba70563b",
+   "index": 8,
+   "moves": [
+    [
+     7,
+     6
+    ],
+    [
+     9,
+     13
+    ],
+    [
+     15,
+     14
+    ],
+    [
+     10,
+     16
+    ],
+    [
+     11,
+     15
+    ],
+    [
+     21,
+     3
+    ]
+   ],
+   "seed": 20261603200,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "f1b983fd1345ea203e42f16b465678f66ebaad042cd5d8a2526ad4430b284e10",
+   "index": 9,
+   "moves": [
+    [
+     16,
+     2
+    ],
+    [
+     12,
+     21
+    ],
+    [
+     0,
+     14
+    ],
+    [
+     3,
+     11
+    ],
+    [
+     20,
+     1
+    ],
+    [
+     12,
+     14
+    ]
+   ],
+   "seed": 20261603600,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "040ec0597b0649a35dae13562fcebc5c4d3272c7bc503753d7d9eb2b7baa015b",
+   "index": 10,
+   "moves": [
+    [
+     9,
+     18
+    ],
+    [
+     4,
+     1
+    ],
+    [
+     17,
+     3
+    ],
+    [
+     2,
+     21
+    ],
+    [
+     0,
+     5
+    ],
+    [
+     15,
+     10
+    ]
+   ],
+   "seed": 20261604000,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "359b517b7c0656579517cec98869b22b1d4cf83d8fc522cbd8d3885df70dbdf8",
+   "index": 11,
+   "moves": [
+    [
+     20,
+     6
+    ],
+    [
+     15,
+     6
+    ],
+    [
+     1,
+     21
+    ],
+    [
+     14,
+     5
+    ],
+    [
+     23,
+     19
+    ],
+    [
+     21,
+     2
+    ]
+   ],
+   "seed": 20261604400,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "42ce689f8b4de5f111fbac2543504d28f818d8fbecaf41d0c0fd08e6aac893b4",
+   "index": 12,
+   "moves": [
+    [
+     10,
+     13
+    ],
+    [
+     12,
+     3
+    ],
+    [
+     18,
+     21
+    ],
+    [
+     22,
+     1
+    ],
+    [
+     17,
+     14
+    ],
+    [
+     2,
+     9
+    ]
+   ],
+   "seed": 20261604800,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "1304568f5f1ae764449c9fb88104091556e97206fabdd5f3e47a9e837eb1033e",
+   "index": 13,
+   "moves": [
+    [
+     10,
+     8
+    ],
+    [
+     5,
+     17
+    ],
+    [
+     13,
+     18
+    ],
+    [
+     6,
+     15
+    ],
+    [
+     15,
+     13
+    ],
+    [
+     2,
+     2
+    ]
+   ],
+   "seed": 20261605200,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "f3695a4e6c75f65aacb5c93d5ada93e9e47653b6628e38d46321c67f61473ab4",
+   "index": 14,
+   "moves": [
+    [
+     16,
+     3
+    ],
+    [
+     21,
+     9
+    ],
+    [
+     15,
+     17
+    ],
+    [
+     5,
+     3
+    ],
+    [
+     5,
+     20
+    ],
+    [
+     6,
+     3
+    ]
+   ],
+   "seed": 20261605600,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "cb11695f4ece6b18d5d3b6ca816a46327ba06450459b3869947fcdd973510832",
+   "index": 15,
+   "moves": [
+    [
+     12,
+     2
+    ],
+    [
+     18,
+     16
+    ],
+    [
+     7,
+     18
+    ],
+    [
+     2,
+     17
+    ],
+    [
+     18,
+     8
+    ],
+    [
+     11,
+     19
+    ]
+   ],
+   "seed": 20261606000,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "981adfbb03d0e109e7a2e9142cdf501234cd617e9a5dbf88cdbcd56e93094495",
+   "index": 16,
+   "moves": [
+    [
+     11,
+     7
+    ],
+    [
+     14,
+     21
+    ],
+    [
+     9,
+     15
+    ],
+    [
+     3,
+     10
+    ],
+    [
+     4,
+     11
+    ],
+    [
+     5,
+     16
+    ]
+   ],
+   "seed": 20261606400,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "ed93dc67d0361090a6efc8ce7d0d4f0307d626372f9217a91fa6e6cad857e17a",
+   "index": 17,
+   "moves": [
+    [
+     8,
+     14
+    ],
+    [
+     18,
+     15
+    ],
+    [
+     1,
+     4
+    ],
+    [
+     4,
+     5
+    ],
+    [
+     8,
+     7
+    ],
+    [
+     7,
+     19
+    ]
+   ],
+   "seed": 20261606800,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "434836d4106f3271cf5947499219cfbef493ce0c2e2f19f080a349dcaaebb2ec",
+   "index": 18,
+   "moves": [
+    [
+     7,
+     18
+    ],
+    [
+     10,
+     11
+    ],
+    [
+     14,
+     8
+    ],
+    [
+     6,
+     10
+    ],
+    [
+     2,
+     18
+    ],
+    [
+     19,
+     4
+    ]
+   ],
+   "seed": 20261607200,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "acb8e9bf91f978d98ea02e8252b36c306c96c77cc785cf87b4d8c80e2d4d3c38",
+   "index": 19,
+   "moves": [
+    [
+     15,
+     4
+    ],
+    [
+     17,
+     22
+    ],
+    [
+     22,
+     6
+    ],
+    [
+     8,
+     3
+    ],
+    [
+     5,
+     18
+    ],
+    [
+     9,
+     17
+    ]
+   ],
+   "seed": 20261607600,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "4da04c06d4f12519152c49c2a481a7fe464fb000bf93801178d1dc22ac69d977",
+   "index": 20,
+   "moves": [
+    [
+     20,
+     1
+    ],
+    [
+     14,
+     9
+    ],
+    [
+     6,
+     12
+    ],
+    [
+     2,
+     19
+    ],
+    [
+     5,
+     1
+    ],
+    [
+     8,
+     2
+    ]
+   ],
+   "seed": 20261608000,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "f89bcf6eda6de88b09153aa9c986e18d61488f703c9e8423d3892c2eb27dde56",
+   "index": 21,
+   "moves": [
+    [
+     3,
+     2
+    ],
+    [
+     1,
+     10
+    ],
+    [
+     18,
+     2
+    ],
+    [
+     15,
+     11
+    ],
+    [
+     3,
+     12
+    ],
+    [
+     6,
+     22
+    ]
+   ],
+   "seed": 20261608400,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "dd131a044a471f4c9bf0d2aefda018d4353ea313d386afe2cc111174a5702f4a",
+   "index": 22,
+   "moves": [
+    [
+     22,
+     20
+    ],
+    [
+     14,
+     11
+    ],
+    [
+     22,
+     6
+    ],
+    [
+     18,
+     11
+    ],
+    [
+     22,
+     18
+    ],
+    [
+     19,
+     15
+    ]
+   ],
+   "seed": 20261608800,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "28737de5ad4ae9d77cbac389e50aa6678b95163f4c7360cbce34cc4db9554c18",
+   "index": 23,
+   "moves": [
+    [
+     17,
+     15
+    ],
+    [
+     4,
+     21
+    ],
+    [
+     17,
+     1
+    ],
+    [
+     20,
+     22
+    ],
+    [
+     9,
+     15
+    ],
+    [
+     18,
+     3
+    ]
+   ],
+   "seed": 20261609200,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "e1011ebfbb82551170c7c2870277c40ee2390cbcd468f0263588bb1171fe10ab",
+   "index": 24,
+   "moves": [
+    [
+     15,
+     18
+    ],
+    [
+     4,
+     11
+    ],
+    [
+     0,
+     10
+    ],
+    [
+     12,
+     9
+    ],
+    [
+     9,
+     7
+    ],
+    [
+     16,
+     12
+    ]
+   ],
+   "seed": 20261609600,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "35f8b4d0ac54f922b0a047b1f5e6d9b09af55fc059cab4b2df23bb1448eecaf6",
+   "index": 25,
+   "moves": [
+    [
+     8,
+     18
+    ],
+    [
+     10,
+     8
+    ],
+    [
+     20,
+     9
+    ],
+    [
+     12,
+     15
+    ],
+    [
+     17,
+     15
+    ],
+    [
+     14,
+     5
+    ]
+   ],
+   "seed": 20261610000,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "0f6b556f11e689aa04e81338aa159d90f6da8d4f2924dd0ad69dc13124077a35",
+   "index": 26,
+   "moves": [
+    [
+     14,
+     19
+    ],
+    [
+     7,
+     8
+    ],
+    [
+     9,
+     20
+    ],
+    [
+     12,
+     0
+    ],
+    [
+     23,
+     3
+    ],
+    [
+     14,
+     2
+    ]
+   ],
+   "seed": 20261610400,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "92aa931aa8dd36b9da81ce6d4551eeacb3cd3dc9734d296fdcb084c69d453bd8",
+   "index": 27,
+   "moves": [
+    [
+     16,
+     7
+    ],
+    [
+     7,
+     15
+    ],
+    [
+     12,
+     13
+    ],
+    [
+     13,
+     13
+    ],
+    [
+     1,
+     1
+    ],
+    [
+     3,
+     7
+    ]
+   ],
+   "seed": 20261610800,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "a178a725628c5c7662fe78fea069134ef94354a8253e49050d1fc836851d0377",
+   "index": 28,
+   "moves": [
+    [
+     12,
+     14
+    ],
+    [
+     17,
+     1
+    ],
+    [
+     11,
+     17
+    ],
+    [
+     3,
+     5
+    ],
+    [
+     15,
+     12
+    ],
+    [
+     14,
+     20
+    ]
+   ],
+   "seed": 20261611200,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "8c588d01ef3c488e7a9c76d9ca25da5691c35fbfdc9f7d04e6347d3aa4ab1bea",
+   "index": 29,
+   "moves": [
+    [
+     7,
+     20
+    ],
+    [
+     3,
+     6
+    ],
+    [
+     13,
+     9
+    ],
+    [
+     18,
+     15
+    ],
+    [
+     1,
+     6
+    ],
+    [
+     17,
+     12
+    ]
+   ],
+   "seed": 20261611600,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "95c9fd4766a859f7563f79ca640d58e51c5d389507192e395605aba824595dd7",
+   "index": 30,
+   "moves": [
+    [
+     1,
+     21
+    ],
+    [
+     11,
+     6
+    ],
+    [
+     3,
+     3
+    ],
+    [
+     12,
+     18
+    ],
+    [
+     12,
+     21
+    ],
+    [
+     5,
+     23
+    ]
+   ],
+   "seed": 20261612000,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "6c33bbbdadc279d77683ca8024a43e7c030a4846bf918a9c5dfd843e44219357",
+   "index": 31,
+   "moves": [
+    [
+     21,
+     20
+    ],
+    [
+     10,
+     0
+    ],
+    [
+     19,
+     7
+    ],
+    [
+     6,
+     7
+    ],
+    [
+     1,
+     6
+    ],
+    [
+     1,
+     16
+    ]
+   ],
+   "seed": 20261612400,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "e0e60786782b4166be5c445fecc5c473339a8800347cf1868c05455ef6233cee",
+   "index": 32,
+   "moves": [
+    [
+     17,
+     6
+    ],
+    [
+     15,
+     1
+    ],
+    [
+     22,
+     1
+    ],
+    [
+     12,
+     22
+    ],
+    [
+     6,
+     4
+    ],
+    [
+     22,
+     18
+    ]
+   ],
+   "seed": 20261612800,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "4b090c438a107eda567dc03912812157c513a0cfb4e5586ca61b8fab51a64e86",
+   "index": 33,
+   "moves": [
+    [
+     5,
+     20
+    ],
+    [
+     2,
+     22
+    ],
+    [
+     17,
+     18
+    ],
+    [
+     10,
+     3
+    ],
+    [
+     20,
+     20
+    ],
+    [
+     18,
+     21
+    ]
+   ],
+   "seed": 20261613200,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "5c2ad02b74e3613b6af9fbfb41d2b40db7bb52f82684e47facf012f72d60ff91",
+   "index": 34,
+   "moves": [
+    [
+     7,
+     22
+    ],
+    [
+     16,
+     9
+    ],
+    [
+     23,
+     18
+    ],
+    [
+     10,
+     18
+    ],
+    [
+     2,
+     11
+    ],
+    [
+     19,
+     6
+    ]
+   ],
+   "seed": 20261613600,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "be194ce5cbb03f85f1561622440841b33ac517828c385fa2a340547202216bf3",
+   "index": 35,
+   "moves": [
+    [
+     16,
+     11
+    ],
+    [
+     19,
+     16
+    ],
+    [
+     17,
+     21
+    ],
+    [
+     13,
+     15
+    ],
+    [
+     1,
+     12
+    ],
+    [
+     2,
+     19
+    ]
+   ],
+   "seed": 20261614000,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "cc2bfe389dc8bd97de5a9d968c37f997f82af27ae9cb690f4ed7fe9ee0fbeb06",
+   "index": 36,
+   "moves": [
+    [
+     12,
+     2
+    ],
+    [
+     21,
+     20
+    ],
+    [
+     4,
+     22
+    ],
+    [
+     11,
+     21
+    ],
+    [
+     15,
+     11
+    ],
+    [
+     18,
+     6
+    ]
+   ],
+   "seed": 20261614400,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "920ba60b2f69bd07fa3274cf574e137f5f8362ce8e01ecfe49ed488aa57df1ee",
+   "index": 37,
+   "moves": [
+    [
+     20,
+     7
+    ],
+    [
+     8,
+     10
+    ],
+    [
+     20,
+     22
+    ],
+    [
+     11,
+     4
+    ],
+    [
+     18,
+     1
+    ],
+    [
+     7,
+     0
+    ]
+   ],
+   "seed": 20261614800,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "d8976a1bc865111f3798d58cfa51e057c54aa5cc3f83e76a54fe6eae9994c285",
+   "index": 38,
+   "moves": [
+    [
+     12,
+     6
+    ],
+    [
+     19,
+     15
+    ],
+    [
+     15,
+     22
+    ],
+    [
+     3,
+     16
+    ],
+    [
+     23,
+     15
+    ],
+    [
+     4,
+     6
+    ]
+   ],
+   "seed": 20261615200,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "eff452e8805d5e81acda0d89fcd16e6f6348d7e0c9faafcc065f3a053f5c7f6d",
+   "index": 39,
+   "moves": [
+    [
+     4,
+     4
+    ],
+    [
+     20,
+     22
+    ],
+    [
+     16,
+     19
+    ],
+    [
+     5,
+     9
+    ],
+    [
+     20,
+     5
+    ],
+    [
+     9,
+     19
+    ]
+   ],
+   "seed": 20261615600,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "1b12fedde7be33525007b555c950aab2eaeba2cd9d2ef6ca340791c2c407aee4",
+   "index": 40,
+   "moves": [
+    [
+     23,
+     6
+    ],
+    [
+     17,
+     9
+    ],
+    [
+     5,
+     18
+    ],
+    [
+     20,
+     4
+    ],
+    [
+     20,
+     5
+    ],
+    [
+     22,
+     9
+    ]
+   ],
+   "seed": 20261616000,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "7adea6b0858a057076aa1146bb310d2be7c4c2ea4b4ce9e72361334c749acbae",
+   "index": 41,
+   "moves": [
+    [
+     20,
+     8
+    ],
+    [
+     19,
+     11
+    ],
+    [
+     13,
+     7
+    ],
+    [
+     14,
+     10
+    ],
+    [
+     1,
+     13
+    ],
+    [
+     11,
+     21
+    ]
+   ],
+   "seed": 20261616400,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "8addff30986fd75de75470ce46f82dd3260af2f7e0d17fb27950fe5df6d2f6ac",
+   "index": 42,
+   "moves": [
+    [
+     2,
+     11
+    ],
+    [
+     16,
+     14
+    ],
+    [
+     7,
+     19
+    ],
+    [
+     10,
+     17
+    ],
+    [
+     17,
+     4
+    ],
+    [
+     11,
+     14
+    ]
+   ],
+   "seed": 20261616800,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "9a825a7a0fb5985cfe4963b28adcb49e46667ef82db00affc9ee2aed08b473bc",
+   "index": 43,
+   "moves": [
+    [
+     5,
+     20
+    ],
+    [
+     6,
+     18
+    ],
+    [
+     14,
+     16
+    ],
+    [
+     10,
+     10
+    ],
+    [
+     11,
+     12
+    ],
+    [
+     16,
+     21
+    ]
+   ],
+   "seed": 20261617200,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "5d590cf50cc8a6fe791238b13b8c88894ddf745444f75b6052c8e77b2bce0272",
+   "index": 44,
+   "moves": [
+    [
+     21,
+     1
+    ],
+    [
+     4,
+     11
+    ],
+    [
+     1,
+     10
+    ],
+    [
+     6,
+     19
+    ],
+    [
+     18,
+     20
+    ],
+    [
+     17,
+     15
+    ]
+   ],
+   "seed": 20261617600,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "825330a99a6367fd960a56f4eb3707521a314469d7b0af0e7d96df8959573b78",
+   "index": 45,
+   "moves": [
+    [
+     23,
+     21
+    ],
+    [
+     14,
+     3
+    ],
+    [
+     20,
+     14
+    ],
+    [
+     1,
+     13
+    ],
+    [
+     5,
+     2
+    ],
+    [
+     9,
+     11
+    ]
+   ],
+   "seed": 20261618000,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "5dc6bfaba1317caa41179f7400a8d3a461265b74cf362092f7b7e575174e9287",
+   "index": 46,
+   "moves": [
+    [
+     0,
+     14
+    ],
+    [
+     14,
+     13
+    ],
+    [
+     19,
+     19
+    ],
+    [
+     19,
+     23
+    ],
+    [
+     4,
+     12
+    ],
+    [
+     6,
+     20
+    ]
+   ],
+   "seed": 20261618400,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "4bc02da1273adbf0765417188ef13a70797f0e59ee283491de7a894fa962b6dd",
+   "index": 47,
+   "moves": [
+    [
+     9,
+     6
+    ],
+    [
+     6,
+     15
+    ],
+    [
+     7,
+     3
+    ],
+    [
+     2,
+     13
+    ],
+    [
+     7,
+     17
+    ],
+    [
+     10,
+     17
+    ]
+   ],
+   "seed": 20261618800,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "d42809f6effa996ed7c63a4a161addc951d1dbf8f7b1de1e3f789e9cd9acfa64",
+   "index": 48,
+   "moves": [
+    [
+     19,
+     20
+    ],
+    [
+     8,
+     15
+    ],
+    [
+     5,
+     20
+    ],
+    [
+     16,
+     0
+    ],
+    [
+     21,
+     7
+    ],
+    [
+     19,
+     8
+    ]
+   ],
+   "seed": 20261619200,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "91633a5534cd7cd303ebef59ec86d033119008459bd79ff6743d18f19e2f5f62",
+   "index": 49,
+   "moves": [
+    [
+     11,
+     1
+    ],
+    [
+     3,
+     12
+    ],
+    [
+     21,
+     2
+    ],
+    [
+     6,
+     15
+    ],
+    [
+     19,
+     3
+    ],
+    [
+     11,
+     14
+    ]
+   ],
+   "seed": 20261619600,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "bbd1cc99c9ee0b136d51f2492077bd7e33f7fb714ce0e8de0a14e4535ec6c8bc",
+   "index": 50,
+   "moves": [
+    [
+     15,
+     10
+    ],
+    [
+     18,
+     3
+    ],
+    [
+     19,
+     19
+    ],
+    [
+     12,
+     11
+    ],
+    [
+     8,
+     18
+    ],
+    [
+     7,
+     12
+    ]
+   ],
+   "seed": 20261620000,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "d154225570269319eec944898ef04f80505967ee10dc9bfe66203565e4bc2875",
+   "index": 51,
+   "moves": [
+    [
+     12,
+     11
+    ],
+    [
+     9,
+     22
+    ],
+    [
+     23,
+     2
+    ],
+    [
+     17,
+     13
+    ],
+    [
+     3,
+     13
+    ],
+    [
+     22,
+     15
+    ]
+   ],
+   "seed": 20261620400,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "2b819f498ca2a4c51cd4179a6cba55e4b2c8d52265207f4ac276ff547e8dfdd9",
+   "index": 52,
+   "moves": [
+    [
+     9,
+     7
+    ],
+    [
+     3,
+     3
+    ],
+    [
+     7,
+     13
+    ],
+    [
+     20,
+     15
+    ],
+    [
+     0,
+     18
+    ],
+    [
+     22,
+     17
+    ]
+   ],
+   "seed": 20261620800,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "d13c44331a502022db6e4ae38bc8fea49b6b78a65927fa67128faae07b11a98f",
+   "index": 53,
+   "moves": [
+    [
+     15,
+     14
+    ],
+    [
+     9,
+     16
+    ],
+    [
+     10,
+     12
+    ],
+    [
+     11,
+     14
+    ],
+    [
+     4,
+     7
+    ],
+    [
+     19,
+     16
+    ]
+   ],
+   "seed": 20261621200,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "e4c0ef489593e02aa8218ee126a8251879c175d9f74f5424508a975e7bec4f12",
+   "index": 54,
+   "moves": [
+    [
+     4,
+     22
+    ],
+    [
+     19,
+     2
+    ],
+    [
+     1,
+     17
+    ],
+    [
+     13,
+     16
+    ],
+    [
+     12,
+     12
+    ],
+    [
+     1,
+     3
+    ]
+   ],
+   "seed": 20261621600,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "76ac174cdbdf694b7ff70b4fe50a0d72d8a403ed1f4e99367374563580ea78d0",
+   "index": 55,
+   "moves": [
+    [
+     18,
+     1
+    ],
+    [
+     19,
+     19
+    ],
+    [
+     3,
+     13
+    ],
+    [
+     6,
+     22
+    ],
+    [
+     22,
+     20
+    ],
+    [
+     11,
+     22
+    ]
+   ],
+   "seed": 20261622000,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "073c204b924d720032154ba74a9dcf5fde3097b3b78bb83157e50becfbe3c598",
+   "index": 56,
+   "moves": [
+    [
+     8,
+     10
+    ],
+    [
+     5,
+     8
+    ],
+    [
+     13,
+     2
+    ],
+    [
+     6,
+     16
+    ],
+    [
+     21,
+     10
+    ],
+    [
+     11,
+     16
+    ]
+   ],
+   "seed": 20261622400,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "2dd88563e5500ed75d6b0d64a4ce6d5a7c14af8cf3e5e382894200ee122f5c83",
+   "index": 57,
+   "moves": [
+    [
+     11,
+     6
+    ],
+    [
+     2,
+     23
+    ],
+    [
+     18,
+     16
+    ],
+    [
+     2,
+     19
+    ],
+    [
+     0,
+     20
+    ],
+    [
+     21,
+     23
+    ]
+   ],
+   "seed": 20261622800,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "cfcb4ad9aea74c153cd6c87a0ae25ae6d9f67e9824c798724a87e668117a7416",
+   "index": 58,
+   "moves": [
+    [
+     11,
+     22
+    ],
+    [
+     12,
+     7
+    ],
+    [
+     16,
+     18
+    ],
+    [
+     9,
+     11
+    ],
+    [
+     9,
+     14
+    ],
+    [
+     18,
+     5
+    ]
+   ],
+   "seed": 20261623200,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "b1b9dd58111e4a4e79daa2083fc0a3700e6d433d9fecbbb1c02db0f47028a3d8",
+   "index": 59,
+   "moves": [
+    [
+     23,
+     13
+    ],
+    [
+     17,
+     12
+    ],
+    [
+     7,
+     22
+    ],
+    [
+     8,
+     10
+    ],
+    [
+     21,
+     12
+    ],
+    [
+     20,
+     23
+    ]
+   ],
+   "seed": 20261623600,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "52abd0fe4b7810e66ff510f7db191dfd690e38f8d142cd6625c0b8e3ccb39957",
+   "index": 60,
+   "moves": [
+    [
+     9,
+     4
+    ],
+    [
+     22,
+     22
+    ],
+    [
+     17,
+     9
+    ],
+    [
+     9,
+     21
+    ],
+    [
+     4,
+     19
+    ],
+    [
+     8,
+     22
+    ]
+   ],
+   "seed": 20261624000,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "b8c6d45f6012bcf880eaf9d59c46c109d8eac3f44ce2a87529604091d00c918e",
+   "index": 61,
+   "moves": [
+    [
+     17,
+     8
+    ],
+    [
+     16,
+     10
+    ],
+    [
+     18,
+     17
+    ],
+    [
+     19,
+     11
+    ],
+    [
+     18,
+     22
+    ],
+    [
+     17,
+     7
+    ]
+   ],
+   "seed": 20261624400,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "0ff08c266b0c9f342bc4e82fff9786dbf33c412859ada492836ce2e63e806539",
+   "index": 62,
+   "moves": [
+    [
+     6,
+     4
+    ],
+    [
+     7,
+     6
+    ],
+    [
+     21,
+     1
+    ],
+    [
+     10,
+     3
+    ],
+    [
+     4,
+     13
+    ],
+    [
+     8,
+     16
+    ]
+   ],
+   "seed": 20261624800,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "a694714f4d2d099dd7dd7057d1db88f00a808fbba0cb66bf4afe31c647b4dc2b",
+   "index": 63,
+   "moves": [
+    [
+     3,
+     18
+    ],
+    [
+     11,
+     4
+    ],
+    [
+     0,
+     5
+    ],
+    [
+     12,
+     8
+    ],
+    [
+     4,
+     11
+    ],
+    [
+     19,
+     9
+    ]
+   ],
+   "seed": 20261625200,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "9a8b0f40add38ca1c336a6ea9ebbaff2e85e8b0d1b74c534a8c8a9170d298b25",
+   "index": 64,
+   "moves": [
+    [
+     3,
+     5
+    ],
+    [
+     14,
+     17
+    ],
+    [
+     7,
+     5
+    ],
+    [
+     9,
+     18
+    ],
+    [
+     21,
+     20
+    ],
+    [
+     19,
+     8
+    ]
+   ],
+   "seed": 20261625600,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "5b4a1698bb032e6cdbb9a0b8b8429633a7f5442df71fc33d6ceb7b938ac419b9",
+   "index": 65,
+   "moves": [
+    [
+     3,
+     4
+    ],
+    [
+     6,
+     21
+    ],
+    [
+     22,
+     11
+    ],
+    [
+     17,
+     21
+    ],
+    [
+     17,
+     20
+    ],
+    [
+     18,
+     19
+    ]
+   ],
+   "seed": 20261626000,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "f48a3e4d61ecb3e54be919db56829c0b74ff11e0249a53bdbd7ddbce3d5e9385",
+   "index": 66,
+   "moves": [
+    [
+     4,
+     14
+    ],
+    [
+     3,
+     23
+    ],
+    [
+     18,
+     8
+    ],
+    [
+     10,
+     18
+    ],
+    [
+     6,
+     21
+    ],
+    [
+     9,
+     18
+    ]
+   ],
+   "seed": 20261626400,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "7e5b38995fb2c946f122c572b8acadb71996612386c2bcac4ee62e5190b83bbc",
+   "index": 67,
+   "moves": [
+    [
+     9,
+     19
+    ],
+    [
+     18,
+     10
+    ],
+    [
+     0,
+     2
+    ],
+    [
+     12,
+     7
+    ],
+    [
+     14,
+     1
+    ],
+    [
+     15,
+     21
+    ]
+   ],
+   "seed": 20261626800,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "17166be75a8e21c79ede5429796ab07179d35a1bd30c3a08d37aca4b02ae6d03",
+   "index": 68,
+   "moves": [
+    [
+     7,
+     9
+    ],
+    [
+     13,
+     0
+    ],
+    [
+     15,
+     11
+    ],
+    [
+     3,
+     2
+    ],
+    [
+     23,
+     16
+    ],
+    [
+     7,
+     1
+    ]
+   ],
+   "seed": 20261627200,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "67c0cdc1a4861d790cdaad4ad1ee6f59f0e332aaace777c7cb09224fc4c7fe92",
+   "index": 69,
+   "moves": [
+    [
+     2,
+     4
+    ],
+    [
+     21,
+     19
+    ],
+    [
+     0,
+     5
+    ],
+    [
+     15,
+     22
+    ],
+    [
+     16,
+     2
+    ],
+    [
+     13,
+     5
+    ]
+   ],
+   "seed": 20261627600,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "c3195097aabc40fdf15ee667e45570025c12d5a664d97dbd1a271145559cf559",
+   "index": 70,
+   "moves": [
+    [
+     16,
+     19
+    ],
+    [
+     2,
+     6
+    ],
+    [
+     10,
+     10
+    ],
+    [
+     13,
+     1
+    ],
+    [
+     11,
+     20
+    ],
+    [
+     1,
+     16
+    ]
+   ],
+   "seed": 20261628000,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "da3b1d4de5d5a94f479db379767620a3dba1b2b07f8c0ee6d7e9c77bafa87d8e",
+   "index": 71,
+   "moves": [
+    [
+     18,
+     8
+    ],
+    [
+     19,
+     9
+    ],
+    [
+     13,
+     5
+    ],
+    [
+     17,
+     1
+    ],
+    [
+     17,
+     20
+    ],
+    [
+     1,
+     8
+    ]
+   ],
+   "seed": 20261628400,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "774cc01ecfc69751fde283e23cf491c6d443fb37457e97aa095a96c1b0919fa5",
+   "index": 72,
+   "moves": [
+    [
+     9,
+     1
+    ],
+    [
+     10,
+     16
+    ],
+    [
+     16,
+     17
+    ],
+    [
+     9,
+     5
+    ],
+    [
+     9,
+     14
+    ],
+    [
+     8,
+     15
+    ]
+   ],
+   "seed": 20261628800,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "c0d82fd0a8f451307a2f0c8f17f32ff7bf6ab6ddb36fb8212aa67493c6777368",
+   "index": 73,
+   "moves": [
+    [
+     13,
+     13
+    ],
+    [
+     19,
+     19
+    ],
+    [
+     2,
+     12
+    ],
+    [
+     12,
+     14
+    ],
+    [
+     11,
+     12
+    ],
+    [
+     17,
+     21
+    ]
+   ],
+   "seed": 20261629200,
+   "segment": 0,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "9b8c94f3e69b263e073cef56820263086e57c56979d70920ab4b9fa823398958",
+   "index": 74,
+   "moves": [
+    [
+     15,
+     17
+    ],
+    [
+     8,
+     15
+    ],
+    [
+     11,
+     7
+    ],
+    [
+     7,
+     12
+    ],
+    [
+     17,
+     17
+    ],
+    [
+     15,
+     3
+    ]
+   ],
+   "seed": 20261629600,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "83895dc6d20325a4a5b4af31e7a1f95aa28300a2c10374a910c9bddefefc5dc5",
+   "index": 75,
+   "moves": [
+    [
+     0,
+     14
+    ],
+    [
+     10,
+     3
+    ],
+    [
+     6,
+     4
+    ],
+    [
+     20,
+     18
+    ],
+    [
+     8,
+     14
+    ],
+    [
+     2,
+     13
+    ]
+   ],
+   "seed": 20261630000,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "7c4c93e9521efbe0cba551ab918801aa6138021b16384ad1b09a3782c7ee013b",
+   "index": 76,
+   "moves": [
+    [
+     23,
+     10
+    ],
+    [
+     15,
+     10
+    ],
+    [
+     13,
+     21
+    ],
+    [
+     1,
+     2
+    ],
+    [
+     12,
+     19
+    ],
+    [
+     12,
+     10
+    ]
+   ],
+   "seed": 20261630400,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "b1cc6e7553908ce3bfe1727873d7936ed90bb4e44a4df7ad7f563c8f08e4ebbd",
+   "index": 77,
+   "moves": [
+    [
+     22,
+     12
+    ],
+    [
+     8,
+     2
+    ],
+    [
+     19,
+     13
+    ],
+    [
+     22,
+     7
+    ],
+    [
+     10,
+     21
+    ],
+    [
+     19,
+     3
+    ]
+   ],
+   "seed": 20261630800,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "4e236ed81259d0d95bfb8355129984f75b566c11bffcffebe21c8189c4756b3a",
+   "index": 78,
+   "moves": [
+    [
+     0,
+     3
+    ],
+    [
+     7,
+     3
+    ],
+    [
+     4,
+     6
+    ],
+    [
+     15,
+     3
+    ],
+    [
+     16,
+     13
+    ],
+    [
+     22,
+     8
+    ]
+   ],
+   "seed": 20261631200,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "ba70e045556868e11921282332c93dcac50086b00222ce0016f8b225aadfd8e4",
+   "index": 79,
+   "moves": [
+    [
+     4,
+     1
+    ],
+    [
+     6,
+     15
+    ],
+    [
+     22,
+     4
+    ],
+    [
+     22,
+     3
+    ],
+    [
+     11,
+     22
+    ],
+    [
+     5,
+     7
+    ]
+   ],
+   "seed": 20261631600,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "f3a04e0e45dad96bc273837cb5ca278ae0fabd017b1e464b41aa376a441113c1",
+   "index": 80,
+   "moves": [
+    [
+     6,
+     15
+    ],
+    [
+     5,
+     6
+    ],
+    [
+     18,
+     2
+    ],
+    [
+     22,
+     13
+    ],
+    [
+     18,
+     1
+    ],
+    [
+     12,
+     4
+    ]
+   ],
+   "seed": 20261632000,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "9bf735a257dbd7f673d953bc9d7cfdcfe063bc4feb559fb8a33eb62e6342023e",
+   "index": 81,
+   "moves": [
+    [
+     16,
+     4
+    ],
+    [
+     18,
+     18
+    ],
+    [
+     2,
+     21
+    ],
+    [
+     7,
+     15
+    ],
+    [
+     4,
+     13
+    ],
+    [
+     1,
+     15
+    ]
+   ],
+   "seed": 20261632400,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "29117d66249a69d9d7e761c07791b2de28ebe85ef1a8c14e4247d69b7c0d4d48",
+   "index": 82,
+   "moves": [
+    [
+     1,
+     1
+    ],
+    [
+     22,
+     4
+    ],
+    [
+     17,
+     1
+    ],
+    [
+     20,
+     14
+    ],
+    [
+     4,
+     9
+    ],
+    [
+     4,
+     10
+    ]
+   ],
+   "seed": 20261632800,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "556fc4acc670a205dda36774ee27ee258f90033a1a1dda298392c8f3a966d32e",
+   "index": 83,
+   "moves": [
+    [
+     17,
+     8
+    ],
+    [
+     2,
+     3
+    ],
+    [
+     0,
+     8
+    ],
+    [
+     13,
+     7
+    ],
+    [
+     2,
+     17
+    ],
+    [
+     19,
+     9
+    ]
+   ],
+   "seed": 20261633200,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "5c962b81ac9dd0a342ac43f37119170fe2063f1e3d8961885887fd1e3dc4c370",
+   "index": 84,
+   "moves": [
+    [
+     7,
+     22
+    ],
+    [
+     19,
+     16
+    ],
+    [
+     12,
+     7
+    ],
+    [
+     19,
+     13
+    ],
+    [
+     21,
+     19
+    ],
+    [
+     4,
+     7
+    ]
+   ],
+   "seed": 20261633600,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "bb9e2b96484c7295736a15f2d310d2f2288fcfda164f10c74a3aac1bd9e60055",
+   "index": 85,
+   "moves": [
+    [
+     17,
+     1
+    ],
+    [
+     10,
+     3
+    ],
+    [
+     22,
+     14
+    ],
+    [
+     6,
+     6
+    ],
+    [
+     3,
+     13
+    ],
+    [
+     13,
+     0
+    ]
+   ],
+   "seed": 20261634000,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "b10e36ad1d3d8f11201c65cb52a3e9979233ad3b7368418ff812beae245736c2",
+   "index": 86,
+   "moves": [
+    [
+     7,
+     15
+    ],
+    [
+     20,
+     7
+    ],
+    [
+     5,
+     4
+    ],
+    [
+     19,
+     9
+    ],
+    [
+     8,
+     10
+    ],
+    [
+     8,
+     4
+    ]
+   ],
+   "seed": 20261634400,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "0c9699610cd79171e2a3d9a1516862d918e3e7f90528c6a34a71a3ce45a1fb08",
+   "index": 87,
+   "moves": [
+    [
+     19,
+     20
+    ],
+    [
+     7,
+     9
+    ],
+    [
+     17,
+     14
+    ],
+    [
+     11,
+     19
+    ],
+    [
+     10,
+     4
+    ],
+    [
+     17,
+     16
+    ]
+   ],
+   "seed": 20261634800,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "543744223a8e9fce6b37e80fc897fb35216406b9f251a2da3f031ab8b01a8ccd",
+   "index": 88,
+   "moves": [
+    [
+     3,
+     17
+    ],
+    [
+     18,
+     14
+    ],
+    [
+     12,
+     15
+    ],
+    [
+     16,
+     12
+    ],
+    [
+     22,
+     8
+    ],
+    [
+     1,
+     7
+    ]
+   ],
+   "seed": 20261635200,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "da86c685b9be0542c094f9feb1b7164296f7397c42ac6dbb9bd7ace7d73e8f2b",
+   "index": 89,
+   "moves": [
+    [
+     19,
+     20
+    ],
+    [
+     19,
+     16
+    ],
+    [
+     23,
+     7
+    ],
+    [
+     18,
+     18
+    ],
+    [
+     5,
+     7
+    ],
+    [
+     15,
+     13
+    ]
+   ],
+   "seed": 20261635600,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "46ba8bd0907b947226aa1c6c79f480714a8fda81fc73fd5f025d61fb6c97a148",
+   "index": 90,
+   "moves": [
+    [
+     20,
+     12
+    ],
+    [
+     12,
+     6
+    ],
+    [
+     16,
+     8
+    ],
+    [
+     14,
+     12
+    ],
+    [
+     14,
+     11
+    ],
+    [
+     1,
+     13
+    ]
+   ],
+   "seed": 20261636000,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "fb0c4f90c2d8b3359a4a2425679fe09b8e37f42cf901b5a7d7dd9ac8643480a4",
+   "index": 91,
+   "moves": [
+    [
+     9,
+     6
+    ],
+    [
+     21,
+     5
+    ],
+    [
+     3,
+     16
+    ],
+    [
+     7,
+     0
+    ],
+    [
+     1,
+     3
+    ],
+    [
+     13,
+     0
+    ]
+   ],
+   "seed": 20261636400,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "ba9f880d36a28635b09a3900791bf294af019d7297170c288791b8ddaf5213bc",
+   "index": 92,
+   "moves": [
+    [
+     20,
+     19
+    ],
+    [
+     18,
+     14
+    ],
+    [
+     17,
+     3
+    ],
+    [
+     10,
+     12
+    ],
+    [
+     2,
+     20
+    ],
+    [
+     1,
+     13
+    ]
+   ],
+   "seed": 20261636800,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "0e8105bd50284cd15ad745506d372a8710ac4ad41adbf070031480443eb00989",
+   "index": 93,
+   "moves": [
+    [
+     16,
+     3
+    ],
+    [
+     7,
+     17
+    ],
+    [
+     21,
+     4
+    ],
+    [
+     14,
+     6
+    ],
+    [
+     13,
+     11
+    ],
+    [
+     1,
+     0
+    ]
+   ],
+   "seed": 20261637200,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "d309c7747cc22a3b2988c76dcc4dd401cc37fd880f2390a09b8d50cffdbe66df",
+   "index": 94,
+   "moves": [
+    [
+     8,
+     6
+    ],
+    [
+     20,
+     20
+    ],
+    [
+     22,
+     15
+    ],
+    [
+     18,
+     16
+    ],
+    [
+     13,
+     13
+    ],
+    [
+     19,
+     9
+    ]
+   ],
+   "seed": 20261637600,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "f184b2a056d24002fc7b3b3801321aaef9ae7d8b18a12f07e35b675a3ea2123a",
+   "index": 95,
+   "moves": [
+    [
+     0,
+     16
+    ],
+    [
+     7,
+     4
+    ],
+    [
+     20,
+     20
+    ],
+    [
+     17,
+     0
+    ],
+    [
+     17,
+     7
+    ],
+    [
+     11,
+     6
+    ]
+   ],
+   "seed": 20261638000,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "d79f61eb85328e8b6afb0dbce4b120cc7e2666631f5067502ba7d81294f14989",
+   "index": 96,
+   "moves": [
+    [
+     7,
+     20
+    ],
+    [
+     13,
+     22
+    ],
+    [
+     21,
+     4
+    ],
+    [
+     8,
+     9
+    ],
+    [
+     9,
+     20
+    ],
+    [
+     4,
+     19
+    ]
+   ],
+   "seed": 20261638400,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "62031d96bdb16fb1f99f90a7331565d54d8cba8fc534060c775d7f865255d129",
+   "index": 97,
+   "moves": [
+    [
+     3,
+     14
+    ],
+    [
+     11,
+     19
+    ],
+    [
+     14,
+     6
+    ],
+    [
+     1,
+     22
+    ],
+    [
+     22,
+     1
+    ],
+    [
+     20,
+     23
+    ]
+   ],
+   "seed": 20261638800,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "a41dfa51cae8d431092b1400372b8df53f85367c9f7acb520196b4ade9395d78",
+   "index": 98,
+   "moves": [
+    [
+     0,
+     13
+    ],
+    [
+     14,
+     6
+    ],
+    [
+     4,
+     14
+    ],
+    [
+     5,
+     18
+    ],
+    [
+     17,
+     18
+    ],
+    [
+     9,
+     21
+    ]
+   ],
+   "seed": 20261639200,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "0dbc6555a83bbeae2928fa9480745a8ad01c5ca5412b3cf6ebea925529fd1466",
+   "index": 99,
+   "moves": [
+    [
+     14,
+     6
+    ],
+    [
+     7,
+     13
+    ],
+    [
+     17,
+     19
+    ],
+    [
+     9,
+     6
+    ],
+    [
+     21,
+     3
+    ],
+    [
+     8,
+     14
+    ]
+   ],
+   "seed": 20261639600,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "02ef277dc7b8bd5c8b45688c318acb142e7f5532ea1f1e4d07f87979118d9f7c",
+   "index": 100,
+   "moves": [
+    [
+     13,
+     11
+    ],
+    [
+     13,
+     22
+    ],
+    [
+     6,
+     20
+    ],
+    [
+     5,
+     0
+    ],
+    [
+     13,
+     2
+    ],
+    [
+     19,
+     5
+    ]
+   ],
+   "seed": 20261640000,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "8031d00d52c7d3b383e2f42db80088be73f84bf01cbdbefb90049e30c89fdf87",
+   "index": 101,
+   "moves": [
+    [
+     20,
+     9
+    ],
+    [
+     16,
+     23
+    ],
+    [
+     10,
+     7
+    ],
+    [
+     20,
+     3
+    ],
+    [
+     20,
+     13
+    ],
+    [
+     15,
+     1
+    ]
+   ],
+   "seed": 20261640400,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "73fb6bcfed8b5d81751738733f0877b73bae1a1e8ae5111bc4bcb162dc84ddff",
+   "index": 102,
+   "moves": [
+    [
+     12,
+     3
+    ],
+    [
+     19,
+     12
+    ],
+    [
+     14,
+     18
+    ],
+    [
+     21,
+     8
+    ],
+    [
+     19,
+     17
+    ],
+    [
+     16,
+     8
+    ]
+   ],
+   "seed": 20261640800,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "04f779a0fa6b9ba9b153487e38f1f7af12d45eb3f888af91b595ab79f5dd067f",
+   "index": 103,
+   "moves": [
+    [
+     17,
+     11
+    ],
+    [
+     12,
+     8
+    ],
+    [
+     11,
+     11
+    ],
+    [
+     3,
+     15
+    ],
+    [
+     4,
+     3
+    ],
+    [
+     20,
+     3
+    ]
+   ],
+   "seed": 20261641200,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "b7f08491386b9d5ddfca056ea4a7c35ab1f9ac2148341860a0a87be107ef452e",
+   "index": 104,
+   "moves": [
+    [
+     6,
+     10
+    ],
+    [
+     12,
+     16
+    ],
+    [
+     5,
+     4
+    ],
+    [
+     12,
+     6
+    ],
+    [
+     22,
+     14
+    ],
+    [
+     8,
+     15
+    ]
+   ],
+   "seed": 20261641600,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "d4dba48084d1e61693770ac967032faad9c3e81569cf7ce0e6264cc87b7ec11d",
+   "index": 105,
+   "moves": [
+    [
+     21,
+     12
+    ],
+    [
+     11,
+     3
+    ],
+    [
+     19,
+     20
+    ],
+    [
+     12,
+     1
+    ],
+    [
+     23,
+     20
+    ],
+    [
+     4,
+     14
+    ]
+   ],
+   "seed": 20261642000,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "dab51123e5751758e3a3f53778841688c74a50249effcd762da177c85e59d6a6",
+   "index": 106,
+   "moves": [
+    [
+     12,
+     2
+    ],
+    [
+     7,
+     15
+    ],
+    [
+     9,
+     1
+    ],
+    [
+     10,
+     14
+    ],
+    [
+     4,
+     15
+    ],
+    [
+     12,
+     16
+    ]
+   ],
+   "seed": 20261642400,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "21a3e4dfbd818b1207c74b9ec18949fcfc3fad019430c2708979de3edd7540fb",
+   "index": 107,
+   "moves": [
+    [
+     10,
+     6
+    ],
+    [
+     10,
+     14
+    ],
+    [
+     13,
+     11
+    ],
+    [
+     11,
+     4
+    ],
+    [
+     1,
+     18
+    ],
+    [
+     2,
+     11
+    ]
+   ],
+   "seed": 20261642800,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "9333fde6c474f892deb29396dab50f36659a3abe8dbe8396add07db62aa44046",
+   "index": 108,
+   "moves": [
+    [
+     18,
+     8
+    ],
+    [
+     21,
+     17
+    ],
+    [
+     16,
+     14
+    ],
+    [
+     17,
+     17
+    ],
+    [
+     2,
+     17
+    ],
+    [
+     15,
+     19
+    ]
+   ],
+   "seed": 20261643200,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "2a54ba3b55f594455d45c90605eee4597f961ba52d1e267e18f2b24649ac657e",
+   "index": 109,
+   "moves": [
+    [
+     1,
+     17
+    ],
+    [
+     7,
+     14
+    ],
+    [
+     12,
+     21
+    ],
+    [
+     5,
+     22
+    ],
+    [
+     15,
+     12
+    ],
+    [
+     15,
+     6
+    ]
+   ],
+   "seed": 20261643600,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "533e7a33138407e752a246e2388cd599b4d46887189f19454676c6005ab07768",
+   "index": 110,
+   "moves": [
+    [
+     7,
+     10
+    ],
+    [
+     13,
+     15
+    ],
+    [
+     4,
+     2
+    ],
+    [
+     4,
+     10
+    ],
+    [
+     17,
+     2
+    ],
+    [
+     7,
+     23
+    ]
+   ],
+   "seed": 20261644000,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "bf176644e3fbe5973bd3ea9e5f75f42ccfc8344b5149f7865d85e46774e79ceb",
+   "index": 111,
+   "moves": [
+    [
+     2,
+     14
+    ],
+    [
+     18,
+     0
+    ],
+    [
+     7,
+     19
+    ],
+    [
+     4,
+     10
+    ],
+    [
+     1,
+     9
+    ],
+    [
+     10,
+     16
+    ]
+   ],
+   "seed": 20261644400,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "586812dd594a7069ed9660d5133c17978f71ea06f97eb96032f84a5fe5772113",
+   "index": 112,
+   "moves": [
+    [
+     5,
+     12
+    ],
+    [
+     7,
+     15
+    ],
+    [
+     14,
+     5
+    ],
+    [
+     8,
+     12
+    ],
+    [
+     3,
+     10
+    ],
+    [
+     15,
+     10
+    ]
+   ],
+   "seed": 20261644800,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "70d25ae4d075147899205bf114c0592c1ab05b3bf9d9e765737b80ac66f21f6d",
+   "index": 113,
+   "moves": [
+    [
+     16,
+     15
+    ],
+    [
+     13,
+     18
+    ],
+    [
+     19,
+     12
+    ],
+    [
+     8,
+     15
+    ],
+    [
+     7,
+     3
+    ],
+    [
+     1,
+     23
+    ]
+   ],
+   "seed": 20261645200,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "4a5256b6df0e599bb9a38a7a2c3ca6e5e236eeb7f0dd07e07c7e2e4307fd7fad",
+   "index": 114,
+   "moves": [
+    [
+     4,
+     2
+    ],
+    [
+     1,
+     23
+    ],
+    [
+     10,
+     18
+    ],
+    [
+     19,
+     15
+    ],
+    [
+     17,
+     2
+    ],
+    [
+     19,
+     2
+    ]
+   ],
+   "seed": 20261645600,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "93c65d1dd86cee6f1bfbcb46f22405212dcb07f1779631ca3885176cc3e19c5a",
+   "index": 115,
+   "moves": [
+    [
+     4,
+     2
+    ],
+    [
+     11,
+     13
+    ],
+    [
+     19,
+     16
+    ],
+    [
+     8,
+     12
+    ],
+    [
+     19,
+     14
+    ],
+    [
+     6,
+     12
+    ]
+   ],
+   "seed": 20261646000,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "63a9e97f53a9da5bd47a15bd6fc07d9d20761a606b70b8b34a96de10828fcae6",
+   "index": 116,
+   "moves": [
+    [
+     18,
+     9
+    ],
+    [
+     7,
+     3
+    ],
+    [
+     7,
+     11
+    ],
+    [
+     14,
+     22
+    ],
+    [
+     12,
+     8
+    ],
+    [
+     2,
+     19
+    ]
+   ],
+   "seed": 20261646400,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "bd8f44134d0153cad7d690e6bd18b96216d90f6b81db521753b58527314fa034",
+   "index": 117,
+   "moves": [
+    [
+     1,
+     17
+    ],
+    [
+     8,
+     18
+    ],
+    [
+     20,
+     11
+    ],
+    [
+     15,
+     4
+    ],
+    [
+     6,
+     15
+    ],
+    [
+     1,
+     8
+    ]
+   ],
+   "seed": 20261646800,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "c9468a923820c2a71ef897d3345579d3d01ae924d69b1cee30b9cb55724cc41d",
+   "index": 118,
+   "moves": [
+    [
+     1,
+     8
+    ],
+    [
+     19,
+     18
+    ],
+    [
+     12,
+     18
+    ],
+    [
+     12,
+     8
+    ],
+    [
+     4,
+     19
+    ],
+    [
+     21,
+     23
+    ]
+   ],
+   "seed": 20261647200,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "cee73c8a9f40663534e971d27fc24c124cbafd03042097c946631b0801fb6d16",
+   "index": 119,
+   "moves": [
+    [
+     19,
+     21
+    ],
+    [
+     12,
+     21
+    ],
+    [
+     16,
+     21
+    ],
+    [
+     4,
+     13
+    ],
+    [
+     8,
+     10
+    ],
+    [
+     7,
+     10
+    ]
+   ],
+   "seed": 20261647600,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "c80a76623581ad6f6a956d2f33d1802d71e50626a20dcfeea79b08447ef5e183",
+   "index": 120,
+   "moves": [
+    [
+     7,
+     12
+    ],
+    [
+     2,
+     4
+    ],
+    [
+     17,
+     1
+    ],
+    [
+     5,
+     17
+    ],
+    [
+     20,
+     15
+    ],
+    [
+     11,
+     23
+    ]
+   ],
+   "seed": 20261648000,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "b948c54c8505b964dffb5492351e3e35372ebc2853e6abeb13f63bd7bf20201c",
+   "index": 121,
+   "moves": [
+    [
+     19,
+     14
+    ],
+    [
+     4,
+     21
+    ],
+    [
+     17,
+     14
+    ],
+    [
+     17,
+     1
+    ],
+    [
+     3,
+     4
+    ],
+    [
+     14,
+     8
+    ]
+   ],
+   "seed": 20261648400,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "bc0be861d615e5b73f220db38d77e3140f0b6dd0bd6d6734ff3062fe22c1430b",
+   "index": 122,
+   "moves": [
+    [
+     16,
+     21
+    ],
+    [
+     12,
+     15
+    ],
+    [
+     6,
+     16
+    ],
+    [
+     8,
+     8
+    ],
+    [
+     15,
+     18
+    ],
+    [
+     9,
+     8
+    ]
+   ],
+   "seed": 20261648800,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "745b162d57401ea4c04f01bb69cdf347b558bd7e469b8223624cb9a2b01108b0",
+   "index": 123,
+   "moves": [
+    [
+     22,
+     9
+    ],
+    [
+     12,
+     5
+    ],
+    [
+     15,
+     22
+    ],
+    [
+     7,
+     7
+    ],
+    [
+     16,
+     16
+    ],
+    [
+     6,
+     18
+    ]
+   ],
+   "seed": 20261649200,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "e8e65f63eee42f8d23bca69d1aadbeb649be9e1fa79e7862920225ec074a4da0",
+   "index": 124,
+   "moves": [
+    [
+     13,
+     2
+    ],
+    [
+     2,
+     16
+    ],
+    [
+     4,
+     3
+    ],
+    [
+     11,
+     3
+    ],
+    [
+     0,
+     3
+    ],
+    [
+     4,
+     1
+    ]
+   ],
+   "seed": 20261649600,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "8f28d12fb5027b5253672b6b8278aa64554ba865336eba89789c5195ecba4ea4",
+   "index": 125,
+   "moves": [
+    [
+     15,
+     10
+    ],
+    [
+     2,
+     23
+    ],
+    [
+     23,
+     7
+    ],
+    [
+     3,
+     20
+    ],
+    [
+     3,
+     17
+    ],
+    [
+     22,
+     20
+    ]
+   ],
+   "seed": 20261650000,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "d50f5eec191045e29e9ce16390a261274297b6833c53968485e5076d406af17b",
+   "index": 126,
+   "moves": [
+    [
+     5,
+     14
+    ],
+    [
+     2,
+     13
+    ],
+    [
+     18,
+     7
+    ],
+    [
+     19,
+     2
+    ],
+    [
+     14,
+     8
+    ],
+    [
+     13,
+     14
+    ]
+   ],
+   "seed": 20261650400,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "3eff1977201e06427c82406a83dfecfe5ea18e4c913ed75de5276ebfe6a1cc0d",
+   "index": 127,
+   "moves": [
+    [
+     22,
+     9
+    ],
+    [
+     5,
+     5
+    ],
+    [
+     19,
+     5
+    ],
+    [
+     15,
+     23
+    ],
+    [
+     16,
+     21
+    ],
+    [
+     12,
+     8
+    ]
+   ],
+   "seed": 20261650800,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "3a6f6bc81dd5743774184cca523d338924742c9b90b50b6ae738c8af7b263e04",
+   "index": 128,
+   "moves": [
+    [
+     21,
+     4
+    ],
+    [
+     20,
+     6
+    ],
+    [
+     0,
+     9
+    ],
+    [
+     8,
+     0
+    ],
+    [
+     17,
+     4
+    ],
+    [
+     19,
+     2
+    ]
+   ],
+   "seed": 20261651200,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "6bf090d26331f0fadac77b371287782ff84387d9afef037ce1fa2ceb43c62f1a",
+   "index": 129,
+   "moves": [
+    [
+     0,
+     5
+    ],
+    [
+     19,
+     1
+    ],
+    [
+     20,
+     9
+    ],
+    [
+     17,
+     6
+    ],
+    [
+     16,
+     11
+    ],
+    [
+     22,
+     19
+    ]
+   ],
+   "seed": 20261651600,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "c9d021c9d1c798fa08e591b704cd2debd2fbac6b86166402543058ef4aa5188f",
+   "index": 130,
+   "moves": [
+    [
+     8,
+     9
+    ],
+    [
+     3,
+     2
+    ],
+    [
+     6,
+     9
+    ],
+    [
+     4,
+     10
+    ],
+    [
+     20,
+     5
+    ],
+    [
+     17,
+     3
+    ]
+   ],
+   "seed": 20261652000,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "04ae0af5d1067fbf915f52e5aca9a2670d1dc426f974c2fc7f30bf93cc0d4900",
+   "index": 131,
+   "moves": [
+    [
+     4,
+     18
+    ],
+    [
+     22,
+     12
+    ],
+    [
+     13,
+     5
+    ],
+    [
+     7,
+     20
+    ],
+    [
+     21,
+     17
+    ],
+    [
+     4,
+     13
+    ]
+   ],
+   "seed": 20261652400,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "2dc0a1b1234978171525abc8d871e690f5cf5372a59d8771d8e67b787d996fbf",
+   "index": 132,
+   "moves": [
+    [
+     7,
+     10
+    ],
+    [
+     12,
+     12
+    ],
+    [
+     21,
+     9
+    ],
+    [
+     14,
+     4
+    ],
+    [
+     1,
+     18
+    ],
+    [
+     21,
+     5
+    ]
+   ],
+   "seed": 20261652800,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "20a3053125d973e794615f14610bf4200730176f458d2bec6af0f9fe57b81c82",
+   "index": 133,
+   "moves": [
+    [
+     10,
+     13
+    ],
+    [
+     1,
+     6
+    ],
+    [
+     22,
+     7
+    ],
+    [
+     1,
+     13
+    ],
+    [
+     1,
+     18
+    ],
+    [
+     19,
+     0
+    ]
+   ],
+   "seed": 20261653200,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "d09c141428d5829b0a4241fec294bf44fcec1d7589b1a94114eb016e2cbc3cbb",
+   "index": 134,
+   "moves": [
+    [
+     11,
+     22
+    ],
+    [
+     1,
+     20
+    ],
+    [
+     12,
+     1
+    ],
+    [
+     14,
+     7
+    ],
+    [
+     10,
+     8
+    ],
+    [
+     15,
+     19
+    ]
+   ],
+   "seed": 20261653600,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "81099c0bbc457ef6ec8e0c69214336945863e19e7d60181e0915ac559f8b0a28",
+   "index": 135,
+   "moves": [
+    [
+     10,
+     2
+    ],
+    [
+     3,
+     6
+    ],
+    [
+     10,
+     20
+    ],
+    [
+     1,
+     1
+    ],
+    [
+     10,
+     17
+    ],
+    [
+     16,
+     9
+    ]
+   ],
+   "seed": 20261654000,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "54f5f00d8c5677836050d7ee277d77d0f3f21324075387cc61e8cb3dc0d691e4",
+   "index": 136,
+   "moves": [
+    [
+     23,
+     3
+    ],
+    [
+     17,
+     0
+    ],
+    [
+     9,
+     6
+    ],
+    [
+     6,
+     8
+    ],
+    [
+     22,
+     13
+    ],
+    [
+     22,
+     23
+    ]
+   ],
+   "seed": 20261654400,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "5018ed90bf7e27744f1016de3f89fc62af6a2e843b5942101613406b5fcf348b",
+   "index": 137,
+   "moves": [
+    [
+     2,
+     6
+    ],
+    [
+     2,
+     17
+    ],
+    [
+     6,
+     9
+    ],
+    [
+     6,
+     0
+    ],
+    [
+     14,
+     9
+    ],
+    [
+     18,
+     3
+    ]
+   ],
+   "seed": 20261654800,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "cf7e0ed4464442887f19669382555e236e3e668023718b1625c0f18971b86652",
+   "index": 138,
+   "moves": [
+    [
+     11,
+     16
+    ],
+    [
+     17,
+     20
+    ],
+    [
+     21,
+     19
+    ],
+    [
+     9,
+     4
+    ],
+    [
+     4,
+     4
+    ],
+    [
+     18,
+     16
+    ]
+   ],
+   "seed": 20261655200,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "81313cb68ba7859353daefae15788ed2f17d0458736313a982e82fea8d50d12c",
+   "index": 139,
+   "moves": [
+    [
+     1,
+     2
+    ],
+    [
+     4,
+     21
+    ],
+    [
+     22,
+     17
+    ],
+    [
+     21,
+     2
+    ],
+    [
+     8,
+     12
+    ],
+    [
+     8,
+     5
+    ]
+   ],
+   "seed": 20261655600,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "26b54929d8869a7a5cbba864743ac700e84cca2dae8a2b466f1458730d174a24",
+   "index": 140,
+   "moves": [
+    [
+     23,
+     19
+    ],
+    [
+     6,
+     8
+    ],
+    [
+     21,
+     18
+    ],
+    [
+     4,
+     13
+    ],
+    [
+     6,
+     7
+    ],
+    [
+     8,
+     16
+    ]
+   ],
+   "seed": 20261656000,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "96e5d0c969d6bfc76bf1fc3711be1438f7f36596432ac6bf6416cd3da2659f83",
+   "index": 141,
+   "moves": [
+    [
+     18,
+     4
+    ],
+    [
+     4,
+     3
+    ],
+    [
+     2,
+     12
+    ],
+    [
+     7,
+     14
+    ],
+    [
+     22,
+     22
+    ],
+    [
+     18,
+     12
+    ]
+   ],
+   "seed": 20261656400,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "456f0bf59632fbd5bac0f07ff39b0ef09cb0e257a5aaf49c9dc2f11d3410781e",
+   "index": 142,
+   "moves": [
+    [
+     13,
+     16
+    ],
+    [
+     17,
+     23
+    ],
+    [
+     12,
+     1
+    ],
+    [
+     22,
+     23
+    ],
+    [
+     7,
+     22
+    ],
+    [
+     21,
+     4
+    ]
+   ],
+   "seed": 20261656800,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "fb657faf16535f10e0126ab9baed900ec5e6e390353da536ee81518ce3539281",
+   "index": 143,
+   "moves": [
+    [
+     8,
+     13
+    ],
+    [
+     9,
+     11
+    ],
+    [
+     20,
+     19
+    ],
+    [
+     1,
+     2
+    ],
+    [
+     21,
+     2
+    ],
+    [
+     7,
+     3
+    ]
+   ],
+   "seed": 20261657200,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "7610599cb2697517c3c49b750bbe596e89fcf92fb7d9ffbc8d92d7da1e2aa7be",
+   "index": 144,
+   "moves": [
+    [
+     6,
+     2
+    ],
+    [
+     21,
+     23
+    ],
+    [
+     12,
+     8
+    ],
+    [
+     3,
+     18
+    ],
+    [
+     19,
+     6
+    ],
+    [
+     14,
+     18
+    ]
+   ],
+   "seed": 20261657600,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "97bf4c803f43d660b5c846b0af84d98ff672c81f993dadfeb356b80eaae8c9cb",
+   "index": 145,
+   "moves": [
+    [
+     3,
+     20
+    ],
+    [
+     14,
+     18
+    ],
+    [
+     19,
+     3
+    ],
+    [
+     15,
+     18
+    ],
+    [
+     20,
+     20
+    ],
+    [
+     15,
+     9
+    ]
+   ],
+   "seed": 20261658000,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "3a38cf9c96468f90bc8af2a496f5c7a6258513491a56d1291b563cd92a78110e",
+   "index": 146,
+   "moves": [
+    [
+     3,
+     1
+    ],
+    [
+     20,
+     23
+    ],
+    [
+     6,
+     7
+    ],
+    [
+     21,
+     18
+    ],
+    [
+     4,
+     8
+    ],
+    [
+     2,
+     14
+    ]
+   ],
+   "seed": 20261658400,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "03443544d8d47d78ae973d52fe713d51b34fb7c5a89c2ac668e81908cb436787",
+   "index": 147,
+   "moves": [
+    [
+     13,
+     11
+    ],
+    [
+     8,
+     0
+    ],
+    [
+     1,
+     10
+    ],
+    [
+     14,
+     20
+    ],
+    [
+     9,
+     12
+    ],
+    [
+     9,
+     18
+    ]
+   ],
+   "seed": 20261658800,
+   "segment": 1,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "843378a7d53af1793206d7d6108cd2151dbf33e97ed7c535fd96343e0528daa4",
+   "index": 148,
+   "moves": [
+    [
+     8,
+     21
+    ],
+    [
+     16,
+     4
+    ],
+    [
+     9,
+     3
+    ],
+    [
+     21,
+     13
+    ],
+    [
+     20,
+     20
+    ],
+    [
+     19,
+     22
+    ]
+   ],
+   "seed": 20261659200,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "9d37bd4d5d36d48014d091774fd6d7f24659cbaf12c026bc9393aae0b1da6e60",
+   "index": 149,
+   "moves": [
+    [
+     16,
+     3
+    ],
+    [
+     10,
+     20
+    ],
+    [
+     18,
+     15
+    ],
+    [
+     3,
+     9
+    ],
+    [
+     15,
+     4
+    ],
+    [
+     21,
+     7
+    ]
+   ],
+   "seed": 20261659600,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "7d2222eb93bc99668094559bfe404cb2c95baee176b727cb2244c24a5cd1cab2",
+   "index": 150,
+   "moves": [
+    [
+     10,
+     17
+    ],
+    [
+     15,
+     4
+    ],
+    [
+     14,
+     10
+    ],
+    [
+     22,
+     17
+    ],
+    [
+     13,
+     17
+    ],
+    [
+     11,
+     21
+    ]
+   ],
+   "seed": 20261660000,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "8775ec25d0d05253a157bd66defdcd594272b7d08cd7cbc3b90a01918a947ecb",
+   "index": 151,
+   "moves": [
+    [
+     15,
+     11
+    ],
+    [
+     12,
+     15
+    ],
+    [
+     21,
+     17
+    ],
+    [
+     17,
+     4
+    ],
+    [
+     12,
+     14
+    ],
+    [
+     14,
+     23
+    ]
+   ],
+   "seed": 20261660400,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "3036902e6a3cc2c6ae4f57b3b429191ef4a114bf5f66e888569c0338905fbfc8",
+   "index": 152,
+   "moves": [
+    [
+     9,
+     11
+    ],
+    [
+     3,
+     7
+    ],
+    [
+     15,
+     22
+    ],
+    [
+     22,
+     6
+    ],
+    [
+     22,
+     16
+    ],
+    [
+     6,
+     20
+    ]
+   ],
+   "seed": 20261660800,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "311b4e1a6836957e3360f5cac72fe6baf8328e59d3c18ec62e343cfedf17abb0",
+   "index": 153,
+   "moves": [
+    [
+     12,
+     3
+    ],
+    [
+     20,
+     12
+    ],
+    [
+     4,
+     20
+    ],
+    [
+     2,
+     23
+    ],
+    [
+     21,
+     14
+    ],
+    [
+     12,
+     6
+    ]
+   ],
+   "seed": 20261661200,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "f950aee2c4f07dec3e358cceb7b741f3db128a49bb052037d1d5c6d6d5568185",
+   "index": 154,
+   "moves": [
+    [
+     15,
+     10
+    ],
+    [
+     4,
+     4
+    ],
+    [
+     7,
+     1
+    ],
+    [
+     11,
+     9
+    ],
+    [
+     15,
+     17
+    ],
+    [
+     10,
+     17
+    ]
+   ],
+   "seed": 20261661600,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "996c76ac74bf0ec7d8179da9bc84fa48fc68a9f0eb7c3bc248d2bd17f6f65869",
+   "index": 155,
+   "moves": [
+    [
+     18,
+     16
+    ],
+    [
+     3,
+     9
+    ],
+    [
+     10,
+     10
+    ],
+    [
+     20,
+     9
+    ],
+    [
+     19,
+     7
+    ],
+    [
+     6,
+     4
+    ]
+   ],
+   "seed": 20261662000,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "7105c9b9920af28969ac6cf860f929876058b27f129eca9d4ba72ae483a2cdfb",
+   "index": 156,
+   "moves": [
+    [
+     18,
+     1
+    ],
+    [
+     19,
+     14
+    ],
+    [
+     12,
+     21
+    ],
+    [
+     18,
+     16
+    ],
+    [
+     2,
+     1
+    ],
+    [
+     15,
+     16
+    ]
+   ],
+   "seed": 20261662400,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "687a79e3a0b47dc7381d6f846a13cc850f1ad5e305899416cce9905e1d7f1878",
+   "index": 157,
+   "moves": [
+    [
+     13,
+     9
+    ],
+    [
+     9,
+     1
+    ],
+    [
+     18,
+     4
+    ],
+    [
+     21,
+     0
+    ],
+    [
+     15,
+     2
+    ],
+    [
+     21,
+     2
+    ]
+   ],
+   "seed": 20261662800,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "d0ed1fffcf2a6ebad5a357efd0cc6e58b1ef3869ef9b51f32288f4165f53dfcc",
+   "index": 158,
+   "moves": [
+    [
+     20,
+     6
+    ],
+    [
+     1,
+     6
+    ],
+    [
+     9,
+     11
+    ],
+    [
+     2,
+     22
+    ],
+    [
+     3,
+     18
+    ],
+    [
+     20,
+     17
+    ]
+   ],
+   "seed": 20261663200,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "d5aafe72cde6f65b91466cd9846cf510f192512562f4a30c64d1d16c24233160",
+   "index": 159,
+   "moves": [
+    [
+     2,
+     15
+    ],
+    [
+     16,
+     15
+    ],
+    [
+     5,
+     19
+    ],
+    [
+     13,
+     4
+    ],
+    [
+     15,
+     2
+    ],
+    [
+     13,
+     3
+    ]
+   ],
+   "seed": 20261663600,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "da2b46d575a21ae50ff39f29396fab19f263ffd478de4ad9d5f8c8318a4f9bf6",
+   "index": 160,
+   "moves": [
+    [
+     19,
+     21
+    ],
+    [
+     16,
+     15
+    ],
+    [
+     3,
+     19
+    ],
+    [
+     18,
+     13
+    ],
+    [
+     17,
+     3
+    ],
+    [
+     13,
+     1
+    ]
+   ],
+   "seed": 20261664000,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "c1d4ebbdcd6bcd22c5b7b32aa983ea7bd0908602538cfc57c70a41477b748b44",
+   "index": 161,
+   "moves": [
+    [
+     21,
+     21
+    ],
+    [
+     6,
+     23
+    ],
+    [
+     13,
+     6
+    ],
+    [
+     1,
+     4
+    ],
+    [
+     10,
+     12
+    ],
+    [
+     4,
+     6
+    ]
+   ],
+   "seed": 20261664400,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "6998197f42aef02ed27026e9500b9e1693ed8c47349dd01645a97efa9fa463f3",
+   "index": 162,
+   "moves": [
+    [
+     2,
+     7
+    ],
+    [
+     15,
+     2
+    ],
+    [
+     22,
+     14
+    ],
+    [
+     11,
+     6
+    ],
+    [
+     11,
+     17
+    ],
+    [
+     21,
+     3
+    ]
+   ],
+   "seed": 20261664800,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "993b953ad6ab78cf32fa2d2355575f5b6e7e4b7c66e78f3ff3de3e2cc36a9bd2",
+   "index": 163,
+   "moves": [
+    [
+     10,
+     18
+    ],
+    [
+     10,
+     2
+    ],
+    [
+     2,
+     14
+    ],
+    [
+     19,
+     9
+    ],
+    [
+     18,
+     8
+    ],
+    [
+     21,
+     11
+    ]
+   ],
+   "seed": 20261665200,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "fbe91e0c9693e04ae5b08efcb86b59b88d52e548665af22ff196e4fca09e2a02",
+   "index": 164,
+   "moves": [
+    [
+     18,
+     13
+    ],
+    [
+     5,
+     12
+    ],
+    [
+     17,
+     19
+    ],
+    [
+     3,
+     0
+    ],
+    [
+     9,
+     18
+    ],
+    [
+     1,
+     8
+    ]
+   ],
+   "seed": 20261665600,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "006f53a4156791dde51365701be9c1f6ec51ca50ef3177ee9879384cb0b29672",
+   "index": 165,
+   "moves": [
+    [
+     23,
+     22
+    ],
+    [
+     22,
+     20
+    ],
+    [
+     23,
+     14
+    ],
+    [
+     11,
+     6
+    ],
+    [
+     16,
+     16
+    ],
+    [
+     10,
+     10
+    ]
+   ],
+   "seed": 20261666000,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "23079f1128a415cdb7d7029d9f990aaf07a297ea1da208569a6466e5268933a3",
+   "index": 166,
+   "moves": [
+    [
+     15,
+     7
+    ],
+    [
+     13,
+     6
+    ],
+    [
+     3,
+     5
+    ],
+    [
+     16,
+     3
+    ],
+    [
+     6,
+     12
+    ],
+    [
+     8,
+     0
+    ]
+   ],
+   "seed": 20261666400,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "bbe57d5ca737f5bc8addc4aa6eccc4308b82e7f45c56907be2ef1076472287b9",
+   "index": 167,
+   "moves": [
+    [
+     4,
+     5
+    ],
+    [
+     14,
+     13
+    ],
+    [
+     2,
+     17
+    ],
+    [
+     6,
+     22
+    ],
+    [
+     15,
+     3
+    ],
+    [
+     17,
+     19
+    ]
+   ],
+   "seed": 20261666800,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "2b2f91d820eb2c192f3293b4747dc0a35a29e6fd6549f35e70bbb9593ad059be",
+   "index": 168,
+   "moves": [
+    [
+     0,
+     14
+    ],
+    [
+     4,
+     0
+    ],
+    [
+     20,
+     2
+    ],
+    [
+     22,
+     19
+    ],
+    [
+     17,
+     11
+    ],
+    [
+     17,
+     4
+    ]
+   ],
+   "seed": 20261667200,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "1e19f22f96be4f7c33edabbea2d1af89080d15f0163f21c38fda2cc768583522",
+   "index": 169,
+   "moves": [
+    [
+     22,
+     22
+    ],
+    [
+     5,
+     13
+    ],
+    [
+     17,
+     20
+    ],
+    [
+     4,
+     10
+    ],
+    [
+     4,
+     19
+    ],
+    [
+     15,
+     3
+    ]
+   ],
+   "seed": 20261667600,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "3f30f954d47798dacc9175a376f6a01b5b4729a9705ac6d4e31f718c3168190a",
+   "index": 170,
+   "moves": [
+    [
+     1,
+     4
+    ],
+    [
+     17,
+     10
+    ],
+    [
+     3,
+     1
+    ],
+    [
+     12,
+     1
+    ],
+    [
+     17,
+     17
+    ],
+    [
+     12,
+     23
+    ]
+   ],
+   "seed": 20261668000,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "3dac4789a926d4b26a7bcc1289d2fb0ad2fe9cd8bdc146592bc39bd5e51dc075",
+   "index": 171,
+   "moves": [
+    [
+     6,
+     21
+    ],
+    [
+     9,
+     13
+    ],
+    [
+     13,
+     18
+    ],
+    [
+     3,
+     17
+    ],
+    [
+     0,
+     4
+    ],
+    [
+     15,
+     5
+    ]
+   ],
+   "seed": 20261668400,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "ae803c14016ba7d9a7fad4eee317003b2ae19d07c427776db901d32f7fc8eadb",
+   "index": 172,
+   "moves": [
+    [
+     21,
+     2
+    ],
+    [
+     9,
+     8
+    ],
+    [
+     15,
+     21
+    ],
+    [
+     21,
+     13
+    ],
+    [
+     2,
+     18
+    ],
+    [
+     22,
+     23
+    ]
+   ],
+   "seed": 20261668800,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "0df17f9d1a4fecdf097222c2fbe2513f326e6f327b784e693eb394dee154c2f0",
+   "index": 173,
+   "moves": [
+    [
+     14,
+     17
+    ],
+    [
+     9,
+     15
+    ],
+    [
+     16,
+     5
+    ],
+    [
+     6,
+     9
+    ],
+    [
+     4,
+     8
+    ],
+    [
+     21,
+     4
+    ]
+   ],
+   "seed": 20261669200,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "392722306a5cd7b1714115a393d1fe966e5201edca63c1e963a22f88c157150c",
+   "index": 174,
+   "moves": [
+    [
+     6,
+     14
+    ],
+    [
+     2,
+     9
+    ],
+    [
+     14,
+     6
+    ],
+    [
+     17,
+     0
+    ],
+    [
+     14,
+     20
+    ],
+    [
+     22,
+     8
+    ]
+   ],
+   "seed": 20261669600,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "b3b2717770803907bfe7f10a6da0316ee406921d4dee872e2b73bb91870b9d99",
+   "index": 175,
+   "moves": [
+    [
+     8,
+     11
+    ],
+    [
+     13,
+     4
+    ],
+    [
+     4,
+     8
+    ],
+    [
+     2,
+     7
+    ],
+    [
+     23,
+     8
+    ],
+    [
+     4,
+     17
+    ]
+   ],
+   "seed": 20261670000,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "e9862e70daf0de9ba79c5e64167c13ea7c47eaf5fb334ced61ce81ed60297341",
+   "index": 176,
+   "moves": [
+    [
+     17,
+     15
+    ],
+    [
+     16,
+     7
+    ],
+    [
+     2,
+     9
+    ],
+    [
+     18,
+     12
+    ],
+    [
+     13,
+     17
+    ],
+    [
+     4,
+     5
+    ]
+   ],
+   "seed": 20261670400,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "83325f098edddc8665b84c3b49d7480410d6e1fa989969d55510ddf142f82fbd",
+   "index": 177,
+   "moves": [
+    [
+     18,
+     19
+    ],
+    [
+     18,
+     7
+    ],
+    [
+     11,
+     17
+    ],
+    [
+     1,
+     15
+    ],
+    [
+     21,
+     7
+    ],
+    [
+     17,
+     2
+    ]
+   ],
+   "seed": 20261670800,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "c5379fdee1b839a9a8f13dfb4e21354699e8aeb9c9aba603fb16543f7db2c63a",
+   "index": 178,
+   "moves": [
+    [
+     4,
+     5
+    ],
+    [
+     7,
+     2
+    ],
+    [
+     23,
+     1
+    ],
+    [
+     19,
+     19
+    ],
+    [
+     16,
+     4
+    ],
+    [
+     17,
+     21
+    ]
+   ],
+   "seed": 20261671200,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "df392064c6212e2ad4bdbe4fbb73adec12ea0bf5463568b5efbc592f4328f5b1",
+   "index": 179,
+   "moves": [
+    [
+     8,
+     19
+    ],
+    [
+     20,
+     5
+    ],
+    [
+     23,
+     21
+    ],
+    [
+     14,
+     15
+    ],
+    [
+     9,
+     1
+    ],
+    [
+     20,
+     9
+    ]
+   ],
+   "seed": 20261671600,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "b047de65c29ac01c3bf0cbbec530dd3ddb47c7a281f61de711d27b00d21acd0d",
+   "index": 180,
+   "moves": [
+    [
+     17,
+     11
+    ],
+    [
+     16,
+     20
+    ],
+    [
+     21,
+     5
+    ],
+    [
+     22,
+     18
+    ],
+    [
+     15,
+     8
+    ],
+    [
+     6,
+     16
+    ]
+   ],
+   "seed": 20261672000,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "63c04a45cdcf11da0e085955e9285204efc330352f72af0b155a924b496d9f0c",
+   "index": 181,
+   "moves": [
+    [
+     22,
+     5
+    ],
+    [
+     2,
+     14
+    ],
+    [
+     16,
+     15
+    ],
+    [
+     16,
+     14
+    ],
+    [
+     4,
+     18
+    ],
+    [
+     12,
+     14
+    ]
+   ],
+   "seed": 20261672400,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "d6b7380d7228ef835f761870660d3a1fceee923683860e2084bbb88b6899792c",
+   "index": 182,
+   "moves": [
+    [
+     20,
+     1
+    ],
+    [
+     18,
+     3
+    ],
+    [
+     3,
+     13
+    ],
+    [
+     19,
+     5
+    ],
+    [
+     19,
+     14
+    ],
+    [
+     18,
+     15
+    ]
+   ],
+   "seed": 20261672800,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "71b7c6e29d84fe6df7f61569dc1bc895ff7dfc2b9fca98fca1a2106a421dcb21",
+   "index": 183,
+   "moves": [
+    [
+     19,
+     5
+    ],
+    [
+     14,
+     16
+    ],
+    [
+     6,
+     6
+    ],
+    [
+     7,
+     9
+    ],
+    [
+     1,
+     10
+    ],
+    [
+     11,
+     1
+    ]
+   ],
+   "seed": 20261673200,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "f42311517fff75b279996f2d6760aa25ddc1f7b73d7a38d12530e1d172c1d437",
+   "index": 184,
+   "moves": [
+    [
+     18,
+     21
+    ],
+    [
+     19,
+     8
+    ],
+    [
+     1,
+     10
+    ],
+    [
+     20,
+     11
+    ],
+    [
+     9,
+     7
+    ],
+    [
+     17,
+     14
+    ]
+   ],
+   "seed": 20261673600,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "55c1d06f7d45f8a932cd64d7e4ffd74c003b1c8059f0474203c607ac6f688912",
+   "index": 185,
+   "moves": [
+    [
+     3,
+     16
+    ],
+    [
+     12,
+     20
+    ],
+    [
+     16,
+     19
+    ],
+    [
+     14,
+     19
+    ],
+    [
+     12,
+     19
+    ],
+    [
+     9,
+     4
+    ]
+   ],
+   "seed": 20261674000,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "f9c88925b24a0326a4fc0a29d4c6660e51eb77bbaec197d1b59b6d6bcd845002",
+   "index": 186,
+   "moves": [
+    [
+     3,
+     16
+    ],
+    [
+     12,
+     23
+    ],
+    [
+     15,
+     15
+    ],
+    [
+     1,
+     16
+    ],
+    [
+     12,
+     11
+    ],
+    [
+     15,
+     20
+    ]
+   ],
+   "seed": 20261674400,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "c2c1d6ead3cdfd9e15868ca83134f1efae2ce4daf2e641eb4c77154c538bd5ce",
+   "index": 187,
+   "moves": [
+    [
+     19,
+     6
+    ],
+    [
+     5,
+     0
+    ],
+    [
+     3,
+     7
+    ],
+    [
+     12,
+     18
+    ],
+    [
+     11,
+     4
+    ],
+    [
+     11,
+     8
+    ]
+   ],
+   "seed": 20261674800,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "0b10e9f613834e8e90b39942b403188eaea2a7aa275810610822dda0b5393eca",
+   "index": 188,
+   "moves": [
+    [
+     18,
+     12
+    ],
+    [
+     2,
+     22
+    ],
+    [
+     9,
+     9
+    ],
+    [
+     19,
+     8
+    ],
+    [
+     23,
+     9
+    ],
+    [
+     20,
+     18
+    ]
+   ],
+   "seed": 20261675200,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "d8832cfe8c6bd5c713e41e6800bec1c18b979ad813244110bfae4dba3ed27fec",
+   "index": 189,
+   "moves": [
+    [
+     0,
+     13
+    ],
+    [
+     6,
+     5
+    ],
+    [
+     14,
+     13
+    ],
+    [
+     19,
+     11
+    ],
+    [
+     16,
+     19
+    ],
+    [
+     21,
+     6
+    ]
+   ],
+   "seed": 20261675600,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "ddbd8662582d58a06fc9b243a100661a5465d278110e510d7dac0a44300c6f87",
+   "index": 190,
+   "moves": [
+    [
+     7,
+     21
+    ],
+    [
+     11,
+     14
+    ],
+    [
+     3,
+     2
+    ],
+    [
+     5,
+     2
+    ],
+    [
+     1,
+     19
+    ],
+    [
+     18,
+     22
+    ]
+   ],
+   "seed": 20261676000,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "17ab4982b0ce8761377b4c0b87d918dd1e6ab6b49a8a20c1f29838f9853c275e",
+   "index": 191,
+   "moves": [
+    [
+     6,
+     10
+    ],
+    [
+     12,
+     15
+    ],
+    [
+     13,
+     2
+    ],
+    [
+     8,
+     15
+    ],
+    [
+     4,
+     5
+    ],
+    [
+     17,
+     15
+    ]
+   ],
+   "seed": 20261676400,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "b587cf2b4bacf12c892498d9767f859aa96a18ecb5654a08b69ef58ae50dad98",
+   "index": 192,
+   "moves": [
+    [
+     12,
+     1
+    ],
+    [
+     21,
+     13
+    ],
+    [
+     23,
+     22
+    ],
+    [
+     9,
+     10
+    ],
+    [
+     22,
+     11
+    ],
+    [
+     8,
+     1
+    ]
+   ],
+   "seed": 20261676800,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "564933c3a1713f7c41bb7dd08934a6b90237ac9bec26ebd6f942fea2d84b180f",
+   "index": 193,
+   "moves": [
+    [
+     20,
+     8
+    ],
+    [
+     19,
+     8
+    ],
+    [
+     21,
+     4
+    ],
+    [
+     10,
+     12
+    ],
+    [
+     12,
+     7
+    ],
+    [
+     18,
+     9
+    ]
+   ],
+   "seed": 20261677200,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "5cca7dce864a541bed45bf19f48e7f9734198b9fca59889e69a124075986656b",
+   "index": 194,
+   "moves": [
+    [
+     22,
+     10
+    ],
+    [
+     18,
+     20
+    ],
+    [
+     2,
+     15
+    ],
+    [
+     14,
+     3
+    ],
+    [
+     6,
+     13
+    ],
+    [
+     10,
+     2
+    ]
+   ],
+   "seed": 20261677600,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "10ca7d2b72cc73f003175cd1cf9968d89a97cd194b69bf667b805943ff9e0a8d",
+   "index": 195,
+   "moves": [
+    [
+     2,
+     9
+    ],
+    [
+     9,
+     5
+    ],
+    [
+     7,
+     7
+    ],
+    [
+     11,
+     5
+    ],
+    [
+     4,
+     10
+    ],
+    [
+     15,
+     14
+    ]
+   ],
+   "seed": 20261678000,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "3504b3f6f51e89f9d89229282d0eb08b9f47fc769f8f5195cfb44c7d647ccedd",
+   "index": 196,
+   "moves": [
+    [
+     3,
+     11
+    ],
+    [
+     3,
+     22
+    ],
+    [
+     20,
+     11
+    ],
+    [
+     9,
+     7
+    ],
+    [
+     14,
+     7
+    ],
+    [
+     15,
+     23
+    ]
+   ],
+   "seed": 20261678400,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "029d2ae8d14f1ac4b9beab8c637bdc8a7d9918fcbdd39d8141163c35c9a0dd35",
+   "index": 197,
+   "moves": [
+    [
+     6,
+     21
+    ],
+    [
+     14,
+     4
+    ],
+    [
+     16,
+     4
+    ],
+    [
+     21,
+     11
+    ],
+    [
+     16,
+     10
+    ],
+    [
+     12,
+     3
+    ]
+   ],
+   "seed": 20261678800,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "113d715992c5fdd73abacc1ac03ba297b68483b8774ff13191fea33178a4f05f",
+   "index": 198,
+   "moves": [
+    [
+     15,
+     22
+    ],
+    [
+     1,
+     20
+    ],
+    [
+     17,
+     1
+    ],
+    [
+     15,
+     13
+    ],
+    [
+     7,
+     19
+    ],
+    [
+     20,
+     12
+    ]
+   ],
+   "seed": 20261679200,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "c5f07a4a45b2f655d47e966067326df9572ff0f93ac048acfb052a17bd584210",
+   "index": 199,
+   "moves": [
+    [
+     23,
+     6
+    ],
+    [
+     4,
+     23
+    ],
+    [
+     0,
+     15
+    ],
+    [
+     22,
+     1
+    ],
+    [
+     13,
+     15
+    ],
+    [
+     21,
+     7
+    ]
+   ],
+   "seed": 20261679600,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "98121972366bb307d03786a13f51526208f82222010f1ab38a1a221100bb6498",
+   "index": 200,
+   "moves": [
+    [
+     23,
+     14
+    ],
+    [
+     11,
+     10
+    ],
+    [
+     21,
+     15
+    ],
+    [
+     13,
+     17
+    ],
+    [
+     9,
+     22
+    ],
+    [
+     7,
+     23
+    ]
+   ],
+   "seed": 20261680000,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "dd8154ffa6c437cb26e3818faf67f1357ad9f2294536a7481d6e6130596097e0",
+   "index": 201,
+   "moves": [
+    [
+     21,
+     9
+    ],
+    [
+     13,
+     11
+    ],
+    [
+     21,
+     20
+    ],
+    [
+     22,
+     3
+    ],
+    [
+     2,
+     19
+    ],
+    [
+     16,
+     9
+    ]
+   ],
+   "seed": 20261680400,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "49595769cd4062116225458628338b14a6d6880e10677a9722b8d01d9e5f978a",
+   "index": 202,
+   "moves": [
+    [
+     6,
+     1
+    ],
+    [
+     15,
+     11
+    ],
+    [
+     15,
+     12
+    ],
+    [
+     8,
+     8
+    ],
+    [
+     23,
+     5
+    ],
+    [
+     10,
+     23
+    ]
+   ],
+   "seed": 20261680800,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "cdb08fd3bd6e9bdb744850b32b141b3b63fad695518cea93a28b1e8acf22a0a5",
+   "index": 203,
+   "moves": [
+    [
+     5,
+     22
+    ],
+    [
+     2,
+     3
+    ],
+    [
+     19,
+     9
+    ],
+    [
+     4,
+     9
+    ],
+    [
+     4,
+     16
+    ],
+    [
+     20,
+     10
+    ]
+   ],
+   "seed": 20261681200,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "5cae581000df4711af117b3abde70a0d5af8561517aea10b65ad9f01df517b3d",
+   "index": 204,
+   "moves": [
+    [
+     20,
+     15
+    ],
+    [
+     18,
+     12
+    ],
+    [
+     1,
+     1
+    ],
+    [
+     18,
+     17
+    ],
+    [
+     3,
+     12
+    ],
+    [
+     21,
+     23
+    ]
+   ],
+   "seed": 20261681600,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "13bb3f07c2160a572e2d89999cdff5be314c1f1bbf9cd2d910b1f0100c83d363",
+   "index": 205,
+   "moves": [
+    [
+     18,
+     16
+    ],
+    [
+     13,
+     20
+    ],
+    [
+     20,
+     5
+    ],
+    [
+     15,
+     16
+    ],
+    [
+     17,
+     17
+    ],
+    [
+     13,
+     10
+    ]
+   ],
+   "seed": 20261682000,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "99a3534cdfbabca926375e5fc900691fdfe3a5deec2277c71f950db542f4d995",
+   "index": 206,
+   "moves": [
+    [
+     8,
+     10
+    ],
+    [
+     2,
+     21
+    ],
+    [
+     1,
+     2
+    ],
+    [
+     18,
+     3
+    ],
+    [
+     1,
+     9
+    ],
+    [
+     12,
+     4
+    ]
+   ],
+   "seed": 20261682400,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "f51cb61d2a52ea909c5c44f242a263565dfdaf43bde6cdb33fd9a630e87ec398",
+   "index": 207,
+   "moves": [
+    [
+     12,
+     11
+    ],
+    [
+     14,
+     8
+    ],
+    [
+     0,
+     5
+    ],
+    [
+     7,
+     1
+    ],
+    [
+     1,
+     22
+    ],
+    [
+     4,
+     20
+    ]
+   ],
+   "seed": 20261682800,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "3a76fc0bed33c6c03df28d66bec08deafaa1c1cbaf80708f76ef84b0556160d8",
+   "index": 208,
+   "moves": [
+    [
+     17,
+     21
+    ],
+    [
+     18,
+     14
+    ],
+    [
+     22,
+     19
+    ],
+    [
+     15,
+     12
+    ],
+    [
+     21,
+     18
+    ],
+    [
+     13,
+     0
+    ]
+   ],
+   "seed": 20261683200,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "9c00359a91b79423a3ce677ccfa61000cf033e56bff9c84580c4af1682b0f385",
+   "index": 209,
+   "moves": [
+    [
+     7,
+     17
+    ],
+    [
+     11,
+     8
+    ],
+    [
+     16,
+     18
+    ],
+    [
+     2,
+     17
+    ],
+    [
+     22,
+     8
+    ],
+    [
+     3,
+     1
+    ]
+   ],
+   "seed": 20261683600,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "42be368a9e349343fab68ebbe19dfb10b76d4361348f16c4932413f94345a05c",
+   "index": 210,
+   "moves": [
+    [
+     21,
+     12
+    ],
+    [
+     8,
+     6
+    ],
+    [
+     16,
+     1
+    ],
+    [
+     13,
+     20
+    ],
+    [
+     19,
+     18
+    ],
+    [
+     2,
+     14
+    ]
+   ],
+   "seed": 20261684000,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "24dd9cd8c2212a26bb5da4c8d4b2881f23e73e45eb6413b469c156ca4b2535c1",
+   "index": 211,
+   "moves": [
+    [
+     0,
+     20
+    ],
+    [
+     10,
+     5
+    ],
+    [
+     8,
+     6
+    ],
+    [
+     4,
+     11
+    ],
+    [
+     14,
+     1
+    ],
+    [
+     15,
+     3
+    ]
+   ],
+   "seed": 20261684400,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "a259ef018f75869e2c747120a8aff2fc80c98c122889e9bb062bf0e3ed92d048",
+   "index": 212,
+   "moves": [
+    [
+     13,
+     16
+    ],
+    [
+     13,
+     12
+    ],
+    [
+     7,
+     1
+    ],
+    [
+     7,
+     12
+    ],
+    [
+     5,
+     21
+    ],
+    [
+     18,
+     16
+    ]
+   ],
+   "seed": 20261684800,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "995f712066d8531e7993565d1489e7b63070bb40e600ee0e22c051e8b06b8d55",
+   "index": 213,
+   "moves": [
+    [
+     11,
+     1
+    ],
+    [
+     1,
+     19
+    ],
+    [
+     18,
+     17
+    ],
+    [
+     11,
+     13
+    ],
+    [
+     23,
+     18
+    ],
+    [
+     9,
+     16
+    ]
+   ],
+   "seed": 20261685200,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "24fb302b01a1e4174343bc41069e1f7b111190d01a354681eefb354a6c8eea8f",
+   "index": 214,
+   "moves": [
+    [
+     4,
+     14
+    ],
+    [
+     5,
+     9
+    ],
+    [
+     9,
+     17
+    ],
+    [
+     17,
+     21
+    ],
+    [
+     16,
+     4
+    ],
+    [
+     20,
+     5
+    ]
+   ],
+   "seed": 20261685600,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "17bb329e15ba1ca176122892f157898e6207edd2c5095509b77941678ae93f09",
+   "index": 215,
+   "moves": [
+    [
+     22,
+     3
+    ],
+    [
+     6,
+     22
+    ],
+    [
+     13,
+     22
+    ],
+    [
+     18,
+     15
+    ],
+    [
+     19,
+     6
+    ],
+    [
+     7,
+     11
+    ]
+   ],
+   "seed": 20261686000,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "d8af630d832d0f78cc579128beba1cfbe0443968daf0bc1d98580fb92b48a242",
+   "index": 216,
+   "moves": [
+    [
+     6,
+     7
+    ],
+    [
+     16,
+     19
+    ],
+    [
+     2,
+     15
+    ],
+    [
+     20,
+     10
+    ],
+    [
+     17,
+     12
+    ],
+    [
+     5,
+     3
+    ]
+   ],
+   "seed": 20261686400,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "2eab4c19215d6f8af0e68672a7c50479afb066532ca56be9bf27980018b2a878",
+   "index": 217,
+   "moves": [
+    [
+     11,
+     8
+    ],
+    [
+     22,
+     5
+    ],
+    [
+     16,
+     7
+    ],
+    [
+     15,
+     13
+    ],
+    [
+     12,
+     10
+    ],
+    [
+     14,
+     4
+    ]
+   ],
+   "seed": 20261686800,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "8496e620d85416bbf9ec2ba91f44259d0fe3a3f68410eece4f75876659b67779",
+   "index": 218,
+   "moves": [
+    [
+     7,
+     4
+    ],
+    [
+     8,
+     18
+    ],
+    [
+     5,
+     3
+    ],
+    [
+     3,
+     4
+    ],
+    [
+     7,
+     2
+    ],
+    [
+     22,
+     18
+    ]
+   ],
+   "seed": 20261687200,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "a7a09058c6d5e41cc836255f5f605973aada90feb3d3c8f0e6b044a7d9d90207",
+   "index": 219,
+   "moves": [
+    [
+     3,
+     21
+    ],
+    [
+     7,
+     14
+    ],
+    [
+     22,
+     21
+    ],
+    [
+     17,
+     9
+    ],
+    [
+     18,
+     11
+    ],
+    [
+     17,
+     17
+    ]
+   ],
+   "seed": 20261687600,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "e7dc83a6364064d9e02289bc5066bdbd8915e4a137de597118763be3ea2756af",
+   "index": 220,
+   "moves": [
+    [
+     1,
+     17
+    ],
+    [
+     19,
+     0
+    ],
+    [
+     12,
+     2
+    ],
+    [
+     9,
+     11
+    ],
+    [
+     5,
+     18
+    ],
+    [
+     22,
+     18
+    ]
+   ],
+   "seed": 20261688000,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "b5388cf92ca2df37e783974fdef9e54e32fc37da0d2e7cda4350f5730bb9260b",
+   "index": 221,
+   "moves": [
+    [
+     9,
+     9
+    ],
+    [
+     11,
+     23
+    ],
+    [
+     17,
+     15
+    ],
+    [
+     20,
+     22
+    ],
+    [
+     0,
+     10
+    ],
+    [
+     3,
+     23
+    ]
+   ],
+   "seed": 20261688400,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "7422cac001ccb7d730acce8848eddf5d81a04558e914fc08a187fd2ade98dbe0",
+   "index": 222,
+   "moves": [
+    [
+     19,
+     14
+    ],
+    [
+     16,
+     0
+    ],
+    [
+     16,
+     8
+    ],
+    [
+     7,
+     16
+    ],
+    [
+     1,
+     19
+    ],
+    [
+     10,
+     23
+    ]
+   ],
+   "seed": 20261688800,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "44506a29e659d6433ed81cb5aa50128df1b1e144285b45e2e4bb0be340157550",
+   "index": 223,
+   "moves": [
+    [
+     11,
+     3
+    ],
+    [
+     13,
+     11
+    ],
+    [
+     3,
+     19
+    ],
+    [
+     13,
+     23
+    ],
+    [
+     7,
+     18
+    ],
+    [
+     5,
+     12
+    ]
+   ],
+   "seed": 20261689200,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "00066acda44e9dce4f6add991e02566d56f5c3f88209a4ae148806d97e5e27cd",
+   "index": 224,
+   "moves": [
+    [
+     2,
+     1
+    ],
+    [
+     5,
+     13
+    ],
+    [
+     14,
+     14
+    ],
+    [
+     11,
+     22
+    ],
+    [
+     8,
+     4
+    ],
+    [
+     20,
+     3
+    ]
+   ],
+   "seed": 20261689600,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "4fb5acbd3ed546cac2ff7f5c785b591dbe3ee40988852c8179205ad927da4b97",
+   "index": 225,
+   "moves": [
+    [
+     1,
+     17
+    ],
+    [
+     14,
+     15
+    ],
+    [
+     15,
+     11
+    ],
+    [
+     20,
+     7
+    ],
+    [
+     8,
+     12
+    ],
+    [
+     4,
+     5
+    ]
+   ],
+   "seed": 20261690000,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "8cf77f2f5b327a3befd4c681e89e315960ad7ca1a13b02c486361da6136b8e43",
+   "index": 226,
+   "moves": [
+    [
+     6,
+     11
+    ],
+    [
+     17,
+     1
+    ],
+    [
+     23,
+     21
+    ],
+    [
+     15,
+     3
+    ],
+    [
+     15,
+     4
+    ],
+    [
+     16,
+     20
+    ]
+   ],
+   "seed": 20261690400,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "6054f6288279615cb9150a23962454ba52b2b42237efbe96ac1ae324e29a37a1",
+   "index": 227,
+   "moves": [
+    [
+     20,
+     17
+    ],
+    [
+     9,
+     15
+    ],
+    [
+     17,
+     8
+    ],
+    [
+     22,
+     5
+    ],
+    [
+     4,
+     15
+    ],
+    [
+     18,
+     7
+    ]
+   ],
+   "seed": 20261690800,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "f417764b8aab024e764b2faee489008e4cdf01258f98e451efcda7f75e9c9047",
+   "index": 228,
+   "moves": [
+    [
+     21,
+     17
+    ],
+    [
+     6,
+     7
+    ],
+    [
+     4,
+     4
+    ],
+    [
+     16,
+     5
+    ],
+    [
+     10,
+     10
+    ],
+    [
+     17,
+     3
+    ]
+   ],
+   "seed": 20261691200,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "19a8c7b4d421e0679736d9a68534e304131dd8e5fe17bf3e6b624fa9f9bc5247",
+   "index": 229,
+   "moves": [
+    [
+     17,
+     8
+    ],
+    [
+     1,
+     17
+    ],
+    [
+     15,
+     5
+    ],
+    [
+     13,
+     9
+    ],
+    [
+     8,
+     6
+    ],
+    [
+     5,
+     14
+    ]
+   ],
+   "seed": 20261691600,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "40a78b7deb9c7ff95325cb39d7394262317966ff74717fc2fbeb443abb8db45c",
+   "index": 230,
+   "moves": [
+    [
+     0,
+     22
+    ],
+    [
+     3,
+     21
+    ],
+    [
+     20,
+     9
+    ],
+    [
+     16,
+     19
+    ],
+    [
+     23,
+     17
+    ],
+    [
+     22,
+     18
+    ]
+   ],
+   "seed": 20261692000,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "11f36a3ff1f43ed5cdf293cd01a76cf5cc4e70253940ee2d24944bd0e02dbe64",
+   "index": 231,
+   "moves": [
+    [
+     11,
+     19
+    ],
+    [
+     13,
+     9
+    ],
+    [
+     15,
+     8
+    ],
+    [
+     11,
+     9
+    ],
+    [
+     19,
+     13
+    ],
+    [
+     20,
+     0
+    ]
+   ],
+   "seed": 20261692400,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "23f580cdc4b590dbe0adbb042da6dcf244f3a976753e453e828f1b67ad74d632",
+   "index": 232,
+   "moves": [
+    [
+     9,
+     10
+    ],
+    [
+     19,
+     18
+    ],
+    [
+     13,
+     4
+    ],
+    [
+     8,
+     20
+    ],
+    [
+     5,
+     19
+    ],
+    [
+     19,
+     3
+    ]
+   ],
+   "seed": 20261692800,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "b2051d2236c9aa968384d5fdc7d6fa7a89ab5c5e2911f6f979f201ac04af8e9e",
+   "index": 233,
+   "moves": [
+    [
+     15,
+     5
+    ],
+    [
+     17,
+     6
+    ],
+    [
+     20,
+     22
+    ],
+    [
+     17,
+     0
+    ],
+    [
+     0,
+     11
+    ],
+    [
+     17,
+     1
+    ]
+   ],
+   "seed": 20261693200,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "16d63b4475dcb8da9f23041247e2c3a9362dd58778c1329ac295f222120cc6ca",
+   "index": 234,
+   "moves": [
+    [
+     9,
+     7
+    ],
+    [
+     2,
+     7
+    ],
+    [
+     21,
+     7
+    ],
+    [
+     9,
+     18
+    ],
+    [
+     3,
+     9
+    ],
+    [
+     2,
+     1
+    ]
+   ],
+   "seed": 20261693600,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "e67c4f9c2014c2c10d40597de5d29b911f633aef32bb62a05e41218133c5e6f6",
+   "index": 235,
+   "moves": [
+    [
+     5,
+     11
+    ],
+    [
+     2,
+     14
+    ],
+    [
+     8,
+     21
+    ],
+    [
+     20,
+     21
+    ],
+    [
+     9,
+     2
+    ],
+    [
+     15,
+     16
+    ]
+   ],
+   "seed": 20261694000,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "b2a82e6b63808817fcc9cca3ff214111bcf798f05ae7f96845377b231c656073",
+   "index": 236,
+   "moves": [
+    [
+     18,
+     14
+    ],
+    [
+     7,
+     17
+    ],
+    [
+     1,
+     16
+    ],
+    [
+     17,
+     2
+    ],
+    [
+     18,
+     15
+    ],
+    [
+     15,
+     11
+    ]
+   ],
+   "seed": 20261694400,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "120b203b868bddde70ef30bdedf2235738332e6969eba0dc2baf58a52221541e",
+   "index": 237,
+   "moves": [
+    [
+     7,
+     7
+    ],
+    [
+     17,
+     3
+    ],
+    [
+     20,
+     17
+    ],
+    [
+     6,
+     7
+    ],
+    [
+     9,
+     8
+    ],
+    [
+     5,
+     10
+    ]
+   ],
+   "seed": 20261694800,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "2c7affe01f4584a2d0136120cd6f301e49c3fff6432645614f5f3c258992dfad",
+   "index": 238,
+   "moves": [
+    [
+     20,
+     8
+    ],
+    [
+     10,
+     17
+    ],
+    [
+     14,
+     10
+    ],
+    [
+     13,
+     3
+    ],
+    [
+     14,
+     1
+    ],
+    [
+     8,
+     21
+    ]
+   ],
+   "seed": 20261695200,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "7bca5ab1bd26809a84da091948a0b5287a10b476868e3e4b87174a43e1d03df8",
+   "index": 239,
+   "moves": [
+    [
+     14,
+     17
+    ],
+    [
+     2,
+     1
+    ],
+    [
+     10,
+     21
+    ],
+    [
+     22,
+     15
+    ],
+    [
+     11,
+     15
+    ],
+    [
+     21,
+     12
+    ]
+   ],
+   "seed": 20261695600,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "547b62dc510848a31c7706c2594530808bdae016d4f4b087a49a264d097c2052",
+   "index": 240,
+   "moves": [
+    [
+     22,
+     10
+    ],
+    [
+     12,
+     6
+    ],
+    [
+     3,
+     19
+    ],
+    [
+     13,
+     4
+    ],
+    [
+     4,
+     20
+    ],
+    [
+     16,
+     23
+    ]
+   ],
+   "seed": 20261696000,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "ac0e7d7f5c98f46041de9ffd1cdc33bf5e98dd1bc97b638b15396cf6c8a7b6f0",
+   "index": 241,
+   "moves": [
+    [
+     3,
+     20
+    ],
+    [
+     4,
+     8
+    ],
+    [
+     23,
+     20
+    ],
+    [
+     3,
+     6
+    ],
+    [
+     12,
+     16
+    ],
+    [
+     18,
+     4
+    ]
+   ],
+   "seed": 20261696400,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "845776c0c97c91ce11d9f145f85029597e06b488ee882c3c20066189d18fd06d",
+   "index": 242,
+   "moves": [
+    [
+     7,
+     22
+    ],
+    [
+     19,
+     5
+    ],
+    [
+     3,
+     9
+    ],
+    [
+     17,
+     2
+    ],
+    [
+     2,
+     2
+    ],
+    [
+     9,
+     9
+    ]
+   ],
+   "seed": 20261696800,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "d5d26d34f96c760439e6b86154b2279fa3a26405c31c7f540729e4cac0f6f17d",
+   "index": 243,
+   "moves": [
+    [
+     2,
+     14
+    ],
+    [
+     15,
+     23
+    ],
+    [
+     6,
+     2
+    ],
+    [
+     1,
+     3
+    ],
+    [
+     21,
+     2
+    ],
+    [
+     7,
+     14
+    ]
+   ],
+   "seed": 20261697200,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "f766caf5003bbd48013d9139c6c11c54387267de71bde9c09051c31bbfa2af96",
+   "index": 244,
+   "moves": [
+    [
+     13,
+     9
+    ],
+    [
+     21,
+     7
+    ],
+    [
+     22,
+     14
+    ],
+    [
+     4,
+     14
+    ],
+    [
+     14,
+     3
+    ],
+    [
+     20,
+     4
+    ]
+   ],
+   "seed": 20261697600,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "37ab79890603484369869dac7ddae8974cf4c755609a84e204604291ad39fff5",
+   "index": 245,
+   "moves": [
+    [
+     17,
+     2
+    ],
+    [
+     2,
+     13
+    ],
+    [
+     8,
+     4
+    ],
+    [
+     19,
+     17
+    ],
+    [
+     10,
+     21
+    ],
+    [
+     18,
+     19
+    ]
+   ],
+   "seed": 20261698000,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "eeeb8a55e9d3592f9354ef2bfd1ec4bf4d1046a8a7432fc6869a7d6282e2b496",
+   "index": 246,
+   "moves": [
+    [
+     19,
+     18
+    ],
+    [
+     22,
+     16
+    ],
+    [
+     9,
+     3
+    ],
+    [
+     17,
+     14
+    ],
+    [
+     9,
+     8
+    ],
+    [
+     13,
+     1
+    ]
+   ],
+   "seed": 20261698400,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "76c6ea348825aa2f7a795fc02b6f27b1c56eb707b9c7e5a3404a322e1a6b92df",
+   "index": 247,
+   "moves": [
+    [
+     4,
+     22
+    ],
+    [
+     10,
+     2
+    ],
+    [
+     2,
+     12
+    ],
+    [
+     18,
+     8
+    ],
+    [
+     17,
+     3
+    ],
+    [
+     16,
+     10
+    ]
+   ],
+   "seed": 20261698800,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "e7ef0e438df1fc221ffc5ad6dab8b7a29398eb4d860bdbcd51c78e57e915bff8",
+   "index": 248,
+   "moves": [
+    [
+     7,
+     15
+    ],
+    [
+     20,
+     20
+    ],
+    [
+     1,
+     1
+    ],
+    [
+     14,
+     18
+    ],
+    [
+     20,
+     1
+    ],
+    [
+     17,
+     7
+    ]
+   ],
+   "seed": 20261699200,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "3cf664042acf0e9830087416c59f8b2a57e41153bba26641216233473604e4ec",
+   "index": 249,
+   "moves": [
+    [
+     7,
+     7
+    ],
+    [
+     15,
+     9
+    ],
+    [
+     9,
+     10
+    ],
+    [
+     11,
+     13
+    ],
+    [
+     8,
+     1
+    ],
+    [
+     18,
+     19
+    ]
+   ],
+   "seed": 20261699600,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "9f5a0ba606bd52d8d9380d469b0b0368cf14c642f3d6dfcd70f10d4d66e1111e",
+   "index": 250,
+   "moves": [
+    [
+     14,
+     19
+    ],
+    [
+     22,
+     9
+    ],
+    [
+     23,
+     18
+    ],
+    [
+     18,
+     17
+    ],
+    [
+     12,
+     5
+    ],
+    [
+     16,
+     13
+    ]
+   ],
+   "seed": 20261700000,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "4e8baaac6a64c036eea744d5dedc3255f828c43d6d254ec8bbffbb8cb9debae6",
+   "index": 251,
+   "moves": [
+    [
+     11,
+     16
+    ],
+    [
+     6,
+     1
+    ],
+    [
+     13,
+     9
+    ],
+    [
+     11,
+     1
+    ],
+    [
+     11,
+     5
+    ],
+    [
+     17,
+     4
+    ]
+   ],
+   "seed": 20261700400,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "4c5bba0de5eba1160ecb4fcb572abd37699c0edcc9df82c099af4bf168798774",
+   "index": 252,
+   "moves": [
+    [
+     9,
+     5
+    ],
+    [
+     18,
+     10
+    ],
+    [
+     22,
+     4
+    ],
+    [
+     17,
+     17
+    ],
+    [
+     14,
+     5
+    ],
+    [
+     18,
+     7
+    ]
+   ],
+   "seed": 20261700800,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "69182aad677d8c37c5dde8ac578b2456b20da01f515d2c2c37d0122212adb3fc",
+   "index": 253,
+   "moves": [
+    [
+     15,
+     10
+    ],
+    [
+     16,
+     20
+    ],
+    [
+     13,
+     21
+    ],
+    [
+     21,
+     23
+    ],
+    [
+     3,
+     1
+    ],
+    [
+     22,
+     14
+    ]
+   ],
+   "seed": 20261701200,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "76a8e341c3fa94b18cb8c99583ff59f70afaa8a4dcf8fc9db37e4d628c273865",
+   "index": 254,
+   "moves": [
+    [
+     2,
+     15
+    ],
+    [
+     3,
+     2
+    ],
+    [
+     14,
+     12
+    ],
+    [
+     7,
+     7
+    ],
+    [
+     10,
+     19
+    ],
+    [
+     6,
+     14
+    ]
+   ],
+   "seed": 20261701600,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "71904651c0bc683604705ab510ccf0975c1b9caf640c14045cc13ebec3989939",
+   "index": 255,
+   "moves": [
+    [
+     17,
+     4
+    ],
+    [
+     8,
+     16
+    ],
+    [
+     15,
+     17
+    ],
+    [
+     16,
+     5
+    ],
+    [
+     13,
+     6
+    ],
+    [
+     19,
+     19
+    ]
+   ],
+   "seed": 20261702000,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "cd358b1e87e7cf2ec9abe41bf84bdc2e041a22160ef51d1840aa27eaae2ac7fa",
+   "index": 256,
+   "moves": [
+    [
+     9,
+     16
+    ],
+    [
+     16,
+     2
+    ],
+    [
+     19,
+     12
+    ],
+    [
+     4,
+     19
+    ],
+    [
+     22,
+     20
+    ],
+    [
+     10,
+     8
+    ]
+   ],
+   "seed": 20261702400,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "d7cb98ec58e965459fcd6928fb70354f136b94db11afc8dde8211f86934ee235",
+   "index": 257,
+   "moves": [
+    [
+     17,
+     22
+    ],
+    [
+     16,
+     8
+    ],
+    [
+     23,
+     4
+    ],
+    [
+     3,
+     16
+    ],
+    [
+     21,
+     12
+    ],
+    [
+     13,
+     12
+    ]
+   ],
+   "seed": 20261702800,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "c850edb7aa7f27148bcef285166a5c7d6ad9bee959fb99ddb3f9e0cb64bb590b",
+   "index": 258,
+   "moves": [
+    [
+     19,
+     10
+    ],
+    [
+     21,
+     12
+    ],
+    [
+     16,
+     18
+    ],
+    [
+     1,
+     3
+    ],
+    [
+     16,
+     10
+    ],
+    [
+     2,
+     4
+    ]
+   ],
+   "seed": 20261703200,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "344a339684bdb6f8ca45bd964d3562f572b932e43c5ee00a736e95e93b7bbcca",
+   "index": 259,
+   "moves": [
+    [
+     0,
+     1
+    ],
+    [
+     22,
+     4
+    ],
+    [
+     14,
+     2
+    ],
+    [
+     11,
+     3
+    ],
+    [
+     10,
+     5
+    ],
+    [
+     22,
+     15
+    ]
+   ],
+   "seed": 20261703600,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "3f41a8c265adb0fbd516361365340471b1fc1a05547705406b2f4fdaca25b701",
+   "index": 260,
+   "moves": [
+    [
+     13,
+     8
+    ],
+    [
+     21,
+     10
+    ],
+    [
+     22,
+     19
+    ],
+    [
+     4,
+     4
+    ],
+    [
+     10,
+     18
+    ],
+    [
+     1,
+     3
+    ]
+   ],
+   "seed": 20261704000,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "a4c2ffb1f6aaee99e13dd218e0fb8e158ad949c2759f52512c97d47b7abafe05",
+   "index": 261,
+   "moves": [
+    [
+     6,
+     21
+    ],
+    [
+     5,
+     18
+    ],
+    [
+     0,
+     9
+    ],
+    [
+     3,
+     18
+    ],
+    [
+     7,
+     15
+    ],
+    [
+     6,
+     6
+    ]
+   ],
+   "seed": 20261704400,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "98de7c083f9fce40657aea32daee75f414679a0a014e39b76ebfb8fcfa57cb75",
+   "index": 262,
+   "moves": [
+    [
+     6,
+     20
+    ],
+    [
+     12,
+     22
+    ],
+    [
+     7,
+     19
+    ],
+    [
+     21,
+     0
+    ],
+    [
+     11,
+     22
+    ],
+    [
+     18,
+     16
+    ]
+   ],
+   "seed": 20261704800,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "3be588d2a2dd95d48949c9f0edeb3335daa7920176d0a610ce6f91479610e0eb",
+   "index": 263,
+   "moves": [
+    [
+     8,
+     21
+    ],
+    [
+     16,
+     18
+    ],
+    [
+     4,
+     22
+    ],
+    [
+     15,
+     16
+    ],
+    [
+     3,
+     4
+    ],
+    [
+     21,
+     19
+    ]
+   ],
+   "seed": 20261705200,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "49cfcce199f795bbab6dc8a8f814239f262ef137472f4ab98afd14cc2dd043a9",
+   "index": 264,
+   "moves": [
+    [
+     2,
+     6
+    ],
+    [
+     15,
+     18
+    ],
+    [
+     23,
+     20
+    ],
+    [
+     6,
+     20
+    ],
+    [
+     3,
+     19
+    ],
+    [
+     1,
+     15
+    ]
+   ],
+   "seed": 20261705600,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "a295b799e398de5f1b729f665d853601be7a014d4fecf45cc4ab68cd018109af",
+   "index": 265,
+   "moves": [
+    [
+     3,
+     10
+    ],
+    [
+     1,
+     16
+    ],
+    [
+     8,
+     8
+    ],
+    [
+     21,
+     0
+    ],
+    [
+     11,
+     9
+    ],
+    [
+     6,
+     11
+    ]
+   ],
+   "seed": 20261706000,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "40d1ace74cf2a138b70f19f183e2d102eefbfa42437cc1636edcadaa0a8dd1c9",
+   "index": 266,
+   "moves": [
+    [
+     20,
+     21
+    ],
+    [
+     8,
+     19
+    ],
+    [
+     19,
+     18
+    ],
+    [
+     6,
+     3
+    ],
+    [
+     3,
+     15
+    ],
+    [
+     15,
+     7
+    ]
+   ],
+   "seed": 20261706400,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "c90004fb3d20a403fbc33e75df9aa60b4f7f3518975bc02e7ba985eba22461df",
+   "index": 267,
+   "moves": [
+    [
+     16,
+     14
+    ],
+    [
+     4,
+     18
+    ],
+    [
+     14,
+     11
+    ],
+    [
+     10,
+     22
+    ],
+    [
+     17,
+     7
+    ],
+    [
+     9,
+     6
+    ]
+   ],
+   "seed": 20261706800,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "3e9c5fc83a97234e866c2a5180a4c8dc365fa2301cd108bd7ea6f276f55530c2",
+   "index": 268,
+   "moves": [
+    [
+     5,
+     15
+    ],
+    [
+     6,
+     8
+    ],
+    [
+     6,
+     5
+    ],
+    [
+     4,
+     1
+    ],
+    [
+     13,
+     10
+    ],
+    [
+     9,
+     4
+    ]
+   ],
+   "seed": 20261707200,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "f8c49cde9eba041288f14985d223855792a10de32e65d6d426057ada781b75f1",
+   "index": 269,
+   "moves": [
+    [
+     19,
+     12
+    ],
+    [
+     7,
+     23
+    ],
+    [
+     2,
+     5
+    ],
+    [
+     22,
+     22
+    ],
+    [
+     5,
+     14
+    ],
+    [
+     4,
+     12
+    ]
+   ],
+   "seed": 20261707600,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "87e7c3e5265a257da49f16347bd89606e64ee08b34adc0c9dc66bbd5cd5b7fcc",
+   "index": 270,
+   "moves": [
+    [
+     3,
+     5
+    ],
+    [
+     13,
+     18
+    ],
+    [
+     10,
+     22
+    ],
+    [
+     11,
+     10
+    ],
+    [
+     11,
+     9
+    ],
+    [
+     16,
+     1
+    ]
+   ],
+   "seed": 20261708000,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "6739cf9d2c19c59e3791ca4deb7e04852a7831ba8033997304e2794c9cde7004",
+   "index": 271,
+   "moves": [
+    [
+     5,
+     14
+    ],
+    [
+     5,
+     18
+    ],
+    [
+     5,
+     20
+    ],
+    [
+     4,
+     10
+    ],
+    [
+     12,
+     21
+    ],
+    [
+     19,
+     4
+    ]
+   ],
+   "seed": 20261708400,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "e8115511cc02c4b1c9b2c38531dec6d74afea06411a93a8cbc25b58ea804464a",
+   "index": 272,
+   "moves": [
+    [
+     5,
+     18
+    ],
+    [
+     9,
+     12
+    ],
+    [
+     20,
+     22
+    ],
+    [
+     7,
+     2
+    ],
+    [
+     5,
+     12
+    ],
+    [
+     1,
+     0
+    ]
+   ],
+   "seed": 20261708800,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "ce5c9017a3832dcce1e708874a6994cc48cc6cd1ce973297efaf17184d358590",
+   "index": 273,
+   "moves": [
+    [
+     8,
+     22
+    ],
+    [
+     18,
+     22
+    ],
+    [
+     9,
+     3
+    ],
+    [
+     9,
+     13
+    ],
+    [
+     10,
+     3
+    ],
+    [
+     10,
+     9
+    ]
+   ],
+   "seed": 20261709200,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "5434683329bf6086c3fa319efb7cabc212f1cf9b83e4f5d170da26a5e87ca1e4",
+   "index": 274,
+   "moves": [
+    [
+     12,
+     8
+    ],
+    [
+     19,
+     11
+    ],
+    [
+     3,
+     21
+    ],
+    [
+     12,
+     10
+    ],
+    [
+     15,
+     5
+    ],
+    [
+     21,
+     2
+    ]
+   ],
+   "seed": 20261709600,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "3b887f72e16e960870c713dd549c00897cab5156f2420e11d25c1d6f4078f9aa",
+   "index": 275,
+   "moves": [
+    [
+     18,
+     12
+    ],
+    [
+     19,
+     13
+    ],
+    [
+     18,
+     5
+    ],
+    [
+     7,
+     9
+    ],
+    [
+     23,
+     5
+    ],
+    [
+     3,
+     20
+    ]
+   ],
+   "seed": 20261710000,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "bb66d5c8e70cd412d25c0760e5715ccf04c15c04ae206ef84f87055fa9d57f21",
+   "index": 276,
+   "moves": [
+    [
+     5,
+     21
+    ],
+    [
+     14,
+     4
+    ],
+    [
+     23,
+     18
+    ],
+    [
+     6,
+     12
+    ],
+    [
+     23,
+     21
+    ],
+    [
+     7,
+     9
+    ]
+   ],
+   "seed": 20261710400,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "45191072869471513d3495c9b174eb9abc4b2c4bb15ee63a614c2ba285f94de9",
+   "index": 277,
+   "moves": [
+    [
+     1,
+     9
+    ],
+    [
+     5,
+     22
+    ],
+    [
+     9,
+     11
+    ],
+    [
+     1,
+     0
+    ],
+    [
+     4,
+     5
+    ],
+    [
+     20,
+     7
+    ]
+   ],
+   "seed": 20261710800,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "9cf2c4147ef9ab035d366f45b5ebaeb1b74644d165e19a2da11769555ebeff21",
+   "index": 278,
+   "moves": [
+    [
+     7,
+     12
+    ],
+    [
+     10,
+     3
+    ],
+    [
+     1,
+     21
+    ],
+    [
+     15,
+     12
+    ],
+    [
+     2,
+     13
+    ],
+    [
+     19,
+     5
+    ]
+   ],
+   "seed": 20261711200,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "e6ddec193155bcce8dbabe264c34107dca737b2b5e004a5990fc3708e881fb8c",
+   "index": 279,
+   "moves": [
+    [
+     7,
+     17
+    ],
+    [
+     19,
+     12
+    ],
+    [
+     19,
+     3
+    ],
+    [
+     16,
+     3
+    ],
+    [
+     20,
+     13
+    ],
+    [
+     5,
+     2
+    ]
+   ],
+   "seed": 20261711600,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "b85b88d39d0bd7de5a2ffc35dd84e2966a66ce2a0e47b166e7eb6ed63c195066",
+   "index": 280,
+   "moves": [
+    [
+     10,
+     11
+    ],
+    [
+     14,
+     12
+    ],
+    [
+     3,
+     12
+    ],
+    [
+     5,
+     13
+    ],
+    [
+     13,
+     16
+    ],
+    [
+     12,
+     9
+    ]
+   ],
+   "seed": 20261712000,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "afad5665ee8a916fb97abfab86e2309064a8e445f8e1a61f3a8a1438f2f89851",
+   "index": 281,
+   "moves": [
+    [
+     11,
+     22
+    ],
+    [
+     12,
+     14
+    ],
+    [
+     13,
+     1
+    ],
+    [
+     17,
+     10
+    ],
+    [
+     21,
+     12
+    ],
+    [
+     15,
+     23
+    ]
+   ],
+   "seed": 20261712400,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "d16ff18e7fbf73a1f09aa7ba781bdf65af7d450104e8a60221829c7035555e1d",
+   "index": 282,
+   "moves": [
+    [
+     3,
+     17
+    ],
+    [
+     19,
+     19
+    ],
+    [
+     12,
+     2
+    ],
+    [
+     1,
+     2
+    ],
+    [
+     1,
+     7
+    ],
+    [
+     7,
+     12
+    ]
+   ],
+   "seed": 20261712800,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "55d5b92e40613fa80552072da160b4d60d05fc002c55ab5ea6f06937c35cdcec",
+   "index": 283,
+   "moves": [
+    [
+     15,
+     8
+    ],
+    [
+     5,
+     3
+    ],
+    [
+     16,
+     17
+    ],
+    [
+     18,
+     6
+    ],
+    [
+     0,
+     3
+    ],
+    [
+     16,
+     3
+    ]
+   ],
+   "seed": 20261713200,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "a607639091ab38be270df413c873c6904aa89238a4dbf625a7cc3f75bab09e57",
+   "index": 284,
+   "moves": [
+    [
+     20,
+     12
+    ],
+    [
+     22,
+     18
+    ],
+    [
+     23,
+     15
+    ],
+    [
+     17,
+     11
+    ],
+    [
+     5,
+     3
+    ],
+    [
+     2,
+     7
+    ]
+   ],
+   "seed": 20261713600,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "b333708510f9dd1115c404bb6c576255e038de896c1e18b8bc9c9eb46d36c475",
+   "index": 285,
+   "moves": [
+    [
+     20,
+     22
+    ],
+    [
+     2,
+     2
+    ],
+    [
+     7,
+     10
+    ],
+    [
+     10,
+     17
+    ],
+    [
+     20,
+     14
+    ],
+    [
+     16,
+     0
+    ]
+   ],
+   "seed": 20261714000,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "974bacf92a6f0a6e90edd7f3df5405b2668c82cc06b480062664d6ec6f62ef16",
+   "index": 286,
+   "moves": [
+    [
+     23,
+     10
+    ],
+    [
+     17,
+     14
+    ],
+    [
+     13,
+     17
+    ],
+    [
+     11,
+     3
+    ],
+    [
+     2,
+     16
+    ],
+    [
+     6,
+     9
+    ]
+   ],
+   "seed": 20261714400,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "1cd9d6fab7a04173c2c6e8cb976532bd81aabbdbb423930fdd7c6df41fa45b79",
+   "index": 287,
+   "moves": [
+    [
+     21,
+     22
+    ],
+    [
+     9,
+     0
+    ],
+    [
+     7,
+     15
+    ],
+    [
+     19,
+     7
+    ],
+    [
+     12,
+     17
+    ],
+    [
+     7,
+     11
+    ]
+   ],
+   "seed": 20261714800,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "c6542106bf9e1dbf75c43d03e1f6fc07ff935fb150ffcfafabd889df2536740c",
+   "index": 288,
+   "moves": [
+    [
+     14,
+     12
+    ],
+    [
+     20,
+     21
+    ],
+    [
+     9,
+     2
+    ],
+    [
+     14,
+     7
+    ],
+    [
+     13,
+     10
+    ],
+    [
+     4,
+     13
+    ]
+   ],
+   "seed": 20261715200,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "bb7faf137e49ddc048eb37b789d4768031a732ee50a0832679c408170f412f40",
+   "index": 289,
+   "moves": [
+    [
+     11,
+     5
+    ],
+    [
+     13,
+     21
+    ],
+    [
+     14,
+     22
+    ],
+    [
+     6,
+     23
+    ],
+    [
+     3,
+     9
+    ],
+    [
+     22,
+     19
+    ]
+   ],
+   "seed": 20261715600,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "2abc68caf155ff99f321af4bc754fd8b901d74fc43ac10d1f197a7593cfc0f9f",
+   "index": 290,
+   "moves": [
+    [
+     7,
+     16
+    ],
+    [
+     21,
+     15
+    ],
+    [
+     1,
+     15
+    ],
+    [
+     8,
+     1
+    ],
+    [
+     11,
+     1
+    ],
+    [
+     14,
+     6
+    ]
+   ],
+   "seed": 20261716000,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "e37a899bcbc3b2b1cafbb56a43f169df659e5d7efe14ecb7e35e977f6b752f0f",
+   "index": 291,
+   "moves": [
+    [
+     19,
+     9
+    ],
+    [
+     5,
+     13
+    ],
+    [
+     16,
+     11
+    ],
+    [
+     20,
+     5
+    ],
+    [
+     23,
+     1
+    ],
+    [
+     11,
+     10
+    ]
+   ],
+   "seed": 20261716400,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "5a3d67f6fa921ffdac3ebb86bec0d324ae849bcbea51aade5fdec74b34221153",
+   "index": 292,
+   "moves": [
+    [
+     13,
+     4
+    ],
+    [
+     4,
+     17
+    ],
+    [
+     0,
+     7
+    ],
+    [
+     6,
+     7
+    ],
+    [
+     4,
+     13
+    ],
+    [
+     3,
+     1
+    ]
+   ],
+   "seed": 20261716800,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "28bdebf0967ac8b99df906c9b028acd9f84e766124deeeb2a3b25804550bf0cd",
+   "index": 293,
+   "moves": [
+    [
+     15,
+     7
+    ],
+    [
+     11,
+     13
+    ],
+    [
+     13,
+     11
+    ],
+    [
+     3,
+     6
+    ],
+    [
+     22,
+     19
+    ],
+    [
+     6,
+     10
+    ]
+   ],
+   "seed": 20261717200,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "38dbd4724e762d48a836bd3e5fc2b03bbd3029e2fb0df8a56e7eba959482b632",
+   "index": 294,
+   "moves": [
+    [
+     22,
+     12
+    ],
+    [
+     3,
+     12
+    ],
+    [
+     2,
+     22
+    ],
+    [
+     8,
+     19
+    ],
+    [
+     7,
+     22
+    ],
+    [
+     16,
+     17
+    ]
+   ],
+   "seed": 20261717600,
+   "segment": 3,
+   "stratum": "uniform"
+  },
+  {
+   "attempts": 1,
+   "digest": "cfa647560dc9831fe567dedef6c9403ff9b8dee230c8ed19291bffd515293e49",
+   "index": 295,
+   "moves": [
+    [
+     22,
+     11
+    ],
+    [
+     7,
+     6
+    ],
+    [
+     1,
+     19
+    ],
+    [
+     8,
+     6
+    ],
+    [
+     2,
+     13
+    ],
+    [
+     8,
+     2
+    ]
+   ],
+   "seed": 20261718000,
+   "segment": 3,
+   "stratum": "uniform"
+  }
+ ],
+ "stratum": "uniform"
+}
