@@ -3650,6 +3650,38 @@ DEFECTS = [
 # DERIVED from the requirement and its assertion and then verified against a run,
 # which is why each names a count or a sentence rather than a first line.
 EXPECTED_REASONS = {
+    # ── the segment-isolation repair (2026-09-18). OBSERVED, never guessed.
+    'the runner stops creating its output directory':
+        'AssertionError: the parent directory was not created',
+    'the directory is created AFTER the create-only open':
+        "AssertionError: assert 'ensure_parent_dirs(trace_path, results_path, report_path)' in 'def _run_segment_unguarded(*, segment: int, tasks, openings, results_path,\\n                           trace_path, re...T directory\\n#: while every test still passed, because nothing compared the two.\\nOPENING_SET_PATH = GEN.DEFAULT_OUT\\n'",
+    'the receipt is not create-only':
+        'AssertionError: a second write must refuse',
+    'an UNAUTHORIZED invocation writes a receipt and occupies the destination':
+        'AssertionError: assert not True',
+    'a retired earlier segment blocks every later one again':
+        "scripts.GPU.alphazero.h3_study_runner.H3StudyRunError: segment 0's block [909090000, 909090148) is not registered: 148 of 148 seeds are absent from ACCOUNTED_SEED_INTERVALS (first 909090000).",
+    'the RETIRED block may be relaunched':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_runner.H3StudyRunError'>",
+    'the launch check stops asking whether the seeds are spent':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_runner.H3StudyRunError'>",
+    'the launch check is not run before a segment starts':
+        "AssertionError: assert 'check_segment_seeds(segment)' in 'def run_segment(*, segment: int, results_path: str, trace_path: str,\\n                report_path: str) -> Dict[str, ...cfg),\\n        want_digest=SEGMENT_DIGESTS[segment],\\n        deadline_s=RULES.SEGMENT_DEADLINE_S, _deadline=deadline)'",
+    'build_tasks consults seed status again':
+        'scripts.GPU.alphazero.h3_study_rules.H3StudyError: spent',
+    'two segments may share one seed block':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_rules.H3StudyError'>",
+    'a segment block may be the wrong size':
+        'scripts.GPU.alphazero.h3_study_rules.H3StudyError: 454 seeds for 592 games',
+    'the number of blocks need not match the segments':
+        'scripts.GPU.alphazero.h3_study_rules.H3StudyError: 444 seeds for 592 games',
+    "segment 1-3's pins are changed by segment 0's replacement":
+        "AssertionError: assert ('cde6d04ce52...8d0a4b8753f0') == ('14aaefb3a01...8d0a4b8753f0')",
+    'segment 0 reuses its RETIRED block':
+        'AssertionError: segment 0 is the fresh block',
+    "segment 0's retry writes into its SPENT destination":
+        'AssertionError: assert False',
+
     # ── the 592-seed match block (2026-09-18). OBSERVED, never guessed.
     'the block is registered as EXPOSED as well as accounted':
         'assert not True',
