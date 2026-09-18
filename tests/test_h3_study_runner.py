@@ -38,6 +38,18 @@ def test_THE_SEED_BLOCK_IS_RESERVED_AND_REGISTERED(monkeypatch):
     with pytest.raises(RUN.H3StudyRunError, match="not registered"):
         RUN.check_seed_registration()
 
+    # 🔴 AND A BLOCK WHOSE FIRST SEED IS ACCOUNTED BUT WHOSE TAIL IS NOT.
+    # The case above is caught even by a barrier that looks only at `lo`, so it
+    # could not tell a full scan from a first-seed one -- the injected-defect
+    # harness reported exactly that. This block starts INSIDE the registered
+    # interval and runs 8 seeds past its end.
+    monkeypatch.setattr(RUN, "STUDY_SEED_BLOCK", (202_626_000, 202_626_600))
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    assert REF.seed_is_accounted(202_626_000), "its first seed IS accounted"
+    assert not REF.seed_is_accounted(202_626_592), "…and its last is not"
+    with pytest.raises(RUN.H3StudyRunError, match="not registered"):
+        RUN.check_seed_registration()
+
 
 
 
