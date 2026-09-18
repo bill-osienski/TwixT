@@ -96,7 +96,7 @@ DEFECTS = [
     ("the pinned sources include the module holding OPENING_SET_DIGEST",
      H3SGEN, '_IDENTITY_SOURCES = ("h3_generation_protocol.py", "game/twixt_state.py",\n                     "d1_selection.py")',
      '_IDENTITY_SOURCES = ("h3_study_rules.py", "game/twixt_state.py",\n                     "d1_selection.py")',
-     f"{T_H3POP}::test_AN_ARTIFACT_VALIDATES_ACROSS_THE_SOLE_OPENING_SET_DIGEST_EDIT"),
+     f"{T_H3POP}::test_THE_PIN_EDIT_DID_NOT_INVALIDATE_THE_ARTIFACT"),
     ("the walk's own module is dropped from the pins",
      H3SGEN, '_IDENTITY_SOURCES = ("h3_generation_protocol.py", "game/twixt_state.py",\n                     "d1_selection.py")',
      '_IDENTITY_SOURCES = ("game/twixt_state.py", "d1_selection.py")',
@@ -362,7 +362,7 @@ DEFECTS = [
     ("the official destination moves into a spent directory",
      H3SGEN, 'OUT_DIR = "docs/superpowers/evidence/2026-09-17-t1j-h3-study-openings-uniform"',
      'OUT_DIR = "docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings"',
-     f"{T_H3POP}::test_THE_OFFICIAL_DESTINATION_IS_ABSENT_AND_OUTSIDE_EVERY_SPENT_DIRECTORY"),
+     f"{T_H3SRUN}::test_THE_FROZEN_DESTINATION_IS_SEPARATE_FROM_EVERY_SPENT_RUN"),
     ("the runner repeats the destination instead of reading it",
      H3SRUN, "OPENING_SET_PATH = GEN.DEFAULT_OUT",
      'OPENING_SET_PATH = "docs/superpowers/evidence/2026-09-15-t1j-h3-study-openings/01_opening_set.json"',
@@ -3222,12 +3222,15 @@ DEFECTS = [
      f"{T_H3OLD}::test_the_destination_INSIDE_A_SPENT_DIRECTORY_is_refused"),
     # ── the generator's terminal semantics
     # ── 2026-09-15: PREPARATION for the opening-generation run.
-    ("the opening-set pin is invented before the artifact exists", H3SR,
-     "OPENING_SET_DIGEST: Optional[str] = None",
-     'OPENING_SET_DIGEST: Optional[str] = "' + "0" * 64 + '"',
-     f"{T_H3SRUN}::test_THE_OPENING_SET_DIGEST_IS_UNSET_AND_REFUSES"),
-    # the same line appears in the PREFLIGHT, so the anchor carries the line above
-    # ═════════════ 2026-09-14: the H3 PILOT -- closed, seedless, contained ═══
+    # 🔑 RE-AIMED. This control injected a pin while OPENING_SET_DIGEST was
+    # None -- "a pin invented before the artifact exists". The population is now
+    # frozen AND pinned, so that defect can no longer be expressed. The one that
+    # replaces it is the live version of the same danger: A PIN THAT IS NOT THE
+    # ARTIFACT'S OWN DIGEST. The study would then play a population nobody froze.
+    ("the opening-set pin is not the frozen artifact's own digest",
+     H3SR, '    "35932b3fabd9c6463d615b0b3af380134dadd700e2ca1e882a0c863faf772e46")',
+     '    "0000000000000000000000000000000000000000000000000000000000000000")',
+     f"{T_H3POP}::test_THE_POPULATION_IS_FROZEN_AND_PINNED"),
     ("the H3 pilot gate is opened", H3RUN,
      "H3_PILOT_EXECUTION_AUTHORIZED = False",
      "H3_PILOT_EXECUTION_AUTHORIZED = True",
