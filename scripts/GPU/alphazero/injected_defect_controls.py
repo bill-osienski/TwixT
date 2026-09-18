@@ -3603,6 +3603,36 @@ DEFECTS = [
 # DERIVED from the requirement and its assertion and then verified against a run,
 # which is why each names a count or a sentence rather than a first line.
 EXPECTED_REASONS = {
+    # ── the 592-seed match block (2026-09-18). OBSERVED, never guessed.
+    'the study seed block is unreserved again':
+        'assert None == (202626000, 202626592)',
+    'the study seed block slides onto the SPENT pilot block':
+        'scripts.GPU.alphazero.h3_study_runner.H3StudyRunError: the study seed block [202624000, 202624592) is not registered: 552 of 592 seeds are absent from ACCOUNTED_SEED_INTERVALS (first 202624040).',
+    'the block is short of one seed per game':
+        'assert (202626000, 202626296) == (202626000, 202626592)',
+    'the registration barrier stops asking the registry':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_runner.H3StudyRunError'>",
+    'the registration barrier checks only the FIRST seed':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_runner.H3StudyRunError'>",
+    'the block is registered as EXPOSED as well as accounted':
+        'assert not True',
+    'the block is registered as RETIRED as well as accounted':
+        'assert not True',
+    'the full-schedule pin is not checked at all':
+        "AssertionError: assert 'check_schedule_digest(tasks)' in 'def run_segment(*, segment: int, results_path: str, trace_path: str,\\n                report_path: str) -> Dict[str, ...cfg),\\n        want_digest=SEGMENT_DIGESTS[segment],\\n        deadline_s=RULES.SEGMENT_DEADLINE_S, _deadline=deadline)'",
+    'the segment pin is computed from the tasks it checks':
+        "AssertionError: assert 'want_digest=SEGMENT_DIGESTS[segment]' in 'def run_segment(*, segment: int, results_path: str, trace_path: str,\\n                report_path: str) -> Dict[str, ...n        want_digest=segment_digest(tasks, segment),\\n        deadline_s=RULES.SEGMENT_DEADLINE_S, _deadline=deadline)'",
+    "the full-schedule pin is a different schedule's":
+        "scripts.GPU.alphazero.h3_study_runner.H3StudyRunError: the full schedule digest is e374a95f885656ea27caa88359437e4c035de0e0e0c027cf861ce5e613362350 but the frozen schedule is 0000000000000000000000000000000000000000000000000000000000000000. A different schedule is a different experiment wearing this one's name.",
+    'two segments share one pin':
+        "AssertionError: each segment's pin is its OWN",
+    'the schedule digest stops refusing a tampered plan':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_runner.H3StudyRunError'>",
+    'the seeds are assigned in reverse':
+        'AssertionError: row i must bind to lo + i',
+    "a pair's two arms are no longer adjacent":
+        'scripts.GPU.alphazero.h3_study_rules.H3StudyError: built 296 tasks, expected 592',
+
     "the opening-set pin is not the frozen artifact's own digest":
         "AssertionError: assert '000000000000...0000000000000' == '35932b3fabd9...c863faf772e46'",
     'the spent-range guard is no longer injected into the loop':
