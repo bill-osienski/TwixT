@@ -3650,6 +3650,10 @@ DEFECTS = [
 # DERIVED from the requirement and its assertion and then verified against a run,
 # which is why each names a count or a sentence rather than a first line.
 EXPECTED_REASONS = {
+    'the SEGMENT command writes no launch receipt at all':
+        'AssertionError: no receipt on a pre-spawn refusal',
+    'a SEGMENT refusal before spawning leaves no receipt':
+        "AssertionError: assert 'UNEXPECTED' == 'REFUSED_BEFORE_SPAWN'",
     # ── the segment-isolation repair (2026-09-18). OBSERVED, never guessed.
     'the runner stops creating its output directory':
         'AssertionError: the parent directory was not created',
