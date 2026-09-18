@@ -1064,14 +1064,46 @@ and only `commit` was informational.
 A test asserts every identity field is in exactly one of the two sets, so a new
 field cannot arrive unclassified.
 
-### 9.4 What is still not done
+### 9.4 ✅ THE POPULATION AND THE SEEDS ARE BOTH FIXED (2026-09-17 / 18)
+
+| step | when | result |
+|---|---|---|
+| population **frozen** | 2026-09-17 | one attempt, exit 0, verdict OK, 296/296 in 0.667 s |
+| digest **pinned** | 2026-09-18 | `35932b3f…f772e46`, read off the artifact |
+| match block **registered** | 2026-09-18 | `[202626000, 202626592)`, ACCOUNTED only |
+
+**The block**: 592 seeds, one per game, bound positionally (row *i* → `lo + i`)
+across four contiguous 148-seed quarters. A pair's two arms are adjacent and
+share a segment, so no pair can be split across a VOIDed one. Collision proof
+**v14** — 0 direct, 0 derived-stream, injective, nearest boundary **1,960** vs a
+gap floor of **592**, **15/15** controls rejected, candidate excluded by identity
+in the gap check as well as the overlap check.
+
+🔴 **Four generation ranges are prior and no registry holds one of them** — three
+retired and one LIVE. v14 adds all four by hand, and three of its controls sit
+inside them so the addition is proved to matter.
+
+🔴 **Pinning the seeded schedule exposed a check that could not fail.**
+`run_segment` passed `want_digest=segment_digest(tasks, segment)` — the digest
+computed from the very tasks it then handed to the checker. One source, two
+sides, agreeing unconditionally. `SCHEDULE_DIGEST` and `SEGMENT_DIGESTS` give the
+comparison a second, independent side.
+
+**Registration authorized nothing.** ACCOUNTED is not EXPOSED and not RETIRED; a
+reservation is not a draw. All ten gates and the freeze barrier stay `False`.
+
+### 9.5 What is still not done
 
 | | |
 |---|---|
-| `OPENING_SET_DIGEST` | **unset** |
-| `STUDY_SEED_BLOCK` | **unset** |
-| the official destination | **absent** |
+| `OPENING_SET_DIGEST` | ✅ **pinned** |
+| `STUDY_SEED_BLOCK` | ✅ **`[202626000, 202626592)`, ACCOUNTED** |
+| the seeded schedule and per-segment pins | ✅ **recorded** |
+| the four segment output directories | **absent** |
 | all ten gates, the freeze barrier included | **False** |
+
+**The only preparation left is the study gate itself**, which is a separate
+authorization. Preflight reports **zero failures and zero pending items**.
 
 🔑 **AND FREEZING IS TWO STEPS, NOT ONE.** `h3_freeze_command` writes the
 artifact; recording its digest as `OPENING_SET_DIGEST` is a **separate reviewed
