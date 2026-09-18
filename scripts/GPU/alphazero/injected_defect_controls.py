@@ -83,12 +83,73 @@ H3OLD = "scripts/GPU/alphazero/h3_coproduced_generator_retired.py"
 GINV = "scripts/GPU/alphazero/gate_inventory.py"
 H3FCMD = "scripts/GPU/alphazero/h3_freeze_command.py"
 H3PROTO = "scripts/GPU/alphazero/h3_generation_protocol.py"
+SCREEN = "scripts/GPU/alphazero/e4_screen_reference.py"
 T_H3POP = "tests/test_h3_uniform_population.py"
 T_H3OLD = "tests/test_h3_coproduced_retired.py"
 T_GATES = "tests/test_gate_inventory.py"
 
 # (label, file, anchor, replacement, test node)
 DEFECTS = [
+    # ═════════ THE MATCH SEED BLOCK, registered 2026-09-18 ═════════════════
+    ("the study seed block is unreserved again",
+     H3SRUN, "STUDY_SEED_BLOCK: Optional[tuple] = (202_626_000, 202_626_592)",
+     "STUDY_SEED_BLOCK: Optional[tuple] = None",
+     f"{T_H3POP}::test_THE_BLOCK_IS_592_SEEDS_ONE_PER_GAME"),
+    ("the study seed block slides onto the SPENT pilot block",
+     H3SRUN, "STUDY_SEED_BLOCK: Optional[tuple] = (202_626_000, 202_626_592)",
+     "STUDY_SEED_BLOCK: Optional[tuple] = (202_624_000, 202_624_592)",
+     f"{T_H3POP}::test_EVERY_SEED_IS_ACCOUNTED_AND_NOT_EXPOSED_RETIRED_OR_TEST_ONLY"),
+    ("the block is short of one seed per game",
+     H3SRUN, "STUDY_SEED_BLOCK: Optional[tuple] = (202_626_000, 202_626_592)",
+     "STUDY_SEED_BLOCK: Optional[tuple] = (202_626_000, 202_626_296)",
+     f"{T_H3POP}::test_THE_BLOCK_IS_592_SEEDS_ONE_PER_GAME"),
+    ("the registration barrier stops asking the registry",
+     H3SRUN, "    missing = [s for s in range(lo, hi) if not REF.seed_is_accounted(s)]",
+     "    missing = []",
+     f"{T_H3SRUN}::test_THE_SEED_BLOCK_IS_RESERVED_AND_REGISTERED"),
+    ("the registration barrier checks only the FIRST seed",
+     H3SRUN, "    missing = [s for s in range(lo, hi) if not REF.seed_is_accounted(s)]",
+     "    missing = [s for s in [lo] if not REF.seed_is_accounted(s)]",
+     f"{T_H3SRUN}::test_THE_SEED_BLOCK_IS_RESERVED_AND_REGISTERED"),
+    ("the block is registered as EXPOSED as well as accounted",
+     SCREEN, "EXPOSED_SEED_INTERVALS = (",
+     "EXPOSED_SEED_INTERVALS = (\n    (202626000, 202626592),",
+     f"{T_H3POP}::test_EVERY_SEED_IS_ACCOUNTED_AND_NOT_EXPOSED_RETIRED_OR_TEST_ONLY"),
+    ("the block is registered as RETIRED as well as accounted",
+     SCREEN, "RETIRED_SEED_INTERVALS = (",
+     "RETIRED_SEED_INTERVALS = (\n    (202626000, 202626592),",
+     f"{T_H3POP}::test_EVERY_SEED_IS_ACCOUNTED_AND_NOT_EXPOSED_RETIRED_OR_TEST_ONLY"),
+
+    # 🔴 THE SEEDED SCHEDULE'S PINS. Without them the segment check compared a
+    # digest to one computed from the same tasks: one source, two sides.
+    ("the full-schedule pin is not checked at all",
+     H3SRUN, "    check_schedule_digest(tasks)\n    deadline = D1.Deadline",
+     "    deadline = D1.Deadline",
+     f"{T_H3POP}::test_THE_SEGMENT_PIN_IS_NOT_COMPUTED_FROM_THE_TASKS_IT_CHECKS"),
+    ("the segment pin is computed from the tasks it checks",
+     H3SRUN, "        want_digest=SEGMENT_DIGESTS[segment],",
+     "        want_digest=segment_digest(tasks, segment),",
+     f"{T_H3POP}::test_THE_SEGMENT_PIN_IS_NOT_COMPUTED_FROM_THE_TASKS_IT_CHECKS"),
+    ("the full-schedule pin is a different schedule's",
+     H3SRUN, '    "e374a95f885656ea27caa88359437e4c035de0e0e0c027cf861ce5e613362350")',
+     '    "0000000000000000000000000000000000000000000000000000000000000000")',
+     f"{T_H3POP}::test_THE_SEEDED_SCHEDULE_REPRODUCES_ITS_PINS"),
+    ("two segments share one pin",
+     H3SRUN, '    "14aaefb3a01cc1d08bdfd7f0c4c21599414d0dc68fee8f51584e1e4a50660a41",',
+     '    "cde6d04ce52e07088e437754e1ee60b750542de08c6b6e9fbc4744bc2c795d31",',
+     f"{T_H3POP}::test_THE_SEEDED_SCHEDULE_REPRODUCES_ITS_PINS"),
+    ("the schedule digest stops refusing a tampered plan",
+     H3SRUN, "    if got != SCHEDULE_DIGEST:", "    if False:",
+     f"{T_H3POP}::test_THE_SCHEDULE_PIN_REFUSES_A_TAMPERED_SCHEDULE"),
+
+    # 🔴 POSITIONAL SEED BINDING across four contiguous quarters.
+    ("the seeds are assigned in reverse",
+     H3SR, "        seeds = list(range(lo, hi))", "        seeds = list(range(hi - 1, lo - 1, -1))",
+     f"{T_H3POP}::test_SEEDS_ARE_POSITIONAL_ACROSS_FOUR_CONTIGUOUS_QUARTERS"),
+    ("a pair's two arms are no longer adjacent",
+     H3SR, '        for colour in ("red", "black"):', '        for colour in ("red",):',
+     f"{T_H3POP}::test_A_PAIRS_TWO_ARMS_SIT_ADJACENT_AND_SHARE_A_SEGMENT"),
+
     # ═════════ THE SELF-INVALIDATING PIN (2026-09-17 review) ═══════════════
     # 🔴 An OUTPUT must never live inside a PINNED INPUT. Pinning the module that
     # holds OPENING_SET_DIGEST made the freeze sequence invalidate its own

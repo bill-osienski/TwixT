@@ -22,9 +22,20 @@ FRESH = (777000000, 777000000 + R.N_GAMES)
 
 
 
-def test_NO_SEED_BLOCK_IS_RESERVED():
-    assert RUN.STUDY_SEED_BLOCK is None
+def test_THE_SEED_BLOCK_IS_RESERVED_AND_REGISTERED(monkeypatch):
+    """Registered 2026-09-18, ACCOUNTED only. The two refusal paths it replaced
+    are still tested by unsetting it and by unregistering it: both are what stop
+    a study running on seeds nobody accounted for."""
+    assert RUN.STUDY_SEED_BLOCK == (202_626_000, 202_626_592)
+    RUN.check_seed_registration()
+
+    monkeypatch.setattr(RUN, "STUDY_SEED_BLOCK", None)
     with pytest.raises(RUN.H3StudyRunError, match="NO SEED BLOCK"):
+        RUN.check_seed_registration()
+
+    # …and a block that is reserved but NOT in the registry is refused too
+    monkeypatch.setattr(RUN, "STUDY_SEED_BLOCK", (909_090_000, 909_090_592))
+    with pytest.raises(RUN.H3StudyRunError, match="not registered"):
         RUN.check_seed_registration()
 
 

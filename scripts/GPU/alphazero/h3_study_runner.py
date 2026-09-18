@@ -56,10 +56,55 @@ def check_gate() -> None:
 
 
 # ═══════════════════════ BARRIER 2: the seeds ══════════════════════════════
-#: 🔴 NO BLOCK IS RESERVED. 592 seeds, four contiguous 148-seed quarters, need a
-#: fresh interval with its own collision re-proof -- which must ALSO cover the
-#: generation ranges, because generation seeds derive streams too.
-STUDY_SEED_BLOCK: Optional[tuple] = None
+#: 🔴 RESERVED AND REGISTERED 2026-09-18, ACCOUNTED ONLY. 592 seeds, one per
+#: game, bound POSITIONALLY (row i -> lo + i) across four contiguous 148-seed
+#: quarters, one per segment:
+#:
+#:     segment 0  [202626000, 202626148)      segment 2  [202626296, 202626444)
+#:     segment 1  [202626148, 202626296)      segment 3  [202626444, 202626592)
+#:
+#: PROVED by collision proof v14 -- 302,357 prior seeds, 1,511,785 values with
+#: derivations, 0 direct, 0 derived-stream, injective, nearest boundary 1,960
+#: against a gap floor of 592 (the block's own size), 15/15 controls rejected.
+#: The proof covers the FOUR GENERATION RANGES, which no registry holds.
+#:
+#: 🔑 ACCOUNTED IS NOT EXPOSED AND NOT RETIRED: a reservation is not a draw.
+#: Registering this block did NOT open the study gate, which is still False.
+STUDY_SEED_BLOCK: Optional[tuple] = (202_626_000, 202_626_592)
+
+#: 🔴 THE SEEDED SCHEDULE'S PINS, RECOMPUTED AND FROZEN 2026-09-18.
+#:
+#: These fix the 592 tasks -- openings, colours, seeds, configuration, every
+#: field -- over the population pinned as `OPENING_SET_DIGEST`. A schedule that
+#: does not reproduce them is a different experiment wearing this one's name.
+#:
+#: 🔴 AND WITHOUT THEM THE SEGMENT CHECK COULD NOT FAIL. `run_segment` passed
+#: `want_digest=segment_digest(tasks, segment)` -- the digest computed from the
+#: very tasks it then handed to `check_segment_schedule` to verify. The two
+#: sides came from one source, so they agreed unconditionally: a check that
+#: existed and did not bind, which is this programme's recurring shape. The pin
+#: is what gives the comparison a second, INDEPENDENT side.
+SCHEDULE_DIGEST = (
+    "e374a95f885656ea27caa88359437e4c035de0e0e0c027cf861ce5e613362350")
+
+#: One per segment, in order. Each segment is its own one-shot schedule.
+SEGMENT_DIGESTS = (
+    "cde6d04ce52e07088e437754e1ee60b750542de08c6b6e9fbc4744bc2c795d31",
+    "14aaefb3a01cc1d08bdfd7f0c4c21599414d0dc68fee8f51584e1e4a50660a41",
+    "1764471c5b95042726b9a3bbeca92309ff703d734d73f448adf2f548d96a1855",
+    "44576a71042ff6b7c9118d3e36f18d62d1d0dfc4d01aeb7eec318d0a4b8753f0",
+)
+
+
+def check_schedule_digest(tasks: Sequence[Mapping[str, Any]]) -> str:
+    """The whole 592-task schedule must BE the pinned one."""
+    got = RULES.task_digest(tasks)
+    if got != SCHEDULE_DIGEST:
+        raise H3StudyRunError(
+            f"the full schedule digest is {got} but the frozen schedule is "
+            f"{SCHEDULE_DIGEST}. A different schedule is a different experiment "
+            f"wearing this one's name.")
+    return got
 
 
 def check_seed_registration() -> None:
@@ -461,6 +506,10 @@ def run_segment(*, segment: int, results_path: str, trace_path: str,
     from . import d1_probe as D1
     openings = load_opening_set(OPENING_SET_PATH)
     tasks = RULES.build_tasks(openings, seed_interval=STUDY_SEED_BLOCK)
+    #: 🔴 AGAINST THE PIN, NOT AGAINST ITSELF. The digest handed to
+    #: `check_segment_schedule` used to be computed from `tasks` two lines above
+    #: it, so the comparison had one source and could not fail.
+    check_schedule_digest(tasks)
     deadline = D1.Deadline(RULES.SEGMENT_DEADLINE_S)
     deadline.start()                    # ONE origin, before anything effectful
     # ONE OBJECT, constructed here and handed to the seam; the run body reads the
@@ -470,7 +519,7 @@ def run_segment(*, segment: int, results_path: str, trace_path: str,
         segment=segment, tasks=segment_schedule(tasks, segment), openings=openings,
         results_path=results_path, trace_path=trace_path, report_path=report_path,
         play=_production_play(results_path, deadline, openings, argmax_cfg),
-        want_digest=segment_digest(tasks, segment),
+        want_digest=SEGMENT_DIGESTS[segment],
         deadline_s=RULES.SEGMENT_DEADLINE_S, _deadline=deadline)
 
 

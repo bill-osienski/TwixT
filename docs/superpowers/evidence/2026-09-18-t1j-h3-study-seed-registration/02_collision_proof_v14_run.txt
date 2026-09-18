@@ -1,0 +1,66 @@
+H3 FULL STUDY -- MATCH SEED BLOCK
+==================================================================
+masks (imported)  : ['0x3c3c3c', '0x5a5a5a', '0xa5a5a5', '0xc3c3c3']
+prior seeds       : 302357
+    ACCOUNTED           6248
+    EXPOSED             1750
+    RETIRED             3240
+    TEST_ONLY            100
+    CONSUMED_SEEDS         1
+    D1_PAPER_S14         221
+    H3_PILOT              40
+    GEN_RANGE_0        59200
+    GEN_RANGE_1        59200
+    GEN_RANGE_2        59200
+    GEN_RANGE_3       118400
+prior values      : 1511785 (incl. derivations)
+gap floor         : 592 (the candidate's OWN size)
+
+THE FOUR GENERATION RANGES NO REGISTRY CAN SEE:
+    [20261000000, 20261059200)  the 148-opening uniform range, RETIRED UNUSED by Amendme
+    [20261200000, 20261259200)  co-produced attempt 1, SPENT WHOLE 2026-09-16
+    [20261400000, 20261459200)  co-produced attempt 2, SPENT WHOLE 2026-09-16
+    [20261600000, 20261718400)  the LIVE uniform range -- it produced the population fro
+
+CANDIDATE (202626000, 202626592)  n=592
+  direct overlap      : NONE
+  stream collisions   : 0
+  own derivations     : 2960 (injective=True)
+  nearest gap         : 1960  (floor 592)  ok=True
+  CLEAN               : True
+
+NEGATIVE CONTROLS -- a check that never rejects proves nothing
+------------------------------------------------------------------
+      REJECTED  the SPENT H3 pilot block
+                (202624000, 202624040) -> overlap {'ACCOUNTED': 40, 'EXPOSED': 40, 'RETIRED': 40, 'H3_PILOT': 40}
+      REJECTED  the SPENT H1 attempt-1 block
+                (202616000, 202616224) -> overlap {'ACCOUNTED': 224, 'EXPOSED': 60, 'RETIRED': 224}
+      REJECTED  the SPENT H1 attempt-2 block
+                (202617000, 202617224) -> overlap {'ACCOUNTED': 224, 'EXPOSED': 224, 'RETIRED': 224}
+      REJECTED  the SPENT H2 attempt-1 block
+                (202618000, 202618736) -> overlap {'ACCOUNTED': 736, 'RETIRED': 736}
+      REJECTED  the SPENT H2 attempt-2 block
+                (202620000, 202620736) -> overlap {'ACCOUNTED': 736, 'EXPOSED': 383, 'RETIRED': 736}
+      REJECTED  the SPENT H2 attempt-3 block
+                (202622000, 202622736) -> overlap {'ACCOUNTED': 736, 'EXPOSED': 693, 'RETIRED': 736}
+      REJECTED  D1's SPENT paper reservation
+                (202615000, 202615221) -> overlap {'ACCOUNTED': 221, 'EXPOSED': 221, 'RETIRED': 221, 'D1_PAPER_S14': 221}
+      REJECTED  L0's spent block
+                (202613000, 202613064) -> overlap {'ACCOUNTED': 64, 'EXPOSED': 64, 'RETIRED': 64}
+      REJECTED  straddles the pilot block's END by exactly one seed
+                (202624039, 202624631) -> overlap {'ACCOUNTED': 1, 'EXPOSED': 1, 'RETIRED': 1, 'H3_PILOT': 1}
+      REJECTED  starts exactly where the pilot ends -- no overlap, INSIDE the floor
+                (202624040, 202624632) -> gap 0 < floor 592
+      REJECTED  clear of everything but ONE SEED inside the gap floor
+                (202624631, 202625223) -> gap 591 < floor 592
+      REJECTED  inside the LIVE uniform GENERATION range
+                (20261600000, 20261600592) -> overlap {'GEN_RANGE_3': 592}
+      REJECTED  inside co-produced attempt 2's SPENT generation range
+                (20261400000, 20261400592) -> overlap {'GEN_RANGE_2': 592}
+      REJECTED  inside the retired 148-opening uniform range
+                (20261000000, 20261000592) -> overlap {'GEN_RANGE_0': 592}
+      REJECTED  the TEST_ONLY reservation
+                (90009000, 90009100) -> overlap {'TEST_ONLY': 100}
+
+controls rejected : 15/15
+VERDICT           : CLEAN

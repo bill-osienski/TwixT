@@ -1065,9 +1065,13 @@ def test_THE_PIN_IS_READ_FROM_THE_ARTIFACT_NOT_RECOMPUTED_AT_START_UP():
     assert "build_population" not in body and "generate_uniform" not in body
 
 
-def test_STILL_NOT_RESERVED_AND_NOTHING_IS_OPEN():
-    """What the pin did NOT authorize. The seed block is the only thing left."""
-    assert RUN.STUDY_SEED_BLOCK is None
+def test_RESERVED_BUT_NOTHING_IS_OPEN():
+    """What registration did NOT authorize.
+
+    The block is now reserved -- ACCOUNTED only -- and that changed nothing about
+    permission. A reservation is not a draw and it is not a gate.
+    """
+    assert RUN.STUDY_SEED_BLOCK == (202_626_000, 202_626_592)
     assert RUN.H3_STUDY_EXECUTION_AUTHORIZED is False
     assert GEN.H3_POPULATION_FREEZE_AUTHORIZED is False
     from scripts.GPU.alphazero import gate_inventory as INV
@@ -1147,3 +1151,169 @@ def test_THE_COMMITTED_ARTIFACT_LOADS_THROUGH_THE_REAL_RUNNER():
         assert dg == o["digest"]
         assert o["seed"] == R.attempt_seed(R.GEN_SEED_UNIFORM, o["index"],
                                            o["attempts"] - 1)
+
+
+# ═══════ THE MATCH SEED BLOCK (registered 2026-09-18) ══════════════════════
+BLOCK = (202_626_000, 202_626_592)
+
+
+def test_THE_BLOCK_IS_592_SEEDS_ONE_PER_GAME():
+    assert RUN.STUDY_SEED_BLOCK == BLOCK
+    lo, hi = BLOCK
+    assert hi - lo == R.N_GAMES == 592 == R.N_PAIRS * 2
+
+
+def test_EVERY_SEED_IS_ACCOUNTED_AND_NOT_EXPOSED_RETIRED_OR_TEST_ONLY():
+    """🔑 A RESERVATION IS NOT A DRAW. Registering the block did not spend it."""
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    lo, hi = BLOCK
+    st = [REF.seed_status(s) for s in range(lo, hi)]
+    assert all(x["accounted"] for x in st)
+    assert not any(x["exposed"] or x["retired"] or x["test_only"] for x in st)
+    assert not any(s in REF.CONSUMED_SEEDS for s in range(lo, hi))
+    RUN.check_seed_registration()
+
+
+def test_THE_BLOCK_OVERLAPS_NOTHING_DIRECTLY_OR_THROUGH_ITS_STREAMS():
+    """Collision proof v14, re-run here so the suite owns it too.
+
+    🔴 THE FOUR GENERATION RANGES ARE IN NO REGISTRY and are added by hand. A
+    registry-only enumeration would call an overlapping block clean.
+    """
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    from scripts.GPU.alphazero.twixtbot_g3_reference import SeededReferenceAgent
+    masks = sorted({*SeededReferenceAgent.SEARCH_MASK.values(),
+                    *SeededReferenceAgent.READOUT_MASK.values()})
+    assert len(masks) == 4
+    lo, hi = BLOCK
+    ours = set(range(lo, hi))
+
+    prior = set()
+    for t in (REF.ACCOUNTED_SEED_INTERVALS, REF.EXPOSED_SEED_INTERVALS,
+              REF.RETIRED_SEED_INTERVALS, REF.TEST_ONLY_SEED_INTERVALS):
+        prior |= {s for a, b in t for s in range(a, b)}
+    prior -= ours                       # 🔑 excluded BY IDENTITY: it is registered
+    prior |= set(REF.CONSUMED_SEEDS)
+    gen = [(a, b) for a, b, _ in R.RETIRED_GENERATION_RANGES]
+    gen.append(R.generation_seed_range(R.GEN_SEED_UNIFORM))
+    assert len(gen) == 4, "all four generation ranges, none of them in a registry"
+    for a, b in gen:
+        prior |= set(range(a, b))
+
+    assert not (ours & prior), "direct overlap"
+    derive = lambda ss: {v for s in ss for v in (s, *(s ^ m for m in masks))}
+    mine, theirs = derive(ours), derive(prior)
+    assert not (mine & theirs), "derived-stream collision"
+    assert len(mine) == len(ours) * 5, "derivations not injective"
+
+
+def test_THE_GAP_FLOOR_IS_THE_BLOCKS_OWN_SIZE_AND_IT_CLEARS_IT():
+    """592, and the ACTUAL nearest distance is checked, not just the floor, so a
+    narrow choice could not hide behind a small threshold."""
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    lo, hi = BLOCK
+    floor = hi - lo
+    assert floor == 592
+    intervals = [iv for t in (REF.ACCOUNTED_SEED_INTERVALS,
+                              REF.EXPOSED_SEED_INTERVALS,
+                              REF.RETIRED_SEED_INTERVALS,
+                              REF.TEST_ONLY_SEED_INTERVALS) for iv in t]
+    intervals += [(a, b) for a, b, _ in R.RETIRED_GENERATION_RANGES]
+    intervals += [R.generation_seed_range(R.GEN_SEED_UNIFORM)]
+    gaps = [a - hi if a >= hi else lo - b
+            for a, b in intervals
+            if (a, b) != BLOCK and not (a < hi and lo < b)]
+    # 🔑 BY IDENTITY IN THE GAP CHECK TOO. Without excluding BLOCK itself the
+    # registered block measures its own distance as zero and fails its own floor.
+    assert gaps and min(gaps) >= floor, min(gaps)
+    assert min(gaps) == 1960, "the nearest actual boundary"
+
+
+def test_SEEDS_ARE_POSITIONAL_ACROSS_FOUR_CONTIGUOUS_QUARTERS():
+    ops = RUN.load_opening_set(RUN.OPENING_SET_PATH)
+    tasks = R.build_tasks(ops, seed_interval=RUN.STUDY_SEED_BLOCK)
+    lo, _ = BLOCK
+    assert [t["seed"] for t in tasks] == list(range(lo, lo + R.N_GAMES)), (
+        "row i must bind to lo + i")
+    for k in range(R.N_SEGMENTS):
+        seg = [t for t in tasks if t["segment"] == k]
+        ss = [t["seed"] for t in seg]
+        assert len(seg) == R.GAMES_PER_SEGMENT == 148
+        assert ss == list(range(lo + 148 * k, lo + 148 * (k + 1))), k
+        assert len({t["pair_id"] for t in seg}) == R.PAIRS_PER_SEGMENT == 74
+    # the quarters partition the block exactly, with no seed in two of them
+    quarters = [{t["seed"] for t in tasks if t["segment"] == k} for k in range(4)]
+    assert set().union(*quarters) == set(range(lo, lo + 592))
+    assert sum(len(q) for q in quarters) == 592, "a seed is in two quarters"
+
+
+def test_A_PAIRS_TWO_ARMS_SIT_ADJACENT_AND_SHARE_A_SEGMENT():
+    """The colour-reversed pair is the unit of analysis; splitting one across
+    segments would make a pair unscoreable if a segment VOIDed."""
+    ops = RUN.load_opening_set(RUN.OPENING_SET_PATH)
+    tasks = R.build_tasks(ops, seed_interval=RUN.STUDY_SEED_BLOCK)
+    for i in range(0, len(tasks), 2):
+        a, b = tasks[i], tasks[i + 1]
+        assert a["pair_id"] == b["pair_id"] and a["segment"] == b["segment"]
+        assert {a["incumbent_colour"], b["incumbent_colour"]} == {"red", "black"}
+        assert b["seed"] == a["seed"] + 1
+
+
+# ── the schedule pins ──────────────────────────────────────────────────────
+def test_THE_SEEDED_SCHEDULE_REPRODUCES_ITS_PINS():
+    ops = RUN.load_opening_set(RUN.OPENING_SET_PATH)
+    tasks = R.build_tasks(ops, seed_interval=RUN.STUDY_SEED_BLOCK)
+    assert RUN.check_schedule_digest(tasks) == RUN.SCHEDULE_DIGEST
+    assert len(RUN.SEGMENT_DIGESTS) == R.N_SEGMENTS == 4
+    assert len(set(RUN.SEGMENT_DIGESTS)) == 4, "each segment's pin is its OWN"
+    for k in range(4):
+        assert RUN.segment_digest(tasks, k) == RUN.SEGMENT_DIGESTS[k]
+
+
+@pytest.mark.parametrize("tamper", [
+    lambda t: t[0].update(seed=t[0]["seed"] + 1),
+    lambda t: t[0].update(incumbent_colour="black"),
+    lambda t: t[0].update(ply_cap=t[0]["ply_cap"] + 1),
+    lambda t: t[0].update(opening_digest="0" * 64),
+    lambda t: t[0].update(mcts_sims=401),
+])
+def test_THE_SCHEDULE_PIN_REFUSES_A_TAMPERED_SCHEDULE(tamper):
+    ops = RUN.load_opening_set(RUN.OPENING_SET_PATH)
+    tasks = [dict(t) for t in R.build_tasks(ops, seed_interval=RUN.STUDY_SEED_BLOCK)]
+    tamper(tasks)
+    with pytest.raises(RUN.H3StudyRunError, match="different experiment"):
+        RUN.check_schedule_digest(tasks)
+
+
+def test_THE_SEGMENT_PIN_IS_NOT_COMPUTED_FROM_THE_TASKS_IT_CHECKS():
+    """🔴 THE DEFECT THE PIN REPLACED. `run_segment` passed
+    `want_digest=segment_digest(tasks, segment)` -- the digest computed from the
+    very tasks it then handed to the checker. One source, two sides, so the
+    comparison agreed unconditionally: a check that existed and did not bind."""
+    import ast
+    src = (ALPHAZERO / "h3_study_runner.py").read_text(encoding="utf-8")
+    fn = next(n for n in ast.parse(src).body
+              if isinstance(n, ast.FunctionDef) and n.name == "run_segment")
+    body = ast.get_source_segment(src, fn) or ""
+    assert "want_digest=SEGMENT_DIGESTS[segment]" in body
+    assert "want_digest=segment_digest(" not in body
+    assert "check_schedule_digest(tasks)" in body
+
+
+def test_THE_UNSEEDED_SCHEDULE_HAS_A_DIFFERENT_DIGEST():
+    """The pin is of the SEEDED plan. An unseeded one is a design identity and
+    must not satisfy it."""
+    ops = RUN.load_opening_set(RUN.OPENING_SET_PATH)
+    with pytest.raises(RUN.H3StudyRunError):
+        RUN.check_schedule_digest(R.build_tasks(ops))
+
+
+def test_REGISTERING_THE_BLOCK_OPENED_NOTHING():
+    """The whole point of ACCOUNTED-only. Ten gates shut, barrier shut."""
+    from scripts.GPU.alphazero import gate_inventory as INV
+    assert INV.gate_count() == 10 and INV.open_gates() == []
+    assert RUN.H3_STUDY_EXECUTION_AUTHORIZED is False
+    assert GEN.H3_POPULATION_FREEZE_AUTHORIZED is False
+    for k in range(R.N_SEGMENTS):
+        from scripts.GPU.alphazero import h3_study_command as CMD
+        assert not any(os.path.lexists(p) for p in CMD.default_paths(k)), k

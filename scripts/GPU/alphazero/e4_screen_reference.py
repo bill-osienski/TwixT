@@ -360,6 +360,54 @@ ACCOUNTED_SEED_INTERVALS = (
                                      # 0 derived-stream, with a 776-seed gap.
                                      # Registering it does NOT open the gate:
                                      # H1_EXECUTION_AUTHORIZED stays False.
+    (202626000, 202626592),          # 🔴 H3 FULL STUDY -- the match itself. 592
+                                     # seeds, ONE PER GAME, bound POSITIONALLY
+                                     # (row i = 202626000 + i) across four
+                                     # contiguous 148-seed segment quarters:
+                                     #   segment 0  [202626000, 202626148)
+                                     #   segment 1  [202626148, 202626296)
+                                     #   segment 2  [202626296, 202626444)
+                                     #   segment 3  [202626444, 202626592)
+                                     # 296 colour-reversed pairs, both arms
+                                     # adjacent, over the population FROZEN
+                                     # 2026-09-17 and PINNED 2026-09-18
+                                     # (opening_set_digest 35932b3f...f772e46).
+                                     #
+                                     # REGISTERED 2026-09-18 as the seed-PREPARATION
+                                     # step and NOT an execution authorization. At
+                                     # the moment of this edit
+                                     # `H3_STUDY_EXECUTION_AUTHORIZED` is False and
+                                     # stays False, and no segment is authorized.
+                                     # Two separate reviews; this is the first.
+                                     #
+                                     # PROVED by collision proof v14 against the
+                                     # registries as they stand: 302,357 prior
+                                     # seeds across eleven categories, 1,511,785
+                                     # prior values with derivations, 0 direct
+                                     # overlaps, 0 derived-stream collisions, own
+                                     # derivations injective (2,960 = 592 x 5).
+                                     # Exhaustive, not sampled. Fifteen negative
+                                     # controls all rejected.
+                                     #
+                                     # 🔴 THE FOUR GENERATION RANGES ARE IN NO
+                                     # REGISTRY and v14 adds them by hand -- three
+                                     # retired, plus the LIVE range that produced
+                                     # the frozen population. A registry-only
+                                     # enumeration would call an overlapping block
+                                     # clean, and three of the fifteen controls sit
+                                     # inside those ranges precisely to prove it
+                                     # does not.
+                                     #
+                                     # 🔑 Excluded from the prior set BY IDENTITY,
+                                     # in the GAP check as well as the overlap
+                                     # check. The gap floor is the candidate's OWN
+                                     # SIZE, 592 here; the NEAREST ACTUAL BOUNDARY
+                                     # IS 1,960 away, with nothing above. The
+                                     # distance is reported so a narrow choice
+                                     # could not hide behind a small threshold.
+                                     #
+                                     # Accounted, NOT exposed and NOT retired: a
+                                     # reservation is not a draw.
 )
 
 #: EXPERIMENTAL EXPOSURE: seeds drawn from OUTSIDE the permanently unschedulable

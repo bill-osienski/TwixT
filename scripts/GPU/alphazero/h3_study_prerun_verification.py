@@ -334,7 +334,69 @@ def main() -> int:
                 f"{RULES.N_GAMES} seeds, four 148-seed quarters, with a "
                 f"collision re-proof covering the GENERATION ranges too")
     else:
+        _lo, _hi = RUN.STUDY_SEED_BLOCK
+        print(f"  [{_lo}, {_hi})")
         check("the block is registered", _accepts(RUN.check_seed_registration))
+        check(f"it is {RULES.N_GAMES} seeds -- one per game",
+              _hi - _lo == RULES.N_GAMES)
+        _st = [REF.seed_status(x) for x in range(_lo, _hi)]
+        check("EVERY seed is ACCOUNTED", all(x["accounted"] for x in _st))
+        check("NOT exposed, NOT retired, NOT test-only -- a reservation is not "
+              "a draw",
+              not any(x["exposed"] or x["retired"] or x["test_only"] for x in _st))
+        check("no seed is in CONSUMED_SEEDS",
+              not any(x in REF.CONSUMED_SEEDS for x in range(_lo, _hi)))
+        #: 🔴 THE FOUR GENERATION RANGES ARE IN NO REGISTRY. Checked by hand, as
+        #: collision proof v14 does, or an overlapping block reads as clean.
+        _gen = [(a, b) for a, b, _ in RULES.RETIRED_GENERATION_RANGES]
+        _gen.append(RULES.generation_seed_range(RULES.GEN_SEED_UNIFORM))
+        check("clear of all FOUR generation ranges, none of them in a registry",
+              all(_hi <= a or b <= _lo for a, b in _gen), f"{len(_gen)} ranges")
+        #: derived streams, exhaustively
+        from .twixtbot_g3_reference import SeededReferenceAgent as _SRA
+        _masks = sorted({*_SRA.SEARCH_MASK.values(), *_SRA.READOUT_MASK.values()})
+        _prior = set()
+        for _t in (REF.ACCOUNTED_SEED_INTERVALS, REF.EXPOSED_SEED_INTERVALS,
+                   REF.RETIRED_SEED_INTERVALS, REF.TEST_ONLY_SEED_INTERVALS):
+            _prior |= {x for a, b in _t for x in range(a, b)}
+        _prior -= set(range(_lo, _hi))          # 🔑 BY IDENTITY: it is registered
+        for a, b in _gen:
+            _prior |= set(range(a, b))
+        _d = lambda ss: {v for x in ss for v in (x, *(x ^ m for m in _masks))}
+        _mine = _d(range(_lo, _hi))
+        check("0 derived-stream collisions, and own derivations injective",
+              not (_mine & _d(_prior)) and len(_mine) == (_hi - _lo) * 5,
+              f"{len(_mine)} values")
+
+        print("\n== the seeded schedule and its pins ==")
+        _ops = RUN.load_opening_set(RUN.OPENING_SET_PATH)
+        _seeded = RULES.build_tasks(_ops, seed_interval=RUN.STUDY_SEED_BLOCK)
+        check("the seeds bind POSITIONALLY, row i -> lo + i",
+              [t["seed"] for t in _seeded] == list(range(_lo, _hi)))
+        for _k in range(RULES.N_SEGMENTS):
+            _s = [t["seed"] for t in _seeded if t["segment"] == _k]
+            check(f"segment {_k}: contiguous quarter "
+                  f"[{_lo + 148 * _k}, {_lo + 148 * (_k + 1)})",
+                  _s == list(range(_lo + 148 * _k, _lo + 148 * (_k + 1))))
+        check("a pair's two arms are adjacent and share a segment",
+              all(_seeded[i]["pair_id"] == _seeded[i + 1]["pair_id"]
+                  and _seeded[i]["segment"] == _seeded[i + 1]["segment"]
+                  and _seeded[i + 1]["seed"] == _seeded[i]["seed"] + 1
+                  for i in range(0, len(_seeded), 2)))
+        check("the full schedule reproduces its PIN",
+              _accepts(lambda: RUN.check_schedule_digest(_seeded)))
+        check("each segment reproduces its OWN pin, and the four differ",
+              all(RUN.segment_digest(_seeded, _k) == RUN.SEGMENT_DIGESTS[_k]
+                  for _k in range(RULES.N_SEGMENTS))
+              and len(set(RUN.SEGMENT_DIGESTS)) == RULES.N_SEGMENTS)
+        _bad = [dict(t) for t in _seeded]
+        _bad[0]["seed"] += 1
+        check("a TAMPERED schedule is REFUSED (negative control)",
+              _refuses(lambda: RUN.check_schedule_digest(_bad),
+                       "different experiment"))
+        check("the pin is NOT computed from the tasks it checks",
+              "want_digest=SEGMENT_DIGESTS[segment]" in
+              open(RUN.__file__, encoding="utf-8").read())
 
     print("\n== the outputs must be UNUSED ==")
     for k in range(RULES.N_SEGMENTS):
