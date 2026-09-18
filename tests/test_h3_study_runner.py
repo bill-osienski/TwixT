@@ -323,29 +323,44 @@ class _Ctx:
 
 # ═══════════ PREPARATION for the generation run (card §1.7.7) ══════════════
 
-def test_THE_OPENING_SET_DIGEST_IS_UNSET_AND_REFUSES():
+def test_THE_OPENING_SET_DIGEST_IS_THE_FROZEN_ARTIFACTS_OWN(monkeypatch):
     """🔴 A pin invented before the artifact exists pins nothing — it is either a
     guess the real set must match, or a value the generator is tempted to
-    reproduce."""
-    assert R.OPENING_SET_DIGEST is None
-    with pytest.raises(R.H3StudyError, match="not FROZEN yet|POPULATION-FREEZE"):
+    reproduce. It is now SET, and set to the artifact's own value.
+
+    The refusal it replaced is still tested, by unsetting the pin: that path has
+    to keep working, because it is what stops a study running over an unpinned
+    population.
+    """
+    import json
+    assert R.OPENING_SET_DIGEST == (
+        "35932b3fabd9c6463d615b0b3af380134dadd700e2ca1e882a0c863faf772e46")
+    doc = json.load(open(RUN.OPENING_SET_PATH, encoding="utf-8"))
+    assert doc["opening_set_digest"] == R.OPENING_SET_DIGEST
+    assert R.expected_opening_set_digest() == R.OPENING_SET_DIGEST
+
+    monkeypatch.setattr(R, "OPENING_SET_DIGEST", None)
+    with pytest.raises(R.H3StudyError, match="not PINNED"):
         R.expected_opening_set_digest()
 
 
 
 
-def test_THE_DESTINATION_IS_ABSENT_AND_OUTSIDE_EVERY_SPENT_DIRECTORY():
-    """It is marked spent only AFTER an attempted run consumes it."""
+def test_THE_FROZEN_DESTINATION_IS_SEPARATE_FROM_EVERY_SPENT_RUN():
+    """The "absent" half is spent: the freeze CONSUMED this destination on
+    2026-09-17 and it now holds the population. The half that still binds is
+    that it is its own place — no earlier run's directory, and no segment's."""
     import os
     from scripts.GPU.alphazero import h3_study_command as CMD
-    assert not os.path.lexists(GEN.OUT_DIR)
-    assert not os.path.lexists(GEN.DEFAULT_OUT)
-    assert not os.path.lexists(GEN.DEFAULT_TRACE)
+    assert os.path.lexists(GEN.DEFAULT_OUT) and os.path.lexists(GEN.DEFAULT_TRACE)
     for spent in CMD.SPENT_OUT_DIRS:
         assert GEN.OUT_DIR != spent
         assert not GEN.OUT_DIR.startswith(spent.rstrip("/") + "/")
-    assert GEN.OUT_DIR not in CMD.SPENT_OUT_DIRS, (
-        "the destination is marked spent only after a run consumes it")
+        assert not spent.startswith(GEN.OUT_DIR.rstrip("/") + "/")
+    for k in range(R.N_SEGMENTS):
+        d = RUN.segment_out_dir(k)
+        assert d != GEN.OUT_DIR and not d.startswith(GEN.OUT_DIR.rstrip("/") + "/"), (
+            "a segment would write into the frozen population's directory")
 
 
 

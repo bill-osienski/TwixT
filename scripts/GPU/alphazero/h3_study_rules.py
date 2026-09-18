@@ -323,29 +323,38 @@ def opening_set_digest(openings: Sequence[Dict[str, Any]]) -> str:
         "\n".join(o["digest"] for o in openings).encode()).hexdigest()
 
 
-#: 🔴 UNSET, AND IT MUST STAY UNSET UNTIL THE POPULATION-FREEZE STEP PRODUCES IT.
-#: A pin invented before the artifact exists pins nothing: it would either be a
-#: guess the real set has to match, or -- worse -- a value the generator is
-#: tempted to reproduce.
+#: 🔴 PINNED 2026-09-18, READ OFF THE FROZEN ARTIFACT AND NOT RECOMPUTED.
+#: The population was frozen once on 2026-09-17 (exit 0, verdict OK, 296/296) to
+#: `evidence/2026-09-17-t1j-h3-study-openings-uniform/01_opening_set.json`, and
+#: this value is that artifact's own `opening_set_digest`.
 #:
 #: 🔑 UNIFORM GENERATION IS DETERMINISTIC AND ENGINE-FREE, SO THE SET CAN BE
-#: COMPUTED AT ANY TIME -- AND THAT IS PRECISELY WHY THE PIN NEEDS ITS OWN STEP.
+#: COMPUTED AT ANY TIME -- AND THAT IS PRECISELY WHY THE PIN NEEDED ITS OWN STEP.
 #: When producing the population costs nothing, "just regenerate it" becomes an
 #: easy way to slide a different population under a study that already started.
-#: Freezing the artifact and recording its digest is a SEPARATE, REVIEWED ACT.
-OPENING_SET_DIGEST: Optional[str] = None
+#: THIS LINE IS WHAT MAKES THE POPULATION A FACT RATHER THAN A RECIPE: from here
+#: the runner plays the set that was FROZEN, and refuses any other -- including
+#: one regenerated today that happens to match.
+#:
+#: 🔑 AND THIS FILE IS DELIBERATELY NOT PINNED BY THE ARTIFACT. Editing this line
+#: moves `h3_study_rules.py`'s hash; if the artifact pinned it, recording the
+#: digest would refuse the population it had just frozen. See
+#: `h3_generation_protocol`: an OUTPUT may never live inside a PINNED INPUT.
+OPENING_SET_DIGEST: Optional[str] = (
+    "35932b3fabd9c6463d615b0b3af380134dadd700e2ca1e882a0c863faf772e46")
 
 
 def expected_opening_set_digest() -> str:
     """The pin, or a refusal. Never a default and never a computed stand-in."""
     if OPENING_SET_DIGEST is None:
         raise H3StudyError(
-            "OPENING_SET_DIGEST is None. The study's population is not FROZEN "
-            "yet. Uniform generation is deterministic and engine-free, so the "
-            "set can be computed at will -- but the OFFICIAL artifact and its "
-            "pin come from a separate POPULATION-FREEZE step, and the pin is "
-            "recorded FROM that artifact. Nothing may execute against an "
-            "unpinned population, and a recomputed set is not a pin.")
+            "OPENING_SET_DIGEST is None. The study's population is not PINNED. "
+            "Freezing and pinning are two steps and this is the second: an "
+            "artifact may exist and still not be THE population, because "
+            "uniform generation is deterministic and engine-free, so a set can "
+            "be computed at will. The pin is recorded FROM the frozen "
+            "artifact. Nothing may execute against an unpinned population, and "
+            "a recomputed set is not a pin.")
     return OPENING_SET_DIGEST
 
 

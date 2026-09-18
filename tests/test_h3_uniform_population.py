@@ -5,6 +5,7 @@ removing a stratum is the kind of change that leaves residue: a constant nothing
 reads, a field nothing validates, a path nothing walks but that still resolves.
 """
 import ast
+import json
 import os
 import pathlib
 import tempfile
@@ -191,12 +192,6 @@ def test_GENERATING_IS_FREE_AND_FREEZING_IS_NOT():
     GEN.build_population()                         # ungated, no exception
 
 
-def test_THE_BARRIER_IS_READ_BEFORE_ANYTHING_DURABLE_IS_TOUCHED():
-    assert not os.path.lexists(GEN.OUT_DIR)
-    with pytest.raises(GEN.H3GenerationError, match="NOT AUTHORIZED"):
-        GEN.freeze_population()
-    assert not os.path.lexists(GEN.OUT_DIR), (
-        "a refusal left a directory behind; the barrier is read too late")
 
 
 def test_THE_BARRIER_IS_READ_FIRST_BY_AST():
@@ -258,18 +253,6 @@ def test_A_TERMINAL_RECORD_IS_WRITTEN_ON_THE_REFUSAL_PATH_TOO():
 
 
 # ═══════════════════════ the official destination ══════════════════════════
-def test_THE_OFFICIAL_DESTINATION_IS_ABSENT_AND_OUTSIDE_EVERY_SPENT_DIRECTORY():
-    """Repointed by Amendment 3. It named attempt 2's directory, which that run
-    CONSUMED on 2026-09-16 -- so this test was correctly red until the
-    destination moved."""
-    assert not os.path.lexists(GEN.OUT_DIR)
-    assert not os.path.lexists(GEN.DEFAULT_OUT)
-    assert not os.path.lexists(GEN.DEFAULT_TRACE)
-    for spent in CMD.SPENT_OUT_DIRS:
-        assert GEN.OUT_DIR != spent
-        assert not GEN.OUT_DIR.startswith(spent.rstrip("/") + "/")
-    assert GEN.OUT_DIR not in CMD.SPENT_OUT_DIRS, (
-        "a destination is marked spent only after a run consumes it")
 
 
 def test_BOTH_VOIDED_DESTINATIONS_ARE_SPENT_AND_STAY_THAT_WAY():
@@ -418,13 +401,6 @@ def test_THE_BY_STRATUM_CHECK_IS_NOT_VACUOUS():
 
 
 # ═══════════════════════ nothing is pinned or reserved yet ═════════════════
-def test_NOTHING_IS_PINNED_RESERVED_OR_OPEN():
-    assert R.OPENING_SET_DIGEST is None
-    assert RUN.STUDY_SEED_BLOCK is None
-    assert RUN.H3_STUDY_EXECUTION_AUTHORIZED is False
-    assert GEN.H3_POPULATION_FREEZE_AUTHORIZED is False
-    with pytest.raises(R.H3StudyError, match="not FROZEN yet"):
-        R.expected_opening_set_digest()
 
 
 # ═══════ gaps the injected-defect harness found in THESE tests ═════════════
@@ -585,10 +561,6 @@ def test_THE_COMMAND_NEVER_OPENS_ITS_OWN_BARRIER():
     assert FCMD.main(["--run"]) == FCMD.EXIT_NOT_AUTHORIZED   # and the barrier binds
 
 
-def test_THE_LIVE_BARRIER_IS_SHUT_AND_THE_DESTINATION_ABSENT():
-    assert FCMD.barrier_is_open() is False
-    assert FCMD.barrier_readback() == "False"
-    assert not os.path.lexists(GEN.OUT_DIR)
 
 
 # ── P1-2: generation happens INSIDE the deadline and the trace ─────────────
@@ -881,33 +853,6 @@ def _frozen_doc():
     return GEN.artifact_document(GEN.build_population())
 
 
-def test_AN_ARTIFACT_VALIDATES_ACROSS_THE_SOLE_OPENING_SET_DIGEST_EDIT(monkeypatch):
-    """🔴 THE BINDING TEST. Freeze, then make the one edit the pin step requires,
-    and the artifact must still validate.
-
-    The edit is applied to the REAL `h3_study_rules.py` text and its hash
-    compared, so this cannot pass by the constant happening to live elsewhere --
-    it passes only because that file is no longer pinned.
-    """
-    doc = _frozen_doc()
-    assert GEN.validate_artifact(doc)["n"] == R.N_PAIRS           # before
-
-    rules_src = (ALPHAZERO / "h3_study_rules.py").read_text(encoding="utf-8")
-    edited = rules_src.replace('OPENING_SET_DIGEST: Optional[str] = None',
-                               f'OPENING_SET_DIGEST: Optional[str] = '
-                               f'"{doc["opening_set_digest"]}"')
-    assert edited != rules_src, "the pin edit must actually change the file"
-    assert hashlib.sha256(edited.encode()).hexdigest() != \
-        hashlib.sha256(rules_src.encode()).hexdigest(), "…and its hash"
-
-    # the pinned surface is untouched by that edit
-    assert "h3_study_rules.py" not in GEN.generator_identity()["source_pins"]
-    assert set(GEN.generator_identity()["source_pins"]) == set(ALL_PINNED)
-
-    # and the artifact still validates with the digest recorded
-    monkeypatch.setattr(R, "OPENING_SET_DIGEST", doc["opening_set_digest"])
-    assert GEN.validate_artifact(doc)["n"] == R.N_PAIRS            # after
-    assert R.expected_opening_set_digest() == doc["opening_set_digest"]
 
 
 def test_NO_OUTPUT_CONSTANT_LIVES_INSIDE_A_PINNED_SOURCE():
@@ -1082,3 +1027,123 @@ def test_GENERATION_ITSELF_REFUSES_A_RETIRED_BASE(retired_lo):
 
 def test_GENERATION_ACCEPTS_THE_LIVE_BASE_OR_THE_REFUSALS_PROVE_NOTHING():
     assert len(R.generate_uniform_openings(seed=R.GEN_SEED_UNIFORM, n=2)) == 2
+
+
+# ═══════ AFTER THE FREEZE AND THE PIN (2026-09-17 / 2026-09-18) ════════════
+# 🔴 FIVE TESTS HERE ASSERTED THE PRE-FREEZE STATE: destination absent, digest
+# unset, a refusal creating no directory. Those preconditions are now legitimately
+# gone -- the population IS frozen and IS pinned. Each is replaced by the invariant
+# it actually protected, re-expressed for the state that now holds. NONE of them
+# is weakened: what "nothing was touched" means simply changed from "the directory
+# does not exist" to "the frozen artifact is byte-identical".
+
+def _artifact_fingerprint():
+    """Every byte of the frozen destination, so "unchanged" is checkable."""
+    d = pathlib.Path(GEN.OUT_DIR)
+    return {f.name: hashlib.sha256(f.read_bytes()).hexdigest()
+            for f in sorted(d.iterdir())} if d.exists() else {}
+
+
+def test_THE_POPULATION_IS_FROZEN_AND_PINNED():
+    """The state this study now stands on, asserted once and plainly."""
+    assert R.OPENING_SET_DIGEST == (
+        "35932b3fabd9c6463d615b0b3af380134dadd700e2ca1e882a0c863faf772e46")
+    assert os.path.lexists(GEN.DEFAULT_OUT) and os.path.lexists(GEN.DEFAULT_TRACE)
+    doc = json.loads(pathlib.Path(GEN.DEFAULT_OUT).read_text(encoding="utf-8"))
+    assert doc["opening_set_digest"] == R.OPENING_SET_DIGEST, (
+        "the pin must be the artifact's OWN digest, not a recomputed one")
+    assert R.opening_set_digest(doc["openings"]) == R.OPENING_SET_DIGEST
+
+
+def test_THE_PIN_IS_READ_FROM_THE_ARTIFACT_NOT_RECOMPUTED_AT_START_UP():
+    """🔑 THE WHOLE POINT OF PINNING A DETERMINISTIC POPULATION. The set can be
+    rebuilt at will, so the runner must play the FROZEN one -- and a rebuild that
+    happens to match is not evidence, it is a coincidence the pin exists to stop
+    mattering."""
+    src = (ALPHAZERO / "h3_study_runner.py").read_text(encoding="utf-8")
+    body = src[src.index("def load_opening_set("):src.index("def run_segment(")]
+    assert "build_population" not in body and "generate_uniform" not in body
+
+
+def test_STILL_NOT_RESERVED_AND_NOTHING_IS_OPEN():
+    """What the pin did NOT authorize. The seed block is the only thing left."""
+    assert RUN.STUDY_SEED_BLOCK is None
+    assert RUN.H3_STUDY_EXECUTION_AUTHORIZED is False
+    assert GEN.H3_POPULATION_FREEZE_AUTHORIZED is False
+    from scripts.GPU.alphazero import gate_inventory as INV
+    assert INV.gate_count() == 10 and INV.open_gates() == []
+
+
+def test_THE_FROZEN_DESTINATION_IS_SPENT_AND_A_SECOND_FREEZE_REFUSES():
+    """🔴 THE NEW INVARIANT THE FREEZE CREATED. The destination used to have to be
+    ABSENT; now it holds the population, and what must hold is that nothing can
+    write over it. Create-only is what makes the frozen artifact final."""
+    before = _artifact_fingerprint()
+    assert before, "the frozen artifact must be there"
+    with pytest.raises(GEN.H3GenerationError, match="CREATE-ONLY"):
+        GEN.write_artifact(openings=GEN.build_population(),
+                           out_path=GEN.DEFAULT_OUT, trace_path=GEN.DEFAULT_TRACE)
+    assert _artifact_fingerprint() == before, "the frozen artifact was modified"
+
+
+def test_THE_BARRIER_STILL_BARS_AND_A_REFUSAL_CHANGES_NOTHING():
+    """The barrier closed behind the one authorized freeze. A refusal must leave
+    the frozen artifact byte-identical -- which is what "nothing durable was
+    touched" means now that the destination legitimately exists."""
+    before = _artifact_fingerprint()
+    with pytest.raises(GEN.H3GenerationError, match="NOT AUTHORIZED"):
+        GEN.freeze_population()
+    assert _artifact_fingerprint() == before
+    assert FCMD.barrier_readback(FCMD.GENERATOR_SOURCE) == "False"
+    assert FCMD.main(["--run"]) == FCMD.EXIT_NOT_AUTHORIZED
+
+
+def test_THE_PIN_EDIT_DID_NOT_INVALIDATE_THE_ARTIFACT():
+    """🔴 THE BINDING TEST, NOW RUN AGAINST THE REAL SEQUENCE RATHER THAN A
+    SIMULATED ONE.
+
+    It used to apply the digest edit to the file text and re-hash. The edit has
+    now actually been made, so the check is stronger: the artifact frozen BEFORE
+    it still validates against the code AFTER it. Before the provenance repair
+    this is exactly where the population would have been refused.
+    """
+    doc = json.loads(pathlib.Path(GEN.DEFAULT_OUT).read_text(encoding="utf-8"))
+    assert "h3_study_rules.py" not in doc["generator"]["source_pins"]
+    assert GEN.validate_artifact(doc)["n"] == R.N_PAIRS
+    # and the file really did move
+    live = hashlib.sha256(
+        (ALPHAZERO / "h3_study_rules.py").read_bytes()).hexdigest()
+    assert live not in doc["generator"]["source_pins"].values()
+    # …while every pinned source is still exactly what the artifact recorded
+    for rel, pin in doc["generator"]["source_pins"].items():
+        assert hashlib.sha256((ALPHAZERO / rel).read_bytes()).hexdigest() == pin, rel
+
+
+def test_THE_RUNNER_REFUSES_A_POPULATION_THAT_IS_NOT_THE_PINNED_ONE(tmp_path,
+                                                                    monkeypatch):
+    """Now that a pin exists, it must actually exclude. A self-consistent set
+    generated from a different base is valid and is NOT this study's."""
+    other = GEN.artifact_document(GEN.build_population())
+    other["openings"] = list(reversed(other["openings"]))
+    for i, o in enumerate(other["openings"]):
+        o["index"], o["segment"] = i, R.segment_of(i)
+    other["opening_set_digest"] = R.opening_set_digest(other["openings"])
+    assert other["opening_set_digest"] != R.OPENING_SET_DIGEST
+    f = tmp_path / "other.json"
+    f.write_text(json.dumps(other), encoding="utf-8")
+    with pytest.raises(RUN.H3StudyRunError):
+        RUN.load_opening_set(str(f))
+
+
+def test_THE_COMMITTED_ARTIFACT_LOADS_THROUGH_THE_REAL_RUNNER():
+    """End to end, on the real path, against the real file."""
+    ops = RUN.load_opening_set(RUN.OPENING_SET_PATH)
+    assert len(ops) == R.N_PAIRS == 296
+    assert len({o["digest"] for o in ops}) == 296
+    assert [o["index"] for o in ops] == list(range(296))
+    for o in ops:
+        mv, dg = R.verify_candidate(R.GEN_SEED_UNIFORM, o["index"], o["attempts"])
+        assert [tuple(m) for m in mv] == [tuple(m) for m in o["moves"]]
+        assert dg == o["digest"]
+        assert o["seed"] == R.attempt_seed(R.GEN_SEED_UNIFORM, o["index"],
+                                           o["attempts"] - 1)
