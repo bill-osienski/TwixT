@@ -186,10 +186,42 @@ def main() -> int:
           GEN.validate_artifact(_good_doc)["n"] == RULES.N_PAIRS)
 
     print("\n== the FROZEN population ==")
-    check("the official destination is ABSENT", not os.path.lexists(GEN.OUT_DIR))
-    check("freezing is BARRED, and a refusal creates nothing",
+    #: 🔴 THESE TWO ASSERTED THE PRE-FREEZE STATE: destination ABSENT, and a
+    #: refusal creating nothing. The freeze CONSUMED that destination on
+    #: 2026-09-17, so "absent" is now the wrong thing to want -- and "a refusal
+    #: touches nothing durable" no longer means "no directory appeared", it means
+    #: THE FROZEN ARTIFACT IS BYTE-IDENTICAL. Neither invariant is weakened; the
+    #: state they describe moved on.
+    import hashlib as _h
+
+    def _fingerprint():
+        d = GEN.OUT_DIR
+        if not os.path.isdir(d):
+            return {}
+        return {n: _h.sha256(open(os.path.join(d, n), "rb").read()).hexdigest()
+                for n in sorted(os.listdir(d))}
+
+    _before = _fingerprint()
+    check("the destination holds the FROZEN population", bool(_before),
+          f"{len(_before)} file(s)")
+    check("freezing is BARRED, and a refusal leaves the artifact BYTE-IDENTICAL",
           _refuses(lambda: GEN.freeze_population(), "NOT AUTHORIZED")
-          and not os.path.lexists(GEN.OUT_DIR))
+          and _fingerprint() == _before)
+    check("a SECOND freeze to the same destination is refused (create-only)",
+          _refuses(lambda: GEN.write_artifact(openings=GEN.build_population(),
+                                              out_path=GEN.DEFAULT_OUT,
+                                              trace_path=GEN.DEFAULT_TRACE),
+                   "CREATE-ONLY")
+          and _fingerprint() == _before)
+    check("every PINNED source still hashes to what the artifact recorded",
+          all(_h.sha256(open(os.path.join(os.path.dirname(
+                  os.path.abspath(GEN.__file__)), rel), "rb").read()).hexdigest()
+              == pin
+              for rel, pin in __import__("json").load(
+                  open(RUN.OPENING_SET_PATH))["generator"]["source_pins"].items()))
+    check("h3_study_rules.py is NOT pinned -- the file the pin edit touched",
+          "h3_study_rules.py" not in __import__("json").load(
+              open(RUN.OPENING_SET_PATH))["generator"]["source_pins"])
     #: 🔑 ONE PENDING, NOT TWO. The artifact and its digest are a single step in
     #: the only sense that matters: until BOTH have happened there is no study
     #: population. Reporting them separately made the preflight look two
