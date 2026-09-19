@@ -1500,3 +1500,59 @@ def test_THE_SEGMENT_0_REPORT_WITHHELD_ITS_VERDICT():
     assert rep["verdict"] == "NO VERDICT"
     assert rep["primary"]["computable"] is True, (
         "the figure is RECORDED -- withholding is not hiding")
+
+
+def test_THE_REPORT_IS_RECOMPUTED_AND_STILL_WITHHOLDS(monkeypatch):
+    """🔴 READING THE FROZEN REPORT PROVES NOTHING ABOUT THE CODE.
+
+    `test_THE_SEGMENT_0_REPORT_WITHHELD_ITS_VERDICT` loads the JSON that segment 0
+    wrote. That file does not change when the analysis does, so disabling the
+    report floor (`below_floor = False`) was NOT CAUGHT -- the harness said so.
+
+    This re-runs the analysis over segment 0's REAL 148 records and asserts the
+    withholding is produced, not merely recorded.
+    """
+    import json
+    from scripts.GPU.alphazero import h3_study_analysis as A
+    recs = [json.loads(l) for l in
+            open(f"{RUN.segment_out_dir(0)}/03_results.jsonl", encoding="utf-8")]
+    games = [r for r in recs if r.get("record_type") == "task_result"]
+    assert len(games) == 148
+    rep = A.summarise(games, total_elapsed_s=0.0)
+    assert rep["pairs_scored"] == 74
+    assert rep["below_report_floor"] is True, (
+        f"74 pairs must be below the {R.REPORT_FLOOR_PAIRS}-pair floor")
+    assert rep["interpretation_withheld"] is True
+    assert rep["is_strength_verdict"] is False
+    assert rep["verdict"] == "NO VERDICT"
+    # …and the figure is still computed, because withholding is not hiding
+    assert rep["primary"]["computable"] is True
+    assert 0.0 <= rep["primary"]["mean"] <= 1.0
+
+
+def test_A_FULL_STUDYS_WORTH_OF_PAIRS_WOULD_NOT_BE_WITHHELD():
+    """POSITIVE CONTROL for the floor: it must not withhold everything.
+
+    Without this, `below_report_floor = True` unconditionally would pass the test
+    above and silence the study forever.
+    """
+    import json
+    from scripts.GPU.alphazero import h3_study_analysis as A
+    recs = [json.loads(l) for l in
+            open(f"{RUN.segment_out_dir(0)}/03_results.jsonl", encoding="utf-8")]
+    games = [r for r in recs if r.get("record_type") == "task_result"]
+    # duplicate segment 0's pairs into the other three segments' identities so the
+    # floor is met -- a synthetic set, used only to show the floor can be cleared
+    grown = list(games)
+    for shift in (1, 2, 3):
+        for g in games:
+            g2 = dict(g)
+            g2["pair_id"] = g["pair_id"] + 74 * shift
+            g2["seed"] = g["seed"] + 100000 * shift
+            g2["task_id"] = f"{g['task_id']}-s{shift}"
+            g2["transcript_digest"] = f"{shift}" + g["transcript_digest"][1:]
+            g2["opening_digest"] = f"{shift}" + g["opening_digest"][1:]
+            grown.append(g2)
+    rep = A.summarise(grown, total_elapsed_s=0.0)
+    assert rep["pairs_scored"] == 296
+    assert rep["below_report_floor"] is False, "the floor must be clearable"

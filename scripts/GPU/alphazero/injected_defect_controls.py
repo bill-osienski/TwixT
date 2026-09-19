@@ -102,7 +102,7 @@ DEFECTS = [
     ("the spent-seed check ignores EXPOSED and looks only at retired",
      H3SRUN, '''           if st["exposed"] or st["retired"] or st["test_only"]]''',
      '''           if st["test_only"]]''',
-     f"{T_H3POP}::test_SEGMENT_0S_BLOCK_IS_EXPOSED_AND_RETIRED_WHOLE"),
+     f"{T_H3SRUN}::test_SEGMENT_0_CANNOT_BE_RELAUNCHED"),
     ("segment 1's block is pointed at segment 0's SPENT one",
      H3SRUN, "    (202_626_148, 202_626_296),", "    (202_628_000, 202_628_148),",
      f"{T_H3POP}::test_SEGMENTS_1_TO_3_REMAIN_ACCOUNTED_UNEXPOSED_AND_UNRETIRED"),
@@ -113,7 +113,7 @@ DEFECTS = [
     ("a partial segment is reported as a strength verdict",
      H3SA, "    below_floor = len(scored) < R.REPORT_FLOOR_PAIRS",
      "    below_floor = False",
-     f"{T_H3POP}::test_THE_SEGMENT_0_REPORT_WITHHELD_ITS_VERDICT"),
+     f"{T_H3POP}::test_THE_REPORT_IS_RECOMPUTED_AND_STILL_WITHHOLDS"),
 
     # ═════════ THE SEGMENT-ISOLATION REPAIR (2026-09-18) ═══════════════════
     # 🔴 MISSING PARENT DIRECTORIES -- the defect that VOIDed segment 0 in one
