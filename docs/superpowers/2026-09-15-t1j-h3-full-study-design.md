@@ -1177,6 +1177,22 @@ The block is now **chosen** as the first unspent segment block and **asserted**
 unspent, so segment 1's eventual run fails that test loudly instead of quietly
 re-merging the two guards.
 
+⚠ **AND ONE REASON DRIFTED WITH CPU LOAD.** `the deadline is not checked inside
+the candidate loop` froze its reason as *"the 0s runaway guard expired after
+**0.7s**"*. Run beside the full suite, the same defect reported **0.8s** and the
+control scored INDETERMINATE while doing exactly what it claims. `stable()`
+already normalises volatile parts of a reason on both sides; it now also
+normalises the measurement after `expired after` — **and only that.** The two
+other reasons carrying float-seconds (`100.0s > 1.0s`, `99999.0s`) are
+*configured* values and stay literal, so changing a declared deadline still
+shows up as drift.
+
+🔑 **THE SHARED LESSON.** Every one of these is the same mistake: **a value was
+measured or observed once, written down, and then never recomputed.** A digest
+that is never recomputed is a label; a count carried forward is arithmetic on a
+memory; a header that names a deleted constant is a barrier nobody has; and a
+frozen reason containing a stopwatch reading is a test of the machine's load.
+
 ⚠ **THE RECORD, CORRECTED.** The closeout commits `bcd17ff..eab252b` reported
 the inverted tests and their recorded reasons as complete. **They had not been
 verified by a finished harness pass** — the run was still in flight when they
