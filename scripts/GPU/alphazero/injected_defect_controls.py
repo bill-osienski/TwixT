@@ -3712,6 +3712,9 @@ DEFECTS = [
 # DERIVED from the requirement and its assertion and then verified against a run,
 # which is why each names a count or a sentence rather than a first line.
 EXPECTED_REASONS = {
+    # ── the harness's own normaliser (2026-09-19). OBSERVED, never guessed.
+    'a MEASURED duration is left in the reason it is compared against':
+        'AssertionError: load must not change the reason',
     # ── the stale prose (2026-09-19). OBSERVED, never guessed.
     "the runner's header names a barrier constant that is gone":
         "AssertionError: the header names constants the module does not have: ['STUDY_SEED_BLOCK']",
