@@ -5,9 +5,9 @@ questions; it never patches in what the thing under test is missing, because the
 pilot's did exactly that and reported 40 tasks building through a builder that
 would have refused every one of them.
 
-🔴 IT IS EXPECTED TO FAIL TODAY, and that is the point: the opening set has not
-been generated and no seed block is reserved, so the checks that depend on them
-report NOT READY rather than passing vacuously.
+Checks that depend on something not yet done report NOT READY rather than passing
+vacuously, and the closing summary is COMPUTED from the live registry -- see
+`readiness()` for why that is not a matter of taste.
 """
 from __future__ import annotations
 
@@ -540,21 +540,62 @@ def main() -> int:
     check("every binding test passes", r.returncode == 0)
 
     print("\n" + "=" * 74)
-    print("⚠ SCOPE. This establishes that the study's machinery refuses, computes")
-    print("  and constructs as the card says -- on this tree, at this commit, with")
-    print("  every gate shut. It establishes NOTHING about strength, and the study")
-    print("  CANNOT RUN: the population is not frozen and pinned, and no seed")
-    print("  block is reserved. Each is a separate authorization.")
-    total = len(_FAILED) + len(_NOT_READY)
+    print(render_readiness(readiness()))
     print(f"\n{len(_FAILED)} FAILED | {len(_NOT_READY)} PENDING BY DESIGN")
     for label in _NOT_READY:
         print(f"    PENDING: {label}")
     for label in _FAILED:
         print(f"    🔴 FAILED: {label}")
-    if _FAILED:
-        return 1
-    print("\nNo check FAILED. The study is NOT READY TO RUN, by design.")
-    return 0
+    return 1 if _FAILED else 0
+
+
+def readiness() -> Dict[str, Any]:
+    """WHAT THIS TREE CAN LAUNCH, RECOMPUTED HERE AND NOW.
+
+    🔴 WHY THIS IS NOT A CONSTANT. The epilogue used to be prose, written when
+    the population was unfrozen and no seeds were reserved, and it kept printing
+    "the population is not frozen and pinned, and no seed block is reserved...
+    NOT READY TO RUN, by design" after the freeze, the pin, the registration of
+    four blocks and a completed segment 0 -- while every check above it passed.
+    A closing line that contradicts the checks it closes is a false report.
+    """
+    completed: List[int] = []
+    launchable: List[int] = []
+    for k, (lo, hi) in enumerate(RUN.SEGMENT_SEED_BLOCKS):
+        st = [REF.seed_status(s) for s in range(lo, hi)]
+        spent = any(x["exposed"] or x["retired"] or x["test_only"] for x in st)
+        (completed if spent else launchable).append(k)
+    return {"population_pinned": RULES.OPENING_SET_DIGEST is not None,
+            "blocks_registered": _accepts(RUN.check_seed_registration),
+            "completed": completed, "launchable": launchable}
+
+
+def render_readiness(r: Dict[str, Any]) -> str:
+    """The epilogue, DERIVED. Never says ready; says what is blocking, or what
+    would be launchable if it were separately authorized."""
+    out = ["⚠ SCOPE. This establishes that the study's machinery refuses, computes",
+           "  and constructs as the card says -- on this tree, at this commit,",
+           "  with every gate shut. It establishes NOTHING about strength."]
+    blocking = []
+    if not r["population_pinned"]:
+        blocking.append("the population is not pinned")
+    if not r["blocks_registered"]:
+        blocking.append("no seed block is registered")
+    if not r["launchable"]:
+        blocking.append("every segment's block is already spent")
+    if blocking:
+        out.append("  The study CANNOT RUN: " + "; ".join(blocking) + ".")
+        out.append("")
+        out.append("No check FAILED. The study is NOT READY TO RUN, by design.")
+    else:
+        done = ", ".join(str(k) for k in r["completed"]) or "none"
+        nxt = ", ".join(f"segment {k}" for k in r["launchable"])
+        out.append(f"  Population pinned, blocks registered; completed: {done}.")
+        out.append(f"  UNSPENT AND CONSTRUCTIBLE: {nxt}.")
+        out.append("")
+        out.append("  🔴 THAT IS NOT PERMISSION. The execution gate is shut and each")
+        out.append("  segment is a separate authorization; this check never opens one.")
+    return "\n".join(out)
 
 
 def _refuses(fn, needle: str = "") -> bool:

@@ -87,9 +87,27 @@ SCREEN = "scripts/GPU/alphazero/e4_screen_reference.py"
 T_H3POP = "tests/test_h3_uniform_population.py"
 T_H3OLD = "tests/test_h3_coproduced_retired.py"
 T_GATES = "tests/test_gate_inventory.py"
+H3PRE = "scripts/GPU/alphazero/h3_study_prerun_verification.py"
 
 # (label, file, anchor, replacement, test node)
 DEFECTS = [
+    # ═════════ THE PREFLIGHT'S OWN EPILOGUE (2026-09-19) ═══════════════════
+    # 🔴 ITS CLOSING LINE WAS PROSE. It kept printing "the population is not
+    # frozen and pinned, and no seed block is reserved ... NOT READY TO RUN"
+    # after the freeze, the pin, four registered blocks and a completed
+    # segment 0 -- above 132 passing checks that each said otherwise.
+    ("the epilogue is hardcoded instead of branching on readiness", H3PRE,
+     "    if blocking:",
+     "    if True:",
+     f"{T_H3SRUN}::test_THE_EPILOGUE_TEXT_SAYS_WHAT_THE_READINESS_SAYS"),
+    ("readiness stops reading the registry and calls nothing spent", H3PRE,
+     '        spent = any(x["exposed"] or x["retired"] or x["test_only"] for x in st)',
+     "        spent = False",
+     f"{T_H3SRUN}::test_THE_PREFLIGHT_EPILOGUE_IS_DERIVED_FROM_LIVE_STATE"),
+    ("readiness asserts the pin instead of reading it", H3PRE,
+     '    return {"population_pinned": RULES.OPENING_SET_DIGEST is not None,',
+     '    return {"population_pinned": True,',
+     f"{T_H3SRUN}::test_THE_PREFLIGHT_EPILOGUE_IS_DERIVED_FROM_LIVE_STATE"),
     # ═════════ SEGMENT 0 CLOSEOUT (ran 2026-09-18) ═════════════════════════
     # 🔴 A SPENT SEGMENT MUST REFUSE RELAUNCH, and must not take the others with
     # it. Before segment 0 ran these could only be driven by monkeypatch; now a

@@ -749,3 +749,54 @@ def test_SEGMENT_0_CANNOT_BE_RELAUNCHED():
         "the destination holds the completed run's artifacts")
     with pytest.raises(RUN.H3StudyRunError, match="already exists"):
         RUN.check_output_paths(*CMD.default_paths(0))
+
+
+# ──────────────── the preflight's own epilogue must not lie ────────────────
+def test_THE_PREFLIGHT_EPILOGUE_IS_DERIVED_FROM_LIVE_STATE():
+    """🔴 A REPORT'S CLOSING CLAIM IS A CLAIM. The preflight ended with hardcoded
+    prose -- "the population is not frozen and pinned, and no seed block is
+    reserved... NOT READY TO RUN, by design" -- written when all three were true
+    and still printed after the freeze, the pin, the registration and a completed
+    segment 0. Every check above it passed; its last line contradicted them.
+
+    So the epilogue is COMPUTED from the same objects the checks read."""
+    from scripts.GPU.alphazero import h3_study_prerun_verification as PRE
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+
+    r = PRE.readiness()
+    assert r["population_pinned"] is (R.OPENING_SET_DIGEST is not None)
+    # recomputed here from the registry, NOT read back off the preflight
+    spent = []
+    for k, (lo, hi) in enumerate(RUN.SEGMENT_SEED_BLOCKS):
+        st = [REF.seed_status(s) for s in range(lo, hi)]
+        if any(x["exposed"] or x["retired"] or x["test_only"] for x in st):
+            spent.append(k)
+    assert r["completed"] == spent
+    assert r["launchable"] == [k for k in range(R.N_SEGMENTS) if k not in spent]
+    assert r["completed"] and r["launchable"], (
+        "as of the segment 0 closeout: segment 0 done, 1-3 still to run")
+    # and the pin is READ, not assumed: with it unset the field must follow.
+    import unittest.mock as _m
+    with _m.patch.object(R, "OPENING_SET_DIGEST", None):
+        assert PRE.readiness()["population_pinned"] is False
+
+
+def test_THE_EPILOGUE_TEXT_SAYS_WHAT_THE_READINESS_SAYS():
+    """Both directions, so neither wording can be a constant: nothing ready must
+    still print the refusal, and a launchable segment must NOT."""
+    from scripts.GPU.alphazero import h3_study_prerun_verification as PRE
+
+    nothing = PRE.render_readiness(
+        {"population_pinned": False, "blocks_registered": False,
+         "completed": [], "launchable": []})
+    assert "NOT READY TO RUN" in nothing
+    assert "not pinned" in nothing and "no seed block" in nothing
+
+    ready = PRE.render_readiness(
+        {"population_pinned": True, "blocks_registered": True,
+         "completed": [0], "launchable": [1, 2, 3]})
+    assert "NOT READY TO RUN" not in ready
+    assert "not pinned" not in ready and "no seed block" not in ready
+    assert "segment 1" in ready and "completed: 0" in ready
+    assert "authorization" in ready, (
+        "readiness is not authorization -- the epilogue must still say so")
