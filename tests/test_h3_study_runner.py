@@ -615,31 +615,6 @@ def test_a_SEEDLESS_schedule_is_REFUSED():
         RUN.check_segment_schedule(seg, 0, RUN.segment_digest(tasks, 0))
 
 
-def test_EVERY_SEGMENT_BLOCK_IS_RESERVED_AND_REGISTERED(monkeypatch):
-    """Four blocks, one per segment. Registration is a PLANNING question and is
-    asked of all four; whether a block is still runnable is a LAUNCH question and
-    is asked of one."""
-    assert len(RUN.SEGMENT_SEED_BLOCKS) == R.N_SEGMENTS == 4
-    RUN.check_seed_registration()
-    for k in range(4):
-        assert RUN.check_segment_seeds(k)["n"] == R.GAMES_PER_SEGMENT
-
-    monkeypatch.setattr(RUN, "SEGMENT_SEED_BLOCKS", ())
-    with pytest.raises(RUN.H3StudyRunError, match="NO SEED BLOCKS"):
-        RUN.check_seed_registration()
-
-    # a block that is reserved but NOT in the registry
-    monkeypatch.setattr(RUN, "SEGMENT_SEED_BLOCKS",
-                        ((909_090_000, 909_090_148),) + RUN.SEGMENT_SEED_BLOCKS[1:]
-                        if False else
-                        ((909_090_000, 909_090_148), (202_626_148, 202_626_296),
-                         (202_626_296, 202_626_444), (202_626_444, 202_626_592)))
-    with pytest.raises(RUN.H3StudyRunError, match="not registered"):
-        RUN.check_seed_registration(0)
-    #: 🔴 AND SEGMENTS 1-3 ARE STILL FINE. Segment 0's problem is segment 0's.
-    for k in (1, 2, 3):
-        RUN.check_seed_registration(k)
-        RUN.check_segment_seeds(k)
 
 
 def test_A_RETIRED_SEGMENT_DOES_NOT_BLOCK_A_LATER_ONE(monkeypatch):
@@ -735,3 +710,42 @@ def test_run_segment_REFUSES_A_SEGMENT_WHOSE_SEEDS_ARE_SPENT(monkeypatch):
     with pytest.raises(RUN.H3StudyRunError, match="SPENT|may never be revived"):
         RUN.run_segment(segment=0, results_path="/dev/null/r",
                         trace_path="/dev/null/t", report_path="/dev/null/p")
+
+
+def test_EVERY_SEGMENT_BLOCK_IS_REGISTERED_AND_ONLY_SEGMENT_0_IS_SPENT(monkeypatch):
+    """🔴 INVERTED AFTER SEGMENT 0 RAN (2026-09-18, 148/148, exit 0).
+
+    Registration is a PLANNING question and still holds for all four. Whether a
+    block is RUNNABLE is a LAUNCH question, and segment 0's answer changed: its
+    148 seeds are exposed and retired, so it refuses. Segments 1-3 are untouched
+    and still launch -- which is the whole point of the isolation repair, now
+    demonstrated by a real consumption rather than by a monkeypatch.
+    """
+    assert len(RUN.SEGMENT_SEED_BLOCKS) == R.N_SEGMENTS == 4
+    RUN.check_seed_registration()                 # all four still REGISTERED
+
+    with pytest.raises(RUN.H3StudyRunError, match="is SPENT"):
+        RUN.check_segment_seeds(0)
+    for k in (1, 2, 3):
+        assert RUN.check_segment_seeds(k)["n"] == R.GAMES_PER_SEGMENT
+
+    monkeypatch.setattr(RUN, "SEGMENT_SEED_BLOCKS", ())
+    with pytest.raises(RUN.H3StudyRunError, match="NO SEED BLOCKS"):
+        RUN.check_seed_registration()
+
+
+def test_SEGMENT_0_CANNOT_BE_RELAUNCHED():
+    """One-shot. Its block is spent and its destination is occupied; either alone
+    must stop a second launch."""
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    lo, hi = RUN.SEGMENT_SEED_BLOCKS[0]
+    st = [REF.seed_status(s) for s in range(lo, hi)]
+    assert all(x["exposed"] and x["retired"] for x in st)
+    with pytest.raises(RUN.H3StudyRunError, match="is SPENT"):
+        RUN.check_segment_seeds(0)
+    import os
+    from scripts.GPU.alphazero import h3_study_command as CMD
+    assert any(os.path.lexists(p) for p in CMD.default_paths(0)), (
+        "the destination holds the completed run's artifacts")
+    with pytest.raises(RUN.H3StudyRunError, match="already exists"):
+        RUN.check_output_paths(*CMD.default_paths(0))

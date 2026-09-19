@@ -1186,15 +1186,6 @@ def test_THE_UNSEEDED_SCHEDULE_HAS_A_DIFFERENT_DIGEST():
         RUN.check_schedule_digest(R.build_tasks(ops))
 
 
-def test_REGISTERING_THE_BLOCK_OPENED_NOTHING():
-    """The whole point of ACCOUNTED-only. Ten gates shut, barrier shut."""
-    from scripts.GPU.alphazero import gate_inventory as INV
-    assert INV.gate_count() == 10 and INV.open_gates() == []
-    assert RUN.H3_STUDY_EXECUTION_AUTHORIZED is False
-    assert GEN.H3_POPULATION_FREEZE_AUTHORIZED is False
-    for k in range(R.N_SEGMENTS):
-        from scripts.GPU.alphazero import h3_study_command as CMD
-        assert not any(os.path.lexists(p) for p in CMD.default_paths(k)), k
 
 
 # ═══════ SEGMENT 0 VOIDED, AND ITS QUARTER IS RETIRED (2026-09-18) ═════════
@@ -1245,12 +1236,6 @@ def test_THE_UNSEEDED_SCHEDULE_AND_THE_POPULATION_ARE_UNAFFECTED():
         "35932b3fabd9c6463d615b0b3af380134dadd700e2ca1e882a0c863faf772e46")
 
 
-def test_THE_SEGMENT_0_DESTINATION_WAS_NEVER_CREATED():
-    """The VOID's own signature: the run died at its first durable write, so the
-    directory it was writing into does not exist."""
-    assert not os.path.lexists(RUN.segment_out_dir(0))
-    from scripts.GPU.alphazero import h3_study_command as CMD
-    assert not any(os.path.lexists(p) for k in range(4) for p in CMD.default_paths(k))
 
 
 
@@ -1270,16 +1255,6 @@ def test_FOUR_SEGMENT_BLOCKS_EACH_148_SEEDS():
         "segments 1-3 keep the quarters they already had")
 
 
-def test_EVERY_BLOCK_IS_ACCOUNTED_UNSPENT_AND_MUTUALLY_DISJOINT():
-    from scripts.GPU.alphazero import e4_screen_reference as REF
-    seen = set()
-    for k, (lo, hi) in enumerate(RUN.SEGMENT_SEED_BLOCKS):
-        st = [REF.seed_status(s) for s in range(lo, hi)]
-        assert all(x["accounted"] for x in st), k
-        assert not any(x["exposed"] or x["retired"] or x["test_only"] for x in st), k
-        rng = set(range(lo, hi))
-        assert not (rng & seen), f"segment {k} overlaps an earlier block"
-        seen |= rng
 
 
 def test_THE_FRESH_SEGMENT_0_BLOCK_COLLIDES_WITH_NOTHING():
@@ -1348,16 +1323,6 @@ def test_SEGMENTS_1_TO_3_PINS_ARE_UNCHANGED_BY_SEGMENT_0S_REPLACEMENT():
 
 
 
-def test_SEGMENT_0S_FIRST_DESTINATION_IS_SPENT_AND_THE_RETRY_IS_FRESH():
-    from scripts.GPU.alphazero import h3_study_command as CMD
-    assert ("docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment0"
-            in CMD.SPENT_OUT_DIRS)
-    retry = RUN.segment_out_dir(0)
-    assert retry.endswith("2026-09-18-t1j-h3-study-segment0-retry")
-    assert retry not in CMD.SPENT_OUT_DIRS
-    for spent in CMD.SPENT_OUT_DIRS:
-        assert not retry.startswith(spent.rstrip("/") + "/")
-    assert not os.path.lexists(retry)
 
 
 def test_THE_COMMAND_WRITES_A_PARENT_OWNED_RECEIPT_ON_AN_EARLY_FAILURE(tmp_path,
@@ -1391,15 +1356,6 @@ def test_THE_RECEIPT_IS_CREATE_ONLY(tmp_path, monkeypatch):
     assert json.loads((tmp_path / "00_launch_receipt.json").read_text())["a"] == 1
 
 
-def test_AN_UNAUTHORIZED_INVOCATION_WRITES_NO_RECEIPT(monkeypatch):
-    """🔑 DELIBERATE. Nothing was attempted and nothing consumed -- and a receipt
-    here would CREATE THE DESTINATION, so the next real launch would be refused
-    for an occupied output directory. H2's defect by a new road."""
-    from scripts.GPU.alphazero import h3_study_command as CMD
-    assert RUN.H3_STUDY_EXECUTION_AUTHORIZED is False
-    assert CMD.main(["--segment", "0"]) == CMD.EXIT_UNAUTHORIZED
-    assert not os.path.lexists(CMD.receipt_path(0))
-    assert not os.path.lexists(RUN.segment_out_dir(0))
 
 
 
@@ -1432,3 +1388,115 @@ def test_THE_RUN_BODY_CALLS_ensure_parent_dirs_BEFORE_ITS_CREATE_ONLY_OPEN():
     body = src_[src_.index("def _run_segment_unguarded("):]
     assert "ensure_parent_dirs(trace_path, results_path, report_path)" in body
     assert body.index("ensure_parent_dirs(") < body.index("os.O_EXCL")
+
+
+# ═══════ SEGMENT 0 CLOSEOUT (ran 2026-09-18: 148/148, exit 0) ══════════════
+# 🔴 FIVE TESTS HERE ASSERTED THE PRE-RUN STATE -- blocks unspent, destinations
+# absent, no receipt anywhere. Segment 0 consumed exactly one block and one
+# destination, so those assertions are now false FOR SEGMENT 0 and still true for
+# segments 1-3. Each is inverted rather than deleted: the invariant did not
+# change, the state did.
+
+def test_SEGMENT_0S_BLOCK_IS_EXPOSED_AND_RETIRED_WHOLE():
+    """All 148 drawn. The count is READ from the records, not derived."""
+    import json
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    lo, hi = RUN.SEGMENT_SEED_BLOCKS[0]
+    st = [REF.seed_status(s) for s in range(lo, hi)]
+    assert all(x["accounted"] and x["exposed"] and x["retired"] for x in st)
+    recs = [json.loads(l) for l in
+            open(f"{RUN.segment_out_dir(0)}/03_results.jsonl", encoding="utf-8")]
+    seeds = sorted(r["seed"] for r in recs if r.get("record_type") == "task_result")
+    assert seeds == list(range(lo, hi)), "the records must name exactly the block"
+    assert len(seeds) == R.GAMES_PER_SEGMENT == 148
+
+
+def test_SEGMENTS_1_TO_3_REMAIN_ACCOUNTED_UNEXPOSED_AND_UNRETIRED():
+    """🔴 THE ISOLATION PROPERTY, NOW DEMONSTRATED BY A REAL CONSUMPTION rather
+    than a monkeypatch. Segment 0 spent its block; the other three are untouched."""
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    for k in (1, 2, 3):
+        lo, hi = RUN.SEGMENT_SEED_BLOCKS[k]
+        st = [REF.seed_status(s) for s in range(lo, hi)]
+        assert hi - lo == R.GAMES_PER_SEGMENT == 148, k
+        assert all(x["accounted"] for x in st), k
+        assert not any(x["exposed"] or x["retired"] or x["test_only"] for x in st), k
+        assert RUN.check_segment_seeds(k)["block"] == (lo, hi)
+
+
+def test_THE_BLOCKS_ARE_STILL_MUTUALLY_DISJOINT():
+    seen = set()
+    for k, (lo, hi) in enumerate(RUN.SEGMENT_SEED_BLOCKS):
+        rng = set(range(lo, hi))
+        assert not (rng & seen), k
+        seen |= rng
+    assert len(seen) == R.N_GAMES == 592
+
+
+def test_SEGMENT_0S_DESTINATION_HOLDS_A_COMPLETED_RUN():
+    """It was never created by the VOID; the completed run created it and filled
+    it. Both its first destination and this one are now spent."""
+    import json
+    from scripts.GPU.alphazero import h3_study_command as CMD
+    d = RUN.segment_out_dir(0)
+    assert d.endswith("2026-09-18-t1j-h3-study-segment0-retry")
+    for p in CMD.default_paths(0):
+        assert os.path.lexists(p), p
+    assert os.path.lexists(CMD.receipt_path(0))
+    rec = json.loads(pathlib.Path(CMD.receipt_path(0)).read_text(encoding="utf-8"))
+    assert rec["outcome"] == "COMPLETED" and rec["exit_code"] == 0
+    assert rec["gate_readback"] == "False" and rec["group_cleared"] is True
+    # the VOIDed first destination stays spent and was never written
+    assert ("docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment0"
+            in CMD.SPENT_OUT_DIRS)
+    assert not os.path.lexists(
+        "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment0")
+
+
+def test_SEGMENTS_1_TO_3_OUTPUT_PATHS_ARE_STILL_ABSENT():
+    """Segment 1 is the next launch, and nothing may be occupying its place."""
+    from scripts.GPU.alphazero import h3_study_command as CMD
+    for k in (1, 2, 3):
+        assert not os.path.lexists(RUN.segment_out_dir(k)), k
+        for p in CMD.default_paths(k):
+            assert not os.path.lexists(p), p
+        assert not os.path.lexists(CMD.receipt_path(k)), k
+        RUN.check_output_paths(*CMD.default_paths(k))     # accepts
+
+
+def test_AN_UNAUTHORIZED_INVOCATION_WRITES_NO_RECEIPT():
+    """🔑 Re-pointed at SEGMENT 1, whose destination is untouched. Segment 0's
+    now holds a real receipt from its completed run, so it can no longer show
+    that an unauthorized call writes nothing.
+
+    The reason this matters is unchanged: a receipt here would CREATE THE
+    DESTINATION and the next real launch would be refused for an occupied output
+    directory."""
+    from scripts.GPU.alphazero import h3_study_command as CMD
+    assert RUN.H3_STUDY_EXECUTION_AUTHORIZED is False
+    assert CMD.main(["--segment", "1"]) == CMD.EXIT_UNAUTHORIZED
+    assert not os.path.lexists(CMD.receipt_path(1))
+    assert not os.path.lexists(RUN.segment_out_dir(1))
+
+
+def test_REGISTERING_AND_RUNNING_SEGMENT_0_OPENED_NOTHING():
+    """The wrapper restored the gate; nothing else moved."""
+    from scripts.GPU.alphazero import gate_inventory as INV
+    assert INV.gate_count() == 10 and INV.open_gates() == []
+    assert RUN.H3_STUDY_EXECUTION_AUTHORIZED is False
+    assert GEN.H3_POPULATION_FREEZE_AUTHORIZED is False
+
+
+def test_THE_SEGMENT_0_REPORT_WITHHELD_ITS_VERDICT():
+    """🔴 74 PAIRS AGAINST A 148-PAIR FLOOR. A quarter of the study is not the
+    study, and the report said so without being asked."""
+    import json
+    rep = json.loads(pathlib.Path(f"{RUN.segment_out_dir(0)}/09_report.json")
+                     .read_text(encoding="utf-8"))
+    assert rep["pairs_scored"] == 74 and rep["games_scored"] == 148
+    assert rep["below_report_floor"] is True
+    assert rep["interpretation_withheld"] is True
+    assert rep["is_strength_verdict"] is False
+    assert rep["verdict"] == "NO VERDICT"
+    assert rep["primary"]["computable"] is True, (
+        "the figure is RECORDED -- withholding is not hiding")

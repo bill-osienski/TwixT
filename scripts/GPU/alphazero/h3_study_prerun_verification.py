@@ -349,8 +349,17 @@ def main() -> int:
         check(f"segment {_k}: {RULES.GAMES_PER_SEGMENT} seeds, all ACCOUNTED",
               _hi - _lo == RULES.GAMES_PER_SEGMENT
               and all(x["accounted"] for x in _st))
-        check(f"segment {_k}: LAUNCHABLE -- accounted and unspent",
-              _accepts(lambda k=_k: RUN.check_segment_seeds(k)))
+        #: 🔴 A COMPLETED SEGMENT IS NOT A FAILURE. Segment 0 ran on
+        #: 2026-09-18 (148/148, exit 0) and its block is exposed and retired, so
+        #: it MUST now refuse. Reporting that as a FAIL would make a finished
+        #: segment look like a broken one and would block every later launch --
+        #: the very coupling the isolation repair removed.
+        if _spent:
+            check(f"segment {_k}: COMPLETED -- spent, and REFUSES relaunch",
+                  _refuses(lambda k=_k: RUN.check_segment_seeds(k), "SPENT"))
+        else:
+            check(f"segment {_k}: LAUNCHABLE -- accounted and unspent",
+                  _accepts(lambda k=_k: RUN.check_segment_seeds(k)))
         _rng = set(range(_lo, _hi))
         check(f"segment {_k}'s block overlaps no other segment's",
               not (_rng & _all))
@@ -446,12 +455,26 @@ def main() -> int:
           RUN.segment_out_dir(0) not in CMD.SPENT_OUT_DIRS
           and RUN.segment_out_dir(0).endswith("segment0-retry"))
 
-    print("\n== the outputs must be UNUSED ==")
+    print("\n== the outputs: UNUSED for a pending segment, COMPLETE for a run one ==")
     for k in range(RULES.N_SEGMENTS):
         d = RUN.segment_out_dir(k)
         paths = CMD.default_paths(k)
-        check(f"segment {k}: all three absent",
-              not any(os.path.lexists(p) for p in paths), d)
+        _lo, _hi = RUN.SEGMENT_SEED_BLOCKS[k]
+        _ran = any(REF.seed_status(x)["exposed"] for x in range(_lo, _hi))
+        if _ran:
+            #: 🔴 A SEGMENT THAT RAN MUST HAVE ITS RECORD, and create-only must
+            #: now refuse the same destination.
+            check(f"segment {k}: COMPLETE -- all three present",
+                  all(os.path.lexists(p) for p in paths), d)
+            check(f"segment {k}: its destination REFUSES a second launch",
+                  _refuses(lambda p=paths: RUN.check_output_paths(*p), "exists"))
+            check(f"segment {k}: the parent receipt is there",
+                  os.path.lexists(CMD.receipt_path(k)))
+        else:
+            check(f"segment {k}: all three absent", 
+                  not any(os.path.lexists(p) for p in paths), d)
+            check(f"segment {k}: no receipt either",
+                  not os.path.lexists(CMD.receipt_path(k)))
         check(f"segment {k}: not inside a SPENT run's directory",
               not any(d == s or d.startswith(s.rstrip('/') + '/')
                       for s in CMD.SPENT_OUT_DIRS))

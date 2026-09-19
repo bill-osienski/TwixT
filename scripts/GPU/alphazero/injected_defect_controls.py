@@ -90,6 +90,31 @@ T_GATES = "tests/test_gate_inventory.py"
 
 # (label, file, anchor, replacement, test node)
 DEFECTS = [
+    # ═════════ SEGMENT 0 CLOSEOUT (ran 2026-09-18) ═════════════════════════
+    # 🔴 A SPENT SEGMENT MUST REFUSE RELAUNCH, and must not take the others with
+    # it. Before segment 0 ran these could only be driven by monkeypatch; now a
+    # real consumption exercises them.
+    ("a SPENT segment may be relaunched",
+     H3SRUN, '''    bad = [(x, st) for x, st in spent
+           if st["exposed"] or st["retired"] or st["test_only"]]''',
+     "    bad = []",
+     f"{T_H3SRUN}::test_SEGMENT_0_CANNOT_BE_RELAUNCHED"),
+    ("the spent-seed check ignores EXPOSED and looks only at retired",
+     H3SRUN, '''           if st["exposed"] or st["retired"] or st["test_only"]]''',
+     '''           if st["test_only"]]''',
+     f"{T_H3POP}::test_SEGMENT_0S_BLOCK_IS_EXPOSED_AND_RETIRED_WHOLE"),
+    ("segment 1's block is pointed at segment 0's SPENT one",
+     H3SRUN, "    (202_626_148, 202_626_296),", "    (202_628_000, 202_628_148),",
+     f"{T_H3POP}::test_SEGMENTS_1_TO_3_REMAIN_ACCOUNTED_UNEXPOSED_AND_UNRETIRED"),
+    ("segment 1 writes into segment 0's occupied destination",
+     H3SRUN, '        return f"{OUT_ROOT}/2026-09-18-t1j-h3-study-segment0-retry"',
+     '        pass\n    if segment in (0, 1):\n        return f"{OUT_ROOT}/2026-09-18-t1j-h3-study-segment0-retry"',
+     f"{T_H3POP}::test_SEGMENTS_1_TO_3_OUTPUT_PATHS_ARE_STILL_ABSENT"),
+    ("a partial segment is reported as a strength verdict",
+     H3SA, "    below_floor = len(scored) < R.REPORT_FLOOR_PAIRS",
+     "    below_floor = False",
+     f"{T_H3POP}::test_THE_SEGMENT_0_REPORT_WITHHELD_ITS_VERDICT"),
+
     # ═════════ THE SEGMENT-ISOLATION REPAIR (2026-09-18) ═══════════════════
     # 🔴 MISSING PARENT DIRECTORIES -- the defect that VOIDed segment 0 in one
     # second, spending an authorization and retiring a seed quarter for nothing.
@@ -172,7 +197,7 @@ DEFECTS = [
     ("segment 0's retry writes into its SPENT destination",
      H3SRUN, '        return f"{OUT_ROOT}/2026-09-18-t1j-h3-study-segment0-retry"',
      '        return f"{OUT_ROOT}/2026-09-15-t1j-h3-study-segment0"',
-     f"{T_H3POP}::test_SEGMENT_0S_FIRST_DESTINATION_IS_SPENT_AND_THE_RETRY_IS_FRESH"),
+     f"{T_H3POP}::test_SEGMENT_0S_DESTINATION_HOLDS_A_COMPLETED_RUN"),
 
     # ═════════ THE MATCH SEED BLOCK, registered 2026-09-18 ═════════════════
     ("the block is registered as EXPOSED as well as accounted",
