@@ -3751,7 +3751,7 @@ EXPECTED_REASONS = {
         'AssertionError: the study is over if nothing is left to launch',
     # ── segment 1 closeout (2026-09-19). OBSERVED, never guessed.
     'the spent/unspent partition stops reading the registry':
-        'AssertionError: []',
+        "AssertionError: the registry's spent set is not the one recorded here",
     # ── the harness's own normaliser (2026-09-19). OBSERVED, never guessed.
     'a MEASURED duration is left in the reason it is compared against':
         'AssertionError: load must not change the reason',
