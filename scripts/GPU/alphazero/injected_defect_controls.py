@@ -3675,6 +3675,18 @@ DEFECTS = [
 # DERIVED from the requirement and its assertion and then verified against a run,
 # which is why each names a count or a sentence rather than a first line.
 EXPECTED_REASONS = {
+    # ── segment 0 closeout (2026-09-18/19). OBSERVED, never guessed.
+    'a SPENT segment may be relaunched':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_runner.H3StudyRunError'>",
+    'the spent-seed check ignores EXPOSED and looks only at retired':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_runner.H3StudyRunError'>",
+    "segment 1's block is pointed at segment 0's SPENT one":
+        'AssertionError: 1',
+    "segment 1 writes into segment 0's occupied destination":
+        'AssertionError: 1',
+    'a partial segment is reported as a strength verdict':
+        'AssertionError: 74 pairs must be below the 148-pair floor',
+
     'the SEGMENT command writes no launch receipt at all':
         'AssertionError: no receipt on a pre-spawn refusal',
     'a SEGMENT refusal before spawning leaves no receipt':
