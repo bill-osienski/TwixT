@@ -149,12 +149,31 @@ DEFECTS = [
      H3SRUN, '''           if st["exposed"] or st["retired"] or st["test_only"]]''',
      '''           if st["test_only"]]''',
      f"{T_H3SRUN}::test_A_SPENT_SEGMENT_CANNOT_BE_RELAUNCHED"),
-    ("segment 1's block is pointed at segment 0's SPENT one",
-     H3SRUN, "    (202_626_148, 202_626_296),", "    (202_628_000, 202_628_148),",
+    #: 🔴 SEGMENT-INDEPENDENT. This used to point SEGMENT 1's block at segment
+    #: 0's spent one. Segment 1 then ran, was spent anyway, and the injection
+    #: stopped changing anything -- NOT CAUGHT while the test was fine. Pointing
+    #: EVERY block at a spent one cannot go stale as segments are consumed.
+    ("every segment's block is pointed at a SPENT one", H3SRUN,
+     "SEGMENT_SEED_BLOCKS: tuple = (\n"
+     "    (202_628_000, 202_628_148),\n"
+     "    (202_626_148, 202_626_296),\n"
+     "    (202_626_296, 202_626_444),\n"
+     "    (202_626_444, 202_626_592),\n"
+     ")",
+     "SEGMENT_SEED_BLOCKS: tuple = (\n"
+     "    (202_628_000, 202_628_148),\n"
+     "    (202_628_000, 202_628_148),\n"
+     "    (202_628_000, 202_628_148),\n"
+     "    (202_628_000, 202_628_148),\n"
+     ")",
      f"{T_H3POP}::test_UNSPENT_SEGMENTS_REMAIN_ACCOUNTED_UNEXPOSED_AND_UNRETIRED"),
-    ("segment 1 writes into segment 0's occupied destination",
-     H3SRUN, '        return f"{OUT_ROOT}/2026-09-18-t1j-h3-study-segment0-retry"',
-     '        pass\n    if segment in (0, 1):\n        return f"{OUT_ROOT}/2026-09-18-t1j-h3-study-segment0-retry"',
+    #: 🔴 SEGMENT-INDEPENDENT, for the same reason. It used to alias SEGMENT 1
+    #: onto segment 0's occupied directory; once segment 1 had its own record the
+    #: injection changed nothing. Aliasing the WHOLE fallback occupies every
+    #: segment's destination however many have run.
+    ("every segment writes into segment 0's occupied destination", H3SRUN,
+     '    return f"{OUT_ROOT}/2026-09-15-t1j-h3-study-segment{segment}"',
+     '    return f"{OUT_ROOT}/2026-09-18-t1j-h3-study-segment0-retry"',
      f"{T_H3POP}::test_UNSPENT_SEGMENTS_OUTPUT_PATHS_ARE_STILL_ABSENT"),
     ("a partial segment is reported as a strength verdict",
      H3SA, "    below_floor = len(scored) < R.REPORT_FLOOR_PAIRS",
@@ -3735,8 +3754,6 @@ EXPECTED_REASONS = {
     # ── the preflight epilogue (2026-09-19). OBSERVED, never guessed.
     'the epilogue is hardcoded instead of branching on readiness':
         "AssertionError: assert 'NOT READY TO RUN' not in '⚠ SCOPE. Th..., by design.'",
-    'readiness stops reading the registry and calls nothing spent':
-        'assert [] == [0]',
     'readiness asserts the pin instead of reading it':
         'assert True is False',
     # ── segment 0 closeout (2026-09-18/19). OBSERVED, never guessed.
@@ -3744,10 +3761,6 @@ EXPECTED_REASONS = {
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_runner.H3StudyRunError'>",
     'the spent-seed check ignores EXPOSED and looks only at retired':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_runner.H3StudyRunError'>",
-    "segment 1's block is pointed at segment 0's SPENT one":
-        'AssertionError: 1',
-    "segment 1 writes into segment 0's occupied destination":
-        'AssertionError: 1',
     'a partial segment is reported as a strength verdict':
         'AssertionError: 74 pairs must be below the 148-pair floor',
 
@@ -3789,8 +3802,6 @@ EXPECTED_REASONS = {
 
     # ── the 592-seed match block (2026-09-18). OBSERVED, never guessed.
     'the block is registered as EXPOSED as well as accounted':
-        'assert not True',
-    'the block is registered as RETIRED as well as accounted':
         'assert not True',
     'the full-schedule pin is not checked at all':
         "AssertionError: assert 'check_schedule_digest(tasks)' in 'def run_segment(*, segment: int, results_path: str, trace_path: str,\\n                report_path: str) -> Dict[str, ...cfg),\\n        want_digest=SEGMENT_DIGESTS[segment],\\n        deadline_s=RULES.SEGMENT_DEADLINE_S, _deadline=deadline)'",

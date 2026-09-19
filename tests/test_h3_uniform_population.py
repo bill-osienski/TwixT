@@ -1201,6 +1201,12 @@ def test_THE_UNSEEDED_SCHEDULE_HAS_A_DIFFERENT_DIGEST():
 SEG0_QUARTER = (202_626_000, 202_626_148)
 
 
+#: 🔴 THE ONE PLACE THE CONCRETE ANSWER LIVES. A segment run edits these two
+#: lines and nothing else; every test DERIVES the rest.
+EXPECTED_SPENT = [0, 1]
+EXPECTED_UNSPENT = [2, 3]
+
+
 def segment_partition():
     """Which segments are SPENT and which are still LAUNCHABLE, **DERIVED from
     the registry** rather than listed.
@@ -1499,10 +1505,13 @@ def test_UNSPENT_SEGMENTS_OUTPUT_PATHS_ARE_STILL_ABSENT():
     spent, unspent = segment_partition()
     assert spent and unspent
     for k in unspent:
-        assert not os.path.lexists(RUN.segment_out_dir(k)), k
+        assert not os.path.lexists(RUN.segment_out_dir(k)), (
+            "an unspent segment's destination must not exist")
         for q in CMD.default_paths(k):
-            assert not os.path.lexists(q), q
-        assert not os.path.lexists(CMD.receipt_path(k)), k
+            assert not os.path.lexists(q), (
+                "an unspent segment's output paths must not exist")
+        assert not os.path.lexists(CMD.receipt_path(k)), (
+            "an unspent segment must have no receipt")
         RUN.check_output_paths(*CMD.default_paths(k))     # accepts
     for k in spent:
         assert os.path.lexists(CMD.receipt_path(k)), k
@@ -1537,11 +1546,13 @@ def test_WHERE_THE_STUDY_STANDS():
     inverting.
 
     As of segment 1's closeout (2026-09-19): segments 0 and 1 have run and are
-    spent; segments 2 and 3 have not.
+    spent; segments 2 and 3 have not. EDIT THE TWO CONSTANTS, NOT THE MESSAGES --
+    a control's recorded reason is the message, and a message carrying a value
+    drifts the moment that value moves.
     """
     spent, unspent = segment_partition()
-    assert spent == [0, 1], spent
-    assert unspent == [2, 3], unspent
+    assert spent == EXPECTED_SPENT, "the registry's spent set is not the one recorded here"
+    assert unspent == EXPECTED_UNSPENT, "the registry's unspent set is not the one recorded here"
     assert R.N_SEGMENTS == 4
     # 148 pairs are now recorded, which is the REPORT FLOOR -- and not a licence
     # to report: see test_REACHING_THE_FLOOR_DOES_NOT_PERMIT_A_VERDICT.

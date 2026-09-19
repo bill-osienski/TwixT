@@ -809,8 +809,10 @@ def test_THE_PREFLIGHT_EPILOGUE_IS_DERIVED_FROM_LIVE_STATE():
         st = [REF.seed_status(s) for s in range(lo, hi)]
         if any(x["exposed"] or x["retired"] or x["test_only"] for x in st):
             spent.append(k)
-    assert r["completed"] == spent
-    assert r["launchable"] == [k for k in range(R.N_SEGMENTS) if k not in spent]
+    assert r["completed"] == spent, (
+        "readiness must report the registry's spent segments")
+    assert r["launchable"] == [k for k in range(R.N_SEGMENTS) if k not in spent], (
+        "readiness must report every segment the registry has not spent")
     assert r["completed"] and r["launchable"], (
         "as of the segment 0 closeout: segment 0 done, 1-3 still to run")
     # and the pin is READ, not assumed: with it unset the field must follow.
