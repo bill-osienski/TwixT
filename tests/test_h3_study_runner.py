@@ -654,10 +654,23 @@ def test_THE_RETIRED_OVERLAP_CHECK_IS_ITS_OWN_GUARD(monkeypatch):
     overlaps nothing.
     """
     # (a) overlaps the retired range, seeds NOT retired in the registry
+    #: 🔴 AND THE ISOLATION MUST BE RE-ESTABLISHED, NOT ASSUMED. This named
+    #: segment 0's block as a literal. Segment 0 then RAN, that block became
+    #: exposed+retired, and disabling the overlap guard let the STATUS guard fire
+    #: instead -- reintroducing the very confound above and drifting the control
+    #: to INDETERMINATE. So: pick an UNSPENT block, and assert it is unspent here,
+    #: so a later segment's run fails this loudly rather than quietly re-merging
+    #: the two guards.
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    unspent = [k for k, (lo, hi) in enumerate(RUN.SEGMENT_SEED_BLOCKS)
+               if not any(REF.seed_status(x)["exposed"] or REF.seed_status(x)["retired"]
+                          or REF.seed_status(x)["test_only"] for x in range(lo, hi))]
+    assert unspent, "(a) needs a block the STATUS guard would let through"
+    k = unspent[0]
     monkeypatch.setattr(RUN, "RETIRED_SEGMENT_BLOCKS",
-                        ((202_628_000, 202_628_148),))       # segment 0's LIVE block
+                        (RUN.SEGMENT_SEED_BLOCKS[k],))
     with pytest.raises(RUN.H3StudyRunError, match="may never be revived"):
-        RUN.check_segment_seeds(0)
+        RUN.check_segment_seeds(k)
 
     # (b) registry-spent, overlapping no declared retired range
     monkeypatch.setattr(RUN, "RETIRED_SEGMENT_BLOCKS", ())
