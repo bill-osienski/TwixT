@@ -3693,6 +3693,13 @@ DEFECTS = [
 # DERIVED from the requirement and its assertion and then verified against a run,
 # which is why each names a count or a sentence rather than a first line.
 EXPECTED_REASONS = {
+    # ── the preflight epilogue (2026-09-19). OBSERVED, never guessed.
+    'the epilogue is hardcoded instead of branching on readiness':
+        "AssertionError: assert 'NOT READY TO RUN' not in '⚠ SCOPE. Th..., by design.'",
+    'readiness stops reading the registry and calls nothing spent':
+        'assert [] == [0]',
+    'readiness asserts the pin instead of reading it':
+        'assert True is False',
     # ── segment 0 closeout (2026-09-18/19). OBSERVED, never guessed.
     'a SPENT segment may be relaunched':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_study_runner.H3StudyRunError'>",
