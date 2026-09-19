@@ -624,6 +624,18 @@ EXPOSED_SEED_INTERVALS = (
                                      # Segments 1-3 keep [202626148, 202626592),
                                      # untouched -- which is the point of the
                                      # 2026-09-18 isolation repair.
+    (202626148, 202626296),          # 🔴 H3 SEGMENT 1 -- RAN AND COMPLETED
+                                     # 2026-09-19. 148/148 games, wrapper exit 0,
+                                     # verdict OK, 1.86 h of a 3.00 h cap. EVERY
+                                     # one of the 148 seeds was DRAWN, read from
+                                     # the records themselves (each task_result
+                                     # carries its own seed, 148 distinct across
+                                     # [202626148, 202626295]), not derived from
+                                     # the plan.
+                                     #
+                                     # RETIRED WHOLE under the one-shot rule.
+                                     # Segments 2-3 keep [202626296, 202626592),
+                                     # untouched.
 )
 
 #: Seeds RESERVED PERMANENTLY FOR TESTS. Unit tests must draw from something, and
@@ -819,6 +831,18 @@ RETIRED_SEED_INTERVALS = (
                                      # Segments 1-3 keep [202626148, 202626592),
                                      # untouched -- which is the point of the
                                      # 2026-09-18 isolation repair.
+    (202626148, 202626296),          # 🔴 H3 SEGMENT 1 -- RAN AND COMPLETED
+                                     # 2026-09-19. 148/148 games, wrapper exit 0,
+                                     # verdict OK, 1.86 h of a 3.00 h cap. EVERY
+                                     # one of the 148 seeds was DRAWN, read from
+                                     # the records themselves (each task_result
+                                     # carries its own seed, 148 distinct across
+                                     # [202626148, 202626295]), not derived from
+                                     # the plan.
+                                     #
+                                     # RETIRED WHOLE under the one-shot rule.
+                                     # Segments 2-3 keep [202626296, 202626592),
+                                     # untouched.
 )
 
 
