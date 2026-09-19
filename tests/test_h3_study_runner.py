@@ -813,3 +813,32 @@ def test_THE_EPILOGUE_TEXT_SAYS_WHAT_THE_READINESS_SAYS():
     assert "segment 1" in ready and "completed: 0" in ready
     assert "authorization" in ready, (
         "readiness is not authorization -- the epilogue must still say so")
+
+
+def test_THE_RUNNERS_DOCSTRING_MAY_NOT_NAME_A_BARRIER_THAT_IS_GONE():
+    """🔴 A DOCSTRING THAT NAMES A DEAD CONSTANT DESCRIBES A BARRIER NOBODY HAS.
+
+    The module header listed `STUDY_SEED_BLOCK is None and no block is
+    registered` as barrier 2. The segment-isolation repair deleted that constant
+    and registered four blocks; the header kept claiming the study was held back
+    by something that no longer existed and was no longer true.
+
+    So every ALL-CAPS name the header cites must resolve on the module."""
+    import re
+    doc = RUN.__doc__ or ""
+    cited = set(re.findall(r"`([A-Z][A-Z0-9_]{3,})`", doc))
+    missing = sorted(n for n in cited if not hasattr(RUN, n))
+    assert not missing, f"the header names constants the module does not have: {missing}"
+
+
+def test_THE_CLI_HELP_MAY_NOT_ASSERT_STATE_THE_TREE_CONTRADICTS():
+    """`--help` printed "it has no seed block, and its opening set has not been
+    generated" long after four blocks were registered and the population was
+    frozen and pinned. Help text is a claim a reader acts on. A perishable fact
+    does not belong in it -- the description states the RULE, which cannot rot.
+    """
+    from scripts.GPU.alphazero import h3_study_command as CMD
+    desc = CMD._parser().description or ""
+    for dead in ("has no seed block", "has not been generated", "NOT AUTHORIZED"):
+        assert dead not in desc, (
+            f"--help still asserts {dead!r}, which this tree contradicts")

@@ -1129,21 +1129,55 @@ a real consumption rather than a monkeypatch.
 | | |
 |---|---|
 | `OPENING_SET_DIGEST` | ✅ **pinned** |
-| `STUDY_SEED_BLOCK` | ✅ **`[202626000, 202626592)`, ACCOUNTED** |
+| the seed blocks | ✅ **four, one per segment** — `[202628000, 202628148)` (segment 0, now spent) and `[202626148, 202626296)`, `[202626296, 202626444)`, `[202626444, 202626592)`. `STUDY_SEED_BLOCK` no longer exists; the single interval was what coupled the segments. `[202626000, 202626148)` is RETIRED (the VOID). |
 | the seeded schedule and per-segment pins | ✅ **recorded** |
 | segment 0 | ✅ **RAN, COMPLETED** — block spent, outputs present |
 | segments 1–3 | **pending** — blocks accounted and unspent, outputs absent |
 | all ten gates, the freeze barrier included | **False** |
 
 **The only preparation left is the study gate itself**, which is a separate
-authorization. Preflight reports **zero failures and zero pending items**.
+authorization per segment. Preflight reports **zero failures and zero pending
+items**, and its closing summary is now COMPUTED rather than asserted (§9.7).
 
-🔑 **AND FREEZING IS TWO STEPS, NOT ONE.** `h3_freeze_command` writes the
-artifact; recording its digest as `OPENING_SET_DIGEST` is a **separate reviewed
-edit**, made after the artifact has been inspected. Freezing produces the
-population; pinning is what makes the study play it. Both are unauthorized.
+🔑 **FREEZING WAS TWO STEPS, NOT ONE, AND BOTH ARE DONE.** `h3_freeze_command`
+wrote the artifact on 2026-09-18; recording its digest as `OPENING_SET_DIGEST`
+was a separate reviewed edit made after the artifact was inspected. Freezing
+produced the population; pinning is what let the study play it.
 
-**Official opening generation, seed registration, study execution and the push
-all remain separate and UNAUTHORIZED.** Building the population in memory is
-free and the suite does it on every run; writing the official artifact and
-fixing its digest is not.
+**Segments 1-3 and the push remain separate and UNAUTHORIZED.** Segment 0's
+favourable direction is not a reason to run segment 1 and not a reason to stop
+(§5.5); the plan is.
+
+### 9.7 What the closeout found (2026-09-19)
+
+Running the harness, suite and preflight after segment 0 turned up **four claims
+that had gone stale** — none of them a computation, all of them text a reader
+would act on. They are the same defect in four costumes: **a fact was written
+down once and never recomputed.**
+
+| where | what it still said | why it was false |
+|---|---|---|
+| preflight epilogue | "the population is not frozen and pinned, and no seed block is reserved… **NOT READY TO RUN**" | printed directly beneath 132 passing checks that each said otherwise |
+| `h3_study_runner` header | barrier 2 is "`STUDY_SEED_BLOCK` is None" | that constant was deleted by the isolation repair |
+| `h3_study_runner` header | "**NEVER EXERCISED END TO END**" | segment 0 ran end to end on 2026-09-18 |
+| `h3_study_command --help` | "it has no seed block, and its opening set has not been generated" | four blocks registered, population frozen and pinned |
+
+Each is now either **derived** (`readiness()` recomputes from the registry and
+the pin) or **stated as a rule that cannot rot** (the CLI describes the
+authorization model, not today's state), and each is bound by a test with a
+negative control.
+
+🔴 **AND ONE CONTROL HAD DRIFTED.** `the RETIRED block may be relaunched` scored
+**INDETERMINATE**: `test_THE_RETIRED_OVERLAP_CHECK_IS_ITS_OWN_GUARD` isolates the
+overlap guard from the status guard by naming a block whose seeds are *not*
+registry-spent — and it named segment 0's block as a literal. Segment 0 then ran
+on it. Disabling the overlap guard no longer produced "may never be revived"
+because the status guard fired first, so the control stopped binding its claim.
+The block is now **chosen** as the first unspent segment block and **asserted**
+unspent, so segment 1's eventual run fails that test loudly instead of quietly
+re-merging the two guards.
+
+⚠ **THE RECORD, CORRECTED.** The closeout commits `bcd17ff..eab252b` reported
+the inverted tests and their recorded reasons as complete. **They had not been
+verified by a finished harness pass** — the run was still in flight when they
+were written. This section is what the finished pass found.

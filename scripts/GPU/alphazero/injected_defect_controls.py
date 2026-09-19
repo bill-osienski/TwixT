@@ -91,6 +91,18 @@ H3PRE = "scripts/GPU/alphazero/h3_study_prerun_verification.py"
 
 # (label, file, anchor, replacement, test node)
 DEFECTS = [
+    # ═════════ PROSE THAT WENT STALE (2026-09-19) ══════════════════════════
+    # 🔴 A HEADER AND A --help LINE ARE CLAIMS. Both survived the repairs that
+    # falsified them: the runner's barrier 2 named a deleted constant, and the
+    # CLI told every reader the study had no seed block and no population.
+    ("the runner's header names a barrier constant that is gone", H3SRUN,
+     "  2. The seeds are checked PER SEGMENT.",
+     "  2. `STUDY_SEED_BLOCK` is None, so nothing is registered.",
+     f"{T_H3SRUN}::test_THE_RUNNERS_DOCSTRING_MAY_NOT_NAME_A_BARRIER_THAT_IS_GONE"),
+    ("--help asserts the population was never generated", H3SCMD,
+     '        description="THE H3 FULL STUDY, one segment. Runs only with the ',
+     '        description="THE H3 FULL STUDY, one segment. It has no seed block, and its opening set has not been generated. Runs only with the ',
+     f"{T_H3SRUN}::test_THE_CLI_HELP_MAY_NOT_ASSERT_STATE_THE_TREE_CONTRADICTS"),
     # ═════════ THE PREFLIGHT'S OWN EPILOGUE (2026-09-19) ═══════════════════
     # 🔴 ITS CLOSING LINE WAS PROSE. It kept printing "the population is not
     # frozen and pinned, and no seed block is reserved ... NOT READY TO RUN"

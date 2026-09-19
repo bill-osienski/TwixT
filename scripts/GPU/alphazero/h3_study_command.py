@@ -124,7 +124,7 @@ def _parser():
     import argparse
     ap = argparse.ArgumentParser(
         prog="h3_study_command",
-        description="THE H3 FULL STUDY, one segment. NOT AUTHORIZED, it has no seed block, and its opening set has not been generated.")
+        description="THE H3 FULL STUDY, one segment. Runs only with the execution gate OPEN; each segment is a separate authorization, and a block that has been spent refuses relaunch.")
     ap.add_argument("--segment", type=int, required=True,
                     help="which of the four frozen segments to run")
     ap.add_argument("--results", default=None)

@@ -2,9 +2,10 @@
 
 THREE BARRIERS, and none of them is the other's fault:
   1. `H3_STUDY_EXECUTION_AUTHORIZED` is False. One reviewed edit opens it.
-  2. `STUDY_SEED_BLOCK` is None and no block is registered, so
-     `check_seed_registration` refuses unconditionally. A gate can be opened by
-     one edit; a seed block cannot be conjured by one.
+  2. The seeds are checked PER SEGMENT. `check_segment_seeds(k)` refuses if
+     segment k's block is unregistered, overlaps a RETIRED block, or is already
+     exposed/retired/test-only. A gate can be opened by one edit; an unspent
+     registered block cannot be conjured by one.
   3. The production seam re-checks the gate and hits a containment boundary that
      refuses inside a test process.
 
@@ -14,7 +15,9 @@ Playing the study IS a run and keeps this module's gate; freezing the population
 has its own separate barrier. One switch for all three would let a population
 approval authorize a match.
 
-⚠ NEVER EXERCISED END TO END. Only construction, wiring and refusals are tested.
+⚠ EXERCISED END TO END ONCE: segment 0 ran 2026-09-18 (148/148, exit 0) on
+block [202628000, 202628148), which is now spent and refuses relaunch. Segments
+1-3 have never run; for them only construction, wiring and refusals are tested.
 """
 from __future__ import annotations
 
