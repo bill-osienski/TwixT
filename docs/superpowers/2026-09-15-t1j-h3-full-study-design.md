@@ -1092,14 +1092,47 @@ comparison a second, independent side.
 **Registration authorized nothing.** ACCOUNTED is not EXPOSED and not RETIRED; a
 reservation is not a draw. All ten gates and the freeze barrier stay `False`.
 
-### 9.5 What is still not done
+### 9.5 ✅ SEGMENT 0 RAN AND COMPLETED (2026-09-18) — 1 of 4
+
+| | |
+|---|---|
+| wrapper exit | **0**, 148/148 games, 74/74 pairs |
+| window | `20:29:49Z → 22:36:52Z`, **2.12 h** of a 3.00 h cap |
+| terminal record | `verdict: "OK"` |
+| gate readback | **`False`**, restored by the wrapper; `group_cleared: true` |
+| artifacts | results, trace, report — and the parent receipt |
+| seeds | `[202628000, 202628148)` **EXPOSED 148 / RETIRED WHOLE** |
+
+**Descriptive only:** 140 win / 8 cap; **148 distinct transcripts from 148
+games**; 74 distinct openings; all degeneracy gates CLEAR. Timing mean **51.5 s**
+against the pilot's 41.22 s — the deadline margin was thinner than §5.3 assumed
+but never threatened.
+
+🔴 **THE REPORT ISSUED NO VERDICT, AND THAT IS THE DESIGN WORKING.** 74 pairs
+against the 148-pair report floor: `below_report_floor: true`,
+`interpretation_withheld: true`, `is_strength_verdict: false`,
+`verdict: "NO VERDICT"`. The primary figure is **recorded and withheld** — mean
+0.7432, n=74, interval [0.585, 0.901], favouring the incumbent.
+
+⚠ **AND THAT DIRECTION IS NOW SEEN, WHICH §5.5 ANTICIPATED.** A favourable first
+segment is exactly when optional stopping becomes tempting. The rule is
+unchanged: **the preregistered study continues**. Segment 0's outcomes may not
+inform whether segments 1–3 run, and they have not — segment 1 is next because
+the plan says so, not because segment 0 looked good.
+
+**Segment 0 consumed one block and one destination. Segments 1–3 are untouched**
+— accounted, unexposed, unretired — which is the isolation repair demonstrated by
+a real consumption rather than a monkeypatch.
+
+### 9.6 What is still not done
 
 | | |
 |---|---|
 | `OPENING_SET_DIGEST` | ✅ **pinned** |
 | `STUDY_SEED_BLOCK` | ✅ **`[202626000, 202626592)`, ACCOUNTED** |
 | the seeded schedule and per-segment pins | ✅ **recorded** |
-| the four segment output directories | **absent** |
+| segment 0 | ✅ **RAN, COMPLETED** — block spent, outputs present |
+| segments 1–3 | **pending** — blocks accounted and unspent, outputs absent |
 | all ten gates, the freeze barrier included | **False** |
 
 **The only preparation left is the study gate itself**, which is a separate
