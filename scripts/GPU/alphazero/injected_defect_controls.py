@@ -3705,6 +3705,11 @@ DEFECTS = [
 # DERIVED from the requirement and its assertion and then verified against a run,
 # which is why each names a count or a sentence rather than a first line.
 EXPECTED_REASONS = {
+    # ── the stale prose (2026-09-19). OBSERVED, never guessed.
+    "the runner's header names a barrier constant that is gone":
+        "AssertionError: the header names constants the module does not have: ['STUDY_SEED_BLOCK']",
+    '--help asserts the population was never generated':
+        "AssertionError: --help still asserts 'has no seed block', which this tree contradicts",
     # ── the preflight epilogue (2026-09-19). OBSERVED, never guessed.
     'the epilogue is hardcoded instead of branching on readiness':
         "AssertionError: assert 'NOT READY TO RUN' not in '⚠ SCOPE. Th..., by design.'",
