@@ -670,3 +670,27 @@ def test_NO_DECLARED_REASON_NAMES_A_SPENT_GENERATION_RANGE():
     assert stale == [], stale
     assert about_retirement, (
         "the exemption matched nothing -- it would pass vacuously")
+
+
+def test_stable_NORMALISES_A_MEASURED_DURATION_BUT_NOT_A_CONFIGURED_ONE():
+    """🔴 A RECORDED REASON THAT EMBEDS A MEASUREMENT CANNOT BIND.
+
+    `the deadline is not checked inside the candidate loop` froze its reason as
+    "the 0s runaway guard expired after 0.7s". Run the harness beside anything
+    else and the same defect reports 0.8s, so the control scores INDETERMINATE
+    while doing exactly what it was written to do -- a reason that drifts with
+    CPU load is not evidence about the code.
+
+    Only the MEASUREMENT is normalised. A CONFIGURED duration stays literal,
+    because changing a declared timeout must remain visible as drift.
+    """
+    from scripts.GPU.alphazero import run_injected_defect_controls as DRV
+
+    slow = "the 0s runaway guard expired after 0.8s at opening 296, attempt 0"
+    fast = "the 0s runaway guard expired after 0.7s at opening 296, attempt 0"
+    assert DRV.stable(slow) == DRV.stable(fast), "load must not change the reason"
+    assert "0.8s" not in DRV.stable(slow)
+    assert "0s runaway guard" in DRV.stable(slow), "the CONFIGURED 0s survives"
+
+    cfg = "whole-run deadline exceeded (100.0s > 1.0s). The run is VOID"
+    assert DRV.stable(cfg) == cfg, "a configured timeout must stay literal"

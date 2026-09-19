@@ -88,9 +88,16 @@ T_H3POP = "tests/test_h3_uniform_population.py"
 T_H3OLD = "tests/test_h3_coproduced_retired.py"
 T_GATES = "tests/test_gate_inventory.py"
 H3PRE = "scripts/GPU/alphazero/h3_study_prerun_verification.py"
+DRV = "scripts/GPU/alphazero/run_injected_defect_controls.py"
+T_DRV = "tests/test_injected_defect_controls.py"
 
 # (label, file, anchor, replacement, test node)
 DEFECTS = [
+    # ═════════ THE HARNESS'S OWN REASONS MUST NOT DRIFT WITH LOAD ══════════
+    ("a MEASURED duration is left in the reason it is compared against", DRV,
+     '    (re.compile(r"(expired after )\\d+(?:\\.\\d+)?s"), r"\\1<elapsed>s"),',
+     '    (re.compile(r"(expired after )ZZZ_NEVER_MATCHES"), r"\\1<elapsed>s"),',
+     f"{T_DRV}::test_stable_NORMALISES_A_MEASURED_DURATION_BUT_NOT_A_CONFIGURED_ONE"),
     # ═════════ PROSE THAT WENT STALE (2026-09-19) ══════════════════════════
     # 🔴 A HEADER AND A --help LINE ARE CLAIMS. Both survived the repairs that
     # falsified them: the runner's barrier 2 named a deleted constant, and the

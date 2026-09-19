@@ -112,6 +112,13 @@ _VOLATILE = (
     # /var/folders prefix vary, so both are normalised.
     (re.compile(r"/var/folders/[^/]+/[^/]+/T/"), "/<tmp>/"),
     (re.compile(r"\btmp[0-9A-Za-z_]{6,}\b"), "tmp<x>"),
+    # 🔴 A MEASURED DURATION. `the deadline is not checked inside the candidate
+    # loop` froze "expired after 0.7s"; run the harness beside anything else and
+    # the same defect reports 0.8s, so the control went INDETERMINATE while doing
+    # exactly what it should. ONLY the measurement after "expired after" is
+    # normalised -- a CONFIGURED timeout elsewhere in the message stays literal,
+    # because changing a declared deadline must still show up as drift.
+    (re.compile(r"(expired after )\d+(?:\.\d+)?s"), r"\1<elapsed>s"),
 )
 
 
