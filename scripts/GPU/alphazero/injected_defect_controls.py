@@ -3740,6 +3740,15 @@ DEFECTS = [
 # DERIVED from the requirement and its assertion and then verified against a run,
 # which is why each names a count or a sentence rather than a first line.
 EXPECTED_REASONS = {
+    # ── segment 1 closeout, REPAIRED controls (2026-09-19). OBSERVED.
+    'readiness stops reading the registry and calls nothing spent':
+        "AssertionError: readiness must report the registry's spent segments",
+    "every segment's block is pointed at a SPENT one":
+        'AssertionError: both halves must be non-empty to mean anything',
+    "every segment writes into segment 0's occupied destination":
+        "AssertionError: an unspent segment's destination must not exist",
+    'the block is registered as RETIRED as well as accounted':
+        'AssertionError: the study is over if nothing is left to launch',
     # ── segment 1 closeout (2026-09-19). OBSERVED, never guessed.
     'the spent/unspent partition stops reading the registry':
         'AssertionError: []',
