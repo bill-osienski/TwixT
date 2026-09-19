@@ -3721,6 +3721,9 @@ DEFECTS = [
 # DERIVED from the requirement and its assertion and then verified against a run,
 # which is why each names a count or a sentence rather than a first line.
 EXPECTED_REASONS = {
+    # ── segment 1 closeout (2026-09-19). OBSERVED, never guessed.
+    'the spent/unspent partition stops reading the registry':
+        'AssertionError: []',
     # ── the harness's own normaliser (2026-09-19). OBSERVED, never guessed.
     'a MEASURED duration is left in the reason it is compared against':
         'AssertionError: load must not change the reason',
