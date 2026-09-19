@@ -621,12 +621,22 @@ def test_A_RETIRED_SEGMENT_DOES_NOT_BLOCK_A_LATER_ONE(monkeypatch):
     """🔴 THE COUPLING THIS REPAIR REMOVED. Segment 0's quarter was retired on
     its VOID and the whole study became unlaunchable -- segments 1-3 included,
     though their seeds were untouched."""
+    #: 🔴 THE LATER SEGMENTS ARE CHOSEN, NOT LISTED. This asserted 1, 2 and 3 all
+    #: still launch; segment 1 then ran and the test failed for a reason that had
+    #: nothing to do with the coupling it exists to guard.
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    later = [k for k, (lo, hi) in enumerate(RUN.SEGMENT_SEED_BLOCKS)
+             if k > 0 and not any(REF.seed_status(x)["exposed"]
+                                  or REF.seed_status(x)["retired"]
+                                  or REF.seed_status(x)["test_only"]
+                                  for x in range(lo, hi))]
+    assert later, "a later UNSPENT segment is needed to show it is not blocked"
     retired = RUN.RETIRED_SEGMENT_BLOCKS[0]
     monkeypatch.setattr(RUN, "SEGMENT_SEED_BLOCKS",
                         (retired,) + RUN.SEGMENT_SEED_BLOCKS[1:])
     with pytest.raises(RUN.H3StudyRunError, match="RETIRED"):
         RUN.check_segment_seeds(0)
-    for k in (1, 2, 3):
+    for k in later:
         assert RUN.check_segment_seeds(k)["segment"] == k
 
 
@@ -725,21 +735,29 @@ def test_run_segment_REFUSES_A_SEGMENT_WHOSE_SEEDS_ARE_SPENT(monkeypatch):
                         trace_path="/dev/null/t", report_path="/dev/null/p")
 
 
-def test_EVERY_SEGMENT_BLOCK_IS_REGISTERED_AND_ONLY_SEGMENT_0_IS_SPENT(monkeypatch):
-    """🔴 INVERTED AFTER SEGMENT 0 RAN (2026-09-18, 148/148, exit 0).
+def test_EVERY_SEGMENT_BLOCK_IS_REGISTERED_AND_ONLY_SPENT_ONES_REFUSE(monkeypatch):
+    """🔴 INVERTED AFTER SEGMENT 0 RAN, AND AGAIN AFTER SEGMENT 1 (2026-09-19).
 
     Registration is a PLANNING question and still holds for all four. Whether a
-    block is RUNNABLE is a LAUNCH question, and segment 0's answer changed: its
-    148 seeds are exposed and retired, so it refuses. Segments 1-3 are untouched
-    and still launch -- which is the whole point of the isolation repair, now
-    demonstrated by a real consumption rather than by a monkeypatch.
+    block is RUNNABLE is a LAUNCH question, and it changes as segments consume
+    their quarters. The answer is therefore READ from the registry, not typed --
+    the previous name asserted "ONLY SEGMENT 0 IS SPENT" and was false the moment
+    segment 1 finished.
     """
+    from scripts.GPU.alphazero import e4_screen_reference as REF
     assert len(RUN.SEGMENT_SEED_BLOCKS) == R.N_SEGMENTS == 4
     RUN.check_seed_registration()                 # all four still REGISTERED
 
-    with pytest.raises(RUN.H3StudyRunError, match="is SPENT"):
-        RUN.check_segment_seeds(0)
-    for k in (1, 2, 3):
+    spent, unspent = [], []
+    for k, (lo, hi) in enumerate(RUN.SEGMENT_SEED_BLOCKS):
+        st = [REF.seed_status(x) for x in range(lo, hi)]
+        (spent if any(x["exposed"] or x["retired"] or x["test_only"] for x in st)
+         else unspent).append(k)
+    assert spent and unspent, "both directions must be exercised"
+    for k in spent:
+        with pytest.raises(RUN.H3StudyRunError, match="is SPENT"):
+            RUN.check_segment_seeds(k)
+    for k in unspent:
         assert RUN.check_segment_seeds(k)["n"] == R.GAMES_PER_SEGMENT
 
     monkeypatch.setattr(RUN, "SEGMENT_SEED_BLOCKS", ())
@@ -747,21 +765,28 @@ def test_EVERY_SEGMENT_BLOCK_IS_REGISTERED_AND_ONLY_SEGMENT_0_IS_SPENT(monkeypat
         RUN.check_seed_registration()
 
 
-def test_SEGMENT_0_CANNOT_BE_RELAUNCHED():
-    """One-shot. Its block is spent and its destination is occupied; either alone
-    must stop a second launch."""
-    from scripts.GPU.alphazero import e4_screen_reference as REF
-    lo, hi = RUN.SEGMENT_SEED_BLOCKS[0]
-    st = [REF.seed_status(s) for s in range(lo, hi)]
-    assert all(x["exposed"] and x["retired"] for x in st)
-    with pytest.raises(RUN.H3StudyRunError, match="is SPENT"):
-        RUN.check_segment_seeds(0)
+def test_A_SPENT_SEGMENT_CANNOT_BE_RELAUNCHED():
+    """One-shot, for EVERY segment that has run. Its block is spent and its
+    destination is occupied; either alone must stop a second launch.
+
+    Generalised at segment 1's closeout: this named segment 0 only, so segment 1
+    gained a completed run and no test asserted it could not be run again."""
     import os
+    from scripts.GPU.alphazero import e4_screen_reference as REF
     from scripts.GPU.alphazero import h3_study_command as CMD
-    assert any(os.path.lexists(p) for p in CMD.default_paths(0)), (
-        "the destination holds the completed run's artifacts")
-    with pytest.raises(RUN.H3StudyRunError, match="already exists"):
-        RUN.check_output_paths(*CMD.default_paths(0))
+    ran = [k for k, (lo, hi) in enumerate(RUN.SEGMENT_SEED_BLOCKS)
+           if any(REF.seed_status(x)["exposed"] for x in range(lo, hi))]
+    assert ran == [0, 1], ran
+    for k in ran:
+        lo, hi = RUN.SEGMENT_SEED_BLOCKS[k]
+        st = [REF.seed_status(x) for x in range(lo, hi)]
+        assert all(x["exposed"] and x["retired"] for x in st), k
+        with pytest.raises(RUN.H3StudyRunError, match="is SPENT"):
+            RUN.check_segment_seeds(k)
+        assert any(os.path.lexists(p) for p in CMD.default_paths(k)), (
+            f"segment {k}'s destination holds the completed run's artifacts")
+        with pytest.raises(RUN.H3StudyRunError, match="already exists"):
+            RUN.check_output_paths(*CMD.default_paths(k))
 
 
 # ──────────────── the preflight's own epilogue must not lie ────────────────

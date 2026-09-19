@@ -385,9 +385,14 @@ def main() -> int:
         RUN.SEGMENT_SEED_BLOCKS = (RUN.RETIRED_SEGMENT_BLOCKS[0],) + _saved[1:]
         check("relaunching the RETIRED block is REFUSED (negative control)",
               _refuses(lambda: RUN.check_segment_seeds(0), "RETIRED"))
-        check("…and segments 1-3 are STILL launchable while it is (the repair)",
-              all(_accepts(lambda k=k: RUN.check_segment_seeds(k))
-                  for k in (1, 2, 3)))
+        #: 🔴 THE UNSPENT ONES, CHOSEN NOT LISTED. This named 1, 2 and 3; segment
+        #: 1 then ran and the check failed for a reason that had nothing to do
+        #: with the coupling it exists to demonstrate.
+        _later = readiness()["launchable"]
+        check(f"…and the unspent segments {_later} are STILL launchable while "
+              f"it is (the repair)",
+              bool(_later) and all(_accepts(lambda k=k: RUN.check_segment_seeds(k))
+                                   for k in _later))
     finally:
         RUN.SEGMENT_SEED_BLOCKS = _saved
 

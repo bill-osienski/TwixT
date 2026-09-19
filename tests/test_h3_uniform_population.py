@@ -1199,7 +1199,30 @@ def test_THE_UNSEEDED_SCHEDULE_HAS_A_DIFFERENT_DIGEST():
 # That is no longer true, and the RIGHT response is to record what IS true, not
 # to rebuild the assertion around a block a quarter of which is spent.
 SEG0_QUARTER = (202_626_000, 202_626_148)
-REMAINING = (202_626_148, 202_626_592)
+
+
+def segment_partition():
+    """Which segments are SPENT and which are still LAUNCHABLE, **DERIVED from
+    the registry** rather than listed.
+
+    🔴 A LITERAL LIST HERE NEEDED EDITING AFTER EVERY SEGMENT, AND ONE WAS NOT
+    EDITED. `test_THE_RETIRED_OVERLAP_CHECK_IS_ITS_OWN_GUARD` named segment 0's
+    block as a literal; segment 0 ran on it, the block became registry-spent, and
+    the control that test backed silently stopped binding its claim. Segment 1
+    then falsified the name of four more tests on the day it ran.
+
+    The set that is spent is not a fact to re-type each time -- it is a fact to
+    read. `test_WHERE_THE_STUDY_STANDS` is the ONE place the concrete answer is
+    pinned, deliberately, so that it is a tripwire instead of six of them.
+    """
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    spent, unspent = [], []
+    for k, (lo, hi) in enumerate(RUN.SEGMENT_SEED_BLOCKS):
+        st = [REF.seed_status(x) for x in range(lo, hi)]
+        bucket = spent if any(x["exposed"] or x["retired"] or x["test_only"]
+                              for x in st) else unspent
+        bucket.append(k)
+    return spent, unspent
 
 
 def test_SEGMENT_0_QUARTER_IS_RETIRED_WHOLE_WITH_ZERO_EXPOSED():
@@ -1213,13 +1236,21 @@ def test_SEGMENT_0_QUARTER_IS_RETIRED_WHOLE_WITH_ZERO_EXPOSED():
     assert not any(x["exposed"] for x in st), "no seed was ever drawn"
 
 
-def test_SEGMENTS_1_TO_3_KEEP_THEIR_QUARTERS_UNSPENT():
-    """The point of segmenting: one segment's failure does not spend the others."""
+def test_UNSPENT_SEGMENTS_KEEP_THEIR_QUARTERS():
+    """The point of segmenting: one segment's run does not spend the others.
+
+    🔴 INVERTED AFTER SEGMENT 1 RAN (2026-09-19, 148/148, exit 0). It read the
+    literal range [202626148, 202626592) and called all 444 seeds unspent -- 148
+    of which segment 1 had just drawn."""
     from scripts.GPU.alphazero import e4_screen_reference as REF
-    st = [REF.seed_status(s) for s in range(*REMAINING)]
-    assert len(st) == 444
-    assert all(x["accounted"] for x in st)
-    assert not any(x["retired"] or x["exposed"] for x in st)
+    spent, unspent = segment_partition()
+    assert unspent, "the study is over if nothing is left to launch"
+    for k in unspent:
+        lo, hi = RUN.SEGMENT_SEED_BLOCKS[k]
+        st = [REF.seed_status(x) for x in range(lo, hi)]
+        assert len(st) == R.GAMES_PER_SEGMENT == 148, k
+        assert all(x["accounted"] for x in st), k
+        assert not any(x["retired"] or x["exposed"] or x["test_only"] for x in st), k
 
 
 
@@ -1411,17 +1442,24 @@ def test_SEGMENT_0S_BLOCK_IS_EXPOSED_AND_RETIRED_WHOLE():
     assert len(seeds) == R.GAMES_PER_SEGMENT == 148
 
 
-def test_SEGMENTS_1_TO_3_REMAIN_ACCOUNTED_UNEXPOSED_AND_UNRETIRED():
-    """🔴 THE ISOLATION PROPERTY, NOW DEMONSTRATED BY A REAL CONSUMPTION rather
-    than a monkeypatch. Segment 0 spent its block; the other three are untouched."""
+def test_UNSPENT_SEGMENTS_REMAIN_ACCOUNTED_UNEXPOSED_AND_UNRETIRED():
+    """🔴 THE ISOLATION PROPERTY, DEMONSTRATED BY TWO REAL CONSUMPTIONS rather
+    than a monkeypatch: segments 0 and 1 spent their blocks and the rest are
+    untouched, each still ACCOUNTED and each still passing its own launch check.
+    """
     from scripts.GPU.alphazero import e4_screen_reference as REF
-    for k in (1, 2, 3):
+    spent, unspent = segment_partition()
+    assert spent and unspent, "both halves must be non-empty to mean anything"
+    for k in unspent:
         lo, hi = RUN.SEGMENT_SEED_BLOCKS[k]
-        st = [REF.seed_status(s) for s in range(lo, hi)]
+        st = [REF.seed_status(x) for x in range(lo, hi)]
         assert hi - lo == R.GAMES_PER_SEGMENT == 148, k
         assert all(x["accounted"] for x in st), k
         assert not any(x["exposed"] or x["retired"] or x["test_only"] for x in st), k
         assert RUN.check_segment_seeds(k)["block"] == (lo, hi)
+    for k in spent:
+        with pytest.raises(RUN.H3StudyRunError, match="is SPENT"):
+            RUN.check_segment_seeds(k)
 
 
 def test_THE_BLOCKS_ARE_STILL_MUTUALLY_DISJOINT():
@@ -1453,30 +1491,82 @@ def test_SEGMENT_0S_DESTINATION_HOLDS_A_COMPLETED_RUN():
         "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment0")
 
 
-def test_SEGMENTS_1_TO_3_OUTPUT_PATHS_ARE_STILL_ABSENT():
-    """Segment 1 is the next launch, and nothing may be occupying its place."""
+def test_UNSPENT_SEGMENTS_OUTPUT_PATHS_ARE_STILL_ABSENT():
+    """Nothing may be occupying the place of a segment that has yet to run, and
+    a SPENT one's destination must refuse a second launch. Both directions, so
+    neither is a vacuous scan over an empty list."""
     from scripts.GPU.alphazero import h3_study_command as CMD
-    for k in (1, 2, 3):
+    spent, unspent = segment_partition()
+    assert spent and unspent
+    for k in unspent:
         assert not os.path.lexists(RUN.segment_out_dir(k)), k
-        for p in CMD.default_paths(k):
-            assert not os.path.lexists(p), p
+        for q in CMD.default_paths(k):
+            assert not os.path.lexists(q), q
         assert not os.path.lexists(CMD.receipt_path(k)), k
         RUN.check_output_paths(*CMD.default_paths(k))     # accepts
+    for k in spent:
+        assert os.path.lexists(CMD.receipt_path(k)), k
+        with pytest.raises(RUN.H3StudyRunError, match="already exists"):
+            RUN.check_output_paths(*CMD.default_paths(k))
 
 
 def test_AN_UNAUTHORIZED_INVOCATION_WRITES_NO_RECEIPT():
-    """🔑 Re-pointed at SEGMENT 1, whose destination is untouched. Segment 0's
-    now holds a real receipt from its completed run, so it can no longer show
-    that an unauthorized call writes nothing.
+    """🔑 AIMED AT THE FIRST UNSPENT SEGMENT, CHOSEN NOT TYPED. It was re-pointed
+    by hand from segment 0 to segment 1 after segment 0 ran, and segment 1 then
+    ran too. A destination that holds a real receipt cannot show that an
+    unauthorized call writes nothing, so the target must follow the study.
 
     The reason this matters is unchanged: a receipt here would CREATE THE
     DESTINATION and the next real launch would be refused for an occupied output
     directory."""
     from scripts.GPU.alphazero import h3_study_command as CMD
+    spent, unspent = segment_partition()
+    assert unspent, "no segment is left whose destination is untouched"
+    k = unspent[0]
     assert RUN.H3_STUDY_EXECUTION_AUTHORIZED is False
-    assert CMD.main(["--segment", "1"]) == CMD.EXIT_UNAUTHORIZED
-    assert not os.path.lexists(CMD.receipt_path(1))
-    assert not os.path.lexists(RUN.segment_out_dir(1))
+    assert CMD.main(["--segment", str(k)]) == CMD.EXIT_UNAUTHORIZED
+    assert not os.path.lexists(CMD.receipt_path(k))
+    assert not os.path.lexists(RUN.segment_out_dir(k))
+
+
+def test_WHERE_THE_STUDY_STANDS():
+    """🔴 THE ONE DELIBERATE TRIPWIRE, and the only test here that must be edited
+    when a segment runs. Everything else DERIVES the spent set; this pins it, so
+    that a segment consuming its block cannot pass unnoticed -- and so that the
+    six tests which used to encode this fact separately no longer each need
+    inverting.
+
+    As of segment 1's closeout (2026-09-19): segments 0 and 1 have run and are
+    spent; segments 2 and 3 have not.
+    """
+    spent, unspent = segment_partition()
+    assert spent == [0, 1], spent
+    assert unspent == [2, 3], unspent
+    assert R.N_SEGMENTS == 4
+    # 148 pairs are now recorded, which is the REPORT FLOOR -- and not a licence
+    # to report: see test_REACHING_THE_FLOOR_DOES_NOT_PERMIT_A_VERDICT.
+    assert len(spent) * (R.GAMES_PER_SEGMENT // 2) == R.REPORT_FLOOR_PAIRS == 148
+
+
+def test_REACHING_THE_FLOOR_DOES_NOT_PERMIT_A_VERDICT():
+    """🔴 148 CUMULATIVE PAIRS CLEARS THE ARITHMETIC AND NOTHING ELSE. Segments
+    2-3 stand withheld AFTER segment 0's and segment 1's outcomes were inspected,
+    which is optional stopping; `combine_segments` refuses a verdict on
+    provenance, not on counts."""
+    stopping_now = RUN.combine_segments(
+        [{"segment": k, "status": "completed", "outcomes_inspected": True}
+         for k in (0, 1)]
+        + [{"segment": k, "status": "withheld", "outcomes_inspected": True}
+           for k in (2, 3)])
+    assert stopping_now["verdict_permitted"] is False
+    assert stopping_now["flagged"] is True
+    assert "optional stopping" in stopping_now["why"]
+
+    all_four = RUN.combine_segments(
+        [{"segment": k, "status": "completed", "outcomes_inspected": True}
+         for k in range(4)])
+    assert all_four["verdict_permitted"] is True, (
+        "the preregistered plan must remain reachable")
 
 
 def test_REGISTERING_AND_RUNNING_SEGMENT_0_OPENED_NOTHING():

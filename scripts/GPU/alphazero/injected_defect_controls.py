@@ -93,6 +93,15 @@ T_DRV = "tests/test_injected_defect_controls.py"
 
 # (label, file, anchor, replacement, test node)
 DEFECTS = [
+    # ═════════ SEGMENT 1 CLOSEOUT (ran 2026-09-19) ═════════════════════
+    # 🔴 FIVE TESTS NOW DERIVE THE SPENT SET instead of listing it, because a
+    # listed one was wrong the day segment 1 finished. If the derivation stops
+    # reading the registry, the tripwire that pins the concrete state must fire.
+    ("the spent/unspent partition stops reading the registry", T_H3POP,
+     '        bucket = spent if any(x["exposed"] or x["retired"] or x["test_only"]\n'
+     '                              for x in st) else unspent',
+     "        bucket = unspent",
+     f"{T_H3POP}::test_WHERE_THE_STUDY_STANDS"),
     # ═════════ THE HARNESS'S OWN REASONS MUST NOT DRIFT WITH LOAD ══════════
     ("a MEASURED duration is left in the reason it is compared against", DRV,
      '    (re.compile(r"(expired after )\\d+(?:\\.\\d+)?s"), r"\\1<elapsed>s"),',
@@ -135,18 +144,18 @@ DEFECTS = [
      H3SRUN, '''    bad = [(x, st) for x, st in spent
            if st["exposed"] or st["retired"] or st["test_only"]]''',
      "    bad = []",
-     f"{T_H3SRUN}::test_SEGMENT_0_CANNOT_BE_RELAUNCHED"),
+     f"{T_H3SRUN}::test_A_SPENT_SEGMENT_CANNOT_BE_RELAUNCHED"),
     ("the spent-seed check ignores EXPOSED and looks only at retired",
      H3SRUN, '''           if st["exposed"] or st["retired"] or st["test_only"]]''',
      '''           if st["test_only"]]''',
-     f"{T_H3SRUN}::test_SEGMENT_0_CANNOT_BE_RELAUNCHED"),
+     f"{T_H3SRUN}::test_A_SPENT_SEGMENT_CANNOT_BE_RELAUNCHED"),
     ("segment 1's block is pointed at segment 0's SPENT one",
      H3SRUN, "    (202_626_148, 202_626_296),", "    (202_628_000, 202_628_148),",
-     f"{T_H3POP}::test_SEGMENTS_1_TO_3_REMAIN_ACCOUNTED_UNEXPOSED_AND_UNRETIRED"),
+     f"{T_H3POP}::test_UNSPENT_SEGMENTS_REMAIN_ACCOUNTED_UNEXPOSED_AND_UNRETIRED"),
     ("segment 1 writes into segment 0's occupied destination",
      H3SRUN, '        return f"{OUT_ROOT}/2026-09-18-t1j-h3-study-segment0-retry"',
      '        pass\n    if segment in (0, 1):\n        return f"{OUT_ROOT}/2026-09-18-t1j-h3-study-segment0-retry"',
-     f"{T_H3POP}::test_SEGMENTS_1_TO_3_OUTPUT_PATHS_ARE_STILL_ABSENT"),
+     f"{T_H3POP}::test_UNSPENT_SEGMENTS_OUTPUT_PATHS_ARE_STILL_ABSENT"),
     ("a partial segment is reported as a strength verdict",
      H3SA, "    below_floor = len(scored) < R.REPORT_FLOOR_PAIRS",
      "    below_floor = False",
@@ -244,7 +253,7 @@ DEFECTS = [
     ("the block is registered as RETIRED as well as accounted",
      SCREEN, "RETIRED_SEED_INTERVALS = (",
      "RETIRED_SEED_INTERVALS = (\n    (202626000, 202626592),",
-     f"{T_H3POP}::test_SEGMENTS_1_TO_3_KEEP_THEIR_QUARTERS_UNSPENT"),
+     f"{T_H3POP}::test_UNSPENT_SEGMENTS_KEEP_THEIR_QUARTERS"),
 
     # 🔴 THE SEEDED SCHEDULE'S PINS. Without them the segment check compared a
     # digest to one computed from the same tasks: one source, two sides.
