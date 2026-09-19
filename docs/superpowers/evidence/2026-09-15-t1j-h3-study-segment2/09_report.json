@@ -1,0 +1,848 @@
+{
+ "below_report_floor": true,
+ "capped_games": 5,
+ "complete": true,
+ "design": "H3_FULL_STUDY",
+ "duplicate_pairs": 0,
+ "games_scored": 148,
+ "games_seen": 148,
+ "gates": [
+  {
+   "ceiling": 0,
+   "observed": 0,
+   "rule": "duplicate_pairs",
+   "status": "CLEAR",
+   "what": "duplicate pairs -- a HARNESS FAULT: the openings are distinct by construction, so two pairs cannot share an identity"
+  },
+  {
+   "ceiling": 7,
+   "observed": 0,
+   "rule": "within_pair_identical",
+   "status": "CLEAR",
+   "what": "pairs whose two games are identical, contributing no discrimination"
+  },
+  {
+   "ceiling": 118,
+   "observed": 5,
+   "rule": "capped_games",
+   "status": "CLEAR",
+   "what": "capped games -- the configuration is not producing decisive games"
+  }
+ ],
+ "interpretation_withheld": true,
+ "is_strength_verdict": false,
+ "pairs": [
+  {
+   "capped": 0,
+   "elapsed_s": 70.71651812503114,
+   "identical": false,
+   "opening_digest": "843378a7d53af1793206d7d6108cd2151dbf33e97ed7c535fd96343e0528daa4",
+   "pair_id": 148,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 68.25568095874041,
+   "identical": false,
+   "opening_digest": "9d37bd4d5d36d48014d091774fd6d7f24659cbaf12c026bc9393aae0b1da6e60",
+   "pair_id": 149,
+   "score": 0.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 77.21829395927489,
+   "identical": false,
+   "opening_digest": "7d2222eb93bc99668094559bfe404cb2c95baee176b727cb2244c24a5cd1cab2",
+   "pair_id": 150,
+   "score": 0.5,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 73.37466812506318,
+   "identical": false,
+   "opening_digest": "8775ec25d0d05253a157bd66defdcd594272b7d08cd7cbc3b90a01918a947ecb",
+   "pair_id": 151,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 73.6078088330105,
+   "identical": false,
+   "opening_digest": "3036902e6a3cc2c6ae4f57b3b429191ef4a114bf5f66e888569c0338905fbfc8",
+   "pair_id": 152,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 76.95065133390017,
+   "identical": false,
+   "opening_digest": "311b4e1a6836957e3360f5cac72fe6baf8328e59d3c18ec62e343cfedf17abb0",
+   "pair_id": 153,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 75.5681011241395,
+   "identical": false,
+   "opening_digest": "f950aee2c4f07dec3e358cceb7b741f3db128a49bb052037d1d5c6d6d5568185",
+   "pair_id": 154,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 93.71198608283885,
+   "identical": false,
+   "opening_digest": "996c76ac74bf0ec7d8179da9bc84fa48fc68a9f0eb7c3bc248d2bd17f6f65869",
+   "pair_id": 155,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 66.21590570895933,
+   "identical": false,
+   "opening_digest": "7105c9b9920af28969ac6cf860f929876058b27f129eca9d4ba72ae483a2cdfb",
+   "pair_id": 156,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 59.13091345783323,
+   "identical": false,
+   "opening_digest": "687a79e3a0b47dc7381d6f846a13cc850f1ad5e305899416cce9905e1d7f1878",
+   "pair_id": 157,
+   "score": 0.5,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 61.24940879107453,
+   "identical": false,
+   "opening_digest": "d0ed1fffcf2a6ebad5a357efd0cc6e58b1ef3869ef9b51f32288f4165f53dfcc",
+   "pair_id": 158,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 85.50694229104556,
+   "identical": false,
+   "opening_digest": "d5aafe72cde6f65b91466cd9846cf510f192512562f4a30c64d1d16c24233160",
+   "pair_id": 159,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 90.07126354193315,
+   "identical": false,
+   "opening_digest": "da2b46d575a21ae50ff39f29396fab19f263ffd478de4ad9d5f8c8318a4f9bf6",
+   "pair_id": 160,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 68.37329308409244,
+   "identical": false,
+   "opening_digest": "c1d4ebbdcd6bcd22c5b7b32aa983ea7bd0908602538cfc57c70a41477b748b44",
+   "pair_id": 161,
+   "score": 0.5,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 88.53646791586652,
+   "identical": false,
+   "opening_digest": "6998197f42aef02ed27026e9500b9e1693ed8c47349dd01645a97efa9fa463f3",
+   "pair_id": 162,
+   "score": 0.5,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 109.84159120777622,
+   "identical": false,
+   "opening_digest": "993b953ad6ab78cf32fa2d2355575f5b6e7e4b7c66e78f3ff3de3e2cc36a9bd2",
+   "pair_id": 163,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 111.64969979086891,
+   "identical": false,
+   "opening_digest": "fbe91e0c9693e04ae5b08efcb86b59b88d52e548665af22ff196e4fca09e2a02",
+   "pair_id": 164,
+   "score": 0.5,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 97.65485979197547,
+   "identical": false,
+   "opening_digest": "006f53a4156791dde51365701be9c1f6ec51ca50ef3177ee9879384cb0b29672",
+   "pair_id": 165,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 91.86768562486395,
+   "identical": false,
+   "opening_digest": "23079f1128a415cdb7d7029d9f990aaf07a297ea1da208569a6466e5268933a3",
+   "pair_id": 166,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 76.11169104184955,
+   "identical": false,
+   "opening_digest": "bbe57d5ca737f5bc8addc4aa6eccc4308b82e7f45c56907be2ef1076472287b9",
+   "pair_id": 167,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 88.52966070803814,
+   "identical": false,
+   "opening_digest": "2b2f91d820eb2c192f3293b4747dc0a35a29e6fd6549f35e70bbb9593ad059be",
+   "pair_id": 168,
+   "score": 0.5,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 83.0551690410357,
+   "identical": false,
+   "opening_digest": "1e19f22f96be4f7c33edabbea2d1af89080d15f0163f21c38fda2cc768583522",
+   "pair_id": 169,
+   "score": 0.5,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 88.39486045809463,
+   "identical": false,
+   "opening_digest": "3f30f954d47798dacc9175a376f6a01b5b4729a9705ac6d4e31f718c3168190a",
+   "pair_id": 170,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 69.40371587499976,
+   "identical": false,
+   "opening_digest": "3dac4789a926d4b26a7bcc1289d2fb0ad2fe9cd8bdc146592bc39bd5e51dc075",
+   "pair_id": 171,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 74.18280466715805,
+   "identical": false,
+   "opening_digest": "ae803c14016ba7d9a7fad4eee317003b2ae19d07c427776db901d32f7fc8eadb",
+   "pair_id": 172,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 56.98933241725899,
+   "identical": false,
+   "opening_digest": "0df17f9d1a4fecdf097222c2fbe2513f326e6f327b784e693eb394dee154c2f0",
+   "pair_id": 173,
+   "score": 0.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 1,
+   "elapsed_s": 247.8998807920143,
+   "identical": false,
+   "opening_digest": "392722306a5cd7b1714115a393d1fe966e5201edca63c1e963a22f88c157150c",
+   "pair_id": 174,
+   "score": 0.75,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 97.38601562497206,
+   "identical": false,
+   "opening_digest": "b3b2717770803907bfe7f10a6da0316ee406921d4dee872e2b73bb91870b9d99",
+   "pair_id": 175,
+   "score": 0.5,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 72.70942170917988,
+   "identical": false,
+   "opening_digest": "e9862e70daf0de9ba79c5e64167c13ea7c47eaf5fb334ced61ce81ed60297341",
+   "pair_id": 176,
+   "score": 0.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 66.32591733289883,
+   "identical": false,
+   "opening_digest": "83325f098edddc8665b84c3b49d7480410d6e1fa989969d55510ddf142f82fbd",
+   "pair_id": 177,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 80.0074458331801,
+   "identical": false,
+   "opening_digest": "c5379fdee1b839a9a8f13dfb4e21354699e8aeb9c9aba603fb16543f7db2c63a",
+   "pair_id": 178,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 89.75208495883271,
+   "identical": false,
+   "opening_digest": "df392064c6212e2ad4bdbe4fbb73adec12ea0bf5463568b5efbc592f4328f5b1",
+   "pair_id": 179,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 1,
+   "elapsed_s": 267.879519041162,
+   "identical": false,
+   "opening_digest": "b047de65c29ac01c3bf0cbbec530dd3ddb47c7a281f61de711d27b00d21acd0d",
+   "pair_id": 180,
+   "score": 0.75,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 78.34824200021103,
+   "identical": false,
+   "opening_digest": "63c04a45cdcf11da0e085955e9285204efc330352f72af0b155a924b496d9f0c",
+   "pair_id": 181,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 49.817671043099836,
+   "identical": false,
+   "opening_digest": "d6b7380d7228ef835f761870660d3a1fceee923683860e2084bbb88b6899792c",
+   "pair_id": 182,
+   "score": 0.5,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 74.15166158298962,
+   "identical": false,
+   "opening_digest": "71b7c6e29d84fe6df7f61569dc1bc895ff7dfc2b9fca98fca1a2106a421dcb21",
+   "pair_id": 183,
+   "score": 0.5,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 62.83039166778326,
+   "identical": false,
+   "opening_digest": "f42311517fff75b279996f2d6760aa25ddc1f7b73d7a38d12530e1d172c1d437",
+   "pair_id": 184,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 1,
+   "elapsed_s": 252.85610012500547,
+   "identical": false,
+   "opening_digest": "55c1d06f7d45f8a932cd64d7e4ffd74c003b1c8059f0474203c607ac6f688912",
+   "pair_id": 185,
+   "score": 0.75,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 91.32899724994786,
+   "identical": false,
+   "opening_digest": "f9c88925b24a0326a4fc0a29d4c6660e51eb77bbaec197d1b59b6d6bcd845002",
+   "pair_id": 186,
+   "score": 0.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 1,
+   "elapsed_s": 260.90309375105426,
+   "identical": false,
+   "opening_digest": "c2c1d6ead3cdfd9e15868ca83134f1efae2ce4daf2e641eb4c77154c538bd5ce",
+   "pair_id": 187,
+   "score": 0.75,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 56.44153695809655,
+   "identical": false,
+   "opening_digest": "0b10e9f613834e8e90b39942b403188eaea2a7aa275810610822dda0b5393eca",
+   "pair_id": 188,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 92.7077403748408,
+   "identical": false,
+   "opening_digest": "d8832cfe8c6bd5c713e41e6800bec1c18b979ad813244110bfae4dba3ed27fec",
+   "pair_id": 189,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 76.16268720827065,
+   "identical": false,
+   "opening_digest": "ddbd8662582d58a06fc9b243a100661a5465d278110e510d7dac0a44300c6f87",
+   "pair_id": 190,
+   "score": 0.5,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 85.72478029201739,
+   "identical": false,
+   "opening_digest": "17ab4982b0ce8761377b4c0b87d918dd1e6ab6b49a8a20c1f29838f9853c275e",
+   "pair_id": 191,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 61.26352145895362,
+   "identical": false,
+   "opening_digest": "b587cf2b4bacf12c892498d9767f859aa96a18ecb5654a08b69ef58ae50dad98",
+   "pair_id": 192,
+   "score": 0.5,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 68.48765133298002,
+   "identical": false,
+   "opening_digest": "564933c3a1713f7c41bb7dd08934a6b90237ac9bec26ebd6f942fea2d84b180f",
+   "pair_id": 193,
+   "score": 0.5,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 116.88084508292377,
+   "identical": false,
+   "opening_digest": "5cca7dce864a541bed45bf19f48e7f9734198b9fca59889e69a124075986656b",
+   "pair_id": 194,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 68.8411085838452,
+   "identical": false,
+   "opening_digest": "10ca7d2b72cc73f003175cd1cf9968d89a97cd194b69bf667b805943ff9e0a8d",
+   "pair_id": 195,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 53.34491454111412,
+   "identical": false,
+   "opening_digest": "3504b3f6f51e89f9d89229282d0eb08b9f47fc769f8f5195cfb44c7d647ccedd",
+   "pair_id": 196,
+   "score": 0.5,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 62.568983000004664,
+   "identical": false,
+   "opening_digest": "029d2ae8d14f1ac4b9beab8c637bdc8a7d9918fcbdd39d8141163c35c9a0dd35",
+   "pair_id": 197,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 55.187983124749735,
+   "identical": false,
+   "opening_digest": "113d715992c5fdd73abacc1ac03ba297b68483b8774ff13191fea33178a4f05f",
+   "pair_id": 198,
+   "score": 0.5,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 54.39577337400988,
+   "identical": false,
+   "opening_digest": "c5f07a4a45b2f655d47e966067326df9572ff0f93ac048acfb052a17bd584210",
+   "pair_id": 199,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 59.12621345883235,
+   "identical": false,
+   "opening_digest": "98121972366bb307d03786a13f51526208f82222010f1ab38a1a221100bb6498",
+   "pair_id": 200,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 78.35356895904988,
+   "identical": false,
+   "opening_digest": "dd8154ffa6c437cb26e3818faf67f1357ad9f2294536a7481d6e6130596097e0",
+   "pair_id": 201,
+   "score": 0.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 104.05519108311273,
+   "identical": false,
+   "opening_digest": "49595769cd4062116225458628338b14a6d6880e10677a9722b8d01d9e5f978a",
+   "pair_id": 202,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 72.36821591714397,
+   "identical": false,
+   "opening_digest": "cdb08fd3bd6e9bdb744850b32b141b3b63fad695518cea93a28b1e8acf22a0a5",
+   "pair_id": 203,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 85.30842645908706,
+   "identical": false,
+   "opening_digest": "5cae581000df4711af117b3abde70a0d5af8561517aea10b65ad9f01df517b3d",
+   "pair_id": 204,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 61.06514854170382,
+   "identical": false,
+   "opening_digest": "13bb3f07c2160a572e2d89999cdff5be314c1f1bbf9cd2d910b1f0100c83d363",
+   "pair_id": 205,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 64.3504093340598,
+   "identical": false,
+   "opening_digest": "99a3534cdfbabca926375e5fc900691fdfe3a5deec2277c71f950db542f4d995",
+   "pair_id": 206,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 82.93403629190288,
+   "identical": false,
+   "opening_digest": "f51cb61d2a52ea909c5c44f242a263565dfdaf43bde6cdb33fd9a630e87ec398",
+   "pair_id": 207,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 74.8093270000536,
+   "identical": false,
+   "opening_digest": "3a76fc0bed33c6c03df28d66bec08deafaa1c1cbaf80708f76ef84b0556160d8",
+   "pair_id": 208,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 161.89891141699627,
+   "identical": false,
+   "opening_digest": "9c00359a91b79423a3ce677ccfa61000cf033e56bff9c84580c4af1682b0f385",
+   "pair_id": 209,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 86.43447666615248,
+   "identical": false,
+   "opening_digest": "42be368a9e349343fab68ebbe19dfb10b76d4361348f16c4932413f94345a05c",
+   "pair_id": 210,
+   "score": 0.5,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 72.52577504189685,
+   "identical": false,
+   "opening_digest": "24dd9cd8c2212a26bb5da4c8d4b2881f23e73e45eb6413b469c156ca4b2535c1",
+   "pair_id": 211,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 76.09126170817763,
+   "identical": false,
+   "opening_digest": "a259ef018f75869e2c747120a8aff2fc80c98c122889e9bb062bf0e3ed92d048",
+   "pair_id": 212,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 1,
+   "elapsed_s": 246.3139599999413,
+   "identical": false,
+   "opening_digest": "995f712066d8531e7993565d1489e7b63070bb40e600ee0e22c051e8b06b8d55",
+   "pair_id": 213,
+   "score": 0.75,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 56.83420208306052,
+   "identical": false,
+   "opening_digest": "24fb302b01a1e4174343bc41069e1f7b111190d01a354681eefb354a6c8eea8f",
+   "pair_id": 214,
+   "score": 0.5,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 77.2091018341016,
+   "identical": false,
+   "opening_digest": "17bb329e15ba1ca176122892f157898e6207edd2c5095509b77941678ae93f09",
+   "pair_id": 215,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 66.04351937375031,
+   "identical": false,
+   "opening_digest": "d8af630d832d0f78cc579128beba1cfbe0443968daf0bc1d98580fb92b48a242",
+   "pair_id": 216,
+   "score": 0.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 98.97221708414145,
+   "identical": false,
+   "opening_digest": "2eab4c19215d6f8af0e68672a7c50479afb066532ca56be9bf27980018b2a878",
+   "pair_id": 217,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 88.52394174900837,
+   "identical": false,
+   "opening_digest": "8496e620d85416bbf9ec2ba91f44259d0fe3a3f68410eece4f75876659b67779",
+   "pair_id": 218,
+   "score": 0.5,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 60.50690516689792,
+   "identical": false,
+   "opening_digest": "a7a09058c6d5e41cc836255f5f605973aada90feb3d3c8f0e6b044a7d9d90207",
+   "pair_id": 219,
+   "score": 0.5,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 63.86219624988735,
+   "identical": false,
+   "opening_digest": "e7dc83a6364064d9e02289bc5066bdbd8915e4a137de597118763be3ea2756af",
+   "pair_id": 220,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  },
+  {
+   "capped": 0,
+   "elapsed_s": 82.29095095791854,
+   "identical": false,
+   "opening_digest": "b5388cf92ca2df37e783974fdef9e54e32fc37da0d2e7cda4350f5730bb9260b",
+   "pair_id": 221,
+   "score": 1.0,
+   "segment": 2,
+   "stratum": "uniform"
+  }
+ ],
+ "pairs_excluded_incomplete": 0,
+ "pairs_excluded_void": 0,
+ "pairs_scored": 74,
+ "pairs_with_a_cap": 5,
+ "population": {
+  "claim": "Over legal six-ply TwixT positions drawn UNIFORMLY AT RANDOM and filtered only by the structural admissibility rules of card section 1.3, played in the frozen deterministic argmax configuration. This population says NOTHING about realistic play, about positions either engine would actually reach, or about any engine-produced population. A uniformly random six-ply position is not a position anyone plays.",
+  "n_pairs": 296,
+  "stratum": "uniform"
+ },
+ "primary": {
+  "computable": true,
+  "decisive": true,
+  "favours": "incumbent",
+  "half_width": 0.15787609437924893,
+  "interval": [
+   0.6157725542693997,
+   0.9315247430278977
+  ],
+  "interval_note": "NOMINAL UNDER THE DECLARED PAIR-INDEPENDENCE MODEL. Rejection sampling conditions the population jointly, the strata are fixed rather than drawn, the same two engines play every game, and the software is deterministic. What the pairing buys is narrower and real: the two games of a pair are not counted as independent observations.",
+  "mean": 0.7736486486486487,
+  "n": 74
+ },
+ "segment": 2,
+ "sensitivities": {
+  "both": {
+   "computable": true,
+   "decisive": true,
+   "favours": "incumbent",
+   "half_width": 0.1634962095495107,
+   "interval": [
+    0.611866109291069,
+    0.9388585283900904
+   ],
+   "interval_note": "NOMINAL UNDER THE DECLARED PAIR-INDEPENDENCE MODEL. Rejection sampling conditions the population jointly, the strata are fixed rather than drawn, the same two engines play every game, and the software is deterministic. What the pairing buys is narrower and real: the two games of a pair are not counted as independent observations.",
+   "mean": 0.7753623188405797,
+   "n": 69
+  },
+  "cap_free": {
+   "computable": true,
+   "decisive": true,
+   "favours": "incumbent",
+   "half_width": 0.1634962095495107,
+   "interval": [
+    0.611866109291069,
+    0.9388585283900904
+   ],
+   "interval_note": "NOMINAL UNDER THE DECLARED PAIR-INDEPENDENCE MODEL. Rejection sampling conditions the population jointly, the strata are fixed rather than drawn, the same two engines play every game, and the software is deterministic. What the pairing buys is narrower and real: the two games of a pair are not counted as independent observations.",
+   "mean": 0.7753623188405797,
+   "n": 69
+  },
+  "identity_free": {
+   "computable": true,
+   "decisive": true,
+   "favours": "incumbent",
+   "half_width": 0.15787609437924893,
+   "interval": [
+    0.6157725542693997,
+    0.9315247430278977
+   ],
+   "interval_note": "NOMINAL UNDER THE DECLARED PAIR-INDEPENDENCE MODEL. Rejection sampling conditions the population jointly, the strata are fixed rather than drawn, the same two engines play every game, and the software is deterministic. What the pairing buys is narrower and real: the two games of a pair are not counted as independent observations.",
+   "mean": 0.7736486486486487,
+   "n": 74
+  }
+ },
+ "shared_continuation_note": "DESCRIPTIVE ONLY, AND GATES NOTHING. Two games from different openings are distinct observations even when their move sequences match: the opening changes the board those moves are played on.",
+ "shared_continuation_pairs": 0,
+ "shared_continuation_relations": 0,
+ "timed_out": false,
+ "total_elapsed_s": 6640.9538394580595,
+ "verdict": "NO VERDICT",
+ "verdict_note": "fewer than the floor of completed pairs",
+ "within_pair_identical": 0
+}

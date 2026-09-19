@@ -1,0 +1,29 @@
+{
+ "design": "H3_FULL_STUDY_SEGMENT",
+ "detail": null,
+ "elapsed_s": 6641.563,
+ "ended_utc": "2026-09-19T22:40:32Z",
+ "exit_code": 0,
+ "gate_readback": "False",
+ "gate_restored": true,
+ "group_cleared": true,
+ "interrupted": false,
+ "outcome": "COMPLETED",
+ "report_exists": true,
+ "results_exists": true,
+ "retirement_rule": "WHOLE BLOCK, on ANY attempted launch -- the quarter retires on START, not on success.",
+ "retires": [
+  202626296,
+  202626444
+ ],
+ "seed_block": [
+  202626296,
+  202626444
+ ],
+ "segment": 2,
+ "segment_digest": "1764471c5b95042726b9a3bbeca92309ff703d734d73f448adf2f548d96a1855",
+ "started_utc": "2026-09-19T20:49:50Z",
+ "timed_out": false,
+ "trace_exists": true,
+ "worker_exit": 0
+}

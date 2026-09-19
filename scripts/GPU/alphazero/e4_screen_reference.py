@@ -636,6 +636,17 @@ EXPOSED_SEED_INTERVALS = (
                                      # RETIRED WHOLE under the one-shot rule.
                                      # Segments 2-3 keep [202626296, 202626592),
                                      # untouched.
+    (202626296, 202626444),          # 🔴 H3 SEGMENT 2 -- RAN AND COMPLETED
+                                     # 2026-09-19. 148/148 games, wrapper exit 0,
+                                     # verdict OK, 1.84 h of a 3.00 h cap. EVERY
+                                     # one of the 148 seeds was DRAWN, read from
+                                     # the records themselves (each task_result
+                                     # carries its own seed, 148 distinct across
+                                     # [202626296, 202626443]), not derived from
+                                     # the plan.
+                                     #
+                                     # RETIRED WHOLE under the one-shot rule.
+                                     # Segment 3 keeps [202626444, 202626592).
 )
 
 #: Seeds RESERVED PERMANENTLY FOR TESTS. Unit tests must draw from something, and
@@ -843,6 +854,17 @@ RETIRED_SEED_INTERVALS = (
                                      # RETIRED WHOLE under the one-shot rule.
                                      # Segments 2-3 keep [202626296, 202626592),
                                      # untouched.
+    (202626296, 202626444),          # 🔴 H3 SEGMENT 2 -- RAN AND COMPLETED
+                                     # 2026-09-19. 148/148 games, wrapper exit 0,
+                                     # verdict OK, 1.84 h of a 3.00 h cap. EVERY
+                                     # one of the 148 seeds was DRAWN, read from
+                                     # the records themselves (each task_result
+                                     # carries its own seed, 148 distinct across
+                                     # [202626296, 202626443]), not derived from
+                                     # the plan.
+                                     #
+                                     # RETIRED WHOLE under the one-shot rule.
+                                     # Segment 3 keeps [202626444, 202626592).
 )
 
 
