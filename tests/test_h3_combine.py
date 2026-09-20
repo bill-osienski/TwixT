@@ -680,7 +680,14 @@ def test_THE_PUBLIC_ENTRY_ACCEPTS_ITS_OWN_OPEN_GATE(study, tmp_path, monkeypatch
     gate open -- and the check rejected any open gate, so the combination
     refused itself on 2026-09-20 having never been exercised in the only state
     it can actually run in."""
-    _open_gate_state(monkeypatch, study, tmp_path, COMBINE.THIS_GATE)
+    #: 🔴 THE OPEN GATE IS NAMED LITERALLY, NOT TAKEN FROM `THIS_GATE`. Using
+    #: the constant under test to build the world the test runs in makes the
+    #: test agree with itself: emptying THIS_GATE also emptied the simulated
+    #: inventory, so no gate was open, nothing needed permitting, and the
+    #: control that blanked the allow-list was NOT CAUGHT. The expectation may
+    #: never come from the thing under test.
+    _open_gate_state(monkeypatch, study, tmp_path,
+                     [("h3_combine", "H3_COMBINATION_AUTHORIZED")])
     out = COMBINE.combine()
     assert out["n_games"] == R.N_GAMES == 592
     assert out["n_pairs"] == R.N_PAIRS == 296
@@ -694,8 +701,8 @@ def test_THE_PUBLIC_ENTRY_STILL_REFUSES_ANY_OTHER_OPEN_GATE(study, tmp_path,
     """The allow-list permits exactly one gate. An execution gate left open
     while the study is combined is still a disagreement."""
     _open_gate_state(monkeypatch, study, tmp_path,
-                     list(COMBINE.THIS_GATE)
-                     + [("h3_study_runner", "H3_STUDY_EXECUTION_AUTHORIZED")])
+                     [("h3_combine", "H3_COMBINATION_AUTHORIZED"),
+                      ("h3_study_runner", "H3_STUDY_EXECUTION_AUTHORIZED")])
     with pytest.raises(COMBINE.H3CombineError, match="gates are OPEN"):
         COMBINE.combine()
     assert not os.path.lexists(tmp_path / "safe"), "a refusal writes nothing"
@@ -704,7 +711,8 @@ def test_THE_PUBLIC_ENTRY_STILL_REFUSES_ANY_OTHER_OPEN_GATE(study, tmp_path,
 def test_THE_PUBLIC_ENTRY_STILL_REQUIRES_ITS_GATE_BEFORE_THE_BODY(study, tmp_path,
                                                                   monkeypatch):
     """The allow-list must not have turned the gate itself into a formality."""
-    _open_gate_state(monkeypatch, study, tmp_path, COMBINE.THIS_GATE)
+    _open_gate_state(monkeypatch, study, tmp_path,
+                     [("h3_combine", "H3_COMBINATION_AUTHORIZED")])
     monkeypatch.setattr(COMBINE, "H3_COMBINATION_AUTHORIZED", False)
     with pytest.raises(COMBINE.H3CombineError, match="NOT AUTHORIZED"):
         COMBINE.combine()
