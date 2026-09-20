@@ -722,3 +722,18 @@ def test_A_DUPLICATED_EXPECTED_REASON_KEY_IS_REFUSED(sandbox):
     assert r.returncode != 0, r.stdout
     assert "DUPLICATE EXPECTED REASON" in r.stdout, r.stdout
     assert "a label" in r.stdout
+
+
+def test_A_REASONS_DICT_BUILT_BY_A_COMPREHENSION_IS_NOT_A_CRASH(sandbox):
+    """The duplicate-key check reads a dict LITERAL. A comprehension has no keys
+    to read, and the filtered subset modules used to run a handful of controls
+    build theirs that way -- the first version of the check crashed on them."""
+    defects = sandbox.parent / "comprehension_reasons.py"
+    defects.write_text(
+        "DEFECTS = [('a label', 'src.py', 'good', 'bad',\n"
+        "            'tests/test_target.py::test_value')]\n"
+        "_SRC = {'a label': 'the reason'}\n"
+        "EXPECTED_REASONS = {k: v for k, v in _SRC.items()}\n")
+    r = drive(sandbox, defects)
+    assert "DUPLICATE EXPECTED REASON" not in r.stdout
+    assert "Traceback" not in r.stderr, r.stderr

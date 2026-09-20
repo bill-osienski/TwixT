@@ -70,8 +70,13 @@ def duplicate_reason_keys(path):
     import collections
     tree = ast.parse(pathlib.Path(path).read_text())
     for node in ast.walk(tree):
-        if isinstance(node, ast.Assign) and any(
-                getattr(t, "id", "") == "EXPECTED_REASONS" for t in node.targets):
+        #: only a DICT LITERAL can hide a duplicate key. A comprehension or a
+        #: call has none to read, and must not crash this check -- the filtered
+        #: subset modules used to run a handful of controls build theirs that way.
+        if (isinstance(node, ast.Assign)
+                and isinstance(node.value, ast.Dict)
+                and any(getattr(t, "id", "") == "EXPECTED_REASONS"
+                        for t in node.targets)):
             keys = [k.value for k in node.value.keys
                     if isinstance(k, ast.Constant) and isinstance(k.value, str)]
             return sorted(k for k, n in collections.Counter(keys).items() if n > 1)
