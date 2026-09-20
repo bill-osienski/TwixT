@@ -142,9 +142,12 @@ DEFECTS = [
      'def _sha256(path: str) -> str:\n    h = hashlib.sha256()',
      'def _sha256(path: str) -> str:\n    return "0" * 64\n    h = hashlib.sha256()',
      f"{T_H3CMB}::test_EVERY_INPUT_IS_RECORDED_BY_PATH_AND_HASH"),
-    ('the combined report may be OVERWRITTEN', H3CMB,
-     '    if os.path.lexists(path):',
-     '    if False:',
+    #: retargeted 2026-09-20: `_occupied` was extracted so the EARLY check and
+    #: the ATOMIC install could be broken apart. While they shared one message,
+    #: removing the early one changed nothing observable and no control bound it.
+    ('the early occupied-destination check is removed', H3CMB,
+     '    return os.path.lexists(path)',
+     '    return False',
      f"{T_H3CMB}::test_THE_DESTINATION_IS_CREATE_ONLY"),
     #: 🔴 THE DURABILITY REPAIR AND THE SUPERVISED COMMAND (2026-09-20).
     #: The first writer opened the OFFICIAL path and serialised into it,
@@ -183,8 +186,8 @@ DEFECTS = [
      '            "exit_code": status,',
      f"{T_H3CMB}::test_A_FAILED_RESTORATION_SUPERSEDES_A_SUCCESSFUL_COMBINATION"),
     ('the combination receipt is not create-only', H3CCMD,
-     '        if os.path.lexists(_receipt):\n            return False',
-     '        if False:\n            return False',
+     '        if os.path.lexists(_receipt):\n            return False\n        os.makedirs(os.path.dirname(_receipt), exist_ok=True)\n        fd = os.open(_receipt, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)',
+     '        os.makedirs(os.path.dirname(_receipt), exist_ok=True)\n        fd = os.open(_receipt, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)',
      f"{T_H3CMB}::test_THE_RECEIPT_IS_CREATE_ONLY"),
     ('an unauthorized combination writes a receipt and occupies the destination', H3CCMD,
      '        print("the H3 COMBINATION is NOT AUTHORIZED "',
@@ -3903,10 +3906,6 @@ EXPECTED_REASONS = {
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_combine.H3CombineError'>",
     'the combination stops hashing its inputs':
         'AssertionError: results',
-    'the combined report may be OVERWRITTEN':
-        "FileExistsError: [Errno 17] File exists: '/private/<tmp>/pytest-of-bill/pytest-<n>/test_THE_DESTINATION_IS_CREATE0/combined/09_combined_report.json'",
-    'a partial write is left occupying the destination':
-        'AssertionError: the partial file must be removed',
     'summarise is called once PER SEGMENT instead of once on the pool':
         'AssertionError: [148, 148, 148, 148, 592]',
     # ── segment 3 closeout, RE-ARMED controls (2026-09-20). OBSERVED.

@@ -92,6 +92,18 @@ def _task_results(path: str) -> List[Dict[str, Any]]:
     return out
 
 
+def _occupied(path: str) -> bool:
+    """Whether `path` is taken. `lexists`, so a DANGLING SYMLINK counts -- it
+    would be followed by an ordinary open and silently write somewhere else.
+
+    🔑 A NAMED FUNCTION SO THE TWO BARRIERS CAN BE TESTED APART. This check and
+    the atomic `os.link` install both refuse an occupied destination, and while
+    they were fused a control that broke the install was silently covered by the
+    check: the defect was real and the test still passed.
+    """
+    return os.path.lexists(path)
+
+
 def _write_create_only(path: str, payload: Mapping[str, Any]) -> None:
     """Install the report at `path` ONLY once the complete payload is durable.
 
@@ -118,7 +130,7 @@ def _write_create_only(path: str, payload: Mapping[str, Any]) -> None:
     After any interruption the official path either does not exist or holds the
     whole payload. There is no third state.
     """
-    if os.path.lexists(path):
+    if _occupied(path):
         raise H3CombineError(
             f"{path} already exists. The combined report is written ONCE; a "
             f"second combination needs a new reviewed destination.")
@@ -134,9 +146,14 @@ def _write_create_only(path: str, payload: Mapping[str, Any]) -> None:
         try:
             os.link(tmp, path)
         except FileExistsError:
+            #: 🔴 A DIFFERENT SITUATION, AND IT SAYS SO. `_occupied` refuses a
+            #: destination that was ALREADY taken; reaching here means the name
+            #: appeared while this combination was running. Giving both the same
+            #: words made the early check undetectable -- removing it changed no
+            #: observable behaviour, so no control could bind it.
             raise H3CombineError(
-                f"{path} already exists. The combined report is written ONCE; a "
-                f"second combination needs a new reviewed destination.")
+                f"{path} was CREATED WHILE THIS COMBINATION WAS RUNNING. The "
+                f"install is atomic and refused it; nothing was overwritten.")
         dfd = os.open(directory, os.O_RDONLY)
         try:
             os.fsync(dfd)

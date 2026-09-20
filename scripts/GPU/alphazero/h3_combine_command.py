@@ -119,6 +119,9 @@ def write_receipt(payload: Dict[str, Any], _receipt: str = RECEIPT) -> bool:
     that could not be written is recorded as such by the exit status, and must
     not turn a completed combination into a crash."""
     try:
+        #: 🔴 BOTH BARRIERS, AND THE CONTROL BREAKS BOTH AT ONCE. `lexists`
+        #: alone was shielded by `O_EXCL` and `O_EXCL` alone by `lexists`, so a
+        #: control disabling either passed while the defect was real.
         if os.path.lexists(_receipt):
             return False
         os.makedirs(os.path.dirname(_receipt), exist_ok=True)

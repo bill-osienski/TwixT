@@ -352,7 +352,7 @@ def test_AN_OMITTED_SENSITIVITY_IS_REFUSED(study):
 def test_THE_DESTINATION_IS_CREATE_ONLY(study):
     run(study)
     with pytest.raises(COMBINE.H3CombineError, match="already exists"):
-        run(study)
+        run(study)          # the EARLY check, named distinctly from the race
 
 
 def test_A_DANGLING_SYMLINK_ALSO_OCCUPIES_THE_DESTINATION(study, tmp_path):
@@ -635,3 +635,19 @@ def test_THE_PAYLOAD_AND_THE_DIRECTORY_ARE_BOTH_FSYNCED(study, monkeypatch):
         f"the payload file was never fsynced: {synced}")
     assert out in synced or out.rstrip("/") in synced, (
         f"the destination directory was never fsynced: {synced}")
+
+
+def test_THE_LINK_IS_A_BARRIER_IN_ITS_OWN_RIGHT(study, monkeypatch):
+    """🔴 TWO GUARDS REFUSE AN OCCUPIED DESTINATION, AND ONE HID THE OTHER.
+    `_occupied` checks first and `os.link` refuses atomically; while they were
+    fused, a control replacing the install with `os.replace` -- which silently
+    OVERWRITES -- passed, because the check had already returned. With the
+    check suppressed, only the install can refuse, which is also the real
+    race: a file appearing between the check and the install."""
+    run(study)
+    monkeypatch.setattr(COMBINE, "_occupied", lambda path: False)
+    with pytest.raises(COMBINE.H3CombineError, match="CREATED WHILE THIS"):
+        run(study)
+    final = pathlib.Path(study["out"], os.path.basename(COMBINE.COMBINED_REPORT))
+    assert json.loads(final.read_text())["n_games"] == R.N_GAMES, (
+        "the first report must still be there, unmodified")
