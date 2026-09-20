@@ -197,7 +197,10 @@ DEFECTS = [
      "    (202_628_000, 202_628_148),\n"
      "    (202_628_000, 202_628_148),\n"
      ")",
-     f"{T_H3POP}::test_UNSPENT_SEGMENTS_REMAIN_ACCOUNTED_UNEXPOSED_AND_UNRETIRED"),
+     #: retargeted at the segment 3 closeout: with every segment spent,
+     #: collapsing the blocks onto one SPENT block no longer moves the
+     #: spent/unspent split at all. What it still destroys is DISJOINTNESS.
+     f"{T_H3POP}::test_THE_BLOCKS_ARE_STILL_MUTUALLY_DISJOINT"),
     #: 🔴 SEGMENT-INDEPENDENT, for the same reason. It used to alias SEGMENT 1
     #: onto segment 0's occupied directory; once segment 1 had its own record the
     #: injection changed nothing. Aliasing the WHOLE fallback occupies every
@@ -300,9 +303,14 @@ DEFECTS = [
      SCREEN, "EXPOSED_SEED_INTERVALS = (",
      "EXPOSED_SEED_INTERVALS = (\n    (202626000, 202626592),",
      f"{T_H3POP}::test_SEGMENT_0_QUARTER_IS_RETIRED_WHOLE_WITH_ZERO_EXPOSED"),
-    ("the block is registered as RETIRED as well as accounted",
+    #: 🔴 RETARGETED AT THE SEGMENT 3 CLOSEOUT. This retired [202626000,
+    #: 202626592) -- every H3 block. All four are retired already, so the
+    #: injection became a NO-OP and went NOT CAUGHT. The claim survives against
+    #: the SYNTHETIC block, the only unspent one left, whose guard exists
+    #: precisely to notice that it has stopped being unspent.
+    ("the SYNTHETIC block is registered as RETIRED as well as accounted",
      SCREEN, "RETIRED_SEED_INTERVALS = (",
-     "RETIRED_SEED_INTERVALS = (\n    (202626000, 202626592),",
+     "RETIRED_SEED_INTERVALS = (\n    (202608188, 202608336),",
      f"{T_H3POP}::test_UNSPENT_SEGMENTS_KEEP_THEIR_QUARTERS"),
 
     # 🔴 THE SEEDED SCHEDULE'S PINS. Without them the segment check compared a
@@ -3791,8 +3799,6 @@ EXPECTED_REASONS = {
         'AssertionError: both halves must be non-empty to mean anything',
     "every segment writes into segment 0's occupied destination":
         "AssertionError: an unspent segment's destination must not exist",
-    'the block is registered as RETIRED as well as accounted':
-        'AssertionError: the study is over if nothing is left to launch',
     # ── segment 1 closeout (2026-09-19). OBSERVED, never guessed.
     'the spent/unspent partition stops reading the registry':
         "AssertionError: the registry's spent set is not the one recorded here",
@@ -3805,8 +3811,6 @@ EXPECTED_REASONS = {
     '--help asserts the population was never generated':
         "AssertionError: --help still asserts 'has no seed block', which this tree contradicts",
     # ── the preflight epilogue (2026-09-19). OBSERVED, never guessed.
-    'the epilogue is hardcoded instead of branching on readiness':
-        "AssertionError: assert 'NOT READY TO RUN' not in '⚠ SCOPE. Th..., by design.'",
     'readiness asserts the pin instead of reading it':
         'assert True is False',
     # ── segment 0 closeout (2026-09-18/19). OBSERVED, never guessed.

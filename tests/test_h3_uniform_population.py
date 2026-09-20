@@ -1207,6 +1207,10 @@ EXPECTED_SPENT = [0, 1, 2, 3]
 EXPECTED_UNSPENT = []
 
 
+from scripts.GPU.alphazero.h3_study_prerun_verification import (   # noqa: E402
+    synthetic_unspent_block)
+
+
 def segment_partition():
     """Which segments are SPENT and which are still LAUNCHABLE, **DERIVED from
     the registry** rather than listed.
@@ -1262,6 +1266,16 @@ def test_UNSPENT_SEGMENTS_KEEP_THEIR_QUARTERS():
         assert len(st) == R.GAMES_PER_SEGMENT == 148, k
         assert all(x["accounted"] for x in st), k
         assert not any(x["retired"] or x["exposed"] or x["test_only"] for x in st), k
+    #: 🔴 AND THE UNSPENT DIRECTION MUST STAY LIVE WHEN THE STUDY IS OVER.
+    #: With every real block spent that loop iterates NOTHING, and the control
+    #: `the block is registered as RETIRED as well as accounted` went NOT CAUGHT
+    #: because of it -- I had deleted the `assert unspent` guard to make this
+    #: test green, which is the definition of a test that stopped binding.
+    lo, hi = synthetic_unspent_block()
+    st = [REF.seed_status(x) for x in range(lo, hi)]
+    assert hi - lo == R.GAMES_PER_SEGMENT
+    assert all(x["accounted"] for x in st)
+    assert not any(x["retired"] or x["exposed"] or x["test_only"] for x in st)
 
 
 
@@ -1472,6 +1486,13 @@ def test_UNSPENT_SEGMENTS_REMAIN_ACCOUNTED_UNEXPOSED_AND_UNRETIRED():
     for k in spent:
         with pytest.raises(RUN.H3StudyRunError, match="is SPENT"):
             RUN.check_segment_seeds(k)
+    #: the ACCEPT path, kept live by a synthetic block once every real one is
+    #: spent -- otherwise the loop above is the whole test and the ACCEPT branch
+    #: is never taken.
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(RUN, "SEGMENT_SEED_BLOCKS",
+                   (synthetic_unspent_block(),) + RUN.SEGMENT_SEED_BLOCKS[1:])
+        assert RUN.check_segment_seeds(0)["n"] == R.GAMES_PER_SEGMENT
 
 
 def test_THE_BLOCKS_ARE_STILL_MUTUALLY_DISJOINT():
@@ -1524,39 +1545,44 @@ def test_UNSPENT_SEGMENTS_OUTPUT_PATHS_ARE_STILL_ABSENT():
         assert os.path.lexists(CMD.receipt_path(k)), k
         with pytest.raises(RUN.H3StudyRunError, match="already exists"):
             RUN.check_output_paths(*CMD.default_paths(k))
+    #: 🔴 EACH SEGMENT'S DESTINATION IS ITS OWN. With every segment spent, the
+    #: "absent" loop above iterates nothing, and a `segment_out_dir` that
+    #: collapsed every segment onto one directory went NOT CAUGHT. Distinctness
+    #: is the part of the claim that survives the study being over.
+    dirs = [RUN.segment_out_dir(k) for k in range(R.N_SEGMENTS)]
+    assert len(set(dirs)) == R.N_SEGMENTS, dirs
 
 
-def test_AN_UNAUTHORIZED_INVOCATION_WRITES_NO_RECEIPT():
-    """🔑 AIMED AT THE FIRST UNSPENT SEGMENT, CHOSEN NOT TYPED. It was re-pointed
-    by hand from segment 0 to segment 1 after segment 0 ran, and segment 1 then
-    ran too. A destination that holds a real receipt cannot show that an
-    unauthorized call writes nothing, so the target must follow the study.
+def test_AN_UNAUTHORIZED_INVOCATION_WRITES_NO_RECEIPT(tmp_path, monkeypatch):
+    """A receipt written here would CREATE THE DESTINATION, and the next real
+    launch would then be refused for an occupied output directory.
 
-    The reason this matters is unchanged: a receipt here would CREATE THE
-    DESTINATION and the next real launch would be refused for an occupied output
-    directory.
+    🔴 IT MUST AIM WHERE NOTHING EXISTS YET. This was hand-pointed at segment 0,
+    then at segment 1, then -- once every segment had run -- rewritten to compare
+    an existing receipt before and after. That looked like a stronger claim and
+    was a weaker one: `write_receipt` is create-only, so an injected write onto
+    an OCCUPIED destination fails on its own and the bytes are unchanged either
+    way. The control `an UNAUTHORIZED invocation writes a receipt and occupies
+    the destination` went NOT CAUGHT.
 
-    🔴 AND THERE IS NO UNTOUCHED DESTINATION LEFT. Every segment has run, so
-    the claim is now stated the stronger way it always meant: an unauthorized
-    call must change NOTHING on disk -- it must not create a destination, must
-    not create a receipt, and must not touch one that exists.
+    The destination is redirected to an empty directory, so an injected write
+    WOULD succeed if the refusal did not come first -- which is the only
+    arrangement in which this test can fail.
     """
     from scripts.GPU.alphazero import h3_study_command as CMD
-    spent, unspent = segment_partition()
-    k = unspent[0] if unspent else spent[0]
-    receipt, out_dir = CMD.receipt_path(k), RUN.segment_out_dir(k)
-    before = (pathlib.Path(receipt).read_bytes()
-              if os.path.lexists(receipt) else None)
-    dir_before = os.path.lexists(out_dir)
+    out_dir = str(tmp_path / "untouched-destination")
+    monkeypatch.setattr(RUN, "segment_out_dir", lambda seg: out_dir)
+    receipt = CMD.receipt_path(0)
+    assert not os.path.lexists(out_dir) and not os.path.lexists(receipt), (
+        "the redirected destination must start empty or this proves nothing")
 
     assert RUN.H3_STUDY_EXECUTION_AUTHORIZED is False
-    assert CMD.main(["--segment", str(k)]) == CMD.EXIT_UNAUTHORIZED
+    assert CMD.main(["--segment", "0"]) == CMD.EXIT_UNAUTHORIZED
 
-    after = (pathlib.Path(receipt).read_bytes()
-             if os.path.lexists(receipt) else None)
-    assert after == before, "an unauthorized call must not write the receipt"
-    assert os.path.lexists(out_dir) == dir_before, (
-        "an unauthorized call must not create or remove the destination")
+    assert not os.path.lexists(receipt), (
+        "an unauthorized call must not write a receipt")
+    assert not os.path.lexists(out_dir), (
+        "an unauthorized call must not create the destination")
 
 
 def test_WHERE_THE_STUDY_STANDS():
