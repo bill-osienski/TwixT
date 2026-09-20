@@ -647,6 +647,18 @@ EXPOSED_SEED_INTERVALS = (
                                      #
                                      # RETIRED WHOLE under the one-shot rule.
                                      # Segment 3 keeps [202626444, 202626592).
+    (202626444, 202626592),          # 🔴 H3 SEGMENT 3 -- RAN AND COMPLETED
+                                     # 2026-09-20. 148/148 games, wrapper exit 0,
+                                     # verdict OK, 2.06 h of a 3.00 h cap. EVERY
+                                     # one of the 148 seeds was DRAWN, read from
+                                     # the records themselves (each task_result
+                                     # carries its own seed, 148 distinct across
+                                     # [202626444, 202626591]), not derived from
+                                     # the plan.
+                                     #
+                                     # RETIRED WHOLE under the one-shot rule.
+                                     # THE LAST SEGMENT: all four quarters of the
+                                     # H3 full study are now spent.
 )
 
 #: Seeds RESERVED PERMANENTLY FOR TESTS. Unit tests must draw from something, and
@@ -865,6 +877,18 @@ RETIRED_SEED_INTERVALS = (
                                      #
                                      # RETIRED WHOLE under the one-shot rule.
                                      # Segment 3 keeps [202626444, 202626592).
+    (202626444, 202626592),          # 🔴 H3 SEGMENT 3 -- RAN AND COMPLETED
+                                     # 2026-09-20. 148/148 games, wrapper exit 0,
+                                     # verdict OK, 2.06 h of a 3.00 h cap. EVERY
+                                     # one of the 148 seeds was DRAWN, read from
+                                     # the records themselves (each task_result
+                                     # carries its own seed, 148 distinct across
+                                     # [202626444, 202626591]), not derived from
+                                     # the plan.
+                                     #
+                                     # RETIRED WHOLE under the one-shot rule.
+                                     # THE LAST SEGMENT: all four quarters of the
+                                     # H3 full study are now spent.
 )
 
 
