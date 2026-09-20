@@ -3889,6 +3889,10 @@ DEFECTS = [
 # DERIVED from the requirement and its assertion and then verified against a run,
 # which is why each names a count or a sentence rather than a first line.
 EXPECTED_REASONS = {
+    'the combination stops hashing its inputs':
+        'AssertionError: every input must be recorded with the hash of what was read',
+    'a PID is left in the temp-file name the reason is compared against':
+        'AssertionError: a PID in a temp-file name must not change the reason',
     # ── PID-free re-harvest (2026-09-20). OBSERVED.
     'the combination gate is not checked at all':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_combine.H3CombineError'>",
