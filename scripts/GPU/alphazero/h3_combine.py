@@ -56,6 +56,7 @@ from . import h3_study_runner as RUN
 
 #: 🔴 THE ELEVENTH GATE. One reviewed edit opens it, for one combination.
 H3_COMBINATION_AUTHORIZED = False
+
 #: THE FIXED DESTINATION. Not a parameter of `combine()`, so a run cannot be
 #: aimed anywhere else, and not reused: create-only means a second combination
 #: needs a new reviewed destination and a new authorization.
