@@ -653,3 +653,110 @@ def test_THE_LINK_IS_A_BARRIER_IN_ITS_OWN_RIGHT(study, monkeypatch):
     final = pathlib.Path(study["out"], os.path.basename(COMBINE.COMBINED_REPORT))
     assert json.loads(final.read_text())["n_games"] == R.N_GAMES, (
         "the first report must still be there, unmodified")
+
+
+# ══════════ the PUBLIC entry, with its gate OPEN, on safe outputs ═══════════
+def _open_gate_state(monkeypatch, study, tmp_path, gates):
+    """Put the process in the state a REAL combination is in: the gate open, the
+    inventory reporting it open, and the destination redirected somewhere safe.
+
+    🔴 THE INPUTS ARE THE SYNTHETIC ONES. `combine()` resolves its inputs
+    through `CMD.default_paths`, so those are redirected too -- pooling the REAL
+    592 games here would compute the study's actual estimate as a side effect of
+    a test, which is the one act the gate exists to hold.
+    """
+    monkeypatch.setattr(COMBINE, "H3_COMBINATION_AUTHORIZED", True)
+    monkeypatch.setattr(COMBINE, "COMBINED_OUT_DIR", str(tmp_path / "safe"))
+    monkeypatch.setattr(COMBINE.CMD, "default_paths", study["paths_for"])
+    monkeypatch.setattr(COMBINE.CMD, "receipt_path", study["receipt_for"])
+    from scripts.GPU.alphazero import gate_inventory as INV
+    monkeypatch.setattr(INV, "open_gates", lambda: list(gates))
+
+
+def test_THE_PUBLIC_ENTRY_ACCEPTS_ITS_OWN_OPEN_GATE(study, tmp_path, monkeypatch):
+    """🔴 THE STATE NO TEST HAD EVER PUT IT IN. Every other test drives
+    `combine_unguarded`, which needs no gate, so all eleven gates are shut and
+    the final-state check trivially passes. The real invocation must have THIS
+    gate open -- and the check rejected any open gate, so the combination
+    refused itself on 2026-09-20 having never been exercised in the only state
+    it can actually run in."""
+    _open_gate_state(monkeypatch, study, tmp_path, COMBINE.THIS_GATE)
+    out = COMBINE.combine()
+    assert out["n_games"] == R.N_GAMES == 592
+    assert out["n_pairs"] == R.N_PAIRS == 296
+    written = pathlib.Path(tmp_path / "safe"
+                           / os.path.basename(COMBINE.COMBINED_REPORT))
+    assert json.loads(written.read_text()) == out
+
+
+def test_THE_PUBLIC_ENTRY_STILL_REFUSES_ANY_OTHER_OPEN_GATE(study, tmp_path,
+                                                            monkeypatch):
+    """The allow-list permits exactly one gate. An execution gate left open
+    while the study is combined is still a disagreement."""
+    _open_gate_state(monkeypatch, study, tmp_path,
+                     list(COMBINE.THIS_GATE)
+                     + [("h3_study_runner", "H3_STUDY_EXECUTION_AUTHORIZED")])
+    with pytest.raises(COMBINE.H3CombineError, match="gates are OPEN"):
+        COMBINE.combine()
+    assert not os.path.lexists(tmp_path / "safe"), "a refusal writes nothing"
+
+
+def test_THE_PUBLIC_ENTRY_STILL_REQUIRES_ITS_GATE_BEFORE_THE_BODY(study, tmp_path,
+                                                                  monkeypatch):
+    """The allow-list must not have turned the gate itself into a formality."""
+    _open_gate_state(monkeypatch, study, tmp_path, COMBINE.THIS_GATE)
+    monkeypatch.setattr(COMBINE, "H3_COMBINATION_AUTHORIZED", False)
+    with pytest.raises(COMBINE.H3CombineError, match="NOT AUTHORIZED"):
+        COMBINE.combine()
+    assert not os.path.lexists(tmp_path / "safe")
+
+
+def test_RESTORATION_RETURNS_THE_SOURCE_BYTE_FOR_BYTE(tmp_path):
+    """🔴 IT DELETED A BLANK LINE. `\\s*$` under re.MULTILINE consumes the
+    newline and any blank lines after it, so restoring the gate on 2026-09-20
+    also removed one from h3_combine.py. The whole file must come back
+    unchanged except for the one intended True -> False."""
+    real = pathlib.Path(CCMD.COMBINE_SOURCE).read_bytes()
+    assert b"\nH3_COMBINATION_AUTHORIZED = False\n" in real
+
+    opened = real.replace(b"\nH3_COMBINATION_AUTHORIZED = False\n",
+                          b"\nH3_COMBINATION_AUTHORIZED = True\n")
+    assert opened != real
+    copy = tmp_path / "h3_combine_copy.py"
+    copy.write_bytes(opened)
+
+    assert CCMD.restore_gate(str(copy)) is True
+    assert CCMD.gate_readback(str(copy)) == "False"
+    assert copy.read_bytes() == real, (
+        "the restored file must differ from the original in NOTHING")
+
+
+def test_ATTEMPT_1S_DESTINATION_IS_SPENT_AND_ATTEMPT_2S_IS_FRESH():
+    """Attempt 1 was consumed by ATTEMPT, not by success: it wrote no report and
+    its create-only receipt stands there as the record."""
+    assert COMBINE.SPENT_COMBINED_DIRS
+    for spent in COMBINE.SPENT_COMBINED_DIRS:
+        assert os.path.lexists(spent), "the spent attempt's record must survive"
+        assert os.path.lexists(os.path.join(spent, "00_combination_receipt.json"))
+        assert not os.path.lexists(os.path.join(spent, "09_combined_report.json"))
+        assert COMBINE.COMBINED_OUT_DIR != spent
+        assert not COMBINE.COMBINED_OUT_DIR.startswith(spent.rstrip("/") + "/")
+    assert not os.path.lexists(COMBINE.COMBINED_OUT_DIR)
+    assert not os.path.lexists(COMBINE.COMBINED_REPORT)
+    assert not os.path.lexists(CCMD.RECEIPT)
+
+
+def test_AN_OPEN_GATE_IS_CAUGHT_FINAL(study, monkeypatch):
+    """The allow-list narrowed the rule; it must not have removed it. An
+    unexpected open gate is still a disagreement, with the default empty
+    allow-list and with a non-empty one."""
+    from scripts.GPU.alphazero import gate_inventory as INV
+    from scripts.GPU.alphazero import h3_final_state as FINAL
+    monkeypatch.setattr(INV, "open_gates",
+                        lambda: [("h3_study_runner", "H3_STUDY_EXECUTION_AUTHORIZED")])
+    for allow in (None, COMBINE.THIS_GATE):
+        problems = FINAL.verify_final_state(
+            paths_for=study["paths_for"], receipt_for=study["receipt_for"],
+            allow_open=allow)
+        assert any("gates are OPEN" in p for p in problems), (
+            "an unexpected open gate must still be reported")

@@ -98,6 +98,29 @@ T_H3FIN = "tests/test_h3_final_state.py"
 
 # (label, file, anchor, replacement, test node)
 DEFECTS = [
+    #: 🔴 THE ALLOW-LIST REPAIR (2026-09-20). The combination refused
+    #: ITSELF: verify_final_state rejected any open gate, including the one
+    #: combine() requires open. The permission must stay as narrow as the act.
+    ('the allow-list permits every open gate instead of the named ones', H3FIN,
+     '    allowed = {tuple(g) for g in (allow_open or ())}',
+     '    allowed = {tuple(g) for g in INVENTORY.open_gates()}',
+     f"{T_H3CMB}::test_THE_PUBLIC_ENTRY_STILL_REFUSES_ANY_OTHER_OPEN_GATE"),
+    ('the final-state check stops rejecting unexpected open gates', H3FIN,
+     '    unexpected = [g for g in open_gates if tuple(g) not in allowed]',
+     '    unexpected = []',
+     f"{T_H3CMB}::test_AN_OPEN_GATE_IS_CAUGHT_FINAL"),
+    ('the combiner allows ANY gate to be open, not just its own', H3CMB,
+     'THIS_GATE = (("h3_combine", "H3_COMBINATION_AUTHORIZED"),)',
+     'THIS_GATE = ()',
+     f"{T_H3CMB}::test_THE_PUBLIC_ENTRY_ACCEPTS_ITS_OWN_OPEN_GATE"),
+    ('the restoration regex goes back to the permissive form', H3CCMD,
+     '_GATE_OPEN = re.compile(r"^H3_COMBINATION_AUTHORIZED = True$", re.M)',
+     '_GATE_OPEN = re.compile(r"^H3_COMBINATION_AUTHORIZED\\s*=\\s*True\\s*$", re.M)',
+     f"{T_H3CMB}::test_RESTORATION_RETURNS_THE_SOURCE_BYTE_FOR_BYTE"),
+    ("attempt 2 is aimed at attempt 1's SPENT destination", H3CMB,
+     'COMBINED_OUT_DIR = f"{RUN.OUT_ROOT}/2026-09-20-t1j-h3-study-combined-attempt2"',
+     'COMBINED_OUT_DIR = f"{RUN.OUT_ROOT}/2026-09-20-t1j-h3-study-combined"',
+     f"{T_H3CMB}::test_ATTEMPT_1S_DESTINATION_IS_SPENT_AND_ATTEMPT_2S_IS_FRESH"),
     # ═════════ THE COMBINATION (2026-09-20) ════════════════════════════
     # 🔴 POOLING THE FOUR SEGMENTS IS THE STUDY'S ONE INTERPRETIVE ACT.
     # After it a number exists that people will quote, so every refusal on

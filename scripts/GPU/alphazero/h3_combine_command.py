@@ -41,7 +41,12 @@ from . import h3_study_runner as RUN
 COMBINE_SOURCE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                               "h3_combine.py")
 
-_GATE_OPEN = re.compile(r"^H3_COMBINATION_AUTHORIZED\s*=\s*True\s*$", re.M)
+#: 🔴 THE EXACT LITERAL LINE, as every other wrapper uses. The permissive form
+#: `\s*=\s*True\s*$` was mine, and `\s*$` under re.MULTILINE consumes the
+#: NEWLINE and any blank lines after it: restoring the gate on 2026-09-20 also
+#: deleted a blank line from the source. A restoration that edits beyond its own
+#: line is not a restoration.
+_GATE_OPEN = re.compile(r"^H3_COMBINATION_AUTHORIZED = True$", re.M)
 _GATE_CLOSED = "H3_COMBINATION_AUTHORIZED = False"
 
 #: the parent-owned receipt. Create-only, beside the report it describes.

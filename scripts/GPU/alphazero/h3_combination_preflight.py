@@ -85,6 +85,31 @@ def main() -> int:
           and not os.path.lexists(CCMD.RECEIPT)
           and not os.path.lexists(COMBINE.COMBINED_OUT_DIR))
 
+    print("\n== the allow-list: narrow, and strict by default ==")
+    #: 🔴 THE PREFLIGHT STILL DEMANDS ALL ELEVEN SHUT. It runs BEFORE the gate is
+    #: opened, so the state it clears is the closed one; the allow-list is for
+    #: the run itself, which cannot be in that state.
+    check("the combiner permits exactly ONE gate, its own",
+          tuple(COMBINE.THIS_GATE) == (("h3_combine", "H3_COMBINATION_AUTHORIZED"),))
+    check("verify_final_state is STRICT by default (no allow_open)",
+          "gates are OPEN" in " ".join(
+              FINAL.verify_final_state(allow_open=None) or ["<none open>"])
+          or INVENTORY.open_gates() == [])
+    _mine = FINAL.verify_final_state(allow_open=COMBINE.THIS_GATE)
+    check("and permitting its own gate changes nothing while all are shut",
+          _mine == FINAL.verify_final_state())
+
+    print("\n== attempt 1 is SPENT; attempt 2's destination is FRESH ==")
+    for _spent in COMBINE.SPENT_COMBINED_DIRS:
+        check("attempt 1's record is PRESERVED",
+              os.path.lexists(os.path.join(_spent, "00_combination_receipt.json")),
+              _spent)
+        check("attempt 1 wrote NO report",
+              not os.path.lexists(os.path.join(_spent, "09_combined_report.json")))
+        check("attempt 2 is not inside it",
+              COMBINE.COMBINED_OUT_DIR != _spent
+              and not COMBINE.COMBINED_OUT_DIR.startswith(_spent.rstrip("/") + "/"))
+
     print("\n== the writer: the official name appears only when durable ==")
     import inspect
     src = inspect.getsource(COMBINE._write_create_only)

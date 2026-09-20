@@ -43,7 +43,7 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Any, Dict, List, Mapping, Optional, Sequence
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence
 
 from . import e4_screen_reference as REF
 from . import gate_inventory as INVENTORY
@@ -143,7 +143,8 @@ def _check_report(k: int, rep: Mapping[str, Any], n: int, out: List[str]) -> Non
 
 
 def verify_final_state(*, paths_for=None, receipt_for=None,
-                       blocks: Optional[Sequence] = None) -> List[str]:
+                       blocks: Optional[Sequence] = None,
+                       allow_open: Optional[Iterable] = None) -> List[str]:
     """Every disagreement across the four segments' records. `[]` means they
     agree. The three injection points exist so a test can feed a TAMPERED record
     and watch a specific cross-check fail, without touching real evidence.
@@ -211,9 +212,19 @@ def verify_final_state(*, paths_for=None, receipt_for=None,
         out.append(f"the pins could not be recomputed: {exc}")
 
     #: the gates, DERIVED from source
+    #: 🔴 THE ALLOW-LIST, AND WHY IT EXISTS. This rejected ANY open gate, which
+    #: is right for the question "is this study finished and shut" and made the
+    #: COMBINATION impossible: `combine()` requires its own gate OPEN, so the
+    #: precondition contradicted the entry condition and the combination refused
+    #: itself on 2026-09-20. `allow_open` names the gates a caller has a reason
+    #: to have open. It is EMPTY by default, so every existing caller keeps the
+    #: strict behaviour, and it permits ONLY what is named -- every other open
+    #: gate is still a disagreement.
+    allowed = {tuple(g) for g in (allow_open or ())}
     open_gates = INVENTORY.open_gates()
-    if open_gates:
-        out.append(f"gates are OPEN: {open_gates}")
+    unexpected = [g for g in open_gates if tuple(g) not in allowed]
+    if unexpected:
+        out.append(f"gates are OPEN: {unexpected}")
     #: 🔴 NO COUNT PINNED HERE, DELIBERATELY. It used to say `!= 10`. The gate
     #: TOTAL has exactly one tripwire -- `EXPECTED_GATES` in
     #: tests/test_gate_inventory.py -- and the reason it has one is that three

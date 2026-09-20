@@ -59,8 +59,21 @@ H3_COMBINATION_AUTHORIZED = False
 #: THE FIXED DESTINATION. Not a parameter of `combine()`, so a run cannot be
 #: aimed anywhere else, and not reused: create-only means a second combination
 #: needs a new reviewed destination and a new authorization.
-COMBINED_OUT_DIR = f"{RUN.OUT_ROOT}/2026-09-20-t1j-h3-study-combined"
+COMBINED_OUT_DIR = f"{RUN.OUT_ROOT}/2026-09-20-t1j-h3-study-combined-attempt2"
 COMBINED_REPORT = f"{COMBINED_OUT_DIR}/09_combined_report.json"
+
+#: 🔴 ATTEMPT 1's DESTINATION IS SPENT. It was consumed by ATTEMPT, not by
+#: success: the combination refused itself (see THIS_GATE below) and wrote no
+#: report, but the authorization was spent and its create-only receipt stands
+#: there as the record. A retry must not write where a spent attempt was aimed
+#: -- the same rule segment 0's VOID established for its quarter.
+SPENT_COMBINED_DIRS = (f"{RUN.OUT_ROOT}/2026-09-20-t1j-h3-study-combined",)
+
+#: 🔴 THE ONE GATE THAT IS SUPPOSED TO BE OPEN WHILE THIS RUNS, and the only one
+#: the final-state check is told to permit. Naming it here rather than passing a
+#: set from the call site keeps the permission as narrow as the act: any OTHER
+#: open gate is still a disagreement and still stops the combination.
+THIS_GATE = (("h3_combine", "H3_COMBINATION_AUTHORIZED"),)
 
 #: the three preregistered sensitivities, by name. Persisting two of them and
 #: calling it the report would be a quiet narrowing of the design.
@@ -186,7 +199,8 @@ def combine_unguarded(
     permit = permit or RUN.combine_segments
 
     # ── 1. the four records must agree BEFORE anything is pooled
-    problems = verify(paths_for=paths_for, receipt_for=receipt_for, blocks=blocks)
+    problems = verify(paths_for=paths_for, receipt_for=receipt_for, blocks=blocks,
+                      allow_open=THIS_GATE)
     if problems:
         raise H3CombineError(
             f"the final state reports {len(problems)} disagreement(s); the "
