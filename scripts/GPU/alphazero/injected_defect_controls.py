@@ -3966,8 +3966,6 @@ EXPECTED_REASONS = {
         'assert 0 == 9',
     'the receipt records the run code instead of the superseding one':
         "AssertionError: the receipt must record the superseding code, not the run's own",
-    'the combination receipt is not create-only':
-        'AssertionError: a second run must not overwrite the first receipt',
     'an unauthorized combination writes a receipt and occupies the destination':
         'AssertionError: assert not True',
     'the combination command accepts a destination override':

@@ -589,14 +589,37 @@ def test_THE_RECEIPT_RECORDS_THE_INPUTS_AND_THE_OUTPUT(tmp_path, fake_source,
 
 
 def test_THE_RECEIPT_IS_CREATE_ONLY(tmp_path, fake_source, monkeypatch):
-    monkeypatch.setattr(COMBINE, "combine", lambda: {"n_games": 592})
+    """🔴 THE TWO RUNS MUST DIFFER, OR AN OVERWRITE LOOKS LIKE A NO-OP. Both
+    runs used to return the same stub, so the receipt was byte-identical either
+    way and the control removing the create-only guard was NOT CAUGHT -- the
+    same trap as comparing an existing receipt before and after a refusal.
+
+    The first run COMPLETES and the second FAILS, so an overwrite would replace
+    a COMPLETED record with a FAILED one and cannot hide."""
+    calls = []
+
+    def once():
+        calls.append(1)
+        if len(calls) > 1:
+            raise RuntimeError("the second attempt exploded")
+        return {"n_games": 592, "n_pairs": 296, "verdict": "NO VERDICT"}
+
+    monkeypatch.setattr(COMBINE, "combine", once)
     receipt = str(tmp_path / "out" / "receipt.json")
-    CCMD.main(["--run"], _combine_source=fake_source, _receipt=receipt)
-    first = pathlib.Path(receipt).read_bytes()
+    assert CCMD.main(["--run"], _combine_source=fake_source,
+                     _receipt=receipt) == CCMD.EXIT_OK
+    first = json.loads(pathlib.Path(receipt).read_text())
+    assert first["outcome"] == "COMPLETED" and first["n_games"] == 592
+
     pathlib.Path(fake_source).write_text("# header\n" + GATE_OPEN_SRC)
     CCMD.main(["--run"], _combine_source=fake_source, _receipt=receipt)
-    assert pathlib.Path(receipt).read_bytes() == first, (
+    assert len(calls) == 2, "the second run must really have been attempted"
+
+    after = json.loads(pathlib.Path(receipt).read_text())
+    assert after == first, (
         "a second run must not overwrite the first receipt")
+    assert after["outcome"] == "COMPLETED", (
+        "the FAILED second attempt must not have replaced the COMPLETED record")
 
 
 def test_THE_REAL_GATE_AND_ITS_RECEIPT_ARE_UNTOUCHED():
