@@ -3939,6 +3939,19 @@ DEFECTS = [
 # DERIVED from the requirement and its assertion and then verified against a run,
 # which is why each names a count or a sentence rather than a first line.
 EXPECTED_REASONS = {
+    # ── machine-independent re-harvest (2026-09-20). OBSERVED.
+    'an ABSOLUTE python path is left in the reason':
+        'AssertionError: the same failure on another machine must produce the same reason',
+    'an ABSOLUTE home path is left in the reason':
+        'assert "the verified...j-e1/t1j.jar\'" == "the verified...j-e1/t1j.jar\'"',
+    'lowply public runner ungated':
+        "scripts.GPU.alphazero.lowply_qualification.LowPlyVoidError: toolchain or compilation failed: the run was given jar '/nonexistent/t1j.jar' but the verified toolchain's jar is '<home>/Library/Application Support/TwixT_Game/toolchains/t1j-e1/t1j.jar'. Verifying one jar and compiling against another is a hash check that binds nothing.. VOID.",
+    'requal gate removed at the public runner':
+        "scripts.GPU.alphazero.runtime_requalification.RequalVoidError: toolchain or compilation failed: the run was given jar '/nonexistent/t1j.jar' but the verified toolchain's jar is '<home>/Library/Application Support/TwixT_Game/toolchains/t1j-e1/t1j.jar'. Verifying one jar and compiling against another is a hash check that binds nothing.. VOID.",
+    'main spawns itself without --worker':
+        "AssertionError: assert ('--worker' in ['<python>', '-m', 'scripts.GPU.alphazero.runtime_requalification', '--out', '...te/<tmp>/pytest-of-bill/pytest-<n>/test_main_supervises_a_WORKER_0/r.json'])",
+    "the default restoration target is not the imported runner's source":
+        "AssertionError: restoration must target the IMPORTED runner's own source, not a decoy",
     'the combination gate is not checked at all':
         'scripts.GPU.alphazero.h3_combine.H3CombineError: docs/superpowers/evidence/2026-09-20-t1j-h3-study-combined-attempt2/09_combined_report.json already exists. The combined report is written ONCE; a second combination needs a new reviewed destination.',
     # ── the combination closeout (2026-09-20). OBSERVED.
