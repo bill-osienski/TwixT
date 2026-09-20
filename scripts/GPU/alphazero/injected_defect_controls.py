@@ -3931,6 +3931,15 @@ DEFECTS = [
 # DERIVED from the requirement and its assertion and then verified against a run,
 # which is why each names a count or a sentence rather than a first line.
 EXPECTED_REASONS = {
+    # ── the combination closeout (2026-09-20). OBSERVED.
+    'the combined outputs are never re-hashed against their pins':
+        'AssertionError: []',
+    'a pinned combined output may be MISSING':
+        "FileNotFoundError: [Errno 2] No such file or directory: '/private/<tmp>/pytest-of-bill/pytest-<n>/test_THE_COMBINED_OUTPUTS_ARE_0/gone.json'",
+    "the combined report's digest pin is blanked":
+        'AssertionError: the combined output must still be byte-identical to what was written',
+    'the verdict is persisted without its population claim':
+        "KeyError: 'claim'",
     'the combination receipt is not create-only':
         'AssertionError: a second run must not overwrite the first receipt',
     # ── the allow-list repair (2026-09-20). OBSERVED, never guessed.
