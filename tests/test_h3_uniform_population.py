@@ -1203,8 +1203,8 @@ SEG0_QUARTER = (202_626_000, 202_626_148)
 
 #: 🔴 THE ONE PLACE THE CONCRETE ANSWER LIVES. A segment run edits these two
 #: lines and nothing else; every test DERIVES the rest.
-EXPECTED_SPENT = [0, 1]
-EXPECTED_UNSPENT = [2, 3]
+EXPECTED_SPENT = [0, 1, 2]
+EXPECTED_UNSPENT = [3]
 
 
 def segment_partition():
@@ -1545,30 +1545,35 @@ def test_WHERE_THE_STUDY_STANDS():
     six tests which used to encode this fact separately no longer each need
     inverting.
 
-    As of segment 1's closeout (2026-09-19): segments 0 and 1 have run and are
-    spent; segments 2 and 3 have not. EDIT THE TWO CONSTANTS, NOT THE MESSAGES --
+    As of segment 2's closeout (2026-09-19): segments 0, 1 and 2 have run and are
+    spent; segment 3 has not. EDIT THE TWO CONSTANTS, NOT THE MESSAGES --
     a control's recorded reason is the message, and a message carrying a value
     drifts the moment that value moves.
     """
     spent, unspent = segment_partition()
     assert spent == EXPECTED_SPENT, "the registry's spent set is not the one recorded here"
     assert unspent == EXPECTED_UNSPENT, "the registry's unspent set is not the one recorded here"
-    assert R.N_SEGMENTS == 4
-    # 148 pairs are now recorded, which is the REPORT FLOOR -- and not a licence
-    # to report: see test_REACHING_THE_FLOOR_DOES_NOT_PERMIT_A_VERDICT.
-    assert len(spent) * (R.GAMES_PER_SEGMENT // 2) == R.REPORT_FLOOR_PAIRS == 148
+    #: 🔴 DESIGN ARITHMETIC, NOT A SNAPSHOT. This used to assert
+    #: `len(spent) * 74 == REPORT_FLOOR_PAIRS`, true only at the two-segment
+    #: moment it was written in -- a third accidental tripwire. What is durable
+    #: is the partition covering the design, and the design's own constants.
+    assert len(spent) + len(unspent) == R.N_SEGMENTS == 4
+    assert R.N_SEGMENTS * (R.GAMES_PER_SEGMENT // 2) == R.N_PAIRS == 296
+    assert R.REPORT_FLOOR_PAIRS == 148
 
 
 def test_REACHING_THE_FLOOR_DOES_NOT_PERMIT_A_VERDICT():
-    """🔴 148 CUMULATIVE PAIRS CLEARS THE ARITHMETIC AND NOTHING ELSE. Segments
-    2-3 stand withheld AFTER segment 0's and segment 1's outcomes were inspected,
-    which is optional stopping; `combine_segments` refuses a verdict on
-    provenance, not on counts."""
+    """🔴 CLEARING THE PAIR FLOOR CLEARS THE ARITHMETIC AND NOTHING ELSE. While
+    ANY segment stands withheld after an earlier one's outcomes were inspected,
+    that is optional stopping, and `combine_segments` refuses a verdict on
+    provenance rather than on counts -- however many pairs are in hand."""
+    spent, unspent = segment_partition()
+    assert spent and unspent, "the question only arises mid-study"
     stopping_now = RUN.combine_segments(
         [{"segment": k, "status": "completed", "outcomes_inspected": True}
-         for k in (0, 1)]
+         for k in spent]
         + [{"segment": k, "status": "withheld", "outcomes_inspected": True}
-           for k in (2, 3)])
+           for k in unspent])
     assert stopping_now["verdict_permitted"] is False
     assert stopping_now["flagged"] is True
     assert "optional stopping" in stopping_now["why"]

@@ -770,13 +770,25 @@ def test_A_SPENT_SEGMENT_CANNOT_BE_RELAUNCHED():
     destination is occupied; either alone must stop a second launch.
 
     Generalised at segment 1's closeout: this named segment 0 only, so segment 1
-    gained a completed run and no test asserted it could not be run again."""
+    gained a completed run and no test asserted it could not be run again.
+
+    🔴 AND THEN I FROZE ANOTHER LITERAL. That generalisation still pinned
+    `ran == [0, 1]`, so segment 2 tripped it -- a second tripwire built by
+    accident beside the one built on purpose. The set is now READ.
+
+    🔑 IT IS READ FROM THE REGISTRY, NOT FROM `check_segment_seeds`. Deriving it
+    from "which segments refuse" would collapse to an empty list under the very
+    defects this test backs -- `a SPENT segment may be relaunched` and `the
+    spent-seed check ignores EXPOSED` both stop it refusing -- and the test would
+    then pass over nothing at all. The expectation must not come from the thing
+    under test.
+    """
     import os
     from scripts.GPU.alphazero import e4_screen_reference as REF
     from scripts.GPU.alphazero import h3_study_command as CMD
     ran = [k for k, (lo, hi) in enumerate(RUN.SEGMENT_SEED_BLOCKS)
            if any(REF.seed_status(x)["exposed"] for x in range(lo, hi))]
-    assert ran == [0, 1], ran
+    assert ran, "no segment has run, so this test would assert nothing"
     for k in ran:
         lo, hi = RUN.SEGMENT_SEED_BLOCKS[k]
         st = [REF.seed_status(x) for x in range(lo, hi)]
