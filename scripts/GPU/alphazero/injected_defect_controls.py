@@ -124,7 +124,7 @@ DEFECTS = [
     ('the combination stops requiring the seeds to be the four blocks', H3CMB,
      '    if len(set(seeds)) != RULES.N_GAMES or set(seeds) != expected_seeds:',
      '    if False:',
-     f"{T_H3CMB}::test_A_DUPLICATED_SEGMENT_IS_REFUSED"),
+     f"{T_H3CMB}::test_SEEDS_THAT_ARE_NOT_THE_FOUR_BLOCKS_ARE_REFUSED"),
     ('the combination accepts a pair that is not a pair', H3CMB,
      '    short = sorted(p for p, n in by_pair.items() if n != 2)',
      '    short = []',

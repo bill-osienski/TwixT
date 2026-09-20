@@ -63,7 +63,8 @@ def _segment_records(k, block, *, winner_of=None):
 
 
 def build_segment(root, k, block, *, winner_of=None, drop_game=False,
-                  duplicate_game=False, split_pair=False):
+                  duplicate_game=False, split_pair=False,
+                  shift_seeds=False):
     """One synthetic segment directory that `verify_final_state` accepts."""
     d = pathlib.Path(root) / f"segment{k}"
     d.mkdir(parents=True, exist_ok=True)
@@ -71,6 +72,12 @@ def build_segment(root, k, block, *, winner_of=None, drop_game=False,
     if drop_game:
         rows = [r for r in rows if r is not results[-1]]
         results = results[:-1]
+    if shift_seeds:
+        #: distinct task ids, complete pairs, 592 games -- and seeds that are
+        #: NOT the block this segment was allocated.
+        results = [dict(r, seed=r["seed"] + 10_000_000) for r in results]
+        rows = [dict(r, seed=r["seed"] + 10_000_000)
+                if r.get("record_type") == "task_result" else r for r in rows]
     if split_pair:
         #: 592 games and 592 seeds still, but one pair holds THREE and another
         #: holds ONE -- the shape a count-only check cannot see.
@@ -229,10 +236,15 @@ def test_THE_POOLED_ELAPSED_TIME_IS_THE_SUM_OF_THE_SEGMENTS(study):
 # ═══════════════════════ what it must refuse ════════════════════════════════
 def test_A_FINAL_STATE_DISAGREEMENT_BLOCKS_AGGREGATION(study):
     """Zero disagreements first, or the number describes no run."""
-    receipt = pathlib.Path(study["receipt_for"](1))
-    data = json.loads(receipt.read_text())
-    data["outcome"] = "TIMED_OUT"
-    receipt.write_text(json.dumps(data))
+    #: 🔴 THE TRACE, NOT THE RECEIPT. Tampering the receipt's outcome ALSO
+    #: turns the segment "void" for `combine_segments`, so removing the
+    #: final-state check moved the refusal rather than removing it and the
+    #: control never demonstrated its own claim. A trace that did not end OK is
+    #: a disagreement the final-state check alone can see.
+    trace = pathlib.Path(study["paths_for"](1)[1])
+    rows = [json.loads(x) for x in trace.read_text().splitlines() if x.strip()]
+    rows[-1]["verdict"] = "VOID"
+    trace.write_text("\n".join(json.dumps(r) for r in rows) + "\n")
     with pytest.raises(COMBINE.H3CombineError, match="disagreement"):
         run(study)
     assert not os.path.lexists(study["out"]), "a refusal writes nothing"
@@ -292,9 +304,22 @@ def test_THE_REAL_VERIFIER_CATCHES_BOTH_FIRST(tmp_path):
 
 
 def test_A_DUPLICATED_SEGMENT_IS_REFUSED(study):
-    """Reading segment 1 twice would double 148 games and halve nothing."""
-    with pytest.raises(COMBINE.H3CombineError):
+    """Reading segment 1 three times would triple its 148 games and halve
+    nothing. The FINAL-STATE check sees it first -- segment 1's trace and report
+    name segment 1 wherever they are read from -- and the test names which guard
+    fired, because an assertion satisfied by any refusal at all proves nothing
+    about which one is doing the work. The task-id arithmetic behind it is
+    exercised in isolation by test_A_DUPLICATED_GAME_IS_REFUSED."""
+    with pytest.raises(COMBINE.H3CombineError, match="disagreement"):
         run(study, paths_for=lambda k: study["paths_for"](1 if k else 0))
+
+
+def test_SEEDS_THAT_ARE_NOT_THE_FOUR_BLOCKS_ARE_REFUSED(tmp_path):
+    """🔴 THE GAMES MUST BE THE GAMES THAT WERE SCHEDULED. Distinct task ids,
+    complete pairs and 592 records are all satisfiable by games played on other
+    seeds entirely; only the union check says they are THIS study's."""
+    with pytest.raises(COMBINE.H3CombineError, match="union of the four blocks"):
+        COMBINE.combine_unguarded(**_broken(tmp_path, shift_seeds=0))
 
 
 def test_FEWER_THAN_FOUR_SEGMENTS_IS_REFUSED(study):
