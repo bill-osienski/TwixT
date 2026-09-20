@@ -282,6 +282,10 @@ DEFECTS = [
      "        bucket = unspent",
      f"{T_H3POP}::test_WHERE_THE_STUDY_STANDS"),
     # ═════════ THE HARNESS'S OWN REASONS MUST NOT DRIFT WITH LOAD ══════════
+    ("the USERNAME is left in the reason via pytest's temp root", DRV,
+     '    (re.compile(r"pytest-of-[^/\\s\'\\"]+"), "pytest-of-<user>"),',
+     "    (re.compile(r'ZZZ_NEVER_MATCHES'), 'pytest-of-<user>'),",
+     f"{T_DRV}::test_stable_NORMALISES_ABSOLUTE_PATHS_SO_ANOTHER_CHECKOUT_MATCHES"),
     ("an ABSOLUTE python path is left in the reason", DRV,
      '    (re.compile(r"/[^\\s\'\\"]*/bin/python[0-9.]*"), "<python>"),',
      "    (re.compile(r'ZZZ_NEVER_MATCHES'), '<python>'),",
@@ -3948,8 +3952,6 @@ EXPECTED_REASONS = {
         "scripts.GPU.alphazero.lowply_qualification.LowPlyVoidError: toolchain or compilation failed: the run was given jar '/nonexistent/t1j.jar' but the verified toolchain's jar is '<home>/Library/Application Support/TwixT_Game/toolchains/t1j-e1/t1j.jar'. Verifying one jar and compiling against another is a hash check that binds nothing.. VOID.",
     'requal gate removed at the public runner':
         "scripts.GPU.alphazero.runtime_requalification.RequalVoidError: toolchain or compilation failed: the run was given jar '/nonexistent/t1j.jar' but the verified toolchain's jar is '<home>/Library/Application Support/TwixT_Game/toolchains/t1j-e1/t1j.jar'. Verifying one jar and compiling against another is a hash check that binds nothing.. VOID.",
-    'main spawns itself without --worker':
-        "AssertionError: assert ('--worker' in ['<python>', '-m', 'scripts.GPU.alphazero.runtime_requalification', '--out', '...te/<tmp>/pytest-of-bill/pytest-<n>/test_main_supervises_a_WORKER_0/r.json'])",
     "the default restoration target is not the imported runner's source":
         "AssertionError: restoration must target the IMPORTED runner's own source, not a decoy",
     'the combination gate is not checked at all':
@@ -3957,8 +3959,6 @@ EXPECTED_REASONS = {
     # ── the combination closeout (2026-09-20). OBSERVED.
     'the combined outputs are never re-hashed against their pins':
         'AssertionError: []',
-    'a pinned combined output may be MISSING':
-        "FileNotFoundError: [Errno 2] No such file or directory: '/private/<tmp>/pytest-of-bill/pytest-<n>/test_THE_COMBINED_OUTPUTS_ARE_0/gone.json'",
     "the combined report's digest pin is blanked":
         'AssertionError: the combined output must still be byte-identical to what was written',
     'the verdict is persisted without its population claim':
@@ -3999,10 +3999,6 @@ EXPECTED_REASONS = {
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_combine.H3CombineError'>",
     'the combination accepts a narrower analysis':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_combine.H3CombineError'>",
-    'the early occupied-destination check is removed':
-        "FileExistsError: [Errno 17] File exists: '/private/<tmp>/pytest-of-bill/pytest-<n>/test_THE_DESTINATION_IS_CREATE0/combined/.09_combined_report.json.<pid>.tmp' -> '/private/<tmp>/pytest-of-bill/pytest-<n>/test_THE_DESTINATION_IS_CREATE0/combined/09_combined_report.json'",
-    'the report is serialised straight into the official path':
-        "FileExistsError: [Errno 17] File exists: '/private/<tmp>/pytest-of-bill/pytest-<n>/test_THE_OFFICIAL_PATH_IS_NEVE0/combined/09_combined_report.json' -> '/private/<tmp>/pytest-of-bill/pytest-<n>/test_THE_OFFICIAL_PATH_IS_NEVE0/combined/09_combined_report.json'",
     'the temporary file is left beside the report':
         'AssertionError: a temporary file was left beside the report',
     'the install OVERWRITES instead of refusing an existing name':
@@ -4041,8 +4037,6 @@ EXPECTED_REASONS = {
         'AssertionError: a receipt that did not COMPLETE must be reported',
     'the final-state check reads seeds from the PLAN, not the records':
         'AssertionError: a seed outside the block must be reported -- exposure is read off the records',
-    'the final-state check stops requiring the artifacts to exist':
-        "FileNotFoundError: [Errno 2] No such file or directory: '/private/<tmp>/pytest-of-bill/pytest-<n>/test_A_MISSING_ARTIFACT_IS_CAU0/segment2/04_trace.jsonl'",
     'the final-state check ignores a fired degeneracy gate':
         'AssertionError: a FIRED degeneracy gate must be reported',
     'the final-state check stops looking at the gate inventory':
@@ -4282,8 +4276,6 @@ EXPECTED_REASONS = {
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
     'compile step accepts a java outside the verified JDK':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1Error'>",
-    'compile step reuses an existing class directory':
-        "FileExistsError: [Errno 17] File exists: '/private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/pytest-of-bill/pytest-<n>/test_an_existing_class_directo0/classes'",
     'compile step ignores a failing javac':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_probe.D1VoidError'>",
     'compile step builds the E3b set, not the query path':
@@ -4636,8 +4628,6 @@ EXPECTED_REASONS = {
         'scripts.GPU.alphazero.h1_viability_runner.H1Error: the H1 schedule may not be executed: seed 202617000 was EXPOSED -- it has been drawn from -- and cannot be scheduled',
     'registering the block opens the gate too':
         'scripts.GPU.alphazero.h1_viability_runner.H1Error: match mode requires a trace path: the card freezes a create-only, non-analytic VOID trace, and a match that cannot say how far it got is not the design that was preregistered. Nothing has been written.',
-    'match mode accepts a supplied plan':
-        "scripts.GPU.alphazero.h1_viability_plan.H1PlanError: cannot read the H1 plan: [Errno 2] No such file or directory: '/private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/pytest-of-bill/pytest-<n>/test_match_mode_REFUSES_a_supp0/other.json'",
     'the content binding narrows to the digest dimensions (dead again)':
         'scripts.GPU.alphazero.h1_viability_runner.H1VoidError: [precondition] no state factory: the public runner opens no games The H1 match is VOID: no viability report is produced and the seed block retires whole.',
     'the seed-block check is dropped from the PLAN validator':
@@ -4710,8 +4700,6 @@ EXPECTED_REASONS = {
         'scripts.GPU.alphazero.e4_screen_runner.HarnessError: cannot create the results file: [Errno 28] no space',
     'the output preflight is removed':
         'AssertionError: a precondition refusal is not a VOID',
-    'the preflight ignores the trace path':
-        "FileExistsError: [Errno 17] File exists: '/private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/pytest-of-bill/pytest-<n>/test_a_PREEXISTING_TRACE_path_0/t.jsonl'",
     'a precondition refusal is reported as a VOID':
         'AssertionError: a precondition refusal is not a VOID',
     'a mid-run recorder failure escapes unclassified again':
@@ -4720,18 +4708,12 @@ EXPECTED_REASONS = {
         'scripts.GPU.alphazero.h1_viability_runner.H1VoidError: [precondition] no state factory: the public runner opens no games The H1 match is VOID: no viability report is produced and the seed block retires whole.',
     'the trace requirement is not applied to the match':
         'scripts.GPU.alphazero.h1_viability_runner.H1VoidError: [precondition] no state factory: the public runner opens no games The H1 match is VOID: no viability report is produced and the seed block retires whole.',
-    'results and trace may be the same file':
-        'scripts.GPU.alphazero.h1_viability_runner.H1VoidError: the results file could not be created: results path already exists: /private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/pytest-of-bill/pytest-<n>/test_THE_TWO_OUTPUT_PATHS_MUST0/both.jsonl. A run writes a NEW file; appending would merge two runs. The H1 match is VOID: no viability report is produced and the seed block retires whole.',
     'the paths are compared WITHOUT canonicalisation':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h1_viability_runner.H1Error'>",
-    'canonicalisation stops resolving symlinks':
-        'scripts.GPU.alphazero.h1_viability_runner.H1Error: the trace path already exists: /private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/pytest-of-bill/pytest-<n>/test_a_SYMLINKED_trace_path_is0/link.jsonl (a dangling symlink -- the directory entry is present). A run writes NEW files; appending would merge two runs, and overwriting would destroy the record of one. Nothing has been written and no trace was opened.',
     'the output precheck follows symlinks again (exists, not lexists)':
         'AssertionError: a knowable path condition became a VOID',
     'the precheck stops agreeing with create-exclusive open':
         'AssertionError: dangling',
-    'only the results name is checked for existence':
-        "FileExistsError: [Errno 17] File exists: '/private/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/pytest-of-bill/pytest-<n>/test_a_DANGLING_TRACE_link_is_0/t.jsonl'",
     'the public docstring denies that match mode is selectable':
         'AssertionError: the correction should record what it corrects',
     'the H1 block is un-registered from ACCOUNTED':

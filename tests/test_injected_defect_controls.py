@@ -840,6 +840,13 @@ def test_stable_NORMALISES_ABSOLUTE_PATHS_SO_ANOTHER_CHECKOUT_MATCHES():
                   "Application Support/TwixT_Game/toolchains/t1j-e1/t1j.jar'")
     assert DRV.stable(jar_mine) == DRV.stable(jar_theirs)
 
+    #: pytest's own temp root carries the username too, and normalising
+    #: /var/folders/…/T/ leaves it standing
+    tmp_mine = "/private/<tmp>/pytest-of-bill/pytest-12/test_x0/r.json"
+    tmp_theirs = "/private/<tmp>/pytest-of-alice/pytest-12/test_x0/r.json"
+    assert DRV.stable(tmp_mine) == DRV.stable(tmp_theirs)
+    assert "bill" not in DRV.stable(tmp_mine)
+
     #: and it must NOT eat a repository-relative path, which is the same in
     #: every checkout and is what most reasons legitimately quote
     keep = "docs/superpowers/evidence/2026-09-20-t1j-h3-study-combined/09.json"

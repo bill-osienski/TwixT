@@ -197,6 +197,11 @@ _VOLATILE = (
     # `/Users/<name>/Library/...`. The username is also the one piece of these
     # paths that is personal.
     (re.compile(r"/(?:Users|home)/[^/\s'\"]+/"), "<home>/"),
+    # 🔴 AND pytest's OWN TEMP ROOT CARRIES THE USERNAME. Normalising
+    # `/var/folders/…/T/` left `pytest-of-<user>/` standing, so ELEVEN more
+    # reasons were machine-bound after the first two normalisers went in --
+    # the username is not the volatile part anyone thinks of.
+    (re.compile(r"pytest-of-[^/\s'\"]+"), "pytest-of-<user>"),
 )
 
 
