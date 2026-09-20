@@ -3806,10 +3806,6 @@ EXPECTED_REASONS = {
     # ── segment 1 closeout, REPAIRED controls (2026-09-19). OBSERVED.
     'readiness stops reading the registry and calls nothing spent':
         "AssertionError: readiness must report the registry's spent segments",
-    "every segment's block is pointed at a SPENT one":
-        'AssertionError: both halves must be non-empty to mean anything',
-    "every segment writes into segment 0's occupied destination":
-        "AssertionError: an unspent segment's destination must not exist",
     # ── segment 1 closeout (2026-09-19). OBSERVED, never guessed.
     'the spent/unspent partition stops reading the registry':
         "AssertionError: the registry's spent set is not the one recorded here",
@@ -3843,8 +3839,6 @@ EXPECTED_REASONS = {
         "AssertionError: assert 'ensure_parent_dirs(trace_path, results_path, report_path)' in 'def _run_segment_unguarded(*, segment: int, tasks, openings, results_path,\\n                           trace_path, re...T directory\\n#: while every test still passed, because nothing compared the two.\\nOPENING_SET_PATH = GEN.DEFAULT_OUT\\n'",
     'the receipt is not create-only':
         'AssertionError: a second write must refuse',
-    'an UNAUTHORIZED invocation writes a receipt and occupies the destination':
-        'AssertionError: assert not True',
     'a retired earlier segment blocks every later one again':
         "scripts.GPU.alphazero.h3_study_runner.H3StudyRunError: segment 0's block [909090000, 909090148) is not registered: 148 of 148 seeds are absent from ACCOUNTED_SEED_INTERVALS (first 909090000).",
     'the RETIRED block may be relaunched':

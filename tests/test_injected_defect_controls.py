@@ -694,3 +694,31 @@ def test_stable_NORMALISES_A_MEASURED_DURATION_BUT_NOT_A_CONFIGURED_ONE():
 
     cfg = "whole-run deadline exceeded (100.0s > 1.0s). The run is VOID"
     assert DRV.stable(cfg) == cfg, "a configured timeout must stay literal"
+
+
+def test_A_DUPLICATED_EXPECTED_REASON_KEY_IS_REFUSED(sandbox):
+    """🔴 A DICT LITERAL SILENTLY KEEPS THE LAST KEY, AND PYTHON NEVER SAYS SO.
+
+    Three reasons were re-harvested and installed at the top of
+    `EXPECTED_REASONS` while STALE entries for the same labels sat further down.
+    The later ones won, the controls were scored against reasons they no longer
+    produced, and all three came back INDETERMINATE while both the reason and
+    the control were individually correct.
+
+    The harness could not see it: `dict(mod.EXPECTED_REASONS)` is already
+    collapsed by the time it is imported, and the duplicate-LABEL and
+    orphan-reason checks both look at that collapsed dict. It has to be read
+    from the SOURCE.
+    """
+    defects = sandbox.parent / "dupe_reasons.py"
+    defects.write_text(
+        "DEFECTS = [('a label', 'src.py', 'good', 'bad',\n"
+        "            'tests/test_target.py::test_value')]\n"
+        "EXPECTED_REASONS = {\n"
+        "    'a label': 'the first reason',\n"
+        "    'a label': 'the reason that silently wins',\n"
+        "}\n")
+    r = drive(sandbox, defects)
+    assert r.returncode != 0, r.stdout
+    assert "DUPLICATE EXPECTED REASON" in r.stdout, r.stdout
+    assert "a label" in r.stdout

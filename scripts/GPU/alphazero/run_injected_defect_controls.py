@@ -53,6 +53,31 @@ _CHECKOUT = None       # the disposable checkout, so a signal can name it
 _PRESERVE = False      # a checkout we announced as kept must not then be discarded
 
 
+def duplicate_reason_keys(path):
+    """Reason keys written twice in the SOURCE.
+
+    🔴 A DICT LITERAL KEEPS THE LAST KEY AND PYTHON NEVER SAYS SO. Three reasons
+    were re-harvested and installed at the top of `EXPECTED_REASONS` while stale
+    entries for the same labels sat further down; the later ones won, and all
+    three controls came back INDETERMINATE while both the control and the new
+    reason were individually correct.
+
+    The duplicate-LABEL and orphan-reason checks cannot see this: by the time
+    the module is imported the dict is already collapsed. It has to be read from
+    the source text.
+    """
+    import ast
+    import collections
+    tree = ast.parse(pathlib.Path(path).read_text())
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign) and any(
+                getattr(t, "id", "") == "EXPECTED_REASONS" for t in node.targets):
+            keys = [k.value for k in node.value.keys
+                    if isinstance(k, ast.Constant) and isinstance(k.value, str)]
+            return sorted(k for k, n in collections.Counter(keys).items() if n > 1)
+    return []
+
+
 def load_defects(path):
     """Import the control list BY PATH. Safe by construction: that module is data."""
     spec = importlib.util.spec_from_file_location("_injected_defect_controls", path)
@@ -222,6 +247,15 @@ def main(argv):
     if git(repo, "status", "--porcelain").stdout.strip():
         print("REFUSED: the working tree is not clean. The checkout is made from "
               "HEAD, so uncommitted changes would NOT be under test.")
+        return REFUSED
+
+    #: read from the SOURCE, before the import collapses it
+    _dupe_reasons = duplicate_reason_keys(a.defects)
+    for _k in _dupe_reasons:
+        print(f"🔴 DUPLICATE EXPECTED REASON -- the later one silently wins: {_k!r}")
+    if _dupe_reasons:
+        print("REFUSED: every control would be scored against a reason that may "
+              "not be the one installed.")
         return REFUSED
 
     defects, reasons = load_defects(a.defects)
