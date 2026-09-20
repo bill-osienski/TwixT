@@ -3771,6 +3771,19 @@ DEFECTS = [
 # DERIVED from the requirement and its assertion and then verified against a run,
 # which is why each names a count or a sentence rather than a first line.
 EXPECTED_REASONS = {
+    # ── the final-state cross-check (2026-09-20). OBSERVED, never guessed.
+    'the final-state check stops comparing the receipt fields':
+        'AssertionError: a receipt that did not COMPLETE must be reported',
+    'the final-state check reads seeds from the PLAN, not the records':
+        'AssertionError: a seed outside the block must be reported -- exposure is read off the records',
+    'the final-state check stops requiring the artifacts to exist':
+        "FileNotFoundError: [Errno 2] No such file or directory: '/private/<tmp>/pytest-of-bill/pytest-<n>/test_A_MISSING_ARTIFACT_IS_CAU0/segment2/04_trace.jsonl'",
+    'the final-state check ignores a fired degeneracy gate':
+        'AssertionError: a FIRED degeneracy gate must be reported',
+    'the final-state check stops looking at the gate inventory':
+        'AssertionError: an open authorization gate must be reported',
+    'the final-state check stops requiring a spent block to be RETIRED':
+        'AssertionError: a block that ran but is not RETIRED must be reported',
     # ── segment 1 closeout, REPAIRED controls (2026-09-19). OBSERVED.
     'readiness stops reading the registry and calls nothing spent':
         "AssertionError: readiness must report the registry's spent segments",
