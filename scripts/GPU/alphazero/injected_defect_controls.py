@@ -3885,6 +3885,31 @@ DEFECTS = [
 # DERIVED from the requirement and its assertion and then verified against a run,
 # which is why each names a count or a sentence rather than a first line.
 EXPECTED_REASONS = {
+    # ── durability + the supervised command (2026-09-20). OBSERVED.
+    'the early occupied-destination check is removed':
+        "FileExistsError: [Errno 17] File exists: '/private/<tmp>/pytest-of-bill/pytest-<n>/test_THE_DESTINATION_IS_CREATE0/combined/.09_combined_report.json.68961.tmp' -> '/private/<tmp>/pytest-of-bill/pytest-<n>/test_THE_DESTINATION_IS_CREATE0/combined/09_combined_report.json'",
+    'the report is serialised straight into the official path':
+        "FileExistsError: [Errno 17] File exists: '/private/<tmp>/pytest-of-bill/pytest-<n>/test_THE_OFFICIAL_PATH_IS_NEVE0/combined/09_combined_report.json' -> '/private/<tmp>/pytest-of-bill/pytest-<n>/test_THE_OFFICIAL_PATH_IS_NEVE0/combined/09_combined_report.json'",
+    'the temporary file is left beside the report':
+        'AssertionError: temporary file left behind: /private/<tmp>/pytest-of-bill/pytest-<n>/test_THE_TEMPORARY_FILE_IS_IN_0/combined/.09_combined_report.json.68967.tmp',
+    'the install OVERWRITES instead of refusing an existing name':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_combine.H3CombineError'>",
+    'the payload is not fsynced before it is installed':
+        "AssertionError: the payload file was never fsynced: ['/private/<tmp>/pytest-of-bill/pytest-<n>/test_THE_PAYLOAD_AND_THE_DIREC0/combined']",
+    'the directory is not fsynced after the link':
+        "AssertionError: the destination directory was never fsynced: ['/private/<tmp>/pytest-of-bill/pytest-<n>/test_THE_PAYLOAD_AND_THE_DIREC0/combined/.09_combined_report.json.68975.tmp']",
+    'the combination command never restores its gate':
+        'assert 9 == 8',
+    'a failed restoration no longer supersedes the run outcome':
+        'assert 0 == 9',
+    'the receipt records the run code instead of the superseding one':
+        "AssertionError: the receipt must record the superseding code, not the run's own",
+    'the combination receipt is not create-only':
+        'AssertionError: a second run must not overwrite the first receipt',
+    'an unauthorized combination writes a receipt and occupies the destination':
+        'AssertionError: assert not True',
+    'the combination command accepts a destination override':
+        "AssertionError: ['--help', '--out', '--run', '-h']",
     # ── the combination (2026-09-20). OBSERVED, never guessed.
     'the combination gate is not checked at all':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_combine.H3CombineError'>",
