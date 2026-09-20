@@ -282,6 +282,14 @@ DEFECTS = [
      "        bucket = unspent",
      f"{T_H3POP}::test_WHERE_THE_STUDY_STANDS"),
     # ═════════ THE HARNESS'S OWN REASONS MUST NOT DRIFT WITH LOAD ══════════
+    ("an ABSOLUTE python path is left in the reason", DRV,
+     '    (re.compile(r"/[^\\s\'\\"]*/bin/python[0-9.]*"), "<python>"),',
+     "    (re.compile(r'ZZZ_NEVER_MATCHES'), '<python>'),",
+     f"{T_DRV}::test_stable_NORMALISES_ABSOLUTE_PATHS_SO_ANOTHER_CHECKOUT_MATCHES"),
+    ("an ABSOLUTE home path is left in the reason", DRV,
+     '    (re.compile(r"/(?:Users|home)/[^/\\s\'\\"]+/"), "<home>/"),',
+     "    (re.compile(r'ZZZ_NEVER_MATCHES/'), '<home>/'),",
+     f"{T_DRV}::test_stable_NORMALISES_ABSOLUTE_PATHS_SO_ANOTHER_CHECKOUT_MATCHES"),
     ("a PID is left in the temp-file name the reason is compared against", DRV,
      '    (re.compile(r"\\.\\d+\\.tmp\\b"), ".<pid>.tmp"),',
      '    (re.compile(r"ZZZ_NEVER_MATCHES"), ".<pid>.tmp"),',
@@ -4380,8 +4388,6 @@ EXPECTED_REASONS = {
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.d1_selection.D1SelectionError'>",
     'lowply gate flipped open':
         'assert True is False',
-    'lowply public runner ungated':
-        "scripts.GPU.alphazero.lowply_qualification.LowPlyVoidError: toolchain or compilation failed: the run was given jar '/nonexistent/t1j.jar' but the verified toolchain's jar is '/Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/t1j.jar'. Verifying one jar and compiling against another is a hash check that binds nothing.. VOID.",
     "lowply turns a non-zero exit back into a VOID (D1's defect)":
         'scripts.GPU.alphazero.lowply_qualification.LowPlyVoidError: t0@ply3 [mover_fragmentation/position] digest=470721202fb36f18: depth 3 invocation 0: exit 3 and no usable query record (1 parsed). T1j reported: FAIL q1: requested depth 3 completed | POSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1. VOID.',
     'lowply stops recording the incomplete-depth shortfall':
@@ -4791,8 +4797,6 @@ EXPECTED_REASONS = {
         "KeyError: 'helper_prefs_observed'",
     'the attribution trigger reads only the bounded excerpt':
         "KeyError: 'helper_prefs_observed'",
-    'requal gate removed at the public runner':
-        "scripts.GPU.alphazero.runtime_requalification.RequalVoidError: toolchain or compilation failed: the run was given jar '/nonexistent/t1j.jar' but the verified toolchain's jar is '/Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/t1j.jar'. Verifying one jar and compiling against another is a hash check that binds nothing.. VOID.",
     'requal gate removed at the worker entry':
         "AssertionError: (7, 'refused: the runtime requalification is UNAUTHORIZED. Gating only the CLI would protect nothing: a direct Python caller reaches this runner without passing it. Nothing has been compiled, queried or written.",
     'requal gate removed at main (the worker still refuses, so only the no-spawn test sees it)':
@@ -4823,8 +4827,6 @@ EXPECTED_REASONS = {
         'assert 0 == 2',
     'the outer cap shrinks to the inner deadline (no grace for the inner VOID)':
         'assert 900 == (900 + 60)',
-    'main spawns itself without --worker':
-        "AssertionError: assert ('--worker' in ['/Users/bill/projects/TwixT_Game/.venv/bin/python', '-m', 'scripts.GPU.alphazero.runtime_requalification', '--out', '...te/var/folders/vm/g32c3nts67bfrpr06cmdzz4h0000gn/T/pytest-of-bill/pytest-<n>/test_main_supervises_a_WORKER_0/r.json'])",
     'every call no longer carries the frozen per-call timeout':
         'assert False',
     'no cleanup after a worker that exits before the timeout':
@@ -4873,8 +4875,6 @@ EXPECTED_REASONS = {
         'assert 7 == 10',
     'the --runner-source override returns to the production CLI':
         "Failed: DID NOT RAISE <class 'SystemExit'>",
-    "the default restoration target is not the imported runner's source":
-        "AssertionError: assert ['/private/va...ner.py.decoy'] == ['/private/va...ty_runner.py']",
     'the attempt-2 block un-registered from ACCOUNTED':
         'assert False',
     'the attempt-2 block un-RETIRED after the completed match':

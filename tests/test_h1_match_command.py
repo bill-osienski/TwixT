@@ -144,7 +144,12 @@ def test_restoration_targets_the_IMPORTED_runners_source_by_default(monkeypatch,
     monkeypatch.setattr(CMD, "restore_gate", lambda path: restored.append(path) or True)
     rc = CMD.main(["--results", str(tmp_path / "r.jsonl"), "--trace", str(tmp_path / "t.jsonl")])
     assert rc == 0
-    assert [os.path.realpath(p) for p in restored] == [os.path.realpath(RUN.__file__)]
+    #: 🔴 A VALUE-FREE MESSAGE, because the values are ABSOLUTE TEMP PATHS.
+    #: pytest ellipsises them to '/private/va...ner.py.decoy', which is neither
+    #: matchable by a normaliser nor the same on another platform -- the control
+    #: backing this test froze that string and would never match elsewhere.
+    assert [os.path.realpath(p) for p in restored] == [os.path.realpath(RUN.__file__)], (
+        "restoration must target the IMPORTED runner's own source, not a decoy")
 
 
 # ─────────────────────────────── exit codes ─────────────────────────────────

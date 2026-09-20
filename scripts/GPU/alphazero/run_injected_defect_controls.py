@@ -187,6 +187,16 @@ _VOLATILE = (
     # match again. Same class as the measured duration above: a value that
     # moves every run is not evidence about the code.
     (re.compile(r"\.\d+\.tmp\b"), ".<pid>.tmp"),
+    # 🔴 THE PYTHON EXECUTABLE'S ABSOLUTE PATH. A reason quoting
+    # `/Users/bill/projects/TwixT_Game/.venv/bin/python` matches on exactly one
+    # machine. Found while auditing this repository for publication: the whole
+    # control set would have gone INDETERMINATE in anyone else's checkout.
+    (re.compile(r"/[^\s'\"]*/bin/python[0-9.]*"), "<python>"),
+    # 🔴 AND THE HOME DIRECTORY, for the same reason. The verified toolchain
+    # lives OUTSIDE the repository, under the user's home, so two reasons quoted
+    # `/Users/<name>/Library/...`. The username is also the one piece of these
+    # paths that is personal.
+    (re.compile(r"/(?:Users|home)/[^/\s'\"]+/"), "<home>/"),
 )
 
 

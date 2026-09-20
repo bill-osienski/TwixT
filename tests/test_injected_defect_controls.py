@@ -811,3 +811,36 @@ def test_THE_REAL_CONTROLS_FILE_HAS_NO_DUPLICATE_REASON_KEYS():
     keys = [k.value for k in node.value.keys if isinstance(k, ast.Constant)]
     assert len(keys) > 700, len(keys)
     assert len(keys) == len(set(keys))
+
+
+def test_stable_NORMALISES_ABSOLUTE_PATHS_SO_ANOTHER_CHECKOUT_MATCHES():
+    """🔴 THE CONTROL SET WAS BOUND TO ONE MACHINE. Found auditing this public
+    repository for publication: four frozen reasons quoted absolute paths —
+    the interpreter at `/Users/<me>/projects/TwixT_Game/.venv/bin/python` and
+    the verified toolchain jar under `/Users/<me>/Library/...`. Every one of
+    them would have gone INDETERMINATE in anybody else's clone, on the very
+    first run, for code that was perfectly correct.
+
+    The same reason, produced under a different home AND a different checkout,
+    must normalise to the same string.
+    """
+    from scripts.GPU.alphazero import run_injected_defect_controls as DRV
+
+    mine = ("AssertionError: assert ('--worker' in "
+            "['/Users/bill/projects/TwixT_Game/.venv/bin/python', '-m', 'x'])")
+    theirs = ("AssertionError: assert ('--worker' in "
+              "['/home/alice/src/twixt-fork/.venv/bin/python3.14', '-m', 'x'])")
+    assert DRV.stable(mine) == DRV.stable(theirs), (
+        "the same failure on another machine must produce the same reason")
+    assert "/Users/" not in DRV.stable(mine) and "bill" not in DRV.stable(mine)
+
+    jar_mine = ("the verified toolchain's jar is '/Users/bill/Library/"
+                "Application Support/TwixT_Game/toolchains/t1j-e1/t1j.jar'")
+    jar_theirs = ("the verified toolchain's jar is '/home/alice/Library/"
+                  "Application Support/TwixT_Game/toolchains/t1j-e1/t1j.jar'")
+    assert DRV.stable(jar_mine) == DRV.stable(jar_theirs)
+
+    #: and it must NOT eat a repository-relative path, which is the same in
+    #: every checkout and is what most reasons legitimately quote
+    keep = "docs/superpowers/evidence/2026-09-20-t1j-h3-study-combined/09.json"
+    assert DRV.stable(keep) == keep
