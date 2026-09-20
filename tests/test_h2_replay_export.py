@@ -43,6 +43,8 @@ def test_exact_recorded_moves_become_viewer_moves(tmp_path):
     assert record["winner"] == "red"
     assert record["meta"]["opening_bound"] == 6
     assert record["meta"]["n_moves"] == 7
+    assert record["meta"]["players"] == {
+        "red": "T1j (theirs)", "black": "Incumbent (ours)"}
     assert [(m["turn"], m["player"], m["row"], m["col"])
             for m in record["moves"]][-2:] == [
                 (6, "black", 14, 14), (7, "red", 17, 11)]

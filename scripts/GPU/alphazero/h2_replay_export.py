@@ -175,6 +175,15 @@ def viewer_record(game: Mapping[str, Any], *,
     reason = result.get("terminal_reason")
     header = game["header"]
     simulations = header.get("identity", {}).get("eval_config", {}).get("mcts_sims")
+    colour_arm = transcript.get("colour_arm")
+    if colour_arm == "t1j_red":
+        players = {"red": "T1j (theirs)", "black": "Incumbent (ours)"}
+    elif colour_arm == "t1j_black":
+        players = {"red": "Incumbent (ours)", "black": "T1j (theirs)"}
+    else:
+        raise H2ReplayExportError(
+            f"{task_id}: unknown colour arm {colour_arm!r}"
+        )
     return {
         "id": task_id,
         "config_hash": "h2-recorded-evidence",
@@ -193,7 +202,8 @@ def viewer_record(game: Mapping[str, Any], *,
             "task_id": task_id,
             "opening": opening_name,
             "opening_bound": opening_bound,
-            "colour_arm": transcript.get("colour_arm"),
+            "colour_arm": colour_arm,
+            "players": players,
             "transcript_digest": got_digest,
             "source": str(source),
             "evidence_note": (

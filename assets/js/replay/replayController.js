@@ -15,6 +15,8 @@ const metaMoves = document.getElementById('meta-moves');
 const metaSeed = document.getElementById('meta-seed');
 const metaDepth = document.getElementById('meta-depth');
 const metaStart = document.getElementById('meta-start');
+const metaRedPlayer = document.getElementById('meta-red-player');
+const metaBlackPlayer = document.getElementById('meta-black-player');
 
 const container = document.getElementById('canvas');
 
@@ -75,6 +77,8 @@ function updateMeta() {
   metaSeed.textContent = replay?.seed ?? '-';
   metaDepth.textContent = replay?.depth ?? replay?.meta?.simulations ?? '-';
   metaStart.textContent = replay?.starting_player ?? replay?.meta?.starting_player ?? '-';
+  metaRedPlayer.textContent = replay?.meta?.players?.red ?? '-';
+  metaBlackPlayer.textContent = replay?.meta?.players?.black ?? '-';
 }
 
 function setReplay(data) {
