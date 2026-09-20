@@ -121,6 +121,16 @@ def _sha(p):
     return hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()
 
 
+#: 🔴 A TARGET THAT EXISTS AND FAILS ON A CLEAN TREE. The baseline's other
+#: failure mode: not a renamed node (now refused up front by the dangling-control
+#: check) but a target test that was already broken, which would score its
+#: control REJECTED for free.
+BROKEN_TEST = """
+def test_already_broken():
+    assert False, "broken before any defect was injected"
+"""
+
+
 @pytest.fixture
 def sandbox(tmp_path):
     """A throwaway git repository with one source file and one test over it."""
@@ -132,6 +142,7 @@ def sandbox(tmp_path):
     (repo / "tests" / "test_fixture.py").write_text(FIXTURE_TEST)
     (repo / "tests" / "test_volatile.py").write_text(VOLATILE_TEST)
     (repo / "tests" / "test_long.py").write_text(LONG_TEST)
+    (repo / "tests" / "test_broken.py").write_text(BROKEN_TEST)
     (repo / "conftest.py").write_text(
         "import pathlib, sys\n"
         "sys.path.insert(0, str(pathlib.Path(__file__).parent))\n")
@@ -184,13 +195,18 @@ def test_a_FAILED_BASELINE_ABORTS_BEFORE_THE_FIRST_INJECTION(sandbox):
     been renamed, pytest exits nonzero for a node id it cannot find, and those
     controls scored REJECTED FOR FREE while the driver printed `clean baseline:
     FAIL` and returned 0. Here the same shape -- a target node that does not
-    exist -- must stop the driver before it writes anything."""
-    ctl = [("names a test that does not exist", "src.py",
+    exist -- must stop the driver before it writes anything.
+
+    🔑 THE RENAMED-NODE SHAPE IS NOW REFUSED EARLIER, by the dangling-control
+    check, so this uses the OTHER way a baseline goes bad: a target test that
+    EXISTS and was already failing. Both must stop the driver, and each needs
+    its own test or the earlier guard would hide the later one."""
+    ctl = [("names an already-broken test", "src.py",
             'VALUE = "good"', 'VALUE = "bad"',
-            "tests/test_target.py::test_no_such_test")]
+            "tests/test_broken.py::test_already_broken")]
     before = (_sha(sandbox / "src.py"), (sandbox / "src.py").stat().st_mtime_ns)
 
-    r = drive(sandbox, write_defects(sandbox, ctl, {"names a test that does not exist": "x"}))
+    r = drive(sandbox, write_defects(sandbox, ctl, {"names an already-broken test": "x"}))
 
     assert "baseline" in r.stdout.lower() and "FAIL" in r.stdout
     # 🔑 EVERY outcome word, not just the two that mean "pass"/"fail". With the
@@ -737,3 +753,17 @@ def test_A_REASONS_DICT_BUILT_BY_A_COMPREHENSION_IS_NOT_A_CRASH(sandbox):
     r = drive(sandbox, defects)
     assert "DUPLICATE EXPECTED REASON" not in r.stdout
     assert "Traceback" not in r.stderr, r.stderr
+
+
+def test_A_CONTROL_NAMING_A_MISSING_TEST_IS_REFUSED_UP_FRONT(sandbox):
+    """🔴 THE CLEAN BASELINE CATCHES THIS, MINUTES LATER AND ILLEGIBLY. A test
+    renamed without its controls makes pytest exit "not found", the baseline
+    fails and the run aborts with the node id truncated mid-word. Naming it
+    before the baseline runs costs one AST parse."""
+    defects = write_defects(sandbox, [
+        ("a renamed target", "src.py", "good", "bad",
+         "tests/test_target.py::test_this_was_renamed_away")], {})
+    r = drive(sandbox, defects)
+    assert r.returncode != 0, r.stdout
+    assert "DANGLING CONTROL" in r.stdout, r.stdout
+    assert "test_this_was_renamed_away" in r.stdout

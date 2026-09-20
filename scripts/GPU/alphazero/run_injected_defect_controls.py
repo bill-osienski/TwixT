@@ -83,6 +83,38 @@ def duplicate_reason_keys(path):
     return []
 
 
+def dangling_test_nodes(defects):
+    """Controls naming a test node that no longer exists in the source.
+
+    🔴 THE CLEAN BASELINE ALREADY CATCHES THIS, AND TOO LATE TO BE USEFUL. A
+    test renamed without its controls makes pytest exit "not found", the
+    baseline FAILS and the run aborts -- after several minutes, with the node id
+    truncated in the middle of a wall of output. It happened on 2026-09-20 when
+    `test_THE_COUNT_IS_TEN_...` became `test_THE_COUNT_IS_DERIVED_...`.
+
+    Naming them up front costs one AST parse per test file and says exactly
+    which control to fix.
+    """
+    import ast
+    import re
+    cache, bad = {}, []
+    for lab, _f, _a, _b, node in defects:
+        path, _, name = node.partition("::")
+        name = re.sub(r"\[.*\]$", "", name)          # strip parametrisation
+        if path not in cache:
+            try:
+                tree = ast.parse(pathlib.Path(path).read_text())
+            except OSError:
+                bad.append((lab, node, "the test FILE is missing"))
+                cache[path] = None
+                continue
+            cache[path] = {n.name for n in ast.walk(tree)
+                           if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))}
+        if cache[path] is not None and name not in cache[path]:
+            bad.append((lab, node, "no such test"))
+    return bad
+
+
 def load_defects(path):
     """Import the control list BY PATH. Safe by construction: that module is data."""
     spec = importlib.util.spec_from_file_location("_injected_defect_controls", path)
@@ -264,6 +296,15 @@ def main(argv):
         return REFUSED
 
     defects, reasons = load_defects(a.defects)
+
+    #: named BEFORE the baseline spends four minutes discovering it
+    _dangling = dangling_test_nodes(defects)
+    for _lab, _node, _why in _dangling:
+        print(f"🔴 DANGLING CONTROL -- {_why}: {_node!r} named by {_lab!r}")
+    if _dangling:
+        print("REFUSED: a control naming a test that does not exist can never "
+              "reject its defect, and would abort the clean baseline instead.")
+        return REFUSED
 
     # ── two ways a tally inflates at GENERATION rather than at RECORDING
     seen, dupes = {}, []

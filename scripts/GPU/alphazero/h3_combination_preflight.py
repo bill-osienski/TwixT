@@ -66,6 +66,32 @@ def main() -> int:
           f"{INVENTORY.open_gates() or 'NONE'}")
     check("every gate is SHUT", INVENTORY.open_gates() == [])
 
+    print("\n== the supervised command, and its restoration path ==")
+    from . import h3_combine_command as CCMD
+    check("the command accepts NOTHING but --run",
+          sorted(f for a in CCMD._parser()._actions for f in a.option_strings)
+          == ["--help", "--run", "-h"])
+    check("it reads the gate back from the SOURCE, not from this process",
+          CCMD.gate_readback() == "False")
+    check("the parent receipt is ABSENT", not os.path.lexists(CCMD.RECEIPT),
+          CCMD.RECEIPT)
+    check("a failed restoration has its OWN superseding exit code",
+          CCMD.EXIT_GATE_NOT_RESTORED == 9
+          and CCMD.EXIT_GATE_NOT_RESTORED not in
+          (CCMD.EXIT_OK, CCMD.EXIT_REFUSED, CCMD.EXIT_NOT_AUTHORIZED,
+           CCMD.EXIT_FAILED))
+    check("with the gate shut the command refuses and writes nothing",
+          CCMD.main(["--run"]) == CCMD.EXIT_NOT_AUTHORIZED
+          and not os.path.lexists(CCMD.RECEIPT)
+          and not os.path.lexists(COMBINE.COMBINED_OUT_DIR))
+
+    print("\n== the writer: the official name appears only when durable ==")
+    import inspect
+    src = inspect.getsource(COMBINE._write_create_only)
+    check("the install is os.link (atomic, create-only), never rename/replace",
+          "os.link(" in src and "os.rename(" not in src
+          and "os.replace(" not in src)
+
     print("\n== the inputs: exactly the four pinned result sets ==")
     problems = FINAL.verify_final_state()
     for p in problems:

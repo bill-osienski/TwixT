@@ -383,3 +383,255 @@ def test_A_PARTIAL_WRITE_LEAVES_NO_FILE_BEHIND(study, monkeypatch):
     monkeypatch.setattr(COMBINE.json, "dump", real_dump)
     out = run(study)                       # and the destination is free again
     assert out["n_games"] == R.N_GAMES
+
+
+# ═══════════════ the official path must appear ONLY when durable ════════════
+def test_THE_OFFICIAL_PATH_IS_NEVER_OPENED_FOR_WRITING(study, monkeypatch):
+    """🔴 AN EXCEPTION HANDLER DOES NOT SURVIVE A KILL.
+
+    The first version opened the FINAL path with O_EXCL and serialised into it,
+    removing the partial file in an `except`. A Python exception was handled; a
+    SIGKILL, a crash or a power loss was not, and any of them would leave a
+    truncated report sitting at the frozen destination forever -- occupying the
+    one-shot path with a file that never held a result.
+
+    So nothing is ever written THROUGH the official path. It is created by
+    `os.link` from a file that is already complete and fsynced.
+    """
+    opened = []
+    real_open = os.open
+
+    def spy(path, flags, *a, **kw):
+        if isinstance(path, str) and "WRONLY" not in str(flags):
+            pass
+        if isinstance(path, str) and (flags & os.O_WRONLY or flags & os.O_RDWR):
+            opened.append(path)
+        return real_open(path, flags, *a, **kw)
+
+    monkeypatch.setattr(COMBINE.os, "open", spy)
+    run(study)
+    final = os.path.join(study["out"], os.path.basename(COMBINE.COMBINED_REPORT))
+    assert opened, "the spy saw nothing; it is not wired to the writer"
+    assert final not in opened, (
+        f"the official path was opened for writing: {opened}")
+    assert all(os.path.dirname(p) == os.path.dirname(final) for p in opened), (
+        f"every write must land in the destination's own directory: {opened}")
+
+
+def test_A_KILL_BEFORE_THE_LINK_LEAVES_NO_OFFICIAL_FILE(study, monkeypatch):
+    """The window the handler could not cover: die after the payload is written
+    but before it is installed. The official path must simply not exist."""
+    def die(src, dst):
+        raise KeyboardInterrupt("SIGINT between fsync and link")
+
+    monkeypatch.setattr(COMBINE.os, "link", die)
+    with pytest.raises(KeyboardInterrupt):
+        run(study)
+    final = pathlib.Path(study["out"], os.path.basename(COMBINE.COMBINED_REPORT))
+    assert not os.path.lexists(final)
+
+
+def test_THE_TEMPORARY_FILE_IS_IN_THE_SAME_DIRECTORY_AND_IS_REMOVED(study):
+    """`os.link` cannot cross a filesystem, and a leftover temp file beside the
+    report is litter at an evidence path."""
+    seen = []
+    real_open = COMBINE.os.open
+
+    def spy(path, flags, *a, **kw):
+        if isinstance(path, str) and (flags & os.O_CREAT):
+            seen.append(path)
+        return real_open(path, flags, *a, **kw)
+
+    import unittest.mock as mock
+    with mock.patch.object(COMBINE.os, "open", spy):
+        run(study)
+    final = pathlib.Path(study["out"], os.path.basename(COMBINE.COMBINED_REPORT))
+    tmps = [p for p in seen if p != str(final)]
+    assert tmps, "no temporary file was created"
+    for t in tmps:
+        assert os.path.dirname(t) == str(final.parent), t
+        assert not os.path.lexists(t), f"temporary file left behind: {t}"
+    assert sorted(p.name for p in final.parent.iterdir()) == [final.name]
+
+
+def test_THE_INSTALLED_REPORT_IS_COMPLETE_JSON(study):
+    out = run(study)
+    final = pathlib.Path(study["out"], os.path.basename(COMBINE.COMBINED_REPORT))
+    assert json.loads(final.read_text()) == out
+
+
+def test_THE_INSTALL_IS_CREATE_ONLY_NOT_A_RENAME(study):
+    """🔴 `os.rename` WOULD SILENTLY OVERWRITE. The install must be the atomic
+    create-only primitive, so a second combination cannot replace the first."""
+    import inspect
+    src = inspect.getsource(COMBINE._write_create_only)
+    assert "os.link(" in src
+    assert "os.rename(" not in src and "os.replace(" not in src
+
+
+# ═════════════════ the supervised command and its restoration ═══════════════
+from scripts.GPU.alphazero import h3_combine_command as CCMD   # noqa: E402
+
+GATE_OPEN_SRC = "H3_COMBINATION_AUTHORIZED = True\n"
+GATE_SHUT_SRC = "H3_COMBINATION_AUTHORIZED = False\n"
+
+
+@pytest.fixture
+def fake_source(tmp_path):
+    """A stand-in for h3_combine.py's source, so restoration can be exercised
+    without ever editing the real gate."""
+    p = tmp_path / "h3_combine_copy.py"
+    p.write_text("# header\n" + GATE_OPEN_SRC + "# tail\n")
+    return str(p)
+
+
+def test_THE_COMMAND_ACCEPTS_NOTHING_BUT_run():
+    """🔴 NO PATH, NO INPUT, NO DESTINATION, NO COLLABORATOR. Anything that
+    could aim this elsewhere would make opening the gate authorize something
+    other than what was reviewed."""
+    opts = CCMD._parser()._actions
+    flags = sorted(f for a in opts for f in a.option_strings)
+    assert flags == ["--help", "--run", "-h"], flags
+
+
+def test_WITHOUT_run_IT_DOES_NOTHING(tmp_path):
+    receipt = str(tmp_path / "receipt.json")
+    assert CCMD.main([], _receipt=receipt) == CCMD.EXIT_REFUSED
+    assert not os.path.lexists(receipt)
+
+
+def test_A_SHUT_GATE_REFUSES_AND_WRITES_NO_RECEIPT(tmp_path, fake_source):
+    """A receipt here would CREATE THE DESTINATION, and the real combination
+    would then be refused for a directory occupied by a refusal."""
+    pathlib.Path(fake_source).write_text("# header\n" + GATE_SHUT_SRC)
+    receipt = str(tmp_path / "out" / "receipt.json")
+    assert CCMD.main(["--run"], _combine_source=fake_source,
+                     _receipt=receipt) == CCMD.EXIT_NOT_AUTHORIZED
+    assert not os.path.lexists(receipt)
+    assert not os.path.lexists(os.path.dirname(receipt))
+
+
+def test_THE_GATE_IS_RESTORED_AND_READ_BACK_FROM_THE_SOURCE(fake_source):
+    assert CCMD.gate_is_open(fake_source) is True
+    assert CCMD.restore_gate(fake_source) is True
+    assert CCMD.gate_readback(fake_source) == "False"
+    assert CCMD.gate_is_open(fake_source) is False
+    assert pathlib.Path(fake_source).read_text() == (
+        "# header\n" + GATE_SHUT_SRC + "# tail\n")
+
+
+def test_RESTORATION_IS_IDEMPOTENT_AND_HONEST_ABOUT_AN_UNREADABLE_SOURCE(tmp_path):
+    shut = tmp_path / "already_shut.py"
+    shut.write_text(GATE_SHUT_SRC)
+    assert CCMD.restore_gate(str(shut)) is True
+    missing = str(tmp_path / "gone.py")
+    assert CCMD.restore_gate(missing) is False
+    assert CCMD.gate_readback(missing) is None
+
+
+def test_A_FAILING_COMBINATION_STILL_RESTORES_THE_GATE(tmp_path, fake_source,
+                                                       monkeypatch):
+    """🔴 THE CASE THAT MATTERS. An exception is exactly when nobody remembers
+    to close a gate by hand."""
+    def boom():
+        raise RuntimeError("the combination exploded")
+
+    monkeypatch.setattr(COMBINE, "combine", boom)
+    receipt = str(tmp_path / "out" / "receipt.json")
+    code = CCMD.main(["--run"], _combine_source=fake_source, _receipt=receipt)
+    assert code == CCMD.EXIT_FAILED
+    assert CCMD.gate_readback(fake_source) == "False"
+    rec = json.loads(pathlib.Path(receipt).read_text())
+    assert rec["outcome"] == "FAILED"
+    assert rec["gate_restored"] is True and rec["gate_readback"] == "False"
+    assert "the combination exploded" in rec["detail"]
+
+
+def test_A_FAILED_RESTORATION_SUPERSEDES_A_SUCCESSFUL_COMBINATION(
+        tmp_path, fake_source, monkeypatch):
+    """🔴 SUPERSEDING. A tree left able to combine again is the more urgent
+    fact about the run than the run having worked."""
+    monkeypatch.setattr(COMBINE, "combine", lambda: {"n_games": 592,
+                                                     "n_pairs": 296,
+                                                     "verdict": "NO VERDICT"})
+    monkeypatch.setattr(CCMD, "restore_gate", lambda *a, **k: False)
+    receipt = str(tmp_path / "out" / "receipt.json")
+    code = CCMD.main(["--run"], _combine_source=fake_source, _receipt=receipt)
+    assert code == CCMD.EXIT_GATE_NOT_RESTORED
+    rec = json.loads(pathlib.Path(receipt).read_text())
+    assert rec["outcome"] == "COMPLETED"
+    assert rec["gate_restored"] is False
+    assert rec["exit_code"] == CCMD.EXIT_GATE_NOT_RESTORED, (
+        "the receipt must record the superseding code, not the run's own")
+
+
+def test_THE_RECEIPT_RECORDS_THE_INPUTS_AND_THE_OUTPUT(tmp_path, fake_source,
+                                                       monkeypatch):
+    monkeypatch.setattr(COMBINE, "combine", lambda: {
+        "n_games": 592, "n_pairs": 296, "verdict": "NO VERDICT",
+        "interpretation_withheld": False, "is_strength_verdict": True})
+    receipt = str(tmp_path / "out" / "receipt.json")
+    assert CCMD.main(["--run"], _combine_source=fake_source,
+                     _receipt=receipt) == CCMD.EXIT_OK
+    rec = json.loads(pathlib.Path(receipt).read_text())
+    assert rec["report_path"] == COMBINE.COMBINED_REPORT
+    assert rec["report_exists"] is False        # the stub wrote nothing
+    assert len(rec["inputs"]) == R.N_SEGMENTS
+    for k, entry in enumerate(rec["inputs"]):
+        assert entry["segment"] == k
+        assert entry["seed_block"] == list(RUN.SEGMENT_SEED_BLOCKS[k])
+        for field in ("results_path", "trace_path", "report_path",
+                      "receipt_path"):
+            assert entry[field], field
+    assert rec["n_games"] == 592 and rec["n_pairs"] == 296
+
+
+def test_THE_RECEIPT_IS_CREATE_ONLY(tmp_path, fake_source, monkeypatch):
+    monkeypatch.setattr(COMBINE, "combine", lambda: {"n_games": 592})
+    receipt = str(tmp_path / "out" / "receipt.json")
+    CCMD.main(["--run"], _combine_source=fake_source, _receipt=receipt)
+    first = pathlib.Path(receipt).read_bytes()
+    pathlib.Path(fake_source).write_text("# header\n" + GATE_OPEN_SRC)
+    CCMD.main(["--run"], _combine_source=fake_source, _receipt=receipt)
+    assert pathlib.Path(receipt).read_bytes() == first, (
+        "a second run must not overwrite the first receipt")
+
+
+def test_THE_REAL_GATE_AND_ITS_RECEIPT_ARE_UNTOUCHED():
+    assert COMBINE.H3_COMBINATION_AUTHORIZED is False
+    assert CCMD.gate_readback() == "False"
+    assert not os.path.lexists(CCMD.RECEIPT)
+    assert not os.path.lexists(COMBINE.COMBINED_OUT_DIR)
+
+
+def test_THE_PAYLOAD_AND_THE_DIRECTORY_ARE_BOTH_FSYNCED(study, monkeypatch):
+    """🔴 DURABILITY CANNOT BE TESTED BY CRASHING THE MACHINE, so it is tested
+    at the syscall: the payload must reach the device before anything claims the
+    official name, and the DIRECTORY entry must reach it too or the new name can
+    vanish in a crash while the file itself survives.
+
+    Spying on `os.fsync` is behavioural -- it observes what the code does, not
+    what its source says."""
+    synced = []
+    real_fsync = COMBINE.os.fsync
+    real_open = COMBINE.os.open
+    fds = {}
+
+    def spy_open(path, flags, *a, **kw):
+        fd = real_open(path, flags, *a, **kw)
+        fds[fd] = path
+        return fd
+
+    def spy_fsync(fd):
+        synced.append(fds.get(fd, "<unknown>"))
+        return real_fsync(fd)
+
+    monkeypatch.setattr(COMBINE.os, "open", spy_open)
+    monkeypatch.setattr(COMBINE.os, "fsync", spy_fsync)
+    run(study)
+
+    out = study["out"]
+    assert any(p.startswith(os.path.join(out, ".")) for p in synced), (
+        f"the payload file was never fsynced: {synced}")
+    assert out in synced or out.rstrip("/") in synced, (
+        f"the destination directory was never fsynced: {synced}")

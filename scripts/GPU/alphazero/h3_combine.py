@@ -23,9 +23,13 @@ a number exists that people will quote.
   the permission      `combine_segments()` must PERMIT a verdict. It gates on
                       PROVENANCE -- optional stopping, VOIDs -- not on counts,
                       and no arithmetic here can substitute for it.
-  the destination     create-only, `O_EXCL` + `lexists`, and a failed write
-                      REMOVES its own partial file rather than leaving the
-                      destination occupied by something truncated.
+  the destination     create-only, and DURABLE BEFORE IT IS NAMED. The payload
+                      is written and fsynced to a temporary file in the same
+                      directory, then installed with `os.link()` -- atomic, and
+                      refusing an existing name. After any interruption the
+                      official path either does not exist or holds the whole
+                      report; an exception handler cannot promise that, because
+                      a SIGKILL does not run one.
 
 🔑 `summarise()` IS CALLED EXACTLY ONCE, on the pooled games, and it is the
 SAME preregistered function each segment used. Nothing here re-implements a
@@ -89,30 +93,60 @@ def _task_results(path: str) -> List[Dict[str, Any]]:
 
 
 def _write_create_only(path: str, payload: Mapping[str, Any]) -> None:
-    """🔴 CREATE-ONLY, AND IT CLEANS UP AFTER ITSELF.
+    """Install the report at `path` ONLY once the complete payload is durable.
 
-    `lexists` refuses a dangling symlink too, which `O_EXCL` alone would follow.
-    If the write fails part-way the partial file is REMOVED: a truncated report
-    sitting at the frozen destination would occupy it forever, and the next
+    🔴 AN EXCEPTION HANDLER DOES NOT SURVIVE A KILL. The first version opened
+    the FINAL path with `O_EXCL` and serialised into it, removing the partial
+    file in an `except`. That covers a Python exception and nothing else: a
+    SIGKILL, a crash or a power loss between the open and the last byte would
+    leave a TRUNCATED REPORT at the frozen one-shot destination -- and the next
     attempt would be refused for a file that never held a result.
+
+    So the official path is never opened for writing at all:
+
+      1. serialise into a temporary file IN THE SAME DIRECTORY, so the install
+         cannot cross a filesystem;
+      2. flush and `fsync` it -- the bytes are on the device before anything
+         claims the name;
+      3. install with `os.link()`, which is ATOMIC and fails if the destination
+         exists. `os.rename`/`os.replace` would silently overwrite, which is
+         the opposite of create-only;
+      4. `fsync` the DIRECTORY, so the new name survives a crash too;
+      5. unlink the temporary name, in a `finally`, so a failure anywhere above
+         leaves litter rather than a half-installed report.
+
+    After any interruption the official path either does not exist or holds the
+    whole payload. There is no third state.
     """
     if os.path.lexists(path):
         raise H3CombineError(
             f"{path} already exists. The combined report is written ONCE; a "
             f"second combination needs a new reviewed destination.")
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+    directory = os.path.dirname(path)
+    os.makedirs(directory, exist_ok=True)
+    tmp = os.path.join(directory, f".{os.path.basename(path)}.{os.getpid()}.tmp")
     try:
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             json.dump(payload, fh, indent=1, sort_keys=True)
             fh.flush()
             os.fsync(fh.fileno())
-    except BaseException:
         try:
-            os.unlink(path)
+            os.link(tmp, path)
+        except FileExistsError:
+            raise H3CombineError(
+                f"{path} already exists. The combined report is written ONCE; a "
+                f"second combination needs a new reviewed destination.")
+        dfd = os.open(directory, os.O_RDONLY)
+        try:
+            os.fsync(dfd)
+        finally:
+            os.close(dfd)
+    finally:
+        try:
+            os.unlink(tmp)
         except OSError:
             pass
-        raise
 
 
 def combine_unguarded(
