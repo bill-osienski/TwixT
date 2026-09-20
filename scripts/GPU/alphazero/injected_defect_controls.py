@@ -3889,6 +3889,8 @@ DEFECTS = [
 # DERIVED from the requirement and its assertion and then verified against a run,
 # which is why each names a count or a sentence rather than a first line.
 EXPECTED_REASONS = {
+    'the gate inventory stops seeing gates at all':
+        'AssertionError: the derived inventory and EXPECTED_GATES must agree',
     'the combination stops hashing its inputs':
         'AssertionError: every input must be recorded with the hash of what was read',
     'a PID is left in the temp-file name the reason is compared against':
