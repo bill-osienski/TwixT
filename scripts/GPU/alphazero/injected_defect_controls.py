@@ -3889,6 +3889,53 @@ DEFECTS = [
 # DERIVED from the requirement and its assertion and then verified against a run,
 # which is why each names a count or a sentence rather than a first line.
 EXPECTED_REASONS = {
+    # ── PID-free re-harvest (2026-09-20). OBSERVED.
+    'the combination gate is not checked at all':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_combine.H3CombineError'>",
+    'the authorized entry point accepts a destination override':
+        "AssertionError: assert ['out_dir'] == []",
+    'the combination ignores the final-state disagreements':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_combine.H3CombineError'>",
+    'the combination stops counting the games':
+        'scripts.GPU.alphazero.h3_combine.H3CombineError: the 591 records carry 591 distinct seeds, which are not exactly the union of the four blocks',
+    'the combination stops requiring DISTINCT task ids':
+        'scripts.GPU.alphazero.h3_combine.H3CombineError: 1 pair(s) do not hold exactly two games (first: [0]); a half pair is not a pair',
+    'the combination stops requiring the seeds to be the four blocks':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_combine.H3CombineError'>",
+    'the combination accepts a pair that is not a pair':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_combine.H3CombineError'>",
+    'the combination ignores the permission decision':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_combine.H3CombineError'>",
+    'the combination accepts a narrower analysis':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_combine.H3CombineError'>",
+    'the combination stops hashing its inputs':
+        'AssertionError: results',
+    'the early occupied-destination check is removed':
+        "FileExistsError: [Errno 17] File exists: '/private/<tmp>/pytest-of-bill/pytest-<n>/test_THE_DESTINATION_IS_CREATE0/combined/.09_combined_report.json.<pid>.tmp' -> '/private/<tmp>/pytest-of-bill/pytest-<n>/test_THE_DESTINATION_IS_CREATE0/combined/09_combined_report.json'",
+    'the report is serialised straight into the official path':
+        "FileExistsError: [Errno 17] File exists: '/private/<tmp>/pytest-of-bill/pytest-<n>/test_THE_OFFICIAL_PATH_IS_NEVE0/combined/09_combined_report.json' -> '/private/<tmp>/pytest-of-bill/pytest-<n>/test_THE_OFFICIAL_PATH_IS_NEVE0/combined/09_combined_report.json'",
+    'the temporary file is left beside the report':
+        'AssertionError: a temporary file was left beside the report',
+    'the install OVERWRITES instead of refusing an existing name':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_combine.H3CombineError'>",
+    'the payload is not fsynced before it is installed':
+        'AssertionError: the payload file was never fsynced',
+    'the directory is not fsynced after the link':
+        'AssertionError: the destination directory was never fsynced',
+    'the combination command never restores its gate':
+        'assert 9 == 8',
+    'a failed restoration no longer supersedes the run outcome':
+        'assert 0 == 9',
+    'the receipt records the run code instead of the superseding one':
+        "AssertionError: the receipt must record the superseding code, not the run's own",
+    'the combination receipt is not create-only':
+        'AssertionError: a second run must not overwrite the first receipt',
+    'an unauthorized combination writes a receipt and occupies the destination':
+        'AssertionError: assert not True',
+    'the combination command accepts a destination override':
+        "AssertionError: ['--help', '--out', '--run', '-h']",
+    'summarise is called once PER SEGMENT instead of once on the pool':
+        'AssertionError: [148, 148, 148, 148, 592]',
     # ── durability + the supervised command (2026-09-20). OBSERVED.
     'the report is serialised straight into the official path':
         "FileExistsError: [Errno 17] File exists: '/private/<tmp>/pytest-of-bill/pytest-<n>/test_THE_OFFICIAL_PATH_IS_NEVE0/combined/09_combined_report.json' -> '/private/<tmp>/pytest-of-bill/pytest-<n>/test_THE_OFFICIAL_PATH_IS_NEVE0/combined/09_combined_report.json'",
