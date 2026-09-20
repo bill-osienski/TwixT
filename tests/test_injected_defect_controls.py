@@ -776,7 +776,8 @@ def test_stable_NORMALISES_A_PID_IN_A_TEMPORARY_FILE_NAME():
     from scripts.GPU.alphazero import run_injected_defect_controls as DRV
     a = DRV.stable("File exists: '/x/combined/.09_combined_report.json.69982.tmp'")
     b = DRV.stable("File exists: '/x/combined/.09_combined_report.json.70113.tmp'")
-    assert a == b and "69982" not in a
+    assert a == b and "69982" not in a, (
+        "a PID in a temp-file name must not change the reason")
     #: a NON-pid number in an ordinary name must survive
     keep = "the 148-pair floor was not reached"
     assert DRV.stable(keep) == keep

@@ -212,7 +212,8 @@ def test_EVERY_INPUT_IS_RECORDED_BY_PATH_AND_HASH(study):
         for field in ("results", "trace", "report", "receipt"):
             path = entry[f"{field}_path"]
             fresh = hashlib.sha256(pathlib.Path(path).read_bytes()).hexdigest()
-            assert entry[f"{field}_sha256"] == fresh, field
+            assert entry[f"{field}_sha256"] == fresh, (
+                "every input must be recorded with the hash of what was read")
 
 
 def test_summarise_IS_CALLED_EXACTLY_ONCE(study):
