@@ -39,6 +39,11 @@ EXPECTED_GATES = {
     #: and the swap is a deliberate edit here rather than a silent drift.
     "h3_study_generator.py": "H3_POPULATION_FREEZE_AUTHORIZED",
     "h3_study_runner.py": "H3_STUDY_EXECUTION_AUTHORIZED",
+    #: 🔴 THE ELEVENTH, ADDED 2026-09-20. Combining the four segments is the
+    #: study's one interpretive act -- after it a number exists that people will
+    #: quote -- so it takes its own reviewed edit rather than riding on the
+    #: execution gate that authorized playing the games.
+    "h3_combine.py": "H3_COMBINATION_AUTHORIZED",
     "l0_match_command.py": "L0_EXECUTION_AUTHORIZED",
     "lowply_qualification.py": "LOWPLY_QUALIFICATION_AUTHORIZED",
     "runtime_requalification.py": "RUNTIME_REQUAL_AUTHORIZED",
@@ -62,8 +67,16 @@ def test_THE_GATE_INVENTORY_IS_EXACTLY_WHAT_THE_SOURCE_CONTAINS():
         f"  only in inventory: {set(EXPECTED_GATES.items()) - set(found.items())}")
 
 
-def test_THE_COUNT_IS_TEN_AND_ANY_REPORT_SAYING_OTHERWISE_IS_WRONG():
-    assert INVENTORY.gate_count() == len(discover_gates()) == 10 == len(EXPECTED_GATES)
+def test_THE_COUNT_IS_DERIVED_AND_ANY_REPORT_SAYING_OTHERWISE_IS_WRONG():
+    #: 🔴 ONE TRIPWIRE, AND `EXPECTED_GATES` IS IT. The literal `10` sat here
+    #: beside `len(EXPECTED_GATES)`, so adding the eleventh gate failed this on
+    #: the number rather than on the inventory -- two pins for one fact, which is
+    #: how seven, eight and ten were all claimed at once. Adding a gate is now a
+    #: single deliberate edit, to the dict above.
+    assert INVENTORY.gate_count() == len(discover_gates()) == len(EXPECTED_GATES)
+    assert len(EXPECTED_GATES) == 11, (
+        "the total moved: add or remove the entry in EXPECTED_GATES above "
+        "deliberately, then update this number in the same edit")
 
 
 def test_EVERY_GATE_IN_THE_INVENTORY_IS_CLOSED():
@@ -136,5 +149,6 @@ def test_THE_STALE_COUNT_GUARD_IS_NOT_VACUOUS():
     assert _stale_count_claims("== the EIGHT gates ==")      # the pilot's, real
     assert _stale_count_claims("all eight gates stay False")  # the reports', real
     assert not _stale_count_claims("Two gates were missed")   # prose, not a claim
-    assert not _stale_count_claims("== the 10 gates ==")      # derived, correct
-    assert not _stale_count_claims("all ten gates are False")  # correct total
+    assert _stale_count_claims("all ten gates are False")      # was right, now stale
+    assert not _stale_count_claims("== the 11 gates ==")       # derived, correct
+    assert not _stale_count_claims("all eleven gates are False")  # correct total

@@ -97,7 +97,7 @@ def main() -> int:
     check("no SOURCE differs from the commit", not dirty,
           "" if not dirty else f"{[l[3:] for l in dirty.splitlines()][:3]}")
 
-    print("\n== the TEN gates ==")
+    print(f"\n== the {INVENTORY.gate_count()} gates ==")
     import importlib
     for mod_name, attr in GATES:
         mod = importlib.import_module(f"scripts.GPU.alphazero.{mod_name}")

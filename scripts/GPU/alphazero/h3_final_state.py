@@ -214,6 +214,10 @@ def verify_final_state(*, paths_for=None, receipt_for=None,
     open_gates = INVENTORY.open_gates()
     if open_gates:
         out.append(f"gates are OPEN: {open_gates}")
-    if INVENTORY.gate_count() != 10:
-        out.append(f"{INVENTORY.gate_count()} gates in the inventory, expected 10")
+    #: 🔴 NO COUNT PINNED HERE, DELIBERATELY. It used to say `!= 10`. The gate
+    #: TOTAL has exactly one tripwire -- `EXPECTED_GATES` in
+    #: tests/test_gate_inventory.py -- and the reason it has one is that three
+    #: hand-kept copies once claimed seven, eight and ten at the same time. What
+    #: matters to the study's final state is that every gate is SHUT, which is
+    #: derived above and cannot go stale when a gate is legitimately added.
     return out

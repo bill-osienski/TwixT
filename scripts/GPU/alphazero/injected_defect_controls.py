@@ -91,10 +91,68 @@ H3PRE = "scripts/GPU/alphazero/h3_study_prerun_verification.py"
 DRV = "scripts/GPU/alphazero/run_injected_defect_controls.py"
 T_DRV = "tests/test_injected_defect_controls.py"
 H3FIN = "scripts/GPU/alphazero/h3_final_state.py"
+H3CMB = "scripts/GPU/alphazero/h3_combine.py"
+T_H3CMB = "tests/test_h3_combine.py"
 T_H3FIN = "tests/test_h3_final_state.py"
 
 # (label, file, anchor, replacement, test node)
 DEFECTS = [
+    # ═════════ THE COMBINATION (2026-09-20) ════════════════════════════
+    # 🔴 POOLING THE FOUR SEGMENTS IS THE STUDY'S ONE INTERPRETIVE ACT.
+    # After it a number exists that people will quote, so every refusal on
+    # the way there is proved to bind.
+    ('the combination gate is not checked at all', H3CMB,
+     '    if not H3_COMBINATION_AUTHORIZED:',
+     '    if False:',
+     f"{T_H3CMB}::test_combine_REFUSES_WHILE_THE_GATE_IS_SHUT"),
+    ('the authorized entry point accepts a destination override', H3CMB,
+     'def combine() -> Dict[str, Any]:',
+     'def combine(out_dir: str = COMBINED_OUT_DIR) -> Dict[str, Any]:',
+     f"{T_H3CMB}::test_combine_TAKES_NO_ARGUMENTS_AT_ALL"),
+    ('the combination ignores the final-state disagreements', H3CMB,
+     '    if problems:',
+     '    if False:',
+     f"{T_H3CMB}::test_A_FINAL_STATE_DISAGREEMENT_BLOCKS_AGGREGATION"),
+    ('the combination stops counting the games', H3CMB,
+     '    if len(task_ids) != RULES.N_GAMES or len(set(task_ids)) != RULES.N_GAMES:',
+     '    if False:',
+     f"{T_H3CMB}::test_A_MISSING_GAME_IS_REFUSED"),
+    ('the combination stops requiring DISTINCT task ids', H3CMB,
+     '    task_ids = [g["task_id"] for g in games]',
+     '    task_ids = sorted(set(g["task_id"] for g in games))',
+     f"{T_H3CMB}::test_A_DUPLICATED_GAME_IS_REFUSED"),
+    ('the combination stops requiring the seeds to be the four blocks', H3CMB,
+     '    if len(set(seeds)) != RULES.N_GAMES or set(seeds) != expected_seeds:',
+     '    if False:',
+     f"{T_H3CMB}::test_A_DUPLICATED_SEGMENT_IS_REFUSED"),
+    ('the combination accepts a pair that is not a pair', H3CMB,
+     '    short = sorted(p for p, n in by_pair.items() if n != 2)',
+     '    short = []',
+     f"{T_H3CMB}::test_AN_INCOMPLETE_PAIR_IS_REFUSED"),
+    ('the combination ignores the permission decision', H3CMB,
+     '    if not permission.get("verdict_permitted"):',
+     '    if False:',
+     f"{T_H3CMB}::test_A_REFUSED_PERMISSION_STOPS_THE_COMBINATION"),
+    ('the combination accepts a narrower analysis', H3CMB,
+     '    missing = [s for s in REQUIRED_SENSITIVITIES if s not in report["sensitivities"]]',
+     '    missing = []',
+     f"{T_H3CMB}::test_AN_OMITTED_SENSITIVITY_IS_REFUSED"),
+    ('the combination stops hashing its inputs', H3CMB,
+     'def _sha256(path: str) -> str:\n    h = hashlib.sha256()',
+     'def _sha256(path: str) -> str:\n    return "0" * 64\n    h = hashlib.sha256()',
+     f"{T_H3CMB}::test_EVERY_INPUT_IS_RECORDED_BY_PATH_AND_HASH"),
+    ('the combined report may be OVERWRITTEN', H3CMB,
+     '    if os.path.lexists(path):',
+     '    if False:',
+     f"{T_H3CMB}::test_THE_DESTINATION_IS_CREATE_ONLY"),
+    ('a partial write is left occupying the destination', H3CMB,
+     '        try:\n            os.unlink(path)\n        except OSError:\n            pass\n        raise',
+     '        raise',
+     f"{T_H3CMB}::test_A_PARTIAL_WRITE_LEAVES_NO_FILE_BEHIND"),
+    ('summarise is called once PER SEGMENT instead of once on the pool', H3CMB,
+     '    report = summarise(games, total_elapsed_s=total_elapsed)',
+     '    for _k in range(len(blocks)):\n        report = summarise([g for g in games if g["segment"] == _k],\n                           total_elapsed_s=total_elapsed)\n    report = summarise(games, total_elapsed_s=total_elapsed)',
+     f"{T_H3CMB}::test_summarise_IS_CALLED_EXACTLY_ONCE"),
     # ═════════ THE FINAL-STATE CROSS-CHECK (2026-09-20) ════════════════
     # 🔴 EACH SEGMENT VERIFIED ITSELF; NOTHING VERIFIED THE SET. These prove
     # the cross-check binds each thing it claims to compare.
