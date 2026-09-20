@@ -667,6 +667,21 @@ def test_THE_VERDICT_TRAVELS_WITH_ITS_POPULATION_LIMITATION():
         rep["primary"]["interval_note"]
 
 
+def test_THE_COMBINER_PERSISTS_THE_CLAIM_IT_IS_GIVEN(study):
+    """🔴 THE FILE AND THE CODE THAT WRITES IT ARE TWO CLAIMS. The test above
+    reads the report that already exists, so it says nothing about the combiner
+    -- a change that stopped persisting the population claim would leave that
+    file untouched and go unnoticed. This exercises the WRITER, on synthetic
+    inputs, and requires the whole claim through."""
+    out = run(study)
+    assert out["population"]["stratum"] == R.STRATUM_UNIFORM
+    claim = out["population"]["claim"]
+    for phrase in ("UNIFORMLY AT RANDOM",
+                   "says NOTHING about realistic play",
+                   "not a position anyone plays"):
+        assert phrase in claim, phrase
+
+
 def test_THE_PAYLOAD_AND_THE_DIRECTORY_ARE_BOTH_FSYNCED(study, monkeypatch):
     """🔴 DURABILITY CANNOT BE TESTED BY CRASHING THE MACHINE, so it is tested
     at the syscall: the payload must reach the device before anything claims the

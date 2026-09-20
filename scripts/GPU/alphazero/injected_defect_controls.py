@@ -139,7 +139,7 @@ DEFECTS = [
     ('the verdict is persisted without its population claim', H3CMB,
      '        "population": report["population"],',
      '        "population": {"stratum": report["population"]["stratum"]},',
-     f"{T_H3CMB}::test_THE_VERDICT_TRAVELS_WITH_ITS_POPULATION_LIMITATION"),
+     f"{T_H3CMB}::test_THE_COMBINER_PERSISTS_THE_CLAIM_IT_IS_GIVEN"),
     # ═════════ THE COMBINATION (2026-09-20) ════════════════════════════
     # 🔴 POOLING THE FOUR SEGMENTS IS THE STUDY'S ONE INTERPRETIVE ACT.
     # After it a number exists that people will quote, so every refusal on
