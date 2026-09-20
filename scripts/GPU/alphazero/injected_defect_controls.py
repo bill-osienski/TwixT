@@ -3912,6 +3912,17 @@ DEFECTS = [
 # DERIVED from the requirement and its assertion and then verified against a run,
 # which is why each names a count or a sentence rather than a first line.
 EXPECTED_REASONS = {
+    # ── the allow-list repair (2026-09-20). OBSERVED, never guessed.
+    'the allow-list permits every open gate instead of the named ones':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_combine.H3CombineError'>",
+    'the final-state check stops rejecting unexpected open gates':
+        'AssertionError: an unexpected open gate must still be reported',
+    'the combiner allows ANY gate to be open, not just its own':
+        'scripts.GPU.alphazero.h3_combine.H3CombineError: the final state reports 1 disagreement(s); the segments may not be pooled until they describe one study:',
+    'the restoration regex goes back to the permissive form':
+        'AssertionError: the restored file must differ from the original in NOTHING',
+    "attempt 2 is aimed at attempt 1's SPENT destination":
+        "AssertionError: assert 'docs/superpowers/evidence/2026-09-20-t1j-h3-study-combined' != 'docs/superpowers/evidence/2026-09-20-t1j-h3-study-combined'",
     'the gate inventory stops seeing gates at all':
         'AssertionError: the derived inventory and EXPECTED_GATES must agree',
     'the combination stops hashing its inputs':
