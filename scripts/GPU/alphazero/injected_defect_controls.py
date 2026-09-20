@@ -3960,8 +3960,6 @@ EXPECTED_REASONS = {
     'a PID is left in the temp-file name the reason is compared against':
         'AssertionError: a PID in a temp-file name must not change the reason',
     # ── PID-free re-harvest (2026-09-20). OBSERVED.
-    'the combination gate is not checked at all':
-        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_combine.H3CombineError'>",
     'the authorized entry point accepts a destination override':
         "AssertionError: assert ['out_dir'] == []",
     'the combination ignores the final-state disagreements':

@@ -162,6 +162,12 @@ def test_THE_COMBINATION_HAS_RUN_AND_ITS_GATE_IS_SHUT_AGAIN():
 
 
 def test_combine_REFUSES_WHILE_THE_GATE_IS_SHUT():
+    """🔴 AND IT MUST BE THE GATE'S REFUSAL, NOT SOMEONE ELSE'S. The destination
+    is occupied now, so a `combine()` that skipped its gate entirely would still
+    be stopped -- by create-only, one layer down. Matching the message is what
+    keeps this a test of the GATE: with the check removed the refusal becomes
+    "already exists" and this fails, which is the layering shown rather than
+    hidden."""
     before = sorted(pathlib.Path(COMBINE.COMBINED_OUT_DIR).iterdir())
     with pytest.raises(COMBINE.H3CombineError, match="NOT AUTHORIZED"):
         COMBINE.combine()
