@@ -66,3 +66,28 @@ def test_output_is_create_only(tmp_path):
 
     with pytest.raises(EXPORT.H2ReplayExportError, match="refusing to replace"):
         EXPORT.write_viewer_record({"moves": []}, path)
+
+
+def test_EVERY_EXPORT_CARRIES_ITS_EVIDENCE_NOTE_AND_DISCLAIMS_H3(tmp_path):
+    """🔴 THE PROVENANCE MUST TRAVEL WITH THE GAME. An exported H2 replay is a
+    recorded game from one PARTIAL attempt; shown without its note it looks
+    like the study. H3 persisted no moves and cannot be replayed at all, so a
+    viewer that renders H2 games is the most likely thing to be mistaken for
+    H3 evidence."""
+    source = _evidence(tmp_path)
+    games = EXPORT.load_recorded_games(source)
+    assert games, "the fixture must produce at least one game"
+    for game in games:
+        note = EXPORT.viewer_record(game, source=source)["meta"]["evidence_note"]
+        assert "H2" in note, note
+        assert "is not an H3 result" in note, note
+
+
+def test_THE_VIEWER_RENDERS_THE_EVIDENCE_NOTE():
+    """A note the viewer never displays is a note nobody reads. The element and
+    the assignment must both exist, or the export's scope stops at the file."""
+    import pathlib
+    html = pathlib.Path("Replay.html").read_text()
+    js = pathlib.Path("assets/js/replay/replayController.js").read_text()
+    assert 'id="meta-evidence"' in html
+    assert "meta?.evidence_note" in js

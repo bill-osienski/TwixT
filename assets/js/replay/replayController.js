@@ -17,6 +17,7 @@ const metaDepth = document.getElementById('meta-depth');
 const metaStart = document.getElementById('meta-start');
 const metaRedPlayer = document.getElementById('meta-red-player');
 const metaBlackPlayer = document.getElementById('meta-black-player');
+const metaEvidence = document.getElementById('meta-evidence');
 
 const container = document.getElementById('canvas');
 
@@ -79,6 +80,10 @@ function updateMeta() {
   metaStart.textContent = replay?.starting_player ?? replay?.meta?.starting_player ?? '-';
   metaRedPlayer.textContent = replay?.meta?.players?.red ?? '-';
   metaBlackPlayer.textContent = replay?.meta?.players?.black ?? '-';
+  // The provenance travels WITH the game. An exported H2 replay shown
+  // without it is a recorded game from one partial attempt that looks
+  // like the study; H3 persisted no moves and cannot be replayed at all.
+  metaEvidence.textContent = replay?.meta?.evidence_note ?? '-';
 }
 
 function setReplay(data) {
