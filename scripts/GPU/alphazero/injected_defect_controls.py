@@ -164,7 +164,7 @@ DEFECTS = [
     ('the install OVERWRITES instead of refusing an existing name', H3CMB,
      '            os.link(tmp, path)',
      '            os.replace(tmp, path)',
-     f"{T_H3CMB}::test_THE_DESTINATION_IS_CREATE_ONLY"),
+     f"{T_H3CMB}::test_THE_LINK_IS_A_BARRIER_IN_ITS_OWN_RIGHT"),
     ('the payload is not fsynced before it is installed', H3CMB,
      '            fh.flush()\n            os.fsync(fh.fileno())',
      '            fh.flush()',
