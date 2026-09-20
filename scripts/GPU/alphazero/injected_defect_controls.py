@@ -3943,6 +3943,31 @@ DEFECTS = [
 # DERIVED from the requirement and its assertion and then verified against a run,
 # which is why each names a count or a sentence rather than a first line.
 EXPECTED_REASONS = {
+    # ── username-free re-harvest (2026-09-20). OBSERVED.
+    'a pinned combined output may be MISSING':
+        "FileNotFoundError: [Errno 2] No such file or directory: '/private/<tmp>/pytest-of-<user>/pytest-<n>/test_THE_COMBINED_OUTPUTS_ARE_0/gone.json'",
+    'the early occupied-destination check is removed':
+        "FileExistsError: [Errno 17] File exists: '/private/<tmp>/pytest-of-<user>/pytest-<n>/test_THE_DESTINATION_IS_CREATE0/combined/.09_combined_report.json.<pid>.tmp' -> '/private/<tmp>/pytest-of-<user>/pytest-<n>/test_THE_DESTINATION_IS_CREATE0/combined/09_combined_report.json'",
+    'the report is serialised straight into the official path':
+        "FileExistsError: [Errno 17] File exists: '/private/<tmp>/pytest-of-<user>/pytest-<n>/test_THE_OFFICIAL_PATH_IS_NEVE0/combined/09_combined_report.json' -> '/private/<tmp>/pytest-of-<user>/pytest-<n>/test_THE_OFFICIAL_PATH_IS_NEVE0/combined/09_combined_report.json'",
+    'the final-state check stops requiring the artifacts to exist':
+        "FileNotFoundError: [Errno 2] No such file or directory: '/private/<tmp>/pytest-of-<user>/pytest-<n>/test_A_MISSING_ARTIFACT_IS_CAU0/segment2/04_trace.jsonl'",
+    "the USERNAME is left in the reason via pytest's temp root":
+        "AssertionError: assert '/private/<tm...est_x0/r.json' == '/private/<tm...est_x0/r.json'",
+    'compile step reuses an existing class directory':
+        "FileExistsError: [Errno 17] File exists: '/private/<tmp>/pytest-of-<user>/pytest-<n>/test_an_existing_class_directo0/classes'",
+    'match mode accepts a supplied plan':
+        "scripts.GPU.alphazero.h1_viability_plan.H1PlanError: cannot read the H1 plan: [Errno 2] No such file or directory: '/private/<tmp>/pytest-of-<user>/pytest-<n>/test_match_mode_REFUSES_a_supp0/other.json'",
+    'the preflight ignores the trace path':
+        "FileExistsError: [Errno 17] File exists: '/private/<tmp>/pytest-of-<user>/pytest-<n>/test_a_PREEXISTING_TRACE_path_0/t.jsonl'",
+    'results and trace may be the same file':
+        'scripts.GPU.alphazero.h1_viability_runner.H1VoidError: the results file could not be created: results path already exists: /private/<tmp>/pytest-of-<user>/pytest-<n>/test_THE_TWO_OUTPUT_PATHS_MUST0/both.jsonl. A run writes a NEW file; appending would merge two runs. The H1 match is VOID: no viability report is produced and the seed block retires whole.',
+    'canonicalisation stops resolving symlinks':
+        'scripts.GPU.alphazero.h1_viability_runner.H1Error: the trace path already exists: /private/<tmp>/pytest-of-<user>/pytest-<n>/test_a_SYMLINKED_trace_path_is0/link.jsonl (a dangling symlink -- the directory entry is present). A run writes NEW files; appending would merge two runs, and overwriting would destroy the record of one. Nothing has been written and no trace was opened.',
+    'only the results name is checked for existence':
+        "FileExistsError: [Errno 17] File exists: '/private/<tmp>/pytest-of-<user>/pytest-<n>/test_a_DANGLING_TRACE_link_is_0/t.jsonl'",
+    'main spawns itself without --worker':
+        "AssertionError: assert ('--worker' in ['<python>', '-m', 'scripts.GPU.alphazero.runtime_requalification', '--out', '...te/<tmp>/pytest-of-<user>/pytest-<n>/test_main_supervises_a_WORKER_0/r.json'])",
     # ── machine-independent re-harvest (2026-09-20). OBSERVED.
     'an ABSOLUTE python path is left in the reason':
         'AssertionError: the same failure on another machine must produce the same reason',
