@@ -13,6 +13,13 @@ from scripts.GPU.alphazero import h3_study_runner as RUN
 from scripts.GPU.alphazero import h3_study_generator as GEN
 from scripts.GPU.alphazero import h3_generation_preflight as PF
 
+#: 🔴 ONE DEFINITION, IMPORTED. The synthetic unspent block lives in the
+#: preflight -- it is verification scaffolding, it must never look like a live
+#: study block, and a second copy here would be free to drift from the one the
+#: preflight actually checks.
+from scripts.GPU.alphazero.h3_study_prerun_verification import (   # noqa: E402
+    synthetic_unspent_block)
+
 FRESH = (777000000, 777000000 + R.N_GAMES)
 #: four blocks now, one per segment -- the study no longer uses a
 #: single interval, so a test schedule must not either.
@@ -624,20 +631,16 @@ def test_A_RETIRED_SEGMENT_DOES_NOT_BLOCK_A_LATER_ONE(monkeypatch):
     #: 🔴 THE LATER SEGMENTS ARE CHOSEN, NOT LISTED. This asserted 1, 2 and 3 all
     #: still launch; segment 1 then ran and the test failed for a reason that had
     #: nothing to do with the coupling it exists to guard.
-    from scripts.GPU.alphazero import e4_screen_reference as REF
-    later = [k for k, (lo, hi) in enumerate(RUN.SEGMENT_SEED_BLOCKS)
-             if k > 0 and not any(REF.seed_status(x)["exposed"]
-                                  or REF.seed_status(x)["retired"]
-                                  or REF.seed_status(x)["test_only"]
-                                  for x in range(lo, hi))]
-    assert later, "a later UNSPENT segment is needed to show it is not blocked"
+    #: 🔴 THE LATER SEGMENT IS SYNTHETIC NOW. Every real one is spent, so a real
+    #: later segment would refuse for its OWN reason and prove nothing about the
+    #: coupling. The point is that segment 0 being RETIRED does not reach it.
+    later = synthetic_unspent_block()
     retired = RUN.RETIRED_SEGMENT_BLOCKS[0]
     monkeypatch.setattr(RUN, "SEGMENT_SEED_BLOCKS",
-                        (retired,) + RUN.SEGMENT_SEED_BLOCKS[1:])
+                        (retired, later) + RUN.SEGMENT_SEED_BLOCKS[2:])
     with pytest.raises(RUN.H3StudyRunError, match="RETIRED"):
         RUN.check_segment_seeds(0)
-    for k in later:
-        assert RUN.check_segment_seeds(k)["segment"] == k
+    assert RUN.check_segment_seeds(1)["segment"] == 1
 
 
 def test_THE_RETIRED_BLOCK_CAN_NEVER_BE_RELAUNCHED():
@@ -671,23 +674,22 @@ def test_THE_RETIRED_OVERLAP_CHECK_IS_ITS_OWN_GUARD(monkeypatch):
     #: to INDETERMINATE. So: pick an UNSPENT block, and assert it is unspent here,
     #: so a later segment's run fails this loudly rather than quietly re-merging
     #: the two guards.
-    from scripts.GPU.alphazero import e4_screen_reference as REF
-    unspent = [k for k, (lo, hi) in enumerate(RUN.SEGMENT_SEED_BLOCKS)
-               if not any(REF.seed_status(x)["exposed"] or REF.seed_status(x)["retired"]
-                          or REF.seed_status(x)["test_only"] for x in range(lo, hi))]
-    assert unspent, "(a) needs a block the STATUS guard would let through"
-    k = unspent[0]
-    monkeypatch.setattr(RUN, "RETIRED_SEGMENT_BLOCKS",
-                        (RUN.SEGMENT_SEED_BLOCKS[k],))
+    #: 🔴 AND NOW IT MUST BE SYNTHETIC. Naming a real block as a literal drifted
+    #: this control once; choosing the first unspent real block then worked until
+    #: segment 3 spent the last one. (a) needs a block the STATUS guard LETS
+    #: THROUGH, and the study no longer contains one, so it uses a paper
+    #: reservation that is accounted and has never been drawn.
+    block = synthetic_unspent_block()
+    monkeypatch.setattr(RUN, "SEGMENT_SEED_BLOCKS",
+                        (block,) + RUN.SEGMENT_SEED_BLOCKS[1:])
+    monkeypatch.setattr(RUN, "RETIRED_SEGMENT_BLOCKS", (block,))
     with pytest.raises(RUN.H3StudyRunError, match="may never be revived"):
-        RUN.check_segment_seeds(k)
+        RUN.check_segment_seeds(0)
 
     # (b) registry-spent, overlapping no declared retired range
     monkeypatch.setattr(RUN, "RETIRED_SEGMENT_BLOCKS", ())
-    monkeypatch.setattr(RUN, "SEGMENT_SEED_BLOCKS",
-                        ((202_626_000, 202_626_148),) + RUN.SEGMENT_SEED_BLOCKS[1:])
     with pytest.raises(RUN.H3StudyRunError, match="is SPENT"):
-        RUN.check_segment_seeds(0)
+        RUN.check_segment_seeds(1)          # a real, spent segment
 
 
 def test_REGISTRATION_IS_ASKED_OF_ONE_SEGMENT_WHEN_ONE_IS_NAMED(monkeypatch):
@@ -753,12 +755,20 @@ def test_EVERY_SEGMENT_BLOCK_IS_REGISTERED_AND_ONLY_SPENT_ONES_REFUSE(monkeypatc
         st = [REF.seed_status(x) for x in range(lo, hi)]
         (spent if any(x["exposed"] or x["retired"] or x["test_only"] for x in st)
          else unspent).append(k)
-    assert spent and unspent, "both directions must be exercised"
+    assert len(spent) + len(unspent) == R.N_SEGMENTS
+    assert spent, "no segment has run, so the SPENT direction asserts nothing"
     for k in spent:
         with pytest.raises(RUN.H3StudyRunError, match="is SPENT"):
             RUN.check_segment_seeds(k)
     for k in unspent:
         assert RUN.check_segment_seeds(k)["n"] == R.GAMES_PER_SEGMENT
+    #: 🔴 THE UNSPENT DIRECTION MUST STILL BE EXERCISED WHEN THE STUDY IS OVER.
+    #: With every real block spent, `unspent` is empty and that loop asserts
+    #: nothing -- so a synthetic accounted, never-drawn block stands in and the
+    #: ACCEPT path keeps being tested for as long as this test exists.
+    monkeypatch.setattr(RUN, "SEGMENT_SEED_BLOCKS",
+                        (synthetic_unspent_block(),) + RUN.SEGMENT_SEED_BLOCKS[1:])
+    assert RUN.check_segment_seeds(0)["n"] == R.GAMES_PER_SEGMENT
 
     monkeypatch.setattr(RUN, "SEGMENT_SEED_BLOCKS", ())
     with pytest.raises(RUN.H3StudyRunError, match="NO SEED BLOCKS"):
@@ -825,8 +835,8 @@ def test_THE_PREFLIGHT_EPILOGUE_IS_DERIVED_FROM_LIVE_STATE():
         "readiness must report the registry's spent segments")
     assert r["launchable"] == [k for k in range(R.N_SEGMENTS) if k not in spent], (
         "readiness must report every segment the registry has not spent")
-    assert r["completed"] and r["launchable"], (
-        "as of the segment 0 closeout: segment 0 done, 1-3 still to run")
+    assert len(r["completed"]) + len(r["launchable"]) == R.N_SEGMENTS
+    assert r["completed"], "no segment has run, so this asserts nothing"
     # and the pin is READ, not assumed: with it unset the field must follow.
     import unittest.mock as _m
     with _m.patch.object(R, "OPENING_SET_DIGEST", None):
@@ -838,16 +848,18 @@ def test_THE_EPILOGUE_TEXT_SAYS_WHAT_THE_READINESS_SAYS():
     still print the refusal, and a launchable segment must NOT."""
     from scripts.GPU.alphazero import h3_study_prerun_verification as PRE
 
-    nothing = PRE.render_readiness(
-        {"population_pinned": False, "blocks_registered": False,
-         "completed": [], "launchable": []})
-    assert "NOT READY TO RUN" in nothing
-    assert "not pinned" in nothing and "no seed block" in nothing
+    nothing = {"population_pinned": False, "blocks_registered": False,
+               "completed": [], "launchable": []}
+    text = PRE.render_readiness(nothing)
+    assert "CANNOT RUN" in text
+    assert "not pinned" in text and "no seed block" in text
+    #: the VERDICT sentence belongs to closing_line, which counts the failures
+    assert "NOT READY TO RUN" in PRE.closing_line(0, nothing)
 
     ready = PRE.render_readiness(
         {"population_pinned": True, "blocks_registered": True,
          "completed": [0], "launchable": [1, 2, 3]})
-    assert "NOT READY TO RUN" not in ready
+    assert "CANNOT RUN" not in ready
     assert "not pinned" not in ready and "no seed block" not in ready
     assert "segment 1" in ready and "completed: 0" in ready
     assert "authorization" in ready, (
@@ -881,3 +893,41 @@ def test_THE_CLI_HELP_MAY_NOT_ASSERT_STATE_THE_TREE_CONTRADICTS():
     for dead in ("has no seed block", "has not been generated", "NOT AUTHORIZED"):
         assert dead not in desc, (
             f"--help still asserts {dead!r}, which this tree contradicts")
+
+
+def test_render_readiness_NEVER_CLAIMS_ANYTHING_ABOUT_CHECK_FAILURES():
+    """🔴 IT PRINTED "No check FAILED" TWO LINES ABOVE "3 FAILED".
+
+    I moved that sentence into `render_readiness` when deriving the epilogue.
+    The original printed it only after `if _FAILED: return 1`, so it was true by
+    construction; inside `render_readiness` it is unconditional, and that
+    function cannot see `_FAILED` at all. A function that asserts a fact outside
+    its own knowledge will eventually assert a false one -- this one did, in the
+    rewrite whose whole purpose was to remove claims exactly like it.
+
+    The launch verdict now belongs to the caller, which counts the failures."""
+    from scripts.GPU.alphazero import h3_study_prerun_verification as PRE
+    for r in ({"population_pinned": False, "blocks_registered": False,
+               "completed": [], "launchable": []},
+              {"population_pinned": True, "blocks_registered": True,
+               "completed": [0, 1, 2, 3], "launchable": []},
+              {"population_pinned": True, "blocks_registered": True,
+               "completed": [0], "launchable": [1, 2, 3]}):
+        text = PRE.render_readiness(r)
+        assert "FAILED" not in text, text
+
+
+def test_THE_CLOSING_LINE_FOLLOWS_THE_FAILURE_COUNT_IN_BOTH_DIRECTIONS():
+    """It is the caller's sentence because only the caller counts failures."""
+    from scripts.GPU.alphazero import h3_study_prerun_verification as PRE
+    complete = {"population_pinned": True, "blocks_registered": True,
+                "completed": [0, 1, 2, 3], "launchable": []}
+    mid = {"population_pinned": True, "blocks_registered": True,
+           "completed": [0], "launchable": [1, 2, 3]}
+
+    assert "No check FAILED" not in PRE.closing_line(3, complete)
+    assert "No check FAILED" not in PRE.closing_line(1, mid)
+    assert "No check FAILED" in PRE.closing_line(0, complete)
+    assert "No check FAILED" in PRE.closing_line(0, mid)
+    # and with nothing left to launch it must say so rather than imply a launch
+    assert "spent" in PRE.closing_line(0, complete)

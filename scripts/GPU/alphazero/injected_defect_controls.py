@@ -90,9 +90,40 @@ T_GATES = "tests/test_gate_inventory.py"
 H3PRE = "scripts/GPU/alphazero/h3_study_prerun_verification.py"
 DRV = "scripts/GPU/alphazero/run_injected_defect_controls.py"
 T_DRV = "tests/test_injected_defect_controls.py"
+H3FIN = "scripts/GPU/alphazero/h3_final_state.py"
+T_H3FIN = "tests/test_h3_final_state.py"
 
 # (label, file, anchor, replacement, test node)
 DEFECTS = [
+    # ═════════ THE FINAL-STATE CROSS-CHECK (2026-09-20) ════════════════
+    # 🔴 EACH SEGMENT VERIFIED ITSELF; NOTHING VERIFIED THE SET. These prove
+    # the cross-check binds each thing it claims to compare.
+    ("the final-state check stops comparing the receipt fields", H3FIN,
+     '        if got != value or type(got) is not type(value):\n'
+     '            out.append(f"segment {k} receipt: {key} is {got!r}, expected {value!r}")',
+     "        pass",
+     f"{T_H3FIN}::test_A_RECEIPT_THAT_DID_NOT_COMPLETE_IS_CAUGHT"),
+    ("the final-state check reads seeds from the PLAN, not the records", H3FIN,
+     '    seeds = sorted(r["seed"] for r in rows if "seed" in r)',
+     "    seeds = list(range(block[0], block[1]))",
+     f"{T_H3FIN}::test_A_SEED_OUTSIDE_THE_BLOCK_IS_CAUGHT"),
+    ("the final-state check stops requiring the artifacts to exist", H3FIN,
+     '            if not os.path.lexists(path):',
+     "            if False:",
+     f"{T_H3FIN}::test_A_MISSING_ARTIFACT_IS_CAUGHT"),
+    ("the final-state check ignores a fired degeneracy gate", H3FIN,
+     '        if gate.get("status") != "CLEAR":',
+     '        if False:',
+     f"{T_H3FIN}::test_A_REPORT_WITH_A_FIRED_DEGENERACY_GATE_IS_CAUGHT"),
+    ("the final-state check stops looking at the gate inventory", H3FIN,
+     "    open_gates = INVENTORY.open_gates()",
+     "    open_gates = []",
+     f"{T_H3FIN}::test_AN_OPEN_GATE_IS_CAUGHT"),
+    ("the final-state check stops requiring a spent block to be RETIRED", H3FIN,
+     '        if not all(x["retired"] for x in st):\n'
+     '            out.append(f"segment {k}: block is not wholly RETIRED")',
+     "        pass",
+     f"{T_H3FIN}::test_A_BLOCK_THAT_IS_NOT_RETIRED_IS_CAUGHT"),
     # ═════════ SEGMENT 1 CLOSEOUT (ran 2026-09-19) ═════════════════════
     # 🔴 FIVE TESTS NOW DERIVE THE SPENT SET instead of listing it, because a
     # listed one was wrong the day segment 1 finished. If the derivation stops

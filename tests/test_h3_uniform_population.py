@@ -1203,8 +1203,8 @@ SEG0_QUARTER = (202_626_000, 202_626_148)
 
 #: 🔴 THE ONE PLACE THE CONCRETE ANSWER LIVES. A segment run edits these two
 #: lines and nothing else; every test DERIVES the rest.
-EXPECTED_SPENT = [0, 1, 2]
-EXPECTED_UNSPENT = [3]
+EXPECTED_SPENT = [0, 1, 2, 3]
+EXPECTED_UNSPENT = []
 
 
 def segment_partition():
@@ -1249,8 +1249,13 @@ def test_UNSPENT_SEGMENTS_KEEP_THEIR_QUARTERS():
     literal range [202626148, 202626592) and called all 444 seeds unspent -- 148
     of which segment 1 had just drawn."""
     from scripts.GPU.alphazero import e4_screen_reference as REF
+    #: 🔴 AN EMPTY `unspent` IS THE TERMINAL STATE, NOT A FAILURE. This asserted
+    #: `unspent` was non-empty, which was right while the study ran and became
+    #: false the moment segment 3 finished. What holds at EVERY stage is that the
+    #: two halves partition the segments and that each half obeys its own rule.
     spent, unspent = segment_partition()
-    assert unspent, "the study is over if nothing is left to launch"
+    assert len(spent) + len(unspent) == R.N_SEGMENTS == 4
+    assert spent, "no segment has run, so this test asserts nothing"
     for k in unspent:
         lo, hi = RUN.SEGMENT_SEED_BLOCKS[k]
         st = [REF.seed_status(x) for x in range(lo, hi)]
@@ -1455,7 +1460,8 @@ def test_UNSPENT_SEGMENTS_REMAIN_ACCOUNTED_UNEXPOSED_AND_UNRETIRED():
     """
     from scripts.GPU.alphazero import e4_screen_reference as REF
     spent, unspent = segment_partition()
-    assert spent and unspent, "both halves must be non-empty to mean anything"
+    assert len(spent) + len(unspent) == R.N_SEGMENTS
+    assert spent, "no segment has run, so the SPENT half asserts nothing"
     for k in unspent:
         lo, hi = RUN.SEGMENT_SEED_BLOCKS[k]
         st = [REF.seed_status(x) for x in range(lo, hi)]
@@ -1503,7 +1509,8 @@ def test_UNSPENT_SEGMENTS_OUTPUT_PATHS_ARE_STILL_ABSENT():
     neither is a vacuous scan over an empty list."""
     from scripts.GPU.alphazero import h3_study_command as CMD
     spent, unspent = segment_partition()
-    assert spent and unspent
+    assert len(spent) + len(unspent) == R.N_SEGMENTS
+    assert spent, "no segment has run, so the SPENT half asserts nothing"
     for k in unspent:
         assert not os.path.lexists(RUN.segment_out_dir(k)), (
             "an unspent segment's destination must not exist")
@@ -1527,15 +1534,29 @@ def test_AN_UNAUTHORIZED_INVOCATION_WRITES_NO_RECEIPT():
 
     The reason this matters is unchanged: a receipt here would CREATE THE
     DESTINATION and the next real launch would be refused for an occupied output
-    directory."""
+    directory.
+
+    🔴 AND THERE IS NO UNTOUCHED DESTINATION LEFT. Every segment has run, so
+    the claim is now stated the stronger way it always meant: an unauthorized
+    call must change NOTHING on disk -- it must not create a destination, must
+    not create a receipt, and must not touch one that exists.
+    """
     from scripts.GPU.alphazero import h3_study_command as CMD
     spent, unspent = segment_partition()
-    assert unspent, "no segment is left whose destination is untouched"
-    k = unspent[0]
+    k = unspent[0] if unspent else spent[0]
+    receipt, out_dir = CMD.receipt_path(k), RUN.segment_out_dir(k)
+    before = (pathlib.Path(receipt).read_bytes()
+              if os.path.lexists(receipt) else None)
+    dir_before = os.path.lexists(out_dir)
+
     assert RUN.H3_STUDY_EXECUTION_AUTHORIZED is False
     assert CMD.main(["--segment", str(k)]) == CMD.EXIT_UNAUTHORIZED
-    assert not os.path.lexists(CMD.receipt_path(k))
-    assert not os.path.lexists(RUN.segment_out_dir(k))
+
+    after = (pathlib.Path(receipt).read_bytes()
+             if os.path.lexists(receipt) else None)
+    assert after == before, "an unauthorized call must not write the receipt"
+    assert os.path.lexists(out_dir) == dir_before, (
+        "an unauthorized call must not create or remove the destination")
 
 
 def test_WHERE_THE_STUDY_STANDS():
@@ -1545,8 +1566,9 @@ def test_WHERE_THE_STUDY_STANDS():
     six tests which used to encode this fact separately no longer each need
     inverting.
 
-    As of segment 2's closeout (2026-09-19): segments 0, 1 and 2 have run and are
-    spent; segment 3 has not. EDIT THE TWO CONSTANTS, NOT THE MESSAGES --
+    As of segment 3's closeout (2026-09-20): ALL FOUR segments have run and are
+    spent. `EXPECTED_UNSPENT` is empty, and that is the study's terminal state,
+    not a broken fixture -- see the note in `segment_partition`. EDIT THE TWO CONSTANTS, NOT THE MESSAGES --
     a control's recorded reason is the message, and a message carrying a value
     drifts the moment that value moves.
     """
@@ -1567,20 +1589,23 @@ def test_REACHING_THE_FLOOR_DOES_NOT_PERMIT_A_VERDICT():
     ANY segment stands withheld after an earlier one's outcomes were inspected,
     that is optional stopping, and `combine_segments` refuses a verdict on
     provenance rather than on counts -- however many pairs are in hand."""
-    spent, unspent = segment_partition()
-    assert spent and unspent, "the question only arises mid-study"
+    #: 🔴 SYNTHETIC STATUSES, NOT THE LIVE PARTITION. This built its two lists
+    #: from the real spent/unspent split, so when segment 3 finished there was no
+    #: withheld segment left and the test could no longer pose its own question.
+    #: The RULE is what is under test, and it does not depend on where the study
+    #: happens to be.
+    n = R.N_SEGMENTS
     stopping_now = RUN.combine_segments(
         [{"segment": k, "status": "completed", "outcomes_inspected": True}
-         for k in spent]
-        + [{"segment": k, "status": "withheld", "outcomes_inspected": True}
-           for k in unspent])
+         for k in range(n - 1)]
+        + [{"segment": n - 1, "status": "withheld", "outcomes_inspected": True}])
     assert stopping_now["verdict_permitted"] is False
     assert stopping_now["flagged"] is True
     assert "optional stopping" in stopping_now["why"]
 
     all_four = RUN.combine_segments(
         [{"segment": k, "status": "completed", "outcomes_inspected": True}
-         for k in range(4)])
+         for k in range(n)])
     assert all_four["verdict_permitted"] is True, (
         "the preregistered plan must remain reachable")
 

@@ -35,6 +35,30 @@ GATES: Tuple[Tuple[str, str], ...] = INVENTORY.gates()
 _FAILED: List[str] = []
 _NOT_READY: List[str] = []
 
+#: 🔴 A SYNTHETIC UNSPENT BLOCK, AND THE ONLY DEFINITION OF ONE.
+#: Some checks must exhibit a block the registry's STATUS guard lets through --
+#: to isolate it from the RETIRED-overlap guard, and to show that a retired
+#: segment does not block an unspent one. Every real segment is spent now, so no
+#: real block can serve. This is a 148-wide slice of an ACCOUNTED, wholly
+#: unspent paper reservation; it is substituted IN MEMORY only and NO SEED IS
+#: EVER DRAWN from it. `synthetic_unspent_block()` re-checks that it is still
+#: accounted and unspent, so if that reservation is ever consumed these checks
+#: fail loudly rather than quietly losing their isolation.
+#: It lives HERE, not in the runner, because it is verification scaffolding and
+#: must never look like a live study block; the tests import it from here so
+#: there is one definition rather than two that can drift apart.
+SYNTHETIC_UNSPENT_BLOCK = (202_608_188, 202_608_188 + 148)
+
+
+def synthetic_unspent_block() -> Tuple[int, int]:
+    lo, hi = SYNTHETIC_UNSPENT_BLOCK
+    st = [REF.seed_status(x) for x in range(lo, hi)]
+    if not all(x["accounted"] for x in st):
+        raise RuntimeError("the synthetic block must be ACCOUNTED")
+    if any(x["exposed"] or x["retired"] or x["test_only"] for x in st):
+        raise RuntimeError("the synthetic block must be UNSPENT or it isolates nothing")
+    return SYNTHETIC_UNSPENT_BLOCK
+
 
 def check(label: str, ok: Any, detail: str = "") -> bool:
     print(f"  {'PASS' if ok else 'FAIL':8s} {label}" + (f"  {detail}" if detail else ""))
@@ -385,14 +409,16 @@ def main() -> int:
         RUN.SEGMENT_SEED_BLOCKS = (RUN.RETIRED_SEGMENT_BLOCKS[0],) + _saved[1:]
         check("relaunching the RETIRED block is REFUSED (negative control)",
               _refuses(lambda: RUN.check_segment_seeds(0), "RETIRED"))
-        #: 🔴 THE UNSPENT ONES, CHOSEN NOT LISTED. This named 1, 2 and 3; segment
-        #: 1 then ran and the check failed for a reason that had nothing to do
-        #: with the coupling it exists to demonstrate.
-        _later = readiness()["launchable"]
-        check(f"…and the unspent segments {_later} are STILL launchable while "
-              f"it is (the repair)",
-              bool(_later) and all(_accepts(lambda k=k: RUN.check_segment_seeds(k))
-                                   for k in _later))
+        #: 🔴 THE LATER BLOCK IS SYNTHETIC. This named segments 1-3, then chose
+        #: the unspent ones -- and segment 3 spent the last one, so the check
+        #: began failing for a reason with nothing to do with the coupling it
+        #: exists to demonstrate. A real later segment now refuses for its OWN
+        #: reason and would prove nothing.
+        RUN.SEGMENT_SEED_BLOCKS = ((RUN.RETIRED_SEGMENT_BLOCKS[0],
+                                    synthetic_unspent_block()) + _saved[2:])
+        check("…and an UNSPENT later block is still launchable while it is "
+              "(the repair, on a synthetic block: no seed is drawn)",
+              _accepts(lambda: RUN.check_segment_seeds(1)))
     finally:
         RUN.SEGMENT_SEED_BLOCKS = _saved
 
@@ -544,14 +570,69 @@ def main() -> int:
     print("    " + (r.stdout.strip().splitlines() or ["<no output>"])[-1])
     check("every binding test passes", r.returncode == 0)
 
+    print("\n== the FINAL STATE: do the four records agree? ==")
+    #: 🔴 EACH SEGMENT VERIFIED ITSELF; NOTHING VERIFIED THE SET. Four runs days
+    #: apart, across edits to the runner, the tests and the controls -- "each one
+    #: said OK" is a weaker claim than "together they describe one 592-game study
+    #: played as designed". This computes NOTHING about strength.
+    from . import h3_final_state as FINAL
+    _problems = FINAL.verify_final_state()
+    for _p in _problems:
+        print(f"    🔴 {_p}")
+    check("the four segments' receipts, traces, results, reports, pins, seed "
+          "records and gates all AGREE", not _problems,
+          f"{len(_problems)} disagreement(s)" if _problems else "0 disagreements")
+
+    print("\n== can anything actually be LAUNCHED? ==")
+    #: 🔴 A LAUNCH PREFLIGHT THAT EXITS 0 WITH NOTHING TO LAUNCH IS A GATE THAT
+    #: DOES NOT BIND. All four segments are spent; this check FAILS, and it is
+    #: meant to. It is NOT weakened to go green -- the spent-seed enforcement
+    #: above is what made it fail, and that enforcement stands.
+    _r0 = readiness()
+    check("at least one segment is LAUNCHABLE", bool(_r0["launchable"]),
+          "all four spent -- the study is COMPLETE" if not _r0["launchable"] else "")
+
     print("\n" + "=" * 74)
-    print(render_readiness(readiness()))
+    _r = readiness()
+    print(render_readiness(_r))
     print(f"\n{len(_FAILED)} FAILED | {len(_NOT_READY)} PENDING BY DESIGN")
     for label in _NOT_READY:
         print(f"    PENDING: {label}")
     for label in _FAILED:
         print(f"    🔴 FAILED: {label}")
+    print(closing_line(len(_FAILED), _r))
     return 1 if _FAILED else 0
+
+
+def blocking_reasons(r: Dict[str, Any]) -> List[str]:
+    """Why no launch is possible, in the reader's order. ONE implementation, so
+    the epilogue and the verdict sentence cannot disagree about it."""
+    out: List[str] = []
+    if not r["population_pinned"]:
+        out.append("the population is not pinned")
+    #: 🔴 UNREGISTERED IS NOT THE SAME AS SPENT. Saying "every segment's block is
+    #: already spent" when no block is registered at all would be a second
+    #: confident falsehood in the same sentence that already held one.
+    if not r["blocks_registered"]:
+        out.append("no seed block is registered")
+    elif not r["launchable"]:
+        out.append("every segment's block is already spent")
+    return out
+
+
+def closing_line(n_failed: int, r: Dict[str, Any]) -> str:
+    """The verdict sentence. IT BELONGS TO THE CALLER, which is the only place
+    that has counted the failures -- see
+    `test_render_readiness_NEVER_CLAIMS_ANYTHING_ABOUT_CHECK_FAILURES`."""
+    if n_failed:
+        return (f"\n\U0001f534 {n_failed} CHECK(S) FAILED. This tree does not satisfy "
+                f"the card. The exit status is nonzero and nothing may be launched.")
+    reasons = blocking_reasons(r)
+    if reasons:
+        return ("\nNo check FAILED. The study is NOT READY TO RUN, by design: "
+                + "; ".join(reasons) + ".")
+    return ("\nNo check FAILED. The study is NOT READY TO RUN, by design: each "
+            "launchable segment needs its own authorization.")
 
 
 def readiness() -> Dict[str, Any]:
@@ -581,17 +662,9 @@ def render_readiness(r: Dict[str, Any]) -> str:
     out = ["⚠ SCOPE. This establishes that the study's machinery refuses, computes",
            "  and constructs as the card says -- on this tree, at this commit,",
            "  with every gate shut. It establishes NOTHING about strength."]
-    blocking = []
-    if not r["population_pinned"]:
-        blocking.append("the population is not pinned")
-    if not r["blocks_registered"]:
-        blocking.append("no seed block is registered")
-    if not r["launchable"]:
-        blocking.append("every segment's block is already spent")
+    blocking = blocking_reasons(r)
     if blocking:
         out.append("  The study CANNOT RUN: " + "; ".join(blocking) + ".")
-        out.append("")
-        out.append("No check FAILED. The study is NOT READY TO RUN, by design.")
     else:
         done = ", ".join(str(k) for k in r["completed"]) or "none"
         nxt = ", ".join(f"segment {k}" for k in r["launchable"])
