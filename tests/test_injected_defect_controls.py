@@ -781,3 +781,33 @@ def test_stable_NORMALISES_A_PID_IN_A_TEMPORARY_FILE_NAME():
     #: a NON-pid number in an ordinary name must survive
     keep = "the 148-pair floor was not reached"
     assert DRV.stable(keep) == keep
+
+
+def test_THE_REAL_CONTROLS_FILE_HAS_NO_DUPLICATE_REASON_KEYS():
+    """🔴 THE DRIVER'S GUARD CANNOT SEE THIS WHEN A SUBSET IS RUN.
+
+    `duplicate_reason_keys` reads a dict LITERAL, and the filtered modules used
+    to run a handful of controls build `EXPECTED_REASONS` by comprehension --
+    deliberately skipped, so they do not crash it. That skip is also a blind
+    spot: nineteen duplicates accumulated in the real file while every subset
+    run reported PROBLEMS: 0, because installing each freshly harvested reason
+    at the TOP left the stale copy below it, and Python keeps the LAST.
+
+    The real file is checked here, on every suite run, where no subset can hide
+    it.
+    """
+    import ast
+    import collections
+    from scripts.GPU.alphazero import run_injected_defect_controls as DRV
+    path = ROOT / DEFS_DEFAULT
+    dupes = DRV.duplicate_reason_keys(str(path))
+    assert dupes == [], dupes
+
+    #: and the checker is not vacuous on this file: it really found the dict
+    node = next(n for n in ast.walk(ast.parse(path.read_text()))
+                if isinstance(n, ast.Assign) and isinstance(n.value, ast.Dict)
+                and any(getattr(t, "id", "") == "EXPECTED_REASONS"
+                        for t in n.targets))
+    keys = [k.value for k in node.value.keys if isinstance(k, ast.Constant)]
+    assert len(keys) > 700, len(keys)
+    assert len(keys) == len(set(keys))
