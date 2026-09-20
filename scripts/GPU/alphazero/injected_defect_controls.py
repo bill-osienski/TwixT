@@ -3931,6 +3931,8 @@ DEFECTS = [
 # DERIVED from the requirement and its assertion and then verified against a run,
 # which is why each names a count or a sentence rather than a first line.
 EXPECTED_REASONS = {
+    'the combination gate is not checked at all':
+        'scripts.GPU.alphazero.h3_combine.H3CombineError: docs/superpowers/evidence/2026-09-20-t1j-h3-study-combined-attempt2/09_combined_report.json already exists. The combined report is written ONCE; a second combination needs a new reviewed destination.',
     # ── the combination closeout (2026-09-20). OBSERVED.
     'the combined outputs are never re-hashed against their pins':
         'AssertionError: []',
