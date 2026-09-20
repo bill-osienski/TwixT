@@ -1,0 +1,385 @@
+{
+ "by_incumbent_colour": {
+  "black": {
+   "caps": 13,
+   "games": 296,
+   "losses": 76,
+   "mean_points": 0.7212837837837838,
+   "wins": 207
+  },
+  "cohens_d": 0.06280634012664271,
+  "difference_red_minus_black": 0.027027027027027084,
+  "red": {
+   "caps": 11,
+   "games": 296,
+   "losses": 69,
+   "mean_points": 0.7483108108108109,
+   "wins": 216
+  }
+ },
+ "by_segment": {
+  "0": {
+   "mean_score": 0.7432432432432432,
+   "pairs": 74,
+   "sd": 0.31234029610371955
+  },
+  "1": {
+   "mean_score": 0.7027027027027027,
+   "pairs": 74,
+   "sd": 0.29165234181426697
+  },
+  "2": {
+   "mean_score": 0.7736486486486487,
+   "pairs": 74,
+   "sd": 0.3156015101632546
+  },
+  "3": {
+   "mean_score": 0.7195945945945946,
+   "pairs": 74,
+   "sd": 0.3334971983993934
+  }
+ },
+ "caps": {
+  "capped_games": 24,
+  "cohens_d_capped_minus_uncapped": -0.3829817989569609,
+  "mean_score_pairs_with_cap": 0.625,
+  "mean_score_pairs_without_cap": 0.7444852941176471,
+  "pairs_with_a_cap": 24
+ },
+ "derivation_agrees_with_pinned_report": true,
+ "design": "H3_POSTHOC_EXPLORATORY",
+ "elapsed_s_per_game": {
+  "max": 229.887569332961,
+  "mean": 47.93419111417008,
+  "median": 39.68705247947946,
+  "min": 17.987866124836728,
+  "n": 592,
+  "q1": 32.42225792759564,
+  "q3": 47.916047405975405,
+  "sd": 37.42899764831042
+ },
+ "excess_by_decile": [
+  {
+   "decile": 1,
+   "excess": 14.5,
+   "n": 29
+  },
+  {
+   "decile": 2,
+   "excess": 15.0,
+   "n": 30
+  },
+  {
+   "decile": 3,
+   "excess": 14.5,
+   "n": 29
+  },
+  {
+   "decile": 4,
+   "excess": 15.0,
+   "n": 30
+  },
+  {
+   "decile": 5,
+   "excess": 15.0,
+   "n": 30
+  },
+  {
+   "decile": 6,
+   "excess": 7.5,
+   "n": 29
+  },
+  {
+   "decile": 7,
+   "excess": 0.0,
+   "n": 30
+  },
+  {
+   "decile": 8,
+   "excess": 0.0,
+   "n": 29
+  },
+  {
+   "decile": 9,
+   "excess": 0.0,
+   "n": 30
+  },
+  {
+   "decile": 10,
+   "excess": -12.0,
+   "n": 30
+  }
+ ],
+ "feature_buckets": {
+  "bbox_area": [
+   {
+    "bucket": 0,
+    "hi": 211.5,
+    "lo": 45.0,
+    "mean_score": 0.7331081081081081,
+    "n": 74
+   },
+   {
+    "bucket": 1,
+    "hi": 285.5,
+    "lo": 211.5,
+    "mean_score": 0.7466216216216216,
+    "n": 74
+   },
+   {
+    "bucket": 2,
+    "hi": 340.0,
+    "lo": 285.5,
+    "mean_score": 0.7195121951219512,
+    "n": 82
+   },
+   {
+    "bucket": 3,
+    "hi": 506.0,
+    "lo": 340.0,
+    "mean_score": 0.7424242424242424,
+    "n": 66
+   }
+  ],
+  "centrality": [
+   {
+    "bucket": 0,
+    "hi": 7.0,
+    "lo": 4.333333333333333,
+    "mean_score": 0.7368421052631579,
+    "n": 76
+   },
+   {
+    "bucket": 1,
+    "hi": 7.833333333333333,
+    "lo": 7.0,
+    "mean_score": 0.7407407407407407,
+    "n": 81
+   },
+   {
+    "bucket": 2,
+    "hi": 8.5,
+    "lo": 7.833333333333333,
+    "mean_score": 0.75,
+    "n": 83
+   },
+   {
+    "bucket": 3,
+    "hi": 9.833333333333334,
+    "lo": 8.5,
+    "mean_score": 0.7008928571428571,
+    "n": 56
+   }
+  ],
+  "elapsed_s": [
+   {
+    "bucket": 0,
+    "hi": 70.52262731309747,
+    "lo": 46.463270999724045,
+    "mean_score": 0.6756756756756757,
+    "n": 74
+   },
+   {
+    "bucket": 1,
+    "hi": 80.07551670854446,
+    "lo": 70.52262731309747,
+    "mean_score": 0.75,
+    "n": 74
+   },
+   {
+    "bucket": 2,
+    "hi": 95.35283268801868,
+    "lo": 80.07551670854446,
+    "mean_score": 0.8040540540540541,
+    "n": 74
+   },
+   {
+    "bucket": 3,
+    "hi": 285.81946429098025,
+    "lo": 95.35283268801868,
+    "mean_score": 0.7094594594594594,
+    "n": 74
+   }
+  ],
+  "mean_pairwise_distance": [
+   {
+    "bucket": 0,
+    "hi": 10.781914324555151,
+    "lo": 6.544734356906263,
+    "mean_score": 0.7567567567567568,
+    "n": 74
+   },
+   {
+    "bucket": 1,
+    "hi": 12.249050529631596,
+    "lo": 10.781914324555151,
+    "mean_score": 0.706081081081081,
+    "n": 74
+   },
+   {
+    "bucket": 2,
+    "hi": 13.612035246495287,
+    "lo": 12.249050529631596,
+    "mean_score": 0.722972972972973,
+    "n": 74
+   },
+   {
+    "bucket": 3,
+    "hi": 16.477159825121213,
+    "lo": 13.612035246495287,
+    "mean_score": 0.7533783783783784,
+    "n": 74
+   }
+  ],
+  "min_cross_distance": [
+   {
+    "bucket": 0,
+    "hi": 2.23606797749979,
+    "lo": 1.0,
+    "mean_score": 0.7469135802469136,
+    "n": 81
+   },
+   {
+    "bucket": 1,
+    "hi": 4.061552812808831,
+    "lo": 2.23606797749979,
+    "mean_score": 0.7014925373134329,
+    "n": 67
+   },
+   {
+    "bucket": 2,
+    "hi": 6.0,
+    "lo": 4.061552812808831,
+    "mean_score": 0.743421052631579,
+    "n": 76
+   },
+   {
+    "bucket": 3,
+    "hi": 13.45362404707371,
+    "lo": 6.0,
+    "mean_score": 0.7430555555555556,
+    "n": 72
+   }
+  ],
+  "plies_max": [
+   {
+    "bucket": 0,
+    "hi": 52.0,
+    "lo": 38.0,
+    "mean_score": 0.7278481012658228,
+    "n": 79
+   },
+   {
+    "bucket": 1,
+    "hi": 60.0,
+    "lo": 52.0,
+    "mean_score": 0.7571428571428571,
+    "n": 70
+   },
+   {
+    "bucket": 2,
+    "hi": 69.0,
+    "lo": 60.0,
+    "mean_score": 0.7466666666666667,
+    "n": 75
+   },
+   {
+    "bucket": 3,
+    "hi": 280.0,
+    "lo": 69.0,
+    "mean_score": 0.7083333333333334,
+    "n": 72
+   }
+  ]
+ },
+ "game_length_plies": {
+  "max": 280,
+  "mean": 63.17567567567568,
+  "median": 52.0,
+  "min": 29,
+  "n": 592,
+  "q1": 45.0,
+  "q3": 62.0,
+  "sd": 46.8660785934106
+ },
+ "inputs": [
+  {
+   "path": "docs/superpowers/evidence/2026-09-18-t1j-h3-study-segment0-retry/03_results.jsonl",
+   "role": "segment_results",
+   "sha256": "51bab3355b770a8af65a1b46b929b6c61fe6ba3c4d8389dc7aaa3c9dd2cbf13c"
+  },
+  {
+   "path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment1/03_results.jsonl",
+   "role": "segment_results",
+   "sha256": "30d6b16d541d33951736955fafe853a0c2b3ab3544d8974520cb318c18a5ba9f"
+  },
+  {
+   "path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment2/03_results.jsonl",
+   "role": "segment_results",
+   "sha256": "e29b7c05d49bd62fd748b34fb0ff538f42a67d98da2dbf5cd39cba3981e337a5"
+  },
+  {
+   "path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment3/03_results.jsonl",
+   "role": "segment_results",
+   "sha256": "50c338ec6e62fd73c82122d2deb0e4c764ea33a1cebcb3e676db8663f2111d1a"
+  },
+  {
+   "path": "docs/superpowers/evidence/2026-09-17-t1j-h3-study-openings-uniform/01_opening_set.json",
+   "role": "frozen_population",
+   "sha256": "40486e943075ae0da68e61528b8327cdd0cdcf5c7fb5cffa8843d292fc6efc3e"
+  },
+  {
+   "path": "docs/superpowers/evidence/2026-09-20-t1j-h3-study-combined-attempt2/09_combined_report.json",
+   "role": "combined_report",
+   "sha256": "252f25ca358f4a814b22f394f3a7efee0b3b276af93866071c03a6078551ed41"
+  }
+ ],
+ "mean_pair_score": 0.7347972972972973,
+ "n_games": 592,
+ "n_pairs": 296,
+ "negative_excess": 12.0,
+ "pair_score_distribution": {
+  "lost both": 21,
+  "lost one, drew one": 6,
+  "split": 97,
+  "won both": 154,
+  "won one, drew one": 18
+ },
+ "pairs_above_parity": 172,
+ "pairs_at_parity": 97,
+ "pairs_below_parity": 27,
+ "pinned_reference": {
+  "interval": [
+   0.6558592501076728,
+   0.8137353444869218
+  ],
+  "mean": 0.7347972972972973,
+  "pairs_scored": 296,
+  "population_claim": "Over legal six-ply TwixT positions drawn UNIFORMLY AT RANDOM and filtered only by the structural admissibility rules of card section 1.3, played in the frozen deterministic argmax configuration. This population says NOTHING about realistic play, about positions either engine would actually reach, or about any engine-produced population. A uniformly random six-ply position is not a position anyone plays.",
+  "verdict": "INCUMBENT STRONGER"
+ },
+ "positive_excess": 81.5,
+ "replay_availability": {
+  "h3_moves_persisted": false,
+  "note": "H3's result records carry task_id, pair_id, seed, segment, stratum, opening_digest, transcript_digest, incumbent_colour, winner, terminal_reason, plies and elapsed_s; its transcript records carry only n_plies and opening_bound. NO MOVE LIST WAS PERSISTED, so EXACT H3 VISUAL REPLAY IS UNAVAILABLE and cannot be reconstructed from this evidence. The first SIX plies of every game are recoverable from the frozen population artifact; nothing after ply 6 was recorded. H2 replays exist and may ILLUSTRATE engine behaviour, but they are a different design on a different population and can neither explain nor validate the H3 result."
+ },
+ "status": "EXPLORATORY -- chosen after the result was known; not preregistered, not confirmatory, and no interval here revises the pinned one",
+ "total_excess_over_parity": 69.5,
+ "trimmed_means": {
+  "drop_top_10pct": {
+   "dropped": 30,
+   "mean_score": 0.7048872180451128,
+   "n": 266
+  },
+  "drop_top_25pct": {
+   "dropped": 74,
+   "mean_score": 0.6463963963963963,
+   "n": 222
+  },
+  "drop_top_5pct": {
+   "dropped": 15,
+   "mean_score": 0.7206405693950177,
+   "n": 281
+  }
+ }
+}

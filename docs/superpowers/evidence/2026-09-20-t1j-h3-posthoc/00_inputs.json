@@ -1,0 +1,34 @@
+{
+ "inputs": [
+  {
+   "path": "docs/superpowers/evidence/2026-09-18-t1j-h3-study-segment0-retry/03_results.jsonl",
+   "role": "segment_results",
+   "sha256": "51bab3355b770a8af65a1b46b929b6c61fe6ba3c4d8389dc7aaa3c9dd2cbf13c"
+  },
+  {
+   "path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment1/03_results.jsonl",
+   "role": "segment_results",
+   "sha256": "30d6b16d541d33951736955fafe853a0c2b3ab3544d8974520cb318c18a5ba9f"
+  },
+  {
+   "path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment2/03_results.jsonl",
+   "role": "segment_results",
+   "sha256": "e29b7c05d49bd62fd748b34fb0ff538f42a67d98da2dbf5cd39cba3981e337a5"
+  },
+  {
+   "path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment3/03_results.jsonl",
+   "role": "segment_results",
+   "sha256": "50c338ec6e62fd73c82122d2deb0e4c764ea33a1cebcb3e676db8663f2111d1a"
+  },
+  {
+   "path": "docs/superpowers/evidence/2026-09-17-t1j-h3-study-openings-uniform/01_opening_set.json",
+   "role": "frozen_population",
+   "sha256": "40486e943075ae0da68e61528b8327cdd0cdcf5c7fb5cffa8843d292fc6efc3e"
+  },
+  {
+   "path": "docs/superpowers/evidence/2026-09-20-t1j-h3-study-combined-attempt2/09_combined_report.json",
+   "role": "combined_report",
+   "sha256": "252f25ca358f4a814b22f394f3a7efee0b3b276af93866071c03a6078551ed41"
+  }
+ ]
+}
