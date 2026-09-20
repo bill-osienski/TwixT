@@ -121,6 +121,25 @@ DEFECTS = [
      'COMBINED_OUT_DIR = f"{RUN.OUT_ROOT}/2026-09-20-t1j-h3-study-combined-attempt2"',
      'COMBINED_OUT_DIR = f"{RUN.OUT_ROOT}/2026-09-20-t1j-h3-study-combined"',
      f"{T_H3CMB}::test_ATTEMPT_1S_DESTINATION_IS_SPENT_AND_ATTEMPT_2S_IS_FRESH"),
+    #: 🔴 THE COMBINATION CLOSEOUT (2026-09-20). The study's answer now
+    #: exists as a file; these prove it is still the file that was written,
+    #: and that the verdict cannot be stored without its scope.
+    ('the combined outputs are never re-hashed against their pins', H3FIN,
+     '        got = hashlib.sha256(open(path, "rb").read()).hexdigest()\n        if got != pin:',
+     '        got = pin\n        if got != pin:',
+     f"{T_H3CMB}::test_THE_COMBINED_OUTPUTS_ARE_REHASHED_NOT_READ_BACK"),
+    ('a pinned combined output may be MISSING', H3FIN,
+     '        if not os.path.lexists(path):\n            out.append(f"the {label} is pinned but MISSING at {path}")',
+     '        if False:\n            out.append(f"the {label} is pinned but MISSING at {path}")',
+     f"{T_H3CMB}::test_THE_COMBINED_OUTPUTS_ARE_REHASHED_NOT_READ_BACK"),
+    ("the combined report's digest pin is blanked", H3CMB,
+     'COMBINED_REPORT_DIGEST = (\n    "252f25ca358f4a814b22f394f3a7efee0b3b276af93866071c03a6078551ed41")',
+     'COMBINED_REPORT_DIGEST = None',
+     f"{T_H3CMB}::test_THE_COMBINATION_HAS_RUN_AND_ITS_GATE_IS_SHUT_AGAIN"),
+    ('the verdict is persisted without its population claim', H3CMB,
+     '        "population": report["population"],',
+     '        "population": {"stratum": report["population"]["stratum"]},',
+     f"{T_H3CMB}::test_THE_VERDICT_TRAVELS_WITH_ITS_POPULATION_LIMITATION"),
     # ═════════ THE COMBINATION (2026-09-20) ════════════════════════════
     # 🔴 POOLING THE FOUR SEGMENTS IS THE STUDY'S ONE INTERPRETIVE ACT.
     # After it a number exists that people will quote, so every refusal on

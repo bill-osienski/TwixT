@@ -70,6 +70,23 @@ COMBINED_REPORT = f"{COMBINED_OUT_DIR}/09_combined_report.json"
 #: -- the same rule segment 0's VOID established for its quarter.
 SPENT_COMBINED_DIRS = (f"{RUN.OUT_ROOT}/2026-09-20-t1j-h3-study-combined",)
 
+#: 🔴 THE COMBINATION RAN ON 2026-09-20 AND ITS OUTPUTS ARE PINNED HERE.
+#: Recorded AFTER the one authorized attempt, from the files it wrote. They are
+#: re-hashed by `verify_final_state`, not read back from the report's own
+#: fields: a digest that is never recomputed from the thing it digests is a
+#: label, not a checksum, and this report is now the study's answer.
+#:
+#: 🔑 THIS IS AN OUTPUT LIVING BESIDE ITS OWN PRODUCER, WHICH IS SAFE ONLY
+#: BECAUSE THIS MODULE IS NOT A PINNED INPUT. `h3_generation_protocol.py`,
+#: `twixt_state.py` and `d1_selection.py` are the pinned sources; nothing here
+#: is hashed into the frozen population, so recording an output here cannot
+#: invalidate the artifact that produced it -- the trap that made the FREEZE
+#: invalidate itself before the protocol was split out.
+COMBINED_REPORT_DIGEST = (
+    "252f25ca358f4a814b22f394f3a7efee0b3b276af93866071c03a6078551ed41")
+COMBINATION_RECEIPT_DIGEST = (
+    "70a3f4f32f9ca22c76279b7d563403e0c9f4859382b1995d49c2b984f9bf747b")
+
 #: 🔴 THE ONE GATE THAT IS SUPPOSED TO BE OPEN WHILE THIS RUNS, and the only one
 #: the final-state check is told to permit. Naming it here rather than passing a
 #: set from the call site keeps the permission as narrow as the act: any OTHER

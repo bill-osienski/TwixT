@@ -41,6 +41,7 @@ question is asked, not to answer it.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence
@@ -210,6 +211,28 @@ def verify_final_state(*, paths_for=None, receipt_for=None,
                 out.append(f"segment {k}'s task digest no longer recomputes to its pin")
     except Exception as exc:                                     # noqa: BLE001
         out.append(f"the pins could not be recomputed: {exc}")
+
+    #: 🔴 THE COMBINATION'S OWN OUTPUTS, RE-HASHED. The study's answer now
+    #: exists as a file, and "the four segments agree" is no longer the whole of
+    #: the final state: the report that pooled them must still be the one that
+    #: was produced. Both digests are RECOMPUTED from the bytes on disk.
+    #: Skipped entirely while the pins are unset, so this stays correct for a
+    #: tree where the combination has not run.
+    from . import h3_combine as COMBINE
+    from . import h3_combine_command as CCMD
+    for label, path, pin in (
+            ("combined report", COMBINE.COMBINED_REPORT,
+             COMBINE.COMBINED_REPORT_DIGEST),
+            ("combination receipt", CCMD.RECEIPT,
+             COMBINE.COMBINATION_RECEIPT_DIGEST)):
+        if pin is None:
+            continue
+        if not os.path.lexists(path):
+            out.append(f"the {label} is pinned but MISSING at {path}")
+            continue
+        got = hashlib.sha256(open(path, "rb").read()).hexdigest()
+        if got != pin:
+            out.append(f"the {label} hashes to {got}, not its pin {pin}")
 
     #: the gates, DERIVED from source
     #: 🔴 THE ALLOW-LIST, AND WHY IT EXISTS. This rejected ANY open gate, which

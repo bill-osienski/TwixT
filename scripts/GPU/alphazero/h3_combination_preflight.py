@@ -24,9 +24,25 @@ from . import h3_combine as COMBINE
 from . import h3_final_state as FINAL
 from . import h3_study_command as CMD
 from . import h3_study_rules as RULES
+from . import h3_combine_command as CCMD0
 from . import h3_study_runner as RUN
 
 _FAILED: List[str] = []
+
+
+def _refuses_combination() -> bool:
+    """A second combination must be refused by the OCCUPIED DESTINATION, not
+    only by the shut gate -- so this asks with the gate believed open."""
+    import unittest.mock as _mock
+    from . import gate_inventory as _INV
+    with _mock.patch.object(COMBINE, "H3_COMBINATION_AUTHORIZED", True), \
+         _mock.patch.object(_INV, "open_gates",
+                            lambda: [("h3_combine", "H3_COMBINATION_AUTHORIZED")]):
+        try:
+            COMBINE.combine()
+        except COMBINE.H3CombineError as exc:
+            return "already exists" in str(exc)
+    return False
 
 
 def check(label: str, ok: Any, detail: str = "") -> bool:
@@ -41,15 +57,31 @@ def check(label: str, ok: Any, detail: str = "") -> bool:
 def main() -> int:
     print("=" * 74)
     print("H3 COMBINATION PREFLIGHT -- read-only, gate SHUT")
+    print("(after the run: the COMBINATION CLOSEOUT check)")
     print("=" * 74)
 
     print("\n== the gate, and the destination it guards ==")
     check("H3_COMBINATION_AUTHORIZED is False",
           COMBINE.H3_COMBINATION_AUTHORIZED is False)
-    check("the combined destination is ABSENT",
-          not os.path.lexists(COMBINE.COMBINED_OUT_DIR)
-          and not os.path.lexists(COMBINE.COMBINED_REPORT),
-          COMBINE.COMBINED_REPORT)
+    #: 🔴 INVERTED AFTER THE COMBINATION RAN. This required the destination to
+    #: be ABSENT, which was the pre-run claim. It has run; the destination holds
+    #: the study's answer, and what must hold now is that the answer is still
+    #: byte-for-byte the one that was written and that no second combination can
+    #: replace it.
+    import hashlib
+    for _label, _path, _pin in (
+            ("combined report", COMBINE.COMBINED_REPORT,
+             COMBINE.COMBINED_REPORT_DIGEST),
+            ("combination receipt", CCMD0.RECEIPT,
+             COMBINE.COMBINATION_RECEIPT_DIGEST)):
+        _there = os.path.lexists(_path)
+        check(f"the {_label} is PRESENT", _there, _path)
+        check(f"the {_label} still hashes to its pin",
+              _there and hashlib.sha256(
+                  open(_path, "rb").read()).hexdigest() == _pin,
+              (_pin or "")[:16] + "…")
+    check("a second combination is REFUSED -- the destination is occupied",
+          _refuses_combination())
     import inspect
     check("combine() takes NO arguments -- no path, input or collaborator "
           "override reaches the authorized entry point",
@@ -60,30 +92,34 @@ def main() -> int:
     except COMBINE.H3CombineError as exc:
         check("combine() REFUSES while the gate is shut",
               "NOT AUTHORIZED" in str(exc))
-    check("and refusing created nothing",
-          not os.path.lexists(COMBINE.COMBINED_OUT_DIR))
+    #: 🔴 "created nothing" was the pre-run claim. The destination now HOLDS the
+    #: result, so the claim that survives is that a refusal leaves it untouched.
+    check("and refusing left the destination untouched",
+          sorted(os.listdir(COMBINE.COMBINED_OUT_DIR))
+          == ["00_combination_receipt.json", "09_combined_report.json"])
     print(f"  {INVENTORY.gate_count()} gates derived from source; OPEN: "
           f"{INVENTORY.open_gates() or 'NONE'}")
     check("every gate is SHUT", INVENTORY.open_gates() == [])
 
     print("\n== the supervised command, and its restoration path ==")
-    from . import h3_combine_command as CCMD
+    CCMD = CCMD0
     check("the command accepts NOTHING but --run",
           sorted(f for a in CCMD._parser()._actions for f in a.option_strings)
           == ["--help", "--run", "-h"])
     check("it reads the gate back from the SOURCE, not from this process",
           CCMD.gate_readback() == "False")
-    check("the parent receipt is ABSENT", not os.path.lexists(CCMD.RECEIPT),
-          CCMD.RECEIPT)
+    check("the parent receipt records a COMPLETED combination",
+          json.loads(open(CCMD.RECEIPT, encoding="utf-8").read())["outcome"]
+          == "COMPLETED")
     check("a failed restoration has its OWN superseding exit code",
           CCMD.EXIT_GATE_NOT_RESTORED == 9
           and CCMD.EXIT_GATE_NOT_RESTORED not in
           (CCMD.EXIT_OK, CCMD.EXIT_REFUSED, CCMD.EXIT_NOT_AUTHORIZED,
            CCMD.EXIT_FAILED))
-    check("with the gate shut the command refuses and writes nothing",
+    _before = sorted(os.listdir(COMBINE.COMBINED_OUT_DIR))
+    check("with the gate shut the command refuses and touches nothing",
           CCMD.main(["--run"]) == CCMD.EXIT_NOT_AUTHORIZED
-          and not os.path.lexists(CCMD.RECEIPT)
-          and not os.path.lexists(COMBINE.COMBINED_OUT_DIR))
+          and sorted(os.listdir(COMBINE.COMBINED_OUT_DIR)) == _before)
 
     print("\n== the allow-list: narrow, and strict by default ==")
     #: 🔴 THE PREFLIGHT STILL DEMANDS ALL ELEVEN SHUT. It runs BEFORE the gate is
@@ -106,7 +142,9 @@ def main() -> int:
               _spent)
         check("attempt 1 wrote NO report",
               not os.path.lexists(os.path.join(_spent, "09_combined_report.json")))
-        check("attempt 2 is not inside it",
+        check("attempt 2 wrote its report elsewhere",
+          os.path.lexists(COMBINE.COMBINED_REPORT))
+    check("attempt 2 is not inside it",
               COMBINE.COMBINED_OUT_DIR != _spent
               and not COMBINE.COMBINED_OUT_DIR.startswith(_spent.rstrip("/") + "/"))
 
@@ -174,8 +212,24 @@ def main() -> int:
           COMBINE.RUN.combine_segments is RUN.combine_segments)
 
     print("\n" + "=" * 74)
-    print("⚠ SCOPE. This establishes that the combination COULD run and has not.")
-    print("  It computed no estimate, pooled no games and wrote no file.")
+    #: 🔴 DERIVED, NOT WRITTEN DOWN. This said "the combination COULD run and
+    #: has not. It computed no estimate, pooled no games and wrote no file."
+    #: That was true until 2026-09-20 and false the moment it ran -- a closing
+    #: claim that outlives the state it describes is the defect this programme
+    #: keeps finding, so it reads the state instead.
+    _done = os.path.lexists(COMBINE.COMBINED_REPORT)
+    if _done:
+        _rep = json.loads(open(COMBINE.COMBINED_REPORT, encoding="utf-8").read())
+        print("⚠ SCOPE. The combination HAS RUN. This establishes that its")
+        print("  outputs are intact and that it cannot run again -- nothing here")
+        print("  recomputed the estimate or reopened the question.")
+        print(f"  verdict: {_rep['verdict']}  "
+              f"({_rep['pairs_scored']} pairs, "
+              f"strength_verdict={_rep['is_strength_verdict']})")
+        print(f"  population: {_rep['population']['claim'][:96]}…")
+    else:
+        print("⚠ SCOPE. This establishes that the combination COULD run and has")
+        print("  not. It computed no estimate, pooled no games and wrote no file.")
     print(f"\n{len(_FAILED)} FAILED")
     for label in _FAILED:
         print(f"    🔴 FAILED: {label}")
@@ -183,9 +237,15 @@ def main() -> int:
         print("\n🔴 The combination must NOT be authorized while anything above "
               "fails.")
         return 1
-    print("\nNo check FAILED. Everything the combination needs is in place and "
-          "the gate is SHUT.\n🔴 THAT IS NOT PERMISSION: opening it is a "
-          "separate reviewed edit, for ONE combination.")
+    if _done:
+        print("\nNo check FAILED. The combination is COMPLETE, its report and "
+              "receipt are byte-identical to what was written, and the gate is "
+              "SHUT.\n🔴 IT CANNOT RUN AGAIN: the destination is occupied and "
+              "the install is create-only.")
+    else:
+        print("\nNo check FAILED. Everything the combination needs is in place "
+              "and the gate is SHUT.\n🔴 THAT IS NOT PERMISSION: opening it is "
+              "a separate reviewed edit, for ONE combination.")
     return 0
 
 

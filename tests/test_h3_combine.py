@@ -146,17 +146,39 @@ def run(study, **kw):
 
 
 # ═══════════════════════════ the gate ═══════════════════════════════════════
-def test_THE_COMBINATION_GATE_IS_SHUT_AND_THE_DESTINATION_IS_ABSENT():
+def test_THE_COMBINATION_HAS_RUN_AND_ITS_GATE_IS_SHUT_AGAIN():
+    """🔴 INVERTED AFTER THE COMBINATION RAN (2026-09-20, attempt 2). The
+    destination is no longer absent -- it holds the study's answer -- and the
+    claim that survives is that the gate is shut and the outputs are the ones
+    that were produced. Their digests are re-hashed, not read back."""
+    import hashlib
     assert COMBINE.H3_COMBINATION_AUTHORIZED is False
-    assert not os.path.lexists(COMBINE.COMBINED_OUT_DIR)
-    assert not os.path.lexists(COMBINE.COMBINED_REPORT)
+    assert CCMD.gate_readback() == "False"
+    for path, pin in ((COMBINE.COMBINED_REPORT, COMBINE.COMBINED_REPORT_DIGEST),
+                      (CCMD.RECEIPT, COMBINE.COMBINATION_RECEIPT_DIGEST)):
+        assert os.path.lexists(path), path
+        assert hashlib.sha256(pathlib.Path(path).read_bytes()).hexdigest() == pin, (
+            "the combined output must still be byte-identical to what was written")
 
 
 def test_combine_REFUSES_WHILE_THE_GATE_IS_SHUT():
+    before = sorted(pathlib.Path(COMBINE.COMBINED_OUT_DIR).iterdir())
     with pytest.raises(COMBINE.H3CombineError, match="NOT AUTHORIZED"):
         COMBINE.combine()
-    assert not os.path.lexists(COMBINE.COMBINED_OUT_DIR), (
-        "a refusal must not create the destination")
+    assert sorted(pathlib.Path(COMBINE.COMBINED_OUT_DIR).iterdir()) == before, (
+        "a refusal must not touch the destination -- which now HOLDS the result, "
+        "so 'created nothing' is no longer the whole claim")
+
+
+def test_THE_COMBINATION_CANNOT_BE_RUN_A_SECOND_TIME(monkeypatch):
+    """One shot. Even with the gate open, the destination is occupied and the
+    create-only install refuses -- the report that exists is the only one."""
+    monkeypatch.setattr(COMBINE, "H3_COMBINATION_AUTHORIZED", True)
+    from scripts.GPU.alphazero import gate_inventory as INV
+    monkeypatch.setattr(INV, "open_gates",
+                        lambda: [("h3_combine", "H3_COMBINATION_AUTHORIZED")])
+    with pytest.raises(COMBINE.H3CombineError, match="already exists"):
+        COMBINE.combine()
 
 
 def test_combine_TAKES_NO_ARGUMENTS_AT_ALL():
@@ -572,6 +594,10 @@ def test_THE_RECEIPT_RECORDS_THE_INPUTS_AND_THE_OUTPUT(tmp_path, fake_source,
     monkeypatch.setattr(COMBINE, "combine", lambda: {
         "n_games": 592, "n_pairs": 296, "verdict": "NO VERDICT",
         "interpretation_withheld": False, "is_strength_verdict": True})
+    #: 🔴 REDIRECTED, so `report_exists: False` means THIS run wrote nothing.
+    #: The real report now exists, and against it the field would report the
+    #: study's own answer rather than anything about the stubbed attempt.
+    monkeypatch.setattr(COMBINE, "COMBINED_REPORT", str(tmp_path / "no-report.json"))
     receipt = str(tmp_path / "out" / "receipt.json")
     assert CCMD.main(["--run"], _combine_source=fake_source,
                      _receipt=receipt) == CCMD.EXIT_OK
@@ -622,11 +648,23 @@ def test_THE_RECEIPT_IS_CREATE_ONLY(tmp_path, fake_source, monkeypatch):
         "the FAILED second attempt must not have replaced the COMPLETED record")
 
 
-def test_THE_REAL_GATE_AND_ITS_RECEIPT_ARE_UNTOUCHED():
-    assert COMBINE.H3_COMBINATION_AUTHORIZED is False
-    assert CCMD.gate_readback() == "False"
-    assert not os.path.lexists(CCMD.RECEIPT)
-    assert not os.path.lexists(COMBINE.COMBINED_OUT_DIR)
+def test_THE_VERDICT_TRAVELS_WITH_ITS_POPULATION_LIMITATION():
+    """🔴 THE SCOPE IS PART OF THE RESULT, NOT A FOOTNOTE TO IT. A stored
+    verdict of INCUMBENT STRONGER that can be read without the population it
+    holds over is the most quotable thing this study produced and the easiest
+    to quote wrongly. The claim is persisted in the same file, and this asserts
+    it is still there and still says what it says."""
+    rep = json.loads(pathlib.Path(COMBINE.COMBINED_REPORT).read_text())
+    assert rep["verdict"] == "INCUMBENT STRONGER"
+    assert rep["is_strength_verdict"] is True
+    claim = rep["population"]["claim"]
+    for phrase in ("UNIFORMLY AT RANDOM",
+                   "says NOTHING about realistic play",
+                   "not a position anyone plays"):
+        assert phrase in claim, phrase
+    assert rep["population"]["stratum"] == R.STRATUM_UNIFORM
+    assert "NOMINAL UNDER THE DECLARED PAIR-INDEPENDENCE MODEL" in \
+        rep["primary"]["interval_note"]
 
 
 def test_THE_PAYLOAD_AND_THE_DIRECTORY_ARE_BOTH_FSYNCED(study, monkeypatch):
@@ -772,9 +810,10 @@ def test_ATTEMPT_1S_DESTINATION_IS_SPENT_AND_ATTEMPT_2S_IS_FRESH():
         assert not os.path.lexists(os.path.join(spent, "09_combined_report.json"))
         assert COMBINE.COMBINED_OUT_DIR != spent
         assert not COMBINE.COMBINED_OUT_DIR.startswith(spent.rstrip("/") + "/")
-    assert not os.path.lexists(COMBINE.COMBINED_OUT_DIR)
-    assert not os.path.lexists(COMBINE.COMBINED_REPORT)
-    assert not os.path.lexists(CCMD.RECEIPT)
+    #: attempt 2 has since RUN, so its destination holds the result rather than
+    #: being absent. What still holds is that it is a DIFFERENT place.
+    assert os.path.lexists(COMBINE.COMBINED_REPORT)
+    assert os.path.lexists(CCMD.RECEIPT)
 
 
 def test_AN_OPEN_GATE_IS_CAUGHT_FINAL(study, monkeypatch):
@@ -791,3 +830,21 @@ def test_AN_OPEN_GATE_IS_CAUGHT_FINAL(study, monkeypatch):
             allow_open=allow)
         assert any("gates are OPEN" in p for p in problems), (
             "an unexpected open gate must still be reported")
+
+
+def test_THE_COMBINED_OUTPUTS_ARE_REHASHED_NOT_READ_BACK(tmp_path, monkeypatch):
+    """🔴 A DIGEST THAT IS NEVER RECOMPUTED FROM THE THING IT DIGESTS IS A LABEL.
+    Both directions: a file whose bytes no longer match its pin must be
+    reported, and a pinned file that has gone missing must be reported too."""
+    from scripts.GPU.alphazero import h3_final_state as FINAL
+    assert FINAL.verify_final_state() == []
+
+    tampered = tmp_path / "tampered.json"
+    tampered.write_text(pathlib.Path(COMBINE.COMBINED_REPORT).read_text() + " ")
+    monkeypatch.setattr(COMBINE, "COMBINED_REPORT", str(tampered))
+    problems = FINAL.verify_final_state()
+    assert any("combined report hashes to" in p for p in problems), problems
+
+    monkeypatch.setattr(COMBINE, "COMBINED_REPORT", str(tmp_path / "gone.json"))
+    problems = FINAL.verify_final_state()
+    assert any("pinned but MISSING" in p for p in problems), problems
