@@ -70,7 +70,8 @@ def _edit_json(path, **fields):
 def test_A_RECEIPT_THAT_DID_NOT_COMPLETE_IS_CAUGHT(mirror):
     paths_for, receipt_for = mirror
     _edit_json(receipt_for(2), outcome="TIMED_OUT")
-    assert any("segment 2 receipt: outcome" in p for p in _problems(mirror))
+    assert any("segment 2 receipt: outcome" in p for p in _problems(mirror)), (
+        "a receipt that did not COMPLETE must be reported")
 
 
 def test_A_RECEIPT_WHOSE_GATE_WAS_LEFT_OPEN_IS_CAUGHT(mirror):
@@ -78,7 +79,8 @@ def test_A_RECEIPT_WHOSE_GATE_WAS_LEFT_OPEN_IS_CAUGHT(mirror):
     reason the field exists."""
     paths_for, receipt_for = mirror
     _edit_json(receipt_for(0), gate_readback="True")
-    assert any("segment 0 receipt: gate_readback" in p for p in _problems(mirror))
+    assert any("segment 0 receipt: gate_readback" in p for p in _problems(mirror)), (
+        "a gate left OPEN in the receipt must be reported")
 
 
 def test_A_RECEIPT_NAMING_THE_WRONG_SEGMENT_IS_CAUGHT(mirror):
@@ -86,19 +88,22 @@ def test_A_RECEIPT_NAMING_THE_WRONG_SEGMENT_IS_CAUGHT(mirror):
     means two runs wrote one record, or one run wrote the wrong one."""
     paths_for, receipt_for = mirror
     _edit_json(receipt_for(1), segment=2)
-    assert any("segment 1 receipt: segment is 2" in p for p in _problems(mirror))
+    assert any("segment 1 receipt: segment is 2" in p for p in _problems(mirror)), (
+        "a receipt naming the wrong segment must be reported")
 
 
 def test_A_RECEIPT_CARRYING_ANOTHER_SEGMENTS_DIGEST_IS_CAUGHT(mirror):
     paths_for, receipt_for = mirror
     _edit_json(receipt_for(3), segment_digest=RUN.SEGMENT_DIGESTS[0])
-    assert any("segment 3 receipt: segment_digest" in p for p in _problems(mirror))
+    assert any("segment 3 receipt: segment_digest" in p for p in _problems(mirror)), (
+        "a receipt carrying another segment's digest must be reported")
 
 
 def test_A_MISSING_ARTIFACT_IS_CAUGHT(mirror):
     paths_for, receipt_for = mirror
     os.remove(paths_for(2)[1])                       # the trace
-    assert any("segment 2: trace is missing" in p for p in _problems(mirror))
+    assert any("segment 2: trace is missing" in p for p in _problems(mirror)), (
+        "a missing artifact must be reported")
 
 
 def test_A_TRACE_MISSING_ONE_GAME_IS_CAUGHT(mirror):
@@ -110,7 +115,8 @@ def test_A_TRACE_MISSING_ONE_GAME_IS_CAUGHT(mirror):
               [r for r in rows if r.get("event") == "task_done"][1:] + \
               [r for r in rows if r.get("event") in ("task_start",)]
     trace.write_text("\n".join(json.dumps(r) for r in dropped) + "\n")
-    assert any("segment 0 trace:" in p for p in _problems(mirror))
+    assert any("segment 0 trace:" in p for p in _problems(mirror)), (
+        "a trace missing a game must be reported")
 
 
 def test_A_TRACE_THAT_DID_NOT_END_OK_IS_CAUGHT(mirror):
@@ -119,7 +125,8 @@ def test_A_TRACE_THAT_DID_NOT_END_OK_IS_CAUGHT(mirror):
     rows = [json.loads(x) for x in trace.read_text().splitlines() if x.strip()]
     rows[-1]["verdict"] = "VOID"
     trace.write_text("\n".join(json.dumps(r) for r in rows) + "\n")
-    assert any("segment 1 trace: terminal verdict" in p for p in _problems(mirror))
+    assert any("segment 1 trace: terminal verdict" in p for p in _problems(mirror)), (
+        "a trace that did not end OK must be reported")
 
 
 def test_A_SEED_OUTSIDE_THE_BLOCK_IS_CAUGHT(mirror):
@@ -133,7 +140,8 @@ def test_A_SEED_OUTSIDE_THE_BLOCK_IS_CAUGHT(mirror):
             r["seed"] = 999_000_000
             break
     results.write_text("\n".join(json.dumps(r) for r in rows) + "\n")
-    assert any("segment 2 results: the 148 seeds" in p for p in _problems(mirror))
+    assert any("segment 2 results: the 148 seeds" in p for p in _problems(mirror)), (
+        "a seed outside the block must be reported -- exposure is read off the records")
 
 
 def test_A_REPORT_CLAIMING_A_STRENGTH_VERDICT_IS_CAUGHT(mirror):
@@ -142,8 +150,10 @@ def test_A_REPORT_CLAIMING_A_STRENGTH_VERDICT_IS_CAUGHT(mirror):
     _edit_json(paths_for(3)[2], is_strength_verdict=True,
                interpretation_withheld=False, verdict="INCUMBENT_STRONGER")
     problems = _problems(mirror)
-    assert any("segment 3 report: is_strength_verdict" in p for p in problems)
-    assert any("segment 3 report: interpretation_withheld" in p for p in problems)
+    assert any("segment 3 report: is_strength_verdict" in p for p in problems), (
+        "a segment claiming a strength verdict must be reported")
+    assert any("segment 3 report: interpretation_withheld" in p for p in problems), (
+        "a segment un-withholding its interpretation must be reported")
 
 
 def test_A_REPORT_WITH_A_FIRED_DEGENERACY_GATE_IS_CAUGHT(mirror):
@@ -151,14 +161,16 @@ def test_A_REPORT_WITH_A_FIRED_DEGENERACY_GATE_IS_CAUGHT(mirror):
     data = json.loads(pathlib.Path(paths_for(0)[2]).read_text())
     data["gates"][0]["status"] = "FIRED"
     pathlib.Path(paths_for(0)[2]).write_text(json.dumps(data))
-    assert any("segment 0 report: gate" in p for p in _problems(mirror))
+    assert any("segment 0 report: gate" in p for p in _problems(mirror)), (
+        "a FIRED degeneracy gate must be reported")
 
 
 def test_AN_OPEN_GATE_IS_CAUGHT(mirror, monkeypatch):
     from scripts.GPU.alphazero import gate_inventory as INV
     monkeypatch.setattr(INV, "open_gates",
                         lambda: [("h3_study_runner", "H3_STUDY_EXECUTION_AUTHORIZED")])
-    assert any("gates are OPEN" in p for p in _problems(mirror))
+    assert any("gates are OPEN" in p for p in _problems(mirror)), (
+        "an open authorization gate must be reported")
 
 
 def test_A_BLOCK_THAT_IS_NOT_RETIRED_IS_CAUGHT(mirror, monkeypatch):
@@ -168,8 +180,10 @@ def test_A_BLOCK_THAT_IS_NOT_RETIRED_IS_CAUGHT(mirror, monkeypatch):
     blocks = (fresh,) + tuple(RUN.SEGMENT_SEED_BLOCKS[1:])
     problems = F.verify_final_state(paths_for=paths_for, receipt_for=receipt_for,
                                     blocks=blocks)
-    assert any("segment 0: block is not wholly EXPOSED" in p for p in problems)
-    assert any("segment 0: block is not wholly RETIRED" in p for p in problems)
+    assert any("segment 0: block is not wholly EXPOSED" in p for p in problems), (
+        "a block that ran but is not EXPOSED must be reported")
+    assert any("segment 0: block is not wholly RETIRED" in p for p in problems), (
+        "a block that ran but is not RETIRED must be reported")
 
 
 def test_IT_IGNORES_THE_STRENGTH_FIGURES_ENTIRELY(mirror):
