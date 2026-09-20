@@ -1,0 +1,62 @@
+{
+ "design": "H3_FULL_STUDY_COMBINATION",
+ "detail": null,
+ "exit_code": 0,
+ "gate_readback": "False",
+ "gate_restored": true,
+ "inputs": [
+  {
+   "receipt_path": "docs/superpowers/evidence/2026-09-18-t1j-h3-study-segment0-retry/00_launch_receipt.json",
+   "report_path": "docs/superpowers/evidence/2026-09-18-t1j-h3-study-segment0-retry/09_report.json",
+   "results_path": "docs/superpowers/evidence/2026-09-18-t1j-h3-study-segment0-retry/03_results.jsonl",
+   "seed_block": [
+    202628000,
+    202628148
+   ],
+   "segment": 0,
+   "trace_path": "docs/superpowers/evidence/2026-09-18-t1j-h3-study-segment0-retry/04_trace.jsonl"
+  },
+  {
+   "receipt_path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment1/00_launch_receipt.json",
+   "report_path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment1/09_report.json",
+   "results_path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment1/03_results.jsonl",
+   "seed_block": [
+    202626148,
+    202626296
+   ],
+   "segment": 1,
+   "trace_path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment1/04_trace.jsonl"
+  },
+  {
+   "receipt_path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment2/00_launch_receipt.json",
+   "report_path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment2/09_report.json",
+   "results_path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment2/03_results.jsonl",
+   "seed_block": [
+    202626296,
+    202626444
+   ],
+   "segment": 2,
+   "trace_path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment2/04_trace.jsonl"
+  },
+  {
+   "receipt_path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment3/00_launch_receipt.json",
+   "report_path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment3/09_report.json",
+   "results_path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment3/03_results.jsonl",
+   "seed_block": [
+    202626444,
+    202626592
+   ],
+   "segment": 3,
+   "trace_path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment3/04_trace.jsonl"
+  }
+ ],
+ "interpretation_withheld": false,
+ "is_strength_verdict": true,
+ "n_games": 592,
+ "n_pairs": 296,
+ "outcome": "COMPLETED",
+ "receipt_path": "docs/superpowers/evidence/2026-09-20-t1j-h3-study-combined-attempt2/00_combination_receipt.json",
+ "report_exists": true,
+ "report_path": "docs/superpowers/evidence/2026-09-20-t1j-h3-study-combined-attempt2/09_combined_report.json",
+ "verdict": "INCUMBENT STRONGER"
+}

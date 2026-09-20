@@ -1,0 +1,207 @@
+{
+ "below_report_floor": false,
+ "capped_games": 24,
+ "design": "H3_FULL_STUDY_COMBINED",
+ "duplicate_pairs": 0,
+ "games_scored": 592,
+ "games_seen": 592,
+ "gates": [
+  {
+   "ceiling": 0,
+   "observed": 0,
+   "rule": "duplicate_pairs",
+   "status": "CLEAR",
+   "what": "duplicate pairs -- a HARNESS FAULT: the openings are distinct by construction, so two pairs cannot share an identity"
+  },
+  {
+   "ceiling": 7,
+   "observed": 0,
+   "rule": "within_pair_identical",
+   "status": "CLEAR",
+   "what": "pairs whose two games are identical, contributing no discrimination"
+  },
+  {
+   "ceiling": 118,
+   "observed": 24,
+   "rule": "capped_games",
+   "status": "CLEAR",
+   "what": "capped games -- the configuration is not producing decisive games"
+  }
+ ],
+ "inputs": [
+  {
+   "games": 148,
+   "receipt_path": "docs/superpowers/evidence/2026-09-18-t1j-h3-study-segment0-retry/00_launch_receipt.json",
+   "receipt_sha256": "ad44a0639c327641524a73869e6dd2256c2c679df698d2094c4095f96c0248b0",
+   "report_path": "docs/superpowers/evidence/2026-09-18-t1j-h3-study-segment0-retry/09_report.json",
+   "report_sha256": "1a5219e7f1872a627a302dcfbfe8d31683a2933ff1ff7150a8b0b32d77eb63bd",
+   "results_path": "docs/superpowers/evidence/2026-09-18-t1j-h3-study-segment0-retry/03_results.jsonl",
+   "results_sha256": "51bab3355b770a8af65a1b46b929b6c61fe6ba3c4d8389dc7aaa3c9dd2cbf13c",
+   "seed_block": [
+    202628000,
+    202628148
+   ],
+   "segment": 0,
+   "trace_path": "docs/superpowers/evidence/2026-09-18-t1j-h3-study-segment0-retry/04_trace.jsonl",
+   "trace_sha256": "ae8d0ecac0139efae19913fdd9ca60f27073fa17fc661760513d8c52ee6c613c"
+  },
+  {
+   "games": 148,
+   "receipt_path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment1/00_launch_receipt.json",
+   "receipt_sha256": "ede9f213fcd21fefec81c34c1566d140d71131949cddbdca0721c46ec0d5ada3",
+   "report_path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment1/09_report.json",
+   "report_sha256": "7bdc3c619b49d85e77995d0d8b0f78e0a252792914282756c581a2a14820f04a",
+   "results_path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment1/03_results.jsonl",
+   "results_sha256": "30d6b16d541d33951736955fafe853a0c2b3ab3544d8974520cb318c18a5ba9f",
+   "seed_block": [
+    202626148,
+    202626296
+   ],
+   "segment": 1,
+   "trace_path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment1/04_trace.jsonl",
+   "trace_sha256": "a50e9b2c7a4b6ded82b412c38749f9fc7b38ba5e0c2c2ec8389f9d0a35f2ac20"
+  },
+  {
+   "games": 148,
+   "receipt_path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment2/00_launch_receipt.json",
+   "receipt_sha256": "d6034bbe431b92b4c5b89c3f67e53e96af92d772813a53d9bd4223f263612216",
+   "report_path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment2/09_report.json",
+   "report_sha256": "7884e907251d219bae76b347b017f6d9d11838b1324d1a7a35e2e150e681dfbd",
+   "results_path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment2/03_results.jsonl",
+   "results_sha256": "e29b7c05d49bd62fd748b34fb0ff538f42a67d98da2dbf5cd39cba3981e337a5",
+   "seed_block": [
+    202626296,
+    202626444
+   ],
+   "segment": 2,
+   "trace_path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment2/04_trace.jsonl",
+   "trace_sha256": "f9e58aa41f9de2f1fb643e8c946d56b2301503e98521351be8b5b33605ca139f"
+  },
+  {
+   "games": 148,
+   "receipt_path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment3/00_launch_receipt.json",
+   "receipt_sha256": "6d523e39820d2129a6f653da86eef9d23d2da6a867b0093c0c4f917aa6535335",
+   "report_path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment3/09_report.json",
+   "report_sha256": "0dc2914b30838b9a9de52df35382d229a1429f7f5dd2f2c923336d924c3a2661",
+   "results_path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment3/03_results.jsonl",
+   "results_sha256": "50c338ec6e62fd73c82122d2deb0e4c764ea33a1cebcb3e676db8663f2111d1a",
+   "seed_block": [
+    202626444,
+    202626592
+   ],
+   "segment": 3,
+   "trace_path": "docs/superpowers/evidence/2026-09-15-t1j-h3-study-segment3/04_trace.jsonl",
+   "trace_sha256": "56597f5da3bb9b287a54123c707316683fbca191911a3019dc3654f61023f4f5"
+  }
+ ],
+ "interpretation_withheld": false,
+ "is_strength_verdict": true,
+ "n_games": 592,
+ "n_pairs": 296,
+ "n_segments": 4,
+ "opening_set_digest": "35932b3fabd9c6463d615b0b3af380134dadd700e2ca1e882a0c863faf772e46",
+ "pairs_excluded_incomplete": 0,
+ "pairs_excluded_void": 0,
+ "pairs_scored": 296,
+ "pairs_with_a_cap": 24,
+ "permission": {
+  "flagged": false,
+  "segments": [
+   {
+    "outcomes_inspected": true,
+    "segment": 0,
+    "status": "completed"
+   },
+   {
+    "outcomes_inspected": true,
+    "segment": 1,
+    "status": "completed"
+   },
+   {
+    "outcomes_inspected": true,
+    "segment": 2,
+    "status": "completed"
+   },
+   {
+    "outcomes_inspected": true,
+    "segment": 3,
+    "status": "completed"
+   }
+  ],
+  "verdict_permitted": true,
+  "why": "every segment either completed or was withheld without any outcome being inspected"
+ },
+ "population": {
+  "claim": "Over legal six-ply TwixT positions drawn UNIFORMLY AT RANDOM and filtered only by the structural admissibility rules of card section 1.3, played in the frozen deterministic argmax configuration. This population says NOTHING about realistic play, about positions either engine would actually reach, or about any engine-produced population. A uniformly random six-ply position is not a position anyone plays.",
+  "n_pairs": 296,
+  "stratum": "uniform"
+ },
+ "primary": {
+  "computable": true,
+  "decisive": true,
+  "favours": "incumbent",
+  "half_width": 0.07893804718962447,
+  "interval": [
+   0.6558592501076728,
+   0.8137353444869218
+  ],
+  "interval_note": "NOMINAL UNDER THE DECLARED PAIR-INDEPENDENCE MODEL. Rejection sampling conditions the population jointly, the strata are fixed rather than drawn, the same two engines play every game, and the software is deterministic. What the pairing buys is narrower and real: the two games of a pair are not counted as independent observations.",
+  "mean": 0.7347972972972973,
+  "n": 296
+ },
+ "schedule_digest": "158cc080da26d5bb39ae3a9dd3422234b842b962e7d65b40d2eb322fcdc8f272",
+ "segment_digests": [
+  "b82bbb08e8bff4df22284100ac6b3777d4a16ed75d77525d5c72f5c707091b23",
+  "14aaefb3a01cc1d08bdfd7f0c4c21599414d0dc68fee8f51584e1e4a50660a41",
+  "1764471c5b95042726b9a3bbeca92309ff703d734d73f448adf2f548d96a1855",
+  "44576a71042ff6b7c9118d3e36f18d62d1d0dfc4d01aeb7eec318d0a4b8753f0"
+ ],
+ "sensitivities": {
+  "both": {
+   "computable": true,
+   "decisive": true,
+   "favours": "incumbent",
+   "half_width": 0.08234699999573558,
+   "interval": [
+    0.6621382941219115,
+    0.8268322941133827
+   ],
+   "interval_note": "NOMINAL UNDER THE DECLARED PAIR-INDEPENDENCE MODEL. Rejection sampling conditions the population jointly, the strata are fixed rather than drawn, the same two engines play every game, and the software is deterministic. What the pairing buys is narrower and real: the two games of a pair are not counted as independent observations.",
+   "mean": 0.7444852941176471,
+   "n": 272
+  },
+  "cap_free": {
+   "computable": true,
+   "decisive": true,
+   "favours": "incumbent",
+   "half_width": 0.08234699999573558,
+   "interval": [
+    0.6621382941219115,
+    0.8268322941133827
+   ],
+   "interval_note": "NOMINAL UNDER THE DECLARED PAIR-INDEPENDENCE MODEL. Rejection sampling conditions the population jointly, the strata are fixed rather than drawn, the same two engines play every game, and the software is deterministic. What the pairing buys is narrower and real: the two games of a pair are not counted as independent observations.",
+   "mean": 0.7444852941176471,
+   "n": 272
+  },
+  "identity_free": {
+   "computable": true,
+   "decisive": true,
+   "favours": "incumbent",
+   "half_width": 0.07893804718962447,
+   "interval": [
+    0.6558592501076728,
+    0.8137353444869218
+   ],
+   "interval_note": "NOMINAL UNDER THE DECLARED PAIR-INDEPENDENCE MODEL. Rejection sampling conditions the population jointly, the strata are fixed rather than drawn, the same two engines play every game, and the software is deterministic. What the pairing buys is narrower and real: the two games of a pair are not counted as independent observations.",
+   "mean": 0.7347972972972973,
+   "n": 296
+  }
+ },
+ "shared_continuation_note": "DESCRIPTIVE ONLY, AND GATES NOTHING. Two games from different openings are distinct observations even when their move sequences match: the opening changes the board those moves are played on.",
+ "shared_continuation_pairs": 0,
+ "shared_continuation_relations": 0,
+ "total_elapsed_s": 28379.906250249827,
+ "verdict": "INCUMBENT STRONGER",
+ "verdict_note": "the primary is decisive and every sensitivity agrees in sign",
+ "within_pair_identical": 0
+}
