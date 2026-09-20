@@ -1643,7 +1643,13 @@ def test_REACHING_THE_FLOOR_DOES_NOT_PERMIT_A_VERDICT():
 def test_REGISTERING_AND_RUNNING_SEGMENT_0_OPENED_NOTHING():
     """The wrapper restored the gate; nothing else moved."""
     from scripts.GPU.alphazero import gate_inventory as INV
-    assert INV.gate_count() == 10 and INV.open_gates() == []
+    #: 🔴 NO COUNT HERE. This asserted `gate_count() == 10` -- the FOURTH copy of
+    #: a number whose one tripwire is `EXPECTED_GATES` in test_gate_inventory.py.
+    #: I removed the other two when the eleventh gate arrived, listed this one in
+    #: the same grep, and did not fix it; the suite failed on it. What this test
+    #: claims is that running segment 0 opened NOTHING, and that is
+    #: `open_gates() == []`, which cannot go stale when a gate is added.
+    assert INV.open_gates() == [], INV.open_gates()
     assert RUN.H3_STUDY_EXECUTION_AUTHORIZED is False
     assert GEN.H3_POPULATION_FREEZE_AUTHORIZED is False
 

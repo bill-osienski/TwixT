@@ -4168,8 +4168,6 @@ EXPECTED_REASONS = {
         'AssertionError: assert (False)',
     'the runner repeats the destination instead of reading it':
         "AssertionError: assert 'docs/superpo...ning_set.json' == 'docs/superpo...ning_set.json'",
-    'the gate inventory stops seeing gates at all':
-        'assert 0 == 10',
     'the inventory scans only the first statement of each module':
         "AssertionError: assert 'LOWPLY_QUALIFICATION_AUTHORIZED' in set()",
 

@@ -73,7 +73,8 @@ def test_THE_COUNT_IS_DERIVED_AND_ANY_REPORT_SAYING_OTHERWISE_IS_WRONG():
     #: the number rather than on the inventory -- two pins for one fact, which is
     #: how seven, eight and ten were all claimed at once. Adding a gate is now a
     #: single deliberate edit, to the dict above.
-    assert INVENTORY.gate_count() == len(discover_gates()) == len(EXPECTED_GATES)
+    assert INVENTORY.gate_count() == len(discover_gates()) == len(EXPECTED_GATES), (
+        "the derived inventory and EXPECTED_GATES must agree")
     assert len(EXPECTED_GATES) == 11, (
         "the total moved: add or remove the entry in EXPECTED_GATES above "
         "deliberately, then update this number in the same edit")
