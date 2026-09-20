@@ -1499,7 +1499,9 @@ def test_THE_BLOCKS_ARE_STILL_MUTUALLY_DISJOINT():
     seen = set()
     for k, (lo, hi) in enumerate(RUN.SEGMENT_SEED_BLOCKS):
         rng = set(range(lo, hi))
-        assert not (rng & seen), k
+        assert not (rng & seen), (
+            "each segment's block must be its own -- two segments sharing seeds "
+            "would play the same games twice and count them as independent")
         seen |= rng
     assert len(seen) == R.N_GAMES == 592
 
@@ -1550,7 +1552,9 @@ def test_UNSPENT_SEGMENTS_OUTPUT_PATHS_ARE_STILL_ABSENT():
     #: collapsed every segment onto one directory went NOT CAUGHT. Distinctness
     #: is the part of the claim that survives the study being over.
     dirs = [RUN.segment_out_dir(k) for k in range(R.N_SEGMENTS)]
-    assert len(set(dirs)) == R.N_SEGMENTS, dirs
+    assert len(set(dirs)) == R.N_SEGMENTS, (
+        "each segment's destination must be its own -- collapsing them would let "
+        "one run overwrite another's record")
 
 
 def test_AN_UNAUTHORIZED_INVOCATION_WRITES_NO_RECEIPT(tmp_path, monkeypatch):
