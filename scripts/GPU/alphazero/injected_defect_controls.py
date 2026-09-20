@@ -3837,6 +3837,33 @@ DEFECTS = [
 # DERIVED from the requirement and its assertion and then verified against a run,
 # which is why each names a count or a sentence rather than a first line.
 EXPECTED_REASONS = {
+    # ── the combination (2026-09-20). OBSERVED, never guessed.
+    'the combination gate is not checked at all':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_combine.H3CombineError'>",
+    'the authorized entry point accepts a destination override':
+        "AssertionError: assert ['out_dir'] == []",
+    'the combination ignores the final-state disagreements':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_combine.H3CombineError'>",
+    'the combination stops counting the games':
+        'scripts.GPU.alphazero.h3_combine.H3CombineError: the 591 records carry 591 distinct seeds, which are not exactly the union of the four blocks',
+    'the combination stops requiring DISTINCT task ids':
+        'scripts.GPU.alphazero.h3_combine.H3CombineError: 1 pair(s) do not hold exactly two games (first: [0]); a half pair is not a pair',
+    'the combination stops requiring the seeds to be the four blocks':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_combine.H3CombineError'>",
+    'the combination accepts a pair that is not a pair':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_combine.H3CombineError'>",
+    'the combination ignores the permission decision':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_combine.H3CombineError'>",
+    'the combination accepts a narrower analysis':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_combine.H3CombineError'>",
+    'the combination stops hashing its inputs':
+        'AssertionError: results',
+    'the combined report may be OVERWRITTEN':
+        "FileExistsError: [Errno 17] File exists: '/private/<tmp>/pytest-of-bill/pytest-<n>/test_THE_DESTINATION_IS_CREATE0/combined/09_combined_report.json'",
+    'a partial write is left occupying the destination':
+        'AssertionError: the partial file must be removed',
+    'summarise is called once PER SEGMENT instead of once on the pool':
+        'AssertionError: [148, 148, 148, 148, 592]',
     # ── segment 3 closeout, RE-ARMED controls (2026-09-20). OBSERVED.
     'the epilogue is hardcoded instead of branching on readiness':
         "AssertionError: assert 'CANNOT RUN' not in '⚠ SCOPE. Th...ANNOT RUN: .'",
