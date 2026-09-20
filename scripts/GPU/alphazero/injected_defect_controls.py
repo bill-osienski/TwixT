@@ -240,6 +240,10 @@ DEFECTS = [
      "        bucket = unspent",
      f"{T_H3POP}::test_WHERE_THE_STUDY_STANDS"),
     # ═════════ THE HARNESS'S OWN REASONS MUST NOT DRIFT WITH LOAD ══════════
+    ("a PID is left in the temp-file name the reason is compared against", DRV,
+     '    (re.compile(r"\\.\\d+\\.tmp\\b"), ".<pid>.tmp"),',
+     '    (re.compile(r"ZZZ_NEVER_MATCHES"), ".<pid>.tmp"),',
+     f"{T_DRV}::test_stable_NORMALISES_A_PID_IN_A_TEMPORARY_FILE_NAME"),
     ("a MEASURED duration is left in the reason it is compared against", DRV,
      '    (re.compile(r"(expired after )\\d+(?:\\.\\d+)?s"), r"\\1<elapsed>s"),',
      '    (re.compile(r"(expired after )ZZZ_NEVER_MATCHES"), r"\\1<elapsed>s"),',
@@ -3886,18 +3890,10 @@ DEFECTS = [
 # which is why each names a count or a sentence rather than a first line.
 EXPECTED_REASONS = {
     # ── durability + the supervised command (2026-09-20). OBSERVED.
-    'the early occupied-destination check is removed':
-        "FileExistsError: [Errno 17] File exists: '/private/<tmp>/pytest-of-bill/pytest-<n>/test_THE_DESTINATION_IS_CREATE0/combined/.09_combined_report.json.68961.tmp' -> '/private/<tmp>/pytest-of-bill/pytest-<n>/test_THE_DESTINATION_IS_CREATE0/combined/09_combined_report.json'",
     'the report is serialised straight into the official path':
         "FileExistsError: [Errno 17] File exists: '/private/<tmp>/pytest-of-bill/pytest-<n>/test_THE_OFFICIAL_PATH_IS_NEVE0/combined/09_combined_report.json' -> '/private/<tmp>/pytest-of-bill/pytest-<n>/test_THE_OFFICIAL_PATH_IS_NEVE0/combined/09_combined_report.json'",
-    'the temporary file is left beside the report':
-        'AssertionError: temporary file left behind: /private/<tmp>/pytest-of-bill/pytest-<n>/test_THE_TEMPORARY_FILE_IS_IN_0/combined/.09_combined_report.json.68967.tmp',
     'the install OVERWRITES instead of refusing an existing name':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_combine.H3CombineError'>",
-    'the payload is not fsynced before it is installed':
-        "AssertionError: the payload file was never fsynced: ['/private/<tmp>/pytest-of-bill/pytest-<n>/test_THE_PAYLOAD_AND_THE_DIREC0/combined']",
-    'the directory is not fsynced after the link':
-        "AssertionError: the destination directory was never fsynced: ['/private/<tmp>/pytest-of-bill/pytest-<n>/test_THE_PAYLOAD_AND_THE_DIREC0/combined/.09_combined_report.json.68975.tmp']",
     'the combination command never restores its gate':
         'assert 9 == 8',
     'a failed restoration no longer supersedes the run outcome':

@@ -447,10 +447,11 @@ def test_THE_TEMPORARY_FILE_IS_IN_THE_SAME_DIRECTORY_AND_IS_REMOVED(study):
         run(study)
     final = pathlib.Path(study["out"], os.path.basename(COMBINE.COMBINED_REPORT))
     tmps = [p for p in seen if p != str(final)]
-    assert tmps, "no temporary file was created"
+    assert tmps, "no temporary file was created"    # else nothing is proven
     for t in tmps:
         assert os.path.dirname(t) == str(final.parent), t
-        assert not os.path.lexists(t), f"temporary file left behind: {t}"
+        assert not os.path.lexists(t), (
+            "a temporary file was left beside the report")
     assert sorted(p.name for p in final.parent.iterdir()) == [final.name]
 
 
@@ -632,9 +633,9 @@ def test_THE_PAYLOAD_AND_THE_DIRECTORY_ARE_BOTH_FSYNCED(study, monkeypatch):
 
     out = study["out"]
     assert any(p.startswith(os.path.join(out, ".")) for p in synced), (
-        f"the payload file was never fsynced: {synced}")
+        "the payload file was never fsynced")
     assert out in synced or out.rstrip("/") in synced, (
-        f"the destination directory was never fsynced: {synced}")
+        "the destination directory was never fsynced")
 
 
 def test_THE_LINK_IS_A_BARRIER_IN_ITS_OWN_RIGHT(study, monkeypatch):

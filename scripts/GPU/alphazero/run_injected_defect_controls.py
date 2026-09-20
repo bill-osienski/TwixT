@@ -181,6 +181,12 @@ _VOLATILE = (
     # normalised -- a CONFIGURED timeout elsewhere in the message stays literal,
     # because changing a declared deadline must still show up as drift.
     (re.compile(r"(expired after )\d+(?:\.\d+)?s"), r"\1<elapsed>s"),
+    # 🔴 A PID IN A TEMPORARY FILE NAME. The combination writes its payload to
+    # `.<report>.<pid>.tmp` beside the destination, so any reason quoting that
+    # name carries the process id of the run that recorded it and can never
+    # match again. Same class as the measured duration above: a value that
+    # moves every run is not evidence about the code.
+    (re.compile(r"\.\d+\.tmp\b"), ".<pid>.tmp"),
 )
 
 

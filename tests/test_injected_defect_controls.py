@@ -767,3 +767,16 @@ def test_A_CONTROL_NAMING_A_MISSING_TEST_IS_REFUSED_UP_FRONT(sandbox):
     assert r.returncode != 0, r.stdout
     assert "DANGLING CONTROL" in r.stdout, r.stdout
     assert "test_this_was_renamed_away" in r.stdout
+
+
+def test_stable_NORMALISES_A_PID_IN_A_TEMPORARY_FILE_NAME():
+    """🔴 THE COMBINATION'S TEMP FILE CARRIES THE WRITER'S PID. Three reasons
+    quoting `.09_combined_report.json.<pid>.tmp` matched only the run that
+    recorded them. The name is the same name; only the process differs."""
+    from scripts.GPU.alphazero import run_injected_defect_controls as DRV
+    a = DRV.stable("File exists: '/x/combined/.09_combined_report.json.69982.tmp'")
+    b = DRV.stable("File exists: '/x/combined/.09_combined_report.json.70113.tmp'")
+    assert a == b and "69982" not in a
+    #: a NON-pid number in an ordinary name must survive
+    keep = "the 148-pair floor was not reached"
+    assert DRV.stable(keep) == keep
