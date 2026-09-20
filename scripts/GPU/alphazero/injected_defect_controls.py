@@ -3779,6 +3779,17 @@ DEFECTS = [
 # DERIVED from the requirement and its assertion and then verified against a run,
 # which is why each names a count or a sentence rather than a first line.
 EXPECTED_REASONS = {
+    # ── segment 3 closeout, RE-ARMED controls (2026-09-20). OBSERVED.
+    'the epilogue is hardcoded instead of branching on readiness':
+        "AssertionError: assert 'CANNOT RUN' not in '⚠ SCOPE. Th...ANNOT RUN: .'",
+    "every segment's block is pointed at a SPENT one":
+        "AssertionError: each segment's block must be its own -- two segments sharing seeds would play the same games twice and count them as independent",
+    "every segment writes into segment 0's occupied destination":
+        "AssertionError: each segment's destination must be its own -- collapsing them would let one run overwrite another's record",
+    'an UNAUTHORIZED invocation writes a receipt and occupies the destination':
+        'AssertionError: an unauthorized call must not write a receipt',
+    'the SYNTHETIC block is registered as RETIRED as well as accounted':
+        'RuntimeError: the synthetic block must be UNSPENT or it isolates nothing',
     # ── the final-state cross-check (2026-09-20). OBSERVED, never guessed.
     'the final-state check stops comparing the receipt fields':
         'AssertionError: a receipt that did not COMPLETE must be reported',
