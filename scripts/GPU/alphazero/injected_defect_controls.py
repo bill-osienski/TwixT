@@ -3912,6 +3912,8 @@ DEFECTS = [
 # DERIVED from the requirement and its assertion and then verified against a run,
 # which is why each names a count or a sentence rather than a first line.
 EXPECTED_REASONS = {
+    'the combination receipt is not create-only':
+        'AssertionError: a second run must not overwrite the first receipt',
     # ── the allow-list repair (2026-09-20). OBSERVED, never guessed.
     'the allow-list permits every open gate instead of the named ones':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_combine.H3CombineError'>",
