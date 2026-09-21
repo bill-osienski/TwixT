@@ -1,0 +1,2130 @@
+{
+ "branch_precedence": [
+  "STOP_ZERO_LENGTH_REFUSED",
+  "STOP_INSTRUMENT_FAILURE",
+  "STOP_NO_SAME_PROCESS_DUMP"
+ ],
+ "branch_reasons": {
+  "STOP_INSTRUMENT_FAILURE": [
+   "empty_board@ply0 query: safety surface not clean: the helper threw",
+   "empty_board@ply0 query: safety surface not clean: 1 reflective accesses, expected exactly 3",
+   "empty_board@ply0 query: failures=1 on a completed query, where the incomplete-search exemption does not apply",
+   "empty_board@ply0 replay: 0 PROC lines, expected exactly 1 per jvm under the frozen fresh-process lifecycle",
+   "l0match-000-strong6-o1_center-t1j_red-r0@ply1 replay: 0 PROC lines, expected exactly 1 per jvm under the frozen fresh-process lifecycle",
+   "l0match-000-strong6-o1_center-t1j_red-r0@ply3 replay: 0 PROC lines, expected exactly 1 per jvm under the frozen fresh-process lifecycle",
+   "l0match-000-strong6-o1_center-t1j_red-r0@ply5 replay: 0 PROC lines, expected exactly 1 per jvm under the frozen fresh-process lifecycle",
+   "l0match-016-strong6-o3_low-t1j_red-r0@ply1 replay: 0 PROC lines, expected exactly 1 per jvm under the frozen fresh-process lifecycle",
+   "l0match-016-strong6-o3_low-t1j_red-r0@ply3 replay: 0 PROC lines, expected exactly 1 per jvm under the frozen fresh-process lifecycle",
+   "l0match-016-strong6-o3_low-t1j_red-r0@ply5 replay: 0 PROC lines, expected exactly 1 per jvm under the frozen fresh-process lifecycle",
+   "l0match-024-strong6-o4_high-t1j_red-r0@ply1 replay: 0 PROC lines, expected exactly 1 per jvm under the frozen fresh-process lifecycle",
+   "l0match-024-strong6-o4_high-t1j_red-r0@ply3 replay: 0 PROC lines, expected exactly 1 per jvm under the frozen fresh-process lifecycle",
+   "l0match-024-strong6-o4_high-t1j_red-r0@ply5 replay: 0 PROC lines, expected exactly 1 per jvm under the frozen fresh-process lifecycle"
+  ],
+  "STOP_ZERO_LENGTH_REFUSED": [
+   "empty_board@ply0 query: the zero-length position yielded no query record"
+  ]
+ },
+ "branches_fired": [
+  "STOP_INSTRUMENT_FAILURE",
+  "STOP_ZERO_LENGTH_REFUSED"
+ ],
+ "depth": 6,
+ "elapsed_s": 3.401874207891524,
+ "frozen_prefixes_sha256": "a9054cb2d56cf75f554292e47ac7e5b86a0c74f54b255ee9147fb65f92207acf",
+ "matrix_plies": [
+  0,
+  1,
+  3,
+  5
+ ],
+ "n_observations": 20,
+ "n_positions": 10,
+ "observations": [
+  {
+   "dump_coherence_divergences": [],
+   "dump_source_pids": [
+    35100
+   ],
+   "dumps": [
+    {
+     "history_len": 0,
+     "n_bridges": 0,
+     "n_legal": 528,
+     "n_pegs": 0,
+     "next_player": "Y",
+     "ply": 0,
+     "term_x": false,
+     "term_y": false
+    }
+   ],
+   "move_legal_in_our_engine": false,
+   "n_dumps": 1,
+   "n_procs": 1,
+   "n_query_records": 0,
+   "ordinal": 0,
+   "our_to_move": "red",
+   "path": "no_record",
+   "ply": 0,
+   "postcond": {
+    "clean_single": false,
+    "expected_refl": 3,
+    "failures_counter": 1,
+    "n": 1,
+    "notes": [
+     "safety surface not clean: the helper threw",
+     "safety surface not clean: 1 reflective accesses, expected exactly 3"
+    ],
+    "rows": [
+     {
+      "clean": false,
+      "failures": 1,
+      "frames": 0,
+      "headless": true,
+      "no_throw": false,
+      "prefs_ok": true,
+      "refl_n": 1,
+      "refl_ok": true,
+      "windows": 0
+     }
+    ],
+    "safety_clean": false
+   },
+   "prefix": [],
+   "procs": [
+    {
+     "headless": "true",
+     "java_version": "17.0.20.1",
+     "pid": 35100,
+     "prefs_factory": "e2probe.ScratchPrefs",
+     "vm": "OpenJDK_64-Bit_Server_VM"
+    }
+   ],
+   "record": null,
+   "requested_depth": 6,
+   "return_code": 3,
+   "role": "query",
+   "same_process_dump": true,
+   "stdout": "PROC pid=35100 java_version=17.0.20.1 vm=OpenJDK_64-Bit_Server_VM headless=true prefs_factory=e2probe.ScratchPrefs\nPLY 0 mover=- move=- next=Y moveNr=0 termY=false termX=false pegs=0 bridges=0\n  PEGS \n  BRIDGES \n  HIST \n  LEGAL 000000000000000000000000111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111000000000000000000000000\nTHREW: java.lang.NullPointerException: Cannot read field \"mdPieRule\" because the return value of \"net.schwagereit.t1j.Match.getMatchData()\" is null\njava.lang.NullPointerException: Cannot read field \"mdPieRule\" because the return value of \"net.schwagereit.t1j.Match.getMatchData()\" is null\n\tat net.schwagereit.t1j.InitialMoves.firstMove(Unknown Source)\n\tat net.schwagereit.t1j.InitialMoves.initialMove(Unknown Source)\n\tat net.schwagereit.t1j.FindMove.computeMove(Unknown Source)\n\tat net.schwagereit.t1j.E4Preflight.queries(E4Preflight.java:155)\n\tat net.schwagereit.t1j.E4Preflight.main(E4Preflight.java:100)\nFAIL no unexpected exception\nPOSTCOND no_throw=false windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=1 failures=1 prefs_before=6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d prefs_after=6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d count_before=527 count_after=527\n",
+   "t1j_colour_role": "red",
+   "task_id": "empty_board",
+   "where": "empty_board@ply0 query"
+  },
+  {
+   "expected_plies": 1,
+   "final_state_divergences": [],
+   "n_plies": 1,
+   "n_procs": 0,
+   "ordinal": 1,
+   "our_to_move": "red",
+   "plies": [
+    {
+     "history_len": 0,
+     "n_bridges": 0,
+     "n_legal": 528,
+     "n_pegs": 0,
+     "next_player": "Y",
+     "ply": 0,
+     "term_x": false,
+     "term_y": false
+    }
+   ],
+   "ply": 0,
+   "ply_cap": 280,
+   "ply_count_matches": true,
+   "postcond": {
+    "clean_single": true,
+    "expected_refl": 1,
+    "failures_counter": 0,
+    "n": 1,
+    "notes": [],
+    "rows": [
+     {
+      "clean": true,
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 1,
+      "refl_ok": true,
+      "windows": 0
+     }
+    ],
+    "safety_clean": true
+   },
+   "prefix": [],
+   "procs": [],
+   "return_code": 0,
+   "role": "replay",
+   "stdout": "SIZE x=24 y=24\nCAP 280\nPLY 0 mover=- move=- next=Y moveNr=0 termY=false termX=false pegs=0 bridges=0\n  PEGS \n  BRIDGES \n  HIST \n  LEGAL 000000000000000000000000111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111000000000000000000000000\nPOSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=1 failures=0\n",
+   "task_id": "empty_board",
+   "where": "empty_board@ply0 replay"
+  },
+  {
+   "dump_coherence_divergences": [],
+   "dump_source_pids": [
+    35102
+   ],
+   "dumps": [
+    {
+     "history_len": 1,
+     "n_bridges": 0,
+     "n_legal": 527,
+     "n_pegs": 1,
+     "next_player": "X",
+     "ply": 1,
+     "term_x": false,
+     "term_y": false
+    }
+   ],
+   "move_legal_in_our_engine": true,
+   "n_dumps": 1,
+   "n_procs": 1,
+   "n_query_records": 1,
+   "ordinal": 2,
+   "our_to_move": "black",
+   "path": "incomplete",
+   "ply": 1,
+   "postcond": {
+    "clean_single": false,
+    "expected_refl": 3,
+    "failures_counter": 1,
+    "n": 1,
+    "notes": [],
+    "rows": [
+     {
+      "clean": false,
+      "failures": 1,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 3,
+      "refl_ok": true,
+      "windows": 0
+     }
+    ],
+    "safety_clean": true
+   },
+   "prefix": [
+    [
+     11,
+     11
+    ]
+   ],
+   "procs": [
+    {
+     "headless": "true",
+     "java_version": "17.0.20.1",
+     "pid": 35102,
+     "prefs_factory": "e2probe.ScratchPrefs",
+     "vm": "OpenJDK_64-Bit_Server_VM"
+    }
+   ],
+   "record": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "elapsed_us": 21352,
+    "eval_regime": "early_moveNr_lt_8",
+    "legal": true,
+    "move": [
+     17,
+     11
+    ],
+    "move_nr": 1,
+    "null_sentinel": false,
+    "q": 1,
+    "requested_depth": 6,
+    "to_move": "X",
+    "usealphabeta": false
+   },
+   "requested_depth": 6,
+   "return_code": 3,
+   "role": "query",
+   "same_process_dump": true,
+   "stdout": "PROC pid=35102 java_version=17.0.20.1 vm=OpenJDK_64-Bit_Server_VM headless=true prefs_factory=e2probe.ScratchPrefs\nPLY 1 mover=- move=- next=X moveNr=1 termY=false termX=false pegs=1 bridges=0\n  PEGS 11,11,Y\n  BRIDGES \n  HIST 11,11\n  LEGAL 011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111110111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110\nQUERY q=1 requested_depth=6 mdFixedPly=true mdPly=6 move_x=11 move_y=17 to_move=X usealphabeta=false currentMaxPly=0 completed_depth=-1 completed=false legal=true null_sentinel=false moveNr=1 eval_regime=early_moveNr_lt_8 elapsed_us=21352\nFAIL q1: requested depth 6 completed\nPOSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1 prefs_before=6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d prefs_after=6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d count_before=527 count_after=527\n",
+   "t1j_colour_role": "black",
+   "task_id": "l0match-000-strong6-o1_center-t1j_red-r0",
+   "where": "l0match-000-strong6-o1_center-t1j_red-r0@ply1 query"
+  },
+  {
+   "expected_plies": 2,
+   "final_state_divergences": [],
+   "n_plies": 2,
+   "n_procs": 0,
+   "ordinal": 3,
+   "our_to_move": "black",
+   "plies": [
+    {
+     "history_len": 0,
+     "n_bridges": 0,
+     "n_legal": 528,
+     "n_pegs": 0,
+     "next_player": "Y",
+     "ply": 0,
+     "term_x": false,
+     "term_y": false
+    },
+    {
+     "history_len": 1,
+     "n_bridges": 0,
+     "n_legal": 527,
+     "n_pegs": 1,
+     "next_player": "X",
+     "ply": 1,
+     "term_x": false,
+     "term_y": false
+    }
+   ],
+   "ply": 1,
+   "ply_cap": 280,
+   "ply_count_matches": true,
+   "postcond": {
+    "clean_single": true,
+    "expected_refl": 1,
+    "failures_counter": 0,
+    "n": 1,
+    "notes": [],
+    "rows": [
+     {
+      "clean": true,
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 1,
+      "refl_ok": true,
+      "windows": 0
+     }
+    ],
+    "safety_clean": true
+   },
+   "prefix": [
+    [
+     11,
+     11
+    ]
+   ],
+   "procs": [],
+   "return_code": 0,
+   "role": "replay",
+   "stdout": "SIZE x=24 y=24\nCAP 280\nPLY 0 mover=- move=- next=Y moveNr=0 termY=false termX=false pegs=0 bridges=0\n  PEGS \n  BRIDGES \n  HIST \n  LEGAL 000000000000000000000000111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111000000000000000000000000\nPLY 1 mover=Y move=11,11 next=X moveNr=1 termY=false termX=false pegs=1 bridges=0\n  PEGS 11,11,Y\n  BRIDGES \n  HIST 11,11\n  LEGAL 011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111110111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110\nPOSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=1 failures=0\n",
+   "task_id": "l0match-000-strong6-o1_center-t1j_red-r0",
+   "where": "l0match-000-strong6-o1_center-t1j_red-r0@ply1 replay"
+  },
+  {
+   "dump_coherence_divergences": [],
+   "dump_source_pids": [
+    35106
+   ],
+   "dumps": [
+    {
+     "history_len": 3,
+     "n_bridges": 1,
+     "n_legal": 525,
+     "n_pegs": 3,
+     "next_player": "X",
+     "ply": 3,
+     "term_x": false,
+     "term_y": false
+    }
+   ],
+   "move_legal_in_our_engine": true,
+   "n_dumps": 1,
+   "n_procs": 1,
+   "n_query_records": 1,
+   "ordinal": 4,
+   "our_to_move": "black",
+   "path": "incomplete",
+   "ply": 3,
+   "postcond": {
+    "clean_single": false,
+    "expected_refl": 3,
+    "failures_counter": 1,
+    "n": 1,
+    "notes": [],
+    "rows": [
+     {
+      "clean": false,
+      "failures": 1,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 3,
+      "refl_ok": true,
+      "windows": 0
+     }
+    ],
+    "safety_clean": true
+   },
+   "prefix": [
+    [
+     11,
+     11
+    ],
+    [
+     12,
+     13
+    ],
+    [
+     13,
+     12
+    ]
+   ],
+   "procs": [
+    {
+     "headless": "true",
+     "java_version": "17.0.20.1",
+     "pid": 35106,
+     "prefs_factory": "e2probe.ScratchPrefs",
+     "vm": "OpenJDK_64-Bit_Server_VM"
+    }
+   ],
+   "record": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "elapsed_us": 25245,
+    "eval_regime": "early_moveNr_lt_8",
+    "legal": true,
+    "move": [
+     6,
+     12
+    ],
+    "move_nr": 3,
+    "null_sentinel": false,
+    "q": 1,
+    "requested_depth": 6,
+    "to_move": "X",
+    "usealphabeta": false
+   },
+   "requested_depth": 6,
+   "return_code": 3,
+   "role": "query",
+   "same_process_dump": true,
+   "stdout": "PROC pid=35106 java_version=17.0.20.1 vm=OpenJDK_64-Bit_Server_VM headless=true prefs_factory=e2probe.ScratchPrefs\nPLY 3 mover=- move=- next=X moveNr=3 termY=false termX=false pegs=3 bridges=1\n  PEGS 11,11,Y 12,13,Y 13,12,X\n  BRIDGES 11,11|12,13|Y\n  HIST 11,11 13,12 12,13\n  LEGAL 011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111110111111111110011111111111101111111110011111111111011111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110\nQUERY q=1 requested_depth=6 mdFixedPly=true mdPly=6 move_x=12 move_y=6 to_move=X usealphabeta=false currentMaxPly=0 completed_depth=-1 completed=false legal=true null_sentinel=false moveNr=3 eval_regime=early_moveNr_lt_8 elapsed_us=25245\nFAIL q1: requested depth 6 completed\nPOSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1 prefs_before=6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d prefs_after=6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d count_before=527 count_after=527\n",
+   "t1j_colour_role": "black",
+   "task_id": "l0match-000-strong6-o1_center-t1j_red-r0",
+   "where": "l0match-000-strong6-o1_center-t1j_red-r0@ply3 query"
+  },
+  {
+   "expected_plies": 4,
+   "final_state_divergences": [],
+   "n_plies": 4,
+   "n_procs": 0,
+   "ordinal": 5,
+   "our_to_move": "black",
+   "plies": [
+    {
+     "history_len": 0,
+     "n_bridges": 0,
+     "n_legal": 528,
+     "n_pegs": 0,
+     "next_player": "Y",
+     "ply": 0,
+     "term_x": false,
+     "term_y": false
+    },
+    {
+     "history_len": 1,
+     "n_bridges": 0,
+     "n_legal": 527,
+     "n_pegs": 1,
+     "next_player": "X",
+     "ply": 1,
+     "term_x": false,
+     "term_y": false
+    },
+    {
+     "history_len": 2,
+     "n_bridges": 0,
+     "n_legal": 526,
+     "n_pegs": 2,
+     "next_player": "Y",
+     "ply": 2,
+     "term_x": false,
+     "term_y": false
+    },
+    {
+     "history_len": 3,
+     "n_bridges": 1,
+     "n_legal": 525,
+     "n_pegs": 3,
+     "next_player": "X",
+     "ply": 3,
+     "term_x": false,
+     "term_y": false
+    }
+   ],
+   "ply": 3,
+   "ply_cap": 280,
+   "ply_count_matches": true,
+   "postcond": {
+    "clean_single": true,
+    "expected_refl": 1,
+    "failures_counter": 0,
+    "n": 1,
+    "notes": [],
+    "rows": [
+     {
+      "clean": true,
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 1,
+      "refl_ok": true,
+      "windows": 0
+     }
+    ],
+    "safety_clean": true
+   },
+   "prefix": [
+    [
+     11,
+     11
+    ],
+    [
+     12,
+     13
+    ],
+    [
+     13,
+     12
+    ]
+   ],
+   "procs": [],
+   "return_code": 0,
+   "role": "replay",
+   "stdout": "SIZE x=24 y=24\nCAP 280\nPLY 0 mover=- move=- next=Y moveNr=0 termY=false termX=false pegs=0 bridges=0\n  PEGS \n  BRIDGES \n  HIST \n  LEGAL 000000000000000000000000111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111000000000000000000000000\nPLY 1 mover=Y move=11,11 next=X moveNr=1 termY=false termX=false pegs=1 bridges=0\n  PEGS 11,11,Y\n  BRIDGES \n  HIST 11,11\n  LEGAL 011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111110111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110\nPLY 2 mover=X move=13,12 next=Y moveNr=2 termY=false termX=false pegs=2 bridges=0\n  PEGS 11,11,Y 13,12,X\n  BRIDGES \n  HIST 11,11 13,12\n  LEGAL 000000000000000000000000111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111110111111111111111111111111111111111111111111111111011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111000000000000000000000000\nPLY 3 mover=Y move=12,13 next=X moveNr=3 termY=false termX=false pegs=3 bridges=1\n  PEGS 11,11,Y 12,13,Y 13,12,X\n  BRIDGES 11,11|12,13|Y\n  HIST 11,11 13,12 12,13\n  LEGAL 011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111110111111111110011111111111101111111110011111111111011111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110\nPOSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=1 failures=0\n",
+   "task_id": "l0match-000-strong6-o1_center-t1j_red-r0",
+   "where": "l0match-000-strong6-o1_center-t1j_red-r0@ply3 replay"
+  },
+  {
+   "dump_coherence_divergences": [],
+   "dump_source_pids": [
+    35117
+   ],
+   "dumps": [
+    {
+     "history_len": 5,
+     "n_bridges": 2,
+     "n_legal": 523,
+     "n_pegs": 5,
+     "next_player": "X",
+     "ply": 5,
+     "term_x": false,
+     "term_y": false
+    }
+   ],
+   "move_legal_in_our_engine": true,
+   "n_dumps": 1,
+   "n_procs": 1,
+   "n_query_records": 1,
+   "ordinal": 6,
+   "our_to_move": "black",
+   "path": "searched",
+   "ply": 5,
+   "postcond": {
+    "clean_single": true,
+    "expected_refl": 3,
+    "failures_counter": 0,
+    "n": 1,
+    "notes": [],
+    "rows": [
+     {
+      "clean": true,
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 3,
+      "refl_ok": true,
+      "windows": 0
+     }
+    ],
+    "safety_clean": true
+   },
+   "prefix": [
+    [
+     11,
+     11
+    ],
+    [
+     12,
+     13
+    ],
+    [
+     13,
+     12
+    ],
+    [
+     10,
+     13
+    ],
+    [
+     12,
+     10
+    ]
+   ],
+   "procs": [
+    {
+     "headless": "true",
+     "java_version": "17.0.20.1",
+     "pid": 35117,
+     "prefs_factory": "e2probe.ScratchPrefs",
+     "vm": "OpenJDK_64-Bit_Server_VM"
+    }
+   ],
+   "record": {
+    "completed": true,
+    "completed_depth": 6,
+    "current_max_ply": 7,
+    "elapsed_us": 179967,
+    "eval_regime": "early_moveNr_lt_8",
+    "legal": true,
+    "move": [
+     9,
+     11
+    ],
+    "move_nr": 5,
+    "null_sentinel": false,
+    "q": 1,
+    "requested_depth": 6,
+    "to_move": "X",
+    "usealphabeta": true
+   },
+   "requested_depth": 6,
+   "return_code": 0,
+   "role": "query",
+   "same_process_dump": true,
+   "stdout": "PROC pid=35117 java_version=17.0.20.1 vm=OpenJDK_64-Bit_Server_VM headless=true prefs_factory=e2probe.ScratchPrefs\nPLY 5 mover=- move=- next=X moveNr=5 termY=false termX=false pegs=5 bridges=2\n  PEGS 10,12,Y 11,11,Y 12,13,Y 13,10,X 13,12,X\n  BRIDGES 10,12|12,13|Y 11,11|12,13|Y\n  HIST 11,11 13,12 12,13 13,10 10,12\n  LEGAL 011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111011111111110011111111110111111111110011111111111101111111110011111111101011111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110\nElapsed: 180 msec.\nQUERY q=1 requested_depth=6 mdFixedPly=true mdPly=6 move_x=11 move_y=9 to_move=X usealphabeta=true currentMaxPly=7 completed_depth=6 completed=true legal=true null_sentinel=false moveNr=5 eval_regime=early_moveNr_lt_8 elapsed_us=179967\nPOSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=0 prefs_before=6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d prefs_after=6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d count_before=527 count_after=527\n",
+   "t1j_colour_role": "black",
+   "task_id": "l0match-000-strong6-o1_center-t1j_red-r0",
+   "where": "l0match-000-strong6-o1_center-t1j_red-r0@ply5 query"
+  },
+  {
+   "expected_plies": 6,
+   "final_state_divergences": [],
+   "n_plies": 6,
+   "n_procs": 0,
+   "ordinal": 7,
+   "our_to_move": "black",
+   "plies": [
+    {
+     "history_len": 0,
+     "n_bridges": 0,
+     "n_legal": 528,
+     "n_pegs": 0,
+     "next_player": "Y",
+     "ply": 0,
+     "term_x": false,
+     "term_y": false
+    },
+    {
+     "history_len": 1,
+     "n_bridges": 0,
+     "n_legal": 527,
+     "n_pegs": 1,
+     "next_player": "X",
+     "ply": 1,
+     "term_x": false,
+     "term_y": false
+    },
+    {
+     "history_len": 2,
+     "n_bridges": 0,
+     "n_legal": 526,
+     "n_pegs": 2,
+     "next_player": "Y",
+     "ply": 2,
+     "term_x": false,
+     "term_y": false
+    },
+    {
+     "history_len": 3,
+     "n_bridges": 1,
+     "n_legal": 525,
+     "n_pegs": 3,
+     "next_player": "X",
+     "ply": 3,
+     "term_x": false,
+     "term_y": false
+    },
+    {
+     "history_len": 4,
+     "n_bridges": 1,
+     "n_legal": 524,
+     "n_pegs": 4,
+     "next_player": "Y",
+     "ply": 4,
+     "term_x": false,
+     "term_y": false
+    },
+    {
+     "history_len": 5,
+     "n_bridges": 2,
+     "n_legal": 523,
+     "n_pegs": 5,
+     "next_player": "X",
+     "ply": 5,
+     "term_x": false,
+     "term_y": false
+    }
+   ],
+   "ply": 5,
+   "ply_cap": 280,
+   "ply_count_matches": true,
+   "postcond": {
+    "clean_single": true,
+    "expected_refl": 1,
+    "failures_counter": 0,
+    "n": 1,
+    "notes": [],
+    "rows": [
+     {
+      "clean": true,
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 1,
+      "refl_ok": true,
+      "windows": 0
+     }
+    ],
+    "safety_clean": true
+   },
+   "prefix": [
+    [
+     11,
+     11
+    ],
+    [
+     12,
+     13
+    ],
+    [
+     13,
+     12
+    ],
+    [
+     10,
+     13
+    ],
+    [
+     12,
+     10
+    ]
+   ],
+   "procs": [],
+   "return_code": 0,
+   "role": "replay",
+   "stdout": "SIZE x=24 y=24\nCAP 280\nPLY 0 mover=- move=- next=Y moveNr=0 termY=false termX=false pegs=0 bridges=0\n  PEGS \n  BRIDGES \n  HIST \n  LEGAL 000000000000000000000000111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111000000000000000000000000\nPLY 1 mover=Y move=11,11 next=X moveNr=1 termY=false termX=false pegs=1 bridges=0\n  PEGS 11,11,Y\n  BRIDGES \n  HIST 11,11\n  LEGAL 011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111110111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110\nPLY 2 mover=X move=13,12 next=Y moveNr=2 termY=false termX=false pegs=2 bridges=0\n  PEGS 11,11,Y 13,12,X\n  BRIDGES \n  HIST 11,11 13,12\n  LEGAL 000000000000000000000000111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111110111111111111111111111111111111111111111111111111011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111000000000000000000000000\nPLY 3 mover=Y move=12,13 next=X moveNr=3 termY=false termX=false pegs=3 bridges=1\n  PEGS 11,11,Y 12,13,Y 13,12,X\n  BRIDGES 11,11|12,13|Y\n  HIST 11,11 13,12 12,13\n  LEGAL 011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111110111111111110011111111111101111111110011111111111011111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110\nPLY 4 mover=X move=13,10 next=Y moveNr=4 termY=false termX=false pegs=4 bridges=1\n  PEGS 11,11,Y 12,13,Y 13,10,X 13,12,X\n  BRIDGES 11,11|12,13|Y\n  HIST 11,11 13,12 12,13 13,10\n  LEGAL 000000000000000000000000111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111110111111111111111111111111101111111111111111111101011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111000000000000000000000000\nPLY 5 mover=Y move=10,12 next=X moveNr=5 termY=false termX=false pegs=5 bridges=2\n  PEGS 10,12,Y 11,11,Y 12,13,Y 13,10,X 13,12,X\n  BRIDGES 10,12|12,13|Y 11,11|12,13|Y\n  HIST 11,11 13,12 12,13 13,10 10,12\n  LEGAL 011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111011111111110011111111110111111111110011111111111101111111110011111111101011111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110\nPOSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=1 failures=0\n",
+   "task_id": "l0match-000-strong6-o1_center-t1j_red-r0",
+   "where": "l0match-000-strong6-o1_center-t1j_red-r0@ply5 replay"
+  },
+  {
+   "dump_coherence_divergences": [],
+   "dump_source_pids": [
+    35119
+   ],
+   "dumps": [
+    {
+     "history_len": 1,
+     "n_bridges": 0,
+     "n_legal": 527,
+     "n_pegs": 1,
+     "next_player": "X",
+     "ply": 1,
+     "term_x": false,
+     "term_y": false
+    }
+   ],
+   "move_legal_in_our_engine": true,
+   "n_dumps": 1,
+   "n_procs": 1,
+   "n_query_records": 1,
+   "ordinal": 8,
+   "our_to_move": "black",
+   "path": "incomplete",
+   "ply": 1,
+   "postcond": {
+    "clean_single": false,
+    "expected_refl": 3,
+    "failures_counter": 1,
+    "n": 1,
+    "notes": [],
+    "rows": [
+     {
+      "clean": false,
+      "failures": 1,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 3,
+      "refl_ok": true,
+      "windows": 0
+     }
+    ],
+    "safety_clean": true
+   },
+   "prefix": [
+    [
+     15,
+     11
+    ]
+   ],
+   "procs": [
+    {
+     "headless": "true",
+     "java_version": "17.0.20.1",
+     "pid": 35119,
+     "prefs_factory": "e2probe.ScratchPrefs",
+     "vm": "OpenJDK_64-Bit_Server_VM"
+    }
+   ],
+   "record": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "elapsed_us": 23130,
+    "eval_regime": "early_moveNr_lt_8",
+    "legal": true,
+    "move": [
+     6,
+     11
+    ],
+    "move_nr": 1,
+    "null_sentinel": false,
+    "q": 1,
+    "requested_depth": 6,
+    "to_move": "X",
+    "usealphabeta": false
+   },
+   "requested_depth": 6,
+   "return_code": 3,
+   "role": "query",
+   "same_process_dump": true,
+   "stdout": "PROC pid=35119 java_version=17.0.20.1 vm=OpenJDK_64-Bit_Server_VM headless=true prefs_factory=e2probe.ScratchPrefs\nPLY 1 mover=- move=- next=X moveNr=1 termY=false termX=false pegs=1 bridges=0\n  PEGS 11,15,Y\n  BRIDGES \n  HIST 11,15\n  LEGAL 011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111011111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110\nQUERY q=1 requested_depth=6 mdFixedPly=true mdPly=6 move_x=11 move_y=6 to_move=X usealphabeta=false currentMaxPly=0 completed_depth=-1 completed=false legal=true null_sentinel=false moveNr=1 eval_regime=early_moveNr_lt_8 elapsed_us=23130\nFAIL q1: requested depth 6 completed\nPOSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1 prefs_before=6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d prefs_after=6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d count_before=527 count_after=527\n",
+   "t1j_colour_role": "black",
+   "task_id": "l0match-016-strong6-o3_low-t1j_red-r0",
+   "where": "l0match-016-strong6-o3_low-t1j_red-r0@ply1 query"
+  },
+  {
+   "expected_plies": 2,
+   "final_state_divergences": [],
+   "n_plies": 2,
+   "n_procs": 0,
+   "ordinal": 9,
+   "our_to_move": "black",
+   "plies": [
+    {
+     "history_len": 0,
+     "n_bridges": 0,
+     "n_legal": 528,
+     "n_pegs": 0,
+     "next_player": "Y",
+     "ply": 0,
+     "term_x": false,
+     "term_y": false
+    },
+    {
+     "history_len": 1,
+     "n_bridges": 0,
+     "n_legal": 527,
+     "n_pegs": 1,
+     "next_player": "X",
+     "ply": 1,
+     "term_x": false,
+     "term_y": false
+    }
+   ],
+   "ply": 1,
+   "ply_cap": 280,
+   "ply_count_matches": true,
+   "postcond": {
+    "clean_single": true,
+    "expected_refl": 1,
+    "failures_counter": 0,
+    "n": 1,
+    "notes": [],
+    "rows": [
+     {
+      "clean": true,
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 1,
+      "refl_ok": true,
+      "windows": 0
+     }
+    ],
+    "safety_clean": true
+   },
+   "prefix": [
+    [
+     15,
+     11
+    ]
+   ],
+   "procs": [],
+   "return_code": 0,
+   "role": "replay",
+   "stdout": "SIZE x=24 y=24\nCAP 280\nPLY 0 mover=- move=- next=Y moveNr=0 termY=false termX=false pegs=0 bridges=0\n  PEGS \n  BRIDGES \n  HIST \n  LEGAL 000000000000000000000000111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111000000000000000000000000\nPLY 1 mover=Y move=11,15 next=X moveNr=1 termY=false termX=false pegs=1 bridges=0\n  PEGS 11,15,Y\n  BRIDGES \n  HIST 11,15\n  LEGAL 011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111011111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110\nPOSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=1 failures=0\n",
+   "task_id": "l0match-016-strong6-o3_low-t1j_red-r0",
+   "where": "l0match-016-strong6-o3_low-t1j_red-r0@ply1 replay"
+  },
+  {
+   "dump_coherence_divergences": [],
+   "dump_source_pids": [
+    35121
+   ],
+   "dumps": [
+    {
+     "history_len": 3,
+     "n_bridges": 1,
+     "n_legal": 525,
+     "n_pegs": 3,
+     "next_player": "X",
+     "ply": 3,
+     "term_x": false,
+     "term_y": false
+    }
+   ],
+   "move_legal_in_our_engine": true,
+   "n_dumps": 1,
+   "n_procs": 1,
+   "n_query_records": 1,
+   "ordinal": 10,
+   "our_to_move": "black",
+   "path": "incomplete",
+   "ply": 3,
+   "postcond": {
+    "clean_single": false,
+    "expected_refl": 3,
+    "failures_counter": 1,
+    "n": 1,
+    "notes": [],
+    "rows": [
+     {
+      "clean": false,
+      "failures": 1,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 3,
+      "refl_ok": true,
+      "windows": 0
+     }
+    ],
+    "safety_clean": true
+   },
+   "prefix": [
+    [
+     15,
+     11
+    ],
+    [
+     12,
+     12
+    ],
+    [
+     13,
+     10
+    ]
+   ],
+   "procs": [
+    {
+     "headless": "true",
+     "java_version": "17.0.20.1",
+     "pid": 35121,
+     "prefs_factory": "e2probe.ScratchPrefs",
+     "vm": "OpenJDK_64-Bit_Server_VM"
+    }
+   ],
+   "record": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "elapsed_us": 25240,
+    "eval_regime": "early_moveNr_lt_8",
+    "legal": true,
+    "move": [
+     7,
+     10
+    ],
+    "move_nr": 3,
+    "null_sentinel": false,
+    "q": 1,
+    "requested_depth": 6,
+    "to_move": "X",
+    "usealphabeta": false
+   },
+   "requested_depth": 6,
+   "return_code": 3,
+   "role": "query",
+   "same_process_dump": true,
+   "stdout": "PROC pid=35121 java_version=17.0.20.1 vm=OpenJDK_64-Bit_Server_VM headless=true prefs_factory=e2probe.ScratchPrefs\nPLY 3 mover=- move=- next=X moveNr=3 termY=false termX=false pegs=3 bridges=1\n  PEGS 10,13,Y 11,15,Y 12,12,X\n  BRIDGES 10,13|11,15|Y\n  HIST 11,15 12,12 10,13\n  LEGAL 011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111101111111110011111111111111011111110011111111111011111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110\nQUERY q=1 requested_depth=6 mdFixedPly=true mdPly=6 move_x=10 move_y=7 to_move=X usealphabeta=false currentMaxPly=0 completed_depth=-1 completed=false legal=true null_sentinel=false moveNr=3 eval_regime=early_moveNr_lt_8 elapsed_us=25240\nFAIL q1: requested depth 6 completed\nPOSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1 prefs_before=6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d prefs_after=6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d count_before=527 count_after=527\n",
+   "t1j_colour_role": "black",
+   "task_id": "l0match-016-strong6-o3_low-t1j_red-r0",
+   "where": "l0match-016-strong6-o3_low-t1j_red-r0@ply3 query"
+  },
+  {
+   "expected_plies": 4,
+   "final_state_divergences": [],
+   "n_plies": 4,
+   "n_procs": 0,
+   "ordinal": 11,
+   "our_to_move": "black",
+   "plies": [
+    {
+     "history_len": 0,
+     "n_bridges": 0,
+     "n_legal": 528,
+     "n_pegs": 0,
+     "next_player": "Y",
+     "ply": 0,
+     "term_x": false,
+     "term_y": false
+    },
+    {
+     "history_len": 1,
+     "n_bridges": 0,
+     "n_legal": 527,
+     "n_pegs": 1,
+     "next_player": "X",
+     "ply": 1,
+     "term_x": false,
+     "term_y": false
+    },
+    {
+     "history_len": 2,
+     "n_bridges": 0,
+     "n_legal": 526,
+     "n_pegs": 2,
+     "next_player": "Y",
+     "ply": 2,
+     "term_x": false,
+     "term_y": false
+    },
+    {
+     "history_len": 3,
+     "n_bridges": 1,
+     "n_legal": 525,
+     "n_pegs": 3,
+     "next_player": "X",
+     "ply": 3,
+     "term_x": false,
+     "term_y": false
+    }
+   ],
+   "ply": 3,
+   "ply_cap": 280,
+   "ply_count_matches": true,
+   "postcond": {
+    "clean_single": true,
+    "expected_refl": 1,
+    "failures_counter": 0,
+    "n": 1,
+    "notes": [],
+    "rows": [
+     {
+      "clean": true,
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 1,
+      "refl_ok": true,
+      "windows": 0
+     }
+    ],
+    "safety_clean": true
+   },
+   "prefix": [
+    [
+     15,
+     11
+    ],
+    [
+     12,
+     12
+    ],
+    [
+     13,
+     10
+    ]
+   ],
+   "procs": [],
+   "return_code": 0,
+   "role": "replay",
+   "stdout": "SIZE x=24 y=24\nCAP 280\nPLY 0 mover=- move=- next=Y moveNr=0 termY=false termX=false pegs=0 bridges=0\n  PEGS \n  BRIDGES \n  HIST \n  LEGAL 000000000000000000000000111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111000000000000000000000000\nPLY 1 mover=Y move=11,15 next=X moveNr=1 termY=false termX=false pegs=1 bridges=0\n  PEGS 11,15,Y\n  BRIDGES \n  HIST 11,15\n  LEGAL 011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111011111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110\nPLY 2 mover=X move=12,12 next=Y moveNr=2 termY=false termX=false pegs=2 bridges=0\n  PEGS 11,15,Y 12,12,X\n  BRIDGES \n  HIST 11,15 12,12\n  LEGAL 000000000000000000000000111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111011111111111111111111011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111000000000000000000000000\nPLY 3 mover=Y move=10,13 next=X moveNr=3 termY=false termX=false pegs=3 bridges=1\n  PEGS 10,13,Y 11,15,Y 12,12,X\n  BRIDGES 10,13|11,15|Y\n  HIST 11,15 12,12 10,13\n  LEGAL 011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111101111111110011111111111111011111110011111111111011111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110\nPOSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=1 failures=0\n",
+   "task_id": "l0match-016-strong6-o3_low-t1j_red-r0",
+   "where": "l0match-016-strong6-o3_low-t1j_red-r0@ply3 replay"
+  },
+  {
+   "dump_coherence_divergences": [],
+   "dump_source_pids": [
+    35123
+   ],
+   "dumps": [
+    {
+     "history_len": 5,
+     "n_bridges": 2,
+     "n_legal": 523,
+     "n_pegs": 5,
+     "next_player": "X",
+     "ply": 5,
+     "term_x": false,
+     "term_y": false
+    }
+   ],
+   "move_legal_in_our_engine": true,
+   "n_dumps": 1,
+   "n_procs": 1,
+   "n_query_records": 1,
+   "ordinal": 12,
+   "our_to_move": "black",
+   "path": "searched",
+   "ply": 5,
+   "postcond": {
+    "clean_single": true,
+    "expected_refl": 3,
+    "failures_counter": 0,
+    "n": 1,
+    "notes": [],
+    "rows": [
+     {
+      "clean": true,
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 3,
+      "refl_ok": true,
+      "windows": 0
+     }
+    ],
+    "safety_clean": true
+   },
+   "prefix": [
+    [
+     15,
+     11
+    ],
+    [
+     12,
+     12
+    ],
+    [
+     13,
+     10
+    ],
+    [
+     14,
+     14
+    ],
+    [
+     11,
+     11
+    ]
+   ],
+   "procs": [
+    {
+     "headless": "true",
+     "java_version": "17.0.20.1",
+     "pid": 35123,
+     "prefs_factory": "e2probe.ScratchPrefs",
+     "vm": "OpenJDK_64-Bit_Server_VM"
+    }
+   ],
+   "record": {
+    "completed": true,
+    "completed_depth": 6,
+    "current_max_ply": 7,
+    "elapsed_us": 241915,
+    "eval_regime": "early_moveNr_lt_8",
+    "legal": true,
+    "move": [
+     7,
+     11
+    ],
+    "move_nr": 5,
+    "null_sentinel": false,
+    "q": 1,
+    "requested_depth": 6,
+    "to_move": "X",
+    "usealphabeta": true
+   },
+   "requested_depth": 6,
+   "return_code": 0,
+   "role": "query",
+   "same_process_dump": true,
+   "stdout": "PROC pid=35123 java_version=17.0.20.1 vm=OpenJDK_64-Bit_Server_VM headless=true prefs_factory=e2probe.ScratchPrefs\nPLY 5 mover=- move=- next=X moveNr=5 termY=false termX=false pegs=5 bridges=2\n  PEGS 10,13,Y 11,11,Y 11,15,Y 12,12,X 14,14,X\n  BRIDGES 10,13|11,11|Y 10,13|11,15|Y\n  HIST 11,15 12,12 10,13 14,14 11,11\n  LEGAL 011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111101111111110011111111110111011111110011111111111011111111110011111111111111111111110011111111111110111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110\nElapsed: 241 msec.\nQUERY q=1 requested_depth=6 mdFixedPly=true mdPly=6 move_x=11 move_y=7 to_move=X usealphabeta=true currentMaxPly=7 completed_depth=6 completed=true legal=true null_sentinel=false moveNr=5 eval_regime=early_moveNr_lt_8 elapsed_us=241915\nPOSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=0 prefs_before=6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d prefs_after=6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d count_before=527 count_after=527\n",
+   "t1j_colour_role": "black",
+   "task_id": "l0match-016-strong6-o3_low-t1j_red-r0",
+   "where": "l0match-016-strong6-o3_low-t1j_red-r0@ply5 query"
+  },
+  {
+   "expected_plies": 6,
+   "final_state_divergences": [],
+   "n_plies": 6,
+   "n_procs": 0,
+   "ordinal": 13,
+   "our_to_move": "black",
+   "plies": [
+    {
+     "history_len": 0,
+     "n_bridges": 0,
+     "n_legal": 528,
+     "n_pegs": 0,
+     "next_player": "Y",
+     "ply": 0,
+     "term_x": false,
+     "term_y": false
+    },
+    {
+     "history_len": 1,
+     "n_bridges": 0,
+     "n_legal": 527,
+     "n_pegs": 1,
+     "next_player": "X",
+     "ply": 1,
+     "term_x": false,
+     "term_y": false
+    },
+    {
+     "history_len": 2,
+     "n_bridges": 0,
+     "n_legal": 526,
+     "n_pegs": 2,
+     "next_player": "Y",
+     "ply": 2,
+     "term_x": false,
+     "term_y": false
+    },
+    {
+     "history_len": 3,
+     "n_bridges": 1,
+     "n_legal": 525,
+     "n_pegs": 3,
+     "next_player": "X",
+     "ply": 3,
+     "term_x": false,
+     "term_y": false
+    },
+    {
+     "history_len": 4,
+     "n_bridges": 1,
+     "n_legal": 524,
+     "n_pegs": 4,
+     "next_player": "Y",
+     "ply": 4,
+     "term_x": false,
+     "term_y": false
+    },
+    {
+     "history_len": 5,
+     "n_bridges": 2,
+     "n_legal": 523,
+     "n_pegs": 5,
+     "next_player": "X",
+     "ply": 5,
+     "term_x": false,
+     "term_y": false
+    }
+   ],
+   "ply": 5,
+   "ply_cap": 280,
+   "ply_count_matches": true,
+   "postcond": {
+    "clean_single": true,
+    "expected_refl": 1,
+    "failures_counter": 0,
+    "n": 1,
+    "notes": [],
+    "rows": [
+     {
+      "clean": true,
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 1,
+      "refl_ok": true,
+      "windows": 0
+     }
+    ],
+    "safety_clean": true
+   },
+   "prefix": [
+    [
+     15,
+     11
+    ],
+    [
+     12,
+     12
+    ],
+    [
+     13,
+     10
+    ],
+    [
+     14,
+     14
+    ],
+    [
+     11,
+     11
+    ]
+   ],
+   "procs": [],
+   "return_code": 0,
+   "role": "replay",
+   "stdout": "SIZE x=24 y=24\nCAP 280\nPLY 0 mover=- move=- next=Y moveNr=0 termY=false termX=false pegs=0 bridges=0\n  PEGS \n  BRIDGES \n  HIST \n  LEGAL 000000000000000000000000111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111000000000000000000000000\nPLY 1 mover=Y move=11,15 next=X moveNr=1 termY=false termX=false pegs=1 bridges=0\n  PEGS 11,15,Y\n  BRIDGES \n  HIST 11,15\n  LEGAL 011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111011111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110\nPLY 2 mover=X move=12,12 next=Y moveNr=2 termY=false termX=false pegs=2 bridges=0\n  PEGS 11,15,Y 12,12,X\n  BRIDGES \n  HIST 11,15 12,12\n  LEGAL 000000000000000000000000111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111011111111111111111111011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111000000000000000000000000\nPLY 3 mover=Y move=10,13 next=X moveNr=3 termY=false termX=false pegs=3 bridges=1\n  PEGS 10,13,Y 11,15,Y 12,12,X\n  BRIDGES 10,13|11,15|Y\n  HIST 11,15 12,12 10,13\n  LEGAL 011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111101111111110011111111111111011111110011111111111011111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110\nPLY 4 mover=X move=14,14 next=Y moveNr=4 termY=false termX=false pegs=4 bridges=1\n  PEGS 10,13,Y 11,15,Y 12,12,X 14,14,X\n  BRIDGES 10,13|11,15|Y\n  HIST 11,15 12,12 10,13 14,14\n  LEGAL 000000000000000000000000111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111101111111111111111111111111011111111111111111111011111111111111111111111111111111111111111111111110111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111000000000000000000000000\nPLY 5 mover=Y move=11,11 next=X moveNr=5 termY=false termX=false pegs=5 bridges=2\n  PEGS 10,13,Y 11,11,Y 11,15,Y 12,12,X 14,14,X\n  BRIDGES 10,13|11,11|Y 10,13|11,15|Y\n  HIST 11,15 12,12 10,13 14,14 11,11\n  LEGAL 011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111101111111110011111111110111011111110011111111111011111111110011111111111111111111110011111111111110111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110\nPOSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=1 failures=0\n",
+   "task_id": "l0match-016-strong6-o3_low-t1j_red-r0",
+   "where": "l0match-016-strong6-o3_low-t1j_red-r0@ply5 replay"
+  },
+  {
+   "dump_coherence_divergences": [],
+   "dump_source_pids": [
+    35125
+   ],
+   "dumps": [
+    {
+     "history_len": 1,
+     "n_bridges": 0,
+     "n_legal": 527,
+     "n_pegs": 1,
+     "next_player": "X",
+     "ply": 1,
+     "term_x": false,
+     "term_y": false
+    }
+   ],
+   "move_legal_in_our_engine": true,
+   "n_dumps": 1,
+   "n_procs": 1,
+   "n_query_records": 1,
+   "ordinal": 14,
+   "our_to_move": "black",
+   "path": "incomplete",
+   "ply": 1,
+   "postcond": {
+    "clean_single": false,
+    "expected_refl": 3,
+    "failures_counter": 1,
+    "n": 1,
+    "notes": [],
+    "rows": [
+     {
+      "clean": false,
+      "failures": 1,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 3,
+      "refl_ok": true,
+      "windows": 0
+     }
+    ],
+    "safety_clean": true
+   },
+   "prefix": [
+    [
+     8,
+     12
+    ]
+   ],
+   "procs": [
+    {
+     "headless": "true",
+     "java_version": "17.0.20.1",
+     "pid": 35125,
+     "prefs_factory": "e2probe.ScratchPrefs",
+     "vm": "OpenJDK_64-Bit_Server_VM"
+    }
+   ],
+   "record": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "elapsed_us": 25196,
+    "eval_regime": "early_moveNr_lt_8",
+    "legal": true,
+    "move": [
+     17,
+     12
+    ],
+    "move_nr": 1,
+    "null_sentinel": false,
+    "q": 1,
+    "requested_depth": 6,
+    "to_move": "X",
+    "usealphabeta": false
+   },
+   "requested_depth": 6,
+   "return_code": 3,
+   "role": "query",
+   "same_process_dump": true,
+   "stdout": "PROC pid=35125 java_version=17.0.20.1 vm=OpenJDK_64-Bit_Server_VM headless=true prefs_factory=e2probe.ScratchPrefs\nPLY 1 mover=- move=- next=X moveNr=1 termY=false termX=false pegs=1 bridges=0\n  PEGS 12,8,Y\n  BRIDGES \n  HIST 12,8\n  LEGAL 011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111110111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110\nQUERY q=1 requested_depth=6 mdFixedPly=true mdPly=6 move_x=12 move_y=17 to_move=X usealphabeta=false currentMaxPly=0 completed_depth=-1 completed=false legal=true null_sentinel=false moveNr=1 eval_regime=early_moveNr_lt_8 elapsed_us=25196\nFAIL q1: requested depth 6 completed\nPOSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1 prefs_before=6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d prefs_after=6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d count_before=527 count_after=527\n",
+   "t1j_colour_role": "black",
+   "task_id": "l0match-024-strong6-o4_high-t1j_red-r0",
+   "where": "l0match-024-strong6-o4_high-t1j_red-r0@ply1 query"
+  },
+  {
+   "expected_plies": 2,
+   "final_state_divergences": [],
+   "n_plies": 2,
+   "n_procs": 0,
+   "ordinal": 15,
+   "our_to_move": "black",
+   "plies": [
+    {
+     "history_len": 0,
+     "n_bridges": 0,
+     "n_legal": 528,
+     "n_pegs": 0,
+     "next_player": "Y",
+     "ply": 0,
+     "term_x": false,
+     "term_y": false
+    },
+    {
+     "history_len": 1,
+     "n_bridges": 0,
+     "n_legal": 527,
+     "n_pegs": 1,
+     "next_player": "X",
+     "ply": 1,
+     "term_x": false,
+     "term_y": false
+    }
+   ],
+   "ply": 1,
+   "ply_cap": 280,
+   "ply_count_matches": true,
+   "postcond": {
+    "clean_single": true,
+    "expected_refl": 1,
+    "failures_counter": 0,
+    "n": 1,
+    "notes": [],
+    "rows": [
+     {
+      "clean": true,
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 1,
+      "refl_ok": true,
+      "windows": 0
+     }
+    ],
+    "safety_clean": true
+   },
+   "prefix": [
+    [
+     8,
+     12
+    ]
+   ],
+   "procs": [],
+   "return_code": 0,
+   "role": "replay",
+   "stdout": "SIZE x=24 y=24\nCAP 280\nPLY 0 mover=- move=- next=Y moveNr=0 termY=false termX=false pegs=0 bridges=0\n  PEGS \n  BRIDGES \n  HIST \n  LEGAL 000000000000000000000000111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111000000000000000000000000\nPLY 1 mover=Y move=12,8 next=X moveNr=1 termY=false termX=false pegs=1 bridges=0\n  PEGS 12,8,Y\n  BRIDGES \n  HIST 12,8\n  LEGAL 011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111110111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110\nPOSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=1 failures=0\n",
+   "task_id": "l0match-024-strong6-o4_high-t1j_red-r0",
+   "where": "l0match-024-strong6-o4_high-t1j_red-r0@ply1 replay"
+  },
+  {
+   "dump_coherence_divergences": [],
+   "dump_source_pids": [
+    35127
+   ],
+   "dumps": [
+    {
+     "history_len": 3,
+     "n_bridges": 1,
+     "n_legal": 525,
+     "n_pegs": 3,
+     "next_player": "X",
+     "ply": 3,
+     "term_x": false,
+     "term_y": false
+    }
+   ],
+   "move_legal_in_our_engine": true,
+   "n_dumps": 1,
+   "n_procs": 1,
+   "n_query_records": 1,
+   "ordinal": 16,
+   "our_to_move": "black",
+   "path": "incomplete",
+   "ply": 3,
+   "postcond": {
+    "clean_single": false,
+    "expected_refl": 3,
+    "failures_counter": 1,
+    "n": 1,
+    "notes": [],
+    "rows": [
+     {
+      "clean": false,
+      "failures": 1,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 3,
+      "refl_ok": true,
+      "windows": 0
+     }
+    ],
+    "safety_clean": true
+   },
+   "prefix": [
+    [
+     8,
+     12
+    ],
+    [
+     11,
+     11
+    ],
+    [
+     10,
+     13
+    ]
+   ],
+   "procs": [
+    {
+     "headless": "true",
+     "java_version": "17.0.20.1",
+     "pid": 35127,
+     "prefs_factory": "e2probe.ScratchPrefs",
+     "vm": "OpenJDK_64-Bit_Server_VM"
+    }
+   ],
+   "record": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "elapsed_us": 24275,
+    "eval_regime": "early_moveNr_lt_8",
+    "legal": true,
+    "move": [
+     16,
+     13
+    ],
+    "move_nr": 3,
+    "null_sentinel": false,
+    "q": 1,
+    "requested_depth": 6,
+    "to_move": "X",
+    "usealphabeta": false
+   },
+   "requested_depth": 6,
+   "return_code": 3,
+   "role": "query",
+   "same_process_dump": true,
+   "stdout": "PROC pid=35127 java_version=17.0.20.1 vm=OpenJDK_64-Bit_Server_VM headless=true prefs_factory=e2probe.ScratchPrefs\nPLY 3 mover=- move=- next=X moveNr=3 termY=false termX=false pegs=3 bridges=1\n  PEGS 11,11,X 12,8,Y 13,10,Y\n  BRIDGES 12,8|13,10|Y\n  HIST 12,8 11,11 13,10\n  LEGAL 011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111110111111111110011111110111111111111110011111111101111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110\nQUERY q=1 requested_depth=6 mdFixedPly=true mdPly=6 move_x=13 move_y=16 to_move=X usealphabeta=false currentMaxPly=0 completed_depth=-1 completed=false legal=true null_sentinel=false moveNr=3 eval_regime=early_moveNr_lt_8 elapsed_us=24275\nFAIL q1: requested depth 6 completed\nPOSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=1 prefs_before=6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d prefs_after=6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d count_before=527 count_after=527\n",
+   "t1j_colour_role": "black",
+   "task_id": "l0match-024-strong6-o4_high-t1j_red-r0",
+   "where": "l0match-024-strong6-o4_high-t1j_red-r0@ply3 query"
+  },
+  {
+   "expected_plies": 4,
+   "final_state_divergences": [],
+   "n_plies": 4,
+   "n_procs": 0,
+   "ordinal": 17,
+   "our_to_move": "black",
+   "plies": [
+    {
+     "history_len": 0,
+     "n_bridges": 0,
+     "n_legal": 528,
+     "n_pegs": 0,
+     "next_player": "Y",
+     "ply": 0,
+     "term_x": false,
+     "term_y": false
+    },
+    {
+     "history_len": 1,
+     "n_bridges": 0,
+     "n_legal": 527,
+     "n_pegs": 1,
+     "next_player": "X",
+     "ply": 1,
+     "term_x": false,
+     "term_y": false
+    },
+    {
+     "history_len": 2,
+     "n_bridges": 0,
+     "n_legal": 526,
+     "n_pegs": 2,
+     "next_player": "Y",
+     "ply": 2,
+     "term_x": false,
+     "term_y": false
+    },
+    {
+     "history_len": 3,
+     "n_bridges": 1,
+     "n_legal": 525,
+     "n_pegs": 3,
+     "next_player": "X",
+     "ply": 3,
+     "term_x": false,
+     "term_y": false
+    }
+   ],
+   "ply": 3,
+   "ply_cap": 280,
+   "ply_count_matches": true,
+   "postcond": {
+    "clean_single": true,
+    "expected_refl": 1,
+    "failures_counter": 0,
+    "n": 1,
+    "notes": [],
+    "rows": [
+     {
+      "clean": true,
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 1,
+      "refl_ok": true,
+      "windows": 0
+     }
+    ],
+    "safety_clean": true
+   },
+   "prefix": [
+    [
+     8,
+     12
+    ],
+    [
+     11,
+     11
+    ],
+    [
+     10,
+     13
+    ]
+   ],
+   "procs": [],
+   "return_code": 0,
+   "role": "replay",
+   "stdout": "SIZE x=24 y=24\nCAP 280\nPLY 0 mover=- move=- next=Y moveNr=0 termY=false termX=false pegs=0 bridges=0\n  PEGS \n  BRIDGES \n  HIST \n  LEGAL 000000000000000000000000111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111000000000000000000000000\nPLY 1 mover=Y move=12,8 next=X moveNr=1 termY=false termX=false pegs=1 bridges=0\n  PEGS 12,8,Y\n  BRIDGES \n  HIST 12,8\n  LEGAL 011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111110111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110\nPLY 2 mover=X move=11,11 next=Y moveNr=2 termY=false termX=false pegs=2 bridges=0\n  PEGS 11,11,X 12,8,Y\n  BRIDGES \n  HIST 12,8 11,11\n  LEGAL 000000000000000000000000111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111110111111111111111111110111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111000000000000000000000000\nPLY 3 mover=Y move=13,10 next=X moveNr=3 termY=false termX=false pegs=3 bridges=1\n  PEGS 11,11,X 12,8,Y 13,10,Y\n  BRIDGES 12,8|13,10|Y\n  HIST 12,8 11,11 13,10\n  LEGAL 011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111110111111111110011111110111111111111110011111111101111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110\nPOSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=1 failures=0\n",
+   "task_id": "l0match-024-strong6-o4_high-t1j_red-r0",
+   "where": "l0match-024-strong6-o4_high-t1j_red-r0@ply3 replay"
+  },
+  {
+   "dump_coherence_divergences": [],
+   "dump_source_pids": [
+    35129
+   ],
+   "dumps": [
+    {
+     "history_len": 5,
+     "n_bridges": 2,
+     "n_legal": 523,
+     "n_pegs": 5,
+     "next_player": "X",
+     "ply": 5,
+     "term_x": false,
+     "term_y": false
+    }
+   ],
+   "move_legal_in_our_engine": true,
+   "n_dumps": 1,
+   "n_procs": 1,
+   "n_query_records": 1,
+   "ordinal": 18,
+   "our_to_move": "black",
+   "path": "searched",
+   "ply": 5,
+   "postcond": {
+    "clean_single": true,
+    "expected_refl": 3,
+    "failures_counter": 0,
+    "n": 1,
+    "notes": [],
+    "rows": [
+     {
+      "clean": true,
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 3,
+      "refl_ok": true,
+      "windows": 0
+     }
+    ],
+    "safety_clean": true
+   },
+   "prefix": [
+    [
+     8,
+     12
+    ],
+    [
+     11,
+     11
+    ],
+    [
+     10,
+     13
+    ],
+    [
+     9,
+     9
+    ],
+    [
+     12,
+     12
+    ]
+   ],
+   "procs": [
+    {
+     "headless": "true",
+     "java_version": "17.0.20.1",
+     "pid": 35129,
+     "prefs_factory": "e2probe.ScratchPrefs",
+     "vm": "OpenJDK_64-Bit_Server_VM"
+    }
+   ],
+   "record": {
+    "completed": true,
+    "completed_depth": 6,
+    "current_max_ply": 7,
+    "elapsed_us": 229971,
+    "eval_regime": "early_moveNr_lt_8",
+    "legal": true,
+    "move": [
+     16,
+     12
+    ],
+    "move_nr": 5,
+    "null_sentinel": false,
+    "q": 1,
+    "requested_depth": 6,
+    "to_move": "X",
+    "usealphabeta": true
+   },
+   "requested_depth": 6,
+   "return_code": 0,
+   "role": "query",
+   "same_process_dump": true,
+   "stdout": "PROC pid=35129 java_version=17.0.20.1 vm=OpenJDK_64-Bit_Server_VM headless=true prefs_factory=e2probe.ScratchPrefs\nPLY 5 mover=- move=- next=X moveNr=5 termY=false termX=false pegs=5 bridges=2\n  PEGS 11,11,X 12,12,Y 12,8,Y 13,10,Y 9,9,X\n  BRIDGES 12,12|13,10|Y 12,8|13,10|Y\n  HIST 12,8 11,11 13,10 9,9 12,12\n  LEGAL 011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111011111111111110011111111111111111111110011111111110111111111110011111110111011111111110011111111101111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110\nElapsed: 230 msec.\nQUERY q=1 requested_depth=6 mdFixedPly=true mdPly=6 move_x=12 move_y=16 to_move=X usealphabeta=true currentMaxPly=7 completed_depth=6 completed=true legal=true null_sentinel=false moveNr=5 eval_regime=early_moveNr_lt_8 elapsed_us=229971\nPOSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=3 failures=0 prefs_before=6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d prefs_after=6cb3a052650f90de53f34a8eb25455c470c6254c5f0fcac3f80c3ca9e8d0128d count_before=527 count_after=527\n",
+   "t1j_colour_role": "black",
+   "task_id": "l0match-024-strong6-o4_high-t1j_red-r0",
+   "where": "l0match-024-strong6-o4_high-t1j_red-r0@ply5 query"
+  },
+  {
+   "expected_plies": 6,
+   "final_state_divergences": [],
+   "n_plies": 6,
+   "n_procs": 0,
+   "ordinal": 19,
+   "our_to_move": "black",
+   "plies": [
+    {
+     "history_len": 0,
+     "n_bridges": 0,
+     "n_legal": 528,
+     "n_pegs": 0,
+     "next_player": "Y",
+     "ply": 0,
+     "term_x": false,
+     "term_y": false
+    },
+    {
+     "history_len": 1,
+     "n_bridges": 0,
+     "n_legal": 527,
+     "n_pegs": 1,
+     "next_player": "X",
+     "ply": 1,
+     "term_x": false,
+     "term_y": false
+    },
+    {
+     "history_len": 2,
+     "n_bridges": 0,
+     "n_legal": 526,
+     "n_pegs": 2,
+     "next_player": "Y",
+     "ply": 2,
+     "term_x": false,
+     "term_y": false
+    },
+    {
+     "history_len": 3,
+     "n_bridges": 1,
+     "n_legal": 525,
+     "n_pegs": 3,
+     "next_player": "X",
+     "ply": 3,
+     "term_x": false,
+     "term_y": false
+    },
+    {
+     "history_len": 4,
+     "n_bridges": 1,
+     "n_legal": 524,
+     "n_pegs": 4,
+     "next_player": "Y",
+     "ply": 4,
+     "term_x": false,
+     "term_y": false
+    },
+    {
+     "history_len": 5,
+     "n_bridges": 2,
+     "n_legal": 523,
+     "n_pegs": 5,
+     "next_player": "X",
+     "ply": 5,
+     "term_x": false,
+     "term_y": false
+    }
+   ],
+   "ply": 5,
+   "ply_cap": 280,
+   "ply_count_matches": true,
+   "postcond": {
+    "clean_single": true,
+    "expected_refl": 1,
+    "failures_counter": 0,
+    "n": 1,
+    "notes": [],
+    "rows": [
+     {
+      "clean": true,
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 1,
+      "refl_ok": true,
+      "windows": 0
+     }
+    ],
+    "safety_clean": true
+   },
+   "prefix": [
+    [
+     8,
+     12
+    ],
+    [
+     11,
+     11
+    ],
+    [
+     10,
+     13
+    ],
+    [
+     9,
+     9
+    ],
+    [
+     12,
+     12
+    ]
+   ],
+   "procs": [],
+   "return_code": 0,
+   "role": "replay",
+   "stdout": "SIZE x=24 y=24\nCAP 280\nPLY 0 mover=- move=- next=Y moveNr=0 termY=false termX=false pegs=0 bridges=0\n  PEGS \n  BRIDGES \n  HIST \n  LEGAL 000000000000000000000000111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111000000000000000000000000\nPLY 1 mover=Y move=12,8 next=X moveNr=1 termY=false termX=false pegs=1 bridges=0\n  PEGS 12,8,Y\n  BRIDGES \n  HIST 12,8\n  LEGAL 011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111110111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110\nPLY 2 mover=X move=11,11 next=Y moveNr=2 termY=false termX=false pegs=2 bridges=0\n  PEGS 11,11,X 12,8,Y\n  BRIDGES \n  HIST 12,8 11,11\n  LEGAL 000000000000000000000000111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111110111111111111111111110111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111000000000000000000000000\nPLY 3 mover=Y move=13,10 next=X moveNr=3 termY=false termX=false pegs=3 bridges=1\n  PEGS 11,11,X 12,8,Y 13,10,Y\n  BRIDGES 12,8|13,10|Y\n  HIST 12,8 11,11 13,10\n  LEGAL 011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111110111111111110011111110111111111111110011111111101111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110\nPLY 4 mover=X move=9,9 next=Y moveNr=4 termY=false termX=false pegs=4 bridges=1\n  PEGS 11,11,X 12,8,Y 13,10,Y 9,9,X\n  BRIDGES 12,8|13,10|Y\n  HIST 12,8 11,11 13,10 9,9\n  LEGAL 000000000000000000000000111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111011111111111111111111111111111111111111111111111110111111111111111111110111111111111111111111111101111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111000000000000000000000000\nPLY 5 mover=Y move=12,12 next=X moveNr=5 termY=false termX=false pegs=5 bridges=2\n  PEGS 11,11,X 12,12,Y 12,8,Y 13,10,Y 9,9,X\n  BRIDGES 12,12|13,10|Y 12,8|13,10|Y\n  HIST 12,8 11,11 13,10 9,9 12,12\n  LEGAL 011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111011111111111110011111111111111111111110011111111110111111111110011111110111011111111110011111111101111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110011111111111111111111110\nPOSTCOND no_throw=true windows=0 frames=0 headless=true prefs_ok=true refl_ok=true refl_n=1 failures=0\n",
+   "task_id": "l0match-024-strong6-o4_high-t1j_red-r0",
+   "where": "l0match-024-strong6-o4_high-t1j_red-r0@ply5 replay"
+  }
+ ],
+ "per_call_timeout_s": 120,
+ "positions": [
+  {
+   "colour_arm": null,
+   "digest": null,
+   "digest_recomputed": "c1ea6b8891e06135c7905d64d8f56d761355c85971706f392ca86e35e4e3c5ee",
+   "opening": null,
+   "ply": 0,
+   "prefix": [],
+   "source": "constructed",
+   "task_id": "empty_board"
+  },
+  {
+   "colour_arm": "t1j_red",
+   "digest": "487df111c9dbd7a3cd70c1ff0bd1316eee47cb950f7443fb15f5bff33927d2a7",
+   "digest_recomputed": "487df111c9dbd7a3cd70c1ff0bd1316eee47cb950f7443fb15f5bff33927d2a7",
+   "opening": "o1_center",
+   "ply": 1,
+   "prefix": [
+    [
+     11,
+     11
+    ]
+   ],
+   "source": "frozen_prefixes",
+   "task_id": "l0match-000-strong6-o1_center-t1j_red-r0"
+  },
+  {
+   "colour_arm": "t1j_red",
+   "digest": "470721202fb36f18040bc00152ae6fbaf2ae576f8941ae2e6a6fcf99de676fde",
+   "digest_recomputed": "470721202fb36f18040bc00152ae6fbaf2ae576f8941ae2e6a6fcf99de676fde",
+   "opening": "o1_center",
+   "ply": 3,
+   "prefix": [
+    [
+     11,
+     11
+    ],
+    [
+     12,
+     13
+    ],
+    [
+     13,
+     12
+    ]
+   ],
+   "source": "frozen_prefixes",
+   "task_id": "l0match-000-strong6-o1_center-t1j_red-r0"
+  },
+  {
+   "colour_arm": "t1j_red",
+   "digest": "ea75792355b736c769b757b65bc8c475b6c7bc4c238e90c9c77c5669b59df372",
+   "digest_recomputed": "ea75792355b736c769b757b65bc8c475b6c7bc4c238e90c9c77c5669b59df372",
+   "opening": "o1_center",
+   "ply": 5,
+   "prefix": [
+    [
+     11,
+     11
+    ],
+    [
+     12,
+     13
+    ],
+    [
+     13,
+     12
+    ],
+    [
+     10,
+     13
+    ],
+    [
+     12,
+     10
+    ]
+   ],
+   "source": "frozen_prefixes",
+   "task_id": "l0match-000-strong6-o1_center-t1j_red-r0"
+  },
+  {
+   "colour_arm": "t1j_red",
+   "digest": "69c2875679f3eb1b128c42daccdc28122ee7ec2556092333f61fcf6e11d3a473",
+   "digest_recomputed": "69c2875679f3eb1b128c42daccdc28122ee7ec2556092333f61fcf6e11d3a473",
+   "opening": "o3_low",
+   "ply": 1,
+   "prefix": [
+    [
+     15,
+     11
+    ]
+   ],
+   "source": "frozen_prefixes",
+   "task_id": "l0match-016-strong6-o3_low-t1j_red-r0"
+  },
+  {
+   "colour_arm": "t1j_red",
+   "digest": "4fba47bfca43d99f8b1c3fda801ec141d4013bdf7e135665fc4678a5047a002b",
+   "digest_recomputed": "4fba47bfca43d99f8b1c3fda801ec141d4013bdf7e135665fc4678a5047a002b",
+   "opening": "o3_low",
+   "ply": 3,
+   "prefix": [
+    [
+     15,
+     11
+    ],
+    [
+     12,
+     12
+    ],
+    [
+     13,
+     10
+    ]
+   ],
+   "source": "frozen_prefixes",
+   "task_id": "l0match-016-strong6-o3_low-t1j_red-r0"
+  },
+  {
+   "colour_arm": "t1j_red",
+   "digest": "e41208a808b032634bbf842d9d466c63be9d0889c9285555a56aa5a3843ed423",
+   "digest_recomputed": "e41208a808b032634bbf842d9d466c63be9d0889c9285555a56aa5a3843ed423",
+   "opening": "o3_low",
+   "ply": 5,
+   "prefix": [
+    [
+     15,
+     11
+    ],
+    [
+     12,
+     12
+    ],
+    [
+     13,
+     10
+    ],
+    [
+     14,
+     14
+    ],
+    [
+     11,
+     11
+    ]
+   ],
+   "source": "frozen_prefixes",
+   "task_id": "l0match-016-strong6-o3_low-t1j_red-r0"
+  },
+  {
+   "colour_arm": "t1j_red",
+   "digest": "7c326873cac4c1d7786dd2eb69b4ba4c4ba0c7631a24fe4855eee529beb0f6a4",
+   "digest_recomputed": "7c326873cac4c1d7786dd2eb69b4ba4c4ba0c7631a24fe4855eee529beb0f6a4",
+   "opening": "o4_high",
+   "ply": 1,
+   "prefix": [
+    [
+     8,
+     12
+    ]
+   ],
+   "source": "frozen_prefixes",
+   "task_id": "l0match-024-strong6-o4_high-t1j_red-r0"
+  },
+  {
+   "colour_arm": "t1j_red",
+   "digest": "5e2c1f8ab19effb5487c8edba19c35a6075538ddcbb2110dd798364b010272e6",
+   "digest_recomputed": "5e2c1f8ab19effb5487c8edba19c35a6075538ddcbb2110dd798364b010272e6",
+   "opening": "o4_high",
+   "ply": 3,
+   "prefix": [
+    [
+     8,
+     12
+    ],
+    [
+     11,
+     11
+    ],
+    [
+     10,
+     13
+    ]
+   ],
+   "source": "frozen_prefixes",
+   "task_id": "l0match-024-strong6-o4_high-t1j_red-r0"
+  },
+  {
+   "colour_arm": "t1j_red",
+   "digest": "14b23d6fe016a5788063ba62ee38273d0decaed70ebc52ba72467cefe31dba08",
+   "digest_recomputed": "14b23d6fe016a5788063ba62ee38273d0decaed70ebc52ba72467cefe31dba08",
+   "opening": "o4_high",
+   "ply": 5,
+   "prefix": [
+    [
+     8,
+     12
+    ],
+    [
+     11,
+     11
+    ],
+    [
+     10,
+     13
+    ],
+    [
+     9,
+     9
+    ],
+    [
+     12,
+     12
+    ]
+   ],
+   "source": "frozen_prefixes",
+   "task_id": "l0match-024-strong6-o4_high-t1j_red-r0"
+  }
+ ],
+ "run_deadline_s": 900,
+ "scope": "Board-plies 0, 1, 3 and 5 only, at depth 6, on the frozen prefix set. Ply 0 is the ONLY position where T1j is asked to move as RED; plies 1, 3 and 5 are black-to-move. Nothing here speaks for plies 2 or 4, for any other depth, or for T1j's strength. No game was played and no score exists.",
+ "stage": "h4_4A_raw_capability_characterization",
+ "subprocess_cap": 20,
+ "subprocesses_spent": 20,
+ "toolchain_identity": {
+  "classes": {
+   "e2probe/ScratchPrefs.class": "aad79e9fc149d012209a53e6cad99cc7d97bf79ab03a56536934891d6dbf8f39",
+   "e2probe/ScratchPrefsFactory.class": "dff0e8f933c656f3d3e48c7b2519746508162b8fddd3db45066038c91480be7d",
+   "net/schwagereit/t1j/E3bDump.class": "d4c796067ed4ece22f8255821c87364225a3407951585664ee9a58a6407b0516",
+   "net/schwagereit/t1j/E4Preflight.class": "1f2425fd7b528ad4c1efbdc47331bd0d10261e4a0c7e8a149ecdabfbdcfc88a8"
+  },
+  "classes_dir": "/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/421d0f79-463e-4c63-b0f8-7f17c98496a9/scratchpad/h4_4a_classes_1790021746",
+  "jar": "/Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/t1j.jar",
+  "jar_sha256": "53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7",
+  "jdk_components": {
+   "bin/java": "af8b122943345320b179c75c3404d56a981017739746b75f9caf583632f0bea0",
+   "bin/javac": "6f5159301c750bba340390eda5fdd4a0959445355f97c40aa9c2addb00ede5ab",
+   "lib/modules": "28745573641057e822a972f223fc8e40db5c9df11ae3f7402764780afc2f1951",
+   "release": "cb6064fe4d7b87d9fbb8b8c7702047044d1bbeac38e0c5217f595579b6cc764b"
+  },
+  "jdk_home": "/Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/jdk/jdk-17.0.20.1+1/Contents/Home",
+  "main_class": "net.schwagereit.t1j.E4Preflight",
+  "sources": {
+   "E3bDump.java": "281664cf68fdd8561dd11ddf2114ec8be710de9244cc370a63ef25a8311ef5dc",
+   "E4Preflight.java": "fa6623390c0ee5f326e9cfa92af05581ec7234df1fe2a15af999e0203f7c94e3",
+   "ScratchPrefs.java": "559fb9483cc34f4cc50a1c153fe6cabac6bb6129a977f42ba328b0cfad798f03",
+   "ScratchPrefsFactory.java": "09c0d74cf3c11130abfb810bd24cc433657b9dbba83152bd7c6f7e3f5858c244"
+  },
+  "toolchain": {
+   "root": "/Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1",
+   "source": "recorded-default",
+   "verified": 5
+  }
+ },
+ "verdict": "STOP_ZERO_LENGTH_REFUSED"
+}

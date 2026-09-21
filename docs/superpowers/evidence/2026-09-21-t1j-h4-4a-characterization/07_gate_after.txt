@@ -1,0 +1,26 @@
+GATE RESTORATION — read back from SOURCE, not asserted — 2026-09-21T16:16:18.122050
+
+derived gate count: 12
+open gates        : []
+§4A gate value    : False
+
+surviving java processes: 1
+
+FOLLOW-UP ON THE PROCESS COUNT, and a CORRECTION to how it was measured.
+
+The first reading above said 1, a re-check said 0, and a third said 3. That
+spread was the MEASUREMENT, not the machine: `ps -ax -o command | grep -c` can
+count the grep pipeline's own command line, and the variant used for the "3"
+had no bracket guard on its pattern, so it matched itself.
+
+Measured again with a method that cannot self-match:
+    pgrep -c java     : 0
+    pgrep -fc t1j.jar : 0
+
+NO T1J PROCESS SURVIVED THE RUN. The unreliable readings are left above rather
+than deleted, because a record that shows only the clean number is a claim about
+process hygiene, not an observation of it.
+
+🔑 THE AUTHORITATIVE EVIDENCE IS THE PROC DATA INSIDE THE RECORD, which is
+emitted per call by the jvm itself and cannot be affected by when an external
+check happened to run. See 08_outcome.md.

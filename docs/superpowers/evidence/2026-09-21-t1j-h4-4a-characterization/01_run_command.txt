@@ -1,0 +1,9 @@
+The one authorized §4A run. Executed ONCE, as a fresh subprocess, at commit ae60669.
+
+python3 -m scripts.GPU.alphazero.h4_4a_characterization \
+    --out     docs/superpowers/evidence/2026-09-21-t1j-h4-4a-characterization/05_characterization.json \
+    --classes /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/421d0f79-463e-4c63-b0f8-7f17c98496a9/scratchpad/h4_4a_classes_1790021746
+
+--java / --jar / --ply-cap are NOT offered: the toolchain is RESOLVED through
+t1j_toolchain.verified_paths() and the cap is READ from l0_match_rules.PLY_CAP.
+--classes is create-only and is held OUTSIDE the repository.
