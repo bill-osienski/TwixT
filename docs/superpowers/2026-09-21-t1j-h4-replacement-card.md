@@ -44,9 +44,13 @@ without reading files *> n* is citing a draft, not the record.
 ## 1. The scientific core — FROZEN before any qualification or pilot result
 
 The pilot (§5) may affect **feasibility and logistics only**. It may not alter
-anything in this section. Two items marked 🟡 require the user's affirmation
-before this card counts as frozen; they are called out rather than silently
-inherited.
+anything in this section.
+
+**✅ FROZEN 2026-09-20.** The three items this card originally left open — δ,
+the cap policy and the process lifecycle — are affirmed in §1.5, §1.6 and §3.1,
+and three arithmetic/factual corrections were applied at the same time (§1.2's
+support, §1.5's N, §1.3's account of what H3 actually dropped). Each correction
+is marked in place rather than quietly overwritten.
 
 ### 1.1 Estimand
 
@@ -60,8 +64,13 @@ played from the empty board.
 |---|---|
 | Arm A | incumbent **Red** (moves first), T1j Black |
 | Arm B | T1j **Red** (moves first), incumbent Black |
-| pair score | incumbent's points over the two games ÷ 2 ∈ {0, 0.5, 1} |
-| points | win 1, loss 0, **cap 0.5** |
+| points (per game) | win 1, loss 0, **cap 0.5** |
+| pair score | incumbent's points over the two games ÷ 2 ∈ **{0, 0.25, 0.5, 0.75, 1}** |
+
+⚠ **Corrected 2026-09-20.** An earlier draft wrote the support as {0, 0.5, 1},
+which is the cap-free range and contradicted this table's own cap rule one line
+above. Two games at {0, 0.5, 1} each give total points {0, 0.5, 1, 1.5, 2},
+hence five pair scores. The `[0,1]` Hoeffding bound is unaffected.
 
 🔴 **This is a COLOUR-BALANCED pair, not a within-position pair, and no
 common-random-number control is claimed.** H3's pair was two views of one
@@ -99,10 +108,17 @@ and `pair_identity` is **`(opening_digest, red_digest, black_digest)`**.
 
 **H4 has no opening digest** — the board is empty, so that field is constant
 across every pair. The identity therefore **degenerates to pure trajectory
-identity**, and the rule that dropped a handful of coincidentally-identical
-openings in H3 would, in H4, **silently delete every repeated trajectory from
+identity**, and a rule that in H3 could only ever have caught a coincidentally
+repeated *opening* would in H4 **silently delete every repeated trajectory from
 the primary estimate** — precisely the mass this estimand exists to measure.
 Under a concentrated protocol it could discard most of the sample.
+
+⚠ **What H3 actually did, stated exactly.** The rule was **capable** of dropping
+observations; it **dropped none**. Every H3 report records `duplicate_pairs: 0`
+(`09_combined_report.json`, and each segment's `09_report.json`). An earlier
+draft implied H3 had dropped "a handful" — it did not, and the hazard is
+entirely prospective. That is what makes it dangerous: the rule is inert in H3's
+records and would become load-bearing on H4's first concentrated run.
 
 **The rule must be removed, and its removal proven with a negative control**
 that feeds identical pairs through the estimator and asserts they are all
@@ -117,35 +133,51 @@ finding, reported as such. It is **not** grounds for retrospectively replacing
 interval: a Hoeffding bound over *n* independent bounded draws is valid
 regardless of how concentrated the draws turn out to be.
 
-### 1.5 🟡 Precision and the decision threshold — OPEN, requires affirmation
+### 1.5 Precision and the decision threshold — ✅ AFFIRMED δ = 0.08
 
-The half-width must be **derived from the smallest advantage worth acting on
-(δ)**, not inherited because H3 used it.
+The half-width is **derived from the smallest advantage worth acting on (δ)**,
+not inherited because H3 used it.
+
+**✅ δ = 0.08, affirmed 2026-09-20.** Its justification for H4 is its own:
+H4 declares a winner only for a **reasonably substantial direct-play
+difference**, rather than treating a modest edge as actionable. With δ = 0.08 an
+observed mean ≥ 0.58 or ≤ 0.42 yields an interval excluding parity.
 
 Two-sided nominal 95% Hoeffding on pair scores bounded in [0,1]:
-`h(n) = sqrt(ln(2/0.05) / 2n)`, recomputed here: **h(296) = 0.078938**.
+`h(n) = sqrt(ln(2/0.05) / 2n)`.
 
-With δ = 0.08, an observed mean ≥ 0.58 or ≤ 0.42 yields an interval excluding
-parity, so the study can call a winner exactly when the advantage is at least δ.
-**N = 296 pairs / 592 games** follows from that δ and nothing else.
+🔴 **δ ALONE GIVES N ≥ 289, NOT 296.** Recomputed:
 
-🟡 **δ = 0.08 needs the user's affirmation for H4's decision, or a different
-value.** The arithmetic survives the change of population; the *substantive
-justification* does not transfer automatically from H3.
+| n | h(n) | |
+|---:|---|---|
+| 288 | 0.0800269 | **too wide** |
+| **289** | 0.0798883 | the true minimum from δ |
+| **296** | 0.078938 | requires a **second, stated** constraint |
 
-### 1.6 🟡 Cap policy — OPEN, requires affirmation
+An earlier draft said "N = 296 follows from that δ and nothing else." **That was
+false.** 296 is reachable only with an additional operational constraint, and it
+must be stated rather than smuggled in:
+
+* **296 = 4 × 74 pairs = 4 segments × 148 games**, which is exactly H3's proven
+  segment shape.
+* **Freeze the four equal segments and N = 296 follows.** Until the operational
+  segmentation is chosen, the card carries **N ≥ 289** and nothing tighter.
+
+### 1.6 Cap policy — ✅ AFFIRMED, 280 total plies
 
 Caps score 0.5, so the cap is part of the estimand, not a runtime detail.
 
-`PLY_CAP = 280` is a **total** ply count. H3's games spent 6 of it on the
-opening and had **274 plies of play**; an H4 game from the empty board playing
-to the same constant gets **280 plies of play**. The constant is unchanged but
-the *play budget is 6 plies longer*, and empty-board games are expected to be
-longer still.
+**✅ `PLY_CAP = 280` total plies, affirmed 2026-09-20.** H4 uses the
+**established total-game boundary**. H3's games spent 6 of that on the opening
+and had 274 plies of play; an H4 game from the empty board gets the full 280.
 
-🟡 **Affirm 280, or set an H4 cap.** Recommendation: keep 280 and treat the cap
-rate as a §5 feasibility rule — but this is a scientific choice and is not mine
-to freeze.
+🔑 **The asymmetry is deliberate and is the right way round.** Reducing H4 to
+274 merely to equal H3's post-opening continuation budget would **truncate a
+complete game six plies earlier** for no scientific reason. The boundary is a
+property of a whole game, not of a continuation.
+
+Caps score **0.5** in the primary; the **cap-free sensitivity is retained**
+beside it. The cap *rate* is a §5.4 feasibility rule, never a validity gate.
 
 ### 1.7 Forbidden interpretations — frozen now, before any number exists
 
@@ -202,9 +234,39 @@ alone.** T1j's low-ply path returned different moves across independent JVMs in
 load-bearing rather than hygienic: **the persisted move list is the
 reproducibility record**, not the seed.
 
-The JVM/process lifecycle must be frozen in this card's implementation stage and
-must be the **same lifecycle used in the §4 qualification** — qualifying one
-lifecycle and running another qualifies nothing.
+### 3.1 ✅ The process lifecycle — AFFIRMED, and it is the EXISTING production path
+
+Frozen 2026-09-20. **This is not a new design**: it is what the production path
+already does, read from source rather than described from memory.
+
+| | frozen behaviour | source |
+|---|---|---|
+| agent object | one Python `T1jAgent` **per T1j colour per game** | `e4_screen_integration.py`, `make_agent_factory` → `agent_factory(task, mover)` |
+| search | a **fresh JVM for every T1j move**, reconstructing the full history | `T1jAgent.__call__` → `A.query(...)` → `subprocess.run` (`t1j_adapter.py:391`) |
+| replay/bind | a **separate fresh JVM for every binder call** — the opening plus every completed ply | `make_binder` → `A.replay(...)` → `subprocess.run` (`t1j_adapter.py:261`) |
+| reuse | **none** — no JVM is reused across moves, games, arms or pairs | follows from the two above |
+| helper classes | **compiled once per run** | `compile_helper()` (`t1j_adapter.py:202`) |
+
+🔑 **Why this lifecycle and not a cheaper one.** It is expensive — two JVM
+spawns per ply in the worst case. Moving to a persistent JVM **would change
+T1j's realized behaviour and its entropy source**, which is the very thing under
+measurement. The §4 qualification and H4 itself use **this exact lifecycle**;
+qualifying one lifecycle and running another qualifies nothing.
+
+### 3.2 The lifecycle must be TESTABLE, not merely described
+
+Asserted from recorded counts, not from reading the code:
+
+* **search-process count == number of T1j moves**;
+* **replay-process count == final ply count + 1** — the binder runs once for the
+  opening (`move=None`) and once per applied ply, and already asserts
+  `len(plies) == state.ply + 1` internally;
+* every subprocess **emits and records its `PROC` identity and ordinal**;
+* **no process survives its call**;
+* query telemetry records the **fallback/search classification** (§4.2.5);
+* any **Zobrist fingerprint is observational only** and must not alter
+  initialization — if recording it would perturb init, it is not recorded, and
+  §7's statement about non-reproducibility stands instead.
 
 ---
 
@@ -216,19 +278,42 @@ of it may be read as one.** It is reported on its own, before any pilot.
 ### 4.1 Why it is required, with the mechanism named
 
 T1j **does** return a legal move at low ply. **The qualified adapter path
-refuses to deliver it.** A non-completing search sets `exit_status: 3`, and
-`E4Preflight` exits 3 exactly when `req(completed, …)` fails.
+refuses to deliver it.**
+
+🔴 **THERE ARE TWO REFUSAL POINTS, NOT ONE**, and both are in
+`T1jAgent.__call__` (`e4_screen_integration.py`). A change addressing only the
+first would still abort:
+
+1. **`if rc != 0 or len(recs) != 1:`** — the helper's own exit. A non-completing
+   search sets `exit_status: 3`, and `E4Preflight` exits 3 exactly when
+   `req(completed, …)` fails.
+2. **`if not r.completed or r.requested_depth != self.depth:`** — the adapter's
+   **own** completion check, which raises `AbortError` **even at `rc == 0`**.
 
 This is not theoretical. **H3 generation attempt 2 VOIDed at board-ply 1** on
 `FAIL q1: requested depth 6 completed … failures=1`, spending a seed range and a
 destination. Every H4 game passes through board-plies 1 and 3 in **every**
 configuration, so this blocks H4 outright until it is deliberately changed.
 
+🔑 **The change is narrower than "an acceptance path" suggests.** Every other
+guard in `__call__` already enforces something §4.2 requires and **must stay
+exactly as it is**: `compare_state(state, dumps[0], …)` re-binds the searched
+position, `r.null_sentinel / r.move is None / not r.legal` rejects unusable
+moves, `r.move not in state.legal_moves()` rejects moves illegal in our engine,
+and `check_postcond` enforces the postcondition surface. **Only the completion
+condition is relaxed, and only under the qualified signature.**
+
 ⚠ The H3 full-study design's heading "T1j CANNOT MOVE AT THE PLIES THE PROTOCOL
 NEEDS" is loose; its body is accurate ("never enters alpha-beta", "known not to
 search"). The precise statement is: **the engine moves, the adapter refuses.**
 
 ### 4.2 What the qualification must establish
+
+**An explicit H4 acceptance mode whose default remains OFF for existing
+callers.** A default that switches the guard off is the defect class this
+programme keeps hitting; the mode is opt-in, and every current caller —
+E4, L0, H1, H2, H3, D1 — keeps the present fail-closed behaviour untouched and
+is proven to.
 
 The adapter must distinguish a **legitimate native fallback** from a **broken
 search**:
@@ -274,10 +359,13 @@ redesigned rather than patched.
 
 **Pilot games NEVER enter the confirmatory estimate.**
 
-### 5.1 Size
+### 5.1 Size — ✅ 16 complete pairs / 32 games
 
-**12–20 complete pairs**, the exact number chosen from runtime and qualification
-needs — **never from score precision**. Frozen before launch.
+Frozen 2026-09-20, chosen from runtime and qualification needs — **never from
+score precision**. It is large enough to exercise **both arms and the per-move
+JVM lifecycle repeatedly**, and **clearly too small to masquerade as strength
+evidence** (at n=16 the nominal Hoeffding half-width is ≈0.34, which settles
+nothing and is not to be computed anyway, per §5.3).
 
 ### 5.2 Purpose — feasibility only
 
@@ -298,12 +386,15 @@ it. The blind is on the **decision-maker**, not the disk:
 
 ### 5.4 Preregistered before launch
 
-* hard integrity requirements for complete move persistence and replay
-  verification;
-* a **maximum operational failure rate**;
+* **integrity failures: ZERO TOLERANCE.** Complete move persistence and replay
+  verification are pass/fail at zero. This is a different category from the
+  operational rate below and is not traded against it.
+* a **maximum operational failure rate** (launch/timeout/process faults), stated
+  as a number before launch;
 * runtime and cap feasibility rules;
-* that trajectory concentration affects **only** the proceed/stop decision — it
-  is never a validity gate on observations (§1.3);
+* trajectory concentration is **reported**, and may inform the **economic**
+  proceed/stop judgment — whether the full study is worth its cost. It may
+  **never** invalidate, deduplicate or reweight an observation (§1.3);
 * that winner-based score, model advantage and confidence intervals **will not
   guide the full design**.
 
@@ -324,8 +415,8 @@ never shrunk and thresholds are never relaxed after seeing results.**
 
 | | |
 |---|---|
-| size | **296 pair bundles / 592 games**, from δ (§1.5) |
-| interval | two-sided **nominal** 95% Hoeffding, h = **0.078938** |
+| size | **N ≥ 289** from δ alone; **296 pair bundles / 592 games** once four equal 74-pair segments are frozen (§1.5) |
+| interval | two-sided **nominal** 95% Hoeffding — h(289) = **0.0798883**, h(296) = **0.078938** |
 | caps | score **0.5**; a **cap-free** sensitivity reported beside the primary |
 | seeds | a **fresh, collision-proved** block, ACCOUNTED before use |
 | execution | segmented, one-shot per segment, supervised gate restoration |
@@ -418,9 +509,24 @@ board, and does not carry H3's verdict across.
 define a *different agent* and a *different question*, and are recorded here as
 separate future hypotheses — **not** as repairs to H4.
 
-### Open items requiring the user's decision before this card is frozen
+### ✅ The three open items are RESOLVED — the scientific core is FROZEN
 
-1. 🟡 **δ = 0.08** (§1.5) — affirm, or set another decision threshold.
-2. 🟡 **cap policy** (§1.6) — affirm `PLY_CAP = 280`, or set an H4 cap.
-3. The T1j **JVM/process lifecycle** (§3) must be named before §4 can be
-   specified, since §4 must qualify the lifecycle H4 will actually use.
+Affirmed 2026-09-20, after the three corrections above were applied:
+
+1. ✅ **δ = 0.08** (§1.5) — with **N ≥ 289**, and 296 only alongside the frozen
+   four-segment shape.
+2. ✅ **`PLY_CAP = 280` total plies** (§1.6) — caps 0.5 in the primary,
+   cap-free sensitivity retained.
+3. ✅ **The existing production process lifecycle** (§3.1) — per-move search
+   JVM, per-bind replay JVM, no reuse, classes compiled once per run — with the
+   §3.2 assertions making it testable.
+
+### What is still owed before implementation
+
+* the **four-segment operational shape**, if N = 296 rather than 289 (§1.5);
+* the preregistered **numbers** for §5.4's operational failure rate and the
+  runtime/cap feasibility rules;
+* the **§4 adapter qualification itself**, which must run and be reported before
+  any pilot.
+
+**No implementation begins until those are recorded.**
