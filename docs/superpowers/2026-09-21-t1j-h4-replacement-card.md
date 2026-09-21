@@ -156,12 +156,26 @@ Two-sided nominal 95% Hoeffding on pair scores bounded in [0,1]:
 
 An earlier draft said "N = 296 follows from that δ and nothing else." **That was
 false.** 296 is reachable only with an additional operational constraint, and it
-must be stated rather than smuggled in:
+must be stated rather than smuggled in.
 
-* **296 = 4 × 74 pairs = 4 segments × 148 games**, which is exactly H3's proven
-  segment shape.
-* **Freeze the four equal segments and N = 296 follows.** Until the operational
-  segmentation is chosen, the card carries **N ≥ 289** and nothing tighter.
+**✅ FROZEN: N = 296 pairs / 592 games, four segments of 74 pairs / 148 games.**
+Pair arms remain adjacent and **never cross a segment boundary**.
+
+🔴 **The justification is NOT "smallest", and saying so would be wrong.**
+Four equal pair-preserving segments require only `n ≥ 289` **and** `n ≡ 0 mod 4`:
+
+| n | pairs/segment | games/segment | h(n) | |
+|---:|---:|---:|---|---|
+| **292** | 73 | 146 | 0.0794769 | **the true smallest** — satisfies every stated constraint |
+| **296** | 74 | **148** | 0.0789380 | **chosen** |
+| 300 | 75 | 150 | 0.0784100 | |
+
+296 is **four pairs above the minimum**, and it is chosen for a different and
+better reason: **148 games per segment is H3's proven segment shape** — the
+exact size that ran to completion four times, with measured runtime behind it
+(segment 0: 148/148 in 2.12 h of a 3 h cap). The premium buys a known-good
+operational unit instead of an untested one. **A tighter interval is a
+side-effect, not the reason.**
 
 ### 1.6 Cap policy — ✅ AFFIRMED, 280 total plies
 
@@ -303,6 +317,28 @@ moves, `r.move not in state.legal_moves()` rejects moves illegal in our engine,
 and `check_postcond` enforces the postcondition surface. **Only the completion
 condition is relaxed, and only under the qualified signature.**
 
+### 4.1.1 ✅ FROZEN: one predicate, placed before both refusals
+
+**A single explicit predicate classifies the returned record before either
+refusal fires.** It returns `searched` / `native_low_ply_fallback` / `reject`,
+and it is the *only* new decision point. State comparison, postconditions,
+null/legal checks and our-engine legality are **left unchanged and keep running
+in their present order** for both classifications.
+
+This is implementable as written: `query()` parses `recs` and `dumps` from
+stdout **unconditionally**, before `returncode` is consulted
+(`t1j_adapter.py`, `parse_queries` / `parse_dump`), so the predicate can inspect
+`recs[0]` even when `rc == 3`.
+
+🔴 **ONE THING THE QUALIFICATION MUST DETERMINE, NOT ASSUME.**
+`parse_dump` returns whatever the Java helper printed. **Whether the helper
+emits a searched-position dump at all when it never enters the search is
+unknown from the existing records** — the low-ply qualification used the probe
+path and did not record dumps. If no dump is emitted, `len(dumps) != 1` aborts
+and **§4.2's board-coherence requirement is unreachable for fallback moves**,
+which changes what the acceptance mode can honestly promise. The qualification
+must measure this **before** the predicate's contract is fixed.
+
 ⚠ The H3 full-study design's heading "T1j CANNOT MOVE AT THE PLIES THE PROTOCOL
 NEEDS" is loose; its body is accurate ("never enters alpha-beta", "known not to
 search"). The precise statement is: **the engine moves, the adapter refuses.**
@@ -349,9 +385,22 @@ The lowest observed prefix in the low-ply record is **one stone**
 * **Arm A** — incumbent moves first, T1j answers at 1 stone: **observed**.
 * **Arm B** — T1j moves first from **0 stones**: **not observed**.
 
-The qualification must cover ply 0 explicitly. If T1j cannot produce an
-acceptable move there, **Arm B does not exist in this form** and H4 must be
-redesigned rather than patched.
+🔑 **The mechanism is specific, and it is not "T1j might refuse".** Both helper
+entry points build their argument list as a fixed prefix plus one argument per
+stone:
+
+```python
+args = [java, …, PREFLIGHT_MAIN] + mode + [f"{x},{y}" for (x, y) in xy]
+```
+
+At ply 0, `moves == []`, so **the JVM is invoked with an empty position
+argument tail** — `query 6` and nothing after it. The same holds for the
+binder's opening `replay` call, which H4 makes on an empty board. **Whether the
+helper accepts a zero-length position is unqualified in both paths.**
+
+The qualification must cover ply 0 explicitly, on **both** the query and replay
+paths. If T1j cannot produce an acceptable move there, **Arm B does not exist in
+this form** and H4 must be redesigned rather than patched.
 
 ---
 
@@ -386,17 +435,79 @@ it. The blind is on the **decision-maker**, not the disk:
 
 ### 5.4 Preregistered before launch
 
-* **integrity failures: ZERO TOLERANCE.** Complete move persistence and replay
-  verification are pass/fail at zero. This is a different category from the
-  operational rate below and is not traded against it.
-* a **maximum operational failure rate** (launch/timeout/process faults), stated
-  as a number before launch;
-* runtime and cap feasibility rules;
-* trajectory concentration is **reported**, and may inform the **economic**
-  proceed/stop judgment — whether the full study is worth its cost. It may
-  **never** invalidate, deduplicate or reweight an observation (§1.3);
-* that winner-based score, model advantage and confidence intervals **will not
-  guide the full design**.
+All numbers below are **frozen 2026-09-20**, before the adapter qualification
+runs and before any game exists.
+
+#### ✅ Operational failures allowed: ZERO
+
+Any of these makes the pilot **`VOID`** — not a partial feasibility result:
+
+> timeout · unexpected helper exit · replay mismatch · missing record · digest
+> failure · **process-count mismatch** (§3.2) · illegal move · leaked process
+
+🔑 **Two things are explicitly NOT operational failures**, because they are the
+phenomena under study: the **qualified native fallback** (§4) and a **game cap**
+(§1.6). Counting either as a fault would make H4 abort on its own subject
+matter.
+
+#### ✅ Runtime rule — setup and gameplay timed separately
+
+```text
+mean_game_s        = (pilot_wall_s - setup_s) / 32
+projected_segment_s = setup_s + 148 × mean_game_s
+```
+
+* **proceed** only if `projected_segment_s ≤ 10,800 s` (3 h);
+* full-study **hard deadline 14,400 s (4 h) per segment**;
+* 🔴 **no shrinking to eight segments after seeing the pilot** — that is
+  optional stopping wearing an operational costume;
+* if the projection exceeds 3 h, **report four-segment H4 as operationally
+  infeasible** and redesign separately.
+
+The 3 h projection ceiling is **H3's proven segment cap**, under which segment 0
+completed 148/148 in 2.12 h. The 4 h deadline leaves **1 h of headroom — 33 %
+over the permitted projection** — for tail variation, without repeating H2's
+eight-hour monolith that VOIDed at game 692 of 736.
+
+⚠ H4 games start from ply 0 and spawn **two JVMs per ply** (§3.1), so H3's
+per-game timings are **not** a prediction. That is what the projection is for.
+
+#### ✅ Cap rule — measured in CAP-AFFECTED PAIRS
+
+Counted per **pair**, not per game, because the cap-free sensitivity excludes
+**whole pairs**:
+
+* **proceed** at **≤ 3 of 16** pairs containing a cap;
+* **stop for cap infeasibility** at **≥ 4** cap-affected pairs.
+
+This guarantees **≥ 81.25 %** (13/16) of pilot pairs remain available to the
+cap-free analogue. 🔑 **It is a feasibility rule, not an exclusion rule**: every
+valid pilot game stays recorded and nothing is deduplicated.
+
+For the **full study**, cap frequency is **part of the result**. If the pilot
+clears and the study later caps more than expected, observations are **not**
+retroactively invalidated or deleted — report the primary, the cap-free
+sensitivity, and the high-cap reading fixed in §9.
+
+#### ✅ Concentration — exact collapse only, no uniqueness floor
+
+🔴 **No general uniqueness floor is imposed.** The only concentration rule that
+may stop anything is exact:
+
+> **Stop after the pilot if all 16 pair-level trajectory tuples are identical.**
+> Report *"empirically complete concentration in the pilot"* — and **do not
+> claim the underlying distribution has zero entropy**, which 16 draws cannot
+> establish.
+
+Anything short of complete collapse is **descriptive** and does not affect
+proceeding. Concentration may inform the **economic** judgment of whether the
+full study is worth its cost; it may **never** invalidate, deduplicate or
+reweight an observation (§1.3).
+
+#### ✅ And the standing prohibition
+
+Winner-based score, model advantage and confidence intervals **will not guide
+the full design** — not its threshold, not its sample size, not its analysis.
 
 ### 5.5 No two-game "sanity run"
 
@@ -415,8 +526,11 @@ never shrunk and thresholds are never relaxed after seeing results.**
 
 | | |
 |---|---|
-| size | **N ≥ 289** from δ alone; **296 pair bundles / 592 games** once four equal 74-pair segments are frozen (§1.5) |
-| interval | two-sided **nominal** 95% Hoeffding — h(289) = **0.0798883**, h(296) = **0.078938** |
+| size | ✅ **296 pair bundles / 592 games** (§1.5) |
+| segments | ✅ **four**, each **74 complete pairs / 148 games** — H3's proven shape |
+| pair integrity | ✅ arms stay **adjacent** and **never cross a segment boundary** |
+| interval | two-sided **nominal** 95% Hoeffding, h(296) = **0.078938** |
+| per-segment time | projection ceiling **10,800 s**, hard deadline **14,400 s** (§5.4) |
 | caps | score **0.5**; a **cap-free** sensitivity reported beside the primary |
 | seeds | a **fresh, collision-proved** block, ACCOUNTED before use |
 | execution | segmented, one-shot per segment, supervised gate restoration |
@@ -513,20 +627,35 @@ separate future hypotheses — **not** as repairs to H4.
 
 Affirmed 2026-09-20, after the three corrections above were applied:
 
-1. ✅ **δ = 0.08** (§1.5) — with **N ≥ 289**, and 296 only alongside the frozen
-   four-segment shape.
+1. ✅ **δ = 0.08** (§1.5) — δ alone gives N ≥ 289; **N = 296** is frozen
+   alongside the four-segment shape, for H3's proven 148-game unit and **not**
+   because it is the smallest such N (292 is).
 2. ✅ **`PLY_CAP = 280` total plies** (§1.6) — caps 0.5 in the primary,
    cap-free sensitivity retained.
 3. ✅ **The existing production process lifecycle** (§3.1) — per-move search
    JVM, per-bind replay JVM, no reuse, classes compiled once per run — with the
    §3.2 assertions making it testable.
 
-### What is still owed before implementation
+### ✅ The preregistered numbers are frozen too
 
-* the **four-segment operational shape**, if N = 296 rather than 289 (§1.5);
-* the preregistered **numbers** for §5.4's operational failure rate and the
-  runtime/cap feasibility rules;
-* the **§4 adapter qualification itself**, which must run and be reported before
-  any pilot.
+Added 2026-09-20: the four-segment shape (§1.5, §6), zero operational failures
+with the fallback and the cap explicitly excluded, the runtime projection rule
+and its 3 h / 4 h bounds, the ≤ 3-of-16 cap-affected-pair rule, and
+exact-collapse-only concentration (all §5.4).
 
-**No implementation begins until those are recorded.**
+**Design-level prerequisites are complete. Pilot outcomes can no longer alter
+the scientific threshold, the sample size, or the analysis.**
+
+### The one thing still owed: the §4 adapter qualification
+
+It **must run and be reported on its own** before any pilot. Two questions it
+must answer that the existing records cannot:
+
+1. whether a **searched-position dump** is emitted when T1j never searches
+   (§4.1.1) — this decides whether board coherence is even checkable for a
+   fallback move;
+2. whether the helper accepts a **zero-length position** on the query **and**
+   replay paths (§4.4) — this decides whether Arm B exists.
+
+**No implementation begins until that qualification is specified and
+authorized.**
