@@ -613,7 +613,8 @@ Per game:
 * **player and frozen configuration identity by colour**;
 * **pair, arm and seed-bundle identity**;
 * **per move**: actor, elapsed time, `searched` vs `native_low_ply_fallback`,
-  and the relevant T1j telemetry;
+  and the relevant T1j telemetry — named explicitly in §7.1, not left as
+  "telemetry";
 * `winner`, `terminal_reason`, total timing, task result;
 * **transcript digest recomputed from the moves plus the terminal state** —
   never read back from its own field;
@@ -621,6 +622,40 @@ Per game:
   and cap termination;
 * **hash-bound viewer-compatible replay export** carrying its own
   `evidence_note`.
+
+### 7.1 ✅ Process identity — PROC must be WIRED, not assumed
+
+Amendment, 2026-09-21. This closes an implementation ambiguity and **changes
+nothing in the scientific design**.
+
+> For every T1j **query** and **replay** subprocess, persist the parsed `PROC`
+> record, **subprocess ordinal**, **role** (`query` or `replay`),
+> **task / pair / arm**, **board ply**, and **return code**. `parse_procs`
+> already exists and is tested but has **no production caller**; H4 must
+> explicitly **wire it into the canonical record**.
+
+🔴 **Why this is spelled out.** The Java helper emits a `PROC` line per JVM and
+`parse_procs` parses it — `ProcRecord(pid, java_version, vm, headless,
+prefs_factory)`, whose docstring records that *"One per jvm, so the count IS the
+process count"* (`t1j_adapter.py:401-425`). But its **only callers are two tests**
+in `test_t1j_adapter.py`. In production, `T1jAgent.__call__` and the binder use
+raw stdout only for `helper_failure_excerpt` on failure paths and
+`check_postcond` → `parse_postconds`; **the PROC lines are never parsed and go
+out of scope unread.**
+
+So the three states must not be conflated:
+
+| | |
+|---|---|
+| Java emits PROC per JVM | **exists** |
+| a parser for it | **exists, and is tested** |
+| any production caller | 🔴 **none** |
+
+**§3.2's process-count assertions therefore depend on plumbing that does not yet
+exist.** The work is *wiring an already-written parser*, not writing one — but
+it is work, and a future reader must not infer from "PROC exists" that PROC is
+already reaching the records. (§4A is unaffected: it records complete stdout, so
+PROC arrives with no Java change and no wiring.)
 
 **T1j state fingerprint.** If a digest or fingerprint of T1j's initialized
 Zobrist state can be recorded **without changing its behavior**, record it.
