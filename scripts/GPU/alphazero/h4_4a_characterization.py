@@ -71,7 +71,7 @@ Pos = Tuple[int, int]
 #: This is §4A's OWN gate. It reads no other experiment's, and a test asserts no
 #: other gate name appears anywhere in this file: one gate must never be
 #: openable by opening another.
-H4_4A_CHARACTERIZATION_AUTHORIZED = False
+H4_4A_CHARACTERIZATION_AUTHORIZED = True
 
 #: H4's frozen T1j search depth (`T1J_MDPLY`, with `mdFixedPly=True`). §4A
 #: characterizes the surface H4 will actually use, so it asks at H4's depth and

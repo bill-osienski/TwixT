@@ -1,0 +1,47 @@
+H4 §4A PRE-RUN VERIFICATION — 2026-09-21T16:15:46.621196
+Recomputed at this moment, not copied from any earlier report.
+
+git HEAD          : 6e3d42a12c5398707109614909b7c3d881637e0a
+working tree      : DIRTY
+?? docs/superpowers/evidence/2026-09-21-t1j-h4-4a-characterization/
+
+
+== GATES ==
+derived gate count: 12
+open gates        : []
+§4A gate          : False (must be False HERE; opened in its own commit next)
+
+== THE PINNED INPUT ==
+prefixes file     : docs/superpowers/evidence/2026-08-28-t1j-lowply-qualification/01_frozen_prefixes.json
+sha256 recomputed : a9054cb2d56cf75f554292e47ac7e5b86a0c74f54b255ee9147fb65f92207acf
+pinned            : a9054cb2d56cf75f554292e47ac7e5b86a0c74f54b255ee9147fb65f92207acf
+MATCH             : True
+
+== THE FROZEN MATRIX ==
+  ply 0  empty_board  prefix=[]
+  ply 1  l0match-000-strong6-o1_center-t1j_red-r0  prefix=[[11, 11]]
+  ply 3  l0match-000-strong6-o1_center-t1j_red-r0  prefix=[[11, 11], [12, 13], [13, 12]]
+  ply 5  l0match-000-strong6-o1_center-t1j_red-r0  prefix=[[11, 11], [12, 13], [13, 12], [10, 13], [12, 10]]
+  ply 1  l0match-016-strong6-o3_low-t1j_red-r0  prefix=[[15, 11]]
+  ply 3  l0match-016-strong6-o3_low-t1j_red-r0  prefix=[[15, 11], [12, 12], [13, 10]]
+  ply 5  l0match-016-strong6-o3_low-t1j_red-r0  prefix=[[15, 11], [12, 12], [13, 10], [14, 14], [11, 11]]
+  ply 1  l0match-024-strong6-o4_high-t1j_red-r0  prefix=[[8, 12]]
+  ply 3  l0match-024-strong6-o4_high-t1j_red-r0  prefix=[[8, 12], [11, 11], [10, 13]]
+  ply 5  l0match-024-strong6-o4_high-t1j_red-r0  prefix=[[8, 12], [11, 11], [10, 13], [9, 9], [12, 12]]
+positions         : 10
+subprocess cap    : 20 (one query + one replay each)
+depth             : 6  ply_cap: 280
+per-call timeout  : 120 s   run deadline: 900 s
+
+== TOOLCHAIN, hash-verified before use ==
+  jar = /Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/t1j.jar
+  jdk_home = /Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/jdk/jdk-17.0.20.1+1/Contents/Home
+  root = /Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1
+  source = recorded-default
+  verified = 5
+
+== SCOPE OF WHAT THIS RUN CAN ESTABLISH ==
+Board-plies 0/1/3/5 only, at depth 6, on the frozen prefix set.
+Ply 0 is the ONLY red-to-move position; 1/3/5 are black-to-move.
+No game is played, no seed drawn, no score computed. This is a
+harness characterization and is NOT strength evidence.
