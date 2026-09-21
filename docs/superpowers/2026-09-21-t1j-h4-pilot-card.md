@@ -1,3 +1,27 @@
+> # 🔴 VOID — SUPERSEDED 2026-09-20
+>
+> **This card's §0, §1 and §7 option framing are RETRACTED. Do not cite them.**
+> Superseded by **`2026-09-21-t1j-h4-replacement-card.md`**, whose §0 carries the
+> point-by-point correction trail against the records.
+>
+> **The body below is left UNEDITED on purpose.** It is the record of what was
+> claimed, not a design. In particular these claims are false:
+>
+> * *"both agents are deterministic … 592 games → 2 distinct games"* — at
+>   board-plies 1 and 3 T1j's two independent JVMs **disagree in 5 of 12**
+>   measured cells (`19_lowply_records.json`, `signature: mover_fragmentation`).
+> * *"a deterministic argmax readout … repeats one game per cell"* — quoted from
+>   `08_accounting_from_records.txt`, which **`12_correction.md` retracts** four
+>   files later in the same directory: argmax removes the **readout's**
+>   randomness, not the **search's**.
+> * *"46 … hit the 274-ply cap"* — `PLY_CAP` is **280** total plies; that cell
+>   **cleared** the diversity floor of 42 and lacked *outcome* information, not
+>   variation.
+> * *"the entropy lives in the selection mode"* — H1 vs H2 differ in readout
+>   **and** seed block; H2 card §8 forbids the attribution.
+> * The **A / B / C** choice it demands is void: it was built on the above, and
+>   H4 proceeds under **argmax**.
+
 # H4 PILOT — CARD: does empty-board play produce games worth counting?
 
 **DESIGN ONLY.** No seeds are chosen or reserved, no code is written, no gate
