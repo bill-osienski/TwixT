@@ -8,9 +8,13 @@ separately-reviewed repair that §4A's `STOP_ZERO_LENGTH_REFUSED` requires befor
 §4B can be contemplated.
 
 > **What the repair must achieve.** `E4Preflight` must be able to ask T1j for a
-> move at board-ply 0 without loading a GUI class, and every JVM on both helper
-> paths must identify itself — while every existing caller keeps the behaviour
-> it was qualified with.
+> move at board-ply 0 **with no new `RightPanel` path and zero windows or
+> frames**, and every JVM on both helper paths must identify itself — while
+> every existing caller keeps the behaviour it was qualified with.
+
+⚠ Not "without loading a GUI class". `GuiBoard` is **already resident** on every
+non-empty query, because `setlastMove()` routes through its static
+`getHoleName()`. See the correction in §2.3.
 
 ---
 
@@ -47,14 +51,41 @@ alternatives, and those findings constrain the design:
    has a private constructor and an eager `static final` instance.
 3. **Same-package access does not help.** `matchData` — with `boardY`, `boardX`,
    `moves`, `moveNr` and the rest — is `private`.
-4. Therefore **reflection into private state is the only non-GUI route**, and
-   E2 refused to take it unilaterally: *"a headless path that depends on private
+4. Therefore **reflection into private state is the only non-GUI route** ⚠ *(as
+   E2 reasoned it then — see the correction immediately below, which narrows
+   this)*, and E2 refused to take it unilaterally: *"a headless path that depends on private
    internals is a materially different claim from one that uses the published
    API — so E2 stops rather than picking between them."*
 
 🔑 **This card is the review E2 deferred.** Choosing reflection is a material
 change in what our harness claims, and it is being made explicitly, in writing,
 rather than slipped in as an implementation detail.
+
+### ⚠ CORRECTED 2026-09-21 — point 4 held under E2's THEN-CURRENT criterion only
+
+An earlier draft of this card carried point 4 forward as though it still closed
+every public route. **It does not, and the card may not claim it does.**
+
+E2's "only non-GUI route" was reasoned under an authorization that forbade
+**loading** a GUI class at all. **Attempt 4 relaxed that**, and passed with GUI
+classes *resident*:
+
+> **25 distinct class names … loaded**: … `GuiMainWindow` and — new this attempt
+> — `GuiBoard` are both **resident**, the latter because `setlastMove()` routes
+> through `GuiBoard.getHoleName()`. … T1j can be loaded … and made to return one
+> legal move … **with GUI classes resident, no window instantiated**, the host
+> preference surfaces untouched
+> — `2026-08-24-t1j-e2-attempt4.md`
+
+Under **today's** broader criterion — residency permitted, **zero windows and
+frames** — the public initialization route is **not logically closed**. What it
+is, is **unqualified**: `prepareNewMatch()` and `updateMatchData()` reach
+`RightPanel.getInstance()`, and nothing in the record establishes whether that
+instantiates a window.
+
+**Reflection remains the narrowest recommended repair**, and that is the claim
+this card makes. It is a judgement about scope and auditability, **not** a proof
+that no alternative exists.
 
 ### 1.1 🔴 A consequence for the opening that the design must carry
 
@@ -65,10 +96,24 @@ E2 also recorded, on the way past:
 > **nondeterministic by construction.**
 
 So a repaired ply-0 query does **not** return a fixed move. T1j's opening is
-drawn from seven entries by randomness **we neither seed nor observe**. That is
-native behaviour and **must not be seeded, replaced or collapsed** — it is part
-of the agent H4 measures, and it is real entropy at exactly the ply the
+drawn from seven entries by **randomness whose state we neither seed nor
+record; every realized move is observed and persisted.**
+
+⚠ **CORRECTED 2026-09-21.** An earlier draft said "randomness we neither seed
+nor observe". That was wrong in a way that matters: **the realized move IS
+observed, and persisted.** What goes unrecorded is the **latent RNG state**.
+The estimand already covers the execution/randomization protocol rather than
+reproducibility from our seed alone, so an unrecorded latent state is a declared
+property of the protocol, not a gap in the evidence.
+
+This is native behaviour and **must not be seeded, replaced or collapsed** — it
+is part of the agent H4 measures, and it is real entropy at exactly the ply the
 superseded H4 card wrongly assumed had none.
+
+🔴 **AND THE QUALIFICATION MUST NOT TRY TO MEASURE IT.** Do not seed it, do not
+collapse repeats, do not require diversity. The qualification establishes
+**legality and operability**; it does **not** estimate opening probabilities.
+Seven table entries is prior art, not a target.
 
 ---
 
@@ -100,8 +145,9 @@ card** before implementation, never discovered and defaulted during it.
 
 ### 2.3 The mechanism: audited private-field injection
 
-Per §1, reflection is the only non-GUI route. The narrow candidate is direct
-injection of a constructed `MatchData` into `Match`'s private `matchData` field.
+Per §1 as corrected, reflection is the **narrowest recommended** route — not the
+only conceivable one. The candidate is direct injection of a constructed
+`MatchData` into `Match`'s private `matchData` field.
 
 **Constraints:**
 
@@ -109,24 +155,58 @@ injection of a constructed `MatchData` into `Match`'s private `matchData` field.
   `nextPlayer` or anything else E2 enumerated;
 * it is **audited**: the injected object's fields are read back and recorded;
 * it runs **only** under the opt-in mode;
-* it **never** loads `RightPanel`, `GuiBoard` or any GUI class, and the
-  postcondition surface (`windows=0`, `frames=0`, `headless=true`) must still
-  come back clean, which is the existing check that would catch it.
+* it opens **no new `RightPanel` path**, and the postcondition surface
+  (`windows=0`, `frames=0`, `headless=true`, preferences unchanged) must come
+  back clean — which is the existing check that would catch it.
 
-### 2.4 🔴 It changes the reflective-access count, and that is a reviewed change
+⚠ **CORRECTED 2026-09-21.** An earlier draft required that it "never loads
+`GuiBoard` or any GUI class." **That is impossible for any non-empty query and
+was already false when written.** `E4Preflight` calls `m.setlastMove(...)` to
+place each move, and `setlastMove()` routes through the **static**
+`GuiBoard.getHoleName()`, so **`GuiBoard` is already resident on every query
+with a move in it** — E2 attempt 4 recorded exactly that, and passed.
 
-The helper **counts its own reflective accesses** and the adapter asserts the
-count: `QUERY_REFL_N = 3`, `REPLAY_REFL_N = 1`
-(`e4_screen_integration.py:37-38`), checked by `check_postcond` on every call.
+The real constraint is the one above: **no new `RightPanel` path, and zero
+windows and frames.** Residency is permitted; instantiation is not. A
+requirement that the qualified harness already violates is not a safeguard — it
+is a line nobody could have read and kept.
 
-**Injection adds reflective accesses, so that count will move.** It must be:
+### 2.4 🔴 It moves the QUERY reflective-access count — a reviewed change
 
-* **re-derived from the repaired helper, not guessed**;
-* changed in the same reviewed edit as the injection;
-* **different for the opt-in path than for the default path**, since default
-  callers perform no injection and their count must not drift.
+The helper counts its own reflective accesses and the adapter asserts the count:
+`QUERY_REFL_N = 3`, `REPLAY_REFL_N = 1` (`e4_screen_integration.py:37-38`),
+checked by `check_postcond` on every call.
 
-A repair that quietly relaxed this check instead of updating it would be the
+**The existing three, read from `E4Preflight.java`** — one write and two reads,
+exactly as the reviewer characterized them:
+
+| line | access |
+|---:|---|
+| 125 | `Match.nextPlayer` **(write)** |
+| 158 | `FindMove.usealphabeta` (read) |
+| 159 | `FindMove.currentMaxPly` (read) |
+
+Adding `Match.matchData` **(write)** makes **four** on the opt-in path —
+**expected, and still to be RE-DERIVED from the repaired helper rather than
+taken from this table.** Configuration and readback of the injected object
+should need no further reflection: the helper is in `net.schwagereit.t1j`, so
+`getMatchData()` and its fields are reachable by package access.
+
+Therefore:
+
+* the count is **re-derived, not guessed**, and changed in the same reviewed
+  edit as the injection;
+* **default callers stay at `refl_n = 3`** — they perform no injection, and
+  their count must not drift;
+* the opt-in path carries its **own separately pinned count**.
+
+🔑 **`Match.matchData` must also be added to the helper's `AUTHORIZED` list.**
+`E4Preflight` asserts `req(reflOk, "only authorized reflective fields used")`
+against an allowlist, so an unlisted field fails the postcondition rather than
+passing silently. That is the check working, and it must be extended
+deliberately.
+
+A repair that quietly relaxed either check instead of updating it would be the
 defect class this programme keeps hitting — a guard weakened to fit rather than
 re-derived.
 
@@ -148,8 +228,16 @@ line; `E4Preflight` emits exactly one per JVM. §4A measured 0 on ten replays an
 final ply count + 1"* — which §4A showed is **not satisfiable** as written,
 because there is nothing on the replay path to count.
 
-⚠ It will also move `REPLAY_REFL_N` if the identity is gathered reflectively.
-Same rule as §2.4: re-derive, don't relax.
+✅ **`REPLAY_REFL_N` STAYS 1.** An earlier draft warned this change "will also
+move" it. **It will not**, and the source settles it: `E4Preflight` builds its
+PROC line from `ProcessHandle.current().pid()`, three `System.getProperty(...)`
+calls and `Preferences.userRoot().getClass().getName()` — **no `reflect()` call
+anywhere in it** (`E4Preflight.java:91-95`). Copying that emission into
+`E3bDump` adds no reflective access, so the replay count is unchanged at **1**.
+
+That is the difference between the two changes in one line: **Change 1 moves a
+count and Change 2 does not**, which is part of why they are reviewable
+separately.
 
 ---
 
@@ -206,15 +294,44 @@ attempted — only what it would have to be if it is.
 **It does not carry `move_count=0` forward** (retired, `10_correction.md` §2),
 and the prohibition on a **dummy opening move** stands.
 
-### Open questions for review
+### ✅ The three open questions are ANSWERED — 2026-09-21
 
-1. Is **reflection into `Match`'s private state** acceptable as a permanent
-   feature of the H4 harness? E2 declined to decide this unilaterally and it is
-   still the decision being made. A "yes" changes what every H4 result claims:
-   an agent reached through private internals, not the published API.
-2. Should the repaired opening path be **in scope for H4 at all**, given §1.1 —
-   T1j's ply-0 move comes from a seven-entry table by randomness we cannot
-   observe, so Arm B's first move is drawn from a distribution we can sample but
-   never reproduce.
-3. `mdPieRule = false` is proposed on the grounds that **H4 has no swap rule**.
-   Confirm, because it is a property of the game being measured.
+**1. Reflection into `Match`'s private state — ACCEPTED, narrowly scoped.**
+The harness already depends on qualified private-state access: one
+`Match.nextPlayer` write and two `FindMove` search-field reads (§2.4). One
+opt-in `Match.matchData` **write** is an incremental, auditable extension of an
+existing dependency rather than a new kind of dependency. Conditions, all
+binding:
+
+* **default callers remain at `refl_n = 3`**;
+* the **opt-in path carries its own separately pinned count** — expected 4,
+  re-derived not assumed;
+* 🔴 **the result is described as T1j driven through a QUALIFIED PRIVATE-STATE
+  ADAPTER, not through its published API.** Every H4 claim inherits that
+  wording. E2 was right that this is a materially different claim; the answer
+  is to *make* the claim accurately, not to avoid it.
+
+**2. Native opening randomness — IN SCOPE for H4.** The estimand already covers
+the **execution/randomization protocol**, not reproducibility from our seed
+alone. The realized opening move is observed and persisted; only the latent RNG
+state goes unrecorded, and that is a declared property of the protocol. It must
+not be seeded, collapsed or required to be diverse (§1.1).
+
+**3. `mdPieRule = false` — CONFIRMED, and required.** Verified in our own
+engine, not assumed: `twixt_state.legal_moves()` returns **placement
+coordinates only**, `apply_move()` places one peg and switches colour, and
+`swap` / `pie_rule` appear **nowhere** in `twixt_state.py`. There is no swap
+action and no swap state transition, so a `true` here would have T1j playing a
+different game from the one we score.
+
+### What is still owed before implementation
+
+* the **enumeration and justification of any other `MatchData` field** the
+  first-move path requires (§2.2) — discovered by reading, in this card, never
+  defaulted during implementation;
+* the **re-derived** opt-in `refl_n`, and `Match.matchData` added to the
+  helper's `AUTHORIZED` allowlist;
+* the **new qualification's own card**, with its gate, destination and frozen
+  stop conditions.
+
+**Implementation is not authorized by this card.**
