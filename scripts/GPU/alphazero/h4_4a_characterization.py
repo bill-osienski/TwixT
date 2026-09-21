@@ -454,11 +454,24 @@ def _zero_length_refused(obs: Dict[str, Any]) -> bool:
     🔑 ZERO, not "other than one". More than one record is the helper
     misbehaving, which is the INSTRUMENT branch; it is not a refusal, and
     calling it one would put the wrong headline on the record.
+
+    🔑 A NULL OR ABSENT MOVE AT PLY 0 IS ALSO A REFUSAL, and this mirrors the
+    empty replay exactly. The helper accepted the empty-board grammar but did
+    not produce the acceptable move Arm B requires, and that is the finding --
+    not a broken instrument. Classifying it as an instrument failure would
+    relabel the answer §4A exists to get.
+
+    At a NON-ZERO ply the same condition is an instrument failure, because a
+    reply was expected there.
     """
     if obs["ply"] != 0:
         return False
     if obs["role"] == "query":
-        return obs["n_query_records"] == 0
+        if obs["n_query_records"] == 0:
+            return True
+        rec = obs.get("record")
+        return bool(rec is not None
+                    and (rec["null_sentinel"] or rec["move"] is None))
     return obs["n_plies"] == 0
 
 
@@ -519,8 +532,23 @@ def classify(observations: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
                 # search ran, and §4B cannot build a coherence contract on one.
                 rec = o["record"]
                 if rec["null_sentinel"] or rec["move"] is None:
-                    fire(BRANCH_INSTRUMENT,
-                         f"{o['where']}: the reply is the null sentinel, not a move")
+                    # 🔴 AT PLY 0 THIS IS THE REFUSAL, ALREADY FIRED ABOVE, and
+                    # it must NOT also be logged as an instrument failure:
+                    # `branches_fired` carries true findings, not the validation
+                    # steps taken along the way.
+                    #
+                    # The ONE exception is a reply that claims it COMPLETED a
+                    # search and still returns no move. That is a contradiction
+                    # in the reply itself, so it is both a refusal and an
+                    # instrument fault, and legitimately fires both.
+                    if not refused:
+                        fire(BRANCH_INSTRUMENT,
+                             f"{o['where']}: the reply is the null sentinel, not "
+                             f"a move")
+                    elif o["path"] == "searched":
+                        fire(BRANCH_INSTRUMENT,
+                             f"{o['where']}: the reply claims completed={rec['completed']} "
+                             f"yet returns no move -- the record contradicts itself")
                 else:
                     if not rec["legal"]:
                         fire(BRANCH_INSTRUMENT,

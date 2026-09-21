@@ -786,13 +786,18 @@ def test_resolve_paths_goes_through_the_VERIFIED_toolchain(monkeypatch):
 # regression that re-nests it would pass the searched half and fail here.
 
 @pytest.mark.parametrize("completed", [True, False], ids=["searched", "incomplete"])
-def test_a_NULL_SENTINEL_reply_is_INSTRUMENT_on_either_path(tmp_path, wire, completed):
-    wire["query"] = lambda p: query_out(p, completed=completed, null_sentinel=True)
+def test_a_NULL_SENTINEL_at_a_NONZERO_ply_is_INSTRUMENT_on_either_path(
+        tmp_path, wire, completed):
+    """At a NON-ZERO ply a reply was expected, so no move is the instrument
+    failing. Ply 0 is the refusal case and is tested separately below."""
+    wire["query"] = lambda p: query_out(p, completed=completed,
+                                        null_sentinel=bool(p))
     wire["rc_query"] = 0 if completed else 3
     r = run(tmp_path)
     assert r["verdict"] == H4A.BRANCH_INSTRUMENT, r["branch_reasons"]
     assert any("null sentinel" in w
                for w in r["branch_reasons"][H4A.BRANCH_INSTRUMENT])
+    assert H4A.BRANCH_ZERO_LENGTH_REFUSED not in r["branches_fired"]
 
 
 @pytest.mark.parametrize("completed", [True, False], ids=["searched", "incomplete"])
@@ -833,3 +838,75 @@ def test_A_CLEAN_INCOMPLETE_QUERY_IS_STILL_THE_PROCEED_BASELINE(tmp_path, wire):
     q = [o for o in r["observations"] if o["role"] == "query"]
     assert all(o["path"] == "incomplete" for o in q)
     assert all(o["move_legal_in_our_engine"] for o in q)
+
+
+# ════ A NULL MOVE AT PLY 0 IS A REFUSAL, MIRRORING THE EMPTY REPLAY ══════════
+# 🔴 REPORTING CORRECTION. The helper accepting the empty-board grammar and then
+# producing no acceptable move is what BLOCKS ARM B -- it is the finding §4A
+# exists to get, not a broken instrument. `branches_fired` carries true
+# findings, never the validation steps taken along the way.
+
+def test_a_PLY_ZERO_INCOMPLETE_NULL_is_a_REFUSAL_with_NO_instrument_claim(
+        tmp_path, wire):
+    wire["query"] = lambda p: query_out(p, completed=bool(p), null_sentinel=not p)
+    r = run(tmp_path)
+    assert r["verdict"] == H4A.BRANCH_ZERO_LENGTH_REFUSED
+    assert r["branches_fired"] == [H4A.BRANCH_ZERO_LENGTH_REFUSED], (
+        "an instrument claim was logged for the ordinary ply-0 refusal")
+    assert any("@ply0" in w
+               for w in r["branch_reasons"][H4A.BRANCH_ZERO_LENGTH_REFUSED])
+
+
+def test_it_MIRRORS_the_empty_replay_case(tmp_path, wire):
+    """The two ply-0 refusals must report the same way: an accepted grammar
+    that yields nothing usable, with no instrument claim attached."""
+    wire["query"] = lambda p: query_out(p, completed=bool(p), null_sentinel=not p)
+    by_query = run(tmp_path, name="q.json")
+    wire["query"] = None
+    wire["replay"] = lambda p: (replay_out(p, blocks=0) if not p else replay_out(p))
+    by_replay = run(tmp_path, name="r2.json")
+    assert by_query["verdict"] == by_replay["verdict"] == \
+        H4A.BRANCH_ZERO_LENGTH_REFUSED
+    assert by_query["branches_fired"] == by_replay["branches_fired"] == \
+        [H4A.BRANCH_ZERO_LENGTH_REFUSED]
+
+
+def test_the_SAME_condition_at_a_NONZERO_ply_stays_INSTRUMENT(tmp_path, wire):
+    """The discriminator is the PLY, not the condition."""
+    wire["query"] = lambda p: query_out(p, completed=False, null_sentinel=bool(p))
+    wire["rc_query"] = 3
+    r = run(tmp_path)
+    assert r["verdict"] == H4A.BRANCH_INSTRUMENT
+    assert H4A.BRANCH_ZERO_LENGTH_REFUSED not in r["branches_fired"]
+
+
+def test_a_CONTRADICTORY_completed_null_at_ply_zero_fires_BOTH(tmp_path, wire):
+    """A reply that claims it COMPLETED a search and still returns no move
+    contradicts itself. That is a refusal AND an instrument fault, and the
+    exception is deliberate -- it is not the ordinary ply-0 case."""
+    wire["query"] = lambda p: query_out(p, completed=True, null_sentinel=not p)
+    r = run(tmp_path)
+    assert set(r["branches_fired"]) == {H4A.BRANCH_ZERO_LENGTH_REFUSED,
+                                        H4A.BRANCH_INSTRUMENT}
+    assert r["verdict"] == H4A.BRANCH_ZERO_LENGTH_REFUSED
+    assert any("contradicts itself" in w
+               for w in r["branch_reasons"][H4A.BRANCH_INSTRUMENT])
+
+
+def test_an_INDEPENDENT_defect_still_records_INSTRUMENT_beside_the_refusal(
+        tmp_path, wire):
+    """Suppressing the instrument note for the refusal must not suppress a
+    SEPARATE instrument fault that happens to coincide with it.
+
+    A DIRTY SAFETY SURFACE is used because it is genuinely independent. A second
+    PROC line is not: it also makes the dump untieable to one process, so it
+    fires the dump branch as well and would not isolate what this test is for.
+    """
+    wire["query"] = lambda p: query_out(p, completed=bool(p), null_sentinel=not p,
+                                        post_ok=bool(p))
+    r = run(tmp_path)
+    assert set(r["branches_fired"]) == {H4A.BRANCH_ZERO_LENGTH_REFUSED,
+                                        H4A.BRANCH_INSTRUMENT}
+    assert r["verdict"] == H4A.BRANCH_ZERO_LENGTH_REFUSED
+    assert any("safety surface" in w
+               for w in r["branch_reasons"][H4A.BRANCH_INSTRUMENT])
