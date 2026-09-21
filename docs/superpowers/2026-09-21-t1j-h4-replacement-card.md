@@ -171,11 +171,17 @@ Four equal pair-preserving segments require only `n ≥ 289` **and** `n ≡ 0 mo
 | 300 | 75 | 150 | 0.0784100 | |
 
 296 is **four pairs above the minimum**, and it is chosen for a different and
-better reason: **148 games per segment is H3's proven segment shape** — the
-exact size that ran to completion four times, with measured runtime behind it
-(segment 0: 148/148 in 2.12 h of a 3 h cap). The premium buys a known-good
-operational unit instead of an untested one. **A tighter interval is a
-side-effect, not the reason.**
+better reason: **148 games per segment is a PROVEN ORCHESTRATION UNIT** — the
+exact size that ran to completion four times under H3's segment runner, seed
+isolation, gate restoration and durable install.
+
+🔴 **"Proven orchestration unit" is NOT "proven H4 runtime."** H3's segment 0
+did 148/148 in 2.12 h of a 3 h cap, but those games began at ply 6 and did not
+spawn two JVMs per ply. **Nothing here establishes that empty-board H4 fits the
+schedule** — that is exactly what §5.4's projection rule exists to determine,
+and it may find that it does not. The premium buys a known-good *harness* unit,
+not a known-good *duration*. **A tighter interval is a side-effect, not the
+reason.**
 
 ### 1.6 Cap policy — ✅ AFFIRMED, 280 total plies
 
@@ -277,7 +283,7 @@ Asserted from recorded counts, not from reading the code:
   `len(plies) == state.ply + 1` internally;
 * every subprocess **emits and records its `PROC` identity and ordinal**;
 * **no process survives its call**;
-* query telemetry records the **fallback/search classification** (§4.2.5);
+* query telemetry records the **fallback/search classification** (§4B.2, item 5);
 * any **Zobrist fingerprint is observational only** and must not alter
   initialization — if recording it would perturb init, it is not recorded, and
   §7's statement about non-reproducibility stands instead.
@@ -310,46 +316,95 @@ destination. Every H4 game passes through board-plies 1 and 3 in **every**
 configuration, so this blocks H4 outright until it is deliberately changed.
 
 🔑 **The change is narrower than "an acceptance path" suggests.** Every other
-guard in `__call__` already enforces something §4.2 requires and **must stay
+guard in `__call__` already enforces something §4B.2 requires and **must stay
 exactly as it is**: `compare_state(state, dumps[0], …)` re-binds the searched
 position, `r.null_sentinel / r.move is None / not r.legal` rejects unusable
 moves, `r.move not in state.legal_moves()` rejects moves illegal in our engine,
 and `check_postcond` enforces the postcondition surface. **Only the completion
 condition is relaxed, and only under the qualified signature.**
 
-### 4.1.1 ✅ FROZEN: one predicate, placed before both refusals
+### 4.1.1 ✅ FROZEN: the qualification SPLITS into two preregistered sub-stages
 
-**A single explicit predicate classifies the returned record before either
-refusal fires.** It returns `searched` / `native_low_ply_fallback` / `reject`,
-and it is the *only* new decision point. State comparison, postconditions,
-null/legal checks and our-engine legality are **left unchanged and keep running
-in their present order** for both classifications.
+The acceptance predicate cannot be written until the available evidence surface
+is known. **§4A characterizes what the helper actually emits. §4B implements
+the mode.** Writing §4B first would mean improvising a contract after seeing
+output, which is how a gate ends up shaped around whatever it was handed.
 
-This is implementable as written: `query()` parses `recs` and `dumps` from
-stdout **unconditionally**, before `returncode` is consulted
-(`t1j_adapter.py`, `parse_queries` / `parse_dump`), so the predicate can inspect
-`recs[0]` even when `rc == 3`.
-
-🔴 **ONE THING THE QUALIFICATION MUST DETERMINE, NOT ASSUME.**
-`parse_dump` returns whatever the Java helper printed. **Whether the helper
-emits a searched-position dump at all when it never enters the search is
-unknown from the existing records** — the low-ply qualification used the probe
-path and did not record dumps. If no dump is emitted, `len(dumps) != 1` aborts
-and **§4.2's board-coherence requirement is unreachable for fallback moves**,
-which changes what the acceptance mode can honestly promise. The qualification
-must measure this **before** the predicate's contract is fixed.
+🔴 **§4A IS THE NEXT AUTHORIZABLE ACTION.** It needs no H4 research seeds,
+changes no adapter code, and produces **no game and no strength evidence**.
 
 ⚠ The H3 full-study design's heading "T1j CANNOT MOVE AT THE PLIES THE PROTOCOL
 NEEDS" is loose; its body is accurate ("never enters alpha-beta", "known not to
 search"). The precise statement is: **the engine moves, the adapter refuses.**
 
-### 4.2 What the qualification must establish
+### 4A. RAW CAPABILITY CHARACTERIZATION — no adapter change
+
+**Nothing is modified.** The existing helper is queried and everything it
+returns is recorded: **complete stdout, the parsed objects, the return code, and
+process identity** — the last already available, since the helper emits a `PROC`
+line per JVM (`pid`, `java_version`, `vm`, `headless`, `prefs_factory`) and
+`parse_procs` notes that **the PROC count IS the process count**
+(`t1j_adapter.py`). §3.2's assertions therefore rest on existing
+instrumentation, not on something §4A must invent.
+
+**Coverage**, all under the frozen fresh-JVM lifecycle of §3.1:
+
+* empty-board **`query`**;
+* empty-board **`replay`** — 🔑 **both**, and §4C says why neither substitutes
+  for the other;
+* representative board plies **1, 3 and 5**;
+* **both T1j colour roles**.
+
+#### 4A.1 The branches, frozen BEFORE any output is seen
+
+| finding | frozen consequence |
+|---|---|
+| **zero-length query or replay refused** | 🔴 **STOP.** Arm B is blocked. Any CLI-grammar repair is a **separate review**, not a §4A improvisation |
+| **fallback query emits no same-process dump** | 🔴 **STOP.** 🔑 **Do NOT substitute the binder's replay JVM** — it is a *different process* and cannot establish what the **search** JVM reconstructed. That substitution would look like a fix and prove nothing |
+| **exactly one coherent dump exists** | ✅ proceed to §4B |
+| **malformed or multiple records, or dirty postconditions** | 🔴 **STOP** as an *instrument* failure — not as a finding about T1j |
+
+#### 4A.2 If §4A stops: the honest repairs, and the dishonest one
+
+* **No dump** → the repair is to make the **query helper emit a same-JVM
+  pre-move position dump**. That instrumentation is **separately reviewed as
+  observational and behaviour-preserving**. 🔴 **Weakening `len(dumps) == 1` is
+  NOT the repair** — it would surrender the strongest coherence guarantee the
+  adapter currently has, in the exact place it is most needed.
+* **Ambiguous zero-length grammar** → prefer an **explicit count-bearing CLI
+  representation** such as `move_count=0`. 🔴 **Never insert a dummy opening
+  move.** That would silently change the position under measurement and make
+  Arm B a different experiment.
+
+---
+
+### 4B. ACCEPTANCE-MODE QUALIFICATION — implemented only after §4A
 
 **An explicit H4 acceptance mode whose default remains OFF for existing
 callers.** A default that switches the guard off is the defect class this
 programme keeps hitting; the mode is opt-in, and every current caller —
 E4, L0, H1, H2, H3, D1 — keeps the present fail-closed behaviour untouched and
 is proven to.
+
+#### 4B.1 The classifier, in this order
+
+1. **exactly one query record and one same-process position dump**;
+2. **clean postconditions and expected reflection count** — `QUERY_REFL_N = 3`,
+   `REPLAY_REFL_N = 1` (`e4_screen_integration.py:37-38`);
+3. **board / history / legal-set coherence**;
+4. **requested-depth identity**;
+5. **either** a normal completed-search status **or** the exact qualified
+   native-fallback signature;
+6. **legal, non-null move in BOTH engines**.
+
+**Only then** may the expected helper `exit 3` and `completed == false` be
+reclassified as an accepted fallback.
+
+🔴 **Both existing refusal sites must consume the SAME classification result.**
+If each keeps its own test, one can silently reinstate the block while the other
+is relaxed — and the failure would appear only at the ply where it matters.
+
+#### 4B.2 What the mode must still distinguish
 
 The adapter must distinguish a **legitimate native fallback** from a **broken
 search**:
@@ -365,7 +420,7 @@ search**:
 6. acceptance **only** for the qualified fallback signature;
 7. **continued fail-closed behavior for genuine incomplete searches elsewhere.**
 
-### 4.3 Negative controls — the acceptance path must be proven to REJECT
+#### 4B.3 Negative controls — the acceptance path must be proven to REJECT
 
 Requirement 7 is the one that fails silently if it is only asserted. The
 qualification must show rejection of at least: a non-completing search **outside**
@@ -377,7 +432,7 @@ A check that greps source is not a test. The acceptance predicate must be
 driven through its **real entry point** in the state it will run in, and the CLI
 must be qualified as a **fresh subprocess**.
 
-### 4.4 The empty board is genuinely unqualified
+### 4C. SCOPE — the empty board, on both paths
 
 The lowest observed prefix in the low-ply record is **one stone**
 (`"ply": 1, "prefix": [[11,11]]`). The empty board was never queried.
@@ -648,14 +703,23 @@ the scientific threshold, the sample size, or the analysis.**
 
 ### The one thing still owed: the §4 adapter qualification
 
-It **must run and be reported on its own** before any pilot. Two questions it
-must answer that the existing records cannot:
+It **must run and be reported on its own** before any pilot, and it is now
+**split in two** (§4.1.1):
 
-1. whether a **searched-position dump** is emitted when T1j never searches
-   (§4.1.1) — this decides whether board coherence is even checkable for a
-   fallback move;
+**▶ §4A — RAW CAPABILITY CHARACTERIZATION is the NEXT AUTHORIZABLE ACTION.**
+No adapter change, no H4 research seeds, no game, no strength evidence. It
+answers the two questions the existing records cannot:
+
+1. whether a **searched-position dump** is emitted when T1j never searches —
+   this decides whether board coherence is even checkable for a fallback move,
+   and if it is not, the repair is to **add observational instrumentation**, not
+   to weaken `len(dumps) == 1`;
 2. whether the helper accepts a **zero-length position** on the query **and**
-   replay paths (§4.4) — this decides whether Arm B exists.
+   replay paths (§4C) — this decides whether Arm B exists, and if the grammar is
+   ambiguous the repair is an explicit `move_count=0`, **never a dummy move**.
 
-**No implementation begins until that qualification is specified and
-authorized.**
+Its four branches are frozen in §4A.1 *before* any output is seen, so a stop is
+a stop rather than a negotiation.
+
+**§4B — the acceptance mode — is not written until §4A reports.** No
+implementation begins before that.
