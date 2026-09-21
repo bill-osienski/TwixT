@@ -53,6 +53,7 @@ import sys
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 from . import e4_screen_integration as INT
+from . import l0_match_rules as L0R
 from . import t1j_adapter as A
 from .d1_probe import D1Error, D1VoidError
 from .d1_probe import Deadline, QueryBudget, T1jPaths, _supervisor
@@ -83,6 +84,13 @@ MATRIX_PLIES = (0, 1, 3, 5)
 
 PER_CALL_TIMEOUT_S = 120
 RUN_DEADLINE_S = 900
+
+#: READ, never retyped. The card's §1.6 affirms the established 280-TOTAL-ply
+#: boundary, and `l0_match_rules` is where that number lives. `T1jPaths` has no
+#: default for `ply_cap` on purpose -- "a cap that must be named cannot be
+#: forgotten quietly" -- and the first version of this CLI handed it `None`
+#: from an argparse default, putting the silence straight back.
+PLY_CAP = L0R.PLY_CAP
 
 #: 10 positions (1 empty board + 9 frozen prefixes) x (1 query + 1 replay).
 #: The cap is DERIVED below from the matrix actually built, never from this
@@ -162,12 +170,8 @@ def _state_for(prefix: Sequence[Pos], *, where: str):
     return state
 
 
-def build_matrix(prefixes: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """The frozen matrix: the empty board, then every frozen prefix in MATRIX_PLIES.
-
-    The empty board carries no pinned digest because there is exactly one of it;
-    its digest is RECOMPUTED here and recorded like any other.
-    """
+def _matrix_from(prefixes: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Shape a prefix list into the matrix. NO pin check -- `build_matrix` does that."""
     out: List[Dict[str, Any]] = [{
         "task_id": "empty_board", "ply": 0, "prefix": [], "digest": None,
         "opening": None, "colour_arm": None, "source": "constructed",
@@ -179,12 +183,51 @@ def build_matrix(prefixes: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
                     "prefix": [list(m) for m in p["prefix"]],
                     "digest": p.get("digest"), "opening": p.get("opening"),
                     "colour_arm": p.get("colour_arm"), "source": "frozen_prefixes"})
-    plies = sorted({m["ply"] for m in out})
+    return out
+
+
+def build_matrix(prefixes: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """The frozen matrix: the empty board, then the pinned prefixes.
+
+    🔴 THE WHOLE CANONICAL MATRIX IS COMPARED AGAINST THE PINNED FILE, not just
+    the set of ply numbers it covers. Checking only `{0,1,3,5}` was a FAIL-OPEN:
+    a caller could drop six of the nine pinned prefixes, duplicate a row, swap
+    one for another position, or add rows, and still present plies 1, 3 and 5 --
+    and the public runner would execute that different matrix and report on it
+    as though it were the frozen one.
+
+    An input that is not the pinned input answers a different question while
+    looking identical, which is the same shape as a gate that does not gate.
+
+    The empty board carries no pinned digest because there is exactly one of it;
+    its digest is RECOMPUTED in `_stages` and recorded like any other.
+    """
+    got = _matrix_from(prefixes)
+    want = _matrix_from(load_frozen_prefixes())
+    if got != want:
+        only_got = [p for p in got if p not in want]
+        only_want = [p for p in want if p not in got]
+        detail = (f"\n  only in the input: {[(p['task_id'], p['ply']) for p in only_got]}"
+                  f"\n  missing from it  : "
+                  f"{[(p['task_id'], p['ply']) for p in only_want]}")
+        if not only_got and not only_want:
+            # ORDER IS PART OF THE PIN, and the record proves why: every
+            # observation carries a monotonic `ordinal`, so a reordered input
+            # produces a differently-numbered record of the same positions. The
+            # only supported input is `load_frozen_prefixes()`, whose order is
+            # deterministic, so nothing legitimate reorders.
+            detail = ("\n  the same positions in a DIFFERENT ORDER. Order is part "
+                      "of the pin: each observation carries a monotonic `ordinal`.")
+        raise H4A4Error(
+            f"the matrix is not the pinned one ({len(got)} positions vs "
+            f"{len(want)}).{detail}\n"
+            f"A matrix that is not the frozen one answers a different question.")
+    plies = sorted({m["ply"] for m in got})
     if plies != sorted(MATRIX_PLIES):
         raise H4A4Error(
-            f"the matrix covers plies {plies}, not the frozen {sorted(MATRIX_PLIES)}. "
-            f"A matrix that is not the frozen one answers a different question.")
-    return out
+            f"the pinned matrix covers plies {plies}, not the frozen "
+            f"{sorted(MATRIX_PLIES)}. The pin and this module disagree.")
+    return got
 
 
 def _procs(out: str, *, where: str) -> List[Dict[str, Any]]:
@@ -331,12 +374,20 @@ def observe_query(*, position: Dict[str, Any], state, paths: T1jPaths,
             "usealphabeta": rec.usealphabeta, "current_max_ply": rec.current_max_ply,
             "completed_depth": rec.completed_depth, "completed": rec.completed,
             "legal": rec.legal, "null_sentinel": rec.null_sentinel,
+            # `move_nr` is T1j's OWN move counter and was omitted from the first
+            # version. §4B's coherence work needs the engine's count, not only
+            # ours, and a field absent from the record cannot be recovered later.
+            "move_nr": rec.move_nr,
             "eval_regime": rec.eval_regime, "elapsed_us": rec.elapsed_us,
         }
         obs["move_legal_in_our_engine"] = (
             rec.move is not None and rec.move in set(state.legal_moves()))
-        # The characterization's central classification, recorded per query.
-        obs["path"] = "searched" if rec.completed else "native_low_ply_fallback"
+        # 🔴 NEUTRAL BY DESIGN: `incomplete`, NEVER `native_low_ply_fallback`.
+        # `completed == false` does NOT establish the qualified fallback
+        # signature -- distinguishing a legitimate native fallback from a broken
+        # search is the job §4B was reserved for, and §4A naming it here would
+        # hand §4B a conclusion it is supposed to reach.
+        obs["path"] = "searched" if rec.completed else "incomplete"
     else:
         obs["move_legal_in_our_engine"] = False
         obs["path"] = "no_record"
@@ -422,31 +473,81 @@ def classify(observations: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
         fired.setdefault(branch, []).append(why)
 
     for o in observations:
-        if _zero_length_refused(o):
+        refused = _zero_length_refused(o)
+        if refused:
             fire(BRANCH_ZERO_LENGTH_REFUSED,
                  f"{o['where']}: the zero-length position yielded no "
                  f"{'query record' if o['role'] == 'query' else 'ply block'}")
-        # Instrument: the postcondition surface unreadable-as-expected, or more
-        # than one query record. This is about a call that was SUPPOSED to work.
+
+        # ── the INSTRUMENT branch: a call that was SUPPOSED to work, did not ──
         for note in o["postcond"]["notes"]:
             fire(BRANCH_INSTRUMENT, f"{o['where']}: {note}")
-        if o["role"] == "query" and o["n_query_records"] > 1:
-            fire(BRANCH_INSTRUMENT,
-                 f"{o['where']}: {o['n_query_records']} query records, expected 1")
         if o["n_procs"] != 1:
             fire(BRANCH_INSTRUMENT,
                  f"{o['where']}: {o['n_procs']} PROC lines, expected exactly 1 "
                  f"per jvm under the frozen fresh-process lifecycle")
-        # The dump question, asked ONLY of the fallback queries it is about.
-        if o["role"] == "query" and o.get("path") == "native_low_ply_fallback":
+
+        # 🔴 THE `failures` EXEMPTION IS CONTEXT-SENSITIVE. It exists because
+        # E4Preflight sets the counter when the requested depth did not
+        # complete. Applying it universally was a FAIL-OPEN: a COMPLETED query,
+        # or any replay, carrying failures > 0 is the instrument misbehaving and
+        # must not ride on an exemption earned by a different condition.
+        exempt = o["role"] == "query" and o.get("path") == "incomplete"
+        if o["postcond"]["failures_counter"] and not exempt:
+            fire(BRANCH_INSTRUMENT,
+                 f"{o['where']}: failures={o['postcond']['failures_counter']} on a "
+                 f"{'completed query' if o['role'] == 'query' else 'replay'}, where "
+                 f"the incomplete-search exemption does not apply")
+
+        if o["role"] == "query":
+            if o["n_query_records"] > 1:
+                fire(BRANCH_INSTRUMENT,
+                     f"{o['where']}: {o['n_query_records']} query records, expected 1")
+            # 🔴 ABSENT AT A NON-ZERO PLY. Only ply 0 may be a refusal; anywhere
+            # else, no record at all is the instrument failing. This fired
+            # NOTHING before, so a query that simply vanished reported PROCEED.
+            elif o["n_query_records"] == 0 and not refused:
+                fire(BRANCH_INSTRUMENT,
+                     f"{o['where']}: no query record at ply {o['ply']}, where a "
+                     f"reply was expected")
+            # 🔴 A SEARCHED QUERY'S DUMP IS AN INSTRUMENT MATTER, not the
+            # fallback-dump question. Nothing checked it before.
+            elif o.get("path") == "searched":
+                if o["n_dumps"] != 1:
+                    fire(BRANCH_INSTRUMENT,
+                         f"{o['where']}: a completed search emitted {o['n_dumps']} "
+                         f"searched-position dumps, expected exactly 1")
+                elif o["dump_coherence_divergences"]:
+                    fire(BRANCH_INSTRUMENT,
+                         f"{o['where']}: the searched position diverges from ours: "
+                         + "; ".join(o["dump_coherence_divergences"]))
+                if o["record"] and not o["move_legal_in_our_engine"]:
+                    fire(BRANCH_INSTRUMENT,
+                         f"{o['where']}: the returned move is not legal in our engine")
+
+        # 🔴 REPLAY STRUCTURE AND COHERENCE WERE RECORDED AND NEVER CLASSIFIED.
+        # A truncated, padded or incoherent replay left `fired` empty.
+        if o["role"] == "replay" and not refused:
+            if not o["ply_count_matches"]:
+                fire(BRANCH_INSTRUMENT,
+                     f"{o['where']}: {o['n_plies']} ply blocks, expected "
+                     f"{o['expected_plies']} (one per ply plus the start)")
+            elif o["final_state_divergences"]:
+                fire(BRANCH_INSTRUMENT,
+                     f"{o['where']}: the replayed final state diverges from ours: "
+                     + "; ".join(o["final_state_divergences"]))
+
+        # ── the DUMP branch, asked ONLY of the incomplete queries it is about ──
+        if o["role"] == "query" and o.get("path") == "incomplete":
             if o["n_dumps"] != 1:
                 fire(BRANCH_NO_SAME_PROCESS_DUMP,
                      f"{o['where']}: a non-searching query emitted {o['n_dumps']} "
                      f"searched-position dumps, expected exactly 1")
             elif o["dump_coherence_divergences"]:
                 fire(BRANCH_NO_SAME_PROCESS_DUMP,
-                     f"{o['where']}: the fallback dump is not coherent with our "
-                     f"position: {'; '.join(o['dump_coherence_divergences'])}")
+                     f"{o['where']}: the incomplete query's dump is not coherent "
+                     f"with our position: "
+                     + "; ".join(o["dump_coherence_divergences"]))
             elif not o["same_process_dump"]:
                 fire(BRANCH_NO_SAME_PROCESS_DUMP,
                      f"{o['where']}: the dump could not be tied to this process")
@@ -576,6 +677,31 @@ def _stages(matrix, paths, out_path, deadline, budget, compile_fn):
     return report
 
 
+def resolve_paths(classes: str) -> T1jPaths:
+    """Resolve the VERIFIED toolchain and freeze the cap. Nothing is defaulted.
+
+    🔴 WHY THIS EXISTS. The first version of the CLI offered `--java`, `--jar`
+    and `--ply-cap`, each defaulting to `None`, so an omitted argument reached
+    execution as `None` -- and `T1jPaths` carries no default for `ply_cap`
+    precisely because "a cap that must be named cannot be forgotten quietly".
+    An argparse default put the silence straight back, which is this
+    programme's recurring shape: a default is a switch-off.
+
+    So the toolchain is RESOLVED rather than accepted. `verified_paths` hashes
+    the jar and every pinned JDK component before returning a path, and refuses
+    a root under /tmp whatever supplied it. `_default_compile` then re-checks
+    that what we hand it IS what was verified, so an unverifiable path cannot
+    reach a jvm.
+
+    `classes` stays the caller's, because it is an OUTPUT: create-only, so a
+    stale `.class` from another build can never decide what ran.
+    """
+    from . import t1j_toolchain as TC
+    tc = TC.verified_paths()
+    return T1jPaths(java=os.path.join(tc["jdk_home"], "bin", "java"),
+                    jar=tc["jar"], classes=classes, ply_cap=PLY_CAP)
+
+
 EXIT_OK = 0
 EXIT_VOID = 3
 EXIT_UNEXPECTED = 4
@@ -599,10 +725,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         description="H4 §4A raw capability characterization. IT IS NOT AUTHORIZED.")
     ap.add_argument("--out", required=True)
     ap.add_argument("--prefixes")
-    ap.add_argument("--java")
-    ap.add_argument("--jar")
-    ap.add_argument("--classes")
-    ap.add_argument("--ply-cap", type=int, default=None)
+    #: The one path the caller must supply, because it is an OUTPUT: the
+    #: class directory is create-only, so it cannot be resolved for them.
+    ap.add_argument("--classes", required=True)
     a = ap.parse_args(argv)
 
     if not H4_4A_CHARACTERIZATION_AUTHORIZED:
@@ -613,8 +738,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     try:                                                      # pragma: no cover
         run_characterization(
             prefixes=load_frozen_prefixes(a.prefixes),
-            paths=T1jPaths(java=a.java, jar=a.jar, classes=a.classes,
-                           ply_cap=a.ply_cap),
+            paths=resolve_paths(a.classes),
             out_path=a.out)
     except H4A4VoidError as e:                                # pragma: no cover
         print(f"VOID: {e}", file=sys.stderr)
