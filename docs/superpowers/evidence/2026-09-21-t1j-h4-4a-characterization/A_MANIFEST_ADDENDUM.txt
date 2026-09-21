@@ -1,0 +1,7 @@
+MANIFEST ADDENDUM — 2026-09-21
+
+`A_MANIFEST.sha256.txt` covers the ten files the run produced and is NOT edited:
+the manifest of a completed run is itself a record. `10_correction.md` was
+written AFTER it, so it is hashed here instead. Every file named in the original
+manifest still verifies against it unchanged.
+ab6565f67c1c28744c0175725170872b2c7160939aaf2ecd92549aa9663c50d6  10_correction.md
