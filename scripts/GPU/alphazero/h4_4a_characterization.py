@@ -510,20 +510,38 @@ def classify(observations: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
                 fire(BRANCH_INSTRUMENT,
                      f"{o['where']}: no query record at ply {o['ply']}, where a "
                      f"reply was expected")
-            # 🔴 A SEARCHED QUERY'S DUMP IS AN INSTRUMENT MATTER, not the
-            # fallback-dump question. Nothing checked it before.
-            elif o.get("path") == "searched":
-                if o["n_dumps"] != 1:
+            elif o["record"] is not None:
+                # 🔴 MOVE VALIDATION APPLIES TO EVERY QUERY RECORD, whatever its
+                # path. It was nested under `path == "searched"`, so an
+                # INCOMPLETE query returning a null sentinel, a move T1j itself
+                # calls illegal, or a move illegal in our engine reported
+                # PROCEED_TO_4B. An unusable reply is unusable whether or not a
+                # search ran, and §4B cannot build a coherence contract on one.
+                rec = o["record"]
+                if rec["null_sentinel"] or rec["move"] is None:
                     fire(BRANCH_INSTRUMENT,
-                         f"{o['where']}: a completed search emitted {o['n_dumps']} "
-                         f"searched-position dumps, expected exactly 1")
-                elif o["dump_coherence_divergences"]:
-                    fire(BRANCH_INSTRUMENT,
-                         f"{o['where']}: the searched position diverges from ours: "
-                         + "; ".join(o["dump_coherence_divergences"]))
-                if o["record"] and not o["move_legal_in_our_engine"]:
-                    fire(BRANCH_INSTRUMENT,
-                         f"{o['where']}: the returned move is not legal in our engine")
+                         f"{o['where']}: the reply is the null sentinel, not a move")
+                else:
+                    if not rec["legal"]:
+                        fire(BRANCH_INSTRUMENT,
+                             f"{o['where']}: T1j reports its own move {rec['move']} "
+                             f"illegal")
+                    if not o["move_legal_in_our_engine"]:
+                        fire(BRANCH_INSTRUMENT,
+                             f"{o['where']}: the returned move {rec['move']} is not "
+                             f"legal in our engine")
+
+                # A SEARCHED query's dump is an INSTRUMENT matter; the
+                # incomplete query's dump is the separate question below.
+                if o["path"] == "searched":
+                    if o["n_dumps"] != 1:
+                        fire(BRANCH_INSTRUMENT,
+                             f"{o['where']}: a completed search emitted "
+                             f"{o['n_dumps']} searched-position dumps, expected 1")
+                    elif o["dump_coherence_divergences"]:
+                        fire(BRANCH_INSTRUMENT,
+                             f"{o['where']}: the searched position diverges from "
+                             f"ours: " + "; ".join(o["dump_coherence_divergences"]))
 
         # 🔴 REPLAY STRUCTURE AND COHERENCE WERE RECORDED AND NEVER CLASSIFIED.
         # A truncated, padded or incoherent replay left `fired` empty.

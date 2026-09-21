@@ -75,7 +75,8 @@ def replay_out(prefix, *, pid=1234, n_proc=1, blocks=None):
 
 
 def query_out(prefix, *, completed=True, dump=True, pid=4321, n_proc=1,
-              post_ok=True, refl_n=None, n_records=1, move=None):
+              post_ok=True, refl_n=None, n_records=1, move=None,
+              legal=True, null_sentinel=False):
     st = _state(prefix)
     mv = move if move is not None else sorted(st.legal_moves())[0]
     x, y = A.to_t1j(*mv)
@@ -87,7 +88,9 @@ def query_out(prefix, *, completed=True, dump=True, pid=4321, n_proc=1,
         f"currentMaxPly={H4A.DEPTH if completed else 0} "
         f"completed_depth={H4A.DEPTH if completed else -1} "
         f"completed={'true' if completed else 'false'} "
-        f"legal=true null_sentinel=false moveNr={len(prefix)} "
+        f"legal={'true' if legal else 'false'} "
+        f"null_sentinel={'true' if null_sentinel else 'false'} "
+        f"moveNr={len(prefix)} "
         f"eval_regime={'normal' if completed else 'early_moveNr_lt_8'} "
         f"elapsed_us=1000\n"
         for i in range(n_records))
@@ -773,3 +776,60 @@ def test_resolve_paths_goes_through_the_VERIFIED_toolchain(monkeypatch):
     assert p.java == "/verified/jdk/bin/java"
     assert p.ply_cap == 280
     assert p.classes == "/tmp/does-not-exist-classes"
+
+
+# ═════════ MOVE VALIDATION APPLIES TO EVERY QUERY RECORD, NOT JUST SEARCHED ══
+# 🔴 THE LAST FAIL-OPEN. Validation was nested under `path == "searched"`, so an
+# INCOMPLETE query returning a null sentinel, a move T1j itself called illegal,
+# or a move illegal in our engine returned PROCEED_TO_4B. These are parametrized
+# over BOTH paths precisely to pin that the check is path-independent: a
+# regression that re-nests it would pass the searched half and fail here.
+
+@pytest.mark.parametrize("completed", [True, False], ids=["searched", "incomplete"])
+def test_a_NULL_SENTINEL_reply_is_INSTRUMENT_on_either_path(tmp_path, wire, completed):
+    wire["query"] = lambda p: query_out(p, completed=completed, null_sentinel=True)
+    wire["rc_query"] = 0 if completed else 3
+    r = run(tmp_path)
+    assert r["verdict"] == H4A.BRANCH_INSTRUMENT, r["branch_reasons"]
+    assert any("null sentinel" in w
+               for w in r["branch_reasons"][H4A.BRANCH_INSTRUMENT])
+
+
+@pytest.mark.parametrize("completed", [True, False], ids=["searched", "incomplete"])
+def test_T1J_CALLING_ITS_OWN_MOVE_ILLEGAL_is_INSTRUMENT_on_either_path(
+        tmp_path, wire, completed):
+    wire["query"] = lambda p: query_out(p, completed=completed, legal=False)
+    wire["rc_query"] = 0 if completed else 3
+    r = run(tmp_path)
+    assert r["verdict"] == H4A.BRANCH_INSTRUMENT, r["branch_reasons"]
+    assert any("reports its own move" in w
+               for w in r["branch_reasons"][H4A.BRANCH_INSTRUMENT])
+
+
+@pytest.mark.parametrize("completed", [True, False], ids=["searched", "incomplete"])
+def test_A_MOVE_ILLEGAL_IN_OUR_ENGINE_is_INSTRUMENT_on_either_path(
+        tmp_path, wire, completed):
+    """(0,0) is a corner and is legal on no TwixT board, at any ply. T1j may
+    report `legal=true` about it; our engine is the second opinion that matters."""
+    wire["query"] = lambda p: query_out(p, completed=completed, move=(0, 0))
+    wire["rc_query"] = 0 if completed else 3
+    r = run(tmp_path)
+    assert r["verdict"] == H4A.BRANCH_INSTRUMENT, r["branch_reasons"]
+    assert any("not legal in our engine" in w
+               for w in r["branch_reasons"][H4A.BRANCH_INSTRUMENT])
+
+
+def test_A_CLEAN_INCOMPLETE_QUERY_IS_STILL_THE_PROCEED_BASELINE(tmp_path, wire):
+    """🔴 CLEAN-BASELINE CONTROL FOR THE WHOLE VALIDATION BLOCK. Tightening move
+    validation until nothing passes would satisfy every test above while making
+    PROCEED unreachable -- which is the same defect, from the other direction,
+    as the `failures` exemption that once condemned every fallback."""
+    wire["query"] = lambda p: query_out(p, completed=False, legal=True,
+                                        null_sentinel=False)
+    wire["rc_query"] = 3
+    r = run(tmp_path)
+    assert r["verdict"] == H4A.BRANCH_PROCEED, r["branch_reasons"]
+    assert r["branches_fired"] == []
+    q = [o for o in r["observations"] if o["role"] == "query"]
+    assert all(o["path"] == "incomplete" for o in q)
+    assert all(o["move_legal_in_our_engine"] for o in q)
