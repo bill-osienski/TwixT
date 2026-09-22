@@ -340,8 +340,11 @@ def test_baseline_native_initial_FIFTH_OR_MORE(ply):
                             failures=1) == Q.NATIVE_FIFTH_OR_MORE
 
 
-@pytest.mark.parametrize("ply", [0, 3, 5])
+@pytest.mark.parametrize("ply", [2, 3, 4, 5])
 def test_baseline_searched(ply):
+    """🔴 PLY 0 IS EXCLUDED, and an earlier version of this test BLESSED it.
+    Under the frozen 24x24 no-pie configuration `firstMove()` always returns a
+    central move, so a search at ply 0 means the injection did not take."""
     rec = _rec(usealphabeta=True, current_max_ply=Q.SEARCHED_CURRENT_MAX_PLY,
                completed=True, completed_depth=Q.DEPTH)
     assert Q.classify_reply(ply=ply, rec=rec, exit_status=0,
@@ -454,11 +457,36 @@ def test_OPT_IN_REFLECTION_DRIFT_is_refused(tmp_path, wire):
         run(tmp_path)
 
 
-def test_DEFAULT_PATH_REFLECTION_DRIFT_is_refused(tmp_path, wire):
-    """The replay path is a DEFAULT caller and must stay at one."""
+def test_REPLAY_REFLECTION_DRIFT_is_refused(tmp_path, wire):
+    """The replay path must stay at one.
+
+    ⚠ RENAMED. This was called "DEFAULT PATH reflection drift", but mutating
+    the REPLAY fixture proves only that replay stays at 1 -- it says nothing
+    about whether the DEFAULT QUERY path still demands 3. That claim now has
+    its own fixture-driven test below.
+    """
     wire["replay"] = lambda p: replay_out(p, refl_n=Q.QUERY_REFL_N_OPTIN)
     with pytest.raises(Q.H4RQStop, match="refl_n=4, expected exactly 1"):
         run(tmp_path)
+
+
+def test_the_DEFAULT_QUERY_PATH_REJECTS_refl_n_other_than_three():
+    """🔴 THE REAL DEFAULT-PATH CONTROL, driven through the REAL checker.
+
+    The qualification only ever calls the opt-in path, so nothing in this
+    runner exercises the default query contract. It is exercised HERE, against
+    `INT.check_postcond` with `INT.QUERY_REFL_N` -- the exact call every default
+    caller (E4, L0, H1, H2, H3, D1) makes.
+    """
+    from scripts.GPU.alphazero.e4_screen_runner import AbortError
+    good = POST.format(nt="true", w=0, ok="true", n=INT.QUERY_REFL_N, f=0) + "\n"
+    assert INT.check_postcond(good, expected_refl=INT.QUERY_REFL_N,
+                              where="default", phase="move")
+    for drifted in (Q.QUERY_REFL_N_OPTIN, 2, 0):
+        bad = POST.format(nt="true", w=0, ok="true", n=drifted, f=0) + "\n"
+        with pytest.raises(AbortError):
+            INT.check_postcond(bad, expected_refl=INT.QUERY_REFL_N,
+                               where="default", phase="move")
 
 
 def test_the_DEFAULT_QUERY_CONTRACT_IS_STILL_THREE():
@@ -523,3 +551,140 @@ def test_it_plays_no_game_draws_no_seed_and_computes_no_score():
                   "seed", "seeds", "SEED_INTERVAL", "evaluator", "mcts",
                   "T1jAgent", "make_binder"):
         assert token not in names, f"it strays into: {token}"
+
+
+# ═══════════ 6. CONTROLS ADDED AFTER REVIEW OF f4499c5 ══════════════════════
+
+def test_SEARCH_AT_PLY_ZERO_is_refused():
+    """🔴 DERIVED, not assumed: `firstMove()` has no `aconst_null` and its
+    no-pie branch always builds `new Move(x,y)` with x = 12 + nextInt(6) - 3
+    on a 24-wide board, i.e. 9..14, so `initialMove()`'s `getX() >= 0` gate
+    always passes it. A search at ply 0 means the injection did not take."""
+    rec = _rec(usealphabeta=True, current_max_ply=Q.SEARCHED_CURRENT_MAX_PLY,
+               completed=True, completed_depth=Q.DEPTH)
+    with pytest.raises(Q.H4RQStop, match="impossible here"):
+        Q.classify_reply(ply=0, rec=rec, exit_status=0, failures=0)
+
+
+@pytest.mark.parametrize("ply", [2, 3, 4, 5])
+def test_search_at_plies_2_to_5_REMAINS_LEGITIMATE(ply):
+    """NEGATIVE CONTROL ON THE PLY-0 RULE: it must not spread. At these plies a
+    native routine may return the -1,-1 sentinel, which falls through to search,
+    so BOTH outcomes are legitimate and neither may be refused."""
+    rec = _rec(usealphabeta=True, current_max_ply=Q.SEARCHED_CURRENT_MAX_PLY,
+               completed=True, completed_depth=Q.DEPTH)
+    assert Q.classify_reply(ply=ply, rec=rec, exit_status=0,
+                            failures=0) == Q.SEARCHED
+
+
+# ── query-record coherence: the QUERY line must describe the position sent ──
+
+def test_a_WRONG_moveNr_in_the_query_record_is_refused(tmp_path, wire):
+    """The dump is checked separately; the QUERY line is a DIFFERENT line and
+    was unchecked, so a record about another move number would be classified as
+    though it were about this position."""
+    def wrong(prefix):
+        out = query_out(prefix, native=_native_for(prefix))
+        return out.replace(f"moveNr={len(prefix)}", f"moveNr={len(prefix) + 7}")
+    wire["query"] = wrong
+    with pytest.raises(Q.H4RQStop, match="moveNr"):
+        run(tmp_path)
+
+
+def test_a_WRONG_to_move_in_the_query_record_is_refused(tmp_path, wire):
+    def wrong(prefix):
+        st = _state(prefix)
+        ours = A.PLAYER_TO_T1J[st.to_move]
+        other = "X" if ours == "Y" else "Y"
+        return query_out(prefix, native=_native_for(prefix)).replace(
+            f"to_move={ours}", f"to_move={other}", 1)
+    wire["query"] = wrong
+    with pytest.raises(Q.H4RQStop, match="to_move"):
+        run(tmp_path)
+
+
+def test_a_WRONG_query_index_is_refused(tmp_path, wire):
+    wire["query"] = lambda p: query_out(p, native=_native_for(p)).replace(
+        "QUERY q=1 ", "QUERY q=2 ", 1)
+    with pytest.raises(Q.H4RQStop, match="query index"):
+        run(tmp_path)
+
+
+def test_MATCHDATA_identity_false_is_refused(tmp_path, wire):
+    """The helper emits `identity` specifically to prove `getMatchData()`
+    returned the injected object. Values agreeing is not the same thing."""
+    wire["query"] = lambda p: query_out(p, native=_native_for(p)).replace(
+        "identity=true", "identity=false")
+    with pytest.raises(Q.H4RQStop, match="identity=false"):
+        run(tmp_path)
+
+
+# ── the destination is claimed BEFORE the run, and a STOP leaves a record ──
+
+def test_an_OCCUPIED_destination_is_refused_BEFORE_any_subprocess(tmp_path, wire):
+    """🔴 It used to be claimed after all 72 subprocesses, so an occupied
+    destination was discovered only once the run had been spent."""
+    (tmp_path / "taken.json").write_text("{}")
+    with pytest.raises(FileExistsError):
+        run(tmp_path, name="taken.json")
+    assert wire["calls"] == [], "it spawned processes before claiming the path"
+
+
+def test_a_STOP_LEAVES_A_DURABLE_RECORD(tmp_path, wire):
+    """🔴 RETRIES ARE FORBIDDEN, so the one observation of a failure is the only
+    one there will ever be. It used to be lost entirely."""
+    wire["query"] = lambda p: query_out(p, native=_native_for(p),
+                                        null_sentinel=True)
+    with pytest.raises(Q.H4RQStop):
+        run(tmp_path, name="stopped.json")
+    rec = json.loads((tmp_path / "stopped.json").read_text())
+    assert rec["verdict"] == "STOP"
+    assert "null sentinel" in rec["stop_reason"]
+    assert rec["stop_where"] and rec["stop_position"]["ply"] == 0
+    assert rec["stop_stdout"].startswith("PROC ")
+    assert rec["matrix_sha256"] == Q.MATRIX_SHA256
+    assert "no retry" in rec["scope"]
+
+
+def test_the_stop_record_keeps_the_observations_completed_before_it(tmp_path, wire):
+    """A stop partway through must not discard what was already observed --
+    and the record must say they are not a partial qualification."""
+    def late(prefix):
+        # ply 0 is fine; the first o1_center position stops
+        if len(prefix) == 1:
+            return query_out(prefix, native=True, null_sentinel=True)
+        return query_out(prefix, native=_native_for(prefix))
+    wire["query"] = late
+    with pytest.raises(Q.H4RQStop):
+        run(tmp_path, name="partial.json")
+    rec = json.loads((tmp_path / "partial.json").read_text())
+    assert rec["observations_completed"] == len(rec["observations"]) > 0
+    assert rec["subprocesses_spent"] < rec["derived_caps"]["total"]
+    assert "not a partial qualification" in rec["scope"]
+
+
+# ── boolean parsing is not fail-open ──
+
+@pytest.mark.parametrize("field", ["pieRule", "ystarts", "identity"])
+def test_MATCHDATA_booleans_require_exact_tokens(field):
+    """`kv[k] == "true"` is FAIL-OPEN: `pieRule=garbage` reads as False and
+    passes a check meaning "the swap rule is off"."""
+    line = ("MATCHDATA pieRule=false xsize=24 ysize=24 ystarts=true "
+            "identity=true")
+    bad = line.replace(f"{field}=false", f"{field}=garbage").replace(
+        f"{field}=true", f"{field}=garbage")
+    with pytest.raises(ValueError, match="not exactly"):
+        A.parse_matchdata(bad)
+    assert A.parse_matchdata(line), "the clean line must still parse"
+
+
+@pytest.mark.parametrize("field", ["usealphabeta", "completed", "legal",
+                                   "null_sentinel"])
+def test_QUERY_booleans_the_classifier_uses_require_exact_tokens(field):
+    good = query_out([], native=True)
+    line = [l for l in good.splitlines() if l.startswith("QUERY ")][0]
+    import re
+    bad = re.sub(rf"\b{field}=(true|false)\b", f"{field}=garbage", line)
+    with pytest.raises(ValueError, match="not exactly"):
+        A.parse_queries(bad)
+    assert A.parse_queries(line), "the clean line must still parse"

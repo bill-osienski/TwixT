@@ -183,6 +183,35 @@ depth-6 search. The classification is keyed on the **ply dispatch plus the
 telemetry**, so it names **which routine answered** rather than inferring a
 narrative from an exit code.
 
+### 🔴 AMENDMENT 2026-09-22 — `searched` IS IMPOSSIBLE AT PLY 0
+
+Under the frozen **24×24 no-pie** configuration, `InitialMoves.firstMove()`
+**always** answers, so a completed search at ply 0 means the injection did not
+take effect. **STOP.**
+
+**Derived, not assumed.** `firstMove()` contains **no `aconst_null`**, and its
+`mdPieRule=false` branch always constructs `new Move(x, y)` with
+`x = Xsize/2 + nextInt(Xsize/4) - (Xsize/4)/2` — on a 24-wide board that is
+`12 + [0..5] - 3` = **9..14**, always ≥ 0, so `initialMove()`'s
+`retMove.getX() >= 0` gate always passes it through.
+
+⚠ **PLY 1 IS *NOT* INCLUDED, AND THE REASON IS THAT I COULD NOT DERIVE IT.**
+Review argued ply 1 is equally impossible, and it may well be. But
+`secondToFourthMove()` has a **single `areturn`**, and its dispatch at offsets
+277–292 reads as *"moveNr == 2 or 3 → compute, else → `new Move(-1,-1)`"* —
+which would make **ply 1 always search**, flatly contradicting §4A, which
+observed **native** replies at ply 1 in all three families. **That
+contradiction means the reading is wrong somewhere**, and a rule encoded on a
+reading known to be wrong is worse than no rule.
+
+So ply 1 stays **permissive** pending a derivation that holds. If the ply-1
+claim is established, adding it is a one-line amendment here and a one-line
+change in `classify_reply`.
+
+🔑 **Plies 2–5 remain legitimately EITHER**, and a negative control pins that
+the ply-0 rule does not spread: at those plies a native routine may return the
+`-1,-1` sentinel, which falls through to search.
+
 ⚠ **Plies 4 and 5 may legitimately produce EITHER classification.**
 `fifthOrMoreMove()` may return a native move **or null**, and null falls through
 to search. §4A observed null at three ply-5 positions; **that is three

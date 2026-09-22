@@ -120,7 +120,21 @@ class H4RQVoidError(H4RQError):
 
 
 class H4RQStop(H4RQError):
-    """A frozen STOP condition fired. A RESULT, and it ends the qualification."""
+    """A frozen STOP condition fired. A RESULT, and it ends the qualification.
+
+    It CARRIES ITS CONTEXT because a STOP must leave a durable record: retries
+    are forbidden, so the one observation of the failure is the only one there
+    will ever be.
+    """
+
+    def __init__(self, message: str, *, where: Optional[str] = None,
+                 row: Optional[Dict[str, Any]] = None,
+                 stdout: Optional[str] = None):
+        super().__init__(message)
+        self.message = message
+        self.where = where
+        self.row = row
+        self.stdout = stdout
 
 
 # ─────────────────────────── the pinned derived matrix ───────────────────────
@@ -233,6 +247,28 @@ def classify_reply(*, ply: int, rec, exit_status: int, failures: Optional[int]
             f"InitialMoves.initialMove() returns null for moveNr >= 6 by "
             f"dispatch, so no routine can have answered.")
     if searched_telemetry:
+        # 🔴 SEARCH IS IMPOSSIBLE AT PLY 0 under the frozen 24x24 no-pie
+        # configuration, and this is DERIVED, not assumed: `firstMove()`
+        # contains no `aconst_null`, and its no-pie branch always constructs
+        # `new Move(x, y)` with x = Xsize/2 + nextInt(Xsize/4) - (Xsize/4)/2,
+        # which on a 24-wide board is 9..14 -- always >= 0, so
+        # `initialMove()`'s `getX() >= 0` gate always passes it through. A
+        # search at ply 0 therefore means the injection did not take.
+        #
+        # ⚠ PLY 1 IS NOT INCLUDED HERE. Review argued it is equally impossible,
+        # and it may well be, but I could not derive it: `secondToFourthMove()`
+        # has a single `areturn` and a dispatch that reads as "moveNr 2 or 3
+        # -> compute, else -> new Move(-1,-1)", which would make ply 1 ALWAYS
+        # search -- flatly contradicting §4A, which observed native replies at
+        # ply 1 in all three families. That contradiction means the reading is
+        # wrong, so the rule is NOT encoded on it. Left permissive pending a
+        # derivation that holds.
+        if ply == 0:
+            raise H4RQStop(
+                f"ply 0: a completed search is impossible here -- under the "
+                f"frozen 24x24 no-pie configuration InitialMoves.firstMove() "
+                f"always returns a central move (x in 9..14), so a search at "
+                f"ply 0 means the MatchData injection did not take effect.")
         if exit_status != SEARCHED_EXIT or failures != SEARCHED_FAILURES:
             raise H4RQStop(
                 f"ply {ply}: completed-search telemetry with exit={exit_status} "
@@ -247,6 +283,23 @@ def classify_reply(*, ply: int, rec, exit_status: int, failures: Optional[int]
 
 
 # ─────────────────────────────── the observations ────────────────────────────
+
+def _with_context(stop: H4RQStop, *, where: str, row: Dict[str, Any],
+                  stdout: Optional[str]) -> H4RQStop:
+    """Attach the failing context ONCE, at the boundary.
+
+    Enriching here rather than at every `raise` means a future STOP condition
+    gets a durable record for free. A dozen raisers each remembering to pass
+    three arguments is a dozen chances to forget, and the one that forgets is
+    the one whose failure goes unrecorded.
+    """
+    if stop.where is None:
+        stop.where = where
+    if stop.row is None:
+        stop.row = row
+    if stop.stdout is None:
+        stop.stdout = stdout
+    return stop
 
 def _postcond_one(out: str, *, expected_refl: int, where: str) -> Dict[str, Any]:
     """The safety surface, read. Unparseable is VOID; unclean is a STOP."""
@@ -309,6 +362,16 @@ def observe_query(*, row: Dict[str, Any], state, paths: T1jPaths,
             f"{where}: the QUERY output could not be parsed ({e}). "
             f"T1j reported: {A.helper_failure_excerpt(e.stdout)}. VOID.") from None
 
+    try:
+        return _observe_query_checks(row=row, state=state, where=where,
+                                     moves=moves, recs=recs, dumps=dumps,
+                                     rc=rc, out=out, ordinal=ordinal, rep=rep)
+    except H4RQStop as stop:
+        raise _with_context(stop, where=where, row=row, stdout=out) from None
+
+
+def _observe_query_checks(*, row, state, where, moves, recs, dumps, rc, out,
+                          ordinal, rep) -> Dict[str, Any]:
     proc = _procs_one(out, where=where)
     post = _postcond_one(out, expected_refl=QUERY_REFL_N_OPTIN, where=where)
 
@@ -325,7 +388,17 @@ def observe_query(*, row: Dict[str, Any], state, paths: T1jPaths,
         raise H4RQStop(
             f"{where}: the injected MatchData did not read back as frozen -- "
             f"pieRule={md.pie_rule} xsize={md.xsize} ysize={md.ysize} "
-            f"ystarts={md.ystarts}. mdPieRule must be false: H4 has no swap rule.")
+            f"ystarts={md.ystarts}. mdPieRule must be false: H4 has no swap rule.",
+            where=where, row=row, stdout=out)
+    if not md.identity:
+        # The helper emits this field SPECIFICALLY to prove `getMatchData()`
+        # returned the object we injected. Values matching is not the same as
+        # the engine holding OUR object.
+        raise H4RQStop(
+            f"{where}: MATCHDATA identity=false -- getMatchData() did not "
+            f"return the injected object, so the values read back describe "
+            f"something else that happens to agree",
+            where=where, row=row, stdout=out)
 
     if len(recs) != 1:
         raise H4RQStop(f"{where}: {len(recs)} query records, expected exactly 1")
@@ -338,7 +411,29 @@ def observe_query(*, row: Dict[str, Any], state, paths: T1jPaths,
     if rec.move not in set(state.legal_moves()):
         raise H4RQStop(f"{where}: {rec.move} is illegal in OUR engine")
     if rec.requested_depth != DEPTH:
-        raise H4RQStop(f"{where}: requested depth {rec.requested_depth}, not {DEPTH}")
+        raise H4RQStop(f"{where}: requested depth {rec.requested_depth}, not {DEPTH}",
+                       where=where, row=row, stdout=out)
+
+    # 🔴 THE QUERY LINE MUST DESCRIBE THE POSITION WE SENT. The dump is checked
+    # for coherence separately, but the QUERY record is a DIFFERENT line and was
+    # unchecked: it could report another mover or move number while
+    # `classify_reply` keys on the outer row's ply, so a reply about a different
+    # position would be classified as though it were about this one.
+    if rec.q != 1:
+        raise H4RQStop(f"{where}: query index q={rec.q}, expected 1",
+                       where=where, row=row, stdout=out)
+    if rec.move_nr != int(row["ply"]):
+        raise H4RQStop(
+            f"{where}: the reply reports moveNr={rec.move_nr} but this position "
+            f"is at ply {row['ply']}; classification keys on the ply, so a "
+            f"record about another move number cannot be classified here",
+            where=where, row=row, stdout=out)
+    ours = A.PLAYER_TO_T1J[state.to_move]
+    if rec.to_move != ours:
+        raise H4RQStop(
+            f"{where}: the reply reports to_move={rec.to_move!r} but our side to "
+            f"move is {state.to_move!r} ({ours!r})",
+            where=where, row=row, stdout=out)
 
     if len(dumps) != 1:
         raise H4RQStop(f"{where}: {len(dumps)} searched-position dumps, expected 1")
@@ -382,6 +477,16 @@ def observe_replay(*, row: Dict[str, Any], state, paths: T1jPaths,
         raise H4RQVoidError(
             f"{where}: the replay output could not be parsed ({e}). VOID.") from None
 
+    try:
+        return _observe_replay_checks(row=row, state=state, where=where,
+                                      moves=moves, plies=plies, rc=rc, out=out,
+                                      ordinal=ordinal, paths=paths)
+    except H4RQStop as stop:
+        raise _with_context(stop, where=where, row=row, stdout=out) from None
+
+
+def _observe_replay_checks(*, row, state, where, moves, plies, rc, out, ordinal,
+                           paths) -> Dict[str, Any]:
     proc = _procs_one(out, where=where)
     post = _postcond_one(out, expected_refl=REPLAY_REFL_N, where=where)
     if rc != 0:
@@ -419,6 +524,26 @@ def run_qualification(*, paths: T1jPaths, out_path: str,
                           deadline=deadline, budget=budget, _compile=_compile)
 
 
+def _claim(out_path: str) -> None:
+    """Claim the create-only destination ATOMICALLY, before anything runs.
+
+    🔴 IT USED TO BE CLAIMED AFTER ALL 72 SUBPROCESSES. Two failures in one:
+    an occupied destination was discovered only after the whole run had been
+    spent, and a STOP -- which is a RESULT, and may not be retried -- produced
+    NO DURABLE RECORD AT ALL. The single observation of the failure was lost.
+    """
+    fd = os.open(out_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+    os.close(fd)
+
+
+def _write_record(out_path: str, report: Dict[str, Any]) -> None:
+    """Write into the ALREADY-CLAIMED path. Exclusivity was taken by `_claim`."""
+    with open(out_path, "w", encoding="utf-8") as fh:
+        json.dump(report, fh, indent=1, sort_keys=True)
+        fh.flush()
+        os.fsync(fh.fileno())
+
+
 def _run_unguarded(*, paths, out_path, prefixes=None, deadline=None, budget=None,
                    _compile=None):
     """Everything below the gate. PRIVATE, and never a way around the gate."""
@@ -429,6 +554,9 @@ def _run_unguarded(*, paths, out_path, prefixes=None, deadline=None, budget=None
     budget = budget or QueryBudget(cap=caps["total"])
     compile_fn = (_compile if _compile is not None
                   else functools.partial(_compile_helper_verified, paths=paths))
+    # 🔴 BEFORE COMPILATION, BEFORE ANY JVM. An occupied destination must be
+    # discovered now, not after 72 subprocesses have been spent.
+    _claim(out_path)
     deadline.start()
     try:
         with _supervisor(deadline):
@@ -443,13 +571,49 @@ def _run_unguarded(*, paths, out_path, prefixes=None, deadline=None, budget=None
 
 
 def _stages(matrix, digest, caps, paths, out_path, deadline, budget, compile_fn):
+    """The run. A STOP is CAUGHT here so it leaves a durable record.
+
+    🔴 RETRIES ARE FORBIDDEN, so the one observation of a failure is the only
+    one there will ever be. Losing it to an exception that wrote nothing would
+    mean the qualification stopped and said nothing about why -- exactly the
+    gap D1's VOID left, which is why the low-ply qualification had to exist.
+    """
+    observations: List[Dict[str, Any]] = []
+    try:
+        return _run_matrix(matrix, digest, caps, paths, out_path, deadline,
+                           budget, compile_fn, observations)
+    except H4RQStop as stop:
+        _write_record(out_path, {
+            "stage": "h4_repair_qualification",
+            "verdict": "STOP",
+            "stop_reason": stop.message,
+            "stop_where": stop.where,
+            "stop_position": stop.row,
+            "stop_stdout": stop.stdout,
+            "matrix_sha256": digest,
+            "n_positions": len(matrix),
+            "observations_completed": len(observations),
+            "subprocesses_spent": budget.spent,
+            "derived_caps": caps,
+            "elapsed_s": deadline.elapsed(),
+            "observations": observations,
+            "scope": (
+                "A STOP is a RESULT and it ENDS the qualification: no repair, "
+                "no retry, no improvisation. The observations below are the "
+                "ones COMPLETED BEFORE the stop and are not a partial "
+                "qualification."),
+        })
+        raise
+
+
+def _run_matrix(matrix, digest, caps, paths, out_path, deadline, budget,
+                compile_fn, observations):
     try:
         artifacts = compile_fn(deadline)
     except (ToolchainError, D1Error) as e:
         raise H4RQVoidError(f"toolchain or compilation failed: {e}. VOID.") from None
     deadline.check("after helper compilation")
 
-    observations: List[Dict[str, Any]] = []
     ordinal = 0
     for row in matrix:
         label = f"{row['family']}@ply{row['ply']}"
@@ -511,11 +675,7 @@ def _stages(matrix, digest, caps, paths, out_path, deadline, budget, compile_fn)
             "number of distinct ones is never a pass condition. No game was "
             "played, no seed drawn, no score computed."),
     }
-    fd = os.open(out_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
-    with os.fdopen(fd, "w", encoding="utf-8") as fh:
-        json.dump(report, fh, indent=1, sort_keys=True)
-        fh.flush()
-        os.fsync(fh.fileno())
+    _write_record(out_path, report)
     return report
 
 

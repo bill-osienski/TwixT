@@ -336,17 +336,19 @@ def parse_queries(text: str, *, transform: str = CANONICAL) -> List[QueryRecord]
         if missing:
             raise ValueError(f"QUERY line missing fields {sorted(missing)}: {line!r}")
         x, y = int(kv["move_x"]), int(kv["move_y"])
-        sentinel = kv["null_sentinel"] == "true"
+        # STRICT: these four drive the classifier and the acceptance rules, so a
+        # malformed token must raise rather than quietly read as False.
+        sentinel = _bool(kv, "null_sentinel", line)
         out.append(QueryRecord(
             q=int(kv["q"]),
             requested_depth=int(kv["requested_depth"]),
             move=None if sentinel else to_ours(x, y, transform=transform),
             to_move=kv["to_move"],
-            usealphabeta=kv["usealphabeta"] == "true",
+            usealphabeta=_bool(kv, "usealphabeta", line),
             current_max_ply=int(kv["currentMaxPly"]),
             completed_depth=int(kv["completed_depth"]),
-            completed=kv["completed"] == "true",
-            legal=kv["legal"] == "true",
+            completed=_bool(kv, "completed", line),
+            legal=_bool(kv, "legal", line),
             null_sentinel=sentinel,
             move_nr=int(kv["moveNr"]),
             eval_regime=kv["eval_regime"],
@@ -429,6 +431,22 @@ class ProcRecord:
     prefs_factory: str
 
 
+def _bool(kv: Dict[str, str], key: str, line: str) -> bool:
+    """EXACT `true`/`false` only. Anything else raises.
+
+    🔴 `kv[key] == "true"` IS FAIL-OPEN: `pieRule=garbage` silently becomes
+    False and passes a check that means "the swap rule is off". The helper emits
+    `String.valueOf(boolean)`, so only these two tokens are ever legitimate, and
+    a third means the output is not what we think we are reading.
+    """
+    v = kv.get(key)
+    if v == "true":
+        return True
+    if v == "false":
+        return False
+    raise ValueError(f"{key}={v!r} is not exactly 'true' or 'false': {line!r}")
+
+
 @dataclass(frozen=True)
 class MatchDataRecord:
     """The helper's MATCHDATA line: what `Match.getMatchData()` actually holds.
@@ -454,10 +472,10 @@ def parse_matchdata(text: str) -> List[MatchDataRecord]:
         missing = {"pieRule", "xsize", "ysize", "ystarts", "identity"} - set(kv)
         if missing:
             raise ValueError(f"MATCHDATA line missing fields {sorted(missing)}: {line!r}")
-        out.append(MatchDataRecord(pie_rule=kv["pieRule"] == "true",
+        out.append(MatchDataRecord(pie_rule=_bool(kv, "pieRule", line),
                                    xsize=int(kv["xsize"]), ysize=int(kv["ysize"]),
-                                   ystarts=kv["ystarts"] == "true",
-                                   identity=kv["identity"] == "true"))
+                                   ystarts=_bool(kv, "ystarts", line),
+                                   identity=_bool(kv, "identity", line)))
     return out
 
 
