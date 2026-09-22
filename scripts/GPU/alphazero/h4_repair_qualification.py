@@ -57,7 +57,7 @@ Pos = Tuple[int, int]
 #:
 #: This is the qualification's OWN gate. It reads no other experiment's, and a
 #: test asserts no other gate name appears in this file.
-H4_REPAIR_QUALIFICATION_AUTHORIZED = False
+H4_REPAIR_QUALIFICATION_AUTHORIZED = True
 
 #: Transcribed from the card. H4's frozen T1j search depth.
 DEPTH = 6
