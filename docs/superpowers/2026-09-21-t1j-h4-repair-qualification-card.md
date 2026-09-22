@@ -293,11 +293,35 @@ ends at ply 5. It is a classifier control driven with constructed telemetry, not
 a position in the matrix — and the card says so rather than letting a reader
 assume the matrix covers it.
 
-🔑 **And a CLEAN-BASELINE control**, because every row above is a refusal: a
-fully valid observation set must reach the clean result. A classifier tightened
-until nothing passes satisfies this whole table while making the qualification
-unusable — the same defect, from the other side, as the `failures` exemption
-that once condemned every native reply.
+🔑 **And CLEAN-BASELINE controls — FOUR OF THEM, one per accepted
+classification.** Every row above is a refusal, so without positive baselines a
+classifier tightened until nothing passes would satisfy the whole table while
+making the qualification unusable — the same defect, from the other side, as the
+`failures` exemption that once condemned every native reply.
+
+🔴 **ONE AGGREGATE "VALID RECORD" IS NOT ENOUGH.** Each accepted classification
+must be exercised **individually**, or an unobserved branch stays unreachable
+while every control passes:
+
+| baseline | must reach |
+|---|---|
+| ply 0, `exit 3` / `failures 1` / `usealphabeta=false` / `currentMaxPly=0` | `native_initial_first` |
+| ply 1–3, same telemetry | `native_initial_second_to_fourth` |
+| **ply 4–5, same telemetry** | **`native_initial_fifth_or_more`** |
+| any ply, `exit 0` / `failures 0` / `usealphabeta=true` / `currentMaxPly=7` / completed depth 6 | `searched` |
+
+⚠ **`native_initial_fifth_or_more` IS THE ONE WITH NO PRIOR EVIDENCE AT ALL, and
+that is exactly why it needs its own baseline.** §4A queried three ply-5
+positions and every one came back `searched` — `fifthOrMoreMove()` returned null
+at all three. **This programme has therefore never observed that routine
+answering.** A single aggregate baseline would almost certainly exercise
+`searched` or a low-ply native reply and leave that branch dead, with the whole
+control table still green.
+
+Because the matrix cannot guarantee a ply-4/5 native reply, this baseline is
+**driven with constructed telemetry** where necessary — the same
+classifier-control status as the ply ≥ 6 refusal, and stated for the same
+reason.
 
 ---
 
