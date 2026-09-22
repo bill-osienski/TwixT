@@ -175,7 +175,7 @@ Recorded per query, from telemetry the repaired helper already emits:
 | **0** | `usealphabeta=false`, `currentMaxPly=0` | `native_initial_first` |
 | **1–3** | `usealphabeta=false`, `currentMaxPly=0` | `native_initial_second_to_fourth` |
 | **4–5** | `usealphabeta=false`, `currentMaxPly=0` | `native_initial_fifth_or_more` |
-| any | `usealphabeta=true`, `currentMaxPly=7`, completed depth **6** | `searched` |
+| ~~any~~ **≥ 3** *(amended 2026-09-22; see below)* | `usealphabeta=true`, `currentMaxPly=7`, completed depth **6** | `searched` |
 | — | **every other combination** | 🔴 **STOP** |
 
 **`currentMaxPly=7` is `depth+1`**, as the low-ply record shows for a completed
@@ -193,8 +193,10 @@ kept there, not rewritten away. This is the corrected rule.
 Under the frozen **24×24 no-pie** configuration, `InitialMoves` answers **every**
 query at plies 0, 1 and 2 natively, so no search can run there. **A completed
 search at any of those plies contradicts the pinned jar's dispatch. STOP.** This
-narrows the "any" in the §4 table's `searched` row, and in §7.1's `searched`
-baseline, to **plies 3 and above**.
+narrows the "any" in the §4 table's `searched` row to **plies ≥ 3**, and in
+§7.1's `searched` baseline to **plies 3–5** (the frozen matrix ends at 5). Both
+rows are marked in place, with the superseded value struck through, because an
+execution-facing table must not keep a locally false rule.
 
 **Derived, not assumed** — `javap -c` on the pinned `t1j.jar`:
 
@@ -393,7 +395,7 @@ while every control passes:
 | ply 0, `exit 3` / `failures 1` / `usealphabeta=false` / `currentMaxPly=0` | `native_initial_first` |
 | ply 1–3, same telemetry | `native_initial_second_to_fourth` |
 | **ply 4–5, same telemetry** | **`native_initial_fifth_or_more`** |
-| any ply, `exit 0` / `failures 0` / `usealphabeta=true` / `currentMaxPly=7` / completed depth 6 | `searched` |
+| ~~any ply~~ **plies 3–5** *(amended 2026-09-22, §4)*, `exit 0` / `failures 0` / `usealphabeta=true` / `currentMaxPly=7` / completed depth 6 | `searched` |
 
 ⚠ **`native_initial_fifth_or_more` IS THE ONE WITH NO PRIOR EVIDENCE AT ALL, and
 that is exactly why it needs its own baseline.** §4A queried three ply-5

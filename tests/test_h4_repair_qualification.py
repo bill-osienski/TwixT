@@ -341,11 +341,19 @@ def test_baseline_native_initial_FIFTH_OR_MORE(ply):
 
 
 @pytest.mark.parametrize("ply", [3, 4, 5])
-def test_baseline_searched(ply):
-    """🔴 PLIES 0, 1 AND 2 ARE EXCLUDED -- under the frozen 24x24 no-pie
-    configuration InitialMoves answers there natively, so search is impossible
-    (card §4 amendment). An earlier version of this test BLESSED ply 0, and the
-    version after it still blessed ply 2."""
+def test_baseline_searched_AND_non_spread_control(ply):
+    """TWO ROLES, ONE TEST. They were two tests with identical bodies and cases,
+    which added no mutation coverage and overstated the count.
+
+    1. POSITIVE BASELINE (card §7.1): `searched` must be reachable.
+    2. NON-SPREAD CONTROL (card §4 amendment): the plies 0-2 STOP must not
+       reach ply 3, where `secondToFourthMove()` may return the -1,-1 sentinel
+       -- the only moveNr that reaches those stores -- or plies 4-5, where
+       `fifthOrMoreMove()` may return null. `initialMove()` turns either into
+       null and the search runs, so it must be ACCEPTED.
+
+    🔴 PLIES 0, 1 AND 2 ARE EXCLUDED: search is impossible there. An earlier
+    version of this baseline BLESSED ply 0, and the version after it ply 2."""
     rec = _rec(usealphabeta=True, current_max_ply=Q.SEARCHED_CURRENT_MAX_PLY,
                completed=True, completed_depth=Q.DEPTH)
     assert Q.classify_reply(ply=ply, rec=rec, exit_status=0,
@@ -559,7 +567,10 @@ def test_it_plays_no_game_draws_no_seed_and_computes_no_score():
 # ── search is IMPOSSIBLE at plies 0, 1 AND 2 (card §4 amendment) ──
 # THREE SEPARATE controls, one per ply, so dropping any one ply from the rule
 # fails a control of its own. Each drives an otherwise CLEAN search -- exit 0,
-# failures 0 -- because that is exactly the reply that must be refused.
+# failures 0 -- because that is exactly the reply that must be refused. The
+# control that the rule does NOT spread past ply 2 is
+# `test_baseline_searched_AND_non_spread_control` in section 4: one test, both
+# roles.
 
 def test_SEARCH_AT_PLY_ZERO_is_refused():
     """🔴 DERIVED, not assumed: `firstMove()` has no `aconst_null` and its
@@ -599,19 +610,6 @@ def test_SEARCH_AT_PLY_TWO_is_refused():
     with pytest.raises(Q.H4RQStop,
                        match="ply 2: a completed search is impossible"):
         Q.classify_reply(ply=2, rec=rec, exit_status=0, failures=0)
-
-
-@pytest.mark.parametrize("ply", [3, 4, 5])
-def test_search_at_plies_3_to_5_REMAINS_LEGITIMATE(ply):
-    """CONTROL THAT THE RULE DOES NOT SPREAD past ply 2. At ply 3 -- the only
-    moveNr that reaches the -1,-1 stores -- `secondToFourthMove()` may return
-    that sentinel, and at plies 4-5 `fifthOrMoreMove()` may return null.
-    `initialMove()` turns either into null and the search runs, so BOTH
-    outcomes are legitimate and neither may be refused."""
-    rec = _rec(usealphabeta=True, current_max_ply=Q.SEARCHED_CURRENT_MAX_PLY,
-               completed=True, completed_depth=Q.DEPTH)
-    assert Q.classify_reply(ply=ply, rec=rec, exit_status=0,
-                            failures=0) == Q.SEARCHED
 
 
 # ── query-record coherence: the QUERY line must describe the position sent ──
