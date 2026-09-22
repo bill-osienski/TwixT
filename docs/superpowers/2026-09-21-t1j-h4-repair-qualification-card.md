@@ -15,8 +15,18 @@ conditions**. Its results **may not be pooled with §4A's**.
 > reflection contracts hold** — with no diversity claim, no probability
 > estimate, and no strength evidence of any kind.
 
-Depends on: `2026-09-21-t1j-h4-matchdata-repair-design.md` (both changes), which
-must be implemented and reviewed **before** this card is frozen.
+🔴 **THIS CARD IS THE AUTHORITY, AND IT IS FROZEN FIRST.** An earlier draft had
+the sequencing backwards — it said the card could not be frozen until the repair
+was implemented and reviewed. **That is the wrong way round.** A specification
+completed *from* its implementation is not a specification; it ratifies whatever
+was built.
+
+So: the card freezes, and then **implementation either CONFORMS to it or returns
+here for an explicit design amendment.** It does not get to settle an open
+question by being written.
+
+Depends on `2026-09-21-t1j-h4-matchdata-repair-design.md` (both changes) for
+**what** is being repaired — not for permission to specify how it is qualified.
 
 ---
 
@@ -43,6 +53,41 @@ different matrix.
 | **order** | observations carry a monotonic ordinal (§4A's own lesson) |
 | **row count = 16** | a dropped or duplicated row changes the coverage |
 | **sha256 over the canonical serialization** | one value that all four of the above must reproduce |
+
+### ✅ THE PIN, FROZEN NOW — the runner REPRODUCES it, never defines it
+
+The canonical form is specified here, so no code is needed to fix it:
+
+* **UTF-8 compact JSON array**, separators `,` and `:`
+* keys in the order **`family`, `ply`, `prefix`** — a declared order, never
+  `sort_keys`
+* **`empty_board` first** (`ply` 0, `prefix` `[]`)
+* families in the order **`o1_center`, `o3_low`, `o4_high`**
+* within each family, **plies ascending 1–5**, each `prefix` the first *ply*
+  moves of that family's ply-5 sequence
+* **no trailing newline**
+
+```text
+H4_REPAIR_MATRIX_SHA256 =
+  3cc14ca99935af511614742feafe6b3966ce8da83dc2789a103f98d3d22f27cd
+```
+
+**16 rows, 1002 bytes.** ✅ **Independently reproduced 2026-09-21** from the
+pinned source file via the form above, matching the value derived separately in
+review — two derivations, one value, agreeing before it was recorded.
+
+Boundary excerpts, so a reproducer can localize a mismatch instead of only
+seeing a wrong digest:
+
+```text
+first 90  [{"family":"empty_board","ply":0,"prefix":[]},{"family":"o1_center","ply":1,"prefix":[[11,
+last  50  ,"prefix":[[8,12],[11,11],[10,13],[9,9],[12,12]]}]
+```
+
+🔑 **The runner must REPRODUCE this serialization, not define it.** That is the
+whole point of fixing it in the card: an implementation that computes its own
+canonical form and then hashes it has pinned nothing — it has recorded what it
+happened to build.
 
 The runner **recomputes the derivation and compares the whole canonical matrix
 against that pin before compilation**, exactly as §4A's corrected
@@ -144,6 +189,37 @@ to search. §4A observed null at three ply-5 positions; **that is three
 positions, not a property of ply 5.** Both outcomes are recorded and neither
 stops the run.
 
+### 4.1 🔴 EXIT SEMANTICS — the most dangerous detail, and it was missing
+
+The repair does **not** change the helper's completion requirement, and no such
+change is authorized. **Therefore a legitimate native-initial reply still looks
+like a failure at the process boundary:**
+
+```text
+exit = 3   failures = 1   completed = false
+usealphabeta = false      currentMaxPly = 0
+```
+
+`E4Preflight` sets its `failures` counter when the requested depth did not
+complete, and `initialMove()` answering means no depth completed. **That is
+expected, and it is exactly the shape D1 mistook for an abort.**
+
+**Frozen rules — nothing else passes:**
+
+| observation | rule |
+|---|---|
+| exact **native-initial** signature | permit **only** `exit = 3` **and** `failures = 1` |
+| **completed search** | require **`exit = 0`** and **`failures = 0`** |
+| native signature with **any other failure count** | 🔴 **STOP** |
+| searched reply with **any** failure | 🔴 **STOP** |
+| **every other** exit / telemetry combination | 🔴 **STOP** |
+
+🔑 **Without this, "a clean result" is ambiguous** — it could be read as "exit 0
+everywhere", which would reject every legitimate native reply, or as "ignore the
+exit code", which would accept a genuinely broken one. Pinning both directions
+is what makes §7's authorization meaningful, and it is the §4A `failures`
+exemption lesson stated as an acceptance rule rather than a bug fix.
+
 ---
 
 ## 5. The contracts that must hold
@@ -192,17 +268,80 @@ H2, H3 or L0.
 
 ---
 
+## 7.1 🔴 REQUIRED NEGATIVE CONTROLS — each must be proven to REJECT
+
+A gate, a pin and a classifier that have never been shown to refuse anything are
+assertions. Every one of these is required before the qualification may run:
+
+| control | what it must reject |
+|---|---|
+| **closed gate** | both public entries refuse, **and** the CLI refuses as a **fresh subprocess**, with no class directory created |
+| **matrix row dropped** | a 15-row matrix |
+| **matrix row duplicated** | 17 rows, or 16 with a repeat |
+| **matrix reordered** | the same 16 rows in another order — order is pinned |
+| **wrong truncation length** | a ply-2 row carrying 3 moves |
+| **invalid source telemetry** | any exit/telemetry combination outside §4 and §4.1 |
+| **native reply at ply ≥ 6** | a native-initial claim where `initialMove()` returns null by dispatch |
+| **missing `PROC`** | 0 PROC lines on a query or a replay |
+| **multiple `PROC`** | 2+ PROC lines from one JVM |
+| **`MatchData` readback mismatch** | injected values that do not read back, incl. `mdPieRule` coming back `true` |
+| **dirty safety state** | a throw, `windows`/`frames` non-zero, not headless, preferences disturbed |
+| **default-path reflection drift** | a default caller reporting `refl_n != 3` |
+
+⚠ **The ply ≥ 6 control is necessarily SYNTHETIC**, because the frozen matrix
+ends at ply 5. It is a classifier control driven with constructed telemetry, not
+a position in the matrix — and the card says so rather than letting a reader
+assume the matrix covers it.
+
+🔑 **And a CLEAN-BASELINE control**, because every row above is a refusal: a
+fully valid observation set must reach the clean result. A classifier tightened
+until nothing passes satisfies this whole table while making the qualification
+unusable — the same defect, from the other side, as the `failures` exemption
+that once condemned every native reply.
+
+---
+
 ## 8. What this card does not do
 
 It writes no code, opens no gate, reserves no seed and runs nothing. It does not
-authorize the repair implementation — that is the repair design's own review —
-and it is **not frozen** until the two changes are implemented and reviewed,
-because a qualification must be written against the helper it will actually run.
+authorize the repair implementation — that is a separate authorization.
 
-### Still owed before freezing
+⚠ **An earlier draft ended here saying the card was "not frozen until the two
+changes are implemented and reviewed, because a qualification must be written
+against the helper it will actually run."** That sentence is **withdrawn**. It
+inverted the dependency: a qualification written against the helper that was
+built can only ratify it. The card is written against the helper the design
+**specifies**, and a helper that does not match it **fails the card**.
 
-* the **derived matrix's own sha256**, computed from the canonical
-  serialization once the truncation is written;
-* the qualification's **gate name** and **create-only destination**;
-* confirmation that **`refl_n = 4`** is what the repaired helper actually
-  reports — **re-derived, not assumed** (repair design §2.4).
+### ✅ FROZEN NAMES
+
+```text
+gate         H4_REPAIR_QUALIFICATION_AUTHORIZED
+destination  docs/superpowers/evidence/2026-09-21-t1j-h4-repair-qualification/
+matrix pin   H4_REPAIR_MATRIX_SHA256 = 3cc14ca9…d22f27cd   (§1)
+```
+
+Naming the gate and its create-only destination is **design work, not
+implementation**. The gate constant is **created closed** when the code is
+written; naming it now is what lets this card be the authority rather than a
+description of whatever gets built.
+
+### ✅ `refl_n = 4` IS THE FROZEN EXPECTED CONTRACT
+
+An earlier draft listed it as "still owed — confirmation of what the repaired
+helper reports". **That was the reversed sequencing again.** The card **cannot**
+wait for a pre-qualification helper run to learn its own acceptance threshold —
+and it does not need to:
+
+* **implementation review** must **re-derive four from the repaired source**;
+* **qualification execution** must **observe four**;
+* a helper reporting anything else **fails this card** rather than amending it.
+
+### Nothing is owed before freezing
+
+The matrix pin, the gate name, the destination, the classifier, the exit
+semantics and the negative controls are all fixed above. **This card is ready to
+freeze.**
+
+**The next separately authorized action is repair implementation plus tests,
+with the gate created CLOSED and no helper execution.**
