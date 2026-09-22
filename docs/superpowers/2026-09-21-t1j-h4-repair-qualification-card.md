@@ -183,40 +183,96 @@ depth-6 search. The classification is keyed on the **ply dispatch plus the
 telemetry**, so it names **which routine answered** rather than inferring a
 narrative from an exit code.
 
-### 🔴 AMENDMENT 2026-09-22 — `searched` IS IMPOSSIBLE AT PLY 0
+### 🔴 AMENDMENT 2026-09-22 — `searched` IS IMPOSSIBLE AT PLIES 0, 1 AND 2
 
-Under the frozen **24×24 no-pie** configuration, `InitialMoves.firstMove()`
-**always** answers, so a completed search at ply 0 means the injection did not
-take effect. **STOP.**
+⚠ **CORRECTED THE SAME DAY.** The first version of this amendment (`3902bf5`)
+made **ply 0** the only STOP and left ply 1 **permissive as underived**. That
+rested on a misread, set out under *"What the first version got wrong"* below —
+kept there, not rewritten away. This is the corrected rule.
 
-**Derived, not assumed.** `firstMove()` contains **no `aconst_null`**, and its
-`mdPieRule=false` branch always constructs `new Move(x, y)` with
-`x = Xsize/2 + nextInt(Xsize/4) - (Xsize/4)/2` — on a 24-wide board that is
-`12 + [0..5] - 3` = **9..14**, always ≥ 0, so `initialMove()`'s
-`retMove.getX() >= 0` gate always passes it through.
+Under the frozen **24×24 no-pie** configuration, `InitialMoves` answers **every**
+query at plies 0, 1 and 2 natively, so no search can run there. **A completed
+search at any of those plies contradicts the pinned jar's dispatch. STOP.** This
+narrows the "any" in the §4 table's `searched` row, and in §7.1's `searched`
+baseline, to **plies 3 and above**.
 
-⚠ **PLY 1 IS *NOT* INCLUDED, AND THE REASON IS THAT I COULD NOT DERIVE IT.**
-Review argued ply 1 is equally impossible, and it may well be. But
-`secondToFourthMove()` has a **single `areturn`**, and its dispatch at offsets
-277–292 reads as *"moveNr == 2 or 3 → compute, else → `new Move(-1,-1)`"* —
-which would make **ply 1 always search**, flatly contradicting §4A, which
-observed **native** replies at ply 1 in all three families. **That
-contradiction means the reading is wrong somewhere**, and a rule encoded on a
-reading known to be wrong is worse than no rule.
+**Derived, not assumed** — `javap -c` on the pinned `t1j.jar`:
 
-So ply 1 stays **permissive** pending a derivation that holds. If the ply-1
-claim is established, adding it is a one-line amendment here and a one-line
-change in `classify_reply`.
+* `FindMove.computeMove()` calls `initialMove()` **first** (offset 12) and, when
+  it gets a move, returns it without searching (`ifnull 40`, `areturn` 39).
+  `initialMove()` keeps a move only if `getX() >= 0`.
+* **ply 0** — `firstMove()` contains **no `aconst_null`**, and its
+  `mdPieRule=false` branch always constructs `new Move(x, y)` with
+  `x = Xsize/2 + nextInt(Xsize/4) - (Xsize/4)/2` — on a 24-wide board
+  `12 + [0..5] - 3` = **9..14**, always ≥ 0.
+* **plies 1 and 2** — `secondToFourthMove()`'s only `-1,-1` stores are at offsets
+  **495–498**, and the only way in is falling through `492: if_icmpgt 499`, on
+  the **moveNr == 3** path. At moveNr 1, `292: if_icmpne 499` jumps **over**
+  them; at moveNr 2, `442: if_icmpne 499` does. The `Move` built at 499 keeps
+  coordinates computed from a placed move (`getMoveX(i)` is `moves.get(i-1)`),
+  and no path drives x below 0.
 
-🔑 **Plies 2–5 remain legitimately EITHER**, and a negative control pins that
-the ply-0 rule does not spread: at those plies a native routine may return the
-`-1,-1` sentinel, which falls through to search.
+| ply | routine | can it search? |
+|---:|---|---|
+| **0** | `firstMove()` | 🔴 **no** — always native |
+| **1–2** | `secondToFourthMove()` | 🔴 **no** — always native |
+| **3** | `secondToFourthMove()` | **either** — the only ply that can reach the `-1,-1` stores |
+| **4–5** | `fifthOrMoreMove()` | **either** — it returns a move or null |
+| **≥ 6** | — | **searched only** — `initialMove()` returns null by dispatch |
+
+✅ **It agrees with every observation on record.** §4A saw native replies at
+plies 1 and 3 and `searched` at ply 5, in all three families. The low-ply run saw
+JVM disagreement at plies 1 and 3 — a randomized routine answering — and none at
+ply 5.
+
+**The STOP names no cause.** It records that the reply is one the frozen
+configuration cannot produce, not why.
+
+🔑 **Plies 3–5 remain legitimately EITHER.** At ply 3 `secondToFourthMove()` may
+return the `-1,-1` sentinel, and at plies 4–5 `fifthOrMoreMove()` may return
+null; `initialMove()` turns either into null and the search runs.
+
+**Required controls, in §7.1's sense:** a completed search at ply 0, at ply 1 and
+at ply 2 must each be shown to **STOP** — **three separate controls**, so that
+dropping any one ply from the rule fails a control of its own — and a completed
+search at plies 3, 4 and 5 must be shown to be **accepted**, so that the rule
+cannot spread.
 
 ⚠ **Plies 4 and 5 may legitimately produce EITHER classification.**
 `fifthOrMoreMove()` may return a native move **or null**, and null falls through
 to search. §4A observed null at three ply-5 positions; **that is three
 positions, not a property of ply 5.** Both outcomes are recorded and neither
 stops the run.
+
+#### ⚠ What the first version got wrong — kept, not rewritten away
+
+It said:
+
+> ⚠ **PLY 1 IS *NOT* INCLUDED, AND THE REASON IS THAT I COULD NOT DERIVE IT.**
+> … `secondToFourthMove()` has a **single `areturn`**, and its dispatch at
+> offsets 277–292 reads as *"moveNr == 2 or 3 → compute, else →
+> `new Move(-1,-1)`"* — which would make **ply 1 always search** …
+
+1. **The misread.** The jump to offset 499 was read as though execution passed
+   *through* the `-1,-1` stores at 495–498 on its way there. **A branch target
+   is where execution RESUMES, not a region it traverses:** `292: if_icmpne 499`
+   skips them, and locals 2/3 keep the coordinates already computed. The
+   contradiction with §4A's native ply-1 replies was the signal, and **when a
+   derivation contradicts an observation, the derivation is wrong.** Refusing to
+   encode a rule on a reading known to be wrong was right; stopping at the
+   contradiction instead of hunting the error cost a review round.
+2. **Ply 2 was missed as well.** Review argued ply 1. The same reading of
+   `442: if_icmpne 499` makes ply 2 equally impossible, yet the first version
+   declared *"Plies 2–5 remain legitimately EITHER"* and pinned it with a
+   control — so a search at ply 2 was **accepted**, and the `searched` positive
+   baseline **blessed** it, as an earlier baseline had blessed ply 0.
+3. **Two of its sentences were not derived.** *"a completed search at ply 0 means
+   the injection did not take effect"* — the runner verifies the MATCHDATA
+   readback (`identity=true`, `pieRule=false`) **before** it classifies, and §4A
+   showed that a missing injection makes `firstMove()` **throw**, not search.
+   And *"at those plies [2–5] a native routine may return the `-1,-1`
+   sentinel"* — only ply 3 can; at plies 4–5 the route to search is
+   `fifthOrMoreMove()` returning **null**.
 
 ### 4.1 🔴 EXIT SEMANTICS — the most dangerous detail, and it was missing
 

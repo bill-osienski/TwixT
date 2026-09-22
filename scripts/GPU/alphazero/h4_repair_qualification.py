@@ -247,28 +247,29 @@ def classify_reply(*, ply: int, rec, exit_status: int, failures: Optional[int]
             f"InitialMoves.initialMove() returns null for moveNr >= 6 by "
             f"dispatch, so no routine can have answered.")
     if searched_telemetry:
-        # 🔴 SEARCH IS IMPOSSIBLE AT PLY 0 under the frozen 24x24 no-pie
-        # configuration, and this is DERIVED, not assumed: `firstMove()`
-        # contains no `aconst_null`, and its no-pie branch always constructs
-        # `new Move(x, y)` with x = Xsize/2 + nextInt(Xsize/4) - (Xsize/4)/2,
-        # which on a 24-wide board is 9..14 -- always >= 0, so
-        # `initialMove()`'s `getX() >= 0` gate always passes it through. A
-        # search at ply 0 therefore means the injection did not take.
-        #
-        # ⚠ PLY 1 IS NOT INCLUDED HERE. Review argued it is equally impossible,
-        # and it may well be, but I could not derive it: `secondToFourthMove()`
-        # has a single `areturn` and a dispatch that reads as "moveNr 2 or 3
-        # -> compute, else -> new Move(-1,-1)", which would make ply 1 ALWAYS
-        # search -- flatly contradicting §4A, which observed native replies at
-        # ply 1 in all three families. That contradiction means the reading is
-        # wrong, so the rule is NOT encoded on it. Left permissive pending a
-        # derivation that holds.
-        if ply == 0:
+        # 🔴 SEARCH IS IMPOSSIBLE AT PLIES 0, 1 AND 2 under the frozen 24x24
+        # no-pie configuration -- DERIVED from the pinned jar (card §4
+        # amendment). `FindMove.computeMove()` returns `initialMove()`'s move
+        # without searching whenever it is non-null with getX() >= 0, and:
+        #   ply 0     `firstMove()` has no `aconst_null`; its no-pie branch
+        #             always builds new Move(x, y), x = 12 + nextInt(6) - 3.
+        #   plies 1-2 `secondToFourthMove()`'s only -1,-1 stores (495-498) are
+        #             reached only at moveNr == 3: `292: if_icmpne 499` and
+        #             `442: if_icmpne 499` jump OVER them, so the move keeps
+        #             coordinates computed from a placed move, never negative.
+        # ⚠ The first version stopped at ply 0 only, having read the jump to 499
+        # as passing THROUGH 495-498; a branch target is where execution
+        # RESUMES. It also blamed the MatchData injection, which is not derived:
+        # the readback is verified before this runs, and a missing injection
+        # makes firstMove() throw, not search. So the STOP names no cause.
+        if 0 <= ply <= 2:
             raise H4RQStop(
-                f"ply 0: a completed search is impossible here -- under the "
-                f"frozen 24x24 no-pie configuration InitialMoves.firstMove() "
-                f"always returns a central move (x in 9..14), so a search at "
-                f"ply 0 means the MatchData injection did not take effect.")
+                f"ply {ply}: a completed search is impossible here -- under the "
+                f"frozen 24x24 no-pie configuration InitialMoves answers plies "
+                f"0-2 natively (firstMove() at 0; secondToFourthMove() at 1-2, "
+                f"whose -1,-1 sentinel is reachable only at moveNr 3), so no "
+                f"search can run. The reply contradicts the pinned jar's "
+                f"dispatch.")
         if exit_status != SEARCHED_EXIT or failures != SEARCHED_FAILURES:
             raise H4RQStop(
                 f"ply {ply}: completed-search telemetry with exit={exit_status} "
