@@ -89,14 +89,37 @@ that no alternative exists.
 
 ### 1.1 🔴 A consequence for the opening that the design must carry
 
-E2 also recorded, on the way past:
+E2 recorded, on the way past:
 
 > `InitialMoves.firstMove()` selects from a **seven-entry opening table** with
 > an **unseeded `new Random()`**. The opening-book branch is therefore
 > **nondeterministic by construction.**
 
+🔴 **CORRECTED 2026-09-21 — THE SEVEN-ENTRY TABLE IS THE WRONG BRANCH FOR H4.**
+An earlier draft of this card carried E2's sentence forward unqualified. It
+describes the branch H4 **deliberately does not take.**
+
+`firstMove()` reads `mdPieRule` and forks. Derived from the pinned jar by
+disassembly (`javap -c net.schwagereit.t1j.InitialMoves`):
+
+| `mdPieRule` | branch |
+|---|---|
+| **true** | the **seven-entry table**: `nextInt(7)` over a `new int[7][]`, then two `nextBoolean()` mirrorings off `getXsize()` / `getYsize()` |
+| 🔴 **false** — **H4's setting** | **two independent unseeded `nextInt` draws off board size** |
+
+The no-pie branch, read straight off the bytecode at offsets 217–294:
+
+```
+r = Xsize / 4 ;  x = Xsize/2 + nextInt(r) - r/2
+s = Ysize / 4 ;  y = Ysize/2 + nextInt(s) - s/2
+```
+
+On H4's **24×24** board that is `12 + [0..5] - 3` on each axis, so
+**x ∈ 9..14 and y ∈ 9..14 — the central 6×6 region, 36 coordinates**, from two
+independent draws of a **fresh unseeded `Random`**.
+
 So a repaired ply-0 query does **not** return a fixed move. T1j's opening is
-drawn from seven entries by **randomness whose state we neither seed nor
+drawn from **that 6×6 region** by **randomness whose state we neither seed nor
 record; every realized move is observed and persisted.**
 
 ⚠ **CORRECTED 2026-09-21.** An earlier draft said "randomness we neither seed
@@ -134,14 +157,30 @@ Match settings decide how T1j plays. They are part of the measured agent, so
 they are frozen here rather than inherited from whatever a constructor leaves
 behind:
 
-| setting | value | why |
-|---|---|---|
-| board size | **24** | `A.BOARD_N`, matching our engine |
-| starting player | **red moves first** | TwixT's first player, and H4 Arm B's premise |
-| `mdPieRule` | 🔴 **false** | **H4 has no swap rule.** The field whose dereference threw is the one most likely to be set carelessly, and a `true` here would silently measure a different game |
+✅ **THE INVENTORY IS CLOSED, and it is smaller than expected.** Derived by
+disassembling the pinned jar: **`mdPieRule` is the ONLY `MatchData` field read
+anywhere in `InitialMoves`** — a single `getfield MatchData.mdPieRule` in the
+whole class. Board dimensions come from the already-sized `Match` boards
+(`getXsize()` / `getYsize()`), and the mover from `nextPlayer` / `currentPlayer`.
+**No human flags, names, game-over flag or any other `MatchData` field is
+required**, and `secondToFourthMove()` and `fifthOrMoreMove()` read none at all
+— which is why §4A's plies 1/3/5 returned moves with `matchData` still null.
 
-Any other field the path requires must be enumerated **and justified in this
-card** before implementation, never discovered and defaulted during it.
+| field | value | status |
+|---|---|---|
+| `mdPieRule` | 🔴 **false** | **OPERATIVE.** H4 has no swap rule; `true` selects a different branch and a different game |
+| `mdXsize` | **24** | set and recorded for a coherent object; **not operative here** |
+| `mdYsize` | **24** | set and recorded; **not operative here** |
+| `mdYstarts` | **true** | set and recorded; **not operative here** |
+
+🔑 **Set the four, record the four, and state plainly that only `mdPieRule` is
+operative on this direct-query path.** A coherent object costs nothing and stops
+a later reader inferring that the other three were consulted. The reflection
+contract is **unchanged at exactly four accesses** on the opt-in path, with
+`Match.matchData(write)` added to `AUTHORIZED`.
+
+If implementation finds any further field is required, that is a **design
+change** returning here — never a default chosen at the keyboard.
 
 ### 2.3 The mechanism: audited private-field injection
 
@@ -248,11 +287,55 @@ helper's behaviour changes, this is a **new qualification with its own name, own
 gate, own create-only destination and own card** — not a continuation, and its
 results may not be pooled with §4A's.
 
-### 4.1 It repeats the FULL 0/1/3/5 matrix
+### 4.0 🔴 TERMINOLOGY: "fallback" is not what the engine does
 
-Not only ply 0. The helper changed, so **every** prior observation is
-re-established rather than assumed to have survived. A repair that fixed ply 0
-and perturbed ply 5 would otherwise go unseen.
+**`native_low_ply_fallback` is a misnomer and must be retired everywhere.** It
+says a search was attempted and fell back. **No search was attempted.**
+
+`FindMove.computeMove()` calls `InitialMoves.initialMove()` **first** and
+returns immediately if it gets a move — disassembled: `initialMove` at offset
+12, `ifnull 40`, `areturn` at 39. `initialMove` then dispatches on `getMoveNr()`:
+
+| ply | routine | randomized? |
+|---:|---|---|
+| **0** | `firstMove()` | **yes** — fresh unseeded `Random` (§1.1) |
+| **1–3** | `secondToFourthMove()` | **yes** — its own fresh unseeded `Random`, six `nextInt` calls |
+| **4–5** | `fifthOrMoreMove()` | **no** — contains no `Random`; may return a native move **or null** |
+| **≥6** | — | returns null → **search runs** |
+
+So §4A's `usealphabeta=false, currentMaxPly=0` records at plies 1 and 3 mean
+**`secondToFourthMove()` answered**. Nothing searched, nothing fell back.
+
+🔑 **AND THIS RESOLVES A QUESTION THE LOW-PLY CARD LEFT OPEN.** That card
+recorded JVM disagreement at plies 1 and 3 (5 of 12 cells) but none at ply 5,
+and said in terms: *"What distinguishes ply 5 from plies 1 and 3 is not recorded
+here."* It is now. Plies 1/3 are answered by a **randomized** routine; at the
+three observed ply-5 positions `fifthOrMoreMove()` returned null so a
+**deterministic search** ran instead. `eval_regime` was never the discriminator,
+as that card already suspected — **which routine answered** is.
+
+### 4.1 🔴 The matrix must cover plies 1–5, not 0/1/3/5
+
+§4A says in terms that it speaks for **no ply 2 or 4**. Repeating its matrix
+therefore **cannot qualify actual H4 play**: T1j Red moves at plies **0, 2, 4**
+and T1j Black at **1, 3, 5**, so half of Arm B's early moves would be
+unqualified.
+
+**Minimal base matrix: the empty board + plies 1–5 from each of the three
+frozen prefix families = 16 positions.** Plies 2 and 4 need **no new input and
+no seed**: the frozen families are **already nested** — `o1_center`'s ply-5
+prefix `[[11,11],[12,13],[13,12],[10,13],[12,10]]` contains its ply-3 prefix
+contains its ply-1 prefix — so plies 2 and 4 are truncations of the ply-5
+sequence, still covered by the same pinned hash.
+
+Everything is re-established rather than assumed to have survived: the helper
+changed, and a repair that fixed ply 0 while perturbing ply 5 would otherwise go
+unseen.
+
+🔑 **Fresh-JVM repetitions for the randomized branches are frozen SEPARATELY,
+for OPERABILITY ONLY** — to show the routine keeps returning legal, coherent
+moves across processes. They are **not** a probability estimate and the count is
+not a sample size (§1.1).
 
 ### 4.2 It must establish
 
@@ -263,11 +346,12 @@ and perturbed ply 5 would otherwise go unseen.
    not an expectation to enforce;
 2. **every returned opening move legal and board-coherent** — legal in T1j's
    own report, legal in **our** engine, and coherent with the same-process dump;
-3. **three distinguishable paths**, recorded per query:
-   `native_opening` (ply 0) · `native_low_ply_fallback` · `searched`.
-   🔑 §4A deliberately recorded only the neutral `incomplete` because naming a
-   fallback is §4B's job. `native_opening` is different: it names **which engine
-   routine answered**, which the repaired helper can observe directly;
+3. **four distinguishable paths**, recorded per query — 🔴 **corrected in §4.0 above,
+   because "fallback" was never what the engine does**:
+   `native_initial_first` · `native_initial_second_to_fourth` ·
+   `native_initial_fifth_or_more` · `searched`.
+   🔑 §4A deliberately recorded only the neutral `incomplete`, which remains
+   correct: it claimed nothing about *why* no search ran;
 4. **exactly one `PROC` per query JVM and per replay JVM** — the assertion
    Change 2 exists to make possible;
 5. **the injected `MatchData` read back and recorded**, so the frozen settings

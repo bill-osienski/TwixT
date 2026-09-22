@@ -6,13 +6,17 @@ written, no gate exists, nothing runs. This card **supersedes
 retained unedited as the correction trail.
 
 > **The question H4 asks.** From an empty board, under the frozen argmax
-> incumbent, frozen native T1j behavior, and a preregistered
-> execution/randomization protocol, which model has the higher expected
+> incumbent, frozen native T1j behavior, and **the frozen
+> execution/randomization protocol**, which model has the higher expected
 > colour-balanced score?
 
-"Execution/randomization protocol" is deliberate and replaces the superseded
-card's "search-seed distribution": **T1j contributes native process-local
-entropy that our seed does not control.** §3 enumerates every source.
+"**The frozen** execution/randomization protocol" is deliberate and replaces the
+superseded card's "a preregistered search-seed distribution". Two words changed
+and both matter: the protocol is **frozen** (§3.1), not merely preregistered,
+and it is a **protocol**, not a seed distribution — **T1j's unseeded native
+randomness is a material source of outcome variation that our seed does not
+control.** §3 enumerates every source; §6 states the independence assumption
+that follows.
 
 ---
 
@@ -415,10 +419,21 @@ search**:
 3. a **legal, non-null** move returned;
 4. **mover, board and postcondition coherence** — the returned move is legal for
    the side to move on the board actually sent;
-5. explicit telemetry distinguishing **`searched`** from
-   **`native_low_ply_fallback`**;
-6. acceptance **only** for the qualified fallback signature;
-7. **continued fail-closed behavior for genuine incomplete searches elsewhere.**
+5. explicit telemetry naming **which routine answered** — 🔴 **corrected
+   2026-09-21**: `native_initial_first` · `native_initial_second_to_fourth` ·
+   `native_initial_fifth_or_more` · `searched`.
+   The earlier pair `searched` / `native_low_ply_fallback` was **a misnomer**:
+   it says a search was attempted and fell back, and **no search was
+   attempted.** `FindMove.computeMove()` calls `InitialMoves.initialMove()`
+   FIRST and returns immediately if it yields a move, dispatching on ply —
+   0 → `firstMove()`, 1–3 → `secondToFourthMove()`, 4–5 →
+   `fifthOrMoreMove()`, ≥6 → null → search. Derived by disassembling the pinned
+   jar; see the repair card §4.0;
+6. acceptance **only** for a qualified native-initial signature, named by
+   routine rather than by "fallback";
+7. **continued fail-closed behavior for genuine incomplete searches elsewhere**
+   — a search that started and did not complete is still a fault, and is a
+   different thing from a routine that answered before any search began.
 
 #### 4B.3 Negative controls — the acceptance path must be proven to REJECT
 
@@ -592,7 +607,19 @@ never shrunk and thresholds are never relaxed after seeing results.**
 
 🔴 **The interval is nominal under a declared independence model, and the model
 must now declare BOTH**: independent seed bundles **and** isolated T1j process
-realizations. The design does not establish that model, and no screen tests it.
+realizations.
+
+⚠ **ADDED 2026-09-21 — INDEPENDENCE OF THE T1J DRAWS IS AN ASSUMPTION, NOT A
+FINDING.** T1j's unseeded native randomness is a **material source of outcome
+variation**, not a detail: at ply 0 it selects from 36 coordinates, and at plies
+1–3 another fresh `Random` decides the reply. If the nominal Hoeffding interval
+is to remain confirmatory, the independence of those **fresh-JVM draws must be
+stated as a declared assumption** in the same breath as the interval.
+
+🔑 **Persisting the realized moves does NOT establish it.** Recording what was
+drawn shows the draws happened; it says nothing about whether successive JVMs'
+`new Random()` seeds are independent. Nothing in this design tests that, and no
+screen here can. The design does not establish that model, and no screen tests it.
 
 Reusable from H3 once §1.3's collapse rule is removed and the removal is
 controlled: the segment runner and per-segment seed isolation, the supervised
@@ -612,8 +639,10 @@ Per game:
 * **complete ordered move list**;
 * **player and frozen configuration identity by colour**;
 * **pair, arm and seed-bundle identity**;
-* **per move**: actor, elapsed time, `searched` vs `native_low_ply_fallback`,
-  and the relevant T1j telemetry — named explicitly in §7.1, not left as
+* **per move**: actor, elapsed time, **which routine answered** —
+  `native_initial_first` / `native_initial_second_to_fourth` /
+  `native_initial_fifth_or_more` / `searched` (🔴 corrected 2026-09-21; see
+  §4B.2 item 5) — and the T1j telemetry named explicitly in §7.1, not left as
   "telemetry";
 * `winner`, `terminal_reason`, total timing, task result;
 * **transcript digest recomputed from the moves plus the terminal state** —
