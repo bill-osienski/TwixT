@@ -47,7 +47,13 @@ public final class E4Preflight {
     private static final List<String> AUTHORIZED = Arrays.asList(
         "net.schwagereit.t1j.Match.nextPlayer(write)",
         "net.schwagereit.t1j.FindMove.usealphabeta(read)",
-        "net.schwagereit.t1j.FindMove.currentMaxPly(read)");
+        "net.schwagereit.t1j.FindMove.currentMaxPly(read)",
+        // THE FOURTH, and it is reached ONLY by the opt-in `h4query` mode. A
+        // default caller performs three accesses and reports refl_n=3,
+        // unchanged. Listing it here is required: `post()` asserts
+        // AUTHORIZED.containsAll(REFLECTED), so an unlisted field FAILS the
+        // postcondition rather than passing silently.
+        "net.schwagereit.t1j.Match.matchData(write)");
     private static int failures = 0;
     private static String plistBefore;
     private static long countBefore;
@@ -97,11 +103,19 @@ public final class E4Preflight {
             String mode = args.length > 0 ? args[0] : "";
             if ("query".equals(mode)) {
                 int depth = Integer.parseInt(args[1]);
-                queries(1, depth, Arrays.copyOfRange(args, 2, args.length));
+                queries(1, depth, Arrays.copyOfRange(args, 2, args.length), false);
+            } else if ("h4query".equals(mode)) {
+                // THE OPT-IN H4 MODE. A separate mode name, not a flag on
+                // `query`, so a default caller's argv is byte-identical to what
+                // it was qualified with. DEFAULT OFF is the whole point: a
+                // default that switches the guard off is the defect class this
+                // programme keeps hitting.
+                int depth = Integer.parseInt(args[1]);
+                queries(1, depth, Arrays.copyOfRange(args, 2, args.length), true);
             } else if ("determinism".equals(mode)) {
                 int n = Integer.parseInt(args[1]);
                 int depth = Integer.parseInt(args[2]);
-                queries(n, depth, Arrays.copyOfRange(args, 3, args.length));
+                queries(n, depth, Arrays.copyOfRange(args, 3, args.length), false);
             } else {
                 System.out.println("FAIL unknown mode " + mode); failures++;
             }
@@ -115,14 +129,59 @@ public final class E4Preflight {
         System.exit(failures == 0 ? 0 : 3);
     }
 
-    /** A fresh Match with both boards cleared, sized and set up, Y to move. */
-    private static Match freshMatch() throws Exception {
+    /**
+     * A fresh Match, optionally with MatchData INJECTED.
+     *
+     * `injectMatchData` is the H4 repair, and it is BEHAVIOURAL: without it
+     * `Match()`'s constructor leaves `matchData` null, and a board-ply-0 query
+     * throws inside `InitialMoves.firstMove()` dereferencing
+     * `getMatchData().mdPieRule`. §4A confirmed that at runtime; the 2026-08-24
+     * E2 blocker report identified it statically a month earlier.
+     *
+     * WHY REFLECTION. `matchData` is private, and the only methods that set it
+     * -- `prepareNewMatch()` and `updateMatchData()` -- both reach
+     * `RightPanel.getInstance()`. Under the current criterion (GUI residency
+     * permitted, ZERO windows and frames) the public route is not closed but is
+     * unqualified; reflection is the narrowest audited repair, reviewed in
+     * `docs/superpowers/2026-09-21-t1j-h4-matchdata-repair-design.md`.
+     *
+     * ONLY `matchData` IS TOUCHED. Configuration and readback need no
+     * reflection at all: `MatchData` has a public constructor and its fields
+     * are protected, so this same-package class reads and writes them directly.
+     * That is why the opt-in path is exactly FOUR reflective accesses and not
+     * more.
+     */
+    private static Match freshMatch(boolean injectMatchData) throws Exception {
         Match m = new Match();                     // the ctor repoints FindMove's static match
         Board bY = m.getBoardY(), bX = m.getBoardX();
         bY.clearBoard(); bX.clearBoard();
         bY.setSize(24, 24); bX.setSize(24, 24);
         bY.getEval().setupForY(); bX.getEval().setupForY();
         reflect(Match.class, "nextPlayer", "write").setInt(m, Board.YPLAYER);
+        if (injectMatchData) {
+            MatchData md = new MatchData();        // public ctor; no reflection
+            md.mdXsize = 24;                       // protected, same package
+            md.mdYsize = 24;
+            md.mdYstarts = true;
+            md.mdPieRule = false;                  // OPERATIVE: H4 has no swap rule
+            reflect(Match.class, "matchData", "write").set(m, md);
+
+            // AUDITED: read back through the PUBLIC getter and report what the
+            // engine will actually see. A digest of our own input object would
+            // prove only that we can hash what we just built.
+            MatchData back = m.getMatchData();
+            req(back != null, "matchData injected");
+            if (back != null) {
+                System.out.println("MATCHDATA pieRule=" + back.mdPieRule
+                    + " xsize=" + back.mdXsize + " ysize=" + back.mdYsize
+                    + " ystarts=" + back.mdYstarts
+                    + " identity=" + (back == md));
+                req(!back.mdPieRule, "mdPieRule is false (H4 has no swap rule)");
+                req(back.mdXsize == 24 && back.mdYsize == 24,
+                    "injected board size is 24x24");
+                req(back.mdYstarts, "mdYstarts true");
+            }
+        }
         return m;
     }
 
@@ -130,10 +189,11 @@ public final class E4Preflight {
      * n independent constructions of the SAME frozen position, each rebuilt and
      * revalidated from scratch, each followed by one computeMove at `depth`.
      */
-    private static void queries(int n, int depth, String[] xy) throws Exception {
+    private static void queries(int n, int depth, String[] xy,
+                                boolean injectMatchData) throws Exception {
         GeneralSettings gs = GeneralSettings.getInstance();
         for (int q = 1; q <= n; q++) {
-            Match m = freshMatch();
+            Match m = freshMatch(injectMatchData);
             Board bY = m.getBoardY(), bX = m.getBoardX();
             for (String s : xy) {
                 String[] p = s.split(",");

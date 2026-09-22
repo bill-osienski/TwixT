@@ -34,6 +34,9 @@ import java.util.stream.Stream;
  *   replay <cap> <x,y ...>   advance one ply at a time, dumping full state each ply
  *   smoke                    the E2/E3a fixed six-move position, one ply-3 computeMove
  *
+ * Emits one PROC line per jvm (identity + process id), matching E4Preflight's
+ * schema exactly. Observational: no reflection, no behaviour change.
+ *
  * Reflection is limited to the three already-qualified fields and is audited in
  * a finally path. Exit 0 = ok, 3 = a requirement failed, 4 = threw.
  */
@@ -85,6 +88,23 @@ public final class E3bDump {
                 "patterns.properties present");
             CheckPattern.getInstance().loadPattern();
             Zobrist.getInstance().initialize();
+
+            // PROC: process identity, one line per jvm, so the count IS the
+            // process count. OBSERVATIONAL and BEHAVIOUR-PRESERVING -- it
+            // prints and changes nothing. The schema is E4Preflight's,
+            // unchanged, so `parse_procs` reads both without a branch.
+            //
+            // It uses NO reflection (ProcessHandle + System.getProperty +
+            // Preferences), so REPLAY_REFL_N stays 1. §4A measured 0 PROC
+            // lines on all ten replays, which made the H4 card's
+            // replay-process-count assertion unsatisfiable: there was nothing
+            // to count.
+            System.out.println("PROC pid=" + ProcessHandle.current().pid()
+                + " java_version=" + System.getProperty("java.version")
+                + " vm=" + System.getProperty("java.vm.name").replace(' ', '_')
+                + " headless=" + System.getProperty("java.awt.headless")
+                + " prefs_factory=" + Preferences.userRoot().getClass().getName());
+
             GeneralSettings gs = GeneralSettings.getInstance();
             gs.mdFixedPly = true; gs.mdPly = 3;
 

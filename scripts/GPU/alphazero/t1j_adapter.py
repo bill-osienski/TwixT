@@ -365,6 +365,7 @@ def query(
     repeats: int = 1,
     timeout_s: Optional[float] = None,
     transform: str = CANONICAL,
+    inject_matchdata: bool = False,
 ) -> Tuple[List[QueryRecord], List[PlyState], int, str]:
     """Ask T1j for a move at ``depth`` from the frozen position ``moves``.
 
@@ -374,13 +375,33 @@ def query(
 
     ``depth`` is the requested FIXED ply. Wall-clock mode is not reachable from
     here: the helper forces ``mdFixedPly = true``.
+
+    ``inject_matchdata`` selects the opt-in H4 mode (``h4query``). DEFAULT OFF:
+    every existing caller keeps the exact behaviour it was qualified with, and
+    a test asserts a default call's argv still says ``query``.
     """
     if depth < 3:
         raise ValueError(
             "T1j's deepening loop starts at currentMaxPly=3, so a requested depth "
             f"below 3 executes no search at all; got {depth}")
     xy = [to_t1j(r, c, transform=transform) for (r, c) in moves]
-    mode = ["query", str(depth)] if repeats == 1 else ["determinism", str(repeats), str(depth)]
+    if inject_matchdata and repeats != 1:
+        raise ValueError(
+            "inject_matchdata is only available on the single-query mode; the "
+            "determinism mode reuses one jvm's Zobrist salt and answers a "
+            "different question")
+    if repeats != 1:
+        mode = ["determinism", str(repeats), str(depth)]
+    elif inject_matchdata:
+        # 🔴 THE OPT-IN H4 MODE, DEFAULT OFF. A distinct mode name rather than a
+        # flag on `query`, so a default caller's argv is byte-identical to what
+        # it was qualified with. It is BEHAVIOURAL: the helper injects MatchData
+        # so board-ply 0 does not throw in InitialMoves.firstMove(), and it
+        # performs a FOURTH reflective access, so the opt-in path reports
+        # refl_n=4 while every default caller still reports 3.
+        mode = ["h4query", str(depth)]
+    else:
+        mode = ["query", str(depth)]
     args = [
         java,
         f"-Djava.util.prefs.PreferencesFactory={PREFS_FACTORY}",
@@ -406,6 +427,38 @@ class ProcRecord:
     vm: str
     headless: str
     prefs_factory: str
+
+
+@dataclass(frozen=True)
+class MatchDataRecord:
+    """The helper's MATCHDATA line: what `Match.getMatchData()` actually holds.
+
+    READ BACK THROUGH THE PUBLIC GETTER by the helper, not hashed from our own
+    input object -- a digest of what we just built proves only that we can hash
+    it. Emitted only by the opt-in `h4query` mode.
+    """
+    pie_rule: bool
+    xsize: int
+    ysize: int
+    ystarts: bool
+    identity: bool
+
+
+def parse_matchdata(text: str) -> List[MatchDataRecord]:
+    """Parse MATCHDATA lines. Absent on every default path, by design."""
+    out: List[MatchDataRecord] = []
+    for line in text.splitlines():
+        if not line.startswith("MATCHDATA "):
+            continue
+        kv = dict(_KV_RE.findall(line))
+        missing = {"pieRule", "xsize", "ysize", "ystarts", "identity"} - set(kv)
+        if missing:
+            raise ValueError(f"MATCHDATA line missing fields {sorted(missing)}: {line!r}")
+        out.append(MatchDataRecord(pie_rule=kv["pieRule"] == "true",
+                                   xsize=int(kv["xsize"]), ysize=int(kv["ysize"]),
+                                   ystarts=kv["ystarts"] == "true",
+                                   identity=kv["identity"] == "true"))
+    return out
 
 
 def parse_procs(text: str) -> List[ProcRecord]:

@@ -49,6 +49,12 @@ EXPECTED_GATES = {
     #: real T1j build, and anything that spawns the external engine takes its own
     #: reviewed authorization rather than riding on another stage's.
     "h4_4a_characterization.py": "H4_4A_CHARACTERIZATION_AUTHORIZED",
+    #: 🔴 THE THIRTEENTH, ADDED 2026-09-21. The H4 repair qualification. Like
+    #: §4A it runs no game, but it launches JVMS against the real T1j build
+    #: THROUGH A BEHAVIOURALLY MODIFIED HELPER -- the opt-in MatchData
+    #: injection -- so it takes its own reviewed authorization rather than
+    #: riding on §4A's, which qualified a different helper.
+    "h4_repair_qualification.py": "H4_REPAIR_QUALIFICATION_AUTHORIZED",
     "l0_match_command.py": "L0_EXECUTION_AUTHORIZED",
     "lowply_qualification.py": "LOWPLY_QUALIFICATION_AUTHORIZED",
     "runtime_requalification.py": "RUNTIME_REQUAL_AUTHORIZED",
@@ -80,7 +86,7 @@ def test_THE_COUNT_IS_DERIVED_AND_ANY_REPORT_SAYING_OTHERWISE_IS_WRONG():
     #: single deliberate edit, to the dict above.
     assert INVENTORY.gate_count() == len(discover_gates()) == len(EXPECTED_GATES), (
         "the derived inventory and EXPECTED_GATES must agree")
-    assert len(EXPECTED_GATES) == 12, (
+    assert len(EXPECTED_GATES) == 13, (
         "the total moved: add or remove the entry in EXPECTED_GATES above "
         "deliberately, then update this number in the same edit")
 
@@ -158,4 +164,5 @@ def test_THE_STALE_COUNT_GUARD_IS_NOT_VACUOUS():
     assert _stale_count_claims("all ten gates are False")      # was right, now stale
     assert not _stale_count_claims("== the 11 gates ==")       # derived, correct
     assert _stale_count_claims("all eleven gates are False")   # was right, now stale
-    assert not _stale_count_claims("all twelve gates are False")  # correct total
+    assert _stale_count_claims("all twelve gates are False")   # was right, now stale
+    assert not _stale_count_claims("all thirteen gates are False")  # correct total
