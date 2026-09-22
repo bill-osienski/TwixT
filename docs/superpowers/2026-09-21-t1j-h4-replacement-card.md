@@ -287,7 +287,8 @@ Asserted from recorded counts, not from reading the code:
   `len(plies) == state.ply + 1` internally;
 * every subprocess **emits and records its `PROC` identity and ordinal**;
 * **no process survives its call**;
-* query telemetry records the **fallback/search classification** (§4B.2, item 5);
+* query telemetry records **which routine answered** (§4B.2, item 5) — not a
+  "fallback/search" classification, which names something the engine never does;
 * any **Zobrist fingerprint is observational only** and must not alter
   initialization — if recording it would perturb init, it is not recorded, and
   §7's statement about non-reproducibility stands instead.
@@ -364,7 +365,7 @@ instrumentation, not on something §4A must invent.
 | finding | frozen consequence |
 |---|---|
 | **zero-length query or replay refused** | 🔴 **STOP.** Arm B is blocked. Any CLI-grammar repair is a **separate review**, not a §4A improvisation |
-| **fallback query emits no same-process dump** | 🔴 **STOP.** 🔑 **Do NOT substitute the binder's replay JVM** — it is a *different process* and cannot establish what the **search** JVM reconstructed. That substitution would look like a fix and prove nothing |
+| **fallback query emits no same-process dump** *(§4A's frozen wording; the engine does not "fall back" — see §4B.2 item 5)* | 🔴 **STOP.** 🔑 **Do NOT substitute the binder's replay JVM** — it is a *different process* and cannot establish what the **search** JVM reconstructed. That substitution would look like a fix and prove nothing |
 | **exactly one coherent dump exists** | ✅ proceed to §4B |
 | **malformed or multiple records, or dirty postconditions** | 🔴 **STOP** as an *instrument* failure — not as a finding about T1j |
 
@@ -398,11 +399,11 @@ is proven to.
 3. **board / history / legal-set coherence**;
 4. **requested-depth identity**;
 5. **either** a normal completed-search status **or** the exact qualified
-   native-fallback signature;
+   **native-initial** signature for the ply's dispatched routine;
 6. **legal, non-null move in BOTH engines**.
 
 **Only then** may the expected helper `exit 3` and `completed == false` be
-reclassified as an accepted fallback.
+reclassified as an accepted **native-initial** reply.
 
 🔴 **Both existing refusal sites must consume the SAME classification result.**
 If each keeps its own test, one can silently reinstate the block while the other
@@ -410,8 +411,8 @@ is relaxed — and the failure would appear only at the ply where it matters.
 
 #### 4B.2 What the mode must still distinguish
 
-The adapter must distinguish a **legitimate native fallback** from a **broken
-search**:
+The adapter must distinguish a **legitimate native-initial reply** — a routine
+that answered before any search began — from a **broken search**:
 
 1. coverage of **both T1j colour roles** and the board states it will encounter
    at **board-plies 0–5**;
@@ -429,8 +430,8 @@ search**:
    0 → `firstMove()`, 1–3 → `secondToFourthMove()`, 4–5 →
    `fifthOrMoreMove()`, ≥6 → null → search. Derived by disassembling the pinned
    jar; see the repair card §4.0;
-6. acceptance **only** for a qualified native-initial signature, named by
-   routine rather than by "fallback";
+6. acceptance **only** for a qualified **native-initial** signature, named by
+   routine;
 7. **continued fail-closed behavior for genuine incomplete searches elsewhere**
    — a search that started and did not complete is still a fault, and is a
    different thing from a routine that answered before any search began.
@@ -441,7 +442,16 @@ Requirement 7 is the one that fails silently if it is only asserted. The
 qualification must show rejection of at least: a non-completing search **outside**
 the qualified low-ply signature; an illegal or null move; a move legal on a
 different board than the one sent; a postcondition surface that is not clean;
-and a fallback claimed at a ply where search is known to complete (ply 5).
+and a **native-initial result claimed at ply ≥ 6**, where `initialMove()`
+returns null by dispatch so no such reply can exist — or **telemetry
+inconsistent with the claimed routine**.
+
+🔴 **CORRECTED 2026-09-21.** This control previously read *"a fallback claimed
+at a ply where search is known to complete (ply 5)"*. **Too broad, and it would
+reject legitimate behaviour**: ply 5 dispatches to `fifthOrMoreMove()`, which
+**may** return a native move. §4A saw it return null at three positions; that is
+three positions, not a property of ply 5. **Ply ≥ 6 is the sound control**,
+because there the dispatch itself forbids a native reply.
 
 A check that greps source is not a test. The acceptance predicate must be
 driven through its **real entry point** in the state it will run in, and the CLI
@@ -516,7 +526,7 @@ Any of these makes the pilot **`VOID`** — not a partial feasibility result:
 > failure · **process-count mismatch** (§3.2) · illegal move · leaked process
 
 🔑 **Two things are explicitly NOT operational failures**, because they are the
-phenomena under study: the **qualified native fallback** (§4) and a **game cap**
+phenomena under study: a **qualified native-initial reply** (§4) and a **game cap**
 (§1.6). Counting either as a fault would make H4 abort on its own subject
 matter.
 
@@ -709,8 +719,10 @@ exclude an observation:
 * first-move and first-*k*-ply prefix frequencies;
 * unique outcome patterns;
 * frequency of identical **pair-level trajectory tuples**;
-* **fallback-versus-search frequency by ply and colour** — this one also reads
-  directly on §4's qualification holding up in production.
+* **answering-routine frequency by ply and colour** — `native_initial_first` /
+  `native_initial_second_to_fourth` / `native_initial_fifth_or_more` /
+  `searched`. This one also reads directly on §4's qualification holding up in
+  production.
 
 ---
 
@@ -758,7 +770,8 @@ Affirmed 2026-09-20, after the three corrections above were applied:
 ### ✅ The preregistered numbers are frozen too
 
 Added 2026-09-20: the four-segment shape (§1.5, §6), zero operational failures
-with the fallback and the cap explicitly excluded, the runtime projection rule
+with a native-initial reply and the cap explicitly excluded, the runtime
+projection rule
 and its 3 h / 4 h bounds, the ≤ 3-of-16 cap-affected-pair rule, and
 exact-collapse-only concentration (all §5.4).
 
@@ -775,7 +788,8 @@ No adapter change, no H4 research seeds, no game, no strength evidence. It
 answers the two questions the existing records cannot:
 
 1. whether a **searched-position dump** is emitted when T1j never searches —
-   this decides whether board coherence is even checkable for a fallback move,
+   this decides whether board coherence is even checkable for a native-initial
+   reply (§4A's wording said "fallback move"; it ran under that wording),
    and if it is not, the repair is to **add observational instrumentation**, not
    to weaken `len(dumps) == 1`;
 2. whether the helper accepts a **zero-length position** on the query **and**

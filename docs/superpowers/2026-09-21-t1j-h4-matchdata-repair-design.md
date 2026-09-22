@@ -116,7 +116,14 @@ s = Ysize / 4 ;  y = Ysize/2 + nextInt(s) - s/2
 
 On H4's **24×24** board that is `12 + [0..5] - 3` on each axis, so
 **x ∈ 9..14 and y ∈ 9..14 — the central 6×6 region, 36 coordinates**, from two
-independent draws of a **fresh unseeded `Random`**.
+**successive** draws on a **single fresh unseeded `Random`**.
+
+⚠ **"Successive", NOT "independent".** An earlier draft said independent. The
+bytecode shows both `nextInt` calls loading the **same local** (`aload_1` at
+offsets 237 and 270) — one `Random` instance, two successive calls. That is a
+**structural** fact. Independence is a **probabilistic** claim about an LCG's
+successive outputs, and disassembly cannot establish it. The same caution
+applies to §6's interval assumption in the replacement card.
 
 So a repaired ply-0 query does **not** return a fixed move. T1j's opening is
 drawn from **that 6×6 region** by **randomness whose state we neither seed nor
@@ -299,9 +306,14 @@ returns immediately if it gets a move — disassembled: `initialMove` at offset
 | ply | routine | randomized? |
 |---:|---|---|
 | **0** | `firstMove()` | **yes** — fresh unseeded `Random` (§1.1) |
-| **1–3** | `secondToFourthMove()` | **yes** — its own fresh unseeded `Random`, six `nextInt` calls |
+| **1–3** | `secondToFourthMove()` | **yes** — its own fresh unseeded `Random`, **six static `nextInt` call sites** |
 | **4–5** | `fifthOrMoreMove()` | **no** — contains no `Random`; may return a native move **or null** |
 | **≥6** | — | returns null → **search runs** |
+
+⚠ **"Six static call sites", not "six calls".** Only a **branch-dependent
+subset** executes on any one invocation — normally one or two. The count is what
+disassembly shows; it is not an execution count, and reading it as one would
+overstate how much randomness a single reply consumes.
 
 So §4A's `usealphabeta=false, currentMaxPly=0` records at plies 1 and 3 mean
 **`secondToFourthMove()` answered**. Nothing searched, nothing fell back.
@@ -339,11 +351,14 @@ not a sample size (§1.1).
 
 ### 4.2 It must establish
 
-1. **multiple fresh-JVM empty-board queries**, to observe the native opening
-   distribution **without seeding or replacing** T1j's randomness (§1.1). The
-   number of repetitions is frozen in that card, and the observed moves are
-   **reported, never constrained to a set** — seven table entries is prior art,
-   not an expectation to enforce;
+1. **exercise the no-pie native opening routine across fresh JVMs** —
+   **reporting realized moves with NO diversity and NO support requirement.**
+   🔴 **Corrected**: an earlier draft said "observe the native opening
+   distribution", which contradicts §1.1's own prohibition on estimating it, and
+   cited the **seven-entry table** — the branch `mdPieRule=false` does not take
+   (§1.1). Repetitions are frozen in that card and exist for **operability**:
+   that the routine keeps returning legal, coherent moves across processes.
+   They are not a sample;
 2. **every returned opening move legal and board-coherent** — legal in T1j's
    own report, legal in **our** engine, and coherent with the same-process dump;
 3. **four distinguishable paths**, recorded per query — 🔴 **corrected in §4.0 above,
