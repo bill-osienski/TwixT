@@ -1,0 +1,85 @@
+H4 REPAIR QUALIFICATION PRE-RUN VERIFICATION -- 2026-09-22T16:32:49.647128
+Recomputed at this moment, not copied from any earlier report.
+
+git HEAD          : 796f07a82ea7750d967cf2611b2c79aee3019c14
+working tree      : clean
+interpreter       : /opt/homebrew/opt/python@3.14/bin/python3.14 (Python 3.14.7)
+
+== GATES ==
+derived gate count: 13
+open gates        : []
+H4 repair gate    : False (must be False HERE; opened in its own one-line commit next)
+
+== THE PINNED SOURCE ==
+prefixes file     : docs/superpowers/evidence/2026-08-28-t1j-lowply-qualification/01_frozen_prefixes.json
+sha256 recomputed : a9054cb2d56cf75f554292e47ac7e5b86a0c74f54b255ee9147fb65f92207acf
+pinned            : a9054cb2d56cf75f554292e47ac7e5b86a0c74f54b255ee9147fb65f92207acf
+MATCH             : True
+
+== THE DERIVED MATRIX (card §1) -- nesting checked by derive_matrix ==
+rows              : 16
+canonical bytes   : 1002
+sha256 recomputed : 3cc14ca99935af511614742feafe6b3966ce8da83dc2789a103f98d3d22f27cd
+card pin          : 3cc14ca99935af511614742feafe6b3966ce8da83dc2789a103f98d3d22f27cd
+MATCH             : True
+  ply 0  empty_board to_move=red   reps=5  legal_replay=True  prefix=[]
+  ply 1  o1_center   to_move=black reps=5  legal_replay=True  prefix=[(11, 11)]
+  ply 2  o1_center   to_move=red   reps=5  legal_replay=True  prefix=[(11, 11), (12, 13)]
+  ply 3  o1_center   to_move=black reps=5  legal_replay=True  prefix=[(11, 11), (12, 13), (13, 12)]
+  ply 4  o1_center   to_move=red   reps=1  legal_replay=True  prefix=[(11, 11), (12, 13), (13, 12), (10, 13)]
+  ply 5  o1_center   to_move=black reps=1  legal_replay=True  prefix=[(11, 11), (12, 13), (13, 12), (10, 13), (12, 10)]
+  ply 1  o3_low      to_move=black reps=5  legal_replay=True  prefix=[(15, 11)]
+  ply 2  o3_low      to_move=red   reps=5  legal_replay=True  prefix=[(15, 11), (12, 12)]
+  ply 3  o3_low      to_move=black reps=5  legal_replay=True  prefix=[(15, 11), (12, 12), (13, 10)]
+  ply 4  o3_low      to_move=red   reps=1  legal_replay=True  prefix=[(15, 11), (12, 12), (13, 10), (14, 14)]
+  ply 5  o3_low      to_move=black reps=1  legal_replay=True  prefix=[(15, 11), (12, 12), (13, 10), (14, 14), (11, 11)]
+  ply 1  o4_high     to_move=black reps=5  legal_replay=True  prefix=[(8, 12)]
+  ply 2  o4_high     to_move=red   reps=5  legal_replay=True  prefix=[(8, 12), (11, 11)]
+  ply 3  o4_high     to_move=black reps=5  legal_replay=True  prefix=[(8, 12), (11, 11), (10, 13)]
+  ply 4  o4_high     to_move=red   reps=1  legal_replay=True  prefix=[(8, 12), (11, 11), (10, 13), (9, 9)]
+  ply 5  o4_high     to_move=black reps=1  legal_replay=True  prefix=[(8, 12), (11, 11), (10, 13), (9, 9), (12, 12)]
+derived caps      : {'queries': 56, 'replays': 16, 'total': 72}
+depth=6  ply_cap=280  per-call timeout=120s  run deadline=1800s
+refl_n: opt-in query=4  default query=3  replay=1
+
+== TOOLCHAIN, hash-verified before use ==
+  jar = /Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/t1j.jar
+  jdk_home = /Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/jdk/jdk-17.0.20.1+1/Contents/Home
+  root = /Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1
+  source = recorded-default
+  verified = 5
+jar sha256        : 53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7
+E4 qualified pin  : 53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7
+MATCH             : True
+JDK identity      : verified, 4 pinned components
+resolved java     : /Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/jdk/jdk-17.0.20.1+1/Contents/Home/bin/java
+resolved jar      : /Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/t1j.jar
+ply_cap           : 280
+
+== CREATE-ONLY DESTINATIONS ==
+evidence dir      : docs/superpowers/evidence/2026-09-21-t1j-h4-repair-qualification (created just now, create-only)
+record (--out)    : docs/superpowers/evidence/2026-09-21-t1j-h4-repair-qualification/05_qualification.json  exists=False
+classes (--classes): /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/498c2c86-7211-4f07-9290-a37054c4ccba/scratchpad/h4rq_classes_1790109169  exists=False
+
+== PROCESSES BEFORE THE RUN (pgrep cannot match itself) ==
+pgrep -c java     : 0
+pgrep -f t1j.jar  : 0
+
+== JAVAC-ONLY PRECHECK, into a THROWAWAY dir (no T1j code executes) ==
+javac exit        : 0   .class files: 4   dir: /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/498c2c86-7211-4f07-9290-a37054c4ccba/scratchpad/h4rq_javac_precheck_1790109169
+javac stderr      : (empty)
+
+== THE EXACT RUN COMMAND, with the gate CLOSED (must exit 5, create nothing) ==
+  /opt/homebrew/opt/python@3.14/bin/python3.14 -m scripts.GPU.alphazero.h4_repair_qualification --out docs/superpowers/evidence/2026-09-21-t1j-h4-repair-qualification/05_qualification.json --classes /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/498c2c86-7211-4f07-9290-a37054c4ccba/scratchpad/h4rq_classes_1790109169
+exit              : 5
+stderr            : the H4 repair qualification is UNAUTHORIZED. No JVM was started, no position queried, and no file was written.
+record created    : False   class dir created: False
+
+== SCOPE OF WHAT THIS RUN CAN ESTABLISH ==
+The frozen 16-position matrix (empty board + plies 1-5 of o1_center, o3_low,
+o4_high), depth 6, through the opt-in h4query mode; 56 queries + 16 replays.
+Legality, board coherence, which routine answered, and the process and
+reflection contracts. No game is played, no seed drawn, no score computed.
+It is NOT strength evidence and NOT a probability estimate.
+
+PRE-RUN RESULT    : ALL CHECKS PASS

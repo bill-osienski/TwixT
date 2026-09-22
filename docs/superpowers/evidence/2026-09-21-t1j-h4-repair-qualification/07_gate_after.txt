@@ -1,0 +1,24 @@
+GATE RESTORATION -- read back from SOURCE, not asserted -- 2026-09-22T16:35:23.412636
+
+Restored by the run wrapper's EXIT trap (`git checkout 796f07a -- scripts/GPU/alphazero/h4_repair_qualification.py`),
+which fires on every exit path of the wrapper; its log line read:
+  GATE RESTORED: scripts/GPU/alphazero/h4_repair_qualification.py is byte-identical to 796f07a (H4_REPAIR_QUALIFICATION_AUTHORIZED = False)
+
+Re-derived now, in a fresh interpreter:
+  source line          : H4_REPAIR_QUALIFICATION_AUTHORIZED = False
+  module == 796f07a    : True   (the reviewed file, byte for byte)
+  imported gate value  : False
+  derived gate count   : 13
+  open gates           : []
+
+SURVIVING PROCESSES, measured with pgrep (which cannot match itself; the
+count is the number of pids it prints):
+  pgrep java           : 0
+  pgrep -f t1j.jar     : 0
+
+⚠ LABEL NOTE on 00_prerun_verification.txt: its "pgrep -c java" line was
+measured the same way as here -- `pgrep java`, pids counted -- not with `-c`.
+The value (0) is a count either way; the label named the wrong flag.
+
+🔑 THE AUTHORITATIVE PROCESS EVIDENCE IS INSIDE THE RECORD: one PROC line per
+jvm, emitted by the jvm itself -- 72 lines from 72 distinct pids.

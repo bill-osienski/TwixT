@@ -1,0 +1,12 @@
+The one authorized H4 repair qualification run. Executed ONCE, as a fresh
+subprocess, at commit fa6fff052a1d1bfb28eb52f1d78b20035adcc679 (the one-line gate-open commit).
+
+/opt/homebrew/opt/python@3.14/bin/python3.14 -m scripts.GPU.alphazero.h4_repair_qualification \
+    --out     docs/superpowers/evidence/2026-09-21-t1j-h4-repair-qualification/05_qualification.json \
+    --classes /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/498c2c86-7211-4f07-9290-a37054c4ccba/scratchpad/h4rq_classes_1790109169
+
+The toolchain is RESOLVED through t1j_toolchain.verified_paths() and the ply
+cap READ from l0_match_rules.PLY_CAP; neither is offered on the command line.
+--out is claimed O_EXCL before compilation; --classes is create-only and held
+OUTSIDE the repository. stdout -> 02_stdout.txt, stderr -> 03_stderr.txt.
+The gate is restored from 796f07a by an EXIT trap, whatever the outcome.
