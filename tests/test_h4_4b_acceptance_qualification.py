@@ -724,3 +724,130 @@ def test_the_switch_DEFAULTS_OFF(wire):
     ctx.reset("d", P[1])
     with pytest.raises(AbortError, match=r"exit 3 with 1 record\(s\)"):
         INT.T1jAgent(runtime=rt, ctx=ctx, depth=6, colour=st.to_move)(st)
+
+
+# ═══════════ 8. CONTROLS ADDED AFTER REVIEW OF b86420d ═══════════
+# Each enumerated check must fail a test of its own when deleted: ysize and
+# frames had none, and the H4 binder -- a SEPARATE implementation of the replay
+# checks -- was controlled only for its PROC count.
+
+def test_MATCHDATA_ysize_other_than_24_is_refused(wire):
+    _refused(wire, 1, "did not read back", rc=3, native=True, ys=23)
+
+
+def test_POSTCOND_frames_nonzero_is_refused_on_the_QUERY_path(wire):
+    _refused(wire, 1, "1 frames opened", rc=3,
+             serve=lambda p: _post_line(query_out(p, native=True), "frames=0", "frames=1"))
+
+
+def _h4_bind(wire, serve=None, ply=2):
+    """The PRODUCTION H4 binder on an H4 runtime. Returns (ctx, call)."""
+    if serve is not None:
+        wire["replay"] = serve
+    ctx, _rt, binder, _f = h4_adapter()
+    ctx.reset("r", P[ply])
+    return ctx, lambda: binder({"task_id": "r"}, _state(P[ply]), ply)
+
+
+def _bind_refused(wire, step, match, serve=None, rc=0):
+    served = {}
+
+    def keep(p):
+        served["out"] = (serve or (lambda q: replay_out(q)))(p)
+        return served["out"]
+    wire["rc_replay"] = rc
+    ctx, call = _h4_bind(wire, keep)
+    with pytest.raises(AbortError, match=match) as ei:
+        call()
+    [r] = records(ctx)
+    assert (r["role"], r["outcome"], r["refused_at"]) == ("replay", "refused", step)
+    assert ei.value.__cause__.stdout == served["out"], "the FULL stdout must ride along"
+
+
+def test_H4_BINDER_a_nonzero_replay_exit_is_refused(wire):
+    _bind_refused(wire, "exit", "T1j replay exit 1", rc=1)
+
+
+def test_H4_BINDER_replay_failures_nonzero_is_refused(wire):
+    _bind_refused(wire, "postcond", "failures=1 on a replay",
+                  serve=lambda p: replay_out(p, failures=1))
+
+
+def test_H4_BINDER_frames_nonzero_is_refused(wire):
+    _bind_refused(wire, "postcond", "1 frames opened",
+                  serve=lambda p: _post_line(replay_out(p), "frames=0", "frames=1"))
+
+
+def test_H4_BINDER_a_wrong_block_count_is_refused(wire):
+    _bind_refused(wire, "plies", "reported 1 plies, expected 3",
+                  serve=lambda p: replay_out(p, blocks=1))
+
+
+def test_H4_BINDER_a_divergent_replayed_state_is_refused(wire):
+    _bind_refused(wire, "state", "pegs|history",
+                  serve=lambda p: replay_out(OTHER[2]))
+
+
+def test_H4_BINDER_unreadable_replay_output_is_NOT_converted(wire):
+    """`A.replay`'s own parser refuses: VOID, with a record and no return code."""
+    ctx, call = _h4_bind(wire, lambda p: replay_out(p).replace("moveNr=0", "moveNr=zz", 1))
+    with pytest.raises(A.HelperOutputError) as ei:
+        call()
+    assert not isinstance(ei.value, AbortError)
+    [r] = records(ctx)
+    assert (r["outcome"], r["refused_at"], r["return_code"]) == ("unreadable", "replay",
+                                                                  None)
+
+
+def test_H4_BINDER_an_unreadable_PROC_line_is_NOT_converted(wire):
+    ctx, call = _h4_bind(wire, lambda p: replay_out(p).replace("PROC pid=", "PROC xid=", 1))
+    with pytest.raises(ValueError) as ei:
+        call()
+    assert not isinstance(ei.value, AbortError)
+    [r] = records(ctx)
+    assert (r["outcome"], r["refused_at"]) == ("unreadable", "proc")
+
+
+def test_H4_BINDER_a_TIMEOUT_is_NOT_converted_and_leaves_NO_record(wire):
+    wire["timeout"] = True
+    ctx, call = _h4_bind(wire)
+    with pytest.raises(subprocess.TimeoutExpired):
+        call()
+    assert records(ctx) == []
+
+
+# ── the create-only class directory: the DEFAULT compile route (card §6.6) ──
+# The runner tests above inject `_compile`. These drive the runner's REAL default
+# route into the real `d1_probe._default_compile`, whose occupied-directory
+# refusal is `tests/test_d1_probe.py::test_an_existing_class_directory_is_refused`.
+# The toolchain and javac are faked by THAT file's fixtures; nothing executes.
+from tests.test_d1_probe import _paths_for, javac, toolchain  # noqa: E402,F401
+from scripts.GPU.alphazero import d1_probe as D1  # noqa: E402
+
+
+def test_the_default_compile_route_IS_the_verified_create_only_compiler():
+    assert B._compile_helper_verified is D1._default_compile
+
+
+def test_the_DEFAULT_route_refuses_an_OCCUPIED_class_directory(tmp_path, wire, toolchain,
+                                                               javac, monkeypatch):
+    _open(monkeypatch)
+    classes = tmp_path / "classes"
+    classes.mkdir()
+    with pytest.raises(B.H4BVoidError, match="already exists"):
+        B.run_qualification(paths=_paths_for(toolchain, classes),
+                            out_path=str(tmp_path / "r.json"))
+    assert javac == [] and wire["calls"] == [], "it compiled or spawned into a used dir"
+    rec = json.loads((tmp_path / "r.json").read_text())
+    assert rec["verdict"] == "VOID" and "already exists" in rec["reason"]
+
+
+def test_the_DEFAULT_route_CREATES_the_class_directory_and_compiles_into_it(
+        tmp_path, wire, toolchain, javac, monkeypatch):
+    _open(monkeypatch)
+    classes = tmp_path / "classes"
+    r = B.run_qualification(paths=_paths_for(toolchain, classes),
+                            out_path=str(tmp_path / "r.json"))
+    assert r["verdict"] == "CLEAN" and classes.is_dir()
+    assert [c["out"] for c in javac] == [str(classes)]
+    assert r["toolchain_identity"]["classes_dir"] == str(classes)

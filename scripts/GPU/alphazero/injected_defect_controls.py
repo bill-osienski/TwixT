@@ -4000,6 +4000,39 @@ DEFECTS = [
      '    except (subprocess.TimeoutExpired, ValueError, KeyError, D1VoidError, D1Error,',
      '    except (subprocess.TimeoutExpired, KeyError, D1VoidError, D1Error,',
      f"{T_H4B}::test_an_UNREADABLE_reply_is_a_VOID_not_a_STOP"),
+    # ── H4 §4B, added after review of b86420d: each enumerated check, deleted.
+    ('§4B: the MATCHDATA ysize check is deleted', INTEG,
+     'if md.pie_rule or md.xsize != A.BOARD_N or md.ysize != A.BOARD_N or not md.ystarts:',
+     'if md.pie_rule or md.xsize != A.BOARD_N or not md.ystarts:',
+     f"{T_H4B}::test_MATCHDATA_ysize_other_than_24_is_refused"),
+    ('§4B: the POSTCOND frames check is deleted', INTEG,
+     '                    (p.frames == 0, f"{p.frames} frames opened"),\n                    (p.headless, "not headless"),',
+     '                    (True, f"{p.frames} frames opened"),\n                    (p.headless, "not headless"),',
+     f"{T_H4B}::test_POSTCOND_frames_nonzero_is_refused_on_the_QUERY_path"),
+    ('§4B: the H4 binder ignores a nonzero replay exit', INTEG,
+     '        if rc != 0:\n            _h4_refuse(PHASE_BIND, where, f"T1j replay exit {rc}", out)',
+     '        if False:\n            _h4_refuse(PHASE_BIND, where, f"T1j replay exit {rc}", out)',
+     f"{T_H4B}::test_H4_BINDER_a_nonzero_replay_exit_is_refused"),
+    ('§4B: the H4 binder ignores replay failures', INTEG,
+     '        if p.failures != 0:\n            _h4_refuse(PHASE_BIND,',
+     '        if False:\n            _h4_refuse(PHASE_BIND,',
+     f"{T_H4B}::test_H4_BINDER_replay_failures_nonzero_is_refused"),
+    ('§4B: the H4 binder ignores the block count', INTEG,
+     '        if len(plies) != state.ply + 1:\n            _h4_refuse(PHASE_BIND,',
+     '        if False:\n            _h4_refuse(PHASE_BIND,',
+     f"{T_H4B}::test_H4_BINDER_a_wrong_block_count_is_refused"),
+    ('§4B: the H4 binder ignores a divergent replayed state', INTEG,
+     '        if div:\n            _h4_refuse(PHASE_BIND, where, "; ".join(div), out)',
+     '        if False:\n            _h4_refuse(PHASE_BIND, where, "; ".join(div), out)',
+     f"{T_H4B}::test_H4_BINDER_a_divergent_replayed_state_is_refused"),
+    ('§4B: the H4 binder converts an unreadable line into an AbortError', INTEG,
+     '    except (ValueError, KeyError) as e:\n        ctx.observe(obs, "unreadable", step, str(e))\n        raise\n',
+     '    except (ValueError, KeyError) as e:\n        ctx.observe(obs, "unreadable", step, str(e))\n        raise AbortError(PHASE_BIND, str(e))\n',
+     f"{T_H4B}::test_H4_BINDER_an_unreadable_PROC_line_is_NOT_converted"),
+    ('§4B: the default compile route is replaced by a stub', H4B,
+     '                  else functools.partial(_compile_helper_verified, paths=paths))',
+     '                  else (lambda d: {"stub": True}))',
+     f"{T_H4B}::test_the_DEFAULT_route_refuses_an_OCCUPIED_class_directory"),
 ]
 
 # ═══════════════════════════ THE EXPECTED REASONS ════════════════════════════
@@ -5753,4 +5786,21 @@ EXPECTED_REASONS = {
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.e4_screen_runner.AbortError'>",
     '§4B: the runner scores an unreadable reply as a STOP':
         "ValueError: PROC line missing fields ['pid']: 'PROC xid=4321 java_version=17.0.20.1 vm=OpenJDK_64-Bit_Server_VM headless=true prefs_factory=e2probe.ScratchPrefs'",
+    # ── 2026-09-22: H4 §4B review controls. RECORDED under .venv (pytest 9.0.2).
+    '§4B: the MATCHDATA ysize check is deleted':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.e4_screen_runner.AbortError'>",
+    '§4B: the POSTCOND frames check is deleted':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.e4_screen_runner.AbortError'>",
+    '§4B: the H4 binder ignores a nonzero replay exit':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.e4_screen_runner.AbortError'>",
+    '§4B: the H4 binder ignores replay failures':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.e4_screen_runner.AbortError'>",
+    '§4B: the H4 binder ignores the block count':
+        "scripts.GPU.alphazero.e4_screen_runner.AbortError: [per_ply_binding] r opening h4 replay: pegs (ours-only ['11,11,Y', '13,12,X'], t1j-only []); ply T1j 0 != ours 2; legal set |ours|=526 |t1j|=528; history [] != submitted [(11, 11), (13, 12)]",
+    '§4B: the H4 binder ignores a divergent replayed state':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.e4_screen_runner.AbortError'>",
+    '§4B: the H4 binder converts an unreadable line into an AbortError':
+        "ValueError: PROC line missing fields ['pid']: 'PROC xid=1234 java_version=17.0.20.1 vm=OpenJDK_64-Bit_Server_VM headless=true prefs_factory=e2probe.ScratchPrefs'",
+    '§4B: the default compile route is replaced by a stub':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_4b_acceptance_qualification.H4BVoidError'>",
 }
