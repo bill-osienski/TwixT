@@ -101,6 +101,13 @@ T_H4B = "tests/test_h4_4b_acceptance_qualification.py"
 # ── H4 runner (step 2, 2026-09-23)
 H4RUN = "scripts/GPU/alphazero/h4_runner.py"
 T_H4RUN = "tests/test_h4_runner.py"
+# ── H4 analysis (step 3, 2026-09-23)
+H4F = "scripts/GPU/alphazero/h4_pilot_feasibility.py"
+H4D = "scripts/GPU/alphazero/h4_pilot_decision.py"
+H4C = "scripts/GPU/alphazero/h4_confirmatory_analysis.py"
+T_H4F = "tests/test_h4_pilot_feasibility.py"
+T_H4D = "tests/test_h4_pilot_decision.py"
+T_H4C = "tests/test_h4_confirmatory_analysis.py"
 
 # (label, file, anchor, replacement, test node)
 DEFECTS = [
@@ -4113,6 +4120,378 @@ DEFECTS = [
      '    obs["expected_position_digest"] = position_digest(expected_payload(state, moves))',
      '    obs["expected_position_digest"] = obs["t1j_position_digest"]',
      f"{T_H4RUN}::test_the_two_coherence_digests_are_computed_INDEPENDENTLY"),
+    # ── H4 analysis, step 3 (2026-09-23): each check of the analysis card, deleted.
+    # ·· feasibility (§0.1, §1, §2.1, §4.1)
+    ('H4 feasibility: an occupied destination is not refused', H4F,
+     '    if os.path.lexists(out):',
+     '    if False:',
+     f"{T_H4F}::test_an_OCCUPIED_destination_is_refused_BEFORE_any_input_is_read"),
+    ('H4 feasibility: the temporary file survives a refused link', H4F,
+     '    finally:\n        os.unlink(tmp)',
+     '    finally:\n        pass',
+     f"{T_H4F}::test_create_only_write_refuses_a_name_taken_at_LINK_time_and_leaves_no_temp"),
+    ('H4 feasibility: durability does not require the file be tracked', H4F,
+     '(["ls-files", "--error-unmatch", "--", name], "not tracked"),',
+     '(["status"], "not tracked"),',
+     f"{T_H4F}::test_every_input_must_be_COMMITTED_and_UNMODIFIED[untracked-manifest]"),
+    ('H4 feasibility: durability does not compare the file with HEAD', H4F,
+     '(["diff", "--quiet", "HEAD", "--", name],',
+     '(["status"],',
+     f"{T_H4F}::test_every_input_must_be_COMMITTED_and_UNMODIFIED[modified-results]"),
+    ('H4 feasibility: a staged, never-committed file counts as durable', H4F,
+     '(["diff", "--quiet", "HEAD", "--", name],',
+     '(["status"],',
+     f"{T_H4F}::test_every_input_must_be_COMMITTED_and_UNMODIFIED[staged_not_committed-results]"),
+    ('H4 feasibility: the inputs are never checked for durability', H4F,
+     '    check_durable([manifest, results])',
+     '    pass',
+     f"{T_H4F}::test_every_input_must_be_COMMITTED_and_UNMODIFIED[modified-manifest]"),
+    ('H4 feasibility: a manifest schedule digest is not recomputed', H4F,
+     '        if R.schedule_digest(e["schedule"]) != e["schedule_digest"]:',
+     '        if False:',
+     f"{T_H4F}::test_a_MANIFEST_that_is_not_a_valid_pilot_preregistration_is_refused[<lambda>-does not recompute]"),
+    ("H4 feasibility: manifest seeds need not be the schedule's", H4F,
+     '        if e["seeds"] != [t["seed"] for t in e["schedule"]]:',
+     '        if False:',
+     f"{T_H4F}::test_a_MANIFEST_that_is_not_a_valid_pilot_preregistration_is_refused[<lambda>-not the schedule's seeds]"),
+    ('H4 feasibility: manifest cards need not name the four cards', H4F,
+     '        if sorted(e["cards"]) != sorted(MANIFEST_CARDS):',
+     '        if False:',
+     f"{T_H4F}::test_a_MANIFEST_that_is_not_a_valid_pilot_preregistration_is_refused[<lambda>-cards must be]"),
+    ('H4 feasibility: a manifest runtime is not checked against the frozen one', H4F,
+     '        wrong = [k for k, v in runtime.items() if not isinstance(rt, dict) or rt.get(k) != v]',
+     '        wrong = []',
+     f"{T_H4F}::test_a_MANIFEST_that_is_not_a_valid_pilot_preregistration_is_refused[<lambda>-frozen runtime]"),
+    ('H4 feasibility: a manifest of the wrong size is accepted', H4F,
+     '        if len(e["schedule"]) != 2 * PAIRS_PER_SEGMENT[stage]:',
+     '        if False:',
+     f"{T_H4F}::test_a_MANIFEST_that_is_not_a_valid_pilot_preregistration_is_refused[<lambda>-30 tasks]"),
+    ('H4 feasibility: a study manifest is accepted as the pilot manifest', H4F,
+     '    if not isinstance(m, dict) or m.get("stage") != stage:',
+     '    if not isinstance(m, dict):',
+     f"{T_H4F}::test_a_MANIFEST_that_is_not_a_valid_pilot_preregistration_is_refused[<lambda>-H4_PILOT manifest is required]"),
+    ('H4 feasibility: a manifest entry may carry another slot label', H4F,
+     '        if e["segment"] != i:',
+     '        if False:',
+     f"{T_H4F}::test_a_MANIFEST_that_is_not_a_valid_pilot_preregistration_is_refused[<lambda>-labelled segment]"),
+    ('H4 feasibility: a manifest entry may lack a bound field', H4F,
+     '        missing = [k for k in ("segment", "schedule", *BOUND) if k not in e]',
+     '        missing = []',
+     f"{T_H4F}::test_a_MANIFEST_that_is_not_a_valid_pilot_preregistration_is_refused[<lambda>-lacks]"),
+    ('H4 feasibility: the manifest seed sign ignores the mode', H4F,
+     '            R.check_schedule(e["schedule"], mode="fixture" if _fixture else',
+     '            R.check_schedule(e["schedule"], mode="fixture" if True else',
+     f"{T_H4F}::test_the_PUBLIC_entry_refuses_a_committed_FIXTURE"),
+    ('H4 feasibility: the header design is not bound', H4F,
+     '    if header.get("design") != want:',
+     '    if False:',
+     f"{T_H4F}::test_a_HEADER_that_differs_from_the_manifest_is_REFUSED_and_nothing_written[<lambda>-design 'H4_STUDY']"),
+    ('H4 feasibility: the header evidence flag is not bound', H4F,
+     '    if header.get("evidence") is not (not _fixture):',
+     '    if False:',
+     f"{T_H4F}::test_a_HEADER_that_differs_from_the_manifest_is_REFUSED_and_nothing_written[<lambda>-evidence flag True]"),
+    ('H4 feasibility: the header segment is not bound to its slot', H4F,
+     '    if header.get("segment") != entry["segment"]:',
+     '    if False:',
+     f"{T_H4F}::test_a_HEADER_that_differs_from_the_manifest_is_REFUSED_and_nothing_written[<lambda>-segment 1 is not manifest slot 0]"),
+    ('H4 feasibility: a header WITHOUT code is accepted', H4F,
+     '    if "code" not in header:',
+     '    if False:',
+     f"{T_H4F}::test_a_HEADER_that_differs_from_the_manifest_is_REFUSED_and_nothing_written[<lambda>-no `code` field]"),
+    ('H4 feasibility: code hashes are not among the bound fields', H4F,
+     'BOUND = ("schedule_digest", "seeds", "incumbent_identity", "t1j_runtime", "cards", "code")',
+     'BOUND = ("schedule_digest", "seeds", "incumbent_identity", "t1j_runtime", "cards")',
+     f"{T_H4F}::test_a_HEADER_that_differs_from_the_manifest_is_REFUSED_and_nothing_written[<lambda>-header `code` differs]"),
+    ('H4 feasibility: the bound fields are not compared', H4F,
+     '    for f in BOUND:\n        if header.get(f) != entry[f]:',
+     '    for f in BOUND:\n        if False:',
+     f"{T_H4F}::test_a_HEADER_that_differs_from_the_manifest_is_REFUSED_and_nothing_written[<lambda>-header `incumbent_identity` differs]"),
+    ("H4 feasibility: the games need not be the manifest's schedule", H4F,
+     '    if got != want:',
+     '    if False:',
+     f"{T_H4F}::test_GAMES_that_are_not_the_manifest_schedule_are_refused"),
+    ('H4 feasibility: a run_void pilot is refused instead of reported VOID', H4F,
+     '    except (R.H4RunError, ValueError, KeyError, TypeError, IndexError) as e:\n        report.update(verdict="VOID"',
+     '    except (R.H4RunError, ValueError, KeyError, TypeError, IndexError) as e:\n        raise\n        report.update(verdict="VOID"',
+     f"{T_H4F}::test_an_OPERATIONAL_FAILURE_is_reported_VOID_not_refused[_to_run_void-run_void]"),
+    ('H4 feasibility: the VOID report drops the run_void classification', H4F,
+     '            "run_void": _run_void_summary(results)}])',
+     '            "run_void": None}])',
+     f"{T_H4F}::test_an_OPERATIONAL_FAILURE_is_reported_VOID_not_refused[_to_run_void-run_void]"),
+    ('H4 feasibility: an incomplete segment_end is not a record fault', H4F,
+     '    if end.get("record_type") != "segment_end" or end.get("complete") is not True:',
+     '    if False:',
+     f"{T_H4F}::test_an_OPERATIONAL_FAILURE_is_reported_VOID_not_refused[<lambda>-incomplete]"),
+    ('H4 feasibility: a VOID reason naming a winner is not withheld', H4F,
+     '    if any(b in msg.lower() for b in R.BLIND_FIELDS):',
+     '    if False:',
+     f"{T_H4F}::test_a_VOID_reason_that_NAMES_a_winner_is_withheld"),
+    ('H4 feasibility: the collapse rule counts UNIQUE tuples', H4F,
+     '    tuples = collections.Counter((_key(a["moves"]), _key(b["moves"]))\n                                 for a, b in _pairs(view))',
+     '    tuples = collections.Counter(set((_key(a["moves"]), _key(b["moves"]))\n                                 for a, b in _pairs(view)))',
+     f"{T_H4F}::test_EXACT_COLLAPSE_all_16_identical_tuples_is_STOP_COLLAPSE_with_the_fixed_wording"),
+    ('H4 feasibility: fifteen identical tuples stop the pilot', H4F,
+     '    if identical == PAIRS_PER_SEGMENT[PILOT]:',
+     '    if identical >= PAIRS_PER_SEGMENT[PILOT] - 1:',
+     f"{T_H4F}::test_FIFTEEN_identical_and_ONE_different_is_NOT_a_stop"),
+    ('H4 feasibility: a projection of exactly 10,800 s stops', H4F,
+     '    if projected > RUNTIME_LIMIT_S:',
+     '    if projected >= RUNTIME_LIMIT_S:',
+     f"{T_H4F}::test_RUNTIME_boundary_exactly_10800_proceeds_just_above_stops[2390.0-PROCEED]"),
+    ('H4 feasibility: the projection omits setup time', H4F,
+     '    projected = setup_s + SEGMENT_GAMES * mean_game_s',
+     '    projected = SEGMENT_GAMES * mean_game_s',
+     f"{T_H4F}::test_RUNTIME_boundary_exactly_10800_proceeds_just_above_stops[2391.0-STOP_RUNTIME]"),
+    ('H4 feasibility: four cap-affected pairs proceed', H4F,
+     '    if cap_pairs >= CAP_STOP_PAIRS:',
+     '    if cap_pairs > CAP_STOP_PAIRS:',
+     f"{T_H4F}::test_CAP_boundary_3_pairs_proceed_4_stop[4-STOP_CAP]"),
+    ('H4 feasibility: caps are counted per game, not per pair', H4F,
+     '    cap_pairs = sum(1 for a, b in pairs if "cap" in (a["terminal_reason"],\n                                                      b["terminal_reason"]))',
+     '    cap_pairs = sum((a["terminal_reason"] == "cap") + (b["terminal_reason"] == "cap")\n                    for a, b in pairs)',
+     f"{T_H4F}::test_CAP_boundary_3_pairs_proceed_4_stop[3-PROCEED]"),
+    ('H4 feasibility: the precedence order is reversed', H4F,
+     'PRECEDENCE = ("VOID", "STOP_RUNTIME", "STOP_CAP", "STOP_COLLAPSE")',
+     'PRECEDENCE = ("VOID", "STOP_COLLAPSE", "STOP_CAP", "STOP_RUNTIME")',
+     f"{T_H4F}::test_PRECEDENCE_names_the_headline_and_LISTS_every_rule_that_fired"),
+    ('H4 feasibility: only the headline rule is listed', H4F,
+     '    return fired\n',
+     '    return fired[:1]\n',
+     f"{T_H4F}::test_PRECEDENCE_names_the_headline_and_LISTS_every_rule_that_fired"),
+    ('H4 feasibility: the blinded view is not checked', H4F,
+     '        leaked = [k for k in v if k in R.BLIND_FIELDS]',
+     '        leaked = []',
+     f"{T_H4F}::test_the_BLINDED_VIEW_carries_no_outcome_field_and_a_leaking_view_is_refused"),
+    ('H4 feasibility: the view whitelist copies the winner', H4F,
+     'VIEW_RESULT = ("plies", "terminal_reason", "elapsed_s", "queries", "replays",\n               "distinct_pids")',
+     'VIEW_RESULT = ("plies", "terminal_reason", "elapsed_s", "queries", "replays",\n               "distinct_pids", "winner")',
+     f"{T_H4F}::test_the_BLINDED_VIEW_carries_no_outcome_field_and_a_leaking_view_is_refused"),
+    ('H4 feasibility: report KEYS are not checked for outcome fields', H4F,
+     '    leaked = sorted({k for k in keys(report) if k in REPORT_FORBIDDEN})',
+     '    leaked = []',
+     f"{T_H4F}::test_a_report_carrying_an_OUTCOME_field_is_refused[interval]"),
+    ('H4 feasibility: report TEXT is not checked for outcome fields', H4F,
+     '    leaked += R.blinding_violations(json.dumps(report, sort_keys=True))',
+     '    leaked += []',
+     f"{T_H4F}::test_a_report_whose_TEXT_names_an_outcome_is_refused"),
+    ('H4 feasibility: outcome patterns and intervals are not forbidden keys', H4F,
+     'REPORT_FORBIDDEN = R.BLIND_FIELDS + ("interval", "mean", "lower", "upper",\n                                     "outcome_patterns")',
+     'REPORT_FORBIDDEN = R.BLIND_FIELDS',
+     f"{T_H4F}::test_a_report_carrying_an_OUTCOME_field_is_refused[outcome_patterns]"),
+    ('H4 feasibility: the report is written BEFORE its blind check', H4F,
+     '    check_report_blind(report)\n    write_create_only(out, report)',
+     '    write_create_only(out, report)\n    check_report_blind(report)',
+     f"{T_H4F}::test_a_leaking_report_is_refused_BEFORE_it_is_written"),
+    ('H4 feasibility: the public entry reaches the fixture relaxation', H4F,
+     '    return _write_report(manifest, results, out, _fixture=False)',
+     '    return _write_report(manifest, results, out, _fixture=True)',
+     f"{T_H4F}::test_the_PUBLIC_entry_refuses_a_committed_FIXTURE"),
+    ('H4 feasibility: the CLI reaches the fixture relaxation', H4F,
+     '    return _main(argv, _fixture=False)',
+     '    return _main(argv, _fixture=True)',
+     f"{T_H4F}::test_the_CLI_refuses_a_committed_FIXTURE_as_a_fresh_subprocess"),
+    # ·· proceed/stop (§2, §2.1, §4.1)
+    ('H4 decision: the stored report is trusted, not re-verified', H4D,
+     '    if {k: v for k, v in stored.items() if k != "written_at"} != fresh:',
+     '    if False:',
+     f"{T_H4D}::test_a_report_EDITED_to_say_PROCEED_is_refused_the_decision_is_never_typed"),
+    ("H4 decision: another pilot's report is accepted", H4D,
+     '    if {k: v for k, v in stored.items() if k != "written_at"} != fresh:',
+     '    if False:',
+     f"{T_H4D}::test_a_report_from_ANOTHER_PILOT_is_refused"),
+    ('H4 decision: its inputs are never checked for durability', H4D,
+     '    F.check_durable([manifest, results, report])',
+     '    pass',
+     f"{T_H4D}::test_each_file_the_decision_rests_on_must_be_COMMITTED_and_UNMODIFIED[untracked-report]"),
+    ('H4 decision: the feasibility report is not among the durable files', H4D,
+     '    F.check_durable([manifest, results, report])',
+     '    F.check_durable([manifest, results])',
+     f"{T_H4D}::test_each_file_the_decision_rests_on_must_be_COMMITTED_and_UNMODIFIED[modified-report]"),
+    ("H4 decision: the artifact may be written outside the pilot's directory", H4D,
+     '    if os.path.dirname(os.path.abspath(out)) != os.path.dirname(os.path.abspath(results)):',
+     '    if False:',
+     f"{T_H4D}::test_the_artifact_must_go_into_the_PILOTS_evidence_directory"),
+    ('H4 decision: VOID exits as a STOP', H4D,
+     'EXIT = {"PROCEED": 0, "STOP_RUNTIME": 2, "STOP_CAP": 2, "STOP_COLLAPSE": 2, "VOID": 3}',
+     'EXIT = {"PROCEED": 0, "STOP_RUNTIME": 2, "STOP_CAP": 2, "STOP_COLLAPSE": 2, "VOID": 2}',
+     f"{T_H4D}::test_STOP_and_VOID_decisions_and_their_exit_codes[kw3-VOID-3]"),
+    ('H4 decision: STOP_CAP exits as PROCEED', H4D,
+     'EXIT = {"PROCEED": 0, "STOP_RUNTIME": 2, "STOP_CAP": 2, "STOP_COLLAPSE": 2, "VOID": 3}',
+     'EXIT = {"PROCEED": 0, "STOP_RUNTIME": 2, "STOP_CAP": 0, "STOP_COLLAPSE": 2, "VOID": 3}',
+     f"{T_H4D}::test_STOP_and_VOID_decisions_and_their_exit_codes[kw1-STOP_CAP-2]"),
+    ('H4 decision: an occupied artifact is not refused first', H4D,
+     '    F.check_free(out)\n    if os.path.dirname',
+     '    if os.path.dirname',
+     f"{T_H4D}::test_an_OCCUPIED_artifact_is_refused_before_any_input_is_read"),
+    ('H4 decision: the artifact does not hash the pilot results', H4D,
+     '                "pilot_results_sha256": F.sha256_file(results),',
+     '                "pilot_results_sha256": None,',
+     f"{T_H4D}::test_a_PROCEED_artifact_carries_the_frozen_fields_and_hashes"),
+    ('H4 decision: the public entry reaches the fixture relaxation', H4D,
+     '    return _decide(manifest, results, report, out, _fixture=False)',
+     '    return _decide(manifest, results, report, out, _fixture=True)',
+     f"{T_H4D}::test_the_PUBLIC_entry_refuses_a_committed_FIXTURE"),
+    ('H4 decision: the CLI reaches the fixture relaxation', H4D,
+     '    return _main(argv, _fixture=False)',
+     '    return _main(argv, _fixture=True)',
+     f"{T_H4D}::test_the_CLI_refuses_a_committed_FIXTURE_as_a_fresh_subprocess"),
+    # ·· confirmatory (§3, §4.1)
+    ('H4 confirmatory: the aggregation gate ships OPEN', H4C,
+     'H4_STUDY_AGGREGATION_AUTHORIZED = False\n',
+     'H4_STUDY_AGGREGATION_AUTHORIZED = True\n',
+     f"{T_H4C}::test_the_gate_is_false_as_published"),
+    ('H4 confirmatory: the gate is read AFTER the destination is stat-ed', H4C,
+     '    if not H4_STUDY_AGGREGATION_AUTHORIZED:                          # 1. FIRST\n        raise H4AggregationUnauthorized(\n            "the H4 study aggregation is UNAUTHORIZED. No file was opened, read or "\n            "written.")\n    F.check_free(out)\n',
+     '    F.check_free(out)\n    if not H4_STUDY_AGGREGATION_AUTHORIZED:                          # 1. FIRST\n        raise H4AggregationUnauthorized(\n            "the H4 study aggregation is UNAUTHORIZED. No file was opened, read or "\n            "written.")\n',
+     f"{T_H4C}::test_a_CLOSED_gate_opens_stats_hashes_and_runs_NOTHING"),
+    ('H4 confirmatory: the CLI stats the destination before the gate', H4C,
+     '    if not H4_STUDY_AGGREGATION_AUTHORIZED:                          # 1. FIRST\n        raise H4AggregationUnauthorized(\n            "the H4 study aggregation is UNAUTHORIZED. No file was opened, read or "\n            "written.")\n    F.check_free(out)\n',
+     '    F.check_free(out)\n    if not H4_STUDY_AGGREGATION_AUTHORIZED:                          # 1. FIRST\n        raise H4AggregationUnauthorized(\n            "the H4 study aggregation is UNAUTHORIZED. No file was opened, read or "\n            "written.")\n',
+     f"{T_H4C}::test_the_CLI_with_the_gate_closed_exits_5_before_touching_ANY_path"),
+    ('H4 confirmatory: the gate is never read', H4C,
+     '    if not H4_STUDY_AGGREGATION_AUTHORIZED:                          # 1. FIRST',
+     '    if False:',
+     f"{T_H4C}::test_a_CLOSED_gate_opens_stats_hashes_and_runs_NOTHING"),
+    ('H4 confirmatory: a closed gate exits 4, not 5', H4C,
+     '        return EXIT_UNAUTHORIZED',
+     '        return EXIT_REFUSED',
+     f"{T_H4C}::test_the_CLI_with_the_gate_closed_exits_5_before_touching_ANY_path"),
+    ('H4 confirmatory: its inputs are never checked for durability', H4C,
+     '    F.check_durable([pilot_manifest, study_manifest, pilot_results, feasibility_report,\n                     artifact, *segments])                           # 2.',
+     '    pass',
+     f"{T_H4C}::test_EVERY_file_the_estimate_rests_on_must_be_COMMITTED_and_UNMODIFIED[artifact-modified]"),
+    ('H4 confirmatory: the segment files are not among the durable files', H4C,
+     '                     artifact, *segments])                           # 2.',
+     '                     artifact])                           # 2.',
+     f"{T_H4C}::test_EVERY_file_the_estimate_rests_on_must_be_COMMITTED_and_UNMODIFIED[segment3-untracked]"),
+    ('H4 confirmatory: the pilot manifest is not among the durable files', H4C,
+     '    F.check_durable([pilot_manifest, study_manifest,',
+     '    F.check_durable([study_manifest,',
+     f"{T_H4C}::test_EVERY_file_the_estimate_rests_on_must_be_COMMITTED_and_UNMODIFIED[pilot_manifest-modified]"),
+    ('H4 confirmatory: a STOP decision is accepted', H4C,
+     '    if not isinstance(art, dict) or art.get("decision") != "PROCEED":',
+     '    if not isinstance(art, dict):',
+     f"{T_H4C}::test_a_STOP_or_VOID_decision_is_refused[pilot_kw0-STOP_COLLAPSE]"),
+    ("H4 confirmatory: the artifact's hashes are not recomputed", H4C,
+     '        if F.sha256_file(path) != art.get(key):',
+     '        if False:',
+     f"{T_H4C}::test_an_artifact_whose_hash_no_longer_recomputes_is_refused[pilot_results]"),
+    ('H4 confirmatory: fewer than four segments are accepted', H4C,
+     '    if len(segments) != F.SEGMENTS[F.STUDY]:',
+     '    if False:',
+     f"{T_H4C}::test_MISSING_REPEATED_or_MISPLACED_segments_are_refused[order0-exactly 4]"),
+    ('H4 confirmatory: a segment header is not bound to its slot', H4C,
+     '        F.bind_header(F.read_header(path), F.STUDY, entry, _fixture=_fixture)',
+     '        pass',
+     f"{T_H4C}::test_MISSING_REPEATED_or_MISPLACED_segments_are_refused[order1-segment 0 is not manifest slot 1]"),
+    ("H4 confirmatory: a reader refusal skips the segment", H4C,
+     '            F.refuse(f"segment {entry[\'segment\']}: {e}")',
+     '            continue',
+     f"{T_H4C}::test_a_segment_that_is_not_complete_and_bound_is_REFUSED_not_voided[<lambda>-segment 2: 0]"),
+    ("H4 confirmatory: segment games need not be the manifest's schedule", H4C,
+     '        F.bind_games(games, entry["schedule"])',
+     '        pass',
+     f"{T_H4C}::test_a_segment_that_is_not_complete_and_bound_is_REFUSED_not_voided[<lambda>-not the manifest's schedule]"),
+    ('H4 confirmatory: a repeated seed is not an integrity fault', H4C,
+     '    for key in ("task_id", "seed"):',
+     '    for key in ("task_id",):',
+     f"{T_H4C}::test_a_MALFORMED_pair_is_an_integrity_fault_and_REFUSES_never_drops[edit-seed -1000 appears 2 times]"),
+    ('H4 confirmatory: a repeated task_id is not an integrity fault', H4C,
+     '    for key in ("task_id", "seed"):',
+     '    for key in ("seed",):',
+     f"{T_H4C}::test_a_MALFORMED_pair_is_an_integrity_fault_and_REFUSES_never_drops[edit-task_id 's0p0-A' appears 2 times]"),
+    ('H4 confirmatory: a pair need not be exactly two games', H4C,
+     '        if len(members) != 2:',
+     '        if False:',
+     f"{T_H4C}::test_a_MALFORMED_pair_is_an_integrity_fault_and_REFUSES_never_drops[<lambda>-4 games]"),
+    ('H4 confirmatory: a pair may cross segments', H4C,
+     '        if sa != sb:',
+     '        if False:',
+     f"{T_H4C}::test_a_MALFORMED_pair_is_an_integrity_fault_and_REFUSES_never_drops[<lambda>-crosses segments]"),
+    ('H4 confirmatory: a pair may hold two Arm As', H4C,
+     '        if (a["start"]["arm"], b["start"]["arm"]) != ("A", "B"):',
+     '        if False:',
+     f"{T_H4C}::test_a_MALFORMED_pair_is_an_integrity_fault_and_REFUSES_never_drops[edit-arms A, A]"),
+    ("H4 confirmatory: an arm's colours are not checked", H4C,
+     '            if (s["incumbent_colour"], s["t1j_colour"]) != colours:',
+     '            if False:',
+     f"{T_H4C}::test_a_MALFORMED_pair_is_an_integrity_fault_and_REFUSES_never_drops[edit-are not Arm A's]"),
+    ("H4 confirmatory: ply actors are not checked against the colours", H4C,
+     '            if any((p["actor"] == "incumbent") != (p["mover"] == s["incumbent_colour"])',
+     '            if False and any((p["actor"] == "incumbent") != (p["mover"] == s["incumbent_colour"])',
+     f"{T_H4C}::test_a_MALFORMED_pair_is_an_integrity_fault_and_REFUSES_never_drops[<lambda>-actor disagrees]"),
+    ('H4 confirmatory: a pair need not be adjacent', H4C,
+     '        if ia % 2 or ib != ia + 1:',
+     '        if False:',
+     f"{T_H4C}::test_a_MALFORMED_pair_is_an_integrity_fault_and_REFUSES_never_drops[edit-not adjacent]"),
+    ('H4 confirmatory: an incomplete game is scored', H4C,
+     '            if res is None or res.get("terminal_reason") not in ("win", "cap"):',
+     '            if False:',
+     f"{T_H4C}::test_a_MALFORMED_pair_is_an_integrity_fault_and_REFUSES_never_drops[edit-not complete]"),
+    ('H4 confirmatory: recorded points are not recomputed', H4C,
+     '            if (res.get("incumbent_points"), res.get("t1j_points")) != (pts, 1.0 - pts):',
+     '            if False:',
+     f"{T_H4C}::test_a_MALFORMED_pair_is_an_integrity_fault_and_REFUSES_never_drops[edit-recorded points]"),
+    ('H4 confirmatory: identical pairs are deduplicated', H4C,
+     '        pairs.append((a, b))',
+     '        if all([p["move"] for p in x[0]["plies"]] != [p["move"] for p in a["plies"]] or [p["move"] for p in x[1]["plies"]] != [p["move"] for p in b["plies"]] for x in pairs):\n            pairs.append((a, b))',
+     f"{T_H4C}::test_WELL_FORMED_pairs_are_all_formed_multiplicity_kept"),
+    ('H4 confirmatory: identical pairs are deduplicated (end to end)', H4C,
+     '        pairs.append((a, b))',
+     '        if all([p["move"] for p in x[0]["plies"]] != [p["move"] for p in a["plies"]] or [p["move"] for p in x[1]["plies"]] != [p["move"] for p in b["plies"]] for x in pairs):\n            pairs.append((a, b))',
+     f"{T_H4C}::test_an_ALL_CAP_study_counts_EVERY_identical_pair_and_cap_free_is_NOT_ESTIMABLE"),
+    ('H4 confirmatory: a win with no winner is scored', H4C,
+     '    if reason == "win" and winner in ("red", "black"):',
+     '    if reason == "win":',
+     f"{T_H4C}::test_a_winner_outside_the_encoding_is_an_integrity_fault[result0]"),
+    ('H4 confirmatory: a cap with a winner is scored', H4C,
+     '    if reason == "cap" and winner is None:',
+     '    if reason == "cap":',
+     f"{T_H4C}::test_a_winner_outside_the_encoding_is_an_integrity_fault[result1]"),
+    ('H4 confirmatory: the interval is clipped to [0, 1]', H4C,
+     '    return {"n": n, "mean": mean, "half_width": h, "lower": mean - h, "upper": mean + h}',
+     '    return {"n": n, "mean": mean, "half_width": h, "lower": max(0.0, mean - h), "upper": min(1.0, mean + h)}',
+     f"{T_H4C}::test_intervals_are_never_clipped_either_side"),
+    ('H4 confirmatory: the interval is clipped to [0, 1] (end to end)', H4C,
+     '    return {"n": n, "mean": mean, "half_width": h, "lower": mean - h, "upper": mean + h}',
+     '    return {"n": n, "mean": mean, "half_width": h, "lower": max(0.0, mean - h), "upper": min(1.0, mean + h)}',
+     f"{T_H4C}::test_the_interval_is_RAW_beyond_1_when_every_pair_scores_1"),
+    ('H4 confirmatory: a lower bound of exactly 0.5 reads as above', H4C,
+     '    if iv["lower"] > 0.5:',
+     '    if iv["lower"] >= 0.5:',
+     f"{T_H4C}::test_the_reading_is_STRICT_on_the_RAW_bounds[0.5-0.9-contains]"),
+    ('H4 confirmatory: an upper bound of exactly 0.5 reads as below', H4C,
+     '    if iv["upper"] < 0.5:',
+     '    if iv["upper"] <= 0.5:',
+     f"{T_H4C}::test_the_reading_is_STRICT_on_the_RAW_bounds[0.1-0.5-contains]"),
+    ('H4 confirmatory: the interval is not the frozen 95%', H4C,
+     'ALPHA = 0.05',
+     'ALPHA = 0.1',
+     f"{T_H4C}::test_h_296_is_the_frozen_0_078938"),
+    ('H4 confirmatory: cap-free drops only all-cap pairs, not every capped pair', H4C,
+     '    capped = [any(g["result"]["terminal_reason"] == "cap" for g in pair) for pair in pairs]',
+     '    capped = [all(g["result"]["terminal_reason"] == "cap" for g in pair) for pair in pairs]',
+     f"{T_H4C}::test_a_MIXED_study_scores_every_pair_and_cap_free_drops_WHOLE_pairs"),
+    ("H4 confirmatory: n' = 0 reports a default mean and interval", H4C,
+     '                {"n": 0, "status": NOT_ESTIMABLE, "label": CAP_FREE_LABEL})',
+     '                {"n": 0, "mean": 0.0, "lower": 0.0, "upper": 0.0, "status": NOT_ESTIMABLE, "label": CAP_FREE_LABEL})',
+     f"{T_H4C}::test_cap_free_with_NO_capless_pair_reports_no_mean_and_no_interval"),
+    ('H4 confirmatory: the cap-free result is labelled confirmatory', H4C,
+     'CAP_FREE_LABEL = ("DESCRIPTIVE and CONDITIONAL: which pairs it keeps is decided by the "\n                  "OBSERVED caps, so it is not a second confirmatory claim")',
+     'CAP_FREE_LABEL = "confirmatory"',
+     f"{T_H4C}::test_a_MIXED_study_scores_every_pair_and_cap_free_drops_WHOLE_pairs"),
+    ('H4 confirmatory: the independence assumption is not stated', H4C,
+     '                        "independence": INDEPENDENCE},',
+     '                        "independence": ""},',
+     f"{T_H4C}::test_an_ALL_CAP_study_counts_EVERY_identical_pair_and_cap_free_is_NOT_ESTIMABLE"),
+    ('H4 confirmatory: the public entry reaches the fixture relaxation', H4C,
+     '                feasibility_report=feasibility_report, segments=segments, out=out,\n                _fixture=False)',
+     '                feasibility_report=feasibility_report, segments=segments, out=out,\n                _fixture=True)',
+     f"{T_H4C}::test_the_PUBLIC_entry_refuses_FIXTURE_input"),
+    ('H4 confirmatory: an occupied destination is not refused first', H4C,
+     '    F.check_free(out)\n    if len(segments)',
+     '    if len(segments)',
+     f"{T_H4C}::test_an_OCCUPIED_destination_is_refused_before_any_input"),
 ]
 
 # ═══════════════════════════ THE EXPECTED REASONS ════════════════════════════
@@ -5922,4 +6301,190 @@ EXPECTED_REASONS = {
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_runner.H4RunError'>",
     "H4 adapter: the expected digest is copied from T1j's":
         "AssertionError: assert 'b075ce96cabc...93c70537eada9' == 'c5401412143a...954b181d5514b'",
+    # ── 2026-09-23: H4 analysis (step 3). RECORDED under .venv (pytest 9.0.2),
+    # harvested in a disposable worktree before commit.
+    'H4 feasibility: an occupied destination is not refused':
+        'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: /private/<tmp>/pytest-of-<user>/pytest-<n>/test_an_OCCUPIED_destination_i0/no-manifest is not durable: not tracked (card §2.1)',
+    'H4 feasibility: the temporary file survives a refused link':
+        'AssertionError: a temporary file survived the refusal',
+    'H4 feasibility: durability does not require the file be tracked':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 feasibility: durability does not compare the file with HEAD':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 feasibility: a staged, never-committed file counts as durable':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 feasibility: the inputs are never checked for durability':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 feasibility: a manifest schedule digest is not recomputed':
+        'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: header `schedule_digest` differs from the manifest',
+    "H4 feasibility: manifest seeds need not be the schedule's":
+        'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: header `seeds` differs from the manifest',
+    'H4 feasibility: manifest cards need not name the four cards':
+        'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: header `cards` differs from the manifest',
+    'H4 feasibility: a manifest runtime is not checked against the frozen one':
+        'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: header `t1j_runtime` differs from the manifest',
+    'H4 feasibility: a manifest of the wrong size is accepted':
+        'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: header `schedule_digest` differs from the manifest',
+    'H4 feasibility: a study manifest is accepted as the pilot manifest':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 feasibility: a manifest entry may carry another slot label':
+        'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: segment 0 is not manifest slot 3',
+    'H4 feasibility: a manifest entry may lack a bound field':
+        "KeyError: 'code'",
+    'H4 feasibility: the manifest seed sign ignores the mode':
+        "scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: design 'H4_SYNTHETIC_FIXTURE', not 'H4_PILOT': pilot, study and fixture data are never interchangeable",
+    'H4 feasibility: the header design is not bound':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 feasibility: the header evidence flag is not bound':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 feasibility: the header segment is not bound to its slot':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 feasibility: a header WITHOUT code is accepted':
+        'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: header `code` differs from the manifest',
+    'H4 feasibility: code hashes are not among the bound fields':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 feasibility: the bound fields are not compared':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    "H4 feasibility: the games need not be the manifest's schedule":
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 feasibility: a run_void pilot is refused instead of reported VOID':
+        'scripts.GPU.alphazero.h4_runner.H4RunError: /private/<tmp>/pytest-of-<user>/pytest-<n>/test_an_OPERATIONAL_FAILURE_is0/repo/pilot/results.jsonl: the run is VOID; its partial games are not results',
+    'H4 feasibility: the VOID report drops the run_void classification':
+        "AssertionError: assert None == {'classification': 'timeout', 'exception': 'TimeoutExpired', 'stage': 'game'}",
+    'H4 feasibility: an incomplete segment_end is not a record fault':
+        "AssertionError: assert 'PROCEED' == 'VOID'",
+    'H4 feasibility: a VOID reason naming a winner is not withheld':
+        'assert (\'withheld\' in "H4RunError: pilot0p3-A: the moves produce winner \'red\', not the recorded win result")',
+    'H4 feasibility: the collapse rule counts UNIQUE tuples':
+        "AssertionError: assert 'PROCEED' == 'STOP_COLLAPSE'",
+    'H4 feasibility: fifteen identical tuples stop the pilot':
+        "AssertionError: assert 'STOP_COLLAPSE' == 'PROCEED'",
+    'H4 feasibility: a projection of exactly 10,800 s stops':
+        "AssertionError: assert 'STOP_RUNTIME' == 'PROCEED'",
+    'H4 feasibility: the projection omits setup time':
+        "AssertionError: assert 'PROCEED' == 'STOP_RUNTIME'",
+    'H4 feasibility: four cap-affected pairs proceed':
+        "AssertionError: assert 'PROCEED' == 'STOP_CAP'",
+    'H4 feasibility: caps are counted per game, not per pair':
+        "AssertionError: assert 'STOP_CAP' == 'PROCEED'",
+    'H4 feasibility: the precedence order is reversed':
+        "AssertionError: assert 'STOP_COLLAPSE' == 'STOP_RUNTIME'",
+    'H4 feasibility: only the headline rule is listed':
+        "AssertionError: assert ['STOP_RUNTIME'] == ['STOP_RUNTIM...TOP_COLLAPSE']",
+    'H4 feasibility: the blinded view is not checked':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 feasibility: the view whitelist copies the winner':
+        "scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: the blinded view carries ['winner']",
+    'H4 feasibility: report KEYS are not checked for outcome fields':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 feasibility: report TEXT is not checked for outcome fields':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 feasibility: outcome patterns and intervals are not forbidden keys':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 feasibility: the report is written BEFORE its blind check':
+        'AssertionError: assert not True',
+    'H4 feasibility: the public entry reaches the fixture relaxation':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 feasibility: the CLI reaches the fixture relaxation':
+        "AssertionError: exit 0, stderr ''",
+    'H4 decision: the stored report is trusted, not re-verified':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    "H4 decision: another pilot's report is accepted":
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 decision: its inputs are never checked for durability':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 decision: the feasibility report is not among the durable files':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    "H4 decision: the artifact may be written outside the pilot's directory":
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 decision: VOID exits as a STOP':
+        'AssertionError: assert 2 == 3',
+    'H4 decision: STOP_CAP exits as PROCEED':
+        'AssertionError: assert 0 == 2',
+    'H4 decision: an occupied artifact is not refused first':
+        'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: /private/<tmp>/pytest-of-<user>/pytest-<n>/test_an_OCCUPIED_artifact_is_r0/m is not durable: not tracked (card §2.1)',
+    'H4 decision: the artifact does not hash the pilot results':
+        "AssertionError: the artifact must carry the pilot results' sha256",
+    'H4 decision: the public entry reaches the fixture relaxation':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 decision: the CLI reaches the fixture relaxation':
+        "AssertionError: exit 0, stderr ''",
+    'H4 confirmatory: the aggregation gate ships OPEN':
+        'assert True is False',
+    'H4 confirmatory: the gate is read AFTER the destination is stat-ed':
+        "AssertionError: assert [('lstat', '/...timate.json')] == []",
+    'H4 confirmatory: the CLI stats the destination before the gate':
+        'AssertionError: REFUSED, nothing written: /private/<tmp>/pytest-of-<user>/pytest-<n>/test_the_CLI_with_the_gate_clo0/estimate.json is occupied; outputs are create-only',
+    'H4 confirmatory: the gate is never read':
+        'scripts.GPU.alphazero.h4_runner.H4RunError: study mode refuses the negative seed -1000: that is a SYNTHETIC fixture seed (card §10.1)',
+    'H4 confirmatory: a closed gate exits 4, not 5':
+        'AssertionError: the H4 study aggregation is UNAUTHORIZED. No file was opened, read or written.',
+    'H4 confirmatory: its inputs are never checked for durability':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 confirmatory: the segment files are not among the durable files':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 confirmatory: the pilot manifest is not among the durable files':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 confirmatory: a STOP decision is accepted':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    "H4 confirmatory: the artifact's hashes are not recomputed":
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 confirmatory: fewer than four segments are accepted':
+        'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: 222 pairs, not 296',
+    'H4 confirmatory: a segment header is not bound to its slot':
+        "scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: the file's 148 games are not the manifest's schedule of 148 tasks",
+    'H4 confirmatory: a reader refusal skips the segment':
+        'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: 222 pairs, not 296',
+    "H4 confirmatory: segment games need not be the manifest's schedule":
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 confirmatory: a repeated seed is not an integrity fault':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 confirmatory: a repeated task_id is not an integrity fault':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 confirmatory: a pair need not be exactly two games':
+        'ValueError: too many values to unpack (expected 2, got 4)',
+    'H4 confirmatory: a pair may cross segments':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 confirmatory: a pair may hold two Arm As':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    "H4 confirmatory: an arm's colours are not checked":
+        "scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: s0p0-A: a ply record's actor disagrees with the colours",
+    'H4 confirmatory: ply actors are not checked against the colours':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 confirmatory: a pair need not be adjacent':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 confirmatory: an incomplete game is scored':
+        "scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: s0p0-A: terminal_reason 'budget' with winner None is an integrity fault",
+    'H4 confirmatory: recorded points are not recomputed':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 confirmatory: identical pairs are deduplicated':
+        'AssertionError: assert 1 == 74',
+    'H4 confirmatory: identical pairs are deduplicated (end to end)':
+        'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: 1 pairs, not 296',
+    'H4 confirmatory: a win with no winner is scored':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 confirmatory: a cap with a winner is scored':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 confirmatory: the interval is clipped to [0, 1]':
+        'assert (0.0 < 0)',
+    'H4 confirmatory: the interval is clipped to [0, 1] (end to end)':
+        'AssertionError: never intersected with [0, 1]',
+    'H4 confirmatory: a lower bound of exactly 0.5 reads as above':
+        "AssertionError: assert 'above' == 'contains'",
+    'H4 confirmatory: an upper bound of exactly 0.5 reads as below':
+        "AssertionError: assert 'below' == 'contains'",
+    'H4 confirmatory: the interval is not the frozen 95%':
+        'assert 0.071136 == 0.078938',
+    'H4 confirmatory: cap-free drops only all-cap pairs, not every capped pair':
+        'assert (220, 0.5909090909090909) == (148, 0.5135135135135135)',
+    "H4 confirmatory: n' = 0 reports a default mean and interval":
+        "AssertionError: assert not ({'half_width', 'lower', 'mean', 'upper'} & {'label', 'lower', 'mean', 'n', 'status', 'upper'})",
+    'H4 confirmatory: the cap-free result is labelled confirmatory':
+        "AssertionError: assert ('confirmatory' == 'confirmatory'",
+    'H4 confirmatory: the independence assumption is not stated':
+        "AssertionError: assert ('contains' == 'contains'",
+    'H4 confirmatory: the public entry reaches the fixture relaxation':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 confirmatory: an occupied destination is not refused first':
+        'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: 0 segment files: the study is exactly 4; an incomplete study is not a smaller study',
 }
