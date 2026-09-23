@@ -129,7 +129,12 @@ agent being paired with a default binder. The pairing is therefore **bound
 through the `IntegrationContext` they share**:
 
 * the first binder or agent built on a context **registers its runtime object
-  on that context**; every later one must present **the same object** (`is`);
+  on that context**, and **every later runtime is compared with it** by object
+  identity (`is`). The operative rule is the next two bullets: identity is
+  **required whenever either runtime is H4**, and a default/default mismatch
+  remains **permitted**. ⚠ *Clarified 2026-09-22: an earlier sentence here said
+  every later one "must present the same object", which contradicted the
+  default/default allowance below; the controls always encoded this rule.*
 * 🔴 **a mismatch is REFUSED whenever EITHER side is in H4 mode** — an H4 binder
   with a default agent, a default binder with an H4 agent, **and two distinct
   H4 runtime objects**. It is refused **at construction**
