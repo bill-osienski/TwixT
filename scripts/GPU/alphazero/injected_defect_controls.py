@@ -5726,21 +5726,21 @@ EXPECTED_REASONS = {
     '§4B: the H4 path queries without inject_matchdata':
         "AssertionError: assert 'h4query' in ['/j', '-Djava.util.prefs.PreferencesFactory=e2probe.ScratchPrefsFactory', '-Djava.awt.headless=true', '-cp', '/x.jar:/c', 'net.schwagereit.t1j.E4Preflight', ...]",
     '§4B: the classifier is handed a constant exit status':
-        'Failed: DID NOT RAISE AbortError',
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.e4_screen_runner.AbortError'>",
     '§4B: the MATCHDATA identity check is skipped':
-        'Failed: DID NOT RAISE AbortError',
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.e4_screen_runner.AbortError'>",
     '§4B: the PROC count is not checked on the query path':
-        'Failed: DID NOT RAISE AbortError',
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.e4_screen_runner.AbortError'>",
     '§4B: the PROC count is not checked on the replay path':
-        'Failed: DID NOT RAISE AbortError',
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.e4_screen_runner.AbortError'>",
     '§4B: the H4 switch defaults ON':
         'assert True is False',
     '§4B: the classifier is a local wrapper, not the qualified object':
         'assert <function _h4_classifier.<locals>.<lambda> at 0x<addr>> is <function classify_reply at 0x<addr>>',
     '§4B: the pairing check is removed':
-        'Failed: DID NOT RAISE AbortError',
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.e4_screen_runner.AbortError'>",
     '§4B: the pairing check applies one way only':
-        'Failed: DID NOT RAISE AbortError',
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.e4_screen_runner.AbortError'>",
     '§4B: a refused call leaves no record':
         'ValueError: not enough values to unpack (expected 1, got 0)',
     '§4B: reset erases the earlier task buckets':
@@ -5750,7 +5750,7 @@ EXPECTED_REASONS = {
     '§4B: a semantic refusal carries only the excerpt':
         "AssertionError: assert 'POSTCOND no_...=1 failures=0' == 'PLY 0 moveNr... failures=0\\n'",
     '§4B: the finite-timeout check reads the REPLAY timeout':
-        'Failed: DID NOT RAISE AbortError',
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.e4_screen_runner.AbortError'>",
     '§4B: the runner scores an unreadable reply as a STOP':
         "ValueError: PROC line missing fields ['pid']: 'PROC xid=4321 java_version=17.0.20.1 vm=OpenJDK_64-Bit_Server_VM headless=true prefs_factory=e2probe.ScratchPrefs'",
 }
