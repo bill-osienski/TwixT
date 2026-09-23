@@ -98,6 +98,9 @@ T_H3FIN = "tests/test_h3_final_state.py"
 # ── H4 §4B (2026-09-22): the production adapter, H4 acceptance mode
 H4B = "scripts/GPU/alphazero/h4_4b_acceptance_qualification.py"
 T_H4B = "tests/test_h4_4b_acceptance_qualification.py"
+# ── H4 runner (step 2, 2026-09-23)
+H4RUN = "scripts/GPU/alphazero/h4_runner.py"
+T_H4RUN = "tests/test_h4_runner.py"
 
 # (label, file, anchor, replacement, test node)
 DEFECTS = [
@@ -4033,6 +4036,83 @@ DEFECTS = [
      '                  else functools.partial(_compile_helper_verified, paths=paths))',
      '                  else (lambda d: {"stub": True}))',
      f"{T_H4B}::test_the_DEFAULT_route_refuses_an_OCCUPIED_class_directory"),
+    # ── H4 runner, step 2 (2026-09-23): each guard of the runner card, deleted.
+    ('H4 runner: the pilot gate ships OPEN', H4RUN,
+     'H4_PILOT_EXECUTION_AUTHORIZED = False\n',
+     'H4_PILOT_EXECUTION_AUTHORIZED = True\n',
+     f"{T_H4RUN}::test_the_gate_is_false_as_published"),
+    ('H4 runner: fixture mode accepts a research seed', H4RUN,
+     '        if mode == "fixture" and s >= 0:',
+     '        if False:',
+     f"{T_H4RUN}::test_FIXTURE_mode_refuses_a_non_negative_seed"),
+    ('H4 runner: pilot mode accepts a synthetic seed', H4RUN,
+     '        if mode != "fixture" and s < 0:',
+     '        if False:',
+     f"{T_H4RUN}::test_PILOT_mode_refuses_a_negative_seed"),
+    ('H4 runner: fixture mode may write into the evidence tree', H4RUN,
+     '    if mode == "fixture" and _inside(out, EVIDENCE_ROOT):',
+     '    if False:',
+     f"{T_H4RUN}::test_FIXTURE_mode_refuses_a_destination_under_the_EVIDENCE_tree"),
+    ('H4 runner: pilot mode runs a stub incumbent at step 2', H4RUN,
+     '    if mode != "fixture":\n        # 🔴 STEP 2 BUILDS',
+     '    if False:\n        # 🔴 STEP 2 BUILDS',
+     f"{T_H4RUN}::test_PILOT_and_STUDY_modes_refuse_at_step_2"),
+    ('H4 runner: the original exception is not kept (types flattened)', H4RUN,
+     '            except BaseException as e:            # noqa: BLE001 -- kept, re-raised typed\n                stash.keep(e)\n',
+     '            except BaseException as e:            # noqa: BLE001 -- kept, re-raised typed\n                pass\n',
+     f"{T_H4RUN}::test_UNREADABLE_output_voids_as_unreadable_not_as_a_refusal"),
+    ('H4 runner: an illegal move is raised untyped', H4RUN,
+     '                err = H4IllegalMove(PHASE_MOVE, f"{actor} returned {mv}, not legal")',
+     '                err = AbortError(PHASE_MOVE, f"{actor} returned {mv}, not legal")',
+     f"{T_H4RUN}::test_an_ILLEGAL_incumbent_move_voids_as_illegal_move"),
+    ('H4 runner: the coherence digests are not compared', H4RUN,
+     '        if o["t1j_position_digest"] != o["expected_position_digest"]:',
+     '        if False:',
+     f"{T_H4RUN}::test_a_COHERENCE_MISMATCH_voids_as_coherence_mismatch"),
+    ('H4 runner: pid liveness is not checked', H4RUN,
+     '    alive = [p for p in pids if check_pids and _pid_alive(p)]',
+     '    alive = []',
+     f"{T_H4RUN}::test_a_LEAKED_pid_voids_as_leaked_process"),
+    ('H4 runner: distinct pids are not required', H4RUN,
+     '                    (len(pids) == len(procs) == len(set(pids)),',
+     '                    (True,',
+     f"{T_H4RUN}::test_a_REUSED_pid_voids_as_process_count"),
+    ("H4 runner: a refused call's process record is dropped", H4RUN,
+     "    finally:\n        live.flush_processes()                    # a refused call's record survives",
+     '    finally:\n        pass',
+     f"{T_H4RUN}::test_an_ADAPTER_REFUSAL_voids_with_the_FULL_stdout"),
+    ('H4 runner: run_void counts are not recomputed from the file', H4RUN,
+     '                "completed": completed_counts(results.path),',
+     '                "completed": {"games": 0, "ply": 0, "process": 0, "game_result": 0},',
+     f"{T_H4RUN}::test_run_void_COUNTS_are_recomputed_from_the_file"),
+    ('H4 runner: the progress trace carries the winner', H4RUN,
+     '                               "terminal_reason": res["terminal_reason"],',
+     '                               "terminal_reason": res["terminal_reason"], "winner": res["winner"],',
+     f"{T_H4RUN}::test_the_TRACE_and_CONSOLE_never_carry_an_outcome"),
+    ('H4 runner: the reader presents fixture data as a result', H4RUN,
+     '    if header.get("design") == FIXTURE_DESIGN and not allow_fixture:',
+     '    if False:',
+     f"{T_H4RUN}::test_FIXTURE_data_is_REFUSED_as_a_result"),
+    ('H4 runner: the reader does not recompute the transcript digest', H4RUN,
+     '        if got != res.get("transcript_digest"):',
+     '        if False:',
+     f"{T_H4RUN}::test_a_TAMPERED_results_file_is_refused_by_the_reader[<lambda>-<lambda>-does not recompute]"),
+    ('H4 runner: the reader does not recompute position digests from the moves', H4RUN,
+     '            if exp != o["expected_position_digest"] or exp != o["t1j_position_digest"]:',
+     '            if False:',
+     f"{T_H4RUN}::test_a_TAMPERED_results_file_is_refused_by_the_reader[<lambda>-<lambda>-does not recompute from the moves]"),
+    ('H4 runner: the reader merges identical games', H4RUN,
+     '        out.append({"task_id": tid, "header": header, **g})',
+     '        if all(o["result"]["transcript_digest"] != g["result"]["transcript_digest"] for o in out):\n            out.append({"task_id": tid, "header": header, **g})',
+     f"{T_H4RUN}::test_MULTIPLICITY_identical_games_are_all_persisted_and_exported"),
+    ('H4 runner: the exporter does not recompute the transcript digest', H4RUN,
+     '    if transcript_digest_of(plies, res) != res["transcript_digest"]:',
+     '    if False:',
+     f"{T_H4RUN}::test_the_exporter_refuses_a_digest_that_does_not_recompute"),
+    ("H4 adapter: the expected digest is copied from T1j's", INTEG,
+     '    obs["expected_position_digest"] = position_digest(expected_payload(state, moves))',
+     '    obs["expected_position_digest"] = obs["t1j_position_digest"]',
+     f"{T_H4RUN}::test_the_two_coherence_digests_are_computed_INDEPENDENTLY"),
 ]
 
 # ═══════════════════════════ THE EXPECTED REASONS ════════════════════════════
@@ -5803,4 +5883,43 @@ EXPECTED_REASONS = {
         "ValueError: PROC line missing fields ['pid']: 'PROC xid=1234 java_version=17.0.20.1 vm=OpenJDK_64-Bit_Server_VM headless=true prefs_factory=e2probe.ScratchPrefs'",
     '§4B: the default compile route is replaced by a stub':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_4b_acceptance_qualification.H4BVoidError'>",
+    # ── 2026-09-23: H4 runner (step 2). RECORDED under .venv (pytest 9.0.2).
+    'H4 runner: the pilot gate ships OPEN':
+        'assert True is False',
+    'H4 runner: fixture mode accepts a research seed':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_runner.H4RunError'>",
+    'H4 runner: pilot mode accepts a synthetic seed':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_runner.H4RunError'>",
+    'H4 runner: fixture mode may write into the evidence tree':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_runner.H4RunError'>",
+    'H4 runner: pilot mode runs a stub incumbent at step 2':
+        'scripts.GPU.alphazero.h4_runner.H4RunError: fixture mode never compiles for real; pass the stub compile',
+    'H4 runner: the original exception is not kept (types flattened)':
+        'AssertionError: H4RunVoid("[adapter_refusal] [move] p0-A ply 1: black raised PROC line missing fields [\'pid\']: \'PROC xid=10000003 java_version=17.0.20.1 vm=OpenJDK_64-Bit_Server_VM headless=true prefs_factory=e2probe.ScratchPrefs\'")',
+    'H4 runner: an illegal move is raised untyped':
+        "AssertionError: H4RunVoid('[adapter_refusal] [move] incumbent returned (0, 4), not legal')",
+    'H4 runner: the coherence digests are not compared':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_runner.H4RunVoid'>",
+    'H4 runner: pid liveness is not checked':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_runner.H4RunVoid'>",
+    'H4 runner: distinct pids are not required':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_runner.H4RunVoid'>",
+    "H4 runner: a refused call's process record is dropped":
+        "AssertionError: the refused call's record must survive",
+    'H4 runner: run_void counts are not recomputed from the file':
+        "AssertionError: assert {'game_result... 'process': 0} == {'game_result... 'process': 5}",
+    'H4 runner: the progress trace carries the winner':
+        "AssertionError: assert ['winner'] == []",
+    'H4 runner: the reader presents fixture data as a result':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_runner.H4RunError'>",
+    'H4 runner: the reader does not recompute the transcript digest':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_runner.H4RunError'>",
+    'H4 runner: the reader does not recompute position digests from the moves':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_runner.H4RunError'>",
+    'H4 runner: the reader merges identical games':
+        'AssertionError: assert 1 == 4',
+    'H4 runner: the exporter does not recompute the transcript digest':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_runner.H4RunError'>",
+    "H4 adapter: the expected digest is copied from T1j's":
+        "AssertionError: assert 'b075ce96cabc...93c70537eada9' == 'c5401412143a...954b181d5514b'",
 }

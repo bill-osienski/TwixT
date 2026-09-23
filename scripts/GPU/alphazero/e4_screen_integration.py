@@ -24,6 +24,7 @@ from __future__ import annotations
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 import hashlib
+import json
 import os
 
 from . import t1j_adapter as A
@@ -390,7 +391,8 @@ class T1jAgent:
                                 "completed": r.completed,
                                 "completed_depth": r.completed_depth,
                                 "move_nr": r.move_nr, "q": r.q,
-                                "requested_depth": r.requested_depth}
+                                "requested_depth": r.requested_depth,
+                                "elapsed_us": r.elapsed_us}
             ours = A.PLAYER_TO_T1J[state.to_move]
             for ok, msg in ((r.q == 1, f"query index q={r.q}, expected 1"),
                             (r.move_nr == ply, f"moveNr={r.move_nr} but our ply is {ply}"),
@@ -403,6 +405,7 @@ class T1jAgent:
             if len(dumps) != 1:
                 _h4_refuse(PHASE_MOVE, where,
                            f"{len(dumps)} searched-position dumps, expected 1", out)
+            _h4_coherence(obs, state, dumps[0], ctx.moves)
             div = compare_state(state, dumps[0], ctx.moves)
             if div:
                 _h4_refuse(PHASE_MOVE, where, "the query jvm reconstructed a different "
@@ -450,7 +453,46 @@ def _h4_obs(role: str, ply: int) -> Dict[str, Any]:
     """A fresh observation. Fields the path does not reach stay None -- never guessed."""
     return {"role": role, "board_ply": ply, "return_code": None, "proc": None,
             "postcond": None, "source": None, "matchdata": None, "move": None,
-            "telemetry": None}
+            "telemetry": None, "t1j_position_digest": None,
+            "expected_position_digest": None}
+
+
+# ── H4 runner card §4: the DURABLE coherence field. Additive and observational:
+# computed from a dump the adapter already parsed, BEFORE `compare_state` judges
+# it, and never consulted by any accept/refuse decision.
+
+def position_payload(tp) -> Dict[str, Any]:
+    """T1j's reported position, as the canonical payload -- EXACTLY the fields
+    `compare_state` compares, each in a canonical order."""
+    return {"ply": tp.ply, "next_player": tp.next_player,
+            "term_y": bool(tp.term_y), "term_x": bool(tp.term_x),
+            "pegs": sorted(tp.pegs), "bridges": sorted(tp.bridges),
+            "legal": sorted([list(xy) for xy in tp.legal]),
+            "history": [list(xy) for xy in tp.history]}
+
+
+def expected_payload(state, moves: Sequence[Tuple[int, int]]) -> Dict[str, Any]:
+    """OUR position, in the same vocabulary. Recomputable from the moves alone."""
+    pegs, bridges = A.our_snapshot(state)
+    winner = state.winner()
+    return {"ply": state.ply, "next_player": A.PLAYER_TO_T1J[state.to_move],
+            "term_y": winner == "red", "term_x": winner == "black",
+            "pegs": sorted(pegs), "bridges": sorted(bridges),
+            "legal": sorted([list(A.to_t1j(r, c)) for (r, c) in state.legal_moves()]),
+            "history": [list(A.to_t1j(*m)) for m in moves]}
+
+
+def position_digest(payload: Dict[str, Any]) -> str:
+    """The payload's INTEGRITY FINGERPRINT. Payload equality is what matches
+    `compare_state`; digest equality implies it only under SHA-256's collision
+    resistance (runner card §4)."""
+    return hashlib.sha256(json.dumps(payload, sort_keys=True,
+                                     separators=(",", ":")).encode()).hexdigest()
+
+
+def _h4_coherence(obs: Dict[str, Any], state, tp, moves) -> None:
+    obs["t1j_position_digest"] = position_digest(position_payload(tp))
+    obs["expected_position_digest"] = position_digest(expected_payload(state, moves))
 
 
 def _h4_refuse(phase: str, where: str, message: str, out: str) -> None:
@@ -537,6 +579,7 @@ def _bind_h4(runtime, ctx: IntegrationContext, task: Dict[str, Any], state,
             _h4_refuse(PHASE_BIND, where, f"T1j reported {len(plies)} plies, expected "
                        f"{state.ply + 1}", out)
         step = "state"
+        _h4_coherence(obs, state, plies[-1], ctx.moves)
         div = compare_state(state, plies[-1], ctx.moves)
         if div:
             _h4_refuse(PHASE_BIND, where, "; ".join(div), out)

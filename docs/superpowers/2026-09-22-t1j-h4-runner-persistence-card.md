@@ -33,6 +33,22 @@ Implementation conforms to this card or returns here for an amendment.
    **integrity fingerprint** under the standard collision-resistance assumption
    (§4).
 
+⚠ **AMENDED 2026-09-23, during step 2 — a conflict between §2 and §10,
+resolved by an explicit decision rather than a quiet test edit:**
+
+* §2 requires the runner to construct `T1jRuntime(h4_acceptance=True)`, but §10
+  said *"§4B unchanged: its test file passes as is"* — and that file's structural
+  test `test_NO_existing_caller_opts_in` allowlisted only the adapter and the §4B
+  runner, so the H4 runner failed it. Both could not hold.
+* **`scripts/GPU/alphazero/h4_runner.py` is the SINGLE newly authorized
+  production opt-in.** Exactly that file is added to that test's allowlist. The
+  test's source walk is not weakened or bypassed: **every other caller is still
+  refused**, and its clean-baseline control still proves the walker sees a planted
+  opt-in.
+* §10's claim is corrected accordingly: **§4B's production behaviour and its
+  behavioural tests are unchanged; one structural allowlist is deliberately
+  extended.**
+
 It rests on: the replacement card (`2026-09-21-t1j-h4-replacement-card.md`;
 scientific core §1, pilot §5, persistence §7), **the §4B card**
 (`2026-09-22-t1j-h4-4b-acceptance-qualification-card.md`) and §4B's **CLEAN**
@@ -336,7 +352,9 @@ the code:
   exported — nothing is merged;
 * the canonical-payload ⇔ `compare_state` equivalence (§4), field by field, and
   the `run_void` record (§3.4) for each §6 classification;
-* §4B unchanged: its test file passes as is;
+* §4B unchanged in production behaviour: every §4B behavioural test passes as
+  is; the ONE structural change is `h4_runner.py` added to the opt-in allowlist
+  (amendment above) — nothing else in that file changes;
 * the gate **created closed**, read at both public entries, and the CLI refused as
   a **fresh subprocess**; the injected-defect harness extended and every anchor
   still matching.

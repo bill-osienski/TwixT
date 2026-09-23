@@ -579,7 +579,8 @@ def _opt_ins(source):
 
 
 def test_NO_existing_caller_opts_in():
-    allowed = {"e4_screen_integration.py", "h4_4b_acceptance_qualification.py"}
+    allowed = {"e4_screen_integration.py", "h4_4b_acceptance_qualification.py",
+               "h4_runner.py"}
     hits = {p.name: _opt_ins(p.read_text(encoding="utf-8"))
             for p in sorted((ROOT / "scripts").rglob("*.py")) if p.name not in allowed}
     assert {k: v for k, v in hits.items() if v} == {}
