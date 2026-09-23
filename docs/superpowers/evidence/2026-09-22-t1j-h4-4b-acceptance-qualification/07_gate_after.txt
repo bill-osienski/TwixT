@@ -1,0 +1,21 @@
+GATE RESTORATION -- read back from SOURCE, not asserted -- 2026-09-22T23:40:55.981326
+
+Restored by the run wrapper's EXIT trap (`git checkout bb046f3 -- scripts/GPU/alphazero/h4_4b_acceptance_qualification.py`); its log:
+  GATE RESTORED: scripts/GPU/alphazero/h4_4b_acceptance_qualification.py is byte-identical to bb046f3 (H4_4B_ACCEPTANCE_QUALIFICATION_AUTHORIZED = False)
+
+Re-derived now, in a fresh interpreter:
+  source line          : ['H4_4B_ACCEPTANCE_QUALIFICATION_AUTHORIZED = False']
+  module == bb046f3    : True
+  imported gate value  : False
+  derived gate count   : 14
+  open gates           : []
+
+SURVIVING PROCESSES (pgrep cannot match itself; pids counted):
+  pgrep java           : 0
+  pgrep -f t1j.jar     : 0
+
+⚠ LABEL NOTE on 00: as in the repair run, its "pgrep -c java" line was measured
+as `pgrep java` with pids counted, not with `-c`. The value is a count either way.
+
+The authoritative process evidence is inside the record: one parsed PROC per
+jvm, 72 records from 72 distinct pids.

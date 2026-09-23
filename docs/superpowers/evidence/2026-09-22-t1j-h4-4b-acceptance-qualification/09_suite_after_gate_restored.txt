@@ -1,0 +1,12 @@
+SUITE AFTER GATE RESTORED -- 2026-09-22T23:42:31-0400
+
+/opt/homebrew/bin/python3 -m pytest <the 31 files matching tests/test_*{h1,h2,h3,h4,l0,e4,t1j,gate,control}*.py> \
+    --continue-on-collection-errors -p no:cacheprovider --tb=no -q -rfE
+pytest exit: 1
+
+============= 29 failed, 1695 passed, 1 error in 83.50s (0:01:23) ==============
+
+failing ids: 30   vs the recorded baseline (clean tree at 3902bf5): IDENTICAL
+(29 H3 numpy-identity failures + 1 mlx collection error: numpy 2.5.1, no mlx/torch)
+
+gates: 14 | open: []

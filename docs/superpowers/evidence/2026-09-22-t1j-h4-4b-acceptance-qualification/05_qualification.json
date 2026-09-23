@@ -1,0 +1,3255 @@
+{
+ "depth": 6,
+ "derived_caps": {
+  "queries": 56,
+  "replays": 16,
+  "total": 72
+ },
+ "distinct_pids": 72,
+ "elapsed_s": 11.282006958965212,
+ "matrix_sha256": "3cc14ca99935af511614742feafe6b3966ce8da83dc2789a103f98d3d22f27cd",
+ "n_positions": 16,
+ "n_records": 72,
+ "per_call_timeout_s": 120,
+ "records": [
+  {
+   "board_ply": 0,
+   "matchdata": null,
+   "move": null,
+   "ordinal": 0,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 0,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 1,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74583,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 0,
+   "role": "replay",
+   "source": null,
+   "task_id": "h4_4b-empty_board-ply0",
+   "telemetry": null
+  },
+  {
+   "board_ply": 0,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    13,
+    13
+   ],
+   "ordinal": 1,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74668,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_first",
+   "task_id": "h4_4b-empty_board-ply0",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 0,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 0,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    9,
+    11
+   ],
+   "ordinal": 2,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74669,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_first",
+   "task_id": "h4_4b-empty_board-ply0",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 0,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 0,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    9,
+    13
+   ],
+   "ordinal": 3,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74670,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_first",
+   "task_id": "h4_4b-empty_board-ply0",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 0,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 0,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    12,
+    9
+   ],
+   "ordinal": 4,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74673,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_first",
+   "task_id": "h4_4b-empty_board-ply0",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 0,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 0,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    9,
+    11
+   ],
+   "ordinal": 5,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74679,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_first",
+   "task_id": "h4_4b-empty_board-ply0",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 0,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 1,
+   "matchdata": null,
+   "move": null,
+   "ordinal": 0,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 0,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 1,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74682,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 0,
+   "role": "replay",
+   "source": null,
+   "task_id": "h4_4b-o1_center-ply1",
+   "telemetry": null
+  },
+  {
+   "board_ply": 1,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    16,
+    11
+   ],
+   "ordinal": 1,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74683,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o1_center-ply1",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 1,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 1,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    18,
+    11
+   ],
+   "ordinal": 2,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74684,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o1_center-ply1",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 1,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 1,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    18,
+    11
+   ],
+   "ordinal": 3,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74685,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o1_center-ply1",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 1,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 1,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    16,
+    11
+   ],
+   "ordinal": 4,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74687,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o1_center-ply1",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 1,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 1,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    18,
+    11
+   ],
+   "ordinal": 5,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74688,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o1_center-ply1",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 1,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 2,
+   "matchdata": null,
+   "move": null,
+   "ordinal": 0,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 0,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 1,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74689,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 0,
+   "role": "replay",
+   "source": null,
+   "task_id": "h4_4b-o1_center-ply2",
+   "telemetry": null
+  },
+  {
+   "board_ply": 2,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    12,
+    7
+   ],
+   "ordinal": 1,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74690,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o1_center-ply2",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 2,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 2,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    12,
+    5
+   ],
+   "ordinal": 2,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74691,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o1_center-ply2",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 2,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 2,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    12,
+    7
+   ],
+   "ordinal": 3,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74693,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o1_center-ply2",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 2,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 2,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    12,
+    6
+   ],
+   "ordinal": 4,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74694,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o1_center-ply2",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 2,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 2,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    12,
+    5
+   ],
+   "ordinal": 5,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74695,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o1_center-ply2",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 2,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 3,
+   "matchdata": null,
+   "move": null,
+   "ordinal": 0,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 0,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 1,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74696,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 0,
+   "role": "replay",
+   "source": null,
+   "task_id": "h4_4b-o1_center-ply3",
+   "telemetry": null
+  },
+  {
+   "board_ply": 3,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    5,
+    12
+   ],
+   "ordinal": 1,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74697,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o1_center-ply3",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 3,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 3,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    6,
+    12
+   ],
+   "ordinal": 2,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74698,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o1_center-ply3",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 3,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 3,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    5,
+    12
+   ],
+   "ordinal": 3,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74699,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o1_center-ply3",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 3,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 3,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    5,
+    12
+   ],
+   "ordinal": 4,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74700,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o1_center-ply3",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 3,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 3,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    6,
+    12
+   ],
+   "ordinal": 5,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74701,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o1_center-ply3",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 3,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 4,
+   "matchdata": null,
+   "move": null,
+   "ordinal": 0,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 0,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 1,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74702,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 0,
+   "role": "replay",
+   "source": null,
+   "task_id": "h4_4b-o1_center-ply4",
+   "telemetry": null
+  },
+  {
+   "board_ply": 4,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    16,
+    9
+   ],
+   "ordinal": 1,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 0,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74703,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 0,
+   "role": "query",
+   "source": "searched",
+   "task_id": "h4_4b-o1_center-ply4",
+   "telemetry": {
+    "completed": true,
+    "completed_depth": 6,
+    "current_max_ply": 7,
+    "move_nr": 4,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": true
+   }
+  },
+  {
+   "board_ply": 5,
+   "matchdata": null,
+   "move": null,
+   "ordinal": 0,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 0,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 1,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74704,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 0,
+   "role": "replay",
+   "source": null,
+   "task_id": "h4_4b-o1_center-ply5",
+   "telemetry": null
+  },
+  {
+   "board_ply": 5,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    9,
+    11
+   ],
+   "ordinal": 1,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 0,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74705,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 0,
+   "role": "query",
+   "source": "searched",
+   "task_id": "h4_4b-o1_center-ply5",
+   "telemetry": {
+    "completed": true,
+    "completed_depth": 6,
+    "current_max_ply": 7,
+    "move_nr": 5,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": true
+   }
+  },
+  {
+   "board_ply": 1,
+   "matchdata": null,
+   "move": null,
+   "ordinal": 0,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 0,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 1,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74706,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 0,
+   "role": "replay",
+   "source": null,
+   "task_id": "h4_4b-o3_low-ply1",
+   "telemetry": null
+  },
+  {
+   "board_ply": 1,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    6,
+    11
+   ],
+   "ordinal": 1,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74707,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o3_low-ply1",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 1,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 1,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    6,
+    11
+   ],
+   "ordinal": 2,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74708,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o3_low-ply1",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 1,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 1,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    8,
+    11
+   ],
+   "ordinal": 3,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74709,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o3_low-ply1",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 1,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 1,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    6,
+    11
+   ],
+   "ordinal": 4,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74710,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o3_low-ply1",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 1,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 1,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    6,
+    11
+   ],
+   "ordinal": 5,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74712,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o3_low-ply1",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 1,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 2,
+   "matchdata": null,
+   "move": null,
+   "ordinal": 0,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 0,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 1,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74713,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 0,
+   "role": "replay",
+   "source": null,
+   "task_id": "h4_4b-o3_low-ply2",
+   "telemetry": null
+  },
+  {
+   "board_ply": 2,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    12,
+    19
+   ],
+   "ordinal": 1,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74714,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o3_low-ply2",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 2,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 2,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    12,
+    19
+   ],
+   "ordinal": 2,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74771,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o3_low-ply2",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 2,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 2,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    12,
+    17
+   ],
+   "ordinal": 3,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74841,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o3_low-ply2",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 2,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 2,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    12,
+    18
+   ],
+   "ordinal": 4,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74842,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o3_low-ply2",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 2,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 2,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    12,
+    18
+   ],
+   "ordinal": 5,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74851,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o3_low-ply2",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 2,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 3,
+   "matchdata": null,
+   "move": null,
+   "ordinal": 0,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 0,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 1,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74852,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 0,
+   "role": "replay",
+   "source": null,
+   "task_id": "h4_4b-o3_low-ply3",
+   "telemetry": null
+  },
+  {
+   "board_ply": 3,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    7,
+    10
+   ],
+   "ordinal": 1,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74853,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o3_low-ply3",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 3,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 3,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    5,
+    10
+   ],
+   "ordinal": 2,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74854,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o3_low-ply3",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 3,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 3,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    6,
+    10
+   ],
+   "ordinal": 3,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74855,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o3_low-ply3",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 3,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 3,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    6,
+    10
+   ],
+   "ordinal": 4,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74856,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o3_low-ply3",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 3,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 3,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    7,
+    10
+   ],
+   "ordinal": 5,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74857,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o3_low-ply3",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 3,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 4,
+   "matchdata": null,
+   "move": null,
+   "ordinal": 0,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 0,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 1,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74858,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 0,
+   "role": "replay",
+   "source": null,
+   "task_id": "h4_4b-o3_low-ply4",
+   "telemetry": null
+  },
+  {
+   "board_ply": 4,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    10,
+    11
+   ],
+   "ordinal": 1,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 0,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74859,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 0,
+   "role": "query",
+   "source": "searched",
+   "task_id": "h4_4b-o3_low-ply4",
+   "telemetry": {
+    "completed": true,
+    "completed_depth": 6,
+    "current_max_ply": 7,
+    "move_nr": 4,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": true
+   }
+  },
+  {
+   "board_ply": 5,
+   "matchdata": null,
+   "move": null,
+   "ordinal": 0,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 0,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 1,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74860,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 0,
+   "role": "replay",
+   "source": null,
+   "task_id": "h4_4b-o3_low-ply5",
+   "telemetry": null
+  },
+  {
+   "board_ply": 5,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    7,
+    11
+   ],
+   "ordinal": 1,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 0,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74861,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 0,
+   "role": "query",
+   "source": "searched",
+   "task_id": "h4_4b-o3_low-ply5",
+   "telemetry": {
+    "completed": true,
+    "completed_depth": 6,
+    "current_max_ply": 7,
+    "move_nr": 5,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": true
+   }
+  },
+  {
+   "board_ply": 1,
+   "matchdata": null,
+   "move": null,
+   "ordinal": 0,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 0,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 1,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74864,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 0,
+   "role": "replay",
+   "source": null,
+   "task_id": "h4_4b-o4_high-ply1",
+   "telemetry": null
+  },
+  {
+   "board_ply": 1,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    15,
+    12
+   ],
+   "ordinal": 1,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74865,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o4_high-ply1",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 1,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 1,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    15,
+    12
+   ],
+   "ordinal": 2,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74866,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o4_high-ply1",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 1,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 1,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    17,
+    12
+   ],
+   "ordinal": 3,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74867,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o4_high-ply1",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 1,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 1,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    15,
+    12
+   ],
+   "ordinal": 4,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74868,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o4_high-ply1",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 1,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 1,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    16,
+    12
+   ],
+   "ordinal": 5,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74869,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o4_high-ply1",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 1,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 2,
+   "matchdata": null,
+   "move": null,
+   "ordinal": 0,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 0,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 1,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74870,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 0,
+   "role": "replay",
+   "source": null,
+   "task_id": "h4_4b-o4_high-ply2",
+   "telemetry": null
+  },
+  {
+   "board_ply": 2,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    11,
+    16
+   ],
+   "ordinal": 1,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74871,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o4_high-ply2",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 2,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 2,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    11,
+    17
+   ],
+   "ordinal": 2,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74872,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o4_high-ply2",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 2,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 2,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    11,
+    18
+   ],
+   "ordinal": 3,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74873,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o4_high-ply2",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 2,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 2,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    11,
+    16
+   ],
+   "ordinal": 4,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74875,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o4_high-ply2",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 2,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 2,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    11,
+    17
+   ],
+   "ordinal": 5,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74876,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o4_high-ply2",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 2,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 3,
+   "matchdata": null,
+   "move": null,
+   "ordinal": 0,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 0,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 1,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74877,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 0,
+   "role": "replay",
+   "source": null,
+   "task_id": "h4_4b-o4_high-ply3",
+   "telemetry": null
+  },
+  {
+   "board_ply": 3,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    18,
+    13
+   ],
+   "ordinal": 1,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74892,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o4_high-ply3",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 3,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 3,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    17,
+    13
+   ],
+   "ordinal": 2,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74978,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o4_high-ply3",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 3,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 3,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    17,
+    13
+   ],
+   "ordinal": 3,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74979,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o4_high-ply3",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 3,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 3,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    17,
+    13
+   ],
+   "ordinal": 4,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74982,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o4_high-ply3",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 3,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 3,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    16,
+    13
+   ],
+   "ordinal": 5,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 1,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74983,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 3,
+   "role": "query",
+   "source": "native_initial_second_to_fourth",
+   "task_id": "h4_4b-o4_high-ply3",
+   "telemetry": {
+    "completed": false,
+    "completed_depth": -1,
+    "current_max_ply": 0,
+    "move_nr": 3,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": false
+   }
+  },
+  {
+   "board_ply": 4,
+   "matchdata": null,
+   "move": null,
+   "ordinal": 0,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 0,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 1,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74984,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 0,
+   "role": "replay",
+   "source": null,
+   "task_id": "h4_4b-o4_high-ply4",
+   "telemetry": null
+  },
+  {
+   "board_ply": 4,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    12,
+    12
+   ],
+   "ordinal": 1,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 0,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74985,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 0,
+   "role": "query",
+   "source": "searched",
+   "task_id": "h4_4b-o4_high-ply4",
+   "telemetry": {
+    "completed": true,
+    "completed_depth": 6,
+    "current_max_ply": 7,
+    "move_nr": 4,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": true
+   }
+  },
+  {
+   "board_ply": 5,
+   "matchdata": null,
+   "move": null,
+   "ordinal": 0,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 0,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 1,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74990,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 0,
+   "role": "replay",
+   "source": null,
+   "task_id": "h4_4b-o4_high-ply5",
+   "telemetry": null
+  },
+  {
+   "board_ply": 5,
+   "matchdata": {
+    "identity": true,
+    "pie_rule": false,
+    "xsize": 24,
+    "ysize": 24,
+    "ystarts": true
+   },
+   "move": [
+    16,
+    12
+   ],
+   "ordinal": 1,
+   "outcome": "accepted",
+   "postcond": {
+    "failures": 0,
+    "frames": 0,
+    "headless": true,
+    "no_throw": true,
+    "prefs_ok": true,
+    "refl_n": 4,
+    "refl_ok": true,
+    "windows": 0
+   },
+   "proc": {
+    "headless": "true",
+    "java_version": "17.0.20.1",
+    "pid": 74991,
+    "prefs_factory": "e2probe.ScratchPrefs",
+    "vm": "OpenJDK_64-Bit_Server_VM"
+   },
+   "reason": null,
+   "refused_at": null,
+   "return_code": 0,
+   "role": "query",
+   "source": "searched",
+   "task_id": "h4_4b-o4_high-ply5",
+   "telemetry": {
+    "completed": true,
+    "completed_depth": 6,
+    "current_max_ply": 7,
+    "move_nr": 5,
+    "q": 1,
+    "requested_depth": 6,
+    "usealphabeta": true
+   }
+  }
+ ],
+ "run_deadline_s": 1800,
+ "scope": "The 16 frozen positions, depth 6, driven through the PRODUCTION agent and binder in H4 mode -- never the game loop. Establishes that the adapter accepts these replies, refuses none, names the answering routine and records one PROC per JVM. native_initial_fifth_or_more is exercised only by constructed tests. No game, no seed, no score.",
+ "source_by_ply": {
+  "0": {
+   "native_initial_first": 5
+  },
+  "1": {
+   "native_initial_second_to_fourth": 15
+  },
+  "2": {
+   "native_initial_second_to_fourth": 15
+  },
+  "3": {
+   "native_initial_second_to_fourth": 15
+  },
+  "4": {
+   "searched": 3
+  },
+  "5": {
+   "searched": 3
+  }
+ },
+ "stage": "h4_4b_acceptance_qualification",
+ "subprocesses_spent": 72,
+ "toolchain_identity": {
+  "classes": {
+   "e2probe/ScratchPrefs.class": "aad79e9fc149d012209a53e6cad99cc7d97bf79ab03a56536934891d6dbf8f39",
+   "e2probe/ScratchPrefsFactory.class": "dff0e8f933c656f3d3e48c7b2519746508162b8fddd3db45066038c91480be7d",
+   "net/schwagereit/t1j/E3bDump.class": "2c9cd6c5ef2934e0d3b2b229215194c9329d0e1185c5c3408466d1c35a522c05",
+   "net/schwagereit/t1j/E4Preflight.class": "db8f9a102c0c563f99912bb6058b5184a59a07c8c1246bfa92b0bba2c62bc992"
+  },
+  "classes_dir": "/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/498c2c86-7211-4f07-9290-a37054c4ccba/scratchpad/h4b_classes_1790134788",
+  "jar": "/Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/t1j.jar",
+  "jar_sha256": "53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7",
+  "jdk_components": {
+   "bin/java": "af8b122943345320b179c75c3404d56a981017739746b75f9caf583632f0bea0",
+   "bin/javac": "6f5159301c750bba340390eda5fdd4a0959445355f97c40aa9c2addb00ede5ab",
+   "lib/modules": "28745573641057e822a972f223fc8e40db5c9df11ae3f7402764780afc2f1951",
+   "release": "cb6064fe4d7b87d9fbb8b8c7702047044d1bbeac38e0c5217f595579b6cc764b"
+  },
+  "jdk_home": "/Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1/jdk/jdk-17.0.20.1+1/Contents/Home",
+  "main_class": "net.schwagereit.t1j.E4Preflight",
+  "sources": {
+   "E3bDump.java": "78f8f3f43b6a1ca9637ce29adcaabac46b9ae4acd849734eca4d32e2e83354ad",
+   "E4Preflight.java": "aa1c680a8450bedc113f852248b88d50b4e6eea80ac009e2d8821d908e041151",
+   "ScratchPrefs.java": "559fb9483cc34f4cc50a1c153fe6cabac6bb6129a977f42ba328b0cfad798f03",
+   "ScratchPrefsFactory.java": "09c0d74cf3c11130abfb810bd24cc433657b9dbba83152bd7c6f7e3f5858c244"
+  },
+  "toolchain": {
+   "root": "/Users/bill/Library/Application Support/TwixT_Game/toolchains/t1j-e1",
+   "source": "recorded-default",
+   "verified": 5
+  }
+ },
+ "verdict": "CLEAN"
+}

@@ -36,7 +36,7 @@ from .t1j_toolchain import ToolchainError
 #: and `main` -- because gating only the CLI protects nothing. No supported
 #: override exists: not argv, not the environment, not a configuration file, not
 #: an import hook. This is the qualification's OWN gate; it reads no other.
-H4_4B_ACCEPTANCE_QUALIFICATION_AUTHORIZED = True
+H4_4B_ACCEPTANCE_QUALIFICATION_AUTHORIZED = False
 
 #: Consumed from the repair qualification, never retyped (card §3.3, §7).
 DEPTH = H4RQ.DEPTH
