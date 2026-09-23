@@ -1,3 +1,10 @@
+> 🔴 **§4B IS SUPERSEDED — read `2026-09-22-t1j-h4-4b-acceptance-qualification-card.md`.**
+> Added 2026-09-22. This card's §4B-relevant clauses are stale in material places
+> (refusal sites, reflection count, `MatchData` readback, the plies 0–2 search
+> rule, `PROC` plumbing, "§4A is next"); the dedicated §4B card supersedes them
+> clause by clause in its §1 and is the authority for §4B. Everything below this
+> banner is preserved **byte-for-byte**; outside §4B it stands unchanged.
+
 # H4 REPLACEMENT CARD — empty-board direct play under the frozen argmax agent
 
 **Written 2026-09-20. DESIGN ONLY.** No seeds are chosen or reserved, no code is

@@ -4,12 +4,32 @@
 nothing runs, no seed is reserved, no game is played.
 
 🔴 **THIS CARD IS THE AUTHORITY FOR §4B.** The replacement card
-(`2026-09-21-t1j-h4-replacement-card.md`) is **preserved unedited** as the
-historical design. Its §4B-relevant clauses that are now stale are superseded
+(`2026-09-21-t1j-h4-replacement-card.md`) is **preserved** as the historical
+design — its body **byte-for-byte**, with only a short pointer banner prepended. Its §4B-relevant clauses that are now stale are superseded
 **here, clause by clause** (§1). Outside §4B — the scientific core, the pilot,
 the study, persistence — the replacement card stands unchanged. Implementation
 either **conforms** to this card or returns here for an explicit amendment; a
 card completed from its implementation only ratifies what was built.
+
+⚠ **AMENDED 2026-09-22, after review of the first version (`658ebe1`) — three
+contracts tightened, and what the first version said is kept here:**
+
+1. **Pairing.** It claimed one switch meant *"an H4 agent can **never** be
+   paired with a default binder"*. **Unenforced:** the two factories take
+   independent runtimes. Now enforced through the shared context, both
+   directions, with controls (§3.1.1).
+2. **Records.** It required *"one record per subprocess"* but recorded only at
+   the final step, **after** acceptance, so a launched JVM later refused had no
+   record. Now every returning subprocess gets one — accepted, refused or
+   unreadable — and task buckets survive `ctx.reset` (§4, §5, §5.1).
+3. **Failure kinds.** It said *"every step fails closed with `AbortError`"* and
+   *"every refusal chains the full transcript"*, which contradicted its own §8:
+   a timeout or unreadable output is VOID, not an `AbortError`, and a
+   pre-subprocess refusal has no transcript. Now three kinds, kept apart, with
+   STOP and VOID decided by the type raised; the H4 binder also chains its full
+   stdout; and the finite-timeout rule names the **query** timeout
+   (`t1j_timeout_s`), not `T1jRuntime.timeout_s`, which already refused `None`
+   (§3.1.2, §4, §8).
 
 > **What §4B must establish.** That the **production adapter**, in an opt-in H4
 > mode whose default stays **OFF**, accepts exactly the replies the repair
@@ -95,24 +115,50 @@ reply at site 2**, and at site 4 **every reply of any kind**.
 
 ### 3.1 One switch, default OFF
 
-* **`T1jRuntime(..., h4_acceptance: bool = False)` is the ONLY switch.** The
-  binder and the agent both read it from the runtime they share, so an H4 agent
-  can **never** be paired with a default binder, or the reverse. No agent
-  keyword, no binder keyword, no environment variable, no configuration file.
+* **`T1jRuntime(..., h4_acceptance: bool = False)` is the ONLY switch.** No
+  agent keyword, no binder keyword, no environment variable, no configuration
+  file.
 * The default, `False`, **is** today's fail-closed behaviour. It keeps every
   guard on; it switches nothing off.
-* In H4 mode, **construction refuses**:
-  * a depth other than **6** — the qualified classifier is depth-6 specific
-    (`DEPTH = 6`, `SEARCHED_CURRENT_MAX_PLY = 7`);
-  * a query timeout of **`None`**. `T1jAgent` and `make_agent_factory` default
-    `timeout_s` to `None` (`:231`, `:292`), an **unbounded wait**. That stays as
-    qualified for default callers and is **refused** in H4 mode.
+
+#### 3.1.1 🔴 PAIRING IS ENFORCED, not implied by the switch
+
+`make_binder(runtime, ctx)` and `make_agent_factory(runtime=…, ctx=…)` take
+their runtimes **independently**, so one switch alone does **not** stop an H4
+agent being paired with a default binder. The pairing is therefore **bound
+through the `IntegrationContext` they share**:
+
+* the first binder or agent built on a context **registers its runtime object
+  on that context**; every later one must present **the same object** (`is`);
+* 🔴 **a mismatch is REFUSED whenever EITHER side is in H4 mode** — an H4 binder
+  with a default agent, a default binder with an H4 agent, **and two distinct
+  H4 runtime objects**. It is refused **at construction**
+  (`AbortError(PHASE_PRECONDITION)`), before any subprocess exists;
+* **two default runtimes on one context are NOT refused.** That is today's
+  behaviour, and `e4_screen_command` and `l0_match_command` both accept a
+  `_binder` override; a new refusal on the default path would be a behaviour
+  change none of those callers was qualified with.
+* `T1jAgent` constructed **directly** (not through the factory) is checked the
+  same way, in its own constructor.
+
+#### 3.1.2 H4-mode construction refusals
+
+In H4 mode, **construction refuses**, before any subprocess:
+
+* a depth other than **6** — the qualified classifier is depth-6 specific
+  (`DEPTH = 6`, `SEARCHED_CURRENT_MAX_PLY = 7`);
+* a **query** timeout of **`None`**. 🔴 This is **`T1jAgent.timeout_s`**, set
+  through **`make_agent_factory(t1j_timeout_s=…)`** — both default to `None`
+  (`:231`, `:292`), an **unbounded wait**. It is **not** `T1jRuntime.timeout_s`:
+  that one is the **replay** timeout, and it already refuses `None` (`:152`).
+  The query default stays as qualified for default callers and is **refused** in
+  H4 mode.
 
 ### 3.2 What may change — at implementation, separately authorized
 
 | file | change |
 |---|---|
-| `e4_screen_integration.py` | the switch on `T1jRuntime`; an **additive** H4 branch in `T1jAgent.__call__` and `make_binder`; a per-task process-record list on `IntegrationContext` |
+| `e4_screen_integration.py` | the switch on `T1jRuntime`; an **additive** H4 branch in `T1jAgent.__call__` and `make_binder`; on `IntegrationContext`: the registered runtime (§3.1.1) and per-task process-record buckets that `reset` never erases (§5.1) |
 | `h4_4b_acceptance_qualification.py` | **new** — the gated runner |
 | `tests/test_h4_4b_acceptance_qualification.py` | **new** — every §4B test |
 | `tests/test_gate_inventory.py` | `EXPECTED_GATES` 13 → **14**, in one deliberate edit with its stale-count control |
@@ -154,10 +200,20 @@ matrix** (§7) — **never through the game loop** — so no game exists.
 
 ## 4. THE H4-MODE AGENT PATH — frozen order
 
-Every step **fails closed** with `AbortError(PHASE_MOVE, …)`, and every refusal
-**chains the full transcript** as its cause (`from A.HelperOutputError(message,
-out)`), so a STOP's durable record carries the raw stdout — the gap that once
-left a real D1 abort unexplained.
+Every step **fails closed**. 🔴 **But not every failure is the same kind, and
+the H4 path keeps three kinds apart** — the runner's STOP and VOID depend on it
+(§8):
+
+| kind | when | raised as | transcript |
+|---|---|---|---|
+| **pre-subprocess refusal** | construction (§3.1) or step 0, before any JVM | `AbortError` (`PHASE_PRECONDITION` / `PHASE_MOVE`) | **none exists** — none is claimed |
+| **semantic refusal** | the subprocess returned **parsable** output that is **unacceptable** — steps 2–8 | `AbortError(PHASE_MOVE)` **chained from `A.HelperOutputError(message, out)`** | the **FULL** stdout, as the cause — the gap that once left a real D1 abort unexplained |
+| **unreadable** | a timeout (`subprocess.TimeoutExpired`), or output a parser **cannot read** (`A.HelperOutputError`, or a `ValueError` from a line parser) | **the original exception, re-raised UNCONVERTED** — never turned into an `AbortError` | whatever that exception carries (`HelperOutputError.stdout`) |
+
+A parsable line with the **wrong count or wrong values** — 0 or 2 `PROC` lines,
+`identity=false`, `refl_n` 3 — is **semantic**. A line that **will not parse** is
+**unreadable**. The difference is whether the helper told us something false or
+told us nothing we can read.
 
 0. **The existing pre-checks, unchanged** — colour to move; move log length ==
    ply.
@@ -186,7 +242,14 @@ left a real D1 abort unexplained.
    only at plies ≥ 3, with exit 0 + failures 0; **everything else refused**.
 8. **A usable move** — not the null sentinel, not `None`, legal in T1j's own
    report, and in **our** `state.legal_moves()`.
-9. **Record** the per-call record (§5); return the move.
+9. Mark the observation **accepted**; return the move.
+
+🔴 **The observation is NOT recorded only here.** It is **opened the moment the
+subprocess returns** and **appended whatever happens next** — accepted at step
+9, **refused** at whichever of steps 2–8 refused it, or **unreadable** if a
+parser could not read the output (§5). Recording only on acceptance would leave
+every launched-then-refused JVM without a record, and "one record per
+subprocess" would be false exactly when a record matters most.
 
 🔴 **The classifier must be `h4_repair_qualification.classify_reply` itself** —
 the object the CLEAN qualification exercised — **imported at call time**
@@ -194,8 +257,13 @@ the object the CLEAN qualification exercised — **imported at call time**
 module-level import back would be a cycle). It is **never re-implemented, never
 copied, and never wrapped in logic that re-judges its inputs**.
 
-**The binder in H4 mode:** every existing replay check unchanged, plus exactly
-one `PROC`, recorded.
+**The binder in H4 mode:** every existing replay check, plus exactly one `PROC`;
+an observation for every replay subprocess on the same terms as the agent's; and
+🔴 **every H4-mode binder refusal chains the FULL stdout** (`from
+A.HelperOutputError(message, out)`). The default binder path carries only
+`helper_failure_excerpt(out)` and **stays exactly so** — its message lines are
+anchored by an existing control (§3.2) — so the H4 binder raises through **its
+own** statements rather than editing the default ones.
 
 ⚠ **Naming.** `ctx.bump("searched_binds")` (`:274`) counts **dump re-binds
 whatever routine answered**. In H4 mode the per-call **`source`** is the
@@ -207,7 +275,7 @@ callers read it.
 ## 5. PRODUCTION PROC PLUMBING — H4 mode only
 
 Replacement §7.1 found the parser written, tested, and **unused in production**.
-In H4 mode the adapter appends **one record per subprocess** to the
+In H4 mode the adapter appends **one record per returning subprocess** to the
 `IntegrationContext`, for the current task:
 
 | field | query | replay |
@@ -220,9 +288,33 @@ In H4 mode the adapter appends **one record per subprocess** to the
 | `source` — which routine answered | ✓ | — |
 | `MatchData` readback | ✓ | — |
 | move and telemetry — `usealphabeta`, `currentMaxPly`, `completed`, `completed_depth`, `moveNr` | ✓ | — |
+| **`outcome`** — `accepted` · `refused` · `unreadable` | ✓ | ✓ |
+| **`refused_at`** (the step) and **`reason`** — refused / unreadable only | ✓ | ✓ |
+
+**Every subprocess that RETURNS gets exactly one record** — accepted, refused
+or unreadable. A field the path **did not reach** before refusing is **`null`**,
+never guessed or defaulted: a call refused at `PROC` has no `MatchData`, no
+`source` and no move; an **unreadable** call may have no return code, when the
+adapter's own parser refused the output inside `A.query` / `A.replay`.
+
+⚠ **A timeout leaves NO record here**, because the subprocess never returned
+output to record. It is re-raised unconverted (§4) and the **runner's VOID
+record** names the call — the one launched JVM the context cannot account for,
+stated rather than papered over.
 
 * **Anything other than exactly one `PROC` per JVM is a refusal**, on both
   paths.
+
+#### 5.1 🔴 Task buckets are PRESERVED across `ctx.reset`
+
+Records live in **one bucket per `task_id`**, and **`ctx.reset` opens a new
+bucket without erasing any earlier one** — exactly as `ctx.stats` already
+behaves (`setdefault`, never cleared; an earlier version reset its counters per
+task and a cross-task total read the last task's numbers). The §7 run uses **16
+tasks**, so its **72-record** assertion is a sum across buckets and is only
+possible if they survive. Once an **H4 runtime is registered on the context**
+(§3.1.1), **`reset` to a `task_id` already used is REFUSED**, so two tasks can
+never merge into one bucket silently.
 * Pair and arm identity are the H4 runner's to attach; the adapter records
   `task_id`.
 * 🔴 **Default callers do not parse `PROC`.** A new refusal on their path would be
@@ -256,7 +348,9 @@ construction and parsing run. A permissive double hides the seam.
 | reflection drift | opt-in `refl_n` 3 or 5 |
 | `PROC` | 0 lines · 2 lines — on the **query** path **and** the **replay** path |
 | dirty safety surface | a throw · windows · frames · not headless · prefs disturbed · `refl_ok=false` |
-| H4-mode construction | depth ≠ 6 · query timeout `None` |
+| H4-mode construction | depth ≠ 6 · **query** timeout `None` (`t1j_timeout_s`) |
+| 🔴 **pairing mismatch — BOTH directions** | an H4 binder with a default agent · a default binder with an H4 agent · two **distinct** H4 runtime objects · a directly constructed `T1jAgent` on a mismatched context |
+| task-bucket reuse | `ctx.reset` to an already-used `task_id` once an H4 runtime is registered |
 
 ### 6.2 Clean baselines — each must ACCEPT, individually
 
@@ -285,6 +379,19 @@ the routine ever answers.
   `rc`, `failures` or `completed` on its own.
 * **A spy that REFUSES** a clean searched reply → the adapter **refuses**. The
   verdict binds in both directions.
+
+### 6.3.1 Pairing, records and failure kinds — each proven
+
+| control | must show |
+|---|---|
+| **matching H4 pair** | the same H4 runtime object for binder and agent is **accepted** — the clean baseline for §3.1.1, so a check tightened until nothing pairs cannot pass |
+| **two default runtimes, one context** | **still accepted** — no new refusal on the default path |
+| **refused call keeps its record** | a semantic refusal at each of `PROC`, `POSTCOND`, `MATCHDATA`, the QUERY line, the dump, the classifier and the move check leaves **exactly one** record, `outcome=refused`, `refused_at` naming that step, and **`null`** in every field not reached |
+| **replay refusal keeps its record** | the same, on the binder path |
+| **semantic refusal carries FULL stdout** | the raised `AbortError`'s cause is a `HelperOutputError` whose `stdout` is the **whole** transcript — on the agent **and** the H4 binder |
+| **unreadable is NOT converted** | a malformed `PROC` / `POSTCOND` / `MATCHDATA` / QUERY line raises the **parser's** exception, **not** `AbortError`, and leaves a record with `outcome=unreadable` |
+| **timeout is NOT converted** | `subprocess.TimeoutExpired` propagates unchanged, and **no** record is written for that call |
+| **buckets survive `reset`** | records from two tasks both remain after the second `reset`; their sum is asserted |
 
 ### 6.4 Default callers unchanged — each proven
 
@@ -323,6 +430,12 @@ the routine ever answers.
 | the H4 path queries without `inject_matchdata` | the argv control and the missing-`MATCHDATA` control |
 | the switch defaults to `True` | the default-caller controls (§6.4) |
 | the classifier is a local copy | the identity control (§6.3) |
+| the pairing check removed, or applied only one way | the mismatch controls, both directions (§6.1) |
+| records appended only on acceptance | "refused call keeps its record" (§6.3.1) |
+| `ctx.reset` clears earlier buckets | "buckets survive `reset`" |
+| the H4 path converts `HelperOutputError` into `AbortError` | "unreadable is NOT converted" |
+| the H4 binder chains the excerpt instead of the full stdout | "semantic refusal carries FULL stdout" |
+| the finite-timeout check reads `T1jRuntime.timeout_s` instead of the query timeout | the `t1j_timeout_s=None` construction control |
 
 ### 6.6 The runner
 
@@ -351,6 +464,8 @@ the routine ever answers.
 | depth · ply cap | **6** · `l0_match_rules.PLY_CAP` (280) |
 | timeouts | **120 s** per call · **1,800 s** whole run, SIGALRM supervisor |
 | lifecycle | a fresh JVM per call; helpers compiled **once**, through the verified compile (jar and JDK pins re-checked) into a **create-only** directory outside the repository; the identity recorded |
+| construction | the binder and an agent for **each** colour are built through the factories on **one** H4 runtime and context **before the destination is claimed and before compilation**, so every §3.1 construction refusal happens before anything is written and before any JVM exists |
+| records | one bucket per position — **16 distinct `task_id`s**; the 72-record assertion sums across them (§5.1) |
 
 **Reported, never judged:** the classification by ply, realized moves, distinct
 pids. Either classification at plies 3–5 is legitimate. The absence of
@@ -367,10 +482,14 @@ files create-only; the evidence and the restoration committed together.
 
 ## 8. STOP RULES — frozen before any output is seen
 
+🔴 **STOP and VOID are decided by the TYPE RAISED, never by reading a message.**
+An `AbortError` is a STOP **even when its cause is a `HelperOutputError`** — that
+chained cause is the transcript riding along (§4), not a verdict.
+
 **STOP (exit 2)** — a RESULT about the production adapter, and it ends §4B:
 
 * **any `AbortError` from the production agent or binder at any matrix call**,
-  whatever its reason. 🔴 In particular, **a reply refused here that the repair
+  whatever its reason — the semantic refusals of §4, and the step-0 pre-checks. 🔴 In particular, **a reply refused here that the repair
   qualification established as legitimate at these positions is a STOP about the
   ADAPTER** — the acceptance mode refusing what it must accept — **never a
   finding about T1j**;
@@ -378,12 +497,15 @@ files create-only; the evidence and the restoration committed together.
   records, or anything other than **72 distinct pids**;
 * subprocesses spent ≠ the derived **72**.
 
-**VOID (exit 3)** — the instrument is unreadable: a per-call timeout,
-unparseable helper output, a toolchain or compilation failure, the whole-run
-deadline.
+**VOID (exit 3)** — the instrument is unreadable: a per-call
+`subprocess.TimeoutExpired`, an **unconverted** `HelperOutputError` or line-parser
+`ValueError` (§4), a toolchain or compilation failure, the whole-run deadline.
+The VOID record carries the exception, its `stdout` when it has one, and the
+observations completed before it.
 
 **Refused before starting**, nothing written: the gate closed (exit 5); a
-matrix-pin or nesting failure; an occupied destination.
+matrix-pin or nesting failure; an occupied destination; a §3.1 construction
+refusal — depth, query timeout, or pairing.
 
 🔴 **A STOP or VOID ends §4B under this card: no repair, no retry, no
 reinterpretation, no second run.** A STOP writes a durable record — the reason,
@@ -428,8 +550,8 @@ with its negative control, and a fresh, collision-proved seed block.
 ## 11. What this card does not do
 
 It writes no code, opens no gate, runs no helper, reserves no seed, plays no
-game, aggregates nothing, and pushes nothing. It does not edit the replacement
-card.
+game, aggregates nothing, and pushes nothing. Its only touch on the replacement card
+is the pointer banner; that card's body is unchanged byte-for-byte.
 
 **The next separately authorized action is §4B implementation plus tests, with
 the gate created CLOSED and no helper execution.** Execution is a separate
