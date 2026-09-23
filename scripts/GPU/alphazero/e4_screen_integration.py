@@ -116,6 +116,12 @@ def compare_state(state, tp, moves: Sequence[Tuple[int, int]]) -> List[str]:
     return div
 
 
+def _is_h4(runtime) -> bool:
+    """The H4 acceptance mode. Anything that does not say True is the DEFAULT
+    path -- which is today's fail-closed behaviour, so absence switches nothing off."""
+    return getattr(runtime, "h4_acceptance", False) is True
+
+
 class IntegrationContext:
     """One task's shared move log. Rebuilt by the state factory per task."""
 
@@ -125,11 +131,50 @@ class IntegrationContext:
         #: PER TASK and NEVER cleared. An earlier version kept bare counters and
         #: reset them per task, so a cross-task total read the last task's numbers.
         self.stats: Dict[str, Dict[str, int]] = {}
+        #: §4B (card §3.1.1): the runtime the first binder/agent registered.
+        self.runtime: Any = None
+        #: §4B (card §5.1): H4-mode process observations, ONE BUCKET PER TASK,
+        #: never erased by `reset` -- the same rule `stats` learned the hard way.
+        self.processes: Dict[str, List[Dict[str, Any]]] = {}
 
     def reset(self, task_id: str, opening: Sequence[Tuple[int, int]]) -> None:
+        if _is_h4(self.runtime):
+            if task_id in self.processes:
+                raise AbortError(PHASE_PRECONDITION,
+                                 f"task_id {task_id!r} was already used on this H4 "
+                                 f"context; two tasks may not share a record bucket")
+            self.processes[task_id] = []
         self.task_id = task_id
         self.moves = [tuple(m) for m in opening]
         self.stats.setdefault(task_id, {"binds": 0, "t1j_queries": 0, "searched_binds": 0})
+
+    def bind_runtime(self, runtime) -> None:
+        """Card §3.1.1: every runtime is COMPARED with the first one registered.
+
+        Identity is REQUIRED whenever either side is H4 -- so an H4 agent can never
+        meet a default binder, or the reverse, or a second H4 runtime. A
+        default/default mismatch stays PERMITTED: that is today's behaviour, and
+        callers that accept a `_binder` override were qualified with it.
+        """
+        if self.runtime is None:
+            self.runtime = runtime
+            return
+        if runtime is self.runtime:
+            return
+        if _is_h4(runtime) or _is_h4(self.runtime):
+            raise AbortError(PHASE_PRECONDITION,
+                             f"runtime mismatch on one context: registered "
+                             f"h4_acceptance={_is_h4(self.runtime)}, presented "
+                             f"h4_acceptance={_is_h4(runtime)}, and they are different "
+                             f"objects. An H4 binder and agent must share ONE runtime.")
+
+    def observe(self, obs: Dict[str, Any], outcome: str,
+                refused_at: Optional[str] = None, reason: Optional[str] = None) -> None:
+        """Append ONE H4 observation for a subprocess that RETURNED (card §5)."""
+        bucket = self.processes.setdefault(self.task_id, [])
+        obs.update(outcome=outcome, refused_at=refused_at, reason=reason,
+                   ordinal=len(bucket), task_id=self.task_id)
+        bucket.append(obs)
 
     def bump(self, key: str) -> None:
         self.stats[self.task_id][key] += 1
@@ -142,7 +187,7 @@ class T1jRuntime:
     """The pinned runtime. Identity is the caller's business; this just carries it."""
 
     def __init__(self, *, java: str, jar: str, classes: str, ply_cap: int,
-                 timeout_s: float):
+                 timeout_s: float, h4_acceptance: bool = False):
         """``ply_cap`` and ``timeout_s`` are both REQUIRED, for the same reason.
 
         A missing cap silently defaults further up the stack, and a missing
@@ -153,6 +198,8 @@ class T1jRuntime:
             raise TypeError("timeout_s is required: an unbounded replay never returns")
         self.java, self.jar, self.classes, self.ply_cap = java, jar, classes, ply_cap
         self.timeout_s = timeout_s
+        #: §4B: THE ONLY switch. Default False is today's fail-closed behaviour.
+        self.h4_acceptance = h4_acceptance is True
 
 
 def make_state_factory(openings: Dict[str, Sequence[Tuple[int, int]]],
@@ -180,6 +227,7 @@ def make_state_factory(openings: Dict[str, Sequence[Tuple[int, int]]],
 
 def make_binder(runtime: T1jRuntime, ctx: IntegrationContext) -> Callable:
     """The E3b per-ply binder. Aborts on the FIRST divergence."""
+    ctx.bind_runtime(runtime)
 
     def binder(task: Dict[str, Any], state, ply: int, move=None) -> None:
         if move is not None:
@@ -189,6 +237,8 @@ def make_binder(runtime: T1jRuntime, ctx: IntegrationContext) -> Callable:
             raise AbortError(PHASE_BIND,
                              f"{task['task_id']} {where}: the move log holds {len(ctx.moves)} "
                              f"moves but our ply is {state.ply}")
+        if _is_h4(runtime):
+            return _bind_h4(runtime, ctx, task, state, where)
 
         plies, rc, out = A.replay(ctx.moves, ply_cap=runtime.ply_cap, java=runtime.java,
                                   jar=runtime.jar, classes=runtime.classes,
@@ -234,6 +284,18 @@ class T1jAgent:
         self._query = _query or A.query          # private seam, for fail-closed tests
         self.moves_made = 0
         self.last_completed_depth: Optional[int] = None
+        ctx.bind_runtime(runtime)
+        if _is_h4(runtime):
+            from . import h4_repair_qualification as H4RQ
+            if depth != H4RQ.DEPTH:
+                raise AbortError(PHASE_PRECONDITION,
+                                 f"H4 mode is qualified at depth {H4RQ.DEPTH} only; got "
+                                 f"{depth}. The shared classifier is depth-specific.")
+            if timeout_s is None:
+                raise AbortError(PHASE_PRECONDITION,
+                                 "H4 mode refuses an unbounded QUERY timeout "
+                                 "(T1jAgent.timeout_s / t1j_timeout_s is None); the "
+                                 "runtime's replay timeout is a different setting")
 
     def __call__(self, state) -> Tuple[int, int]:
         if state.to_move != self.colour:
@@ -243,6 +305,8 @@ class T1jAgent:
             raise AbortError(PHASE_MOVE,
                              f"the move log holds {len(self.ctx.moves)} moves but our ply is "
                              f"{state.ply}; T1j would search a different position")
+        if _is_h4(self.runtime):
+            return self._call_h4(state)
         recs, dumps, rc, out = self._query(
             self.ctx.moves, depth=self.depth, java=self.runtime.java, jar=self.runtime.jar,
             classes=self.runtime.classes, timeout_s=self.timeout_s)
@@ -287,11 +351,210 @@ class T1jAgent:
         self.last_completed_depth = r.completed_depth
         return r.move
 
+    def _call_h4(self, state) -> Tuple[int, int]:
+        """§4B card §4: the H4-mode path, in its frozen order.
+
+        `rc`, `failures` and `completed` are judged in ONE place -- the qualified
+        classifier -- which REPLACES the three default refusal sites rather than
+        relaxing them one at a time (card §2).
+        """
+        from . import h4_repair_qualification as H4RQ
+        ctx, ply = self.ctx, state.ply
+        where = f"{ctx.task_id} h4 query at ply {ply}"
+        obs = _h4_obs("query", ply)
+        try:
+            recs, dumps, rc, out = self._query(
+                ctx.moves, depth=self.depth, java=self.runtime.java, jar=self.runtime.jar,
+                classes=self.runtime.classes, timeout_s=self.timeout_s,
+                inject_matchdata=True)
+        except A.HelperOutputError as e:          # returned, but unreadable -> VOID
+            ctx.observe(obs, "unreadable", "query", str(e))
+            raise
+        # (subprocess.TimeoutExpired propagates UNCONVERTED: nothing returned,
+        # so there is nothing to record -- the runner's VOID names the call.)
+        ctx.bump("t1j_queries")
+        obs["return_code"] = rc
+        step = "proc"
+        try:
+            _h4_proc(obs, out, where, PHASE_MOVE)
+            step = "postcond"
+            post = _h4_postcond(obs, out, where, PHASE_MOVE, H4RQ.QUERY_REFL_N_OPTIN)
+            step = "matchdata"
+            _h4_matchdata(obs, out, where)
+            step = "query_record"
+            if len(recs) != 1:
+                _h4_refuse(PHASE_MOVE, where, f"{len(recs)} query records, expected 1", out)
+            r = recs[0]
+            obs["telemetry"] = {"usealphabeta": r.usealphabeta,
+                                "current_max_ply": r.current_max_ply,
+                                "completed": r.completed,
+                                "completed_depth": r.completed_depth,
+                                "move_nr": r.move_nr, "q": r.q,
+                                "requested_depth": r.requested_depth}
+            ours = A.PLAYER_TO_T1J[state.to_move]
+            for ok, msg in ((r.q == 1, f"query index q={r.q}, expected 1"),
+                            (r.move_nr == ply, f"moveNr={r.move_nr} but our ply is {ply}"),
+                            (r.to_move == ours, f"to_move={r.to_move!r} but ours is {ours!r}"),
+                            (r.requested_depth == self.depth,
+                             f"requested depth {r.requested_depth}, not {self.depth}")):
+                if not ok:
+                    _h4_refuse(PHASE_MOVE, where, msg, out)
+            step = "dump"
+            if len(dumps) != 1:
+                _h4_refuse(PHASE_MOVE, where,
+                           f"{len(dumps)} searched-position dumps, expected 1", out)
+            div = compare_state(state, dumps[0], ctx.moves)
+            if div:
+                _h4_refuse(PHASE_MOVE, where, "the query jvm reconstructed a different "
+                           "position: " + "; ".join(div), out)
+            ctx.bump("searched_binds")
+            step = "classify"
+            try:
+                source = _h4_classifier()(ply=ply, rec=r, exit_status=rc,
+                                          failures=post.failures)
+            except H4RQ.H4RQStop as e:
+                _h4_refuse(PHASE_MOVE, where, e.message, out)
+            obs["source"] = source
+            step = "move"
+            obs["move"] = None if r.move is None else list(r.move)
+            if r.null_sentinel or r.move is None or not r.legal:
+                _h4_refuse(PHASE_MOVE, where, f"unusable move {r.move}", out)
+            if r.move not in set(state.legal_moves()):
+                _h4_refuse(PHASE_MOVE, where, f"{r.move} is illegal in OUR engine", out)
+        except AbortError as e:                    # semantic refusal -> STOP
+            ctx.observe(obs, "refused", step, e.message)
+            raise
+        except (ValueError, KeyError) as e:        # a line would not parse -> VOID
+            ctx.observe(obs, "unreadable", step, str(e))
+            raise
+        ctx.observe(obs, "accepted")
+        self.moves_made += 1
+        self.last_completed_depth = r.completed_depth
+        return r.move
+
+
+# ─────────────────────── §4B: the H4-mode helpers (card §4, §5) ───────────────────────
+
+def _h4_classifier():
+    """The QUALIFIED classifier, looked up AT CALL TIME and never copied.
+
+    `h4_repair_qualification` imports this module at import time, so importing
+    it back at module level would be a cycle. Looking it up per call also means
+    it is always THE object the CLEAN qualification exercised.
+    """
+    from . import h4_repair_qualification as H4RQ
+    return H4RQ.classify_reply
+
+
+def _h4_obs(role: str, ply: int) -> Dict[str, Any]:
+    """A fresh observation. Fields the path does not reach stay None -- never guessed."""
+    return {"role": role, "board_ply": ply, "return_code": None, "proc": None,
+            "postcond": None, "source": None, "matchdata": None, "move": None,
+            "telemetry": None}
+
+
+def _h4_refuse(phase: str, where: str, message: str, out: str) -> None:
+    """A SEMANTIC refusal: AbortError carrying the FULL transcript as its cause."""
+    msg = f"{where}: {message}"
+    raise AbortError(phase, msg) from A.HelperOutputError(msg, out)
+
+
+def _h4_proc(obs: Dict[str, Any], out: str, where: str, phase: str) -> None:
+    procs = A.parse_procs(out)
+    if len(procs) != 1:
+        _h4_refuse(phase, where, f"{len(procs)} PROC lines, expected exactly 1 per jvm", out)
+    p = procs[0]
+    obs["proc"] = {"pid": p.pid, "java_version": p.java_version, "vm": p.vm,
+                   "headless": p.headless, "prefs_factory": p.prefs_factory}
+
+
+def _h4_postcond(obs: Dict[str, Any], out: str, where: str, phase: str,
+                 expected_refl: int):
+    """The SAFETY SURFACE, field by field. `failures` is recorded, never judged here:
+    `PostCond.clean` folds it in, and that is the refusal site this path replaces."""
+    posts = A.parse_postconds(out)
+    if len(posts) != 1:
+        _h4_refuse(phase, where, f"{len(posts)} POSTCOND lines, expected exactly 1", out)
+    p = posts[0]
+    obs["postcond"] = {k: getattr(p, k) for k in (
+        "no_throw", "windows", "frames", "headless", "prefs_ok", "refl_ok",
+        "refl_n", "failures")}
+    for ok, msg in ((p.no_throw, "the helper threw"),
+                    (p.windows == 0, f"{p.windows} windows opened"),
+                    (p.frames == 0, f"{p.frames} frames opened"),
+                    (p.headless, "not headless"),
+                    (p.prefs_ok, "the preferences surface was disturbed"),
+                    (p.refl_ok, "the reflective-access check failed"),
+                    (p.refl_n == expected_refl,
+                     f"refl_n={p.refl_n}, expected exactly {expected_refl}")):
+        if not ok:
+            _h4_refuse(phase, where, f"safety surface not clean: {msg}", out)
+    return p
+
+
+def _h4_matchdata(obs: Dict[str, Any], out: str, where: str) -> None:
+    mds = A.parse_matchdata(out)
+    if len(mds) != 1:
+        _h4_refuse(PHASE_MOVE, where, f"{len(mds)} MATCHDATA lines, expected exactly 1", out)
+    md = mds[0]
+    obs["matchdata"] = {"pie_rule": md.pie_rule, "xsize": md.xsize, "ysize": md.ysize,
+                        "ystarts": md.ystarts, "identity": md.identity}
+    if md.pie_rule or md.xsize != A.BOARD_N or md.ysize != A.BOARD_N or not md.ystarts:
+        _h4_refuse(PHASE_MOVE, where, f"the injected MatchData did not read back as "
+                   f"frozen: {obs['matchdata']}", out)
+    if not md.identity:
+        _h4_refuse(PHASE_MOVE, where, "MATCHDATA identity=false -- getMatchData() did "
+                   "not return the injected object", out)
+
+
+def _bind_h4(runtime, ctx: IntegrationContext, task: Dict[str, Any], state,
+             where: str) -> None:
+    """§4B card §4: the H4 binder. Every default replay check, plus exactly one
+    PROC, an observation for every returning replay, and the FULL stdout on
+    every refusal -- through its own statements, so the default path is untouched."""
+    where = f"{task['task_id']} {where} h4 replay"
+    obs = _h4_obs("replay", state.ply)
+    try:
+        plies, rc, out = A.replay(ctx.moves, ply_cap=runtime.ply_cap, java=runtime.java,
+                                  jar=runtime.jar, classes=runtime.classes,
+                                  timeout_s=runtime.timeout_s)
+    except A.HelperOutputError as e:
+        ctx.observe(obs, "unreadable", "replay", str(e))
+        raise
+    obs["return_code"] = rc
+    step = "proc"
+    try:
+        _h4_proc(obs, out, where, PHASE_BIND)
+        step = "exit"
+        if rc != 0:
+            _h4_refuse(PHASE_BIND, where, f"T1j replay exit {rc}", out)
+        step = "postcond"
+        p = _h4_postcond(obs, out, where, PHASE_BIND, REPLAY_REFL_N)
+        if p.failures != 0:
+            _h4_refuse(PHASE_BIND, where, f"failures={p.failures} on a replay", out)
+        step = "plies"
+        if len(plies) != state.ply + 1:
+            _h4_refuse(PHASE_BIND, where, f"T1j reported {len(plies)} plies, expected "
+                       f"{state.ply + 1}", out)
+        step = "state"
+        div = compare_state(state, plies[-1], ctx.moves)
+        if div:
+            _h4_refuse(PHASE_BIND, where, "; ".join(div), out)
+    except AbortError as e:
+        ctx.observe(obs, "refused", step, e.message)
+        raise
+    except (ValueError, KeyError) as e:
+        ctx.observe(obs, "unreadable", step, str(e))
+        raise
+    ctx.observe(obs, "accepted")
+    ctx.bump("binds")
+
 
 def make_agent_factory(*, runtime: T1jRuntime, ctx: IntegrationContext, evaluator,
                        reference_build: Callable, t1j_timeout_s: Optional[float] = None,
                        _query: Optional[Callable] = None) -> Callable:
     """`(task, mover) -> agent`. The reference on its colour, T1j on the other."""
+    ctx.bind_runtime(runtime)
 
     def agent_factory(task: Dict[str, Any], mover: str, _evaluator=None):
         if mover == task["reference_colour"]:

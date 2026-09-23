@@ -95,6 +95,9 @@ H3CMB = "scripts/GPU/alphazero/h3_combine.py"
 T_H3CMB = "tests/test_h3_combine.py"
 H3CCMD = "scripts/GPU/alphazero/h3_combine_command.py"
 T_H3FIN = "tests/test_h3_final_state.py"
+# ── H4 §4B (2026-09-22): the production adapter, H4 acceptance mode
+H4B = "scripts/GPU/alphazero/h4_4b_acceptance_qualification.py"
+T_H4B = "tests/test_h4_4b_acceptance_qualification.py"
 
 # (label, file, anchor, replacement, test node)
 DEFECTS = [
@@ -3919,6 +3922,84 @@ DEFECTS = [
      "        want = RULES.expected_task_digest(tasks)",
      "        want = RULES.TASK_DIGEST",
      f"{T_H3RUN}::test_check_schedule_REFUSES_a_seeded_schedule_while_the_pin_is_unset"),
+    # ── H4 §4B (2026-09-22): the production adapter, H4 acceptance mode.
+    # Each must be caught by the named test in the §4B file (card §6.5).
+    ('§4B: the H4 path re-checks rc on its own', INTEG,
+     '        ctx.bump("t1j_queries")\n        obs["return_code"] = rc\n',
+     '        ctx.bump("t1j_queries")\n        obs["return_code"] = rc\n        if rc != 0:\n            raise AbortError(PHASE_MOVE, f"exit {rc}")\n',
+     f"{T_H4B}::test_baseline_a_NATIVE_reply_is_ACCEPTED_by_routine[1-native_initial_second_to_fourth]"),
+    ('§4B: the H4 path judges PostCond.clean', INTEG,
+     '    for ok, msg in ((p.no_throw, "the helper threw"),\n                    (p.windows == 0,',
+     '    for ok, msg in ((p.clean, "the helper threw"),\n                    (p.windows == 0,',
+     f"{T_H4B}::test_baseline_a_NATIVE_reply_is_ACCEPTED_by_routine[1-native_initial_second_to_fourth]"),
+    ('§4B: the H4 path keeps the completion check', INTEG,
+     '            step = "classify"\n',
+     '            step = "classify"\n            if not r.completed:\n                _h4_refuse(PHASE_MOVE, where, "did not complete", out)\n',
+     f"{T_H4B}::test_baseline_a_NATIVE_reply_is_ACCEPTED_by_routine[1-native_initial_second_to_fourth]"),
+    ('§4B: the H4 path expects the default refl_n 3', INTEG,
+     'post = _h4_postcond(obs, out, where, PHASE_MOVE, H4RQ.QUERY_REFL_N_OPTIN)',
+     'post = _h4_postcond(obs, out, where, PHASE_MOVE, QUERY_REFL_N)',
+     f"{T_H4B}::test_baseline_a_NATIVE_reply_is_ACCEPTED_by_routine[1-native_initial_second_to_fourth]"),
+    ('§4B: the H4 path queries without inject_matchdata', INTEG,
+     '                inject_matchdata=True)\n',
+     '                inject_matchdata=False)\n',
+     f"{T_H4B}::test_baseline_a_NATIVE_reply_is_ACCEPTED_by_routine[1-native_initial_second_to_fourth]"),
+    ('§4B: the classifier is handed a constant exit status', INTEG,
+     'source = _h4_classifier()(ply=ply, rec=r, exit_status=rc,',
+     'source = _h4_classifier()(ply=ply, rec=r, exit_status=3,',
+     f"{T_H4B}::test_a_native_signature_with_the_wrong_exit_or_failures_is_refused[0-1]"),
+    ('§4B: the MATCHDATA identity check is skipped', INTEG,
+     '    if not md.identity:\n',
+     '    if False:\n',
+     f"{T_H4B}::test_MATCHDATA_identity_false_is_refused"),
+    ('§4B: the PROC count is not checked on the query path', INTEG,
+     '    if len(procs) != 1:\n        _h4_refuse(phase, where, f"{len(procs)} PROC lines',
+     '    if False:\n        _h4_refuse(phase, where, f"{len(procs)} PROC lines',
+     f"{T_H4B}::test_PROC_counts_other_than_one_are_refused_on_the_QUERY_path[2]"),
+    ('§4B: the PROC count is not checked on the replay path', INTEG,
+     '    if len(procs) != 1:\n        _h4_refuse(phase, where, f"{len(procs)} PROC lines',
+     '    if False:\n        _h4_refuse(phase, where, f"{len(procs)} PROC lines',
+     f"{T_H4B}::test_PROC_counts_other_than_one_are_refused_on_the_REPLAY_path[2]"),
+    ('§4B: the H4 switch defaults ON', INTEG,
+     'timeout_s: float, h4_acceptance: bool = False):',
+     'timeout_s: float, h4_acceptance: bool = True):',
+     f"{T_H4B}::test_the_switch_DEFAULTS_OFF"),
+    ('§4B: the classifier is a local wrapper, not the qualified object', INTEG,
+     '    return H4RQ.classify_reply\n',
+     '    return lambda **kw: H4RQ.classify_reply(**kw)\n',
+     f"{T_H4B}::test_the_classifier_IS_the_qualified_one"),
+    ('§4B: the pairing check is removed', INTEG,
+     '        if _is_h4(runtime) or _is_h4(self.runtime):\n',
+     '        if False:\n',
+     f"{T_H4B}::test_PAIRING_an_H4_binder_with_a_DEFAULT_agent_is_refused"),
+    ('§4B: the pairing check applies one way only', INTEG,
+     '        if _is_h4(runtime) or _is_h4(self.runtime):\n',
+     '        if _is_h4(self.runtime):\n',
+     f"{T_H4B}::test_PAIRING_a_DEFAULT_binder_with_an_H4_agent_is_refused"),
+    ('§4B: a refused call leaves no record', INTEG,
+     '        except AbortError as e:                    # semantic refusal -> STOP\n            ctx.observe(obs, "refused", step, e.message)\n',
+     '        except AbortError as e:                    # semantic refusal -> STOP\n            pass\n',
+     f"{T_H4B}::test_a_REFUSED_call_keeps_exactly_one_record[proc-kw0-3-1]"),
+    ('§4B: reset erases the earlier task buckets', INTEG,
+     '            self.processes[task_id] = []\n',
+     '            self.processes.clear()\n            self.processes[task_id] = []\n',
+     f"{T_H4B}::test_task_buckets_SURVIVE_reset"),
+    ('§4B: an unreadable reply is converted into an AbortError', INTEG,
+     '        except (ValueError, KeyError) as e:        # a line would not parse -> VOID\n            ctx.observe(obs, "unreadable", step, str(e))\n            raise\n',
+     '        except (ValueError, KeyError) as e:        # a line would not parse -> VOID\n            ctx.observe(obs, "unreadable", step, str(e))\n            raise AbortError(PHASE_MOVE, str(e))\n',
+     f"{T_H4B}::test_an_UNREADABLE_line_is_NOT_converted_to_AbortError"),
+    ('§4B: a semantic refusal carries only the excerpt', INTEG,
+     '    raise AbortError(phase, msg) from A.HelperOutputError(msg, out)\n',
+     '    raise AbortError(phase, msg) from A.HelperOutputError(\n        msg, A.helper_failure_excerpt(out))\n',
+     f"{T_H4B}::test_a_SEMANTIC_refusal_carries_the_FULL_stdout_on_the_H4_BINDER"),
+    ('§4B: the finite-timeout check reads the REPLAY timeout', INTEG,
+     '            if timeout_s is None:\n                raise AbortError(PHASE_PRECONDITION,\n                                 "H4 mode refuses an unbounded QUERY timeout "',
+     '            if runtime.timeout_s is None:\n                raise AbortError(PHASE_PRECONDITION,\n                                 "H4 mode refuses an unbounded QUERY timeout "',
+     f"{T_H4B}::test_H4_construction_refuses_an_unbounded_QUERY_timeout"),
+    ('§4B: the runner scores an unreadable reply as a STOP', H4B,
+     '    except (subprocess.TimeoutExpired, ValueError, KeyError, D1VoidError, D1Error,',
+     '    except (subprocess.TimeoutExpired, KeyError, D1VoidError, D1Error,',
+     f"{T_H4B}::test_an_UNREADABLE_reply_is_a_VOID_not_a_STOP"),
 ]
 
 # ═══════════════════════════ THE EXPECTED REASONS ════════════════════════════
@@ -5632,4 +5713,44 @@ EXPECTED_REASONS = {
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h3_pilot_runner.H3PilotRunError'>",
     'a seedless schedule is admitted, so it bypasses the registry':
         "TypeError: int() argument must be a string, a bytes-like object or a real number, not 'NoneType'",
+    # ── 2026-09-22: H4 §4B. RECORDED from an observed run in a disposable
+    # worktree, through the driver's own run_pytest/evidence_lines/stable.
+    '§4B: the H4 path re-checks rc on its own':
+        'scripts.GPU.alphazero.e4_screen_runner.AbortError: [move] exit 3',
+    '§4B: the H4 path judges PostCond.clean':
+        'scripts.GPU.alphazero.e4_screen_runner.AbortError: [move] t0 h4 query at ply 1: safety surface not clean: the helper threw',
+    '§4B: the H4 path keeps the completion check':
+        'scripts.GPU.alphazero.e4_screen_runner.AbortError: [move] t0 h4 query at ply 1: did not complete',
+    '§4B: the H4 path expects the default refl_n 3':
+        'scripts.GPU.alphazero.e4_screen_runner.AbortError: [move] t0 h4 query at ply 1: safety surface not clean: refl_n=4, expected exactly 3',
+    '§4B: the H4 path queries without inject_matchdata':
+        "AssertionError: assert 'h4query' in ['/j', '-Djava.util.prefs.PreferencesFactory=e2probe.ScratchPrefsFactory', '-Djava.awt.headless=true', '-cp', '/x.jar:/c', 'net.schwagereit.t1j.E4Preflight', ...]",
+    '§4B: the classifier is handed a constant exit status':
+        'Failed: DID NOT RAISE AbortError',
+    '§4B: the MATCHDATA identity check is skipped':
+        'Failed: DID NOT RAISE AbortError',
+    '§4B: the PROC count is not checked on the query path':
+        'Failed: DID NOT RAISE AbortError',
+    '§4B: the PROC count is not checked on the replay path':
+        'Failed: DID NOT RAISE AbortError',
+    '§4B: the H4 switch defaults ON':
+        'assert True is False',
+    '§4B: the classifier is a local wrapper, not the qualified object':
+        'assert <function _h4_classifier.<locals>.<lambda> at 0x<addr>> is <function classify_reply at 0x<addr>>',
+    '§4B: the pairing check is removed':
+        'Failed: DID NOT RAISE AbortError',
+    '§4B: the pairing check applies one way only':
+        'Failed: DID NOT RAISE AbortError',
+    '§4B: a refused call leaves no record':
+        'ValueError: not enough values to unpack (expected 1, got 0)',
+    '§4B: reset erases the earlier task buckets':
+        'AssertionError: assert (1 == 2)',
+    '§4B: an unreadable reply is converted into an AbortError':
+        "ValueError: PROC line missing fields ['pid']: 'PROC xid=4321 java_version=17.0.20.1 vm=OpenJDK_64-Bit_Server_VM headless=true prefs_factory=e2probe.ScratchPrefs'",
+    '§4B: a semantic refusal carries only the excerpt':
+        "AssertionError: assert 'POSTCOND no_...=1 failures=0' == 'PLY 0 moveNr... failures=0\\n'",
+    '§4B: the finite-timeout check reads the REPLAY timeout':
+        'Failed: DID NOT RAISE AbortError',
+    '§4B: the runner scores an unreadable reply as a STOP':
+        "ValueError: PROC line missing fields ['pid']: 'PROC xid=4321 java_version=17.0.20.1 vm=OpenJDK_64-Bit_Server_VM headless=true prefs_factory=e2probe.ScratchPrefs'",
 }
