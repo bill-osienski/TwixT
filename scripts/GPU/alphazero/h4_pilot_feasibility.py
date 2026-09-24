@@ -35,7 +35,7 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 from . import h4_runner as R
 
-RUNNER_CARD, FOURB_CARD, REPLACEMENT_CARD, CARD = R.CARDS
+RUNNER_CARD, FOURB_CARD, REPLACEMENT_CARD, CARD, STEP4_CARD = R.CARDS
 
 #: Card §0.1: what a manifest carries -- READ from the runner that writes the
 #: header, never retyped -- and the header fields bound to it.

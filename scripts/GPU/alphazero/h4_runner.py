@@ -82,7 +82,8 @@ EVIDENCE_ROOT = REPO_ROOT / "docs" / "superpowers" / "evidence"
 CARDS = ("docs/superpowers/2026-09-22-t1j-h4-runner-persistence-card.md",
          "docs/superpowers/2026-09-22-t1j-h4-4b-acceptance-qualification-card.md",
          "docs/superpowers/2026-09-21-t1j-h4-replacement-card.md",
-         "docs/superpowers/2026-09-23-t1j-h4-analysis-card.md")
+         "docs/superpowers/2026-09-23-t1j-h4-analysis-card.md",
+         "docs/superpowers/2026-09-24-t1j-h4-step4-seed-card.md")
 #: 🔴 Card §12.6.1: EVERY first-party file reachable by import at any depth from
 #: this runner and the 3P-b qualification, package `__init__`s included, minus the
 #: two gate modules. Explicit and reviewed; a test recomputes the closure from
@@ -139,6 +140,20 @@ TOOLCHAIN_CONTENT = ("jar_sha256", "jdk_components", "sources", "classes", "main
 TOOLCHAIN_LOCAL = ("toolchain", "jar", "jdk_home", "classes_dir")
 #: Replacement card §5.4: the per-segment hard deadline.
 SEGMENT_DEADLINE_S = 14_400
+
+#: 🔴 Step-4 card §2 (BOUND): the five registered blocks, one seed per game.
+#: Registered in `e4_screen_reference.ACCOUNTED_SEED_INTERVALS` after collision
+#: proof v16 was CLEAN (evidence/2026-09-24-t1j-h4-seed-registration/).
+SEED_BLOCKS = {("pilot", 0): (202_632_000, 202_632_032),
+               ("study", 0): (202_634_000, 202_634_148),
+               ("study", 1): (202_636_000, 202_636_148),
+               ("study", 2): (202_638_000, 202_638_148),
+               ("study", 3): (202_640_000, 202_640_148)}
+#: Step-4 card §2.1 / amendment 3: FIXED, repo-relative, create-only; the one-shot
+#: use record of each run until H4 closes.
+EVIDENCE_DIRS = {("pilot", 0): "docs/superpowers/evidence/t1j-h4-pilot",
+                 **{("study", k): f"docs/superpowers/evidence/t1j-h4-study-segment{k}"
+                    for k in range(4)}}
 
 #: Card §3.4: the §6 categories, and nothing else.
 CLASSIFICATIONS = ("timeout", "adapter_refusal", "unreadable_output", "replay_mismatch",
@@ -345,6 +360,49 @@ def binding_differences(header: Mapping[str, Any], entry: Mapping[str, Any], *,
         if _canon(got) != _canon(want):
             bad.append(f)
     return bad
+
+
+def canonical_schedule(mode: str, segment: int,
+                       reference: Mapping[str, Any]) -> List[Dict[str, Any]]:
+    """Step-4 card §2: the ONLY schedule a pilot or study entry may carry -- pair k
+    of the block gets lo+2k (Arm A) and lo+2k+1 (Arm B)."""
+    if (mode, segment) not in SEED_BLOCKS:
+        raise H4RunError(f"no registered block for {mode} segment {segment}")
+    lo, hi = SEED_BLOCKS[(mode, segment)]
+    tag = "h4p" if mode == "pilot" else f"h4s{segment}"
+    pairs = [(f"{tag}-{k:02d}", lo + 2 * k, lo + 2 * k + 1) for k in range((hi - lo) // 2)]
+    return make_schedule(pairs, mode=mode, reference=reference)
+
+
+def seed_registry_faults(schedule: Sequence[Mapping[str, Any]]) -> List[str]:
+    """Every seed ACCOUNTED, and none EXPOSED, RETIRED, TEST_ONLY or CONSUMED --
+    read from the shared registry at call time (step-4 card §3, 4b)."""
+    from . import e4_screen_reference as REF
+    bad = []
+    for t in schedule:
+        st = REF.seed_status(t["seed"])
+        why = ([] if st["accounted"] else ["not accounted"]) + \
+              [k for k in ("exposed", "retired", "test_only") if st[k]] + \
+              (["consumed"] if t["seed"] in REF.CONSUMED_SEEDS else [])
+        if why:
+            bad.append(f"{t['seed']}: {', '.join(why)}")
+    return bad
+
+
+def claim_directory(path: str) -> None:
+    """Step-4 card amendment 1: the ONE-SHOT use record. Create-only (`os.mkdir`,
+    never `exist_ok`), parent fsynced; an occupied directory refuses, whatever left
+    it there -- a VOID included."""
+    try:
+        os.mkdir(path)
+    except FileExistsError:
+        raise H4RunError(f"{path} is occupied: a run's evidence directory is claimed "
+                         f"once, and an occupied one -- a VOID's included -- refuses") from None
+    fd = os.open(os.path.dirname(os.path.abspath(path)), os.O_RDONLY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
 
 
 def manifest_entry(manifest: str, *, mode: str, segment: int) -> Dict[str, Any]:
@@ -719,6 +777,21 @@ def _production(*, mode, out_dir, classes, deadline_s, manifest, segment, _now, 
                  != (identity["reference"], identity["reference_sha1"])]
     if wrong_ref:
         raise H4RunError(f"tasks {wrong_ref[:3]} name another incumbent reference")
+    if _canon(list(schedule)) != _canon(canonical_schedule(mode, segment, identity)):
+        raise H4RunError(f"the manifest's schedule is not the CANONICAL {mode} segment "
+                         f"{segment} schedule of the step-4 card (block, pair ids, arm "
+                         f"seeds, reference)")
+    faults = seed_registry_faults(schedule)
+    if faults:
+        raise H4RunError(f"seeds fail the shared registry: {faults[:3]}")
+    want_dir = EVIDENCE_DIRS[(mode, segment)]
+    if entry.get("evidence_dir") != want_dir or os.path.realpath(out_dir) != \
+            os.path.realpath(os.path.join(REPO_ROOT, want_dir)):
+        raise H4RunError(f"{mode} segment {segment} writes ONLY to its manifest's "
+                         f"evidence_dir {want_dir!r}, not {out_dir!r}")
+    if os.path.lexists(out_dir):
+        raise H4RunError(f"{out_dir} is occupied: this entry has already been run, or "
+                         f"a VOID left it -- a run is one-shot (step-4 card §2.1)")
     head = header_candidate(mode=mode, segment=segment, schedule=schedule,
                             incumbent_identity=identity, toolchain_content=None)
     bad = binding_differences(head, entry, stage=DESIGNS[mode], with_toolchain=False)
@@ -738,7 +811,7 @@ def _production(*, mode, out_dir, classes, deadline_s, manifest, segment, _now, 
 def _run_unguarded(*, mode, schedule, out_dir, paths, deadline_s, incumbent_build,
                    evaluator, incumbent_identity, segment, _compile, _now, entry=None):
     t_start = _now()
-    os.makedirs(out_dir, exist_ok=True)           # the FILES below are create-only
+    claim_directory(out_dir)                      # THE claim: before any draw or JVM
     results = Results(os.path.join(out_dir, "results.jsonl"))
     trace = os.fdopen(os.open(os.path.join(out_dir, "trace.jsonl"),
                               os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644), "w")

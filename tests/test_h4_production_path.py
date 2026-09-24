@@ -19,6 +19,7 @@ import sys
 import pytest
 
 from scripts.GPU.alphazero import e4_screen_command as SCREEN_CMD
+from scripts.GPU.alphazero import e4_screen_reference as REF
 from scripts.GPU.alphazero import h4_pilot_authorization as AUTH
 from scripts.GPU.alphazero import h4_production_qualification as Q
 from scripts.GPU.alphazero import h4_production_qualification_authorization as QAUTH
@@ -237,8 +238,23 @@ def test_the_builder_is_handed_THE_config_object(monkeypatch):
 
 # ───────────────────── 4. pilot and study mode (§12.1 items 4-6, §12.6.3) ─────────────────────
 
+#: A PLACEHOLDER pilot block (card §12.6.3: pilot-mode tests use seeds 1..n,
+#: outside every registered block, and stop before any incumbent is built). It is
+#: patched into the runner's blocks and the ACCOUNTED registry for the test only.
+PLACEHOLDER = (1, 33)
+
+
 @pytest.fixture
-def pilot_open(monkeypatch):
+def placeholder(monkeypatch, tmp_path):
+    monkeypatch.setattr(R, "SEED_BLOCKS", {**R.SEED_BLOCKS, ("pilot", 0): PLACEHOLDER})
+    monkeypatch.setattr(REF, "ACCOUNTED_SEED_INTERVALS",
+                        tuple(REF.ACCOUNTED_SEED_INTERVALS) + (PLACEHOLDER,))
+    monkeypatch.setattr(R, "EVIDENCE_DIRS", {**R.EVIDENCE_DIRS,
+                                             ("pilot", 0): str(tmp_path / "out")})
+
+
+@pytest.fixture
+def pilot_open(monkeypatch, placeholder):
     monkeypatch.setattr(AUTH, "H4_PILOT_EXECUTION_AUTHORIZED", True)
 
 
@@ -282,11 +298,12 @@ def spies(monkeypatch):
 
 def write_manifest(tmp_path, mode="pilot", edit=None, content=None):
     _cfg, ident = _identity()
-    sched = R.make_schedule([("p0", 1, 2), ("p1", 3, 4)], mode=mode, reference=ident)
+    sched = R.canonical_schedule(mode, 0, ident)
     content = content or {k: FAKE_TOOLCHAIN[k] for k in R.TOOLCHAIN_CONTENT}
     head = R.header_candidate(mode=mode, segment=0, schedule=sched,
                               incumbent_identity=ident, toolchain_content=content)
-    entry = {"segment": 0, "schedule": sched, **{k: head[k] for k in R.MANIFEST_BOUND}}
+    entry = {"segment": 0, "schedule": sched, **{k: head[k] for k in R.MANIFEST_BOUND},
+             "evidence_dir": R.EVIDENCE_DIRS[(mode, 0)]}
     if edit:
         edit(entry)
     p = tmp_path / "manifest.json"
@@ -294,10 +311,10 @@ def write_manifest(tmp_path, mode="pilot", edit=None, content=None):
     return str(p)
 
 
-def pilot(tmp_path, **kw):
+def pilot(tmp_path, out_dir=None, **kw):
     if "manifest" not in kw:                      # NOT setdefault: it would write eagerly
         kw["manifest"] = write_manifest(tmp_path)  # over an edited manifest
-    return R.run_games(mode="pilot", out_dir=str(tmp_path / "out"),
+    return R.run_games(mode="pilot", out_dir=out_dir or str(tmp_path / "out"),
                        classes=str(tmp_path / "cls"), deadline_s=60, **kw)
 
 
@@ -307,7 +324,7 @@ def nothing_ran(tmp_path, calls):
             calls["subprocess"], calls.get("toolchain_resolved", 0)) == (0, 0, 0, 0, 0, 0)
 
 
-def test_PILOT_mode_refuses_while_the_gate_is_shut(tmp_path, spies):
+def test_PILOT_mode_refuses_while_the_gate_is_shut(tmp_path, spies, placeholder):
     with pytest.raises(R.H4RunError, match="UNAUTHORIZED"):
         pilot(tmp_path)
     nothing_ran(tmp_path, spies)
@@ -350,6 +367,89 @@ def test_a_manifest_that_would_not_bind_is_refused_BEFORE_ANYTHING_is_claimed(
     with pytest.raises(R.H4RunError, match=f"would not bind to its manifest: .*'{field}'"):
         pilot(tmp_path, manifest=write_manifest(tmp_path, edit=edit))
     nothing_ran(tmp_path, spies)
+
+
+# ─────────────── 4b: canonical schedule, registry, evidence directory ───────────────
+
+def test_the_SEED_BLOCKS_and_EVIDENCE_DIRS_are_the_step4_cards_and_REGISTERED():
+    """Spelled out HERE from the bound card §2 / amendment 3, not read from code."""
+    card = {("pilot", 0): (202632000, 202632032), ("study", 0): (202634000, 202634148),
+            ("study", 1): (202636000, 202636148), ("study", 2): (202638000, 202638148),
+            ("study", 3): (202640000, 202640148)}
+    assert R.SEED_BLOCKS == card
+    assert R.EVIDENCE_DIRS == {("pilot", 0): "docs/superpowers/evidence/t1j-h4-pilot",
+                               **{("study", k): f"docs/superpowers/evidence/"
+                                  f"t1j-h4-study-segment{k}" for k in range(4)}}
+    for block in card.values():
+        assert block in REF.ACCOUNTED_SEED_INTERVALS, "registered as EXACTLY itself"
+        assert not any(REF.seed_is_unavailable(s) or REF.seed_is_test_only(s)
+                       for s in range(*block))
+
+
+def test_the_CANONICAL_schedule_assigns_lo_plus_2k_to_Arm_A_and_lo_plus_2k_plus_1_to_B():
+    _cfg, ident = _identity()
+    for (mode, seg), (lo, hi) in R.SEED_BLOCKS.items():
+        s = R.canonical_schedule(mode, seg, ident)
+        assert [t["seed"] for t in s] == list(range(lo, hi))
+        assert [t["arm"] for t in s] == ["A", "B"] * ((hi - lo) // 2)
+        tag = "h4p" if mode == "pilot" else f"h4s{seg}"
+        assert s[0]["pair_id"] == f"{tag}-00" and s[-1]["pair_id"] == \
+            f"{tag}-{(hi - lo) // 2 - 1:02d}"
+        assert all(t["reference_sha1"] == ident["reference_sha1"] for t in s)
+
+
+def _swap_arm_seeds(e):
+    a, b = e["schedule"][0], e["schedule"][1]
+    a["seed"], b["seed"] = b["seed"], a["seed"]
+
+
+@pytest.mark.parametrize("edit", [_swap_arm_seeds,
+                                  lambda e: e["schedule"][0].update(pair_id="x"),
+                                  lambda e: e.update(schedule=e["schedule"][:-2])])
+def test_a_NON_CANONICAL_schedule_is_refused(tmp_path, spies, pilot_open, edit):
+    with pytest.raises(R.H4RunError, match="not the CANONICAL|whole pairs|adjacent"):
+        pilot(tmp_path, manifest=write_manifest(tmp_path, edit=edit))
+    nothing_ran(tmp_path, spies)
+
+
+@pytest.mark.parametrize("registry,match", [
+    ("ACCOUNTED", "not accounted"), ("EXPOSED", "exposed"), ("RETIRED", "retired"),
+    ("TEST_ONLY", "test_only"), ("CONSUMED", "consumed")])
+def test_a_seed_the_SHARED_REGISTRY_forbids_is_refused(tmp_path, spies, pilot_open,
+                                                      monkeypatch, registry, match):
+    if registry == "ACCOUNTED":
+        monkeypatch.setattr(REF, "ACCOUNTED_SEED_INTERVALS", tuple(
+            iv for iv in REF.ACCOUNTED_SEED_INTERVALS if iv != PLACEHOLDER))
+    elif registry == "CONSUMED":
+        monkeypatch.setattr(REF, "CONSUMED_SEEDS", tuple(REF.CONSUMED_SEEDS) + (5,))
+    else:
+        name = f"{registry}_SEED_INTERVALS"
+        monkeypatch.setattr(REF, name, tuple(getattr(REF, name)) + ((5, 6),))
+    with pytest.raises(R.H4RunError, match=f"fail the shared registry.*{match}"):
+        pilot(tmp_path)
+    nothing_ran(tmp_path, spies)
+
+
+def test_the_run_writes_ONLY_to_its_manifests_evidence_dir(tmp_path, spies, pilot_open):
+    with pytest.raises(R.H4RunError, match="writes ONLY to its manifest's evidence_dir"):
+        pilot(tmp_path, out_dir=str(tmp_path / "elsewhere"))
+    assert not (tmp_path / "elsewhere").exists()
+    with pytest.raises(R.H4RunError, match="writes ONLY to its manifest's evidence_dir"):
+        pilot(tmp_path, manifest=write_manifest(
+            tmp_path, edit=lambda e: e.update(evidence_dir=str(tmp_path / "other"))))
+    nothing_ran(tmp_path, spies)
+
+
+def test_an_evidence_dir_LEFT_BY_A_VOID_refuses_and_nothing_runs(tmp_path, spies,
+                                                                   pilot_open):
+    (tmp_path / "out").mkdir()
+    (tmp_path / "out" / "results.jsonl").write_text(json.dumps(
+        {"record_type": "run_void", "classification": "timeout"}) + "\n")
+    with pytest.raises(R.H4RunError, match="occupied"):
+        pilot(tmp_path)
+    assert (spies["load"], spies["compile"], spies["game"], spies["build"],
+            spies["subprocess"]) == (0, 0, 0, 0, 0)
+    assert os.listdir(tmp_path / "out") == ["results.jsonl"], "the VOID's record kept"
 
 
 def test_a_task_naming_ANOTHER_incumbent_is_refused(tmp_path, spies, pilot_open):

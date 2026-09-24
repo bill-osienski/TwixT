@@ -106,6 +106,9 @@ H4AUTH = "scripts/GPU/alphazero/h4_pilot_authorization.py"
 H4QAUTH = "scripts/GPU/alphazero/h4_production_qualification_authorization.py"
 H4QUAL = "scripts/GPU/alphazero/h4_production_qualification.py"
 T_H4PP = "tests/test_h4_production_path.py"
+# ── H4 step 4b (2026-09-24): registration checks, directory claim, manifest writer
+H4MW = "scripts/GPU/alphazero/h4_manifest_writer.py"
+T_H4MW = "tests/test_h4_manifest_writer.py"
 # ── H4 analysis (step 3, 2026-09-23)
 H4F = "scripts/GPU/alphazero/h4_pilot_feasibility.py"
 H4D = "scripts/GPU/alphazero/h4_pilot_decision.py"
@@ -4498,11 +4501,11 @@ DEFECTS = [
     ('H4 runner: the header does not hash the Python code', H4RUN,
      '            "code": {m: _sha256_or_none(REPO_ROOT / m) for m in CODE}}',
      '            }',
-     f"{T_H4RUN}::test_the_HEADER_hashes_the_FOUR_cards_and_EVERY_listed_module"),
+     f"{T_H4RUN}::test_the_HEADER_hashes_the_FIVE_cards_and_EVERY_listed_module"),
     ('H4 runner: the header omits the analysis card', H4RUN,
-     '         "docs/superpowers/2026-09-21-t1j-h4-replacement-card.md",\n         "docs/superpowers/2026-09-23-t1j-h4-analysis-card.md")',
-     '         "docs/superpowers/2026-09-21-t1j-h4-replacement-card.md")',
-     f"{T_H4RUN}::test_the_HEADER_hashes_the_FOUR_cards_and_EVERY_listed_module"),
+     '         "docs/superpowers/2026-09-23-t1j-h4-analysis-card.md",\n',
+     '',
+     f"{T_H4RUN}::test_the_HEADER_hashes_the_FIVE_cards_and_EVERY_listed_module"),
     ('H4 feasibility: production durability accepts another repository', H4F,
      '            if not R._inside(pathlib.Path(real), R.REPO_ROOT):',
      '            if False:',
@@ -4641,6 +4644,79 @@ DEFECTS = [
      '    if os.path.lexists(out_dir):\n        raise QualificationRefused(f"{out_dir} is occupied; the record is create-only")',
      '    os.makedirs(out_dir, exist_ok=True)\n    if False:\n        raise QualificationRefused(f"{out_dir} is occupied; the record is create-only")',
      f"{T_H4PP}::test_the_qualification_REFUSES_a_bad_destination_and_WRITES_NOTHING[classes_in_repo]"),
+    # ── H4 step 4b (2026-09-24): each 4b check deleted in turn.
+    ('H4 4b: the directory claim accepts an existing directory', H4RUN,
+     '    try:\n        os.mkdir(path)',
+     '    try:\n        os.makedirs(path, exist_ok=True)',
+     f"{T_H4RUN}::test_an_OCCUPIED_but_EMPTY_directory_is_refused_too"),
+    ('H4 4b: a non-canonical schedule is accepted', H4RUN,
+     '    if _canon(list(schedule)) != _canon(canonical_schedule(mode, segment, identity)):',
+     '    if False:',
+     f"{T_H4PP}::test_a_NON_CANONICAL_schedule_is_refused[_swap_arm_seeds]"),
+    ('H4 4b: the canonical schedule swaps the arm seeds', H4RUN,
+     '    pairs = [(f"{tag}-{k:02d}", lo + 2 * k, lo + 2 * k + 1) for k in range((hi - lo) // 2)]',
+     '    pairs = [(f"{tag}-{k:02d}", lo + 2 * k + 1, lo + 2 * k) for k in range((hi - lo) // 2)]',
+     f"{T_H4PP}::test_the_CANONICAL_schedule_assigns_lo_plus_2k_to_Arm_A_and_lo_plus_2k_plus_1_to_B"),
+    ('H4 4b: the shared-registry faults are ignored', H4RUN,
+     '    if faults:\n        raise H4RunError(f"seeds fail the shared registry',
+     '    if False:\n        raise H4RunError(f"seeds fail the shared registry',
+     f"{T_H4PP}::test_a_seed_the_SHARED_REGISTRY_forbids_is_refused[EXPOSED-exposed]"),
+    ('H4 4b: an unaccounted seed passes the registry check', H4RUN,
+     '        why = ([] if st["accounted"] else ["not accounted"]) + \\',
+     '        why = [] + \\',
+     f"{T_H4PP}::test_a_seed_the_SHARED_REGISTRY_forbids_is_refused[ACCOUNTED-not accounted]"),
+    ('H4 4b: a consumed seed passes the registry check', H4RUN,
+     '              (["consumed"] if t["seed"] in REF.CONSUMED_SEEDS else [])',
+     '              []',
+     f"{T_H4PP}::test_a_seed_the_SHARED_REGISTRY_forbids_is_refused[CONSUMED-consumed]"),
+    ("H4 4b: the run may write outside its manifest's evidence_dir", H4RUN,
+     '    if entry.get("evidence_dir") != want_dir or os.path.realpath(out_dir) != \\\n            os.path.realpath(os.path.join(REPO_ROOT, want_dir)):',
+     '    if False:',
+     f"{T_H4PP}::test_the_run_writes_ONLY_to_its_manifests_evidence_dir"),
+    ('H4 4b: an occupied evidence dir is found only after loading', H4RUN,
+     '    if os.path.lexists(out_dir):\n        raise H4RunError(f"{out_dir} is occupied: this entry',
+     '    if False:\n        raise H4RunError(f"{out_dir} is occupied: this entry',
+     f"{T_H4PP}::test_an_evidence_dir_LEFT_BY_A_VOID_refuses_and_nothing_runs"),
+    ('H4 4b: the step-4 card is not bound', H4RUN,
+     '         "docs/superpowers/2026-09-24-t1j-h4-step4-seed-card.md")',
+     '         )',
+     f"{T_H4RUN}::test_the_HEADER_hashes_the_FIVE_cards_and_EVERY_listed_module"),
+    ('H4 4b: a seed block is not the registered one', H4RUN,
+     '               ("study", 3): (202_640_000, 202_640_148)}',
+     '               ("study", 3): (202_642_000, 202_642_148)}',
+     f"{T_H4PP}::test_the_SEED_BLOCKS_and_EVIDENCE_DIRS_are_the_step4_cards_and_REGISTERED"),
+    ('H4 4b: the evidence directory names are dated', H4RUN,
+     'EVIDENCE_DIRS = {("pilot", 0): "docs/superpowers/evidence/t1j-h4-pilot",',
+     'EVIDENCE_DIRS = {("pilot", 0): "docs/superpowers/evidence/2026-09-24-t1j-h4-pilot",',
+     f"{T_H4PP}::test_the_SEED_BLOCKS_and_EVIDENCE_DIRS_are_the_step4_cards_and_REGISTERED"),
+    ('H4 4b writer: a STOP record is accepted', H4MW,
+     '            or rec.get("result") != "CLEAN":',
+     '            or False:',
+     f"{T_H4MW}::test_a_record_that_no_longer_BINDS_is_refused_and_nothing_written[<lambda>-not a CLEAN]"),
+    ('H4 4b writer: code hashes are not compared with the record', H4MW,
+     '    for field in ("code", "cards", "incumbent_identity", "t1j_runtime"):',
+     '    for field in ("cards", "incumbent_identity", "t1j_runtime"):',
+     f"{T_H4MW}::test_a_record_that_no_longer_BINDS_is_refused_and_nothing_written[<lambda>-`code` at HEAD differs]"),
+    ('H4 4b writer: the toolchain is not re-verified now', H4MW,
+     '    for k, v in fresh.items():',
+     '    for k, v in {}.items():',
+     f"{T_H4MW}::test_a_toolchain_that_verifies_differently_NOW_is_refused[jar_sha256]"),
+    ('H4 4b writer: code and cards need not be committed', H4MW,
+     '    if not _fixture:\n        # 🔴 the files whose hashes',
+     '    if False:\n        # 🔴 the files whose hashes',
+     f"{T_H4MW}::test_the_PUBLIC_path_checks_EVERY_code_and_card_file_is_committed"),
+    ('H4 4b writer: registry faults are ignored', H4MW,
+     '            if faults:\n                F.refuse(f"{mode} segment {seg}: seeds fail',
+     '            if False:\n                F.refuse(f"{mode} segment {seg}: seeds fail',
+     f"{T_H4MW}::test_a_seed_the_REGISTRY_forbids_is_refused"),
+    ('H4 4b writer: an existing evidence dir is accepted', H4MW,
+     '            if os.path.lexists(os.path.join(R.REPO_ROOT, evidence_dir)):',
+     '            if False:',
+     f"{T_H4MW}::test_an_evidence_dir_that_ALREADY_EXISTS_is_refused"),
+    ('H4 4b writer: an occupied destination is not refused first', H4MW,
+     '    if os.path.lexists(out_dir):\n        F.refuse(f"{out_dir} is occupied; the manifests',
+     '    if False:\n        F.refuse(f"{out_dir} is occupied; the manifests',
+     f"{T_H4MW}::test_an_OCCUPIED_destination_is_refused_before_anything"),
 ]
 
 # ═══════════════════════════ THE EXPECTED REASONS ════════════════════════════
@@ -6683,8 +6759,10 @@ EXPECTED_REASONS = {
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_runner.H4RunError'>",
     'H4 3P-a: the builder is handed a fresh config':
         "AssertionError: assert (EvalConfig(board_size=24, mcts_sims=400, mcts_eval_batch_size=14, mcts_stall_flush_sims=48, selection_mode='argmax', opening_temp_plies=20, temp_high=1.0, temp_low=0.1, max_moves=280) is EvalConfig(board_size=24, mcts_sims=400, mcts_eval_batch_size=14, mcts_stall_flush_sims=48, selection_mode='argmax', opening_temp_plies=20, temp_high=1.0, temp_low=0.1, max_moves=280))",
+    # RE-RECORDED 2026-09-24 (4b): with this check deleted the new CANONICAL-
+    # schedule check catches the same defect one layer later.
     'H4 3P-a: a task may name another incumbent':
-        "scripts.GPU.alphazero.h4_runner.H4RunError: the run would not bind to its manifest: ['schedule_digest'] differ. Nothing was claimed, loaded, compiled or played.",
+        "scripts.GPU.alphazero.h4_runner.H4RunError: the manifest's schedule is not the CANONICAL pilot segment 0 schedule of the step-4 card (block, pair ids, arm seeds, reference)",
     'H4 3P-a: the qualification gate is never read':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_production_qualification.QualificationUnauthorized'>",
     'H4 3P-a: the qualification CLI exits 4 with its gate shut':
@@ -6718,4 +6796,42 @@ EXPECTED_REASONS = {
         "FileExistsError: [Errno 17] File exists: '/private/<tmp>/pytest-of-<user>/pytest-<n>/test_the_qualification_REFUSES0/cls'",
     'H4 3P-a: the record directory is claimed before the destination checks':
         'AssertionError: the record directory is claimed only after every check',
+    # ── 2026-09-24: H4 step 4b. RECORDED under .venv (pytest 9.0.2), harvested in a
+    # disposable worktree before commit; 146 other H4 + gate-inventory controls unchanged.
+    'H4 4b: the directory claim accepts an existing directory':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_runner.H4RunError'>",
+    'H4 4b: a non-canonical schedule is accepted':
+        "scripts.GPU.alphazero.h4_runner.H4RunError: the run would not bind to its manifest: ['schedule_digest', 'seeds'] differ. Nothing was claimed, loaded, compiled or played.",
+    'H4 4b: the canonical schedule swaps the arm seeds':
+        'assert [202632001, 2...02632004, ...] == [202632000, 2...02632005, ...]',
+    'H4 4b: the shared-registry faults are ignored':
+        'RuntimeError: SENTINEL: reached the first game',
+    'H4 4b: an unaccounted seed passes the registry check':
+        'RuntimeError: SENTINEL: reached the first game',
+    'H4 4b: a consumed seed passes the registry check':
+        'RuntimeError: SENTINEL: reached the first game',
+    "H4 4b: the run may write outside its manifest's evidence_dir":
+        'RuntimeError: SENTINEL: reached the first game',
+    'H4 4b: an occupied evidence dir is found only after loading':
+        'assert (1, 0, 0, 0, 0) == (0, 0, 0, 0, 0)',
+    'H4 4b: the step-4 card is not bound':
+        'AssertionError: cards',
+    'H4 4b: a seed block is not the registered one':
+        "AssertionError: assert {('pilot', 0)...2638148), ...} == {('pilot', 0)...2638148), ...}",
+    'H4 4b: the evidence directory names are dated':
+        "AssertionError: assert {('pilot', 0)...egment2', ...} == {('pilot', 0)...egment2', ...}",
+    'H4 4b writer: a STOP record is accepted':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 4b writer: code hashes are not compared with the record':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 4b writer: the toolchain is not re-verified now':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 4b writer: code and cards need not be committed':
+        'AssertionError: the public path did not check that every code and card file is committed',
+    'H4 4b writer: registry faults are ignored':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 4b writer: an existing evidence dir is accepted':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 4b writer: an occupied destination is not refused first':
+        'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: /private/<tmp>/pytest-of-<user>/pytest-<n>/test_an_OCCUPIED_destination_i0/no-record.json is not durable: not tracked (card §2.1)',
 }

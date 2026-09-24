@@ -607,7 +607,8 @@ def test_the_MANIFEST_names_exactly_the_cards_and_code_the_card_names():
         "docs/superpowers/2026-09-22-t1j-h4-runner-persistence-card.md",
         "docs/superpowers/2026-09-22-t1j-h4-4b-acceptance-qualification-card.md",
         "docs/superpowers/2026-09-21-t1j-h4-replacement-card.md",
-        "docs/superpowers/2026-09-23-t1j-h4-analysis-card.md"]
+        "docs/superpowers/2026-09-23-t1j-h4-analysis-card.md",
+        "docs/superpowers/2026-09-24-t1j-h4-step4-seed-card.md"]
     # `code` is the runner's reviewed play-path list (runner card §12.6.1), read,
     # never retyped; `tests/test_h4_production_path.py` pins it to the card.
     assert F.MANIFEST_CODE is R.CODE

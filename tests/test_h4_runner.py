@@ -232,9 +232,27 @@ def test_an_OCCUPIED_results_file_is_refused_before_any_subprocess(tmp_path, wir
                                                                    gate_open):
     (tmp_path / "run").mkdir()
     (tmp_path / "run" / "results.jsonl").write_text("")
-    with pytest.raises(FileExistsError):
+    with pytest.raises(R.H4RunError, match="occupied"):
         run(tmp_path)
     assert wire["calls"] == []
+
+
+def test_an_OCCUPIED_but_EMPTY_directory_is_refused_too(tmp_path, wire, gate_open):
+    """Step-4 card amendment 1: the DIRECTORY is the claim, not its files."""
+    (tmp_path / "run").mkdir()
+    with pytest.raises(R.H4RunError, match="occupied"):
+        run(tmp_path)
+    assert wire["calls"] == [] and list((tmp_path / "run").iterdir()) == []
+
+
+def test_the_claim_is_create_only_and_never_exist_ok(tmp_path):
+    R.claim_directory(str(tmp_path / "d"))
+    assert (tmp_path / "d").is_dir()
+    with pytest.raises(R.H4RunError, match="occupied"):
+        R.claim_directory(str(tmp_path / "d"))
+    tree = ast.parse(pathlib.Path(R.__file__).read_text(encoding="utf-8"))
+    assert not [n for n in ast.walk(tree) if isinstance(n, ast.keyword)
+                and n.arg == "exist_ok"], "an exist_ok claim accepts an occupied directory"
 
 
 # ──────────────── 3. a pair end to end, then RE-READ (§3, §4, §8) ────────────────
@@ -281,7 +299,7 @@ def card_code_list():
     return [l.strip() for l in block.splitlines() if l.strip().startswith("scripts/")]
 
 
-def test_the_HEADER_hashes_the_FOUR_cards_and_EVERY_listed_module(tmp_path, wire, gate_open):
+def test_the_HEADER_hashes_the_FIVE_cards_and_EVERY_listed_module(tmp_path, wire, gate_open):
     """Card §3.1 / §12.6.1: the card paths spelled out HERE, the code list read from
     the CARD; every value RECOMPUTED from the file on disk."""
     import hashlib
@@ -290,7 +308,8 @@ def test_the_HEADER_hashes_the_FOUR_cards_and_EVERY_listed_module(tmp_path, wire
     cards = ["docs/superpowers/2026-09-22-t1j-h4-runner-persistence-card.md",
              "docs/superpowers/2026-09-22-t1j-h4-4b-acceptance-qualification-card.md",
              "docs/superpowers/2026-09-21-t1j-h4-replacement-card.md",
-             "docs/superpowers/2026-09-23-t1j-h4-analysis-card.md"]
+             "docs/superpowers/2026-09-23-t1j-h4-analysis-card.md",
+             "docs/superpowers/2026-09-24-t1j-h4-step4-seed-card.md"]
     code = card_code_list()
     assert len(code) == 37
     for field, paths in (("cards", cards), ("code", code)):
