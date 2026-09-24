@@ -4,6 +4,38 @@
 no gate opened, no code, no push. The only artifact besides this card is a
 **read-only collision survey** (§5).
 
+⚠ **AMENDED 2026-09-24 with the 4b authorization — the §6 decisions, taken; the
+first version (`808ae60`) is quoted, not rewritten away:**
+
+1. **Deferred use-recording: ACCEPTED, with one correction to the interim claim.**
+   The first version said *"Until the closing edit, the committed evidence
+   directories ARE the use record."* Before its evidence is committed, a run's use
+   record is **the occupied, fsynced evidence directory itself**. The claim is
+   **create-only — `os.mkdir`, never `exist_ok=True`** — made **before any seed
+   draw or JVM**, its parent directory fsynced. An occupied directory **refuses,
+   including one left by a VOID**. (The step-2 runner claimed with
+   `os.makedirs(out_dir, exist_ok=True)`: an existing directory was accepted and
+   only its files were create-only. That is replaced in 4b.)
+2. **This card is BOUND, as the FIFTH card.** It freezes what the manifests only
+   carry the results of — the exact blocks, the arm assignment, the collision
+   method and the use-recording rule. Its sha256 enters the runner header's
+   `cards` and the manifest checks **before 4c**; the card is **frozen after 4c**
+   (any later amendment voids 4c for binding, §3).
+3. **Evidence directory names are FIXED, not dated**, because the manifest names
+   them before the run: `docs/superpowers/evidence/t1j-h4-pilot/` and
+   `docs/superpowers/evidence/t1j-h4-study-segment<k>/`. The first version wrote
+   `<date>-t1j-h4-pilot/`, a date nobody knows at manifest time.
+4. **The schedule is CANONICAL, not merely inside its block.** The first version's
+   4b row said the runner refuses *"any seed outside its entry's block"*. The
+   runner rebuilds the entry's schedule from §2's rule — block, pair ids, Arm A /
+   Arm B seed assignment, the incumbent reference — and refuses any other; the
+   registry checks run on top.
+5. **Registration waits for the proof.** Collision proof v16 is run against the
+   **pre-registration** registries and must be CLEAN before the five blocks are
+   written into `ACCOUNTED_SEED_INTERVALS`; it is re-run after registration with
+   each block excluded **by identity** (v15's rule), and both runs are committed
+   with the registration.
+
 It rests on the runner card (`2026-09-22-t1j-h4-runner-persistence-card.md` §12:
 the production path and its qualification) and the analysis card
 (`2026-09-23-t1j-h4-analysis-card.md` §0.1: what a manifest binds). 3P-b ran once
@@ -80,13 +112,17 @@ were all required unspent let ONE segment's VOID block the other three. H4 uses
   run (or the STOP that ends the line), under its own authorization.
 * **One-shot without the registry: each run is bound to its evidence directory.**
   Each manifest entry names its create-only **`evidence_dir`**
-  (`docs/superpowers/evidence/<date>-t1j-h4-pilot/`,
-  `…-t1j-h4-study-segment<k>/`). In pilot and study mode the runner **refuses any
-  `out_dir` other than that one** (step 4b). The directory is claimed before any
-  JVM and committed after the run, so a second run of the same entry always finds
-  it occupied and refuses — the job H3 gave to "retired on start".
-* **Until the closing edit, the committed evidence directories ARE the use
-  record.** The closing edit derives exposure from them (a seed is EXPOSED iff its
+  (`docs/superpowers/evidence/t1j-h4-pilot/`,
+  `docs/superpowers/evidence/t1j-h4-study-segment<k>/` — fixed names, amendment 3).
+  In pilot and study mode the runner **refuses any `out_dir` other than that
+  one** (step 4b). The directory is claimed **create-only (`os.mkdir`) and
+  fsynced before any seed draw or JVM** and committed after the run, so a second
+  run of the same entry always finds it occupied and refuses — the job H3 gave to
+  "retired on start". An occupied directory refuses **whatever left it there**,
+  a VOID included (amendment 1).
+* **Until the closing edit, the occupied evidence directories ARE the use
+  record** — fsynced at the claim, committed after the run (amendment 1).
+  ~~the committed evidence directories ARE the use record~~ The closing edit derives exposure from them (a seed is EXPOSED iff its
   game started, per the results file; every started block is RETIRED whole;
   a block never started — e.g. the study after a pilot STOP — is RETIRED, not
   exposed), exactly the H3 conventions, applied once.

@@ -149,7 +149,7 @@ from it and hash-bound to it**. Records are written **create-only** (`O_EXCL`),
 
 | `record_type` | when | carries |
 |---|---|---|
-| `header` | once, first | design (`H4_PILOT` / `H4_STUDY`), segment, schedule digest, seed-block identity, **the incumbent identity read off the configuration object that plays**, the **T1j runtime identity** (jar sha256, JDK components, compiled-class and source hashes, depth, both timeouts, cap, `h4_acceptance=true`), **`cards`**: sha256 of the four governing cards (this card, §4B, replacement, analysis), **`code`**: sha256 of the five Python modules that play (amendment above) |
+| `header` | once, first | design (`H4_PILOT` / `H4_STUDY`), segment, schedule digest, seed-block identity, **the incumbent identity read off the configuration object that plays**, the **T1j runtime identity** (jar sha256, JDK components, compiled-class and source hashes, depth, both timeouts, cap, `h4_acceptance=true`), **`cards`**: sha256 of the ~~four~~ **five** governing cards (this card, §4B, replacement, analysis, **step 4** — added in 4b), **`code`**: sha256 of the five Python modules that play (amendment above) |
 | `game_start` | per game, before its opening bind | `task_id`, `pair_id`, `arm` (`A`/`B`), `incumbent_colour`, `t1j_colour`, `seed`, `game_index` |
 | `ply` | per applied ply | `task_id`, `ply`, `mover` (colour), **`actor`** (`incumbent` / `t1j`), **`move` `[row, col]`**, `elapsed_s` (monotonic, around the agent call); for a T1j ply also **`source`** (the routine that answered), `t1j_elapsed_us`, and the **ordinal of its query process record** |
 | `process` | per T1j subprocess that returned | the §4B observation **verbatim** — role, ordinal, board ply, return code, parsed `PROC`, postcondition fields, `outcome`, `refused_at`, `reason`, and for queries `source`, `MatchData`, telemetry, move — **plus the two coherence digests of §4** |
@@ -442,6 +442,11 @@ under an already-reserved seed block.
 | **3P-b** | **qualify** it once, **without a game** (§12.2) | separate |
 | 4 | fresh collision-checked seed block + committed manifests (§12.3) | separate |
 | 5 | the 16-pair pilot | separate |
+
+⚠ **From step 4 on, SUPERSEDED by the step 4 card §3** (`2026-09-24-t1j-h4-step4-seed-card.md`):
+4a card + survey → 4b registration + runner checks + manifest writer → 4c ONE
+re-qualification of the final code state → 4d manifests → 5 pilot. The shared
+seed registry is in a hashed file, so the 3P-b record (`b49b1de`) stops binding.
 
 🔴 **After step 4, every bound file is FROZEN.** A change to any of the five
 modules, any of the four cards, the toolchain or the incumbent after the
