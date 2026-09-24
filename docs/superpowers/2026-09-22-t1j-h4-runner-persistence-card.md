@@ -60,6 +60,14 @@ now records **`cards`** — sha256 of this card, the §4B card, the replacement 
 `h2_match_rules.py`, read from the files at run time. Nothing else in the record
 changes.
 
+⚠ **SEQUENCING AMENDMENT 2026-09-23, after `f36d40d` — DESIGN ONLY.** The
+agreed order put seed reservation (step 4) straight after the analysis (step 3).
+It cannot: `h4_runner.py` still **refuses pilot and study mode** (§10), so the
+code that will play does not exist yet, and a manifest (analysis card §0.1) binds
+the **sha256 of that code**. Reserving seeds now would put a code change AFTER the
+reservation. A new **step 3P — the production runner path — and its no-game
+qualification** now sit between step 3 and step 4. See **§12**.
+
 It rests on: the replacement card (`2026-09-21-t1j-h4-replacement-card.md`;
 scientific core §1, pilot §5, persistence §7), **the §4B card**
 (`2026-09-22-t1j-h4-4b-acceptance-qualification-card.md`) and §4B's **CLEAN**
@@ -406,3 +414,140 @@ analysis, aggregates nothing, pushes nothing, and neither reruns nor alters §4B
 
 **The next separately authorized action is step 2**: implement this card and
 qualify it without games, with the gate created CLOSED.
+
+---
+
+## 12. SEQUENCING AMENDMENT — the production path BEFORE any seed (design only)
+
+**Written 2026-09-23 after `f36d40d`. DESIGN ONLY:** no code, no test, no gate,
+no seed, no manifest, no JVM, no push.
+
+### 12.0 Why the order changes
+
+A manifest binds, field by field, the header the pilot will write — including
+**`code`**, the sha256 of the five modules that play (analysis card §0.1). Today
+`run_games` refuses `pilot` and `study` mode outright (`h4_runner.py`, the
+`if mode != "fixture":` refusal): the production incumbent seam was deferred to
+*"the pilot's own authorization"*. Building it changes `h4_runner.py`, so its
+hash — and possibly others — moves. **Any manifest written before that change
+could never bind the run.** Worse, fixing it afterwards would mean editing code
+under an already-reserved seed block.
+
+**The order is therefore:**
+
+| step | what | authorization |
+|---|---|---|
+| 3 ✅ | analysis modules (`a6dea80`, `f36d40d`) | done |
+| **3P-a** | **implement** the production path, gates CLOSED, fixtures only | separate |
+| **3P-b** | **qualify** it once, **without a game** (§12.2) | separate |
+| 4 | fresh collision-checked seed block + committed manifests (§12.3) | separate |
+| 5 | the 16-pair pilot | separate |
+
+🔴 **After step 4, every bound file is FROZEN.** A change to any of the five
+modules, any of the four cards, the toolchain or the incumbent after the
+manifests are committed means those manifests no longer bind anything: the pilot
+may not run under them. Recovery is a separately authorized decision — **never an
+edit of a committed manifest or a silent reuse of the reserved seeds.**
+
+### 12.1 Step 3P-a — the production path (implementation; gates stay CLOSED)
+
+1. **The incumbent is constructed ONCE, and its identity read off THAT object**
+   (the H3 lesson: same function, two objects, one describing a run that never
+   happened). The configuration is the frozen argmax one — the eval config of the
+   qualified reference path with `selection_mode = h2_match_rules.SELECTION_MODE` —
+   built from the **upstream** sources H3 itself read (`twixtbot_g3_reference`,
+   `h2_match_rules`, `h2_match_runner`, `e4_screen_reference`), **not** by importing
+   `h3_study_runner`: H3 is closed and would otherwise become an unhashed
+   dependency of H4's play path.
+2. **The recorded identity** = `h2_match_runner.frozen_incumbent_identity()` +
+   `argmax_config` read off the object + the H4 design label, checked
+   **type-strictly** against the frozen one **before any process starts**.
+3. **The evaluator** is loaded by the qualified loader, and the **checkpoint's
+   sha1 is recomputed at load** and compared with the identity's before the first
+   game. If the existing loader already does this, a control proves it; if not,
+   the runner does it.
+4. **Pilot and study mode accept NO injected seam** — no `incumbent_build`,
+   `evaluator`, `incumbent_identity` or `_compile` argument. An entry that accepts
+   its own seams is not a gate. Fixture mode keeps its stubs and its negative seeds;
+   the two crossings (§10.1) stay refused.
+5. **The header's `t1j_runtime` binds CONTENT, not location.** `_default_compile`
+   returns run-local fields too — `classes_dir` (create-only, NEW every run), the
+   toolchain `root`, `source` and `verified` count — which no manifest written in
+   advance could equal. The header therefore records exactly the analysis card
+   §0.1 content: **jar sha256, JDK components, helper source hashes, compiled
+   class hashes, main class**, plus depth, both timeouts, `ply_cap` and
+   `h4_acceptance=true`. The run-local fields go to a separate **unbound**
+   `t1j_local` header field, so where it ran is recorded but not confused with
+   what ran.
+6. **The runner binds itself before the first game.** Pilot and study mode take
+   the **committed manifest** and refuse — after compiling, before any game or T1j
+   JVM — unless the header it is about to write equals its manifest entry field by
+   field. A run the analysis would refuse is never played.
+7. The pilot's existing gate stays the only door to games. **A new closed gate for
+   the qualification run** (§12.2) is proposed, making **seventeen**, because 3P-b
+   spawns `javac` from the verified JDK and loads the checkpoint — each earlier
+   stage that touched the external toolchain took its own reviewed authorization.
+
+**Tests (fixtures only, as in step 2):** the refusals above, each shown to reject
+through the public entry with the relevant gate open in the test; the header
+projection (content fields present, run-local fields absent from `t1j_runtime`);
+the pre-game manifest binding, including a manifest that differs in each bound
+field; the injected-defect harness extended.
+
+### 12.2 Step 3P-b — its no-game qualification (one authorized run)
+
+Run once, on the **real** toolchain and checkpoint, gate opened for that run and
+restored after. **No game, no T1j query or replay JVM, no research seed, no
+outcome.** It establishes:
+
+| check | how |
+|---|---|
+| incumbent identity | built by the production path, read off the object, equal to the frozen identity type-strictly |
+| checkpoint | loaded by the production path, sha1 recomputed, equal to the identity |
+| the incumbent can move | **one** incumbent decision from the empty board through the production builder, under a named synthetic seed; a legal move is required. No T1j call, no second ply, no game — a broken seam is found here, not at pilot game 0 with seeds spent |
+| toolchain | `verified_paths` + E4's jar pin + JDK components, as `_default_compile` enforces |
+| **compile reproducibility** | compile **twice**, into two fresh create-only directories outside the repository; the class-hash maps must be **identical**. If `javac` is not byte-reproducible, **STOP**: class hashes cannot be bound in advance and this card returns for an amendment |
+| the header candidate | built by the **same function** the pilot will use, for the pilot stage — `code` (five module hashes at HEAD), `cards` (four), `t1j_runtime` (content only), `incumbent_identity` |
+| refusals | the CLI in pilot mode refuses as a fresh subprocess while the pilot gate is closed |
+
+Result is **CLEAN** or **STOP**, recorded create-only under
+`docs/superpowers/evidence/<date>-t1j-h4-production-qualification/`, marked
+**not evidence of strength**, and committed. A STOP is a result; nothing is
+repaired and rerun without a new authorization.
+
+### 12.3 How the final identities enter the manifests (step 4)
+
+The manifests are written **only after 3P-b is CLEAN and committed**, and every
+field is **re-derived, then compared** — never copied on trust:
+
+| manifest field | source | must also equal |
+|---|---|---|
+| `code` | sha256 of the five modules **at HEAD** (committed, unmodified — analysis card §2.1) | the qualification record's `code` — a mismatch means code moved after qualification: **refuse** |
+| `cards` | sha256 of the four cards at HEAD | the qualification record's `cards` — any card amended after 3P-b needs a new qualification record first |
+| `t1j_runtime` | the qualification record's content projection + the frozen depth, timeouts, cap | a fresh `verified_paths` + JDK verification at manifest time (no compile needed: the class map was proven reproducible) |
+| `incumbent_identity` | re-derived by the production path | the qualification record's identity |
+| `schedule`, `seeds`, `schedule_digest` | the **fresh, collision-checked** seed block (registered, accounted before use, disjoint from every earlier block); digest recomputed | — |
+
+The pilot manifest and the four study-segment manifests are written in **one**
+step-4 commit, together with the seed registration; the study's seeds are
+reserved **before** the pilot is run so the pilot's outcome cannot shape them.
+The study manifests therefore also freeze everything above for the study: a
+change after the pilot — even one the pilot's findings motivate — needs a new,
+separately authorized set.
+
+### 12.4 Open decision — for the reviewer, not taken here
+
+⚠ **The `code` field covers five modules** (analysis card §0.1). It does **not**
+cover the incumbent's own play path (`twixtbot_g3_reference.py`,
+`e4_screen_reference.py`), the evaluator loader (`e4_screen_command.py`), the
+compile and toolchain checks (`d1_probe.py`, `t1j_toolchain.py`) or
+`h2_match_runner.py` (the identity source). Those are bound only indirectly — by
+the incumbent identity's settings and checkpoint hash, and by the toolchain
+content hashes. Whether to widen `code` must be decided **before 3P-a**, because
+it changes what the header records and what the manifest binds.
+
+### 12.5 What this amendment does not do
+
+It writes no code or tests, creates or opens no gate, reserves no seed, writes no
+manifest, plays no game, runs no JVM and pushes nothing. **The next separately
+authorized action is 3P-a** (after the §12.4 decision).

@@ -393,3 +393,8 @@ confirmatory gate created CLOSED and fixtures only** (fixture manifests,
 negative seeds). Before any pilot: the runner's **`code`** header field (§0.1),
 the manifests and seeds (step 4), and the pilot itself (step 5) — each a
 separate authorization.
+
+⚠ **Superseded order (2026-09-23, after `f36d40d`):** the `code` header field is
+done (second amendment), and a **production-runner step 3P** — implementation,
+then a no-game qualification — now precedes the manifests and seeds, because a
+manifest cannot bind code that does not exist yet. See runner card §12.
