@@ -4143,7 +4143,7 @@ DEFECTS = [
      '(["status"],',
      f"{T_H4F}::test_every_input_must_be_COMMITTED_and_UNMODIFIED[staged_not_committed-results]"),
     ('H4 feasibility: the inputs are never checked for durability', H4F,
-     '    check_durable([manifest, results])',
+     '    check_durable([manifest, results], _fixture=_fixture)',
      '    pass',
      f"{T_H4F}::test_every_input_must_be_COMMITTED_and_UNMODIFIED[modified-manifest]"),
     ('H4 feasibility: a manifest schedule digest is not recomputed', H4F,
@@ -4181,7 +4181,7 @@ DEFECTS = [
     ('H4 feasibility: the manifest seed sign ignores the mode', H4F,
      '            R.check_schedule(e["schedule"], mode="fixture" if _fixture else',
      '            R.check_schedule(e["schedule"], mode="fixture" if True else',
-     f"{T_H4F}::test_the_PUBLIC_entry_refuses_a_committed_FIXTURE"),
+     f"{T_H4F}::test_the_PUBLIC_entry_refuses_FIXTURE_CONTENT_even_inside_the_repository"),
     ('H4 feasibility: the header design is not bound', H4F,
      '    if header.get("design") != want:',
      '    if False:',
@@ -4300,12 +4300,12 @@ DEFECTS = [
      '    if False:',
      f"{T_H4D}::test_a_report_from_ANOTHER_PILOT_is_refused"),
     ('H4 decision: its inputs are never checked for durability', H4D,
-     '    F.check_durable([manifest, results, report])',
+     '    F.check_durable([manifest, results, report], _fixture=_fixture)',
      '    pass',
      f"{T_H4D}::test_each_file_the_decision_rests_on_must_be_COMMITTED_and_UNMODIFIED[untracked-report]"),
     ('H4 decision: the feasibility report is not among the durable files', H4D,
-     '    F.check_durable([manifest, results, report])',
-     '    F.check_durable([manifest, results])',
+     '    F.check_durable([manifest, results, report], _fixture=_fixture)',
+     '    F.check_durable([manifest, results], _fixture=_fixture)',
      f"{T_H4D}::test_each_file_the_decision_rests_on_must_be_COMMITTED_and_UNMODIFIED[modified-report]"),
     ("H4 decision: the artifact may be written outside the pilot's directory", H4D,
      '    if os.path.dirname(os.path.abspath(out)) != os.path.dirname(os.path.abspath(results)):',
@@ -4357,12 +4357,12 @@ DEFECTS = [
      '        return EXIT_REFUSED',
      f"{T_H4C}::test_the_CLI_with_the_gate_closed_exits_5_before_touching_ANY_path"),
     ('H4 confirmatory: its inputs are never checked for durability', H4C,
-     '    F.check_durable([pilot_manifest, study_manifest, pilot_results, feasibility_report,\n                     artifact, *segments])                           # 2.',
+     '    F.check_durable([pilot_manifest, study_manifest, pilot_results, feasibility_report,\n                     artifact, *segments], _fixture=_fixture)        # 2.',
      '    pass',
      f"{T_H4C}::test_EVERY_file_the_estimate_rests_on_must_be_COMMITTED_and_UNMODIFIED[artifact-modified]"),
     ('H4 confirmatory: the segment files are not among the durable files', H4C,
-     '                     artifact, *segments])                           # 2.',
-     '                     artifact])                           # 2.',
+     '                     artifact, *segments], _fixture=_fixture)        # 2.',
+     '                     artifact], _fixture=_fixture)        # 2.',
      f"{T_H4C}::test_EVERY_file_the_estimate_rests_on_must_be_COMMITTED_and_UNMODIFIED[segment3-untracked]"),
     ('H4 confirmatory: the pilot manifest is not among the durable files', H4C,
      '    F.check_durable([pilot_manifest, study_manifest,',
@@ -4492,6 +4492,36 @@ DEFECTS = [
      '    F.check_free(out)\n    if len(segments)',
      '    if len(segments)',
      f"{T_H4C}::test_an_OCCUPIED_destination_is_refused_before_any_input"),
+    # ── H4 provenance follow-up (2026-09-23, after a6dea80): header code + four
+    # cards, k frozen, durability confined to THIS repository, liveness wording.
+    ('H4 runner: the header does not hash the Python code', H4RUN,
+     '                          "code": {m: _sha256_or_none(REPO_ROOT / m) for m in CODE}})',
+     '                          })',
+     f"{T_H4RUN}::test_the_HEADER_hashes_the_FOUR_cards_and_the_FIVE_modules"),
+    ('H4 runner: the header omits the analysis card', H4RUN,
+     '         "docs/superpowers/2026-09-21-t1j-h4-replacement-card.md",\n         "docs/superpowers/2026-09-23-t1j-h4-analysis-card.md")',
+     '         "docs/superpowers/2026-09-21-t1j-h4-replacement-card.md")',
+     f"{T_H4RUN}::test_the_HEADER_hashes_the_FOUR_cards_and_the_FIVE_modules"),
+    ('H4 feasibility: production durability accepts another repository', H4F,
+     '            if not R._inside(pathlib.Path(real), R.REPO_ROOT):',
+     '            if False:',
+     f"{T_H4F}::test_PRODUCTION_durability_refuses_a_committed_file_in_ANOTHER_repository"),
+    ("H4 feasibility: production durability asks the file's own repository", H4F,
+     '        if _fixture:\n            d, name = os.path.split(os.path.abspath(p))',
+     '        if True:\n            d, name = os.path.split(os.path.abspath(p))',
+     f"{T_H4F}::test_PRODUCTION_durability_refuses_a_committed_file_in_ANOTHER_repository"),
+    ('H4 feasibility: production durability does not resolve symlinks', H4F,
+     '            real = os.path.realpath(p)',
+     '            real = os.path.abspath(p)',
+     f"{T_H4F}::test_PRODUCTION_durability_resolves_SYMLINKS_before_judging"),
+    ('H4 feasibility: the report omits the liveness statement', H4F,
+     '                     "process_liveness": LIVENESS},',
+     '                     },',
+     f"{T_H4F}::test_a_clean_pilot_is_PROCEED_eligible_and_the_report_is_what_was_written"),
+    ('H4 feasibility: prefix frequencies are not the frozen k = 1..6', H4F,
+     'PREFIX_KS = (1, 2, 3, 4, 5, 6)',
+     'PREFIX_KS = (1, 2, 3)',
+     f"{T_H4F}::test_a_clean_pilot_is_PROCEED_eligible_and_the_report_is_what_was_written"),
 ]
 
 # ═══════════════════════════ THE EXPECTED REASONS ════════════════════════════
@@ -6415,8 +6445,10 @@ EXPECTED_REASONS = {
         "AssertionError: assert [('lstat', '/...timate.json')] == []",
     'H4 confirmatory: the CLI stats the destination before the gate':
         'AssertionError: REFUSED, nothing written: /private/<tmp>/pytest-of-<user>/pytest-<n>/test_the_CLI_with_the_gate_clo0/estimate.json is occupied; outputs are create-only',
+    # RE-RECORDED after a6dea80: production durability now refuses a temp-repo
+    # input FIRST, so the same defect is caught one check earlier (intended order).
     'H4 confirmatory: the gate is never read':
-        'scripts.GPU.alphazero.h4_runner.H4RunError: study mode refuses the negative seed -1000: that is a SYNTHETIC fixture seed (card §10.1)',
+        'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: /private/<tmp>/pytest-of-<user>/pytest-<n>/h4study0/repo/pilot/manifest.json is not durable: it does not resolve into this repository (card §2.1)',
     'H4 confirmatory: a closed gate exits 4, not 5':
         'AssertionError: the H4 study aggregation is UNAUTHORIZED. No file was opened, read or written.',
     'H4 confirmatory: its inputs are never checked for durability':
@@ -6487,4 +6519,20 @@ EXPECTED_REASONS = {
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
     'H4 confirmatory: an occupied destination is not refused first':
         'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: 0 segment files: the study is exactly 4; an incomplete study is not a smaller study',
+    # ── 2026-09-23: H4 provenance follow-up. RECORDED under .venv (pytest 9.0.2),
+    # harvested in a disposable worktree before commit.
+    'H4 runner: the header does not hash the Python code':
+        "KeyError: 'code'",
+    'H4 runner: the header omits the analysis card':
+        'AssertionError: cards',
+    'H4 feasibility: production durability accepts another repository':
+        'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: /private/<tmp>/pytest-of-<user>/pytest-<n>/test_PRODUCTION_durability_ref0/repo/x.json is not durable: not tracked (card §2.1)',
+    "H4 feasibility: production durability asks the file's own repository":
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H4 feasibility: production durability does not resolve symlinks':
+        'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: /private/<tmp>/pytest-of-<user>/pytest-<n>/test_PRODUCTION_durability_res0/in-link.py is not durable: not tracked (card §2.1)',
+    'H4 feasibility: the report omits the liveness statement':
+        "KeyError: 'process_liveness'",
+    'H4 feasibility: prefix frequencies are not the frozen k = 1..6':
+        'AssertionError: k = 1..6, frozen by the card',
 }

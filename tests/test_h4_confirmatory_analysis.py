@@ -129,7 +129,9 @@ def test_a_CLOSED_gate_opens_stats_hashes_and_runs_NOTHING(study, monkeypatch):
 
 
 def test_the_input_spy_is_NOT_VACUOUS(study, monkeypatch, gate_open):
-    """CLEAN-BASELINE CONTROL: with the gate open the same spy sees the reads."""
+    """CLEAN-BASELINE CONTROL: with the gate open the same spy sees the reads
+    (the repository root pointed at the fixture repo, so durability passes)."""
+    monkeypatch.setattr(R, "REPO_ROOT", study["repo"].resolve())
     spy = Spy(monkeypatch, study["repo"])
     with pytest.raises(F.H4AnalysisRefused):
         C.run_confirmatory(**args(study))                     # public: refuses fixtures
@@ -262,8 +264,16 @@ def test_EVERY_file_the_estimate_rests_on_must_be_COMMITTED_and_UNMODIFIED(
 
 
 def test_the_PUBLIC_entry_refuses_FIXTURE_input(study, gate_open, tmp_path):
-    with pytest.raises(F.H4AnalysisRefused, match="negative seed"):
+    with pytest.raises(F.H4AnalysisRefused, match="does not resolve into this repository"):
         C.run_confirmatory(**args(study, out=str(tmp_path / "e.json")))
+
+
+def test_the_PUBLIC_entry_refuses_FIXTURE_CONTENT_even_inside_the_repository(
+        study, gate_open, monkeypatch):
+    monkeypatch.setattr(R, "REPO_ROOT", study["repo"].resolve())
+    with pytest.raises(F.H4AnalysisRefused, match="negative seed"):
+        C.run_confirmatory(**args(study, out=str(study["repo"] / "e.json")))
+    assert not (study["repo"] / "e.json").exists()
 
 
 def test_PILOT_data_in_a_segment_slot_is_refused(study, gate_open, tmp_path):

@@ -32,6 +32,29 @@ version (`8fdd7ad`) is quoted, not rewritten away:**
 6. **Output and exit behaviour were left to implementation.** Now frozen for all
    three entry points (§4.1).
 
+⚠ **AMENDED AGAIN 2026-09-23, after the step-3 implementation (`a6dea80`) was
+accepted — four provenance points, authorized explicitly; the earlier text is
+quoted, not rewritten away:**
+
+1. **The runner dependency is closed by a runner amendment, not by the
+   analysis.** §0.1 said the step-2 header records everything *"except
+   `code`"*. Implementation found a SECOND gap: the manifest carries **four** card
+   hashes, this card among them, while the step-2 header recorded **three**. The
+   runner header now records `code` (the five modules below) **and all four card
+   hashes**; the manifest's field-by-field checks are unchanged (runner card §3.1).
+2. **`k` is frozen.** §1.3 said *"first-*k*-ply prefix frequencies"* without a
+   value. It is **k = 1 … 6** — the plies T1j's native-initial routines answer —
+   matching what was implemented. Descriptive only; it stops nothing.
+3. **Durable means committed IN THIS REPOSITORY.** §2.1 said *"tracked by git at
+   HEAD"* without saying which repository. Production checks now **resolve every
+   input into this TwixT repository** (symlinks resolved) and ask this
+   repository's git; a file in any other repository is refused. Temporary git
+   repositories are reachable **only through the synthetic-fixture test path**.
+4. **"None alive" cannot be measured from a report.** §1.1 listed it among the
+   per-game process facts. Liveness is **checked by the runner at the end of each
+   game** (a live recorded pid VOIDs the run before `segment_end` is written); the
+   report states that and does not claim to re-measure it.
+
 > **Why it is three things, not one.** A single "H4 analysis" command could read
 > the pilot's winners while computing its feasibility, and break the blind by
 > being run once with the wrong argument. So H4 analysis is **three separate
@@ -76,6 +99,10 @@ the header gains a `code` field — separately authorized, before the pilot runs
 Until it exists, the analysis must refuse any results file whose header has no
 `code` field.
 
+✅ **CLOSED by the runner amendment (second amendment above, item 1):** the header
+now records `code` and all **four** card hashes. The analysis still refuses a
+header without `code` — an older results file stays unbindable.
+
 **Shared, by import:** the runner's reader (`h4_runner.load_games`), which
 re-derives every game — transcript digest, per-game record checks, position
 digests from the moves — and refuses VOID, killed and fixture files; and its
@@ -107,7 +134,7 @@ that exists without a clean run.
 | **runtime projection** | `mean_game_s = (pilot_wall_s − setup_s) / 32`; `projected_segment_s = setup_s + 148 × mean_game_s`, from `segment_end.total_s` and `segment_end.setup_s` |
 | **cap-affected pairs** | the number of pairs with **at least one** `terminal_reason == "cap"` game |
 | **replay integrity** | the reader's pass or refusal, and per-game counts of re-derived digests |
-| **process behaviour** | per game: query and replay counts, distinct pids, all processes accepted, none alive; answering-routine counts by ply and colour |
+| **process behaviour** | per game: query and replay counts, distinct pids, all processes accepted; answering-routine counts by ply and colour. **Liveness** is stated, not re-measured: *checked by the runner at the end of each game; it cannot be measured retrospectively from the report* |
 | **concentration** | §1.3 — **trajectory-only** measures |
 
 `terminal_reason` appears **only as the categories `win` / `cap`**, which cap
@@ -138,7 +165,8 @@ guarantees is that **the feasibility module neither computes nor outputs one**:
   sequence)` — **moves only**. Identical move sequences imply identical outcomes,
   so this is equality of whole games without touching an outcome field;
 * reported descriptively: unique complete games by arm, the maximum frequency of
-  any game, first-move and first-*k*-ply prefix frequencies, identical pair-level
+  any game, first-move and first-*k*-ply prefix frequencies for **k = 1 … 6**
+  (frozen by the second amendment), identical pair-level
   tuples, answering-routine frequency by ply and colour (replacement §8);
 * 🔴 **"unique outcome patterns" is OUTCOME-BEARING** and is therefore **not**
   reported by the pilot. It belongs to confirmatory analysis only.
@@ -190,9 +218,12 @@ it against the pilot results** rather than trusting it:
 
 ### 2.1 🔴 Durable means COMMITTED — for EVERY file the decision rests on
 
-A file counts only when it is **tracked by git at HEAD and has no working-tree
-modification** (`git ls-files --error-unmatch` and `git diff --quiet HEAD --`
-both succeed). That applies to:
+A file counts only when it **resolves into this TwixT repository** and is
+**tracked by git at HEAD there with no working-tree modification** (`git
+ls-files --error-unmatch` and `git diff --quiet HEAD --`, run in this repository,
+both succeed). A file in another repository — or a symlink resolving out of this
+one — is refused. Temporary git repositories are reachable only through the
+synthetic-fixture test path (§4). That applies to:
 
 * the **pilot and study manifests**;
 * the **pilot results file** and the **feasibility report**;

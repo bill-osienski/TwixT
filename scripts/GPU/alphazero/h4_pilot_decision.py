@@ -34,7 +34,7 @@ def _decide(manifest: str, results: str, report: str, out: str, *,
     F.check_free(out)
     if os.path.dirname(os.path.abspath(out)) != os.path.dirname(os.path.abspath(results)):
         F.refuse(f"{out}: the artifact is written into the pilot's evidence directory")
-    F.check_durable([manifest, results, report])
+    F.check_durable([manifest, results, report], _fixture=_fixture)
     stored = F._load_json(report, "feasibility report")
     if not isinstance(stored, dict):
         F.refuse(f"{report} is not a report")

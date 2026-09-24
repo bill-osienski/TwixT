@@ -247,6 +247,25 @@ def test_a_FIXTURE_PAIR_runs_end_to_end_and_every_record_re_derives(tmp_path, wi
     assert st.winner() == a["result"]["winner"]
 
 
+def test_the_HEADER_hashes_the_FOUR_cards_and_the_FIVE_modules(tmp_path, wire, gate_open):
+    """Card §3.1 (amended after step 3): the paths spelled out HERE, from the card;
+    every value RECOMPUTED from the file on disk."""
+    import hashlib
+    run(tmp_path)
+    header = R.read_records(results_of(tmp_path))[0]
+    cards = ["docs/superpowers/2026-09-22-t1j-h4-runner-persistence-card.md",
+             "docs/superpowers/2026-09-22-t1j-h4-4b-acceptance-qualification-card.md",
+             "docs/superpowers/2026-09-21-t1j-h4-replacement-card.md",
+             "docs/superpowers/2026-09-23-t1j-h4-analysis-card.md"]
+    code = [f"scripts/GPU/alphazero/{m}" for m in (
+        "h4_runner.py", "e4_screen_integration.py", "t1j_adapter.py", "e4_screen_runner.py",
+        "h2_match_rules.py")]
+    for field, paths in (("cards", cards), ("code", code)):
+        assert sorted(header[field]) == sorted(paths), field
+        for p in paths:
+            assert header[field][p] == hashlib.sha256((ROOT / p).read_bytes()).hexdigest(), p
+
+
 def test_the_viewer_EXPORT_validates_and_is_marked_a_FIXTURE(tmp_path, wire, gate_open):
     run(tmp_path)
     paths = R.write_exports(results_of(tmp_path), str(tmp_path / "exports"),

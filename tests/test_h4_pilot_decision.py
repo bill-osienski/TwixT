@@ -145,6 +145,15 @@ def test_a_refusal_leaves_no_output_and_no_temporary_file(repo, templates):
 
 def test_the_PUBLIC_entry_refuses_a_committed_FIXTURE(repo, templates):
     man, res, rep = pilot_with_report(repo, templates)
+    with pytest.raises(F.H4AnalysisRefused, match="does not resolve into this repository"):
+        D.write_decision(str(man), str(res), str(rep), str(res.parent / "d.json"))
+    assert not (res.parent / "d.json").exists()
+
+
+def test_the_PUBLIC_entry_refuses_FIXTURE_CONTENT_even_inside_the_repository(
+        repo, templates, monkeypatch):
+    man, res, rep = pilot_with_report(repo, templates)
+    monkeypatch.setattr(F.R, "REPO_ROOT", repo.resolve())
     with pytest.raises(F.H4AnalysisRefused, match="negative seed"):
         D.write_decision(str(man), str(res), str(rep), str(res.parent / "d.json"))
     assert not (res.parent / "d.json").exists()

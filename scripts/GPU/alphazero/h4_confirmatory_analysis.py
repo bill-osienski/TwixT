@@ -174,7 +174,7 @@ def _run(*, pilot_manifest: str, study_manifest: str, artifact: str, pilot_resul
         F.refuse(f"{len(segments)} segment files: the study is exactly "
                  f"{F.SEGMENTS[F.STUDY]}; an incomplete study is not a smaller study")
     F.check_durable([pilot_manifest, study_manifest, pilot_results, feasibility_report,
-                     artifact, *segments])                           # 2.
+                     artifact, *segments], _fixture=_fixture)        # 2.
     art = F._load_json(artifact, "decision artifact")               # 3.
     if not isinstance(art, dict) or art.get("decision") != "PROCEED":
         F.refuse(f"the decision artifact says "

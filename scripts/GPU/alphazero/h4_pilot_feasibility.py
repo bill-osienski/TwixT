@@ -27,6 +27,7 @@ import datetime
 import hashlib
 import json
 import os
+import pathlib
 import subprocess
 import sys
 import tempfile
@@ -34,14 +35,12 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 from . import h4_runner as R
 
-CARD = "docs/superpowers/2026-09-23-t1j-h4-analysis-card.md"
-RUNNER_CARD, FOURB_CARD, REPLACEMENT_CARD = R.CARDS
+RUNNER_CARD, FOURB_CARD, REPLACEMENT_CARD, CARD = R.CARDS
 
-#: Card §0.1: what a manifest carries, and the header fields bound to it.
-MANIFEST_CARDS = (CARD, RUNNER_CARD, FOURB_CARD, REPLACEMENT_CARD)
-MANIFEST_CODE = tuple(f"scripts/GPU/alphazero/{m}" for m in (
-    "h4_runner.py", "e4_screen_integration.py", "t1j_adapter.py", "e4_screen_runner.py",
-    "h2_match_rules.py"))
+#: Card §0.1: what a manifest carries -- READ from the runner that writes the
+#: header, never retyped -- and the header fields bound to it.
+MANIFEST_CARDS = R.CARDS
+MANIFEST_CODE = R.CODE
 BOUND = ("schedule_digest", "seeds", "incumbent_identity", "t1j_runtime", "cards", "code")
 
 PILOT, STUDY = R.DESIGNS["pilot"], R.DESIGNS["study"]
@@ -55,9 +54,13 @@ RUNTIME_LIMIT_S = 10_800
 CAP_STOP_PAIRS = 4
 PRECEDENCE = ("VOID", "STOP_RUNTIME", "STOP_CAP", "STOP_COLLAPSE")
 COLLAPSE_STATEMENT = "empirically complete concentration in the pilot"
-#: ⚠ NOT FROZEN BY THE CARD: §1.3 says "first-k-ply prefix frequencies" without k.
-#: Plies 1-6 cover T1j's native-initial replies. Descriptive only; stops nothing.
+#: Card §1.3, frozen by its second amendment: k = 1..6, the plies T1j's
+#: native-initial routines answer. Descriptive only; stops nothing.
 PREFIX_KS = (1, 2, 3, 4, 5, 6)
+#: Card §1.1, second amendment: liveness is STATED, never re-measured.
+LIVENESS = ("checked by the runner at the end of each game (a live recorded pid VOIDs "
+            "the run before segment_end is written); it cannot be measured "
+            "retrospectively from this report")
 
 #: Card §1.2: the blinded view is a WHITELIST. Outcome fields are never copied.
 VIEW_START = ("task_id", "pair_id", "arm", "incumbent_colour", "t1j_colour", "seed",
@@ -121,11 +124,19 @@ def write_create_only(out: str, obj: Mapping[str, Any]) -> None:
         os.close(dfd)
 
 
-def check_durable(paths: Sequence[str]) -> None:
-    """Card §2.1: tracked by git at HEAD AND unmodified -- each file, separately,
-    in the repository that contains it."""
+def check_durable(paths: Sequence[str], *, _fixture: bool) -> None:
+    """Card §2.1 (amended): each file RESOLVES INTO THIS REPOSITORY and is tracked
+    by its git at HEAD, unmodified. Only the synthetic-fixture path (`_fixture`,
+    never reachable from a public entry) asks the file's own temporary repository."""
     for p in paths:
-        d, name = os.path.split(os.path.abspath(p))
+        if _fixture:
+            d, name = os.path.split(os.path.abspath(p))
+        else:
+            real = os.path.realpath(p)
+            if not R._inside(pathlib.Path(real), R.REPO_ROOT):
+                refuse(f"{p} is not durable: it does not resolve into this repository "
+                       f"(card §2.1)")
+            d, name = str(R.REPO_ROOT), os.path.relpath(real, R.REPO_ROOT)
         for args, what in ((["ls-files", "--error-unmatch", "--", name], "not tracked"),
                            (["diff", "--quiet", "HEAD", "--", name],
                             "modified against HEAD")):
@@ -370,7 +381,8 @@ def build_report(manifest: str, results: str, *, _fixture: bool) -> Dict[str, An
     mean_game_s = (end["total_s"] - end["setup_s"]) / PILOT_GAMES
     report.update(
         verdict=verdict(fired), rules_fired=fired,
-        operational={"segment_end": True, "reader": "passed", "games": len(view)},
+        operational={"segment_end": True, "reader": "passed", "games": len(view),
+                     "process_liveness": LIVENESS},
         runtime={"setup_s": end["setup_s"], "pilot_wall_s": end["total_s"],
                  "mean_game_s": mean_game_s,
                  "projected_segment_s": end["setup_s"] + SEGMENT_GAMES * mean_game_s,
@@ -405,7 +417,7 @@ def check_report_blind(report: Mapping[str, Any]) -> None:
 
 def _write_report(manifest: str, results: str, out: str, *, _fixture: bool) -> Dict[str, Any]:
     check_free(out)
-    check_durable([manifest, results])
+    check_durable([manifest, results], _fixture=_fixture)
     report = build_report(manifest, results, _fixture=_fixture)
     report["written_at"] = now_iso()
     check_report_blind(report)

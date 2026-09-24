@@ -70,9 +70,16 @@ EMPTY_BOARD = "empty_board"          # the state factory's key -- not an opening
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
 EVIDENCE_ROOT = REPO_ROOT / "docs" / "superpowers" / "evidence"
+#: Card §3.1 (amended after step 3): the header hashes FOUR cards -- the analysis
+#: card binds a results file to a manifest carrying all four -- and the FIVE
+#: Python modules that play. The analysis reads both tuples from here.
 CARDS = ("docs/superpowers/2026-09-22-t1j-h4-runner-persistence-card.md",
          "docs/superpowers/2026-09-22-t1j-h4-4b-acceptance-qualification-card.md",
-         "docs/superpowers/2026-09-21-t1j-h4-replacement-card.md")
+         "docs/superpowers/2026-09-21-t1j-h4-replacement-card.md",
+         "docs/superpowers/2026-09-23-t1j-h4-analysis-card.md")
+CODE = tuple(f"scripts/GPU/alphazero/{m}" for m in (
+    "h4_runner.py", "e4_screen_integration.py", "t1j_adapter.py", "e4_screen_runner.py",
+    "h2_match_rules.py"))
 
 #: Card §3.4: the §6 categories, and nothing else.
 CLASSIFICATIONS = ("timeout", "adapter_refusal", "unreadable_output", "replay_mismatch",
@@ -511,7 +518,8 @@ def _run_unguarded(*, mode, schedule, out_dir, paths, deadline_s, incumbent_buil
                                           "query_timeout_s": QUERY_TIMEOUT_S,
                                           "replay_timeout_s": REPLAY_TIMEOUT_S,
                                           "ply_cap": PLY_CAP, "h4_acceptance": True},
-                          "cards": {c: _sha256_or_none(REPO_ROOT / c) for c in CARDS}})
+                          "cards": {c: _sha256_or_none(REPO_ROOT / c) for c in CARDS},
+                          "code": {m: _sha256_or_none(REPO_ROOT / m) for m in CODE}})
             setup_s = _now() - t_start
             _trace(trace, {"event": "run_start", "n_games": len(schedule),
                            "design": DESIGNS[mode]})

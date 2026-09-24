@@ -49,6 +49,17 @@ resolved by an explicit decision rather than a quiet test edit:**
   behavioural tests are unchanged; one structural allowlist is deliberately
   extended.**
 
+⚠ **AMENDED 2026-09-23, after step 3 — the header's provenance, authorized
+explicitly.** §3.1's header row said *"the governing card commits"*; the step-2
+runner in fact recorded the **sha256 of three cards** and **no Python code**. The
+H4 analysis card (§0.1) binds a results file to a manifest carrying the hashes of
+**four** cards and **five** modules, so no step-2 header could bind. The header
+now records **`cards`** — sha256 of this card, the §4B card, the replacement card
+**and the analysis card** — and **`code`** — sha256 of `h4_runner.py`,
+`e4_screen_integration.py`, `t1j_adapter.py`, `e4_screen_runner.py` and
+`h2_match_rules.py`, read from the files at run time. Nothing else in the record
+changes.
+
 It rests on: the replacement card (`2026-09-21-t1j-h4-replacement-card.md`;
 scientific core §1, pilot §5, persistence §7), **the §4B card**
 (`2026-09-22-t1j-h4-4b-acceptance-qualification-card.md`) and §4B's **CLEAN**
@@ -130,7 +141,7 @@ from it and hash-bound to it**. Records are written **create-only** (`O_EXCL`),
 
 | `record_type` | when | carries |
 |---|---|---|
-| `header` | once, first | design (`H4_PILOT` / `H4_STUDY`), segment, schedule digest, seed-block identity, **the incumbent identity read off the configuration object that plays**, the **T1j runtime identity** (jar sha256, JDK components, compiled-class and source hashes, depth, both timeouts, cap, `h4_acceptance=true`), the governing card commits |
+| `header` | once, first | design (`H4_PILOT` / `H4_STUDY`), segment, schedule digest, seed-block identity, **the incumbent identity read off the configuration object that plays**, the **T1j runtime identity** (jar sha256, JDK components, compiled-class and source hashes, depth, both timeouts, cap, `h4_acceptance=true`), **`cards`**: sha256 of the four governing cards (this card, §4B, replacement, analysis), **`code`**: sha256 of the five Python modules that play (amendment above) |
 | `game_start` | per game, before its opening bind | `task_id`, `pair_id`, `arm` (`A`/`B`), `incumbent_colour`, `t1j_colour`, `seed`, `game_index` |
 | `ply` | per applied ply | `task_id`, `ply`, `mover` (colour), **`actor`** (`incumbent` / `t1j`), **`move` `[row, col]`**, `elapsed_s` (monotonic, around the agent call); for a T1j ply also **`source`** (the routine that answered), `t1j_elapsed_us`, and the **ordinal of its query process record** |
 | `process` | per T1j subprocess that returned | the §4B observation **verbatim** — role, ordinal, board ply, return code, parsed `PROC`, postcondition fields, `outcome`, `refused_at`, `reason`, and for queries `source`, `MatchData`, telemetry, move — **plus the two coherence digests of §4** |

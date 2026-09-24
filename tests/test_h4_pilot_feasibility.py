@@ -183,6 +183,12 @@ def test_a_clean_pilot_is_PROCEED_eligible_and_the_report_is_what_was_written(re
     rep = feasibility(man, res)
     assert (rep["verdict"], rep["rules_fired"]) == ("PROCEED", [])
     assert json.loads((repo / "pilot" / "feasibility.json").read_text()) == rep
+    assert rep["operational"]["process_liveness"] == (
+        "checked by the runner at the end of each game (a live recorded pid VOIDs the "
+        "run before segment_end is written); it cannot be measured retrospectively "
+        "from this report")
+    assert sorted(c for c in rep["concentration"]["by_arm"]["A"]["prefix_frequencies"]) \
+        == ["1", "2", "3", "4", "5", "6"], "k = 1..6, frozen by the card"
     assert rep["runtime"]["mean_game_s"] == 72.5
     assert rep["runtime"]["projected_segment_s"] == 10_800
     assert rep["caps"] == {"cap_affected_pairs": 0, "cap_games": 0, "stop_at": 4}
@@ -397,7 +403,43 @@ def test_the_durability_check_passes_a_committed_unmodified_file(repo):
     f = repo / "x.json"
     f.write_text("{}")
     commit(repo, f)
-    F.check_durable([str(f)])
+    F.check_durable([str(f)], _fixture=True)
+
+
+#: A file this work never edits, tracked at HEAD in THIS repository.
+TRACKED_HERE = ROOT / "scripts" / "GPU" / "alphazero" / "gate_inventory.py"
+
+
+def test_PRODUCTION_durability_passes_a_committed_file_IN_THIS_REPOSITORY():
+    """CLEAN BASELINE for the production path: it is not refusing everything."""
+    F.check_durable([str(TRACKED_HERE)], _fixture=False)
+
+
+def test_PRODUCTION_durability_refuses_a_committed_file_in_ANOTHER_repository(repo):
+    f = repo / "x.json"
+    f.write_text("{}")
+    commit(repo, f)
+    with pytest.raises(F.H4AnalysisRefused, match="does not resolve into this repository"):
+        F.check_durable([str(f)], _fixture=False)
+
+
+def test_PRODUCTION_durability_resolves_SYMLINKS_before_judging(repo, tmp_path):
+    f = repo / "x.json"
+    f.write_text("{}")
+    commit(repo, f)
+    out = tmp_path / "out-link.json"
+    out.symlink_to(f)                                          # resolves OUT of this repo
+    with pytest.raises(F.H4AnalysisRefused, match="does not resolve into this repository"):
+        F.check_durable([str(out)], _fixture=False)
+    into = tmp_path / "in-link.py"
+    into.symlink_to(TRACKED_HERE)                              # resolves INTO this repo
+    F.check_durable([str(into)], _fixture=False)
+
+
+def test_PRODUCTION_durability_refuses_an_untracked_path_in_this_repository():
+    with pytest.raises(F.H4AnalysisRefused, match="not tracked"):
+        F.check_durable([str(ROOT / "docs" / "superpowers" / "evidence" /
+                             "no-such-h4-file.json")], _fixture=False)
 
 
 # ──────────────────────────── 5. output semantics (§4.1) ────────────────────────────
@@ -510,8 +552,20 @@ def test_the_blind_walker_is_NOT_VACUOUS(planted):
 # ───────────────── 7. the fixture relaxation is unreachable (§4) ─────────────────
 
 def test_the_PUBLIC_entry_refuses_a_committed_FIXTURE(repo, templates):
-    """Refused at the FIRST fixture mark it meets: the manifest's negative seeds."""
+    """Refused where it lives: a temporary repository is not this one."""
     man, res = make_pilot(repo, templates)
+    with pytest.raises(F.H4AnalysisRefused, match="does not resolve into this repository"):
+        F.write_feasibility_report(str(man), str(res), str(res.parent / "f.json"))
+    assert not (res.parent / "f.json").exists()
+
+
+def test_the_PUBLIC_entry_refuses_FIXTURE_CONTENT_even_inside_the_repository(
+        repo, templates, monkeypatch):
+    """With the location check satisfied -- the repository root pointed at the
+    fixture's own repo, for this test only -- the content is still refused, at
+    the manifest's negative seeds."""
+    man, res = make_pilot(repo, templates)
+    monkeypatch.setattr(R, "REPO_ROOT", repo.resolve())
     with pytest.raises(F.H4AnalysisRefused, match="negative seed"):
         F.write_feasibility_report(str(man), str(res), str(res.parent / "f.json"))
     assert not (res.parent / "f.json").exists()
@@ -524,7 +578,7 @@ def test_the_CLI_refuses_a_committed_FIXTURE_as_a_fresh_subprocess(repo, templat
                         "--manifest", str(man), "--results", str(res), "--out", str(out)],
                        cwd=ROOT, capture_output=True, text=True)
     assert r.returncode == F.EXIT_REFUSED, f"exit {r.returncode}, stderr {r.stderr!r}"
-    assert "negative seed" in r.stderr and not out.exists()
+    assert "does not resolve into this repository" in r.stderr and not out.exists()
 
 
 def fixture_leaks(module_path, public):
@@ -543,6 +597,18 @@ def fixture_leaks(module_path, public):
                                                  and kw.value.value is False):
                     bad.append(f"{fn.name} passes _fixture={ast.unparse(kw.value)}")
     return bad
+
+
+def test_the_MANIFEST_names_exactly_the_cards_and_code_the_card_names():
+    """Spelled out here from card §0.1, not read from the module under test."""
+    assert list(F.MANIFEST_CARDS) == [
+        "docs/superpowers/2026-09-22-t1j-h4-runner-persistence-card.md",
+        "docs/superpowers/2026-09-22-t1j-h4-4b-acceptance-qualification-card.md",
+        "docs/superpowers/2026-09-21-t1j-h4-replacement-card.md",
+        "docs/superpowers/2026-09-23-t1j-h4-analysis-card.md"]
+    assert list(F.MANIFEST_CODE) == [f"scripts/GPU/alphazero/{m}" for m in (
+        "h4_runner.py", "e4_screen_integration.py", "t1j_adapter.py", "e4_screen_runner.py",
+        "h2_match_rules.py")]
 
 
 def test_NO_public_entry_can_reach_the_fixture_relaxation():
