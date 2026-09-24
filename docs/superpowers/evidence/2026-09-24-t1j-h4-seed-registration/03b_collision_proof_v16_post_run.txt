@@ -1,0 +1,40 @@
+H4 SEED REGISTRATION -- COLLISION PROOF v16 (PROVENANCE) -- MODE POST
+excluded own records (exact paths, card amendments 6-7): 10
+======================================================================
+masks (imported): ['0x3c3c3c', '0x5a5a5a', '0xa5a5a5', '0xc3c3c3']
+registries: ACCOUNTED 24 intervals, EXPOSED 17 intervals, RETIRED 15 intervals, TEST_ONLY 1 intervals
+repo literal values counted (by provenance, registry-tuple occurrences exempt): 3044
+  registry state H4_PILOT             (202632000, 202632032): overlapping {'ACCOUNTED': 1}, registered as exactly itself in ['ACCOUNTED']  OK
+  registry state H4_STUDY_SEGMENT_0   (202634000, 202634148): overlapping {'ACCOUNTED': 1}, registered as exactly itself in ['ACCOUNTED']  OK
+  registry state H4_STUDY_SEGMENT_1   (202636000, 202636148): overlapping {'ACCOUNTED': 1}, registered as exactly itself in ['ACCOUNTED']  OK
+  registry state H4_STUDY_SEGMENT_2   (202638000, 202638148): overlapping {'ACCOUNTED': 1}, registered as exactly itself in ['ACCOUNTED']  OK
+  registry state H4_STUDY_SEGMENT_3   (202640000, 202640148): overlapping {'ACCOUNTED': 1}, registered as exactly itself in ['ACCOUNTED']  OK
+
+H4_PILOT             (202632000, 202632032)  n= 32  direct=NONE  streams=0  injective=True  gap=1968 (floor 32)  CLEAN=True
+H4_STUDY_SEGMENT_0   (202634000, 202634148)  n=148  direct=NONE  streams=0  injective=True  gap=1852 (floor 148)  CLEAN=True
+H4_STUDY_SEGMENT_1   (202636000, 202636148)  n=148  direct=NONE  streams=0  injective=True  gap=1852 (floor 148)  CLEAN=True
+H4_STUDY_SEGMENT_2   (202638000, 202638148)  n=148  direct=NONE  streams=0  injective=True  gap=1852 (floor 148)  CLEAN=True
+H4_STUDY_SEGMENT_3   (202640000, 202640148)  n=148  direct=NONE  streams=0  injective=True  gap=1852 (floor 148)  CLEAN=True
+
+total seeds: 624
+
+NEGATIVE CONTROLS -- each must be REJECTED
+----------------------------------------------------------------------
+  REJECTED     H3 segment-0 replacement block (spent)  (202628000, 202628148)
+  REJECTED     H3's retired segment-0 quarter  (202626000, 202626148)
+  REJECTED     the H3 pilot block  (202624000, 202624040)
+  REJECTED     H2 attempt-3 block  (202622000, 202622736)
+  REJECTED     D1's paper reservation  (202615000, 202615221)
+  REJECTED     the TEST_ONLY band  (90009000, 90009100)
+  REJECTED     the stray literal 202630000  (202630000, 202630032)
+  REJECTED     the stray literal 202699000  (202699000, 202699032)
+  REJECTED     overlaps H4 segment 0 by one seed  (202634147, 202634295)
+  REJECTED     starts where H4 segment 0 ends -- inside the floor  (202634148, 202634296)
+  REJECTED     one seed inside segment 0's floor  (202634295, 202634443)
+  REJECTED     EQUALS the H4 pilot block (an existing reservation, not its own)  (202632000, 202632032)
+  REJECTED     inside the live H3 uniform generation range  (20261600000, 20261600148)
+  REJECTED     a candidate SEED copied into an UNRELATED file (202632000): without the copy CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=1968
+  REJECTED     an exclusive END copied into an UNRELATED file (202632032): without the copy CLEAN=True; with it direct={} gap=0
+
+controls rejected: 15/15
+VERDICT          : CLEAN
