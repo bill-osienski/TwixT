@@ -4595,23 +4595,52 @@ DEFECTS = [
     ('H4 3P-a: two different compiles pass the qualification', H4QUAL,
      '    if a != b:',
      '    if False:',
-     f"{T_H4PP}::test_a_failed_check_is_a_recorded_STOP[fault0-does not compile reproducibly]"),
+     f"{T_H4PP}::test_a_failed_check_is_a_recorded_STOP_that_KEEPS_every_earlier_stage[fault0-reproducibility-does not compile reproducibly]"),
     ('H4 3P-a: an illegal incumbent move passes the qualification', H4QUAL,
      '    if move is None or move not in set(state.legal_moves()):',
      '    if False:',
-     f"{T_H4PP}::test_a_failed_check_is_a_recorded_STOP[fault1-not a legal empty-board move]"),
+     f"{T_H4PP}::test_a_failed_check_is_a_recorded_STOP_that_KEEPS_every_earlier_stage[fault1-incumbent_move-not a legal empty-board move]"),
     ('H4 3P-a: a pilot CLI that does not refuse passes the qualification', H4QUAL,
      '    if rc != R.EXIT_UNAUTHORIZED:',
      '    if False:',
-     f"{T_H4PP}::test_a_pilot_CLI_that_does_not_refuse_is_a_recorded_STOP"),
+     f"{T_H4PP}::test_a_later_PILOT_CLI_failure_keeps_everything_before_it"),
     ("H4 3P-a: the qualification does not use the pilot's header function", H4QUAL,
-     '    got["bound"] = R.bound_identity(identity, a)',
-     '    got["bound"] = {"t1j_runtime": a}',
+     '    log.done("bound_identity", R.bound_identity(identity, a))',
+     '    log.done("bound_identity", {"t1j_runtime": a})',
      f"{T_H4PP}::test_a_CLEAN_qualification_records_the_bound_identity_from_the_PILOTS_function"),
     ('H4 3P-a: the qualification compiles inside the repository', H4QUAL,
      '    if R._inside(pathlib.Path(classes_root), R.REPO_ROOT):',
      '    if False:',
-     f"{T_H4PP}::test_the_qualification_REFUSES_a_bad_destination_before_anything[classes_in_repo]"),
+     f"{T_H4PP}::test_the_qualification_REFUSES_a_bad_destination_and_WRITES_NOTHING[classes_in_repo]"),
+    # ── 2026-09-24: 3P-a correction, card §12.2.1 -- a STOP keeps what was observed.
+    ('H4 3P-a: completed stages are not written to the stage log', H4QUAL,
+     '        self._f.write(json.dumps({"stage": stage, "observation": observation},\n                                 sort_keys=True) + "\\n")',
+     '        pass',
+     f"{T_H4PP}::test_an_INTERRUPTED_run_leaves_the_stage_log_prefix_and_no_record"),
+    ("H4 3P-a: a STOP record drops the completed stages", H4QUAL,
+     '"checks": log.completed,',
+     '"checks": log.completed if result == "CLEAN" else None,',
+     f"{T_H4PP}::test_a_SECOND_COMPILE_MISMATCH_keeps_the_FIRST_compiles_class_hashes"),
+    ('H4 3P-a: a STOP does not name its failing stage', H4QUAL,
+     '            result, failing, reason = "STOP", log.current, str(e)',
+     '            result, failing, reason = "STOP", None, str(e)',
+     f"{T_H4PP}::test_a_failed_check_is_a_recorded_STOP_that_KEEPS_every_earlier_stage[fault2-checkpoint-checkpoint]"),
+    ('H4 3P-a: an unexpected failure does not name its stage', H4QUAL,
+     '            result, failing, reason = "STOP", log.current, f"{type(e).__name__}: {e}"',
+     '            result, failing, reason = "STOP", None, f"{type(e).__name__}: {e}"',
+     f"{T_H4PP}::test_an_UNEXPECTED_exception_inside_a_stage_is_a_STOP_naming_that_stage"),
+    ("H4 3P-a: a compile's local fields are not recorded", H4QUAL,
+     '        log.done(stage, {"content": content, "local": local})',
+     '        log.done(stage, {"content": content})',
+     f"{T_H4PP}::test_a_SECOND_COMPILE_MISMATCH_keeps_the_FIRST_compiles_class_hashes"),
+    ('H4 3P-a: an occupied class root is found only after the claim', H4QUAL,
+     '    if os.path.lexists(classes_root):\n        raise QualificationRefused(f"{classes_root} is occupied',
+     '    if False:\n        raise QualificationRefused(f"{classes_root} is occupied',
+     f"{T_H4PP}::test_the_qualification_REFUSES_a_bad_destination_and_WRITES_NOTHING[occupied_classes]"),
+    ('H4 3P-a: the record directory is claimed before the destination checks', H4QUAL,
+     '    if os.path.lexists(out_dir):\n        raise QualificationRefused(f"{out_dir} is occupied; the record is create-only")',
+     '    os.makedirs(out_dir, exist_ok=True)\n    if False:\n        raise QualificationRefused(f"{out_dir} is occupied; the record is create-only")',
+     f"{T_H4PP}::test_the_qualification_REFUSES_a_bad_destination_and_WRITES_NOTHING[classes_in_repo]"),
 ]
 
 # ═══════════════════════════ THE EXPECTED REASONS ════════════════════════════
@@ -6660,14 +6689,33 @@ EXPECTED_REASONS = {
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_production_qualification.QualificationUnauthorized'>",
     'H4 3P-a: the qualification CLI exits 4 with its gate shut':
         "AssertionError: exit 4, 'the H4 production qualification is UNAUTHORIZED. Nothing was loaded, compiled or written.\\n'",
+    # RE-RECORDED 2026-09-24: its test now asserts (result, failing stage) together.
     'H4 3P-a: two different compiles pass the qualification':
-        "AssertionError: assert ('CLEAN' == 'STOP'",
+        "AssertionError: assert ('CLEAN', None) == ('STOP', 'reproducibility')",
+    # RE-RECORDED 2026-09-24: its test now asserts (result, failing stage) together.
     'H4 3P-a: an illegal incumbent move passes the qualification':
-        "AssertionError: assert ('CLEAN' == 'STOP'",
+        "AssertionError: assert ('CLEAN', None) == ('STOP', 'incumbent_move')",
+    # RE-RECORDED 2026-09-24: its test now asserts (result, failing stage) together.
     'H4 3P-a: a pilot CLI that does not refuse passes the qualification':
-        "AssertionError: assert ('CLEAN' == 'STOP'",
+        "AssertionError: assert ('CLEAN', None) == ('STOP', 'pilot_cli')",
     "H4 3P-a: the qualification does not use the pilot's header function":
         "AssertionError: the qualification's bound identity is not the pilot header function's",
     'H4 3P-a: the qualification compiles inside the repository':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_production_qualification.QualificationRefused'>",
+    # ── 2026-09-24: 3P-a correction (card §12.2.1). RECORDED under .venv (pytest 9.0.2),
+    # harvested in a disposable worktree before commit.
+    'H4 3P-a: completed stages are not written to the stage log':
+        "AssertionError: assert [] == ['incumbent_i..., 'compile_a']",
+    'H4 3P-a: a STOP record drops the completed stages':
+        "TypeError: 'NoneType' object is not subscriptable",
+    'H4 3P-a: a STOP does not name its failing stage':
+        "AssertionError: assert ('STOP', None) == ('STOP', 'checkpoint')",
+    'H4 3P-a: an unexpected failure does not name its stage':
+        "AssertionError: assert ('STOP', None) == ('STOP', 'compile_b')",
+    "H4 3P-a: a compile's local fields are not recorded":
+        "KeyError: 'local'",
+    'H4 3P-a: an occupied class root is found only after the claim':
+        "FileExistsError: [Errno 17] File exists: '/private/<tmp>/pytest-of-<user>/pytest-<n>/test_the_qualification_REFUSES0/cls'",
+    'H4 3P-a: the record directory is claimed before the destination checks':
+        'AssertionError: the record directory is claimed only after every check',
 }

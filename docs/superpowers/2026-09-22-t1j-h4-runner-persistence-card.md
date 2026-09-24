@@ -516,6 +516,32 @@ Result is **CLEAN** or **STOP**, recorded create-only under
 **not evidence of strength**, and committed. A STOP is a result; nothing is
 repaired and rerun without a new authorization.
 
+#### 12.2.1 ⚠ AMENDED 2026-09-24 (before any 3P-b run) — a STOP keeps what was observed
+
+The 3P-a implementation (`4f96644`) created the evidence directory **after** the
+checkpoint check, the incumbent move and both compiles, and on a STOP wrote
+`checks: null`. So a second compile that differed would have left a one-shot
+record **without the first compile's class hashes** or any completed check —
+exactly what investigating that STOP needs. Corrected, before 3P-b runs:
+
+* **Order.** Gate → destination checks (record directory free; class root outside
+  the repository and free) → **claim the record directory, create-only** → only
+  then the first effectful stage. A closed gate or an occupied / misplaced
+  destination still writes **nothing**.
+* **Every completed stage is durable before the next begins.** Each is appended
+  to a create-only **`stages.jsonl`** in the record directory, flushed and fsynced:
+  `incumbent_identity`, `checkpoint`, `incumbent_move`, `compile_a`, `compile_b`
+  (each compile's content **and** local fields), `reproducibility`, `pilot_cli`,
+  `bound_identity`. A killed run leaves a truthful prefix.
+* **A STOP retains everything before it.** `record.json` carries the result, the
+  **failing stage** and its **reason**, and the observations of **every completed
+  stage** (also when the failure is an unexpected exception inside a stage). A
+  CLEAN record carries all of them.
+* **Tests:** a second-compile mismatch and a later pilot-CLI failure each leave
+  the earlier observations intact — `compile_a`'s class hashes included — in both
+  `stages.jsonl` and `record.json`; an interrupted run leaves the stage-log prefix
+  and no `record.json`; a closed gate or an occupied destination writes nothing.
+
 ### 12.3 How the final identities enter the manifests (step 4)
 
 The manifests are written **only after 3P-b is CLEAN and committed**, and every

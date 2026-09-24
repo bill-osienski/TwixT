@@ -19,8 +19,12 @@ failure:
   6. the bound identity (code, cards, T1j runtime content, incumbent identity) is
      built by the SAME function the pilot's header uses.
 
-The result is CLEAN or STOP, written create-only and marked NOT evidence of
-strength. A STOP is a result: nothing is repaired and rerun here.
+The record directory is claimed, create-only, BEFORE the first of these runs, and
+each completed stage is appended to `stages.jsonl` and fsynced before the next
+begins (card §12.2.1): a STOP keeps every earlier observation, the failing stage
+and its reason; a kill keeps a truthful prefix. The result is CLEAN or STOP,
+marked NOT evidence of strength. A STOP is a result: nothing is repaired and
+rerun here.
 """
 from __future__ import annotations
 
@@ -70,22 +74,56 @@ def _pilot_cli_refuses(tmp: str) -> int:
     return r.returncode
 
 
-def _checks(classes_root: str) -> Dict[str, Any]:
+#: Card §12.2.1: the stages, in order; each is durable before the next begins.
+STAGES = ("incumbent_identity", "checkpoint", "incumbent_move", "compile_a", "compile_b",
+          "reproducibility", "pilot_cli", "bound_identity")
+
+
+class _StageLog:
+    """Create-only `stages.jsonl`: each completed stage appended, flushed and
+    fsynced BEFORE the next stage runs, so a STOP -- or a kill -- keeps it."""
+
+    def __init__(self, path: str):
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+        self._f = os.fdopen(fd, "w", encoding="utf-8")
+        self.completed: Dict[str, Any] = {}
+        self.current: Optional[str] = None
+
+    def begin(self, stage: str) -> None:
+        self.current = stage
+
+    def done(self, stage: str, observation: Any) -> None:
+        self._f.write(json.dumps({"stage": stage, "observation": observation},
+                                 sort_keys=True) + "\n")
+        self._f.flush()
+        os.fsync(self._f.fileno())
+        self.completed[stage] = observation
+        self.current = None
+
+    def close(self) -> None:
+        self._f.close()
+
+
+def _checks(classes_root: str, log: _StageLog) -> None:
     from .game.twixt_state import TwixtState
-    got: Dict[str, Any] = {}
+    log.begin("incumbent_identity")
     config = R.frozen_argmax_config()
     identity = R.frozen_incumbent_identity(config, design=DESIGN)
     try:
         R.check_incumbent_identity(identity, config, design=DESIGN)
     except R.H4RunError as e:
         _stop(f"incumbent identity: {e}")
-    got["incumbent_identity"] = identity
+    log.done("incumbent_identity", identity)
+
+    log.begin("checkpoint")
     try:
         evaluator = R.load_production_evaluator(identity)
     except R.H4RunError as e:
         _stop(f"checkpoint: {e}")
-    got["checkpoint"] = {"reference": identity["reference"],
-                         "reference_sha1": identity["reference_sha1"]}
+    log.done("checkpoint", {"reference": identity["reference"],
+                            "reference_sha1": identity["reference_sha1"]})
+
+    log.begin("incumbent_move")
     task = R.make_schedule([("h4-production-qualification", SEED, SEED - 1)],
                            mode="fixture", reference=identity)[0]
     state = TwixtState(active_size=A.BOARD_N, to_move="red")
@@ -93,28 +131,37 @@ def _checks(classes_root: str) -> Dict[str, Any]:
     move = tuple(move) if move is not None else None
     if move is None or move not in set(state.legal_moves()):
         _stop(f"the incumbent returned {move}, not a legal empty-board move")
-    got["incumbent_move"] = list(move)
-    identities = []
-    for leaf in ("compile-a", "compile-b"):
+    log.done("incumbent_move", list(move))
+
+    compiled = {}
+    for stage, leaf in (("compile_a", "compile-a"), ("compile_b", "compile-b")):
+        log.begin(stage)
         paths = R._verified_t1j_paths(os.path.join(classes_root, leaf))
         R.check_destinations(os.path.join(classes_root, "unused-out"), paths.classes,
                              mode="pilot")
         deadline = D1.Deadline(limit_s=COMPILE_DEADLINE_S)
         deadline.start()
         with D1._supervisor(deadline):
-            identities.append(R.split_toolchain(D1._default_compile(deadline, paths=paths)))
-    (a, local_a), (b, local_b) = identities
+            content, local = R.split_toolchain(D1._default_compile(deadline, paths=paths))
+        compiled[stage] = content
+        log.done(stage, {"content": content, "local": local})
+
+    log.begin("reproducibility")
+    a, b = compiled["compile_a"], compiled["compile_b"]
     if a != b:
         diff = sorted(k for k in a if a[k] != b[k])
         _stop(f"the helper does not compile reproducibly: {diff} differ between two "
               f"compiles, so class hashes cannot be bound in advance")
-    got["t1j_local"] = [local_a, local_b]
+    log.done("reproducibility", {"identical": True})
+
+    log.begin("pilot_cli")
     rc = _pilot_cli_refuses(classes_root)
     if rc != R.EXIT_UNAUTHORIZED:
         _stop(f"the pilot CLI exited {rc}, not {R.EXIT_UNAUTHORIZED}, with its gate shut")
-    got["pilot_cli_exit"] = rc
-    got["bound"] = R.bound_identity(identity, a)
-    return got
+    log.done("pilot_cli", {"exit": rc})
+
+    log.begin("bound_identity")
+    log.done("bound_identity", R.bound_identity(identity, a))
 
 
 def _write_create_only(path: str, obj: Dict[str, Any]) -> None:
@@ -127,6 +174,8 @@ def _write_create_only(path: str, obj: Dict[str, Any]) -> None:
 
 
 def _qualify(out_dir: str, classes_root: str) -> Dict[str, Any]:
+    """Card §12.2.1: every refusal BEFORE the claim; the record directory claimed
+    BEFORE the first effectful stage; the stage log durable stage by stage."""
     if os.path.lexists(out_dir):
         raise QualificationRefused(f"{out_dir} is occupied; the record is create-only")
     if R._inside(pathlib.Path(classes_root), R.REPO_ROOT):
@@ -134,18 +183,24 @@ def _qualify(out_dir: str, classes_root: str) -> Dict[str, Any]:
                                    f"{classes_root}")
     if os.path.lexists(classes_root):
         raise QualificationRefused(f"{classes_root} is occupied; compiles are create-only")
-    os.makedirs(classes_root)
+    os.mkdir(out_dir)                             # THE CLAIM: create-only, before any stage
+    log = _StageLog(os.path.join(out_dir, "stages.jsonl"))
     try:
-        checks, result, reason = _checks(classes_root), "CLEAN", None
-    except _Stop as e:
-        checks, result, reason = None, "STOP", str(e)
-    except Exception as e:                        # noqa: BLE001 -- any failure is a STOP, recorded
-        checks, result, reason = None, "STOP", f"{type(e).__name__}: {e}"
-    record = {"record": "H4_PRODUCTION_QUALIFICATION", "result": result, "reason": reason,
-              "checks": checks, "evidence_note": "NOT evidence of strength: no game was "
-              "played and no outcome exists", "seed": SEED,
+        os.makedirs(classes_root)
+        try:
+            _checks(classes_root, log)
+            result, failing, reason = "CLEAN", None, None
+        except _Stop as e:
+            result, failing, reason = "STOP", log.current, str(e)
+        except Exception as e:                    # noqa: BLE001 -- any failure is a STOP, recorded
+            result, failing, reason = "STOP", log.current, f"{type(e).__name__}: {e}"
+    finally:
+        log.close()
+    record = {"record": "H4_PRODUCTION_QUALIFICATION", "result": result,
+              "failing_stage": failing, "reason": reason, "checks": log.completed,
+              "stages": list(STAGES), "evidence_note": "NOT evidence of strength: no game "
+              "was played and no outcome exists", "seed": SEED,
               "written_at": datetime.datetime.now(datetime.timezone.utc).isoformat()}
-    os.makedirs(out_dir)
     _write_create_only(os.path.join(out_dir, "record.json"), record)
     return record
 

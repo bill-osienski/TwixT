@@ -10,6 +10,7 @@ and every one of them stops BEFORE any incumbent is built.
 """
 import ast
 import json
+import os
 import pathlib
 import shutil
 import subprocess
@@ -433,6 +434,8 @@ def qual_open(monkeypatch):
 
     def comp(deadline, *, paths):
         box["n"] += 1
+        if box.get("raise_on") == box["n"]:
+            raise box["exc"]
         return dict(FAKE_TOOLCHAIN, classes_dir=paths.classes,
                     classes=box["classes"][box["n"] - 1] or FAKE_TOOLCHAIN["classes"])
     monkeypatch.setattr(Q.D1, "_default_compile", comp)
@@ -441,48 +444,113 @@ def qual_open(monkeypatch):
     return box
 
 
+def stage_log(rec_dir):
+    return [json.loads(l) for l in (rec_dir / "stages.jsonl").read_text().splitlines()]
+
+
 def test_a_CLEAN_qualification_records_the_bound_identity_from_the_PILOTS_function(
         tmp_path, qual_open):
     rec = Q.qualify(str(tmp_path / "rec"), str(tmp_path / "cls"))
-    assert rec["result"] == "CLEAN", rec["reason"]
+    assert (rec["result"], rec["failing_stage"]) == ("CLEAN", None), rec["reason"]
     assert json.loads((tmp_path / "rec" / "record.json").read_text()) == \
         json.loads(json.dumps(rec))
     cfg, ident = _identity()
     content = {k: FAKE_TOOLCHAIN[k] for k in R.TOOLCHAIN_CONTENT}
-    assert rec["checks"]["bound"] == R.bound_identity(ident, content), \
+    checks = rec["checks"]
+    assert checks["bound_identity"] == R.bound_identity(ident, content), \
         "the qualification's bound identity is not the pilot header function's"
-    assert rec["checks"]["pilot_cli_exit"] == R.EXIT_UNAUTHORIZED
-    assert rec["checks"]["incumbent_move"] == [0, 4] and qual_open["n"] == 2
+    assert checks["pilot_cli"] == {"exit": R.EXIT_UNAUTHORIZED}
+    assert checks["incumbent_move"] == [0, 4] and qual_open["n"] == 2
     assert "NOT evidence of strength" in rec["evidence_note"]
+    log = stage_log(tmp_path / "rec")
+    assert [e["stage"] for e in log] == list(Q.STAGES) == list(checks)
+    assert all(e["observation"] == json.loads(json.dumps(checks[e["stage"]])) for e in log)
 
 
-@pytest.mark.parametrize("fault,match", [
-    ({"classes": [{}, {"E3bDump.class": "e" * 64}]}, "does not compile reproducibly"),
-    ({"move": (0, 0)}, "not a legal empty-board move"),
-    ({"sha1": "0" * 40}, "checkpoint")])
-def test_a_failed_check_is_a_recorded_STOP(tmp_path, qual_open, fault, match):
+@pytest.mark.parametrize("fault,stage,match", [
+    ({"classes": [{}, {"E3bDump.class": "e" * 64}]}, "reproducibility",
+     "does not compile reproducibly"),
+    ({"move": (0, 0)}, "incumbent_move", "not a legal empty-board move"),
+    ({"sha1": "0" * 40}, "checkpoint", "checkpoint")])
+def test_a_failed_check_is_a_recorded_STOP_that_KEEPS_every_earlier_stage(
+        tmp_path, qual_open, fault, stage, match):
     qual_open.update(fault)
     rec = Q.qualify(str(tmp_path / "rec"), str(tmp_path / "cls"))
-    assert rec["result"] == "STOP" and match in rec["reason"]
-    assert rec["checks"] is None
-    assert (tmp_path / "rec" / "record.json").exists()
+    assert (rec["result"], rec["failing_stage"]) == ("STOP", stage)
+    assert match in rec["reason"]
+    before = list(Q.STAGES[:Q.STAGES.index(stage)])
+    assert list(rec["checks"]) == before, "every completed stage, and only those"
+    assert [e["stage"] for e in stage_log(tmp_path / "rec")] == before
+    assert json.loads((tmp_path / "rec" / "record.json").read_text())["failing_stage"] == stage
 
 
-@pytest.mark.parametrize("where", ["occupied_record", "classes_in_repo"])
-def test_the_qualification_REFUSES_a_bad_destination_before_anything(tmp_path, qual_open,
-                                                                    where):
+def test_a_SECOND_COMPILE_MISMATCH_keeps_the_FIRST_compiles_class_hashes(tmp_path,
+                                                                        qual_open):
+    """Card §12.2.1, the case that motivated it: both compiles' hashes survive."""
+    first, second = {"E3bDump.class": "1" * 64}, {"E3bDump.class": "2" * 64}
+    qual_open["classes"] = [first, second]
+    rec = Q.qualify(str(tmp_path / "rec"), str(tmp_path / "cls"))
+    assert (rec["result"], rec["failing_stage"]) == ("STOP", "reproducibility")
+    on_disk = json.loads((tmp_path / "rec" / "record.json").read_text())
+    for where in (rec["checks"], on_disk["checks"],
+                  {e["stage"]: e["observation"] for e in stage_log(tmp_path / "rec")}):
+        assert where["compile_a"]["content"]["classes"] == first, \
+            "the first compile's class hashes were lost"
+        assert where["compile_b"]["content"]["classes"] == second
+        assert where["compile_a"]["local"]["classes_dir"].endswith("compile-a")
+        assert {"incumbent_identity", "checkpoint", "incumbent_move"} <= set(where)
+
+
+def test_a_later_PILOT_CLI_failure_keeps_everything_before_it(tmp_path, qual_open,
+                                                              monkeypatch):
+    monkeypatch.setattr(Q, "_pilot_cli_refuses", lambda tmp: 0)
+    rec = Q.qualify(str(tmp_path / "rec"), str(tmp_path / "cls"))
+    assert (rec["result"], rec["failing_stage"]) == ("STOP", "pilot_cli")
+    assert "the pilot CLI exited 0" in rec["reason"]
+    assert list(rec["checks"]) == list(Q.STAGES[:Q.STAGES.index("pilot_cli")])
+    assert rec["checks"]["compile_a"]["content"]["classes"] == FAKE_TOOLCHAIN["classes"]
+    assert [e["stage"] for e in stage_log(tmp_path / "rec")] == list(rec["checks"])
+
+
+def test_an_UNEXPECTED_exception_inside_a_stage_is_a_STOP_naming_that_stage(tmp_path,
+                                                                           qual_open):
+    qual_open.update(raise_on=2, exc=OSError("disk vanished"))
+    rec = Q.qualify(str(tmp_path / "rec"), str(tmp_path / "cls"))
+    assert (rec["result"], rec["failing_stage"]) == ("STOP", "compile_b")
+    assert rec["reason"] == "OSError: disk vanished"
+    assert "compile_a" in rec["checks"] and "compile_b" not in rec["checks"]
+
+
+def test_an_INTERRUPTED_run_leaves_the_stage_log_prefix_and_no_record(tmp_path, qual_open):
+    """Durable stage by stage: a kill mid-compile keeps what was done."""
+    qual_open.update(raise_on=2, exc=KeyboardInterrupt())
+    with pytest.raises(KeyboardInterrupt):
+        Q.qualify(str(tmp_path / "rec"), str(tmp_path / "cls"))
+    assert [e["stage"] for e in stage_log(tmp_path / "rec")] == list(Q.STAGES[:4])
+    assert not (tmp_path / "rec" / "record.json").exists()
+
+
+@pytest.mark.parametrize("where", ["occupied_record", "classes_in_repo", "occupied_classes"])
+def test_the_qualification_REFUSES_a_bad_destination_and_WRITES_NOTHING(tmp_path, qual_open,
+                                                                       where):
     rec, cls = tmp_path / "rec", tmp_path / "cls"
     if where == "occupied_record":
         rec.mkdir()
+    elif where == "occupied_classes":
+        cls.mkdir()
     else:
         cls = ROOT / "never-created-h4-classes"
-    with pytest.raises(Q.QualificationRefused):
-        Q.qualify(str(rec), str(cls))
-    assert qual_open["n"] == 0 and not (ROOT / "never-created-h4-classes").exists()
-
-
-def test_a_pilot_CLI_that_does_not_refuse_is_a_recorded_STOP(tmp_path, qual_open,
-                                                             monkeypatch):
-    monkeypatch.setattr(Q, "_pilot_cli_refuses", lambda tmp: 0)
-    rec = Q.qualify(str(tmp_path / "rec"), str(tmp_path / "cls"))
-    assert rec["result"] == "STOP" and "the pilot CLI exited 0" in rec["reason"]
+    try:
+        with pytest.raises(Q.QualificationRefused):
+            Q.qualify(str(rec), str(cls))
+        assert qual_open["n"] == 0 and not (ROOT / "never-created-h4-classes").exists()
+    finally:
+        # a DEFECT under test may create it inside the repository; it must not
+        # outlive this test and contaminate the next (it did, in a shared checkout)
+        shutil.rmtree(ROOT / "never-created-h4-classes", ignore_errors=True)
+    if where == "occupied_record":
+        assert os.listdir(rec) == [] and not cls.exists()
+    else:
+        assert not rec.exists(), "the record directory is claimed only after every check"
+    if where == "occupied_classes":
+        assert os.listdir(cls) == []
