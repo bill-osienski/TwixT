@@ -36,6 +36,34 @@ first version (`808ae60`) is quoted, not rewritten away:**
    each block excluded **by identity** (v15's rule), and both runs are committed
    with the registration.
 
+6. **The repo-literal term excludes THIS reservation's own records — by exact
+   path, pinned here.** *(Added 2026-09-24 after v16's pre-registration run came
+   back NOT CLEAN, `c9d4f5a`; that run is preserved as
+   `02a_collision_proof_v16_pre_run_NOT_CLEAN.txt`.)* The failed rule, §5, said:
+   *"every nine-digit `2026…` literal in `scripts/`, `tests/`,
+   `docs/superpowers/` outside a registered interval is a prior term"*. The
+   survey's own committed output and v16's own output list the candidate blocks,
+   so the rule counted the proposal's paperwork as a prior reservation and could
+   never pass. Corrected: literals are prior terms from **every file except
+   exactly these seven**, and from every other file still — the check that found
+   `202630000` and `202699000` is kept:
+
+   ```text
+   docs/superpowers/2026-09-24-t1j-h4-step4-seed-card.md
+   docs/superpowers/evidence/2026-09-24-t1j-h4-step4-collision-survey/01_collision_survey.py
+   docs/superpowers/evidence/2026-09-24-t1j-h4-step4-collision-survey/02_collision_survey_run.txt
+   docs/superpowers/evidence/2026-09-24-t1j-h4-seed-registration/01_collision_proof_v16.py
+   docs/superpowers/evidence/2026-09-24-t1j-h4-seed-registration/01b_collision_proof_v16_amended.py
+   docs/superpowers/evidence/2026-09-24-t1j-h4-seed-registration/02a_collision_proof_v16_pre_run_NOT_CLEAN.txt
+   docs/superpowers/evidence/2026-09-24-t1j-h4-seed-registration/02b_collision_proof_v16_pre_run.txt
+   ```
+
+   An added negative control copies a candidate seed literal into an **unrelated
+   file** and requires the block to be **rejected**, so the exclusion cannot
+   widen unseen. The re-run is **create-only** (its output file may not exist) and
+   carries all 13 earlier controls plus that one; if it is not CLEAN, nothing is
+   registered.
+
 It rests on the runner card (`2026-09-22-t1j-h4-runner-persistence-card.md` §12:
 the production path and its qualification) and the analysis card
 (`2026-09-23-t1j-h4-analysis-card.md` §0.1: what a manifest binds). 3P-b ran once
@@ -171,6 +199,7 @@ against the registries as they stand then.
   least the candidate's own size away. **Added:** the five candidates are checked
   against **each other**, and every nine-digit `2026…` literal in `scripts/`,
   `tests/`, `docs/superpowers/` outside a registered interval is a prior term
+  (**except in the seven pinned files of amendment 6**)
   (68 found, mostly exclusive interval ends; notably `202630000` in a test and
   `202699000` in the H4 fixture tests — both avoided).
 * **Result:** all five candidates **CLEAN** — no direct or derived-stream
