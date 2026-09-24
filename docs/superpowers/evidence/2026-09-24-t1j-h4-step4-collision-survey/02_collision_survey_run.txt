@@ -1,0 +1,41 @@
+H4 STEP 4 -- READ-ONLY COLLISION SURVEY (not the proof)
+==================================================================
+masks (imported): ['0x3c3c3c', '0x5a5a5a', '0xa5a5a5', '0xc3c3c3']
+    ACCOUNTED             6988
+    EXPOSED               2342
+    RETIRED               3980
+    TEST_ONLY              100
+    CONSUMED_SEEDS           1
+    NAMED_SPENT           3657
+    REPO_LITERALS           68
+    GEN_RANGE_0          59200
+    GEN_RANGE_1          59200
+    GEN_RANGE_2          59200
+    GEN_RANGE_3         118400
+    repo literals outside every registered interval: [202610188, 202611400, 202612512, 202612999, 202613064, 202613224, 202613999, 202614227, 202614447, 202614448, 202614776, 202614777, 202614997, 202614999, 202615221, 202615227, 202615324, 202615441, 202615445, 202616224, 202616225, 202616447, 202616448, 202616449, 202617224, 202617225, 202617264, 202617777, 202617960, 202617961, 202617999, 202618736, 202618737, 202619264, 202619471, 202619472, 202619473, 202619777, 202619999, 202620736, 202620737, 202621118, 202621264, 202621471, 202621472, 202621473, 202621777, 202621999, 202622736, 202622737, 202622775, 202622776, 202622777, 202623960, 202623961, 202623999, 202624040, 202624079, 202624631, 202624632, 202625223, 202626592, 202626739, 202626740, 202626887, 202628148, 202630000, 202699000]
+
+H4_PILOT             (202632000, 202632032)  n= 32  direct=NONE  streams=0  injective=True  gap=1968 (floor 32)  CLEAN=True
+H4_STUDY_SEGMENT_0   (202634000, 202634148)  n=148  direct=NONE  streams=0  injective=True  gap=1852 (floor 148)  CLEAN=True
+H4_STUDY_SEGMENT_1   (202636000, 202636148)  n=148  direct=NONE  streams=0  injective=True  gap=1852 (floor 148)  CLEAN=True
+H4_STUDY_SEGMENT_2   (202638000, 202638148)  n=148  direct=NONE  streams=0  injective=True  gap=1852 (floor 148)  CLEAN=True
+H4_STUDY_SEGMENT_3   (202640000, 202640148)  n=148  direct=NONE  streams=0  injective=True  gap=1852 (floor 148)  CLEAN=True
+
+total seeds: 624 = pilot 32 + 4 x 148
+
+NEGATIVE CONTROLS -- each must be REJECTED
+------------------------------------------------------------------
+  REJECTED     H3 segment-0 replacement block (spent)  (202628000, 202628148)
+  REJECTED     H3's retired segment-0 quarter  (202626000, 202626148)
+  REJECTED     the H3 pilot block  (202624000, 202624040)
+  REJECTED     H2 attempt-3 block  (202622000, 202622736)
+  REJECTED     D1's paper reservation  (202615000, 202615221)
+  REJECTED     the TEST_ONLY band  (90009000, 90009100)
+  REJECTED     the literal 202630000 in tests/test_h1_viability.py  (202630000, 202630032)
+  REJECTED     the literal 202699000 in tests/test_h4_runner.py  (202699000, 202699032)
+  REJECTED     overlaps H4 segment 0 by one seed  (202634147, 202634295)
+  REJECTED     starts where H4 segment 0 ends -- inside the floor  (202634148, 202634296)
+  REJECTED     one seed inside segment 0's floor  (202634295, 202634443)
+  REJECTED     inside the live H3 uniform generation range  (20261600000, 20261600148)
+
+controls rejected: 12/12
+SURVEY VERDICT   : ALL FIVE CANDIDATES CLEAN
