@@ -64,6 +64,35 @@ first version (`808ae60`) is quoted, not rewritten away:**
    carries all 13 earlier controls plus that one; if it is not CLEAN, nothing is
    registered.
 
+7. **Literals are judged by PROVENANCE, occurrence by occurrence.** *(Added
+   2026-09-24 after the post-registration run came back NOT CLEAN, `a2b2b02`;
+   preserved as `03_collision_proof_v16_post_run.txt`. The five blocks stay
+   registered.)* Amendment 6's scanner (a) dropped every value falling inside
+   `ACCOUNTED_SEED_INTERVALS`, **globally** — so after registration a candidate
+   seed copied into ANY file was silently ignored (the post run's 14th control
+   shows `direct={}`: it was rejected only through the gap), and (b) counted each
+   new registry line's **exclusive end** (`hi`, outside `[lo, hi)`) as a stray
+   seed beside its own block. Corrected:
+   * a literal is exempt **only at its specific occurrence** as an element of a
+     `(lo, hi)` tuple inside one of the four registry assignments of
+     `e4_screen_reference.py` (`ACCOUNTED_…`, `EXPOSED_…`, `RETIRED_…`,
+     `TEST_ONLY_SEED_INTERVALS`), located by parsing that file — **the same number
+     anywhere else still counts**, in any file, inside a registered interval or
+     not; **no value is exempt globally**, interval ends included;
+   * or it occurs in one of the pinned own records — amendment 6's seven, plus
+     `01c_collision_proof_v16_provenance.py`,
+     `03_collision_proof_v16_post_run.txt` and
+     `03b_collision_proof_v16_post_run.txt` (**ten**, exact paths, same directory
+     as the other v16 files);
+   * **new controls, in both modes:** a candidate seed copied into an unrelated
+     real file must fail the candidate **on the literal itself** (direct
+     `REPO_LITERALS` overlap), and an exclusive end copied into an unrelated file
+     must fail it **on the gap to that literal** — each checked differentially
+     against the same block without the copy, which must be CLEAN. The existing
+     stray-literal controls stay.
+   The post run is repeated **create-only** as `03b` after these controls pass;
+   if it is not CLEAN, 4b stops again.
+
 It rests on the runner card (`2026-09-22-t1j-h4-runner-persistence-card.md` §12:
 the production path and its qualification) and the analysis card
 (`2026-09-23-t1j-h4-analysis-card.md` §0.1: what a manifest binds). 3P-b ran once
