@@ -448,6 +448,24 @@ ACCOUNTED_SEED_INTERVALS = (
                                      # Accounted, NOT exposed and NOT retired.
                                      # Registering it does not open the gate:
                                      # H3_STUDY_EXECUTION_AUTHORIZED stays False.
+    # 🔴 H4 -- FIVE BLOCKS, registered 2026-09-24 (step 4b) by the BOUND step-4
+    # card §2 (`2026-09-24-t1j-h4-step4-seed-card.md`). One seed per game; pair k
+    # gets lo+2k (Arm A) and lo+2k+1 (Arm B). Registered ONLY after collision proof
+    # v16 (amended, card amendment 6) was CLEAN against the PRE-registration
+    # registries, 14/14 controls rejected
+    # (evidence/2026-09-24-t1j-h4-seed-registration/02b_*). Its first pre-run was
+    # NOT CLEAN on a self-referential literal term (02a, preserved).
+    #
+    # 🔴 USE IS NOT RECORDED HERE UNTIL H4 CLOSES (card §2.1): this file is hashed
+    # into H4's `code`, so an EXPOSED/RETIRED edit between runs would void the
+    # study manifests. Until then each run's occupied create-only evidence
+    # directory is its use record; ONE closing edit derives exposure/retirement.
+    # Accounted, NOT exposed and NOT retired. No gate is opened by this.
+    (202632000, 202632032),          # H4 PILOT            -- 16 pairs, 32 seeds
+    (202634000, 202634148),          # H4 STUDY SEGMENT 0  -- 74 pairs, 148 seeds
+    (202636000, 202636148),          # H4 STUDY SEGMENT 1  -- 74 pairs, 148 seeds
+    (202638000, 202638148),          # H4 STUDY SEGMENT 2  -- 74 pairs, 148 seeds
+    (202640000, 202640148),          # H4 STUDY SEGMENT 3  -- 74 pairs, 148 seeds
 )
 
 #: EXPERIMENTAL EXPOSURE: seeds drawn from OUTSIDE the permanently unschedulable
