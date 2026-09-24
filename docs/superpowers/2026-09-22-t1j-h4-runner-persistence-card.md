@@ -483,8 +483,9 @@ edit of a committed manifest or a silent reuse of the reserved seeds.**
    the **committed manifest** and refuse — after compiling, before any game or T1j
    JVM — unless the header it is about to write equals its manifest entry field by
    field. A run the analysis would refuse is never played.
-7. The pilot's existing gate stays the only door to games. **A new closed gate for
-   the qualification run** (§12.2) is proposed, making **seventeen**, because 3P-b
+7. The pilot's existing gate stays the only door to games (moved out of the
+   hashed runner by §12.6.2). **A new closed gate for the qualification run**
+   (§12.2) is proposed, making **seventeen** (✅ created by §12.6.2), because 3P-b
    spawns `javac` from the verified JDK and loads the checkpoint — each earlier
    stage that touched the external toolchain took its own reviewed authorization.
 
@@ -537,6 +538,11 @@ separately authorized set.
 
 ### 12.4 Open decision — for the reviewer, not taken here
 
+✅ **DECIDED 2026-09-23: widen `code`** — and five or eight named files were not
+enough (the reviewer found `twixtbot_g3_reference.py` also loads `eval_runner`,
+`local_evaluator`, `probe_eval`, `eval_readout` and `mcts`). See **§12.6**. The
+original question is kept below.
+
 ⚠ **The `code` field covers five modules** (analysis card §0.1). It does **not**
 cover the incumbent's own play path (`twixtbot_g3_reference.py`,
 `e4_screen_reference.py`), the evaluator loader (`e4_screen_command.py`), the
@@ -545,6 +551,140 @@ compile and toolchain checks (`d1_probe.py`, `t1j_toolchain.py`) or
 the incumbent identity's settings and checkpoint hash, and by the toolchain
 content hashes. Whether to widen `code` must be decided **before 3P-a**, because
 it changes what the header records and what the manifest binds.
+
+### 12.6 AMENDMENT with the 3P-a authorization (2026-09-23) — the code list and the gates
+
+Authorized together with 3P-a. Two changes to what the header binds, written
+here **before** any 3P-a code.
+
+#### 12.6.1 `code` is an explicit, reviewed list — the whole first-party play path
+
+* **What is in it:** every first-party file (under `scripts/`) reachable by
+  **import at any depth** — module level **and inside functions** — from the two
+  roots `h4_runner.py` (the play path) and `h4_production_qualification.py` (the
+  3P-b qualification), plus the `__init__.py` of every package on the way (they
+  execute on import), **minus the two gate modules of §12.6.2**.
+* **Deliberately conservative.** An import reached only by a function the pilot
+  never calls is still in the list: whether a reachable module can affect a move
+  is a judgement, and a list that needs a judgement to stay complete will not.
+  The cost is that editing any listed file after step 4 voids the manifests.
+* **Frozen HERE and in the code, equal by test.** The list below is the reviewed
+  one; `h4_runner.CODE` must equal it, and a test **recomputes the import closure
+  from source** (AST, every `import`/`from` at any depth, relative imports
+  resolved) and requires it to equal `CODE` exactly. A new first-party import
+  anywhere on the path — or a removed one — fails that test until this card and
+  `CODE` are updated together. A dynamic import (`importlib.import_module`,
+  `__import__`) on the path is refused outright, because the walk cannot follow
+  it. A clean-baseline control plants a function-level import of a new module in
+  a copy of the package and shows the closure grows.
+* **Not covered, and stated:** third-party packages (numpy, MLX) and the Python
+  interpreter; the Java toolchain (bound by its content hashes, §12.1 item 5); the
+  checkpoint (bound by the loader's sha1 pin and the incumbent identity); data
+  files the code reads (the L0 plan is sha256-verified by `load_l0_plan`).
+
+The list (`CODE`), as derived and reviewed at 3P-a — **37 files**:
+
+<!-- H4-CODE-LIST-BEGIN -->
+```text
+scripts/GPU/__init__.py
+scripts/GPU/alphazero/__init__.py
+scripts/GPU/alphazero/d0_postmortem.py
+scripts/GPU/alphazero/d1_probe.py
+scripts/GPU/alphazero/d1_selection.py
+scripts/GPU/alphazero/e4_screen_command.py
+scripts/GPU/alphazero/e4_screen_integration.py
+scripts/GPU/alphazero/e4_screen_reference.py
+scripts/GPU/alphazero/e4_screen_rules.py
+scripts/GPU/alphazero/e4_screen_runner.py
+scripts/GPU/alphazero/eval_integrity.py
+scripts/GPU/alphazero/eval_readout.py
+scripts/GPU/alphazero/eval_replay.py
+scripts/GPU/alphazero/eval_runner.py
+scripts/GPU/alphazero/evaluator.py
+scripts/GPU/alphazero/fpu_state_hash.py
+scripts/GPU/alphazero/game/__init__.py
+scripts/GPU/alphazero/game/twixt_state.py
+scripts/GPU/alphazero/h2_match_plan.py
+scripts/GPU/alphazero/h2_match_rules.py
+scripts/GPU/alphazero/h2_match_runner.py
+scripts/GPU/alphazero/h4_4a_characterization.py
+scripts/GPU/alphazero/h4_production_qualification.py
+scripts/GPU/alphazero/h4_repair_qualification.py
+scripts/GPU/alphazero/h4_runner.py
+scripts/GPU/alphazero/l0_match_plan.py
+scripts/GPU/alphazero/l0_match_rules.py
+scripts/GPU/alphazero/local_evaluator.py
+scripts/GPU/alphazero/mcts.py
+scripts/GPU/alphazero/network.py
+scripts/GPU/alphazero/opening_diagnostics.py
+scripts/GPU/alphazero/probe_eval.py
+scripts/GPU/alphazero/t1j_adapter.py
+scripts/GPU/alphazero/t1j_toolchain.py
+scripts/GPU/alphazero/twixtbot_g3_reference.py
+scripts/GPU/alphazero/twixtbot_g3_schedule.py
+scripts/GPU/alphazero/void_trace.py
+```
+<!-- H4-CODE-LIST-END -->
+
+⚠ This replaces the five-module `code` of analysis card §0.1 (that card is
+amended to point here). If implementing 3P-a changes the closure, the list above
+is corrected **in the same commit, with the difference named** — never silently.
+
+#### 12.6.2 The gates leave the hashed files
+
+`H4_PILOT_EXECUTION_AUTHORIZED` lived **inside `h4_runner.py`**. A manifest
+committed while it read `False` would stop matching the moment the one-line
+opening commit set it `True` — the gate itself would void the run it opens.
+
+* It moves to **`scripts/GPU/alphazero/h4_pilot_authorization.py`**. The 3P-b gate,
+  **`H4_PRODUCTION_QUALIFICATION_AUTHORIZED`** (the **seventeenth**, created
+  CLOSED), lives in **`scripts/GPU/alphazero/h4_production_qualification_authorization.py`**,
+  for the same reason: the qualification module is in `code`.
+* **Each gate module is constrained to its declaration:** a docstring and ONE
+  module-level assignment of a bool to its gate name — no import, no function, no
+  class, no other statement. A test parses each and refuses anything else, so play
+  logic cannot move into an unbound file; a control plants a function there.
+* **Neither gate module is in `code`**, and the closure test requires exactly
+  these two to be the excluded files.
+* **Both runner entry points still read the pilot gate** — `run_games` and `main`
+  — as a module attribute **at call time** (`AUTH.H4_PILOT_EXECUTION_AUTHORIZED`),
+  never `from … import`, which would freeze a copy at import. Same for the
+  qualification's entries. No override: not argv, environment or file.
+* The gate inventory moves the pilot gate's entry to its new file and adds the
+  seventeenth.
+
+#### 12.6.3 Two implementation details of §12.1, fixed before the code
+
+* **Binding happens twice.** Everything not needing a compile — design, segment,
+  schedule digest, seeds, incumbent identity, cards, code and the frozen runtime
+  scalars — is compared with the manifest entry **before any destination is
+  claimed** (a plain refusal; nothing written). The toolchain content (class
+  hashes need the compile) is compared **after compiling and before the first
+  game**; a mismatch there is a **VOID** (`unexpected`), because the destination
+  is already claimed and the qualified reproducibility said it could not happen.
+* **The toolchain split is exhaustive.** `CONTENT` = `jar_sha256`,
+  `jdk_components`, `sources`, `classes`, `main_class`; `LOCAL` = `toolchain`,
+  `jar`, `jdk_home`, `classes_dir`. The compile identity must have **exactly**
+  their union, so a new field cannot slip into either side unclassified.
+* In pilot and study mode **the toolchain paths are not accepted either** — they
+  are a seam too. The runner resolves `java` and the jar from the **verified
+  toolchain itself**, after the pre-binding checks; the caller names only the
+  (create-only, outside-the-repository) class directory. *(Found while harvesting
+  the 3P-a controls: with `paths` passed in, the CLI resolved the toolchain before
+  `run_games` read its gate.)*
+* In pilot and study mode the schedule is **read from the manifest entry**, not
+  passed separately; tests of those modes use placeholder positive seeds `1 … n`
+  (outside every registered block) and every such test stops **before any
+  incumbent is built**.
+
+#### 12.6.4 Frozen names (3P-a)
+
+```text
+pilot gate           scripts/GPU/alphazero/h4_pilot_authorization.py
+qualification gate   scripts/GPU/alphazero/h4_production_qualification_authorization.py  (17th, CLOSED)
+qualification        scripts/GPU/alphazero/h4_production_qualification.py
+tests                tests/test_h4_production_path.py (+ the existing runner and analysis files)
+```
 
 ### 12.5 What this amendment does not do
 

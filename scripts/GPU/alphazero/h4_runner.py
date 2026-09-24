@@ -21,9 +21,15 @@ THAT exception's type -- never by reading a message (card §3.4).
 canonical results file and in exports DERIVED from it after the run; stdout,
 stderr and the progress trace never carry them, and the runner computes no score.
 
-🔴 STEP 2 RUNS FIXTURES ONLY: negative synthetic seeds, a stub incumbent, header
-`H4_SYNTHETIC_FIXTURE` with `evidence: false`. Pilot and study modes refuse, because
-the production incumbent seam is built under the pilot's own authorization.
+🔴 FIXTURE MODE: negative synthetic seeds, a stub incumbent, header
+`H4_SYNTHETIC_FIXTURE` with `evidence: false`.
+
+🔴 PILOT AND STUDY MODE (step 3P-a, card §12): the PRODUCTION incumbent -- built
+ONCE from the frozen argmax sources, its identity read off that object -- with no
+injected seam of any kind; the schedule READ FROM THE COMMITTED MANIFEST; the
+header bound to the manifest entry twice, before any destination is claimed and
+again after compiling, before the first game. The gate lives in
+`h4_pilot_authorization.py`, OUTSIDE this hashed file (card §12.6.2).
 """
 from __future__ import annotations
 
@@ -46,12 +52,12 @@ from .d1_probe import D1Error, D1VoidError, Deadline, T1jPaths, _supervisor
 from .d1_probe import _default_compile as _compile_helper_verified
 from .e4_screen_runner import AbortError, PHASE_BIND, PHASE_MOVE
 
-#: THE H4 PILOT IS NOT AUTHORIZED. Changing this is a reviewed one-line code
-#: change. Read directly at BOTH public entries -- `run_games` and `main` -- in
-#: EVERY mode, fixture included: a fixture run with a real process boundary would
-#: launch real JVMs, so no mode is a way around the gate. No override exists: not
-#: argv, not the environment, not a configuration file, not an import hook.
-H4_PILOT_EXECUTION_AUTHORIZED = False
+#: THE H4 PILOT IS NOT AUTHORIZED. The gate is `AUTH.H4_PILOT_EXECUTION_AUTHORIZED`,
+#: in its own unhashed module (card §12.6.2), read AS AN ATTRIBUTE AT CALL TIME at
+#: BOTH public entries -- `run_games` and `main` -- in EVERY mode, fixture
+#: included: a fixture run with a real process boundary would launch real JVMs.
+#: No override exists: not argv, not the environment, not a file, not an import hook.
+from . import h4_pilot_authorization as AUTH
 
 #: Card §2: the §4B-qualified runtime, READ, never retyped.
 DEPTH = H4RQ.DEPTH
@@ -77,9 +83,62 @@ CARDS = ("docs/superpowers/2026-09-22-t1j-h4-runner-persistence-card.md",
          "docs/superpowers/2026-09-22-t1j-h4-4b-acceptance-qualification-card.md",
          "docs/superpowers/2026-09-21-t1j-h4-replacement-card.md",
          "docs/superpowers/2026-09-23-t1j-h4-analysis-card.md")
-CODE = tuple(f"scripts/GPU/alphazero/{m}" for m in (
-    "h4_runner.py", "e4_screen_integration.py", "t1j_adapter.py", "e4_screen_runner.py",
-    "h2_match_rules.py"))
+#: 🔴 Card §12.6.1: EVERY first-party file reachable by import at any depth from
+#: this runner and the 3P-b qualification, package `__init__`s included, minus the
+#: two gate modules. Explicit and reviewed; a test recomputes the closure from
+#: source and requires equality with this tuple AND with the card's list.
+CODE = (
+    "scripts/GPU/__init__.py",
+    "scripts/GPU/alphazero/__init__.py",
+    "scripts/GPU/alphazero/d0_postmortem.py",
+    "scripts/GPU/alphazero/d1_probe.py",
+    "scripts/GPU/alphazero/d1_selection.py",
+    "scripts/GPU/alphazero/e4_screen_command.py",
+    "scripts/GPU/alphazero/e4_screen_integration.py",
+    "scripts/GPU/alphazero/e4_screen_reference.py",
+    "scripts/GPU/alphazero/e4_screen_rules.py",
+    "scripts/GPU/alphazero/e4_screen_runner.py",
+    "scripts/GPU/alphazero/eval_integrity.py",
+    "scripts/GPU/alphazero/eval_readout.py",
+    "scripts/GPU/alphazero/eval_replay.py",
+    "scripts/GPU/alphazero/eval_runner.py",
+    "scripts/GPU/alphazero/evaluator.py",
+    "scripts/GPU/alphazero/fpu_state_hash.py",
+    "scripts/GPU/alphazero/game/__init__.py",
+    "scripts/GPU/alphazero/game/twixt_state.py",
+    "scripts/GPU/alphazero/h2_match_plan.py",
+    "scripts/GPU/alphazero/h2_match_rules.py",
+    "scripts/GPU/alphazero/h2_match_runner.py",
+    "scripts/GPU/alphazero/h4_4a_characterization.py",
+    "scripts/GPU/alphazero/h4_production_qualification.py",
+    "scripts/GPU/alphazero/h4_repair_qualification.py",
+    "scripts/GPU/alphazero/h4_runner.py",
+    "scripts/GPU/alphazero/l0_match_plan.py",
+    "scripts/GPU/alphazero/l0_match_rules.py",
+    "scripts/GPU/alphazero/local_evaluator.py",
+    "scripts/GPU/alphazero/mcts.py",
+    "scripts/GPU/alphazero/network.py",
+    "scripts/GPU/alphazero/opening_diagnostics.py",
+    "scripts/GPU/alphazero/probe_eval.py",
+    "scripts/GPU/alphazero/t1j_adapter.py",
+    "scripts/GPU/alphazero/t1j_toolchain.py",
+    "scripts/GPU/alphazero/twixtbot_g3_reference.py",
+    "scripts/GPU/alphazero/twixtbot_g3_schedule.py",
+    "scripts/GPU/alphazero/void_trace.py",
+)
+#: Card §12.6.2: the ONLY files on the path left out of `code`.
+GATE_MODULES = ("scripts/GPU/alphazero/h4_pilot_authorization.py",
+                "scripts/GPU/alphazero/h4_production_qualification_authorization.py")
+
+#: Analysis card §0.1: the header fields a manifest entry binds.
+MANIFEST_BOUND = ("schedule_digest", "seeds", "incumbent_identity", "t1j_runtime", "cards",
+                  "code")
+#: Card §12.1 item 5, §12.6.3: the compile identity, split EXHAUSTIVELY into what
+#: ran (bound) and where it ran (recorded in `t1j_local`, never bound).
+TOOLCHAIN_CONTENT = ("jar_sha256", "jdk_components", "sources", "classes", "main_class")
+TOOLCHAIN_LOCAL = ("toolchain", "jar", "jdk_home", "classes_dir")
+#: Replacement card §5.4: the per-segment hard deadline.
+SEGMENT_DEADLINE_S = 14_400
 
 #: Card §3.4: the §6 categories, and nothing else.
 CLASSIFICATIONS = ("timeout", "adapter_refusal", "unreadable_output", "replay_mismatch",
@@ -230,6 +289,151 @@ def transcript_digest_of(plies: Sequence[Mapping[str, Any]], result: Mapping[str
                        {"plies": result["plies"], "terminal_reason": result["terminal_reason"],
                         "winner": result["winner"]}, opening_bound=0)
     return H2R.transcript_digest(t)
+
+
+# ─────────────────────── the header and its binding (§3.1, §12) ───────────────────────
+
+def split_toolchain(identity: Mapping[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """(content, local). The compile identity must have EXACTLY these fields."""
+    want = set(TOOLCHAIN_CONTENT) | set(TOOLCHAIN_LOCAL)
+    if set(identity) != want:
+        raise H4RunError(f"the compile identity's fields {sorted(identity)} are not exactly "
+                         f"the classified {sorted(want)} (card §12.6.3)")
+    return ({k: identity[k] for k in TOOLCHAIN_CONTENT},
+            {k: identity[k] for k in TOOLCHAIN_LOCAL})
+
+
+def bound_identity(incumbent_identity: Mapping[str, Any],
+                   toolchain_content: Optional[Mapping[str, Any]]) -> Dict[str, Any]:
+    """The bound fields that do not depend on the schedule. `code` and `cards` are
+    hashed from the files NOW -- the state that is about to play."""
+    return {"incumbent_identity": dict(incumbent_identity),
+            "t1j_runtime": {"toolchain": (dict(toolchain_content)
+                                          if toolchain_content is not None else None),
+                            "depth": DEPTH, "query_timeout_s": QUERY_TIMEOUT_S,
+                            "replay_timeout_s": REPLAY_TIMEOUT_S, "ply_cap": PLY_CAP,
+                            "h4_acceptance": True},
+            "cards": {c: _sha256_or_none(REPO_ROOT / c) for c in CARDS},
+            "code": {m: _sha256_or_none(REPO_ROOT / m) for m in CODE}}
+
+
+def header_candidate(*, mode: str, segment: int, schedule: Sequence[Mapping[str, Any]],
+                     incumbent_identity: Mapping[str, Any],
+                     toolchain_content: Optional[Mapping[str, Any]]) -> Dict[str, Any]:
+    return {"record_type": "header", "design": DESIGNS[mode], "evidence": mode != "fixture",
+            "segment": segment, "schedule_digest": schedule_digest(schedule),
+            "seeds": [t["seed"] for t in schedule],
+            **bound_identity(incumbent_identity, toolchain_content)}
+
+
+def _canon(v: Any) -> str:
+    """Type-strict comparison form: 1 and 1.0, True and 1 differ."""
+    return json.dumps(v, sort_keys=True, separators=(",", ":"))
+
+
+def binding_differences(header: Mapping[str, Any], entry: Mapping[str, Any], *,
+                        stage: str, with_toolchain: bool) -> List[str]:
+    """The fields in which the header does not equal its manifest entry."""
+    bad = [f for f, want in (("design", stage), ("segment", entry.get("segment")))
+           if header.get(f) != want]
+    for f in MANIFEST_BOUND:
+        got, want = header.get(f), entry.get(f)
+        if f == "t1j_runtime" and not with_toolchain:
+            got = {k: v for k, v in (got or {}).items() if k != "toolchain"}
+            want = {k: v for k, v in want.items() if k != "toolchain"} \
+                if isinstance(want, dict) else want
+        if _canon(got) != _canon(want):
+            bad.append(f)
+    return bad
+
+
+def manifest_entry(manifest: str, *, mode: str, segment: int) -> Dict[str, Any]:
+    try:
+        with open(manifest, encoding="utf-8") as fh:
+            m = json.load(fh)
+    except (OSError, ValueError) as e:
+        raise H4RunError(f"manifest {manifest} is unreadable: {e}") from None
+    if not isinstance(m, dict) or m.get("stage") != DESIGNS[mode]:
+        raise H4RunError(f"{manifest} is not a {DESIGNS[mode]} manifest")
+    entries = m.get("segments")
+    if not isinstance(entries, list) or not 0 <= segment < len(entries) \
+            or entries[segment].get("segment") != segment:
+        raise H4RunError(f"{manifest} has no entry for segment {segment}")
+    return entries[segment]
+
+
+# ───────────────────── the production incumbent (§2, §12.1) ─────────────────────
+
+def frozen_argmax_config():
+    """THE ONE construction of the configuration the incumbent plays under, from
+    the upstream sources -- the qualified reference path's eval config with H2's
+    selection mode. The seam carries THIS object; the identity is read off it."""
+    from . import twixtbot_g3_reference as G3
+    cfg = G3.eval_config()
+    return cfg.__class__(**{**cfg.__dict__, "selection_mode": H2R.SELECTION_MODE})
+
+
+def frozen_incumbent_identity(config, *, design: str) -> Dict[str, Any]:
+    """H2's frozen argmax identity, read off THE OBJECT THAT WILL PLAY."""
+    from . import e4_screen_reference as REF
+    from . import h2_match_runner as H2RUN
+    ident = dict(H2RUN.frozen_incumbent_identity())
+    ident["argmax_config"] = {f: getattr(config, f)
+                              for f in REF.frozen_settings()["eval_config"]}
+    ident["design"] = design
+    return ident
+
+
+def check_incumbent_identity(identity: Mapping[str, Any], config, *, design: str) -> None:
+    """The object against the qualified path, `selection_mode`, then the whole
+    recorded identity against the frozen one -- type-strictly."""
+    from . import h2_match_runner as H2RUN
+    want = frozen_incumbent_identity(config, design=design)
+    try:
+        H2RUN._same(want["argmax_config"],
+                    {**want["eval_config"], **want["inert_under_argmax"]}, "argmax_config")
+    except H2RUN.H2VoidError as e:
+        raise H4RunError(f"the configuration that would play disagrees with the "
+                         f"qualified path's frozen settings: {e}") from None
+    if (identity.get("eval_config") or {}).get("selection_mode") != H2R.SELECTION_MODE:
+        raise H4RunError(f"the incumbent identity's selection_mode is not "
+                         f"{H2R.SELECTION_MODE!r}")
+    try:
+        H2RUN._same(dict(identity), want, "incumbent_identity")
+    except H2RUN.H2VoidError as e:
+        raise H4RunError(str(e)) from None
+
+
+def load_production_evaluator(identity: Mapping[str, Any]):
+    """The qualified loader (it recomputes the checkpoint's sha1 against its pin),
+    then the loaded object's tags against THIS identity."""
+    from . import e4_screen_command as SCREEN_CMD
+    ev = SCREEN_CMD._default_load_evaluator(str(REPO_ROOT))
+    got = (getattr(ev, "_g3_reference", None), getattr(ev, "_g3_sha1", None))
+    if got != (identity["reference"], identity["reference_sha1"]):
+        raise H4RunError(f"the loaded evaluator is {got}, not the identity's "
+                         f"({identity['reference']}, {identity['reference_sha1']})")
+    return ev
+
+
+def production_incumbent_build(config) -> Callable:
+    """Builds the incumbent for a task from THE config object -- never a fresh one."""
+    from . import e4_screen_reference as REF
+    from . import twixtbot_g3_reference as G3
+
+    def build(task, evaluator=None):
+        return G3.build_reference_agent(task=task, evaluator=evaluator,
+                                        colour=REF.reference_colour(task), config=config)
+    build.config = config
+    return build
+
+
+def _verified_t1j_paths(classes: str) -> T1jPaths:
+    """The VERIFIED toolchain's java and jar; the class directory is an output."""
+    from . import t1j_toolchain as TC
+    tc = TC.verified_paths()
+    return T1jPaths(java=os.path.join(tc["jdk_home"], "bin", "java"), jar=tc["jar"],
+                    classes=classes, ply_cap=PLY_CAP)
 
 
 # ───────────────────────── classification (§3.4, §6) ─────────────────────────
@@ -454,25 +658,33 @@ def _trace(fh, obj: Mapping[str, Any]) -> None:
     os.fsync(fh.fileno())
 
 
-def run_games(*, mode: str, schedule: Sequence[Mapping[str, Any]], out_dir: str,
-              paths: T1jPaths, deadline_s: float,
+def run_games(*, mode: str, out_dir: str, deadline_s: float,
+              paths: Optional[T1jPaths] = None, classes: Optional[str] = None,
+              schedule: Optional[Sequence[Mapping[str, Any]]] = None,
+              manifest: Optional[str] = None,
               incumbent_build: Optional[Callable] = None, evaluator: Any = None,
               incumbent_identity: Optional[Mapping[str, Any]] = None, segment: int = 0,
               _compile: Optional[Callable] = None,
               _now: Callable[[], float] = time.monotonic) -> Dict[str, Any]:
     """PUBLIC ENTRY. Refuses while the gate is shut, in EVERY mode."""
-    if not H4_PILOT_EXECUTION_AUTHORIZED:
+    if not AUTH.H4_PILOT_EXECUTION_AUTHORIZED:
         raise H4RunError("the H4 pilot is UNAUTHORIZED. Nothing has been built, "
                          "compiled, played or written.")
+    if mode not in DESIGNS:
+        raise H4RunError(f"unknown mode {mode!r}; one of {sorted(DESIGNS)}")
+    if mode != "fixture":
+        return _production(mode=mode, out_dir=out_dir, classes=classes,
+                           deadline_s=deadline_s, manifest=manifest, segment=segment,
+                           _now=_now,
+                           injected={"paths": paths, "schedule": schedule,
+                                     "incumbent_build": incumbent_build,
+                                     "evaluator": evaluator,
+                                     "incumbent_identity": incumbent_identity,
+                                     "_compile": _compile})
+    if manifest is not None or classes is not None or paths is None:
+        raise H4RunError("fixture mode takes stub paths and binds to no manifest")
     check_schedule(schedule, mode=mode)
     check_destinations(out_dir, paths.classes, mode=mode)
-    if mode != "fixture":
-        # 🔴 STEP 2 BUILDS NO PRODUCTION INCUMBENT SEAM. Accepting an injected
-        # incumbent here would let a STUB play under a RESEARCH seed and write
-        # records labelled evidence. The seam -- frozen argmax config, identity read
-        # off the object that plays -- is bound by the pilot's own authorization.
-        raise H4RunError(f"{mode} mode is not runnable at step 2: the production "
-                         f"incumbent seam is built under the pilot's own authorization")
     if incumbent_build is None or incumbent_identity is None:
         raise H4RunError("fixture mode needs the STUB incumbent and its identity")
     if _compile is None:
@@ -483,8 +695,48 @@ def run_games(*, mode: str, schedule: Sequence[Mapping[str, Any]], out_dir: str,
                           segment=segment, _compile=_compile, _now=_now)
 
 
+def _production(*, mode, out_dir, classes, deadline_s, manifest, segment, _now, injected):
+    """Card §12.1: pilot and study mode. NO injected seam -- not even the toolchain
+    paths, which are resolved HERE from the verified toolchain; the schedule comes
+    from the committed manifest; every bound field that needs no compile is checked
+    BEFORE any destination is claimed, the toolchain resolved or the checkpoint
+    loaded."""
+    seams = sorted(k for k, v in injected.items() if v is not None)
+    if seams:
+        raise H4RunError(f"{mode} mode accepts no injected seam, got {seams}: an entry "
+                         f"that accepts its own seams is not a gate (card §12.1)")
+    if manifest is None or classes is None:
+        raise H4RunError(f"{mode} mode plays only a committed manifest's schedule, "
+                         f"into a named class directory")
+    entry = manifest_entry(manifest, mode=mode, segment=segment)
+    schedule = entry.get("schedule")
+    check_schedule(schedule, mode=mode)
+    config = frozen_argmax_config()
+    identity = frozen_incumbent_identity(config, design=DESIGNS[mode])
+    check_incumbent_identity(identity, config, design=DESIGNS[mode])
+    wrong_ref = [t["task_id"] for t in schedule
+                 if (t.get("reference"), t.get("reference_sha1"))
+                 != (identity["reference"], identity["reference_sha1"])]
+    if wrong_ref:
+        raise H4RunError(f"tasks {wrong_ref[:3]} name another incumbent reference")
+    head = header_candidate(mode=mode, segment=segment, schedule=schedule,
+                            incumbent_identity=identity, toolchain_content=None)
+    bad = binding_differences(head, entry, stage=DESIGNS[mode], with_toolchain=False)
+    if bad:
+        raise H4RunError(f"the run would not bind to its manifest: {bad} differ. Nothing "
+                         f"was claimed, loaded, compiled or played.")
+    paths = _verified_t1j_paths(classes)
+    check_destinations(out_dir, paths.classes, mode=mode)
+    evaluator = load_production_evaluator(identity)
+    return _run_unguarded(mode=mode, schedule=schedule, out_dir=out_dir, paths=paths,
+                          deadline_s=deadline_s,
+                          incumbent_build=production_incumbent_build(config),
+                          evaluator=evaluator, incumbent_identity=identity,
+                          segment=segment, _compile=None, _now=_now, entry=entry)
+
+
 def _run_unguarded(*, mode, schedule, out_dir, paths, deadline_s, incumbent_build,
-                   evaluator, incumbent_identity, segment, _compile, _now):
+                   evaluator, incumbent_identity, segment, _compile, _now, entry=None):
     t_start = _now()
     os.makedirs(out_dir, exist_ok=True)           # the FILES below are create-only
     results = Results(os.path.join(out_dir, "results.jsonl"))
@@ -508,18 +760,18 @@ def _run_unguarded(*, mode, schedule, out_dir, paths, deadline_s, incumbent_buil
         with _supervisor(deadline):
             where["stage"] = "compile"
             compile_fn = _compile or (lambda d: _compile_helper_verified(d, paths=paths))
-            identity = compile_fn(deadline)
-            results.emit({"record_type": "header", "design": DESIGNS[mode],
-                          "evidence": mode != "fixture", "segment": segment,
-                          "schedule_digest": schedule_digest(schedule),
-                          "seeds": [t["seed"] for t in schedule],
-                          "incumbent_identity": dict(incumbent_identity),
-                          "t1j_runtime": {"toolchain": identity, "depth": DEPTH,
-                                          "query_timeout_s": QUERY_TIMEOUT_S,
-                                          "replay_timeout_s": REPLAY_TIMEOUT_S,
-                                          "ply_cap": PLY_CAP, "h4_acceptance": True},
-                          "cards": {c: _sha256_or_none(REPO_ROOT / c) for c in CARDS},
-                          "code": {m: _sha256_or_none(REPO_ROOT / m) for m in CODE}})
+            content, local = split_toolchain(compile_fn(deadline))
+            header = header_candidate(mode=mode, segment=segment, schedule=schedule,
+                                      incumbent_identity=incumbent_identity,
+                                      toolchain_content=content)
+            if entry is not None:
+                bad = binding_differences(header, entry, stage=DESIGNS[mode],
+                                          with_toolchain=True)
+                if bad:
+                    raise H4RunVoid("unexpected", f"after compiling, the header does not "
+                                    f"bind to its manifest: {bad} differ. No game was "
+                                    f"played (card §12.6.3)")
+            results.emit({**header, "t1j_local": local})
             setup_s = _now() - t_start
             _trace(trace, {"event": "run_start", "n_games": len(schedule),
                            "design": DESIGNS[mode]})
@@ -704,17 +956,27 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap = argparse.ArgumentParser(prog="h4_runner",
                                  description="H4 pilot/study runner. IT IS NOT AUTHORIZED.")
     ap.add_argument("--mode", choices=("pilot", "study"), required=True)
-    ap.add_argument("--schedule", required=True)
+    ap.add_argument("--manifest", required=True)
+    ap.add_argument("--segment", type=int, required=True)
     ap.add_argument("--out-dir", required=True)
     ap.add_argument("--classes", required=True)
     a = ap.parse_args(argv)
-    if not H4_PILOT_EXECUTION_AUTHORIZED:
+    if not AUTH.H4_PILOT_EXECUTION_AUTHORIZED:
         print("the H4 pilot is UNAUTHORIZED. No JVM was started, nothing was played, "
               "and no file was written.", file=sys.stderr)
         return EXIT_UNAUTHORIZED
-    print("refused: the production incumbent seam is bound by the pilot's own "  # pragma: no cover
-          "authorization, not by this CLI", file=sys.stderr)
-    return EXIT_REFUSED                                                          # pragma: no cover
+    try:
+        out = run_games(mode=a.mode, manifest=a.manifest, segment=a.segment,
+                        out_dir=a.out_dir, classes=a.classes,
+                        deadline_s=SEGMENT_DEADLINE_S)
+    except H4RunVoid as e:
+        print(f"VOID: {e}", file=sys.stderr)
+        return EXIT_VOID
+    except (H4RunError, D1Error) as e:
+        print(f"REFUSED: {e}", file=sys.stderr)
+        return EXIT_REFUSED
+    print(f"complete: {out['games_completed']} games -> {out['results']}")
+    return EXIT_OK
 
 
 if __name__ == "__main__":                                                        # pragma: no cover

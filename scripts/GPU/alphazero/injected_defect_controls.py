@@ -101,6 +101,11 @@ T_H4B = "tests/test_h4_4b_acceptance_qualification.py"
 # ── H4 runner (step 2, 2026-09-23)
 H4RUN = "scripts/GPU/alphazero/h4_runner.py"
 T_H4RUN = "tests/test_h4_runner.py"
+# ── H4 step 3P-a (2026-09-23): the production path, gates out of the hashed files
+H4AUTH = "scripts/GPU/alphazero/h4_pilot_authorization.py"
+H4QAUTH = "scripts/GPU/alphazero/h4_production_qualification_authorization.py"
+H4QUAL = "scripts/GPU/alphazero/h4_production_qualification.py"
+T_H4PP = "tests/test_h4_production_path.py"
 # ── H4 analysis (step 3, 2026-09-23)
 H4F = "scripts/GPU/alphazero/h4_pilot_feasibility.py"
 H4D = "scripts/GPU/alphazero/h4_pilot_decision.py"
@@ -4044,7 +4049,7 @@ DEFECTS = [
      '                  else (lambda d: {"stub": True}))',
      f"{T_H4B}::test_the_DEFAULT_route_refuses_an_OCCUPIED_class_directory"),
     # ── H4 runner, step 2 (2026-09-23): each guard of the runner card, deleted.
-    ('H4 runner: the pilot gate ships OPEN', H4RUN,
+    ('H4 runner: the pilot gate ships OPEN', H4AUTH,
      'H4_PILOT_EXECUTION_AUTHORIZED = False\n',
      'H4_PILOT_EXECUTION_AUTHORIZED = True\n',
      f"{T_H4RUN}::test_the_gate_is_false_as_published"),
@@ -4060,10 +4065,6 @@ DEFECTS = [
      '    if mode == "fixture" and _inside(out, EVIDENCE_ROOT):',
      '    if False:',
      f"{T_H4RUN}::test_FIXTURE_mode_refuses_a_destination_under_the_EVIDENCE_tree"),
-    ('H4 runner: pilot mode runs a stub incumbent at step 2', H4RUN,
-     '    if mode != "fixture":\n        # 🔴 STEP 2 BUILDS',
-     '    if False:\n        # 🔴 STEP 2 BUILDS',
-     f"{T_H4RUN}::test_PILOT_and_STUDY_modes_refuse_at_step_2"),
     ('H4 runner: the original exception is not kept (types flattened)', H4RUN,
      '            except BaseException as e:            # noqa: BLE001 -- kept, re-raised typed\n                stash.keep(e)\n',
      '            except BaseException as e:            # noqa: BLE001 -- kept, re-raised typed\n                pass\n',
@@ -4495,13 +4496,13 @@ DEFECTS = [
     # ── H4 provenance follow-up (2026-09-23, after a6dea80): header code + four
     # cards, k frozen, durability confined to THIS repository, liveness wording.
     ('H4 runner: the header does not hash the Python code', H4RUN,
-     '                          "code": {m: _sha256_or_none(REPO_ROOT / m) for m in CODE}})',
-     '                          })',
-     f"{T_H4RUN}::test_the_HEADER_hashes_the_FOUR_cards_and_the_FIVE_modules"),
+     '            "code": {m: _sha256_or_none(REPO_ROOT / m) for m in CODE}}',
+     '            }',
+     f"{T_H4RUN}::test_the_HEADER_hashes_the_FOUR_cards_and_EVERY_listed_module"),
     ('H4 runner: the header omits the analysis card', H4RUN,
      '         "docs/superpowers/2026-09-21-t1j-h4-replacement-card.md",\n         "docs/superpowers/2026-09-23-t1j-h4-analysis-card.md")',
      '         "docs/superpowers/2026-09-21-t1j-h4-replacement-card.md")',
-     f"{T_H4RUN}::test_the_HEADER_hashes_the_FOUR_cards_and_the_FIVE_modules"),
+     f"{T_H4RUN}::test_the_HEADER_hashes_the_FOUR_cards_and_EVERY_listed_module"),
     ('H4 feasibility: production durability accepts another repository', H4F,
      '            if not R._inside(pathlib.Path(real), R.REPO_ROOT):',
      '            if False:',
@@ -4522,6 +4523,95 @@ DEFECTS = [
      'PREFIX_KS = (1, 2, 3, 4, 5, 6)',
      'PREFIX_KS = (1, 2, 3)',
      f"{T_H4F}::test_a_clean_pilot_is_PROCEED_eligible_and_the_report_is_what_was_written"),
+    # ── H4 step 3P-a (2026-09-23): the production path; each check deleted in turn.
+    ('H4 3P-a: run_games no longer reads the pilot gate', H4RUN,
+     '    if not AUTH.H4_PILOT_EXECUTION_AUTHORIZED:\n        raise H4RunError("the H4 pilot is UNAUTHORIZED.',
+     '    if False:\n        raise H4RunError("the H4 pilot is UNAUTHORIZED.',
+     f"{T_H4PP}::test_PILOT_mode_refuses_while_the_gate_is_shut"),
+    ('H4 3P-a: the CLI no longer reads the pilot gate', H4RUN,
+     '    if not AUTH.H4_PILOT_EXECUTION_AUTHORIZED:\n        print("the H4 pilot is UNAUTHORIZED.',
+     '    if False:\n        print("the H4 pilot is UNAUTHORIZED.',
+     f"{T_H4RUN}::test_the_cli_refuses_in_a_fresh_subprocess"),
+    ('H4 3P-a: the runner freezes a copy of the gate at import', H4RUN,
+     'from . import h4_pilot_authorization as AUTH\n',
+     'from . import h4_pilot_authorization as AUTH\nfrom .h4_pilot_authorization import H4_PILOT_EXECUTION_AUTHORIZED\n',
+     f"{T_H4RUN}::test_the_gate_is_read_at_both_entries_at_CALL_TIME_and_has_no_override"),
+    ('H4 3P-a: play logic moves into the unhashed gate module', H4AUTH,
+     'H4_PILOT_EXECUTION_AUTHORIZED = False\n',
+     'H4_PILOT_EXECUTION_AUTHORIZED = False\n\n\ndef first_move(state):\n    return (0, 4)\n',
+     f"{T_H4PP}::test_each_GATE_MODULE_is_only_its_declaration_and_is_CLOSED[scripts/GPU/alphazero/h4_pilot_authorization.py-H4_PILOT_EXECUTION_AUTHORIZED]"),
+    ('H4 3P-a: the qualification gate ships OPEN', H4QAUTH,
+     'H4_PRODUCTION_QUALIFICATION_AUTHORIZED = False\n',
+     'H4_PRODUCTION_QUALIFICATION_AUTHORIZED = True\n',
+     f"{T_H4PP}::test_the_gates_are_published_CLOSED"),
+    ('H4 3P-a: a play-path file is missing from CODE', H4RUN,
+     '    "scripts/GPU/alphazero/mcts.py",\n',
+     '',
+     f"{T_H4PP}::test_CODE_is_EXACTLY_the_play_path_closure_minus_the_gate_modules"),
+    ('H4 3P-a: pilot mode accepts an injected seam', H4RUN,
+     '    seams = sorted(k for k, v in injected.items() if v is not None)',
+     '    seams = []',
+     f"{T_H4PP}::test_PILOT_mode_accepts_NO_injected_seam[evaluator]"),
+    ('H4 3P-a: the manifest is not bound before anything is claimed', H4RUN,
+     '    if bad:\n        raise H4RunError(f"the run would not bind',
+     '    if False:\n        raise H4RunError(f"the run would not bind',
+     f"{T_H4PP}::test_a_manifest_that_would_not_bind_is_refused_BEFORE_ANYTHING_is_claimed[<lambda>-seeds]"),
+    ('H4 3P-a: the toolchain is not bound after compiling', H4RUN,
+     '                if bad:\n                    raise H4RunVoid("unexpected", f"after compiling',
+     '                if False:\n                    raise H4RunVoid("unexpected", f"after compiling',
+     f"{T_H4PP}::test_a_TOOLCHAIN_that_compiles_differently_VOIDS_before_the_first_game"),
+    ('H4 3P-a: where the toolchain ran is not recorded', H4RUN,
+     '            results.emit({**header, "t1j_local": local})',
+     '            results.emit(header)',
+     f"{T_H4RUN}::test_the_header_binds_toolchain_CONTENT_and_records_LOCATION_apart"),
+    ('H4 3P-a: an unclassified compile field is accepted', H4RUN,
+     '    if set(identity) != want:',
+     '    if False:',
+     f"{T_H4RUN}::test_an_UNCLASSIFIED_compile_identity_is_refused[change0]"),
+    ('H4 3P-a: the recorded identity is not compared with the frozen one', H4RUN,
+     '        H2RUN._same(dict(identity), want, "incumbent_identity")',
+     '        pass',
+     f"{T_H4PP}::test_a_TAMPERED_identity_is_refused_type_strictly[<lambda>0]"),
+    ("H4 3P-a: the evaluator's checkpoint tags are not checked", H4RUN,
+     '    if got != (identity["reference"], identity["reference_sha1"]):',
+     '    if False:',
+     f"{T_H4PP}::test_the_evaluator_must_carry_THE_identitys_checkpoint"),
+    ('H4 3P-a: the builder is handed a fresh config', H4RUN,
+     '                                        colour=REF.reference_colour(task), config=config)',
+     '                                        colour=REF.reference_colour(task), config=frozen_argmax_config())',
+     f"{T_H4PP}::test_the_builder_is_handed_THE_config_object"),
+    ("H4 3P-a: a task may name another incumbent", H4RUN,
+     '    if wrong_ref:',
+     '    if False:',
+     f"{T_H4PP}::test_a_task_naming_ANOTHER_incumbent_is_refused"),
+    ('H4 3P-a: the qualification gate is never read', H4QUAL,
+     '    if not QAUTH.H4_PRODUCTION_QUALIFICATION_AUTHORIZED:\n        raise QualificationUnauthorized(',
+     '    if False:\n        raise QualificationUnauthorized(',
+     f"{T_H4PP}::test_the_QUALIFICATION_refuses_while_its_gate_is_shut"),
+    ('H4 3P-a: the qualification CLI exits 4 with its gate shut', H4QUAL,
+     '        return EXIT_UNAUTHORIZED',
+     '        return EXIT_REFUSED',
+     f"{T_H4PP}::test_the_QUALIFICATION_CLI_exits_5_as_a_fresh_subprocess"),
+    ('H4 3P-a: two different compiles pass the qualification', H4QUAL,
+     '    if a != b:',
+     '    if False:',
+     f"{T_H4PP}::test_a_failed_check_is_a_recorded_STOP[fault0-does not compile reproducibly]"),
+    ('H4 3P-a: an illegal incumbent move passes the qualification', H4QUAL,
+     '    if move is None or move not in set(state.legal_moves()):',
+     '    if False:',
+     f"{T_H4PP}::test_a_failed_check_is_a_recorded_STOP[fault1-not a legal empty-board move]"),
+    ('H4 3P-a: a pilot CLI that does not refuse passes the qualification', H4QUAL,
+     '    if rc != R.EXIT_UNAUTHORIZED:',
+     '    if False:',
+     f"{T_H4PP}::test_a_pilot_CLI_that_does_not_refuse_is_a_recorded_STOP"),
+    ("H4 3P-a: the qualification does not use the pilot's header function", H4QUAL,
+     '    got["bound"] = R.bound_identity(identity, a)',
+     '    got["bound"] = {"t1j_runtime": a}',
+     f"{T_H4PP}::test_a_CLEAN_qualification_records_the_bound_identity_from_the_PILOTS_function"),
+    ('H4 3P-a: the qualification compiles inside the repository', H4QUAL,
+     '    if R._inside(pathlib.Path(classes_root), R.REPO_ROOT):',
+     '    if False:',
+     f"{T_H4PP}::test_the_qualification_REFUSES_a_bad_destination_before_anything[classes_in_repo]"),
 ]
 
 # ═══════════════════════════ THE EXPECTED REASONS ════════════════════════════
@@ -6301,8 +6391,6 @@ EXPECTED_REASONS = {
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_runner.H4RunError'>",
     'H4 runner: fixture mode may write into the evidence tree':
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_runner.H4RunError'>",
-    'H4 runner: pilot mode runs a stub incumbent at step 2':
-        'scripts.GPU.alphazero.h4_runner.H4RunError: fixture mode never compiles for real; pass the stub compile',
     'H4 runner: the original exception is not kept (types flattened)':
         'AssertionError: H4RunVoid("[adapter_refusal] [move] p0-A ply 1: black raised PROC line missing fields [\'pid\']: \'PROC xid=10000003 java_version=17.0.20.1 vm=OpenJDK_64-Bit_Server_VM headless=true prefs_factory=e2probe.ScratchPrefs\'")',
     'H4 runner: an illegal move is raised untyped':
@@ -6535,4 +6623,51 @@ EXPECTED_REASONS = {
         "KeyError: 'process_liveness'",
     'H4 feasibility: prefix frequencies are not the frozen k = 1..6':
         'AssertionError: k = 1..6, frozen by the card',
+    # ── 2026-09-23: H4 step 3P-a. RECORDED under .venv (pytest 9.0.2), harvested in
+    # a disposable worktree before commit; the 119 other H4 + gate-inventory controls
+    # drift-checked against their installed reasons there: none moved.
+    'H4 3P-a: run_games no longer reads the pilot gate':
+        'RuntimeError: SENTINEL: reached the first game',
+    'H4 3P-a: the CLI no longer reads the pilot gate':
+        'AssertionError: REFUSED: the H4 pilot is UNAUTHORIZED. Nothing has been built, compiled, played or written.',
+    'H4 3P-a: the runner freezes a copy of the gate at import':
+        "AssertionError: assert ({'main': Tru..._AUTHORIZED'}) == ({'main': Tru... True}, set())",
+    'H4 3P-a: play logic moves into the unhashed gate module':
+        "AssertionError: assert ['2 statement...eturn (0, 4)'] == []",
+    'H4 3P-a: the qualification gate ships OPEN':
+        'assert True is False',
+    'H4 3P-a: a play-path file is missing from CODE':
+        "AssertionError: assert ['scripts/GPU...zero/mcts.py'] == ['scripts/GPU...orization.py']",
+    'H4 3P-a: pilot mode accepts an injected seam':
+        'RuntimeError: SENTINEL: reached the first game',
+    'H4 3P-a: the manifest is not bound before anything is claimed':
+        "scripts.GPU.alphazero.h4_runner.H4RunVoid: [unexpected] after compiling, the header does not bind to its manifest: ['seeds'] differ. No game was played (card §12.6.3)",
+    'H4 3P-a: the toolchain is not bound after compiling':
+        'RuntimeError: SENTINEL: reached the first game',
+    'H4 3P-a: where the toolchain ran is not recorded':
+        "KeyError: 't1j_local'",
+    'H4 3P-a: an unclassified compile field is accepted':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_runner.H4RunError'>",
+    'H4 3P-a: the recorded identity is not compared with the frozen one':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_runner.H4RunError'>",
+    "H4 3P-a: the evaluator's checkpoint tags are not checked":
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_runner.H4RunError'>",
+    'H4 3P-a: the builder is handed a fresh config':
+        "AssertionError: assert (EvalConfig(board_size=24, mcts_sims=400, mcts_eval_batch_size=14, mcts_stall_flush_sims=48, selection_mode='argmax', opening_temp_plies=20, temp_high=1.0, temp_low=0.1, max_moves=280) is EvalConfig(board_size=24, mcts_sims=400, mcts_eval_batch_size=14, mcts_stall_flush_sims=48, selection_mode='argmax', opening_temp_plies=20, temp_high=1.0, temp_low=0.1, max_moves=280))",
+    'H4 3P-a: a task may name another incumbent':
+        "scripts.GPU.alphazero.h4_runner.H4RunError: the run would not bind to its manifest: ['schedule_digest'] differ. Nothing was claimed, loaded, compiled or played.",
+    'H4 3P-a: the qualification gate is never read':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_production_qualification.QualificationUnauthorized'>",
+    'H4 3P-a: the qualification CLI exits 4 with its gate shut':
+        "AssertionError: exit 4, 'the H4 production qualification is UNAUTHORIZED. Nothing was loaded, compiled or written.\\n'",
+    'H4 3P-a: two different compiles pass the qualification':
+        "AssertionError: assert ('CLEAN' == 'STOP'",
+    'H4 3P-a: an illegal incumbent move passes the qualification':
+        "AssertionError: assert ('CLEAN' == 'STOP'",
+    'H4 3P-a: a pilot CLI that does not refuse passes the qualification':
+        "AssertionError: assert ('CLEAN' == 'STOP'",
+    "H4 3P-a: the qualification does not use the pilot's header function":
+        "AssertionError: the qualification's bound identity is not the pilot header function's",
+    'H4 3P-a: the qualification compiles inside the repository':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_production_qualification.QualificationRefused'>",
 }

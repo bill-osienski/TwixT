@@ -20,6 +20,7 @@ import sys
 import pytest
 
 from scripts.GPU.alphazero import e4_screen_integration as INT
+from scripts.GPU.alphazero import h4_pilot_authorization as AUTH
 from scripts.GPU.alphazero import h4_repair_qualification as Q
 from scripts.GPU.alphazero import h4_runner as R
 from scripts.GPU.alphazero import t1j_adapter as A
@@ -49,6 +50,14 @@ def replay(prefix, *, pid, **kw):
     j = out.index("\n", i)
     flags = "termY=true termX=false" if winner == "red" else "termY=false termX=true"
     return out[:i] + out[i:j].replace("termY=false termX=false", flags) + out[j:]
+
+
+#: The SHAPE of `_default_compile`'s identity (card §12.6.3), with fake values.
+FAKE_TOOLCHAIN = {"jar_sha256": "a" * 64, "jdk_components": {"stub": "b" * 64},
+                  "sources": {"E3bDump.java": "c" * 64},
+                  "classes": {"E3bDump.class": "d" * 64}, "main_class": "E4Preflight",
+                  "toolchain": {"root": "/fake", "source": "stub", "verified": 0},
+                  "jar": "/fake/t1j.jar", "jdk_home": "/fake/jdk", "classes_dir": "/fake/cls"}
 
 
 def stub_incumbent(task, evaluator=None):
@@ -87,7 +96,7 @@ def wire(monkeypatch):
 @pytest.fixture
 def gate_open(monkeypatch):
     """Tests must run in the REAL state: the public entry, gate OPEN."""
-    monkeypatch.setattr(R, "H4_PILOT_EXECUTION_AUTHORIZED", True)
+    monkeypatch.setattr(AUTH, "H4_PILOT_EXECUTION_AUTHORIZED", True)
 
 
 def _paths(tmp_path):
@@ -99,7 +108,7 @@ def run(tmp_path, pairs=(("p0", -1, -2),), name="run", **kw):
     sched = R.make_schedule(pairs, mode="fixture")
     kw.setdefault("incumbent_build", stub_incumbent)
     kw.setdefault("incumbent_identity", {"stub": True})
-    kw.setdefault("_compile", lambda d: {"stub_compile": True})
+    kw.setdefault("_compile", lambda d: dict(FAKE_TOOLCHAIN))
     return R.run_games(mode="fixture", schedule=sched, out_dir=str(tmp_path / name),
                        paths=_paths(tmp_path), deadline_s=600, **kw)
 
@@ -122,7 +131,7 @@ def voided(tmp_path, cls, name="run", **kw):
 # ─────────────────────────────── 1. the gate ───────────────────────────────
 
 def test_the_gate_is_false_as_published():
-    assert R.H4_PILOT_EXECUTION_AUTHORIZED is False
+    assert AUTH.H4_PILOT_EXECUTION_AUTHORIZED is False
 
 
 def test_the_public_entry_refuses_while_the_gate_is_shut(tmp_path, wire):
@@ -134,33 +143,47 @@ def test_the_public_entry_refuses_while_the_gate_is_shut(tmp_path, wire):
 def test_the_cli_refuses_in_a_fresh_subprocess(tmp_path):
     r = subprocess.run(
         [sys.executable, "-m", "scripts.GPU.alphazero.h4_runner", "--mode", "pilot",
-         "--schedule", "s.json", "--out-dir", str(tmp_path / "o"),
+         "--manifest", "m.json", "--segment", "0", "--out-dir", str(tmp_path / "o"),
          "--classes", str(tmp_path / "c")], cwd=ROOT, capture_output=True, text=True)
     assert r.returncode == R.EXIT_UNAUTHORIZED, r.stderr
     assert not (tmp_path / "o").exists() and not (tmp_path / "c").exists()
 
 
-def test_the_gate_is_read_at_both_entries_and_has_no_override():
-    tree = ast.parse(pathlib.Path(R.__file__).read_text(encoding="utf-8"))
+def gate_reads(source):
+    """Per public entry: does it read `AUTH.H4_PILOT_EXECUTION_AUTHORIZED` AS AN
+    ATTRIBUTE (at call time)? Plus any other `_AUTHORIZED` name the module binds."""
+    tree = ast.parse(source)
     fns = {n.name: n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)}
-    for entry in ("run_games", "main"):
-        names = {n.id for n in ast.walk(fns[entry]) if isinstance(n, ast.Name)}
-        assert "H4_PILOT_EXECUTION_AUTHORIZED" in names, entry
-    attrs = {n.attr for n in ast.walk(tree) if isinstance(n, ast.Attribute)}
-    assert not {"environ", "getenv"} & attrs
-    gates = {n.id for n in ast.walk(tree) if isinstance(n, ast.Name)
+    reads = {e: any(isinstance(n, ast.Attribute) and n.attr == "H4_PILOT_EXECUTION_AUTHORIZED"
+                    and isinstance(n.value, ast.Name) and n.value.id == "AUTH"
+                    for n in ast.walk(fns[e])) for e in ("run_games", "main")}
+    bound = {n.id for n in ast.walk(tree) if isinstance(n, ast.Name)
              and n.id.endswith("_AUTHORIZED")}
-    assert gates == {"H4_PILOT_EXECUTION_AUTHORIZED"}
+    bound |= {a.asname or a.name for n in ast.walk(tree) if isinstance(n, ast.ImportFrom)
+              for a in n.names if a.name.endswith("_AUTHORIZED")}
+    return reads, bound
 
 
-def test_PILOT_and_STUDY_modes_refuse_at_step_2(tmp_path, wire, gate_open):
-    for mode in ("pilot", "study"):
-        sched = R.make_schedule([("p", 202699000, 202699001)], mode=mode)
-        with pytest.raises(R.H4RunError, match="not runnable at step 2"):
-            R.run_games(mode=mode, schedule=sched, out_dir=str(tmp_path / mode),
-                        paths=_paths(tmp_path), deadline_s=60,
-                        incumbent_build=stub_incumbent, incumbent_identity={"stub": 1})
-    assert wire["calls"] == []
+def test_the_gate_is_read_at_both_entries_at_CALL_TIME_and_has_no_override():
+    src = pathlib.Path(R.__file__).read_text(encoding="utf-8")
+    assert gate_reads(src) == ({"run_games": True, "main": True}, set())
+    attrs = {n.attr for n in ast.walk(ast.parse(src)) if isinstance(n, ast.Attribute)}
+    assert not {"environ", "getenv"} & attrs
+
+
+@pytest.mark.parametrize("plant", [
+    ("    if not AUTH.H4_PILOT_EXECUTION_AUTHORIZED:\n        raise H4RunError(\"the H4 pilot",
+     "    if False:\n        raise H4RunError(\"the H4 pilot"),
+    ("from . import h4_pilot_authorization as AUTH\n",
+     "from . import h4_pilot_authorization as AUTH\n"
+     "from .h4_pilot_authorization import H4_PILOT_EXECUTION_AUTHORIZED\n")])
+def test_the_gate_walker_is_NOT_VACUOUS(plant):
+    """CLEAN-BASELINE CONTROL: an entry that stops reading the gate, or a copy of
+    the gate frozen at import, is seen."""
+    src = pathlib.Path(R.__file__).read_text(encoding="utf-8")
+    assert src.count(plant[0]) == 1
+    assert gate_reads(src.replace(plant[0], plant[1])) != (
+        {"run_games": True, "main": True}, set())
 
 
 # ─────────────── 2. the schedule, seeds and destinations (§1, §9, §10.1) ───────────────
@@ -247,9 +270,20 @@ def test_a_FIXTURE_PAIR_runs_end_to_end_and_every_record_re_derives(tmp_path, wi
     assert st.winner() == a["result"]["winner"]
 
 
-def test_the_HEADER_hashes_the_FOUR_cards_and_the_FIVE_modules(tmp_path, wire, gate_open):
-    """Card §3.1 (amended after step 3): the paths spelled out HERE, from the card;
-    every value RECOMPUTED from the file on disk."""
+RUNNER_CARD = ROOT / "docs" / "superpowers" / "2026-09-22-t1j-h4-runner-persistence-card.md"
+
+
+def card_code_list():
+    """The reviewed `code` list, read from the CARD (runner card §12.6.1)."""
+    text = RUNNER_CARD.read_text(encoding="utf-8")
+    block = text.split("<!-- H4-CODE-LIST-BEGIN -->", 1)[1].split(
+        "<!-- H4-CODE-LIST-END -->", 1)[0]
+    return [l.strip() for l in block.splitlines() if l.strip().startswith("scripts/")]
+
+
+def test_the_HEADER_hashes_the_FOUR_cards_and_EVERY_listed_module(tmp_path, wire, gate_open):
+    """Card §3.1 / §12.6.1: the card paths spelled out HERE, the code list read from
+    the CARD; every value RECOMPUTED from the file on disk."""
     import hashlib
     run(tmp_path)
     header = R.read_records(results_of(tmp_path))[0]
@@ -257,13 +291,33 @@ def test_the_HEADER_hashes_the_FOUR_cards_and_the_FIVE_modules(tmp_path, wire, g
              "docs/superpowers/2026-09-22-t1j-h4-4b-acceptance-qualification-card.md",
              "docs/superpowers/2026-09-21-t1j-h4-replacement-card.md",
              "docs/superpowers/2026-09-23-t1j-h4-analysis-card.md"]
-    code = [f"scripts/GPU/alphazero/{m}" for m in (
-        "h4_runner.py", "e4_screen_integration.py", "t1j_adapter.py", "e4_screen_runner.py",
-        "h2_match_rules.py")]
+    code = card_code_list()
+    assert len(code) == 37
     for field, paths in (("cards", cards), ("code", code)):
         assert sorted(header[field]) == sorted(paths), field
         for p in paths:
             assert header[field][p] == hashlib.sha256((ROOT / p).read_bytes()).hexdigest(), p
+
+
+def test_the_header_binds_toolchain_CONTENT_and_records_LOCATION_apart(tmp_path, wire,
+                                                                       gate_open):
+    """Card §12.1 item 5: where it ran is recorded, never bound."""
+    run(tmp_path)
+    header = R.read_records(results_of(tmp_path))[0]
+    assert header["t1j_runtime"]["toolchain"] == {k: FAKE_TOOLCHAIN[k]
+                                                  for k in R.TOOLCHAIN_CONTENT}
+    assert header["t1j_local"] == {k: FAKE_TOOLCHAIN[k] for k in R.TOOLCHAIN_LOCAL}
+
+
+@pytest.mark.parametrize("change", [{"extra_field": 1}, "drop"])
+def test_an_UNCLASSIFIED_compile_identity_is_refused(change):
+    ident = dict(FAKE_TOOLCHAIN)
+    if change == "drop":
+        ident.pop("classes")
+    else:
+        ident.update(change)
+    with pytest.raises(R.H4RunError, match="not exactly"):
+        R.split_toolchain(ident)
 
 
 def test_the_viewer_EXPORT_validates_and_is_marked_a_FIXTURE(tmp_path, wire, gate_open):

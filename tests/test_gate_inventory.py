@@ -56,7 +56,14 @@ EXPECTED_GATES = {
     #: riding on §4A's, which qualified a different helper.
     "h4_repair_qualification.py": "H4_REPAIR_QUALIFICATION_AUTHORIZED",
     "h4_4b_acceptance_qualification.py": "H4_4B_ACCEPTANCE_QUALIFICATION_AUTHORIZED",
-    "h4_runner.py": "H4_PILOT_EXECUTION_AUTHORIZED",
+    #: 🔴 MOVED 2026-09-23 (runner card §12.6.2), not added: it lived INSIDE the
+    #: hashed `h4_runner.py`, so the one-line commit opening it would have changed
+    #: the code hash every manifest binds. Its own single-purpose module now.
+    "h4_pilot_authorization.py": "H4_PILOT_EXECUTION_AUTHORIZED",
+    #: 🔴 THE SEVENTEENTH, ADDED 2026-09-23. The 3P-b production-path qualification:
+    #: no game, but it compiles with the verified JDK and loads the checkpoint, and
+    #: like the pilot gate it lives OUTSIDE the hashed module it guards.
+    "h4_production_qualification_authorization.py": "H4_PRODUCTION_QUALIFICATION_AUTHORIZED",
     #: 🔴 THE SIXTEENTH, ADDED 2026-09-23. H4 confirmatory aggregation: the one act
     #: after which an H4 strength number exists. It runs no engine, but it READS
     #: OUTCOMES, so it takes its own reviewed edit -- not the pilot's execution gate
@@ -93,7 +100,7 @@ def test_THE_COUNT_IS_DERIVED_AND_ANY_REPORT_SAYING_OTHERWISE_IS_WRONG():
     #: single deliberate edit, to the dict above.
     assert INVENTORY.gate_count() == len(discover_gates()) == len(EXPECTED_GATES), (
         "the derived inventory and EXPECTED_GATES must agree")
-    assert len(EXPECTED_GATES) == 16, (
+    assert len(EXPECTED_GATES) == 17, (
         "the total moved: add or remove the entry in EXPECTED_GATES above "
         "deliberately, then update this number in the same edit")
 
@@ -132,7 +139,8 @@ def _stale_count_claims(text):
     """
     words = {"two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7,
              "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12,
-             "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16}
+             "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16,
+             "seventeen": 17}
     n = len(EXPECTED_GATES)
     bad = []
     for word, value in words.items():
@@ -176,4 +184,5 @@ def test_THE_STALE_COUNT_GUARD_IS_NOT_VACUOUS():
     assert _stale_count_claims("all thirteen gates are False")  # was right, now stale
     assert _stale_count_claims("all fourteen gates are False")  # was right, now stale
     assert _stale_count_claims("all fifteen gates are False")  # was right, now stale
-    assert not _stale_count_claims("all sixteen gates are False")  # correct total
+    assert _stale_count_claims("all sixteen gates are False")  # was right, now stale
+    assert not _stale_count_claims("all seventeen gates are False")  # correct total

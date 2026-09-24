@@ -19,12 +19,13 @@ import sys
 
 import pytest
 
+from scripts.GPU.alphazero import h4_pilot_authorization as AUTH
 from scripts.GPU.alphazero import h4_pilot_feasibility as F
 from scripts.GPU.alphazero import h4_repair_qualification as Q
 from scripts.GPU.alphazero import h4_runner as R
 from scripts.GPU.alphazero import t1j_adapter as A
 from tests.test_h4_repair_qualification import query_out
-from tests.test_h4_runner import SEQ, replay
+from tests.test_h4_runner import FAKE_TOOLCHAIN, SEQ, replay
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
@@ -58,7 +59,7 @@ def _play(seq, out_dir, cap=None):
 
     with pytest.MonkeyPatch.context() as mp:
         mp.setattr(subprocess, "run", fake_run)
-        mp.setattr(R, "H4_PILOT_EXECUTION_AUTHORIZED", True)
+        mp.setattr(AUTH, "H4_PILOT_EXECUTION_AUTHORIZED", True)
         if cap:
             mp.setattr(R, "PLY_CAP", cap)
         R.run_games(mode="fixture", schedule=R.make_schedule([("t", -1, -2)], mode="fixture"),
@@ -66,7 +67,8 @@ def _play(seq, out_dir, cap=None):
                     paths=R.T1jPaths(java="/j", jar="/x.jar", classes=out_dir + ".cls",
                                      ply_cap=280),
                     incumbent_build=lambda t, evaluator=None: (lambda s: seq[s.ply]),
-                    incumbent_identity={"stub": True}, _compile=lambda d: {"stub": True})
+                    incumbent_identity={"stub": True},
+                    _compile=lambda d: dict(FAKE_TOOLCHAIN))
     return os.path.join(out_dir, "results.jsonl")
 
 
@@ -606,9 +608,9 @@ def test_the_MANIFEST_names_exactly_the_cards_and_code_the_card_names():
         "docs/superpowers/2026-09-22-t1j-h4-4b-acceptance-qualification-card.md",
         "docs/superpowers/2026-09-21-t1j-h4-replacement-card.md",
         "docs/superpowers/2026-09-23-t1j-h4-analysis-card.md"]
-    assert list(F.MANIFEST_CODE) == [f"scripts/GPU/alphazero/{m}" for m in (
-        "h4_runner.py", "e4_screen_integration.py", "t1j_adapter.py", "e4_screen_runner.py",
-        "h2_match_rules.py")]
+    # `code` is the runner's reviewed play-path list (runner card §12.6.1), read,
+    # never retyped; `tests/test_h4_production_path.py` pins it to the card.
+    assert F.MANIFEST_CODE is R.CODE
 
 
 def test_NO_public_entry_can_reach_the_fixture_relaxation():

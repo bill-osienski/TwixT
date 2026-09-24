@@ -82,7 +82,7 @@ unmodified** (§2.1):
 | incumbent | the identity read off the configuration object that will play | `incumbent_identity` |
 | T1j runtime | jar sha256, JDK components, helper sources and compiled classes, depth, both timeouts, `ply_cap`, `h4_acceptance=true` | `t1j_runtime` |
 | cards | sha256 of this card, the runner card, the §4B card and the replacement card | `cards` |
-| code | sha256 of `h4_runner.py`, `e4_screen_integration.py`, `t1j_adapter.py`, `e4_screen_runner.py`, `h2_match_rules.py` | `code` (see ⚠ below) |
+| code | ~~sha256 of `h4_runner.py`, `e4_screen_integration.py`, `t1j_adapter.py`, `e4_screen_runner.py`, `h2_match_rules.py`~~ → sha256 of **every file on the reviewed first-party play-path list, runner card §12.6.1** (widened with 3P-a; the five are among them) | `code` (see ⚠ below) |
 
 * The study manifest names **four** segments; confirmatory analysis requires
   **exactly those four files, each matching its own segment entry** — a valid
