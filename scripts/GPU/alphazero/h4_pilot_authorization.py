@@ -6,4 +6,4 @@ This file is NOT in `code`, so it may hold ONLY this declaration -- a test refus
 any import, function, class or other statement here. Opening it is a reviewed
 one-line change; the runner reads it at call time at both public entries.
 """
-H4_PILOT_EXECUTION_AUTHORIZED = True
+H4_PILOT_EXECUTION_AUTHORIZED = False
