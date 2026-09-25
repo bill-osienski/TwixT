@@ -1,0 +1,298 @@
+{"design": "H4_STUDY", "event": "run_start", "n_games": 148}
+{"event": "game_start", "index": 0, "task_id": "h4s2-00-A"}
+{"elapsed_s": 59.35491912486032, "event": "game_done", "index": 0, "plies": 65, "terminal_reason": "win"}
+{"event": "game_start", "index": 1, "task_id": "h4s2-00-B"}
+{"elapsed_s": 44.99645841680467, "event": "game_done", "index": 1, "plies": 56, "terminal_reason": "win"}
+{"event": "game_start", "index": 2, "task_id": "h4s2-01-A"}
+{"elapsed_s": 50.0042257909663, "event": "game_done", "index": 2, "plies": 55, "terminal_reason": "win"}
+{"event": "game_start", "index": 3, "task_id": "h4s2-01-B"}
+{"elapsed_s": 52.11203933414072, "event": "game_done", "index": 3, "plies": 55, "terminal_reason": "win"}
+{"event": "game_start", "index": 4, "task_id": "h4s2-02-A"}
+{"elapsed_s": 45.935521124862134, "event": "game_done", "index": 4, "plies": 54, "terminal_reason": "win"}
+{"event": "game_start", "index": 5, "task_id": "h4s2-02-B"}
+{"elapsed_s": 59.138064292259514, "event": "game_done", "index": 5, "plies": 71, "terminal_reason": "win"}
+{"event": "game_start", "index": 6, "task_id": "h4s2-03-A"}
+{"elapsed_s": 68.17250337498263, "event": "game_done", "index": 6, "plies": 69, "terminal_reason": "win"}
+{"event": "game_start", "index": 7, "task_id": "h4s2-03-B"}
+{"elapsed_s": 34.767531166784465, "event": "game_done", "index": 7, "plies": 40, "terminal_reason": "win"}
+{"event": "game_start", "index": 8, "task_id": "h4s2-04-A"}
+{"elapsed_s": 47.124966790899634, "event": "game_done", "index": 8, "plies": 48, "terminal_reason": "win"}
+{"event": "game_start", "index": 9, "task_id": "h4s2-04-B"}
+{"elapsed_s": 39.6386041669175, "event": "game_done", "index": 9, "plies": 48, "terminal_reason": "win"}
+{"event": "game_start", "index": 10, "task_id": "h4s2-05-A"}
+{"elapsed_s": 47.04665149981156, "event": "game_done", "index": 10, "plies": 48, "terminal_reason": "win"}
+{"event": "game_start", "index": 11, "task_id": "h4s2-05-B"}
+{"elapsed_s": 63.95291345799342, "event": "game_done", "index": 11, "plies": 72, "terminal_reason": "win"}
+{"event": "game_start", "index": 12, "task_id": "h4s2-06-A"}
+{"elapsed_s": 55.04514033300802, "event": "game_done", "index": 12, "plies": 61, "terminal_reason": "win"}
+{"event": "game_start", "index": 13, "task_id": "h4s2-06-B"}
+{"elapsed_s": 42.7283509997651, "event": "game_done", "index": 13, "plies": 54, "terminal_reason": "win"}
+{"event": "game_start", "index": 14, "task_id": "h4s2-07-A"}
+{"elapsed_s": 56.293242416810244, "event": "game_done", "index": 14, "plies": 65, "terminal_reason": "win"}
+{"event": "game_start", "index": 15, "task_id": "h4s2-07-B"}
+{"elapsed_s": 39.77441145805642, "event": "game_done", "index": 15, "plies": 42, "terminal_reason": "win"}
+{"event": "game_start", "index": 16, "task_id": "h4s2-08-A"}
+{"elapsed_s": 226.83016954176128, "event": "game_done", "index": 16, "plies": 280, "terminal_reason": "cap"}
+{"event": "game_start", "index": 17, "task_id": "h4s2-08-B"}
+{"elapsed_s": 59.588084457907826, "event": "game_done", "index": 17, "plies": 68, "terminal_reason": "win"}
+{"event": "game_start", "index": 18, "task_id": "h4s2-09-A"}
+{"elapsed_s": 228.12498341687024, "event": "game_done", "index": 18, "plies": 280, "terminal_reason": "cap"}
+{"event": "game_start", "index": 19, "task_id": "h4s2-09-B"}
+{"elapsed_s": 235.27073100022972, "event": "game_done", "index": 19, "plies": 280, "terminal_reason": "cap"}
+{"event": "game_start", "index": 20, "task_id": "h4s2-10-A"}
+{"elapsed_s": 43.64348137518391, "event": "game_done", "index": 20, "plies": 48, "terminal_reason": "win"}
+{"event": "game_start", "index": 21, "task_id": "h4s2-10-B"}
+{"elapsed_s": 41.55684033315629, "event": "game_done", "index": 21, "plies": 48, "terminal_reason": "win"}
+{"event": "game_start", "index": 22, "task_id": "h4s2-11-A"}
+{"elapsed_s": 49.09750262508169, "event": "game_done", "index": 22, "plies": 60, "terminal_reason": "win"}
+{"event": "game_start", "index": 23, "task_id": "h4s2-11-B"}
+{"elapsed_s": 28.29731075000018, "event": "game_done", "index": 23, "plies": 33, "terminal_reason": "win"}
+{"event": "game_start", "index": 24, "task_id": "h4s2-12-A"}
+{"elapsed_s": 51.941062833648175, "event": "game_done", "index": 24, "plies": 61, "terminal_reason": "win"}
+{"event": "game_start", "index": 25, "task_id": "h4s2-12-B"}
+{"elapsed_s": 32.35265737492591, "event": "game_done", "index": 25, "plies": 39, "terminal_reason": "win"}
+{"event": "game_start", "index": 26, "task_id": "h4s2-13-A"}
+{"elapsed_s": 31.586241459008306, "event": "game_done", "index": 26, "plies": 40, "terminal_reason": "win"}
+{"event": "game_start", "index": 27, "task_id": "h4s2-13-B"}
+{"elapsed_s": 25.839026083238423, "event": "game_done", "index": 27, "plies": 35, "terminal_reason": "win"}
+{"event": "game_start", "index": 28, "task_id": "h4s2-14-A"}
+{"elapsed_s": 47.36621291702613, "event": "game_done", "index": 28, "plies": 55, "terminal_reason": "win"}
+{"event": "game_start", "index": 29, "task_id": "h4s2-14-B"}
+{"elapsed_s": 37.86781554110348, "event": "game_done", "index": 29, "plies": 48, "terminal_reason": "win"}
+{"event": "game_start", "index": 30, "task_id": "h4s2-15-A"}
+{"elapsed_s": 35.9771857499145, "event": "game_done", "index": 30, "plies": 42, "terminal_reason": "win"}
+{"event": "game_start", "index": 31, "task_id": "h4s2-15-B"}
+{"elapsed_s": 56.27062850026414, "event": "game_done", "index": 31, "plies": 61, "terminal_reason": "win"}
+{"event": "game_start", "index": 32, "task_id": "h4s2-16-A"}
+{"elapsed_s": 44.03265475016087, "event": "game_done", "index": 32, "plies": 48, "terminal_reason": "win"}
+{"event": "game_start", "index": 33, "task_id": "h4s2-16-B"}
+{"elapsed_s": 32.39434075029567, "event": "game_done", "index": 33, "plies": 37, "terminal_reason": "win"}
+{"event": "game_start", "index": 34, "task_id": "h4s2-17-A"}
+{"elapsed_s": 58.42232233379036, "event": "game_done", "index": 34, "plies": 65, "terminal_reason": "win"}
+{"event": "game_start", "index": 35, "task_id": "h4s2-17-B"}
+{"elapsed_s": 45.83587616728619, "event": "game_done", "index": 35, "plies": 56, "terminal_reason": "win"}
+{"event": "game_start", "index": 36, "task_id": "h4s2-18-A"}
+{"elapsed_s": 40.188850292004645, "event": "game_done", "index": 36, "plies": 49, "terminal_reason": "win"}
+{"event": "game_start", "index": 37, "task_id": "h4s2-18-B"}
+{"elapsed_s": 28.542024082969874, "event": "game_done", "index": 37, "plies": 37, "terminal_reason": "win"}
+{"event": "game_start", "index": 38, "task_id": "h4s2-19-A"}
+{"elapsed_s": 39.21843883302063, "event": "game_done", "index": 38, "plies": 45, "terminal_reason": "win"}
+{"event": "game_start", "index": 39, "task_id": "h4s2-19-B"}
+{"elapsed_s": 51.89049412496388, "event": "game_done", "index": 39, "plies": 61, "terminal_reason": "win"}
+{"event": "game_start", "index": 40, "task_id": "h4s2-20-A"}
+{"elapsed_s": 64.59069629199803, "event": "game_done", "index": 40, "plies": 69, "terminal_reason": "win"}
+{"event": "game_start", "index": 41, "task_id": "h4s2-20-B"}
+{"elapsed_s": 43.63745979079977, "event": "game_done", "index": 41, "plies": 48, "terminal_reason": "win"}
+{"event": "game_start", "index": 42, "task_id": "h4s2-21-A"}
+{"elapsed_s": 40.497015833854675, "event": "game_done", "index": 42, "plies": 49, "terminal_reason": "win"}
+{"event": "game_start", "index": 43, "task_id": "h4s2-21-B"}
+{"elapsed_s": 51.22715949965641, "event": "game_done", "index": 43, "plies": 57, "terminal_reason": "win"}
+{"event": "game_start", "index": 44, "task_id": "h4s2-22-A"}
+{"elapsed_s": 58.162390834186226, "event": "game_done", "index": 44, "plies": 66, "terminal_reason": "win"}
+{"event": "game_start", "index": 45, "task_id": "h4s2-22-B"}
+{"elapsed_s": 38.18434499995783, "event": "game_done", "index": 45, "plies": 46, "terminal_reason": "win"}
+{"event": "game_start", "index": 46, "task_id": "h4s2-23-A"}
+{"elapsed_s": 59.51880612503737, "event": "game_done", "index": 46, "plies": 66, "terminal_reason": "win"}
+{"event": "game_start", "index": 47, "task_id": "h4s2-23-B"}
+{"elapsed_s": 33.54539783298969, "event": "game_done", "index": 47, "plies": 39, "terminal_reason": "win"}
+{"event": "game_start", "index": 48, "task_id": "h4s2-24-A"}
+{"elapsed_s": 50.15847550006583, "event": "game_done", "index": 48, "plies": 53, "terminal_reason": "win"}
+{"event": "game_start", "index": 49, "task_id": "h4s2-24-B"}
+{"elapsed_s": 40.47965995920822, "event": "game_done", "index": 49, "plies": 46, "terminal_reason": "win"}
+{"event": "game_start", "index": 50, "task_id": "h4s2-25-A"}
+{"elapsed_s": 48.28572825016454, "event": "game_done", "index": 50, "plies": 55, "terminal_reason": "win"}
+{"event": "game_start", "index": 51, "task_id": "h4s2-25-B"}
+{"elapsed_s": 30.26331241708249, "event": "game_done", "index": 51, "plies": 37, "terminal_reason": "win"}
+{"event": "game_start", "index": 52, "task_id": "h4s2-26-A"}
+{"elapsed_s": 47.75978891737759, "event": "game_done", "index": 52, "plies": 55, "terminal_reason": "win"}
+{"event": "game_start", "index": 53, "task_id": "h4s2-26-B"}
+{"elapsed_s": 50.78860987490043, "event": "game_done", "index": 53, "plies": 58, "terminal_reason": "win"}
+{"event": "game_start", "index": 54, "task_id": "h4s2-27-A"}
+{"elapsed_s": 53.448599125258625, "event": "game_done", "index": 54, "plies": 53, "terminal_reason": "win"}
+{"event": "game_start", "index": 55, "task_id": "h4s2-27-B"}
+{"elapsed_s": 32.65307650016621, "event": "game_done", "index": 55, "plies": 33, "terminal_reason": "win"}
+{"event": "game_start", "index": 56, "task_id": "h4s2-28-A"}
+{"elapsed_s": 51.77225858299062, "event": "game_done", "index": 56, "plies": 53, "terminal_reason": "win"}
+{"event": "game_start", "index": 57, "task_id": "h4s2-28-B"}
+{"elapsed_s": 51.32766266586259, "event": "game_done", "index": 57, "plies": 56, "terminal_reason": "win"}
+{"event": "game_start", "index": 58, "task_id": "h4s2-29-A"}
+{"elapsed_s": 51.58451004186645, "event": "game_done", "index": 58, "plies": 53, "terminal_reason": "win"}
+{"event": "game_start", "index": 59, "task_id": "h4s2-29-B"}
+{"elapsed_s": 53.0196352917701, "event": "game_done", "index": 59, "plies": 61, "terminal_reason": "win"}
+{"event": "game_start", "index": 60, "task_id": "h4s2-30-A"}
+{"elapsed_s": 111.3311763331294, "event": "game_done", "index": 60, "plies": 133, "terminal_reason": "win"}
+{"event": "game_start", "index": 61, "task_id": "h4s2-30-B"}
+{"elapsed_s": 34.45986562501639, "event": "game_done", "index": 61, "plies": 39, "terminal_reason": "win"}
+{"event": "game_start", "index": 62, "task_id": "h4s2-31-A"}
+{"elapsed_s": 60.66808920819312, "event": "game_done", "index": 62, "plies": 66, "terminal_reason": "win"}
+{"event": "game_start", "index": 63, "task_id": "h4s2-31-B"}
+{"elapsed_s": 230.25404404103756, "event": "game_done", "index": 63, "plies": 280, "terminal_reason": "cap"}
+{"event": "game_start", "index": 64, "task_id": "h4s2-32-A"}
+{"elapsed_s": 48.85215766681358, "event": "game_done", "index": 64, "plies": 49, "terminal_reason": "win"}
+{"event": "game_start", "index": 65, "task_id": "h4s2-32-B"}
+{"elapsed_s": 254.09630724973977, "event": "game_done", "index": 65, "plies": 280, "terminal_reason": "cap"}
+{"event": "game_start", "index": 66, "task_id": "h4s2-33-A"}
+{"elapsed_s": 45.45522500015795, "event": "game_done", "index": 66, "plies": 49, "terminal_reason": "win"}
+{"event": "game_start", "index": 67, "task_id": "h4s2-33-B"}
+{"elapsed_s": 49.18646941706538, "event": "game_done", "index": 67, "plies": 52, "terminal_reason": "win"}
+{"event": "game_start", "index": 68, "task_id": "h4s2-34-A"}
+{"elapsed_s": 159.4169229590334, "event": "game_done", "index": 68, "plies": 187, "terminal_reason": "win"}
+{"event": "game_start", "index": 69, "task_id": "h4s2-34-B"}
+{"elapsed_s": 55.24396124994382, "event": "game_done", "index": 69, "plies": 62, "terminal_reason": "win"}
+{"event": "game_start", "index": 70, "task_id": "h4s2-35-A"}
+{"elapsed_s": 43.122123499866575, "event": "game_done", "index": 70, "plies": 45, "terminal_reason": "win"}
+{"event": "game_start", "index": 71, "task_id": "h4s2-35-B"}
+{"elapsed_s": 54.355203750077635, "event": "game_done", "index": 71, "plies": 63, "terminal_reason": "win"}
+{"event": "game_start", "index": 72, "task_id": "h4s2-36-A"}
+{"elapsed_s": 46.77325045783073, "event": "game_done", "index": 72, "plies": 48, "terminal_reason": "win"}
+{"event": "game_start", "index": 73, "task_id": "h4s2-36-B"}
+{"elapsed_s": 29.003920166753232, "event": "game_done", "index": 73, "plies": 35, "terminal_reason": "win"}
+{"event": "game_start", "index": 74, "task_id": "h4s2-37-A"}
+{"elapsed_s": 42.241016208194196, "event": "game_done", "index": 74, "plies": 49, "terminal_reason": "win"}
+{"event": "game_start", "index": 75, "task_id": "h4s2-37-B"}
+{"elapsed_s": 47.70786462491378, "event": "game_done", "index": 75, "plies": 50, "terminal_reason": "win"}
+{"event": "game_start", "index": 76, "task_id": "h4s2-38-A"}
+{"elapsed_s": 251.08720229193568, "event": "game_done", "index": 76, "plies": 280, "terminal_reason": "cap"}
+{"event": "game_start", "index": 77, "task_id": "h4s2-38-B"}
+{"elapsed_s": 51.36865495797247, "event": "game_done", "index": 77, "plies": 57, "terminal_reason": "win"}
+{"event": "game_start", "index": 78, "task_id": "h4s2-39-A"}
+{"elapsed_s": 60.12972283316776, "event": "game_done", "index": 78, "plies": 67, "terminal_reason": "win"}
+{"event": "game_start", "index": 79, "task_id": "h4s2-39-B"}
+{"elapsed_s": 27.59388408297673, "event": "game_done", "index": 79, "plies": 35, "terminal_reason": "win"}
+{"event": "game_start", "index": 80, "task_id": "h4s2-40-A"}
+{"elapsed_s": 60.556848084088415, "event": "game_done", "index": 80, "plies": 67, "terminal_reason": "win"}
+{"event": "game_start", "index": 81, "task_id": "h4s2-40-B"}
+{"elapsed_s": 26.939374790992588, "event": "game_done", "index": 81, "plies": 35, "terminal_reason": "win"}
+{"event": "game_start", "index": 82, "task_id": "h4s2-41-A"}
+{"elapsed_s": 46.211170667316765, "event": "game_done", "index": 82, "plies": 54, "terminal_reason": "win"}
+{"event": "game_start", "index": 83, "task_id": "h4s2-41-B"}
+{"elapsed_s": 29.999193999916315, "event": "game_done", "index": 83, "plies": 33, "terminal_reason": "win"}
+{"event": "game_start", "index": 84, "task_id": "h4s2-42-A"}
+{"elapsed_s": 51.15139550017193, "event": "game_done", "index": 84, "plies": 60, "terminal_reason": "win"}
+{"event": "game_start", "index": 85, "task_id": "h4s2-42-B"}
+{"elapsed_s": 31.098485458176583, "event": "game_done", "index": 85, "plies": 37, "terminal_reason": "win"}
+{"event": "game_start", "index": 86, "task_id": "h4s2-43-A"}
+{"elapsed_s": 59.177276249974966, "event": "game_done", "index": 86, "plies": 67, "terminal_reason": "win"}
+{"event": "game_start", "index": 87, "task_id": "h4s2-43-B"}
+{"elapsed_s": 40.09660870907828, "event": "game_done", "index": 87, "plies": 49, "terminal_reason": "win"}
+{"event": "game_start", "index": 88, "task_id": "h4s2-44-A"}
+{"elapsed_s": 54.52319516707212, "event": "game_done", "index": 88, "plies": 61, "terminal_reason": "win"}
+{"event": "game_start", "index": 89, "task_id": "h4s2-44-B"}
+{"elapsed_s": 34.258010915946215, "event": "game_done", "index": 89, "plies": 39, "terminal_reason": "win"}
+{"event": "game_start", "index": 90, "task_id": "h4s2-45-A"}
+{"elapsed_s": 61.533701499924064, "event": "game_done", "index": 90, "plies": 66, "terminal_reason": "win"}
+{"event": "game_start", "index": 91, "task_id": "h4s2-45-B"}
+{"elapsed_s": 52.37845445796847, "event": "game_done", "index": 91, "plies": 60, "terminal_reason": "win"}
+{"event": "game_start", "index": 92, "task_id": "h4s2-46-A"}
+{"elapsed_s": 37.52382329199463, "event": "game_done", "index": 92, "plies": 42, "terminal_reason": "win"}
+{"event": "game_start", "index": 93, "task_id": "h4s2-46-B"}
+{"elapsed_s": 45.4400550420396, "event": "game_done", "index": 93, "plies": 52, "terminal_reason": "win"}
+{"event": "game_start", "index": 94, "task_id": "h4s2-47-A"}
+{"elapsed_s": 45.02633516630158, "event": "game_done", "index": 94, "plies": 54, "terminal_reason": "win"}
+{"event": "game_start", "index": 95, "task_id": "h4s2-47-B"}
+{"elapsed_s": 46.51655316632241, "event": "game_done", "index": 95, "plies": 58, "terminal_reason": "win"}
+{"event": "game_start", "index": 96, "task_id": "h4s2-48-A"}
+{"elapsed_s": 40.57406475022435, "event": "game_done", "index": 96, "plies": 45, "terminal_reason": "win"}
+{"event": "game_start", "index": 97, "task_id": "h4s2-48-B"}
+{"elapsed_s": 29.74622170906514, "event": "game_done", "index": 97, "plies": 37, "terminal_reason": "win"}
+{"event": "game_start", "index": 98, "task_id": "h4s2-49-A"}
+{"elapsed_s": 50.61456812499091, "event": "game_done", "index": 98, "plies": 60, "terminal_reason": "win"}
+{"event": "game_start", "index": 99, "task_id": "h4s2-49-B"}
+{"elapsed_s": 37.082064624875784, "event": "game_done", "index": 99, "plies": 42, "terminal_reason": "win"}
+{"event": "game_start", "index": 100, "task_id": "h4s2-50-A"}
+{"elapsed_s": 110.67641254141927, "event": "game_done", "index": 100, "plies": 135, "terminal_reason": "win"}
+{"event": "game_start", "index": 101, "task_id": "h4s2-50-B"}
+{"elapsed_s": 49.46622479194775, "event": "game_done", "index": 101, "plies": 56, "terminal_reason": "win"}
+{"event": "game_start", "index": 102, "task_id": "h4s2-51-A"}
+{"elapsed_s": 58.9879805422388, "event": "game_done", "index": 102, "plies": 66, "terminal_reason": "win"}
+{"event": "game_start", "index": 103, "task_id": "h4s2-51-B"}
+{"elapsed_s": 40.01447404222563, "event": "game_done", "index": 103, "plies": 48, "terminal_reason": "win"}
+{"event": "game_start", "index": 104, "task_id": "h4s2-52-A"}
+{"elapsed_s": 56.023536541033536, "event": "game_done", "index": 104, "plies": 61, "terminal_reason": "win"}
+{"event": "game_start", "index": 105, "task_id": "h4s2-52-B"}
+{"elapsed_s": 48.40506695769727, "event": "game_done", "index": 105, "plies": 48, "terminal_reason": "win"}
+{"event": "game_start", "index": 106, "task_id": "h4s2-53-A"}
+{"elapsed_s": 42.24745291704312, "event": "game_done", "index": 106, "plies": 45, "terminal_reason": "win"}
+{"event": "game_start", "index": 107, "task_id": "h4s2-53-B"}
+{"elapsed_s": 34.140184209216386, "event": "game_done", "index": 107, "plies": 37, "terminal_reason": "win"}
+{"event": "game_start", "index": 108, "task_id": "h4s2-54-A"}
+{"elapsed_s": 50.45230654068291, "event": "game_done", "index": 108, "plies": 55, "terminal_reason": "win"}
+{"event": "game_start", "index": 109, "task_id": "h4s2-54-B"}
+{"elapsed_s": 40.79281825013459, "event": "game_done", "index": 109, "plies": 42, "terminal_reason": "win"}
+{"event": "game_start", "index": 110, "task_id": "h4s2-55-A"}
+{"elapsed_s": 47.4937584172003, "event": "game_done", "index": 110, "plies": 48, "terminal_reason": "win"}
+{"event": "game_start", "index": 111, "task_id": "h4s2-55-B"}
+{"elapsed_s": 37.24992237472907, "event": "game_done", "index": 111, "plies": 44, "terminal_reason": "win"}
+{"event": "game_start", "index": 112, "task_id": "h4s2-56-A"}
+{"elapsed_s": 50.4268727498129, "event": "game_done", "index": 112, "plies": 55, "terminal_reason": "win"}
+{"event": "game_start", "index": 113, "task_id": "h4s2-56-B"}
+{"elapsed_s": 248.91959054209292, "event": "game_done", "index": 113, "plies": 280, "terminal_reason": "cap"}
+{"event": "game_start", "index": 114, "task_id": "h4s2-57-A"}
+{"elapsed_s": 43.76863150019199, "event": "game_done", "index": 114, "plies": 49, "terminal_reason": "win"}
+{"event": "game_start", "index": 115, "task_id": "h4s2-57-B"}
+{"elapsed_s": 249.32579312520102, "event": "game_done", "index": 115, "plies": 280, "terminal_reason": "cap"}
+{"event": "game_start", "index": 116, "task_id": "h4s2-58-A"}
+{"elapsed_s": 39.475551875308156, "event": "game_done", "index": 116, "plies": 42, "terminal_reason": "win"}
+{"event": "game_start", "index": 117, "task_id": "h4s2-58-B"}
+{"elapsed_s": 45.37878162506968, "event": "game_done", "index": 117, "plies": 51, "terminal_reason": "win"}
+{"event": "game_start", "index": 118, "task_id": "h4s2-59-A"}
+{"elapsed_s": 249.38569587515667, "event": "game_done", "index": 118, "plies": 280, "terminal_reason": "cap"}
+{"event": "game_start", "index": 119, "task_id": "h4s2-59-B"}
+{"elapsed_s": 54.623764750082046, "event": "game_done", "index": 119, "plies": 63, "terminal_reason": "win"}
+{"event": "game_start", "index": 120, "task_id": "h4s2-60-A"}
+{"elapsed_s": 248.62792162504047, "event": "game_done", "index": 120, "plies": 280, "terminal_reason": "cap"}
+{"event": "game_start", "index": 121, "task_id": "h4s2-60-B"}
+{"elapsed_s": 48.845888500101864, "event": "game_done", "index": 121, "plies": 57, "terminal_reason": "win"}
+{"event": "game_start", "index": 122, "task_id": "h4s2-61-A"}
+{"elapsed_s": 65.40373399993405, "event": "game_done", "index": 122, "plies": 66, "terminal_reason": "win"}
+{"event": "game_start", "index": 123, "task_id": "h4s2-61-B"}
+{"elapsed_s": 40.74917945917696, "event": "game_done", "index": 123, "plies": 48, "terminal_reason": "win"}
+{"event": "game_start", "index": 124, "task_id": "h4s2-62-A"}
+{"elapsed_s": 44.00323404185474, "event": "game_done", "index": 124, "plies": 49, "terminal_reason": "win"}
+{"event": "game_start", "index": 125, "task_id": "h4s2-62-B"}
+{"elapsed_s": 47.78790270909667, "event": "game_done", "index": 125, "plies": 46, "terminal_reason": "win"}
+{"event": "game_start", "index": 126, "task_id": "h4s2-63-A"}
+{"elapsed_s": 51.90228174999356, "event": "game_done", "index": 126, "plies": 49, "terminal_reason": "win"}
+{"event": "game_start", "index": 127, "task_id": "h4s2-63-B"}
+{"elapsed_s": 50.16811391711235, "event": "game_done", "index": 127, "plies": 56, "terminal_reason": "win"}
+{"event": "game_start", "index": 128, "task_id": "h4s2-64-A"}
+{"elapsed_s": 61.77210920769721, "event": "game_done", "index": 128, "plies": 65, "terminal_reason": "win"}
+{"event": "game_start", "index": 129, "task_id": "h4s2-64-B"}
+{"elapsed_s": 27.745990250259638, "event": "game_done", "index": 129, "plies": 35, "terminal_reason": "win"}
+{"event": "game_start", "index": 130, "task_id": "h4s2-65-A"}
+{"elapsed_s": 58.10097945900634, "event": "game_done", "index": 130, "plies": 66, "terminal_reason": "win"}
+{"event": "game_start", "index": 131, "task_id": "h4s2-65-B"}
+{"elapsed_s": 30.659407707862556, "event": "game_done", "index": 131, "plies": 37, "terminal_reason": "win"}
+{"event": "game_start", "index": 132, "task_id": "h4s2-66-A"}
+{"elapsed_s": 52.719379000365734, "event": "game_done", "index": 132, "plies": 55, "terminal_reason": "win"}
+{"event": "game_start", "index": 133, "task_id": "h4s2-66-B"}
+{"elapsed_s": 56.63944095792249, "event": "game_done", "index": 133, "plies": 63, "terminal_reason": "win"}
+{"event": "game_start", "index": 134, "task_id": "h4s2-67-A"}
+{"elapsed_s": 36.27386541618034, "event": "game_done", "index": 134, "plies": 40, "terminal_reason": "win"}
+{"event": "game_start", "index": 135, "task_id": "h4s2-67-B"}
+{"elapsed_s": 36.46242029219866, "event": "game_done", "index": 135, "plies": 39, "terminal_reason": "win"}
+{"event": "game_start", "index": 136, "task_id": "h4s2-68-A"}
+{"elapsed_s": 59.12384033296257, "event": "game_done", "index": 136, "plies": 65, "terminal_reason": "win"}
+{"event": "game_start", "index": 137, "task_id": "h4s2-68-B"}
+{"elapsed_s": 59.23712204070762, "event": "game_done", "index": 137, "plies": 69, "terminal_reason": "win"}
+{"event": "game_start", "index": 138, "task_id": "h4s2-69-A"}
+{"elapsed_s": 51.195865917019546, "event": "game_done", "index": 138, "plies": 53, "terminal_reason": "win"}
+{"event": "game_start", "index": 139, "task_id": "h4s2-69-B"}
+{"elapsed_s": 37.94699800014496, "event": "game_done", "index": 139, "plies": 46, "terminal_reason": "win"}
+{"event": "game_start", "index": 140, "task_id": "h4s2-70-A"}
+{"elapsed_s": 52.394887417089194, "event": "game_done", "index": 140, "plies": 60, "terminal_reason": "win"}
+{"event": "game_start", "index": 141, "task_id": "h4s2-70-B"}
+{"elapsed_s": 233.20173937501386, "event": "game_done", "index": 141, "plies": 280, "terminal_reason": "cap"}
+{"event": "game_start", "index": 142, "task_id": "h4s2-71-A"}
+{"elapsed_s": 41.13114658324048, "event": "game_done", "index": 142, "plies": 45, "terminal_reason": "win"}
+{"event": "game_start", "index": 143, "task_id": "h4s2-71-B"}
+{"elapsed_s": 29.08718083286658, "event": "game_done", "index": 143, "plies": 35, "terminal_reason": "win"}
+{"event": "game_start", "index": 144, "task_id": "h4s2-72-A"}
+{"elapsed_s": 49.7332358751446, "event": "game_done", "index": 144, "plies": 55, "terminal_reason": "win"}
+{"event": "game_start", "index": 145, "task_id": "h4s2-72-B"}
+{"elapsed_s": 41.167972000315785, "event": "game_done", "index": 145, "plies": 45, "terminal_reason": "win"}
+{"event": "game_start", "index": 146, "task_id": "h4s2-73-A"}
+{"elapsed_s": 33.72227366594598, "event": "game_done", "index": 146, "plies": 40, "terminal_reason": "win"}
+{"event": "game_start", "index": 147, "task_id": "h4s2-73-B"}
+{"elapsed_s": 40.15968554141, "event": "game_done", "index": 147, "plies": 44, "terminal_reason": "win"}
+{"event": "run_end", "games_completed": 148}
