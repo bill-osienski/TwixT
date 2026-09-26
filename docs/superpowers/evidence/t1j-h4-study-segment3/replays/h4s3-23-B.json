@@ -1,0 +1,526 @@
+{
+ "config_hash": "h4-recorded-evidence",
+ "depth": null,
+ "id": "h4s3-23-B",
+ "meta": {
+  "arm": "B",
+  "board_size": 24,
+  "evidence_note": "derived from the H4 results file; a viewer export, not a result",
+  "mode": "recorded_h4",
+  "n_moves": 50,
+  "pair_id": "h4s3-23",
+  "players": {
+   "black": "Incumbent (ours)",
+   "red": "T1j (theirs)"
+  },
+  "reason": "win",
+  "source_sha256": "c54b5efa98850ac6f64a86bfa83a41bcb21dbaa5dcdb8163bab5f78aa8da6e55",
+  "task_id": "h4s3-23-B",
+  "transcript_digest": "b246ce6e451ad33a56d1ae2c42a32473eedc0b570453365b118124a006ab3427"
+ },
+ "moves": [
+  {
+   "bridges_created": [],
+   "col": 12,
+   "heuristics": {},
+   "player": "red",
+   "root_top1_share": null,
+   "row": 11,
+   "search_score": null,
+   "turn": 1
+  },
+  {
+   "bridges_created": [],
+   "col": 11,
+   "heuristics": {},
+   "player": "black",
+   "root_top1_share": null,
+   "row": 15,
+   "search_score": null,
+   "turn": 2
+  },
+  {
+   "bridges_created": [],
+   "col": 16,
+   "heuristics": {},
+   "player": "red",
+   "root_top1_share": null,
+   "row": 15,
+   "search_score": null,
+   "turn": 3
+  },
+  {
+   "bridges_created": [],
+   "col": 12,
+   "heuristics": {},
+   "player": "black",
+   "root_top1_share": null,
+   "row": 7,
+   "search_score": null,
+   "turn": 4
+  },
+  {
+   "bridges_created": [],
+   "col": 8,
+   "heuristics": {},
+   "player": "red",
+   "root_top1_share": null,
+   "row": 8,
+   "search_score": null,
+   "turn": 5
+  },
+  {
+   "bridges_created": [],
+   "col": 8,
+   "heuristics": {},
+   "player": "black",
+   "root_top1_share": null,
+   "row": 4,
+   "search_score": null,
+   "turn": 6
+  },
+  {
+   "bridges_created": [],
+   "col": 4,
+   "heuristics": {},
+   "player": "red",
+   "root_top1_share": null,
+   "row": 5,
+   "search_score": null,
+   "turn": 7
+  },
+  {
+   "bridges_created": [],
+   "col": 15,
+   "heuristics": {},
+   "player": "black",
+   "root_top1_share": null,
+   "row": 19,
+   "search_score": null,
+   "turn": 8
+  },
+  {
+   "bridges_created": [],
+   "col": 3,
+   "heuristics": {},
+   "player": "red",
+   "root_top1_share": null,
+   "row": 3,
+   "search_score": null,
+   "turn": 9
+  },
+  {
+   "bridges_created": [],
+   "col": 6,
+   "heuristics": {},
+   "player": "black",
+   "root_top1_share": null,
+   "row": 7,
+   "search_score": null,
+   "turn": 10
+  },
+  {
+   "bridges_created": [],
+   "col": 3,
+   "heuristics": {},
+   "player": "red",
+   "root_top1_share": null,
+   "row": 7,
+   "search_score": null,
+   "turn": 11
+  },
+  {
+   "bridges_created": [],
+   "col": 3,
+   "heuristics": {},
+   "player": "black",
+   "root_top1_share": null,
+   "row": 10,
+   "search_score": null,
+   "turn": 12
+  },
+  {
+   "bridges_created": [],
+   "col": 3,
+   "heuristics": {},
+   "player": "red",
+   "root_top1_share": null,
+   "row": 11,
+   "search_score": null,
+   "turn": 13
+  },
+  {
+   "bridges_created": [],
+   "col": 4,
+   "heuristics": {},
+   "player": "black",
+   "root_top1_share": null,
+   "row": 12,
+   "search_score": null,
+   "turn": 14
+  },
+  {
+   "bridges_created": [],
+   "col": 2,
+   "heuristics": {},
+   "player": "red",
+   "root_top1_share": null,
+   "row": 9,
+   "search_score": null,
+   "turn": 15
+  },
+  {
+   "bridges_created": [],
+   "col": 2,
+   "heuristics": {},
+   "player": "black",
+   "root_top1_share": null,
+   "row": 11,
+   "search_score": null,
+   "turn": 16
+  },
+  {
+   "bridges_created": [],
+   "col": 6,
+   "heuristics": {},
+   "player": "red",
+   "root_top1_share": null,
+   "row": 0,
+   "search_score": null,
+   "turn": 17
+  },
+  {
+   "bridges_created": [],
+   "col": 9,
+   "heuristics": {},
+   "player": "black",
+   "root_top1_share": null,
+   "row": 14,
+   "search_score": null,
+   "turn": 18
+  },
+  {
+   "bridges_created": [],
+   "col": 7,
+   "heuristics": {},
+   "player": "red",
+   "root_top1_share": null,
+   "row": 10,
+   "search_score": null,
+   "turn": 19
+  },
+  {
+   "bridges_created": [],
+   "col": 13,
+   "heuristics": {},
+   "player": "black",
+   "root_top1_share": null,
+   "row": 14,
+   "search_score": null,
+   "turn": 20
+  },
+  {
+   "bridges_created": [],
+   "col": 15,
+   "heuristics": {},
+   "player": "red",
+   "root_top1_share": null,
+   "row": 13,
+   "search_score": null,
+   "turn": 21
+  },
+  {
+   "bridges_created": [],
+   "col": 16,
+   "heuristics": {},
+   "player": "black",
+   "root_top1_share": null,
+   "row": 17,
+   "search_score": null,
+   "turn": 22
+  },
+  {
+   "bridges_created": [],
+   "col": 1,
+   "heuristics": {},
+   "player": "red",
+   "root_top1_share": null,
+   "row": 11,
+   "search_score": null,
+   "turn": 23
+  },
+  {
+   "bridges_created": [],
+   "col": 1,
+   "heuristics": {},
+   "player": "black",
+   "root_top1_share": null,
+   "row": 13,
+   "search_score": null,
+   "turn": 24
+  },
+  {
+   "bridges_created": [],
+   "col": 6,
+   "heuristics": {},
+   "player": "red",
+   "root_top1_share": null,
+   "row": 12,
+   "search_score": null,
+   "turn": 25
+  },
+  {
+   "bridges_created": [],
+   "col": 6,
+   "heuristics": {},
+   "player": "black",
+   "root_top1_share": null,
+   "row": 13,
+   "search_score": null,
+   "turn": 26
+  },
+  {
+   "bridges_created": [],
+   "col": 16,
+   "heuristics": {},
+   "player": "red",
+   "root_top1_share": null,
+   "row": 16,
+   "search_score": null,
+   "turn": 27
+  },
+  {
+   "bridges_created": [],
+   "col": 18,
+   "heuristics": {},
+   "player": "black",
+   "root_top1_share": null,
+   "row": 18,
+   "search_score": null,
+   "turn": 28
+  },
+  {
+   "bridges_created": [],
+   "col": 22,
+   "heuristics": {},
+   "player": "red",
+   "root_top1_share": null,
+   "row": 17,
+   "search_score": null,
+   "turn": 29
+  },
+  {
+   "bridges_created": [],
+   "col": 15,
+   "heuristics": {},
+   "player": "black",
+   "root_top1_share": null,
+   "row": 15,
+   "search_score": null,
+   "turn": 30
+  },
+  {
+   "bridges_created": [],
+   "col": 21,
+   "heuristics": {},
+   "player": "red",
+   "root_top1_share": null,
+   "row": 19,
+   "search_score": null,
+   "turn": 31
+  },
+  {
+   "bridges_created": [],
+   "col": 20,
+   "heuristics": {},
+   "player": "black",
+   "root_top1_share": null,
+   "row": 19,
+   "search_score": null,
+   "turn": 32
+  },
+  {
+   "bridges_created": [],
+   "col": 20,
+   "heuristics": {},
+   "player": "red",
+   "root_top1_share": null,
+   "row": 21,
+   "search_score": null,
+   "turn": 33
+  },
+  {
+   "bridges_created": [],
+   "col": 19,
+   "heuristics": {},
+   "player": "black",
+   "root_top1_share": null,
+   "row": 16,
+   "search_score": null,
+   "turn": 34
+  },
+  {
+   "bridges_created": [],
+   "col": 21,
+   "heuristics": {},
+   "player": "red",
+   "root_top1_share": null,
+   "row": 15,
+   "search_score": null,
+   "turn": 35
+  },
+  {
+   "bridges_created": [],
+   "col": 20,
+   "heuristics": {},
+   "player": "black",
+   "root_top1_share": null,
+   "row": 13,
+   "search_score": null,
+   "turn": 36
+  },
+  {
+   "bridges_created": [],
+   "col": 20,
+   "heuristics": {},
+   "player": "red",
+   "root_top1_share": null,
+   "row": 12,
+   "search_score": null,
+   "turn": 37
+  },
+  {
+   "bridges_created": [],
+   "col": 19,
+   "heuristics": {},
+   "player": "black",
+   "root_top1_share": null,
+   "row": 11,
+   "search_score": null,
+   "turn": 38
+  },
+  {
+   "bridges_created": [],
+   "col": 21,
+   "heuristics": {},
+   "player": "red",
+   "root_top1_share": null,
+   "row": 14,
+   "search_score": null,
+   "turn": 39
+  },
+  {
+   "bridges_created": [],
+   "col": 20,
+   "heuristics": {},
+   "player": "black",
+   "root_top1_share": null,
+   "row": 9,
+   "search_score": null,
+   "turn": 40
+  },
+  {
+   "bridges_created": [],
+   "col": 19,
+   "heuristics": {},
+   "player": "red",
+   "root_top1_share": null,
+   "row": 14,
+   "search_score": null,
+   "turn": 41
+  },
+  {
+   "bridges_created": [],
+   "col": 18,
+   "heuristics": {},
+   "player": "black",
+   "root_top1_share": null,
+   "row": 14,
+   "search_score": null,
+   "turn": 42
+  },
+  {
+   "bridges_created": [],
+   "col": 7,
+   "heuristics": {},
+   "player": "red",
+   "root_top1_share": null,
+   "row": 14,
+   "search_score": null,
+   "turn": 43
+  },
+  {
+   "bridges_created": [],
+   "col": 7,
+   "heuristics": {},
+   "player": "black",
+   "root_top1_share": null,
+   "row": 15,
+   "search_score": null,
+   "turn": 44
+  },
+  {
+   "bridges_created": [],
+   "col": 22,
+   "heuristics": {},
+   "player": "red",
+   "root_top1_share": null,
+   "row": 16,
+   "search_score": null,
+   "turn": 45
+  },
+  {
+   "bridges_created": [],
+   "col": 0,
+   "heuristics": {},
+   "player": "black",
+   "root_top1_share": null,
+   "row": 11,
+   "search_score": null,
+   "turn": 46
+  },
+  {
+   "bridges_created": [],
+   "col": 19,
+   "heuristics": {},
+   "player": "red",
+   "root_top1_share": null,
+   "row": 23,
+   "search_score": null,
+   "turn": 47
+  },
+  {
+   "bridges_created": [],
+   "col": 21,
+   "heuristics": {},
+   "player": "black",
+   "root_top1_share": null,
+   "row": 11,
+   "search_score": null,
+   "turn": 48
+  },
+  {
+   "bridges_created": [],
+   "col": 22,
+   "heuristics": {},
+   "player": "red",
+   "root_top1_share": null,
+   "row": 11,
+   "search_score": null,
+   "turn": 49
+  },
+  {
+   "bridges_created": [],
+   "col": 23,
+   "heuristics": {},
+   "player": "black",
+   "root_top1_share": null,
+   "row": 10,
+   "search_score": null,
+   "turn": 50
+  }
+ ],
+ "seed": 202640047,
+ "starting_player": "red",
+ "winner": "black"
+}
