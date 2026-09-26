@@ -29,7 +29,7 @@ from . import h4_runner as R
 #: one-line code change. Read FIRST by `_run`, the only path to an estimate, so
 #: both public entries -- `run_confirmatory` and `main` -- pass through it before
 #: touching any file. No override exists: not argv, not the environment.
-H4_STUDY_AGGREGATION_AUTHORIZED = False
+H4_STUDY_AGGREGATION_AUTHORIZED = True
 
 ALPHA = 0.05
 STUDY_PAIRS = F.SEGMENTS[F.STUDY] * F.PAIRS_PER_SEGMENT[F.STUDY]
