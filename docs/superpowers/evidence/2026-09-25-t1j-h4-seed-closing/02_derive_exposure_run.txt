@@ -1,0 +1,7 @@
+pilot 0: block [202632000, 202632032) -- 32 game_starts, every assigned seed started EXACTLY once: True; run ended in segment_end
+study 0: block [202634000, 202634148) -- 148 game_starts, every assigned seed started EXACTLY once: True; run ended in segment_end
+study 1: block [202636000, 202636148) -- 148 game_starts, every assigned seed started EXACTLY once: True; run ended in segment_end
+study 2: block [202638000, 202638148) -- 148 game_starts, every assigned seed started EXACTLY once: True; run ended in segment_end
+study 3: block [202640000, 202640148) -- 148 game_starts, every assigned seed started EXACTLY once: True; run ended in segment_end
+total seeds started: 624 of 624
+VERDICT: every assigned seed started exactly once -> the five blocks are EXPOSED WHOLE and RETIRED WHOLE

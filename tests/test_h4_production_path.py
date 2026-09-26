@@ -382,8 +382,31 @@ def test_the_SEED_BLOCKS_and_EVIDENCE_DIRS_are_the_step4_cards_and_REGISTERED():
                                   f"t1j-h4-study-segment{k}" for k in range(4)}}
     for block in card.values():
         assert block in REF.ACCOUNTED_SEED_INTERVALS, "registered as EXACTLY itself"
-        assert not any(REF.seed_is_unavailable(s) or REF.seed_is_test_only(s)
-                       for s in range(*block))
+        assert not any(REF.seed_is_test_only(s) for s in range(*block))
+
+
+def test_the_CLOSING_edit_exposed_and_retired_every_H4_block_exactly():
+    """Step-4 card §2.1: after H4 closed (all five runs COMPLETE, 624 seeds each
+    started once), ONE edit marks every block EXPOSED and RETIRED WHOLE -- exactly
+    at its boundaries, ACCOUNTED unchanged."""
+    for lo, hi in R.SEED_BLOCKS.values():
+        for name in ("EXPOSED", "RETIRED", "ACCOUNTED"):
+            assert (lo, hi) in getattr(REF, f"{name}_SEED_INTERVALS"), \
+                f"block [{lo}, {hi}) is not registered as exactly itself in {name}"
+        for s in (lo, lo + 1, hi - 1):
+            assert REF.seed_is_exposed(s) and REF.seed_is_retired(s), s
+        for s in (lo - 1, hi):
+            assert not REF.seed_is_exposed(s) and not REF.seed_is_retired(s), s
+            assert not REF.seed_is_accounted(s), s
+
+
+def test_after_the_closing_edit_the_runner_REFUSES_every_H4_schedule():
+    """The one-shot rule now binds through the shared registry too."""
+    _cfg, ident = _identity()
+    for (mode, seg) in R.SEED_BLOCKS:
+        faults = R.seed_registry_faults(R.canonical_schedule(mode, seg, ident))
+        assert len(faults) == len(R.canonical_schedule(mode, seg, ident))
+        assert all("exposed" in f and "retired" in f for f in faults)
 
 
 def test_the_CANONICAL_schedule_assigns_lo_plus_2k_to_Arm_A_and_lo_plus_2k_plus_1_to_B():

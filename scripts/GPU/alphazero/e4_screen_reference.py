@@ -677,6 +677,17 @@ EXPOSED_SEED_INTERVALS = (
                                      # RETIRED WHOLE under the one-shot rule.
                                      # THE LAST SEGMENT: all four quarters of the
                                      # H3 full study are now spent.
+    # 🔴 H4 -- THE ONE CLOSING EDIT (2026-09-25, step-4 card §2.1), after H4 closed:
+    # pilot + four study segments all COMPLETE. Exposure DERIVED from the committed
+    # game_start records (evidence/2026-09-25-t1j-h4-seed-closing/): all 624 assigned
+    # seeds started EXACTLY once, so each block is EXPOSED WHOLE. A post-run
+    # accounting edit to a bound file: the committed H4 records keep the hashes
+    # they were bound to, and H4 is NOT rerun under the old manifests.
+    (202632000, 202632032),  # H4 PILOT -- 32 seeds, all started
+    (202634000, 202634148),  # H4 STUDY SEGMENT 0 -- 148 seeds, all started
+    (202636000, 202636148),  # H4 STUDY SEGMENT 1 -- 148 seeds, all started
+    (202638000, 202638148),  # H4 STUDY SEGMENT 2 -- 148 seeds, all started
+    (202640000, 202640148),  # H4 STUDY SEGMENT 3 -- 148 seeds, all started
 )
 
 #: Seeds RESERVED PERMANENTLY FOR TESTS. Unit tests must draw from something, and
@@ -907,6 +918,17 @@ RETIRED_SEED_INTERVALS = (
                                      # RETIRED WHOLE under the one-shot rule.
                                      # THE LAST SEGMENT: all four quarters of the
                                      # H3 full study are now spent.
+    # 🔴 H4 -- THE ONE CLOSING EDIT (2026-09-25, step-4 card §2.1), after H4 closed:
+    # pilot + four study segments all COMPLETE. Exposure DERIVED from the committed
+    # game_start records (evidence/2026-09-25-t1j-h4-seed-closing/): all 624 assigned
+    # seeds started EXACTLY once, so each block is RETIRED WHOLE. A post-run
+    # accounting edit to a bound file: the committed H4 records keep the hashes
+    # they were bound to, and H4 is NOT rerun under the old manifests.
+    (202632000, 202632032),  # H4 PILOT -- 32 seeds, all started
+    (202634000, 202634148),  # H4 STUDY SEGMENT 0 -- 148 seeds, all started
+    (202636000, 202636148),  # H4 STUDY SEGMENT 1 -- 148 seeds, all started
+    (202638000, 202638148),  # H4 STUDY SEGMENT 2 -- 148 seeds, all started
+    (202640000, 202640148),  # H4 STUDY SEGMENT 3 -- 148 seeds, all started
 )
 
 

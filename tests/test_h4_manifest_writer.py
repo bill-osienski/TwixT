@@ -25,6 +25,21 @@ from tests.test_h4_runner import FAKE_TOOLCHAIN
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CONTENT = {k: FAKE_TOOLCHAIN[k] for k in R.TOOLCHAIN_CONTENT}
+REAL_BLOCKS, REAL_DIRS = dict(R.SEED_BLOCKS), dict(R.EVIDENCE_DIRS)
+#: PLACEHOLDER blocks: the real five were EXPOSED and RETIRED by the closing edit
+#: (2026-09-25) and their evidence directories are occupied, so the writer must
+#: refuse them -- tested below. Every other test writes placeholder manifests.
+PLACEHOLDERS = {("pilot", 0): (1, 33),
+                **{("study", k): (10_000 + 1_000 * k, 10_148 + 1_000 * k) for k in range(4)}}
+
+
+@pytest.fixture(autouse=True)
+def placeholders(monkeypatch, tmp_path):
+    monkeypatch.setattr(R, "SEED_BLOCKS", dict(PLACEHOLDERS))
+    monkeypatch.setattr(REF, "ACCOUNTED_SEED_INTERVALS",
+                        tuple(REF.ACCOUNTED_SEED_INTERVALS) + tuple(PLACEHOLDERS.values()))
+    monkeypatch.setattr(R, "EVIDENCE_DIRS", {k: str(tmp_path / f"evidence-{k[0]}-{k[1]}")
+                                             for k in PLACEHOLDERS})
 
 
 def fixture_record(repo, edit=None, result="CLEAN"):
@@ -167,6 +182,17 @@ def test_the_CLI_refuses_as_a_fresh_subprocess(tmp_path):
 
 def test_NO_public_entry_reaches_the_fixture_relaxation():
     assert fixture_leaks(W.__file__, {"write_manifests", "main"}) == []
+
+
+def test_the_CLOSED_real_blocks_are_refused(repo, fresh, tmp_path, monkeypatch):
+    """After the closing edit the writer can never re-issue the H4 manifests."""
+    monkeypatch.setattr(R, "SEED_BLOCKS", dict(REAL_BLOCKS))
+    monkeypatch.setattr(R, "EVIDENCE_DIRS", {k: str(tmp_path / f"free-{k[0]}-{k[1]}")
+                                             for k in REAL_DIRS})
+    with pytest.raises(F.H4AnalysisRefused, match="pilot segment 0: seeds fail the "
+                                                  "shared registry.*exposed, retired"):
+        write(fixture_record(repo), tmp_path / "manifests")
+    assert not (tmp_path / "manifests").exists()
 
 
 def test_the_writer_is_OUTSIDE_code_and_the_play_path():

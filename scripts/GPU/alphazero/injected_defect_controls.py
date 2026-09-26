@@ -4717,6 +4717,19 @@ DEFECTS = [
      '    if os.path.lexists(out_dir):\n        F.refuse(f"{out_dir} is occupied; the manifests',
      '    if False:\n        F.refuse(f"{out_dir} is occupied; the manifests',
      f"{T_H4MW}::test_an_OCCUPIED_destination_is_refused_before_anything"),
+    # ── H4 closing seed edit (2026-09-25): each registration deleted in turn.
+    ('H4 closing: the pilot block is not recorded EXPOSED', REF_SRC,
+     '    # seeds started EXACTLY once, so each block is EXPOSED WHOLE. A post-run\n    # accounting edit to a bound file: the committed H4 records keep the hashes\n    # they were bound to, and H4 is NOT rerun under the old manifests.\n    (202632000, 202632032),  # H4 PILOT -- 32 seeds, all started\n',
+     '    # seeds started EXACTLY once, so each block is EXPOSED WHOLE. A post-run\n    # accounting edit to a bound file: the committed H4 records keep the hashes\n    # they were bound to, and H4 is NOT rerun under the old manifests.\n',
+     f"{T_H4PP}::test_the_CLOSING_edit_exposed_and_retired_every_H4_block_exactly"),
+    ('H4 closing: the pilot block is not recorded RETIRED', REF_SRC,
+     '    # seeds started EXACTLY once, so each block is RETIRED WHOLE. A post-run\n    # accounting edit to a bound file: the committed H4 records keep the hashes\n    # they were bound to, and H4 is NOT rerun under the old manifests.\n    (202632000, 202632032),  # H4 PILOT -- 32 seeds, all started\n',
+     '    # seeds started EXACTLY once, so each block is RETIRED WHOLE. A post-run\n    # accounting edit to a bound file: the committed H4 records keep the hashes\n    # they were bound to, and H4 is NOT rerun under the old manifests.\n',
+     f"{T_H4PP}::test_the_CLOSING_edit_exposed_and_retired_every_H4_block_exactly"),
+    ('H4 closing: segment 3 is exposed one seed short', REF_SRC,
+     '    # seeds started EXACTLY once, so each block is EXPOSED WHOLE. A post-run\n    # accounting edit to a bound file: the committed H4 records keep the hashes\n    # they were bound to, and H4 is NOT rerun under the old manifests.\n    (202632000, 202632032),  # H4 PILOT -- 32 seeds, all started\n    (202634000, 202634148),  # H4 STUDY SEGMENT 0 -- 148 seeds, all started\n    (202636000, 202636148),  # H4 STUDY SEGMENT 1 -- 148 seeds, all started\n    (202638000, 202638148),  # H4 STUDY SEGMENT 2 -- 148 seeds, all started\n    (202640000, 202640148),  # H4 STUDY SEGMENT 3 -- 148 seeds, all started\n',
+     '    # seeds started EXACTLY once, so each block is EXPOSED WHOLE. A post-run\n    # accounting edit to a bound file: the committed H4 records keep the hashes\n    # they were bound to, and H4 is NOT rerun under the old manifests.\n    (202632000, 202632032),  # H4 PILOT -- 32 seeds, all started\n    (202634000, 202634148),  # H4 STUDY SEGMENT 0 -- 148 seeds, all started\n    (202636000, 202636148),  # H4 STUDY SEGMENT 1 -- 148 seeds, all started\n    (202638000, 202638148),  # H4 STUDY SEGMENT 2 -- 148 seeds, all started\n    (202640000, 202640147),  # H4 STUDY SEGMENT 3 -- 148 seeds, all started\n',
+     f"{T_H4PP}::test_the_CLOSING_edit_exposed_and_retired_every_H4_block_exactly"),
 ]
 
 # ═══════════════════════════ THE EXPECTED REASONS ════════════════════════════
@@ -6834,4 +6847,12 @@ EXPECTED_REASONS = {
         "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
     'H4 4b writer: an occupied destination is not refused first':
         'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: /private/<tmp>/pytest-of-<user>/pytest-<n>/test_an_OCCUPIED_destination_i0/no-record.json is not durable: not tracked (card §2.1)',
+    # ── 2026-09-25: H4 closing seed edit. RECORDED under .venv (pytest 9.0.2), harvested in
+    # a disposable worktree before commit; 199 other H4/gate/registry controls unchanged.
+    'H4 closing: the pilot block is not recorded EXPOSED':
+        'AssertionError: block [202632000, 202632032) is not registered as exactly itself in EXPOSED',
+    'H4 closing: the pilot block is not recorded RETIRED':
+        'AssertionError: block [202632000, 202632032) is not registered as exactly itself in RETIRED',
+    'H4 closing: segment 3 is exposed one seed short':
+        'AssertionError: block [202640000, 202640148) is not registered as exactly itself in EXPOSED',
 }
