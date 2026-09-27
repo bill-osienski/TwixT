@@ -5071,6 +5071,14 @@ DEFECTS = [
      '                out=os.path.join(R4.REPO_ROOT, OUT), _fixture=False)',
      '                out=os.path.join(R4.REPO_ROOT, OUT), _fixture=True)',
      f"{T_H5C}::test_NO_public_entry_can_reach_the_fixture_relaxation"),
+    ('H5 qualification: the class root is created outside the STOP handler', H5QUAL,
+     '    log = None\n    try:\n        try:\n            log = Q4._StageLog(os.path.join(out_dir, "stages.jsonl"))\n            log.begin(SETUP)\n            os.makedirs(classes_root)\n',
+     '    log = None\n    os.makedirs(classes_root)\n    try:\n        try:\n            log = Q4._StageLog(os.path.join(out_dir, "stages.jsonl"))\n            log.begin(SETUP)\n',
+     f"{T_H5QUAL}::test_a_SETUP_failure_after_the_claim_is_a_RECORDED_STOP_not_a_bare_directory[classes_root]"),
+    ('H5 qualification: the stage log is created outside the STOP handler', H5QUAL,
+     '    log = None\n    try:\n        try:\n            log = Q4._StageLog(os.path.join(out_dir, "stages.jsonl"))\n            log.begin(SETUP)\n',
+     '    log = Q4._StageLog(os.path.join(out_dir, "stages.jsonl"))\n    try:\n        try:\n            log.begin(SETUP)\n',
+     f"{T_H5QUAL}::test_a_SETUP_failure_after_the_claim_is_a_RECORDED_STOP_not_a_bare_directory[stage_log]"),
 ]
 
 # ═══════════════════════════ THE EXPECTED REASONS ════════════════════════════
@@ -7362,4 +7370,10 @@ EXPECTED_REASONS = {
         "AssertionError: assert ['.git', 'doc...dir', 'study'] == ['.git', 'docs', 'study']",
     'H5 analysis: the public entry reaches the fixture relaxation':
         "AssertionError: assert ['run_confirm...fixture=True'] == []",
+    # ── 2026-09-27: H5 step 3 review fix -- setup after the claim is under the recorded
+    # STOP. Harvested in a disposable worktree before commit.
+    'H5 qualification: the class root is created outside the STOP handler':
+        'OSError: class root refused',
+    'H5 qualification: the stage log is created outside the STOP handler':
+        'OSError: stage log refused',
 }

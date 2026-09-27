@@ -337,3 +337,29 @@ def test_the_qualification_REFUSES_a_bad_destination_and_WRITES_NOTHING(tmp_path
         assert os.listdir(rec) == []
     else:
         assert not rec.exists(), "the record directory is claimed only after every check"
+
+
+@pytest.mark.parametrize("what", ["classes_root", "stage_log"])
+def test_a_SETUP_failure_after_the_claim_is_a_RECORDED_STOP_not_a_bare_directory(
+        tmp_path, qual_open, monkeypatch, what):
+    """Review 2026-09-27: after the claim, NOTHING may leave an occupied record
+    directory without `record.json` -- not the class root, not the stage log."""
+    cls = tmp_path / "cls"
+    if what == "classes_root":
+        real = os.makedirs
+
+        def refuse(path, *a, **k):
+            if os.fspath(path) == str(cls):
+                raise OSError("class root refused")
+            return real(path, *a, **k)
+        monkeypatch.setattr(os, "makedirs", refuse)
+    else:
+        def broken(path):
+            raise OSError("stage log refused")
+        monkeypatch.setattr(Q.Q4, "_StageLog", broken)
+    rec = early(tmp_path)
+    assert (rec["result"], rec["failing_stage"]) == ("STOP", "setup")
+    assert rec["reason"].startswith("OSError:") and rec["checks"] == {}
+    on_disk = json.loads((tmp_path / "evidence" / "early" / "record.json").read_text())
+    assert (on_disk["result"], on_disk["failing_stage"]) == ("STOP", "setup")
+    assert qual_open["n"] == 0 and not cls.exists()

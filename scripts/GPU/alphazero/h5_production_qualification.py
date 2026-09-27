@@ -63,6 +63,8 @@ H4_REGISTRY_BLOB_SHA256 = "c1021279a2dd37a183c5c7b10577f2a8b541b6714da6c78a6259d
 INTERVAL_REGISTRIES = ("ACCOUNTED_SEED_INTERVALS", "EXPOSED_SEED_INTERVALS",
                        "RETIRED_SEED_INTERVALS", "TEST_ONLY_SEED_INTERVALS")
 
+#: The failing-stage name for anything after the claim and before `role` begins.
+SETUP = "setup"
 STAGES = ("role", "incumbent_identity", "checkpoint", "incumbent_move", "compile_a",
           "compile_b", "reproducibility", "study_cli", "h4_equivalence", "bound_identity")
 
@@ -292,23 +294,32 @@ def _qualify(out_dir: str, classes_root: str) -> Dict[str, Any]:
     if os.path.lexists(classes_root):
         raise QualificationRefused(f"{classes_root} is occupied; compiles are create-only")
     os.mkdir(out_dir)                             # THE CLAIM: create-only, before any stage
-    log = Q4._StageLog(os.path.join(out_dir, "stages.jsonl"))
+    #: 🔴 EVERYTHING after the claim is inside the recorded-STOP handler -- the stage
+    #: log's creation and the class root's included -- so a failure there leaves a
+    #: STOP `record.json` naming `setup`, never an occupied directory without one.
+    #: (H4's 3P-b created the class root OUTSIDE its handler; it never failed there.)
+    log = None
     try:
-        os.makedirs(classes_root)
         try:
+            log = Q4._StageLog(os.path.join(out_dir, "stages.jsonl"))
+            log.begin(SETUP)
+            os.makedirs(classes_root)
             _checks(classes_root, log, role)
             result, failing, reason = "CLEAN", None, None
         except _Stop as e:
             result, failing, reason = "STOP", log.current, str(e)
         except Exception as e:                    # noqa: BLE001 -- any failure is a STOP, recorded
-            result, failing, reason = "STOP", log.current, f"{type(e).__name__}: {e}"
+            result, failing, reason = ("STOP", log.current if log else SETUP,
+                                       f"{type(e).__name__}: {e}")
     finally:
-        log.close()
+        if log is not None:
+            log.close()
     note = "NOT evidence of strength: no game was played and no outcome exists"
     if role[0] != BINDING:
         note += f". {role[0]}: this record binds NOTHING; the manifest writer refuses it"
     record = {"record": "H5_PRODUCTION_QUALIFICATION", "role": role[0], "result": result,
-              "failing_stage": failing, "reason": reason, "checks": log.completed,
+              "failing_stage": failing, "reason": reason,
+              "checks": log.completed if log is not None else {},
               "stages": list(STAGES), "evidence_note": note, "seed": SEED,
               "written_at": datetime.datetime.now(datetime.timezone.utc).isoformat()}
     Q4._write_create_only(os.path.join(out_dir, "record.json"), record)
