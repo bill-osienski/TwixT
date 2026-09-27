@@ -1,0 +1,48 @@
+H5 STEP 5 -- FRESH READ-ONLY SEED SURVEY (not the collision proof)
+========================================================================
+HEAD 779f8f6a0070f4bd12caa9e7dcde05e9c59f1780; scripts/ and tests/ clean
+registry scripts/GPU/alphazero/e4_screen_reference.py sha256 a98c22788544c8994a1bb3e82fe7e5404fd9a105bc1a3ac3768088b8810692f9
+masks (imported): ['0x3c3c3c', '0x5a5a5a', '0xa5a5a5', '0xc3c3c3']
+registries: ACCOUNTED 24, EXPOSED 22, RETIRED 20, TEST_ONLY 1
+named spent blocks: 17 (H4's five included); H3 generation ranges: 4
+
+PINNED OWN RECORDS (exact paths; the ONLY files whose literals are exempt): 5
+    docs/superpowers/evidence/2026-09-27-t1j-h5-seed-survey/01_h5_seed_survey.py
+    docs/superpowers/evidence/2026-09-27-t1j-h5-seed-survey/02_h5_seed_survey_run.txt
+    docs/superpowers/evidence/t1j-h5-seed-registration/01_h5_collision_proof.py
+    docs/superpowers/evidence/t1j-h5-seed-registration/02_h5_collision_proof_pre_run.txt
+    docs/superpowers/evidence/t1j-h5-seed-registration/03_h5_collision_proof_post_run.txt
+
+repo literal values counted (union scanner): 3680; v16's scanner alone: 3680
+values ONLY the underscore-aware scan finds: 0
+literal values in the 2026 band: 3680
+
+CANDIDATE RULE: highest registered/named seed end in the band = 202640148; BASE = 202650000; spacing 2000; size 148
+H5_STUDY_SEGMENT_0   (202650000, 202650148)  n=148  direct=NONE  streams=0  injective=True  gap=1852 (floor 148)  CLEAN=True
+H5_STUDY_SEGMENT_1   (202652000, 202652148)  n=148  direct=NONE  streams=0  injective=True  gap=1852 (floor 148)  CLEAN=True
+H5_STUDY_SEGMENT_2   (202654000, 202654148)  n=148  direct=NONE  streams=0  injective=True  gap=1852 (floor 148)  CLEAN=True
+H5_STUDY_SEGMENT_3   (202656000, 202656148)  n=148  direct=NONE  streams=0  injective=True  gap=1852 (floor 148)  CLEAN=True
+total seeds: 592 = 4 x 148
+
+NEGATIVE CONTROLS -- each must be REJECTED
+------------------------------------------------------------------------
+  REJECTED     H4 study segment 0 (exposed, retired)  (202634000, 202634148)
+  REJECTED     H4 pilot block  (202632000, 202632032)
+  REJECTED     H3 segment-0 replacement block (spent)  (202628000, 202628148)
+  REJECTED     H3's retired segment-0 quarter  (202626000, 202626148)
+  REJECTED     the H3 pilot block  (202624000, 202624040)
+  REJECTED     H2 attempt-3 block  (202622000, 202622736)
+  REJECTED     D1's paper reservation  (202615000, 202615221)
+  REJECTED     the TEST_ONLY band  (90009000, 90009100)
+  REJECTED     inside the live H3 uniform generation range  (20261600000, 20261600148)
+  REJECTED     overlaps candidate 0 by one seed  (202650147, 202650295)
+  REJECTED     starts where candidate 0 ends -- inside the floor  (202650148, 202650296)
+  REJECTED     one seed inside candidate 0's floor  (202650295, 202650443)
+  REJECTED     a block at the H4-4b MUTATION literal 202642000 (injected_defect_controls.py)  (202642000, 202642148)
+      descriptive: with v16's scanner alone that block is REJECTED (direct={'REPO_LITERALS': 1}) -- v16 now sees the value only where it is written plainly: ['docs/superpowers/2026-09-27-t1j-h5-implementation-card.md']
+  REJECTED     an UNDERSCORE-GROUPED candidate seed (202_650_000): without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=1852; v16's scanner alone sees it: False
+  REJECTED     a PLAIN candidate seed (202650007): without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=1852; v16's scanner alone sees it: True
+  REJECTED     an UNDERSCORE-GROUPED exclusive end (202_650_148): without it CLEAN=True; with it direct=NONE gap=0; v16's scanner alone sees it: False
+
+controls rejected: 16/16
+SURVEY VERDICT   : ALL FOUR CANDIDATES CLEAN
