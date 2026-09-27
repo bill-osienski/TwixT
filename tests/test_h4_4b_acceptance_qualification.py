@@ -579,8 +579,10 @@ def _opt_ins(source):
 
 
 def test_NO_existing_caller_opts_in():
+    #: `h5_runner.py` added 2026-09-27: H5 replicates H4 under the SAME §4B mode
+    #: (H5 replication card §1), through a VERBATIM copy of H4's run loop.
     allowed = {"e4_screen_integration.py", "h4_4b_acceptance_qualification.py",
-               "h4_runner.py"}
+               "h4_runner.py", "h5_runner.py"}
     hits = {p.name: _opt_ins(p.read_text(encoding="utf-8"))
             for p in sorted((ROOT / "scripts").rglob("*.py")) if p.name not in allowed}
     assert {k: v for k, v in hits.items() if v} == {}

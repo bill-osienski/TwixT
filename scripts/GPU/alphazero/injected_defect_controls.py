@@ -116,6 +116,18 @@ H4C = "scripts/GPU/alphazero/h4_confirmatory_analysis.py"
 T_H4F = "tests/test_h4_pilot_feasibility.py"
 T_H4D = "tests/test_h4_pilot_decision.py"
 T_H4C = "tests/test_h4_confirmatory_analysis.py"
+# ── H5 step 3 (2026-09-27): H5 by IMPORT of H4, its own gates, roles and analysis
+H5RUN = "scripts/GPU/alphazero/h5_runner.py"
+H5QUAL = "scripts/GPU/alphazero/h5_production_qualification.py"
+H5MW = "scripts/GPU/alphazero/h5_manifest_writer.py"
+H5C = "scripts/GPU/alphazero/h5_confirmatory_analysis.py"
+H5AUTH = "scripts/GPU/alphazero/h5_study_authorization.py"
+H5QAUTH = "scripts/GPU/alphazero/h5_production_qualification_authorization.py"
+H5CAUTH = "scripts/GPU/alphazero/h5_aggregation_authorization.py"
+T_H5RUN = "tests/test_h5_runner.py"
+T_H5QUAL = "tests/test_h5_production_qualification.py"
+T_H5MW = "tests/test_h5_manifest_writer.py"
+T_H5C = "tests/test_h5_confirmatory_analysis.py"
 
 # (label, file, anchor, replacement, test node)
 DEFECTS = [
@@ -4730,6 +4742,335 @@ DEFECTS = [
      '    # seeds started EXACTLY once, so each block is EXPOSED WHOLE. A post-run\n    # accounting edit to a bound file: the committed H4 records keep the hashes\n    # they were bound to, and H4 is NOT rerun under the old manifests.\n    (202632000, 202632032),  # H4 PILOT -- 32 seeds, all started\n    (202634000, 202634148),  # H4 STUDY SEGMENT 0 -- 148 seeds, all started\n    (202636000, 202636148),  # H4 STUDY SEGMENT 1 -- 148 seeds, all started\n    (202638000, 202638148),  # H4 STUDY SEGMENT 2 -- 148 seeds, all started\n    (202640000, 202640148),  # H4 STUDY SEGMENT 3 -- 148 seeds, all started\n',
      '    # seeds started EXACTLY once, so each block is EXPOSED WHOLE. A post-run\n    # accounting edit to a bound file: the committed H4 records keep the hashes\n    # they were bound to, and H4 is NOT rerun under the old manifests.\n    (202632000, 202632032),  # H4 PILOT -- 32 seeds, all started\n    (202634000, 202634148),  # H4 STUDY SEGMENT 0 -- 148 seeds, all started\n    (202636000, 202636148),  # H4 STUDY SEGMENT 1 -- 148 seeds, all started\n    (202638000, 202638148),  # H4 STUDY SEGMENT 2 -- 148 seeds, all started\n    (202640000, 202640147),  # H4 STUDY SEGMENT 3 -- 148 seeds, all started\n',
      f"{T_H4PP}::test_the_CLOSING_edit_exposed_and_retired_every_H4_block_exactly"),
+    # ── H5 step 3 (2026-09-27): each H5 check deleted in turn (implementation card §8).
+    ('H5 gate: the study entry ignores its gate', H5RUN,
+     '    if not AUTH.H5_STUDY_EXECUTION_AUTHORIZED:\n        raise H4RunError("the H5 study',
+     '    if False:\n        raise H4RunError("the H5 study',
+     f"{T_H5RUN}::test_the_public_entry_refuses_while_the_gate_is_shut"),
+    ('H5 gate: the study CLI ignores its gate', H5RUN,
+     '    if not AUTH.H5_STUDY_EXECUTION_AUTHORIZED:\n        print(',
+     '    if False:\n        print(',
+     f"{T_H5RUN}::test_the_CLI_refuses_in_a_fresh_subprocess"),
+    ('H5 gate: the study gate module is published OPEN', H5AUTH,
+     'H5_STUDY_EXECUTION_AUTHORIZED = False',
+     'H5_STUDY_EXECUTION_AUTHORIZED = True',
+     f"{T_H5RUN}::test_the_H5_gates_are_published_CLOSED"),
+    ('H5 gate: the qualification gate module is published OPEN', H5QAUTH,
+     'H5_PRODUCTION_QUALIFICATION_AUTHORIZED = False',
+     'H5_PRODUCTION_QUALIFICATION_AUTHORIZED = True',
+     f"{T_H5RUN}::test_the_H5_gates_are_published_CLOSED"),
+    ('H5 gate: the aggregation gate module is published OPEN', H5CAUTH,
+     'H5_STUDY_AGGREGATION_AUTHORIZED = False',
+     'H5_STUDY_AGGREGATION_AUTHORIZED = True',
+     f"{T_H5RUN}::test_the_H5_gates_are_published_CLOSED"),
+    ('H5 gate: a gate module declares its gate under another name', H5AUTH,
+     'H5_STUDY_EXECUTION_AUTHORIZED = False',
+     'H5_STUDY_EXECUTION_ALLOWED = False',
+     f"{T_GATES}::test_THE_GATE_INVENTORY_IS_EXACTLY_WHAT_THE_SOURCE_CONTAINS"),
+    ('H5 runner: study mode runs with no registered block', H5RUN,
+     '    if not SEED_BLOCKS:\n        raise H4RunError("no H5 seed block',
+     '    if False:\n        raise H4RunError("no H5 seed block',
+     f"{T_H5RUN}::test_STUDY_mode_refuses_while_SEED_BLOCKS_is_EMPTY"),
+    ('H5 runner: study mode accepts an injected seam', H5RUN,
+     '    if seams:\n        raise H4RunError(f"study mode accepts no injected seam',
+     '    if False:\n        raise H4RunError(f"study mode accepts no injected seam',
+     f"{T_H5RUN}::test_STUDY_mode_accepts_NO_injected_seam[paths]"),
+    ('H5 runner: an uncommitted manifest is read', H5RUN,
+     '    _durable([manifest], "the manifest is not durable")\n',
+     '',
+     f"{T_H5RUN}::test_an_UNCOMMITTED_or_MODIFIED_manifest_is_refused[untracked]"),
+    ('H5 runner: segment order is not enforced', H5RUN,
+     '    check_predecessor(segment)\n    entry = manifest_entry',
+     '    entry = manifest_entry',
+     f"{T_H5RUN}::test_segment_k_REFUSES_unless_segment_k_minus_1_is_COMMITTED_and_COMPLETE[absent-needs segment 0 committed first]"),
+    ('H5 runner: a VOID predecessor is accepted', H5RUN,
+     '        F.segment_end(prev)',
+     '        pass',
+     f"{T_H5RUN}::test_segment_k_REFUSES_unless_segment_k_minus_1_is_COMMITTED_and_COMPLETE[void-needs segment 0 COMPLETE]"),
+    ('H5 runner: a manifest of another stage is read', H5RUN,
+     '    if not isinstance(m, dict) or m.get("stage") != STUDY_DESIGN:',
+     '    if not isinstance(m, dict):',
+     f"{T_H5RUN}::test_a_manifest_of_ANOTHER_STAGE_is_refused[H4_STUDY]"),
+    ('H5 runner: a non-canonical schedule is accepted', H5RUN,
+     '    if _canon(list(schedule)) != _canon(canonical_schedule(segment, identity)):',
+     '    if False:',
+     f"{T_H5RUN}::test_a_NON_CANONICAL_schedule_H4s_included_is_refused[_h4_schedule]"),
+    ('H5 runner: the canonical schedule swaps the arm seeds', H5RUN,
+     '    pairs = [(f"{PAIR_TAG}{segment}-{k:02d}", lo + 2 * k, lo + 2 * k + 1)',
+     '    pairs = [(f"{PAIR_TAG}{segment}-{k:02d}", lo + 2 * k + 1, lo + 2 * k)',
+     f"{T_H5MW}::test_the_writer_builds_the_STUDY_manifest_from_the_registered_blocks"),
+    ('H5 runner: the shared-registry faults are ignored', H5RUN,
+     '    if faults:\n        raise H4RunError(f"seeds fail the shared registry',
+     '    if False:\n        raise H4RunError(f"seeds fail the shared registry',
+     f"{T_H5RUN}::test_an_H4_SEED_BLOCK_is_refused_by_the_registry"),
+    ("H5 runner: the run may write outside its manifest's evidence_dir", H5RUN,
+     '    if entry.get("evidence_dir") != want_dir or os.path.realpath(out_dir) != \\\n            os.path.realpath(os.path.join(REPO_ROOT, want_dir)):',
+     '    if False:',
+     f"{T_H5RUN}::test_the_run_writes_ONLY_to_its_manifests_evidence_dir"),
+    ('H5 runner: an occupied evidence dir is found only after loading', H5RUN,
+     '    if os.path.lexists(out_dir):\n        raise H4RunError(f"{out_dir} is occupied: this segment',
+     '    if False:\n        raise H4RunError(f"{out_dir} is occupied: this segment',
+     f"{T_H5RUN}::test_an_evidence_dir_LEFT_BY_A_VOID_refuses_and_nothing_runs"),
+    ('H5 runner: the pre-claim binding is skipped', H5RUN,
+     '    bad = binding_differences(head, entry, stage=STUDY_DESIGN, with_toolchain=False)\n    if bad:',
+     '    bad = binding_differences(head, entry, stage=STUDY_DESIGN, with_toolchain=False)\n    if False:',
+     f"{T_H5RUN}::test_a_manifest_that_would_not_bind_is_refused_BEFORE_ANYTHING_is_claimed[<lambda>-code]"),
+    ('H5 runner: a task naming another incumbent is accepted', H5RUN,
+     '    if wrong_ref:',
+     '    if False:',
+     f"{T_H5RUN}::test_a_task_naming_ANOTHER_incumbent_is_refused"),
+    ('H5 runner: the replication card is not bound', H5RUN,
+     'CARDS = ("docs/superpowers/2026-09-25-t1j-h5-replication-card.md",\n',
+     'CARDS = (\n',
+     f"{T_H5RUN}::test_the_HEADER_hashes_the_SEVEN_cards_and_EVERY_CODE_file"),
+    ('H5 runner: the header binds H4s cards, not H5s', H5RUN,
+     '            "cards": {c: R4._sha256_or_none(REPO_ROOT / c) for c in CARDS},\n',
+     '',
+     f"{T_H5RUN}::test_the_HEADER_hashes_the_SEVEN_cards_and_EVERY_CODE_file"),
+    ('H5 runner: a CODE file is left unlisted', H5RUN,
+     '    "scripts/GPU/alphazero/h4_pilot_feasibility.py",\n',
+     '',
+     f"{T_H5RUN}::test_CODE_is_EXACTLY_the_play_path_closure_minus_the_H5_gate_modules"),
+    ('H5 runner: an H4 gate module is left out of CODE', H5RUN,
+     '    "scripts/GPU/alphazero/h4_pilot_authorization.py",\n',
+     '',
+     f"{T_H5RUN}::test_CODE_holds_H4s_whole_path_AND_H4s_gate_modules_but_no_H5_gate"),
+    ('H5 runner: the fixture label is H4s', H5RUN,
+     'DESIGNS = {"fixture": "H5_SYNTHETIC_FIXTURE", "study": "H5_STUDY"}',
+     'DESIGNS = {"fixture": "H4_SYNTHETIC_FIXTURE", "study": "H5_STUDY"}',
+     f"{T_H5RUN}::test_a_FIXTURE_PAIR_runs_end_to_end_and_every_record_re_derives"),
+    ('H5 runner: the evidence directories are dated', H5RUN,
+     'EVIDENCE_DIRS = {k: f"docs/superpowers/evidence/t1j-h5-study-segment{k}" for k in SEGMENTS}',
+     'EVIDENCE_DIRS = {k: f"docs/superpowers/evidence/2026-09-27-t1j-h5-study-segment{k}" for k in SEGMENTS}',
+     f"{T_H5RUN}::test_the_constants_are_the_cards"),
+    ('H5 runner: SEED_BLOCKS is filled before step 6', H5RUN,
+     'SEED_BLOCKS: Dict[int, tuple] = {}',
+     'SEED_BLOCKS: Dict[int, tuple] = {0: (1, 149)}',
+     f"{T_H5RUN}::test_SEED_BLOCKS_is_EMPTY_until_step_6"),
+    ('H5 runner: the copied loop claims with exist_ok', H5RUN,
+     '    claim_directory(out_dir)                      # THE claim: before any draw or JVM',
+     '    os.makedirs(out_dir, exist_ok=True)           # THE claim: before any draw or JVM',
+     f"{T_H5RUN}::test_the_COPIED_functions_are_H4s_TEXT_in_H5s_NAMESPACE"),
+    ('H5 qualification: the entry ignores its gate', H5QUAL,
+     '    if not QAUTH.H5_PRODUCTION_QUALIFICATION_AUTHORIZED:\n        raise',
+     '    if False:\n        raise',
+     f"{T_H5QUAL}::test_the_QUALIFICATION_refuses_while_its_gate_is_shut"),
+    ('H5 qualification: the CLI ignores its gate', H5QUAL,
+     '    if not QAUTH.H5_PRODUCTION_QUALIFICATION_AUTHORIZED:\n        print(',
+     '    if False:\n        print(',
+     f"{T_H5QUAL}::test_the_QUALIFICATION_CLI_exits_5_as_a_fresh_subprocess"),
+    ('H5 qualification: empty blocks derive BINDING', H5QUAL,
+     '    if not blocks:\n        return EARLY, seen, None',
+     '    if not blocks:\n        return BINDING, seen, None',
+     f"{T_H5QUAL}::test_EMPTY_blocks_derive_EARLY"),
+    ('H5 qualification: a partial block set is not a STOP', H5QUAL,
+     '    if sorted(blocks) != list(H5.SEGMENTS):',
+     '    if False:',
+     f"{T_H5QUAL}::test_ANY_OTHER_block_state_derives_STOP[segments]"),
+    ('H5 qualification: a wrong block size is not a STOP', H5QUAL,
+     '    if any(n != BLOCK_SEEDS for n in sizes.values()):',
+     '    if False:',
+     f"{T_H5QUAL}::test_ANY_OTHER_block_state_derives_STOP[size]"),
+    ('H5 qualification: overlapping blocks are not a STOP', H5QUAL,
+     '    if len(set(seeds)) != len(seeds):',
+     '    if False:',
+     f"{T_H5QUAL}::test_ANY_OTHER_block_state_derives_STOP[overlap]"),
+    ('H5 qualification: an unregistered block derives BINDING', H5QUAL,
+     '    faults = R4.seed_registry_faults([{"seed": s} for s in seeds])\n    if faults:',
+     '    faults = R4.seed_registry_faults([{"seed": s} for s in seeds])\n    if False:',
+     f"{T_H5QUAL}::test_ANY_OTHER_block_state_derives_STOP[unaccounted]"),
+    ('H5 qualification: a STOP role runs the stages anyway', H5QUAL,
+     '    if role[0] == STOP:\n        _stop(f"role: {role[2]}")\n',
+     '',
+     f"{T_H5QUAL}::test_a_STOP_role_is_a_RECORDED_STOP_at_the_role_stage"),
+    ('H5 qualification: BINDING may write anywhere', H5QUAL,
+     '    if role == BINDING and here != binding:',
+     '    if False:',
+     f"{T_H5QUAL}::test_a_BINDING_qualification_writes_ONLY_to_the_binding_dir"),
+    ('H5 qualification: EARLY may write to the binding dir', H5QUAL,
+     '        if here == binding:',
+     '        if False:',
+     f"{T_H5QUAL}::test_an_EARLY_qualification_may_NEVER_write_to_the_binding_dir"),
+    ('H5 qualification: EARLY may write outside the evidence tree', H5QUAL,
+     '        if not R4._inside(pathlib.Path(here), pathlib.Path(EVIDENCE_ROOT)):',
+     '        if False:',
+     f"{T_H5QUAL}::test_an_EARLY_record_goes_UNDER_the_evidence_tree"),
+    ('H5 qualification: an EARLY record does not say it binds nothing', H5QUAL,
+     '        note += f". {role[0]}: this record binds NOTHING; the manifest writer refuses it"',
+     '        note += ""',
+     f"{T_H5QUAL}::test_an_EARLY_qualification_runs_CLEAN_and_says_it_binds_NOTHING"),
+    ('H5 qualification: an occupied record directory is claimed anyway', H5QUAL,
+     '    if os.path.lexists(out_dir):\n        raise QualificationRefused',
+     '    if False:\n        raise QualificationRefused',
+     f"{T_H5QUAL}::test_the_qualification_REFUSES_a_bad_destination_and_WRITES_NOTHING[occupied_record]"),
+    ('H5 qualification: a non-reproducible compile passes', H5QUAL,
+     '    if a != b:\n        diff = sorted(k for k in a if a[k] != b[k])',
+     '    if False:\n        diff = sorted(k for k in a if a[k] != b[k])',
+     f"{T_H5QUAL}::test_a_failed_check_is_a_recorded_STOP_that_KEEPS_every_earlier_stage[fault0-reproducibility-does not compile reproducibly]"),
+    ('H5 qualification: a study CLI that runs passes', H5QUAL,
+     '    if rc != H5.EXIT_UNAUTHORIZED:',
+     '    if False:',
+     f"{T_H5QUAL}::test_a_STUDY_CLI_that_does_not_refuse_is_a_STOP"),
+    ('H5 equivalence: the pinned manifest need not be committed', H5QUAL,
+     '        F.check_durable([path], _fixture=False)',
+     '        pass',
+     f"{T_H5QUAL}::test_an_UNTRACKED_pinned_manifest_STOPS"),
+    ('H5 equivalence: the manifest pin is not checked', H5QUAL,
+     '    if _sha(raw) != H4_STUDY_MANIFEST_SHA256:',
+     '    if False:',
+     f"{T_H5QUAL}::test_a_PIN_that_does_not_recompute_STOPS_before_its_content_is_used[H4_STUDY_MANIFEST_SHA256]"),
+    ('H5 equivalence: the registry pin is not checked', H5QUAL,
+     '    if _sha(r.stdout) != H4_REGISTRY_BLOB_SHA256:',
+     '    if False:',
+     f"{T_H5QUAL}::test_a_PIN_that_does_not_recompute_STOPS_before_its_content_is_used[H4_REGISTRY_BLOB_SHA256]"),
+    ('H5 equivalence: H4 entries may disagree', H5QUAL,
+     '    if len(entries) != 4 or any(_canon(e.get(f)) != _canon(entries[0].get(f))',
+     '    if len(entries) != 4 or False and any(_canon(e.get(f)) != _canon(entries[0].get(f))',
+     f"{T_H5QUAL}::test_H4_entries_that_DISAGREE_with_each_other_STOP"),
+    ('H5 equivalence: moved H4 files pass', H5QUAL,
+     '    if moved:',
+     '    if False:',
+     f"{T_H5QUAL}::test_a_MOVED_H4_file_or_card_STOPS[<lambda>-H4 play-path files changed]"),
+    ('H5 equivalence: the registry may change outside its intervals', H5QUAL,
+     '    if _registry_body(now) != _registry_body(h4_registry_source()):',
+     '    if False:',
+     f"{T_H5QUAL}::test_a_REGISTRY_changed_OUTSIDE_its_interval_registries_STOPS"),
+    ('H5 equivalence: CONSUMED_SEEDS is ignored like an interval', H5QUAL,
+     '                       "RETIRED_SEED_INTERVALS", "TEST_ONLY_SEED_INTERVALS")',
+     '                       "RETIRED_SEED_INTERVALS", "TEST_ONLY_SEED_INTERVALS", "CONSUMED_SEEDS")',
+     f"{T_H5QUAL}::test_a_registry_changed_ONLY_in_an_interval_registry_is_equal"),
+    ('H5 equivalence: moved H4 cards pass', H5QUAL,
+     '    if cards:                                                                    # 3.',
+     '    if False:                                                                    # 3.',
+     f"{T_H5QUAL}::test_a_MOVED_H4_file_or_card_STOPS[<lambda>-H4 cards changed]"),
+    ('H5 equivalence: a different T1j runtime passes', H5QUAL,
+     '    if _canon(bound["t1j_runtime"]) != _canon(h4["t1j_runtime"]):                # 4.',
+     '    if False:                                                                    # 4.',
+     f"{T_H5QUAL}::test_a_DIFFERENT_T1J_RUNTIME_STOPS"),
+    ('H5 equivalence: the identity is compared on design only', H5QUAL,
+     '            or _canon(ours) != _canon(theirs):',
+     '            or False:',
+     f"{T_H5QUAL}::test_an_IDENTITY_differing_in_more_than_design_STOPS[<lambda>0]"),
+    ('H5 equivalence: an H4 design label passes', H5QUAL,
+     '    if (ours.pop("design", None), theirs.pop("design", None)) != (DESIGN, "H4_STUDY") \\\n            or',
+     '    if (ours.pop("design", None), theirs.pop("design", None)) and False \\\n            or',
+     f"{T_H5QUAL}::test_an_IDENTITY_differing_in_more_than_design_STOPS[<lambda>1]"),
+    ('H5 writer: an EARLY role is accepted', H5MW,
+     '    if rec.get("role") != Q.BINDING:',
+     '    if False:',
+     f"{T_H5MW}::test_refusal_1_an_EARLY_ROLE_is_refused_even_at_the_binding_path_with_a_matching_HEAD"),
+    ('H5 writer: a record away from the binding path is accepted', H5MW,
+     '    if os.path.realpath(record) != want:',
+     '    if False:',
+     f"{T_H5MW}::test_refusal_2_a_BINDING_role_NOT_at_the_binding_path_is_refused"),
+    ('H5 writer: code is not compared with HEAD', H5MW,
+     '    for field in ("code", "cards", "incumbent_identity", "t1j_runtime"):   # refusal 3',
+     '    for field in ("cards", "incumbent_identity", "t1j_runtime"):   # refusal 3',
+     f"{T_H5MW}::test_refusal_3_a_record_whose_CODE_predates_HEAD_is_refused"),
+    ('H5 writer: a STOP record is accepted', H5MW,
+     '            or rec.get("result") != "CLEAN":',
+     '            or False:',
+     f"{T_H5MW}::test_a_record_that_no_longer_BINDS_is_refused_and_nothing_written[<lambda>-not a CLEAN]"),
+    ('H5 writer: the toolchain is not re-verified now', H5MW,
+     '    for k, v in fresh.items():',
+     '    for k, v in {}.items():',
+     f"{T_H5MW}::test_a_toolchain_that_verifies_differently_NOW_is_refused[jar_sha256]"),
+    ('H5 writer: registry faults are ignored', H5MW,
+     '        if faults:\n            F.refuse(f"segment {seg}: seeds fail',
+     '        if False:\n            F.refuse(f"segment {seg}: seeds fail',
+     f"{T_H5MW}::test_a_seed_the_REGISTRY_forbids_is_refused"),
+    ('H5 writer: an existing evidence dir is accepted', H5MW,
+     '        if os.path.lexists(os.path.join(H5.REPO_ROOT, evidence_dir)):',
+     '        if False:',
+     f"{T_H5MW}::test_an_evidence_dir_that_ALREADY_EXISTS_is_refused"),
+    ('H5 writer: code and cards need not be committed', H5MW,
+     '    if not _fixture:\n        # 🔴 the files whose hashes the manifest carries',
+     '    if False:\n        # 🔴 the files whose hashes the manifest carries',
+     f"{T_H5MW}::test_the_PUBLIC_path_checks_EVERY_code_and_card_file_is_committed"),
+    ('H5 writer: an occupied destination is not refused first', H5MW,
+     '    if os.path.lexists(out_dir):\n        F.refuse(f"{out_dir} is occupied; the manifest is written once")',
+     '    if False:\n        F.refuse(f"{out_dir} is occupied; the manifest is written once")',
+     f"{T_H5MW}::test_an_OCCUPIED_destination_is_refused_before_anything"),
+    ('H5 analysis: the gate is not read', H5C,
+     '    if not AUTH.H5_STUDY_AGGREGATION_AUTHORIZED:                     # 1. FIRST',
+     '    if False:                                                        # 1. FIRST',
+     f"{T_H5C}::test_a_CLOSED_gate_opens_stats_hashes_and_runs_NOTHING"),
+    ('H5 analysis: the destination is not checked first', H5C,
+     '    F.check_free(out)                                                # 2.\n',
+     '',
+     f"{T_H5C}::test_an_OCCUPIED_destination_is_refused_before_any_input"),
+    ('H5 analysis: fewer than four segments are accepted', H5C,
+     '    if len(segments) != SEGMENT_COUNT:',
+     '    if False:',
+     f"{T_H5C}::test_MISSING_REPEATED_or_MISPLACED_segments_are_refused[order0-exactly 4]"),
+    ('H5 analysis: the H4 estimate need not be committed', H5C,
+     '    F.check_durable([study_manifest, *segments, h4_estimate], _fixture=_fixture)   # 3.',
+     '    F.check_durable([study_manifest, *segments], _fixture=_fixture)   # 3.',
+     f"{T_H5C}::test_EVERY_input_must_be_COMMITTED_and_UNMODIFIED[h4_estimate-untracked]"),
+    ('H5 analysis: segments need not be committed', H5C,
+     '    F.check_durable([study_manifest, *segments, h4_estimate], _fixture=_fixture)   # 3.',
+     '    F.check_durable([study_manifest, h4_estimate], _fixture=_fixture)   # 3.',
+     f"{T_H5C}::test_EVERY_input_must_be_COMMITTED_and_UNMODIFIED[segment2-modified]"),
+    ('H5 analysis: the H4 estimate pin is not checked', H5C,
+     '    if F.sha256_file(path) != H4_ESTIMATE_SHA256:',
+     '    if False:',
+     f"{T_H5C}::test_an_H4_ESTIMATE_that_does_not_hash_to_its_PIN_is_refused"),
+    ('H5 analysis: a manifest of another stage is read', H5C,
+     '    if not isinstance(m, dict) or m.get("stage") != STAGE:',
+     '    if not isinstance(m, dict):',
+     f"{T_H5C}::test_a_manifest_of_ANOTHER_STAGE_is_refused[H4_STUDY]"),
+    ('H5 analysis: a manifest binding H4s cards is read', H5C,
+     '        if sorted(e["cards"]) != sorted(H5.CARDS):',
+     '        if False:',
+     f"{T_H5C}::test_a_manifest_binding_H4s_cards_or_code_LIST_is_refused[cards]"),
+    ('H5 analysis: a manifest binding H4s code is read', H5C,
+     '        if sorted(e["code"]) != sorted(H5.CODE):',
+     '        if False:',
+     f"{T_H5C}::test_a_manifest_binding_H4s_cards_or_code_LIST_is_refused[code]"),
+    ('H5 analysis: an H5 FIXTURE header passes the public binding', H5C,
+     '    if header.get("design") != want:\n        F.refuse(f"design',
+     '    if False:\n        F.refuse(f"design',
+     f"{T_H5C}::test_bind_header_REFUSES_an_H5_FIXTURE_header_on_the_public_path"),
+    ('H5 analysis: the public path accepts an H5 FIXTURE file', H5C,
+     '    want = FIXTURE_DESIGN if _fixture else STAGE\n',
+     '    want = FIXTURE_DESIGN if _fixture else header.get("design")\n',
+     f"{T_H5C}::test_the_PUBLIC_ENTRY_refuses_an_H5_FIXTURE_file_at_its_header_binding"),
+    ('H5 analysis: header fields are not bound to the manifest', H5C,
+     '        if header.get(f) != entry[f]:\n            F.refuse(f"header `{f}` differs',
+     '        if False:\n            F.refuse(f"header `{f}` differs',
+     f"{T_H5C}::test_a_segment_from_ANOTHER_SCHEDULE_is_refused"),
+    ("H5 analysis: games are not bound to the manifest's schedule", H5C,
+     '        F.bind_games(games, entry["schedule"])\n',
+     '',
+     f"{T_H5C}::test_a_game_that_is_NOT_the_manifests_schedule_is_refused"),
+    ('H5 analysis: a lower bound of exactly 0.5 replicates', H5C,
+     '    if iv["lower"] > 0.5:\n        return REPLICATION',
+     '    if iv["lower"] >= 0.5:\n        return REPLICATION',
+     f"{T_H5C}::test_the_verdict_is_STRICT_on_the_RAW_bounds[0.5-0.9-INCONCLUSIVE]"),
+    ('H5 analysis: an upper bound of exactly 0.5 is opposite', H5C,
+     '    if iv["upper"] < 0.5:\n        return OPPOSITE',
+     '    if iv["upper"] <= 0.5:\n        return OPPOSITE',
+     f"{T_H5C}::test_the_verdict_is_STRICT_on_the_RAW_bounds[0.1-0.5-INCONCLUSIVE]"),
+    ('H5 analysis: per-segment wall times are all segment 0s', H5C,
+     '            "total_s": ends[k]["total_s"]})',
+     '            "total_s": ends[0]["total_s"]})',
+     f"{T_H5C}::test_PER_SEGMENT_results_are_reported_IN_RUN_ORDER_and_DESCRIPTIVE_only"),
+    ('H5 analysis: the H4-H5 difference is signed the wrong way', H5C,
+     '            "difference_of_means": primary["mean"] - h4p["mean"]}}',
+     '            "difference_of_means": h4p["mean"] - primary["mean"]}}',
+     f"{T_H5C}::test_H4_BESIDE_H5_is_read_from_the_PINNED_estimate_and_is_DESCRIPTIVE"),
+    ('H5 analysis: the independence caveat loses its correction', H5C,
+     '"their outcomes -- across H5\'s pairs, and between H5 and H4 -- is an "\n                "assumption, not an observed property. Replication does not verify it.")',
+     '"their outcomes is assumed.")',
+     f"{T_H5C}::test_an_ALL_CAP_study_is_INCONCLUSIVE_with_every_identical_pair_counted"),
+    ('H5 analysis: the destination directory is made before the checks', H5C,
+     '    F.check_free(out)                                                # 2.\n',
+     '    F.check_free(out)                                                # 2.\n    os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)\n',
+     f"{T_H5C}::test_a_refusal_leaves_no_output_no_directory_and_no_temporary_file"),
+    ('H5 analysis: the public entry reaches the fixture relaxation', H5C,
+     '                out=os.path.join(R4.REPO_ROOT, OUT), _fixture=False)',
+     '                out=os.path.join(R4.REPO_ROOT, OUT), _fixture=True)',
+     f"{T_H5C}::test_NO_public_entry_can_reach_the_fixture_relaxation"),
 ]
 
 # ═══════════════════════════ THE EXPECTED REASONS ════════════════════════════
@@ -6855,4 +7196,170 @@ EXPECTED_REASONS = {
         'AssertionError: block [202632000, 202632032) is not registered as exactly itself in RETIRED',
     'H4 closing: segment 3 is exposed one seed short':
         'AssertionError: block [202640000, 202640148) is not registered as exactly itself in EXPOSED',
+    # ── 2026-09-27: H5 step 3. RECORDED under .venv, harvested in a disposable worktree
+    # before commit; the 2 related gate-inventory controls re-checked unchanged.
+    'H5 gate: the study entry ignores its gate':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_runner.H4RunError'>",
+    'H5 gate: the study CLI ignores its gate':
+        'AssertionError: REFUSED: the H5 study is UNAUTHORIZED. Nothing has been built, compiled, played or written.',
+    'H5 gate: the study gate module is published OPEN':
+        'assert True is False',
+    'H5 gate: the qualification gate module is published OPEN':
+        'assert True is False',
+    'H5 gate: the aggregation gate module is published OPEN':
+        'assert True is False',
+    'H5 gate: a gate module declares its gate under another name':
+        'AssertionError: the source and the declared inventory disagree; a gate was added or removed without updating EXPECTED_GATES',
+    'H5 runner: study mode runs with no registered block':
+        'scripts.GPU.alphazero.h4_runner.H4RunError: no registered H5 block for segment 0',
+    'H5 runner: study mode accepts an injected seam':
+        'RuntimeError: SENTINEL: reached the first game',
+    'H5 runner: an uncommitted manifest is read':
+        'RuntimeError: SENTINEL: reached the first game',
+    'H5 runner: segment order is not enforced':
+        'RuntimeError: SENTINEL: reached the first game',
+    'H5 runner: a VOID predecessor is accepted':
+        'RuntimeError: SENTINEL: reached the first game',
+    'H5 runner: a manifest of another stage is read':
+        'RuntimeError: SENTINEL: reached the first game',
+    'H5 runner: a non-canonical schedule is accepted':
+        "scripts.GPU.alphazero.h4_runner.H4RunError: seeds fail the shared registry: ['202634000: exposed, retired', '202634001: exposed, retired', '202634002: exposed, retired']",
+    'H5 runner: the canonical schedule swaps the arm seeds':
+        'assert [10001, 10000...5, 10004, ...] == [10000, 10001...4, 10005, ...]',
+    'H5 runner: the shared-registry faults are ignored':
+        'RuntimeError: SENTINEL: reached the first game',
+    "H5 runner: the run may write outside its manifest's evidence_dir":
+        'RuntimeError: SENTINEL: reached the first game',
+    'H5 runner: an occupied evidence dir is found only after loading':
+        'assert (1, 0, 0, 0, 0) == (0, 0, 0, 0, 0)',
+    'H5 runner: the pre-claim binding is skipped':
+        "scripts.GPU.alphazero.h4_runner.H4RunVoid: [unexpected] after compiling, the header does not bind to its manifest: ['code'] differ. No game was played (card §12.6.3)",
+    'H5 runner: a task naming another incumbent is accepted':
+        "scripts.GPU.alphazero.h4_runner.H4RunError: the manifest's schedule is not the CANONICAL H5 segment 0 schedule (block, pair ids, arm seeds, reference)",
+    'H5 runner: the replication card is not bound':
+        'AssertionError: assert 6 == 7',
+    'H5 runner: the header binds H4s cards, not H5s':
+        'AssertionError: cards',
+    'H5 runner: a CODE file is left unlisted':
+        "AssertionError: assert ['scripts/GPU...orization.py'] == ['scripts/GPU...orization.py']",
+    'H5 runner: an H4 gate module is left out of CODE':
+        "AssertionError: opening an H4 gate during H5 must change H5's bound code",
+    'H5 runner: the fixture label is H4s':
+        "AssertionError: assert ('H4_SYNTHETI...XTURE', False) == ('H5_SYNTHETI...XTURE', False)",
+    'H5 runner: the evidence directories are dated':
+        "AssertionError: assert {0: 'docs/sup...udy-segment3'} == {0: 'docs/sup...udy-segment3'}",
+    'H5 runner: SEED_BLOCKS is filled before step 6':
+        'assert {0: (1, 149)} == {}',
+    'H5 runner: the copied loop claims with exist_ok':
+        'assert ["_run_unguar...rs from H4\'s"] == []',
+    'H5 qualification: the entry ignores its gate':
+        'scripts.GPU.alphazero.h4_production_qualification.QualificationRefused: an EARLY record goes under the evidence tree, not /private/<tmp>/pytest-of-<user>/pytest-<n>/test_the_QUALIFICATION_refuses0/rec',
+    'H5 qualification: the CLI ignores its gate':
+        "AssertionError: exit 4, 'REFUSED: the H5 production qualification is UNAUTHORIZED. Nothing was loaded, compiled or written.\\n'",
+    'H5 qualification: empty blocks derive BINDING':
+        "AssertionError: assert 'BINDING' == 'EARLY'",
+    'H5 qualification: a partial block set is not a STOP':
+        "AssertionError: assert 'BINDING' == 'STOP'",
+    'H5 qualification: a wrong block size is not a STOP':
+        "AssertionError: assert 'BINDING' == 'STOP'",
+    'H5 qualification: overlapping blocks are not a STOP':
+        "AssertionError: assert 'BINDING' == 'STOP'",
+    'H5 qualification: an unregistered block derives BINDING':
+        "AssertionError: assert 'BINDING' == 'STOP'",
+    'H5 qualification: a STOP role runs the stages anyway':
+        "AssertionError: assert ('STOP', 'CLEAN', None) == ('STOP', 'STOP', 'role')",
+    'H5 qualification: BINDING may write anywhere':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_production_qualification.QualificationRefused'>",
+    'H5 qualification: EARLY may write to the binding dir':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_production_qualification.QualificationRefused'>",
+    'H5 qualification: EARLY may write outside the evidence tree':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_production_qualification.QualificationRefused'>",
+    'H5 qualification: an EARLY record does not say it binds nothing':
+        "AssertionError: assert ('binds NOTHING' in 'NOT evidence of strength: no game was played and no outcome exists')",
+    'H5 qualification: an occupied record directory is claimed anyway':
+        "FileExistsError: [Errno 17] File exists: '/private/<tmp>/pytest-of-<user>/pytest-<n>/test_the_qualification_REFUSES0/evidence/early'",
+    'H5 qualification: a non-reproducible compile passes':
+        "AssertionError: assert ('CLEAN', None) == ('STOP', 'reproducibility')",
+    'H5 qualification: a study CLI that runs passes':
+        "AssertionError: assert ('CLEAN', None) == ('STOP', 'study_cli')",
+    'H5 equivalence: the pinned manifest need not be committed':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h5_production_qualification._Stop'>",
+    'H5 equivalence: the manifest pin is not checked':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h5_production_qualification._Stop'>",
+    'H5 equivalence: the registry pin is not checked':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h5_production_qualification._Stop'>",
+    'H5 equivalence: H4 entries may disagree':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h5_production_qualification._Stop'>",
+    'H5 equivalence: moved H4 files pass':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h5_production_qualification._Stop'>",
+    'H5 equivalence: the registry may change outside its intervals':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h5_production_qualification._Stop'>",
+    'H5 equivalence: CONSUMED_SEEDS is ignored like an interval':
+        'AssertionError: a CONSUMED_SEEDS edit must NOT be ignored',
+    'H5 equivalence: moved H4 cards pass':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h5_production_qualification._Stop'>",
+    'H5 equivalence: a different T1j runtime passes':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h5_production_qualification._Stop'>",
+    'H5 equivalence: the identity is compared on design only':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h5_production_qualification._Stop'>",
+    'H5 equivalence: an H4 design label passes':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h5_production_qualification._Stop'>",
+    'H5 writer: an EARLY role is accepted':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H5 writer: a record away from the binding path is accepted':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H5 writer: code is not compared with HEAD':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H5 writer: a STOP record is accepted':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H5 writer: the toolchain is not re-verified now':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H5 writer: registry faults are ignored':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H5 writer: an existing evidence dir is accepted':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H5 writer: code and cards need not be committed':
+        'AssertionError: the public path did not check that every code and card file is committed',
+    'H5 writer: an occupied destination is not refused first':
+        'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: /private/<tmp>/pytest-of-<user>/pytest-<n>/test_an_OCCUPIED_destination_i0/no-record.json is not durable: not tracked (card §2.1)',
+    'H5 analysis: the gate is not read':
+        'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: /private/<tmp>/pytest-of-<user>/pytest-<n>/h5study0/repo/study/manifest.json is not durable: it does not resolve into this repository (card §2.1)',
+    'H5 analysis: the destination is not checked first':
+        'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: 0 segment files: the study is exactly 4; an incomplete study is not a smaller study',
+    'H5 analysis: fewer than four segments are accepted':
+        'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: 222 pairs, not 296',
+    'H5 analysis: the H4 estimate need not be committed':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H5 analysis: segments need not be committed':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H5 analysis: the H4 estimate pin is not checked':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H5 analysis: a manifest of another stage is read':
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H5 analysis: a manifest binding H4s cards is read':
+        'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: header `cards` differs from the manifest',
+    'H5 analysis: a manifest binding H4s code is read':
+        'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: header `code` differs from the manifest',
+    'H5 analysis: an H5 FIXTURE header passes the public binding':
+        'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: evidence flag False does not fit H5_STUDY',
+    'H5 analysis: the public path accepts an H5 FIXTURE file':
+        'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: evidence flag False does not fit H5_SYNTHETIC_FIXTURE',
+    'H5 analysis: header fields are not bound to the manifest':
+        "scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused: the file's 148 games are not the manifest's schedule of 148 tasks",
+    "H5 analysis: games are not bound to the manifest's schedule":
+        "Failed: DID NOT RAISE <class 'scripts.GPU.alphazero.h4_pilot_feasibility.H4AnalysisRefused'>",
+    'H5 analysis: a lower bound of exactly 0.5 replicates':
+        "AssertionError: assert 'DIRECTIONAL_REPLICATION' == 'INCONCLUSIVE'",
+    'H5 analysis: an upper bound of exactly 0.5 is opposite':
+        "AssertionError: assert 'OPPOSITE_DIRECTION' == 'INCONCLUSIVE'",
+    'H5 analysis: per-segment wall times are all segment 0s':
+        'assert [2000.0, 2000...000.0, 2000.0] == [2000.0, 2001...002.0, 2003.0]',
+    'H5 analysis: the H4-H5 difference is signed the wrong way':
+        'assert 0.09290540540540537 == (0.5 - 0.5929054054054054)',
+    'H5 analysis: the independence caveat loses its correction':
+        'assert \'assumption, not an observed property\' in "nominal two-sided 95% Hoeffding under a DECLARED independence model. \'Independent set\' means fresh, non-overlapping pairs; independence of their outcomes is assumed."',
+    'H5 analysis: the destination directory is made before the checks':
+        "AssertionError: assert ['.git', 'doc...dir', 'study'] == ['.git', 'docs', 'study']",
+    'H5 analysis: the public entry reaches the fixture relaxation':
+        "AssertionError: assert ['run_confirm...fixture=True'] == []",
 }
