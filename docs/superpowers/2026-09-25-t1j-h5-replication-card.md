@@ -1,5 +1,9 @@
 # H5 — REPLICATION OF H4 — DESIGN CARD
 
+> ⚠ **Read with §12 (corrections, 2026-09-27)** — it narrows "independent set"
+> and "NOT controlled or observed", and withdraws one figure in §5. The text
+> above §12 is otherwise as first committed (`aac5ce2`).
+
 **Written 2026-09-25. DESIGN ONLY.** No code, no test, no gate, no seed survey,
 no seed registration, no manifest, no JVM, no game, no push. The authorization
 for this card covers the card and one local commit, nothing else.
@@ -147,7 +151,7 @@ the four committed H4 segment results after H4's analysis was published):
 
 | assumed true mean | P(H5 lower bound > 0.5), normal approximation |
 |---|---|
-| 0.5929 (H4's observed mean) | ≈ **0.76** (a bootstrap of H4's pair scores, 20,000 resamples, gives 0.756) |
+| 0.5929 (H4's observed mean) | ≈ **0.76** ~~(a bootstrap of H4's pair scores, 20,000 resamples, gives 0.756)~~ — withdrawn, §12 C3 |
 | 0.55 (inside H4's interval) | ≈ **0.07** |
 
 The first row **assumes H4's estimate is the truth**, which is likely
@@ -343,3 +347,41 @@ no manifest, starts no JVM, plays no game, reads no H5 outcome (none exists), an
 pushes nothing. It does not edit H4's cards, code or evidence, and it does not
 design an estimand that avoids the independence assumption — that would be a
 different study, with a different randomization protocol, under its own card.
+
+---
+
+## 12. Corrections — 2026-09-27, before the card is frozen
+
+Reviewed by the user 2026-09-27. The text above is left as first committed
+(`aac5ce2`) except the one strike-through in §5; these corrections govern where
+they differ.
+
+**C1 — "independent set" (the opening question; §6, DIRECTIONAL REPLICATION
+row).** It means **fresh, non-overlapping pairs**: new seeds, new games, no H4
+seed, game or record reused. It does **not** mean the pairs' outcomes are
+observed to be independent. Independence of the outcomes — across H5's pairs,
+and between H5 and H4 — remains the **declared assumption** of §6, not an
+observed property.
+
+**C2 — "T1j native entropy NOT controlled or observed" (§1 table).** What is
+unobserved is T1j's **RNG seeds** (each fresh JVM's `new Random()` state). T1j's
+**realized moves are persisted**, every one, with their process records (§1,
+persistence row); the persisted moves, not a seed, are the reproducibility
+record of every H5 game.
+
+**C3 — the §5 bootstrap figure is withdrawn.** "0.756" was computed without
+recording enough to reproduce it (resample order, generator and seed), so it is
+struck. The §5 warning stands on the normal approximation alone: ≈ 0.76 at a
+true mean of 0.5929 and ≈ 0.07 at 0.55, from H4's mean 0.59291 and population SD
+0.33739 of its 296 pair scores, with `h` as in §3.
+
+**Also recorded at this review:** the additions made in `aac5ce2` beyond the
+four frozen points — the runtime/incumbent equality with H4's manifest (§1), the
+fixed identifiers (§8), the descriptive H4–H5 difference with no test or pooling
+(§4), refusal of any pilot artifact as input (§7), and the staged order (§10.1)
+— are approved. The two no-game qualifications in §10.1 have **distinct jobs**:
+step 4 (**early**) finds production-path faults before any H5 seed is
+registered, and binds nothing; step 7 (**binding**) qualifies the final code
+state after registration and is the only record the manifests may bind to. The
+implementation card (`2026-09-27-t1j-h5-implementation-card.md`) makes that
+distinction mechanical.
