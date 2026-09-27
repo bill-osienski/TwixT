@@ -1,7 +1,7 @@
 # H5 IMPLEMENTATION CARD — design only (step 2)
 
-> ⚠ **Read with §10 (amendment, 2026-09-27, after the step-3 build `f80ce42`)** —
-> it replaces §2.3 item 2's predecessor rule. The text above §10 is otherwise as
+> ⚠ **Read with §10 and §11 (amendments, 2026-09-27)** — §10 replaces §2.3 item
+> 2's predecessor rule; §11 adds the step-6 literal exemption for `SEED_BLOCKS`. The text above §10 is otherwise as
 > first committed (`83520b1`).
 
 **Written 2026-09-27. DESIGN ONLY.** No code, no test, no gate, no seed survey,
@@ -440,4 +440,63 @@ refuses any outcome-field literal in the check. It does **not** call
 fixture games — its envelope matches an H5 schedule, it is labelled synthetic,
 and it lives in a temporary repository outside the evidence tree. Negative
 controls cover each clause above, including a header-plus-end-marker file.
+
+---
+
+## 11. Amendment A2 — 2026-09-27, after the step-5 survey, BEFORE any proof run
+
+**The problem, found before it could bite.** Step 6 writes the four blocks into
+`h5_runner.SEED_BLOCKS`. Under §7's method a literal is exempt only inside the
+four registry assignments of `e4_screen_reference.py` or a pinned own record, and
+the corrected scanner now sees underscore-grouped literals — so the
+post-registration proof would count the blocks' own ranges in the runner as stray
+priors and could never be CLEAN. H4 never met this: its post run (`5d48b49`)
+predated the block literals in its code and tests (`aee01a8`), and
+`h4_runner.SEED_BLOCKS` was underscore-grouped, invisible to v16.
+
+**The rule (decided by the user; option 1, narrow).** A literal is additionally
+exempt **only** as an int element of the `(lo, hi)` tuple VALUE of one of the four
+segment entries — int keys 0, 1, 2, 3 — of the module-level `SEED_BLOCKS`
+assignment of `scripts/GPU/alphazero/h5_runner.py`, **located by parsing that
+assignment**. Not by value; not the runner file as a whole; not a fifth entry; not
+any other assignment; not any other file. The pre- and post-registration proofs
+use the SAME rule; it is inert in `pre`, where the dict is empty.
+
+**No exemption for tests or cards.** They refer to the survey's candidate blocks
+by reading the committed survey record
+(`2026-09-27-t1j-h5-seed-survey/02_h5_seed_survey_run.txt`, sha256 `de7d1f69…`),
+never by repeating their numbers.
+
+**Controls, recorded before any run** (in the proof script, both modes; each must
+be REJECTED; the runner is SIMULATED filled in `pre`):
+
+* BASELINE: the filled runner alone is CLEAN — the exemption works;
+* a bound copied into an UNRELATED ASSIGNMENT of the runner — `lo` plain,
+  `lo` underscore-grouped (direct hit), `hi` underscore-grouped (gap 0);
+* a FIFTH `SEED_BLOCKS` entry repeating a block;
+* the identical `SEED_BLOCKS` assignment in ANOTHER file;
+* a bound copied into an UNRELATED FILE — `lo` plain, `hi` underscore-grouped;
+* plus the survey's static set (spent H1/H2/H3/D1 and H4 blocks, the TEST_ONLY
+  band, the live generation range, the H4-4b mutation literal, overlap/floor).
+
+**The frozen step-6 proof** — `docs/superpowers/evidence/t1j-h5-seed-registration/01_h5_collision_proof.py`,
+sha256 `3966e45d4b682f072a6b20cb1dfcbd613ddc37e7da2473ec9874fb10d0ace9f6`. It reads the blocks from the pinned survey record (it holds no
+seed literal), refuses a dirty `scripts/`/`tests/` tree, and writes its run
+record create-only:
+
+```text
+PYTHONPATH=. .venv/bin/python docs/superpowers/evidence/t1j-h5-seed-registration/01_h5_collision_proof.py \
+    pre  --out docs/superpowers/evidence/t1j-h5-seed-registration/02_h5_collision_proof_pre_run.txt
+PYTHONPATH=. .venv/bin/python docs/superpowers/evidence/t1j-h5-seed-registration/01_h5_collision_proof.py \
+    post --out docs/superpowers/evidence/t1j-h5-seed-registration/03_h5_collision_proof_post_run.txt
+```
+
+**Step 6, in order, each needing the step-6 authorization:** (1) `pre` on the
+committed tree — NOT CLEAN stops step 6 with nothing registered; (2) the
+registration, gates closed: the four intervals into `ACCOUNTED_SEED_INTERVALS`,
+the four entries into `h5_runner.SEED_BLOCKS`, the tests that pinned the empty
+dict replaced by tests that read the blocks from the survey record, the affected
+injected-defect controls re-anchored and harvested, committed; (3) `post` on that
+committed tree — NOT CLEAN stops step 6, and the registration stands unused until
+the user decides; (4) the post record committed.
 
