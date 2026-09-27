@@ -1,5 +1,9 @@
 # H5 IMPLEMENTATION CARD — design only (step 2)
 
+> ⚠ **Read with §10 (amendment, 2026-09-27, after the step-3 build `f80ce42`)** —
+> it replaces §2.3 item 2's predecessor rule. The text above §10 is otherwise as
+> first committed (`83520b1`).
+
 **Written 2026-09-27. DESIGN ONLY.** No code, no test, no gate, no seed survey,
 no registration, no manifest, no JVM, no game, no push.
 
@@ -395,3 +399,45 @@ read-only count over the files named there, not a collision proof.
 
 **Next separately authorized action: step 3 — implement this card, all three
 H5 gates CLOSED, fixtures only.**
+
+---
+
+## 10. Amendment — 2026-09-27, after review of the step-3 build
+
+**A1 — §2.3 item 2, the predecessor rule, is REPLACED.** It said segment *k* > 0
+refuses unless segment *k − 1*'s `results.jsonl` is *"committed, unmodified, and
+ends in `segment_end`"*. The build (`f80ce42`) did exactly that, and review found
+it too weak: a committed file holding only a header and a `segment_end` passed,
+and its positive test treated that as complete. A bare end marker is not a basis
+for spending the next segment's seeds.
+
+**The rule now.** Segment *k* > 0 refuses unless segment *k − 1*'s
+`results.jsonl` is committed, unmodified, **and structurally complete against its
+manifest entry** — entry *k − 1* of the same committed manifest this run reads:
+
+1. the first record is a header with design `H5_STUDY`, `evidence: true`,
+   segment *k − 1*, and every bound field equal to entry *k − 1*'s;
+2. for each scheduled task, in schedule order: exactly one `game_start` whose
+   task id, pair id, arm, seed and game index equal the schedule's; then only
+   `ply` / `process` records of THAT task; then exactly one `game_result` of
+   THAT task, before the next `game_start` — a duplicate result, a result for
+   any other task, or a result before its game's start refuses;
+3. no `run_void`, no unknown record type;
+4. the last record, and the only one after the final `game_result`, is a
+   `segment_end` with `complete: true` and `games_completed` = 148.
+
+**The blind is PROCEDURAL** (as H4 analysis card §1.2). Parsing JSONL necessarily
+reads the bytes that carry outcomes; what is guaranteed is that the check **does
+not inspect, compute from, or output any outcome value**. Each record is reduced
+to a whitelisted view (record type and identities; the header's bound fields;
+`segment_end`'s `complete` and `games_completed`) as soon as it is parsed; the
+whitelist is disjoint from `h4_runner.BLIND_FIELDS`, and a test over the source
+refuses any outcome-field literal in the check. It does **not** call
+`load_games`, which reads winners. Full replay validation stays at aggregation
+(§6.1 step 6).
+
+**Tests.** The positive case composes a 148-game predecessor from synthetic
+fixture games — its envelope matches an H5 schedule, it is labelled synthetic,
+and it lives in a temporary repository outside the evidence tree. Negative
+controls cover each clause above, including a header-plus-end-marker file.
+

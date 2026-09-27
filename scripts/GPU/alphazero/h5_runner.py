@@ -186,19 +186,96 @@ def _durable(paths: Sequence[str], what: str) -> None:
         raise H4RunError(f"{what}: {e}") from None
 
 
-def check_predecessor(segment: int) -> None:
-    """Card §2.3 item 2: segment k > 0 runs only after segment k - 1's results are
-    COMMITTED, UNMODIFIED and end in a complete `segment_end` -- so a VOID in k - 1
-    ends the line mechanically."""
+#: Implementation card §10 A1: the ONLY fields the predecessor check keeps, per
+#: record type -- identities and structure, never an outcome. Disjoint from
+#: `h4_runner.BLIND_FIELDS` (a test holds it to that).
+PREDECESSOR_VIEW = {
+    "header": ("design", "evidence", "segment", "schedule_digest", "seeds",
+               "incumbent_identity", "t1j_runtime", "cards", "code"),
+    "game_start": ("task_id", "pair_id", "arm", "seed", "game_index"),
+    "ply": ("task_id",), "process": ("task_id",), "game_result": ("task_id",),
+    "segment_end": ("complete", "games_completed"), "run_void": ()}
+START_KEYS = ("task_id", "pair_id", "arm", "seed", "game_index")
+
+
+def predecessor_views(path: str) -> List[Dict[str, Any]]:
+    """Each record reduced to its whitelisted view AS SOON AS IT IS PARSED. The
+    blind is PROCEDURAL: parsing reads the bytes that carry outcomes; nothing
+    here inspects, computes from or outputs an outcome value."""
+    views = []
+    with open(path, encoding="utf-8") as fh:
+        for line in fh:
+            if not line.strip():
+                continue
+            r = json.loads(line)
+            kind = r.get("record_type") if isinstance(r, dict) else None
+            keep = PREDECESSOR_VIEW.get(kind)
+            views.append({"record_type": kind} if keep is None else
+                         {"record_type": kind, **{k: r.get(k) for k in keep}})
+    return views
+
+
+def structural_faults(views: Sequence[Mapping[str, Any]], entry: Mapping[str, Any]) -> List[str]:
+    """Card §10 A1: the file against ITS manifest entry -- header, then for each
+    scheduled task in order one game_start, its own ply/process records, one
+    game_result, then one complete segment_end. Returns the first fault."""
+    schedule = entry["schedule"]
+    if not views or views[0]["record_type"] != "header":
+        return ["the first record is not a header"]
+    head = views[0]
+    if (head["design"], head["evidence"], head["segment"]) != \
+            (STUDY_DESIGN, True, entry["segment"]):
+        return [f"the header is {head['design']!r}/evidence={head['evidence']!r}/segment "
+                f"{head['segment']!r}, not {STUDY_DESIGN}/True/{entry['segment']}"]
+    unbound = [f for f in R4.MANIFEST_BOUND if _canon(head[f]) != _canon(entry.get(f))]
+    if unbound:
+        return [f"the header's {unbound} differ from manifest entry {entry['segment']}"]
+    i = 1
+    for n, task in enumerate(schedule):
+        want = {**{k: task[k] for k in START_KEYS[:-1]}, "game_index": n}
+        if i >= len(views) or views[i]["record_type"] != "game_start":
+            return [f"task {n} ({task['task_id']}): no game_start where one is due"]
+        got = {k: views[i][k] for k in START_KEYS}
+        if _canon(got) != _canon(want):
+            return [f"task {n}: game_start {got} is not the schedule's {want}"]
+        i += 1
+        while i < len(views) and views[i]["record_type"] in ("ply", "process"):
+            if views[i]["task_id"] != task["task_id"]:
+                return [f"task {n}: a {views[i]['record_type']} record of "
+                        f"{views[i]['task_id']!r} inside {task['task_id']!r}"]
+            i += 1
+        if i >= len(views) or views[i]["record_type"] != "game_result" \
+                or views[i]["task_id"] != task["task_id"]:
+            got = (f"{views[i]['record_type']} of {views[i].get('task_id')!r}"
+                   if i < len(views) else "end of file")
+            return [f"task {n} ({task['task_id']}): {got} where its own game_result is due"]
+        i += 1
+    rest = views[i:]
+    if [v["record_type"] for v in rest] != ["segment_end"]:
+        return [f"after the last game: {[v['record_type'] for v in rest]}, not exactly "
+                f"one segment_end"]
+    end = rest[0]
+    if end["complete"] is not True or end["games_completed"] != len(schedule):
+        return [f"segment_end complete={end['complete']!r} games_completed="
+                f"{end['games_completed']!r}, not True/{len(schedule)}"]
+    return []
+
+
+def check_predecessor(manifest: str, segment: int) -> None:
+    """Card §10 A1: segment k > 0 runs only after segment k - 1's results are
+    COMMITTED, UNMODIFIED and STRUCTURALLY COMPLETE against manifest entry k - 1."""
     if segment == 0:
         return
     prev = os.path.join(REPO_ROOT, EVIDENCE_DIRS[segment - 1], "results.jsonl")
     _durable([prev], f"segment {segment} needs segment {segment - 1} committed first")
+    entry = manifest_entry(manifest, segment=segment - 1)
     try:
-        F.segment_end(prev)
-    except (H4RunError, OSError, ValueError, IndexError) as e:
-        raise H4RunError(f"segment {segment} needs segment {segment - 1} COMPLETE: "
-                         f"{e}") from None
+        faults = structural_faults(predecessor_views(prev), entry)
+    except (OSError, ValueError, KeyError, TypeError) as e:
+        faults = [f"unreadable: {type(e).__name__}"]
+    if faults:
+        raise H4RunError(f"segment {segment} needs segment {segment - 1} STRUCTURALLY "
+                         f"COMPLETE: {faults[0]}")
 
 
 # ──────────────────────────────── the public entries ────────────────────────────────
@@ -256,8 +333,8 @@ def _production(*, out_dir, classes, deadline_s, manifest, segment, _now, inject
     if segment not in SEGMENTS:
         raise H4RunError(f"no H5 segment {segment!r}; one of {list(SEGMENTS)}")
     _durable([manifest], "the manifest is not durable")
-    check_predecessor(segment)
     entry = manifest_entry(manifest, segment=segment)
+    check_predecessor(manifest, segment)
     schedule = entry.get("schedule")
     check_schedule(schedule, mode="study")
     config = frozen_argmax_config()

@@ -4780,13 +4780,13 @@ DEFECTS = [
      '',
      f"{T_H5RUN}::test_an_UNCOMMITTED_or_MODIFIED_manifest_is_refused[untracked]"),
     ('H5 runner: segment order is not enforced', H5RUN,
-     '    check_predecessor(segment)\n    entry = manifest_entry',
-     '    entry = manifest_entry',
-     f"{T_H5RUN}::test_segment_k_REFUSES_unless_segment_k_minus_1_is_COMMITTED_and_COMPLETE[absent-needs segment 0 committed first]"),
+     '    check_predecessor(manifest, segment)\n',
+     '',
+     f"{T_H5RUN}::test_segment_k_REFUSES_unless_segment_k_minus_1_is_COMMITTED[absent]"),
     ('H5 runner: a VOID predecessor is accepted', H5RUN,
-     '        F.segment_end(prev)',
-     '        pass',
-     f"{T_H5RUN}::test_segment_k_REFUSES_unless_segment_k_minus_1_is_COMMITTED_and_COMPLETE[void-needs segment 0 COMPLETE]"),
+     '    if [v["record_type"] for v in rest] != ["segment_end"]:',
+     '    if False:',
+     f"{T_H5RUN}::test_segment_k_REFUSES_a_predecessor_that_is_not_STRUCTURALLY_COMPLETE[run_void_before_end]"),
     ('H5 runner: a manifest of another stage is read', H5RUN,
      '    if not isinstance(m, dict) or m.get("stage") != STUDY_DESIGN:',
      '    if not isinstance(m, dict):',
@@ -5079,6 +5079,39 @@ DEFECTS = [
      '    log = None\n    try:\n        try:\n            log = Q4._StageLog(os.path.join(out_dir, "stages.jsonl"))\n            log.begin(SETUP)\n',
      '    log = Q4._StageLog(os.path.join(out_dir, "stages.jsonl"))\n    try:\n        try:\n            log.begin(SETUP)\n',
      f"{T_H5QUAL}::test_a_SETUP_failure_after_the_claim_is_a_RECORDED_STOP_not_a_bare_directory[stage_log]"),
+    # ── 2026-09-27: implementation card §10 A1 -- the STRUCTURAL predecessor check.
+    ('H5 runner: a bare header and end marker pass the predecessor check', H5RUN,
+     '        faults = structural_faults(predecessor_views(prev), entry)',
+     '        faults = []',
+     f"{T_H5RUN}::test_segment_k_REFUSES_a_predecessor_that_is_not_STRUCTURALLY_COMPLETE[bare_header_and_end]"),
+    ('H5 runner: the predecessor header is not checked', H5RUN,
+     '    if (head["design"], head["evidence"], head["segment"]) != \\\n            (STUDY_DESIGN, True, entry["segment"]):',
+     '    if False:',
+     f"{T_H5RUN}::test_segment_k_REFUSES_a_predecessor_that_is_not_STRUCTURALLY_COMPLETE[header_fixture_design]"),
+    ('H5 runner: the predecessor header is not bound to its entry', H5RUN,
+     '    if unbound:',
+     '    if False:',
+     f"{T_H5RUN}::test_segment_k_REFUSES_a_predecessor_that_is_not_STRUCTURALLY_COMPLETE[header_other_entry]"),
+    ('H5 runner: a predecessor game_start need not match the schedule', H5RUN,
+     '        if _canon(got) != _canon(want):',
+     '        if False:',
+     f"{T_H5RUN}::test_segment_k_REFUSES_a_predecessor_that_is_not_STRUCTURALLY_COMPLETE[wrong_seed]"),
+    ('H5 runner: a foreign ply passes inside a game', H5RUN,
+     '            if views[i]["task_id"] != task["task_id"]:',
+     '            if False:',
+     f"{T_H5RUN}::test_segment_k_REFUSES_a_predecessor_that_is_not_STRUCTURALLY_COMPLETE[foreign_ply]"),
+    ('H5 runner: a stray game_result passes', H5RUN,
+     '                or views[i]["task_id"] != task["task_id"]:',
+     '                or False:',
+     f"{T_H5RUN}::test_segment_k_REFUSES_a_predecessor_that_is_not_STRUCTURALLY_COMPLETE[stray_result]"),
+    ('H5 runner: an incomplete segment_end passes', H5RUN,
+     '    if end["complete"] is not True or end["games_completed"] != len(schedule):',
+     '    if False:',
+     f"{T_H5RUN}::test_segment_k_REFUSES_a_predecessor_that_is_not_STRUCTURALLY_COMPLETE[short_count]"),
+    ('H5 runner: the predecessor view keeps a winner', H5RUN,
+     '"game_result": ("task_id",),',
+     '"game_result": ("task_id", "winner"),',
+     f"{T_H5RUN}::test_the_predecessor_check_is_BLIND_procedurally"),
 ]
 
 # ═══════════════════════════ THE EXPECTED REASONS ════════════════════════════
@@ -7224,10 +7257,6 @@ EXPECTED_REASONS = {
         'RuntimeError: SENTINEL: reached the first game',
     'H5 runner: an uncommitted manifest is read':
         'RuntimeError: SENTINEL: reached the first game',
-    'H5 runner: segment order is not enforced':
-        'RuntimeError: SENTINEL: reached the first game',
-    'H5 runner: a VOID predecessor is accepted':
-        'RuntimeError: SENTINEL: reached the first game',
     'H5 runner: a manifest of another stage is read':
         'RuntimeError: SENTINEL: reached the first game',
     'H5 runner: a non-canonical schedule is accepted':
@@ -7376,4 +7405,27 @@ EXPECTED_REASONS = {
         'OSError: class root refused',
     'H5 qualification: the stage log is created outside the STOP handler':
         'OSError: stage log refused',
+    # ── 2026-09-27: implementation card §10 A1, the STRUCTURAL predecessor check. Two
+    # re-anchored (the bare end-marker check they bound is gone) + eight new; harvested
+    # in a disposable worktree before commit.
+    'H5 runner: segment order is not enforced':
+        'RuntimeError: SENTINEL: reached the first game',
+    'H5 runner: a VOID predecessor is accepted':
+        'scripts.GPU.alphazero.h4_runner.H4RunError: segment 1 needs segment 0 STRUCTURALLY COMPLETE: unreadable: KeyError',
+    'H5 runner: a bare header and end marker pass the predecessor check':
+        'RuntimeError: SENTINEL: reached the first game',
+    'H5 runner: the predecessor header is not checked':
+        'RuntimeError: SENTINEL: reached the first game',
+    'H5 runner: the predecessor header is not bound to its entry':
+        'RuntimeError: SENTINEL: reached the first game',
+    'H5 runner: a predecessor game_start need not match the schedule':
+        'RuntimeError: SENTINEL: reached the first game',
+    'H5 runner: a foreign ply passes inside a game':
+        'RuntimeError: SENTINEL: reached the first game',
+    'H5 runner: a stray game_result passes':
+        'RuntimeError: SENTINEL: reached the first game',
+    'H5 runner: an incomplete segment_end passes':
+        'RuntimeError: SENTINEL: reached the first game',
+    'H5 runner: the predecessor view keeps a winner':
+        'AssertionError: the predecessor whitelist keeps an outcome field',
 }

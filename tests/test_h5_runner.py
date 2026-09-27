@@ -33,7 +33,8 @@ from scripts.GPU.alphazero import h5_production_qualification_authorization as Q
 from scripts.GPU.alphazero import h5_runner as H5
 from scripts.GPU.alphazero import h5_study_authorization as AUTH
 from scripts.GPU.alphazero import twixtbot_g3_reference as G3
-from tests.test_h4_pilot_feasibility import commit, new_repo
+from tests.test_h4_pilot_feasibility import commit, edit_records, new_repo
+from tests.test_h5_confirmatory_analysis import compose, templates  # noqa: F401
 from tests.test_h4_production_path import StubEvaluator, gate_module_faults, play_path_closure
 from tests.test_h4_runner import FAKE_TOOLCHAIN, SEQ, stub_incumbent, wire  # noqa: F401
 
@@ -529,22 +530,131 @@ def _segment_file(repo, k, last):
     return d / "results.jsonl"
 
 
-COMPLETE = {"record_type": "segment_end", "complete": True, "games_completed": 148}
 VOIDED = {"record_type": "run_void", "classification": "timeout"}
+#: Card §10 A1: the positive predecessor is SYNTHETIC -- composed from fixture games
+#: played by the real H5 runner, its envelope matching entry 0 -- and lives in a
+#: temporary repository OUTSIDE the evidence tree.
+SYNTHETIC_NOTE = "SYNTHETIC FIXTURE: composed for a test, NOT evidence"
+
+
+def predecessor(repo, templates, edit=None, *, committed=True):
+    e = manifest_entries()[0]
+    d = pathlib.Path(H5.EVIDENCE_DIRS[0])
+    assert not R4._inside(d, R4.EVIDENCE_ROOT), "a test predecessor is never evidence"
+    d.mkdir()
+    f = d / "results.jsonl"
+    compose(f, templates, e, [("red", "black")] * 74, design="H5_STUDY")
+    edit_records(f, lambda i, r: dict(r, synthetic_note=SYNTHETIC_NOTE) if i == 0 else r)
+    if edit:
+        edit_records(f, edit)
+    if committed:
+        commit(repo, f)
+    return f
+
+
+def _where(f, pred):
+    return next(i for i, r in enumerate(R4.read_records(str(f))) if pred(r))
+
+
+def _move(pred, to):
+    """Edit that moves the first record matching `pred` to index `to`."""
+    def edit_all(path):
+        recs = R4.read_records(str(path))
+        i = next(i for i, r in enumerate(recs) if pred(r))
+        recs.insert(to, recs.pop(i))
+        pathlib.Path(path).write_text("".join(json.dumps(r) + "\n" for r in recs))
+    return edit_all
+
+
+def _is(kind, task=None):
+    return lambda r: r["record_type"] == kind and (task is None or r.get("task_id") == task)
+
+
+def _header(**kw):
+    return lambda i, r: dict(r, **kw) if i == 0 else r
+
+
+def _only_header_and_end(i, r):
+    return r if r["record_type"] in ("header", "segment_end") else None
+
+
+def _drop_task(task):
+    return lambda i, r: None if r.get("task_id") == task else r
+
+
+def _dup(kind, task):
+    """Edit_all: duplicate the first `kind` record of `task` in place."""
+    def edit_all(path):
+        recs = R4.read_records(str(path))
+        i = next(i for i, r in enumerate(recs) if _is(kind, task)(r))
+        recs.insert(i, dict(recs[i]))
+        pathlib.Path(path).write_text("".join(json.dumps(r) + "\n" for r in recs))
+    return edit_all
+
+
+def _before_end(record):
+    def edit_all(path):
+        recs = R4.read_records(str(path))
+        recs.insert(len(recs) - 1, record)
+        pathlib.Path(path).write_text("".join(json.dumps(r) + "\n" for r in recs))
+    return edit_all
+
+
+def _append(record):
+    def edit_all(path):
+        with open(path, "a") as fh:
+            fh.write(json.dumps(record) + "\n")
+    return edit_all
+
+
+T0, T1 = "h5s0-00-A", "h5s0-00-B"
+STRUCTURAL = {
+    "bare_header_and_end": (_only_header_and_end, "no game_start where one is due"),
+    "missing_last_game": (_drop_task("h5s0-73-B"), "no game_start where one is due"),
+    "wrong_seed": (lambda i, r: dict(r, seed=r["seed"] + 1)
+                   if r["record_type"] == "game_start" and r["game_index"] == 5 else r,
+                   "is not the schedule's"),
+    "games_out_of_order": (lambda i, r: dict(r, game_index=1 - r["game_index"])
+                           if r["record_type"] == "game_start" and r["game_index"] < 2 else r,
+                           "is not the schedule's"),
+    "header_other_segment": (_header(segment=2), "the header is"),
+    "header_fixture_design": (_header(design="H5_SYNTHETIC_FIXTURE", evidence=False),
+                              "the header is"),
+    "header_other_entry": (_header(schedule_digest="0" * 64),
+                           "differ from manifest entry 0"),
+    "duplicate_result": ("dup_result", "no game_start where one is due"),
+    "stray_result": (lambda i, r: dict(r, task_id=T1)
+                     if r["record_type"] == "game_result" and r["task_id"] == T0 else r,
+                     "game_result of 'h5s0-00-B' where its own game_result is due"),
+    "result_before_start": ("result_first", "no game_start where one is due"),
+    "foreign_ply": (lambda i, r: dict(r, task_id=T1)
+                    if r["record_type"] == "ply" and r["task_id"] == T0 and r["ply"] == 3
+                    else r, "a ply record of 'h5s0-00-B' inside 'h5s0-00-A'"),
+    "unknown_record": ("unknown", "mystery"),
+    "run_void_before_end": ("void", "\\['run_void', 'segment_end'\\]"),
+    "record_after_end": ("after_end", "\\['segment_end', 'ply'\\]"),
+    "short_count": (lambda i, r: dict(r, games_completed=147)
+                    if r["record_type"] == "segment_end" else r, "games_completed=147"),
+    "incomplete_end": (lambda i, r: dict(r, complete=False)
+                       if r["record_type"] == "segment_end" else r, "complete=False"),
+}
+EDIT_ALL = {"dup_result": _dup("game_result", T0),
+            "result_first": _move(_is("game_result", T0), 1),
+            "unknown": _before_end({"record_type": "mystery", "task_id": "h5s0-73-B"}),
+            "void": _before_end(VOIDED),
+            "after_end": _append({"record_type": "ply", "task_id": "h5s0-73-B"})}
 
 
 @pytest.mark.parametrize("state,match", [
     ("absent", "needs segment 0 committed first"),
     ("uncommitted", "needs segment 0 committed first"),
-    ("void", "needs segment 0 COMPLETE"),
-    ("modified", "needs segment 0 committed first")])
-def test_segment_k_REFUSES_unless_segment_k_minus_1_is_COMMITTED_and_COMPLETE(
-        repo, tmp_path, spies, study_open, state, match):
+    ("modified", "needs segment 0 committed first")], ids=["absent", "uncommitted", "modified"])
+def test_segment_k_REFUSES_unless_segment_k_minus_1_is_COMMITTED(repo, tmp_path, spies,
+                                                                study_open, templates,
+                                                                state, match):
     m = write_manifest(repo)
     if state != "absent":
-        f = _segment_file(repo, 0, VOIDED if state == "void" else COMPLETE)
-        if state != "uncommitted":
-            commit(repo, f)
+        f = predecessor(repo, templates, committed=state != "uncommitted")
         if state == "modified":
             f.write_text(f.read_text() + "\n")
     with pytest.raises(H5.H4RunError, match=match):
@@ -552,15 +662,78 @@ def test_segment_k_REFUSES_unless_segment_k_minus_1_is_COMMITTED_and_COMPLETE(
     nothing_ran(spies, H5.EVIDENCE_DIRS[1])
 
 
-def test_segment_k_PROCEEDS_once_k_minus_1_is_committed_and_complete(repo, tmp_path, spies,
-                                                                    study_open):
-    """CLEAN BASELINE for the order check: it reaches the first game and no further."""
+@pytest.mark.parametrize("case", list(STRUCTURAL))
+def test_segment_k_REFUSES_a_predecessor_that_is_not_STRUCTURALLY_COMPLETE(
+        repo, tmp_path, spies, study_open, templates, case):
+    """Card §10 A1: each clause, alone. The file stays COMMITTED -- only its structure
+    is wrong."""
+    edit, match = STRUCTURAL[case]
     m = write_manifest(repo)
-    commit(repo, _segment_file(repo, 0, COMPLETE))
+    f = predecessor(repo, templates, committed=False)
+    if isinstance(edit, str):
+        EDIT_ALL[edit](f)
+    else:
+        edit_records(f, edit)
+    commit(repo, f)
+    with pytest.raises(H5.H4RunError, match="needs segment 0 STRUCTURALLY COMPLETE: .*"
+                       + match):
+        study(repo, tmp_path, segment=1, manifest=m)
+    nothing_ran(spies, H5.EVIDENCE_DIRS[1])
+
+
+def test_segment_k_PROCEEDS_after_a_STRUCTURALLY_COMPLETE_synthetic_predecessor(
+        repo, tmp_path, spies, study_open, templates):
+    """CLEAN BASELINE for every clause above: the same synthetic 148-game file,
+    unedited, gets segment 1 to its first game and no further."""
+    m = write_manifest(repo)
+    f = predecessor(repo, templates)
+    views = H5.predecessor_views(str(f))
+    assert sum(v["record_type"] == "game_start" for v in views) == 148
+    assert R4.read_records(str(f))[0]["synthetic_note"] == SYNTHETIC_NOTE
     with pytest.raises(H5.H4RunVoid, match="SENTINEL"):
         study(repo, tmp_path, segment=1, manifest=m)
     header = R4.read_records(os.path.join(H5.EVIDENCE_DIRS[1], "results.jsonl"))[0]
     assert (header["design"], header["segment"], header["evidence"]) == ("H5_STUDY", 1, True)
+
+
+#: Card §10 A1: the blind is PROCEDURAL -- the check keeps no outcome field and
+#: names none. `terminal_reason` is held out too: the check has no use for it.
+OUTCOME_FIELDS = set(R4.BLIND_FIELDS) | {"terminal_reason"}
+PREDECESSOR_FNS = ("predecessor_views", "structural_faults", "check_predecessor")
+
+
+def outcome_literals(source):
+    tree = ast.parse(source)
+    fns = [n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name in PREDECESSOR_FNS]
+    assert len(fns) == len(PREDECESSOR_FNS)
+    return sorted({n.value for f in fns for n in ast.walk(f)
+                   if isinstance(n, ast.Constant) and n.value in OUTCOME_FIELDS})
+
+
+def test_the_predecessor_check_is_BLIND_procedurally(templates, tmp_path):
+    assert not set(sum(H5.PREDECESSOR_VIEW.values(), ())) & OUTCOME_FIELDS, \
+        "the predecessor whitelist keeps an outcome field"
+    assert outcome_literals(pathlib.Path(H5.__file__).read_text(encoding="utf-8")) == []
+    src = tmp_path / "p.jsonl"
+    compose(src, templates, _fixture_entry(), [("red", "black")] * 74, design="H5_STUDY")
+    views = H5.predecessor_views(str(src))
+    assert not {k for v in views for k in v} & OUTCOME_FIELDS, "a view carries an outcome field"
+    assert "load_games" not in {n.attr for n in ast.walk(ast.parse(
+        pathlib.Path(H5.__file__).read_text(encoding="utf-8"))) if isinstance(n, ast.Attribute)}
+
+
+@pytest.mark.parametrize("plant", ['            r.get("winner")\n', '            x = "t1j_points"\n'],
+                         ids=["winner_get", "points_literal"])
+def test_the_blind_check_is_NOT_VACUOUS(plant):
+    src = pathlib.Path(H5.__file__).read_text(encoding="utf-8")
+    anchor = '            r = json.loads(line)\n'
+    assert src.count(anchor) == 1
+    assert outcome_literals(src.replace(anchor, anchor + plant)) != []
+
+
+def _fixture_entry():
+    from tests.test_h5_confirmatory_analysis import entry
+    return entry(0)
 
 
 @pytest.mark.parametrize("edit,field", [
