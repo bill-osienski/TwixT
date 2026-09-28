@@ -10,9 +10,11 @@ durability, and stop BEFORE any incumbent is built.
 """
 import ast
 import builtins
+import hashlib
 import json
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -268,8 +270,35 @@ def test_the_constants_are_the_cards():
     assert H5.PAIRS_PER_SEGMENT == 74 and H5.PAIR_TAG == "h5s"
 
 
-def test_SEED_BLOCKS_is_EMPTY_until_step_6():
-    assert H5.SEED_BLOCKS == {}
+#: Step 6 (card §7, §11, §12): the blocks are READ from the committed step-5 survey
+#: record after its hash recomputes -- never retyped, so this file carries no seed
+#: literal for the collision proof to count. Messages are FIXED: a failure must not
+#: print a block into a harvested control reason either.
+SURVEY = "docs/superpowers/evidence/2026-09-27-t1j-h5-seed-survey/02_h5_seed_survey_run.txt"
+SURVEY_SHA256 = "de7d1f693b9dadf87fca10603c0917f6ba7901ef00619e2d4fbdf4ceed5fff8f"
+
+
+def survey_blocks():
+    raw = (ROOT / SURVEY).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == SURVEY_SHA256, "the survey record moved"
+    text = raw.decode("utf-8")
+    assert "SURVEY VERDICT   : ALL FOUR CANDIDATES CLEAN" in text, "survey not all CLEAN"
+    found = re.findall(r"^H5_STUDY_SEGMENT_(\d)\s+\((\d+), (\d+)\).*CLEAN=True$", text, re.M)
+    return {int(k): (int(lo), int(hi)) for k, lo, hi in found}
+
+
+def test_SEED_BLOCKS_are_the_four_SURVEY_blocks_REGISTERED():
+    blocks = survey_blocks()
+    assert sorted(blocks) == list(H5.SEGMENTS), "the survey does not name segments 0-3"
+    assert H5.SEED_BLOCKS == blocks, "SEED_BLOCKS is not the step-5 survey's four blocks"
+    for k, (lo, hi) in sorted(blocks.items()):
+        assert hi - lo == 2 * H5.PAIRS_PER_SEGMENT, f"segment {k} is not 148 seeds"
+        assert list(REF.ACCOUNTED_SEED_INTERVALS).count((lo, hi)) == 1, \
+            f"segment {k} is not registered as exactly itself in ACCOUNTED"
+        bad = [s for s in range(lo, hi)
+               if not REF.seed_is_accounted(s) or REF.seed_is_unavailable(s)
+               or REF.seed_is_test_only(s) or s in REF.CONSUMED_SEEDS]
+        assert not bad, f"segment {k}: {len(bad)} seeds fail the registry"
 
 
 # ──────────────── 5. a fixture pair end to end, through H4's persistence ────────────────

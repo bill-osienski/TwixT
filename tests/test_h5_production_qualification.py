@@ -26,6 +26,7 @@ from scripts.GPU.alphazero import h5_runner as H5
 from scripts.GPU.alphazero import twixtbot_g3_reference as G3
 from tests.test_h4_production_path import StubEvaluator
 from tests.test_h4_runner import FAKE_TOOLCHAIN
+from tests.test_h5_runner import survey_blocks
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PLACEHOLDERS = {k: (10_000 + 1_000 * k, 10_148 + 1_000 * k) for k in range(4)}
@@ -87,8 +88,18 @@ def registered(monkeypatch):
                         tuple(REF.ACCOUNTED_SEED_INTERVALS) + tuple(PLACEHOLDERS.values()))
 
 
-def test_EMPTY_blocks_derive_EARLY():
+def test_EMPTY_blocks_derive_EARLY(monkeypatch):
+    monkeypatch.setattr(H5, "SEED_BLOCKS", {})
     assert Q.derive_role()[0] == Q.EARLY
+
+
+def test_the_REAL_step6_state_derives_BINDING_on_the_survey_blocks():
+    """Step 6 registered the four survey blocks: the REAL state is now BINDING.
+    Fixed messages -- a failure must not print a block."""
+    role, seen, reason = Q.derive_role()
+    assert (role, reason) == (Q.BINDING, None), "the registered real state is not BINDING"
+    assert seen["seed_blocks"] == {str(k): list(v) for k, v in survey_blocks().items()}, \
+        "BINDING, but not on the step-5 survey's blocks"
 
 
 def test_FOUR_registered_blocks_derive_BINDING(registered):
@@ -206,8 +217,11 @@ def test_an_UNTRACKED_pinned_manifest_STOPS(monkeypatch, tmp_path):
 @pytest.fixture
 def qual_open(monkeypatch, tmp_path):
     """Gate open, the evidence root a temporary directory, every external act
-    stubbed except the H5 CLI's refusal and the H4 record reads."""
+    stubbed except the H5 CLI's refusal and the H4 record reads. EARLY by default:
+    step 6 filled the real `SEED_BLOCKS`, so the empty state is set here; a test
+    wanting BINDING requests `registered` AFTER this fixture."""
     monkeypatch.setattr(QAUTH, "H5_PRODUCTION_QUALIFICATION_AUTHORIZED", True)
+    monkeypatch.setattr(H5, "SEED_BLOCKS", {})
     monkeypatch.setattr(Q, "EVIDENCE_ROOT", tmp_path / "evidence")
     (tmp_path / "evidence").mkdir()
     _cfg, ident = _identity()

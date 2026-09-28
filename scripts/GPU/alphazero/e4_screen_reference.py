@@ -466,6 +466,23 @@ ACCOUNTED_SEED_INTERVALS = (
     (202636000, 202636148),          # H4 STUDY SEGMENT 1  -- 74 pairs, 148 seeds
     (202638000, 202638148),          # H4 STUDY SEGMENT 2  -- 74 pairs, 148 seeds
     (202640000, 202640148),          # H4 STUDY SEGMENT 3  -- 74 pairs, 148 seeds
+    # 🔴 H5 -- FOUR BLOCKS, registered 2026-09-28 (step 6) under the H5
+    # implementation card §7, §11 A2 and §12 A3
+    # (`2026-09-27-t1j-h5-implementation-card.md`): the four CLEAN candidates of
+    # the step-5 survey (evidence/2026-09-27-t1j-h5-seed-survey/02_*), READ from
+    # that record, not chosen here. One seed per game; pair k gets lo+2k (Arm A)
+    # and lo+2k+1 (Arm B). Registered ONLY after the frozen step-6 collision proof
+    # (sha256 8d08cfc1...) was CLEAN against the PRE-registration registries,
+    # 25/25 controls rejected (evidence/t1j-h5-seed-registration/02_*).
+    #
+    # 🔴 USE IS NOT RECORDED HERE UNTIL H5 CLOSES (as H4, step-4 card §2.1): this
+    # file is hashed into H5's `code`. Until then each segment's occupied
+    # create-only evidence directory is its use record. Accounted, NOT exposed and
+    # NOT retired. No gate is opened by this.
+    (202650000, 202650148),          # H5 STUDY SEGMENT 0  -- 74 pairs, 148 seeds
+    (202652000, 202652148),          # H5 STUDY SEGMENT 1  -- 74 pairs, 148 seeds
+    (202654000, 202654148),          # H5 STUDY SEGMENT 2  -- 74 pairs, 148 seeds
+    (202656000, 202656148),          # H5 STUDY SEGMENT 3  -- 74 pairs, 148 seeds
 )
 
 #: EXPERIMENTAL EXPOSURE: seeds drawn from OUTSIDE the permanently unschedulable

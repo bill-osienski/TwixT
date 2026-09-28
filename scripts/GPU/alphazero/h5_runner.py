@@ -113,9 +113,12 @@ CODE = (
 GATE_MODULES = ("scripts/GPU/alphazero/h5_study_authorization.py",
                 "scripts/GPU/alphazero/h5_production_qualification_authorization.py")
 
-#: 🔴 Card §2.1: EMPTY until step 6 registers four collision-proved blocks. Study
-#: mode refuses while it is empty.
-SEED_BLOCKS: Dict[int, tuple] = {}
+#: 🔴 Card §2.1, §7, §11-§12: the four step-5 survey blocks, registered at step 6
+#: after the frozen collision proof's `pre` run was CLEAN
+#: (evidence/t1j-h5-seed-registration/02_*), each ACCOUNTED in e4_screen_reference.
+#: ONE line, in exactly this annotated form: the proof's A3 shape rule parses it.
+#: Study mode refuses while it is empty.
+SEED_BLOCKS: Dict[int, tuple] = {0: (202_650_000, 202_650_148), 1: (202_652_000, 202_652_148), 2: (202_654_000, 202_654_148), 3: (202_656_000, 202_656_148)}
 SEGMENTS = (0, 1, 2, 3)
 PAIRS_PER_SEGMENT = 74
 #: Replication card §8: FIXED names, repo-relative, create-only; the one-shot use

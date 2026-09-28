@@ -4843,10 +4843,12 @@ DEFECTS = [
      'EVIDENCE_DIRS = {k: f"docs/superpowers/evidence/t1j-h5-study-segment{k}" for k in SEGMENTS}',
      'EVIDENCE_DIRS = {k: f"docs/superpowers/evidence/2026-09-27-t1j-h5-study-segment{k}" for k in SEGMENTS}',
      f"{T_H5RUN}::test_the_constants_are_the_cards"),
-    ('H5 runner: SEED_BLOCKS is filled before step 6', H5RUN,
-     'SEED_BLOCKS: Dict[int, tuple] = {}',
-     'SEED_BLOCKS: Dict[int, tuple] = {0: (1, 149)}',
-     f"{T_H5RUN}::test_SEED_BLOCKS_is_EMPTY_until_step_6"),
+    # step 6: re-anchored from 'SEED_BLOCKS is filled before step 6' (the empty
+    # dict is gone); no block literal here -- the collision proof scans this file
+    ('H5 runner: SEED_BLOCKS segment 0 is not the survey block', H5RUN,
+     'SEED_BLOCKS: Dict[int, tuple] = {0: (',
+     'SEED_BLOCKS: Dict[int, tuple] = {0: (2 + ',
+     f"{T_H5RUN}::test_SEED_BLOCKS_are_the_four_SURVEY_blocks_REGISTERED"),
     ('H5 runner: the copied loop claims with exist_ok', H5RUN,
      '    claim_directory(out_dir)                      # THE claim: before any draw or JVM',
      '    os.makedirs(out_dir, exist_ok=True)           # THE claim: before any draw or JVM',
@@ -7285,12 +7287,15 @@ EXPECTED_REASONS = {
         "AssertionError: assert ('H4_SYNTHETI...XTURE', False) == ('H5_SYNTHETI...XTURE', False)",
     'H5 runner: the evidence directories are dated':
         "AssertionError: assert {0: 'docs/sup...udy-segment3'} == {0: 'docs/sup...udy-segment3'}",
-    'H5 runner: SEED_BLOCKS is filled before step 6':
-        'assert {0: (1, 149)} == {}',
+    'H5 runner: SEED_BLOCKS segment 0 is not the survey block':
+        "AssertionError: SEED_BLOCKS is not the step-5 survey's four blocks",
     'H5 runner: the copied loop claims with exist_ok':
         'assert ["_run_unguar...rs from H4\'s"] == []',
+    # step 6: RE-RECORDED -- the target test runs in the REAL state, whose role is
+    # now BINDING (registration), so the defect is refused at BINDING's
+    # destination rule instead of EARLY's. Same defect, same test; drift noted.
     'H5 qualification: the entry ignores its gate':
-        'scripts.GPU.alphazero.h4_production_qualification.QualificationRefused: an EARLY record goes under the evidence tree, not /private/<tmp>/pytest-of-<user>/pytest-<n>/test_the_QUALIFICATION_refuses0/rec',
+        'scripts.GPU.alphazero.h4_production_qualification.QualificationRefused: a BINDING qualification writes ONLY to docs/superpowers/evidence/t1j-h5-binding-qualification, not /private/<tmp>/pytest-of-<user>/pytest-<n>/test_the_QUALIFICATION_refuses0/rec',
     'H5 qualification: the CLI ignores its gate':
         "AssertionError: exit 4, 'REFUSED: the H5 production qualification is UNAUTHORIZED. Nothing was loaded, compiled or written.\\n'",
     'H5 qualification: empty blocks derive BINDING':
