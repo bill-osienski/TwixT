@@ -1,0 +1,48 @@
+H5 STEP 6 -- COLLISION PROOF -- MODE PRE
+========================================================================
+HEAD 6b3c81bcbe4011b9f46606b2753d868c85c7aaa1; scripts/ and tests/ clean
+blocks READ from docs/superpowers/evidence/2026-09-27-t1j-h5-seed-survey/02_h5_seed_survey_run.txt (sha256 pin recomputed)
+exemptions: registry tuples (v16); SEED_BLOCKS segment entries, sole binding of exact shape (A2 + A3); 5 pinned own records
+repo literal values counted: 3680
+SEED_BLOCKS shape in scripts/GPU/alphazero/h5_runner.py (must be 'empty'): OK, sole binding of exact shape
+  registry state segment 0 (202650000, 202650148): overlapping NONE; exactly in NONE  OK
+  registry state segment 1 (202652000, 202652148): overlapping NONE; exactly in NONE  OK
+  registry state segment 2 (202654000, 202654148): overlapping NONE; exactly in NONE  OK
+  registry state segment 3 (202656000, 202656148): overlapping NONE; exactly in NONE  OK
+  h5_runner.SEED_BLOCKS empty, as required for pre
+
+H5_STUDY_SEGMENT_0 (202650000, 202650148)  direct=NONE  streams=0  injective=True  gap=1852 (floor 148)  CLEAN=True
+H5_STUDY_SEGMENT_1 (202652000, 202652148)  direct=NONE  streams=0  injective=True  gap=1852 (floor 148)  CLEAN=True
+H5_STUDY_SEGMENT_2 (202654000, 202654148)  direct=NONE  streams=0  injective=True  gap=1852 (floor 148)  CLEAN=True
+H5_STUDY_SEGMENT_3 (202656000, 202656148)  direct=NONE  streams=0  injective=True  gap=1852 (floor 148)  CLEAN=True
+
+NEGATIVE CONTROLS -- each must be REJECTED
+------------------------------------------------------------------------
+  REJECTED     H4 study segment 0  (202634000, 202634148)
+  REJECTED     H4 pilot block  (202632000, 202632032)
+  REJECTED     H3 segment-0 replacement block  (202628000, 202628148)
+  REJECTED     H3's retired segment-0 quarter  (202626000, 202626148)
+  REJECTED     the H3 pilot block  (202624000, 202624040)
+  REJECTED     H2 attempt-3 block  (202622000, 202622736)
+  REJECTED     D1's paper reservation  (202615000, 202615221)
+  REJECTED     the TEST_ONLY band  (90009000, 90009100)
+  REJECTED     inside the live H3 generation range  (20261600000, 20261600148)
+  REJECTED     overlaps segment 0 by one seed  (202650147, 202650295)
+  REJECTED     starts where segment 0 ends  (202650148, 202650296)
+  REJECTED     one seed inside segment 0's floor  (202650295, 202650443)
+  REJECTED     the H4-4b MUTATION literal 202642000 (read from the control list)  (202642000, 202642148)
+  REJECTED     BASELINE: the filled runner alone is CLEAN (the A2/A3 exemption works)  direct=NONE gap=1852 shape=OK
+  REJECTED     lo copied into an UNRELATED ASSIGNMENT of the runner (plain)  direct={'REPO_LITERALS': 1} gap=1852 shape=OK
+  REJECTED     lo copied into an UNRELATED ASSIGNMENT of the runner (underscore-grouped)  direct={'REPO_LITERALS': 1} gap=1852 shape=OK
+  REJECTED     hi copied into an UNRELATED ASSIGNMENT of the runner (underscore-grouped)  direct=NONE gap=0 shape=OK
+  REJECTED     the identical SEED_BLOCKS assignment in ANOTHER file  direct={'REPO_LITERALS': 1} gap=0 shape=OK
+  REJECTED     lo copied into an UNRELATED FILE (plain)  direct={'REPO_LITERALS': 1} gap=1852 shape=OK
+  REJECTED     hi copied into an UNRELATED FILE (underscore-grouped)  direct=NONE gap=0 shape=OK
+  REJECTED     A3: a FIFTH SEED_BLOCKS entry (key 4) repeating segment 0 -- shape fault  direct={'REPO_LITERALS': 1} gap=0 shape=FAULT
+  REJECTED     A3: a DUPLICATE key 0 in SEED_BLOCKS -- shape fault  direct={'REPO_LITERALS': 1} gap=0 shape=FAULT
+  REJECTED     A3: a SECOND module-level SEED_BLOCKS assignment (identical dict) -- shape fault  direct={'REPO_LITERALS': 1} gap=0 shape=FAULT
+  REJECTED     A3: SEED_BLOCKS[0] = (lo, hi) after the assignment -- shape fault  direct={'REPO_LITERALS': 1} gap=0 shape=FAULT
+  REJECTED     A3: SEED_BLOCKS.update(...) after the assignment -- shape fault  direct={'REPO_LITERALS': 1} gap=0 shape=FAULT
+
+controls rejected: 25/25
+VERDICT          : CLEAN
