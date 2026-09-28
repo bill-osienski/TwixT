@@ -1,6 +1,6 @@
 """H5 STEP 6 -- COLLISION PROOF for the four H5 study blocks. FROZEN; NOT YET RUN.
 
-Implementation card §7 and §11 A2. The SAME script runs twice, with the SAME rule:
+Implementation card §7, §11 A2 and §12 A3. The SAME script runs twice, with the SAME rule:
 
     PYTHONPATH=. .venv/bin/python <this file> pre  --out <dir>/02_h5_collision_proof_pre_run.txt
     PYTHONPATH=. .venv/bin/python <this file> post --out <dir>/03_h5_collision_proof_post_run.txt
@@ -19,11 +19,17 @@ provenance + the underscore-aware union scanner). A literal counts at EVERY
 occurrence except:
   (a) an int element of a (lo, hi) tuple inside one of the four registry
       assignments of e4_screen_reference.py, located by parsing (v16, unchanged);
-  (b) 🔴 AMENDMENT A2: an int element of the (lo, hi) tuple VALUE of one of the
-      four segment entries (int keys 0, 1, 2, 3) of the `SEED_BLOCKS` assignment
-      of scripts/GPU/alphazero/h5_runner.py, located by parsing THAT assignment.
-      Not by value; not the runner file as a whole; not a fifth entry; not any
-      other assignment; not any other file. Inert in `pre`, where the dict is empty;
+  (b) 🔴 AMENDMENTS A2 + A3: an int element of the (lo, hi) tuple VALUE of one of
+      the four segment entries (int keys 0, 1, 2, 3) of the `SEED_BLOCKS`
+      assignment of scripts/GPU/alphazero/h5_runner.py, located by parsing THAT
+      assignment -- and (A3) ONLY when that assignment is the SOLE binding of the
+      name in the runner, at module level, of EXACT shape: EMPTY in `pre`; in
+      `post` EXACTLY four DISTINCT int-literal keys 0-3, each value one int-literal
+      (lo, hi) pair. Any other shape -- a duplicate or fifth key, a second binding
+      in any form (assignment, augmented assignment, del, global, import, def ...),
+      a subscript store or delete, any attribute of SEED_BLOCKS (every method
+      call) -- is a SHAPE FAULT: it exempts nothing and the run is NOT CLEAN.
+      Not by value; not the runner file as a whole; not any other file;
   (c) the five pinned own records, fixed by the step-5 survey.
 No exemption for tests or cards: they refer to the blocks without their numbers.
 
@@ -31,13 +37,16 @@ CONTROLS -- run in BOTH modes; every one must be REJECTED, and each DIFFERENTIAL
 control has a baseline that must be CLEAN:
   * the survey's static set: spent H1/H2/H3/D1 blocks, H4's blocks, the TEST_ONLY
     band, the live generation range, the H4-4b mutation literal, overlap/floor;
-  * A2, with the runner's SEED_BLOCKS SIMULATED FILLED in `pre` (the real file in
-    `post`); baseline = filled runner alone, CLEAN -- the exemption works:
+  * A2/A3, with the runner's SEED_BLOCKS SIMULATED FILLED in `pre` (the real file
+    in `post`), judged against the `post` shape; baseline = filled runner alone,
+    CLEAN -- the exemption works:
       - a bound copied into an UNRELATED ASSIGNMENT of the runner (lo: direct hit;
         hi: gap 0), plain and underscore-grouped;
-      - a FIFTH SEED_BLOCKS entry repeating a block;
       - the identical SEED_BLOCKS assignment in ANOTHER file (not exempt by value);
-      - a bound copied into an unrelated file (plain lo, underscore-grouped hi).
+      - a bound copied into an unrelated file (plain lo, underscore-grouped hi);
+      - A3, each REJECTED ON THE SHAPE FAULT: a FIFTH entry (key 4) repeating a
+        block; a DUPLICATE key 0; a SECOND module-level assignment (identical
+        dict); `SEED_BLOCKS[0] = (lo, hi)`; `SEED_BLOCKS.update(...)`.
 """
 import ast
 import bisect
@@ -82,6 +91,7 @@ REGISTRY_NAMES = ("ACCOUNTED_SEED_INTERVALS", "EXPOSED_SEED_INTERVALS",
                   "RETIRED_SEED_INTERVALS", "TEST_ONLY_SEED_INTERVALS")
 RUNNER_SOURCE = "scripts/GPU/alphazero/h5_runner.py"
 SEGMENT_KEYS = (0, 1, 2, 3)
+SHAPES = {"empty": [], "four": list(SEGMENT_KEYS)}      # A3: the sorted keys each mode requires
 V16 = re.compile(r"(?<![\d.])(2026\d{5})(?!\d)")
 GROUPED = re.compile(r"(?<![\d.])(\d(?:_?\d)*)(?![\d_])")
 MASKS = sorted({*SeededReferenceAgent.SEARCH_MASK.values(),
@@ -134,22 +144,58 @@ def registry_tuple_occurrences(text):
     return out
 
 
-def seed_blocks_occurrences(text):
-    """(b), AMENDMENT A2: the int elements of the (lo, hi) VALUE of each entry whose
-    key is one of the four segment ints, in the module-level `SEED_BLOCKS`
-    assignment -- and nothing else. A fifth key, a non-pair value or any other
-    assignment exempts nothing."""
-    out = set()
-    for node in ast.parse(text).body:
-        target = node.target if isinstance(node, ast.AnnAssign) else (
-            node.targets[0] if isinstance(node, ast.Assign) and len(node.targets) == 1 else None)
-        if getattr(target, "id", None) != "SEED_BLOCKS" or not isinstance(node.value, ast.Dict):
-            continue
-        for k, v in zip(node.value.keys, node.value.values):
-            if isinstance(k, ast.Constant) and type(k.value) is int \
-                    and k.value in SEGMENT_KEYS and _int_pair(v):
-                out.update((e.lineno, e.col_offset) for e in v.elts)
-    return out
+_NAMED = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.ExceptHandler,
+          ast.MatchAs, ast.MatchStar)
+
+
+def seed_blocks_exemption(text, expect):
+    """(b), AMENDMENTS A2 + A3 -> (exempt positions, shape faults).
+
+    Exempt: the int elements of the (lo, hi) VALUES of the `SEED_BLOCKS` dict --
+    ONLY when that dict is the SOLE binding of the name in the file, a single-target
+    module-level assignment, of EXACT shape: `expect` "empty" = no entry; "four" =
+    exactly four DISTINCT int-literal keys 0-3, each value an int-literal pair.
+    Anything else is a fault, and a fault exempts NOTHING."""
+    name = "SEED_BLOCKS"
+    is_it = lambda n: isinstance(n, ast.Name) and n.id == name     # noqa: E731
+    tree = ast.parse(text)
+    binds, faults = [], []
+    for n in ast.walk(tree):
+        line = getattr(n, "lineno", "?")
+        if is_it(n) and not isinstance(n.ctx, ast.Load):
+            binds.append(n)                   # assign, aug-assign, del, for/with/walrus target
+        elif isinstance(n, (ast.Global, ast.Nonlocal)) and name in n.names:
+            faults.append(f"line {line}: global/nonlocal {name}")
+        elif ((isinstance(n, _NAMED) and n.name == name)
+              or (isinstance(n, ast.arg) and n.arg == name)
+              or (isinstance(n, ast.MatchMapping) and n.rest == name)
+              or (isinstance(n, ast.alias) and name in (n.asname, n.name.split(".")[0]))):
+            faults.append(f"line {line}: another binding of {name}")
+        elif isinstance(n, ast.Subscript) and is_it(n.value) and not isinstance(n.ctx, ast.Load):
+            faults.append(f"line {line}: subscript store/delete on {name}")
+        elif isinstance(n, ast.Attribute) and is_it(n.value):
+            faults.append(f"line {line}: {name}.{n.attr} (attribute / method call)")
+    stmt = None
+    if len(binds) != 1:
+        faults.append(f"{len(binds)} bindings of {name}, not exactly one")
+    else:
+        stmt = next((s for s in tree.body
+                     if (isinstance(s, ast.Assign) and len(s.targets) == 1 and s.targets[0] is binds[0])
+                     or (isinstance(s, ast.AnnAssign) and s.target is binds[0] and s.value is not None)),
+                    None)
+        if stmt is None or not isinstance(stmt.value, ast.Dict):
+            faults.append(f"line {binds[0].lineno}: {name} is not bound by one module-level dict")
+            stmt = None
+    if stmt is not None:
+        keys, values = stmt.value.keys, stmt.value.values
+        ints = [k.value for k in keys if isinstance(k, ast.Constant) and type(k.value) is int]
+        if len(ints) != len(keys) or sorted(ints) != SHAPES[expect] \
+                or not all(_int_pair(v) for v in values):
+            faults.append(f"line {stmt.lineno}: {name} is not '{expect}' (keys {ints}, "
+                          f"{len(keys)} entries, int pairs {all(_int_pair(v) for v in values)})")
+    if faults:
+        return frozenset(), faults
+    return {(e.lineno, e.col_offset) for v in stmt.value.values for e in v.elts}, []
 
 
 def scan(text, exempt=frozenset()):
@@ -172,12 +218,13 @@ def scan(text, exempt=frozenset()):
     return hits
 
 
-def exempt_for(rel, text):
+def exempt_for(rel, text, expect):
+    """(exempt positions, shape faults) for one scanned file."""
     if rel == REGISTRY_SOURCE:
-        return registry_tuple_occurrences(text)
+        return registry_tuple_occurrences(text), []
     if rel == RUNNER_SOURCE:
-        return seed_blocks_occurrences(text)
-    return frozenset()
+        return seed_blocks_exemption(text, expect)
+    return frozenset(), []
 
 
 def repo_sources():
@@ -190,12 +237,15 @@ def repo_sources():
     return out
 
 
-def literals_of(sources):
-    vals = set()
+def literals_of(sources, expect):
+    """(literal values counted, the runner's SEED_BLOCKS shape faults)."""
+    vals, faults = set(), []
     for rel, text in sources:
         if rel not in OWN_RECORDS:
-            vals.update(scan(text, exempt_for(rel, text)))
-    return vals
+            exempt, bad = exempt_for(rel, text, expect)
+            vals.update(scan(text, exempt))
+            faults += bad
+    return vals, faults
 
 
 # ─────────────────────────────── the check ───────────────────────────────
@@ -208,7 +258,7 @@ def derivations(seeds):
     return {v for s in seeds for v in (s, *(s ^ m for m in MASKS))}
 
 
-def check(block, others, literals, *, own_registration=None):
+def check(block, others, literals, *, own_registration=None, faults=()):
     ours = set(range(*block))
     reg = {k: [iv for iv in v if iv != own_registration] for k, v in REGISTRIES.items()}
     cats = {k: intervals_set(v) for k, v in reg.items()}
@@ -225,20 +275,23 @@ def check(block, others, literals, *, own_registration=None):
             for lo, hi in ivs if not (lo < block[1] and block[0] < hi)]
     direct = {k: len(ours & v) for k, v in cats.items() if ours & v}
     streams = len(vals & derivations(prior))
-    return {"block": block, "direct": direct, "streams": streams,
+    return {"block": block, "direct": direct, "streams": streams, "faults": list(faults),
             "injective": len(vals) == len(ours) * 5, "nearest_gap": min(gaps), "floor": floor,
-            "clean": not direct and not streams and len(vals) == len(ours) * 5
+            "clean": not faults and not direct and not streams and len(vals) == len(ours) * 5
             and min(gaps) >= floor}
+
+
+SEED_BLOCKS_HEAD = "SEED_BLOCKS: Dict[int, tuple] = {"
 
 
 def filled_runner(text, blocks):
     """The runner as registration will write it: SEED_BLOCKS holding the blocks."""
-    empty = "SEED_BLOCKS: Dict[int, tuple] = {}"
-    if seed_blocks_occurrences(text):
+    empty = SEED_BLOCKS_HEAD + "}"
+    if empty not in text:
         return text                               # post: the real, filled file
     assert text.count(empty) == 1, "the runner's SEED_BLOCKS line is not the step-3 form"
     body = ", ".join(f"{k}: ({lo:_}, {hi:_})" for k, (lo, hi) in sorted(blocks.items()))
-    return text.replace(empty, f"SEED_BLOCKS: Dict[int, tuple] = {{{body}}}")
+    return text.replace(empty, f"{SEED_BLOCKS_HEAD}{body}}}")
 
 
 def mutation_literal():
@@ -270,15 +323,18 @@ def main(mode, out):
     dirty = subprocess.run(["git", "-C", str(ROOT), "status", "--porcelain", "--",
                             "scripts", "tests"], capture_output=True, text=True).stdout.strip()
     blocks = survey_blocks()
+    expect = "empty" if mode == "pre" else "four"
     say(f"H5 STEP 6 -- COLLISION PROOF -- MODE {mode.upper()}")
     say("=" * 72)
     say(f"HEAD {head}; scripts/ and tests/ {'DIRTY' if dirty else 'clean'}")
     say(f"blocks READ from {SURVEY} (sha256 pin recomputed)")
-    say(f"exemptions: registry tuples (v16); SEED_BLOCKS segment entries (A2); "
-        f"{len(OWN_RECORDS)} pinned own records")
+    say(f"exemptions: registry tuples (v16); SEED_BLOCKS segment entries, sole binding of "
+        f"exact shape (A2 + A3); {len(OWN_RECORDS)} pinned own records")
     sources = repo_sources()
-    literals = literals_of(sources)
+    literals, faults = literals_of(sources, expect)
     say(f"repo literal values counted: {len(literals)}")
+    say(f"SEED_BLOCKS shape in {RUNNER_SOURCE} (must be '{expect}'): "
+        f"{'FAULT -- ' + '; '.join(faults) if faults else 'OK, sole binding of exact shape'}")
     # ── registry and runner state for the mode
     state_ok = True
     for k, b in sorted(blocks.items()):
@@ -300,7 +356,7 @@ def main(mode, out):
     results = {}
     for k, block in sorted(blocks.items()):
         others = tuple(b for j, b in blocks.items() if j != k)
-        r = results[k] = check(block, others, literals,
+        r = results[k] = check(block, others, literals, faults=faults,
                                own_registration=block if mode == "post" else None)
         say(f"H5_STUDY_SEGMENT_{k} {r['block']}  direct={r['direct'] or 'NONE'}  "
             f"streams={r['streams']}  injective={r['injective']}  "
@@ -337,46 +393,56 @@ def main(mode, out):
     for label, block in static:
         verdict(label, not check(block, allb, literals)["clean"], f"  {block}")
 
-    # ── A2 DIFFERENTIAL controls on the runner, SIMULATED filled in `pre`
+    # ── A2/A3 DIFFERENTIAL controls on the runner, SIMULATED filled in `pre`,
+    #    judged against the `post` shape ("four")
     runner_text = dict(sources)[RUNNER_SOURCE]
     filled = filled_runner(runner_text, blocks)
     rest = [(rel, t) for rel, t in sources if rel != RUNNER_SOURCE]
 
-    def with_runner(text, extra=()):
-        return literals_of(rest + [(RUNNER_SOURCE, text)] + list(extra))
-    base = check(b0, others0, with_runner(filled), own_registration=own0)
-    verdict("BASELINE: the filled runner alone is CLEAN (the A2 exemption works)",
-            base["clean"], f"  direct={base['direct'] or 'NONE'} gap={base['nearest_gap']}")
+    def judged(text, extra=()):
+        lits, bad = literals_of(rest + [(RUNNER_SOURCE, text)] + list(extra), "four")
+        return check(b0, others0, lits, own_registration=own0, faults=bad)
+    base = judged(filled)
+    verdict("BASELINE: the filled runner alone is CLEAN (the A2/A3 exemption works)",
+            base["clean"], f"  direct={base['direct'] or 'NONE'} gap={base['nearest_gap']} "
+            f"shape={'FAULT' if base['faults'] else 'OK'}")
     lo, hi = b0
     lo_hit = lambda r: r["direct"].get("REPO_LITERALS", 0) >= 1          # noqa: E731
     hi_gap = lambda r: not r["direct"] and r["nearest_gap"] == 0 < r["floor"]   # noqa: E731
-    fifth = filled.replace("SEED_BLOCKS: Dict[int, tuple] = {",
-                           f"SEED_BLOCKS: Dict[int, tuple] = {{4: ({lo}, {hi}), ", 1)
+    shape = lambda r: bool(r["faults"])                                   # noqa: E731
+    body = ", ".join(f"{k}: ({a}, {b})" for k, (a, b) in sorted(blocks.items()))
     cases = [
         ("lo copied into an UNRELATED ASSIGNMENT of the runner (plain)",
-         with_runner(filled + f"\nOTHER_BLOCK = ({lo}, 1)\n"), lo_hit),
+         judged(filled + f"\nOTHER_BLOCK = ({lo}, 1)\n"), lo_hit),
         ("lo copied into an UNRELATED ASSIGNMENT of the runner (underscore-grouped)",
-         with_runner(filled + f"\nOTHER_BLOCK = ({lo:_}, 1)\n"), lo_hit),
+         judged(filled + f"\nOTHER_BLOCK = ({lo:_}, 1)\n"), lo_hit),
         ("hi copied into an UNRELATED ASSIGNMENT of the runner (underscore-grouped)",
-         with_runner(filled + f"\nOTHER_END = {hi:_}\n"), hi_gap),
-        ("a FIFTH SEED_BLOCKS entry repeating segment 0", with_runner(fifth), lo_hit),
+         judged(filled + f"\nOTHER_END = {hi:_}\n"), hi_gap),
         ("the identical SEED_BLOCKS assignment in ANOTHER file",
-         with_runner(filled, [("scripts/GPU/alphazero/elsewhere.py",
-                               "SEED_BLOCKS = {0: (%d, %d)}\n" % (lo, hi))]), lo_hit),
+         judged(filled, [("scripts/GPU/alphazero/elsewhere.py",
+                          "SEED_BLOCKS = {0: (%d, %d)}\n" % (lo, hi))]), lo_hit),
         ("lo copied into an UNRELATED FILE (plain)",
-         with_runner(filled, [("docs/superpowers/unrelated_notes.md", f"a number: {lo}\n")]),
-         lo_hit),
+         judged(filled, [("docs/superpowers/unrelated_notes.md", f"a number: {lo}\n")]), lo_hit),
         ("hi copied into an UNRELATED FILE (underscore-grouped)",
-         with_runner(filled, [("docs/superpowers/unrelated_notes.md", f"STRAY = {hi:_}\n")]),
-         hi_gap),
+         judged(filled, [("docs/superpowers/unrelated_notes.md", f"STRAY = {hi:_}\n")]), hi_gap),
+        ("A3: a FIFTH SEED_BLOCKS entry (key 4) repeating segment 0 -- shape fault",
+         judged(filled.replace(SEED_BLOCKS_HEAD, f"{SEED_BLOCKS_HEAD}4: ({lo}, {hi}), ", 1)), shape),
+        ("A3: a DUPLICATE key 0 in SEED_BLOCKS -- shape fault",
+         judged(filled.replace(SEED_BLOCKS_HEAD, f"{SEED_BLOCKS_HEAD}0: ({lo}, {hi}), ", 1)), shape),
+        ("A3: a SECOND module-level SEED_BLOCKS assignment (identical dict) -- shape fault",
+         judged(filled + f"\nSEED_BLOCKS = {{{body}}}\n"), shape),
+        ("A3: SEED_BLOCKS[0] = (lo, hi) after the assignment -- shape fault",
+         judged(filled + f"\nSEED_BLOCKS[0] = ({lo}, {hi})\n"), shape),
+        ("A3: SEED_BLOCKS.update(...) after the assignment -- shape fault",
+         judged(filled + f"\nSEED_BLOCKS.update({{0: ({lo}, {hi})}})\n"), shape),
     ]
-    for label, lits, failed_on in cases:
-        r = check(b0, others0, lits, own_registration=own0)
+    for label, r, failed_on in cases:
         verdict(label, base["clean"] and not r["clean"] and failed_on(r),
-                f"  direct={r['direct'] or 'NONE'} gap={r['nearest_gap']}")
+                f"  direct={r['direct'] or 'NONE'} gap={r['nearest_gap']} "
+                f"shape={'FAULT' if r['faults'] else 'OK'}")
     say(f"\ncontrols rejected: {rejected}/{total}")
     clean = all(r["clean"] for r in results.values()) and state_ok and rejected == total \
-        and not dirty
+        and not faults and not dirty
     say(f"VERDICT          : {'CLEAN' if clean else 'NOT CLEAN'}"
         f"{' -- RUN ON A DIRTY TREE' if dirty else ''}")
     with open(out, "x", encoding="utf-8") as fh:            # create-only

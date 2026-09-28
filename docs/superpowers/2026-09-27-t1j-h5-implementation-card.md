@@ -1,7 +1,9 @@
 # H5 IMPLEMENTATION CARD — design only (step 2)
 
-> ⚠ **Read with §10 and §11 (amendments, 2026-09-27)** — §10 replaces §2.3 item
-> 2's predecessor rule; §11 adds the step-6 literal exemption for `SEED_BLOCKS`. The text above §10 is otherwise as
+> ⚠ **Read with §10, §11 and §12 (amendments, 2026-09-27/28)** — §10 replaces §2.3 item
+> 2's predecessor rule; §11 adds the step-6 literal exemption for `SEED_BLOCKS`; **§12 (A3)
+> narrows that exemption to the SOLE assignment of exact shape and supersedes §11's frozen
+> proof hash** (`3966e45d…` → `8d08cfc1…`). The text above §10 is otherwise as
 > first committed (`83520b1`).
 
 **Written 2026-09-27. DESIGN ONLY.** No code, no test, no gate, no seed survey,
@@ -499,4 +501,71 @@ dict replaced by tests that read the blocks from the survey record, the affected
 injected-defect controls re-anchored and harvested, committed; (3) `post` on that
 committed tree — NOT CLEAN stops step 6, and the registration stands unused until
 the user decides; (4) the post record committed.
+
+---
+
+## 12. Amendment A3 — 2026-09-28, after review of A2, BEFORE any proof run
+
+**The problem.** A2's parser exempted the pair elements of EVERY entry with key
+0–3 in ANY module-level `SEED_BLOCKS` dict assignment. A duplicate key 0, or a
+second `SEED_BLOCKS` assignment, could therefore carry exempt literals that
+Python's final dict never holds — and the post-state check (`h5_runner.SEED_BLOCKS`
+equal to the blocks) reads only that final dict, so it could not see them.
+
+**The rule (decided by the user).** §11's exemption applies **only** to the
+**SOLE** binding of `SEED_BLOCKS` in `scripts/GPU/alphazero/h5_runner.py`: a
+single-target, module-level assignment of a dict literal of **exact shape** —
+**empty** in `pre`; in `post` **exactly four DISTINCT int-literal keys 0–3**, each
+value **one int-literal `(lo, hi)` pair**. Any other shape exempts **nothing**, is
+printed on the record's `SEED_BLOCKS shape` line, and makes the run a recorded
+**NOT CLEAN**. Shape faults, as implemented:
+
+* a duplicate key, a fifth key, a missing key, a non-int or bool key, a dict
+  unpack, a value that is not an int-literal pair;
+* a second binding of the name **in any form, in any scope** — assignment,
+  augmented assignment, `del`, a `for`/`with`/walrus target, import alias,
+  def/class name, function argument, `except … as`, match capture;
+  `global`/`nonlocal SEED_BLOCKS`; a chained or tuple target; the assignment not
+  directly at module level;
+* a subscript store or delete (`SEED_BLOCKS[0] = …`, `del SEED_BLOCKS[0]`);
+* **any attribute** of `SEED_BLOCKS` — every method call (`.update(…)`), including
+  a bound method taken first (`u = SEED_BLOCKS.update`). This is the implemented
+  reading of "method call", stricter than the words.
+
+Faults are judged on the runner only: literals in any other file were never
+exempt. Unchanged: not by value; not the runner as a whole; no exemption for
+tests or cards.
+
+**Stated limit.** The check reads the NAME. An alias (`X = SEED_BLOCKS;
+X[0] = …`) is not seen by it; the backstop is the existing post-state check that
+the imported dict equals the blocks. A value-equality check on the exempted
+literals would close it; it is **not** part of A3.
+
+**Controls added to the proof** (both modes; the filled runner — simulated in
+`pre`, the real file in `post` — judged against the `post` shape; each must be
+REJECTED **on the shape fault**, against a baseline filled runner that must stay
+CLEAN): a **fifth** entry (key 4) repeating a block (A2's control, now a shape
+fault); a **duplicate** key 0; a **second** module-level assignment of the
+identical dict; `SEED_BLOCKS[0] = (lo, hi)`; `SEED_BLOCKS.update(…)`. The fifth-
+and duplicate-key controls insert after the step-3 prefix
+`SEED_BLOCKS: Dict[int, tuple] = {`; if registration writes any other form they
+come out NOT REJECTED, and the run is recorded NOT CLEAN — fail-closed. A2's
+other controls are unchanged. The `pre`-mode "must be empty" branch has no
+in-proof control (not in the decided list); it was exercised on synthetic
+numbers below.
+
+**Helpers checked on SYNTHETIC numbers only** (2026-09-28; blocks
+`202_69{1,3,5,7}_000` + 148, none of the survey's; the survey record, `main`
+and `survey_blocks` were not touched; no `__pycache__` left): 31/31 — the
+committed runner judged `empty` → no fault, judged `four` → fault; the synthetic
+filled runner judged `four` → 8 positions exempt, none of its bounds counted,
+judged `empty` → fault; the five A3 controls → fault, nothing exempt, `lo`
+counted; 15 further fault forms (listed above) → fault; the alias → **not** seen
+(the stated limit); `check()` on a synthetic block CLEAN without faults and NOT
+CLEAN with one. **Scope:** helper level only — no proof mode was run.
+
+**The frozen step-6 proof, superseding §11's hash** —
+`docs/superpowers/evidence/t1j-h5-seed-registration/01_h5_collision_proof.py`,
+sha256 `8d08cfc148462d4e370011fbbb6d693b68c94889b8bd6461cd02197acf3b71f0`. The
+commands and the step-6 order are §11's, unchanged.
 
