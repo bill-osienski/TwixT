@@ -1,0 +1,7 @@
+HEAD 8ca7278e5423ef61db6470255419970fa8d89a90; manifest + 4 results files committed and unmodified
+segment 0: block [202650000, 202650148) -- manifest assigns 148, 148 game_starts, every assigned seed started EXACTLY once: True; run_void 0; ended in a complete segment_end: True
+segment 1: block [202652000, 202652148) -- manifest assigns 148, 148 game_starts, every assigned seed started EXACTLY once: True; run_void 0; ended in a complete segment_end: True
+segment 2: block [202654000, 202654148) -- manifest assigns 148, 148 game_starts, every assigned seed started EXACTLY once: True; run_void 0; ended in a complete segment_end: True
+segment 3: block [202656000, 202656148) -- manifest assigns 148, 148 game_starts, every assigned seed started EXACTLY once: True; run_void 0; ended in a complete segment_end: True
+total seeds started: 592 of 592
+VERDICT: every assigned seed started exactly once and all four runs completed -> the four blocks are EXPOSED WHOLE and RETIRED WHOLE
