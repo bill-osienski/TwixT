@@ -4848,7 +4848,29 @@ DEFECTS = [
     ('H5 runner: SEED_BLOCKS segment 0 is not the survey block', H5RUN,
      'SEED_BLOCKS: Dict[int, tuple] = {0: (',
      'SEED_BLOCKS: Dict[int, tuple] = {0: (2 + ',
-     f"{T_H5RUN}::test_SEED_BLOCKS_are_the_four_SURVEY_blocks_REGISTERED"),
+     f"{T_H5RUN}::test_SEED_BLOCKS_are_the_four_SURVEY_blocks_REGISTERED_and_CLOSED"),
+    # ── H5 closing seed edit (2026-10-01): each registration deleted or shortened in
+    # turn, and the refusals of the SPENT blocks undone in the REAL state.
+    ('H5 closing: segment 0 is not recorded EXPOSED', REF_SRC,
+     '    # EXACTLY once, so each H5 block is EXPOSED WHOLE. A post-run accounting edit to\n    # a bound file: the committed H5 records keep the hashes they were bound to,\n    # and H5 is NOT rerun under its manifest.\n    (202650000, 202650148),  # H5 STUDY SEGMENT 0 -- 148 seeds, all started\n',
+     '    # EXACTLY once, so each H5 block is EXPOSED WHOLE. A post-run accounting edit to\n    # a bound file: the committed H5 records keep the hashes they were bound to,\n    # and H5 is NOT rerun under its manifest.\n',
+     f"{T_H5RUN}::test_SEED_BLOCKS_are_the_four_SURVEY_blocks_REGISTERED_and_CLOSED"),
+    ('H5 closing: segment 0 is not recorded RETIRED', REF_SRC,
+     '    # EXACTLY once, so each H5 block is RETIRED WHOLE. A post-run accounting edit to\n    # a bound file: the committed H5 records keep the hashes they were bound to,\n    # and H5 is NOT rerun under its manifest.\n    (202650000, 202650148),  # H5 STUDY SEGMENT 0 -- 148 seeds, all started\n',
+     '    # EXACTLY once, so each H5 block is RETIRED WHOLE. A post-run accounting edit to\n    # a bound file: the committed H5 records keep the hashes they were bound to,\n    # and H5 is NOT rerun under its manifest.\n',
+     f"{T_H5RUN}::test_SEED_BLOCKS_are_the_four_SURVEY_blocks_REGISTERED_and_CLOSED"),
+    ('H5 closing: segment 3 is exposed one seed short', REF_SRC,
+     '    (202656000, 202656148),  # H5 STUDY SEGMENT 3 -- 148 seeds, all started\n)\n\n#: Seeds RESERVED PERMANENTLY FOR TESTS',
+     '    (202656000, 202656147),  # H5 STUDY SEGMENT 3 -- 148 seeds, all started\n)\n\n#: Seeds RESERVED PERMANENTLY FOR TESTS',
+     f"{T_H5RUN}::test_SEED_BLOCKS_are_the_four_SURVEY_blocks_REGISTERED_and_CLOSED"),
+    ('H5 closing: the runner ignores the registry for the REAL spent segments', H5RUN,
+     '    if faults:\n        raise H4RunError(f"seeds fail the shared registry',
+     '    if False:\n        raise H4RunError(f"seeds fail the shared registry',
+     f"{T_H5RUN}::test_the_REAL_runner_REFUSES_all_four_SPENT_segments"),
+    ('H5 closing: the REAL closed state derives BINDING', H5QUAL,
+     '    faults = R4.seed_registry_faults([{"seed": s} for s in seeds])\n    if faults:',
+     '    faults = R4.seed_registry_faults([{"seed": s} for s in seeds])\n    if False:',
+     f"{T_H5QUAL}::test_the_REAL_closed_state_derives_STOP"),
     ('H5 runner: the copied loop claims with exist_ok', H5RUN,
      '    claim_directory(out_dir)                      # THE claim: before any draw or JVM',
      '    os.makedirs(out_dir, exist_ok=True)           # THE claim: before any draw or JVM',
@@ -7289,13 +7311,28 @@ EXPECTED_REASONS = {
         "AssertionError: assert {0: 'docs/sup...udy-segment3'} == {0: 'docs/sup...udy-segment3'}",
     'H5 runner: SEED_BLOCKS segment 0 is not the survey block':
         "AssertionError: SEED_BLOCKS is not the step-5 survey's four blocks",
+    # ── 2026-10-01: H5 closing seed edit. Harvested under .venv in a disposable
+    # worktree before commit.
+    'H5 closing: segment 0 is not recorded EXPOSED':
+        'AssertionError: segment 0 is not registered as exactly itself in EXPOSED',
+    'H5 closing: segment 0 is not recorded RETIRED':
+        'AssertionError: segment 0 is not registered as exactly itself in RETIRED',
+    'H5 closing: segment 3 is exposed one seed short':
+        'AssertionError: segment 3 is not registered as exactly itself in EXPOSED',
+    'H5 closing: the runner ignores the registry for the REAL spent segments':
+        'AssertionError: segment 0: the spent schedule was not refused by the shared registry',
+    'H5 closing: the REAL closed state derives BINDING':
+        'AssertionError: the closed real state does not derive STOP',
     'H5 runner: the copied loop claims with exist_ok':
         'assert ["_run_unguar...rs from H4\'s"] == []',
     # step 6: RE-RECORDED -- the target test runs in the REAL state, whose role is
     # now BINDING (registration), so the defect is refused at BINDING's
     # destination rule instead of EARLY's. Same defect, same test; drift noted.
+    # 2026-10-01 closing edit: RE-RECORDED again -- the four blocks are now EXPOSED and
+    # RETIRED, so the REAL role derives STOP and the defect is refused at the
+    # non-BINDING destination rule. Same defect, same test; drift noted.
     'H5 qualification: the entry ignores its gate':
-        'scripts.GPU.alphazero.h4_production_qualification.QualificationRefused: a BINDING qualification writes ONLY to docs/superpowers/evidence/t1j-h5-binding-qualification, not /private/<tmp>/pytest-of-<user>/pytest-<n>/test_the_QUALIFICATION_refuses0/rec',
+        'scripts.GPU.alphazero.h4_production_qualification.QualificationRefused: an STOP record goes under the evidence tree, not /private/<tmp>/pytest-of-<user>/pytest-<n>/test_the_QUALIFICATION_refuses0/rec',
     'H5 qualification: the CLI ignores its gate':
         "AssertionError: exit 4, 'REFUSED: the H5 production qualification is UNAUTHORIZED. Nothing was loaded, compiled or written.\\n'",
     'H5 qualification: empty blocks derive BINDING':

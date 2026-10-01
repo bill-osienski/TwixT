@@ -287,18 +287,55 @@ def survey_blocks():
     return {int(k): (int(lo), int(hi)) for k, lo, hi in found}
 
 
-def test_SEED_BLOCKS_are_the_four_SURVEY_blocks_REGISTERED():
+def test_SEED_BLOCKS_are_the_four_SURVEY_blocks_REGISTERED_and_CLOSED():
+    """Step 6 registered the four survey blocks in ACCOUNTED; the ONE closing edit
+    (card §7, after all four segments COMPLETED and the estimate was committed)
+    EXPOSED and RETIRED each WHOLE -- exactly at its boundaries, ACCOUNTED unchanged."""
     blocks = survey_blocks()
     assert sorted(blocks) == list(H5.SEGMENTS), "the survey does not name segments 0-3"
     assert H5.SEED_BLOCKS == blocks, "SEED_BLOCKS is not the step-5 survey's four blocks"
     for k, (lo, hi) in sorted(blocks.items()):
         assert hi - lo == 2 * H5.PAIRS_PER_SEGMENT, f"segment {k} is not 148 seeds"
-        assert list(REF.ACCOUNTED_SEED_INTERVALS).count((lo, hi)) == 1, \
-            f"segment {k} is not registered as exactly itself in ACCOUNTED"
+        for name in ("ACCOUNTED", "EXPOSED", "RETIRED"):
+            assert list(getattr(REF, f"{name}_SEED_INTERVALS")).count((lo, hi)) == 1, \
+                f"segment {k} is not registered as exactly itself in {name}"
         bad = [s for s in range(lo, hi)
-               if not REF.seed_is_accounted(s) or REF.seed_is_unavailable(s)
+               if not (REF.seed_is_accounted(s) and REF.seed_is_exposed(s)
+                       and REF.seed_is_retired(s))
                or REF.seed_is_test_only(s) or s in REF.CONSUMED_SEEDS]
-        assert not bad, f"segment {k}: {len(bad)} seeds fail the registry"
+        assert not bad, f"segment {k}: {len(bad)} seeds are not accounted, exposed and retired"
+        spill = [s for s in (lo - 1, hi) if REF.seed_is_accounted(s)
+                 or REF.seed_is_exposed(s) or REF.seed_is_retired(s)]
+        assert not spill, f"segment {k}: the registration spills past the block's boundaries"
+
+
+def test_after_the_closing_edit_every_SPENT_schedule_fails_the_registry():
+    """Every seed of all four canonical H5 schedules is refused -- exposed AND retired."""
+    _cfg, ident = _identity()
+    for k in H5.SEGMENTS:
+        schedule = H5.canonical_schedule(k, ident)
+        faults = H5.seed_registry_faults(schedule)
+        assert len(faults) == len(schedule) == 2 * H5.PAIRS_PER_SEGMENT, \
+            f"segment {k}: not every seed of the spent schedule is refused"
+        assert all("exposed" in f and "retired" in f for f in faults), \
+            f"segment {k}: a seed is refused without being both exposed and retired"
+
+
+def test_the_REAL_runner_REFUSES_all_four_SPENT_segments(tmp_path, gate_open):
+    """The public study entry in the REAL state, gate OPEN in-test, on the committed
+    manifest and each segment's own evidence_dir: refused by the shared registry --
+    before the occupied-directory check, before any toolchain, checkpoint or class
+    directory. Fixed messages."""
+    manifest = str(ROOT / "docs/superpowers/evidence/t1j-h5-manifests/study_manifest.json")
+    for k in H5.SEGMENTS:
+        classes = tmp_path / f"classes{k}"
+        with pytest.raises(H5.H4RunError) as refused:
+            H5.run_study(mode="study", manifest=manifest, segment=k,
+                         out_dir=str(ROOT / H5.EVIDENCE_DIRS[k]), classes=str(classes),
+                         deadline_s=H5.SEGMENT_DEADLINE_S)
+        assert "seeds fail the shared registry" in str(refused.value), \
+            f"segment {k}: the spent schedule was not refused by the shared registry"
+        assert not classes.exists(), f"segment {k}: a class directory was created"
 
 
 # ──────────────── 5. a fixture pair end to end, through H4's persistence ────────────────

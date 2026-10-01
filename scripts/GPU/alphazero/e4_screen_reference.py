@@ -705,6 +705,17 @@ EXPOSED_SEED_INTERVALS = (
     (202636000, 202636148),  # H4 STUDY SEGMENT 1 -- 148 seeds, all started
     (202638000, 202638148),  # H4 STUDY SEGMENT 2 -- 148 seeds, all started
     (202640000, 202640148),  # H4 STUDY SEGMENT 3 -- 148 seeds, all started
+    # 🔴 H5 -- THE ONE CLOSING EDIT (2026-10-01, implementation card §7), after H5
+    # closed: four study segments all COMPLETE, confirmatory estimate committed.
+    # Exposure DERIVED from the committed game_start records
+    # (evidence/2026-10-01-t1j-h5-seed-closing/): all 592 assigned seeds started
+    # EXACTLY once, so each H5 block is EXPOSED WHOLE. A post-run accounting edit to
+    # a bound file: the committed H5 records keep the hashes they were bound to,
+    # and H5 is NOT rerun under its manifest.
+    (202650000, 202650148),  # H5 STUDY SEGMENT 0 -- 148 seeds, all started
+    (202652000, 202652148),  # H5 STUDY SEGMENT 1 -- 148 seeds, all started
+    (202654000, 202654148),  # H5 STUDY SEGMENT 2 -- 148 seeds, all started
+    (202656000, 202656148),  # H5 STUDY SEGMENT 3 -- 148 seeds, all started
 )
 
 #: Seeds RESERVED PERMANENTLY FOR TESTS. Unit tests must draw from something, and
@@ -946,6 +957,17 @@ RETIRED_SEED_INTERVALS = (
     (202636000, 202636148),  # H4 STUDY SEGMENT 1 -- 148 seeds, all started
     (202638000, 202638148),  # H4 STUDY SEGMENT 2 -- 148 seeds, all started
     (202640000, 202640148),  # H4 STUDY SEGMENT 3 -- 148 seeds, all started
+    # 🔴 H5 -- THE ONE CLOSING EDIT (2026-10-01, implementation card §7), after H5
+    # closed: four study segments all COMPLETE, confirmatory estimate committed.
+    # Exposure DERIVED from the committed game_start records
+    # (evidence/2026-10-01-t1j-h5-seed-closing/): all 592 assigned seeds started
+    # EXACTLY once, so each H5 block is RETIRED WHOLE. A post-run accounting edit to
+    # a bound file: the committed H5 records keep the hashes they were bound to,
+    # and H5 is NOT rerun under its manifest.
+    (202650000, 202650148),  # H5 STUDY SEGMENT 0 -- 148 seeds, all started
+    (202652000, 202652148),  # H5 STUDY SEGMENT 1 -- 148 seeds, all started
+    (202654000, 202654148),  # H5 STUDY SEGMENT 2 -- 148 seeds, all started
+    (202656000, 202656148),  # H5 STUDY SEGMENT 3 -- 148 seeds, all started
 )
 
 

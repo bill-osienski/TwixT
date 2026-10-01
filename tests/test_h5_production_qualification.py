@@ -93,13 +93,16 @@ def test_EMPTY_blocks_derive_EARLY(monkeypatch):
     assert Q.derive_role()[0] == Q.EARLY
 
 
-def test_the_REAL_step6_state_derives_BINDING_on_the_survey_blocks():
-    """Step 6 registered the four survey blocks: the REAL state is now BINDING.
-    Fixed messages -- a failure must not print a block."""
+def test_the_REAL_closed_state_derives_STOP():
+    """After the closing edit the four survey blocks are EXPOSED and RETIRED: the REAL
+    state derives STOP, so no qualification can bind spent seeds again. Fixed
+    messages -- a failure must not print a block."""
     role, seen, reason = Q.derive_role()
-    assert (role, reason) == (Q.BINDING, None), "the registered real state is not BINDING"
+    assert role == Q.STOP, "the closed real state does not derive STOP"
+    assert reason.startswith("seeds fail the shared registry") and "exposed, retired" in reason, \
+        "STOP, but not on the shared registry's exposed-and-retired refusal"
     assert seen["seed_blocks"] == {str(k): list(v) for k, v in survey_blocks().items()}, \
-        "BINDING, but not on the step-5 survey's blocks"
+        "the observation is not the step-5 survey's blocks"
 
 
 def test_FOUR_registered_blocks_derive_BINDING(registered):
