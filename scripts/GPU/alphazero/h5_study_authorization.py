@@ -5,4 +5,4 @@ hashed into every H5 manifest: a gate inside it would change the bound hash on
 the one-line commit that opens it. This file may hold ONLY this declaration; a
 test refuses any import, function, class or other statement here.
 """
-H5_STUDY_EXECUTION_AUTHORIZED = False
+H5_STUDY_EXECUTION_AUTHORIZED = True
