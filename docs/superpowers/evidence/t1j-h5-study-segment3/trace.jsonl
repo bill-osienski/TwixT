@@ -1,0 +1,298 @@
+{"design": "H5_STUDY", "event": "run_start", "n_games": 148}
+{"event": "game_start", "index": 0, "task_id": "h5s3-00-A"}
+{"elapsed_s": 46.091413625050336, "event": "game_done", "index": 0, "plies": 55, "terminal_reason": "win"}
+{"event": "game_start", "index": 1, "task_id": "h5s3-00-B"}
+{"elapsed_s": 39.22929854132235, "event": "game_done", "index": 1, "plies": 51, "terminal_reason": "win"}
+{"event": "game_start", "index": 2, "task_id": "h5s3-01-A"}
+{"elapsed_s": 38.16090462496504, "event": "game_done", "index": 2, "plies": 45, "terminal_reason": "win"}
+{"event": "game_start", "index": 3, "task_id": "h5s3-01-B"}
+{"elapsed_s": 239.9592884578742, "event": "game_done", "index": 3, "plies": 280, "terminal_reason": "cap"}
+{"event": "game_start", "index": 4, "task_id": "h5s3-02-A"}
+{"elapsed_s": 58.45740812504664, "event": "game_done", "index": 4, "plies": 67, "terminal_reason": "win"}
+{"event": "game_start", "index": 5, "task_id": "h5s3-02-B"}
+{"elapsed_s": 59.68034516694024, "event": "game_done", "index": 5, "plies": 64, "terminal_reason": "win"}
+{"event": "game_start", "index": 6, "task_id": "h5s3-03-A"}
+{"elapsed_s": 32.77006620820612, "event": "game_done", "index": 6, "plies": 40, "terminal_reason": "win"}
+{"event": "game_start", "index": 7, "task_id": "h5s3-03-B"}
+{"elapsed_s": 47.144883499946445, "event": "game_done", "index": 7, "plies": 51, "terminal_reason": "win"}
+{"event": "game_start", "index": 8, "task_id": "h5s3-04-A"}
+{"elapsed_s": 234.58846929110587, "event": "game_done", "index": 8, "plies": 280, "terminal_reason": "cap"}
+{"event": "game_start", "index": 9, "task_id": "h5s3-04-B"}
+{"elapsed_s": 44.33908229181543, "event": "game_done", "index": 9, "plies": 40, "terminal_reason": "win"}
+{"event": "game_start", "index": 10, "task_id": "h5s3-05-A"}
+{"elapsed_s": 58.18968120822683, "event": "game_done", "index": 10, "plies": 65, "terminal_reason": "win"}
+{"event": "game_start", "index": 11, "task_id": "h5s3-05-B"}
+{"elapsed_s": 37.022507292218506, "event": "game_done", "index": 11, "plies": 46, "terminal_reason": "win"}
+{"event": "game_start", "index": 12, "task_id": "h5s3-06-A"}
+{"elapsed_s": 58.02631870796904, "event": "game_done", "index": 12, "plies": 66, "terminal_reason": "win"}
+{"event": "game_start", "index": 13, "task_id": "h5s3-06-B"}
+{"elapsed_s": 47.916816915851086, "event": "game_done", "index": 13, "plies": 56, "terminal_reason": "win"}
+{"event": "game_start", "index": 14, "task_id": "h5s3-07-A"}
+{"elapsed_s": 49.38050700025633, "event": "game_done", "index": 14, "plies": 55, "terminal_reason": "win"}
+{"event": "game_start", "index": 15, "task_id": "h5s3-07-B"}
+{"elapsed_s": 46.50613791728392, "event": "game_done", "index": 15, "plies": 50, "terminal_reason": "win"}
+{"event": "game_start", "index": 16, "task_id": "h5s3-08-A"}
+{"elapsed_s": 43.176933916751295, "event": "game_done", "index": 16, "plies": 49, "terminal_reason": "win"}
+{"event": "game_start", "index": 17, "task_id": "h5s3-08-B"}
+{"elapsed_s": 44.52173166722059, "event": "game_done", "index": 17, "plies": 46, "terminal_reason": "win"}
+{"event": "game_start", "index": 18, "task_id": "h5s3-09-A"}
+{"elapsed_s": 49.46045112516731, "event": "game_done", "index": 18, "plies": 49, "terminal_reason": "win"}
+{"event": "game_start", "index": 19, "task_id": "h5s3-09-B"}
+{"elapsed_s": 47.83380383392796, "event": "game_done", "index": 19, "plies": 49, "terminal_reason": "win"}
+{"event": "game_start", "index": 20, "task_id": "h5s3-10-A"}
+{"elapsed_s": 46.36266354192048, "event": "game_done", "index": 20, "plies": 45, "terminal_reason": "win"}
+{"event": "game_start", "index": 21, "task_id": "h5s3-10-B"}
+{"elapsed_s": 57.53229183331132, "event": "game_done", "index": 21, "plies": 56, "terminal_reason": "win"}
+{"event": "game_start", "index": 22, "task_id": "h5s3-11-A"}
+{"elapsed_s": 46.4432885828428, "event": "game_done", "index": 22, "plies": 48, "terminal_reason": "win"}
+{"event": "game_start", "index": 23, "task_id": "h5s3-11-B"}
+{"elapsed_s": 49.242146499920636, "event": "game_done", "index": 23, "plies": 59, "terminal_reason": "win"}
+{"event": "game_start", "index": 24, "task_id": "h5s3-12-A"}
+{"elapsed_s": 49.3510263748467, "event": "game_done", "index": 24, "plies": 49, "terminal_reason": "win"}
+{"event": "game_start", "index": 25, "task_id": "h5s3-12-B"}
+{"elapsed_s": 46.04497258318588, "event": "game_done", "index": 25, "plies": 48, "terminal_reason": "win"}
+{"event": "game_start", "index": 26, "task_id": "h5s3-13-A"}
+{"elapsed_s": 56.70693837525323, "event": "game_done", "index": 26, "plies": 66, "terminal_reason": "win"}
+{"event": "game_start", "index": 27, "task_id": "h5s3-13-B"}
+{"elapsed_s": 32.715082165785134, "event": "game_done", "index": 27, "plies": 39, "terminal_reason": "win"}
+{"event": "game_start", "index": 28, "task_id": "h5s3-14-A"}
+{"elapsed_s": 57.346269874833524, "event": "game_done", "index": 28, "plies": 66, "terminal_reason": "win"}
+{"event": "game_start", "index": 29, "task_id": "h5s3-14-B"}
+{"elapsed_s": 51.3424251251854, "event": "game_done", "index": 29, "plies": 58, "terminal_reason": "win"}
+{"event": "game_start", "index": 30, "task_id": "h5s3-15-A"}
+{"elapsed_s": 160.07634041737765, "event": "game_done", "index": 30, "plies": 199, "terminal_reason": "win"}
+{"event": "game_start", "index": 31, "task_id": "h5s3-15-B"}
+{"elapsed_s": 43.330249917227775, "event": "game_done", "index": 31, "plies": 50, "terminal_reason": "win"}
+{"event": "game_start", "index": 32, "task_id": "h5s3-16-A"}
+{"elapsed_s": 56.94905520789325, "event": "game_done", "index": 32, "plies": 65, "terminal_reason": "win"}
+{"event": "game_start", "index": 33, "task_id": "h5s3-16-B"}
+{"elapsed_s": 45.911382750142366, "event": "game_done", "index": 33, "plies": 56, "terminal_reason": "win"}
+{"event": "game_start", "index": 34, "task_id": "h5s3-17-A"}
+{"elapsed_s": 47.026917207986116, "event": "game_done", "index": 34, "plies": 49, "terminal_reason": "win"}
+{"event": "game_start", "index": 35, "task_id": "h5s3-17-B"}
+{"elapsed_s": 47.05054666707292, "event": "game_done", "index": 35, "plies": 58, "terminal_reason": "win"}
+{"event": "game_start", "index": 36, "task_id": "h5s3-18-A"}
+{"elapsed_s": 41.271126832813025, "event": "game_done", "index": 36, "plies": 45, "terminal_reason": "win"}
+{"event": "game_start", "index": 37, "task_id": "h5s3-18-B"}
+{"elapsed_s": 236.94991245912388, "event": "game_done", "index": 37, "plies": 280, "terminal_reason": "cap"}
+{"event": "game_start", "index": 38, "task_id": "h5s3-19-A"}
+{"elapsed_s": 162.48808758333325, "event": "game_done", "index": 38, "plies": 199, "terminal_reason": "win"}
+{"event": "game_start", "index": 39, "task_id": "h5s3-19-B"}
+{"elapsed_s": 65.69848675001413, "event": "game_done", "index": 39, "plies": 81, "terminal_reason": "win"}
+{"event": "game_start", "index": 40, "task_id": "h5s3-20-A"}
+{"elapsed_s": 48.60157079203054, "event": "game_done", "index": 40, "plies": 54, "terminal_reason": "win"}
+{"event": "game_start", "index": 41, "task_id": "h5s3-20-B"}
+{"elapsed_s": 51.8044222923927, "event": "game_done", "index": 41, "plies": 54, "terminal_reason": "win"}
+{"event": "game_start", "index": 42, "task_id": "h5s3-21-A"}
+{"elapsed_s": 64.60442812507972, "event": "game_done", "index": 42, "plies": 66, "terminal_reason": "win"}
+{"event": "game_start", "index": 43, "task_id": "h5s3-21-B"}
+{"elapsed_s": 46.351868332829326, "event": "game_done", "index": 43, "plies": 49, "terminal_reason": "win"}
+{"event": "game_start", "index": 44, "task_id": "h5s3-22-A"}
+{"elapsed_s": 44.86294687492773, "event": "game_done", "index": 44, "plies": 45, "terminal_reason": "win"}
+{"event": "game_start", "index": 45, "task_id": "h5s3-22-B"}
+{"elapsed_s": 28.972812917083502, "event": "game_done", "index": 45, "plies": 35, "terminal_reason": "win"}
+{"event": "game_start", "index": 46, "task_id": "h5s3-23-A"}
+{"elapsed_s": 48.77248395886272, "event": "game_done", "index": 46, "plies": 55, "terminal_reason": "win"}
+{"event": "game_start", "index": 47, "task_id": "h5s3-23-B"}
+{"elapsed_s": 41.19466658262536, "event": "game_done", "index": 47, "plies": 52, "terminal_reason": "win"}
+{"event": "game_start", "index": 48, "task_id": "h5s3-24-A"}
+{"elapsed_s": 32.26406079204753, "event": "game_done", "index": 48, "plies": 40, "terminal_reason": "win"}
+{"event": "game_start", "index": 49, "task_id": "h5s3-24-B"}
+{"elapsed_s": 49.39074854226783, "event": "game_done", "index": 49, "plies": 59, "terminal_reason": "win"}
+{"event": "game_start", "index": 50, "task_id": "h5s3-25-A"}
+{"elapsed_s": 48.418921458069235, "event": "game_done", "index": 50, "plies": 49, "terminal_reason": "win"}
+{"event": "game_start", "index": 51, "task_id": "h5s3-25-B"}
+{"elapsed_s": 45.401577583979815, "event": "game_done", "index": 51, "plies": 53, "terminal_reason": "win"}
+{"event": "game_start", "index": 52, "task_id": "h5s3-26-A"}
+{"elapsed_s": 50.032405249774456, "event": "game_done", "index": 52, "plies": 60, "terminal_reason": "win"}
+{"event": "game_start", "index": 53, "task_id": "h5s3-26-B"}
+{"elapsed_s": 31.234847333282232, "event": "game_done", "index": 53, "plies": 38, "terminal_reason": "win"}
+{"event": "game_start", "index": 54, "task_id": "h5s3-27-A"}
+{"elapsed_s": 39.9406509581022, "event": "game_done", "index": 54, "plies": 49, "terminal_reason": "win"}
+{"event": "game_start", "index": 55, "task_id": "h5s3-27-B"}
+{"elapsed_s": 240.241898749955, "event": "game_done", "index": 55, "plies": 280, "terminal_reason": "cap"}
+{"event": "game_start", "index": 56, "task_id": "h5s3-28-A"}
+{"elapsed_s": 48.11448245821521, "event": "game_done", "index": 56, "plies": 55, "terminal_reason": "win"}
+{"event": "game_start", "index": 57, "task_id": "h5s3-28-B"}
+{"elapsed_s": 36.228035542182624, "event": "game_done", "index": 57, "plies": 46, "terminal_reason": "win"}
+{"event": "game_start", "index": 58, "task_id": "h5s3-29-A"}
+{"elapsed_s": 132.18280658405274, "event": "game_done", "index": 58, "plies": 167, "terminal_reason": "win"}
+{"event": "game_start", "index": 59, "task_id": "h5s3-29-B"}
+{"elapsed_s": 60.2808828339912, "event": "game_done", "index": 59, "plies": 72, "terminal_reason": "win"}
+{"event": "game_start", "index": 60, "task_id": "h5s3-30-A"}
+{"elapsed_s": 53.02848308440298, "event": "game_done", "index": 60, "plies": 61, "terminal_reason": "win"}
+{"event": "game_start", "index": 61, "task_id": "h5s3-30-B"}
+{"elapsed_s": 38.35254962509498, "event": "game_done", "index": 61, "plies": 44, "terminal_reason": "win"}
+{"event": "game_start", "index": 62, "task_id": "h5s3-31-A"}
+{"elapsed_s": 32.11323729204014, "event": "game_done", "index": 62, "plies": 40, "terminal_reason": "win"}
+{"event": "game_start", "index": 63, "task_id": "h5s3-31-B"}
+{"elapsed_s": 47.704774249810725, "event": "game_done", "index": 63, "plies": 56, "terminal_reason": "win"}
+{"event": "game_start", "index": 64, "task_id": "h5s3-32-A"}
+{"elapsed_s": 44.67952833417803, "event": "game_done", "index": 64, "plies": 54, "terminal_reason": "win"}
+{"event": "game_start", "index": 65, "task_id": "h5s3-32-B"}
+{"elapsed_s": 224.1588740418665, "event": "game_done", "index": 65, "plies": 280, "terminal_reason": "cap"}
+{"event": "game_start", "index": 66, "task_id": "h5s3-33-A"}
+{"elapsed_s": 42.22135583311319, "event": "game_done", "index": 66, "plies": 54, "terminal_reason": "win"}
+{"event": "game_start", "index": 67, "task_id": "h5s3-33-B"}
+{"elapsed_s": 35.3229487077333, "event": "game_done", "index": 67, "plies": 44, "terminal_reason": "win"}
+{"event": "game_start", "index": 68, "task_id": "h5s3-34-A"}
+{"elapsed_s": 54.741536332760006, "event": "game_done", "index": 68, "plies": 67, "terminal_reason": "win"}
+{"event": "game_start", "index": 69, "task_id": "h5s3-34-B"}
+{"elapsed_s": 27.492536541074514, "event": "game_done", "index": 69, "plies": 37, "terminal_reason": "win"}
+{"event": "game_start", "index": 70, "task_id": "h5s3-35-A"}
+{"elapsed_s": 42.05553508270532, "event": "game_done", "index": 70, "plies": 54, "terminal_reason": "win"}
+{"event": "game_start", "index": 71, "task_id": "h5s3-35-B"}
+{"elapsed_s": 31.385731749702245, "event": "game_done", "index": 71, "plies": 39, "terminal_reason": "win"}
+{"event": "game_start", "index": 72, "task_id": "h5s3-36-A"}
+{"elapsed_s": 53.90374608337879, "event": "game_done", "index": 72, "plies": 65, "terminal_reason": "win"}
+{"event": "game_start", "index": 73, "task_id": "h5s3-36-B"}
+{"elapsed_s": 209.89839720819145, "event": "game_done", "index": 73, "plies": 280, "terminal_reason": "cap"}
+{"event": "game_start", "index": 74, "task_id": "h5s3-37-A"}
+{"elapsed_s": 54.71120504196733, "event": "game_done", "index": 74, "plies": 67, "terminal_reason": "win"}
+{"event": "game_start", "index": 75, "task_id": "h5s3-37-B"}
+{"elapsed_s": 31.66470295796171, "event": "game_done", "index": 75, "plies": 39, "terminal_reason": "win"}
+{"event": "game_start", "index": 76, "task_id": "h5s3-38-A"}
+{"elapsed_s": 45.88128662481904, "event": "game_done", "index": 76, "plies": 55, "terminal_reason": "win"}
+{"event": "game_start", "index": 77, "task_id": "h5s3-38-B"}
+{"elapsed_s": 46.98064516717568, "event": "game_done", "index": 77, "plies": 57, "terminal_reason": "win"}
+{"event": "game_start", "index": 78, "task_id": "h5s3-39-A"}
+{"elapsed_s": 54.64898812491447, "event": "game_done", "index": 78, "plies": 67, "terminal_reason": "win"}
+{"event": "game_start", "index": 79, "task_id": "h5s3-39-B"}
+{"elapsed_s": 24.959980874788016, "event": "game_done", "index": 79, "plies": 35, "terminal_reason": "win"}
+{"event": "game_start", "index": 80, "task_id": "h5s3-40-A"}
+{"elapsed_s": 46.07660770788789, "event": "game_done", "index": 80, "plies": 49, "terminal_reason": "win"}
+{"event": "game_start", "index": 81, "task_id": "h5s3-40-B"}
+{"elapsed_s": 45.31661570770666, "event": "game_done", "index": 81, "plies": 54, "terminal_reason": "win"}
+{"event": "game_start", "index": 82, "task_id": "h5s3-41-A"}
+{"elapsed_s": 224.36894504213706, "event": "game_done", "index": 82, "plies": 280, "terminal_reason": "cap"}
+{"event": "game_start", "index": 83, "task_id": "h5s3-41-B"}
+{"elapsed_s": 31.323360082693398, "event": "game_done", "index": 83, "plies": 39, "terminal_reason": "win"}
+{"event": "game_start", "index": 84, "task_id": "h5s3-42-A"}
+{"elapsed_s": 61.35458049969748, "event": "game_done", "index": 84, "plies": 69, "terminal_reason": "win"}
+{"event": "game_start", "index": 85, "task_id": "h5s3-42-B"}
+{"elapsed_s": 35.20857741590589, "event": "game_done", "index": 85, "plies": 44, "terminal_reason": "win"}
+{"event": "game_start", "index": 86, "task_id": "h5s3-43-A"}
+{"elapsed_s": 34.150407209061086, "event": "game_done", "index": 86, "plies": 42, "terminal_reason": "win"}
+{"event": "game_start", "index": 87, "task_id": "h5s3-43-B"}
+{"elapsed_s": 43.48402608372271, "event": "game_done", "index": 87, "plies": 56, "terminal_reason": "win"}
+{"event": "game_start", "index": 88, "task_id": "h5s3-44-A"}
+{"elapsed_s": 34.12493779184297, "event": "game_done", "index": 88, "plies": 42, "terminal_reason": "win"}
+{"event": "game_start", "index": 89, "task_id": "h5s3-44-B"}
+{"elapsed_s": 39.63653466710821, "event": "game_done", "index": 89, "plies": 51, "terminal_reason": "win"}
+{"event": "game_start", "index": 90, "task_id": "h5s3-45-A"}
+{"elapsed_s": 61.24289533402771, "event": "game_done", "index": 90, "plies": 69, "terminal_reason": "win"}
+{"event": "game_start", "index": 91, "task_id": "h5s3-45-B"}
+{"elapsed_s": 216.65810079220682, "event": "game_done", "index": 91, "plies": 280, "terminal_reason": "cap"}
+{"event": "game_start", "index": 92, "task_id": "h5s3-46-A"}
+{"elapsed_s": 38.31499929120764, "event": "game_done", "index": 92, "plies": 45, "terminal_reason": "win"}
+{"event": "game_start", "index": 93, "task_id": "h5s3-46-B"}
+{"elapsed_s": 59.09149416722357, "event": "game_done", "index": 93, "plies": 76, "terminal_reason": "win"}
+{"event": "game_start", "index": 94, "task_id": "h5s3-47-A"}
+{"elapsed_s": 46.146235917229205, "event": "game_done", "index": 94, "plies": 49, "terminal_reason": "win"}
+{"event": "game_start", "index": 95, "task_id": "h5s3-47-B"}
+{"elapsed_s": 28.25971245812252, "event": "game_done", "index": 95, "plies": 33, "terminal_reason": "win"}
+{"event": "game_start", "index": 96, "task_id": "h5s3-48-A"}
+{"elapsed_s": 37.86890266695991, "event": "game_done", "index": 96, "plies": 49, "terminal_reason": "win"}
+{"event": "game_start", "index": 97, "task_id": "h5s3-48-B"}
+{"elapsed_s": 41.14715758385137, "event": "game_done", "index": 97, "plies": 52, "terminal_reason": "win"}
+{"event": "game_start", "index": 98, "task_id": "h5s3-49-A"}
+{"elapsed_s": 61.232427624985576, "event": "game_done", "index": 98, "plies": 69, "terminal_reason": "win"}
+{"event": "game_start", "index": 99, "task_id": "h5s3-49-B"}
+{"elapsed_s": 35.24432866694406, "event": "game_done", "index": 99, "plies": 44, "terminal_reason": "win"}
+{"event": "game_start", "index": 100, "task_id": "h5s3-50-A"}
+{"elapsed_s": 47.19687583297491, "event": "game_done", "index": 100, "plies": 53, "terminal_reason": "win"}
+{"event": "game_start", "index": 101, "task_id": "h5s3-50-B"}
+{"elapsed_s": 37.787879791110754, "event": "game_done", "index": 101, "plies": 46, "terminal_reason": "win"}
+{"event": "game_start", "index": 102, "task_id": "h5s3-51-A"}
+{"elapsed_s": 53.35994395799935, "event": "game_done", "index": 102, "plies": 65, "terminal_reason": "win"}
+{"event": "game_start", "index": 103, "task_id": "h5s3-51-B"}
+{"elapsed_s": 44.80428958265111, "event": "game_done", "index": 103, "plies": 55, "terminal_reason": "win"}
+{"event": "game_start", "index": 104, "task_id": "h5s3-52-A"}
+{"elapsed_s": 54.30828558281064, "event": "game_done", "index": 104, "plies": 67, "terminal_reason": "win"}
+{"event": "game_start", "index": 105, "task_id": "h5s3-52-B"}
+{"elapsed_s": 47.89209258323535, "event": "game_done", "index": 105, "plies": 58, "terminal_reason": "win"}
+{"event": "game_start", "index": 106, "task_id": "h5s3-53-A"}
+{"elapsed_s": 44.59659812506288, "event": "game_done", "index": 106, "plies": 49, "terminal_reason": "win"}
+{"event": "game_start", "index": 107, "task_id": "h5s3-53-B"}
+{"elapsed_s": 25.382929541170597, "event": "game_done", "index": 107, "plies": 35, "terminal_reason": "win"}
+{"event": "game_start", "index": 108, "task_id": "h5s3-54-A"}
+{"elapsed_s": 42.263595457654446, "event": "game_done", "index": 108, "plies": 48, "terminal_reason": "win"}
+{"event": "game_start", "index": 109, "task_id": "h5s3-54-B"}
+{"elapsed_s": 30.34403583407402, "event": "game_done", "index": 109, "plies": 39, "terminal_reason": "win"}
+{"event": "game_start", "index": 110, "task_id": "h5s3-55-A"}
+{"elapsed_s": 38.24083433393389, "event": "game_done", "index": 110, "plies": 45, "terminal_reason": "win"}
+{"event": "game_start", "index": 111, "task_id": "h5s3-55-B"}
+{"elapsed_s": 29.74344441667199, "event": "game_done", "index": 111, "plies": 38, "terminal_reason": "win"}
+{"event": "game_start", "index": 112, "task_id": "h5s3-56-A"}
+{"elapsed_s": 47.600093292072415, "event": "game_done", "index": 112, "plies": 60, "terminal_reason": "win"}
+{"event": "game_start", "index": 113, "task_id": "h5s3-56-B"}
+{"elapsed_s": 45.25014379201457, "event": "game_done", "index": 113, "plies": 54, "terminal_reason": "win"}
+{"event": "game_start", "index": 114, "task_id": "h5s3-57-A"}
+{"elapsed_s": 47.14765933295712, "event": "game_done", "index": 114, "plies": 53, "terminal_reason": "win"}
+{"event": "game_start", "index": 115, "task_id": "h5s3-57-B"}
+{"elapsed_s": 34.22363162506372, "event": "game_done", "index": 115, "plies": 46, "terminal_reason": "win"}
+{"event": "game_start", "index": 116, "task_id": "h5s3-58-A"}
+{"elapsed_s": 53.848511166870594, "event": "game_done", "index": 116, "plies": 66, "terminal_reason": "win"}
+{"event": "game_start", "index": 117, "task_id": "h5s3-58-B"}
+{"elapsed_s": 37.974270625039935, "event": "game_done", "index": 117, "plies": 45, "terminal_reason": "win"}
+{"event": "game_start", "index": 118, "task_id": "h5s3-59-A"}
+{"elapsed_s": 42.27192624984309, "event": "game_done", "index": 118, "plies": 54, "terminal_reason": "win"}
+{"event": "game_start", "index": 119, "task_id": "h5s3-59-B"}
+{"elapsed_s": 29.668540291953832, "event": "game_done", "index": 119, "plies": 38, "terminal_reason": "win"}
+{"event": "game_start", "index": 120, "task_id": "h5s3-60-A"}
+{"elapsed_s": 224.6389647088945, "event": "game_done", "index": 120, "plies": 280, "terminal_reason": "cap"}
+{"event": "game_start", "index": 121, "task_id": "h5s3-60-B"}
+{"elapsed_s": 48.58170508267358, "event": "game_done", "index": 121, "plies": 55, "terminal_reason": "win"}
+{"event": "game_start", "index": 122, "task_id": "h5s3-61-A"}
+{"elapsed_s": 50.810187083203346, "event": "game_done", "index": 122, "plies": 61, "terminal_reason": "win"}
+{"event": "game_start", "index": 123, "task_id": "h5s3-61-B"}
+{"elapsed_s": 47.93114349991083, "event": "game_done", "index": 123, "plies": 62, "terminal_reason": "win"}
+{"event": "game_start", "index": 124, "task_id": "h5s3-62-A"}
+{"elapsed_s": 222.57122679194435, "event": "game_done", "index": 124, "plies": 280, "terminal_reason": "cap"}
+{"event": "game_start", "index": 125, "task_id": "h5s3-62-B"}
+{"elapsed_s": 46.50377895869315, "event": "game_done", "index": 125, "plies": 59, "terminal_reason": "win"}
+{"event": "game_start", "index": 126, "task_id": "h5s3-63-A"}
+{"elapsed_s": 34.30771941598505, "event": "game_done", "index": 126, "plies": 42, "terminal_reason": "win"}
+{"event": "game_start", "index": 127, "task_id": "h5s3-63-B"}
+{"elapsed_s": 24.269456000067294, "event": "game_done", "index": 127, "plies": 31, "terminal_reason": "win"}
+{"event": "game_start", "index": 128, "task_id": "h5s3-64-A"}
+{"elapsed_s": 37.87623220868409, "event": "game_done", "index": 128, "plies": 49, "terminal_reason": "win"}
+{"event": "game_start", "index": 129, "task_id": "h5s3-64-B"}
+{"elapsed_s": 46.87721125036478, "event": "game_done", "index": 129, "plies": 60, "terminal_reason": "win"}
+{"event": "game_start", "index": 130, "task_id": "h5s3-65-A"}
+{"elapsed_s": 46.19362425012514, "event": "game_done", "index": 130, "plies": 49, "terminal_reason": "win"}
+{"event": "game_start", "index": 131, "task_id": "h5s3-65-B"}
+{"elapsed_s": 46.444066791795194, "event": "game_done", "index": 131, "plies": 59, "terminal_reason": "win"}
+{"event": "game_start", "index": 132, "task_id": "h5s3-66-A"}
+{"elapsed_s": 42.310763750225306, "event": "game_done", "index": 132, "plies": 54, "terminal_reason": "win"}
+{"event": "game_start", "index": 133, "task_id": "h5s3-66-B"}
+{"elapsed_s": 41.43087187502533, "event": "game_done", "index": 133, "plies": 50, "terminal_reason": "win"}
+{"event": "game_start", "index": 134, "task_id": "h5s3-67-A"}
+{"elapsed_s": 47.550314667169005, "event": "game_done", "index": 134, "plies": 60, "terminal_reason": "win"}
+{"event": "game_start", "index": 135, "task_id": "h5s3-67-B"}
+{"elapsed_s": 44.33537758421153, "event": "game_done", "index": 135, "plies": 56, "terminal_reason": "win"}
+{"event": "game_start", "index": 136, "task_id": "h5s3-68-A"}
+{"elapsed_s": 50.85313699999824, "event": "game_done", "index": 136, "plies": 61, "terminal_reason": "win"}
+{"event": "game_start", "index": 137, "task_id": "h5s3-68-B"}
+{"elapsed_s": 40.71065237466246, "event": "game_done", "index": 137, "plies": 50, "terminal_reason": "win"}
+{"event": "game_start", "index": 138, "task_id": "h5s3-69-A"}
+{"elapsed_s": 42.52913345908746, "event": "game_done", "index": 138, "plies": 48, "terminal_reason": "win"}
+{"event": "game_start", "index": 139, "task_id": "h5s3-69-B"}
+{"elapsed_s": 41.13552604196593, "event": "game_done", "index": 139, "plies": 50, "terminal_reason": "win"}
+{"event": "game_start", "index": 140, "task_id": "h5s3-70-A"}
+{"elapsed_s": 223.27780541684479, "event": "game_done", "index": 140, "plies": 280, "terminal_reason": "cap"}
+{"event": "game_start", "index": 141, "task_id": "h5s3-70-B"}
+{"elapsed_s": 36.2651968752034, "event": "game_done", "index": 141, "plies": 46, "terminal_reason": "win"}
+{"event": "game_start", "index": 142, "task_id": "h5s3-71-A"}
+{"elapsed_s": 42.4123744587414, "event": "game_done", "index": 142, "plies": 48, "terminal_reason": "win"}
+{"event": "game_start", "index": 143, "task_id": "h5s3-71-B"}
+{"elapsed_s": 29.811437250114977, "event": "game_done", "index": 143, "plies": 38, "terminal_reason": "win"}
+{"event": "game_start", "index": 144, "task_id": "h5s3-72-A"}
+{"elapsed_s": 34.03584812534973, "event": "game_done", "index": 144, "plies": 42, "terminal_reason": "win"}
+{"event": "game_start", "index": 145, "task_id": "h5s3-72-B"}
+{"elapsed_s": 41.422432666644454, "event": "game_done", "index": 145, "plies": 50, "terminal_reason": "win"}
+{"event": "game_start", "index": 146, "task_id": "h5s3-73-A"}
+{"elapsed_s": 42.59913979191333, "event": "game_done", "index": 146, "plies": 48, "terminal_reason": "win"}
+{"event": "game_start", "index": 147, "task_id": "h5s3-73-B"}
+{"elapsed_s": 48.14970737462863, "event": "game_done", "index": 147, "plies": 62, "terminal_reason": "win"}
+{"event": "run_end", "games_completed": 148}
