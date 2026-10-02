@@ -5,4 +5,4 @@ EXPLORATORY. One gate for the freeze, Stage 1 and Stage 2; opened for ONE run at
 under its own authorization and restored on every exit. This file may hold ONLY this
 declaration.
 """
-H5_CAP_COMPLETION_AUTHORIZED = True
+H5_CAP_COMPLETION_AUTHORIZED = False
