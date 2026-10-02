@@ -503,3 +503,46 @@ configuration, identity, loader and builder. The control checks:
 **A4.5 — Scope.** This amendment authorizes the implementation and its synthetic tests
 only. It authorizes no compile, model load, agent query, Stage-2 run, game or push. All 21
 gates stay closed. The frozen set, the Stage-1 evidence and frozen agent code are unchanged.
+
+---
+
+## 10. Amendment A5 — 2026-10-02, the child's own streams are evidence; committed BEFORE the implementation (user-decided)
+
+Review of `a9ee6880` accepted the watchdog, and the disclosed limits of §9 A4.1 stand (a
+process that leaves the group; a parent that is itself SIGKILLed). One evidence gap
+remains: a child that refuses before `record.json` exists left only an exit code, because
+its stdout and stderr went to the terminal.
+
+**A5.1 — Capture.** Before starting the child, the parent creates **create-only** files
+`02_stage2/child.stdout.txt` and `02_stage2/child.stderr.txt`. The child's stdout and
+stderr are redirected to them **as files, never pipes**, so a full pipe buffer can never
+block the child or the parent.
+
+The files are kept on every exit:
+
+* a normal exit;
+* a start-up failure (they then stay empty);
+* the parent's interruption;
+* forced termination.
+
+**A5.2 — Record.** `watchdog.json` records, for each stream, its file name, byte count and
+sha256, computed after the child's process group is gone. Beside them it records the
+child's actual exit: `exit status N`, `killed by signal NAME`, or `never started`.
+
+**A5.3 — The claim stays single-use.** A claim is unconsumed when `02_stage2/` holds
+`claim.json` and **at most** the parent's two child-stream files. Any other entry — the
+journal, `streams/`, a record or a stranger — means it is consumed, or not this parent's.
+
+**A5.4 — Synthetic controls** (harmless dummy processes, plus the real child invocation up
+to the closed on-disk gate):
+
+* a child refusal whose explanatory stderr is kept and hashed;
+* a successful child whose output is kept;
+* a hanging child whose partial output, written before the kill, is kept;
+* a start-up failure leaving both files empty and recorded;
+* an interrupted parent keeping the child's partial output;
+* the claim rule above.
+
+**A5.5 — Scope.** This amendment authorizes the implementation and its synthetic tests
+only. It authorizes no compile, model load, agent query, Stage-2 run, game or push. All 21
+gates stay closed. The existing evidence and agent code are unchanged.
