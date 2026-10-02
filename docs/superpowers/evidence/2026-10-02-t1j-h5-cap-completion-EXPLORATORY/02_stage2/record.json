@@ -1,0 +1,2018 @@
+{
+ "calls": {
+  "incumbent": "14/14",
+  "t1j": "18/18"
+ },
+ "card": "docs/superpowers/2026-10-02-t1j-h5-cap-completion-diagnostic-card.md",
+ "compile": {
+  "classes": {
+   "e2probe/ScratchPrefs.class": "aad79e9fc149d012209a53e6cad99cc7d97bf79ab03a56536934891d6dbf8f39",
+   "e2probe/ScratchPrefsFactory.class": "dff0e8f933c656f3d3e48c7b2519746508162b8fddd3db45066038c91480be7d",
+   "net/schwagereit/t1j/E3bDump.class": "2c9cd6c5ef2934e0d3b2b229215194c9329d0e1185c5c3408466d1c35a522c05",
+   "net/schwagereit/t1j/E4Preflight.class": "db8f9a102c0c563f99912bb6058b5184a59a07c8c1246bfa92b0bba2c62bc992"
+  },
+  "jar_sha256": "53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7",
+  "jdk_components": {
+   "bin/java": "af8b122943345320b179c75c3404d56a981017739746b75f9caf583632f0bea0",
+   "bin/javac": "6f5159301c750bba340390eda5fdd4a0959445355f97c40aa9c2addb00ede5ab",
+   "lib/modules": "28745573641057e822a972f223fc8e40db5c9df11ae3f7402764780afc2f1951",
+   "release": "cb6064fe4d7b87d9fbb8b8c7702047044d1bbeac38e0c5217f595579b6cc764b"
+  },
+  "main_class": "net.schwagereit.t1j.E4Preflight",
+  "sources": {
+   "E3bDump.java": "78f8f3f43b6a1ca9637ce29adcaabac46b9ae4acd849734eca4d32e2e83354ad",
+   "E4Preflight.java": "aa1c680a8450bedc113f852248b88d50b4e6eea80ac009e2d8821d908e041151",
+   "ScratchPrefs.java": "559fb9483cc34f4cc50a1c153fe6cabac6bb6129a977f42ba328b0cfad798f03",
+   "ScratchPrefsFactory.java": "09c0d74cf3c11130abfb810bd24cc433657b9dbba83152bd7c6f7e3f5858c244"
+  }
+ },
+ "compile_note": null,
+ "controls_ok": true,
+ "deadline_s": 3518.8537403750233,
+ "elapsed_s": 14.92316508339718,
+ "episodes": {
+  "E1": {
+   "frequency": 7,
+   "incumbent_blocks": "0/2",
+   "incumbent_equals_recorded": 2,
+   "members": [
+    "h5s0-21-B",
+    "h5s1-14-B",
+    "h5s1-27-B",
+    "h5s1-32-B",
+    "h5s1-54-B",
+    "h5s1-65-B",
+    "h5s2-19-B"
+   ],
+   "reading": "AGENT_CHOICE (reproduced)",
+   "t1j_completes": "0/3",
+   "t1j_equals_recorded": 3
+  },
+  "E2": {
+   "frequency": 5,
+   "incumbent_blocks": "0/2",
+   "incumbent_equals_recorded": 2,
+   "members": [
+    "h5s0-69-B",
+    "h5s2-23-B",
+    "h5s2-35-B",
+    "h5s3-36-B",
+    "h5s3-45-B"
+   ],
+   "reading": "AGENT_CHOICE (reproduced)",
+   "t1j_completes": "0/3",
+   "t1j_equals_recorded": 3
+  },
+  "E3": {
+   "frequency": 1,
+   "incumbent_blocks": "0/2",
+   "incumbent_equals_recorded": 2,
+   "members": [
+    "h5s3-32-B"
+   ],
+   "reading": "AGENT_CHOICE (reproduced)",
+   "t1j_completes": "0/3",
+   "t1j_equals_recorded": 3
+  }
+ },
+ "episodes_note": null,
+ "failure": null,
+ "incumbent_identity": {
+  "agent_lifetime": "one instance per game; both streams advance across the game",
+  "argmax_config": {
+   "board_size": 24,
+   "max_moves": 280,
+   "mcts_eval_batch_size": 14,
+   "mcts_sims": 400,
+   "mcts_stall_flush_sims": 48,
+   "opening_temp_plies": 20,
+   "selection_mode": "argmax",
+   "temp_high": 1.0,
+   "temp_low": 0.1
+  },
+  "design": "H5_STUDY",
+  "eval_config": {
+   "board_size": 24,
+   "max_moves": 280,
+   "mcts_eval_batch_size": 14,
+   "mcts_sims": 400,
+   "mcts_stall_flush_sims": 48,
+   "selection_mode": "argmax"
+  },
+  "inert_under_argmax": {
+   "opening_temp_plies": 20,
+   "temp_high": 1.0,
+   "temp_low": 0.1
+  },
+  "noise_note": "cfg_from does NOT pass dirichlet_eps, so MCTSConfig keeps its default 0.25; noise is suppressed at the call site instead. A schedule that declares dirichlet_eps=0 is declaring nothing.",
+  "noise_suppression": "search_with_root(state, add_noise=False)",
+  "plan_sha256": "c8b9cba816852a6752bc9a8ae7f74fe06529dcb5af5a06ac4bb6bda716cf8a30",
+  "readout_mask": {
+   "black": 3947580,
+   "red": 12829635
+  },
+  "readout_note": "H2's ONE gameplay-rule change: the incumbent plays the visit-count maximum. The listed settings are INERT under argmax and are recorded as such, never as 'unchanged'.",
+  "readout_path": "eval_readout.select, never mcts.select_move",
+  "reference": "calib020_0001",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "search_mask": {
+   "black": 5921370,
+   "red": 10855845
+  }
+ },
+ "incumbent_identity_note": null,
+ "label": "EXPLORATORY",
+ "note": "what was chosen, never why; no strength estimate, no rescoring",
+ "provenance": {
+  "E1": {
+   "frequency": 7,
+   "members": [
+    "h5s0-21-B",
+    "h5s1-14-B",
+    "h5s1-27-B",
+    "h5s1-32-B",
+    "h5s1-54-B",
+    "h5s1-65-B",
+    "h5s2-19-B"
+   ]
+  },
+  "E2": {
+   "frequency": 5,
+   "members": [
+    "h5s0-69-B",
+    "h5s2-23-B",
+    "h5s2-35-B",
+    "h5s3-36-B",
+    "h5s3-45-B"
+   ]
+  },
+  "E3": {
+   "frequency": 1,
+   "members": [
+    "h5s3-32-B"
+   ]
+  }
+ },
+ "rows": [
+  {
+   "acceptable": false,
+   "agent": "t1j",
+   "control": false,
+   "equals_recorded": true,
+   "move": [
+    16,
+    4
+   ],
+   "observations": [
+    {
+     "board_ply": 38,
+     "expected_position_digest": "9472de8ee463e36bb61587b47f41baa579ec023a781d84fa9ea5ff650fe91e93",
+     "matchdata": {
+      "identity": true,
+      "pie_rule": false,
+      "xsize": 24,
+      "ysize": 24,
+      "ystarts": true
+     },
+     "move": [
+      16,
+      4
+     ],
+     "ordinal": 0,
+     "outcome": "accepted",
+     "postcond": {
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 4,
+      "refl_ok": true,
+      "windows": 0
+     },
+     "proc": {
+      "headless": "true",
+      "java_version": "17.0.20.1",
+      "pid": 18639,
+      "prefs_factory": "e2probe.ScratchPrefs",
+      "vm": "OpenJDK_64-Bit_Server_VM"
+     },
+     "reason": null,
+     "refused_at": null,
+     "return_code": 0,
+     "role": "query",
+     "source": "searched",
+     "t1j_position_digest": "9472de8ee463e36bb61587b47f41baa579ec023a781d84fa9ea5ff650fe91e93",
+     "task_id": "E1/t1j#0",
+     "telemetry": {
+      "completed": true,
+      "completed_depth": 6,
+      "current_max_ply": 7,
+      "elapsed_us": 28660,
+      "move_nr": 38,
+      "q": 1,
+      "requested_depth": 6,
+      "usealphabeta": true
+     }
+    }
+   ],
+   "position": "E1/t1j",
+   "processes": [
+    {
+     "exception_type": null,
+     "rc": 0,
+     "rc_note": null,
+     "reason": null,
+     "stderr_note": "unavailable: t1j_adapter.query does not return stderr",
+     "stdout_note": null,
+     "streams": {
+      "stderr": null,
+      "stdout": {
+       "file": "streams/E1__t1j.k0.q0.stdout.txt",
+       "sha256": "fda3b65b0bdd8093b44ee08b5074d962d1714a691925c2b71a60bf849f3fb0d3"
+      }
+     }
+    }
+   ],
+   "processes_note": null,
+   "query": 0,
+   "raw": {},
+   "role": "complete"
+  },
+  {
+   "acceptable": false,
+   "agent": "t1j",
+   "control": false,
+   "equals_recorded": true,
+   "move": [
+    16,
+    4
+   ],
+   "observations": [
+    {
+     "board_ply": 38,
+     "expected_position_digest": "9472de8ee463e36bb61587b47f41baa579ec023a781d84fa9ea5ff650fe91e93",
+     "matchdata": {
+      "identity": true,
+      "pie_rule": false,
+      "xsize": 24,
+      "ysize": 24,
+      "ystarts": true
+     },
+     "move": [
+      16,
+      4
+     ],
+     "ordinal": 0,
+     "outcome": "accepted",
+     "postcond": {
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 4,
+      "refl_ok": true,
+      "windows": 0
+     },
+     "proc": {
+      "headless": "true",
+      "java_version": "17.0.20.1",
+      "pid": 18640,
+      "prefs_factory": "e2probe.ScratchPrefs",
+      "vm": "OpenJDK_64-Bit_Server_VM"
+     },
+     "reason": null,
+     "refused_at": null,
+     "return_code": 0,
+     "role": "query",
+     "source": "searched",
+     "t1j_position_digest": "9472de8ee463e36bb61587b47f41baa579ec023a781d84fa9ea5ff650fe91e93",
+     "task_id": "E1/t1j#1",
+     "telemetry": {
+      "completed": true,
+      "completed_depth": 6,
+      "current_max_ply": 7,
+      "elapsed_us": 29019,
+      "move_nr": 38,
+      "q": 1,
+      "requested_depth": 6,
+      "usealphabeta": true
+     }
+    }
+   ],
+   "position": "E1/t1j",
+   "processes": [
+    {
+     "exception_type": null,
+     "rc": 0,
+     "rc_note": null,
+     "reason": null,
+     "stderr_note": "unavailable: t1j_adapter.query does not return stderr",
+     "stdout_note": null,
+     "streams": {
+      "stderr": null,
+      "stdout": {
+       "file": "streams/E1__t1j.k1.q0.stdout.txt",
+       "sha256": "3840478d3f9422fe789154d051903113e07f0d0e2e15d86939d253aa15040868"
+      }
+     }
+    }
+   ],
+   "processes_note": null,
+   "query": 1,
+   "raw": {},
+   "role": "complete"
+  },
+  {
+   "acceptable": false,
+   "agent": "t1j",
+   "control": false,
+   "equals_recorded": true,
+   "move": [
+    16,
+    4
+   ],
+   "observations": [
+    {
+     "board_ply": 38,
+     "expected_position_digest": "9472de8ee463e36bb61587b47f41baa579ec023a781d84fa9ea5ff650fe91e93",
+     "matchdata": {
+      "identity": true,
+      "pie_rule": false,
+      "xsize": 24,
+      "ysize": 24,
+      "ystarts": true
+     },
+     "move": [
+      16,
+      4
+     ],
+     "ordinal": 0,
+     "outcome": "accepted",
+     "postcond": {
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 4,
+      "refl_ok": true,
+      "windows": 0
+     },
+     "proc": {
+      "headless": "true",
+      "java_version": "17.0.20.1",
+      "pid": 18641,
+      "prefs_factory": "e2probe.ScratchPrefs",
+      "vm": "OpenJDK_64-Bit_Server_VM"
+     },
+     "reason": null,
+     "refused_at": null,
+     "return_code": 0,
+     "role": "query",
+     "source": "searched",
+     "t1j_position_digest": "9472de8ee463e36bb61587b47f41baa579ec023a781d84fa9ea5ff650fe91e93",
+     "task_id": "E1/t1j#2",
+     "telemetry": {
+      "completed": true,
+      "completed_depth": 6,
+      "current_max_ply": 7,
+      "elapsed_us": 27902,
+      "move_nr": 38,
+      "q": 1,
+      "requested_depth": 6,
+      "usealphabeta": true
+     }
+    }
+   ],
+   "position": "E1/t1j",
+   "processes": [
+    {
+     "exception_type": null,
+     "rc": 0,
+     "rc_note": null,
+     "reason": null,
+     "stderr_note": "unavailable: t1j_adapter.query does not return stderr",
+     "stdout_note": null,
+     "streams": {
+      "stderr": null,
+      "stdout": {
+       "file": "streams/E1__t1j.k2.q0.stdout.txt",
+       "sha256": "084d490d715f2772a031da5a1fd52df9172bcde0cc40ce99a8ec62371421efdd"
+      }
+     }
+    }
+   ],
+   "processes_note": null,
+   "query": 2,
+   "raw": {},
+   "role": "complete"
+  },
+  {
+   "acceptable": false,
+   "agent": "incumbent",
+   "control": false,
+   "equals_recorded": true,
+   "move": [
+    1,
+    2
+   ],
+   "observations": null,
+   "position": "E1/incumbent",
+   "processes": null,
+   "processes_note": "not applicable: the incumbent decides in-process; no process stream exists",
+   "query": 0,
+   "raw": {
+    "seconds": 0.9982426669448614,
+    "seed": -1
+   },
+   "role": "defend"
+  },
+  {
+   "acceptable": false,
+   "agent": "incumbent",
+   "control": false,
+   "equals_recorded": true,
+   "move": [
+    1,
+    2
+   ],
+   "observations": null,
+   "position": "E1/incumbent",
+   "processes": null,
+   "processes_note": "not applicable: the incumbent decides in-process; no process stream exists",
+   "query": 1,
+   "raw": {
+    "seconds": 0.9384512496180832,
+    "seed": -1
+   },
+   "role": "defend"
+  },
+  {
+   "acceptable": false,
+   "agent": "t1j",
+   "control": false,
+   "equals_recorded": true,
+   "move": [
+    11,
+    7
+   ],
+   "observations": [
+    {
+     "board_ply": 56,
+     "expected_position_digest": "47dda5f8b97e9a0886abb0e893a471851dbc322d339ee17c7da022cabb19b87f",
+     "matchdata": {
+      "identity": true,
+      "pie_rule": false,
+      "xsize": 24,
+      "ysize": 24,
+      "ystarts": true
+     },
+     "move": [
+      11,
+      7
+     ],
+     "ordinal": 0,
+     "outcome": "accepted",
+     "postcond": {
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 4,
+      "refl_ok": true,
+      "windows": 0
+     },
+     "proc": {
+      "headless": "true",
+      "java_version": "17.0.20.1",
+      "pid": 18661,
+      "prefs_factory": "e2probe.ScratchPrefs",
+      "vm": "OpenJDK_64-Bit_Server_VM"
+     },
+     "reason": null,
+     "refused_at": null,
+     "return_code": 0,
+     "role": "query",
+     "source": "searched",
+     "t1j_position_digest": "47dda5f8b97e9a0886abb0e893a471851dbc322d339ee17c7da022cabb19b87f",
+     "task_id": "E2/t1j#0",
+     "telemetry": {
+      "completed": true,
+      "completed_depth": 6,
+      "current_max_ply": 7,
+      "elapsed_us": 11667,
+      "move_nr": 56,
+      "q": 1,
+      "requested_depth": 6,
+      "usealphabeta": true
+     }
+    }
+   ],
+   "position": "E2/t1j",
+   "processes": [
+    {
+     "exception_type": null,
+     "rc": 0,
+     "rc_note": null,
+     "reason": null,
+     "stderr_note": "unavailable: t1j_adapter.query does not return stderr",
+     "stdout_note": null,
+     "streams": {
+      "stderr": null,
+      "stdout": {
+       "file": "streams/E2__t1j.k0.q0.stdout.txt",
+       "sha256": "043b0fda620aa2253f9481b6853c3e9874d39d60b4efeb65aac40276fdf32caa"
+      }
+     }
+    }
+   ],
+   "processes_note": null,
+   "query": 0,
+   "raw": {},
+   "role": "complete"
+  },
+  {
+   "acceptable": false,
+   "agent": "t1j",
+   "control": false,
+   "equals_recorded": true,
+   "move": [
+    11,
+    7
+   ],
+   "observations": [
+    {
+     "board_ply": 56,
+     "expected_position_digest": "47dda5f8b97e9a0886abb0e893a471851dbc322d339ee17c7da022cabb19b87f",
+     "matchdata": {
+      "identity": true,
+      "pie_rule": false,
+      "xsize": 24,
+      "ysize": 24,
+      "ystarts": true
+     },
+     "move": [
+      11,
+      7
+     ],
+     "ordinal": 0,
+     "outcome": "accepted",
+     "postcond": {
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 4,
+      "refl_ok": true,
+      "windows": 0
+     },
+     "proc": {
+      "headless": "true",
+      "java_version": "17.0.20.1",
+      "pid": 18662,
+      "prefs_factory": "e2probe.ScratchPrefs",
+      "vm": "OpenJDK_64-Bit_Server_VM"
+     },
+     "reason": null,
+     "refused_at": null,
+     "return_code": 0,
+     "role": "query",
+     "source": "searched",
+     "t1j_position_digest": "47dda5f8b97e9a0886abb0e893a471851dbc322d339ee17c7da022cabb19b87f",
+     "task_id": "E2/t1j#1",
+     "telemetry": {
+      "completed": true,
+      "completed_depth": 6,
+      "current_max_ply": 7,
+      "elapsed_us": 11426,
+      "move_nr": 56,
+      "q": 1,
+      "requested_depth": 6,
+      "usealphabeta": true
+     }
+    }
+   ],
+   "position": "E2/t1j",
+   "processes": [
+    {
+     "exception_type": null,
+     "rc": 0,
+     "rc_note": null,
+     "reason": null,
+     "stderr_note": "unavailable: t1j_adapter.query does not return stderr",
+     "stdout_note": null,
+     "streams": {
+      "stderr": null,
+      "stdout": {
+       "file": "streams/E2__t1j.k1.q0.stdout.txt",
+       "sha256": "54a8c44673d2c92073728938e75bd51dd8a45a33d389cc71c095c3d25fd99e6c"
+      }
+     }
+    }
+   ],
+   "processes_note": null,
+   "query": 1,
+   "raw": {},
+   "role": "complete"
+  },
+  {
+   "acceptable": false,
+   "agent": "t1j",
+   "control": false,
+   "equals_recorded": true,
+   "move": [
+    11,
+    7
+   ],
+   "observations": [
+    {
+     "board_ply": 56,
+     "expected_position_digest": "47dda5f8b97e9a0886abb0e893a471851dbc322d339ee17c7da022cabb19b87f",
+     "matchdata": {
+      "identity": true,
+      "pie_rule": false,
+      "xsize": 24,
+      "ysize": 24,
+      "ystarts": true
+     },
+     "move": [
+      11,
+      7
+     ],
+     "ordinal": 0,
+     "outcome": "accepted",
+     "postcond": {
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 4,
+      "refl_ok": true,
+      "windows": 0
+     },
+     "proc": {
+      "headless": "true",
+      "java_version": "17.0.20.1",
+      "pid": 18663,
+      "prefs_factory": "e2probe.ScratchPrefs",
+      "vm": "OpenJDK_64-Bit_Server_VM"
+     },
+     "reason": null,
+     "refused_at": null,
+     "return_code": 0,
+     "role": "query",
+     "source": "searched",
+     "t1j_position_digest": "47dda5f8b97e9a0886abb0e893a471851dbc322d339ee17c7da022cabb19b87f",
+     "task_id": "E2/t1j#2",
+     "telemetry": {
+      "completed": true,
+      "completed_depth": 6,
+      "current_max_ply": 7,
+      "elapsed_us": 11936,
+      "move_nr": 56,
+      "q": 1,
+      "requested_depth": 6,
+      "usealphabeta": true
+     }
+    }
+   ],
+   "position": "E2/t1j",
+   "processes": [
+    {
+     "exception_type": null,
+     "rc": 0,
+     "rc_note": null,
+     "reason": null,
+     "stderr_note": "unavailable: t1j_adapter.query does not return stderr",
+     "stdout_note": null,
+     "streams": {
+      "stderr": null,
+      "stdout": {
+       "file": "streams/E2__t1j.k2.q0.stdout.txt",
+       "sha256": "ef8b1efb778208b6a26992b5ad37d5e82daf90bb014b6ea9d7c82ea611d5e4b2"
+      }
+     }
+    }
+   ],
+   "processes_note": null,
+   "query": 2,
+   "raw": {},
+   "role": "complete"
+  },
+  {
+   "acceptable": false,
+   "agent": "incumbent",
+   "control": false,
+   "equals_recorded": true,
+   "move": [
+    1,
+    4
+   ],
+   "observations": null,
+   "position": "E2/incumbent",
+   "processes": null,
+   "processes_note": "not applicable: the incumbent decides in-process; no process stream exists",
+   "query": 0,
+   "raw": {
+    "seconds": 0.9665329586714506,
+    "seed": -1
+   },
+   "role": "defend"
+  },
+  {
+   "acceptable": false,
+   "agent": "incumbent",
+   "control": false,
+   "equals_recorded": true,
+   "move": [
+    1,
+    4
+   ],
+   "observations": null,
+   "position": "E2/incumbent",
+   "processes": null,
+   "processes_note": "not applicable: the incumbent decides in-process; no process stream exists",
+   "query": 1,
+   "raw": {
+    "seconds": 0.9439125410281122,
+    "seed": -1
+   },
+   "role": "defend"
+  },
+  {
+   "acceptable": false,
+   "agent": "t1j",
+   "control": false,
+   "equals_recorded": true,
+   "move": [
+    14,
+    8
+   ],
+   "observations": [
+    {
+     "board_ply": 80,
+     "expected_position_digest": "cc47bffc6ac0df98c442fb2a9dd3792af25ff09585de993ffb7118d823dac5be",
+     "matchdata": {
+      "identity": true,
+      "pie_rule": false,
+      "xsize": 24,
+      "ysize": 24,
+      "ystarts": true
+     },
+     "move": [
+      14,
+      8
+     ],
+     "ordinal": 0,
+     "outcome": "accepted",
+     "postcond": {
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 4,
+      "refl_ok": true,
+      "windows": 0
+     },
+     "proc": {
+      "headless": "true",
+      "java_version": "17.0.20.1",
+      "pid": 18672,
+      "prefs_factory": "e2probe.ScratchPrefs",
+      "vm": "OpenJDK_64-Bit_Server_VM"
+     },
+     "reason": null,
+     "refused_at": null,
+     "return_code": 0,
+     "role": "query",
+     "source": "searched",
+     "t1j_position_digest": "cc47bffc6ac0df98c442fb2a9dd3792af25ff09585de993ffb7118d823dac5be",
+     "task_id": "E3/t1j#0",
+     "telemetry": {
+      "completed": true,
+      "completed_depth": 6,
+      "current_max_ply": 7,
+      "elapsed_us": 17686,
+      "move_nr": 80,
+      "q": 1,
+      "requested_depth": 6,
+      "usealphabeta": true
+     }
+    }
+   ],
+   "position": "E3/t1j",
+   "processes": [
+    {
+     "exception_type": null,
+     "rc": 0,
+     "rc_note": null,
+     "reason": null,
+     "stderr_note": "unavailable: t1j_adapter.query does not return stderr",
+     "stdout_note": null,
+     "streams": {
+      "stderr": null,
+      "stdout": {
+       "file": "streams/E3__t1j.k0.q0.stdout.txt",
+       "sha256": "a2a63f4dbe6467945001342b5d51afbef58e06f57e7cc36a7c81511ede2e7c10"
+      }
+     }
+    }
+   ],
+   "processes_note": null,
+   "query": 0,
+   "raw": {},
+   "role": "complete"
+  },
+  {
+   "acceptable": false,
+   "agent": "t1j",
+   "control": false,
+   "equals_recorded": true,
+   "move": [
+    14,
+    8
+   ],
+   "observations": [
+    {
+     "board_ply": 80,
+     "expected_position_digest": "cc47bffc6ac0df98c442fb2a9dd3792af25ff09585de993ffb7118d823dac5be",
+     "matchdata": {
+      "identity": true,
+      "pie_rule": false,
+      "xsize": 24,
+      "ysize": 24,
+      "ystarts": true
+     },
+     "move": [
+      14,
+      8
+     ],
+     "ordinal": 0,
+     "outcome": "accepted",
+     "postcond": {
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 4,
+      "refl_ok": true,
+      "windows": 0
+     },
+     "proc": {
+      "headless": "true",
+      "java_version": "17.0.20.1",
+      "pid": 18673,
+      "prefs_factory": "e2probe.ScratchPrefs",
+      "vm": "OpenJDK_64-Bit_Server_VM"
+     },
+     "reason": null,
+     "refused_at": null,
+     "return_code": 0,
+     "role": "query",
+     "source": "searched",
+     "t1j_position_digest": "cc47bffc6ac0df98c442fb2a9dd3792af25ff09585de993ffb7118d823dac5be",
+     "task_id": "E3/t1j#1",
+     "telemetry": {
+      "completed": true,
+      "completed_depth": 6,
+      "current_max_ply": 7,
+      "elapsed_us": 17583,
+      "move_nr": 80,
+      "q": 1,
+      "requested_depth": 6,
+      "usealphabeta": true
+     }
+    }
+   ],
+   "position": "E3/t1j",
+   "processes": [
+    {
+     "exception_type": null,
+     "rc": 0,
+     "rc_note": null,
+     "reason": null,
+     "stderr_note": "unavailable: t1j_adapter.query does not return stderr",
+     "stdout_note": null,
+     "streams": {
+      "stderr": null,
+      "stdout": {
+       "file": "streams/E3__t1j.k1.q0.stdout.txt",
+       "sha256": "fd44c6012fa4a4c9ad60536f9f39acc2a29ad92b946e1bc54954da6dc4111a68"
+      }
+     }
+    }
+   ],
+   "processes_note": null,
+   "query": 1,
+   "raw": {},
+   "role": "complete"
+  },
+  {
+   "acceptable": false,
+   "agent": "t1j",
+   "control": false,
+   "equals_recorded": true,
+   "move": [
+    14,
+    8
+   ],
+   "observations": [
+    {
+     "board_ply": 80,
+     "expected_position_digest": "cc47bffc6ac0df98c442fb2a9dd3792af25ff09585de993ffb7118d823dac5be",
+     "matchdata": {
+      "identity": true,
+      "pie_rule": false,
+      "xsize": 24,
+      "ysize": 24,
+      "ystarts": true
+     },
+     "move": [
+      14,
+      8
+     ],
+     "ordinal": 0,
+     "outcome": "accepted",
+     "postcond": {
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 4,
+      "refl_ok": true,
+      "windows": 0
+     },
+     "proc": {
+      "headless": "true",
+      "java_version": "17.0.20.1",
+      "pid": 18674,
+      "prefs_factory": "e2probe.ScratchPrefs",
+      "vm": "OpenJDK_64-Bit_Server_VM"
+     },
+     "reason": null,
+     "refused_at": null,
+     "return_code": 0,
+     "role": "query",
+     "source": "searched",
+     "t1j_position_digest": "cc47bffc6ac0df98c442fb2a9dd3792af25ff09585de993ffb7118d823dac5be",
+     "task_id": "E3/t1j#2",
+     "telemetry": {
+      "completed": true,
+      "completed_depth": 6,
+      "current_max_ply": 7,
+      "elapsed_us": 17473,
+      "move_nr": 80,
+      "q": 1,
+      "requested_depth": 6,
+      "usealphabeta": true
+     }
+    }
+   ],
+   "position": "E3/t1j",
+   "processes": [
+    {
+     "exception_type": null,
+     "rc": 0,
+     "rc_note": null,
+     "reason": null,
+     "stderr_note": "unavailable: t1j_adapter.query does not return stderr",
+     "stdout_note": null,
+     "streams": {
+      "stderr": null,
+      "stdout": {
+       "file": "streams/E3__t1j.k2.q0.stdout.txt",
+       "sha256": "8c565646703936b99a84421bf9fd2186145462a1ba288878ddc0c0f658f8b3e0"
+      }
+     }
+    }
+   ],
+   "processes_note": null,
+   "query": 2,
+   "raw": {},
+   "role": "complete"
+  },
+  {
+   "acceptable": false,
+   "agent": "incumbent",
+   "control": false,
+   "equals_recorded": true,
+   "move": [
+    11,
+    10
+   ],
+   "observations": null,
+   "position": "E3/incumbent",
+   "processes": null,
+   "processes_note": "not applicable: the incumbent decides in-process; no process stream exists",
+   "query": 0,
+   "raw": {
+    "seconds": 1.0652422923594713,
+    "seed": -1
+   },
+   "role": "defend"
+  },
+  {
+   "acceptable": false,
+   "agent": "incumbent",
+   "control": false,
+   "equals_recorded": true,
+   "move": [
+    11,
+    10
+   ],
+   "observations": null,
+   "position": "E3/incumbent",
+   "processes": null,
+   "processes_note": "not applicable: the incumbent decides in-process; no process stream exists",
+   "query": 1,
+   "raw": {
+    "seconds": 1.045574916061014,
+    "seed": -1
+   },
+   "role": "defend"
+  },
+  {
+   "acceptable": true,
+   "agent": "t1j",
+   "control": true,
+   "equals_recorded": true,
+   "move": [
+    2,
+    15
+   ],
+   "observations": [
+    {
+     "board_ply": 30,
+     "expected_position_digest": "3d01f5a24c8049a601a8082aa69c4e7381c51f07032748f642b79e4a28c00344",
+     "matchdata": {
+      "identity": true,
+      "pie_rule": false,
+      "xsize": 24,
+      "ysize": 24,
+      "ystarts": true
+     },
+     "move": [
+      2,
+      15
+     ],
+     "ordinal": 0,
+     "outcome": "accepted",
+     "postcond": {
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 4,
+      "refl_ok": true,
+      "windows": 0
+     },
+     "proc": {
+      "headless": "true",
+      "java_version": "17.0.20.1",
+      "pid": 18683,
+      "prefs_factory": "e2probe.ScratchPrefs",
+      "vm": "OpenJDK_64-Bit_Server_VM"
+     },
+     "reason": null,
+     "refused_at": null,
+     "return_code": 0,
+     "role": "query",
+     "source": "searched",
+     "t1j_position_digest": "3d01f5a24c8049a601a8082aa69c4e7381c51f07032748f642b79e4a28c00344",
+     "task_id": "CT1#0",
+     "telemetry": {
+      "completed": true,
+      "completed_depth": 6,
+      "current_max_ply": 7,
+      "elapsed_us": 28802,
+      "move_nr": 30,
+      "q": 1,
+      "requested_depth": 6,
+      "usealphabeta": true
+     }
+    }
+   ],
+   "position": "CT1",
+   "processes": [
+    {
+     "exception_type": null,
+     "rc": 0,
+     "rc_note": null,
+     "reason": null,
+     "stderr_note": "unavailable: t1j_adapter.query does not return stderr",
+     "stdout_note": null,
+     "streams": {
+      "stderr": null,
+      "stdout": {
+       "file": "streams/CT1.k0.q0.stdout.txt",
+       "sha256": "f11ae6e5ebf69ad65534ffd87e09d2a14c88f8ccfa307d380a54b58b14b7543c"
+      }
+     }
+    }
+   ],
+   "processes_note": null,
+   "query": 0,
+   "raw": {},
+   "role": "complete"
+  },
+  {
+   "acceptable": true,
+   "agent": "t1j",
+   "control": true,
+   "equals_recorded": true,
+   "move": [
+    2,
+    15
+   ],
+   "observations": [
+    {
+     "board_ply": 30,
+     "expected_position_digest": "3d01f5a24c8049a601a8082aa69c4e7381c51f07032748f642b79e4a28c00344",
+     "matchdata": {
+      "identity": true,
+      "pie_rule": false,
+      "xsize": 24,
+      "ysize": 24,
+      "ystarts": true
+     },
+     "move": [
+      2,
+      15
+     ],
+     "ordinal": 0,
+     "outcome": "accepted",
+     "postcond": {
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 4,
+      "refl_ok": true,
+      "windows": 0
+     },
+     "proc": {
+      "headless": "true",
+      "java_version": "17.0.20.1",
+      "pid": 18684,
+      "prefs_factory": "e2probe.ScratchPrefs",
+      "vm": "OpenJDK_64-Bit_Server_VM"
+     },
+     "reason": null,
+     "refused_at": null,
+     "return_code": 0,
+     "role": "query",
+     "source": "searched",
+     "t1j_position_digest": "3d01f5a24c8049a601a8082aa69c4e7381c51f07032748f642b79e4a28c00344",
+     "task_id": "CT1#1",
+     "telemetry": {
+      "completed": true,
+      "completed_depth": 6,
+      "current_max_ply": 7,
+      "elapsed_us": 29149,
+      "move_nr": 30,
+      "q": 1,
+      "requested_depth": 6,
+      "usealphabeta": true
+     }
+    }
+   ],
+   "position": "CT1",
+   "processes": [
+    {
+     "exception_type": null,
+     "rc": 0,
+     "rc_note": null,
+     "reason": null,
+     "stderr_note": "unavailable: t1j_adapter.query does not return stderr",
+     "stdout_note": null,
+     "streams": {
+      "stderr": null,
+      "stdout": {
+       "file": "streams/CT1.k1.q0.stdout.txt",
+       "sha256": "33613343cbe58a583fe835e322789994c6ac118d6a27886075dd87ca19bb8a12"
+      }
+     }
+    }
+   ],
+   "processes_note": null,
+   "query": 1,
+   "raw": {},
+   "role": "complete"
+  },
+  {
+   "acceptable": true,
+   "agent": "t1j",
+   "control": true,
+   "equals_recorded": true,
+   "move": [
+    2,
+    15
+   ],
+   "observations": [
+    {
+     "board_ply": 30,
+     "expected_position_digest": "3d01f5a24c8049a601a8082aa69c4e7381c51f07032748f642b79e4a28c00344",
+     "matchdata": {
+      "identity": true,
+      "pie_rule": false,
+      "xsize": 24,
+      "ysize": 24,
+      "ystarts": true
+     },
+     "move": [
+      2,
+      15
+     ],
+     "ordinal": 0,
+     "outcome": "accepted",
+     "postcond": {
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 4,
+      "refl_ok": true,
+      "windows": 0
+     },
+     "proc": {
+      "headless": "true",
+      "java_version": "17.0.20.1",
+      "pid": 18685,
+      "prefs_factory": "e2probe.ScratchPrefs",
+      "vm": "OpenJDK_64-Bit_Server_VM"
+     },
+     "reason": null,
+     "refused_at": null,
+     "return_code": 0,
+     "role": "query",
+     "source": "searched",
+     "t1j_position_digest": "3d01f5a24c8049a601a8082aa69c4e7381c51f07032748f642b79e4a28c00344",
+     "task_id": "CT1#2",
+     "telemetry": {
+      "completed": true,
+      "completed_depth": 6,
+      "current_max_ply": 7,
+      "elapsed_us": 29587,
+      "move_nr": 30,
+      "q": 1,
+      "requested_depth": 6,
+      "usealphabeta": true
+     }
+    }
+   ],
+   "position": "CT1",
+   "processes": [
+    {
+     "exception_type": null,
+     "rc": 0,
+     "rc_note": null,
+     "reason": null,
+     "stderr_note": "unavailable: t1j_adapter.query does not return stderr",
+     "stdout_note": null,
+     "streams": {
+      "stderr": null,
+      "stdout": {
+       "file": "streams/CT1.k2.q0.stdout.txt",
+       "sha256": "c0d65a5369e16b67d8f138bfbd4d77e7dfe26e0feac4f1dfb3b303a649c69d6e"
+      }
+     }
+    }
+   ],
+   "processes_note": null,
+   "query": 2,
+   "raw": {},
+   "role": "complete"
+  },
+  {
+   "acceptable": true,
+   "agent": "t1j",
+   "control": true,
+   "equals_recorded": true,
+   "move": [
+    23,
+    2
+   ],
+   "observations": [
+    {
+     "board_ply": 58,
+     "expected_position_digest": "4cd0c2e6e9a826c02d187ad7f30a5eaa94848339d8e41369dd8d62fe879fb701",
+     "matchdata": {
+      "identity": true,
+      "pie_rule": false,
+      "xsize": 24,
+      "ysize": 24,
+      "ystarts": true
+     },
+     "move": [
+      23,
+      2
+     ],
+     "ordinal": 0,
+     "outcome": "accepted",
+     "postcond": {
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 4,
+      "refl_ok": true,
+      "windows": 0
+     },
+     "proc": {
+      "headless": "true",
+      "java_version": "17.0.20.1",
+      "pid": 18686,
+      "prefs_factory": "e2probe.ScratchPrefs",
+      "vm": "OpenJDK_64-Bit_Server_VM"
+     },
+     "reason": null,
+     "refused_at": null,
+     "return_code": 0,
+     "role": "query",
+     "source": "searched",
+     "t1j_position_digest": "4cd0c2e6e9a826c02d187ad7f30a5eaa94848339d8e41369dd8d62fe879fb701",
+     "task_id": "CT2#0",
+     "telemetry": {
+      "completed": true,
+      "completed_depth": 6,
+      "current_max_ply": 7,
+      "elapsed_us": 1489,
+      "move_nr": 58,
+      "q": 1,
+      "requested_depth": 6,
+      "usealphabeta": true
+     }
+    }
+   ],
+   "position": "CT2",
+   "processes": [
+    {
+     "exception_type": null,
+     "rc": 0,
+     "rc_note": null,
+     "reason": null,
+     "stderr_note": "unavailable: t1j_adapter.query does not return stderr",
+     "stdout_note": null,
+     "streams": {
+      "stderr": null,
+      "stdout": {
+       "file": "streams/CT2.k0.q0.stdout.txt",
+       "sha256": "9e90de6233d9363b6aeb92f337b599128d4a39449f46bb989ec61fa23b67da8e"
+      }
+     }
+    }
+   ],
+   "processes_note": null,
+   "query": 0,
+   "raw": {},
+   "role": "complete"
+  },
+  {
+   "acceptable": true,
+   "agent": "t1j",
+   "control": true,
+   "equals_recorded": true,
+   "move": [
+    23,
+    2
+   ],
+   "observations": [
+    {
+     "board_ply": 58,
+     "expected_position_digest": "4cd0c2e6e9a826c02d187ad7f30a5eaa94848339d8e41369dd8d62fe879fb701",
+     "matchdata": {
+      "identity": true,
+      "pie_rule": false,
+      "xsize": 24,
+      "ysize": 24,
+      "ystarts": true
+     },
+     "move": [
+      23,
+      2
+     ],
+     "ordinal": 0,
+     "outcome": "accepted",
+     "postcond": {
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 4,
+      "refl_ok": true,
+      "windows": 0
+     },
+     "proc": {
+      "headless": "true",
+      "java_version": "17.0.20.1",
+      "pid": 18687,
+      "prefs_factory": "e2probe.ScratchPrefs",
+      "vm": "OpenJDK_64-Bit_Server_VM"
+     },
+     "reason": null,
+     "refused_at": null,
+     "return_code": 0,
+     "role": "query",
+     "source": "searched",
+     "t1j_position_digest": "4cd0c2e6e9a826c02d187ad7f30a5eaa94848339d8e41369dd8d62fe879fb701",
+     "task_id": "CT2#1",
+     "telemetry": {
+      "completed": true,
+      "completed_depth": 6,
+      "current_max_ply": 7,
+      "elapsed_us": 1417,
+      "move_nr": 58,
+      "q": 1,
+      "requested_depth": 6,
+      "usealphabeta": true
+     }
+    }
+   ],
+   "position": "CT2",
+   "processes": [
+    {
+     "exception_type": null,
+     "rc": 0,
+     "rc_note": null,
+     "reason": null,
+     "stderr_note": "unavailable: t1j_adapter.query does not return stderr",
+     "stdout_note": null,
+     "streams": {
+      "stderr": null,
+      "stdout": {
+       "file": "streams/CT2.k1.q0.stdout.txt",
+       "sha256": "442c8797b0ceea4e8410299e33469e536e224f75e1203b94ad13a90bc138a23c"
+      }
+     }
+    }
+   ],
+   "processes_note": null,
+   "query": 1,
+   "raw": {},
+   "role": "complete"
+  },
+  {
+   "acceptable": true,
+   "agent": "t1j",
+   "control": true,
+   "equals_recorded": true,
+   "move": [
+    23,
+    2
+   ],
+   "observations": [
+    {
+     "board_ply": 58,
+     "expected_position_digest": "4cd0c2e6e9a826c02d187ad7f30a5eaa94848339d8e41369dd8d62fe879fb701",
+     "matchdata": {
+      "identity": true,
+      "pie_rule": false,
+      "xsize": 24,
+      "ysize": 24,
+      "ystarts": true
+     },
+     "move": [
+      23,
+      2
+     ],
+     "ordinal": 0,
+     "outcome": "accepted",
+     "postcond": {
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 4,
+      "refl_ok": true,
+      "windows": 0
+     },
+     "proc": {
+      "headless": "true",
+      "java_version": "17.0.20.1",
+      "pid": 18688,
+      "prefs_factory": "e2probe.ScratchPrefs",
+      "vm": "OpenJDK_64-Bit_Server_VM"
+     },
+     "reason": null,
+     "refused_at": null,
+     "return_code": 0,
+     "role": "query",
+     "source": "searched",
+     "t1j_position_digest": "4cd0c2e6e9a826c02d187ad7f30a5eaa94848339d8e41369dd8d62fe879fb701",
+     "task_id": "CT2#2",
+     "telemetry": {
+      "completed": true,
+      "completed_depth": 6,
+      "current_max_ply": 7,
+      "elapsed_us": 1286,
+      "move_nr": 58,
+      "q": 1,
+      "requested_depth": 6,
+      "usealphabeta": true
+     }
+    }
+   ],
+   "position": "CT2",
+   "processes": [
+    {
+     "exception_type": null,
+     "rc": 0,
+     "rc_note": null,
+     "reason": null,
+     "stderr_note": "unavailable: t1j_adapter.query does not return stderr",
+     "stdout_note": null,
+     "streams": {
+      "stderr": null,
+      "stdout": {
+       "file": "streams/CT2.k2.q0.stdout.txt",
+       "sha256": "ad9152205141d83a4073ccf107a0f15488b0ae987658621331324dcb60245ea4"
+      }
+     }
+    }
+   ],
+   "processes_note": null,
+   "query": 2,
+   "raw": {},
+   "role": "complete"
+  },
+  {
+   "acceptable": true,
+   "agent": "t1j",
+   "control": true,
+   "equals_recorded": true,
+   "move": [
+    9,
+    0
+   ],
+   "observations": [
+    {
+     "board_ply": 39,
+     "expected_position_digest": "0c9acc62c40e94374ae96baee07b891cf90b56c09ccde50aa5b66f957095d5f6",
+     "matchdata": {
+      "identity": true,
+      "pie_rule": false,
+      "xsize": 24,
+      "ysize": 24,
+      "ystarts": true
+     },
+     "move": [
+      9,
+      0
+     ],
+     "ordinal": 0,
+     "outcome": "accepted",
+     "postcond": {
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 4,
+      "refl_ok": true,
+      "windows": 0
+     },
+     "proc": {
+      "headless": "true",
+      "java_version": "17.0.20.1",
+      "pid": 18689,
+      "prefs_factory": "e2probe.ScratchPrefs",
+      "vm": "OpenJDK_64-Bit_Server_VM"
+     },
+     "reason": null,
+     "refused_at": null,
+     "return_code": 0,
+     "role": "query",
+     "source": "searched",
+     "t1j_position_digest": "0c9acc62c40e94374ae96baee07b891cf90b56c09ccde50aa5b66f957095d5f6",
+     "task_id": "CT3#0",
+     "telemetry": {
+      "completed": true,
+      "completed_depth": 6,
+      "current_max_ply": 7,
+      "elapsed_us": 1352,
+      "move_nr": 39,
+      "q": 1,
+      "requested_depth": 6,
+      "usealphabeta": true
+     }
+    }
+   ],
+   "position": "CT3",
+   "processes": [
+    {
+     "exception_type": null,
+     "rc": 0,
+     "rc_note": null,
+     "reason": null,
+     "stderr_note": "unavailable: t1j_adapter.query does not return stderr",
+     "stdout_note": null,
+     "streams": {
+      "stderr": null,
+      "stdout": {
+       "file": "streams/CT3.k0.q0.stdout.txt",
+       "sha256": "4cb567b78e98439ab5c79ba387a89acfdaff28fec99da963d93b6285f9d83b7a"
+      }
+     }
+    }
+   ],
+   "processes_note": null,
+   "query": 0,
+   "raw": {},
+   "role": "complete"
+  },
+  {
+   "acceptable": true,
+   "agent": "t1j",
+   "control": true,
+   "equals_recorded": true,
+   "move": [
+    9,
+    0
+   ],
+   "observations": [
+    {
+     "board_ply": 39,
+     "expected_position_digest": "0c9acc62c40e94374ae96baee07b891cf90b56c09ccde50aa5b66f957095d5f6",
+     "matchdata": {
+      "identity": true,
+      "pie_rule": false,
+      "xsize": 24,
+      "ysize": 24,
+      "ystarts": true
+     },
+     "move": [
+      9,
+      0
+     ],
+     "ordinal": 0,
+     "outcome": "accepted",
+     "postcond": {
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 4,
+      "refl_ok": true,
+      "windows": 0
+     },
+     "proc": {
+      "headless": "true",
+      "java_version": "17.0.20.1",
+      "pid": 18690,
+      "prefs_factory": "e2probe.ScratchPrefs",
+      "vm": "OpenJDK_64-Bit_Server_VM"
+     },
+     "reason": null,
+     "refused_at": null,
+     "return_code": 0,
+     "role": "query",
+     "source": "searched",
+     "t1j_position_digest": "0c9acc62c40e94374ae96baee07b891cf90b56c09ccde50aa5b66f957095d5f6",
+     "task_id": "CT3#1",
+     "telemetry": {
+      "completed": true,
+      "completed_depth": 6,
+      "current_max_ply": 7,
+      "elapsed_us": 1429,
+      "move_nr": 39,
+      "q": 1,
+      "requested_depth": 6,
+      "usealphabeta": true
+     }
+    }
+   ],
+   "position": "CT3",
+   "processes": [
+    {
+     "exception_type": null,
+     "rc": 0,
+     "rc_note": null,
+     "reason": null,
+     "stderr_note": "unavailable: t1j_adapter.query does not return stderr",
+     "stdout_note": null,
+     "streams": {
+      "stderr": null,
+      "stdout": {
+       "file": "streams/CT3.k1.q0.stdout.txt",
+       "sha256": "34ca3758b585d732bdae889e7db30d19acdc260a4b49b65c035545ef54290164"
+      }
+     }
+    }
+   ],
+   "processes_note": null,
+   "query": 1,
+   "raw": {},
+   "role": "complete"
+  },
+  {
+   "acceptable": true,
+   "agent": "t1j",
+   "control": true,
+   "equals_recorded": true,
+   "move": [
+    9,
+    0
+   ],
+   "observations": [
+    {
+     "board_ply": 39,
+     "expected_position_digest": "0c9acc62c40e94374ae96baee07b891cf90b56c09ccde50aa5b66f957095d5f6",
+     "matchdata": {
+      "identity": true,
+      "pie_rule": false,
+      "xsize": 24,
+      "ysize": 24,
+      "ystarts": true
+     },
+     "move": [
+      9,
+      0
+     ],
+     "ordinal": 0,
+     "outcome": "accepted",
+     "postcond": {
+      "failures": 0,
+      "frames": 0,
+      "headless": true,
+      "no_throw": true,
+      "prefs_ok": true,
+      "refl_n": 4,
+      "refl_ok": true,
+      "windows": 0
+     },
+     "proc": {
+      "headless": "true",
+      "java_version": "17.0.20.1",
+      "pid": 18691,
+      "prefs_factory": "e2probe.ScratchPrefs",
+      "vm": "OpenJDK_64-Bit_Server_VM"
+     },
+     "reason": null,
+     "refused_at": null,
+     "return_code": 0,
+     "role": "query",
+     "source": "searched",
+     "t1j_position_digest": "0c9acc62c40e94374ae96baee07b891cf90b56c09ccde50aa5b66f957095d5f6",
+     "task_id": "CT3#2",
+     "telemetry": {
+      "completed": true,
+      "completed_depth": 6,
+      "current_max_ply": 7,
+      "elapsed_us": 1381,
+      "move_nr": 39,
+      "q": 1,
+      "requested_depth": 6,
+      "usealphabeta": true
+     }
+    }
+   ],
+   "position": "CT3",
+   "processes": [
+    {
+     "exception_type": null,
+     "rc": 0,
+     "rc_note": null,
+     "reason": null,
+     "stderr_note": "unavailable: t1j_adapter.query does not return stderr",
+     "stdout_note": null,
+     "streams": {
+      "stderr": null,
+      "stdout": {
+       "file": "streams/CT3.k2.q0.stdout.txt",
+       "sha256": "db85a150bfa5476e73c55d6d38ac482799e913c89bc448ba6a8d8488965aa940"
+      }
+     }
+    }
+   ],
+   "processes_note": null,
+   "query": 2,
+   "raw": {},
+   "role": "complete"
+  },
+  {
+   "acceptable": true,
+   "agent": "incumbent",
+   "control": true,
+   "equals_recorded": true,
+   "move": [
+    13,
+    10
+   ],
+   "observations": null,
+   "position": "CI1",
+   "processes": null,
+   "processes_note": "not applicable: the incumbent decides in-process; no process stream exists",
+   "query": 0,
+   "raw": {
+    "seconds": 0.5856277919374406,
+    "seed": -1
+   },
+   "role": "complete"
+  },
+  {
+   "acceptable": true,
+   "agent": "incumbent",
+   "control": true,
+   "equals_recorded": true,
+   "move": [
+    13,
+    10
+   ],
+   "observations": null,
+   "position": "CI1",
+   "processes": null,
+   "processes_note": "not applicable: the incumbent decides in-process; no process stream exists",
+   "query": 1,
+   "raw": {
+    "seconds": 0.5259987078607082,
+    "seed": -1
+   },
+   "role": "complete"
+  },
+  {
+   "acceptable": true,
+   "agent": "incumbent",
+   "control": true,
+   "equals_recorded": true,
+   "move": [
+    15,
+    16
+   ],
+   "observations": null,
+   "position": "CI2",
+   "processes": null,
+   "processes_note": "not applicable: the incumbent decides in-process; no process stream exists",
+   "query": 0,
+   "raw": {
+    "seconds": 0.18321258341893554,
+    "seed": -1
+   },
+   "role": "complete"
+  },
+  {
+   "acceptable": true,
+   "agent": "incumbent",
+   "control": true,
+   "equals_recorded": true,
+   "move": [
+    15,
+    16
+   ],
+   "observations": null,
+   "position": "CI2",
+   "processes": null,
+   "processes_note": "not applicable: the incumbent decides in-process; no process stream exists",
+   "query": 1,
+   "raw": {
+    "seconds": 0.1880090832710266,
+    "seed": -1
+   },
+   "role": "complete"
+  },
+  {
+   "acceptable": true,
+   "agent": "incumbent",
+   "control": true,
+   "equals_recorded": true,
+   "move": [
+    16,
+    9
+   ],
+   "observations": null,
+   "position": "CD1",
+   "processes": null,
+   "processes_note": "not applicable: the incumbent decides in-process; no process stream exists",
+   "query": 0,
+   "raw": {
+    "seconds": 0.9472290831618011,
+    "seed": -1
+   },
+   "role": "defend"
+  },
+  {
+   "acceptable": true,
+   "agent": "incumbent",
+   "control": true,
+   "equals_recorded": true,
+   "move": [
+    16,
+    9
+   ],
+   "observations": null,
+   "position": "CD1",
+   "processes": null,
+   "processes_note": "not applicable: the incumbent decides in-process; no process stream exists",
+   "query": 1,
+   "raw": {
+    "seconds": 0.9445956670679152,
+    "seed": -1
+   },
+   "role": "defend"
+  },
+  {
+   "acceptable": true,
+   "agent": "incumbent",
+   "control": true,
+   "equals_recorded": true,
+   "move": [
+    12,
+    5
+   ],
+   "observations": null,
+   "position": "CD2",
+   "processes": null,
+   "processes_note": "not applicable: the incumbent decides in-process; no process stream exists",
+   "query": 0,
+   "raw": {
+    "seconds": 1.1725430837832391,
+    "seed": -1
+   },
+   "role": "defend"
+  },
+  {
+   "acceptable": true,
+   "agent": "incumbent",
+   "control": true,
+   "equals_recorded": true,
+   "move": [
+    12,
+    5
+   ],
+   "observations": null,
+   "position": "CD2",
+   "processes": null,
+   "processes_note": "not applicable: the incumbent decides in-process; no process stream exists",
+   "query": 1,
+   "raw": {
+    "seconds": 1.0997708751820028,
+    "seed": -1
+   },
+   "role": "defend"
+  }
+ ],
+ "stage1": {
+  "binding": {
+   "frozen_set_sha256": "28c03f9f0be9accdb691b9325941da6227b856c17ddeff8e1cac5c91972e7cc6",
+   "position_digests": {
+    "CD1": "ab4b4552f037c1388a9dcb7f80caebdc8f79ab5950736633294ea96eb80bbbe6",
+    "CD2": "1ce728b6ef11e1ac6601a6906a942b53e4dc695b65505c308ed601f280784800",
+    "CI1": "b8f2977e636bc7f46d3b8c79157c58fc6e19359f21359fd469aab03f6c9cd339",
+    "CI2": "5aaef1686e29e9c906a090fe77a15b61c85aec836b7b240083033a8dedbd209a",
+    "CT1": "0a0f0e6db54de4233c3e00037263241d58457bd4dd42d9752a50a1ed8cc5434f",
+    "CT2": "7afd27fb538832f6a4ff720e0699a943bb12e171e5fbb088028268347c97bdf7",
+    "CT3": "5ae39981eadd70d243855a81a9a16c467820412d4c27fd776452c247b59382d3",
+    "E1/incumbent": "26d7d7ad2abc9be3246a15eff538bb652ab9d945a268911cb849667e09cc16ce",
+    "E1/t1j": "66ef7606efa05e032b0ceba0f04cb2720147b416cdae1710461baf291217b61b",
+    "E2/incumbent": "466a8ecead28b58f01a4ee2b66045f3e779c1e6e3b39c37a7510613227ee3c06",
+    "E2/t1j": "3644a590483f504b8cf6041284540adfbc402eb03a93295d51832d0c06e20873",
+    "E3/incumbent": "98a84694d4c9218aaad41e9ac5c63115ff75c0f6255765f0cf717438606929aa",
+    "E3/t1j": "ce4196689c58b9586e31349053e06ff2fe05e7cd0e186d75e490e1b123aad98d"
+   },
+   "toolchain": {
+    "classes": {
+     "e2probe/ScratchPrefs.class": "aad79e9fc149d012209a53e6cad99cc7d97bf79ab03a56536934891d6dbf8f39",
+     "e2probe/ScratchPrefsFactory.class": "dff0e8f933c656f3d3e48c7b2519746508162b8fddd3db45066038c91480be7d",
+     "net/schwagereit/t1j/E3bDump.class": "2c9cd6c5ef2934e0d3b2b229215194c9329d0e1185c5c3408466d1c35a522c05",
+     "net/schwagereit/t1j/E4Preflight.class": "db8f9a102c0c563f99912bb6058b5184a59a07c8c1246bfa92b0bba2c62bc992"
+    },
+    "jar_sha256": "53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7",
+    "jdk_components": {
+     "bin/java": "af8b122943345320b179c75c3404d56a981017739746b75f9caf583632f0bea0",
+     "bin/javac": "6f5159301c750bba340390eda5fdd4a0959445355f97c40aa9c2addb00ede5ab",
+     "lib/modules": "28745573641057e822a972f223fc8e40db5c9df11ae3f7402764780afc2f1951",
+     "release": "cb6064fe4d7b87d9fbb8b8c7702047044d1bbeac38e0c5217f595579b6cc764b"
+    },
+    "main_class": "net.schwagereit.t1j.E4Preflight",
+    "sources": {
+     "E3bDump.java": "78f8f3f43b6a1ca9637ce29adcaabac46b9ae4acd849734eca4d32e2e83354ad",
+     "E4Preflight.java": "aa1c680a8450bedc113f852248b88d50b4e6eea80ac009e2d8821d908e041151",
+     "ScratchPrefs.java": "559fb9483cc34f4cc50a1c153fe6cabac6bb6129a977f42ba328b0cfad798f03",
+     "ScratchPrefsFactory.java": "09c0d74cf3c11130abfb810bd24cc433657b9dbba83152bd7c6f7e3f5858c244"
+    }
+   }
+  },
+  "claim": {
+   "claimed_monotonic": 3086093.08033025,
+   "claimed_utc": "2026-10-02T19:32:02Z",
+   "nonce_sha256": "47d28adaa627c93bb83497062864daa598714e2ca5c6b84ee37acb7fab4106b2",
+   "parent_pid": 18146
+  },
+  "record_sha256": "9c01f53a134d6c0e412e6463bc526317a51c8413bbd268557331b05eb6f0078e"
+ },
+ "status": "COMPLETE"
+}
