@@ -283,3 +283,133 @@ own contract matches A2.1–A2.2: claim before compiling or loading the model; *
 query's full stdout (and stderr where available) stored and hashed, not only structured
 observations; and **every** exit, including an unexpected exception, written as a record
 naming the failing step. That implementation needs its own authorization.
+
+---
+
+## 8. Amendment A3 — 2026-10-02, the Stage-2 recording contract, committed BEFORE the implementation (user-decided)
+
+Stage 1 ran once at `05535ffb` and came back COMPLETE, 18/18 AGREE (committed at
+`f7890212`). stderr is unavailable on every item, a limitation the user accepted. That
+establishes agreement on the tested completions and blocks; it explains no agent's choice.
+This amendment closes §7 A2.4 for Stage 2.
+
+Unchanged: the frozen set, the Stage-1 evidence, §3's counts (K = 3 T1j queries, 2
+incumbent decisions, synthetic seed −1), §6 A1.1's judging rules, and every frozen adapter,
+agent and configuration.
+
+**A3.1 — Permission before anything is compiled or loaded.** Stage 2 refuses, writing
+nothing, on **pure** checks only, in this order:
+
+1. the gate;
+2. the evidence directory;
+3. the committed frozen set, re-derived equal;
+4. `02_stage2/` unoccupied;
+5. the class directory outside the repository and unoccupied;
+6. **the Stage-1 permission** (§6 A1.2, with §7 A2.2's status and stream rules).
+
+The binding that permission is checked against is re-derived **without compiling**:
+
+* the frozen set's sha256;
+* the frozen positions' digests;
+* the toolchain content **bound by the H5 study manifest**. Stage 1's compile was required
+  to equal it, and its record does.
+
+**A3.2 — The claim, then one deadline.** Stage 2 then claims `02_stage2/` (create-only;
+occupied refuses) **before** compiling or loading the model.
+
+The frozen 1-hour bound of §3 **starts at the claim**. It covers the compile, the model load
+and every call:
+
+* it is checked before each step;
+* it is enforced mid-step by the shared whole-run supervisor (`d1_probe._supervisor`,
+  SIGALRM). That supervisor's message says "VOID"; Stage 2 records it as a STOP.
+
+The compile runs under this deadline, not under a separate compile deadline. Its content must
+again equal the bound toolchain. Known ceiling: SIGALRM cannot interrupt a C call that never
+returns.
+
+**A3.3 — The diagnostic boundary.** T1j is queried through the unchanged §4B path:
+`T1jAgent` in H4 acceptance mode, depth 6, the frozen query timeout, `classify_reply`. The
+only addition is a recording pass-through around `t1j_adapter.query`. It is handed to the
+agent through the agent's existing `_query` parameter, as `runtime_requalification` already
+does, and it:
+
+* passes the same arguments in;
+* returns the same object;
+* re-raises the same exception.
+
+No frozen file is edited. Each T1j query records the following:
+
+| case | stdout | stderr | return code |
+|---|---|---|---|
+| the query returned (whatever the §4B path then decides) | the full stdout | unavailable — `t1j_adapter.query` does not return it | the exit status |
+| `HelperOutputError` (malformed output) | the stdout it carries | unavailable | unavailable |
+| `TimeoutExpired` | its partial stdout, if any | its partial stderr, if any | unavailable — killed |
+| any other exception, interruption included | unavailable | unavailable | unavailable |
+
+Each T1j query also records:
+
+* the §4B observations the context made for that call: PROC, POSTCOND, MATCHDATA, telemetry,
+  classification, outcome and the refusing step;
+* the chosen move;
+* its judgement under §6 A1.1;
+* whether it equals the recorded move.
+
+Each incumbent decision records the move, its judgement, whether it equals the recorded move,
+the seconds taken and the seed. The decision is made in-process, so no process stream exists;
+the record says so rather than leaving the field blank.
+
+**A3.4 — Persistence.** `log.jsonl` is append-only and fsynced. It records, in order:
+
+1. the compile's content;
+2. the model-load identity;
+3. each call's row, written together with its stream files before the next call starts.
+
+`record.json` (create-only) is written on **every** exit. Its `status` is one of:
+
+* COMPLETE;
+* STOP — any exception: a §4B refusal, a timeout, unreadable output, the deadline, an
+  unexpected error, or a call that returns no move;
+* INTERRUPTED — KeyboardInterrupt or SystemExit, re-raised after recording.
+
+On any exit other than COMPLETE, the record names:
+
+* the `failing_step`: `compile`, `model_load`, `query:<position>#k` or
+  `decision:<position>#k`;
+* the exception's type and message;
+* the failing call's **partial evidence** — its streams and observations, as far as they
+  got;
+* every completed row.
+
+A STOP ends the stage; no further call is made.
+
+**A3.5 — Completion and interpretation.** COMPLETE requires no failure **and** the exact
+call set derived from the frozen set: 3 queries at each T1j position and 2 decisions at each
+incumbent position, so **18 T1j queries and 14 incumbent decisions**, with no omission,
+duplicate or extra. A run with no failure whose call set is not exact is **INCOMPLETE**.
+
+Episode readings (§3) exist only for a COMPLETE run; otherwise `episodes` is null, and the
+record states why. In a COMPLETE run, any failed control makes every episode
+**uninterpretable**.
+
+**A3.6 — Synthetic controls:**
+
+* a compile failure;
+* a model-load failure;
+* a timeout carrying partial output;
+* a §4B refusal;
+* malformed output;
+* an unexpected exception;
+* an interruption after a completed call;
+* an occupied `02_stage2/`;
+* an occupied class directory;
+* a run missing a call: INCOMPLETE, not interpreted;
+* permission refused before any claim, compile or load;
+* the deadline reached during the compile, and before the model load;
+* each completed row persisted before the next call;
+* the boundary returning THE object and re-raising THE exception;
+* a public-entry run in the real state, with the gate open and a synthetic process boundary.
+
+**A3.7 — Scope.** This amendment authorizes the implementation and its synthetic tests
+only. It authorizes no compile, model load, agent query, Stage-2 run, game or push. All 21
+gates stay closed.
