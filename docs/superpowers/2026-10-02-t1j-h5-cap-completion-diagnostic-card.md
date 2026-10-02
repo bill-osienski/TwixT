@@ -413,3 +413,93 @@ record states why. In a COMPLETE run, any failed control makes every episode
 **A3.7 — Scope.** This amendment authorizes the implementation and its synthetic tests
 only. It authorizes no compile, model load, agent query, Stage-2 run, game or push. All 21
 gates stay closed.
+
+---
+
+## 9. Amendment A4 — 2026-10-02, a hard deadline, INCOMPLETE diagnostics, the loader control; committed BEFORE the implementation (user-decided)
+
+Review of `e91da6ba` found three gaps before execution. §8 A3 stands except where amended
+here. The recording pass-through on `_query` is accepted.
+
+**A4.1 — The hard deadline is external.** SIGALRM cannot interrupt a hung native call (a
+model load), so §8 A3.2's in-process deadline is no longer the bound. Stage 2 becomes a
+**parent** and a **child** process.
+
+* **The parent** (`run_stage2`, the public entry):
+  1. runs §8 A3.1's pure refusals, the Stage-1 permission included;
+  2. **claims** `02_stage2/` (create-only) by writing `claim.json`, which holds the claim
+     time and the sha256 of a single-use nonce that only the child is given;
+  3. starts the child **in its own session**;
+  4. waits at most **3600 s from the claim, measured by the parent**. At that limit, or if
+     the parent itself is interrupted, it SIGKILLs the child's **whole process group** —
+     the child, its JVMs and any other subprocess it started. After a normal exit it also
+     kills any member of that group still alive, and records that it did.
+
+  Detection needs nothing from the child: no handler of the child's runs, because the parent
+  measures and the kernel kills.
+* **The child** (`run_stage2_claimed`, reached only through the parent's argv):
+  1. reads the gate;
+  2. repeats the pure checks;
+  3. takes the claim only if `02_stage2/` holds **exactly** `claim.json` and its nonce
+     matches. The journal is created next, so a claim is single-use;
+  4. runs §8 A3 with its in-process deadline at **3540 s from the claim**. That 60 s margin
+     lets a cooperative STOP be recorded before the hard kill.
+* **The parent's record, `watchdog.json`** (create-only), is written on **every** exit,
+  separately from the child's `record.json`. It holds:
+  * the status;
+  * the cause;
+  * the limit and the elapsed time;
+  * the child's pid and exit status, and the signal sent;
+  * whether any survivor was killed;
+  * the journal's line count and sha256;
+  * whether a record exists, and its status.
+
+  The journal and any record are left **exactly as the child wrote them**. The status is:
+
+  | situation | status |
+  |---|---|
+  | the parent killed the child (limit or interruption) | **TERMINATED**, never COMPLETE, even if the child wrote a COMPLETE record before hanging |
+  | the child exited without a readable record | EXITED_WITHOUT_RECORD |
+  | the child exited non-zero, with a record that is not INTERRUPTED | EXITED_ABNORMALLY |
+  | otherwise | the record's own status |
+
+* **Ceilings:**
+  * a process that leaves the group (setsid) escapes the kill; `subprocess.run` does not
+    leave it;
+  * if the parent itself is SIGKILLed, the child is unsupervised but keeps its in-process
+    deadline.
+
+**A4.2 — INCOMPLETE says what is wrong.** A run with no exception whose call set is not
+exact records `failure` as:
+
+* `failing_step: completion_check`;
+* `exception_type: null` — no exception was raised, and none is invented;
+* the **missing**, **duplicated** and **extra** calls, each a (position, agent, query) triple.
+
+**A4.3 — The loader's wiring is a control.** The real `_incumbent_choose` is run with fake
+configuration, identity, loader and builder. The control checks:
+
+* it returns `(callable, identity)`;
+* the model is loaded **once**, however many decisions follow;
+* a red-to-move and a black-to-move position each get the task whose incumbent colour is
+  the mover;
+* both tasks carry seed **−1**;
+* an identity that is not H5's bound one is refused before any load.
+
+**A4.4 — Synthetic controls,** with harmless dummy processes only:
+
+* the watchdog kills a child that has **every signal blocked**, so no Python handler can run,
+  and kills that child's own subprocess;
+* a child that finishes returns its exit status;
+* an interrupted parent kills the group and re-raises;
+* through the public entry:
+  * a hung child gives TERMINATED, with the journal preserved byte-for-byte and no record;
+  * a COMPLETE record written before a hang is still reported TERMINATED;
+  * a child that exits without a record is reported as such;
+* claim refusals: no claim, a wrong nonce, a consumed claim;
+* the real child invocation exits on the closed on-disk gate;
+* INCOMPLETE with missing, duplicated and extra calls.
+
+**A4.5 — Scope.** This amendment authorizes the implementation and its synthetic tests
+only. It authorizes no compile, model load, agent query, Stage-2 run, game or push. All 21
+gates stay closed. The frozen set, the Stage-1 evidence and frozen agent code are unchanged.
