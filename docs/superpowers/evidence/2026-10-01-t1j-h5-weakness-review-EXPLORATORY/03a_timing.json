@@ -1,0 +1,24 @@
+{
+ "N": 20786,
+ "label": "EXPLORATORY",
+ "projected_s": 738.8430055157056,
+ "sample": [
+  {
+   "digest": "551de2ef4ab71d3a6c4c5c298ba395225ebf3cd6d8609321af03a26ecfe4485d",
+   "plies": 31,
+   "seconds": 0.14501070883125067
+  },
+  {
+   "digest": "4144b79ccbf4a1f25cfebbe4e2e316111c664e3ebb7b18f5c5d6c0f9016759d9",
+   "plies": 58,
+   "seconds": 0.285196874756366
+  },
+  {
+   "digest": "ffff228a96bac317a9e247fc41809675cf0ce9852d75b9046a080ff44e8adb01",
+   "plies": 280,
+   "seconds": 12.685979707632214
+  }
+ ],
+ "started": true,
+ "stop_s": 7200.0
+}

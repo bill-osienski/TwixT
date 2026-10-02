@@ -1,0 +1,65 @@
+{
+ "label": "EXPLORATORY",
+ "tables": {
+  "A/incumbent loses/UNDEFENDABLE/multi-hole": {
+   "all on the winner's own goal edge (distinct)": 4,
+   "all on the winner's own goal edge (games)": 73
+  },
+  "A/incumbent loses/UNDEFENDABLE/single-hole": {
+   "all on the winner's own goal edge (distinct)": 2,
+   "all on the winner's own goal edge (games)": 30
+  },
+  "A/t1j loses/DEFENDED/multi-hole": {
+   "all on the winner's own goal edge (distinct)": 1,
+   "all on the winner's own goal edge (games)": 19
+  },
+  "A/t1j loses/DEFENDED/single-hole": {
+   "all on the winner's own goal edge (distinct)": 1,
+   "all on the winner's own goal edge (games)": 21
+  },
+  "A/t1j loses/MISSED_DEFENCE/single-hole": {
+   "none on it (distinct)": 16,
+   "none on it (games)": 16
+  },
+  "A/t1j loses/UNDEFENDABLE/multi-hole": {
+   "all on the winner's own goal edge (distinct)": 8,
+   "all on the winner's own goal edge (games)": 117
+  },
+  "B/incumbent loses/MISSED_DEFENCE/single-hole": {
+   "none on it (distinct)": 1,
+   "none on it (games)": 1
+  },
+  "B/incumbent loses/UNDEFENDABLE/multi-hole": {
+   "all on the winner's own goal edge (distinct)": 26,
+   "all on the winner's own goal edge (games)": 77,
+   "none on it (distinct)": 6,
+   "none on it (games)": 17
+  },
+  "B/incumbent loses/UNDEFENDABLE/single-hole": {
+   "all on the winner's own goal edge (distinct)": 7,
+   "all on the winner's own goal edge (games)": 21
+  },
+  "B/t1j loses/DEFENDED/multi-hole": {
+   "all on the winner's own goal edge (distinct)": 6,
+   "all on the winner's own goal edge (games)": 20
+  },
+  "B/t1j loses/DEFENDED/single-hole": {
+   "none on it (distinct)": 1,
+   "none on it (games)": 1
+  },
+  "B/t1j loses/MISSED_DEFENCE/single-hole": {
+   "none on it (distinct)": 2,
+   "none on it (games)": 3
+  },
+  "B/t1j loses/UNDEFENDABLE/multi-hole": {
+   "all on the winner's own goal edge (distinct)": 42,
+   "all on the winner's own goal edge (games)": 107,
+   "none on it (distinct)": 2,
+   "none on it (games)": 4
+  },
+  "B/t1j loses/UNDEFENDABLE/single-hole": {
+   "all on the winner's own goal edge (distinct)": 10,
+   "all on the winner's own goal edge (games)": 23
+  }
+ }
+}

@@ -1,0 +1,1300 @@
+{
+ "armA_loss_goal_row_pegs": {
+  "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-06-A.json": {
+   "frequency": 16,
+   "incumbent_goal_row_pegs_at_ply": [
+    19
+   ],
+   "plies": 54
+  },
+  "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-08-A.json": {
+   "frequency": 20,
+   "incumbent_goal_row_pegs_at_ply": [
+    37,
+    41
+   ],
+   "plies": 42
+  },
+  "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-09-A.json": {
+   "frequency": 21,
+   "incumbent_goal_row_pegs_at_ply": [
+    23,
+    35,
+    37,
+    39
+   ],
+   "plies": 40
+  },
+  "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-17-A.json": {
+   "frequency": 21,
+   "incumbent_goal_row_pegs_at_ply": [
+    47
+   ],
+   "plies": 60
+  },
+  "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-32-A.json": {
+   "frequency": 14,
+   "incumbent_goal_row_pegs_at_ply": [
+    45,
+    61
+   ],
+   "plies": 66
+  },
+  "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-65-A.json": {
+   "frequency": 11,
+   "incumbent_goal_row_pegs_at_ply": [
+    43,
+    45,
+    47
+   ],
+   "plies": 48
+  }
+ },
+ "armB_depth2_outcomes": [
+  {
+   "distinct": {
+    "cap": 3,
+    "games": 5,
+    "loss": 2,
+    "win": 0
+   },
+   "occurrence": {
+    "cap": 3,
+    "games": 14,
+    "loss": 11,
+    "win": 0
+   },
+   "prefix": "13,13 10,12",
+   "recurs_in_losses": true
+  },
+  {
+   "distinct": {
+    "cap": 0,
+    "games": 3,
+    "loss": 3,
+    "win": 0
+   },
+   "occurrence": {
+    "cap": 0,
+    "games": 10,
+    "loss": 10,
+    "win": 0
+   },
+   "prefix": "12,9 8,9",
+   "recurs_in_losses": true
+  },
+  {
+   "distinct": {
+    "cap": 7,
+    "games": 9,
+    "loss": 2,
+    "win": 0
+   },
+   "occurrence": {
+    "cap": 7,
+    "games": 17,
+    "loss": 10,
+    "win": 0
+   },
+   "prefix": "9,13 13,13",
+   "recurs_in_losses": true
+  },
+  {
+   "distinct": {
+    "cap": 0,
+    "games": 3,
+    "loss": 2,
+    "win": 1
+   },
+   "occurrence": {
+    "cap": 0,
+    "games": 11,
+    "loss": 8,
+    "win": 3
+   },
+   "prefix": "12,10 8,11",
+   "recurs_in_losses": true
+  },
+  {
+   "distinct": {
+    "cap": 0,
+    "games": 3,
+    "loss": 2,
+    "win": 1
+   },
+   "occurrence": {
+    "cap": 0,
+    "games": 9,
+    "loss": 8,
+    "win": 1
+   },
+   "prefix": "14,12 10,11",
+   "recurs_in_losses": true
+  },
+  {
+   "distinct": {
+    "cap": 0,
+    "games": 4,
+    "loss": 3,
+    "win": 1
+   },
+   "occurrence": {
+    "cap": 0,
+    "games": 8,
+    "loss": 7,
+    "win": 1
+   },
+   "prefix": "11,14 8,13",
+   "recurs_in_losses": true
+  },
+  {
+   "distinct": {
+    "cap": 0,
+    "games": 3,
+    "loss": 2,
+    "win": 1
+   },
+   "occurrence": {
+    "cap": 0,
+    "games": 11,
+    "loss": 7,
+    "win": 4
+   },
+   "prefix": "12,12 8,11",
+   "recurs_in_losses": true
+  },
+  {
+   "distinct": {
+    "cap": 0,
+    "games": 3,
+    "loss": 2,
+    "win": 1
+   },
+   "occurrence": {
+    "cap": 0,
+    "games": 9,
+    "loss": 7,
+    "win": 2
+   },
+   "prefix": "14,11 10,10",
+   "recurs_in_losses": true
+  },
+  {
+   "distinct": {
+    "cap": 0,
+    "games": 3,
+    "loss": 2,
+    "win": 1
+   },
+   "occurrence": {
+    "cap": 0,
+    "games": 7,
+    "loss": 6,
+    "win": 1
+   },
+   "prefix": "11,10 7,10",
+   "recurs_in_losses": true
+  },
+  {
+   "distinct": {
+    "cap": 0,
+    "games": 3,
+    "loss": 1,
+    "win": 2
+   },
+   "occurrence": {
+    "cap": 0,
+    "games": 9,
+    "loss": 5,
+    "win": 4
+   },
+   "prefix": "11,9 7,10",
+   "recurs_in_losses": false
+  },
+  {
+   "distinct": {
+    "cap": 0,
+    "games": 3,
+    "loss": 2,
+    "win": 1
+   },
+   "occurrence": {
+    "cap": 0,
+    "games": 9,
+    "loss": 5,
+    "win": 4
+   },
+   "prefix": "13,9 10,10",
+   "recurs_in_losses": true
+  },
+  {
+   "distinct": {
+    "cap": 0,
+    "games": 4,
+    "loss": 2,
+    "win": 2
+   },
+   "occurrence": {
+    "cap": 0,
+    "games": 9,
+    "loss": 5,
+    "win": 4
+   },
+   "prefix": "9,12 6,12",
+   "recurs_in_losses": true
+  },
+  {
+   "distinct": {
+    "cap": 0,
+    "games": 3,
+    "loss": 1,
+    "win": 2
+   },
+   "occurrence": {
+    "cap": 0,
+    "games": 6,
+    "loss": 3,
+    "win": 3
+   },
+   "prefix": "13,10 10,10",
+   "recurs_in_losses": false
+  },
+  {
+   "distinct": {
+    "cap": 0,
+    "games": 3,
+    "loss": 1,
+    "win": 2
+   },
+   "occurrence": {
+    "cap": 0,
+    "games": 13,
+    "loss": 3,
+    "win": 10
+   },
+   "prefix": "14,10 11,10",
+   "recurs_in_losses": false
+  },
+  {
+   "distinct": {
+    "cap": 0,
+    "games": 3,
+    "loss": 1,
+    "win": 2
+   },
+   "occurrence": {
+    "cap": 0,
+    "games": 10,
+    "loss": 3,
+    "win": 7
+   },
+   "prefix": "9,10 4,18",
+   "recurs_in_losses": false
+  },
+  {
+   "distinct": {
+    "cap": 0,
+    "games": 3,
+    "loss": 1,
+    "win": 2
+   },
+   "occurrence": {
+    "cap": 0,
+    "games": 6,
+    "loss": 2,
+    "win": 4
+   },
+   "prefix": "10,10 6,10",
+   "recurs_in_losses": false
+  },
+  {
+   "distinct": {
+    "cap": 0,
+    "games": 3,
+    "loss": 1,
+    "win": 2
+   },
+   "occurrence": {
+    "cap": 0,
+    "games": 7,
+    "loss": 2,
+    "win": 5
+   },
+   "prefix": "10,14 7,13",
+   "recurs_in_losses": false
+  },
+  {
+   "distinct": {
+    "cap": 0,
+    "games": 5,
+    "loss": 1,
+    "win": 4
+   },
+   "occurrence": {
+    "cap": 0,
+    "games": 7,
+    "loss": 2,
+    "win": 5
+   },
+   "prefix": "10,9 6,9",
+   "recurs_in_losses": false
+  },
+  {
+   "distinct": {
+    "cap": 0,
+    "games": 3,
+    "loss": 1,
+    "win": 2
+   },
+   "occurrence": {
+    "cap": 0,
+    "games": 10,
+    "loss": 2,
+    "win": 8
+   },
+   "prefix": "11,11 7,11",
+   "recurs_in_losses": false
+  },
+  {
+   "distinct": {
+    "cap": 1,
+    "games": 3,
+    "loss": 1,
+    "win": 1
+   },
+   "occurrence": {
+    "cap": 1,
+    "games": 5,
+    "loss": 2,
+    "win": 2
+   },
+   "prefix": "11,13 8,12",
+   "recurs_in_losses": false
+  },
+  {
+   "distinct": {
+    "cap": 0,
+    "games": 3,
+    "loss": 2,
+    "win": 1
+   },
+   "occurrence": {
+    "cap": 0,
+    "games": 5,
+    "loss": 2,
+    "win": 3
+   },
+   "prefix": "12,14 8,13",
+   "recurs_in_losses": true
+  },
+  {
+   "distinct": {
+    "cap": 0,
+    "games": 2,
+    "loss": 1,
+    "win": 1
+   },
+   "occurrence": {
+    "cap": 0,
+    "games": 4,
+    "loss": 2,
+    "win": 2
+   },
+   "prefix": "13,14 10,13",
+   "recurs_in_losses": false
+  },
+  {
+   "distinct": {
+    "cap": 0,
+    "games": 3,
+    "loss": 1,
+    "win": 2
+   },
+   "occurrence": {
+    "cap": 0,
+    "games": 3,
+    "loss": 1,
+    "win": 2
+   },
+   "prefix": "10,13 6,13",
+   "recurs_in_losses": false
+  },
+  {
+   "distinct": {
+    "cap": 5,
+    "games": 7,
+    "loss": 1,
+    "win": 1
+   },
+   "occurrence": {
+    "cap": 5,
+    "games": 8,
+    "loss": 1,
+    "win": 2
+   },
+   "prefix": "13,12 10,11",
+   "recurs_in_losses": false
+  },
+  {
+   "distinct": {
+    "cap": 0,
+    "games": 2,
+    "loss": 1,
+    "win": 1
+   },
+   "occurrence": {
+    "cap": 0,
+    "games": 2,
+    "loss": 1,
+    "win": 1
+   },
+   "prefix": "9,14 13,14",
+   "recurs_in_losses": false
+  },
+  {
+   "distinct": {
+    "cap": 0,
+    "games": 4,
+    "loss": 1,
+    "win": 3
+   },
+   "occurrence": {
+    "cap": 0,
+    "games": 5,
+    "loss": 1,
+    "win": 4
+   },
+   "prefix": "9,9 6,9",
+   "recurs_in_losses": false
+  },
+  {
+   "distinct": {
+    "cap": 0,
+    "games": 5,
+    "loss": 0,
+    "win": 5
+   },
+   "occurrence": {
+    "cap": 0,
+    "games": 7,
+    "loss": 0,
+    "win": 7
+   },
+   "prefix": "10,11 6,11",
+   "recurs_in_losses": false
+  },
+  {
+   "distinct": {
+    "cap": 0,
+    "games": 2,
+    "loss": 0,
+    "win": 2
+   },
+   "occurrence": {
+    "cap": 0,
+    "games": 11,
+    "loss": 0,
+    "win": 11
+   },
+   "prefix": "10,12 14,12",
+   "recurs_in_losses": false
+  },
+  {
+   "distinct": {
+    "cap": 0,
+    "games": 3,
+    "loss": 0,
+    "win": 3
+   },
+   "occurrence": {
+    "cap": 0,
+    "games": 10,
+    "loss": 0,
+    "win": 10
+   },
+   "prefix": "11,12 15,11",
+   "recurs_in_losses": false
+  },
+  {
+   "distinct": {
+    "cap": 0,
+    "games": 1,
+    "loss": 0,
+    "win": 1
+   },
+   "occurrence": {
+    "cap": 0,
+    "games": 5,
+    "loss": 0,
+    "win": 5
+   },
+   "prefix": "12,11 8,11",
+   "recurs_in_losses": false
+  },
+  {
+   "distinct": {
+    "cap": 2,
+    "games": 4,
+    "loss": 0,
+    "win": 2
+   },
+   "occurrence": {
+    "cap": 2,
+    "games": 5,
+    "loss": 0,
+    "win": 3
+   },
+   "prefix": "12,13 9,12",
+   "recurs_in_losses": false
+  },
+  {
+   "distinct": {
+    "cap": 0,
+    "games": 3,
+    "loss": 0,
+    "win": 3
+   },
+   "occurrence": {
+    "cap": 0,
+    "games": 8,
+    "loss": 0,
+    "win": 8
+   },
+   "prefix": "13,11 10,10",
+   "recurs_in_losses": false
+  },
+  {
+   "distinct": {
+    "cap": 4,
+    "games": 6,
+    "loss": 0,
+    "win": 2
+   },
+   "occurrence": {
+    "cap": 4,
+    "games": 13,
+    "loss": 0,
+    "win": 9
+   },
+   "prefix": "14,13 11,12",
+   "recurs_in_losses": false
+  },
+  {
+   "distinct": {
+    "cap": 0,
+    "games": 2,
+    "loss": 0,
+    "win": 2
+   },
+   "occurrence": {
+    "cap": 0,
+    "games": 6,
+    "loss": 0,
+    "win": 6
+   },
+   "prefix": "14,14 10,13",
+   "recurs_in_losses": false
+  },
+  {
+   "distinct": {
+    "cap": 0,
+    "games": 3,
+    "loss": 0,
+    "win": 3
+   },
+   "occurrence": {
+    "cap": 0,
+    "games": 10,
+    "loss": 0,
+    "win": 10
+   },
+   "prefix": "14,9 10,9",
+   "recurs_in_losses": false
+  },
+  {
+   "distinct": {
+    "cap": 0,
+    "games": 3,
+    "loss": 0,
+    "win": 3
+   },
+   "occurrence": {
+    "cap": 0,
+    "games": 7,
+    "loss": 0,
+    "win": 7
+   },
+   "prefix": "9,11 6,11",
+   "recurs_in_losses": false
+  }
+ ],
+ "caps": {
+  "A": {
+   "distinct_capped": 20,
+   "profiles_HYPOTHESIS_SUPPORT": {
+    "no loop | incumbent largest goal1=False,goal2=True | T1j largest goal1=False,goal2=True": 20
+   },
+   "with_loop": 0
+  },
+  "B": {
+   "distinct_capped": 22,
+   "profiles_HYPOTHESIS_SUPPORT": {
+    "loop | incumbent largest goal1=False,goal2=True | T1j largest goal1=False,goal2=True": 7,
+    "loop | incumbent largest goal1=False,goal2=True | T1j largest goal1=True,goal2=False": 6,
+    "no loop | incumbent largest goal1=True,goal2=False | T1j largest goal1=False,goal2=False": 2,
+    "no loop | incumbent largest goal1=True,goal2=False | T1j largest goal1=False,goal2=True": 5,
+    "no loop | incumbent largest goal1=True,goal2=False | T1j largest goal1=True,goal2=False": 2
+   },
+   "with_loop": 13
+  }
+ },
+ "label": "EXPLORATORY",
+ "ladders_HYPOTHESIS_SUPPORT": {
+  "A/incumbent loses": {
+   "distinct": 6,
+   "distinct_ladder_ge3": 2,
+   "distinct_winning_move_extends": 0,
+   "games": 103,
+   "winner_ran_ladder_ge3": 41,
+   "winning_move_extends_ladder": 0
+  },
+  "A/t1j loses": {
+   "distinct": 26,
+   "distinct_ladder_ge3": 1,
+   "distinct_winning_move_extends": 0,
+   "games": 173,
+   "winner_ran_ladder_ge3": 21,
+   "winning_move_extends_ladder": 0
+  },
+  "B/incumbent loses": {
+   "distinct": 40,
+   "distinct_ladder_ge3": 16,
+   "distinct_winning_move_extends": 5,
+   "games": 116,
+   "winner_ran_ladder_ge3": 51,
+   "winning_move_extends_ladder": 20
+  },
+  "B/t1j loses": {
+   "distinct": 63,
+   "distinct_ladder_ge3": 9,
+   "distinct_winning_move_extends": 1,
+   "games": 158,
+   "winner_ran_ladder_ge3": 21,
+   "winning_move_extends_ladder": 4
+  }
+ },
+ "loser_first_threatened_turn": {
+  "A/incumbent loses": {
+   "multi-hole/UNDEFENDABLE/ended next ply": {
+    "distinct_trajectories": 4,
+    "examples": [
+     {
+      "board_threats": [
+       [
+        9,
+        0
+       ],
+       [
+        13,
+        0
+       ]
+      ],
+      "ply": 39,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-09-A.json"
+     },
+     {
+      "board_threats": [
+       [
+        8,
+        23
+       ],
+       [
+        10,
+        23
+       ]
+      ],
+      "ply": 41,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-08-A.json"
+     },
+     {
+      "board_threats": [
+       [
+        10,
+        23
+       ],
+       [
+        14,
+        23
+       ]
+      ],
+      "ply": 47,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-65-A.json"
+     }
+    ],
+    "games": 73
+   },
+   "single-hole/UNDEFENDABLE/ended next ply": {
+    "distinct_trajectories": 2,
+    "examples": [
+     {
+      "board_threats": [
+       [
+        4,
+        23
+       ]
+      ],
+      "ply": 53,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-06-A.json"
+     },
+     {
+      "board_threats": [
+       [
+        4,
+        23
+       ]
+      ],
+      "ply": 65,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-32-A.json"
+     }
+    ],
+    "games": 30
+   }
+  },
+  "A/t1j loses": {
+   "multi-hole/DEFENDED/continued": {
+    "distinct_trajectories": 1,
+    "examples": [
+     {
+      "board_threats": [
+       [
+        23,
+        2
+       ],
+       [
+        23,
+        4
+       ]
+      ],
+      "ply": 46,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-05-A.json"
+     }
+    ],
+    "games": 19
+   },
+   "multi-hole/UNDEFENDABLE/ended next ply": {
+    "distinct_trajectories": 8,
+    "examples": [
+     {
+      "board_threats": [
+       [
+        0,
+        3
+       ],
+       [
+        0,
+        5
+       ]
+      ],
+      "ply": 44,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-01-A.json"
+     },
+     {
+      "board_threats": [
+       [
+        23,
+        2
+       ],
+       [
+        23,
+        6
+       ]
+      ],
+      "ply": 48,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-00-A.json"
+     },
+     {
+      "board_threats": [
+       [
+        23,
+        17
+       ],
+       [
+        23,
+        21
+       ]
+      ],
+      "ply": 48,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-03-A.json"
+     }
+    ],
+    "games": 117
+   },
+   "single-hole/DEFENDED/continued": {
+    "distinct_trajectories": 1,
+    "examples": [
+     {
+      "board_threats": [
+       [
+        23,
+        12
+       ]
+      ],
+      "ply": 42,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-15-A.json"
+     }
+    ],
+    "games": 21
+   },
+   "single-hole/MISSED_DEFENCE/continued": {
+    "distinct_trajectories": 1,
+    "examples": [
+     {
+      "board_threats": [
+       [
+        6,
+        4
+       ]
+      ],
+      "ply": 206,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment1/replays/h5s1-50-A.json"
+     }
+    ],
+    "games": 1
+   },
+   "single-hole/MISSED_DEFENCE/ended next ply": {
+    "distinct_trajectories": 15,
+    "examples": [
+     {
+      "board_threats": [
+       [
+        5,
+        6
+       ]
+      ],
+      "ply": 138,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-13-A.json"
+     },
+     {
+      "board_threats": [
+       [
+        5,
+        6
+       ]
+      ],
+      "ply": 138,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment1/replays/h5s1-06-A.json"
+     },
+     {
+      "board_threats": [
+       [
+        5,
+        6
+       ]
+      ],
+      "ply": 144,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-47-A.json"
+     }
+    ],
+    "games": 15
+   }
+  },
+  "B/incumbent loses": {
+   "multi-hole/UNDEFENDABLE/ended next ply": {
+    "distinct_trajectories": 32,
+    "examples": [
+     {
+      "board_threats": [
+       [
+        2,
+        15
+       ],
+       [
+        2,
+        17
+       ]
+      ],
+      "ply": 30,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-14-B.json"
+     },
+     {
+      "board_threats": [
+       [
+        23,
+        18
+       ],
+       [
+        23,
+        20
+       ]
+      ],
+      "ply": 32,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment2/replays/h5s2-14-B.json"
+     },
+     {
+      "board_threats": [
+       [
+        2,
+        15
+       ],
+       [
+        2,
+        17
+       ]
+      ],
+      "ply": 32,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment1/replays/h5s1-06-B.json"
+     }
+    ],
+    "games": 94
+   },
+   "single-hole/MISSED_DEFENCE/continued": {
+    "distinct_trajectories": 1,
+    "examples": [
+     {
+      "board_threats": [
+       [
+        12,
+        5
+       ]
+      ],
+      "ply": 56,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment2/replays/h5s2-01-B.json"
+     }
+    ],
+    "games": 1
+   },
+   "single-hole/UNDEFENDABLE/ended next ply": {
+    "distinct_trajectories": 7,
+    "examples": [
+     {
+      "board_threats": [
+       [
+        23,
+        20
+       ]
+      ],
+      "ply": 36,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment1/replays/h5s1-01-B.json"
+     },
+     {
+      "board_threats": [
+       [
+        23,
+        19
+       ]
+      ],
+      "ply": 36,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-46-B.json"
+     },
+     {
+      "board_threats": [
+       [
+        23,
+        4
+       ]
+      ],
+      "ply": 38,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment2/replays/h5s2-53-B.json"
+     }
+    ],
+    "games": 21
+   }
+  },
+  "B/t1j loses": {
+   "multi-hole/DEFENDED/continued": {
+    "distinct_trajectories": 6,
+    "examples": [
+     {
+      "board_threats": [
+       [
+        19,
+        0
+       ],
+       [
+        21,
+        0
+       ]
+      ],
+      "ply": 43,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-33-B.json"
+     },
+     {
+      "board_threats": [
+       [
+        13,
+        0
+       ],
+       [
+        15,
+        0
+       ]
+      ],
+      "ply": 41,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-23-B.json"
+     },
+     {
+      "board_threats": [
+       [
+        12,
+        0
+       ],
+       [
+        14,
+        0
+       ]
+      ],
+      "ply": 47,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-59-B.json"
+     }
+    ],
+    "games": 20
+   },
+   "multi-hole/UNDEFENDABLE/continued": {
+    "distinct_trajectories": 1,
+    "examples": [
+     {
+      "board_threats": [
+       [
+        13,
+        10
+       ],
+       [
+        15,
+        15
+       ]
+      ],
+      "ply": 39,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment2/replays/h5s2-05-B.json"
+     }
+    ],
+    "games": 3
+   },
+   "multi-hole/UNDEFENDABLE/ended next ply": {
+    "distinct_trajectories": 43,
+    "examples": [
+     {
+      "board_threats": [
+       [
+        16,
+        0
+       ],
+       [
+        20,
+        0
+       ]
+      ],
+      "ply": 39,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment3/replays/h5s3-04-B.json"
+     },
+     {
+      "board_threats": [
+       [
+        13,
+        8
+       ],
+       [
+        16,
+        10
+       ],
+       [
+        16,
+        11
+       ]
+      ],
+      "ply": 41,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-37-B.json"
+     },
+     {
+      "board_threats": [
+       [
+        9,
+        23
+       ],
+       [
+        11,
+        23
+       ]
+      ],
+      "ply": 41,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-10-B.json"
+     }
+    ],
+    "games": 108
+   },
+   "single-hole/DEFENDED/continued": {
+    "distinct_trajectories": 1,
+    "examples": [
+     {
+      "board_threats": [
+       [
+        11,
+        10
+       ]
+      ],
+      "ply": 61,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment3/replays/h5s3-46-B.json"
+     }
+    ],
+    "games": 1
+   },
+   "single-hole/MISSED_DEFENCE/ended next ply": {
+    "distinct_trajectories": 2,
+    "examples": [
+     {
+      "board_threats": [
+       [
+        15,
+        10
+       ]
+      ],
+      "ply": 45,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment2/replays/h5s2-57-B.json"
+     },
+     {
+      "board_threats": [
+       [
+        13,
+        7
+       ]
+      ],
+      "ply": 103,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment2/replays/h5s2-15-B.json"
+     }
+    ],
+    "games": 3
+   },
+   "single-hole/UNDEFENDABLE/ended next ply": {
+    "distinct_trajectories": 10,
+    "examples": [
+     {
+      "board_threats": [
+       [
+        4,
+        0
+       ]
+      ],
+      "ply": 37,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment1/replays/h5s1-21-B.json"
+     },
+     {
+      "board_threats": [
+       [
+        19,
+        0
+       ]
+      ],
+      "ply": 41,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment1/replays/h5s1-69-B.json"
+     },
+     {
+      "board_threats": [
+       [
+        4,
+        23
+       ]
+      ],
+      "ply": 43,
+      "replay": "docs/superpowers/evidence/t1j-h5-study-segment3/replays/h5s3-33-B.json"
+     }
+    ],
+    "games": 23
+   }
+  }
+ },
+ "missed_defence_punished_next_ply": {
+  "incumbent": {
+   "distinct_trajectories": 0,
+   "positions": 0
+  },
+  "t1j": {
+   "distinct_trajectories": 19,
+   "positions": 19
+  }
+ },
+ "presence_by_trajectory": {
+  "A/loss/incumbent/UNDEFENDABLE": {
+   "distinct_trajectories": 6,
+   "games": 103
+  },
+  "A/loss/t1j/DEFENDED": {
+   "distinct_trajectories": 1,
+   "games": 14
+  },
+  "A/win/incumbent/MISSED_WIN": {
+   "distinct_trajectories": 2,
+   "games": 22
+  },
+  "A/win/t1j/DEFENDED": {
+   "distinct_trajectories": 2,
+   "games": 40
+  },
+  "A/win/t1j/MISSED_DEFENCE": {
+   "distinct_trajectories": 16,
+   "games": 16
+  },
+  "A/win/t1j/UNDEFENDABLE": {
+   "distinct_trajectories": 10,
+   "games": 157
+  },
+  "B/cap/incumbent/DEFENDED": {
+   "distinct_trajectories": 12,
+   "games": 12
+  },
+  "B/cap/incumbent/MISSED_DEFENCE": {
+   "distinct_trajectories": 13,
+   "games": 13
+  },
+  "B/cap/incumbent/UNDEFENDABLE": {
+   "distinct_trajectories": 2,
+   "games": 2
+  },
+  "B/cap/t1j/DEFENDED": {
+   "distinct_trajectories": 5,
+   "games": 5
+  },
+  "B/cap/t1j/MISSED_WIN": {
+   "distinct_trajectories": 13,
+   "games": 13
+  },
+  "B/loss/incumbent/MISSED_DEFENCE": {
+   "distinct_trajectories": 1,
+   "games": 1
+  },
+  "B/loss/incumbent/UNDEFENDABLE": {
+   "distinct_trajectories": 40,
+   "games": 116
+  },
+  "B/loss/t1j/DEFENDED": {
+   "distinct_trajectories": 2,
+   "games": 10
+  },
+  "B/loss/t1j/MISSED_WIN": {
+   "distinct_trajectories": 1,
+   "games": 1
+  },
+  "B/win/incumbent/DEFENDED": {
+   "distinct_trajectories": 1,
+   "games": 1
+  },
+  "B/win/incumbent/MISSED_WIN": {
+   "distinct_trajectories": 1,
+   "games": 3
+  },
+  "B/win/t1j/DEFENDED": {
+   "distinct_trajectories": 7,
+   "games": 21
+  },
+  "B/win/t1j/MISSED_DEFENCE": {
+   "distinct_trajectories": 3,
+   "games": 4
+  },
+  "B/win/t1j/UNDEFENDABLE": {
+   "distinct_trajectories": 60,
+   "games": 154
+  }
+ },
+ "single_hole_undefendable_location_distinct": {
+  "A: hole on T1j's own goal edge=True": 2,
+  "B: hole on T1j's own goal edge=True": 7
+ }
+}

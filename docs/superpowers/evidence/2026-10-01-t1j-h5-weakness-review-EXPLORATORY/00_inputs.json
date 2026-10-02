@@ -1,0 +1,12 @@
+{
+ "cross_check": "per-arm outcomes, cap games, cap-affected pairs, unique games by arm, 592 games: all EQUAL",
+ "label": "EXPLORATORY",
+ "sha256": {
+  "docs/superpowers/evidence/t1j-h5-confirmatory/estimate.json": "73600cf26875abb39b223093642a841c2e90b1c4ce5733470127db346e66edb4",
+  "docs/superpowers/evidence/t1j-h5-manifests/study_manifest.json": "e08c5f352eaabc9fac2fa73c48a432abbbdc23caf8ec5c4c52735de8bb619d32",
+  "docs/superpowers/evidence/t1j-h5-study-segment0/results.jsonl": "e9c54d5f430c4a01bfd181ba53c3818dce8d79a5b05700e8d8a3f8121de74cef",
+  "docs/superpowers/evidence/t1j-h5-study-segment1/results.jsonl": "7e1ca0b9f8a84b3749ecfd365016ec7c27298633dff6d8fb657b6f79ed6d768a",
+  "docs/superpowers/evidence/t1j-h5-study-segment2/results.jsonl": "d13a3bd8ec700def08e7cfef948cb3b89d0e6655ca2f1de27a606e8485929ad7",
+  "docs/superpowers/evidence/t1j-h5-study-segment3/results.jsonl": "4ff643415e997e8eaddc31766742739af81563468159b8aedb0ade8bef04a030"
+ }
+}

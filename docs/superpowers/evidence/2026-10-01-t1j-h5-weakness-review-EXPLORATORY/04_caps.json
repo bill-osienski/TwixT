@@ -1,0 +1,1132 @@
+{
+ "A": {
+  "capped_games": 20,
+  "distinct_capped_trajectories": 20,
+  "recurring_by_final_profile": [],
+  "recurring_by_prefix": {
+   "10": [
+    "18,19 10,17 10,14 17,14 17,11 13,11 14,14 7,14 13,8 6,12"
+   ],
+   "12": [
+    "18,19 10,17 10,14 17,14 17,11 13,11 14,14 7,14 13,8 6,12 6,9 6,8"
+   ],
+   "2": [
+    "18,19 10,17"
+   ],
+   "4": [
+    "18,19 10,17 10,14 17,14"
+   ],
+   "6": [
+    "18,19 10,17 10,14 17,14 17,11 13,11"
+   ],
+   "8": [
+    "18,19 10,17 10,14 17,14 17,11 13,11 14,14 7,14"
+   ]
+  },
+  "trajectories": [
+   {
+    "digest": "02dbe4f3f5fa00ac866001f5759015965713766b6d77f6665b1410732892c5e7",
+    "final": {
+     "black": {
+      "bridges": 62,
+      "components": 81,
+      "largest_component": 37,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 170,
+      "components": 17,
+      "largest_component": 100,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment3/replays/h5s3-62-A.json"
+    ]
+   },
+   {
+    "digest": "0366b0743055878b63aea7979bd96e2234e02be3368ffc2c6423497433fc8281",
+    "final": {
+     "black": {
+      "bridges": 59,
+      "components": 86,
+      "largest_component": 32,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 180,
+      "components": 15,
+      "largest_component": 98,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-02-A.json"
+    ]
+   },
+   {
+    "digest": "134544f849822edf0af8c372c2c8ca4421b7957249fe655100d61038be611e89",
+    "final": {
+     "black": {
+      "bridges": 70,
+      "components": 73,
+      "largest_component": 37,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 176,
+      "components": 16,
+      "largest_component": 103,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment1/replays/h5s1-62-A.json"
+    ]
+   },
+   {
+    "digest": "224850008e5a93881f491f77edd2a68d1cc4cf757719b708b40863c5a1840c88",
+    "final": {
+     "black": {
+      "bridges": 74,
+      "components": 72,
+      "largest_component": 39,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 180,
+      "components": 13,
+      "largest_component": 98,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-50-A.json"
+    ]
+   },
+   {
+    "digest": "2c94970ba3d6210c487cd0090ec96aa567f2e42fd2eeaaef6057dea416bae80e",
+    "final": {
+     "black": {
+      "bridges": 73,
+      "components": 73,
+      "largest_component": 35,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 170,
+      "components": 18,
+      "largest_component": 101,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment2/replays/h5s2-62-A.json"
+    ]
+   },
+   {
+    "digest": "3134f3b626989362585c3a63163cee755e9cc571212d3c2543bbc8648fe1d195",
+    "final": {
+     "black": {
+      "bridges": 72,
+      "components": 72,
+      "largest_component": 44,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 167,
+      "components": 18,
+      "largest_component": 95,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment1/replays/h5s1-23-A.json"
+    ]
+   },
+   {
+    "digest": "34d526fcec9139d453280ad7a5037e58e1ecb3670bace66af6ea5bfa888fe76f",
+    "final": {
+     "black": {
+      "bridges": 69,
+      "components": 81,
+      "largest_component": 40,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 178,
+      "components": 16,
+      "largest_component": 106,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-07-A.json"
+    ]
+   },
+   {
+    "digest": "3ce4401a0973659022a6e7445ac6f195b7b09915f3a8dbbee377dec78c973633",
+    "final": {
+     "black": {
+      "bridges": 81,
+      "components": 68,
+      "largest_component": 45,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 176,
+      "components": 18,
+      "largest_component": 102,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment2/replays/h5s2-65-A.json"
+    ]
+   },
+   {
+    "digest": "40328044a2e452e3d8b56b52ff82a476ad04102ea46bd6bcc4259c9b392105c4",
+    "final": {
+     "black": {
+      "bridges": 74,
+      "components": 72,
+      "largest_component": 40,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 173,
+      "components": 18,
+      "largest_component": 94,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment2/replays/h5s2-36-A.json"
+    ]
+   },
+   {
+    "digest": "423e92eafda084693d503580b64912aa6d35208788bf346cc2a5164a30b5613f",
+    "final": {
+     "black": {
+      "bridges": 70,
+      "components": 75,
+      "largest_component": 42,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 180,
+      "components": 12,
+      "largest_component": 95,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment2/replays/h5s2-69-A.json"
+    ]
+   },
+   {
+    "digest": "63d1ac12aa31d0e6a72c92bb00af9f4eb7b08806f5dd5ca724a640e4c9094886",
+    "final": {
+     "black": {
+      "bridges": 69,
+      "components": 75,
+      "largest_component": 32,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 169,
+      "components": 17,
+      "largest_component": 95,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment2/replays/h5s2-60-A.json"
+    ]
+   },
+   {
+    "digest": "717b91fdd7bf8b73bea6f5bedf55b4a4bdfca4323ebce8e6fa21c05451653377",
+    "final": {
+     "black": {
+      "bridges": 63,
+      "components": 80,
+      "largest_component": 34,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 184,
+      "components": 14,
+      "largest_component": 95,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment1/replays/h5s1-45-A.json"
+    ]
+   },
+   {
+    "digest": "75898f3b07ba4a585c7e6c765271c64d220002aead6c5486555b674bb09c48cc",
+    "final": {
+     "black": {
+      "bridges": 69,
+      "components": 77,
+      "largest_component": 31,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 178,
+      "components": 13,
+      "largest_component": 101,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-41-A.json"
+    ]
+   },
+   {
+    "digest": "75a4c5245259e656f92bdfba73827b9bff556805c51fa8b1ab3dc302c81400b2",
+    "final": {
+     "black": {
+      "bridges": 67,
+      "components": 79,
+      "largest_component": 38,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 175,
+      "components": 16,
+      "largest_component": 96,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment1/replays/h5s1-18-A.json"
+    ]
+   },
+   {
+    "digest": "9b7d1dcbb5bc8ff6e7037717dca2c38a282c69286d87ad09bb0a6d53df68ae1c",
+    "final": {
+     "black": {
+      "bridges": 64,
+      "components": 82,
+      "largest_component": 26,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 179,
+      "components": 18,
+      "largest_component": 100,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment2/replays/h5s2-61-A.json"
+    ]
+   },
+   {
+    "digest": "b2f892f1415ed2e67edec11054be171a2272b2bcc21b3327dc0d0de89b4b7811",
+    "final": {
+     "black": {
+      "bridges": 81,
+      "components": 65,
+      "largest_component": 35,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 166,
+      "components": 17,
+      "largest_component": 100,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment1/replays/h5s1-41-A.json"
+    ]
+   },
+   {
+    "digest": "bb17ef0e936cb3a6f062c35e833d2215c0e083167e4fa19315b87b0860a9579f",
+    "final": {
+     "black": {
+      "bridges": 65,
+      "components": 79,
+      "largest_component": 34,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 170,
+      "components": 15,
+      "largest_component": 98,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment3/replays/h5s3-41-A.json"
+    ]
+   },
+   {
+    "digest": "cfef716bcf8e4be7920faf22b5b06b310b8c42d415e2d5485ec29768a094ed53",
+    "final": {
+     "black": {
+      "bridges": 62,
+      "components": 82,
+      "largest_component": 29,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 167,
+      "components": 18,
+      "largest_component": 94,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment3/replays/h5s3-60-A.json"
+    ]
+   },
+   {
+    "digest": "e40b50e338105345f75c209b9c40f97767c4048b3bbdc8a2c9b4f2ac85b964d4",
+    "final": {
+     "black": {
+      "bridges": 67,
+      "components": 75,
+      "largest_component": 36,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 170,
+      "components": 15,
+      "largest_component": 92,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment3/replays/h5s3-04-A.json"
+    ]
+   },
+   {
+    "digest": "f683c33e408894f57b20261fa275306123a7c8be81e17dd191bb9fefaa986440",
+    "final": {
+     "black": {
+      "bridges": 69,
+      "components": 76,
+      "largest_component": 32,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 169,
+      "components": 17,
+      "largest_component": 103,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment3/replays/h5s3-70-A.json"
+    ]
+   }
+  ]
+ },
+ "B": {
+  "capped_games": 22,
+  "distinct_capped_trajectories": 22,
+  "recurring_by_final_profile": [],
+  "recurring_by_prefix": {
+   "10": [
+    "13,12 10,11 10,18 16,12 15,8 11,9 11,13 9,13 8,17 6,16",
+    "12,13 9,12 9,18 15,13 9,8 6,8 15,10 7,10 11,17 7,18",
+    "13,13 10,12 10,17 7,16 10,8 7,8 8,16 16,13 12,18 14,18",
+    "14,13 11,12 11,18 7,18 11,8 14,8 8,14 12,14 9,17 15,17",
+    "9,13 13,13 13,7 17,7 16,11 19,11 18,12 14,10 13,10 12,11"
+   ],
+   "12": [
+    "13,12 10,11 10,18 16,12 15,8 11,9 11,13 9,13 8,17 6,16 6,18 10,15",
+    "12,13 9,12 9,18 15,13 9,8 6,8 15,10 7,10 11,17 7,18 7,17 18,10",
+    "13,13 10,12 10,17 7,16 10,8 7,8 8,16 16,13 12,18 14,18 14,19 15,20",
+    "14,13 11,12 11,18 7,18 11,8 14,8 8,14 12,14 9,17 15,17 14,21 5,14",
+    "9,13 13,13 13,7 17,7 16,11 19,11 18,12 14,10 13,10 12,11 15,9 13,9"
+   ],
+   "2": [
+    "13,13 10,12",
+    "9,13 13,13",
+    "13,12 10,11",
+    "12,13 9,12",
+    "14,13 11,12"
+   ],
+   "4": [
+    "13,12 10,11 10,18 16,12",
+    "12,13 9,12 9,18 15,13",
+    "13,13 10,12 10,17 7,16",
+    "14,13 11,12 11,18 7,18",
+    "9,13 13,13 13,7 17,7"
+   ],
+   "6": [
+    "13,12 10,11 10,18 16,12 15,8 11,9",
+    "12,13 9,12 9,18 15,13 9,8 6,8",
+    "13,13 10,12 10,17 7,16 10,8 7,8",
+    "14,13 11,12 11,18 7,18 11,8 14,8",
+    "9,13 13,13 13,7 17,7 16,11 19,11"
+   ],
+   "8": [
+    "13,12 10,11 10,18 16,12 15,8 11,9 11,13 9,13",
+    "12,13 9,12 9,18 15,13 9,8 6,8 15,10 7,10",
+    "13,13 10,12 10,17 7,16 10,8 7,8 8,16 16,13",
+    "14,13 11,12 11,18 7,18 11,8 14,8 8,14 12,14",
+    "9,13 13,13 13,7 17,7 16,11 19,11 18,12 14,10"
+   ]
+  },
+  "trajectories": [
+   {
+    "digest": "004c0a6bc1f675392b2a18c75b762f762188bb6ea9605ec1088d3f093fb1f45c",
+    "final": {
+     "black": {
+      "bridges": 143,
+      "components": 25,
+      "largest_component": 96,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 89,
+      "components": 53,
+      "largest_component": 23,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-32-B.json"
+    ]
+   },
+   {
+    "digest": "16a05c1e61f88eeb6ffba20bdaea5bfd13896cc2ee8d1a6fa95121d87de3d9fb",
+    "final": {
+     "black": {
+      "bridges": 158,
+      "components": 20,
+      "largest_component": 71,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 80,
+      "components": 63,
+      "largest_component": 35,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment2/replays/h5s2-19-B.json"
+    ]
+   },
+   {
+    "digest": "1a456e2f94398118b592f72f7edce063a0d118eb82f65949e487461af49618b6",
+    "final": {
+     "black": {
+      "bridges": 151,
+      "components": 21,
+      "largest_component": 79,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 83,
+      "components": 60,
+      "largest_component": 26,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment3/replays/h5s3-45-B.json"
+    ]
+   },
+   {
+    "digest": "1cea47bbea9e6fa09fc53c9c797ae687fad7fa7d34a95626fb4aa13013fa7473",
+    "final": {
+     "black": {
+      "bridges": 150,
+      "components": 24,
+      "largest_component": 88,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 77,
+      "components": 66,
+      "largest_component": 31,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-73-B.json"
+    ]
+   },
+   {
+    "digest": "2c705bab69366b249968b4e0d250470528a063c5d25b0dcab6edb5f35d2bc5e8",
+    "final": {
+     "black": {
+      "bridges": 155,
+      "components": 20,
+      "largest_component": 90,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 67,
+      "components": 76,
+      "largest_component": 21,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-21-B.json"
+    ]
+   },
+   {
+    "digest": "46d580ca63b8c12a2b7ce6cdd52a8ea8e0e67a4867cef3a4cc88e04ba10ba857",
+    "final": {
+     "black": {
+      "bridges": 142,
+      "components": 29,
+      "largest_component": 86,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 86,
+      "components": 58,
+      "largest_component": 33,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment2/replays/h5s2-44-B.json"
+    ]
+   },
+   {
+    "digest": "68ccf50e93dc293b222c87a87d2007421a90f07c0e47dd09ab70b1554b33919d",
+    "final": {
+     "black": {
+      "bridges": 156,
+      "components": 17,
+      "largest_component": 68,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 85,
+      "components": 63,
+      "largest_component": 30,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment3/replays/h5s3-32-B.json"
+    ]
+   },
+   {
+    "digest": "6a18082379c5da676384c04c5b00e86f4d3bdabf3563b9891cddeb2d5cd0ff5f",
+    "final": {
+     "black": {
+      "bridges": 143,
+      "components": 26,
+      "largest_component": 86,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 94,
+      "components": 54,
+      "largest_component": 49,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment3/replays/h5s3-01-B.json"
+    ]
+   },
+   {
+    "digest": "7eeac4fd6ce9a701d5570ba476ed48bdb0194a248d6f8be2cfb0345f21503c3f",
+    "final": {
+     "black": {
+      "bridges": 150,
+      "components": 27,
+      "largest_component": 79,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 66,
+      "components": 76,
+      "largest_component": 23,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment1/replays/h5s1-27-B.json"
+    ]
+   },
+   {
+    "digest": "88eb7b4e3ce9ac2f83136a6c62075337e5e2531a0d69aeec2290509eb698dcf7",
+    "final": {
+     "black": {
+      "bridges": 159,
+      "components": 16,
+      "largest_component": 78,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 90,
+      "components": 59,
+      "largest_component": 28,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment3/replays/h5s3-27-B.json"
+    ]
+   },
+   {
+    "digest": "9c4c3eaadb31431b65825dba4474e0c5cf480fb225f9ede33e98af7717cc8f46",
+    "final": {
+     "black": {
+      "bridges": 156,
+      "components": 22,
+      "largest_component": 78,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 74,
+      "components": 73,
+      "largest_component": 26,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment2/replays/h5s2-23-B.json"
+    ]
+   },
+   {
+    "digest": "af0c193fc69ad758bb2137f43bfce7ffcb7f997ce5cd7282de31a1df0f0c87ad",
+    "final": {
+     "black": {
+      "bridges": 164,
+      "components": 17,
+      "largest_component": 93,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 68,
+      "components": 73,
+      "largest_component": 15,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment1/replays/h5s1-54-B.json"
+    ]
+   },
+   {
+    "digest": "b1ef2994ec8212c15c2b47e70cf0f888a5c3f57bbc9e52873233c9371f1b2e26",
+    "final": {
+     "black": {
+      "bridges": 159,
+      "components": 17,
+      "largest_component": 80,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 74,
+      "components": 71,
+      "largest_component": 31,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment2/replays/h5s2-35-B.json"
+    ]
+   },
+   {
+    "digest": "bbebbc4691d6c3564479ebab20612a2cbb1067e7727c6e50d7a09d55ae76d360",
+    "final": {
+     "black": {
+      "bridges": 169,
+      "components": 12,
+      "largest_component": 70,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 71,
+      "components": 75,
+      "largest_component": 27,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-50-B.json"
+    ]
+   },
+   {
+    "digest": "c0b475e8f504d4e6ea9c4c24f8f3a4b9bdc66a5404b3c2bd2a8df9ac8255cd56",
+    "final": {
+     "black": {
+      "bridges": 169,
+      "components": 17,
+      "largest_component": 90,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 56,
+      "components": 85,
+      "largest_component": 17,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment1/replays/h5s1-65-B.json"
+    ]
+   },
+   {
+    "digest": "c5431c3b00df08b2758fddb43b1dbf7d1cac2bb67f56df622f4ce4af927fe715",
+    "final": {
+     "black": {
+      "bridges": 167,
+      "components": 16,
+      "largest_component": 86,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 66,
+      "components": 78,
+      "largest_component": 24,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-69-B.json"
+    ]
+   },
+   {
+    "digest": "cbe1d32f1cff895860bba510bec246baa4c46dc01655db4a3ba0906259dd9eb1",
+    "final": {
+     "black": {
+      "bridges": 167,
+      "components": 15,
+      "largest_component": 63,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 71,
+      "components": 72,
+      "largest_component": 30,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment1/replays/h5s1-23-B.json"
+    ]
+   },
+   {
+    "digest": "d107a5505de53e472175bf7c84b30ec46a845dd7c364945ea6fb03bc290f0064",
+    "final": {
+     "black": {
+      "bridges": 159,
+      "components": 21,
+      "largest_component": 89,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 57,
+      "components": 85,
+      "largest_component": 19,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment1/replays/h5s1-32-B.json"
+    ]
+   },
+   {
+    "digest": "f18f74c511ae0dbd58d3ce1d938c4e6ae10ce5792c73c026c6fd000f9da28996",
+    "final": {
+     "black": {
+      "bridges": 154,
+      "components": 23,
+      "largest_component": 81,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 80,
+      "components": 67,
+      "largest_component": 30,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment3/replays/h5s3-36-B.json"
+    ]
+   },
+   {
+    "digest": "fb27b029ec405795aadc4691ba800f487e30ea51bbcb93907445e468a056120b",
+    "final": {
+     "black": {
+      "bridges": 154,
+      "components": 26,
+      "largest_component": 89,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 66,
+      "components": 75,
+      "largest_component": 24,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment1/replays/h5s1-14-B.json"
+    ]
+   },
+   {
+    "digest": "ff3af529692a8933ff72ec0aede9317dea8cf1d0acbcb4fa4333a9679fa020ed",
+    "final": {
+     "black": {
+      "bridges": 150,
+      "components": 24,
+      "largest_component": 75,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 82,
+      "components": 63,
+      "largest_component": 41,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment0/replays/h5s0-00-B.json"
+    ]
+   },
+   {
+    "digest": "ffff228a96bac317a9e247fc41809675cf0ce9852d75b9046a080ff44e8adb01",
+    "final": {
+     "black": {
+      "bridges": 172,
+      "components": 12,
+      "largest_component": 75,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     },
+     "red": {
+      "bridges": 75,
+      "components": 68,
+      "largest_component": 33,
+      "min_goal1_distance": 0,
+      "min_goal2_distance": 0,
+      "pegs": 140
+     }
+    },
+    "frequency": 1,
+    "replays": [
+     "docs/superpowers/evidence/t1j-h5-study-segment3/replays/h5s3-18-B.json"
+    ]
+   }
+  ]
+ },
+ "label": "EXPLORATORY",
+ "note": "capped games are UNRESOLVED, never losses"
+}
