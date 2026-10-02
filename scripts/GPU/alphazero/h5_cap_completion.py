@@ -40,6 +40,11 @@ MANIFEST = "docs/superpowers/evidence/t1j-h5-manifests/study_manifest.json"
 MANIFEST_SHA256 = "e08c5f352eaabc9fac2fa73c48a432abbbdc23caf8ec5c4c52735de8bb619d32"
 FROZEN_FILE, STAGE1_DIR, STAGE2_DIR = "00_frozen_set.json", "01_stage1", "02_stage2"
 K_T1J, N_INCUMBENT, STAGE2_WALL_S = 3, 2, 3600.0
+#: §9 A4.1: the child's in-process deadline ends this long before the parent's hard kill,
+#: so a cooperative STOP can still be recorded.
+RECORD_MARGIN_S = 60.0
+CLAIM_FILE, WATCHDOG_FILE, CLAIM_ENV = "claim.json", "watchdog.json", "H5_CAP_STAGE2_CLAIM"
+MODULE = "scripts.GPU.alphazero.h5_cap_completion"
 SEED = -1                       # the qualifications' synthetic seed; no research seed
 OUTCOMES = ("AGREE", "RECONSTRUCTION_DISAGREEMENT", "TERMINAL_DISAGREEMENT", "UNAVAILABLE")
 EXIT_OK, EXIT_REFUSED, EXIT_UNAUTHORIZED = 0, 4, 5
@@ -677,20 +682,20 @@ def _readings(frozen: Mapping[str, Any], rows: Sequence[Mapping[str, Any]],
 def _stage2(frozen: Mapping[str, Any], permission: Mapping[str, Any],
             stage1: Mapping[str, Any], compile_fn: Callable, incumbent_factory: Callable,
             t1j_factory: Callable, out_dir: pathlib.Path, *,
-            clock: Callable[[], float] = time.monotonic, wall_s: float = STAGE2_WALL_S
-            ) -> Dict[str, Any]:
-    """§8 A3. Reached only after the pure refusals, the Stage-1 permission included. The
-    CLAIM comes before the compile and the model load; ONE deadline, started at the claim,
-    covers both and every call; each row is persisted before the next call; a record on
-    EVERY exit. Judged by §6 A1.1's rules, never by the historical move (reported apart)."""
+            clock: Callable[[], float] = time.monotonic,
+            wall_s: float = STAGE2_WALL_S - RECORD_MARGIN_S) -> Dict[str, Any]:
+    """§8 A3 inside the child (§9 A4.1). Reached only after the pure refusals, the Stage-1
+    permission included, on a directory already CLAIMED (holding only `claim.json`): the
+    compile and the model load come after the claim. ONE in-process deadline (`wall_s`,
+    what remains of the claim's) covers both and every call; each row is persisted before
+    the next call; a record on EVERY exit. Judged by §6 A1.1's rules, never by the
+    historical move (reported apart)."""
     from . import d1_probe as D1
     if permission.get("status") != "COMPLETE" or not permission.get("all_agree"):
         raise CapRefused("Stage 2 needs a COMPLETE, all-AGREE Stage-1 record")
     d = pathlib.Path(out_dir) / STAGE2_DIR
-    try:
-        os.mkdir(d)                              # THE CLAIM: before compiling or loading
-    except FileExistsError:
-        raise CapRefused(f"{STAGE2_DIR} is occupied: Stage 2 is one-shot") from None
+    if not d.is_dir() or sorted(os.listdir(d)) != [CLAIM_FILE]:
+        raise CapRefused(f"{STAGE2_DIR} does not hold exactly an unconsumed claim")
     deadline = D1.Deadline(limit_s=wall_s, clock=clock).start()
     log, step, rows, partial, compiled, identity = None, "claim", [], None, None, None
     status, failure, interrupt = "COMPLETE", None, None
@@ -751,7 +756,14 @@ def _stage2(frozen: Mapping[str, Any], permission: Mapping[str, Any],
     want = stage2_expected(frozen)
     done = sorted((r["position"], r["agent"], r["query"]) for r in rows)
     if status == "COMPLETE" and done != want:
-        status = "INCOMPLETE"
+        #: §9 A4.2: what is wrong, by name. No exception was raised; none is invented.
+        got, need = collections.Counter(done), collections.Counter(want)
+        status, failure = "INCOMPLETE", {
+            "failing_step": "completion_check", "exception_type": None,
+            "reason": "the call set is not the one derived from the frozen set",
+            "missing": [list(c) for c in sorted(need - got)],
+            "duplicated": [list(c) for c, n in sorted(got.items()) if n > 1],
+            "extra": [list(c) for c in sorted(set(got) - set(need))]}
     controls_ok = episodes = None
     if status == "COMPLETE":
         controls_ok = all(r["acceptable"] for r in rows if r["control"])
@@ -766,7 +778,7 @@ def _stage2(frozen: Mapping[str, Any], permission: Mapping[str, Any],
               "rows": rows, "controls_ok": controls_ok, "episodes": episodes,
               "episodes_note": None if episodes is not None else
               f"not interpreted: the run is {status}",
-              "elapsed_s": deadline.elapsed(),
+              "deadline_s": wall_s, "elapsed_s": deadline.elapsed(),
               "provenance": {e: {"members": ep["members"], "frequency": ep["frequency"]}
                              for e, ep in frozen["episodes"].items()},
               "note": "what was chosen, never why; no strength estimate, no rescoring"}
@@ -775,6 +787,117 @@ def _stage2(frozen: Mapping[str, Any], permission: Mapping[str, Any],
     if interrupt is not None:
         raise interrupt
     return record
+
+
+# ─────────────────────────────── the hard deadline (§9 A4.1) ───────────────────────────────
+
+def _claim(d: pathlib.Path) -> Tuple[Dict[str, Any], str]:
+    """THE claim, by the parent, before anything is compiled or loaded: `02_stage2/`
+    (create-only) holding `claim.json` -- the claim time and the sha256 of a single-use
+    nonce that only the child is given."""
+    import secrets
+    try:
+        os.mkdir(d)
+    except FileExistsError:
+        raise CapRefused(f"{STAGE2_DIR} is occupied: Stage 2 is one-shot") from None
+    nonce = secrets.token_hex(16)
+    claim = {"claimed_monotonic": time.monotonic(),
+             "claimed_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+             "parent_pid": os.getpid(),
+             "nonce_sha256": hashlib.sha256(nonce.encode()).hexdigest()}
+    with open(d / CLAIM_FILE, "x", encoding="utf-8") as fh:
+        json.dump(claim, fh, indent=1, sort_keys=True)
+    return claim, nonce
+
+
+def _accept_claim(d: pathlib.Path) -> Dict[str, Any]:
+    """The child takes the claim only if `02_stage2/` holds EXACTLY `claim.json` and the
+    nonce it was handed matches. The journal is created next, so a claim is single-use."""
+    if not d.is_dir() or sorted(os.listdir(d)) != [CLAIM_FILE]:
+        raise CapRefused(f"{STAGE2_DIR} does not hold exactly an unconsumed claim")
+    claim = json.loads((d / CLAIM_FILE).read_text(encoding="utf-8"))
+    nonce = os.environ.get(CLAIM_ENV) or ""
+    if hashlib.sha256(nonce.encode()).hexdigest() != claim.get("nonce_sha256"):
+        raise CapRefused("the claim's nonce does not match: this process was not started "
+                         "by the parent that claimed")
+    return claim
+
+
+def _watch(argv: Sequence[str], *, limit_s: float, env: Mapping[str, str],
+           cwd: str) -> Dict[str, Any]:
+    """Run `argv` in its OWN session and wait at most `limit_s`, measured HERE. At the
+    limit -- or if this parent is interrupted -- SIGKILL the child's whole process group:
+    the child and every subprocess it started (the JVMs). After a normal exit, any member
+    of the group still alive is killed too, and that is recorded. Detection needs nothing
+    from the child: no handler of its runs; the parent measures and the kernel kills.
+    ponytail: a process that leaves the group (setsid) escapes; subprocess.run does not."""
+    import signal
+    import subprocess
+    t0 = time.monotonic()
+    out: Dict[str, Any] = {"child_pid": None, "limit_s": limit_s, "terminated": False,
+                           "cause": None, "signal": None, "rc": None,
+                           "survivors_killed": False}
+    try:
+        p = subprocess.Popen(list(argv), start_new_session=True, env=dict(env), cwd=cwd)
+    except OSError as e:                         # never started: nothing to watch or kill
+        return {**out, "cause": f"the child could not be started ({type(e).__name__}: {e})",
+                "elapsed_s": time.monotonic() - t0}
+    out["child_pid"] = p.pid
+    try:
+        try:
+            p.wait(timeout=max(limit_s, 0.0))
+        except subprocess.TimeoutExpired:
+            out.update(terminated=True, cause=f"the hard limit of {limit_s:.1f} s from "
+                                              f"the claim, measured by the parent")
+    except BaseException as e:                   # noqa: BLE001 -- killed, then re-raised
+        out.update(terminated=True, cause=f"the parent was interrupted "
+                                          f"({type(e).__name__})", parent_exception=e)
+    try:
+        os.killpg(p.pid, signal.SIGKILL)         # the child's session IS its group
+        killed = True
+    except ProcessLookupError:
+        killed = False
+    out.update(rc=p.wait(), elapsed_s=time.monotonic() - t0,
+               signal="SIGKILL" if out["terminated"] else None,
+               survivors_killed=killed and not out["terminated"])
+    return out
+
+
+def _journal(d: pathlib.Path) -> Optional[Dict[str, Any]]:
+    j = d / "log.jsonl"
+    if not j.exists():
+        return None
+    raw = j.read_bytes()
+    return {"file": "log.jsonl", "lines": raw.count(b"\n"),
+            "sha256": hashlib.sha256(raw).hexdigest()}
+
+
+def _settle(d: pathlib.Path, watch: Mapping[str, Any]) -> Dict[str, Any]:
+    """The parent's own record, `watchdog.json`, on EVERY exit. The journal and any
+    record are left exactly as the child wrote them; a killed run is never COMPLETE."""
+    rec, present = None, (d / "record.json").exists()
+    if present:
+        try:
+            rec = json.loads((d / "record.json").read_text(encoding="utf-8"))
+        except ValueError:
+            rec = None                           # cut off mid-write
+    status = ("TERMINATED" if watch["terminated"] else
+              "EXITED_WITHOUT_RECORD" if rec is None else
+              "EXITED_ABNORMALLY" if watch["rc"] != 0 and rec.get("status") != "INTERRUPTED"
+              else rec.get("status"))
+    journal = _journal(d)
+    summary = {"label": LABEL, "card": CARD, "status": status, "cause": watch["cause"],
+               "limit_s": watch["limit_s"], "elapsed_s": watch["elapsed_s"],
+               "child_pid": watch["child_pid"], "child_rc": watch["rc"],
+               "signal": watch["signal"], "survivors_killed": watch["survivors_killed"],
+               "journal": journal, "journal_note": None if journal is not None else
+               "no journal: the child stopped before opening it",
+               "record_present": present, "record_readable": rec is not None,
+               "record_status": None if rec is None else rec.get("status"),
+               "note": "the journal and any record are exactly as the child wrote them"}
+    with open(d / WATCHDOG_FILE, "x", encoding="utf-8") as fh:
+        json.dump(summary, fh, indent=1, sort_keys=True)
+    return summary
 
 
 # ─────────────────────────────── production wiring ───────────────────────────────
@@ -935,23 +1058,57 @@ def run_stage1(out_dir: str, classes: str) -> Dict[str, Any]:
     return _stage1(frozen, frozen_sha, lambda: _verified_paths(classes), _t1j_replay, out)
 
 
+def _permission(out: pathlib.Path, frozen: Mapping[str, Any], frozen_sha: str
+                ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """§8 A3.1: the Stage-1 permission, against a binding re-derived WITHOUT compiling."""
+    binding = {"frozen_set_sha256": frozen_sha, "position_digests": position_digests(frozen),
+               "toolchain": _bound_toolchain()}
+    permission = stage2_permission(out / STAGE1_DIR, frozen, binding, _fixture=False)
+    return permission, {"binding": binding, "record_sha256": hashlib.sha256(
+        (out / STAGE1_DIR / "record.json").read_bytes()).hexdigest()}
+
+
+def _child_argv(out: pathlib.Path, classes: str) -> List[str]:
+    return [sys.executable, "-m", MODULE, "stage2-claimed", "--out-dir", str(out),
+            "--classes", classes]
+
+
 def run_stage2(out_dir: str, classes: str) -> Dict[str, Any]:
-    """PUBLIC ENTRY. The unchanged agents. §8 A3.1: PURE refusals first -- the Stage-1
-    permission among them, against a binding re-derived WITHOUT compiling -- then the
-    claim, then the compile and the model load inside one deadline. No seam is accepted."""
+    """PUBLIC ENTRY -- the PARENT (§9 A4.1). PURE refusals first (§8 A3.1, the Stage-1
+    permission among them), then THE CLAIM, then the child in its own session under the
+    hard watchdog; `watchdog.json` on every exit. No seam is accepted."""
     _gate()
     out = _evidence_dir(out_dir)
     frozen, frozen_sha = _committed_frozen(out)
     if os.path.lexists(out / STAGE2_DIR):
         raise CapRefused(f"{STAGE2_DIR} is occupied: Stage 2 is one-shot")
     _check_classes(classes)
-    binding = {"frozen_set_sha256": frozen_sha, "position_digests": position_digests(frozen),
-               "toolchain": _bound_toolchain()}
-    permission = stage2_permission(out / STAGE1_DIR, frozen, binding, _fixture=False)
-    stage1 = {"binding": binding, "record_sha256": hashlib.sha256(
-        (out / STAGE1_DIR / "record.json").read_bytes()).hexdigest()}
-    return _stage2(frozen, permission, stage1, lambda dl: _compile(classes, dl),
-                   _incumbent_choose, _t1j_choose, out)
+    _permission(out, frozen, frozen_sha)
+    d = out / STAGE2_DIR
+    claim, nonce = _claim(d)
+    watch = _watch(_child_argv(out, classes),
+                   limit_s=STAGE2_WALL_S - (time.monotonic() - claim["claimed_monotonic"]),
+                   env={**os.environ, CLAIM_ENV: nonce}, cwd=str(R4.REPO_ROOT))
+    summary = _settle(d, watch)
+    if "parent_exception" in watch:
+        raise watch["parent_exception"]
+    return summary
+
+
+def run_stage2_claimed(out_dir: str, classes: str) -> Dict[str, Any]:
+    """The CHILD (§9 A4.1), started only by `run_stage2` with the claim's nonce: the gate
+    and the pure checks again, then the claim it was handed, then §8 A3 with its in-process
+    deadline RECORD_MARGIN_S inside the parent's hard limit."""
+    _gate()
+    out = _evidence_dir(out_dir)
+    frozen, frozen_sha = _committed_frozen(out)
+    _check_classes(classes)
+    permission, stage1 = _permission(out, frozen, frozen_sha)
+    claim = _accept_claim(out / STAGE2_DIR)
+    since = time.monotonic() - claim["claimed_monotonic"]
+    return _stage2(frozen, permission, {**stage1, "claim": claim},
+                   lambda dl: _compile(classes, dl), _incumbent_choose, _t1j_choose, out,
+                   wall_s=STAGE2_WALL_S - max(since, 0.0) - RECORD_MARGIN_S)
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
@@ -960,7 +1117,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap = argparse.ArgumentParser(prog="h5_cap_completion",
                                  description="H5 cap-completion diagnostic -- EXPLORATORY. "
                                              "NOT AUTHORIZED.")
-    ap.add_argument("step", choices=("freeze", "stage1", "stage2"))
+    ap.add_argument("step", choices=("freeze", "stage1", "stage2", "stage2-claimed"))
     ap.add_argument("--out-dir", required=True)
     ap.add_argument("--classes")
     a = ap.parse_args(argv)
@@ -975,9 +1132,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             raise CapRefused("--classes is required for a stage")
         elif a.step == "stage1":
             print(json.dumps({"all_agree": run_stage1(a.out_dir, a.classes)["all_agree"]}))
+        elif a.step == "stage2":
+            res = run_stage2(a.out_dir, a.classes)
+            print(json.dumps({k: res[k] for k in ("status", "record_status", "child_rc")}))
         else:
-            rec = run_stage2(a.out_dir, a.classes)
-            print(json.dumps({k: rec[k] for k in ("status", "calls", "controls_ok")}))
+            print(json.dumps({"status": run_stage2_claimed(a.out_dir, a.classes)["status"]}))
     except (CapRefused, CapUnauthorized) as e:
         print(f"REFUSED: {e}", file=sys.stderr)
         return EXIT_REFUSED

@@ -1,4 +1,4 @@
-"""H5 cap-completion diagnostic (EXPLORATORY) -- card §1-§8 (§6 A1, §7 A2, §8 A3).
+"""H5 cap-completion diagnostic (EXPLORATORY) -- card §1-§9 (§6 A1, §7 A2, §8 A3, §9 A4).
 
 SYNTHETIC FIXTURES for everything on the T1j and incumbent side: no JVM, no compile, no
 model, no query. T1j's replay is faked FROM OUR OWN ENGINE (a perfectly agreeing T1j),
@@ -116,12 +116,12 @@ def test_the_gate_is_false_as_published():
     assert AUTH.H5_CAP_COMPLETION_AUTHORIZED is False
 
 
-@pytest.mark.parametrize("entry", ["freeze", "run_stage1", "run_stage2"])
+@pytest.mark.parametrize("entry", ["freeze", "run_stage1", "run_stage2", "run_stage2_claimed"])
 def test_every_public_entry_refuses_with_the_gate_shut_BEFORE_anything(entry, monkeypatch,
                                                                         tmp_path):
     for owner, name in ((C, "_frozen_from_records"), (C, "_verified_paths"), (C, "_compile"),
-                        (C, "_incumbent_choose"), (C.F, "check_durable"), (os, "makedirs"),
-                        (os, "mkdir")):
+                        (C, "_incumbent_choose"), (C, "_claim"), (C, "_watch"),
+                        (C.F, "check_durable"), (os, "makedirs"), (os, "mkdir")):
         monkeypatch.setattr(owner, name, lambda *a, **k: pytest.fail("touched before the gate"))
     args = (str(tmp_path / "x-EXPLORATORY"),) + (() if entry == "freeze" else (str(tmp_path),))
     with pytest.raises(C.CapUnauthorized):
@@ -474,6 +474,7 @@ def inc_stub():
 
 def stage2(tmp_path, t1j=None, inc=None, compile_fn=None, load=None, **kw):
     t1j, inc = t1j or t1j_stub(), inc or inc_stub()
+    C._claim(tmp_path / C.STAGE2_DIR)            # §9 A4.1: the parent's claim
     return C._stage2(frozen(), PERMIT, STAGE1, compile_fn or (lambda dl: (PATHS, TOOL)),
                      load or (lambda: (inc, IDENTITY)), lambda paths: t1j, tmp_path, **kw)
 
@@ -515,25 +516,23 @@ def test_STAGE2_refuses_without_a_COMPLETE_all_AGREE_permission(tmp_path):
 
 # ── §8 A3.2: the claim, then ONE deadline
 
-def test_the_CLAIM_comes_BEFORE_the_compile_AND_the_model_load(tmp_path):
-    seen, d = [], tmp_path / C.STAGE2_DIR
-
-    def compile_fn(dl):
-        seen.append(("compile", d.is_dir()))
-        return PATHS, TOOL
-
-    def load():
-        seen.append(("load", d.is_dir()))
-        return inc_stub(), IDENTITY
-    stage2(tmp_path, compile_fn=compile_fn, load=load)
-    assert seen == [("compile", True), ("load", True)], "a compile or load ran before the claim"
+def test_STAGE2_runs_ONLY_on_an_UNCONSUMED_claim_so_compile_and_load_follow_it(tmp_path):
+    d = tmp_path / C.STAGE2_DIR
+    args = (frozen(), PERMIT, STAGE1, lambda dl: pytest.fail("compiled"),
+            lambda: pytest.fail("loaded"), lambda p: pytest.fail("t1j"), tmp_path)
+    with pytest.raises(C.CapRefused, match="unconsumed claim"):
+        C._stage2(*args)                         # never claimed
+    C._claim(d)
+    (d / "log.jsonl").write_text("")             # a claim already consumed
+    with pytest.raises(C.CapRefused, match="unconsumed claim"):
+        C._stage2(*args)
 
 
-def test_an_OCCUPIED_stage2_directory_is_refused_and_left_untouched(tmp_path):
+def test_an_OCCUPIED_stage2_directory_is_refused_by_the_CLAIM_and_left_untouched(tmp_path):
     (tmp_path / C.STAGE2_DIR).mkdir()
     (tmp_path / C.STAGE2_DIR / "earlier.txt").write_text("an earlier attempt\n")
     with pytest.raises(C.CapRefused, match="occupied"):
-        stage2(tmp_path, compile_fn=lambda dl: pytest.fail("compiled"))
+        C._claim(tmp_path / C.STAGE2_DIR)
     assert [p.name for p in (tmp_path / C.STAGE2_DIR).iterdir()] == ["earlier.txt"]
 
 
@@ -654,12 +653,34 @@ def test_a_call_that_returns_NO_MOVE_is_a_STOP(tmp_path):
     assert rec["failure"]["partial"]["processes_note"] == C.IN_PROCESS
 
 
-def test_a_run_MISSING_a_call_is_INCOMPLETE_and_is_not_interpreted(tmp_path, monkeypatch):
+def _drop_xd(ps):
+    return [p for p in ps if p["id"] != "XD"]
+
+
+def _twice_s1(ps):
+    return ps + [p for p in ps if p["id"] == "S1/t1j"]
+
+
+def _plus_xe(ps):
+    return ps + [{**p, "id": "XE"} for p in ps if p["id"] == "XD"]
+
+
+@pytest.mark.parametrize("change,missing,duplicated,extra,calls", [
+    (_drop_xd, [["XD", "incumbent", 0], ["XD", "incumbent", 1]], [], [], ("6/6", "2/4")),
+    (_twice_s1, [], [["S1/t1j", "t1j", k] for k in range(3)], [], ("9/6", "4/4")),
+    (_plus_xe, [], [], [["XE", "incumbent", 0], ["XE", "incumbent", 1]], ("6/6", "6/4")),
+])
+def test_an_INEXACT_call_set_is_INCOMPLETE_names_what_is_wrong_and_invents_no_exception(
+        tmp_path, monkeypatch, change, missing, duplicated, extra, calls):
     real = C._positions
-    monkeypatch.setattr(C, "_positions", lambda fz: [p for p in real(fz) if p["id"] != "XD"])
-    rec = stage2(tmp_path)
-    assert (rec["status"], rec["failure"]) == ("INCOMPLETE", None)
-    assert rec["calls"] == {"t1j": "6/6", "incumbent": "2/4"}
+    monkeypatch.setattr(C, "_positions", lambda fz: change(real(fz)))
+    inc = chooser({"S1/incumbent": (13, 4), "XD": (12, 3), "XE": (12, 3)})
+    rec = stage2(tmp_path, inc=inc)
+    f = rec["failure"]
+    assert (rec["status"], f["failing_step"], f["exception_type"]) == \
+        ("INCOMPLETE", "completion_check", None)
+    assert (f["missing"], f["duplicated"], f["extra"]) == (missing, duplicated, extra)
+    assert (rec["calls"]["t1j"], rec["calls"]["incumbent"]) == calls
     assert (rec["episodes"], rec["controls_ok"]) == (None, None)
     assert "INCOMPLETE" in rec["episodes_note"]
 
@@ -710,6 +731,7 @@ def searched(move):
 
 def stage2_real_t1j(tmp_path, served, replies):
     served["replies"] = list(replies)
+    C._claim(tmp_path / C.STAGE2_DIR)
     return C._stage2(frozen(), PERMIT, STAGE1, lambda dl: (PATHS, TOOL),
                      lambda: (inc_stub(), IDENTITY), C._t1j_choose, tmp_path)
 
@@ -787,46 +809,73 @@ def test_4B_PATH_an_UNEXPECTED_exception_is_a_STOP_with_every_field_unavailable(
 # ── §8 A3.1: the PUBLIC entry in the real state
 
 def public_stage2(open_gate, monkeypatch, *, commit_after=True):
-    """Gate open; a committed Stage-1 record in its own repository, judged by the REAL
-    permission check against THAT repository; the T1j path real down to `subprocess.run`.
-    Synthetic: the frozen set's re-derivation, the bound toolchain, compile, model load."""
+    """Gate open IN THIS PROCESS; a committed Stage-1 record in its own repository, judged
+    by the REAL permission check against THAT repository. Synthetic: the frozen set's
+    re-derivation, the bound toolchain, compile, model load. `_watch` stays REAL unless a
+    test runs the child in-process (`inproc`)."""
     fz, d = committed_stage1(open_gate, commit_after=commit_after, name="x-EXPLORATORY")
-    real_permission, spy = C.stage2_permission, {"compile": 0, "load": 0}
+    out = d.parent
+    real_permission, spy = C.stage2_permission, {"compile": [], "load": []}
     monkeypatch.setattr(C, "_committed_frozen", lambda out: (fz, FSHA))
     monkeypatch.setattr(C, "_bound_toolchain", lambda: TOOL)
     monkeypatch.setattr(C, "stage2_permission",
                         lambda *a, _fixture: real_permission(*a, _fixture=True))
 
     def compile_(classes, dl):
-        spy["compile"] += 1
+        spy["compile"].append((out / C.STAGE2_DIR / C.CLAIM_FILE).exists())
         return PATHS, TOOL
 
     def load():
-        spy["load"] += 1
+        spy["load"].append((out / C.STAGE2_DIR / C.CLAIM_FILE).exists())
         return inc_stub(), IDENTITY
     monkeypatch.setattr(C, "_compile", compile_)
     monkeypatch.setattr(C, "_incumbent_choose", load)
-    return d.parent, spy
+    return out, spy
+
+
+def inproc(monkeypatch):
+    """The child run IN THIS PROCESS through its real CLI, with the nonce the parent hands
+    it -- so the fakes above reach it. The argv must be the real child invocation."""
+    def watch(argv, *, limit_s, env, cwd):
+        assert list(argv[1:4]) == ["-m", C.MODULE, "stage2-claimed"], argv
+        monkeypatch.setenv(C.CLAIM_ENV, env[C.CLAIM_ENV])
+        t0 = time.monotonic()
+        rc = C.main(list(argv[3:]))
+        return {"child_pid": os.getpid(), "limit_s": limit_s, "terminated": False,
+                "cause": None, "signal": None, "rc": rc, "elapsed_s": time.monotonic() - t0,
+                "survivors_killed": False}
+    monkeypatch.setattr(C, "_watch", watch)
 
 
 def test_PUBLIC_ENTRY_runs_Stage_2_in_the_real_state(open_gate, monkeypatch, served):
     out, spy = public_stage2(open_gate, monkeypatch)
+    inproc(monkeypatch)
     served["replies"] = [searched((2, 10))] * 3 + [searched((12, 4))] * 3
-    rec = C.run_stage2(str(out), str(open_gate / "cls"))
-    assert (rec["status"], rec["calls"], rec["controls_ok"]) == \
-        ("COMPLETE", {"t1j": "6/6", "incumbent": "4/4"}, True), rec["failure"]
+    res = C.run_stage2(str(out), str(open_gate / "cls"))
+    d = out / C.STAGE2_DIR
+    rec = json.loads((d / "record.json").read_text())
+    assert (res["status"], res["record_status"], res["child_rc"]) == \
+        ("COMPLETE", "COMPLETE", 0), rec["failure"]
+    assert res == json.loads((d / C.WATCHDOG_FILE).read_text()), \
+        "the parent returned something other than what it recorded"
+    assert (rec["calls"], rec["controls_ok"]) == ({"t1j": "6/6", "incumbent": "4/4"}, True)
     assert rec["episodes"]["S1"]["reading"] == "AGENT_CHOICE (reproduced)"
     assert rec["stage1"]["record_sha256"] == hashlib.sha256(
         (out / C.STAGE1_DIR / "record.json").read_bytes()).hexdigest()
-    assert spy == {"compile": 1, "load": 1}
+    assert rec["stage1"]["claim"] == json.loads((d / C.CLAIM_FILE).read_text())
+    assert 3500 < rec["deadline_s"] <= C.STAGE2_WALL_S - C.RECORD_MARGIN_S, \
+        "the child's deadline is not the claim's, less the record margin"
+    assert spy == {"compile": [True], "load": [True]}, "a compile or load ran unclaimed or twice"
+    assert res["journal"]["lines"] == 2 + 10
 
 
 def test_PUBLIC_ENTRY_refuses_on_PERMISSION_before_any_claim_compile_or_load(open_gate,
                                                                             monkeypatch):
     out, spy = public_stage2(open_gate, monkeypatch, commit_after=False)
+    monkeypatch.setattr(C, "_watch", lambda *a, **k: pytest.fail("a child was started"))
     with pytest.raises(C.CapRefused, match="the Stage-1 record is not durable"):
         C.run_stage2(str(out), str(open_gate / "cls"))
-    assert not (out / C.STAGE2_DIR).exists() and spy == {"compile": 0, "load": 0}
+    assert not (out / C.STAGE2_DIR).exists() and spy == {"compile": [], "load": []}
 
 
 @pytest.mark.parametrize("occupied", ["stage2", "classes"])
@@ -839,11 +888,251 @@ def test_PUBLIC_ENTRY_refuses_an_OCCUPIED_destination_before_the_permission(open
     (out / C.STAGE2_DIR if occupied == "stage2" else cls).mkdir()
     with pytest.raises(C.CapRefused, match="occupied"):
         C.run_stage2(str(out), str(cls))
-    assert spy == {"compile": 0, "load": 0}
+    assert spy == {"compile": [], "load": []}
     if occupied == "stage2":
         assert list((out / C.STAGE2_DIR).iterdir()) == [], "the occupied directory was written"
     else:
         assert not (out / C.STAGE2_DIR).exists(), "Stage 2 was claimed past an occupied refusal"
+
+
+def test_the_CHILD_takes_only_an_UNCONSUMED_claim_with_ITS_nonce(tmp_path, monkeypatch):
+    d = tmp_path / C.STAGE2_DIR
+    with pytest.raises(C.CapRefused, match="unconsumed claim"):
+        C._accept_claim(d)                       # nothing claimed
+    claim, nonce = C._claim(d)
+    assert nonce not in (d / C.CLAIM_FILE).read_text(), "the nonce itself was written down"
+    monkeypatch.delenv(C.CLAIM_ENV, raising=False)
+    with pytest.raises(C.CapRefused, match="nonce does not match"):
+        C._accept_claim(d)                       # no nonce handed over
+    monkeypatch.setenv(C.CLAIM_ENV, "0" * 32)
+    with pytest.raises(C.CapRefused, match="nonce does not match"):
+        C._accept_claim(d)                       # another parent's nonce
+    monkeypatch.setenv(C.CLAIM_ENV, nonce)
+    assert C._accept_claim(d) == claim
+    (d / "log.jsonl").write_text("")             # consumed by its child
+    with pytest.raises(C.CapRefused, match="unconsumed claim"):
+        C._accept_claim(d)
+
+
+# ── §9 A4.1: the hard deadline -- an external parent watchdog, harmless dummy processes only
+
+#: blocks EVERY signal, so no Python handler of the child's can run, then hangs in C
+MASKED_CHILD = r'''
+import os, signal, subprocess, sys, time
+signal.pthread_sigmask(signal.SIG_BLOCK, signal.valid_signals())
+g = subprocess.Popen(["/bin/sleep", "60"])
+open(sys.argv[1] + ".tmp", "w").write(f"{g.pid}\n")
+os.replace(sys.argv[1] + ".tmp", sys.argv[1])
+time.sleep(60)
+'''
+#: leaves its own subprocess running and exits normally
+SURVIVOR_CHILD = r'''
+import os, subprocess, sys
+g = subprocess.Popen(["/bin/sleep", "60"])
+open(sys.argv[1] + ".tmp", "w").write(f"{g.pid}\n")
+os.replace(sys.argv[1] + ".tmp", sys.argv[1])
+'''
+
+
+def gone(pid, within=5.0):
+    end = time.monotonic() + within
+    while time.monotonic() < end:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return True
+        time.sleep(0.05)
+    return False
+
+
+def watch(tmp_path, code, *args, limit_s):
+    return C._watch([sys.executable, "-c", code, *args], limit_s=limit_s, env=os.environ,
+                    cwd=str(tmp_path))
+
+
+def test_WATCHDOG_kills_a_child_with_EVERY_SIGNAL_BLOCKED_and_its_own_subprocess(tmp_path):
+    """The control: detection needs nothing from the child. Every catchable signal is
+    blocked there and it hangs in a C call; the parent measures, the kernel kills."""
+    pidfile, t0 = tmp_path / "grandchild.pid", time.monotonic()
+    w = watch(tmp_path, MASKED_CHILD, str(tmp_path / "grandchild.pid"), limit_s=3.0)
+    assert time.monotonic() - t0 < 15, "the hung child was not killed near its limit"
+    assert (w["terminated"], w["signal"], w["rc"]) == (True, "SIGKILL", -9)
+    assert "hard limit" in w["cause"]
+    assert pidfile.exists(), "the dummy never started its subprocess: the control is vacuous"
+    assert gone(int(pidfile.read_text())), "the child's own subprocess survived the kill"
+
+
+def test_WATCHDOG_returns_the_status_of_a_child_that_finishes(tmp_path):
+    w = watch(tmp_path, "import sys; sys.exit(3)", limit_s=30)
+    assert (w["terminated"], w["rc"], w["signal"], w["survivors_killed"], w["cause"]) == \
+        (False, 3, None, False, None)
+
+
+def test_WATCHDOG_kills_a_SURVIVING_subprocess_after_a_normal_exit_and_records_it(tmp_path):
+    pidfile = tmp_path / "grandchild.pid"
+    w = watch(tmp_path, SURVIVOR_CHILD, str(pidfile), limit_s=30)
+    assert (w["terminated"], w["rc"], w["survivors_killed"]) == (False, 0, True)
+    assert gone(int(pidfile.read_text())), "a subprocess outlived the run"
+
+
+def test_WATCHDOG_an_INTERRUPTED_parent_kills_the_group_and_hands_back_the_interrupt(
+        tmp_path, monkeypatch):
+    pidfile, real_wait = tmp_path / "grandchild.pid", subprocess.Popen.wait
+
+    def wait(self, timeout=None):
+        if timeout is None:
+            return real_wait(self)
+        end = time.monotonic() + 10
+        while not pidfile.exists() and time.monotonic() < end:
+            time.sleep(0.05)
+        raise KeyboardInterrupt
+    monkeypatch.setattr(subprocess.Popen, "wait", wait)
+    w = watch(tmp_path, MASKED_CHILD, str(pidfile), limit_s=30)
+    assert (w["terminated"], w["signal"], w["rc"]) == (True, "SIGKILL", -9)
+    assert isinstance(w["parent_exception"], KeyboardInterrupt) and "interrupted" in w["cause"]
+    assert gone(int(pidfile.read_text())), "the child's subprocess survived the interrupt"
+
+
+#: a dummy child that writes a journal line, then (by mode) a COMPLETE record, an exit,
+#: or a hang with every signal blocked
+DUMMY_CHILD = r'''
+import json, os, signal, sys, time
+d, mode = sys.argv[1], sys.argv[2]
+with open(os.path.join(d, "log.jsonl"), "x") as fh:
+    fh.write(json.dumps({"step": "compile", "observation": {}}) + "\n")
+if mode == "complete":
+    with open(os.path.join(d, "record.json"), "x") as fh:
+        json.dump({"status": "COMPLETE"}, fh)
+if mode == "exit":
+    sys.exit(0)
+signal.pthread_sigmask(signal.SIG_BLOCK, signal.valid_signals())
+time.sleep(60)
+'''
+
+
+@pytest.mark.parametrize("mode,status,signal_rc", [
+    ("hang", "TERMINATED", ("SIGKILL", -9)),
+    ("complete", "TERMINATED", ("SIGKILL", -9)),
+    ("exit", "EXITED_WITHOUT_RECORD", (None, 0)),
+])
+def test_PUBLIC_ENTRY_the_PARENT_settles_a_dummy_child_and_never_reports_COMPLETE(
+        open_gate, monkeypatch, mode, status, signal_rc):
+    out, spy = public_stage2(open_gate, monkeypatch)
+    d = out / C.STAGE2_DIR
+    monkeypatch.setattr(C, "_child_argv",
+                        lambda o, cls: [sys.executable, "-c", DUMMY_CHILD, str(d), mode])
+    monkeypatch.setattr(C, "STAGE2_WALL_S", 3.0)
+    t0 = time.monotonic()
+    res = C.run_stage2(str(out), str(open_gate / "cls"))
+    assert time.monotonic() - t0 < 20, "the parent did not enforce its limit"
+    assert res["status"] == status and res == json.loads((d / C.WATCHDOG_FILE).read_text())
+    assert (res["signal"], res["child_rc"]) == signal_rc
+    journal = (d / "log.jsonl").read_bytes()
+    assert journal == json.dumps({"step": "compile", "observation": {}}).encode() + b"\n", \
+        "the journal was altered"
+    assert res["journal"] == {"file": "log.jsonl", "lines": 1,
+                              "sha256": hashlib.sha256(journal).hexdigest()}
+    if mode == "complete":
+        assert res["record_status"] == "COMPLETE" and \
+            json.loads((d / "record.json").read_text()) == {"status": "COMPLETE"}, \
+            "the child's record was touched"
+    else:
+        assert not (d / "record.json").exists() and res["record_status"] is None
+
+
+def test_PUBLIC_ENTRY_a_child_that_CANNOT_START_still_gets_the_parents_record(open_gate,
+                                                                              monkeypatch):
+    out, spy = public_stage2(open_gate, monkeypatch)
+    monkeypatch.setattr(C, "_child_argv", lambda o, cls: ["/nonexistent/python"])
+    res = C.run_stage2(str(out), str(open_gate / "cls"))
+    assert (res["status"], res["child_pid"], res["child_rc"]) == \
+        ("EXITED_WITHOUT_RECORD", None, None)
+    assert "could not be started" in res["cause"]
+    assert res == json.loads((out / C.STAGE2_DIR / C.WATCHDOG_FILE).read_text())
+
+
+def test_the_MONOTONIC_clock_the_child_reads_is_the_parents(tmp_path):
+    """The child's deadline is computed from the parent's `claimed_monotonic`: that
+    needs ONE system-wide monotonic clock across processes. Checked, not assumed."""
+    before = time.monotonic()
+    r = subprocess.run([sys.executable, "-c", "import time; print(repr(time.monotonic()))"],
+                       capture_output=True, text=True, check=True)
+    after = time.monotonic()
+    assert before <= float(r.stdout) <= after, "a child process reads a different clock"
+
+
+def test_PUBLIC_ENTRY_an_INTERRUPTED_parent_records_TERMINATED_and_re_raises(open_gate,
+                                                                            monkeypatch):
+    out, spy = public_stage2(open_gate, monkeypatch)
+    stop = KeyboardInterrupt()
+    monkeypatch.setattr(C, "_watch", lambda argv, **k: {
+        "child_pid": 1, "limit_s": k["limit_s"], "terminated": True, "signal": "SIGKILL",
+        "cause": "the parent was interrupted (KeyboardInterrupt)", "rc": -9, "elapsed_s": 0.1,
+        "survivors_killed": False, "parent_exception": stop})
+    with pytest.raises(KeyboardInterrupt) as e:
+        C.run_stage2(str(out), str(open_gate / "cls"))
+    assert e.value is stop
+    w = json.loads((out / C.STAGE2_DIR / C.WATCHDOG_FILE).read_text())
+    assert (w["status"], w["journal"]) == ("TERMINATED", None) and w["journal_note"]
+
+
+def test_PUBLIC_ENTRY_the_REAL_child_invocation_reads_the_CLOSED_on_disk_gate(open_gate,
+                                                                             monkeypatch):
+    """The parent's gate is open IN THIS PROCESS only. The child is a fresh interpreter,
+    started by the real argv, reading the published gate (False): it exits 5, doing
+    nothing, and the parent says so."""
+    out, spy = public_stage2(open_gate, monkeypatch)
+    res = C.run_stage2(str(out), str(open_gate / "cls"))
+    d = out / C.STAGE2_DIR
+    assert (res["status"], res["child_rc"], res["signal"]) == \
+        ("EXITED_WITHOUT_RECORD", C.EXIT_UNAUTHORIZED, None)
+    assert sorted(p.name for p in d.iterdir()) == [C.CLAIM_FILE, C.WATCHDOG_FILE]
+    assert spy == {"compile": [], "load": []}
+
+
+# ── §9 A4.3: the loader's wiring, with fakes (no model is loaded)
+
+def test_the_REAL_LOADER_loads_ONCE_and_gives_each_colour_its_task_at_seed_minus_1(
+        monkeypatch):
+    bound = json.loads((ROOT / C.MANIFEST).read_text())["segments"][0]["incumbent_identity"]
+    config, evaluator, loads, built = object(), object(), [], []
+    monkeypatch.setattr(C.R4, "frozen_argmax_config", lambda: config)
+
+    def identity_of(cfg, *, design):
+        assert cfg is config and design == C.H5.STUDY_DESIGN
+        return bound
+    monkeypatch.setattr(C.R4, "frozen_incumbent_identity", identity_of)
+    monkeypatch.setattr(C.R4, "check_incumbent_identity", lambda ident, cfg, *, design: None)
+    monkeypatch.setattr(C.R4, "load_production_evaluator",
+                        lambda ident: loads.append(ident) or evaluator)
+
+    def build_for(cfg):
+        assert cfg is config, "the builder was not given THE config"
+
+        def build(task, ev):
+            def agent(state):
+                built.append((task, ev, state.to_move))
+                return sorted(state.legal_moves())[0]
+            return agent
+        return build
+    monkeypatch.setattr(C.R4, "production_incumbent_build", build_for)
+    choose, identity = C._incumbent_choose()
+    assert callable(choose) and identity is bound and loads == [bound]
+    red, black = choose(ONE[:22], "R#0", {}), choose(ONE[:23], "B#0", {})
+    assert len(loads) == 1, "the model was loaded more than once"
+    assert [(t["incumbent_colour"], t["seed"], ev is evaluator, mover)
+            for t, ev, mover in built] == [("red", -1, True, "red"), ("black", -1, True, "black")]
+    assert (red["seed"], black["seed"]) == (-1, -1) and red["move"] and black["move"]
+
+
+def test_the_LOADER_refuses_an_UNBOUND_identity_BEFORE_any_load(monkeypatch):
+    monkeypatch.setattr(C.R4, "frozen_argmax_config", lambda: object())
+    monkeypatch.setattr(C.R4, "frozen_incumbent_identity",
+                        lambda cfg, *, design: {"reference": "another"})
+    monkeypatch.setattr(C.R4, "check_incumbent_identity", lambda *a, **k: None)
+    monkeypatch.setattr(C.R4, "load_production_evaluator", lambda ident: pytest.fail("loaded"))
+    with pytest.raises(C.CapRefused, match="not H5's bound identity"):
+        C._incumbent_choose()
 
 
 # ─────────────────────────────── the public path, real state ───────────────────────────────
