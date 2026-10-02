@@ -1,0 +1,18 @@
+PASS  h5s0-00-A.json  arm A  49 moves  reason win  viewer winner red  red="Incumbent (ours)" black="T1j (theirs)"
+PASS  h5s0-00-B.json  arm B  280 moves  reason cap  viewer winner none  red="T1j (theirs)" black="Incumbent (ours)"
+PASS  h5s0-73-A.json  arm A  45 moves  reason win  viewer winner red  red="Incumbent (ours)" black="T1j (theirs)"
+PASS  h5s0-73-B.json  arm B  280 moves  reason cap  viewer winner none  red="T1j (theirs)" black="Incumbent (ours)"
+PASS  h5s1-00-A.json  arm A  54 moves  reason win  viewer winner black  red="Incumbent (ours)" black="T1j (theirs)"
+PASS  h5s1-00-B.json  arm B  46 moves  reason win  viewer winner black  red="T1j (theirs)" black="Incumbent (ours)"
+PASS  h5s1-73-A.json  arm A  67 moves  reason win  viewer winner red  red="Incumbent (ours)" black="T1j (theirs)"
+PASS  h5s1-73-B.json  arm B  56 moves  reason win  viewer winner black  red="T1j (theirs)" black="Incumbent (ours)"
+PASS  h5s2-00-A.json  arm A  53 moves  reason win  viewer winner red  red="Incumbent (ours)" black="T1j (theirs)"
+PASS  h5s2-00-B.json  arm B  69 moves  reason win  viewer winner red  red="T1j (theirs)" black="Incumbent (ours)"
+PASS  h5s2-73-A.json  arm A  66 moves  reason win  viewer winner black  red="Incumbent (ours)" black="T1j (theirs)"
+PASS  h5s2-73-B.json  arm B  39 moves  reason win  viewer winner red  red="T1j (theirs)" black="Incumbent (ours)"
+PASS  h5s3-00-A.json  arm A  55 moves  reason win  viewer winner red  red="Incumbent (ours)" black="T1j (theirs)"
+PASS  h5s3-00-B.json  arm B  51 moves  reason win  viewer winner red  red="T1j (theirs)" black="Incumbent (ours)"
+PASS  h5s3-73-A.json  arm A  48 moves  reason win  viewer winner black  red="Incumbent (ours)" black="T1j (theirs)"
+PASS  h5s3-73-B.json  arm B  62 moves  reason win  viewer winner black  red="T1j (theirs)" black="Incumbent (ours)"
+
+viewer path: 16/16 files pass

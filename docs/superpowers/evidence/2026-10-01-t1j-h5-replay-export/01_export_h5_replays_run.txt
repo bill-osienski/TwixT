@@ -1,0 +1,5 @@
+segment 0: 148 games re-derived by load_games, 148 files -> docs/superpowers/evidence/t1j-h5-study-segment0/replays
+segment 1: 148 games re-derived by load_games, 148 files -> docs/superpowers/evidence/t1j-h5-study-segment1/replays
+segment 2: 148 games re-derived by load_games, 148 files -> docs/superpowers/evidence/t1j-h5-study-segment2/replays
+segment 3: 148 games re-derived by load_games, 148 files -> docs/superpowers/evidence/t1j-h5-study-segment3/replays
+total: 592 files

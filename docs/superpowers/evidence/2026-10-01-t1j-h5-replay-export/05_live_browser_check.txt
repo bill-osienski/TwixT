@@ -1,0 +1,18 @@
+H5 REPLAY EXPORT -- LIVE BROWSER CHECK: ATTEMPTED, NOT POSSIBLE (2026-10-01)
+
+Attempted through the Claude-in-Chrome tools:
+  tabs_context_mcp        -> "Browser extension is not connected."
+  list_connected_browsers -> [] (no browser connected to this account)
+
+Nothing was installed or reconfigured, and no local server was started.
+
+LIMITATION, therefore: the live Replay.html page -- its labels on screen, the Prev/Next/
+slider stepping in the browser, and the WebGL final-board rendering (board3DRenderer.js)
+-- was NOT exercised for the H5 exports, as it was not for H4's. What WAS exercised is the
+viewer's own JavaScript load / step / place / win path under Node for the 16 selected
+files (04_viewer_check_run.txt: 16/16 pass), which covers every terminal category
+(red win, black win, cap) but not rendering.
+
+To run it later: serve the repository root on localhost (Replay.html loads ES modules,
+which Chrome refuses over file://), open /Replay.html, and load each file listed in
+03_viewer_selection.json through the page's file input.

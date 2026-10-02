@@ -1,0 +1,7 @@
+segment 0: 148 files, source sha256 e9c54d5f430c..., 0 failing
+segment 1: 148 files, source sha256 7e1ca0b9f8a8..., 0 failing
+segment 2: 148 files, source sha256 d13a3bd8ec70..., 0 failing
+segment 3: 148 files, source sha256 4ff643415e99..., 0 failing
+files verified: 592; failures: 0
+checks per file: id_and_task, moves, n_moves, digest (file == result == recomputed), identities_by_colour, seed, pair_and_arm, outcome, terminal_reason, starting_player, source_sha256, h5_labels, only_the_labels_differ_from_H4s_exporter
+viewer set: 16 first/last-pair files cover ['black win', 'cap', 'red win']; added for missing categories: none
