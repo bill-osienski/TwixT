@@ -161,3 +161,54 @@ change any model, card, bound file or result. A weakness that looks actionable b
 the hypothesis of a **new, separately carded** experiment.
 
 **Next separately authorized action:** review of this card; then the analysis.
+
+---
+
+## 7. Clarifications — 2026-10-01, committed BEFORE any diagnostic runs (user-decided)
+
+**C1 — Terminal precedence and the three labels (replaces §4 Step 3's table).** At a
+pre-move position P, mover X, opponent Y: **W** = X's immediate wins; **T** = Y's
+immediate wins *were Y to move* — **board threats**, hypothetical while X is to move.
+**An immediate winning move counts as a saving move**, and no opponent reply after a win
+is ever examined. Labels are exclusive per ply, in this precedence:
+
+| label | condition |
+|---|---|
+| **MISSED_WIN** | W ≠ ∅ and the played move ∉ W. Witness: every move of W (and T, if non-empty) |
+| **MISSED_DEFENCE** | W = ∅, T ≠ ∅, the played move leaves Y ≥ 1 immediate win, and **some legal move leaves Y none**. Witness: every such saving move, and Y's wins the played move left |
+| **UNDEFENDABLE** | W = ∅, T ≠ ∅, and **neither an immediate win nor any move removing every immediate Y win exists**. Not an error |
+| *(DEFENDED, context only)* | W = ∅, T ≠ ∅, and the played move leaves Y no immediate win |
+
+**Board threats vs replies.** Every hit records T (board threats before the move), the
+Y wins the played move **left** (Y's actual replies), whether that reply was
+**available** — false only when the game **capped** at this ply, so Y never moved — and
+whether Y **won on the next ply**. A miss whose reply was unavailable because of the cap
+is reported apart from one whose reply was available.
+
+**Exact reduction, disclosed.** An X peg can only remove Y connectivity, so Y's immediate
+wins after any X move are a **subset of T**. The defence check therefore tests only the
+moves of T after each candidate. This is (a) verified against the full scan in the
+synthetic tests, and (b) **asserted on every played move**: the Y wins left by the move
+(the next ply's full W scan, or a full scan at a capped final ply) must be ⊆ T — a
+violation stops the run. W and T themselves are always full scans (D0's
+`one_ply_threats`).
+
+**C2 — Denominators.** Each label's rate = hits / **inspected pre-move positions**,
+separately by **engine** (incumbent, T1j) and **arm**; **occurrence-weighted** (every
+game's positions) and **distinct** (each distinct trajectory's positions once);
+numerator and denominator always shown. Every pre-move position of every distinct
+trajectory is inspected — no sampling.
+
+**C3 — Timing sample and the frozen projection.** Distinct trajectories are keyed by
+(arm, moves); **trajectory digest** = sha256 of the canonical JSON
+`{"arm": …, "moves": [[r, c], …]}`. Sorted by (length, digest): the sample is the first
+(**shortest**), the element at index (n − 1) // 2 (**median-length**) and the last
+(**longest**). Projection, frozen before timing:
+
+```text
+projected_s = (t_short + t_median + t_long) / (n_short + n_median + n_long) × N
+N = total pre-move positions over all distinct trajectories
+```
+
+If projected_s > 7,200 the full run does not start; during the full run, it stops at
+7,200 s elapsed and reports what completed. No silent sampling, no pruning.
