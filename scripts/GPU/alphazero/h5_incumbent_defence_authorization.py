@@ -4,4 +4,4 @@
 EXPLORATORY. Opened for ONE run under its own authorization and restored on every exit.
 This file may hold ONLY this declaration.
 """
-H5_INCUMBENT_DEFENCE_AUTHORIZED = True
+H5_INCUMBENT_DEFENCE_AUTHORIZED = False
