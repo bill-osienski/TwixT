@@ -230,3 +230,56 @@ or modified record) refused.
 **A1.5 — Gate.** `h5_cap_completion_authorization.H5_CAP_COMPLETION_AUTHORIZED` is created
 **False** — the 21st gate, derived by the inventory. The implementation approval authorizes
 no JVM, compilation, model load, query, Stage-1 or Stage-2 execution.
+
+---
+
+## 7. Amendment A2 — 2026-10-02, the Stage-1 recording contract, committed BEFORE the repair (user-decided)
+
+Review found two Stage-1 blockers in `08baeb09`: failure transcripts were discarded (an
+exception became `out: ""`), and the one-shot directory was claimed only **after**
+compiling, so a compile failure left no record and a second attempt could look like the
+first. The frozen set (§1, §6 A1), the 18 items and every expectation are unchanged.
+
+**A2.1 — Claim before compiling.** Stage 1 refuses, writing nothing, only on **pure**
+checks: the gate, the evidence directory, the committed frozen set re-derived equal, the
+class directory outside the repository and unoccupied, and our own engine meeting every
+frozen expectation. It then **claims** `01_stage1/` (create-only; occupied refuses) **before
+compiling**. Everything after the claim — compile, binding, every replay — runs inside a
+recorded handler:
+
+* an append-only `log.jsonl`, flushed and fsynced after each completed step (the compile's
+  content, then each item's observation), so completed observations survive a kill;
+* `record.json` (create-only) on **every** exit: `status` COMPLETE, STOP (an exception) or
+  INTERRUPTED (KeyboardInterrupt / SystemExit — re-raised after recording); the
+  `failing_stage` (`compile`, `binding`, `replay:<item id>`); the exception type and
+  message; the binding if it was reached (else `null`, stated); every completed item.
+
+A claimed directory therefore always names its attempt: a compile failure leaves a STOP
+record, and any second attempt finds the directory occupied.
+
+**A2.2 — Every observation keeps what the failure carried.** Per item: stdout (the
+transcript), stderr, the return code and the exception type; any field that is not
+available is recorded **explicitly, with why**:
+
+| case | stdout | stderr | return code |
+|---|---|---|---|
+| normal return | the helper's stdout | unavailable — `t1j_adapter.replay` does not return it | the exit status |
+| `HelperOutputError` (malformed output) | the stdout the exception carries | unavailable | unavailable — raised before the exit status was returned |
+| `TimeoutExpired` | the partial stdout it carries, if any | the partial stderr it carries, if any | unavailable — killed at the timeout |
+| any other exception | unavailable | unavailable | unavailable |
+
+A compile failure's carried output, if any, is recorded the same way. Capturing stderr on
+a normal return would need a change to `t1j_adapter.replay` — a bound file — and is **not**
+made. The Stage-2 permission (§6 A1.2) additionally requires `status: COMPLETE`, and every
+stored stream file (stdout and stderr) must be committed and hash to its record.
+
+**A2.3 — Synthetic controls:** malformed replay output; a timeout with partial output; a
+compile failure (directory claimed, STOP record naming `compile`, a second attempt
+refused); an interruption after a completed item (INTERRUPTED record keeping that item,
+the log intact, the interrupt re-raised); a non-COMPLETE record refused by the permission.
+
+**A2.4 — Stage 2: OPEN, not implemented by this amendment.** Stage 2 must not run until its
+own contract matches A2.1–A2.2: claim before compiling or loading the model; **every**
+query's full stdout (and stderr where available) stored and hashed, not only structured
+observations; and **every** exit, including an unexpected exception, written as a record
+naming the failing step. That implementation needs its own authorization.
