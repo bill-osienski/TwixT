@@ -44,6 +44,8 @@ K_T1J, N_INCUMBENT, STAGE2_WALL_S = 3, 2, 3600.0
 #: so a cooperative STOP can still be recorded.
 RECORD_MARGIN_S = 60.0
 CLAIM_FILE, WATCHDOG_FILE, CLAIM_ENV = "claim.json", "watchdog.json", "H5_CAP_STAGE2_CLAIM"
+#: §10 A5.1: the child's own stdout and stderr, captured by the parent as FILES
+CHILD_STREAMS = {"stdout": "child.stdout.txt", "stderr": "child.stderr.txt"}
 MODULE = "scripts.GPU.alphazero.h5_cap_completion"
 SEED = -1                       # the qualifications' synthetic seed; no research seed
 OUTCOMES = ("AGREE", "RECONSTRUCTION_DISAGREEMENT", "TERMINAL_DISAGREEMENT", "UNAVAILABLE")
@@ -694,7 +696,7 @@ def _stage2(frozen: Mapping[str, Any], permission: Mapping[str, Any],
     if permission.get("status") != "COMPLETE" or not permission.get("all_agree"):
         raise CapRefused("Stage 2 needs a COMPLETE, all-AGREE Stage-1 record")
     d = pathlib.Path(out_dir) / STAGE2_DIR
-    if not d.is_dir() or sorted(os.listdir(d)) != [CLAIM_FILE]:
+    if not _unconsumed(d):
         raise CapRefused(f"{STAGE2_DIR} does not hold exactly an unconsumed claim")
     deadline = D1.Deadline(limit_s=wall_s, clock=clock).start()
     log, step, rows, partial, compiled, identity = None, "claim", [], None, None, None
@@ -810,10 +812,19 @@ def _claim(d: pathlib.Path) -> Tuple[Dict[str, Any], str]:
     return claim, nonce
 
 
+def _unconsumed(d: pathlib.Path) -> bool:
+    """§10 A5.3: `claim.json` and AT MOST the parent's two child-stream files. Any other
+    entry -- the journal, `streams/`, a record, a stranger -- means consumed or foreign."""
+    if not d.is_dir():
+        return False
+    names = set(os.listdir(d))
+    return CLAIM_FILE in names and names <= {CLAIM_FILE, *CHILD_STREAMS.values()}
+
+
 def _accept_claim(d: pathlib.Path) -> Dict[str, Any]:
-    """The child takes the claim only if `02_stage2/` holds EXACTLY `claim.json` and the
-    nonce it was handed matches. The journal is created next, so a claim is single-use."""
-    if not d.is_dir() or sorted(os.listdir(d)) != [CLAIM_FILE]:
+    """The child takes the claim only if it is unconsumed (§10 A5.3) and the nonce it was
+    handed matches. The journal is created next, so a claim is single-use."""
+    if not _unconsumed(d):
         raise CapRefused(f"{STAGE2_DIR} does not hold exactly an unconsumed claim")
     claim = json.loads((d / CLAIM_FILE).read_text(encoding="utf-8"))
     nonce = os.environ.get(CLAIM_ENV) or ""
@@ -823,9 +834,11 @@ def _accept_claim(d: pathlib.Path) -> Dict[str, Any]:
     return claim
 
 
-def _watch(argv: Sequence[str], *, limit_s: float, env: Mapping[str, str],
-           cwd: str) -> Dict[str, Any]:
-    """Run `argv` in its OWN session and wait at most `limit_s`, measured HERE. At the
+def _watch(argv: Sequence[str], *, limit_s: float, env: Mapping[str, str], cwd: str,
+           stdout_path: pathlib.Path, stderr_path: pathlib.Path) -> Dict[str, Any]:
+    """Run `argv` in its OWN session, its stdout and stderr redirected to create-only FILES
+    (§10 A5.1 -- never pipes, so no buffer can block either side), and wait at most
+    `limit_s`, measured HERE. At the
     limit -- or if this parent is interrupted -- SIGKILL the child's whole process group:
     the child and every subprocess it started (the JVMs). After a normal exit, any member
     of the group still alive is killed too, and that is recorded. Detection needs nothing
@@ -838,7 +851,9 @@ def _watch(argv: Sequence[str], *, limit_s: float, env: Mapping[str, str],
                            "cause": None, "signal": None, "rc": None,
                            "survivors_killed": False}
     try:
-        p = subprocess.Popen(list(argv), start_new_session=True, env=dict(env), cwd=cwd)
+        with open(stdout_path, "xb") as so, open(stderr_path, "xb") as se:
+            p = subprocess.Popen(list(argv), start_new_session=True, env=dict(env), cwd=cwd,
+                                 stdout=so, stderr=se)
     except OSError as e:                         # never started: nothing to watch or kill
         return {**out, "cause": f"the child could not be started ({type(e).__name__}: {e})",
                 "elapsed_s": time.monotonic() - t0}
@@ -872,6 +887,14 @@ def _journal(d: pathlib.Path) -> Optional[Dict[str, Any]]:
             "sha256": hashlib.sha256(raw).hexdigest()}
 
 
+def _signal_name(n: int) -> str:
+    import signal
+    try:
+        return signal.Signals(n).name
+    except ValueError:
+        return str(n)
+
+
 def _settle(d: pathlib.Path, watch: Mapping[str, Any]) -> Dict[str, Any]:
     """The parent's own record, `watchdog.json`, on EVERY exit. The journal and any
     record are left exactly as the child wrote them; a killed run is never COMPLETE."""
@@ -885,10 +908,18 @@ def _settle(d: pathlib.Path, watch: Mapping[str, Any]) -> Dict[str, Any]:
               "EXITED_WITHOUT_RECORD" if rec is None else
               "EXITED_ABNORMALLY" if watch["rc"] != 0 and rec.get("status") != "INTERRUPTED"
               else rec.get("status"))
-    journal = _journal(d)
+    journal, rc = _journal(d), watch["rc"]
+    streams = {}
+    for s, name in sorted(CHILD_STREAMS.items()):  # read after the group is gone (§10 A5.2)
+        raw = (d / name).read_bytes() if (d / name).exists() else None
+        streams[s] = None if raw is None else {
+            "file": name, "bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()}
     summary = {"label": LABEL, "card": CARD, "status": status, "cause": watch["cause"],
                "limit_s": watch["limit_s"], "elapsed_s": watch["elapsed_s"],
-               "child_pid": watch["child_pid"], "child_rc": watch["rc"],
+               "child_pid": watch["child_pid"], "child_rc": rc,
+               "child_exit": "never started" if watch["child_pid"] is None else
+               f"killed by signal {_signal_name(-rc)}" if rc < 0 else f"exit status {rc}",
+               "child_streams": streams,
                "signal": watch["signal"], "survivors_killed": watch["survivors_killed"],
                "journal": journal, "journal_note": None if journal is not None else
                "no journal: the child stopped before opening it",
@@ -1088,7 +1119,11 @@ def run_stage2(out_dir: str, classes: str) -> Dict[str, Any]:
     claim, nonce = _claim(d)
     watch = _watch(_child_argv(out, classes),
                    limit_s=STAGE2_WALL_S - (time.monotonic() - claim["claimed_monotonic"]),
-                   env={**os.environ, CLAIM_ENV: nonce}, cwd=str(R4.REPO_ROOT))
+                   #: unbuffered, so what the child wrote before a kill is on disk (§10 A5.1)
+                   env={**os.environ, CLAIM_ENV: nonce, "PYTHONUNBUFFERED": "1"},
+                   cwd=str(R4.REPO_ROOT),
+                   stdout_path=d / CHILD_STREAMS["stdout"],
+                   stderr_path=d / CHILD_STREAMS["stderr"])
     summary = _settle(d, watch)
     if "parent_exception" in watch:
         raise watch["parent_exception"]

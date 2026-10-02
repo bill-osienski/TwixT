@@ -1,4 +1,4 @@
-"""H5 cap-completion diagnostic (EXPLORATORY) -- card §1-§9 (§6 A1, §7 A2, §8 A3, §9 A4).
+"""H5 cap-completion diagnostic (EXPLORATORY) -- card §1-§10 (§6 A1 ... §10 A5).
 
 SYNTHETIC FIXTURES for everything on the T1j and incumbent side: no JVM, no compile, no
 model, no query. T1j's replay is faked FROM OUR OWN ENGINE (a perfectly agreeing T1j),
@@ -8,6 +8,7 @@ One test re-derives the REAL frozen set from the committed H5 records, read-only
 checks it against the card's pins. Messages fixed.
 """
 import collections
+import contextlib
 import copy
 import hashlib
 import json
@@ -836,11 +837,13 @@ def public_stage2(open_gate, monkeypatch, *, commit_after=True):
 def inproc(monkeypatch):
     """The child run IN THIS PROCESS through its real CLI, with the nonce the parent hands
     it -- so the fakes above reach it. The argv must be the real child invocation."""
-    def watch(argv, *, limit_s, env, cwd):
+    def watch(argv, *, limit_s, env, cwd, stdout_path, stderr_path):
         assert list(argv[1:4]) == ["-m", C.MODULE, "stage2-claimed"], argv
         monkeypatch.setenv(C.CLAIM_ENV, env[C.CLAIM_ENV])
         t0 = time.monotonic()
-        rc = C.main(list(argv[3:]))
+        with open(stdout_path, "x") as so, open(stderr_path, "x") as se, \
+                contextlib.redirect_stdout(so), contextlib.redirect_stderr(se):
+            rc = C.main(list(argv[3:]))
         return {"child_pid": os.getpid(), "limit_s": limit_s, "terminated": False,
                 "cause": None, "signal": None, "rc": rc, "elapsed_s": time.monotonic() - t0,
                 "survivors_killed": False}
@@ -867,6 +870,7 @@ def test_PUBLIC_ENTRY_runs_Stage_2_in_the_real_state(open_gate, monkeypatch, ser
         "the child's deadline is not the claim's, less the record margin"
     assert spy == {"compile": [True], "load": [True]}, "a compile or load ran unclaimed or twice"
     assert res["journal"]["lines"] == 2 + 10
+    assert json.loads(child_streams(d, res)["stdout"]) == {"status": "COMPLETE"}
 
 
 def test_PUBLIC_ENTRY_refuses_on_PERMISSION_before_any_claim_compile_or_load(open_gate,
@@ -909,6 +913,13 @@ def test_the_CHILD_takes_only_an_UNCONSUMED_claim_with_ITS_nonce(tmp_path, monke
         C._accept_claim(d)                       # another parent's nonce
     monkeypatch.setenv(C.CLAIM_ENV, nonce)
     assert C._accept_claim(d) == claim
+    for name in C.CHILD_STREAMS.values():        # the parent's capture of the child's streams
+        (d / name).write_text("")
+    assert C._accept_claim(d) == claim, "the parent's own stream files consumed the claim"
+    (d / "stranger.txt").write_text("")          # not this parent's
+    with pytest.raises(C.CapRefused, match="unconsumed claim"):
+        C._accept_claim(d)
+    (d / "stranger.txt").unlink()
     (d / "log.jsonl").write_text("")             # consumed by its child
     with pytest.raises(C.CapRefused, match="unconsumed claim"):
         C._accept_claim(d)
@@ -920,6 +931,7 @@ def test_the_CHILD_takes_only_an_UNCONSUMED_claim_with_ITS_nonce(tmp_path, monke
 MASKED_CHILD = r'''
 import os, signal, subprocess, sys, time
 signal.pthread_sigmask(signal.SIG_BLOCK, signal.valid_signals())
+print("masked child started", flush=True)
 g = subprocess.Popen(["/bin/sleep", "60"])
 open(sys.argv[1] + ".tmp", "w").write(f"{g.pid}\n")
 os.replace(sys.argv[1] + ".tmp", sys.argv[1])
@@ -947,7 +959,8 @@ def gone(pid, within=5.0):
 
 def watch(tmp_path, code, *args, limit_s):
     return C._watch([sys.executable, "-c", code, *args], limit_s=limit_s, env=os.environ,
-                    cwd=str(tmp_path))
+                    cwd=str(tmp_path), stdout_path=tmp_path / "child.out",
+                    stderr_path=tmp_path / "child.err")
 
 
 def test_WATCHDOG_kills_a_child_with_EVERY_SIGNAL_BLOCKED_and_its_own_subprocess(tmp_path):
@@ -991,47 +1004,77 @@ def test_WATCHDOG_an_INTERRUPTED_parent_kills_the_group_and_hands_back_the_inter
     assert (w["terminated"], w["signal"], w["rc"]) == (True, "SIGKILL", -9)
     assert isinstance(w["parent_exception"], KeyboardInterrupt) and "interrupted" in w["cause"]
     assert gone(int(pidfile.read_text())), "the child's subprocess survived the interrupt"
+    assert (tmp_path / "child.out").read_text() == "masked child started\n", \
+        "the interrupted child's output was not kept"
 
 
-#: a dummy child that writes a journal line, then (by mode) a COMPLETE record, an exit,
-#: or a hang with every signal blocked
+#: a dummy child. `refuse`: an explanation on stderr and exit 4, before any journal.
+#: Otherwise a journal line and output on both streams, written WITHOUT flushing (the
+#: parent's PYTHONUNBUFFERED must get it to disk), then by mode a COMPLETE record and/or an
+#: exit, or a hang with every signal blocked.
 DUMMY_CHILD = r'''
 import json, os, signal, sys, time
 d, mode = sys.argv[1], sys.argv[2]
+if mode == "refuse":
+    print("REFUSED: the Stage-1 record is not durable", file=sys.stderr)
+    sys.exit(4)
 with open(os.path.join(d, "log.jsonl"), "x") as fh:
     fh.write(json.dumps({"step": "compile", "observation": {}}) + "\n")
-if mode == "complete":
+sys.stdout.write("OUT before\n")
+sys.stderr.write("ERR before\n")
+if mode in ("complete", "succeed"):
     with open(os.path.join(d, "record.json"), "x") as fh:
         json.dump({"status": "COMPLETE"}, fh)
-if mode == "exit":
+if mode in ("exit", "succeed"):
     sys.exit(0)
 signal.pthread_sigmask(signal.SIG_BLOCK, signal.valid_signals())
 time.sleep(60)
 '''
 
 
-@pytest.mark.parametrize("mode,status,signal_rc", [
-    ("hang", "TERMINATED", ("SIGKILL", -9)),
-    ("complete", "TERMINATED", ("SIGKILL", -9)),
-    ("exit", "EXITED_WITHOUT_RECORD", (None, 0)),
-])
-def test_PUBLIC_ENTRY_the_PARENT_settles_a_dummy_child_and_never_reports_COMPLETE(
-        open_gate, monkeypatch, mode, status, signal_rc):
+def child_streams(d, res):
+    """Each recorded child stream: present, its size and hash matching the file. Returns
+    the contents."""
+    got = {}
+    for s, name in C.CHILD_STREAMS.items():
+        raw = (d / name).read_bytes()
+        assert res["child_streams"][s] == {"file": name, "bytes": len(raw),
+                                           "sha256": hashlib.sha256(raw).hexdigest()}, \
+            f"the recorded {s} does not describe its file"
+        got[s] = raw.decode()
+    return got
+
+
+def run_dummy(open_gate, monkeypatch, mode, wall_s=3.0):
     out, spy = public_stage2(open_gate, monkeypatch)
     d = out / C.STAGE2_DIR
     monkeypatch.setattr(C, "_child_argv",
                         lambda o, cls: [sys.executable, "-c", DUMMY_CHILD, str(d), mode])
-    monkeypatch.setattr(C, "STAGE2_WALL_S", 3.0)
+    monkeypatch.setattr(C, "STAGE2_WALL_S", wall_s)
     t0 = time.monotonic()
     res = C.run_stage2(str(out), str(open_gate / "cls"))
     assert time.monotonic() - t0 < 20, "the parent did not enforce its limit"
-    assert res["status"] == status and res == json.loads((d / C.WATCHDOG_FILE).read_text())
-    assert (res["signal"], res["child_rc"]) == signal_rc
+    assert res == json.loads((d / C.WATCHDOG_FILE).read_text()), \
+        "the parent returned something other than what it recorded"
+    return d, res
+
+
+@pytest.mark.parametrize("mode,status,exit_", [
+    ("hang", "TERMINATED", "killed by signal SIGKILL"),
+    ("complete", "TERMINATED", "killed by signal SIGKILL"),
+    ("exit", "EXITED_WITHOUT_RECORD", "exit status 0"),
+])
+def test_PUBLIC_ENTRY_the_PARENT_settles_a_dummy_child_and_never_reports_COMPLETE(
+        open_gate, monkeypatch, mode, status, exit_):
+    d, res = run_dummy(open_gate, monkeypatch, mode)
+    assert (res["status"], res["child_exit"]) == (status, exit_)
     journal = (d / "log.jsonl").read_bytes()
     assert journal == json.dumps({"step": "compile", "observation": {}}).encode() + b"\n", \
         "the journal was altered"
     assert res["journal"] == {"file": "log.jsonl", "lines": 1,
                               "sha256": hashlib.sha256(journal).hexdigest()}
+    assert child_streams(d, res) == {"stdout": "OUT before\n", "stderr": "ERR before\n"}, \
+        "the output the child wrote before it ended or was killed was lost"
     if mode == "complete":
         assert res["record_status"] == "COMPLETE" and \
             json.loads((d / "record.json").read_text()) == {"status": "COMPLETE"}, \
@@ -1040,14 +1083,31 @@ def test_PUBLIC_ENTRY_the_PARENT_settles_a_dummy_child_and_never_reports_COMPLET
         assert not (d / "record.json").exists() and res["record_status"] is None
 
 
+def test_PUBLIC_ENTRY_a_child_REFUSAL_keeps_its_explanatory_stderr(open_gate, monkeypatch):
+    d, res = run_dummy(open_gate, monkeypatch, "refuse")
+    assert (res["status"], res["child_exit"], res["journal"]) == \
+        ("EXITED_WITHOUT_RECORD", "exit status 4", None)
+    assert child_streams(d, res) == {
+        "stdout": "", "stderr": "REFUSED: the Stage-1 record is not durable\n"}
+
+
+def test_PUBLIC_ENTRY_a_SUCCESSFUL_child_keeps_its_output(open_gate, monkeypatch):
+    d, res = run_dummy(open_gate, monkeypatch, "succeed", wall_s=30.0)
+    assert (res["status"], res["child_exit"], res["record_status"]) == \
+        ("COMPLETE", "exit status 0", "COMPLETE")
+    assert child_streams(d, res) == {"stdout": "OUT before\n", "stderr": "ERR before\n"}
+
+
 def test_PUBLIC_ENTRY_a_child_that_CANNOT_START_still_gets_the_parents_record(open_gate,
                                                                               monkeypatch):
     out, spy = public_stage2(open_gate, monkeypatch)
     monkeypatch.setattr(C, "_child_argv", lambda o, cls: ["/nonexistent/python"])
     res = C.run_stage2(str(out), str(open_gate / "cls"))
-    assert (res["status"], res["child_pid"], res["child_rc"]) == \
-        ("EXITED_WITHOUT_RECORD", None, None)
+    assert (res["status"], res["child_pid"], res["child_rc"], res["child_exit"]) == \
+        ("EXITED_WITHOUT_RECORD", None, None, "never started")
     assert "could not be started" in res["cause"]
+    assert child_streams(out / C.STAGE2_DIR, res) == {"stdout": "", "stderr": ""}, \
+        "a start-up failure did not leave both (empty) stream files"
     assert res == json.loads((out / C.STAGE2_DIR / C.WATCHDOG_FILE).read_text())
 
 
@@ -1084,9 +1144,12 @@ def test_PUBLIC_ENTRY_the_REAL_child_invocation_reads_the_CLOSED_on_disk_gate(op
     out, spy = public_stage2(open_gate, monkeypatch)
     res = C.run_stage2(str(out), str(open_gate / "cls"))
     d = out / C.STAGE2_DIR
-    assert (res["status"], res["child_rc"], res["signal"]) == \
-        ("EXITED_WITHOUT_RECORD", C.EXIT_UNAUTHORIZED, None)
-    assert sorted(p.name for p in d.iterdir()) == [C.CLAIM_FILE, C.WATCHDOG_FILE]
+    assert (res["status"], res["child_rc"], res["signal"], res["child_exit"]) == \
+        ("EXITED_WITHOUT_RECORD", C.EXIT_UNAUTHORIZED, None, "exit status 5")
+    assert sorted(p.name for p in d.iterdir()) == sorted(
+        [C.CLAIM_FILE, C.WATCHDOG_FILE, *C.CHILD_STREAMS.values()])
+    assert "UNAUTHORIZED" in child_streams(d, res)["stderr"], \
+        "the child's refusal left no explanation"
     assert spy == {"compile": [], "load": []}
 
 
