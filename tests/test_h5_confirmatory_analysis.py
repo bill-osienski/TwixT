@@ -182,6 +182,16 @@ def gate_open(monkeypatch):
     monkeypatch.setattr(AUTH, "H5_STUDY_AGGREGATION_AUTHORIZED", True)
 
 
+@pytest.fixture
+def fresh_destination(monkeypatch, tmp_path):
+    """TEST-LOCAL. Since step 13 the committed estimate occupies the real `C.OUT`, so
+    an in-process test that must reach a check AFTER the destination's gets a fresh
+    temporary one. Absolute, so the public entry's join with REPO_ROOT yields it."""
+    out = tmp_path / "fresh-destination" / "estimate.json"
+    monkeypatch.setattr(C, "OUT", str(out))
+    return out
+
+
 # ─────────────────────────── 1. THE GATE comes first (§6.1) ───────────────────────────
 
 class Spy:
@@ -207,7 +217,8 @@ def test_the_gate_is_false_as_published():
     assert AUTH.H5_STUDY_AGGREGATION_AUTHORIZED is False
 
 
-def test_a_CLOSED_gate_opens_stats_hashes_and_runs_NOTHING(study, monkeypatch):
+def test_a_CLOSED_gate_opens_stats_hashes_and_runs_NOTHING(study, monkeypatch,
+                                                         fresh_destination):
     spy = Spy(monkeypatch, study["repo"])
     with pytest.raises(C.H5AggregationUnauthorized):
         C.run_confirmatory(study_manifest=str(study["study_manifest"]),
@@ -231,13 +242,21 @@ def test_the_input_spy_is_NOT_VACUOUS(study, monkeypatch, gate_open):
 
 
 def test_the_CLI_with_the_gate_closed_exits_5_before_touching_ANY_path(tmp_path):
+    """A fresh subprocess with the PRODUCTION gate closed. Since step 13 the real
+    destination holds the committed estimate: it must be left exactly as it was."""
+    real = ROOT / C.OUT
+
+    def state():
+        return ((real.read_bytes(), real.stat().st_mtime_ns) if real.exists() else None,
+                sorted(os.listdir(real.parent)) if real.parent.exists() else None)
+    before = state()
     segs = [a for k in range(4) for a in ("--segment", str(tmp_path / f"s{k}"))]
     r = subprocess.run([sys.executable, "-m", "scripts.GPU.alphazero.h5_confirmatory_analysis",
                         "--study-manifest", str(tmp_path / "missing"), *segs],
                        cwd=ROOT, capture_output=True, text=True)
     assert r.returncode == C.EXIT_UNAUTHORIZED == 5, r.stderr
     assert os.listdir(tmp_path) == []
-    assert not (ROOT / C.OUT).parent.exists()
+    assert state() == before, "the CLI changed the real destination"
 
 
 def test_the_gate_is_the_FIRST_statement_of_the_only_path_and_has_no_override():
@@ -524,10 +543,12 @@ def test_the_PUBLIC_entry_refuses_FIXTURE_CONTENT_even_inside_the_repository(
                            segments=[str(p) for p in study["segments"]])
 
 
-def test_the_PUBLIC_entry_refuses_input_outside_THIS_repository(study, gate_open):
+def test_the_PUBLIC_entry_refuses_input_outside_THIS_repository(study, gate_open,
+                                                                fresh_destination):
     with pytest.raises(F.H4AnalysisRefused, match="does not resolve into this repository"):
         C.run_confirmatory(study_manifest=str(study["study_manifest"]),
                            segments=[str(p) for p in study["segments"]])
+    assert not fresh_destination.parent.exists(), "a refusal writes nothing"
 
 
 def test_NO_public_entry_can_reach_the_fixture_relaxation():
