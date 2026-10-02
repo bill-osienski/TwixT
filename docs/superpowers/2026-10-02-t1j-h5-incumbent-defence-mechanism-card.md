@@ -229,3 +229,121 @@ decision:
   2. one run of §6's 10 decisions.
 * **Not authorized by this card:** instrumentation code, model load, query, agent or
   configuration change, gate opening, push.
+
+---
+
+## 9. Amendment A1 — 2026-10-02, corrections before implementation (user-decided)
+
+Review of `c019cae2` kept the design and the central fresh-agent limitation. It corrected
+three technical points and clarified two points of interpretation. The sections above stand
+except where A1 amends them.
+
+**A1.1 — Capture-off access (amends §5).** A capture-off agent keeps neither the root nor the
+counts, so the off run cannot be compared on them as §5 assumed. Both runs therefore install
+a **study-local pass-through** on the agent's own MCTS instance, `agent.mcts.search_with_root`.
+It:
+
+* calls the original bound method with the **same arguments**;
+* returns **the** tuple it returned (the same object);
+* lets any exception propagate **unchanged** (it catches nothing);
+* keeps a reference to the returned `(counts, root_value, root)`.
+
+No frozen file and no class is edited. Synthetic tests check:
+
+* object identity: the retained `counts` **is** the object `eval_readout.select` received;
+* arguments forwarded verbatim;
+* the same exception object re-raised;
+* moves, both stream states and tree fingerprints (A1.3) identical with and without the
+  pass-through, at the frozen 400-simulation configuration.
+
+The capture-on run reads `last_capture`. The capture-off run reads the pass-through. In both,
+the pass-through's retained objects must be **the** objects capture reports when capture is
+on.
+
+**A1.2 — Value perspective (amends §2.2 and §2.3).** At R2, *W* under *m* is a terminal node
+where T1j has just won, so `_terminal_value` returns −1 to the player to move there (the
+incumbent). The backup alternates sign: each such visit adds **+1 to the value sum of the
+child node *m*** (T1j's perspective, T1j being to move at *m*) and **−1 at the root** (the
+incumbent's perspective). §2.2's "a terminal −1 backed into *m*" is **wrong** and is replaced
+by this.
+
+Every reported value names its perspective:
+
+* `q_node` — the node's stored mean, from the perspective of the player to move **at that
+  node**;
+* `q_root_mover` — the same quantity from the root mover's (the incumbent's) perspective. It
+  is `−q_node` for a root child and `+q_node` for a grandchild, by depth parity.
+
+A mean is reported only for a visited node; otherwise it is `null`, with a note.
+
+**A1.3 — Reader preservation (amends §5.6).** Visits and stream states alone cannot catch a
+reader that changes a prior or a value. A **fingerprint** of the final tree is therefore taken
+before and after reading, and must be equal. It is a sha256 over a canonical walk of every
+node, children in move-id order, covering:
+
+* the move id, `visit_count` and `value_sum` (float hex);
+* `nn_value`;
+* every prior and every raw prior (float hex);
+* whether `priors` is `priors_raw`;
+* the child keys;
+
+plus the `counts` table and the root value.
+
+The fingerprint must also be equal **between** the capture-off and capture-on runs. The
+synthetic negative controls a qualification run must catch are readers that:
+
+* change a prior;
+* change a value sum;
+* change `nn_value`;
+* change a visit count;
+* draw from the search stream;
+* draw from the readout stream.
+
+**A1.4 — Interpretation (amends §1 and §6).**
+
+* The fresh-agent and in-game decisions ran on different stream histories, so their trees
+  **may** differ. How they actually differ is **unobserved**: nothing in this study observes an
+  in-game tree.
+* CD1 is a **within-game, same-threat contrast** with E1, at a different position four plies
+  later. It is **not** a within-position control.
+
+**A1.5 — Classifier controls (amends §5).** The reader's classification is itself tested on
+synthetic trees whose answers are known:
+
+* A (absent from the candidates);
+* B (a candidate never visited), and B0 (prior exactly 0.0);
+* C (visited, not returned);
+* D (returned);
+* R0, R1 and R2 under the returned move;
+* a visit tie, recording the tie set and its (row, col) resolution.
+
+Each of these, and the perspective labels of A1.2, has a deliberately wrong classifier that the
+tests must catch.
+
+**A1.6 — The pinned saving sets.** The episode sets come from the frozen set: E1 (16,9) and
+(17,9); E2 (12,5); E3 (16,6) and (17,7). For the controls, the saving set is derived by the
+same rule the frozen set uses (the mover's immediate wins, plus every move that leaves no
+immediate threat) and **pinned**: CD1 (16,9) and (17,9); CD2 (12,4), (12,5) and (13,5). A
+re-derivation that differs refuses.
+
+**A1.7 — Implementation scope.**
+
+* **Positions:** the five frozen positions only.
+* **Observations:** final-tree only; no per-simulation observer.
+* **Qualification:** synthetic, at the frozen 400-simulation configuration, with a stub
+  evaluator.
+* **Gate:** the 22nd gate, `h5_incumbent_defence_authorization.H5_INCUMBENT_DEFENCE_AUTHORIZED`,
+  created **False**.
+* **The eventual run** follows the established contract (cap-completion card §7–§10):
+  * pure refusals first;
+  * a parent claim with a single-use nonce;
+  * the child in its own session under a hard parent watchdog;
+  * the child's streams captured to files;
+  * an fsynced journal;
+  * a record on every exit (COMPLETE / STOP / INTERRUPTED / INCOMPLETE);
+  * `watchdog.json` on every exit.
+
+  Any failed preservation check is a STOP, naming the position and the check.
+* **Not authorized:** a real model load, any decision, a per-simulation observer, an extra
+  position, an agent or configuration change, gate opening, push. The ten-decision run needs
+  separate approval.
