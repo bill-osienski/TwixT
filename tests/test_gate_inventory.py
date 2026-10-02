@@ -16,6 +16,7 @@ drift.
 """
 import ast
 import pathlib
+import re
 
 import pytest
 
@@ -81,6 +82,10 @@ EXPECTED_GATES = {
     #: EXPLORATORY: the freeze, Stage 1 (both rules engines) and Stage 2 (the unchanged
     #: agents) each run only under their own authorization with this door opened.
     "h5_cap_completion_authorization.py": "H5_CAP_COMPLETION_AUTHORIZED",
+    #: 🔴 THE TWENTY-SECOND, ADDED 2026-10-02 (incumbent defence mechanism card §9 A1.7).
+    #: EXPLORATORY: one final-tree observation run of the unchanged incumbent at five
+    #: frozen positions, only under its own authorization with this door opened.
+    "h5_incumbent_defence_authorization.py": "H5_INCUMBENT_DEFENCE_AUTHORIZED",
     "l0_match_command.py": "L0_EXECUTION_AUTHORIZED",
     "lowply_qualification.py": "LOWPLY_QUALIFICATION_AUTHORIZED",
     "runtime_requalification.py": "RUNTIME_REQUAL_AUTHORIZED",
@@ -112,7 +117,7 @@ def test_THE_COUNT_IS_DERIVED_AND_ANY_REPORT_SAYING_OTHERWISE_IS_WRONG():
     #: single deliberate edit, to the dict above.
     assert INVENTORY.gate_count() == len(discover_gates()) == len(EXPECTED_GATES), (
         "the derived inventory and EXPECTED_GATES must agree")
-    assert len(EXPECTED_GATES) == 21, (
+    assert len(EXPECTED_GATES) == 22, (
         "the total moved: add or remove the entry in EXPECTED_GATES above "
         "deliberately, then update this number in the same edit")
 
@@ -153,7 +158,7 @@ def _stale_count_claims(text):
              "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12,
              "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16,
              "seventeen": 17, "eighteen": 18, "nineteen": 19, "twenty": 20,
-             "twenty-one": 21}
+             "twenty-one": 21, "twenty-two": 22}
     n = len(EXPECTED_GATES)
     bad = []
     for word, value in words.items():
@@ -163,7 +168,9 @@ def _stale_count_claims(text):
             for variant in (claim, claim.upper(),
                             claim.replace(word, word.upper()),
                             claim.replace(word, word.capitalize())):
-                if variant in text:
+                #: not preceded by a letter or hyphen: "two gates are" must not match
+                #: inside "twenty-two gates are" (first possible at 22 gates)
+                if re.search(r"(?<![A-Za-z-])" + re.escape(variant), text):
                     bad.append(f"'{variant}' but there are {n}")
     return bad
 
@@ -200,4 +207,5 @@ def test_THE_STALE_COUNT_GUARD_IS_NOT_VACUOUS():
     assert _stale_count_claims("all sixteen gates are False")  # was right, now stale
     assert _stale_count_claims("all seventeen gates are False")  # was right, now stale
     assert _stale_count_claims("all twenty gates are False")  # was right, now stale
-    assert not _stale_count_claims("all twenty-one gates are False")  # correct total
+    assert _stale_count_claims("all twenty-one gates are False")  # was right, now stale
+    assert not _stale_count_claims("all twenty-two gates are False")  # correct total
