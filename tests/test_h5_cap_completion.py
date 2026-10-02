@@ -53,7 +53,8 @@ CONTROLS = {"XT": {"game": "c-ct", "n": 24, "agent": "t1j", "role": "complete", 
                    "recorded": (12, 4), "digest": C.prefix_digest(ONE)},
             "XD": {"game": "c-cd", "n": 23, "agent": "incumbent", "role": "defend",
                    "threat": ((12, 4),), "recorded": (13, 4), "digest": C.prefix_digest(ONE[:23])}}
-BINDING = {"frozen_set_sha256": "f" * 64, "toolchain": {"jar_sha256": "j" * 64}}
+FSHA, TOOL = "f" * 64, {"jar_sha256": "j" * 64}
+BINDING = {"frozen_set_sha256": FSHA, "toolchain": TOOL}
 
 
 def frozen():
@@ -214,12 +215,20 @@ def test_the_STAGE1_item_set_is_exact_for_the_fixture():
                    "XD/block+threat12,4"], "the Stage-1 item set is not the frozen one"
 
 
+def stage1(tmp_path, replay=None, compile_fn=None):
+    return C._stage1(frozen(), FSHA, compile_fn or (lambda: (None, TOOL)),
+                     lambda paths: replay or faithful, tmp_path)
+
+
 def test_a_FAITHFUL_T1j_agrees_on_every_item(tmp_path):
     fz = frozen()
-    rec = C._stage1(fz, binding(fz), faithful, tmp_path)
-    assert rec["all_agree"] and len(rec["items"]) == 7, "a faithful T1j did not agree"
-    t = tmp_path / C.STAGE1_DIR / rec["items"][0]["transcript"]
-    assert hashlib.sha256(t.read_bytes()).hexdigest() == rec["items"][0]["transcript_sha256"]
+    rec = stage1(tmp_path)
+    assert (rec["status"], rec["all_agree"], len(rec["items"])) == ("COMPLETE", True, 7), \
+        "a faithful T1j did not agree"
+    assert rec["binding"] == binding(fz), "the binding was not built from the run"
+    out = rec["items"][0]["streams"]["stdout"]
+    t = tmp_path / C.STAGE1_DIR / out["file"]
+    assert hashlib.sha256(t.read_bytes()).hexdigest() == out["sha256"]
     assert rec["provenance"]["S1"] == {"members": ["s1-B", "s2-B"], "frequency": 2}
 
 
@@ -268,13 +277,105 @@ def test_PATHS_are_validated_per_graph_and_NOT_compared_so_two_valid_paths_agree
         "our independent check of T1j's reported board found no path"
 
 
+# ─────────────────────────────── the recording contract (§7 A2) ───────────────────────────────
+
+def read_stream(tmp_path, row, s):
+    stored = row["streams"][s]
+    return None if stored is None else (tmp_path / C.STAGE1_DIR / stored["file"]).read_text()
+
+
+def test_the_CLAIM_comes_BEFORE_the_compile(tmp_path):
+    seen = []
+
+    def compile_fn():
+        seen.append((tmp_path / C.STAGE1_DIR).is_dir())
+        return None, TOOL
+    stage1(tmp_path, compile_fn=compile_fn)
+    assert seen == [True], "the compile ran before Stage 1 was claimed"
+
+
+def test_a_NORMAL_return_records_its_rc_and_says_stderr_is_UNAVAILABLE(tmp_path):
+    row = stage1(tmp_path)["items"][0]
+    assert (row["rc"], row["rc_note"], row["exception_type"]) == (0, None, None)
+    assert row["streams"]["stderr"] is None and row["stderr_note"] == C.NO_STDERR, \
+        "a missing stderr was not recorded as explicitly unavailable"
+    assert read_stream(tmp_path, row, "stdout").startswith("SYNTHETIC")
+
+
+def test_MALFORMED_replay_output_keeps_the_stdout_the_exception_carries(tmp_path):
+    def replay(moves):
+        raise A.HelperOutputError("the helper's replay output could not be parsed", "GARBLED\n")
+    row = stage1(tmp_path, replay=replay)["items"][0]
+    assert (row["outcome"], row["exception_type"]) == ("UNAVAILABLE", "HelperOutputError")
+    assert read_stream(tmp_path, row, "stdout") == "GARBLED\n", "the carried stdout was lost"
+    assert row["rc"] is None and row["rc_note"].startswith("unavailable: raised before")
+    assert row["streams"]["stderr"] is None and row["stderr_note"] == C.NO_STDERR
+
+
+@pytest.mark.parametrize("out,err", [("PARTIAL OUT\n", "PARTIAL ERR\n"),
+                                     (b"PARTIAL OUT\n", b"PARTIAL ERR\n")])
+def test_a_TIMEOUT_keeps_its_partial_stdout_and_stderr(tmp_path, out, err):
+    def replay(moves):
+        raise subprocess.TimeoutExpired(["java"], 60, output=out, stderr=err)
+    row = stage1(tmp_path, replay=replay)["items"][0]
+    assert (row["outcome"], row["exception_type"]) == ("UNAVAILABLE", "TimeoutExpired")
+    assert (read_stream(tmp_path, row, "stdout"), read_stream(tmp_path, row, "stderr")) == \
+        ("PARTIAL OUT\n", "PARTIAL ERR\n"), "the partial output was lost"
+    assert row["rc"] is None and "killed at the 60 s timeout" in row["rc_note"]
+
+
+def test_ANY_OTHER_exception_records_every_field_as_explicitly_unavailable(tmp_path):
+    def replay(moves):
+        raise OSError("java: not found")
+    row = stage1(tmp_path, replay=replay)["items"][0]
+    assert (row["outcome"], row["exception_type"]) == ("UNAVAILABLE", "OSError")
+    assert row["streams"] == {"stdout": None, "stderr": None}
+    assert all(row[k].startswith("unavailable") for k in ("stdout_note", "stderr_note", "rc_note"))
+
+
+def test_a_COMPILE_FAILURE_leaves_a_claimed_directory_and_a_STOP_record(tmp_path):
+    def compile_fn():
+        e = RuntimeError("javac exited 1")
+        e.stdout, e.stderr, e.returncode = "javac says\n", "error: cannot find symbol\n", 1
+        raise e
+    rec = stage1(tmp_path, compile_fn=compile_fn)
+    assert (rec["status"], rec["failure"]["failing_stage"], rec["failure"]["exception_type"]) \
+        == ("STOP", "compile", "RuntimeError")
+    assert rec["items"] == [] and rec["binding"] is None and rec["binding_note"], \
+        "a STOP before the binding claimed to have one"
+    d = tmp_path / C.STAGE1_DIR
+    assert (d / rec["failure"]["streams"]["stderr"]["file"]).read_text() == \
+        "error: cannot find symbol\n" and rec["failure"]["rc"] == 1, "the compiler's output was lost"
+    with pytest.raises(C.CapRefused, match="occupied"):
+        stage1(tmp_path)
+
+
+def test_an_INTERRUPTION_after_a_completed_item_is_recorded_and_re_raised(tmp_path):
+    calls = []
+
+    def replay(moves):
+        calls.append(1)
+        if len(calls) == 2:
+            raise KeyboardInterrupt
+        return faithful(moves)
+    with pytest.raises(KeyboardInterrupt):
+        stage1(tmp_path, replay=replay)
+    d = tmp_path / C.STAGE1_DIR
+    rec = json.loads((d / "record.json").read_text())
+    assert (rec["status"], rec["failure"]["failing_stage"], len(rec["items"])) == \
+        ("INTERRUPTED", "replay:S1/t1j+recorded", 1), "the interruption was not recorded"
+    log = [json.loads(line)["step"] for line in (d / "log.jsonl").read_text().splitlines()]
+    assert log == ["compile", "binding", "item"], "the completed observation was not persisted"
+    assert not rec["all_agree"]
+
+
 # ─────────────────────────────── Stage-2 permission (§6 A1.2) ───────────────────────────────
 
 def committed_stage1(tmp_path, mutate=None, commit_after=True):
     """A Stage-1 record in its own temporary git repository, optionally edited."""
     repo = new_repo(tmp_path / "repo")
     fz = frozen()
-    C._stage1(fz, binding(fz), faithful, repo)
+    stage1(repo)
     d = repo / C.STAGE1_DIR
     if mutate:
         rec = json.loads((d / "record.json").read_text())
@@ -302,8 +403,11 @@ def test_PERMISSION_baseline_an_exact_committed_bound_record_is_accepted(tmp_pat
      "binding differs"),
     ("toolchain", lambda r, d: r["binding"]["toolchain"].update(jar_sha256="k" * 64),
      "binding differs"),
-    ("transcript hash", lambda r, d: r["items"][1].update(transcript_sha256="0" * 64),
+    ("transcript hash", lambda r, d: r["items"][1]["streams"]["stdout"].update(sha256="0" * 64),
      "does not hash to its record"),
+    ("not COMPLETE", lambda r, d: r.update(status="STOP"), "not COMPLETE"),
+    ("no stored stdout", lambda r, d: r["items"][0]["streams"].update(stdout=None),
+     "no stored stdout"),
 ])
 def test_PERMISSION_refuses_an_incomplete_or_rebound_record(tmp_path, case, mutate, match):
     fz, d = committed_stage1(tmp_path, mutate)
@@ -322,7 +426,7 @@ def test_PERMISSION_refuses_an_uncommitted_record_and_a_modified_transcript(tmp_
     with pytest.raises(C.CapRefused, match="the Stage-1 record is not durable"):
         C.stage2_permission(d, fz, binding(fz), _fixture=True)
     fz, d = committed_stage1(tmp_path / "b")
-    t = sorted((d / "transcripts").iterdir())[0]
+    t = sorted((d / "streams").iterdir())[0]
     t.write_text("edited after the commit\n")
     with pytest.raises(C.CapRefused, match="transcript not durable"):
         C.stage2_permission(d, fz, binding(fz), _fixture=True)

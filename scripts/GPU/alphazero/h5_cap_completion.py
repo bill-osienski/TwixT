@@ -388,40 +388,157 @@ def classify(item: Mapping[str, Any], states: Sequence[TwixtState], moves: Seque
     return {"outcome": "AGREE", "reason": None}
 
 
-def _stage1(frozen: Mapping[str, Any], binding: Mapping[str, Any],
-            t1j_replay: Callable[[List[Tuple[int, int]]], Mapping[str, Any]],
-            out_dir: pathlib.Path) -> Dict[str, Any]:
-    """Every item: OUR engine first (a failure there refuses before any T1j call), then
-    T1j's replay; each transcript create-only, its sha256 in the record."""
-    items = stage1_items(frozen)
+NO_STDERR = "unavailable: t1j_adapter.replay does not return stderr"
+
+
+class _Log:
+    """§7 A2.1: append-only `log.jsonl`, flushed and fsynced after each completed step,
+    so completed observations survive even a kill."""
+
+    def __init__(self, path: pathlib.Path):
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+        self._f = os.fdopen(fd, "w", encoding="utf-8")
+
+    def done(self, step: str, observation: Any) -> None:
+        self._f.write(json.dumps({"step": step, "observation": observation},
+                                 sort_keys=True) + "\n")
+        self._f.flush()
+        os.fsync(self._f.fileno())
+
+    def close(self) -> None:
+        self._f.close()
+
+
+def _text(v) -> Optional[str]:
+    if v is None:
+        return None
+    return v.decode("utf-8", "replace") if isinstance(v, (bytes, bytearray)) else str(v)
+
+
+def carried(exc: BaseException) -> Dict[str, Any]:
+    """§7 A2.2: what a failure CARRIES -- stdout, stderr, return code -- each present or
+    explicitly unavailable, with why. Never an empty string standing in for 'unknown'."""
+    import subprocess
+    if isinstance(exc, subprocess.TimeoutExpired):
+        out = _text(exc.stdout if exc.stdout is not None else exc.output)
+        err = _text(exc.stderr)
+        return {"stdout": out, "stdout_note": None if out is not None else
+                "unavailable: the timeout carried no stdout",
+                "stderr": err, "stderr_note": None if err is not None else
+                "unavailable: the timeout carried no stderr",
+                "rc": None, "rc_note": f"unavailable: killed at the {exc.timeout} s timeout"}
+    if isinstance(exc, A.HelperOutputError):
+        out = _text(getattr(exc, "stdout", None))
+        return {"stdout": out, "stdout_note": None if out is not None else
+                "unavailable: the exception carried no stdout",
+                "stderr": None, "stderr_note": NO_STDERR,
+                "rc": None, "rc_note": "unavailable: raised before the exit status was returned"}
+    out, err = _text(getattr(exc, "stdout", None)), _text(getattr(exc, "stderr", None))
+    rc = getattr(exc, "returncode", None)
+    return {"stdout": out, "stdout_note": None if out is not None else
+            f"unavailable: {type(exc).__name__} carried no stdout",
+            "stderr": err, "stderr_note": None if err is not None else
+            f"unavailable: {type(exc).__name__} carried no stderr",
+            "rc": rc, "rc_note": None if rc is not None else
+            f"unavailable: {type(exc).__name__} carried no return code"}
+
+
+def _store(d: pathlib.Path, stem: str, obs: Dict[str, Any]) -> Dict[str, Any]:
+    """Each present stream written create-only beside the record, its sha256 recorded;
+    an absent stream keeps its explicit note."""
+    streams = {}
+    os.makedirs(d / "streams", exist_ok=True)
+    for s in ("stdout", "stderr"):
+        if obs.get(s) is None:
+            streams[s] = None
+            continue
+        body = obs[s].encode()
+        name = f"streams/{stem}.{s}.txt"
+        with open(d / name, "xb") as fh:
+            fh.write(body)
+        streams[s] = {"file": name, "sha256": hashlib.sha256(body).hexdigest()}
+    return {"streams": streams, "stdout_note": obs.get("stdout_note"),
+            "stderr_note": obs.get("stderr_note"), "rc": obs.get("rc"),
+            "rc_note": obs.get("rc_note")}
+
+
+def _observe(it, states, moves, replay, d: pathlib.Path) -> Dict[str, Any]:
+    """One item: T1j's replay, kept whole whether it returned or raised."""
+    try:
+        res = dict(replay(list(moves)))
+        obs = {"stdout": res.get("out"), "stdout_note": None if res.get("out") is not None
+               else "unavailable: the replay returned no stdout",
+               "stderr": res.get("stderr"),
+               "stderr_note": None if res.get("stderr") is not None else NO_STDERR,
+               "rc": res.get("rc"), "rc_note": None if res.get("rc") is not None
+               else "unavailable: the replay returned no exit status"}
+        exc_type, verdict = None, classify(it, states, moves, res)
+    except Exception as e:                       # noqa: BLE001 -- recorded, never hidden
+        obs, exc_type = carried(e), type(e).__name__
+        verdict = {"outcome": "UNAVAILABLE", "reason": f"{exc_type}: {e}"}
+    return {"id": it["id"], "expect": it["expect"], "moves_applied": it["apply"],
+            "exception_type": exc_type, **verdict,
+            **_store(d, it["id"].replace("/", "__"), obs)}
+
+
+def _stage1(frozen: Mapping[str, Any], frozen_sha: str,
+            compile_fn: Callable[[], Tuple[Any, Dict[str, Any]]],
+            replay_factory: Callable[[Any], Callable], out_dir: pathlib.Path) -> Dict[str, Any]:
+    """§7 A2.1. PURE refusals first (our engine on every item); then the CLAIM, before
+    the compile; then everything inside a recorded handler -- a record on EVERY exit."""
     checked = []
-    for it in items:
+    for it in stage1_items(frozen):
         states, moves, problems = ours_check(it)
         if problems:
             raise CapRefused(f"{it['id']}: our own engine does not meet the frozen "
                              f"expectation: {problems}")
         checked.append((it, states, moves))
     d = pathlib.Path(out_dir) / STAGE1_DIR
-    os.makedirs(d / "transcripts")               # create-only
-    rows = []
-    for it, states, moves in checked:
-        try:
-            res = dict(t1j_replay(list(moves)))
-        except Exception as e:                   # noqa: BLE001 -- recorded, never hidden
-            res = {"plies": None, "rc": None, "out": "", "error": f"{type(e).__name__}: {e}"}
-        name = "transcripts/" + it["id"].replace("/", "__") + ".txt"
-        body = (res.get("out") or "").encode()
-        with open(d / name, "xb") as fh:
-            fh.write(body)
-        rows.append({"id": it["id"], "expect": it["expect"], "moves_applied": it["apply"],
-                     "rc": res.get("rc"), **classify(it, states, moves, res),
-                     "transcript": name, "transcript_sha256": hashlib.sha256(body).hexdigest()})
-    record = {"label": LABEL, "card": CARD, "binding": dict(binding), "items": rows,
-              "all_agree": all(r["outcome"] == "AGREE" for r in rows),
+    try:
+        os.mkdir(d)                              # THE CLAIM: create-only, before compiling
+    except FileExistsError:
+        raise CapRefused(f"{STAGE1_DIR} is occupied: Stage 1 is one-shot") from None
+    log, stage, rows, binding = None, "claim", [], None
+    status, failure, interrupt = "COMPLETE", None, None
+    try:
+        os.mkdir(d / "streams")
+        log = _Log(d / "log.jsonl")
+        stage = "compile"
+        paths, content = compile_fn()
+        log.done("compile", {"content": content})
+        stage = "binding"
+        binding = {"frozen_set_sha256": frozen_sha, "position_digests": position_digests(frozen),
+                   "toolchain": content}
+        log.done("binding", binding)
+        replay = replay_factory(paths)
+        for it, states, moves in checked:
+            stage = f"replay:{it['id']}"
+            row = _observe(it, states, moves, replay, d)
+            rows.append(row)
+            log.done("item", row)
+    except (KeyboardInterrupt, SystemExit) as e:
+        status, interrupt = "INTERRUPTED", e
+        failure = {"failing_stage": stage, "exception_type": type(e).__name__,
+                   "reason": str(e), **_store(d, "failure", carried(e))}
+    except Exception as e:                       # noqa: BLE001 -- a recorded STOP
+        status = "STOP"
+        failure = {"failing_stage": stage, "exception_type": type(e).__name__,
+                   "reason": str(e), **_store(d, "failure", carried(e))}
+    finally:
+        if log is not None:
+            log.close()
+    record = {"label": LABEL, "card": CARD, "status": status, "failure": failure,
+              "binding": binding, "binding_note": None if binding is not None else
+              "unavailable: the run stopped before the binding was computed",
+              "items": rows,
+              "all_agree": status == "COMPLETE" and bool(rows)
+              and all(r["outcome"] == "AGREE" for r in rows),
               "provenance": {e: {"members": ep["members"], "frequency": ep["frequency"]}
                              for e, ep in frozen["episodes"].items()}}
     with open(d / "record.json", "x", encoding="utf-8") as fh:
         json.dump(record, fh, indent=1, sort_keys=True)
+    if interrupt is not None:
+        raise interrupt
     return record
 
 
@@ -440,6 +557,9 @@ def stage2_permission(stage1_dir: pathlib.Path, frozen: Mapping[str, Any],
     except F.H4AnalysisRefused as e:
         raise CapRefused(f"the Stage-1 record is not durable: {e}") from None
     rec = json.loads(rec_path.read_text(encoding="utf-8"))
+    if rec.get("status") != "COMPLETE":
+        raise CapRefused(f"the Stage-1 record's status is {rec.get('status')!r}, not "
+                         f"COMPLETE (failure: {rec.get('failure')})")
     want = collections.Counter(i["id"] for i in stage1_items(frozen))
     got = collections.Counter(r.get("id") for r in rec.get("items", []))
     if got != want:
@@ -453,16 +573,22 @@ def stage2_permission(stage1_dir: pathlib.Path, frozen: Mapping[str, Any],
         diff = sorted(k for k in set(binding) | set(rec.get("binding") or {})
                       if (rec.get("binding") or {}).get(k) != binding.get(k))
         raise CapRefused(f"the Stage-1 binding differs in {diff}")
+    root = pathlib.Path(stage1_dir).resolve()
     for r in rec["items"]:
-        t = pathlib.Path(stage1_dir) / r["transcript"]
-        if not str(t.resolve()).startswith(str(pathlib.Path(stage1_dir).resolve())):
-            raise CapRefused(f"{r['id']}: the transcript lies outside the Stage-1 directory")
-        try:
-            F.check_durable([str(t)], _fixture=_fixture)
-        except F.H4AnalysisRefused as e:
-            raise CapRefused(f"{r['id']}: transcript not durable: {e}") from None
-        if hashlib.sha256(t.read_bytes()).hexdigest() != r["transcript_sha256"]:
-            raise CapRefused(f"{r['id']}: the transcript does not hash to its record")
+        if not (r.get("streams") or {}).get("stdout"):
+            raise CapRefused(f"{r['id']}: an AGREE item with no stored stdout")
+        for s, stored in sorted((r.get("streams") or {}).items()):
+            if stored is None:
+                continue
+            t = pathlib.Path(stage1_dir) / stored["file"]
+            if not str(t.resolve()).startswith(str(root)):
+                raise CapRefused(f"{r['id']}: its {s} lies outside the Stage-1 directory")
+            try:
+                F.check_durable([str(t)], _fixture=_fixture)
+            except F.H4AnalysisRefused as e:
+                raise CapRefused(f"{r['id']}: {s} transcript not durable: {e}") from None
+            if hashlib.sha256(t.read_bytes()).hexdigest() != stored["sha256"]:
+                raise CapRefused(f"{r['id']}: its {s} does not hash to its record")
     return rec
 
 
@@ -582,15 +708,19 @@ def _bound_toolchain() -> Dict[str, Any]:
     return json.loads(raw)["segments"][0]["t1j_runtime"]["toolchain"]
 
 
+def _check_classes(classes: str) -> None:
+    """A PURE refusal (§7 A2.1): the class directory is outside the repository and free."""
+    if R4._inside(pathlib.Path(classes).resolve(), pathlib.Path(R4.REPO_ROOT)):
+        raise CapRefused(f"the class directory must be OUTSIDE the repository: {classes}")
+    if os.path.lexists(classes):
+        raise CapRefused(f"{classes} is occupied: compiles are create-only")
+
+
 def _verified_paths(classes: str):
     """H5's BOUND toolchain, compiled fresh outside the repository; content must equal
     the H5 study manifest's, or nothing runs."""
     from . import d1_probe as D1
     from . import h4_production_qualification as Q4
-    if R4._inside(pathlib.Path(classes).resolve(), pathlib.Path(R4.REPO_ROOT)):
-        raise CapRefused(f"the class directory must be OUTSIDE the repository: {classes}")
-    if os.path.lexists(classes):
-        raise CapRefused(f"{classes} is occupied: compiles are create-only")
     paths = R4._verified_t1j_paths(classes)
     deadline = D1.Deadline(limit_s=Q4.COMPILE_DEADLINE_S)
     deadline.start()
@@ -676,16 +806,13 @@ def freeze(out_dir: str) -> str:
 
 
 def run_stage1(out_dir: str, classes: str) -> Dict[str, Any]:
-    """PUBLIC ENTRY. Both rules engines, no agent. No seam is accepted."""
+    """PUBLIC ENTRY. Both rules engines, no agent. No seam is accepted. Pure refusals
+    first; the claim before the compile; a record on every exit (§7 A2)."""
     _gate()
     out = _evidence_dir(out_dir)
     frozen, frozen_sha = _committed_frozen(out)
-    if os.path.lexists(out / STAGE1_DIR):
-        raise CapRefused(f"{STAGE1_DIR} is occupied: Stage 1 is one-shot")
-    paths, content = _verified_paths(classes)
-    binding = {"frozen_set_sha256": frozen_sha, "position_digests": position_digests(frozen),
-               "toolchain": content}
-    return _stage1(frozen, binding, _t1j_replay(paths), out)
+    _check_classes(classes)
+    return _stage1(frozen, frozen_sha, lambda: _verified_paths(classes), _t1j_replay, out)
 
 
 def run_stage2(out_dir: str, classes: str) -> Dict[str, Any]:
@@ -696,6 +823,8 @@ def run_stage2(out_dir: str, classes: str) -> Dict[str, Any]:
     frozen, frozen_sha = _committed_frozen(out)
     if os.path.lexists(out / STAGE2_DIR):
         raise CapRefused(f"{STAGE2_DIR} is occupied: Stage 2 is one-shot")
+    #: 🔴 card §7 A2.4: Stage 2's own claim-first / full-output contract is OPEN.
+    _check_classes(classes)
     paths, content = _verified_paths(classes)
     binding = {"frozen_set_sha256": frozen_sha, "position_digests": position_digests(frozen),
                "toolchain": content}
