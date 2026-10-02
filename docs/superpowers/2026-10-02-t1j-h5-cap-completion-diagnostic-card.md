@@ -174,3 +174,59 @@ carded mechanism study — neither is a finding about strength.
 
 **Next separately authorized action:** implementation (gate closed, synthetic controls),
 then Stage 1, then — only if all AGREE — Stage 2.
+
+---
+
+## 6. Amendment A1 — 2026-10-02, committed BEFORE implementation (user-decided)
+
+**Three inputs, thirteen provenance links.** The diagnostic has **three episode inputs**,
+not 13 independent situations. Every record keeps all 13 source games as provenance links
+with their frequencies (E1 7, E2 5, E3 1); no count is ever reported as 13 situations.
+
+**A1.1 — Each control's threat and acceptable replies are pinned** (this corrects §1.2,
+whose CD rows named only the recorded block):
+
+| item | threat (the opponent's immediate wins at the position) | recorded move | acceptable reply |
+|---|---|---|---|
+| CT1–CT3, CI1–CI2 | — | the recorded winning move | **any** immediate winning move for the mover |
+| **CD1** | **(17,9)** | (16,9) | any immediate winning move, or **any** move after which the opponent has **no** immediate win |
+| **CD2** | **(13,5)** | (12,5) | same |
+| episodes, T1j's turn | — | §1.1 | T1j "completes" = any immediate winning move |
+| episodes, incumbent's turn | §1.1 W | §1.1 | "blocks" = any immediate winning move or any move removing every immediate T1j win |
+
+Stage 2 judges every reply by these rules (card §7-style precedence: a win counts as
+saving), **never** by equality with the historical move; historical-move equality is
+reported separately. The frozen-set builder verifies that each pinned threat is
+**exactly** the opponent's set of immediate wins at its position and that each recorded
+move satisfies its rule — a wrong coordinate refuses.
+
+**A1.2 — Stage-1 permission is integrity-bound (replaces §3's "every item AGREE").**
+Stage 2 refuses unless the Stage-1 record is **committed and unmodified at HEAD** and:
+
+1. its item ids equal **exactly** the frozen expected set — the 18 items of §2: no
+   omission, no duplicate, no extra;
+2. every item is AGREE;
+3. its **binding** equals Stage 2's re-derived values: the sha256 of the committed
+   `00_frozen_set.json`, the frozen positions' digests, and the toolchain content (jar,
+   JDK components, helper class hashes);
+4. every transcript file named in the record exists, is committed and unmodified, and
+   hashes to its recorded sha256.
+
+"Every present item is AGREE" alone never suffices.
+
+**A1.3 — Path checking.** After a witness, the winning path is validated **on each
+engine's reported graph**: on ours from our state, and on T1j's from **T1j's reported pegs
+and bridges** — our independent validation of T1j's reported board; T1j does not report a
+path. **Different valid paths are not a disagreement.** AGREE requires the same reported
+position (`compare_state`), matching terminal recognition, and a valid winning path on each
+engine's graph exactly when the move wins (none when it does not).
+
+**A1.4 — Negative controls** (synthetic, in the implementation's tests): wrong threat
+coordinates refused; alternative valid winning moves and alternative valid blocking moves
+**accepted**; missing, duplicated and extra Stage-1 items refused; each changed binding
+(frozen-set hash, a position digest, toolchain content, a transcript hash, an uncommitted
+or modified record) refused.
+
+**A1.5 — Gate.** `h5_cap_completion_authorization.H5_CAP_COMPLETION_AUTHORIZED` is created
+**False** — the 21st gate, derived by the inventory. The implementation approval authorizes
+no JVM, compilation, model load, query, Stage-1 or Stage-2 execution.
