@@ -1,0 +1,528 @@
+{
+ "all_agree": true,
+ "binding": {
+  "frozen_set_sha256": "28c03f9f0be9accdb691b9325941da6227b856c17ddeff8e1cac5c91972e7cc6",
+  "position_digests": {
+   "CD1": "ab4b4552f037c1388a9dcb7f80caebdc8f79ab5950736633294ea96eb80bbbe6",
+   "CD2": "1ce728b6ef11e1ac6601a6906a942b53e4dc695b65505c308ed601f280784800",
+   "CI1": "b8f2977e636bc7f46d3b8c79157c58fc6e19359f21359fd469aab03f6c9cd339",
+   "CI2": "5aaef1686e29e9c906a090fe77a15b61c85aec836b7b240083033a8dedbd209a",
+   "CT1": "0a0f0e6db54de4233c3e00037263241d58457bd4dd42d9752a50a1ed8cc5434f",
+   "CT2": "7afd27fb538832f6a4ff720e0699a943bb12e171e5fbb088028268347c97bdf7",
+   "CT3": "5ae39981eadd70d243855a81a9a16c467820412d4c27fd776452c247b59382d3",
+   "E1/incumbent": "26d7d7ad2abc9be3246a15eff538bb652ab9d945a268911cb849667e09cc16ce",
+   "E1/t1j": "66ef7606efa05e032b0ceba0f04cb2720147b416cdae1710461baf291217b61b",
+   "E2/incumbent": "466a8ecead28b58f01a4ee2b66045f3e779c1e6e3b39c37a7510613227ee3c06",
+   "E2/t1j": "3644a590483f504b8cf6041284540adfbc402eb03a93295d51832d0c06e20873",
+   "E3/incumbent": "98a84694d4c9218aaad41e9ac5c63115ff75c0f6255765f0cf717438606929aa",
+   "E3/t1j": "ce4196689c58b9586e31349053e06ff2fe05e7cd0e186d75e490e1b123aad98d"
+  },
+  "toolchain": {
+   "classes": {
+    "e2probe/ScratchPrefs.class": "aad79e9fc149d012209a53e6cad99cc7d97bf79ab03a56536934891d6dbf8f39",
+    "e2probe/ScratchPrefsFactory.class": "dff0e8f933c656f3d3e48c7b2519746508162b8fddd3db45066038c91480be7d",
+    "net/schwagereit/t1j/E3bDump.class": "2c9cd6c5ef2934e0d3b2b229215194c9329d0e1185c5c3408466d1c35a522c05",
+    "net/schwagereit/t1j/E4Preflight.class": "db8f9a102c0c563f99912bb6058b5184a59a07c8c1246bfa92b0bba2c62bc992"
+   },
+   "jar_sha256": "53ec95e421db2531758142e9ee8ae49030f5345f5dc0c57b2ddb103fbd44e9b7",
+   "jdk_components": {
+    "bin/java": "af8b122943345320b179c75c3404d56a981017739746b75f9caf583632f0bea0",
+    "bin/javac": "6f5159301c750bba340390eda5fdd4a0959445355f97c40aa9c2addb00ede5ab",
+    "lib/modules": "28745573641057e822a972f223fc8e40db5c9df11ae3f7402764780afc2f1951",
+    "release": "cb6064fe4d7b87d9fbb8b8c7702047044d1bbeac38e0c5217f595579b6cc764b"
+   },
+   "main_class": "net.schwagereit.t1j.E4Preflight",
+   "sources": {
+    "E3bDump.java": "78f8f3f43b6a1ca9637ce29adcaabac46b9ae4acd849734eca4d32e2e83354ad",
+    "E4Preflight.java": "aa1c680a8450bedc113f852248b88d50b4e6eea80ac009e2d8821d908e041151",
+    "ScratchPrefs.java": "559fb9483cc34f4cc50a1c153fe6cabac6bb6129a977f42ba328b0cfad798f03",
+    "ScratchPrefsFactory.java": "09c0d74cf3c11130abfb810bd24cc433657b9dbba83152bd7c6f7e3f5858c244"
+   }
+  }
+ },
+ "binding_note": null,
+ "card": "docs/superpowers/2026-10-02-t1j-h5-cap-completion-diagnostic-card.md",
+ "failure": null,
+ "items": [
+  {
+   "exception_type": null,
+   "expect": "win",
+   "id": "E1/t1j+W17,9",
+   "moves_applied": [
+    [
+     17,
+     9
+    ]
+   ],
+   "outcome": "AGREE",
+   "rc": 0,
+   "rc_note": null,
+   "reason": null,
+   "stderr_note": "unavailable: t1j_adapter.replay does not return stderr",
+   "stdout_note": null,
+   "streams": {
+    "stderr": null,
+    "stdout": {
+     "file": "streams/E1__t1j+W17,9.stdout.txt",
+     "sha256": "2f38ca9f6094bab7254b6f792fd5170c8026e996edcaabbbd802187671f049e6"
+    }
+   }
+  },
+  {
+   "exception_type": null,
+   "expect": "not_terminal",
+   "id": "E1/t1j+recorded",
+   "moves_applied": [
+    [
+     16,
+     4
+    ]
+   ],
+   "outcome": "AGREE",
+   "rc": 0,
+   "rc_note": null,
+   "reason": null,
+   "stderr_note": "unavailable: t1j_adapter.replay does not return stderr",
+   "stdout_note": null,
+   "streams": {
+    "stderr": null,
+    "stdout": {
+     "file": "streams/E1__t1j+recorded.stdout.txt",
+     "sha256": "9510cc58852f93a37ea0b1667279f9dea788c14f9e3b5c09e138744551aa0005"
+    }
+   }
+  },
+  {
+   "exception_type": null,
+   "expect": "not_terminal",
+   "id": "E1/incumbent+16,9+W17,9",
+   "moves_applied": [
+    [
+     16,
+     9
+    ],
+    [
+     17,
+     9
+    ]
+   ],
+   "outcome": "AGREE",
+   "rc": 0,
+   "rc_note": null,
+   "reason": null,
+   "stderr_note": "unavailable: t1j_adapter.replay does not return stderr",
+   "stdout_note": null,
+   "streams": {
+    "stderr": null,
+    "stdout": {
+     "file": "streams/E1__incumbent+16,9+W17,9.stdout.txt",
+     "sha256": "a670c632cd40832e8c2e263c49beb07004533c85d8e98f3f97bc9dfaf869b2f5"
+    }
+   }
+  },
+  {
+   "exception_type": null,
+   "expect": "occupied",
+   "id": "E1/incumbent+17,9=W",
+   "moves_applied": [
+    [
+     17,
+     9
+    ]
+   ],
+   "outcome": "AGREE",
+   "rc": 0,
+   "rc_note": null,
+   "reason": null,
+   "stderr_note": "unavailable: t1j_adapter.replay does not return stderr",
+   "stdout_note": null,
+   "streams": {
+    "stderr": null,
+    "stdout": {
+     "file": "streams/E1__incumbent+17,9=W.stdout.txt",
+     "sha256": "acf1c28ad7ecf83064edce224a10898a29bc5a404e69d031f9211cc227fd30a3"
+    }
+   }
+  },
+  {
+   "exception_type": null,
+   "expect": "win",
+   "id": "E2/t1j+W12,5",
+   "moves_applied": [
+    [
+     12,
+     5
+    ]
+   ],
+   "outcome": "AGREE",
+   "rc": 0,
+   "rc_note": null,
+   "reason": null,
+   "stderr_note": "unavailable: t1j_adapter.replay does not return stderr",
+   "stdout_note": null,
+   "streams": {
+    "stderr": null,
+    "stdout": {
+     "file": "streams/E2__t1j+W12,5.stdout.txt",
+     "sha256": "92344530df61034cf89a085664bca515a6eb4cf93b98a8156263d425e9094dd7"
+    }
+   }
+  },
+  {
+   "exception_type": null,
+   "expect": "not_terminal",
+   "id": "E2/t1j+recorded",
+   "moves_applied": [
+    [
+     11,
+     7
+    ]
+   ],
+   "outcome": "AGREE",
+   "rc": 0,
+   "rc_note": null,
+   "reason": null,
+   "stderr_note": "unavailable: t1j_adapter.replay does not return stderr",
+   "stdout_note": null,
+   "streams": {
+    "stderr": null,
+    "stdout": {
+     "file": "streams/E2__t1j+recorded.stdout.txt",
+     "sha256": "bf254d76e8a3f4ff1b45b6b2de652bbf80db069c8eb6472d5ec888eebd8e0e0b"
+    }
+   }
+  },
+  {
+   "exception_type": null,
+   "expect": "occupied",
+   "id": "E2/incumbent+12,5=W",
+   "moves_applied": [
+    [
+     12,
+     5
+    ]
+   ],
+   "outcome": "AGREE",
+   "rc": 0,
+   "rc_note": null,
+   "reason": null,
+   "stderr_note": "unavailable: t1j_adapter.replay does not return stderr",
+   "stdout_note": null,
+   "streams": {
+    "stderr": null,
+    "stdout": {
+     "file": "streams/E2__incumbent+12,5=W.stdout.txt",
+     "sha256": "92261d7535b62662ef57b29961a943444038cd2ca762b5d4c21e97d6f8812259"
+    }
+   }
+  },
+  {
+   "exception_type": null,
+   "expect": "win",
+   "id": "E3/t1j+W17,7",
+   "moves_applied": [
+    [
+     17,
+     7
+    ]
+   ],
+   "outcome": "AGREE",
+   "rc": 0,
+   "rc_note": null,
+   "reason": null,
+   "stderr_note": "unavailable: t1j_adapter.replay does not return stderr",
+   "stdout_note": null,
+   "streams": {
+    "stderr": null,
+    "stdout": {
+     "file": "streams/E3__t1j+W17,7.stdout.txt",
+     "sha256": "cae4fe8051fee607972e0bf95e452155eae2b8cef773c004064db880c0e47fe9"
+    }
+   }
+  },
+  {
+   "exception_type": null,
+   "expect": "not_terminal",
+   "id": "E3/t1j+recorded",
+   "moves_applied": [
+    [
+     14,
+     8
+    ]
+   ],
+   "outcome": "AGREE",
+   "rc": 0,
+   "rc_note": null,
+   "reason": null,
+   "stderr_note": "unavailable: t1j_adapter.replay does not return stderr",
+   "stdout_note": null,
+   "streams": {
+    "stderr": null,
+    "stdout": {
+     "file": "streams/E3__t1j+recorded.stdout.txt",
+     "sha256": "fc714f11eb1a8a7208266ee721be81a3d8898ee735daed544cb01154902cad3e"
+    }
+   }
+  },
+  {
+   "exception_type": null,
+   "expect": "not_terminal",
+   "id": "E3/incumbent+16,6+W17,7",
+   "moves_applied": [
+    [
+     16,
+     6
+    ],
+    [
+     17,
+     7
+    ]
+   ],
+   "outcome": "AGREE",
+   "rc": 0,
+   "rc_note": null,
+   "reason": null,
+   "stderr_note": "unavailable: t1j_adapter.replay does not return stderr",
+   "stdout_note": null,
+   "streams": {
+    "stderr": null,
+    "stdout": {
+     "file": "streams/E3__incumbent+16,6+W17,7.stdout.txt",
+     "sha256": "9e8d2b572e5de9cb009665b2cba76283c60a7450fe7bf21bc75edd6dd4dd28f4"
+    }
+   }
+  },
+  {
+   "exception_type": null,
+   "expect": "occupied",
+   "id": "E3/incumbent+17,7=W",
+   "moves_applied": [
+    [
+     17,
+     7
+    ]
+   ],
+   "outcome": "AGREE",
+   "rc": 0,
+   "rc_note": null,
+   "reason": null,
+   "stderr_note": "unavailable: t1j_adapter.replay does not return stderr",
+   "stdout_note": null,
+   "streams": {
+    "stderr": null,
+    "stdout": {
+     "file": "streams/E3__incumbent+17,7=W.stdout.txt",
+     "sha256": "0644758196bcf048f937b2555843d62ecc2822c73d7e272e77da6c9756d1e40f"
+    }
+   }
+  },
+  {
+   "exception_type": null,
+   "expect": "win",
+   "id": "CT1/witness",
+   "moves_applied": [
+    [
+     2,
+     15
+    ]
+   ],
+   "outcome": "AGREE",
+   "rc": 0,
+   "rc_note": null,
+   "reason": null,
+   "stderr_note": "unavailable: t1j_adapter.replay does not return stderr",
+   "stdout_note": null,
+   "streams": {
+    "stderr": null,
+    "stdout": {
+     "file": "streams/CT1__witness.stdout.txt",
+     "sha256": "f001b0a1581448a7bb4313368cc4cea5b9ce8be6e8664b1624d7098ef10db5c5"
+    }
+   }
+  },
+  {
+   "exception_type": null,
+   "expect": "win",
+   "id": "CT2/witness",
+   "moves_applied": [
+    [
+     23,
+     2
+    ]
+   ],
+   "outcome": "AGREE",
+   "rc": 0,
+   "rc_note": null,
+   "reason": null,
+   "stderr_note": "unavailable: t1j_adapter.replay does not return stderr",
+   "stdout_note": null,
+   "streams": {
+    "stderr": null,
+    "stdout": {
+     "file": "streams/CT2__witness.stdout.txt",
+     "sha256": "21ede05a8be6c1ee7c3c4e9c236cf39cee435bc20b3889cfe3fe678e0e08836e"
+    }
+   }
+  },
+  {
+   "exception_type": null,
+   "expect": "win",
+   "id": "CT3/witness",
+   "moves_applied": [
+    [
+     9,
+     0
+    ]
+   ],
+   "outcome": "AGREE",
+   "rc": 0,
+   "rc_note": null,
+   "reason": null,
+   "stderr_note": "unavailable: t1j_adapter.replay does not return stderr",
+   "stdout_note": null,
+   "streams": {
+    "stderr": null,
+    "stdout": {
+     "file": "streams/CT3__witness.stdout.txt",
+     "sha256": "acfd2ffa6ed04024f7c0819d34fcdc608ea279546010e4479f22da51f4b55474"
+    }
+   }
+  },
+  {
+   "exception_type": null,
+   "expect": "win",
+   "id": "CI1/witness",
+   "moves_applied": [
+    [
+     13,
+     10
+    ]
+   ],
+   "outcome": "AGREE",
+   "rc": 0,
+   "rc_note": null,
+   "reason": null,
+   "stderr_note": "unavailable: t1j_adapter.replay does not return stderr",
+   "stdout_note": null,
+   "streams": {
+    "stderr": null,
+    "stdout": {
+     "file": "streams/CI1__witness.stdout.txt",
+     "sha256": "9003b41023efb0547da0d9224f5ec3d0136b96602235a12fc22bfd694f7c54b5"
+    }
+   }
+  },
+  {
+   "exception_type": null,
+   "expect": "win",
+   "id": "CI2/witness",
+   "moves_applied": [
+    [
+     15,
+     16
+    ]
+   ],
+   "outcome": "AGREE",
+   "rc": 0,
+   "rc_note": null,
+   "reason": null,
+   "stderr_note": "unavailable: t1j_adapter.replay does not return stderr",
+   "stdout_note": null,
+   "streams": {
+    "stderr": null,
+    "stdout": {
+     "file": "streams/CI2__witness.stdout.txt",
+     "sha256": "aeef65db3610298b76d1fb4a19d8891ac20ece7c6773067efc174f9c12c8b08c"
+    }
+   }
+  },
+  {
+   "exception_type": null,
+   "expect": "not_terminal",
+   "id": "CD1/block+threat17,9",
+   "moves_applied": [
+    [
+     16,
+     9
+    ],
+    [
+     17,
+     9
+    ]
+   ],
+   "outcome": "AGREE",
+   "rc": 0,
+   "rc_note": null,
+   "reason": null,
+   "stderr_note": "unavailable: t1j_adapter.replay does not return stderr",
+   "stdout_note": null,
+   "streams": {
+    "stderr": null,
+    "stdout": {
+     "file": "streams/CD1__block+threat17,9.stdout.txt",
+     "sha256": "1890ee460bfbdbc8523c553e22347c3fee6d2ab4905d2b3a42388391c1d747e8"
+    }
+   }
+  },
+  {
+   "exception_type": null,
+   "expect": "not_terminal",
+   "id": "CD2/block+threat13,5",
+   "moves_applied": [
+    [
+     12,
+     5
+    ],
+    [
+     13,
+     5
+    ]
+   ],
+   "outcome": "AGREE",
+   "rc": 0,
+   "rc_note": null,
+   "reason": null,
+   "stderr_note": "unavailable: t1j_adapter.replay does not return stderr",
+   "stdout_note": null,
+   "streams": {
+    "stderr": null,
+    "stdout": {
+     "file": "streams/CD2__block+threat13,5.stdout.txt",
+     "sha256": "73bd30a3bf2b41bec5f4a9980b695938bea343d226815d8f3d32f58135d82d8d"
+    }
+   }
+  }
+ ],
+ "label": "EXPLORATORY",
+ "provenance": {
+  "E1": {
+   "frequency": 7,
+   "members": [
+    "h5s0-21-B",
+    "h5s1-14-B",
+    "h5s1-27-B",
+    "h5s1-32-B",
+    "h5s1-54-B",
+    "h5s1-65-B",
+    "h5s2-19-B"
+   ]
+  },
+  "E2": {
+   "frequency": 5,
+   "members": [
+    "h5s0-69-B",
+    "h5s2-23-B",
+    "h5s2-35-B",
+    "h5s3-36-B",
+    "h5s3-45-B"
+   ]
+  },
+  "E3": {
+   "frequency": 1,
+   "members": [
+    "h5s3-32-B"
+   ]
+  }
+ },
+ "status": "COMPLETE"
+}
