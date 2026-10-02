@@ -1,8 +1,9 @@
 """H5 CAP-COMPLETION DIAGNOSTIC -- EXPLORATORY.
 
-Card: `docs/superpowers/2026-10-02-t1j-h5-cap-completion-diagnostic-card.md`, with §6
-Amendment A1. 🔴 THE CARD IS THE AUTHORITY. No game, no strength estimate, no rescoring,
-no H4-H5 pooling; nothing is inferred about any search mechanism from a chosen move.
+Card: `docs/superpowers/2026-10-02-t1j-h5-cap-completion-diagnostic-card.md`, with §6 A1,
+§7 A2 (Stage-1 recording) and §8 A3 (Stage-2 recording). 🔴 THE CARD IS THE AUTHORITY.
+No game, no strength estimate, no rescoring, no H4-H5 pooling; nothing is inferred about
+any search mechanism from a chosen move.
 
 Three public steps, each reading the gate FIRST, each its own authorization:
   freeze  -- the frozen set re-derived from the committed H5 records -> 00_frozen_set.json
@@ -98,7 +99,8 @@ class CapUnauthorized(Exception):
 
 
 class CapStop(Exception):
-    """A recorded STOP during a run (a refusal by the §4B classifier, the wall clock)."""
+    """A recorded STOP raised by this module (the Stage-2 deadline, a call returning no
+    move). A §4B refusal is NOT converted: it is recorded under its own type (§8 A3.4)."""
 
 
 # ─────────────────────────────── board facts (ours) ───────────────────────────────
@@ -592,7 +594,7 @@ def stage2_permission(stage1_dir: pathlib.Path, frozen: Mapping[str, Any],
     return rec
 
 
-# ─────────────────────────────── Stage 2 (§3, §6 A1.1) ───────────────────────────────
+# ─────────────────────────────── Stage 2 (§3, §6 A1.1, §8 A3) ───────────────────────────────
 
 def _positions(frozen: Mapping[str, Any]) -> List[Dict[str, Any]]:
     out = []
@@ -608,39 +610,53 @@ def _positions(frozen: Mapping[str, Any]) -> List[Dict[str, Any]]:
     return out
 
 
-def _stage2(frozen: Mapping[str, Any], permission: Mapping[str, Any],
-            t1j_choose: Callable, incumbent_choose: Callable, out_dir: pathlib.Path, *,
-            now: Callable[[], float] = time.monotonic, wall_s: float = STAGE2_WALL_S
-            ) -> Dict[str, Any]:
-    """Judged by §6 A1.1's rules, never by the historical move (reported apart)."""
-    if not permission.get("all_agree"):
-        raise CapRefused("Stage 2 needs an all-AGREE Stage-1 record")
-    d = pathlib.Path(out_dir) / STAGE2_DIR
-    os.makedirs(d)                               # create-only
-    t0, rows, stop = now(), [], None
-    for pos in _positions(frozen):
-        state = state_of(pos["moves"])
-        n = K_T1J if pos["agent"] == "t1j" else N_INCUMBENT
-        for k in range(n):
-            if now() - t0 > wall_s:
-                stop = f"wall clock {wall_s:.0f} s reached"
-                break
-            tag = f"{pos['id']}#{k}"
-            try:
-                got = dict((t1j_choose if pos["agent"] == "t1j" else incumbent_choose)(
-                    pos["moves"], tag))
-            except CapStop as e:
-                stop = f"{tag}: {e}"
-                break
-            move = got.get("move")
-            rows.append({"position": pos["id"], "query": k, "agent": pos["agent"],
-                         "role": pos["role"], "control": pos["control"], "move": move,
-                         "acceptable": move is not None and acceptable(state, move, pos["role"]),
-                         "equals_recorded": move is not None and list(move) == pos["recorded"],
-                         "raw": {key: v for key, v in got.items() if key != "move"}})
-        if stop:
-            break
-    controls_ok = stop is None and all(r["acceptable"] for r in rows if r["control"])
+def stage2_expected(frozen: Mapping[str, Any]) -> List[Tuple[str, str, int]]:
+    """§8 A3.5: the EXACT call set, derived from the frozen set APART from the run loop --
+    18 T1j queries and 14 incumbent decisions for the card's set."""
+    n = {"t1j": K_T1J, "incumbent": N_INCUMBENT}
+    who = [(f"{e}/{a}", a) for e in frozen["episodes"] for a in ("t1j", "incumbent")]
+    who += [(c, ct["agent"]) for c, ct in frozen["controls"].items()]
+    return sorted((p, a, k) for p, a in who for k in range(n[a]))
+
+
+NO_QUERY_STDERR = "unavailable: t1j_adapter.query does not return stderr"
+IN_PROCESS = "not applicable: the incumbent decides in-process; no process stream exists"
+
+
+def recording_query(ev: Dict[str, Any]) -> Callable:
+    """§8 A3.3: THE diagnostic boundary around `t1j_adapter.query` -- the same arguments
+    in, THE object out, THE exception re-raised. What the query returned or carried is
+    appended to `ev["queries"]`; nothing else in the agent changes."""
+    def keep(*args, **kwargs):
+        try:
+            result = A.query(*args, **kwargs)
+        except BaseException as e:
+            ev.setdefault("queries", []).append(
+                {**carried(e), "exception_type": type(e).__name__, "reason": str(e)})
+            raise
+        out = result[3]
+        ev.setdefault("queries", []).append(
+            {"stdout": out, "stdout_note": None if out is not None else
+             "unavailable: the query returned no stdout", "stderr": None,
+             "stderr_note": NO_QUERY_STDERR, "rc": result[2], "rc_note": None,
+             "exception_type": None, "reason": None})
+        return result
+    return keep
+
+
+def _call_evidence(d: pathlib.Path, stem: str, agent: str, ev: Mapping[str, Any]
+                   ) -> Dict[str, Any]:
+    """One call's evidence, its streams written create-only NOW, returned or raised."""
+    if agent != "t1j":
+        return {"processes": None, "processes_note": IN_PROCESS, "observations": None}
+    procs = [{"exception_type": q["exception_type"], "reason": q["reason"],
+              **_store(d, f"{stem}.q{j}", q)} for j, q in enumerate(ev.get("queries", []))]
+    return {"processes": procs, "processes_note": None if procs else
+            "unavailable: no query process was started", "observations": ev.get("observations")}
+
+
+def _readings(frozen: Mapping[str, Any], rows: Sequence[Mapping[str, Any]],
+              controls_ok: bool) -> Dict[str, Any]:
     readings = {}
     for e in frozen["episodes"]:
         t = [r for r in rows if r["position"] == f"{e}/t1j"]
@@ -655,11 +671,109 @@ def _stage2(frozen: Mapping[str, Any], permission: Mapping[str, Any],
                        "incumbent_equals_recorded": sum(r["equals_recorded"] for r in i),
                        "members": frozen["episodes"][e]["members"],
                        "frequency": frozen["episodes"][e]["frequency"], "reading": reading}
-    record = {"label": LABEL, "card": CARD, "stop": stop, "controls_ok": controls_ok,
-              "queries": rows, "episodes": readings, "elapsed_s": now() - t0,
+    return readings
+
+
+def _stage2(frozen: Mapping[str, Any], permission: Mapping[str, Any],
+            stage1: Mapping[str, Any], compile_fn: Callable, incumbent_factory: Callable,
+            t1j_factory: Callable, out_dir: pathlib.Path, *,
+            clock: Callable[[], float] = time.monotonic, wall_s: float = STAGE2_WALL_S
+            ) -> Dict[str, Any]:
+    """§8 A3. Reached only after the pure refusals, the Stage-1 permission included. The
+    CLAIM comes before the compile and the model load; ONE deadline, started at the claim,
+    covers both and every call; each row is persisted before the next call; a record on
+    EVERY exit. Judged by §6 A1.1's rules, never by the historical move (reported apart)."""
+    from . import d1_probe as D1
+    if permission.get("status") != "COMPLETE" or not permission.get("all_agree"):
+        raise CapRefused("Stage 2 needs a COMPLETE, all-AGREE Stage-1 record")
+    d = pathlib.Path(out_dir) / STAGE2_DIR
+    try:
+        os.mkdir(d)                              # THE CLAIM: before compiling or loading
+    except FileExistsError:
+        raise CapRefused(f"{STAGE2_DIR} is occupied: Stage 2 is one-shot") from None
+    deadline = D1.Deadline(limit_s=wall_s, clock=clock).start()
+    log, step, rows, partial, compiled, identity = None, "claim", [], None, None, None
+    status, failure, interrupt = "COMPLETE", None, None
+
+    def due(next_step):
+        if deadline.elapsed() > wall_s:
+            raise CapStop(f"the {wall_s:.0f} s Stage-2 deadline passed before {next_step}")
+
+    try:
+        os.mkdir(d / "streams")
+        log = _Log(d / "log.jsonl")
+        step = "compile"
+        with D1._supervisor(deadline):           # enforced MID-step too (SIGALRM)
+            paths, compiled = compile_fn(deadline)
+            log.done("compile", {"content": compiled})
+            step = "model_load"
+            due(step)
+            incumbent_choose, identity = incumbent_factory()
+            log.done("model_load", {"incumbent_identity": identity})
+            t1j_choose = t1j_factory(paths)
+            for pos in _positions(frozen):
+                state, t1j = state_of(pos["moves"]), pos["agent"] == "t1j"
+                for k in range(K_T1J if t1j else N_INCUMBENT):
+                    tag = f"{pos['id']}#{k}"
+                    step = f"{'query' if t1j else 'decision'}:{tag}"
+                    due(step)
+                    ev: Dict[str, Any] = {}
+                    try:
+                        got = dict((t1j_choose if t1j else incumbent_choose)(
+                            pos["moves"], tag, ev))
+                    finally:
+                        evidence = _call_evidence(d, f"{pos['id'].replace('/', '__')}.k{k}",
+                                                  pos["agent"], ev)
+                        partial = {"step": step, **evidence}
+                    move = got.pop("move", None)
+                    if move is None:
+                        raise CapStop(f"{step}: no move was returned")
+                    row = {"position": pos["id"], "agent": pos["agent"], "query": k,
+                           "role": pos["role"], "control": pos["control"],
+                           "move": list(_t(move)),
+                           "acceptable": acceptable(state, move, pos["role"]),
+                           "equals_recorded": list(_t(move)) == list(pos["recorded"]),
+                           **evidence, "raw": got}
+                    rows.append(row)
+                    log.done("call", row)
+                    partial = None
+    except (KeyboardInterrupt, SystemExit) as e:
+        status, interrupt = "INTERRUPTED", e
+        failure = {"failing_step": step, "exception_type": type(e).__name__,
+                   "reason": str(e), **_store(d, "failure", carried(e)), "partial": partial}
+    except Exception as e:                       # noqa: BLE001 -- a recorded STOP
+        status = "STOP"
+        failure = {"failing_step": step, "exception_type": type(e).__name__,
+                   "reason": str(e), **_store(d, "failure", carried(e)), "partial": partial}
+    finally:
+        if log is not None:
+            log.close()
+    want = stage2_expected(frozen)
+    done = sorted((r["position"], r["agent"], r["query"]) for r in rows)
+    if status == "COMPLETE" and done != want:
+        status = "INCOMPLETE"
+    controls_ok = episodes = None
+    if status == "COMPLETE":
+        controls_ok = all(r["acceptable"] for r in rows if r["control"])
+        episodes = _readings(frozen, rows, controls_ok)
+    record = {"label": LABEL, "card": CARD, "status": status, "failure": failure,
+              "stage1": dict(stage1), "compile": compiled, "compile_note": None
+              if compiled is not None else "unavailable: the run stopped before compiling",
+              "incumbent_identity": identity, "incumbent_identity_note": None
+              if identity is not None else "unavailable: the run stopped before the model load",
+              "calls": {a: f"{sum(c[1] == a for c in done)}/{sum(c[1] == a for c in want)}"
+                        for a in ("t1j", "incumbent")},
+              "rows": rows, "controls_ok": controls_ok, "episodes": episodes,
+              "episodes_note": None if episodes is not None else
+              f"not interpreted: the run is {status}",
+              "elapsed_s": deadline.elapsed(),
+              "provenance": {e: {"members": ep["members"], "frequency": ep["frequency"]}
+                             for e, ep in frozen["episodes"].items()},
               "note": "what was chosen, never why; no strength estimate, no rescoring"}
     with open(d / "record.json", "x", encoding="utf-8") as fh:
         json.dump(record, fh, indent=1, sort_keys=True)
+    if interrupt is not None:
+        raise interrupt
     return record
 
 
@@ -716,19 +830,25 @@ def _check_classes(classes: str) -> None:
         raise CapRefused(f"{classes} is occupied: compiles are create-only")
 
 
-def _verified_paths(classes: str):
-    """H5's BOUND toolchain, compiled fresh outside the repository; content must equal
-    the H5 study manifest's, or nothing runs."""
+def _compile(classes: str, deadline):
+    """H5's BOUND toolchain, compiled fresh outside the repository under `deadline`;
+    content must equal the H5 study manifest's, or nothing runs."""
     from . import d1_probe as D1
-    from . import h4_production_qualification as Q4
     paths = R4._verified_t1j_paths(classes)
-    deadline = D1.Deadline(limit_s=Q4.COMPILE_DEADLINE_S)
-    deadline.start()
-    with D1._supervisor(deadline):
-        content, _local = R4.split_toolchain(D1._default_compile(deadline, paths=paths))
+    content, _local = R4.split_toolchain(D1._default_compile(deadline, paths=paths))
     if content != _bound_toolchain():
         raise CapRefused("the compiled toolchain is not H5's bound toolchain")
     return paths, content
+
+
+def _verified_paths(classes: str):
+    """Stage 1's compile, under its own compile deadline and supervisor."""
+    from . import d1_probe as D1
+    from . import h4_production_qualification as Q4
+    deadline = D1.Deadline(limit_s=Q4.COMPILE_DEADLINE_S)
+    deadline.start()
+    with D1._supervisor(deadline):
+        return _compile(classes, deadline)
 
 
 def _t1j_replay(paths) -> Callable:
@@ -751,22 +871,22 @@ def _t1j_choose(paths) -> Callable:
                              ply_cap=R4.PLY_CAP, timeout_s=R4.REPLAY_TIMEOUT_S,
                              h4_acceptance=True)
 
-    def choose(moves, tag):
+    def choose(moves, tag, ev):
+        """The unchanged §4B path; only `_query` is the recording boundary (§8 A3.3).
+        Any exception propagates UNCONVERTED -- the stage records it as a STOP."""
         ctx = INT.IntegrationContext()
         ctx.bind_runtime(runtime)
         ctx.reset(tag, [_t(m) for m in moves])
+        ev["observations"] = ctx.processes[tag]  # THE bucket, filled as the agent goes
         state = state_of(moves)
         agent = INT.T1jAgent(runtime=runtime, ctx=ctx, depth=R4.DEPTH, colour=state.to_move,
-                             timeout_s=R4.QUERY_TIMEOUT_S)
-        try:
-            move = agent(state)
-        except INT.AbortError as e:
-            raise CapStop(f"the §4B path refused: {e}") from None
-        return {"move": list(_t(move)), "observations": ctx.processes.get(tag, [])}
+                             timeout_s=R4.QUERY_TIMEOUT_S, _query=recording_query(ev))
+        return {"move": list(_t(agent(state)))}
     return choose
 
 
-def _incumbent_choose() -> Callable:
+def _incumbent_choose() -> Tuple[Callable, Dict[str, Any]]:
+    """The model load (§8 A3.2: after the claim, inside the deadline)."""
     config = R4.frozen_argmax_config()
     identity = R4.frozen_incumbent_identity(config, design=H5.STUDY_DESIGN)
     R4.check_incumbent_identity(identity, config, design=H5.STUDY_DESIGN)
@@ -780,14 +900,14 @@ def _incumbent_choose() -> Callable:
              "black": R4.make_schedule([("h5-cap-completion-black", SEED - 2, SEED)],
                                        mode="fixture", reference=identity)[1]}
 
-    def choose(moves, tag):
+    def choose(moves, tag, ev):
         state = state_of(moves)
         task = tasks[state.to_move]
         t0 = time.monotonic()
         move = build(task, evaluator)(state)
         return {"move": None if move is None else list(_t(move)),
                 "seconds": time.monotonic() - t0, "seed": task["seed"]}
-    return choose
+    return choose, identity
 
 
 # ─────────────────────────────── the public entries ───────────────────────────────
@@ -816,20 +936,22 @@ def run_stage1(out_dir: str, classes: str) -> Dict[str, Any]:
 
 
 def run_stage2(out_dir: str, classes: str) -> Dict[str, Any]:
-    """PUBLIC ENTRY. The unchanged agents -- permission DERIVED from the committed,
-    integrity-bound Stage-1 record. No seam is accepted."""
+    """PUBLIC ENTRY. The unchanged agents. §8 A3.1: PURE refusals first -- the Stage-1
+    permission among them, against a binding re-derived WITHOUT compiling -- then the
+    claim, then the compile and the model load inside one deadline. No seam is accepted."""
     _gate()
     out = _evidence_dir(out_dir)
     frozen, frozen_sha = _committed_frozen(out)
     if os.path.lexists(out / STAGE2_DIR):
         raise CapRefused(f"{STAGE2_DIR} is occupied: Stage 2 is one-shot")
-    #: 🔴 card §7 A2.4: Stage 2's own claim-first / full-output contract is OPEN.
     _check_classes(classes)
-    paths, content = _verified_paths(classes)
     binding = {"frozen_set_sha256": frozen_sha, "position_digests": position_digests(frozen),
-               "toolchain": content}
+               "toolchain": _bound_toolchain()}
     permission = stage2_permission(out / STAGE1_DIR, frozen, binding, _fixture=False)
-    return _stage2(frozen, permission, _t1j_choose(paths), _incumbent_choose(), out)
+    stage1 = {"binding": binding, "record_sha256": hashlib.sha256(
+        (out / STAGE1_DIR / "record.json").read_bytes()).hexdigest()}
+    return _stage2(frozen, permission, stage1, lambda dl: _compile(classes, dl),
+                   _incumbent_choose, _t1j_choose, out)
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
@@ -854,7 +976,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         elif a.step == "stage1":
             print(json.dumps({"all_agree": run_stage1(a.out_dir, a.classes)["all_agree"]}))
         else:
-            print(json.dumps({"controls_ok": run_stage2(a.out_dir, a.classes)["controls_ok"]}))
+            rec = run_stage2(a.out_dir, a.classes)
+            print(json.dumps({k: rec[k] for k in ("status", "calls", "controls_ok")}))
     except (CapRefused, CapUnauthorized) as e:
         print(f"REFUSED: {e}", file=sys.stderr)
         return EXIT_REFUSED
