@@ -4,4 +4,4 @@
 §9 A1.6. EXPLORATORY. Opened for ONE run under its own authorization and restored on every
 exit. This file may hold ONLY this declaration.
 """
-H5_INCUMBENT_DEFENCE_FACTORS_AUTHORIZED = False
+H5_INCUMBENT_DEFENCE_FACTORS_AUTHORIZED = True
