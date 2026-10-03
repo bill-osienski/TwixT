@@ -1,0 +1,35 @@
+{
+ "card": "docs/superpowers/2026-10-02-t1j-h5-incumbent-defence-controlled-study-card.md",
+ "cause": null,
+ "child_exit": "exit status 0",
+ "child_pid": 26402,
+ "child_rc": 0,
+ "child_streams": {
+  "stderr": {
+   "bytes": 0,
+   "file": "child.stderr.txt",
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "stdout": {
+   "bytes": 23,
+   "file": "child.stdout.txt",
+   "sha256": "c0b2ec1ed5ff6f9e565fb365f891d2a55e91d7dee5327ba8ec4693d4c2aa7dba"
+  }
+ },
+ "elapsed_s": 352.6538457078859,
+ "journal": {
+  "file": "log.jsonl",
+  "lines": 41,
+  "sha256": "e67ddfbcf5ff67b47996091f7b794ec95482bd50fbeea20a5e75d318a4653efd"
+ },
+ "journal_note": null,
+ "label": "EXPLORATORY",
+ "limit_s": 1799.999606875237,
+ "note": "the journal and any record are exactly as the child wrote them",
+ "record_present": true,
+ "record_readable": true,
+ "record_status": "COMPLETE",
+ "signal": null,
+ "status": "COMPLETE",
+ "survivors_killed": false
+}
