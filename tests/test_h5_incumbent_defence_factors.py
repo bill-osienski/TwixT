@@ -357,6 +357,44 @@ def test_RUN_a_COMPLETE_plan_is_recorded_and_interpreted(tmp_path, monkeypatch, 
     assert all(r["reading"]["readout_variants"] for r in rec["rows"] if r["arm"] == "B-repro")
 
 
+def _interpretation_fails(monkeypatch, stub_pins, exc):
+    monkeypatch.setattr(X, "PINNED_FINGERPRINTS", stub_pins)
+    monkeypatch.setattr(X, "plan", lambda: FAST)
+
+    def broken(rows):
+        raise exc
+    monkeypatch.setattr(X, "interpret", broken)
+
+
+def test_RUN_an_INTERPRETATION_failure_is_a_recorded_STOP_keeping_every_observation(
+        tmp_path, monkeypatch, stub_pins):
+    """The completed run's rows and journal survive an exception in the interpretation, and
+    a record says so -- the defect found in review: no record.json was written."""
+    _interpretation_fails(monkeypatch, stub_pins, ValueError("synthetic interpretation failure"))
+    d = claimed(tmp_path)
+    rec = X._run(FIX, CONFIG, IDENT, Steered, d)
+    f = rec["failure"]
+    assert (rec["status"], f["failing_step"], f["exception_type"]) == \
+        ("STOP", "interpretation", "ValueError")
+    assert f["reason"] == "synthetic interpretation failure"
+    assert (rec["interpretable"], rec["interpretation"]) == (False, None)
+    assert rec["interpretation_note"] == "not interpreted: the run is STOP"
+    assert len(rec["rows"]) == 10 and log_steps(d) == ["model_load"] + ["observation"] * 10
+    assert json.loads((d / "record.json").read_text()) == rec, "the record was not written"
+
+
+def test_RUN_an_INTERRUPTION_during_interpretation_is_recorded_and_re_raised(
+        tmp_path, monkeypatch, stub_pins):
+    _interpretation_fails(monkeypatch, stub_pins, KeyboardInterrupt())
+    d = claimed(tmp_path)
+    with pytest.raises(KeyboardInterrupt):
+        X._run(FIX, CONFIG, IDENT, Steered, d)
+    rec = json.loads((d / "record.json").read_text())
+    assert (rec["status"], rec["failure"]["failing_step"], len(rec["rows"])) == \
+        ("INTERRUPTED", "interpretation", 10)
+    assert rec["interpretation"] is None
+
+
 def test_RUN_a_FAILURE_keeps_every_completed_observation(tmp_path, monkeypatch, stub_pins):
     monkeypatch.setattr(X, "PINNED_FINGERPRINTS", stub_pins)
     bad, real = X.Arm("S", -1, budget=1600), X.arm_builder

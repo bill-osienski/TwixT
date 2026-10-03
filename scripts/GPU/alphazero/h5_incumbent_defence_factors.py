@@ -309,6 +309,12 @@ def interpret(rows: Sequence[Mapping[str, Any]]) -> Dict[str, Any]:
 
 # ─────────────────────────────── the child's run ───────────────────────────────
 
+def _failure(d: pathlib.Path, step: str, e: BaseException) -> Dict[str, Any]:
+    """A recorded failure: the step, the actual exception, and what it carried."""
+    return {"failing_step": step, "exception_type": type(e).__name__, "reason": str(e),
+            **CC._store(d, "failure", CC.carried(e))}
+
+
 def _run(fixtures: Sequence[Mapping[str, Any]], config, identity: Mapping[str, Any],
          loader: Callable, d: pathlib.Path, *, arms: Optional[Sequence[Arm]] = None,
          clock: Callable[[], float] = time.monotonic,
@@ -342,28 +348,37 @@ def _run(fixtures: Sequence[Mapping[str, Any]], config, identity: Mapping[str, A
                     rows.append(row)
                     log.done("observation", row)
     except (KeyboardInterrupt, SystemExit) as e:
-        status, interrupt = "INTERRUPTED", e
-        failure = {"failing_step": step, "exception_type": type(e).__name__, "reason": str(e),
-                   **CC._store(d, "failure", CC.carried(e))}
+        status, interrupt, failure = "INTERRUPTED", e, _failure(d, step, e)
     except Exception as e:                       # noqa: BLE001 -- a recorded STOP
-        status = "STOP"
-        failure = {"failing_step": step, "exception_type": type(e).__name__, "reason": str(e),
-                   **CC._store(d, "failure", CC.carried(e))}
+        status, failure = "STOP", _failure(d, step, e)
     finally:
         if log is not None:
             log.close()
-    want = collections.Counter((a.label, p) for a in plan() for p in D.POSITION_IDS)
-    got = collections.Counter((r["arm"], r["position"]) for r in rows)
-    if status == "COMPLETE" and got != want:
-        status, failure = "INCOMPLETE", {
-            "failing_step": "completion_check", "exception_type": None,
-            "reason": "the observations are not the frozen plan",
-            "missing": sorted(list(k) for k in want - got),
-            "duplicated": sorted(list(k) for k, n in got.items() if n > 1),
-            "extra": sorted(list(k) for k in set(got) - set(want))}
+    #: the completion check and the interpretation sit inside their OWN recorded
+    #: boundary: an exception here still leaves `record.json`, every row and the journal.
+    interpretation = None
+    if status == "COMPLETE":
+        step = "completion_check"
+        try:
+            want = collections.Counter((a.label, p) for a in plan() for p in D.POSITION_IDS)
+            got = collections.Counter((r["arm"], r["position"]) for r in rows)
+            if got != want:
+                status, failure = "INCOMPLETE", {
+                    "failing_step": "completion_check", "exception_type": None,
+                    "reason": "the observations are not the frozen plan",
+                    "missing": sorted(list(k) for k in want - got),
+                    "duplicated": sorted(list(k) for k, n in got.items() if n > 1),
+                    "extra": sorted(list(k) for k in set(got) - set(want))}
+            else:
+                step = "interpretation"
+                interpretation = interpret(rows)
+        except (KeyboardInterrupt, SystemExit) as e:
+            status, interrupt, failure = "INTERRUPTED", e, _failure(d, step, e)
+        except Exception as e:                   # noqa: BLE001 -- a recorded STOP
+            status, failure = "STOP", _failure(d, step, e)
     record = {"label": LABEL, "card": CARD, "status": status, "failure": failure,
               "interpretable": status == "COMPLETE",
-              "interpretation": interpret(rows) if status == "COMPLETE" else None,
+              "interpretation": interpretation,     # set only on the COMPLETE path
               "interpretation_note": None if status == "COMPLETE" else
               f"not interpreted: the run is {status}",
               "incumbent_identity": dict(identity), "frozen_set_sha256": D.FROZEN_SHA256,
