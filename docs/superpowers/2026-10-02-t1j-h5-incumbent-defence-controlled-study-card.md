@@ -1,5 +1,8 @@
 # H5 INCUMBENT DEFENCE — CONTROLLED ONE-FACTOR STUDY — EXPLORATORY CARD (design only)
 
+⚠️ **Amended by §9 A1 (2026-10-03). Read §9 first.** It supersedes §1.5, §2, §3.1, §5.2 and
+§6 where they conflict, and quotes each statement it replaces.
+
 **Written 2026-10-02. DESIGN ONLY.** No implementation, model load, decision, gate, game or
 push. Each later step needs its own authorization.
 
@@ -373,3 +376,188 @@ the run is under about 10 minutes, within the 1800 s parent watchdog.
 
 Authorized by this card: **nothing executable.** No implementation, model load, decision,
 gate, game, T1j call or push.
+
+---
+
+## 9. Amendment A1 — 2026-10-03, corrections before implementation (user-decided)
+
+Review of `72e0eb08` found that the pass condition could never be met, plus four further
+defects. Each superseded statement is quoted below and replaced.
+
+**What stands unchanged:**
+
+* the historical findings (§1.1–§1.4);
+* the arms, factor levels and seeds;
+* the budget-only S factor and the whole-tree FPU scope;
+* the contaminated R factor;
+* the 80 decisions and the separate gate;
+* the run contract, stop rules and three aims.
+
+**A1.1 — CD1 is a contrast and a control, not a sweep fixture.** This supersedes §5.2's table
+and rule.
+
+**What was wrong.** §5.2 required, in quoted text, "B-seed shows a full sweep at E1, E2 and CD1
+at all three seeds", and it predicted CD1's sweep. CD1's committed baseline is 398 children
+visited once plus the block (16,9) visited twice. That is **not** a full sweep, so the rule
+could never pass. This was my error.
+
+**CD1's role from now on:**
+
+* It stays a **control**, because it defends at baseline.
+* It stays a **contrast**: the same game and the same threat (17,9) as E1, four plies later.
+* Under each level it is reported **descriptively**: its visit histogram, tie-set size, and
+  whether it still defends. If it no longer defends, that is control harm.
+* No sweep prediction is made for it.
+
+**Revised predictions — six cells, E1 and E2 only, frozen now:**
+
+| level | E1 | E2 |
+|---|---|---|
+| −0.20 | full sweep **persists** | **persists** |
+| −0.50 | full sweep **breaks** | **persists** |
+| −1.0 | **breaks** | **breaks** |
+
+**Revised rule.** The result is "**consistent with the H-FPU-SWEEP conjecture at E1 and E2**"
+iff all three hold:
+
+1. B-repro passes;
+2. B-seed shows a full sweep at E1 **and** E2, at seeds −3 **and** −5 (seed −1 is B-repro);
+3. all **six** cells match.
+
+Any mismatch means "**not supported as stated**". Full agreement establishes consistency at E1
+and E2 under fresh-agent search — not cause, and nothing beyond them.
+
+**A1.2 — Heuristic conjectures, not deductions.** This supersedes §3.1's rationale for the
+levels, §5.2's hypothesis, and the word "losing" in §1.5.
+
+**Why Q alone does not decide selection.** The PUCT score (`mcts.py:1076–1156`) has two parts:
+
+| child | score |
+|---|---|
+| unvisited | `FPU + c·P·√(N+1)` |
+| visited | `−Q(child) + c·P·√(N+1)/(1+n)` |
+
+Two consequences:
+
+* Visited values below the FPU do **not** guarantee a sweep: a visited child's exploration
+  bonus can close the gap.
+* An FPU of −1.0 does **not** stop an unvisited child winning a comparison: its own bonus can
+  exceed the difference.
+
+**Statements replaced:**
+
+* §3.1, quoted: "−1.0 is the minimum value; with it, no unvisited child can be favoured over a
+  visited one" — **wrong**.
+* §5.2, quoted: "At a losing root, the shipped FPU of 0.0 exceeds every visited child's value.
+  Every simulation therefore goes to an unvisited child" — **not a deduction**.
+
+**H-FPU-SWEEP, restated as a heuristic conjecture.** When the network's estimates for the
+root's visited children all lie well below the FPU, the FPU term *tends* to dominate the
+comparison, so unvisited children *tend* to keep being selected. Lowering the FPU below part
+or all of the visited-value range should *tend* to end a full sweep.
+
+The six cells are predictions of this conjecture. They come from a comparison that ignores
+the exploration bonus, and they can fail for that reason alone.
+
+**"Losing roots"** means roots where the **network's estimates are negative**: −0.81 to −0.97
+at E1, E2 and CD1. It does not mean established lost positions. §1.5's "The roots are
+**losing**" is replaced by this.
+
+**A1.3 — Arm-specific preservation checks.** This supersedes §2's and §4's application of "the
+15 preservation checks" to every arm.
+
+The existing module `h5_incumbent_defence` and its checks — the production of `912b601f` — are
+**unchanged**. The new module defines its checks per arm.
+
+**For every decision, in every arm — off/on equivalence.** The decision runs twice, from fresh
+agents at the same seed, with capture off and then on. All of these must hold:
+
+* the same move;
+* the same search-stream and readout-stream states;
+* the same counts and the same tie set;
+* the same tree fingerprint;
+* the reader leaves each tree's fingerprint unchanged and draws from neither stream;
+* the same readings;
+* the pass-through returns **the** objects;
+* exactly one search per decision.
+
+**For every decision — the budget.** The root visit count equals the arm's declared budget:
+400 for B-repro, B-seed and F; 1600 or 6400 for S.
+
+**For every decision — the configuration.** The agent's `EvalConfig` and `MCTSConfig` equal the
+frozen ones (`frozen_argmax_config()`, `cfg_from(...)`) in every field except the arm's named
+fields:
+
+| arm | fields allowed to differ |
+|---|---|
+| B-repro, B-seed | none |
+| F | `MCTSConfig.fpu_value` only |
+| S | `EvalConfig.mcts_sims` and `MCTSConfig.n_simulations` only — one factor in two objects; they must equal each other |
+
+The seed is the arm's own, and the colour is the mover.
+
+**B-repro, additionally:**
+
+* seed −1;
+* the returned move equals the recorded move;
+* the tree fingerprint equals the per-fixture fingerprint recorded in `912b601f` — five pinned
+  values.
+
+Any B-repro failure is a **STOP** before every other arm.
+
+**B-seed:** seeds −3 and −5. No historical-move requirement.
+
+**F and S:** seed −1. No historical-move requirement: a different move is a **result**, not a
+failure.
+
+Any check failure is a **STOP** naming the arm, the fixture, the seed or level, and the check.
+
+**A1.4 — Refutation depends on the actual returned move.** This supersedes the incumbent card's
+§2.2 as applied here, and §5.4's "R1 → R2" wording.
+
+The rules engine examines the position **after the returned move *m***, before any R category
+is applied:
+
+| case | condition |
+|---|---|
+| **TERMINAL** | *m* ends the game: the incumbent wins |
+| **NEUTRALIZED** | the opponent has **no** immediate winning move after *m*, i.e. *m* defends |
+| otherwise | the **refutation set** is the opponent's immediate winning moves after *m*. It may differ from the frozen W. For each move in it, R0, R1 or R2 is applied under *m*'s node. |
+
+This applies uniformly to all five fixtures and all arms. A defending control is NEUTRALIZED.
+
+§5.4's E3 question becomes: under S, is the returned move NEUTRALIZED (a repair), or is its
+refutation set visited (R2) or unvisited (R1)?
+
+**A1.5 — An honest description of the reuse.** This supersedes §1.5's "**No rejected rule is
+tested.**", which is **false for absolute FPU**.
+
+* The F factor sets **absolute** `fpu_value` levels.
+  * −0.20 is exactly the v16a candidate rejected as a general 400-simulation setting.
+  * −0.50 and −1.0 belong to the same absolute family.
+* This study **re-examines absolute FPU strictly as a diagnostic intervention at five
+  fixtures**:
+  * it does **not** reopen that rejected status as a general setting;
+  * it measures **none** of the collateral that rejected it (late new-collapse);
+  * no level may be proposed as a setting.
+* The two **policy-mass** rules (`Q_parent − r·√P` and `−r·√P`) are **not** tested.
+
+**A1.6 — Frozen names.**
+
+| item | name |
+|---|---|
+| module | `scripts/GPU/alphazero/h5_incumbent_defence_factors.py` |
+| gate (the 23rd) | `scripts/GPU/alphazero/h5_incumbent_defence_factors_authorization.py`, declaring `H5_INCUMBENT_DEFENCE_FACTORS_AUTHORIZED = False` |
+| tests | `tests/test_h5_incumbent_defence_factors.py` |
+| evidence | `docs/superpowers/evidence/t1j-h5-incumbent-defence-factors-EXPLORATORY/` |
+| CLI | `python -m scripts.GPU.alphazero.h5_incumbent_defence_factors {run, run-claimed}` |
+
+* The evidence directory is the frozen subdirectory of `h4_runner.EVIDENCE_ROOT`. It is a
+  module constant and is create-only.
+* There is **no `--out-dir`**: the module writes only there, and refuses any other path. Tests
+  redirect only by patching `EVIDENCE_ROOT`, as in the earlier modules.
+* `h5_incumbent_defence.py` is **reused by import and not edited**.
+
+**A1.7 — Scope.** This amendment authorizes design changes and a local commit only. It
+authorizes no implementation, model load, decision, gate, game, T1j call or push. The
+80-decision run needs separate approval.
