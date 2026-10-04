@@ -206,6 +206,7 @@ def proof_statuses(root, *, semantics: str) -> Dict[int, str]:
 
 def certificate(node, status: Mapping[int, str]) -> Dict[str, Any]:
     """The witness for a proven node, reconstructible from the prefix by the engine alone."""
+    _official(node.state, "certificate")         # §11 A2.1: this node and, recursively, each below
     st, s = status[id(node)], node.state
     if st == "LOSS" and s.winner() is not None:
         return {"kind": "TERMINAL_LOSS", "winner": s.winner()}

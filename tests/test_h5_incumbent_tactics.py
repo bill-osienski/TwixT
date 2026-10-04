@@ -192,7 +192,8 @@ def test_A2_a_board_that_is_not_24x24_is_REFUSED_at_every_entry_before_anything_
         monkeypatch.setattr(TwixtState, name, lambda *a, **k: pytest.fail("computed before the refusal"))
     for call in (lambda: M.classify(bad, semantics="protocol"), lambda: M.classify(bad, semantics="board"),
                  lambda: M.state_digest(bad), lambda: M.proof_statuses(root, semantics="board"),
-                 lambda: M.m2_choice(root, {}, semantics="protocol"), lambda: M.tactics(bad, {}, root)):
+                 lambda: M.m2_choice(root, {}, semantics="protocol"), lambda: M.tactics(bad, {}, root),
+                 lambda: M.certificate(root, {id(root): "LOSS"})):
         with pytest.raises(M.TacticsRefused, match="not the official 24x24"):
             call()
 
@@ -209,6 +210,8 @@ def test_A2_EVERY_node_examined_is_checked_not_only_the_root(dims):
             M.proof_statuses(root, semantics=sem)
     with pytest.raises(M.TacticsRefused, match="a tree node"):
         M.tactics(s, counts_of(s, {mv: 5}), root)
+    with pytest.raises(M.TacticsRefused, match="certificate: .* not the official 24x24"):
+        M.certificate(root, {id(root): "WIN", id(root.children[enc(*mv)]): "LOSS"})   # the RECURSIVE call
     won = M.replay(list(TWO) + [(12, 2)])         # its winner stops the walk at the root ...
     top = tree_root(won)
     top.children[enc(*mv)] = MCTSNode(state=TwixtState(to_move="black", **dims), parent=top,
