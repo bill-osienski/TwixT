@@ -227,8 +227,13 @@ def verify_certificate(prefix: Sequence, path: Sequence, claim: str, cert: Mappi
                 raise _Bad(f"not a terminal win for the previous mover (winner {s.winner()}, "
                            f"certificate {cert.get('winner')})")
             return True, "verified"
-        if s.winner() is not None or _past_cap(s, semantics, ply_cap):
-            raise _Bad(f"a {kind} certificate at a terminal position (ply {s.ply})")
+        if s.is_terminal() or _past_cap(s, semantics, ply_cap):
+            #: a winner, the protocol cap, or the engine's DRAW (no legal move): no proof rule
+            #: applies -- an empty ALL_REPLIES_WIN would otherwise "cover" a full board vacuously
+            why = ("a winner" if s.winner() is not None else
+                   f"the protocol cap {ply_cap}" if _past_cap(s, semantics, ply_cap) else
+                   f"a draw: no winner, {len(s.legal_moves())} legal moves")
+            raise _Bad(f"a {kind} certificate at a terminal position (ply {s.ply}: {why})")
         if kind == "WIN":
             if claim != "WIN":
                 raise _Bad(f"a WIN certificate for a {claim} claim")
@@ -290,15 +295,25 @@ def m2_choice(root, counts: Mapping, *, semantics: str, ply_cap: int = PLY_CAP
             "no_search_evidence": counts.get(choice, 0) == 0, "choice_visits": counts.get(choice, 0)}
 
 
+VALUE_NOTE = ("q_root_mover: the child's mean value for the ROOT's mover (+1 = a win for the player "
+              "to move at the root); q_node: the same mean for the player to move AT the child; "
+              "both null when never visited")
+
+
 def tactics(state: TwixtState, counts: Mapping, root, *, ply_cap: int = PLY_CAP
             ) -> Dict[str, Any]:
-    """Both mechanisms, under both semantics, labelled apart. Reads only."""
+    """Both mechanisms, under both semantics, labelled apart. Reads only. §7: the visits and
+    the root mover's value of the baseline and of each mechanism's choice, per semantics."""
     out: Dict[str, Any] = {}
     for sem in SEMANTICS:
         c = classify(state, semantics=sem, ply_cap=ply_cap)
-        out[sem] = {"class": c,
-                    "M1": None if c is None else m1_choice(c, counts),
-                    "M2": m2_choice(root, counts, semantics=sem, ply_cap=ply_cap)}
+        m1 = None if c is None else m1_choice(c, counts)
+        m2 = m2_choice(root, counts, semantics=sem, ply_cap=ply_cap)
+        stat = lambda m: D.node_stat(root, encode_move(*_t(m)), 1)   # noqa: E731
+        out[sem] = {"class": c, "M1": m1, "M2": m2,
+                    "values": {"note": VALUE_NOTE, "baseline": stat(m2["baseline"]),
+                               "M1": None if m1 is None else stat(m1["choice"]),
+                               "M2": stat(m2["choice"])}}
     p, b = out["protocol"], out["board"]
     out["cap_sensitive"] = (p["class"] != b["class"] or p["M1"] != b["M1"] or
                             p["M2"]["choice"] != b["M2"]["choice"] or
@@ -460,6 +475,19 @@ def verify_rows(rows: Sequence[Mapping[str, Any]]) -> int:
     return n
 
 
+def _both_visited(rs: Sequence[Mapping[str, Any]], mech: str) -> List[Dict[str, Any]]:
+    """§7, descriptive: where the baseline and the mechanism's choice were both visited, the
+    root mover's value of each (protocol)."""
+    out = []
+    for r in rs:
+        v = r["tactics"]["protocol"]["values"]
+        if v[mech] is not None and v["baseline"]["visits"] > 0 and v[mech]["visits"] > 0:
+            out.append({"id": r["id"], "changed": r["tactics"]["protocol"][mech]["changed"],
+                        "baseline_q_root_mover": v["baseline"]["q_root_mover"],
+                        "choice_q_root_mover": v[mech]["q_root_mover"]})
+    return out
+
+
 def interpret(rows: Sequence[Mapping[str, Any]]) -> Dict[str, Any]:
     """§7: the structural rules (a violation STOPs) and the descriptive tallies."""
     bad = []
@@ -502,7 +530,8 @@ def interpret(rows: Sequence[Mapping[str, Any]]) -> Dict[str, Any]:
                                                  for r in rs),
                     "M2_changed": sum(r["tactics"]["protocol"]["M2"]["changed"] for r in rs),
                     "M2_root_proven_loss": sum(r["tactics"]["protocol"]["M2"]["rule"] ==
-                                               "ROOT_PROVEN_LOSS" for r in rs)}
+                                               "ROOT_PROVEN_LOSS" for r in rs),
+                    "values_where_both_visited": {m: _both_visited(rs, m) for m in ("M1", "M2")}}
     return {"verdict": "the structural rules hold", "protocol_tally": tally,
             "cap_sensitive": [r["id"] for r in rows if r["tactics"]["cap_sensitive"]],
             "note": "tactical behaviour of two readout rules on the unchanged tree; no candidate, "
