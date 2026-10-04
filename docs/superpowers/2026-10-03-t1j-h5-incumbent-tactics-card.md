@@ -488,3 +488,74 @@ M2's exclusions and proven-win choices count only when their certificates verify
 
 This amendment authorizes design changes and a local commit only. Implementation, the corpus
 freeze, model loading, decisions, gate changes and push all remain unauthorized.
+
+---
+
+## 11. Amendment A2 — 2026-10-04, the official board and the protocol cap enforced (user-decided)
+
+Review of the implementation (`6040f438`, repaired at `6ddf2931`) found that the diagnostic only
+**defaulted** to the official board and the protocol cap:
+
+* `replay` and `verify_certificate` took a `size`;
+* the rules took a `ply_cap`;
+* most synthetic controls ran on 8×8 boards with lowered caps.
+
+Those were synthetic tests, not training or H4/H5 games, but they did not respect the rule that
+this research runs on 24×24 only. A2 makes both requirements **enforced**, not defaulted.
+
+### A2.1 — 24×24 only (supersedes every other board size this card or its tests imply)
+
+* Every position the diagnostic accepts has `board_size == active_size == 24`.
+* The check runs at **every** entry that accepts a state or a tree, and on **every node a proof
+  walk examines** — not only the root. That includes the root children whose values §7 reads.
+* A wrong size is **refused** (`TacticsRefused`) before anything is computed from it.
+* No parameter selects another size: `replay` and the verifier always build 24×24.
+* Deliberately invalid sizes appear **only** in tests that prove the refusal.
+
+### A2.2 — The protocol cap is exactly 280 (supersedes A1.2's "`ply_cap = 280` an explicit parameter")
+
+* `PLY_CAP = 280` is a constant; no function takes a cap.
+* **Protocol:** at most 280 plies are played. Moves are made from states at ply 0–279, and
+  `winner()` is checked before the cap. So a 280th move — made at ply 279, reaching ply 280 —
+  that wins **is a win**. No move is made from ply ≥ 280, and the opponent's "immediate win"
+  after a non-winning 280th move is void. The rest of A1.2's table stands.
+* **Board-only** stays uncapped by the protocol (the engine's own terminal rules only). It is
+  recorded beside the protocol results and labelled apart. A board-only result never justifies a
+  protocol exclusion or choice.
+* The baseline search and its continuation semantics are **unchanged**.
+
+### A2.3 — Controls on the official board (supersedes the small-board controls of §5, A1.2 and A1.4)
+
+* Every control runs on 24×24 at the real cap. Cap-boundary controls use real positions at plies
+  279/280; none lowers the cap.
+* Positions come from **rules-engine-only** random legal playouts — no model, no agent decision,
+  no research game. They are pinned in the tests and re-checked there.
+* A negative control shows a smaller playable board, and a non-24 physical board, refused at
+  every entry — including at a non-root node.
+
+### A2.4 — For the record: the review repairs at `6ddf2931` (A1.4, §7)
+
+* Before any proof rule, the verifier rejects:
+  * any engine-terminal position (a winner, or a draw: no legal move);
+  * any position past the protocol cap.
+
+  An empty `ALL_REPLIES_WIN` no longer "covers" a full-board draw. On 24×24 such a draw lies past
+  the cap, so the defect affected the board-only verifier only.
+* Each record carries §7's values per semantics: the visits and the root mover's value of the
+  baseline and of each mechanism's choice, null when never visited.
+
+### A2.5 — Scope
+
+**Untouched:**
+
+* curriculum support;
+* `TwixtState`;
+* the baseline search;
+* frozen H4/H5 files and historical evidence.
+
+This is not a global engine change.
+
+**Authorized:** this amendment, then implementation, synthetic tests, injected-defect controls,
+the regression and a local commit.
+
+**Unauthorized:** the corpus freeze, model loading, real decisions, gate opening and push.
