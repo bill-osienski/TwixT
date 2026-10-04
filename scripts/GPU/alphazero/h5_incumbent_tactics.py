@@ -41,6 +41,7 @@ from .mcts import decode_move, encode_move
 LABEL = "EXPLORATORY"
 CARD = "docs/superpowers/2026-10-03-t1j-h5-incumbent-tactics-card.md"
 MODULE = "scripts.GPU.alphazero.h5_incumbent_tactics"
+BOARD = 24                          # §11 A2.1: the official board, physical and playable
 PLY_CAP = 280                       # the H5 protocol cap (§10 A1.2); a test pins it to R4's
 SEMANTICS = ("protocol", "board")
 CLASSES = ("OWN_WIN", "DEFEND_SINGLE", "DEFEND_MULTI", "UNDEFENDABLE", "QUIET")
@@ -83,16 +84,23 @@ class _Bad(Exception):
     pass
 
 
-def replay(moves: Sequence, *, size: int = 24, semantics: str = "board",
-           ply_cap: int = PLY_CAP) -> TwixtState:
-    """Moves from the empty board, refusing a move after a winner and -- under the
+def _official(state: TwixtState, what: str) -> None:
+    """§11 A2.1: the official board only -- physical AND playable 24x24 -- refused before
+    anything is computed from it."""
+    if (state.board_size, state.active_size) != (BOARD, BOARD):
+        raise TacticsRefused(f"{what}: a {state.board_size}/{state.active_size} board, not the "
+                             f"official {BOARD}x{BOARD}; nothing was computed")
+
+
+def replay(moves: Sequence, *, semantics: str = "board") -> TwixtState:
+    """Moves from the empty official board, refusing a move after a winner and -- under the
     protocol -- a move at or past the cap. `apply_move` itself checks only the cell."""
-    s = TwixtState(active_size=size, to_move="red")
+    s = TwixtState(board_size=BOARD, active_size=BOARD, to_move="red")
     for m in moves:
         if s.winner() is not None:
             raise _Bad(f"a move {list(m)} after the game was won at ply {s.ply}")
-        if semantics == "protocol" and s.ply >= ply_cap:
-            raise _Bad(f"a move {list(m)} at ply {s.ply}, past the cap {ply_cap}")
+        if semantics == "protocol" and s.ply >= PLY_CAP:
+            raise _Bad(f"a move {list(m)} at ply {s.ply}, past the cap {PLY_CAP}")
         if not s.is_valid_placement(*_t(m)):
             raise _Bad(f"the illegal move {list(m)} at ply {s.ply}")
         s = s.apply_move(_t(m))
@@ -101,6 +109,7 @@ def replay(moves: Sequence, *, size: int = 24, semantics: str = "board",
 
 def state_digest(state: TwixtState) -> str:
     """§10 A1.1: sorted pegs [r, c, colour], sorted bridges, side to move."""
+    _official(state, "state_digest")
     body = {"pegs": sorted([r, c, col] for (r, c), col in state.pegs.items()),
             "bridges": sorted(sorted([list(a), list(b)]) for a, b in state.bridges),
             "to_move": state.to_move}
@@ -110,16 +119,16 @@ def state_digest(state: TwixtState) -> str:
 
 # ─────────────────────────────── M1: the exact one-ply scan (§3.1, §10 A1.2) ─────────────────
 
-def classify(state: TwixtState, *, semantics: str, ply_cap: int = PLY_CAP
-             ) -> Optional[Dict[str, Any]]:
+def classify(state: TwixtState, *, semantics: str) -> Optional[Dict[str, Any]]:
     """None when the position is not a decision position under `semantics`: a winner
     exists, no legal move remains, or -- protocol -- ply >= cap. Otherwise the class with
     W (own immediate wins), T (the opponent's), D (moves leaving it none)."""
     if semantics not in SEMANTICS:
         raise ValueError(semantics)
+    _official(state, "classify")
     if state.winner() is not None or not state.legal_moves():
         return None
-    if semantics == "protocol" and state.ply >= ply_cap:
+    if semantics == "protocol" and state.ply >= PLY_CAP:
         return None
     W = CC.immediate_wins(state)
     if W:                                        # terminal precedence: T is irrelevant
@@ -127,7 +136,7 @@ def classify(state: TwixtState, *, semantics: str, ply_cap: int = PLY_CAP
                 "T_void": None}
     T = CC.threats_against(state)
     void = None
-    if semantics == "protocol" and state.ply + 1 >= ply_cap and T:
+    if semantics == "protocol" and state.ply + 1 >= PLY_CAP and T:
         #: the game ends as a draw after the mover's (non-winning) move: no reply exists
         void, T = [list(t) for t in T], []
     if not T:
@@ -161,11 +170,11 @@ def m1_choice(c: Mapping[str, Any], counts: Mapping) -> Dict[str, Any]:
 
 # ─────────────────────────────── M2: proven results (§3.2, §10 A1.2, A1.4) ──────────────────
 
-def _past_cap(state: TwixtState, semantics: str, ply_cap: int) -> bool:
-    return semantics == "protocol" and state.ply >= ply_cap
+def _past_cap(state: TwixtState, semantics: str) -> bool:
+    return semantics == "protocol" and state.ply >= PLY_CAP
 
 
-def proof_statuses(root, *, semantics: str, ply_cap: int = PLY_CAP) -> Dict[int, str]:
+def proof_statuses(root, *, semantics: str) -> Dict[int, str]:
     """Bottom-up over the final tree, read-only. LOSS: a winner exists (the player to move
     lost), or every legal move has a created child that is WIN. WIN: some child is LOSS.
     UNKNOWN otherwise -- including an absent child, a protocol draw at the cap, and any
@@ -176,13 +185,14 @@ def proof_statuses(root, *, semantics: str, ply_cap: int = PLY_CAP) -> Dict[int,
         node, done = stack.pop()
         s = node.state
         if not done:
+            _official(s, "a tree node")              # EVERY node examined, not only the root
             stack.append((node, True))
-            if s.winner() is None and not _past_cap(s, semantics, ply_cap):
+            if s.winner() is None and not _past_cap(s, semantics):
                 stack.extend((c, False) for c in node.children.values())
             continue
         if s.winner() is not None:
             status[id(node)] = "LOSS"
-        elif _past_cap(s, semantics, ply_cap) or not node.is_expanded or not node.children:
+        elif _past_cap(s, semantics) or not node.is_expanded or not node.children:
             status[id(node)] = "UNKNOWN"
         elif any(status[id(c)] == "LOSS" for c in node.children.values()):
             status[id(node)] = "WIN"
@@ -213,12 +223,11 @@ def certificate(node, status: Mapping[int, str]) -> Dict[str, Any]:
 
 
 def verify_certificate(prefix: Sequence, path: Sequence, claim: str, cert: Mapping[str, Any],
-                       *, semantics: str, ply_cap: int = PLY_CAP, size: int = 24
-                       ) -> Tuple[bool, str]:
+                       *, semantics: str) -> Tuple[bool, str]:
     """§10 A1.4: PURE and engine-only. Replays prefix + path (no move after a win; under the
     protocol none at or past the cap) and checks the claim recursively."""
     try:
-        s = replay(list(prefix) + list(path), size=size, semantics=semantics, ply_cap=ply_cap)
+        s = replay(list(prefix) + list(path), semantics=semantics)
         kind = cert.get("kind")
         if kind == "TERMINAL_LOSS":
             if claim != "LOSS":
@@ -227,11 +236,11 @@ def verify_certificate(prefix: Sequence, path: Sequence, claim: str, cert: Mappi
                 raise _Bad(f"not a terminal win for the previous mover (winner {s.winner()}, "
                            f"certificate {cert.get('winner')})")
             return True, "verified"
-        if s.is_terminal() or _past_cap(s, semantics, ply_cap):
+        if s.is_terminal() or _past_cap(s, semantics):
             #: a winner, the protocol cap, or the engine's DRAW (no legal move): no proof rule
             #: applies -- an empty ALL_REPLIES_WIN would otherwise "cover" a full board vacuously
             why = ("a winner" if s.winner() is not None else
-                   f"the protocol cap {ply_cap}" if _past_cap(s, semantics, ply_cap) else
+                   f"the protocol cap {PLY_CAP}" if _past_cap(s, semantics) else
                    f"a draw: no winner, {len(s.legal_moves())} legal moves")
             raise _Bad(f"a {kind} certificate at a terminal position (ply {s.ply}: {why})")
         if kind == "WIN":
@@ -241,7 +250,7 @@ def verify_certificate(prefix: Sequence, path: Sequence, claim: str, cert: Mappi
             if not s.is_valid_placement(*move):
                 raise _Bad(f"the winning move {list(move)} is illegal")
             ok, why = verify_certificate(prefix, list(path) + [move], "LOSS", cert["child"],
-                                         semantics=semantics, ply_cap=ply_cap, size=size)
+                                         semantics=semantics)
             if not ok:
                 raise _Bad(why)
             return True, "verified"
@@ -255,8 +264,7 @@ def verify_certificate(prefix: Sequence, path: Sequence, claim: str, cert: Mappi
                 raise _Bad("the certificate's children do not cover exactly the legal moves")
             for r, c in legal:
                 ok, why = verify_certificate(prefix, list(path) + [(r, c)], "WIN",
-                                             cert["children"][f"{r},{c}"], semantics=semantics,
-                                             ply_cap=ply_cap, size=size)
+                                             cert["children"][f"{r},{c}"], semantics=semantics)
                 if not ok:
                     raise _Bad(why)
             return True, "verified"
@@ -265,12 +273,11 @@ def verify_certificate(prefix: Sequence, path: Sequence, claim: str, cert: Mappi
         return False, str(e)
 
 
-def m2_choice(root, counts: Mapping, *, semantics: str, ply_cap: int = PLY_CAP
-              ) -> Dict[str, Any]:
+def m2_choice(root, counts: Mapping, *, semantics: str) -> Dict[str, Any]:
     """§3.2: a proven win is taken; otherwise proven-losing root moves are excluded and the
     most-visited of the rest chosen; if every legal move is proven losing, the unchanged
     readout stands (ROOT_PROVEN_LOSS). Every proven root child carries its certificate."""
-    status = proof_statuses(root, semantics=semantics, ply_cap=ply_cap)
+    status = proof_statuses(root, semantics=semantics)
     baseline = RO._argmax(counts)
     proven = []
     for mid, child in sorted(root.children.items(), key=lambda kv: decode_move(kv[0])):
@@ -300,20 +307,26 @@ VALUE_NOTE = ("q_root_mover: the child's mean value for the ROOT's mover (+1 = a
               "both null when never visited")
 
 
-def tactics(state: TwixtState, counts: Mapping, root, *, ply_cap: int = PLY_CAP
-            ) -> Dict[str, Any]:
+def _value(root, move) -> Dict[str, Any]:
+    """§7: one root move's visits and values (D.node_stat at depth 1); its node checked first."""
+    mid = encode_move(*_t(move))
+    if mid in root.children:
+        _official(root.children[mid].state, "a root child")
+    return D.node_stat(root, mid, 1)
+
+
+def tactics(state: TwixtState, counts: Mapping, root) -> Dict[str, Any]:
     """Both mechanisms, under both semantics, labelled apart. Reads only. §7: the visits and
     the root mover's value of the baseline and of each mechanism's choice, per semantics."""
     out: Dict[str, Any] = {}
     for sem in SEMANTICS:
-        c = classify(state, semantics=sem, ply_cap=ply_cap)
+        c = classify(state, semantics=sem)
         m1 = None if c is None else m1_choice(c, counts)
-        m2 = m2_choice(root, counts, semantics=sem, ply_cap=ply_cap)
-        stat = lambda m: D.node_stat(root, encode_move(*_t(m)), 1)   # noqa: E731
+        m2 = m2_choice(root, counts, semantics=sem)
         out[sem] = {"class": c, "M1": m1, "M2": m2,
-                    "values": {"note": VALUE_NOTE, "baseline": stat(m2["baseline"]),
-                               "M1": None if m1 is None else stat(m1["choice"]),
-                               "M2": stat(m2["choice"])}}
+                    "values": {"note": VALUE_NOTE, "baseline": _value(root, m2["baseline"]),
+                               "M1": None if m1 is None else _value(root, m1["choice"]),
+                               "M2": _value(root, m2["choice"])}}
     p, b = out["protocol"], out["board"]
     out["cap_sensitive"] = (p["class"] != b["class"] or p["M1"] != b["M1"] or
                             p["M2"]["choice"] != b["M2"]["choice"] or
@@ -334,7 +347,7 @@ def fixture_digests(frozen: Mapping[str, Any]) -> Dict[str, str]:
 
 
 def corpus_universe(games: Sequence[Mapping[str, Any]], *, excluded: Sequence[str],
-                    fixtures: Mapping[str, str], ply_cap: int = PLY_CAP
+                    fixtures: Mapping[str, str]
                     ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     """Every incumbent decision position under the protocol, outside the excluded games,
     classified both ways; fixture-equivalent states set aside."""
@@ -343,13 +356,12 @@ def corpus_universe(games: Sequence[Mapping[str, Any]], *, excluded: Sequence[st
     for g in sorted(games, key=lambda g: g["task_id"]):
         if g["task_id"] in set(excluded):
             continue
-        s = TwixtState(active_size=24, to_move="red")
+        s = replay([])
         for i, mv in enumerate(g["moves"]):
             if g["actors"][i] == "incumbent":
-                cp = classify(s, semantics="protocol", ply_cap=ply_cap)
+                cp = classify(s, semantics="protocol")
                 if cp is not None:
-                    cb = cp if s.ply + 1 < ply_cap else classify(s, semantics="board",
-                                                                 ply_cap=ply_cap)
+                    cb = cp if s.ply + 1 < PLY_CAP else classify(s, semantics="board")
                     moves = [list(_t(m)) for m in g["moves"][:i]]
                     e = {"key": f"{g['task_id']}@{i}", "game": g["task_id"], "ply": i,
                          "moves": moves, "prefix_digest": CC.prefix_digest(moves),

@@ -11,6 +11,7 @@ import copy
 import dataclasses
 import json
 import os
+import inspect
 import pathlib
 import random
 import subprocess
@@ -26,31 +27,12 @@ from scripts.GPU.alphazero import h5_incumbent_defence_factors as X
 from scripts.GPU.alphazero import h5_incumbent_tactics as M
 from scripts.GPU.alphazero import h5_incumbent_tactics_authorization as AUTH
 from scripts.GPU.alphazero import h5_weakness_review as WR
+from scripts.GPU.alphazero.game.twixt_state import TwixtState
 from scripts.GPU.alphazero.mcts import MCTSNode, encode_move as enc
 from tests.test_h5_cap_completion import ONE, TWO
 from tests.test_h5_incumbent_defence import BY_ID, CONFIG, FIX, IDENT, Steered
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-#: 8x8 positions found by random playout and pinned; each test re-checks the property it needs
-OWN_WIN_AND_THREAT = [(1, 1), (1, 4), (7, 3), (3, 4), (7, 2), (2, 3), (3, 1), (3, 6), (5, 4),
-                      (5, 7), (4, 3), (2, 7), (5, 1), (5, 5), (0, 2), (5, 2), (2, 6), (1, 7),
-                      (0, 5), (6, 1), (3, 5), (4, 6), (6, 6), (1, 6), (6, 3), (3, 0)]
-ONE_THREAT_FIVE_DEFENCES = [(0, 2), (5, 1), (3, 3), (6, 3), (1, 1), (3, 1), (6, 4), (4, 2),
-                            (2, 1), (4, 3), (2, 6), (6, 2), (7, 5)]
-TWO_THREATS_ONE_DEFENCE = [(5, 4), (3, 0), (6, 1), (2, 4), (4, 6), (2, 0), (4, 4), (1, 7),
-                           (4, 3), (5, 3), (3, 4), (1, 4), (2, 6), (5, 7), (0, 5)]
-THREE_THREATS_NO_DEFENCE = [(4, 5), (5, 4), (5, 1), (4, 4), (6, 1), (6, 2), (2, 1), (2, 4),
-                            (6, 5), (5, 3), (1, 6), (1, 7), (6, 3), (3, 7), (1, 4), (2, 0),
-                            (7, 6), (1, 2), (5, 6), (3, 5), (4, 3), (5, 7), (4, 2), (5, 2),
-                            (0, 6), (5, 0), (0, 1), (4, 1), (0, 4), (1, 1), (0, 3), (2, 6)]
-
-
-#: an 8x8 legal full-board DRAW (no winner, no legal move); random playout seed 2386
-DRAW8 = [(6, 3), (4, 2), (3, 3), (2, 3), (6, 2), (1, 3), (2, 4), (4, 7), (6, 6), (3, 1), (6, 4), (4, 5),
-         (3, 2), (1, 0), (4, 4), (2, 0), (3, 5), (1, 7), (1, 2), (3, 7), (1, 6), (6, 5), (2, 5), (4, 0),
-         (0, 5), (5, 4), (1, 5), (6, 1), (4, 1), (3, 0), (2, 2), (6, 7), (5, 5), (5, 7), (0, 2), (5, 1),
-         (3, 4), (5, 0), (5, 3), (6, 0), (5, 6), (3, 6), (7, 6), (1, 4), (5, 2), (1, 1), (2, 1), (2, 6),
-         (0, 1), (2, 7), (4, 6), (4, 3), (7, 3)]
 A24 = "abcdefghijklmnopqrstuvwx"
 
 
@@ -59,8 +41,9 @@ def game24(code):
     return [(A24.index(code[i]), A24.index(code[i + 1])) for i in range(0, len(code), 2)]
 
 
-#: OFFICIAL-BOARD positions from random legal playouts (scratch finders, streams noted), pinned
-#: here; each is re-checked in test_the_24x24_POSITIONS_still_have_their_properties
+#: §11 A2.3 -- OFFICIAL-BOARD positions only, from RULES-ENGINE-ONLY random legal playouts (scratch
+#: finders; no model, agent decision or research game; streams noted), pinned here and re-checked
+#: in test_the_24x24_POSITIONS_still_have_their_properties
 DRAW24 = game24(  # Random("draw24:0"): ply 570, no winner, red to move with NO legal move
     "wgvwshopanntwsokcslgjlgxqloqqsdodpgcpbwwfbkeidedbnrqmpkdxieupnlvonijogiqqjixqelwajqdrvkp"
     "cdlsofduxpkjnhwqitrbgjdcqhmtumirvckthuwknebomiouhjqtlqnbtumcbtknpdcamntjxocqifsenifiuipg"
@@ -98,10 +81,30 @@ UNDEFENDABLE_256 = game24(  # Random("undef24:5"): ply 256, red to move; 4 black
     "wvlgccndphmqxbuxgspmgpbaenkowbwnagsmbgfrqnummnjretgtngdheikmdkdeedsofftsijsiuwexsjguxsqw"
     "scvnluvtpforcdkulegrdcesmeibtfjmawhxnnuvjdrvlsuartdfftwuxllrdrejkfepvvvxarntwksatofjwrog"
     "qdtmljpgktmaspcrfnghvlkpxjqmqidnvrpusgcphkpbnewpimnoinrcdjfuxoosquhohjja")
-
-
-def small(moves):
-    return M.replay(moves, size=8)
+OWN_WIN_AND_THREAT_264 = game24(  # Random("tacwt24:266"), moves biased to own pegs: ply 264, red; own wins (4,6) (4,7) (4,8), black threat (4,6)
+    "sggalwebridunvftthgrpwhckubvnnonpjusqfwttekkvdkskccwothpqlfocmembulmpvwqkmkojkrlmnglobsr"
+    "nrgnwfinphuqdoqsvfevlsqjlgdtjtbtbeokddfcbwwptgpqjwhjqtvnagishlrgsccbsshdwcgquiqiuctsngmm"
+    "jrcnluocrhwbqkvvrndwpoeahohbilpkhvjdbnrufmeegpitchvinkfdwrtjkwdejvuhkhktoukvjhvemshnbfdk"
+    "mwoqlevoidswojugfrkbnwvjvkferkwgpsfliudipnnibiknhsclaiiqeogedmjlohqnifeqcqfkqpqrdvdbffjc"
+    "uosdovpiibdlgtrwdftvxdmagcexcjvrctmhcsuaersxtklvxgtireplqhicwenmsnqvsfdalqvlghsojowxkrrq"
+    "kikproedubooalqojmmjxobdahlpmetbbmccomnsjnfjwdnemuskoildpugdkfshadrbhgrvtpodlcelcpudmvbj")
+SINGLE_260 = game24(  # Random("tac24:147"): ply 260, red to move; ONE black threat (8,10), 4 defences
+    "rqcmgmnwhwrebrfsquljdphplukrdwgjrjsghswepdulnuwilvjwchfurvekxksdltuwhjugskiucwuiuhcsohrc"
+    "covfpiosgsgnjttfdielqlvwsvwpruwgsobmpmmrsprpgvpkhvtjxrvetqwqgtpgsbwvauhdgdclpndxussejgem"
+    "qgbauugopckafeovfjlrmuqvnenxjvfdrwiamgpxckrxuntcrgwsmeiimpptrruorkonhokmfckpmwhcwmkxisua"
+    "wthrglubdtqfttvovjkdsmtkjqcbblqiurbgvtbjineugpegdudlbpbomjwrrmngsrivjcdesisnahqtigdjorti"
+    "vniqtbhhamfwointwjnccrkfpfoegwirocccxwkqxnbeesscafbqgbldxsvxcvropocnfhlhgfkjftvqfkksnhow"
+    "mcoawulnukrlrshxaslkijufvblxlfkgcptorbqspbcqepmofvrtfmjmpqplkidchldgjunpihopwopu")
+MULTI_269 = game24(  # Random("tac24:255"): ply 269, black; red threats (12,16) (12,18), ONE defence (11,17)
+    "rjflofrgewmmahgwkuouxosiemiibpggsemhxsgeuncmjebgtugubuhvhbdctmiejqfiektgiqfjirccglwonkci"
+    "aomuteeajuvmkfurcntpihvgkrdogcdjnegdqhsuxnohcbrmcfuscdhmblnwtvsjnomenncqadpxwfvhplevwjnb"
+    "ippefrpiporerrprsnncjwensrwifsokjkddnmukaktntopdcgjnssghpfndpcescuuwfgkjnhkirkdficktvjve"
+    "nqgfcwcecsqnmowkwgduhglgqqjooddagbngtrshogwqudcjvndgsvcrajlpgosllknvftuefwnuckrqjjuckdol"
+    "spniebovjllfeorbbqqadkeuwrmpfnpmaedxdtwesmejmvcoettjcpgrojlbaplwvqbkqmpbmfedimrcfejcwpkn"
+    "xrwtgnhxuotcsdqttlqbhsvagprnvwjsnlbsrlexomutkhtdegklttljntkchddidvruxvbnorfxxihfkoeiecqg"
+    "hiubulopdl")
+QUIET_40 = DRAW24[:40]   # ply 40: no own win, no threat
+OCCUPIED = UNDEFENDABLE_256[0]
 
 
 def other(state, avoid=()):
@@ -113,6 +116,21 @@ def other(state, avoid=()):
 def counts_of(state, visits=None):
     visits = visits or {}
     return {m: visits.get(m, 0) for m in state.legal_moves()}
+
+
+def tree_root(state, *, expanded=True):
+    root = MCTSNode(state=state, priors={enc(*m): 1.0 for m in state.legal_moves()}
+                    if expanded else None)
+    return root
+
+
+def child(parent, move, visits=1, expanded=True):
+    st = parent.state.apply_move(move)
+    n = MCTSNode(state=st, parent=parent, move=enc(*move), visit_count=visits,
+                 priors={enc(*m): 1.0 for m in st.legal_moves()} if expanded and
+                 st.winner() is None else None)
+    parent.children[enc(*move)] = n
+    return n
 
 
 # ─────────────────────────────── the gate and the frozen names ───────────────────────────────
@@ -151,6 +169,54 @@ def test_the_FROZEN_NAMES_cap_and_excluded_games():
     assert len(members) == 13 and len(M.EXCLUDED_GAMES) == 18, "two controls share E games"
 
 
+# ─────────────────────────────── §11 A2: the official board and the cap, enforced ───────────
+
+def test_A2_no_entry_takes_a_SIZE_or_a_CAP_and_replay_builds_the_official_board():
+    for f in (M.replay, M.classify, M.proof_statuses, M.verify_certificate, M.m2_choice, M.tactics,
+              M.corpus_universe):
+        assert not {"size", "ply_cap"} & set(inspect.signature(f).parameters), f.__name__
+    s = M.replay([])
+    assert (s.board_size, s.active_size, M.BOARD, M.PLY_CAP) == (24, 24, 24, 280)
+
+
+#: deliberately INVALID boards -- used only to prove the refusal (§11 A2.1)
+WRONG = {"playable-8": dict(active_size=8), "physical-26": dict(board_size=26, active_size=24)}
+
+
+@pytest.mark.parametrize("dims", WRONG.values(), ids=WRONG.keys())
+def test_A2_a_board_that_is_not_24x24_is_REFUSED_at_every_entry_before_anything_is_computed(
+        dims, monkeypatch):
+    bad = TwixtState(to_move="red", **dims)
+    root = tree_root(bad)
+    for name in ("winner", "legal_moves", "apply_move"):
+        monkeypatch.setattr(TwixtState, name, lambda *a, **k: pytest.fail("computed before the refusal"))
+    for call in (lambda: M.classify(bad, semantics="protocol"), lambda: M.classify(bad, semantics="board"),
+                 lambda: M.state_digest(bad), lambda: M.proof_statuses(root, semantics="board"),
+                 lambda: M.m2_choice(root, {}, semantics="protocol"), lambda: M.tactics(bad, {}, root)):
+        with pytest.raises(M.TacticsRefused, match="not the official 24x24"):
+            call()
+
+
+@pytest.mark.parametrize("dims", WRONG.values(), ids=WRONG.keys())
+def test_A2_EVERY_node_examined_is_checked_not_only_the_root(dims):
+    s = M.replay(QUIET_40)
+    mv = other(s)
+    root = tree_root(s)
+    root.children[enc(*mv)] = MCTSNode(state=TwixtState(to_move="black", **dims), parent=root,
+                                       move=enc(*mv), visit_count=5, priors={})
+    for sem in M.SEMANTICS:
+        with pytest.raises(M.TacticsRefused, match="a tree node"):
+            M.proof_statuses(root, semantics=sem)
+    with pytest.raises(M.TacticsRefused, match="a tree node"):
+        M.tactics(s, counts_of(s, {mv: 5}), root)
+    won = M.replay(list(TWO) + [(12, 2)])         # its winner stops the walk at the root ...
+    top = tree_root(won)
+    top.children[enc(*mv)] = MCTSNode(state=TwixtState(to_move="black", **dims), parent=top,
+                                      move=enc(*mv), visit_count=5, priors={})
+    with pytest.raises(M.TacticsRefused, match="a root child"):
+        M.tactics(won, {mv: 5}, top)             # ... but the child whose VALUE §7 reads is checked
+
+
 # ─────────────────────────────── M1: classes and precedence (§3.1) ───────────────────────────
 
 def test_the_24x24_POSITIONS_still_have_their_properties():
@@ -168,35 +234,39 @@ def test_the_24x24_POSITIONS_still_have_their_properties():
     assert (u.ply, u.to_move, CC.immediate_wins(u), len(u.legal_moves())) == (256, "red", [], 286)
     assert CC.threats_against(u) == [(15, 16), (16, 15), (17, 16), (19, 16)]
     assert WR.saving_moves_of(u, CC.threats_against(u)) == []
-
-
-def test_the_SYNTHETIC_POSITIONS_still_have_their_properties():
-    s = small(OWN_WIN_AND_THREAT)
-    assert (CC.immediate_wins(s), CC.threats_against(s)) == ([(2, 4)], [(2, 2)])
-    s = small(ONE_THREAT_FIVE_DEFENCES)
-    assert CC.threats_against(s) == [(5, 4)] and len(WR.saving_moves_of(s, [(5, 4)])) == 5
-    s = small(TWO_THREATS_ONE_DEFENCE)
-    assert CC.threats_against(s) == [(7, 3), (7, 5)]
-    s = small(THREE_THREATS_NO_DEFENCE)
-    assert len(CC.threats_against(s)) == 3 and len(s.legal_moves()) == 21
+    a = M.replay(OWN_WIN_AND_THREAT_264, semantics="protocol")
+    assert (a.ply, a.to_move, CC.immediate_wins(a), CC.threats_against(a)) == \
+        (264, "red", [(4, 6), (4, 7), (4, 8)], [(4, 6)])
+    o = M.replay(SINGLE_260, semantics="protocol")
+    assert (o.ply, o.to_move, CC.immediate_wins(o), CC.threats_against(o)) == (260, "red", [], [(8, 10)])
+    assert sorted(map(tuple, WR.saving_moves_of(o, [(8, 10)]))) == [(8, 10), (9, 10), (9, 11), (10, 10)]
+    m = M.replay(MULTI_269, semantics="protocol")
+    assert (m.ply, m.to_move, CC.immediate_wins(m), CC.threats_against(m)) == \
+        (269, "black", [], [(12, 16), (12, 18)])
+    assert sorted(map(tuple, WR.saving_moves_of(m, [(12, 16), (12, 18)]))) == [(11, 17)]
+    q = M.replay(QUIET_40)
+    assert (q.ply, CC.immediate_wins(q), CC.threats_against(q)) == (40, [], [])
 
 
 @pytest.mark.parametrize("moves,cls,D_", [
-    (OWN_WIN_AND_THREAT, "OWN_WIN", None),
-    (ONE_THREAT_FIVE_DEFENCES, "DEFEND_SINGLE", [[2, 4], [3, 5], [4, 4], [5, 4], [5, 5]]),
-    (TWO_THREATS_ONE_DEFENCE, "DEFEND_MULTI", [[6, 5]]),
-    (THREE_THREATS_NO_DEFENCE, "UNDEFENDABLE", []),
-    (ONE_THREAT_FIVE_DEFENCES[:2], "QUIET", []),
-])
+    (OWN_WIN_AND_THREAT_264, "OWN_WIN", None),
+    (SINGLE_260, "DEFEND_SINGLE", [[8, 10], [9, 10], [9, 11], [10, 10]]),
+    (MULTI_269, "DEFEND_MULTI", [[11, 17]]),
+    (UNDEFENDABLE_256, "UNDEFENDABLE", []),
+    (QUIET_40, "QUIET", []),
+], ids=["OWN_WIN", "DEFEND_SINGLE", "DEFEND_MULTI", "UNDEFENDABLE", "QUIET"])
 def test_the_CLASSES_in_precedence_order(moves, cls, D_):
-    c = M.classify(small(moves), semantics="protocol")
+    c = M.classify(M.replay(moves), semantics="protocol")
     assert (c["class"], c["D"]) == (cls, D_)
 
 
 def test_M1_an_OWN_WIN_takes_precedence_over_defending():
-    s = small(OWN_WIN_AND_THREAT)
-    r = M.m1_choice(M.classify(s, semantics="protocol"), counts_of(s, {(2, 2): 50, (2, 4): 3}))
-    assert (r["baseline"], r["choice"], r["changed"]) == ([2, 2], [2, 4], True)
+    s = M.replay(OWN_WIN_AND_THREAT_264)
+    c = M.classify(s, semantics="protocol")
+    assert (c["class"], c["T"]) == ("OWN_WIN", None), "the threat is irrelevant once the mover can win"
+    block = other(s, c["W"])
+    r = M.m1_choice(c, counts_of(s, {block: 50, (4, 7): 3}))
+    assert (r["baseline"], r["choice"], r["changed"]) == (list(block), [4, 7], True)
 
 
 def test_M1_TWO_OWN_WINS_are_both_admissible_and_the_most_visited_is_chosen():
@@ -207,85 +277,32 @@ def test_M1_TWO_OWN_WINS_are_both_admissible_and_the_most_visited_is_chosen():
 
 
 def test_M1_ALTERNATIVE_DEFENCES_choose_the_most_visited_and_flag_no_evidence():
-    s = small(ONE_THREAT_FIVE_DEFENCES)
+    s = M.replay(SINGLE_260)
     c = M.classify(s, semantics="protocol")
     out = other(s, c["D"])
-    r = M.m1_choice(c, counts_of(s, {(3, 5): 7, (4, 4): 9, out: 100}))
-    assert (r["choice"], r["no_search_evidence"]) == ([4, 4], False)
+    r = M.m1_choice(c, counts_of(s, {(9, 10): 7, (10, 10): 9, out: 100}))
+    assert (r["choice"], r["no_search_evidence"]) == ([10, 10], False)
     r = M.m1_choice(c, counts_of(s, {out: 100}))
-    assert (r["choice"], r["no_search_evidence"]) == ([2, 4], True), \
+    assert (r["choice"], r["no_search_evidence"]) == ([8, 10], True), \
         "an unvisited defence is the (row, col) minimum and must be flagged"
 
 
 def test_M1_MULTIPLE_THREATS_admit_only_the_common_defence():
-    s = small(TWO_THREATS_ONE_DEFENCE)
+    s = M.replay(MULTI_269)
     c = M.classify(s, semantics="protocol")
     r = M.m1_choice(c, counts_of(s, {other(s, c["D"]): 30}))
-    assert r["choice"] == [6, 5]
+    assert r["choice"] == [11, 17]
 
 
-@pytest.mark.parametrize("moves", [THREE_THREATS_NO_DEFENCE, ONE_THREAT_FIVE_DEFENCES[:2]])
+@pytest.mark.parametrize("moves", [UNDEFENDABLE_256, QUIET_40], ids=["UNDEFENDABLE", "QUIET"])
 def test_M1_UNDEFENDABLE_and_QUIET_change_nothing(moves):
-    s = small(moves)
+    s = M.replay(moves)
     some = sorted(s.legal_moves())[3]
     r = M.m1_choice(M.classify(s, semantics="protocol"), counts_of(s, {some: 5}))
     assert (r["choice"], r["changed"]) == (list(some), False)
 
 
-# ─────────────────────────────── the cap (§10 A1.2) ───────────────────────────────
-
-def test_CAP_a_win_at_the_boundary_counts_and_a_position_at_the_cap_is_not_classified():
-    s = small(OWN_WIN_AND_THREAT)                # ply 26
-    assert M.classify(s, semantics="protocol", ply_cap=27)["class"] == "OWN_WIN", \
-        "the winner is checked before the cap"
-    assert M.classify(s, semantics="protocol", ply_cap=26) is None
-    assert M.classify(s, semantics="board", ply_cap=26)["class"] == "OWN_WIN"
-
-
-def test_CAP_a_purported_reply_after_termination_is_void():
-    s = small(ONE_THREAT_FIVE_DEFENCES)          # ply 13, one threat
-    p = M.classify(s, semantics="protocol", ply_cap=14)
-    b = M.classify(s, semantics="board", ply_cap=14)
-    assert (p["class"], p["T_void"]) == ("QUIET", [[5, 4]]) and b["class"] == "DEFEND_SINGLE"
-
-
-def tree_root(state, *, expanded=True):
-    root = MCTSNode(state=state, priors={enc(*m): 1.0 for m in state.legal_moves()}
-                    if expanded else None)
-    return root
-
-
-def child(parent, move, visits=1, expanded=True):
-    st = parent.state.apply_move(move)
-    n = MCTSNode(state=st, parent=parent, move=enc(*move), visit_count=visits,
-                 priors={enc(*m): 1.0 for m in st.legal_moves()} if expanded and
-                 st.winner() is None else None)
-    parent.children[enc(*move)] = n
-    return n
-
-
-def test_CAP_a_BOARD_ONLY_proof_never_justifies_a_PROTOCOL_exclusion():
-    s = small(ONE_THREAT_FIVE_DEFENCES)          # ply 13; the threat (5,4) wins at ply 15
-    root = tree_root(s)
-    bad = other(s, M.classify(s, semantics="board")["D"])
-    m = child(root, bad, visits=9)               # does not defend
-    child(m, (5, 4))                             # the terminal refutation, at ply 15
-    counts = counts_of(s, {bad: 9, (2, 4): 3})
-    board = M.m2_choice(root, counts, semantics="board", ply_cap=14)
-    prot = M.m2_choice(root, counts, semantics="protocol", ply_cap=14)
-    assert board["excluded"] == [list(bad)] and board["choice"] == [2, 4]
-    assert prot["excluded"] == [] and prot["choice"] == list(bad), \
-        "a proof past the cap was used under the protocol"
-    assert prot["proven_root_children"] == []
-
-
-def test_CAP_a_node_AT_the_cap_without_a_winner_is_UNKNOWN():
-    s = small(ONE_THREAT_FIVE_DEFENCES)
-    root = tree_root(s)
-    m = child(root, other(s))
-    st = M.proof_statuses(root, semantics="protocol", ply_cap=14)
-    assert st[id(m)] == "UNKNOWN"
-
+# ─────────────────────────────── the cap at 280 (§10 A1.2, §11 A2.2) ─────────────────────────
 
 def test_CAP_24x24_a_win_on_the_LAST_allowed_move_counts_and_nothing_is_decided_AT_the_cap():
     s = M.replay(OWN_WIN_279, semantics="protocol")          # ply 279; the real cap, 280
@@ -295,6 +312,8 @@ def test_CAP_24x24_a_win_on_the_LAST_allowed_move_counts_and_nothing_is_decided_
                                 semantics="protocol") == (True, "verified")
     assert M.verify_certificate(OWN_WIN_279, [], "WIN", {"kind": "WIN", "move": [6, 19], "child": leaf},
                                 semantics="protocol") == (True, "verified")
+    assert not M.verify_certificate(OWN_WIN_279, [(6, 19)], "WIN", leaf, semantics="board")[0], \
+        "a TERMINAL_LOSS certificate proved a WIN"
     root = tree_root(s)
     child(root, (6, 19))
     assert M.m2_choice(root, counts_of(s, {(6, 19): 1}), semantics="protocol")["rule"] == "PROVEN_WIN"
@@ -330,6 +349,10 @@ def test_CAP_24x24_a_reply_AT_the_cap_is_void_and_a_BOARD_ONLY_proof_never_exclu
     assert (board["excluded"], board["choice"]) == ([list(bad)], list(dfn))
     assert (prot["excluded"], prot["proven_root_children"], prot["choice"]) == ([], [], list(bad)), \
         "a proof resting on a reply AT the cap was used under the protocol"
+    m = root.children[enc(*bad)]
+    assert (M.proof_statuses(root, semantics="protocol")[id(m)],
+            M.proof_statuses(root, semantics="board")[id(m)]) == ("UNKNOWN", "WIN"), \
+        "a node AT the cap without a winner is a protocol draw: UNKNOWN"
     cert = board["proven_root_children"][0]["certificate"]
     assert M.verify_certificate(THREAT_279, [bad], "WIN", cert, semantics="board") == (True, "verified")
     ok_, why = M.verify_certificate(THREAT_279, [bad], "WIN", cert, semantics="protocol")
@@ -339,61 +362,63 @@ def test_CAP_24x24_a_reply_AT_the_cap_is_void_and_a_BOARD_ONLY_proof_never_exclu
 # ─────────────────────────────── M2: statuses, choices, certificates (§3.2, §10 A1.4) ────────
 
 def refuted_root():
-    """ONE_THREAT_FIVE_DEFENCES: a non-defending move loses to (5,4); (2,4) defends."""
-    s = small(ONE_THREAT_FIVE_DEFENCES)
+    """SINGLE_260 (ply 260, far from the cap): a non-defending move loses to black's (8,10);
+    (9,10) defends."""
+    s = M.replay(SINGLE_260)
     bad = other(s, M.classify(s, semantics="protocol")["D"])
     root = tree_root(s)
     m = child(root, bad, visits=9)
-    child(m, (5, 4))
-    child(root, (2, 4), visits=3)
+    child(m, (8, 10))
+    child(root, (9, 10), visits=3)
     return s, root, bad
 
 
 def test_M2_a_VISITED_REFUTATION_excludes_its_parent_and_the_certificate_verifies():
     s, root, bad = refuted_root()
-    r = M.m2_choice(root, counts_of(s, {bad: 9, (2, 4): 3}), semantics="protocol")
-    assert (r["rule"], r["excluded"], r["choice"]) == ("EXCLUSION", [list(bad)], [2, 4])
+    r = M.m2_choice(root, counts_of(s, {bad: 9, (9, 10): 3}), semantics="protocol")
+    assert (r["rule"], r["excluded"], r["choice"]) == ("EXCLUSION", [list(bad)], [9, 10])
     p = r["proven_root_children"][0]
     assert (p["move"], p["status"], p["certificate"]["kind"]) == (list(bad), "WIN", "WIN")
-    assert M.verify_certificate(ONE_THREAT_FIVE_DEFENCES, [bad], "WIN", p["certificate"],
-                                semantics="protocol", size=8) == (True, "verified")
-    assert not M.verify_certificate(ONE_THREAT_FIVE_DEFENCES, [bad], "LOSS", p["certificate"],
-                                    semantics="protocol", size=8)[0], "a WIN certificate proved a LOSS"
+    assert M.verify_certificate(SINGLE_260, [bad], "WIN", p["certificate"],
+                                semantics="protocol") == (True, "verified")
+    assert not M.verify_certificate(SINGLE_260, [bad], "LOSS", p["certificate"],
+                                    semantics="protocol")[0], "a WIN certificate proved a LOSS"
 
 
 def test_M2_a_PROVEN_WIN_is_chosen():
-    s = small(OWN_WIN_AND_THREAT)
+    s = M.replay(OWN_WIN_AND_THREAT_264)
+    block = other(s, CC.immediate_wins(s))
     root = tree_root(s)
-    child(root, (2, 4), visits=1)                # terminal: the mover wins
-    child(root, (2, 2), visits=40)
-    r = M.m2_choice(root, counts_of(s, {(2, 4): 1, (2, 2): 40}), semantics="protocol")
-    assert (r["rule"], r["choice"], r["root_status"]) == ("PROVEN_WIN", [2, 4], "WIN"), \
+    child(root, (4, 7), visits=1)                # terminal: the mover wins
+    child(root, block, visits=40)
+    r = M.m2_choice(root, counts_of(s, {(4, 7): 1, block: 40}), semantics="protocol")
+    assert (r["rule"], r["choice"], r["root_status"]) == ("PROVEN_WIN", [4, 7], "WIN"), \
         "ONE losing child proves the parent: the rule is existential"
     assert r["proven_root_children"][0]["certificate"] == {"kind": "TERMINAL_LOSS",
                                                            "winner": s.to_move}
 
 
 def full_refutation_tree(drop=None):
-    """THREE_THREATS_NO_DEFENCE: every legal move answered by a winning reply."""
-    s = small(THREE_THREATS_NO_DEFENCE)
+    """UNDEFENDABLE_256: every legal move answered by one of black's winning replies (ply 257)."""
+    s = M.replay(UNDEFENDABLE_256)
+    T = CC.threats_against(s)
     root = tree_root(s)
     for mv in s.legal_moves():
-        if mv == drop:
-            continue
-        n = child(root, mv)
-        w = CC.immediate_wins(n.state)[0]
-        child(n, w)
+        if mv != drop:
+            n = child(root, mv)
+            child(n, next(t for t in T if n.state.is_valid_placement(*t) and
+                          n.state.apply_move(t).winner() == "black"))
     return s, root
 
 
 def test_M2_EVERY_MOVE_LOSES_is_ROOT_PROVEN_LOSS_with_full_coverage():
     s, root = full_refutation_tree()
-    st = M.proof_statuses(root, semantics="protocol")
-    assert st[id(root)] == "LOSS"
-    cert = M.certificate(root, st)
-    assert cert["kind"] == "ALL_REPLIES_WIN" and len(cert["legal"]) == 21
-    assert M.verify_certificate(THREE_THREATS_NO_DEFENCE, [], "LOSS", cert,
-                                semantics="protocol", size=8) == (True, "verified")
+    for sem in M.SEMANTICS:
+        st = M.proof_statuses(root, semantics=sem)
+        cert = M.certificate(root, st)
+        assert (st[id(root)], cert["kind"], len(cert["legal"])) == ("LOSS", "ALL_REPLIES_WIN", 286)
+        assert M.verify_certificate(UNDEFENDABLE_256, [], "LOSS", cert,
+                                    semantics=sem) == (True, "verified"), "a GENUINE universal proof"
     counts = counts_of(s, {m: 1 for m in s.legal_moves()})
     r = M.m2_choice(root, counts, semantics="protocol")
     assert (r["rule"], r["choice"], r["root_status"]) == \
@@ -401,7 +426,7 @@ def test_M2_EVERY_MOVE_LOSES_is_ROOT_PROVEN_LOSS_with_full_coverage():
 
 
 def test_M2_an_ABSENT_legal_child_keeps_the_node_UNKNOWN_and_unvisited_is_never_LOSS():
-    drop = other(small(THREE_THREATS_NO_DEFENCE))
+    drop = other(M.replay(UNDEFENDABLE_256))
     s, root = full_refutation_tree(drop=drop)
     assert drop in s.legal_moves()
     st = M.proof_statuses(root, semantics="protocol")
@@ -413,25 +438,25 @@ def test_M2_an_ABSENT_legal_child_keeps_the_node_UNKNOWN_and_unvisited_is_never_
 
 
 def test_M2_a_NETWORK_VALUE_or_MEAN_of_plus_minus_1_is_not_proof():
-    s = small(ONE_THREAT_FIVE_DEFENCES)
+    s = M.replay(SINGLE_260)
     root = tree_root(s)
     m = child(root, other(s, M.classify(s, semantics="protocol")["D"]), visits=50)
     m.nn_value, m.value_sum = 1.0, 50.0          # "certain" -- but not terminal
-    g = child(m, other(m.state, [(5, 4)]), visits=49)
+    g = child(m, other(m.state, CC.immediate_wins(m.state)), visits=49)
     g.nn_value, g.value_sum = -1.0, -49.0
     st = M.proof_statuses(root, semantics="protocol")
     assert (st[id(m)], st[id(g)]) == ("UNKNOWN", "UNKNOWN")
 
 
 def test_TACTICS_labels_PROTOCOL_and_BOARD_apart_and_flags_cap_sensitivity():
-    s, root, bad = refuted_root()                # ply 13; the refutation lands at ply 15
-    counts = counts_of(s, {bad: 9, (2, 4): 3})
-    t = M.tactics(s, counts, root, ply_cap=14)
+    s, root, bad, dfn, counts = threat279_tree()  # ply 279: the refutation would be the move at 280
+    t = M.tactics(s, counts, root)
     p, b = t["protocol"], t["board"]
     assert (p["class"]["class"], b["class"]["class"]) == ("QUIET", "DEFEND_SINGLE")
     assert (p["M2"]["excluded"], b["M2"]["excluded"]) == ([], [list(bad)])
     assert t["cap_sensitive"] is True
-    assert M.tactics(s, counts, root)["cap_sensitive"] is False
+    s, root, bad = refuted_root()                 # ply 260: far from the cap
+    assert M.tactics(s, counts_of(s, {bad: 9, (9, 10): 3}), root)["cap_sensitive"] is False
 
 
 def test_VALUES_are_the_ROOT_MOVERs_per_SEMANTICS_and_NULL_when_unvisited():
@@ -465,15 +490,14 @@ def test_VALUES_through_the_REAL_search_a_visited_own_win_is_plus_1_for_the_root
 
 # ─────────────────────────────── certificate tampering (§10 A1.4) ───────────────────────────────
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def loss_cert():
     s, root = full_refutation_tree()
     return M.certificate(root, M.proof_statuses(root, semantics="protocol"))
 
 
-def ok(cert, claim="LOSS", path=(), cap=280):
-    return M.verify_certificate(THREE_THREATS_NO_DEFENCE, list(path), claim, cert,
-                                semantics="protocol", ply_cap=cap, size=8)[0]
+def ok(cert, claim="LOSS"):
+    return M.verify_certificate(UNDEFENDABLE_256, [], claim, cert, semantics="protocol")[0]
 
 
 def test_TAMPER_a_missing_legal_move_is_rejected(loss_cert):
@@ -489,29 +513,16 @@ def test_TAMPER_a_wrong_legal_LIST_alone_is_rejected(loss_cert):
     assert not ok(c)
 
 
-def test_REPLAY_refuses_a_winning_move_made_AT_the_cap():
-    s = small(OWN_WIN_AND_THREAT)                # ply 26; (2,4) wins
-    cert = {"kind": "TERMINAL_LOSS", "winner": s.to_move}
-    args = (OWN_WIN_AND_THREAT, [(2, 4)], "LOSS", cert)
-    assert M.verify_certificate(*args, semantics="board", ply_cap=26, size=8)[0]
-    assert M.verify_certificate(*args, semantics="protocol", ply_cap=27, size=8)[0], \
-        "a win on the last allowed move is a win"
-    assert not M.verify_certificate(*args, semantics="protocol", ply_cap=26, size=8)[0], \
-        "a move at the cap was replayed"
-    assert not M.verify_certificate(OWN_WIN_AND_THREAT, [(2, 4)], "WIN", cert, semantics="board",
-                                    size=8)[0], "a TERMINAL_LOSS certificate proved a WIN"
-
-
 def test_TAMPER_an_extra_move_is_rejected(loss_cert):
     c = copy.deepcopy(loss_cert)
-    c["children"]["9,9"] = c["children"][next(iter(c["children"]))]
+    c["children"][f"{OCCUPIED[0]},{OCCUPIED[1]}"] = c["children"][next(iter(c["children"]))]
     assert not ok(c)
 
 
 def test_TAMPER_an_illegal_winning_move_is_rejected(loss_cert):
     c = copy.deepcopy(loss_cert)
     k = next(iter(c["children"]))
-    c["children"][k]["move"] = list(THREE_THREATS_NO_DEFENCE[0])   # an occupied cell
+    c["children"][k]["move"] = list(OCCUPIED)    # an occupied cell
     assert not ok(c)
 
 
@@ -523,51 +534,30 @@ def test_TAMPER_a_wrong_winner_is_rejected(loss_cert):
     assert not ok(c)
 
 
-def test_TAMPER_a_path_past_the_cap_and_a_claim_mismatch_are_rejected(loss_cert):
-    ply = small(THREE_THREATS_NO_DEFENCE).ply
-    assert not ok(loss_cert, cap=ply + 1), "a reply at the cap was accepted as proof"
+def test_TAMPER_a_claim_mismatch_is_rejected(loss_cert):
+    """(A path past the cap: the 24x24 cap controls above.)"""
     assert not ok(loss_cert, claim="WIN")
 
 
-@pytest.mark.parametrize("moves,size", [(DRAW24, 24), (DRAW8, 8)], ids=["24x24", "8x8"])
-def test_DRAW_a_full_board_without_a_winner_is_never_a_proven_LOSS(moves, size):
-    d = M.replay(moves, size=size)
+def test_DRAW_a_full_board_without_a_winner_is_never_a_proven_LOSS():
+    d = M.replay(DRAW24)
     assert (d.winner(), d.legal_moves(), d.is_terminal()) == (None, [], True)
     empty = {"kind": "ALL_REPLIES_WIN", "legal": [], "children": {}}
-    ok_, why = M.verify_certificate(moves, [], "LOSS", empty, semantics="board", size=size)
+    ok_, why = M.verify_certificate(DRAW24, [], "LOSS", empty, semantics="board")
     assert not ok_ and "a draw: no winner, 0 legal moves" in why, why
-    win = {"kind": "WIN", "move": list(moves[-1]), "child": empty}
-    assert not M.verify_certificate(moves[:-1], [], "WIN", win, semantics="board", size=size)[0], \
+    win = {"kind": "WIN", "move": list(DRAW24[-1]), "child": empty}
+    assert not M.verify_certificate(DRAW24[:-1], [], "WIN", win, semantics="board")[0], \
         "the move INTO the draw was proven winning"
-    assert not M.verify_certificate(moves, [], "LOSS", {"kind": "TERMINAL_LOSS", "winner": None},
-                                    semantics="board", size=size)[0]
-    ok_, why = M.verify_certificate(moves, [], "LOSS", empty, semantics="protocol", size=size)
-    assert not ok_ and ("past the cap 280" if len(moves) > 280 else "a draw: no winner") in why
-    parent = tree_root(M.replay(moves[:-1], size=size))
-    leaf = child(parent, moves[-1])
+    assert not M.verify_certificate(DRAW24, [], "LOSS", {"kind": "TERMINAL_LOSS", "winner": None},
+                                    semantics="board")[0]
+    ok_, why = M.verify_certificate(DRAW24, [], "LOSS", empty, semantics="protocol")
+    assert not ok_ and "past the cap 280" in why, "the draw lies beyond the cap: board-only"
+    parent = tree_root(M.replay(DRAW24[:-1]))
+    leaf = child(parent, DRAW24[-1])
     for sem in M.SEMANTICS:
         st = M.proof_statuses(parent, semantics=sem)
         assert (st[id(parent)], st.get(id(leaf), "UNKNOWN")) == ("UNKNOWN", "UNKNOWN")
         assert M.classify(d, semantics=sem) is None
-
-
-def test_24x24_a_GENUINE_universal_loss_proof_still_verifies_and_a_missing_reply_does_not():
-    s = M.replay(UNDEFENDABLE_256, semantics="protocol")    # replies at ply 257: inside the cap
-    T = CC.threats_against(s)
-    root = tree_root(s)
-    for mv in s.legal_moves():
-        n = child(root, mv)
-        child(n, next(t for t in T if n.state.is_valid_placement(*t) and
-                      n.state.apply_move(t).winner() == "black"))
-    for sem in M.SEMANTICS:
-        st = M.proof_statuses(root, semantics=sem)
-        cert = M.certificate(root, st)
-        assert (st[id(root)], cert["kind"], len(cert["legal"])) == ("LOSS", "ALL_REPLIES_WIN", 286)
-        assert M.verify_certificate(UNDEFENDABLE_256, [], "LOSS", cert,
-                                    semantics=sem) == (True, "verified")
-    gone = copy.deepcopy(cert)
-    gone["children"].pop(next(iter(gone["children"])))
-    assert not M.verify_certificate(UNDEFENDABLE_256, [], "LOSS", gone, semantics="board")[0]
 
 
 # ─────────────────────────────── the conclusion: verification and structural rules ───────────
@@ -615,7 +605,7 @@ def test_INTERPRET_STOPS_on_each_structural_violation(breakage, problem):
 
 
 def test_INTERPRET_a_QUIET_move_changed_by_M1_is_a_violation():
-    s = small(ONE_THREAT_FIVE_DEFENCES[:2])
+    s = M.replay(QUIET_40)
     c = M.classify(s, semantics="protocol")
     row = {"kind": "corpus", "id": "q", "moves": [], "move": [1, 1], "tactics": {
         sem: {"class": c, "M1": {"choice": [1, 1], "changed": True, "baseline_admissible": True,
@@ -700,11 +690,13 @@ def game_of(task_id, moves):
 
 
 def test_UNIVERSE_excludes_fixture_games_positions_at_the_cap_and_fixture_equivalents():
-    games = [game_of("keep", ONE + [(12, 4)]), game_of("h5s0-21-B", ONE)]
-    fx = {"FAKE": M.state_digest(CC.state_of(ONE[:5]))}
-    entries, feq = M.corpus_universe(games, excluded=["h5s0-21-B"], fixtures=fx, ply_cap=20)
+    games = [game_of("keep", DRAW24), game_of("h5s0-21-B", DRAW24)]   # 570 plies: past the cap
+    fx = {"FAKE": M.state_digest(M.replay(DRAW24[:5]))}
+    entries, feq = M.corpus_universe(games, excluded=["h5s0-21-B"], fixtures=fx)
     assert {e["game"] for e in entries} == {"keep"}
-    assert all(e["ply"] < 20 and e["ply"] % 2 == 1 for e in entries), "not decision positions"
+    assert all(e["ply"] < 280 and e["ply"] % 2 == 1 for e in entries), "not decision positions"
+    last = max(entries, key=lambda e: e["ply"])
+    assert last["ply"] == 279 and last["class_board"] is not None, "the last decision position"
     assert [(e["key"], e["equivalent_to"]) for e in feq] == [("keep@5", "FAKE")]
     assert "keep@5" not in {e["key"] for e in entries}
 
