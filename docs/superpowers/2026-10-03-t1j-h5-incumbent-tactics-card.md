@@ -1,5 +1,8 @@
 # H5 INCUMBENT TACTICS — EXACT THREAT HANDLING vs PROVEN-RESULT PROPAGATION — EXPLORATORY CARD (design only)
 
+⚠️ **Amended by §10 A1 (2026-10-03). Read §10 first.** It supersedes §3.1, §3.2, §5, §6 and §8
+where they conflict.
+
 **Written 2026-10-03. DESIGN ONLY.** No implementation, model load, decision, gate change,
 game or push. The implementation and each run need their own authorization.
 
@@ -338,3 +341,150 @@ Each step is a separate authorization.
 
 This card authorizes **nothing executable**: no implementation, model load, decision, gate
 change, game, T1j call or push.
+
+---
+
+## 10. Amendment A1 — 2026-10-03, four corrections before implementation (user-decided)
+
+Review of `417b6efa` kept the separation:
+
+* M1 may act without search evidence;
+* M2 uses only proofs present in the unchanged tree;
+* neither becomes a candidate.
+
+It corrected four points. The closeout history (§1) stands.
+
+### A1.1 — Corpus selection, executable and unambiguous (supersedes §6's selection rule)
+
+**Universe.** Every incumbent decision position of every committed H5 game, with these
+exclusions:
+
+* the fixture and control source games (§6);
+* positions at ply ≥ 280 — not decision positions under the protocol (A1.2).
+
+Each position gets:
+
+* **a class**, under protocol semantics (A1.2);
+* **a state digest:** the sha256 of a canonical JSON with
+  * the sorted pegs, as `[row, col, colour]`;
+  * the sorted bridges;
+  * the side to move.
+
+**Fixture-equivalent positions.** A position whose state digest equals that of any of the
+5 fixture positions, or of the 7 control positions in the frozen set, is **removed from
+sampling** and listed separately as `fixture_equivalent`. It is never decided as corpus.
+
+**Grouping and sampling,** per class *s* in the order OWN_WIN, DEFEND_SINGLE, DEFEND_MULTI,
+UNDEFENDABLE, QUIET:
+
+1. **Group by game.** For each game *g* with at least one eligible position in *s*, pick **one
+   representative**:
+   `random.Random(f"20261003:{s}:{g}").choice(sorted plies of g in s)`.
+   String seeds are hashed with sha512 by Python, so this is reproducible.
+2. **Sample games.** Let G_s be those games, sorted by `task_id`. Take
+   `random.Random(f"20261003:{s}").sample(G_s, min(20, len(G_s)))`, and list the result
+   sorted by (`task_id`, ply).
+3. **Shortage.** If `len(G_s) < 20`, every game in G_s contributes its one representative.
+   `quota_shortfall[s] = 20 − len(G_s)` is recorded. Nothing is substituted, and no game
+   contributes a second position to the same class.
+
+**Repeated positions.** Different games or classes can yield the same state digest. Such
+entries are listed separately as `repeats`, grouped by digest. Each **distinct** state is
+decided **once**: the entry first in (class order, `task_id`, ply). Per-class statistics
+count distinct states, and report repeat multiplicities beside them, never mixed in.
+
+**The manifest** holds, per entry: game, ply, prefix digest, state digest, class (protocol and
+board-only, A1.2), W, T, D, and whether it is a repeat. It also holds `fixture_equivalent`,
+`repeats` and `quota_shortfall`. It is written once and committed before any model load.
+
+### A1.2 — Cap semantics, frozen (supersedes §3.1 and §3.2 where they are silent on the cap)
+
+**What the code does, as read:**
+
+* `TwixtState` reconstructions — the defence study's `state_of`, and H4/H5's state factory —
+  leave `max_plies_limit = None`.
+* The H5 searches therefore ran **board-only continuation**, both in play and in the reproduced
+  baseline.
+* The **protocol** cap of 280 plies was applied by the **play loop**
+  (`e4_screen_runner.py:286–293`): `winner()` is checked first, then `ply >= 280` ends the game
+  as a draw.
+* `apply_move` checks only cell legality, so it permits placements after a terminal position.
+
+**Decision:**
+
+1. **The search is not altered.** It stays exactly the baseline: board-only continuation,
+   uncapped states. B-repro's pinned fingerprints depend on this.
+2. **The tactical rules use the capped H5 protocol.** That covers M1's classes and M2's statuses
+   and certificates, with `ply_cap = 280` an explicit parameter.
+
+| situation | protocol ruling |
+|---|---|
+| ply ≥ 280 | not a decision position, and never classified |
+| a move made at ply *p* wins | a win **even when *p* + 1 = 280** — the winner is checked before the cap |
+| the opponent's reply after the mover's move at *p* | counts only if *p* + 1 < 280, i.e. *p* ≤ 278 |
+| any "immediate win" at *p* = 279, after the mover's non-winning move | **void** — the game has already ended as a draw |
+| a tree node at ply ≥ 280 with no winner | a protocol-terminal **draw**: UNKNOWN, never proven |
+| tree nodes beyond such a node | **ignored**: no status or certificate is derived from them |
+
+* **Recorded both ways.** For every position, the board-only class and statuses are recorded
+  beside the protocol ones. Any position where they differ is **cap-sensitive** and is listed
+  separately.
+* **The fixtures** (plies 37–127) are far from the cap, so the §4 predictions are unaffected.
+
+**Synthetic controls,** added to §5. Tests pass the cap as a parameter, e.g. cap = position ply
++ 1 on ONE/TWO-style boards:
+
+| control | expected |
+|---|---|
+| a win at the boundary | an own win on the last allowed move is OWN_WIN, and its node is a proven terminal LOSS for the next player |
+| a terminal draw | a node at the cap with no winner is UNKNOWN; a position at the cap is not classified |
+| a purported winning reply after termination | at *p* = cap − 1, the opponent's board-only "immediate win" is void, so the class is not DEFEND. M2 derives nothing from nodes past the cap. The position is flagged cap-sensitive. |
+
+### A1.3 — Reproduction kept separate from corpus preservation (supersedes §8's checks)
+
+| decisions | checks |
+|---|---|
+| **B-repro** (fixtures) | historical moves **and** the five pinned fingerprints of `912b601f` |
+| **corpus** | off/on equivalence; the frozen configuration (no field differs); seed −1; budget 400 |
+
+* Corpus decisions are **never** compared with the in-game move. A different move is data.
+* **Computing M1 and M2 is read-only.** For both the off and the on tree, the fingerprint and
+  both stream states are recorded before computing M1 and M2, and must be equal after.
+  Otherwise: STOP.
+
+### A1.4 — Independently checkable proof witnesses (supersedes §3.2's "statuses computed over the final tree" as sufficient)
+
+**Root statuses alone are not evidence.** Every proven status that M2 reports for a root child
+is persisted with a **certificate**. A certificate is reconstructible from the root prefix by
+the rules engine alone; it never refers to MCTS objects. The forms:
+
+| form | applies to | content |
+|---|---|---|
+| `TERMINAL_LOSS` | a node that is protocol-terminal by a **win** | the move path to it; the winner (the player who just moved). Checkable by replay. |
+| `WIN` (existential) | a node with a child proven LOSS | `{move, child: <LOSS certificate>}` |
+| `ALL_REPLIES_WIN` (universal LOSS) | a non-terminal node where every legal move leads to a proven WIN | `{legal: <the engine's full legal-move list at the node>, children: {move: <WIN certificate>}}`. `legal` must **equal** the engine's list exactly — complete coverage. |
+
+**The verifier**, `verify_certificate(prefix, path, claim, cert, ply_cap)`, is pure and engine-only.
+It replays `prefix + path` under protocol semantics and checks the claim recursively.
+
+**When it runs:**
+
+* inside the recorded boundary, for **every** persisted certificate;
+* any failure is a **STOP** naming the position and the move.
+
+M2's exclusions and proven-win choices count only when their certificates verify.
+
+**Tests:**
+
+* an internal node stays **UNKNOWN** when one legal child is absent, even if every present child
+  is WIN;
+* a non-terminal node whose network value or mean is ±1 is **not** proof;
+* terminal status comes from the engine's `winner()` on the replayed state, never from `q`,
+  `value_sum` or `nn_value`;
+* a tampered certificate is rejected. The tampering cases are: a missing legal move, an extra
+  move, an illegal move, a wrong winner, and a path that runs past the cap.
+
+### A1.5 — Scope
+
+This amendment authorizes design changes and a local commit only. Implementation, the corpus
+freeze, model loading, decisions, gate changes and push all remain unauthorized.
