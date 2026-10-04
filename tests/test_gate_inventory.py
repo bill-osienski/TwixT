@@ -90,6 +90,9 @@ EXPECTED_GATES = {
     #: EXPLORATORY: one run of the B-repro / B-seed / F / S arms at five frozen fixtures,
     #: only under its own authorization with this door opened.
     "h5_incumbent_defence_factors_authorization.py": "H5_INCUMBENT_DEFENCE_FACTORS_AUTHORIZED",
+    #: 🔴 THE TWENTY-FOURTH, ADDED 2026-10-03 (incumbent tactics card §8, §10). EXPLORATORY:
+    #: the corpus freeze and the single run, each only under its own authorization.
+    "h5_incumbent_tactics_authorization.py": "H5_INCUMBENT_TACTICS_AUTHORIZED",
     "l0_match_command.py": "L0_EXECUTION_AUTHORIZED",
     "lowply_qualification.py": "LOWPLY_QUALIFICATION_AUTHORIZED",
     "runtime_requalification.py": "RUNTIME_REQUAL_AUTHORIZED",
@@ -121,7 +124,7 @@ def test_THE_COUNT_IS_DERIVED_AND_ANY_REPORT_SAYING_OTHERWISE_IS_WRONG():
     #: single deliberate edit, to the dict above.
     assert INVENTORY.gate_count() == len(discover_gates()) == len(EXPECTED_GATES), (
         "the derived inventory and EXPECTED_GATES must agree")
-    assert len(EXPECTED_GATES) == 23, (
+    assert len(EXPECTED_GATES) == 24, (
         "the total moved: add or remove the entry in EXPECTED_GATES above "
         "deliberately, then update this number in the same edit")
 
@@ -162,7 +165,8 @@ def _stale_count_claims(text):
              "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12,
              "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16,
              "seventeen": 17, "eighteen": 18, "nineteen": 19, "twenty": 20,
-             "twenty-one": 21, "twenty-two": 22, "twenty-three": 23}
+             "twenty-one": 21, "twenty-two": 22, "twenty-three": 23,
+             "twenty-four": 24}
     n = len(EXPECTED_GATES)
     bad = []
     for word, value in words.items():
@@ -213,4 +217,5 @@ def test_THE_STALE_COUNT_GUARD_IS_NOT_VACUOUS():
     assert _stale_count_claims("all twenty gates are False")  # was right, now stale
     assert _stale_count_claims("all twenty-one gates are False")  # was right, now stale
     assert _stale_count_claims("all twenty-two gates are False")  # was right, now stale
-    assert not _stale_count_claims("all twenty-three gates are False")  # correct total
+    assert _stale_count_claims("all twenty-three gates are False")  # was right, now stale
+    assert not _stale_count_claims("all twenty-four gates are False")  # correct total
