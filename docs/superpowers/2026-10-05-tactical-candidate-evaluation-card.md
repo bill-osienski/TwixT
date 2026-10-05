@@ -665,3 +665,61 @@ version said f ≤ 3.)*
 
 Design amendment only. No implementation, gate change, corpus generation, model loading, seed
 registration, pilot, study or push.
+
+---
+
+## 13. Amendment A3 — 2026-10-05, the recording contract of R1 hardened (user-decided)
+
+Review of R1 (`4c32c9f8`) found three gaps. Each is a gap in the recording contract, not evidence
+about any real game.
+
+### A3.1 — The 15-minute game limit is enforced by the PARENT (supersedes §12 A2.4's "hard-enforced by the runner")
+
+* **The SIGALRM alarm was not hard.** It needs Python to run its handler, so a blocking native call can
+  overrun it, and the parent's watchdog enforced only the 4-hour segment.
+* **The child marks each game.** Before each game, the child journals an outcome-blind `game_start`
+  (pair and arm only).
+* **The parent enforces the limit.** It polls about every 0.5 s. When a game has been open for
+  **15 minutes** — measured on the parent's own clock from when it first saw the `game_start` — it
+  SIGKILLs the child's whole process group. It records which game breached, and why.
+* **The bound** is 15 minutes plus at most one poll interval past the game's real start.
+* **The child's alarm stays**, set 30 s earlier (14.5 minutes). A responsive child therefore records a
+  clean STOP before the parent's kill.
+
+### A3.2 — Completed observations are durable before the next one starts
+
+* **Each completed decision** is appended and fsynced to `games/<pair>-<arm>.partial.jsonl`: ply, move,
+  and the candidate's compact witness where it moved. This is evidence that carries outcomes. It is
+  kept **apart from the blind journal**.
+* **Each completed game** is written create-only and fsynced to `games/<pair>-<arm>.json` (directory
+  fsynced too) **before the next game starts**.
+* **record.json** lists the games by file, sha256 and digest.
+* **watchdog.json**, written by the parent, inventories every file under `games/` by name, size and
+  sha256, and records `record.json`'s sha256. The parent reads no file content.
+* **What a kill can lose** is the decision in progress, never a completed one.
+
+### A3.3 — A predecessor segment is validated, not trusted (supersedes §12 A2's label-only check)
+
+Before study segment *k* starts, every segment *j < k* must pass, outcome-blind:
+
+* **Durability:** its claim, journal, record, watchdog summary and every listed game file are committed.
+* **The claim** names the committed plan's file sha256, the study role and segment *j*.
+* **watchdog.json:**
+  * COMPLETE / COMPLETE;
+  * its journal sha256 equals `log.jsonl`'s bytes;
+  * its record sha256 equals `record.json`'s bytes.
+* **record.json:**
+  * card, mode `study`, status COMPLETE;
+  * its plan and plan hash equal the committed plan;
+  * its games are exactly the plan's (pair, arm) sequence;
+  * each listed game file is present, committed, and of the recorded sha256;
+  * its replay checks name every planned pair.
+
+No move, terminal or witness content is parsed. Any failure refuses the later segment. The 80-hour
+ceiling sums the validated segments' parent-measured elapsed times.
+
+### A3.4 — Scope
+
+Contract amendment, then the repairs, their synthetic failure controls, the regression and a local
+commit. Corpus generation, model loading, qualifications, research seeds, gate opening, real games
+and push remain unauthorized.
