@@ -611,9 +611,11 @@ The last column ignores setup and verification, so the real limit is lower.
 
 > *Planning approximation (§12 A2.3): n is computed from a normal approximation for the mean of the pair scores (empirical Bernstein additionally plans Vₙ at σ²). It is **not** a distribution-free 80 % power guarantee, and valid interval coverage does not make the power calculation exact.*
 
-**Read honestly:** at the rough planning figure of about 4 min per pair (§5), the study fits the ceiling
-only if **f ≤ 3**. Otherwise it **stops before starting**, as A2.2 requires. The pilot's measured t̄
-decides; nothing is shrunk to fit.
+**Read honestly:** at exactly 4 min per pair (the rough planning figure of §5), the study fits the
+ceiling only if **f ≤ 2**. At f = 3, 969 × 4 min × 1.25 = 80.75 h, already over 80 h before setup. The
+table's 3.96-minute limit for f = 3 is correct. Otherwise the study **stops before starting**, as A2.2
+requires. The pilot's measured t̄ decides; nothing is shrunk to fit. *(Corrected on review: an earlier
+version said f ≤ 3.)*
 
 ### A2.3 — The sizing tables are approximations (qualifies §7.3, A1.1, A1.4 and A2.2)
 
