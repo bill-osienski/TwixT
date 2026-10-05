@@ -370,3 +370,187 @@ stay untouched throughout.
 
 This card authorizes nothing executable: no code, gate creation or opening, corpus generation, model
 load, pilot, game, seed registration or push.
+
+---
+
+## 11. Amendment A1 — 2026-10-05, statistical corrections before implementation (user-decided)
+
+Review of `513034dd` accepted:
+
+* the seed coupling (§7.1);
+* the counterpart algebra (§7.2);
+* the module and gate names (§3).
+
+It corrected three statistical points and §9's order, and recorded decisions.
+
+### A1.1 — Precision is not power (supersedes §7.3's table and its double use of δ)
+
+§7.3 used δ for two different quantities.
+
+* **h(n)** is the interval half-width at n: precision. §7.3's table gives h(n), not power.
+* **Δ** is the true overall effect worth detecting, on the pair-score scale: μ − 0.5.
+
+At a true effect Δ = h(n), the lower bound clears 0.5 only about half the time. So a ±0.040 interval
+is **not** an adequately powered design for a true +0.040. This also corrects this programme's earlier
+1,153-pair suggestion.
+
+**Power** = P(lower bound > 0.5 | μ = 0.5 + Δ), at α = 0.05 two-sided. The target is **80 %** (proposed;
+part of D3). For **sizing only**, X̄ is treated as normal with standard deviation σ/√n, and the
+empirical-Bernstein sample variance is planned at σ². No approximation enters a verdict.
+
+* **Hoeffding:** n = ⌈((√(ln 40 / 2) + z·σ) / Δ)²⌉, with √(ln 40 / 2) = 1.3581 and z = z₀.₈₀ = 0.8416.
+* **Empirical Bernstein (A1.5):** n = the smallest n ≥ 2 with
+  Δ ≥ √(2σ² ln 80 / n) + 7 ln 80 / (3(n − 1)) + z·σ/√n.
+
+**Computed for the worst case**, σ = 0.5, with no pilot input. The cost column assumes about 4 min per
+pair (2 games × about 2 min). It is rough, and the pilot measures it.
+
+| Δ | Hoeffding pairs | ≈ compute | EB pairs | ≈ compute |
+|---|---|---|---|---|
+| 0.079 | 508 | ~34 h | 818 | ~55 h |
+| 0.050 | 1,266 | ~84 h | 1,832 | ~122 h |
+| 0.040 | 1,978 | ~132 h | 2,747 | ~183 h |
+| 0.030 | 3,517 | ~234 h | 4,673 | ~312 h |
+| 0.020 | 7,912 | ~527 h | 10,032 | ~669 h |
+
+### A1.2 — The pilot stays outcome-blind (supersedes "the pilot's measured variance" in §7.3)
+
+* **Nothing outcome-derived is read.** No pilot score, winner, per-colour result or score variance is
+  computed, printed or read. The records hold results; they are not read.
+* **What the pilot report reads:**
+  * per-game and per-pair wall time;
+  * the termination type, win or cap — never the winner;
+  * the override witnesses;
+  * the move lists, for the exact-replay check.
+* **Firing is outcome-blind.** A pair fires if, at any candidate decision in either game, the final move
+  differs from the baseline move. This is read from the witnesses, not from any result.
+* **Variance enters sizing only through an outcome-blind bound.**
+  * Under exact replay (§7.1), a non-firing pair scores exactly 0.5. So
+    Var(pair) ≤ E[(pair − 0.5)²] ≤ p/4, where p = P(a pair fires).
+  * The pilot's firing count f out of 16 pairs gives **p_U**, the one-sided 95 % Clopper–Pearson upper
+    bound. That accounts for the uncertainty in p.
+  * σ_plan = min(0.5, √p_U / 2).
+* **Preconditions:**
+  * every non-firing pilot pair is move-identical (§7.1). Otherwise the bound is void: **STOP and
+    review**, with no fallback chosen after the fact;
+  * f ≥ 1. If f = 0, the candidate never acted in the pilot: **STOP and review** before sizing.
+
+### A1.3 — A fixed sample means a fixed sample (supersedes §7.3's "(K) play until n_f … or ceiling" and its "underpowered" clause)
+
+* **n is computed once**, by the frozen rule (A1.4), from the pilot firing count. It is committed before
+  any study seed is registered and before any study game exists.
+* **Stopping early means no verdict.** If the study stops before all n pairs are committed (compute,
+  failure, interruption), the result is **INCOMPLETE: no confirmatory verdict**. That means no
+  improvement, no regression, and not even "inconclusive"; only descriptive integrity reporting.
+* **No interim look at scores.** Scores stay blinded until all n pairs are committed.
+* **No time-uniform method is adopted.** Inference at arbitrary stopping times would need one (an
+  anytime-valid confidence sequence; Howard et al., arXiv:1810.08240).
+* **(K) has no stopping rule.** It is a **secondary**, **conditional** analysis, on the firing pairs of
+  the complete study only, and labelled as such.
+* **The compute ceiling is checked before the study starts** (A1.4 step 5). A study whose planned
+  compute exceeds it is never started.
+
+### A1.4 — The sizing rule, frozen before the pilot
+
+Δ, the power target and the ceiling stay open (D3). Everything else is fixed:
+
+1. **Declared before the pilot:**
+   * Δ, overall, on the pair-score scale;
+   * the power target, 80 % proposed;
+   * α = 0.05, two-sided;
+   * the method (D2);
+   * the compute ceiling C, in hours.
+2. **Pilot, 16 pairs:** f = the number of firing pairs; t̄ = the mean wall time per pilot pair, both
+   games and the scans included.
+3. p_U = the one-sided 95 % Clopper–Pearson upper bound for f of 16; σ_plan = min(0.5, √p_U / 2).
+4. n = the A1.1 formula of the frozen method, at (Δ, σ_plan).
+5. **The compute check:** n × t̄ × 1.25 ≤ C. Otherwise **STOP and review**. n is never reduced to fit.
+6. **Preconditions (A1.2):** f ≥ 1, and every non-firing pilot pair replays exactly.
+7. n is committed in a record before any study seed or game.
+
+**Illustration** (computed; pairs needed, Hoeffding / EB):
+
+| pilot f of 16 | p_U | σ_plan | Δ 0.05 | Δ 0.04 | Δ 0.03 | Δ 0.02 |
+|---|---|---|---|---|---|---|
+| 0 | 0.171 | 0.207 | (stop: f = 0) | — | — | — |
+| 1 | 0.264 | 0.257 | 992 / 734 | 1,550 / 1,046 | 2,754 / 1,673 | 6,197 / 3,329 |
+| 2 | 0.344 | 0.293 | 1,031 / 858 | 1,610 / 1,236 | 2,862 / 2,005 | 6,439 / 4,065 |
+| 4 | 0.484 | 0.348 | 1,091 / 1,071 | 1,704 / 1,564 | 3,029 / 2,582 | 6,815 / 5,351 |
+| 8 | 0.721 | 0.425 | 1,178 / 1,423 | 1,840 / 2,110 | 3,271 / 3,546 | 7,358 / 7,506 |
+| 16 | 1.000 | 0.500 | 1,266 / 1,832 | 1,978 / 2,747 | 3,517 / 4,673 | 7,912 / 10,032 |
+
+* A declared overall Δ with a small p implies a large effect per firing pair. For example, Δ = 0.04 at
+  p = 0.26 needs firing pairs to average about 0.65.
+* The rule does not judge whether Δ is plausible. That is the D3 decision.
+
+### A1.5 — D2: the empirical-Bernstein interval, specified for review (Maurer & Pontil 2009, Theorem 4)
+
+**The source** (arXiv:0907.3740 v1; read from the paper, Theorem 4 under the conditions of Theorem 1):
+
+* Z, Z₁…Zₙ are **i.i.d.**, with values in **[0, 1]**; n ≥ 2; δ > 0.
+* With probability at least 1 − δ:
+  E Z − (1/n) Σ Zᵢ ≤ √(2 Vₙ(Z) ln(2/δ) / n) + 7 ln(2/δ) / (3(n − 1)).
+* Vₙ(Z) = (1 / (n(n − 1))) Σ_{i<j} (Zᵢ − Zⱼ)². This equals the unbiased sample variance, with
+  denominator n − 1.
+* The bound is **one-sided**. The other side follows by replacing Z with 1 − Z.
+
+**As applied:**
+
+* Zᵢ = the pair score of pair i, one of {0, ¼, ½, ¾, 1}.
+* Two-sided 95 %: each side at δ = 0.025, so ln(2/δ) = ln 80.
+* 1 − Zᵢ has the same Vₙ. The interval is:
+
+  > L = Z̄ − √(2 Vₙ ln 80 / n) − 7 ln 80 / (3(n − 1)); U = Z̄ + the same two terms.
+
+* The decision rules are unchanged and apply **at the frozen n only**:
+  * L > 0.5 → improvement;
+  * U < 0.5 → regression;
+  * otherwise inconclusive.
+* **Stated assumptions:**
+  * pairs i.i.d. — the same independence assumption as H4/H5, since the registered seeds are treated as
+    an i.i.d. draw;
+  * scores bounded in [0, 1];
+  * n fixed in advance (A1.3).
+* **The estimand is unchanged:** E[pair score], design P.
+
+**It is not automatically better** (computed, A1.1 and A1.4):
+
+* With no firing information (σ = 0.5), EB needs **more** pairs than Hoeffding, because of its constants.
+  For Δ = 0.04: 2,747 against 1,978.
+* It needs fewer only when the planned variance is small: roughly f ≤ 4 of 16 pilot pairs firing.
+* D2 remains the user's choice. An option, **not adopted:** pre-specify "the method with the smaller n
+  under A1.4". It would be chosen from the outcome-blind firing count, before any study game.
+
+### A1.6 — Decisions (supersedes §8's status)
+
+| # | decision | status |
+|---|---|---|
+| D1 | **P**: all colour-reversed pairs, no counterpart games ((C) dropped); (K) secondary, conditional and labelled only | **decided** |
+| D2 | the empirical-Bernstein interval of A1.5, or Hoeffding | **proposed for review**; see the trade-off in A1.5 |
+| D3 | Δ, the power target and the compute ceiling C | **open** (user) |
+| D4 | runtime limits: per game, per segment, watchdog, scan-overhead share, cap-rate threshold | **open** (user); no spending limit is inferred from earlier studies |
+| D5 | pilot = **16 pairs** (32 games), excluded from the estimate | **decided** |
+| D6 | the §3 module and gate names | **accepted** |
+
+### A1.7 — Order of authorizations (supersedes §9)
+
+1. Review of this card with A1.
+2. Implementation: the wrapper, synthetic controls and the independent checker.
+3. R1: the runner implementation.
+4. **Freeze of the fresh qualification corpus** — rules-engine only, before any real-model load (§4).
+5. R2, the no-game production qualification, and the tactical qualification run on the frozen corpus.
+   These are the first real-model loads.
+6. D2–D4 decided; the A1.4 sizing rule frozen, complete.
+7. **Pilot seed registration.**
+8. The pilot: 16 pairs, outcome-blind (A1.2).
+9. n computed by the frozen rule, compute-checked and committed.
+10. Study seed registration (separate).
+11. Study segments, blinded.
+12. Analysis → accept, reject or inconclusive — or **INCOMPLETE** (A1.3).
+
+Each step is separately authorized.
+
+### A1.8 — Scope
+
+Design amendment only. No implementation, gates, corpus generation, model loading, seed registration,
+games or push.
