@@ -260,11 +260,11 @@ def test_the_CROSS_CHECK_catches_a_wrong_detector(defect, monkeypatch):
 
 
 def test_a_STALE_capture_is_refused():
-    class Stale:
-        colour, capture = "red", True
-        last_capture = {"ply": 3, "move": (5, 5), "counts": {}, "root": None}
+    class Stale:                                  # refreshes, but with another ply's search
+        colour, capture, last_capture = "red", True, None
 
         def __call__(self, state):
+            self.last_capture = {"ply": 3, "move": (5, 5), "counts": {}, "root": None}
             return (5, 5)
     with pytest.raises(TC.CandidateRefused, match="captured search is not the one"):
         TC.TacticalCandidate(Stale(), enabled=True)(T.replay(QUIET_40))
@@ -280,3 +280,60 @@ def test_the_CHECKER_flags_a_reply_outside_the_threat_set_and_then_never_agrees(
     r = TC.cross_check(s)
     assert r["classify"] == r["exhaustive"] and not r["agree"], \
         "equal class dicts must not agree while the reduction premise fails"
+
+
+# ─────────────────────────────── review repairs: capture freshness, protocol termination ────
+
+def test_an_UNCHANGED_capture_is_refused():
+    s = T.replay(QUIET_40)
+    m = other(s)
+
+    class Lazy:                                   # never refreshes its capture
+        colour, capture = s.to_move, True
+
+        def __init__(self):
+            self.last_capture = {"ply": s.ply, "move": m, "counts": {m: 1}, "root": tree_root(s)}
+
+        def __call__(self, state):
+            return m
+    with pytest.raises(TC.CandidateRefused, match="did not refresh its capture"):
+        TC.TacticalCandidate(Lazy(), enabled=True)(s)
+
+
+def test_a_capture_of_ANOTHER_BOARD_with_matching_ply_and_move_is_refused():
+    s, elsewhere = T.replay(QUIET_40), T.replay(SINGLE_260[:40])
+    assert (elsewhere.ply, elsewhere.to_move) == (s.ply, s.to_move)
+    assert T.state_digest(elsewhere) != T.state_digest(s)
+    m = next(x for x in sorted(s.legal_moves()) if elsewhere.is_valid_placement(*x))
+
+    class Fresh:                                  # refreshes -- but searched another board
+        colour, capture, last_capture = s.to_move, True, None
+
+        def __call__(self, state):
+            self.last_capture = {"ply": state.ply, "move": m, "counts": {m: 1},
+                                 "root": tree_root(elsewhere)}
+            return m
+    with pytest.raises(TC.CandidateRefused, match="captured search is not the one"):
+        TC.TacticalCandidate(Fresh(), enabled=True)(s)
+
+
+def test_a_PROTOCOL_TERMINAL_position_is_refused_BEFORE_any_search():
+    s = T.replay(OWN_WIN_279)
+    at_cap = T.replay(OWN_WIN_279 + [other(s, [(6, 19)])])     # ply 280, no winner
+    won = T.replay(list(TWO) + [(12, 2)])                       # red has won at ply 25
+    assert (at_cap.ply, at_cap.winner(), won.winner()) == (280, None, "red")
+    for st in (at_cap, won):
+        for enabled in (False, True):
+            agent = Dummy()
+            agent.colour = st.to_move
+            with pytest.raises(TC.CandidateRefused, match="protocol-terminal"):
+                TC.TacticalCandidate(agent, enabled=enabled)(st)
+
+
+@pytest.mark.parametrize("enabled", [False, True], ids=["disabled", "enabled"])
+def test_the_LAST_allowed_decision_at_ply_279_is_made_and_a_win_there_counts(enabled):
+    move = TC.TacticalCandidate(builder()("black", True), enabled=enabled)(T.replay(OWN_WIN_279))
+    if enabled:
+        assert T.replay(OWN_WIN_279 + [move]).winner() == "black", "the 280th move wins"
+    else:
+        assert T.replay(OWN_WIN_279 + [move]).ply == 280

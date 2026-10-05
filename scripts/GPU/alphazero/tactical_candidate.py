@@ -81,13 +81,22 @@ class TacticalCandidate:
 
     def __call__(self, state: TwixtState) -> Tuple[int, int]:
         T._official(state, "the candidate")              # before any search
+        #: protocol-terminal: a winner, ply >= 280 or no legal move. A decision AT ply 279 --
+        #: possibly a winning 280th move -- is still made. Enabled or not.
+        if state.winner() is not None or state.ply >= PLY_CAP or not state.legal_moves():
+            raise CandidateRefused(f"a protocol-terminal position (ply {state.ply}, winner "
+                                   f"{state.winner()}): no decision is made")
+        before = self.agent.last_capture
         t0 = time.perf_counter()
         baseline = _t(self.agent(state))                  # the unchanged search, ONCE
         search_s = time.perf_counter() - t0
         if not self.enabled:
             return baseline
         cap = self.agent.last_capture
-        if cap is None or cap["ply"] != state.ply or _t(cap["move"]) != baseline:
+        if cap is None or cap is before:
+            raise CandidateRefused("the agent did not refresh its capture for this call")
+        #: the search's root holds THE input state object (MCTSNode(state=root_state))
+        if cap["ply"] != state.ply or _t(cap["move"]) != baseline or cap["root"].state is not state:
             raise CandidateRefused("the captured search is not the one that chose this move")
         w = {**witness(state, cap["counts"], cap["root"], baseline), "search_s": search_s}
         self.witnesses.append(w)
