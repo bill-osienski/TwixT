@@ -1,0 +1,372 @@
+# Exact one-ply tactics as a candidate — evaluation design card (DESIGN ONLY)
+
+**Date:** 2026-10-05. **Status:** design for review. **Authorizes nothing executable:** no code,
+gate, corpus generation, model load, pilot, game, seed registration or push.
+
+**Question.** Does exact one-ply tactical handling, applied to our agent's readout, make the agent
+stronger against the unchanged incumbent? The closed H5 tactics diagnostic (`1ec87ac5`) answered a
+narrower question: rule M1 changes reproduced baseline decisions to exact wins or defences, sometimes
+choosing an unvisited move. It showed no strength.
+
+**Programme.** Five checkpoints, each separately authorized:
+
+1. correctness;
+2. qualification;
+3. a fresh tactical corpus;
+4. feasibility;
+5. one strength test.
+
+It ends in **accept**, **reject** or **inconclusive**. No automatic deployment and no further tuning
+follows any outcome.
+
+---
+
+## 1. The candidate — frozen, one change only
+
+The checkpoint, network, 400-simulation search, priors, FPU and normal readout are unchanged. One
+**default-off wrapper** acts **after the unchanged search has finished**, on the root visit counts:
+
+| position (protocol semantics, cap 280) | candidate's move |
+|---|---|
+| an own immediate win exists | the most-visited winning move |
+| no own win, and the opponent threatens | the most-visited move that removes **every** immediate winning reply |
+| threats exist, but no move removes them all | the baseline move |
+| no immediate threat | the baseline move |
+
+* **Rule.** This is exactly M1 of the H5 tactics card (§3.1, §10 A1.2, §11 A2): `classify` → admissible
+  set A → `m1_choice`, under **protocol** semantics only.
+* **Tie-break.** The existing coordinate tie-break: visits descending, then (row, col).
+* **Baseline already admissible.** If the baseline move is in A, it is preserved. It is then the most
+  visited in A, so this follows from the rule.
+* **Zero visits.** An admissible move with zero visits stays eligible. It is recorded as
+  **unsearched**: tactically necessary, never examined by search.
+* **Board.** Physical and playable board both 24×24, enforced exactly as in §11 A2.1: any other board is
+  refused.
+* **Cap.** The protocol cap is 280. The winner is checked first, so a winning 280th move wins. The
+  search keeps its existing **board-only continuation**, unchanged.
+* **Excluded:** M2, any training change, extra simulations, parameter tuning.
+* **The wrapper is read-only.** It reads counts and the state. It draws from neither random stream, and
+  changes neither the tree nor the configuration.
+* **Identity.** The candidate's identity is the incumbent identity plus the wrapper module's hash.
+
+**Proposed implementation reuse (decide at implementation):** import the qualified H5 rule code
+(`classify`, `admissible`, `m1_choice`) unchanged rather than copy it. That module is evidence-bound and
+stays unchanged.
+
+---
+
+## 2. Checkpoint 1 — implementation and synthetic correctness
+
+### Synthetic controls
+
+All on 24×24 at the real cap. Positions come from rules-engine-only playouts. Invalid boards appear
+only in refusal tests. The controls:
+
+* an own win takes precedence over defence;
+* multiple threats with one common defence;
+* alternative valid defences;
+* undefendable and quiet positions are unchanged;
+* zero-visit winning and saving moves (chosen, flagged unsearched);
+* the real 279/280 boundary;
+* invalid board sizes refused;
+* the tree, the configuration and both random streams are untouched;
+* a baseline move already in A is preserved.
+
+### Independent checker (§2.1, point 5)
+
+The optimized detector (`CC.immediate_wins`, `CC.threats_against`, `WR.saving_moves_of`) is checked
+against an **exhaustive rules-engine scan**:
+
+* for every legal move, apply it and test for a winner;
+* for every legal mover move *m*, and every legal opponent reply *r* after *m*, test whether *r* wins.
+
+The check must use no shared helper. It also confirms the detector's assumption that the mover's own
+peg never creates a new opponent win.
+
+* **Cost.** O(L²) per position, about 90,000 move trials at L ≈ 300. The freeze classified about 19,300
+  positions in about 263 s, roughly 14 ms each for about 600 trials, so about 23 µs per trial. That gives
+  an estimated **≈ 2 s per position**, to be measured.
+* **Where it runs.** In **qualification only**, never in the production play loop.
+
+### Regression and scope
+
+* **Regression.** The H5 fixtures E1–E3 and CD1–CD2, with their M1 predictions, become regression
+  tests. Passing them is **required** and is **not** fresh improvement evidence.
+* **Untouched:** frozen H4/H5 code, evidence and the closed tactics diagnostic.
+
+---
+
+## 3. Implementation prerequisites — separate from the wrapper
+
+**R1. A new two-agent runner.** The H4/H5 runner is built around the T1j adapter and cannot play
+agent against agent. A new runner must provide:
+
+* one fresh `SeededReferenceAgent` per colour per game;
+* the seed coupling of §7.1;
+* the 280-cap loop, winner first;
+* full move records;
+* an **override witness** at every candidate decision: ply, class, baseline move and visits, final move
+  and visits, the unsearched flag, and both root-mover values;
+* per-game digests;
+* the run contract already proven in H5: create-only evidence, a one-shot claim, the hard watchdog
+  killing the process group, a journal, a record on every exit, and the conclusion inside the recorded
+  boundary;
+* blinding: no score is printed until every required segment is committed;
+* its **own gate(s)**, created closed.
+
+**R2. A no-game production qualification**, separate from R1's implementation. On fixed positions
+with the real model, and without playing games, it shows:
+
+* the runner's agents reproduce the incumbent's pinned decisions;
+* the candidate equals the incumbent wherever the rule is inactive;
+* both random streams follow §7.1;
+* the 279/280 boundary and the board refusal work on the production path.
+
+**Proposed names (frozen at implementation authorization):**
+
+| module | gate |
+|---|---|
+| `tactical_candidate.py` (wrapper, qualification corpus, qualification run) | `TACTICAL_CANDIDATE_QUALIFICATION_AUTHORIZED` |
+| `candidate_match_runner.py` (pilot and study) | `CANDIDATE_MATCH_AUTHORIZED` |
+
+Evidence would go under `evidence/tactical-candidate-*`. Gates 25 and 26 are counted by the inventory
+test, not by hand.
+
+---
+
+## 4. Checkpoint 2 — a fresh tactical qualification corpus
+
+* **Size.** At most **100 new 24×24 positions**, up to 20 per class: own immediate win; single
+  defendable threat; multiple defendable threats; undefendable; quiet.
+* **Generator** (point 6). Fixed, recorded and **rules-engine-only**. It is frozen in full before it
+  runs:
+  * stream names, which must be **new**. `draw24`, `tac24`, `undef24` and `tacwt24` produced the pinned
+    test positions and are not reused. Proposed: `tq24-uniform:{seed}` and `tq24-pegs:{seed}`;
+  * the seed range, i.e. the generation budget;
+  * the move policy:
+    * uniform random legal; and
+    * a **frozen bias**: with probability 0.7, a random legal move a knight's step from one of the
+      mover's own pegs. Without it, own-win-plus-threat positions are very rare;
+  * the scan window, e.g. 1–20 plies before a win;
+  * the ply bound, e.g. ≤ 270, so every reply lands inside the cap;
+  * the class rule (protocol);
+  * selection: one representative per (class, game), then a seeded sample of at most 20 games per class.
+* **Shortages** are recorded, never filled by changing the procedure.
+* **Exclusion by state digest** of every previously examined position:
+  * the H5 fixtures and controls (10);
+  * the H5 tactics corpus's 63 selected entries and its 23 fixture-equivalent positions;
+  * every pinned test position.
+* **Freeze.** The corpus is frozen and committed before any model load.
+* **Run.** At each position, baseline and candidate use matching fresh-agent seeds. The searches must
+  be identical: counts, tie set, fingerprint and both streams. Only the permitted readout may differ.
+* **Reported:** tactical correctness, overrides, unsearched choices, timing.
+* **Realism.** Random playouts give cluttered, late positions (plies 250+). The H5 threat positions were
+  at plies 35–206. These positions establish **coverage**, **not** representative play or strength.
+
+---
+
+## 5. Checkpoint 3 — operational feasibility (pilot)
+
+A small, separately authorized pilot of candidate against incumbent. **Pilot games never enter the
+strength estimate.**
+
+**Frozen before the pilot:**
+
+* maximum runtime: per game, per segment, and the watchdog limit;
+* acceptable tactical-scan overhead, as a share of decision time;
+* recording, replay and process-integrity requirements;
+* rules for operational failure;
+* an excessive-cap threshold;
+* the **sizing rule of §7.3**, complete.
+
+**Measured:**
+
+* **full-game runtime**, including both agents and the candidate's scans. The rough planning figure is
+  about 2 minutes per game: about 1.7 s per decision in the H5 tactics run, times about 67 plies (H5 games
+  averaged about 33 incumbent decisions). Self-play length may differ.
+* the override firing rate, per game and per pair;
+* the cap rate;
+* replay integrity: §7.1's exact-replay condition holds on every no-override pair.
+
+**The pilot decides only whether the study is practical.** It cannot:
+
+* select or alter the candidate;
+* resize the study after inspecting scores;
+* drop the tactical scans to save time.
+
+An unacceptable cost means **stop and review**.
+
+---
+
+## 6. Checkpoint 4 — scope (points 4 and 7)
+
+* **Opponent.** This tests the candidate **against the incumbent**, not against T1j. The incumbent
+  itself sometimes misses one-ply wins; the H5 weakness review found its misses were never punished. So
+  a defence may be worth less in self-play than against an opponent that converts every win. Strength
+  against T1j is a separate question.
+* **Unsearched choices** (point 7). A zero-visit win or defence is chosen because the rules require it,
+  not because search examined it. Every such choice is recorded as **unsearched**. The strength test is
+  what prices that risk. Tactical correctness never implies stronger play.
+
+---
+
+## 7. Checkpoint 5 — one fresh strength comparison
+
+**Games.** Candidate against the unchanged incumbent, from the empty board, in adjacent colour-reversed
+pairs:
+
+* **Arm A:** candidate Red. **Arm B:** candidate Black.
+* Same checkpoint and 400 simulations per decision.
+* Fresh, collision-checked seed bundles.
+* Full move records and override witnesses.
+* A capped game scores 0.5. Repeated trajectories keep their multiplicity.
+* The sample size is frozen **before any evaluation game exists**. Scores stay blinded until every
+  required segment is committed.
+* An inconclusive study is **never** extended, never pooled with H4/H5 or the pilot, and never read as
+  "tactical correctness ⇒ stronger".
+
+### 7.1 Seed coupling — exact
+
+The agent code fixes the streams. Search stream = `Random(seed ^ SEARCH_MASK[colour])`; readout
+stream = `Random(seed ^ READOUT_MASK[colour])`. Under the argmax readout, `eval_readout.select` returns
+`_argmax(counts)` and **never draws** from the readout stream. It is recorded as inert.
+
+| follows | what |
+|---|---|
+| **colour** | the seed. Pair *k* has one bundle (*s_red(k)*, *s_black(k)*). In **both** games of the pair, whichever role plays red uses *s_red(k)*, and whichever plays black uses *s_black(k)*. |
+| **game** | the agent instance. Each game builds one fresh agent per colour, so both streams restart at every game and advance across that game only. |
+| **role** | **nothing.** Being candidate or incumbent never changes a seed, mask or stream. |
+
+* **Before the first override.** The wrapper draws nothing and the evaluator is deterministic. (The H5
+  fixture fingerprints reproduced exactly across processes; most recently they matched the `912b601f`
+  pins in `1ec87ac5`.) So each game follows the **incumbent-only game *G₀(k)*** — incumbent red on
+  *s_red(k)*, incumbent black on *s_black(k)* — move for move, until its first override:
+  * game A deviates from *G₀(k)* at the first **red** decision where the rule changes the move;
+  * game B deviates at the first **black** such decision.
+* **Exact-replay condition.** If the rule changes no move in either game of pair *k*, then A = B =
+  *G₀(k)* move for move, and the pair scores **exactly 0.5**.
+  * This is **checked**, not assumed. A no-override pair whose games differ in any move means the
+    determinism assumption has failed: **STOP**.
+  * More generally, A and B must agree up to the earlier of their two first overrides.
+* **Role-following seeds would break all of this**, for example the candidate always receiving the
+  first seed. They are not allowed.
+
+### 7.2 The primary estimand — candidate-vs-incumbent pairs against the matched counterpart (UNRESOLVED, an approval decision)
+
+**(P) Pairs.** The pair score is the mean of the candidate's two game scores, in [0, 1]. The estimand is
+its mean, against 0.5. This is the H4/H5 continuity design.
+
+**(C) Matched incumbent-only counterpart.** Also play *G₀(k)* for every pair. Per arm:
+
+* Δ_A = s_cand(A) − s_red(G₀);
+* Δ_B = s_cand(B) − s_black(G₀).
+
+Because s_red(G₀) + s_black(G₀) = 1 in every game (a cap is 0.5 each):
+
+> (Δ_A + Δ_B) / 2 = pair score − 0.5 — **identically**, pair by pair.
+
+What follows:
+
+* **Pooled effect.** For the pooled effect, (C) is the *same statistic* as (P). It adds **no power**.
+* **What (C) adds:**
+  * per-colour attribution. Δ_A alone is the effect as red, controlled for red's advantage; (P) cannot
+    separate a per-colour effect from colour advantage;
+  * a direct replay check, every game against its counterpart.
+* **What (C) costs:** **+50 % games**.
+* **The power question** therefore lies in the statistical method (§7.3), not in (P) against (C).
+
+**(K) Conditional on firing — LABELLED CONDITIONAL.**
+
+* **Firing** = the rule changes at least one move in game A or game B. Whether a game fires is decided
+  by *G₀(k)* alone (§7.1), before the candidate's play diverges.
+* **Validity.** Conditioning on it is therefore valid inference about the **firing pairs**.
+* **Relation to the overall effect.** Under exact replay, non-firing pairs contribute exactly 0, so
+  overall − 0.5 = P(fire) × (conditional − 0.5): the two share their sign.
+* **The rule.** A (K) result is reported **as conditional**. It never stands in for overall strength on
+  its own. Any overall statement needs (P) or (C), with P(fire) and its uncertainty shown.
+
+### 7.3 Sizing — a rule frozen before the pilot (an approval decision)
+
+The firing rate alone cannot set power. A sizing rule needs, **all declared before the pilot**:
+
+* **δ**, the effect worth detecting, on the pair-score scale;
+* the **statistical method**;
+* α = 0.05, two-sided;
+* a **compute ceiling** in hours.
+
+**Hoeffding, all pairs (continuity).**
+
+* Half-width h = √(ln(2/α) / 2n), so n = ⌈ln 40 / (2δ²)⌉.
+* This **does not depend on the firing rate**. The pilot cannot change n. It only checks
+  n × 2 games × t_game ≤ ceiling; otherwise **stop and review**, never shrink.
+* Hoeffding uses no variance, so it is conservative when many pairs score exactly 0.5.
+
+| δ (half-width) | pairs n | games | rough compute at ~2 min/game (pilot measures) | with counterparts (C) |
+|---|---|---|---|---|
+| 0.079 | 296 | 592 | ~20 h | ~30 h |
+| 0.050 | 738 | 1,476 | ~49 h | ~74 h |
+| 0.040 | 1,153 | 2,306 | ~77 h | ~115 h |
+| 0.030 | 2,050 | 4,100 | ~137 h | ~205 h |
+| 0.020 | 4,612 | 9,224 | ~307 h | ~461 h |
+
+**Dilution, illustrated.** If 10 % of pairs fire and the firing pairs average 0.70, the overall mean is
+0.52. Even 1,153 pairs (±0.040) would very likely report **inconclusive**.
+
+**Variance-adaptive alternative** (e.g. empirical Bernstein). It exploits the exact-0.5 pairs and can be
+much tighter. It is **not** the H4/H5 method, so choosing it must be a deliberate decision. Its sizing
+formula, and its dependence on the pilot's measured variance, must be frozen first.
+
+**Conditional (K).** Play until **n_f firing pairs**, n_f = ⌈ln 40 / (2δ_c²)⌉ for a declared
+conditional effect δ_c, or until the compute ceiling.
+
+* The stopping count is outcome-blind, and "fired" is decided by *G₀*, so stopping on it is allowed.
+  (H3 lesson: a monotone *count* may decide; a ratio may not.)
+* If the ceiling comes first, the result is reported as **underpowered**, and the decision rules stay
+  the same.
+
+**Decision rules** (bounded-pair Hoeffding, independence of pairs assumed and stated):
+
+* lower bound strictly above 0.5 → evidence of **improvement** under this protocol;
+* upper bound strictly below 0.5 → evidence of **regression**;
+* otherwise **inconclusive**.
+
+### 7.4 Seeds
+
+Fresh bundles are registered in the shared registry (`e4_screen_reference.py`), with a collision proof
+by the established method: the v15/v16 provenance, extended for underscored literals. Registration is
+its own authorization. Pilot and study seeds are disjoint.
+
+---
+
+## 8. Approval decisions this card leaves open
+
+| # | decision | options set out here |
+|---|---|---|
+| D1 | the final comparison design | (P) pairs; (C) with counterparts; (K) only as a labelled conditional analysis alongside |
+| D2 | the statistical method | Hoeffding (continuity) or a variance-adaptive bound |
+| D3 | δ, hence n (or n_f), and the compute ceiling | the §7.3 table |
+| D4 | runtime limits | per game, per segment, watchdog, scan-overhead share, cap-rate threshold |
+| D5 | pilot size | small; never in the estimate |
+| D6 | names and gates | §3 proposal |
+
+## 9. Order of authorizations
+
+1. This card's review.
+2. Implementation: the wrapper, synthetic controls and the independent checker.
+3. R1: the runner implementation.
+4. R2: the no-game production qualification.
+5. Freeze of the qualification corpus.
+6. The qualification run (model load).
+7. Decisions D1–D5 and the frozen sizing rule.
+8. The pilot.
+9. Seed registration.
+10. The study segments.
+11. Analysis → accept, reject or inconclusive.
+
+Each step is separately authorized. Frozen H4/H5 code and evidence, curriculum support and `TwixtState`
+stay untouched throughout.
+
+## 10. Scope
+
+This card authorizes nothing executable: no code, gate creation or opening, corpus generation, model
+load, pilot, game, seed registration or push.
