@@ -1,0 +1,35 @@
+{
+ "card": "docs/superpowers/2026-10-03-t1j-h5-incumbent-tactics-card.md",
+ "cause": null,
+ "child_exit": "exit status 0",
+ "child_pid": 51950,
+ "child_rc": 0,
+ "child_streams": {
+  "stderr": {
+   "bytes": 0,
+   "file": "child.stderr.txt",
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "stdout": {
+   "bytes": 23,
+   "file": "child.stdout.txt",
+   "sha256": "c0b2ec1ed5ff6f9e565fb365f891d2a55e91d7dee5327ba8ec4693d4c2aa7dba"
+  }
+ },
+ "elapsed_s": 203.21412466606125,
+ "journal": {
+  "file": "log.jsonl",
+  "lines": 61,
+  "sha256": "98a8ee9868f9a60f3fcbd870586a1c8a87469bb69e90e20fd6281798e3b8b132"
+ },
+ "journal_note": null,
+ "label": "EXPLORATORY",
+ "limit_s": 1799.9995581670664,
+ "note": "the journal and any record are exactly as the child wrote them",
+ "record_present": true,
+ "record_readable": true,
+ "record_status": "COMPLETE",
+ "signal": null,
+ "status": "COMPLETE",
+ "survivors_killed": false
+}
