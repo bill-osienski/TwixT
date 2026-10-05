@@ -309,6 +309,8 @@ The firing rate alone cannot set power. A sizing rule needs, **all declared befo
 | 0.030 | 2,050 | 4,100 | ~137 h | ~205 h |
 | 0.020 | 4,612 | 9,224 | ~307 h | ~461 h |
 
+> *Half-widths only — precision, not power. Superseded by A1.1; see §12 A2.3.*
+
 **Dilution, illustrated.** If 10 % of pairs fire and the firing pairs average 0.70, the overall mean is
 0.52. Even 1,153 pairs (±0.040) would very likely report **inconclusive**.
 
@@ -413,6 +415,8 @@ pair (2 games × about 2 min). It is rough, and the pilot measures it.
 | 0.030 | 3,517 | ~234 h | 4,673 | ~312 h |
 | 0.020 | 7,912 | ~527 h | 10,032 | ~669 h |
 
+> *Planning approximation (§12 A2.3): n is computed from a normal approximation for the mean of the pair scores (empirical Bernstein additionally plans Vₙ at σ²). It is **not** a distribution-free 80 % power guarantee, and valid interval coverage does not make the power calculation exact.*
+
 ### A1.2 — The pilot stays outcome-blind (supersedes "the pilot's measured variance" in §7.3)
 
 * **Nothing outcome-derived is read.** No pilot score, winner, per-colour result or score variance is
@@ -479,6 +483,8 @@ pair (2 games × about 2 min). It is rough, and the pilot measures it.
 | 8 | 0.721 | 0.425 | 1,178 / 1,423 | 1,840 / 2,110 | 3,271 / 3,546 | 7,358 / 7,506 |
 | 16 | 1.000 | 0.500 | 1,266 / 1,832 | 1,978 / 2,747 | 3,517 / 4,673 | 7,912 / 10,032 |
 
+> *Planning approximation (§12 A2.3): n is computed from a normal approximation for the mean of the pair scores (empirical Bernstein additionally plans Vₙ at σ²). It is **not** a distribution-free 80 % power guarantee, and valid interval coverage does not make the power calculation exact.*
+
 * A declared overall Δ with a small p implies a large effect per firing pair. For example, Δ = 0.04 at
   p = 0.26 needs firing pairs to average about 0.65.
 * The rule does not judge whether Δ is plausible. That is the D3 decision.
@@ -508,7 +514,7 @@ pair (2 games × about 2 min). It is rough, and the pilot measures it.
   * otherwise inconclusive.
 * **Stated assumptions:**
   * pairs i.i.d. — the same independence assumption as H4/H5, since the registered seeds are treated as
-    an i.i.d. draw;
+    an i.i.d. draw; *[corrected by §12 A2.5: identical distribution is an ADDITIONAL modelling assumption, not the H4/H5 one]*
   * scores bounded in [0, 1];
   * n fixed in advance (A1.3).
 * **The estimand is unchanged:** E[pair score], design P.
@@ -554,3 +560,106 @@ Each step is separately authorized.
 
 Design amendment only. No implementation, gates, corpus generation, model loading, seed registration,
 games or push.
+
+---
+
+## 12. Amendment A2 — 2026-10-05, decisions D2–D4 and qualifications (user-decided)
+
+These choices set **design limits, not permission to spend compute.** D1, D5 and D6 stand as decided
+in A1.6.
+
+### A2.1 — D2: a predeclared method-selection rule (supersedes A1.5's "D2 remains the user's choice")
+
+Frozen before the pilot:
+
+1. From the **outcome-blind** pilot inputs only — f, hence p_U and σ_plan (A1.2, A1.4) — compute the
+   planned n for **Hoeffding** and for the **empirical-Bernstein interval of A1.5**. Use the A1.1
+   formulas at Δ and σ_plan.
+2. **Choose the smaller n**; a tie chooses **Hoeffding**.
+3. **Commit** the chosen method and n before study seed registration.
+4. **Never** choose between intervals after any study outcome exists.
+
+This is the option A1.5 described as "not adopted", now adopted.
+
+### A2.2 — D3: bounded scope
+
+* **Effect worth detecting: Δ = 0.05**, i.e. a candidate pair-score mean of 0.55.
+* **Planning power target: approximately 80 %** (A2.3).
+* **Study compute ceiling: 80 hours**, *including* study setup and verification, across all segments.
+* **The projection keeps the 25 % margin:**
+
+  > projected = 1.25 × (n × t̄ + setup and verification, estimated from the pilot)
+
+  If projected > 80 h: **stop before starting**. n is never shrunk.
+* **Scope.** This first programme may miss smaller improvements. **Inconclusive is an acceptable
+  result.**
+
+**What this implies (computed).** At Δ = 0.05 and 80 % planning power, by pilot firing count f of 16.
+The last column ignores setup and verification, so the real limit is lower.
+
+| f | p_U | σ_plan | n Hoeffding | n EB | chosen (A2.1) | n | longest mean pair time t̄ that fits 80 h |
+|---|---|---|---|---|---|---|---|
+| 0 | 0.171 | 0.207 | — | — | **STOP** (A1.2: f = 0) | — | — |
+| 1 | 0.264 | 0.257 | 992 | 734 | EB | 734 | 5.23 min |
+| 2 | 0.344 | 0.293 | 1,031 | 858 | EB | 858 | 4.48 min |
+| 3 | 0.417 | 0.323 | 1,063 | 969 | EB | 969 | 3.96 min |
+| 4 | 0.484 | 0.348 | 1,091 | 1,071 | EB | 1,071 | 3.59 min |
+| 5 | 0.548 | 0.370 | 1,116 | 1,167 | Hoeffding | 1,116 | 3.44 min |
+| 8 | 0.721 | 0.425 | 1,178 | 1,423 | Hoeffding | 1,178 | 3.26 min |
+| 12 | 0.910 | 0.477 | 1,239 | 1,700 | Hoeffding | 1,239 | 3.10 min |
+| 16 | 1.000 | 0.500 | 1,266 | 1,832 | Hoeffding | 1,266 | 3.03 min |
+
+> *Planning approximation (§12 A2.3): n is computed from a normal approximation for the mean of the pair scores (empirical Bernstein additionally plans Vₙ at σ²). It is **not** a distribution-free 80 % power guarantee, and valid interval coverage does not make the power calculation exact.*
+
+**Read honestly:** at the rough planning figure of about 4 min per pair (§5), the study fits the ceiling
+only if **f ≤ 3**. Otherwise it **stops before starting**, as A2.2 requires. The pilot's measured t̄
+decides; nothing is shrunk to fit.
+
+### A2.3 — The sizing tables are approximations (qualifies §7.3, A1.1, A1.4 and A2.2)
+
+* Every planned n comes from a **normal approximation** for the mean of the pair scores. The
+  empirical-Bernstein n additionally plans the sample variance at its planned value σ².
+* **Neither is a distribution-free 80 % power guarantee.** For example, 1,978 pairs for Δ = 0.04 is
+  correct under the A1.1 planning formula only.
+* **Valid final interval coverage does not make the power calculation exact.**
+* These qualifiers are annotated beside every sizing table above.
+
+### A2.4 — D4: operational limits (fixed)
+
+* **Per game: 15 minutes, hard-enforced** by the runner (R1). An overrun is an operational failure.
+* **Per segment: 4 hours**, setup included.
+* **The entire pilot: 4 hours.**
+* **Tactical scans:** at most **25 % of the aggregate candidate decision time**, measured over the
+  completed pilot. Above that: **stop and review**. Scans are never skipped to save time.
+* **Caps:** **stop** if **4 or more of the 16 pilot pairs** contain a capped game. This uses the
+  termination type only, never the winner (A1.2).
+* **Any operational or integrity failure:** stop, retain the evidence, **no automatic retry.**
+* **The 80-hour ceiling applies across all segments.** An unfinished study is INCOMPLETE, with no
+  confirmatory verdict (A1.3).
+
+### A2.5 — The i.i.d. assumption, stated (corrects A1.5)
+
+* **Empirical Bernstein** (Maurer & Pontil, Theorem 4, under the conditions of their Theorem 1) requires
+  **i.i.d.** pair scores.
+* **Identical distribution is an additional modelling assumption.** It goes beyond the H4/H5
+  independence assumption, and registering fresh seeds does **not** establish it. If the rule selects
+  empirical Bernstein, the verdict holds under **i.i.d. pairs, assumed**, and says so.
+* **Hoeffding**, in its general form for independent variables bounded in [0, 1] (Hoeffding 1963),
+  needs independence only. Its interval then concerns the average of the pairs' expected scores.
+* Whichever method the rule selects, the record states that method's assumption beside the verdict.
+
+### A2.6 — Decisions (supersedes A1.6's statuses)
+
+| # | decision | status |
+|---|---|---|
+| D1 | P: all colour-reversed pairs; (K) secondary, conditional only | decided (A1.6) |
+| D2 | the method-selection rule of A2.1 | **decided** |
+| D3 | Δ = 0.05; ≈ 80 % planning power; an 80 h ceiling including setup and verification; the 25 % margin | **decided** |
+| D4 | the limits of A2.4 | **decided** |
+| D5 | pilot = 16 pairs, excluded from the estimate | decided (A1.6) |
+| D6 | the §3 names and gates | accepted (A1.6) |
+
+### A2.7 — Scope
+
+Design amendment only. No implementation, gate change, corpus generation, model loading, seed
+registration, pilot, study or push.
