@@ -8,10 +8,13 @@ evaluator. Seeds are negative (synthetic).
 """
 import contextlib
 import copy
+import hashlib
 import json
 import os
 import pathlib
 import random
+import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -104,6 +107,9 @@ def test_the_gate_is_created_CLOSED():
 def test_the_CONSTANTS_are_the_cards():
     assert (CM.BOARD, CM.PLY_CAP) == (T.BOARD, T.PLY_CAP) == (TC.BOARD, TC.PLY_CAP) == (24, 280)
     assert (CM.GAME_DEADLINE_S, CM.SEGMENT_DEADLINE_S, CM.STUDY_CEILING_S) == (900, 14_400, 288_000)
+    assert (CM.CHILD_GRACE_S, CM.POLL_S) == (30, 0.5), "the child's alarm fires before the parent's kill"
+    import inspect
+    assert inspect.signature(CM._run).parameters["game_s"].default == CM.GAME_DEADLINE_S - CM.CHILD_GRACE_S
     assert CM.ARMS == {"A": "red", "B": "black"}
 
 
@@ -297,7 +303,7 @@ def journal(d):
     return [json.loads(line) for line in (d / "log.jsonl").read_text().splitlines()]
 
 
-JOURNAL_KEYS = {"model_load": {"incumbent_identity"},
+JOURNAL_KEYS = {"model_load": {"incumbent_identity"}, "game_start": {"pair_id", "arm"},
                 "game": {"pair_id", "arm", "digest", "overrides", "seconds"},
                 "pair": {"pair_id", "fired", "first_override"}}
 
@@ -314,7 +320,8 @@ def test_RUN_COMPLETE_records_every_game_and_every_replay_check(complete):
     assert [(g["pair_id"], g["arm"]) for g in rec["games"]] == \
         [("p-fired", "A"), ("p-fired", "B"), ("p-quiet", "A"), ("p-quiet", "B")]
     assert [p["fired"] for p in rec["pairs"]] == [True, False]
-    assert [e["step"] for e in journal(d)] == ["model_load", "game", "game", "pair", "game", "game", "pair"]
+    assert [e["step"] for e in journal(d)] == ["model_load"] + \
+        ["game_start", "game", "game_start", "game", "pair"] * 2
     assert rec["plan_sha256"] == CM._sha(PLAN) and rec["wrapper_sha256"] == CM._file_sha(TC.__file__)
     assert json.loads((d / "record.json").read_text())["status"] == "COMPLETE"
 
@@ -412,7 +419,7 @@ def test_the_CHILD_takes_only_an_UNCONSUMED_claim_with_ITS_nonce(tmp_path, monke
 @pytest.mark.parametrize("entry", ["run", "run_claimed"])
 def test_every_public_entry_refuses_with_the_gate_shut_BEFORE_anything(entry, monkeypatch):
     for owner, name in ((CM, "_committed_plan"), (CM, "_segment_limit"), (CM, "_claim"),
-                        (CM, "_run"), (CC, "_watch"), (os, "mkdir"), (R4, "load_production_evaluator")):
+                        (CM, "_run"), (CM, "_watch_games"), (os, "mkdir"), (R4, "load_production_evaluator")):
         monkeypatch.setattr(owner, name, lambda *a, **k: pytest.fail("touched before the gate"))
     with pytest.raises(CM.MatchUnauthorized):
         getattr(CM, entry)("pilot", 0)
@@ -453,16 +460,18 @@ def open_gate(monkeypatch, tmp_path):
 
 
 def test_PUBLIC_ENTRY_runs_in_the_real_state_and_reports_STATUSES_only(open_gate, monkeypatch):
-    def watch(argv, *, limit_s, env, cwd, stdout_path, stderr_path):
+    def watch(argv, *, limit_s, game_s, d, env, cwd, stdout_path, stderr_path):
         assert list(argv[1:]) == ["-m", CM.MODULE, "run-claimed", "--role", "pilot", "--segment", "0"]
         assert env["PYTHONUNBUFFERED"] == "1" and limit_s <= CM.SEGMENT_DEADLINE_S
+        assert (game_s, d) == (CM.GAME_DEADLINE_S, CM.out_dir("pilot", 0)), "the parent enforces 15 min"
         monkeypatch.setenv(CM.CLAIM_ENV, env[CM.CLAIM_ENV])
         with open(stdout_path, "x") as so, open(stderr_path, "x") as se, \
                 contextlib.redirect_stdout(so), contextlib.redirect_stderr(se):
             rc = CM.main(list(argv[3:]))
         return {"child_pid": os.getpid(), "limit_s": limit_s, "terminated": False, "cause": None,
-                "signal": None, "rc": rc, "elapsed_s": 1.0, "survivors_killed": False}
-    monkeypatch.setattr(CC, "_watch", watch)
+                "signal": None, "rc": rc, "elapsed_s": 1.0, "survivors_killed": False,
+                "game_limit_s": game_s, "game_breach": None}
+    monkeypatch.setattr(CM, "_watch_games", watch)
     res = CM.run("pilot", 0)
     out = CM.out_dir("pilot", 0)
     rec = json.loads((out / "record.json").read_text())
@@ -470,6 +479,7 @@ def test_PUBLIC_ENTRY_runs_in_the_real_state_and_reports_STATUSES_only(open_gate
     assert (out / CM.CHILD_STREAMS["stdout"]).read_text().strip() == '{"status": "COMPLETE"}'
     for text in ((out / CM.WATCHDOG_FILE).read_text(), (out / "log.jsonl").read_text()):
         assert not R4.blinding_violations(text) and "terminal" not in text and "winner" not in text
+        assert '"moves"' not in text and '"agree_through"' not in text, "no game length, no move"
     claim = json.loads((out / CM.CLAIM_FILE).read_text())
     assert (claim["role"], claim["segment"]) == ("pilot", 0) and len(claim["plan_sha256"]) == 64
 
@@ -489,7 +499,7 @@ def test_the_CHILD_refuses_a_claim_for_another_plan_role_or_segment(open_gate, m
 def test_PUBLIC_ENTRY_refuses_an_UNCOMMITTED_plan_before_any_claim(monkeypatch, tmp_path):
     monkeypatch.setattr(AUTH, "CANDIDATE_MATCH_AUTHORIZED", True)
     monkeypatch.setattr(R4, "EVIDENCE_ROOT", str(tmp_path))
-    monkeypatch.setattr(CC, "_watch", lambda *a, **k: pytest.fail("a child was started"))
+    monkeypatch.setattr(CM, "_watch_games", lambda *a, **k: pytest.fail("a child was started"))
     with pytest.raises(CM.MatchRefused, match="must be committed before any model load"):
         CM.run("pilot", 0)
     assert not CM.out_dir("pilot", 0).exists()
@@ -515,32 +525,199 @@ def test_PUBLIC_ENTRY_a_hung_child_is_TERMINATED_never_COMPLETE(open_gate, monke
     assert (res["status"], res["record_status"]) == ("TERMINATED", "COMPLETE")
 
 
-def test_a_STUDY_segment_needs_its_predecessors_COMPLETE_and_the_80_h_CEILING(monkeypatch, tmp_path):
-    monkeypatch.setattr(R4, "EVIDENCE_ROOT", str(tmp_path))
-    def durable(paths, _fixture):                 # committed == present, for this control
-        for p in paths:
-            if not os.path.exists(p):
-                raise F.H4AnalysisRefused(f"{p} is not committed")
+# ─────────────────────────────── §13 A3: a hard game limit, durable evidence, validated predecessors
+
+def test_RUN_every_completed_game_and_decision_is_DURABLE(complete):
+    d, rec = complete
+    for g in rec["games"]:
+        raw = (d / CM.GAMES_DIR / g["file"]).read_bytes()
+        game = json.loads(raw)
+        assert hashlib.sha256(raw).hexdigest() == g["sha256"] and game["digest"] == g["digest"]
+        lines = (d / CM.GAMES_DIR / g["file"].replace(".json", ".partial.jsonl")).read_text().splitlines()
+        dec = [json.loads(x) for x in lines]
+        assert [x["move"] for x in dec] == game["moves"] and [x["ply"] for x in dec] == list(range(len(dec)))
+        assert [x["witness"] for x in dec if x["witness"]] == game["witnesses"]
+
+
+UNRESPONSIVE = r'''
+import json, os, signal, sys, time
+d = sys.argv[1]
+with open(os.path.join(d, "log.jsonl"), "x") as fh:
+    fh.write(json.dumps({"step": "model_load", "observation": {}}) + "\n")
+    fh.write(json.dumps({"step": "game_start", "observation": {"pair_id": "p1", "arm": "A"}}) + "\n")
+signal.pthread_sigmask(signal.SIG_BLOCK, signal.valid_signals())   # no handler can ever run
+time.sleep(120)
+'''
+
+
+def test_an_UNRESPONSIVE_child_is_KILLED_by_the_PARENT_at_the_GAME_limit(open_gate, monkeypatch):
+    monkeypatch.setattr(CM, "_child_argv", lambda role, segment: [sys.executable, "-c", UNRESPONSIVE,
+                                                                  str(CM.out_dir(role, segment))])
+    monkeypatch.setattr(CM, "GAME_DEADLINE_S", 2.0)          # the segment keeps its 4 h
+    t0 = time.monotonic()
+    res = CM.run("pilot", 0)
+    assert time.monotonic() - t0 < 10, "killed at the GAME limit, not the segment's"
+    assert (res["status"], res["game_breach"], res["signal"]) == ("TERMINATED", "p1-A", "SIGKILL")
+    assert "game p1-A open longer than 2.0 s" in res["cause"] and res["child_exit"] == "killed by signal SIGKILL"
+
+
+KILLER = r'''
+import os, pathlib, signal, sys
+sys.path.insert(0, sys.argv[2])
+from tests.test_candidate_match_runner import CONFIG, FIRED, IDENT, Fake, fake_builder
+from scripts.GPU.alphazero import candidate_match_runner as CM
+calls = [0]
+class Killer(Fake):                               # SIGKILL mid-way through game B
+    def __call__(self, state):
+        calls[0] += 1
+        if calls[0] == int(sys.argv[3]) + 31:
+            os.kill(os.getpid(), signal.SIGKILL)
+        return super().__call__(state)
+CM._run({"mode": "fixture", "pairs": [FIRED]}, CONFIG, IDENT, object, pathlib.Path(sys.argv[1]),
+        mode="fixture", builder=fake_builder(agent=Killer))
+'''
+
+
+def test_a_KILL_after_completed_observations_loses_NONE_of_them(played, tmp_path):
+    d = claimed(tmp_path)
+    plies_a = len(played["p-fired"]["A"]["moves"])
+    r = subprocess.run([sys.executable, "-c", KILLER, str(d), str(ROOT), str(plies_a)], cwd=ROOT,
+                       capture_output=True, text=True, timeout=300)
+    assert r.returncode == -signal.SIGKILL, r.stderr
+    assert not (d / "record.json").exists()
+    assert [e["step"] for e in journal(d)] == ["model_load", "game_start", "game", "game_start"]
+    a = json.loads((d / CM.GAMES_DIR / "p-fired-A.json").read_text())
+    assert a["moves"] == played["p-fired"]["A"]["moves"], "the completed game, whole"
+    b = [json.loads(x) for x in (d / CM.GAMES_DIR / "p-fired-B.partial.jsonl").read_text().splitlines()]
+    assert [x["ply"] for x in b] == list(range(30)), "every completed decision of the killed game"
+    assert [x["move"] for x in b] == played["p-fired"]["B"]["moves"][:30]
+    summary = CM._settle(d, {"terminated": True, "cause": "test kill", "limit_s": 1.0, "elapsed_s": 1.0,
+                             "child_pid": 1, "rc": -9, "signal": "SIGKILL", "survivors_killed": False,
+                             "game_limit_s": 900.0, "game_breach": "p-fired-B"})
+    assert [g["file"] for g in summary["games"]] == ["p-fired-A.json", "p-fired-A.partial.jsonl",
+                                                     "p-fired-B.partial.jsonl"]
+    assert all(g["sha256"] == hashlib.sha256((d / CM.GAMES_DIR / g["file"]).read_bytes()).hexdigest()
+               for g in summary["games"])
+    assert summary["record_sha256"] is None and summary["status"] == "TERMINATED"
+
+
+STUDY_PLAN = {"mode": "study", "pairs": [{"pair_id": "s1", "seeds": {"red": 13, "black": 14}}]}
+
+
+@pytest.fixture(scope="module")
+def pristine(tmp_path_factory):
+    """A genuinely completed synthetic study segment 0 -- plan, claim, games, record, watchdog."""
+    root = tmp_path_factory.mktemp("pristine")
+    mp = pytest.MonkeyPatch()
+    mp.setattr(R4, "EVIDENCE_ROOT", str(root))
+    mp.setattr(R4, "seed_registry_faults", lambda tasks: [])
+    try:
+        CM.plan_path("study", 0).parent.mkdir(parents=True)
+        CM.plan_path("study", 0).write_text(json.dumps(STUDY_PLAN))
+        d = CM.out_dir("study", 0)
+        CM._claim(d, {"plan_sha256": CM._file_sha(str(CM.plan_path("study", 0))), "role": "study",
+                      "segment": 0})
+        assert CM._run(STUDY_PLAN, CONFIG, IDENT, object, d, mode="study",
+                       builder=fake_builder())["status"] == "COMPLETE"
+        CM._settle(d, {"terminated": False, "cause": None, "limit_s": 14_400.0, "elapsed_s": 75 * 3600.0,
+                       "child_pid": 1, "rc": 0, "signal": None, "survivors_killed": False,
+                       "game_limit_s": 900.0, "game_breach": None})
+    finally:
+        mp.undo()
+    return root
+
+
+@pytest.fixture
+def segment0(pristine, tmp_path, monkeypatch):
+    root = tmp_path / "ev"
+    shutil.copytree(pristine, root)
+    monkeypatch.setattr(R4, "EVIDENCE_ROOT", str(root))
+    monkeypatch.setattr(R4, "seed_registry_faults", lambda tasks: [])
+
+    def durable(paths, _fixture):                 # committed == present, for these controls
+        for x in paths:
+            if not os.path.exists(x):
+                raise F.H4AnalysisRefused(f"{x} is not committed")
     monkeypatch.setattr(F, "check_durable", durable)
-    assert CM._segment_limit("study", 0) == CM.SEGMENT_DEADLINE_S
-    with pytest.raises(CM.MatchRefused, match="segment 0 must be committed first"):
+    return CM.out_dir("study", 0)
+
+
+def test_a_GENUINE_predecessor_VALIDATES_and_counts_toward_the_80_h_ceiling(segment0):
+    assert CM._validate_segment("study", 0) == 75 * 3600.0
+    assert CM._segment_limit("study", 1) == CM.SEGMENT_DEADLINE_S, "75 h + 4 h <= 80 h"
+    w = json.loads((segment0 / CM.WATCHDOG_FILE).read_text())
+    assert w["record_sha256"] == CM._file_sha(str(segment0 / "record.json")) and len(w["games"]) == 4
+
+
+def _rehash_record(d):
+    w = json.loads((d / CM.WATCHDOG_FILE).read_text())
+    w["record_sha256"] = CM._file_sha(str(d / "record.json"))
+    (d / CM.WATCHDOG_FILE).write_text(json.dumps(w))
+
+
+def _edit_record(d, f):
+    rec = json.loads((d / "record.json").read_text())
+    f(rec)
+    (d / "record.json").write_text(json.dumps(rec))
+    _rehash_record(d)
+
+
+def _edit_json(path, f):
+    obj = json.loads(path.read_text())
+    f(obj)
+    path.write_text(json.dumps(obj))
+
+
+BREAKS = {
+    "the record is {}": (lambda d: (d / "record.json").write_text("{}"), "not the one its watchdog hashed"),
+    "the record is {}, rehashed": (lambda d: ((d / "record.json").write_text("{}"), _rehash_record(d)),
+                                   "not a COMPLETE record of the committed plan"),
+    "a game file altered": (lambda d: (d / CM.GAMES_DIR / "s1-B.json").write_text("{}"),
+                            "s1-B.json is not the file its record hashed"),
+    "a game file missing": (lambda d: (d / CM.GAMES_DIR / "s1-A.json").unlink(), "a game file is not committed"),
+    "a game names another file": (lambda d: _edit_record(d, lambda r: r["games"][0].update(file="x.json")),
+                                  "names the file"),
+    "the games are not the plan's": (lambda d: _edit_record(d, lambda r: r["games"].reverse()),
+                                     "not the plan's pairs and arms"),
+    "the claim is for segment 3": (lambda d: _edit_json(d / CM.CLAIM_FILE, lambda c: c.update(segment=3)),
+                                   "claim is for another plan, role or segment"),
+    "the watchdog says STOP": (lambda d: _edit_json(d / CM.WATCHDOG_FILE, lambda w: w.update(status="STOP")),
+                               "its watchdog says STOP"),
+    "the journal altered": (lambda d: (d / "log.jsonl").write_text("{}\\n"), "journal is not the one"),
+    "the plan changed after the run": (lambda d: CM.plan_path("study", 0).write_text(json.dumps(
+        {"mode": "study", "pairs": [{"pair_id": "s2", "seeds": {"red": 13, "black": 14}}]})),
+        "claim is for another plan"),
+    "the watchdog is not JSON": (lambda d: (d / CM.WATCHDOG_FILE).write_text("not json"), "malformed"),
+    "the record is missing": (lambda d: (d / "record.json").unlink(), "not committed"),
+    "the replay checks are missing": (lambda d: _edit_record(d, lambda r: r.update(pairs=[])),
+                                      "do not name every planned pair"),
+}
+
+
+@pytest.mark.parametrize("name", BREAKS)
+def test_a_MALFORMED_or_MISMATCHED_predecessor_is_REFUSED(segment0, name):
+    breakage, why = BREAKS[name]
+    breakage(segment0)
+    with pytest.raises(CM.MatchRefused, match=why):
         CM._segment_limit("study", 1)
 
-    def segment(k, status, elapsed):
-        d = CM.out_dir("study", k)
-        d.mkdir(parents=True)
-        (d / "record.json").write_text("{}")
-        (d / CM.WATCHDOG_FILE).write_text(json.dumps({"status": status, "record_status": status,
-                                                      "elapsed_s": elapsed}))
-    segment(0, "STOP", 100.0)
-    with pytest.raises(CM.MatchRefused, match="segment 0 is STOP"):
-        CM._segment_limit("study", 1)
-    (CM.out_dir("study", 0) / CM.WATCHDOG_FILE).write_text(json.dumps(
-        {"status": "COMPLETE", "record_status": "COMPLETE", "elapsed_s": 75 * 3600.0}))
-    assert CM._segment_limit("study", 1) == CM.SEGMENT_DEADLINE_S, "75 h + 4 h <= 80 h"
-    segment(1, "COMPLETE", 2 * 3600.0)
+
+def test_the_PARENT_reads_only_the_OPEN_games_pair_and_arm(tmp_path):
+    d = tmp_path
+    assert CM._open_game(d) is None
+    lines = [{"step": "model_load", "observation": {}},
+             {"step": "game_start", "observation": {"pair_id": "p1", "arm": "A"}}]
+    (d / "log.jsonl").write_text("".join(json.dumps(x) + "\n" for x in lines) + '{"step": "ga')
+    assert CM._open_game(d) == "p1-A", "a line still being written is skipped"
+    lines.append({"step": "game", "observation": {"pair_id": "p1", "arm": "A"}})
+    (d / "log.jsonl").write_text("".join(json.dumps(x) + "\n" for x in lines))
+    assert CM._open_game(d) is None
+
+
+def test_the_80_h_CEILING_counts_the_validated_segments(segment0):
+    _edit_json(segment0 / CM.WATCHDOG_FILE, lambda w: w.update(elapsed_s=77 * 3600.0))
     with pytest.raises(CM.MatchRefused, match="ceiling"):
-        CM._segment_limit("study", 2)
+        CM._segment_limit("study", 1)
 
 
 def test_a_pair_where_BOTH_fired_is_checked_up_to_the_EARLIER_override(played):

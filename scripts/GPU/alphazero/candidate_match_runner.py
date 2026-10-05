@@ -15,10 +15,13 @@ are derivable from the evidence alone -- by design. Nothing outcome-bearing reac
 or the journal: no winner, no score, no ply count, no terminal type. Nothing here scores a game.
 
 RUN CONTRACT (the H5 studies'): pure refusals; the parent's create-only CLAIM with a nonce; the
-child in its own session under the parent's hard watchdog (process-group SIGKILL at the segment
-limit); a hard SIGALRM limit per game (15 min) and for the segment (4 h, setup included); an
-fsynced journal; record.json on every exit, the completion check inside the recorded boundary;
-watchdog.json; no automatic retry. Gate: `candidate_match_authorization`, created closed.
+child in its own session under the PARENT's watchdog, which SIGKILLs the process group at the
+segment limit (4 h, setup included) AND when one game has been open 15 min (§13 A3.1) -- the
+child's own SIGALRM fires 30 s earlier for a clean recorded STOP; every completed decision and
+game durable before the next (§13 A3.2); an fsynced blind journal; record.json on every exit,
+the completion check inside the recorded boundary; watchdog.json; no automatic retry. A study
+segment starts only after every earlier one VALIDATES (§13 A3.3). Gate:
+`candidate_match_authorization`, created closed.
 """
 from __future__ import annotations
 
@@ -49,7 +52,10 @@ COLOURS = ("red", "black")
 OTHER = {"red": "black", "black": "red"}
 ARMS = {"A": "red", "B": "black"}          # the CANDIDATE's colour in each arm
 MODES = ("fixture", "pilot", "study")      # "fixture": synthetic plans, never a public entry
-GAME_DEADLINE_S = 900.0                    # §12 A2.4: 15 min per game, hard
+GAME_DEADLINE_S = 900.0                    # §12 A2.4 / §13 A3.1: 15 min per game, the PARENT kills
+CHILD_GRACE_S = 30.0                       # §13 A3.1: the child's own alarm fires this much earlier
+POLL_S = 0.5                               # §13 A3.1: the parent's polling interval
+GAMES_DIR = "games"                        # §13 A3.2: durable per-game evidence
 SEGMENT_DEADLINE_S = 14_400.0              # §12 A2.4: 4 h per segment, setup included
 STUDY_CEILING_S = 80 * 3600.0              # §12 A2.2: across all study segments
 MARGIN_S = 60.0
@@ -169,7 +175,8 @@ def game_digest(moves: Sequence, terminal: Mapping[str, Any]) -> str:
 
 
 def play_game(make: Callable, pair: Mapping[str, Any], arm: str, *, limit_s: float,
-              clock: Callable[[], float] = time.monotonic) -> Dict[str, Any]:
+              clock: Callable[[], float] = time.monotonic,
+              on_decision: Optional[Callable[[Dict[str, Any]], None]] = None) -> Dict[str, Any]:
     """One game from the empty official board under a HARD limit. Fresh agents; the seed
     follows the colour. The winner is checked before the cap; no move is asked for after."""
     cand = ARMS[arm]
@@ -187,6 +194,10 @@ def play_game(make: Callable, pair: Mapping[str, Any], arm: str, *, limit_s: flo
                 raise MatchStop(f"game {pair['pair_id']}-{arm}: the illegal move {list(move)} "
                                 f"at ply {state.ply}")
             moves.append(list(move))
+            if on_decision is not None:               # §13 A3.2: durable before the next decision
+                mover = state.to_move
+                on_decision({"ply": state.ply, "move": list(move),
+                             "witness": _compact(agents[cand].witnesses[-1]) if mover == cand else None})
             state = state.apply_move(move)
     witnesses = agents[cand].witnesses
     own = [i for i in range(len(moves)) if i % 2 == (0 if cand == "red" else 1)]
@@ -240,20 +251,63 @@ def _file_sha(path: str) -> str:
     return hashlib.sha256(pathlib.Path(path).read_bytes()).hexdigest()
 
 
+def _fsync_dir(path: pathlib.Path) -> None:
+    fd = os.open(path, os.O_RDONLY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+class _Partial:
+    """§13 A3.2: one game's completed decisions, append-only and fsynced line by line --
+    outcome-bearing evidence, kept apart from the blind journal."""
+
+    def __init__(self, path: pathlib.Path):
+        self._f = os.fdopen(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644), "w",
+                            encoding="utf-8")
+        _fsync_dir(path.parent)
+
+    def __call__(self, decision: Mapping[str, Any]) -> None:
+        self._f.write(json.dumps(decision, sort_keys=True) + "\n")
+        self._f.flush()
+        os.fsync(self._f.fileno())
+
+    def close(self) -> None:
+        self._f.close()
+
+
+def _save_game(gdir: pathlib.Path, g: Mapping[str, Any]) -> Dict[str, Any]:
+    """§13 A3.2: the completed game, create-only and fsynced (file and directory)."""
+    name = f"{g['pair_id']}-{g['arm']}.json"
+    raw = (json.dumps(g, indent=1, sort_keys=True) + "\n").encode()
+    fd = os.open(gdir / name, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+    try:
+        os.write(fd, raw)
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    _fsync_dir(gdir)
+    return {"pair_id": g["pair_id"], "arm": g["arm"], "digest": g["digest"], "file": name,
+            "sha256": hashlib.sha256(raw).hexdigest()}
+
+
 def _run(plan: Mapping[str, Any], config, identity: Mapping[str, Any], loader: Callable,
          d: pathlib.Path, *, mode: str, builder: Optional[Callable] = None,
          clock: Callable[[], float] = time.monotonic, wall_s: float = SEGMENT_DEADLINE_S - MARGIN_S,
-         game_s: float = GAME_DEADLINE_S) -> Dict[str, Any]:
+         game_s: float = GAME_DEADLINE_S - CHILD_GRACE_S) -> Dict[str, Any]:
     """The segment. `builder(evaluator) -> make` is a TEST seam; no public entry passes one."""
     check_plan(plan, mode=mode)
     if not _unconsumed(d):
         raise MatchRefused(f"{d} does not hold exactly an unconsumed claim")
     t0 = clock()
     left = lambda: wall_s - (clock() - t0)    # noqa: E731
-    log, step, games, pairs = None, "claim", [], []
+    log, step, games, pairs, partial = None, "claim", [], [], None
     status, failure, interrupt = "COMPLETE", None, None
     try:
         log = CC._Log(d / "log.jsonl")
+        gdir = d / GAMES_DIR
+        os.mkdir(gdir)
         step = "model_load"
         with _alarm(left(), "the segment (model load)"):
             evaluator = loader()
@@ -266,8 +320,13 @@ def _run(plan: Mapping[str, Any], config, identity: Mapping[str, Any], loader: C
                 step = f"game:{p['pair_id']}-{arm}"
                 if left() <= 0:
                     raise MatchTimeout(f"the segment's {wall_s:.0f} s passed before {step}")
-                g = play_game(make, p, arm, limit_s=min(game_s, left()), clock=clock)
-                games.append(g)
+                log.done("game_start", {"pair_id": p["pair_id"], "arm": arm})
+                partial = _Partial(gdir / f"{p['pair_id']}-{arm}.partial.jsonl")
+                g = play_game(make, p, arm, limit_s=min(game_s, left()), clock=clock,
+                              on_decision=partial)
+                partial.close()
+                partial = None
+                games.append(_save_game(gdir, g))
                 got.append(g)
                 log.done("game", {"pair_id": g["pair_id"], "arm": arm, "digest": g["digest"],
                                   "overrides": sum(w["override"] for w in g["witnesses"]),
@@ -282,6 +341,8 @@ def _run(plan: Mapping[str, Any], config, identity: Mapping[str, Any], loader: C
     except Exception as e:                       # noqa: BLE001 -- a recorded STOP
         status, failure = "STOP", _failure(d, step, e)
     finally:
+        if partial is not None:
+            partial.close()
         if log is not None:
             log.close()
     if status == "COMPLETE":                     # inside the recorded boundary
@@ -305,7 +366,7 @@ def _run(plan: Mapping[str, Any], config, identity: Mapping[str, Any], loader: C
               "wrapper_sha256": _file_sha(TC.__file__), "m1_sha256": _file_sha(T.__file__),
               "board": BOARD, "ply_cap": PLY_CAP, "game_deadline_s": game_s, "deadline_s": wall_s,
               "elapsed_s": clock() - t0, "games": games, "pairs": pairs,
-              "note": "nothing here scores a game; outcomes are derivable from the moves, by design"}
+              "note": "nothing here scores a game; outcomes are derivable from the game files, by design"}
     with open(d / "record.json", "x", encoding="utf-8") as fh:
         json.dump(record, fh, indent=1, sort_keys=True)
     if interrupt is not None:
@@ -349,8 +410,91 @@ def _accept_claim(d: pathlib.Path) -> Dict[str, Any]:
     return claim
 
 
+def _open_game(d: pathlib.Path) -> Optional[str]:
+    """The game the journal shows started and not finished -- read for (pair, arm) only."""
+    j = d / "log.jsonl"
+    if not j.exists():
+        return None
+    current = None
+    for line in j.read_text(encoding="utf-8").splitlines():
+        try:
+            e = json.loads(line)
+        except ValueError:                       # a line still being written
+            continue
+        if e.get("step") == "game_start":
+            current = f"{e['observation']['pair_id']}-{e['observation']['arm']}"
+        elif e.get("step") == "game":
+            current = None
+    return current
+
+
+def _watch_games(argv: Sequence[str], *, limit_s: float, game_s: float, d: pathlib.Path,
+                 env: Mapping[str, str], cwd: str, stdout_path: pathlib.Path,
+                 stderr_path: pathlib.Path, poll_s: float = POLL_S) -> Dict[str, Any]:
+    """§13 A3.1: the child in its OWN session, streams to create-only files; the PARENT kills its
+    whole process group at the segment limit, when one game has been open `game_s` on the
+    parent's clock (from first seeing its `game_start`), or when this parent is interrupted.
+    Needs nothing from the child but its blind journal. (CC._watch, with the game limit added.)"""
+    import subprocess
+    t0 = time.monotonic()
+    out: Dict[str, Any] = {"child_pid": None, "limit_s": limit_s, "game_limit_s": game_s,
+                           "terminated": False, "cause": None, "signal": None, "rc": None,
+                           "survivors_killed": False, "game_breach": None}
+    try:
+        with open(stdout_path, "xb") as so, open(stderr_path, "xb") as se:
+            p = subprocess.Popen(list(argv), start_new_session=True, env=dict(env), cwd=cwd,
+                                 stdout=so, stderr=se)
+    except OSError as e:
+        return {**out, "cause": f"the child could not be started ({type(e).__name__}: {e})",
+                "elapsed_s": time.monotonic() - t0}
+    out["child_pid"] = p.pid
+    seen: Dict[str, float] = {}
+    try:
+        while True:
+            try:
+                p.wait(timeout=poll_s)
+                break
+            except subprocess.TimeoutExpired:
+                pass
+            now = time.monotonic()
+            if now - t0 > limit_s:
+                out.update(terminated=True, cause=f"the segment limit of {limit_s:.1f} s from the "
+                                                  "claim, measured by the parent")
+                break
+            g = _open_game(d)
+            if g is not None and now - seen.setdefault(g, now) > game_s:
+                out.update(terminated=True, game_breach=g,
+                           cause=f"game {g} open longer than {game_s:.1f} s on the parent's clock")
+                break
+    except BaseException as e:                   # noqa: BLE001 -- killed, then re-raised
+        out.update(terminated=True, cause=f"the parent was interrupted ({type(e).__name__})",
+                   parent_exception=e)
+    try:
+        os.killpg(p.pid, signal.SIGKILL)         # the child's session IS its group
+        killed = True
+    except ProcessLookupError:
+        killed = False
+    out.update(rc=p.wait(), elapsed_s=time.monotonic() - t0,
+               signal="SIGKILL" if out["terminated"] else None,
+               survivors_killed=killed and not out["terminated"])
+    return out
+
+
+def _inventory(d: pathlib.Path) -> List[Dict[str, Any]]:
+    """§13 A3.2: every file under games/ by name, size and sha256 -- no content is read."""
+    gdir = d / GAMES_DIR
+    if not gdir.is_dir():
+        return []
+    out = []
+    for f in sorted(gdir.iterdir()):
+        raw = f.read_bytes()
+        out.append({"file": f.name, "bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()})
+    return out
+
+
 def _settle(d: pathlib.Path, watch: Mapping[str, Any]) -> Dict[str, Any]:
-    """watchdog.json: statuses, streams and the journal by hash -- never an outcome."""
+    """watchdog.json: statuses, streams, the journal, the record and the game files by hash --
+    never an outcome."""
     rec, present = None, (d / "record.json").exists()
     if present:
         try:
@@ -373,6 +517,9 @@ def _settle(d: pathlib.Path, watch: Mapping[str, Any]) -> Dict[str, Any]:
                f"killed by signal {CC._signal_name(-rc)}" if rc < 0 else f"exit status {rc}",
                "child_streams": streams, "signal": watch["signal"],
                "survivors_killed": watch["survivors_killed"], "journal": CC._journal(d),
+               "game_limit_s": watch.get("game_limit_s"), "game_breach": watch.get("game_breach"),
+               "record_sha256": _file_sha(str(d / "record.json")) if present else None,
+               "games": _inventory(d),
                "record_present": present, "record_readable": rec is not None,
                "record_status": None if rec is None else rec.get("status")}
     with open(d / WATCHDOG_FILE, "x", encoding="utf-8") as fh:
@@ -416,23 +563,66 @@ def _committed_plan(role: str, segment: int) -> Tuple[Dict[str, Any], str]:
     return plan, hashlib.sha256(raw).hexdigest()
 
 
+def _validate_segment(role: str, k: int) -> float:
+    """§13 A3.3: an earlier segment, VALIDATED outcome-blind -- durability, the claim, the
+    watchdog's hashes of journal and record, the record's plan binding and game sequence, every
+    game file's hash. No move, terminal or witness is parsed. Returns its parent-measured time."""
+    def bad(why: str) -> MatchRefused:
+        return MatchRefused(f"{role} segment {k} does not validate: {why}")
+    d = out_dir(role, k)
+    plan, plan_file_sha = _committed_plan(role, k)
+    core = [d / CLAIM_FILE, d / "log.jsonl", d / "record.json", d / WATCHDOG_FILE]
+    try:
+        F.check_durable([str(x) for x in core], _fixture=False)
+    except F.H4AnalysisRefused as e:
+        raise bad(f"not committed ({e})") from None
+    try:
+        claim = json.loads((d / CLAIM_FILE).read_text(encoding="utf-8"))
+        w = json.loads((d / WATCHDOG_FILE).read_text(encoding="utf-8"))
+        raw = (d / "record.json").read_bytes()
+        rec = json.loads(raw)
+        if (claim.get("plan_sha256"), claim.get("role"), claim.get("segment")) != (plan_file_sha, role, k):
+            raise bad("its claim is for another plan, role or segment")
+        if (w.get("status"), w.get("record_status")) != ("COMPLETE", "COMPLETE"):
+            raise bad(f"its watchdog says {w.get('status')}/{w.get('record_status')}")
+        if (w.get("journal") or {}).get("sha256") != _file_sha(str(d / "log.jsonl")):
+            raise bad("the journal is not the one its watchdog hashed")
+        if w.get("record_sha256") != hashlib.sha256(raw).hexdigest():
+            raise bad("the record is not the one its watchdog hashed")
+        if (rec.get("card"), rec.get("mode"), rec.get("status"), rec.get("plan_sha256")) != \
+                (CARD, role, "COMPLETE", _sha(plan)) or rec.get("plan") != plan:
+            raise bad("the record is not a COMPLETE record of the committed plan")
+        want = [(p["pair_id"], arm) for p in plan["pairs"] for arm in ARMS]
+        games = rec.get("games")
+        if not isinstance(games, list) or [(g.get("pair_id"), g.get("arm")) for g in games] != want:
+            raise bad("its games are not the plan's pairs and arms, in order")
+        if [x.get("pair_id") for x in rec.get("pairs") or []] != [p["pair_id"] for p in plan["pairs"]]:
+            raise bad("its replay checks do not name every planned pair")
+        files = []
+        for g in games:
+            if g.get("file") != f"{g['pair_id']}-{g['arm']}.json":
+                raise bad(f"game {g['pair_id']}-{g['arm']} names the file {g.get('file')!r}")
+            files.append(d / GAMES_DIR / g["file"])
+        try:
+            F.check_durable([str(x) for x in files], _fixture=False)
+        except F.H4AnalysisRefused as e:
+            raise bad(f"a game file is not committed ({e})") from None
+        for g, f in zip(games, files):
+            if _file_sha(str(f)) != g.get("sha256"):
+                raise bad(f"{g['file']} is not the file its record hashed")
+        return float(w["elapsed_s"])
+    except MatchRefused:
+        raise
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as e:
+        raise bad(f"malformed ({type(e).__name__}: {e})") from None
+
+
 def _segment_limit(role: str, segment: int) -> float:
-    """§12 A2.4: 4 h per segment. A study segment needs every earlier segment committed and
-    COMPLETE, and starts only if the 80 h ceiling holds even should this one run its full limit."""
+    """§12 A2.4: 4 h per segment. A study segment needs every earlier segment VALIDATED (§13
+    A3.3), and starts only if the 80 h ceiling holds even should this one run its full limit."""
     if role == "pilot":
         return SEGMENT_DEADLINE_S
-    used = 0.0
-    for k in range(segment):
-        d = out_dir("study", k)
-        paths = [str(d / "record.json"), str(d / WATCHDOG_FILE)]
-        try:
-            F.check_durable(paths, _fixture=False)
-        except F.H4AnalysisRefused as e:
-            raise MatchRefused(f"study segment {k} must be committed first: {e}") from None
-        w = json.loads((d / WATCHDOG_FILE).read_text(encoding="utf-8"))
-        if (w.get("status"), w.get("record_status")) != ("COMPLETE", "COMPLETE"):
-            raise MatchRefused(f"study segment {k} is {w.get('status')}: no later segment runs")
-        used += float(w["elapsed_s"])
+    used = sum(_validate_segment("study", k) for k in range(segment))
     if used + SEGMENT_DEADLINE_S > STUDY_CEILING_S:
         raise MatchRefused(f"{used / 3600:.2f} h used: another {SEGMENT_DEADLINE_S / 3600:.0f} h "
                            f"segment could pass the {STUDY_CEILING_S / 3600:.0f} h ceiling")
@@ -455,11 +645,12 @@ def run(role: str, segment: int) -> Dict[str, Any]:
     limit = _segment_limit(role, segment)
     D._identity(R4.frozen_argmax_config())
     claim, nonce = _claim(out, {"plan_sha256": sha, "role": role, "segment": segment})
-    watch = CC._watch(_child_argv(role, segment),
-                      limit_s=limit - (time.monotonic() - claim["claimed_monotonic"]),
-                      env={**os.environ, CLAIM_ENV: nonce, "PYTHONUNBUFFERED": "1"},
-                      cwd=str(R4.REPO_ROOT), stdout_path=out / CHILD_STREAMS["stdout"],
-                      stderr_path=out / CHILD_STREAMS["stderr"])
+    watch = _watch_games(_child_argv(role, segment),
+                         limit_s=limit - (time.monotonic() - claim["claimed_monotonic"]),
+                         game_s=GAME_DEADLINE_S, d=out,
+                         env={**os.environ, CLAIM_ENV: nonce, "PYTHONUNBUFFERED": "1"},
+                         cwd=str(R4.REPO_ROOT), stdout_path=out / CHILD_STREAMS["stdout"],
+                         stderr_path=out / CHILD_STREAMS["stderr"])
     summary = _settle(out, watch)
     if "parent_exception" in watch:
         raise watch["parent_exception"]
