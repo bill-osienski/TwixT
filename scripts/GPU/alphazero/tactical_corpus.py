@@ -50,6 +50,9 @@ H5_CORPUS_SHA256 = "214b958c016e90a0bfc051b505eb2885f13e10efd7970e8b3fcb20ae3d89
 H5_RECORD_SHA256 = "189e6add3beab8a571ec52cfc5a62956711a8132c93f9ecd2f945353d7553140"
 PRIOR_FILE = pathlib.Path(__file__).with_name("tactical_corpus_prior.json")
 PRIOR_SHA256 = "dc344b079823bf200d77970ccc1e980e561f7cf7af618edf3b28c1bc12bf8bd4"
+EXAMINED_SEEDS = [0, 20]                   # §16 A6.1: production seeds examined during development
+PINNED_SOURCES = {"h5_corpus": H5_CORPUS_SHA256, "h5_record": H5_RECORD_SHA256, "prior": PRIOR_SHA256,
+                  "examined_seeds": EXAMINED_SEEDS}
 HARD_LIMIT_S, MARGIN_S = 3 * 3600.0, 60.0
 OUT_NAME = "tactical-candidate-corpus"
 PROVISIONAL, CORPUS, INVENTORY, CANDIDATES = ("corpus.provisional.json", "corpus.json",
@@ -196,6 +199,11 @@ def build_inventory(sources: Mapping[str, Any], spec: Mapping[str, Any]
         for name, moves in sorted(group.items()):
             for i, d in enumerate(_prefixes(moves)):
                 add(d, f"{tag}:{name}[:{i}]")
+    lo, hi = sources["examined"]["seeds"]          # (g) §16 A6.1: examined during development
+    for stream in spec["streams"]:
+        for seed in range(lo, hi):
+            for i, d in enumerate(_prefixes(play(stream, seed, spec)["moves"])):
+                add(d, f"g:{stream}:{seed}[:{i}]")
     near: Set[bytes] = set()
     per_base = {}
     for b in prior["bases"]:
@@ -204,7 +212,7 @@ def build_inventory(sources: Mapping[str, Any], spec: Mapping[str, Any]
         near |= x
     digests = {bytes.fromhex(d) for d in listed} | near
     summary = {"listed": {d: sorted(s) for d, s in sorted(listed.items())},
-               "counts": {k: counts[k] for k in "abcde"},
+               "counts": {k: counts[k] for k in "abcdeg"},
                "neighbourhood": {"rule": "every one- and two-ply extension of each base, kept where "
                                          "its ply lies in the eligible window; no reply after a win",
                                  "bases": per_base, "count": len(near),
@@ -223,7 +231,8 @@ def _sources() -> Dict[str, Any]:
     return {"fixtures": T.fixture_digests(D._frozen()),
             "h5_corpus": pinned(T.corpus_path(), H5_CORPUS_SHA256, "the H5 tactics corpus"),
             "h5_record": pinned(T.out_dir() / "record.json", H5_RECORD_SHA256, "the H5 tactics record"),
-            "prior": pinned(PRIOR_FILE, PRIOR_SHA256, "the prior-position file")}
+            "prior": pinned(PRIOR_FILE, PRIOR_SHA256, "the prior-position file"),
+            "examined": {"seeds": list(EXAMINED_SEEDS)}, "hashes": dict(PINNED_SOURCES)}
 
 
 # ─────────────────────────────── selection (§14 A4.5) ───────────────────────────────
@@ -265,8 +274,12 @@ def select(games: Sequence[Mapping[str, Any]], inventory: Set[bytes], spec: Mapp
             first[e["state_digest"]] = key
         else:
             repeats[e["state_digest"]].append(key)
+    composition = {cls: {"universe": {s: sum(len(ps) for (st, _), ps in by_class[cls].items() if st == s)
+                                       for s in spec["streams"]},
+                         "selected": {s: sum(e["stream"] == s for e in selected if e["class"] == cls)
+                                      for s in spec["streams"]}} for cls in T.CLASSES}
     return {"selected": selected, "quota_shortfall": shortfall, "universe": universe,
-            "excluded_prior": {c: excluded[c] for c in T.CLASSES},
+            "composition": composition, "excluded_prior": {c: excluded[c] for c in T.CLASSES},
             "repeats": {d: [first[d]] + ks for d, ks in sorted(repeats.items())}}
 
 
@@ -296,7 +309,7 @@ def _run(spec: Mapping[str, Any], sources: Mapping[str, Any], d: pathlib.Path, *
     log, partial, step = None, None, "claim"
     status, failure, interrupt = "COMPLETE", None, None
     games: List[Dict[str, Any]] = []
-    inv_sha, prov_sha, counts = None, None, None
+    inv_sha, prov_sha, counts, cand_sha = None, None, None, None
     try:
         log = CC._Log(d / "log.jsonl")
         with CM._alarm(left(), "the corpus freeze"):
@@ -320,6 +333,7 @@ def _run(spec: Mapping[str, Any], sources: Mapping[str, Any], d: pathlib.Path, *
                     log.done("game", {"stream": stream, "seed": seed, "window": len(row["positions"])})
             partial.close()
             partial = None
+            cand_sha = CM._file_sha(str(d / CANDIDATES))
             step = "completion_check"
             if len(games) != expected:
                 raise CorpusStop(f"{len(games)} games generated, {expected} planned")
@@ -348,6 +362,7 @@ def _run(spec: Mapping[str, Any], sources: Mapping[str, Any], d: pathlib.Path, *
             payload = {"label": LABEL, "card": CARD, "spec": dict(spec),
                        "python": platform.python_version(), "code": _code_shas(),
                        "inventory_sha256": inv_sha, "inventory_counts": counts,
+                       "candidates_sha256": cand_sha, "source_hashes": sources.get("hashes"),
                        "games_generated": len(games),
                        "games_won": sum(g["reason"] == "win" for g in games), **sel}
             prov_sha = _write_file(d / PROVISIONAL, _canonical(payload))
@@ -365,7 +380,7 @@ def _run(spec: Mapping[str, Any], sources: Mapping[str, Any], d: pathlib.Path, *
               "spec_sha256": _sha(dict(spec)), "python": platform.python_version(),
               "games_processed": len(games), "games_planned": expected,
               "inventory_sha256": inv_sha, "provisional_sha256": prov_sha,
-              "deadline_s": wall_s, "elapsed_s": clock() - t0,
+              "candidates_sha256": cand_sha, "deadline_s": wall_s, "elapsed_s": clock() - t0,
               "note": "the child never writes corpus.json; only the parent publishes it (§15 A5.2)"}
     with open(d / "record.json", "x", encoding="utf-8") as fh:
         json.dump(record, fh, indent=1, sort_keys=True)
@@ -376,8 +391,11 @@ def _run(spec: Mapping[str, Any], sources: Mapping[str, Any], d: pathlib.Path, *
 
 # ─────────────────────────────── the parent: validation and publication (§15 A5.2) ───────────
 
-def validate_provisional(d: pathlib.Path, rec: Mapping[str, Any], spec: Mapping[str, Any]) -> bytes:
-    """The parent's own checks of the child's payload; returns its bytes, or raises CorpusStop."""
+def validate_provisional(d: pathlib.Path, rec: Mapping[str, Any], spec: Mapping[str, Any],
+                         sources: Optional[Mapping[str, Any]] = None) -> bytes:
+    """The parent's own checks of the child's payload (§15 A5.2, §16 A6.2); returns its bytes, or
+    raises CorpusStop."""
+    sources = PINNED_SOURCES if sources is None else sources
     p = d / PROVISIONAL
     if not p.exists():
         raise CorpusStop("no provisional payload")
@@ -387,12 +405,36 @@ def validate_provisional(d: pathlib.Path, rec: Mapping[str, Any], spec: Mapping[
     c = json.loads(raw)
     if c.get("spec") != dict(spec) or c.get("python") != spec["python"]:
         raise CorpusStop("the payload is not of the frozen specification and interpreter")
+    if rec.get("spec_sha256") != _sha(dict(spec)):
+        raise CorpusStop("the record is not of the frozen specification")
+    if c.get("source_hashes") != dict(sources):
+        raise CorpusStop("the payload's sources are not the pinned ones")
+    log_raw = (d / CANDIDATES).read_bytes()
+    if hashlib.sha256(log_raw).hexdigest() != c.get("candidates_sha256") or \
+            rec.get("candidates_sha256") != c.get("candidates_sha256"):
+        raise CorpusStop("candidates.jsonl is not the log the record and the payload hashed")
+    rows = [json.loads(x) for x in log_raw.decode("utf-8").splitlines()]
+    planned = [(s, k) for s in spec["streams"] for k in range(*spec["seeds"])]
+    if [(r["stream"], r["seed"]) for r in rows] != planned:
+        raise CorpusStop("the candidate log is not the planned stream/seed sequence")
+    if not rec.get("games_processed") == c.get("games_generated") == len(rows) == len(planned):
+        raise CorpusStop("the game counts of record, payload, log and plan disagree")
+    if c.get("games_won") != sum(r["reason"] == "win" for r in rows):
+        raise CorpusStop("the won-game count disagrees with the log")
+    logged = collections.Counter(q["class"] for r in rows for q in r["positions"])
+    for cls in T.CLASSES:
+        if logged[cls] != c["universe"][cls]["positions"] + c["excluded_prior"][cls]:
+            raise CorpusStop(f"{cls}: the log's positions are not the universe plus the exclusions")
+    index = {(r["stream"], r["seed"], q["ply"]): q for r in rows for q in r["positions"]}
     if hashlib.sha256((d / INVENTORY).read_bytes()).hexdigest() != c.get("inventory_sha256"):
         raise CorpusStop("inventory.json is not the inventory the payload recorded")
     per = collections.Counter(e["class"] for e in c["selected"])
     if any(per[k] > spec["quota"] for k in per) or len(c["selected"]) > spec["quota"] * len(T.CLASSES):
         raise CorpusStop(f"the quotas are exceeded: {dict(per)}")
     for e in c["selected"]:
+        q = index.get((e["stream"], e["seed"], e["ply"]))
+        if q is None or (q["class"], q["digest"]) != (e["class"], e["state_digest"]):
+            raise CorpusStop(f"{e['stream']}:{e['seed']}@{e['ply']} is not in the candidate log")
         s = T.replay(e["moves"])
         if (T.state_digest(s), len(e["moves"])) != (e["state_digest"], e["ply"]) or \
                 not spec["min_ply"] <= e["ply"] <= spec["max_ply"]:
@@ -404,6 +446,44 @@ def validate_provisional(d: pathlib.Path, rec: Mapping[str, Any], spec: Mapping[
         if (e.get("cross_check") or {}).get("agree") is not True:
             raise CorpusStop(f"{e['stream']}:{e['seed']}@{e['ply']} has no agreeing cross-check")
     return raw
+
+
+def _publish(d: pathlib.Path, raw: bytes) -> str:
+    """§16 A6.3: the complete bytes to a temporary file in the destination, fsynced, then
+    HARD-LINKED to corpus.json -- create-only and atomic; a failed write leaves no corpus.json."""
+    tmp = d / f".{CORPUS}.partial"
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+    try:
+        CM._write_all(fd, raw)
+        os.fsync(fd)
+    except BaseException:
+        os.close(fd)
+        os.unlink(tmp)
+        raise
+    os.close(fd)
+    try:
+        os.link(tmp, d / CORPUS)                 # fails if corpus.json exists
+    finally:
+        os.unlink(tmp)
+    CM._fsync_dir(d)
+    return hashlib.sha256(raw).hexdigest()
+
+
+def _record_settle_failure(d: pathlib.Path, e: BaseException) -> None:
+    """§16 A6.3: a settlement that failed or was interrupted still leaves watchdog.json."""
+    if (d / WATCHDOG_FILE).exists():
+        return
+    try:
+        summary = {"label": LABEL, "card": CARD,
+                   "status": "INTERRUPTED" if isinstance(e, (KeyboardInterrupt, SystemExit))
+                   else "SETTLE_FAILED",
+                   "failure": {"exception_type": type(e).__name__, "reason": str(e)},
+                   "published": None, "corpus_present": (d / CORPUS).exists(),
+                   "record_present": (d / "record.json").exists()}
+        with open(d / WATCHDOG_FILE, "x", encoding="utf-8") as fh:
+            json.dump(summary, fh, indent=1, sort_keys=True)
+    except Exception:                            # noqa: BLE001 -- nothing more can be recorded
+        pass
 
 
 def _unconsumed(d: pathlib.Path) -> bool:
@@ -440,8 +520,8 @@ def _accept_claim(d: pathlib.Path) -> Dict[str, Any]:
     return claim
 
 
-def _settle(d: pathlib.Path, watch: Mapping[str, Any], *,
-            spec: Mapping[str, Any] = FROZEN_SPEC) -> Dict[str, Any]:
+def _settle(d: pathlib.Path, watch: Mapping[str, Any], *, spec: Mapping[str, Any] = FROZEN_SPEC,
+            sources: Optional[Mapping[str, Any]] = None) -> Dict[str, Any]:
     """watchdog.json -- and the ONLY publication of corpus.json, after a normal exit, a COMPLETE
     record and `validate_provisional`."""
     rec, present = None, (d / "record.json").exists()
@@ -457,9 +537,9 @@ def _settle(d: pathlib.Path, watch: Mapping[str, Any], *,
     published, why = None, None
     if status == "COMPLETE" and watch["rc"] == 0:
         try:
-            raw = validate_provisional(d, rec, spec)
-            published = {"file": CORPUS, "corpus_sha256": _write_file(d / CORPUS, raw)}
-        except (CorpusStop, CM.MatchStop, OSError, ValueError, KeyError, TypeError) as e:
+            raw = validate_provisional(d, rec, spec, sources)
+            published = {"file": CORPUS, "corpus_sha256": _publish(d, raw)}
+        except Exception as e:                   # noqa: BLE001 -- a recorded NOT_PUBLISHED
             status, why = "NOT_PUBLISHED", f"{type(e).__name__}: {e}"
     else:
         why = f"the child's run is {status}"
@@ -479,6 +559,8 @@ def _settle(d: pathlib.Path, watch: Mapping[str, Any], *,
                "record_status": None if rec is None else rec.get("status"),
                "record_sha256": CM._file_sha(str(d / "record.json")) if present else None,
                "provisional_sha256": CM._file_sha(str(d / PROVISIONAL)) if (d / PROVISIONAL).exists()
+               else None,
+               "candidates_sha256": CM._file_sha(str(d / CANDIDATES)) if (d / CANDIDATES).exists()
                else None, "published": published, "not_published": why}
     with open(d / WATCHDOG_FILE, "x", encoding="utf-8") as fh:
         json.dump(summary, fh, indent=1, sort_keys=True)
@@ -490,8 +572,8 @@ def committed_corpus() -> Tuple[Dict[str, Any], str]:
     parent summary and a COMPLETE child record by matching hashes."""
     d = out_dir()
     try:
-        F.check_durable([str(d / x) for x in (CORPUS, PROVISIONAL, "record.json", WATCHDOG_FILE)],
-                        _fixture=False)
+        F.check_durable([str(d / x) for x in (CORPUS, PROVISIONAL, "record.json", WATCHDOG_FILE,
+                                              INVENTORY, CANDIDATES)], _fixture=False)
     except F.H4AnalysisRefused as e:
         raise CorpusRefused(f"the corpus is not committed: {e}") from None
     raw = (d / CORPUS).read_bytes()
@@ -500,10 +582,20 @@ def committed_corpus() -> Tuple[Dict[str, Any], str]:
     rec = json.loads((d / "record.json").read_text(encoding="utf-8"))
     if w.get("status") != "COMPLETE" or (w.get("published") or {}).get("corpus_sha256") != sha:
         raise CorpusRefused("the parent did not publish THIS corpus as COMPLETE")
+    if w.get("record_sha256") != CM._file_sha(str(d / "record.json")):
+        raise CorpusRefused("record.json is not the record the parent hashed")
     if rec.get("status") != "COMPLETE" or rec.get("provisional_sha256") != sha or \
-            CM._file_sha(str(d / PROVISIONAL)) != sha:
+            CM._file_sha(str(d / PROVISIONAL)) != sha or w.get("provisional_sha256") != sha:
         raise CorpusRefused("the child's COMPLETE record does not hash to the published corpus")
-    return json.loads(raw), sha
+    c = json.loads(raw)
+    if c.get("inventory_sha256") != CM._file_sha(str(d / INVENTORY)):
+        raise CorpusRefused("inventory.json is not the inventory the corpus recorded")
+    if c.get("candidates_sha256") != CM._file_sha(str(d / CANDIDATES)) or \
+            rec.get("candidates_sha256") != c.get("candidates_sha256"):
+        raise CorpusRefused("candidates.jsonl is not the log the corpus and record hashed")
+    if c.get("source_hashes") != PINNED_SOURCES:
+        raise CorpusRefused("the corpus's sources are not the pinned ones")
+    return c, sha
 
 
 # ─────────────────────────────── the public entries ───────────────────────────────
@@ -534,12 +626,16 @@ def freeze() -> Dict[str, Any]:
                             f"{FROZEN_SPEC['python']}")
     _sources()
     claim, nonce = _claim(out, {"spec_sha256": _sha(FROZEN_SPEC)})
-    watch = CC._watch(_child_argv(),
-                      limit_s=HARD_LIMIT_S - (time.monotonic() - claim["claimed_monotonic"]),
-                      env={**os.environ, CLAIM_ENV: nonce, "PYTHONUNBUFFERED": "1"},
-                      cwd=str(R4.REPO_ROOT), stdout_path=out / CHILD_STREAMS["stdout"],
-                      stderr_path=out / CHILD_STREAMS["stderr"])
-    summary = _settle(out, watch)
+    try:                                         # §16 A6.3: every exit leaves watchdog.json
+        watch = CC._watch(_child_argv(),
+                          limit_s=HARD_LIMIT_S - (time.monotonic() - claim["claimed_monotonic"]),
+                          env={**os.environ, CLAIM_ENV: nonce, "PYTHONUNBUFFERED": "1"},
+                          cwd=str(R4.REPO_ROOT), stdout_path=out / CHILD_STREAMS["stdout"],
+                          stderr_path=out / CHILD_STREAMS["stderr"])
+        summary = _settle(out, watch)
+    except BaseException as e:
+        _record_settle_failure(out, e)
+        raise
     if "parent_exception" in watch:
         raise watch["parent_exception"]
     return summary

@@ -30,9 +30,14 @@ from tests import test_h5_cap_completion as TCC
 from tests import test_h5_incumbent_tactics as TT
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-SMALL = {**TQ.FROZEN_SPEC, "seeds": [0, 8]}   # 16 games: one win, tq24-pegs:3 (end 193)
+#: §16 A6.1: test seeds are DISJOINT from the production range 0-3,999 -- 16 games, one win,
+#: tq24-pegs:1000001 (end 271)
+SMALL = {**TQ.FROZEN_SPEC, "seeds": [1_000_000, 1_000_008]}
 EMPTY = {"fixtures": {}, "h5_corpus": {"selected": [], "fixture_equivalent": []},
-         "h5_record": {"rows": []}, "prior": {"pinned": {}, "standin": {}, "bases": []}}
+         "h5_record": {"rows": []}, "prior": {"pinned": {}, "standin": {}, "bases": []},
+         "examined": {"seeds": [0, 0]}, "hashes": dict(TQ.PINNED_SOURCES)}
+WIN = ("tq24-pegs", 1_000_001)
+WIN_ROW = 9                                       # its row in the candidate log
 
 
 def moves_sha(moves):
@@ -127,28 +132,28 @@ def test_the_MOVE_POLICIES_and_their_EXACT_draw_order():
 
 
 def test_GENERATION_is_REPRODUCIBLE_and_pinned():
-    for stream, seed, sha, reason, end in (("tq24-uniform", 0, "8e0e41050fc6e5e6", "cap", 280),
-                                           ("tq24-pegs", 0, "734c2aa016c0013e", "cap", 280),
-                                           ("tq24-pegs", 3, "44061b61c22e37ee", "win", 193)):
+    for stream, seed, sha, reason, end in (("tq24-uniform", 1_000_000, "5eec6c52e5edfa9b", "cap", 280),
+                                           ("tq24-pegs", 1_000_000, "855c238aeba1265c", "cap", 280),
+                                           ("tq24-pegs", 1_000_001, "05ac4f7f63441098", "win", 271)):
         a, b = TQ.play(stream, seed, SMALL), TQ.play(stream, seed, SMALL)
         assert a == b and (moves_sha(a["moves"]), a["reason"], a["end"]) == (sha, reason, end)
 
 
 def test_a_game_ends_at_the_FIRST_WINNER_or_the_CAP():
-    g = TQ.play("tq24-pegs", 3, SMALL)
+    g = TQ.play(*WIN, SMALL)
     assert T.replay(g["moves"]).winner() is not None and T.replay(g["moves"][:-1]).winner() is None
-    c = TQ.play("tq24-uniform", 0, SMALL)
+    c = TQ.play("tq24-uniform", 1_000_000, SMALL)
     assert len(c["moves"]) == 280 and T.replay(c["moves"]).winner() is None
 
 
 def test_the_WINDOW_is_the_last_20_plies_of_a_WON_game_inside_10_270():
-    g = TQ.play("tq24-pegs", 3, SMALL)
+    g = TQ.play(*WIN, SMALL)
     w = TQ.window(g, SMALL)
-    assert [p["ply"] for p in w] == list(range(173, 193))
+    assert [p["ply"] for p in w] == list(range(251, 271)), "end 271: up to the 270 ceiling"
     for p in w:
         s = T.replay(g["moves"][:p["ply"]])
         assert (p["class"], p["digest"]) == (T.classify(s, semantics="protocol")["class"], T.state_digest(s))
-    assert TQ.window(TQ.play("tq24-uniform", 0, SMALL), SMALL) == [], "a capped game contributes nothing"
+    assert TQ.window(TQ.play("tq24-uniform", 1_000_000, SMALL), SMALL) == [], "a capped game contributes nothing"
     late = {"reason": "win", "end": 285, "moves": [list(m) for m in TT.DRAW24[:285]]}
     assert [p["ply"] for p in TQ.window(late, SMALL)] == list(range(265, 271)), "never past ply 270"
     early = {"reason": "win", "end": 15, "moves": [list(m) for m in TT.DRAW24[:15]]}
@@ -171,8 +176,8 @@ def production_inventory():
 
 def test_the_INVENTORY_holds_every_identifiable_prior_and_test_derived_position(production_inventory):
     inv, summary = production_inventory
-    assert summary["counts"] == {"a": 10, "b": 86, "c": 60, "d": 2234, "e": 880}
-    assert summary["neighbourhood"]["count"] == 1_238_361 and summary["total_distinct"] == 1_241_115
+    assert summary["counts"] == {"a": 10, "b": 86, "c": 60, "d": 2234, "e": 880, "g": 11_021}
+    assert summary["neighbourhood"]["count"] == 1_238_361 and summary["total_distinct"] == 1_252_096
     d = lambda moves: bytes.fromhex(T.state_digest(T.replay(moves)))   # noqa: E731
     s = T.replay(TT.SINGLE_260)
     bad = TT.other(s, T.classify(s, semantics="protocol")["D"])
@@ -190,15 +195,25 @@ def test_the_INVENTORY_holds_every_identifiable_prior_and_test_derived_position(
     assert all(bytes.fromhex(x) in inv for x in TQ._prefixes(TT.DRAW24))
 
 
+def test_FRESHNESS_every_position_EXAMINED_during_development_is_excluded(production_inventory):
+    inv, _ = production_inventory
+    assert TQ.EXAMINED_SEEDS == [0, 20] and not set(range(*TQ.EXAMINED_SEEDS)) & set(range(*SMALL["seeds"]))
+    for stream in TQ.FROZEN_SPEC["streams"]:
+        for seed in range(*TQ.EXAMINED_SEEDS):
+            g = TQ.play(stream, seed, TQ.FROZEN_SPEC)
+            assert all(bytes.fromhex(x) in inv for x in TQ._prefixes(g["moves"])), (stream, seed)
+            assert all(bytes.fromhex(p["digest"]) in inv for p in TQ.window(g, TQ.FROZEN_SPEC))
+
+
 def test_a_SMALL_inventory_lists_each_source_digest_by_digest():
     pos = TT.QUIET_40
     src = {"fixtures": {"F1": T.state_digest(T.replay(pos))},
            "h5_corpus": {"selected": [{"key": "k", "state_digest": T.state_digest(T.replay(pos[:12]))}],
                          "fixture_equivalent": []},
            "h5_record": {"rows": [{"id": "r", "moves": pos[:11]}]},
-           "prior": {"pinned": {"P": pos[:3]}, "standin": {}, "bases": []}}
+           "prior": {"pinned": {"P": pos[:3]}, "standin": {}, "bases": []}, "examined": {"seeds": [0, 0]}}
     inv, summary = TQ.build_inventory(src, SMALL)
-    assert summary["counts"] == {"a": 1, "b": 1, "c": 1, "d": 4, "e": 0}
+    assert summary["counts"] == {"a": 1, "b": 1, "c": 1, "d": 4, "e": 0, "g": 0}
     assert summary["listed"][T.state_digest(T.replay(pos))] == ["a:F1"]
     assert summary["listed"][T.state_digest(T.replay(pos[:2]))] == ["d:P[:2]"]
     assert len(inv) == summary["total_distinct"] == 7
@@ -265,7 +280,10 @@ def test_RUN_COMPLETE_writes_a_PROVISIONAL_payload_and_NEVER_corpus_json(small_r
     assert hashlib.sha256(raw).hexdigest() == rec["provisional_sha256"]
     c = json.loads(raw)
     assert (c["spec"], c["games_generated"], c["games_won"]) == (SMALL, 16, 1)
-    assert c["selected"] and all(e["stream"] == "tq24-pegs" and e["seed"] == 3 for e in c["selected"])
+    assert c["selected"] and all((e["stream"], e["seed"]) == WIN for e in c["selected"])
+    assert c["composition"]["OWN_WIN"]["selected"] == {"tq24-uniform": 0, "tq24-pegs": 1}, "reported, not rebalanced"
+    assert c["composition"]["OWN_WIN"]["universe"]["tq24-uniform"] == 0
+    assert c["candidates_sha256"] == rec["candidates_sha256"] == CM._file_sha(str(d / TQ.CANDIDATES))
     assert all(e["cross_check"]["agree"] for e in c["selected"])
     for e in c["selected"]:                       # no reply is examined after a winning move
         assert (e["cross_check"]["replies_examined"] == 0) == (e["class"] == "OWN_WIN"), e["class"]
@@ -278,8 +296,8 @@ def test_RUN_every_completed_game_is_DURABLE_in_order(small_run):
     d, _ = small_run
     rows = [json.loads(x) for x in (d / TQ.CANDIDATES).read_text().splitlines()]
     assert [(r["stream"], r["seed"]) for r in rows] == \
-        [(s, k) for s in SMALL["streams"] for k in range(0, 8)]
-    assert [r for r in rows if r["positions"]] == [rows[11]] and rows[11]["end"] == 193
+        [(s, k) for s in SMALL["streams"] for k in range(*SMALL["seeds"])]
+    assert [r for r in rows if r["positions"]] == [rows[WIN_ROW]] and rows[WIN_ROW]["end"] == 271
 
 
 def test_the_whole_RUN_is_REPRODUCIBLE_byte_for_byte(tmp_path, monkeypatch):
@@ -295,7 +313,7 @@ def test_RUN_a_PRIOR_position_is_EXCLUDED_and_counted(small_run, tmp_path, monke
     monkeypatch.setattr(TC, "cross_check", fast_check)
     d0, _ = small_run
     rows = [json.loads(x) for x in (d0 / TQ.CANDIDATES).read_text().splitlines()]
-    p = rows[11]["positions"][0]
+    p = rows[WIN_ROW]["positions"][0]
     src = copy.deepcopy(EMPTY)
     src["h5_corpus"]["selected"] = [{"key": "prior", "state_digest": p["digest"]}]
     d = claimed(tmp_path)
@@ -318,7 +336,7 @@ def test_RUN_an_INTERRUPTION_keeps_every_completed_game_and_no_payload(tmp_path,
     real = TQ.play
 
     def play(stream, seed, spec):
-        if (stream, seed) == ("tq24-pegs", 3):
+        if (stream, seed) == ("tq24-pegs", 1_000_003):
             raise KeyboardInterrupt
         return real(stream, seed, spec)
     monkeypatch.setattr(TQ, "play", play)
@@ -327,7 +345,7 @@ def test_RUN_an_INTERRUPTION_keeps_every_completed_game_and_no_payload(tmp_path,
         TQ._run(SMALL, EMPTY, d)
     rec = json.loads((d / "record.json").read_text())
     assert (rec["status"], rec["games_processed"], rec["failure"]["failing_step"]) == \
-        ("INTERRUPTED", 11, "generate:tq24-pegs:3")
+        ("INTERRUPTED", 11, "generate:tq24-pegs:1000003")
     assert len((d / TQ.CANDIDATES).read_text().splitlines()) == 11 and not (d / TQ.PROVISIONAL).exists()
 
 
@@ -337,8 +355,8 @@ def test_RUN_a_NON_REPRODUCIBLE_generator_STOPS(tmp_path, monkeypatch):
 
     def play(stream, seed, spec):
         calls[(stream, seed)] += 1
-        if (stream, seed) == ("tq24-pegs", 3) and calls[(stream, seed)] > 1:
-            return {**real(stream, seed, spec), "moves": real("tq24-uniform", 3, spec)["moves"]}
+        if (stream, seed) == WIN and calls[(stream, seed)] > 1:
+            return {**real(stream, seed, spec), "moves": real("tq24-uniform", WIN[1], spec)["moves"]}
         return real(stream, seed, spec)        # the REPLAY above is a legal game -- but another one
     monkeypatch.setattr(TQ, "play", play)
     rec = TQ._run(SMALL, EMPTY, claimed(tmp_path))
@@ -388,6 +406,22 @@ def test_the_PARENT_publishes_the_provisional_BYTES_after_a_COMPLETE_exit(copy_o
     assert json.loads((copy_of / TQ.WATCHDOG_FILE).read_text()) == w
 
 
+def _edit(path, f):
+    obj = json.loads(path.read_text())
+    f(obj)
+    path.write_text(json.dumps(obj))
+
+
+def _rewrite_log(d, f):
+    """Rewrite candidates.jsonl and re-bind its hash in payload and record (so a later check fires)."""
+    rows = [json.loads(x) for x in (d / TQ.CANDIDATES).read_text().splitlines()]
+    f(rows)
+    (d / TQ.CANDIDATES).write_text("".join(json.dumps(r, sort_keys=True) + "\n" for r in rows))
+    sha = CM._file_sha(str(d / TQ.CANDIDATES))
+    _rewrite(d, lambda c: c.update(candidates_sha256=sha))
+    _edit(d / "record.json", lambda r: r.update(candidates_sha256=sha))
+
+
 def _rewrite(d, f):
     c = json.loads((d / TQ.PROVISIONAL).read_text())
     f(c)
@@ -417,6 +451,27 @@ REFUSALS = {
                                    WATCH, "no agreeing cross-check"),
     "a quota exceeded": (lambda d: _rewrite(d, lambda c: c["selected"].extend([c["selected"][0]] * 20)), WATCH,
                          "quotas are exceeded"),
+    # §16 A6.2: the budget, validated
+    "a ZERO-game budget": (lambda d: (_rewrite_log(d, lambda rows: rows.clear()),
+                                      _rewrite(d, lambda c: c.update(games_generated=0)),
+                                      _edit(d / "record.json", lambda r: r.update(games_processed=0))), WATCH,
+                           "not the planned stream/seed sequence"),
+    "the candidate log altered": (lambda d: (d / TQ.CANDIDATES).write_text("x\n"), WATCH,
+                                  "candidates.jsonl is not the log"),
+    "the candidate log missing": (lambda d: (d / TQ.CANDIDATES).unlink(), WATCH, "FileNotFoundError"),
+    "a game out of order": (lambda d: _rewrite_log(d, lambda rows: rows.reverse()), WATCH,
+                            "not the planned stream/seed sequence"),
+    "the record's count": (lambda d: _edit(d / "record.json", lambda r: r.update(games_processed=15)), WATCH,
+                           "game counts of record, payload, log and plan disagree"),
+    "the won count": (lambda d: _rewrite(d, lambda c: c.update(games_won=2)), WATCH, "won-game count"),
+    "a class count": (lambda d: _rewrite(d, lambda c: c["universe"]["OWN_WIN"].update(
+        positions=c["universe"]["OWN_WIN"]["positions"] + 1)), WATCH, "not the universe plus the exclusions"),
+    "a selection outside the log": (lambda d: _rewrite(d, lambda c: c["selected"][0].update(
+        ply=c["selected"][0]["ply"] - 1)), WATCH, "is not in the candidate log"),
+    "the record's specification": (lambda d: _edit(d / "record.json", lambda r: r.update(spec_sha256="x")), WATCH,
+                                   "record is not of the frozen specification"),
+    "unpinned sources": (lambda d: _rewrite(d, lambda c: c.update(source_hashes={})), WATCH,
+                         "sources are not the pinned ones"),
 }
 
 
@@ -489,9 +544,20 @@ def test_PUBLIC_ENTRY_runs_in_the_real_state_and_the_PARENT_publishes(open_gate,
         {**json.loads((d / TQ.WATCHDOG_FILE).read_text()), "status": "STOP"})), "did not publish THIS"),
     (lambda d: (d / TQ.CORPUS).write_text("{}"), "did not publish THIS"),
     (lambda d: (d / "record.json").write_text(json.dumps({"status": "COMPLETE", "provisional_sha256": "x"})),
+     "record.json is not the record the parent hashed"),
+    (lambda d: (_edit(d / "record.json", lambda r: r.update(provisional_sha256="x")),
+                _edit(d / TQ.WATCHDOG_FILE, lambda w: w.update(record_sha256=CM._file_sha(str(d / "record.json"))))),
      "does not hash to the published corpus"),
-], ids=["watchdog not COMPLETE", "corpus altered", "record hash mismatch"])
+    (lambda d: _edit(d / TQ.WATCHDOG_FILE, lambda w: w.update(provisional_sha256="x")),
+     "does not hash to the published corpus"),
+    (lambda d: (d / TQ.INVENTORY).write_text("{}"), "inventory.json is not the inventory"),
+    (lambda d: (d / TQ.CANDIDATES).write_text(""), "candidates.jsonl is not the log"),
+    (lambda d: TQ.PINNED_SOURCES.update(prior="0" * 64), "sources are not the pinned ones"),
+], ids=["watchdog not COMPLETE", "corpus altered", "an altered child record (watchdog binding)",
+        "record hash mismatch", "watchdog provisional hash", "inventory altered", "candidate log altered",
+        "sources not pinned"])
 def test_QUALIFICATION_requires_the_parents_COMPLETE_publication(copy_of, monkeypatch, breakage, why):
+    monkeypatch.setattr(TQ, "PINNED_SOURCES", dict(TQ.PINNED_SOURCES))
     TQ._settle(copy_of, WATCH, spec=SMALL)
     monkeypatch.setattr(R4, "EVIDENCE_ROOT", str(copy_of.parent))
     monkeypatch.setattr(F, "check_durable", lambda paths, _fixture: None)
@@ -543,3 +609,58 @@ def test_the_CHILD_takes_only_an_UNCONSUMED_claim_for_THE_frozen_spec(open_gate,
     monkeypatch.setenv(TQ.CLAIM_ENV, nonce)
     with pytest.raises(TQ.CorpusRefused, match="another specification"):
         TQ.freeze_claimed()
+
+
+# ─────────────────────────────── §16 A6.3: a protected settlement, atomic publication ─────────
+
+def test_an_ERROR_in_validation_is_a_recorded_NOT_PUBLISHED(copy_of, monkeypatch):
+    monkeypatch.setattr(TQ, "validate_provisional", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("probe")))
+    w = TQ._settle(copy_of, WATCH, spec=SMALL)
+    assert (w["status"], w["published"]) == ("NOT_PUBLISHED", None) and "RuntimeError: probe" in w["not_published"]
+    assert not (copy_of / TQ.CORPUS).exists()
+
+
+@pytest.mark.parametrize("ok_bytes", [0, 9], ids=["at once", "after 9 bytes"])
+def test_a_FAILED_publication_write_leaves_NO_corpus_json(copy_of, monkeypatch, ok_bytes):
+    real, calls = CM._write, []
+
+    def stalls(fd, data):                         # ok_bytes once, then no progress
+        calls.append(1)
+        return real(fd, bytes(data[:ok_bytes])) if ok_bytes and len(calls) == 1 else 0
+    monkeypatch.setattr(CM, "_write", stalls)
+    w = TQ._settle(copy_of, WATCH, spec=SMALL)
+    assert (w["status"], w["published"]) == ("NOT_PUBLISHED", None) and "no progress" in w["not_published"]
+    assert sorted(x.name for x in copy_of.iterdir() if "corpus.json" in x.name) == []
+
+
+def test_publication_is_CREATE_ONLY(copy_of):
+    (copy_of / TQ.CORPUS).write_bytes(b"already here")
+    w = TQ._settle(copy_of, WATCH, spec=SMALL)
+    assert (w["status"], w["published"]) == ("NOT_PUBLISHED", None) and "FileExistsError" in w["not_published"]
+    assert (copy_of / TQ.CORPUS).read_bytes() == b"already here"
+    assert not (copy_of / f".{TQ.CORPUS}.partial").exists()
+
+
+def in_process_watch(monkeypatch):
+    monkeypatch.setattr(TC, "cross_check", fast_check)
+
+    def watch(argv, *, limit_s, env, cwd, stdout_path, stderr_path):
+        monkeypatch.setenv(TQ.CLAIM_ENV, env[TQ.CLAIM_ENV])
+        with open(stdout_path, "x") as so, open(stderr_path, "x") as se, \
+                contextlib.redirect_stdout(so), contextlib.redirect_stderr(se):
+            rc = TQ.main(["freeze-claimed"])
+        return {**WATCH, "limit_s": limit_s, "rc": rc}
+    monkeypatch.setattr(CC, "_watch", watch)
+
+
+@pytest.mark.parametrize("exc,status", [(RuntimeError, "SETTLE_FAILED"), (KeyboardInterrupt, "INTERRUPTED")])
+def test_a_SETTLEMENT_failure_or_interruption_still_leaves_watchdog_json(open_gate, monkeypatch, exc, status):
+    in_process_watch(monkeypatch)
+
+    def boom(d):
+        raise exc("settlement probe")
+    monkeypatch.setattr(CC, "_journal", boom)
+    with pytest.raises(exc):
+        TQ.freeze()
+    w = json.loads((TQ.out_dir() / TQ.WATCHDOG_FILE).read_text())
+    assert (w["status"], w["published"], w["failure"]["exception_type"]) == (status, None, exc.__name__)
