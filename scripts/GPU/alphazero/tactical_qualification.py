@@ -21,10 +21,12 @@ every exit; no retry. Gate: `tactical_candidate_authorization`, created closed.
 from __future__ import annotations
 
 import collections
+import contextlib
 import hashlib
 import json
 import os
 import pathlib
+import signal
 import statistics
 import sys
 import time
@@ -260,7 +262,7 @@ def _run(plan: Sequence[Mapping[str, Any]], config, identity: Mapping[str, Any],
         raise QualRefused(f"{d} does not hold exactly an unconsumed claim")
     t0 = clock()
     left = lambda: wall_s - (clock() - t0)    # noqa: E731
-    log, obs, step, rows = None, None, "claim", []
+    log, obs, step, rows, cleanup = None, None, "claim", [], []
     status, failure, interrupt, summary = "COMPLETE", None, None, None
     try:
         log = CC._Log(d / "log.jsonl")
@@ -280,17 +282,25 @@ def _run(plan: Sequence[Mapping[str, Any]], config, identity: Mapping[str, Any],
             obs(row)                             # durable before the next call
             rows.append(row)
             log.done("call", {"id": call["id"], "checks": len(row["checks"])})
-        obs.close()
-        obs = None
+        step = "close:observations"              # closing is inside the recorded boundary too
+        h, obs = obs, None
+        h.close()
+        step = "close:journal"
+        h, log = log, None
+        h.close()
     except (KeyboardInterrupt, SystemExit) as e:
         status, interrupt, failure = "INTERRUPTED", e, _failure(d, step, e)
     except Exception as e:                       # noqa: BLE001 -- a recorded STOP
         status, failure = "STOP", _failure(d, step, e)
-    finally:
-        if obs is not None:
-            obs.close()
-        if log is not None:
-            log.close()
+    for name, h in (("observations", obs), ("journal", log)):     # after a failure: every handle
+        if h is None:                                             # closed, every error recorded
+            continue
+        try:
+            h.close()
+        except BaseException as e:               # noqa: BLE001 -- recorded; an interruption re-raised below
+            cleanup.append({"handle": name, "exception_type": type(e).__name__, "reason": str(e)})
+            if interrupt is None and isinstance(e, (KeyboardInterrupt, SystemExit)):
+                status, interrupt = "INTERRUPTED", e
     if status == "COMPLETE":                     # inside the recorded boundary
         step = "completion_check"
         try:
@@ -309,7 +319,7 @@ def _run(plan: Sequence[Mapping[str, Any]], config, identity: Mapping[str, Any],
     record = {"label": LABEL, "card": CARD, "status": status,
               "verdict": "QUALIFIED" if status == "COMPLETE" else "NOT_QUALIFIED", "failure": failure,
               "corpus_sha256": bound["corpus_sha256"], "plan_sha256": _sha(list(plan)), "calls": len(plan),
-              "observed": len(rows), "incumbent_identity": dict(identity), "seed": SEED,
+              "observed": len(rows), "cleanup_failures": cleanup, "incumbent_identity": dict(identity), "seed": SEED,
               "observations_sha256": CM._file_sha(str(d / OBSERVATIONS)) if (d / OBSERVATIONS).exists() else None,
               "summary": summary, "deadline_s": wall_s, "call_s": call_s, "elapsed_s": clock() - t0,
               "note": "production-path qualification on the frozen corpus; NOT strength"}
@@ -329,18 +339,44 @@ def _unconsumed(d: pathlib.Path) -> bool:
     return CLAIM_FILE in names and names <= {CLAIM_FILE, *CHILD_STREAMS.values()}
 
 
-def _claim(d: pathlib.Path, extra: Mapping[str, Any]) -> Tuple[Dict[str, Any], str]:
-    import secrets
+def _create(d: pathlib.Path) -> None:
+    """The one-shot destination, created by THIS invocation; an occupied one is refused and never
+    written to."""
     try:
         os.mkdir(d)
     except FileExistsError:
         raise QualRefused(f"{d} is occupied: the qualification is one-shot") from None
+
+
+@contextlib.contextmanager
+def _sigint_held():
+    """A SIGINT while the destination is created and marked as ours is HELD -- Python runs this
+    handler in the main thread whichever thread the kernel delivers to -- and re-raised to the restored
+    handler afterwards: inside the caller's protected region, never between the two."""
+    held: List[int] = []
+    previous = signal.signal(signal.SIGINT, lambda signum, _frame: held.append(signum))
+    try:
+        yield
+    finally:
+        signal.signal(signal.SIGINT, previous)
+        if held:
+            signal.raise_signal(signal.SIGINT)
+
+
+def _claim(d: pathlib.Path, extra: Mapping[str, Any]) -> Tuple[Dict[str, Any], str]:
+    """claim.json, create-only and fsynced, in a destination this invocation created."""
+    import secrets
     nonce = secrets.token_hex(16)
     claim = {"claimed_monotonic": time.monotonic(),
              "claimed_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
              "parent_pid": os.getpid(), "nonce_sha256": hashlib.sha256(nonce.encode()).hexdigest(), **extra}
-    with open(d / CLAIM_FILE, "x", encoding="utf-8") as fh:
-        json.dump(claim, fh, indent=1, sort_keys=True)
+    fd = os.open(d / CLAIM_FILE, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+    try:
+        CM._write_all(fd, json.dumps(claim, indent=1, sort_keys=True).encode())
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    CM._fsync_dir(d)
     return claim, nonce
 
 
@@ -390,16 +426,18 @@ def _settle(d: pathlib.Path, watch: Mapping[str, Any]) -> Dict[str, Any]:
     return summary
 
 
-def _record_settle_failure(d: pathlib.Path, e: BaseException) -> None:
-    """A settlement that failed or was interrupted still leaves watchdog.json (as §16 A6.3)."""
+def _record_parent_failure(d: pathlib.Path, e: BaseException, stage: str) -> None:
+    """A claim or settlement that failed or was interrupted still leaves watchdog.json (as §16 A6.3),
+    in a destination this invocation created."""
     if (d / WATCHDOG_FILE).exists():
         return
     try:
         with open(d / WATCHDOG_FILE, "x", encoding="utf-8") as fh:
-            json.dump({"label": LABEL, "card": CARD, "verdict": "NOT_QUALIFIED",
+            json.dump({"label": LABEL, "card": CARD, "verdict": "NOT_QUALIFIED", "stage": stage,
                        "status": "INTERRUPTED" if isinstance(e, (KeyboardInterrupt, SystemExit))
-                       else "SETTLE_FAILED",
+                       else f"{stage.upper()}_FAILED",
                        "failure": {"exception_type": type(e).__name__, "reason": str(e)},
+                       "claim_present": (d / CLAIM_FILE).exists(),
                        "record_present": (d / "record.json").exists()}, fh, indent=1, sort_keys=True)
     except Exception:                            # noqa: BLE001 -- nothing more can be recorded
         pass
@@ -423,7 +461,7 @@ def _child_argv() -> List[str]:
 
 def run() -> Dict[str, Any]:
     """PUBLIC ENTRY -- the PARENT. Bindings (pure), THE CLAIM, the child under the 1 h hard
-    limit; watchdog.json on every exit."""
+    limit; watchdog.json on every exit once the destination is created."""
     _gate()
     out = out_dir()
     if os.path.lexists(out):
@@ -431,8 +469,13 @@ def run() -> Dict[str, Any]:
     bound = bindings()
     plan = plan_of(bound["corpus"])
     D._identity(R4.frozen_argmax_config())
-    claim, nonce = _claim(out, {"corpus_sha256": bound["corpus_sha256"], "plan_sha256": _sha(plan)})
-    try:
+    ours, stage = False, "claim"
+    try:                                         # from the directory's creation on, every exit is recorded
+        with _sigint_held():
+            _create(out)
+            ours = True
+        claim, nonce = _claim(out, {"corpus_sha256": bound["corpus_sha256"], "plan_sha256": _sha(plan)})
+        stage = "settle"
         watch = CC._watch(_child_argv(),
                           limit_s=HARD_LIMIT_S - (time.monotonic() - claim["claimed_monotonic"]),
                           env={**os.environ, CLAIM_ENV: nonce, "PYTHONUNBUFFERED": "1"},
@@ -440,7 +483,8 @@ def run() -> Dict[str, Any]:
                           stderr_path=out / CHILD_STREAMS["stderr"])
         summary = _settle(out, watch)
     except BaseException as e:
-        _record_settle_failure(out, e)
+        if ours:
+            _record_parent_failure(out, e, stage)
         raise
     if "parent_exception" in watch:
         raise watch["parent_exception"]

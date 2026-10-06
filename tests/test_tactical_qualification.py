@@ -12,8 +12,10 @@ import hashlib
 import json
 import os
 import pathlib
+import signal
 import subprocess
 import sys
+import threading
 import time
 
 import pytest
@@ -76,6 +78,7 @@ REAL_PLAN_OF = Q.plan_of
 
 def claimed(tmp_path):
     d = tmp_path / Q.OUT_NAME
+    Q._create(d)
     Q._claim(d, {})
     return d
 
@@ -494,6 +497,49 @@ def test_RUN_the_INTERPRETATION_is_inside_the_record(pinned, bound, tmp_path, mo
         ("STOP", "NOT_QUALIFIED", "interpretation")
 
 
+def _failing_close(monkeypatch, handle, exc):
+    cls = CM._Partial if handle == "observations" else CC._Log
+    real = cls.close
+
+    def close(self):
+        real(self)
+        raise exc("close probe")
+    monkeypatch.setattr(cls, "close", close)
+
+
+def _run_raising(exc, plan, d, bound):
+    with pytest.raises(exc) if exc is KeyboardInterrupt else contextlib.nullcontext():
+        Q._run(plan, CONFIG, IDENT, Steered, d, bound)
+    return json.loads((d / "record.json").read_text())
+
+
+@pytest.mark.parametrize("exc", [RuntimeError, KeyboardInterrupt])
+@pytest.mark.parametrize("handle", ["observations", "journal"])
+def test_RUN_a_CLEANUP_failure_after_a_STOP_is_recorded_and_the_STOP_kept(bound, tmp_path, monkeypatch, handle, exc):
+    """board-8 completes; repro:E1 STOPs on the real pins; then closing one handle fails."""
+    _failing_close(monkeypatch, handle, exc)
+    d = claimed(tmp_path)
+    rec = _run_raising(exc, [call(bound, "boundary:board-8"), call(bound, "repro:E1")], d, bound)
+    assert (rec["status"], rec["verdict"]) == ("INTERRUPTED" if exc is KeyboardInterrupt else "STOP", "NOT_QUALIFIED")
+    assert rec["failure"]["failing_step"] == "repro:E1" and "pinned fingerprint" in rec["failure"]["reason"]
+    assert rec["cleanup_failures"] == [{"handle": handle, "exception_type": exc.__name__, "reason": "close probe"}]
+    assert [r["id"] for r in lines(d / Q.OBSERVATIONS)] == ["boundary:board-8"]
+    assert rec["observations_sha256"] == CM._file_sha(str(d / Q.OBSERVATIONS))
+
+
+@pytest.mark.parametrize("exc", [RuntimeError, KeyboardInterrupt])
+@pytest.mark.parametrize("handle", ["observations", "journal"])
+def test_RUN_a_CLOSE_failure_after_EVERY_call_is_recorded_NOT_QUALIFIED(bound, tmp_path, monkeypatch, handle, exc):
+    _failing_close(monkeypatch, handle, exc)
+    d = claimed(tmp_path)
+    rec = _run_raising(exc, [call(bound, "boundary:board-8")], d, bound)
+    assert (rec["status"], rec["verdict"]) == ("INTERRUPTED" if exc is KeyboardInterrupt else "STOP", "NOT_QUALIFIED")
+    assert (rec["failure"]["failing_step"], rec["failure"]["exception_type"]) == (f"close:{handle}", exc.__name__)
+    assert rec["cleanup_failures"] == [] and rec["summary"] is None
+    assert [r["id"] for r in lines(d / Q.OBSERVATIONS)] == ["boundary:board-8"]
+    assert rec["observations_sha256"] == CM._file_sha(str(d / Q.OBSERVATIONS))
+
+
 def test_RUN_refuses_without_an_UNCONSUMED_claim(bound, tmp_path):
     d = claimed(tmp_path)
     (d / "stranger").write_text("")
@@ -526,9 +572,16 @@ def in_process_watch(monkeypatch):
     monkeypatch.setattr(CC, "_watch", watch)
 
 
+def mask():
+    """The SIGINT disposition, which the destination's creation borrows and must give back."""
+    return signal.getsignal(signal.SIGINT)
+
+
 def test_PUBLIC_ENTRY_runs_in_the_real_state(open_gate, monkeypatch):
     in_process_watch(monkeypatch)
+    before = mask()
     w = Q.run()
+    assert mask() == before
     out = Q.out_dir()
     rec = json.loads((out / "record.json").read_text())
     assert (w["status"], w["record_status"], w["verdict"], w["child_rc"]) == \
@@ -538,7 +591,7 @@ def test_PUBLIC_ENTRY_runs_in_the_real_state(open_gate, monkeypatch):
     assert w["observations_sha256"] == rec["observations_sha256"] == CM._file_sha(str(out / Q.OBSERVATIONS))
     claim = json.loads((out / Q.CLAIM_FILE).read_text())
     assert (claim["corpus_sha256"], claim["plan_sha256"]) == (rec["corpus_sha256"], rec["plan_sha256"])
-    assert [r["id"] for r in lines(out / Q.OBSERVATIONS)] == list(SMALL)
+    assert [r["id"] for r in lines(out / Q.OBSERVATIONS)] == list(SMALL) and rec["cleanup_failures"] == []
     assert Q.HARD_LIMIT_S - Q.MARGIN_S - 60 < rec["deadline_s"] < Q.HARD_LIMIT_S - Q.MARGIN_S
     assert json.loads((out / Q.CHILD_STREAMS["stdout"]).read_text()) == {"status": "COMPLETE"}
 
@@ -584,6 +637,7 @@ def test_the_CHILD_checks_its_bindings_BEFORE_the_load(open_gate, monkeypatch):
 
 
 def test_the_CHILD_takes_only_an_UNCONSUMED_claim_for_THIS_corpus_and_call_list(open_gate, monkeypatch):
+    Q._create(Q.out_dir())
     _c, nonce = Q._claim(Q.out_dir(), {"corpus_sha256": "x", "plan_sha256": "y"})
     monkeypatch.setenv(Q.CLAIM_ENV, "0" * 32)
     with pytest.raises(Q.QualRefused, match="nonce does not match"):
@@ -637,8 +691,67 @@ def test_a_SETTLEMENT_failure_or_interruption_still_leaves_watchdog_json(open_ga
     with pytest.raises(exc):
         Q.run()
     w = json.loads((Q.out_dir() / Q.WATCHDOG_FILE).read_text())
-    assert (w["status"], w["verdict"], w["failure"]["exception_type"], w["record_present"]) == \
-        (status, "NOT_QUALIFIED", exc.__name__, True)
+    assert (w["status"], w["stage"], w["verdict"], w["failure"]["exception_type"], w["claim_present"],
+            w["record_present"]) == (status, "settle", "NOT_QUALIFIED", exc.__name__, True, True)
+
+
+@pytest.mark.parametrize("exc,status", [(RuntimeError, "CLAIM_FAILED"), (KeyboardInterrupt, "INTERRUPTED")])
+def test_a_CLAIM_failure_or_interruption_still_leaves_watchdog_json(open_gate, monkeypatch, exc, status):
+    def boom(fd, data):
+        raise exc("claim probe")
+    monkeypatch.setattr(CM, "_write", boom)
+    monkeypatch.setattr(CC, "_watch", lambda *a, **k: pytest.fail("a child was started"))
+    before = mask()
+    with pytest.raises(exc, match="claim probe"):
+        Q.run()
+    w = json.loads((Q.out_dir() / Q.WATCHDOG_FILE).read_text())
+    assert (w["status"], w["stage"], w["verdict"], w["failure"]["exception_type"], w["record_present"]) == \
+        (status, "claim", "NOT_QUALIFIED", exc.__name__, False)
+    assert sorted(p.name for p in Q.out_dir().iterdir()) == [Q.CLAIM_FILE, Q.WATCHDOG_FILE] and mask() == before
+
+
+@pytest.fixture
+def sigint_default():
+    """Python's own SIGINT handler: a background job (`cmd &`) inherits SIGINT IGNORED, and an
+    ignored SIGINT -- correctly -- raises nothing."""
+    previous = signal.signal(signal.SIGINT, signal.default_int_handler)
+    yield
+    signal.signal(signal.SIGINT, previous)
+
+
+def test_an_INTERRUPT_as_the_destination_is_created_is_recorded_IN_IT(open_gate, monkeypatch, sigint_default):
+    """A real SIGINT during the mkdir: held until the directory is marked ours, then raised inside
+    the protected region -- never in between -- and the SIGINT handler given back. Sent to the MAIN
+    thread, so it is delivered before pthread_kill returns."""
+    real = os.mkdir
+
+    def mkdir_then_sigint(path, *a, **k):
+        real(path, *a, **k)
+        if pathlib.Path(path) == Q.out_dir():
+            signal.pthread_kill(threading.main_thread().ident, signal.SIGINT)
+    monkeypatch.setattr(os, "mkdir", mkdir_then_sigint)
+    monkeypatch.setattr(CC, "_watch", lambda *a, **k: pytest.fail("a child was started"))
+    before = mask()
+    with pytest.raises(KeyboardInterrupt):
+        Q.run()
+    w = json.loads((Q.out_dir() / Q.WATCHDOG_FILE).read_text())
+    assert (w["status"], w["stage"], w["claim_present"]) == ("INTERRUPTED", "claim", False)
+    assert sorted(p.name for p in Q.out_dir().iterdir()) == [Q.WATCHDOG_FILE] and mask() == before
+
+
+def test_a_destination_created_by_ANOTHER_invocation_is_never_written(open_gate, monkeypatch):
+    out, real = Q.out_dir(), Q.bindings
+
+    def racing():                                 # another invocation creates it after the first check
+        b = real()
+        out.mkdir()
+        (out / "theirs").write_text("x")
+        return b
+    monkeypatch.setattr(Q, "bindings", racing)
+    before = mask()
+    with pytest.raises(Q.QualRefused, match="occupied"):
+        Q.run()
+    assert sorted(p.name for p in out.iterdir()) == ["theirs"] and mask() == before
 
 
 def test_SETTLE_an_unreadable_or_abnormal_record_is_never_QUALIFIED(tmp_path):
