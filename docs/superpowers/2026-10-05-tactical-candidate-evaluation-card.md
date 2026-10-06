@@ -985,3 +985,83 @@ The payload reports, per class and per stream, the universe and the selection.
 Contract amendment first, then the repairs, synthetic controls, the regression and local commits. The
 8,000-game freeze, model loading, qualifications, research seeds, gate opening, real games and push
 remain unauthorized.
+
+---
+
+## 17. Amendment A7 — 2026-10-06, the qualification run specified exactly (§9 step 5; user-decided)
+
+The corpus is frozen and published (`f84c8f90`; `corpus.json` sha256 `1f040a92…`). Of its 100
+positions, 92 come from `tq24-pegs`: a coverage limitation, not strength evidence. A7 fixes the
+qualification run before any code exists. It establishes **production-path qualification**: the
+frozen incumbent reproduces, the candidate's search is the incumbent's, and the tactical readout
+behaves as specified on 24×24 at the real cap. It establishes **no strength**.
+
+### A7.1 — Bindings verified before any model load (parent before the claim; child before the load)
+
+* **The corpus:** `committed_corpus()` accepts — committed, the parent's COMPLETE publication, every
+  hash bound (§15 A5.2, §16 A6.4).
+* **Code, as recorded by the corpus:** the current sha256 of `h5_incumbent_tactics.py` (M1),
+  `tactical_candidate.py` (the wrapper) and `tactical_corpus.py` equal the hashes in `corpus.json`.
+* **Code, pinned in the new module:**
+  * `candidate_match_runner.py`, R1, whose `production_builder` is reused;
+  * `h5_incumbent_defence.py`;
+  * `h5_incumbent_defence_factors.py` (fixtures, fingerprints, reader).
+* **The prior-position file** (`tactical_corpus_prior.json`), the source of the boundary positions,
+  bound to its pinned sha256.
+
+### A7.2 — The exact call list (109 calls, in this order)
+
+Every agent is built by R1's `production_builder` on the **one** production evaluator. Each agent is
+fresh, with **seed −1** for the colour to move — the seed that produced the pinned fingerprints.
+These are synthetic seeds, never research seeds.
+
+| # | calls | what each does | passes when |
+|---|---|---|---|
+| 1 | `repro:E1`, `repro:E2`, `repro:E3`, `repro:CD1`, `repro:CD2` | the plain incumbent decides the fixture once | its move = the recorded move, and its tree fingerprint = the pinned fingerprint of `912b601f` |
+| 2 | `corpus:000` … `corpus:099` (the published selection order) | a plain incumbent and a candidate decide the position | see the checks below |
+| 3 | `boundary:own-win-279` | as row 2, on `OWN_WIN_279` | row 2's checks, and the candidate's move **wins** — a winning 280th move |
+| 4 | `boundary:threat-279` | as row 2, on `THREAT_279` | row 2's checks; the rule is **inactive** (the threat is void under the protocol) and the move = the baseline |
+| 5 | `boundary:ply-280` | `OWN_WIN_279` plus its first legal non-winning move, given to the candidate, enabled and disabled | refused before **any** search |
+| 6 | `boundary:board-8` | an 8×8 board, given to the candidate, enabled and disabled | refused before **any** search |
+
+**The checks for rows 2–4:**
+
+* **Equivalence:** counts, tie set, tree fingerprint and root value are equal; both random streams
+  are equal after the decision; the configuration difference is empty for both agents; the
+  candidate's baseline = the incumbent's move.
+* **The readout (rows 2–3):** the witness class = the class `corpus.json` recorded (for row 2). The
+  candidate's move follows M1:
+  * the baseline, when the rule is inactive or the baseline is admissible;
+  * otherwise the most-visited admissible move;
+  * always inside the admissible set when the rule is active.
+
+### A7.3 — Deadline, destination, recording
+
+* **Destination,** one-shot and create-only: `docs/superpowers/evidence/tactical-candidate-qualification/`.
+* **Code:** a new module, `tactical_qualification.py`.
+* **Gate:** the existing `TACTICAL_CANDIDATE_QUALIFICATION_AUTHORIZED`, opened for **one** run.
+* **Deadline:**
+  * **1 hour**, enforced by the **parent**, which SIGKILLs the process group;
+  * a child alarm 60 s earlier;
+  * a per-call child alarm of 120 s, which is soft: it gives a clean recorded STOP when Python is
+    responsive. The parent's hour is the hard bound.
+  * **Estimate:** about 209 decisions at about 1.7 s, plus the load — under 10 minutes.
+* **Recording:**
+  * **Claim:** create-only, with a nonce, binding the corpus sha256 and the call list's sha256.
+  * **Journal:** each call's start and end.
+  * **Observations:** `observations.jsonl` — every completed call appended and fsynced before the next.
+  * **record.json on every exit.** The completion check, and the verdict **QUALIFIED** (every call
+    passed) or **NOT_QUALIFIED**, sit inside the recorded boundary.
+  * **watchdog.json:** written by the parent on every exit from the claim on, with the protected
+    settlement of §16 A6.3 (SETTLE_FAILED, INTERRUPTED).
+  * **No retry,** no replacement destination.
+* **Reported, descriptively:** per class, the rule outcomes (inactive / preserved / override), the
+  unsearched choices, and scan and search timing.
+
+### A7.4 — Scope
+
+Contract first, then the implementation with the gate **closed**, synthetic tests (the steered stub
+evaluator, never the model), injected-defect controls, the regression and local commits. The gate's
+stale docstring may be corrected; its value stays False. The frozen corpus, the wrapper, the agents
+and the search stay unchanged. Model loading, the qualification run, research seeds, agent-played
+games and push remain unauthorized.
