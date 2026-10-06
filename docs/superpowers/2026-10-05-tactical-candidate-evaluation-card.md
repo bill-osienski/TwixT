@@ -682,7 +682,13 @@ about any real game.
 * **The parent enforces the limit.** It polls about every 0.5 s. When a game has been open for
   **15 minutes** — measured on the parent's own clock from when it first saw the `game_start` — it
   SIGKILLs the child's whole process group. It records which game breached, and why.
-* **The bound** is 15 minutes plus at most one poll interval past the game's real start.
+* **The bound** is 15 minutes plus about **two** polling intervals past the game's real start.
+  * The parent first detects the `game_start` up to one interval after it is written, and its
+    clock starts only then.
+  * It detects the expiry up to one interval after the limit passes.
+
+  At 0.5 s that is about 1 s under normal scheduling. *(Corrected on review: an earlier version
+  said one interval.)*
 * **The child's alarm stays**, set 30 s earlier (14.5 minutes). A responsive child therefore records a
   clean STOP before the parent's kill.
 
