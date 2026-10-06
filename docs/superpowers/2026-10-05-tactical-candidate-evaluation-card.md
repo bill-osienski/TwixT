@@ -916,3 +916,72 @@ Card corrections, then the generator implementation with the gate closed, synthe
 injected-defect controls, the regression and local commits. The 8,000-game generation, the corpus
 freeze, model loading, qualifications, research seeds, gate opening, real games and push remain
 unauthorized.
+
+---
+
+## 16. Amendment A6 — 2026-10-05, freshness, budget validation, a protected settlement, qualification binding (user-decided)
+
+Review of the generator (`fb992fec`) left the frozen streams and seeds **unchanged**. The corpus will
+come mostly from `tq24-pegs`, which limits qualification coverage but does not invalidate it. The
+manifest **reports** stream composition and shortages; **nothing is rebalanced** after seeing them.
+Four corrections:
+
+### A6.1 — Freshness (adds source (g) to A4.4 and A5.1)
+
+* **What has been examined.** During development, production seeds were examined: the generator tests
+  played seeds 0–7 of both streams and inspected their winning windows, and the timing probes played
+  seeds 0–19 of both streams.
+* **(g)** Therefore **every prefix of every game of both streams at seeds 0–19** is excluded by digest.
+  The frozen seed range (0–3,999) is unchanged; those games simply contribute nothing new.
+* **Future generator tests use seeds disjoint from 0–3,999** (≥ 1,000,000). Changing future tests does
+  not undo what has already been examined. Source (g) does.
+
+### A6.2 — The budget is validated by the parent (adds to A5.2's validation)
+
+The parent publishes only when all of these hold:
+
+* **The candidate log.** `candidates.jsonl` is present, and its rows are **exactly** the planned
+  (stream, seed) sequence, in order.
+* **One sha256** for that log, in the record and in the payload.
+* **The counts agree:** the record's `games_processed` = the payload's `games_generated` = the log's
+  rows = the planned count. The payload's `games_won` = the won rows.
+* **One specification:** the record's specification hash = the payload's = the frozen specification's.
+* **Per class:** the log's positions = the payload's universe positions plus `excluded_prior`.
+* **Every selected position** appears in the log with the same stream, seed, ply, class and digest.
+* **The source hashes** in the payload equal the module's pinned hashes, including the examined-seed
+  range of (g).
+
+### A6.3 — A protected settlement; atomic, create-only publication (supersedes A5.2's publication clause)
+
+* **From the claim on, every exit of the parent writes `watchdog.json`.** That covers a publication, a
+  NOT_PUBLISHED, a settlement failure (`SETTLE_FAILED`, with the exception's type and reason) and an
+  interruption (`INTERRUPTED`, then re-raised). Any error during validation or publication is a
+  recorded NOT_PUBLISHED.
+* **Publication is atomic and create-only:**
+  1. the complete bytes are written, with `_write_all`, to a temporary file inside the destination,
+     and fsynced;
+  2. the temporary file is **hard-linked** to `corpus.json` — a link fails if the name exists;
+  3. the temporary file is removed, and the directory fsynced.
+
+  A failed write never leaves a `corpus.json`.
+
+### A6.4 — Qualification binding (adds to A5.2's qualification clause)
+
+`committed_corpus` also requires:
+
+* the watchdog's `record_sha256` = `record.json`'s bytes;
+* its `provisional_sha256` = the published hash;
+* the payload's `inventory_sha256` = the committed `inventory.json`;
+* its `candidates_sha256` = the committed `candidates.jsonl`, and the record's;
+* its source hashes = the module's pinned hashes;
+* every one of these files committed.
+
+### A6.5 — Composition reported
+
+The payload reports, per class and per stream, the universe and the selection.
+
+### A6.6 — Scope
+
+Contract amendment first, then the repairs, synthetic controls, the regression and local commits. The
+8,000-game freeze, model loading, qualifications, research seeds, gate opening, real games and push
+remain unauthorized.
