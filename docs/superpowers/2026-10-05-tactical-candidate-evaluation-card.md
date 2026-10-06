@@ -854,3 +854,65 @@ expected — but it is **not excluded by digest**. *(Review point: the reviewer 
 
 Design amendment only. Generator implementation, corpus generation, model loading, qualifications,
 research seeds, gate opening, real games and push remain unauthorized.
+
+---
+
+## 15. Amendment A5 — 2026-10-05, exclusions completed; publication by the parent (user-decided)
+
+Review of A4 (`aa91a26a`) required two corrections before any code.
+
+### A5.1 — The exclusion inventory, completed (supersedes A4.4's "not enumerated" clause)
+
+Sources (a)–(d) stand. Two are added:
+
+| # | source | positions |
+|---|---|---|
+| e | **every prefix** of the four canonical stand-in games in `tests/test_candidate_match_runner.py`: pairs FIRED (seeds −3, −4) and QUIET (seeds −13, −14), arms A and B, as the stand-in plays them | about 1,000 |
+| f | **every one-ply and two-ply extension** of each *base*, kept where its ply lies inside the eligible window (10–270) | about 1.4 million, computed |
+
+* **The bases** are:
+  * the final positions of the nine pinned sequences;
+  * `ONE[:23]`, `DRAW24[:40]` (`QUIET_40`) and `DRAW24[:-1]`.
+* **Why (f) is a superset.** Every hand-built tree in the tests reaches at most two plies past one of
+  these bases. Covering the whole two-ply neighbourhood includes every node any test builds,
+  whichever move a helper happens to choose (the first legal move, a saving set). Positions outside
+  the eligible window can never be selected, so they are skipped.
+* **The prior move lists are pinned in data.** The move lists of (d), (e) and the bases are committed
+  once in `scripts/GPU/alphazero/tactical_corpus_prior.json`, with its sha256 pinned in the module.
+  Tests check that it still equals the suite's pinned constants and the stand-in's current replays. So
+  drift is caught, never silently absorbed into the inventory.
+* **inventory.json** lists sources (a)–(e) digest by digest. Source (f) is recorded by base, rule,
+  count and the sha256 of its sorted digest list — too many digests to list one by one.
+* **Wording (corrects A4.3):** "≥ 10: no early-opening coincidence" becomes "≥ 10: **excludes the
+  earliest opening plies**". **Novelty comes from the digest check** (A4.4, A5.1), not from the streams
+  or the ply bound.
+
+### A5.2 — Only the PARENT publishes the corpus (supersedes A4.6's `corpus.json` clause)
+
+* **The child never writes `corpus.json`.** It writes `corpus.provisional.json` — create-only, every
+  byte or a STOP, fsynced — and records the provisional file's sha256 in `record.json`.
+* **The parent publishes `corpus.json` only when all of these hold:**
+  * the child exited normally: rc 0, not terminated;
+  * the record is COMPLETE, and the provisional file is present with the recorded sha256;
+  * its own validation passes:
+    * the frozen specification, and the recorded interpreter;
+    * the quotas: at most 20 per class and 100 in total;
+    * every selected position replays on the official board to its digest, at an eligible ply, with
+      the recorded class;
+    * every cross-check agreed;
+    * `inventory.json`'s sha256 equals the provisional file's record of it.
+* **Publishing** means writing `corpus.json` create-only with the provisional file's exact bytes. The
+  published sha256 goes into `watchdog.json`.
+* **Otherwise there is no `corpus.json`,** and `watchdog.json` says why. A completed provisional
+  payload followed by termination is **never** published.
+* **Qualification** (later, separately designed) requires all of these committed:
+  * `watchdog.json` COMPLETE, with the published sha256 equal to `corpus.json`'s;
+  * `record.json` COMPLETE, with the provisional sha256 equal to the same;
+  * `corpus.json` itself.
+
+### A5.3 — Scope
+
+Card corrections, then the generator implementation with the gate closed, synthetic tests,
+injected-defect controls, the regression and local commits. The 8,000-game generation, the corpus
+freeze, model loading, qualifications, research seeds, gate opening, real games and push remain
+unauthorized.
