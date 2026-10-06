@@ -1,0 +1,16 @@
+{
+ "candidates_sha256": "6e08b4e12f93f349ba2d4f7bb9540b29467719e319632f93304ea39ed0d8a735",
+ "card": "docs/superpowers/2026-10-05-tactical-candidate-evaluation-card.md",
+ "deadline_s": 10739.87938295817,
+ "elapsed_s": 1915.2569255828857,
+ "failure": null,
+ "games_planned": 8000,
+ "games_processed": 8000,
+ "inventory_sha256": "ed789dec28f7c7e9ce20971ce4ec781ca14e71784c925398d838f8cb2080c4dd",
+ "label": "TACTICAL CANDIDATE QUALIFICATION CORPUS",
+ "note": "the child never writes corpus.json; only the parent publishes it (\u00a715 A5.2)",
+ "provisional_sha256": "1f040a9208fb3049de4fbf6e73884ad0fafa067fed3d9c275a4abbedf149179c",
+ "python": "3.14.7",
+ "spec_sha256": "bd455a12470465126f73724025a89be52c5b13830d0cb55778fef14fecc30bd1",
+ "status": "COMPLETE"
+}

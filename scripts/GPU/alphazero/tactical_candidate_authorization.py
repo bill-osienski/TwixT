@@ -6,4 +6,4 @@ qualification run -- each opened for ONE step under its own authorization and re
 every exit. Created closed; no entry reads it until those steps are implemented. This file
 may hold ONLY this declaration.
 """
-TACTICAL_CANDIDATE_QUALIFICATION_AUTHORIZED = True
+TACTICAL_CANDIDATE_QUALIFICATION_AUTHORIZED = False

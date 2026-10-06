@@ -1,0 +1,41 @@
+{
+ "candidates_sha256": "6e08b4e12f93f349ba2d4f7bb9540b29467719e319632f93304ea39ed0d8a735",
+ "card": "docs/superpowers/2026-10-05-tactical-candidate-evaluation-card.md",
+ "cause": null,
+ "child_exit": "exit status 0",
+ "child_pid": 37985,
+ "child_rc": 0,
+ "child_streams": {
+  "stderr": {
+   "bytes": 0,
+   "file": "child.stderr.txt",
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "stdout": {
+   "bytes": 23,
+   "file": "child.stdout.txt",
+   "sha256": "c0b2ec1ed5ff6f9e565fb365f891d2a55e91d7dee5327ba8ec4693d4c2aa7dba"
+  }
+ },
+ "elapsed_s": 1915.4970265422016,
+ "journal": {
+  "file": "log.jsonl",
+  "lines": 8003,
+  "sha256": "e442242c5c5ff2160190f5718d27d3df21d3ba36ae312e681ac00cbb9a125d10"
+ },
+ "label": "TACTICAL CANDIDATE QUALIFICATION CORPUS",
+ "limit_s": 10799.999620832969,
+ "not_published": null,
+ "provisional_sha256": "1f040a9208fb3049de4fbf6e73884ad0fafa067fed3d9c275a4abbedf149179c",
+ "published": {
+  "corpus_sha256": "1f040a9208fb3049de4fbf6e73884ad0fafa067fed3d9c275a4abbedf149179c",
+  "file": "corpus.json"
+ },
+ "record_present": true,
+ "record_readable": true,
+ "record_sha256": "2728e6ac8f456d11ae3f168a2d5056b34e8beda1e63e4ae5cf1fa634dad2b7b3",
+ "record_status": "COMPLETE",
+ "signal": null,
+ "status": "COMPLETE",
+ "survivors_killed": false
+}
