@@ -691,6 +691,12 @@ BREAKS = {
     "the record is missing": (lambda d: (d / "record.json").unlink(), "not committed"),
     "the replay checks are missing": (lambda d: _edit_record(d, lambda r: r.update(pairs=[])),
                                       "do not name every planned pair"),
+    **{f"elapsed {name}": ((lambda v: lambda d: _edit_json(d / CM.WATCHDOG_FILE, lambda w: w.update(elapsed_s=v)))(v),
+                           "not a finite, nonnegative number")
+       for name, v in (("NaN", float("nan")), ("negative", -3600.0), ("infinite", float("inf")),
+                       ("a string", "100"), ("a boolean", True))},
+    "elapsed missing": (lambda d: _edit_json(d / CM.WATCHDOG_FILE, lambda w: w.pop("elapsed_s")),
+                        "not a finite, nonnegative number"),
 }
 
 
@@ -747,3 +753,81 @@ def test_the_NAMES_are_the_frozen_ones():
     assert CM.out_dir("study", 3) == root / "tactical-candidate-study-s3"
     assert CM.plan_path("study", 3) == root / "tactical-candidate-plans" / "study-s3.json"
     assert CM.MODULE == "scripts.GPU.alphazero.candidate_match_runner"
+
+
+# ─────────────────────────────── review: complete writes, safe identifiers ─────────────────────
+
+GAME = {"pair_id": "w1", "arm": "A", "digest": "d", "moves": [[1, 2]] * 40,
+        "terminal": {"reason": "cap", "ply": 280}}
+
+
+def test_a_SHORT_write_is_continued_to_the_last_byte(tmp_path, monkeypatch):
+    calls = []
+
+    def seven(fd, data):
+        calls.append(len(data))
+        return os.write(fd, bytes(data[:7]))
+    monkeypatch.setattr(CM, "_write", seven)
+    summary = CM._save_game(tmp_path, GAME)
+    raw = (tmp_path / "w1-A.json").read_bytes()
+    assert raw == (json.dumps(GAME, indent=1, sort_keys=True) + "\n").encode() and len(calls) > 1
+    assert summary["sha256"] == hashlib.sha256(raw).hexdigest()
+
+
+@pytest.mark.parametrize("first", [0, 7], ids=["at once", "after 7 bytes"])
+def test_ZERO_progress_is_a_recorded_failure_never_a_loop(tmp_path, monkeypatch, first):
+    n = [0]
+
+    def stalls(fd, data):
+        n[0] += 1
+        if n[0] > 50:
+            pytest.fail("looped on a write that made no progress")
+        return os.write(fd, bytes(data[:first])) if n[0] == 1 and first else 0
+    monkeypatch.setattr(CM, "_write", stalls)
+    with pytest.raises(CM.MatchStop, match=f"no progress at byte {first} of"):
+        CM._save_game(tmp_path, GAME)
+
+
+def test_a_writer_that_OVERSTATES_its_progress_is_caught_by_the_size(tmp_path, monkeypatch):
+    monkeypatch.setattr(CM, "_write", lambda fd, data: (os.write(fd, bytes(data[:7])), len(data))[1])
+    with pytest.raises(CM.MatchStop, match="holds 7 bytes"):
+        CM._save_game(tmp_path, GAME)
+
+
+def test_a_failed_write_inside_a_RUN_is_a_recorded_STOP(tmp_path, monkeypatch):
+    monkeypatch.setattr(CM, "_write", lambda fd, data: 0)
+    rec = CM._run({"mode": "fixture", "pairs": [FIRED]}, CONFIG, IDENT, object, claimed(tmp_path),
+                  mode="fixture", builder=fake_builder())
+    f = rec["failure"]
+    assert (rec["status"], f["failing_step"], f["exception_type"]) == ("STOP", "game:p-fired-A", "MatchStop")
+    assert "no progress" in f["reason"] and rec["games"] == []
+
+
+UNSAFE = ["../outside", "a/b", ".hidden", "-lead", "x" * 65, "has space", "", "ok.dot"]
+
+
+@pytest.mark.parametrize("pid", UNSAFE)
+def test_an_UNSAFE_pair_id_is_refused_by_the_plan(pid):
+    with pytest.raises(CM.MatchRefused, match="unique and SAFE"):
+        CM.check_plan({"mode": "fixture", "pairs": [{"pair_id": pid, "seeds": {"red": -1, "black": -2}}]},
+                      mode="fixture")
+
+
+def test_a_game_file_stays_DIRECTLY_inside_games_whatever_the_plan_said(tmp_path):
+    gdir = tmp_path / "games"
+    gdir.mkdir()
+    for pid in ("../outside", "a/b", ".."):
+        with pytest.raises(CM.MatchStop, match="would not lie directly inside"):
+            CM._save_game(gdir, {**GAME, "pair_id": pid})
+    with pytest.raises(CM.MatchStop, match="would not lie directly inside"):
+        CM._game_file(gdir, "ok", "C", ".json")
+    assert sorted(os.listdir(tmp_path)) == ["games"] and os.listdir(gdir) == []
+    assert CM._game_file(gdir, "p-1", "B", ".partial.jsonl") == gdir / "p-1-B.partial.jsonl"
+
+
+def test_a_RUN_with_an_unsafe_id_refuses_BEFORE_loading_anything(tmp_path):
+    d = claimed(tmp_path)
+    plan = {"mode": "fixture", "pairs": [{"pair_id": "../outside", "seeds": {"red": -1, "black": -2}}]}
+    with pytest.raises(CM.MatchRefused, match="SAFE"):
+        CM._run(plan, CONFIG, IDENT, lambda: pytest.fail("loaded"), d, mode="fixture", builder=fake_builder())
+    assert sorted(os.listdir(d)) == [CM.CLAIM_FILE] and not (tmp_path / "outside-A.json").exists()

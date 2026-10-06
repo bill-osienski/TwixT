@@ -29,8 +29,10 @@ import collections
 import contextlib
 import hashlib
 import json
+import math
 import os
 import pathlib
+import re
 import signal
 import sys
 import threading
@@ -56,6 +58,7 @@ GAME_DEADLINE_S = 900.0                    # §12 A2.4 / §13 A3.1: 15 min per g
 CHILD_GRACE_S = 30.0                       # §13 A3.1: the child's own alarm fires this much earlier
 POLL_S = 0.5                               # §13 A3.1: the parent's polling interval
 GAMES_DIR = "games"                        # §13 A3.2: durable per-game evidence
+SAFE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}")   # a pair id names files: no path in it
 SEGMENT_DEADLINE_S = 14_400.0              # §12 A2.4: 4 h per segment, setup included
 STUDY_CEILING_S = 80 * 3600.0              # §12 A2.2: across all study segments
 MARGIN_S = 60.0
@@ -109,8 +112,9 @@ def check_plan(plan: Mapping[str, Any], *, mode: str) -> None:
             raise MatchRefused(f"pair {p!r}: seeds must be exactly one per colour")
         ids.append(p.get("pair_id"))
         seeds += [s["red"], s["black"]]
-    if any(not isinstance(i, str) or not i for i in ids) or len(set(ids)) != len(ids):
-        raise MatchRefused("pair ids must be non-empty and unique")
+    if any(not isinstance(i, str) or not SAFE_ID.fullmatch(i) for i in ids) or len(set(ids)) != len(ids):
+        raise MatchRefused("pair ids must be unique and SAFE: 1-64 of A-Z a-z 0-9 _ -, starting "
+                           "alphanumeric (a pair id names its game files)")
     if any(type(x) is not int for x in seeds):
         raise MatchRefused("every seed must be an int")
     if len(set(seeds)) != len(seeds):
@@ -277,13 +281,40 @@ class _Partial:
         self._f.close()
 
 
+def _game_file(gdir: pathlib.Path, pair_id: Any, arm: Any, suffix: str) -> pathlib.Path:
+    """A game file DIRECTLY inside games/ -- refused otherwise, whatever the plan said."""
+    name = f"{pair_id}-{arm}{suffix}"
+    path = gdir / name
+    if not isinstance(pair_id, str) or not SAFE_ID.fullmatch(pair_id) or arm not in ARMS or \
+            path.parent != gdir or path.name != name:
+        raise MatchStop(f"the game file {name!r} would not lie directly inside {gdir}")
+    return path
+
+
+_write = os.write                                # the one raw write path (a test seam)
+
+
+def _write_all(fd: int, raw: bytes) -> None:
+    """Every byte, or a recorded failure: a short write continues, zero progress STOPS, and the
+    file's size is checked against the bytes meant."""
+    view, done = memoryview(raw), 0
+    while done < len(raw):
+        n = _write(fd, view[done:])
+        if n <= 0:
+            raise MatchStop(f"a write made no progress at byte {done} of {len(raw)}")
+        done += n
+    if os.fstat(fd).st_size != len(raw):
+        raise MatchStop(f"the file holds {os.fstat(fd).st_size} bytes, not the {len(raw)} written")
+
+
 def _save_game(gdir: pathlib.Path, g: Mapping[str, Any]) -> Dict[str, Any]:
     """§13 A3.2: the completed game, create-only and fsynced (file and directory)."""
-    name = f"{g['pair_id']}-{g['arm']}.json"
+    path = _game_file(gdir, g["pair_id"], g["arm"], ".json")
+    name = path.name
     raw = (json.dumps(g, indent=1, sort_keys=True) + "\n").encode()
-    fd = os.open(gdir / name, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
     try:
-        os.write(fd, raw)
+        _write_all(fd, raw)
         os.fsync(fd)
     finally:
         os.close(fd)
@@ -321,7 +352,7 @@ def _run(plan: Mapping[str, Any], config, identity: Mapping[str, Any], loader: C
                 if left() <= 0:
                     raise MatchTimeout(f"the segment's {wall_s:.0f} s passed before {step}")
                 log.done("game_start", {"pair_id": p["pair_id"], "arm": arm})
-                partial = _Partial(gdir / f"{p['pair_id']}-{arm}.partial.jsonl")
+                partial = _Partial(_game_file(gdir, p["pair_id"], arm, ".partial.jsonl"))
                 g = play_game(make, p, arm, limit_s=min(game_s, left()), clock=clock,
                               on_decision=partial)
                 partial.close()
@@ -602,7 +633,10 @@ def _validate_segment(role: str, k: int) -> float:
         for g in games:
             if g.get("file") != f"{g['pair_id']}-{g['arm']}.json":
                 raise bad(f"game {g['pair_id']}-{g['arm']} names the file {g.get('file')!r}")
-            files.append(d / GAMES_DIR / g["file"])
+            try:
+                files.append(_game_file(d / GAMES_DIR, g["pair_id"], g["arm"], ".json"))
+            except MatchStop as e:
+                raise bad(str(e)) from None
         try:
             F.check_durable([str(x) for x in files], _fixture=False)
         except F.H4AnalysisRefused as e:
@@ -610,7 +644,10 @@ def _validate_segment(role: str, k: int) -> float:
         for g, f in zip(games, files):
             if _file_sha(str(f)) != g.get("sha256"):
                 raise bad(f"{g['file']} is not the file its record hashed")
-        return float(w["elapsed_s"])
+        e = w.get("elapsed_s")
+        if type(e) not in (int, float) or not math.isfinite(e) or e < 0:
+            raise bad(f"its elapsed time {e!r} is not a finite, nonnegative number")
+        return float(e)
     except MatchRefused:
         raise
     except (OSError, ValueError, KeyError, TypeError, AttributeError) as e:
