@@ -729,3 +729,128 @@ ceiling sums the validated segments' parent-measured elapsed times.
 Contract amendment, then the repairs, their synthetic failure controls, the regression and a local
 commit. Corpus generation, model loading, qualifications, research seeds, gate opening, real games
 and push remain unauthorized.
+
+---
+
+## 14. Amendment A4 — 2026-10-05, the fresh qualification corpus frozen in full (supersedes §4's examples)
+
+§4 named the generator's settings by example. A4 fixes every one of them before any code exists.
+
+**Unchanged:**
+
+* the official 24×24 board, enforced (§11 A2.1), and protocol semantics with cap 280;
+* at most **20 positions per class**, **100 in total**;
+* shortages are recorded and **never** filled by changing the procedure.
+
+### A4.1 — Streams, seeds, budget
+
+| stream | random generator per game | seeds |
+|---|---|---|
+| `tq24-uniform` | `random.Random(f"tq24-uniform:{seed}")` | 0 … 3,999 |
+| `tq24-pegs` | `random.Random(f"tq24-pegs:{seed}")` | 0 … 3,999 |
+
+* **Budget:** 8,000 games, generated in a fixed order — uniform stream first, seeds ascending, then the
+  pegs stream.
+* **No early stop.** Every seed is processed even once quotas could be met, so the universe never
+  depends on the order of processing.
+* **Stream names are new.** `draw24`, `tac24`, `undef24` and `tacwt24` are never used.
+* **Toolchain.** Python's string seeding and `random.choice` / `random.sample` are frozen at the
+  recorded interpreter: CPython 3.14.7, from `.venv`. The manifest records the version, and a
+  reproduction needs the same one.
+
+### A4.2 — Move policies (exact draw order)
+
+Each game starts from the empty official board. Every move computes `legal = sorted(state.legal_moves())`.
+
+* **Uniform:** `rng.choice(legal)`.
+* **Pegs:**
+  * `own` = every cell (r + a, c + b) for each peg (r, c) of the mover's colour, over the knight steps
+    (a, b) in the order (1,2) (2,1) (−1,2) (−2,1) (1,−2) (2,−1) (−1,−2) (−2,−1);
+  * `near = [m for m in legal if m in own]`;
+  * **if `near` is non-empty:** draw `u = rng.random()`, then `rng.choice(near)` if `u < 0.7`, else
+    `rng.choice(legal)`;
+  * **if `near` is empty:** `rng.choice(legal)`, and **no** `u` is drawn.
+
+A game ends at the first winner, at ply 280, or when no legal move remains.
+
+### A4.3 — Which positions are scanned
+
+* **Only games that end in a win contribute**, with `end` = the ply of the final state. Games ending at
+  the cap, or with no legal move, contribute nothing.
+* **The scan window** is every position at plies **max(10, end − 20) … min(end − 1, 270)**.
+  * **≥ 10:** no early-opening coincidence with any other process.
+  * **≤ 270:** every reply lands well inside the cap, so the protocol and board-only classes coincide.
+* **Classification.** Each window position is classified by `classify(state, semantics="protocol")`,
+  imported unchanged from `h5_incumbent_tactics`, into OWN_WIN, DEFEND_SINGLE, DEFEND_MULTI,
+  UNDEFENDABLE or QUIET.
+
+### A4.4 — The prior-position exclusion inventory (complete, enumerated)
+
+A position whose `state_digest` appears in the inventory is removed **before** selection, and counted
+per class as `excluded_prior`. The inventory is written to `inventory.json`, each digest with its
+source(s); its sha256 goes into the manifest. Its sources:
+
+| # | source | positions |
+|---|---|---|
+| a | `fixture_digests` of the frozen H5 fixtures and controls (E1–E3, CT1–CT3, CI1–CI2, CD1–CD2) | 10 |
+| b | the committed H5 tactics corpus, sha256 `214b958c…`: every `selected` digest and every `fixture_equivalent` digest | 63 entries (55 distinct) + 23 |
+| c | the committed H5 tactics study record (`1ec87ac5`): every row's position, by replaying its moves | 60 |
+| d | **every prefix** — empty board to full sequence — of every pinned move sequence in the test suite: `DRAW24`, `OWN_WIN_279`, `THREAT_279`, `UNDEFENDABLE_256`, `OWN_WIN_AND_THREAT_264`, `SINGLE_260`, `MULTI_269` (tests/test_h5_incumbent_tactics.py), and `ONE` and `TWO` (tests/test_h5_cap_completion.py) | about 2,230 |
+
+**Not enumerated, stated:** positions that test code derives *on the fly* and does not pin — one-ply
+extensions inside refutation trees, and the runner tests' stand-in games. No research conclusion rests
+on them, and they come from other streams and policies. With eligible plies ≥ 10, a coincidence is not
+expected — but it is **not excluded by digest**. *(Review point: the reviewer may require them too.)*
+
+### A4.5 — Deterministic selection
+
+* **One representative per game and class.** For each class and each game (stream, seed) with a
+  position of that class in its window — after exclusion — take one ply:
+  `random.Random(f"tq24-select:{class}:{stream}:{seed}").choice(sorted plies)`.
+* **At most 20 games per class.** Over that class's games sorted by (stream, seed):
+  `random.Random(f"tq24-select:{class}").sample(games, min(20, len(games)))`.
+* **A shortage** takes every game, and records `quota_shortfall`.
+* **Order.** Classes in the order OWN_WIN, DEFEND_SINGLE, DEFEND_MULTI, UNDEFENDABLE, QUIET; then
+  (stream, seed, ply).
+* **Repeats.** A position whose digest repeats one already selected is marked `repeat_of` and decided
+  once. It still counts in its class.
+* **The independent cross-check.** Every distinct selected position runs `cross_check`, the exhaustive
+  engine-only checker of §2.1. **Any disagreement STOPS the freeze**, recorded, with no substitution:
+  it would mean the detector is wrong.
+
+### A4.6 — Destination, runtime limit, failure recording
+
+* **Code:** a new module, `tactical_corpus.py`. This amends §3, which put the corpus in
+  `tactical_candidate.py`: kept apart, the wrapper's recorded hash never changes because of generator
+  code.
+* **Gate:** the existing `TACTICAL_CANDIDATE_QUALIFICATION_AUTHORIZED`, opened for **one** freeze.
+* **Destination,** one-shot and create-only: `docs/superpowers/evidence/tactical-candidate-corpus/`.
+  * `claim.json`, child stdout and stderr;
+  * `log.jsonl`: per completed game, the stream, seed and window count;
+  * `candidates.jsonl`: per completed game, the stream, seed, `end`, and for each window position its
+    ply, class and digest — appended and **fsynced before the next game**;
+  * `inventory.json`;
+  * `corpus.json` — **only if COMPLETE**;
+  * `record.json`, on every exit;
+  * `watchdog.json`, written by the parent.
+* **Runtime limit:** **3 hours**, enforced by the **parent**, which kills the process group (as §13
+  A3.1). The child's own alarm fires 60 s earlier.
+  * **Estimate:** under 1.5 h. Earlier finders ran a uniform playout in about 45 ms. A window
+    classification takes about 20–40 ms. An exhaustive cross-check took 1.4–5.5 s per position.
+* **Failure:** STOP, INTERRUPTED, INCOMPLETE or TERMINATED writes **no** `corpus.json`. The evidence
+  stays; there is no retry. Another attempt needs a new authorization, and an amendment naming a new
+  destination.
+* **corpus.json contains:**
+  * the A4.1–A4.5 settings, the interpreter version, and the sha256 of `tactical_corpus.py`,
+    `h5_incumbent_tactics.py` and `tactical_candidate.py`;
+  * the inventory's sha256, and its count per source;
+  * per class: universe positions and games, `excluded_prior`, the selection and `quota_shortfall`;
+  * the repeats;
+  * per selected position: stream, seed, ply, moves, `state_digest`, class dict, `repeat_of`, and the
+    cross-check result.
+* **Commit before any model load.** A COMPLETE freeze is committed with the gate restored.
+
+### A4.7 — Scope
+
+Design amendment only. Generator implementation, corpus generation, model loading, qualifications,
+research seeds, gate opening, real games and push remain unauthorized.
