@@ -35,11 +35,25 @@ from tests.test_h5_incumbent_defence import CONFIG, FIX, IDENT, Steered, build
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CORPUS_DIR = TQ.out_dir()                         # the REAL published corpus, read-only
+#: A8.6: the pins exactly as the (spent) qualification module holds them -- R1 at the qualified
+#: a53e7ac8... -- and the AMENDED runner's hash, which those pins refuse by design
+QUALIFIED_PINS = dict(Q.CODE_PINS)
+AMENDED_RUNNER = CM._file_sha(CM.__file__)
 REAL_PINS = dict(X.PINNED_FINGERPRINTS)
 #: one call of each kind and class: an override (020) and every boundary
 SMALL = ("repro:E1", "corpus:000", "corpus:020", "corpus:060", "boundary:ply-280", "boundary:board-8")
 WATCH = {"terminated": False, "cause": None, "limit_s": 3600.0, "elapsed_s": 100.0, "child_pid": 1,
          "rc": 0, "signal": None, "survivors_killed": False}
+
+
+@pytest.fixture(scope="module", autouse=True)
+def amended_runner():
+    """A8.6, test-only: R1 was amended after the qualification ran, so `bindings()` refuses it --
+    correctly, the run is spent. These synthetic tests bind the AMENDED runner explicitly; the
+    refusal itself is pinned by test_the_UNPATCHED_bindings_refuse_the_AMENDED_runner."""
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setitem(Q.CODE_PINS, "candidate_match_runner.py", AMENDED_RUNNER)
+        yield
 
 
 @pytest.fixture(scope="module")
@@ -98,6 +112,16 @@ def test_the_BINDINGS_are_the_committed_corpus_its_code_and_the_pinned_files(bou
     for name, sha in Q.CODE_PINS.items():
         assert CM._file_sha(str(pathlib.Path(TQ.__file__).with_name(name))) == sha, name
     assert bound["prior"] == json.loads(TQ.PRIOR_FILE.read_text())
+
+
+def test_the_UNPATCHED_bindings_refuse_the_AMENDED_runner(monkeypatch):
+    """A8.6: the qualification module and its evidence are untouched; it cannot run again on
+    amended code."""
+    assert QUALIFIED_PINS["candidate_match_runner.py"] == \
+        "a53e7ac857f045a281af85d7dd268445e2419e1c71fd2a0458092a5c2c7e21b6" != AMENDED_RUNNER
+    monkeypatch.setitem(Q.CODE_PINS, "candidate_match_runner.py", QUALIFIED_PINS["candidate_match_runner.py"])
+    with pytest.raises(Q.QualRefused, match="candidate_match_runner.py is not the pinned code"):
+        Q.bindings()
 
 
 def _code(monkeypatch, bound):

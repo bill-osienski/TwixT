@@ -25,6 +25,9 @@ segment starts only after every earlier one VALIDATES (§13 A3.3). Gate:
 """
 from __future__ import annotations
 
+from time import monotonic as _monotonic      # A8.5 item 3: m0 is read before every other import
+_T_START = _monotonic()
+
 import collections
 import contextlib
 import hashlib
@@ -67,6 +70,18 @@ CLAIM_FILE, WATCHDOG_FILE, CLAIM_ENV = "claim.json", "watchdog.json", "CANDIDATE
 CHILD_STREAMS = {"stdout": "child.stdout.txt", "stderr": "child.stderr.txt"}
 EXIT_OK, EXIT_REFUSED, EXIT_UNAUTHORIZED = 0, 4, 5
 CARD = "docs/superpowers/2026-10-05-tactical-candidate-evaluation-card.md"
+#: A8.4: the accepted qualification run, pinned byte for byte as committed at this commit
+QUALIFICATION_COMMIT = "d815461eb8daa7f462dc8c492316717a0b3045b4"
+QUALIFICATION_FILES = {
+    "claim.json": "bbf45b8e0572113dfed097fce279175466eb37f4197d572ee8de68142dece49a",
+    "child.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "child.stdout.txt": "c0b2ec1ed5ff6f9e565fb365f891d2a55e91d7dee5327ba8ec4693d4c2aa7dba",
+    "log.jsonl": "8a0ed8763616abf1db18b9ab76bba8fce79c017ab8dba9f8722e6a814da9904a",
+    "observations.jsonl": "6551e6d3efcdb49fc2f2417ce9a7ab68096ca8ee1f38ee58823fe9cfe2e8dbbd",
+    "record.json": "698338279b8d6402b2a1aaf446fdebbd69ab03b833ad0a7937f18f50d65c5ace",
+    "watchdog.json": "c33068294a19c06bc9a18cfd80c34c8119e8094bada218e2bd36ba3dd614ffa1"}
+QUALIFICATION_MODULE_SHA256 = "bb073d9a5eb9b047667f68976466ac89c24262bbbfd10654a779a1eddfedd805"
+QUALIFICATION_CALLS = 109
 
 
 class MatchRefused(Exception):
@@ -333,7 +348,7 @@ def _run(plan: Mapping[str, Any], config, identity: Mapping[str, Any], loader: C
         raise MatchRefused(f"{d} does not hold exactly an unconsumed claim")
     t0 = clock()
     left = lambda: wall_s - (clock() - t0)    # noqa: E731
-    log, step, games, pairs, partial = None, "claim", [], [], None
+    log, step, games, pairs, partial, cleanup = None, "claim", [], [], None, []
     status, failure, interrupt = "COMPLETE", None, None
     try:
         log = CC._Log(d / "log.jsonl")
@@ -355,8 +370,8 @@ def _run(plan: Mapping[str, Any], config, identity: Mapping[str, Any], loader: C
                 partial = _Partial(_game_file(gdir, p["pair_id"], arm, ".partial.jsonl"))
                 g = play_game(make, p, arm, limit_s=min(game_s, left()), clock=clock,
                               on_decision=partial)
-                partial.close()
-                partial = None
+                h, partial = partial, None
+                h.close()
                 games.append(_save_game(gdir, g))
                 got.append(g)
                 log.done("game", {"pair_id": g["pair_id"], "arm": arm, "digest": g["digest"],
@@ -367,15 +382,22 @@ def _run(plan: Mapping[str, Any], config, identity: Mapping[str, Any], loader: C
             pairs.append(pc)
             log.done("pair", {"pair_id": pc["pair_id"], "fired": pc["fired"],
                               "first_override": pc["first_override"]})
+        step = "close:journal"                   # A8.5: closing is inside the recorded boundary too
+        h, log = log, None
+        h.close()
     except (KeyboardInterrupt, SystemExit) as e:
         status, interrupt, failure = "INTERRUPTED", e, _failure(d, step, e)
     except Exception as e:                       # noqa: BLE001 -- a recorded STOP
         status, failure = "STOP", _failure(d, step, e)
-    finally:
-        if partial is not None:
-            partial.close()
-        if log is not None:
-            log.close()
+    for name, h in (("partial", partial), ("journal", log)):      # after a failure: every handle
+        if h is None:                                             # closed, every error recorded
+            continue
+        try:
+            h.close()
+        except BaseException as e:               # noqa: BLE001 -- recorded; an interruption re-raised below
+            cleanup.append({"handle": name, "exception_type": type(e).__name__, "reason": str(e)})
+            if interrupt is None and isinstance(e, (KeyboardInterrupt, SystemExit)):
+                status, interrupt = "INTERRUPTED", e
     if status == "COMPLETE":                     # inside the recorded boundary
         step = "completion_check"
         try:
@@ -396,7 +418,7 @@ def _run(plan: Mapping[str, Any], config, identity: Mapping[str, Any], loader: C
               "plan_sha256": _sha(plan), "plan": plan, "incumbent_identity": dict(identity),
               "wrapper_sha256": _file_sha(TC.__file__), "m1_sha256": _file_sha(T.__file__),
               "board": BOARD, "ply_cap": PLY_CAP, "game_deadline_s": game_s, "deadline_s": wall_s,
-              "elapsed_s": clock() - t0, "games": games, "pairs": pairs,
+              "elapsed_s": clock() - t0, "games": games, "pairs": pairs, "cleanup_failures": cleanup,
               "note": "nothing here scores a game; outcomes are derivable from the game files, by design"}
     with open(d / "record.json", "x", encoding="utf-8") as fh:
         json.dump(record, fh, indent=1, sort_keys=True)
@@ -414,20 +436,85 @@ def _unconsumed(d: pathlib.Path) -> bool:
     return CLAIM_FILE in names and names <= {CLAIM_FILE, *CHILD_STREAMS.values()}
 
 
-def _claim(d: pathlib.Path, extra: Mapping[str, Any]) -> Tuple[Dict[str, Any], str]:
-    import secrets
+def _create(d: pathlib.Path) -> None:
+    """A8.5: the one-shot destination, created by THIS invocation; an occupied one is refused and
+    never written to."""
     try:
         os.mkdir(d)
     except FileExistsError:
         raise MatchRefused(f"{d} is occupied: each segment is one-shot") from None
+
+
+@contextlib.contextmanager
+def _sigint_held():
+    """A8.5: a SIGINT while the destination is created and marked as ours is HELD -- Python runs
+    this handler in the main thread whichever thread the kernel delivers to -- and re-raised to the
+    restored handler afterwards: inside the caller's protected region, never between the two."""
+    held: List[int] = []
+    previous = signal.signal(signal.SIGINT, lambda signum, _frame: held.append(signum))
+    try:
+        yield
+    finally:
+        signal.signal(signal.SIGINT, previous)
+        if held:
+            signal.raise_signal(signal.SIGINT)
+
+
+def _claim(d: pathlib.Path, extra: Mapping[str, Any]) -> Tuple[Dict[str, Any], str]:
+    """A8.5: claim.json, create-only and fsynced, in a destination this invocation created."""
+    import secrets
     nonce = secrets.token_hex(16)
     claim = {"claimed_monotonic": time.monotonic(),
              "claimed_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
              "parent_pid": os.getpid(),
              "nonce_sha256": hashlib.sha256(nonce.encode()).hexdigest(), **extra}
-    with open(d / CLAIM_FILE, "x", encoding="utf-8") as fh:
-        json.dump(claim, fh, indent=1, sort_keys=True)
+    fd = os.open(d / CLAIM_FILE, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+    try:
+        _write_all(fd, json.dumps(claim, indent=1, sort_keys=True).encode())
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    _fsync_dir(d)
     return claim, nonce
+
+
+def _record_parent_failure(d: pathlib.Path, e: BaseException, stage: str) -> None:
+    """A8.5: a claim, watch or settlement that failed or was interrupted still leaves watchdog.json,
+    in a destination this invocation created."""
+    if (d / WATCHDOG_FILE).exists():
+        return
+    try:
+        with open(d / WATCHDOG_FILE, "x", encoding="utf-8") as fh:
+            json.dump({"card": CARD, "stage": stage,
+                       "status": "INTERRUPTED" if isinstance(e, (KeyboardInterrupt, SystemExit))
+                       else f"{stage.upper()}_FAILED",
+                       "failure": {"exception_type": type(e).__name__, "reason": str(e)},
+                       "claim_present": (d / CLAIM_FILE).exists(),
+                       "record_present": (d / "record.json").exists()}, fh, indent=1, sort_keys=True)
+    except Exception:                            # noqa: BLE001 -- nothing more can be recorded
+        pass
+
+
+def _timing_path(d: pathlib.Path) -> pathlib.Path:
+    return d / "timing.json"
+
+
+def _write_timing(d: pathlib.Path, marks: Sequence[float]) -> None:
+    """A8.5 item 3: four intervals between five readings of ONE monotonic clock -- they tile
+    [m0, m4] without overlap. Written create-only and fsynced, after watchdog.json. A failure here
+    leaves the segment without a valid timing.json, which every later use refuses."""
+    m0, m1, m2, m3, m4 = marks
+    t = {"startup_s": m1 - m0, "pre_launch_s": m2 - m1, "child_s": m3 - m2, "settlement_s": m4 - m3,
+         "clock": "time.monotonic, in the parent",
+         "note": "start-up counts from R1's first statement (meaningful when the process was started "
+                 "for this run); the interpreter's own start before it is not measured"}
+    fd = os.open(_timing_path(d), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+    try:
+        _write_all(fd, json.dumps(t, indent=1, sort_keys=True).encode())
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    _fsync_dir(d)
 
 
 def _accept_claim(d: pathlib.Path) -> Dict[str, Any]:
@@ -594,10 +681,131 @@ def _committed_plan(role: str, segment: int) -> Tuple[Dict[str, Any], str]:
     return plan, hashlib.sha256(raw).hexdigest()
 
 
+def qualification_binding() -> Dict[str, Any]:
+    """A8.4: the accepted qualification run -- exactly its seven committed, unmodified, pinned
+    files, COMPLETE and QUALIFIED, on the corpus and the exact 109-call list recomputed NOW. Reads
+    only; refuses anything else. Returns the binding a plan and a claim must carry."""
+    from . import tactical_corpus as TQ                   # both import this module
+    from . import tactical_qualification as Q
+
+    def bad(why: str) -> MatchRefused:
+        return MatchRefused(f"the qualification does not bind: {why} (A8.4)")
+    if _file_sha(Q.__file__) != QUALIFICATION_MODULE_SHA256:
+        raise bad("tactical_qualification.py is not the qualified call-list definition")
+    d = Q.out_dir()
+    names = sorted(os.listdir(d)) if d.is_dir() else []
+    if names != sorted(QUALIFICATION_FILES):
+        raise bad(f"{d} does not hold exactly the seven evidence files")
+    try:
+        F.check_durable([str(d / n) for n in names], _fixture=False)
+    except F.H4AnalysisRefused as e:
+        raise bad(f"its evidence is not committed and unmodified ({e})") from None
+    got = {n: _file_sha(str(d / n)) for n in names}
+    for n, want in sorted(QUALIFICATION_FILES.items()):
+        if got[n] != want:
+            raise bad(f"{n} is not the pinned file")
+    try:
+        w, rec, claim = (json.loads((d / f).read_text(encoding="utf-8"))
+                         for f in (WATCHDOG_FILE, "record.json", CLAIM_FILE))
+        obs = [json.loads(x) for x in (d / "observations.jsonl").read_text(encoding="utf-8").splitlines()]
+        if (w.get("status"), w.get("verdict"), w.get("child_rc"), w.get("signal")) != \
+                ("COMPLETE", "QUALIFIED", 0, None):
+            raise bad("its watchdog is not COMPLETE and QUALIFIED with a clean exit")
+        if (w.get("record_sha256"), w.get("observations_sha256"), (w.get("journal") or {}).get("sha256")) != \
+                (got["record.json"], got["observations.jsonl"], got["log.jsonl"]):
+            raise bad("its watchdog hashed other files")
+        if (rec.get("status"), rec.get("verdict"), rec.get("failure"), rec.get("cleanup_failures")) != \
+                ("COMPLETE", "QUALIFIED", None, []):
+            raise bad("its record is not COMPLETE and QUALIFIED without a failure")
+        if not rec.get("calls") == rec.get("observed") == len(obs) == QUALIFICATION_CALLS:
+            raise bad(f"its record does not hold all {QUALIFICATION_CALLS} calls")
+        try:
+            corpus, corpus_sha = TQ.committed_corpus()
+        except TQ.CorpusRefused as e:
+            raise bad(f"the corpus is not accepted now ({e})") from None
+        if (claim.get("corpus_sha256"), rec.get("corpus_sha256")) != (corpus_sha, corpus_sha):
+            raise bad("it ran on another corpus")
+        calls = Q.plan_of(corpus)
+        calls_sha = Q._sha(calls)
+        if (claim.get("plan_sha256"), rec.get("plan_sha256")) != (calls_sha, calls_sha):
+            raise bad("it ran another call list")
+        if [o.get("id") for o in obs] != [c["id"] for c in calls]:
+            raise bad("its observations are not the call list, in order")
+    except MatchRefused:
+        raise
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as e:
+        raise bad(f"malformed ({type(e).__name__}: {e})") from None
+    return {"commit": QUALIFICATION_COMMIT, "files": dict(QUALIFICATION_FILES),
+            "corpus_sha256": corpus_sha, "call_list_sha256": calls_sha}
+
+
+def _bound_plan(plan: Mapping[str, Any]) -> Dict[str, Any]:
+    """A8.3-A8.4: the plan carries exactly the binding the guard produces now."""
+    binding = qualification_binding()
+    if plan.get("qualification") != binding:
+        raise MatchRefused("the plan is not bound to the accepted qualification (A8.3, A8.4)")
+    return binding
+
+
+def verification_path(role: str, k: int) -> pathlib.Path:
+    """A8.7: the post-segment verification record of one segment."""
+    return pathlib.Path(R4.EVIDENCE_ROOT) / "tactical-candidate-verification" / f"{role}-s{k}.json"
+
+
+def _nonneg(v: Any) -> bool:
+    return type(v) in (int, float) and math.isfinite(v) and v >= 0
+
+
+def _read_timing(d: pathlib.Path, bad: Callable[[str], MatchRefused]) -> Tuple[float, str]:
+    """A8.5 item 4: a segment's timing.json -- committed, unmodified, four finite, nonnegative
+    intervals. Returns their sum (m4 - m0) and the file's sha256."""
+    path = _timing_path(d)
+    try:
+        F.check_durable([str(path)], _fixture=False)
+    except F.H4AnalysisRefused as e:
+        raise bad(f"its timing.json is not committed ({e})") from None
+    raw = path.read_bytes()
+    t = json.loads(raw)
+    parts = []
+    for key in ("startup_s", "pre_launch_s", "child_s", "settlement_s"):
+        v = t.get(key) if isinstance(t, dict) else None
+        if not _nonneg(v):
+            raise bad(f"its timing {key} {v!r} is not a finite, nonnegative number")
+        parts.append(float(v))
+    return sum(parts), hashlib.sha256(raw).hexdigest()
+
+
+def _read_verification(role: str, k: int, files: Mapping[str, str], games: int,
+                       bad: Callable[[str], MatchRefused]) -> float:
+    """A8.5 item 4: a segment's verification record -- committed, unmodified, for THIS segment,
+    bound to the watchdog, record and timing it verified, VERIFIED. Returns its measured time."""
+    path = verification_path(role, k)
+    try:
+        F.check_durable([str(path)], _fixture=False)
+    except F.H4AnalysisRefused as e:
+        raise bad(f"its verification record is not committed ({e})") from None
+    v = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(v, dict) or (v.get("role"), v.get("segment")) != (role, k):
+        raise bad("its verification record is for another segment")
+    if {f"{n}_sha256": v.get(f"{n}_sha256") for n in files} != {f"{n}_sha256": h for n, h in files.items()}:
+        raise bad("its verification record verified other files")
+    if v.get("verdict") != "VERIFIED":
+        raise bad(f"its verification record says {v.get('verdict')!r}")
+    if type(v.get("game_files")) is not int or v["game_files"] != games:
+        raise bad(f"its verification record counts {v.get('game_files')!r} game files, not {games}")
+    for key in ("t_fixed_s", "t_games_s"):
+        if not _nonneg(v.get(key)):
+            raise bad(f"its verification {key} {v.get(key)!r} is not a finite, nonnegative number")
+    return float(v["t_fixed_s"]) + float(v["t_games_s"])
+
+
 def _validate_segment(role: str, k: int) -> float:
     """§13 A3.3: an earlier segment, VALIDATED outcome-blind -- durability, the claim, the
     watchdog's hashes of journal and record, the record's plan binding and game sequence, every
-    game file's hash. No move, terminal or witness is parsed. Returns its parent-measured time."""
+    game file's hash; and (A8.5 item 4) its timing.json and its verification record. No move,
+    terminal or witness is parsed. Returns its FULL measured time: timing.json's m4 - m0 plus its
+    verification run -- never the child time alone. The predecessor checks it made itself lie
+    inside its own pre-launch interval: counted there, once."""
     def bad(why: str) -> MatchRefused:
         return MatchRefused(f"{role} segment {k} does not validate: {why}")
     d = out_dir(role, k)
@@ -647,22 +855,36 @@ def _validate_segment(role: str, k: int) -> float:
         e = w.get("elapsed_s")
         if type(e) not in (int, float) or not math.isfinite(e) or e < 0:
             raise bad(f"its elapsed time {e!r} is not a finite, nonnegative number")
-        return float(e)
+        timing_s, timing_sha = _read_timing(d, bad)
+        verified_s = _read_verification(role, k, {"watchdog": _file_sha(str(d / WATCHDOG_FILE)),
+                                                  "record": hashlib.sha256(raw).hexdigest(),
+                                                  "timing": timing_sha}, len(games), bad)
+        return timing_s + verified_s
     except MatchRefused:
         raise
     except (OSError, ValueError, KeyError, TypeError, AttributeError) as e:
         raise bad(f"malformed ({type(e).__name__}: {e})") from None
 
 
-def _segment_limit(role: str, segment: int) -> float:
+def _segment_limit(role: str, segment: int, plan: Mapping[str, Any]) -> float:
     """§12 A2.4: 4 h per segment. A study segment needs every earlier segment VALIDATED (§13
-    A3.3), and starts only if the 80 h ceiling holds even should this one run its full limit."""
+    A3.3), and (A8.5 item 4) starts only if the FULL measured time already used -- every
+    predecessor's timing.json and verification run -- plus this process's time so far, this
+    segment's own 4 h and its plan's verification reserve fit the 80 h ceiling.
+    NOT a hard end-to-end 80-hour guarantee: the reserve is a planning estimate (A8.7), and this
+    segment's settlement after its limit is not reserved."""
     if role == "pilot":
         return SEGMENT_DEADLINE_S
+    reserve = plan.get("verification_reserve_s")
+    if not _nonneg(reserve):
+        raise MatchRefused(f"the plan's verification_reserve_s {reserve!r} is not a finite, "
+                           "nonnegative number (A8.5 item 4)")
     used = sum(_validate_segment("study", k) for k in range(segment))
-    if used + SEGMENT_DEADLINE_S > STUDY_CEILING_S:
-        raise MatchRefused(f"{used / 3600:.2f} h used: another {SEGMENT_DEADLINE_S / 3600:.0f} h "
-                           f"segment could pass the {STUDY_CEILING_S / 3600:.0f} h ceiling")
+    now = _monotonic() - _T_START
+    if used + now + SEGMENT_DEADLINE_S + reserve > STUDY_CEILING_S:
+        raise MatchRefused(f"{used / 3600:.2f} h used and {now:.0f} s in this process: another "
+                           f"{SEGMENT_DEADLINE_S / 3600:.0f} h segment and its {reserve:.0f} s "
+                           f"verification reserve could pass the {STUDY_CEILING_S / 3600:.0f} h ceiling")
     return SEGMENT_DEADLINE_S
 
 
@@ -671,24 +893,42 @@ def _child_argv(role: str, segment: int) -> List[str]:
 
 
 def run(role: str, segment: int) -> Dict[str, Any]:
-    """PUBLIC ENTRY -- the PARENT. Pure refusals, THE CLAIM, the child under the hard watchdog;
-    `watchdog.json` on every exit. Returns statuses only."""
+    """PUBLIC ENTRY -- the PARENT. Pure refusals (the qualification guard among them, A8.4), THE
+    CLAIM, the child under the hard watchdog; from the destination's creation on, `watchdog.json`
+    on every exit (A8.5); then `timing.json` (A8.5 item 3). Returns statuses only."""
+    m1 = _monotonic()
     _gate()
     _role(role, segment)
     out = out_dir(role, segment)
     if os.path.lexists(out):
         raise MatchRefused(f"{out} is occupied: each segment is one-shot")
-    _plan, sha = _committed_plan(role, segment)
-    limit = _segment_limit(role, segment)
+    plan, sha = _committed_plan(role, segment)
+    binding = _bound_plan(plan)
+    limit = _segment_limit(role, segment, plan)
     D._identity(R4.frozen_argmax_config())
-    claim, nonce = _claim(out, {"plan_sha256": sha, "role": role, "segment": segment})
-    watch = _watch_games(_child_argv(role, segment),
-                         limit_s=limit - (time.monotonic() - claim["claimed_monotonic"]),
-                         game_s=GAME_DEADLINE_S, d=out,
-                         env={**os.environ, CLAIM_ENV: nonce, "PYTHONUNBUFFERED": "1"},
-                         cwd=str(R4.REPO_ROOT), stdout_path=out / CHILD_STREAMS["stdout"],
-                         stderr_path=out / CHILD_STREAMS["stderr"])
-    summary = _settle(out, watch)
+    ours, stage = False, "claim"
+    try:                                         # from the directory's creation on, every exit is recorded
+        with _sigint_held():
+            _create(out)
+            ours = True
+        claim, nonce = _claim(out, {"plan_sha256": sha, "role": role, "segment": segment,
+                                    "qualification": binding})
+        stage = "settle"
+        m2 = _monotonic()
+        watch = _watch_games(_child_argv(role, segment),
+                             limit_s=limit - (time.monotonic() - claim["claimed_monotonic"]),
+                             game_s=GAME_DEADLINE_S, d=out,
+                             env={**os.environ, CLAIM_ENV: nonce, "PYTHONUNBUFFERED": "1"},
+                             cwd=str(R4.REPO_ROOT), stdout_path=out / CHILD_STREAMS["stdout"],
+                             stderr_path=out / CHILD_STREAMS["stderr"])
+        m3 = _monotonic()
+        summary = _settle(out, watch)
+        m4 = _monotonic()
+        _write_timing(out, (_T_START, m1, m2, m3, m4))
+    except BaseException as e:
+        if ours:
+            _record_parent_failure(out, e, stage)
+        raise
     if "parent_exception" in watch:
         raise watch["parent_exception"]
     return summary
@@ -696,16 +936,20 @@ def run(role: str, segment: int) -> Dict[str, Any]:
 
 def run_claimed(role: str, segment: int) -> Dict[str, Any]:
     """The CHILD: the gate, the committed plan (durable, the claim's sha, this role and segment),
-    the identity, the claim; then the model load and the games."""
+    the qualification guard (A8.4), the identity, the claim -- its plan, role, segment and
+    qualification binding; then the model load and the games."""
     _gate()
     _role(role, segment)
     out = out_dir(role, segment)
     plan, sha = _committed_plan(role, segment)
+    binding = _bound_plan(plan)                  # A8.4: in the child too, before the load
     config = R4.frozen_argmax_config()
     identity = D._identity(config)
     claim = _accept_claim(out)
     if (claim.get("plan_sha256"), claim.get("role"), claim.get("segment")) != (sha, role, segment):
         raise MatchRefused("the claim is for another plan, role or segment")
+    if claim.get("qualification") != binding:
+        raise MatchRefused("the claim is bound to another qualification (A8.4)")
     since = time.monotonic() - claim["claimed_monotonic"]
     return _run(plan, config, identity, lambda: R4.load_production_evaluator(identity), out,
                 mode=role, wall_s=SEGMENT_DEADLINE_S - max(since, 0.0) - MARGIN_S)

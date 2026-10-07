@@ -29,6 +29,8 @@ from scripts.GPU.alphazero import h4_runner as R4
 from scripts.GPU.alphazero import h5_cap_completion as CC
 from scripts.GPU.alphazero import h5_incumbent_tactics as T
 from scripts.GPU.alphazero import tactical_candidate as TC
+from scripts.GPU.alphazero import tactical_corpus as TQ
+from scripts.GPU.alphazero import tactical_qualification as Q
 from scripts.GPU.alphazero import twixtbot_g3_reference as G3
 from scripts.GPU.alphazero.mcts import MCTSNode, encode_move as enc
 from tests.test_h5_incumbent_defence import CONFIG, IDENT, Steered
@@ -40,6 +42,20 @@ K = [(1, 2), (2, 1), (-1, 2), (-2, 1), (1, -2), (2, -1), (-1, -2), (-2, -1)]
 FIRED = {"pair_id": "p-fired", "seeds": {"red": -3, "black": -4}}
 QUIET = {"pair_id": "p-quiet", "seeds": {"red": -13, "black": -14}}
 PLAN = {"mode": "fixture", "pairs": [FIRED, QUIET]}
+#: the REAL committed qualification and corpus evidence, read-only (A8.4), wherever a test moves
+#: the evidence root
+QUAL_DIR, CORPUS_DIR = Q.out_dir(), TQ.out_dir()
+
+
+def real_evidence(monkeypatch):
+    monkeypatch.setattr(Q, "out_dir", lambda: QUAL_DIR)
+    monkeypatch.setattr(TQ, "out_dir", lambda: CORPUS_DIR)
+
+
+@pytest.fixture(scope="module")
+def binding():
+    """The guard on the REAL committed qualification evidence -- no model; reads only."""
+    return CM.qualification_binding()
 
 
 class Fake:
@@ -295,6 +311,7 @@ def test_EXACT_REPLAY_on_the_REAL_search_over_the_first_plies():
 def claimed(tmp_path):
     tmp_path.mkdir(parents=True, exist_ok=True)
     d = tmp_path / "seg"
+    CM._create(d)
     CM._claim(d, {})
     return d
 
@@ -405,6 +422,7 @@ def test_RUN_an_INEXACT_set_is_INCOMPLETE_and_a_bad_plan_writes_NOTHING(tmp_path
 
 def test_the_CHILD_takes_only_an_UNCONSUMED_claim_with_ITS_nonce(tmp_path, monkeypatch):
     d = tmp_path / "c"
+    CM._create(d)
     _claim, nonce = CM._claim(d, {"plan_sha256": "x"})
     monkeypatch.setenv(CM.CLAIM_ENV, "0" * 32)
     with pytest.raises(CM.MatchRefused, match="nonce does not match"):
@@ -418,8 +436,9 @@ def test_the_CHILD_takes_only_an_UNCONSUMED_claim_with_ITS_nonce(tmp_path, monke
 
 @pytest.mark.parametrize("entry", ["run", "run_claimed"])
 def test_every_public_entry_refuses_with_the_gate_shut_BEFORE_anything(entry, monkeypatch):
-    for owner, name in ((CM, "_committed_plan"), (CM, "_segment_limit"), (CM, "_claim"),
-                        (CM, "_run"), (CM, "_watch_games"), (os, "mkdir"), (R4, "load_production_evaluator")):
+    for owner, name in ((CM, "_committed_plan"), (CM, "qualification_binding"), (CM, "_segment_limit"),
+                        (CM, "_create"), (CM, "_claim"), (CM, "_run"), (CM, "_watch_games"), (os, "mkdir"),
+                        (R4, "load_production_evaluator")):
         monkeypatch.setattr(owner, name, lambda *a, **k: pytest.fail("touched before the gate"))
     with pytest.raises(CM.MatchUnauthorized):
         getattr(CM, entry)("pilot", 0)
@@ -443,19 +462,25 @@ def test_only_the_pilot_and_study_segments_exist(role, segment):
 PILOT_PLAN = {"mode": "pilot", "pairs": [{"pair_id": "p1", "seeds": {"red": 3, "black": 4}}]}
 
 
+def commit_plan(monkeypatch, plan):
+    raw = json.dumps(plan).encode()
+    monkeypatch.setattr(CM, "_committed_plan", lambda role, segment: (
+        CM.check_plan(plan, mode=role) or plan, hashlib.sha256(raw).hexdigest()))
+
+
 @pytest.fixture
-def open_gate(monkeypatch, tmp_path):
-    """The gate open, the evidence root in tmp, the plan 'committed', the seeds 'registered',
-    the stand-in agents for speed. Everything else -- claim, child entry, record -- is real."""
+def open_gate(monkeypatch, tmp_path, binding):
+    """The gate open, the evidence root in tmp, the plan 'committed' and bound to the REAL
+    qualification (A8.3-A8.4, checked for real against the committed evidence), the seeds
+    'registered', the stand-in agents for speed. Everything else -- guard, claim, child entry,
+    record, timing -- is real."""
     monkeypatch.setattr(AUTH, "CANDIDATE_MATCH_AUTHORIZED", True)
     monkeypatch.setattr(R4, "EVIDENCE_ROOT", str(tmp_path))
     monkeypatch.setattr(R4, "seed_registry_faults", lambda tasks: [])
     monkeypatch.setattr(R4, "load_production_evaluator", lambda identity: object())
     monkeypatch.setattr(CM, "production_builder", lambda config, ev, ident: fake_make())
-    raw = json.dumps(PILOT_PLAN).encode()
-    monkeypatch.setattr(CM, "_committed_plan", lambda role, segment: (
-        CM.check_plan(PILOT_PLAN, mode=role) or PILOT_PLAN,
-        __import__("hashlib").sha256(raw).hexdigest()))
+    real_evidence(monkeypatch)
+    commit_plan(monkeypatch, {**PILOT_PLAN, "qualification": binding})
     return tmp_path
 
 
@@ -490,6 +515,7 @@ def test_PUBLIC_ENTRY_the_REAL_child_reads_the_CLOSED_on_disk_gate(open_gate):
 
 
 def test_the_CHILD_refuses_a_claim_for_another_plan_role_or_segment(open_gate, monkeypatch):
+    CM._create(CM.out_dir("pilot", 0))
     _c, nonce = CM._claim(CM.out_dir("pilot", 0), {"plan_sha256": "t" * 64, "role": "pilot", "segment": 0})
     monkeypatch.setenv(CM.CLAIM_ENV, nonce)
     with pytest.raises(CM.MatchRefused, match="another plan, role or segment"):
@@ -602,6 +628,21 @@ def test_a_KILL_after_completed_observations_loses_NONE_of_them(played, tmp_path
 
 
 STUDY_PLAN = {"mode": "study", "pairs": [{"pair_id": "s1", "seeds": {"red": 13, "black": 14}}]}
+#: segment 0's measured time, every component distinct and nonzero: timing.json's four intervals
+#: (m4 - m0 = 270,015 s) and its verification run (100 s). The watchdog's child time is 270,000 s.
+MARKS = (0.0, 3.0, 10.0, 270_010.0, 270_015.0)
+VERIFY = {"t_fixed_s": 40.0, "t_games_s": 60.0}
+FULL_S0 = 270_115.0
+
+
+def write_verification(role, k, d, **over):
+    path = CM.verification_path(role, k)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    v = {"role": role, "segment": k, "verdict": "VERIFIED", "game_files": 2 * len(STUDY_PLAN["pairs"]),
+         "watchdog_sha256": CM._file_sha(str(d / CM.WATCHDOG_FILE)),
+         "record_sha256": CM._file_sha(str(d / "record.json")),
+         "timing_sha256": CM._file_sha(str(d / "timing.json")), **VERIFY, **over}
+    path.write_text(json.dumps(v))
 
 
 @pytest.fixture(scope="module")
@@ -615,13 +656,16 @@ def pristine(tmp_path_factory):
         CM.plan_path("study", 0).parent.mkdir(parents=True)
         CM.plan_path("study", 0).write_text(json.dumps(STUDY_PLAN))
         d = CM.out_dir("study", 0)
+        CM._create(d)
         CM._claim(d, {"plan_sha256": CM._file_sha(str(CM.plan_path("study", 0))), "role": "study",
                       "segment": 0})
         assert CM._run(STUDY_PLAN, CONFIG, IDENT, object, d, mode="study",
                        builder=fake_builder())["status"] == "COMPLETE"
-        CM._settle(d, {"terminated": False, "cause": None, "limit_s": 14_400.0, "elapsed_s": 75 * 3600.0,
+        CM._settle(d, {"terminated": False, "cause": None, "limit_s": 14_400.0, "elapsed_s": 270_000.0,
                        "child_pid": 1, "rc": 0, "signal": None, "survivors_killed": False,
                        "game_limit_s": 900.0, "game_breach": None})
+        CM._write_timing(d, MARKS)
+        write_verification("study", 0, d)
     finally:
         mp.undo()
     return root
@@ -639,13 +683,20 @@ def segment0(pristine, tmp_path, monkeypatch):
             if not os.path.exists(x):
                 raise F.H4AnalysisRefused(f"{x} is not committed")
     monkeypatch.setattr(F, "check_durable", durable)
+    monkeypatch.setattr(CM, "_T_START", 1_000.0)  # this process's time so far: exactly 85 s
+    monkeypatch.setattr(CM, "_monotonic", lambda: 1_085.0)
     return CM.out_dir("study", 0)
 
 
-def test_a_GENUINE_predecessor_VALIDATES_and_counts_toward_the_80_h_ceiling(segment0):
-    assert CM._validate_segment("study", 0) == 75 * 3600.0
-    assert CM._segment_limit("study", 1) == CM.SEGMENT_DEADLINE_S, "75 h + 4 h <= 80 h"
+def reserve(r):
+    return {"verification_reserve_s": r}
+
+
+def test_a_GENUINE_predecessor_VALIDATES_with_its_FULL_measured_time(segment0):
+    """A8.5 item 4: timing.json's m4 - m0 plus its verification run -- not the child time alone."""
+    assert CM._validate_segment("study", 0) == FULL_S0 == sum(b - a for a, b in zip(MARKS, MARKS[1:])) + 100.0
     w = json.loads((segment0 / CM.WATCHDOG_FILE).read_text())
+    assert w["elapsed_s"] == 270_000.0 != FULL_S0
     assert w["record_sha256"] == CM._file_sha(str(segment0 / "record.json")) and len(w["games"]) == 4
 
 
@@ -705,7 +756,7 @@ def test_a_MALFORMED_or_MISMATCHED_predecessor_is_REFUSED(segment0, name):
     breakage, why = BREAKS[name]
     breakage(segment0)
     with pytest.raises(CM.MatchRefused, match=why):
-        CM._segment_limit("study", 1)
+        CM._segment_limit("study", 1, reserve(0.0))
 
 
 def test_the_PARENT_reads_only_the_OPEN_games_pair_and_arm(tmp_path):
@@ -720,10 +771,12 @@ def test_the_PARENT_reads_only_the_OPEN_games_pair_and_arm(tmp_path):
     assert CM._open_game(d) is None
 
 
-def test_the_80_h_CEILING_counts_the_validated_segments(segment0):
-    _edit_json(segment0 / CM.WATCHDOG_FILE, lambda w: w.update(elapsed_s=77 * 3600.0))
-    with pytest.raises(CM.MatchRefused, match="ceiling"):
-        CM._segment_limit("study", 1)
+def test_the_80_h_BACKSTOP_admits_an_EXACT_fit_and_refuses_ONE_second_more(segment0):
+    """A8.5 item 4: used 270,115 + this process 85 + 4 h 14,400 + reserve = 288,000 exactly. Every
+    component is >= 3 s: omitting any one admits the over-run; counting any twice refuses the fit."""
+    assert CM._segment_limit("study", 1, reserve(3_400.0)) == CM.SEGMENT_DEADLINE_S
+    with pytest.raises(CM.MatchRefused, match="could pass the 80 h ceiling"):
+        CM._segment_limit("study", 1, reserve(3_401.0))
 
 
 def test_a_pair_where_BOTH_fired_is_checked_up_to_the_EARLIER_override(played):
@@ -795,8 +848,9 @@ def test_a_writer_that_OVERSTATES_its_progress_is_caught_by_the_size(tmp_path, m
 
 
 def test_a_failed_write_inside_a_RUN_is_a_recorded_STOP(tmp_path, monkeypatch):
+    d = claimed(tmp_path)                         # the claim is written by the same path (A8.5)
     monkeypatch.setattr(CM, "_write", lambda fd, data: 0)
-    rec = CM._run({"mode": "fixture", "pairs": [FIRED]}, CONFIG, IDENT, object, claimed(tmp_path),
+    rec = CM._run({"mode": "fixture", "pairs": [FIRED]}, CONFIG, IDENT, object, d,
                   mode="fixture", builder=fake_builder())
     f = rec["failure"]
     assert (rec["status"], f["failing_step"], f["exception_type"]) == ("STOP", "game:p-fired-A", "MatchStop")
@@ -831,3 +885,467 @@ def test_a_RUN_with_an_unsafe_id_refuses_BEFORE_loading_anything(tmp_path):
     with pytest.raises(CM.MatchRefused, match="SAFE"):
         CM._run(plan, CONFIG, IDENT, lambda: pytest.fail("loaded"), d, mode="fixture", builder=fake_builder())
     assert sorted(os.listdir(d)) == [CM.CLAIM_FILE] and not (tmp_path / "outside-A.json").exists()
+
+
+# ─────────────────────────────── A8.4: the qualification guard ───────────────────────────────
+
+def test_the_GUARD_binds_the_REAL_committed_qualification(binding):
+    """Reads the committed evidence for real: seven pinned files, the corpus and call list now."""
+    assert binding == {"commit": "d815461eb8daa7f462dc8c492316717a0b3045b4", "files": CM.QUALIFICATION_FILES,
+                       "corpus_sha256": "1f040a9208fb3049de4fbf6e73884ad0fafa067fed3d9c275a4abbedf149179c",
+                       "call_list_sha256": "dae1e0f7b6723e64e99ae9154cc474fd3ff989f380396ba08b13f8e1c1d3fe7b"}
+    assert sorted(CM.QUALIFICATION_FILES) == sorted(os.listdir(QUAL_DIR)) and CM.QUALIFICATION_CALLS == 109
+    assert CM._file_sha(Q.__file__) == CM.QUALIFICATION_MODULE_SHA256
+
+
+@pytest.fixture
+def qual_copy(tmp_path, monkeypatch):
+    """A COPY of the qualification evidence, 'committed' as present (durability is tested on its own)."""
+    d = tmp_path / Q.OUT_NAME
+    shutil.copytree(QUAL_DIR, d)
+    monkeypatch.setattr(Q, "out_dir", lambda: d)
+    monkeypatch.setattr(TQ, "out_dir", lambda: CORPUS_DIR)
+    monkeypatch.setattr(F, "check_durable", lambda paths, _fixture: None)
+    return d
+
+
+def _qedit(name, f):
+    """Edit one evidence file; re-hash it into the watchdog where the watchdog hashes it."""
+    def edit(d):
+        p = d / name
+        if name.endswith(".jsonl"):
+            p.write_text(f(p.read_text()))
+        else:
+            _edit_json(p, f)
+        keys = {"record.json": ("record_sha256",), "observations.jsonl": ("observations_sha256",)}.get(name, ())
+        if keys or name == "log.jsonl":
+            w = json.loads((d / CM.WATCHDOG_FILE).read_text())
+            for k in keys:
+                w[k] = CM._file_sha(str(p))
+            if name == "log.jsonl":
+                w["journal"]["sha256"] = CM._file_sha(str(p))
+            (d / CM.WATCHDOG_FILE).write_text(json.dumps(w))
+    return edit
+
+
+def _lines(f):
+    return lambda text: "".join(x + "\n" for x in f(text.splitlines()))
+
+
+#: content breakages -- each file then RE-PINNED, so the content check itself must refuse
+GUARD_CONTENT = {
+    "watchdog STOP": (_qedit("watchdog.json", lambda w: w.update(status="STOP")), "watchdog is not COMPLETE"),
+    "watchdog NOT_QUALIFIED": (_qedit("watchdog.json", lambda w: w.update(verdict="NOT_QUALIFIED")),
+                               "watchdog is not COMPLETE"),
+    "watchdog child rc 1": (_qedit("watchdog.json", lambda w: w.update(child_rc=1)), "watchdog is not COMPLETE"),
+    "watchdog killed": (_qedit("watchdog.json", lambda w: w.update(signal="SIGKILL")), "watchdog is not COMPLETE"),
+    "watchdog hashed another record": (_qedit("watchdog.json", lambda w: w.update(record_sha256="0" * 64)),
+                                       "watchdog hashed other files"),
+    "watchdog hashed other observations": (_qedit("watchdog.json", lambda w: w.update(observations_sha256="0" * 64)),
+                                           "watchdog hashed other files"),
+    "watchdog hashed another journal": (_qedit("watchdog.json", lambda w: w["journal"].update(sha256="0" * 64)),
+                                        "watchdog hashed other files"),
+    "record STOP": (_qedit("record.json", lambda r: r.update(status="STOP")), "record is not COMPLETE"),
+    "record NOT_QUALIFIED": (_qedit("record.json", lambda r: r.update(verdict="NOT_QUALIFIED")),
+                             "record is not COMPLETE"),
+    "record with a failure": (_qedit("record.json", lambda r: r.update(failure={"reason": "x"})),
+                              "record is not COMPLETE"),
+    "record with a cleanup failure": (_qedit("record.json", lambda r: r.update(cleanup_failures=[{}])),
+                                      "record is not COMPLETE"),
+    "record 108 calls": (_qedit("record.json", lambda r: r.update(calls=108)), "all 109 calls"),
+    "record 108 observed": (_qedit("record.json", lambda r: r.update(observed=108)), "all 109 calls"),
+    "an observation dropped": (_qedit("observations.jsonl", _lines(lambda ls: ls[:-1])), "all 109 calls"),
+    "two observations swapped": (_qedit("observations.jsonl", _lines(lambda ls: [ls[1], ls[0], *ls[2:]])),
+                                 "not the call list, in order"),
+    "claim on another corpus": (_qedit("claim.json", lambda c: c.update(corpus_sha256="0" * 64)), "another corpus"),
+    "record on another corpus": (_qedit("record.json", lambda r: r.update(corpus_sha256="0" * 64)), "another corpus"),
+    "claim with another call list": (_qedit("claim.json", lambda c: c.update(plan_sha256="0" * 64)),
+                                     "another call list"),
+    "record with another call list": (_qedit("record.json", lambda r: r.update(plan_sha256="0" * 64)),
+                                      "another call list"),
+    "the watchdog is not JSON": (lambda d: (d / CM.WATCHDOG_FILE).write_text("not json"), "malformed"),
+}
+
+
+@pytest.mark.parametrize("name", GUARD_CONTENT)
+def test_the_GUARD_refuses_evidence_whose_CONTENT_does_not_qualify(qual_copy, monkeypatch, name):
+    assert CM.qualification_binding()["corpus_sha256"].startswith("1f040a92")    # the copy binds unaltered
+    edit, why = GUARD_CONTENT[name]
+    edit(qual_copy)
+    for n in CM.QUALIFICATION_FILES:                                               # re-pinned: content alone
+        monkeypatch.setitem(CM.QUALIFICATION_FILES, n, CM._file_sha(str(qual_copy / n)))
+    with pytest.raises(CM.MatchRefused, match=why):
+        CM.qualification_binding()
+
+
+@pytest.mark.parametrize("name", sorted(CM.QUALIFICATION_FILES))
+def test_the_GUARD_refuses_an_evidence_file_that_is_not_the_PINNED_one(qual_copy, name):
+    with open(qual_copy / name, "ab") as fh:
+        fh.write(b" ")
+    with pytest.raises(CM.MatchRefused, match=f"{name} is not the pinned file"):
+        CM.qualification_binding()
+
+
+@pytest.mark.parametrize("edit", [lambda d: (d / "extra.txt").write_text(""),
+                                  lambda d: (d / "child.stderr.txt").unlink()], ids=["one more", "one fewer"])
+def test_the_GUARD_wants_EXACTLY_the_seven_files(qual_copy, edit):
+    edit(qual_copy)
+    with pytest.raises(CM.MatchRefused, match="exactly the seven evidence files"):
+        CM.qualification_binding()
+
+
+def test_the_GUARD_wants_the_evidence_COMMITTED_and_UNMODIFIED(tmp_path, monkeypatch):
+    d = tmp_path / Q.OUT_NAME                     # a byte-identical copy that git does not hold
+    shutil.copytree(QUAL_DIR, d)
+    monkeypatch.setattr(Q, "out_dir", lambda: d)
+    with pytest.raises(CM.MatchRefused, match="not committed and unmodified"):
+        CM.qualification_binding()
+
+
+def test_the_GUARD_wants_the_QUALIFIED_call_list_definition_and_an_ACCEPTED_corpus(qual_copy, monkeypatch):
+    monkeypatch.setattr(CM, "QUALIFICATION_MODULE_SHA256", "0" * 64)
+    with pytest.raises(CM.MatchRefused, match="not the qualified call-list definition"):
+        CM.qualification_binding()
+    monkeypatch.undo()
+    real_evidence(monkeypatch)
+
+    def refused():
+        raise TQ.CorpusRefused("probe")
+    monkeypatch.setattr(TQ, "committed_corpus", refused)
+    with pytest.raises(CM.MatchRefused, match="corpus is not accepted now"):
+        CM.qualification_binding()
+
+
+def test_the_PLAN_must_carry_EXACTLY_the_guards_binding(binding, monkeypatch):
+    real_evidence(monkeypatch)
+    assert CM._bound_plan({"qualification": binding}) == binding
+    for plan in ({}, {"qualification": {**binding, "call_list_sha256": "0" * 64}},
+                 {"qualification": {**binding, "files": {**binding["files"], "log.jsonl": "0" * 64}}}):
+        with pytest.raises(CM.MatchRefused, match="not bound to the accepted qualification"):
+            CM._bound_plan(plan)
+
+
+def test_PUBLIC_ENTRY_a_GUARD_failure_refuses_BEFORE_the_claim(open_gate, monkeypatch):
+    monkeypatch.setattr(CM, "_watch_games", lambda *a, **k: pytest.fail("a child was started"))
+    monkeypatch.setattr(CM, "QUALIFICATION_MODULE_SHA256", "0" * 64)
+    with pytest.raises(CM.MatchRefused, match="call-list definition"):
+        CM.run("pilot", 0)
+    assert not CM.out_dir("pilot", 0).exists()
+
+
+def test_PUBLIC_ENTRY_an_UNBOUND_plan_refuses_BEFORE_the_claim(open_gate, monkeypatch):
+    commit_plan(monkeypatch, PILOT_PLAN)
+    monkeypatch.setattr(CM, "_watch_games", lambda *a, **k: pytest.fail("a child was started"))
+    with pytest.raises(CM.MatchRefused, match="not bound to the accepted qualification"):
+        CM.run("pilot", 0)
+    assert not CM.out_dir("pilot", 0).exists()
+
+
+def _child_claim(binding, monkeypatch, **over):
+    out = CM.out_dir("pilot", 0)
+    plan = {**PILOT_PLAN, "qualification": binding}
+    CM._create(out)
+    _c, nonce = CM._claim(out, {"plan_sha256": hashlib.sha256(json.dumps(plan).encode()).hexdigest(),
+                                "role": "pilot", "segment": 0, "qualification": binding, **over})
+    monkeypatch.setenv(CM.CLAIM_ENV, nonce)
+
+
+def test_the_CHILD_checks_the_GUARD_before_the_LOAD(open_gate, binding, monkeypatch):
+    _child_claim(binding, monkeypatch)
+    monkeypatch.setattr(R4, "load_production_evaluator", lambda identity: pytest.fail("loaded"))
+    monkeypatch.setattr(CM, "QUALIFICATION_MODULE_SHA256", "0" * 64)
+    with pytest.raises(CM.MatchRefused, match="call-list definition"):
+        CM.run_claimed("pilot", 0)
+    assert sorted(os.listdir(CM.out_dir("pilot", 0))) == [CM.CLAIM_FILE]
+
+
+def test_the_CHILD_refuses_a_claim_bound_to_ANOTHER_qualification(open_gate, binding, monkeypatch):
+    _child_claim(binding, monkeypatch, qualification={**binding, "commit": "0" * 40})
+    monkeypatch.setattr(R4, "load_production_evaluator", lambda identity: pytest.fail("loaded"))
+    with pytest.raises(CM.MatchRefused, match="bound to another qualification"):
+        CM.run_claimed("pilot", 0)
+
+
+# ─────────────────────────────── A8.5: parent recording and timing ───────────────────────────
+
+def in_process(monkeypatch):
+    """The child IN THIS PROCESS through its real CLI, with the parent's nonce (as the real watch)."""
+    def watch(argv, *, limit_s, game_s, d, env, cwd, stdout_path, stderr_path):
+        monkeypatch.setenv(CM.CLAIM_ENV, env[CM.CLAIM_ENV])
+        with open(stdout_path, "x") as so, open(stderr_path, "x") as se, \
+                contextlib.redirect_stdout(so), contextlib.redirect_stderr(se):
+            rc = CM.main(list(argv[3:]))
+        return {"child_pid": os.getpid(), "limit_s": limit_s, "terminated": False, "cause": None,
+                "signal": None, "rc": rc, "elapsed_s": 1.0, "survivors_killed": False,
+                "game_limit_s": game_s, "game_breach": None}
+    monkeypatch.setattr(CM, "_watch_games", watch)
+
+
+def test_TIMING_tiles_the_parents_run_from_m0_to_m4_without_overlap(open_gate, monkeypatch):
+    """A8.5 item 3: m1 at entry; m2 after the claim, before launch; m3 after the child, before the
+    watchdog; m4 after watchdog.json; then timing.json."""
+    in_process(monkeypatch)
+    out, seen = CM.out_dir("pilot", 0), []
+
+    def clock():
+        seen.append(sorted(os.listdir(out)) if out.exists() else None)
+        return 10.0 * len(seen)
+    monkeypatch.setattr(CM, "_T_START", 5.0)
+    monkeypatch.setattr(CM, "_monotonic", clock)
+    res = CM.run("pilot", 0)
+    assert res["status"] == "COMPLETE" and len(seen) == 4
+    m1, m2, m3, m4 = seen
+    assert m1 is None, "m1: before the destination exists"
+    assert m2 == [CM.CLAIM_FILE], "m2: after the claim, before the child's streams"
+    assert "record.json" in m3 and CM.WATCHDOG_FILE not in m3, "m3: after the child, before settlement"
+    assert CM.WATCHDOG_FILE in m4 and "timing.json" not in m4, "m4: after watchdog.json, before timing"
+    t = json.loads((out / "timing.json").read_text())
+    assert {k: t[k] for k in ("startup_s", "pre_launch_s", "child_s", "settlement_s")} == \
+        {"startup_s": 5.0, "pre_launch_s": 10.0, "child_s": 10.0, "settlement_s": 10.0}
+
+
+def test_TIMING_is_written_even_when_the_child_leaves_no_record(open_gate):
+    res = CM.run("pilot", 0)                      # the real child reads the CLOSED on-disk gate
+    out = CM.out_dir("pilot", 0)
+    assert res["status"] == "EXITED_WITHOUT_RECORD"
+    t = json.loads((out / "timing.json").read_text())
+    assert all(CM._nonneg(t[k]) for k in ("startup_s", "pre_launch_s", "child_s", "settlement_s"))
+
+
+@pytest.mark.parametrize("exc,status", [(RuntimeError, "CLAIM_FAILED"), (KeyboardInterrupt, "INTERRUPTED")])
+def test_a_CLAIM_failure_or_interruption_still_leaves_watchdog_json(open_gate, monkeypatch, exc, status):
+    def boom(fd, data):
+        raise exc("claim probe")
+    monkeypatch.setattr(CM, "_write", boom)
+    monkeypatch.setattr(CM, "_watch_games", lambda *a, **k: pytest.fail("a child was started"))
+    with pytest.raises(exc, match="claim probe"):
+        CM.run("pilot", 0)
+    out = CM.out_dir("pilot", 0)
+    w = json.loads((out / CM.WATCHDOG_FILE).read_text())
+    assert (w["status"], w["stage"], w["failure"]["exception_type"], w["record_present"]) == \
+        (status, "claim", exc.__name__, False)
+    assert sorted(os.listdir(out)) == [CM.CLAIM_FILE, CM.WATCHDOG_FILE]
+
+
+@pytest.fixture
+def sigint_default():
+    """Python's own SIGINT handler: a background job (`cmd &`) inherits SIGINT IGNORED."""
+    previous = signal.signal(signal.SIGINT, signal.default_int_handler)
+    yield
+    signal.signal(signal.SIGINT, previous)
+
+
+def test_an_INTERRUPT_as_the_destination_is_created_is_recorded_IN_IT(open_gate, monkeypatch, sigint_default):
+    import threading
+    real = os.mkdir
+
+    def mkdir_then_sigint(path, *a, **k):
+        real(path, *a, **k)
+        if pathlib.Path(path) == CM.out_dir("pilot", 0):
+            signal.pthread_kill(threading.main_thread().ident, signal.SIGINT)
+    monkeypatch.setattr(os, "mkdir", mkdir_then_sigint)
+    monkeypatch.setattr(CM, "_watch_games", lambda *a, **k: pytest.fail("a child was started"))
+    with pytest.raises(KeyboardInterrupt):
+        CM.run("pilot", 0)
+    w = json.loads((CM.out_dir("pilot", 0) / CM.WATCHDOG_FILE).read_text())
+    assert (w["status"], w["stage"], w["claim_present"]) == ("INTERRUPTED", "claim", False)
+    assert signal.getsignal(signal.SIGINT) is signal.default_int_handler
+
+
+def test_a_destination_created_by_ANOTHER_invocation_is_never_written(open_gate, monkeypatch):
+    out, real = CM.out_dir("pilot", 0), CM._bound_plan
+
+    def racing(plan):                             # another invocation creates it after the first check
+        b = real(plan)
+        out.mkdir()
+        (out / "theirs").write_text("x")
+        return b
+    monkeypatch.setattr(CM, "_bound_plan", racing)
+    with pytest.raises(CM.MatchRefused, match="occupied"):
+        CM.run("pilot", 0)
+    assert sorted(os.listdir(out)) == ["theirs"]
+
+
+@pytest.mark.parametrize("where", ["watch", "settle"])
+@pytest.mark.parametrize("exc,status", [(RuntimeError, "SETTLE_FAILED"), (KeyboardInterrupt, "INTERRUPTED")])
+def test_a_WATCH_or_SETTLEMENT_failure_still_leaves_watchdog_json(open_gate, monkeypatch, where, exc, status):
+    def boom(*a, **k):
+        raise exc(f"{where} probe")
+    if where == "watch":
+        monkeypatch.setattr(CM, "_watch_games", boom)
+    else:
+        in_process(monkeypatch)
+        monkeypatch.setattr(CC, "_journal", boom)
+    with pytest.raises(exc, match=f"{where} probe"):
+        CM.run("pilot", 0)
+    w = json.loads((CM.out_dir("pilot", 0) / CM.WATCHDOG_FILE).read_text())
+    assert (w["status"], w["stage"], w["failure"]["exception_type"], w["claim_present"]) == \
+        (status, "settle", exc.__name__, True)
+
+
+# ─────────────────────────────── A8.5: the child's cleanup ───────────────────────────────
+
+def _failing_close(monkeypatch, cls, exc):
+    real = cls.close
+
+    def close(self):
+        real(self)
+        raise exc("close probe")
+    monkeypatch.setattr(cls, "close", close)
+
+
+class Breaks(Fake):                               # a STOP mid-game, while its partial file is open
+    def __call__(self, state):
+        if state.ply == 5:
+            raise RuntimeError("mid-game probe")
+        return super().__call__(state)
+
+
+def _run_raising(exc, d, **kw):
+    with pytest.raises(exc) if exc is KeyboardInterrupt else contextlib.nullcontext():
+        CM._run({"mode": "fixture", "pairs": [FIRED]}, CONFIG, IDENT, object, d, mode="fixture", **kw)
+    return json.loads((d / "record.json").read_text())
+
+
+@pytest.mark.parametrize("exc", [RuntimeError, KeyboardInterrupt])
+@pytest.mark.parametrize("handle,cls", [("partial", CM._Partial), ("journal", CC._Log)], ids=["partial", "journal"])
+def test_a_CLEANUP_failure_after_a_STOP_is_recorded_and_the_STOP_kept(tmp_path, monkeypatch, handle, cls, exc):
+    d = claimed(tmp_path)
+    _failing_close(monkeypatch, cls, exc)
+    rec = _run_raising(exc, d, builder=fake_builder(agent=Breaks))
+    assert rec["status"] == ("INTERRUPTED" if exc is KeyboardInterrupt else "STOP")
+    assert (rec["failure"]["failing_step"], rec["failure"]["reason"]) == ("game:p-fired-A", "mid-game probe")
+    assert rec["cleanup_failures"] == [{"handle": handle, "exception_type": exc.__name__, "reason": "close probe"}]
+    dec = (d / CM.GAMES_DIR / "p-fired-A.partial.jsonl").read_text().splitlines()
+    assert [json.loads(x)["ply"] for x in dec] == list(range(5)), "the completed decisions are kept"
+
+
+@pytest.mark.parametrize("exc", [RuntimeError, KeyboardInterrupt])
+def test_a_JOURNAL_close_failure_after_EVERY_game_is_recorded_never_COMPLETE(tmp_path, monkeypatch, exc):
+    d = claimed(tmp_path)
+    _failing_close(monkeypatch, CC._Log, exc)
+    rec = _run_raising(exc, d, builder=fake_builder())
+    assert rec["status"] == ("INTERRUPTED" if exc is KeyboardInterrupt else "STOP")
+    assert (rec["failure"]["failing_step"], rec["failure"]["exception_type"]) == ("close:journal", exc.__name__)
+    assert len(rec["games"]) == 2 and rec["cleanup_failures"] == []
+
+
+def test_a_PARTIAL_close_failure_in_a_game_is_a_recorded_STOP(tmp_path, monkeypatch):
+    d = claimed(tmp_path)
+    _failing_close(monkeypatch, CM._Partial, RuntimeError)
+    rec = _run_raising(RuntimeError, d, builder=fake_builder())
+    assert (rec["status"], rec["failure"]["failing_step"], rec["cleanup_failures"]) == ("STOP", "game:p-fired-A", [])
+
+
+def test_a_COMPLETE_run_records_no_cleanup_failure(complete):
+    assert complete[1]["cleanup_failures"] == []
+
+
+# ─────────────────────────────── A8.5 item 4: predecessor timing and verification ─────────────
+
+def _ver(f):
+    return lambda d: _edit_json(CM.verification_path("study", 0), f)
+
+
+def _timing(f):
+    return lambda d: _edit_json(d / "timing.json", f)
+
+
+BREAKS_A8 = {
+    "timing.json missing": (lambda d: (d / "timing.json").unlink(), "timing.json is not committed"),
+    "timing.json not JSON": (lambda d: (d / "timing.json").write_text("not json"), "malformed"),
+    **{f"timing {k} NaN": (_timing(lambda t, k=k: t.update({k: float("nan")})), "not a finite, nonnegative")
+       for k in ("startup_s", "pre_launch_s", "child_s", "settlement_s")},
+    **{f"timing settlement {name}": (_timing(lambda t, v=v: t.update(settlement_s=v)), "not a finite, nonnegative")
+       for name, v in (("negative", -1.0), ("infinite", float("inf")), ("a string", "5"), ("a boolean", True))},
+    "timing startup missing": (_timing(lambda t: t.pop("startup_s")), "not a finite, nonnegative"),
+    "verification missing": (lambda d: CM.verification_path("study", 0).unlink(),
+                             "verification record is not committed"),
+    "verification not JSON": (lambda d: CM.verification_path("study", 0).write_text("x"), "malformed"),
+    "verification for segment 3": (_ver(lambda v: v.update(segment=3)), "for another segment"),
+    "verification for the pilot": (_ver(lambda v: v.update(role="pilot")), "for another segment"),
+    "verification of another watchdog": (_ver(lambda v: v.update(watchdog_sha256="0" * 64)), "verified other files"),
+    "verification of another record": (_ver(lambda v: v.update(record_sha256="0" * 64)), "verified other files"),
+    "verification of another timing": (_ver(lambda v: v.update(timing_sha256="0" * 64)), "verified other files"),
+    "timing.json changed after its verification": (
+        lambda d: (d / "timing.json").write_text(json.dumps(json.loads((d / "timing.json").read_text()))),
+        "verified other files"),
+    "verification NOT_VERIFIED": (_ver(lambda v: v.update(verdict="NOT_VERIFIED")), "record says 'NOT_VERIFIED'"),
+    "verification of 3 game files": (_ver(lambda v: v.update(game_files=3)), "counts 3 game files, not 2"),
+    "verification game files a string": (_ver(lambda v: v.update(game_files="2")), "game files, not 2"),
+    "verification t_fixed NaN": (_ver(lambda v: v.update(t_fixed_s=float("nan"))), "not a finite, nonnegative"),
+    "verification t_games negative": (_ver(lambda v: v.update(t_games_s=-1.0)), "not a finite, nonnegative"),
+    "verification t_games missing": (_ver(lambda v: v.pop("t_games_s")), "not a finite, nonnegative"),
+}
+
+
+@pytest.mark.parametrize("name", BREAKS_A8)
+def test_a_predecessor_with_BAD_timing_or_verification_is_REFUSED(segment0, name):
+    breakage, why = BREAKS_A8[name]
+    breakage(segment0)
+    with pytest.raises(CM.MatchRefused, match=why):
+        CM._segment_limit("study", 1, reserve(0.0))
+
+
+@pytest.mark.parametrize("bad", [None, float("nan"), -1.0, float("inf"), "0", True], ids=str)
+def test_a_study_plan_needs_a_VALID_verification_reserve(segment0, bad):
+    plan = {} if bad is None else reserve(bad)
+    with pytest.raises(CM.MatchRefused, match="verification_reserve_s"):
+        CM._segment_limit("study", 1, plan)
+
+
+def test_the_PILOT_has_no_predecessor_and_no_reserve():
+    assert CM._segment_limit("pilot", 0, {}) == CM.SEGMENT_DEADLINE_S
+
+
+def test_the_BACKSTOP_is_not_described_as_a_hard_guarantee():
+    doc = CM._segment_limit.__doc__
+    assert "NOT a hard end-to-end 80-hour guarantee" in doc and "planning estimate" in doc
+
+
+# ─────────────────────────────── A8.6: the amendment stays inside its allowlist ───────────────
+
+QUALIFIED_R1 = "a53e7ac857f045a281af85d7dd268445e2419e1c71fd2a0458092a5c2c7e21b6"
+A8_CHANGED = {"_claim", "run", "run_claimed", "_run", "main", "_validate_segment", "_segment_limit"}
+A8_ADDED = {"_T_START", "QUALIFICATION_COMMIT", "QUALIFICATION_FILES", "QUALIFICATION_MODULE_SHA256",
+            "QUALIFICATION_CALLS", "qualification_binding", "_bound_plan", "_create", "_sigint_held",
+            "_record_parent_failure", "_timing_path", "_write_timing", "_read_timing", "verification_path",
+            "_read_verification", "_nonneg"}
+
+
+def _top_nodes(src):
+    import ast
+    out = {}
+    for n in ast.parse(src).body:
+        if isinstance(n, (ast.FunctionDef, ast.ClassDef)):
+            key = n.name
+        elif isinstance(n, (ast.Assign, ast.AnnAssign)):
+            t = n.targets if isinstance(n, ast.Assign) else [n.target]
+            names = sorted(e.id for x in t for e in (x.elts if isinstance(x, ast.Tuple) else [x]))
+            key = names[0] if len(names) == 1 else tuple(names)
+        elif isinstance(n, ast.Expr):
+            key = "<docstring>"
+        else:
+            key = "<" + ast.dump(n) + ">"
+        out[key] = n
+    return out
+
+
+def test_the_R1_AMENDMENT_stays_inside_the_A8_6_allowlist():
+    """A preview of the binding record's first check -- it supports, never replaces, the review."""
+    import ast
+    old = subprocess.run(["git", "show", f"{CM.QUALIFICATION_COMMIT}:scripts/GPU/alphazero/candidate_match_runner.py"],
+                         cwd=ROOT, capture_output=True, check=True).stdout
+    assert hashlib.sha256(old).hexdigest() == QUALIFIED_R1
+    a, b = _top_nodes(old), _top_nodes(pathlib.Path(CM.__file__).read_bytes())
+    assert a.keys() <= b.keys(), "nothing qualified was removed"
+    for key in a:
+        if key not in A8_CHANGED:
+            assert ast.dump(a[key]) == ast.dump(b[key]), f"{key} changed outside the allowlist"
+    for key in b.keys() - a.keys():
+        assert key in A8_ADDED or (isinstance(key, str) and key.startswith("<ImportFrom(module='time'")), key
+
+    def calls(fn, name):
+        return [ast.dump(c) for c in ast.walk(fn) if isinstance(c, ast.Call) and getattr(c.func, "id", None) == name]
+    for name in ("production_builder", "play_game"):
+        assert calls(a["_run"], name) == calls(b["_run"], name) != [], name
