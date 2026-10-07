@@ -1065,3 +1065,240 @@ evaluator, never the model), injected-defect controls, the regression and local 
 stale docstring may be corrected; its value stays False. The frozen corpus, the wrapper, the agents
 and the search stay unchanged. Model loading, the qualification run, research seeds, agent-played
 games and push remain unauthorized.
+
+---
+
+## 18. Amendment A8 — 2026-10-06, preparing the pilot: seeds, plan, qualification guard, binding, stop rule (design only; user-decided)
+
+The qualification is accepted (`d815461e`: COMPLETE, QUALIFIED, 109/109). It establishes correct
+production-path behaviour **on those positions**, not stronger play. Its 21 defensive overrides come
+from a deliberately selected corpus; they are **not** an estimate of how often the rule fires in games.
+
+A8 fixes how the 16-pair pilot is prepared. **It chooses no new parameter:** Δ, the power target, the
+method rule, the ceiling, the margin and the limits are those of A1–A2.
+
+### A8.1 — A fresh seed survey (read-only)
+
+* **Method:** H5's survey (`evidence/2026-09-27-t1j-h5-seed-survey/01_h5_seed_survey.py`), i.e. H4's
+  collision proof v16 with the union scanner. The scanner finds every v16 match **and** every
+  underscore-grouped nine-digit literal starting 2026.
+* **Applied fresh; nothing is inherited:** no survey output, candidate, exclusion list or cleanliness
+  claim of H4 or H5. H5 surveyed and then used blocks above its predecessors; whatever lies in the band
+  now is found by this survey.
+* **Prior terms,** as they stand when the survey runs:
+  * the four registries of `e4_screen_reference.py`;
+  * `CONSUMED_SEEDS`;
+  * every named spent block: D1, H1, H2, H3 (with its retired segment blocks), H4's five and H5's four
+    (`h5_runner.SEED_BLOCKS`);
+  * H3's generation ranges;
+  * every repository literal in the nine-digit 2026 band, **at every occurrence**, in every tracked
+    file. The only exemptions are (a) `(lo, hi)` elements inside the four registry assignments,
+    located by parsing, and (b) the survey's own pinned records.
+* **Per candidate seed:**
+  * the seed and its four XOR-mask derivations (`SEARCH_MASK` and `READOUT_MASK`, both colours, read
+    from `SeededReferenceAgent`) are disjoint from every prior term;
+  * the derivations are injective across the block;
+  * the nearest other interval is at least the block's own size (32) away.
+* **Differential control:** a planted underscore-grouped candidate seed in an unrelated file must make
+  the block NOT CLEAN; without it, the block is CLEAN.
+* **The candidate rule, fixed here before any result:**
+  * BASE = the first multiple of 10,000 strictly above the highest seed of every REGISTERED or
+    NAMED-SPENT interval in the band, as the survey computes it.
+  * The pilot block = [BASE, BASE + 32).
+  * Pair k = 0..15 has `pair_id` `pilot-{k:02d}`, red seed BASE + 2k and black seed BASE + 2k + 1. The
+    seed follows the colour in both games of a pair (§7.1).
+  * The block is checked, never adjusted. NOT CLEAN → stop.
+* **Not in the band, stated rather than assumed clean:** the corpus streams (`Random("tq24-…:{seed}")`,
+  seeds 0–3,999), the test seeds (1,000,000+) and the synthetic negative seeds. None is a band seed of
+  `SeededReferenceAgent`.
+* **Destination:** `docs/superpowers/evidence/<date>-tactical-candidate-seed-survey/`:
+  * `01` is the script, committed before its run and holding no seed literal;
+  * `02` is the run record, create-only.
+* **Pilot only.** The study block is surveyed separately later, with the pilot block as a prior term
+  (§7.4: pilot and study seeds are disjoint).
+
+### A8.2 — The collision proof and the registration edit
+
+* **Order:** pre-proof on the committed tree → the registration commit → post-proof on the committed
+  tree → commit. Each proof record is create-only. The proof script is committed before the pre run
+  and reads the block from the survey record.
+* **The registration commit does exactly two things:**
+  * it appends **one** tuple `(BASE, BASE + 32)` to `ACCOUNTED_SEED_INTERVALS`, as plain integers, with
+    a comment naming the pilot. It does **not** touch EXPOSED, RETIRED or TEST_ONLY;
+  * it adds the pilot plan (A8.3).
+* **Literal exemptions in the post-proof,** under the same rule pre and post:
+  * that registry tuple;
+  * the committed pilot plan, at exactly its path, whose seeds must equal the survey's block.
+  
+  Nothing else spells the seeds. Tests and cards read them from the survey record.
+* **Exposure and retirement follow actual use.** A later closing edit, separately authorized, derives
+  exposure from the pilot's committed game starts (as H5's `92d1b8e7`) and then retires (as
+  `6c8ab5d3`). Nothing is marked in advance.
+* **Consequence, stated.**
+  * The closed H4 and H5 records bind `e4_screen_reference.py` by hash; `h4_runner`, `h5_runner`,
+    `h5_production_qualification` and `injected_defect_controls` reference it.
+  * Those records are historical and are **not edited**. Their closed entries would refuse a re-run, by
+    design; H5's own closing edit changed the same file.
+  * The registration step re-runs the regression (the 30-id baseline) and every injected-defect control
+    anchored in the registry. A re-anchored control carries a note.
+
+### A8.3 — The pilot plan
+
+* **Path:** `docs/superpowers/evidence/tactical-candidate-plans/pilot-s0.json`, i.e. R1's
+  `plan_path("pilot", 0)`. It is committed in the registration commit, before any model load (R1's
+  `_committed_plan` requires it).
+* **Content:**
+  * `mode: "pilot"`;
+  * the 16 pairs of A8.1;
+  * `qualification`: the binding of A8.4 — the seven evidence hashes, the call-list and corpus hashes,
+    and the qualification commit;
+  * `survey`: the survey record's sha256.
+* **R1's `check_plan` applies unchanged:** positive seeds, ACCOUNTED and unspent; unique seeds; SAFE,
+  unique pair ids.
+
+### A8.4 — The qualification guard (in R1)
+
+R1's pilot and study entries refuse — the parent before its claim, the child before the model load —
+unless **every** condition holds:
+
+1. **Exact evidence.** `docs/superpowers/evidence/tactical-candidate-qualification/` holds exactly
+   seven files, no more and no fewer: `claim.json`, `child.stderr.txt`, `child.stdout.txt`,
+   `log.jsonl`, `observations.jsonl`, `record.json`, `watchdog.json`.
+2. **Committed and unmodified.** Each file passes `check_durable`: tracked at HEAD, with no difference
+   against HEAD in the index or the working tree.
+3. **Pinned bytes.** Each file's sha256 equals the value pinned in R1, as committed at
+   `d815461eb8daa7f462dc8c492316717a0b3045b4`:
+
+   | file | sha256 |
+   |---|---|
+   | `claim.json` | `bbf45b8e0572113dfed097fce279175466eb37f4197d572ee8de68142dece49a` |
+   | `child.stderr.txt` | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+   | `child.stdout.txt` | `c0b2ec1ed5ff6f9e565fb365f891d2a55e91d7dee5327ba8ec4693d4c2aa7dba` |
+   | `log.jsonl` | `8a0ed8763616abf1db18b9ab76bba8fce79c017ab8dba9f8722e6a814da9904a` |
+   | `observations.jsonl` | `6551e6d3efcdb49fc2f2417ce9a7ab68096ca8ee1f38ee58823fe9cfe2e8dbbd` |
+   | `record.json` | `698338279b8d6402b2a1aaf446fdebbd69ab03b833ad0a7937f18f50d65c5ace` |
+   | `watchdog.json` | `c33068294a19c06bc9a18cfd80c34c8119e8094bada218e2bd36ba3dd614ffa1` |
+
+4. **Content.**
+   * The watchdog says COMPLETE and QUALIFIED, child rc 0, not terminated. Its `record_sha256`,
+     `observations_sha256` and journal sha256 equal the files' hashes.
+   * The record says COMPLETE and QUALIFIED, `failure` null, `cleanup_failures` empty, and
+     `calls` = `observed` = 109.
+   * The claim's and the record's `corpus_sha256` equal the corpus that `committed_corpus()` accepts
+     **now** (`1f040a92…`).
+   * Their `plan_sha256` equals the sha256 of the exact call list recomputed **now** by
+     `tactical_qualification.plan_of` over that corpus (`dae1e0f7…`).
+   * The observation ids are that call list's ids, in order.
+5. **The qualified call-list definition.** `tactical_qualification.py` is byte-identical to its blob at
+   `d815461e` (sha256 `bb073d9a5eb9b047667f68976466ac89c24262bbbfd10654a779a1eddfedd805`). It is imported
+   inside the guard, because it imports R1.
+6. **The plan is bound.** The plan's `qualification` block equals the binding these checks produce.
+   The parent writes that binding into its claim; the child requires the claim's binding to equal its
+   own.
+
+Any failure refuses before the claim (parent) or before the load (child). Nothing is played.
+
+### A8.5 — The R1 amendment, including two recording repairs
+
+**Found while drafting A8, not raised before.** R1 has the gaps the qualification review found:
+
+* `run()` creates the destination and writes the claim before any protection, and `_watch_games` and
+  `_settle` are unprotected. R1 predates §16 A6.3, so a claim, watch or settlement failure leaves no
+  `watchdog.json`.
+* `_run`'s `finally:` closes the partial-game file and the journal outside the handlers, so a close
+  failure leaves no `record.json`.
+
+**The R1 amendment contains exactly these changes:**
+
+1. The guard of A8.4 and its pinned constants.
+2. The qualification repair's contract (`3462cfd1`), applied to R1:
+   * the parent creates the destination itself; an occupied one is refused and never written to;
+   * SIGINT is held across the creation and the "ours" mark;
+   * everything after is protected, and every exit writes `watchdog.json`: CLAIM_FAILED, SETTLE_FAILED
+     or INTERRUPTED, with the stage;
+   * `claim.json` is create-only and fsynced;
+   * in `_run`, the files are closed inside the recorded boundary. After a failure, every handle is
+     closed, its errors are recorded in `record.json` with the first failure kept, and an interruption
+     is re-raised after the record.
+
+It changes nothing in agent construction, games, pairing, the replay check, game limits, segment
+validation or the 80-hour check.
+
+### A8.6 — The binding consequence: the unchanged agent-construction path, verified
+
+* **What the change does to the qualification's binding.**
+  * The qualification pinned R1 at `a53e7ac8…` (`CODE_PINS`) and exercised `production_builder` under
+    the real model. The amendment changes R1's hash, so `tactical_qualification.bindings()` refuses from
+    then on. That is correct: the qualification is spent and one-shot.
+  * `tactical_qualification.py` and **all historical evidence stay untouched.**
+  * The qualification's tests adapt, test-only:
+    * its synthetic tests bind the amended runner through an explicit fixture;
+    * one test pins that the unpatched `bindings()` refuses the amended runner, by name.
+* **A mechanical binding record** reads code only: no model, no decision. Destination:
+  `docs/superpowers/evidence/<date>-tactical-candidate-r1-binding/`, with `01` the script (committed
+  before its run) and `02` the run record (create-only). It checks:
+  1. **R1 against `a53e7ac8`, per top-level node** (`ast.dump`, attributes excluded).
+     * Every node outside a fixed allowlist is identical. That includes every constant and import that
+       exists today, and `_t`, `_sha`, `check_plan`, `production_builder`, `_alarm`, `_compact`,
+       `game_digest`, `play_game`, `first_override`, `check_pair`, `_failure`, `_file_sha`,
+       `_fsync_dir`, `_Partial`, `_game_file`, `_write`, `_write_all`, `_save_game`, `_unconsumed`,
+       `_accept_claim`, `_open_game`, `_watch_games`, `_inventory`, `_settle`, `_gate`, `_role`,
+       `out_dir`, `plan_path`, `_committed_plan`, `_validate_segment`, `_segment_limit` and
+       `_child_argv`.
+     * **The allowlist** (may change, or be added): the guard and its constants; `_create`, the SIGINT
+       hold and `_record_parent_failure`; `_claim`, `run`, `run_claimed`, `_run`, `main`; and
+       standard-library imports.
+     * Inside `_run`, the `production_builder(…)` and `play_game(…)` call nodes are identical.
+  2. **The import closure.** Every repository module R1 reaches by import, anywhere in a module and
+     transitively, other than R1, is byte-identical to its blob at `d815461e`. That includes
+     `twixtbot_g3_reference`, `tactical_candidate`, `h5_incumbent_tactics`, the search, the readout,
+     the rules engine, and `h4_runner`'s loader and frozen config.
+     * **One permitted difference:** `e4_screen_reference.py` may differ only by the A8.2 tuple. The
+       other three registries are identical by parsing, and ACCOUNTED equals the `d815461e` tuple plus
+       exactly the pilot block.
+  3. **The guard's verdict** on the real committed tree (A8.4, pure). Also: the plan's seeds equal the
+     survey's block, which ACCOUNTED holds.
+  
+  The record lists every node's verdict and every closure file's two hashes. Any difference outside
+  the allowlist, or beyond the permitted registry tuple, makes it **NOT BOUND**: the pilot is not
+  authorized.
+* **The binding review before play.** It runs **after** registration, at the exact pre-play state. You
+  review the committed R1 diff, the binding record and the guard's verdict before the pilot is
+  authorized. Nothing re-runs the qualification.
+
+### A8.7 — After the pilot: the stop rule, as frozen
+
+* **The stops of A1.2 and A2.4 stand:**
+  * f = 0;
+  * a non-firing pair that is not move-identical;
+  * scans above 25 % of candidate decision time;
+  * 4 or more of the 16 pairs capped;
+  * a pilot longer than 4 hours;
+  * any operational or integrity failure.
+* **Then, the frozen n:** the A2.1 method's n at Δ = 0.05 and σ_plan(f), chosen and committed with
+  the method before any study seed (A1.4 steps 3–4 and 7; A2.1).
+* **The measured projection** (A2.2): projected = 1.25 × (n × t̄ + setup and verification).
+  * t̄ is the mean wall time per pilot pair, from the pilot's game records: both games, scans included.
+  * Setup and verification = S × k, where:
+    * S = the pilot's parent-measured elapsed time minus the sum of its game wall times. That covers
+      the model load, the claim, validation, recording and settlement.
+    * k = ⌈n × t̄ / (4 h − S)⌉, the number of 4-hour segments the study needs (A2.4).
+  * **If projected > 80 h: stop before starting.** n is never shrunk.
+* **An illustration, not a gate.** A2.2's "f ≤ 2 at four minutes per pair" illustrates this rule at
+  one assumed t̄. It is **not** an additional gate. The measured t̄ and the frozen n decide.
+
+### A8.8 — Order (each step separately authorized)
+
+1. This amendment (design only).
+2. The R1 amendment (A8.4–A8.5): gates closed, synthetic tests, injected-defect controls, regression,
+   a local commit.
+3. The fresh seed survey (A8.1).
+4. The pre-proof → the registration commit (ACCOUNTED + pilot plan) → the post-proof (A8.2–A8.3).
+5. The binding record and its review (A8.6).
+6. The pilot: `CANDIDATE_MATCH_AUTHORIZED` opened for one run (A1.2, A2.4, A3).
+7. The sizing record (A8.7), committed: stop, or proceed to study seed registration.
+
+### A8.9 — Scope
+
+Design amendment only. No survey execution, seed registration, R1 implementation, model loading,
+game, gate opening or push.
