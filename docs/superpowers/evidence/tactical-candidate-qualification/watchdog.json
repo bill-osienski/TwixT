@@ -1,0 +1,36 @@
+{
+ "card": "docs/superpowers/2026-10-05-tactical-candidate-evaluation-card.md",
+ "cause": null,
+ "child_exit": "exit status 0",
+ "child_pid": 94065,
+ "child_rc": 0,
+ "child_streams": {
+  "stderr": {
+   "bytes": 0,
+   "file": "child.stderr.txt",
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "stdout": {
+   "bytes": 23,
+   "file": "child.stdout.txt",
+   "sha256": "c0b2ec1ed5ff6f9e565fb365f891d2a55e91d7dee5327ba8ec4693d4c2aa7dba"
+  }
+ },
+ "elapsed_s": 221.27780058281496,
+ "journal": {
+  "file": "log.jsonl",
+  "lines": 219,
+  "sha256": "8a0ed8763616abf1db18b9ab76bba8fce79c017ab8dba9f8722e6a814da9904a"
+ },
+ "label": "TACTICAL CANDIDATE QUALIFICATION",
+ "limit_s": 3599.999347665813,
+ "observations_sha256": "6551e6d3efcdb49fc2f2417ce9a7ab68096ca8ee1f38ee58823fe9cfe2e8dbbd",
+ "record_present": true,
+ "record_readable": true,
+ "record_sha256": "698338279b8d6402b2a1aaf446fdebbd69ab03b833ad0a7937f18f50d65c5ace",
+ "record_status": "COMPLETE",
+ "signal": null,
+ "status": "COMPLETE",
+ "survivors_killed": false,
+ "verdict": "QUALIFIED"
+}

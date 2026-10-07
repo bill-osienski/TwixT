@@ -1,0 +1,137 @@
+{
+ "call_s": 120.0,
+ "calls": 109,
+ "card": "docs/superpowers/2026-10-05-tactical-candidate-evaluation-card.md",
+ "cleanup_failures": [],
+ "corpus_sha256": "1f040a9208fb3049de4fbf6e73884ad0fafa067fed3d9c275a4abbedf149179c",
+ "deadline_s": 3539.8386557498015,
+ "elapsed_s": 220.9995042500086,
+ "failure": null,
+ "incumbent_identity": {
+  "agent_lifetime": "one instance per game; both streams advance across the game",
+  "argmax_config": {
+   "board_size": 24,
+   "max_moves": 280,
+   "mcts_eval_batch_size": 14,
+   "mcts_sims": 400,
+   "mcts_stall_flush_sims": 48,
+   "opening_temp_plies": 20,
+   "selection_mode": "argmax",
+   "temp_high": 1.0,
+   "temp_low": 0.1
+  },
+  "design": "H5_STUDY",
+  "eval_config": {
+   "board_size": 24,
+   "max_moves": 280,
+   "mcts_eval_batch_size": 14,
+   "mcts_sims": 400,
+   "mcts_stall_flush_sims": 48,
+   "selection_mode": "argmax"
+  },
+  "inert_under_argmax": {
+   "opening_temp_plies": 20,
+   "temp_high": 1.0,
+   "temp_low": 0.1
+  },
+  "noise_note": "cfg_from does NOT pass dirichlet_eps, so MCTSConfig keeps its default 0.25; noise is suppressed at the call site instead. A schedule that declares dirichlet_eps=0 is declaring nothing.",
+  "noise_suppression": "search_with_root(state, add_noise=False)",
+  "plan_sha256": "c8b9cba816852a6752bc9a8ae7f74fe06529dcb5af5a06ac4bb6bda716cf8a30",
+  "readout_mask": {
+   "black": 3947580,
+   "red": 12829635
+  },
+  "readout_note": "H2's ONE gameplay-rule change: the incumbent plays the visit-count maximum. The listed settings are INERT under argmax and are recorded as such, never as 'unchanged'.",
+  "readout_path": "eval_readout.select, never mcts.select_move",
+  "reference": "calib020_0001",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "search_mask": {
+   "black": 5921370,
+   "red": 10855845
+  }
+ },
+ "label": "TACTICAL CANDIDATE QUALIFICATION",
+ "note": "production-path qualification on the frozen corpus; NOT strength",
+ "observations_sha256": "6551e6d3efcdb49fc2f2417ce9a7ab68096ca8ee1f38ee58823fe9cfe2e8dbbd",
+ "observed": 109,
+ "plan_sha256": "dae1e0f7b6723e64e99ae9154cc474fd3ff989f380396ba08b13f8e1c1d3fe7b",
+ "seed": -1,
+ "status": "COMPLETE",
+ "summary": {
+  "note": "production-path qualification: no strength claim",
+  "per_class": {
+   "DEFEND_MULTI": {
+    "median_scan_s": 0.0651991874910891,
+    "median_search_s": 1.0149253329727799,
+    "overrides": 9,
+    "positions": 20,
+    "rules": {
+     "override": 9,
+     "preserved": 11
+    },
+    "streams": {
+     "tq24-pegs": 19,
+     "tq24-uniform": 1
+    },
+    "unsearched": 1
+   },
+   "DEFEND_SINGLE": {
+    "median_scan_s": 0.07274791691452265,
+    "median_search_s": 0.9782706869300455,
+    "overrides": 12,
+    "positions": 20,
+    "rules": {
+     "override": 12,
+     "preserved": 8
+    },
+    "streams": {
+     "tq24-pegs": 15,
+     "tq24-uniform": 5
+    },
+    "unsearched": 1
+   },
+   "OWN_WIN": {
+    "median_scan_s": 0.021302146138623357,
+    "median_search_s": 0.0961665001232177,
+    "overrides": 0,
+    "positions": 20,
+    "rules": {
+     "preserved": 20
+    },
+    "streams": {
+     "tq24-pegs": 19,
+     "tq24-uniform": 1
+    },
+    "unsearched": 0
+   },
+   "QUIET": {
+    "median_scan_s": 0.03218227089382708,
+    "median_search_s": 1.109248541528359,
+    "overrides": 0,
+    "positions": 20,
+    "rules": {
+     "inactive": 20
+    },
+    "streams": {
+     "tq24-pegs": 19,
+     "tq24-uniform": 1
+    },
+    "unsearched": 0
+   },
+   "UNDEFENDABLE": {
+    "median_scan_s": 0.07111716666258872,
+    "median_search_s": 1.085313478950411,
+    "overrides": 0,
+    "positions": 20,
+    "rules": {
+     "inactive": 20
+    },
+    "streams": {
+     "tq24-pegs": 20
+    },
+    "unsearched": 0
+   }
+  }
+ },
+ "verdict": "QUALIFIED"
+}

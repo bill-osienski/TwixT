@@ -1,0 +1,219 @@
+{"observation": {"incumbent_identity": {"agent_lifetime": "one instance per game; both streams advance across the game", "argmax_config": {"board_size": 24, "max_moves": 280, "mcts_eval_batch_size": 14, "mcts_sims": 400, "mcts_stall_flush_sims": 48, "opening_temp_plies": 20, "selection_mode": "argmax", "temp_high": 1.0, "temp_low": 0.1}, "design": "H5_STUDY", "eval_config": {"board_size": 24, "max_moves": 280, "mcts_eval_batch_size": 14, "mcts_sims": 400, "mcts_stall_flush_sims": 48, "selection_mode": "argmax"}, "inert_under_argmax": {"opening_temp_plies": 20, "temp_high": 1.0, "temp_low": 0.1}, "noise_note": "cfg_from does NOT pass dirichlet_eps, so MCTSConfig keeps its default 0.25; noise is suppressed at the call site instead. A schedule that declares dirichlet_eps=0 is declaring nothing.", "noise_suppression": "search_with_root(state, add_noise=False)", "plan_sha256": "c8b9cba816852a6752bc9a8ae7f74fe06529dcb5af5a06ac4bb6bda716cf8a30", "readout_mask": {"black": 3947580, "red": 12829635}, "readout_note": "H2's ONE gameplay-rule change: the incumbent plays the visit-count maximum. The listed settings are INERT under argmax and are recorded as such, never as 'unchanged'.", "readout_path": "eval_readout.select, never mcts.select_move", "reference": "calib020_0001", "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e", "search_mask": {"black": 5921370, "red": 10855845}}}, "step": "model_load"}
+{"observation": {"id": "repro:E1"}, "step": "call_start"}
+{"observation": {"checks": 3, "id": "repro:E1"}, "step": "call"}
+{"observation": {"id": "repro:E2"}, "step": "call_start"}
+{"observation": {"checks": 3, "id": "repro:E2"}, "step": "call"}
+{"observation": {"id": "repro:E3"}, "step": "call_start"}
+{"observation": {"checks": 3, "id": "repro:E3"}, "step": "call"}
+{"observation": {"id": "repro:CD1"}, "step": "call_start"}
+{"observation": {"checks": 3, "id": "repro:CD1"}, "step": "call"}
+{"observation": {"id": "repro:CD2"}, "step": "call_start"}
+{"observation": {"checks": 3, "id": "repro:CD2"}, "step": "call"}
+{"observation": {"id": "corpus:000"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:000"}, "step": "call"}
+{"observation": {"id": "corpus:001"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:001"}, "step": "call"}
+{"observation": {"id": "corpus:002"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:002"}, "step": "call"}
+{"observation": {"id": "corpus:003"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:003"}, "step": "call"}
+{"observation": {"id": "corpus:004"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:004"}, "step": "call"}
+{"observation": {"id": "corpus:005"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:005"}, "step": "call"}
+{"observation": {"id": "corpus:006"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:006"}, "step": "call"}
+{"observation": {"id": "corpus:007"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:007"}, "step": "call"}
+{"observation": {"id": "corpus:008"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:008"}, "step": "call"}
+{"observation": {"id": "corpus:009"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:009"}, "step": "call"}
+{"observation": {"id": "corpus:010"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:010"}, "step": "call"}
+{"observation": {"id": "corpus:011"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:011"}, "step": "call"}
+{"observation": {"id": "corpus:012"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:012"}, "step": "call"}
+{"observation": {"id": "corpus:013"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:013"}, "step": "call"}
+{"observation": {"id": "corpus:014"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:014"}, "step": "call"}
+{"observation": {"id": "corpus:015"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:015"}, "step": "call"}
+{"observation": {"id": "corpus:016"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:016"}, "step": "call"}
+{"observation": {"id": "corpus:017"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:017"}, "step": "call"}
+{"observation": {"id": "corpus:018"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:018"}, "step": "call"}
+{"observation": {"id": "corpus:019"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:019"}, "step": "call"}
+{"observation": {"id": "corpus:020"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:020"}, "step": "call"}
+{"observation": {"id": "corpus:021"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:021"}, "step": "call"}
+{"observation": {"id": "corpus:022"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:022"}, "step": "call"}
+{"observation": {"id": "corpus:023"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:023"}, "step": "call"}
+{"observation": {"id": "corpus:024"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:024"}, "step": "call"}
+{"observation": {"id": "corpus:025"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:025"}, "step": "call"}
+{"observation": {"id": "corpus:026"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:026"}, "step": "call"}
+{"observation": {"id": "corpus:027"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:027"}, "step": "call"}
+{"observation": {"id": "corpus:028"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:028"}, "step": "call"}
+{"observation": {"id": "corpus:029"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:029"}, "step": "call"}
+{"observation": {"id": "corpus:030"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:030"}, "step": "call"}
+{"observation": {"id": "corpus:031"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:031"}, "step": "call"}
+{"observation": {"id": "corpus:032"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:032"}, "step": "call"}
+{"observation": {"id": "corpus:033"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:033"}, "step": "call"}
+{"observation": {"id": "corpus:034"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:034"}, "step": "call"}
+{"observation": {"id": "corpus:035"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:035"}, "step": "call"}
+{"observation": {"id": "corpus:036"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:036"}, "step": "call"}
+{"observation": {"id": "corpus:037"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:037"}, "step": "call"}
+{"observation": {"id": "corpus:038"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:038"}, "step": "call"}
+{"observation": {"id": "corpus:039"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:039"}, "step": "call"}
+{"observation": {"id": "corpus:040"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:040"}, "step": "call"}
+{"observation": {"id": "corpus:041"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:041"}, "step": "call"}
+{"observation": {"id": "corpus:042"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:042"}, "step": "call"}
+{"observation": {"id": "corpus:043"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:043"}, "step": "call"}
+{"observation": {"id": "corpus:044"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:044"}, "step": "call"}
+{"observation": {"id": "corpus:045"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:045"}, "step": "call"}
+{"observation": {"id": "corpus:046"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:046"}, "step": "call"}
+{"observation": {"id": "corpus:047"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:047"}, "step": "call"}
+{"observation": {"id": "corpus:048"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:048"}, "step": "call"}
+{"observation": {"id": "corpus:049"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:049"}, "step": "call"}
+{"observation": {"id": "corpus:050"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:050"}, "step": "call"}
+{"observation": {"id": "corpus:051"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:051"}, "step": "call"}
+{"observation": {"id": "corpus:052"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:052"}, "step": "call"}
+{"observation": {"id": "corpus:053"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:053"}, "step": "call"}
+{"observation": {"id": "corpus:054"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:054"}, "step": "call"}
+{"observation": {"id": "corpus:055"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:055"}, "step": "call"}
+{"observation": {"id": "corpus:056"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:056"}, "step": "call"}
+{"observation": {"id": "corpus:057"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:057"}, "step": "call"}
+{"observation": {"id": "corpus:058"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:058"}, "step": "call"}
+{"observation": {"id": "corpus:059"}, "step": "call_start"}
+{"observation": {"checks": 16, "id": "corpus:059"}, "step": "call"}
+{"observation": {"id": "corpus:060"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:060"}, "step": "call"}
+{"observation": {"id": "corpus:061"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:061"}, "step": "call"}
+{"observation": {"id": "corpus:062"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:062"}, "step": "call"}
+{"observation": {"id": "corpus:063"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:063"}, "step": "call"}
+{"observation": {"id": "corpus:064"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:064"}, "step": "call"}
+{"observation": {"id": "corpus:065"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:065"}, "step": "call"}
+{"observation": {"id": "corpus:066"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:066"}, "step": "call"}
+{"observation": {"id": "corpus:067"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:067"}, "step": "call"}
+{"observation": {"id": "corpus:068"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:068"}, "step": "call"}
+{"observation": {"id": "corpus:069"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:069"}, "step": "call"}
+{"observation": {"id": "corpus:070"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:070"}, "step": "call"}
+{"observation": {"id": "corpus:071"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:071"}, "step": "call"}
+{"observation": {"id": "corpus:072"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:072"}, "step": "call"}
+{"observation": {"id": "corpus:073"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:073"}, "step": "call"}
+{"observation": {"id": "corpus:074"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:074"}, "step": "call"}
+{"observation": {"id": "corpus:075"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:075"}, "step": "call"}
+{"observation": {"id": "corpus:076"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:076"}, "step": "call"}
+{"observation": {"id": "corpus:077"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:077"}, "step": "call"}
+{"observation": {"id": "corpus:078"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:078"}, "step": "call"}
+{"observation": {"id": "corpus:079"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:079"}, "step": "call"}
+{"observation": {"id": "corpus:080"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:080"}, "step": "call"}
+{"observation": {"id": "corpus:081"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:081"}, "step": "call"}
+{"observation": {"id": "corpus:082"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:082"}, "step": "call"}
+{"observation": {"id": "corpus:083"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:083"}, "step": "call"}
+{"observation": {"id": "corpus:084"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:084"}, "step": "call"}
+{"observation": {"id": "corpus:085"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:085"}, "step": "call"}
+{"observation": {"id": "corpus:086"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:086"}, "step": "call"}
+{"observation": {"id": "corpus:087"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:087"}, "step": "call"}
+{"observation": {"id": "corpus:088"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:088"}, "step": "call"}
+{"observation": {"id": "corpus:089"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:089"}, "step": "call"}
+{"observation": {"id": "corpus:090"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:090"}, "step": "call"}
+{"observation": {"id": "corpus:091"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:091"}, "step": "call"}
+{"observation": {"id": "corpus:092"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:092"}, "step": "call"}
+{"observation": {"id": "corpus:093"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:093"}, "step": "call"}
+{"observation": {"id": "corpus:094"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:094"}, "step": "call"}
+{"observation": {"id": "corpus:095"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:095"}, "step": "call"}
+{"observation": {"id": "corpus:096"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:096"}, "step": "call"}
+{"observation": {"id": "corpus:097"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:097"}, "step": "call"}
+{"observation": {"id": "corpus:098"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:098"}, "step": "call"}
+{"observation": {"id": "corpus:099"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "corpus:099"}, "step": "call"}
+{"observation": {"id": "boundary:own-win-279"}, "step": "call_start"}
+{"observation": {"checks": 15, "id": "boundary:own-win-279"}, "step": "call"}
+{"observation": {"id": "boundary:threat-279"}, "step": "call_start"}
+{"observation": {"checks": 14, "id": "boundary:threat-279"}, "step": "call"}
+{"observation": {"id": "boundary:ply-280"}, "step": "call_start"}
+{"observation": {"checks": 5, "id": "boundary:ply-280"}, "step": "call"}
+{"observation": {"id": "boundary:board-8"}, "step": "call_start"}
+{"observation": {"checks": 4, "id": "boundary:board-8"}, "step": "call"}

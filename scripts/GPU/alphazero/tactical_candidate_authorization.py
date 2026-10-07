@@ -5,4 +5,4 @@ It guards the qualification steps: the corpus freeze (`tactical_corpus`, run onc
 and the real-model qualification run (`tactical_qualification`). Each is opened for ONE step
 under its own authorization and restored on every exit. This file may hold ONLY this declaration.
 """
-TACTICAL_CANDIDATE_QUALIFICATION_AUTHORIZED = True
+TACTICAL_CANDIDATE_QUALIFICATION_AUTHORIZED = False

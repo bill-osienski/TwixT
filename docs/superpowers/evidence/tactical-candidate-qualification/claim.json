@@ -1,0 +1,8 @@
+{
+ "claimed_monotonic": 3450769.727848291,
+ "claimed_utc": "2026-10-07T00:50:00Z",
+ "corpus_sha256": "1f040a9208fb3049de4fbf6e73884ad0fafa067fed3d9c275a4abbedf149179c",
+ "nonce_sha256": "1d34ead753730e9db41e2236dd06ffe2efff3ce5bcff1a66116294352e4beda6",
+ "parent_pid": 94052,
+ "plan_sha256": "dae1e0f7b6723e64e99ae9154cc474fd3ff989f380396ba08b13f8e1c1d3fe7b"
+}
