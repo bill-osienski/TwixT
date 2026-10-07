@@ -1459,3 +1459,150 @@ game limits.
 
 Design amendment only. No survey execution, seed registration, R1 implementation, model loading,
 game, gate opening or push.
+
+---
+
+## 19. Amendment A9 — 2026-10-07, the pilot tooling: interfaces, destinations, recording contracts (A8.8 step 3; design, before implementation)
+
+Three tools, implemented together with the gates closed, on synthetic inputs only:
+
+* the post-segment verification procedure (A8.7);
+* the outcome-blind pilot report (A1.2, A2.4);
+* the sizing and runtime-projection computation (A1.4, A2.1–A2.2, A8.7).
+
+**No statistical parameter changes.** Running any of these tools on real evidence is A8.8 step 8, and
+it is separately authorized.
+
+### A9.1 — Module, entries, gate
+
+* **One module,** `scripts/GPU/alphazero/tactical_pilot.py`, with three public entries: `verify(role,
+  segment)`, `report()` and `size()`.
+  * **CLI:** `python -m scripts.GPU.alphazero.tactical_pilot verify --role R --segment K | report |
+    size`. It takes no output-directory argument.
+  * Each entry reads the gate **before anything else**.
+  * The arithmetic is pure functions, tested on their own: the Clopper–Pearson bound, σ_plan, both n
+    formulas, the method rule, the packing and the projection.
+* **One new gate, created closed:** `TACTICAL_PILOT_ANALYSIS_AUTHORIZED` in
+  `tactical_pilot_authorization.py`, the 27th. It guards all three entries. It is opened for one step
+  under that step's own authorization and restored on every exit. The gate inventory's expected set
+  gains it in a deliberate edit.
+
+### A9.2 — The recording contract (all three)
+
+* **Refusals write nothing.** That covers a closed gate, an unknown role or segment, an occupied
+  destination, and an **absent** prerequisite.
+* **After the refusals, the outcome is always recorded:**
+  * a check that fails becomes a recorded non-pass verdict (NOT_VERIFIED or STOP), with its step and
+    reason;
+  * an unexpected exception is recorded the same way, with its type;
+  * an interruption is recorded, then re-raised.
+* **Each record is create-only.** Its complete bytes are fsynced in a temporary file in its
+  destination, published under their name by a create-only link, and then the directory is synced. A
+  record is never visible incomplete.
+* **One-shot:** no retry and no replacement destination. Every input is bound by sha256 in the record.
+* **Every consumer enforces A8.5 item 5.** `finalized.json` must be present, committed, FINALIZED and
+  bound, and `finalization_failed.json` absent. Each tool uses R1's own `_read_finalization`, and the
+  report and sizing also use R1's `_read_verification`, so the acceptance rules are R1's, not copies.
+
+### A9.3 — The post-segment verification procedure
+
+* **Destination:** `docs/superpowers/evidence/tactical-candidate-verification/{role}-s{k}.json`. The
+  pilot is `pilot-s0`; study segments are `study-s{k}`.
+* **Checks** (outcome-blind; no move, terminal or witness is read):
+  * the segment's plan is committed;
+  * the claim: plan sha256, role, segment;
+  * `claim.json`, `log.jsonl`, `record.json`, `watchdog.json`, `timing.json` and `finalized.json`
+    are committed and unmodified;
+  * the finalization: A8.5 item 5;
+  * the watchdog: COMPLETE and COMPLETE, and its journal and record hashes;
+  * the record: card, mode, COMPLETE, and the plan's hash and content;
+  * its games are the plan's pairs × arms, in order, and its replay checks name every pair;
+  * the watchdog's elapsed time is finite and non-negative;
+  * `timing.json` is valid (R1's `_read_timing`);
+  * **the per-game loop:** each game file lies directly inside `games/`, is committed, and has the hash
+    the record gives it.
+* **Its timing.** One monotonic clock, from the module's first statement (before every other import):
+  * `t_games_s` = the time spent in the per-game loop;
+  * `t_fixed_s` = (just before the record is written − the first statement) − `t_games_s`.
+  * The record's own write is not timed. These are inputs to a **planning estimate** (A8.7), not a
+    bound.
+* **The record:** `card`, `role`, `segment`, `verdict` (VERIFIED or NOT_VERIFIED), `failure`,
+  `watchdog_sha256`, `record_sha256`, `timing_sha256`, `finalized_sha256`, `game_files`, `t_fixed_s`,
+  `t_games_s`, `clock` and `note`. These are exactly the fields R1's `_read_verification` reads.
+
+### A9.4 — The outcome-blind pilot report
+
+* **Destination:** `docs/superpowers/evidence/tactical-candidate-pilot-report/report.json`.
+* **Prerequisite** (absent → refusal): the pilot's committed verification record.
+* **Consumer checks** (failing → a recorded STOP):
+  * R1's `_read_verification`: VERIFIED, bound to the pilot's watchdog, record and timing, and the
+    game count;
+  * R1's `_read_finalization`;
+  * a plan of exactly 16 pairs (D5).
+* **Reads ONLY:**
+  * per game: the pair id, the arm, the termination type (win or cap), the move list (compared for
+    equality only), each candidate witness's baseline and final moves with its `scan_s` and
+    `search_s`, and the game's wall time;
+  * the `timing.json` intervals.
+* **Never reads or computes:** a winner, a score, a per-colour result, a terminal ply, a game length,
+  the record's replay summaries (`agree_through`), or any variance.
+* **Computes:**
+  * **firing:** a pair fires if any candidate decision in either game has a final move different from
+    its baseline move. f = the number of firing pairs;
+  * **exact replay:** every non-firing pair has equal move lists and equal termination types;
+  * **capped pairs:** pairs with at least one capped game;
+  * **the scan share** = Σ `scan_s` / Σ (`scan_s` + `search_s`) over every candidate decision. This is
+    the operational definition of A2.4's "aggregate candidate decision time";
+  * **timing:** G = the sum of the game wall times; t̄ = G / 16; O and its four components (A8.7); the
+    pilot's duration = m4 − m0 from `timing.json`.
+* **Stops** (A1.2, A2.4), each recorded:
+  * f = 0;
+  * a non-firing pair that is not move-identical;
+  * a scan share above 0.25;
+  * 4 or more capped pairs;
+  * a pilot longer than 14,400 s;
+  * a timing that is not finite or is negative, or child < G;
+  * any integrity failure.
+* **Verdict:** PROCEED_TO_SIZING, or STOP with **every** stop that applies.
+* **The record:** the verdict and stops, 16 pairs, f, the firing pair ids, the capped pairs, the replay
+  result, the scan share, G, t̄, O and its components, the pilot's duration, and the input hashes.
+
+### A9.5 — The sizing and runtime projection
+
+* **Destination:** `docs/superpowers/evidence/tactical-candidate-sizing/sizing.json`.
+* **Prerequisite** (absent → refusal): the committed report. A STOP report is refused: no sizing.
+* **Consumer checks** (failing → a recorded STOP):
+  * the report's measurements are **re-derived from the evidence** by the same function and must equal
+    the report's;
+  * R1's `_read_verification` and `_read_finalization` on the pilot.
+* **Constants — those of A1–A2 and A8, nothing new:**
+  * Δ = 0.05; α = 0.05, two-sided; z = Φ⁻¹(0.80);
+  * the Hoeffding constant √(ln 40 / 2); the EB term ln 80;
+  * p_U = the one-sided 95 % Clopper–Pearson upper bound for f of 16 (f = 16 → 1);
+  * σ_plan = min(0.5, √p_U / 2);
+  * the method: the smaller n, a tie choosing Hoeffding;
+  * 80 h = 288,000 s; the margin 1.25; the segment 14,400 s; the child margin 60 s.
+  * **Exact or printed constants: it does not matter.** The exact z and √(ln 40 / 2), and the printed
+    0.8416 and 1.3581, give the same n for every f = 1…16, and both reproduce A2.2's table. The tool
+    uses the exact values and pins the whole f → n table.
+* **The computation (A8.7):**
+  * b = `t_games_s` / `game_files`; V(c) = `t_fixed_s` + b × 2c;
+  * c_j^max = ⌊(14,400 − 60 − O − Σ_{i<j} V(c_i)) / t̄⌋, filled in order;
+  * **STOP** if any segment still needed has c_j^max < 1;
+  * verification = Σᵢ (k + 1 − i) × V(c_i);
+  * projected = 1.25 × (n × t̄ + k × O + verification);
+  * **STOP** if projected > 288,000 s. n is never shrunk.
+* **Per segment j,** its planned pairs c_j and its `verification_reserve_s` = V(c_j), plus Σᵢ V(c_i) in
+  the last. These are what each study plan carries (A8.5 item 4).
+* **The record also states:**
+  * the chosen method's assumption (A2.5: independence for Hoeffding; i.i.d. pairs, assumed, for EB);
+  * that n is a planning approximation, not a power guarantee (A2.3);
+  * that V is a planning estimate (A8.7).
+
+### A9.6 — Scope
+
+This is the contract, committed before the code. The implementation follows with the gates closed,
+synthetic inputs only, tests, injected-defect controls, the regression and local commits.
+
+The spent qualification and corpus modules stay untouched. No survey, seed registration,
+binding-record run, model load, game, pilot run or push.
