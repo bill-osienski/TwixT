@@ -1086,6 +1086,11 @@ workload-scaled **planning estimate**, not a bound (A8.7); R1's 80-hour backstop
 time (A8.5 item 4, with A8.6's allowlist updated for it); an unreadable file or a failed decompression
 stops the survey (A8.1).
 
+*Clarified on review, 2026-10-06, before the repair:* a failure or interruption after `watchdog.json`
+exists is recorded in a separate, create-only `finalization_failed.json`; `finalized.json` is the
+parent's last act, and every consumer requires it and rejects the failure record (A8.5 item 5). A8.6
+names `_nonneg` and the finalization helpers.
+
 ### A8.1 — A fresh seed survey (read-only)
 
 * **Method:** H5's survey (`evidence/2026-09-27-t1j-h5-seed-survey/01_h5_seed_survey.py`), i.e. H4's
@@ -1292,7 +1297,30 @@ Any failure refuses before the claim (parent) or before the load (child). Nothin
    * **Not reserved:** this segment's settlement after the limit (seconds). It is measured in its
      `timing.json` and counted by the next check.
 
-Apart from items 1–4, nothing changes in agent construction, games, pairing, the replay check or the
+5. **Finalization — the parent's last act, and late failures recorded** (clarified on review).
+   * **The last act.** After `watchdog.json`, the parent writes `timing.json` (item 3), then
+     `finalized.json`: `{"status": "FINALIZED", "watchdog_sha256", "timing_sha256"}`. Its complete
+     bytes are written to a temporary file and fsynced, published under their name by a create-only
+     link, and then the directory is synced. `finalized.json` never appears incomplete under its name.
+   * **Late failures are recorded.** A failure or interruption once `watchdog.json` exists — whole or
+     not — is recorded in a separate, create-only, fsynced `finalization_failed.json`. That covers its
+     own write, `timing.json`, `finalized.json`, or any sync. The record holds the stage, the status
+     (FINALIZE_FAILED, SETTLE_FAILED or INTERRUPTED), the failure and which files are present. The
+     existing watchdog, record and game evidence are preserved, never rewritten. An interruption is
+     re-raised after it is recorded.
+   * **Every consumer** — R1's predecessor check (item 4), the post-segment verification (A8.7), the
+     pilot report and the sizing computation (A8.8 step 3) — accepts a segment only if:
+     * `finalized.json` is present, committed, FINALIZED and bound to the segment's own
+       `watchdog.json` and `timing.json`; **and**
+     * `finalization_failed.json` is absent.
+
+     This holds **even when both JSON files exist and parse.**
+   * **Residual, stated:** if recording a late failure itself fails — a double fault — nothing more can
+     be recorded.
+     * Before the link, `finalized.json` is absent, so consumers reject the segment.
+     * After the link, its content was complete and synced; only the directory sync is in doubt.
+
+Apart from items 1–5, nothing changes in agent construction, games, pairing, the replay check or the
 game limits.
 
 ### A8.6 — The binding consequence: the unchanged agent-construction path, verified
@@ -1318,7 +1346,9 @@ game limits.
      * **The allowlist** (may change, or be added): the guard and its constants; `_create`, the SIGINT
        hold and `_record_parent_failure`; `_T_START` and the timing writer (A8.5 item 3);
        `_validate_segment`, `_segment_limit` and new helpers that read a predecessor's `timing.json`
-       and verification record (A8.5 item 4); `_claim`, `run`, `run_claimed`, `_run`, `main`; and
+       and verification record (A8.5 item 4); `_nonneg`, the finite, nonnegative check shared by
+       those readers and the reserve check; `_finalize`, `_write_finalized`, `_read_finalization`
+       and their path helpers (A8.5 item 5); `_claim`, `run`, `run_claimed`, `_run`, `main`; and
        standard-library imports.
      * Inside `_run`, the `production_builder(…)` and `play_game(…)` call nodes are identical.
   2. **The import closure.** Every repository module R1 reaches by import, anywhere in a module and
