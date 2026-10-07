@@ -1077,6 +1077,10 @@ from a deliberately selected corpus; they are **not** an estimate of how often t
 A8 fixes how the 16-pair pilot is prepared. **It chooses no new parameter:** Δ, the power target, the
 method rule, the ceiling, the margin and the limits are those of A1–A2.
 
+*Corrected on review, 2026-10-06, before any implementation:* A8.1's scan scope (H5's full coverage,
+kept) and its exempt paths, enumerated; A8.5's timing record; A8.6's review clause; A8.7's overhead
+measurements and whole-pair packing (replacing "S × k"); A8.8's tooling step.
+
 ### A8.1 — A fresh seed survey (read-only)
 
 * **Method:** H5's survey (`evidence/2026-09-27-t1j-h5-seed-survey/01_h5_seed_survey.py`), i.e. H4's
@@ -1091,9 +1095,20 @@ method rule, the ceiling, the margin and the limits are those of A1–A2.
   * every named spent block: D1, H1, H2, H3 (with its retired segment blocks), H4's five and H5's four
     (`h5_runner.SEED_BLOCKS`);
   * H3's generation ranges;
-  * every repository literal in the nine-digit 2026 band, **at every occurrence**, in every tracked
-    file. The only exemptions are (a) `(lo, hi)` elements inside the four registry assignments,
-    located by parsing, and (b) the survey's own pinned records.
+  * every literal in the nine-digit 2026 band, **at every occurrence**, in every file in scope (below).
+    The only exemptions are those of A8.2, fixed now.
+* **Scan scope — H5's coverage, kept and not narrowed.** H5's `repo_files()` scanned every file under
+  `scripts/`, `tests/` and `docs/superpowers/` whatever its git state — tracked, untracked or ignored,
+  including historical run logs kept as `.txt` or `.jsonl` — but only five suffixes
+  (`.py .md .json .jsonl .txt`). Under those roots
+  that filter skips files that can hold literals: 16 `.log` files, plus `.csv`, `.sh`, `.js`/`.mjs`,
+  `.java`, `.diff`, `.sha256`, `.gz` and suffix-less files. So the scope is:
+  * **every regular file under the same three roots**, whatever its git state or suffix;
+  * read as text with undecodable bytes ignored; `.gz` decompressed first;
+  * the survey record lists the files scanned, by suffix and git state, so the coverage is auditable.
+  
+  **Stated, not claimed:** an integer stored in binary form (compiled `.pyc`, `.class`) cannot be seen
+  by a decimal scan. Its source, where the roots hold it, is scanned.
 * **Per candidate seed:**
   * the seed and its four XOR-mask derivations (`SEARCH_MASK` and `READOUT_MASK`, both colours, read
     from `SeededReferenceAgent`) are disjoint from every prior term;
@@ -1111,9 +1126,10 @@ method rule, the ceiling, the margin and the limits are those of A1–A2.
 * **Not in the band, stated rather than assumed clean:** the corpus streams (`Random("tq24-…:{seed}")`,
   seeds 0–3,999), the test seeds (1,000,000+) and the synthetic negative seeds. None is a band seed of
   `SeededReferenceAgent`.
-* **Destination:** `docs/superpowers/evidence/<date>-tactical-candidate-seed-survey/`:
-  * `01` is the script, committed before its run and holding no seed literal;
-  * `02` is the run record, create-only.
+* **Destination,** fixed and undated so that its paths are known now:
+  `docs/superpowers/evidence/tactical-candidate-seed-survey/`.
+  * `01_seed_survey.py` is the script, committed before its run and holding no seed literal;
+  * `02_seed_survey_run.txt` is the run record, create-only.
 * **Pilot only.** The study block is surveyed separately later, with the pilot block as a prior term
   (§7.4: pilot and study seeds are disjoint).
 
@@ -1126,11 +1142,21 @@ method rule, the ceiling, the margin and the limits are those of A1–A2.
   * it appends **one** tuple `(BASE, BASE + 32)` to `ACCOUNTED_SEED_INTERVALS`, as plain integers, with
     a comment naming the pilot. It does **not** touch EXPOSED, RETIRED or TEST_ONLY;
   * it adds the pilot plan (A8.3).
-* **Literal exemptions in the post-proof,** under the same rule pre and post:
-  * that registry tuple;
-  * the committed pilot plan, at exactly its path, whose seeds must equal the survey's block.
+* **The exemptions — enumerated now, before anything runs; the same for the survey, the pre-proof and
+  the post-proof.** Exact paths, not prefixes:
+  1. `docs/superpowers/evidence/tactical-candidate-seed-survey/01_seed_survey.py`
+  2. `docs/superpowers/evidence/tactical-candidate-seed-survey/02_seed_survey_run.txt`
+  3. `docs/superpowers/evidence/tactical-candidate-seed-registration/01_collision_proof.py`
+  4. `docs/superpowers/evidence/tactical-candidate-seed-registration/02_collision_proof_pre_run.txt`
+  5. `docs/superpowers/evidence/tactical-candidate-seed-registration/03_collision_proof_post_run.txt`
+  6. `docs/superpowers/evidence/tactical-candidate-plans/pilot-s0.json` — exempt **only** if every
+     band literal in it is a seed of the surveyed block; otherwise it is scanned like any file.
   
-  Nothing else spells the seeds. Tests and cards read them from the survey record.
+  And, by occurrence rather than path: the `(lo, hi)` integer elements inside the four registry
+  assignments of `scripts/GPU/alphazero/e4_screen_reference.py`, located by parsing.
+
+  **Nothing else is exempt.** Tests, cards, the binding record and all other evidence never spell the
+  seeds; tests read them from record 2.
 * **Exposure and retirement follow actual use.** A later closing edit, separately authorized, derives
   exposure from the pilot's committed game starts (as H5's `92d1b8e7`) and then retires (as
   `6c8ab5d3`). Nothing is marked in advance.
@@ -1221,8 +1247,25 @@ Any failure refuses before the claim (parent) or before the load (child). Nothin
      closed, its errors are recorded in `record.json` with the first failure kept, and an interruption
      is re-raised after the record.
 
+3. **A segment timing record,** for A8.7. The parent reads one monotonic clock at five points:
+   * m0 — `_T_START`, R1's first statement (before every import except `__future__`);
+   * m1 — entry to `run()`;
+   * m2 — immediately before `_watch_games` (after the claim);
+   * m3 — immediately after `_watch_games` returns;
+   * m4 — immediately after `watchdog.json` is written.
+
+   It then writes `timing.json` — create-only, fsynced — holding start-up = m1 − m0, pre-launch =
+   m2 − m1, child = m3 − m2 and settlement = m4 − m3. The four intervals tile [m0, m4] without overlap;
+   only the `timing.json` write itself falls outside them. Start-up means something only when the
+   process was started for this run (the CLI). **Not measured:** the interpreter's own start before
+   R1's first statement.
+
 It changes nothing in agent construction, games, pairing, the replay check, game limits, segment
 validation or the 80-hour check.
+
+**Stated limit, not changed by A8.** R1's in-study backstop (`_segment_limit`) sums each predecessor's
+watchdog `elapsed_s`, i.e. its child time only. It undercounts the 80 hours as A2.2 defines them. The
+binding stop is the projection of A8.7, made before the study starts.
 
 ### A8.6 — The binding consequence: the unchanged agent-construction path, verified
 
@@ -1246,8 +1289,8 @@ validation or the 80-hour check.
        `out_dir`, `plan_path`, `_committed_plan`, `_validate_segment`, `_segment_limit` and
        `_child_argv`.
      * **The allowlist** (may change, or be added): the guard and its constants; `_create`, the SIGINT
-       hold and `_record_parent_failure`; `_claim`, `run`, `run_claimed`, `_run`, `main`; and
-       standard-library imports.
+       hold and `_record_parent_failure`; `_T_START` and the timing writer (A8.5 item 3); `_claim`,
+       `run`, `run_claimed`, `_run`, `main`; and standard-library imports.
      * Inside `_run`, the `production_builder(…)` and `play_game(…)` call nodes are identical.
   2. **The import closure.** Every repository module R1 reaches by import, anywhere in a module and
      transitively, other than R1, is byte-identical to its blob at `d815461e`. That includes
@@ -1265,6 +1308,9 @@ validation or the 80-hour check.
 * **The binding review before play.** It runs **after** registration, at the exact pre-play state. You
   review the committed R1 diff, the binding record and the guard's verdict before the pilot is
   authorized. Nothing re-runs the qualification.
+  * **The mechanical record supports the review; it does not replace it.** Changes **inside** the
+    allowlisted functions are reviewed line by line against A8.4 and A8.5. The AST check only shows
+    that nothing outside them moved.
 
 ### A8.7 — After the pilot: the stop rule, as frozen
 
@@ -1277,12 +1323,42 @@ validation or the 80-hour check.
   * any operational or integrity failure.
 * **Then, the frozen n:** the A2.1 method's n at Δ = 0.05 and σ_plan(f), chosen and committed with
   the method before any study seed (A1.4 steps 3–4 and 7; A2.1).
-* **The measured projection** (A2.2): projected = 1.25 × (n × t̄ + setup and verification).
-  * t̄ is the mean wall time per pilot pair, from the pilot's game records: both games, scans included.
-  * Setup and verification = S × k, where:
-    * S = the pilot's parent-measured elapsed time minus the sum of its game wall times. That covers
-      the model load, the claim, validation, recording and settlement.
-    * k = ⌈n × t̄ / (4 h − S)⌉, the number of 4-hour segments the study needs (A2.4).
+* **The projection, unchanged** (A2.2): projected = 1.25 × (game time + setup + verification). Its
+  three terms come from **separate, non-overlapping measurements** of the completed pilot:
+  * **Game time.** G = the sum of the 32 games' recorded wall times, measured in the child (both
+    agents and the scans included). t̄ = G / 16 per pair. The study's game time = n × t̄.
+  * **Per-segment overhead** (A8.5 item 3), from the pilot's `timing.json` and game records:
+    O = start-up + pre-launch + (child − G) + settlement.
+    * It covers R1's start-up from its first statement, the checks before launch, the claim, the child's start-up and model
+      load, the gaps between games, recording and settlement.
+    * The pilot validates no predecessor, so O contains no predecessor validation. That is costed
+      under verification, once.
+    * The study's setup = k × O.
+  * **Verification** — the frozen post-segment verification procedure (A8.8 step 3), committed
+    before the pilot.
+    * It is outcome-blind and does everything R1's `_validate_segment` does for one segment —
+      durability, the claim, the watchdog's journal and record hashes, the record's plan binding and
+      game sequence, every game file's hash — plus checking `timing.json`.
+    * **V** = its own wall time, read on one monotonic clock from its first statement to just before
+      its record is written, from **one** run on the committed pilot evidence.
+    * V bounds R1's validation of one predecessor, because it does a superset of the same reads and
+      hashes.
+    * The study's verification is V × (2k + k(k − 1)/2), counting each occurrence once:
+      * after each of the k segments, one run (k);
+      * inside R1, segment j validates its j predecessors before its claim (k(k − 1)/2 in all);
+      * **the one-off final verification** before the analysis: the procedure over all k segments once
+        more (k).
+  * **k by whole-pair packing.** A segment's 4 hours include its setup (A2.4). R1's child stops
+    `MARGIN_S` (60 s) before the segment limit `SEGMENT_DEADLINE_S` (14,400 s).
+    * Segment j (j = 0, 1, …) can hold c_j = ⌊(14,400 − 60 − O − j × V) / t̄⌋ **whole pairs**.
+    * Pairs are packed into segments 0, 1, … in order, min(c_j, the pairs remaining) each. k is the
+      number of segments used.
+    * *Example:* if every c_j = 14, then 100 pairs need ⌈100 / 14⌉ = 8 segments, not 7.
+  * **Refusals — stop and review, with no sizing:**
+    * any timing that is missing, not finite or negative;
+    * t̄ ≤ 0, or child < G;
+    * a pilot that is not COMPLETE, or a game record missing;
+    * a capacity c_j < 1 for any segment still needed: one pair cannot fit a segment.
   * **If projected > 80 h: stop before starting.** n is never shrunk.
 * **An illustration, not a gate.** A2.2's "f ≤ 2 at four minutes per pair" illustrates this rule at
   one assumed t̄. It is **not** an additional gate. The measured t̄ and the frozen n decide.
@@ -1292,11 +1368,15 @@ validation or the 80-hour check.
 1. This amendment (design only).
 2. The R1 amendment (A8.4–A8.5): gates closed, synthetic tests, injected-defect controls, regression,
    a local commit.
-3. The fresh seed survey (A8.1).
-4. The pre-proof → the registration commit (ACCOUNTED + pilot plan) → the post-proof (A8.2–A8.3).
-5. The binding record and its review (A8.6).
-6. The pilot: `CANDIDATE_MATCH_AUTHORIZED` opened for one run (A1.2, A2.4, A3).
-7. The sizing record (A8.7), committed: stop, or proceed to study seed registration.
+3. The outcome-blind pilot tooling, committed **before** the pilot: the post-segment verification
+   procedure (A8.7), the pilot report (A1.2) and the sizing computation (A1.4, A2.1–A2.2, A8.7). Gates
+   closed, synthetic tests, controls, regression.
+4. The fresh seed survey (A8.1).
+5. The pre-proof → the registration commit (ACCOUNTED + pilot plan) → the post-proof (A8.2–A8.3).
+6. The binding record and its review (A8.6).
+7. The pilot: `CANDIDATE_MATCH_AUTHORIZED` opened for one run (A1.2, A2.4, A3).
+8. The verification run on the pilot evidence (it measures V), the pilot report, then the sizing
+   record (A8.7), committed: stop, or proceed to study seed registration.
 
 ### A8.9 — Scope
 
