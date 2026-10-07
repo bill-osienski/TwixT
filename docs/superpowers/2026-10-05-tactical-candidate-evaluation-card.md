@@ -1081,6 +1081,11 @@ method rule, the ceiling, the margin and the limits are those of A1–A2.
 kept) and its exempt paths, enumerated; A8.5's timing record; A8.6's review clause; A8.7's overhead
 measurements and whole-pair packing (replacing "S × k"); A8.8's tooling step.
 
+*Corrected again on review, 2026-10-06, before any implementation:* verification time is a
+workload-scaled **planning estimate**, not a bound (A8.7); R1's 80-hour backstop counts full measured
+time (A8.5 item 4, with A8.6's allowlist updated for it); an unreadable file or a failed decompression
+stops the survey (A8.1).
+
 ### A8.1 — A fresh seed survey (read-only)
 
 * **Method:** H5's survey (`evidence/2026-09-27-t1j-h5-seed-survey/01_h5_seed_survey.py`), i.e. H4's
@@ -1104,7 +1109,11 @@ measurements and whole-pair packing (replacing "S × k"); A8.8's tooling step.
   that filter skips files that can hold literals: 16 `.log` files, plus `.csv`, `.sh`, `.js`/`.mjs`,
   `.java`, `.diff`, `.sha256`, `.gz` and suffix-less files. So the scope is:
   * **every regular file under the same three roots**, whatever its git state or suffix;
-  * read as text with undecodable bytes ignored; `.gz` decompressed first;
+  * `.gz` decompressed first; read as UTF-8 with each undecodable byte **replaced** by U+FFFD, a
+    non-digit, so that no digit run is joined or split. (H5 dropped such bytes, which could join a
+    stray digit onto a literal and hide it.);
+  * **fail-closed:** a file that cannot be read (any OS error), or a `.gz` that fails to decompress,
+    **stops the survey with no verdict.** It is never skipped;
   * the survey record lists the files scanned, by suffix and git state, so the coverage is auditable.
   
   **Stated, not claimed:** an integer stored in binary form (compiled `.pyc`, `.class`) cannot be seen
@@ -1155,8 +1164,10 @@ measurements and whole-pair packing (replacing "S × k"); A8.8's tooling step.
   And, by occurrence rather than path: the `(lo, hi)` integer elements inside the four registry
   assignments of `scripts/GPU/alphazero/e4_screen_reference.py`, located by parsing.
 
-  **Nothing else is exempt.** Tests, cards, the binding record and all other evidence never spell the
-  seeds; tests read them from record 2.
+  **Nothing else is exempt.** Until the post-proof is committed, nothing else spells the seeds; tests
+  and cards read them from record 2. Evidence written **later** — R1's pilot record embeds its plan —
+  is not exempt either. For any later survey (the study's) those seeds are prior terms, as they should
+  be.
 * **Exposure and retirement follow actual use.** A later closing edit, separately authorized, derives
   exposure from the pilot's committed game starts (as H5's `92d1b8e7`) and then retires (as
   `6c8ab5d3`). Nothing is marked in advance.
@@ -1260,12 +1271,29 @@ Any failure refuses before the claim (parent) or before the load (child). Nothin
    process was started for this run (the CLI). **Not measured:** the interpreter's own start before
    R1's first statement.
 
-It changes nothing in agent construction, games, pairing, the replay check, game limits, segment
-validation or the 80-hour check.
+4. **The 80-hour backstop counts full measured time** (A2.2, A2.4), replacing child time alone.
+   Before a study segment's claim, R1 refuses unless every predecessor validates — as now — **and**,
+   for each predecessor i:
+   * its `timing.json` is committed and unmodified, and holds four finite, non-negative intervals;
+   * its post-segment verification record (A8.7) is committed and unmodified, and is bound to that
+     segment: the watchdog, record and timing hashes it verified. Its verdict is VERIFIED and its
+     measured time is finite and non-negative.
 
-**Stated limit, not changed by A8.** R1's in-study backstop (`_segment_limit`) sums each predecessor's
-watchdog `elapsed_s`, i.e. its child time only. It undercounts the 80 hours as A2.2 defines them. The
-binding stop is the projection of A8.7, made before the study starts.
+   **used** = Σ over predecessors of (m4 − m0 from its `timing.json`) + (its verification record's
+   measured time).
+   * **No double count.** The predecessor checks that segment i made before its own claim lie inside
+     its pre-launch interval and are counted there, once. The verification records are separate runs.
+   * **The check.** The segment starts only if used + (this process's time so far, from m0) +
+     `SEGMENT_DEADLINE_S` + the plan's `verification_reserve_s` ≤ 80 h.
+   * **The reserve.** `verification_reserve_s` is carried in each study segment's committed plan and
+     computed by the frozen sizing computation (A8.7): the estimate V(c_j) for this segment's own
+     post-segment verification, plus, in the last segment's plan only, the one-off final verification.
+     It must be finite and non-negative.
+   * **Not reserved:** this segment's settlement after the limit (seconds). It is measured in its
+     `timing.json` and counted by the next check.
+
+Apart from items 1–4, nothing changes in agent construction, games, pairing, the replay check or the
+game limits.
 
 ### A8.6 — The binding consequence: the unchanged agent-construction path, verified
 
@@ -1286,11 +1314,12 @@ binding stop is the projection of A8.7, made before the study starts.
        `game_digest`, `play_game`, `first_override`, `check_pair`, `_failure`, `_file_sha`,
        `_fsync_dir`, `_Partial`, `_game_file`, `_write`, `_write_all`, `_save_game`, `_unconsumed`,
        `_accept_claim`, `_open_game`, `_watch_games`, `_inventory`, `_settle`, `_gate`, `_role`,
-       `out_dir`, `plan_path`, `_committed_plan`, `_validate_segment`, `_segment_limit` and
-       `_child_argv`.
+       `out_dir`, `plan_path`, `_committed_plan` and `_child_argv`.
      * **The allowlist** (may change, or be added): the guard and its constants; `_create`, the SIGINT
-       hold and `_record_parent_failure`; `_T_START` and the timing writer (A8.5 item 3); `_claim`,
-       `run`, `run_claimed`, `_run`, `main`; and standard-library imports.
+       hold and `_record_parent_failure`; `_T_START` and the timing writer (A8.5 item 3);
+       `_validate_segment`, `_segment_limit` and new helpers that read a predecessor's `timing.json`
+       and verification record (A8.5 item 4); `_claim`, `run`, `run_claimed`, `_run`, `main`; and
+       standard-library imports.
      * Inside `_run`, the `production_builder(…)` and `play_game(…)` call nodes are identical.
   2. **The import closure.** Every repository module R1 reaches by import, anywhere in a module and
      transitively, other than R1, is byte-identical to its blob at `d815461e`. That includes
@@ -1329,36 +1358,53 @@ binding stop is the projection of A8.7, made before the study starts.
     agents and the scans included). t̄ = G / 16 per pair. The study's game time = n × t̄.
   * **Per-segment overhead** (A8.5 item 3), from the pilot's `timing.json` and game records:
     O = start-up + pre-launch + (child − G) + settlement.
-    * It covers R1's start-up from its first statement, the checks before launch, the claim, the child's start-up and model
-      load, the gaps between games, recording and settlement.
+    * It covers R1's start-up from its first statement, the checks before launch, the claim, the
+      child's start-up and model load, the gaps between games, recording and settlement.
     * The pilot validates no predecessor, so O contains no predecessor validation. That is costed
       under verification, once.
     * The study's setup = k × O.
-  * **Verification** — the frozen post-segment verification procedure (A8.8 step 3), committed
-    before the pilot.
-    * It is outcome-blind and does everything R1's `_validate_segment` does for one segment —
-      durability, the claim, the watchdog's journal and record hashes, the record's plan binding and
-      game sequence, every game file's hash — plus checking `timing.json`.
-    * **V** = its own wall time, read on one monotonic clock from its first statement to just before
-      its record is written, from **one** run on the committed pilot evidence.
-    * V bounds R1's validation of one predecessor, because it does a superset of the same reads and
-      hashes.
-    * The study's verification is V × (2k + k(k − 1)/2), counting each occurrence once:
-      * after each of the k segments, one run (k);
-      * inside R1, segment j validates its j predecessors before its claim (k(k − 1)/2 in all);
-      * **the one-off final verification** before the analysis: the procedure over all k segments once
-        more (k).
-  * **k by whole-pair packing.** A segment's 4 hours include its setup (A2.4). R1's child stops
-    `MARGIN_S` (60 s) before the segment limit `SEGMENT_DEADLINE_S` (14,400 s).
-    * Segment j (j = 0, 1, …) can hold c_j = ⌊(14,400 − 60 − O − j × V) / t̄⌋ **whole pairs**.
-    * Pairs are packed into segments 0, 1, … in order, min(c_j, the pairs remaining) each. k is the
-      number of segments used.
-    * *Example:* if every c_j = 14, then 100 pairs need ⌈100 / 14⌉ = 8 segments, not 7.
+  * **Verification — a workload-scaled planning estimate, not a bound.**
+    * **The procedure.** The frozen post-segment verification procedure (A8.8 step 3) is committed
+      before the pilot. It is outcome-blind and does everything R1's `_validate_segment` does for one
+      segment — durability, the claim, the watchdog's journal and record hashes, the record's plan
+      binding and game sequence, every game file's hash — plus checking `timing.json`.
+    * **Its record.** It writes, create-only, one record per segment:
+      `docs/superpowers/evidence/tactical-candidate-verification/{role}-s{k}.json`. The record holds
+      the hashes it verified, its verdict, its game-file count and its time in two parts, both on one
+      monotonic clock:
+      * **t_games** — its per-game loop: each game's entry checks, its file's durability and its hash;
+      * **t_fixed** — everything else: start-up, the core files (claim, journal, record, watchdog,
+        timing) and the segment-level checks.
+    * **Measured once,** on the committed pilot evidence: t_fixed, and b = t_games / 32, per game file.
+    * **The scaling rule, frozen now:** verifying a segment of c planned pairs is estimated at
+      V(c) = t_fixed + b × 2c, linear in its planned game files with the pilot's fixed part.
+      * **It is a planning estimate.** Timing 16 pairs does not establish the cost of a larger
+        segment, and a procedure that does more checks need not take longer. The 25 % margin is
+        retained, and nothing else pads it.
+      * R1's own validation of a predecessor of c pairs, inside a later segment's pre-launch, is
+        estimated by the same V(c). It performs the same reads and hashes.
+    * **The study's verification,** for segments i = 0..k − 1 of c_i planned pairs, counting each
+      occurrence once:
+      * after each segment, one run: Σᵢ V(c_i);
+      * inside R1, every later segment validates segment i: (k − 1 − i) × V(c_i);
+      * **the one-off final verification** before the analysis, the procedure over every segment
+        once more: Σᵢ V(c_i).
+      * In all: Σᵢ (k + 1 − i) × V(c_i).
+  * **k by whole-pair packing, with those estimates.** A segment's 4 hours include its setup and its
+    validation of its predecessors (A2.4). R1's child stops `MARGIN_S` (60 s) before the segment limit
+    `SEGMENT_DEADLINE_S` (14,400 s).
+    * Segment j (j = 0, 1, …) can hold at most
+      c_j^max = ⌊(14,400 − 60 − O − Σ_{i<j} V(c_i)) / t̄⌋ **whole pairs**.
+    * Segments are filled in order: c_j = min(c_j^max, the pairs remaining). k is the number of
+      segments used.
+    * *Example:* if every c_j^max = 14, then 100 pairs need ⌈100 / 14⌉ = 8 segments, not 7.
+  * **The projection, assembled:**
+    projected = 1.25 × (n × t̄ + k × O + Σᵢ (k + 1 − i) × V(c_i)).
   * **Refusals — stop and review, with no sizing:**
-    * any timing that is missing, not finite or negative;
+    * any timing that is missing, not finite or negative, including t_fixed and t_games;
     * t̄ ≤ 0, or child < G;
     * a pilot that is not COMPLETE, or a game record missing;
-    * a capacity c_j < 1 for any segment still needed: one pair cannot fit a segment.
+    * a capacity c_j^max < 1 for any segment still needed: one pair cannot fit a segment.
   * **If projected > 80 h: stop before starting.** n is never shrunk.
 * **An illustration, not a gate.** A2.2's "f ≤ 2 at four minutes per pair" illustrates this rule at
   one assumed t̄. It is **not** an additional gate. The measured t̄ and the frozen n decide.
@@ -1369,14 +1415,15 @@ binding stop is the projection of A8.7, made before the study starts.
 2. The R1 amendment (A8.4–A8.5): gates closed, synthetic tests, injected-defect controls, regression,
    a local commit.
 3. The outcome-blind pilot tooling, committed **before** the pilot: the post-segment verification
-   procedure (A8.7), the pilot report (A1.2) and the sizing computation (A1.4, A2.1–A2.2, A8.7). Gates
-   closed, synthetic tests, controls, regression.
+   procedure with its two-part timing and its record (A8.7), the pilot report (A1.2), and the sizing
+   computation (A1.4, A2.1–A2.2, A8.7), including each study plan's `verification_reserve_s` (A8.5
+   item 4). Gates closed, synthetic tests, controls, regression.
 4. The fresh seed survey (A8.1).
 5. The pre-proof → the registration commit (ACCOUNTED + pilot plan) → the post-proof (A8.2–A8.3).
 6. The binding record and its review (A8.6).
 7. The pilot: `CANDIDATE_MATCH_AUTHORIZED` opened for one run (A1.2, A2.4, A3).
-8. The verification run on the pilot evidence (it measures V), the pilot report, then the sizing
-   record (A8.7), committed: stop, or proceed to study seed registration.
+8. The verification run on the pilot evidence (it measures t_fixed and b), the pilot report, then the
+   sizing record (A8.7), committed: stop, or proceed to study seed registration.
 
 ### A8.9 — Scope
 
