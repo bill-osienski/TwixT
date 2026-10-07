@@ -1503,6 +1503,34 @@ it is separately authorized.
 * **Every consumer enforces A8.5 item 5.** `finalized.json` must be present, committed, FINALIZED and
   bound, and `finalization_failed.json` absent. Each tool uses R1's own `_read_finalization`, and the
   report and sizing also use R1's `_read_verification`, so the acceptance rules are R1's, not copies.
+* **Ownership and publication, protected** (corrected on review, 2026-10-07, before the repair). Each
+  record is named by its stem: `report`, `sizing`, or `{role}-s{k}`.
+  * **Ownership.** `report()` and `size()` create their destination directory themselves. `verify()`
+    claims its record by the exclusive creation of the record's temporary file. Both happen under a
+    held SIGINT, and the destination is marked as ours before an interruption can surface. A
+    destination another invocation created is never written to.
+  * **Publication, the last act.** The record is published as above. Then its marker,
+    `{stem}.published.json` = `{"status": "PUBLISHED", "record": "{stem}.json", "record_sha256"}`, is
+    published the same way.
+  * **Late failures are recorded.** Once the destination is ours, a failure or interruption is
+    recorded in a separate, create-only, fsynced `{stem}.publication_failed.json`, with the step, the
+    status (PUBLICATION_FAILED or INTERRUPTED), the failure and the files present. That covers:
+    * just after its creation;
+    * before the record is written, after its complete bytes, at its link, or during a sync;
+    * anywhere in the marker.
+
+    An existing record is never rewritten. An interruption is re-raised after it is recorded. A failed
+    check is still recorded **in** the record, as before.
+  * **Every consumer** accepts a tool record only if `{stem}.published.json` is present, committed,
+    PUBLISHED and bound to the record's sha256, **and** `{stem}.publication_failed.json` is absent —
+    even when the record exists and parses.
+    * R1's `_read_verification` gains these checks: a minimal change, inside A8.6's allowlist.
+    * `size()` applies them to the report.
+    * Any later consumer of the sizing record must apply them too.
+  * **Occupied** now also means a marker, a failure record or a temporary file of the stem.
+  * **Residual, stated** (as A8.5 item 5): a double fault, where recording the failure itself fails,
+    cannot be recorded. Before the marker's link, consumers reject the record; after it, only the
+    marker's directory sync is in doubt.
 
 ### A9.3 — The post-segment verification procedure
 
@@ -1529,6 +1557,8 @@ it is separately authorized.
 * **The record:** `card`, `role`, `segment`, `verdict` (VERIFIED or NOT_VERIFIED), `failure`,
   `watchdog_sha256`, `record_sha256`, `timing_sha256`, `finalized_sha256`, `game_files`, `t_fixed_s`,
   `t_games_s`, `clock` and `note`. These are exactly the fields R1's `_read_verification` reads.
+  Beside it sit `{role}-s{k}.published.json` and, after a late failure, `{role}-s{k}.publication_failed.json`
+  (A9.2).
 
 ### A9.4 — The outcome-blind pilot report
 
