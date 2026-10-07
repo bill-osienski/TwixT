@@ -80,12 +80,25 @@ def _failure(step: str, e: BaseException) -> Dict[str, Any]:
             "status": "INTERRUPTED" if isinstance(e, (KeyboardInterrupt, SystemExit)) else "FAILED"}
 
 
-def _publish(d: pathlib.Path, name: str, obj: Mapping[str, Any]) -> str:
+def _published_path(d: pathlib.Path, stem: str) -> pathlib.Path:
+    return d / f"{stem}.published.json"
+
+
+def _failed_path(d: pathlib.Path, stem: str) -> pathlib.Path:
+    return d / f"{stem}.publication_failed.json"
+
+
+def _publish(d: pathlib.Path, name: str, obj: Mapping[str, Any], owned: Optional[List[bool]] = None) -> str:
     """A9.2: the complete bytes, fsynced in a temporary file, published by a create-only link;
-    then the directory is synced. A record is never visible incomplete."""
+    then the directory is synced. A record is never visible incomplete. The temporary file is
+    created exclusively under a held SIGINT and `owned` is marked before an interruption can
+    surface: that creation is how `verify` claims its record."""
     raw = (json.dumps(obj, indent=1, sort_keys=True) + "\n").encode()
     tmp = d / f".{name}.partial"
-    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+    with CM._sigint_held():
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+        if owned is not None:
+            owned[0] = True
     try:
         CM._write_all(fd, raw)
         os.fsync(fd)
@@ -95,6 +108,58 @@ def _publish(d: pathlib.Path, name: str, obj: Mapping[str, Any]) -> str:
     os.unlink(tmp)
     CM._fsync_dir(d)
     return _sha(raw)
+
+
+def _publish_record(d: pathlib.Path, stem: str, record: Mapping[str, Any], at: List[str],
+                    owned: Optional[List[bool]] = None) -> None:
+    """A9.2: the record, then -- the LAST act -- its marker, bound to the record's sha256."""
+    at[0] = "record"
+    sha = _publish(d, f"{stem}.json", record, owned)
+    at[0] = "marker"
+    _publish(d, _published_path(d, stem).name, {"status": "PUBLISHED", "record": f"{stem}.json",
+                                                "record_sha256": sha})
+
+
+def _record_publication_failure(d: pathlib.Path, stem: str, e: BaseException, step: str) -> None:
+    """A9.2: a failure or interruption once the destination is ours, recorded in a separate,
+    create-only, fsynced file; an existing record is never rewritten."""
+    target = _failed_path(d, stem)
+    if target.exists():
+        return
+    body = {"card": CARD, "record": f"{stem}.json", "step": step,
+            "status": "INTERRUPTED" if isinstance(e, (KeyboardInterrupt, SystemExit)) else "PUBLICATION_FAILED",
+            "failure": {"exception_type": type(e).__name__, "reason": str(e)},
+            "record_present": (d / f"{stem}.json").exists(), "published_present": _published_path(d, stem).exists()}
+    try:
+        with open(target, "x", encoding="utf-8") as fh:
+            json.dump(body, fh, indent=1, sort_keys=True)
+            fh.flush()
+            os.fsync(fh.fileno())
+    except Exception:                            # noqa: BLE001 -- nothing more can be recorded
+        return
+    try:
+        CM._fsync_dir(d)
+    except Exception:                            # noqa: BLE001 -- the record itself is written
+        pass
+
+
+def read_published(d: pathlib.Path, stem: str, bad: Callable[[str], Exception]) -> Dict[str, Any]:
+    """A9.2: a CONSUMER's check of a tool record -- no recorded publication failure; the record and
+    its marker committed; the marker PUBLISHED and bound to THIS record. Even when the record
+    exists and parses. Returns the record."""
+    if _failed_path(d, stem).exists():
+        raise bad(f"{stem}.json: its publication failed ({_failed_path(d, stem).name})")
+    path, marker = d / f"{stem}.json", _published_path(d, stem)
+    try:
+        F.check_durable([str(path), str(marker)], _fixture=False)
+    except F.H4AnalysisRefused as e:
+        raise bad(f"{stem}.json was never published, or is not committed ({e})") from None
+    m = json.loads(marker.read_text(encoding="utf-8"))
+    if not isinstance(m, dict) or (m.get("status"), m.get("record")) != ("PUBLISHED", f"{stem}.json"):
+        raise bad(f"{stem}.json is not PUBLISHED")
+    if m.get("record_sha256") != CM._file_sha(str(path)):
+        raise bad(f"{stem}.json is not the one published")
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _gate() -> None:
@@ -177,7 +242,10 @@ def verify(role: str, segment: int) -> Dict[str, Any]:
     except CM.MatchRefused as e:
         raise PilotRefused(str(e)) from None
     path = CM.verification_path(role, segment)
-    if path.exists() or (path.parent / f".{path.name}.partial").exists():
+    stem, vdir = path.stem, path.parent
+    leftovers = (path, vdir / f".{path.name}.partial", _published_path(vdir, stem),
+                 vdir / f".{_published_path(vdir, stem).name}.partial", _failed_path(vdir, stem))
+    if any(p.exists() for p in leftovers):
         raise PilotRefused(f"{path} is occupied: each segment is verified once")
     d = CM.out_dir(role, segment)
     if not d.is_dir():
@@ -201,7 +269,13 @@ def verify(role: str, segment: int) -> Dict[str, Any]:
               "clock": "time.monotonic, from tactical_pilot's first statement",
               "note": "outcome-blind; its times feed a PLANNING ESTIMATE (A8.7), not a bound; the record's "
                       "own write is not timed"}
-    _publish(path.parent, path.name, record)
+    owned, step = [False], ["record"]
+    try:                                         # A9.2: from the claim on, every exit is recorded
+        _publish_record(vdir, stem, record, step, owned)
+    except BaseException as e:
+        if owned[0]:
+            _record_publication_failure(vdir, stem, e, step[0])
+        raise
     if interrupt is not None:
         raise interrupt
     return record
@@ -312,20 +386,33 @@ def _dest(name: str) -> pathlib.Path:
     return pathlib.Path(R4.EVIDENCE_ROOT) / name
 
 
-def _recorded(out: pathlib.Path, name: str, compute: Callable[[List[str]], Dict[str, Any]],
+def _recorded(out: pathlib.Path, stem: str, compute: Callable[[List[str]], Dict[str, Any]],
               stop_key: str) -> Dict[str, Any]:
-    """A9.2: create the one-shot destination; compute; ALWAYS record the outcome, with its step."""
-    os.mkdir(out)
-    interrupt, at = None, ["start"]
+    """A9.2: create the one-shot destination (ours under a held SIGINT); compute; ALWAYS record
+    the outcome with its step -- a failed check IN the record, a failure from the creation through
+    the publication in {stem}.publication_failed.json."""
+    ours, step, interrupt = False, ["create"], None
     try:
-        record = compute(at)
-    except (KeyboardInterrupt, SystemExit) as e:
-        record, interrupt = {"verdict": "STOP", "failure": _failure(at[0], e)}, e
-    except Exception as e:                       # noqa: BLE001 -- a recorded STOP
-        record = {"verdict": "STOP", "failure": _failure(at[0], e)}
-    record = {"card": CARD, **record}
-    record.setdefault(stop_key, [])
-    _publish(out, name, record)
+        with CM._sigint_held():
+            try:
+                os.mkdir(out)
+            except FileExistsError:
+                raise PilotRefused(f"{out} is occupied: {stem} is one-shot") from None
+            ours = True
+        at = ["start"]
+        try:
+            record = compute(at)
+        except (KeyboardInterrupt, SystemExit) as e:
+            record, interrupt = {"verdict": "STOP", "failure": _failure(at[0], e)}, e
+        except Exception as e:                   # noqa: BLE001 -- a recorded STOP
+            record = {"verdict": "STOP", "failure": _failure(at[0], e)}
+        record = {"card": CARD, **record}
+        record.setdefault(stop_key, [])
+        _publish_record(out, stem, record, step)
+    except BaseException as e:
+        if ours:
+            _record_publication_failure(out, stem, e, step[0])
+        raise
     if interrupt is not None:
         raise interrupt
     return record
@@ -349,7 +436,7 @@ def report() -> Dict[str, Any]:
         return {"verdict": "STOP" if s else "PROCEED_TO_SIZING", "stops": s, "measurements": m,
                 "note": "outcome-blind (A1.2): no winner, score, per-colour result, terminal ply, game length, "
                         "replay summary or variance was read"}
-    return _recorded(out, "report.json", compute, "stops")
+    return _recorded(out, "report", compute, "stops")
 
 
 # ─────────────────────────────── A9.5: the frozen sizing rule ───────────────────────────────
@@ -451,11 +538,8 @@ def size() -> Dict[str, Any]:
     if os.path.lexists(out):
         raise PilotRefused(f"{out} is occupied: the sizing is one-shot")
     rpath = _dest(REPORT_DIR) / "report.json"
-    try:
-        F.check_durable([str(rpath)], _fixture=False)
-    except F.H4AnalysisRefused as e:
-        raise PilotRefused(f"the pilot report is absent or uncommitted ({e})") from None
-    rep = json.loads(rpath.read_text(encoding="utf-8"))
+    rep = read_published(_dest(REPORT_DIR), "report",
+                         lambda why: PilotRefused(f"the pilot report is absent, uncommitted or unpublished: {why}"))
     if rep.get("verdict") != "PROCEED_TO_SIZING":
         raise PilotRefused(f"the pilot report says {rep.get('verdict')!r}: no sizing (A1.2, A2.4)")
 
@@ -469,7 +553,7 @@ def size() -> Dict[str, Any]:
         result = plan_study(m["fired_pairs"], m["t_bar_s"], m["O_s"], v["t_fixed_s"], v["t_games_s"],
                             v["game_files"])
         return {**result, "inputs": {**m["inputs"], "report_sha256": CM._file_sha(str(rpath))}}
-    return _recorded(out, "sizing.json", compute, "stops")
+    return _recorded(out, "sizing", compute, "stops")
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:

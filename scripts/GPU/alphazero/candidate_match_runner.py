@@ -841,13 +841,22 @@ def _read_finalization(d: pathlib.Path, bad: Callable[[str], MatchRefused], watc
 
 def _read_verification(role: str, k: int, files: Mapping[str, str], games: int,
                        bad: Callable[[str], MatchRefused]) -> float:
-    """A8.5 item 4: a segment's verification record -- committed, unmodified, for THIS segment,
-    bound to the watchdog, record and timing it verified, VERIFIED. Returns its measured time."""
+    """A8.5 item 4: a segment's verification record -- committed, unmodified, PUBLISHED with no
+    recorded publication failure (A9.2), for THIS segment, bound to the watchdog, record and timing
+    it verified, VERIFIED. Returns its measured time."""
     path = verification_path(role, k)
+    marker, failed = path.parent / f"{path.stem}.published.json", path.parent / f"{path.stem}.publication_failed.json"
+    if failed.exists():                          # A9.2: a tool record is read only if PUBLISHED
+        raise bad(f"its verification record's publication failed ({failed.name})")
     try:
-        F.check_durable([str(path)], _fixture=False)
+        F.check_durable([str(path), str(marker)], _fixture=False)
     except F.H4AnalysisRefused as e:
-        raise bad(f"its verification record is not committed ({e})") from None
+        raise bad(f"its verification record is not committed, or was never published ({e})") from None
+    m = json.loads(marker.read_text(encoding="utf-8"))
+    if not isinstance(m, dict) or (m.get("status"), m.get("record")) != ("PUBLISHED", path.name):
+        raise bad("its verification record is not PUBLISHED")
+    if m.get("record_sha256") != _file_sha(str(path)):
+        raise bad("its verification record is not the one published")
     v = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(v, dict) or (v.get("role"), v.get("segment")) != (role, k):
         raise bad("its verification record is for another segment")

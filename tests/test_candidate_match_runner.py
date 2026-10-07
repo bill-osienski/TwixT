@@ -643,6 +643,13 @@ def write_verification(role, k, d, **over):
          "record_sha256": CM._file_sha(str(d / "record.json")),
          "timing_sha256": CM._file_sha(str(d / "timing.json")), **VERIFY, **over}
     path.write_text(json.dumps(v))
+    publish_marker(path)
+
+
+def publish_marker(path):
+    """A9.2: the verification record's PUBLISHED marker, bound to the record as it is now."""
+    (path.parent / f"{path.stem}.published.json").write_text(json.dumps(
+        {"status": "PUBLISHED", "record": path.name, "record_sha256": CM._file_sha(str(path))}))
 
 
 @pytest.fixture(scope="module")
@@ -1244,7 +1251,12 @@ def test_a_COMPLETE_run_records_no_cleanup_failure(complete):
 # ─────────────────────────────── A8.5 item 4: predecessor timing and verification ─────────────
 
 def _ver(f):
-    return lambda d: _edit_json(CM.verification_path("study", 0), f)
+    """Edit the verification record AND re-bind its marker, so the edit reaches its own check."""
+    return lambda d: (_edit_json(CM.verification_path("study", 0), f), publish_marker(CM.verification_path("study", 0)))
+
+
+def _vmarker(f):
+    return lambda d: _edit_json(CM.verification_path("study", 0).parent / "study-s0.published.json", f)
 
 
 def _timing(f):
@@ -1261,7 +1273,18 @@ BREAKS_A8 = {
     "timing startup missing": (_timing(lambda t: t.pop("startup_s")), "not a finite, nonnegative"),
     "verification missing": (lambda d: CM.verification_path("study", 0).unlink(),
                              "verification record is not committed"),
-    "verification not JSON": (lambda d: CM.verification_path("study", 0).write_text("x"), "malformed"),
+    "verification not JSON": (lambda d: (CM.verification_path("study", 0).write_text("x"),
+                                         publish_marker(CM.verification_path("study", 0))), "malformed"),
+    "verification never published": (
+        lambda d: (CM.verification_path("study", 0).parent / "study-s0.published.json").unlink(), "never published"),
+    "verification publication failed": (
+        lambda d: (CM.verification_path("study", 0).parent / "study-s0.publication_failed.json").write_text("{}"),
+        "publication failed"),
+    "verification marker not PUBLISHED": (_vmarker(lambda m: m.update(status="X")), "not PUBLISHED"),
+    "verification marker bound to another record": (_vmarker(lambda m: m.update(record_sha256="0" * 64)),
+                                                     "not the one published"),
+    "verification record edited after publication": (
+        lambda d: _edit_json(CM.verification_path("study", 0), lambda v: v.update(extra=1)), "not the one published"),
     "verification for segment 3": (_ver(lambda v: v.update(segment=3)), "for another segment"),
     "verification for the pilot": (_ver(lambda v: v.update(role="pilot")), "for another segment"),
     "verification of another watchdog": (_ver(lambda v: v.update(watchdog_sha256="0" * 64)), "verified other files"),

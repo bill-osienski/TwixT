@@ -162,7 +162,8 @@ def test_VERIFY_a_genuine_segment_and_R1_ACCEPTS_its_record(ev, scripted):
         tuple(CM._file_sha(str(d / n)) for n in (CM.WATCHDOG_FILE, "timing.json", "finalized.json"))
     timing = 2.0 + 3.0 + (3_840.0 + 50.0) + 4.0
     assert CM._validate_segment("study", 0) == timing + 18.0 + 32.0
-    assert [x.name for x in CM.verification_path("study", 0).parent.iterdir()] == ["study-s0.json"], "no temporary"
+    assert sorted(x.name for x in CM.verification_path("study", 0).parent.iterdir()) == \
+        ["study-s0.json", "study-s0.published.json"], "no temporary, no failure record"
 
 
 def test_PUBLICATION_is_CREATE_ONLY(tmp_path):
@@ -316,6 +317,7 @@ def test_a_RECORD_is_never_visible_incomplete(ev, monkeypatch):
         TP.verify("pilot", 0)
     assert not CM.verification_path("pilot", 0).exists()
     assert (CM.verification_path("pilot", 0).parent / ".pilot-s0.json.partial").exists()
+    assert _failed(_vdir(), "pilot-s0")["step"] == "record", "the failed publication is recorded"
     monkeypatch.setattr(CM, "_write", os.write)
     with pytest.raises(TP.PilotRefused, match="occupied"):
         TP.verify("pilot", 0)
@@ -369,7 +371,8 @@ def test_REPORT_a_genuine_pilot_PROCEEDS_with_its_blind_measurements(ev, scripte
     assert m["scan_share"] == pytest.approx(0.01 / 1.01)
     assert (m["G_s"], m["t_bar_s"], m["O_s"], m["pilot_s"]) == (3_840.0, 240.0, 59.0, 3_899.0)
     out = pathlib.Path(R4.EVIDENCE_ROOT) / TP.REPORT_DIR
-    assert sorted(os.listdir(out)) == ["report.json"] and json.loads((out / "report.json").read_text()) == rep
+    assert sorted(os.listdir(out)) == ["report.json", "report.published.json"]
+    assert json.loads((out / "report.json").read_text()) == rep
 
 
 def test_REPORT_LEAKS_no_outcome_and_is_INVARIANT_to_every_outcome_field(ev, scripted, tmp_path, monkeypatch):
@@ -460,16 +463,23 @@ def test_REPORT_STOPS_on_a_NEGATIVE_game_time(ev, scripted):
     assert (rep["verdict"], rep["failure"]["step"]) == ("STOP", "games")
 
 
+def _republish(d, stem):
+    """Re-bind a tool record's marker to the record as it is now (an edit then reaches its check)."""
+    _edit(f"{stem}.published.json", lambda m: m.update(record_sha256=CM._file_sha(str(d / f"{stem}.json"))))(d)
+
+
 #: consumer checks after the verification: markers, binding, files
 CONSUMER = {
     "finalized.json removed after verification": (_unlink("finalized.json"), "finalization"),
     "a late failure recorded after verification": (_write("finalization_failed.json", "{}"), "finalization"),
     "the verification bound to another record": (
-        lambda d: _edit("pilot-s0.json", lambda v: v.update(record_sha256="0" * 64))(
-            CM.verification_path("pilot", 0).parent), "verification"),
+        lambda d: (_edit("pilot-s0.json", lambda v: v.update(record_sha256="0" * 64))(_vdir()),
+                   _republish(_vdir(), "pilot-s0")), "verification"),
     "the verification NOT_VERIFIED": (
-        lambda d: _edit("pilot-s0.json", lambda v: v.update(verdict="NOT_VERIFIED"))(
-            CM.verification_path("pilot", 0).parent), "verification"),
+        lambda d: (_edit("pilot-s0.json", lambda v: v.update(verdict="NOT_VERIFIED"))(_vdir()),
+                   _republish(_vdir(), "pilot-s0")), "verification"),
+    "the verification's publication failed": (lambda d: (_vdir() / "pilot-s0.publication_failed.json").write_text("{}"),
+                                              "verification"),
     "a game file altered after verification": (       # still a valid game: only the hash can tell
         lambda d: _edit("pilot-09-A.json", lambda g: g.update(seconds=1.0))(d / CM.GAMES_DIR), "games"),
 }
@@ -651,7 +661,7 @@ def test_SIZE_a_slow_pilot_STOPS_before_starting(ev, scripted):
 
 
 def test_SIZE_refuses_a_STOP_report_and_an_absent_one(ev, scripted):
-    with pytest.raises(TP.PilotRefused, match="absent or uncommitted"):
+    with pytest.raises(TP.PilotRefused, match="absent, uncommitted or unpublished"):
         TP.size()
     build(specs=[{} for _ in range(16)])
     assert _pipeline()["verdict"] == "STOP"
@@ -661,8 +671,8 @@ def test_SIZE_refuses_a_STOP_report_and_an_absent_one(ev, scripted):
 
 
 @pytest.mark.parametrize("name,breakage,step", [
-    ("the report altered", lambda d: _edit("report.json", lambda r: r["measurements"].update(fired_pairs=2))(
-        pathlib.Path(R4.EVIDENCE_ROOT) / TP.REPORT_DIR), "report"),
+    ("the report altered", lambda d: (_edit("report.json", lambda r: r["measurements"].update(fired_pairs=2))(_rdir()),
+                                      _republish(_rdir(), "report")), "report"),
     ("a late failure recorded after the report", _write("finalization_failed.json", "{}"), "finalization"),
     ("finalized.json removed after the report", _unlink("finalized.json"), "finalization"),
 ], ids=["report altered", "late failure", "finalized removed"])
@@ -672,3 +682,253 @@ def test_SIZE_as_a_CONSUMER_STOPS_on_a_changed_report_or_failed_finalization(ev,
     breakage(d)
     s = TP.size()
     assert (s["verdict"], s["failure"]["step"]) == ("STOP", step), s.get("failure")
+
+
+# ─────────────────────────────── A9.2 (corrected): ownership and publication, protected ─────────
+
+class PubTrip:
+    """One-shot fault injection into a tool's publication of `stem`: its 'record' (holds
+    "verdict") or its 'marker' (holds "PUBLISHED") -- before writing, after the complete bytes, at
+    the file's sync, at the link, or at the directory's sync."""
+
+    def __init__(self, monkeypatch, d, stem, kind, when, exc):
+        self.fired, self.armed = False, False
+        real_all, real_fsync, real_dir, real_link = CM._write_all, os.fsync, CM._fsync_dir, os.link
+        token = b'"verdict"' if kind == "record" else b'"PUBLISHED"'
+        target = f"{stem}.json" if kind == "record" else f"{stem}.published.json"
+
+        def fire():
+            if not self.fired:
+                self.fired = True
+                raise exc(f"publication probe: {kind} {when}")
+
+        def write_all(fd, raw):
+            mine = token in bytes(raw)
+            if mine and when == "before writing":
+                fire()
+            real_all(fd, raw)
+            if mine and when == "after complete bytes":
+                fire()
+            self.armed = mine and when == "file sync"
+
+        def fsync(fd):
+            if self.armed:
+                self.armed = False
+                fire()
+            real_fsync(fd)
+
+        def fsync_dir(path):
+            rec, mark = (d() / f"{stem}.json").exists(), (d() / f"{stem}.published.json").exists()
+            if when == "directory sync" and ((kind == "record" and rec and not mark) or (kind == "marker" and mark)):
+                fire()
+            real_dir(path)
+
+        def link(src, dst, *a, **k):
+            if when == "link" and pathlib.Path(dst).name == target:
+                fire()
+            return real_link(src, dst, *a, **k)
+        monkeypatch.setattr(CM, "_write_all", write_all)
+        monkeypatch.setattr(os, "fsync", fsync)
+        monkeypatch.setattr(CM, "_fsync_dir", fsync_dir)
+        monkeypatch.setattr(os, "link", link)
+
+
+PUB = [(k, w) for k in ("record", "marker") for w in ("before writing", "after complete bytes", "file sync", "link",
+                                                     "directory sync")]
+LINKED = {("record", "directory sync")} | {("marker", w) for _k, w in PUB}
+
+
+def _vdir():
+    return CM.verification_path("pilot", 0).parent
+
+
+def _rdir():
+    return pathlib.Path(R4.EVIDENCE_ROOT) / TP.REPORT_DIR
+
+
+def _sdir():
+    return pathlib.Path(R4.EVIDENCE_ROOT) / TP.SIZING_DIR
+
+
+def _failed(d, stem):
+    return json.loads((d / f"{stem}.publication_failed.json").read_text())
+
+
+@pytest.mark.parametrize("exc,status", [(RuntimeError, "PUBLICATION_FAILED"), (KeyboardInterrupt, "INTERRUPTED")])
+@pytest.mark.parametrize("kind,when", PUB, ids=[f"{k}-{w}" for k, w in PUB])
+def test_a_VERIFICATION_publication_failure_is_RECORDED_and_R1_REJECTS(ev, monkeypatch, kind, when, exc, status):
+    build()
+    PubTrip(monkeypatch, _vdir, "pilot-s0", kind, when, exc)
+    with pytest.raises(exc, match="publication probe"):
+        TP.verify("pilot", 0)
+    f = _failed(_vdir(), "pilot-s0")
+    assert (f["step"], f["status"], f["failure"]["exception_type"]) == (kind, status, exc.__name__)
+    if (kind, when) in LINKED:                   # the record stands, valid, VERIFIED -- and is still rejected
+        assert vrec()["verdict"] == "VERIFIED"
+    with pytest.raises(CM.MatchRefused, match="publication failed"):
+        CM._read_verification("pilot", 0, {}, 32, lambda w: CM.MatchRefused(w))
+
+
+@pytest.mark.parametrize("exc,status", [(RuntimeError, "PUBLICATION_FAILED"), (KeyboardInterrupt, "INTERRUPTED")])
+@pytest.mark.parametrize("kind,when", PUB, ids=[f"{k}-{w}" for k, w in PUB])
+def test_a_REPORT_publication_failure_is_RECORDED_and_SIZE_REFUSES(ev, scripted, monkeypatch, kind, when, exc, status):
+    build()
+    TP.verify("pilot", 0)
+    PubTrip(monkeypatch, _rdir, "report", kind, when, exc)
+    with pytest.raises(exc, match="publication probe"):
+        TP.report()
+    f = _failed(_rdir(), "report")
+    assert (f["step"], f["status"], f["failure"]["exception_type"]) == (kind, status, exc.__name__)
+    if (kind, when) in LINKED:
+        assert json.loads((_rdir() / "report.json").read_text())["verdict"] == "PROCEED_TO_SIZING"
+    monkeypatch.undo()
+    monkeypatch.setattr(AUTH, "TACTICAL_PILOT_ANALYSIS_AUTHORIZED", True)
+    monkeypatch.setattr(R4, "EVIDENCE_ROOT", str(ev))
+    monkeypatch.setattr(F, "check_durable", lambda paths, _fixture: None)
+    with pytest.raises(TP.PilotRefused, match="publication failed"):
+        TP.size()
+    assert not _sdir().exists()
+
+
+@pytest.mark.parametrize("exc,status", [(RuntimeError, "PUBLICATION_FAILED"), (KeyboardInterrupt, "INTERRUPTED")])
+@pytest.mark.parametrize("kind,when", PUB, ids=[f"{k}-{w}" for k, w in PUB])
+def test_a_SIZING_publication_failure_is_RECORDED_and_its_readers_REJECT(ev, scripted, monkeypatch, kind, when, exc,
+                                                                         status):
+    build()
+    _pipeline()
+    PubTrip(monkeypatch, _sdir, "sizing", kind, when, exc)
+    with pytest.raises(exc, match="publication probe"):
+        TP.size()
+    f = _failed(_sdir(), "sizing")
+    assert (f["step"], f["status"]) == (kind, status)
+    with pytest.raises(TP.PilotStop, match="publication failed"):
+        TP.read_published(_sdir(), "sizing", TP.PilotStop)
+
+
+def test_the_REPRODUCED_case_a_valid_PROCEED_report_whose_directory_sync_failed(ev, scripted, monkeypatch):
+    """The review's reproduction: report.json is valid and says PROCEED_TO_SIZING -- yet the
+    failure is recorded and the sizing refuses it."""
+    build()
+    TP.verify("pilot", 0)
+    PubTrip(monkeypatch, _rdir, "report", "record", "directory sync", OSError)
+    with pytest.raises(OSError):
+        TP.report()
+    assert json.loads((_rdir() / "report.json").read_text())["verdict"] == "PROCEED_TO_SIZING"
+    assert (_rdir() / "report.publication_failed.json").exists()
+
+
+@pytest.mark.parametrize("entry", ["report", "size"])
+def test_an_INTERRUPT_just_after_the_destination_is_CREATED_is_recorded_IN_IT(ev, scripted, monkeypatch, entry):
+    import signal
+    import threading
+    build()
+    _pipeline() if entry == "size" else TP.verify("pilot", 0)
+    out, stem = (_rdir(), "report") if entry == "report" else (_sdir(), "sizing")
+    real = os.mkdir
+
+    def mkdir_then_sigint(path, *a, **k):
+        real(path, *a, **k)
+        if pathlib.Path(path) == out:
+            signal.pthread_kill(threading.main_thread().ident, signal.SIGINT)
+    previous = signal.signal(signal.SIGINT, signal.default_int_handler)
+    monkeypatch.setattr(os, "mkdir", mkdir_then_sigint)
+    try:
+        with pytest.raises(KeyboardInterrupt):
+            getattr(TP, entry)()
+    finally:
+        signal.signal(signal.SIGINT, previous)
+    f = _failed(out, stem)
+    assert (f["step"], f["status"], f["record_present"]) == ("create", "INTERRUPTED", False)
+    assert sorted(x.name for x in out.iterdir()) == [f"{stem}.publication_failed.json"]
+
+
+def test_an_INTERRUPT_as_VERIFY_claims_its_record_is_recorded(ev, monkeypatch):
+    import signal
+    import threading
+    build()
+    real = os.open
+
+    def open_then_sigint(path, *a, **k):
+        fd = real(path, *a, **k)
+        if pathlib.Path(path).name == ".pilot-s0.json.partial":
+            signal.pthread_kill(threading.main_thread().ident, signal.SIGINT)
+        return fd
+    previous = signal.signal(signal.SIGINT, signal.default_int_handler)
+    monkeypatch.setattr(os, "open", open_then_sigint)
+    try:
+        with pytest.raises(KeyboardInterrupt):
+            TP.verify("pilot", 0)
+    finally:
+        signal.signal(signal.SIGINT, previous)
+    f = _failed(_vdir(), "pilot-s0")
+    assert (f["step"], f["status"]) == ("record", "INTERRUPTED")
+
+
+def test_a_destination_created_by_ANOTHER_invocation_is_never_written(ev, scripted, monkeypatch):
+    build()
+    TP.verify("pilot", 0)
+    # another invocation creates it after the first check
+    monkeypatch.setattr(os.path, "lexists", lambda p: False if pathlib.Path(p) == _rdir() else os.path.exists(p))
+    _rdir().mkdir()
+    (_rdir() / "theirs").write_text("x")
+    with pytest.raises(TP.PilotRefused, match="occupied"):
+        TP.report()
+    assert sorted(x.name for x in _rdir().iterdir()) == ["theirs"]
+
+
+#: what a consumer must reject, though the record exists and parses
+PUBLISHED_BREAKS = {
+    "no marker": (lambda d, s: (d / f"{s}.published.json").unlink(), "never published"),
+    "the marker bound to another record": (
+        lambda d, s: _edit(f"{s}.published.json", lambda m: m.update(record_sha256="0" * 64))(d), "not the one published"),
+    "the marker not PUBLISHED": (lambda d, s: _edit(f"{s}.published.json", lambda m: m.update(status="X"))(d),
+                                 "not PUBLISHED"),
+    "CONFLICTING: a marker AND a recorded failure": (
+        lambda d, s: (d / f"{s}.publication_failed.json").write_text("{}"), "publication failed"),
+}
+
+
+@pytest.mark.parametrize("name", PUBLISHED_BREAKS)
+def test_every_CONSUMER_rejects_an_unpublished_or_failed_record(ev, scripted, name):
+    breakage, why = PUBLISHED_BREAKS[name]
+    build()
+    _pipeline()
+    TP.size()
+    for d, stem in ((_vdir(), "pilot-s0"), (_rdir(), "report"), (_sdir(), "sizing")):
+        assert TP.read_published(d, stem, TP.PilotStop)["verdict"] in ("VERIFIED", "PROCEED_TO_SIZING", "PROCEED")
+    breakage(_vdir(), "pilot-s0")
+    with pytest.raises(CM.MatchRefused, match=why):
+        CM._read_verification("pilot", 0, {}, 32, lambda w: CM.MatchRefused(w))
+    breakage(_rdir(), "report")
+    with pytest.raises(TP.PilotStop, match=why):
+        TP.read_published(_rdir(), "report", TP.PilotStop)
+    breakage(_sdir(), "sizing")
+    with pytest.raises(TP.PilotStop, match=why):
+        TP.read_published(_sdir(), "sizing", TP.PilotStop)
+
+
+@pytest.mark.parametrize("leftover", ["pilot-s0.published.json", "pilot-s0.publication_failed.json",
+                                      ".pilot-s0.published.json.partial"])
+def test_VERIFY_counts_any_LEFTOVER_of_its_stem_as_occupied(ev, leftover):
+    build()
+    _vdir().mkdir(parents=True)
+    (_vdir() / leftover).write_text("x")
+    with pytest.raises(TP.PilotRefused, match="occupied"):
+        TP.verify("pilot", 0)
+    assert sorted(x.name for x in _vdir().iterdir()) == [leftover]
+
+
+def test_VERIFY_never_records_into_a_claim_it_does_not_OWN(ev, monkeypatch):
+    """Another invocation claims the record (its temporary file) after the occupied check: this
+    one's exclusive creation fails, and it writes NOTHING of its own there."""
+    build()
+    real = TP._check_segment
+
+    def racing(*a, **k):
+        n = real(*a, **k)
+        (_vdir() / ".pilot-s0.json.partial").write_text("theirs")
+        return n
+    monkeypatch.setattr(TP, "_check_segment", racing)
+    with pytest.raises(FileExistsError):
+        TP.verify("pilot", 0)
+    assert sorted(x.name for x in _vdir().iterdir()) == [".pilot-s0.json.partial"]
