@@ -664,7 +664,7 @@ def pristine(tmp_path_factory):
         CM._settle(d, {"terminated": False, "cause": None, "limit_s": 14_400.0, "elapsed_s": 270_000.0,
                        "child_pid": 1, "rc": 0, "signal": None, "survivors_killed": False,
                        "game_limit_s": 900.0, "game_breach": None})
-        CM._write_timing(d, MARKS)
+        CM._finalize(d, MARKS)
         write_verification("study", 0, d)
     finally:
         mp.undo()
@@ -1267,9 +1267,26 @@ BREAKS_A8 = {
     "verification of another watchdog": (_ver(lambda v: v.update(watchdog_sha256="0" * 64)), "verified other files"),
     "verification of another record": (_ver(lambda v: v.update(record_sha256="0" * 64)), "verified other files"),
     "verification of another timing": (_ver(lambda v: v.update(timing_sha256="0" * 64)), "verified other files"),
-    "timing.json changed after its verification": (
+    "timing.json changed after its finalization": (
         lambda d: (d / "timing.json").write_text(json.dumps(json.loads((d / "timing.json").read_text()))),
+        "finalization bound other files"),
+    "timing.json replaced and RE-FINALIZED after its verification": (
+        lambda d: ((d / "timing.json").write_text(json.dumps(json.loads((d / "timing.json").read_text()))),
+                   _edit_json(d / "finalized.json", lambda f: f.update(
+                       timing_sha256=CM._file_sha(str(d / "timing.json"))))),
         "verified other files"),
+    "finalized.json missing": (lambda d: (d / "finalized.json").unlink(), "never finalized"),
+    "a late failure recorded": (lambda d: (d / "finalization_failed.json").write_text("{}"),
+                                "finalization failed"),
+    "a late failure recorded, finalized.json also present": (
+        lambda d: (d / "finalization_failed.json").write_text(json.dumps({"stage": "finalize"})),
+        "finalization failed"),
+    "finalized.json not FINALIZED": (lambda d: _edit_json(d / "finalized.json", lambda f: f.update(status="X")),
+                                     "not FINALIZED"),
+    "finalized.json bound another watchdog": (
+        lambda d: _edit_json(d / "finalized.json", lambda f: f.update(watchdog_sha256="0" * 64)),
+        "finalization bound other files"),
+    "finalized.json not JSON": (lambda d: (d / "finalized.json").write_text("{"), "malformed"),
     "verification NOT_VERIFIED": (_ver(lambda v: v.update(verdict="NOT_VERIFIED")), "record says 'NOT_VERIFIED'"),
     "verification of 3 game files": (_ver(lambda v: v.update(game_files=3)), "counts 3 game files, not 2"),
     "verification game files a string": (_ver(lambda v: v.update(game_files="2")), "game files, not 2"),
@@ -1310,7 +1327,8 @@ A8_CHANGED = {"_claim", "run", "run_claimed", "_run", "main", "_validate_segment
 A8_ADDED = {"_T_START", "QUALIFICATION_COMMIT", "QUALIFICATION_FILES", "QUALIFICATION_MODULE_SHA256",
             "QUALIFICATION_CALLS", "qualification_binding", "_bound_plan", "_create", "_sigint_held",
             "_record_parent_failure", "_timing_path", "_write_timing", "_read_timing", "verification_path",
-            "_read_verification", "_nonneg"}
+            "_read_verification", "_nonneg", "_finalize", "_write_finalized", "_read_finalization",
+            "_finalized_path", "_finalization_failed_path"}
 
 
 def _top_nodes(src):
@@ -1349,3 +1367,130 @@ def test_the_R1_AMENDMENT_stays_inside_the_A8_6_allowlist():
         return [ast.dump(c) for c in ast.walk(fn) if isinstance(c, ast.Call) and getattr(c.func, "id", None) == name]
     for name in ("production_builder", "play_game"):
         assert calls(a["_run"], name) == calls(b["_run"], name) != [], name
+
+
+# ─────────────────────────────── A8.5 item 5: finalization, and late failures recorded ──────────
+
+class Trip:
+    """One-shot fault injection into the parent's LATE steps, chosen by what is being written:
+    'timing' (startup_s) or 'finalized' (FINALIZED). `when` is before writing, after the complete
+    bytes, the file's sync, the link, or the directory's sync."""
+
+    def __init__(self, monkeypatch, out, kind, when, exc):
+        self.out, self.kind, self.when, self.exc, self.armed, self.fired = out, kind, when, exc, False, False
+        real_all, real_fsync, real_dir, real_link = CM._write_all, os.fsync, CM._fsync_dir, os.link
+        marker = b'"startup_s"' if kind == "timing" else b'"FINALIZED"'
+
+        def write_all(fd, raw):
+            mine = marker in bytes(raw)
+            if mine and when == "before writing":
+                self.fire()
+            real_all(fd, raw)
+            if mine and when == "after complete bytes":
+                self.fire()
+            self.armed = mine and when == "file sync"
+
+        def fsync(fd):
+            if self.armed:
+                self.armed = False
+                self.fire()
+            real_fsync(fd)
+
+        def fsync_dir(d):
+            timing, final = CM._timing_path(out).exists(), (out / "finalized.json").exists()
+            if when == "directory sync" and ((kind == "timing" and timing and not final) or
+                                             (kind == "finalized" and final)):
+                self.fire()
+            real_dir(d)
+
+        def link(src, dst, *a, **k):
+            if when == "link":
+                self.fire()
+            return real_link(src, dst, *a, **k)
+        monkeypatch.setattr(CM, "_write_all", write_all)
+        monkeypatch.setattr(os, "fsync", fsync)
+        monkeypatch.setattr(CM, "_fsync_dir", fsync_dir)
+        monkeypatch.setattr(os, "link", link)
+
+    def fire(self):
+        if not self.fired:
+            self.fired = True
+            raise self.exc(f"late probe: {self.kind} {self.when}")
+
+
+LATE = [("timing", w) for w in ("before writing", "after complete bytes", "file sync", "directory sync")] + \
+       [("finalized", w) for w in ("before writing", "after complete bytes", "file sync", "link", "directory sync")]
+
+
+@pytest.mark.parametrize("exc,status", [(RuntimeError, "FINALIZE_FAILED"), (KeyboardInterrupt, "INTERRUPTED")])
+@pytest.mark.parametrize("kind,when", LATE, ids=[f"{k}-{w}" for k, w in LATE])
+def test_a_LATE_failure_is_RECORDED_the_evidence_KEPT_and_every_consumer_REJECTS(open_gate, monkeypatch,
+                                                                                  kind, when, exc, status):
+    in_process(monkeypatch)
+    out, kept = CM.out_dir("pilot", 0), {}
+    real_settle = CM._settle
+
+    def settle(d, watch):                         # the evidence as it stood when the watchdog was written
+        res = real_settle(d, watch)
+        kept.update({p.name: p.read_bytes() for p in d.rglob("*") if p.is_file()})
+        return res
+    monkeypatch.setattr(CM, "_settle", settle)
+    trip = Trip(monkeypatch, out, kind, when, exc)
+    with pytest.raises(exc, match=f"late probe: {kind} {when}"):
+        CM.run("pilot", 0)
+    assert trip.fired
+    f = json.loads((out / "finalization_failed.json").read_text())
+    assert (f["stage"], f["status"], f["failure"]["exception_type"]) == ("finalize", status, exc.__name__)
+    for name, raw in kept.items():                # watchdog, record, journal, games: byte for byte
+        assert (out.rglob(name).__next__()).read_bytes() == raw, name
+    w = json.loads((out / CM.WATCHDOG_FILE).read_text())
+    assert w["status"] == "COMPLETE", "the watchdog alone still says COMPLETE"
+    monkeypatch.undo()                            # the consumer, on the evidence as left
+    monkeypatch.setattr(F, "check_durable", lambda paths, _fixture: None)
+    timing = CM._timing_path(out)
+    with pytest.raises(CM.MatchRefused, match="finalization failed"):
+        CM._read_finalization(out, lambda why: CM.MatchRefused(why), CM._file_sha(str(out / CM.WATCHDOG_FILE)),
+                              CM._file_sha(str(timing)) if timing.exists() else None)
+
+
+def test_the_REPRODUCED_case_valid_timing_COMPLETE_watchdog_failed_directory_sync(open_gate, monkeypatch):
+    """The review's reproduction: timing.json holds valid JSON, the watchdog says COMPLETE -- and the
+    segment is still rejected, because its finalization failed and is recorded."""
+    in_process(monkeypatch)
+    out = CM.out_dir("pilot", 0)
+    Trip(monkeypatch, out, "timing", "directory sync", OSError)
+    with pytest.raises(OSError):
+        CM.run("pilot", 0)
+    t = json.loads(CM._timing_path(out).read_text())
+    assert all(CM._nonneg(t[k]) for k in ("startup_s", "pre_launch_s", "child_s", "settlement_s"))
+    assert json.loads((out / CM.WATCHDOG_FILE).read_text())["status"] == "COMPLETE"
+    assert not (out / "finalized.json").exists() and (out / "finalization_failed.json").exists()
+
+
+def test_a_FINALIZED_segment_carries_its_bound_marker_and_no_failure_record(open_gate, monkeypatch):
+    in_process(monkeypatch)
+    CM.run("pilot", 0)
+    out = CM.out_dir("pilot", 0)
+    f = json.loads((out / "finalized.json").read_text())
+    assert f == {"status": "FINALIZED", "watchdog_sha256": CM._file_sha(str(out / CM.WATCHDOG_FILE)),
+                 "timing_sha256": CM._file_sha(str(CM._timing_path(out)))}
+    assert not (out / "finalization_failed.json").exists() and not (out / ".finalized.json.partial").exists()
+
+
+def test_a_failing_WATCHDOG_write_is_recorded_LATE_never_silently(open_gate, monkeypatch):
+    """_settle's own write fails after creating watchdog.json: recorded in the failure file."""
+    in_process(monkeypatch)
+    real_dump = json.dump
+
+    def dump(obj, fh, *a, **k):
+        if getattr(fh, "name", "").endswith(CM.WATCHDOG_FILE) and "child_streams" in obj:
+            fh.write("{")
+            raise OSError("watchdog write probe")
+        return real_dump(obj, fh, *a, **k)
+    monkeypatch.setattr(json, "dump", dump)
+    with pytest.raises(OSError, match="watchdog write probe"):
+        CM.run("pilot", 0)
+    out = CM.out_dir("pilot", 0)
+    assert (out / CM.WATCHDOG_FILE).read_text() == "{"
+    f = json.loads((out / "finalization_failed.json").read_text())
+    assert (f["stage"], f["status"]) == ("settle", "SETTLE_FAILED")

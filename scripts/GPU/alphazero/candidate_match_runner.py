@@ -479,24 +479,46 @@ def _claim(d: pathlib.Path, extra: Mapping[str, Any]) -> Tuple[Dict[str, Any], s
 
 
 def _record_parent_failure(d: pathlib.Path, e: BaseException, stage: str) -> None:
-    """A8.5: a claim, watch or settlement that failed or was interrupted still leaves watchdog.json,
-    in a destination this invocation created."""
-    if (d / WATCHDOG_FILE).exists():
+    """A8.5: a claim, watch, settlement or finalization that failed or was interrupted is
+    recorded, in a destination this invocation created: in watchdog.json while there is none; once
+    watchdog.json exists -- whole or not -- in a separate, create-only finalization_failed.json
+    (item 5), so the existing evidence is never rewritten. Every consumer rejects a segment that
+    has that file, or has no finalized.json."""
+    late = (d / WATCHDOG_FILE).exists()
+    target = _finalization_failed_path(d) if late else d / WATCHDOG_FILE
+    if target.exists():
+        return
+    body = {"card": CARD, "stage": stage,
+            "status": "INTERRUPTED" if isinstance(e, (KeyboardInterrupt, SystemExit))
+            else f"{stage.upper()}_FAILED",
+            "failure": {"exception_type": type(e).__name__, "reason": str(e)},
+            "claim_present": (d / CLAIM_FILE).exists(), "record_present": (d / "record.json").exists()}
+    if late:
+        body.update(watchdog_present=True, timing_present=_timing_path(d).exists(),
+                    finalized_present=_finalized_path(d).exists())
+    try:
+        with open(target, "x", encoding="utf-8") as fh:
+            json.dump(body, fh, indent=1, sort_keys=True)
+            fh.flush()
+            os.fsync(fh.fileno())
+    except Exception:                            # noqa: BLE001 -- nothing more can be recorded
         return
     try:
-        with open(d / WATCHDOG_FILE, "x", encoding="utf-8") as fh:
-            json.dump({"card": CARD, "stage": stage,
-                       "status": "INTERRUPTED" if isinstance(e, (KeyboardInterrupt, SystemExit))
-                       else f"{stage.upper()}_FAILED",
-                       "failure": {"exception_type": type(e).__name__, "reason": str(e)},
-                       "claim_present": (d / CLAIM_FILE).exists(),
-                       "record_present": (d / "record.json").exists()}, fh, indent=1, sort_keys=True)
-    except Exception:                            # noqa: BLE001 -- nothing more can be recorded
+        _fsync_dir(d)
+    except Exception:                            # noqa: BLE001 -- the record itself is written
         pass
 
 
 def _timing_path(d: pathlib.Path) -> pathlib.Path:
     return d / "timing.json"
+
+
+def _finalized_path(d: pathlib.Path) -> pathlib.Path:
+    return d / "finalized.json"
+
+
+def _finalization_failed_path(d: pathlib.Path) -> pathlib.Path:
+    return d / "finalization_failed.json"
 
 
 def _write_timing(d: pathlib.Path, marks: Sequence[float]) -> None:
@@ -515,6 +537,29 @@ def _write_timing(d: pathlib.Path, marks: Sequence[float]) -> None:
     finally:
         os.close(fd)
     _fsync_dir(d)
+
+
+def _write_finalized(d: pathlib.Path, watchdog_sha: str, timing_sha: str) -> None:
+    """A8.5 item 5: the parent's LAST act. The complete bytes are fsynced in a temporary file and
+    appear under their name only by a create-only link; then the directory is synced."""
+    raw = json.dumps({"status": "FINALIZED", "watchdog_sha256": watchdog_sha, "timing_sha256": timing_sha},
+                     indent=1, sort_keys=True).encode()
+    tmp = d / ".finalized.json.partial"
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+    try:
+        _write_all(fd, raw)
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    os.link(tmp, _finalized_path(d))             # fails if finalized.json exists
+    os.unlink(tmp)
+    _fsync_dir(d)
+
+
+def _finalize(d: pathlib.Path, marks: Sequence[float]) -> None:
+    """A8.5 items 3 and 5: timing.json, then finalized.json bound to the watchdog and the timing."""
+    _write_timing(d, marks)
+    _write_finalized(d, _file_sha(str(d / WATCHDOG_FILE)), _file_sha(str(_timing_path(d))))
 
 
 def _accept_claim(d: pathlib.Path) -> Dict[str, Any]:
@@ -775,6 +820,25 @@ def _read_timing(d: pathlib.Path, bad: Callable[[str], MatchRefused]) -> Tuple[f
     return sum(parts), hashlib.sha256(raw).hexdigest()
 
 
+def _read_finalization(d: pathlib.Path, bad: Callable[[str], MatchRefused], watchdog_sha: str,
+                       timing_sha: Optional[str]) -> None:
+    """A8.5 item 5: a segment is usable only if its parent FINALIZED it -- finalized.json
+    committed, FINALIZED, bound to THIS watchdog.json and timing.json -- and recorded no late
+    failure. Even when both JSON files exist and parse."""
+    if _finalization_failed_path(d).exists():
+        raise bad("its finalization failed (finalization_failed.json)")
+    path = _finalized_path(d)
+    try:
+        F.check_durable([str(path)], _fixture=False)
+    except F.H4AnalysisRefused as e:
+        raise bad(f"it was never finalized ({e})") from None
+    f = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(f, dict) or f.get("status") != "FINALIZED":
+        raise bad("its finalization is not FINALIZED")
+    if (f.get("watchdog_sha256"), f.get("timing_sha256")) != (watchdog_sha, timing_sha):
+        raise bad("its finalization bound other files")
+
+
 def _read_verification(role: str, k: int, files: Mapping[str, str], games: int,
                        bad: Callable[[str], MatchRefused]) -> float:
     """A8.5 item 4: a segment's verification record -- committed, unmodified, for THIS segment,
@@ -856,7 +920,9 @@ def _validate_segment(role: str, k: int) -> float:
         if type(e) not in (int, float) or not math.isfinite(e) or e < 0:
             raise bad(f"its elapsed time {e!r} is not a finite, nonnegative number")
         timing_s, timing_sha = _read_timing(d, bad)
-        verified_s = _read_verification(role, k, {"watchdog": _file_sha(str(d / WATCHDOG_FILE)),
+        watchdog_sha = _file_sha(str(d / WATCHDOG_FILE))
+        _read_finalization(d, bad, watchdog_sha, timing_sha)
+        verified_s = _read_verification(role, k, {"watchdog": watchdog_sha,
                                                   "record": hashlib.sha256(raw).hexdigest(),
                                                   "timing": timing_sha}, len(games), bad)
         return timing_s + verified_s
@@ -895,7 +961,8 @@ def _child_argv(role: str, segment: int) -> List[str]:
 def run(role: str, segment: int) -> Dict[str, Any]:
     """PUBLIC ENTRY -- the PARENT. Pure refusals (the qualification guard among them, A8.4), THE
     CLAIM, the child under the hard watchdog; from the destination's creation on, `watchdog.json`
-    on every exit (A8.5); then `timing.json` (A8.5 item 3). Returns statuses only."""
+    on every exit (A8.5); then `timing.json` and, last, `finalized.json` (A8.5 items 3 and 5) -- a
+    late failure recorded in `finalization_failed.json`. Returns statuses only."""
     m1 = _monotonic()
     _gate()
     _role(role, segment)
@@ -924,7 +991,8 @@ def run(role: str, segment: int) -> Dict[str, Any]:
         m3 = _monotonic()
         summary = _settle(out, watch)
         m4 = _monotonic()
-        _write_timing(out, (_T_START, m1, m2, m3, m4))
+        stage = "finalize"
+        _finalize(out, (_T_START, m1, m2, m3, m4))
     except BaseException as e:
         if ours:
             _record_parent_failure(out, e, stage)
