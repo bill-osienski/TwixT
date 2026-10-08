@@ -1,0 +1,32 @@
+TACTICAL CANDIDATE -- CLOSING SEED ACCOUNTING OF THE PILOT BLOCK (card §18 A8.2; read-only, outcome-blind)
+================================================================================================
+HEAD 950528e791656a6262be9cbbb7556c27df43e8b3; working tree clean; 37 inputs committed and unmodified (plan sha256 b4e9e00a3bb9ca9b3ee7de8c9a4a8f1a55b04e168cd82debb2d9f67a92e70b61, registry, pilot record, watchdog, journal, 32 game files)
+run status (watchdog, its record status, record): ('COMPLETE', 'COMPLETE', 'COMPLETE')
+game starts in the journal: 32, distinct 32; the plan's pairs x arms: 32; the record's games: 32
+seed fields read from 32 game files: 16 distinct red, 16 distinct black, 32 distinct in all; each pair's two arms carry the same colour seeds: True
+the block the started seeds make: (202660000, 202660032); ACCOUNTED holds it as itself: True; in EXPOSED: False; in RETIRED: False
+faults: none
+
+CONTROLS (synthetic)
+------------------------------------------------------------------------------------------------
+  PASS   a sound world reconciles
+  PASS   a game start missing
+  PASS   a game started twice
+  PASS   the starts out of plan order
+  PASS   the record's games are not the started games
+  PASS   the game files are not the record's games
+  PASS   one arm's seeds differ from the other arm's
+  PASS   both arms agree but not with the plan
+  PASS   the started seeds are not one contiguous block
+  PASS   the block is not ACCOUNTED
+  PASS   the block ACCOUNTED twice
+  PASS   a seed of the block already EXPOSED
+  PASS   a seed of the block already RETIRED
+  PASS   an adjacent EXPOSED interval is no overlap
+  PASS   the run not COMPLETE
+  PASS   a game without both colour seeds is refused
+  PASS   seed_fields returns ONLY pair_id, arm and the two colour seeds
+  PASS   game_starts reads only game_start entries
+
+controls passed: 18/18
+VERDICT: RECONCILES -- all 32 seeds of (202660000, 202660032) started, each colour seed in both arms of its pair: the pilot block is EXPOSED WHOLE and RETIRED WHOLE
