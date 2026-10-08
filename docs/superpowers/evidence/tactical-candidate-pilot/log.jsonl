@@ -1,0 +1,81 @@
+{"observation": {"incumbent_identity": {"agent_lifetime": "one instance per game; both streams advance across the game", "argmax_config": {"board_size": 24, "max_moves": 280, "mcts_eval_batch_size": 14, "mcts_sims": 400, "mcts_stall_flush_sims": 48, "opening_temp_plies": 20, "selection_mode": "argmax", "temp_high": 1.0, "temp_low": 0.1}, "design": "H5_STUDY", "eval_config": {"board_size": 24, "max_moves": 280, "mcts_eval_batch_size": 14, "mcts_sims": 400, "mcts_stall_flush_sims": 48, "selection_mode": "argmax"}, "inert_under_argmax": {"opening_temp_plies": 20, "temp_high": 1.0, "temp_low": 0.1}, "noise_note": "cfg_from does NOT pass dirichlet_eps, so MCTSConfig keeps its default 0.25; noise is suppressed at the call site instead. A schedule that declares dirichlet_eps=0 is declaring nothing.", "noise_suppression": "search_with_root(state, add_noise=False)", "plan_sha256": "c8b9cba816852a6752bc9a8ae7f74fe06529dcb5af5a06ac4bb6bda716cf8a30", "readout_mask": {"black": 3947580, "red": 12829635}, "readout_note": "H2's ONE gameplay-rule change: the incumbent plays the visit-count maximum. The listed settings are INERT under argmax and are recorded as such, never as 'unchanged'.", "readout_path": "eval_readout.select, never mcts.select_move", "reference": "calib020_0001", "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e", "search_mask": {"black": 5921370, "red": 10855845}}}, "step": "model_load"}
+{"observation": {"arm": "A", "pair_id": "pilot-00"}, "step": "game_start"}
+{"observation": {"arm": "A", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-00", "seconds": 81.973}, "step": "game"}
+{"observation": {"arm": "B", "pair_id": "pilot-00"}, "step": "game_start"}
+{"observation": {"arm": "B", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-00", "seconds": 64.843}, "step": "game"}
+{"observation": {"fired": false, "first_override": {"A": null, "B": null}, "pair_id": "pilot-00"}, "step": "pair"}
+{"observation": {"arm": "A", "pair_id": "pilot-01"}, "step": "game_start"}
+{"observation": {"arm": "A", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-01", "seconds": 62.287}, "step": "game"}
+{"observation": {"arm": "B", "pair_id": "pilot-01"}, "step": "game_start"}
+{"observation": {"arm": "B", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-01", "seconds": 62.065}, "step": "game"}
+{"observation": {"fired": false, "first_override": {"A": null, "B": null}, "pair_id": "pilot-01"}, "step": "pair"}
+{"observation": {"arm": "A", "pair_id": "pilot-02"}, "step": "game_start"}
+{"observation": {"arm": "A", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-02", "seconds": 61.803}, "step": "game"}
+{"observation": {"arm": "B", "pair_id": "pilot-02"}, "step": "game_start"}
+{"observation": {"arm": "B", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-02", "seconds": 61.788}, "step": "game"}
+{"observation": {"fired": false, "first_override": {"A": null, "B": null}, "pair_id": "pilot-02"}, "step": "pair"}
+{"observation": {"arm": "A", "pair_id": "pilot-03"}, "step": "game_start"}
+{"observation": {"arm": "A", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-03", "seconds": 61.675}, "step": "game"}
+{"observation": {"arm": "B", "pair_id": "pilot-03"}, "step": "game_start"}
+{"observation": {"arm": "B", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-03", "seconds": 61.562}, "step": "game"}
+{"observation": {"fired": false, "first_override": {"A": null, "B": null}, "pair_id": "pilot-03"}, "step": "pair"}
+{"observation": {"arm": "A", "pair_id": "pilot-04"}, "step": "game_start"}
+{"observation": {"arm": "A", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-04", "seconds": 61.475}, "step": "game"}
+{"observation": {"arm": "B", "pair_id": "pilot-04"}, "step": "game_start"}
+{"observation": {"arm": "B", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-04", "seconds": 61.527}, "step": "game"}
+{"observation": {"fired": false, "first_override": {"A": null, "B": null}, "pair_id": "pilot-04"}, "step": "pair"}
+{"observation": {"arm": "A", "pair_id": "pilot-05"}, "step": "game_start"}
+{"observation": {"arm": "A", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-05", "seconds": 61.838}, "step": "game"}
+{"observation": {"arm": "B", "pair_id": "pilot-05"}, "step": "game_start"}
+{"observation": {"arm": "B", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-05", "seconds": 60.183}, "step": "game"}
+{"observation": {"fired": false, "first_override": {"A": null, "B": null}, "pair_id": "pilot-05"}, "step": "pair"}
+{"observation": {"arm": "A", "pair_id": "pilot-06"}, "step": "game_start"}
+{"observation": {"arm": "A", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-06", "seconds": 59.256}, "step": "game"}
+{"observation": {"arm": "B", "pair_id": "pilot-06"}, "step": "game_start"}
+{"observation": {"arm": "B", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-06", "seconds": 59.658}, "step": "game"}
+{"observation": {"fired": false, "first_override": {"A": null, "B": null}, "pair_id": "pilot-06"}, "step": "pair"}
+{"observation": {"arm": "A", "pair_id": "pilot-07"}, "step": "game_start"}
+{"observation": {"arm": "A", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-07", "seconds": 58.983}, "step": "game"}
+{"observation": {"arm": "B", "pair_id": "pilot-07"}, "step": "game_start"}
+{"observation": {"arm": "B", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-07", "seconds": 59.167}, "step": "game"}
+{"observation": {"fired": false, "first_override": {"A": null, "B": null}, "pair_id": "pilot-07"}, "step": "pair"}
+{"observation": {"arm": "A", "pair_id": "pilot-08"}, "step": "game_start"}
+{"observation": {"arm": "A", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-08", "seconds": 58.303}, "step": "game"}
+{"observation": {"arm": "B", "pair_id": "pilot-08"}, "step": "game_start"}
+{"observation": {"arm": "B", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-08", "seconds": 58.437}, "step": "game"}
+{"observation": {"fired": false, "first_override": {"A": null, "B": null}, "pair_id": "pilot-08"}, "step": "pair"}
+{"observation": {"arm": "A", "pair_id": "pilot-09"}, "step": "game_start"}
+{"observation": {"arm": "A", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-09", "seconds": 58.469}, "step": "game"}
+{"observation": {"arm": "B", "pair_id": "pilot-09"}, "step": "game_start"}
+{"observation": {"arm": "B", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-09", "seconds": 58.432}, "step": "game"}
+{"observation": {"fired": false, "first_override": {"A": null, "B": null}, "pair_id": "pilot-09"}, "step": "pair"}
+{"observation": {"arm": "A", "pair_id": "pilot-10"}, "step": "game_start"}
+{"observation": {"arm": "A", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-10", "seconds": 58.568}, "step": "game"}
+{"observation": {"arm": "B", "pair_id": "pilot-10"}, "step": "game_start"}
+{"observation": {"arm": "B", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-10", "seconds": 58.732}, "step": "game"}
+{"observation": {"fired": false, "first_override": {"A": null, "B": null}, "pair_id": "pilot-10"}, "step": "pair"}
+{"observation": {"arm": "A", "pair_id": "pilot-11"}, "step": "game_start"}
+{"observation": {"arm": "A", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-11", "seconds": 58.335}, "step": "game"}
+{"observation": {"arm": "B", "pair_id": "pilot-11"}, "step": "game_start"}
+{"observation": {"arm": "B", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-11", "seconds": 59.09}, "step": "game"}
+{"observation": {"fired": false, "first_override": {"A": null, "B": null}, "pair_id": "pilot-11"}, "step": "pair"}
+{"observation": {"arm": "A", "pair_id": "pilot-12"}, "step": "game_start"}
+{"observation": {"arm": "A", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-12", "seconds": 58.643}, "step": "game"}
+{"observation": {"arm": "B", "pair_id": "pilot-12"}, "step": "game_start"}
+{"observation": {"arm": "B", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-12", "seconds": 58.471}, "step": "game"}
+{"observation": {"fired": false, "first_override": {"A": null, "B": null}, "pair_id": "pilot-12"}, "step": "pair"}
+{"observation": {"arm": "A", "pair_id": "pilot-13"}, "step": "game_start"}
+{"observation": {"arm": "A", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-13", "seconds": 58.45}, "step": "game"}
+{"observation": {"arm": "B", "pair_id": "pilot-13"}, "step": "game_start"}
+{"observation": {"arm": "B", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-13", "seconds": 58.307}, "step": "game"}
+{"observation": {"fired": false, "first_override": {"A": null, "B": null}, "pair_id": "pilot-13"}, "step": "pair"}
+{"observation": {"arm": "A", "pair_id": "pilot-14"}, "step": "game_start"}
+{"observation": {"arm": "A", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-14", "seconds": 58.479}, "step": "game"}
+{"observation": {"arm": "B", "pair_id": "pilot-14"}, "step": "game_start"}
+{"observation": {"arm": "B", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-14", "seconds": 59.077}, "step": "game"}
+{"observation": {"fired": false, "first_override": {"A": null, "B": null}, "pair_id": "pilot-14"}, "step": "pair"}
+{"observation": {"arm": "A", "pair_id": "pilot-15"}, "step": "game_start"}
+{"observation": {"arm": "A", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-15", "seconds": 58.196}, "step": "game"}
+{"observation": {"arm": "B", "pair_id": "pilot-15"}, "step": "game_start"}
+{"observation": {"arm": "B", "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009", "overrides": 0, "pair_id": "pilot-15", "seconds": 58.289}, "step": "game"}
+{"observation": {"fired": false, "first_override": {"A": null, "B": null}, "pair_id": "pilot-15"}, "step": "pair"}

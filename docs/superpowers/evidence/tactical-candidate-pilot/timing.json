@@ -1,0 +1,8 @@
+{
+ "child_s": 1937.0598642090335,
+ "clock": "time.monotonic, in the parent",
+ "note": "start-up counts from R1's first statement (meaningful when the process was started for this run); the interpreter's own start before it is not measured",
+ "pre_launch_s": 0.2192814159207046,
+ "settlement_s": 0.013253665994852781,
+ "startup_s": 0.11799645889550447
+}

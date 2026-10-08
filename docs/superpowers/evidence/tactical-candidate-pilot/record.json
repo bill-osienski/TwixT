@@ -1,0 +1,563 @@
+{
+ "board": 24,
+ "card": "docs/superpowers/2026-10-05-tactical-candidate-evaluation-card.md",
+ "cleanup_failures": [],
+ "deadline_s": 14339.683488292154,
+ "elapsed_s": 1936.6151366671547,
+ "failure": null,
+ "game_deadline_s": 870.0,
+ "games": [
+  {
+   "arm": "A",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-00-A.json",
+   "pair_id": "pilot-00",
+   "sha256": "ead09b868c121854b8679c1b4af3e4b42ec63f0ad305d8350680748d929b3b26"
+  },
+  {
+   "arm": "B",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-00-B.json",
+   "pair_id": "pilot-00",
+   "sha256": "3e6db3f1326d8c73fb9526d0e2f467514b0ceec9967a74b599cf88eeea282a5b"
+  },
+  {
+   "arm": "A",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-01-A.json",
+   "pair_id": "pilot-01",
+   "sha256": "64a1c0704730f6ac675f4f1fb801bd4f21977d16e94c981cc55c34f846de99f8"
+  },
+  {
+   "arm": "B",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-01-B.json",
+   "pair_id": "pilot-01",
+   "sha256": "bab55dcd21f5fd451a1d6676791a2eb123c239774db3cbed7d79cfdb89119a73"
+  },
+  {
+   "arm": "A",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-02-A.json",
+   "pair_id": "pilot-02",
+   "sha256": "c6b141ddf9f731407c37650a127ec29f9befd42848d822268dd8c14bd1a52aaa"
+  },
+  {
+   "arm": "B",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-02-B.json",
+   "pair_id": "pilot-02",
+   "sha256": "473aadcf1f2af6ca78bd7702bfe8b5c9d777b9f85195ecd6889b7036ff350d13"
+  },
+  {
+   "arm": "A",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-03-A.json",
+   "pair_id": "pilot-03",
+   "sha256": "9e3dd8e52dfe29a32387d0f2ffd3a49fc62651466f6ce9c9e293bdb197ca0fd2"
+  },
+  {
+   "arm": "B",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-03-B.json",
+   "pair_id": "pilot-03",
+   "sha256": "00f8d83ec63fc3a2de3206a9a91fb3093f8615ba1973304a667ba2cd2a368a91"
+  },
+  {
+   "arm": "A",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-04-A.json",
+   "pair_id": "pilot-04",
+   "sha256": "3d3c75e594bc93b732c7339acc79c94936f290210a5109984c879f4d3313d486"
+  },
+  {
+   "arm": "B",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-04-B.json",
+   "pair_id": "pilot-04",
+   "sha256": "54f1193a8c39e8942810444ec5974cbf6d968090845edb4013e57e1c4f876d6a"
+  },
+  {
+   "arm": "A",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-05-A.json",
+   "pair_id": "pilot-05",
+   "sha256": "f0fa0ef7bdd63c3085dadf7f111618a6467a3ef56355f4d56e69d1e61e349e8d"
+  },
+  {
+   "arm": "B",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-05-B.json",
+   "pair_id": "pilot-05",
+   "sha256": "3cd876a8107528b2551204ffc1908593f2a85e4d104da07b09d6d3e24cf9a6fe"
+  },
+  {
+   "arm": "A",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-06-A.json",
+   "pair_id": "pilot-06",
+   "sha256": "b99f67529fd2ce1433c98e4d2fbe043e11e4b327ff359a198d3d1255c52d4e2b"
+  },
+  {
+   "arm": "B",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-06-B.json",
+   "pair_id": "pilot-06",
+   "sha256": "0db8cb884cbc98b28707000d6b745ed5341a9d8630acfd6a1d126e9034908446"
+  },
+  {
+   "arm": "A",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-07-A.json",
+   "pair_id": "pilot-07",
+   "sha256": "99c95cab6cba5fa4d77d422bd852465319a69d157940713b5e9711c4593e2aac"
+  },
+  {
+   "arm": "B",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-07-B.json",
+   "pair_id": "pilot-07",
+   "sha256": "947c8ce781586f63caa68e3bfc0043ae339e8ed90ebeb93f66d890e05fbd5d6b"
+  },
+  {
+   "arm": "A",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-08-A.json",
+   "pair_id": "pilot-08",
+   "sha256": "f403fcc11f5fed2207a913d8875072cf289c0e886009f71bb7bb3c7685530439"
+  },
+  {
+   "arm": "B",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-08-B.json",
+   "pair_id": "pilot-08",
+   "sha256": "feec837cf0f8d9ce4ce71a45054597e49cc4c9fba3b91aee37009de4169e16a1"
+  },
+  {
+   "arm": "A",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-09-A.json",
+   "pair_id": "pilot-09",
+   "sha256": "379e6b4c02a21e63eb240f9ae0ff24f2f8c2084001109bb06c291f9c032c4b35"
+  },
+  {
+   "arm": "B",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-09-B.json",
+   "pair_id": "pilot-09",
+   "sha256": "8d94c80532410f9eb18d9c90f8f54cf45ed363a27efc6c19a1290e94b185e90b"
+  },
+  {
+   "arm": "A",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-10-A.json",
+   "pair_id": "pilot-10",
+   "sha256": "53b482259741bf9529ab14ededaa24c1b041f610500ae641e8d1625350cdd04f"
+  },
+  {
+   "arm": "B",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-10-B.json",
+   "pair_id": "pilot-10",
+   "sha256": "d4a3ae510ca566eadc63f0554b2c6a0fd9d7c8a974eb465504dbdec7e53dd106"
+  },
+  {
+   "arm": "A",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-11-A.json",
+   "pair_id": "pilot-11",
+   "sha256": "14d118db7ec6983fe538f40b001a468613040ab9e8ac99c2417c9a1a0db7ad98"
+  },
+  {
+   "arm": "B",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-11-B.json",
+   "pair_id": "pilot-11",
+   "sha256": "e44a0df4d7e2fe64524946c530934d5b7af55e8404da692ffb55945f1ad7d76a"
+  },
+  {
+   "arm": "A",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-12-A.json",
+   "pair_id": "pilot-12",
+   "sha256": "c2961616933823c70ba1feda0925e5c154de3c7f046fe4a8758e98d4c625a888"
+  },
+  {
+   "arm": "B",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-12-B.json",
+   "pair_id": "pilot-12",
+   "sha256": "518a7354e9dba8875450ba06d6f1a9d2d6da9cca63f023e1362c8a21385e194e"
+  },
+  {
+   "arm": "A",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-13-A.json",
+   "pair_id": "pilot-13",
+   "sha256": "730c7e50c53e13e53990ec726efce7ec8f2bea6fe1bdbe5108cb391c820026e3"
+  },
+  {
+   "arm": "B",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-13-B.json",
+   "pair_id": "pilot-13",
+   "sha256": "b1a54f01331c24c9b55a5391873aa249c574962feacc2b30c2632a2ba27b29e7"
+  },
+  {
+   "arm": "A",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-14-A.json",
+   "pair_id": "pilot-14",
+   "sha256": "db32e118927669d4fd9a4a3a9e811a3dd681c92f77637b86ee07211e0538707e"
+  },
+  {
+   "arm": "B",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-14-B.json",
+   "pair_id": "pilot-14",
+   "sha256": "adcc7ac2f37accd84d463c7cb7116bbd83bf566b055ef079330a9e7f647b23dd"
+  },
+  {
+   "arm": "A",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-15-A.json",
+   "pair_id": "pilot-15",
+   "sha256": "dd22148227e29e569f8b1acca3856f536bae0c5a322ac037d9c80ba30c15e628"
+  },
+  {
+   "arm": "B",
+   "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+   "file": "pilot-15-B.json",
+   "pair_id": "pilot-15",
+   "sha256": "c5bda7871a697e89267e5e2744be2d1093466b5bc0e987dff386d247cc049bc4"
+  }
+ ],
+ "incumbent_identity": {
+  "agent_lifetime": "one instance per game; both streams advance across the game",
+  "argmax_config": {
+   "board_size": 24,
+   "max_moves": 280,
+   "mcts_eval_batch_size": 14,
+   "mcts_sims": 400,
+   "mcts_stall_flush_sims": 48,
+   "opening_temp_plies": 20,
+   "selection_mode": "argmax",
+   "temp_high": 1.0,
+   "temp_low": 0.1
+  },
+  "design": "H5_STUDY",
+  "eval_config": {
+   "board_size": 24,
+   "max_moves": 280,
+   "mcts_eval_batch_size": 14,
+   "mcts_sims": 400,
+   "mcts_stall_flush_sims": 48,
+   "selection_mode": "argmax"
+  },
+  "inert_under_argmax": {
+   "opening_temp_plies": 20,
+   "temp_high": 1.0,
+   "temp_low": 0.1
+  },
+  "noise_note": "cfg_from does NOT pass dirichlet_eps, so MCTSConfig keeps its default 0.25; noise is suppressed at the call site instead. A schedule that declares dirichlet_eps=0 is declaring nothing.",
+  "noise_suppression": "search_with_root(state, add_noise=False)",
+  "plan_sha256": "c8b9cba816852a6752bc9a8ae7f74fe06529dcb5af5a06ac4bb6bda716cf8a30",
+  "readout_mask": {
+   "black": 3947580,
+   "red": 12829635
+  },
+  "readout_note": "H2's ONE gameplay-rule change: the incumbent plays the visit-count maximum. The listed settings are INERT under argmax and are recorded as such, never as 'unchanged'.",
+  "readout_path": "eval_readout.select, never mcts.select_move",
+  "reference": "calib020_0001",
+  "reference_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+  "search_mask": {
+   "black": 5921370,
+   "red": 10855845
+  }
+ },
+ "m1_sha256": "b21a0e7d2fef53bbe8f87c51db78460b5b2e61bcb7ed9d333bf8cdd9a26359ac",
+ "mode": "pilot",
+ "note": "nothing here scores a game; outcomes are derivable from the game files, by design",
+ "pairs": [
+  {
+   "agree_through": 61,
+   "fired": false,
+   "first_override": {
+    "A": null,
+    "B": null
+   },
+   "pair_id": "pilot-00"
+  },
+  {
+   "agree_through": 61,
+   "fired": false,
+   "first_override": {
+    "A": null,
+    "B": null
+   },
+   "pair_id": "pilot-01"
+  },
+  {
+   "agree_through": 61,
+   "fired": false,
+   "first_override": {
+    "A": null,
+    "B": null
+   },
+   "pair_id": "pilot-02"
+  },
+  {
+   "agree_through": 61,
+   "fired": false,
+   "first_override": {
+    "A": null,
+    "B": null
+   },
+   "pair_id": "pilot-03"
+  },
+  {
+   "agree_through": 61,
+   "fired": false,
+   "first_override": {
+    "A": null,
+    "B": null
+   },
+   "pair_id": "pilot-04"
+  },
+  {
+   "agree_through": 61,
+   "fired": false,
+   "first_override": {
+    "A": null,
+    "B": null
+   },
+   "pair_id": "pilot-05"
+  },
+  {
+   "agree_through": 61,
+   "fired": false,
+   "first_override": {
+    "A": null,
+    "B": null
+   },
+   "pair_id": "pilot-06"
+  },
+  {
+   "agree_through": 61,
+   "fired": false,
+   "first_override": {
+    "A": null,
+    "B": null
+   },
+   "pair_id": "pilot-07"
+  },
+  {
+   "agree_through": 61,
+   "fired": false,
+   "first_override": {
+    "A": null,
+    "B": null
+   },
+   "pair_id": "pilot-08"
+  },
+  {
+   "agree_through": 61,
+   "fired": false,
+   "first_override": {
+    "A": null,
+    "B": null
+   },
+   "pair_id": "pilot-09"
+  },
+  {
+   "agree_through": 61,
+   "fired": false,
+   "first_override": {
+    "A": null,
+    "B": null
+   },
+   "pair_id": "pilot-10"
+  },
+  {
+   "agree_through": 61,
+   "fired": false,
+   "first_override": {
+    "A": null,
+    "B": null
+   },
+   "pair_id": "pilot-11"
+  },
+  {
+   "agree_through": 61,
+   "fired": false,
+   "first_override": {
+    "A": null,
+    "B": null
+   },
+   "pair_id": "pilot-12"
+  },
+  {
+   "agree_through": 61,
+   "fired": false,
+   "first_override": {
+    "A": null,
+    "B": null
+   },
+   "pair_id": "pilot-13"
+  },
+  {
+   "agree_through": 61,
+   "fired": false,
+   "first_override": {
+    "A": null,
+    "B": null
+   },
+   "pair_id": "pilot-14"
+  },
+  {
+   "agree_through": 61,
+   "fired": false,
+   "first_override": {
+    "A": null,
+    "B": null
+   },
+   "pair_id": "pilot-15"
+  }
+ ],
+ "plan": {
+  "mode": "pilot",
+  "pairs": [
+   {
+    "pair_id": "pilot-00",
+    "seeds": {
+     "black": 202660001,
+     "red": 202660000
+    }
+   },
+   {
+    "pair_id": "pilot-01",
+    "seeds": {
+     "black": 202660003,
+     "red": 202660002
+    }
+   },
+   {
+    "pair_id": "pilot-02",
+    "seeds": {
+     "black": 202660005,
+     "red": 202660004
+    }
+   },
+   {
+    "pair_id": "pilot-03",
+    "seeds": {
+     "black": 202660007,
+     "red": 202660006
+    }
+   },
+   {
+    "pair_id": "pilot-04",
+    "seeds": {
+     "black": 202660009,
+     "red": 202660008
+    }
+   },
+   {
+    "pair_id": "pilot-05",
+    "seeds": {
+     "black": 202660011,
+     "red": 202660010
+    }
+   },
+   {
+    "pair_id": "pilot-06",
+    "seeds": {
+     "black": 202660013,
+     "red": 202660012
+    }
+   },
+   {
+    "pair_id": "pilot-07",
+    "seeds": {
+     "black": 202660015,
+     "red": 202660014
+    }
+   },
+   {
+    "pair_id": "pilot-08",
+    "seeds": {
+     "black": 202660017,
+     "red": 202660016
+    }
+   },
+   {
+    "pair_id": "pilot-09",
+    "seeds": {
+     "black": 202660019,
+     "red": 202660018
+    }
+   },
+   {
+    "pair_id": "pilot-10",
+    "seeds": {
+     "black": 202660021,
+     "red": 202660020
+    }
+   },
+   {
+    "pair_id": "pilot-11",
+    "seeds": {
+     "black": 202660023,
+     "red": 202660022
+    }
+   },
+   {
+    "pair_id": "pilot-12",
+    "seeds": {
+     "black": 202660025,
+     "red": 202660024
+    }
+   },
+   {
+    "pair_id": "pilot-13",
+    "seeds": {
+     "black": 202660027,
+     "red": 202660026
+    }
+   },
+   {
+    "pair_id": "pilot-14",
+    "seeds": {
+     "black": 202660029,
+     "red": 202660028
+    }
+   },
+   {
+    "pair_id": "pilot-15",
+    "seeds": {
+     "black": 202660031,
+     "red": 202660030
+    }
+   }
+  ],
+  "qualification": {
+   "call_list_sha256": "dae1e0f7b6723e64e99ae9154cc474fd3ff989f380396ba08b13f8e1c1d3fe7b",
+   "commit": "d815461eb8daa7f462dc8c492316717a0b3045b4",
+   "corpus_sha256": "1f040a9208fb3049de4fbf6e73884ad0fafa067fed3d9c275a4abbedf149179c",
+   "files": {
+    "child.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "child.stdout.txt": "c0b2ec1ed5ff6f9e565fb365f891d2a55e91d7dee5327ba8ec4693d4c2aa7dba",
+    "claim.json": "bbf45b8e0572113dfed097fce279175466eb37f4197d572ee8de68142dece49a",
+    "log.jsonl": "8a0ed8763616abf1db18b9ab76bba8fce79c017ab8dba9f8722e6a814da9904a",
+    "observations.jsonl": "6551e6d3efcdb49fc2f2417ce9a7ab68096ca8ee1f38ee58823fe9cfe2e8dbbd",
+    "record.json": "698338279b8d6402b2a1aaf446fdebbd69ab03b833ad0a7937f18f50d65c5ace",
+    "watchdog.json": "c33068294a19c06bc9a18cfd80c34c8119e8094bada218e2bd36ba3dd614ffa1"
+   }
+  },
+  "survey": "dee36562d62bc4f449c07b841c859c562d9edb1dd42870bd260dcdea0ae91ee4"
+ },
+ "plan_sha256": "8c57e608a089b22ae4ae678cbc17d83bbaf58356cfad0dd7bc33d08ab3ba1907",
+ "ply_cap": 280,
+ "status": "COMPLETE",
+ "wrapper_sha256": "2d73e2efcad45e76f0281ab8a97da4b11218ea139993f53eea18a190f863f003"
+}

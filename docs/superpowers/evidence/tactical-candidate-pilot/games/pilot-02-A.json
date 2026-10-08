@@ -1,0 +1,1054 @@
+{
+ "arm": "A",
+ "candidate": "red",
+ "digest": "25db3ec6c6b24bc72ba5988a4e6a0a9f7eabbfac6c6f54000a8a86bae4180009",
+ "moves": [
+  [
+   18,
+   19
+  ],
+  [
+   14,
+   18
+  ],
+  [
+   14,
+   15
+  ],
+  [
+   17,
+   15
+  ],
+  [
+   15,
+   17
+  ],
+  [
+   19,
+   10
+  ],
+  [
+   17,
+   12
+  ],
+  [
+   10,
+   14
+  ],
+  [
+   13,
+   18
+  ],
+  [
+   11,
+   16
+  ],
+  [
+   10,
+   18
+  ],
+  [
+   8,
+   17
+  ],
+  [
+   8,
+   19
+  ],
+  [
+   18,
+   18
+  ],
+  [
+   7,
+   17
+  ],
+  [
+   6,
+   16
+  ],
+  [
+   6,
+   19
+  ],
+  [
+   20,
+   12
+  ],
+  [
+   17,
+   18
+  ],
+  [
+   16,
+   19
+  ],
+  [
+   19,
+   17
+  ],
+  [
+   12,
+   19
+  ],
+  [
+   11,
+   19
+  ],
+  [
+   3,
+   19
+  ],
+  [
+   10,
+   10
+  ],
+  [
+   4,
+   17
+  ],
+  [
+   6,
+   12
+  ],
+  [
+   9,
+   12
+  ],
+  [
+   8,
+   11
+  ],
+  [
+   12,
+   10
+  ],
+  [
+   11,
+   12
+  ],
+  [
+   1,
+   1
+  ],
+  [
+   13,
+   11
+  ],
+  [
+   1,
+   0
+  ],
+  [
+   18,
+   7
+  ],
+  [
+   1,
+   2
+  ],
+  [
+   12,
+   9
+  ],
+  [
+   1,
+   4
+  ],
+  [
+   4,
+   13
+  ],
+  [
+   1,
+   5
+  ],
+  [
+   12,
+   14
+  ],
+  [
+   1,
+   6
+  ],
+  [
+   2,
+   4
+  ],
+  [
+   1,
+   7
+  ],
+  [
+   0,
+   5
+  ],
+  [
+   1,
+   3
+  ],
+  [
+   4,
+   20
+  ],
+  [
+   2,
+   21
+  ],
+  [
+   17,
+   16
+  ],
+  [
+   3,
+   4
+  ],
+  [
+   16,
+   14
+  ],
+  [
+   1,
+   8
+  ],
+  [
+   14,
+   13
+  ],
+  [
+   1,
+   9
+  ],
+  [
+   2,
+   12
+  ],
+  [
+   1,
+   10
+  ],
+  [
+   0,
+   11
+  ],
+  [
+   1,
+   11
+  ],
+  [
+   21,
+   18
+  ],
+  [
+   1,
+   13
+  ],
+  [
+   23,
+   17
+  ]
+ ],
+ "pair_id": "pilot-02",
+ "roles": {
+  "black": "incumbent",
+  "red": "candidate"
+ },
+ "seconds": 61.80272858310491,
+ "seeds": {
+  "black": 202660005,
+  "red": 202660004
+ },
+ "terminal": {
+  "ply": 61,
+  "reason": "win"
+ },
+ "witnesses": [
+  {
+   "baseline": [
+    18,
+    19,
+    213,
+    0.10457262999876599
+   ],
+   "class": {
+    "T_void": null,
+    "class": "QUIET"
+   },
+   "final": [
+    18,
+    19,
+    213,
+    0.10457262999876599
+   ],
+   "override": false,
+   "ply": 0,
+   "reason": null,
+   "rule": "inactive",
+   "scan_s": 0.0036310418508946896,
+   "search_s": 1.0770032089203596,
+   "unsearched": false
+  },
+  {
+   "baseline": [
+    14,
+    15,
+    216,
+    0.11702352617457681
+   ],
+   "class": {
+    "T_void": null,
+    "class": "QUIET"
+   },
+   "final": [
+    14,
+    15,
+    216,
+    0.11702352617457681
+   ],
+   "override": false,
+   "ply": 2,
+   "reason": null,
+   "rule": "inactive",
+   "scan_s": 0.0041792080737650394,
+   "search_s": 1.0555970002897084,
+   "unsearched": false
+  },
+  {
+   "baseline": [
+    15,
+    17,
+    87,
+    0.0916462270516217
+   ],
+   "class": {
+    "T_void": null,
+    "class": "QUIET"
+   },
+   "final": [
+    15,
+    17,
+    87,
+    0.0916462270516217
+   ],
+   "override": false,
+   "ply": 4,
+   "reason": null,
+   "rule": "inactive",
+   "scan_s": 0.004321458283811808,
+   "search_s": 1.0448952079750597,
+   "unsearched": false
+  },
+  {
+   "baseline": [
+    17,
+    12,
+    163,
+    0.06832778622664831
+   ],
+   "class": {
+    "T_void": null,
+    "class": "QUIET"
+   },
+   "final": [
+    17,
+    12,
+    163,
+    0.06832778622664831
+   ],
+   "override": false,
+   "ply": 6,
+   "reason": null,
+   "rule": "inactive",
+   "scan_s": 0.00404979195445776,
+   "search_s": 1.05244066612795,
+   "unsearched": false
+  },
+  {
+   "baseline": [
+    13,
+    18,
+    87,
+    0.13627952641416768
+   ],
+   "class": {
+    "T_void": null,
+    "class": "QUIET"
+   },
+   "final": [
+    13,
+    18,
+    87,
+    0.13627952641416768
+   ],
+   "override": false,
+   "ply": 8,
+   "reason": null,
+   "rule": "inactive",
+   "scan_s": 0.004270249977707863,
+   "search_s": 1.0496437079273164,
+   "unsearched": false
+  },
+  {
+   "baseline": [
+    10,
+    18,
+    58,
+    0.01219585391789161
+   ],
+   "class": {
+    "T_void": null,
+    "class": "QUIET"
+   },
+   "final": [
+    10,
+    18,
+    58,
+    0.01219585391789161
+   ],
+   "override": false,
+   "ply": 10,
+   "reason": null,
+   "rule": "inactive",
+   "scan_s": 0.004089458379894495,
+   "search_s": 1.0694665000773966,
+   "unsearched": false
+  },
+  {
+   "baseline": [
+    8,
+    19,
+    91,
+    -0.011702671780117921
+   ],
+   "class": {
+    "T_void": null,
+    "class": "QUIET"
+   },
+   "final": [
+    8,
+    19,
+    91,
+    -0.011702671780117921
+   ],
+   "override": false,
+   "ply": 12,
+   "reason": null,
+   "rule": "inactive",
+   "scan_s": 0.00417045783251524,
+   "search_s": 1.0650050840340555,
+   "unsearched": false
+  },
+  {
+   "baseline": [
+    7,
+    17,
+    183,
+    0.08484233375333372
+   ],
+   "class": {
+    "T_void": null,
+    "class": "QUIET"
+   },
+   "final": [
+    7,
+    17,
+    183,
+    0.08484233375333372
+   ],
+   "override": false,
+   "ply": 14,
+   "reason": null,
+   "rule": "inactive",
+   "scan_s": 0.00421191705390811,
+   "search_s": 1.1557303750887513,
+   "unsearched": false
+  },
+  {
+   "baseline": [
+    6,
+    19,
+    274,
+    0.1504725787277082
+   ],
+   "class": {
+    "T_void": null,
+    "class": "QUIET"
+   },
+   "final": [
+    6,
+    19,
+    274,
+    0.1504725787277082
+   ],
+   "override": false,
+   "ply": 16,
+   "reason": null,
+   "rule": "inactive",
+   "scan_s": 0.005119625013321638,
+   "search_s": 1.1645936253480613,
+   "unsearched": false
+  },
+  {
+   "baseline": [
+    17,
+    18,
+    335,
+    0.23011648138470725
+   ],
+   "class": {
+    "T_void": null,
+    "class": "QUIET"
+   },
+   "final": [
+    17,
+    18,
+    335,
+    0.23011648138470725
+   ],
+   "override": false,
+   "ply": 18,
+   "reason": null,
+   "rule": "inactive",
+   "scan_s": 0.004495833069086075,
+   "search_s": 1.0322500001639128,
+   "unsearched": false
+  },
+  {
+   "baseline": [
+    19,
+    17,
+    391,
+    0.5873966948284061
+   ],
+   "class": {
+    "T_void": null,
+    "class": "QUIET"
+   },
+   "final": [
+    19,
+    17,
+    391,
+    0.5873966948284061
+   ],
+   "override": false,
+   "ply": 20,
+   "reason": null,
+   "rule": "inactive",
+   "scan_s": 0.004617332946509123,
+   "search_s": 1.0175999589264393,
+   "unsearched": false
+  },
+  {
+   "baseline": [
+    11,
+    19,
+    372,
+    0.49583626968625893
+   ],
+   "class": {
+    "T_void": null,
+    "class": "QUIET"
+   },
+   "final": [
+    11,
+    19,
+    372,
+    0.49583626968625893
+   ],
+   "override": false,
+   "ply": 22,
+   "reason": null,
+   "rule": "inactive",
+   "scan_s": 0.004301582928746939,
+   "search_s": 1.014452540781349,
+   "unsearched": false
+  },
+  {
+   "baseline": [
+    10,
+    10,
+    217,
+    0.6784221744207742
+   ],
+   "class": {
+    "T_void": null,
+    "class": "QUIET"
+   },
+   "final": [
+    10,
+    10,
+    217,
+    0.6784221744207742
+   ],
+   "override": false,
+   "ply": 24,
+   "reason": null,
+   "rule": "inactive",
+   "scan_s": 0.004410667344927788,
+   "search_s": 1.0117678330279887,
+   "unsearched": false
+  },
+  {
+   "baseline": [
+    6,
+    12,
+    251,
+    0.8102757176792479
+   ],
+   "class": {
+    "T_void": null,
+    "class": "QUIET"
+   },
+   "final": [
+    6,
+    12,
+    251,
+    0.8102757176792479
+   ],
+   "override": false,
+   "ply": 26,
+   "reason": null,
+   "rule": "inactive",
+   "scan_s": 0.004514792002737522,
+   "search_s": 1.0180865828879178,
+   "unsearched": false
+  },
+  {
+   "baseline": [
+    8,
+    11,
+    188,
+    0.8489515981141557
+   ],
+   "class": {
+    "T_void": null,
+    "class": "QUIET"
+   },
+   "final": [
+    8,
+    11,
+    188,
+    0.8489515981141557
+   ],
+   "override": false,
+   "ply": 28,
+   "reason": null,
+   "rule": "inactive",
+   "scan_s": 0.004658457823097706,
+   "search_s": 1.0178608326241374,
+   "unsearched": false
+  },
+  {
+   "baseline": [
+    11,
+    12,
+    148,
+    0.8910833134039028
+   ],
+   "class": {
+    "T_void": null,
+    "class": "QUIET"
+   },
+   "final": [
+    11,
+    12,
+    148,
+    0.8910833134039028
+   ],
+   "override": false,
+   "ply": 30,
+   "reason": null,
+   "rule": "inactive",
+   "scan_s": 0.004771417006850243,
+   "search_s": 1.0176467499695718,
+   "unsearched": false
+  },
+  {
+   "baseline": [
+    13,
+    11,
+    136,
+    0.9209621711908018
+   ],
+   "class": {
+    "T_void": null,
+    "class": "QUIET"
+   },
+   "final": [
+    13,
+    11,
+    136,
+    0.9209621711908018
+   ],
+   "override": false,
+   "ply": 32,
+   "reason": null,
+   "rule": "inactive",
+   "scan_s": 0.004948707763105631,
+   "search_s": 1.0249225003644824,
+   "unsearched": false
+  },
+  {
+   "baseline": [
+    18,
+    7,
+    102,
+    0.9382249192864287
+   ],
+   "class": {
+    "T_void": null,
+    "class": "QUIET"
+   },
+   "final": [
+    18,
+    7,
+    102,
+    0.9382249192864287
+   ],
+   "override": false,
+   "ply": 34,
+   "reason": null,
+   "rule": "inactive",
+   "scan_s": 0.007395957596600056,
+   "search_s": 1.029649999924004,
+   "unsearched": false
+  },
+  {
+   "baseline": [
+    12,
+    9,
+    86,
+    0.9240496345730715
+   ],
+   "class": {
+    "T_void": null,
+    "class": "QUIET"
+   },
+   "final": [
+    12,
+    9,
+    86,
+    0.9240496345730715
+   ],
+   "override": false,
+   "ply": 36,
+   "reason": null,
+   "rule": "inactive",
+   "scan_s": 0.007366042118519545,
+   "search_s": 1.0168239590711892,
+   "unsearched": false
+  },
+  {
+   "baseline": [
+    4,
+    13,
+    86,
+    0.9264758665894353
+   ],
+   "class": {
+    "T_void": null,
+    "class": "QUIET"
+   },
+   "final": [
+    4,
+    13,
+    86,
+    0.9264758665894353
+   ],
+   "override": false,
+   "ply": 38,
+   "reason": null,
+   "rule": "inactive",
+   "scan_s": 0.007811916992068291,
+   "search_s": 1.0235351249575615,
+   "unsearched": false
+  },
+  {
+   "baseline": [
+    12,
+    14,
+    139,
+    0.9343920470141679
+   ],
+   "class": {
+    "T_void": null,
+    "class": "QUIET"
+   },
+   "final": [
+    12,
+    14,
+    139,
+    0.9343920470141679
+   ],
+   "override": false,
+   "ply": 40,
+   "reason": null,
+   "rule": "inactive",
+   "scan_s": 0.007808665744960308,
+   "search_s": 1.0264240419492126,
+   "unsearched": false
+  },
+  {
+   "baseline": [
+    2,
+    4,
+    120,
+    0.9360822757085164
+   ],
+   "class": {
+    "T_void": null,
+    "class": "QUIET"
+   },
+   "final": [
+    2,
+    4,
+    120,
+    0.9360822757085164
+   ],
+   "override": false,
+   "ply": 42,
+   "reason": null,
+   "rule": "inactive",
+   "scan_s": 0.007888082880526781,
+   "search_s": 1.015951749868691,
+   "unsearched": false
+  },
+  {
+   "baseline": [
+    0,
+    5,
+    81,
+    0.9225205999833567
+   ],
+   "class": {
+    "T_void": null,
+    "class": "QUIET"
+   },
+   "final": [
+    0,
+    5,
+    81,
+    0.9225205999833567
+   ],
+   "override": false,
+   "ply": 44,
+   "reason": null,
+   "rule": "inactive",
+   "scan_s": 0.007705874741077423,
+   "search_s": 1.016436249949038,
+   "unsearched": false
+  },
+  {
+   "baseline": [
+    4,
+    20,
+    76,
+    0.9214736105580079
+   ],
+   "class": {
+    "T_void": null,
+    "class": "QUIET"
+   },
+   "final": [
+    4,
+    20,
+    76,
+    0.9214736105580079
+   ],
+   "override": false,
+   "ply": 46,
+   "reason": null,
+   "rule": "inactive",
+   "scan_s": 0.00844487501308322,
+   "search_s": 1.1446330002509058,
+   "unsearched": false
+  },
+  {
+   "baseline": [
+    17,
+    16,
+    97,
+    0.8949973773710507
+   ],
+   "class": {
+    "T_void": null,
+    "class": "QUIET"
+   },
+   "final": [
+    17,
+    16,
+    97,
+    0.8949973773710507
+   ],
+   "override": false,
+   "ply": 48,
+   "reason": null,
+   "rule": "inactive",
+   "scan_s": 0.008616582956165075,
+   "search_s": 1.0205121668986976,
+   "unsearched": false
+  },
+  {
+   "baseline": [
+    16,
+    14,
+    116,
+    0.9283298074171461
+   ],
+   "class": {
+    "T_void": null,
+    "class": "QUIET"
+   },
+   "final": [
+    16,
+    14,
+    116,
+    0.9283298074171461
+   ],
+   "override": false,
+   "ply": 50,
+   "reason": null,
+   "rule": "inactive",
+   "scan_s": 0.009168082848191261,
+   "search_s": 1.0190234170295298,
+   "unsearched": false
+  },
+  {
+   "baseline": [
+    14,
+    13,
+    111,
+    0.9297313894237484
+   ],
+   "class": {
+    "T_void": null,
+    "class": "QUIET"
+   },
+   "final": [
+    14,
+    13,
+    111,
+    0.9297313894237484
+   ],
+   "override": false,
+   "ply": 52,
+   "reason": null,
+   "rule": "inactive",
+   "scan_s": 0.009638292249292135,
+   "search_s": 1.0311309583485126,
+   "unsearched": false
+  },
+  {
+   "baseline": [
+    2,
+    12,
+    108,
+    0.9499107097034101
+   ],
+   "class": {
+    "T_void": null,
+    "class": "QUIET"
+   },
+   "final": [
+    2,
+    12,
+    108,
+    0.9499107097034101
+   ],
+   "override": false,
+   "ply": 54,
+   "reason": null,
+   "rule": "inactive",
+   "scan_s": 0.010095375124365091,
+   "search_s": 1.0207562088035047,
+   "unsearched": false
+  },
+  {
+   "baseline": [
+    0,
+    11,
+    128,
+    0.9897831697016954
+   ],
+   "class": {
+    "T_void": null,
+    "class": "QUIET"
+   },
+   "final": [
+    0,
+    11,
+    128,
+    0.9897831697016954
+   ],
+   "override": false,
+   "ply": 56,
+   "reason": null,
+   "rule": "inactive",
+   "scan_s": 0.010317208245396614,
+   "search_s": 1.0293520418927073,
+   "unsearched": false
+  },
+  {
+   "baseline": [
+    21,
+    18,
+    269,
+    0.9938976080001065
+   ],
+   "class": {
+    "T_void": null,
+    "class": "QUIET"
+   },
+   "final": [
+    21,
+    18,
+    269,
+    0.9938976080001065
+   ],
+   "override": false,
+   "ply": 58,
+   "reason": null,
+   "rule": "inactive",
+   "scan_s": 0.015207708347588778,
+   "search_s": 1.139179457910359,
+   "unsearched": false
+  },
+  {
+   "baseline": [
+    23,
+    17,
+    200,
+    1.0
+   ],
+   "class": {
+    "D": null,
+    "T": null,
+    "T_void": null,
+    "W": [
+     [
+      23,
+      17
+     ],
+     [
+      23,
+      19
+     ]
+    ],
+    "class": "OWN_WIN"
+   },
+   "final": [
+    23,
+    17,
+    200,
+    1.0
+   ],
+   "override": false,
+   "ply": 60,
+   "reason": null,
+   "rule": "preserved",
+   "scan_s": 0.007809041999280453,
+   "search_s": 0.06250179186463356,
+   "unsearched": false
+  }
+ ]
+}

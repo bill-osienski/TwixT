@@ -5,4 +5,4 @@ One gate for the pilot and for each study segment of `candidate_match_runner`, e
 ONE run under its own authorization and restored on every exit. Created closed. This file may
 hold ONLY this declaration.
 """
-CANDIDATE_MATCH_AUTHORIZED = True
+CANDIDATE_MATCH_AUTHORIZED = False

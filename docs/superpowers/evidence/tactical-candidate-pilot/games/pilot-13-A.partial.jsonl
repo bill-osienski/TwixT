@@ -1,0 +1,61 @@
+{"move": [18, 19], "ply": 0, "witness": {"baseline": [18, 19, 213, 0.10457262999876599], "class": {"T_void": null, "class": "QUIET"}, "final": [18, 19, 213, 0.10457262999876599], "override": false, "ply": 0, "reason": null, "rule": "inactive", "scan_s": 0.003705458715558052, "search_s": 1.0145506672561169, "unsearched": false}}
+{"move": [14, 18], "ply": 1, "witness": null}
+{"move": [14, 15], "ply": 2, "witness": {"baseline": [14, 15, 216, 0.11702352617457681], "class": {"T_void": null, "class": "QUIET"}, "final": [14, 15, 216, 0.11702352617457681], "override": false, "ply": 2, "reason": null, "rule": "inactive", "scan_s": 0.0040040831081569195, "search_s": 1.0092567498795688, "unsearched": false}}
+{"move": [17, 15], "ply": 3, "witness": null}
+{"move": [15, 17], "ply": 4, "witness": {"baseline": [15, 17, 87, 0.0916462270516217], "class": {"T_void": null, "class": "QUIET"}, "final": [15, 17, 87, 0.0916462270516217], "override": false, "ply": 4, "reason": null, "rule": "inactive", "scan_s": 0.004348707851022482, "search_s": 1.0277327499352396, "unsearched": false}}
+{"move": [19, 10], "ply": 5, "witness": null}
+{"move": [17, 12], "ply": 6, "witness": {"baseline": [17, 12, 163, 0.06832778622664831], "class": {"T_void": null, "class": "QUIET"}, "final": [17, 12, 163, 0.06832778622664831], "override": false, "ply": 6, "reason": null, "rule": "inactive", "scan_s": 0.004085874650627375, "search_s": 1.009318582713604, "unsearched": false}}
+{"move": [10, 14], "ply": 7, "witness": null}
+{"move": [13, 18], "ply": 8, "witness": {"baseline": [13, 18, 87, 0.13627952641416768], "class": {"T_void": null, "class": "QUIET"}, "final": [13, 18, 87, 0.13627952641416768], "override": false, "ply": 8, "reason": null, "rule": "inactive", "scan_s": 0.004368833731859922, "search_s": 1.0218481249175966, "unsearched": false}}
+{"move": [11, 16], "ply": 9, "witness": null}
+{"move": [10, 18], "ply": 10, "witness": {"baseline": [10, 18, 58, 0.01219585391789161], "class": {"T_void": null, "class": "QUIET"}, "final": [10, 18, 58, 0.01219585391789161], "override": false, "ply": 10, "reason": null, "rule": "inactive", "scan_s": 0.0040814997628331184, "search_s": 1.0042524579912424, "unsearched": false}}
+{"move": [8, 17], "ply": 11, "witness": null}
+{"move": [8, 19], "ply": 12, "witness": {"baseline": [8, 19, 91, -0.011702671780117921], "class": {"T_void": null, "class": "QUIET"}, "final": [8, 19, 91, -0.011702671780117921], "override": false, "ply": 12, "reason": null, "rule": "inactive", "scan_s": 0.00407083285972476, "search_s": 1.0088987918570638, "unsearched": false}}
+{"move": [18, 18], "ply": 13, "witness": null}
+{"move": [7, 17], "ply": 14, "witness": {"baseline": [7, 17, 183, 0.08484233375333372], "class": {"T_void": null, "class": "QUIET"}, "final": [7, 17, 183, 0.08484233375333372], "override": false, "ply": 14, "reason": null, "rule": "inactive", "scan_s": 0.004155125003308058, "search_s": 1.0152947921305895, "unsearched": false}}
+{"move": [6, 16], "ply": 15, "witness": null}
+{"move": [6, 19], "ply": 16, "witness": {"baseline": [6, 19, 274, 0.1504725787277082], "class": {"T_void": null, "class": "QUIET"}, "final": [6, 19, 274, 0.1504725787277082], "override": false, "ply": 16, "reason": null, "rule": "inactive", "scan_s": 0.0043440829031169415, "search_s": 1.0235313326120377, "unsearched": false}}
+{"move": [20, 12], "ply": 17, "witness": null}
+{"move": [17, 18], "ply": 18, "witness": {"baseline": [17, 18, 335, 0.23011648138470725], "class": {"T_void": null, "class": "QUIET"}, "final": [17, 18, 335, 0.23011648138470725], "override": false, "ply": 18, "reason": null, "rule": "inactive", "scan_s": 0.004515375010669231, "search_s": 0.993002959061414, "unsearched": false}}
+{"move": [16, 19], "ply": 19, "witness": null}
+{"move": [19, 17], "ply": 20, "witness": {"baseline": [19, 17, 391, 0.5873966948284061], "class": {"T_void": null, "class": "QUIET"}, "final": [19, 17, 391, 0.5873966948284061], "override": false, "ply": 20, "reason": null, "rule": "inactive", "scan_s": 0.004622125066816807, "search_s": 0.9514959170483053, "unsearched": false}}
+{"move": [12, 19], "ply": 21, "witness": null}
+{"move": [11, 19], "ply": 22, "witness": {"baseline": [11, 19, 372, 0.49583626968625893], "class": {"T_void": null, "class": "QUIET"}, "final": [11, 19, 372, 0.49583626968625893], "override": false, "ply": 22, "reason": null, "rule": "inactive", "scan_s": 0.004296999890357256, "search_s": 0.9565531658008695, "unsearched": false}}
+{"move": [3, 19], "ply": 23, "witness": null}
+{"move": [10, 10], "ply": 24, "witness": {"baseline": [10, 10, 217, 0.6784221744207742], "class": {"T_void": null, "class": "QUIET"}, "final": [10, 10, 217, 0.6784221744207742], "override": false, "ply": 24, "reason": null, "rule": "inactive", "scan_s": 0.00445441622287035, "search_s": 0.9603263330645859, "unsearched": false}}
+{"move": [4, 17], "ply": 25, "witness": null}
+{"move": [6, 12], "ply": 26, "witness": {"baseline": [6, 12, 251, 0.8102757176792479], "class": {"T_void": null, "class": "QUIET"}, "final": [6, 12, 251, 0.8102757176792479], "override": false, "ply": 26, "reason": null, "rule": "inactive", "scan_s": 0.004578625317662954, "search_s": 0.9656879166141152, "unsearched": false}}
+{"move": [9, 12], "ply": 27, "witness": null}
+{"move": [8, 11], "ply": 28, "witness": {"baseline": [8, 11, 188, 0.8489515981141557], "class": {"T_void": null, "class": "QUIET"}, "final": [8, 11, 188, 0.8489515981141557], "override": false, "ply": 28, "reason": null, "rule": "inactive", "scan_s": 0.004635167308151722, "search_s": 0.9579671248793602, "unsearched": false}}
+{"move": [12, 10], "ply": 29, "witness": null}
+{"move": [11, 12], "ply": 30, "witness": {"baseline": [11, 12, 148, 0.8910833134039028], "class": {"T_void": null, "class": "QUIET"}, "final": [11, 12, 148, 0.8910833134039028], "override": false, "ply": 30, "reason": null, "rule": "inactive", "scan_s": 0.004815415944904089, "search_s": 0.969401374924928, "unsearched": false}}
+{"move": [1, 1], "ply": 31, "witness": null}
+{"move": [13, 11], "ply": 32, "witness": {"baseline": [13, 11, 136, 0.9209621711908018], "class": {"T_void": null, "class": "QUIET"}, "final": [13, 11, 136, 0.9209621711908018], "override": false, "ply": 32, "reason": null, "rule": "inactive", "scan_s": 0.0048719169571995735, "search_s": 0.9868669579736888, "unsearched": false}}
+{"move": [1, 0], "ply": 33, "witness": null}
+{"move": [18, 7], "ply": 34, "witness": {"baseline": [18, 7, 102, 0.9382249192864287], "class": {"T_void": null, "class": "QUIET"}, "final": [18, 7, 102, 0.9382249192864287], "override": false, "ply": 34, "reason": null, "rule": "inactive", "scan_s": 0.007443083915859461, "search_s": 0.9773811670020223, "unsearched": false}}
+{"move": [1, 2], "ply": 35, "witness": null}
+{"move": [12, 9], "ply": 36, "witness": {"baseline": [12, 9, 86, 0.9240496345730715], "class": {"T_void": null, "class": "QUIET"}, "final": [12, 9, 86, 0.9240496345730715], "override": false, "ply": 36, "reason": null, "rule": "inactive", "scan_s": 0.007418166846036911, "search_s": 0.9703782079741359, "unsearched": false}}
+{"move": [1, 4], "ply": 37, "witness": null}
+{"move": [4, 13], "ply": 38, "witness": {"baseline": [4, 13, 86, 0.9264758665894353], "class": {"T_void": null, "class": "QUIET"}, "final": [4, 13, 86, 0.9264758665894353], "override": false, "ply": 38, "reason": null, "rule": "inactive", "scan_s": 0.00768583407625556, "search_s": 1.1134009156376123, "unsearched": false}}
+{"move": [1, 5], "ply": 39, "witness": null}
+{"move": [12, 14], "ply": 40, "witness": {"baseline": [12, 14, 139, 0.9343920470141679], "class": {"T_void": null, "class": "QUIET"}, "final": [12, 14, 139, 0.9343920470141679], "override": false, "ply": 40, "reason": null, "rule": "inactive", "scan_s": 0.0077878329902887344, "search_s": 0.9671704997308552, "unsearched": false}}
+{"move": [1, 6], "ply": 41, "witness": null}
+{"move": [2, 4], "ply": 42, "witness": {"baseline": [2, 4, 120, 0.9360822757085164], "class": {"T_void": null, "class": "QUIET"}, "final": [2, 4, 120, 0.9360822757085164], "override": false, "ply": 42, "reason": null, "rule": "inactive", "scan_s": 0.007910791784524918, "search_s": 0.9537372076883912, "unsearched": false}}
+{"move": [1, 7], "ply": 43, "witness": null}
+{"move": [0, 5], "ply": 44, "witness": {"baseline": [0, 5, 81, 0.9225205999833567], "class": {"T_void": null, "class": "QUIET"}, "final": [0, 5, 81, 0.9225205999833567], "override": false, "ply": 44, "reason": null, "rule": "inactive", "scan_s": 0.007802624721080065, "search_s": 0.9552728747949004, "unsearched": false}}
+{"move": [1, 3], "ply": 45, "witness": null}
+{"move": [4, 20], "ply": 46, "witness": {"baseline": [4, 20, 76, 0.9214736105580079], "class": {"T_void": null, "class": "QUIET"}, "final": [4, 20, 76, 0.9214736105580079], "override": false, "ply": 46, "reason": null, "rule": "inactive", "scan_s": 0.008455624803900719, "search_s": 0.9534602910280228, "unsearched": false}}
+{"move": [2, 21], "ply": 47, "witness": null}
+{"move": [17, 16], "ply": 48, "witness": {"baseline": [17, 16, 97, 0.8949973773710507], "class": {"T_void": null, "class": "QUIET"}, "final": [17, 16, 97, 0.8949973773710507], "override": false, "ply": 48, "reason": null, "rule": "inactive", "scan_s": 0.008622417226433754, "search_s": 0.9663659576326609, "unsearched": false}}
+{"move": [3, 4], "ply": 49, "witness": null}
+{"move": [16, 14], "ply": 50, "witness": {"baseline": [16, 14, 116, 0.9283298074171461], "class": {"T_void": null, "class": "QUIET"}, "final": [16, 14, 116, 0.9283298074171461], "override": false, "ply": 50, "reason": null, "rule": "inactive", "scan_s": 0.009241207968443632, "search_s": 0.9624636247754097, "unsearched": false}}
+{"move": [1, 8], "ply": 51, "witness": null}
+{"move": [14, 13], "ply": 52, "witness": {"baseline": [14, 13, 111, 0.9297313894237484], "class": {"T_void": null, "class": "QUIET"}, "final": [14, 13, 111, 0.9297313894237484], "override": false, "ply": 52, "reason": null, "rule": "inactive", "scan_s": 0.0102548748254776, "search_s": 0.9675182909704745, "unsearched": false}}
+{"move": [1, 9], "ply": 53, "witness": null}
+{"move": [2, 12], "ply": 54, "witness": {"baseline": [2, 12, 108, 0.9499107097034101], "class": {"T_void": null, "class": "QUIET"}, "final": [2, 12, 108, 0.9499107097034101], "override": false, "ply": 54, "reason": null, "rule": "inactive", "scan_s": 0.010019625071436167, "search_s": 0.9568197499029338, "unsearched": false}}
+{"move": [1, 10], "ply": 55, "witness": null}
+{"move": [0, 11], "ply": 56, "witness": {"baseline": [0, 11, 128, 0.9897831697016954], "class": {"T_void": null, "class": "QUIET"}, "final": [0, 11, 128, 0.9897831697016954], "override": false, "ply": 56, "reason": null, "rule": "inactive", "scan_s": 0.010296958964318037, "search_s": 0.9671726250089705, "unsearched": false}}
+{"move": [1, 11], "ply": 57, "witness": null}
+{"move": [21, 18], "ply": 58, "witness": {"baseline": [21, 18, 269, 0.9938976080001065], "class": {"T_void": null, "class": "QUIET"}, "final": [21, 18, 269, 0.9938976080001065], "override": false, "ply": 58, "reason": null, "rule": "inactive", "scan_s": 0.014658832922577858, "search_s": 0.9762552911415696, "unsearched": false}}
+{"move": [1, 13], "ply": 59, "witness": null}
+{"move": [23, 17], "ply": 60, "witness": {"baseline": [23, 17, 200, 1.0], "class": {"D": null, "T": null, "T_void": null, "W": [[23, 17], [23, 19]], "class": "OWN_WIN"}, "final": [23, 17, 200, 1.0], "override": false, "ply": 60, "reason": null, "rule": "preserved", "scan_s": 0.0076885828748345375, "search_s": 0.06091849971562624, "unsearched": false}}

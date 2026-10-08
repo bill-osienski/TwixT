@@ -1,0 +1,23 @@
+{
+ "claimed_monotonic": 3579201.24701975,
+ "claimed_utc": "2026-10-08T12:30:32Z",
+ "nonce_sha256": "7f8e1280eea7c68b9c5a5cb28b9fd6d8b82ee9e75faff2958987b25faa267d23",
+ "parent_pid": 91835,
+ "plan_sha256": "b4e9e00a3bb9ca9b3ee7de8c9a4a8f1a55b04e168cd82debb2d9f67a92e70b61",
+ "qualification": {
+  "call_list_sha256": "dae1e0f7b6723e64e99ae9154cc474fd3ff989f380396ba08b13f8e1c1d3fe7b",
+  "commit": "d815461eb8daa7f462dc8c492316717a0b3045b4",
+  "corpus_sha256": "1f040a9208fb3049de4fbf6e73884ad0fafa067fed3d9c275a4abbedf149179c",
+  "files": {
+   "child.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "child.stdout.txt": "c0b2ec1ed5ff6f9e565fb365f891d2a55e91d7dee5327ba8ec4693d4c2aa7dba",
+   "claim.json": "bbf45b8e0572113dfed097fce279175466eb37f4197d572ee8de68142dece49a",
+   "log.jsonl": "8a0ed8763616abf1db18b9ab76bba8fce79c017ab8dba9f8722e6a814da9904a",
+   "observations.jsonl": "6551e6d3efcdb49fc2f2417ce9a7ab68096ca8ee1f38ee58823fe9cfe2e8dbbd",
+   "record.json": "698338279b8d6402b2a1aaf446fdebbd69ab03b833ad0a7937f18f50d65c5ace",
+   "watchdog.json": "c33068294a19c06bc9a18cfd80c34c8119e8094bada218e2bd36ba3dd614ffa1"
+  }
+ },
+ "role": "pilot",
+ "segment": 0
+}
