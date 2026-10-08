@@ -1,0 +1,16 @@
+{
+ "card": "docs/superpowers/2026-10-05-tactical-candidate-evaluation-card.md",
+ "clock": "time.monotonic, from tactical_pilot's first statement",
+ "failure": null,
+ "finalized_sha256": "a678b991afa2cfae3b0a2a958704008c88f3da9b11e0e316b86e67e2fa70512b",
+ "game_files": 32,
+ "note": "outcome-blind; its times feed a PLANNING ESTIMATE (A8.7), not a bound; the record's own write is not timed",
+ "record_sha256": "be3a086674f307132761945bfa3083c7f0941fbaba2efef4263b31b24821031f",
+ "role": "pilot",
+ "segment": 0,
+ "t_fixed_s": 0.18996437592431903,
+ "t_games_s": 0.343751790933311,
+ "timing_sha256": "d9f44a7bda9539262dedaec06cefac888e68f2c858d384927b6dd26a5a71f3a2",
+ "verdict": "VERIFIED",
+ "watchdog_sha256": "454ab1045cb4e50ce64bb230c43ac00ae6a35b8ecce76d34afa867e7128a5b4f"
+}
