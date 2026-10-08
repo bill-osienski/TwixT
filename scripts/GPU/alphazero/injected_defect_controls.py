@@ -4859,9 +4859,11 @@ DEFECTS = [
      '    # EXACTLY once, so each H5 block is RETIRED WHOLE. A post-run accounting edit to\n    # a bound file: the committed H5 records keep the hashes they were bound to,\n    # and H5 is NOT rerun under its manifest.\n    (202650000, 202650148),  # H5 STUDY SEGMENT 0 -- 148 seeds, all started\n',
      '    # EXACTLY once, so each H5 block is RETIRED WHOLE. A post-run accounting edit to\n    # a bound file: the committed H5 records keep the hashes they were bound to,\n    # and H5 is NOT rerun under its manifest.\n',
      f"{T_H5RUN}::test_SEED_BLOCKS_are_the_four_SURVEY_blocks_REGISTERED_and_CLOSED"),
+    # RE-ANCHORED 2026-10-08 (tactical-candidate closing edit): EXPOSED no longer ends after H5 segment 3 --
+    # the pilot block follows it -- so the anchor now runs into the EXPOSED pilot comment; same mutation.
     ('H5 closing: segment 3 is exposed one seed short', REF_SRC,
-     '    (202656000, 202656148),  # H5 STUDY SEGMENT 3 -- 148 seeds, all started\n)\n\n#: Seeds RESERVED PERMANENTLY FOR TESTS',
-     '    (202656000, 202656147),  # H5 STUDY SEGMENT 3 -- 148 seeds, all started\n)\n\n#: Seeds RESERVED PERMANENTLY FOR TESTS',
+     '    (202656000, 202656148),  # H5 STUDY SEGMENT 3 -- 148 seeds, all started\n    # 🔴 TACTICAL CANDIDATE PILOT -- THE ONE CLOSING EDIT (2026-10-08, card §18 A8.2), after\n    # the evaluation closed at the pilot report\'s STOP (f = 0). Exposure DERIVED from the\n    # committed game starts and each game\'s seed fields\n    # (evidence/2026-10-08-tactical-candidate-seed-closing/): all 32 seeds started, each\n    # colour seed in both arms of its pair, so the pilot block is EXPOSED WHOLE.',
+     '    (202656000, 202656147),  # H5 STUDY SEGMENT 3 -- 148 seeds, all started\n    # 🔴 TACTICAL CANDIDATE PILOT -- THE ONE CLOSING EDIT (2026-10-08, card §18 A8.2), after\n    # the evaluation closed at the pilot report\'s STOP (f = 0). Exposure DERIVED from the\n    # committed game starts and each game\'s seed fields\n    # (evidence/2026-10-08-tactical-candidate-seed-closing/): all 32 seeds started, each\n    # colour seed in both arms of its pair, so the pilot block is EXPOSED WHOLE.',
      f"{T_H5RUN}::test_SEED_BLOCKS_are_the_four_SURVEY_blocks_REGISTERED_and_CLOSED"),
     ('H5 closing: the runner ignores the registry for the REAL spent segments', H5RUN,
      '    if faults:\n        raise H4RunError(f"seeds fail the shared registry',

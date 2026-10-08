@@ -727,6 +727,14 @@ EXPOSED_SEED_INTERVALS = (
     (202652000, 202652148),  # H5 STUDY SEGMENT 1 -- 148 seeds, all started
     (202654000, 202654148),  # H5 STUDY SEGMENT 2 -- 148 seeds, all started
     (202656000, 202656148),  # H5 STUDY SEGMENT 3 -- 148 seeds, all started
+    # 🔴 TACTICAL CANDIDATE PILOT -- THE ONE CLOSING EDIT (2026-10-08, card §18 A8.2), after
+    # the evaluation closed at the pilot report's STOP (f = 0). Exposure DERIVED from the
+    # committed game starts and each game's seed fields
+    # (evidence/2026-10-08-tactical-candidate-seed-closing/): all 32 seeds started, each
+    # colour seed in both arms of its pair, so the pilot block is EXPOSED WHOLE. A post-run
+    # accounting edit to a bound file: the committed plan, qualification, binding, pilot
+    # and report records keep the hashes they were bound to; nothing is rerun.
+    (202660000, 202660032),  # TACTICAL CANDIDATE PILOT -- 32 seeds, all started
 )
 
 #: Seeds RESERVED PERMANENTLY FOR TESTS. Unit tests must draw from something, and
@@ -979,6 +987,14 @@ RETIRED_SEED_INTERVALS = (
     (202652000, 202652148),  # H5 STUDY SEGMENT 1 -- 148 seeds, all started
     (202654000, 202654148),  # H5 STUDY SEGMENT 2 -- 148 seeds, all started
     (202656000, 202656148),  # H5 STUDY SEGMENT 3 -- 148 seeds, all started
+    # 🔴 TACTICAL CANDIDATE PILOT -- THE ONE CLOSING EDIT (2026-10-08, card §18 A8.2), after
+    # the evaluation closed at the pilot report's STOP (f = 0). Exposure DERIVED from the
+    # committed game starts and each game's seed fields
+    # (evidence/2026-10-08-tactical-candidate-seed-closing/): all 32 seeds started, each
+    # colour seed in both arms of its pair, so the pilot block is RETIRED WHOLE. A post-run
+    # accounting edit to a bound file: the committed plan, qualification, binding, pilot
+    # and report records keep the hashes they were bound to; nothing is rerun.
+    (202660000, 202660032),  # TACTICAL CANDIDATE PILOT -- 32 seeds, all started
 )
 
 

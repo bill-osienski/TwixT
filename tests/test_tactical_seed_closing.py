@@ -313,3 +313,53 @@ def test_INPUTS_refuse_an_UNCOMMITTED_input(M, evidence, monkeypatch):
     monkeypatch.setattr(F, "check_durable", refuse)
     with pytest.raises(M.Refused, match="not committed and unmodified: not durable here"):
         M._inputs()
+
+
+# ─────────────────────────────── THE CLOSED STATE: the one closing edit (2026-10-08) ───────────────────────────────
+
+def _closed_block(M):
+    """The block, READ from the committed derivation record -- never spelled here."""
+    import re
+    rec = (ROOT / M.HERE / "02_derive_usage_run.txt").read_text()
+    assert "VERDICT: RECONCILES" in rec
+    m = re.search(r"^the block the started seeds make: \((\d+), (\d+)\);", rec, re.M)
+    return int(m.group(1)), int(m.group(2))
+
+
+def test_the_pilot_block_is_ACCOUNTED_EXPOSED_and_RETIRED_exactly_as_itself_and_LAST(M):
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    lo, hi = block = _closed_block(M)
+    for name in ("ACCOUNTED_SEED_INTERVALS", "EXPOSED_SEED_INTERVALS", "RETIRED_SEED_INTERVALS"):
+        intervals = getattr(REF, name)
+        short = name.split("_")[0]
+        assert intervals.count(block) == 1, f"the pilot block is not registered as exactly itself in {short}"
+        assert [iv for iv in intervals if iv[0] < hi and lo < iv[1]] == [block], \
+            f"another interval overlaps the pilot block in {short}"
+    assert REF.EXPOSED_SEED_INTERVALS[-1] == REF.RETIRED_SEED_INTERVALS[-1] == block, \
+        "the pilot block is not the LAST entry of EXPOSED and RETIRED"
+    assert not any(iv[0] <= lo - 1 < iv[1] or iv[0] <= hi < iv[1] for name in
+                   ("ACCOUNTED_SEED_INTERVALS", "EXPOSED_SEED_INTERVALS", "RETIRED_SEED_INTERVALS", "TEST_ONLY_SEED_INTERVALS")
+                   for iv in getattr(REF, name)), "a registry interval reaches just outside the pilot block"
+    for seed in range(lo, hi):
+        st = REF.seed_status(seed)
+        assert (st["accounted"], st["exposed"], st["retired"], st["test_only"]) == (True, True, True, False), \
+            f"pilot seed lo+{seed - lo} is not accounted, exposed and retired"
+
+
+def test_every_pilot_seed_now_FAULTS_as_exposed_and_retired(M):
+    from scripts.GPU.alphazero import h4_runner as R4
+    lo, hi = _closed_block(M)
+    assert R4.seed_registry_faults([{"seed": s} for s in range(lo, hi)]) == \
+        [f"{s}: exposed, retired" for s in range(lo, hi)], "a pilot seed does not fault as exactly exposed and retired"
+
+
+def test_R1_REFUSES_the_committed_pilot_plan_at_the_shared_registry(M):
+    from scripts.GPU.alphazero import candidate_match_runner as CM
+    plan = json.loads((ROOT / M.PLAN).read_bytes())
+    try:
+        CM.check_plan(plan, mode="pilot")
+    except CM.MatchRefused as e:
+        assert "seeds not registered for use, or spent" in str(e) and "exposed, retired" in str(e), \
+            "R1 refused the spent pilot plan for another reason"
+    else:
+        raise AssertionError("R1 accepted the spent pilot plan")
