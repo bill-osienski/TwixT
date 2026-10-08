@@ -1,0 +1,101 @@
+TACTICAL CANDIDATE A8.8 STEP 4 -- FRESH READ-ONLY PILOT SEED SURVEY (not the collision proof)
+================================================================================================
+HEAD 16f2b6a1d06672f8397d69ef0c043f4af0481651; working tree clean
+registry scripts/GPU/alphazero/e4_screen_reference.py sha256 fcfc309b21bbfccdfdc85291c822423521c56e91c446a8b630e9784f2bf75690
+masks (imported): ['0x3c3c3c', '0x5a5a5a', '0xa5a5a5', '0xc3c3c3']
+registries: ACCOUNTED 28, EXPOSED 26, RETIRED 24, TEST_ONLY 1
+named spent blocks: D1 paper 1, H1 2, H2 3, H3 6, H4 5, H5 4; H3 generation ranges 4; CONSUMED_SEEDS 1
+
+EXEMPT PATHS (A8.2; exact; plus registry tuple elements by parsing): 5 + the plan
+    docs/superpowers/evidence/tactical-candidate-seed-survey/01_seed_survey.py
+    docs/superpowers/evidence/tactical-candidate-seed-survey/02_seed_survey_run.txt
+    docs/superpowers/evidence/tactical-candidate-seed-registration/01_collision_proof.py
+    docs/superpowers/evidence/tactical-candidate-seed-registration/02_collision_proof_pre_run.txt
+    docs/superpowers/evidence/tactical-candidate-seed-registration/03_collision_proof_post_run.txt
+    docs/superpowers/evidence/tactical-candidate-plans/pilot-s0.json  (only if every band literal in it is a seed of the block)
+
+CANDIDATE RULE: highest registered/named-spent SEED in the band = 202656147; BASE = 202660000; block = [202660000, 202660032) -- 32 seeds
+
+SCOPE: 46304 regular files under ['scripts', 'tests', 'docs/superpowers']; symbolic links (not followed): 0
+    .json          ignored   41819
+    .json          tracked   1760
+    .txt           tracked   999
+    .pyc           ignored   705
+    .py            tracked   554
+    .md            tracked   258
+    .jsonl         tracked   64
+    .class         tracked   52
+    .mjs           tracked   29
+    .log           tracked   16
+    .sha256        tracked   15
+    .js            tracked   8
+    <none>         ignored   8
+    .java          tracked   4
+    .asqualified   tracked   3
+    .csv           tracked   2
+    .diff          tracked   2
+    .gz            tracked   2
+    <none>         tracked   2
+    .py            ignored   1
+    .sh            tracked   1
+
+band literal values counted (union scanner, replaced bytes): 4279; v16's scanner alone: 4279; values only the underscore-aware scan finds: 0
+band literal values: 4279; the highest: 202699032
+
+THE BLOCK (202660000, 202660032)  n=32  direct=NONE  streams=0  injective=True  gap=3851 (floor 32)  CLEAN=True
+PAIR SEEDS (A8.1; the seed follows the colour in both games of a pair):
+    pilot-00  red 202660000  black 202660001
+    pilot-01  red 202660002  black 202660003
+    pilot-02  red 202660004  black 202660005
+    pilot-03  red 202660006  black 202660007
+    pilot-04  red 202660008  black 202660009
+    pilot-05  red 202660010  black 202660011
+    pilot-06  red 202660012  black 202660013
+    pilot-07  red 202660014  black 202660015
+    pilot-08  red 202660016  black 202660017
+    pilot-09  red 202660018  black 202660019
+    pilot-10  red 202660020  black 202660021
+    pilot-11  red 202660022  black 202660023
+    pilot-12  red 202660024  black 202660025
+    pilot-13  red 202660026  black 202660027
+    pilot-14  red 202660028  black 202660029
+    pilot-15  red 202660030  black 202660031
+
+NEGATIVE CONTROLS -- each must be REJECTED
+------------------------------------------------------------------------------------------------
+  REJECTED     D1 paper block (202615000, 202615221)
+  REJECTED     H1 block (202616000, 202616224)
+  REJECTED     H2 block (202618000, 202618736)
+  REJECTED     H3 block (202624000, 202624040)
+  REJECTED     H4 block (202632000, 202632032)
+  REJECTED     H5 block (202650000, 202650148)
+  REJECTED     the TEST_ONLY band
+  REJECTED     inside the live H3 uniform generation range
+  REJECTED     overlaps the block by one seed
+  REJECTED     starts where the block ends -- inside the floor
+  REJECTED     one seed inside the floor
+  REJECTED     a block at the H4-4b MUTATION literal 202642000 (injected_defect_controls.py)
+
+DIFFERENTIAL AND FAIL-CLOSED CONTROLS (temporary trees outside the repository)
+------------------------------------------------------------------------------------------------
+  PASS         an UNDERSCORE-GROUPED candidate seed (.py): without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=3851; dropping undecodable bytes instead would see it
+  PASS         a PLAIN candidate seed (.py): without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=3851; dropping undecodable bytes instead would see it
+  PASS         an UNDERSCORE-GROUPED exclusive end (.py): without it CLEAN=True; with it direct=NONE gap=0; dropping undecodable bytes instead would see it
+  PASS         a candidate seed in a .log -- a suffix H5's filter skipped: without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=3851; dropping undecodable bytes instead would see it
+  PASS         a candidate seed inside a .gz: without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=3851; dropping undecodable bytes instead would see it
+  PASS         a candidate seed after an undecodable byte after a digit: without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=3851; dropping undecodable bytes instead would MISS it
+  PASS         an UNREADABLE file stops the survey: SurveyStop
+  PASS         a CORRUPT .gz stops the survey: SurveyStop
+  PASS         BASE when the last interval ENDS at a multiple of 10,000: the highest seed is end - 1, so BASE = end (True)
+
+EXEMPTION CONTROLS (A8.2, synthetic tree)
+------------------------------------------------------------------------------------------------
+  PASS         an own record (exact path) is exempt  [None]
+  PASS         a sibling path that is NOT listed is counted  [[('docs/superpowers/evidence/tactical-candidate-seed-registration/04_not_listed.txt', 1)]]
+  PASS         the plan holding only block seeds is exempt  [None]
+  PASS         registry tuple elements are exempt by parsing (a non-ASCII char BEFORE them)  [[202660011]]
+  PASS         the same value outside a registry tuple is counted  [[('scripts/GPU/alphazero/e4_screen_reference.py', 1)]]
+  PASS         a plan with a seed OUTSIDE the block is not exempt  [[202660000, 202660037]]
+
+controls passed: 27/27
+SURVEY VERDICT   : THE PILOT BLOCK IS CLEAN
