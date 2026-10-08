@@ -5,4 +5,4 @@ entries of `tactical_pilot` -- the post-segment verification, the outcome-blind 
 sizing -- each opened for ONE step under its own authorization and restored on every exit. Created
 closed. This file may hold ONLY this declaration.
 """
-TACTICAL_PILOT_ANALYSIS_AUTHORIZED = False
+TACTICAL_PILOT_ANALYSIS_AUTHORIZED = True
