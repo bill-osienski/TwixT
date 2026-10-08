@@ -1,0 +1,309 @@
+TACTICAL CANDIDATE A8.8 STEP 6 -- THE R1 BINDING RECORD (card §18 A8.6; reads code only)
+================================================================================================
+HEAD cbbc4d63c734f5092a0a4062a2589136a22bf6d8; working tree clean
+script docs/superpowers/evidence/2026-10-08-tactical-candidate-r1-binding/01_r1_binding.py; card docs/superpowers/2026-10-05-tactical-candidate-evaluation-card.md (allowlist clarified at e8c80602)
+the block, read from the pinned survey record via the pinned proof script: (202660000, 202660032), 16 pairs
+
+PRE-PLAY STATE -- changed since aafdbc7726344a9c7c2dcf121b5ed9322f465dbf:
+    docs/superpowers/2026-10-05-tactical-candidate-evaluation-card.md
+    docs/superpowers/evidence/2026-10-08-tactical-candidate-r1-binding/01_r1_binding.py
+    tests/test_tactical_r1_binding.py
+  HOLDS
+
+1. R1 PER TOP-LEVEL NODE (ast.dump, attributes excluded) -- base blob at d815461eb8daa7f462dc8c492316717a0b3045b4, sha256 a53e7ac857f045a281af85d7dd268445e2419e1c71fd2a0458092a5c2c7e21b6
+   R1 now: sha256 a0a9d098ca342b9d97c9202f6f7c543d0113cd0b10900f3e4dddef03b3a1e02b
+    IDENTICAL <module docstring>
+    IDENTICAL from __future__ import annotations
+    IDENTICAL import collections
+    IDENTICAL import contextlib
+    IDENTICAL import hashlib
+    IDENTICAL import json
+    IDENTICAL import math
+    IDENTICAL import os
+    IDENTICAL import pathlib
+    IDENTICAL import re
+    IDENTICAL import signal
+    IDENTICAL import sys
+    IDENTICAL import threading
+    IDENTICAL import time
+    IDENTICAL from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
+    IDENTICAL from . import candidate_match_authorization as AUTH
+    IDENTICAL from . import h4_pilot_feasibility as F
+    IDENTICAL from . import h4_runner as R4
+    IDENTICAL from . import h5_cap_completion as CC
+    IDENTICAL from . import h5_incumbent_defence as D
+    IDENTICAL from . import h5_incumbent_tactics as T
+    IDENTICAL from . import tactical_candidate as TC
+    IDENTICAL from . import twixtbot_g3_reference as G3
+    IDENTICAL MODULE
+    IDENTICAL (BOARD, PLY_CAP)
+    IDENTICAL COLOURS
+    IDENTICAL OTHER
+    IDENTICAL ARMS
+    IDENTICAL MODES
+    IDENTICAL GAME_DEADLINE_S
+    IDENTICAL CHILD_GRACE_S
+    IDENTICAL POLL_S
+    IDENTICAL GAMES_DIR
+    IDENTICAL SAFE_ID
+    IDENTICAL SEGMENT_DEADLINE_S
+    IDENTICAL STUDY_CEILING_S
+    IDENTICAL MARGIN_S
+    IDENTICAL PLAN_DIR
+    IDENTICAL (CLAIM_FILE, WATCHDOG_FILE, CLAIM_ENV)
+    IDENTICAL CHILD_STREAMS
+    IDENTICAL (EXIT_OK, EXIT_REFUSED, EXIT_UNAUTHORIZED)
+    IDENTICAL CARD
+    IDENTICAL MatchRefused
+    IDENTICAL MatchUnauthorized
+    IDENTICAL MatchStop
+    IDENTICAL MatchTimeout
+    IDENTICAL _t
+    IDENTICAL _sha
+    IDENTICAL check_plan
+    IDENTICAL production_builder
+    IDENTICAL _alarm
+    IDENTICAL _compact
+    IDENTICAL game_digest
+    IDENTICAL play_game
+    IDENTICAL first_override
+    IDENTICAL check_pair
+    IDENTICAL _failure
+    IDENTICAL _file_sha
+    IDENTICAL _fsync_dir
+    IDENTICAL _Partial
+    IDENTICAL _game_file
+    IDENTICAL _write
+    IDENTICAL _write_all
+    IDENTICAL _save_game
+    CHANGED   _run   allowlisted: _run (its two call nodes checked apart)
+    IDENTICAL _unconsumed
+    CHANGED   _claim   allowlisted: _claim
+    IDENTICAL _accept_claim
+    IDENTICAL _open_game
+    IDENTICAL _watch_games
+    IDENTICAL _inventory
+    IDENTICAL _settle
+    IDENTICAL _gate
+    IDENTICAL _role
+    IDENTICAL out_dir
+    IDENTICAL plan_path
+    IDENTICAL _committed_plan
+    CHANGED   _validate_segment   allowlisted: _validate_segment (A8.5 item 4)
+    CHANGED   _segment_limit   allowlisted: _segment_limit (A8.5 item 4)
+    IDENTICAL _child_argv
+    CHANGED   run   allowlisted: run
+    CHANGED   run_claimed   allowlisted: run_claimed
+    IDENTICAL main
+    IDENTICAL <If> if __name__ == '__main__':
+    ADDED     from time import monotonic as _monotonic   allowlisted: standard-library imports
+    ADDED     _T_START   allowlisted: _T_START (A8.5 item 3)
+    ADDED     QUALIFICATION_COMMIT   allowlisted: the guard's constants
+    ADDED     QUALIFICATION_FILES   allowlisted: the guard's constants
+    ADDED     QUALIFICATION_MODULE_SHA256   allowlisted: the guard's constants
+    ADDED     QUALIFICATION_CALLS   allowlisted: the guard's constants
+    ADDED     _create   allowlisted: _create
+    ADDED     _sigint_held   allowlisted: the SIGINT hold
+    ADDED     _record_parent_failure   allowlisted: _record_parent_failure
+    ADDED     _timing_path   allowlisted: _timing_path (clarified at e8c80602)
+    ADDED     _finalized_path   allowlisted: their path helpers (A8.5 item 5)
+    ADDED     _finalization_failed_path   allowlisted: their path helpers (A8.5 item 5)
+    ADDED     _write_timing   allowlisted: the timing writer (A8.5 item 3)
+    ADDED     _write_finalized   allowlisted: _write_finalized (A8.5 item 5)
+    ADDED     _finalize   allowlisted: _finalize (A8.5 item 5)
+    ADDED     qualification_binding   allowlisted: the guard (A8.4)
+    ADDED     _bound_plan   allowlisted: the guard (A8.4 item 6: the plan is bound)
+    ADDED     verification_path   allowlisted: verification_path (clarified at e8c80602)
+    ADDED     _nonneg   allowlisted: _nonneg
+    ADDED     _read_timing   allowlisted: a new helper that reads a predecessor's timing.json (A8.5 item 4)
+    ADDED     _read_finalization   allowlisted: _read_finalization (A8.5 item 5)
+    ADDED     _read_verification   allowlisted: a new helper that reads a predecessor's verification record (A8.5 item 4)
+   78 identical, 28 differing (of those, 0 outside the allowlist); named by A8.6 as identical: 30
+   inside _run, production_builder(...) call nodes: 1 at the base, 1 now -- IDENTICAL
+   inside _run, play_game(...) call nodes: 1 at the base, 1 now -- IDENTICAL
+  HOLDS
+
+2. THE IMPORT CLOSURE OF R1 (every import anywhere in a module, transitively; package __init__ files included) against d815461eb8daa7f462dc8c492316717a0b3045b4
+    IDENTICAL            scripts/GPU/__init__.py
+        now e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  base e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+    IDENTICAL            scripts/GPU/alphazero/__init__.py
+        now c6f13806151399f9e6be707271537b166ec79ba9729d8339800127c826adc4ab  base c6f13806151399f9e6be707271537b166ec79ba9729d8339800127c826adc4ab
+    IDENTICAL            scripts/GPU/alphazero/candidate_match_authorization.py
+        now acc6c0eb0a807e4ee9de2b41a3659ed6e07272de43c10293ae2fb3069bb5c22f  base acc6c0eb0a807e4ee9de2b41a3659ed6e07272de43c10293ae2fb3069bb5c22f
+    R1 ITSELF -- item 1  scripts/GPU/alphazero/candidate_match_runner.py
+        now a0a9d098ca342b9d97c9202f6f7c543d0113cd0b10900f3e4dddef03b3a1e02b  base a53e7ac857f045a281af85d7dd268445e2419e1c71fd2a0458092a5c2c7e21b6
+    IDENTICAL            scripts/GPU/alphazero/d0_postmortem.py
+        now 3a87c508880b1f6c014fdeedff094db2d8adb63d9ef3b2c1c62fb9930cd4af59  base 3a87c508880b1f6c014fdeedff094db2d8adb63d9ef3b2c1c62fb9930cd4af59
+    IDENTICAL            scripts/GPU/alphazero/d1_probe.py
+        now 134e75ac33955ac550661164605d99dc68862bf4fb8a3b2e70a05ab07adf7793  base 134e75ac33955ac550661164605d99dc68862bf4fb8a3b2e70a05ab07adf7793
+    IDENTICAL            scripts/GPU/alphazero/d1_selection.py
+        now ebea796093bdd7cbecb17ce719df50404fef7eba905309f3f27b3d7b56076e7d  base ebea796093bdd7cbecb17ce719df50404fef7eba905309f3f27b3d7b56076e7d
+    IDENTICAL            scripts/GPU/alphazero/e4_screen_command.py
+        now 35f5e70b4993ba57f1a249c6cdfd2d7b2c1bc1b4065f9d856f94681443e4ef42  base 35f5e70b4993ba57f1a249c6cdfd2d7b2c1bc1b4065f9d856f94681443e4ef42
+    IDENTICAL            scripts/GPU/alphazero/e4_screen_integration.py
+        now 002895201a10b9bd4c477d5309e8d29f13b288b56d4a5d527406e457442ded86  base 002895201a10b9bd4c477d5309e8d29f13b288b56d4a5d527406e457442ded86
+    ONLY THE A8.2 TUPLE  scripts/GPU/alphazero/e4_screen_reference.py
+        now 08461fbbf39fa503165fa134775c88a342f2cb467c6304c13fb65878de73afec  base fcfc309b21bbfccdfdc85291c822423521c56e91c446a8b630e9784f2bf75690
+    IDENTICAL            scripts/GPU/alphazero/e4_screen_rules.py
+        now 4c12bf2189cf42dc1345c839b8c694f0090bc4be470c5b84226792e93a383a84  base 4c12bf2189cf42dc1345c839b8c694f0090bc4be470c5b84226792e93a383a84
+    IDENTICAL            scripts/GPU/alphazero/e4_screen_runner.py
+        now e4e4ebc3b9b9e5ccfc1b190d0f66ab24d692ab10afc0b38d9b228cf15c58bcc8  base e4e4ebc3b9b9e5ccfc1b190d0f66ab24d692ab10afc0b38d9b228cf15c58bcc8
+    IDENTICAL            scripts/GPU/alphazero/eval_integrity.py
+        now 4f4f0f6d69839f922f7c7533fd9d65f1a310ae7f05965cb63af3964d6cfe1106  base 4f4f0f6d69839f922f7c7533fd9d65f1a310ae7f05965cb63af3964d6cfe1106
+    IDENTICAL            scripts/GPU/alphazero/eval_readout.py
+        now f0f5908854365988b5311fd5f90e154144a9ed3ad4721eac38073600d6165b63  base f0f5908854365988b5311fd5f90e154144a9ed3ad4721eac38073600d6165b63
+    IDENTICAL            scripts/GPU/alphazero/eval_replay.py
+        now 702c924fecac9a211470f077e2e65dc0c1ee7f6461665de00fb4d2a08aa70cd6  base 702c924fecac9a211470f077e2e65dc0c1ee7f6461665de00fb4d2a08aa70cd6
+    IDENTICAL            scripts/GPU/alphazero/eval_runner.py
+        now 29381c2918b55eaa3d1e8d8851a0162180d25044cb954164a6570dc56e91f744  base 29381c2918b55eaa3d1e8d8851a0162180d25044cb954164a6570dc56e91f744
+    IDENTICAL            scripts/GPU/alphazero/evaluator.py
+        now 043388192eaeb55eda58057d5f15160866b7ba0ecd8d117ff4e913f00327d8c2  base 043388192eaeb55eda58057d5f15160866b7ba0ecd8d117ff4e913f00327d8c2
+    IDENTICAL            scripts/GPU/alphazero/fpu_state_hash.py
+        now 7dd87232e4f530fe7bb36d00b55e71718ab3c06f3ee1f98fd9c3de3fb2edef72  base 7dd87232e4f530fe7bb36d00b55e71718ab3c06f3ee1f98fd9c3de3fb2edef72
+    IDENTICAL            scripts/GPU/alphazero/game/__init__.py
+        now b8cba656f4cdd17ca1fce240224623d2ed631904a035425a30ef4a7be2069122  base b8cba656f4cdd17ca1fce240224623d2ed631904a035425a30ef4a7be2069122
+    IDENTICAL            scripts/GPU/alphazero/game/twixt_state.py
+        now 291275223b71b522a19181ae33a34518c0ca3c8f585275770f4c72e651cba5e2  base 291275223b71b522a19181ae33a34518c0ca3c8f585275770f4c72e651cba5e2
+    IDENTICAL            scripts/GPU/alphazero/h2_match_plan.py
+        now 662017e4380e94e053b33295c56cfd884eaf5214144a09346b0dfb2f8861096d  base 662017e4380e94e053b33295c56cfd884eaf5214144a09346b0dfb2f8861096d
+    IDENTICAL            scripts/GPU/alphazero/h2_match_rules.py
+        now 4433c6eba324fccdc1ea1e0f8fd2cf5c0dbbee45e40549a12ee89e6f142101c4  base 4433c6eba324fccdc1ea1e0f8fd2cf5c0dbbee45e40549a12ee89e6f142101c4
+    IDENTICAL            scripts/GPU/alphazero/h2_match_runner.py
+        now 61c84f608f29d6b489b72c085caa0820b146e4902216978f9b5d17e99f4a0854  base 61c84f608f29d6b489b72c085caa0820b146e4902216978f9b5d17e99f4a0854
+    IDENTICAL            scripts/GPU/alphazero/h4_4a_characterization.py
+        now 38a9d4f8b61337460dcb863b0ed82f317bd3877af841370ee00570e5b675e51a  base 38a9d4f8b61337460dcb863b0ed82f317bd3877af841370ee00570e5b675e51a
+    IDENTICAL            scripts/GPU/alphazero/h4_pilot_authorization.py
+        now 613eb2e94f2851f1396c514bfc74944e28bd61afde335b8e0cf6f000e56eafcd  base 613eb2e94f2851f1396c514bfc74944e28bd61afde335b8e0cf6f000e56eafcd
+    IDENTICAL            scripts/GPU/alphazero/h4_pilot_feasibility.py
+        now 382cfad4411e431aa904e9205f651633ac044e0c4d5dc96f58913149bf230236  base 382cfad4411e431aa904e9205f651633ac044e0c4d5dc96f58913149bf230236
+    IDENTICAL            scripts/GPU/alphazero/h4_production_qualification.py
+        now c7e56ac29a8d836f0968fa80e4e4756264c2b771c6a3456f8610608b9c6b98c7  base c7e56ac29a8d836f0968fa80e4e4756264c2b771c6a3456f8610608b9c6b98c7
+    IDENTICAL            scripts/GPU/alphazero/h4_production_qualification_authorization.py
+        now 4e8259bcd3b00af1e1f2b322034d5d388ac7515f1de7a5062f4e073c04a86fe4  base 4e8259bcd3b00af1e1f2b322034d5d388ac7515f1de7a5062f4e073c04a86fe4
+    IDENTICAL            scripts/GPU/alphazero/h4_repair_qualification.py
+        now d598375b8f98d718554e12a5e9fe173127e29cd3ea4de6ea24a164606325730e  base d598375b8f98d718554e12a5e9fe173127e29cd3ea4de6ea24a164606325730e
+    IDENTICAL            scripts/GPU/alphazero/h4_runner.py
+        now 0954b96bbd78dead59910217c6709d38fc0aa272a8d83328c4908ffdecb6da06  base 0954b96bbd78dead59910217c6709d38fc0aa272a8d83328c4908ffdecb6da06
+    IDENTICAL            scripts/GPU/alphazero/h5_cap_completion.py
+        now 93f66ea9590c5e553c54fbcae8d82d8b9638da7bdf07330b8a1033523f9a5c69  base 93f66ea9590c5e553c54fbcae8d82d8b9638da7bdf07330b8a1033523f9a5c69
+    IDENTICAL            scripts/GPU/alphazero/h5_cap_completion_authorization.py
+        now f2984aae70d575dfa1c6179444ca82fec3016a264b5b87f8bb6556501294f1cc  base f2984aae70d575dfa1c6179444ca82fec3016a264b5b87f8bb6556501294f1cc
+    IDENTICAL            scripts/GPU/alphazero/h5_incumbent_defence.py
+        now d3328c324e3e9779a3d9e0213a67b459ae1a2e6d6c3ce1757d7644629619e5af  base d3328c324e3e9779a3d9e0213a67b459ae1a2e6d6c3ce1757d7644629619e5af
+    IDENTICAL            scripts/GPU/alphazero/h5_incumbent_defence_authorization.py
+        now 9fa2bd71ff433735131fc6c5f334d95970da2d5bc544483cd2b22d3257c6ae6f  base 9fa2bd71ff433735131fc6c5f334d95970da2d5bc544483cd2b22d3257c6ae6f
+    IDENTICAL            scripts/GPU/alphazero/h5_incumbent_defence_factors.py
+        now 098a86c67386157b9b15e77ef931f54800b90ff9ec1d4e596286a0713e0bf997  base 098a86c67386157b9b15e77ef931f54800b90ff9ec1d4e596286a0713e0bf997
+    IDENTICAL            scripts/GPU/alphazero/h5_incumbent_defence_factors_authorization.py
+        now 49a8b92b58cc59b0226b6f11c8c723f96927ba27a3e85d19bd51bcd1a6905731  base 49a8b92b58cc59b0226b6f11c8c723f96927ba27a3e85d19bd51bcd1a6905731
+    IDENTICAL            scripts/GPU/alphazero/h5_incumbent_tactics.py
+        now b21a0e7d2fef53bbe8f87c51db78460b5b2e61bcb7ed9d333bf8cdd9a26359ac  base b21a0e7d2fef53bbe8f87c51db78460b5b2e61bcb7ed9d333bf8cdd9a26359ac
+    IDENTICAL            scripts/GPU/alphazero/h5_incumbent_tactics_authorization.py
+        now dcae1192df4ebc85a895da474ad0f89e867c131091a230e30ba941b3655c40ef  base dcae1192df4ebc85a895da474ad0f89e867c131091a230e30ba941b3655c40ef
+    IDENTICAL            scripts/GPU/alphazero/h5_runner.py
+        now 5cd5b325c5de29ef96c02ac1f9b2eaf97ff71564a667ceb9ffe3a545906da7ba  base 5cd5b325c5de29ef96c02ac1f9b2eaf97ff71564a667ceb9ffe3a545906da7ba
+    IDENTICAL            scripts/GPU/alphazero/h5_study_authorization.py
+        now 0c776deb9a8a268fc77538c6b1361afc9caa2f70bead7afd5ceee7f7dcb8864e  base 0c776deb9a8a268fc77538c6b1361afc9caa2f70bead7afd5ceee7f7dcb8864e
+    IDENTICAL            scripts/GPU/alphazero/h5_weakness_review.py
+        now ec44c9d906b9bda367efa1828632e9fb36981e53b9c5c5dbb81a4c4cd28af43d  base ec44c9d906b9bda367efa1828632e9fb36981e53b9c5c5dbb81a4c4cd28af43d
+    IDENTICAL            scripts/GPU/alphazero/l0_match_plan.py
+        now 7e241a2f6f6836e5b8e8b062fc996957e5b7408641f6dd445c479a6de2ce0cb2  base 7e241a2f6f6836e5b8e8b062fc996957e5b7408641f6dd445c479a6de2ce0cb2
+    IDENTICAL            scripts/GPU/alphazero/l0_match_rules.py
+        now c6af3a5959161fe315ef545f7d06251bbb1766eaa60c7692e2a4ec46610d729f  base c6af3a5959161fe315ef545f7d06251bbb1766eaa60c7692e2a4ec46610d729f
+    IDENTICAL            scripts/GPU/alphazero/local_evaluator.py
+        now 7fbeb49d3eb210fae4c74098a29e257b34916d8837f6735cd875c3184447ea4e  base 7fbeb49d3eb210fae4c74098a29e257b34916d8837f6735cd875c3184447ea4e
+    IDENTICAL            scripts/GPU/alphazero/mcts.py
+        now 0769b22ae47923da2600584da1bcf7c955bb975f0bd4985d7d11605d5196050f  base 0769b22ae47923da2600584da1bcf7c955bb975f0bd4985d7d11605d5196050f
+    IDENTICAL            scripts/GPU/alphazero/network.py
+        now 81465fe7106d4d7161cc5bdaf2b00a002ac337a77aff5d354a3bcd26986873bc  base 81465fe7106d4d7161cc5bdaf2b00a002ac337a77aff5d354a3bcd26986873bc
+    IDENTICAL            scripts/GPU/alphazero/opening_diagnostics.py
+        now 03e40f0ea8110f194bb94b6f99b03b7aa367937882bf9c9cd5de57adc5a13106  base 03e40f0ea8110f194bb94b6f99b03b7aa367937882bf9c9cd5de57adc5a13106
+    IDENTICAL            scripts/GPU/alphazero/probe_eval.py
+        now cb9d303d7dd387ac40650ae6c139dddf6e36de4f34965ef92fb8f1b32dc3a182  base cb9d303d7dd387ac40650ae6c139dddf6e36de4f34965ef92fb8f1b32dc3a182
+    IDENTICAL            scripts/GPU/alphazero/t1j_adapter.py
+        now 12c86e1762a6eb5c049dd969a5828bbbae81c8a5abb7ea76f7dbe39886520719  base 12c86e1762a6eb5c049dd969a5828bbbae81c8a5abb7ea76f7dbe39886520719
+    IDENTICAL            scripts/GPU/alphazero/t1j_toolchain.py
+        now 31b63a37c250d1a5fbff92b1ce6608edd7f35e52b319c4e9704838e83afb01f0  base 31b63a37c250d1a5fbff92b1ce6608edd7f35e52b319c4e9704838e83afb01f0
+    IDENTICAL            scripts/GPU/alphazero/tactical_candidate.py
+        now 2d73e2efcad45e76f0281ab8a97da4b11218ea139993f53eea18a190f863f003  base 2d73e2efcad45e76f0281ab8a97da4b11218ea139993f53eea18a190f863f003
+    IDENTICAL            scripts/GPU/alphazero/tactical_candidate_authorization.py
+        now 4d38dc19737f7a84b781a52e79f40368c86ba17532c2ab3c69af547029b680d3  base 4d38dc19737f7a84b781a52e79f40368c86ba17532c2ab3c69af547029b680d3
+    IDENTICAL            scripts/GPU/alphazero/tactical_corpus.py
+        now df09cb1ae21f1e575a06f64f0f100a25af6b2c947ba3a0480de97d5967ec9278  base df09cb1ae21f1e575a06f64f0f100a25af6b2c947ba3a0480de97d5967ec9278
+    IDENTICAL            scripts/GPU/alphazero/tactical_qualification.py
+        now bb073d9a5eb9b047667f68976466ac89c24262bbbfd10654a779a1eddfedd805  base bb073d9a5eb9b047667f68976466ac89c24262bbbfd10654a779a1eddfedd805
+    IDENTICAL            scripts/GPU/alphazero/twixtbot_g3_reference.py
+        now f68af1525d7997467904e2dfe7ea8aaf5400fffce3e5513625643ec442e3e55e  base f68af1525d7997467904e2dfe7ea8aaf5400fffce3e5513625643ec442e3e55e
+    IDENTICAL            scripts/GPU/alphazero/twixtbot_g3_schedule.py
+        now 7624c4e61c8ca5cba7641a641d74800c4c2a6d8e6c1ffb13115bed177b92a600  base 7624c4e61c8ca5cba7641a641d74800c4c2a6d8e6c1ffb13115bed177b92a600
+    IDENTICAL            scripts/GPU/alphazero/void_trace.py
+        now 5babdfc44114dad8cbac04f0726b32f6dd744658c9bd86f03fae65ac41ea409e  base 5babdfc44114dad8cbac04f0726b32f6dd744658c9bd86f03fae65ac41ea409e
+   57 repository files reached (R1 included); external top-level names: __future__, argparse, collections, contextlib, csv, dataclasses, datetime, functools, gc, hashlib, inspect, json, math, mlx, multiprocessing, numpy, os, pathlib, platform, queue, random, re, secrets, signal, statistics, subprocess, sys, tempfile, threading, time, traceback, typing, warnings
+   the registry (scripts/GPU/alphazero/e4_screen_reference.py; in the closure: True): ONLY THE A8.2 TUPLE (202660000, 202660032)
+  HOLDS
+
+3. THE GUARD (A8.4) ON THE COMMITTED TREE, pure
+    HOLDS    qualification_binding() -- A8.4 items 1-5  [commit d815461eb8daa7f462dc8c492316717a0b3045b4; corpus 1f040a9208fb3049de4fbf6e73884ad0fafa067fed3d9c275a4abbedf149179c; call list dae1e0f7b6723e64e99ae9154cc474fd3ff989f380396ba08b13f8e1c1d3fe7b]
+    HOLDS    _committed_plan("pilot", 0) -- committed, check_plan  [plan sha256 b4e9e00a3bb9ca9b3ee7de8c9a4a8f1a55b04e168cd82debb2d9f67a92e70b61]
+    HOLDS    _bound_plan(plan) -- A8.4 item 6
+    HOLDS    the plan's pairs are the survey's pairs, ids and seeds  [16 pairs]
+    HOLDS    the survey's pairs are exactly the block's seeds  [block (202660000, 202660032)]
+    HOLDS    ACCOUNTED holds the block
+    HOLDS    the pilot destination does not exist (pre-play)  [/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/tactical-candidate-pilot]
+    HOLDS    every gate is closed  [open: []]
+   gates: 27 discovered, CANDIDATE_MATCH_AUTHORIZED = False
+  HOLDS
+
+CONTROLS (synthetic)
+------------------------------------------------------------------------------------------------
+  PASS   R1: identical
+  PASS   R1: comments and blank lines only
+  PASS   R1: a non-allowlisted function changed
+  PASS   R1: an allowlisted function changed
+  PASS   R1: a non-allowlisted function added
+  PASS   R1: an allowlisted helper added
+  PASS   R1: a named function removed
+  PASS   R1: a constant changed
+  PASS   R1: a repository import changed
+  PASS   R1: a repository import added
+  PASS   R1: a standard-library import added
+  PASS   R1: production_builder's arguments changed inside _run
+  PASS   R1: a second play_game call inside _run
+  PASS   R1: the play_game call removed from _run
+  PASS   R1: the module docstring changed
+  PASS   R1: two top-level nodes with one name STOP
+  PASS   closure: unchanged -> no difference; the unreached module is outside
+  PASS   closure: a module reached only by a FUNCTION's import changed
+  PASS   closure: a module reached transitively changed
+  PASS   closure: a subpackage __init__ changed
+  PASS   closure: the package __init__ changed
+  PASS   closure: a module R1 does not reach changed
+  PASS   closure: R1 reaches a module with no blob at the base
+  PASS   registry: exactly the block appended last
+  PASS   registry: the block appended FIRST
+  PASS   registry: a different tuple
+  PASS   registry: EXPOSED changed too
+  PASS   registry: another statement changed
+  PASS   registry: the block appended, and a comment elsewhere
+  PASS   registry: unchanged -- the block NOT appended
+  PASS   closure: importlib STOPS
+  PASS   closure: __import__() STOPS
+  PASS   closure: an unresolvable relative import STOPS
+  PASS   closure: an absolute import a sibling file could shadow STOPS
+  PASS   guard: every check holds
+  PASS   guard: qualification_binding() refuses
+  PASS   guard: _bound_plan() refuses
+  PASS   guard: _committed_plan() refuses
+  PASS   guard: a plan seed that is not the survey's
+  PASS   guard: ACCOUNTED lacks the block
+  PASS   guard: the pilot destination exists
+  PASS   guard: an open gate
+  PASS   pre-play: only the card, this script and its tests changed
+  PASS   pre-play: any other path changed
+  PASS   pre-play: the pre-play commit is not an ancestor
+  PASS   registry: byte-identical to the base (the block missing) is still a fault
+  PASS   registry: outside the closure, still checked
+  PASS   registry: a closure DIFFERS row is not counted twice
+
+controls passed: 48/48
+BINDING VERDICT: BOUND -- every node outside the allowlist, every closure file and the guard as A8.6 requires
