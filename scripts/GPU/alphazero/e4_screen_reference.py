@@ -483,6 +483,17 @@ ACCOUNTED_SEED_INTERVALS = (
     (202652000, 202652148),          # H5 STUDY SEGMENT 1  -- 74 pairs, 148 seeds
     (202654000, 202654148),          # H5 STUDY SEGMENT 2  -- 74 pairs, 148 seeds
     (202656000, 202656148),          # H5 STUDY SEGMENT 3  -- 74 pairs, 148 seeds
+    # 🔴 TACTICAL CANDIDATE PILOT -- ONE BLOCK, registered 2026-10-08 (A8.8 step 5) under
+    # §18 A8.2 of `2026-10-05-tactical-candidate-evaluation-card.md`: the block of the
+    # step-4 survey (evidence/tactical-candidate-seed-survey/02_*), READ from that record,
+    # not chosen here. Pair pilot-k gets lo+2k (red) and lo+2k+1 (black); the plan is
+    # evidence/tactical-candidate-plans/pilot-s0.json. Registered ONLY after the frozen
+    # collision proof (sha256 dd192011...) was CLEAN against the PRE-registration
+    # registries, 46/46 controls passed (evidence/tactical-candidate-seed-registration/02_*).
+    #
+    # Accounted, NOT exposed and NOT retired: exposure follows actual use, in a later,
+    # separately authorized closing edit (A8.2). No gate is opened by this.
+    (202660000, 202660032),          # TACTICAL CANDIDATE PILOT -- 16 pairs, 32 seeds
 )
 
 #: EXPERIMENTAL EXPOSURE: seeds drawn from OUTSIDE the permanently unschedulable
