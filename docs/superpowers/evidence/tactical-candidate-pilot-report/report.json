@@ -1,0 +1,36 @@
+{
+ "card": "docs/superpowers/2026-10-05-tactical-candidate-evaluation-card.md",
+ "measurements": {
+  "G_s": 1936.3616242902353,
+  "O_s": 1.04877145960927,
+  "capped_pair_ids": [],
+  "capped_pairs": 0,
+  "fired_pairs": 0,
+  "firing_pair_ids": [],
+  "inputs": {
+   "finalized_sha256": "a678b991afa2cfae3b0a2a958704008c88f3da9b11e0e316b86e67e2fa70512b",
+   "plan_sha256": "b4e9e00a3bb9ca9b3ee7de8c9a4a8f1a55b04e168cd82debb2d9f67a92e70b61",
+   "record_sha256": "be3a086674f307132761945bfa3083c7f0941fbaba2efef4263b31b24821031f",
+   "timing_sha256": "d9f44a7bda9539262dedaec06cefac888e68f2c858d384927b6dd26a5a71f3a2",
+   "verification_sha256": "268e1822d1dbba5995f3f13df0700f25b28fb82e03d586c52a7b3f8cc92468cd",
+   "watchdog_sha256": "454ab1045cb4e50ce64bb230c43ac00ae6a35b8ecce76d34afa867e7128a5b4f"
+  },
+  "pairs": 16,
+  "pilot_s": 1937.4103957498446,
+  "replay_breaks": [],
+  "replay_ok": true,
+  "scan_share": 0.006760632767858184,
+  "t_bar_s": 121.02260151813971,
+  "timing": {
+   "child_s": 1937.0598642090335,
+   "pre_launch_s": 0.2192814159207046,
+   "settlement_s": 0.013253665994852781,
+   "startup_s": 0.11799645889550447
+  }
+ },
+ "note": "outcome-blind (A1.2): no winner, score, per-colour result, terminal ply, game length, replay summary or variance was read",
+ "stops": [
+  "f = 0: the candidate never acted (A1.2)"
+ ],
+ "verdict": "STOP"
+}
