@@ -1348,8 +1348,14 @@ game limits.
        `_validate_segment`, `_segment_limit` and new helpers that read a predecessor's `timing.json`
        and verification record (A8.5 item 4); `_nonneg`, the finite, nonnegative check shared by
        those readers and the reserve check; `_finalize`, `_write_finalized`, `_read_finalization`
-       and their path helpers (A8.5 item 5); `_claim`, `run`, `run_claimed`, `_run`, `main`; and
-       standard-library imports.
+       and their path helpers (A8.5 item 5); `_timing_path`, the path helper of the timing writer,
+       the timing reader and the finalization plumbing (A8.5 items 3–5); `verification_path`, the
+       path helper of the verification-record reader (A8.5 item 4); `_claim`, `run`, `run_claimed`,
+       `_run`, `main`; and standard-library imports.
+       * *Clarified 2026-10-08, before the binding script (A8.8 step 6):* `_timing_path` and
+         `verification_path` were part of the reviewed R1 amendment but unnamed here. Naming them
+         authorizes no R1 code change and no broader exception; any other node outside this list
+         that differs is NOT BOUND.
      * Inside `_run`, the `production_builder(…)` and `play_game(…)` call nodes are identical.
   2. **The import closure.** Every repository module R1 reaches by import, anywhere in a module and
      transitively, other than R1, is byte-identical to its blob at `d815461e`. That includes
