@@ -1,0 +1,63 @@
+TACTICAL CANDIDATE A8.8 STEP 5 -- COLLISION PROOF, mode POST
+================================================================================================
+HEAD e3c5a0f8c4b020985992a42b5849088997450e84; working tree clean
+survey record docs/superpowers/evidence/tactical-candidate-seed-survey/02_seed_survey_run.txt sha256 dee36562d62bc4f449c07b841c859c562d9edb1dd42870bd260dcdea0ae91ee4 (pinned; read at 16f2b6a1d06672f8397d69ef0c043f4af0481651)
+survey script docs/superpowers/evidence/tactical-candidate-seed-survey/01_seed_survey.py sha256 6f6e55dbd5da672848c757753d4e61a3e9d110d96569b7ef468f902cf46f8860 (pinned; its scope, exemptions and check)
+THE BLOCK, read from the record: [202660000, 202660032) -- BASE 202660000; 16 pairs
+registry sha256 now 08461fbbf39fa503165fa134775c88a342f2cb467c6304c13fb65878de73afec; the survey read fcfc309b21bbfccdfdc85291c822423521c56e91c446a8b630e9784f2bf75690
+EXPECTED STATE (post): HOLDS
+
+SCOPE (fail-closed enumeration): 46311 regular files under ['scripts', 'tests', 'docs/superpowers']; symbolic links (not followed): 0; band literal values counted: 4279
+THE BLOCK (202660000, 202660032)  n=32  direct=NONE  streams=0  injective=True  gap=3851 (floor 32)  CLEAN=True
+
+CONTROLS
+------------------------------------------------------------------------------------------------
+  PASS   REJECTED: D1 paper block (202615000, 202615221)
+  PASS   REJECTED: H1 block (202616000, 202616224)
+  PASS   REJECTED: H2 block (202618000, 202618736)
+  PASS   REJECTED: H3 block (202624000, 202624040)
+  PASS   REJECTED: H4 block (202632000, 202632032)
+  PASS   REJECTED: H5 block (202650000, 202650148)
+  PASS   REJECTED: the TEST_ONLY band
+  PASS   REJECTED: inside the live H3 uniform generation range
+  PASS   REJECTED: overlaps the block by one seed
+  PASS   REJECTED: starts where the block ends -- inside the floor
+  PASS   REJECTED: one seed inside the floor
+  PASS   REJECTED: a block at the H4-4b MUTATION literal 202642000
+  PASS   an UNDERSCORE-GROUPED candidate seed (.py)  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=3851; dropping undecodable bytes instead would see it]
+  PASS   a PLAIN candidate seed (.py)  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=3851; dropping undecodable bytes instead would see it]
+  PASS   an UNDERSCORE-GROUPED exclusive end (.py)  [without it CLEAN=True; with it direct=NONE gap=0; dropping undecodable bytes instead would see it]
+  PASS   a candidate seed in a .log -- a suffix H5's filter skipped  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=3851; dropping undecodable bytes instead would see it]
+  PASS   a candidate seed inside a .gz  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=3851; dropping undecodable bytes instead would see it]
+  PASS   a candidate seed after an undecodable byte after a digit  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=3851; dropping undecodable bytes instead would MISS it]
+  PASS   an UNREADABLE file stops the survey  [SurveyStop]
+  PASS   a CORRUPT .gz stops the survey  [SurveyStop]
+  PASS   an own record (exact path) is exempt  [None]
+  PASS   a sibling path that is NOT listed is counted  [[('docs/superpowers/evidence/tactical-candidate-seed-registration/04_not_listed.txt', 1)]]
+  PASS   the plan holding only block seeds is exempt  [None]
+  PASS   registry tuple elements are exempt by parsing (a non-ASCII char BEFORE them)  [[202660011]]
+  PASS   the same value outside a registry tuple is counted  [[('scripts/GPU/alphazero/e4_screen_reference.py', 1)]]
+  PASS   a plan with a seed OUTSIDE the block is not exempt  [[202660000, 202660037]]
+  PASS   an UNREADABLE directory  [STOPPED: a directory could not be read]
+  PASS   an UNREADABLE nested directory  [STOPPED: a directory could not be read]
+  PASS   a missing root  [STOPPED: <tmp>/tests: the root is not a directory]
+  PASS   a root that is a file  [STOPPED: <tmp>/scripts: the root is not a directory]
+  PASS   a FIFO inside a root  [STOPPED: <tmp>/scripts/pipe: neither a regular file, a directory nor a symbolic link]
+  PASS   a sound tree with a symbolic link  [enumerated: 3 files, 1 links]
+  PASS   pre: the survey's registry, no plan  [the expected state]
+  PASS   pre: the registry changed  [the registry is not the one the survey read]
+  PASS   pre: the block already registered  [the registry is not the one the survey read; a registry already holds seeds of the block: [('ACCOUNTED_SEED_INTERVALS', (202660000, 202660032))]]
+  PASS   pre: a plan already exists  [a pilot plan already exists]
+  PASS   post: exactly the block appended last, the plan  [the expected state]
+  PASS   post: the block appended FIRST  [ACCOUNTED is not the survey's state with exactly the block appended last]
+  PASS   post: two tuples appended  [ACCOUNTED is not the survey's state with exactly the block appended last]
+  PASS   post: a different tuple  [ACCOUNTED is not the survey's state with exactly the block appended last]
+  PASS   post: EXPOSED changed too  [EXPOSED_SEED_INTERVALS changed]
+  PASS   post: another statement changed  [a statement other than ACCOUNTED changed in the registry]
+  PASS   post: no plan  [the pilot plan is absent or not committed]
+  PASS   post: a plan seed that is not the survey's  [the pilot plan's mode, pairs or seeds are not the survey's]
+  PASS   post: a plan of 15 pairs  [the pilot plan's mode, pairs or seeds are not the survey's]
+  PASS   post: only the block's own last ACCOUNTED interval leaves the prior terms  [pre keeps it; post drops exactly it]
+
+controls passed: 46/46
+PROOF VERDICT (post): THE PILOT BLOCK IS CLEAN AND THE STATE IS AS EXPECTED
