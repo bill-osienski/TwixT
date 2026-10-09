@@ -1,0 +1,23 @@
+{
+ "ceiling_s": 1800,
+ "child_exit": 0,
+ "elapsed_s": 5.1,
+ "exit_code": 0,
+ "files": {
+  "candidate.safetensors": "e73e80b4b6c5e75a207068bd3da391ebcbbf1329ad876303268801771da57b76",
+  "child.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "child.stdout.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "claim.json": "cd6720e9aadefb0d7f53cea8816eda7cfab6a5cd042fe035fcefdc1a3a79d037",
+  "environment.txt": "2c88ae01a171728faf51564160fac80d5f7c9fb3003aa79522811c7021661589",
+  "progress.jsonl": "d01ab41a0bce3f6b8226f9cc0ff3c5cd82398710789964bf443ba86831255373",
+  "record.json": "667a68825ed09b826107694d4afbc9bb13f19c5a15a00434d181f049a190825a"
+ },
+ "gate_sha256": "f765b0761a0215f882e54223e8ddbf4a3f55b89e64c63bd05d66df1c495fdb0b",
+ "group_reaped": true,
+ "head": "3eaa34e2b8824fe5ba58dd13d6d48e54c7b577e9",
+ "module_sha256": "4ed50105168da7dee6a25e42f17be824600945b095b39dd0d8b1ac0d99cafd9d",
+ "python": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.1.1.101)]",
+ "started_unix": 1791581087.103325,
+ "status": "EXITED",
+ "verdict": "PASS"
+}

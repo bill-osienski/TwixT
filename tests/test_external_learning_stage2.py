@@ -66,11 +66,19 @@ def _params(net):
 
 # ─────────────────────────────── the gate, the manifest, the plan ───────────────────────────────
 
+def _tree(rel):
+    root = S2.ROOT / rel
+    return sorted(str(p.relative_to(root)) for p in root.rglob("*")) if root.exists() else None
+
+
 def test_the_gate_is_closed_and_both_entries_refuse_creating_nothing(tmp_path):
     assert GATE.EXTERNAL_LEARNING_STAGE2_AUTHORIZED is False
+    # AMENDED 2026-10-09: stage 2 has run once, so its run and evidence directories exist; a refused entry
+    # must leave both exactly as it found them (it asserted their absence before the run).
+    before = [_tree(S2.RUN_DIR), _tree(S2.EVIDENCE_DIR), (S2.ROOT / S2.CLEANUP_FAILED).exists()]
     assert S2.main(["run"]) == S2.EXIT_REFUSED
     assert S2.main(["_child", "--run-dir", str(tmp_path)]) == S2.EXIT_REFUSED
-    assert not (S2.ROOT / S2.RUN_DIR).exists() and not (S2.ROOT / S2.EVIDENCE_DIR).exists()
+    assert [_tree(S2.RUN_DIR), _tree(S2.EVIDENCE_DIR), (S2.ROOT / S2.CLEANUP_FAILED).exists()] == before
     assert list(tmp_path.iterdir()) == []
 
 

@@ -1,0 +1,78 @@
+{
+ "baseline": "ff1422fb",
+ "card": "docs/superpowers/2026-10-08-external-engine-learning-viability.md",
+ "kind": "external-learning-stage2-record/1",
+ "steps": {
+  "candidate_sha256": "e73e80b4b6c5e75a207068bd3da391ebcbbf1329ad876303268801771da57b76",
+  "candidate_surface": {
+   "changed": [
+    "policy_head.bn.bias",
+    "policy_head.bn.weight",
+    "policy_head.conv.bias",
+    "policy_head.conv.weight",
+    "policy_head.fc.bias",
+    "policy_head.fc.weight",
+    "policy_head.out.bias",
+    "policy_head.out.weight"
+   ],
+   "identical": 84,
+   "tensors": 92
+  },
+  "control": {
+   "beta": 0.5610537528991699,
+   "bounds": [
+    0.0,
+    100.0
+   ],
+   "bracket": [
+    0.5610532760620117,
+    0.5610542297363281
+   ],
+   "ce": 3.745846269186586,
+   "derivative": 4.583358242965518e-06,
+   "derivative_at_init": 2.08268811687268,
+   "iterations": 20
+  },
+  "inputs": {
+   "logits_sha256": "82ff3f2b0460ecb1ec635d8d65e8991b393be3e1a931092b058f323d8fe71eda",
+   "rows_sha256": "b59218ea5dd2c3f0ccff5bf5287cef85a89c0424c544c08f50f33ca4f4752865",
+   "train_rows": 128
+  },
+  "manifest_sha256": "916224900d6f674d6d93ccc08fc00499ae2bc71f422f57a7a6a5ae17961d831d",
+  "plan": {
+   "n_slots": 1,
+   "sha256": "1420bda3ec6e6ced66d6f7e2cc052fcb4ad2d4234b1b0ba46b9abae4e1167ebe"
+  },
+  "policy_change": {
+   "max_abs_prob_change": 0.8597156009757361,
+   "tolerance": 1e-06,
+   "train_ce_candidate": 2.4819840431091063,
+   "train_ce_incumbent": 4.38151577863093,
+   "train_top1_changed": 89,
+   "train_top1_teacher_candidate": 57,
+   "train_top1_teacher_incumbent": 31
+  },
+  "schedule_sha256": "8c411d62e8b235f5231fbf5b18ea1c0116d8516a0b0b90c08bac8d6a22222368",
+  "surface": {
+   "parameters": 519,
+   "trainable": [
+    "policy_head.bn.bias",
+    "policy_head.bn.weight",
+    "policy_head.conv.bias",
+    "policy_head.conv.weight",
+    "policy_head.fc.bias",
+    "policy_head.fc.weight",
+    "policy_head.out.bias",
+    "policy_head.out.weight"
+   ]
+  },
+  "training": {
+   "first_loss": 3.962116241455078,
+   "last_loss": 2.1939685344696045,
+   "max_grad_norm": 6.668354511260986,
+   "steps": 128
+  },
+  "values_unchanged": 128
+ },
+ "verdict": "PASS"
+}
