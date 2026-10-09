@@ -335,7 +335,10 @@ def test_the_pilot_block_is_ACCOUNTED_EXPOSED_and_RETIRED_exactly_as_itself_and_
         assert intervals.count(block) == 1, f"the pilot block is not registered as exactly itself in {short}"
         assert [iv for iv in intervals if iv[0] < hi and lo < iv[1]] == [block], \
             f"another interval overlaps the pilot block in {short}"
-    assert REF.EXPOSED_SEED_INTERVALS[-1] == REF.RETIRED_SEED_INTERVALS[-1] == block, \
+    # RE-ANCHORED 2026-10-09 (external-engine learning closing edit): appended LAST at its own closing, the
+    # pilot block is now followed by a LATER closing -- in both lists alike, and only by higher blocks.
+    ex, rt = REF.EXPOSED_SEED_INTERVALS, REF.RETIRED_SEED_INTERVALS
+    assert ex[ex.index(block):] == rt[rt.index(block):] and all(iv[0] >= hi for iv in ex[ex.index(block) + 1:]), \
         "the pilot block is not the LAST entry of EXPOSED and RETIRED"
     assert not any(iv[0] <= lo - 1 < iv[1] or iv[0] <= hi < iv[1] for name in
                    ("ACCOUNTED_SEED_INTERVALS", "EXPOSED_SEED_INTERVALS", "RETIRED_SEED_INTERVALS", "TEST_ONLY_SEED_INTERVALS")

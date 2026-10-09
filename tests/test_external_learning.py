@@ -666,12 +666,20 @@ def test_a_stop_mid_game_keeps_the_attempted_game_and_its_partial_moves(tmp_path
 
 # ─────────────────────────────── the gate and the exit code ───────────────────────────────
 
+def _tree(rel):
+    root = EL.ROOT / rel
+    return sorted(str(p.relative_to(root)) for p in root.rglob("*")) if root.exists() else None
+
+
 def test_the_gate_is_closed_and_every_engine_entry_refuses(tmp_path):
     assert GATE.EXTERNAL_LEARNING_STAGE1_AUTHORIZED is False
+    # AMENDED 2026-10-09: stage 1 has run once, so its run and evidence directories exist; a refused entry
+    # must leave both exactly as it found them (it asserted their absence before the run).
+    before = [_tree(EL.RUN_DIR), _tree(EL.EVIDENCE_DIR), (EL.ROOT / EL.CLEANUP_FAILED).exists()]
     assert EL.main(["run", "--clone-root", str(tmp_path)]) == EL.EXIT_REFUSED
     assert EL.main(["_query", "--clone-root", str(tmp_path), "--out", str(tmp_path / "q.json")]) == EL.EXIT_REFUSED
     assert EL.main(["_child", "--run-dir", str(tmp_path), "--clone-root", str(tmp_path)]) == EL.EXIT_REFUSED
-    assert not (EL.ROOT / EL.RUN_DIR).exists() and not (EL.ROOT / EL.EVIDENCE_DIR).exists()
+    assert [_tree(EL.RUN_DIR), _tree(EL.EVIDENCE_DIR), (EL.ROOT / EL.CLEANUP_FAILED).exists()] == before
     assert list(tmp_path.iterdir()) == []
 
 

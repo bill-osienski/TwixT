@@ -259,3 +259,50 @@ def test_MAIN_on_a_block_already_EXPOSED_does_NOT_reconcile(M, evidence, monkeyp
     assert M.main(["script"]) == 1
     rec = (root / M.OUT).read_text()
     assert "already in EXPOSED_SEED_INTERVALS" in rec and "VERDICT: DOES NOT RECONCILE" in rec
+
+
+# ─────────────────────────────── THE CLOSED STATE: the one closing edit (2026-10-09) ───────────────────────────────
+
+def _closed_block(M):
+    """The block, READ from the committed derivation record -- never spelled here."""
+    import re
+    rec = (ROOT / M.HERE / "02_derive_usage_run.txt").read_text()
+    assert "VERDICT: RECONCILES" in rec
+    m = re.search(r"^the block the used seeds make: \((\d+), (\d+)\);", rec, re.M)
+    return int(m.group(1)), int(m.group(2))
+
+
+def test_the_stage1_block_is_ACCOUNTED_EXPOSED_and_RETIRED_exactly_as_itself(M):
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    lo, hi = block = _closed_block(M)
+    for name in ("ACCOUNTED_SEED_INTERVALS", "EXPOSED_SEED_INTERVALS", "RETIRED_SEED_INTERVALS"):
+        intervals = getattr(REF, name)
+        short = name.split("_")[0]
+        assert intervals.count(block) == 1, f"the stage-1 block is not registered as exactly itself in {short}"
+        assert [iv for iv in intervals if iv[0] < hi and lo < iv[1]] == [block], \
+            f"another interval overlaps the stage-1 block in {short}"
+    ex, rt = REF.EXPOSED_SEED_INTERVALS, REF.RETIRED_SEED_INTERVALS
+    assert ex[ex.index(block):] == rt[rt.index(block):] and all(iv[0] >= hi for iv in ex[ex.index(block) + 1:]), \
+        "the stage-1 block is not the LAST entry of EXPOSED and RETIRED"
+    assert not any(iv[0] <= lo - 1 < iv[1] or iv[0] <= hi < iv[1] for name in
+                   ("ACCOUNTED_SEED_INTERVALS", "EXPOSED_SEED_INTERVALS", "RETIRED_SEED_INTERVALS", "TEST_ONLY_SEED_INTERVALS")
+                   for iv in getattr(REF, name)), "a registry interval reaches just outside the stage-1 block"
+    for seed in range(lo, hi):
+        st = REF.seed_status(seed)
+        assert (st["accounted"], st["exposed"], st["retired"], st["test_only"]) == (True, True, True, False), \
+            f"stage-1 seed lo+{seed - lo} is not accounted, exposed and retired"
+
+
+def test_every_stage1_seed_now_FAULTS_as_exposed_and_retired(M):
+    from scripts.GPU.alphazero import h4_runner as R4
+    lo, hi = _closed_block(M)
+    assert R4.seed_registry_faults([{"seed": s} for s in range(lo, hi)]) == \
+        [f"{s}: exposed, retired" for s in range(lo, hi)], "a stage-1 seed does not fault as exactly exposed and retired"
+
+
+def test_check_plan_REFUSES_the_committed_stage1_plan_as_SPENT(M):
+    from scripts.GPU.alphazero import external_learning as EL
+    plan = json.loads((ROOT / M.PLAN).read_bytes())
+    assert EL.plan_block(plan) == _closed_block(M)
+    with pytest.raises(EL.Stage1Stop, match="is spent"):
+        EL.check_plan(plan)
