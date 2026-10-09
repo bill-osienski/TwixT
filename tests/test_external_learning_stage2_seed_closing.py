@@ -195,3 +195,43 @@ def test_INPUTS_refuse_an_UNCOMMITTED_input(M, evidence, monkeypatch):
     monkeypatch.setattr(F, "check_durable", refuse)
     with pytest.raises(M.Refused, match="not committed and unmodified: not durable here"):
         M._inputs()
+
+
+# ─────────────────────────────── THE CLOSED STATE: the one closing edit (2026-10-09) ───────────────────────────────
+
+def _closed_block(M):
+    """The block, READ from the committed derivation record -- never spelled here."""
+    import re
+    rec = (ROOT / M.HERE / "02_derive_usage_run.txt").read_text()
+    assert "VERDICT: RECONCILES" in rec
+    m = re.search(r"^the block of the seed: \((\d+), (\d+)\);", rec, re.M)
+    return int(m.group(1)), int(m.group(2))
+
+
+def test_the_stage2_seed_is_ACCOUNTED_EXPOSED_and_RETIRED_exactly_as_itself(M):
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    lo, hi = block = _closed_block(M)
+    assert hi == lo + 1
+    for name in ("ACCOUNTED_SEED_INTERVALS", "EXPOSED_SEED_INTERVALS", "RETIRED_SEED_INTERVALS"):
+        intervals = getattr(REF, name)
+        short = name.split("_")[0]
+        assert intervals.count(block) == 1, f"the stage-2 seed is not registered as exactly itself in {short}"
+        assert [iv for iv in intervals if iv[0] < hi and lo < iv[1]] == [block], \
+            f"another interval overlaps the stage-2 seed in {short}"
+    ex, rt = REF.EXPOSED_SEED_INTERVALS, REF.RETIRED_SEED_INTERVALS
+    assert ex[ex.index(block):] == rt[rt.index(block):] and all(iv[0] >= hi for iv in ex[ex.index(block) + 1:]), \
+        "the stage-2 seed is not the LAST entry of EXPOSED and RETIRED"
+    st = REF.seed_status(lo)
+    assert (st["accounted"], st["exposed"], st["retired"], st["test_only"]) == (True, True, True, False), \
+        "the stage-2 seed is not accounted, exposed and retired"
+
+
+def test_the_stage2_seed_now_FAULTS_and_check_plan_REFUSES_the_committed_plan_as_SPENT(M):
+    from scripts.GPU.alphazero import external_learning_stage2 as S2
+    from scripts.GPU.alphazero import h4_runner as R4
+    lo, _hi = _closed_block(M)
+    assert R4.seed_registry_faults([{"seed": lo}]) == [f"{lo}: exposed, retired"]
+    plan = json.loads((ROOT / M.PLAN).read_bytes())
+    assert plan["seed"] == lo
+    with pytest.raises(S2.Stop, match="is spent"):
+        S2.check_plan(plan)

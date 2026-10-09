@@ -764,6 +764,13 @@ EXPOSED_SEED_INTERVALS = (
     # a bound file: the committed plan, survey/proof and run records keep the hashes they
     # were bound to; nothing is rerun.
     (202670000, 202670018),  # EXTERNAL-ENGINE LEARNING STAGE 1 -- 18 seeds, all used
+    # 🔴 EXTERNAL-ENGINE LEARNING STAGE 2 -- THE CLOSING EDIT (2026-10-09), after the one
+    # authorized stage-2 run (PASS). Use DERIVED from the committed run evidence
+    # (evidence/external-engine-learning-stage2-seed-closing/): the training seed drew the
+    # run's whole sampling schedule (128 steps), so its one-seed block is EXPOSED WHOLE. A
+    # post-run accounting edit to a bound file: the committed plan, survey/proof and run
+    # records keep the hashes they were bound to; nothing is rerun.
+    (202680000, 202680001),  # EXTERNAL-ENGINE LEARNING STAGE 2 -- 1 training seed, used
 )
 
 #: Seeds RESERVED PERMANENTLY FOR TESTS. Unit tests must draw from something, and
@@ -1031,6 +1038,13 @@ RETIRED_SEED_INTERVALS = (
     # a bound file: the committed plan, survey/proof and run records keep the hashes they
     # were bound to; nothing is rerun.
     (202670000, 202670018),  # EXTERNAL-ENGINE LEARNING STAGE 1 -- 18 seeds, all used
+    # 🔴 EXTERNAL-ENGINE LEARNING STAGE 2 -- THE CLOSING EDIT (2026-10-09), after the one
+    # authorized stage-2 run (PASS). Use DERIVED from the committed run evidence
+    # (evidence/external-engine-learning-stage2-seed-closing/): the training seed drew the
+    # run's whole sampling schedule (128 steps), so its one-seed block is RETIRED WHOLE. A
+    # post-run accounting edit to a bound file: the committed plan, survey/proof and run
+    # records keep the hashes they were bound to; nothing is rerun.
+    (202680000, 202680001),  # EXTERNAL-ENGINE LEARNING STAGE 2 -- 1 training seed, used
 )
 
 
