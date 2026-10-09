@@ -1,0 +1,31 @@
+EXTERNAL-ENGINE LEARNING STAGE 2 -- CLOSING SEED ACCOUNTING OF THE TRAINING SEED (read-only)
+================================================================================================
+HEAD 1f39191b9de873a696525eba17300a53664ad29f; working tree clean; 6 inputs committed and unmodified (plan sha256 1420bda3ec6e6ced66d6f7e2cc052fcb4ad2d4234b1b0ba46b9abae4e1167ebe, registry, manifest, record, finalized, progress), each run file the one the manifest hashed
+run (finalized status, group reaped): ('EXITED', True); record verdict: PASS
+the schedule the plan's seed draws: sha256 8c411d62e8b235f5231fbf5b18ea1c0116d8516a0b0b90c08bac8d6a22222368; the record's: 8c411d62e8b235f5231fbf5b18ea1c0116d8516a0b0b90c08bac8d6a22222368
+train steps logged: 128 (0 .. 127); recorded: 128; the fixed budget: 128
+the block of the seed: (202680000, 202680001); ACCOUNTED holds it as itself: True; in EXPOSED: False; in RETIRED: False
+faults: none
+
+CONTROLS (synthetic)
+------------------------------------------------------------------------------------------------
+  PASS   a sound world reconciles
+  PASS   the run ran another plan
+  PASS   the seed draws another schedule
+  PASS   a train step missing
+  PASS   a train step logged twice
+  PASS   the steps out of order
+  PASS   the record counts other steps
+  PASS   the plan names no int seed
+  PASS   the plan names two slots
+  PASS   the seed is not ACCOUNTED
+  PASS   the seed ACCOUNTED inside a wider interval
+  PASS   the seed already EXPOSED
+  PASS   the seed already RETIRED
+  PASS   an adjacent EXPOSED interval is no overlap
+  PASS   the run's group not reaped
+  PASS   the run timed out
+  PASS   train_steps reads only train_step entries
+
+controls passed: 17/17
+VERDICT: RECONCILES -- the seed of (202680000, 202680001) drew the run's whole schedule (128 steps): its block is EXPOSED WHOLE and RETIRED WHOLE
