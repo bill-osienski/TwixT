@@ -682,6 +682,37 @@ def test_the_gate_module_holds_only_its_declaration():
     assert [type(n).__name__ for n in tree.body] == ["Expr", "Assign"]
 
 
+def _run_with(tmp_path, monkeypatch, *, reaped):
+    """The REAL run() with the gate opened in memory, ROOT a temp tree and the group runner replaced by
+    a fake child that writes its record; returns (exit code, run dir, evidence dir, cleanup record)."""
+    monkeypatch.setattr(GATE, "EXTERNAL_LEARNING_STAGE1_AUTHORIZED", True)
+    monkeypatch.setattr(EL, "ROOT", tmp_path)
+    monkeypatch.setattr(EL, "_git", lambda *a: "" if a[0] == "status" else "f" * 40)
+
+    def fake_group(argv, *, stdout, stderr, timeout):
+        run_dir = pathlib.Path(argv[argv.index("--run-dir") + 1])
+        (run_dir / "record.json").write_text(json.dumps({"verdict": "PASS"}))
+        return "EXITED", EL.EXIT_PASS, reaped
+    monkeypatch.setattr(EL, "run_group", fake_group)
+    code = EL.run(str(tmp_path / "clone"))
+    return code, tmp_path / EL.RUN_DIR, tmp_path / EL.EVIDENCE_DIR, tmp_path / EL.CLEANUP_FAILED
+
+
+def test_an_unreaped_group_finalizes_nothing_and_leaves_the_run_directory(tmp_path, monkeypatch):
+    code, run_dir, evidence, cleanup = _run_with(tmp_path, monkeypatch, reaped=False)
+    assert code == EL.EXIT_STOP and not evidence.exists()
+    assert not (run_dir / "finalized.json").exists() and (run_dir / "record.json").exists()
+    rec = json.loads(cleanup.read_text())
+    assert rec["group_reaped"] is False and rec["finalized"] is False and "files" not in rec
+    assert cleanup.parent == run_dir.parent and "verdict" not in rec
+
+
+def test_control_a_reaped_group_finalizes_and_copies(tmp_path, monkeypatch):
+    code, run_dir, evidence, cleanup = _run_with(tmp_path, monkeypatch, reaped=True)
+    assert code == EL.EXIT_PASS and not cleanup.exists()
+    assert (run_dir / "finalized.json").exists() and (evidence / "MANIFEST.sha256").exists()
+
+
 @pytest.mark.parametrize("verdict,status,child,code", [
     ("PASS", "EXITED", 0, 0), ("STOP_F_ZERO", "EXITED", 1, 1), ("STOP", "EXITED", 2, 2),
     ("PASS", "EXITED", 1, 2), ("STOP", "EXITED", 0, 2), (None, "EXITED", 0, 2), ("PASS", "TIMEOUT", None, 4),

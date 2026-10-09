@@ -66,6 +66,7 @@ RECORD_KIND = "external-learning-stage1-record/1"
 PLAN = "docs/superpowers/evidence/external-engine-learning-plans/stage1.json"
 RUN_DIR = "runs/external-engine-learning/stage1"
 EVIDENCE_DIR = "docs/superpowers/evidence/external-engine-learning-stage1"
+CLEANUP_FAILED = RUN_DIR + ".cleanup-failed.json"    # parent-owned, OUTSIDE the run directory
 EXECUTION_S = 3600                                   # the card's 60-minute execution ceiling
 QUERY_S = 600
 GROUP_GRACE_S = 5.0                                  # SIGTERM -> SIGKILL for the run's process group
@@ -1024,8 +1025,10 @@ def exit_code_for(record: pathlib.Path, status: str, child_exit: Optional[int], 
     timeout, a missing record, a disagreement or a process group not reaped is never a pass."""
     if status == "TIMEOUT":
         return EXIT_TIMEOUT
+    if reaped is not True:                                       # a descendant may still write: read nothing
+        return EXIT_STOP
     verdict = _verdict(record)
-    if reaped is not True or verdict not in VERDICT_EXIT or child_exit != VERDICT_EXIT[verdict]:
+    if verdict not in VERDICT_EXIT or child_exit != VERDICT_EXIT[verdict]:
         return EXIT_STOP
     return VERDICT_EXIT[verdict]
 
@@ -1033,7 +1036,10 @@ def exit_code_for(record: pathlib.Path, status: str, child_exit: Optional[int], 
 def run(clone_root: str) -> int:
     """THE entry point. Paths only; no seams. Refuses before claiming anything unless the gate is open,
     the tree clean and both destinations absent. The child runs under the 60-minute ceiling; the parent
-    writes finalized.json LAST and copies the run directory into the evidence directory."""
+    writes finalized.json LAST and copies the run directory into the evidence directory -- ONLY once the
+    process group is reaped. Otherwise a descendant may still be writing: the parent records the failure
+    in its own file beside the run directory, leaves the run directory as it is, hashes and copies
+    nothing, and declares no finalization."""
     _require_gate()
     if _git("status", "--porcelain"):
         raise Refused("the working tree is dirty: run only from a committed state")
@@ -1063,15 +1069,21 @@ def run(clone_root: str) -> int:
     finally:
         code = exit_code_for(run_dir / "record.json", status, child_exit, reaped)
         fin.update(status=status, child_exit=child_exit, group_reaped=reaped, exit_code=code,
-                   elapsed_s=round(time.time() - t0, 3),
-                   verdict=_verdict(run_dir / "record.json"),
-                   files={str(p.relative_to(run_dir)): _sha(p.read_bytes())
-                          for p in sorted(run_dir.rglob("*")) if p.is_file()})
-        _write_json(run_dir / "finalized.json", fin)
-        shutil.copytree(run_dir, evidence)
-        manifest = "".join(f"{_sha(p.read_bytes())}  {p.relative_to(evidence)}\n"
-                           for p in sorted(evidence.rglob("*")) if p.is_file())
-        _write_new(evidence / "MANIFEST.sha256", manifest.encode())
+                   elapsed_s=round(time.time() - t0, 3))
+        if reaped is not True:
+            _write_json(ROOT / CLEANUP_FAILED, {**fin, "finalized": False, "run_dir": RUN_DIR,
+                                                "detail": "the process group was not reaped (or never ran): "
+                                                          "nothing hashed, copied or finalized"})
+    if reaped is not True:
+        return code
+    fin.update(verdict=_verdict(run_dir / "record.json"),
+               files={str(p.relative_to(run_dir)): _sha(p.read_bytes())
+                      for p in sorted(run_dir.rglob("*")) if p.is_file()})
+    _write_json(run_dir / "finalized.json", fin)
+    shutil.copytree(run_dir, evidence)
+    manifest = "".join(f"{_sha(p.read_bytes())}  {p.relative_to(evidence)}\n"
+                       for p in sorted(evidence.rglob("*")) if p.is_file())
+    _write_new(evidence / "MANIFEST.sha256", manifest.encode())
     return code
 
 
