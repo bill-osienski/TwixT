@@ -1,0 +1,72 @@
+{
+ "baseline": "ff1422fb",
+ "budget": {
+  "batch": 32,
+  "deadline_s": 1800,
+  "steps": 128
+ },
+ "candidate": {
+  "evidence_path": "docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+  "run_path": "runs/external-engine-learning/stage2/candidate.safetensors"
+ },
+ "card": "docs/superpowers/2026-10-08-external-engine-learning-viability.md",
+ "control": {
+  "beta_bounds": [
+   0.0,
+   100.0
+  ],
+  "beta_init": 1.0,
+  "iterations": 64,
+  "tolerance": 1e-06
+ },
+ "incumbent": {
+  "path": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference": "calib020_0001",
+  "sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e"
+ },
+ "kind": "external-learning-stage2-manifest/1",
+ "loss": "mean over the batch of -sum(one-hot chosen target * compute_masked_log_probs(logits, mask)); value output discarded; eval mode (incumbent BN statistics)",
+ "optimizer": {
+  "betas": [
+   0.9,
+   0.999
+  ],
+  "bias_correction": false,
+  "eps": 1e-08,
+  "grad_clip_global_norm": 1.0,
+  "learning_rate": 0.001,
+  "name": "adam",
+  "weight_decay": 0.0
+ },
+ "sampling": "numpy.random.Generator(PCG64(seed)).integers(0, n_train, size=(steps, batch)): uniform, with replacement",
+ "stage1": {
+  "evidence_dir": "docs/superpowers/evidence/external-engine-learning-stage1",
+  "logits": {
+   "file": "training_logits.json",
+   "sha256": "82ff3f2b0460ecb1ec635d8d65e8991b393be3e1a931092b058f323d8fe71eda"
+  },
+  "manifest_sha256": "0064f0777d7df4a1b85177aadf59b3a41bb52d627b6d1439a4c1349cbb196b05",
+  "record_sha256": "105614031a4b6f10ea292da4b24909558e2c22da725df18b2deb28cb520491fe",
+  "rows": {
+   "file": "teacher_rows.jsonl",
+   "sha256": "b59218ea5dd2c3f0ccff5bf5287cef85a89c0424c544c08f50f33ca4f4752865"
+  }
+ },
+ "trainable": {
+  "names": [
+   "policy_head.conv.weight",
+   "policy_head.conv.bias",
+   "policy_head.bn.weight",
+   "policy_head.bn.bias",
+   "policy_head.fc.weight",
+   "policy_head.fc.bias",
+   "policy_head.out.weight",
+   "policy_head.out.bias"
+  ],
+  "parameters": 519
+ },
+ "training_seed": {
+  "plan": "docs/superpowers/evidence/external-engine-learning-plans/stage2.json",
+  "slots": 1
+ }
+}
