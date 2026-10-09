@@ -59,6 +59,7 @@ EXECUTION_S = 1800                                           # the card's 30 min
 N_SLOTS = 1
 TRAINABLE = tuple(f"policy_head.{m}.{p}" for m in ("conv", "bn", "fc", "out") for p in ("weight", "bias"))
 N_TRAINABLE = 519
+POLICY_TOL = 1e-6                                            # max |change in a legal probability| must exceed it
 SAMPLING = "numpy.random.Generator(PCG64(seed)).integers(0, n_train, size=(steps, batch)): uniform, with replacement"
 
 Stop, Refused = EL.Stage1Stop, EL.Refused
@@ -334,15 +335,26 @@ def reload_check(network, path: pathlib.Path):
     return reloaded
 
 
+def legal_probs(z: Sequence[float]) -> List[float]:
+    """softmax over a row's legal logits -- unchanged by adding any constant to every logit of the row."""
+    m = max(z)
+    e = [math.exp(v - m) for v in z]
+    s = sum(e)
+    return [x / s for x in e]
+
+
 def policy_change(before: Sequence[Sequence[float]], after: Sequence[Sequence[float]],
                   rows: Sequence[Mapping[str, Any]]) -> Dict[str, Any]:
-    """Training rows only -- a mechanics observation, never strength evidence."""
-    diff = max(abs(a - b) for x, y in zip(before, after) for a, b in zip(x, y))
-    if not diff > 0:
-        raise Stop("change", "no measurable policy change on the training rows")
-    ce = lambda zs: sum(max(z) + math.log(sum(math.exp(v - max(z)) for v in z)) - z[r["chosen_index"]]
-                        for z, r in zip(zs, rows)) / len(rows)
-    return {"max_abs_logit_change": diff, "train_ce_incumbent": ce(before), "train_ce_candidate": ce(after),
+    """Training rows only -- a mechanics observation, never strength evidence. The policy changed only if
+    some training row's legal-move PROBABILITIES moved by more than POLICY_TOL: a common shift of a row's
+    logits leaves its distribution, its order and its CE unchanged, and is no change. Top-1 need not move."""
+    diff = max(abs(a - b) for x, y in zip(before, after) for a, b in zip(legal_probs(x), legal_probs(y)))
+    if not diff > POLICY_TOL:
+        raise Stop("change", f"no measurable policy change on the training rows: max |change in a legal "
+                             f"probability| {diff:.3g} <= {POLICY_TOL:g}")
+    ce = lambda zs: sum(-math.log(legal_probs(z)[r["chosen_index"]]) for z, r in zip(zs, rows)) / len(rows)
+    return {"max_abs_prob_change": diff, "tolerance": POLICY_TOL,
+            "train_ce_incumbent": ce(before), "train_ce_candidate": ce(after),
             "train_top1_changed": sum(EL.top1(x) != EL.top1(y) for x, y in zip(before, after)),
             "train_top1_teacher_incumbent": sum(EL.top1(x) == r["chosen_index"] for x, r in zip(before, rows)),
             "train_top1_teacher_candidate": sum(EL.top1(y) == r["chosen_index"] for y, r in zip(after, rows))}

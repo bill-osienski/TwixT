@@ -263,14 +263,36 @@ def test_a_NONFINITE_step_stops(monkeypatch):
         S2.train_head(_network(), S2.records_of(rows), S2.sampling_schedule(SYNTHETIC, 2))
 
 
-def test_NO_measurable_policy_change_stops_and_a_change_is_reported_on_training_rows_only():
+def test_NO_change_and_a_COMMON_SHIFT_of_every_legal_logit_both_STOP():
+    """A constant added to every logit of a row leaves its probabilities, order and CE unchanged: no change."""
     rows = [{"chosen_index": 1}, {"chosen_index": 0}]
     z = [[0.0, 1.0, 0.5], [2.0, 0.0]]
     with pytest.raises(S2.Stop, match="no measurable policy change"):
         S2.policy_change(z, [list(x) for x in z], rows)
-    out = S2.policy_change(z, [[1.5, 1.0, 0.5], [2.0, 0.0]], rows)
-    assert out["max_abs_logit_change"] == 1.5 and out["train_top1_changed"] == 1
-    assert (out["train_top1_teacher_incumbent"], out["train_top1_teacher_candidate"]) == (2, 1)
+    for shift in (2.0, -7.5, 30.0):
+        shifted = [[v + shift for v in x] for x in z]
+        with pytest.raises(S2.Stop, match="no measurable policy change"):
+            S2.policy_change(z, shifted, rows)
+    per_row = [[v + 2.0 for v in z[0]], [v - 3.0 for v in z[1]]]                    # a different shift per row
+    with pytest.raises(S2.Stop, match="no measurable policy change"):
+        S2.policy_change(z, per_row, rows)
+    tiny = [[z[0][0] + 1e-9, *z[0][1:]], list(z[1])]                                # below the tolerance
+    with pytest.raises(S2.Stop, match="no measurable policy change"):
+        S2.policy_change(z, tiny, rows)
+
+
+def test_a_GENUINE_distribution_change_passes_without_any_top1_change():
+    rows = [{"chosen_index": 1}, {"chosen_index": 0}]
+    z = [[0.0, 1.0, 0.5], [2.0, 0.0]]
+    after = [[0.0, 1.0, 0.9], [2.0, 0.0]]                                          # one logit moved; top-1 kept
+    out = S2.policy_change(z, after, rows)
+    p0, p1 = S2.legal_probs(z[0]), S2.legal_probs(after[0])
+    assert out["max_abs_prob_change"] == pytest.approx(max(abs(a - b) for a, b in zip(p0, p1)))
+    assert out["max_abs_prob_change"] > S2.POLICY_TOL and out["train_top1_changed"] == 0
+    assert out["train_ce_candidate"] > out["train_ce_incumbent"]                     # chosen 1 lost mass to 2
+    flipped = S2.policy_change(z, [[1.5, 1.0, 0.5], [2.0, 0.0]], rows)
+    assert flipped["train_top1_changed"] == 1
+    assert (flipped["train_top1_teacher_incumbent"], flipped["train_top1_teacher_candidate"]) == (2, 1)
 
 
 # ─────────────────────────────── the control ───────────────────────────────
