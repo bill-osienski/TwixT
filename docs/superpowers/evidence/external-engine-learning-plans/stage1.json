@@ -1,0 +1,138 @@
+{
+ "base": 202670000,
+ "baseline": "ff1422fb",
+ "card": "docs/superpowers/2026-10-08-external-engine-learning-viability.md",
+ "games": [
+  {
+   "arm": "teacher_red",
+   "family": 0,
+   "game_id": "f0-teacher_red",
+   "seed": 202670006,
+   "split": "train",
+   "teacher_colour": "red"
+  },
+  {
+   "arm": "teacher_black",
+   "family": 0,
+   "game_id": "f0-teacher_black",
+   "seed": 202670007,
+   "split": "train",
+   "teacher_colour": "black"
+  },
+  {
+   "arm": "teacher_red",
+   "family": 1,
+   "game_id": "f1-teacher_red",
+   "seed": 202670008,
+   "split": "train",
+   "teacher_colour": "red"
+  },
+  {
+   "arm": "teacher_black",
+   "family": 1,
+   "game_id": "f1-teacher_black",
+   "seed": 202670009,
+   "split": "train",
+   "teacher_colour": "black"
+  },
+  {
+   "arm": "teacher_red",
+   "family": 2,
+   "game_id": "f2-teacher_red",
+   "seed": 202670010,
+   "split": "train",
+   "teacher_colour": "red"
+  },
+  {
+   "arm": "teacher_black",
+   "family": 2,
+   "game_id": "f2-teacher_black",
+   "seed": 202670011,
+   "split": "train",
+   "teacher_colour": "black"
+  },
+  {
+   "arm": "teacher_red",
+   "family": 3,
+   "game_id": "f3-teacher_red",
+   "seed": 202670012,
+   "split": "train",
+   "teacher_colour": "red"
+  },
+  {
+   "arm": "teacher_black",
+   "family": 3,
+   "game_id": "f3-teacher_black",
+   "seed": 202670013,
+   "split": "train",
+   "teacher_colour": "black"
+  },
+  {
+   "arm": "teacher_red",
+   "family": 4,
+   "game_id": "f4-teacher_red",
+   "seed": 202670014,
+   "split": "heldout",
+   "teacher_colour": "red"
+  },
+  {
+   "arm": "teacher_black",
+   "family": 4,
+   "game_id": "f4-teacher_black",
+   "seed": 202670015,
+   "split": "heldout",
+   "teacher_colour": "black"
+  },
+  {
+   "arm": "teacher_red",
+   "family": 5,
+   "game_id": "f5-teacher_red",
+   "seed": 202670016,
+   "split": "heldout",
+   "teacher_colour": "red"
+  },
+  {
+   "arm": "teacher_black",
+   "family": 5,
+   "game_id": "f5-teacher_black",
+   "seed": 202670017,
+   "split": "heldout",
+   "teacher_colour": "black"
+  }
+ ],
+ "kind": "external-learning-stage1-plan/1",
+ "n_slots": 18,
+ "openings": [
+  {
+   "family": 0,
+   "opening_seed": 202670000,
+   "split": "train"
+  },
+  {
+   "family": 1,
+   "opening_seed": 202670001,
+   "split": "train"
+  },
+  {
+   "family": 2,
+   "opening_seed": 202670002,
+   "split": "train"
+  },
+  {
+   "family": 3,
+   "opening_seed": 202670003,
+   "split": "train"
+  },
+  {
+   "family": 4,
+   "opening_seed": 202670004,
+   "split": "heldout"
+  },
+  {
+   "family": 5,
+   "opening_seed": 202670005,
+   "split": "heldout"
+  }
+ ],
+ "survey_record_sha256": "3ef38730107f865a823d4d9d1aaa69cbe848d8fe93ab8e43b387ff8c6d39af00"
+}

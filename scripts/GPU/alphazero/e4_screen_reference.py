@@ -494,6 +494,17 @@ ACCOUNTED_SEED_INTERVALS = (
     # Accounted, NOT exposed and NOT retired: exposure follows actual use, in a later,
     # separately authorized closing edit (A8.2). No gate is opened by this.
     (202660000, 202660032),          # TACTICAL CANDIDATE PILOT -- 16 pairs, 32 seeds
+    # 🔴 EXTERNAL-ENGINE LEARNING STAGE 1 -- ONE BLOCK, registered 2026-10-09 under
+    # `2026-10-08-external-engine-learning-viability.md` (design baseline ff1422fb): the block of
+    # the 18-slot survey (evidence/external-engine-learning-seed-survey/02_*), READ from that
+    # record, not chosen here. Family j opens with lo+j; its arm-c game is lo+6+2j+c; the plan is
+    # evidence/external-engine-learning-plans/stage1.json (base + slot count). Registered ONLY
+    # after the pre-registration collision proof (evidence/external-engine-learning-seed-survey/
+    # 03_*) was CLEAN against the PRE-registration registries, 42/42 controls passed.
+    #
+    # Accounted, NOT exposed and NOT retired: exposure follows actual use, in a later,
+    # separately authorized closing edit. No gate is opened by this.
+    (202670000, 202670018),          # EXTERNAL-ENGINE LEARNING STAGE 1 -- 6 openings + 12 games, 18 seeds
 )
 
 #: EXPERIMENTAL EXPOSURE: seeds drawn from OUTSIDE the permanently unschedulable
