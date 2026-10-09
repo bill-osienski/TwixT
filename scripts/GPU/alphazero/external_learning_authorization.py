@@ -5,4 +5,4 @@ the teacher/data smoke in `external_learning` -- fixtures, six deterministic tea
 games, the export and the training-row disagreement check. Opened for ONE approved run and restored on
 every exit. Created closed. This file may hold ONLY this declaration.
 """
-EXTERNAL_LEARNING_STAGE1_AUTHORIZED = False
+EXTERNAL_LEARNING_STAGE1_AUTHORIZED = True
