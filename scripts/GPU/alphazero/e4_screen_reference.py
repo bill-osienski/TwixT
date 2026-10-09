@@ -505,6 +505,17 @@ ACCOUNTED_SEED_INTERVALS = (
     # Accounted, NOT exposed and NOT retired: exposure follows actual use, in a later,
     # separately authorized closing edit. No gate is opened by this.
     (202670000, 202670018),          # EXTERNAL-ENGINE LEARNING STAGE 1 -- 6 openings + 12 games, 18 seeds
+    # 🔴 EXTERNAL-ENGINE LEARNING STAGE 2 -- ONE TRAINING SEED, registered 2026-10-09 under
+    # `2026-10-08-external-engine-learning-viability.md` (design baseline ff1422fb), stage 2: the
+    # one-seed block of the stage-2 survey (evidence/external-engine-learning-stage2-seed-survey/
+    # 02_*), READ from that record, not chosen here. It seeds the training sampler; the plan is
+    # evidence/external-engine-learning-plans/stage2.json (seed + manifest hash). Registered ONLY
+    # after the pre-registration collision proof (same directory, 03_*) was CLEAN against the
+    # PRE-registration registries, 43/43 controls passed.
+    #
+    # Accounted, NOT exposed and NOT retired: exposure follows actual use, in a later,
+    # separately authorized closing edit. No gate is opened by this.
+    (202680000, 202680001),          # EXTERNAL-ENGINE LEARNING STAGE 2 -- 1 training seed
 )
 
 #: EXPERIMENTAL EXPOSURE: seeds drawn from OUTSIDE the permanently unschedulable
