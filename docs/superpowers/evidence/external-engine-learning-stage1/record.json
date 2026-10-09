@@ -1,0 +1,369 @@
+{
+ "baseline": "ff1422fb",
+ "card": "docs/superpowers/2026-10-08-external-engine-learning-viability.md",
+ "kind": "external-learning-stage1-record/1",
+ "steps": {
+  "config_sha256": "1067946af9a0bd3872471f763cccfd437b88918ab49f8a6f4987cba94bcf8fa3",
+  "corruption_detected": [
+   "peg",
+   "bridge",
+   "side",
+   "ply"
+  ],
+  "disagreement": {
+   "disagree": 97,
+   "f": 0.7578125,
+   "match": 31,
+   "per_colour": {
+    "black": {
+     "disagree": 49,
+     "rate": 0.7205882352941176,
+     "rows": 68
+    },
+    "red": {
+     "disagree": 48,
+     "rate": 0.8,
+     "rows": 60
+    }
+   },
+   "per_game": {
+    "f0-teacher_black": {
+     "disagree": 8,
+     "rate": 0.5714285714285714,
+     "rows": 14
+    },
+    "f0-teacher_red": {
+     "disagree": 12,
+     "rate": 0.75,
+     "rows": 16
+    },
+    "f1-teacher_black": {
+     "disagree": 18,
+     "rate": 0.8571428571428571,
+     "rows": 21
+    },
+    "f1-teacher_red": {
+     "disagree": 11,
+     "rate": 0.8461538461538461,
+     "rows": 13
+    },
+    "f2-teacher_black": {
+     "disagree": 14,
+     "rate": 1.0,
+     "rows": 14
+    },
+    "f2-teacher_red": {
+     "disagree": 15,
+     "rate": 0.8823529411764706,
+     "rows": 17
+    },
+    "f3-teacher_black": {
+     "disagree": 9,
+     "rate": 0.47368421052631576,
+     "rows": 19
+    },
+    "f3-teacher_red": {
+     "disagree": 10,
+     "rate": 0.7142857142857143,
+     "rows": 14
+    }
+   },
+   "rows": 128
+  },
+  "fixtures": [
+   "F01_edges: 6 plies equal at every ply",
+   "F02_red_links: 6 plies equal at every ply",
+   "F03_black_links: 6 plies equal at every ply",
+   "F04_red_win: 25 plies equal at every ply",
+   "F05_black_win: 26 plies equal at every ply",
+   "F06_opponent_cross: 4 plies equal at every ply",
+   "F07_own_cross_red: 8 plies equal at every ply",
+   "F08_own_cross_black: 8 plies equal at every ply",
+   "F09_both_slopes: 10 plies equal at every ply",
+   "F10_shared_endpoint: 6 plies equal at every ply",
+   "F11_cap_reached: 6 plies equal at every ply",
+   "F12_cap_one_below: 6 plies equal at every ply"
+  ],
+  "games": [
+   {
+    "game_id": "f0-teacher_red",
+    "plies": 35,
+    "result": "teacher",
+    "rows": 16,
+    "seconds": 47.913
+   },
+   {
+    "game_id": "f0-teacher_black",
+    "plies": 32,
+    "result": "teacher",
+    "rows": 14,
+    "seconds": 33.003
+   },
+   {
+    "game_id": "f1-teacher_red",
+    "plies": 29,
+    "result": "teacher",
+    "rows": 13,
+    "seconds": 29.974
+   },
+   {
+    "game_id": "f1-teacher_black",
+    "plies": 46,
+    "result": "teacher",
+    "rows": 21,
+    "seconds": 50.91
+   },
+   {
+    "game_id": "f2-teacher_red",
+    "plies": 37,
+    "result": "teacher",
+    "rows": 17,
+    "seconds": 44.12
+   },
+   {
+    "game_id": "f2-teacher_black",
+    "plies": 32,
+    "result": "teacher",
+    "rows": 14,
+    "seconds": 32.547
+   },
+   {
+    "game_id": "f3-teacher_red",
+    "plies": 31,
+    "result": "teacher",
+    "rows": 14,
+    "seconds": 40.558
+   },
+   {
+    "game_id": "f3-teacher_black",
+    "plies": 42,
+    "result": "teacher",
+    "rows": 19,
+    "seconds": 45.017
+   },
+   {
+    "game_id": "f4-teacher_red",
+    "plies": 33,
+    "result": "teacher",
+    "rows": 15,
+    "seconds": 36.175
+   },
+   {
+    "game_id": "f4-teacher_black",
+    "plies": 34,
+    "result": "teacher",
+    "rows": 15,
+    "seconds": 35.207
+   },
+   {
+    "game_id": "f5-teacher_red",
+    "plies": 29,
+    "result": "teacher",
+    "rows": 13,
+    "seconds": 29.04
+   },
+   {
+    "game_id": "f5-teacher_black",
+    "plies": 46,
+    "result": "teacher",
+    "rows": 21,
+    "seconds": 51.022
+   }
+  ],
+  "logit_artifact_sha256": "82ff3f2b0460ecb1ec635d8d65e8991b393be3e1a931092b058f323d8fe71eda",
+  "openings": {
+   "0": [
+    [
+     14,
+     21
+    ],
+    [
+     7,
+     4
+    ],
+    [
+     23,
+     8
+    ],
+    [
+     2,
+     4
+    ]
+   ],
+   "1": [
+    [
+     12,
+     14
+    ],
+    [
+     19,
+     2
+    ],
+    [
+     16,
+     20
+    ],
+    [
+     14,
+     21
+    ]
+   ],
+   "2": [
+    [
+     3,
+     3
+    ],
+    [
+     12,
+     20
+    ],
+    [
+     4,
+     8
+    ],
+    [
+     11,
+     9
+    ]
+   ],
+   "3": [
+    [
+     10,
+     11
+    ],
+    [
+     3,
+     3
+    ],
+    [
+     18,
+     8
+    ],
+    [
+     20,
+     0
+    ]
+   ],
+   "4": [
+    [
+     7,
+     7
+    ],
+    [
+     15,
+     14
+    ],
+    [
+     7,
+     6
+    ],
+    [
+     20,
+     14
+    ]
+   ],
+   "5": [
+    [
+     19,
+     3
+    ],
+    [
+     17,
+     7
+    ],
+    [
+     16,
+     19
+    ],
+    [
+     17,
+     16
+    ]
+   ]
+  },
+  "permission": [
+   {
+    "path": "LICENSE",
+    "sha256": "cef0d970b9a3dcdc2d3b7bc2ecee97a67d57cc1d1287d1ea5e13fe86b6dbd36b"
+   }
+  ],
+  "plan": {
+   "base": 202670000,
+   "n_slots": 18,
+   "sha256": "79126e13ac7e72bdc980a64c7aa6c5b96d9d2fff8b5484a43aa0060c9ef6d575"
+  },
+  "queries": [
+   {
+    "fixture": "F02_red_links",
+    "input_sha256": "6cc24a72f227d3cf0383e48f1a75358e4084fb405480234f0a44d722f1d3e124",
+    "move": [
+     6,
+     10
+    ]
+   },
+   {
+    "fixture": "F06_opponent_cross",
+    "input_sha256": "28b465bfca9e68b38bb9dc4fe84606671e3996f4d167a27b85f79ebf6c6ec356",
+    "move": [
+     10,
+     9
+    ]
+   },
+   {
+    "fixture": "F09_both_slopes",
+    "input_sha256": "f77e957aaf1c596a26e9c44c0c6b05ec332524d3d15115a0a397ee6620a18b91",
+    "move": [
+     6,
+     13
+    ]
+   }
+  ],
+  "reconstructed_in_both": 192,
+  "rows": {
+   "file_sha256": "b59218ea5dd2c3f0ccff5bf5287cef85a89c0424c544c08f50f33ca4f4752865",
+   "games": {
+    "heldout": [
+     "f4-teacher_black",
+     "f4-teacher_red",
+     "f5-teacher_black",
+     "f5-teacher_red"
+    ],
+    "train": [
+     "f0-teacher_black",
+     "f0-teacher_red",
+     "f1-teacher_black",
+     "f1-teacher_red",
+     "f2-teacher_black",
+     "f2-teacher_red",
+     "f3-teacher_black",
+     "f3-teacher_red"
+    ]
+   },
+   "heldout": 64,
+   "n": 192,
+   "rows_sha256": "b59218ea5dd2c3f0ccff5bf5287cef85a89c0424c544c08f50f33ca4f4752865",
+   "splits": {
+    "heldout": 64,
+    "train": 128
+   },
+   "train": 128
+  },
+  "rule_flag_copies": [
+   "Game.clone",
+   "copy.copy",
+   "copy.deepcopy"
+  ],
+  "runtime": {
+   "artifact_sha256": {
+    "model/pb/saved_model.pb": "e0c2b882bc97c4661ac92af47ae5ef78443e57b42d0cb7c9c3a8cb7e8d01993b",
+    "model/pb/variables/variables.data-00000-of-00001": "1958f8476e9d56cbb87fa570db88f9cc9d389b30e20571fd66e8e779a4cefbab",
+    "model/pb/variables/variables.index": "1d4073c4da30e515a984faef2c3cc9c8b8ba402353a01933c8bb80e1f279f8cd"
+   },
+   "commit": "83749f230a0bae1766b46a05bfde0ed87f0a9a0a",
+   "model_artifacts": 3,
+   "runtime_sha256": "32e4e14d5ca02c2cb2ad7a774def23138fb0ec7a5b83537680ec165a5045817e",
+   "tensorflow": "2.21.0"
+  }
+ },
+ "verdict": "PASS"
+}

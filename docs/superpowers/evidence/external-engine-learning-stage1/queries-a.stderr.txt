@@ -1,0 +1,3 @@
+WARNING:tensorflow:From /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d14bb48a-a70e-4863-a3dc-f0ea46427418/scratchpad/twixtbot-ui/src/backend/nneval.py:21: load (from tensorflow.python.saved_model.loader_impl) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use `tf.saved_model.load` instead.

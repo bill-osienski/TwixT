@@ -1,0 +1,14 @@
+EXTERNAL-ENGINE LEARNING STAGE 1 -- SETUP: which copy path the teacher's search uses (2026-10-09)
+Read from the pinned source, twixtbot-ui @ 83749f230a0bae1766b46a05bfde0ed87f0a9a0a, src/backend/.
+
+* nnmcts.py never copies the game: it plays and undoes each move IN PLACE on the Game it was given
+  (game.play(move) / game.undo() at lines 169/178 and 386/394). The root game's allow_scl=False
+  therefore holds for the whole search.
+* Game.clone() (twixt.py:104) builds `Game(self.allow_scl)` -- it keeps the flag -- but nothing in the
+  backend calls it.
+* The only `Game(True)` (twixt.py:528) is `check_board` in the draw detection reached from play()
+  (line 224, _is_a_draw); its crossing checks read self.allow_scl of the real game, not the scratch board's.
+* No copy.copy / copy.deepcopy of a Game anywhere in src/backend.
+
+So the run's rule_flag_copies check (Game.clone, copy.copy, copy.deepcopy) covers more than the search
+uses; nothing here undermines it. The run recorded it: steps.rule_flag_copies.

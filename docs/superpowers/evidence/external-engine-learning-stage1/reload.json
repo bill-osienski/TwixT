@@ -1,0 +1,9 @@
+{
+ "file_sha256": "b59218ea5dd2c3f0ccff5bf5287cef85a89c0424c544c08f50f33ca4f4752865",
+ "n": 192,
+ "rows_sha256": "b59218ea5dd2c3f0ccff5bf5287cef85a89c0424c544c08f50f33ca4f4752865",
+ "splits": {
+  "heldout": 64,
+  "train": 128
+ }
+}

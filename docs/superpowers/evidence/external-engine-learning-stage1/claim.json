@@ -1,0 +1,9 @@
+{
+ "ceiling_s": 3600,
+ "clone_root": "/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/d14bb48a-a70e-4863-a3dc-f0ea46427418/scratchpad/twixtbot-ui",
+ "gate_sha256": "0a8b58f3fd3cd8bf1a3f66bd9566a239acd7b506ee87146844a0240cfade6cf5",
+ "head": "2be283947e8634a68eec815096fb3b03c006dc4d",
+ "module_sha256": "9b35cb8bd1ca06156027cfa300c87071d55b6a0bd80985238889aed42fe7ce7a",
+ "python": "3.13.15 (main, Aug  5 2026, 12:25:43) [Clang 21.0.0 (clang-2100.1.1.101)]",
+ "started_unix": 1791569295.5054772
+}

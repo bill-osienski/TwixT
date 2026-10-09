@@ -1,0 +1,26 @@
+[
+ {
+  "fixture": "F02_red_links",
+  "input_sha256": "6cc24a72f227d3cf0383e48f1a75358e4084fb405480234f0a44d722f1d3e124",
+  "move": [
+   6,
+   10
+  ]
+ },
+ {
+  "fixture": "F06_opponent_cross",
+  "input_sha256": "28b465bfca9e68b38bb9dc4fe84606671e3996f4d167a27b85f79ebf6c6ec356",
+  "move": [
+   10,
+   9
+  ]
+ },
+ {
+  "fixture": "F09_both_slopes",
+  "input_sha256": "f77e957aaf1c596a26e9c44c0c6b05ec332524d3d15115a0a397ee6620a18b91",
+  "move": [
+   6,
+   13
+  ]
+ }
+]
