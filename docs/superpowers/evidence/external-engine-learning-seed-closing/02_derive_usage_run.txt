@@ -1,0 +1,34 @@
+EXTERNAL-ENGINE LEARNING STAGE 1 -- CLOSING SEED ACCOUNTING OF THE STAGE-1 BLOCK (read-only, outcome-blind)
+================================================================================================
+HEAD b7de24d7f4bff1447a910c6694fac07eb3d4a6a8; working tree clean; 18 inputs committed and unmodified (plan sha256 79126e13ac7e72bdc980a64c7aa6c5b96d9d2fff8b5484a43aa0060c9ef6d575, registry, manifest, record, finalized, progress, 12 game files), each run file the one the manifest hashed
+run (finalized status, group reaped): ('EXITED', True); exit code, verdict: (0, 'PASS')
+game starts in progress.jsonl: 12, distinct 12; the plan's games: 12; game files read: 12
+openings: 6 recorded; 6 of 6 equal the opening their plan seed draws
+the block the used seeds make: (202670000, 202670018); ACCOUNTED holds it as itself: True; in EXPOSED: False; in RETIRED: False
+faults: none
+
+CONTROLS (synthetic)
+------------------------------------------------------------------------------------------------
+  PASS   a sound world reconciles
+  PASS   a game start missing
+  PASS   a game started twice
+  PASS   the starts out of plan order
+  PASS   a game started with another seed
+  PASS   a game file missing
+  PASS   a game file's seed is not its plan entry's
+  PASS   a recorded opening is not the one its seed draws
+  PASS   a family's opening not recorded
+  PASS   the used seeds are not one contiguous block
+  PASS   the used seeds are not the plan's declared block
+  PASS   the block is not ACCOUNTED
+  PASS   the block ACCOUNTED twice
+  PASS   a seed of the block already EXPOSED
+  PASS   a seed of the block already RETIRED
+  PASS   an adjacent EXPOSED interval is no overlap
+  PASS   the run's group not reaped
+  PASS   the run timed out
+  PASS   seed_fields returns ONLY game_id, family and seed
+  PASS   game_starts reads only game_start entries
+
+controls passed: 20/20
+VERDICT: RECONCILES -- all 18 seeds of (202670000, 202670018) used (6 openings drawn, 12 games started): the stage-1 block is EXPOSED WHOLE and RETIRED WHOLE
