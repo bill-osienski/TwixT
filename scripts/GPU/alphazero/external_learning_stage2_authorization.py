@@ -6,4 +6,4 @@ logits, then ONE 128-step, batch-32 policy-head-only update of a verified incumb
 reloaded. Opened for ONE approved run and restored on every exit. Created closed. This file may hold ONLY
 this declaration.
 """
-EXTERNAL_LEARNING_STAGE2_AUTHORIZED = False
+EXTERNAL_LEARNING_STAGE2_AUTHORIZED = True
