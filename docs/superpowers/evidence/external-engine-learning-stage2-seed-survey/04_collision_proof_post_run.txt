@@ -1,0 +1,74 @@
+EXTERNAL-ENGINE LEARNING STAGE 2 -- TRAINING-SEED COLLISION PROOF, mode POST
+================================================================================================
+HEAD b2069f6cb78af788e0dc34de31b2a87ee331d465; working tree clean
+method (survey) docs/superpowers/evidence/tactical-candidate-seed-survey/01_seed_survey.py sha256 6f6e55dbd5da672848c757753d4e61a3e9d110d96569b7ef468f902cf46f8860 (pinned)
+method (proof) docs/superpowers/evidence/tactical-candidate-seed-registration/01_collision_proof.py sha256 dd192011938ca5c6674092b243681174e669e1e96b22b8d13da2a264b340764d (pinned)
+stage-2 manifest docs/superpowers/evidence/external-engine-learning-plans/stage2-manifest.json sha256 916224900d6f674d6d93ccc08fc00499ae2bc71f422f57a7a6a5ae17961d831d (pinned in the module)
+registry scripts/GPU/alphazero/e4_screen_reference.py sha256 1fb6b7a2b876b91f72bd765273a4c5d6c5e46f44cf70fa0d41568025775c7a17
+masks (imported): ['0x3c3c3c', '0x5a5a5a', '0xa5a5a5', '0xc3c3c3']
+registries: ACCOUNTED 31, EXPOSED 28, RETIRED 26, TEST_ONLY 1
+named spent blocks: D1 paper 1, H1 2, H2 3, H3 6, H4 5, H5 4; H3 generation ranges 4; CONSUMED_SEEDS 1
+EXEMPT PATHS (exact; plus registry tuple elements by parsing): 4 + the plan
+    docs/superpowers/evidence/external-engine-learning-stage2-seed-survey/01_seed_survey.py
+    docs/superpowers/evidence/external-engine-learning-stage2-seed-survey/02_seed_survey_run.txt
+    docs/superpowers/evidence/external-engine-learning-stage2-seed-survey/03_collision_proof_pre_run.txt
+    docs/superpowers/evidence/external-engine-learning-stage2-seed-survey/04_collision_proof_post_run.txt
+    docs/superpowers/evidence/external-engine-learning-plans/stage2.json  (only if every band literal in it is the seed)
+
+survey record docs/superpowers/evidence/external-engine-learning-stage2-seed-survey/02_seed_survey_run.txt sha256 998cb17dafc3b112fd13526ff7a04d70ba644d7abe5d4c7939884e975b596e64 (read at c689b17efed1803505deeec081877649334dad29)
+THE SEED, read from the record: [202680000, 202680001) -- BASE 202680000
+EXPECTED STATE (post): HOLDS
+
+SCOPE (fail-closed enumeration): 46507 regular files under ['scripts', 'tests', 'docs/superpowers']; symbolic links (not followed): 0; band literal values counted: 4333
+THE BLOCK (202680000, 202680001)  n=1  direct=NONE  streams=0  injective=True  gap=9976 (floor 1)  CLEAN=True
+SLOT (external_learning_stage2):
+    SLOT stage-2 training seed 202680000
+
+CONTROLS
+------------------------------------------------------------------------------------------------
+  PASS   REJECTED: D1 paper block (202615000, 202615221)
+  PASS   REJECTED: H1 block (202616000, 202616224)
+  PASS   REJECTED: H2 block (202618000, 202618736)
+  PASS   REJECTED: H3 block (202624000, 202624040)
+  PASS   REJECTED: H4 block (202632000, 202632032)
+  PASS   REJECTED: H5 block (202650000, 202650148)
+  PASS   REJECTED: the TEST_ONLY band
+  PASS   REJECTED: inside the live H3 uniform generation range
+  PASS   REJECTED: the seed itself, as another block
+  PASS   REJECTED: starts where the block ends -- inside the floor
+  PASS   REJECTED: the most recently EXPOSED block (stage 1's)
+  PASS   REJECTED: a block at the H4-4b MUTATION literal 202642000
+  PASS   an UNDERSCORE-GROUPED candidate seed (.py)  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=9976; dropping undecodable bytes instead would see it]
+  PASS   a PLAIN candidate seed (.py)  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=9976; dropping undecodable bytes instead would see it]
+  PASS   an UNDERSCORE-GROUPED exclusive end (.py)  [without it CLEAN=True; with it direct=NONE gap=0; dropping undecodable bytes instead would see it]
+  PASS   a candidate seed in a .log -- a suffix H5's filter skipped  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=9976; dropping undecodable bytes instead would see it]
+  PASS   a candidate seed inside a .gz  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=9976; dropping undecodable bytes instead would see it]
+  PASS   a candidate seed after an undecodable byte after a digit  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=9976; dropping undecodable bytes instead would MISS it]
+  PASS   an UNREADABLE file stops the survey  [SurveyStop]
+  PASS   a CORRUPT .gz stops the survey  [SurveyStop]
+  PASS   an own record (exact path) is exempt  [None]
+  PASS   a sibling path that is NOT listed is counted  [[('docs/superpowers/evidence/external-engine-learning-stage2-seed-survey/05_not_listed.txt', 1)]]
+  PASS   the plan holding only the seed is exempt  [None]
+  PASS   registry tuple elements are exempt by parsing (a non-ASCII char BEFORE them)  [[202680011]]
+  PASS   the same value outside a registry tuple is counted  [[('scripts/GPU/alphazero/e4_screen_reference.py', 1)]]
+  PASS   a plan with a seed OUTSIDE the block is not exempt  [[202680000, 202680006]]
+  PASS   an UNREADABLE directory  [STOPPED: a directory could not be read]
+  PASS   an UNREADABLE nested directory  [STOPPED: a directory could not be read]
+  PASS   a missing root  [STOPPED: <tmp>/tests: the root is not a directory]
+  PASS   a root that is a file  [STOPPED: <tmp>/scripts: the root is not a directory]
+  PASS   a FIFO inside a root  [STOPPED: <tmp>/scripts/pipe: neither a regular file, a directory nor a symbolic link]
+  PASS   a sound tree with a symbolic link  [enumerated: 3 files, 1 links]
+  PASS   pre: the survey's registry, no plan  [the expected state]
+  PASS   pre: the registry changed  [the registry is not the one the survey read]
+  PASS   pre: the seed already registered  [the registry is not the one the survey read; a registry already holds seeds of the block: [('ACCOUNTED_SEED_INTERVALS', (202680000, 202680001))]]
+  PASS   pre: a plan already exists  [a pilot plan already exists]
+  PASS   post: exactly the block appended last, the plan  [the expected state]
+  PASS   post: the block appended FIRST  [ACCOUNTED is not the survey's state with exactly the block appended last]
+  PASS   post: a wider tuple  [ACCOUNTED is not the survey's state with exactly the block appended last]
+  PASS   post: EXPOSED changed too  [EXPOSED_SEED_INTERVALS changed]
+  PASS   post: no plan  [the stage-2 plan is absent or not committed]
+  PASS   post: a plan of another seed  [the stage-2 plan is not the frozen form of the surveyed seed]
+  PASS   post: a plan bound to another manifest  [the stage-2 plan is not the frozen form of the surveyed seed]
+
+controls passed: 43/43
+PROOF VERDICT (post): THE STAGE-2 SEED IS CLEAN AND THE STATE IS AS EXPECTED
