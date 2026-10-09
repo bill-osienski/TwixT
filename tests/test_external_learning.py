@@ -7,7 +7,11 @@ under `.venv` for the full set.
 """
 import json
 import math
+import os
 import pathlib
+import subprocess
+import sys
+import time
 from collections import deque, namedtuple
 from types import SimpleNamespace
 
@@ -205,6 +209,11 @@ def test_check_plan_refuses_an_unregistered_block_and_any_tampering(monkeypatch)
         EL.check_plan(bad)
     with pytest.raises(EL.Stage1Stop, match="survey record"):
         EL.check_plan({**plan, "survey_record_sha256": None})
+    assert "block" not in plan and EL.plan_block(plan) == (SYNTHETIC, SYNTHETIC + 18)
+    for wrong in ({**plan, "n_slots": 19}, {**plan, "n_slots": 18.0}, {**plan, "base": float(SYNTHETIC)},
+                  {**plan, "block": [SYNTHETIC, SYNTHETIC + 18]}):
+        with pytest.raises(EL.Stage1Stop):
+            EL.check_plan(wrong)
     monkeypatch.setattr(REG, "seed_is_unavailable", lambda s: s == SYNTHETIC + 7)
     with pytest.raises(EL.Stage1Stop, match="spent"):
         EL.check_plan(plan)
@@ -467,6 +476,194 @@ def test_pure_temperature_rescaling_cannot_pass_the_heldout_comparison():
         EL.heldout_passes({"a": {"ce": 1, "top1": 1}}, m_inc, m_inc)
 
 
+# ─────────────────────────────── the ceiling and the record of progress ───────────────────────────────
+
+PARENT = """
+import pathlib, signal, subprocess, sys, time
+mode, pidfile = sys.argv[1], pathlib.Path(sys.argv[2])
+body = "import signal, time\\n"
+if mode == "stubborn":
+    body += "signal.signal(signal.SIGTERM, signal.SIG_IGN)\\n"
+g = subprocess.Popen([sys.executable, "-c", body + "time.sleep(60)"])
+pidfile.write_text(str(g.pid))
+if mode != "orphan":
+    time.sleep(60)
+"""
+
+
+def _alive(pid):
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    return True
+
+
+def _grandchild(tmp_path, mode, monkeypatch):
+    """parent -> child -> grandchild under run_group; returns (status, exit, reaped, grandchild pid)."""
+    monkeypatch.setattr(EL, "GROUP_GRACE_S", 0.5)
+    script, pidfile = tmp_path / "parent.py", tmp_path / "grandchild.pid"
+    script.write_text(PARENT)
+    t0 = time.monotonic()
+    status, code, reaped = EL.run_group([sys.executable, str(script), mode, str(pidfile)],
+                                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2)
+    assert time.monotonic() - t0 < 10
+    return status, code, reaped, int(pidfile.read_text())
+
+
+@pytest.mark.parametrize("mode,status", [("hang", "TIMEOUT"), ("stubborn", "TIMEOUT"), ("orphan", "EXITED")])
+def test_the_ceiling_ends_the_whole_process_group(tmp_path, monkeypatch, mode, status):
+    """A timed-out child's query subprocess (hang), one that ignores SIGTERM (stubborn), and one left
+    behind by a child that exited (orphan): none outlives the run."""
+    got, _code, reaped, pid = _grandchild(tmp_path, mode, monkeypatch)
+    assert (got, reaped) == (status, True) and not _alive(pid)
+
+
+def test_control_a_plain_timeout_leaves_the_grandchild_running(tmp_path):
+    """The defect the group fixes: subprocess.run(timeout=) kills only the direct child."""
+    script, pidfile = tmp_path / "parent.py", tmp_path / "grandchild.pid"
+    script.write_text(PARENT)
+    with pytest.raises(subprocess.TimeoutExpired):
+        subprocess.run([sys.executable, str(script), "hang", str(pidfile)], timeout=2)
+    pid = int(pidfile.read_text())
+    try:
+        assert _alive(pid)
+    finally:
+        os.kill(pid, 9)
+
+
+def test_a_query_timeout_keeps_its_partial_output(tmp_path, monkeypatch):
+    fake = tmp_path / "python"
+    fake.write_text("#!/bin/sh\necho partial-out\necho partial-err >&2\nexec sleep 30\n")
+    fake.chmod(0o755)
+    monkeypatch.setattr(sys, "executable", str(fake))
+    with pytest.raises(EL.Stage1Stop, match="timed out after 1 s"):
+        EL._subprocess_json(["_query"], tmp_path / "queries-a.json", 1, "queries")
+    assert (tmp_path / "queries-a.stdout.txt").read_text() == "partial-out\n"
+    assert (tmp_path / "queries-a.stderr.txt").read_text() == "partial-err\n"
+
+
+def test_every_move_is_logged_as_it_is_played_and_an_aborted_game_keeps_its_partial_moves():
+    full, part = [], []
+    g = EL.play_teacher_game(game=GAME, opening=[[12, 12], [11, 10], [13, 9], [10, 13]], rt=rt(),
+                             player=FakePlayer(), reference_agent=FakeAgent(GAME["seed"]), log=full.append)
+    assert [{k: v for k, v in e.items() if k != "event"} for e in full] == g["moves"]
+    a = EL.play_teacher_game(game=GAME, opening=[[12, 12], [11, 10], [13, 9], [10, 13]], rt=rt(drop_play_at=2),
+                             player=FakePlayer(), reference_agent=FakeAgent(GAME["seed"]), log=part.append)
+    assert a["aborted"] and [e["ply"] for e in part] == [0, 1, 2]
+
+
+def _staged(tmp_path, monkeypatch, *, logits_agree):
+    """The REAL stage1 and _child against the fake engine: gate opened in memory only, the plan a
+    synthetic block in tmp_path, every engine/model entry a stand-in."""
+    from scripts.GPU.alphazero import e4_screen_reference as REG
+    from scripts.GPU.alphazero import twixtbot_g3_reference as RF
+
+    plan = tmp_path / "plan.json"
+    plan.write_text(json.dumps(EL.build_plan((SYNTHETIC, SYNTHETIC + 18), "a" * 64)))
+    clone, run_dir = tmp_path / "clone", tmp_path / "run"
+    clone.mkdir(), run_dir.mkdir()
+    (clone / "LICENSE").write_text("synthetic\n")
+    monkeypatch.setattr(GATE, "EXTERNAL_LEARNING_STAGE1_AUTHORIZED", True)
+    monkeypatch.setattr(EL, "PLAN", str(plan))
+    monkeypatch.setattr(EL, "_committed", lambda rel: True)
+    monkeypatch.setattr(REG, "seed_is_accounted", lambda s: True)
+    monkeypatch.setattr(REG, "seed_is_unavailable", lambda s: False)
+    fake_rt = {**rt(), "nneval": SimpleNamespace(NNEvaluater=lambda path: None),
+               "nnmplayer": SimpleNamespace(Player=lambda **kw: FakePlayer()), "ct": None}
+    monkeypatch.setattr(EL, "load_runtime", lambda c: (fake_rt, {"runtime_sha256": "r" * 64}))
+    monkeypatch.setattr(EL, "teacher_kwargs", lambda ct: {})
+    monkeypatch.setattr(EL, "PLY_CAP", 24)                         # short games; the floors scaled to match
+    monkeypatch.setattr(EL, "MIN_TRAIN_ROWS", 8)
+    monkeypatch.setattr(EL, "MIN_HELDOUT_ROWS", 4)
+
+    def subproc(args, out, timeout, step):
+        if step == "queries":
+            return [{"fixture": f} for f in EL.QUERY_FIXTURES]
+        return EL.reload_summary(pathlib.Path(args[args.index("--rows") + 1]))
+    monkeypatch.setattr(EL, "_subprocess_json", subproc)
+    monkeypatch.setattr(RF, "load_reference_evaluator",
+                        lambda ref, root: SimpleNamespace(_g3_sha1=EL.REFERENCE_SHA1, network=None))
+    monkeypatch.setattr(RF, "build_reference_agent", lambda task, evaluator, colour: FakeAgent(task["seed"]))
+    monkeypatch.setattr(RF, "between_games_cleanup", lambda: None)
+    monkeypatch.setattr(EL, "raw_logits", lambda net, rows: [
+        [1.0 if (i == r["chosen_index"]) == logits_agree else 0.0 for i in range(len(r["legal_moves"]))]
+        for r in rows])
+    return run_dir, clone
+
+
+def _progress(run_dir):
+    return [json.loads(ln) for ln in (run_dir / "progress.jsonl").read_text().splitlines()]
+
+
+def test_an_f_zero_stop_keeps_every_completed_step_and_the_f_report(tmp_path, monkeypatch):
+    run_dir, clone = _staged(tmp_path, monkeypatch, logits_agree=True)
+    assert EL._child(run_dir, str(clone)) == EL.EXIT_STOP_F_ZERO
+    rec = json.loads((run_dir / "record.json").read_text())
+    assert rec["verdict"] == "STOP_F_ZERO" and rec["stop"]["step"] == "f"
+    assert rec["steps"]["disagreement"]["disagree"] == 0 and rec["steps"]["rows"]["n"] > 0
+    events = _progress(run_dir)
+    assert sorted(e["step"] for e in events if e["event"] == "step") == sorted(rec["steps"])
+    assert [e["game_id"] for e in events if e["event"] == "game_start"] == [f"f{j}-{a}" for j in range(6)
+                                                                         for a in ("teacher_red", "teacher_black")]
+    moves = [e for e in events if e["event"] == "move"]
+    assert len(moves) == sum(g["plies"] for g in rec["steps"]["games"])
+
+
+def test_the_staged_stage_passes_when_rows_disagree(tmp_path, monkeypatch):
+    run_dir, clone = _staged(tmp_path, monkeypatch, logits_agree=False)
+    assert EL._child(run_dir, str(clone)) == EL.EXIT_PASS
+    rec = json.loads((run_dir / "record.json").read_text())
+    assert rec["verdict"] == "PASS" and rec["steps"]["disagreement"]["disagree"] > 0
+
+
+def test_the_ceilings_sigterm_is_a_recorded_stop_and_the_handler_is_restored(tmp_path, monkeypatch):
+    import signal
+
+    run_dir, clone = _staged(tmp_path, monkeypatch, logits_agree=False)
+
+    def not_the_childs(signum, frame):                  # so a missing handler fails cleanly, never kills pytest
+        raise RuntimeError("the test's own SIGTERM handler ran")
+    outer = signal.signal(signal.SIGTERM, not_the_childs)
+
+    class Killed(FakePlayer):
+        def pick_move(self, game, window=None):
+            os.kill(os.getpid(), signal.SIGTERM)
+            return super().pick_move(game, window)
+    fake_rt = {**rt(), "nneval": SimpleNamespace(NNEvaluater=lambda p: None),
+               "nnmplayer": SimpleNamespace(Player=lambda **kw: Killed()), "ct": None}
+    monkeypatch.setattr(EL, "load_runtime", lambda c: (fake_rt, {"runtime_sha256": "r" * 64}))
+    try:
+        assert EL._child(run_dir, str(clone)) == EL.EXIT_STOP
+        assert signal.getsignal(signal.SIGTERM) is not_the_childs
+    finally:
+        signal.signal(signal.SIGTERM, outer)
+    rec = json.loads((run_dir / "record.json").read_text())
+    assert rec["stop"]["step"] == "games" and "ceiling" in rec["stop"]["detail"]
+
+
+def test_a_stop_mid_game_keeps_the_attempted_game_and_its_partial_moves(tmp_path, monkeypatch):
+    run_dir, clone = _staged(tmp_path, monkeypatch, logits_agree=False)
+
+    class Dies(FakePlayer):
+        calls = 0
+
+        def pick_move(self, game, window=None):
+            Dies.calls += 1
+            if Dies.calls == 3:
+                raise RuntimeError("synthetic teacher failure")
+            return super().pick_move(game, window)
+    monkeypatch.setattr(EL, "load_runtime", lambda c: ({**rt(), "nneval": SimpleNamespace(NNEvaluater=lambda p: None),
+                                                        "nnmplayer": SimpleNamespace(Player=lambda **kw: Dies()),
+                                                        "ct": None}, {"runtime_sha256": "r" * 64}))
+    assert EL._child(run_dir, str(clone)) == EL.EXIT_STOP
+    rec = json.loads((run_dir / "record.json").read_text())
+    assert rec["stop"]["step"] == "games" and "fixtures" in rec["steps"] and "games" not in rec["steps"]
+    events = _progress(run_dir)
+    assert [e["game_id"] for e in events if e["event"] == "game_start"] == ["f0-teacher_red"]
+    assert [e["mover"] for e in events if e["event"] == "move"] == ["opening"] * 4 + ["teacher", "incumbent"] * 2
+
+
 # ─────────────────────────────── the gate and the exit code ───────────────────────────────
 
 def test_the_gate_is_closed_and_every_engine_entry_refuses(tmp_path):
@@ -494,3 +691,5 @@ def test_the_exit_code_is_the_recorded_verdict_and_must_agree(tmp_path, verdict,
     if verdict is not None:
         rec.write_text(json.dumps({"verdict": verdict}))
     assert EL.exit_code_for(rec, status, child) == code
+    assert EL.exit_code_for(rec, status, child, False) == (4 if status == "TIMEOUT" else 2)   # a live descendant
+    assert EL.exit_code_for(rec, status, child, None) == (4 if status == "TIMEOUT" else 2)    # never ran

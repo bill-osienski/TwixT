@@ -35,6 +35,7 @@ import os
 import pathlib
 import random
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -67,6 +68,7 @@ RUN_DIR = "runs/external-engine-learning/stage1"
 EVIDENCE_DIR = "docs/superpowers/evidence/external-engine-learning-stage1"
 EXECUTION_S = 3600                                   # the card's 60-minute execution ceiling
 QUERY_S = 600
+GROUP_GRACE_S = 5.0                                  # SIGTERM -> SIGKILL for the run's process group
 BETA_BOUNDS, BETA_ITERATIONS, BETA_TOLERANCE = (0.0, 100.0), 64, 1e-6
 
 RULES = {"board": BOARD, "active_size": BOARD, "automatic_links": True, "link_removal": False,
@@ -139,8 +141,15 @@ def slot_layout(block: Sequence[int]) -> Dict[str, list]:
 
 
 def build_plan(block: Sequence[int], survey_record_sha256: str) -> Dict[str, Any]:
-    return {"kind": PLAN_KIND, "card": CARD, "baseline": BASELINE, "block": [int(block[0]), int(block[1])],
+    """Serialized as base + slot count, never the exclusive endpoint: that endpoint is outside the
+    block, so the seed scanner would count it and the plan would lose its exemption."""
+    return {"kind": PLAN_KIND, "card": CARD, "baseline": BASELINE, "base": int(block[0]), "n_slots": N_SLOTS,
             "survey_record_sha256": survey_record_sha256, **slot_layout(block)}
+
+
+def plan_block(plan: Mapping[str, Any]) -> Tuple[int, int]:
+    """The half-open block, derived from base + slot count."""
+    return plan["base"], plan["base"] + plan["n_slots"]
 
 
 def plan_seeds(plan: Mapping[str, Any]) -> List[int]:
@@ -155,9 +164,9 @@ def check_plan(plan: Any) -> Dict[str, Any]:
 
     if not isinstance(plan, dict) or plan.get("kind") != PLAN_KIND:
         raise Stage1Stop("plan", "not a stage-1 plan")
-    block = plan.get("block")
-    if not (isinstance(block, list) and len(block) == 2 and all(type(x) is int for x in block)):
-        raise Stage1Stop("plan", "the plan's block is not two ints")
+    if type(plan.get("base")) is not int or plan.get("n_slots") != N_SLOTS or type(plan["n_slots"]) is not int:
+        raise Stage1Stop("plan", f"the plan's base is not an int or its slot count is not {N_SLOTS}")
+    block = plan_block(plan)
     sha = plan.get("survey_record_sha256")
     if not (isinstance(sha, str) and len(sha) == 64):
         raise Stage1Stop("plan", "the plan names no survey record")
@@ -393,10 +402,11 @@ def compare_queries(first: Any, second: Any) -> List[Dict[str, Any]]:
 # ─────────────────────────────── the games ───────────────────────────────
 
 def play_teacher_game(*, game: Mapping[str, Any], opening: Sequence[Sequence[int]], rt: Mapping[str, Any],
-                      player, reference_agent) -> Dict[str, Any]:
+                      player, reference_agent, log=None) -> Dict[str, Any]:
     """One game: the opening replayed with BOTH engines compared after every opening ply, then teacher
     vs incumbent with the comparison after every ply. Each teacher decision is captured as a row.
-    G3's harness supplies the move capture; aborts are recorded, never retried."""
+    G3's harness supplies the move capture; aborts are recorded, never retried. `log` receives every
+    move as it is played, so a killed process still leaves the partial game."""
     from . import twixtbot_g3_harness as H
 
     twixt, Point, TwixtState = rt["twixt"], rt["Point"], rt["TwixtState"]
@@ -407,6 +417,11 @@ def play_teacher_game(*, game: Mapping[str, Any], opening: Sequence[Sequence[int
               "ply_cap": PLY_CAP, "aborted": False, "abort_reason": None, "abort_detail": None}
     moves: List[Dict[str, Any]] = []
     rows: List[Dict[str, Any]] = []
+
+    def played(mrec):
+        moves.append(mrec)
+        if log is not None:
+            log({"event": "move", **mrec})
 
     def bind(ply, label):
         d = A.state_divergences(our, tb, twixt, ply_cap=PLY_CAP)
@@ -422,7 +437,7 @@ def play_teacher_game(*, game: Mapping[str, Any], opening: Sequence[Sequence[int
                 raise H.HarnessAbort("illegal_move", f"opening move {(r, c)} illegal", i)
             our = our.apply_move((r, c))
             tb.play(Point(*A.rc_to_xy(r, c)))
-            moves.append({"ply": i, "mover": "opening", "move": [r, c]})
+            played({"ply": i, "mover": "opening", "move": [r, c]})
             bind(i + 1, f"after opening ply {i}")
         while not our.is_terminal():
             ply = our.ply
@@ -439,7 +454,7 @@ def play_teacher_game(*, game: Mapping[str, Any], opening: Sequence[Sequence[int
                 mrec["mover"] = "incumbent"
             our = our.apply_move(rc)
             tb.play(Point(*A.rc_to_xy(*rc)))
-            moves.append(mrec)
+            played(mrec)
             bind(our.ply, f"after ply {ply} ({mrec['mover']} {rc})")
         winner = our.winner()
         record.update(winner=winner, plies=our.ply,
@@ -815,25 +830,46 @@ def _committed(rel: str) -> bool:
 
 
 def _subprocess_json(args: List[str], out: pathlib.Path, timeout: int, step: str) -> Any:
-    proc = subprocess.run([sys.executable, "-m", MODULE, *args, "--out", str(out)], cwd=str(ROOT),
-                          capture_output=True, text=True, timeout=timeout)
-    _write_new(out.with_suffix(".stdout.txt"), proc.stdout.encode())
-    _write_new(out.with_suffix(".stderr.txt"), proc.stderr.encode())
+    """Its output goes straight to create-only files, so a timeout keeps what it had written."""
+    with open(out.with_suffix(".stdout.txt"), "xb") as so, open(out.with_suffix(".stderr.txt"), "xb") as se:
+        try:
+            proc = subprocess.run([sys.executable, "-m", MODULE, *args, "--out", str(out)], cwd=str(ROOT),
+                                  stdout=so, stderr=se, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            raise Stage1Stop(step, f"subprocess timed out after {timeout} s; partial output in "
+                                   f"{out.with_suffix('.stderr.txt').name}") from None
     if proc.returncode != 0 or not out.exists():
         raise Stage1Stop(step, f"subprocess exit {proc.returncode}; see {out.with_suffix('.stderr.txt').name}")
     return json.loads(out.read_text(encoding="utf-8"))
 
 
-def stage1(run_dir: pathlib.Path, clone_root: str) -> Dict[str, Any]:
-    """The whole stage. Writes as it goes; returns the record (the caller persists it)."""
+def progress(run_dir: pathlib.Path, event: Mapping[str, Any]) -> None:
+    """One JSON line appended and flushed per event: survives a stop, a crash and the ceiling's kill."""
+    with open(run_dir / "progress.jsonl", "a", encoding="utf-8") as fh:
+        fh.write(json.dumps({"t": round(time.time(), 3), **event}, sort_keys=True) + "\n")
+        fh.flush()
+
+
+class _Steps(dict):
+    """The record's steps: every completed check is also written to progress.jsonl when it is set."""
+    def __init__(self, run_dir: pathlib.Path):
+        super().__init__()
+        self.run_dir = run_dir
+
+    def __setitem__(self, key, value):
+        super().__setitem__(key, value)
+        progress(self.run_dir, {"event": "step", "step": key, "value": value})
+
+
+def stage1(run_dir: pathlib.Path, clone_root: str, rec: Dict[str, Any]) -> None:
+    """The whole stage. Writes into `rec` as it goes, so a stop keeps every completed step."""
     from . import twixtbot_g3_reference as RF
 
-    rec: Dict[str, Any] = {"steps": {}}
-    steps = rec["steps"]
+    steps = rec["steps"] = _Steps(run_dir)
     if not _committed(PLAN):
         raise Stage1Stop("plan", f"{PLAN} is absent or not committed")
     plan = check_plan(json.loads((ROOT / PLAN).read_text(encoding="utf-8")))
-    steps["plan"] = {"sha256": _sha((ROOT / PLAN).read_bytes()), "block": plan["block"]}
+    steps["plan"] = {"sha256": _sha((ROOT / PLAN).read_bytes()), "base": plan["base"], "n_slots": plan["n_slots"]}
     steps["permission"] = license_notices(clone_root)
     rt, identity = load_runtime(clone_root)
     steps["runtime"] = identity
@@ -864,8 +900,10 @@ def stage1(run_dir: pathlib.Path, clone_root: str) -> Dict[str, Any]:
             evaluator=ev, colour="black" if g["teacher_colour"] == "red" else "red")
         player = rt["nnmplayer"].Player(evaluator=teacher_eval, **kwargs)
         t0 = time.monotonic()
+        progress(run_dir, {"event": "game_start", **g, "opening": [list(m) for m in openings[g["family"]]]})
         record = play_teacher_game(game=g, opening=openings[g["family"]], rt=rt, player=player,
-                                   reference_agent=agent)
+                                   reference_agent=agent,
+                                   log=lambda e, gid=g["game_id"]: progress(run_dir, {"game_id": gid, **e}))
         record["seconds"] = round(time.monotonic() - t0, 3)
         _write_json(run_dir / "games" / f"{g['game_id']}.json", record)
         games.append(record)
@@ -896,17 +934,20 @@ def stage1(run_dir: pathlib.Path, clone_root: str) -> Dict[str, Any]:
     steps["logit_artifact_sha256"] = art_sha
     steps["disagreement"] = report
     require_training_opportunity(report)
-    return rec
 
 
 def _child(run_dir: pathlib.Path, clone_root: str) -> int:
     """The record boundary covers the conclusion: the verdict is decided inside it and record.json is
     written on every exit."""
     _require_gate()
-    rec: Dict[str, Any] = {"kind": RECORD_KIND, "card": CARD, "baseline": BASELINE, "verdict": None}
+    rec: Dict[str, Any] = {"kind": RECORD_KIND, "card": CARD, "baseline": BASELINE, "verdict": None, "steps": {}}
     code = EXIT_STOP
+
+    def ceiling(signum, _frame):
+        raise Stage1Stop("ceiling", f"signal {signum} from the parent's {EXECUTION_S} s ceiling")
+    previous = signal.signal(signal.SIGTERM, ceiling)
     try:
-        rec.update(stage1(run_dir, clone_root))
+        stage1(run_dir, clone_root, rec)
         rec["verdict"], code = "PASS", EXIT_PASS
     except Stage1Stop as e:
         rec["stop"] = {"step": e.step, "detail": e.detail}
@@ -916,6 +957,8 @@ def _child(run_dir: pathlib.Path, clone_root: str) -> int:
         rec["verdict"] = "STOP"
         _write_json(run_dir / "record.json", rec)
         raise
+    finally:
+        signal.signal(signal.SIGTERM, previous)
     _write_json(run_dir / "record.json", rec)
     return code
 
@@ -936,13 +979,53 @@ def _verdict(record: pathlib.Path) -> Optional[str]:
         return None
 
 
-def exit_code_for(record: pathlib.Path, status: str, child_exit: Optional[int]) -> int:
+def end_group(proc: subprocess.Popen, grace: float = GROUP_GRACE_S) -> bool:
+    """Terminate and reap the process group led by `proc` (the child and every descendant it started):
+    SIGTERM, then SIGKILL. True once the direct child is reaped and the group has no member left."""
+    def gone() -> bool:
+        if proc.poll() is None:
+            return False
+        try:
+            os.killpg(proc.pid, 0)
+        except ProcessLookupError:
+            return True
+        return False
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        try:
+            os.killpg(proc.pid, sig)
+        except ProcessLookupError:
+            break
+        deadline = time.monotonic() + grace
+        while time.monotonic() < deadline:
+            if gone():
+                return True
+            time.sleep(0.05)
+    proc.wait()
+    return gone()
+
+
+def run_group(argv: Sequence[str], *, stdout, stderr, timeout: float) -> Tuple[str, Optional[int], bool]:
+    """`argv` in a new session (its own process group) under `timeout`; the group is ended on EVERY exit,
+    so no descendant outlives it. Returns (status, exit code, group reaped)."""
+    proc = subprocess.Popen(list(argv), cwd=str(ROOT), stdout=stdout, stderr=stderr, start_new_session=True)
+    status, code = "UNKNOWN", None
+    try:
+        code = proc.wait(timeout=timeout)
+        status = "EXITED"
+    except subprocess.TimeoutExpired:
+        status = "TIMEOUT"
+    finally:
+        reaped = end_group(proc, GROUP_GRACE_S)
+    return status, code, reaped
+
+
+def exit_code_for(record: pathlib.Path, status: str, child_exit: Optional[int], reaped: Optional[bool] = True) -> int:
     """ONE answer: the recorded verdict decides, and the child's exit status must agree with it. A
-    timeout, a missing record or a disagreement is never a pass."""
+    timeout, a missing record, a disagreement or a process group not reaped is never a pass."""
     if status == "TIMEOUT":
         return EXIT_TIMEOUT
     verdict = _verdict(record)
-    if verdict not in VERDICT_EXIT or child_exit != VERDICT_EXIT[verdict]:
+    if reaped is not True or verdict not in VERDICT_EXIT or child_exit != VERDICT_EXIT[verdict]:
         return EXIT_STOP
     return VERDICT_EXIT[verdict]
 
@@ -971,19 +1054,16 @@ def run(clone_root: str) -> int:
     freeze = subprocess.run([sys.executable, "-m", "pip", "freeze"], capture_output=True, text=True)
     _write_new(run_dir / "environment.txt", (f"python {sys.version}\nexecutable {sys.executable}\n"
                                              f"pip freeze exit {freeze.returncode}\n{freeze.stdout}").encode())
-    status, child_exit = "UNKNOWN", None
+    status, child_exit, reaped = "UNKNOWN", None, None
     try:
         with open(run_dir / "child.stdout.txt", "xb") as out, open(run_dir / "child.stderr.txt", "xb") as err:
-            try:
-                proc = subprocess.run([sys.executable, "-m", MODULE, "_child", "--run-dir", str(run_dir),
-                                       "--clone-root", clone_root], cwd=str(ROOT), stdout=out, stderr=err,
-                                      timeout=EXECUTION_S)
-                status, child_exit = "EXITED", proc.returncode
-            except subprocess.TimeoutExpired:
-                status = "TIMEOUT"
+            status, child_exit, reaped = run_group(
+                [sys.executable, "-m", MODULE, "_child", "--run-dir", str(run_dir), "--clone-root", clone_root],
+                stdout=out, stderr=err, timeout=EXECUTION_S)
     finally:
-        code = exit_code_for(run_dir / "record.json", status, child_exit)
-        fin.update(status=status, child_exit=child_exit, exit_code=code, elapsed_s=round(time.time() - t0, 3),
+        code = exit_code_for(run_dir / "record.json", status, child_exit, reaped)
+        fin.update(status=status, child_exit=child_exit, group_reaped=reaped, exit_code=code,
+                   elapsed_s=round(time.time() - t0, 3),
                    verdict=_verdict(run_dir / "record.json"),
                    files={str(p.relative_to(run_dir)): _sha(p.read_bytes())
                           for p in sorted(run_dir.rglob("*")) if p.is_file()})

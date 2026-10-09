@@ -1,6 +1,8 @@
 """The stage-1 seed survey / collision-proof script: pins, record reading, expected state. Synthetic only --
 every in-band value is computed from the band's lower bound, so no 2026-band literal is written here."""
+import hashlib
 import importlib.util
+import json
 import pathlib
 
 import pytest
@@ -79,3 +81,22 @@ def test_the_slots_are_the_modules_layout(SV, method):
     block = (S.BAND[0] + 90_000, S.BAND[0] + 90_018)
     lines = SV.slot_lines(EL, block)
     assert len(lines) == 18 and len({ln.rsplit(" ", 1)[1] for ln in lines}) == 18
+
+
+@pytest.mark.parametrize("indent", [None, 2])
+def test_the_serialized_plan_keeps_its_exemption_under_the_unchanged_scanner(SV, method, tmp_path, indent):
+    """The plan registration would write -- the surveyed block, the record's hash -- through the pinned
+    repo_literals: every band literal in it is a slot, so it is exempt. The old encoding, with the
+    exclusive endpoint, is the control: the scanner counts all 19 values."""
+    S, _P, EL = method
+    raw = (ROOT / SV.OUT["survey"]).read_bytes()
+    block = SV.read_record(raw.decode("utf-8"), S, EL)["block"]
+    plan = EL.build_plan(block, hashlib.sha256(raw).hexdigest())
+    path = tmp_path / EL.PLAN
+    path.parent.mkdir(parents=True)
+    path.write_text(json.dumps(plan, indent=indent) + "\n")
+    assert S.scan(path.read_text()).keys() == set(range(*block))
+    assert S.repo_literals([path], block, tmp_path) == {}
+    path.write_text(json.dumps({**plan, "block": list(block)}, indent=indent) + "\n")
+    old = S.repo_literals([path], block, tmp_path)
+    assert len(old) == 19 and block[1] in old
