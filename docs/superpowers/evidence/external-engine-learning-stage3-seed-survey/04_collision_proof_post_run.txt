@@ -1,0 +1,106 @@
+EXTERNAL-ENGINE LEARNING STAGE 3 -- GAME-SEED COLLISION PROOF, mode POST
+================================================================================================
+HEAD ee43026e3b18e7044fb2ee2340f23558d55f77c4; working tree clean
+method (survey) docs/superpowers/evidence/tactical-candidate-seed-survey/01_seed_survey.py sha256 6f6e55dbd5da672848c757753d4e61a3e9d110d96569b7ef468f902cf46f8860 (pinned)
+method (proof) docs/superpowers/evidence/tactical-candidate-seed-registration/01_collision_proof.py sha256 dd192011938ca5c6674092b243681174e669e1e96b22b8d13da2a264b340764d (pinned)
+stage-3 manifest docs/superpowers/evidence/external-engine-learning-plans/stage3-manifest.json sha256 f26f2f60e4b9907916abe81984aceeadee899deb0513acb84680ce66c39cffcc (pinned in the module)
+registry scripts/GPU/alphazero/e4_screen_reference.py sha256 1fc18ddac0ae0befc31bec1a11cc578e795aec1cba159934033c52a84d639b95
+masks (imported): ['0x3c3c3c', '0x5a5a5a', '0xa5a5a5', '0xc3c3c3']
+registries: ACCOUNTED 32, EXPOSED 29, RETIRED 27, TEST_ONLY 1
+named spent blocks: D1 paper 1, H1 2, H2 3, H3 6, H4 5, H5 4; H3 generation ranges 4; CONSUMED_SEEDS 1
+EXEMPT PATHS (exact; plus registry tuple elements by parsing): 4 + the plan
+    docs/superpowers/evidence/external-engine-learning-stage3-seed-survey/01_seed_survey.py
+    docs/superpowers/evidence/external-engine-learning-stage3-seed-survey/02_seed_survey_run.txt
+    docs/superpowers/evidence/external-engine-learning-stage3-seed-survey/03_collision_proof_pre_run.txt
+    docs/superpowers/evidence/external-engine-learning-stage3-seed-survey/04_collision_proof_post_run.txt
+    docs/superpowers/evidence/external-engine-learning-plans/stage3.json  (only if every band literal in it is a slot of the block)
+
+survey record docs/superpowers/evidence/external-engine-learning-stage3-seed-survey/02_seed_survey_run.txt sha256 7c458504db22cbe4626eb8c200b22aa9c6e5f517f47c23c8d1b8bfe446d39527 (read at 0b58581870ac67b41f6b4d0714022167c5a7d8d5)
+THE BLOCK, read from the record: [202690000, 202690032) -- BASE 202690000
+EXPECTED STATE (post): HOLDS
+
+SCOPE (fail-closed enumeration): 46539 regular files under ['scripts', 'tests', 'docs/superpowers']; symbolic links (not followed): 0; band literal values counted: 4337
+THE BLOCK (202690000, 202690032)  n=32  direct=NONE  streams=0  injective=True  gap=8968 (floor 32)  CLEAN=True
+SLOTS (external_learning_stage3.slot_layout):
+    SLOT game 0 pair 0 candidate red seed 202690000
+    SLOT game 1 pair 0 candidate black seed 202690001
+    SLOT game 2 pair 1 candidate red seed 202690002
+    SLOT game 3 pair 1 candidate black seed 202690003
+    SLOT game 4 pair 2 candidate red seed 202690004
+    SLOT game 5 pair 2 candidate black seed 202690005
+    SLOT game 6 pair 3 candidate red seed 202690006
+    SLOT game 7 pair 3 candidate black seed 202690007
+    SLOT game 8 pair 4 candidate red seed 202690008
+    SLOT game 9 pair 4 candidate black seed 202690009
+    SLOT game 10 pair 5 candidate red seed 202690010
+    SLOT game 11 pair 5 candidate black seed 202690011
+    SLOT game 12 pair 6 candidate red seed 202690012
+    SLOT game 13 pair 6 candidate black seed 202690013
+    SLOT game 14 pair 7 candidate red seed 202690014
+    SLOT game 15 pair 7 candidate black seed 202690015
+    SLOT game 16 pair 8 candidate red seed 202690016
+    SLOT game 17 pair 8 candidate black seed 202690017
+    SLOT game 18 pair 9 candidate red seed 202690018
+    SLOT game 19 pair 9 candidate black seed 202690019
+    SLOT game 20 pair 10 candidate red seed 202690020
+    SLOT game 21 pair 10 candidate black seed 202690021
+    SLOT game 22 pair 11 candidate red seed 202690022
+    SLOT game 23 pair 11 candidate black seed 202690023
+    SLOT game 24 pair 12 candidate red seed 202690024
+    SLOT game 25 pair 12 candidate black seed 202690025
+    SLOT game 26 pair 13 candidate red seed 202690026
+    SLOT game 27 pair 13 candidate black seed 202690027
+    SLOT game 28 pair 14 candidate red seed 202690028
+    SLOT game 29 pair 14 candidate black seed 202690029
+    SLOT game 30 pair 15 candidate red seed 202690030
+    SLOT game 31 pair 15 candidate black seed 202690031
+
+CONTROLS
+------------------------------------------------------------------------------------------------
+  PASS   REJECTED: D1 paper block (202615000, 202615221)
+  PASS   REJECTED: H1 block (202616000, 202616224)
+  PASS   REJECTED: H2 block (202618000, 202618736)
+  PASS   REJECTED: H3 block (202624000, 202624040)
+  PASS   REJECTED: H4 block (202632000, 202632032)
+  PASS   REJECTED: H5 block (202650000, 202650148)
+  PASS   REJECTED: the TEST_ONLY band
+  PASS   REJECTED: inside the live H3 uniform generation range
+  PASS   REJECTED: overlaps the block by one seed
+  PASS   REJECTED: starts where the block ends -- inside the floor
+  PASS   REJECTED: one seed inside the floor
+  PASS   REJECTED: the most recently EXPOSED block (stage 2's seed)
+  PASS   REJECTED: a block at the H4-4b MUTATION literal 202642000
+  PASS   an UNDERSCORE-GROUPED candidate seed (.py)  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=8968; dropping undecodable bytes instead would see it]
+  PASS   a PLAIN candidate seed (.py)  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=8968; dropping undecodable bytes instead would see it]
+  PASS   an UNDERSCORE-GROUPED exclusive end (.py)  [without it CLEAN=True; with it direct=NONE gap=0; dropping undecodable bytes instead would see it]
+  PASS   a candidate seed in a .log -- a suffix H5's filter skipped  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=8968; dropping undecodable bytes instead would see it]
+  PASS   a candidate seed inside a .gz  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=8968; dropping undecodable bytes instead would see it]
+  PASS   a candidate seed after an undecodable byte after a digit  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=8968; dropping undecodable bytes instead would MISS it]
+  PASS   an UNREADABLE file stops the survey  [SurveyStop]
+  PASS   a CORRUPT .gz stops the survey  [SurveyStop]
+  PASS   an own record (exact path) is exempt  [None]
+  PASS   a sibling path that is NOT listed is counted  [[('docs/superpowers/evidence/external-engine-learning-stage3-seed-survey/04_not_listed.txt', 1)]]
+  PASS   the plan holding only block seeds is exempt  [None]
+  PASS   registry tuple elements are exempt by parsing (a non-ASCII char BEFORE them)  [[202690011]]
+  PASS   the same value outside a registry tuple is counted  [[('scripts/GPU/alphazero/e4_screen_reference.py', 1)]]
+  PASS   a plan with a seed OUTSIDE the block is not exempt  [[202690000, 202690037]]
+  PASS   an UNREADABLE directory  [STOPPED: a directory could not be read]
+  PASS   an UNREADABLE nested directory  [STOPPED: a directory could not be read]
+  PASS   a missing root  [STOPPED: <tmp>/tests: the root is not a directory]
+  PASS   a root that is a file  [STOPPED: <tmp>/scripts: the root is not a directory]
+  PASS   a FIFO inside a root  [STOPPED: <tmp>/scripts/pipe: neither a regular file, a directory nor a symbolic link]
+  PASS   a sound tree with a symbolic link  [enumerated: 3 files, 1 links]
+  PASS   pre: the survey's registry, no plan  [the expected state]
+  PASS   pre: the registry changed  [the registry is not the one the survey read]
+  PASS   pre: the block already registered  [the registry is not the one the survey read; a registry already holds seeds of the block: [('ACCOUNTED_SEED_INTERVALS', (202690000, 202690032))]]
+  PASS   pre: a plan already exists  [a pilot plan already exists]
+  PASS   post: exactly the block appended last, the plan  [the expected state]
+  PASS   post: the block appended FIRST  [ACCOUNTED is not the survey's state with exactly the block appended last]
+  PASS   post: a wider tuple  [ACCOUNTED is not the survey's state with exactly the block appended last]
+  PASS   post: EXPOSED changed too  [EXPOSED_SEED_INTERVALS changed]
+  PASS   post: no plan  [the stage-3 plan is absent or not committed]
+  PASS   post: a plan slot that is not the layout's  [the stage-3 plan is not the frozen layout of the surveyed block]
+  PASS   post: a plan bound to another manifest  [the stage-3 plan is not the frozen layout of the surveyed block]
+
+controls passed: 44/44
+PROOF VERDICT (post): THE STAGE-3 BLOCK IS CLEAN AND THE STATE IS AS EXPECTED
