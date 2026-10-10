@@ -8,6 +8,9 @@ budget they exist they add little beyond the one-hot label. Nothing yet links a 
 teacher to stronger play. At most, a teacher-only information probe could be considered later (below).
 No experiment is authorized by this memo.
 
+> **Corrected on review (2026-10-10) — read §6 first.** Three interpretations in §2–§4 overreach; §6
+> supersedes them. The decision stands, and so does withholding the probe.
+
 Context: the closed trial (`2026-10-10-external-engine-learning-result.md`, ledger #53) improved held-out
 imitation but left strength unresolved at an unfavourable 12–20. `calib020_0001` remains the incumbent.
 
@@ -100,3 +103,25 @@ Both need focused synthetic tests with all gates closed, and each needs separate
 Keep the candidate archived. Do **not** write a search-distribution successor card now. If you want to
 keep the option open, the only step worth authorizing is the teacher-only probe in §4, after the two
 prerequisites, judged by its falsifier before any training is designed.
+
+## 6. Review corrections (2026-10-10) — supersede §2–§4 where they conflict
+
+The reviewer independently confirmed the training-only figures: 120 usable rows, 8 proven roots, zero
+visits outside our legal set, 45 one-hot rows, median effective move count 1.39.
+
+1. **Concentration is not a falsifier on its own.** A strong search can be confidently concentrated on one
+   move, and higher entropy can mean uncertainty rather than useful information. §4's rule ("median
+   effective count below about 2 means the line is dead") is **withdrawn as unsupported**. A probe needs a
+   criterion that measures whether search changed the target **usefully**, not how soft the target is.
+2. **Diffuse visits do not establish noise, and concentrated visits do not establish prior imitation.**
+   §2's readings (the 12 diffuse rows as "noise"; visits that "largely echo the teacher's own prior") are
+   **hypotheses only**. The capture kept no raw priors, so how much search changed them cannot be
+   measured from this data.
+3. **The 12–20 result supplies caution, not an explanation.** It neither establishes failed strength
+   transfer nor identifies why transfer might fail; §3's reading that a softer target "mostly repeats that
+   signal" is a hypothesis. Any future match must be priced with its own statistic and interval method:
+   the frozen-parent line's 400-game interval in §4 is **not** a transferable precision guarantee.
+
+**Net:** there is no qualified argument for another training experiment yet. The teacher-only probe in §4
+also stays **unapproved** until it has a criterion that measures useful search changes rather than target
+softness. No run, card, training or push is authorized.
