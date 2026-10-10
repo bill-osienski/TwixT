@@ -1,0 +1,34 @@
+EXTERNAL-ENGINE LEARNING STAGE 3 -- CLOSING SEED ACCOUNTING OF THE STAGE-3 GAME SEEDS (read-only, outcome-blind)
+================================================================================================
+HEAD 007c940a3fb002320cfeb50684749b06a9271716; working tree clean; 38 inputs committed and unmodified (plan sha256 0eab28b084514e34f4454e185e909072d5816f62ee2dd88ca3ba73c20cba5a41, registry, manifest, record, finalized, progress, 32 replay files), each run file the one the manifest hashed
+run (finalized status, group reaped): ('EXITED', True); exit code, verdict: (0, 'SCREEN_COMPLETED')
+game starts in progress.jsonl: 32, distinct 32; the plan's slots: 32; replay files read: 32
+seeds used (every started game): (202690000, 202690032); the plan's block: (202690000, 202690032)
+faults: none
+
+CONTROLS (synthetic)
+------------------------------------------------------------------------------------------------
+  PASS   a complete cohort reconciles: all seeds EXPOSED, the block RETIRED
+  PASS   an interrupted cohort (3 started, timed out) exposes the 3 started seeds, retires the block
+  PASS   a started game with NO replay (interrupted mid-game) is still EXPOSED
+  PASS   a held-out stop (no game started) exposes zero seeds, retires the block
+  PASS   a game started twice
+  PASS   the starts out of plan order
+  PASS   a game skipped (the starts are not a prefix)
+  PASS   a game started with another seed
+  PASS   a replay of a game never started
+  PASS   a replay with another seed
+  PASS   two replays of one game
+  PASS   the plan's slots not its block
+  PASS   the block not ACCOUNTED
+  PASS   the block ACCOUNTED twice
+  PASS   a seed of the block already EXPOSED
+  PASS   a seed of the block already RETIRED
+  PASS   the run's group not reaped
+  PASS   the run's status unknown
+  PASS   an adjacent EXPOSED interval is no overlap
+  PASS   seed_fields returns ONLY game and seed
+  PASS   game_starts reads only game_start entries
+
+controls passed: 21/21
+VERDICT: RECONCILES -- EXPOSED (202690000, 202690032); RETIRED the whole block (202690000, 202690032)
