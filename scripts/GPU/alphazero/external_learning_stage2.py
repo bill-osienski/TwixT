@@ -450,19 +450,21 @@ def run() -> int:
     freeze = subprocess.run([sys.executable, "-m", "pip", "freeze"], capture_output=True, text=True)
     EL._write_new(run_dir / "environment.txt", (f"python {sys.version}\nexecutable {sys.executable}\n"
                                                 f"pip freeze exit {freeze.returncode}\n{freeze.stdout}").encode())
-    status, child_exit, reaped = "UNKNOWN", None, None
+    status, child_exit, reaped, cleanup_error = "UNKNOWN", None, None, None
     try:
         with open(run_dir / "child.stdout.txt", "xb") as out, open(run_dir / "child.stderr.txt", "xb") as err:
-            status, child_exit, reaped = EL.run_group([sys.executable, "-m", MODULE, "_child", "--run-dir", str(run_dir)],
-                                                      stdout=out, stderr=err, timeout=EXECUTION_S)
+            status, child_exit, reaped, cleanup_error = EL.run_group(
+                [sys.executable, "-m", MODULE, "_child", "--run-dir", str(run_dir)],
+                stdout=out, stderr=err, timeout=EXECUTION_S)
     finally:
         code = EL.exit_code_for(run_dir / "record.json", status, child_exit, reaped)
-        fin.update(status=status, child_exit=child_exit, group_reaped=reaped, exit_code=code,
-                   elapsed_s=round(time.time() - t0, 3))
+        fin.update(status=status, child_exit=child_exit, group_reaped=reaped, cleanup_error=cleanup_error,
+                   exit_code=code, elapsed_s=round(time.time() - t0, 3))
         if reaped is not True:
             EL._write_json(ROOT / CLEANUP_FAILED, {**fin, "finalized": False, "run_dir": RUN_DIR,
-                                                   "detail": "the process group was not reaped (or never ran): "
-                                                             "nothing hashed, copied or finalized"})
+                                                   "detail": "the process group's end was not verified (not reaped, "
+                                                             "the check failed, or it never ran): nothing hashed, copied or "
+                                                             "finalized"})
     if reaped is not True:
         return code
     fin.update(verdict=EL._verdict(run_dir / "record.json"),

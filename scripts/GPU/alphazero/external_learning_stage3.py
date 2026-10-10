@@ -71,7 +71,7 @@ HALF_WIDTH = math.sqrt(math.log(2 / HOEFFDING_ALPHA) / (2 * PAIRS))   # 0.33953.
 PARITY = 0.5
 VERDICT_EXIT = {"SCREEN_COMPLETED": 0, "STOP_HELDOUT": 1, "STOP": 2}
 EXIT_COMPLETED, EXIT_STOP_HELDOUT, EXIT_STOP = 0, 1, 2
-EXIT_REFUSED, EXIT_TIMEOUT = EL.EXIT_REFUSED, EL.EXIT_TIMEOUT
+EXIT_REFUSED, EXIT_TIMEOUT, EXIT_CLEANUP_UNVERIFIED = EL.EXIT_REFUSED, EL.EXIT_TIMEOUT, EL.EXIT_CLEANUP_UNVERIFIED
 
 Stop, Refused = EL.Stage1Stop, EL.Refused
 
@@ -459,11 +459,12 @@ def _child(run_dir: pathlib.Path) -> int:
 # ─────────────────────────────── the parent: claim, ceiling, finalization ───────────────────────────────
 
 def exit_code_for(record: pathlib.Path, status: str, child_exit: Optional[int], reaped: Optional[bool] = True) -> int:
-    """ONE answer, as stage 1's: the recorded verdict decides and the child's exit must agree with it."""
+    """ONE answer, as stage 1's: an unverified cleanup first, with its own status; then the recorded verdict
+    decides and the child's exit must agree with it."""
+    if reaped is not True:
+        return EXIT_CLEANUP_UNVERIFIED
     if status == "TIMEOUT":
         return EXIT_TIMEOUT
-    if reaped is not True:
-        return EXIT_STOP
     verdict = EL._verdict(record)
     if verdict not in VERDICT_EXIT or child_exit != VERDICT_EXIT[verdict]:
         return EXIT_STOP
@@ -493,19 +494,21 @@ def run() -> int:
     freeze = subprocess.run([sys.executable, "-m", "pip", "freeze"], capture_output=True, text=True)
     EL._write_new(run_dir / "environment.txt", (f"python {sys.version}\nexecutable {sys.executable}\n"
                                                 f"pip freeze exit {freeze.returncode}\n{freeze.stdout}").encode())
-    status, child_exit, reaped = "UNKNOWN", None, None
+    status, child_exit, reaped, cleanup_error = "UNKNOWN", None, None, None
     try:
         with open(run_dir / "child.stdout.txt", "xb") as out, open(run_dir / "child.stderr.txt", "xb") as err:
-            status, child_exit, reaped = EL.run_group([sys.executable, "-m", MODULE, "_child", "--run-dir", str(run_dir)],
-                                                      stdout=out, stderr=err, timeout=EXECUTION_S)
+            status, child_exit, reaped, cleanup_error = EL.run_group(
+                [sys.executable, "-m", MODULE, "_child", "--run-dir", str(run_dir)],
+                stdout=out, stderr=err, timeout=EXECUTION_S)
     finally:
         code = exit_code_for(run_dir / "record.json", status, child_exit, reaped)
-        fin.update(status=status, child_exit=child_exit, group_reaped=reaped, exit_code=code,
-                   elapsed_s=round(time.time() - t0, 3))
+        fin.update(status=status, child_exit=child_exit, group_reaped=reaped, cleanup_error=cleanup_error,
+                   exit_code=code, elapsed_s=round(time.time() - t0, 3))
         if reaped is not True:
             EL._write_json(ROOT / CLEANUP_FAILED, {**fin, "finalized": False, "run_dir": RUN_DIR,
-                                                   "detail": "the process group was not reaped (or never ran): "
-                                                             "nothing hashed, copied or finalized"})
+                                                   "detail": "the process group's end was not verified (not reaped, "
+                                                             "the check failed, or it never ran): nothing hashed, copied or "
+                                                             "finalized"})
     if reaped is not True:
         return code
     fin.update(verdict=EL._verdict(run_dir / "record.json"),

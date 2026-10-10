@@ -505,7 +505,7 @@ def _grandchild(tmp_path, mode, monkeypatch):
     script, pidfile = tmp_path / "parent.py", tmp_path / "grandchild.pid"
     script.write_text(PARENT)
     t0 = time.monotonic()
-    status, code, reaped = EL.run_group([sys.executable, str(script), mode, str(pidfile)],
+    status, code, reaped, _error = EL.run_group([sys.executable, str(script), mode, str(pidfile)],
                                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2)
     assert time.monotonic() - t0 < 10
     return status, code, reaped, int(pidfile.read_text())
@@ -700,7 +700,7 @@ def _run_with(tmp_path, monkeypatch, *, reaped):
     def fake_group(argv, *, stdout, stderr, timeout):
         run_dir = pathlib.Path(argv[argv.index("--run-dir") + 1])
         (run_dir / "record.json").write_text(json.dumps({"verdict": "PASS"}))
-        return "EXITED", EL.EXIT_PASS, reaped
+        return "EXITED", EL.EXIT_PASS, reaped, None
     monkeypatch.setattr(EL, "run_group", fake_group)
     code = EL.run(str(tmp_path / "clone"))
     return code, tmp_path / EL.RUN_DIR, tmp_path / EL.EVIDENCE_DIR, tmp_path / EL.CLEANUP_FAILED
@@ -708,7 +708,7 @@ def _run_with(tmp_path, monkeypatch, *, reaped):
 
 def test_an_unreaped_group_finalizes_nothing_and_leaves_the_run_directory(tmp_path, monkeypatch):
     code, run_dir, evidence, cleanup = _run_with(tmp_path, monkeypatch, reaped=False)
-    assert code == EL.EXIT_STOP and not evidence.exists()
+    assert code == EL.EXIT_CLEANUP_UNVERIFIED and not evidence.exists()
     assert not (run_dir / "finalized.json").exists() and (run_dir / "record.json").exists()
     rec = json.loads(cleanup.read_text())
     assert rec["group_reaped"] is False and rec["finalized"] is False and "files" not in rec
@@ -730,5 +730,5 @@ def test_the_exit_code_is_the_recorded_verdict_and_must_agree(tmp_path, verdict,
     if verdict is not None:
         rec.write_text(json.dumps({"verdict": verdict}))
     assert EL.exit_code_for(rec, status, child) == code
-    assert EL.exit_code_for(rec, status, child, False) == (4 if status == "TIMEOUT" else 2)   # a live descendant
-    assert EL.exit_code_for(rec, status, child, None) == (4 if status == "TIMEOUT" else 2)    # never ran
+    assert EL.exit_code_for(rec, status, child, False) == EL.EXIT_CLEANUP_UNVERIFIED   # a live descendant
+    assert EL.exit_code_for(rec, status, child, None) == EL.EXIT_CLEANUP_UNVERIFIED    # unverified / never ran

@@ -77,6 +77,10 @@ RULES = {"board": BOARD, "active_size": BOARD, "automatic_links": True, "link_re
          "allow_scl": False, "ply_cap": PLY_CAP}
 
 EXIT_PASS, EXIT_STOP_F_ZERO, EXIT_STOP, EXIT_REFUSED, EXIT_TIMEOUT = 0, 1, 2, 3, 4
+#: The process group's end could NOT BE VERIFIED -- not reaped, or the check itself failed (e.g. EPERM from
+#: killpg). A descendant may still be writing, so nothing is finalized. Its own status, shared with no
+#: verdict, and it overrides every other answer (stages 2 and 3 use it too).
+EXIT_CLEANUP_UNVERIFIED = 5
 
 
 class Stage1Stop(Exception):
@@ -1005,9 +1009,11 @@ def end_group(proc: subprocess.Popen, grace: float = GROUP_GRACE_S) -> bool:
     return gone()
 
 
-def run_group(argv: Sequence[str], *, stdout, stderr, timeout: float) -> Tuple[str, Optional[int], bool]:
+def run_group(argv: Sequence[str], *, stdout, stderr,
+              timeout: float) -> Tuple[str, Optional[int], Optional[bool], Optional[str]]:
     """`argv` in a new session (its own process group) under `timeout`; the group is ended on EVERY exit,
-    so no descendant outlives it. Returns (status, exit code, group reaped)."""
+    so no descendant outlives it. Returns (status, exit code, group reaped, cleanup error). A cleanup that
+    RAISES is UNVERIFIED: reaped None with the error kept -- never read as "group gone"."""
     proc = subprocess.Popen(list(argv), cwd=str(ROOT), stdout=stdout, stderr=stderr, start_new_session=True)
     status, code = "UNKNOWN", None
     try:
@@ -1016,17 +1022,21 @@ def run_group(argv: Sequence[str], *, stdout, stderr, timeout: float) -> Tuple[s
     except subprocess.TimeoutExpired:
         status = "TIMEOUT"
     finally:
-        reaped = end_group(proc, GROUP_GRACE_S)
-    return status, code, reaped
+        try:
+            reaped, error = end_group(proc, GROUP_GRACE_S), None
+        except Exception as e:                                   # noqa: BLE001 -- kept as the diagnostic
+            reaped, error = None, f"{type(e).__name__}: {e}"
+    return status, code, reaped, error
 
 
 def exit_code_for(record: pathlib.Path, status: str, child_exit: Optional[int], reaped: Optional[bool] = True) -> int:
     """ONE answer: the recorded verdict decides, and the child's exit status must agree with it. A
-    timeout, a missing record, a disagreement or a process group not reaped is never a pass."""
+    timeout, a missing record, a disagreement or a process group not reaped is never a pass. A cleanup
+    not verified answers first, with its own status: a descendant may still write, so read nothing."""
+    if reaped is not True:
+        return EXIT_CLEANUP_UNVERIFIED
     if status == "TIMEOUT":
         return EXIT_TIMEOUT
-    if reaped is not True:                                       # a descendant may still write: read nothing
-        return EXIT_STOP
     verdict = _verdict(record)
     if verdict not in VERDICT_EXIT or child_exit != VERDICT_EXIT[verdict]:
         return EXIT_STOP
@@ -1060,20 +1070,21 @@ def run(clone_root: str) -> int:
     freeze = subprocess.run([sys.executable, "-m", "pip", "freeze"], capture_output=True, text=True)
     _write_new(run_dir / "environment.txt", (f"python {sys.version}\nexecutable {sys.executable}\n"
                                              f"pip freeze exit {freeze.returncode}\n{freeze.stdout}").encode())
-    status, child_exit, reaped = "UNKNOWN", None, None
+    status, child_exit, reaped, cleanup_error = "UNKNOWN", None, None, None
     try:
         with open(run_dir / "child.stdout.txt", "xb") as out, open(run_dir / "child.stderr.txt", "xb") as err:
-            status, child_exit, reaped = run_group(
+            status, child_exit, reaped, cleanup_error = run_group(
                 [sys.executable, "-m", MODULE, "_child", "--run-dir", str(run_dir), "--clone-root", clone_root],
                 stdout=out, stderr=err, timeout=EXECUTION_S)
     finally:
         code = exit_code_for(run_dir / "record.json", status, child_exit, reaped)
-        fin.update(status=status, child_exit=child_exit, group_reaped=reaped, exit_code=code,
-                   elapsed_s=round(time.time() - t0, 3))
+        fin.update(status=status, child_exit=child_exit, group_reaped=reaped, cleanup_error=cleanup_error,
+                   exit_code=code, elapsed_s=round(time.time() - t0, 3))
         if reaped is not True:
             _write_json(ROOT / CLEANUP_FAILED, {**fin, "finalized": False, "run_dir": RUN_DIR,
-                                                "detail": "the process group was not reaped (or never ran): "
-                                                          "nothing hashed, copied or finalized"})
+                                                "detail": "the process group's end was not verified (not reaped, "
+                                                          "the check failed, or it never ran): nothing hashed, copied or "
+                                                          "finalized"})
     if reaped is not True:
         return code
     fin.update(verdict=_verdict(run_dir / "record.json"),
