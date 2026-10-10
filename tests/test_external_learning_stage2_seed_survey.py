@@ -29,6 +29,12 @@ def _block(S):
     return (S.BAND[0] + 90_000, S.BAND[0] + 90_001)
 
 
+def _clean_block(S):
+    """For the controls that need a CLEAN block under the REAL registries. AMENDED 2026-10-09 at the stage-3
+    registration: `_block` (band start + 90,000) is now that registered block. Band start + 95,000 is
+    unregistered, outside every floor, and not 10,000-aligned, so the candidate rule can never register it."""
+    return (S.BAND[0] + 95_000, S.BAND[0] + 95_000 + 1)
+
 def _record(SV, S, block, *, verdict=None, dirty=False, slots=None):
     lo, hi = block
     lines = [f"HEAD {'a' * 40}; working tree {'DIRTY' if dirty else 'clean'}",
@@ -88,7 +94,7 @@ def test_the_SUBSTITUTED_controls_pass_on_a_one_seed_block_and_the_PINNED_ones_w
     """Why the substitution: the pinned plants sit at lo+3 .. lo+9 -- outside a one-seed block, where the
     check rightly calls the block clean -- so the pinned controls fail there for the wrong reason."""
     S, _P, _S2 = method
-    block = _block(S)
+    block = _clean_block(S)
     registries, named, gen, masks, consumed = S.prior_terms()
     prior = (registries, named, gen, consumed, {})
     assert S.check(block, prior, masks)["clean"]

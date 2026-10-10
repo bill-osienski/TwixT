@@ -1,0 +1,203 @@
+{
+ "base": 202690000,
+ "baseline": "ff1422fb",
+ "card": "docs/superpowers/2026-10-08-external-engine-learning-viability.md",
+ "games": [
+  {
+   "candidate": "red",
+   "game": 0,
+   "pair": 0,
+   "seed": 202690000
+  },
+  {
+   "candidate": "black",
+   "game": 1,
+   "pair": 0,
+   "seed": 202690001
+  },
+  {
+   "candidate": "red",
+   "game": 2,
+   "pair": 1,
+   "seed": 202690002
+  },
+  {
+   "candidate": "black",
+   "game": 3,
+   "pair": 1,
+   "seed": 202690003
+  },
+  {
+   "candidate": "red",
+   "game": 4,
+   "pair": 2,
+   "seed": 202690004
+  },
+  {
+   "candidate": "black",
+   "game": 5,
+   "pair": 2,
+   "seed": 202690005
+  },
+  {
+   "candidate": "red",
+   "game": 6,
+   "pair": 3,
+   "seed": 202690006
+  },
+  {
+   "candidate": "black",
+   "game": 7,
+   "pair": 3,
+   "seed": 202690007
+  },
+  {
+   "candidate": "red",
+   "game": 8,
+   "pair": 4,
+   "seed": 202690008
+  },
+  {
+   "candidate": "black",
+   "game": 9,
+   "pair": 4,
+   "seed": 202690009
+  },
+  {
+   "candidate": "red",
+   "game": 10,
+   "pair": 5,
+   "seed": 202690010
+  },
+  {
+   "candidate": "black",
+   "game": 11,
+   "pair": 5,
+   "seed": 202690011
+  },
+  {
+   "candidate": "red",
+   "game": 12,
+   "pair": 6,
+   "seed": 202690012
+  },
+  {
+   "candidate": "black",
+   "game": 13,
+   "pair": 6,
+   "seed": 202690013
+  },
+  {
+   "candidate": "red",
+   "game": 14,
+   "pair": 7,
+   "seed": 202690014
+  },
+  {
+   "candidate": "black",
+   "game": 15,
+   "pair": 7,
+   "seed": 202690015
+  },
+  {
+   "candidate": "red",
+   "game": 16,
+   "pair": 8,
+   "seed": 202690016
+  },
+  {
+   "candidate": "black",
+   "game": 17,
+   "pair": 8,
+   "seed": 202690017
+  },
+  {
+   "candidate": "red",
+   "game": 18,
+   "pair": 9,
+   "seed": 202690018
+  },
+  {
+   "candidate": "black",
+   "game": 19,
+   "pair": 9,
+   "seed": 202690019
+  },
+  {
+   "candidate": "red",
+   "game": 20,
+   "pair": 10,
+   "seed": 202690020
+  },
+  {
+   "candidate": "black",
+   "game": 21,
+   "pair": 10,
+   "seed": 202690021
+  },
+  {
+   "candidate": "red",
+   "game": 22,
+   "pair": 11,
+   "seed": 202690022
+  },
+  {
+   "candidate": "black",
+   "game": 23,
+   "pair": 11,
+   "seed": 202690023
+  },
+  {
+   "candidate": "red",
+   "game": 24,
+   "pair": 12,
+   "seed": 202690024
+  },
+  {
+   "candidate": "black",
+   "game": 25,
+   "pair": 12,
+   "seed": 202690025
+  },
+  {
+   "candidate": "red",
+   "game": 26,
+   "pair": 13,
+   "seed": 202690026
+  },
+  {
+   "candidate": "black",
+   "game": 27,
+   "pair": 13,
+   "seed": 202690027
+  },
+  {
+   "candidate": "red",
+   "game": 28,
+   "pair": 14,
+   "seed": 202690028
+  },
+  {
+   "candidate": "black",
+   "game": 29,
+   "pair": 14,
+   "seed": 202690029
+  },
+  {
+   "candidate": "red",
+   "game": 30,
+   "pair": 15,
+   "seed": 202690030
+  },
+  {
+   "candidate": "black",
+   "game": 31,
+   "pair": 15,
+   "seed": 202690031
+  }
+ ],
+ "kind": "external-learning-stage3-plan/1",
+ "manifest_sha256": "f26f2f60e4b9907916abe81984aceeadee899deb0513acb84680ce66c39cffcc",
+ "n_slots": 32,
+ "survey_record_sha256": "7c458504db22cbe4626eb8c200b22aa9c6e5f517f47c23c8d1b8bfe446d39527"
+}

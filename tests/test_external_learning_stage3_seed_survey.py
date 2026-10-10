@@ -29,6 +29,12 @@ def _block(S):
     return (S.BAND[0] + 90_000, S.BAND[0] + 90_032)
 
 
+def _clean_block(S):
+    """For the controls that need a CLEAN block under the REAL registries. AMENDED 2026-10-09 at the stage-3
+    registration: `_block` (band start + 90,000) is now that registered block. Band start + 95,000 is
+    unregistered, outside every floor, and not 10,000-aligned, so the candidate rule can never register it."""
+    return (S.BAND[0] + 95_000, S.BAND[0] + 95_000 + 32)
+
 def _record(SV, S, S3, block, *, verdict=None, dirty=False, slots=None):
     lo, hi = block
     lines = [f"HEAD {'a' * 40}; working tree {'DIRTY' if dirty else 'clean'}",
@@ -96,7 +102,7 @@ def test_the_slots_are_the_modules_layout_one_seed_per_game(SV, method):
 
 def test_the_PINNED_plant_and_exemption_controls_hold_on_a_32_seed_block__none_substituted(SV, method):
     S, _P, _S3 = method
-    block = _block(S)
+    block = _clean_block(S)
     registries, named, gen, masks, consumed = S.prior_terms()
     prior = (registries, named, gen, consumed, {})
     assert S.check(block, prior, masks)["clean"]
