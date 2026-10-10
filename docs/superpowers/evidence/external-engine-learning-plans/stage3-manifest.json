@@ -1,0 +1,150 @@
+{
+ "baseline": "ff1422fb",
+ "card": "docs/superpowers/2026-10-08-external-engine-learning-viability.md",
+ "ceiling_s": 7200,
+ "environment": {
+  "mlx": "0.30.3",
+  "numpy": "2.4.1",
+  "pip_freeze_sha256": "f992ecb33432a94383e53506aaf877bbec81d36139f462590bb90b980495a658",
+  "python": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.1.1.101)]",
+  "source": "docs/superpowers/evidence/external-engine-learning-stage2/environment.txt",
+  "source_sha256": "2c88ae01a171728faf51564160fac80d5f7c9fb3003aa79522811c7021661589"
+ },
+ "environment_provenance": {
+  "stage1": {
+   "freeze_file": "docs/superpowers/evidence/external-engine-learning-setup/03_venv_freeze.txt",
+   "freeze_sha256": "4fff54407c8da367ed324a12c5fa3fb3884cb0d228e572056bf5f1a13481e124",
+   "mlx": "0.32.1",
+   "numpy": "2.5.2",
+   "python": "3.13.15 (main, Aug  5 2026, 12:25:43) [Clang 21.0.0 (clang-2100.1.1.101)]"
+  },
+  "stage2": {
+   "mlx": "0.30.3",
+   "numpy": "2.4.1",
+   "pip_freeze_sha256": "f992ecb33432a94383e53506aaf877bbec81d36139f462590bb90b980495a658",
+   "python": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.1.1.101)]"
+  }
+ },
+ "game_seeds": {
+  "plan": "docs/superpowers/evidence/external-engine-learning-plans/stage3.json",
+  "slots": 32
+ },
+ "games": {
+  "add_noise": false,
+  "agents": [
+   "candidate",
+   "incumbent"
+  ],
+  "eval_config": {
+   "board_size": 24,
+   "max_moves": 280,
+   "mcts_eval_batch_size": 14,
+   "mcts_sims": 400,
+   "mcts_stall_flush_sims": 48,
+   "opening_temp_plies": 20,
+   "selection_mode": "opening_temperature",
+   "temp_high": 1.0,
+   "temp_low": 0.1
+  },
+  "games": 32,
+  "layout": "game g: seed = plan base + g, pair g // 2; candidate red on even g, black on odd g",
+  "mcts_config": {
+   "c_puct": 1.5,
+   "closeout_selection_tiebreak_enabled": false,
+   "closeout_selection_tiebreak_max_distance": 2,
+   "closeout_selection_tiebreak_min_share": 0.05,
+   "closeout_selection_tiebreak_min_value": 0.95,
+   "closeout_selection_tiebreak_topk": 5,
+   "closeout_td1_high_value_threshold": 0.95,
+   "closeout_td1_max_forced_moves": 4,
+   "closeout_td1_min_visits": 8,
+   "closeout_td1_require_high_value": false,
+   "closeout_td1_visit_forcing_enabled": false,
+   "dirichlet_alpha": 0.3,
+   "dirichlet_eps": 0.25,
+   "eval_batch_size": 14,
+   "fpu_policy_mass_reduction": null,
+   "fpu_value": 0.0,
+   "n_simulations": 400,
+   "opening_dirichlet_alpha": 1.0,
+   "opening_dirichlet_eps": 0.5,
+   "opening_noise_ply": 0,
+   "pending_virtual_visits": 8,
+   "root_edge_band_penalty": 0.0,
+   "root_edge_band_penalty_ply": 0,
+   "root_edge_band_width": 2,
+   "root_near_corner_penalty": 0.0,
+   "root_near_corner_penalty_early": 0.0,
+   "root_near_corner_penalty_early_plies": 0,
+   "root_near_corner_penalty_ply": 0,
+   "root_near_corner_radius": 2,
+   "stall_flush_sims": 48,
+   "temp_high": 1.0,
+   "temp_low": 0.1,
+   "temp_threshold_ply": 20
+  },
+  "pairing_id": "external-learning-stage3",
+  "pairs": 16,
+  "readout": {
+   "mode": "opening_temperature",
+   "opening_temp_plies": 20,
+   "temp_high": 1.0,
+   "temp_low": 0.1
+  },
+  "workers": 1
+ },
+ "heldout_criteria": {
+  "ce": "per game, mean over its rows of -log p(teacher's chosen move)",
+  "control": "softmax(beta * incumbent raw logits) over the row's legal moves, beta frozen from stage 2",
+  "games": 4,
+  "pass": "candidate game-mean CE < incumbent AND < control (strict), and candidate game-mean top-1 > incumbent (strict); otherwise STOP_HELDOUT before any game",
+  "top1": "per game, the fraction of rows whose first maximum (recorded legal order) is the chosen move",
+  "unit": "game",
+  "weights": "each held-out game equally (mean of per-game means)"
+ },
+ "incumbent": {
+  "path": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "reference": "calib020_0001",
+  "sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e"
+ },
+ "kind": "external-learning-stage3-manifest/1",
+ "screen": {
+  "half_width": 0.3395253789351549,
+  "hoeffding_alpha": 0.05,
+  "uninterpretable": "more than 16 state_cap games",
+  "unit": "pair mean in [0, 1]",
+  "veto": "upper bound (mean + half-width, unclipped) < 0.5"
+ },
+ "stage1": {
+  "evidence_dir": "docs/superpowers/evidence/external-engine-learning-stage1",
+  "heldout": {
+   "games": [
+    "f4-teacher_black",
+    "f4-teacher_red",
+    "f5-teacher_black",
+    "f5-teacher_red"
+   ],
+   "row_ids_sha256": "b3719ae2f30b0793318673ca8ba38b40fc46871173bc267b831ef54b06af770d",
+   "rows": 64
+  },
+  "manifest_sha256": "0064f0777d7df4a1b85177aadf59b3a41bb52d627b6d1439a4c1349cbb196b05",
+  "rows": {
+   "file": "teacher_rows.jsonl",
+   "sha256": "b59218ea5dd2c3f0ccff5bf5287cef85a89c0424c544c08f50f33ca4f4752865"
+  }
+ },
+ "stage2": {
+  "candidate": {
+   "path": "docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+   "sha256": "e73e80b4b6c5e75a207068bd3da391ebcbbf1329ad876303268801771da57b76"
+  },
+  "control": {
+   "beta": 0.5610537528991699,
+   "training_ce": 3.745846269186586
+  },
+  "evidence_dir": "docs/superpowers/evidence/external-engine-learning-stage2",
+  "manifest_sha256": "92e9b5087b147c468ae241cb56119239da3c19641d035ae32e9a6ec36cd84a98",
+  "record_sha256": "667a68825ed09b826107694d4afbc9bb13f19c5a15a00434d181f049a190825a",
+  "stage2_manifest_sha256": "916224900d6f674d6d93ccc08fc00499ae2bc71f422f57a7a6a5ae17961d831d"
+ }
+}
