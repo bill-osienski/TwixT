@@ -234,3 +234,46 @@ def test_MAIN_on_a_block_already_EXPOSED_does_NOT_reconcile(M, evidence, monkeyp
     assert M.main(["script"]) == 1
     rec = (root / M.OUT).read_text()
     assert "already in EXPOSED_SEED_INTERVALS" in rec and "VERDICT: DOES NOT RECONCILE" in rec
+
+
+# ─────────────────────────────── THE CLOSED STATE: the one closing edit (2026-10-10) ───────────────────────────────
+
+def _closed_block(M):
+    """The block, READ from the committed derivation record -- never spelled here."""
+    import re
+    rec = (ROOT / M.HERE / "02_derive_usage_run.txt").read_text()
+    assert "VERDICT: RECONCILES" in rec
+    m = re.search(r"^seeds used \(every started game\): \((\d+), (\d+)\); the plan's block: \((\d+), (\d+)\)$", rec, re.M)
+    assert m.group(1, 2) == m.group(3, 4), "the closing exposes less than the block: this edit assumed all started"
+    return int(m.group(1)), int(m.group(2))
+
+
+def test_the_stage3_block_is_ACCOUNTED_EXPOSED_and_RETIRED_exactly_as_itself(M):
+    from scripts.GPU.alphazero import e4_screen_reference as REF
+    lo, hi = block = _closed_block(M)
+    assert hi == lo + 32
+    for name in ("ACCOUNTED_SEED_INTERVALS", "EXPOSED_SEED_INTERVALS", "RETIRED_SEED_INTERVALS"):
+        intervals = getattr(REF, name)
+        short = name.split("_")[0]
+        assert intervals.count(block) == 1, f"the stage-3 block is not registered as exactly itself in {short}"
+        assert [iv for iv in intervals if iv[0] < hi and lo < iv[1]] == [block], \
+            f"another interval overlaps the stage-3 block in {short}"
+    ex, rt = REF.EXPOSED_SEED_INTERVALS, REF.RETIRED_SEED_INTERVALS
+    assert ex[ex.index(block):] == rt[rt.index(block):] and all(iv[0] >= hi for iv in ex[ex.index(block) + 1:]), \
+        "the stage-3 block is not the LAST entry of EXPOSED and RETIRED"
+    for s in (lo, hi - 1):
+        st = REF.seed_status(s)
+        assert (st["accounted"], st["exposed"], st["retired"], st["test_only"]) == (True, True, True, False), \
+            "the stage-3 block is not accounted, exposed and retired"
+
+
+def test_the_stage3_block_now_FAULTS_and_check_plan_REFUSES_the_committed_plan_as_SPENT(M):
+    from scripts.GPU.alphazero import external_learning_stage3 as S3
+    from scripts.GPU.alphazero import h4_runner as R4
+    lo, hi = _closed_block(M)
+    assert R4.seed_registry_faults([{"seed": lo}, {"seed": hi - 1}]) == [f"{lo}: exposed, retired",
+                                                                        f"{hi - 1}: exposed, retired"]
+    plan = json.loads((ROOT / M.PLAN).read_bytes())
+    assert plan["base"] == lo
+    with pytest.raises(S3.Stop, match="already spent"):
+        S3.check_plan(plan)
