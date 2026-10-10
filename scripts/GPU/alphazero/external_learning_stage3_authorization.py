@@ -6,4 +6,4 @@ control and the single stage-2 candidate on the sealed held-out games, then, onl
 pass, 32 candidate-vs-incumbent games. Opened for ONE approved run and restored on every exit. Created
 closed. This file may hold ONLY this declaration.
 """
-EXTERNAL_LEARNING_STAGE3_AUTHORIZED = True
+EXTERNAL_LEARNING_STAGE3_AUTHORIZED = False

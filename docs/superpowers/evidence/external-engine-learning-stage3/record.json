@@ -1,0 +1,1197 @@
+{
+ "baseline": "ff1422fb",
+ "card": "docs/superpowers/2026-10-08-external-engine-learning-viability.md",
+ "kind": "external-learning-stage3-record/1",
+ "steps": {
+  "environment": {
+   "mlx": "0.30.3",
+   "numpy": "2.4.1",
+   "pip_freeze_sha256": "f992ecb33432a94383e53506aaf877bbec81d36139f462590bb90b980495a658",
+   "python": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.1.1.101)]"
+  },
+  "games": [
+   {
+    "black_agent_id": "incumbent",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 0.0,
+    "comparison_unit": "agent",
+    "game_idx": 0,
+    "n_moves": 33,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "candidate",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 1.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000000.json",
+    "same_checkpoint": false,
+    "seed": 202690000,
+    "task_id": 0,
+    "winner": "red",
+    "winner_agent_id": "candidate",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors"
+   },
+   {
+    "black_agent_id": "candidate",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 0.0,
+    "comparison_unit": "agent",
+    "game_idx": 1,
+    "n_moves": 59,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "incumbent",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 1.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000001.json",
+    "same_checkpoint": false,
+    "seed": 202690001,
+    "task_id": 1,
+    "winner": "red",
+    "winner_agent_id": "incumbent",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+   },
+   {
+    "black_agent_id": "incumbent",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 1.0,
+    "comparison_unit": "agent",
+    "game_idx": 2,
+    "n_moves": 52,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "candidate",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 0.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000002.json",
+    "same_checkpoint": false,
+    "seed": 202690002,
+    "task_id": 2,
+    "winner": "black",
+    "winner_agent_id": "incumbent",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+   },
+   {
+    "black_agent_id": "candidate",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 0.0,
+    "comparison_unit": "agent",
+    "game_idx": 3,
+    "n_moves": 45,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "incumbent",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 1.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000003.json",
+    "same_checkpoint": false,
+    "seed": 202690003,
+    "task_id": 3,
+    "winner": "red",
+    "winner_agent_id": "incumbent",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+   },
+   {
+    "black_agent_id": "incumbent",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 0.0,
+    "comparison_unit": "agent",
+    "game_idx": 4,
+    "n_moves": 51,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "candidate",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 1.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000004.json",
+    "same_checkpoint": false,
+    "seed": 202690004,
+    "task_id": 4,
+    "winner": "red",
+    "winner_agent_id": "candidate",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors"
+   },
+   {
+    "black_agent_id": "candidate",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 0.0,
+    "comparison_unit": "agent",
+    "game_idx": 5,
+    "n_moves": 53,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "incumbent",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 1.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000005.json",
+    "same_checkpoint": false,
+    "seed": 202690005,
+    "task_id": 5,
+    "winner": "red",
+    "winner_agent_id": "incumbent",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+   },
+   {
+    "black_agent_id": "incumbent",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 1.0,
+    "comparison_unit": "agent",
+    "game_idx": 6,
+    "n_moves": 42,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "candidate",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 0.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000006.json",
+    "same_checkpoint": false,
+    "seed": 202690006,
+    "task_id": 6,
+    "winner": "black",
+    "winner_agent_id": "incumbent",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+   },
+   {
+    "black_agent_id": "candidate",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 0.0,
+    "comparison_unit": "agent",
+    "game_idx": 7,
+    "n_moves": 53,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "incumbent",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 1.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000007.json",
+    "same_checkpoint": false,
+    "seed": 202690007,
+    "task_id": 7,
+    "winner": "red",
+    "winner_agent_id": "incumbent",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+   },
+   {
+    "black_agent_id": "incumbent",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 1.0,
+    "comparison_unit": "agent",
+    "game_idx": 8,
+    "n_moves": 76,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "candidate",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 0.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000008.json",
+    "same_checkpoint": false,
+    "seed": 202690008,
+    "task_id": 8,
+    "winner": "black",
+    "winner_agent_id": "incumbent",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+   },
+   {
+    "black_agent_id": "candidate",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 0.0,
+    "comparison_unit": "agent",
+    "game_idx": 9,
+    "n_moves": 33,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "incumbent",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 1.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000009.json",
+    "same_checkpoint": false,
+    "seed": 202690009,
+    "task_id": 9,
+    "winner": "red",
+    "winner_agent_id": "incumbent",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+   },
+   {
+    "black_agent_id": "incumbent",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 1.0,
+    "comparison_unit": "agent",
+    "game_idx": 10,
+    "n_moves": 50,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "candidate",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 0.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000010.json",
+    "same_checkpoint": false,
+    "seed": 202690010,
+    "task_id": 10,
+    "winner": "black",
+    "winner_agent_id": "incumbent",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+   },
+   {
+    "black_agent_id": "candidate",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 1.0,
+    "comparison_unit": "agent",
+    "game_idx": 11,
+    "n_moves": 40,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "incumbent",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 0.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000011.json",
+    "same_checkpoint": false,
+    "seed": 202690011,
+    "task_id": 11,
+    "winner": "black",
+    "winner_agent_id": "candidate",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors"
+   },
+   {
+    "black_agent_id": "incumbent",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 1.0,
+    "comparison_unit": "agent",
+    "game_idx": 12,
+    "n_moves": 50,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "candidate",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 0.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000012.json",
+    "same_checkpoint": false,
+    "seed": 202690012,
+    "task_id": 12,
+    "winner": "black",
+    "winner_agent_id": "incumbent",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+   },
+   {
+    "black_agent_id": "candidate",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 0.0,
+    "comparison_unit": "agent",
+    "game_idx": 13,
+    "n_moves": 55,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "incumbent",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 1.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000013.json",
+    "same_checkpoint": false,
+    "seed": 202690013,
+    "task_id": 13,
+    "winner": "red",
+    "winner_agent_id": "incumbent",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+   },
+   {
+    "black_agent_id": "incumbent",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 0.0,
+    "comparison_unit": "agent",
+    "game_idx": 14,
+    "n_moves": 47,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "candidate",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 1.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000014.json",
+    "same_checkpoint": false,
+    "seed": 202690014,
+    "task_id": 14,
+    "winner": "red",
+    "winner_agent_id": "candidate",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors"
+   },
+   {
+    "black_agent_id": "candidate",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 0.0,
+    "comparison_unit": "agent",
+    "game_idx": 15,
+    "n_moves": 41,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "incumbent",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 1.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000015.json",
+    "same_checkpoint": false,
+    "seed": 202690015,
+    "task_id": 15,
+    "winner": "red",
+    "winner_agent_id": "incumbent",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+   },
+   {
+    "black_agent_id": "incumbent",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 0.0,
+    "comparison_unit": "agent",
+    "game_idx": 16,
+    "n_moves": 31,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "candidate",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 1.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000016.json",
+    "same_checkpoint": false,
+    "seed": 202690016,
+    "task_id": 16,
+    "winner": "red",
+    "winner_agent_id": "candidate",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors"
+   },
+   {
+    "black_agent_id": "candidate",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 0.0,
+    "comparison_unit": "agent",
+    "game_idx": 17,
+    "n_moves": 71,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "incumbent",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 1.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000017.json",
+    "same_checkpoint": false,
+    "seed": 202690017,
+    "task_id": 17,
+    "winner": "red",
+    "winner_agent_id": "incumbent",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+   },
+   {
+    "black_agent_id": "incumbent",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 0.0,
+    "comparison_unit": "agent",
+    "game_idx": 18,
+    "n_moves": 41,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "candidate",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 1.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000018.json",
+    "same_checkpoint": false,
+    "seed": 202690018,
+    "task_id": 18,
+    "winner": "red",
+    "winner_agent_id": "candidate",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors"
+   },
+   {
+    "black_agent_id": "candidate",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 0.0,
+    "comparison_unit": "agent",
+    "game_idx": 19,
+    "n_moves": 43,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "incumbent",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 1.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000019.json",
+    "same_checkpoint": false,
+    "seed": 202690019,
+    "task_id": 19,
+    "winner": "red",
+    "winner_agent_id": "incumbent",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+   },
+   {
+    "black_agent_id": "incumbent",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 1.0,
+    "comparison_unit": "agent",
+    "game_idx": 20,
+    "n_moves": 50,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "candidate",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 0.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000020.json",
+    "same_checkpoint": false,
+    "seed": 202690020,
+    "task_id": 20,
+    "winner": "black",
+    "winner_agent_id": "incumbent",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+   },
+   {
+    "black_agent_id": "candidate",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 1.0,
+    "comparison_unit": "agent",
+    "game_idx": 21,
+    "n_moves": 68,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "incumbent",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 0.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000021.json",
+    "same_checkpoint": false,
+    "seed": 202690021,
+    "task_id": 21,
+    "winner": "black",
+    "winner_agent_id": "candidate",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors"
+   },
+   {
+    "black_agent_id": "incumbent",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 1.0,
+    "comparison_unit": "agent",
+    "game_idx": 22,
+    "n_moves": 46,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "candidate",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 0.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000022.json",
+    "same_checkpoint": false,
+    "seed": 202690022,
+    "task_id": 22,
+    "winner": "black",
+    "winner_agent_id": "incumbent",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+   },
+   {
+    "black_agent_id": "candidate",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 0.0,
+    "comparison_unit": "agent",
+    "game_idx": 23,
+    "n_moves": 43,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "incumbent",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 1.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000023.json",
+    "same_checkpoint": false,
+    "seed": 202690023,
+    "task_id": 23,
+    "winner": "red",
+    "winner_agent_id": "incumbent",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+   },
+   {
+    "black_agent_id": "incumbent",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 1.0,
+    "comparison_unit": "agent",
+    "game_idx": 24,
+    "n_moves": 48,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "candidate",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 0.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000024.json",
+    "same_checkpoint": false,
+    "seed": 202690024,
+    "task_id": 24,
+    "winner": "black",
+    "winner_agent_id": "incumbent",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+   },
+   {
+    "black_agent_id": "candidate",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 0.0,
+    "comparison_unit": "agent",
+    "game_idx": 25,
+    "n_moves": 43,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "incumbent",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 1.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000025.json",
+    "same_checkpoint": false,
+    "seed": 202690025,
+    "task_id": 25,
+    "winner": "red",
+    "winner_agent_id": "incumbent",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+   },
+   {
+    "black_agent_id": "incumbent",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 0.0,
+    "comparison_unit": "agent",
+    "game_idx": 26,
+    "n_moves": 33,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "candidate",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 1.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000026.json",
+    "same_checkpoint": false,
+    "seed": 202690026,
+    "task_id": 26,
+    "winner": "red",
+    "winner_agent_id": "candidate",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors"
+   },
+   {
+    "black_agent_id": "candidate",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 0.0,
+    "comparison_unit": "agent",
+    "game_idx": 27,
+    "n_moves": 47,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "incumbent",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 1.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000027.json",
+    "same_checkpoint": false,
+    "seed": 202690027,
+    "task_id": 27,
+    "winner": "red",
+    "winner_agent_id": "incumbent",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+   },
+   {
+    "black_agent_id": "incumbent",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 0.0,
+    "comparison_unit": "agent",
+    "game_idx": 28,
+    "n_moves": 57,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "candidate",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 1.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000028.json",
+    "same_checkpoint": false,
+    "seed": 202690028,
+    "task_id": 28,
+    "winner": "red",
+    "winner_agent_id": "candidate",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors"
+   },
+   {
+    "black_agent_id": "candidate",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 1.0,
+    "comparison_unit": "agent",
+    "game_idx": 29,
+    "n_moves": 88,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "incumbent",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 0.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000029.json",
+    "same_checkpoint": false,
+    "seed": 202690029,
+    "task_id": 29,
+    "winner": "black",
+    "winner_agent_id": "candidate",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors"
+   },
+   {
+    "black_agent_id": "incumbent",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 0.0,
+    "comparison_unit": "agent",
+    "game_idx": 30,
+    "n_moves": 31,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "candidate",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 1.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000030.json",
+    "same_checkpoint": false,
+    "seed": 202690030,
+    "task_id": 30,
+    "winner": "red",
+    "winner_agent_id": "candidate",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors"
+   },
+   {
+    "black_agent_id": "candidate",
+    "black_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors",
+    "black_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "black_score": 1.0,
+    "comparison_unit": "agent",
+    "game_idx": 31,
+    "n_moves": 60,
+    "pairing_id": "external-learning-stage3",
+    "reason": "win",
+    "red_agent_id": "incumbent",
+    "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "red_readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    },
+    "red_score": 0.0,
+    "replay_path": "runs/external-engine-learning/stage3/games/game_000031.json",
+    "same_checkpoint": false,
+    "seed": 202690031,
+    "task_id": 31,
+    "winner": "black",
+    "winner_agent_id": "candidate",
+    "winner_checkpoint": "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/external-engine-learning-stage2/candidate.safetensors"
+   }
+  ],
+  "heldout": {
+   "beta": 0.5610537528991699,
+   "colour_means_descriptive": {
+    "black": {
+     "candidate_ce": 2.7603628728333907,
+     "candidate_rank": 25.16190476190476,
+     "candidate_top1": 0.34285714285714286,
+     "control_ce": 3.306487836339187,
+     "incumbent_ce": 3.540228964741229,
+     "incumbent_rank": 34.9,
+     "incumbent_top1": 0.27142857142857146,
+     "move_disagreements": 13.5
+    },
+    "red": {
+     "candidate_ce": 3.6611139005615305,
+     "candidate_rank": 44.16153846153846,
+     "candidate_top1": 0.1717948717948718,
+     "control_ce": 4.473995364827557,
+     "incumbent_ce": 5.592656303397428,
+     "incumbent_rank": 58.892307692307696,
+     "incumbent_top1": 0.13846153846153847,
+     "move_disagreements": 9.5
+    }
+   },
+   "game_means": {
+    "candidate_ce": 3.210738386697461,
+    "candidate_rank": 34.66172161172161,
+    "candidate_top1": 0.2573260073260073,
+    "control_ce": 3.8902416005833724,
+    "incumbent_ce": 4.566442634069328,
+    "incumbent_rank": 46.89615384615385,
+    "incumbent_top1": 0.20494505494505494,
+    "move_disagreements": 11.5
+   },
+   "paired": {
+    "f4-teacher_black": {
+     "candidate_minus_control_ce": -0.6461602049606665,
+     "candidate_minus_incumbent_ce": -0.5424933355803863,
+     "candidate_minus_incumbent_top1": 0.0
+    },
+    "f4-teacher_red": {
+     "candidate_minus_control_ce": -0.4938481827415053,
+     "candidate_minus_incumbent_ce": -1.7086785218233258,
+     "candidate_minus_incumbent_top1": 0.06666666666666665
+    },
+    "f5-teacher_black": {
+     "candidate_minus_control_ce": -0.4460897220509268,
+     "candidate_minus_incumbent_ce": -1.0172388482352912,
+     "candidate_minus_incumbent_top1": 0.14285714285714285
+    },
+    "f5-teacher_red": {
+     "candidate_minus_control_ce": -1.131914745790548,
+     "candidate_minus_incumbent_ce": -2.1544062838484677,
+     "candidate_minus_incumbent_top1": 0.0
+    }
+   },
+   "passes": true,
+   "per_game": {
+    "f4-teacher_black": {
+     "candidate_ce": 1.8973052247150461,
+     "candidate_rank": 5.133333333333334,
+     "candidate_top1": 0.4,
+     "control_ce": 2.5434654296757127,
+     "incumbent_ce": 2.4397985602954324,
+     "incumbent_rank": 11.8,
+     "incumbent_top1": 0.4,
+     "move_disagreements": 11,
+     "rows": 15,
+     "teacher_colour": "black"
+    },
+    "f4-teacher_red": {
+     "candidate_ce": 4.091150537913402,
+     "candidate_rank": 77.4,
+     "candidate_top1": 0.26666666666666666,
+     "control_ce": 4.584998720654907,
+     "incumbent_ce": 5.7998290597367275,
+     "incumbent_rank": 75.4,
+     "incumbent_top1": 0.2,
+     "move_disagreements": 7,
+     "rows": 15,
+     "teacher_colour": "red"
+    },
+    "f5-teacher_black": {
+     "candidate_ce": 3.623420520951735,
+     "candidate_rank": 45.19047619047619,
+     "candidate_top1": 0.2857142857142857,
+     "control_ce": 4.069510243002662,
+     "incumbent_ce": 4.640659369187026,
+     "incumbent_rank": 58.0,
+     "incumbent_top1": 0.14285714285714285,
+     "move_disagreements": 16,
+     "rows": 21,
+     "teacher_colour": "black"
+    },
+    "f5-teacher_red": {
+     "candidate_ce": 3.23107726320966,
+     "candidate_rank": 10.923076923076923,
+     "candidate_top1": 0.07692307692307693,
+     "control_ce": 4.362992009000208,
+     "incumbent_ce": 5.3854835470581275,
+     "incumbent_rank": 42.38461538461539,
+     "incumbent_top1": 0.07692307692307693,
+     "move_disagreements": 12,
+     "rows": 13,
+     "teacher_colour": "red"
+    }
+   }
+  },
+  "heldout_rows": {
+   "games": [
+    "f4-teacher_black",
+    "f4-teacher_red",
+    "f5-teacher_black",
+    "f5-teacher_red"
+   ],
+   "rows": 64
+  },
+  "manifest_sha256": "f26f2f60e4b9907916abe81984aceeadee899deb0513acb84680ce66c39cffcc",
+  "plan": {
+   "n_slots": 32,
+   "sha256": "0eab28b084514e34f4454e185e909072d5816f62ee2dd88ca3ba73c20cba5a41"
+  },
+  "screen": {
+   "candidate_losses": 20,
+   "candidate_wins": 12,
+   "caps": 0,
+   "draws_board_full": 0,
+   "half_width": 0.3395253789351549,
+   "interval_unclipped": [
+    0.03547462106484511,
+    0.7145253789351549
+   ],
+   "mean_pair_score": 0.375,
+   "outcome": "NOT_VETOED",
+   "pair_means": [
+    0.5,
+    0.0,
+    0.5,
+    0.0,
+    0.0,
+    0.5,
+    0.0,
+    0.5,
+    0.5,
+    0.5,
+    0.5,
+    0.0,
+    0.0,
+    0.5,
+    1.0,
+    1.0
+   ]
+  },
+  "tasks": {
+   "games": 32,
+   "seeds_sha256": "c2b352f42ac3e770e6d0f76aca0a9a93f321e97e29ec71a551fda8982ac39b7c"
+  }
+ },
+ "verdict": "SCREEN_COMPLETED"
+}
