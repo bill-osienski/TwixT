@@ -1,0 +1,29 @@
+f0-teacher_red 35 red red
+f0-teacher_black 32 black black
+f1-teacher_red 29 red red
+f1-teacher_black 46 black black
+f2-teacher_red 37 red red
+f2-teacher_black 32 black black
+f3-teacher_red 31 red red
+f3-teacher_black 42 black black
+('incumbent', 'QUIET', True) 116
+('incumbent', 'UNDEFENDABLE', True) 8
+('teacher', 'OWN_WIN', True) 8
+('teacher', 'QUIET', True) 120
+('f0-teacher_red', 33, 'incumbent', 'UNDEFENDABLE', True, 0, 2)
+('f0-teacher_red', 34, 'teacher', 'OWN_WIN', True, 2, 0)
+('f0-teacher_black', 30, 'incumbent', 'UNDEFENDABLE', True, 0, 2)
+('f0-teacher_black', 31, 'teacher', 'OWN_WIN', True, 2, 0)
+('f1-teacher_red', 27, 'incumbent', 'UNDEFENDABLE', True, 0, 2)
+('f1-teacher_red', 28, 'teacher', 'OWN_WIN', True, 2, 0)
+('f1-teacher_black', 44, 'incumbent', 'UNDEFENDABLE', True, 0, 2)
+('f1-teacher_black', 45, 'teacher', 'OWN_WIN', True, 2, 0)
+('f2-teacher_red', 35, 'incumbent', 'UNDEFENDABLE', True, 0, 2)
+('f2-teacher_red', 36, 'teacher', 'OWN_WIN', True, 2, 0)
+('f2-teacher_black', 30, 'incumbent', 'UNDEFENDABLE', True, 0, 2)
+('f2-teacher_black', 31, 'teacher', 'OWN_WIN', True, 2, 0)
+('f3-teacher_red', 29, 'incumbent', 'UNDEFENDABLE', True, 0, 2)
+('f3-teacher_red', 30, 'teacher', 'OWN_WIN', True, 2, 0)
+('f3-teacher_black', 40, 'incumbent', 'UNDEFENDABLE', True, 0, 2)
+('f3-teacher_black', 41, 'teacher', 'OWN_WIN', True, 2, 0)
+cross-checks 66 all agree; seconds 84.0

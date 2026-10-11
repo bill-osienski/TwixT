@@ -1,0 +1,28 @@
+f0-teacher_red 210
+f0-teacher_black 401
+f1-teacher_red 569
+f1-teacher_black 875
+f2-teacher_red 1118
+f2-teacher_black 1322
+f3-teacher_red 1530
+f3-teacher_black 1860
+('incumbent', 'LIVE') 16
+('incumbent', 'no_hit') 108
+('teacher', 'no_hit') 128
+('f0-teacher_red', 31, 'incumbent', (13, 0))
+('f0-teacher_red', 33, 'incumbent', (13, 0))
+('f0-teacher_black', 28, 'incumbent', (19, 1))
+('f0-teacher_black', 30, 'incumbent', (19, 1))
+('f1-teacher_red', 25, 'incumbent', (1, 22))
+('f1-teacher_red', 27, 'incumbent', (1, 23))
+('f1-teacher_black', 42, 'incumbent', (0, 22))
+('f1-teacher_black', 44, 'incumbent', (0, 22))
+('f2-teacher_red', 33, 'incumbent', (22, 0))
+('f2-teacher_red', 35, 'incumbent', (21, 0))
+('f2-teacher_black', 28, 'incumbent', (0, 19))
+('f2-teacher_black', 30, 'incumbent', (0, 19))
+('f3-teacher_red', 27, 'incumbent', (2, 23))
+('f3-teacher_red', 29, 'incumbent', (2, 23))
+('f3-teacher_black', 38, 'incumbent', (0, 9))
+('f3-teacher_black', 40, 'incumbent', (0, 9))
+seconds 1860

@@ -1,0 +1,46 @@
+f0-teacher_red 209
+f0-teacher_black 598
+f1-teacher_red 757
+f1-teacher_black 1139
+f2-teacher_red 3353
+f2-teacher_black 4110
+f3-teacher_red 4300
+f3-teacher_black 5359
+('incumbent', '-', '-', '-', '-') 108
+('incumbent', '-', '-', 'chosen_LOSS4', '-') 15
+('incumbent', '-', '-', 'chosen_LOSS4', 'alt_ok') 1
+('teacher', '-', '-', '-', '-') 112
+('teacher', 'win3_avail', 'chosen_win3', '-', '-') 16
+('f0-teacher_red', 31, 'incumbent', 0, False, True, None)
+('f0-teacher_red', 32, 'teacher', 4, True, False, None)
+('f0-teacher_red', 33, 'incumbent', 0, False, True, None)
+('f0-teacher_red', 34, 'teacher', 495, True, False, None)
+('f0-teacher_black', 28, 'incumbent', 0, False, True, (8, 21))
+('f0-teacher_black', 29, 'teacher', 4, True, False, None)
+('f0-teacher_black', 30, 'incumbent', 0, False, True, None)
+('f0-teacher_black', 31, 'teacher', 498, True, False, None)
+('f1-teacher_red', 25, 'incumbent', 0, False, True, None)
+('f1-teacher_red', 26, 'teacher', 3, True, False, None)
+('f1-teacher_red', 27, 'incumbent', 0, False, True, None)
+('f1-teacher_red', 28, 'teacher', 501, True, False, None)
+('f1-teacher_black', 42, 'incumbent', 0, False, True, None)
+('f1-teacher_black', 43, 'teacher', 8, True, False, None)
+('f1-teacher_black', 44, 'incumbent', 0, False, True, None)
+('f1-teacher_black', 45, 'teacher', 483, True, False, None)
+('f2-teacher_red', 33, 'incumbent', 0, False, True, None)
+('f2-teacher_red', 34, 'teacher', 8, True, False, None)
+('f2-teacher_red', 35, 'incumbent', 0, False, True, None)
+('f2-teacher_red', 36, 'teacher', 493, True, False, None)
+('f2-teacher_black', 28, 'incumbent', 0, False, True, None)
+('f2-teacher_black', 29, 'teacher', 4, True, False, None)
+('f2-teacher_black', 30, 'incumbent', 0, False, True, None)
+('f2-teacher_black', 31, 'teacher', 498, True, False, None)
+('f3-teacher_red', 27, 'incumbent', 0, False, True, None)
+('f3-teacher_red', 28, 'teacher', 4, True, False, None)
+('f3-teacher_red', 29, 'incumbent', 0, False, True, None)
+('f3-teacher_red', 30, 'teacher', 500, True, False, None)
+('f3-teacher_black', 38, 'incumbent', 0, False, True, None)
+('f3-teacher_black', 39, 'teacher', 3, True, False, None)
+('f3-teacher_black', 40, 'incumbent', 0, False, True, None)
+('f3-teacher_black', 41, 'teacher', 487, True, False, None)
+seconds 5359

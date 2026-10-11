@@ -1,0 +1,8 @@
+bebbfdeffaadd8c9823c1865eeb4ca400ad5ee42aa1363fcf475d40bd6c5c6f4  docs/superpowers/evidence/external-engine-learning-stage1/games/f0-teacher_black.json
+161a5bf8eb2865f3583fc9418eaf34e62a80743e587b271c2b856bad9bfde47d  docs/superpowers/evidence/external-engine-learning-stage1/games/f0-teacher_red.json
+ed11f5d7d2f59f1264b9e12f18df42f70ee60bb121dacc7e579fb098cf9296ba  docs/superpowers/evidence/external-engine-learning-stage1/games/f1-teacher_black.json
+86cc86e8cb64377ed0e746eb99e4309d5e0324c813e34966ee0f36d2bfbdc2df  docs/superpowers/evidence/external-engine-learning-stage1/games/f1-teacher_red.json
+e894610d1de1ba84586c2be83c9ad8fc251daf7d6ef2223a953ee1a2a7796157  docs/superpowers/evidence/external-engine-learning-stage1/games/f2-teacher_black.json
+e7bdf25372ba171e5057fbab2c4d3ed0dc487e8cebdbdd48756c0a3d1f66600e  docs/superpowers/evidence/external-engine-learning-stage1/games/f2-teacher_red.json
+391de4e815da15bb66c4c17275a83e08e512bfe5765b2eb1f5ac61db910113df  docs/superpowers/evidence/external-engine-learning-stage1/games/f3-teacher_black.json
+d73e5a6f44975f67ff1e0d54797b88e2cc3428478d3f90616e83b7b1f4e8e477  docs/superpowers/evidence/external-engine-learning-stage1/games/f3-teacher_red.json

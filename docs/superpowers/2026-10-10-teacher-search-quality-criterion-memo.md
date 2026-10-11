@@ -3,6 +3,9 @@
 **Question.** Does deeper twixtbot search produce demonstrably better moves under our rules? Any answer
 must rest on a standard that our own rules engine verifies, defined and reviewed before any teacher query.
 
+> **Corrected on review (2026-10-10) — read §6 first.** The eligible count is a lower bound, the sign
+> test lacks a sampling unit, and reproduction depends on the mover. The stop stands.
+
 **Result: blocked.** A verifiable criterion can be defined (§1–§3). On the training-side material it
 cannot measure an improvement, because the baseline already makes no mistake the standard can see, and
 the material holds just one position where the standard could see one (§4). The pre-query feasibility stop
@@ -142,3 +145,37 @@ opening or push. The successful data pipeline does not by itself justify more tr
 Also noted, without interpretation: the teacher won all 8 training games. That is consistent with stronger
 play beyond the horizon, but it is not a verified standard for move quality, and it says nothing about
 deeper budgets.
+
+## 6. Review corrections (2026-10-10) — supersede §2–§4 where they conflict
+
+The stop stands. The conclusion is narrower: **this material has not established a suitable probe.** It
+does **not** establish that deeper search has nothing useful to correct.
+
+1. **One confirmed eligible position is a lower bound, not an upper bound.**
+   * The far-move probe tests only 3 moves per position, so it can miss positions where a losing move
+     existed.
+   * The supported finding is **"insufficient qualifying positions demonstrated"**. §4's "at most 1
+     baseline mistake is possible" and "deeper search has nothing verifiable to correct here" are
+     **withdrawn**.
+   * What remains exact:
+     * the teacher chose 0 LOSS4 moves in 128;
+     * it took a WIN3 move in all 16 positions where one existed;
+     * in 15 of the incumbent's 16 LOSS4 choices, every alternative was LOSS4 too.
+2. **The claim rule is withdrawn as unsupported.** Positions from one game share a history and are
+   probably dependent, so five positional corrections do not justify §2's sign test. A future criterion
+   must name a defensible sampling unit and argue that the units are independent before any test. One
+   example is at most one position per game, or per family. That design is not made here.
+3. **The reproduction rule depends on the mover.**
+   * **Teacher-to-move positions:** a fresh 100-trial query can be checked against the recorded teacher
+     move, and a mismatch voids the run.
+   * **Incumbent-to-move positions:** the recorded move is the incumbent's, so it is not a teacher
+     baseline. There, the 100-trial query is the baseline and has nothing on record to reproduce. Any
+     determinism check would need a repeated query, which counts against the budget.
+
+   §3's S1 is corrected accordingly.
+4. **Evidence.** The scripts, outputs, input and source hashes, and execution details are in
+   `evidence/teacher-search-quality-criterion/`. See `00_EXECUTION.md` there.
+   * Nothing was rerun.
+   * The one-ply output was recovered verbatim from the session transcript.
+   * The discarded null-move shortcut is kept as `90_INVALID_…`, as diagnostics only. Its own output was
+     not retained.
