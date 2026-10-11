@@ -38,10 +38,29 @@ EvaluatorFactory = Callable[[str], object]
 class AgentSpec:
     """One competitor. `agent_id` is the experimental identity and is
     independent of `checkpoint` -- two agents may share a checkpoint and
-    differ only in readout."""
+    differ only in readout or search budget.
+
+    `mcts_sims` None means the run's EvalConfig.mcts_sims (legacy behaviour).
+    Like the readout, the budget travels WITH the agent across the colour swap.
+    """
     agent_id: str
     checkpoint: str
     readout: ReadoutConfig
+    mcts_sims: Optional[int] = None
+
+    def __post_init__(self):
+        s = self.mcts_sims
+        if s is not None and (type(s) is not int or s < 1):
+            raise ValueError(
+                f"agent {self.agent_id!r}: mcts_sims must be a positive int "
+                f"or None, got {s!r}")
+
+
+def agent_sims(agent: Optional[AgentSpec], config: EvalConfig) -> int:
+    """The simulation budget `agent` searches with under `config`."""
+    if agent is None or agent.mcts_sims is None:
+        return config.mcts_sims
+    return agent.mcts_sims
 
 
 @dataclass(frozen=True)
@@ -82,6 +101,10 @@ class EvalGameResult:
     black_readout: Optional[dict] = None
     same_checkpoint: Optional[bool] = None
     comparison_unit: Optional[str] = None
+    # Each colour's EFFECTIVE search budget (agent results only). None on
+    # legacy results; per-game rows are the authoritative budget record.
+    red_mcts_sims: Optional[int] = None
+    black_mcts_sims: Optional[int] = None
 
 
 @dataclass(frozen=True)
@@ -108,9 +131,10 @@ class _WorkerFailed:
     error: str
 
 
-def cfg_from(config: EvalConfig) -> MCTSConfig:
+def cfg_from(config: EvalConfig, n_simulations: Optional[int] = None) -> MCTSConfig:
     """Map EvalConfig -> MCTSConfig. argmax mode zeroes temps to hit
-    select_move's deterministic argmax branch."""
+    select_move's deterministic argmax branch. `n_simulations` overrides
+    config.mcts_sims for one side; None keeps the run budget."""
     if config.selection_mode == "argmax":
         th, tl = 0.0, 0.0
     elif config.selection_mode == "opening_temperature":
@@ -118,7 +142,8 @@ def cfg_from(config: EvalConfig) -> MCTSConfig:
     else:
         raise ValueError(f"unknown selection_mode {config.selection_mode!r}")
     return MCTSConfig(
-        n_simulations=config.mcts_sims,
+        n_simulations=(config.mcts_sims if n_simulations is None
+                       else n_simulations),
         eval_batch_size=config.mcts_eval_batch_size,
         stall_flush_sims=config.mcts_stall_flush_sims,
         temp_threshold_ply=config.opening_temp_plies,
@@ -160,7 +185,9 @@ def root_child_stats(counts, root):
 def play_eval_game(red_eval, black_eval, config: EvalConfig, seed: int,
                    capture: bool = False,
                    red_readout: Optional[ReadoutConfig] = None,
-                   black_readout: Optional[ReadoutConfig] = None):
+                   black_readout: Optional[ReadoutConfig] = None,
+                   red_sims: Optional[int] = None,
+                   black_sims: Optional[int] = None):
     """Play one A-vs-B game. Returns (winner, reason, n_moves, records).
 
     `records` is None unless capture=True, in which case it is a list of
@@ -170,6 +197,9 @@ def play_eval_game(red_eval, black_eval, config: EvalConfig, seed: int,
 
     `red_readout`/`black_readout` default to the readout implied by `config`,
     preserving the legacy single-config behaviour.
+
+    `red_sims`/`black_sims` set each side's search budget; None keeps
+    config.mcts_sims. Every ply is validated against the MOVER's budget.
 
     RNG: search and readout draw from SEPARATE streams. mcts.MCTS shares one
     `self.rng` across prior-shuffle, PUCT tie-break and move readout, so a
@@ -183,8 +213,10 @@ def play_eval_game(red_eval, black_eval, config: EvalConfig, seed: int,
     """
     red_rd = red_readout or readout_from_eval_config(config)
     black_rd = black_readout or readout_from_eval_config(config)
-    mcts_red = MCTS(red_eval, cfg_from(config), random.Random(seed ^ 0xA5A5A5))
-    mcts_black = MCTS(black_eval, cfg_from(config), random.Random(seed ^ 0x5A5A5A))
+    red_n = config.mcts_sims if red_sims is None else red_sims
+    black_n = config.mcts_sims if black_sims is None else black_sims
+    mcts_red = MCTS(red_eval, cfg_from(config, red_n), random.Random(seed ^ 0xA5A5A5))
+    mcts_black = MCTS(black_eval, cfg_from(config, black_n), random.Random(seed ^ 0x5A5A5A))
     readout_rng_red = random.Random(seed ^ 0xC3C3C3)
     readout_rng_black = random.Random(seed ^ 0x3C3C3C)
     state = TwixtState(active_size=config.board_size, to_move="red",
@@ -198,7 +230,8 @@ def play_eval_game(red_eval, black_eval, config: EvalConfig, seed: int,
         rng = readout_rng_red if is_red else readout_rng_black
         counts, root_value, root = mcts.search_with_root(state, add_noise=False)
         top2 = eval_readout.top_two(root_child_stats(counts, root))
-        validate_ply(ply, config.mcts_sims, root.visit_count, root_value, top2)
+        validate_ply(ply, red_n if is_red else black_n, root.visit_count,
+                     root_value, top2)
         move, overrode = eval_readout.select(counts, ply, rdt, rng, top2=top2)
         if capture:
             records.append(ply_record(ply, state.to_move, move, counts,
@@ -219,7 +252,8 @@ def play_eval_game(red_eval, black_eval, config: EvalConfig, seed: int,
 
 
 def make_result(task: EvalGameTask, winner, reason, n_moves,
-                replay_path=None) -> EvalGameResult:
+                replay_path=None,
+                config: Optional[EvalConfig] = None) -> EvalGameResult:
     """Build a result, mapping winner colour -> checkpoint and 0/0.5/1 scores.
 
     When the task carries AgentSpecs, the experimental identity fields are
@@ -252,6 +286,9 @@ def make_result(task: EvalGameTask, winner, reason, n_moves,
                 task.red_agent.checkpoint == task.black_agent.checkpoint),
             "comparison_unit": AGENT_COMPARISON_UNIT,
         }
+        if config is not None:
+            agent_fields["red_mcts_sims"] = agent_sims(task.red_agent, config)
+            agent_fields["black_mcts_sims"] = agent_sims(task.black_agent, config)
 
     return EvalGameResult(
         task_id=task.task_id, pairing_id=task.pairing_id, game_idx=task.game_idx,
@@ -375,8 +412,10 @@ def _play_and_build_result(task, red, black, config, capture, replay_dir):
     black_rd = task.black_agent.readout if task.black_agent is not None else None
     winner, reason, nm, records = play_eval_game(
         red, black, config, task.seed, capture=capture,
-        red_readout=red_rd, black_readout=black_rd)
-    result = make_result(task, winner, reason, nm)
+        red_readout=red_rd, black_readout=black_rd,
+        red_sims=agent_sims(task.red_agent, config),
+        black_sims=agent_sims(task.black_agent, config))
+    result = make_result(task, winner, reason, nm, config=config)
     # Immediate stop (spec 8.3): a binding or unknown_error fault raises on the
     # game that produced it, not after every remaining game has been played.
     # Under workers > 1 this surfaces via the existing _WorkerFailed sentinel,

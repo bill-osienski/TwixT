@@ -115,6 +115,12 @@ def validate_game_binding(result, task) -> None:
                 f"task {result.task_id}: configuration mismatch for {colour} "
                 f"agent {agent_id!r} -- recorded {readout!r}, task specifies "
                 f"{expected!r}")
+        want = spec.mcts_sims
+        got = getattr(result, f"{colour}_mcts_sims", None)
+        if want is not None and got != want:
+            raise IntegrityError(
+                f"task {result.task_id}: search budget mismatch for {colour} "
+                f"agent {agent_id!r} -- recorded {got!r}, task specifies {want}")
 
     if result.red_agent_id == result.black_agent_id:
         raise IntegrityError(
