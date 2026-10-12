@@ -1,0 +1,237 @@
+SEARCH DISTILLATION STAGE A -- GAME-SEED COLLISION PROOF, mode POST
+================================================================================================
+HEAD 865b613df468d4d3ec21704c628e779b2072e704; working tree clean
+this tree /Users/bill/projects/TwixT_Game-stage-a
+main checkout /Users/bill/projects/TwixT_Game (scanned too; HEAD a39561b2736aeff7a93dfc0e972bb65f0ff6e108; 7 uncommitted entries, not required clean)
+method (survey) docs/superpowers/evidence/tactical-candidate-seed-survey/01_seed_survey.py sha256 6f6e55dbd5da672848c757753d4e61a3e9d110d96569b7ef468f902cf46f8860 (pinned)
+method (proof) docs/superpowers/evidence/tactical-candidate-seed-registration/01_collision_proof.py sha256 dd192011938ca5c6674092b243681174e669e1e96b22b8d13da2a264b340764d (pinned)
+rule scripts/GPU/alphazero/seed_selection.py sha256 34c2a537e580eb7215b18a4ad747ed894c330dadeb40b96bc87f90c1d74b4dcc (ALIGN 100)
+registry scripts/GPU/alphazero/e4_screen_reference.py sha256 f60b9b035dac7dfb3711e7439b2b2ceca6ae3d4863ed6a5d05e3fce93304a3ee
+masks (imported): ['0x3c3c3c', '0x5a5a5a', '0xa5a5a5', '0xc3c3c3']
+registries: ACCOUNTED 34, EXPOSED 31, RETIRED 29, TEST_ONLY 1
+named spent blocks: D1 paper 1, H1 2, H2 3, H3 6, H4 5, H5 4; H3 generation ranges 4; CONSUMED_SEEDS 1
+EXEMPT PATHS (exact; plus registry tuple elements by parsing): 4 + the plan
+    docs/superpowers/evidence/search-distillation-stage-a-seed-survey/01_seed_survey.py
+    docs/superpowers/evidence/search-distillation-stage-a-seed-survey/02_seed_survey_run.txt
+    docs/superpowers/evidence/search-distillation-stage-a-seed-survey/03_collision_proof_pre_run.txt
+    docs/superpowers/evidence/search-distillation-stage-a-seed-survey/04_collision_proof_post_run.txt
+    docs/superpowers/evidence/search-distillation-stage-a/plan.json  (only if every band literal in it is a slot of the block)
+
+survey record docs/superpowers/evidence/search-distillation-stage-a-seed-survey/02_seed_survey_run.txt sha256 188b4994f33f444223caba3993379ad75889334e0798acaefc8ccedaa3dbbb6d (read at a39561b2736aeff7a93dfc0e972bb65f0ff6e108)
+THE BLOCK, read from the record: [202690300, 202690460) -- BASE 202690300
+EXPECTED STATE (post): HOLDS
+
+SCOPE (fail-closed enumeration) under ['scripts', 'tests', 'docs/superpowers']: this tree 4035 regular files, 0 symbolic links (not followed); main checkout 46651 regular files, 0 symbolic links; band literal values counted: 4377
+THE BLOCK (202690300, 202690460)  n=160  direct=NONE  streams=0  injective=True  gap=167 (floor 160)  CLEAN=True
+SLOTS (build_agent_pairing_tasks: game g has seed BASE + g):
+    SLOT 0 game 0 pair 0 red sims1600 seed 202690300
+    SLOT 1 game 1 pair 0 red sims400 seed 202690301
+    SLOT 2 game 2 pair 1 red sims1600 seed 202690302
+    SLOT 3 game 3 pair 1 red sims400 seed 202690303
+    SLOT 4 game 4 pair 2 red sims1600 seed 202690304
+    SLOT 5 game 5 pair 2 red sims400 seed 202690305
+    SLOT 6 game 6 pair 3 red sims1600 seed 202690306
+    SLOT 7 game 7 pair 3 red sims400 seed 202690307
+    SLOT 8 game 8 pair 4 red sims1600 seed 202690308
+    SLOT 9 game 9 pair 4 red sims400 seed 202690309
+    SLOT 10 game 10 pair 5 red sims1600 seed 202690310
+    SLOT 11 game 11 pair 5 red sims400 seed 202690311
+    SLOT 12 game 12 pair 6 red sims1600 seed 202690312
+    SLOT 13 game 13 pair 6 red sims400 seed 202690313
+    SLOT 14 game 14 pair 7 red sims1600 seed 202690314
+    SLOT 15 game 15 pair 7 red sims400 seed 202690315
+    SLOT 16 game 16 pair 8 red sims1600 seed 202690316
+    SLOT 17 game 17 pair 8 red sims400 seed 202690317
+    SLOT 18 game 18 pair 9 red sims1600 seed 202690318
+    SLOT 19 game 19 pair 9 red sims400 seed 202690319
+    SLOT 20 game 20 pair 10 red sims1600 seed 202690320
+    SLOT 21 game 21 pair 10 red sims400 seed 202690321
+    SLOT 22 game 22 pair 11 red sims1600 seed 202690322
+    SLOT 23 game 23 pair 11 red sims400 seed 202690323
+    SLOT 24 game 24 pair 12 red sims1600 seed 202690324
+    SLOT 25 game 25 pair 12 red sims400 seed 202690325
+    SLOT 26 game 26 pair 13 red sims1600 seed 202690326
+    SLOT 27 game 27 pair 13 red sims400 seed 202690327
+    SLOT 28 game 28 pair 14 red sims1600 seed 202690328
+    SLOT 29 game 29 pair 14 red sims400 seed 202690329
+    SLOT 30 game 30 pair 15 red sims1600 seed 202690330
+    SLOT 31 game 31 pair 15 red sims400 seed 202690331
+    SLOT 32 game 32 pair 16 red sims1600 seed 202690332
+    SLOT 33 game 33 pair 16 red sims400 seed 202690333
+    SLOT 34 game 34 pair 17 red sims1600 seed 202690334
+    SLOT 35 game 35 pair 17 red sims400 seed 202690335
+    SLOT 36 game 36 pair 18 red sims1600 seed 202690336
+    SLOT 37 game 37 pair 18 red sims400 seed 202690337
+    SLOT 38 game 38 pair 19 red sims1600 seed 202690338
+    SLOT 39 game 39 pair 19 red sims400 seed 202690339
+    SLOT 40 game 40 pair 20 red sims1600 seed 202690340
+    SLOT 41 game 41 pair 20 red sims400 seed 202690341
+    SLOT 42 game 42 pair 21 red sims1600 seed 202690342
+    SLOT 43 game 43 pair 21 red sims400 seed 202690343
+    SLOT 44 game 44 pair 22 red sims1600 seed 202690344
+    SLOT 45 game 45 pair 22 red sims400 seed 202690345
+    SLOT 46 game 46 pair 23 red sims1600 seed 202690346
+    SLOT 47 game 47 pair 23 red sims400 seed 202690347
+    SLOT 48 game 48 pair 24 red sims1600 seed 202690348
+    SLOT 49 game 49 pair 24 red sims400 seed 202690349
+    SLOT 50 game 50 pair 25 red sims1600 seed 202690350
+    SLOT 51 game 51 pair 25 red sims400 seed 202690351
+    SLOT 52 game 52 pair 26 red sims1600 seed 202690352
+    SLOT 53 game 53 pair 26 red sims400 seed 202690353
+    SLOT 54 game 54 pair 27 red sims1600 seed 202690354
+    SLOT 55 game 55 pair 27 red sims400 seed 202690355
+    SLOT 56 game 56 pair 28 red sims1600 seed 202690356
+    SLOT 57 game 57 pair 28 red sims400 seed 202690357
+    SLOT 58 game 58 pair 29 red sims1600 seed 202690358
+    SLOT 59 game 59 pair 29 red sims400 seed 202690359
+    SLOT 60 game 60 pair 30 red sims1600 seed 202690360
+    SLOT 61 game 61 pair 30 red sims400 seed 202690361
+    SLOT 62 game 62 pair 31 red sims1600 seed 202690362
+    SLOT 63 game 63 pair 31 red sims400 seed 202690363
+    SLOT 64 game 64 pair 32 red sims1600 seed 202690364
+    SLOT 65 game 65 pair 32 red sims400 seed 202690365
+    SLOT 66 game 66 pair 33 red sims1600 seed 202690366
+    SLOT 67 game 67 pair 33 red sims400 seed 202690367
+    SLOT 68 game 68 pair 34 red sims1600 seed 202690368
+    SLOT 69 game 69 pair 34 red sims400 seed 202690369
+    SLOT 70 game 70 pair 35 red sims1600 seed 202690370
+    SLOT 71 game 71 pair 35 red sims400 seed 202690371
+    SLOT 72 game 72 pair 36 red sims1600 seed 202690372
+    SLOT 73 game 73 pair 36 red sims400 seed 202690373
+    SLOT 74 game 74 pair 37 red sims1600 seed 202690374
+    SLOT 75 game 75 pair 37 red sims400 seed 202690375
+    SLOT 76 game 76 pair 38 red sims1600 seed 202690376
+    SLOT 77 game 77 pair 38 red sims400 seed 202690377
+    SLOT 78 game 78 pair 39 red sims1600 seed 202690378
+    SLOT 79 game 79 pair 39 red sims400 seed 202690379
+    SLOT 80 game 80 pair 40 red sims1600 seed 202690380
+    SLOT 81 game 81 pair 40 red sims400 seed 202690381
+    SLOT 82 game 82 pair 41 red sims1600 seed 202690382
+    SLOT 83 game 83 pair 41 red sims400 seed 202690383
+    SLOT 84 game 84 pair 42 red sims1600 seed 202690384
+    SLOT 85 game 85 pair 42 red sims400 seed 202690385
+    SLOT 86 game 86 pair 43 red sims1600 seed 202690386
+    SLOT 87 game 87 pair 43 red sims400 seed 202690387
+    SLOT 88 game 88 pair 44 red sims1600 seed 202690388
+    SLOT 89 game 89 pair 44 red sims400 seed 202690389
+    SLOT 90 game 90 pair 45 red sims1600 seed 202690390
+    SLOT 91 game 91 pair 45 red sims400 seed 202690391
+    SLOT 92 game 92 pair 46 red sims1600 seed 202690392
+    SLOT 93 game 93 pair 46 red sims400 seed 202690393
+    SLOT 94 game 94 pair 47 red sims1600 seed 202690394
+    SLOT 95 game 95 pair 47 red sims400 seed 202690395
+    SLOT 96 game 96 pair 48 red sims1600 seed 202690396
+    SLOT 97 game 97 pair 48 red sims400 seed 202690397
+    SLOT 98 game 98 pair 49 red sims1600 seed 202690398
+    SLOT 99 game 99 pair 49 red sims400 seed 202690399
+    SLOT 100 game 100 pair 50 red sims1600 seed 202690400
+    SLOT 101 game 101 pair 50 red sims400 seed 202690401
+    SLOT 102 game 102 pair 51 red sims1600 seed 202690402
+    SLOT 103 game 103 pair 51 red sims400 seed 202690403
+    SLOT 104 game 104 pair 52 red sims1600 seed 202690404
+    SLOT 105 game 105 pair 52 red sims400 seed 202690405
+    SLOT 106 game 106 pair 53 red sims1600 seed 202690406
+    SLOT 107 game 107 pair 53 red sims400 seed 202690407
+    SLOT 108 game 108 pair 54 red sims1600 seed 202690408
+    SLOT 109 game 109 pair 54 red sims400 seed 202690409
+    SLOT 110 game 110 pair 55 red sims1600 seed 202690410
+    SLOT 111 game 111 pair 55 red sims400 seed 202690411
+    SLOT 112 game 112 pair 56 red sims1600 seed 202690412
+    SLOT 113 game 113 pair 56 red sims400 seed 202690413
+    SLOT 114 game 114 pair 57 red sims1600 seed 202690414
+    SLOT 115 game 115 pair 57 red sims400 seed 202690415
+    SLOT 116 game 116 pair 58 red sims1600 seed 202690416
+    SLOT 117 game 117 pair 58 red sims400 seed 202690417
+    SLOT 118 game 118 pair 59 red sims1600 seed 202690418
+    SLOT 119 game 119 pair 59 red sims400 seed 202690419
+    SLOT 120 game 120 pair 60 red sims1600 seed 202690420
+    SLOT 121 game 121 pair 60 red sims400 seed 202690421
+    SLOT 122 game 122 pair 61 red sims1600 seed 202690422
+    SLOT 123 game 123 pair 61 red sims400 seed 202690423
+    SLOT 124 game 124 pair 62 red sims1600 seed 202690424
+    SLOT 125 game 125 pair 62 red sims400 seed 202690425
+    SLOT 126 game 126 pair 63 red sims1600 seed 202690426
+    SLOT 127 game 127 pair 63 red sims400 seed 202690427
+    SLOT 128 game 128 pair 64 red sims1600 seed 202690428
+    SLOT 129 game 129 pair 64 red sims400 seed 202690429
+    SLOT 130 game 130 pair 65 red sims1600 seed 202690430
+    SLOT 131 game 131 pair 65 red sims400 seed 202690431
+    SLOT 132 game 132 pair 66 red sims1600 seed 202690432
+    SLOT 133 game 133 pair 66 red sims400 seed 202690433
+    SLOT 134 game 134 pair 67 red sims1600 seed 202690434
+    SLOT 135 game 135 pair 67 red sims400 seed 202690435
+    SLOT 136 game 136 pair 68 red sims1600 seed 202690436
+    SLOT 137 game 137 pair 68 red sims400 seed 202690437
+    SLOT 138 game 138 pair 69 red sims1600 seed 202690438
+    SLOT 139 game 139 pair 69 red sims400 seed 202690439
+    SLOT 140 game 140 pair 70 red sims1600 seed 202690440
+    SLOT 141 game 141 pair 70 red sims400 seed 202690441
+    SLOT 142 game 142 pair 71 red sims1600 seed 202690442
+    SLOT 143 game 143 pair 71 red sims400 seed 202690443
+    SLOT 144 game 144 pair 72 red sims1600 seed 202690444
+    SLOT 145 game 145 pair 72 red sims400 seed 202690445
+    SLOT 146 game 146 pair 73 red sims1600 seed 202690446
+    SLOT 147 game 147 pair 73 red sims400 seed 202690447
+    SLOT 148 game 148 pair 74 red sims1600 seed 202690448
+    SLOT 149 game 149 pair 74 red sims400 seed 202690449
+    SLOT 150 game 150 pair 75 red sims1600 seed 202690450
+    SLOT 151 game 151 pair 75 red sims400 seed 202690451
+    SLOT 152 game 152 pair 76 red sims1600 seed 202690452
+    SLOT 153 game 153 pair 76 red sims400 seed 202690453
+    SLOT 154 game 154 pair 77 red sims1600 seed 202690454
+    SLOT 155 game 155 pair 77 red sims400 seed 202690455
+    SLOT 156 game 156 pair 78 red sims1600 seed 202690456
+    SLOT 157 game 157 pair 78 red sims400 seed 202690457
+    SLOT 158 game 158 pair 79 red sims1600 seed 202690458
+    SLOT 159 game 159 pair 79 red sims400 seed 202690459
+
+CONTROLS
+------------------------------------------------------------------------------------------------
+  PASS   REJECTED: D1 paper block (202615000, 202615221)
+  PASS   REJECTED: H1 block (202616000, 202616224)
+  PASS   REJECTED: H2 block (202618000, 202618736)
+  PASS   REJECTED: H3 block (202624000, 202624040)
+  PASS   REJECTED: H4 block (202632000, 202632032)
+  PASS   REJECTED: H5 block (202650000, 202650148)
+  PASS   REJECTED: the TEST_ONLY band
+  PASS   REJECTED: inside the live H3 uniform generation range
+  PASS   REJECTED: overlaps the block by one seed
+  PASS   REJECTED: starts where the block ends -- inside the floor
+  PASS   REJECTED: one seed inside the floor
+  PASS   REJECTED: the most recently EXPOSED block (stage 3's games)
+  PASS   REJECTED: a block at the H4-4b MUTATION literal 202642000
+  PASS   an UNDERSCORE-GROUPED candidate seed (.py)  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=167; dropping undecodable bytes instead would see it]
+  PASS   a PLAIN candidate seed (.py)  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=167; dropping undecodable bytes instead would see it]
+  PASS   an UNDERSCORE-GROUPED exclusive end (.py)  [without it CLEAN=True; with it direct=NONE gap=0; dropping undecodable bytes instead would see it]
+  PASS   a candidate seed in a .log -- a suffix H5's filter skipped  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=167; dropping undecodable bytes instead would see it]
+  PASS   a candidate seed inside a .gz  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=167; dropping undecodable bytes instead would see it]
+  PASS   a candidate seed after an undecodable byte after a digit  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=167; dropping undecodable bytes instead would MISS it]
+  PASS   an UNREADABLE file stops the survey  [SurveyStop]
+  PASS   a CORRUPT .gz stops the survey  [SurveyStop]
+  PASS   an own record (exact path) is exempt  [None]
+  PASS   a sibling path that is NOT listed is counted  [[('docs/superpowers/evidence/search-distillation-stage-a-seed-survey/04_not_listed.txt', 1)]]
+  PASS   the plan holding only block seeds is exempt  [None]
+  PASS   registry tuple elements are exempt by parsing (a non-ASCII char BEFORE them)  [[202690311]]
+  PASS   the same value outside a registry tuple is counted  [[('scripts/GPU/alphazero/e4_screen_reference.py', 1)]]
+  PASS   a plan with a seed OUTSIDE the block is not exempt  [[202690300, 202690465]]
+  PASS   an UNREADABLE directory  [STOPPED: a directory could not be read]
+  PASS   an UNREADABLE nested directory  [STOPPED: a directory could not be read]
+  PASS   a missing root  [STOPPED: <tmp>/tests: the root is not a directory]
+  PASS   a root that is a file  [STOPPED: <tmp>/scripts: the root is not a directory]
+  PASS   a FIFO inside a root  [STOPPED: <tmp>/scripts/pipe: neither a regular file, a directory nor a symbolic link]
+  PASS   a sound tree with a symbolic link  [enumerated: 3 files, 1 links]
+  PASS   pre: the survey's registry, no plan  [the expected state]
+  PASS   pre: the registry changed  [the registry is not the one the survey read]
+  PASS   pre: the block already registered  [the registry is not the one the survey read; a registry already holds seeds of the block: [('ACCOUNTED_SEED_INTERVALS', (202690300, 202690460))]]
+  PASS   pre: a plan already exists  [a pilot plan already exists]
+  PASS   post: exactly the block appended last, the plan  [the expected state]
+  PASS   post: the block appended FIRST  [ACCOUNTED is not the survey's state with exactly the block appended last]
+  PASS   post: a wider tuple  [ACCOUNTED is not the survey's state with exactly the block appended last]
+  PASS   post: EXPOSED changed too  [EXPOSED_SEED_INTERVALS changed]
+  PASS   post: no plan  [the Stage A plan is absent or not committed]
+  PASS   post: a plan with another BASE  [the Stage A plan is not build_plan of the surveyed block]
+  PASS   post: a plan of 161 slots  [the Stage A plan is not build_plan of the surveyed block]
+  PASS   post: a plan bound to another survey record  [the Stage A plan is not build_plan of the surveyed block]
+
+controls passed: 45/45
+PROOF VERDICT (post): THE STAGE-A BLOCK IS CLEAN AND THE STATE IS AS EXPECTED
