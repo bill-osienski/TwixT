@@ -1,0 +1,323 @@
+{"event": "start", "t": 0.007, "head": "a809308f1a2d5a55fc8549a9ea6ce8b8e09e0d8f"}
+{"event": "loaded", "t": 0.219, "seconds": 0.023}
+{"event": "game_start", "t": 0.231, "game": 0, "slot": 0, "red": "sims1600"}
+{"event": "game_end", "t": 131.95, "game": 0, "slot": 0, "seconds": 131.718, "n_moves": 43, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 131.95, "game": 1, "slot": 1, "red": "sims400"}
+{"event": "game_end", "t": 278.782, "game": 1, "slot": 1, "seconds": 146.831, "n_moves": 50, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 278.782, "game": 2, "slot": 2, "red": "sims1600"}
+{"event": "game_end", "t": 401.635, "game": 2, "slot": 2, "seconds": 122.853, "n_moves": 43, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 401.635, "game": 3, "slot": 3, "red": "sims400"}
+{"event": "game_end", "t": 542.908, "game": 3, "slot": 3, "seconds": 141.272, "n_moves": 50, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 542.908, "game": 4, "slot": 4, "red": "sims1600"}
+{"event": "game_end", "t": 663.271, "game": 4, "slot": 4, "seconds": 120.363, "n_moves": 39, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 663.271, "game": 5, "slot": 5, "red": "sims400"}
+{"event": "game_end", "t": 814.96, "game": 5, "slot": 5, "seconds": 151.688, "n_moves": 50, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 814.96, "game": 6, "slot": 6, "red": "sims1600"}
+{"event": "game_end", "t": 966.743, "game": 6, "slot": 6, "seconds": 151.782, "n_moves": 49, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 966.743, "game": 7, "slot": 7, "red": "sims400"}
+{"event": "game_end", "t": 1231.256, "game": 7, "slot": 7, "seconds": 264.512, "n_moves": 72, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 1231.257, "game": 8, "slot": 8, "red": "sims1600"}
+{"event": "game_end", "t": 1471.725, "game": 8, "slot": 8, "seconds": 240.467, "n_moves": 50, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 1471.726, "game": 9, "slot": 9, "red": "sims400"}
+{"event": "game_end", "t": 1607.702, "game": 9, "slot": 9, "seconds": 135.976, "n_moves": 44, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 1607.703, "game": 10, "slot": 10, "red": "sims1600"}
+{"event": "game_end", "t": 1756.125, "game": 10, "slot": 10, "seconds": 148.422, "n_moves": 49, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 1756.125, "game": 11, "slot": 11, "red": "sims400"}
+{"event": "game_end", "t": 1972.329, "game": 11, "slot": 11, "seconds": 216.204, "n_moves": 71, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 1972.33, "game": 12, "slot": 12, "red": "sims1600"}
+{"event": "game_end", "t": 2279.656, "game": 12, "slot": 12, "seconds": 307.325, "n_moves": 84, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 2279.657, "game": 13, "slot": 13, "red": "sims400"}
+{"event": "game_end", "t": 2382.076, "game": 13, "slot": 13, "seconds": 102.419, "n_moves": 32, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 2382.077, "game": 14, "slot": 14, "red": "sims1600"}
+{"event": "game_end", "t": 2596.014, "game": 14, "slot": 14, "seconds": 213.936, "n_moves": 59, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 2596.015, "game": 15, "slot": 15, "red": "sims400"}
+{"event": "game_end", "t": 2814.809, "game": 15, "slot": 15, "seconds": 218.793, "n_moves": 72, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 2814.809, "game": 16, "slot": 16, "red": "sims1600"}
+{"event": "game_end", "t": 2985.324, "game": 16, "slot": 16, "seconds": 170.514, "n_moves": 55, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 2985.324, "game": 17, "slot": 17, "red": "sims400"}
+{"event": "game_end", "t": 3235.053, "game": 17, "slot": 17, "seconds": 249.728, "n_moves": 68, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 3235.054, "game": 18, "slot": 18, "red": "sims1600"}
+{"event": "game_end", "t": 4195.248, "game": 18, "slot": 18, "seconds": 960.193, "n_moves": 280, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 4195.248, "game": 19, "slot": 19, "red": "sims400"}
+{"event": "game_end", "t": 4336.341, "game": 19, "slot": 19, "seconds": 141.09, "n_moves": 42, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 4336.341, "game": 20, "slot": 20, "red": "sims1600"}
+{"event": "game_end", "t": 4551.57, "game": 20, "slot": 20, "seconds": 215.228, "n_moves": 45, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 4551.57, "game": 21, "slot": 21, "red": "sims400"}
+{"event": "game_end", "t": 4698.124, "game": 21, "slot": 21, "seconds": 146.553, "n_moves": 40, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 4698.124, "game": 22, "slot": 22, "red": "sims1600"}
+{"event": "game_end", "t": 4867.105, "game": 22, "slot": 22, "seconds": 168.98, "n_moves": 49, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 4867.106, "game": 23, "slot": 23, "red": "sims400"}
+{"event": "game_end", "t": 5085.899, "game": 23, "slot": 23, "seconds": 218.793, "n_moves": 66, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 5085.9, "game": 24, "slot": 24, "red": "sims1600"}
+{"event": "game_end", "t": 5278.048, "game": 24, "slot": 24, "seconds": 192.148, "n_moves": 58, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 5278.049, "game": 25, "slot": 25, "red": "sims400"}
+{"event": "game_end", "t": 5458.279, "game": 25, "slot": 25, "seconds": 180.228, "n_moves": 54, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 5458.279, "game": 26, "slot": 26, "red": "sims1600"}
+{"event": "game_end", "t": 5662.428, "game": 26, "slot": 26, "seconds": 204.148, "n_moves": 62, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 5662.428, "game": 27, "slot": 27, "red": "sims400"}
+{"event": "game_end", "t": 5846.569, "game": 27, "slot": 27, "seconds": 184.138, "n_moves": 59, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 5846.569, "game": 28, "slot": 28, "red": "sims1600"}
+{"event": "game_end", "t": 6004.399, "game": 28, "slot": 28, "seconds": 157.829, "n_moves": 53, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 6004.399, "game": 29, "slot": 29, "red": "sims400"}
+{"event": "game_end", "t": 6198.1, "game": 29, "slot": 29, "seconds": 193.7, "n_moves": 64, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 6198.101, "game": 30, "slot": 30, "red": "sims1600"}
+{"event": "game_end", "t": 6386.527, "game": 30, "slot": 30, "seconds": 188.426, "n_moves": 59, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 6386.528, "game": 31, "slot": 31, "red": "sims400"}
+{"event": "game_end", "t": 6515.389, "game": 31, "slot": 31, "seconds": 128.86, "n_moves": 44, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 6515.39, "game": 32, "slot": 32, "red": "sims1600"}
+{"event": "game_end", "t": 6676.182, "game": 32, "slot": 32, "seconds": 160.792, "n_moves": 53, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 6676.183, "game": 33, "slot": 33, "red": "sims400"}
+{"event": "game_end", "t": 6812.483, "game": 33, "slot": 33, "seconds": 136.3, "n_moves": 46, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 6812.483, "game": 34, "slot": 34, "red": "sims1600"}
+{"event": "game_end", "t": 6961.093, "game": 34, "slot": 34, "seconds": 148.609, "n_moves": 49, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 6961.094, "game": 35, "slot": 35, "red": "sims400"}
+{"event": "game_end", "t": 7177.623, "game": 35, "slot": 35, "seconds": 216.528, "n_moves": 60, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 7177.624, "game": 36, "slot": 36, "red": "sims1600"}
+{"event": "game_end", "t": 7299.792, "game": 36, "slot": 36, "seconds": 122.168, "n_moves": 37, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 7299.792, "game": 37, "slot": 37, "red": "sims400"}
+{"event": "game_end", "t": 7547.649, "game": 37, "slot": 37, "seconds": 247.855, "n_moves": 70, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 7547.65, "game": 38, "slot": 38, "red": "sims1600"}
+{"event": "game_end", "t": 7762.259, "game": 38, "slot": 38, "seconds": 214.609, "n_moves": 59, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 7762.26, "game": 39, "slot": 39, "red": "sims400"}
+{"event": "game_end", "t": 7918.929, "game": 39, "slot": 39, "seconds": 156.669, "n_moves": 46, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 7918.93, "game": 40, "slot": 40, "red": "sims1600"}
+{"event": "game_end", "t": 8151.85, "game": 40, "slot": 40, "seconds": 232.92, "n_moves": 70, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 8151.852, "game": 41, "slot": 41, "red": "sims400"}
+{"event": "game_end", "t": 8452.553, "game": 41, "slot": 41, "seconds": 300.701, "n_moves": 90, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 8452.555, "game": 42, "slot": 42, "red": "sims1600"}
+{"event": "game_end", "t": 8702.467, "game": 42, "slot": 42, "seconds": 249.911, "n_moves": 77, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 8702.468, "game": 43, "slot": 43, "red": "sims400"}
+{"event": "game_end", "t": 8951.164, "game": 43, "slot": 43, "seconds": 248.695, "n_moves": 78, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 8951.164, "game": 44, "slot": 44, "red": "sims1600"}
+{"event": "game_end", "t": 9093.305, "game": 44, "slot": 44, "seconds": 142.14, "n_moves": 43, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 9093.306, "game": 45, "slot": 45, "red": "sims400"}
+{"event": "game_end", "t": 9283.652, "game": 45, "slot": 45, "seconds": 190.345, "n_moves": 58, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 9283.653, "game": 46, "slot": 46, "red": "sims1600"}
+{"event": "game_end", "t": 9419.696, "game": 46, "slot": 46, "seconds": 136.041, "n_moves": 43, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 9419.697, "game": 47, "slot": 47, "red": "sims400"}
+{"event": "game_end", "t": 9647.067, "game": 47, "slot": 47, "seconds": 227.37, "n_moves": 70, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 9647.068, "game": 48, "slot": 48, "red": "sims1600"}
+{"event": "game_end", "t": 9821.262, "game": 48, "slot": 48, "seconds": 174.193, "n_moves": 56, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 9821.263, "game": 49, "slot": 49, "red": "sims400"}
+{"event": "game_end", "t": 10061.288, "game": 49, "slot": 49, "seconds": 240.024, "n_moves": 78, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 10061.289, "game": 50, "slot": 50, "red": "sims1600"}
+{"event": "game_end", "t": 10233.567, "game": 50, "slot": 50, "seconds": 172.278, "n_moves": 57, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 10233.568, "game": 51, "slot": 51, "red": "sims400"}
+{"event": "game_end", "t": 10350.046, "game": 51, "slot": 51, "seconds": 116.477, "n_moves": 40, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 10350.046, "game": 52, "slot": 52, "red": "sims1600"}
+{"event": "game_end", "t": 10539.331, "game": 52, "slot": 52, "seconds": 189.284, "n_moves": 57, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 10539.331, "game": 53, "slot": 53, "red": "sims400"}
+{"event": "game_end", "t": 10872.54, "game": 53, "slot": 53, "seconds": 333.209, "n_moves": 72, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 10872.541, "game": 54, "slot": 54, "red": "sims1600"}
+{"event": "game_end", "t": 11056.451, "game": 54, "slot": 54, "seconds": 183.909, "n_moves": 50, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 11056.451, "game": 55, "slot": 55, "red": "sims400"}
+{"event": "game_end", "t": 11210.191, "game": 55, "slot": 55, "seconds": 153.74, "n_moves": 40, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 11210.192, "game": 56, "slot": 56, "red": "sims1600"}
+{"event": "game_end", "t": 11332.744, "game": 56, "slot": 56, "seconds": 122.552, "n_moves": 41, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 11332.745, "game": 57, "slot": 57, "red": "sims400"}
+{"event": "game_end", "t": 11484.146, "game": 57, "slot": 57, "seconds": 151.4, "n_moves": 50, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 11484.147, "game": 58, "slot": 58, "red": "sims1600"}
+{"event": "game_end", "t": 12515.959, "game": 58, "slot": 58, "seconds": 1031.811, "n_moves": 280, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 12515.96, "game": 59, "slot": 59, "red": "sims400"}
+{"event": "game_end", "t": 12653.486, "game": 59, "slot": 59, "seconds": 137.525, "n_moves": 41, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 12653.487, "game": 60, "slot": 60, "red": "sims1600"}
+{"event": "game_end", "t": 12904.644, "game": 60, "slot": 60, "seconds": 251.156, "n_moves": 80, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 12904.645, "game": 61, "slot": 61, "red": "sims400"}
+{"event": "game_end", "t": 13068.84, "game": 61, "slot": 61, "seconds": 164.195, "n_moves": 54, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 13068.841, "game": 62, "slot": 62, "red": "sims1600"}
+{"event": "game_end", "t": 13158.346, "game": 62, "slot": 62, "seconds": 89.505, "n_moves": 30, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 13158.347, "game": 63, "slot": 63, "red": "sims400"}
+{"event": "game_end", "t": 13298.497, "game": 63, "slot": 63, "seconds": 140.148, "n_moves": 49, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 13298.498, "game": 64, "slot": 64, "red": "sims1600"}
+{"event": "game_end", "t": 13511.988, "game": 64, "slot": 64, "seconds": 213.49, "n_moves": 71, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 13511.989, "game": 65, "slot": 65, "red": "sims400"}
+{"event": "game_end", "t": 13658.119, "game": 65, "slot": 65, "seconds": 146.13, "n_moves": 51, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 13658.119, "game": 66, "slot": 66, "red": "sims1600"}
+{"event": "game_end", "t": 13806.254, "game": 66, "slot": 66, "seconds": 148.135, "n_moves": 50, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 13806.255, "game": 67, "slot": 67, "red": "sims400"}
+{"event": "game_end", "t": 13983.278, "game": 67, "slot": 67, "seconds": 177.022, "n_moves": 60, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 13983.279, "game": 68, "slot": 68, "red": "sims1600"}
+{"event": "game_end", "t": 14097.448, "game": 68, "slot": 68, "seconds": 114.169, "n_moves": 37, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 14097.449, "game": 69, "slot": 69, "red": "sims400"}
+{"event": "game_end", "t": 14245.622, "game": 69, "slot": 69, "seconds": 148.173, "n_moves": 50, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 14245.623, "game": 70, "slot": 70, "red": "sims1600"}
+{"event": "game_end", "t": 14396.013, "game": 70, "slot": 70, "seconds": 150.39, "n_moves": 51, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 14396.014, "game": 71, "slot": 71, "red": "sims400"}
+{"event": "game_end", "t": 14611.474, "game": 71, "slot": 71, "seconds": 215.46, "n_moves": 74, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 14611.475, "game": 72, "slot": 72, "red": "sims1600"}
+{"event": "game_end", "t": 14769.99, "game": 72, "slot": 72, "seconds": 158.515, "n_moves": 54, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 14769.991, "game": 73, "slot": 73, "red": "sims400"}
+{"event": "game_end", "t": 14887.3, "game": 73, "slot": 73, "seconds": 117.308, "n_moves": 42, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 14887.3, "game": 74, "slot": 74, "red": "sims1600"}
+{"event": "game_end", "t": 15028.338, "game": 74, "slot": 74, "seconds": 141.038, "n_moves": 49, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 15028.338, "game": 75, "slot": 75, "red": "sims400"}
+{"event": "game_end", "t": 15145.109, "game": 75, "slot": 75, "seconds": 116.771, "n_moves": 41, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 15145.109, "game": 76, "slot": 76, "red": "sims1600"}
+{"event": "game_end", "t": 15301.31, "game": 76, "slot": 76, "seconds": 156.2, "n_moves": 53, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 15301.31, "game": 77, "slot": 77, "red": "sims400"}
+{"event": "game_end", "t": 15449.132, "game": 77, "slot": 77, "seconds": 147.821, "n_moves": 52, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 15449.133, "game": 78, "slot": 78, "red": "sims1600"}
+{"event": "game_end", "t": 15650.08, "game": 78, "slot": 78, "seconds": 200.947, "n_moves": 55, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 15650.081, "game": 79, "slot": 79, "red": "sims400"}
+{"event": "game_end", "t": 15886.136, "game": 79, "slot": 79, "seconds": 236.054, "n_moves": 61, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 15886.137, "game": 80, "slot": 80, "red": "sims1600"}
+{"event": "game_end", "t": 16085.638, "game": 80, "slot": 80, "seconds": 199.5, "n_moves": 57, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 16085.639, "game": 81, "slot": 81, "red": "sims400"}
+{"event": "game_end", "t": 16281.805, "game": 81, "slot": 81, "seconds": 196.166, "n_moves": 59, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 16281.806, "game": 82, "slot": 82, "red": "sims1600"}
+{"event": "game_end", "t": 16654.349, "game": 82, "slot": 82, "seconds": 372.542, "n_moves": 109, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 16654.349, "game": 83, "slot": 83, "red": "sims400"}
+{"event": "game_end", "t": 16803.603, "game": 83, "slot": 83, "seconds": 149.253, "n_moves": 48, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 16803.604, "game": 84, "slot": 84, "red": "sims1600"}
+{"event": "game_end", "t": 17048.561, "game": 84, "slot": 84, "seconds": 244.957, "n_moves": 67, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 17048.562, "game": 85, "slot": 85, "red": "sims400"}
+{"event": "game_end", "t": 17227.412, "game": 85, "slot": 85, "seconds": 178.85, "n_moves": 46, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 17227.413, "game": 86, "slot": 86, "red": "sims1600"}
+{"event": "game_end", "t": 17856.464, "game": 86, "slot": 86, "seconds": 629.05, "n_moves": 195, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 17856.465, "game": 87, "slot": 87, "red": "sims400"}
+{"event": "game_end", "t": 18047.931, "game": 87, "slot": 87, "seconds": 191.465, "n_moves": 66, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 18047.931, "game": 88, "slot": 88, "red": "sims1600"}
+{"event": "game_end", "t": 18179.801, "game": 88, "slot": 88, "seconds": 131.87, "n_moves": 47, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 18179.802, "game": 89, "slot": 89, "red": "sims400"}
+{"event": "game_end", "t": 18325.406, "game": 89, "slot": 89, "seconds": 145.604, "n_moves": 50, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 18325.406, "game": 90, "slot": 90, "red": "sims1600"}
+{"event": "game_end", "t": 18424.448, "game": 90, "slot": 90, "seconds": 99.041, "n_moves": 35, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 18424.448, "game": 91, "slot": 91, "red": "sims400"}
+{"event": "game_end", "t": 18569.088, "game": 91, "slot": 91, "seconds": 144.64, "n_moves": 46, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 18569.089, "game": 92, "slot": 92, "red": "sims1600"}
+{"event": "game_end", "t": 18720.686, "game": 92, "slot": 92, "seconds": 151.597, "n_moves": 47, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 18720.687, "game": 93, "slot": 93, "red": "sims400"}
+{"event": "game_end", "t": 18904.127, "game": 93, "slot": 93, "seconds": 183.439, "n_moves": 60, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 18904.128, "game": 94, "slot": 94, "red": "sims1600"}
+{"event": "game_end", "t": 19330.708, "game": 94, "slot": 94, "seconds": 426.579, "n_moves": 144, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 19330.708, "game": 95, "slot": 95, "red": "sims400"}
+{"event": "game_end", "t": 19512.972, "game": 95, "slot": 95, "seconds": 182.263, "n_moves": 65, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 19512.972, "game": 96, "slot": 96, "red": "sims1600"}
+{"event": "game_end", "t": 19627.81, "game": 96, "slot": 96, "seconds": 114.838, "n_moves": 41, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 19627.811, "game": 97, "slot": 97, "red": "sims400"}
+{"event": "game_end", "t": 19760.987, "game": 97, "slot": 97, "seconds": 133.176, "n_moves": 48, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 19760.987, "game": 98, "slot": 98, "red": "sims1600"}
+{"event": "game_end", "t": 19876.179, "game": 98, "slot": 98, "seconds": 115.191, "n_moves": 41, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 19876.179, "game": 99, "slot": 99, "red": "sims400"}
+{"event": "game_end", "t": 20082.535, "game": 99, "slot": 99, "seconds": 206.355, "n_moves": 64, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 20082.535, "game": 100, "slot": 100, "red": "sims1600"}
+{"event": "game_end", "t": 20242.712, "game": 100, "slot": 100, "seconds": 160.177, "n_moves": 50, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 20242.713, "game": 101, "slot": 101, "red": "sims400"}
+{"event": "game_end", "t": 20363.289, "game": 101, "slot": 101, "seconds": 120.575, "n_moves": 44, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 20363.289, "game": 102, "slot": 102, "red": "sims1600"}
+{"event": "game_end", "t": 20594.601, "game": 102, "slot": 102, "seconds": 231.311, "n_moves": 74, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 20594.601, "game": 103, "slot": 103, "red": "sims400"}
+{"event": "game_end", "t": 21578.431, "game": 103, "slot": 103, "seconds": 983.829, "n_moves": 280, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 21578.432, "game": 104, "slot": 104, "red": "sims1600"}
+{"event": "game_end", "t": 21778.261, "game": 104, "slot": 104, "seconds": 199.829, "n_moves": 61, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 21778.261, "game": 105, "slot": 105, "red": "sims400"}
+{"event": "game_end", "t": 21883.296, "game": 105, "slot": 105, "seconds": 105.033, "n_moves": 36, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 21883.296, "game": 106, "slot": 106, "red": "sims1600"}
+{"event": "game_end", "t": 21993.299, "game": 106, "slot": 106, "seconds": 110.003, "n_moves": 37, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 21993.299, "game": 107, "slot": 107, "red": "sims400"}
+{"event": "game_end", "t": 22129.244, "game": 107, "slot": 107, "seconds": 135.945, "n_moves": 44, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 22129.245, "game": 108, "slot": 108, "red": "sims1600"}
+{"event": "game_end", "t": 22272.24, "game": 108, "slot": 108, "seconds": 142.995, "n_moves": 49, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 22272.241, "game": 109, "slot": 109, "red": "sims400"}
+{"event": "game_end", "t": 22456.956, "game": 109, "slot": 109, "seconds": 184.715, "n_moves": 63, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 22456.958, "game": 110, "slot": 110, "red": "sims1600"}
+{"event": "game_end", "t": 22634.821, "game": 110, "slot": 110, "seconds": 177.863, "n_moves": 61, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 22634.822, "game": 111, "slot": 111, "red": "sims400"}
+{"event": "game_end", "t": 22782.852, "game": 111, "slot": 111, "seconds": 148.028, "n_moves": 48, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 22782.853, "game": 112, "slot": 112, "red": "sims1600"}
+{"event": "game_end", "t": 22908.362, "game": 112, "slot": 112, "seconds": 125.509, "n_moves": 39, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 22908.363, "game": 113, "slot": 113, "red": "sims400"}
+{"event": "game_end", "t": 23112.693, "game": 113, "slot": 113, "seconds": 204.329, "n_moves": 60, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 23112.694, "game": 114, "slot": 114, "red": "sims1600"}
+{"event": "game_end", "t": 23298.941, "game": 114, "slot": 114, "seconds": 186.247, "n_moves": 66, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 23298.942, "game": 115, "slot": 115, "red": "sims400"}
+{"event": "game_end", "t": 23483.678, "game": 115, "slot": 115, "seconds": 184.735, "n_moves": 52, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 23483.679, "game": 116, "slot": 116, "red": "sims1600"}
+{"event": "game_end", "t": 23805.849, "game": 116, "slot": 116, "seconds": 322.17, "n_moves": 94, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 23805.85, "game": 117, "slot": 117, "red": "sims400"}
+{"event": "game_end", "t": 23916.734, "game": 117, "slot": 117, "seconds": 110.883, "n_moves": 38, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 23916.735, "game": 118, "slot": 118, "red": "sims1600"}
+{"event": "game_end", "t": 24129.204, "game": 118, "slot": 118, "seconds": 212.469, "n_moves": 73, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 24129.205, "game": 119, "slot": 119, "red": "sims400"}
+{"event": "game_end", "t": 24270.736, "game": 119, "slot": 119, "seconds": 141.53, "n_moves": 51, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 24270.736, "game": 120, "slot": 120, "red": "sims1600"}
+{"event": "game_end", "t": 24400.407, "game": 120, "slot": 120, "seconds": 129.67, "n_moves": 47, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 24400.407, "game": 121, "slot": 121, "red": "sims400"}
+{"event": "game_end", "t": 24493.043, "game": 121, "slot": 121, "seconds": 92.635, "n_moves": 36, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 24493.044, "game": 122, "slot": 122, "red": "sims1600"}
+{"event": "game_end", "t": 24607.475, "game": 122, "slot": 122, "seconds": 114.431, "n_moves": 41, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 24607.475, "game": 123, "slot": 123, "red": "sims400"}
+{"event": "game_end", "t": 24755.851, "game": 123, "slot": 123, "seconds": 148.375, "n_moves": 53, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 24755.852, "game": 124, "slot": 124, "red": "sims1600"}
+{"event": "game_end", "t": 24897.716, "game": 124, "slot": 124, "seconds": 141.864, "n_moves": 51, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 24897.716, "game": 125, "slot": 125, "red": "sims400"}
+{"event": "game_end", "t": 25014.558, "game": 125, "slot": 125, "seconds": 116.841, "n_moves": 43, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 25014.559, "game": 126, "slot": 126, "red": "sims1600"}
+{"event": "game_end", "t": 25195.479, "game": 126, "slot": 126, "seconds": 180.92, "n_moves": 64, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 25195.48, "game": 127, "slot": 127, "red": "sims400"}
+{"event": "game_end", "t": 25322.087, "game": 127, "slot": 127, "seconds": 126.606, "n_moves": 46, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 25322.087, "game": 128, "slot": 128, "red": "sims1600"}
+{"event": "game_end", "t": 25569.416, "game": 128, "slot": 128, "seconds": 247.328, "n_moves": 89, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 25569.417, "game": 129, "slot": 129, "red": "sims400"}
+{"event": "game_end", "t": 25738.285, "game": 129, "slot": 129, "seconds": 168.868, "n_moves": 62, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 25738.286, "game": 130, "slot": 130, "red": "sims1600"}
+{"event": "game_end", "t": 25927.633, "game": 130, "slot": 130, "seconds": 189.346, "n_moves": 67, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 25927.634, "game": 131, "slot": 131, "red": "sims400"}
+{"event": "game_end", "t": 26198.973, "game": 131, "slot": 131, "seconds": 271.338, "n_moves": 96, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 26198.973, "game": 132, "slot": 132, "red": "sims1600"}
+{"event": "game_end", "t": 26326.826, "game": 132, "slot": 132, "seconds": 127.852, "n_moves": 47, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 26326.827, "game": 133, "slot": 133, "red": "sims400"}
+{"event": "game_end", "t": 26440.089, "game": 133, "slot": 133, "seconds": 113.261, "n_moves": 42, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 26440.09, "game": 134, "slot": 134, "red": "sims1600"}
+{"event": "game_end", "t": 26569.336, "game": 134, "slot": 134, "seconds": 129.246, "n_moves": 47, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 26569.337, "game": 135, "slot": 135, "red": "sims400"}
+{"event": "game_end", "t": 26718.014, "game": 135, "slot": 135, "seconds": 148.676, "n_moves": 54, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 26718.014, "game": 136, "slot": 136, "red": "sims1600"}
+{"event": "game_end", "t": 26844.88, "game": 136, "slot": 136, "seconds": 126.865, "n_moves": 45, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 26844.881, "game": 137, "slot": 137, "red": "sims400"}
+{"event": "game_end", "t": 26986.296, "game": 137, "slot": 137, "seconds": 141.415, "n_moves": 52, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 26986.297, "game": 138, "slot": 138, "red": "sims1600"}
+{"event": "game_end", "t": 27174.452, "game": 138, "slot": 138, "seconds": 188.155, "n_moves": 67, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 27174.453, "game": 139, "slot": 139, "red": "sims400"}
+{"event": "game_end", "t": 27313.609, "game": 139, "slot": 139, "seconds": 139.156, "n_moves": 51, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 27313.61, "game": 140, "slot": 140, "red": "sims1600"}
+{"event": "game_end", "t": 27435.017, "game": 140, "slot": 140, "seconds": 121.407, "n_moves": 45, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 27435.017, "game": 141, "slot": 141, "red": "sims400"}
+{"event": "game_end", "t": 28267.136, "game": 141, "slot": 141, "seconds": 832.117, "n_moves": 280, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 28267.136, "game": 142, "slot": 142, "red": "sims1600"}
+{"event": "game_end", "t": 28431.594, "game": 142, "slot": 142, "seconds": 164.458, "n_moves": 59, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 28431.596, "game": 143, "slot": 143, "red": "sims400"}
+{"event": "game_end", "t": 28555.87, "game": 143, "slot": 143, "seconds": 124.274, "n_moves": 45, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 28555.871, "game": 144, "slot": 144, "red": "sims1600"}
+{"event": "game_end", "t": 28683.648, "game": 144, "slot": 144, "seconds": 127.777, "n_moves": 47, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 28683.649, "game": 145, "slot": 145, "red": "sims400"}
+{"event": "game_end", "t": 28824.641, "game": 145, "slot": 145, "seconds": 140.992, "n_moves": 52, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 28824.642, "game": 146, "slot": 146, "red": "sims1600"}
+{"event": "game_end", "t": 28919.876, "game": 146, "slot": 146, "seconds": 95.233, "n_moves": 35, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 28919.876, "game": 147, "slot": 147, "red": "sims400"}
+{"event": "game_end", "t": 29020.746, "game": 147, "slot": 147, "seconds": 100.869, "n_moves": 38, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 29020.747, "game": 148, "slot": 148, "red": "sims1600"}
+{"event": "game_end", "t": 29227.198, "game": 148, "slot": 148, "seconds": 206.45, "n_moves": 72, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 29227.198, "game": 149, "slot": 149, "red": "sims400"}
+{"event": "game_end", "t": 29334.669, "game": 149, "slot": 149, "seconds": 107.471, "n_moves": 40, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 29334.67, "game": 150, "slot": 150, "red": "sims1600"}
+{"event": "game_end", "t": 29487.587, "game": 150, "slot": 150, "seconds": 152.916, "n_moves": 55, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 29487.588, "game": 151, "slot": 151, "red": "sims400"}
+{"event": "game_end", "t": 29669.954, "game": 151, "slot": 151, "seconds": 182.363, "n_moves": 58, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 29669.955, "game": 152, "slot": 152, "red": "sims1600"}
+{"event": "game_end", "t": 29838.39, "game": 152, "slot": 152, "seconds": 168.435, "n_moves": 35, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 29838.391, "game": 153, "slot": 153, "red": "sims400"}
+{"event": "game_end", "t": 29951.545, "game": 153, "slot": 153, "seconds": 113.153, "n_moves": 40, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 29951.546, "game": 154, "slot": 154, "red": "sims1600"}
+{"event": "game_end", "t": 30149.787, "game": 154, "slot": 154, "seconds": 198.24, "n_moves": 59, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 30149.788, "game": 155, "slot": 155, "red": "sims400"}
+{"event": "game_end", "t": 30342.848, "game": 155, "slot": 155, "seconds": 193.06, "n_moves": 56, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 30342.849, "game": 156, "slot": 156, "red": "sims1600"}
+{"event": "game_end", "t": 30607.77, "game": 156, "slot": 156, "seconds": 264.921, "n_moves": 77, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 30607.771, "game": 157, "slot": 157, "red": "sims400"}
+{"event": "game_end", "t": 30714.311, "game": 157, "slot": 157, "seconds": 106.539, "n_moves": 36, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "game_start", "t": 30714.311, "game": 158, "slot": 158, "red": "sims1600"}
+{"event": "game_end", "t": 30825.1, "game": 158, "slot": 158, "seconds": 110.789, "n_moves": 38, "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 30825.101, "game": 159, "slot": 159, "red": "sims400"}
+{"event": "game_end", "t": 31028.653, "game": 159, "slot": 159, "seconds": 203.551, "n_moves": 71, "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "end", "t": 31029.026, "verdict": "COMPLETED"}
