@@ -527,6 +527,17 @@ ACCOUNTED_SEED_INTERVALS = (
     # Accounted, NOT exposed and NOT retired: exposure follows actual use, in a later,
     # separately authorized closing edit. No gate is opened by this.
     (202690000, 202690032),          # EXTERNAL-ENGINE LEARNING STAGE 3 -- 16 pairs, 32 game seeds
+    # 🔴 SEARCH DISTILLATION A1 -- 2 GAME SEEDS, registered 2026-10-11 under
+    # `2026-10-11-search-distillation-a1-card.md`: the two-seed block of the A1 survey
+    # (evidence/search-distillation-a1-seed-survey/02b_*), READ from that record, not chosen here;
+    # the first use of the replacement rule (seed_selection.candidate). One seed per game of one
+    # colour-reversed pair, calib020_0001 at 1,600 vs 400 simulations; the plan is
+    # evidence/search-distillation-a1/plan.json (base + slot count + survey hash). Registered ONLY
+    # after the pre-registration collision proof (same directory, 03_*) was CLEAN, 45/45.
+    #
+    # Accounted, NOT exposed and NOT retired: exposure follows actual use (the started-game
+    # prefix); the closing edit retires the whole block. No gate is opened by this.
+    (202690100, 202690102),          # SEARCH DISTILLATION A1 -- 1 pair, 2 game seeds
 )
 
 #: EXPERIMENTAL EXPOSURE: seeds drawn from OUTSIDE the permanently unschedulable
