@@ -1,0 +1,183 @@
+{
+ "card": "docs/superpowers/2026-10-11-search-distillation-a1-card.md",
+ "checkpoint": {
+  "path": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "sha1_verified": "209cf2d4fd24a48553d259dd71b4954867b9473e"
+ },
+ "environment": {
+  "executable": "/Users/bill/projects/TwixT_Game/.venv/bin/python",
+  "mlx": "0.30.3",
+  "numpy": "2.4.1",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "python": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.1.1.101)]"
+ },
+ "games": [
+  {
+   "black_agent_id": "sims400",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 400,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 0.0,
+   "comparison_unit": "agent",
+   "game_idx": 0,
+   "n_moves": 55,
+   "pairing_id": "a1",
+   "reason": "win",
+   "red_agent_id": "sims1600",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 1600,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 1.0,
+   "replay_path": "docs/superpowers/evidence/search-distillation-a1/replays/game_000000.json",
+   "root_total_visits": {
+    "black": [
+     400
+    ],
+    "red": [
+     1600
+    ]
+   },
+   "same_checkpoint": true,
+   "seconds": 339.456,
+   "slot": 0,
+   "task_id": 0,
+   "winner": "red",
+   "winner_agent_id": "sims1600",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "sims1600",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 1600,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 1.0,
+   "comparison_unit": "agent",
+   "game_idx": 1,
+   "n_moves": 48,
+   "pairing_id": "a1",
+   "reason": "win",
+   "red_agent_id": "sims400",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 400,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 0.0,
+   "replay_path": "docs/superpowers/evidence/search-distillation-a1/replays/game_000001.json",
+   "root_total_visits": {
+    "black": [
+     1600
+    ],
+    "red": [
+     400
+    ]
+   },
+   "same_checkpoint": true,
+   "seconds": 230.169,
+   "slot": 1,
+   "task_id": 1,
+   "winner": "black",
+   "winner_agent_id": "sims1600",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  }
+ ],
+ "head": "6ef33076a3c7d0de8dda94cda539cdf6505f6c57",
+ "kind": "search-distillation-a1-record/1",
+ "load_seconds": 0.034,
+ "modules": {
+  "docs/superpowers/evidence/search-distillation-a1/01_a1_run.py": "c11c5c1181d39ef98751e5d86abc1b09c2744492c4914c32c97b471594e87606",
+  "scripts/GPU/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "scripts/GPU/alphazero/__init__.py": "c6f13806151399f9e6be707271537b166ec79ba9729d8339800127c826adc4ab",
+  "scripts/GPU/alphazero/e4_screen_reference.py": "5cd3a5a56e284c183f247dcbb24b6651690fefb341ecba1babd1e4c40b2a46db",
+  "scripts/GPU/alphazero/eval_integrity.py": "bfedf8d677dd5391e389f4152de2a220f4cd70510e17b0643eaf1fbb011b3310",
+  "scripts/GPU/alphazero/eval_readout.py": "f0f5908854365988b5311fd5f90e154144a9ed3ad4721eac38073600d6165b63",
+  "scripts/GPU/alphazero/eval_replay.py": "702c924fecac9a211470f077e2e65dc0c1ee7f6461665de00fb4d2a08aa70cd6",
+  "scripts/GPU/alphazero/eval_runner.py": "11de6dc3519be67679d824bef3939520f369797a0ff7084758429cc3bf9d3a50",
+  "scripts/GPU/alphazero/evaluator.py": "043388192eaeb55eda58057d5f15160866b7ba0ecd8d117ff4e913f00327d8c2",
+  "scripts/GPU/alphazero/external_learning.py": "569a4a2b25e543d22494032563711af1225017ff433e69e90494c7c3c187caee",
+  "scripts/GPU/alphazero/external_learning_authorization.py": "a125240f2971eba42d64c7681896626edd87bc77c5167c2d091f4390f3223260",
+  "scripts/GPU/alphazero/external_learning_stage2.py": "002c8f153077fe0d799d0a73eb03d08d703db372ad0e419fe0b0c69363a132c8",
+  "scripts/GPU/alphazero/external_learning_stage2_authorization.py": "ce3ec3b6b82798483a5d1d65c98a24c71e39dd09b1dcdd5fc1d3146ba2b87bfb",
+  "scripts/GPU/alphazero/external_learning_stage3.py": "8bb0bea482565ca0d051cf8962c34d1e9ff0cd620fda14c34dd8df4381e2d21c",
+  "scripts/GPU/alphazero/external_learning_stage3_authorization.py": "3664ea262727f5f1b3c074b386f1dc5a072b123f9d52746754795b26951509bf",
+  "scripts/GPU/alphazero/game/__init__.py": "b8cba656f4cdd17ca1fce240224623d2ed631904a035425a30ef4a7be2069122",
+  "scripts/GPU/alphazero/game/twixt_state.py": "291275223b71b522a19181ae33a34518c0ca3c8f585275770f4c72e651cba5e2",
+  "scripts/GPU/alphazero/local_evaluator.py": "7fbeb49d3eb210fae4c74098a29e257b34916d8837f6735cd875c3184447ea4e",
+  "scripts/GPU/alphazero/mcts.py": "0769b22ae47923da2600584da1bcf7c955bb975f0bd4985d7d11605d5196050f",
+  "scripts/GPU/alphazero/network.py": "81465fe7106d4d7161cc5bdaf2b00a002ac337a77aff5d354a3bcd26986873bc",
+  "scripts/GPU/alphazero/opening_diagnostics.py": "03e40f0ea8110f194bb94b6f99b03b7aa367937882bf9c9cd5de57adc5a13106",
+  "scripts/GPU/alphazero/probe_eval.py": "cb9d303d7dd387ac40650ae6c139dddf6e36de4f34965ef92fb8f1b32dc3a182",
+  "scripts/GPU/alphazero/twixtbot_adapter.py": "f0f2dfdee202c9f33a0575315e248746d318599bd170405b0a785d7ded806a2c",
+  "scripts/GPU/alphazero/twixtbot_g3_reference.py": "f68af1525d7997467904e2dfe7ea8aaf5400fffce3e5513625643ec442e3e55e",
+  "scripts/GPU/alphazero/twixtbot_g3_schedule.py": "7624c4e61c8ca5cba7641a641d74800c4c2a6d8e6c1ffb13115bed177b92a600"
+ },
+ "protocol": {
+  "PROTOCOL": {
+   "board_size": 24,
+   "max_moves": 280,
+   "mcts_eval_batch_size": 14,
+   "mcts_sims": 400,
+   "mcts_stall_flush_sims": 48,
+   "opening_temp_plies": 20,
+   "selection_mode": "opening_temperature",
+   "temp_high": 1.0,
+   "temp_low": 0.1
+  },
+  "agents": [
+   {
+    "agent_id": "sims1600",
+    "checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "mcts_sims": 1600,
+    "readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    }
+   },
+   {
+    "agent_id": "sims400",
+    "checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "mcts_sims": 400,
+    "readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    }
+   }
+  ],
+  "eval_config": {
+   "board_size": 24,
+   "max_moves": 280,
+   "mcts_eval_batch_size": 14,
+   "mcts_sims": 400,
+   "mcts_stall_flush_sims": 48,
+   "opening_temp_plies": 20,
+   "selection_mode": "opening_temperature",
+   "temp_high": 1.0,
+   "temp_low": 0.1
+  }
+ },
+ "strength_verdict": null,
+ "total_seconds": 569.951,
+ "verdict": "COMPLETED"
+}

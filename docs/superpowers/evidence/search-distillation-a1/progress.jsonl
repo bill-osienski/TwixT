@@ -1,0 +1,7 @@
+{"event": "start", "t": 0.008, "head": "6ef33076a3c7d0de8dda94cda539cdf6505f6c57"}
+{"event": "loaded", "t": 0.284, "seconds": 0.034}
+{"event": "game_start", "t": 0.301, "game": 0, "slot": 0, "red": "sims1600"}
+{"event": "game_end", "t": 339.757, "game": 0, "slot": 0, "seconds": 339.456, "n_moves": 55, "reason": "win", "red_mcts_sims": 1600, "black_mcts_sims": 400}
+{"event": "game_start", "t": 339.758, "game": 1, "slot": 1, "red": "sims400"}
+{"event": "game_end", "t": 569.928, "game": 1, "slot": 1, "seconds": 230.169, "n_moves": 48, "reason": "win", "red_mcts_sims": 400, "black_mcts_sims": 1600}
+{"event": "end", "t": 569.951, "verdict": "COMPLETED"}
