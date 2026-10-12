@@ -1,0 +1,29 @@
+SEARCH DISTILLATION STAGE A -- ANALYSIS
+================================================================================================
+HEAD aa5d2992a0456b87743e52e148d2c2ec0b9bfbe9; working tree clean
+input docs/superpowers/evidence/search-distillation-stage-a/plan.json (committed, unmodified)
+input docs/superpowers/evidence/search-distillation-stage-a/outer.json (committed, unmodified)
+input docs/superpowers/evidence/search-distillation-stage-a/record.json (committed, unmodified)
+
+CONTROLS
+  PASS   all 160 wins: PASS  [PASS]
+  PASS   all 160 draws: NON-PASS  [NON-PASS]
+  PASS   104 points (mean 0.65): NON-PASS  [NON-PASS]
+  PASS   104.5 points (mean 0.653125): PASS  [PASS]
+  PASS   104 and 104.5 points straddle the exact bound  [lower bounds 0.498160 / 0.501285]
+  PASS   159 games: no verdict  [159 games, not 160]
+  PASS   winner agent not the winning colour's agent: no verdict  [game 7: winner black is bound to sims1600, record says 'sims400']
+  PASS   budgets not bound to the agents: no verdict  [game 4: schedule {'slot': 4, 'game_idx': 4, 'red_agent_id': 'sims1600', 'black_agent_id': 'sims400', 'red_mcts_sims': 40]
+  PASS   a root visit count off the budget: no verdict  [game 9: root visit sets {'red': [400], 'black': [1599, 1600]} are not the bound budgets]
+  PASS   outer exit 124: no verdict  [outer exit 124, not 0]
+  PASS   survivors: no verdict  [survivors '123 ': termination not confirmed]
+  PASS   run verdict STOP_INTEGRITY: no verdict  [run verdict 'STOP_INTEGRITY', not COMPLETED]
+
+controls passed: 12/12
+
+games 160, pairs 80; sims1600 points 123.0 of 160
+pair scores: 1 1 1 1 0.5 0.5 0.5 1 1 0.75 1 1 0.5 0 1 1 1 1 1 1 0.5 1 1 1 0.5 1 1 0.5 1 0.25 0.5 0 0.5 0.5 1 1 0.5 0.5 1 0.5 0.5 1 1 1 1 1 1 0 1 1 0.5 0.25 1 1 0.5 1 1 0.5 0.5 0.5 1 0.5 0.5 0.5 1 1 1 1 1 0.5 0.75 0.5 1 1 0.5 1 1 1 1 0
+mean pair score 0.768750; half-width sqrt(ln(40)/(2*80)) = 0.151840; lower bound 0.616910
+distinct transcripts (descriptive): 160 of 160
+The bound is conditional on the card's independence assumption (§2).
+VERDICT: PASS
