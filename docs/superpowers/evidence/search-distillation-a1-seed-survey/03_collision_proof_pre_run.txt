@@ -1,0 +1,81 @@
+SEARCH DISTILLATION A1 -- GAME-SEED COLLISION PROOF, mode PRE
+================================================================================================
+HEAD 8464087dd3468eb30733a81c254f2a29e458dce9; working tree clean
+this tree /Users/bill/projects/TwixT_Game-a1
+main checkout /Users/bill/projects/TwixT_Game (scanned too; HEAD affb087d14763a0f2a9fe665606172ab3237c935; 7 uncommitted entries, not required clean)
+method (survey) docs/superpowers/evidence/tactical-candidate-seed-survey/01_seed_survey.py sha256 6f6e55dbd5da672848c757753d4e61a3e9d110d96569b7ef468f902cf46f8860 (pinned)
+method (proof) docs/superpowers/evidence/tactical-candidate-seed-registration/01_collision_proof.py sha256 dd192011938ca5c6674092b243681174e669e1e96b22b8d13da2a264b340764d (pinned)
+rule scripts/GPU/alphazero/seed_selection.py sha256 34c2a537e580eb7215b18a4ad747ed894c330dadeb40b96bc87f90c1d74b4dcc (ALIGN 100)
+registry scripts/GPU/alphazero/e4_screen_reference.py sha256 57504a7119e0e2ac8de681e3804b9eb743c8db577876c4ae23f6c784541b36ee
+masks (imported): ['0x3c3c3c', '0x5a5a5a', '0xa5a5a5', '0xc3c3c3']
+registries: ACCOUNTED 32, EXPOSED 30, RETIRED 28, TEST_ONLY 1
+named spent blocks: D1 paper 1, H1 2, H2 3, H3 6, H4 5, H5 4; H3 generation ranges 4; CONSUMED_SEEDS 1
+EXEMPT PATHS (exact; plus registry tuple elements by parsing): 5 + the plan
+    docs/superpowers/evidence/search-distillation-a1-seed-survey/01_seed_survey.py
+    docs/superpowers/evidence/search-distillation-a1-seed-survey/02b_seed_survey_run.txt
+    docs/superpowers/evidence/search-distillation-a1-seed-survey/03_collision_proof_pre_run.txt
+    docs/superpowers/evidence/search-distillation-a1-seed-survey/04_collision_proof_post_run.txt
+    docs/superpowers/evidence/search-distillation-a1-seed-survey/02_seed_survey_run.txt
+    docs/superpowers/evidence/search-distillation-a1/plan.json  (only if every band literal in it is a slot of the block)
+
+survey record docs/superpowers/evidence/search-distillation-a1-seed-survey/02b_seed_survey_run.txt sha256 600fc67a9164d11e896e596db4392fe2fc4fe7ad303cac40e07c4356d260a0f1 (read at 00dbbd118c5e4700fca1343319de9c3917c9a79e)
+THE BLOCK, read from the record: [202690100, 202690102) -- BASE 202690100
+EXPECTED STATE (pre): HOLDS
+
+SCOPE (fail-closed enumeration) under ['scripts', 'tests', 'docs/superpowers']: this tree 4015 regular files, 0 symbolic links (not followed); main checkout 46632 regular files, 0 symbolic links; band literal values counted: 4371
+THE BLOCK (202690100, 202690102)  n=2  direct=NONE  streams=0  injective=True  gap=62 (floor 2)  CLEAN=True
+SLOTS (build_agent_pairing_tasks: game g has seed BASE + g):
+    SLOT 0 game 0 red sims1600 seed 202690100
+    SLOT 1 game 1 red sims400 seed 202690101
+PROBE BLOCK (202690100, 202690132) (differential controls only)  direct=NONE  streams=0  gap=62 (floor 32)  CLEAN=True
+
+CONTROLS
+------------------------------------------------------------------------------------------------
+  PASS   REJECTED: D1 paper block (202615000, 202615221)
+  PASS   REJECTED: H1 block (202616000, 202616224)
+  PASS   REJECTED: H2 block (202618000, 202618736)
+  PASS   REJECTED: H3 block (202624000, 202624040)
+  PASS   REJECTED: H4 block (202632000, 202632032)
+  PASS   REJECTED: H5 block (202650000, 202650148)
+  PASS   REJECTED: the TEST_ONLY band
+  PASS   REJECTED: inside the live H3 uniform generation range
+  PASS   REJECTED: overlaps the block by one seed
+  PASS   REJECTED: starts where the block ends -- inside the floor
+  PASS   REJECTED: one seed inside the floor
+  PASS   REJECTED: the most recently EXPOSED block (stage 3's games)
+  PASS   REJECTED: a block at the H4-4b MUTATION literal 202642000
+  PASS   PROBE: an UNDERSCORE-GROUPED candidate seed (.py)  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=62; dropping undecodable bytes instead would see it]
+  PASS   PROBE: a PLAIN candidate seed (.py)  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=62; dropping undecodable bytes instead would see it]
+  PASS   PROBE: an UNDERSCORE-GROUPED exclusive end (.py)  [without it CLEAN=True; with it direct=NONE gap=0; dropping undecodable bytes instead would see it]
+  PASS   PROBE: a candidate seed in a .log -- a suffix H5's filter skipped  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=62; dropping undecodable bytes instead would see it]
+  PASS   PROBE: a candidate seed inside a .gz  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=62; dropping undecodable bytes instead would see it]
+  PASS   PROBE: a candidate seed after an undecodable byte after a digit  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=62; dropping undecodable bytes instead would MISS it]
+  PASS   PROBE: an UNREADABLE file stops the survey  [SurveyStop]
+  PASS   PROBE: a CORRUPT .gz stops the survey  [SurveyStop]
+  PASS   an own record (exact path) is exempt  [None]
+  PASS   a sibling path that is NOT listed is counted  [[('docs/superpowers/evidence/search-distillation-a1-seed-survey/04_not_listed.txt', 1)]]
+  PASS   the plan holding only block seeds is exempt  [None]
+  PASS   registry tuple elements are exempt by parsing (a non-ASCII char BEFORE them)  [[202690111]]
+  PASS   the same value outside a registry tuple is counted  [[('scripts/GPU/alphazero/e4_screen_reference.py', 1)]]
+  PASS   a plan with a seed OUTSIDE the block is not exempt  [[202690100, 202690107]]
+  PASS   an UNREADABLE directory  [STOPPED: a directory could not be read]
+  PASS   an UNREADABLE nested directory  [STOPPED: a directory could not be read]
+  PASS   a missing root  [STOPPED: <tmp>/tests: the root is not a directory]
+  PASS   a root that is a file  [STOPPED: <tmp>/scripts: the root is not a directory]
+  PASS   a FIFO inside a root  [STOPPED: <tmp>/scripts/pipe: neither a regular file, a directory nor a symbolic link]
+  PASS   a sound tree with a symbolic link  [enumerated: 3 files, 1 links]
+  PASS   pre: the survey's registry, no plan  [the expected state]
+  PASS   pre: the registry changed  [the registry is not the one the survey read]
+  PASS   pre: the block already registered  [the registry is not the one the survey read; a registry already holds seeds of the block: [('ACCOUNTED_SEED_INTERVALS', (202690100, 202690102))]]
+  PASS   pre: a plan already exists  [a pilot plan already exists]
+  PASS   post: exactly the block appended last, the plan  [the expected state]
+  PASS   post: the block appended FIRST  [ACCOUNTED is not the survey's state with exactly the block appended last]
+  PASS   post: a wider tuple  [ACCOUNTED is not the survey's state with exactly the block appended last]
+  PASS   post: EXPOSED changed too  [EXPOSED_SEED_INTERVALS changed]
+  PASS   post: no plan  [the A1 plan is absent or not committed]
+  PASS   post: a plan with another BASE  [the A1 plan is not build_plan of the surveyed block]
+  PASS   post: a plan of 3 slots  [the A1 plan is not build_plan of the surveyed block]
+  PASS   post: a plan bound to another survey record  [the A1 plan is not build_plan of the surveyed block]
+
+controls passed: 45/45
+PROOF VERDICT (pre): THE A1 BLOCK IS CLEAN AND THE STATE IS AS EXPECTED
