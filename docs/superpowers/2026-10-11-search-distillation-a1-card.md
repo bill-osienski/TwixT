@@ -6,6 +6,15 @@ and the closing. No gate is added or changed. Nothing is pushed.
 
 **Approved 2026-10-11:** P0, P1, S1 and S2, with commits C1–C3 only. Stop before S3 registration.
 
+**S1 attempt 1 failed (exit 1, 216 s), preserved.** `02_seed_survey_run.txt`: the block was CLEAN but 44/45
+controls passed. The failing control, "post: a plan bound to another survey record", built its wrong plan
+with the same all-zero placeholder hash that survey mode uses for the absent record, so the wrong plan
+equalled the right one. A control-fixture defect; seed selection is unchanged. **Recovery (approved):**
+the control now flips the first hex digit of the hash, so it differs in every mode; the failed record is
+kept unchanged, committed, and exempt by its exact path (appended last to `OWN_RECORDS`); the rerun writes
+`02b_seed_survey_run.txt`, which the proofs and registration read. The rerun must exit 0 with 45/45 controls
+and the same two-seed block, or the sequence stops.
+
 **Purpose.** A1 is a planning measurement and real-model wiring check for Stage A of
 `docs/superpowers/2026-10-11-search-distillation-proposal.md` (103a9222), on the A0 harness (43ab8d9b).
 It measures loading time and per-game runtime at 1,600 vs 400 simulations, so that Stage A's runtime cap
@@ -120,9 +129,9 @@ the sequence for review.
 |---|---|---|---|
 | P0 | MAIN | Commit **only** this card and the four scripts: `.../search-distillation-a1-seed-survey/01_seed_survey.py`, `.../search-distillation-a1/01_a1_run.py`, `.../search-distillation-a1/02_a1_wrapper.sh`, `.../search-distillation-a1-seed-closing/01_derive_usage.py`. The capture work stays out. | C1 on `main` |
 | P1 | MAIN | `git worktree add -b search-distillation-a1 $W C1`; check that `git -C $W status --porcelain` is empty. | — |
-| S1 | W | `timeout 1200 ... 01_seed_survey.py --mode survey` → record 02; must exit 0 with `THE A1 BLOCK IS CLEAN`. | C2: record 02 |
+| S1 | W | `timeout 1200 ... 01_seed_survey.py --mode survey` → record 02b (attempt 2; attempt 1 = record 02, failed); must exit 0 with `THE A1 BLOCK IS CLEAN`, every control passed. | C2: record 02b |
 | S2 | W | `timeout 1200 ... 01_seed_survey.py --mode pre` → record 03; must exit 0. | C3: record 03 |
-| S3 | W | **Registration.** (a) Append the block read from record 02, `(BASE, BASE + 2)`, **last** to `ACCOUNTED_SEED_INTERVALS` in `e4_screen_reference.py`, with a comment holding no band literal. (b) Create `plan.json` from the record with the script's own `build_plan` (snippet below), create-only. (c) Run the data-only check below once; every test must pass. | C4: registry + plan |
+| S3 | W | **Registration.** (a) Append the block read from record 02b, `(BASE, BASE + 2)`, **last** to `ACCOUNTED_SEED_INTERVALS` in `e4_screen_reference.py`, with a comment holding no band literal. (b) Create `plan.json` from the record with the script's own `build_plan` (snippet below), create-only. (c) Run the data-only check below once; every test must pass. | C4: registry + plan |
 | S4 | W | `timeout 1200 ... 01_seed_survey.py --mode post` → record 04; must exit 0 (`STATE HOLDS`, CLEAN). | C5: record 04 |
 | R | W | On the clean tree at C5: `sh docs/superpowers/evidence/search-distillation-a1/02_a1_wrapper.sh` (background). When it returns, check `outer.json`: `survivors` must be empty. Also check that `pgrep -f search-distillation-a1/01_a1_run.py` prints nothing. | C6: all run outputs, as written |
 | K1 | W | `... 01_derive_usage.py` → record 02 in the closing directory; must exit 0 (`RECONCILES`). | C7: record 02 |

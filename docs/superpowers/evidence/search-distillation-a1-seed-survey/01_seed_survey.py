@@ -26,7 +26,8 @@ THREE ADAPTATIONS, stated:
      roots of BOTH trees is scanned, fail-closed; neither is narrowed. Only THIS tree must be clean.
 
 THREE MODES, each run ONCE on a clean committed tree, each writing ONE create-only record here:
-  survey -> 02_seed_survey_run.txt
+  survey -> 02b_seed_survey_run.txt        (02_seed_survey_run.txt = attempt 1, preserved: a control-fixture
+                                            defect failed 1 of 45 controls; exempt by its exact path)
   pre    -> 03_collision_proof_pre_run.txt   (survey record committed) registry unchanged, block
                                               unregistered, no plan
   post   -> 04_collision_proof_post_run.txt  (after a SEPARATELY AUTHORIZED registration) ACCOUNTED = the
@@ -48,9 +49,10 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[4]
 HERE = "docs/superpowers/evidence/search-distillation-a1-seed-survey"
 PLAN = "docs/superpowers/evidence/search-distillation-a1/plan.json"
-OUT = {"survey": f"{HERE}/02_seed_survey_run.txt", "pre": f"{HERE}/03_collision_proof_pre_run.txt",
+OUT = {"survey": f"{HERE}/02b_seed_survey_run.txt", "pre": f"{HERE}/03_collision_proof_pre_run.txt",
        "post": f"{HERE}/04_collision_proof_post_run.txt"}
-OWN_RECORDS = (f"{HERE}/01_seed_survey.py", *OUT.values())
+FAILED_ATTEMPT_1 = f"{HERE}/02_seed_survey_run.txt"       # preserved unchanged; exact path, not the directory
+OWN_RECORDS = (f"{HERE}/01_seed_survey.py", *OUT.values(), FAILED_ATTEMPT_1)   # [3] stays the post record
 #: the method, pinned (the same two files the tactical line and stages 1-3 pinned)
 PINNED = {"survey": ("docs/superpowers/evidence/tactical-candidate-seed-survey/01_seed_survey.py",
                      "6f6e55dbd5da672848c757753d4e61a3e9d110d96569b7ef468f902cf46f8860"),
@@ -168,6 +170,7 @@ def _state_controls(S, P, record, survey_sha):
     rec = {**record, "registry_sha256": _sha(pre.encode())}
     plan = build_plan(lo, survey_sha)
     good = reg(old + f"    ({lo}, {hi}),\n")
+    wrong_sha = ("1" if survey_sha[0] == "0" else "0") + survey_sha[1:]   # differs from survey_sha in every mode
     cases = [("pre: the survey's registry, no plan", "pre", pre, None, None, True),
              ("pre: the registry changed", "pre", reg(old, other="X = 2"), None, None, False),
              ("pre: the block already registered", "pre", good, None, None, False),
@@ -181,7 +184,7 @@ def _state_controls(S, P, record, survey_sha):
              ("post: a plan with another BASE", "post", good, pre, {**plan, "base": lo + 1}, False),
              ("post: a plan of 3 slots", "post", good, pre, {**plan, "n_slots": 3}, False),
              ("post: a plan bound to another survey record", "post", good, pre,
-              {**plan, "survey_record_sha256": "0" * 64}, False)]
+              {**plan, "survey_record_sha256": wrong_sha}, False)]
     out = []
     for label, mode, cur, pre_text, p, want_ok in cases:
         faults = state_faults(mode, rec, cur, pre_text, p, p is not None, survey_sha, S, P)
