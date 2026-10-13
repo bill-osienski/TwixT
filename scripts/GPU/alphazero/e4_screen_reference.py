@@ -818,6 +818,13 @@ EXPOSED_SEED_INTERVALS = (
     # to a bound file: the committed plan, survey/proof and run records keep their hashes; nothing
     # is rerun.
     (202690100, 202690102),  # SEARCH DISTILLATION A1 -- 2 game seeds, both started
+    # 🔴 SEARCH DISTILLATION STAGE A -- THE CLOSING EDIT (2026-10-12), after the one authorized
+    # Stage A run (COMPLETED, outer exit 0, no survivors). Use DERIVED from the committed run
+    # evidence (evidence/search-distillation-stage-a-seed-closing/02_*: RECONCILES, 15/15): every
+    # STARTED game counts as use; all 160 games started, so the block is EXPOSED WHOLE. A post-run
+    # accounting edit to a bound file: the committed plan, survey/proof and run records keep their
+    # hashes; nothing is rerun.
+    (202690300, 202690460),  # SEARCH DISTILLATION STAGE A -- 160 game seeds, all started
 )
 
 #: Seeds RESERVED PERMANENTLY FOR TESTS. Unit tests must draw from something, and
@@ -1106,6 +1113,13 @@ RETIRED_SEED_INTERVALS = (
     # to a bound file: the committed plan, survey/proof and run records keep their hashes; nothing
     # is rerun.
     (202690100, 202690102),  # SEARCH DISTILLATION A1 -- 2 game seeds, both started
+    # 🔴 SEARCH DISTILLATION STAGE A -- THE CLOSING EDIT (2026-10-12), after the one authorized
+    # Stage A run (COMPLETED, outer exit 0, no survivors). Use DERIVED from the committed run
+    # evidence (evidence/search-distillation-stage-a-seed-closing/02_*: RECONCILES, 15/15): every
+    # STARTED game counts as use; all 160 games started, so the block is RETIRED WHOLE. A post-run
+    # accounting edit to a bound file: the committed plan, survey/proof and run records keep their
+    # hashes; nothing is rerun.
+    (202690300, 202690460),  # SEARCH DISTILLATION STAGE A -- 160 game seeds, all started
 )
 
 
