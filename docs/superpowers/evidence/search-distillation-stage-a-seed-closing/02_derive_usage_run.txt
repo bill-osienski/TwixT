@@ -1,0 +1,29 @@
+SEARCH DISTILLATION STAGE A -- SEED-USAGE DERIVATION (closing)
+================================================================================================
+HEAD 480e0f9b31909db97b28d6a9ef383b0781038ef2; working tree clean
+input docs/superpowers/evidence/search-distillation-stage-a/plan.json (committed, unmodified)
+input docs/superpowers/evidence/search-distillation-stage-a/progress.jsonl (committed, unmodified)
+input docs/superpowers/evidence/search-distillation-stage-a/outer.json (committed, unmodified)
+input docs/superpowers/evidence/search-distillation-stage-a/record.json (committed, unmodified)
+outer exit 0; survivors ''; verdict 'COMPLETED'
+game starts (slots): [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159]
+
+CONTROLS
+  PASS   completed: 160 starts, expose all, retire all  [expose (202690300, 202690460), retire (202690300, 202690460)]
+  PASS   REFUSED before any game: expose NONE, retire all  [expose None, retire (202690300, 202690460)]
+  PASS   timeout during loading: expose none  [expose None, retire (202690300, 202690460)]
+  PASS   timeout in game 0: expose slot 0 only  [expose (202690300, 202690301), retire (202690300, 202690460)]
+  PASS   timeout in game 73: expose slots 0-73  [expose (202690300, 202690374), retire (202690300, 202690460)]
+  PASS   kill in the last game: expose all 160  [expose (202690300, 202690460), retire (202690300, 202690460)]
+  PASS   integrity stop in game 159: expose all  [expose (202690300, 202690460), retire (202690300, 202690460)]
+  PASS   survivors: refused  [termination NOT confirmed: survivors '123 ']
+  PASS   slots out of order: refused  [game_start slots [0, 2] are not a prefix 0..k-1 of the 160 slots]
+  PASS   a slot started twice: refused  [game_start slots [0, 1, 2, 2] are not a prefix 0..k-1 of the 160 slots]
+  PASS   more than 160 starts: refused  [game_start slots [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160] are not a prefix 0..k-1 of the 160 slots]
+  PASS   exit 0 with 159 starts: refused  [outer exit 0 but 159 games started, verdict 'COMPLETED']
+  PASS   REFUSED after a game: refused  [a REFUSED run started 1 games]
+  PASS   block not ACCOUNTED: refused  [the block is not ACCOUNTED exactly once]
+  PASS   block already RETIRED in part: refused  [a seed of the block is already EXPOSED or RETIRED]
+
+controls passed: 15/15
+VERDICT: RECONCILES -- EXPOSE [202690300, 202690460]; RETIRE [202690300, 202690460]
