@@ -1,6 +1,7 @@
 """SEARCH DISTILLATION STAGE B -- the pilot's pure pieces: split, position selection, state digest, leakage,
-full legal support, TV/KL, gate Q, the L1-L3 verdict and seed exposure. CPU-only: no model, no search, no
-file I/O, no seed literal. Card: docs/superpowers/2026-10-12-search-distillation-stage-b-card.md (a9e16fc9).
+full legal support, TV/KL, gate Q, the L1-L3 verdict and seed exposure; the label adapter and the soft
+temperature fit. No model and no file I/O; `label` runs the real search with whatever evaluator it is given.
+No seed literal. Card: docs/superpowers/2026-10-12-search-distillation-stage-b-card.md (a9e16fc9).
 """
 from __future__ import annotations
 
@@ -11,8 +12,11 @@ import math
 import random
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
+from .eval_runner import EvalConfig, cfg_from
+from .external_learning import BETA_BOUNDS, BETA_ITERATIONS, BETA_TOLERANCE
 from .external_learning_stage3 import PROTOCOL
 from .game.twixt_state import TwixtState
+from .mcts import MCTS
 
 N_GAMES, PER_GAME, N_HELDOUT, SIGN_K, Q2_MAX = 200, 4, 40, 26, 0.5
 GAME, LABEL, REPEAT, TRAIN, N_SLOTS = 0, 200, 400, 440, 441
@@ -152,7 +156,7 @@ def game_measures(positions: Sequence[Mapping[str, Any]]) -> Optional[Dict[str, 
     if not positions:
         return None
     n = len(positions)
-    return {"kl": {a: sum(kl(probs(p["target"]), softmax(p["logits"][a])) for p in positions) / n for a in ARMS},
+    return {"kl": {a: sum(kl_logits(probs(p["target"]), p["logits"][a]) for p in positions) / n for a in ARMS},
             "top1": {a: sum(top1(p["logits"][a]) in argmax_set(p["target"]) for p in positions) / n for a in ARMS}}
 
 
@@ -215,3 +219,73 @@ def closing_intervals(base: int, events: Sequence[Mapping[str, Any]]) -> Tuple[L
         else:
             runs.append([base + s, base + s + 1])
     return [tuple(r) for r in runs], (base, base + N_SLOTS)
+
+
+def label_mcts(evaluator: Any, sims: int, seed: int) -> MCTS:
+    """Card §5: the evaluation harness's red-search construction on the frozen protocol, at `sims`."""
+    return MCTS(evaluator, cfg_from(EvalConfig(**PROTOCOL), sims), random.Random(seed ^ 0xA5A5A5))
+
+
+def label(evaluator: Any, state: TwixtState, sims: int, seed: int) -> List[List[int]]:
+    """One label: a fresh search_with_root without noise; the sparse visits, refused unless they sum to sims."""
+    visits, _value, _root = label_mcts(evaluator, sims, seed).search_with_root(state, add_noise=False)
+    return sparse_label(visits, sims)
+
+
+def log_softmax(logits: Sequence[float]) -> List[float]:
+    m = max(logits)
+    lse = m + math.log(sum(math.exp(z - m) for z in logits))
+    return [z - lse for z in logits]
+
+
+def kl_logits(t: Sequence[float], logits: Sequence[float]) -> float:
+    """KL(t || softmax(logits)) through a stable log-softmax: finite where softmax underflows to 0."""
+    if len(t) != len(logits):
+        raise ValueError("distributions over different supports")
+    return sum(a * (math.log(a) - l) for a, l in zip(t, log_softmax(logits)) if a > 0)
+
+
+def soft_beta_derivative(logits_rows: Sequence[Sequence[float]], target_rows: Sequence[Sequence[float]],
+                         beta: float) -> float:
+    """d/dbeta of the mean soft CE: mean over rows of sum p(beta) z - sum T z, over each row's legal moves."""
+    total = 0.0
+    for z, t in zip(logits_rows, target_rows):
+        p = softmax([beta * x for x in z])
+        total += sum(a * x for a, x in zip(p, z)) - sum(a * x for a, x in zip(t, z))
+    v = total / len(logits_rows)
+    if not math.isfinite(v):
+        raise ValueError(f"nonfinite derivative at beta = {beta}")
+    return v
+
+
+def fit_beta_soft(logits_rows: Sequence[Sequence[float]], target_rows: Sequence[Sequence[float]]) -> Dict[str, Any]:
+    """Card §7: one inverse temperature on the TRAINING positions' T1600 targets, minimizing the mean soft CE.
+    Convex in beta: #53's bracketing -- bounds [0, 100], start 1, bisection to 1e-6 in at most 64 steps; an
+    endpoint only when its one-sided derivative establishes the constrained minimum. Refusals are ValueError."""
+    if not logits_rows or len(logits_rows) != len(target_rows) or any(len(z) != len(t) for z, t in zip(logits_rows, target_rows)):
+        raise ValueError("logits and targets are not row-aligned over the same supports")
+
+    def g(b: float) -> float:
+        return soft_beta_derivative(logits_rows, target_rows, b)
+
+    lo_b, hi_b = BETA_BOUNDS
+    iterations = 0
+    if g(lo_b) >= 0:
+        beta, bracket = lo_b, (lo_b, lo_b)
+    else:
+        if g(hi_b) <= 0:
+            raise ValueError(f"soft CE still decreasing at beta = {hi_b}: the fit is not bracketed")
+        lo, hi = (lo_b, 1.0) if g(1.0) >= 0 else (1.0, hi_b)
+        while hi - lo > BETA_TOLERANCE and iterations < BETA_ITERATIONS:
+            mid = (lo + hi) / 2
+            lo, hi = (mid, hi) if g(mid) < 0 else (lo, mid)
+            iterations += 1
+        if hi - lo > BETA_TOLERANCE:
+            raise ValueError("bisection did not reach the bracket tolerance")
+        beta, bracket = (lo + hi) / 2, (lo, hi)
+    ce = sum(-sum(a * l for a, l in zip(t, log_softmax([beta * x for x in z])) if a > 0)
+             for z, t in zip(logits_rows, target_rows)) / len(logits_rows)
+    if not math.isfinite(ce):
+        raise ValueError("nonfinite soft CE at the fitted beta")
+    return {"beta": beta, "ce": ce, "derivative": g(beta), "iterations": iterations, "bracket": list(bracket),
+            "bounds": list(BETA_BOUNDS)}

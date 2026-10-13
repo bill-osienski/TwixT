@@ -3,10 +3,12 @@ import dataclasses
 import math
 import random
 
+import numpy as np
 import pytest
 
 from scripts.GPU.alphazero import search_distillation_stage_b as B
 from scripts.GPU.alphazero.game.twixt_state import TwixtState
+from tests.fpu_search_fixture import FakeEvaluator
 
 MOVES = [(5, 5), (10, 3), (7, 6), (12, 8), (9, 7), (3, 14), (11, 8), (14, 10), (13, 9), (16, 11)]
 
@@ -260,3 +262,125 @@ def test_stop_during_corpus_exposes_started_games_only_and_retires_all():
 def test_exposure_refuses_an_event_outside_the_schedule(bad):
     with pytest.raises(ValueError):
         B.used_slots([bad])
+
+
+# ─── checkpoint 2A: the label adapter on the REAL search (CPU fake evaluator), stable KL, soft beta ───
+
+class CentralFakeEvaluator(FakeEvaluator):
+    """Deterministic CPU fake: priors favour the centre and are mirror-symmetric, so exact ties occur; value 0."""
+
+    def infer(self, boards, move_rows, move_cols, move_mask, active_size):
+        w = move_mask * np.exp(-((move_rows - 11.5) ** 2 + (move_cols - 11.5) ** 2) / 32.0)
+        s = w.sum(axis=1, keepdims=True)
+        priors = np.divide(w, s, out=np.zeros_like(w), where=s > 0)
+        return priors.astype(np.float32), np.zeros(len(move_rows), dtype=np.float32)
+
+
+SEED = 1000
+EV = CentralFakeEvaluator()
+STATE = B.replay_state(MOVES[:2])          # 24x24, ply cap 280, red to move
+
+
+@pytest.fixture(scope="module")
+def runs():
+    """THE ONLY SEARCHES IN THIS FILE: 1,600 + 400 + 400 + 400 = 2,800 simulations (the plan's ceiling)."""
+    m = B.label_mcts(EV, 1600, SEED)
+    orig, calls, snap = m._run_single_simulation, [0], {}
+
+    def counted(root, root_move_override=None):         # test-side instrumentation; MCTS is not modified
+        orig(root, root_move_override=root_move_override)
+        calls[0] += 1
+        if calls[0] == 400:
+            snap.update({mid: ch.visit_count for mid, ch in root.children.items() if ch.visit_count})
+
+    m._run_single_simulation = counted
+    v1600, _, _ = m.search_with_root(STATE, add_noise=False)
+    v400, _, root400 = B.label_mcts(EV, 400, SEED).search_with_root(STATE, add_noise=False)
+
+    real, seen = B.label_mcts, {}
+
+    def capturing(evaluator, sims, seed):               # test-side: record the full output of label's own search
+        mc = real(evaluator, sims, seed)
+        search = mc.search_with_root
+
+        def recorded(state, add_noise=True):
+            out = search(state, add_noise=add_noise)
+            seen["visits"] = out[0]
+            return out
+
+        mc.search_with_root = recorded
+        return mc
+
+    B.label_mcts = capturing
+    try:
+        sparse = B.label(EV, STATE, 400, SEED)
+    finally:
+        B.label_mcts = real
+    other, _, _ = B.label_mcts(EV, 400, SEED + 1).search_with_root(STATE, add_noise=False)
+    return {"v1600": v1600, "calls1600": calls[0], "snap400": snap, "v400": v400, "again": seen["visits"],
+            "label": sparse, "other": other,
+            "root400": {mid: ch.visit_count for mid, ch in root400.children.items() if ch.visit_count}}
+
+
+def test_label_construction_is_the_frozen_call():
+    m = B.label_mcts(EV, 400, SEED)
+    assert (m.config.n_simulations, m.config.eval_batch_size, m.config.stall_flush_sims) == (400, 14, 48)
+    assert m.rng.getstate() == random.Random(SEED ^ 0xA5A5A5).getstate()
+
+
+def test_completed_visits_sum_to_sims_at_400_and_1600(runs):
+    assert sum(runs["v400"].values()) == 400 and runs["calls1600"] == 1600 and sum(runs["v1600"].values()) == 1600
+    assert set(runs["v400"]) == set(STATE.legal_moves())                     # every legal move, zeros included
+    assert 0 in runs["v400"].values()
+
+
+def test_same_seed_repeats_exactly_through_the_adapter(runs, capsys):
+    differ = sum(runs["other"][m] != runs["v400"][m] for m in runs["v400"])
+    with capsys.disabled():                                                  # descriptive only: no assertion
+        print(f"\nDESCRIPTIVE another-seed 400: counts differ = {differ > 0} ({differ} moves differ)")
+    assert runs["again"] == runs["v400"]
+
+
+def test_400_search_is_the_first_400_simulations_of_the_1600_search(runs):
+    assert runs["snap400"] == runs["root400"] and sum(runs["snap400"].values()) == 400
+
+
+def test_label_output_rebuilds_its_own_search_exactly(runs):
+    legal = [tuple(m) for m in STATE.legal_moves()]
+    got_legal, counts = B.full_counts(STATE, runs["label"], 400, B.legal_digest(legal))
+    assert got_legal == legal and counts == [runs["again"][m] for m in legal]
+
+
+def test_kl_from_logits_is_stable_where_softmax_underflows():
+    assert B.kl_logits([1.0, 0.0], [-1000.0, 0.0]) == pytest.approx(1000.0)
+
+
+def test_kl_from_logits_matches_the_probability_form_on_benign_logits():
+    t, z = B.probs([3, 1, 0]), [0.3, -0.2, 1.1]
+    assert math.isclose(B.kl_logits(t, z), B.kl(t, B.softmax(z)), rel_tol=1e-12)
+
+
+def test_game_measures_survives_underflowing_temperature_logits():
+    pos = [{"target": [1, 0], "logits": {a: [-1000.0, 0.0] for a in B.ARMS}}]
+    m = B.game_measures(pos)
+    assert all(m["kl"][a] == pytest.approx(1000.0) for a in B.ARMS)
+
+
+def test_soft_beta_hand_solution_two_moves():
+    # logits [0, 1], target [0.25, 0.75]: softmax(beta z) matches the target at sigma(beta) = 0.75, beta = ln 3;
+    # derivative g(beta) = sigma(beta) - 0.75 (= sum p z - sum T z), so g(0) = -0.25 exactly.
+    logits, targets = [[0.0, 1.0]], [[0.25, 0.75]]
+    assert B.soft_beta_derivative(logits, targets, 0.0) == -0.25
+    fit = B.fit_beta_soft(logits, targets)
+    assert abs(fit["beta"] - math.log(3)) < 1e-6 and abs(fit["derivative"]) < 1e-6
+    assert B.soft_beta_derivative(logits, targets, math.log(3) - 0.1) < 0 < B.soft_beta_derivative(logits, targets, math.log(3) + 0.1)
+
+
+def test_soft_beta_accepts_the_zero_endpoint_for_a_uniform_target():
+    fit = B.fit_beta_soft([[0.0, 1.0]], [[0.5, 0.5]])
+    assert fit["beta"] == 0.0 and fit["bracket"] == [0.0, 0.0]
+
+
+def test_soft_beta_refuses_a_target_it_can_never_reach():
+    with pytest.raises(ValueError):
+        B.fit_beta_soft([[0.0, 1.0]], [[0.0, 1.0]])     # CE still decreasing at beta = 100: not a minimum
