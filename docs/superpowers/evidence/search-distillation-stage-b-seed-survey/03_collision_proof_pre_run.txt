@@ -1,0 +1,518 @@
+SEARCH DISTILLATION STAGE B -- SEED COLLISION PROOF, mode PRE
+================================================================================================
+HEAD 5131036d01512dfdcaf222c2b45a3b9c8cf1118b; working tree clean
+this tree /Users/bill/projects/TwixT_Game-stage-b
+main checkout /Users/bill/projects/TwixT_Game (scanned too; HEAD 85ad52973cc49df3848c6d2e41b34c37d4d328fb; 7 uncommitted entries, not required clean)
+method (survey) docs/superpowers/evidence/tactical-candidate-seed-survey/01_seed_survey.py sha256 6f6e55dbd5da672848c757753d4e61a3e9d110d96569b7ef468f902cf46f8860 (pinned)
+method (proof) docs/superpowers/evidence/tactical-candidate-seed-registration/01_collision_proof.py sha256 dd192011938ca5c6674092b243681174e669e1e96b22b8d13da2a264b340764d (pinned)
+rule scripts/GPU/alphazero/seed_selection.py sha256 34c2a537e580eb7215b18a4ad747ed894c330dadeb40b96bc87f90c1d74b4dcc (ALIGN 100)
+registry scripts/GPU/alphazero/e4_screen_reference.py sha256 ea00f2b65b3ea140932ab059ed41d726c84e174fa1878a82ceef9de002412491
+masks (imported): ['0x3c3c3c', '0x5a5a5a', '0xa5a5a5', '0xc3c3c3']
+registries: ACCOUNTED 34, EXPOSED 32, RETIRED 30, TEST_ONLY 1
+named spent blocks: D1 paper 1, H1 2, H2 3, H3 6, H4 5, H5 4; H3 generation ranges 4; CONSUMED_SEEDS 1
+EXEMPT PATHS (exact; plus registry tuple elements by parsing): 4 + the plan
+    docs/superpowers/evidence/search-distillation-stage-b-seed-survey/01_seed_survey.py
+    docs/superpowers/evidence/search-distillation-stage-b-seed-survey/02_seed_survey_run.txt
+    docs/superpowers/evidence/search-distillation-stage-b-seed-survey/03_collision_proof_pre_run.txt
+    docs/superpowers/evidence/search-distillation-stage-b-seed-survey/04_collision_proof_post_run.txt
+    docs/superpowers/evidence/search-distillation-stage-b/plan.json  (only if every band literal in it is a slot of the block)
+
+survey record docs/superpowers/evidence/search-distillation-stage-b-seed-survey/02_seed_survey_run.txt sha256 615ff0528cbd6f3d68b70e4ad0081ec5ee7a9f5eb95b9b16560f4c9efc1358d1 (read at 85ad52973cc49df3848c6d2e41b34c37d4d328fb)
+THE BLOCK, read from the record: [202691000, 202691441) -- BASE 202691000
+EXPECTED STATE (pre): HOLDS
+
+SCOPE (fail-closed enumeration) under ['scripts', 'tests', 'docs/superpowers']: this tree 4215 regular files, 0 symbolic links (not followed); main checkout 46833 regular files, 0 symbolic links; band literal values counted: 4539
+THE BLOCK (202691000, 202691441)  n=441  direct=NONE  streams=0  injective=True  gap=534 (floor 441)  CLEAN=True
+SLOTS (card §9: G 0-199, L 200-399, R 400-439, T 440; slot s has seed BASE + s):
+    SLOT 0 G game 0 seed 202691000
+    SLOT 1 G game 1 seed 202691001
+    SLOT 2 G game 2 seed 202691002
+    SLOT 3 G game 3 seed 202691003
+    SLOT 4 G game 4 seed 202691004
+    SLOT 5 G game 5 seed 202691005
+    SLOT 6 G game 6 seed 202691006
+    SLOT 7 G game 7 seed 202691007
+    SLOT 8 G game 8 seed 202691008
+    SLOT 9 G game 9 seed 202691009
+    SLOT 10 G game 10 seed 202691010
+    SLOT 11 G game 11 seed 202691011
+    SLOT 12 G game 12 seed 202691012
+    SLOT 13 G game 13 seed 202691013
+    SLOT 14 G game 14 seed 202691014
+    SLOT 15 G game 15 seed 202691015
+    SLOT 16 G game 16 seed 202691016
+    SLOT 17 G game 17 seed 202691017
+    SLOT 18 G game 18 seed 202691018
+    SLOT 19 G game 19 seed 202691019
+    SLOT 20 G game 20 seed 202691020
+    SLOT 21 G game 21 seed 202691021
+    SLOT 22 G game 22 seed 202691022
+    SLOT 23 G game 23 seed 202691023
+    SLOT 24 G game 24 seed 202691024
+    SLOT 25 G game 25 seed 202691025
+    SLOT 26 G game 26 seed 202691026
+    SLOT 27 G game 27 seed 202691027
+    SLOT 28 G game 28 seed 202691028
+    SLOT 29 G game 29 seed 202691029
+    SLOT 30 G game 30 seed 202691030
+    SLOT 31 G game 31 seed 202691031
+    SLOT 32 G game 32 seed 202691032
+    SLOT 33 G game 33 seed 202691033
+    SLOT 34 G game 34 seed 202691034
+    SLOT 35 G game 35 seed 202691035
+    SLOT 36 G game 36 seed 202691036
+    SLOT 37 G game 37 seed 202691037
+    SLOT 38 G game 38 seed 202691038
+    SLOT 39 G game 39 seed 202691039
+    SLOT 40 G game 40 seed 202691040
+    SLOT 41 G game 41 seed 202691041
+    SLOT 42 G game 42 seed 202691042
+    SLOT 43 G game 43 seed 202691043
+    SLOT 44 G game 44 seed 202691044
+    SLOT 45 G game 45 seed 202691045
+    SLOT 46 G game 46 seed 202691046
+    SLOT 47 G game 47 seed 202691047
+    SLOT 48 G game 48 seed 202691048
+    SLOT 49 G game 49 seed 202691049
+    SLOT 50 G game 50 seed 202691050
+    SLOT 51 G game 51 seed 202691051
+    SLOT 52 G game 52 seed 202691052
+    SLOT 53 G game 53 seed 202691053
+    SLOT 54 G game 54 seed 202691054
+    SLOT 55 G game 55 seed 202691055
+    SLOT 56 G game 56 seed 202691056
+    SLOT 57 G game 57 seed 202691057
+    SLOT 58 G game 58 seed 202691058
+    SLOT 59 G game 59 seed 202691059
+    SLOT 60 G game 60 seed 202691060
+    SLOT 61 G game 61 seed 202691061
+    SLOT 62 G game 62 seed 202691062
+    SLOT 63 G game 63 seed 202691063
+    SLOT 64 G game 64 seed 202691064
+    SLOT 65 G game 65 seed 202691065
+    SLOT 66 G game 66 seed 202691066
+    SLOT 67 G game 67 seed 202691067
+    SLOT 68 G game 68 seed 202691068
+    SLOT 69 G game 69 seed 202691069
+    SLOT 70 G game 70 seed 202691070
+    SLOT 71 G game 71 seed 202691071
+    SLOT 72 G game 72 seed 202691072
+    SLOT 73 G game 73 seed 202691073
+    SLOT 74 G game 74 seed 202691074
+    SLOT 75 G game 75 seed 202691075
+    SLOT 76 G game 76 seed 202691076
+    SLOT 77 G game 77 seed 202691077
+    SLOT 78 G game 78 seed 202691078
+    SLOT 79 G game 79 seed 202691079
+    SLOT 80 G game 80 seed 202691080
+    SLOT 81 G game 81 seed 202691081
+    SLOT 82 G game 82 seed 202691082
+    SLOT 83 G game 83 seed 202691083
+    SLOT 84 G game 84 seed 202691084
+    SLOT 85 G game 85 seed 202691085
+    SLOT 86 G game 86 seed 202691086
+    SLOT 87 G game 87 seed 202691087
+    SLOT 88 G game 88 seed 202691088
+    SLOT 89 G game 89 seed 202691089
+    SLOT 90 G game 90 seed 202691090
+    SLOT 91 G game 91 seed 202691091
+    SLOT 92 G game 92 seed 202691092
+    SLOT 93 G game 93 seed 202691093
+    SLOT 94 G game 94 seed 202691094
+    SLOT 95 G game 95 seed 202691095
+    SLOT 96 G game 96 seed 202691096
+    SLOT 97 G game 97 seed 202691097
+    SLOT 98 G game 98 seed 202691098
+    SLOT 99 G game 99 seed 202691099
+    SLOT 100 G game 100 seed 202691100
+    SLOT 101 G game 101 seed 202691101
+    SLOT 102 G game 102 seed 202691102
+    SLOT 103 G game 103 seed 202691103
+    SLOT 104 G game 104 seed 202691104
+    SLOT 105 G game 105 seed 202691105
+    SLOT 106 G game 106 seed 202691106
+    SLOT 107 G game 107 seed 202691107
+    SLOT 108 G game 108 seed 202691108
+    SLOT 109 G game 109 seed 202691109
+    SLOT 110 G game 110 seed 202691110
+    SLOT 111 G game 111 seed 202691111
+    SLOT 112 G game 112 seed 202691112
+    SLOT 113 G game 113 seed 202691113
+    SLOT 114 G game 114 seed 202691114
+    SLOT 115 G game 115 seed 202691115
+    SLOT 116 G game 116 seed 202691116
+    SLOT 117 G game 117 seed 202691117
+    SLOT 118 G game 118 seed 202691118
+    SLOT 119 G game 119 seed 202691119
+    SLOT 120 G game 120 seed 202691120
+    SLOT 121 G game 121 seed 202691121
+    SLOT 122 G game 122 seed 202691122
+    SLOT 123 G game 123 seed 202691123
+    SLOT 124 G game 124 seed 202691124
+    SLOT 125 G game 125 seed 202691125
+    SLOT 126 G game 126 seed 202691126
+    SLOT 127 G game 127 seed 202691127
+    SLOT 128 G game 128 seed 202691128
+    SLOT 129 G game 129 seed 202691129
+    SLOT 130 G game 130 seed 202691130
+    SLOT 131 G game 131 seed 202691131
+    SLOT 132 G game 132 seed 202691132
+    SLOT 133 G game 133 seed 202691133
+    SLOT 134 G game 134 seed 202691134
+    SLOT 135 G game 135 seed 202691135
+    SLOT 136 G game 136 seed 202691136
+    SLOT 137 G game 137 seed 202691137
+    SLOT 138 G game 138 seed 202691138
+    SLOT 139 G game 139 seed 202691139
+    SLOT 140 G game 140 seed 202691140
+    SLOT 141 G game 141 seed 202691141
+    SLOT 142 G game 142 seed 202691142
+    SLOT 143 G game 143 seed 202691143
+    SLOT 144 G game 144 seed 202691144
+    SLOT 145 G game 145 seed 202691145
+    SLOT 146 G game 146 seed 202691146
+    SLOT 147 G game 147 seed 202691147
+    SLOT 148 G game 148 seed 202691148
+    SLOT 149 G game 149 seed 202691149
+    SLOT 150 G game 150 seed 202691150
+    SLOT 151 G game 151 seed 202691151
+    SLOT 152 G game 152 seed 202691152
+    SLOT 153 G game 153 seed 202691153
+    SLOT 154 G game 154 seed 202691154
+    SLOT 155 G game 155 seed 202691155
+    SLOT 156 G game 156 seed 202691156
+    SLOT 157 G game 157 seed 202691157
+    SLOT 158 G game 158 seed 202691158
+    SLOT 159 G game 159 seed 202691159
+    SLOT 160 G game 160 seed 202691160
+    SLOT 161 G game 161 seed 202691161
+    SLOT 162 G game 162 seed 202691162
+    SLOT 163 G game 163 seed 202691163
+    SLOT 164 G game 164 seed 202691164
+    SLOT 165 G game 165 seed 202691165
+    SLOT 166 G game 166 seed 202691166
+    SLOT 167 G game 167 seed 202691167
+    SLOT 168 G game 168 seed 202691168
+    SLOT 169 G game 169 seed 202691169
+    SLOT 170 G game 170 seed 202691170
+    SLOT 171 G game 171 seed 202691171
+    SLOT 172 G game 172 seed 202691172
+    SLOT 173 G game 173 seed 202691173
+    SLOT 174 G game 174 seed 202691174
+    SLOT 175 G game 175 seed 202691175
+    SLOT 176 G game 176 seed 202691176
+    SLOT 177 G game 177 seed 202691177
+    SLOT 178 G game 178 seed 202691178
+    SLOT 179 G game 179 seed 202691179
+    SLOT 180 G game 180 seed 202691180
+    SLOT 181 G game 181 seed 202691181
+    SLOT 182 G game 182 seed 202691182
+    SLOT 183 G game 183 seed 202691183
+    SLOT 184 G game 184 seed 202691184
+    SLOT 185 G game 185 seed 202691185
+    SLOT 186 G game 186 seed 202691186
+    SLOT 187 G game 187 seed 202691187
+    SLOT 188 G game 188 seed 202691188
+    SLOT 189 G game 189 seed 202691189
+    SLOT 190 G game 190 seed 202691190
+    SLOT 191 G game 191 seed 202691191
+    SLOT 192 G game 192 seed 202691192
+    SLOT 193 G game 193 seed 202691193
+    SLOT 194 G game 194 seed 202691194
+    SLOT 195 G game 195 seed 202691195
+    SLOT 196 G game 196 seed 202691196
+    SLOT 197 G game 197 seed 202691197
+    SLOT 198 G game 198 seed 202691198
+    SLOT 199 G game 199 seed 202691199
+    SLOT 200 L game 0 seed 202691200
+    SLOT 201 L game 1 seed 202691201
+    SLOT 202 L game 2 seed 202691202
+    SLOT 203 L game 3 seed 202691203
+    SLOT 204 L game 4 seed 202691204
+    SLOT 205 L game 5 seed 202691205
+    SLOT 206 L game 6 seed 202691206
+    SLOT 207 L game 7 seed 202691207
+    SLOT 208 L game 8 seed 202691208
+    SLOT 209 L game 9 seed 202691209
+    SLOT 210 L game 10 seed 202691210
+    SLOT 211 L game 11 seed 202691211
+    SLOT 212 L game 12 seed 202691212
+    SLOT 213 L game 13 seed 202691213
+    SLOT 214 L game 14 seed 202691214
+    SLOT 215 L game 15 seed 202691215
+    SLOT 216 L game 16 seed 202691216
+    SLOT 217 L game 17 seed 202691217
+    SLOT 218 L game 18 seed 202691218
+    SLOT 219 L game 19 seed 202691219
+    SLOT 220 L game 20 seed 202691220
+    SLOT 221 L game 21 seed 202691221
+    SLOT 222 L game 22 seed 202691222
+    SLOT 223 L game 23 seed 202691223
+    SLOT 224 L game 24 seed 202691224
+    SLOT 225 L game 25 seed 202691225
+    SLOT 226 L game 26 seed 202691226
+    SLOT 227 L game 27 seed 202691227
+    SLOT 228 L game 28 seed 202691228
+    SLOT 229 L game 29 seed 202691229
+    SLOT 230 L game 30 seed 202691230
+    SLOT 231 L game 31 seed 202691231
+    SLOT 232 L game 32 seed 202691232
+    SLOT 233 L game 33 seed 202691233
+    SLOT 234 L game 34 seed 202691234
+    SLOT 235 L game 35 seed 202691235
+    SLOT 236 L game 36 seed 202691236
+    SLOT 237 L game 37 seed 202691237
+    SLOT 238 L game 38 seed 202691238
+    SLOT 239 L game 39 seed 202691239
+    SLOT 240 L game 40 seed 202691240
+    SLOT 241 L game 41 seed 202691241
+    SLOT 242 L game 42 seed 202691242
+    SLOT 243 L game 43 seed 202691243
+    SLOT 244 L game 44 seed 202691244
+    SLOT 245 L game 45 seed 202691245
+    SLOT 246 L game 46 seed 202691246
+    SLOT 247 L game 47 seed 202691247
+    SLOT 248 L game 48 seed 202691248
+    SLOT 249 L game 49 seed 202691249
+    SLOT 250 L game 50 seed 202691250
+    SLOT 251 L game 51 seed 202691251
+    SLOT 252 L game 52 seed 202691252
+    SLOT 253 L game 53 seed 202691253
+    SLOT 254 L game 54 seed 202691254
+    SLOT 255 L game 55 seed 202691255
+    SLOT 256 L game 56 seed 202691256
+    SLOT 257 L game 57 seed 202691257
+    SLOT 258 L game 58 seed 202691258
+    SLOT 259 L game 59 seed 202691259
+    SLOT 260 L game 60 seed 202691260
+    SLOT 261 L game 61 seed 202691261
+    SLOT 262 L game 62 seed 202691262
+    SLOT 263 L game 63 seed 202691263
+    SLOT 264 L game 64 seed 202691264
+    SLOT 265 L game 65 seed 202691265
+    SLOT 266 L game 66 seed 202691266
+    SLOT 267 L game 67 seed 202691267
+    SLOT 268 L game 68 seed 202691268
+    SLOT 269 L game 69 seed 202691269
+    SLOT 270 L game 70 seed 202691270
+    SLOT 271 L game 71 seed 202691271
+    SLOT 272 L game 72 seed 202691272
+    SLOT 273 L game 73 seed 202691273
+    SLOT 274 L game 74 seed 202691274
+    SLOT 275 L game 75 seed 202691275
+    SLOT 276 L game 76 seed 202691276
+    SLOT 277 L game 77 seed 202691277
+    SLOT 278 L game 78 seed 202691278
+    SLOT 279 L game 79 seed 202691279
+    SLOT 280 L game 80 seed 202691280
+    SLOT 281 L game 81 seed 202691281
+    SLOT 282 L game 82 seed 202691282
+    SLOT 283 L game 83 seed 202691283
+    SLOT 284 L game 84 seed 202691284
+    SLOT 285 L game 85 seed 202691285
+    SLOT 286 L game 86 seed 202691286
+    SLOT 287 L game 87 seed 202691287
+    SLOT 288 L game 88 seed 202691288
+    SLOT 289 L game 89 seed 202691289
+    SLOT 290 L game 90 seed 202691290
+    SLOT 291 L game 91 seed 202691291
+    SLOT 292 L game 92 seed 202691292
+    SLOT 293 L game 93 seed 202691293
+    SLOT 294 L game 94 seed 202691294
+    SLOT 295 L game 95 seed 202691295
+    SLOT 296 L game 96 seed 202691296
+    SLOT 297 L game 97 seed 202691297
+    SLOT 298 L game 98 seed 202691298
+    SLOT 299 L game 99 seed 202691299
+    SLOT 300 L game 100 seed 202691300
+    SLOT 301 L game 101 seed 202691301
+    SLOT 302 L game 102 seed 202691302
+    SLOT 303 L game 103 seed 202691303
+    SLOT 304 L game 104 seed 202691304
+    SLOT 305 L game 105 seed 202691305
+    SLOT 306 L game 106 seed 202691306
+    SLOT 307 L game 107 seed 202691307
+    SLOT 308 L game 108 seed 202691308
+    SLOT 309 L game 109 seed 202691309
+    SLOT 310 L game 110 seed 202691310
+    SLOT 311 L game 111 seed 202691311
+    SLOT 312 L game 112 seed 202691312
+    SLOT 313 L game 113 seed 202691313
+    SLOT 314 L game 114 seed 202691314
+    SLOT 315 L game 115 seed 202691315
+    SLOT 316 L game 116 seed 202691316
+    SLOT 317 L game 117 seed 202691317
+    SLOT 318 L game 118 seed 202691318
+    SLOT 319 L game 119 seed 202691319
+    SLOT 320 L game 120 seed 202691320
+    SLOT 321 L game 121 seed 202691321
+    SLOT 322 L game 122 seed 202691322
+    SLOT 323 L game 123 seed 202691323
+    SLOT 324 L game 124 seed 202691324
+    SLOT 325 L game 125 seed 202691325
+    SLOT 326 L game 126 seed 202691326
+    SLOT 327 L game 127 seed 202691327
+    SLOT 328 L game 128 seed 202691328
+    SLOT 329 L game 129 seed 202691329
+    SLOT 330 L game 130 seed 202691330
+    SLOT 331 L game 131 seed 202691331
+    SLOT 332 L game 132 seed 202691332
+    SLOT 333 L game 133 seed 202691333
+    SLOT 334 L game 134 seed 202691334
+    SLOT 335 L game 135 seed 202691335
+    SLOT 336 L game 136 seed 202691336
+    SLOT 337 L game 137 seed 202691337
+    SLOT 338 L game 138 seed 202691338
+    SLOT 339 L game 139 seed 202691339
+    SLOT 340 L game 140 seed 202691340
+    SLOT 341 L game 141 seed 202691341
+    SLOT 342 L game 142 seed 202691342
+    SLOT 343 L game 143 seed 202691343
+    SLOT 344 L game 144 seed 202691344
+    SLOT 345 L game 145 seed 202691345
+    SLOT 346 L game 146 seed 202691346
+    SLOT 347 L game 147 seed 202691347
+    SLOT 348 L game 148 seed 202691348
+    SLOT 349 L game 149 seed 202691349
+    SLOT 350 L game 150 seed 202691350
+    SLOT 351 L game 151 seed 202691351
+    SLOT 352 L game 152 seed 202691352
+    SLOT 353 L game 153 seed 202691353
+    SLOT 354 L game 154 seed 202691354
+    SLOT 355 L game 155 seed 202691355
+    SLOT 356 L game 156 seed 202691356
+    SLOT 357 L game 157 seed 202691357
+    SLOT 358 L game 158 seed 202691358
+    SLOT 359 L game 159 seed 202691359
+    SLOT 360 L game 160 seed 202691360
+    SLOT 361 L game 161 seed 202691361
+    SLOT 362 L game 162 seed 202691362
+    SLOT 363 L game 163 seed 202691363
+    SLOT 364 L game 164 seed 202691364
+    SLOT 365 L game 165 seed 202691365
+    SLOT 366 L game 166 seed 202691366
+    SLOT 367 L game 167 seed 202691367
+    SLOT 368 L game 168 seed 202691368
+    SLOT 369 L game 169 seed 202691369
+    SLOT 370 L game 170 seed 202691370
+    SLOT 371 L game 171 seed 202691371
+    SLOT 372 L game 172 seed 202691372
+    SLOT 373 L game 173 seed 202691373
+    SLOT 374 L game 174 seed 202691374
+    SLOT 375 L game 175 seed 202691375
+    SLOT 376 L game 176 seed 202691376
+    SLOT 377 L game 177 seed 202691377
+    SLOT 378 L game 178 seed 202691378
+    SLOT 379 L game 179 seed 202691379
+    SLOT 380 L game 180 seed 202691380
+    SLOT 381 L game 181 seed 202691381
+    SLOT 382 L game 182 seed 202691382
+    SLOT 383 L game 183 seed 202691383
+    SLOT 384 L game 184 seed 202691384
+    SLOT 385 L game 185 seed 202691385
+    SLOT 386 L game 186 seed 202691386
+    SLOT 387 L game 187 seed 202691387
+    SLOT 388 L game 188 seed 202691388
+    SLOT 389 L game 189 seed 202691389
+    SLOT 390 L game 190 seed 202691390
+    SLOT 391 L game 191 seed 202691391
+    SLOT 392 L game 192 seed 202691392
+    SLOT 393 L game 193 seed 202691393
+    SLOT 394 L game 194 seed 202691394
+    SLOT 395 L game 195 seed 202691395
+    SLOT 396 L game 196 seed 202691396
+    SLOT 397 L game 197 seed 202691397
+    SLOT 398 L game 198 seed 202691398
+    SLOT 399 L game 199 seed 202691399
+    SLOT 400 R game 4 seed 202691400
+    SLOT 401 R game 9 seed 202691401
+    SLOT 402 R game 14 seed 202691402
+    SLOT 403 R game 19 seed 202691403
+    SLOT 404 R game 24 seed 202691404
+    SLOT 405 R game 29 seed 202691405
+    SLOT 406 R game 34 seed 202691406
+    SLOT 407 R game 39 seed 202691407
+    SLOT 408 R game 44 seed 202691408
+    SLOT 409 R game 49 seed 202691409
+    SLOT 410 R game 54 seed 202691410
+    SLOT 411 R game 59 seed 202691411
+    SLOT 412 R game 64 seed 202691412
+    SLOT 413 R game 69 seed 202691413
+    SLOT 414 R game 74 seed 202691414
+    SLOT 415 R game 79 seed 202691415
+    SLOT 416 R game 84 seed 202691416
+    SLOT 417 R game 89 seed 202691417
+    SLOT 418 R game 94 seed 202691418
+    SLOT 419 R game 99 seed 202691419
+    SLOT 420 R game 104 seed 202691420
+    SLOT 421 R game 109 seed 202691421
+    SLOT 422 R game 114 seed 202691422
+    SLOT 423 R game 119 seed 202691423
+    SLOT 424 R game 124 seed 202691424
+    SLOT 425 R game 129 seed 202691425
+    SLOT 426 R game 134 seed 202691426
+    SLOT 427 R game 139 seed 202691427
+    SLOT 428 R game 144 seed 202691428
+    SLOT 429 R game 149 seed 202691429
+    SLOT 430 R game 154 seed 202691430
+    SLOT 431 R game 159 seed 202691431
+    SLOT 432 R game 164 seed 202691432
+    SLOT 433 R game 169 seed 202691433
+    SLOT 434 R game 174 seed 202691434
+    SLOT 435 R game 179 seed 202691435
+    SLOT 436 R game 184 seed 202691436
+    SLOT 437 R game 189 seed 202691437
+    SLOT 438 R game 194 seed 202691438
+    SLOT 439 R game 199 seed 202691439
+    SLOT 440 T schedule seed 202691440
+
+CONTROLS
+------------------------------------------------------------------------------------------------
+  PASS   REJECTED: D1 paper block (202615000, 202615221)
+  PASS   REJECTED: H1 block (202616000, 202616224)
+  PASS   REJECTED: H2 block (202618000, 202618736)
+  PASS   REJECTED: H3 block (202624000, 202624040)
+  PASS   REJECTED: H4 block (202632000, 202632032)
+  PASS   REJECTED: H5 block (202650000, 202650148)
+  PASS   REJECTED: the TEST_ONLY band
+  PASS   REJECTED: inside the live H3 uniform generation range
+  PASS   REJECTED: overlaps the block by one seed
+  PASS   REJECTED: starts where the block ends -- inside the floor
+  PASS   REJECTED: one seed inside the floor
+  PASS   REJECTED: the most recently EXPOSED block (Stage A's games)
+  PASS   REJECTED: a block at the H4-4b MUTATION literal 202642000
+  PASS   an UNDERSCORE-GROUPED candidate seed (.py)  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=534; dropping undecodable bytes instead would see it]
+  PASS   a PLAIN candidate seed (.py)  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=534; dropping undecodable bytes instead would see it]
+  PASS   an UNDERSCORE-GROUPED exclusive end (.py)  [without it CLEAN=True; with it direct=NONE gap=0; dropping undecodable bytes instead would see it]
+  PASS   a candidate seed in a .log -- a suffix H5's filter skipped  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=534; dropping undecodable bytes instead would see it]
+  PASS   a candidate seed inside a .gz  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=534; dropping undecodable bytes instead would see it]
+  PASS   a candidate seed after an undecodable byte after a digit  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=534; dropping undecodable bytes instead would MISS it]
+  PASS   an UNREADABLE file stops the survey  [SurveyStop]
+  PASS   a CORRUPT .gz stops the survey  [SurveyStop]
+  PASS   an own record (exact path) is exempt  [None]
+  PASS   a sibling path that is NOT listed is counted  [[('docs/superpowers/evidence/search-distillation-stage-b-seed-survey/04_not_listed.txt', 1)]]
+  PASS   the plan holding only block seeds is exempt  [None]
+  PASS   registry tuple elements are exempt by parsing (a non-ASCII char BEFORE them)  [[202691011]]
+  PASS   the same value outside a registry tuple is counted  [[('scripts/GPU/alphazero/e4_screen_reference.py', 1)]]
+  PASS   a plan with a seed OUTSIDE the block is not exempt  [[202691000, 202691446]]
+  PASS   an UNREADABLE directory  [STOPPED: a directory could not be read]
+  PASS   an UNREADABLE nested directory  [STOPPED: a directory could not be read]
+  PASS   a missing root  [STOPPED: <tmp>/tests: the root is not a directory]
+  PASS   a root that is a file  [STOPPED: <tmp>/scripts: the root is not a directory]
+  PASS   a FIFO inside a root  [STOPPED: <tmp>/scripts/pipe: neither a regular file, a directory nor a symbolic link]
+  PASS   a sound tree with a symbolic link  [enumerated: 3 files, 1 links]
+  PASS   pre: the survey's registry, no plan  [the expected state]
+  PASS   pre: the registry changed  [the registry is not the one the survey read]
+  PASS   pre: the block already registered  [the registry is not the one the survey read; a registry already holds seeds of the block: [('ACCOUNTED_SEED_INTERVALS', (202691000, 202691441))]]
+  PASS   pre: a plan already exists  [a pilot plan already exists]
+  PASS   post: exactly the block appended last, the plan  [the expected state]
+  PASS   post: the block appended FIRST  [ACCOUNTED is not the survey's state with exactly the block appended last]
+  PASS   post: a wider tuple  [ACCOUNTED is not the survey's state with exactly the block appended last]
+  PASS   post: EXPOSED changed too  [EXPOSED_SEED_INTERVALS changed]
+  PASS   post: no plan  [the Stage B plan is absent or not committed]
+  PASS   post: a plan with another BASE  [the Stage B plan is not build_plan of the surveyed block]
+  PASS   post: a plan of 442 slots  [the Stage B plan is not build_plan of the surveyed block]
+  PASS   post: a plan bound to another survey record  [the Stage B plan is not build_plan of the surveyed block]
+
+controls passed: 45/45
+PROOF VERDICT (pre): THE STAGE-B BLOCK IS CLEAN AND THE STATE IS AS EXPECTED
