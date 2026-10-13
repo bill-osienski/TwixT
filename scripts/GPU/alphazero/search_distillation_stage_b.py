@@ -289,3 +289,136 @@ def fit_beta_soft(logits_rows: Sequence[Sequence[float]], target_rows: Sequence[
         raise ValueError("nonfinite soft CE at the fitted beta")
     return {"beta": beta, "ce": ce, "derivative": g(beta), "iterations": iterations, "bracket": list(bracket),
             "bounds": list(BETA_BOUNDS)}
+
+
+SIMS_HI, SIMS_LO = 1600, 400
+TRAIN_STEPS, TRAIN_BATCH = 160, 32
+
+
+class Stop(Exception):
+    """Card §8: a STOP with NO VERDICT -- a determinism mismatch, a moved position, an integrity failure."""
+
+
+class Refused(Exception):
+    """Card §11: a phase its committed inputs do not allow."""
+
+
+def require_qualified(q: Any) -> None:
+    """Card §6/§11: no training label and no training unless the committed gate-Q record QUALIFIED."""
+    if not isinstance(q, Mapping) or q.get("verdict") != "QUALIFIED" or q.get("failed") != []:
+        raise Refused(f"gate Q did not qualify ({q.get('verdict') if isinstance(q, Mapping) else q!r}): "
+                      "Stage B stops before the training labels")
+
+
+def label_game(evaluator: Any, g: int, moves: Sequence[Sequence[int]], selected: Sequence[Mapping[str, Any]],
+               label_seed: int, repeat_seed: Optional[int], log: Any) -> List[Dict[str, Any]]:
+    """Card §5/§6: one game's labels, in ply order. Every position is rebuilt and checked against its selected
+    digest FIRST; then `label_start` (and, before the first T', `repeat_start`) is logged before that seed's
+    first use. Per position: T1600 and T400 from the label seed (common random numbers), and T' (1600) from the
+    repeat seed when held out. Check D: the first position's 400 call is repeated and must match exactly."""
+    states = []
+    for p in selected:
+        s = replay_state(moves[:p["ply"]])
+        if state_digest(s) != p["digest"]:
+            raise Stop(f"game {g} ply {p['ply']}: the rebuilt position's digest is not the selected one")
+        states.append((p, s))
+    if not states:
+        return []
+    log({"event": "label_start", "game": g})
+    rows = []
+    for i, (p, s) in enumerate(states):
+        row = {"game": g, "ply": p["ply"], "digest": p["digest"], "legal_sha": legal_digest(s.legal_moves()),
+               "t1600": label(evaluator, s, SIMS_HI, label_seed), "t400": label(evaluator, s, SIMS_LO, label_seed)}
+        if i == 0 and label(evaluator, s, SIMS_LO, label_seed) != row["t400"]:
+            raise Stop(f"game {g} ply {p['ply']}: determinism check D failed (a repeated 400 label differs)")
+        if repeat_seed is not None:
+            if i == 0:
+                log({"event": "repeat_start", "game": g})
+            row["repeat"] = label(evaluator, s, SIMS_HI, repeat_seed)
+        rows.append(row)
+    return rows
+
+
+def label_phase(evaluator: Any, games: Any, selected: Any, base: int, heldout: bool, log: Any,
+                q: Any = None) -> List[Dict[str, Any]]:
+    """Card §11: L1 (heldout: T1600, T400, D and T') or L2 (training: T1600, T400 and D), in slot order. L2
+    needs the committed gate-Q record QUALIFIED, checked before any event or search."""
+    if not heldout:
+        require_qualified(q)
+    rows: List[Dict[str, Any]] = []
+    for g in range(N_GAMES):
+        if is_heldout(g) == heldout:
+            rows += label_game(evaluator, g, games[g], selected[g], base + LABEL + g,
+                               base + repeat_slot(g) if heldout else None, log)
+    return rows
+
+
+def training_record(state: TwixtState, sparse: Sequence[Sequence[int]], sims: int, legal_sha: str):
+    """Card §5/§7: a stored label as a training row -- a PositionRecord over the FULL legal order holding the
+    restored counts; `make_padded_batch` divides them by their sum (= sims). The board is built as #53's
+    `position_record` builds it; the outcome is a required zero placeholder (no value loss)."""
+    import numpy as np
+
+    from .self_play import PositionRecord
+
+    legal, counts = full_counts(state, sparse, sims, legal_sha)
+    return PositionRecord(board_tensor=np.transpose(state.to_tensor(), (1, 2, 0)), to_move=state.to_move,
+                          legal_moves=legal, visit_counts=counts, outcome=0.0,
+                          active_size=PROTOCOL["board_size"], ply=state.ply)
+
+
+def train_schedule(seed: int, n_train: int):
+    """Card §7: TRAIN_STEPS draws of TRAIN_BATCH indices, uniform with replacement, from PCG64(T)."""
+    import numpy as np
+
+    return np.random.Generator(np.random.PCG64(seed)).integers(0, n_train, size=(TRAIN_STEPS, TRAIN_BATCH))
+
+
+def _position(r: Any) -> Tuple[Any, ...]:
+    return r.ply, r.to_move, tuple(r.legal_moves), r.board_tensor.tobytes()
+
+
+def train_arms(q: Any, load_network: Any, student: Sequence[Any], control: Sequence[Any], seed: int, log: Any,
+               train: Any) -> Tuple[Any, Dict[str, Tuple[Any, List[Dict[str, float]]]]]:
+    """Card §7: the two arms, identical except for their targets -- each a fresh incumbent copy, the SAME
+    positions in the same order, the SAME index schedule. Gate Q is checked before anything loads or is
+    logged; `train_start` is logged before the schedule seed is used."""
+    require_qualified(q)
+    if len(student) != len(control) or any(_position(a) != _position(b) for a, b in zip(student, control)):
+        raise ValueError("the arms do not hold the same positions in the same order")
+    log({"event": "train_start"})
+    schedule = train_schedule(seed, len(student))
+    nets = {}
+    for arm, records in (("student", student), ("control", control)):
+        net = load_network()
+        steps = train(net, records, schedule, log=lambda e, arm=arm: log({**e, "arm": arm}))
+        if len(steps) != TRAIN_STEPS:
+            raise Stop(f"{arm}: {len(steps)} of {TRAIN_STEPS} steps")
+        nets[arm] = (net, steps)
+    return schedule, nets
+
+
+def require_terminated(outer: Any, need_exit_zero: bool) -> None:
+    """Card §10/§11: a phase's committed outer record (the wrapper's) must show no survivor. An input to a later
+    phase also needs exit 0; closing accepts any exit, since a stopped or timed-out phase still exposed seeds."""
+    if not isinstance(outer, Mapping) or type(outer.get("outer_exit")) is not int or outer.get("survivors") != "":
+        raise Refused(f"the phase's outer record shows no clean termination: {outer!r}")
+    if need_exit_zero and outer["outer_exit"] != 0:
+        raise Refused(f"the phase exited {outer['outer_exit']}, not 0: its outputs are not inputs")
+
+
+def check_label_rows(rows: Sequence[Mapping[str, Any]], selected: Mapping[int, Sequence[Mapping[str, Any]]],
+                     games: Any, heldout: bool) -> None:
+    """Card §4/§5: label rows must be exactly the split's selected positions -- none missing, extra, duplicated
+    or from the other split -- and each row's digest must be the selection's AND the rebuilt state's."""
+    keys = [(r["game"], r["ply"]) for r in rows]
+    want = {(g, p["ply"]): p["digest"] for g in selected if is_heldout(g) == heldout for p in selected[g]}
+    if len(set(keys)) != len(keys):
+        raise Stop("duplicate label rows")
+    if set(keys) != set(want):
+        raise Stop(f"the label rows are not exactly the selected {'held-out' if heldout else 'training'} positions: "
+                   f"{len(set(keys) - set(want))} extra, {len(set(want) - set(keys))} missing")
+    for r in rows:
+        g, p = r["game"], r["ply"]
+        if r["digest"] != want[(g, p)] or state_digest(replay_state(games[g][:p])) != r["digest"]:
+            raise Stop(f"game {g} ply {p}: the row's digest is not the selected, rebuilt position's")

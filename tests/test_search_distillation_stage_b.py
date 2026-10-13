@@ -2,11 +2,13 @@
 import dataclasses
 import math
 import random
+import types
 
 import numpy as np
 import pytest
 
 from scripts.GPU.alphazero import search_distillation_stage_b as B
+from scripts.GPU.alphazero.external_learning_stage2 import batch_of
 from scripts.GPU.alphazero.game.twixt_state import TwixtState
 from tests.fpu_search_fixture import FakeEvaluator
 
@@ -384,3 +386,148 @@ def test_soft_beta_accepts_the_zero_endpoint_for_a_uniform_target():
 def test_soft_beta_refuses_a_target_it_can_never_reach():
     with pytest.raises(ValueError):
         B.fit_beta_soft([[0.0, 1.0]], [[0.0, 1.0]])     # CE still decreasing at beta = 100: not a minimum
+
+
+# ─── wiring: a stored label into the training batch, one schedule for both arms, the Q stop, one game's labels ───
+
+QUALIFIED = {"verdict": "QUALIFIED", "failed": []}
+NOT_QUALIFIED = [B.gate_q([None] * 40), {}, {"verdict": "QUALIFIED", "failed": ["Q2"]}]
+
+
+def _never(*a, **k):
+    pytest.fail("called after a refusal")
+
+
+def _pairs(n):
+    """Fake aligned arms: what train_arms compares (ply, side, legal order, board) is equal; the targets differ."""
+    pos = lambda i, c: types.SimpleNamespace(ply=i, to_move="red", legal_moves=[(i, 0), (i, 1)],
+                                             board_tensor=np.full(2, i), visit_counts=c)
+    return [pos(i, [3, 1]) for i in range(n)], [pos(i, [1, 3]) for i in range(n)]
+
+
+def test_a_stored_label_reaches_the_training_batch_over_the_full_legal_support(runs):
+    legal = [tuple(m) for m in STATE.legal_moves()]
+    sha = B.legal_digest(legal)
+    student = B.training_record(STATE, B.sparse_label(runs["v1600"], 1600), 1600, sha)   # as a label row stores it
+    control = B.training_record(STATE, runs["label"], 400, sha)
+    boards, mr, mc, mask, target, _ = (np.array(x) for x in batch_of([student, control]))
+    n = len(legal)
+    assert mask.shape == (2, n) and mask.sum() == 2 * n                  # every legal move, nothing truncated
+    assert all(list(zip(mr[i].tolist(), mc[i].tolist())) == legal for i in (0, 1))
+    assert np.array_equal(boards[0], boards[1])                          # one position, two targets
+    for row, visits, sims in ((target[0], runs["v1600"], 1600), (target[1], runs["again"], 400)):
+        assert np.array_equal(row, np.array([visits[m] for m in legal], dtype=np.float32) / np.float32(sims))
+    assert (target[1] == 0).any()                                        # zero-visit moves stay in the support
+
+
+def test_both_arms_draw_one_schedule_after_train_start():
+    events, seen = [], []
+    student, control = _pairs(5)
+
+    def train(net, records, schedule, log):
+        assert events == [{"event": "train_start"}]                     # the seed's use is logged first
+        seen.append((net, records, schedule.copy()))
+        return [{}] * B.TRAIN_STEPS
+
+    schedule, nets = B.train_arms(QUALIFIED, object, student, control, 7, events.append, train)
+    want = np.random.Generator(np.random.PCG64(7)).integers(0, 5, size=(160, 32))
+    assert np.array_equal(schedule, want) and set(nets) == {"student", "control"}
+    assert seen[0][1] is student and seen[1][1] is control and seen[0][0] is not seen[1][0]   # fresh copy per arm
+    assert all(np.array_equal(s[2], want) for s in seen)
+
+
+def test_the_arms_must_hold_the_same_positions_in_the_same_order():
+    student, control = _pairs(3)
+    for bad in (control[:2], control[::-1]):
+        events = []
+        with pytest.raises(ValueError):
+            B.train_arms(QUALIFIED, _never, student, bad, 7, events.append, _never)
+        assert events == []
+
+
+@pytest.mark.parametrize("q", NOT_QUALIFIED)
+def test_training_stops_before_any_load_or_event_when_q_did_not_qualify(q):
+    events = []
+    with pytest.raises(B.Refused):
+        B.train_arms(q, _never, *_pairs(3), 7, events.append, _never)
+    assert events == []
+
+
+@pytest.mark.parametrize("q", NOT_QUALIFIED)
+def test_training_labels_stop_before_any_event_or_search_when_q_did_not_qualify(q):
+    events = []
+    with pytest.raises(B.Refused):
+        B.label_phase(None, {}, {}, BASE, False, events.append, q=q)
+    assert events == []
+
+
+def test_label_game_logs_each_seed_before_its_first_use_and_pairs_the_budgets(monkeypatch):
+    events, calls = [], []
+
+    def fake_label(evaluator, state, sims, seed):
+        calls.append((len(events), state.ply, sims, seed))
+        return [[0, 0, sims]]
+
+    monkeypatch.setattr(B, "label", fake_label)
+    sel = B.select_game(MOVES, 11)
+    rows = B.label_game("ev", 9, MOVES, sel, 11, 22, events.append)    # game 9 is held out
+    assert events == [{"event": "label_start", "game": 9}, {"event": "repeat_start", "game": 9}]
+    first, *rest = [p["ply"] for p in sel]
+    assert calls == [(1, first, 1600, 11), (1, first, 400, 11), (1, first, 400, 11), (2, first, 1600, 22)] + \
+        [(2, p, s, seed) for p in rest for s, seed in ((1600, 11), (400, 11), (1600, 22))]
+    assert [r["ply"] for r in rows] == [p["ply"] for p in sel]
+    assert all(set(r) == {"game", "ply", "digest", "legal_sha", "t1600", "t400", "repeat"} for r in rows)
+
+
+def test_label_game_stops_on_a_determinism_mismatch(monkeypatch):
+    n = iter(range(1, 100))
+    monkeypatch.setattr(B, "label", lambda ev, s, sims, seed: [[0, 0, next(n)]])
+    with pytest.raises(B.Stop, match="determinism"):
+        B.label_game("ev", 3, MOVES, B.select_game(MOVES, 11), 11, None, [].append)
+
+
+def test_label_game_stops_before_any_event_when_a_position_is_not_the_selected_one(monkeypatch):
+    monkeypatch.setattr(B, "label", _never)
+    sel = [{**p, "digest": "0" * 64} for p in B.select_game(MOVES, 11)]
+    events = []
+    with pytest.raises(B.Stop, match="digest"):
+        B.label_game("ev", 3, MOVES, sel, 11, None, events.append)
+    assert events == []
+
+
+# ─── data-only input checks: label rows against the selection; phase termination ───
+
+ROW_GAMES = {3: MOVES, 4: MOVES, 8: MOVES}                              # 3 and 8 train; 4 is held out
+ROW_SEL = {g: B.select_game(MOVES, 11 + g) for g in ROW_GAMES}
+TRAIN_ROWS = [{"game": g, "ply": p["ply"], "digest": p["digest"]} for g in (3, 8) for p in ROW_SEL[g]]
+
+
+def test_label_rows_that_are_exactly_the_split_selection_are_accepted():
+    B.check_label_rows(TRAIN_ROWS, ROW_SEL, ROW_GAMES, heldout=False)
+
+
+@pytest.mark.parametrize("rows, games", [
+    (TRAIN_ROWS[:-1], ROW_GAMES),                                                         # one missing
+    (TRAIN_ROWS + TRAIN_ROWS[:1], ROW_GAMES),                                             # a duplicate
+    (TRAIN_ROWS + [{"game": 4, "ply": p["ply"], "digest": p["digest"]} for p in ROW_SEL[4][:1]], ROW_GAMES),  # held out
+    ([{**TRAIN_ROWS[0], "digest": "0" * 64}] + TRAIN_ROWS[1:], ROW_GAMES),                # not the selection's digest
+    (TRAIN_ROWS, {**ROW_GAMES, 3: MOVES[:1] + [(20, 20)] + MOVES[2:]}),                   # not the rebuilt state's
+])
+def test_label_rows_that_are_not_exactly_the_split_selection_stop(rows, games):
+    with pytest.raises(B.Stop):
+        B.check_label_rows(rows, ROW_SEL, games, heldout=False)
+
+
+@pytest.mark.parametrize("outer", [{"outer_exit": 124, "survivors": ""}, {"outer_exit": 0, "survivors": "4242 "}, {}])
+def test_a_phase_input_needs_exit_zero_and_no_survivor(outer):
+    B.require_terminated({"outer_exit": 0, "survivors": ""}, True)
+    with pytest.raises(B.Refused):
+        B.require_terminated(outer, True)
+
+
+def test_closing_accepts_a_stopped_or_timed_out_phase_but_not_a_survivor():
+    for status in (0, 2, 124):
+        B.require_terminated({"outer_exit": status, "survivors": ""}, False)
+    for bad in ({"outer_exit": 124, "survivors": "4242 "}, {"survivors": ""}, None):
+        with pytest.raises(B.Refused):
+            B.require_terminated(bad, False)
