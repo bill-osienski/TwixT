@@ -549,6 +549,17 @@ ACCOUNTED_SEED_INTERVALS = (
     # Accounted, NOT exposed and NOT retired: exposure follows actual use (the started-game
     # prefix); the closing edit retires the whole block. No gate is opened by this.
     (202690300, 202690460),          # SEARCH DISTILLATION STAGE A -- 80 pairs, 160 game seeds
+    # 🔴 SEARCH DISTILLATION STAGE B -- 441 SEEDS, registered 2026-10-13 under
+    # `2026-10-12-search-distillation-stage-b-card.md` §9: the 441-slot block of the Stage B survey
+    # (evidence/search-distillation-stage-b-seed-survey/02_*), READ from that record, not chosen
+    # here, by the replacement rule (seed_selection.candidate). Slots: 200 corpus games, 200 label
+    # seeds (selection and labels of each game), 40 repeat seeds, 1 training-schedule seed; the plan
+    # is evidence/search-distillation-stage-b/plan.json (base + slot count + survey hash).
+    # Registered ONLY after the pre-registration collision proof (same directory, 03_*) was CLEAN, 45/45.
+    #
+    # Accounted, NOT exposed and NOT retired: exposure is the union of slots any phase logs as used;
+    # the closing edit retires the whole block. No gate is opened by this.
+    (202691000, 202691441),          # SEARCH DISTILLATION STAGE B -- 441 slots (G, L, R, T)
 )
 
 #: EXPERIMENTAL EXPOSURE: seeds drawn from OUTSIDE the permanently unschedulable
