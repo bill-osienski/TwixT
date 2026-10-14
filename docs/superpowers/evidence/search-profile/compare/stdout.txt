@@ -1,0 +1,1 @@
+COMPLETED: 4800 simulations, all 12 searches matched the baseline; control 7437 ms, prototype 6856 ms, reduction 7.8% -> SCREEN_NON_PASS
