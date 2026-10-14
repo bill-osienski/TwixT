@@ -1,0 +1,603 @@
+{
+ "verdict": "NON-PASS",
+ "learning": {
+  "l1_wins": 27,
+  "l2_wins": 18,
+  "top1": {
+   "student": 0.13958333333333334,
+   "control": 0.15833333333333333,
+   "temperature": 0.18125,
+   "incumbent": 0.18125
+  },
+  "failed": [
+   "L2",
+   "L3"
+  ],
+  "verdict": "NON-PASS"
+ },
+ "q": "QUALIFIED",
+ "beta": {
+  "beta": 0.7164864540100098,
+  "ce": 3.870215031101518,
+  "derivative": -1.423746874402998e-06,
+  "iterations": 20,
+  "bracket": [
+   0.7164859771728516,
+   0.716486930847168
+  ],
+  "bounds": [
+   0.0,
+   100.0
+  ]
+ },
+ "mean_kl": {
+  "student": 1.5096296047307152,
+  "control": 1.5650914121277528,
+  "temperature": 1.5560937460837982,
+  "incumbent": 1.670761605349476
+ },
+ "relative_kl_gain_vs_incumbent": 0.09644224532263933,
+ "per_game": [
+  {
+   "kl": {
+    "student": 1.4375190905124913,
+    "control": 1.5875482816331195,
+    "temperature": 1.721049391448768,
+    "incumbent": 1.9882369950007963
+   },
+   "top1": {
+    "student": 0.0,
+    "control": 0.0,
+    "temperature": 0.0,
+    "incumbent": 0.0
+   }
+  },
+  {
+   "kl": {
+    "student": 1.4960085089020556,
+    "control": 1.3778360960835647,
+    "temperature": 1.5257713756383133,
+    "incumbent": 1.5738108041440406
+   },
+   "top1": {
+    "student": 0.25,
+    "control": 0.25,
+    "temperature": 0.0,
+    "incumbent": 0.0
+   }
+  },
+  {
+   "kl": {
+    "student": 1.274156285148303,
+    "control": 1.373935356596596,
+    "temperature": 1.4386024581878292,
+    "incumbent": 1.1721672178770044
+   },
+   "top1": {
+    "student": 0.0,
+    "control": 0.0,
+    "temperature": 0.0,
+    "incumbent": 0.0
+   }
+  },
+  {
+   "kl": {
+    "student": 1.6312333030657804,
+    "control": 1.6764726843377293,
+    "temperature": 1.6431525745325841,
+    "incumbent": 1.6513786107141577
+   },
+   "top1": {
+    "student": 0.0,
+    "control": 0.0,
+    "temperature": 0.0,
+    "incumbent": 0.0
+   }
+  },
+  {
+   "kl": {
+    "student": 1.2377765787554729,
+    "control": 1.2931775035027813,
+    "temperature": 1.3796753429480542,
+    "incumbent": 1.7349066324108748
+   },
+   "top1": {
+    "student": 0.0,
+    "control": 0.0,
+    "temperature": 0.25,
+    "incumbent": 0.25
+   }
+  },
+  {
+   "kl": {
+    "student": 1.8091104145294867,
+    "control": 1.9174627978039904,
+    "temperature": 1.5524437299827556,
+    "incumbent": 1.8390976635070553
+   },
+   "top1": {
+    "student": 0.25,
+    "control": 0.25,
+    "temperature": 0.25,
+    "incumbent": 0.25
+   }
+  },
+  {
+   "kl": {
+    "student": 1.710978364262565,
+    "control": 1.7217634875653864,
+    "temperature": 1.6657608682982605,
+    "incumbent": 2.148689914861369
+   },
+   "top1": {
+    "student": 0.0,
+    "control": 0.0,
+    "temperature": 0.0,
+    "incumbent": 0.0
+   }
+  },
+  {
+   "kl": {
+    "student": 1.3445635354842345,
+    "control": 1.291786448181697,
+    "temperature": 1.4405970695088175,
+    "incumbent": 1.5257447355126752
+   },
+   "top1": {
+    "student": 0.0,
+    "control": 0.0,
+    "temperature": 0.0,
+    "incumbent": 0.0
+   }
+  },
+  {
+   "kl": {
+    "student": 1.0745443080379422,
+    "control": 1.1502527248458703,
+    "temperature": 1.159105163727548,
+    "incumbent": 1.1047973958801585
+   },
+   "top1": {
+    "student": 0.25,
+    "control": 0.25,
+    "temperature": 0.25,
+    "incumbent": 0.25
+   }
+  },
+  {
+   "kl": {
+    "student": 1.3530862601913072,
+    "control": 1.3863057203147076,
+    "temperature": 1.262448562290741,
+    "incumbent": 1.529191265169624
+   },
+   "top1": {
+    "student": 0.0,
+    "control": 0.25,
+    "temperature": 0.25,
+    "incumbent": 0.25
+   }
+  },
+  {
+   "kl": {
+    "student": 0.7101357954316195,
+    "control": 0.8074826212341222,
+    "temperature": 0.7204317185611208,
+    "incumbent": 0.5930870722221221
+   },
+   "top1": {
+    "student": 0.75,
+    "control": 0.25,
+    "temperature": 0.75,
+    "incumbent": 0.75
+   }
+  },
+  {
+   "kl": {
+    "student": 1.2434014889161804,
+    "control": 1.2313917658070552,
+    "temperature": 1.3032112459870393,
+    "incumbent": 1.1587484502401213
+   },
+   "top1": {
+    "student": 0.25,
+    "control": 0.25,
+    "temperature": 0.25,
+    "incumbent": 0.25
+   }
+  },
+  {
+   "kl": {
+    "student": 1.4441276230553415,
+    "control": 1.3901984195260992,
+    "temperature": 1.503371448711173,
+    "incumbent": 1.8011431130779254
+   },
+   "top1": {
+    "student": 0.3333333333333333,
+    "control": 0.3333333333333333,
+    "temperature": 0.3333333333333333,
+    "incumbent": 0.3333333333333333
+   }
+  },
+  {
+   "kl": {
+    "student": 1.1244885928413069,
+    "control": 1.2696968020338009,
+    "temperature": 1.2691911271419822,
+    "incumbent": 1.1147734080112288
+   },
+   "top1": {
+    "student": 0.25,
+    "control": 0.25,
+    "temperature": 0.25,
+    "incumbent": 0.25
+   }
+  },
+  {
+   "kl": {
+    "student": 2.046334760539072,
+    "control": 2.2841377627419877,
+    "temperature": 2.267753301057055,
+    "incumbent": 2.514260377406353
+   },
+   "top1": {
+    "student": 0.0,
+    "control": 0.25,
+    "temperature": 0.0,
+    "incumbent": 0.0
+   }
+  },
+  {
+   "kl": {
+    "student": 1.4249226909064763,
+    "control": 1.5127791633923573,
+    "temperature": 1.2972601090330695,
+    "incumbent": 1.3077718413783017
+   },
+   "top1": {
+    "student": 0.0,
+    "control": 0.0,
+    "temperature": 0.0,
+    "incumbent": 0.0
+   }
+  },
+  {
+   "kl": {
+    "student": 1.3937859566280677,
+    "control": 1.363337306429085,
+    "temperature": 1.6435274652785437,
+    "incumbent": 1.6732703778713318
+   },
+   "top1": {
+    "student": 0.0,
+    "control": 0.0,
+    "temperature": 0.25,
+    "incumbent": 0.25
+   }
+  },
+  {
+   "kl": {
+    "student": 1.8578360405820076,
+    "control": 1.8943113085654295,
+    "temperature": 1.7417131931905139,
+    "incumbent": 1.6428384674079684
+   },
+   "top1": {
+    "student": 0.25,
+    "control": 0.25,
+    "temperature": 0.25,
+    "incumbent": 0.25
+   }
+  },
+  {
+   "kl": {
+    "student": 1.6052363243340346,
+    "control": 1.7171137071502498,
+    "temperature": 1.989300121205066,
+    "incumbent": 2.356762363867576
+   },
+   "top1": {
+    "student": 0.0,
+    "control": 0.0,
+    "temperature": 0.25,
+    "incumbent": 0.25
+   }
+  },
+  {
+   "kl": {
+    "student": 1.2198544835561764,
+    "control": 1.315273243774104,
+    "temperature": 1.2772823536276152,
+    "incumbent": 1.1347747945535471
+   },
+   "top1": {
+    "student": 0.0,
+    "control": 0.0,
+    "temperature": 0.0,
+    "incumbent": 0.0
+   }
+  },
+  {
+   "kl": {
+    "student": 1.7439377729006327,
+    "control": 1.8460023593944206,
+    "temperature": 1.8352379119162974,
+    "incumbent": 2.0121581382017193
+   },
+   "top1": {
+    "student": 0.0,
+    "control": 0.0,
+    "temperature": 0.0,
+    "incumbent": 0.0
+   }
+  },
+  {
+   "kl": {
+    "student": 3.018539954089503,
+    "control": 3.195770981009319,
+    "temperature": 3.202404291421342,
+    "incumbent": 3.9089484586908902
+   },
+   "top1": {
+    "student": 0.0,
+    "control": 0.0,
+    "temperature": 0.0,
+    "incumbent": 0.0
+   }
+  },
+  {
+   "kl": {
+    "student": 1.6577932707758074,
+    "control": 1.6527750844856859,
+    "temperature": 1.768579420798072,
+    "incumbent": 1.8954867135939975
+   },
+   "top1": {
+    "student": 0.0,
+    "control": 0.0,
+    "temperature": 0.0,
+    "incumbent": 0.0
+   }
+  },
+  {
+   "kl": {
+    "student": 1.7610319356983322,
+    "control": 1.7901625314012222,
+    "temperature": 1.6664316661256429,
+    "incumbent": 2.0974698636862197
+   },
+   "top1": {
+    "student": 0.0,
+    "control": 0.0,
+    "temperature": 0.0,
+    "incumbent": 0.0
+   }
+  },
+  {
+   "kl": {
+    "student": 2.3661704817730294,
+    "control": 2.2339862715458914,
+    "temperature": 2.429125221793056,
+    "incumbent": 3.1025477809926323
+   },
+   "top1": {
+    "student": 0.0,
+    "control": 0.0,
+    "temperature": 0.0,
+    "incumbent": 0.0
+   }
+  },
+  {
+   "kl": {
+    "student": 1.2241063717454113,
+    "control": 1.2165668812636738,
+    "temperature": 1.189618861169848,
+    "incumbent": 1.3528039013414355
+   },
+   "top1": {
+    "student": 0.0,
+    "control": 0.25,
+    "temperature": 0.5,
+    "incumbent": 0.5
+   }
+  },
+  {
+   "kl": {
+    "student": 2.554907128076994,
+    "control": 2.631558541373745,
+    "temperature": 2.621948794337678,
+    "incumbent": 2.92212998734811
+   },
+   "top1": {
+    "student": 0.0,
+    "control": 0.0,
+    "temperature": 0.0,
+    "incumbent": 0.0
+   }
+  },
+  {
+   "kl": {
+    "student": 0.683077473011681,
+    "control": 0.6471804856960723,
+    "temperature": 0.5581812694974726,
+    "incumbent": 0.5331384987201983
+   },
+   "top1": {
+    "student": 0.3333333333333333,
+    "control": 0.3333333333333333,
+    "temperature": 0.3333333333333333,
+    "incumbent": 0.3333333333333333
+   }
+  },
+  {
+   "kl": {
+    "student": 0.9693145198604679,
+    "control": 0.9334821384103229,
+    "temperature": 0.9668664591513801,
+    "incumbent": 0.8594593462786463
+   },
+   "top1": {
+    "student": 0.0,
+    "control": 0.0,
+    "temperature": 0.0,
+    "incumbent": 0.0
+   }
+  },
+  {
+   "kl": {
+    "student": 1.411792921989628,
+    "control": 1.7930263143622278,
+    "temperature": 1.6182685429304966,
+    "incumbent": 1.3390205329503482
+   },
+   "top1": {
+    "student": 0.25,
+    "control": 0.5,
+    "temperature": 0.75,
+    "incumbent": 0.75
+   }
+  },
+  {
+   "kl": {
+    "student": 1.7705777647062384,
+    "control": 1.7938537135357313,
+    "temperature": 1.9506798213853542,
+    "incumbent": 1.8641190161512715
+   },
+   "top1": {
+    "student": 0.0,
+    "control": 0.0,
+    "temperature": 0.0,
+    "incumbent": 0.0
+   }
+  },
+  {
+   "kl": {
+    "student": 1.643863240457129,
+    "control": 1.5823881810565636,
+    "temperature": 1.6818187929572603,
+    "incumbent": 1.7261266327107254
+   },
+   "top1": {
+    "student": 0.25,
+    "control": 0.25,
+    "temperature": 0.0,
+    "incumbent": 0.0
+   }
+  },
+  {
+   "kl": {
+    "student": 0.799294744668563,
+    "control": 1.0853655274764524,
+    "temperature": 1.0662791051226443,
+    "incumbent": 0.6309274671351318
+   },
+   "top1": {
+    "student": 0.6666666666666666,
+    "control": 0.6666666666666666,
+    "temperature": 0.3333333333333333,
+    "incumbent": 0.3333333333333333
+   }
+  },
+  {
+   "kl": {
+    "student": 1.506167737824545,
+    "control": 1.546720926798846,
+    "temperature": 1.465006939231498,
+    "incumbent": 1.4405272004884861
+   },
+   "top1": {
+    "student": 0.5,
+    "control": 0.25,
+    "temperature": 0.0,
+    "incumbent": 0.0
+   }
+  },
+  {
+   "kl": {
+    "student": 1.1538618543769394,
+    "control": 1.0750459244338109,
+    "temperature": 1.011557482560085,
+    "incumbent": 0.9087200829246166
+   },
+   "top1": {
+    "student": 0.0,
+    "control": 0.0,
+    "temperature": 0.25,
+    "incumbent": 0.25
+   }
+  },
+  {
+   "kl": {
+    "student": 1.78456992638314,
+    "control": 1.9052610045948843,
+    "temperature": 2.2049540042743683,
+    "incumbent": 2.9143331773776873
+   },
+   "top1": {
+    "student": 0.0,
+    "control": 0.0,
+    "temperature": 0.25,
+    "incumbent": 0.25
+   }
+  },
+  {
+   "kl": {
+    "student": 1.3217466420545698,
+    "control": 1.356271557583409,
+    "temperature": 1.2825613995376728,
+    "incumbent": 1.4323223238492124
+   },
+   "top1": {
+    "student": 0.5,
+    "control": 0.5,
+    "temperature": 0.5,
+    "incumbent": 0.5
+   }
+  },
+  {
+   "kl": {
+    "student": 1.0274711745657248,
+    "control": 1.126057171239832,
+    "temperature": 0.9254879166616905,
+    "incumbent": 0.9615526825124039
+   },
+   "top1": {
+    "student": 0.25,
+    "control": 0.5,
+    "temperature": 0.25,
+    "incumbent": 0.25
+   }
+  },
+  {
+   "kl": {
+    "student": 1.3271975645883605,
+    "control": 1.290956663231934,
+    "temperature": 1.0452794725530017,
+    "incumbent": 1.1042793904275936
+   },
+   "top1": {
+    "student": 0.25,
+    "control": 0.25,
+    "temperature": 0.5,
+    "incumbent": 0.5
+   }
+  },
+  {
+   "kl": {
+    "student": 2.220661304001988,
+    "control": 2.338961024696338,
+    "temperature": 1.9518138495702169,
+    "incumbent": 2.2589415174834797
+   },
+   "top1": {
+    "student": 0.0,
+    "control": 0.25,
+    "temperature": 0.25,
+    "incumbent": 0.25
+   }
+  }
+ ],
+ "strength_verdict": null
+}
