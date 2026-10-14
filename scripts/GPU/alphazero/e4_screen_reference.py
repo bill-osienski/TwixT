@@ -836,6 +836,14 @@ EXPOSED_SEED_INTERVALS = (
     # accounting edit to a bound file: the committed plan, survey/proof and run records keep their
     # hashes; nothing is rerun.
     (202690300, 202690460),  # SEARCH DISTILLATION STAGE A -- 160 game seeds, all started
+    # 🔴 SEARCH DISTILLATION STAGE B -- THE CLOSING EDIT (2026-10-14), after the authorized phase
+    # sequence G, P, L1, Q, L2, T (each COMPLETED, outer exit 0, no survivors; learning verdict
+    # NON-PASS). Use DERIVED from the committed run evidence by the frozen closing phase
+    # (evidence/search-distillation-stage-b/K/closing.json: COMPLETED, outer exit 0): exposure is the
+    # union of slots the phases logged as used; every slot was used, so the block is EXPOSED WHOLE.
+    # A post-run accounting edit to a bound file: the committed plan, survey/proof and run records
+    # keep their hashes; nothing is rerun.
+    (202691000, 202691441),  # SEARCH DISTILLATION STAGE B -- 441 slots (G, L, R, T), all used
 )
 
 #: Seeds RESERVED PERMANENTLY FOR TESTS. Unit tests must draw from something, and
@@ -1131,6 +1139,14 @@ RETIRED_SEED_INTERVALS = (
     # accounting edit to a bound file: the committed plan, survey/proof and run records keep their
     # hashes; nothing is rerun.
     (202690300, 202690460),  # SEARCH DISTILLATION STAGE A -- 160 game seeds, all started
+    # 🔴 SEARCH DISTILLATION STAGE B -- THE CLOSING EDIT (2026-10-14), after the authorized phase
+    # sequence G, P, L1, Q, L2, T (each COMPLETED, outer exit 0, no survivors; learning verdict
+    # NON-PASS). Use DERIVED from the committed run evidence by the frozen closing phase
+    # (evidence/search-distillation-stage-b/K/closing.json: COMPLETED, outer exit 0): exposure is the
+    # union of slots the phases logged as used; every slot was used, so the block is RETIRED WHOLE.
+    # A post-run accounting edit to a bound file: the committed plan, survey/proof and run records
+    # keep their hashes; nothing is rerun.
+    (202691000, 202691441),  # SEARCH DISTILLATION STAGE B -- 441 slots (G, L, R, T), all used
 )
 
 
