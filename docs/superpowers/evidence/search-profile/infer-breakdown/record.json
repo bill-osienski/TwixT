@@ -1,0 +1,246 @@
+{
+ "baseline": {
+  "path": "docs/superpowers/evidence/search-profile/run/record.json",
+  "sha256": "0fd099ed2e929847f44ce0b5c312316eea2e6e8a9cd4dd6eabe976627e624e57"
+ },
+ "checkpoint": {
+  "path": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "sha1_verified": "209cf2d4fd24a48553d259dd71b4954867b9473e"
+ },
+ "combined": {
+  "infer_calls": 1203,
+  "infer_segments_ms": 2830.49008,
+  "infer_share_of_search_wall": 0.7083821121175757,
+  "mark_estimate": {
+   "estimated_ms": 0.184815897525,
+   "note": "an estimate from a loop calibration, not a measurement of the run",
+   "ns_per_mark": 30.725835
+  },
+  "search_wall_ms": 3995.710834,
+  "segments": {
+   "forward": {
+    "max_ms": 5.025583,
+    "median_ms": 1.833,
+    "p95_ms": 3.058541,
+    "total_ms": 2454.952533
+   },
+   "input": {
+    "max_ms": 0.063,
+    "median_ms": 0.015,
+    "p95_ms": 0.025542,
+    "total_ms": 19.8849
+   },
+   "output": {
+    "max_ms": 0.129667,
+    "median_ms": 0.025833,
+    "p95_ms": 0.041625,
+    "total_ms": 32.997043
+   },
+   "softmax": {
+    "max_ms": 1.880541,
+    "median_ms": 0.225541,
+    "p95_ms": 0.510583,
+    "total_ms": 322.655604
+   }
+  },
+  "share_of_infer": {
+   "forward": 0.8673241960275657,
+   "input": 0.007025249846485948,
+   "output": 0.011657713705889404,
+   "softmax": 0.11399284042005899
+  },
+  "share_of_search_wall": {
+   "forward": 0.6143969458726852,
+   "input": 0.004976561324407391,
+   "output": 0.008258115857439947,
+   "softmax": 0.08075048906304313
+  },
+  "simulations": 1200
+ },
+ "dirty_paths": [
+  "M scripts/GPU/alphazero/self_play.py",
+  "?? docs/superpowers/evidence/search-profile/infer-breakdown/",
+  "?? docs/superpowers/plans/2026-10-11-training-replay-capture.md",
+  "?? docs/superpowers/specs/2026-10-11-training-replay-capture-design.md",
+  "?? scripts/GPU/alphazero/training_replay_capture.py",
+  "?? tests/test_training_replay_capture.py",
+  "?? tests/test_training_replay_capture_search_probe.py",
+  "?? tests/test_training_replay_capture_serial.py"
+ ],
+ "environment": {
+  "executable": "/Users/bill/projects/TwixT_Game/.venv/bin/python",
+  "mlx": "0.30.3",
+  "numpy": "2.4.1",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "python": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.1.1.101)]"
+ },
+ "head": "e57215a6d405710cae35422e741304a418a3161d",
+ "instrumentation_diff": "--- production\n+++ instrumented\n@@ -19,11 +19,13 @@\n             priors: (B, M) float32 - masked and renormalized probability distribution\n             values: (B,) float32 - value estimates for each position\n         \"\"\"\n+        _MARK(_NS())\n         # Convert numpy to MLX arrays\n         boards_mx = mx.array(boards)\n         move_rows_mx = mx.array(move_rows)\n         move_cols_mx = mx.array(move_cols)\n         move_mask_mx = mx.array(move_mask)\n+        _MARK(_NS())\n \n         # Forward pass \u2014 use compiled graph if requested to prevent Metal\n         # resource exhaustion during long sequential eval runs (see module doc).\n@@ -48,10 +50,12 @@\n \n         # Sync GPU (known stable at eval_batch <= 14)\n         mx.eval(policy_logits, values_mx)\n+        _MARK(_NS())\n \n         # Stable softmax with mask and renormalization\n         priors_mx = self._masked_softmax_batch(policy_logits, move_mask_mx)\n         mx.eval(priors_mx)\n+        _MARK(_NS())\n \n         # Convert to numpy (bulk transfer)\n         priors_list = priors_mx.tolist()\n@@ -75,4 +79,5 @@\n \n         # Note: No cache clearing here - trainer.py handles it per-game\n \n+        _MARK(_NS())\n         return priors_np, values_np\n",
+ "kind": "search-infer-breakdown/1",
+ "limitation": "CPU-thread wall time; time inside mx.eval is GPU execution and waiting, not separable",
+ "loadavg_after": [
+  3.28125,
+  4.8515625,
+  6.67626953125
+ ],
+ "loadavg_before": [
+  3.1318359375,
+  4.84912109375,
+  6.6865234375
+ ],
+ "phases_s": {
+  "factory": 0.008395625278353691,
+  "imports": 0.009265957865864038
+ },
+ "script": "docs/superpowers/evidence/search-profile/03_infer_breakdown.py",
+ "searches": [
+  {
+   "fixture": "P1",
+   "infer_calls": 401,
+   "infer_segments_ms": 1032.8902540000001,
+   "matched_baseline": true,
+   "process_cpu_ms": 747.977,
+   "segments": {
+    "forward": {
+     "max_ms": 5.025583,
+     "median_ms": 2.114208,
+     "p95_ms": 3.254083,
+     "total_ms": 897.545232
+    },
+    "input": {
+     "max_ms": 0.056209,
+     "median_ms": 0.017042,
+     "p95_ms": 0.027542,
+     "total_ms": 7.392097
+    },
+    "output": {
+     "max_ms": 0.129667,
+     "median_ms": 0.030125,
+     "p95_ms": 0.044333,
+     "total_ms": 13.087082
+    },
+    "softmax": {
+     "max_ms": 1.880541,
+     "median_ms": 0.22375,
+     "p95_ms": 0.767959,
+     "total_ms": 114.865843
+    }
+   },
+   "wall_ms": 1422.8645
+  },
+  {
+   "fixture": "P2",
+   "infer_calls": 401,
+   "infer_segments_ms": 902.1457029999999,
+   "matched_baseline": true,
+   "process_cpu_ms": 708.622,
+   "segments": {
+    "forward": {
+     "max_ms": 4.075459,
+     "median_ms": 1.714333,
+     "p95_ms": 2.829209,
+     "total_ms": 783.554635
+    },
+    "input": {
+     "max_ms": 0.055583,
+     "median_ms": 0.013708,
+     "p95_ms": 0.020875,
+     "total_ms": 6.005268
+    },
+    "output": {
+     "max_ms": 0.068625,
+     "median_ms": 0.0225,
+     "p95_ms": 0.034458,
+     "total_ms": 9.604838
+    },
+    "softmax": {
+     "max_ms": 1.403209,
+     "median_ms": 0.2255,
+     "p95_ms": 0.294125,
+     "total_ms": 102.980962
+    }
+   },
+   "wall_ms": 1282.786167
+  },
+  {
+   "fixture": "P3",
+   "infer_calls": 401,
+   "infer_segments_ms": 895.454123,
+   "matched_baseline": true,
+   "process_cpu_ms": 738.144,
+   "segments": {
+    "forward": {
+     "max_ms": 3.792834,
+     "median_ms": 1.723083,
+     "p95_ms": 2.799333,
+     "total_ms": 773.852666
+    },
+    "input": {
+     "max_ms": 0.063,
+     "median_ms": 0.014084,
+     "p95_ms": 0.025292,
+     "total_ms": 6.487535
+    },
+    "output": {
+     "max_ms": 0.087917,
+     "median_ms": 0.02325,
+     "p95_ms": 0.03975,
+     "total_ms": 10.305123
+    },
+    "softmax": {
+     "max_ms": 1.393417,
+     "median_ms": 0.227083,
+     "p95_ms": 0.485833,
+     "total_ms": 104.808799
+    }
+   },
+   "wall_ms": 1290.060167
+  }
+ ],
+ "seeds": {
+  "P1": 90009000,
+  "P2": 90009001,
+  "P3": 90009002
+ },
+ "segments": [
+  "input",
+  "forward",
+  "softmax",
+  "output"
+ ],
+ "strength_verdict": null,
+ "total_seconds": 4.157083165831864,
+ "verdict": "COMPLETED",
+ "warmups": [
+  {
+   "fixture": "P1",
+   "seconds": 0.030953167006373405,
+   "segments_ms": {
+    "forward": 29.528334,
+    "input": 0.140625,
+    "output": 0.041875,
+    "softmax": 1.2375
+   }
+  },
+  {
+   "fixture": "P2",
+   "seconds": 0.004442374687641859,
+   "segments_ms": {
+    "forward": 3.905625,
+    "input": 0.027292,
+    "output": 0.036792,
+    "softmax": 0.467583
+   }
+  },
+  {
+   "fixture": "P3",
+   "seconds": 0.003980000037699938,
+   "segments_ms": {
+    "forward": 3.678708,
+    "input": 0.026708,
+    "output": 0.031083,
+    "softmax": 0.239459
+   }
+  }
+ ]
+}

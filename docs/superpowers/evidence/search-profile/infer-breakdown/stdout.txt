@@ -1,0 +1,1 @@
+COMPLETED: 1200 simulations, all 3 searches matched the baseline; infer 2830 of 3996 ms; input 0.7%, forward 86.7%, softmax 11.4%, output 1.2%
