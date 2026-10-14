@@ -1,0 +1,1 @@
+COMPLETED: 1200 simulations, 3791 ms search wall, 3.16 ms/simulation
