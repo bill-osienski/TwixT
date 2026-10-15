@@ -1,0 +1,1 @@
+COMPLETED: 6000 simulations, evaluation mode, all checks passed; S400 3413 ms, fixed-shape B1600 4932 ms, ratio 1.445 -> NOT_FEASIBLE
