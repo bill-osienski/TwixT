@@ -1,0 +1,511 @@
+{
+ "calls": [
+  {
+   "kind": "ordinary",
+   "label": "A1",
+   "modules_in_training_mode_after": 0,
+   "prior_sum": 1.0,
+   "priors_sha256": "b7647b3c9d7f28cb2307d4af3760ffd128eb1381c5dbd7be9306c296e62c023a",
+   "top5": [
+    [
+     [
+      7,
+      11
+     ],
+     0.14892497658729553
+    ],
+    [
+     [
+      7,
+      9
+     ],
+     0.14207600057125092
+    ],
+    [
+     [
+      8,
+      8
+     ],
+     0.10708393901586533
+    ],
+    [
+     [
+      12,
+      18
+     ],
+     0.1068805530667305
+    ],
+    [
+     [
+      5,
+      4
+     ],
+     0.0961277037858963
+    ]
+   ],
+   "value": "0.06497320532798767"
+  },
+  {
+   "kind": "ordinary",
+   "label": "A2",
+   "modules_in_training_mode_after": 0,
+   "prior_sum": 1.0,
+   "priors_sha256": "b7647b3c9d7f28cb2307d4af3760ffd128eb1381c5dbd7be9306c296e62c023a",
+   "top5": [
+    [
+     [
+      7,
+      11
+     ],
+     0.14892497658729553
+    ],
+    [
+     [
+      7,
+      9
+     ],
+     0.14207600057125092
+    ],
+    [
+     [
+      8,
+      8
+     ],
+     0.10708393901586533
+    ],
+    [
+     [
+      12,
+      18
+     ],
+     0.1068805530667305
+    ],
+    [
+     [
+      5,
+      4
+     ],
+     0.0961277037858963
+    ]
+   ],
+   "value": "0.06497320532798767"
+  },
+  {
+   "kind": "fixed_shape",
+   "label": "B1",
+   "modules_in_training_mode_after": 0,
+   "prior_sum": 0.9999998807907104,
+   "priors_sha256": "4ed302a9a2b6123f77dce0727aaca995363dffec67fe491e4382e2e7036238a2",
+   "top5": [
+    [
+     [
+      7,
+      11
+     ],
+     0.1489250808954239
+    ],
+    [
+     [
+      7,
+      9
+     ],
+     0.14207610487937927
+    ],
+    [
+     [
+      8,
+      8
+     ],
+     0.10708408057689667
+    ],
+    [
+     [
+      12,
+      18
+     ],
+     0.10688060522079468
+    ],
+    [
+     [
+      5,
+      4
+     ],
+     0.09612782299518585
+    ]
+   ],
+   "value": "0.06497226655483246"
+  },
+  {
+   "kind": "fixed_shape",
+   "label": "B2",
+   "modules_in_training_mode_after": 0,
+   "prior_sum": 0.9999998807907104,
+   "priors_sha256": "4ed302a9a2b6123f77dce0727aaca995363dffec67fe491e4382e2e7036238a2",
+   "top5": [
+    [
+     [
+      7,
+      11
+     ],
+     0.1489250808954239
+    ],
+    [
+     [
+      7,
+      9
+     ],
+     0.14207610487937927
+    ],
+    [
+     [
+      8,
+      8
+     ],
+     0.10708408057689667
+    ],
+    [
+     [
+      12,
+      18
+     ],
+     0.10688060522079468
+    ],
+    [
+     [
+      5,
+      4
+     ],
+     0.09612782299518585
+    ]
+   ],
+   "value": "0.06497226655483246"
+  }
+ ],
+ "checkpoint": {
+  "path": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "sha1_verified": "209cf2d4fd24a48553d259dd71b4954867b9473e"
+ },
+ "checks": {
+  "A_repeat_identical": true,
+  "B_repeat_identical": true,
+  "all_batchnorm_eval_mode": true,
+  "network_eval_mode": true,
+  "no_module_training_after_calls": true,
+  "padded_priors_within_tolerance": true,
+  "padded_same_top_move": true,
+  "padded_value_within_tolerance": true
+ },
+ "comparisons": {
+  "A1_vs_A2": {
+   "priors_identical": true,
+   "priors_max_abs_diff": 0.0,
+   "priors_total_variation": 0.0,
+   "same_top_prior_move": true,
+   "value_abs_diff": 0.0,
+   "value_identical": true
+  },
+  "A1_vs_B1": {
+   "priors_identical": false,
+   "priors_max_abs_diff": 3.7997961044311523e-07,
+   "priors_total_variation": 8.655766805532039e-07,
+   "same_top_prior_move": true,
+   "value_abs_diff": 9.387731552124023e-07,
+   "value_identical": false
+  },
+  "B1_vs_B2": {
+   "priors_identical": true,
+   "priors_max_abs_diff": 0.0,
+   "priors_total_variation": 0.0,
+   "same_top_prior_move": true,
+   "value_abs_diff": 0.0,
+   "value_identical": true
+  }
+ },
+ "dirty_paths": [
+  "M scripts/GPU/alphazero/self_play.py",
+  "?? docs/superpowers/evidence/search-profile/05_fixed_shape.py",
+  "?? docs/superpowers/evidence/search-profile/eval-mode/",
+  "?? docs/superpowers/plans/2026-10-11-training-replay-capture.md",
+  "?? docs/superpowers/specs/2026-10-11-training-replay-capture-design.md",
+  "?? scripts/GPU/alphazero/training_replay_capture.py",
+  "?? tests/test_training_replay_capture.py",
+  "?? tests/test_training_replay_capture_search_probe.py",
+  "?? tests/test_training_replay_capture_serial.py"
+ ],
+ "environment": {
+  "executable": "/Users/bill/projects/TwixT_Game/.venv/bin/python",
+  "mlx": "0.30.3",
+  "numpy": "2.4.1",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "python": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.1.1.101)]"
+ },
+ "head": "57a70367e118b716c7856c45834edf3504cb8938",
+ "input": {
+  "boards": 1,
+  "fixture": "P1",
+  "moves": 522,
+  "padded_to": [
+   14,
+   528
+  ]
+ },
+ "kind": "search-eval-mode/1",
+ "loadavg_before": [
+  3.09375,
+  3.09912109375,
+  3.07421875
+ ],
+ "modes_at_load": {
+  "batchnorm": [
+   {
+    "name": "policy_head.bn",
+    "track_running_stats": true,
+    "training": false
+   },
+   {
+    "name": "encoder.blocks.5.bn2",
+    "track_running_stats": true,
+    "training": false
+   },
+   {
+    "name": "encoder.blocks.5.bn1",
+    "track_running_stats": true,
+    "training": false
+   },
+   {
+    "name": "encoder.blocks.4.bn2",
+    "track_running_stats": true,
+    "training": false
+   },
+   {
+    "name": "encoder.blocks.4.bn1",
+    "track_running_stats": true,
+    "training": false
+   },
+   {
+    "name": "encoder.blocks.3.bn2",
+    "track_running_stats": true,
+    "training": false
+   },
+   {
+    "name": "encoder.blocks.3.bn1",
+    "track_running_stats": true,
+    "training": false
+   },
+   {
+    "name": "encoder.blocks.2.bn2",
+    "track_running_stats": true,
+    "training": false
+   },
+   {
+    "name": "encoder.blocks.2.bn1",
+    "track_running_stats": true,
+    "training": false
+   },
+   {
+    "name": "encoder.blocks.1.bn2",
+    "track_running_stats": true,
+    "training": false
+   },
+   {
+    "name": "encoder.blocks.1.bn1",
+    "track_running_stats": true,
+    "training": false
+   },
+   {
+    "name": "encoder.blocks.0.bn2",
+    "track_running_stats": true,
+    "training": false
+   },
+   {
+    "name": "encoder.blocks.0.bn1",
+    "track_running_stats": true,
+    "training": false
+   },
+   {
+    "name": "encoder.bn1",
+    "track_running_stats": true,
+    "training": false
+   }
+  ],
+  "dropout_layers": [],
+  "modules": 42,
+  "modules_in_training_mode": 0,
+  "network_training": false
+ },
+ "running_statistics": "not read",
+ "script": "docs/superpowers/evidence/search-profile/08_eval_mode.py",
+ "strength_verdict": null,
+ "timing_verdict": null,
+ "tolerance": {
+  "priors_max_abs": 1e-05,
+  "repeats": "bit-identical",
+  "value_abs": 1e-05
+ },
+ "training_mode_reference": {
+  "calls": {
+   "A1": {
+    "top5": [
+     [
+      [
+       8,
+       12
+      ],
+      0.1886633038520813
+     ],
+     [
+      [
+       8,
+       8
+      ],
+      0.1638031154870987
+     ],
+     [
+      [
+       7,
+       9
+      ],
+      0.15592731535434723
+     ],
+     [
+      [
+       7,
+       11
+      ],
+      0.1556304544210434
+     ],
+     [
+      [
+       12,
+       18
+      ],
+      0.08534645289182663
+     ]
+    ],
+    "value": "0.6246814131736755"
+   },
+   "A2": {
+    "top5": [
+     [
+      [
+       8,
+       12
+      ],
+      0.1886633038520813
+     ],
+     [
+      [
+       8,
+       8
+      ],
+      0.1638031154870987
+     ],
+     [
+      [
+       7,
+       9
+      ],
+      0.15592731535434723
+     ],
+     [
+      [
+       7,
+       11
+      ],
+      0.1556304544210434
+     ],
+     [
+      [
+       12,
+       18
+      ],
+      0.08534645289182663
+     ]
+    ],
+    "value": "0.6246814131736755"
+   },
+   "B1": {
+    "top5": [
+     [
+      [
+       8,
+       12
+      ],
+      0.4360429048538208
+     ],
+     [
+      [
+       7,
+       9
+      ],
+      0.20861861109733582
+     ],
+     [
+      [
+       10,
+       8
+      ],
+      0.11065749824047089
+     ],
+     [
+      [
+       7,
+       11
+      ],
+      0.10940735787153244
+     ],
+     [
+      [
+       8,
+       8
+      ],
+      0.07367251068353653
+     ]
+    ],
+    "value": "0.999140202999115"
+   },
+   "B2": {
+    "top5": [
+     [
+      [
+       8,
+       12
+      ],
+      0.4360429048538208
+     ],
+     [
+      [
+       7,
+       9
+      ],
+      0.20861861109733582
+     ],
+     [
+      [
+       10,
+       8
+      ],
+      0.11065749824047089
+     ],
+     [
+      [
+       7,
+       11
+      ],
+      0.10940735787153244
+     ],
+     [
+      [
+       8,
+       8
+      ],
+      0.07367251068353653
+     ]
+    ],
+    "value": "0.999140202999115"
+   }
+  },
+  "path": "docs/superpowers/evidence/search-profile/bn-mode-events/record.json"
+ },
+ "verdict": "PASS"
+}
