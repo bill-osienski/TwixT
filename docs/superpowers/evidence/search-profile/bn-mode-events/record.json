@@ -1,0 +1,415 @@
+{
+ "calls": [
+  {
+   "copy": "A",
+   "kind": "ordinary",
+   "label": "A1",
+   "modules_in_training_mode_after": 42,
+   "prior_sum": 0.9999998807907104,
+   "priors_sha256": "7a01bd2efe952d0275f540956d9d74279e1521ae822a108b01ffa4d591490bef",
+   "top5": [
+    [
+     [
+      8,
+      12
+     ],
+     0.1886633038520813
+    ],
+    [
+     [
+      8,
+      8
+     ],
+     0.1638031154870987
+    ],
+    [
+     [
+      7,
+      9
+     ],
+     0.15592731535434723
+    ],
+    [
+     [
+      7,
+      11
+     ],
+     0.1556304544210434
+    ],
+    [
+     [
+      12,
+      18
+     ],
+     0.08534645289182663
+    ]
+   ],
+   "value": "0.6246814131736755"
+  },
+  {
+   "copy": "A",
+   "kind": "ordinary",
+   "label": "A2",
+   "modules_in_training_mode_after": 42,
+   "prior_sum": 0.9999998807907104,
+   "priors_sha256": "7a01bd2efe952d0275f540956d9d74279e1521ae822a108b01ffa4d591490bef",
+   "top5": [
+    [
+     [
+      8,
+      12
+     ],
+     0.1886633038520813
+    ],
+    [
+     [
+      8,
+      8
+     ],
+     0.1638031154870987
+    ],
+    [
+     [
+      7,
+      9
+     ],
+     0.15592731535434723
+    ],
+    [
+     [
+      7,
+      11
+     ],
+     0.1556304544210434
+    ],
+    [
+     [
+      12,
+      18
+     ],
+     0.08534645289182663
+    ]
+   ],
+   "value": "0.6246814131736755"
+  },
+  {
+   "copy": "B",
+   "kind": "fixed_shape",
+   "label": "B1",
+   "modules_in_training_mode_after": 42,
+   "prior_sum": 1.0000001192092896,
+   "priors_sha256": "4cab2b8ee23131fca1a7d12f348e330446e5fcf0ee2a65837dd0818cb0964dff",
+   "top5": [
+    [
+     [
+      8,
+      12
+     ],
+     0.4360429048538208
+    ],
+    [
+     [
+      7,
+      9
+     ],
+     0.20861861109733582
+    ],
+    [
+     [
+      10,
+      8
+     ],
+     0.11065749824047089
+    ],
+    [
+     [
+      7,
+      11
+     ],
+     0.10940735787153244
+    ],
+    [
+     [
+      8,
+      8
+     ],
+     0.07367251068353653
+    ]
+   ],
+   "value": "0.999140202999115"
+  },
+  {
+   "copy": "B",
+   "kind": "fixed_shape",
+   "label": "B2",
+   "modules_in_training_mode_after": 42,
+   "prior_sum": 1.0000001192092896,
+   "priors_sha256": "4cab2b8ee23131fca1a7d12f348e330446e5fcf0ee2a65837dd0818cb0964dff",
+   "top5": [
+    [
+     [
+      8,
+      12
+     ],
+     0.4360429048538208
+    ],
+    [
+     [
+      7,
+      9
+     ],
+     0.20861861109733582
+    ],
+    [
+     [
+      10,
+      8
+     ],
+     0.11065749824047089
+    ],
+    [
+     [
+      7,
+      11
+     ],
+     0.10940735787153244
+    ],
+    [
+     [
+      8,
+      8
+     ],
+     0.07367251068353653
+    ]
+   ],
+   "value": "0.999140202999115"
+  }
+ ],
+ "checkpoint": {
+  "path": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "sha1_verified": "209cf2d4fd24a48553d259dd71b4954867b9473e"
+ },
+ "comparisons": {
+  "A1_vs_A2": {
+   "priors_identical": true,
+   "priors_max_abs_diff": 0.0,
+   "priors_total_variation": 0.0,
+   "same_top_prior_move": true,
+   "value_abs_diff": 0.0,
+   "value_identical": true
+  },
+  "A1_vs_B1": {
+   "priors_identical": false,
+   "priors_max_abs_diff": 0.2473796010017395,
+   "priors_total_variation": 0.44683176279067993,
+   "same_top_prior_move": true,
+   "value_abs_diff": 0.37445878982543945,
+   "value_identical": false
+  },
+  "B1_vs_B2": {
+   "priors_identical": true,
+   "priors_max_abs_diff": 0.0,
+   "priors_total_variation": 0.0,
+   "same_top_prior_move": true,
+   "value_abs_diff": 0.0,
+   "value_identical": true
+  }
+ },
+ "dirty_paths": [
+  "M scripts/GPU/alphazero/self_play.py",
+  "?? docs/superpowers/evidence/search-profile/05_fixed_shape.py",
+  "?? docs/superpowers/evidence/search-profile/bn-mode-events/",
+  "?? docs/superpowers/plans/2026-10-11-training-replay-capture.md",
+  "?? docs/superpowers/specs/2026-10-11-training-replay-capture-design.md",
+  "?? scripts/GPU/alphazero/training_replay_capture.py",
+  "?? tests/test_training_replay_capture.py",
+  "?? tests/test_training_replay_capture_search_probe.py",
+  "?? tests/test_training_replay_capture_serial.py"
+ ],
+ "environment": {
+  "executable": "/Users/bill/projects/TwixT_Game/.venv/bin/python",
+  "mlx": "0.30.3",
+  "numpy": "2.4.1",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "python": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.1.1.101)]"
+ },
+ "head": "2085c8693f59a01a3c55aeaa8dcaa282edebbc78",
+ "input": {
+  "boards": 1,
+  "fixture": "P1",
+  "moves": 522,
+  "padded_to": [
+   14,
+   528
+  ]
+ },
+ "kind": "search-bn-mode-events/1",
+ "loadavg_before": [
+  1.9228515625,
+  2.74951171875,
+  2.9833984375
+ ],
+ "modes_at_load": {
+  "A": {
+   "batchnorm": [
+    {
+     "name": "policy_head.bn",
+     "track_running_stats": true,
+     "training": true
+    },
+    {
+     "name": "encoder.blocks.5.bn2",
+     "track_running_stats": true,
+     "training": true
+    },
+    {
+     "name": "encoder.blocks.5.bn1",
+     "track_running_stats": true,
+     "training": true
+    },
+    {
+     "name": "encoder.blocks.4.bn2",
+     "track_running_stats": true,
+     "training": true
+    },
+    {
+     "name": "encoder.blocks.4.bn1",
+     "track_running_stats": true,
+     "training": true
+    },
+    {
+     "name": "encoder.blocks.3.bn2",
+     "track_running_stats": true,
+     "training": true
+    },
+    {
+     "name": "encoder.blocks.3.bn1",
+     "track_running_stats": true,
+     "training": true
+    },
+    {
+     "name": "encoder.blocks.2.bn2",
+     "track_running_stats": true,
+     "training": true
+    },
+    {
+     "name": "encoder.blocks.2.bn1",
+     "track_running_stats": true,
+     "training": true
+    },
+    {
+     "name": "encoder.blocks.1.bn2",
+     "track_running_stats": true,
+     "training": true
+    },
+    {
+     "name": "encoder.blocks.1.bn1",
+     "track_running_stats": true,
+     "training": true
+    },
+    {
+     "name": "encoder.blocks.0.bn2",
+     "track_running_stats": true,
+     "training": true
+    },
+    {
+     "name": "encoder.blocks.0.bn1",
+     "track_running_stats": true,
+     "training": true
+    },
+    {
+     "name": "encoder.bn1",
+     "track_running_stats": true,
+     "training": true
+    }
+   ],
+   "dropout_layers": [],
+   "modules": 42,
+   "modules_in_training_mode": 42,
+   "network_training": true
+  },
+  "B": {
+   "batchnorm": [
+    {
+     "name": "policy_head.bn",
+     "track_running_stats": true,
+     "training": true
+    },
+    {
+     "name": "encoder.blocks.5.bn2",
+     "track_running_stats": true,
+     "training": true
+    },
+    {
+     "name": "encoder.blocks.5.bn1",
+     "track_running_stats": true,
+     "training": true
+    },
+    {
+     "name": "encoder.blocks.4.bn2",
+     "track_running_stats": true,
+     "training": true
+    },
+    {
+     "name": "encoder.blocks.4.bn1",
+     "track_running_stats": true,
+     "training": true
+    },
+    {
+     "name": "encoder.blocks.3.bn2",
+     "track_running_stats": true,
+     "training": true
+    },
+    {
+     "name": "encoder.blocks.3.bn1",
+     "track_running_stats": true,
+     "training": true
+    },
+    {
+     "name": "encoder.blocks.2.bn2",
+     "track_running_stats": true,
+     "training": true
+    },
+    {
+     "name": "encoder.blocks.2.bn1",
+     "track_running_stats": true,
+     "training": true
+    },
+    {
+     "name": "encoder.blocks.1.bn2",
+     "track_running_stats": true,
+     "training": true
+    },
+    {
+     "name": "encoder.blocks.1.bn1",
+     "track_running_stats": true,
+     "training": true
+    },
+    {
+     "name": "encoder.blocks.0.bn2",
+     "track_running_stats": true,
+     "training": true
+    },
+    {
+     "name": "encoder.blocks.0.bn1",
+     "track_running_stats": true,
+     "training": true
+    },
+    {
+     "name": "encoder.bn1",
+     "track_running_stats": true,
+     "training": true
+    }
+   ],
+   "dropout_layers": [],
+   "modules": 42,
+   "modules_in_training_mode": 42,
+   "network_training": true
+  }
+ },
+ "running_statistics": "not read (unresolved by design)",
+ "script": "docs/superpowers/evidence/search-profile/07_bn_mode_events.py",
+ "strength_verdict": null,
+ "timing_verdict": null,
+ "verdict": "COMPLETED"
+}

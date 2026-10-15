@@ -1,0 +1,1 @@
+COMPLETED: network training=True, 14/14 BatchNorm in training mode; A1 vs B1 priors identical=False, max diff 0.247, value diff 0.374
