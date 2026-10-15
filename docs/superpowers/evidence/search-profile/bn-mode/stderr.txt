@@ -1,0 +1,5 @@
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [eval] Attempting to eval an array without a primitive.
+If you are compiling a function, make sure all the inputs and outputs are captured:
+https://ml-explore.github.io/mlx/build/html/usage/compile.html#pure-functions.
+If you are not using compile, this may be a bug. Please file an issue here:
+https://github.com/ml-explore/mlx/issues.
