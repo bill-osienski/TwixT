@@ -1,0 +1,1 @@
+COMPLETED: 6000 simulations, S400 matched the baseline 3/3, B1600 checks passed 3/3; S400 3768 ms, B1600 7330 ms, ratio 1.945 (first-seen-shape-inclusive) -> NOT_FEASIBLE

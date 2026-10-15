@@ -1,0 +1,412 @@
+{
+ "arms": {
+  "B1600": "search_from_root, 1600, frozen batch settings",
+  "S400": "search_with_root, 400"
+ },
+ "baseline": {
+  "path": "docs/superpowers/evidence/search-profile/run/record.json",
+  "sha256": "0fd099ed2e929847f44ce0b5c312316eea2e6e8a9cd4dd6eabe976627e624e57"
+ },
+ "checkpoint": {
+  "path": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "sha1_verified": "209cf2d4fd24a48553d259dd71b4954867b9473e"
+ },
+ "combined": {
+  "b1600_ms": 7329.715292,
+  "criterion_max_ratio": 1.0,
+  "first_seen_shape_infer_ms": {
+   "B1600": 3768.013124,
+   "S400": 68.18533099999999
+  },
+  "per_fixture_ratio": {
+   "P1": 3.0646508421563503,
+   "P2": 1.7053701937169254,
+   "P3": 1.141170535095369
+  },
+  "ratio": 1.945309392260806,
+  "s400_ms": 3767.8917920000004,
+  "simulations": 6000,
+  "timing": "first-seen-shape-inclusive"
+ },
+ "dirty_paths": [
+  "M scripts/GPU/alphazero/self_play.py",
+  "?? docs/superpowers/evidence/search-profile/batch-feasibility/",
+  "?? docs/superpowers/plans/2026-10-11-training-replay-capture.md",
+  "?? docs/superpowers/specs/2026-10-11-training-replay-capture-design.md",
+  "?? scripts/GPU/alphazero/training_replay_capture.py",
+  "?? tests/test_training_replay_capture.py",
+  "?? tests/test_training_replay_capture_search_probe.py",
+  "?? tests/test_training_replay_capture_serial.py"
+ ],
+ "environment": {
+  "executable": "/Users/bill/projects/TwixT_Game/.venv/bin/python",
+  "mlx": "0.30.3",
+  "numpy": "2.4.1",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "python": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.1.1.101)]"
+ },
+ "feasibility": "NOT_FEASIBLE",
+ "frozen_batched_settings": {
+  "c_puct": 1.5,
+  "closeout_td1_visit_forcing_enabled": false,
+  "eval_batch_size": 14,
+  "fpu_policy_mass_reduction": null,
+  "n_simulations": 1600,
+  "pending_virtual_visits": 8,
+  "stall_flush_sims": 48
+ },
+ "head": "fae36da273169437210f4fd3c844dff07b2ce966",
+ "kind": "search-batch-feasibility/1",
+ "limitation": "first-seen-shape-inclusive times; a first-seen shape does not prove recompilation; not steady-state gameplay latency; one search per arm per fixture",
+ "loadavg_after": [
+  4.23388671875,
+  4.41455078125,
+  3.109375
+ ],
+ "loadavg_before": [
+  4.43603515625,
+  4.45556640625,
+  3.1005859375
+ ],
+ "phases_s": {
+  "factory": 0.009802584070712328,
+  "imports": 0.010263917036354542
+ },
+ "script": "docs/superpowers/evidence/search-profile/04_batch_feasibility.py",
+ "searches": [
+  {
+   "arm": "S400",
+   "batch_size_histogram": {
+    "1": 401
+   },
+   "batched_path_counters": "not applicable (sequential path)",
+   "distinct_shapes": 6,
+   "evaluated_rows": 401,
+   "first_seen_shape_calls": 5,
+   "first_seen_shape_infer_ms": 20.820998,
+   "fixture": "P1",
+   "infer_calls": 401,
+   "infer_ms": 865.433491,
+   "matched_baseline": true,
+   "per_batch_size_median_ms": {
+    "1": 1.937667
+   },
+   "process_cpu_ms": 681.623,
+   "simulations": 400,
+   "wall_ms": 1221.978792
+  },
+  {
+   "arm": "B1600",
+   "backups": {
+    "terminal_backups": 0,
+    "waiter_backups": 1600
+   },
+   "batch_size_histogram": {
+    "1": 1,
+    "10": 10,
+    "11": 8,
+    "12": 2,
+    "13": 2,
+    "2": 1,
+    "4": 1,
+    "6": 1,
+    "7": 1,
+    "8": 1,
+    "9": 1
+   },
+   "checks": {
+    "backup_counter_agrees": true,
+    "backups_sum": true,
+    "finite_root_value": true,
+    "legal_support": true,
+    "root_visits": true,
+    "summed_visits": true,
+    "waiter_counter_agrees": true
+   },
+   "counters": {
+    "_flush_full": 0,
+    "_flush_stall": 27,
+    "_flush_tail": 1,
+    "_max_waiters_on_any_leaf": 49,
+    "_nn_batches": 29,
+    "_nn_call_count": 275,
+    "_total_backups": 1600,
+    "_total_waiters_backed_up": 1600,
+    "_unique_leaves_expanded": 274
+   },
+   "distinct_shapes": 15,
+   "evaluated_rows": 275,
+   "first_seen_shape_calls": 14,
+   "first_seen_shape_infer_ms": 2763.712498,
+   "fixture": "P1",
+   "infer_calls": 29,
+   "infer_ms": 2894.747498,
+   "most_visited": [
+    6,
+    9
+   ],
+   "per_batch_size_median_ms": {
+    "1": 1.892,
+    "10": 8.678625,
+    "11": 10.624291,
+    "12": 240.157042,
+    "13": 244.237791,
+    "2": 241.438084,
+    "4": 239.80225,
+    "6": 253.672958,
+    "7": 257.573083,
+    "8": 506.114708,
+    "9": 251.435667
+   },
+   "process_cpu_ms": 1055.523,
+   "root_value": "0.20741086880130752",
+   "root_visits": 1600,
+   "same_most_visited_as_s400": false,
+   "simulations": 1600,
+   "visit_counts_sha256": "f031118633aee7559991b4eedf84bbbc44941cf155c2d7122087bcc032ead2db",
+   "wall_ms": 3744.938334
+  },
+  {
+   "arm": "S400",
+   "batch_size_histogram": {
+    "1": 401
+   },
+   "batched_path_counters": "not applicable (sequential path)",
+   "distinct_shapes": 6,
+   "evaluated_rows": 401,
+   "first_seen_shape_calls": 5,
+   "first_seen_shape_infer_ms": 20.6115,
+   "fixture": "P2",
+   "infer_calls": 401,
+   "infer_ms": 830.141748,
+   "matched_baseline": true,
+   "per_batch_size_median_ms": {
+    "1": 1.964833
+   },
+   "process_cpu_ms": 714.898,
+   "simulations": 400,
+   "wall_ms": 1204.283
+  },
+  {
+   "arm": "B1600",
+   "backups": {
+    "terminal_backups": 0,
+    "waiter_backups": 1600
+   },
+   "batch_size_histogram": {
+    "1": 1,
+    "12": 1,
+    "13": 1,
+    "14": 17,
+    "3": 5,
+    "4": 1,
+    "5": 3,
+    "6": 7,
+    "7": 5,
+    "8": 1,
+    "9": 2
+   },
+   "checks": {
+    "backup_counter_agrees": true,
+    "backups_sum": true,
+    "finite_root_value": true,
+    "legal_support": true,
+    "root_visits": true,
+    "summed_visits": true,
+    "waiter_counter_agrees": true
+   },
+   "counters": {
+    "_flush_full": 17,
+    "_flush_stall": 25,
+    "_flush_tail": 1,
+    "_max_waiters_on_any_leaf": 49,
+    "_nn_batches": 44,
+    "_nn_call_count": 401,
+    "_total_backups": 1600,
+    "_total_waiters_backed_up": 1600,
+    "_unique_leaves_expanded": 400
+   },
+   "distinct_shapes": 17,
+   "evaluated_rows": 401,
+   "first_seen_shape_calls": 16,
+   "first_seen_shape_infer_ms": 894.405583,
+   "fixture": "P2",
+   "infer_calls": 44,
+   "infer_ms": 1126.653121,
+   "most_visited": [
+    14,
+    8
+   ],
+   "per_batch_size_median_ms": {
+    "1": 2.048209,
+    "12": 12.464584,
+    "13": 13.636583,
+    "14": 11.009541,
+    "3": 5.337375,
+    "4": 6.136042,
+    "5": 7.74625,
+    "6": 6.504083,
+    "7": 8.216166,
+    "8": 11.00125,
+    "9": 11.134209
+   },
+   "process_cpu_ms": 1114.386,
+   "root_value": "0.450248875086254",
+   "root_visits": 1600,
+   "same_most_visited_as_s400": false,
+   "simulations": 1600,
+   "visit_counts_sha256": "ea00bdb1eaaee651580ad1a04c94a8c5042ca3da080cd05c01b244a7196b647c",
+   "wall_ms": 2053.748333
+  },
+  {
+   "arm": "S400",
+   "batch_size_histogram": {
+    "1": 401
+   },
+   "batched_path_counters": "not applicable (sequential path)",
+   "distinct_shapes": 6,
+   "evaluated_rows": 401,
+   "first_seen_shape_calls": 5,
+   "first_seen_shape_infer_ms": 26.752833,
+   "fixture": "P3",
+   "infer_calls": 401,
+   "infer_ms": 954.457909,
+   "matched_baseline": true,
+   "per_batch_size_median_ms": {
+    "1": 2.066125
+   },
+   "process_cpu_ms": 741.951,
+   "simulations": 400,
+   "wall_ms": 1341.63
+  },
+  {
+   "arm": "B1600",
+   "backups": {
+    "terminal_backups": 0,
+    "waiter_backups": 1600
+   },
+   "batch_size_histogram": {
+    "1": 1,
+    "11": 1,
+    "14": 32,
+    "2": 1,
+    "3": 1,
+    "4": 1,
+    "5": 3,
+    "6": 8,
+    "7": 5,
+    "8": 1,
+    "9": 1
+   },
+   "checks": {
+    "backup_counter_agrees": true,
+    "backups_sum": true,
+    "finite_root_value": true,
+    "legal_support": true,
+    "root_visits": true,
+    "summed_visits": true,
+    "waiter_counter_agrees": true
+   },
+   "counters": {
+    "_flush_full": 32,
+    "_flush_stall": 21,
+    "_flush_tail": 1,
+    "_max_waiters_on_any_leaf": 49,
+    "_nn_batches": 55,
+    "_nn_call_count": 584,
+    "_total_backups": 1600,
+    "_total_waiters_backed_up": 1600,
+    "_unique_leaves_expanded": 583
+   },
+   "distinct_shapes": 13,
+   "evaluated_rows": 584,
+   "first_seen_shape_calls": 12,
+   "first_seen_shape_infer_ms": 109.895043,
+   "fixture": "P3",
+   "infer_calls": 55,
+   "infer_ms": 512.09542,
+   "most_visited": [
+    22,
+    1
+   ],
+   "per_batch_size_median_ms": {
+    "1": 2.029333,
+    "11": 14.855292,
+    "14": 10.839084,
+    "2": 5.12275,
+    "3": 5.92525,
+    "4": 5.969833,
+    "5": 5.34325,
+    "6": 5.753209,
+    "7": 6.555625,
+    "8": 9.045583,
+    "9": 11.258417
+   },
+   "process_cpu_ms": 1179.238,
+   "root_value": "0.4875590138199914",
+   "root_visits": 1600,
+   "same_most_visited_as_s400": true,
+   "simulations": 1600,
+   "visit_counts_sha256": "292da5bc21a4574640a7f733da2248d3f7eda97224d9bae7f593367684614f2f",
+   "wall_ms": 1531.028625
+  }
+ ],
+ "seeds": {
+  "P1": 90009000,
+  "P2": 90009001,
+  "P3": 90009002
+ },
+ "strength_verdict": null,
+ "total_seconds": 11.269136084243655,
+ "verdict": "COMPLETED",
+ "warmups": [
+  {
+   "batch_size_histogram": {
+    "1": 1
+   },
+   "distinct_shapes": 1,
+   "evaluated_rows": 1,
+   "first_seen_shape_calls": 1,
+   "first_seen_shape_infer_ms": 29.783042,
+   "fixture": "P1",
+   "infer_calls": 1,
+   "infer_ms": 29.783042,
+   "per_batch_size_median_ms": {
+    "1": 29.783042
+   },
+   "seconds": 0.02984733274206519
+  },
+  {
+   "batch_size_histogram": {
+    "1": 1
+   },
+   "distinct_shapes": 1,
+   "evaluated_rows": 1,
+   "first_seen_shape_calls": 1,
+   "first_seen_shape_infer_ms": 4.465584,
+   "fixture": "P2",
+   "infer_calls": 1,
+   "infer_ms": 4.465584,
+   "per_batch_size_median_ms": {
+    "1": 4.465584
+   },
+   "seconds": 0.004488458391278982
+  },
+  {
+   "batch_size_histogram": {
+    "1": 1
+   },
+   "distinct_shapes": 1,
+   "evaluated_rows": 1,
+   "first_seen_shape_calls": 1,
+   "first_seen_shape_infer_ms": 4.116583,
+   "fixture": "P3",
+   "infer_calls": 1,
+   "infer_ms": 4.116583,
+   "per_batch_size_median_ms": {
+    "1": 4.116583
+   },
+   "seconds": 0.0041412911377847195
+  }
+ ]
+}
