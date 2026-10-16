@@ -1,0 +1,1 @@
+COMPLETED: corrected 20-0-12 legacy, caps 0; mean pair score 0.6250 +/- 0.3395 (descriptive, assumes independence)

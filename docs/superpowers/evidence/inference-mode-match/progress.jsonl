@@ -1,0 +1,67 @@
+{"event": "start", "t": 0.007, "head": "5216fb68951d4f64a0e0b6af8f752460fa727c10"}
+{"event": "loaded", "t": 0.203, "seconds": 0.029, "modules_in_training_mode": {"corrected": 0, "legacy": 42}}
+{"event": "game_start", "t": 0.221, "game": 0, "slot": 0, "red": "corrected"}
+{"event": "game_end", "t": 54.651, "game": 0, "slot": 0, "seconds": 54.43, "n_moves": 43, "reason": "win"}
+{"event": "game_start", "t": 54.853, "game": 1, "slot": 1, "red": "legacy"}
+{"event": "game_end", "t": 126.934, "game": 1, "slot": 1, "seconds": 72.081, "n_moves": 61, "reason": "win"}
+{"event": "game_start", "t": 126.959, "game": 2, "slot": 2, "red": "corrected"}
+{"event": "game_end", "t": 177.271, "game": 2, "slot": 2, "seconds": 50.312, "n_moves": 41, "reason": "win"}
+{"event": "game_start", "t": 177.355, "game": 3, "slot": 3, "red": "legacy"}
+{"event": "game_end", "t": 234.091, "game": 3, "slot": 3, "seconds": 56.737, "n_moves": 43, "reason": "win"}
+{"event": "game_start", "t": 234.197, "game": 4, "slot": 4, "red": "corrected"}
+{"event": "game_end", "t": 321.097, "game": 4, "slot": 4, "seconds": 86.9, "n_moves": 53, "reason": "win"}
+{"event": "game_start", "t": 321.243, "game": 5, "slot": 5, "red": "legacy"}
+{"event": "game_end", "t": 503.79, "game": 5, "slot": 5, "seconds": 182.546, "n_moves": 55, "reason": "win"}
+{"event": "game_start", "t": 503.972, "game": 6, "slot": 6, "red": "corrected"}
+{"event": "game_end", "t": 583.787, "game": 6, "slot": 6, "seconds": 79.814, "n_moves": 47, "reason": "win"}
+{"event": "game_start", "t": 583.935, "game": 7, "slot": 7, "red": "legacy"}
+{"event": "game_end", "t": 654.932, "game": 7, "slot": 7, "seconds": 70.997, "n_moves": 56, "reason": "win"}
+{"event": "game_start", "t": 655.03, "game": 8, "slot": 8, "red": "corrected"}
+{"event": "game_end", "t": 699.786, "game": 8, "slot": 8, "seconds": 44.756, "n_moves": 37, "reason": "win"}
+{"event": "game_start", "t": 699.806, "game": 9, "slot": 9, "red": "legacy"}
+{"event": "game_end", "t": 761.383, "game": 9, "slot": 9, "seconds": 61.577, "n_moves": 51, "reason": "win"}
+{"event": "game_start", "t": 761.528, "game": 10, "slot": 10, "red": "corrected"}
+{"event": "game_end", "t": 846.22, "game": 10, "slot": 10, "seconds": 84.691, "n_moves": 67, "reason": "win"}
+{"event": "game_start", "t": 846.335, "game": 11, "slot": 11, "red": "legacy"}
+{"event": "game_end", "t": 930.464, "game": 11, "slot": 11, "seconds": 84.128, "n_moves": 67, "reason": "win"}
+{"event": "game_start", "t": 930.584, "game": 12, "slot": 12, "red": "corrected"}
+{"event": "game_end", "t": 974.04, "game": 12, "slot": 12, "seconds": 43.456, "n_moves": 37, "reason": "win"}
+{"event": "game_start", "t": 974.092, "game": 13, "slot": 13, "red": "legacy"}
+{"event": "game_end", "t": 1026.61, "game": 13, "slot": 13, "seconds": 52.518, "n_moves": 45, "reason": "win"}
+{"event": "game_start", "t": 1026.741, "game": 14, "slot": 14, "red": "corrected"}
+{"event": "game_end", "t": 1081.798, "game": 14, "slot": 14, "seconds": 55.057, "n_moves": 46, "reason": "win"}
+{"event": "game_start", "t": 1081.914, "game": 15, "slot": 15, "red": "legacy"}
+{"event": "game_end", "t": 1124.546, "game": 15, "slot": 15, "seconds": 42.632, "n_moves": 36, "reason": "win"}
+{"event": "game_start", "t": 1124.582, "game": 16, "slot": 16, "red": "corrected"}
+{"event": "game_end", "t": 1184.141, "game": 16, "slot": 16, "seconds": 59.559, "n_moves": 50, "reason": "win"}
+{"event": "game_start", "t": 1184.271, "game": 17, "slot": 17, "red": "legacy"}
+{"event": "game_end", "t": 1262.276, "game": 17, "slot": 17, "seconds": 78.005, "n_moves": 64, "reason": "win"}
+{"event": "game_start", "t": 1262.345, "game": 18, "slot": 18, "red": "corrected"}
+{"event": "game_end", "t": 1319.421, "game": 18, "slot": 18, "seconds": 57.076, "n_moves": 54, "reason": "win"}
+{"event": "game_start", "t": 1319.481, "game": 19, "slot": 19, "red": "legacy"}
+{"event": "game_end", "t": 1365.188, "game": 19, "slot": 19, "seconds": 45.707, "n_moves": 43, "reason": "win"}
+{"event": "game_start", "t": 1365.265, "game": 20, "slot": 20, "red": "corrected"}
+{"event": "game_end", "t": 1416.229, "game": 20, "slot": 20, "seconds": 50.963, "n_moves": 45, "reason": "win"}
+{"event": "game_start", "t": 1416.36, "game": 21, "slot": 21, "red": "legacy"}
+{"event": "game_end", "t": 1468.674, "game": 21, "slot": 21, "seconds": 52.314, "n_moves": 44, "reason": "win"}
+{"event": "game_start", "t": 1468.795, "game": 22, "slot": 22, "red": "corrected"}
+{"event": "game_end", "t": 1542.915, "game": 22, "slot": 22, "seconds": 74.12, "n_moves": 66, "reason": "win"}
+{"event": "game_start", "t": 1542.969, "game": 23, "slot": 23, "red": "legacy"}
+{"event": "game_end", "t": 1594.4, "game": 23, "slot": 23, "seconds": 51.431, "n_moves": 45, "reason": "win"}
+{"event": "game_start", "t": 1594.512, "game": 24, "slot": 24, "red": "corrected"}
+{"event": "game_end", "t": 1653.924, "game": 24, "slot": 24, "seconds": 59.412, "n_moves": 53, "reason": "win"}
+{"event": "game_start", "t": 1653.968, "game": 25, "slot": 25, "red": "legacy"}
+{"event": "game_end", "t": 1728.49, "game": 25, "slot": 25, "seconds": 74.521, "n_moves": 68, "reason": "win"}
+{"event": "game_start", "t": 1728.569, "game": 26, "slot": 26, "red": "corrected"}
+{"event": "game_end", "t": 1800.134, "game": 26, "slot": 26, "seconds": 71.565, "n_moves": 65, "reason": "win"}
+{"event": "game_start", "t": 1800.171, "game": 27, "slot": 27, "red": "legacy"}
+{"event": "game_end", "t": 1862.961, "game": 27, "slot": 27, "seconds": 62.79, "n_moves": 56, "reason": "win"}
+{"event": "game_start", "t": 1863.062, "game": 28, "slot": 28, "red": "corrected"}
+{"event": "game_end", "t": 1930.977, "game": 28, "slot": 28, "seconds": 67.914, "n_moves": 63, "reason": "win"}
+{"event": "game_start", "t": 1931.023, "game": 29, "slot": 29, "red": "legacy"}
+{"event": "game_end", "t": 2001.92, "game": 29, "slot": 29, "seconds": 70.897, "n_moves": 64, "reason": "win"}
+{"event": "game_start", "t": 2001.981, "game": 30, "slot": 30, "red": "corrected"}
+{"event": "game_end", "t": 2052.585, "game": 30, "slot": 30, "seconds": 50.605, "n_moves": 45, "reason": "win"}
+{"event": "game_start", "t": 2052.689, "game": 31, "slot": 31, "red": "legacy"}
+{"event": "game_end", "t": 2092.777, "game": 31, "slot": 31, "seconds": 40.088, "n_moves": 38, "reason": "win"}
+{"event": "end", "t": 2092.854, "verdict": "COMPLETED"}
