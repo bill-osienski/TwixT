@@ -1,0 +1,125 @@
+{
+ "excluded": [],
+ "games": [
+  {
+   "labels": {
+    "DEFENDED": 0,
+    "MISSED_DEFENCE": 0,
+    "MISSED_WIN": 0,
+    "UNDEFENDABLE": 1
+   },
+   "n_moves": 43,
+   "positions": 43,
+   "reason": "win",
+   "replay": "docs/superpowers/evidence/self-play-diagnostic/games/game_000000.json",
+   "seed": 202691600,
+   "winner": "red"
+  },
+  {
+   "labels": {
+    "DEFENDED": 0,
+    "MISSED_DEFENCE": 0,
+    "MISSED_WIN": 0,
+    "UNDEFENDABLE": 1
+   },
+   "n_moves": 41,
+   "positions": 41,
+   "reason": "win",
+   "replay": "docs/superpowers/evidence/self-play-diagnostic/games/game_000001.json",
+   "seed": 202691601,
+   "winner": "red"
+  },
+  {
+   "labels": {
+    "DEFENDED": 0,
+    "MISSED_DEFENCE": 0,
+    "MISSED_WIN": 0,
+    "UNDEFENDABLE": 1
+   },
+   "n_moves": 42,
+   "positions": 42,
+   "reason": "win",
+   "replay": "docs/superpowers/evidence/self-play-diagnostic/games/game_000002.json",
+   "seed": 202691602,
+   "winner": "black"
+  },
+  {
+   "labels": {
+    "DEFENDED": 0,
+    "MISSED_DEFENCE": 1,
+    "MISSED_WIN": 0,
+    "UNDEFENDABLE": 0
+   },
+   "n_moves": 43,
+   "positions": 43,
+   "reason": "win",
+   "replay": "docs/superpowers/evidence/self-play-diagnostic/games/game_000003.json",
+   "seed": 202691603,
+   "winner": "red"
+  }
+ ],
+ "head": "ee718688ab79adbdc498f37f0812de00aae356c0",
+ "kind": "self-play-diagnostic-scan/1",
+ "labels": "h5_weakness_review.scan_trajectory (card \u00a77 C1)",
+ "mistakes": [
+  {
+   "better": [
+    [
+     21,
+     6
+    ]
+   ],
+   "board_before": "    012345678901234567890123\n  0 ......R.................\n  1 ....RB...............B..\n  2 ......RB................\n  3 ........RB............B.\n  4 ..........RB......B.....\n  5 ............RB..........\n  6 ........................\n  7 ...........R.B..........\n  8 ........................\n  9 ............R..B........\n 10 ....B......R............\n 11 .............R..........\n 12 ........B.R....R........\n 13 ....B...................\n 14 ....R..B.R....R...B.....\n 15 .....B.R................\n 16 .....R..................\n 17 ........................\n 18 ....R...B......B...R....\n 19 ........................\n 20 .....R........B.........\n 21 .......r................\n 22 ........B...............\n 23 ........................",
+   "label": "MISSED_DEFENCE",
+   "mover": "black",
+   "opponent_threats": [
+    [
+     23,
+     6
+    ],
+    [
+     23,
+     8
+    ]
+   ],
+   "opponent_won_next_ply": true,
+   "played": [
+    14,
+    19
+   ],
+   "played_is_search_preferred": false,
+   "ply_index": 41,
+   "readout_temperature": 0.1,
+   "replay": "docs/superpowers/evidence/self-play-diagnostic/games/game_000003.json",
+   "root": {
+    "readout_overrode_leader": false,
+    "root_top1_share": 0.0025,
+    "root_total_visits": 400,
+    "root_value": -0.9865409588813782,
+    "selected_visit_count": 1,
+    "selected_visit_rank": 253,
+    "top2": [
+     {
+      "col": 3,
+      "completed_visit_count": 1,
+      "q_value_child_perspective": 0.9863962531089783,
+      "q_value_root_perspective": -0.9863962531089783,
+      "row": 1
+     },
+     {
+      "col": 6,
+      "completed_visit_count": 1,
+      "q_value_child_perspective": 0.9877569675445557,
+      "q_value_root_perspective": -0.9877569675445557,
+      "row": 1
+     }
+    ]
+   },
+   "search_preferred": [
+    1,
+    3
+   ],
+   "search_preferred_is_better": false
+  }
+ ]
+}
