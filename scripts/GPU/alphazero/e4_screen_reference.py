@@ -854,6 +854,12 @@ EXPOSED_SEED_INTERVALS = (
     # A post-run accounting edit to a bound file: the committed plan, survey/proof and run records
     # keep their hashes; nothing is rerun.
     (202691000, 202691441),  # SEARCH DISTILLATION STAGE B -- 441 slots (G, L, R, T), all used
+    # 🔴 INFERENCE-MODE MATCH -- THE CLOSING EDIT (2026-10-16), after the authorized 32-game run
+    # (outer exit 0, COMPLETED, no survivors). Use DERIVED from the committed run evidence by
+    # evidence/inference-mode-match-seed-closing/02_* (RECONCILES, 15/15): all 32 games started,
+    # so the block is EXPOSED WHOLE. A post-run accounting edit to a bound file: the committed plan,
+    # survey/proof and run records keep their hashes; nothing is rerun.
+    (202691500, 202691532),  # INFERENCE-MODE MATCH -- 32 game seeds, all started
 )
 
 #: Seeds RESERVED PERMANENTLY FOR TESTS. Unit tests must draw from something, and
@@ -1157,6 +1163,12 @@ RETIRED_SEED_INTERVALS = (
     # A post-run accounting edit to a bound file: the committed plan, survey/proof and run records
     # keep their hashes; nothing is rerun.
     (202691000, 202691441),  # SEARCH DISTILLATION STAGE B -- 441 slots (G, L, R, T), all used
+    # 🔴 INFERENCE-MODE MATCH -- THE CLOSING EDIT (2026-10-16), after the authorized 32-game run
+    # (outer exit 0, COMPLETED, no survivors). Use DERIVED from the committed run evidence by
+    # evidence/inference-mode-match-seed-closing/02_* (RECONCILES, 15/15): all 32 games started,
+    # so the block is RETIRED WHOLE. A post-run accounting edit to a bound file: the committed plan,
+    # survey/proof and run records keep their hashes; nothing is rerun.
+    (202691500, 202691532),  # INFERENCE-MODE MATCH -- 32 game seeds, all started
 )
 
 
