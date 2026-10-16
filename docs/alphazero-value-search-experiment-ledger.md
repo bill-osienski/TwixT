@@ -62,6 +62,8 @@ knob) is not a new hypothesis.
 
 > **External-engine learning (twixtbot teacher → policy-head imitation) — RUN 2026-10-09/10; PROVISIONAL VIABILITY, STRENGTH UNRESOLVED.** A separately scoped three-stage trial (card `docs/superpowers/2026-10-08-external-engine-learning-viability.md`; result note `docs/superpowers/2026-10-10-external-engine-learning-result.md`; accepted at `92ab3040`) labelled 192 positions with twixtbot's moves, fitted `calib020_0001`'s policy head only (128 steps; 519 parameters in 8 tensors), then compared on four sealed held-out games and screened in 32 games. **Held-out imitation passed, narrowly:** per-game mean chosen-move CE candidate **3.211** vs scalar-temperature control **3.890** vs incumbent **4.566**; teacher top-1 agreement **25.7%** vs **20.5%**. Four games from one teacher are not broad generalization, and beating the control excludes only a global temperature explanation. **Teacher-rule limitation stands:** the teacher was trained with own-link crossings allowed; labels on positions legal under our rules do not show it chooses good moves under them. **Strength screen inconclusive:** 32/32 games, candidate **12–20**, mean pair score **0.375**, unclipped Hoeffding95 **[0.035, 0.715]** — an unfavourable point estimate whose interval cannot establish inferiority or improvement; NOT_VETOED means only that the disaster veto did not fire. **Keep `calib020_0001`;** the candidate is a research artifact only. Open before any future run: the cleanup exit-code ambiguity and the exhausted seed-selection rule (result note). See do-not-repeat **#53**.
 
+> **Post-closure work, 2026-10-11 → 2026-10-16 — five lines, `calib020_0001` kept throughout** (full entries: [Post-closure work](#post-closure-work-2026-10-11--2026-10-16)). **Search distillation:** Stage A PASS (1,600 vs 400 simulations, mean pair 0.769); Stage B NON-PASS and closed (L2 18/40 jointly, L3 fail). **Search speed:** one-sync 7.8% (bar 10%) not adopted; batched B1600 NOT_FEASIBLE twice (1.945, then 1.445 fixed-shape) — batching path closed. **Implementation finding:** `eval_runner`'s default factory ran BatchNorm in TRAINING mode until `c8cb2aa6`; earlier results stand under their original protocol; the browser's eval-mode ONNX export was unaffected. **Inference-mode match:** corrected 20–12 legacy, mean pair 0.625, inconclusive, closed. **Self-play diagnostic (OPEN):** one missed defence; the losing side's search goes flat (one visit per child) once root value nears −1, because absolute FPU 0 outranks every visited move — the saving move was reached once and never searched deeper. No correction tested yet.
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -1592,6 +1594,14 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 
 53. **The external-engine learning trial, as run — PROVISIONAL VIABILITY 2026-10-10; do not extend or rescue it.** Held-out imitation passed (CE **3.211 / 3.890 / 4.566**; top-1 **25.7% vs 20.5%**) and the 32-game screen was inconclusive (**12–20**, **[0.035, 0.715]**, NOT_VETOED). Do **not** add games or repeat the match to resolve the interval, refit beta, retrain, change the dose or rows, select another checkpoint, or promote the candidate — each was excluded before the result, and choosing one now is post-hoc selection. Do **not** read NOT_VETOED as non-inferiority, or teacher agreement as rules-correct strength. Any successor needs its own card and fresh seed accounting, and first a decision on the exhausted seed-selection rule and a distinct exit status for unverified process-group cleanup (result note `docs/superpowers/2026-10-10-external-engine-learning-result.md`). **`calib020_0001` stands.**
 
+54. **Search distillation Stage B, as run — NON-PASS 2026-10-14; the pilot is closed.** Do **not** rerun Stage A or B, reuse their spent games, labels or seeds, retune on the 40 held-out games, or play strength games for the Stage B student or control without a new card. Stage A's PASS establishes stronger search at 1,600 simulations, nothing about distillation. The training-mode BatchNorm in Stage B's labels (Post-closure entry 3) is a possible confound, not a proven cause, and does not reopen the stage.
+
+55. **Batched search (B1600) as a way to afford stronger search — CLOSED 2026-10-15.** Both screens were NOT_FEASIBLE (1.945; fixed-shape eval-mode 1.445). Do **not** try padding variants, batch-size or flush-setting searches, timing retries, lowered bars, or reruns under quieter load. The one-sync change (7.8% vs a 10% bar) is not adopted. The remaining cost lies outside inference but is not attributed to any component.
+
+56. **The inference-mode match (corrected vs legacy BatchNorm) — inconclusive 2026-10-16; do not extend it.** 20–12, mean pair 0.625, interval includes 0.5. Do **not** add games or repeat the match to obtain significance, and run no further mode or batching experiment for this question. Keep the factory fix; future research uses eval-mode inference; historical results stay under their original protocols.
+
+57. **The flat-search defence failure does NOT reopen FPU sweeps.** The 2026-10-16 probe shows absolute FPU 0 outranking every visited move once Q nears −1. That supports a mechanism; it does **not** revive the rejected absolute or policy-mass FPU settings (v17, context-relative FPU) or justify a parameter grid. Any correction must be a new, narrowly scoped test of this observed mechanism, chosen and reviewed on its own.
+
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
 
@@ -2591,6 +2601,161 @@ Artifact root:
 - `summary.json`: `63c22af1ca068e9c2c7e89ddfa7192299632dd8e`
 - `provenance.json`: `cf98f99f1cdd1b5153d16a007003e993205b895c`
 - `report.md`: `708401666be5712b5a7ca229f07c45431f7109eb`
+
+## Post-closure work, 2026-10-11 → 2026-10-16
+
+Five separately authorized lines run after the external-engine trial. None is a four-gate (A/B/C/D) calibration
+branch, so the gate table above does not apply; each is recorded in this ledger's long-form fields. **Where no
+prediction was stated before a run, the entry says so — none is backfilled.** `calib020_0001` remained the
+incumbent throughout; nothing was pushed.
+
+### 1. Search distillation — A1, Stage A PASS, Stage B NON-PASS (2026-10-11 → 2026-10-14)
+
+**Test.** A1: one colour-reversed pair, `calib020_0001` at 1,600 vs 400 simulations (planning measurement and
+wiring check). Stage A: 80 colour-reversed pairs (160 games), the same two budgets. Stage B: 200 fresh
+self-play games at 400 vs 400; on 40 held-out games, the incumbent's eight policy-head tensors (519 parameters,
+encoder, value head and BN running statistics frozen, eval mode) trained on 1,600-simulation visit
+distributions (student), compared with the same procedure on 400-simulation targets (control), the unchanged
+incumbent, and the incumbent with one fitted temperature.
+
+**Hypothesis.** The incumbent's 1,600-simulation visit distributions are a policy target that makes the network
+stronger when it plays at 400 simulations (proposal `docs/superpowers/2026-10-11-search-distillation-proposal.md`
+§1).
+
+**Why it was plausible.** Stronger search is the standard source of better policy targets; Stage A was designed
+to establish first that 1,600 simulations actually play better than 400 under our exact engine and rules.
+
+**Prediction on record.** Proposal §8: Stage A passes about 50%; the full chain passes Stage C at most 10%.
+Frozen bars: Stage A PASS iff `mean − sqrt(ln(40)/(2·80)) > 0.5`; Stage B needs L1 and L2 each ≥ 26/40
+held-out game wins and L3 student top-1 strictly above control and incumbent.
+
+**What ran.** A1 `09741b3e`; Stage A run `aa5d2992`, analysis `480e0f9b`, closing `a46623b7`; Stage B phases
+G `414afe5e`, P `ec639584`, L1 `a02f8a9a`, Q `1358bb0e` (QUALIFIED), L2 `2ccc7fca`, T `30da129a`, closing
+`6299beaf`, closeout memo `c69224c4` (`docs/superpowers/2026-10-14-search-distillation-stage-b-closeout.md`).
+
+**Result.** Stage A **PASS**: 1,600 simulations scored a mean pair score of **0.76875**, bound **0.61691**
+(> 0.5; independence of pairs assumed). Stage B **NON-PASS**: L1 27/40 (held); L2 **18/40 jointly** (student vs
+temperature alone 25/40, vs incumbent alone 25/40) — fail; L3 fail (top-1 student 0.140 < control 0.158 <
+incumbent = temperature 0.181). Mean KL: student 1.510, control 1.565, temperature 1.556, incumbent 1.671.
+
+**Did it match the prediction, and why?** Stage A passing matched a ~50% forecast; one outcome validates no
+probability. Stage B: the student fitted the targets better on average (lower KL) but did not beat the
+fitted-temperature and incumbent arms per game, and lost top-1 agreement — the fixed recipe improved average
+fit without the per-game advantage the criteria required. Possible confound, **not a proven cause**: Stage B's
+labels were produced through the evaluation factory, which ran the network in **training-mode BatchNorm**
+(entry 3), while the fitted models ran in eval mode.
+
+**Conclusion.** Stage A shows stronger search at 1,600 simulations. Stage B closed NON-PASS; no strength game was
+played, so there is no strength evidence for the student either way. Candidates kept as research artifacts
+(`runs/search-distillation-stage-b/`, untracked). See do-not-repeat **#54**.
+
+### 2. Play-path search speed — profile, one-sync screen, batching screens (2026-10-14 → 2026-10-15)
+
+**Test.** Make Stage A's stronger search affordable with the incumbent's weights fixed. Evidence:
+`docs/superpowers/evidence/search-profile/`.
+
+**Hypothesis.** (a) Removing one of the two GPU syncs per `infer` call cuts search time ≥ 10% with identical
+results. (b) Batched search (`search_from_root`, batch 14) at 1,600 simulations (B1600) fits within the
+sequential 400-simulation search's time (S400).
+
+**Why it was plausible.** The profile (`b8cf2adf`) found `infer` at 71% of 3.16 ms/simulation, always batch 1,
+with forward-through-first-sync 86.7% of `infer` (`a2e6e5cf`): batching amortizes exactly that cost.
+
+**Prediction on record.** No probability forecast. Frozen bars: one-sync ≥ 10% reduction with exact matches;
+B1600/S400 ≤ 1.00.
+
+**What ran / result.**
+| Screen | Commit | Result | Verdict |
+|---|---|---|---|
+| One sync instead of two | `77eff8a5` | 12/12 exact matches; 7.8% faster (per fixture 7.3 / 7.0 / 9.1%) | SCREEN_NON_PASS (bar 10%) |
+| B1600 vs S400, variable shapes (training-mode BN) | `20badd1a` | 7,330 vs 3,768 ms, ratio **1.945** | NOT_FEASIBLE |
+| B1600 fixed 14×528 vs S400, eval mode | `e7cd3674` | 4,933 vs 3,413 ms, ratio **1.445** (1.24 / 1.59 / 1.53) | NOT_FEASIBLE |
+
+**Did it match, and why?** No. Padding removed the per-shape recompilation cost (padded calls ~9 ms each) and
+B1600 spent *less* time in `infer` than S400, yet used about twice the process CPU: substantial time lies
+**outside inference**. These measurements do not isolate how much belongs to selection, board operations or
+input building.
+
+**Conclusion.** The batching optimization path is CLOSED by its own closure condition (the fixed-shape
+prototype also failed). The one-sync change was not adopted. See do-not-repeat **#55**.
+
+### 3. Implementation finding — the evaluation factory ran BatchNorm in TRAINING mode (2026-10-15)
+
+**Finding.** `eval_runner._default_evaluator_factory` loaded the network and never called `.eval()`. MLX modules
+start in training mode, so every BatchNorm normalised each position with the statistics of the batch it was
+given (in play, a batch of one) and assigned running statistics on each forward. Confirmed by
+`dc34cac3` (14/14 BatchNorm, 42/42 modules in training mode; zero-padding a batch moved P1's value from 0.625 to
+0.999). The trainer's self-play and inline evaluation already called `network.eval()`; the browser game uses an
+ONNX export made in eval mode (`export_onnx.py`), so **the product was not affected**.
+
+**Fix.** `c8cb2aa6`: the factory calls `net.eval()`. Verified by `0a7aa8e9` (0/42 modules in training mode;
+padded vs ordinary within 1e-5; repeats bit-identical).
+
+**Consequence for this ledger.** **Every result produced through `eval_runner`'s default factory before
+`c8cb2aa6` ran in training-mode BatchNorm.** Those results stay valid **under their original protocol** and
+are not re-scored. This is related to, but distinct from, the 2026-06-30 BatchNorm calibration confound above
+(which concerned training-time forwards). Future research uses corrected inference.
+
+**Still open (found 2026-10-16, not fixed):** `probe_eval.py`'s own entry point (`main`) also builds its
+`LocalGPUEvaluator` from a network it never puts in eval mode, so measurements taken through that entry point
+were training-mode too. Twelve other scripts that load through `load_network_for_scoring` do call `.eval()`.
+Comparisons made under one mode on both sides are internally consistent; what does not transfer is a
+pre-fix number reused as a baseline for an eval-mode run — re-measure the baseline instead.
+
+### 4. Inference-mode match — corrected vs legacy, 32 games (2026-10-16)
+
+**Test.** `calib020_0001` in eval mode (corrected) vs the same checkpoint in training mode (legacy), separate
+network copies, 400 simulations each, Stage B protocol, 16 colour-reversed pairs, one fresh accounted 32-seed
+block (survey → registration → closing).
+
+**Hypothesis.** The inference correction helps the model play.
+
+**Why it was plausible.** Training-mode BatchNorm makes each evaluation depend on its batch; eval mode is the
+intended inference behaviour and what the trainer and browser already use.
+
+**Prediction on record.** None stated in advance. Exploratory screen, no decision rule.
+
+**What ran.** Scripts `9bed85bc`; run `4380bfbe` (outer exit 0, 2,093 s, COMPLETED, no survivors; modes held
+at load and end); closing `a31b045d`.
+
+**Result.** Corrected **20–12** (no draws, no caps); pair scores 6 × 1.0, 8 × 0.5, 2 × 0.0; mean pair score
+**0.625**, Hoeffding 95% [0.285, 0.965] — descriptive, conditional on the assumed independence of the pairs,
+which distinct seeds and colour reversal do not themselves establish.
+
+**Conclusion.** Encouraging but **inconclusive**; the interval includes 0.5. Closed; keep the factory fix. See
+do-not-repeat **#56**.
+
+### 5. Self-play diagnostic and instrumented probe — a concrete defence failure (2026-10-16, OPEN FINDING)
+
+**Test.** Four self-play games of `calib020_0001` in eval mode (400 simulations, Stage B protocol, fresh 4-seed
+block, diagnostic material only), scanned with the H5 review's exact one-ply labels; then one instrumented cold
+400-simulation search of the one hit.
+
+**Hypothesis.** A small fresh sample shows at least one verifiable tactical mistake (missed immediate win or
+avoidable one-move loss) that can be traced to a mechanism.
+
+**Prediction on record.** None stated in advance.
+
+**What ran.** Scripts `88a5f759`; run `ee718688` (outer exit 0, 172 s; four games of 41–43 plies); scan
+`e8ef077c`; closing `8ed243fb`; probe script `beab7e9f`, probe `c8ad5050`.
+
+**Result.** One **MISSED_DEFENCE** (game 3, ply index 41, black): red threatened (23,6) and (23,8); the only
+saving move was (21,6); black played (14,19) (sampled at temperature 0.1, 1 visit) and red won next move.
+In all four games, once the losing side's root value fell below about −0.82, its 400 visits went one per
+child (23 positions). The probe (fresh cold search, test-only seed): **all 400 root selections chose an
+unexplored move** — FPU 0 plus the exploration bonus (~0.005–0.053) beat the best visited score (~−0.93 to
+−0.86) by 0.91–0.99 every time; 400 children × 1 visit, 88 never visited, no opponent reply searched anywhere.
+(21,6): prior 0.0027 (rank 7 of a nearly flat policy, max 0.0031), reached at root visit 6, Q −0.959 — only
+**5th best** of 400 visited; (22,7), (21,8), (22,6) and (20,8) were valued higher though each loses to an
+immediate red win.
+
+**Interpretation.** The save was **reached once and never examined further**: with absolute FPU 0, no root
+move gets a second visit once visited Q is near −1, so the search never reaches the depth where red's winning
+replies become terminal, and one network evaluation does not separate the save from immediate losses. One-ply
+only: whether black's position was savable after (21,6) was not checked. Not a strength claim.
+
+**Status.** OPEN — the finding guides the choice of the next correction; no correction has been tested. See
+do-not-repeat **#57**.
 
 ---
 
