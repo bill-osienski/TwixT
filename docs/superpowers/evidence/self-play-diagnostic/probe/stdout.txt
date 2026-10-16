@@ -1,0 +1,1 @@
+COMPLETED: REACHED_ONCE_NOT_EXAMINED_FURTHER; (21,6) prior 0.002737 rank 7, visits 1, Q -0.959398627281189; root 400 visits over 400 children, max 1, value -0.9865
