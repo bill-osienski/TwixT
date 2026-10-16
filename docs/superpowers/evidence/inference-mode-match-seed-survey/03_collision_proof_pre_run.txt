@@ -1,0 +1,109 @@
+INFERENCE-MODE MATCH -- GAME-SEED COLLISION PROOF, mode PRE
+================================================================================================
+HEAD b44f4b7f34da120bc9e987436a5a8bcbdbcb005d; working tree clean
+this tree /Users/bill/projects/TwixT_Game-inference-mode
+main checkout /Users/bill/projects/TwixT_Game (scanned too; HEAD 9bed85bca5b40ec9c8dfe8cbf773e10dcfeed442; 8 uncommitted entries, not required clean)
+method (survey) docs/superpowers/evidence/tactical-candidate-seed-survey/01_seed_survey.py sha256 6f6e55dbd5da672848c757753d4e61a3e9d110d96569b7ef468f902cf46f8860 (pinned)
+method (proof) docs/superpowers/evidence/tactical-candidate-seed-registration/01_collision_proof.py sha256 dd192011938ca5c6674092b243681174e669e1e96b22b8d13da2a264b340764d (pinned)
+rule scripts/GPU/alphazero/seed_selection.py sha256 34c2a537e580eb7215b18a4ad747ed894c330dadeb40b96bc87f90c1d74b4dcc (ALIGN 100)
+registry scripts/GPU/alphazero/e4_screen_reference.py sha256 3d15fee90f15a83715d80e4f0107dc7095f455fbf029540cebcbe4b23a11ce2f
+masks (imported): ['0x3c3c3c', '0x5a5a5a', '0xa5a5a5', '0xc3c3c3']
+registries: ACCOUNTED 35, EXPOSED 33, RETIRED 31, TEST_ONLY 1
+named spent blocks: D1 paper 1, H1 2, H2 3, H3 6, H4 5, H5 4; H3 generation ranges 4; CONSUMED_SEEDS 1
+EXEMPT PATHS (exact; plus registry tuple elements by parsing): 4 + the plan
+    docs/superpowers/evidence/inference-mode-match-seed-survey/01_seed_survey.py
+    docs/superpowers/evidence/inference-mode-match-seed-survey/02_seed_survey_run.txt
+    docs/superpowers/evidence/inference-mode-match-seed-survey/03_collision_proof_pre_run.txt
+    docs/superpowers/evidence/inference-mode-match-seed-survey/04_collision_proof_post_run.txt
+    docs/superpowers/evidence/inference-mode-match/plan.json  (only if every band literal in it is a slot of the block)
+
+survey record docs/superpowers/evidence/inference-mode-match-seed-survey/02_seed_survey_run.txt sha256 a72b96f5a41205d0ae63b33a9fa178c9b9ffc0b970e52ddb7db9bfab7b3f5444 (read at 9bed85bca5b40ec9c8dfe8cbf773e10dcfeed442)
+THE BLOCK, read from the record: [202691500, 202691532) -- BASE 202691500
+EXPECTED STATE (pre): HOLDS
+
+SCOPE (fail-closed enumeration) under ['scripts', 'tests', 'docs/superpowers']: this tree 4513 regular files, 0 symbolic links (not followed); main checkout 47136 regular files, 0 symbolic links; band literal values counted: 4982
+THE BLOCK (202691500, 202691532)  n=32  direct=NONE  streams=0  injective=True  gap=53 (floor 32)  CLEAN=True
+SLOTS (build_agent_pairing_tasks: game g has seed BASE + g):
+    SLOT 0 game 0 pair 0 red corrected seed 202691500
+    SLOT 1 game 1 pair 0 red legacy seed 202691501
+    SLOT 2 game 2 pair 1 red corrected seed 202691502
+    SLOT 3 game 3 pair 1 red legacy seed 202691503
+    SLOT 4 game 4 pair 2 red corrected seed 202691504
+    SLOT 5 game 5 pair 2 red legacy seed 202691505
+    SLOT 6 game 6 pair 3 red corrected seed 202691506
+    SLOT 7 game 7 pair 3 red legacy seed 202691507
+    SLOT 8 game 8 pair 4 red corrected seed 202691508
+    SLOT 9 game 9 pair 4 red legacy seed 202691509
+    SLOT 10 game 10 pair 5 red corrected seed 202691510
+    SLOT 11 game 11 pair 5 red legacy seed 202691511
+    SLOT 12 game 12 pair 6 red corrected seed 202691512
+    SLOT 13 game 13 pair 6 red legacy seed 202691513
+    SLOT 14 game 14 pair 7 red corrected seed 202691514
+    SLOT 15 game 15 pair 7 red legacy seed 202691515
+    SLOT 16 game 16 pair 8 red corrected seed 202691516
+    SLOT 17 game 17 pair 8 red legacy seed 202691517
+    SLOT 18 game 18 pair 9 red corrected seed 202691518
+    SLOT 19 game 19 pair 9 red legacy seed 202691519
+    SLOT 20 game 20 pair 10 red corrected seed 202691520
+    SLOT 21 game 21 pair 10 red legacy seed 202691521
+    SLOT 22 game 22 pair 11 red corrected seed 202691522
+    SLOT 23 game 23 pair 11 red legacy seed 202691523
+    SLOT 24 game 24 pair 12 red corrected seed 202691524
+    SLOT 25 game 25 pair 12 red legacy seed 202691525
+    SLOT 26 game 26 pair 13 red corrected seed 202691526
+    SLOT 27 game 27 pair 13 red legacy seed 202691527
+    SLOT 28 game 28 pair 14 red corrected seed 202691528
+    SLOT 29 game 29 pair 14 red legacy seed 202691529
+    SLOT 30 game 30 pair 15 red corrected seed 202691530
+    SLOT 31 game 31 pair 15 red legacy seed 202691531
+
+CONTROLS
+------------------------------------------------------------------------------------------------
+  PASS   REJECTED: D1 paper block (202615000, 202615221)
+  PASS   REJECTED: H1 block (202616000, 202616224)
+  PASS   REJECTED: H2 block (202618000, 202618736)
+  PASS   REJECTED: H3 block (202624000, 202624040)
+  PASS   REJECTED: H4 block (202632000, 202632032)
+  PASS   REJECTED: H5 block (202650000, 202650148)
+  PASS   REJECTED: the TEST_ONLY band
+  PASS   REJECTED: inside the live H3 uniform generation range
+  PASS   REJECTED: overlaps the block by one seed
+  PASS   REJECTED: starts where the block ends -- inside the floor
+  PASS   REJECTED: one seed inside the floor
+  PASS   REJECTED: the most recently EXPOSED block (Stage B's slots)
+  PASS   REJECTED: a block at the H4-4b MUTATION literal 202642000
+  PASS   an UNDERSCORE-GROUPED candidate seed (.py)  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=53; dropping undecodable bytes instead would see it]
+  PASS   a PLAIN candidate seed (.py)  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=53; dropping undecodable bytes instead would see it]
+  PASS   an UNDERSCORE-GROUPED exclusive end (.py)  [without it CLEAN=True; with it direct=NONE gap=0; dropping undecodable bytes instead would see it]
+  PASS   a candidate seed in a .log -- a suffix H5's filter skipped  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=53; dropping undecodable bytes instead would see it]
+  PASS   a candidate seed inside a .gz  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=53; dropping undecodable bytes instead would see it]
+  PASS   a candidate seed after an undecodable byte after a digit  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=53; dropping undecodable bytes instead would MISS it]
+  PASS   an UNREADABLE file stops the survey  [SurveyStop]
+  PASS   a CORRUPT .gz stops the survey  [SurveyStop]
+  PASS   an own record (exact path) is exempt  [None]
+  PASS   a sibling path that is NOT listed is counted  [[('docs/superpowers/evidence/inference-mode-match-seed-survey/04_not_listed.txt', 1)]]
+  PASS   the plan holding only block seeds is exempt  [None]
+  PASS   registry tuple elements are exempt by parsing (a non-ASCII char BEFORE them)  [[202691511]]
+  PASS   the same value outside a registry tuple is counted  [[('scripts/GPU/alphazero/e4_screen_reference.py', 1)]]
+  PASS   a plan with a seed OUTSIDE the block is not exempt  [[202691500, 202691537]]
+  PASS   an UNREADABLE directory  [STOPPED: a directory could not be read]
+  PASS   an UNREADABLE nested directory  [STOPPED: a directory could not be read]
+  PASS   a missing root  [STOPPED: <tmp>/tests: the root is not a directory]
+  PASS   a root that is a file  [STOPPED: <tmp>/scripts: the root is not a directory]
+  PASS   a FIFO inside a root  [STOPPED: <tmp>/scripts/pipe: neither a regular file, a directory nor a symbolic link]
+  PASS   a sound tree with a symbolic link  [enumerated: 3 files, 1 links]
+  PASS   pre: the survey's registry, no plan  [the expected state]
+  PASS   pre: the registry changed  [the registry is not the one the survey read]
+  PASS   pre: the block already registered  [the registry is not the one the survey read; a registry already holds seeds of the block: [('ACCOUNTED_SEED_INTERVALS', (202691500, 202691532))]]
+  PASS   pre: a plan already exists  [a pilot plan already exists]
+  PASS   post: exactly the block appended last, the plan  [the expected state]
+  PASS   post: the block appended FIRST  [ACCOUNTED is not the survey's state with exactly the block appended last]
+  PASS   post: a wider tuple  [ACCOUNTED is not the survey's state with exactly the block appended last]
+  PASS   post: EXPOSED changed too  [EXPOSED_SEED_INTERVALS changed]
+  PASS   post: no plan  [the inference-mode plan is absent or not committed]
+  PASS   post: a plan with another BASE  [the inference-mode plan is not build_plan of the surveyed block]
+  PASS   post: a plan of 33 slots  [the inference-mode plan is not build_plan of the surveyed block]
+  PASS   post: a plan bound to another survey record  [the inference-mode plan is not build_plan of the surveyed block]
+
+controls passed: 45/45
+PROOF VERDICT (pre): THE INFERENCE-MODE BLOCK IS CLEAN AND THE STATE IS AS EXPECTED
