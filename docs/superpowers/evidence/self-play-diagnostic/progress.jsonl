@@ -1,0 +1,11 @@
+{"event": "start", "t": 0.008, "head": "2ecc98d03700f60c3c5b6076c5327e2ac632ded0"}
+{"event": "loaded", "t": 0.177, "seconds": 0.024, "modules_in_training_mode": 0}
+{"event": "game_start", "t": 0.192, "game": 0, "slot": 0, "red": "self_a"}
+{"event": "game_end", "t": 44.499, "game": 0, "slot": 0, "seconds": 44.307, "n_moves": 43, "reason": "win"}
+{"event": "game_start", "t": 44.585, "game": 1, "slot": 1, "red": "self_b"}
+{"event": "game_end", "t": 86.727, "game": 1, "slot": 1, "seconds": 42.142, "n_moves": 41, "reason": "win"}
+{"event": "game_start", "t": 86.753, "game": 2, "slot": 2, "red": "self_a"}
+{"event": "game_end", "t": 130.228, "game": 2, "slot": 2, "seconds": 43.475, "n_moves": 42, "reason": "win"}
+{"event": "game_start", "t": 130.288, "game": 3, "slot": 3, "red": "self_b"}
+{"event": "game_end", "t": 172.065, "game": 3, "slot": 3, "seconds": 41.776, "n_moves": 43, "reason": "win"}
+{"event": "end", "t": 172.15, "verdict": "COMPLETED"}
