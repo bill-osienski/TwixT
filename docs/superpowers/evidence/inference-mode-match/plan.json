@@ -1,0 +1,6 @@
+{
+ "base": 202691500,
+ "kind": "inference-mode-match-plan/1",
+ "n_slots": 32,
+ "survey_record_sha256": "a72b96f5a41205d0ae63b33a9fa178c9b9ffc0b970e52ddb7db9bfab7b3f5444"
+}

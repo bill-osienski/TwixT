@@ -560,6 +560,16 @@ ACCOUNTED_SEED_INTERVALS = (
     # Accounted, NOT exposed and NOT retired: exposure is the union of slots any phase logs as used;
     # the closing edit retires the whole block. No gate is opened by this.
     (202691000, 202691441),          # SEARCH DISTILLATION STAGE B -- 441 slots (G, L, R, T)
+    # 🔴 INFERENCE-MODE MATCH -- 32 GAME SEEDS, registered 2026-10-16: the 32-seed block of the
+    # inference-mode survey (evidence/inference-mode-match-seed-survey/02_*), READ from that record, not
+    # chosen here, by the replacement rule (seed_selection.candidate). One seed per game of 16
+    # colour-reversed pairs, calib020_0001 in evaluation mode vs training mode at 400 simulations; the
+    # plan is evidence/inference-mode-match/plan.json (base + slot count + survey hash). Registered
+    # ONLY after the pre-registration collision proof (same directory, 03_*) was CLEAN, 45/45.
+    #
+    # Accounted, NOT exposed and NOT retired: exposure follows actual use (the started-game
+    # prefix); the closing edit retires the whole block. No gate is opened by this.
+    (202691500, 202691532),          # INFERENCE-MODE MATCH -- 16 pairs, 32 game seeds
 )
 
 #: EXPERIMENTAL EXPOSURE: seeds drawn from OUTSIDE the permanently unschedulable
