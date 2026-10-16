@@ -1,0 +1,29 @@
+INFERENCE-MODE MATCH -- SEED-USAGE DERIVATION (closing)
+================================================================================================
+HEAD 4380bfbe51f7908bfa8c5614d4fa8f15b51abe0b; working tree clean
+input docs/superpowers/evidence/inference-mode-match/plan.json (committed, unmodified)
+input docs/superpowers/evidence/inference-mode-match/progress.jsonl (committed, unmodified)
+input docs/superpowers/evidence/inference-mode-match/outer.json (committed, unmodified)
+input docs/superpowers/evidence/inference-mode-match/record.json (committed, unmodified)
+outer exit 0; survivors ''; verdict 'COMPLETED'
+game starts (slots): [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]
+
+CONTROLS
+  PASS   completed: 32 starts, expose all, retire all  [expose (202691500, 202691532), retire (202691500, 202691532)]
+  PASS   REFUSED before any game: expose NONE, retire all  [expose None, retire (202691500, 202691532)]
+  PASS   timeout during loading: expose none  [expose None, retire (202691500, 202691532)]
+  PASS   timeout in game 0: expose slot 0 only  [expose (202691500, 202691501), retire (202691500, 202691532)]
+  PASS   timeout in game 20: expose slots 0-20  [expose (202691500, 202691521), retire (202691500, 202691532)]
+  PASS   kill in the last game: expose all 32  [expose (202691500, 202691532), retire (202691500, 202691532)]
+  PASS   integrity stop in game 31: expose all  [expose (202691500, 202691532), retire (202691500, 202691532)]
+  PASS   survivors: refused  [termination NOT confirmed: survivors '123 ']
+  PASS   slots out of order: refused  [game_start slots [0, 2] are not a prefix 0..k-1 of the 32 slots]
+  PASS   a slot started twice: refused  [game_start slots [0, 1, 2, 2] are not a prefix 0..k-1 of the 32 slots]
+  PASS   more than 32 starts: refused  [game_start slots [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32] are not a prefix 0..k-1 of the 32 slots]
+  PASS   exit 0 with 31 starts: refused  [outer exit 0 but 31 games started, verdict 'COMPLETED']
+  PASS   REFUSED after a game: refused  [a REFUSED run started 1 games]
+  PASS   block not ACCOUNTED: refused  [the block is not ACCOUNTED exactly once]
+  PASS   block already RETIRED in part: refused  [a seed of the block is already EXPOSED or RETIRED]
+
+controls passed: 15/15
+VERDICT: RECONCILES -- EXPOSE [202691500, 202691532]; RETIRE [202691500, 202691532]
