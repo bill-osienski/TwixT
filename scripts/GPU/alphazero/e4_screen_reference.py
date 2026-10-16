@@ -570,6 +570,16 @@ ACCOUNTED_SEED_INTERVALS = (
     # Accounted, NOT exposed and NOT retired: exposure follows actual use (the started-game
     # prefix); the closing edit retires the whole block. No gate is opened by this.
     (202691500, 202691532),          # INFERENCE-MODE MATCH -- 16 pairs, 32 game seeds
+    # 🔴 SELF-PLAY DIAGNOSTIC -- 4 GAME SEEDS, registered 2026-10-16: the 4-seed block of the
+    # self-play diagnostic survey (evidence/self-play-diagnostic-seed-survey/02_*), READ from that record,
+    # not chosen here, by the replacement rule (seed_selection.candidate). One seed per self-play game
+    # of calib020_0001 in evaluation mode at 400 simulations; DIAGNOSTIC material, never held-out
+    # evaluation. The plan is evidence/self-play-diagnostic/plan.json (base + slot count + survey hash).
+    # Registered ONLY after the pre-registration collision proof (same directory, 03_*) was CLEAN, 45/45.
+    #
+    # Accounted, NOT exposed and NOT retired: exposure follows actual use (the started-game
+    # prefix); the closing edit retires the whole block. No gate is opened by this.
+    (202691600, 202691604),          # SELF-PLAY DIAGNOSTIC -- 4 game seeds
 )
 
 #: EXPERIMENTAL EXPOSURE: seeds drawn from OUTSIDE the permanently unschedulable
