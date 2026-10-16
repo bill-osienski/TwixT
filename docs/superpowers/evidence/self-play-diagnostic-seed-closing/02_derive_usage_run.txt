@@ -1,0 +1,29 @@
+SELF-PLAY DIAGNOSTIC -- SEED-USAGE DERIVATION (closing)
+================================================================================================
+HEAD e8ef077ca337c2e4d0b98a36e0ecacd604a587f4; working tree clean
+input docs/superpowers/evidence/self-play-diagnostic/plan.json (committed, unmodified)
+input docs/superpowers/evidence/self-play-diagnostic/progress.jsonl (committed, unmodified)
+input docs/superpowers/evidence/self-play-diagnostic/outer.json (committed, unmodified)
+input docs/superpowers/evidence/self-play-diagnostic/record.json (committed, unmodified)
+outer exit 0; survivors ''; verdict 'COMPLETED'
+game starts (slots): [0, 1, 2, 3]
+
+CONTROLS
+  PASS   completed: 4 starts, expose all, retire all  [expose (202691600, 202691604), retire (202691600, 202691604)]
+  PASS   REFUSED before any game: expose NONE, retire all  [expose None, retire (202691600, 202691604)]
+  PASS   timeout during loading: expose none  [expose None, retire (202691600, 202691604)]
+  PASS   timeout in game 0: expose slot 0 only  [expose (202691600, 202691601), retire (202691600, 202691604)]
+  PASS   timeout in game 2: expose slots 0-2  [expose (202691600, 202691603), retire (202691600, 202691604)]
+  PASS   kill in the last game: expose all 4  [expose (202691600, 202691604), retire (202691600, 202691604)]
+  PASS   integrity stop in game 3: expose all  [expose (202691600, 202691604), retire (202691600, 202691604)]
+  PASS   survivors: refused  [termination NOT confirmed: survivors '123 '; game_start slots [0, 1, 2, 3, 4] are not a prefix 0..k-1 of the 4 slots]
+  PASS   slots out of order: refused  [game_start slots [0, 2] are not a prefix 0..k-1 of the 4 slots]
+  PASS   a slot started twice: refused  [game_start slots [0, 1, 2, 2] are not a prefix 0..k-1 of the 4 slots]
+  PASS   more than 4 starts: refused  [game_start slots [0, 1, 2, 3, 4] are not a prefix 0..k-1 of the 4 slots]
+  PASS   exit 0 with 3 starts: refused  [outer exit 0 but 3 games started, verdict 'COMPLETED']
+  PASS   REFUSED after a game: refused  [a REFUSED run started 1 games]
+  PASS   block not ACCOUNTED: refused  [the block is not ACCOUNTED exactly once]
+  PASS   block already RETIRED in part: refused  [a seed of the block is already EXPOSED or RETIRED]
+
+controls passed: 15/15
+VERDICT: RECONCILES -- EXPOSE [202691600, 202691604]; RETIRE [202691600, 202691604]
