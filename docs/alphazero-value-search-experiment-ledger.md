@@ -64,6 +64,8 @@ knob) is not a new hypothesis.
 
 > **Post-closure work, 2026-10-11 → 2026-10-16 — five lines, `calib020_0001` kept throughout** (full entries: [Post-closure work](#post-closure-work-2026-10-11--2026-10-16)). **Search distillation:** Stage A PASS (1,600 vs 400 simulations, mean pair 0.769); Stage B NON-PASS and closed (L2 18/40 jointly, L3 fail). **Search speed:** one-sync 7.8% (bar 10%) not adopted; batched B1600 NOT_FEASIBLE twice (1.945, then 1.445 fixed-shape) — batching path closed. **Implementation finding:** `eval_runner`'s default factory ran BatchNorm in TRAINING mode until `c8cb2aa6`; earlier results stand under their original protocol; the browser's eval-mode ONNX export was unaffected. **Inference-mode match:** corrected 20–12 legacy, mean pair 0.625, inconclusive, closed. **Self-play diagnostic (OPEN):** one missed defence; the losing side's search goes flat (one visit per child) once root value nears −1, because absolute FPU 0 outranks every visited move — the saving move was reached once and never searched deeper. No correction tested yet.
 
+> **2026-10-19 additions (Post-closure entries 6–7).** **The diagnostic example was already lost:** a rules-engine-only check proved that after the save (21,6) red forces a win within three plies (four forcing red moves; every one of black's 486 replies answered by a verified red win). The flat search explains why the save was not deepened, but this example cannot show that a search correction would have saved the game. **`probe_eval._load_network` now returns eval mode** (`444269ac`), closing entry 3's open item. See do-not-repeat **#58**.
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -1602,6 +1604,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 
 57. **The flat-search defence failure does NOT reopen FPU sweeps.** The 2026-10-16 probe shows absolute FPU 0 outranking every visited move once Q nears −1. That supports a mechanism; it does **not** revive the rejected absolute or policy-mass FPU settings (v17, context-relative FPU) or justify a parameter grid. Any correction must be a new, narrowly scoped test of this observed mechanism, chosen and reviewed on its own.
 
+58. **The game-3 missed defence (ply index 41) is not evidence that a search correction saves games — 2026-10-19.** A rules-only check proved red forces a win within three plies after the save (21,6). Do **not** extend the horizon, rerun the check, or cite this example as a game a deeper search would have saved; it shows only the flat-search mechanism. A future correction needs examples where the save is not already lost within the checked horizon.
+
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
 
@@ -2756,6 +2760,44 @@ only: whether black's position was savable after (21,6) was not checked. Not a s
 
 **Status.** OPEN — the finding guides the choice of the next correction; no correction has been tested. See
 do-not-repeat **#57**.
+
+### 6. Forced-loss check of the diagnostic example — rules engine only (2026-10-19)
+
+**Test.** In entry 5's position (game 3, ply index 41), apply the save (21,6); can red force a win within three
+further plies (red, black, red)? Exact checks only (`d0_postmortem.one_ply_threats`,
+`h5_weakness_review.saving_moves_of`); no model, search, seed or game.
+
+**Hypothesis.** None tested as a hypothesis: the question was whether this example can support a search
+correction — avoiding the immediate loss does not by itself establish that black could save the game, and the
+network's pessimism (Q −0.959, a value estimate, not a calibrated probability) might be justified.
+
+**Prediction on record.** None stated in advance.
+
+**What ran.** Script `fa11c06c`; one run, evidence `3c49042c`
+(`docs/superpowers/evidence/self-play-diagnostic/forced-loss/`): `timeout -k 10 50`, exit 0, COMPLETED, 8.7 s.
+
+**Result.** **FORCED_WIN_WITHIN_3.** After (21,6) red has no immediate win, but four red moves force one:
+(21,3) threatening (23,2)/(23,4); (22,4) threatening (23,2)/(23,6); (22,6) threatening (23,4)/(23,8); (22,9)
+threatening (23,7)/(23,11). For each, every one of black's 486 legal replies is answered by a red winning move,
+each verified by applying it. Of the other 482 red moves, 476 leave red no immediate threat and 6 are answered
+by a saving black reply (each confirmed by a full scan); none lets black win immediately.
+
+**Did it match, and why?** No prediction. The position at ply index 41 was **already lost** within this horizon:
+the save delays the loss by two moves.
+
+**Conclusion / status.** Entry 5's mechanism stands (the search goes flat and never deepened the save), but
+**this example does not show a search correction would have changed the result** — the network's pessimism was
+justified here. The example is closed as evidence for a correction. See do-not-repeat **#58**.
+
+### 7. Addendum to entry 3 — `probe_eval.py` loader fixed (2026-10-19)
+
+`_load_network` now calls `net.eval()` after loading the weights (`444269ac`), covering
+`load_network_for_scoring` and the probe CLI's direct call; one loader-mode test (red on the old loader, green on
+the fix). `eval_runner`'s explicit call is kept; `LocalGPUEvaluator` and functions given a trainer-owned network
+are unchanged. Also now eval mode: `twixt_replay_analyzer.py`'s shared scoring network, the one other caller that
+did not call `.eval()` itself. No historical probe is rerun; earlier probe results stay under their recorded
+protocol (training mode). The inference-mode match's `legacy_factory` loaded through this function, so that closed
+one-shot script would now STOP on its own mode check rather than reproduce its legacy arm.
 
 ---
 
