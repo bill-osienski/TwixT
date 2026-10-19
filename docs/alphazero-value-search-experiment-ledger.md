@@ -70,6 +70,8 @@ knob) is not a new hypothesis.
 
 > **Mirror-augmentation defect fixed (Post-closure entry 9, 2026-10-19).** Training's left-right mirror (`_mirror_position_lr`) flipped the black edge-connectivity channels 27/28 spatially but never swapped their left/right labels; fixed in `0c417882`. Whether this contributed to the incumbent's asymmetry (entry 8) is **unmeasured**; the incumbent's weights are unchanged and no retraining follows. Symmetry averaging stays an open hypothesis.
 
+> **Mirror-averaging prototype — correctness PASS (Post-closure entry 10, 2026-10-19, OPEN).** A separate, unwired evaluator wrapper averaging the policy distributions and values of a position and its reflection matched an independent engine-rebuilt reference within 3e-8 on four positions (16 inference calls). Correctness only — **no evidence that averaging helps**; a cost-matched strength screen is not yet authorized.
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -2861,6 +2863,36 @@ model, search, game or training.
 contributed to entry 8's asymmetry is **unmeasured**. The probe in entry 8 did not use this helper (it rebuilt
 mirrored states through the engine) and stands. No retraining or averaging strength trial follows from this fix;
 symmetry averaging remains an open hypothesis.
+
+### 10. Mirror-averaging prototype — one bounded correctness check (2026-10-19, OPEN)
+
+**Test.** A fixed prototype with no parameters, `scripts/GPU/alphazero/mirror_averaging.py`
+(`MirrorAveragingEvaluator`, imported by nothing in production): each `infer` evaluates the boards and their
+tensor-mirrored counterparts (`_mirror_position_lr`, with entry 9's fix), reflected moves index-aligned, and returns
+the mean of the two policy probability distributions and the mean of the two values. Weights, search and readout
+unchanged. Checked on entry 8's four positions against a reference built independently from the original and the
+**engine-rebuilt** reflected position (priors mapped back by move, then averaged).
+
+**Hypothesis.** The prototype computes exactly the intended average (a correctness question, not a strength one).
+
+**Prediction on record.** None stated in advance. Pass bar: |value| and |prior| differences ≤ 1e-5, finite
+outputs, priors covering exactly the legal moves, non-negative and summing to 1 within 1e-5.
+
+**What ran.** Code and check script `bf6d03ad`; one run in a clean linked worktree (fast-forwarded, removed),
+evidence `3b11645a` (`docs/superpowers/evidence/mirror-averaging/run/`): `timeout -k 10 50`, exit 0, COMPLETED,
+0.41 s; one checkpoint load, eval mode (0 modules in training mode), all 20 loaded repository modules committed;
+**16** underlying inference calls.
+
+**Result.** **PASS.** Max value difference **2.98e-08**, max prior difference **1.12e-08**; all outputs finite;
+priors sum to 1 within 1e-7. Averaged values: game 0 0.623 (0.601 / 0.646), game 1 −0.531 (−0.213 / −0.849),
+game 2 −0.447 (−0.546 / −0.347), game 3 −0.910 (−0.978 / −0.842).
+
+**Did it match, and why?** The tensor mirror and the engine rebuild agree to float precision on these positions,
+so the prototype averages what it claims to.
+
+**Conclusion / status.** OPEN. Correctness only: it does not show averaging helps. Each prototype evaluation costs
+two network evaluations, so any strength screen must be cost-matched (e.g. 200 averaged vs 400 ordinary
+simulations, recording actual evaluations and runtime) and needs its own authorization.
 
 ---
 
