@@ -72,6 +72,8 @@ knob) is not a new hypothesis.
 
 > **Mirror-averaging prototype — correctness PASS (Post-closure entry 10, 2026-10-19, OPEN).** A separate, unwired evaluator wrapper averaging the policy distributions and values of a position and its reflection matched an independent engine-rebuilt reference within 3e-8 on four positions (16 inference calls). Correctness only — **no evidence that averaging helps**; a cost-matched strength screen is not yet authorized.
 
+> **Mirror-averaging match — STOP_CONFIGURATION (Post-closure entry 11, 2026-10-19, CLOSED).** 200 averaged vs 400 ordinary simulations, `calib020_0001`, 16 colour-reversed pairs: averaged **19–13** (no draws or caps), **19/32 points < the frozen bar 24**; mean pair score **0.594**, Hoeffding95 [0.254, 0.933] descriptive, pair independence assumed. Network evaluations 323,608 vs 323,983 (approximately matched); search time 696 s vs 840 s. This configuration is stopped. See do-not-repeat **#59**.
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -1614,6 +1616,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 
    *Correction to #58 (2026-10-19, review).* The requirement for new examples applies **only to corrections justified by this tactical criterion** (a missed one-move defence), not to every future search or strength idea: a bounded tactical proof is not a universal prerequisite for strength research. Conversely, failing to prove a loss within a horizon would not prove a position savable. Both inference fixes (`c8cb2aa6`, `444269ac`) and `calib020_0001` stay; do **not** expand this check, reopen FPU settings or start training from this example — the four diagnostic games supplied no evidence that warrants such a change.
 
+59. **Mirror averaging at 200 vs 400 ordinary simulations — STOP_CONFIGURATION 2026-10-19.** 19/32 against a frozen bar of 24 (mean pair 0.594, interval includes 0.5). Do **not** add games or repeat the match to reach the bar, change the budgets (e.g. 250 or 400 averaged), weight the two orientations unequally, add other symmetries or orientations, or rescue it with another readout — each would be post-hoc tuning of a stopped configuration. A different symmetry-based idea needs its own justification and authorization. The prototype stays unwired; production is unchanged.
+
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
 
@@ -2893,6 +2897,46 @@ so the prototype averages what it claims to.
 **Conclusion / status.** OPEN. Correctness only: it does not show averaging helps. Each prototype evaluation costs
 two network evaluations, so any strength screen must be cost-matched (e.g. 200 averaged vs 400 ordinary
 simulations, recording actual evaluations and runtime) and needs its own authorization.
+
+### 11. Mirror-averaging match — 200 averaged vs 400 ordinary simulations, 32 games (2026-10-19, CLOSED)
+
+**Test.** `calib020_0001` with `MirrorAveragingEvaluator` (entry 10) at 200 simulations ("averaged") vs the plain
+evaluator at 400 ("ordinary"), each from its own eval-mode load; Stage B PROTOCOL otherwise (24×24, 280-ply cap,
+opening-temperature readout, no root noise); 16 colour-reversed pairs, one fresh accounted 32-seed block (survey →
+pre-proof → registration → post-proof → closing). Approximately inference-budget matched, not equal wall time.
+
+**Hypothesis.** Averaging the network's predictions over the left-right reflection makes the incumbent play
+better at about the same number of network evaluations.
+
+**Why it was plausible.** Entry 8: predictions differ materially between orientations (value gaps up to 0.64);
+entry 10: the prototype computes the intended average.
+
+**Prediction on record.** None as a probability. **Frozen screening rule** (operational, not statistical proof):
+averaged points ≥ 24 of 32 (mean pair ≥ 0.75) → consider a confirmatory study; below → stop this configuration
+without changing budgets, averaging weights or orientations; an incomplete run gets no score.
+
+**What ran.** Scripts `41620884`; survey `45ccc65f`, pre-proof `055693b1`, registration `3c8d5360`, post-proof
+`b9acb1ab` (all CLEAN 45/45); run `7560d7bc` (outer exit 0, **1,540 s** of the 5,400 s cap, COMPLETED, no
+survivors, both networks in eval mode at load and end); closing K1 `60a35d6e` (RECONCILES 15/15), K2 `a7b52290`
+(block EXPOSED and RETIRED whole). Clean linked worktree, fast-forwarded and removed.
+
+**Result.** Averaged **19–13** ordinary, no draws, no caps (games of 31–81 plies). Pair scores: 4 × 1.0, 10 × 0.5,
+2 × 0.0 (in order 1, 1, .5, .5, .5, 1, 1, .5, 0, .5, 1, .5, 0, .5, .5, .5); mean **0.594**, unclipped Hoeffding 95%
+**[0.254, 0.933]** — descriptive, pairs as the sampling unit, conditional on their assumed independence.
+**19/32 < 24 → STOP_CONFIGURATION.** Cost per agent:
+| Agent | Searches | Leaf calls | Network evaluations | Network s | Search s | Evaluations / search | s / search |
+|---|---|---|---|---|---|---|---|
+| averaged (200) | 824 | 161,804 | 323,608 | 542 | 696 | 392.7 | 0.845 |
+| ordinary (400) | 821 | 323,983 | 323,983 | 553 | 840 | 394.6 | 1.023 |
+
+**Did it match, and why?** The bar was not met. The point estimate favours averaging, but 10 of 16 pairs split
+and the interval includes 0.5, so the screen cannot distinguish a small benefit from none. Network evaluations
+were matched within 0.1%; averaging used about 17% less search time (half the tree operations), so the comparison
+did not disadvantage it on runtime.
+
+**Conclusion / status.** CLOSED for this configuration: no confirmatory study, no budget, weighting or
+orientation change. Not evidence that averaging helps or hurts. `calib020_0001` and production defaults unchanged.
+See do-not-repeat **#59**.
 
 ---
 
