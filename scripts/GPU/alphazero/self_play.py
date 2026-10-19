@@ -33,6 +33,7 @@ from .game import (
     CHANNEL_RED_LINKS_START, CHANNEL_BLACK_LINKS_START,
     CHANNEL_BLACK_LEFT_DIST, CHANNEL_BLACK_RIGHT_DIST,
 )
+from .game.twixt_state import CHANNEL_BLACK_CONN_LEFT, CHANNEL_BLACK_CONN_RIGHT
 from .recovery_retargeting_diagnostics import (
     RecoveryRetargetingConfig,
     RecoveryRetargetingTracker,
@@ -203,6 +204,12 @@ def _mirror_position_lr(board_hwc, legal_moves, visit_counts, active_size):
     tmp = out[:S, :S, LEFT].copy()
     out[:S, :S, LEFT] = out[:S, :S, RIGHT]
     out[:S, :S, RIGHT] = tmp
+
+    # 4b) Swap BLACK_CONN_LEFT <-> BLACK_CONN_RIGHT (30-channel layout only; legacy 24-channel has none)
+    if out.shape[2] > CHANNEL_BLACK_CONN_RIGHT:
+        tmp = out[:S, :S, CHANNEL_BLACK_CONN_LEFT].copy()
+        out[:S, :S, CHANNEL_BLACK_CONN_LEFT] = out[:S, :S, CHANNEL_BLACK_CONN_RIGHT]
+        out[:S, :S, CHANNEL_BLACK_CONN_RIGHT] = tmp
 
     # Unchanged: 0,1 (pegs -- flip handles), 18 (player -- uniform),
     # 19,20 (red dists -- row-based), 23 (move num -- uniform)

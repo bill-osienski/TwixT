@@ -231,3 +231,29 @@ class TestMirrorInvolution:
             f"Double mirror moves: expected {moves}, got {m2_moves}"
         )
         assert m2_counts == counts
+
+
+def test_mirror_matches_engine_rebuilt_reflection_24x24():
+    """The helper's mirror of a real 24x24 tensor equals the tensor the engine builds from the reflected move
+    history -- including the black edge-connectivity channels, with black components touching both goal edges.
+    The legacy 24-channel slice must mirror the same way."""
+    from scripts.GPU.alphazero.game.twixt_state import (
+        TwixtState, CHANNEL_BLACK_CONN_LEFT, CHANNEL_BLACK_CONN_RIGHT, NUM_CHANNELS_V1)
+
+    moves = [(3, 10), (10, 0), (5, 11), (12, 1), (20, 15), (15, 23)]   # black: (10,0)-(12,1) left, (15,23) right
+    s = TwixtState(active_size=24, to_move="red")
+    sm = TwixtState(active_size=24, to_move="red")
+    for r, c in moves:
+        s, sm = s.apply_move((r, c)), sm.apply_move((r, 23 - c))
+    board = np.transpose(s.to_tensor(), (1, 2, 0))
+    expected = np.transpose(sm.to_tensor(), (1, 2, 0))
+    assert board[:, :, CHANNEL_BLACK_CONN_LEFT].sum() != board[:, :, CHANNEL_BLACK_CONN_RIGHT].sum()
+    legal = s.legal_moves()
+
+    out, m_moves, _ = _mirror_position_lr(board, legal, [0] * len(legal), 24)
+    bad = [ch for ch in range(board.shape[2]) if not np.allclose(out[:, :, ch], expected[:, :, ch])]
+    assert bad == []
+    assert sorted(m_moves) == sorted(map(tuple, sm.legal_moves()))
+
+    legacy, _, _ = _mirror_position_lr(board[:, :, :NUM_CHANNELS_V1], legal, [0] * len(legal), 24)
+    assert np.allclose(legacy, expected[:, :, :NUM_CHANNELS_V1])
