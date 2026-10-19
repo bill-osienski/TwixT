@@ -580,6 +580,16 @@ ACCOUNTED_SEED_INTERVALS = (
     # Accounted, NOT exposed and NOT retired: exposure follows actual use (the started-game
     # prefix); the closing edit retires the whole block. No gate is opened by this.
     (202691600, 202691604),          # SELF-PLAY DIAGNOSTIC -- 4 game seeds
+    # 🔴 MIRROR-AVERAGING MATCH -- 32 GAME SEEDS, registered 2026-10-19: the 32-seed block of the
+    # mirror-averaging survey (evidence/mirror-averaging-match-seed-survey/02_*), READ from that record, not
+    # chosen here, by the replacement rule (seed_selection.candidate). One seed per game of 16
+    # colour-reversed pairs, calib020_0001 with mirror averaging at 200 simulations vs ordinary at 400; the
+    # plan is evidence/mirror-averaging-match/plan.json (base + slot count + survey hash). Registered
+    # ONLY after the pre-registration collision proof (same directory, 03_*) was CLEAN, 45/45.
+    #
+    # Accounted, NOT exposed and NOT retired: exposure follows actual use (the started-game
+    # prefix); the closing edit retires the whole block. No gate is opened by this.
+    (202691700, 202691732),          # MIRROR-AVERAGING MATCH -- 16 pairs, 32 game seeds
 )
 
 #: EXPERIMENTAL EXPOSURE: seeds drawn from OUTSIDE the permanently unschedulable

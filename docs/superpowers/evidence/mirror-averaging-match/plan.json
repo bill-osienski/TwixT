@@ -1,0 +1,6 @@
+{
+ "base": 202691700,
+ "kind": "mirror-averaging-match-plan/1",
+ "n_slots": 32,
+ "survey_record_sha256": "04e74f14b03e611c8e2b5f5837e0ec1299f5bc6969a879a593d0c5cf8bf8b450"
+}
