@@ -1,0 +1,1 @@
+COMPLETED: averaged 19-0-13 ordinary, caps 0; averaged points 19.0/32 (bar 24) -> STOP_CONFIGURATION; mean pair score 0.5938 +/- 0.3395 (descriptive, assumes independence)

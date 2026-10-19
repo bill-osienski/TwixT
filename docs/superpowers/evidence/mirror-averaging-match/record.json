@@ -1,0 +1,2120 @@
+{
+ "checkpoint": {
+  "path": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "sha1_verified": "209cf2d4fd24a48553d259dd71b4954867b9473e"
+ },
+ "cost": {
+  "averaged": {
+   "leaf_infer_calls": 161804,
+   "network_infer_calls": 323608,
+   "network_positions": 323608,
+   "network_seconds": 542.162,
+   "search_seconds": 696.213,
+   "searches": 824
+  },
+  "ordinary": {
+   "leaf_infer_calls": 323983,
+   "network_infer_calls": 323983,
+   "network_positions": 323983,
+   "network_seconds": 553.22,
+   "search_seconds": 839.987,
+   "searches": 821
+  }
+ },
+ "environment": {
+  "executable": "/Users/bill/projects/TwixT_Game/.venv/bin/python",
+  "mlx": "0.30.3",
+  "numpy": "2.4.1",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "python": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.1.1.101)]"
+ },
+ "games": [
+  {
+   "black_agent_id": "ordinary",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 400,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 0.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 5026,
+     "network_infer_calls": 10052,
+     "network_positions": 10052,
+     "network_seconds": 17.085,
+     "search_seconds": 22.058,
+     "searches": 26
+    },
+    "ordinary": {
+     "leaf_infer_calls": 10025,
+     "network_infer_calls": 10025,
+     "network_positions": 10025,
+     "network_seconds": 16.886,
+     "search_seconds": 25.679,
+     "searches": 25
+    }
+   },
+   "game_idx": 0,
+   "n_moves": 51,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "averaged",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 200,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 1.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000000.json",
+   "same_checkpoint": true,
+   "seconds": 47.798,
+   "slot": 0,
+   "task_id": 0,
+   "winner": "red",
+   "winner_agent_id": "averaged",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "averaged",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 200,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 1.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 5009,
+     "network_infer_calls": 10018,
+     "network_positions": 10018,
+     "network_seconds": 16.521,
+     "search_seconds": 21.171,
+     "searches": 26
+    },
+    "ordinary": {
+     "leaf_infer_calls": 10405,
+     "network_infer_calls": 10405,
+     "network_positions": 10405,
+     "network_seconds": 17.553,
+     "search_seconds": 26.908,
+     "searches": 26
+    }
+   },
+   "game_idx": 1,
+   "n_moves": 52,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "ordinary",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 400,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 0.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000001.json",
+   "same_checkpoint": true,
+   "seconds": 48.103,
+   "slot": 1,
+   "task_id": 1,
+   "winner": "black",
+   "winner_agent_id": "averaged",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "ordinary",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 400,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 0.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 3820,
+     "network_infer_calls": 7640,
+     "network_positions": 7640,
+     "network_seconds": 12.922,
+     "search_seconds": 16.464,
+     "searches": 20
+    },
+    "ordinary": {
+     "leaf_infer_calls": 7619,
+     "network_infer_calls": 7619,
+     "network_positions": 7619,
+     "network_seconds": 13.124,
+     "search_seconds": 19.583,
+     "searches": 19
+    }
+   },
+   "game_idx": 2,
+   "n_moves": 39,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "averaged",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 200,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 1.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000002.json",
+   "same_checkpoint": true,
+   "seconds": 36.081,
+   "slot": 2,
+   "task_id": 2,
+   "winner": "red",
+   "winner_agent_id": "averaged",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "averaged",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 200,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 1.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 5428,
+     "network_infer_calls": 10856,
+     "network_positions": 10856,
+     "network_seconds": 18.384,
+     "search_seconds": 23.859,
+     "searches": 28
+    },
+    "ordinary": {
+     "leaf_infer_calls": 11228,
+     "network_infer_calls": 11228,
+     "network_positions": 11228,
+     "network_seconds": 19.23,
+     "search_seconds": 29.264,
+     "searches": 28
+    }
+   },
+   "game_idx": 3,
+   "n_moves": 56,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "ordinary",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 400,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 0.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000003.json",
+   "same_checkpoint": true,
+   "seconds": 53.147,
+   "slot": 3,
+   "task_id": 3,
+   "winner": "black",
+   "winner_agent_id": "averaged",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "ordinary",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 400,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 0.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 6031,
+     "network_infer_calls": 12062,
+     "network_positions": 12062,
+     "network_seconds": 20.43,
+     "search_seconds": 26.761,
+     "searches": 31
+    },
+    "ordinary": {
+     "leaf_infer_calls": 12030,
+     "network_infer_calls": 12030,
+     "network_positions": 12030,
+     "network_seconds": 21.081,
+     "search_seconds": 31.795,
+     "searches": 30
+    }
+   },
+   "game_idx": 4,
+   "n_moves": 61,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "averaged",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 200,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 1.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000004.json",
+   "same_checkpoint": true,
+   "seconds": 58.601,
+   "slot": 4,
+   "task_id": 4,
+   "winner": "red",
+   "winner_agent_id": "averaged",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "averaged",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 200,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 0.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 8040,
+     "network_infer_calls": 16080,
+     "network_positions": 16080,
+     "network_seconds": 26.896,
+     "search_seconds": 34.523,
+     "searches": 40
+    },
+    "ordinary": {
+     "leaf_infer_calls": 16041,
+     "network_infer_calls": 16041,
+     "network_positions": 16041,
+     "network_seconds": 27.621,
+     "search_seconds": 42.813,
+     "searches": 41
+    }
+   },
+   "game_idx": 5,
+   "n_moves": 81,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "ordinary",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 400,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 1.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000005.json",
+   "same_checkpoint": true,
+   "seconds": 77.376,
+   "slot": 5,
+   "task_id": 5,
+   "winner": "red",
+   "winner_agent_id": "ordinary",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "ordinary",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 400,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 0.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 5226,
+     "network_infer_calls": 10452,
+     "network_positions": 10452,
+     "network_seconds": 17.669,
+     "search_seconds": 23.23,
+     "searches": 27
+    },
+    "ordinary": {
+     "leaf_infer_calls": 10409,
+     "network_infer_calls": 10409,
+     "network_positions": 10409,
+     "network_seconds": 17.808,
+     "search_seconds": 27.347,
+     "searches": 26
+    }
+   },
+   "game_idx": 6,
+   "n_moves": 53,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "averaged",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 200,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 1.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000006.json",
+   "same_checkpoint": true,
+   "seconds": 50.617,
+   "slot": 6,
+   "task_id": 6,
+   "winner": "red",
+   "winner_agent_id": "averaged",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "averaged",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 200,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 0.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 4422,
+     "network_infer_calls": 8844,
+     "network_positions": 8844,
+     "network_seconds": 14.712,
+     "search_seconds": 19.176,
+     "searches": 22
+    },
+    "ordinary": {
+     "leaf_infer_calls": 8823,
+     "network_infer_calls": 8823,
+     "network_positions": 8823,
+     "network_seconds": 15.157,
+     "search_seconds": 24.083,
+     "searches": 23
+    }
+   },
+   "game_idx": 7,
+   "n_moves": 45,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "ordinary",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 400,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 1.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000007.json",
+   "same_checkpoint": true,
+   "seconds": 43.287,
+   "slot": 7,
+   "task_id": 7,
+   "winner": "red",
+   "winner_agent_id": "ordinary",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "ordinary",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 400,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 0.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 5830,
+     "network_infer_calls": 11660,
+     "network_positions": 11660,
+     "network_seconds": 19.671,
+     "search_seconds": 25.501,
+     "searches": 30
+    },
+    "ordinary": {
+     "leaf_infer_calls": 11629,
+     "network_infer_calls": 11629,
+     "network_positions": 11629,
+     "network_seconds": 20.107,
+     "search_seconds": 30.066,
+     "searches": 29
+    }
+   },
+   "game_idx": 8,
+   "n_moves": 59,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "averaged",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 200,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 1.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000008.json",
+   "same_checkpoint": true,
+   "seconds": 55.615,
+   "slot": 8,
+   "task_id": 8,
+   "winner": "red",
+   "winner_agent_id": "averaged",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "averaged",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 200,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 0.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 6231,
+     "network_infer_calls": 12462,
+     "network_positions": 12462,
+     "network_seconds": 21.148,
+     "search_seconds": 26.91,
+     "searches": 31
+    },
+    "ordinary": {
+     "leaf_infer_calls": 12432,
+     "network_infer_calls": 12432,
+     "network_positions": 12432,
+     "network_seconds": 21.922,
+     "search_seconds": 33.868,
+     "searches": 32
+    }
+   },
+   "game_idx": 9,
+   "n_moves": 63,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "ordinary",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 400,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 1.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000009.json",
+   "same_checkpoint": true,
+   "seconds": 60.81,
+   "slot": 9,
+   "task_id": 9,
+   "winner": "red",
+   "winner_agent_id": "ordinary",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "ordinary",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 400,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 0.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 4624,
+     "network_infer_calls": 9248,
+     "network_positions": 9248,
+     "network_seconds": 15.116,
+     "search_seconds": 19.554,
+     "searches": 24
+    },
+    "ordinary": {
+     "leaf_infer_calls": 9223,
+     "network_infer_calls": 9223,
+     "network_positions": 9223,
+     "network_seconds": 15.236,
+     "search_seconds": 22.966,
+     "searches": 23
+    }
+   },
+   "game_idx": 10,
+   "n_moves": 47,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "averaged",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 200,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 1.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000010.json",
+   "same_checkpoint": true,
+   "seconds": 42.543,
+   "slot": 10,
+   "task_id": 10,
+   "winner": "red",
+   "winner_agent_id": "averaged",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "averaged",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 200,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 1.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 6232,
+     "network_infer_calls": 12464,
+     "network_positions": 12464,
+     "network_seconds": 20.07,
+     "search_seconds": 26.022,
+     "searches": 32
+    },
+    "ordinary": {
+     "leaf_infer_calls": 12832,
+     "network_infer_calls": 12832,
+     "network_positions": 12832,
+     "network_seconds": 20.987,
+     "search_seconds": 31.378,
+     "searches": 32
+    }
+   },
+   "game_idx": 11,
+   "n_moves": 64,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "ordinary",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 400,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 0.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000011.json",
+   "same_checkpoint": true,
+   "seconds": 57.434,
+   "slot": 11,
+   "task_id": 11,
+   "winner": "black",
+   "winner_agent_id": "averaged",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "ordinary",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 400,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 0.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 4624,
+     "network_infer_calls": 9248,
+     "network_positions": 9248,
+     "network_seconds": 15.848,
+     "search_seconds": 20.7,
+     "searches": 24
+    },
+    "ordinary": {
+     "leaf_infer_calls": 9223,
+     "network_infer_calls": 9223,
+     "network_positions": 9223,
+     "network_seconds": 15.93,
+     "search_seconds": 23.539,
+     "searches": 23
+    }
+   },
+   "game_idx": 12,
+   "n_moves": 47,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "averaged",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 200,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 1.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000012.json",
+   "same_checkpoint": true,
+   "seconds": 44.263,
+   "slot": 12,
+   "task_id": 12,
+   "winner": "red",
+   "winner_agent_id": "averaged",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "averaged",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 200,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 1.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 4624,
+     "network_infer_calls": 9248,
+     "network_positions": 9248,
+     "network_seconds": 15.548,
+     "search_seconds": 20.221,
+     "searches": 24
+    },
+    "ordinary": {
+     "leaf_infer_calls": 9624,
+     "network_infer_calls": 9624,
+     "network_positions": 9624,
+     "network_seconds": 16.516,
+     "search_seconds": 24.913,
+     "searches": 24
+    }
+   },
+   "game_idx": 13,
+   "n_moves": 48,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "ordinary",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 400,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 0.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000013.json",
+   "same_checkpoint": true,
+   "seconds": 45.184,
+   "slot": 13,
+   "task_id": 13,
+   "winner": "black",
+   "winner_agent_id": "averaged",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "ordinary",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 400,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 1.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 5226,
+     "network_infer_calls": 10452,
+     "network_positions": 10452,
+     "network_seconds": 17.714,
+     "search_seconds": 22.411,
+     "searches": 26
+    },
+    "ordinary": {
+     "leaf_infer_calls": 10026,
+     "network_infer_calls": 10026,
+     "network_positions": 10026,
+     "network_seconds": 17.185,
+     "search_seconds": 26.294,
+     "searches": 26
+    }
+   },
+   "game_idx": 14,
+   "n_moves": 52,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "averaged",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 200,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 0.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000014.json",
+   "same_checkpoint": true,
+   "seconds": 48.731,
+   "slot": 14,
+   "task_id": 14,
+   "winner": "black",
+   "winner_agent_id": "ordinary",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "averaged",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 200,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 1.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 5227,
+     "network_infer_calls": 10454,
+     "network_positions": 10454,
+     "network_seconds": 17.714,
+     "search_seconds": 22.849,
+     "searches": 27
+    },
+    "ordinary": {
+     "leaf_infer_calls": 10827,
+     "network_infer_calls": 10827,
+     "network_positions": 10827,
+     "network_seconds": 18.449,
+     "search_seconds": 27.135,
+     "searches": 27
+    }
+   },
+   "game_idx": 15,
+   "n_moves": 54,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "ordinary",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 400,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 0.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000015.json",
+   "same_checkpoint": true,
+   "seconds": 50.012,
+   "slot": 15,
+   "task_id": 15,
+   "winner": "black",
+   "winner_agent_id": "averaged",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "ordinary",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 400,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 1.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 7236,
+     "network_infer_calls": 14472,
+     "network_positions": 14472,
+     "network_seconds": 24.664,
+     "search_seconds": 31.194,
+     "searches": 36
+    },
+    "ordinary": {
+     "leaf_infer_calls": 14036,
+     "network_infer_calls": 14036,
+     "network_positions": 14036,
+     "network_seconds": 24.096,
+     "search_seconds": 37.149,
+     "searches": 36
+    }
+   },
+   "game_idx": 16,
+   "n_moves": 72,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "averaged",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 200,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 0.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000016.json",
+   "same_checkpoint": true,
+   "seconds": 68.402,
+   "slot": 16,
+   "task_id": 16,
+   "winner": "black",
+   "winner_agent_id": "ordinary",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "averaged",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 200,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 0.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 3015,
+     "network_infer_calls": 6030,
+     "network_positions": 6030,
+     "network_seconds": 10.259,
+     "search_seconds": 12.762,
+     "searches": 15
+    },
+    "ordinary": {
+     "leaf_infer_calls": 6016,
+     "network_infer_calls": 6016,
+     "network_positions": 6016,
+     "network_seconds": 10.4,
+     "search_seconds": 15.872,
+     "searches": 16
+    }
+   },
+   "game_idx": 17,
+   "n_moves": 31,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "ordinary",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 400,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 1.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000017.json",
+   "same_checkpoint": true,
+   "seconds": 28.659,
+   "slot": 17,
+   "task_id": 17,
+   "winner": "red",
+   "winner_agent_id": "ordinary",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "ordinary",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 400,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 0.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 4825,
+     "network_infer_calls": 9650,
+     "network_positions": 9650,
+     "network_seconds": 16.239,
+     "search_seconds": 21.027,
+     "searches": 25
+    },
+    "ordinary": {
+     "leaf_infer_calls": 9624,
+     "network_infer_calls": 9624,
+     "network_positions": 9624,
+     "network_seconds": 16.703,
+     "search_seconds": 24.635,
+     "searches": 24
+    }
+   },
+   "game_idx": 18,
+   "n_moves": 49,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "averaged",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 200,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 1.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000018.json",
+   "same_checkpoint": true,
+   "seconds": 45.69,
+   "slot": 18,
+   "task_id": 18,
+   "winner": "red",
+   "winner_agent_id": "averaged",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "averaged",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 200,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 0.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 3216,
+     "network_infer_calls": 6432,
+     "network_positions": 6432,
+     "network_seconds": 10.893,
+     "search_seconds": 13.647,
+     "searches": 16
+    },
+    "ordinary": {
+     "leaf_infer_calls": 6417,
+     "network_infer_calls": 6417,
+     "network_positions": 6417,
+     "network_seconds": 11.114,
+     "search_seconds": 17.034,
+     "searches": 17
+    }
+   },
+   "game_idx": 19,
+   "n_moves": 33,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "ordinary",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 400,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 1.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000019.json",
+   "same_checkpoint": true,
+   "seconds": 30.697,
+   "slot": 19,
+   "task_id": 19,
+   "winner": "red",
+   "winner_agent_id": "ordinary",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "ordinary",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 400,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 0.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 5026,
+     "network_infer_calls": 10052,
+     "network_positions": 10052,
+     "network_seconds": 17.031,
+     "search_seconds": 22.036,
+     "searches": 26
+    },
+    "ordinary": {
+     "leaf_infer_calls": 10025,
+     "network_infer_calls": 10025,
+     "network_positions": 10025,
+     "network_seconds": 17.24,
+     "search_seconds": 25.757,
+     "searches": 25
+    }
+   },
+   "game_idx": 20,
+   "n_moves": 51,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "averaged",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 200,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 1.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000020.json",
+   "same_checkpoint": true,
+   "seconds": 47.82,
+   "slot": 20,
+   "task_id": 20,
+   "winner": "red",
+   "winner_agent_id": "averaged",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "averaged",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 200,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 1.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 3619,
+     "network_infer_calls": 7238,
+     "network_positions": 7238,
+     "network_seconds": 12.158,
+     "search_seconds": 15.633,
+     "searches": 19
+    },
+    "ordinary": {
+     "leaf_infer_calls": 7619,
+     "network_infer_calls": 7619,
+     "network_positions": 7619,
+     "network_seconds": 13.021,
+     "search_seconds": 19.06,
+     "searches": 19
+    }
+   },
+   "game_idx": 21,
+   "n_moves": 38,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "ordinary",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 400,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 0.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000021.json",
+   "same_checkpoint": true,
+   "seconds": 34.711,
+   "slot": 21,
+   "task_id": 21,
+   "winner": "black",
+   "winner_agent_id": "averaged",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "ordinary",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 400,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 0.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 5428,
+     "network_infer_calls": 10856,
+     "network_positions": 10856,
+     "network_seconds": 18.419,
+     "search_seconds": 23.693,
+     "searches": 28
+    },
+    "ordinary": {
+     "leaf_infer_calls": 10827,
+     "network_infer_calls": 10827,
+     "network_positions": 10827,
+     "network_seconds": 18.459,
+     "search_seconds": 26.816,
+     "searches": 27
+    }
+   },
+   "game_idx": 22,
+   "n_moves": 55,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "averaged",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 200,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 1.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000022.json",
+   "same_checkpoint": true,
+   "seconds": 50.536,
+   "slot": 22,
+   "task_id": 22,
+   "winner": "red",
+   "winner_agent_id": "averaged",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "averaged",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 200,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 0.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 4422,
+     "network_infer_calls": 8844,
+     "network_positions": 8844,
+     "network_seconds": 14.877,
+     "search_seconds": 18.62,
+     "searches": 22
+    },
+    "ordinary": {
+     "leaf_infer_calls": 8823,
+     "network_infer_calls": 8823,
+     "network_positions": 8823,
+     "network_seconds": 15.41,
+     "search_seconds": 23.553,
+     "searches": 23
+    }
+   },
+   "game_idx": 23,
+   "n_moves": 45,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "ordinary",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 400,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 1.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000023.json",
+   "same_checkpoint": true,
+   "seconds": 42.195,
+   "slot": 23,
+   "task_id": 23,
+   "winner": "red",
+   "winner_agent_id": "ordinary",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "ordinary",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 400,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 1.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 3819,
+     "network_infer_calls": 7638,
+     "network_positions": 7638,
+     "network_seconds": 12.916,
+     "search_seconds": 16.321,
+     "searches": 19
+    },
+    "ordinary": {
+     "leaf_infer_calls": 7219,
+     "network_infer_calls": 7219,
+     "network_positions": 7219,
+     "network_seconds": 12.789,
+     "search_seconds": 19.442,
+     "searches": 19
+    }
+   },
+   "game_idx": 24,
+   "n_moves": 38,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "averaged",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 200,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 0.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000024.json",
+   "same_checkpoint": true,
+   "seconds": 35.809,
+   "slot": 24,
+   "task_id": 24,
+   "winner": "black",
+   "winner_agent_id": "ordinary",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "averaged",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 200,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 0.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 3819,
+     "network_infer_calls": 7638,
+     "network_positions": 7638,
+     "network_seconds": 12.904,
+     "search_seconds": 16.272,
+     "searches": 19
+    },
+    "ordinary": {
+     "leaf_infer_calls": 7620,
+     "network_infer_calls": 7620,
+     "network_positions": 7620,
+     "network_seconds": 13.129,
+     "search_seconds": 20.277,
+     "searches": 20
+    }
+   },
+   "game_idx": 25,
+   "n_moves": 39,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "ordinary",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 400,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 1.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000025.json",
+   "same_checkpoint": true,
+   "seconds": 36.57,
+   "slot": 25,
+   "task_id": 25,
+   "winner": "red",
+   "winner_agent_id": "ordinary",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "ordinary",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 400,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 1.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 4623,
+     "network_infer_calls": 9246,
+     "network_positions": 9246,
+     "network_seconds": 15.209,
+     "search_seconds": 19.25,
+     "searches": 23
+    },
+    "ordinary": {
+     "leaf_infer_calls": 8823,
+     "network_infer_calls": 8823,
+     "network_positions": 8823,
+     "network_seconds": 14.865,
+     "search_seconds": 23.041,
+     "searches": 23
+    }
+   },
+   "game_idx": 26,
+   "n_moves": 46,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "averaged",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 200,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 0.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000026.json",
+   "same_checkpoint": true,
+   "seconds": 42.342,
+   "slot": 26,
+   "task_id": 26,
+   "winner": "black",
+   "winner_agent_id": "ordinary",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "averaged",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 200,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 1.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 6230,
+     "network_infer_calls": 12460,
+     "network_positions": 12460,
+     "network_seconds": 20.009,
+     "search_seconds": 25.776,
+     "searches": 32
+    },
+    "ordinary": {
+     "leaf_infer_calls": 12832,
+     "network_infer_calls": 12832,
+     "network_positions": 12832,
+     "network_seconds": 20.845,
+     "search_seconds": 32.134,
+     "searches": 32
+    }
+   },
+   "game_idx": 27,
+   "n_moves": 64,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "ordinary",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 400,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 0.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000027.json",
+   "same_checkpoint": true,
+   "seconds": 58.067,
+   "slot": 27,
+   "task_id": 27,
+   "winner": "black",
+   "winner_agent_id": "averaged",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "ordinary",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 400,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 1.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 5427,
+     "network_infer_calls": 10854,
+     "network_positions": 10854,
+     "network_seconds": 18.028,
+     "search_seconds": 22.682,
+     "searches": 27
+    },
+    "ordinary": {
+     "leaf_infer_calls": 10427,
+     "network_infer_calls": 10427,
+     "network_positions": 10427,
+     "network_seconds": 17.605,
+     "search_seconds": 27.211,
+     "searches": 27
+    }
+   },
+   "game_idx": 28,
+   "n_moves": 54,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "averaged",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 200,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 0.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000028.json",
+   "same_checkpoint": true,
+   "seconds": 49.923,
+   "slot": 28,
+   "task_id": 28,
+   "winner": "black",
+   "winner_agent_id": "ordinary",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "averaged",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 200,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 1.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 5227,
+     "network_infer_calls": 10454,
+     "network_positions": 10454,
+     "network_seconds": 17.462,
+     "search_seconds": 22.756,
+     "searches": 27
+    },
+    "ordinary": {
+     "leaf_infer_calls": 10827,
+     "network_infer_calls": 10827,
+     "network_positions": 10827,
+     "network_seconds": 18.571,
+     "search_seconds": 28.175,
+     "searches": 27
+    }
+   },
+   "game_idx": 29,
+   "n_moves": 54,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "ordinary",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 400,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 0.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000029.json",
+   "same_checkpoint": true,
+   "seconds": 50.96,
+   "slot": 29,
+   "task_id": 29,
+   "winner": "black",
+   "winner_agent_id": "averaged",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "ordinary",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 400,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 0.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 5428,
+     "network_infer_calls": 10856,
+     "network_positions": 10856,
+     "network_seconds": 17.346,
+     "search_seconds": 22.529,
+     "searches": 28
+    },
+    "ordinary": {
+     "leaf_infer_calls": 10827,
+     "network_infer_calls": 10827,
+     "network_positions": 10827,
+     "network_seconds": 17.422,
+     "search_seconds": 26.294,
+     "searches": 27
+    }
+   },
+   "game_idx": 30,
+   "n_moves": 55,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "averaged",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 200,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 1.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000030.json",
+   "same_checkpoint": true,
+   "seconds": 48.85,
+   "slot": 30,
+   "task_id": 30,
+   "winner": "red",
+   "winner_agent_id": "averaged",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  },
+  {
+   "black_agent_id": "averaged",
+   "black_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "black_mcts_sims": 200,
+   "black_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "black_score": 0.0,
+   "comparison_unit": "agent",
+   "cost": {
+    "averaged": {
+     "leaf_infer_calls": 4824,
+     "network_infer_calls": 9648,
+     "network_positions": 9648,
+     "network_seconds": 16.3,
+     "search_seconds": 20.605,
+     "searches": 24
+    },
+    "ordinary": {
+     "leaf_infer_calls": 9625,
+     "network_infer_calls": 9625,
+     "network_positions": 9625,
+     "network_seconds": 16.759,
+     "search_seconds": 25.906,
+     "searches": 25
+    }
+   },
+   "game_idx": 31,
+   "n_moves": 49,
+   "pairing_id": "mirror-averaging",
+   "reason": "win",
+   "red_agent_id": "ordinary",
+   "red_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+   "red_mcts_sims": 400,
+   "red_readout": {
+    "mode": "opening_temperature",
+    "opening_temp_plies": 20,
+    "temp_high": 1.0,
+    "temp_low": 0.1
+   },
+   "red_score": 1.0,
+   "replay_path": "docs/superpowers/evidence/mirror-averaging-match/games/game_000031.json",
+   "same_checkpoint": true,
+   "seconds": 46.536,
+   "slot": 31,
+   "task_id": 31,
+   "winner": "red",
+   "winner_agent_id": "ordinary",
+   "winner_checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
+  }
+ ],
+ "head": "b9acb1ab7c1c855a374141721f51e0ba149234e0",
+ "kind": "mirror-averaging-match-record/1",
+ "limitation": "exploratory screen; not promotion evidence; approximately inference-budget matched",
+ "load_seconds": 0.027,
+ "loadavg_after": [
+  3.1298828125,
+  2.31005859375,
+  2.34521484375
+ ],
+ "loadavg_before": [
+  2.70556640625,
+  2.77490234375,
+  3.05810546875
+ ],
+ "modes_at_end": {
+  "averaged": {
+   "batchnorm": [
+    {
+     "name": "policy_head.bn",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.5.bn2",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.5.bn1",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.4.bn2",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.4.bn1",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.3.bn2",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.3.bn1",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.2.bn2",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.2.bn1",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.1.bn2",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.1.bn1",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.0.bn2",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.0.bn1",
+     "training": false
+    },
+    {
+     "name": "encoder.bn1",
+     "training": false
+    }
+   ],
+   "modules": 42,
+   "modules_in_training_mode": 0,
+   "network_training": false
+  },
+  "ordinary": {
+   "batchnorm": [
+    {
+     "name": "policy_head.bn",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.5.bn2",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.5.bn1",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.4.bn2",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.4.bn1",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.3.bn2",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.3.bn1",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.2.bn2",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.2.bn1",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.1.bn2",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.1.bn1",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.0.bn2",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.0.bn1",
+     "training": false
+    },
+    {
+     "name": "encoder.bn1",
+     "training": false
+    }
+   ],
+   "modules": 42,
+   "modules_in_training_mode": 0,
+   "network_training": false
+  }
+ },
+ "modes_at_load": {
+  "averaged": {
+   "batchnorm": [
+    {
+     "name": "policy_head.bn",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.5.bn2",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.5.bn1",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.4.bn2",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.4.bn1",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.3.bn2",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.3.bn1",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.2.bn2",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.2.bn1",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.1.bn2",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.1.bn1",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.0.bn2",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.0.bn1",
+     "training": false
+    },
+    {
+     "name": "encoder.bn1",
+     "training": false
+    }
+   ],
+   "modules": 42,
+   "modules_in_training_mode": 0,
+   "network_training": false
+  },
+  "ordinary": {
+   "batchnorm": [
+    {
+     "name": "policy_head.bn",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.5.bn2",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.5.bn1",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.4.bn2",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.4.bn1",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.3.bn2",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.3.bn1",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.2.bn2",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.2.bn1",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.1.bn2",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.1.bn1",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.0.bn2",
+     "training": false
+    },
+    {
+     "name": "encoder.blocks.0.bn1",
+     "training": false
+    },
+    {
+     "name": "encoder.bn1",
+     "training": false
+    }
+   ],
+   "modules": 42,
+   "modules_in_training_mode": 0,
+   "network_training": false
+  }
+ },
+ "modules": {
+  "docs/superpowers/evidence/mirror-averaging-match/01_match.py": "d63dff864406aebe991c9bfe93b678a3bf033682fec1d8d7c1d19bcc1d55fc8a",
+  "scripts/GPU/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "scripts/GPU/alphazero/__init__.py": "c6f13806151399f9e6be707271537b166ec79ba9729d8339800127c826adc4ab",
+  "scripts/GPU/alphazero/connectivity_diagnostics.py": "77a63a54c0f1c17cb2814061a04331402f120c14562d042119b3c390eba6ea78",
+  "scripts/GPU/alphazero/e4_screen_reference.py": "f3194d71c6581b64e687e8209d6d089cd90bdbd2787526c454b7be9264a88a77",
+  "scripts/GPU/alphazero/eval_integrity.py": "bfedf8d677dd5391e389f4152de2a220f4cd70510e17b0643eaf1fbb011b3310",
+  "scripts/GPU/alphazero/eval_readout.py": "f0f5908854365988b5311fd5f90e154144a9ed3ad4721eac38073600d6165b63",
+  "scripts/GPU/alphazero/eval_replay.py": "702c924fecac9a211470f077e2e65dc0c1ee7f6461665de00fb4d2a08aa70cd6",
+  "scripts/GPU/alphazero/eval_runner.py": "6bc43781ab92c3bbdbb2718078f385e3d908f7637678333418ed65fc92bdb9a3",
+  "scripts/GPU/alphazero/evaluator.py": "043388192eaeb55eda58057d5f15160866b7ba0ecd8d117ff4e913f00327d8c2",
+  "scripts/GPU/alphazero/external_learning.py": "569a4a2b25e543d22494032563711af1225017ff433e69e90494c7c3c187caee",
+  "scripts/GPU/alphazero/external_learning_authorization.py": "a125240f2971eba42d64c7681896626edd87bc77c5167c2d091f4390f3223260",
+  "scripts/GPU/alphazero/external_learning_stage2.py": "002c8f153077fe0d799d0a73eb03d08d703db372ad0e419fe0b0c69363a132c8",
+  "scripts/GPU/alphazero/external_learning_stage2_authorization.py": "ce3ec3b6b82798483a5d1d65c98a24c71e39dd09b1dcdd5fc1d3146ba2b87bfb",
+  "scripts/GPU/alphazero/external_learning_stage3.py": "8bb0bea482565ca0d051cf8962c34d1e9ff0cd620fda14c34dd8df4381e2d21c",
+  "scripts/GPU/alphazero/external_learning_stage3_authorization.py": "3664ea262727f5f1b3c074b386f1dc5a072b123f9d52746754795b26951509bf",
+  "scripts/GPU/alphazero/game/__init__.py": "b8cba656f4cdd17ca1fce240224623d2ed631904a035425a30ef4a7be2069122",
+  "scripts/GPU/alphazero/game/twixt_state.py": "291275223b71b522a19181ae33a34518c0ca3c8f585275770f4c72e651cba5e2",
+  "scripts/GPU/alphazero/inheritance_probe.py": "d8e073b8303d5db5f43a5613f82aff6a9cc1a0bc6249e7a312fec73242688203",
+  "scripts/GPU/alphazero/local_evaluator.py": "7fbeb49d3eb210fae4c74098a29e257b34916d8837f6735cd875c3184447ea4e",
+  "scripts/GPU/alphazero/mcts.py": "0769b22ae47923da2600584da1bcf7c955bb975f0bd4985d7d11605d5196050f",
+  "scripts/GPU/alphazero/mirror_averaging.py": "1f23ac6adeb6ea0a33b7fe5500edeb2c9929a9781089106d5925a99817340aef",
+  "scripts/GPU/alphazero/network.py": "81465fe7106d4d7161cc5bdaf2b00a002ac337a77aff5d354a3bcd26986873bc",
+  "scripts/GPU/alphazero/opening_diagnostics.py": "03e40f0ea8110f194bb94b6f99b03b7aa367937882bf9c9cd5de57adc5a13106",
+  "scripts/GPU/alphazero/probe_eval.py": "e2a2943604d6b3efd5f4c3edac2c8c547b4ebe8b04e1cbf5a0b47b4f3d9a0a25",
+  "scripts/GPU/alphazero/recovery_retargeting_diagnostics.py": "25f36b6df0295c5d3baf27a07f0a2be9faebe9df0eb1a2ff53f06454d6ee32ea",
+  "scripts/GPU/alphazero/search_distillation_stage_b.py": "1f6af351a7469ffcea6861429ff20fe5b44288b1ca2637cedf1c217d957097da",
+  "scripts/GPU/alphazero/self_play.py": "294fbb7961f8571932e2c715ca8a7c5b37af5a593e1e69f98979ab136faef5ca",
+  "scripts/GPU/alphazero/twixtbot_adapter.py": "f0f2dfdee202c9f33a0575315e248746d318599bd170405b0a785d7ded806a2c",
+  "scripts/GPU/alphazero/twixtbot_g3_reference.py": "f68af1525d7997467904e2dfe7ea8aaf5400fffce3e5513625643ec442e3e55e",
+  "scripts/GPU/alphazero/twixtbot_g3_schedule.py": "7624c4e61c8ca5cba7641a641d74800c4c2a6d8e6c1ffb13115bed177b92a600"
+ },
+ "protocol": {
+  "PROTOCOL": {
+   "board_size": 24,
+   "max_moves": 280,
+   "mcts_eval_batch_size": 14,
+   "mcts_sims": 400,
+   "mcts_stall_flush_sims": 48,
+   "opening_temp_plies": 20,
+   "selection_mode": "opening_temperature",
+   "temp_high": 1.0,
+   "temp_low": 0.1
+  },
+  "agents": [
+   {
+    "agent_id": "averaged",
+    "checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "mcts_sims": 200,
+    "readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    }
+   },
+   {
+    "agent_id": "ordinary",
+    "checkpoint": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "mcts_sims": 400,
+    "readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    }
+   }
+  ],
+  "eval_config": {
+   "board_size": 24,
+   "max_moves": 280,
+   "mcts_eval_batch_size": 14,
+   "mcts_sims": 400,
+   "mcts_stall_flush_sims": 48,
+   "opening_temp_plies": 20,
+   "selection_mode": "opening_temperature",
+   "temp_high": 1.0,
+   "temp_low": 0.1
+  }
+ },
+ "screen": {
+  "averaged_points": 19.0,
+  "averaged_wins": 19,
+  "board_full": 0,
+  "caps": 0,
+  "draws": 0,
+  "half_width": 0.3395253789351549,
+  "interval_note": "descriptive; pairs are the sampling unit; conditional on the assumed independence of the 16 pairs, which distinct seeds and colour reversal do not themselves establish",
+  "interval_unclipped": [
+   0.2542246210648451,
+   0.9332753789351549
+  ],
+  "mean_pair_score": 0.59375,
+  "ordinary_wins": 13,
+  "pair_scores": [
+   1.0,
+   1.0,
+   0.5,
+   0.5,
+   0.5,
+   1.0,
+   1.0,
+   0.5,
+   0.0,
+   0.5,
+   1.0,
+   0.5,
+   0.0,
+   0.5,
+   0.5,
+   0.5
+  ],
+  "points_bar": 24,
+  "screening_note": "operational screening threshold, not statistical proof of superiority",
+  "screening_outcome": "STOP_CONFIGURATION"
+ },
+ "script": "docs/superpowers/evidence/mirror-averaging-match/01_match.py",
+ "strength_verdict": null,
+ "total_seconds": 1539.852,
+ "verdict": "COMPLETED"
+}
