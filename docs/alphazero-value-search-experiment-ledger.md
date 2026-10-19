@@ -68,6 +68,8 @@ knob) is not a new hypothesis.
 
 > **Mirror consistency (Post-closure entry 8, 2026-10-19, OPEN).** On four diagnostic positions, `calib020_0001` (eval mode) gave clearly different predictions for a position and its left-right reflection: value differences **0.045–0.637**, policy total variation **0.108–0.178**, top move disagreeing in 1 of 4 (tolerance 1e-5). This justifies *considering* an inference-time averaging prototype; it is not evidence of stronger play, and averaging would double inference cost.
 
+> **Mirror-augmentation defect fixed (Post-closure entry 9, 2026-10-19).** Training's left-right mirror (`_mirror_position_lr`) flipped the black edge-connectivity channels 27/28 spatially but never swapped their left/right labels; fixed in `0c417882`. Whether this contributed to the incumbent's asymmetry (entry 8) is **unmeasured**; the incumbent's weights are unchanged and no retraining follows. Symmetry averaging stays an open hypothesis.
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -2839,6 +2841,26 @@ rate, and which orientation (or the average) is closer to the true value is not 
 **Conclusion / status.** OPEN — the finding justifies *considering* an averaging prototype, not building one. Any
 later comparison must account for averaging's doubled inference cost (e.g. equal wall-clock or equal network
 evaluations). Not evidence of stronger play.
+
+### 9. Implementation finding — training mirror augmentation kept the black edge-connectivity labels (2026-10-19)
+
+**Finding (found in review).** `self_play._mirror_position_lr`, the training-time left-right mirror, permutes link
+directions and swaps the black edge-*distance* channels (21/22), but did not swap the black edge-*connectivity*
+channels **27** (black connected to the left edge) and **28** (right edge): it flipped their locations and kept
+the wrong edge labels. So every mirrored 30-channel training sample with black edge-connected pegs carried
+inconsistent connectivity labels.
+
+**Fix.** `0c417882`: swap 27 ↔ 28 when the tensor has them; legacy 24-channel tensors are unchanged. Focused CPU
+test (`tests/test_mirror.py::test_mirror_matches_engine_rebuilt_reflection_24x24`): a hand-built 24×24 position
+with black components touching both goal edges, the helper's mirror compared channel by channel with the tensor
+the engine builds from the reflected move history. Run once before the fix — failed on exactly channels
+**[27, 28]**, every other channel matching — and once after — passed, the legacy 24-channel slice included. No
+model, search, game or training.
+
+**Consequence.** The incumbent was trained with this defect; its weights are unchanged. Whether the defect
+contributed to entry 8's asymmetry is **unmeasured**. The probe in entry 8 did not use this helper (it rebuilt
+mirrored states through the engine) and stands. No retraining or averaging strength trial follows from this fix;
+symmetry averaging remains an open hypothesis.
 
 ---
 
