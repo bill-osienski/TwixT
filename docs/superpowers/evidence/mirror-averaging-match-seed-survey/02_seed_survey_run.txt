@@ -1,0 +1,107 @@
+MIRROR-AVERAGING MATCH -- GAME-SEED SURVEY
+================================================================================================
+HEAD 41620884dd5426d2baf761e46a6c40e92b093c76; working tree clean
+this tree /Users/bill/projects/TwixT_Game-mirror-match
+main checkout /Users/bill/projects/TwixT_Game (scanned too; HEAD 41620884dd5426d2baf761e46a6c40e92b093c76; 8 uncommitted entries, not required clean)
+method (survey) docs/superpowers/evidence/tactical-candidate-seed-survey/01_seed_survey.py sha256 6f6e55dbd5da672848c757753d4e61a3e9d110d96569b7ef468f902cf46f8860 (pinned)
+method (proof) docs/superpowers/evidence/tactical-candidate-seed-registration/01_collision_proof.py sha256 dd192011938ca5c6674092b243681174e669e1e96b22b8d13da2a264b340764d (pinned)
+rule scripts/GPU/alphazero/seed_selection.py sha256 34c2a537e580eb7215b18a4ad747ed894c330dadeb40b96bc87f90c1d74b4dcc (ALIGN 100)
+registry scripts/GPU/alphazero/e4_screen_reference.py sha256 c5df80bd9190141c714e1e4862ed8f34f74585a734d6e8048462529d0a477979
+masks (imported): ['0x3c3c3c', '0x5a5a5a', '0xa5a5a5', '0xc3c3c3']
+registries: ACCOUNTED 37, EXPOSED 35, RETIRED 33, TEST_ONLY 1
+named spent blocks: D1 paper 1, H1 2, H2 3, H3 6, H4 5, H5 4; H3 generation ranges 4; CONSUMED_SEEDS 1
+EXEMPT PATHS (exact; plus registry tuple elements by parsing): 4 + the plan
+    docs/superpowers/evidence/mirror-averaging-match-seed-survey/01_seed_survey.py
+    docs/superpowers/evidence/mirror-averaging-match-seed-survey/02_seed_survey_run.txt
+    docs/superpowers/evidence/mirror-averaging-match-seed-survey/03_collision_proof_pre_run.txt
+    docs/superpowers/evidence/mirror-averaging-match-seed-survey/04_collision_proof_post_run.txt
+    docs/superpowers/evidence/mirror-averaging-match/plan.json  (only if every band literal in it is a slot of the block)
+
+CANDIDATE RULE: highest registered/named-spent SEED in the band = 202691603; BASE = 202691700; block = [202691700, 202691732) -- 32 seeds
+
+SCOPE (fail-closed enumeration) under ['scripts', 'tests', 'docs/superpowers']: this tree 4600 regular files, 0 symbolic links (not followed); main checkout 47225 regular files, 0 symbolic links; band literal values counted: 5024
+THE BLOCK (202691700, 202691732)  n=32  direct=NONE  streams=0  injective=True  gap=67 (floor 32)  CLEAN=True
+SLOTS (build_agent_pairing_tasks: game g has seed BASE + g):
+    SLOT 0 game 0 pair 0 red averaged seed 202691700
+    SLOT 1 game 1 pair 0 red ordinary seed 202691701
+    SLOT 2 game 2 pair 1 red averaged seed 202691702
+    SLOT 3 game 3 pair 1 red ordinary seed 202691703
+    SLOT 4 game 4 pair 2 red averaged seed 202691704
+    SLOT 5 game 5 pair 2 red ordinary seed 202691705
+    SLOT 6 game 6 pair 3 red averaged seed 202691706
+    SLOT 7 game 7 pair 3 red ordinary seed 202691707
+    SLOT 8 game 8 pair 4 red averaged seed 202691708
+    SLOT 9 game 9 pair 4 red ordinary seed 202691709
+    SLOT 10 game 10 pair 5 red averaged seed 202691710
+    SLOT 11 game 11 pair 5 red ordinary seed 202691711
+    SLOT 12 game 12 pair 6 red averaged seed 202691712
+    SLOT 13 game 13 pair 6 red ordinary seed 202691713
+    SLOT 14 game 14 pair 7 red averaged seed 202691714
+    SLOT 15 game 15 pair 7 red ordinary seed 202691715
+    SLOT 16 game 16 pair 8 red averaged seed 202691716
+    SLOT 17 game 17 pair 8 red ordinary seed 202691717
+    SLOT 18 game 18 pair 9 red averaged seed 202691718
+    SLOT 19 game 19 pair 9 red ordinary seed 202691719
+    SLOT 20 game 20 pair 10 red averaged seed 202691720
+    SLOT 21 game 21 pair 10 red ordinary seed 202691721
+    SLOT 22 game 22 pair 11 red averaged seed 202691722
+    SLOT 23 game 23 pair 11 red ordinary seed 202691723
+    SLOT 24 game 24 pair 12 red averaged seed 202691724
+    SLOT 25 game 25 pair 12 red ordinary seed 202691725
+    SLOT 26 game 26 pair 13 red averaged seed 202691726
+    SLOT 27 game 27 pair 13 red ordinary seed 202691727
+    SLOT 28 game 28 pair 14 red averaged seed 202691728
+    SLOT 29 game 29 pair 14 red ordinary seed 202691729
+    SLOT 30 game 30 pair 15 red averaged seed 202691730
+    SLOT 31 game 31 pair 15 red ordinary seed 202691731
+
+CONTROLS
+------------------------------------------------------------------------------------------------
+  PASS   REJECTED: D1 paper block (202615000, 202615221)
+  PASS   REJECTED: H1 block (202616000, 202616224)
+  PASS   REJECTED: H2 block (202618000, 202618736)
+  PASS   REJECTED: H3 block (202624000, 202624040)
+  PASS   REJECTED: H4 block (202632000, 202632032)
+  PASS   REJECTED: H5 block (202650000, 202650148)
+  PASS   REJECTED: the TEST_ONLY band
+  PASS   REJECTED: inside the live H3 uniform generation range
+  PASS   REJECTED: overlaps the block by one seed
+  PASS   REJECTED: starts where the block ends -- inside the floor
+  PASS   REJECTED: one seed inside the floor
+  PASS   REJECTED: the most recently EXPOSED block (the self-play diagnostic's games)
+  PASS   REJECTED: a block at the H4-4b MUTATION literal 202642000
+  PASS   an UNDERSCORE-GROUPED candidate seed (.py)  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=67; dropping undecodable bytes instead would see it]
+  PASS   a PLAIN candidate seed (.py)  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=67; dropping undecodable bytes instead would see it]
+  PASS   an UNDERSCORE-GROUPED exclusive end (.py)  [without it CLEAN=True; with it direct=NONE gap=0; dropping undecodable bytes instead would see it]
+  PASS   a candidate seed in a .log -- a suffix H5's filter skipped  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=67; dropping undecodable bytes instead would see it]
+  PASS   a candidate seed inside a .gz  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=67; dropping undecodable bytes instead would see it]
+  PASS   a candidate seed after an undecodable byte after a digit  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=67; dropping undecodable bytes instead would MISS it]
+  PASS   an UNREADABLE file stops the survey  [SurveyStop]
+  PASS   a CORRUPT .gz stops the survey  [SurveyStop]
+  PASS   an own record (exact path) is exempt  [None]
+  PASS   a sibling path that is NOT listed is counted  [[('docs/superpowers/evidence/mirror-averaging-match-seed-survey/04_not_listed.txt', 1)]]
+  PASS   the plan holding only block seeds is exempt  [None]
+  PASS   registry tuple elements are exempt by parsing (a non-ASCII char BEFORE them)  [[202691711]]
+  PASS   the same value outside a registry tuple is counted  [[('scripts/GPU/alphazero/e4_screen_reference.py', 1)]]
+  PASS   a plan with a seed OUTSIDE the block is not exempt  [[202691700, 202691737]]
+  PASS   an UNREADABLE directory  [STOPPED: a directory could not be read]
+  PASS   an UNREADABLE nested directory  [STOPPED: a directory could not be read]
+  PASS   a missing root  [STOPPED: <tmp>/tests: the root is not a directory]
+  PASS   a root that is a file  [STOPPED: <tmp>/scripts: the root is not a directory]
+  PASS   a FIFO inside a root  [STOPPED: <tmp>/scripts/pipe: neither a regular file, a directory nor a symbolic link]
+  PASS   a sound tree with a symbolic link  [enumerated: 3 files, 1 links]
+  PASS   pre: the survey's registry, no plan  [the expected state]
+  PASS   pre: the registry changed  [the registry is not the one the survey read]
+  PASS   pre: the block already registered  [the registry is not the one the survey read; a registry already holds seeds of the block: [('ACCOUNTED_SEED_INTERVALS', (202691700, 202691732))]]
+  PASS   pre: a plan already exists  [a pilot plan already exists]
+  PASS   post: exactly the block appended last, the plan  [the expected state]
+  PASS   post: the block appended FIRST  [ACCOUNTED is not the survey's state with exactly the block appended last]
+  PASS   post: a wider tuple  [ACCOUNTED is not the survey's state with exactly the block appended last]
+  PASS   post: EXPOSED changed too  [EXPOSED_SEED_INTERVALS changed]
+  PASS   post: no plan  [the mirror-averaging plan is absent or not committed]
+  PASS   post: a plan with another BASE  [the mirror-averaging plan is not build_plan of the surveyed block]
+  PASS   post: a plan of 33 slots  [the mirror-averaging plan is not build_plan of the surveyed block]
+  PASS   post: a plan bound to another survey record  [the mirror-averaging plan is not build_plan of the surveyed block]
+
+controls passed: 45/45
+SURVEY VERDICT   : THE MIRROR-AVERAGING BLOCK IS CLEAN
