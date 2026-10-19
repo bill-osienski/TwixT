@@ -1,0 +1,1 @@
+COMPLETED: JUSTIFIES_SMALL_PROTOTYPE; 226 duplicates of 1203 calls (0 within a search, 226 from an earlier one); duplicate inference 0.394 s of 3.077 s search = 12.80% (bar 10%); 3.896 s
