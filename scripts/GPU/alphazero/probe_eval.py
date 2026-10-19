@@ -110,6 +110,7 @@ def _load_network(
             f"n_blocks={actual_n_blocks}, value_adapter={has_value_adapter}"
         )
     net.load_weights(weights_path)
+    net.eval()   # BatchNorm uses running statistics: every caller here scores, none trains
     return net, in_channels, actual_hidden, actual_n_blocks
 
 
