@@ -2938,6 +2938,10 @@ did not disadvantage it on runtime.
 orientation change. Not evidence that averaging helps or hurts. `calib020_0001` and production defaults unchanged.
 See do-not-repeat **#59**.
 
+*Correction (2026-10-19, same day).* The pair-score counts above are miscounted: the record has **5 × 1.0, 9 × 0.5,
+2 × 0.0** (the listed sequence is correct), so **9** of 16 pairs split, not 10. The mean (0.594), points (19) and
+verdict are unchanged.
+
 ---
 
 *Append a new row to the [experiment ledger](#experiment-ledger) and update [do-not-repeat](#do-not-repeat-prevents-going-in-circles) whenever a branch is run and judged. Keep the key conclusion at the top current.*
