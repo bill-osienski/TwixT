@@ -74,6 +74,8 @@ knob) is not a new hypothesis.
 
 > **Mirror-averaging match — STOP_CONFIGURATION (Post-closure entry 11, 2026-10-19, CLOSED).** 200 averaged vs 400 ordinary simulations, `calib020_0001`, 16 colour-reversed pairs: averaged **19–13** (no draws or caps), **19/32 points < the frozen bar 24**; mean pair score **0.594**, Hoeffding95 [0.254, 0.933] descriptive, pair independence assumed. Network evaluations 323,608 vs 323,983 (approximately matched); search time 696 s vs 840 s. This configuration is stopped. See do-not-repeat **#59**.
 
+> **Evaluation reuse (Post-closure entry 12, 2026-10-19, OPEN).** Across three consecutive 400-simulation searches, 226 of 1,203 evaluator calls (all from an earlier search) repeated an exact input; their inference time was **12.8%** of search time, above the frozen 10% bar. That justifies only a small cache prototype — optimistic (cache overhead excluded), three positions, one timing run, not a route to stronger play.
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -2941,6 +2943,43 @@ See do-not-repeat **#59**.
 *Correction (2026-10-19, same day).* The pair-score counts above are miscounted: the record has **5 × 1.0, 9 × 0.5,
 2 × 0.0** (the listed sequence is correct), so **9** of 16 pairs split, not 10. The mean (0.594), points (19) and
 verdict are unchanged.
+
+### 12. Evaluation-reuse measurement — exact duplicate evaluator inputs across consecutive searches (2026-10-19, OPEN)
+
+**Test.** Game 0 of the self-play diagnostic corpus after 20, 21 and 22 moves (red, black, red to move); one
+ordinary 400-simulation search of each (1,200 simulations) by `calib020_0001` in eval mode, Stage B search settings,
+no root noise, each side its own MCTS over one shared evaluator as in `play_eval_game`, test-only RNG seed (a
+diagnostic search, not a game). Every `infer` call keyed by the sha256 of its exact inputs (board tensor, move
+rows, move columns, mask, active size) and timed; every inference ran normally — nothing cached or skipped.
+
+**Hypothesis.** Consecutive searches re-evaluate identical inputs often enough that reusing predictions could make
+existing search cheaper (no previous test of per-prediction reuse is recorded; existing caches reuse evaluator
+objects or completed root searches).
+
+**Prediction on record.** None stated in advance. **Frozen decision:** inference time on duplicates / search time
+< 10% → stop; ≥ 10% → justifies only a small prototype (optimistic: cache overhead excluded).
+
+**What ran.** Script `0cd47567`; one run in a clean linked worktree (fast-forwarded, removed), evidence `9bd5eeca`
+(`docs/superpowers/evidence/eval-reuse/run/`): `timeout -k 10 50`, exit 0, COMPLETED, 3.9 s; 0 modules in
+training mode; all 26 loaded repository modules committed.
+
+**Result.** 1,203 calls (401 per search, batch 1), **977 distinct inputs, 226 exact duplicates — 0 within a
+search, all 226 repeating an input from an earlier search** (28% of the 802 calls in searches 2 and 3). Inference
+on duplicates **0.394 s** of **3.077 s** search time (hashing time, 0.057 s, subtracted) → **12.8% ≥ 10% →
+JUSTIFIES_SMALL_PROTOTYPE.** Per search: 1.125 / 0.947 / 1.006 s search, 0.778 / 0.667 / 0.668 s inference (the
+first includes one-time graph compilation, which only enlarges the denominator).
+
+**Did it match, and why?** No prediction. With no transpositions inside one search, every duplicate is a
+position the previous search(es) already expanded beneath the moves actually played — the subtree a reused tree
+or prediction cache would keep.
+
+**Limits.** Three positions from one game, one timing run, 2.8 points above the bar. The record does not split the
+226 duplicates by which earlier search supplied them, so how many cross sides (red's search reused by black's,
+which needs a cache shared by both agents — natural in self-play, not between different agents in a match) is
+**unmeasured**. A cache's own lookup and memory cost is excluded. Not a route to stronger play by itself.
+
+**Conclusion / status.** OPEN — clears the frozen bar, which justifies considering only a small prototype; nothing
+is built or authorized. Batching and mirror averaging stay closed; `calib020_0001` unchanged.
 
 ---
 
