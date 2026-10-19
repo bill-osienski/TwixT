@@ -66,6 +66,8 @@ knob) is not a new hypothesis.
 
 > **2026-10-19 additions (Post-closure entries 6–7).** **The diagnostic example was already lost:** a rules-engine-only check proved that after the save (21,6) red forces a win within three plies (four forcing red moves; every one of black's 486 replies answered by a verified red win). The flat search explains why the save was not deepened, but this example cannot show that a search correction would have saved the game. **`probe_eval._load_network` now returns eval mode** (`444269ac`), closing entry 3's open item. See do-not-repeat **#58**.
 
+> **Mirror consistency (Post-closure entry 8, 2026-10-19, OPEN).** On four diagnostic positions, `calib020_0001` (eval mode) gave clearly different predictions for a position and its left-right reflection: value differences **0.045–0.637**, policy total variation **0.108–0.178**, top move disagreeing in 1 of 4 (tolerance 1e-5). This justifies *considering* an inference-time averaging prototype; it is not evidence of stronger play, and averaging would double inference cost.
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -2800,6 +2802,43 @@ are unchanged. Also now eval mode: `twixt_replay_analyzer.py`'s shared scoring n
 did not call `.eval()` itself. No historical probe is rerun; earlier probe results stay under their recorded
 protocol (training mode). The inference-mode match's `legacy_factory` loaded through this function, so that closed
 one-shot script would now STOP on its own mode check rather than reproduce its legacy arm.
+
+### 8. Mirror-consistency probe — position vs left-right reflection (2026-10-19, OPEN FINDING)
+
+**Test.** Four positions from the four diagnostic games (entry 5; no held-out material): after 20 moves in games
+0 and 2, after 21 in games 1 and 3. Each position and its left-right reflection — the complete move history
+replayed with (r, c) → (r, 23 − c), so the engine rebuilds pegs and links — evaluated by `calib020_0001` in eval
+mode, batch 1, exactly as `mcts.py` evaluates a leaf; reflected priors mapped back. Eight inference calls; no
+search, game, seed or training.
+
+**Hypothesis.** The network's predictions are not invariant under the left-right reflection, a symmetry of our
+rules that preserves the true value; if so, averaging the two orientations might help.
+
+**Why it was plausible.** Training uses horizontal-mirror augmentation (`self_play.py`, `_mirror_position_lr`),
+which encourages but does not enforce invariance. No inference-time symmetry-averaging experiment is recorded.
+
+**Prediction on record.** None stated in advance. Stop rule: if every difference were within 1e-5, stop the idea
+on this sample.
+
+**What ran.** Script `2077d2ef`; one run, evidence `d4081174`
+(`docs/superpowers/evidence/self-play-diagnostic/mirror/`): `timeout -k 10 50`, exit 0, COMPLETED, 0.22 s,
+0 modules in training mode, legal sets corresponding exactly under the map.
+
+**Result.** **DISCREPANT.**
+| Game | Moves | To move | Value | Value (reflected) | abs diff | Policy TV | Top move (reflected, mapped back) |
+|---|---|---|---|---|---|---|---|
+| 0 | 20 | red | 0.601 | 0.646 | 0.045 | 0.178 | (17,15) 0.122 vs (17,17) 0.107 — disagree |
+| 1 | 21 | black | −0.213 | −0.849 | **0.637** | 0.122 | (17,11) both |
+| 2 | 20 | red | −0.546 | −0.347 | 0.199 | 0.138 | (11,17) both |
+| 3 | 21 | black | −0.978 | −0.842 | 0.136 | 0.108 | (4,11) both |
+
+**Did it match, and why?** No prediction. The differences are four orders of magnitude above numerical tolerance,
+so the network is materially orientation-dependent on these positions. Four positions from four games are not a
+rate, and which orientation (or the average) is closer to the true value is not measured.
+
+**Conclusion / status.** OPEN — the finding justifies *considering* an averaging prototype, not building one. Any
+later comparison must account for averaging's doubled inference cost (e.g. equal wall-clock or equal network
+evaluations). Not evidence of stronger play.
 
 ---
 
