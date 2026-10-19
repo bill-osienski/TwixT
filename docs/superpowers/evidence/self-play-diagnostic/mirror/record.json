@@ -1,0 +1,106 @@
+{
+ "answer": "DISCREPANT",
+ "head": "2077d2ef16a070e6c88efd208178cce9c2215e1b",
+ "inference_calls": 8,
+ "kind": "self-play-diagnostic-mirror-probe/1",
+ "max": {
+  "policy_max_abs_diff": 0.0823309626430273,
+  "policy_total_variation": 0.17754996378554644,
+  "value_abs_diff": 0.6366122215986252
+ },
+ "modules_in_training_mode": 0,
+ "positions": [
+  {
+   "game": 0,
+   "legal": 508,
+   "moves_applied": 20,
+   "policy_max_abs_diff": 0.05107056349515915,
+   "policy_total_variation": 0.17754996378554644,
+   "to_move": "red",
+   "top_move": [
+    17,
+    15
+   ],
+   "top_move_reflected_mapped_back": [
+    17,
+    17
+   ],
+   "top_moves_agree": false,
+   "top_prior": 0.12217621505260468,
+   "top_prior_reflected": 0.10743480920791626,
+   "value": 0.6010586619377136,
+   "value_abs_diff": 0.044707298278808594,
+   "value_reflected": 0.6457659602165222
+  },
+  {
+   "game": 1,
+   "legal": 507,
+   "moves_applied": 21,
+   "policy_max_abs_diff": 0.05160484090447426,
+   "policy_total_variation": 0.12185985024552792,
+   "to_move": "black",
+   "top_move": [
+    17,
+    11
+   ],
+   "top_move_reflected_mapped_back": [
+    17,
+    11
+   ],
+   "top_moves_agree": true,
+   "top_prior": 0.2175692468881607,
+   "top_prior_reflected": 0.17703717947006226,
+   "value": -0.21277166903018951,
+   "value_abs_diff": 0.6366122215986252,
+   "value_reflected": -0.8493838906288147
+  },
+  {
+   "game": 2,
+   "legal": 508,
+   "moves_applied": 20,
+   "policy_max_abs_diff": 0.0823309626430273,
+   "policy_total_variation": 0.13833247733055032,
+   "to_move": "red",
+   "top_move": [
+    11,
+    17
+   ],
+   "top_move_reflected_mapped_back": [
+    11,
+    17
+   ],
+   "top_moves_agree": true,
+   "top_prior": 0.21064981818199158,
+   "top_prior_reflected": 0.1836363673210144,
+   "value": -0.5461026430130005,
+   "value_abs_diff": 0.19892039895057678,
+   "value_reflected": -0.3471822440624237
+  },
+  {
+   "game": 3,
+   "legal": 507,
+   "moves_applied": 21,
+   "policy_max_abs_diff": 0.046333108097314835,
+   "policy_total_variation": 0.10755483130924404,
+   "to_move": "black",
+   "top_move": [
+    4,
+    11
+   ],
+   "top_move_reflected_mapped_back": [
+    4,
+    11
+   ],
+   "top_moves_agree": true,
+   "top_prior": 0.10623166710138321,
+   "top_prior_reflected": 0.059898559004068375,
+   "value": -0.9779531359672546,
+   "value_abs_diff": 0.13607007265090942,
+   "value_reflected": -0.8418830633163452
+  }
+ ],
+ "script": "docs/superpowers/evidence/self-play-diagnostic/07_mirror_probe.py",
+ "seconds": 0.223,
+ "tolerance": 1e-05,
+ "verdict": "COMPLETED"
+}
