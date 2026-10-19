@@ -1606,6 +1606,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 
 58. **The game-3 missed defence (ply index 41) is not evidence that a search correction saves games — 2026-10-19.** A rules-only check proved red forces a win within three plies after the save (21,6). Do **not** extend the horizon, rerun the check, or cite this example as a game a deeper search would have saved; it shows only the flat-search mechanism. A future correction needs examples where the save is not already lost within the checked horizon.
 
+   *Correction to #58 (2026-10-19, review).* The requirement for new examples applies **only to corrections justified by this tactical criterion** (a missed one-move defence), not to every future search or strength idea: a bounded tactical proof is not a universal prerequisite for strength research. Conversely, failing to prove a loss within a horizon would not prove a position savable. Both inference fixes (`c8cb2aa6`, `444269ac`) and `calib020_0001` stay; do **not** expand this check, reopen FPU settings or start training from this example — the four diagnostic games supplied no evidence that warrants such a change.
+
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
 
