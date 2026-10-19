@@ -76,6 +76,8 @@ knob) is not a new hypothesis.
 
 > **Evaluation reuse (Post-closure entry 12, 2026-10-19, OPEN).** Across three consecutive 400-simulation searches, 226 of 1,203 evaluator calls (all from an earlier search) repeated an exact input; their inference time was **12.8%** of search time, above the frozen 10% bar. That justifies only a small cache prototype — optimistic (cache overhead excluded), three positions, one timing run, not a route to stronger play.
 
+> **Per-colour prediction cache — STOP_CONFIGURATION (Post-closure entry 13, 2026-10-19, CLOSED).** With each colour's cache kept to its own searches, only **4 of 802** later lookups hit (red; black 0): entry 12's duplicates were almost all **cross-colour**. Results were identical, but combined search time was **2.0% higher** (6.219 s vs 6.097 s), far from the 10% bar. See do-not-repeat **#60**.
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -1620,6 +1622,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 
 59. **Mirror averaging at 200 vs 400 ordinary simulations — STOP_CONFIGURATION 2026-10-19.** 19/32 against a frozen bar of 24 (mean pair 0.594, interval includes 0.5). Do **not** add games or repeat the match to reach the bar, change the budgets (e.g. 250 or 400 averaged), weight the two orientations unequally, add other symmetries or orientations, or rescue it with another readout — each would be post-hoc tuning of a stopped configuration. A different symmetry-based idea needs its own justification and authorization. The prototype stays unwired; production is unchanged.
 
+60. **A per-colour exact-input prediction cache — STOP_CONFIGURATION 2026-10-19.** Identical results, but 4 hits in 802 lookups and 2.0% *slower* search (bar: 10% faster). Do **not** retry it with more positions, longer sequences, faster hashing, a different key, or under quieter load to find a saving — there is almost nothing to reuse within one colour. Entry 12's 12.8% came from **cross-colour** duplicates; a cache shared between the two sides is a different question (between different agents it means one agent consuming the other's predictions) and needs its own justification and authorization.
+
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
 
@@ -2980,6 +2984,43 @@ which needs a cache shared by both agents — natural in self-play, not between 
 
 **Conclusion / status.** OPEN — clears the frozen bar, which justifies considering only a small prototype; nothing
 is built or authorized. Batching and mirror averaging stay closed; `calib020_0001` unchanged.
+
+### 13. Per-colour prediction cache — one bounded timing screen (2026-10-19, CLOSED)
+
+**Test.** Entry 12's three positions, checkpoint and settings. A CACHE in the comparison script only
+(`CachedEvaluator`): exact-input key as in entry 12, a miss runs the network and stores copies, a hit returns
+copies; **each colour its own cache**, retained across that colour's searches in a sequence, never fed by the
+opposing agent. Sequences (fresh MCTS objects, RNG streams and caches each) in the order **ordinary → cached →
+cached → ordinary**, 4,800 search simulations, after an identical shared warm-up (one plain inference per root).
+
+**Hypothesis.** Reusing a colour's own earlier predictions makes search cheaper after the cache's overhead.
+
+**Why it was plausible.** Entry 12: 226 of 1,203 calls repeated an earlier input (12.8% of search time) — but
+that count did not separate same-colour from cross-colour reuse.
+
+**Prediction on record.** None stated in advance. **Frozen screen:** ≥ 10% lower combined search time (whole
+`search_with_root`, hashing, lookup, storage and copying included) with every correctness check passing →
+QUALIFIES; less → STOP_CONFIGURATION; any mismatch → STOP at once.
+
+**What ran.** Script `f8c19d1d`; one run in a clean linked worktree (fast-forwarded, removed), evidence `938e35e4`
+(`docs/superpowers/evidence/eval-reuse/cache-run/`): `timeout -k 10 50`, exit 0, COMPLETED, 12.7 s; eval mode; all
+26 loaded repository modules committed.
+
+**Result.** **Every check passed:** each search's visit counts, root value and most-visited move, and both colours'
+final search-RNG states, identical to the first ordinary sequence. Cache, each cached sequence: **red 4 hits /
+798 misses** (1.67 MB stored), **black 0 / 401** (0.84 MB). Search seconds by sequence: ordinary 3.151, cached
+3.203, cached 3.017, ordinary 2.946; combined **ordinary 6.097 s vs cached 6.219 s → reduction −2.0% →
+STOP_CONFIGURATION.**
+
+**Did it match, and why?** No prediction. Entry 12's open question is answered: with no reuse inside a search
+and almost none within one colour (4 of 802 later lookups), its duplicates were **almost entirely cross-colour** —
+one side's search evaluating positions the other side had just expanded. A per-colour cache therefore has nearly
+nothing to reuse and only adds overhead; the remaining difference is within the run-order drift visible between
+the two ordinary sequences (3.151 vs 2.946 s).
+
+**Conclusion / status.** CLOSED for this configuration. Cross-colour sharing (natural in self-play, but between
+different agents in a match it means one agent using the other's predictions) was deliberately excluded and
+was not tested. Not deployment or strength evidence; production unchanged. See do-not-repeat **#60**.
 
 ---
 
