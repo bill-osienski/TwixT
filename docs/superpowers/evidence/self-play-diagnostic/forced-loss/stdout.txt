@@ -1,0 +1,1 @@
+COMPLETED: FORCED_WIN_WITHIN_3; forcing red moves [[21, 3], [22, 4], [22, 6], [22, 9]]; refuted {'BLACK_WINS_IMMEDIATELY': 0, 'BLACK_SAVES': 6, 'NO_RED_THREAT': 476}; 8.651 s
