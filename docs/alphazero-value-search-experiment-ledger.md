@@ -1624,6 +1624,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 
 60. **A per-colour exact-input prediction cache — STOP_CONFIGURATION 2026-10-19.** Identical results, but 4 hits in 802 lookups and 2.0% *slower* search (bar: 10% faster). Do **not** retry it with more positions, longer sequences, faster hashing, a different key, or under quieter load to find a saving — there is almost nothing to reuse within one colour. Entry 12's 12.8% came from **cross-colour** duplicates; a cache shared between the two sides is a different question (between different agents it means one agent consuming the other's predictions) and needs its own justification and authorization.
 
+   *Correction to #60 (2026-10-19, review).* The parenthesis ("one agent consuming the other's predictions") is wrong as stated: an exact-input prediction shared between two agents is valid **when both use the identical frozen evaluator and the inputs are exact** — it only avoids duplicate computation (entries 12 and 13 ran one checkpoint on both sides). Predictions from **different** models cannot be interchanged. This distinction does **not** authorize a shared-cache experiment. No deployment, retry or further experiment follows from #60.
+
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
 
@@ -2985,6 +2987,8 @@ which needs a cache shared by both agents — natural in self-play, not between 
 **Conclusion / status.** OPEN — clears the frozen bar, which justifies considering only a small prototype; nothing
 is built or authorized. Batching and mirror averaging stay closed; `calib020_0001` unchanged.
 
+*Follow-up (2026-10-19, review).* The small prototype this entry justified has since been **built, tested and stopped** — entry 13 (per-colour cache, STOP_CONFIGURATION, do-not-repeat #60). The "OPEN — nothing is built" status above is historical; do **not** treat it as an open invitation to build a cache. Correction to the Limits wording ("not between different agents in a match"): an exact-input prediction shared between two agents is valid **when both use the identical frozen evaluator and the inputs are exact** — it only avoids duplicate computation (entries 12 and 13 ran one checkpoint on both sides). Predictions from **different** models cannot be interchanged. This distinction does **not** authorize a shared-cache experiment.
+
 ### 13. Per-colour prediction cache — one bounded timing screen (2026-10-19, CLOSED)
 
 **Test.** Entry 12's three positions, checkpoint and settings. A CACHE in the comparison script only
@@ -3021,6 +3025,8 @@ the two ordinary sequences (3.151 vs 2.946 s).
 **Conclusion / status.** CLOSED for this configuration. Cross-colour sharing (natural in self-play, but between
 different agents in a match it means one agent using the other's predictions) was deliberately excluded and
 was not tested. Not deployment or strength evidence; production unchanged. See do-not-repeat **#60**.
+
+*Correction (2026-10-19, review).* The parenthesis above ("one agent using the other's predictions") is wrong as stated: an exact-input prediction shared between two agents is valid **when both use the identical frozen evaluator and the inputs are exact** — it only avoids duplicate computation (entries 12 and 13 ran one checkpoint on both sides). Predictions from **different** models cannot be interchanged. This distinction does **not** authorize a shared-cache experiment.
 
 ---
 
