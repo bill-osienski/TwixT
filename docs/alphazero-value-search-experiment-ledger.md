@@ -86,6 +86,8 @@ knob) is not a new hypothesis.
 
 > **Root-only sequential halving — STOP_CONFIGURATION (Post-closure entry 15 result, 2026-10-19, CLOSED).** Halving vs ordinary search at 400 simulations each: **21–1–10**, **21.5/32** against the frozen bar of 24 (mean pair 0.672, interval includes 0.5) — the prediction "fails the screen" matched. Equal network cost (376k vs 378k evaluations). Not a strength finding either way. See do-not-repeat **#62**.
 
+> **Adaptive per-move budget — oracle bookkeeping (Post-closure entry 16, 2026-10-20, MEASURED).** Rules-only chronological credit accounting over 1,135 recorded searches: of 126,800 credits freed by strongly evaluated positions, only **14.5%** reached contested positions before the game ended (+9% budget on average); 85.5% were unused. Oracle classification assumed; not a strength result. Attempt 1 was an execution error. Decision pending.
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -3195,6 +3197,49 @@ For the next genuinely new candidate:
   example by an anytime-valid or properly spent design), and the power budget recalculated where needed.
 * A normal-approximation figure of **about 130 games** for 60%, from entry 15's 16 pair scores (standard deviation
   about 0.29), is **illustrative only and is not an adopted budget**.
+
+
+### 16. Adaptive per-move budget — oracle bookkeeping of chronological credit (2026-10-20, MEASURED)
+
+**Test.** Rules-only accounting, no model calls, searches, games, training or seeds. The ordinary agent's recorded
+400-simulation searches from ply 20 in the root-halving (entry 15) and mirror-averaging (entry 11) match replays —
+64 games, 1,135 searches, the same records surveyed in chat on 2026-10-20. One illustrative policy, fixed by review
+and not tuned: each game starts with 0 credits; +400 credits on each of the agent's turns from ply 20; a recorded
+|root value| ≥ 0.8 spends 200; any other ("contested") position spends min(1,000, available credits); never borrow
+from future turns. **This is oracle bookkeeping**: it assumes the recorded classification (from a completed
+400-simulation search) is available cheaply, which is unestablished. It measures chronological opportunity, not
+strength, and is not fresh confirmation (the records were already surveyed).
+
+**Hypothesis.** Budget saved on strongly evaluated positions arrives in time to be spent on contested ones.
+
+**Why it was plausible.** The pooled survey found 56% of these searches at |value| ≥ 0.8 with very flat roots; but
+pooled percentages cannot show that savings arrive before they can be spent.
+
+**Prediction on record.** None stated in advance; no decision rule frozen.
+
+**What ran.** A script held outside the repository (scratchpad; not committed — only this ledger text is), run
+under `timeout -k 5 55`. **Attempt 1: execution error, not a result** — exit 1 before any accounting output: it
+read a context field `winner_agent_id` that the replay files do not carry (they record `winner` as a colour); no
+accounting ran and no numbers were seen. **Attempt 2** (authorized), after a one-line schema fix (`winner` ==
+the ordinary agent's colour) with the policy unchanged: exit 0, 0.014 s.
+
+**Result.** 634 strongly evaluated and 501 contested positions. Strong positions freed **126,800** credits; only
+**18,400 (14.5%)** reached contested positions before the game ended; **108,400 (85.5%) were unused at game end**.
+Contested positions averaged **436.7** simulations (+36.7, about +9%); **19 of 501** reached 1,000. 28 of 64 games
+moved any extra budget to a contested position; 12 had no contested position from ply 20; median unused credit at
+game end 1,600; the top four games took 39% of all extra. Per-game figures are in the 2026-10-20 chat report.
+
+**Did it match, and why?** No prediction. Strongly evaluated positions cluster at the end of games: once a game's
+evaluation becomes strong it rarely returns to contested, so savings arrive after the contested moves they were
+meant to fund.
+
+**Limits.** Oracle classification (unestablished cost and reliability); |value| ≥ 0.8 means strongly evaluated, not
+decided; one illustrative policy on 64 games from two matches; 400-simulation records only; says nothing about
+strength. These records are now consumed for policy design: do not tune a budget policy against them.
+
+**Conclusion / status.** MEASURED. Under this policy the central compute claim — that freed budget can be
+reallocated to contested moves — largely fails chronologically (14.5% reached them). The decision on adaptive
+budgeting rests with review; nothing is built or authorized. `calib020_0001` unchanged.
 
 ---
 
