@@ -3287,3 +3287,11 @@ passed (small batch, explicit cap), 0.24 s — and once after — 8 passed, 0.12
 weights are unchanged; how many trained positions exceeded 512 legal moves, and what the truncation did to the
 learned policy, are **unmeasured**. This is a correctness repair to carry into any future training proposal; no
 training, retraining or match follows from it.
+
+*Correction (2026-10-20, review).* The opening of **Consequence** above ("Not an explanation of any regression")
+overstates what the evidence shows. That the parent inherited the same truncation does not rule out additional
+damage from it during continuation; it means the existing evidence cannot isolate its contribution, which is
+neither ruled in nor out. Continuation's disabled calibration objective and restarted value-weight warmup were
+already recorded differences between parent and continuation, not newly discovered causes. The repair is a
+training-data correctness fix with no demonstrated strength improvement; it is carried into any independently
+justified future training, and the closed continuation experiment is not restarted to test it.
