@@ -90,6 +90,8 @@ knob) is not a new hypothesis.
 
 > **Banked-budget controller — DECLINED (entry 16 decision, 2026-10-20).** Not built or funded: contested moves would have gained only ~9% (436.7 simulations), not the proposed ~2×; the ~24% hypothetical reduction in simulated work is not measured runtime or play preservation. A declined proposal, not a failed experiment; adaptive budgeting generally stays untested. See do-not-repeat **#63**.
 
+> **Training-target truncation — FIXED (Post-closure entry 17, 2026-10-20).** The ordinary training chain defaulted to 512 move slots, below the 528 legal moves of a 24×24 opening, dropping the tail moves' visits and renormalizing the rest; defaults now 576, explicit caps unchanged. Not a regression explanation (the parent inherited it); its effect on trained models is unmeasured.
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -3254,3 +3256,34 @@ budgeting rests with review; nothing is built or authorized. `calib020_0001` unc
 ---
 
 *Append a new row to the [experiment ledger](#experiment-ledger) and update [do-not-repeat](#do-not-repeat-prevents-going-in-circles) whenever a branch is run and judged. Keep the key conclusion at the top current.*
+
+---
+
+### 17. Implementation finding — the ordinary training chain truncated policy targets at 512 move slots (2026-10-20)
+
+**Finding (found in review).** `trainer.make_padded_batch` keeps at most `max_moves_cap` legal moves per position:
+it slices `legal_moves` and `visit_counts` to the first M slots and renormalizes the retained counts. The cap
+defaulted to **512** there and in every function of the ordinary training chain that passes it through
+(`_calibration_component_loss`, `summarize_value_sanity`, `alphazero_loss_batch`, `train_step`), and the
+ordinary training loop's two `train_step` calls pass no cap. A 24×24 opening has **528** legal moves, so the last
+16 moves and their visits were dropped and the target renormalized over the rest — e.g. 300 visits on the first
+move and 100 on the last trained as 100% / 0% instead of 75% / 25%. Per the review, the historical continuation
+source used the same default; the external-learning adapter already passed 576 explicitly
+(`external_learning.MAX_MOVES_CAP`), so its protection never reached ordinary training.
+
+**Fix.** The five defaults are now **576** (24 × 24, so no 24×24 position can be truncated); explicit
+caller-supplied caps are unchanged. `tests/test_external_learning.py::test_a_chosen_move_beyond_slot_512_keeps_its_target`
+relied on the old default to demonstrate the hazard; it now passes `max_moves_cap=512` explicitly (one line,
+same assertion). That test's fixture plays fake-evaluator games, so it was **not run** under this authorization.
+
+**Checks.** New focused CPU test `tests/test_padded_batch_cap.py` (MLX on CPU; no network, model, search, game
+or training): the real 24×24 opening (`TwixtState` legal moves, 528) with 300 / 100 visits on slots 0 / 527 must
+keep all 528 moves in legal order, every zero target and exactly 0.75 / 0.25; a two-position batch under 512
+moves must match hand-computed rows, columns, mask and targets; an explicit cap of 512 must still truncate; and
+all five defaults must be 576. Run once before the fix — 6 failed (the opening test and the five defaults), 2
+passed (small batch, explicit cap), 0.24 s — and once after — 8 passed, 0.12 s.
+
+**Consequence.** Not an explanation of any regression: the parent inherited the same truncation. The incumbent's
+weights are unchanged; how many trained positions exceeded 512 legal moves, and what the truncation did to the
+learned policy, are **unmeasured**. This is a correctness repair to carry into any future training proposal; no
+training, retraining or match follows from it.

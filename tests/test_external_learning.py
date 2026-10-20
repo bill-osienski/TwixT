@@ -398,7 +398,7 @@ def test_a_chosen_move_beyond_slot_512_keeps_its_target(played):
     row["chosen_index"], row["chosen"] = 520, row["legal_moves"][520]
     target = np.asarray(EL.target_batch([row])[4])
     assert target[0, 520] == 1.0 and target.sum() == 1.0
-    legacy = np.asarray(make_padded_batch([EL.position_record(row)])[4])       # the default cap of 512
+    legacy = np.asarray(make_padded_batch([EL.position_record(row)], max_moves_cap=512)[4])  # the old default cap
     assert legacy.sum() == 0.0, "the hazard the 576 cap exists for"
 
 

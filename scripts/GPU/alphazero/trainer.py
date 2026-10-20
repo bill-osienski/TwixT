@@ -397,7 +397,7 @@ def project_conflicting_gradient(surf_total, surf_A, surf_G, weight: float,
 
 def _calibration_component_loss(model, calibration_positions, calibration_weights,
                                 calibration_guardrail_sign, guardrail_margin,
-                                component: str, max_moves_cap: int = 512):
+                                component: str, max_moves_cap: int = 576):
     """Eval-mode calibration-ONLY component scalar (no self-play, no policy CE).
     Reproduces alphazero_loss_batch's guardrail-branch value_term / hinge, split
     by the guardrail-sign mask. component in {"a_correction","guardrail_hinge"}."""
@@ -844,7 +844,7 @@ def summarize_value_sanity(
     active_size: int,
     sample_n: int = 256,
     seed: int = 0,
-    max_moves_cap: int = 512,
+    max_moves_cap: int = 576,
 ) -> dict:
     """Compute value head sanity stats via forward pass (canonicalization-safe).
 
@@ -1106,7 +1106,7 @@ def verify_canonicalization(
 
 def make_padded_batch(
     positions: List["PositionRecord"],
-    max_moves_cap: int = 512,
+    max_moves_cap: int = 576,
     return_legal: bool = False,    # NEW: opt-in for Spec 2 conversion aux loss
 ):
     """Prepare batched tensors with padded moves for training.
@@ -1254,7 +1254,7 @@ def alphazero_loss_batch(
     positions: List["PositionRecord"],
     l2_weight: float = 1e-4,
     value_weight: float = 0.5,
-    max_moves_cap: int = 512,
+    max_moves_cap: int = 576,
     active_size: int = 24,
     progress_weighted: bool = True,
     progress_weight_floor: float = 0.25,
@@ -1486,7 +1486,7 @@ def train_step(
     batch: List["PositionRecord"],
     l2_weight: float = 1e-4,
     value_weight: float = 0.5,
-    max_moves_cap: int = 512,
+    max_moves_cap: int = 576,
     active_size: int = 24,
     value_grad_max_norm: float = 0.5,
     progress_weighted: bool = True,
