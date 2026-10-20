@@ -903,6 +903,12 @@ EXPOSED_SEED_INTERVALS = (
     # block is EXPOSED WHOLE. A post-run accounting edit to a bound file: the committed plan,
     # survey/proof and run records keep their hashes; nothing is rerun.
     (202691700, 202691732),  # MIRROR-AVERAGING MATCH -- 32 game seeds, all started
+    # 🔴 ROOT-HALVING MATCH -- THE CLOSING EDIT (2026-10-19), after the authorized 32-game run (outer
+    # exit 0, COMPLETED, no survivors). Use DERIVED from the committed run evidence by
+    # evidence/root-halving-match-seed-closing/02_* (RECONCILES, 15/15): all 32 games started, so the
+    # block is EXPOSED WHOLE. A post-run accounting edit to a bound file: the committed plan,
+    # survey/proof and run records keep their hashes; nothing is rerun.
+    (202691800, 202691832),  # ROOT-HALVING MATCH -- 32 game seeds, all started
 )
 
 #: Seeds RESERVED PERMANENTLY FOR TESTS. Unit tests must draw from something, and
@@ -1224,6 +1230,12 @@ RETIRED_SEED_INTERVALS = (
     # block is RETIRED WHOLE. A post-run accounting edit to a bound file: the committed plan,
     # survey/proof and run records keep their hashes; nothing is rerun.
     (202691700, 202691732),  # MIRROR-AVERAGING MATCH -- 32 game seeds, all started
+    # 🔴 ROOT-HALVING MATCH -- THE CLOSING EDIT (2026-10-19), after the authorized 32-game run (outer
+    # exit 0, COMPLETED, no survivors). Use DERIVED from the committed run evidence by
+    # evidence/root-halving-match-seed-closing/02_* (RECONCILES, 15/15): all 32 games started, so the
+    # block is RETIRED WHOLE. A post-run accounting edit to a bound file: the committed plan,
+    # survey/proof and run records keep their hashes; nothing is rerun.
+    (202691800, 202691832),  # ROOT-HALVING MATCH -- 32 game seeds, all started
 )
 
 
