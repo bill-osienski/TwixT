@@ -84,6 +84,8 @@ knob) is not a new hypothesis.
 
 > **Root-only sequential-halving variant (Post-closure entry 15, 2026-10-19, OPEN — built, CPU-checked, no games).** A fixed root-allocation prototype (16 candidates, halving rounds, `c_visit` 50, `c_scale` 1.0, zero Gumbel noise, from ply 20) under a narrow, recorded exception to #47; 13 focused CPU tests pass. Prediction on record: **fails the screen**. No model loaded, no seeds accounted, no match approved.
 
+> **Root-only sequential halving — STOP_CONFIGURATION (Post-closure entry 15 result, 2026-10-19, CLOSED).** Halving vs ordinary search at 400 simulations each: **21–1–10**, **21.5/32** against the frozen bar of 24 (mean pair 0.672, interval includes 0.5) — the prediction "fails the screen" matched. Equal network cost (376k vs 378k evaluations). Not a strength finding either way. See do-not-repeat **#62**.
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -1636,6 +1638,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 
 61. **A standalone strength trial of the mirror-augmentation repair, justified by entry 14's exposure count — NOT JUSTIFIED 2026-10-19 (never run).** Do **not** run the paired control-vs-corrected training-and-match pilot on this evidence, and do **not** generate more games merely to seek a higher exposure count to justify it. This is a decision not to spend, not a failed experiment: 1.6% is an expected buffer share under these four games and the assumed mirror probability 0.5, not a measurement of the incumbent's training buffer; and the exposed positions are late, but it is **not established that they were already decided** — rare, important positions can affect strength disproportionately, so the count does not show the defect was harmless. Keep the fix `0c417882` and carry it into any independently justified future training experiment; a strength claim for the repair alone needs new evidence and its own authorization. #49 (ordinary continuation) stays closed.
 
+62. **The root-only sequential-halving variant (Post-closure entry 15) — STOP_CONFIGURATION 2026-10-19.** 21.5/32 against a frozen bar of 24 (21–1–10; mean pair 0.672, interval includes 0.5). Do **not** add games, repeat the match, or treat the 21–10 lean as earning a confirmatory or strength comparison; and do **not** rescue it by changing the candidate count, `c_visit`, `c_scale`, the (q + 1)/2 mapping, the start ply, the tie-breaks or the final decision rule, by adding Gumbel noise, or by changing the simulation budget — each would be post-hoc tuning of a stopped configuration. The narrow #47 exception covered this one fixed variant and is spent; any other root-allocation idea needs its own justification, a new exception and its own authorization. The prototype stays unwired; production is unchanged.
+
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
 
@@ -3138,6 +3142,32 @@ them. No strength evidence.
 loading, seed accounting and the screen await separate review. `calib020_0001` and production unchanged.
 
 *Update (2026-10-19) — match script and loop-equivalence check.* The match script (`docs/superpowers/evidence/root-halving-match/01_match.py`) copies `eval_runner.play_eval_game` / `_play_and_build_result` with three marked differences only (each colour's MCTS class from its agent; the move is the search's `last_choice` when it supplies one, else the existing readout; an optional per-search timer); separate search/readout RNG streams, per-ply budget checks, colour binding and replay records are unchanged. Wrapper `02_wrapper.sh` (5,390 s + 10 s kill grace). **Loop-equivalence check** (`03_loop_check.py`, evidence `root-halving-match/loop-check/`): ordinary vs ordinary through both loops, one colour-reversed pair on test-only seeds, GPU-free fake evaluators (uniform priors, value 0), 16 simulations, 24×24, 280-ply cap; run once in a clean detached worktree at `e8df0da6`, exit 0, **PASS** in 10.6 s — both games identical in every result field but the replay path and in their replay files. Limits: equivalence was shown **with fake evaluators only**; both games ended at the 280-ply cap, so the win and board-full branches were not exercised; and the **halving choice branch (`last_choice`) was not exercised by this check**. The screen (32 games, 400 simulations per side, bar 24 points, 5,400 s) is now approved to run once after fresh seed preparation.
+
+*Screen result (2026-10-19) — STOP_CONFIGURATION; CLOSED.* **What ran.** Seeds: survey `83fcf73f` (CLEAN, 45/45),
+pre-proof `1dc80bc9`, registration of the 32-seed block in ACCOUNTED `66e80515` (only ACCOUNTED changed, 38 → 39;
+registry tests 17 + 31 passed, exit 0), post-proof `af5c43a0` (state HOLDS, 45/45). One run through `02_wrapper.sh`
+in a clean linked worktree on `codex/root-halving-run`: **outer exit 0, 2,130 s, COMPLETED, no survivors**; both
+networks in evaluation mode at load and after the last game; all 27 loaded repository modules committed. Evidence
+`d535cd75` (`docs/superpowers/evidence/root-halving-match/`). Closing: K1 `6817f7e3` (RECONCILES, 15/15; 32/32
+started), K2 `9b6a8267` (the block EXPOSED and RETIRED whole, 36 → 37 and 34 → 35; ACCOUNTED unchanged; registry
+tests 48 passed, exit 0).
+
+**Result.** Halving **21–1–10** ordinary (one 280-ply cap draw); **21.5/32 points against the frozen bar of 24 →
+STOP_CONFIGURATION.** Pair scores: six 1.0, one 0.75, eight 0.5, one 0.0; mean pair score **0.672**, unclipped
+Hoeffding interval **[0.332, 1.011]** (descriptive, pairs the unit, conditional on assumed pair independence) —
+includes 0.5. Halving won 9 games as red and 12 as black; ordinary 4 and 6. Games 30–88 plies apart from the cap.
+Cost: network evaluations **376,168** (halving) vs **377,822** (ordinary); search seconds **1,065.5 vs 1,059.3**;
+639 of halving's 959 searches used the halving allocation (ply ≥ 20), the rest the ordinary opening.
+
+**Did it match the prediction?** **Yes — the author's prediction "fails the screen" matched**: the result is below
+the advance bar. The 21–10 game count leans toward halving, but the interval includes 0.5 and this 32-game screen
+cannot distinguish that lean from chance; it is neither a strength finding nor evidence that halving is weaker.
+The comparison measured root allocation plus its final decision rule against ordinary search with its readout, at
+equal simulations and essentially equal network cost.
+
+**Conclusion / status.** CLOSED for this configuration (STOP_CONFIGURATION). No separately priced strength
+comparison is earned. `calib020_0001`, ordinary search and production unchanged; the prototype stays unwired. See
+do-not-repeat **#62**.
 
 ---
 
