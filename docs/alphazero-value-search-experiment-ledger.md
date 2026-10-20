@@ -3169,6 +3169,33 @@ equal simulations and essentially equal network cost.
 comparison is earned. `calib020_0001`, ordinary search and production unchanged; the prototype stays unwired. See
 do-not-repeat **#62**.
 
+
+### Methods note — funding and powering future strength experiments (2026-10-20)
+
+Recorded after entry 15, which applied a 24/32 knockout bar (a 75% observed score before any strength test). That
+is a valid spending rule but poorly matched to the goal: it can discard worthwhile improvements (the older readout
+plan warned of this). **This note reopens nothing previously closed** — halving (#62), mirror averaging (#59) and
+every other closed line stay closed.
+
+For the next genuinely new candidate:
+
+* **The target effect is chosen before implementation.** The planning alternative is a **true mean pair score of
+  60% against the incumbent**. It is the alternative the power budget is computed for — **not** a required observed
+  score and **not** a promised effect.
+* **The small screen catches broken behaviour and gross regression only**, against a threshold frozen before it
+  runs; it does not demand an overwhelming win.
+* **The full strength comparison is funded before launch.** Its statistic, independent sampling unit (colour-
+  reversed pairs), regression threshold and **all** stopping rules are frozen in advance.
+* **Reference budget** (conservative Hoeffding on independent pair scores in [0, 1], two-sided α 0.05, 80% power:
+  n pairs with (√(ln 40 / 2) + √(ln 5 / 2)) / √n = δ): **60% → 509 pairs, 1,018 games** (about 19 hours at entry 15's
+  66.6 s per game); **55% → 2,035 pairs, 4,070 games** (about 75 hours). Planning times are estimates, not
+  guaranteed completion times.
+* **Any sequential rule must control error across the whole procedure.** Adding an early-success test to a separate
+  95% final test does not by itself preserve 95% validity; the combined procedure's error must be controlled (for
+  example by an anytime-valid or properly spent design), and the power budget recalculated where needed.
+* A normal-approximation figure of **about 130 games** for 60%, from entry 15's 16 pair scores (standard deviation
+  about 0.29), is **illustrative only and is not an adopted budget**.
+
 ---
 
 *Append a new row to the [experiment ledger](#experiment-ledger) and update [do-not-repeat](#do-not-repeat-prevents-going-in-circles) whenever a branch is run and judged. Keep the key conclusion at the top current.*
