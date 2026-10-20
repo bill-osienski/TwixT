@@ -3233,6 +3233,8 @@ game end 1,600; the top four games took 39% of all extra. Per-game figures are i
 evaluation becomes strong it rarely returns to contested, so savings arrive after the contested moves they were
 meant to fund.
 
+*Correction (2026-10-20).* The explanation above (strong evaluations cluster at the end of games and rarely return to contested) is an **unmeasured interpretation**: the pass counted credits, not transitions between classes. The measured facts are the credit totals.
+
 **Limits.** Oracle classification (unestablished cost and reliability); |value| ≥ 0.8 means strongly evaluated, not
 decided; one illustrative policy on 64 games from two matches; 400-simulation records only; says nothing about
 strength. These records are now consumed for policy design: do not tune a budget policy against them.
