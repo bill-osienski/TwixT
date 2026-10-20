@@ -1,0 +1,1 @@
+COMPLETED: halving 21-1-10 ordinary, caps 1; halving points 21.5/32 (bar 24) -> STOP_CONFIGURATION; mean pair score 0.6719 +/- 0.3395 (descriptive, assumes independence)
