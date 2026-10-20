@@ -82,6 +82,8 @@ knob) is not a new hypothesis.
 
 > **Mirror-repair pilot — NOT JUSTIFIED by current evidence (entry 14 decision, 2026-10-19, CLOSED route).** The proposed paired training-and-match pilot was not run: entry 14's small exposure gives too weak a reason for a ~5-hour trial whose null would be hard to interpret. Not a failed training experiment, and not evidence the defect was harmless. The fix (`0c417882`) stays and goes into any independently justified future training. See do-not-repeat **#61**.
 
+> **Root-only sequential-halving variant (Post-closure entry 15, 2026-10-19, OPEN — built, CPU-checked, no games).** A fixed root-allocation prototype (16 candidates, halving rounds, `c_visit` 50, `c_scale` 1.0, zero Gumbel noise, from ply 20) under a narrow, recorded exception to #47; 13 focused CPU tests pass. Prediction on record: **fails the screen**. No model loaded, no seeds accounted, no match approved.
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -1593,6 +1595,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 46. **Rescuing v18 by implementing the cap anyway, relaxing the preflight, or reusing its evidence.** v18 had real selected-A reach (`0.5639`) but failed its decisive A-vs-matched-control selectivity gate (AUC `0.5089`, lower bound `0.39`), missed sign dominance (`0.78475 < 0.80`), and produced **zero complete target rows**; selector sizing failed even on the full 800-game universe. Do not edit `mcts.py`, run a positive cap, extend or interpolate the grid, weaken the exposure/sign/near-even/flip/sizing predicates, or reuse the consumed census/cohort as fresh evidence to rescue this formulation. A successor needs a genuinely new selective observable, a new written hypothesis and fresh preregistered confirmation. This null means selectivity was not established; do not overstate it as proof that no depth-2 effect exists.
 47. **Progressive widening in any shape, and enlarging or re-labelling the atlas corpus to rescue it.** The convergence atlas ran its authorized pilot (24 games, `[20321000, 20321024)`, checkpoint `209cf2d4…`) and returned two stopping findings. **Progressive widening: both frozen shapes FAIL on retention alone** — depth-1 retention `0.6842` against the `0.90` floor, identically for `(C=4, α=0.5)` and `(C=13, α=0.3)`, over 12 stable-reference-eligible rows, with root retention a perfect `1.0`. Widening keeps every stable root move and drops roughly a third of the depth-1 replies stable deeper search requires. Do **not** add, tune or interpolate a third shape — §8 preregistered this check as authoritative on the pilot alone. The intervention rates are **not** the basis and must not be quoted as if they were: their denominators were 1 and 10 rows with 17 and 2 inconclusive. **Separately `PROJECTED_CAPACITY_NO_GO`:** `p_s = 1/24` stable-negative drove required `N` to 1800 against a frozen maximum of 400, and **12 of 24 rows had no stable 3,200/6,400 reference at all**. Do not enlarge the corpus, loosen the stable-reference criteria, or reuse either the retired `[20320000, 20320024)` rows or these. **Read-out A's selectivity and Read-out B's gate calibration are UNANSWERED, not failed** — an operational capacity failure, not proof the information is absent. The `remaining` median of 66 establishes controller *feasibility* only and justifies no prototype. Closeout: `docs/superpowers/2026-08-05-atlas-closeout.md`. **Tree-local search heuristics are closed; the candidate set was the last untried axis.** A high-budget distillation successor must not inherit "deeper is truth" — half these rows disagreed with themselves between 3,200 and 6,400.
 
+   *Narrow exception (2026-10-19, review).* One fixed, root-only sequential-halving allocation experiment (Post-closure entry 15) is excepted from the closing sentence above: search below the root is unchanged. Progressive widening, FPU variants and the archived evidence remain closed; the exception covers no other variant, parameter or shape.
+
 48. **Rescuing the rejected five-iteration cold-buffer continuation with nearby endpoints, dose changes or more match games.** The frozen iteration-5 checkpoint lost clearly to its parent over 400 games: score `0.31375`, CI95 `[0.2687, 0.3588]`, about `−136` Elo. The preregistered absolute per-colour rule mechanically fired for red and black, but the 2026-08-10 erratum makes that non-diagnostic of independent colour harm; the aggregate loss alone closes the recipe. Do not evaluate iterations 1–4, extend the same run to 10 or 20 iterations, alter its learning rate or training steps, add games, or invoke the success-only replication. The result rejects the exact calibration-free, cold-buffer continuation recipe; it does not isolate whether the cold replay buffer, removal of the parent's calibration objective, or their interaction caused the regression, and it does not prove all training has plateaued. A successor must introduce and justify a genuinely different training mechanism rather than relabeling a top-up as discovery.
 
 
@@ -3073,6 +3077,65 @@ authorized; `calib020_0001` unchanged.
 *Decision (2026-10-19, review).* **Proposed pilot not justified by current evidence — NO_GO.** The paired training-and-match pilot (one fresh corpus, control vs corrected mirror, candidate vs control) is not authorized on this exposure count; it was never run, so this is **not** a failed training experiment. Qualifications: 1.6% is an expected buffer share under these four games and the assumed mirror probability 0.5, not a measurement of the incumbent's training buffer; and the exposed positions are late, but it is **not established that they were already decided** — rare, important positions can affect strength disproportionately, so the count does not show the defect was harmless. The correctness fix `0c417882` stays and is carried into any independently justified future training experiment. This closes the route from this exposure count to that pilot, not the goal of stronger play.
 
 *Correction (2026-10-19, review).* "Did it match" above calls the exposed positions "late, decided positions": they are late; that they were decided is **not established**.
+
+### 15. Root-only sequential-halving variant — prototype and focused CPU checks (2026-10-19, OPEN)
+
+**Test.** Build one fixed root-allocation variant and check it on the CPU before any gameplay. A subclass of `MCTS`
+(`scripts/GPU/alphazero/root_sequential_halving.py`) overrides only `search_with_root`; descent below the root is
+the existing PUCT through `_run_single_simulation(root, root_move_override=…)`. Called a **root-only
+sequential-halving variant**, not full Gumbel AlphaZero (Danihelka et al., ICLR 2022).
+
+**Frozen variant (no parameters, no grid).** Plies 0–19: ordinary search and the existing readout. From ply 20
+(24×24 only, no root noise): the 16 highest-prior legal moves (fewer if fewer are legal), ties by (row, col); zero
+Gumbel noise (as in the paper's perfect-information evaluation); score = log(max(prior, 1e-12)) + (`c_visit` 50 +
+max visits) × `c_scale` 1.0 × (q + 1)/2, q the candidate's mean value from the root player's side — the fixed
+(q + 1)/2 mapping replaces the paper's completed-Q rescaling (rescaling only the survivors could stretch a tiny
+value gap to the full range); it is our adaptation and carries no published guarantee. Rank ties: higher prior,
+then (row, col). Budget: ceil(log₂ m) visiting rounds; every round but the last gives each survivor
+N ÷ (rounds × survivors) more visits (floor) and keeps the top ceil(survivors/2); the last round splits the rest
+evenly, any remainder one visit each in rank order (prior order when nothing is visited yet); visits round-robin.
+For 16 candidates: 6/12/25/54 more visits per round (cumulative 6/18/43/97); one candidate gets all 400. The move
+played is the top-ranked final survivor and replaces the readout. Known limit, not patched: a move outside the 16
+candidates is never searched.
+
+**Scope exception to #47 (2026-10-19, review).** #47 closes progressive widening and ends "tree-local search
+heuristics are closed". A **narrow exception** is recorded for this one fixed, root-only allocation experiment:
+search below the root is unchanged, so #47's measured failure (depth-1 retention) does not apply; whether 16 root
+candidates retain the moves deeper search needs is unmeasured. Progressive widening, FPU variants and the archived
+evidence stay closed. The flat-root mechanism (#57) motivates it; the already-lost game-3 example (#58)
+illustrates allocation behaviour and is **not** evidence this would save games.
+
+**Hypothesis.** Concentrating the root budget on a few prior-ranked candidates, chosen by value and prior, plays
+better than ordinary PUCT allocation at the same 400 simulations.
+
+**Why it was plausible.** A published fixed-budget method for choosing among root moves, untested here (no prior
+ledger or code record), aimed at the observed root failure: in losing positions FPU 0 outranks every visited move
+and the root spreads flat (#57). 400 simulations over about 500 legal moves is a limited-budget setting, not
+evidence against the approach; #39's overestimate finding does not establish that concentration generally weakens
+play.
+
+**Prediction on record.** The author's, stated with the proposal before implementation: **fails the screen.**
+
+**What the comparison will measure.** Root allocation **plus its final decision rule** against ordinary search
+with its readout — not allocation alone (identical opening procedures do not remove the later readout
+difference). Intended screen, **not yet approved**: 32 fresh games (16 colour-reversed pairs, pairs the
+statistical unit), 400 simulations per side, advance bar **24 points**, 90-minute cap; runtime and network
+evaluations recorded, no timing veto.
+
+**What ran.** CPU only, stub evaluator, no model: `tests/test_root_sequential_halving.py`, **13 passed** (2.6 s):
+accounting for 1, 3, 7, 15 and 16 candidates (exact per-move counts, root total 400, remainder rule 120/119 for
+7), full-board accounting (survivor sets 16 → 8 → 4 → 2, first 16 = top 16 by prior, played move legal and a
+final survivor), value overriding a lower prior, the exact score formula and zero-prior floor, a terminal win
+backed up as +1 and chosen, the pinned limit (a winning move outside the candidates is never searched), no PUCT at
+the root and PUCT below it, plies 0 and 19 identical to `MCTS.search_with_root`, and the refusals (root noise, a
+12×12 board, a 40-simulation budget). Four deliberate mutations (value sign, remainder order, floor instead of
+ceil survivors, 17 candidates) each failed at least one test; the module was restored byte-identical.
+
+**Result / did it match.** The implementation matches the frozen variant on these checks; no prediction concerns
+them. No strength evidence.
+
+**Conclusion / status.** OPEN — built and CPU-checked; the match script, its loop-equivalence check, model
+loading, seed accounting and the screen await separate review. `calib020_0001` and production unchanged.
 
 ---
 
