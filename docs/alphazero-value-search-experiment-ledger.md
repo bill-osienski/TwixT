@@ -80,6 +80,8 @@ knob) is not a new hypothesis.
 
 > **Mirror-defect exposure (Post-closure entry 14, 2026-10-19, MEASURED — decision pending).** On the four diagnostic replays, the old and corrected training mirrors differ at **8 of 169** positions (4.7%), all in game 2 (the one black win), plies 34–41, once black's chain touched the right edge — about **1.6%** of a buffer at mirror probability 0.5. Exposure only, not benefit; four games. No training or match follows without authorization.
 
+> **Mirror-repair pilot — NOT JUSTIFIED by current evidence (entry 14 decision, 2026-10-19, CLOSED route).** The proposed paired training-and-match pilot was not run: entry 14's small exposure gives too weak a reason for a ~5-hour trial whose null would be hard to interpret. Not a failed training experiment, and not evidence the defect was harmless. The fix (`0c417882`) stays and goes into any independently justified future training. See do-not-repeat **#61**.
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -1628,6 +1630,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 
    *Correction to #60 (2026-10-19, review).* The parenthesis ("one agent consuming the other's predictions") is wrong as stated: an exact-input prediction shared between two agents is valid **when both use the identical frozen evaluator and the inputs are exact** — it only avoids duplicate computation (entries 12 and 13 ran one checkpoint on both sides). Predictions from **different** models cannot be interchanged. This distinction does **not** authorize a shared-cache experiment. No deployment, retry or further experiment follows from #60.
 
+61. **A standalone strength trial of the mirror-augmentation repair, justified by entry 14's exposure count — NOT JUSTIFIED 2026-10-19 (never run).** Do **not** run the paired control-vs-corrected training-and-match pilot on this evidence, and do **not** generate more games merely to seek a higher exposure count to justify it. This is a decision not to spend, not a failed experiment: 1.6% is an expected buffer share under these four games and the assumed mirror probability 0.5, not a measurement of the incumbent's training buffer; and the exposed positions are late, but it is **not established that they were already decided** — rare, important positions can affect strength disproportionately, so the count does not show the defect was harmless. Keep the fix `0c417882` and carry it into any independently justified future training experiment; a strength claim for the repair alone needs new evidence and its own authorization. #49 (ordinary continuation) stays closed.
+
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
 
@@ -3065,6 +3069,10 @@ The incumbent's actual launch settings (mirror probability) remain inferred from
 
 **Conclusion / status.** MEASURED; the decision on a controlled trial rests with review. Nothing trained, played or
 authorized; `calib020_0001` unchanged.
+
+*Decision (2026-10-19, review).* **Proposed pilot not justified by current evidence — NO_GO.** The paired training-and-match pilot (one fresh corpus, control vs corrected mirror, candidate vs control) is not authorized on this exposure count; it was never run, so this is **not** a failed training experiment. Qualifications: 1.6% is an expected buffer share under these four games and the assumed mirror probability 0.5, not a measurement of the incumbent's training buffer; and the exposed positions are late, but it is **not established that they were already decided** — rare, important positions can affect strength disproportionately, so the count does not show the defect was harmless. The correctness fix `0c417882` stays and is carried into any independently justified future training experiment. This closes the route from this exposure count to that pilot, not the goal of stronger play.
+
+*Correction (2026-10-19, review).* "Did it match" above calls the exposed positions "late, decided positions": they are late; that they were decided is **not established**.
 
 ---
 
