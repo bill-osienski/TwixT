@@ -3065,6 +3065,7 @@ The incumbent's actual launch settings (mirror probability) remain inferred from
 
 **Conclusion / status.** MEASURED; the decision on a controlled trial rests with review. Nothing trained, played or
 authorized; `calib020_0001` unchanged.
+
 ---
 
 *Append a new row to the [experiment ledger](#experiment-ledger) and update [do-not-repeat](#do-not-repeat-prevents-going-in-circles) whenever a branch is run and judged. Keep the key conclusion at the top current.*
