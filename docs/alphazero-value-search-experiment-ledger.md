@@ -78,6 +78,8 @@ knob) is not a new hypothesis.
 
 > **Per-colour prediction cache — STOP_CONFIGURATION (Post-closure entry 13, 2026-10-19, CLOSED).** With each colour's cache kept to its own searches, only **4 of 802** later lookups hit (red; black 0): entry 12's duplicates were almost all **cross-colour**. Results were identical, but combined search time was **2.0% higher** (6.219 s vs 6.097 s), far from the 10% bar. See do-not-repeat **#60**.
 
+> **Mirror-defect exposure (Post-closure entry 14, 2026-10-19, MEASURED — decision pending).** On the four diagnostic replays, the old and corrected training mirrors differ at **8 of 169** positions (4.7%), all in game 2 (the one black win), plies 34–41, once black's chain touched the right edge — about **1.6%** of a buffer at mirror probability 0.5. Exposure only, not benefit; four games. No training or match follows without authorization.
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -3028,6 +3030,41 @@ was not tested. Not deployment or strength evidence; production unchanged. See d
 
 *Correction (2026-10-19, review).* The parenthesis above ("one agent using the other's predictions") is wrong as stated: an exact-input prediction shared between two agents is valid **when both use the identical frozen evaluator and the inputs are exact** — it only avoids duplicate computation (entries 12 and 13 ran one checkpoint on both sides). Predictions from **different** models cannot be interchanged. This distinction does **not** authorize a shared-cache experiment.
 
+
+### 14. Mirror-defect exposure — how often old and corrected mirrored tensors differ (2026-10-19, MEASURED)
+
+**Test.** Rules-only, no model, search, game, seed or training. Every pre-move position of the four committed
+self-play diagnostic replays (games 0–3, 169 positions), tensor built as `play_game` records it. CORRECTED =
+`self_play._mirror_position_lr` with entry 9's fix; OLD = CORRECTED with channels 27/28 swapped back (the swap is its
+own inverse, so this is the pre-fix helper exactly). A position is EXPOSED iff OLD ≠ CORRECTED anywhere — its
+mirrored training sample would have carried wrong black edge-connectivity labels. Integrity check: CORRECTED equals
+the engine-rebuilt reflection at every position.
+
+**Hypothesis.** None tested; this measures exposure to decide whether entry 9's repair deserves a controlled
+training-and-strength trial (the proposed five-hour paired pilot was not authorized as written).
+
+**Prediction on record.** None stated in advance. No decision rule was frozen; the count is descriptive.
+
+**What ran.** Script `dc6c9a28`; one run in a clean linked worktree (fast-forwarded, removed), evidence `106a405c`
+(`docs/superpowers/evidence/mirror-exposure/run/`): `timeout -k 10 50`, exit 0, COMPLETED, 0.22 s; integrity check
+passed at all 169 positions; all 12 loaded repository modules committed.
+
+**Result.** **8 of 169 positions exposed (4.7%)**: games 0, 1 and 3 (red wins) 0 of 43 / 41 / 43; **game 2 (the
+black win) 8 of 42, plies 34–41**, every one with black pegs connected to the right edge (6–19 cells in channel 28)
+and none to the left edge. Before ply 34 no position in any game had a black edge-connected peg. Self-play mirrors
+each position with probability 0.5, so the expected exposed share of a training buffer is about **1.6%** of
+samples (4.7% / 3).
+
+**Did it match, and why?** No prediction. Channels 27/28 mark only black pegs whose component touches a goal edge,
+which in these games happens late and only in the game black wins; the defect's exposure is concentrated in a
+few late, decided positions rather than spread across play.
+
+**Limits.** Four games from one diagnostic corpus (41–43 plies, three red wins), not a training-recipe corpus;
+exposure in longer or black-favourable games may differ. Counts exposure, not effect on the network or on play.
+The incumbent's actual launch settings (mirror probability) remain inferred from code defaults, not recorded.
+
+**Conclusion / status.** MEASURED; the decision on a controlled trial rests with review. Nothing trained, played or
+authorized; `calib020_0001` unchanged.
 ---
 
 *Append a new row to the [experiment ledger](#experiment-ledger) and update [do-not-repeat](#do-not-repeat-prevents-going-in-circles) whenever a branch is run and judged. Keep the key conclusion at the top current.*
