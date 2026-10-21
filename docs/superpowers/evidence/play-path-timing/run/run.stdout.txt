@@ -1,0 +1,1 @@
+COMPLETED: 103 timed searches, mean 1.74 ms/simulation, 41.7 s per game at entry 15's length
