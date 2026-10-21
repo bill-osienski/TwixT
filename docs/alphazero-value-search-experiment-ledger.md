@@ -94,6 +94,8 @@ knob) is not a new hypothesis.
 
 > **Policy-head capacity pilot — isolated residual head built and CPU-checked (Post-closure entry 18, 2026-10-21, OPEN).** Arm R adds a zero-initialized residual path reading the move cell's 128 encoder features (8,840 trainable parameters); arm C trains only the existing 519. Six CPU checks pass after a float32 fix to one test assertion (first run 4 passed, 2 failed on that test bug). Prediction: none stated in advance. Nothing about capacity is measured; no checkpoint, corpus, search or training is authorized.
 
+> **Play-path timing on the new machine (Post-closure entry 19, 2026-10-21, MEASURED).** Mac Studio M5 Max: 1.74 ms per simulation, 0.70 s per ply at 400 simulations (eval mode, committed game positions, no games played, no seeds); about 41.7 s of search per game at entry 15's length, so the methods note's budgets become about 11.8 h (60%) and 47 h (55%) here (derived). Search time only, against entry 15's whole-game 66.6 s: no speed-up between machines is measured or claimed. Label lines derived (1.24 h / 0.62 h, constant cost per simulation assumed); the 205 s G-phase figure stays open (unexplained 3.6 vs 1.1 s per ply).
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -3353,3 +3355,58 @@ installing twice, calling the head from search) hold, and installing on a clone 
 **Conclusion / status.** OPEN — built and CPU-checked; nothing about capacity is measured. The next step,
 planted-target qualification of the fitting recipe, needs its own approval. No checkpoint loading, corpus
 generation, search or real-target training is authorized.
+
+### 19. Play-path timing re-measured on the new machine (2026-10-21, MEASURED)
+
+**Test.** Re-measure on this machine the timings that forward-looking documents rely on, without playing a game.
+Hardware (recorded by the script from sysctl, system_profiler and sw_vers): **Mac Studio (Mac17,14), Apple M5 Max,
+18 CPU cores (6 "Super" + 12 "Performance"), 40 GPU cores, 48 GB, macOS 27.0.1 (build 26A434)**; `.venv` Python
+3.14.8, MLX 0.30.3. Script `docs/superpowers/evidence/play-path-timing/01_timing.py` (committed `55d3b9c1`):
+`calib020_0001` (SHA-1 verified) through `eval_runner._default_evaluator_factory` (eval mode since `c8cb2aa6`; 0
+modules in training mode, checked; compiled; Metal GPU); `MCTS.search_with_root(state, add_noise=False)` at
+`cfg_from(EvalConfig(**PROTOCOL), 400)`, one MCTS per colour per game as `play_eval_game` builds them; no setting
+changed; no seed (an unseeded `random.Random()`; the moves come from the record, so the stream only orders ties
+inside a search). Positions: every position of one committed colour-reversed pair of inference-mode-match games,
+the pair whose total length is closest to the median (pair 0, games 0 and 1: 43 + 61 plies); each recorded move
+replayed and checked (ply, player, legal-move count, legality).
+
+**Hypothesis.** None: a measurement, not an experiment.
+
+**Why it was needed.** Every recorded timing came from the old machine (Apple M3 Pro). This machine has more GPU
+cores, but the play path runs one position at a time and waits on GPU syncs, so no speed-up could be assumed.
+
+**Prediction on record.** None stated in advance.
+
+**What ran.** Script committed at `55d3b9c1`; run once on 2026-10-21 from a clean linked worktree, 10-minute cap, no
+other pytest or heavy compute running; exit 0, 75 s wall. Record (committed with this entry):
+`docs/superpowers/evidence/play-path-timing/run/record.json`.
+
+**Result (measured).** 104 searches of 400 simulations. Excluding the first (758 ms, including warm-up): **mean 1.74
+ms per simulation** (median 1.76, p90 1.85; the minimum, 0.10 ms, is one near-terminal search); **0.697 s per
+ply**; search time per recorded game **30.2 s (43 plies) and 42.4 s (61 plies)**; process CPU about 60% of wall;
+load average 1.2–1.7. Warm-up inference 1.53 s; load 0.02 s.
+
+**Derived (not measured; assumptions stated).**
+- At entry 15's mean of 59.8 plies per game (59.78125, counted from its committed records): **41.7 s per game,
+  search time only** (game-loop overhead not included). The methods note's reference budgets become **about 11.8
+  hours for 1,018 games (60%)** and **about 47 hours for 4,070 games (55%)** on this machine. The old machine's 19
+  and 75 hours came from entry 15's 66.6 s, which was a **whole game** (one side the halving variant, loop
+  included), while 41.7 s is search time only. **No speed-up between the machines was measured, and none is
+  claimed.**
+- The pilot's label lines: **training labels, 1,600 × 1,600 simulations ≈ 1.24 h** (old 2.9 h) and **held-out
+  labels, 400 × 3,200 ≈ 0.62 h** (old 1.3 h). These **assume the cost per simulation measured at 400 simulations
+  also holds at 1,600 and 3,200**; that was not measured.
+- The generation line (200 × 205 s = 11.4 h on the old machine) is **not re-derived**. Stage B's G phase
+  (`eval_runner.run_game_tasks`, a400 vs b400, mean 57 plies) implied about 3.6 s per ply against about 1.1 s per
+  ply in the match games on the same path; that discrepancy is unexplained, so the figure stays **open** on this
+  machine.
+
+**Did it match the prediction.** No prediction was stated.
+
+**Comparability.** The old profile's **3.16 ms per simulation** (`b8cf2adf`) is **not comparable** and is not a
+baseline for 1.74 ms (CLAUDE.md): it came from three hand-built positions, with BatchNorm in training mode (before
+`c8cb2aa6`), on the old machine.
+
+**Conclusion / status.** MEASURED. Old-machine timings in this ledger stay as written (true for that machine);
+planning on this machine uses the figures above, with the derived lines carrying their assumptions. Still open
+here: the 205 s per G-phase game, and with it the pilot's total cost.
