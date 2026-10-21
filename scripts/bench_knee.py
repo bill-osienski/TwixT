@@ -1,12 +1,32 @@
 #!/usr/bin/env python3
 """
-Benchmark runner to find the 'knee' for parallel self-play workers.
+Self-play throughput sweep on 24x24: find the best --n-workers, then the best
+--mcts-eval-batch-size at that worker count.
 
-Runs training with different worker counts, measures selfplay positions/sec,
-and finds the optimal --n-workers value where diminishing returns start.
+Replaces the original bench_knee.py (workers only, 16x16 by default, random
+weights; see git history before 2026-10-21). This version:
+
+  * runs `scripts.GPU.alphazero.train --iterations 1 --train-steps 0` on 24x24
+    with real weights (--load-weights), so games and batch patterns are real;
+  * sends EVERYTHING the trainer writes (checkpoint, game replays, the
+    per-iteration stats sidecar) into --out: nothing lands in the repository,
+    and scripts/GPU/logs/games/ is never touched;
+  * stage 1 sweeps workers at --start-eval-batch; stage 2 sweeps eval batch at
+    stage 1's best worker count;
+  * kills a hung run's whole process group (TERM, then KILL) and, in stage 2,
+    skips every eval batch larger than the first one that hung.
+
+Throughput only. A larger eval batch changes the search (more pending leaves,
+different visit counts), so a stage-2 winner is not a behaviour-preserving
+setting, and one clean sweep does not prove the Metal hang is gone. Games are
+unseeded and their outcomes are not a strength measurement.
 
 Usage:
-  python scripts/bench_knee.py --board 16 --sims 200 --games 8 --repeats 2
+  .venv/bin/python scripts/bench_knee.py \\
+      --load-weights checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors \\
+      --out /path/outside/the/repo/selfplay-sweep
+
+Exit: 0 completed, 2 usage, 4 refused before any run.
 """
 
 from __future__ import annotations
@@ -14,673 +34,305 @@ from __future__ import annotations
 import argparse
 import csv
 import hashlib
+import json
 import os
+import platform
 import re
+import resource
 import shutil
 import signal
 import statistics
 import subprocess
 import sys
-import tempfile
 import time
-from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional, Tuple
 
-# =============================================================================
-# Regex Patterns (use LAST match found in stdout)
-# =============================================================================
-
-RE_POSITIONS = re.compile(r"Generated\s+(\d+)\s+games,\s+(\d+)\s+positions")
-RE_SELFPLAY = re.compile(r"\bselfplay=(\d+(?:\.\d+)?)s\b")
-RE_AVG_BATCH = re.compile(r"Avg batch:\s*(\d+(?:\.\d+)?)")
-RE_WAITERS = re.compile(r"Avg waiters:\s*(\d+(?:\.\d+)?),\s*Max waiters:\s*(\d+)")
-RE_FLUSHES = re.compile(r"Flushes:\s*full=(\d+),\s*stall=(\d+),\s*tail=(\d+)")
-RE_AVG_PLIES = re.compile(r"Avg plies:\s*(\d+(?:\.\d+)?)")
-RE_NN_BATCHES = re.compile(r"NN batches:\s*(\d+)")
-RE_RESULTS = re.compile(r"Results:\s*Red=(\d+),\s*Black=(\d+),\s*Draws=(\d+)")
-RE_DRAW_BREAKDOWN = re.compile(
-    r"Draw breakdown:\s*timeout=(\d+),\s*board_full=(\d+),\s*state_cap=(\d+),\s*unknown=(\d+)"
-)
-RE_WORKERS_MODE = re.compile(r"Workers:\s*(\d+)\s*\((parallel|sequential)\)")
-
-
-# =============================================================================
-# Data Classes
-# =============================================================================
-
-@dataclass
-class RunResult:
-    """Result from a single benchmark run."""
-    workers: int
-    positions: int = 0
-    games: int = 0
-    selfplay_s: float = 0.0
-    pos_per_s: float = 0.0
-    pos_per_game: float = 0.0
-    nn_batches: int = 0
-    nn_batches_per_pos: float = 0.0
-    avg_batch: float = 0.0
-    avg_waiters: float = 0.0
-    max_waiters: int = 0
-    flush_full: int = 0
-    flush_stall: int = 0
-    flush_tail: int = 0
-    stall_ratio: float = 0.0
-    red_wins: int = 0
-    black_wins: int = 0
-    draws: int = 0
-    timeout_draws: int = 0
-    timeout_rate: float = 0.0
-    draw_rate: float = 0.0
-    avg_plies: float = 0.0
-    ok: bool = False
-    parallel_mode: bool = True
-    shape_changed: bool = False
-    error_msg: str = ""
+ROOT = Path(__file__).resolve().parents[1]
+BOARD = 24                      # research is 24x24 only
+FIELDS = {                      # trainer stdout -> metric (last match wins)
+    "games_positions": re.compile(r"Generated\s+(\d+)\s+games,\s+(\d+)\s+positions"),
+    "selfplay_s": re.compile(r"\bselfplay=(\d+(?:\.\d+)?)s\b"),
+    "nn": re.compile(r"Leaf evals:\s*(\d+),\s*NN batches:\s*(\d+)"),
+    "batch": re.compile(r"Avg batch:\s*([\d.]+),\s*Avg waiters:\s*([\d.]+),\s*Max waiters:\s*(\d+)"),
+    "flushes": re.compile(r"Flushes:\s*full=(\d+),\s*stall=(\d+),\s*tail=(\d+)"),
+    "avg_plies": re.compile(r"Avg plies:\s*([\d.]+)"),
+    "results": re.compile(r"Results:\s*Red=(\d+),\s*Black=(\d+),\s*Draws=(\d+)"),
+    "workers": re.compile(r"Workers:\s*(\d+)"),
+}
+CSV_COLUMNS = ["stage", "workers", "eval_batch", "repeat", "status", "wall_s", "selfplay_s",
+               "games", "positions", "plies_per_s", "pos_per_s", "games_per_h", "s_per_game", "avg_plies",
+               "leaf_evals", "nn_batches", "avg_batch", "avg_waiters", "max_waiters",
+               "flush_full", "flush_stall", "flush_tail", "children_cpu_s", "red", "black",
+               "draws", "workers_reported"]
 
 
-@dataclass
-class WorkerSummary:
-    """Summary statistics for a worker count across repeats."""
-    workers: int
-    median_pos_per_s: float = 0.0
-    min_pos_per_s: float = 0.0
-    max_pos_per_s: float = 0.0
-    cv: float = 0.0  # Coefficient of variation
-    median_pos_per_game: float = 0.0
-    median_avg_batch: float = 0.0
-    median_avg_waiters: float = 0.0
-    median_max_waiters: int = 0
-    median_stall_ratio: float = 0.0
-    median_timeout_rate: float = 0.0
-    valid_repeats: int = 0
-    excluded: bool = False
-    exclude_reason: str = ""
+def parse_list(text: str) -> list[int]:
+    values = sorted({int(x) for x in text.split(",") if x.strip()})
+    if not values or values[0] < 1:
+        raise argparse.ArgumentTypeError(f"need positive integers: {text!r}")
+    return values
 
 
-# =============================================================================
-# Helper Functions
-# =============================================================================
-
-def get_git_hash() -> str:
-    """Get short git hash, or 'unknown' if not available."""
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"],
-            capture_output=True, text=True, timeout=5
-        )
-        if result.returncode == 0:
-            return result.stdout.strip()
-    except Exception:
-        pass
-    return "unknown"
+def sha1_of(path: Path) -> str:
+    h = hashlib.sha1()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
-def default_worker_sweep() -> List[int]:
-    """Generate smart worker sweep based on CPU count."""
-    cpu = os.cpu_count() or 4
-    candidates = [
-        1, 2, 3, 4, 5,        # small integers
-        6, 8, 9,               # round numbers
-        max(1, cpu - 4),       # near saturation
-        max(1, cpu - 2),
-        max(1, cpu - 1),
-        cpu,
-    ]
-    # Add 7 for Apple Silicon (P-core sweet spot)
-    if cpu >= 10:
-        candidates.append(7)
-    return sorted({w for w in candidates if 1 <= w <= cpu})
+def contention() -> list[str]:
+    """Other heavy jobs that would skew the timings."""
+    out = subprocess.run(["ps", "-axo", "pid=,command="], capture_output=True, text=True).stdout
+    pats = ("-m pytest", "guarded_suite", "alphazero.train", "build_probe_suite", "benchmark_phase2")
+    return [line.strip() for line in out.splitlines()
+            if int(line.split(None, 1)[0]) != os.getpid() and any(p in line for p in pats)]
 
 
-def parse_workers(value: str) -> List[int]:
-    """Parse --workers argument: 'auto' or comma-separated list."""
-    if value.lower() == "auto":
-        return default_worker_sweep()
-    return sorted(set(int(x.strip()) for x in value.split(",")))
+def hardware() -> dict:
+    hw = {"platform": platform.platform(), "python": platform.python_version()}
+    for key in ("machdep.cpu.brand_string", "hw.ncpu", "hw.memsize"):
+        r = subprocess.run(["sysctl", "-n", key], capture_output=True, text=True)
+        hw[key] = r.stdout.strip()
+    return hw
 
 
-def build_train_cmd(
-    board: int,
-    sims: int,
-    games: int,
-    eval_batch: int,
-    workers: int,
-    tmp_dir: str,
-    load_weights: Optional[str] = None,
-) -> List[str]:
-    """Build benchmark-pure training command."""
-    cmd = [
+def train_cmd(args, workers: int, eval_batch: int, run_dir: Path) -> list[str]:
+    return [
         sys.executable, "-m", "scripts.GPU.alphazero.train",
-        "--iterations", "1",
-        "--train-steps", "0",
-        "--games-per-iter", str(games),
-        "--curriculum-sizes", str(board),
-        "--simulations", str(sims),
+        "--iterations", "1", "--train-steps", "0",
+        "--games-per-iter", str(args.games),
+        "--curriculum-sizes", str(BOARD),
+        "--simulations", str(args.sims),
         "--mcts-eval-batch-size", str(eval_batch),
+        "--mcts-pending-virtual-visits", str(args.virtual_visits),
+        "--mcts-stall-flush-sims", str(args.stall_flush),
         "--n-workers", str(workers),
-        "--checkpoint-dir", tmp_dir,
+        "--load-weights", str(args.load_weights),
+        "--checkpoint-dir", str(run_dir / "checkpoint"),
+        "--games-dir", str(run_dir / "games"),
+        "--no-save-games",
+        "--probes-inline-disable",
     ]
-    if load_weights:
-        cmd.extend(["--load-weights", load_weights])
-    return cmd
 
 
-def parse_output(text: str, workers: int, games_expected: int) -> RunResult:
-    """Parse combined stdout+stderr to extract metrics."""
-    result = RunResult(workers=workers)
+def parse(text: str) -> dict:
+    def last(name):
+        found = list(FIELDS[name].finditer(text))
+        return found[-1].groups() if found else None
 
-    # Use LAST match for each pattern (in case of multiple prints)
-    def last_match(pattern, text):
-        matches = list(pattern.finditer(text))
-        return matches[-1] if matches else None
-
-    # Positions and games
-    m = last_match(RE_POSITIONS, text)
-    if m:
-        result.games = int(m.group(1))
-        result.positions = int(m.group(2))
-
-    # Selfplay time
-    m = last_match(RE_SELFPLAY, text)
-    if m:
-        result.selfplay_s = float(m.group(1))
-
-    # NN batches
-    m = last_match(RE_NN_BATCHES, text)
-    if m:
-        result.nn_batches = int(m.group(1))
-
-    # Avg batch
-    m = last_match(RE_AVG_BATCH, text)
-    if m:
-        result.avg_batch = float(m.group(1))
-
-    # Waiters
-    m = last_match(RE_WAITERS, text)
-    if m:
-        result.avg_waiters = float(m.group(1))
-        result.max_waiters = int(m.group(2))
-
-    # Flushes
-    m = last_match(RE_FLUSHES, text)
-    if m:
-        result.flush_full = int(m.group(1))
-        result.flush_stall = int(m.group(2))
-        result.flush_tail = int(m.group(3))
-        total_flushes = result.flush_full + result.flush_stall + result.flush_tail
-        if total_flushes > 0:
-            result.stall_ratio = result.flush_stall / total_flushes
-
-    # Avg plies
-    m = last_match(RE_AVG_PLIES, text)
-    if m:
-        result.avg_plies = float(m.group(1))
-
-    # Results (wins/draws)
-    m = last_match(RE_RESULTS, text)
-    if m:
-        result.red_wins = int(m.group(1))
-        result.black_wins = int(m.group(2))
-        result.draws = int(m.group(3))
-
-    # Draw breakdown
-    m = last_match(RE_DRAW_BREAKDOWN, text)
-    if m:
-        result.timeout_draws = int(m.group(1))
-
-    # Workers mode validation
-    m = last_match(RE_WORKERS_MODE, text)
-    if m:
-        mode = m.group(2)
-        result.parallel_mode = (mode == "parallel") if workers > 1 else True
-    else:
-        # If we can't find the mode line, assume it's valid
-        result.parallel_mode = True
-
-    # Compute derived metrics
-    if result.selfplay_s > 0:
-        result.pos_per_s = result.positions / result.selfplay_s
-    if result.games > 0:
-        result.pos_per_game = result.positions / result.games
-        result.timeout_rate = result.timeout_draws / result.games
-        result.draw_rate = result.draws / result.games
-    if result.positions > 0 and result.nn_batches > 0:
-        result.nn_batches_per_pos = result.nn_batches / result.positions
-
-    # Validity check
-    result.ok = (
-        result.positions > 0 and
-        result.selfplay_s > 0 and
-        result.parallel_mode
-    )
-
-    return result
+    m = {}
+    if g := last("games_positions"):
+        m["games"], m["positions"] = int(g[0]), int(g[1])
+    if g := last("selfplay_s"):
+        m["selfplay_s"] = float(g[0])
+    if g := last("nn"):
+        m["leaf_evals"], m["nn_batches"] = int(g[0]), int(g[1])
+    if g := last("batch"):
+        m["avg_batch"], m["avg_waiters"], m["max_waiters"] = float(g[0]), float(g[1]), int(g[2])
+    if g := last("flushes"):
+        m["flush_full"], m["flush_stall"], m["flush_tail"] = map(int, g)
+    if g := last("avg_plies"):
+        m["avg_plies"] = float(g[0])
+    if g := last("results"):
+        m["red"], m["black"], m["draws"] = map(int, g)
+    if g := last("workers"):
+        m["workers_reported"] = int(g[0])
+    if m.get("selfplay_s") and m.get("positions") and m.get("avg_plies"):
+        m["plies_per_s"] = m["avg_plies"] * m["games"] / m["selfplay_s"]   # 400-sim searches per second
+        m["pos_per_s"] = m["positions"] / m["selfplay_s"]
+        m["games_per_h"] = m["games"] / m["selfplay_s"] * 3600
+        m["s_per_game"] = m["selfplay_s"] / m["games"]
+    return m
 
 
-def run_one(
-    workers: int,
-    board: int,
-    sims: int,
-    games: int,
-    eval_batch: int,
-    load_weights: Optional[str],
-    timeout_s: int,
-    keep_logs: bool,
-    log_dir: Path,
-    timestamp: str,
-    rep: int,
-) -> RunResult:
-    """Run a single benchmark iteration."""
-    # Create temp checkpoint dir
-    tmp_dir = tempfile.mkdtemp(prefix=f"bench_knee_w{workers}_")
-    cmd = build_train_cmd(board, sims, games, eval_batch, workers, tmp_dir, load_weights)
-    cmd_str = " ".join(cmd)
-    cmd_hash = hashlib.sha1(cmd_str.encode()).hexdigest()[:8]
+def run_one(args, stage: str, workers: int, eval_batch: int, repeat: int, timeout: float) -> dict:
+    run_dir = args.out / "runs" / f"{stage}_w{workers}_eb{eval_batch}_r{repeat}"
+    run_dir.mkdir(parents=True)
+    cmd = train_cmd(args, workers, eval_batch, run_dir)
+    (run_dir / "command.txt").write_text(" ".join(cmd) + "\n")
+    env = {**os.environ, "PYTHONHASHSEED": "0", "OMP_NUM_THREADS": "1", "MKL_NUM_THREADS": "1"}
+    row = {"stage": stage, "workers": workers, "eval_batch": eval_batch, "repeat": repeat}
+    print(f"[bench] {stage}: workers={workers} eval_batch={eval_batch} repeat={repeat} "
+          f"(timeout {timeout:.0f}s)", flush=True)
 
-    # Environment for repeatability
-    env = os.environ.copy()
-    env["PYTHONHASHSEED"] = "0"
-    env["OMP_NUM_THREADS"] = "1"
-    env["MKL_NUM_THREADS"] = "1"
-
-    start_time = time.time()
-    stdout = ""
-    stderr = ""
-    return_code = -1
-
-    try:
-        # Launch in own process group for clean timeout handling
-        proc = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            env=env,
-            start_new_session=True,
-        )
-
+    cpu0 = resource.getrusage(resource.RUSAGE_CHILDREN)
+    start = time.monotonic()
+    with open(run_dir / "stdout.txt", "w") as out, open(run_dir / "stderr.txt", "w") as err:
+        proc = subprocess.Popen(cmd, cwd=ROOT, env=env, stdout=out, stderr=err, start_new_session=True)
         try:
-            stdout, stderr = proc.communicate(timeout=timeout_s)
-            return_code = proc.returncode
+            rc = proc.wait(timeout=timeout)
+            status = "OK" if rc == 0 else f"EXIT_{rc}"
         except subprocess.TimeoutExpired:
-            # Kill process group
-            try:
-                pgid = os.getpgid(proc.pid)
-                os.killpg(pgid, signal.SIGTERM)
+            status = "TIMEOUT"
+            for sig, grace in ((signal.SIGTERM, 10), (signal.SIGKILL, 10)):
                 try:
-                    proc.wait(timeout=5)
+                    os.killpg(proc.pid, sig)
+                except ProcessLookupError:
+                    break
+                try:
+                    proc.wait(timeout=grace)
+                    break
                 except subprocess.TimeoutExpired:
-                    os.killpg(pgid, signal.SIGKILL)
-                    proc.wait(timeout=5)
-            except (ProcessLookupError, OSError):
-                pass  # Process already exited
-            time.sleep(0.3)  # Cleanup delay
-            stdout = proc.stdout.read() if proc.stdout else ""
-            stderr = proc.stderr.read() if proc.stderr else ""
-            return RunResult(workers=workers, ok=False, error_msg="TIMEOUT")
-
-    except Exception as e:
-        return RunResult(workers=workers, ok=False, error_msg=str(e))
-    finally:
-        # Cleanup checkpoint dir
-        if not keep_logs:
-            shutil.rmtree(tmp_dir, ignore_errors=True)
-
-    end_time = time.time()
-
-    # Parse combined output
-    combined = stdout + "\n" + stderr
-    result = parse_output(combined, workers, games)
-
-    # Save log if parse failed or if keeping logs
-    if not result.ok or keep_logs:
-        log_file = log_dir / f"bench_knee_{timestamp}_w{workers}_r{rep}.log"
-        with open(log_file, "w") as f:
-            f.write(f"Command: {cmd_str}\n")
-            f.write(f"cmd_hash: {cmd_hash}\n")
-            f.write(f"Start: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time))}\n")
-            f.write(f"End: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time))}\n")
-            f.write(f"Return code: {return_code}\n")
-            f.write(f"ok: {result.ok}\n")
-            f.write("\n=== STDOUT ===\n")
-            f.write(stdout)
-            f.write("\n=== STDERR ===\n")
-            f.write(stderr)
-
-    return result
+                    continue
+    cpu1 = resource.getrusage(resource.RUSAGE_CHILDREN)
+    row["wall_s"] = round(time.monotonic() - start, 2)
+    row["children_cpu_s"] = round((cpu1.ru_utime - cpu0.ru_utime) + (cpu1.ru_stime - cpu0.ru_stime), 1)
+    row.update(parse((run_dir / "stdout.txt").read_text() + "\n" + (run_dir / "stderr.txt").read_text()))
+    if status == "OK" and "plies_per_s" not in row:
+        status = "UNPARSED"
+    row["status"] = status
+    print(f"[bench]   -> {status}, wall {row['wall_s']}s"
+          + (f", {row['plies_per_s']:.2f} plies/s, {row['games_per_h']:.0f} games/h, "
+             f"avg batch {row.get('avg_batch', 0):.1f}" if "plies_per_s" in row else ""), flush=True)
+    for name in ("checkpoint", "games"):          # weights copies are ~7.5 MB each; keep logs only
+        shutil.rmtree(run_dir / name, ignore_errors=True)
+    return row
 
 
-def median(values: List[float]) -> float:
-    """Compute median of a list."""
-    if not values:
-        return 0.0
-    return statistics.median(values)
+def summarize(rows: list[dict], stage: str, key: str) -> dict[int, dict]:
+    """{knob value: median metrics over OK repeats} for one stage."""
+    out = {}
+    for value in sorted({r[key] for r in rows if r["stage"] == stage}):
+        ok = [r for r in rows if r["stage"] == stage and r[key] == value and r["status"] == "OK"]
+        all_runs = [r for r in rows if r["stage"] == stage and r[key] == value]
+        s = {"ok_runs": len(ok), "runs": len(all_runs),
+             "statuses": sorted({r["status"] for r in all_runs})}
+        for metric in ("plies_per_s", "pos_per_s", "games_per_h", "s_per_game", "avg_batch", "avg_plies"):
+            vals = [r[metric] for r in ok if metric in r]
+            if vals:
+                s[metric] = statistics.median(vals)
+                s[metric + "_range"] = (min(vals), max(vals))
+        out[value] = s
+    return out
 
 
-def cv(values: List[float]) -> float:
-    """Compute coefficient of variation (stdev/mean)."""
-    if len(values) < 2:
-        return 0.0
-    mean = statistics.mean(values)
-    if mean == 0:
-        return 0.0
-    return statistics.stdev(values) / mean
+def best(summary: dict[int, dict], within: float) -> tuple[int | None, int | None]:
+    """(best value by median plies/s, smallest value within `within` of it)."""
+    scored = {v: s["plies_per_s"] for v, s in summary.items() if "plies_per_s" in s}
+    if not scored:
+        return None, None
+    top = max(scored, key=scored.get)
+    knee = min(v for v, p in scored.items() if p >= scored[top] * (1 - within))
+    return top, knee
 
 
-def find_knee(
-    worker_points: List[Tuple[int, float]],
-    min_gain: float = 0.07,
-    consecutive: int = 2,
-    slack: float = 0.05,
-) -> int:
-    """
-    Find the knee in the throughput curve.
-
-    Definition: Knee = first index where a run of `consecutive` gains falls
-    below `min_gain`, returning the point immediately before that run began.
-    """
-    if len(worker_points) < 2:
-        return worker_points[0][0] if worker_points else 1
-
-    # Monotonic smoothing (prevents noisy dip from faking knee)
-    smoothed = []
-    for w, t in worker_points:
-        if smoothed:
-            t = max(t, smoothed[-1][1])
-        smoothed.append((w, t))
-
-    # Find best
-    best_w, best_t = max(smoothed, key=lambda x: x[1])
-    below = 0
-    knee_w = best_w  # Default to best if no knee found
-
-    for i in range(1, len(smoothed)):
-        prev_t = smoothed[i - 1][1]
-        curr_t = smoothed[i][1]
-        gain = (curr_t - prev_t) / max(prev_t, 1e-9)
-
-        if gain < min_gain:
-            below += 1
-        else:
-            below = 0
-
-        if below >= consecutive:
-            # Knee is at i-consecutive (last point BEFORE the diminishing run)
-            knee_w = smoothed[i - consecutive][0]
-            break
-
-    # Check knee is within slack% of best
-    knee_t = dict(smoothed).get(knee_w, 0)
-    if knee_t < (1 - slack) * best_t:
-        return best_w
-
-    return knee_w
-
-
-def print_summary_table(summaries: List[WorkerSummary], knee_w: int) -> None:
-    """Print ASCII summary table."""
-    print("\n" + "=" * 80)
-    print("SUMMARY TABLE")
-    print("=" * 80)
-    header = f"{'workers':>7}  {'pos/s [min..max]':>22}  {'pos/game':>8}  {'avg_batch':>9}  {'stall':>6}  {'timeout':>7}"
-    print(header)
-    print("-" * 80)
-
-    for s in summaries:
-        knee_marker = " <- knee" if s.workers == knee_w else ""
-        if s.excluded:
-            knee_marker = f" ({s.exclude_reason})"
-        spread = f"{s.median_pos_per_s:.1f} [{s.min_pos_per_s:.1f}..{s.max_pos_per_s:.1f}]"
-        print(
-            f"{s.workers:>7}  {spread:>22}  {s.median_pos_per_game:>8.1f}  "
-            f"{s.median_avg_batch:>9.1f}  {s.median_stall_ratio:>6.2f}  "
-            f"{s.median_timeout_rate:>7.2f}{knee_marker}"
-        )
-
-
-def write_csv(
-    csv_path: Path,
-    results: List[RunResult],
-    args: argparse.Namespace,
-    git_hash: str,
-    timestamp: str,
-) -> None:
-    """Append results to CSV file."""
-    # Ensure directory exists
-    csv_path.parent.mkdir(parents=True, exist_ok=True)
-
-    # Check if we need to write header
-    write_header = not csv_path.exists() or csv_path.stat().st_size == 0
-
-    with open(csv_path, "a", newline="") as f:
-        writer = csv.writer(f)
-        if write_header:
-            writer.writerow([
-                "timestamp", "git_hash", "cpu_count", "board", "sims", "games",
-                "max_moves", "eval_batch", "workers", "positions", "selfplay_s",
-                "pos_per_s", "pos_per_game", "nn_batches", "nn_batches_per_pos",
-                "avg_batch", "avg_waiters", "max_waiters", "flush_full",
-                "flush_stall", "flush_tail", "stall_ratio", "red_wins",
-                "black_wins", "draws", "timeout_draws", "timeout_rate",
-                "draw_rate", "avg_plies", "resume_model", "cmd_hash", "ok"
-            ])
-
-        resume_model = Path(args.load_weights).name if args.load_weights else ""
-        cmd_base = f"{args.board}_{args.sims}_{args.games}_{args.eval_batch}"
-
-        for r in results:
-            cmd_hash = hashlib.sha1(f"{cmd_base}_{r.workers}".encode()).hexdigest()[:8]
-            writer.writerow([
-                timestamp, git_hash, os.cpu_count(), args.board, args.sims,
-                args.games, args.max_moves, args.eval_batch, r.workers,
-                r.positions, f"{r.selfplay_s:.3f}", f"{r.pos_per_s:.3f}",
-                f"{r.pos_per_game:.1f}", r.nn_batches, f"{r.nn_batches_per_pos:.4f}",
-                f"{r.avg_batch:.2f}", f"{r.avg_waiters:.2f}", r.max_waiters,
-                r.flush_full, r.flush_stall, r.flush_tail, f"{r.stall_ratio:.4f}",
-                r.red_wins, r.black_wins, r.draws, r.timeout_draws,
-                f"{r.timeout_rate:.4f}", f"{r.draw_rate:.4f}", f"{r.avg_plies:.1f}",
-                resume_model, cmd_hash, int(r.ok)
-            ])
-
-
-# =============================================================================
-# Main
-# =============================================================================
-
-def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Benchmark to find optimal --n-workers (knee detection)"
-    )
-    parser.add_argument("--board", type=int, default=16, help="Board/curriculum size")
-    parser.add_argument("--sims", type=int, default=200, help="MCTS simulations")
-    parser.add_argument("--games", type=int, default=8, help="Games per iteration")
-    parser.add_argument("--max-moves", type=int, default=200, help="Max moves (logged only)")
-    parser.add_argument("--eval-batch", type=int, default=14, help="MCTS eval batch size")
-    parser.add_argument("--workers", type=str, default="auto", help="'auto' or comma-separated list")
-    parser.add_argument("--repeats", type=int, default=2, help="Runs per worker count")
-    parser.add_argument("--min-gain", type=float, default=0.07, help="Knee threshold (0.07=7%%)")
-    parser.add_argument("--consecutive", type=int, default=2, help="Below-threshold steps for knee")
-    parser.add_argument("--timeout-s", type=int, default=1800, help="Per-run timeout (seconds)")
-    parser.add_argument("--max-timeout-rate", type=float, default=0.3, help="Max timeout rate before exclusion")
-    parser.add_argument("--load-weights", type=str, default=None, help="Weights-only load (no training state restore)")
-    parser.add_argument("--keep-logs", action="store_true", help="Keep temp checkpoint dirs")
-    parser.add_argument("--csv", type=str, default="Benchmarks/bench_knee_results.csv", help="CSV output path")
-    args = parser.parse_args()
-
-    # Setup
-    worker_sweep = parse_workers(args.workers)
-    git_hash = get_git_hash()
-    timestamp = time.strftime("%Y%m%d_%H%M%S")
-    log_dir = Path("Benchmarks/logs")
-    log_dir.mkdir(parents=True, exist_ok=True)
-    csv_path = Path(args.csv)
-
-    print("=" * 60)
-    print("BENCH KNEE: Worker Count Optimization")
-    print("=" * 60)
-    print(f"Board: {args.board}, Sims: {args.sims}, Games: {args.games}")
-    print(f"Eval batch: {args.eval_batch}, Repeats: {args.repeats}")
-    print(f"Worker sweep: {worker_sweep}")
-    print(f"Timeout: {args.timeout_s}s, Max timeout rate: {args.max_timeout_rate}")
-    print(f"Git hash: {git_hash}")
-    print(f"Load weights: {args.load_weights or 'None'}")
-    print()
-
-    # Warmup run (compile kernels, non-fatal parse failures)
-    print("Running warmup (compiling kernels)...")
-    warmup_workers = max(worker_sweep)
-    warmup_timeout = min(args.timeout_s // 2, 300)
-    warmup_result = run_one(
-        workers=warmup_workers,
-        board=args.board,
-        sims=args.sims,
-        games=2,  # Fewer games for warmup
-        eval_batch=args.eval_batch,
-        load_weights=args.load_weights,
-        timeout_s=warmup_timeout,
-        keep_logs=args.keep_logs,
-        log_dir=log_dir,
-        timestamp=timestamp,
-        rep=0,
-    )
-    if warmup_result.ok:
-        print(f"  Warmup OK: {warmup_result.pos_per_s:.1f} pos/s")
-    else:
-        print(f"  Warmup completed (parse issues are non-fatal)")
-    print()
-
-    # Main benchmark loop
-    all_results: List[RunResult] = []
-    summaries: List[WorkerSummary] = []
-
-    for w in worker_sweep:
-        print(f"[w={w}] Running {args.repeats} repeats...")
-        repeats: List[RunResult] = []
-        retry_count = 0
-        max_retries = 1
-
-        for rep in range(args.repeats):
-            result = run_one(
-                workers=w,
-                board=args.board,
-                sims=args.sims,
-                games=args.games,
-                eval_batch=args.eval_batch,
-                load_weights=args.load_weights,
-                timeout_s=args.timeout_s,
-                keep_logs=args.keep_logs,
-                log_dir=log_dir,
-                timestamp=timestamp,
-                rep=rep + 1,
-            )
-
-            # Retry once on failure
-            if not result.ok and retry_count < max_retries:
-                print(f"  Repeat {rep + 1} failed, retrying...")
-                retry_count += 1
-                result = run_one(
-                    workers=w,
-                    board=args.board,
-                    sims=args.sims,
-                    games=args.games,
-                    eval_batch=args.eval_batch,
-                    load_weights=args.load_weights,
-                    timeout_s=args.timeout_s,
-                    keep_logs=args.keep_logs,
-                    log_dir=log_dir,
-                    timestamp=timestamp,
-                    rep=rep + 1,
-                )
-
-            repeats.append(result)
-            all_results.append(result)
-
-            if result.ok:
-                print(f"  Repeat {rep + 1}: {result.pos_per_s:.1f} pos/s, {result.pos_per_game:.1f} pos/game")
+def report(args, rows, s1, s2, picks, meta) -> str:
+    lines = [f"# Self-play throughput sweep ({BOARD}x{BOARD}, {args.sims} sims, {args.games} games/run)", "",
+             f"Machine: {meta['hardware'].get('machdep.cpu.brand_string')}, {meta['hardware'].get('hw.ncpu')} CPUs; "
+             f"git {meta['git_head'][:8]}; weights {args.load_weights.name} sha1 {meta['weights_sha1'][:12]}", "",
+             "Ranking metric: median self-play plies/s (400-sim searches per second, all workers) over OK "
+             "repeats; positions/s counts the trainer's stored positions, which are not one per ply. "
+             "Throughput only: a larger eval batch changes the search, and one clean sweep does not prove "
+             "the Metal hang is gone.", ""]
+    for title, summary, key in (("Stage 1: workers", s1, "workers"), ("Stage 2: eval batch", s2, "eval_batch")):
+        lines += [f"## {title}", "", f"| {key} | OK/runs | plies/s (median, range) | pos/s | games/h | s/game | "
+                  "avg batch | avg plies | statuses |", "|---|---|---|---|---|---|---|---|---|"]
+        for v, s in summary.items():
+            if "plies_per_s" in s:
+                lo, hi = s["plies_per_s_range"]
+                lines.append(f"| {v} | {s['ok_runs']}/{s['runs']} | {s['plies_per_s']:.2f} ({lo:.2f}-{hi:.2f}) | "
+                             f"{s['pos_per_s']:.1f} | "
+                             f"{s['games_per_h']:.0f} | {s['s_per_game']:.1f} | {s.get('avg_batch', 0):.1f} | "
+                             f"{s.get('avg_plies', 0):.1f} | {', '.join(s['statuses'])} |")
             else:
-                print(f"  Repeat {rep + 1}: FAILED ({result.error_msg})")
+                lines.append(f"| {v} | 0/{s['runs']} | - | - | - | - | - | - | {', '.join(s['statuses'])} |")
+        lines.append("")
+    lines += ["## Picks", "", json.dumps(picks, indent=2), ""]
+    return "\n".join(lines)
 
-        # Compute summary for this worker count
-        valid_results = [r for r in repeats if r.ok]
-        summary = WorkerSummary(workers=w, valid_repeats=len(valid_results))
 
-        if valid_results:
-            pos_per_s_values = [r.pos_per_s for r in valid_results]
-            summary.median_pos_per_s = median(pos_per_s_values)
-            summary.min_pos_per_s = min(pos_per_s_values)
-            summary.max_pos_per_s = max(pos_per_s_values)
-            summary.cv = cv(pos_per_s_values)
-            summary.median_pos_per_game = median([r.pos_per_game for r in valid_results])
-            summary.median_avg_batch = median([r.avg_batch for r in valid_results])
-            summary.median_avg_waiters = median([r.avg_waiters for r in valid_results])
-            summary.median_max_waiters = int(median([r.max_waiters for r in valid_results]))
-            summary.median_stall_ratio = median([r.stall_ratio for r in valid_results])
-            summary.median_timeout_rate = median([r.timeout_rate for r in valid_results])
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--load-weights", type=Path, required=True, help="checkpoint to self-play with")
+    ap.add_argument("--out", type=Path, required=True, help="output directory (created; must not exist)")
+    ap.add_argument("--workers", type=parse_list, default=parse_list("10,12,14,16,18"))
+    ap.add_argument("--eval-batches", type=parse_list, default=parse_list("14,16,24,32,48"))
+    ap.add_argument("--start-eval-batch", type=int, default=14, help="eval batch held during stage 1")
+    ap.add_argument("--games", type=int, default=36, help="self-play games per run")
+    ap.add_argument("--repeats", type=int, default=2)
+    ap.add_argument("--sims", type=int, default=400, help="simulations per move (SIMS_TABLE[24] = 400)")
+    ap.add_argument("--stall-flush", type=int, default=48, help="last training run's mcts_stall_flush_sims")
+    ap.add_argument("--virtual-visits", type=int, default=8, help="last training run's pending virtual visits")
+    ap.add_argument("--within", type=float, default=0.03, help="knee: smallest value within this of the best")
+    ap.add_argument("--first-timeout", type=float, default=3600, help="seconds, the first (reference) run")
+    ap.add_argument("--timeout-mult", type=float, default=3.0, help="later runs: x the reference run's wall")
+    ap.add_argument("--min-timeout", type=float, default=300)
+    ap.add_argument("--skip-stage2", action="store_true")
+    args = ap.parse_args(argv)
 
-            # Variance warning
-            if summary.cv > 0.08:
-                print(f"  WARNING: High variance (CV={summary.cv:.1%}), consider more repeats/games")
+    args.load_weights = args.load_weights.resolve()
+    args.out = args.out.resolve()
+    refusals = []
+    if args.out.exists():
+        refusals.append(f"{args.out} exists (create-only)")
+    if args.out == ROOT or ROOT in args.out.parents:
+        refusals.append(f"{args.out} is inside the repository")
+    if not args.load_weights.is_file():
+        refusals.append(f"{args.load_weights} is not a file")
+    if busy := contention():
+        refusals.append("other heavy jobs are running: " + " | ".join(busy))
+    if refusals:
+        for r in refusals:
+            print(f"REFUSED: {r}", file=sys.stderr)
+        return 4
 
-            # Timeout rate warning/exclusion
-            if summary.median_timeout_rate > args.max_timeout_rate:
-                summary.excluded = True
-                summary.exclude_reason = "high timeout"
-                print(f"  EXCLUDED: timeout rate {summary.median_timeout_rate:.1%} > {args.max_timeout_rate:.0%}")
-        else:
-            summary.excluded = True
-            summary.exclude_reason = "all failed"
-            print(f"  EXCLUDED: all repeats failed")
+    args.out.mkdir(parents=True)
+    meta = {"started": time.strftime("%Y-%m-%d %H:%M:%S"), "hardware": hardware(),
+            "git_head": subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True,
+                                       text=True).stdout.strip(),
+            "weights": str(args.load_weights), "weights_sha1": sha1_of(args.load_weights),
+            "args": {k: str(v) for k, v in vars(args).items()}}
+    rows: list[dict] = []
+    timeout = args.first_timeout
 
-        summaries.append(summary)
-        print()
+    def next_timeout(row):
+        return max(args.min_timeout, row["wall_s"] * args.timeout_mult) if row["status"] == "OK" else timeout
 
-    # Shape-change detection (baseline from smallest valid worker)
-    valid_summaries = [s for s in summaries if not s.excluded]
-    if valid_summaries:
-        baseline_summary = min(valid_summaries, key=lambda s: s.workers)
-        baseline_pos_per_game = baseline_summary.median_pos_per_game
+    # Stage 1: workers at the start eval batch. The first OK run sets the timeout for every later run.
+    for w in args.workers:
+        for rep in range(1, args.repeats + 1):
+            row = run_one(args, "workers", w, args.start_eval_batch, rep, timeout)
+            rows.append(row)
+            if timeout == args.first_timeout:
+                timeout = next_timeout(row)
+    s1 = summarize(rows, "workers", "workers")
+    w_best, w_knee = best(s1, args.within)
 
-        for s in valid_summaries:
-            if baseline_pos_per_game > 0:
-                deviation = abs(s.median_pos_per_game - baseline_pos_per_game) / baseline_pos_per_game
-                if deviation > 0.30:
-                    s.excluded = True
-                    s.exclude_reason = "shape changed"
-                    print(f"[w={s.workers}] EXCLUDED: pos_per_game deviation {deviation:.0%} > 30%")
+    # Stage 2: eval batch at stage 1's best worker count; stop climbing after the first hang.
+    s2, hung_at = {}, None
+    if w_best is not None and not args.skip_stage2:
+        for eb in args.eval_batches:
+            if hung_at is not None and eb > hung_at:
+                print(f"[bench] skip eval_batch={eb}: {hung_at} hung", flush=True)
+                rows.append({"stage": "eval_batch", "workers": w_best, "eval_batch": eb, "repeat": 0,
+                             "status": f"SKIPPED_AFTER_HANG_AT_{hung_at}"})
+                continue
+            for rep in range(1, args.repeats + 1):
+                if eb == args.start_eval_batch:       # reuse stage 1's runs for the reference value
+                    rows += [dict(r, stage="eval_batch") for r in rows
+                             if r["stage"] == "workers" and r["workers"] == w_best and r["repeat"] == rep]
+                    continue
+                row = run_one(args, "eval_batch", w_best, eb, rep, timeout)
+                rows.append(row)
+                if row["status"] == "TIMEOUT":
+                    hung_at = eb
+                    break
+        s2 = summarize(rows, "eval_batch", "eval_batch")
+    eb_best, eb_knee = best(s2, args.within) if s2 else (None, None)
 
-    # Find knee from non-excluded points
-    knee_points = [(s.workers, s.median_pos_per_s) for s in summaries if not s.excluded]
-    if knee_points:
-        knee_w = find_knee(knee_points, args.min_gain, args.consecutive)
-        best_w, best_t = max(knee_points, key=lambda x: x[1])
-        knee_t = dict(knee_points).get(knee_w, 0)
-    else:
-        knee_w = worker_sweep[0]
-        best_w, best_t = knee_w, 0
-        knee_t = 0
-
-    # Print summary table
-    print_summary_table(summaries, knee_w)
-
-    # Print recommendation
-    print("\n" + "=" * 60)
-    print("KNEE RECOMMENDATION")
-    print("=" * 60)
-    if best_t > 0:
-        pct_of_best = (knee_t / best_t) * 100 if best_t > 0 else 0
-        print(f"  recommended --n-workers {knee_w}")
-        print(f"  (throughput: {knee_t:.1f} pos/s, {pct_of_best:.0f}% of best)")
-        print(f"  best throughput at workers={best_w} ({best_t:.1f} pos/s)")
-    else:
-        print(f"  No valid results - cannot recommend")
-    print()
-
-    # Write CSV
-    write_csv(csv_path, all_results, args, git_hash, timestamp)
-    print(f"CSV appended: {csv_path}")
-
+    picks = {"workers_best": w_best, "workers_knee": w_knee, "eval_batch_best": eb_best,
+             "eval_batch_knee": eb_knee, "first_hang_eval_batch": hung_at, "within": args.within}
+    meta["finished"] = time.strftime("%Y-%m-%d %H:%M:%S")
+    with open(args.out / "results.csv", "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=CSV_COLUMNS, extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(rows)
+    (args.out / "record.json").write_text(json.dumps(
+        {"meta": meta, "picks": picks, "stage1": s1, "stage2": s2, "rows": rows}, indent=2, default=str))
+    text = report(args, rows, s1, s2, picks, meta)
+    (args.out / "report.md").write_text(text)
+    print(text)
     return 0
 
 
