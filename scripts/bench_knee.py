@@ -13,8 +13,14 @@ weights; see git history before 2026-10-21). This version:
     and scripts/GPU/logs/games/ is never touched;
   * stage 1 sweeps workers at --start-eval-batch; stage 2 sweeps eval batch at
     stage 1's best worker count;
-  * kills a hung run's whole process group (TERM, then KILL) and, in stage 2,
-    skips every eval batch larger than the first one that hung.
+  * runs the trainer unbuffered and keeps, per run, progress.txt (each stdout
+    line with seconds since start) and samples.txt (GPU utilization and each
+    process's CPU % and state every --sample-every seconds);
+  * a run is TIMEOUT past its timeout, or STALLED after --stall-timeout seconds
+    with no trainer output; either way its whole process group gets SIGABRT
+    first (PYTHONFAULTHANDLER=1, so every process prints all its threads'
+    stacks to stderr.txt), then TERM, then KILL. In stage 2 it skips every eval
+    batch larger than the first one that timed out or stalled.
 
 Throughput only. A larger eval batch changes the search (more pending leaves,
 different visit counts), so a stage-2 winner is not a behaviour-preserving
@@ -44,6 +50,7 @@ import signal
 import statistics
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -63,7 +70,7 @@ CSV_COLUMNS = ["stage", "workers", "eval_batch", "repeat", "status", "wall_s", "
                "games", "positions", "plies_per_s", "pos_per_s", "games_per_h", "s_per_game", "avg_plies",
                "leaf_evals", "nn_batches", "avg_batch", "avg_waiters", "max_waiters",
                "flush_full", "flush_stall", "flush_tail", "children_cpu_s", "red", "black",
-               "draws", "workers_reported"]
+               "draws", "workers_reported", "last_output_s", "last_games_line", "max_outside_cpu"]
 
 
 def parse_list(text: str) -> list[int]:
@@ -82,11 +89,18 @@ def sha1_of(path: Path) -> str:
 
 
 def contention() -> list[str]:
-    """Other heavy jobs that would skew the timings."""
-    out = subprocess.run(["ps", "-axo", "pid=,command="], capture_output=True, text=True).stdout
+    """Other heavy jobs that would skew the timings (this process and its ancestors excluded, so a
+    shell that launched the sweep is not mistaken for one)."""
+    out = subprocess.run(["ps", "-axo", "pid=,ppid=,command="], capture_output=True, text=True).stdout
+    procs = {int(pid): (int(ppid), cmd) for pid, ppid, cmd in
+             (line.split(None, 2) for line in out.splitlines() if len(line.split(None, 2)) == 3)}
+    mine, pid = set(), os.getpid()
+    while pid in procs and pid not in mine:
+        mine.add(pid)
+        pid = procs[pid][0]
     pats = ("-m pytest", "guarded_suite", "alphazero.train", "build_probe_suite", "benchmark_phase2")
-    return [line.strip() for line in out.splitlines()
-            if int(line.split(None, 1)[0]) != os.getpid() and any(p in line for p in pats)]
+    return [f"{pid} {cmd}" for pid, (_, cmd) in procs.items()
+            if pid not in mine and any(p in cmd for p in pats)]
 
 
 def hardware() -> dict:
@@ -146,43 +160,133 @@ def parse(text: str) -> dict:
     return m
 
 
+def pump(proc, out, prog, start: float, last: dict) -> None:
+    """Copy the trainer's stdout to stdout.txt, and to progress.txt with seconds since start."""
+    for line in proc.stdout:
+        now = time.monotonic()
+        last["t"] = now
+        if line.lstrip().startswith("Games:"):
+            last["games"] = line.strip()
+        out.write(line)
+        prog.write(f"{now - start:8.1f}  {line}")
+        prog.flush()
+
+
+def gpu_utilization() -> str:
+    text = subprocess.run(["ioreg", "-r", "-d", "1", "-c", "IOAccelerator"], capture_output=True,
+                          text=True).stdout
+    m = re.search(r'"Device Utilization %"=(\d+)', text)
+    return m.group(1) if m else "?"
+
+
+def sample(pgid: int, samp, start: float, every: float, done, last: dict) -> None:
+    """Every `every` seconds: GPU utilization, each process in the run's group (CPU %, state), and the
+    CPU used by everything outside the group (total and top three), to catch other jobs competing."""
+    me = os.getpid()
+    while not done.wait(every):
+        ps = subprocess.run(["ps", "-axo", "pid=,pgid=,pcpu=,state=,rss=,comm="], capture_output=True,
+                            text=True).stdout.splitlines()
+        rows = [p.split(None, 5) for p in ps]
+        rows = [p for p in rows if len(p) == 6]
+        procs = [p for p in rows if p[1] == str(pgid)]
+        others = sorted((p for p in rows if p[1] != str(pgid) and int(p[0]) != me),
+                        key=lambda p: -float(p[2]))
+        total = sum(float(p[2]) for p in procs)
+        outside = sum(float(p[2]) for p in others)
+        last["max_outside_cpu"] = max(last.get("max_outside_cpu", 0.0), outside)
+        top = " ".join(f"{p[0]}:{Path(p[5]).name}:{p[2]}%" for p in others[:3])
+        detail = " ".join(f"{p[0]}:{p[2]}%:{p[3]}" for p in procs)
+        samp.write(f"{time.monotonic() - start:8.1f}  gpu={gpu_utilization()}%  procs={len(procs)}  "
+                   f"cpu_total={total:.0f}%  outside={outside:.0f}% [{top}]  {detail}\n")
+        samp.flush()
+
+
+def group_pids(pgid: int) -> list[tuple[int, str]]:
+    ps = subprocess.run(["ps", "-axo", "pid=,pgid=,comm="], capture_output=True, text=True).stdout
+    rows = [line.split(None, 2) for line in ps.splitlines()]
+    return [(int(r[0]), r[2] if len(r) > 2 else "") for r in rows if len(r) >= 2 and r[1] == str(pgid)]
+
+
+def abort_one_by_one(pgid: int, err) -> None:
+    """SIGABRT each process in the group in turn (the trainer first), so faulthandler's stack dumps
+    land in stderr.txt one after another, each under a marker, instead of interleaved."""
+    pids = sorted(group_pids(pgid), key=lambda p: p[0] != pgid)
+    for pid, comm in pids:
+        err.write(f"\n===== bench_knee: SIGABRT pid {pid} ({'trainer' if pid == pgid else comm}) =====\n")
+        err.flush()
+        try:
+            os.kill(pid, signal.SIGABRT)
+        except ProcessLookupError:
+            continue
+        time.sleep(1.0)
+
+
 def run_one(args, stage: str, workers: int, eval_batch: int, repeat: int, timeout: float) -> dict:
     run_dir = args.out / "runs" / f"{stage}_w{workers}_eb{eval_batch}_r{repeat}"
     run_dir.mkdir(parents=True)
     cmd = train_cmd(args, workers, eval_batch, run_dir)
     (run_dir / "command.txt").write_text(" ".join(cmd) + "\n")
-    env = {**os.environ, "PYTHONHASHSEED": "0", "OMP_NUM_THREADS": "1", "MKL_NUM_THREADS": "1"}
+    # Unbuffered so a killed run still shows how far it got; faulthandler so SIGABRT makes every
+    # process in the group (spawned workers inherit the env) print all its threads' stacks to stderr.
+    env = {**os.environ, "PYTHONHASHSEED": "0", "OMP_NUM_THREADS": "1", "MKL_NUM_THREADS": "1",
+           "PYTHONUNBUFFERED": "1", "PYTHONFAULTHANDLER": "1"}
     row = {"stage": stage, "workers": workers, "eval_batch": eval_batch, "repeat": repeat}
     print(f"[bench] {stage}: workers={workers} eval_batch={eval_batch} repeat={repeat} "
-          f"(timeout {timeout:.0f}s)", flush=True)
+          f"(timeout {timeout:.0f}s, stall {args.stall_timeout:.0f}s)", flush=True)
 
     cpu0 = resource.getrusage(resource.RUSAGE_CHILDREN)
     start = time.monotonic()
-    with open(run_dir / "stdout.txt", "w") as out, open(run_dir / "stderr.txt", "w") as err:
-        proc = subprocess.Popen(cmd, cwd=ROOT, env=env, stdout=out, stderr=err, start_new_session=True)
-        try:
-            rc = proc.wait(timeout=timeout)
-            status = "OK" if rc == 0 else f"EXIT_{rc}"
-        except subprocess.TimeoutExpired:
-            status = "TIMEOUT"
+    last = {"t": start, "games": ""}               # time of the last stdout line, last "Games: n/N"
+    with open(run_dir / "stdout.txt", "w") as out, open(run_dir / "progress.txt", "w") as prog, \
+            open(run_dir / "samples.txt", "w") as samp, open(run_dir / "stderr.txt", "w") as err:
+        proc = subprocess.Popen(cmd, cwd=ROOT, env=env, stdout=subprocess.PIPE, stderr=err,
+                                text=True, bufsize=1, start_new_session=True)
+        done = threading.Event()
+        reader = threading.Thread(target=pump, args=(proc, out, prog, start, last), daemon=True)
+        sampler = threading.Thread(target=sample, daemon=True,
+                                   args=(proc.pid, samp, start, args.sample_every, done, last))
+        reader.start()
+        sampler.start()
+        status = None
+        while status is None:
+            rc = proc.poll()
+            now = time.monotonic()
+            if rc is not None:
+                status = "OK" if rc == 0 else f"EXIT_{rc}"
+            elif now - start > timeout:
+                status = "TIMEOUT"
+            elif args.stall_timeout and now - last["t"] > args.stall_timeout:
+                status = "STALLED"
+            else:
+                time.sleep(1)
+        if status in ("TIMEOUT", "STALLED"):
+            abort_one_by_one(proc.pid, err)
             for sig, grace in ((signal.SIGTERM, 10), (signal.SIGKILL, 10)):
                 try:
                     os.killpg(proc.pid, sig)
-                except ProcessLookupError:
+                except (ProcessLookupError, PermissionError):   # macOS: EPERM once only a zombie is left
+                    proc.wait(timeout=grace)
                     break
                 try:
                     proc.wait(timeout=grace)
                     break
                 except subprocess.TimeoutExpired:
                     continue
+        done.set()
+        reader.join(timeout=10)
+        sampler.join(timeout=10)
     cpu1 = resource.getrusage(resource.RUSAGE_CHILDREN)
+    row["last_output_s"] = round(last["t"] - start, 1)
+    row["max_outside_cpu"] = round(last.get("max_outside_cpu", 0.0))
+    row["last_games_line"] = last["games"]
     row["wall_s"] = round(time.monotonic() - start, 2)
     row["children_cpu_s"] = round((cpu1.ru_utime - cpu0.ru_utime) + (cpu1.ru_stime - cpu0.ru_stime), 1)
     row.update(parse((run_dir / "stdout.txt").read_text() + "\n" + (run_dir / "stderr.txt").read_text()))
     if status == "OK" and "plies_per_s" not in row:
         status = "UNPARSED"
     row["status"] = status
-    print(f"[bench]   -> {status}, wall {row['wall_s']}s"
+    print(f"[bench]   -> {status}, wall {row['wall_s']}s, last output at {row['last_output_s']}s"
+          f" ({row['last_games_line'] or 'no Games line'})"
           + (f", {row['plies_per_s']:.2f} plies/s, {row['games_per_h']:.0f} games/h, "
              f"avg batch {row.get('avg_batch', 0):.1f}" if "plies_per_s" in row else ""), flush=True)
     for name in ("checkpoint", "games"):          # weights copies are ~7.5 MB each; keep logs only
@@ -258,6 +362,9 @@ def main(argv=None) -> int:
     ap.add_argument("--first-timeout", type=float, default=3600, help="seconds, the first (reference) run")
     ap.add_argument("--timeout-mult", type=float, default=3.0, help="later runs: x the reference run's wall")
     ap.add_argument("--min-timeout", type=float, default=300)
+    ap.add_argument("--stall-timeout", type=float, default=600,
+                    help="seconds with no trainer output before a run is STALLED and killed; 0 = off")
+    ap.add_argument("--sample-every", type=float, default=15, help="seconds between CPU/GPU samples")
     ap.add_argument("--skip-stage2", action="store_true")
     args = ap.parse_args(argv)
 
@@ -315,7 +422,7 @@ def main(argv=None) -> int:
                     continue
                 row = run_one(args, "eval_batch", w_best, eb, rep, timeout)
                 rows.append(row)
-                if row["status"] == "TIMEOUT":
+                if row["status"] in ("TIMEOUT", "STALLED"):
                     hung_at = eb
                     break
         s2 = summarize(rows, "eval_batch", "eval_batch")
