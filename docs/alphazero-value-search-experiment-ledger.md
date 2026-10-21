@@ -92,6 +92,8 @@ knob) is not a new hypothesis.
 
 > **Training-target truncation — FIXED (Post-closure entry 17, 2026-10-20).** The ordinary training chain defaulted to 512 move slots, below the 528 legal moves of a 24×24 opening, dropping the tail moves' visits and renormalizing the rest; defaults now 576, explicit caps unchanged. Not a regression explanation (the parent inherited it); its effect on trained models is unmeasured.
 
+> **Policy-head capacity pilot — isolated residual head built and CPU-checked (Post-closure entry 18, 2026-10-21, OPEN).** Arm R adds a zero-initialized residual path reading the move cell's 128 encoder features (8,840 trainable parameters); arm C trains only the existing 519. Six CPU checks pass after a float32 fix to one test assertion (first run 4 passed, 2 failed on that test bug). Prediction: none stated in advance. Nothing about capacity is measured; no checkpoint, corpus, search or training is authorized.
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -3295,3 +3297,59 @@ neither ruled in nor out. Continuation's disabled calibration objective and rest
 already recorded differences between parent and continuation, not newly discovered causes. The repair is a
 training-data correctness fix with no demonstrated strength improvement; it is carried into any independently
 justified future training, and the closed continuation experiment is not restarted to test it.
+
+### 18. Policy-head capacity pilot: isolated residual head and CPU checks (2026-10-21, OPEN)
+
+**Test.** Build, in isolation, the two training arms of a proposed policy-head capacity pilot and check them on the
+CPU before any checkpoint, corpus, search or training. `scripts/GPU/alphazero/policy_head_capacity.py`:
+`ResidualPolicyHead` subclasses `PolicyHead` and keeps the existing path unchanged, adding a second path that reads
+the move cell's full 128 encoder features, logit = existing + `extra_out(relu(extra_fc(features at the move)))`,
+`extra_fc` 128 → 64, `extra_out` 64 → 1, with `extra_out` zero-initialized so arm R starts exactly equal to the head
+it copies. `install(network, "R" | "C")` installs the arm, puts the network in eval mode, freezes everything but the
+arm's surface and refuses any other surface: **arm C trains only the existing head's 519 parameters; arm R trains
+those 519 plus 8,321 new = 8,840.** Encoder, value head and every BatchNorm running statistic stay frozen. The head
+refuses to be called by search. Not production and not wired into any caller.
+
+**Hypothesis.** The user's, untested and not a found bottleneck: the policy head scores each move from only two
+numbers per cell (1×1 conv 128 → 2, BN, ReLU, then 2 → 64 → 1; 519 parameters, `network.py:293`), which may limit
+what the policy can learn. These CPU checks test no part of that hypothesis; they test only that the arms are
+built as designed.
+
+**Why it was plausible.** Every move logit passes through a two-channel bottleneck per cell, and the head has 519
+parameters against an encoder of 128 channels per cell; a richer read of the same features is a direct way to ask
+whether that bottleneck binds.
+
+**Design (agreed in review before implementation).** Baselines: arm C, a fitted temperature T and the unchanged
+incumbent I; R must beat each separately. Planted controls only qualify the fitting recipe (operational) and do not
+isolate capacity; they run before any label generation, with a synthetic target scale frozen independently of real
+targets. Development features may come from existing diagnostic positions, never spent held-out material. Repeat
+labels measure reproducibility only, and Stage B's gate Q is not imported. The 59/100 sign-test power (82.5% at
+p 0.63) is per comparison, not for the combined verdict. The training dose is frozen explicitly (1,600 positions ×
+160 steps × batch 32 ≈ 3.2 passes, versus Stage B's 8; a short recipe failing proves nothing about capacity).
+User decisions: δ = 0.05 nats accepted as a spending threshold; the 200-game, ~16 h pilot is **not** approved; no
+Stage B variance computation; a later strength match would not need Stage A rerun.
+
+**Prediction on record.** None stated in advance.
+
+**What ran.** CPU only, MLX on CPU, random weights, no checkpoint, search, game or training:
+`tests/test_policy_head_capacity.py`, six tests on real 24×24 positions from the rules engine (red's opening, 528
+legal moves, and black to move after one red peg, padded to 528).
+- *First run* (old machine, Python 3.14.7, by 2026-10-20; files untracked): **4 passed, 2 failed, 2.68 s.** Both
+  failures were a **test bug at line 69**: the copied BN `running_mean` (float32) was compared against float64
+  literals `[0.3, -0.2]` (actual 0.30000001 / −0.20000000; the copy was correct). Both arms' logits and value were
+  bitwise equal to the incumbent head before that line.
+- *Fix (approved 2026-10-21):* line 69 compares against `np.float32([0.3, -0.2])`; nothing else changed.
+- *Corrected run* (2026-10-21, Mac Studio M5 Max, Python 3.14.8, run once, 60 s cap): **6 passed, 1.63 s.**
+Committed with this entry (module sha256 `ab9418916d7f…`, test `f373a32d4aad…`).
+
+**Result.** Both arms start bitwise equal to the incumbent head (logits and value), with the BN running statistics
+copied. With random `extra_out` weights the residual path changes every legal logit while keeping full legal support
+(finite logits on every legal move, −1e9 on padding, a proper distribution). After two Adam steps exactly the arm's
+surface changed: no other parameter, no BN running statistic, and eval mode was kept. The refusals (unknown arm,
+installing twice, calling the head from search) hold, and installing on a clone leaves the source untouched.
+
+**Did it match the prediction.** No prediction was stated. These are construction checks, not a capacity result.
+
+**Conclusion / status.** OPEN — built and CPU-checked; nothing about capacity is measured. The next step,
+planted-target qualification of the fitting recipe, needs its own approval. No checkpoint loading, corpus
+generation, search or real-target training is authorized.
