@@ -192,3 +192,26 @@ def test_CHECK_AFTER_CATCHES_A_FROZEN_TENSOR_THAT_MOVED(trained, case):
     after[victim] = after[victim] + 1e-3
     with pytest.raises(D.DistillError, match="off the update surface changed"):
         D.check_after(before, after, names)
+
+
+def test_THE_TARGET_IS_THE_AFTER_COUNT_not_the_before_count_nor_the_newly_added_count(tmp_path):
+    """Scripted rows (no game, no model) where before, after and after-minus-before all differ. In the
+    fake-evaluator games above before-counts are all ZERO, so after == newly added there and only a reader taking
+    the newly added counts would go unnoticed; this fixture separates all three, and the selection counts too."""
+    from tests.test_training_replay_capture import ADJUSTED, _record, write_phase
+    ctx, _sha, env, _ = _record()
+    write_phase(str(tmp_path / "cap"), ctx, [env])
+    _ctx, records, ids = D.load_records(str(tmp_path / "cap"))
+    rows = {r["row_id"]: r for r in C.load_phase(str(tmp_path / "cap"))[1][0]["rows"]}
+    inherited = 0
+    for rec, rid in zip(records, ids):
+        row = rows[rid]
+        after, before = row["child_visits_after"], row["child_visits_before"]
+        delta = [a - b for a, b in zip(after, before)]
+        assert rec.visit_counts == after
+        if any(before):
+            inherited += 1
+            assert rec.visit_counts != before and rec.visit_counts != delta and before != delta
+        if row["ply"] == ADJUSTED:
+            assert row["selection_counts"] != after and rec.visit_counts != row["selection_counts"]
+    assert inherited >= 5 and f"0:{ADJUSTED}" in ids

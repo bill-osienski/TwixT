@@ -3610,3 +3610,15 @@ lengths, and at most about 10.9 h even if every game reached the 280-ply cap, pr
 long games (not measured beyond ply 54). Two games cannot estimate the length distribution, so the corpus's size in
 positions (about 6,400 at these lengths) is also uncertain. Stages 2–5, promotion and pushing remain unapproved.
 See do-not-repeat **#67**.
+
+*Correction (2026-10-22, after the user's review of entry 21).* Entry 21 (and the build commit `24327418`) said the
+missed mutant survived because "before- and after-search counts coincide" in the fake-evaluator games. That is
+wrong. Without inherited visits the **before-counts are all zero and the after-counts equal the newly added
+counts**; before and after do not coincide. What the missed mutant actually tested: it took the before-counts
+**only where they had mass and fell back to the after-counts otherwise**. Every fake-game row had zero before-mass,
+so it never substituted anything and was equivalent to the original on that data. A plain before-for-after
+substitution was not run; the data could have caught it. The case the fake data cannot distinguish is **after
+versus after-minus-before** (the newly added counts). A synthetic reader test now covers it. It is built on the
+scripted capture fixture, where before, after and after-minus-before all differ on inherited rows; it also checks
+the selection counts on the adjusted row. The test needs no game and no inference; no mutation campaign was
+repeated. Stage 1's live check is unchanged: 99 of 106 rows there had inherited visits.

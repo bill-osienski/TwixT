@@ -121,3 +121,15 @@ Stage 1 completed in 124 s. The two games ran 52 and 54 plies, both decisive, at
 **Corpus size.** At these lengths the corpus would hold about 6,400 positions, not the proposal's ~10,000. Two games cannot estimate the length distribution, so the corpus size is uncertain too.
 
 **Open for Stage 2 approval:** keep 120 games, or use the time headroom for more games. That would be a revision to this draft, decided before Stage 2 is approved; it must not be decided after seeing data.
+
+## 10. Stage 2 terms as approved (2026-10-22). These replace §3 where the two differ.
+
+- **Approved:** 120 games, not 240. The ~10,000-position figure was an estimate, not a requirement, and timing headroom alone does not justify doubling a feasibility corpus.
+- **Configuration and split:** 12 ordered phases of 10 at Stage 1's exact configuration. Slot 9 of each phase is held out, giving 108 training and 12 held-out games.
+- **Ceiling:** 12 hours in all, including capture and validation.
+- **Stops:** the stage stops on the first capture failure or timeout, with no retry, replacement or top-up.
+- **Eligibility: all 12 phases must complete before the corpus is eligible for training.** This replaces §3's six-phase fallback. If the stage stops, incomplete and completed phases are kept as diagnostics.
+- **Exclusion:** the two Stage 1 games stay excluded.
+- **Frozen card:** `2026-10-22-search-distillation-d2-stage2-card.md`.
+- **Timing:** the 2.1-hour estimate is a projection from two games, and 10.9 hours is not a demonstrated worst-case bound.
+- **Still unapproved:** training and Stages 4–5.

@@ -126,6 +126,7 @@ def test_A_MODULE_IN_TRAINING_MODE_is_refused():
 
 def test_THE_PUBLIC_ENTRY_refuses_with_its_gate_closed_and_with_an_unpinned_card(monkeypatch, tmp_path, capsys):
     assert M.GATE.SEARCH_DISTILLATION_D2_MEASURE_AUTHORIZED is False
+    existed = (M.ROOT / M.EVIDENCE_DIR).exists()             # after the real run it exists
     ckpt = tmp_path / "x.safetensors"
     ckpt.write_bytes(b"")
     assert M.main(["run", "--checkpoint", str(ckpt)]) == M.EXIT_REFUSED
@@ -135,7 +136,7 @@ def test_THE_PUBLIC_ENTRY_refuses_with_its_gate_closed_and_with_an_unpinned_card
     assert M.main(["run", "--checkpoint", str(ckpt)]) == M.EXIT_REFUSED
     assert "not the pinned card" in capsys.readouterr().err
     assert M.main(["run"]) == M.EXIT_USAGE
-    assert not (M.ROOT / M.EVIDENCE_DIR).exists()
+    assert (M.ROOT / M.EVIDENCE_DIR).exists() == existed                # nothing created or removed
 
 
 def test_THE_CARD_IS_PINNED():
