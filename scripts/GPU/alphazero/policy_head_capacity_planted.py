@@ -1,7 +1,7 @@
 """POLICY-HEAD CAPACITY PILOT -- PLANTED-TARGET QUALIFICATION of the fitting recipe. BUILT; NOT RUN.
 
-Card: `docs/superpowers/2026-10-21-policy-head-capacity-planted-qualification-card.md` (rev 2, 28abdbfe), pinned
-below by sha256. Nothing runs on import. `run` refuses unless
+Card: `docs/superpowers/2026-10-21-policy-head-capacity-planted-qualification-card.md` (rev 3, amending rev 2 of
+28abdbfe), pinned below by sha256. Nothing runs on import. `run` refuses unless
 `policy_head_capacity_planted_authorization.POLICY_HEAD_CAPACITY_PLANTED_AUTHORIZED` is open, read at call time.
 
 WHAT THE RUN DOES, in the card's order (every §8 failure is a VOID; nothing is retried, selected or extended):
@@ -12,10 +12,13 @@ WHAT THE RUN DOES, in the card's order (every §8 failure is a VOID; nothing is 
      CPU, caches them OUTSIDE the repository (only the digest is recorded) and plants TC (seed 12) and TR (seed 13)
      at a 1.0-nat within-position scale measured on the training features;
   §5 fits arms C and R to each target -- 400 Adam steps, batch 32, lr 1e-3, global-norm clip 1.0 as
-     external-learning stage 2, draw order seed 14 -- and a temperature on TR, on training positions only;
+     external-learning stage 2, draw order seed 14, R's residual path starting from seed 15 in both R fits -- and
+     a temperature on TR, on training positions only;
   §6 scores every fit on the evaluation positions only and applies F1, F2, S1, S2, S3;
   §7 records the descriptive numbers. Every outcome is OPERATIONAL QUALIFICATION ONLY.
-The verdict is computed inside the handler that writes record.json, so every exit leaves a record.
+The verdict is computed inside the handler that writes record.json, so every exit leaves a record. SIGTERM (the
+wrapper's ceiling, or a signal it forwards) is turned into a VOID at step "terminated" inside that handler; a run
+killed before it can write (KILL after the grace period) or crashed outright gets its record from the wrapper.
 
     python -m scripts.GPU.alphazero.policy_head_capacity_planted run --checkpoint <absolute path to calib020_0001>
 """
@@ -28,7 +31,9 @@ import json
 import math
 import os
 import pathlib
+import signal
 import sys
+import threading
 import time
 from typing import Any, Callable, Dict, List, Mapping, Sequence, Tuple
 
@@ -47,7 +52,7 @@ from .search_distillation_stage_b import state_digest     # card §3: Stage B's 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
 RECORD_KIND = "policy-head-capacity-planted-record/1"
 CARD = "docs/superpowers/2026-10-21-policy-head-capacity-planted-qualification-card.md"
-CARD_SHA256 = "41554c31fa278da4a16ca25bb873f81910b3f3cff095cab2d42641217e9d37c0"
+CARD_SHA256 = "e3b2140812b752cfa92a8ee359780063d212f561a11dd52b41dc5cd9597c04e7"
 CHECKPOINT = "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"
 CHECKPOINT_SHA1 = "209cf2d4fd24a48553d259dd71b4954867b9473e"
 SOURCES = ("inference-mode-match", "mirror-averaging-match")         # card §3, in this order
@@ -58,7 +63,7 @@ CACHE_DIR = pathlib.Path.home() / "twixt-cache" / "policy-head-capacity-planted"
 BOARD, PLY_CAP, M_PAD, HIDDEN, TR_HIDDEN = 24, 280, 528, 128, 64
 FROZEN = {"n_train": 1600, "n_eval": 400, "steps": 400, "batch": 32,                 # §2, §5
           "games": 64, "moves": 3293, "eval_games": 12, "eval_moves": 611}          # §3, counted from the records
-SEEDS = {"selection": 11, "tc": 12, "tr": 13, "order": 14}                          # §2: small, outside the registry
+SEEDS = {"selection": 11, "tc": 12, "tr": 13, "order": 14, "r_init": 15}           # §2: small, outside the registry
 LEARNING_RATE, CLIP_NORM, WEIGHT_DECAY = 1e-3, 1.0, 0.0                              # as external_learning_stage2
 ADAM = {"betas": [0.9, 0.999], "eps": 1e-8, "bias_correction": False}
 SCALE, SCALE_TOL = 1.0, 1e-3
@@ -77,6 +82,14 @@ class Void(Exception):
     def __init__(self, step: str, detail: str):
         super().__init__(f"[{step}] {detail}")
         self.step, self.detail = step, detail
+
+
+class Terminated(BaseException):
+    """SIGTERM arrived inside the record boundary (raised by its handler; not an Exception, so nothing catches it
+    on the way out except conclude)."""
+
+
+R_INIT_SHA256 = PHC.residual_sha256(PHC.residual_init(SEEDS["r_init"]))     # card §5: both R fits start here
 
 
 class Refused(Exception):
@@ -349,7 +362,10 @@ def fit(make_network: Callable[[], Any], arm: str, train: Mapping[str, np.ndarra
     from .trainer import clip_grad_norm          # trainer imports self_play: imported here, as stage 2 does
 
     network = make_network()
-    surface = PHC.install(network, arm)
+    surface = PHC.install(network, arm, init_seed=SEEDS["r_init"] if arm == "R" else None)
+    r_init = PHC.residual_sha256(PHC.residual_arrays(network.policy_head)) if arm == "R" else None
+    if arm == "R" and r_init != R_INIT_SHA256:
+        raise Void("fit", f"arm R's residual path starts at {r_init}, not seed {SEEDS['r_init']}'s {R_INIT_SHA256}")
     if not np.array_equal(head_logits(network.policy_head, held), i_eval):
         raise Void("fit", f"arm {arm} does not start exactly at the incumbent head")
     before = snapshot(network)
@@ -372,7 +388,7 @@ def fit(make_network: Callable[[], Any], arm: str, train: Mapping[str, np.ndarra
         steps.append({"loss": loss_f, "grad_norm": gnorm_f})
     _eval_mode(network, f"arm {arm} after training")
     check_after(before, snapshot(network), surface)
-    return {"surface": surface, "eval_logits": head_logits(network.policy_head, held),
+    return {"surface": surface, "r_init_sha256": r_init, "eval_logits": head_logits(network.policy_head, held),
             "train_ce": mean_ce(train["target"], head_logits(network.policy_head, train), train["mask"]),
             "steps": steps}
 
@@ -531,6 +547,7 @@ def _execute(spec: Mapping[str, int], seams: Seams, out_dir: pathlib.Path, cache
 
     order = draw_order(spec["n_train"], spec["steps"], spec["batch"])
     rec["draw_order_sha256"] = _jsha(order.tolist())
+    rec["r_init"] = {"seed": SEEDS["r_init"], "sha256": R_INIT_SHA256}
     kl, fits = {}, {}
     for arm, target in FITS:
         key = f"{arm}/{target}"
@@ -539,7 +556,8 @@ def _execute(spec: Mapping[str, int], seams: Seams, out_dir: pathlib.Path, cache
                   order, i_e)
         kl[key] = mean_kl(E[target], out["eval_logits"], E["mask"])
         norms = [st["grad_norm"] for st in out["steps"]]
-        fits[key] = {"surface": out["surface"], "final_train_ce": out["train_ce"], "grad_norms": norms,
+        fits[key] = {"surface": out["surface"], "r_init_sha256": out["r_init_sha256"],
+                     "final_train_ce": out["train_ce"], "grad_norms": norms,
                      "clipped_fraction": sum(g > CLIP_NORM for g in norms) / len(norms),
                      "losses": [st["loss"] for st in out["steps"]]}
     phase("temperature")
@@ -561,14 +579,26 @@ def _execute(spec: Mapping[str, int], seams: Seams, out_dir: pathlib.Path, cache
 
 def conclude(spec: Mapping[str, int], seams: Seams, out_dir: pathlib.Path, cache_dir: pathlib.Path,
              clock: Callable[[], float] = time.monotonic) -> Tuple[int, Dict[str, Any]]:
-    """THE RECORD BOUNDARY: the verdict is computed inside it, and record.json is written on every exit."""
+    """THE RECORD BOUNDARY: the verdict is computed inside it, and record.json is written on every exit.
+    SIGTERM inside it raises Terminated, recorded as a VOID at step "terminated"; while the record is being
+    written SIGTERM is ignored, and the previous handler is restored on the way out."""
     out_dir.mkdir(parents=True, exist_ok=False)
     rec: Dict[str, Any] = {"kind": RECORD_KIND, "card": CARD, "card_sha256": CARD_SHA256, "spec": dict(spec),
-                           "seeds": dict(SEEDS), "status": None}
+                           "seeds": dict(SEEDS), "status": None, "written_by": "script"}
     code = EXIT_VOID
+    t0 = time.monotonic()                        # for the termination detail only; the cap uses `clock`
+
+    def on_term(signum, _frame):
+        raise Terminated(signal.Signals(signum).name)
+
+    main_thread = threading.current_thread() is threading.main_thread()
+    previous = signal.signal(signal.SIGTERM, on_term) if main_thread else None
     try:
         _execute(spec, seams, out_dir, cache_dir, clock, rec)
         rec["status"], code = "COMPLETED", EXIT_DONE
+    except Terminated as t:
+        rec.update(status="VOID", void={"step": "terminated", "detail": f"{t} after {time.monotonic() - t0:.1f} s, "
+                                        f"during phase {list(rec.get('phases_s') or ['(before the first)'])[-1]}"})
     except Void as v:
         rec.update(status="VOID", void={"step": v.step, "detail": v.detail})
     except Exception as e:                       # card §8: any exception is a VOID, and it is recorded
@@ -577,7 +607,13 @@ def conclude(spec: Mapping[str, int], seams: Seams, out_dir: pathlib.Path, cache
         rec.update(status="INTERRUPTED", void={"step": "interrupted", "detail": type(e).__name__})
         raise
     finally:
-        _write_json_new(out_dir / "record.json", rec)
+        if main_thread:
+            signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        try:
+            _write_json_new(out_dir / "record.json", rec)
+        finally:
+            if main_thread:
+                signal.signal(signal.SIGTERM, signal.SIG_DFL if previous is None else previous)
     return code, rec
 
 
@@ -613,7 +649,7 @@ def run(checkpoint: str) -> int:
     """THE PUBLIC ENTRY. No seam: the frozen spec, the real sources, the pinned card."""
     _require_gate()
     if _sha((ROOT / CARD).read_bytes()) != CARD_SHA256:
-        raise Refused(f"{CARD} is not the pinned rev-2 card")
+        raise Refused(f"{CARD} is not the pinned rev-3 card")
     ckpt = pathlib.Path(checkpoint)
     if not (ckpt.is_absolute() and ckpt.is_file()):
         raise Refused("--checkpoint must name an existing file by absolute path")

@@ -38,7 +38,14 @@ if mode == "refused":
     sys.exit(4)
 if mode == "stubborn":
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
-if mode in ("hang", "stubborn"):
+if mode == "term_records":                       # as the real script does: SIGTERM -> its own VOID record
+    def on_term(*_):
+        d = pathlib.Path("docs/superpowers/evidence/policy-head-capacity-planted")
+        d.mkdir(exist_ok=True)
+        (d / "record.json").write_text('{"written_by": "script", "status": "VOID", "void": {"step": "terminated"}}')
+        sys.exit(3)
+    signal.signal(signal.SIGTERM, on_term)
+if mode in ("hang", "stubborn", "term_records"):
     time.sleep(120)
 if mode == "corrupt_gate":
     GATE.write_text(GATE.read_text().replace("AUTHORIZED = True", "AUTHORIZED = 1"))
@@ -85,6 +92,11 @@ def _run(repo, mode, timeout=60):
     out = repo / pathlib.Path(WRAPPER_REL).parent
     outer = json.loads((out / "outer.json").read_text()) if (out / "outer.json").exists() else None
     return p, outer, out
+
+
+def _record(repo):
+    path = repo / PL.EVIDENCE_DIR / "record.json"
+    return json.loads(path.read_text()) if path.exists() else None
 
 
 def _restored(repo):
@@ -162,6 +174,9 @@ def test_THE_CEILING_TERM_fires_maps_to_TIMEOUT_and_restores_the_gate(tmp_path):
     assert p.returncode == 124 and outer["inner_exit"] == 124 and outer["outcome"] == "TIMEOUT"
     assert outer["wall_seconds"] < 10 and outer["survivors"] == ""
     assert outer["gate_restored"] is True and _restored(repo)
+    rec = _record(repo)                                     # rev 3: TERM killed it before any record -> the wrapper's
+    assert outer["record_by"] == "wrapper" and rec["written_by"] == "wrapper" and rec["kind"] == PL.RECORD_KIND
+    assert rec["status"] == "VOID" and rec["void"]["step"] == "timeout" and rec["inner_exit"] == 124
 
 
 def test_THE_CEILING_KILL_after_an_ignored_TERM_and_the_gate_is_restored(tmp_path):
@@ -170,6 +185,33 @@ def test_THE_CEILING_KILL_after_an_ignored_TERM_and_the_gate_is_restored(tmp_pat
     assert p.returncode == 137 and outer["inner_exit"] == 137 and outer["outcome"] == "TIMEOUT"
     assert outer["wall_seconds"] < 10 and outer["survivors"] == ""
     assert outer["gate_restored"] is True and _restored(repo)
+    rec = _record(repo)                                     # rev 3: the forced KILL left no record -> the wrapper's
+    assert outer["record_by"] == "wrapper" and rec["written_by"] == "wrapper"
+    assert rec["status"] == "VOID" and rec["void"]["step"] == "timeout" and rec["inner_exit"] == 137
+
+
+def test_REV3_THE_CEILING_leaves_the_script_s_own_record_alone(tmp_path):
+    repo = _repo(tmp_path, wrapper_text=_ceiling_copy())
+    p, outer, _ = _run(repo, "term_records")
+    assert p.returncode == 124 and outer["outcome"] == "TIMEOUT" and outer["record_by"] == "script"
+    assert _record(repo) == {"written_by": "script", "status": "VOID", "void": {"step": "terminated"}}
+    assert outer["gate_restored"] is True and _restored(repo)
+
+
+def test_REV3_A_CRASH_without_a_record_gets_the_wrapper_s(tmp_path):
+    repo = _repo(tmp_path)
+    p, outer, _ = _run(repo, "crash")
+    assert p.returncode == 9 and outer["outcome"] == "CRASHED" and outer["record_by"] == "wrapper"
+    rec = _record(repo)
+    assert rec["written_by"] == "wrapper" and rec["void"]["step"] == "crashed" and rec["inner_exit"] == 9
+    assert outer["gate_restored"] is True and _restored(repo)
+
+
+@pytest.mark.parametrize("mode, code", [("done", 0), ("void", 3), ("refused", 4)])
+def test_REV3_the_wrapper_writes_no_record_for_the_script_s_own_exits(tmp_path, mode, code):
+    repo = _repo(tmp_path)
+    p, outer, _ = _run(repo, mode)
+    assert p.returncode == code and outer["record_by"] == "none" and _record(repo) is None
 
 
 def test_THE_READ_BACK_IS_NOT_VACUOUS_an_unrestorable_gate_exits_5(tmp_path):

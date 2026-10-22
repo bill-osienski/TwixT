@@ -57,12 +57,16 @@ def _snapshot(net):
     return {k: np.array(v) for k, v in tree_flatten(net.parameters())}
 
 
+def _install(net, arm, seed=15):
+    return PHC.install(net, arm, init_seed=seed if arm == "R" else None)
+
+
 @pytest.mark.parametrize("arm", ["C", "R"])
 def test_each_arm_starts_exactly_equal_to_the_incumbent_head(reference, arm):
     batch = _batch()
     want_logits, want_value = _forward(reference, batch)
     net = _clone(reference)
-    PHC.install(net, arm)
+    _install(net, arm)
     got_logits, got_value = _forward(net, batch)
     np.testing.assert_array_equal(got_logits, want_logits)
     np.testing.assert_array_equal(got_value, want_value)
@@ -73,7 +77,7 @@ def test_the_residual_path_is_live_and_keeps_full_legal_support(reference):
     batch = _batch()
     base, _ = _forward(reference, batch)
     net = _clone(reference)
-    PHC.install(net, "R")
+    _install(net, "R")
     mx.random.seed(1)
     net.policy_head.extra_out.weight = mx.random.normal(net.policy_head.extra_out.weight.shape)
     logits, _ = _forward(net, batch)
@@ -95,7 +99,7 @@ def test_two_steps_change_exactly_the_arms_surface(reference, arm):
         target[i, :n] /= target[i, :n].sum()
     target = mx.array(target)
     net = _clone(reference)
-    names = PHC.install(net, arm)
+    names = _install(net, arm)
     before = _snapshot(net)
 
     def loss(model):
@@ -122,9 +126,43 @@ def test_refusals(reference):
     net = _clone(reference)
     with pytest.raises(ValueError, match="arm must be"):
         PHC.install(net, "X")
-    PHC.install(net, "R")
+    _install(net, "R")
     with pytest.raises(ValueError, match="installed twice"):
         PHC.install(net, "C")
     with pytest.raises(TypeError, match="not for search"):
         net.policy_head(None, [(0, 1)])
     assert type(reference.policy_head) is PolicyHead      # installing on a clone left the source alone
+
+
+def test_R_needs_an_integer_init_seed_and_C_refuses_one(reference):
+    for seed in (None, 15.0, "15", True):
+        with pytest.raises(ValueError, match="integer init_seed"):
+            PHC.install(_clone(reference), "R", init_seed=seed)
+    with pytest.raises(ValueError, match="arm C has no residual path"):
+        PHC.install(_clone(reference), "C", init_seed=15)
+
+
+def test_R_STARTS_FROM_ITS_SEED_whatever_was_drawn_before(reference):
+    """Rev 3: the residual path's starting tensors come from the seed alone -- not from MLX's global random state,
+    which the real loader never resets -- so two installs with the same seed are bitwise identical."""
+    def install_after(mx_seed, draws):
+        mx.random.seed(mx_seed)
+        mx.eval(mx.random.normal((draws, 7)), mx.random.uniform(shape=(draws,)))   # unrelated MLX draws
+        np.random.seed(mx_seed)
+        np.random.standard_normal(draws)                                             # and numpy's global ones
+        net = _clone(reference)
+        _install(net, "R")
+        return PHC.residual_arrays(net.policy_head)
+
+    a, b = install_after(1, 3), install_after(999, 50)
+    want = PHC.residual_init(15)
+    for k in PHC.EXTRA_ARRAYS:
+        assert a[k].dtype == np.float32 and np.array_equal(a[k], b[k]) and np.array_equal(a[k], want[k])
+    assert PHC.residual_sha256(a) == PHC.residual_sha256(b) == PHC.residual_sha256(want)
+    assert not np.any(a["extra_out.weight"]) and not np.any(a["extra_out.bias"])
+    bound = np.float32(1 / np.sqrt(128))
+    assert np.abs(a["extra_fc.weight"]).max() <= bound and np.abs(a["extra_fc.bias"]).max() <= bound
+    assert a["extra_fc.weight"].std() > 0.5 * bound / np.sqrt(3)                      # really drawn, not zero
+    other = PHC.residual_init(16)
+    assert not np.array_equal(other["extra_fc.weight"], want["extra_fc.weight"])
+    assert PHC.residual_sha256(other) != PHC.residual_sha256(want)

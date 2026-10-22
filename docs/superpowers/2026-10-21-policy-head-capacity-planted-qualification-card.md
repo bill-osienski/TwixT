@@ -1,6 +1,7 @@
-# Policy-head capacity pilot — planted-target qualification of the fitting recipe (FROZEN CARD, rev 2, 2026-10-21)
+# Policy-head capacity pilot — planted-target qualification of the fitting recipe (FROZEN CARD, rev 3, 2026-10-21)
 
-**Status.** Revision 2, frozen for review. Not committed; nothing is built or run.
+**Status.** Revision 3, frozen for review; it amends rev 2 (committed `28abdbfe`, built and wrapped in `be18fd07`).
+Nothing has run; the gate is closed.
 
 **It authorizes nothing.** Each of these needs its own explicit approval: committing this card; building the
 qualification script and its focused CPU tests; opening the gate and running it once.
@@ -19,6 +20,16 @@ position's mean added logit is subtracted before the SD over training legal move
 (§4). Gradient clipping is stated explicitly: global norm clipped at 1.0, as external-learning stage 2 (§5). The
 temperature is fitted on the training positions only and scored on the evaluation positions (§5, §6). Teacher seeds
 listed explicitly (§2). The replay VOID check and the `~/twixt-cache/` location were accepted.
+
+**Review changes in rev 3 (2026-10-21), two gaps found in the rev-2 build before any run.**
+(1) *Arm R's initialization was not frozen.* The residual path's first layer took MLX's unseeded default
+initializer; the tests reset MLX's global seed, but the real loader does not, so R/TC and R/TR could start from
+different tensors and the run could not be reproduced. Now seed **15** fixes them (§2, §5): both R fits start from
+the same tensors, independent of MLX's global random state, their SHA-256 is recorded, and a mismatch is a VOID (§8).
+(2) *A timeout could leave no record.* The wrapper's ceiling sends SIGTERM, which Python did not handle, so the
+process could die before writing `record.json`. Now the script turns SIGTERM into a recorded VOID, and when the
+script cannot write (KILL after the grace period, or a hard crash) the wrapper writes the record itself, marked as
+the wrapper's (§8). Nothing else in the design changed.
 
 ## 1. The question, and what an answer means
 
@@ -42,7 +53,7 @@ about capacity either.
 | dose | 400 Adam steps, batch 32, lr 1e-3, frozen draw order — 12,800 samples = 8 passes (matches Stage B) |
 | verdict | QUALIFIED only if all five rules F1, F2, S1, S2, S3 hold (§6) |
 | cap | 15 minutes wall for the whole run (§8) |
-| seeds | small integers outside the seed registry (no games are played), all distinct: **11** position selection; **12** TC teacher (perturbation noise ε); **13** TR teacher (weights of g); **14** draw order |
+| seeds | small integers outside the seed registry (no games are played), all distinct: **11** position selection; **12** TC teacher (perturbation noise ε); **13** TR teacher (weights of g); **14** draw order; **15** arm R's residual initialization (rev 3) |
 
 ## 3. Positions: source, split, digest, leakage
 
@@ -111,9 +122,15 @@ stored as float32 rows that sum to 1 over legal moves and are 0 on padding.
 
 ## 5. Fitting recipe (frozen; identical for every fit)
 
-- **Arms.** A fresh copy of the loaded network per fit; `policy_head_capacity.install(network, "C" | "R")`.
-  Before the first step each arm's evaluation logits must equal I bitwise (entry 18's tested property); otherwise
-  VOID.
+- **Arms.** A fresh copy of the loaded network per fit; `policy_head_capacity.install(network, "C")` or
+  `install(network, "R", init_seed=15)`. Before the first step each arm's evaluation logits must equal I bitwise
+  (entry 18's tested property); otherwise VOID.
+- **Arm R's starting residual path (rev 3).** `extra_fc` (64 × 128 weight, then 64 bias) drawn from
+  `numpy.random.default_rng(15)`, uniform on [−1/√128, 1/√128] (the range of MLX's default `Linear`
+  initializer), stored float32; `extra_out` zero, so R still starts exactly at I. The values never come from
+  MLX's global random state, so R/TC and R/TR start from bitwise-identical tensors whatever else was drawn before.
+  The SHA-256 of the four residual arrays (`policy_head_capacity.residual_sha256`) is recorded once for the run and
+  per R fit; each R fit must start at the seed-15 digest, otherwise VOID.
 - **Loss.** Soft-target cross-entropy as in `tests/test_policy_head_capacity.py`:
   `−Σ p_target · log_softmax(logits)` over the batch's padded moves, divided by the batch size; computed from the
   cached features through `network.policy_head.forward_padded` only.
@@ -176,13 +193,22 @@ approval:
 - after a fit, any parameter outside the arm's surface changed, or any BatchNorm running statistic changed;
 - the network or its policy head leaves eval mode;
 - checkpoint SHA-1 mismatch, or the feature cache's re-hash does not match its recorded digest;
+- an R fit whose residual path does not start at the seed-15 tensors (rev 3);
 - a non-24×24 position; a replayed `n_legal` or move legality mismatch; fewer unique positions than §3 requires;
   any count differing from the frozen numbers;
 - the 15-minute wall cap reached (enforced by the wrapper's alarm and checked by the script between phases);
+- SIGTERM received during the run (the wrapper's ceiling, or a signal it forwards), recorded at step
+  `terminated` (rev 3);
 - any exception.
 
 **Record boundary.** The verdict is computed inside the same handler that writes `record.json`, so every exit,
-including VOID, leaves a record.
+including VOID, leaves a record. Inside that handler SIGTERM raises and is recorded (step `terminated`, with the
+phase in progress); while the record is being written SIGTERM is ignored. **Wrapper record (rev 3):** if the run
+timed out, crashed or was interrupted and no `record.json` exists once no run process survives (the process was
+killed after the 10-second grace period, or died without reaching the handler), the wrapper writes `record.json`
+itself, create-only, with `"written_by": "wrapper"`, status VOID, step `timeout`, `crashed` or `interrupted`, and
+the inner exit code; the script's own records carry `"written_by": "script"`. The wrapper's `outer.json` records
+which of the two wrote it (`record_by`). A wrapper record that cannot be written makes the wrapper exit 5.
 
 ## 9. Execution (each step separately approved)
 
@@ -191,7 +217,11 @@ including VOID, leaves a record.
    with stub features and no checkpoint, run in a clean linked worktree (the fit imports `trainer`, hence
    `self_play`): each teacher is exactly representable by its arm (copying the planted weights gives KL 0), the
    within-position scale procedure hits 1.0 nat, clipping matches `clip_grad_norm`, the digest equals Stage B's,
-   split and leakage, the five rules on hand-computed numbers, and each VOID path fires.
+   split and leakage, the five rules on hand-computed numbers, and each VOID path fires. Rev 3 adds: R's residual
+   initialization is fixed by seed 15, identical across R/TC and R/TR and unaffected by unrelated MLX or numpy
+   random draws; SIGTERM inside the record boundary leaves a VOID record (in-process and in a real subprocess);
+   the wrapper writes its own record after TERM and after a forced KILL, leaves the script's record alone, and
+   writes one after a crash (stub module in a throwaway repository, short ceiling).
 2. **Run once.** In a clean linked worktree: a one-line commit opens the gate; the wrapper runs the script under
    `.venv/bin/python` with a 900-second alarm; the gate is restored and committed with the evidence; main is
    fast-forwarded and the worktree removed.

@@ -1,5 +1,5 @@
 #!/bin/bash
-# POLICY-HEAD CAPACITY PLANTED QUALIFICATION -- OUTER WRAPPER (card §9 step 2; rev 2, 28abdbfe).
+# POLICY-HEAD CAPACITY PLANTED QUALIFICATION -- OUTER WRAPPER (card §9 step 2; rev 3, amending rev 2 of 28abdbfe).
 # Runs `python -B -m scripts.GPU.alphazero.policy_head_capacity_planted run --checkpoint <calib020_0001>` ONCE,
 # under ONE ceiling: TERM to the run's whole process group at 890 s, KILL 10 s later -- 900 s in all, the card's
 # 15 minutes. This machine has no `timeout`; the perl supervisor below does its job and keeps its exit codes
@@ -10,11 +10,16 @@
 # (the parent of the shared git directory), by absolute path; nothing is installed or copied.
 # Writes, create-only, in THIS directory: run.stdout.txt, run.stderr.txt, outer.json. The script owns
 # docs/superpowers/evidence/policy-head-capacity-planted/ (create-only: it refuses if that exists).
+# The card promises record.json on every exit. The script writes it itself, SIGTERM included (VOID at step
+# "terminated"). If the run TIMED OUT, CRASHED or was INTERRUPTED and no record.json exists once no run process
+# survives (KILL after the grace period, a hard crash), THE WRAPPER writes record.json there, create-only, marked
+# "written_by": "wrapper", status VOID, step timeout | crashed | interrupted. outer.json's "record_by" says who
+# wrote it: script | wrapper | none.
 #
 #   inner exit -> outcome: 0 COMPLETED (verdict in the script's record.json) | 3 VOID | 4 REFUSED | 2 USAGE |
 #                          124, 137 TIMEOUT | anything else CRASHED; a signal to the wrapper -> INTERRUPTED
 #   outer exit: the inner exit; 1 if the wrapper refused before the run; 130 if interrupted;
-#               5 if the gate was NOT restored (overrides every other status).
+#               5 if the gate was NOT restored, or a needed wrapper record could not be written (overrides all).
 set -u
 OUT_REL=docs/superpowers/evidence/policy-head-capacity-planted-run
 RUN_REL=docs/superpowers/evidence/policy-head-capacity-planted
@@ -27,6 +32,7 @@ GRACE_S=10
 W=$(cd "$(dirname "$0")/../../../.." && pwd -P) || exit 1
 cd "$W" || exit 1
 status=1; inner=""; outcome="NOT_STARTED"; started=false; PRE=""; HEAD_C=""; PY=""; CKPT=""; start=0
+RECORD_KIND=policy-head-capacity-planted-record/1
 
 restore() {
   /usr/bin/sed -i '' "s/^${GATE} = True\$/${GATE} = False/" "$GATE_REL"
@@ -41,13 +47,33 @@ finish() {
   fi
   survivors=$(pgrep -f -- "-m ${MODULE} run" | tr '\n' ' ')
   final=$status
+  record_by=none
+  if [ "$started" = true ]; then
+    if [ -f "$RUN_REL/record.json" ]; then
+      record_by=script
+    elif [ -z "$survivors" ]; then
+      case "$outcome" in
+        TIMEOUT) step=timeout ;;
+        CRASHED) step=crashed ;;
+        INTERRUPTED) step=interrupted ;;
+        *) step="" ;;
+      esac
+      if [ -n "$step" ]; then
+        mkdir -p "$RUN_REL" &&
+          printf '{"kind": "%s", "written_by": "wrapper", "status": "VOID", "void": {"step": "%s", "detail": "inner exit %s; the script left no record.json (ceiling: TERM at %d s, KILL %d s later)"}, "inner_exit": %s, "term_s": %d, "grace_s": %d}\n' \
+            "$RECORD_KIND" "$step" "${inner:-none}" "$TERM_S" "$GRACE_S" "${inner:-null}" "$TERM_S" "$GRACE_S" \
+            > "$RUN_REL/record.json" && record_by=wrapper
+        [ "$record_by" = wrapper ] || { echo "WRAPPER RECORD NOT WRITTEN: $RUN_REL/record.json" >&2; final=5; }
+      fi
+    fi
+  fi
   if [ "$restored" != true ]; then
     echo "GATE NOT RESTORED: $GATE_REL" >&2
     final=5
   fi
   if [ "$started" = true ]; then
-    printf '{"inner_exit": %s, "outcome": "%s", "outer_exit": %d, "gate_restored": %s, "survivors": "%s", "wall_seconds": %d, "term_s": %d, "grace_s": %d, "tree": "%s", "head": "%s", "pre_open": "%s", "python": "%s", "checkpoint": "%s"}\n' \
-      "${inner:-null}" "$outcome" "$final" "$restored" "$survivors" "$(( $(date +%s) - start ))" "$TERM_S" "$GRACE_S" \
+    printf '{"inner_exit": %s, "outcome": "%s", "outer_exit": %d, "gate_restored": %s, "survivors": "%s", "record_by": "%s", "wall_seconds": %d, "term_s": %d, "grace_s": %d, "tree": "%s", "head": "%s", "pre_open": "%s", "python": "%s", "checkpoint": "%s"}\n' \
+      "${inner:-null}" "$outcome" "$final" "$restored" "$survivors" "$record_by" "$(( $(date +%s) - start ))" "$TERM_S" "$GRACE_S" \
       "$W" "$HEAD_C" "$PRE" "$PY" "$CKPT" > "$OUT_REL/outer.json" || final=5
   fi
   exit "$final"

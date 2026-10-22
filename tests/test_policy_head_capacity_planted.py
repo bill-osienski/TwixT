@@ -1,10 +1,15 @@
 """Planted-target qualification (card docs/superpowers/2026-10-21-policy-head-capacity-planted-qualification-card.md,
-rev 2): the build's focused CPU checks. STUBS ONLY -- synthetic games played through the rules engine, a seeded
+rev 3): the build's focused CPU checks. STUBS ONLY -- synthetic games played through the rules engine, a seeded
 random-init network in place of calib020_0001, and random features keyed by state digest. No checkpoint, no real
 feature, no fit on real data. The gate stays closed. `trainer` (hence `self_play`) is imported: linked worktree only."""
 import itertools
 import json
 import math
+import os
+import signal
+import subprocess
+import sys
+import time
 
 import numpy as np
 import pytest
@@ -109,7 +114,9 @@ def test_the_gate_is_closed_and_the_public_entry_refuses_before_writing_anything
 def test_the_frozen_numbers_are_the_card_s():
     assert PL.FROZEN["steps"] * PL.FROZEN["batch"] == 8 * PL.FROZEN["n_train"]
     assert (PL.FROZEN["n_train"], PL.FROZEN["n_eval"], PL.FROZEN["steps"], PL.FROZEN["batch"]) == (1600, 400, 400, 32)
-    assert PL.SEEDS == {"selection": 11, "tc": 12, "tr": 13, "order": 14} and len(set(PL.SEEDS.values())) == 4
+    assert PL.SEEDS == {"selection": 11, "tc": 12, "tr": 13, "order": 14, "r_init": 15}
+    assert len(set(PL.SEEDS.values())) == 5
+    assert PL.R_INIT_SHA256 == PHC.residual_sha256(PHC.residual_init(15))
     assert (PL.LEARNING_RATE, PL.CLIP_NORM, PL.WEIGHT_DECAY, PL.DELTA, PL.FIT_FRACTION) == (1e-3, 1.0, 0.0, 0.05, 0.25)
     assert PL.ADAM == {"betas": [0.9, 0.999], "eps": 1e-8, "bias_correction": False}
     assert PL.CACHE_DIR.resolve().is_relative_to(PL.ROOT.resolve()) is False
@@ -199,7 +206,7 @@ def test_TC_is_exactly_representable_by_both_arms(data):
     planted = [(k, v) for k, v in tree_flatten(data["tc_head"].parameters()) if k in PL.TC_ARRAYS]
     for arm in ("C", "R"):
         net = _net()
-        PHC.install(net, arm)
+        PHC.install(net, arm, init_seed=15 if arm == "R" else None)
         net.policy_head.update(tree_unflatten(planted))
         got = PL.head_logits(net.policy_head, E)
         assert np.array_equal(got, want) and PL.mean_kl(E["TC"], got, E["mask"]) < 1e-6
@@ -209,7 +216,7 @@ def test_TC_is_exactly_representable_by_both_arms(data):
 def test_TR_is_exactly_representable_by_R_only(data):
     E = data["E"]
     net = _net()
-    PHC.install(net, "R")
+    PHC.install(net, "R", init_seed=15)
     h = net.policy_head
     h.extra_fc.weight = mx.array(data["w1"].astype(np.float32))
     h.extra_fc.bias = mx.zeros_like(h.extra_fc.bias)
@@ -236,7 +243,7 @@ def test_CLIPPING_matches_clip_grad_norm_and_is_active(data, monkeypatch):
 
     def manual(max_norm):
         ref = _net()
-        PHC.install(ref, "C")
+        PHC.install(ref, "C", init_seed=None)
         _, grads = nn.value_and_grad(ref, PL.soft_ce)(ref, *batch)
         g, norm = ((grads["policy_head"], None) if max_norm is None
                    else clip_grad_norm(grads["policy_head"], max_norm=max_norm))
@@ -298,8 +305,8 @@ def _fit_small(data, target=None, i_eval=None):
 def test_THE_GUARDS_void_a_gradient_outside_the_surface(data, monkeypatch):
     real = PHC.install
 
-    def leaky(network, arm):
-        names = real(network, arm)
+    def leaky(network, arm, **kw):
+        names = real(network, arm, **kw)
         network.value_head.unfreeze()
         return names
     monkeypatch.setattr(PL.PHC, "install", leaky)
@@ -325,6 +332,39 @@ def test_THE_GUARDS_void_leaving_eval_mode_a_wrong_start_and_a_nonfinite_loss(da
     monkeypatch.setattr(PL, "snapshot", then_train)
     with pytest.raises(PL.Void, match="left eval mode"):
         _fit_small(data)
+
+
+def _unseeded_net(mx_seed, draws):
+    """calib020_0001's loader never resets MLX's global seed: here every network comes from a different state."""
+    def make():
+        net = _net()
+        mx.random.seed(mx_seed)
+        mx.eval(mx.random.normal((draws, 5)))
+        np.random.seed(mx_seed)
+        np.random.standard_normal(draws)
+        return net
+    return make
+
+
+def test_REV3_both_R_fits_start_from_seed_15_whatever_was_drawn_before(data):
+    """The run's two R fits (R/TC, R/TR) start from bitwise-identical residual tensors, recorded by digest; so an R
+    fit is reproducible -- the same final logits -- even when unrelated random draws differ in between."""
+    T, E = data["T"], data["E"]
+    order = PL.draw_order(48, 12, 8)
+    outs = [PL.fit(_unseeded_net(seed, draws), "R", {**T, "target": T["TR"]}, {**E, "target": E["TR"]}, order,
+                   data["i_e"]) for seed, draws in ((1, 3), (999, 40))]
+    assert outs[0]["r_init_sha256"] == outs[1]["r_init_sha256"] == PL.R_INIT_SHA256
+    assert np.array_equal(outs[0]["eval_logits"], outs[1]["eval_logits"])
+    assert [s["loss"] for s in outs[0]["steps"]] == [s["loss"] for s in outs[1]["steps"]]
+    c = PL.fit(_net, "C", {**T, "target": T["TC"]}, {**E, "target": E["TC"]}, order, data["i_e"])
+    assert c["r_init_sha256"] is None
+
+
+def test_REV3_an_R_fit_not_starting_at_seed_15_voids(data, monkeypatch):
+    monkeypatch.setattr(PL, "R_INIT_SHA256", "0" * 64)
+    T, E = data["T"], data["E"]
+    with pytest.raises(PL.Void, match="residual path starts at"):
+        PL.fit(_net, "R", {**T, "target": T["TR"]}, {**E, "target": E["TR"]}, PL.draw_order(48, 12, 8), data["i_e"])
 
 
 def test_the_temperature_fit_recovers_a_planted_temperature():
@@ -376,6 +416,9 @@ def test_the_whole_path_completes_on_stubs_and_records_every_number(tmp_path, mo
     assert seen == [SMALL["n_train"]]                                            # temperature: training only
     assert abs(rec["teachers"]["tc_scale"] - 1) <= PL.SCALE_TOL and rec["teachers"]["tr_scale"] == pytest.approx(1)
     assert set(rec["fits"]) == {"C/TC", "R/TC", "C/TR", "R/TR"}
+    assert rec["written_by"] == "script" and rec["r_init"] == {"seed": 15, "sha256": PL.R_INIT_SHA256}
+    assert rec["fits"]["R/TC"]["r_init_sha256"] == rec["fits"]["R/TR"]["r_init_sha256"] == PL.R_INIT_SHA256
+    assert rec["fits"]["C/TC"]["r_init_sha256"] is None is rec["fits"]["C/TR"]["r_init_sha256"]
     for key, f in rec["fits"].items():
         assert f["starting_kl"] == rec["kl0"][key.split("/")[1]] and f["final_kl"] == rec["kl"][key]
         assert len(f["grad_norms"]) == SMALL["steps"] and 0 <= f["clipped_fraction"] <= 1
@@ -435,3 +478,50 @@ def test_A_CHANGED_CACHE_voids_with_a_record(tmp_path, monkeypatch):
     monkeypatch.setattr(PL, "top2_fraction", _corrupting_top2(PL.top2_fraction))
     code, rec = PL.conclude(SMALL, _seams(), tmp_path / "ev", tmp_path / "cache")
     assert code == PL.EXIT_VOID and rec["void"]["step"] == "cache", rec.get("void")
+
+
+# ─────────────────────────────── rev 3: SIGTERM inside the record boundary ───────────────────────────────
+
+def test_REV3_SIGTERM_inside_the_boundary_leaves_a_VOID_record_and_restores_the_handler(tmp_path):
+    def term_then_games():
+        os.kill(os.getpid(), signal.SIGTERM)
+        time.sleep(5)                         # the handler raises here; a missed signal would fall through
+        return GAMES
+    before = signal.getsignal(signal.SIGTERM)
+    code, rec = PL.conclude(SMALL, _seams(load_games=term_then_games), tmp_path / "ev", tmp_path / "cache")
+    assert signal.getsignal(signal.SIGTERM) is before
+    assert code == PL.EXIT_VOID and rec["status"] == "VOID" and rec["void"]["step"] == "terminated"
+    assert "SIGTERM" in rec["void"]["detail"] and "during phase positions" in rec["void"]["detail"]
+    on_disk = json.loads((tmp_path / "ev" / "record.json").read_text())
+    assert on_disk["void"]["step"] == "terminated" and on_disk["written_by"] == "script"
+
+
+SUBPROCESS = """
+import pathlib, sys, time
+from scripts.GPU.alphazero import policy_head_capacity_planted as PL
+out, ready = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])
+def hang():
+    ready.write_text("ready")
+    time.sleep(120)
+seams = PL.Seams(load_games=hang, checkpoint_sha1=lambda: "", load_network=lambda: None, features=lambda n, s: None)
+code, rec = PL.conclude({"n_train": 1}, seams, out / "ev", out / "cache")
+sys.exit(code)
+"""
+
+
+def test_REV3_a_real_SIGTERM_to_a_real_process_leaves_the_record(tmp_path):
+    """As the wrapper's ceiling delivers it: from outside, to a separate Python process blocked mid-run."""
+    ready = tmp_path / "ready"
+    proc = subprocess.Popen([sys.executable, "-B", "-c", SUBPROCESS, str(tmp_path), str(ready)], cwd=PL.ROOT,
+                            env={**os.environ, "PYTHONPATH": str(PL.ROOT)}, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE, text=True)
+    deadline = time.monotonic() + 60
+    while not ready.exists():
+        assert proc.poll() is None, proc.communicate()
+        assert time.monotonic() < deadline, "the subprocess never reached the run"
+        time.sleep(0.05)
+    proc.send_signal(signal.SIGTERM)
+    _, err = proc.communicate(timeout=30)
+    assert proc.returncode == PL.EXIT_VOID, err
+    rec = json.loads((tmp_path / "ev" / "record.json").read_text())
+    assert rec["status"] == "VOID" and rec["void"]["step"] == "terminated" and rec["written_by"] == "script"
