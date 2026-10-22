@@ -55,10 +55,10 @@ The forced tier has no Phase 2 (positions 1–2 plies from terminal don't need M
 | `--max-probes` | 30 | Final cap on admitted probes (post-filter) |
 | `--max-probes-per-game` | 2 | Maximum probes from any single source game, total across all 4 categories. Combined with the internal `MIN_PLY_SEPARATION_SAME_GAME=3` constant, no single game contributes more than 2 probes and any 2 it contributes are at least 3 plies apart in the source trajectory. Strong-advantage tier only. Default 2 is conservative; raise only if the suite is consistently undersized. |
 | `--label-worker-mode` | process | Phase 2 execution mode. Default `process` runs a `ProcessPoolExecutor` of `--label-workers` workers. Pass `serial` for the single-process byte-reference path (slower; useful for debugging or strict reproducibility). |
-| `--label-workers` | 10 (process) / 1 (serial) | Worker count under `--label-worker-mode=process`. Default 10 (M3 Pro optimum). Use `scripts/probes/benchmark_phase2_knobs.py` to tune for your machine. Ignored under `serial`. |
-| `--mcts-eval-batch-size` | 14 | NN batch size for the labeler's MCTS. Capped at 14 because larger batches have caused Metal hangs; pass `--allow-unsafe-eval-batch` to exceed. |
-| `--mcts-stall-flush-sims` | 16 | MCTS stall-flush threshold (see `MCTSConfig`). 0 disables. |
-| `--allow-unsafe-eval-batch` | flag | Required to set `--mcts-eval-batch-size > 14`. Intended only for local benchmarking. |
+| `--label-workers` | 10 (process) / 1 (serial) | Worker count under `--label-worker-mode=process`. Default 10 (M3 Pro optimum). On the M5 Max (18 cores, 2026-10-21) 10–18 workers were within 1% of each other (~3.25x vs serial), so 10 is still fine there. Use `scripts/probes/benchmark_phase2_knobs.py` to tune for your machine. Ignored under `serial`. |
+| `--mcts-eval-batch-size` | 14 | Passed into the labeler's `MCTSConfig` and recorded in `meta.phase2_run_stats`, but it has **no effect on labeling** (corrected 2026-10-21): the labeler's MCTS calls `MCTS.search()`, the synchronous path that evaluates one leaf per NN call; only the batched `search_from_root()` (self-play) reads `eval_batch_size` and `stall_flush_sims`. Capped at 14 because larger batches have caused Metal hangs in self-play; pass `--allow-unsafe-eval-batch` to exceed. |
+| `--mcts-stall-flush-sims` | 16 | MCTS stall-flush threshold (see `MCTSConfig`). 0 disables. Like `--mcts-eval-batch-size`, recorded but **inert for labeling** (corrected 2026-10-21). |
+| `--allow-unsafe-eval-batch` | flag | Required to set `--mcts-eval-batch-size > 14`. Intended only for local benchmarking. Since the labeler never reads the eval batch, this neither speeds labeling up nor can it trigger the Metal hang here. |
 | `--admission-borderline-epsilon` | 0.01 | In process mode, candidates whose phase-2 label is within ε of any admission threshold are re-labeled in the main process to use the serial reference label. 0 disables. |
 | `--no-borderline-rerun` | flag | Disable borderline rerun even when ε > 0. Used for benchmarking the raw process-pool path. |
 | `--out` | per-tier default | Output JSON path |
@@ -143,7 +143,7 @@ For a first iteration: use `--label-mcts-sims 2000 --label-mcts-repeats 2` and a
 
 Phase 2 runs in a `ProcessPoolExecutor` by default (`--label-worker-mode process` with `--label-workers 10`), one MLX network per worker. The default 10 workers is the M3 Pro optimum validated by `scripts/probes/benchmark_phase2_knobs.py`. For strict byte-reproducibility (e.g., generating golden test fixtures), pass `--label-worker-mode serial` to use the single-process reference path.
 
-To tune for a different machine, run `scripts/probes/benchmark_phase2_knobs.py` to sweep worker counts and pick the best for your hardware. Avoid increasing `--mcts-eval-batch-size` above 14 unless intentionally benchmarking with `--allow-unsafe-eval-batch`. Higher worker counts are not always faster: each process loads its own MLX network and can contend for the Metal scheduler.
+To tune for a different machine, run `scripts/probes/benchmark_phase2_knobs.py` to sweep worker counts and pick the best for your hardware. Worker count is the only knob that matters for labeling (see the correction below). Avoid increasing `--mcts-eval-batch-size` above 14 unless intentionally benchmarking with `--allow-unsafe-eval-batch`. Higher worker counts are not always faster: each process loads its own MLX network and can contend for the Metal scheduler.
 
 `--label-worker-mode process --label-workers 1` is valid (useful for testing worker initialization and deterministic reassembly), but it is not expected to speed up the run.
 
@@ -154,6 +154,8 @@ To tune for a different machine, run `scripts/probes/benchmark_phase2_knobs.py` 
 ### Tuning for different hardware
 
 The default `--label-workers 10` is the M3 Pro optimum (3.19x speedup vs. serial baseline; admitted-ID equivalent). On other Apple Silicon (M2, M4, M3 Max, etc.) or after MLX version changes, re-run the bench to find the local sweet spot. It does coordinate-descent over worker count, eval batch, and stall-flush, with a SIGTERM-then-SIGKILL watchdog that catches the documented Metal hang above `--mcts-eval-batch-size=14`.
+
+**Correction (2026-10-21).** Only the worker axis of this bench measures anything: the labeler's MCTS calls `MCTS.search()`, the synchronous path that evaluates one leaf per NN call; only the batched `search_from_root()` (self-play) reads `eval_batch_size` and `stall_flush_sims`. Eval-batch and stall-flush differences in its report are run-to-run noise, and `--include-unsafe` cannot reproduce the hang through the labeler. On the M5 Max (18 cores, 40 GPU cores) the bench gave serial 336.8 s; 8 workers 107.6 s (3.13x); 10–18 workers 102.9–103.8 s (3.24–3.27x), flat from 10 up; eval batch 12–48 and stall-flush 8–32 all within 0.6 s. For the self-play knobs (`train.py --n-workers`, `--mcts-eval-batch-size`), which do use the batched path, use `scripts/bench_knee.py`.
 
 ```bash
 .venv/bin/python scripts/probes/benchmark_phase2_knobs.py \

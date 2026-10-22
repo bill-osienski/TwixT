@@ -1,0 +1,121 @@
+     0.1  ============================================================
+     0.1  ALPHAZERO TRAINING
+     0.1  ============================================================
+     0.1  
+     0.1  Configuration:
+     0.1    Iterations: 1
+     0.1    Games/iteration: 36
+     0.1    Train steps/iteration: 0
+     0.1    Batch size: 64
+     0.1    MCTS simulations: 400
+     0.1    MCTS: eval_batch=14, virtual_visits=8, stall_flush=48
+     0.1    Max moves/game: 24:280 (per curriculum size)
+     0.1    Network: hidden=128, blocks=6
+     0.1    Learning rate: 0.001
+     0.1    L2 weight: 0.0001
+     0.1    Buffer size: 100000
+     0.1    Replay cap: disabled (all positions from every game)
+     0.1    Checkpoint dir: /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/22e04ca7-539e-4f9d-bf13-2e42f602fcb8/scratchpad/diag-w12/runs/workers_w12_eb14_r6/checkpoint
+     0.1    Curriculum sizes: (24,)
+     0.1    Workers: 12
+     0.1    Save games: False
+     0.1    Loading weights from: /Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors
+     0.1  
+     0.1  Metal cache limit set to 2.0GB
+     0.1    Inline forced-probe eval: disabled
+     0.1    Inline strong_advantage-probe eval: disabled
+     0.1  Loaded weights-only from /Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors (no state restored)
+     0.1  Starting training: 1 iterations
+     0.1    Run ID: 20261021_191437_560318
+     0.1    Games/iter: 36
+     0.1    Train steps/iter: 0
+     0.1    Batch size: 64
+     0.1    Buffer size: 100000
+     0.1    MCTS simulations: 400
+     0.1    Learning rate: 0.001 (value head: 0.0001)
+     0.1    Value grad max norm: 0.5
+     0.1    Value weight: 0.5 (target, warmup applies)
+     0.1    Value weight: 0.5 (progress_weighted=True, floor=0.25)
+     0.1    Curriculum sizes: (24,)
+     0.1    Starting active_size: 24
+     0.1    Sims policy: CLI override
+     0.1    Workers: 12 (parallel)
+     0.1    Save games: False
+     0.1    Conversion auxiliary loss: disabled
+     0.1    Recovery / extreme-closeout-drift: enabled (du_threshold=10, delay_threshold=20)
+     0.1    Closeout td=1 visit forcing: disabled
+     0.1    Closeout selection tie-break: disabled
+     0.1    Recovery / re-targeting diagnostics: enabled
+     0.1      collapse_value <=         -0.75
+     0.1      severe_value <=           -0.90
+     0.1      diffuse_root_top1 <=       0.20
+     0.1      delta >=                   0.50
+     0.1      delta_max_current_score:  -0.30
+     0.1      alternate_component_min_size:  4
+     0.1      classify_defense:          on
+     0.1      sample_all_moves:          off  (cap=32 per side)
+     0.1    Caffeinate: enabled (PID 80359)
+     0.1  
+     0.1  ============================================================
+     0.1  Iteration 1/1
+     0.1    Curriculum: active_size=24, max_moves=280
+     0.1    Sims: cli=400, table=400, factor=1.00, effective=400 (cli)
+     0.1  ============================================================
+     0.1  
+     0.1  Self-play: generating 36 games (parallel, 12 workers)...
+     0.1    Started 12 workers, dynamic game assignment for 36 games
+    42.3    Games: 5/36
+    54.9    Games: 10/36
+    83.2    Games: 15/36
+    99.0    Games: 20/36
+   110.2    Games: 25/36
+   110.2    Worker 10 done (1/12)
+   111.8    Worker 1 done (2/12)
+   118.0    Worker 8 done (3/12)
+   121.8    Worker 2 done (4/12)
+   126.7    Worker 0 done (5/12)
+   126.9    Games: 30/36
+   126.9    Worker 3 done (6/12)
+   127.6    Worker 4 done (7/12)
+   133.4    Worker 5 done (8/12)
+   137.8    Worker 6 done (9/12)
+   137.9    Worker 9 done (10/12)
+   139.5    Games: 35/36
+   139.5    Worker 11 done (11/12)
+   207.7    Worker 7 done (12/12)
+   207.7    Worker summary (games,pos): w0=4/321 w1=2/198 w2=3/268 w3=2/173 w4=3/293 w5=3/269 w6=3/281 w7=3/365 w8=3/253 w9=5/411 w10=2/187 w11=3/306
+   207.7    Worker summary (time_s):    w0=126.5 w1=111.6 w2=121.6 w3=126.6 w4=127.4 w5=133.1 w6=137.6 w7=207.4 w8=117.7 w9=137.7 w10=109.9 w11=139.3 | imbalance=1.89x | straggler=w7
+   207.7    Generated 36 games, 3325 positions
+   207.7    Results: Red=18, Black=18, Draws=0
+   207.7      Draw breakdown: timeout=0, board_full=0, state_cap=0, unknown=0
+   207.7    Buffer size: 3325
+   207.7    Balance: black=50.0%, red=50.0%, draw=0.0% (decisive=36/36, window=0/20)
+   207.7    Backups: 886400, Leaf evals: 362090, NN batches: 31326
+   207.7    Avg batch: 11.6, Avg waiters: 2.4, Max waiters: 49
+   207.7    Flushes: full=19242, stall=9962, tail=2086
+   207.7    Avg plies: 61.6
+   207.8  
+   207.8    Sanity (3325 positions):
+   207.8      z: mean=0.003, std=1.000, [+/0/-]=1667/0/1658
+   207.8      z by to_move: red=-0.012 (+/0/-=823/0/843), black=0.017 (+/0/-=844/0/815)
+   207.8      v: mean=-0.085, std=0.631, range=[-0.99,1.00], mse=0.6470, sign_agree=72.3%
+   207.8      v cls: labels(+/-)=114/142, maj_base=55.5%, bal_acc=71.6%, mcc=0.436
+   207.8      v pretanh: range=[-2.68,3.47], p99=2.92, frac_sat=0.000, zv_corr=0.379 (n=256)
+   207.8      Sanity by connectivity (threshold: largest_component>=8 OR n_goal_touching>=2):
+   207.8        winning_structure    (n=39): sign_agree=76.9%, median |v|=0.948
+   207.8        no_winning_structure (n=217): sign_agree=71.4%, median |v|=0.421
+   207.8  
+   207.8  Skipping training (train_steps=0)
+   207.8    State: size=24 sims=400 factor=1.00 frozen=False promo_streak=1 demote_streak=0 full=True train=n/a
+   207.8  
+   207.8  Checkpoint saved: /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/22e04ca7-539e-4f9d-bf13-2e42f602fcb8/scratchpad/diag-w12/runs/workers_w12_eb14_r6/checkpoint/model_iter_0001.safetensors
+   207.8    Curriculum: active_size=24, draw_rate_true=0.0%, timeout_rate_rolling=0.0%
+   207.8    Status: sims_used=400, sims_next=400, factor=1.00, frozen=False
+   207.8    Timing: iter=207.7s, selfplay=207.7s, train=0.0s
+   207.8  
+   207.8  ============================================================
+   207.8  Training complete!
+   207.8  ============================================================
+   207.8    Caffeinate: stopped
+   207.9  
+   207.9  Training finished!

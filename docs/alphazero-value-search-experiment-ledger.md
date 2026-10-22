@@ -96,6 +96,8 @@ knob) is not a new hypothesis.
 
 > **Play-path timing on the new machine (Post-closure entry 19, 2026-10-21, MEASURED).** Mac Studio M5 Max: 1.74 ms per simulation, 0.70 s per ply at 400 simulations (eval mode, committed game positions, no games played, no seeds); about 41.7 s of search per game at entry 15's length, so the methods note's budgets become about 11.8 h (60%) and 47 h (55%) here (derived). Search time only, against entry 15's whole-game 66.6 s: no speed-up between machines is measured or claimed. Label lines derived (1.24 h / 0.62 h, constant cost per simulation assumed); the 205 s G-phase figure stays open (unexplained 3.6 vs 1.1 s per ply).
 
+> **Throughput settings on the new machine (Post-closure entry 20, 2026-10-21, MEASURED).** Self-play: **18 workers at eval batch 14** measured fastest (median 1,207 games/h while all workers are busy; 12 workers 1,038; eval batch 16–48 no faster, 32 and 48 slower; no hang up to 48 in 3 short runs each, which does not show the old hang is gone). Whole-run wall time is dominated by one state-cap game finishing alone (140–484 s for the same setting), so the first sweep's timeouts and its "hang at 16" are void. Labelling: 10–18 workers equal (~3.25x serial); eval batch and stall-flush are never read by the labeller. Operational only; no defaults changed. See do-not-repeat **#64**.
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -1651,6 +1653,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 62. **The root-only sequential-halving variant (Post-closure entry 15) — STOP_CONFIGURATION 2026-10-19.** 21.5/32 against a frozen bar of 24 (21–1–10; mean pair 0.672, interval includes 0.5). Do **not** add games, repeat the match, or treat the 21–10 lean as earning a confirmatory or strength comparison; and do **not** rescue it by changing the candidate count, `c_visit`, `c_scale`, the (q + 1)/2 mapping, the start ply, the tie-breaks or the final decision rule, by adding Gumbel noise, or by changing the simulation budget — each would be post-hoc tuning of a stopped configuration. The narrow #47 exception covered this one fixed variant and is spent; any other root-allocation idea needs its own justification, a new exception and its own authorization. The prototype stays unwired; production is unchanged.
 
 63. **The banked-budget controller of entry 16 — DECLINED 2026-10-20 (never built or run).** Do **not** tune this policy — its thresholds, credit amounts, caps or borrowing rule — against the consumed match records (root-halving and mirror-averaging replays), run further accounting variants on them, or treat the oracle bookkeeping as strength evidence: it assumed a free classification and measured chronological opportunity only (14.5% of freed credit reached contested moves; ~9% extra budget). The ~24% hypothetical reduction in simulated work is not a measured runtime saving and not evidence that play is preserved. Other adaptive-budget mechanisms are untested and need an independent justification and their own authorization, not a rescue of this policy.
+
+64. **Self-play throughput tuning on the M5 Max (Post-closure entry 20) — settled 2026-10-21.** Do **not** rank self-play settings on the total wall time of a few dozen games: one state-cap game finishing alone moves it by up to 3.5x. Rank on the rate while every worker is busy (`scripts/bench_knee.py` default). Do **not** read a watchdog kill as a Metal hang without progress output and stack dumps. Do **not** re-sweep eval batch above 14 hoping for speed on this machine (16–48 were no faster), and do **not** tune eval batch or stall-flush through `benchmark_phase2_knobs.py`: the labeller never reads them.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -3410,3 +3414,67 @@ baseline for 1.74 ms (CLAUDE.md): it came from three hand-built positions, with 
 **Conclusion / status.** MEASURED. Old-machine timings in this ledger stay as written (true for that machine);
 planning on this machine uses the figures above, with the derived lines carrying their assumptions. Still open
 here: the 205 s per G-phase game, and with it the pilot's total cost.
+
+### 20. Self-play and labelling throughput settings for the new machine (2026-10-21, MEASURED)
+
+**Test.** Find the fastest worker count and eval batch for (a) probe labelling (`build_probe_suite` phase 2) and
+(b) self-play generation (`train.py`) on the Mac Studio M5 Max of entry 19 (18 CPU cores, 40 GPU cores, 48 GB).
+The old values were tuned on the M3 Pro: `--label-workers 10`, training `--n-workers 10`, and eval batch capped at
+14 since 16 caused Metal hangs there. Operational tuning, not a strength experiment: games are unseeded and no
+outcome was read.
+
+**Hypothesis.** None for worker count. For eval batch, see the prediction.
+
+**Why it was plausible.** More cores and more GPU should move the worker optimum up. Whether the eval-batch-14 cap
+was still needed on new hardware was open.
+
+**Prediction on record.** Stated by the user before any eval-batch run: "we expect eval batch to cause it to crash
+however this is a new CPU/GPU and more [memory] so I'd expect [us] to exceed the current safe limit of 12 or 14".
+Nothing was predicted for worker count.
+
+**What ran.** All runs from main with no other heavy job at start; evidence (reports, CSVs, records, and the
+diagnostic's timestamped progress) in `docs/superpowers/evidence/selfplay-throughput/`.
+- *Labelling* (`scripts/probes/benchmark_phase2_knobs.py`, 10 candidates, 500 sims, `model_iter_0059`): run A,
+  workers 8–18, eval batch 12/14, stall-flush 8/16/32, 2 passes; run B, 12 workers, eval batch 14 and (unsafe)
+  16/24/32/48.
+- *Self-play* (`scripts/bench_knee.py`, rewritten for this, `calib020_0001`, 24x24, 400 sims, stall-flush 48,
+  virtual visits 8, outputs outside the repository): first sweep at `6d888aa8` (36 games/run, 2 repeats, scored on
+  whole-run wall time); diagnostic at `6864a16e` (12 workers, eval batch 14, 6 repeats, 30-minute watchdog,
+  unbuffered timestamped output, CPU/GPU sampling); steady-state sweep at `5ddd7437` (48 games/run, 3 repeats,
+  scored on games/h while every worker is busy, each run stopped at the first `Worker done`); one full run at 18
+  workers, eval batch 12.
+
+**Result.**
+- *Labelling.* Serial 336.8 s; 8 workers 107.6 s (3.13x); 10–18 workers 102.9–103.8 s (3.24–3.27x), flat from 10
+  up. Eval batch 12–48 and stall-flush 8–32 all within 0.6 s, with no hang. **Those two settings are inert for
+  labelling:** the labeller calls `MCTS.search()` (`probe_eval.py:1038` → `search_with_root`), one leaf per network
+  call; only `search_from_root()` (self-play) reads `eval_batch_size` (`mcts.py:632`) and `stall_flush_sims`
+  (`mcts.py:717`). Run B therefore tested nothing about the cap. `docs/probe-suite-generation.md` presented them as
+  labelling knobs and is corrected in the same commit as this entry.
+- *First self-play sweep — invalid.* 6 of 12 runs were killed at a 409 s watchdog, eval batch 14 included, so its
+  "first hang at eval batch 16" pick and the skipped 24/32/48 mean nothing.
+- *Diagnostic.* All 6 runs completed; no stall. Wall time 140–484 s for identical settings, but the game rate
+  while all workers were busy (games 5→25) was 0.280–0.306 games/s. The three slow runs each held exactly one
+  state-cap draw (about 270 plies) that ran alone at the end: one worker at 100% CPU, GPU about 20%, for up to 378
+  s. Outside CPU load stayed under 12% in the slow runs, so contention is ruled out. The first sweep's kills fit
+  this pattern (such runs take 400–480 s), but their output was lost, so that is inferred, not shown.
+- *Steady-state sweep* (median games/h, range over 3): at eval batch 14, workers 10 → 863 (776–998), 12 → 1,038
+  (1,003–1,104), 14 → 1,068 (874–1,235), 16 → 1,136 (1,042–1,214), **18 → 1,207 (1,142–1,251)**. At 18 workers,
+  eval batch **14 → 1,207**, 16 → 1,084 (989–1,088), 24 → 1,137 (1,056–1,195), 32 → 880 (858–1,199), 48 → 910
+  (906–1,005). All 30 runs good; no timeout or stall at any eval batch. Spread within a setting reached about 30%
+  (25–30 games per window, game-length mix, and another session's test suite adding up to 336% CPU in some runs).
+- *Eval batch 12, 18 workers, one full run:* 1,219 games/h steady; average batch 10.5 vs 11.6 at 14 (the cap binds
+  slightly more), speed unchanged.
+
+**Did it match the prediction, and why.** Partly. No eval batch up to 48 hung, in either the labeller (where it is
+never read, so that run says nothing) or self-play (3 short runs per value, about 2.5 minutes each). But going
+above 14 gave **no speed-up**: 32 and 48 were slower. Batches already average about 11.6 of 14, so throughput is
+limited by how fast the workers produce leaves, not by the cap. Three short clean runs per value do not show the
+old hang is gone.
+
+**Conclusion / status.** MEASURED; adopted by the user. Self-play: **18 workers, eval batch 14**, recorded in
+`train.py --help`, `docs/train-cli.md` and `docs/analysis-metrics-guide.md` (`151f09c4`). Defaults are unchanged
+(`--n-workers` stays 1, so pass 18 explicitly; eval batch stays 14). Labelling: `--label-workers 10` stays (within
+1% of the best). Separate finding, left as is: in training, each iteration waits on its slowest game, so a
+state-cap game costs up to about 5 minutes of near-idle machine per iteration; shortening such games would change
+play, so it is not a throughput setting. See do-not-repeat **#64**.

@@ -1,0 +1,646 @@
+{
+  "meta": {
+    "started": "2026-10-21 15:26:10",
+    "hardware": {
+      "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "python": "3.14.8",
+      "machdep.cpu.brand_string": "Apple M5 Max",
+      "hw.ncpu": "18",
+      "hw.memsize": "51539607552"
+    },
+    "git_head": "6d888aa88f9d3c42e2b27fa9d805eb1fcb74e461",
+    "weights": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "weights_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+    "args": {
+      "load_weights": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+      "out": "/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/22e04ca7-539e-4f9d-bf13-2e42f602fcb8/scratchpad/selfplay-sweep",
+      "workers": "[10, 12, 14, 16, 18]",
+      "eval_batches": "[14, 16, 24, 32, 48]",
+      "start_eval_batch": "14",
+      "games": "36",
+      "repeats": "2",
+      "sims": "400",
+      "stall_flush": "48",
+      "virtual_visits": "8",
+      "within": "0.03",
+      "first_timeout": "3600",
+      "timeout_mult": "3.0",
+      "min_timeout": "300",
+      "skip_stage2": "False"
+    },
+    "finished": "2026-10-21 16:24:19"
+  },
+  "picks": {
+    "workers_best": 10,
+    "workers_knee": 10,
+    "eval_batch_best": 14,
+    "eval_batch_knee": 14,
+    "first_hang_eval_batch": 16,
+    "within": 0.03
+  },
+  "stage1": {
+    "10": {
+      "ok_runs": 1,
+      "runs": 2,
+      "statuses": [
+        "OK",
+        "TIMEOUT"
+      ],
+      "plies_per_s": 14.801762114537446,
+      "plies_per_s_range": [
+        14.801762114537446,
+        14.801762114537446
+      ],
+      "pos_per_s": 22.254038179148314,
+      "pos_per_s_range": [
+        22.254038179148314,
+        22.254038179148314
+      ],
+      "games_per_h": 951.5418502202643,
+      "games_per_h_range": [
+        951.5418502202643,
+        951.5418502202643
+      ],
+      "s_per_game": 3.783333333333333,
+      "s_per_game_range": [
+        3.783333333333333,
+        3.783333333333333
+      ],
+      "avg_batch": 11.5,
+      "avg_batch_range": [
+        11.5,
+        11.5
+      ],
+      "avg_plies": 56.0,
+      "avg_plies_range": [
+        56.0,
+        56.0
+      ]
+    },
+    "12": {
+      "ok_runs": 2,
+      "runs": 2,
+      "statuses": [
+        "OK"
+      ],
+      "plies_per_s": 14.412676056338029,
+      "plies_per_s_range": [
+        14.121126760563381,
+        14.704225352112676
+      ],
+      "pos_per_s": 21.700704225352112,
+      "pos_per_s_range": [
+        21.288732394366196,
+        22.112676056338028
+      ],
+      "games_per_h": 936.693847294292,
+      "games_per_h_range": [
+        912.6760563380282,
+        960.7116382505559
+      ],
+      "s_per_game": 3.845833333333333,
+      "s_per_game_range": [
+        3.7472222222222222,
+        3.9444444444444446
+      ],
+      "avg_batch": 11.6,
+      "avg_batch_range": [
+        11.5,
+        11.7
+      ],
+      "avg_plies": 55.400000000000006,
+      "avg_plies_range": [
+        55.1,
+        55.7
+      ]
+    },
+    "14": {
+      "ok_runs": 1,
+      "runs": 2,
+      "statuses": [
+        "OK",
+        "TIMEOUT"
+      ],
+      "plies_per_s": 13.480943738656986,
+      "plies_per_s_range": [
+        13.480943738656986,
+        13.480943738656986
+      ],
+      "pos_per_s": 20.151240169388988,
+      "pos_per_s_range": [
+        20.151240169388988,
+        20.151240169388988
+      ],
+      "games_per_h": 784.0290381125227,
+      "games_per_h_range": [
+        784.0290381125227,
+        784.0290381125227
+      ],
+      "s_per_game": 4.591666666666667,
+      "s_per_game_range": [
+        4.591666666666667,
+        4.591666666666667
+      ],
+      "avg_batch": 11.6,
+      "avg_batch_range": [
+        11.6,
+        11.6
+      ],
+      "avg_plies": 61.9,
+      "avg_plies_range": [
+        61.9,
+        61.9
+      ]
+    },
+    "16": {
+      "ok_runs": 1,
+      "runs": 2,
+      "statuses": [
+        "OK",
+        "TIMEOUT"
+      ],
+      "plies_per_s": 13.865905848787447,
+      "plies_per_s_range": [
+        13.865905848787447,
+        13.865905848787447
+      ],
+      "pos_per_s": 20.720399429386593,
+      "pos_per_s_range": [
+        20.720399429386593,
+        20.720399429386593
+      ],
+      "games_per_h": 924.3937232524964,
+      "games_per_h_range": [
+        924.3937232524964,
+        924.3937232524964
+      ],
+      "s_per_game": 3.894444444444444,
+      "s_per_game_range": [
+        3.894444444444444,
+        3.894444444444444
+      ],
+      "avg_batch": 11.6,
+      "avg_batch_range": [
+        11.6,
+        11.6
+      ],
+      "avg_plies": 54.0,
+      "avg_plies_range": [
+        54.0,
+        54.0
+      ]
+    },
+    "18": {
+      "ok_runs": 1,
+      "runs": 2,
+      "statuses": [
+        "OK",
+        "TIMEOUT"
+      ],
+      "plies_per_s": 5.837315436241611,
+      "plies_per_s_range": [
+        5.837315436241611,
+        5.837315436241611
+      ],
+      "pos_per_s": 8.676510067114094,
+      "pos_per_s_range": [
+        8.676510067114094,
+        8.676510067114094
+      ],
+      "games_per_h": 347.9194630872483,
+      "games_per_h_range": [
+        347.9194630872483,
+        347.9194630872483
+      ],
+      "s_per_game": 10.347222222222221,
+      "s_per_game_range": [
+        10.347222222222221,
+        10.347222222222221
+      ],
+      "avg_batch": 11.6,
+      "avg_batch_range": [
+        11.6,
+        11.6
+      ],
+      "avg_plies": 60.4,
+      "avg_plies_range": [
+        60.4,
+        60.4
+      ]
+    }
+  },
+  "stage2": {
+    "14": {
+      "ok_runs": 1,
+      "runs": 2,
+      "statuses": [
+        "OK",
+        "TIMEOUT"
+      ],
+      "plies_per_s": 14.801762114537446,
+      "plies_per_s_range": [
+        14.801762114537446,
+        14.801762114537446
+      ],
+      "pos_per_s": 22.254038179148314,
+      "pos_per_s_range": [
+        22.254038179148314,
+        22.254038179148314
+      ],
+      "games_per_h": 951.5418502202643,
+      "games_per_h_range": [
+        951.5418502202643,
+        951.5418502202643
+      ],
+      "s_per_game": 3.783333333333333,
+      "s_per_game_range": [
+        3.783333333333333,
+        3.783333333333333
+      ],
+      "avg_batch": 11.5,
+      "avg_batch_range": [
+        11.5,
+        11.5
+      ],
+      "avg_plies": 56.0,
+      "avg_plies_range": [
+        56.0,
+        56.0
+      ]
+    },
+    "16": {
+      "ok_runs": 1,
+      "runs": 2,
+      "statuses": [
+        "OK",
+        "TIMEOUT"
+      ],
+      "plies_per_s": 6.846373500856653,
+      "plies_per_s_range": [
+        6.846373500856653,
+        6.846373500856653
+      ],
+      "pos_per_s": 10.185608223872073,
+      "pos_per_s_range": [
+        10.185608223872073,
+        10.185608223872073
+      ],
+      "games_per_h": 370.0742432895488,
+      "games_per_h_range": [
+        370.0742432895488,
+        370.0742432895488
+      ],
+      "s_per_game": 9.727777777777778,
+      "s_per_game_range": [
+        9.727777777777778,
+        9.727777777777778
+      ],
+      "avg_batch": 12.5,
+      "avg_batch_range": [
+        12.5,
+        12.5
+      ],
+      "avg_plies": 66.6,
+      "avg_plies_range": [
+        66.6,
+        66.6
+      ]
+    },
+    "24": {
+      "ok_runs": 0,
+      "runs": 1,
+      "statuses": [
+        "SKIPPED_AFTER_HANG_AT_16"
+      ]
+    },
+    "32": {
+      "ok_runs": 0,
+      "runs": 1,
+      "statuses": [
+        "SKIPPED_AFTER_HANG_AT_16"
+      ]
+    },
+    "48": {
+      "ok_runs": 0,
+      "runs": 1,
+      "statuses": [
+        "SKIPPED_AFTER_HANG_AT_16"
+      ]
+    }
+  },
+  "rows": [
+    {
+      "stage": "workers",
+      "workers": 10,
+      "eval_batch": 14,
+      "repeat": 1,
+      "wall_s": 136.39,
+      "children_cpu_s": 847.8,
+      "games": 36,
+      "positions": 3031,
+      "selfplay_s": 136.2,
+      "leaf_evals": 325540,
+      "nn_batches": 28223,
+      "avg_batch": 11.5,
+      "avg_waiters": 2.4,
+      "max_waiters": 49,
+      "flush_full": 17190,
+      "flush_stall": 9106,
+      "flush_tail": 1891,
+      "avg_plies": 56.0,
+      "red": 14,
+      "black": 22,
+      "draws": 0,
+      "workers_reported": 10,
+      "plies_per_s": 14.801762114537446,
+      "pos_per_s": 22.254038179148314,
+      "games_per_h": 951.5418502202643,
+      "s_per_game": 3.783333333333333,
+      "status": "OK"
+    },
+    {
+      "stage": "workers",
+      "workers": 10,
+      "eval_batch": 14,
+      "repeat": 2,
+      "wall_s": 409.2,
+      "children_cpu_s": 906.3,
+      "workers_reported": 10,
+      "status": "TIMEOUT"
+    },
+    {
+      "stage": "workers",
+      "workers": 12,
+      "eval_batch": 14,
+      "repeat": 1,
+      "wall_s": 135.1,
+      "children_cpu_s": 855.3,
+      "games": 36,
+      "positions": 2983,
+      "selfplay_s": 134.9,
+      "leaf_evals": 335934,
+      "nn_batches": 28638,
+      "avg_batch": 11.7,
+      "avg_waiters": 2.3,
+      "max_waiters": 49,
+      "flush_full": 18136,
+      "flush_stall": 8617,
+      "flush_tail": 1849,
+      "avg_plies": 55.1,
+      "red": 13,
+      "black": 23,
+      "draws": 0,
+      "workers_reported": 12,
+      "plies_per_s": 14.704225352112676,
+      "pos_per_s": 22.112676056338028,
+      "games_per_h": 960.7116382505559,
+      "s_per_game": 3.7472222222222222,
+      "status": "OK"
+    },
+    {
+      "stage": "workers",
+      "workers": 12,
+      "eval_batch": 14,
+      "repeat": 2,
+      "wall_s": 142.18,
+      "children_cpu_s": 937.6,
+      "games": 36,
+      "positions": 3023,
+      "selfplay_s": 142.0,
+      "leaf_evals": 323272,
+      "nn_batches": 28042,
+      "avg_batch": 11.5,
+      "avg_waiters": 2.4,
+      "max_waiters": 49,
+      "flush_full": 17085,
+      "flush_stall": 9050,
+      "flush_tail": 1871,
+      "avg_plies": 55.7,
+      "red": 19,
+      "black": 17,
+      "draws": 0,
+      "workers_reported": 12,
+      "plies_per_s": 14.121126760563381,
+      "pos_per_s": 21.288732394366196,
+      "games_per_h": 912.6760563380282,
+      "s_per_game": 3.9444444444444446,
+      "status": "OK"
+    },
+    {
+      "stage": "workers",
+      "workers": 14,
+      "eval_batch": 14,
+      "repeat": 1,
+      "wall_s": 165.51,
+      "children_cpu_s": 1323.8,
+      "games": 36,
+      "positions": 3331,
+      "selfplay_s": 165.3,
+      "leaf_evals": 377831,
+      "nn_batches": 32489,
+      "avg_batch": 11.6,
+      "avg_waiters": 2.3,
+      "max_waiters": 49,
+      "flush_full": 20651,
+      "flush_stall": 9720,
+      "flush_tail": 2082,
+      "avg_plies": 61.9,
+      "red": 23,
+      "black": 13,
+      "draws": 0,
+      "workers_reported": 14,
+      "plies_per_s": 13.480943738656986,
+      "pos_per_s": 20.151240169388988,
+      "games_per_h": 784.0290381125227,
+      "s_per_game": 4.591666666666667,
+      "status": "OK"
+    },
+    {
+      "stage": "workers",
+      "workers": 14,
+      "eval_batch": 14,
+      "repeat": 2,
+      "wall_s": 409.2,
+      "children_cpu_s": 1051.4,
+      "workers_reported": 14,
+      "status": "TIMEOUT"
+    },
+    {
+      "stage": "workers",
+      "workers": 16,
+      "eval_batch": 14,
+      "repeat": 1,
+      "wall_s": 140.35,
+      "children_cpu_s": 887.9,
+      "games": 36,
+      "positions": 2905,
+      "selfplay_s": 140.2,
+      "leaf_evals": 325687,
+      "nn_batches": 27969,
+      "avg_batch": 11.6,
+      "avg_waiters": 2.3,
+      "max_waiters": 49,
+      "flush_full": 17582,
+      "flush_stall": 8544,
+      "flush_tail": 1807,
+      "avg_plies": 54.0,
+      "red": 18,
+      "black": 18,
+      "draws": 0,
+      "workers_reported": 16,
+      "plies_per_s": 13.865905848787447,
+      "pos_per_s": 20.720399429386593,
+      "games_per_h": 924.3937232524964,
+      "s_per_game": 3.894444444444444,
+      "status": "OK"
+    },
+    {
+      "stage": "workers",
+      "workers": 16,
+      "eval_batch": 14,
+      "repeat": 2,
+      "wall_s": 409.2,
+      "children_cpu_s": 1063.8,
+      "workers_reported": 16,
+      "status": "TIMEOUT"
+    },
+    {
+      "stage": "workers",
+      "workers": 18,
+      "eval_batch": 14,
+      "repeat": 1,
+      "wall_s": 409.2,
+      "children_cpu_s": 924.8,
+      "workers_reported": 18,
+      "status": "TIMEOUT"
+    },
+    {
+      "stage": "workers",
+      "workers": 18,
+      "eval_batch": 14,
+      "repeat": 2,
+      "wall_s": 372.72,
+      "children_cpu_s": 1427.5,
+      "games": 36,
+      "positions": 3232,
+      "selfplay_s": 372.5,
+      "leaf_evals": 364121,
+      "nn_batches": 31357,
+      "avg_batch": 11.6,
+      "avg_waiters": 2.3,
+      "max_waiters": 49,
+      "flush_full": 19701,
+      "flush_stall": 9592,
+      "flush_tail": 2028,
+      "avg_plies": 60.4,
+      "red": 18,
+      "black": 18,
+      "draws": 0,
+      "workers_reported": 18,
+      "plies_per_s": 5.837315436241611,
+      "pos_per_s": 8.676510067114094,
+      "games_per_h": 347.9194630872483,
+      "s_per_game": 10.347222222222221,
+      "status": "OK"
+    },
+    {
+      "stage": "eval_batch",
+      "workers": 10,
+      "eval_batch": 14,
+      "repeat": 1,
+      "wall_s": 136.39,
+      "children_cpu_s": 847.8,
+      "games": 36,
+      "positions": 3031,
+      "selfplay_s": 136.2,
+      "leaf_evals": 325540,
+      "nn_batches": 28223,
+      "avg_batch": 11.5,
+      "avg_waiters": 2.4,
+      "max_waiters": 49,
+      "flush_full": 17190,
+      "flush_stall": 9106,
+      "flush_tail": 1891,
+      "avg_plies": 56.0,
+      "red": 14,
+      "black": 22,
+      "draws": 0,
+      "workers_reported": 10,
+      "plies_per_s": 14.801762114537446,
+      "pos_per_s": 22.254038179148314,
+      "games_per_h": 951.5418502202643,
+      "s_per_game": 3.783333333333333,
+      "status": "OK"
+    },
+    {
+      "stage": "eval_batch",
+      "workers": 10,
+      "eval_batch": 14,
+      "repeat": 2,
+      "wall_s": 409.2,
+      "children_cpu_s": 906.3,
+      "workers_reported": 10,
+      "status": "TIMEOUT"
+    },
+    {
+      "stage": "eval_batch",
+      "workers": 10,
+      "eval_batch": 16,
+      "repeat": 1,
+      "wall_s": 350.38,
+      "children_cpu_s": 1289.8,
+      "games": 36,
+      "positions": 3567,
+      "selfplay_s": 350.2,
+      "leaf_evals": 378264,
+      "nn_batches": 30265,
+      "avg_batch": 12.5,
+      "avg_waiters": 2.5,
+      "max_waiters": 49,
+      "flush_full": 17108,
+      "flush_stall": 11027,
+      "flush_tail": 2094,
+      "avg_plies": 66.6,
+      "red": 19,
+      "black": 16,
+      "draws": 1,
+      "workers_reported": 10,
+      "plies_per_s": 6.846373500856653,
+      "pos_per_s": 10.185608223872073,
+      "games_per_h": 370.0742432895488,
+      "s_per_game": 9.727777777777778,
+      "status": "OK"
+    },
+    {
+      "stage": "eval_batch",
+      "workers": 10,
+      "eval_batch": 16,
+      "repeat": 2,
+      "wall_s": 409.23,
+      "children_cpu_s": 999.8,
+      "workers_reported": 10,
+      "status": "TIMEOUT"
+    },
+    {
+      "stage": "eval_batch",
+      "workers": 10,
+      "eval_batch": 24,
+      "repeat": 0,
+      "status": "SKIPPED_AFTER_HANG_AT_16"
+    },
+    {
+      "stage": "eval_batch",
+      "workers": 10,
+      "eval_batch": 32,
+      "repeat": 0,
+      "status": "SKIPPED_AFTER_HANG_AT_16"
+    },
+    {
+      "stage": "eval_batch",
+      "workers": 10,
+      "eval_batch": 48,
+      "repeat": 0,
+      "status": "SKIPPED_AFTER_HANG_AT_16"
+    }
+  ]
+}

@@ -1,0 +1,119 @@
+{
+  "meta": {
+    "started": "2026-10-21 22:44:11",
+    "hardware": {
+      "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "python": "3.14.8",
+      "machdep.cpu.brand_string": "Apple M5 Max",
+      "hw.ncpu": "18",
+      "hw.memsize": "51539607552"
+    },
+    "git_head": "5ddd74375b79fe7240b3b44a74959aead0e24a23",
+    "weights": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "weights_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+    "args": {
+      "load_weights": "/Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+      "out": "/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/22e04ca7-539e-4f9d-bf13-2e42f602fcb8/scratchpad/check-w18-eb12",
+      "workers": "[18]",
+      "eval_batches": "[14, 16, 24, 32, 48]",
+      "start_eval_batch": "12",
+      "games": "48",
+      "min_steady_games": "15",
+      "full": "True",
+      "repeats": "1",
+      "sims": "400",
+      "stall_flush": "48",
+      "virtual_visits": "8",
+      "within": "0.03",
+      "first_timeout": "3600",
+      "timeout_mult": "3.0",
+      "min_timeout": "300",
+      "stall_timeout": "600",
+      "sample_every": "10.0",
+      "skip_stage2": "True"
+    },
+    "finished": "2026-10-21 22:47:22"
+  },
+  "picks": {
+    "workers_best": 18,
+    "workers_knee": 18,
+    "eval_batch_best": null,
+    "eval_batch_knee": null,
+    "first_hang_eval_batch": null,
+    "within": 0.03
+  },
+  "stage1": {
+    "18": {
+      "ok_runs": 1,
+      "runs": 1,
+      "statuses": [
+        "OK"
+      ],
+      "steady_games_per_h": 1219.144922890346,
+      "steady_games_per_h_range": [
+        1219.144922890346,
+        1219.144922890346
+      ],
+      "plies_per_s": 14.028436018957345,
+      "plies_per_s_range": [
+        14.028436018957345,
+        14.028436018957345
+      ],
+      "games_per_h": 909.952606635071,
+      "games_per_h_range": [
+        909.952606635071,
+        909.952606635071
+      ],
+      "avg_batch": 10.5,
+      "avg_batch_range": [
+        10.5,
+        10.5
+      ],
+      "avg_plies": 55.5,
+      "avg_plies_range": [
+        55.5,
+        55.5
+      ]
+    }
+  },
+  "stage2": {},
+  "rows": [
+    {
+      "stage": "workers",
+      "workers": 18,
+      "eval_batch": 12,
+      "repeat": 1,
+      "last_output_s": 190.0,
+      "max_outside_cpu": 252,
+      "last_games_line": "Games: 45/48",
+      "wall_s": 190.79,
+      "children_cpu_s": 1231.5,
+      "games": 48,
+      "positions": 4013,
+      "selfplay_s": 189.9,
+      "leaf_evals": 486596,
+      "nn_batches": 46315,
+      "avg_batch": 10.5,
+      "avg_waiters": 2.1,
+      "max_waiters": 49,
+      "flush_full": 32782,
+      "flush_stall": 10989,
+      "flush_tail": 2496,
+      "avg_plies": 55.5,
+      "red": 25,
+      "black": 23,
+      "draws": 0,
+      "workers_reported": 18,
+      "plies_per_s": 14.028436018957345,
+      "pos_per_s": 21.13217482885729,
+      "games_per_h": 909.952606635071,
+      "s_per_game": 3.9562500000000003,
+      "steady_games": 25,
+      "steady_from_s": 53.7,
+      "steady_to_s": 127.5,
+      "first_done_s": 131.7,
+      "steady_games_per_h": 1219.144922890346,
+      "status": "OK"
+    }
+  ]
+}
