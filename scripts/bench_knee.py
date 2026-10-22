@@ -22,6 +22,12 @@ weights; see git history before 2026-10-21). This version:
     stacks to stderr.txt), then TERM, then KILL. In stage 2 it skips every eval
     batch larger than the first one that timed out or stalled.
 
+Ranking: steady-state games/h, the game rate while every worker is busy.
+Total wall time for a few dozen games is dominated by whether one ~270-ply
+game hits the state cap and then runs alone at the end (2026-10-21: the same
+setting took 140-484 s, steady rate within +-4%), so by default each run is
+stopped at the first "Worker done" line (status STEADY); --full runs to the end.
+
 Throughput only. A larger eval batch changes the search (more pending leaves,
 different visit counts), so a stage-2 winner is not a behaviour-preserving
 setting, and one clean sweep does not prove the Metal hang is gone. Games are
@@ -66,7 +72,10 @@ FIELDS = {                      # trainer stdout -> metric (last match wins)
     "results": re.compile(r"Results:\s*Red=(\d+),\s*Black=(\d+),\s*Draws=(\d+)"),
     "workers": re.compile(r"Workers:\s*(\d+)"),
 }
-CSV_COLUMNS = ["stage", "workers", "eval_batch", "repeat", "status", "wall_s", "selfplay_s",
+GAMES_LINE = re.compile(r"^\s*Games:\s*(\d+)/\d+")
+WORKER_DONE = re.compile(r"^\s*Worker\s+\d+\s+done\b")
+CSV_COLUMNS = ["stage", "workers", "eval_batch", "repeat", "status", "wall_s", "steady_games_per_h",
+               "steady_games", "steady_from_s", "steady_to_s", "first_done_s", "selfplay_s",
                "games", "positions", "plies_per_s", "pos_per_s", "games_per_h", "s_per_game", "avg_plies",
                "leaf_evals", "nn_batches", "avg_batch", "avg_waiters", "max_waiters",
                "flush_full", "flush_stall", "flush_tail", "children_cpu_s", "red", "black",
@@ -160,13 +169,29 @@ def parse(text: str) -> dict:
     return m
 
 
+def steady(events: list[tuple[float, int]], first_done: float | None, min_games: int) -> dict:
+    """Game rate while every worker is busy: from the first "Games: n" line with n >= 5 to the last one
+    at or before the first "Worker done" line. Leaves out start-up and the straggler tail."""
+    if first_done is None:
+        return {}
+    window = [(t, n) for t, n in events if n >= 5 and t <= first_done]
+    if len(window) < 2 or window[-1][1] - window[0][1] < min_games:
+        return {}
+    (t0, n0), (t1, n1) = window[0], window[-1]
+    return {"steady_games": n1 - n0, "steady_from_s": round(t0, 1), "steady_to_s": round(t1, 1),
+            "first_done_s": round(first_done, 1), "steady_games_per_h": (n1 - n0) / (t1 - t0) * 3600}
+
+
 def pump(proc, out, prog, start: float, last: dict) -> None:
     """Copy the trainer's stdout to stdout.txt, and to progress.txt with seconds since start."""
     for line in proc.stdout:
         now = time.monotonic()
         last["t"] = now
-        if line.lstrip().startswith("Games:"):
+        if m := GAMES_LINE.search(line):
             last["games"] = line.strip()
+            last["events"].append((now - start, int(m.group(1))))
+        elif "first_done" not in last and WORKER_DONE.search(line):
+            last["first_done"] = now - start
         out.write(line)
         prog.write(f"{now - start:8.1f}  {line}")
         prog.flush()
@@ -236,7 +261,7 @@ def run_one(args, stage: str, workers: int, eval_batch: int, repeat: int, timeou
 
     cpu0 = resource.getrusage(resource.RUSAGE_CHILDREN)
     start = time.monotonic()
-    last = {"t": start, "games": ""}               # time of the last stdout line, last "Games: n/N"
+    last = {"t": start, "games": "", "events": []}   # last stdout line time, last "Games: n/N", events
     with open(run_dir / "stdout.txt", "w") as out, open(run_dir / "progress.txt", "w") as prog, \
             open(run_dir / "samples.txt", "w") as samp, open(run_dir / "stderr.txt", "w") as err:
         proc = subprocess.Popen(cmd, cwd=ROOT, env=env, stdout=subprocess.PIPE, stderr=err,
@@ -253,6 +278,8 @@ def run_one(args, stage: str, workers: int, eval_batch: int, repeat: int, timeou
             now = time.monotonic()
             if rc is not None:
                 status = "OK" if rc == 0 else f"EXIT_{rc}"
+            elif not args.full and "first_done" in last:
+                status = "STEADY"                      # window measured; skip the straggler tail
             elif now - start > timeout:
                 status = "TIMEOUT"
             elif args.stall_timeout and now - last["t"] > args.stall_timeout:
@@ -261,6 +288,7 @@ def run_one(args, stage: str, workers: int, eval_batch: int, repeat: int, timeou
                 time.sleep(1)
         if status in ("TIMEOUT", "STALLED"):
             abort_one_by_one(proc.pid, err)
+        if status in ("TIMEOUT", "STALLED", "STEADY"):
             for sig, grace in ((signal.SIGTERM, 10), (signal.SIGKILL, 10)):
                 try:
                     os.killpg(proc.pid, sig)
@@ -282,11 +310,14 @@ def run_one(args, stage: str, workers: int, eval_batch: int, repeat: int, timeou
     row["wall_s"] = round(time.monotonic() - start, 2)
     row["children_cpu_s"] = round((cpu1.ru_utime - cpu0.ru_utime) + (cpu1.ru_stime - cpu0.ru_stime), 1)
     row.update(parse((run_dir / "stdout.txt").read_text() + "\n" + (run_dir / "stderr.txt").read_text()))
-    if status == "OK" and "plies_per_s" not in row:
+    row.update(steady(last["events"], last.get("first_done"), args.min_steady_games))
+    if status in ("OK", "STEADY") and "steady_games_per_h" not in row:
         status = "UNPARSED"
     row["status"] = status
     print(f"[bench]   -> {status}, wall {row['wall_s']}s, last output at {row['last_output_s']}s"
           f" ({row['last_games_line'] or 'no Games line'})"
+          + (f", steady {row['steady_games_per_h']:.0f} games/h over {row['steady_games']} games"
+             if "steady_games_per_h" in row else "")
           + (f", {row['plies_per_s']:.2f} plies/s, {row['games_per_h']:.0f} games/h, "
              f"avg batch {row.get('avg_batch', 0):.1f}" if "plies_per_s" in row else ""), flush=True)
     for name in ("checkpoint", "games"):          # weights copies are ~7.5 MB each; keep logs only
@@ -294,15 +325,18 @@ def run_one(args, stage: str, workers: int, eval_batch: int, repeat: int, timeou
     return row
 
 
+GOOD = ("OK", "STEADY")
+
+
 def summarize(rows: list[dict], stage: str, key: str) -> dict[int, dict]:
     """{knob value: median metrics over OK repeats} for one stage."""
     out = {}
     for value in sorted({r[key] for r in rows if r["stage"] == stage}):
-        ok = [r for r in rows if r["stage"] == stage and r[key] == value and r["status"] == "OK"]
+        ok = [r for r in rows if r["stage"] == stage and r[key] == value and r["status"] in GOOD]
         all_runs = [r for r in rows if r["stage"] == stage and r[key] == value]
         s = {"ok_runs": len(ok), "runs": len(all_runs),
              "statuses": sorted({r["status"] for r in all_runs})}
-        for metric in ("plies_per_s", "pos_per_s", "games_per_h", "s_per_game", "avg_batch", "avg_plies"):
+        for metric in ("steady_games_per_h", "plies_per_s", "games_per_h", "avg_batch", "avg_plies"):
             vals = [r[metric] for r in ok if metric in r]
             if vals:
                 s[metric] = statistics.median(vals)
@@ -312,8 +346,8 @@ def summarize(rows: list[dict], stage: str, key: str) -> dict[int, dict]:
 
 
 def best(summary: dict[int, dict], within: float) -> tuple[int | None, int | None]:
-    """(best value by median plies/s, smallest value within `within` of it)."""
-    scored = {v: s["plies_per_s"] for v, s in summary.items() if "plies_per_s" in s}
+    """(best value by median steady games/h, smallest value within `within` of it)."""
+    scored = {v: s["steady_games_per_h"] for v, s in summary.items() if "steady_games_per_h" in s}
     if not scored:
         return None, None
     top = max(scored, key=scored.get)
@@ -325,22 +359,27 @@ def report(args, rows, s1, s2, picks, meta) -> str:
     lines = [f"# Self-play throughput sweep ({BOARD}x{BOARD}, {args.sims} sims, {args.games} games/run)", "",
              f"Machine: {meta['hardware'].get('machdep.cpu.brand_string')}, {meta['hardware'].get('hw.ncpu')} CPUs; "
              f"git {meta['git_head'][:8]}; weights {args.load_weights.name} sha1 {meta['weights_sha1'][:12]}", "",
-             "Ranking metric: median self-play plies/s (400-sim searches per second, all workers) over OK "
-             "repeats; positions/s counts the trainer's stored positions, which are not one per ply. "
-             "Throughput only: a larger eval batch changes the search, and one clean sweep does not prove "
-             "the Metal hang is gone.", ""]
+             "Ranking metric: median steady-state games/h over good repeats, i.e. the game rate while every "
+             "worker is busy (first `Games: n` line with n >= 5 up to the first `Worker done`), which leaves "
+             "out start-up and the straggler tail (one long game finishing alone). "
+             + ("Runs went to the end (--full). " if args.full else
+                "Runs were stopped at the first `Worker done` (status STEADY), so the trainer's batch and "
+                "plies stats are absent. ")
+             + "Games/h assumes the same game-length mix across settings; a larger eval batch changes the "
+             "search and may change it. Throughput only, and one clean sweep does not prove the Metal hang "
+             "is gone.", ""]
     for title, summary, key in (("Stage 1: workers", s1, "workers"), ("Stage 2: eval batch", s2, "eval_batch")):
-        lines += [f"## {title}", "", f"| {key} | OK/runs | plies/s (median, range) | pos/s | games/h | s/game | "
-                  "avg batch | avg plies | statuses |", "|---|---|---|---|---|---|---|---|---|"]
+        lines += [f"## {title}", "", f"| {key} | good/runs | steady games/h (median, range) | full-run games/h | "
+                  "avg batch | avg plies | statuses |", "|---|---|---|---|---|---|---|"]
         for v, s in summary.items():
-            if "plies_per_s" in s:
-                lo, hi = s["plies_per_s_range"]
-                lines.append(f"| {v} | {s['ok_runs']}/{s['runs']} | {s['plies_per_s']:.2f} ({lo:.2f}-{hi:.2f}) | "
-                             f"{s['pos_per_s']:.1f} | "
-                             f"{s['games_per_h']:.0f} | {s['s_per_game']:.1f} | {s.get('avg_batch', 0):.1f} | "
-                             f"{s.get('avg_plies', 0):.1f} | {', '.join(s['statuses'])} |")
+            if "steady_games_per_h" in s:
+                lo, hi = s["steady_games_per_h_range"]
+                full = lambda m, f: format(s[m], f) if m in s else "-"
+                lines.append(f"| {v} | {s['ok_runs']}/{s['runs']} | {s['steady_games_per_h']:.0f} "
+                             f"({lo:.0f}-{hi:.0f}) | {full('games_per_h', '.0f')} | {full('avg_batch', '.1f')} | "
+                             f"{full('avg_plies', '.1f')} | {', '.join(s['statuses'])} |")
             else:
-                lines.append(f"| {v} | 0/{s['runs']} | - | - | - | - | - | - | {', '.join(s['statuses'])} |")
+                lines.append(f"| {v} | 0/{s['runs']} | - | - | - | - | {', '.join(s['statuses'])} |")
         lines.append("")
     lines += ["## Picks", "", json.dumps(picks, indent=2), ""]
     return "\n".join(lines)
@@ -353,7 +392,11 @@ def main(argv=None) -> int:
     ap.add_argument("--workers", type=parse_list, default=parse_list("10,12,14,16,18"))
     ap.add_argument("--eval-batches", type=parse_list, default=parse_list("14,16,24,32,48"))
     ap.add_argument("--start-eval-batch", type=int, default=14, help="eval batch held during stage 1")
-    ap.add_argument("--games", type=int, default=36, help="self-play games per run")
+    ap.add_argument("--games", type=int, default=48, help="self-play games per run")
+    ap.add_argument("--min-steady-games", type=int, default=15,
+                    help="fewest games in the steady window for a run to count")
+    ap.add_argument("--full", action="store_true",
+                    help="run every game to the end (adds the trainer's batch/plies stats and the tail)")
     ap.add_argument("--repeats", type=int, default=2)
     ap.add_argument("--sims", type=int, default=400, help="simulations per move (SIMS_TABLE[24] = 400)")
     ap.add_argument("--stall-flush", type=int, default=48, help="last training run's mcts_stall_flush_sims")
@@ -394,7 +437,7 @@ def main(argv=None) -> int:
     timeout = args.first_timeout
 
     def next_timeout(row):
-        return max(args.min_timeout, row["wall_s"] * args.timeout_mult) if row["status"] == "OK" else timeout
+        return max(args.min_timeout, row["wall_s"] * args.timeout_mult) if row["status"] in GOOD else timeout
 
     # Stage 1: workers at the start eval batch. The first OK run sets the timeout for every later run.
     for w in args.workers:
