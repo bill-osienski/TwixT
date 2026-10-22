@@ -17,7 +17,7 @@ import random
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -650,6 +650,9 @@ def play_game(
     # DELIBERATELY LAST: appending keeps every existing positional call valid.
     opponent_evaluator: Optional[Evaluator] = None,
     learner_player: Optional[str] = None,
+    # Durable training replay capture (spec 2026-10-11, serial-wiring checkpoint). None = absent: no
+    # accumulator, no snapshot, no hashing, no file. DELIBERATELY LAST.
+    training_capture: Optional[Any] = None,
 ) -> GameRecord:
     """Play one self-play game.
 
@@ -685,6 +688,18 @@ def play_game(
     game_t0 = time.perf_counter()
     mcts_config = mcts_config or MCTSConfig()
     rng = rng or random.Random()
+
+    if training_capture is not None:
+        from .training_replay_capture import CaptureError
+        _unsupported = [name for name, bad in (
+            ("active_size", active_size != 24), ("max_moves", max_moves != 280),
+            ("resign_enabled", bool(resign_enabled)), ("adjudicate_enabled", bool(adjudicate_enabled)),
+            ("td1_visit_forcing", bool(mcts_config.closeout_td1_visit_forcing_enabled)),
+            ("closeout_selection_tiebreak", bool(mcts_config.closeout_selection_tiebreak_enabled)),
+            ("mirror_prob", _MIRROR_PROB != 0.0), ("max_positions_per_game", bool(max_positions_per_game)),
+            ("learner_player", training_capture.learner_player != learner_player)) if bad]
+        if _unsupported:
+            raise CaptureError(f"training capture: unsupported in the serial-wiring checkpoint: {_unsupported}")
 
     mcts = MCTS(evaluator, mcts_config, rng)
 
@@ -916,6 +931,12 @@ def play_game(
                 root=agent_root,
                 forced_sims_total=mcts._closeout_td1_forced_sims_total,
             )
+        if training_capture is not None:
+            training_capture.begin_decision(
+                state=state,
+                child_visits_before={decode_move(mid): child.visit_count
+                                     for mid, child in (agent_root.children or {}).items()},
+                root_visits_before=agent_root.visit_count)
         visit_counts, root_value, agent_root = agent.search_from_root(
             agent_root, add_noise=add_noise, ply=ply, gc_state_full=gc_state_full,
         )
@@ -923,6 +944,9 @@ def play_game(
             root = agent_root
         else:
             opp_root = agent_root
+        if training_capture is not None:
+            training_capture.after_search(visit_counts=visit_counts, root_visits_after=agent_root.visit_count,
+                                          root_value=root_value)
         if inheritance_tracker is not None and learner_to_move:
             inheritance_tracker.observe_search_end(
                 forced_sims_total=mcts._closeout_td1_forced_sims_total,
@@ -1103,6 +1127,8 @@ def play_game(
                     conversion=conversion_meta,  # Spec 2: None unless conversion-eligible
                 )
             )
+            if training_capture is not None:
+                training_capture.note_training_row(positions[-1])
 
             # Probabilistic mirror augmentation
             if _MIRROR_PROB > 0 and rng.random() < _MIRROR_PROB:
@@ -1155,7 +1181,11 @@ def play_game(
 
         # Select move
         # Active agent selects, using ITS OWN rng stream.
+        if training_capture is not None:
+            training_capture.before_selection(selection_counts=visit_counts, adjustment=None)
         move = agent.select_move(visit_counts, ply)
+        if training_capture is not None:
+            training_capture.after_selection(move=move)
 
         if (
             _OPENING_DEBUG
@@ -1394,6 +1424,9 @@ def play_game(
         endgame_keep_positions=endgame_keep_positions,
         rng=rng,
     )
+    if training_capture is not None:
+        training_capture.finish(move_history=move_history, start_player=start_player, final_state=state,
+                                kept_positions=positions)
 
     # Diagnostic: print timeout trace
     if draw_reason == DRAW_TIMEOUT:
