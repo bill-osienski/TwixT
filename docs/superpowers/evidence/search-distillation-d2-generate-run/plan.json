@@ -1,0 +1,6 @@
+{
+ "base": 202692100,
+ "kind": "search-distillation-d2-generate-plan/1",
+ "n_slots": 120,
+ "survey_record_sha256": "cf929c1d19701972212cee884f83a64b622ca08cde8607dd1fc20968b6fe2b15"
+}
