@@ -102,6 +102,8 @@ knob) is not a new hypothesis.
 
 > **Throughput settings on the new machine (Post-closure entry 20, 2026-10-21, MEASURED).** Self-play: **18 workers at eval batch 14** measured fastest (median 1,207 games/h while all workers are busy; 12 workers 1,038; eval batch 16–48 no faster, 32 and 48 slower; no hang up to 48 in 3 short runs each, which does not show the old hang is gone). Whole-run wall time is dominated by one state-cap game finishing alone (140–484 s for the same setting), so the first sweep's timeouts and its "hang at 16" are void. Labelling: 10–18 workers equal (~3.25x serial); eval batch and stall-flush are never read by the labeller. Operational only; no defaults changed. See do-not-repeat **#64**.
 
+> **Search distillation D2, Stage 1 live measurement (Post-closure entry 21, 2026-10-22, MEASURED).** Stage 0 built an offline trainer that trains `calib020_0001`'s encoder and policy head on its own captured search targets (value head and BatchNorm statistics frozen, value anchor). Stage 1 ran two incumbent self-play games once at 1,600 simulations through the serial capture driver: **COMPLETED in 124 s**; 52 and 54 plies; **1.16 s per ply**; 776 KB captured; the rebuilt records equal the learner rows, and 99 of 106 searches began with inherited child visits. Two games price generation (120 games ≈ 2 h at these lengths; ≤ 10.9 h even if every game reached the 280-ply cap, if the per-ply time holds) but cannot estimate the game-length distribution. Measurement only; the seeds are retired. Stages 2–5 unapproved. See #67.
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -1663,6 +1665,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 65. **The policy-head capacity planted qualification (entry 18 addendum) — NOT QUALIFIED 2026-10-21.** S1 failed (C − R on TR = 0.0286 < δ 0.05). Do **not** rerun it, rerun it with other seeds, or retune its recipe or design (steps, learning rate, batch, clipping, planted scale, δ, the 25% fit fraction, teacher shapes) and run again in search of a pass; do **not** generate real labels with this recipe or run the 200-game pilot on it; and do **not** read NOT QUALIFIED, or C's close fit of TR, as evidence that the head's capacity does or does not bind. A new recipe needs a new card, fresh teacher seeds and its own approval.
 
 66. **The policy-head capacity proposal (entry 18) — SHELVED 2026-10-22.** Do **not** spend further on this proposal — no new planted recipe, synthetic separation check, real-label generation or 200-game pilot under it — unless a new design first establishes, before any fitting, a defensible KL separation between the arms it compares, and is separately approved. Do **not** cite the shelving, or the NOT QUALIFIED result, as evidence that the head's capacity does or does not limit learning: the hypothesis is unresolved.
+
+67. **The D2 Stage 1 live measurement (entry 21) — MEASURED 2026-10-22.** Do **not** rerun it, add games to it, or use its two games (seeds `[202691900, 202691902)`, EXPOSED and RETIRED) as training, held-out or evaluation material: they are measurement material only. Do **not** read their lengths (52 and 54 plies, both decisive) as the corpus's game-length distribution — two games cannot estimate it — or compare their 1.16 s per ply (batched self-play search, 0.73 ms per simulation) with entry 19's 1.74 ms per simulation (the evaluation play path): different search paths. Nothing here is evidence about target quality or strength.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -3557,3 +3561,52 @@ old hang is gone.
 1% of the best). Separate finding, left as is: in training, each iteration waits on its slowest game, so a
 state-cap game costs up to about 5 minutes of near-idle machine per iteration; shortening such games would change
 play, so it is not a throughput setting. See do-not-repeat **#64**.
+
+### 21. Search distillation D2 — Stage 0 offline trainer and the Stage 1 live measurement (2026-10-22, MEASURED)
+
+**Test.** Stage 0: an offline trainer (`scripts/GPU/alphazero/search_distillation_d2.py`) that rebuilds training
+records from a finalized replay-capture phase and trains a student copy of `calib020_0001` on the encoder and
+policy head only, in evaluation mode (BatchNorm running statistics frozen), with a value anchor to the unchanged
+teacher; synthetic checks only. Stage 1 (card `docs/superpowers/2026-10-22-search-distillation-d2-stage1-card.md`,
+pinned): exactly two incumbent self-play games at 1,600 simulations through the serial capture driver, at the
+settings intended for corpus generation (`train()`'s other defaults, root noise on, mirror augmentation off, both
+goal-completion diagnostics off), to price generation and to check the capture path with the live network.
+Measurement only; no strength claim. The later stages are drafted in
+`docs/superpowers/2026-10-22-search-distillation-d2-plan.md` and are not approved.
+
+**Hypothesis.** None for the measurement. (The experiment's hypothesis, for Stages 2–5: distilling the incumbent's
+1,600-simulation search into its whole policy path makes it stronger at 400 simulations.)
+
+**Why it was plausible.** Stage A (entry 1) showed 1,600 simulations play much stronger than 400 (mean pair 0.769),
+under the earlier protocol with training-mode BatchNorm; transfer to corrected inference is an assumption.
+
+**Prediction on record.** No prediction for the measurement. The proposal's cost estimate, stated before the run:
+about 2.8 s per ply (1.74 ms per simulation × 1,600), game length unmeasured.
+
+**What ran.** Build `24327418` (13 trainer tests; 8 mutation controls caught after one was replaced because the
+fake-evaluator games have no inherited child visits, so before- and after-search counts coincide there; that case
+moved to a live check in Stage 1). Regression at `24327418`: the 58-id baseline exactly (3,272 passed). Seeds:
+survey `c1f674e1` (CLEAN, 45/45), pre-proof `5c82af03`, registration in ACCOUNTED `51c51898` (39 → 40), post-proof
+`4554d472`; registry readers 593 passed. Gate `SEARCH_DISTILLATION_D2_MEASURE_AUTHORIZED` (the thirty-second)
+opened by `6cb69b40`; one run through `01_wrapper.sh` in a clean linked worktree; evidence and the restored gate
+`e057761d`; closing K1 `818551f7` (RECONCILES, 15/15), K2 `09a540b7` (EXPOSED and RETIRED whole).
+
+**Result.** Outer exit 0, **COMPLETED in 124 s** of a 1,800 s ceiling, record by the script, no survivors, gate
+restored and read back. Network in evaluation mode at load and after the last game; model digest unchanged
+(`ae0e71fc…`). Games (seeds 202691900, 202691901): **52 and 54 plies, both decisive**; 60.7 s and 62.6 s; **1.1635 s
+per ply** overall (about 0.73 ms per simulation). Capture: 776,093 bytes, finalized; write 0.023 s, reopen and
+validate 0.020 s. The Stage 0 reader rebuilt 106 records, **every one equal to the learner `PositionRecord`**
+(board, mover, legal order, visit counts, outcome); **99 of 106** searches began with inherited child visits, so
+the after-search versus before-search target distinction was exercised live.
+
+**Did it match the prediction, and why.** The per-ply estimate was about 2.4 times too high. It extrapolated entry
+19's evaluation-path figure (`search_with_root`, one leaf per network call); self-play uses the batched
+`search_from_root` (eval batch 14). The two figures come from different search paths and are not comparable as a
+machine speed.
+
+**Conclusion / status.** MEASURED. The capture path holds with the live network for these two games, and the
+Stage 0 reader reproduces the training rows exactly. Pricing for the plan's 120-game schedule: about 2.1 h at these
+lengths, and at most about 10.9 h even if every game reached the 280-ply cap, provided the per-ply time holds in
+long games (not measured beyond ply 54). Two games cannot estimate the length distribution, so the corpus's size in
+positions (about 6,400 at these lengths) is also uncertain. Stages 2–5, promotion and pushing remain unapproved.
+See do-not-repeat **#67**.

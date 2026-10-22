@@ -108,3 +108,16 @@ Pairs are assumed independent. The size gives conservative 80% power at a true m
 ## 8. Prediction on record (from the proposal, before any data)
 
 About a 20% chance of passing Stage 5. The most likely mean pair score is 0.48–0.56.
+
+## 9. Stage 1 result (2026-10-22, ledger entry 21)
+
+Stage 1 completed in 124 s. The two games ran 52 and 54 plies, both decisive, at **1.1635 s per ply**. The live records equal the learner rows; 99 of 106 searches began with inherited child visits.
+
+**Applying §3's repricing rule:**
+- At these lengths the 120-game schedule projects to about 2.1 h.
+- If every game reached the 280-ply cap, it would take about 10.9 h. Both figures are under the 12-hour ceiling, so the schedule stands.
+- This assumes the per-ply time holds in long games, which was not measured beyond ply 54.
+
+**Corpus size.** At these lengths the corpus would hold about 6,400 positions, not the proposal's ~10,000. Two games cannot estimate the length distribution, so the corpus size is uncertain too.
+
+**Open for Stage 2 approval:** keep 120 games, or use the time headroom for more games. That would be a revision to this draft, decided before Stage 2 is approved; it must not be decided after seeing data.
