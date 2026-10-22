@@ -3738,3 +3738,8 @@ encoder moved; how much each part of the recipe contributed was not measured.
 output beyond both fixed limits, so Stages 4–5 are not entered under this card, and the candidate is not used.
 This says nothing about strength in either direction. The gradient-norm spikes are an observation without a
 derived cause. Promotion and pushing remain unapproved. See do-not-repeat **#69**.
+
+*Correction (2026-10-22, the same day, after rechecking entry 23's training-log figures).* Entry 23 says the 86
+updates with pre-clip gradient norms above 10,000 came "in 68 separate runs between updates 21 and 389". The 68
+runs counted the 88 updates above **100**. The 86 updates above 10,000 form **69** runs; their first and last
+updates are also 21 and 389. Nothing else in the entry changes.
