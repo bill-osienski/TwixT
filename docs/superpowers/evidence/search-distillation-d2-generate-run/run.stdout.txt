@@ -1,0 +1,1 @@
+{"status": "COMPLETED", "void": null, "head": "44390545c6ef5f5a4df17c620fd20a3f78847bba", "corpus_dir": "/Users/bill/twixt-cache/search-distillation-d2/corpus-20261022T162940Z", "totals": {"games": 120, "plies": 7020, "game_seconds": 8360.27, "records": 7020, "bytes": 50046452}}

@@ -1,0 +1,255 @@
+{"event": "start", "t": 0.011}
+{"event": "loaded", "t": 0.084}
+{"event": "game_start", "t": 0.104, "phase": 0, "game": 0, "start": "red"}
+{"event": "game_end", "t": 82.63, "phase": 0, "game": 0, "seed": 202692100, "held_out": false, "start_player": "red", "plies": 69, "winner": "red", "draw_reason": null, "seconds": 82.526, "seconds_per_ply": 1.196}
+{"event": "game_start", "t": 82.664, "phase": 0, "game": 1, "start": "black"}
+{"event": "game_end", "t": 150.838, "phase": 0, "game": 1, "seed": 202692101, "held_out": false, "start_player": "black", "plies": 60, "winner": "red", "draw_reason": null, "seconds": 68.174, "seconds_per_ply": 1.1362}
+{"event": "game_start", "t": 150.868, "phase": 0, "game": 2, "start": "black"}
+{"event": "game_end", "t": 205.087, "phase": 0, "game": 2, "seed": 202692102, "held_out": false, "start_player": "black", "plies": 46, "winner": "red", "draw_reason": null, "seconds": 54.219, "seconds_per_ply": 1.1787}
+{"event": "game_start", "t": 205.11, "phase": 0, "game": 3, "start": "black"}
+{"event": "game_end", "t": 266.541, "phase": 0, "game": 3, "seed": 202692103, "held_out": false, "start_player": "black", "plies": 53, "winner": "black", "draw_reason": null, "seconds": 61.431, "seconds_per_ply": 1.1591}
+{"event": "game_start", "t": 266.567, "phase": 0, "game": 4, "start": "red"}
+{"event": "game_end", "t": 344.323, "phase": 0, "game": 4, "seed": 202692104, "held_out": false, "start_player": "red", "plies": 65, "winner": "red", "draw_reason": null, "seconds": 77.756, "seconds_per_ply": 1.1962}
+{"event": "game_start", "t": 344.356, "phase": 0, "game": 5, "start": "red"}
+{"event": "game_end", "t": 406.688, "phase": 0, "game": 5, "seed": 202692105, "held_out": false, "start_player": "red", "plies": 54, "winner": "black", "draw_reason": null, "seconds": 62.332, "seconds_per_ply": 1.1543}
+{"event": "game_start", "t": 406.714, "phase": 0, "game": 6, "start": "black"}
+{"event": "game_end", "t": 471.091, "phase": 0, "game": 6, "seed": 202692106, "held_out": false, "start_player": "black", "plies": 55, "winner": "black", "draw_reason": null, "seconds": 64.377, "seconds_per_ply": 1.1705}
+{"event": "game_start", "t": 471.118, "phase": 0, "game": 7, "start": "black"}
+{"event": "game_end", "t": 518.754, "phase": 0, "game": 7, "seed": 202692107, "held_out": false, "start_player": "black", "plies": 41, "winner": "black", "draw_reason": null, "seconds": 47.635, "seconds_per_ply": 1.1618}
+{"event": "game_start", "t": 518.774, "phase": 0, "game": 8, "start": "black"}
+{"event": "game_end", "t": 600.195, "phase": 0, "game": 8, "seed": 202692108, "held_out": false, "start_player": "black", "plies": 66, "winner": "red", "draw_reason": null, "seconds": 81.421, "seconds_per_ply": 1.2336}
+{"event": "game_start", "t": 600.228, "phase": 0, "game": 9, "start": "black"}
+{"event": "game_end", "t": 680.566, "phase": 0, "game": 9, "seed": 202692109, "held_out": true, "start_player": "black", "plies": 73, "winner": "black", "draw_reason": null, "seconds": 80.338, "seconds_per_ply": 1.1005}
+{"event": "phase_end", "t": 681.026, "phase": 0, "records": 582}
+{"event": "game_start", "t": 681.042, "phase": 1, "game": 10, "start": "black"}
+{"event": "game_end", "t": 752.27, "phase": 1, "game": 10, "seed": 202692110, "held_out": false, "start_player": "black", "plies": 60, "winner": "red", "draw_reason": null, "seconds": 71.229, "seconds_per_ply": 1.1871}
+{"event": "game_start", "t": 752.301, "phase": 1, "game": 11, "start": "red"}
+{"event": "game_end", "t": 815.742, "phase": 1, "game": 11, "seed": 202692111, "held_out": false, "start_player": "red", "plies": 52, "winner": "black", "draw_reason": null, "seconds": 63.441, "seconds_per_ply": 1.22}
+{"event": "game_start", "t": 815.768, "phase": 1, "game": 12, "start": "black"}
+{"event": "game_end", "t": 907.304, "phase": 1, "game": 12, "seed": 202692112, "held_out": false, "start_player": "black", "plies": 76, "winner": "red", "draw_reason": null, "seconds": 91.536, "seconds_per_ply": 1.2044}
+{"event": "game_start", "t": 907.341, "phase": 1, "game": 13, "start": "red"}
+{"event": "game_end", "t": 991.618, "phase": 1, "game": 13, "seed": 202692113, "held_out": false, "start_player": "red", "plies": 72, "winner": "black", "draw_reason": null, "seconds": 84.277, "seconds_per_ply": 1.1705}
+{"event": "game_start", "t": 991.654, "phase": 1, "game": 14, "start": "black"}
+{"event": "game_end", "t": 1048.187, "phase": 1, "game": 14, "seed": 202692114, "held_out": false, "start_player": "black", "plies": 47, "winner": "black", "draw_reason": null, "seconds": 56.533, "seconds_per_ply": 1.2028}
+{"event": "game_start", "t": 1048.211, "phase": 1, "game": 15, "start": "black"}
+{"event": "game_end", "t": 1125.587, "phase": 1, "game": 15, "seed": 202692115, "held_out": false, "start_player": "black", "plies": 65, "winner": "black", "draw_reason": null, "seconds": 77.377, "seconds_per_ply": 1.1904}
+{"event": "game_start", "t": 1125.62, "phase": 1, "game": 16, "start": "black"}
+{"event": "game_end", "t": 1181.129, "phase": 1, "game": 16, "seed": 202692116, "held_out": false, "start_player": "black", "plies": 47, "winner": "black", "draw_reason": null, "seconds": 55.51, "seconds_per_ply": 1.1811}
+{"event": "game_start", "t": 1181.153, "phase": 1, "game": 17, "start": "black"}
+{"event": "game_end", "t": 1229.63, "phase": 1, "game": 17, "seed": 202692117, "held_out": false, "start_player": "black", "plies": 43, "winner": "black", "draw_reason": null, "seconds": 48.476, "seconds_per_ply": 1.1274}
+{"event": "game_start", "t": 1229.651, "phase": 1, "game": 18, "start": "black"}
+{"event": "game_end", "t": 1306.626, "phase": 1, "game": 18, "seed": 202692118, "held_out": false, "start_player": "black", "plies": 68, "winner": "red", "draw_reason": null, "seconds": 76.976, "seconds_per_ply": 1.132}
+{"event": "game_start", "t": 1306.661, "phase": 1, "game": 19, "start": "red"}
+{"event": "game_end", "t": 1341.487, "phase": 1, "game": 19, "seed": 202692119, "held_out": true, "start_player": "red", "plies": 32, "winner": "black", "draw_reason": null, "seconds": 34.826, "seconds_per_ply": 1.0883}
+{"event": "phase_end", "t": 1341.937, "phase": 1, "records": 562}
+{"event": "game_start", "t": 1341.953, "phase": 2, "game": 20, "start": "black"}
+{"event": "game_end", "t": 1416.388, "phase": 2, "game": 20, "seed": 202692120, "held_out": false, "start_player": "black", "plies": 65, "winner": "black", "draw_reason": null, "seconds": 74.435, "seconds_per_ply": 1.1452}
+{"event": "game_start", "t": 1416.419, "phase": 2, "game": 21, "start": "red"}
+{"event": "game_end", "t": 1455.784, "phase": 2, "game": 21, "seed": 202692121, "held_out": false, "start_player": "red", "plies": 39, "winner": "red", "draw_reason": null, "seconds": 39.365, "seconds_per_ply": 1.0094}
+{"event": "game_start", "t": 1455.804, "phase": 2, "game": 22, "start": "black"}
+{"event": "game_end", "t": 1495.336, "phase": 2, "game": 22, "seed": 202692122, "held_out": false, "start_player": "black", "plies": 38, "winner": "red", "draw_reason": null, "seconds": 39.533, "seconds_per_ply": 1.0403}
+{"event": "game_start", "t": 1495.355, "phase": 2, "game": 23, "start": "red"}
+{"event": "game_end", "t": 1537.785, "phase": 2, "game": 23, "seed": 202692123, "held_out": false, "start_player": "red", "plies": 39, "winner": "red", "draw_reason": null, "seconds": 42.43, "seconds_per_ply": 1.0879}
+{"event": "game_start", "t": 1537.805, "phase": 2, "game": 24, "start": "black"}
+{"event": "game_end", "t": 1599.295, "phase": 2, "game": 24, "seed": 202692124, "held_out": false, "start_player": "black", "plies": 53, "winner": "black", "draw_reason": null, "seconds": 61.489, "seconds_per_ply": 1.1602}
+{"event": "game_start", "t": 1599.321, "phase": 2, "game": 25, "start": "red"}
+{"event": "game_end", "t": 1658.725, "phase": 2, "game": 25, "seed": 202692125, "held_out": false, "start_player": "red", "plies": 53, "winner": "red", "draw_reason": null, "seconds": 59.404, "seconds_per_ply": 1.1208}
+{"event": "game_start", "t": 1658.752, "phase": 2, "game": 26, "start": "black"}
+{"event": "game_end", "t": 1724.029, "phase": 2, "game": 26, "seed": 202692126, "held_out": false, "start_player": "black", "plies": 59, "winner": "black", "draw_reason": null, "seconds": 65.277, "seconds_per_ply": 1.1064}
+{"event": "game_start", "t": 1724.058, "phase": 2, "game": 27, "start": "black"}
+{"event": "game_end", "t": 1762.935, "phase": 2, "game": 27, "seed": 202692127, "held_out": false, "start_player": "black", "plies": 35, "winner": "black", "draw_reason": null, "seconds": 38.877, "seconds_per_ply": 1.1108}
+{"event": "game_start", "t": 1762.954, "phase": 2, "game": 28, "start": "black"}
+{"event": "game_end", "t": 1831.622, "phase": 2, "game": 28, "seed": 202692128, "held_out": false, "start_player": "black", "plies": 57, "winner": "black", "draw_reason": null, "seconds": 68.669, "seconds_per_ply": 1.2047}
+{"event": "game_start", "t": 1831.652, "phase": 2, "game": 29, "start": "black"}
+{"event": "game_end", "t": 1879.809, "phase": 2, "game": 29, "seed": 202692129, "held_out": true, "start_player": "black", "plies": 44, "winner": "red", "draw_reason": null, "seconds": 48.157, "seconds_per_ply": 1.0945}
+{"event": "phase_end", "t": 1880.17, "phase": 2, "records": 482}
+{"event": "game_start", "t": 1880.182, "phase": 3, "game": 30, "start": "black"}
+{"event": "game_end", "t": 1924.613, "phase": 3, "game": 30, "seed": 202692130, "held_out": false, "start_player": "black", "plies": 40, "winner": "red", "draw_reason": null, "seconds": 44.431, "seconds_per_ply": 1.1108}
+{"event": "game_start", "t": 1924.633, "phase": 3, "game": 31, "start": "red"}
+{"event": "game_end", "t": 1972.629, "phase": 3, "game": 31, "seed": 202692131, "held_out": false, "start_player": "red", "plies": 41, "winner": "red", "draw_reason": null, "seconds": 47.996, "seconds_per_ply": 1.1706}
+{"event": "game_start", "t": 1972.649, "phase": 3, "game": 32, "start": "black"}
+{"event": "game_end", "t": 2028.703, "phase": 3, "game": 32, "seed": 202692132, "held_out": false, "start_player": "black", "plies": 52, "winner": "red", "draw_reason": null, "seconds": 56.053, "seconds_per_ply": 1.0779}
+{"event": "game_start", "t": 2028.728, "phase": 3, "game": 33, "start": "red"}
+{"event": "game_end", "t": 2094.279, "phase": 3, "game": 33, "seed": 202692133, "held_out": false, "start_player": "red", "plies": 58, "winner": "black", "draw_reason": null, "seconds": 65.55, "seconds_per_ply": 1.1302}
+{"event": "game_start", "t": 2094.309, "phase": 3, "game": 34, "start": "black"}
+{"event": "game_end", "t": 2193.806, "phase": 3, "game": 34, "seed": 202692134, "held_out": false, "start_player": "black", "plies": 84, "winner": "red", "draw_reason": null, "seconds": 99.497, "seconds_per_ply": 1.1845}
+{"event": "game_start", "t": 2193.85, "phase": 3, "game": 35, "start": "red"}
+{"event": "game_end", "t": 2245.541, "phase": 3, "game": 35, "seed": 202692135, "held_out": false, "start_player": "red", "plies": 46, "winner": "black", "draw_reason": null, "seconds": 51.69, "seconds_per_ply": 1.1237}
+{"event": "game_start", "t": 2245.563, "phase": 3, "game": 36, "start": "black"}
+{"event": "game_end", "t": 2299.204, "phase": 3, "game": 36, "seed": 202692136, "held_out": false, "start_player": "black", "plies": 47, "winner": "black", "draw_reason": null, "seconds": 53.641, "seconds_per_ply": 1.1413}
+{"event": "game_start", "t": 2299.229, "phase": 3, "game": 37, "start": "black"}
+{"event": "game_end", "t": 2352.891, "phase": 3, "game": 37, "seed": 202692137, "held_out": false, "start_player": "black", "plies": 48, "winner": "red", "draw_reason": null, "seconds": 53.662, "seconds_per_ply": 1.118}
+{"event": "game_start", "t": 2352.915, "phase": 3, "game": 38, "start": "red"}
+{"event": "game_end", "t": 2421.309, "phase": 3, "game": 38, "seed": 202692138, "held_out": false, "start_player": "red", "plies": 56, "winner": "black", "draw_reason": null, "seconds": 68.394, "seconds_per_ply": 1.2213}
+{"event": "game_start", "t": 2421.341, "phase": 3, "game": 39, "start": "black"}
+{"event": "game_end", "t": 2462.298, "phase": 3, "game": 39, "seed": 202692139, "held_out": true, "start_player": "black", "plies": 37, "winner": "black", "draw_reason": null, "seconds": 40.957, "seconds_per_ply": 1.107}
+{"event": "phase_end", "t": 2462.672, "phase": 3, "records": 509}
+{"event": "game_start", "t": 2462.686, "phase": 4, "game": 40, "start": "black"}
+{"event": "game_end", "t": 2866.394, "phase": 4, "game": 40, "seed": 202692140, "held_out": false, "start_player": "black", "plies": 280, "winner": null, "draw_reason": "terminal_state_cap", "seconds": 403.708, "seconds_per_ply": 1.4418}
+{"event": "game_start", "t": 2866.58, "phase": 4, "game": 41, "start": "black"}
+{"event": "game_end", "t": 2922.923, "phase": 4, "game": 41, "seed": 202692141, "held_out": false, "start_player": "black", "plies": 49, "winner": "black", "draw_reason": null, "seconds": 56.343, "seconds_per_ply": 1.1499}
+{"event": "game_start", "t": 2922.947, "phase": 4, "game": 42, "start": "black"}
+{"event": "game_end", "t": 3001.583, "phase": 4, "game": 42, "seed": 202692142, "held_out": false, "start_player": "black", "plies": 65, "winner": "black", "draw_reason": null, "seconds": 78.635, "seconds_per_ply": 1.2098}
+{"event": "game_start", "t": 3001.615, "phase": 4, "game": 43, "start": "red"}
+{"event": "game_end", "t": 3102.471, "phase": 4, "game": 43, "seed": 202692143, "held_out": false, "start_player": "red", "plies": 84, "winner": "black", "draw_reason": null, "seconds": 100.856, "seconds_per_ply": 1.2007}
+{"event": "game_start", "t": 3102.515, "phase": 4, "game": 44, "start": "black"}
+{"event": "game_end", "t": 3166.902, "phase": 4, "game": 44, "seed": 202692144, "held_out": false, "start_player": "black", "plies": 53, "winner": "black", "draw_reason": null, "seconds": 64.387, "seconds_per_ply": 1.2148}
+{"event": "game_start", "t": 3166.929, "phase": 4, "game": 45, "start": "red"}
+{"event": "game_end", "t": 3235.076, "phase": 4, "game": 45, "seed": 202692145, "held_out": false, "start_player": "red", "plies": 59, "winner": "red", "draw_reason": null, "seconds": 68.147, "seconds_per_ply": 1.155}
+{"event": "game_start", "t": 3235.108, "phase": 4, "game": 46, "start": "black"}
+{"event": "game_end", "t": 3300.287, "phase": 4, "game": 46, "seed": 202692146, "held_out": false, "start_player": "black", "plies": 57, "winner": "black", "draw_reason": null, "seconds": 65.179, "seconds_per_ply": 1.1435}
+{"event": "game_start", "t": 3300.315, "phase": 4, "game": 47, "start": "red"}
+{"event": "game_end", "t": 3351.094, "phase": 4, "game": 47, "seed": 202692147, "held_out": false, "start_player": "red", "plies": 45, "winner": "red", "draw_reason": null, "seconds": 50.779, "seconds_per_ply": 1.1284}
+{"event": "game_start", "t": 3351.116, "phase": 4, "game": 48, "start": "red"}
+{"event": "game_end", "t": 3428.955, "phase": 4, "game": 48, "seed": 202692148, "held_out": false, "start_player": "red", "plies": 65, "winner": "red", "draw_reason": null, "seconds": 77.838, "seconds_per_ply": 1.1975}
+{"event": "game_start", "t": 3428.987, "phase": 4, "game": 49, "start": "red"}
+{"event": "game_end", "t": 3473.9, "phase": 4, "game": 49, "seed": 202692149, "held_out": true, "start_player": "red", "plies": 39, "winner": "red", "draw_reason": null, "seconds": 44.913, "seconds_per_ply": 1.1516}
+{"event": "phase_end", "t": 3474.56, "phase": 4, "records": 796}
+{"event": "game_start", "t": 3474.579, "phase": 5, "game": 50, "start": "red"}
+{"event": "game_end", "t": 3538.897, "phase": 5, "game": 50, "seed": 202692150, "held_out": false, "start_player": "red", "plies": 57, "winner": "red", "draw_reason": null, "seconds": 64.318, "seconds_per_ply": 1.1284}
+{"event": "game_start", "t": 3538.926, "phase": 5, "game": 51, "start": "black"}
+{"event": "game_end", "t": 3571.98, "phase": 5, "game": 51, "seed": 202692151, "held_out": false, "start_player": "black", "plies": 33, "winner": "black", "draw_reason": null, "seconds": 33.054, "seconds_per_ply": 1.0016}
+{"event": "game_start", "t": 3571.996, "phase": 5, "game": 52, "start": "black"}
+{"event": "game_end", "t": 3633.478, "phase": 5, "game": 52, "seed": 202692152, "held_out": false, "start_player": "black", "plies": 54, "winner": "red", "draw_reason": null, "seconds": 61.482, "seconds_per_ply": 1.1386}
+{"event": "game_start", "t": 3633.505, "phase": 5, "game": 53, "start": "red"}
+{"event": "game_end", "t": 3702.309, "phase": 5, "game": 53, "seed": 202692153, "held_out": false, "start_player": "red", "plies": 57, "winner": "red", "draw_reason": null, "seconds": 68.804, "seconds_per_ply": 1.2071}
+{"event": "game_start", "t": 3702.339, "phase": 5, "game": 54, "start": "black"}
+{"event": "game_end", "t": 3744.001, "phase": 5, "game": 54, "seed": 202692154, "held_out": false, "start_player": "black", "plies": 39, "winner": "black", "draw_reason": null, "seconds": 41.662, "seconds_per_ply": 1.0683}
+{"event": "game_start", "t": 3744.021, "phase": 5, "game": 55, "start": "red"}
+{"event": "game_end", "t": 3811.421, "phase": 5, "game": 55, "seed": 202692155, "held_out": false, "start_player": "red", "plies": 59, "winner": "red", "draw_reason": null, "seconds": 67.4, "seconds_per_ply": 1.1424}
+{"event": "game_start", "t": 3811.452, "phase": 5, "game": 56, "start": "black"}
+{"event": "game_end", "t": 3881.449, "phase": 5, "game": 56, "seed": 202692156, "held_out": false, "start_player": "black", "plies": 59, "winner": "black", "draw_reason": null, "seconds": 69.997, "seconds_per_ply": 1.1864}
+{"event": "game_start", "t": 3881.478, "phase": 5, "game": 57, "start": "black"}
+{"event": "game_end", "t": 3921.851, "phase": 5, "game": 57, "seed": 202692157, "held_out": false, "start_player": "black", "plies": 37, "winner": "black", "draw_reason": null, "seconds": 40.373, "seconds_per_ply": 1.0912}
+{"event": "game_start", "t": 3921.871, "phase": 5, "game": 58, "start": "red"}
+{"event": "game_end", "t": 3971.241, "phase": 5, "game": 58, "seed": 202692158, "held_out": false, "start_player": "red", "plies": 43, "winner": "red", "draw_reason": null, "seconds": 49.37, "seconds_per_ply": 1.1481}
+{"event": "game_start", "t": 3971.263, "phase": 5, "game": 59, "start": "red"}
+{"event": "game_end", "t": 4035.357, "phase": 5, "game": 59, "seed": 202692159, "held_out": true, "start_player": "red", "plies": 50, "winner": "black", "draw_reason": null, "seconds": 64.095, "seconds_per_ply": 1.2819}
+{"event": "phase_end", "t": 4035.738, "phase": 5, "records": 488}
+{"event": "game_start", "t": 4035.751, "phase": 6, "game": 60, "start": "black"}
+{"event": "game_end", "t": 4088.589, "phase": 6, "game": 60, "seed": 202692160, "held_out": false, "start_player": "black", "plies": 47, "winner": "black", "draw_reason": null, "seconds": 52.837, "seconds_per_ply": 1.1242}
+{"event": "game_start", "t": 4088.612, "phase": 6, "game": 61, "start": "red"}
+{"event": "game_end", "t": 4152.091, "phase": 6, "game": 61, "seed": 202692161, "held_out": false, "start_player": "red", "plies": 53, "winner": "red", "draw_reason": null, "seconds": 63.479, "seconds_per_ply": 1.1977}
+{"event": "game_start", "t": 4152.118, "phase": 6, "game": 62, "start": "black"}
+{"event": "game_end", "t": 4215.622, "phase": 6, "game": 62, "seed": 202692162, "held_out": false, "start_player": "black", "plies": 52, "winner": "red", "draw_reason": null, "seconds": 63.504, "seconds_per_ply": 1.2212}
+{"event": "game_start", "t": 4215.648, "phase": 6, "game": 63, "start": "red"}
+{"event": "game_end", "t": 4280.16, "phase": 6, "game": 63, "seed": 202692163, "held_out": false, "start_player": "red", "plies": 56, "winner": "black", "draw_reason": null, "seconds": 64.512, "seconds_per_ply": 1.152}
+{"event": "game_start", "t": 4280.188, "phase": 6, "game": 64, "start": "red"}
+{"event": "game_end", "t": 4317.655, "phase": 6, "game": 64, "seed": 202692164, "held_out": false, "start_player": "red", "plies": 33, "winner": "red", "draw_reason": null, "seconds": 37.467, "seconds_per_ply": 1.1354}
+{"event": "game_start", "t": 4317.672, "phase": 6, "game": 65, "start": "red"}
+{"event": "game_end", "t": 4386.579, "phase": 6, "game": 65, "seed": 202692165, "held_out": false, "start_player": "red", "plies": 59, "winner": "red", "draw_reason": null, "seconds": 68.906, "seconds_per_ply": 1.1679}
+{"event": "game_start", "t": 4386.61, "phase": 6, "game": 66, "start": "black"}
+{"event": "game_end", "t": 4448.066, "phase": 6, "game": 66, "seed": 202692166, "held_out": false, "start_player": "black", "plies": 50, "winner": "red", "draw_reason": null, "seconds": 61.456, "seconds_per_ply": 1.2291}
+{"event": "game_start", "t": 4448.091, "phase": 6, "game": 67, "start": "red"}
+{"event": "game_end", "t": 4500.032, "phase": 6, "game": 67, "seed": 202692167, "held_out": false, "start_player": "red", "plies": 44, "winner": "black", "draw_reason": null, "seconds": 51.941, "seconds_per_ply": 1.1805}
+{"event": "game_start", "t": 4500.054, "phase": 6, "game": 68, "start": "black"}
+{"event": "game_end", "t": 4560.957, "phase": 6, "game": 68, "seed": 202692168, "held_out": false, "start_player": "black", "plies": 53, "winner": "black", "draw_reason": null, "seconds": 60.903, "seconds_per_ply": 1.1491}
+{"event": "game_start", "t": 4560.984, "phase": 6, "game": 69, "start": "black"}
+{"event": "game_end", "t": 4630.532, "phase": 6, "game": 69, "seed": 202692169, "held_out": true, "start_player": "black", "plies": 56, "winner": "red", "draw_reason": null, "seconds": 69.548, "seconds_per_ply": 1.2419}
+{"event": "phase_end", "t": 4630.921, "phase": 6, "records": 503}
+{"event": "game_start", "t": 4630.934, "phase": 7, "game": 70, "start": "red"}
+{"event": "game_end", "t": 4667.332, "phase": 7, "game": 70, "seed": 202692170, "held_out": false, "start_player": "red", "plies": 35, "winner": "red", "draw_reason": null, "seconds": 36.398, "seconds_per_ply": 1.0399}
+{"event": "game_start", "t": 4667.35, "phase": 7, "game": 71, "start": "red"}
+{"event": "game_end", "t": 4756.073, "phase": 7, "game": 71, "seed": 202692171, "held_out": false, "start_player": "red", "plies": 70, "winner": "black", "draw_reason": null, "seconds": 88.723, "seconds_per_ply": 1.2675}
+{"event": "game_start", "t": 4756.165, "phase": 7, "game": 72, "start": "black"}
+{"event": "game_end", "t": 4815.863, "phase": 7, "game": 72, "seed": 202692172, "held_out": false, "start_player": "black", "plies": 54, "winner": "red", "draw_reason": null, "seconds": 59.697, "seconds_per_ply": 1.1055}
+{"event": "game_start", "t": 4815.889, "phase": 7, "game": 73, "start": "black"}
+{"event": "game_end", "t": 4877.238, "phase": 7, "game": 73, "seed": 202692173, "held_out": false, "start_player": "black", "plies": 53, "winner": "black", "draw_reason": null, "seconds": 61.349, "seconds_per_ply": 1.1575}
+{"event": "game_start", "t": 4877.265, "phase": 7, "game": 74, "start": "red"}
+{"event": "game_end", "t": 4914.544, "phase": 7, "game": 74, "seed": 202692174, "held_out": false, "start_player": "red", "plies": 36, "winner": "black", "draw_reason": null, "seconds": 37.278, "seconds_per_ply": 1.0355}
+{"event": "game_start", "t": 4914.563, "phase": 7, "game": 75, "start": "red"}
+{"event": "game_end", "t": 5004.758, "phase": 7, "game": 75, "seed": 202692175, "held_out": false, "start_player": "red", "plies": 75, "winner": "red", "draw_reason": null, "seconds": 90.195, "seconds_per_ply": 1.2026}
+{"event": "game_start", "t": 5004.796, "phase": 7, "game": 76, "start": "black"}
+{"event": "game_end", "t": 5076.943, "phase": 7, "game": 76, "seed": 202692176, "held_out": false, "start_player": "black", "plies": 59, "winner": "black", "draw_reason": null, "seconds": 72.146, "seconds_per_ply": 1.2228}
+{"event": "game_start", "t": 5076.971, "phase": 7, "game": 77, "start": "red"}
+{"event": "game_end", "t": 5134.158, "phase": 7, "game": 77, "seed": 202692177, "held_out": false, "start_player": "red", "plies": 51, "winner": "red", "draw_reason": null, "seconds": 57.187, "seconds_per_ply": 1.1213}
+{"event": "game_start", "t": 5134.184, "phase": 7, "game": 78, "start": "red"}
+{"event": "game_end", "t": 5183.122, "phase": 7, "game": 78, "seed": 202692178, "held_out": false, "start_player": "red", "plies": 42, "winner": "black", "draw_reason": null, "seconds": 48.937, "seconds_per_ply": 1.1652}
+{"event": "game_start", "t": 5183.145, "phase": 7, "game": 79, "start": "black"}
+{"event": "game_end", "t": 5274.325, "phase": 7, "game": 79, "seed": 202692179, "held_out": true, "start_player": "black", "plies": 77, "winner": "black", "draw_reason": null, "seconds": 91.18, "seconds_per_ply": 1.1842}
+{"event": "phase_end", "t": 5274.772, "phase": 7, "records": 552}
+{"event": "game_start", "t": 5274.787, "phase": 8, "game": 80, "start": "red"}
+{"event": "game_end", "t": 5348.411, "phase": 8, "game": 80, "seed": 202692180, "held_out": false, "start_player": "red", "plies": 64, "winner": "black", "draw_reason": null, "seconds": 73.624, "seconds_per_ply": 1.1504}
+{"event": "game_start", "t": 5348.443, "phase": 8, "game": 81, "start": "black"}
+{"event": "game_end", "t": 5406.668, "phase": 8, "game": 81, "seed": 202692181, "held_out": false, "start_player": "black", "plies": 46, "winner": "red", "draw_reason": null, "seconds": 58.225, "seconds_per_ply": 1.2658}
+{"event": "game_start", "t": 5406.691, "phase": 8, "game": 82, "start": "black"}
+{"event": "game_end", "t": 5489.422, "phase": 8, "game": 82, "seed": 202692182, "held_out": false, "start_player": "black", "plies": 67, "winner": "black", "draw_reason": null, "seconds": 82.731, "seconds_per_ply": 1.2348}
+{"event": "game_start", "t": 5489.457, "phase": 8, "game": 83, "start": "red"}
+{"event": "game_end", "t": 5557.479, "phase": 8, "game": 83, "seed": 202692183, "held_out": false, "start_player": "red", "plies": 58, "winner": "black", "draw_reason": null, "seconds": 68.022, "seconds_per_ply": 1.1728}
+{"event": "game_start", "t": 5557.507, "phase": 8, "game": 84, "start": "black"}
+{"event": "game_end", "t": 5593.876, "phase": 8, "game": 84, "seed": 202692184, "held_out": false, "start_player": "black", "plies": 33, "winner": "black", "draw_reason": null, "seconds": 36.369, "seconds_per_ply": 1.1021}
+{"event": "game_start", "t": 5593.893, "phase": 8, "game": 85, "start": "black"}
+{"event": "game_end", "t": 5667.352, "phase": 8, "game": 85, "seed": 202692185, "held_out": false, "start_player": "black", "plies": 64, "winner": "red", "draw_reason": null, "seconds": 73.458, "seconds_per_ply": 1.1478}
+{"event": "game_start", "t": 5667.386, "phase": 8, "game": 86, "start": "black"}
+{"event": "game_end", "t": 5802.461, "phase": 8, "game": 86, "seed": 202692186, "held_out": false, "start_player": "black", "plies": 103, "winner": "black", "draw_reason": null, "seconds": 135.075, "seconds_per_ply": 1.3114}
+{"event": "game_start", "t": 5802.515, "phase": 8, "game": 87, "start": "red"}
+{"event": "game_end", "t": 5846.828, "phase": 8, "game": 87, "seed": 202692187, "held_out": false, "start_player": "red", "plies": 38, "winner": "black", "draw_reason": null, "seconds": 44.313, "seconds_per_ply": 1.1661}
+{"event": "game_start", "t": 5846.848, "phase": 8, "game": 88, "start": "red"}
+{"event": "game_end", "t": 5903.679, "phase": 8, "game": 88, "seed": 202692188, "held_out": false, "start_player": "red", "plies": 47, "winner": "red", "draw_reason": null, "seconds": 56.832, "seconds_per_ply": 1.2092}
+{"event": "game_start", "t": 5903.704, "phase": 8, "game": 89, "start": "red"}
+{"event": "game_end", "t": 5949.811, "phase": 8, "game": 89, "seed": 202692189, "held_out": true, "start_player": "red", "plies": 42, "winner": "black", "draw_reason": null, "seconds": 46.107, "seconds_per_ply": 1.0978}
+{"event": "phase_end", "t": 5950.229, "phase": 8, "records": 562}
+{"event": "game_start", "t": 5950.243, "phase": 9, "game": 90, "start": "black"}
+{"event": "game_end", "t": 5988.763, "phase": 9, "game": 90, "seed": 202692190, "held_out": false, "start_player": "black", "plies": 37, "winner": "black", "draw_reason": null, "seconds": 38.52, "seconds_per_ply": 1.0411}
+{"event": "game_start", "t": 5988.782, "phase": 9, "game": 91, "start": "black"}
+{"event": "game_end", "t": 6044.634, "phase": 9, "game": 91, "seed": 202692191, "held_out": false, "start_player": "black", "plies": 49, "winner": "black", "draw_reason": null, "seconds": 55.852, "seconds_per_ply": 1.1398}
+{"event": "game_start", "t": 6044.658, "phase": 9, "game": 92, "start": "red"}
+{"event": "game_end", "t": 6114.284, "phase": 9, "game": 92, "seed": 202692192, "held_out": false, "start_player": "red", "plies": 59, "winner": "red", "draw_reason": null, "seconds": 69.626, "seconds_per_ply": 1.1801}
+{"event": "game_start", "t": 6114.314, "phase": 9, "game": 93, "start": "red"}
+{"event": "game_end", "t": 6149.756, "phase": 9, "game": 93, "seed": 202692193, "held_out": false, "start_player": "red", "plies": 33, "winner": "red", "draw_reason": null, "seconds": 35.441, "seconds_per_ply": 1.074}
+{"event": "game_start", "t": 6149.773, "phase": 9, "game": 94, "start": "red"}
+{"event": "game_end", "t": 6219.099, "phase": 9, "game": 94, "seed": 202692194, "held_out": false, "start_player": "red", "plies": 60, "winner": "black", "draw_reason": null, "seconds": 69.326, "seconds_per_ply": 1.1554}
+{"event": "game_start", "t": 6219.129, "phase": 9, "game": 95, "start": "black"}
+{"event": "game_end", "t": 6301.714, "phase": 9, "game": 95, "seed": 202692195, "held_out": false, "start_player": "black", "plies": 69, "winner": "black", "draw_reason": null, "seconds": 82.585, "seconds_per_ply": 1.1969}
+{"event": "game_start", "t": 6301.749, "phase": 9, "game": 96, "start": "red"}
+{"event": "game_end", "t": 6354.299, "phase": 9, "game": 96, "seed": 202692196, "held_out": false, "start_player": "red", "plies": 46, "winner": "black", "draw_reason": null, "seconds": 52.55, "seconds_per_ply": 1.1424}
+{"event": "game_start", "t": 6354.323, "phase": 9, "game": 97, "start": "red"}
+{"event": "game_end", "t": 6456.876, "phase": 9, "game": 97, "seed": 202692197, "held_out": false, "start_player": "red", "plies": 93, "winner": "red", "draw_reason": null, "seconds": 102.553, "seconds_per_ply": 1.1027}
+{"event": "game_start", "t": 6456.926, "phase": 9, "game": 98, "start": "black"}
+{"event": "game_end", "t": 6517.013, "phase": 9, "game": 98, "seed": 202692198, "held_out": false, "start_player": "black", "plies": 54, "winner": "red", "draw_reason": null, "seconds": 60.087, "seconds_per_ply": 1.1127}
+{"event": "game_start", "t": 6517.04, "phase": 9, "game": 99, "start": "black"}
+{"event": "game_end", "t": 6584.888, "phase": 9, "game": 99, "seed": 202692199, "held_out": true, "start_player": "black", "plies": 63, "winner": "black", "draw_reason": null, "seconds": 67.847, "seconds_per_ply": 1.0769}
+{"event": "phase_end", "t": 6585.344, "phase": 9, "records": 563}
+{"event": "game_start", "t": 6585.358, "phase": 10, "game": 100, "start": "black"}
+{"event": "game_end", "t": 6639.429, "phase": 10, "game": 100, "seed": 202692200, "held_out": false, "start_player": "black", "plies": 47, "winner": "black", "draw_reason": null, "seconds": 54.071, "seconds_per_ply": 1.1504}
+{"event": "game_start", "t": 6639.453, "phase": 10, "game": 101, "start": "black"}
+{"event": "game_end", "t": 6688.691, "phase": 10, "game": 101, "seed": 202692201, "held_out": false, "start_player": "black", "plies": 44, "winner": "red", "draw_reason": null, "seconds": 49.239, "seconds_per_ply": 1.1191}
+{"event": "game_start", "t": 6688.713, "phase": 10, "game": 102, "start": "black"}
+{"event": "game_end", "t": 6751.506, "phase": 10, "game": 102, "seed": 202692202, "held_out": false, "start_player": "black", "plies": 52, "winner": "red", "draw_reason": null, "seconds": 62.793, "seconds_per_ply": 1.2076}
+{"event": "game_start", "t": 6751.533, "phase": 10, "game": 103, "start": "black"}
+{"event": "game_end", "t": 7027.577, "phase": 10, "game": 103, "seed": 202692203, "held_out": false, "start_player": "black", "plies": 195, "winner": "black", "draw_reason": null, "seconds": 276.043, "seconds_per_ply": 1.4156}
+{"event": "game_start", "t": 7027.692, "phase": 10, "game": 104, "start": "black"}
+{"event": "game_end", "t": 7089.724, "phase": 10, "game": 104, "seed": 202692204, "held_out": false, "start_player": "black", "plies": 53, "winner": "black", "draw_reason": null, "seconds": 62.033, "seconds_per_ply": 1.1704}
+{"event": "game_start", "t": 7089.752, "phase": 10, "game": 105, "start": "black"}
+{"event": "game_end", "t": 7159.738, "phase": 10, "game": 105, "seed": 202692205, "held_out": false, "start_player": "black", "plies": 59, "winner": "black", "draw_reason": null, "seconds": 69.986, "seconds_per_ply": 1.1862}
+{"event": "game_start", "t": 7159.769, "phase": 10, "game": 106, "start": "black"}
+{"event": "game_end", "t": 7216.761, "phase": 10, "game": 106, "seed": 202692206, "held_out": false, "start_player": "black", "plies": 50, "winner": "red", "draw_reason": null, "seconds": 56.993, "seconds_per_ply": 1.1399}
+{"event": "game_start", "t": 7216.787, "phase": 10, "game": 107, "start": "red"}
+{"event": "game_end", "t": 7615.9, "phase": 10, "game": 107, "seed": 202692207, "held_out": false, "start_player": "red", "plies": 280, "winner": null, "draw_reason": "terminal_state_cap", "seconds": 399.112, "seconds_per_ply": 1.4254}
+{"event": "game_start", "t": 7616.101, "phase": 10, "game": 108, "start": "black"}
+{"event": "game_end", "t": 7676.807, "phase": 10, "game": 108, "seed": 202692208, "held_out": false, "start_player": "black", "plies": 54, "winner": "red", "draw_reason": null, "seconds": 60.706, "seconds_per_ply": 1.1242}
+{"event": "game_start", "t": 7676.836, "phase": 10, "game": 109, "start": "red"}
+{"event": "game_end", "t": 7738.276, "phase": 10, "game": 109, "seed": 202692209, "held_out": true, "start_player": "red", "plies": 53, "winner": "red", "draw_reason": null, "seconds": 61.441, "seconds_per_ply": 1.1593}
+{"event": "phase_end", "t": 7739.044, "phase": 10, "records": 887}
+{"event": "game_start", "t": 7739.065, "phase": 11, "game": 110, "start": "black"}
+{"event": "game_end", "t": 7777.588, "phase": 11, "game": 110, "seed": 202692210, "held_out": false, "start_player": "black", "plies": 36, "winner": "red", "draw_reason": null, "seconds": 38.523, "seconds_per_ply": 1.0701}
+{"event": "game_start", "t": 7777.606, "phase": 11, "game": 111, "start": "red"}
+{"event": "game_end", "t": 7842.81, "phase": 11, "game": 111, "seed": 202692211, "held_out": false, "start_player": "red", "plies": 53, "winner": "red", "draw_reason": null, "seconds": 65.204, "seconds_per_ply": 1.2303}
+{"event": "game_start", "t": 7842.836, "phase": 11, "game": 112, "start": "red"}
+{"event": "game_end", "t": 7893.328, "phase": 11, "game": 112, "seed": 202692212, "held_out": false, "start_player": "red", "plies": 45, "winner": "red", "draw_reason": null, "seconds": 50.492, "seconds_per_ply": 1.122}
+{"event": "game_start", "t": 7893.351, "phase": 11, "game": 113, "start": "red"}
+{"event": "game_end", "t": 7955.365, "phase": 11, "game": 113, "seed": 202692213, "held_out": false, "start_player": "red", "plies": 49, "winner": "red", "draw_reason": null, "seconds": 62.014, "seconds_per_ply": 1.2656}
+{"event": "game_start", "t": 7955.389, "phase": 11, "game": 114, "start": "red"}
+{"event": "game_end", "t": 8008.526, "phase": 11, "game": 114, "seed": 202692214, "held_out": false, "start_player": "red", "plies": 45, "winner": "red", "draw_reason": null, "seconds": 53.137, "seconds_per_ply": 1.1808}
+{"event": "game_start", "t": 8008.548, "phase": 11, "game": 115, "start": "black"}
+{"event": "game_end", "t": 8054.279, "phase": 11, "game": 115, "seed": 202692215, "held_out": false, "start_player": "black", "plies": 41, "winner": "black", "draw_reason": null, "seconds": 45.731, "seconds_per_ply": 1.1154}
+{"event": "game_start", "t": 8054.3, "phase": 11, "game": 116, "start": "red"}
+{"event": "game_end", "t": 8119.308, "phase": 11, "game": 116, "seed": 202692216, "held_out": false, "start_player": "red", "plies": 57, "winner": "red", "draw_reason": null, "seconds": 65.007, "seconds_per_ply": 1.1405}
+{"event": "game_start", "t": 8119.337, "phase": 11, "game": 117, "start": "red"}
+{"event": "game_end", "t": 8225.571, "phase": 11, "game": 117, "seed": 202692217, "held_out": false, "start_player": "red", "plies": 89, "winner": "red", "draw_reason": null, "seconds": 106.234, "seconds_per_ply": 1.1936}
+{"event": "game_start", "t": 8225.616, "phase": 11, "game": 118, "start": "black"}
+{"event": "game_end", "t": 8309.69, "phase": 11, "game": 118, "seed": 202692218, "held_out": false, "start_player": "black", "plies": 68, "winner": "red", "draw_reason": null, "seconds": 84.074, "seconds_per_ply": 1.2364}
+{"event": "game_start", "t": 8309.726, "phase": 11, "game": 119, "start": "red"}
+{"event": "game_end", "t": 8369.14, "phase": 11, "game": 119, "seed": 202692219, "held_out": true, "start_player": "red", "plies": 51, "winner": "red", "draw_reason": null, "seconds": 59.414, "seconds_per_ply": 1.165}
+{"event": "phase_end", "t": 8369.57, "phase": 11, "records": 534}
+{"event": "end", "t": 8369.586, "status": "COMPLETED"}
