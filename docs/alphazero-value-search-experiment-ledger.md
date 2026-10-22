@@ -104,6 +104,8 @@ knob) is not a new hypothesis.
 
 > **Search distillation D2, Stage 1 live measurement (Post-closure entry 21, 2026-10-22, MEASURED).** Stage 0 built an offline trainer that trains `calib020_0001`'s encoder and policy head on its own captured search targets (value head and BatchNorm statistics frozen, value anchor). Stage 1 ran two incumbent self-play games once at 1,600 simulations through the serial capture driver: **COMPLETED in 124 s**; 52 and 54 plies; **1.16 s per ply**; 776 KB captured; the rebuilt records equal the learner rows, and 99 of 106 searches began with inherited child visits. Two games price generation (120 games ≈ 2 h at these lengths; ≤ 10.9 h even if every game reached the 280-ply cap, if the per-ply time holds) but cannot estimate the game-length distribution. Measurement only; the seeds are retired. Stages 2–5 unapproved. See #67.
 
+> **Search distillation D2, Stage 2 corpus generation (Post-closure entry 22, 2026-10-22, COMPLETED).** One run of 120 fresh incumbent self-play games at 1,600 simulations, at Stage 1's exact configuration, in 12 phases of 10: **COMPLETED in 8,370 s (2.3 h) of a 12 h ceiling, 12/12 phases finalized**; 7,020 records (6,403 from the 108 training games, 617 from the 12 held-out games); every rebuilt record equal to the learner row; model digest unchanged. Game lengths 32–280 plies (median 53; two reached the 280-ply cap). The corpus (outside the repository, bound by `corpus.json`) is **eligible for training**. No claim about target quality or strength. Training, Stages 4–5, promotion and pushing unapproved. See #68.
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -1667,6 +1669,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 66. **The policy-head capacity proposal (entry 18) — SHELVED 2026-10-22.** Do **not** spend further on this proposal — no new planted recipe, synthetic separation check, real-label generation or 200-game pilot under it — unless a new design first establishes, before any fitting, a defensible KL separation between the arms it compares, and is separately approved. Do **not** cite the shelving, or the NOT QUALIFIED result, as evidence that the head's capacity does or does not limit learning: the hypothesis is unresolved.
 
 67. **The D2 Stage 1 live measurement (entry 21) — MEASURED 2026-10-22.** Do **not** rerun it, add games to it, or use its two games (seeds `[202691900, 202691902)`, EXPOSED and RETIRED) as training, held-out or evaluation material: they are measurement material only. Do **not** read their lengths (52 and 54 plies, both decisive) as the corpus's game-length distribution — two games cannot estimate it — or compare their 1.16 s per ply (batched self-play search, 0.73 ms per simulation) with entry 19's 1.74 ms per simulation (the evaluation play path): different search paths. Nothing here is evidence about target quality or strength.
+
+68. **The D2 Stage 2 corpus generation (entry 22) — COMPLETED 2026-10-22.** Do **not** rerun it, top it up, replace any game or phase, or add games to the corpus: it is fixed at 120 games in 12 phases. Do **not** move games between the training and held-out sets (held out: slot ≡ 9 mod 10, 12 games), train on the held-out games, or use any of the 120 games (seeds `[202692100, 202692220)`, EXPOSED and RETIRED) for strength or screen games. Do **not** read the run's 2.3 h, its 1.19 s per ply or its length distribution as a cost bound for other configurations, or anything here as evidence about target quality or strength. Training needs its own approval and a frozen Stage 3 card with the recipe fixed before training.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -3622,3 +3626,53 @@ versus after-minus-before** (the newly added counts). A synthetic reader test no
 scripted capture fixture, where before, after and after-minus-before all differ on inherited rows; it also checks
 the selection counts on the adjusted row. The test needs no game and no inference; no mutation campaign was
 repeated. Stage 1's live check is unchanged: 99 of 106 rows there had inherited visits.
+
+### 22. Search distillation D2 — Stage 2 corpus generation, 120 games (2026-10-22, COMPLETED)
+
+**Test.** One bounded generation run under card `docs/superpowers/2026-10-22-search-distillation-d2-stage2-card.md`
+(pinned by SHA-256 in `scripts/GPU/alphazero/search_distillation_d2_generate.py`): 120 fresh self-play games of
+`calib020_0001` at 1,600 simulations, at Stage 1's exact configuration (entry 21), in 12 ordered phases of 10 games,
+each phase its own finalized capture directory. Slot `s` uses seed `base + s`; slots with `s % 10 == 9` (one per
+phase, 12 games) are held out, the other 108 are training games, fixed before generation. All 12 phases had to
+finalize for the corpus to be eligible for training (the plan's six-phase fallback was replaced at approval). 12 h
+ceiling including capture and validation; stop on the first failure, with no retry, replacement or top-up. After
+each phase the Stage 0 reader rebuilt its records and every one had to equal the learner row. The approval asked for
+120 games, not 240. Production of training material only; no strength claim.
+
+**Hypothesis.** None for the generation. (The experiment's hypothesis is stated in entry 21.)
+
+**Why it was plausible.** As for entry 21.
+
+**Prediction on record.** None stated in advance about the corpus. The approved terms recorded the timing as an
+estimate: about 2.1 h, projected from Stage 1's two games, with 10.9 h (every game capped) explicitly not a
+demonstrated bound.
+
+**What ran.** Build `b015a8fe` (gate `SEARCH_DISTILLATION_D2_GENERATE_AUTHORIZED`, the thirty-third; wrapper with TERM
+at 43,190 s and KILL 10 s later; regression at the build equal to the 58-id baseline). Seeds `[202692100, 202692220)`:
+survey `88209d76` (CLEAN, 45/45), pre-proof `0d77665b`, registration in ACCOUNTED `6aa0971e` (40 → 41), post-proof
+`e10987bc`. Gate opened by `44390545`; one run through `01_wrapper.sh` in a clean linked worktree; evidence and the
+restored gate `d78387f2`; closing K1 `985eccbd` (RECONCILES, 15/15), K2 `1d4d7eda` (EXPOSED and RETIRED whole);
+registry readers 593 passed; seed, gate and D2 tests 312 passed.
+
+**Result.** Outer exit 0, **COMPLETED in 8,370 s** (2.3 h) of a 43,200 s ceiling, record by the script, no survivors,
+gate restored and read back, stderr empty. **12/12 phases finalized**; 120 games, **7,020 records**: 6,403 from the
+108 training games and 617 from the 12 held-out games. Every phase's rebuilt records equal the learner rows; 6,728
+of 7,020 searches began with inherited child visits. Model digest unchanged (`ae0e71fc…`); 0 of 42 modules in
+training mode at load and at the end. Game lengths: 32 to 280 plies, median 53, mean 58.5, 90th percentile 73; four
+games over 100 plies (103, 195, and two of 280 that ended at the state cap). Outcomes: 118 decisive, 2 state-cap
+draws. Overall 1.19 s per ply (per game 1.00–1.44; the three longest games, 195–280 plies, ran slowest at 1.42–1.44 s per ply); 9 s
+outside games. Capture: 50.0 MB in all, 3.5–5.8 MB per phase against an 84 MiB phase ceiling; write and reopen
+under 0.24 s per phase. The corpus is at `~/twixt-cache/search-distillation-d2/corpus-20261022T162940Z/`, outside the
+repository; `corpus.json` (SHA-256 `a9a425f2…`) lists the phases and their hashes and the training and held-out ids,
+and each phase's context, receipts and completion marker are copied into the evidence directory. After the run the
+whole corpus was reopened with the Stage 0 reader, independently of the script: 7,020 records, all game ids
+distinct, and the context and completion-marker hashes match the record and the evidence copies.
+
+**Did it match the prediction, and why.** No prediction was stated. Against the timing estimate: 2.3 h, not 2.1 h.
+The games were longer on average than Stage 1's two (mean 58.5 against 53 plies), and per-ply time was higher in
+long games (about 1.43 s per ply at 195–280 plies against 1.16 s in Stage 1), which Stage 1 had not measured
+beyond ply 54.
+
+**Conclusion / status.** COMPLETED. The corpus is fixed and eligible for training under the approved terms. It
+is training material only and says nothing about target quality or strength. Training (Stage 3), Stages 4–5,
+promotion and pushing remain unapproved. See do-not-repeat **#68**.
