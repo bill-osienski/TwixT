@@ -1,0 +1,197 @@
+SEARCH DISTILLATION D2 STAGE 2 -- GAME-SEED COLLISION PROOF, mode PRE
+================================================================================================
+HEAD 88209d76b79f9e03d1640bc1d8f0995d4c385a7f; working tree clean
+this tree /Users/bill/twixt-worktrees/d2-generate
+main checkout /Users/bill/projects/TwixT_Game (scanned too; HEAD b015a8fed999d90fa2b7109c7e269fa58e5da092; 2 uncommitted entries, not required clean)
+method (survey) docs/superpowers/evidence/tactical-candidate-seed-survey/01_seed_survey.py sha256 6f6e55dbd5da672848c757753d4e61a3e9d110d96569b7ef468f902cf46f8860 (pinned)
+method (proof) docs/superpowers/evidence/tactical-candidate-seed-registration/01_collision_proof.py sha256 dd192011938ca5c6674092b243681174e669e1e96b22b8d13da2a264b340764d (pinned)
+rule scripts/GPU/alphazero/seed_selection.py sha256 34c2a537e580eb7215b18a4ad747ed894c330dadeb40b96bc87f90c1d74b4dcc (ALIGN 100)
+registry scripts/GPU/alphazero/e4_screen_reference.py sha256 96cb789fd72204118462e69a200cb4bd1aa5d531714ec918647726662a27555f
+masks (imported): ['0x3c3c3c', '0x5a5a5a', '0xa5a5a5', '0xc3c3c3']
+registries: ACCOUNTED 40, EXPOSED 38, RETIRED 36, TEST_ONLY 1
+named spent blocks: D1 paper 1, H1 2, H2 3, H3 6, H4 5, H5 4; H3 generation ranges 4; CONSUMED_SEEDS 1
+EXEMPT PATHS (exact; plus registry tuple elements by parsing): 4 + the plan
+    docs/superpowers/evidence/search-distillation-d2-generate-seed-survey/01_seed_survey.py
+    docs/superpowers/evidence/search-distillation-d2-generate-seed-survey/02_seed_survey_run.txt
+    docs/superpowers/evidence/search-distillation-d2-generate-seed-survey/03_collision_proof_pre_run.txt
+    docs/superpowers/evidence/search-distillation-d2-generate-seed-survey/04_collision_proof_post_run.txt
+    docs/superpowers/evidence/search-distillation-d2-generate-run/plan.json  (only if every band literal in it is a slot of the block)
+
+survey record docs/superpowers/evidence/search-distillation-d2-generate-seed-survey/02_seed_survey_run.txt sha256 cf929c1d19701972212cee884f83a64b622ca08cde8607dd1fc20968b6fe2b15 (read at b015a8fed999d90fa2b7109c7e269fa58e5da092)
+THE BLOCK, read from the record: [202692100, 202692220) -- BASE 202692100
+EXPECTED STATE (pre): HOLDS
+
+SCOPE (fail-closed enumeration) under ['scripts', 'tests', 'docs/superpowers']: this tree 4793 regular files, 0 symbolic links (not followed); main checkout 47437 regular files, 0 symbolic links; band literal values counted: 5098
+THE BLOCK (202692100, 202692220)  n=120  direct=NONE  streams=0  injective=True  gap=167 (floor 120)  CLEAN=True
+SLOTS (build_agent_pairing_tasks: game g has seed BASE + g):
+    SLOT 0 game 0 phase 0 training seed 202692100
+    SLOT 1 game 1 phase 0 training seed 202692101
+    SLOT 2 game 2 phase 0 training seed 202692102
+    SLOT 3 game 3 phase 0 training seed 202692103
+    SLOT 4 game 4 phase 0 training seed 202692104
+    SLOT 5 game 5 phase 0 training seed 202692105
+    SLOT 6 game 6 phase 0 training seed 202692106
+    SLOT 7 game 7 phase 0 training seed 202692107
+    SLOT 8 game 8 phase 0 training seed 202692108
+    SLOT 9 game 9 phase 0 held-out seed 202692109
+    SLOT 10 game 10 phase 1 training seed 202692110
+    SLOT 11 game 11 phase 1 training seed 202692111
+    SLOT 12 game 12 phase 1 training seed 202692112
+    SLOT 13 game 13 phase 1 training seed 202692113
+    SLOT 14 game 14 phase 1 training seed 202692114
+    SLOT 15 game 15 phase 1 training seed 202692115
+    SLOT 16 game 16 phase 1 training seed 202692116
+    SLOT 17 game 17 phase 1 training seed 202692117
+    SLOT 18 game 18 phase 1 training seed 202692118
+    SLOT 19 game 19 phase 1 held-out seed 202692119
+    SLOT 20 game 20 phase 2 training seed 202692120
+    SLOT 21 game 21 phase 2 training seed 202692121
+    SLOT 22 game 22 phase 2 training seed 202692122
+    SLOT 23 game 23 phase 2 training seed 202692123
+    SLOT 24 game 24 phase 2 training seed 202692124
+    SLOT 25 game 25 phase 2 training seed 202692125
+    SLOT 26 game 26 phase 2 training seed 202692126
+    SLOT 27 game 27 phase 2 training seed 202692127
+    SLOT 28 game 28 phase 2 training seed 202692128
+    SLOT 29 game 29 phase 2 held-out seed 202692129
+    SLOT 30 game 30 phase 3 training seed 202692130
+    SLOT 31 game 31 phase 3 training seed 202692131
+    SLOT 32 game 32 phase 3 training seed 202692132
+    SLOT 33 game 33 phase 3 training seed 202692133
+    SLOT 34 game 34 phase 3 training seed 202692134
+    SLOT 35 game 35 phase 3 training seed 202692135
+    SLOT 36 game 36 phase 3 training seed 202692136
+    SLOT 37 game 37 phase 3 training seed 202692137
+    SLOT 38 game 38 phase 3 training seed 202692138
+    SLOT 39 game 39 phase 3 held-out seed 202692139
+    SLOT 40 game 40 phase 4 training seed 202692140
+    SLOT 41 game 41 phase 4 training seed 202692141
+    SLOT 42 game 42 phase 4 training seed 202692142
+    SLOT 43 game 43 phase 4 training seed 202692143
+    SLOT 44 game 44 phase 4 training seed 202692144
+    SLOT 45 game 45 phase 4 training seed 202692145
+    SLOT 46 game 46 phase 4 training seed 202692146
+    SLOT 47 game 47 phase 4 training seed 202692147
+    SLOT 48 game 48 phase 4 training seed 202692148
+    SLOT 49 game 49 phase 4 held-out seed 202692149
+    SLOT 50 game 50 phase 5 training seed 202692150
+    SLOT 51 game 51 phase 5 training seed 202692151
+    SLOT 52 game 52 phase 5 training seed 202692152
+    SLOT 53 game 53 phase 5 training seed 202692153
+    SLOT 54 game 54 phase 5 training seed 202692154
+    SLOT 55 game 55 phase 5 training seed 202692155
+    SLOT 56 game 56 phase 5 training seed 202692156
+    SLOT 57 game 57 phase 5 training seed 202692157
+    SLOT 58 game 58 phase 5 training seed 202692158
+    SLOT 59 game 59 phase 5 held-out seed 202692159
+    SLOT 60 game 60 phase 6 training seed 202692160
+    SLOT 61 game 61 phase 6 training seed 202692161
+    SLOT 62 game 62 phase 6 training seed 202692162
+    SLOT 63 game 63 phase 6 training seed 202692163
+    SLOT 64 game 64 phase 6 training seed 202692164
+    SLOT 65 game 65 phase 6 training seed 202692165
+    SLOT 66 game 66 phase 6 training seed 202692166
+    SLOT 67 game 67 phase 6 training seed 202692167
+    SLOT 68 game 68 phase 6 training seed 202692168
+    SLOT 69 game 69 phase 6 held-out seed 202692169
+    SLOT 70 game 70 phase 7 training seed 202692170
+    SLOT 71 game 71 phase 7 training seed 202692171
+    SLOT 72 game 72 phase 7 training seed 202692172
+    SLOT 73 game 73 phase 7 training seed 202692173
+    SLOT 74 game 74 phase 7 training seed 202692174
+    SLOT 75 game 75 phase 7 training seed 202692175
+    SLOT 76 game 76 phase 7 training seed 202692176
+    SLOT 77 game 77 phase 7 training seed 202692177
+    SLOT 78 game 78 phase 7 training seed 202692178
+    SLOT 79 game 79 phase 7 held-out seed 202692179
+    SLOT 80 game 80 phase 8 training seed 202692180
+    SLOT 81 game 81 phase 8 training seed 202692181
+    SLOT 82 game 82 phase 8 training seed 202692182
+    SLOT 83 game 83 phase 8 training seed 202692183
+    SLOT 84 game 84 phase 8 training seed 202692184
+    SLOT 85 game 85 phase 8 training seed 202692185
+    SLOT 86 game 86 phase 8 training seed 202692186
+    SLOT 87 game 87 phase 8 training seed 202692187
+    SLOT 88 game 88 phase 8 training seed 202692188
+    SLOT 89 game 89 phase 8 held-out seed 202692189
+    SLOT 90 game 90 phase 9 training seed 202692190
+    SLOT 91 game 91 phase 9 training seed 202692191
+    SLOT 92 game 92 phase 9 training seed 202692192
+    SLOT 93 game 93 phase 9 training seed 202692193
+    SLOT 94 game 94 phase 9 training seed 202692194
+    SLOT 95 game 95 phase 9 training seed 202692195
+    SLOT 96 game 96 phase 9 training seed 202692196
+    SLOT 97 game 97 phase 9 training seed 202692197
+    SLOT 98 game 98 phase 9 training seed 202692198
+    SLOT 99 game 99 phase 9 held-out seed 202692199
+    SLOT 100 game 100 phase 10 training seed 202692200
+    SLOT 101 game 101 phase 10 training seed 202692201
+    SLOT 102 game 102 phase 10 training seed 202692202
+    SLOT 103 game 103 phase 10 training seed 202692203
+    SLOT 104 game 104 phase 10 training seed 202692204
+    SLOT 105 game 105 phase 10 training seed 202692205
+    SLOT 106 game 106 phase 10 training seed 202692206
+    SLOT 107 game 107 phase 10 training seed 202692207
+    SLOT 108 game 108 phase 10 training seed 202692208
+    SLOT 109 game 109 phase 10 held-out seed 202692209
+    SLOT 110 game 110 phase 11 training seed 202692210
+    SLOT 111 game 111 phase 11 training seed 202692211
+    SLOT 112 game 112 phase 11 training seed 202692212
+    SLOT 113 game 113 phase 11 training seed 202692213
+    SLOT 114 game 114 phase 11 training seed 202692214
+    SLOT 115 game 115 phase 11 training seed 202692215
+    SLOT 116 game 116 phase 11 training seed 202692216
+    SLOT 117 game 117 phase 11 training seed 202692217
+    SLOT 118 game 118 phase 11 training seed 202692218
+    SLOT 119 game 119 phase 11 held-out seed 202692219
+
+CONTROLS
+------------------------------------------------------------------------------------------------
+  PASS   REJECTED: D1 paper block (202615000, 202615221)
+  PASS   REJECTED: H1 block (202616000, 202616224)
+  PASS   REJECTED: H2 block (202618000, 202618736)
+  PASS   REJECTED: H3 block (202624000, 202624040)
+  PASS   REJECTED: H4 block (202632000, 202632032)
+  PASS   REJECTED: H5 block (202650000, 202650148)
+  PASS   REJECTED: the TEST_ONLY band
+  PASS   REJECTED: inside the live H3 uniform generation range
+  PASS   REJECTED: overlaps the block by one seed
+  PASS   REJECTED: starts where the block ends -- inside the floor
+  PASS   REJECTED: one seed inside the floor
+  PASS   REJECTED: the most recently EXPOSED block (the D2 Stage 1 measurement's games)
+  PASS   REJECTED: a block at the H4-4b MUTATION literal 202642000
+  PASS   an UNDERSCORE-GROUPED candidate seed (.py)  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=167; dropping undecodable bytes instead would see it]
+  PASS   a PLAIN candidate seed (.py)  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=167; dropping undecodable bytes instead would see it]
+  PASS   an UNDERSCORE-GROUPED exclusive end (.py)  [without it CLEAN=True; with it direct=NONE gap=0; dropping undecodable bytes instead would see it]
+  PASS   a candidate seed in a .log -- a suffix H5's filter skipped  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=167; dropping undecodable bytes instead would see it]
+  PASS   a candidate seed inside a .gz  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=167; dropping undecodable bytes instead would see it]
+  PASS   a candidate seed after an undecodable byte after a digit  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=167; dropping undecodable bytes instead would MISS it]
+  PASS   an UNREADABLE file stops the survey  [SurveyStop]
+  PASS   a CORRUPT .gz stops the survey  [SurveyStop]
+  PASS   an own record (exact path) is exempt  [None]
+  PASS   a sibling path that is NOT listed is counted  [[('docs/superpowers/evidence/search-distillation-d2-generate-seed-survey/04_not_listed.txt', 1)]]
+  PASS   the plan holding only block seeds is exempt  [None]
+  PASS   registry tuple elements are exempt by parsing (a non-ASCII char BEFORE them)  [[202692111]]
+  PASS   the same value outside a registry tuple is counted  [[('scripts/GPU/alphazero/e4_screen_reference.py', 1)]]
+  PASS   a plan with a seed OUTSIDE the block is not exempt  [[202692100, 202692225]]
+  PASS   an UNREADABLE directory  [STOPPED: a directory could not be read]
+  PASS   an UNREADABLE nested directory  [STOPPED: a directory could not be read]
+  PASS   a missing root  [STOPPED: <tmp>/tests: the root is not a directory]
+  PASS   a root that is a file  [STOPPED: <tmp>/scripts: the root is not a directory]
+  PASS   a FIFO inside a root  [STOPPED: <tmp>/scripts/pipe: neither a regular file, a directory nor a symbolic link]
+  PASS   a sound tree with a symbolic link  [enumerated: 3 files, 1 links]
+  PASS   pre: the survey's registry, no plan  [the expected state]
+  PASS   pre: the registry changed  [the registry is not the one the survey read]
+  PASS   pre: the block already registered  [the registry is not the one the survey read; a registry already holds seeds of the block: [('ACCOUNTED_SEED_INTERVALS', (202692100, 202692220))]]
+  PASS   pre: a plan already exists  [a pilot plan already exists]
+  PASS   post: exactly the block appended last, the plan  [the expected state]
+  PASS   post: the block appended FIRST  [ACCOUNTED is not the survey's state with exactly the block appended last]
+  PASS   post: a wider tuple  [ACCOUNTED is not the survey's state with exactly the block appended last]
+  PASS   post: EXPOSED changed too  [EXPOSED_SEED_INTERVALS changed]
+  PASS   post: no plan  [the corpus plan is absent or not committed]
+  PASS   post: a plan with another BASE  [the corpus plan is not build_plan of the surveyed block]
+  PASS   post: a plan of 121 slots  [the corpus plan is not build_plan of the surveyed block]
+  PASS   post: a plan bound to another survey record  [the corpus plan is not build_plan of the surveyed block]
+
+controls passed: 45/45
+PROOF VERDICT (pre): THE D2 CORPUS BLOCK IS CLEAN AND THE STATE IS AS EXPECTED
