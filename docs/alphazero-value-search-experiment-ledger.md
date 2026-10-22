@@ -96,6 +96,8 @@ knob) is not a new hypothesis.
 
 > **Policy-head capacity planted qualification — NOT QUALIFIED (Post-closure entry 18 addendum, 2026-10-21, CLOSED).** One run under card rev 3 (`9deaccb9`; evidence `08ced79e`), 26 s, COMPLETED: F1, F2, S2, S3 hold, but **S1 fails** — on the planted R-only target arm C reached KL 0.0496 and R 0.0210, a 0.0286-nat gap below δ = 0.05. The recipe therefore must not be used to measure capacity; no labels, no retuning. Operational only: nothing about whether the head's capacity binds, nothing about strength. The capacity hypothesis remains untested. See do-not-repeat **#65**.
 
+> **Policy-head capacity proposal — SHELVED (Post-closure entry 18 addendum, 2026-10-22, decision).** No qualified, affordable test was established: the planted qualification was NOT QUALIFIED, and a read-only review found its planted target did not establish beforehand that a δ-sized gap between the arms had to exist; no suitable pre-fit guarantee of separation was identified. The capacity hypothesis remains **unresolved**; a frozen-encoder pilot would address only the narrower question of extracting information from existing features, and joint-training capacity and optimization remain open. No further spending; `calib020_0001` stays. See do-not-repeat **#66**.
+
 > **Play-path timing on the new machine (Post-closure entry 19, 2026-10-21, MEASURED).** Mac Studio M5 Max: 1.74 ms per simulation, 0.70 s per ply at 400 simulations (eval mode, committed game positions, no games played, no seeds); about 41.7 s of search per game at entry 15's length, so the methods note's budgets become about 11.8 h (60%) and 47 h (55%) here (derived). Search time only, against entry 15's whole-game 66.6 s: no speed-up between machines is measured or claimed. Label lines derived (1.24 h / 0.62 h, constant cost per simulation assumed); the 205 s G-phase figure stays open (unexplained 3.6 vs 1.1 s per ply).
 
 > **Throughput settings on the new machine (Post-closure entry 20, 2026-10-21, MEASURED).** Self-play: **18 workers at eval batch 14** measured fastest (median 1,207 games/h while all workers are busy; 12 workers 1,038; eval batch 16–48 no faster, 32 and 48 slower; no hang up to 48 in 3 short runs each, which does not show the old hang is gone). Whole-run wall time is dominated by one state-cap game finishing alone (140–484 s for the same setting), so the first sweep's timeouts and its "hang at 16" are void. Labelling: 10–18 workers equal (~3.25x serial); eval batch and stall-flush are never read by the labeller. Operational only; no defaults changed. See do-not-repeat **#64**.
@@ -1659,6 +1661,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 64. **Self-play throughput tuning on the M5 Max (Post-closure entry 20) — settled 2026-10-21.** Do **not** rank self-play settings on the total wall time of a few dozen games: one state-cap game finishing alone moves it by up to 3.5x. Rank on the rate while every worker is busy (`scripts/bench_knee.py` default). Do **not** read a watchdog kill as a Metal hang without progress output and stack dumps. Do **not** re-sweep eval batch above 14 hoping for speed on this machine (16–48 were no faster), and do **not** tune eval batch or stall-flush through `benchmark_phase2_knobs.py`: the labeller never reads them.
 
 65. **The policy-head capacity planted qualification (entry 18 addendum) — NOT QUALIFIED 2026-10-21.** S1 failed (C − R on TR = 0.0286 < δ 0.05). Do **not** rerun it, rerun it with other seeds, or retune its recipe or design (steps, learning rate, batch, clipping, planted scale, δ, the 25% fit fraction, teacher shapes) and run again in search of a pass; do **not** generate real labels with this recipe or run the 200-game pilot on it; and do **not** read NOT QUALIFIED, or C's close fit of TR, as evidence that the head's capacity does or does not bind. A new recipe needs a new card, fresh teacher seeds and its own approval.
+
+66. **The policy-head capacity proposal (entry 18) — SHELVED 2026-10-22.** Do **not** spend further on this proposal — no new planted recipe, synthetic separation check, real-label generation or 200-game pilot under it — unless a new design first establishes, before any fitting, a defensible KL separation between the arms it compares, and is separately approved. Do **not** cite the shelving, or the NOT QUALIFIED result, as evidence that the head's capacity does or does not limit learning: the hypothesis is unresolved.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -3415,6 +3419,25 @@ incumbent head's capacity limits real learning, and nothing about strength.**
 and the recipe is not retuned; any new recipe needs a new card, fresh teacher seeds and its own approval. The
 capacity hypothesis remains **untested**. The 200-game pilot, label generation and promotion remain unapproved.
 See do-not-repeat **#65**.
+
+**Addendum (2026-10-22): the policy-head capacity proposal is SHELVED (decision; documentation only).**
+
+*Decision.* No further spending on this proposal. Basis: no qualified, affordable test has been established. The
+planted qualification above was NOT QUALIFIED (S1: KL(C, TR) − KL(R, TR) = 0.02857 < δ 0.05). A follow-up read-only
+review of the existing code and evidence (no fitting, inference, labels or games) found that the planted TR target,
+although exactly representable by R, was not constructed so as to establish beforehand that C could not approximate it
+within δ: the qualification measured the gap but did not establish that a gap of that size had to exist. No suitable
+guarantee of a KL separation between these actual arms, specified before fitting, was identified in that review.
+
+*Scope of what remains open.* A frozen-encoder pilot addresses a useful but narrower question: whether the existing
+encoder's features carry move information that the current head does not extract. It does not address capacity or
+optimization under joint training. That an encoder could in principle carry the final logit through one channel does
+not show that this fixed, finite encoder could absorb a richer head without cost; joint-training capacity and
+optimization remain open.
+
+*Status.* The capacity hypothesis is **unresolved** (untested). `calib020_0001` remains the incumbent. Nothing new was
+run for this addendum. The feature cache (`~/twixt-cache/policy-head-capacity-planted/`) is kept for now. No new
+recipe, synthetic experiment, real labels, 200-game pilot or promotion is authorized. See do-not-repeat **#66**.
 
 ### 19. Play-path timing re-measured on the new machine (2026-10-21, MEASURED)
 
