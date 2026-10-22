@@ -920,6 +920,13 @@ EXPOSED_SEED_INTERVALS = (
     # block is EXPOSED WHOLE. A post-run accounting edit to a bound file: the committed plan,
     # survey/proof and run records keep their hashes; nothing is rerun.
     (202691800, 202691832),  # ROOT-HALVING MATCH -- 32 game seeds, all started
+    # 🔴 SEARCH DISTILLATION D2 STAGE 1 -- THE CLOSING EDIT (2026-10-22), after the authorized 2-game
+    # measurement (outer exit 0, COMPLETED, no survivors). Use DERIVED from the committed run evidence by
+    # evidence/search-distillation-d2-measure-seed-closing/02_* (RECONCILES, 15/15): both games started, so
+    # the block is EXPOSED WHOLE -- measurement material, never training, held-out or evaluation data. A
+    # post-run accounting edit to a bound file: the committed plan, survey/proof and run records keep their
+    # hashes; nothing is rerun.
+    (202691900, 202691902),  # SEARCH DISTILLATION D2 STAGE 1 -- 2 game seeds, all started
 )
 
 #: Seeds RESERVED PERMANENTLY FOR TESTS. Unit tests must draw from something, and
@@ -1247,6 +1254,13 @@ RETIRED_SEED_INTERVALS = (
     # block is RETIRED WHOLE. A post-run accounting edit to a bound file: the committed plan,
     # survey/proof and run records keep their hashes; nothing is rerun.
     (202691800, 202691832),  # ROOT-HALVING MATCH -- 32 game seeds, all started
+    # 🔴 SEARCH DISTILLATION D2 STAGE 1 -- THE CLOSING EDIT (2026-10-22), after the authorized 2-game
+    # measurement (outer exit 0, COMPLETED, no survivors). Use DERIVED from the committed run evidence by
+    # evidence/search-distillation-d2-measure-seed-closing/02_* (RECONCILES, 15/15): both games started, so
+    # the block is RETIRED WHOLE -- measurement material, never training, held-out or evaluation data. A
+    # post-run accounting edit to a bound file: the committed plan, survey/proof and run records keep their
+    # hashes; nothing is rerun.
+    (202691900, 202691902),  # SEARCH DISTILLATION D2 STAGE 1 -- 2 game seeds, all started
 )
 
 
