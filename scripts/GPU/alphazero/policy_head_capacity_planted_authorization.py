@@ -5,4 +5,4 @@ planted-target qualification of the fitting recipe in `policy_head_capacity_plan
 computes encoder features of 2,000 recorded positions on the CPU and fits arms C and R to two planted targets.
 Opened for ONE approved run and restored on every exit. Created closed. This file may hold ONLY this declaration.
 """
-POLICY_HEAD_CAPACITY_PLANTED_AUTHORIZED = True
+POLICY_HEAD_CAPACITY_PLANTED_AUTHORIZED = False

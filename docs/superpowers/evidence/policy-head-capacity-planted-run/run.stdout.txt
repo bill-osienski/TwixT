@@ -1,0 +1,1 @@
+{"status": "COMPLETED", "verdict": "NOT_QUALIFIED", "void": null}
