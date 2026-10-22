@@ -133,3 +133,24 @@ Stage 1 completed in 124 s. The two games ran 52 and 54 plies, both decisive, at
 - **Frozen card:** `2026-10-22-search-distillation-d2-stage2-card.md`.
 - **Timing:** the 2.1-hour estimate is a projection from two games, and 10.9 hours is not a demonstrated worst-case bound.
 - **Still unapproved:** training and Stages 4–5.
+
+## 11. Stage 2 result and Stage 3 terms as approved (2026-10-22). These replace §4 where the two differ.
+
+**Stage 2 (ledger entry 22):** COMPLETED, with 12 of 12 phases finalized. It produced 120 games and 7,020 records: 6,403 training and 617 held-out. The run took 2.3 h. The corpus is eligible for training. `corpus.json` has SHA-256 `a9a425f2…`.
+
+**Stage 3, approved after Stage 2 was accepted at `b189a4ae`:** one training run under the frozen card `2026-10-22-search-distillation-d2-stage3-card.md`.
+- **Pins:** the `corpus.json` hash and the incumbent's identity (SHA-1 and state digest). The corpus's split is kept unchanged.
+- **Recipe:**
+  - 401 updates at batch 64;
+  - Adam at learning rate 1e-4, with MLX's resolved defaults recorded and checked;
+  - gradient clipping at 1.0, value-anchor weight 1.0, L2 1e-4 and draw-order seed 0.
+- **Surface:** only the encoder and policy head are updated. The teacher, the value-head weights and the BatchNorm running statistics stay unchanged.
+- **Held-out data** is used only for the incumbent baseline and the final check, with no intermediate selection or retuning.
+- **Pass criteria:**
+  - every metric is finite;
+  - held-out policy cross-entropy is strictly lower than the teacher's;
+  - mean absolute value drift is ≤ 0.05 and its 95th percentile is ≤ 0.15. These are inclusive limits; §4 stated them as exceed-to-stop.
+- **Ceiling:** 30 minutes in all, with gate restoration and process cleanup. There is no retry or extension.
+- **Candidate:** one final candidate is saved create-only, reloaded strictly, and its state digest verified. A failed candidate is kept as a research artifact.
+- **What a pass shows:** fit and bounded value drift, not stronger play.
+- **Still unapproved:** Stages 4–5, promotion and pushing.

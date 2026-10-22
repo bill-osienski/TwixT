@@ -25,7 +25,7 @@ import dataclasses
 import hashlib
 import os
 import pathlib
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 import mlx.core as mx
 import mlx.nn as nn
@@ -180,9 +180,17 @@ def evaluate(network, records: Sequence[PositionRecord], teacher_values: np.ndar
             "value_abs_max": float(d.max())}
 
 
+def adam_settings(opt) -> Dict[str, Any]:
+    """The optimizer's RESOLVED settings, read back from the object (MLX's defaults included)."""
+    return {"name": type(opt).__name__, "learning_rate": float(np.array(opt.learning_rate)),
+            "betas": [float(b) for b in opt.betas], "eps": float(opt.eps), "bias_correction": bool(opt.bias_correction)}
+
+
 def train_student(student, teacher, records: Sequence[PositionRecord], recipe: Recipe,
-                  teacher_values: Optional[np.ndarray] = None) -> Dict[str, Any]:
-    """Train `student` in place on `records`. The teacher is read, never updated; both stay in evaluation mode."""
+                  teacher_values: Optional[np.ndarray] = None,
+                  on_step: Optional[Callable[[Dict[str, Any]], None]] = None) -> Dict[str, Any]:
+    """Train `student` in place on `records`. The teacher is read, never updated; both stay in evaluation mode.
+    `on_step`, if given, receives each step's log entry after its finiteness check (progress reporting only)."""
     if student is teacher:
         raise DistillError("the student and the teacher are the same object")
     for net, who in ((student, "the student"), (teacher, "the teacher")):
@@ -202,6 +210,7 @@ def train_student(student, teacher, records: Sequence[PositionRecord], recipe: R
     surface = MainModule(student.encoder, student.policy_head)
     names = surface_names(student)
     opt = optim.Adam(learning_rate=recipe.learning_rate)
+    optimizer = adam_settings(opt)
 
     def loss_fn(_surface, boards, rows, cols, mask, target, tv):
         logits, values, _ = student.forward_padded(boards, rows, cols, mask, active_size=BOARD)
@@ -228,12 +237,14 @@ def train_student(student, teacher, records: Sequence[PositionRecord], recipe: R
         if not all(np.isfinite(values)):
             raise DistillError(f"step {step}: a non-finite loss or gradient norm {values}")
         log.append({"step": step, "loss": values[0], "policy": values[1], "anchor": values[2], "grad_norm": values[3]})
+        if on_step is not None:
+            on_step(log[-1])
 
     _require_eval(student, "the student after training")
     if state_digest(teacher) != teacher_digest:
         raise DistillError("the teacher changed during training")
     checks = check_after(before, snapshot(student), names)
-    return {"recipe": dataclasses.asdict(recipe), "steps": log, "checks": checks,
+    return {"recipe": dataclasses.asdict(recipe), "optimizer": optimizer, "steps": log, "checks": checks,
             "teacher_digest": teacher_digest, "student_digest": state_digest(student)}
 
 
