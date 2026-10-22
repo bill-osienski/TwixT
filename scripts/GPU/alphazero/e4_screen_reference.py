@@ -938,6 +938,13 @@ EXPOSED_SEED_INTERVALS = (
     # post-run accounting edit to a bound file: the committed plan, survey/proof and run records keep their
     # hashes; nothing is rerun.
     (202691900, 202691902),  # SEARCH DISTILLATION D2 STAGE 1 -- 2 game seeds, all started
+    # 🔴 SEARCH DISTILLATION D2 STAGE 2 -- THE CLOSING EDIT (2026-10-22), after the authorized 120-game
+    # corpus generation (outer exit 0, COMPLETED, 12/12 phases, no survivors). Use DERIVED from the committed
+    # run evidence by evidence/search-distillation-d2-generate-seed-closing/02_* (RECONCILES, 15/15): all 120
+    # games started, so the block is EXPOSED WHOLE. The games are the D2 corpus (108 training, 12 held-out);
+    # they are never strength-comparison data. A post-run accounting edit to a bound file: the committed
+    # plan, survey/proof and run records keep their hashes; nothing is rerun.
+    (202692100, 202692220),  # SEARCH DISTILLATION D2 STAGE 2 -- 120 game seeds, all started
 )
 
 #: Seeds RESERVED PERMANENTLY FOR TESTS. Unit tests must draw from something, and
@@ -1272,6 +1279,13 @@ RETIRED_SEED_INTERVALS = (
     # post-run accounting edit to a bound file: the committed plan, survey/proof and run records keep their
     # hashes; nothing is rerun.
     (202691900, 202691902),  # SEARCH DISTILLATION D2 STAGE 1 -- 2 game seeds, all started
+    # 🔴 SEARCH DISTILLATION D2 STAGE 2 -- THE CLOSING EDIT (2026-10-22), after the authorized 120-game
+    # corpus generation (outer exit 0, COMPLETED, 12/12 phases, no survivors). Use DERIVED from the committed
+    # run evidence by evidence/search-distillation-d2-generate-seed-closing/02_* (RECONCILES, 15/15): all 120
+    # games started, so the block is RETIRED WHOLE. The games are the D2 corpus (108 training, 12 held-out);
+    # they are never strength-comparison data. A post-run accounting edit to a bound file: the committed
+    # plan, survey/proof and run records keep their hashes; nothing is rerun.
+    (202692100, 202692220),  # SEARCH DISTILLATION D2 STAGE 2 -- 120 game seeds, all started
 )
 
 
