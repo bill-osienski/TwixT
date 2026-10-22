@@ -1,0 +1,7 @@
+{"event": "start", "t": 0.01}
+{"event": "loaded", "t": 0.077, "seconds": 0.007}
+{"event": "game_start", "t": 0.096, "game": 0, "start": "black"}
+{"event": "game_end", "t": 60.786, "game": 0, "seed": 202691900, "start_player": "black", "plies": 52, "winner": "red", "draw_reason": null, "seconds": 60.691, "seconds_per_ply": 1.1671}
+{"event": "game_start", "t": 60.812, "game": 1, "start": "red"}
+{"event": "game_end", "t": 123.457, "game": 1, "seed": 202691901, "start_player": "red", "plies": 54, "winner": "black", "draw_reason": null, "seconds": 62.645, "seconds_per_ply": 1.1601}
+{"event": "end", "t": 123.562, "status": "COMPLETED"}

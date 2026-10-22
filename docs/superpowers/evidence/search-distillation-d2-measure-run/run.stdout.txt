@@ -1,0 +1,1 @@
+{"status": "COMPLETED", "void": null, "head": "6cb69b40e1b437c7bb4f3a1f60e295d4470ce3db", "totals": {"plies": 106, "game_seconds": 123.336, "seconds_per_ply": 1.1635}}
