@@ -106,6 +106,8 @@ knob) is not a new hypothesis.
 
 > **Search distillation D2, Stage 2 corpus generation (Post-closure entry 22, 2026-10-22, COMPLETED).** One run of 120 fresh incumbent self-play games at 1,600 simulations, at Stage 1's exact configuration, in 12 phases of 10: **COMPLETED in 8,370 s (2.3 h) of a 12 h ceiling, 12/12 phases finalized**; 7,020 records (6,403 from the 108 training games, 617 from the 12 held-out games); every rebuilt record equal to the learner row; model digest unchanged. Game lengths 32–280 plies (median 53; two reached the 280-ply cap). The corpus (outside the repository, bound by `corpus.json`) is **eligible for training**. No claim about target quality or strength. Training, Stages 4–5, promotion and pushing unapproved. See #68.
 
+> **Search distillation D2, Stage 3 training (Post-closure entry 23, 2026-10-22, STOP).** One run of the frozen recipe (401 updates of the encoder and policy head on the 6,403 training records; teacher, value head and BatchNorm statistics unchanged): held-out policy cross-entropy fell from 4.824 to 4.147, but absolute value drift from the teacher on the 617 held-out records was **mean 0.103 (limit 0.05) and p95 0.279 (limit 0.15)**, so the verdict is **STOP**. The candidate is kept as a research artifact only. Pre-clip gradient norms exceeded 10,000 on 86 of 401 updates; the cause was not derived. Stages 4–5 are not entered under this card. See #69.
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -1671,6 +1673,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 67. **The D2 Stage 1 live measurement (entry 21) — MEASURED 2026-10-22.** Do **not** rerun it, add games to it, or use its two games (seeds `[202691900, 202691902)`, EXPOSED and RETIRED) as training, held-out or evaluation material: they are measurement material only. Do **not** read their lengths (52 and 54 plies, both decisive) as the corpus's game-length distribution — two games cannot estimate it — or compare their 1.16 s per ply (batched self-play search, 0.73 ms per simulation) with entry 19's 1.74 ms per simulation (the evaluation play path): different search paths. Nothing here is evidence about target quality or strength.
 
 68. **The D2 Stage 2 corpus generation (entry 22) — COMPLETED 2026-10-22.** Do **not** rerun it, top it up, replace any game or phase, or add games to the corpus: it is fixed at 120 games in 12 phases. Do **not** move games between the training and held-out sets (held out: slot ≡ 9 mod 10, 12 games), train on the held-out games, or use any of the 120 games (seeds `[202692100, 202692220)`, EXPOSED and RETIRED) for strength or screen games. Do **not** read the run's 2.3 h, its 1.19 s per ply or its length distribution as a cost bound for other configurations, or anything here as evidence about target quality or strength. Training needs its own approval and a frozen Stage 3 card with the recipe fixed before training.
+
+69. **The D2 Stage 3 training run (entry 23) — STOP 2026-10-22.** Do **not** rerun it, rerun it with other seeds, or retune its recipe (anchor weight, learning rate, updates, batch, clipping, L2, surface) and judge the result on the same 12 held-out games: they have served as this recipe's final check, and re-judging retuned recipes on them is selection. Do **not** use the candidate (`student-stage3-20261022T232207Z.safetensors`, state digest `9c73feb2…`) in a screen, a strength comparison or promotion, or as a starting point for further training. Do **not** read its lower held-out cross-entropy as evidence of stronger play, or the STOP as evidence that search distillation cannot work: the run shows only that this recipe moved the value output beyond the fixed limits. Do **not** name a cause for the gradient-norm spikes until one is derived. A new recipe needs a new card, fresh held-out data and its own approval.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -3676,3 +3680,61 @@ beyond ply 54.
 **Conclusion / status.** COMPLETED. The corpus is fixed and eligible for training under the approved terms. It
 is training material only and says nothing about target quality or strength. Training (Stage 3), Stages 4–5,
 promotion and pushing remain unapproved. See do-not-repeat **#68**.
+
+### 23. Search distillation D2 — Stage 3 training, one run (2026-10-22, STOP)
+
+**Test.** One training run under card `docs/superpowers/2026-10-22-search-distillation-d2-stage3-card.md` (pinned by
+SHA-256 in `scripts/GPU/alphazero/search_distillation_d2_train.py`). A student copy of `calib020_0001` was trained on the
+Stage 2 corpus (entry 22; `corpus.json` SHA-256 `a9a425f2…` pinned, every phase reopened through the strict reader,
+the corpus's split unchanged: 6,403 training and 617 held-out records). The update surface was the encoder and
+policy head; the teacher, the value-head weights and every BatchNorm running statistic were held unchanged. The
+recipe was frozen: 401 updates (four passes) at batch 64, Adam learning rate 1e-4 (MLX's resolved defaults recorded
+and checked: betas 0.9 and 0.999, eps 1e-8, no bias correction), global-norm clip 1.0, value-anchor weight 1.0, L2
+1e-4, draw-order seed 0. The held-out records were read only for the teacher baseline and for the final check on
+the reloaded candidate. PASS needed finite metrics, held-out policy cross-entropy strictly below the teacher's, and
+absolute value drift from the teacher on the held-out records with mean ≤ 0.05 and 95th percentile ≤ 0.15.
+Otherwise the verdict is STOP. A pass would have shown fit and bounded value drift, not stronger play.
+
+**Hypothesis.** Training the encoder and policy head on the incumbent's own 1,600-simulation targets, with a value
+anchor, fits held-out targets better than the incumbent while keeping its value output within the limits.
+
+**Why it was plausible.** The targets come from a stronger player (Stage A, entry 1, under the earlier protocol),
+and the anchor penalizes value movement directly on every batch.
+
+**Prediction on record.** None stated in advance for the outcome. The plan's cost estimate was under 0.5 h; a
+timing check with a random-initialized network of the same architecture, on the training records only, put the
+401 updates at about 45 s.
+
+**What ran.** Build `1a92eb7c`: entry point, the gate `SEARCH_DISTILLATION_D2_TRAIN_AUTHORIZED` (the thirty-fourth), a
+wrapper with TERM at 1,790 s and KILL 10 s later, and the card. It had 23 run-module and 17 wrapper tests. Of 14
+injected defects, 12 were caught at first. The two misses were the loaded-teacher pin and the Adam-default check;
+each got its own test, and both were then caught. Regression at the build equalled the 58-id baseline (3,272
+passed). Gate opened by `24a3eaaf`; one run through `01_wrapper.sh` in a clean linked worktree; evidence and the
+restored gate `1c489c5b`. No game seeds were drawn.
+
+**Result.** Outer exit 6, **COMPLETED, verdict STOP**, 34 s in all (401 updates in 24.8 s on the GPU), record by the
+script, no survivors, gate restored and read back, stderr empty.
+- **Training checks:** every check passed. All 60 surface tensors changed, the 32 off-surface tensors were bitwise
+  unchanged, and the teacher's digest (`ae0e71fc…`) was unchanged; every metric was finite.
+- **Held-out policy cross-entropy:** 4.8243 for the teacher, 4.1474 for the candidate (KL to the targets 1.9714 →
+  1.2945), strictly lower.
+- **Held-out absolute value drift from the teacher:** **mean 0.1026 (limit 0.05), p95 0.2791 (limit 0.15)**, max 0.5795.
+  Both limits failed.
+- **Training-set diagnostics** (judging nothing): cross-entropy 4.6958 → 3.9801; drift mean 0.0679, p95 0.1975,
+  max 0.5369.
+- **Training log:** the anchor term's batch mean fell from 0.038 over the first 50 updates to 0.011 over the last 50.
+  Every update was clipped: pre-clip gradient norms were all above 1, with a median of 4.46. On 86 of 401 updates
+  they exceeded 10,000 (maximum 43,779 at update 361), in 68 separate runs between updates 21 and 389. The cause
+  was not derived.
+- **Candidate:** kept as a research artifact outside the repository, made read-only after the run, at
+  `~/twixt-cache/search-distillation-d2/student-stage3-20261022T232207Z.safetensors`, SHA-256 `8552edb4…`, state digest
+  `9c73feb2…`. The strict reload reproduced the state digest.
+
+**Did it match the prediction, and why.** No outcome was predicted. The run was faster than the timing check (24.8 s
+against about 45 s). On drift: the anchor weight of 1.0 did not hold the value output within the limits while the
+encoder moved; how much each part of the recipe contributed was not measured.
+
+**Conclusion / status.** STOP. The recipe fits the held-out targets better than the incumbent but moves its value
+output beyond both fixed limits, so Stages 4–5 are not entered under this card, and the candidate is not used.
+This says nothing about strength in either direction. The gradient-norm spikes are an observation without a
+derived cause. Promotion and pushing remain unapproved. See do-not-repeat **#69**.
