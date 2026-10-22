@@ -5,4 +5,4 @@ simulations through the serial training-capture driver, measurement only. LOADS 
 takes its own reviewed door. Opened for ONE approved run and restored on every exit. Created closed. This file may
 hold ONLY this declaration.
 """
-SEARCH_DISTILLATION_D2_MEASURE_AUTHORIZED = False
+SEARCH_DISTILLATION_D2_MEASURE_AUTHORIZED = True
