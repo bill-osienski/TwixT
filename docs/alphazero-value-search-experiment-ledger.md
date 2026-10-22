@@ -94,6 +94,8 @@ knob) is not a new hypothesis.
 
 > **Policy-head capacity pilot — isolated residual head built and CPU-checked (Post-closure entry 18, 2026-10-21, OPEN).** Arm R adds a zero-initialized residual path reading the move cell's 128 encoder features (8,840 trainable parameters); arm C trains only the existing 519. Six CPU checks pass after a float32 fix to one test assertion (first run 4 passed, 2 failed on that test bug). Prediction: none stated in advance. Nothing about capacity is measured; no checkpoint, corpus, search or training is authorized.
 
+> **Policy-head capacity planted qualification — NOT QUALIFIED (Post-closure entry 18 addendum, 2026-10-21, CLOSED).** One run under card rev 3 (`9deaccb9`; evidence `08ced79e`), 26 s, COMPLETED: F1, F2, S2, S3 hold, but **S1 fails** — on the planted R-only target arm C reached KL 0.0496 and R 0.0210, a 0.0286-nat gap below δ = 0.05. The recipe therefore must not be used to measure capacity; no labels, no retuning. Operational only: nothing about whether the head's capacity binds, nothing about strength. The capacity hypothesis remains untested. See do-not-repeat **#65**.
+
 > **Play-path timing on the new machine (Post-closure entry 19, 2026-10-21, MEASURED).** Mac Studio M5 Max: 1.74 ms per simulation, 0.70 s per ply at 400 simulations (eval mode, committed game positions, no games played, no seeds); about 41.7 s of search per game at entry 15's length, so the methods note's budgets become about 11.8 h (60%) and 47 h (55%) here (derived). Search time only, against entry 15's whole-game 66.6 s: no speed-up between machines is measured or claimed. Label lines derived (1.24 h / 0.62 h, constant cost per simulation assumed); the 205 s G-phase figure stays open (unexplained 3.6 vs 1.1 s per ply).
 
 > **Throughput settings on the new machine (Post-closure entry 20, 2026-10-21, MEASURED).** Self-play: **18 workers at eval batch 14** measured fastest (median 1,207 games/h while all workers are busy; 12 workers 1,038; eval batch 16–48 no faster, 32 and 48 slower; no hang up to 48 in 3 short runs each, which does not show the old hang is gone). Whole-run wall time is dominated by one state-cap game finishing alone (140–484 s for the same setting), so the first sweep's timeouts and its "hang at 16" are void. Labelling: 10–18 workers equal (~3.25x serial); eval batch and stall-flush are never read by the labeller. Operational only; no defaults changed. See do-not-repeat **#64**.
@@ -1655,6 +1657,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 63. **The banked-budget controller of entry 16 — DECLINED 2026-10-20 (never built or run).** Do **not** tune this policy — its thresholds, credit amounts, caps or borrowing rule — against the consumed match records (root-halving and mirror-averaging replays), run further accounting variants on them, or treat the oracle bookkeeping as strength evidence: it assumed a free classification and measured chronological opportunity only (14.5% of freed credit reached contested moves; ~9% extra budget). The ~24% hypothetical reduction in simulated work is not a measured runtime saving and not evidence that play is preserved. Other adaptive-budget mechanisms are untested and need an independent justification and their own authorization, not a rescue of this policy.
 
 64. **Self-play throughput tuning on the M5 Max (Post-closure entry 20) — settled 2026-10-21.** Do **not** rank self-play settings on the total wall time of a few dozen games: one state-cap game finishing alone moves it by up to 3.5x. Rank on the rate while every worker is busy (`scripts/bench_knee.py` default). Do **not** read a watchdog kill as a Metal hang without progress output and stack dumps. Do **not** re-sweep eval batch above 14 hoping for speed on this machine (16–48 were no faster), and do **not** tune eval batch or stall-flush through `benchmark_phase2_knobs.py`: the labeller never reads them.
+
+65. **The policy-head capacity planted qualification (entry 18 addendum) — NOT QUALIFIED 2026-10-21.** S1 failed (C − R on TR = 0.0286 < δ 0.05). Do **not** rerun it, rerun it with other seeds, or retune its recipe or design (steps, learning rate, batch, clipping, planted scale, δ, the 25% fit fraction, teacher shapes) and run again in search of a pass; do **not** generate real labels with this recipe or run the 200-game pilot on it; and do **not** read NOT QUALIFIED, or C's close fit of TR, as evidence that the head's capacity does or does not bind. A new recipe needs a new card, fresh teacher seeds and its own approval.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -3359,6 +3363,58 @@ installing twice, calling the head from search) hold, and installing on a clone 
 **Conclusion / status.** OPEN — built and CPU-checked; nothing about capacity is measured. The next step,
 planted-target qualification of the fitting recipe, needs its own approval. No checkpoint loading, corpus
 generation, search or real-target training is authorized.
+
+**Addendum (2026-10-21): planted-target qualification of the fitting recipe — COMPLETED, NOT QUALIFIED (CLOSED).**
+
+*Test.* Card `docs/superpowers/2026-10-21-policy-head-capacity-planted-qualification-card.md`: rev 2 (`28abdbfe`),
+built and wrapped in `be18fd07`, amended to rev 3 in review before any run (`9deaccb9`: arm R's residual path seeded
+(seed 15) instead of MLX's unseeded initializer; SIGTERM recorded as a VOID, and a record written by the wrapper
+when the script cannot write one). Can the frozen recipe (400 Adam steps, batch 32, lr 1e-3, global-norm clip 1.0,
+8 passes over 1,600 positions) recover a capacity gap planted on purpose on `calib020_0001`'s real encoder features
+of real positions, without favouring R where no gap exists? TC is a perturbed copy of the existing head (inside both
+arms' class); TR adds a fixed random 128 → 64 → 1 network of the move cell's features (inside R's class only); each
+planted term has a 1.0-nat within-position scale. Five rules, all required: F1, F2 (each arm fits its exactly
+representable target to ≤ 25% of the starting KL), S1 (R beats C on TR by ≥ δ = 0.05 nats), S2 (R beats a fitted
+temperature on TR by ≥ δ), S3 (R does not beat C on TC by δ or more).
+
+*Hypothesis.* Operational only: the recipe can expose a planted gap of this size.
+
+*Prediction on record.* None stated in advance.
+
+*What ran.* One run, approved 2026-10-21: gate opened by `8f0743e5`, `01_wrapper.sh` once, CPU only, 900 s
+ceiling; inner exit 0, **26 s wall**, record written by the script, gate restored and read back, no survivors.
+Evidence and the restored gate: `08ced79e` (`docs/superpowers/evidence/policy-head-capacity-planted/` record and
+positions; `…-run/` outer.json and logs). Checkpoint SHA-1 verified, 0 modules in training mode; 64 games / 3,293
+moves as frozen; pools 2,576 training / 584 evaluation (10 evaluation digests leaked into training and stayed
+there); 1,600 + 400 positions. Feature cache (602 MB) outside the repository at `~/twixt-cache/policy-head-capacity-
+planted/features-20261022T034928Z.npz`, re-hash matching the recorded digest; kept. TC α 0.6728 (scale 1.0000); TR
+s 3.208. Both R fits started at the seed-15 residual (digest `ee796a7e…`).
+
+*Result.* KL on the 400 evaluation positions (nats):
+
+| target | start (incumbent I) | C | R | temperature (τ 1.187) |
+|---|---|---|---|---|
+| TC | 0.1715 | 0.00047 | 0.00057 | — |
+| TR | 0.4712 | **0.0496** | **0.0210** | 0.4199 |
+
+F1 holds (both ≤ 0.0429), F2 holds (0.0210 ≤ 0.1178), S2 holds (margin 0.399), S3 holds (C − R on TC = −0.0001).
+**S1 fails: KL(C, TR) − KL(R, TR) = 0.0286 < 0.05.** Verdict **NOT_QUALIFIED** (status COMPLETED, not VOID).
+Descriptive: chance baseline 6.217 nats; target entropy TC 2.584, TR 3.036; top-2 principal components hold 31.9% of
+legal-cell feature variance; clipping active on 0.3–1.3% of steps. Phases (s): features 8.0, targets 7.4, each fit
+2.0 (C) or 2.8 (R), temperature 0.2. These are this machine's first timings for this workload.
+
+*Did it match the prediction.* No prediction was stated.
+
+*Interpretation, kept to what was measured.* Arm C, with only the existing head's 519 parameters, brought KL on the
+R-only target from 0.471 to 0.050 (to 10.5% of its start); R reached 0.021 (4.5%). At this planted size and dose the
+recipe separated the arms by 0.029 nats, below the frozen δ, so by the card this recipe must not be used to measure
+capacity. Why C fitted TR this closely was not measured and is not asserted. **This says nothing about whether the
+incumbent head's capacity limits real learning, and nothing about strength.**
+
+*Conclusion / status.* Planted qualification **CLOSED, NOT QUALIFIED.** Per card §6: no real labels are generated
+and the recipe is not retuned; any new recipe needs a new card, fresh teacher seeds and its own approval. The
+capacity hypothesis remains **untested**. The 200-game pilot, label generation and promotion remain unapproved.
+See do-not-repeat **#65**.
 
 ### 19. Play-path timing re-measured on the new machine (2026-10-21, MEASURED)
 
