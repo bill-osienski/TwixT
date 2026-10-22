@@ -1,0 +1,1 @@
+{"status": "COMPLETED", "verdict": "STOP", "void": null, "stop_reasons": ["value_abs_mean_within_limit", "value_abs_p95_within_limit"], "head": "24a3eaafa5e3c60d6911c91c4b5da05c5608fd76", "candidate": "/Users/bill/twixt-cache/search-distillation-d2/student-stage3-20261022T232207Z.safetensors"}
