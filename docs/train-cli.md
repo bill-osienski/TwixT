@@ -40,7 +40,7 @@ python -m scripts.GPU.alphazero.train [OPTIONS]
 |------|------|---------|-------------|
 | `--simulations` | int | per-size table | MCTS simulations per move. If omitted, uses `SIMS_TABLE` (8:400, 10:400, 12:300, 16:200, 20:150, 24:400). CLI value overrides the table for all sizes |
 | `--max-moves` | int | 200 | Base max moves per game. In practice, curriculum overrides this with `MAX_MOVES_TABLE` (8:90, 10:110, 12:160, 16:200, 20:250, 24:380) |
-| `--mcts-eval-batch-size` | int | 14 | Leaves per NN batch. Reduced from 16 to prevent Metal GPU hangs |
+| `--mcts-eval-batch-size` | int | 14 | Leaves per NN batch. Reduced from 16 to prevent Metal GPU hangs. On the M5 Max at 18 workers, 14 was also the fastest: 12 matched it, 16–48 were no faster, and none of 16–48 hung in 3 short runs each (`scripts/bench_knee.py`, 2026-10-21) |
 | `--mcts-pending-virtual-visits` | int | 8 | Virtual visits added to pending leaves (prevents dogpiling) |
 | `--mcts-stall-flush-sims` | int | 16 | Flush pending batch if no new leaf found in N sims. `0` = disabled |
 
@@ -219,7 +219,7 @@ Training starts on small boards and promotes to larger sizes when win-rate crite
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--n-workers` | int | 1 | Parallel self-play workers. `1` = single-process (most stable) |
+| `--n-workers` | int | 1 | Parallel self-play workers. `1` = single-process (most stable). 18 measured fastest on the M5 Max (18 cores) at eval batch 14, about 1,200 games/h steady state (`scripts/bench_knee.py`, 2026-10-21) |
 | `--seed` | int | None | Master RNG seed. Per-game seeds are derived deterministically |
 
 ## Diagnostics

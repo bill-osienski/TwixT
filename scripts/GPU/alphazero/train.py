@@ -212,12 +212,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
 
     # Multi-process self-play
-    default_workers = max(1, (os.cpu_count() or 4) - 2)
     parser.add_argument(
         "--n-workers",
         type=int,
         default=1,  # Single-process by default for stability
-        help=f"Parallel self-play workers (default: 1, max recommended: {default_workers})",
+        help="Parallel self-play workers (default: 1; 18 measured fastest on the M5 Max, 18 cores, "
+             "with --mcts-eval-batch-size 14: scripts/bench_knee.py, 2026-10-21)",
     )
     parser.add_argument(
         "--frozen-opponent-checkpoint",

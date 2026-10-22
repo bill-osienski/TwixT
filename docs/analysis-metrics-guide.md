@@ -388,7 +388,7 @@ These affect overall training dynamics and indirectly affect all metrics.
 | Knob | What it does | Current tuned value |
 |------|-------------|---------------------|
 | `--curriculum-sizes` | Board sizes for curriculum progression | 24 (single size) |
-| `--n-workers` | Parallel self-play workers | 10 |
+| `--n-workers` | Parallel self-play workers | 18 on the M5 Max (measured 2026-10-21, `scripts/bench_knee.py`); was 10 on the M3 Pro |
 | `--mirror-prob` | Probability of mirror augmentation per position | 0.5 |
 | `--games-per-iter` | Games per training iteration | 100 |
 | `--train-steps` | Gradient updates per iteration | 200 |
