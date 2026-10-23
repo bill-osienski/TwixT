@@ -128,6 +128,7 @@ knob) is not a new hypothesis.
 
 > **Search distillation D2, full-float32 setting through the policy head and full gradient path (Post-closure entry 32, 2026-10-23, COMPLETED; FAIL at phase 2).** A fresh process with `MLX_ENABLE_TF32=0`. Phase 1, the policy head against the independent NumPy reference: PASS in all six cases (worst 0.05 of the tolerance). Phase 2, the full model at the incumbent against the CPU: the update-21 batch passes everywhere; on the update-0 batch, 2 of 60 gradient tensors (`encoder.blocks.1` and `.2` `conv2.weight`) differ from the CPU by 2.05 and 1.57 × entry 26's 1e-3 tolerance, repeatably. Everything else is within it, and entry 26's gross, non-repeatable GPU gradients are gone. FAIL under the frozen rule: phase 3 (21 updates) did not run. The setting is not validated for the full gradient path; which backend is nearer the exact gradient is not established. Both CPU predictions matched. See #78.
 > **Search distillation D2, convolution-reference diagnostic (Post-closure entry 33, 2026-10-23, COMPLETED; both targets INHERITED).** Same setting, at the incumbent on the update-0 batch, no optimizer update. Entry 32's six failures reproduced bit for bit, and the operand capture was bitwise faithful (L2 included). Given identical operands, the CPU and GPU convolution weight-gradient kernels agree **bitwise**, within 0.006 of the tolerance of float64. Float64 alone, fed each device's own operands, reproduces the miss (2.05×, 1.57×): it is carried in by the upstream gradient (GPU against CPU 5.1× and 5.7× the tolerance, at 2 and 1 elements, all in channel 42), not made by either kernel. Which device's whole-model gradient is nearer the exact one is not established; entry 32's FAIL stands. See #79.
+> **Search distillation D2, encoder branch trace (Post-closure entry 34, 2026-10-23, COMPLETED; BRANCH_CHANGE).** Same setting, incumbent and batch, no update. Reproduced bitwise; the trace was bitwise faithful; every local forward and backward step (convolutions, BN, residual, ReLU) is correct on both devices against float64 from their own operands. 14 ReLU elements with inputs within about 1e-6 of zero take different branches on the CPU and GPU, each following from its own device's operands; among them is block 2's outer ReLU at `[1, 13, 4, 42]` (CPU off, GPU on). Those flips alone account for both target gradients (0.006× and 0.004× the tolerance with them, 2.05× and 1.57× without). A numerical branch change, not an incorrect derivative; not shown harmless, and which device is more accurate is not established. Entry 32's FAIL stands; next is the user's qualification decision. See #80.
 
 ## Historical proposal check — programme now closed
 
@@ -1716,6 +1717,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 78. **The D2 full-float32 setting path validation (entry 32) — FAIL at phase 2, 2026-10-23.** Do **not** rerun it, retry phase 2, run phase 3's 21 updates, loosen or re-pick the tolerance, or swap the comparison base after seeing the result, without a new card and approval. Do **not** describe the setting as validated for the gradient path or for training: two encoder conv2 weight gradients missed the frozen tolerance on the update-0 batch. Do **not** call the remaining difference a GPU error, or a CPU one: it is a disagreement between two MLX backends with no independent encoder reference, and no cause was measured. Do **not** read phase 1's pass or the vanished gross gradients as rehabilitating the Stage 3 candidate or explaining its value drift. Adopting the setting, package changes, chunking, training, bug-report submission and pushing need their own approval.
 
 79. **The D2 convolution-reference diagnostic (entry 33) — both targets INHERITED, 2026-10-23.** Do **not** rerun it, extend it to other tensors, batches or states, or trace the upstream gradient further back, without a new card and approval. Do **not** read INHERITED as either backend being right: the whole-model gradients still differ, and no independent reference covers the upstream gradient. Do **not** read the bitwise kernel agreement as validating the setting for the gradient path or for training, or as relaxing or overturning entry 32's FAIL. Do **not** name a cause for the channel-42 concentration; it is an observation. Do **not** modify or delete the fixtures in `~/twixt-cache/search-distillation-d2/convref-fixtures-20261023T200104Z/`: they are this entry's evidence. Adopting the setting, training, package changes, bug-report submission and pushing need their own approval.
+
+80. **The D2 encoder branch trace (entry 34) — BRANCH_CHANGE, 2026-10-23.** Do **not** rerun it, trace the operand differences further upstream, or extend it to other batches or states, without a new card and approval; the next step is a qualification decision, not another, more detailed diagnostic. Do **not** call the branch change harmless rounding: small pre-activations do not establish that, and it moves two gradients past the frozen criterion. Do **not** call either device's branch or gradient correct. Do **not** use it to relax, re-judge or overturn entry 32's FAIL, or to force CPU/GPU agreement (for example by perturbing or masking ReLU inputs). Keep the fixtures in `~/twixt-cache/search-distillation-d2/branchtrace-fixtures-20261023T210537Z/` unmodified. Adopting the setting, training, package changes, bug-report submission and pushing need their own approval.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -4839,3 +4842,160 @@ the network (inherited).
 - **Not done:** no parameter, package or persistent configuration change; no held-out access; no checkpoint or model
   state saved; nothing submitted or pushed. The bug-report draft does not yet include this entry.
 - See do-not-repeat **#79**.
+
+### 34. Search distillation D2 — full-float32 setting: encoder nonlinear-stage (branch) trace (2026-10-23, COMPLETED; BRANCH_CHANGE)
+
+**Test.** One fresh process launched with `MLX_ENABLE_TF32=0`, at the unchanged incumbent on Stage 3's update-0 batch,
+with no optimizer update:
+1. **Reproduce:** on each device, the uninstrumented loss and gradient. The digests must equal entry 33's.
+2. **Trace:** the encoder and its six blocks swapped, for the duration, to subclasses doing the same operations in the
+   same order (`conv → BN → ReLU`, and per block `conv1 → BN1 → ReLU → conv2 → BN2 → + residual → ReLU`).
+   - A zero probe sits at every conv output, BN output (= ReLU input), ReLU output and residual sum; their gradients
+     are the loss's gradients there.
+   - All 60 gradients and every output must be bitwise unchanged.
+3. **Analysis in NumPy float64,** from each device's own captured operands:
+   - every local forward and backward step: the convolutions, BN, the residual add and the ReLUs (the ReLU bitwise);
+   - the ReLU masks and their flips, each quantified;
+   - the focus element `[1, 13, 4, 42]`;
+   - the backward walk (GPU against CPU, in backward order);
+   - the accounting: a linear float64 propagation of the flips alone, from the encoder's output to the two target
+     weight gradients.
+
+Card `docs/superpowers/2026-10-23-search-distillation-d2-branch-trace-card.md` (frozen before the run).
+
+**Hypothesis** (the user's, stated as a hypothesis, not an established defect). A ReLU takes a different branch on the
+two devices at `[1, 13, 4, 42]`.
+**Why it was plausible:** entry 33 put both blocks' largest upstream-gradient difference at that element, and block
+2's CPU value there was exactly −0.0.
+
+**Prediction on record** (card §9, before the run):
+1. Reproduction bitwise on both devices, with the teacher values' digest equal to entry 33's.
+2. The instrumentation bitwise faithful on both devices.
+3. Block 2's outer ReLU flips at `[1, 13, 4, 42]`, with the CPU's mask 0 and the GPU's 1.
+4. The outcome: **None stated in advance.**
+
+**Rule** (frozen, card §7), in order:
+1. `LOCAL_DERIVATIVE_ERROR` if any backward local check fails on either device.
+2. `LOCAL_FORWARD_ERROR` if any forward local check fails.
+3. `BRANCH_CHANGE` if there are flips in blocks 1–5 and, for both targets, the accounting is within the tolerance of
+   the GPU's original gradient with the flips and outside it without.
+4. `NOT_EXPLAINED` otherwise.
+
+The tolerance is entry 26's, `1e-3 × max|b| + 1e-6`. Fidelity and the ReLU check are bitwise; the adjoint self-check
+is 1e-9 relative. Entry 32's verdict is unchanged by any outcome.
+
+**What ran:**
+- **Build `2e202ece`:** 35 entry tests and 16 wrapper tests; the gate inventory has 43 gates.
+  - Reference correctness: the transposed convolution and BN against a brute-force loop and MLX, and the adjoint
+    check catching a flipped kernel.
+  - Fidelity: no parameter added, every class restored on an exception, a perturbing trace caught.
+  - On the rig: each outcome produced by an injected fault (a BN2 backward fault, a BN2 forward shift, and perturbed
+    ReLU operands, which the accounting explains as a branch change); each stop, SIGTERM retention, refusals and
+    fresh-process checks.
+  - Two real-state tests (the public entry stops `NOT_REPRODUCED` when "gpu" is the CPU; a full trace on the real
+    incumbent is bitwise faithful with every local check passing). Both run after the build commit; pytest's exit
+    code was checked directly.
+  - The regression equals the 58-id baseline (3,272 passed, 20 failed, 38 errors).
+- **Bug-report draft `ae15f8df`** (not submitted): entry 33 added, saying explicitly that the convolution kernels
+  passed on identical operands.
+- **A process disclosure:** while designing the card, I checked MLX's ReLU derivative at zero with a five-element
+  `mx.vjp` on the default GPU device, outside any gate and without the setting. It was trivial and was not used as
+  evidence (the card's rule rests on the CPU test, and on the same convention seen on the GPU there). It was still GPU
+  use outside the procedure.
+- **Idle check:** the GPU's utilization read 0% in five of six samples over 30 s (one read 47%), and no Python
+  process was busy. Spotlight was again using one CPU core; the load average was 2.3 at the start. As the user
+  directed, Spotlight is not a reason to repeat entry 33. Entry 33's two disclosures (the Spotlight load and the
+  committed failing test) stand as recorded there.
+- **Gate 43:** opened `e20ae7c4` in a linked worktree.
+- **The run:** `docs/superpowers/evidence/search-distillation-d2-branchtrace-run/01_wrapper.sh` once.
+- **Evidence and the restored gate:** `c7b456c6`.
+  - **Correction:** that commit's message says "18 ReLU flips". The record counts **14**; I mis-added the per-ReLU
+    counts. The commit is left as it is, and this entry is the correction.
+  - The gate is byte-identical to the pre-open commit, and no process survived.
+  - main was fast-forwarded and the worktree and branch removed. The gate inventory test passes.
+- **Outcome:** COMPLETED, inner and outer exit 0, 11.9 s in the script, 12 s wall. The time is observational, not a
+  benchmark. The setting read `"0"` at the start and at the end.
+- **Evidence:** `docs/superpowers/evidence/search-distillation-d2-branchtrace/`:
+  - `record.json`, `progress.jsonl`;
+  - `trace/{cpu,gpu}.json`, `stages/<relu>.json` (13);
+  - `walk.json`, `focus.json`, `accounting.json`, `fixtures.jsonl`.
+- **Fixtures:** `~/twixt-cache/search-distillation-d2/branchtrace-fixtures-20261023T210537Z/`, holding
+  `{cpu,gpu}_record1.npz`.
+  - About 12 MB each, re-hashed after the run.
+  - They are the only change in `~/twixt-cache`, verified. No weights, model state or checkpoint saved; held-out
+    records read: 0.
+
+**Result.**
+- **Reproduction:** bitwise on both devices. The teacher values, gradient digests, loss terms and the logits and
+  values digests equal entry 33's. The targets are again 2.0487× and 1.5741×.
+- **Fidelity:** on both devices, the traced loss terms, logits, values and all 60 gradients equal the uninstrumented
+  ones bitwise.
+- **Self-check:** the adjoint identity of the float64 transposed convolution held to 5.6e-17 absolute.
+- **Every local step is correct on both devices.**
+  - No forward or backward failure in the stem or any block.
+  - Each ReLU's gradient equals its incoming gradient times its own mask, bitwise.
+  - BN, the convolutions, the residual add and each block's input gradient are within the tolerance of float64 from
+    that device's own operands.
+- **14 ReLU flips** in the encoder:
+  - block 0 outer: 1;
+  - block 2: 1 inner and 3 outer;
+  - block 4: 2 inner and 3 outer;
+  - block 5: 3 inner and 1 outer;
+  - none in the stem or blocks 1 and 3.
+- **What every flip has in common:**
+  - Its pre-activation is within 6e-6 of zero on both devices. 13 of the 14 are within 1.6e-6; the exception is
+    block 5's inner ReLU at `[0, 0, 23, 33]` (CPU +2.7e-6, GPU −5.8e-6).
+  - That is at most 0.21 of its stage's largest GPU−CPU pre-activation difference; 13 of the 14 are at most 0.09.
+  - The float64 recomputation from each device's own operands lands on the same side of zero as that device's
+    branch.
+  - The incoming gradient is the same on both devices.
+- **The focus element, block 2's outer ReLU at `[1, 13, 4, 42]`:**
+  - Pre-activation: CPU −9.760e-7 (mask 0), GPU +9.015e-7 (mask 1). Float64 from its own operands gives −9.809e-7
+    and +8.968e-7.
+  - Its operands: the BN input is 0.10157866 on the CPU and 0.10158007 on the GPU; the residual is 0.0914961 on
+    both, to 7e-9.
+  - About 120–130 float32 ulps of the operands from zero, and 0.05 of the stage's largest pre-activation difference.
+  - The incoming gradient is −2.178e-4 on both. The CPU's branch blocks it and the GPU's passes it: this is entry 33's
+    upstream-gradient difference for block 2.
+- **The backward walk:**
+  - Everything downstream of block 4's outer ReLU is within the tolerance.
+  - The first point outside it is block 4's outer ReLU, at `[52, 17, 7, 48]`: a flip (CPU −2.0e-7 off, GPU +3.4e-8
+    on), with an incoming gradient of 2.1e-4.
+  - Block 2's outer ReLU adds a new outside element, at the focus (`blocks.2.out` is within the tolerance and
+    `blocks.2.s` is not).
+  - Further up the encoder, points are outside the tolerance at 1 to 55 elements.
+
+| Accounting | `blocks.1.conv2.weight` | `blocks.2.conv2.weight` |
+|---|---|---|
+| GPU original against CPU original (× tolerance) | 2.0486 | 1.5740 |
+| float64 prediction **without** the flips, against GPU original | 2.0485 | 1.5747 |
+| float64 prediction **with** the flips (all 14), against GPU original | **0.0059** | **0.0039** |
+| predicted ΔG against actual ΔG | 0.094 | 0.085 |
+| Explained | **yes** | **yes** |
+
+**Did it match the prediction, and why.**
+1. **MATCHED:** reproduction was bitwise, for the third process in a row.
+2. **MATCHED:** the instrumentation was bitwise faithful.
+3. **MATCHED:** block 2's outer ReLU flips at `[1, 13, 4, 42]`, CPU off and GPU on. It is not the only flip, nor the
+   first point in the backward walk: that is block 4's.
+4. None stated. Observed: `BRANCH_CHANGE`.
+
+**Conclusion / status.** COMPLETED; **BRANCH_CHANGE.** Entry 32's FAIL at phase 2 stands; its criterion is not
+relaxed.
+- **Established, for this batch at the incumbent, on this machine and MLX 0.30.3:**
+  - The two encoder gradient discrepancies are a **numerical branch change**, not an incorrect local derivative.
+  - Every traced local forward and backward step is correct on both devices against float64 from their own operands.
+  - 14 ReLU elements whose inputs lie within about 1e-6 of zero (at most 6e-6) take different branches. Each device's branch follows
+    from its own operands.
+  - Those flips alone account for both weight-gradient misses, to within 0.006 of the tolerance.
+- **Not established:**
+  - **That the branch change is harmless.** Small pre-activations alone do not establish it, and it moves two
+    gradient tensors beyond the frozen criterion.
+  - Which device's branch, or whole-model gradient, is the more accurate.
+  - Where the forward operand differences of about 1e-6 come from (not traced; no recursive expansion).
+  - Anything for other batches, states, training, the failed candidate or Stage 3's value drift.
+- **No retry and no further trace.** The next step is the user's qualification decision from what entries 31–34
+  establish. Training remains closed.
+- **Not done:** no parameter, package or persistent configuration change; no held-out access; no checkpoint or model
+  state saved; nothing submitted or pushed.
+- See do-not-repeat **#80**.
