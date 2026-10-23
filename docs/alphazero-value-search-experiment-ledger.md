@@ -127,6 +127,7 @@ knob) is not a new hypothesis.
 > **Search distillation D2, full-float32 setting validation (Post-closure entry 31, 2026-10-23, COMPLETED; CANDIDATE for the isolated operations).** A fresh process launched with `MLX_ENABLE_TF32=0` ran the unchanged synthetic probe and entry 27's four saved cases. On the GPU: no evaluation outside the 1e-4 tolerance (Y and dX now ≤ 3.9e-7 of scale, from about 1e-3), no gross rows at any size, every output bitwise repeatable, in both sets. The CPU and the ungated GPU outputs (dW, db, out Y) are unchanged to the bit, as predicted. A candidate workaround for the isolated operations only: the policy head, full-model gradients and training are not validated, and the cause is not established. See #77.
 
 > **Search distillation D2, full-float32 setting through the policy head and full gradient path (Post-closure entry 32, 2026-10-23, COMPLETED; FAIL at phase 2).** A fresh process with `MLX_ENABLE_TF32=0`. Phase 1, the policy head against the independent NumPy reference: PASS in all six cases (worst 0.05 of the tolerance). Phase 2, the full model at the incumbent against the CPU: the update-21 batch passes everywhere; on the update-0 batch, 2 of 60 gradient tensors (`encoder.blocks.1` and `.2` `conv2.weight`) differ from the CPU by 2.05 and 1.57 × entry 26's 1e-3 tolerance, repeatably. Everything else is within it, and entry 26's gross, non-repeatable GPU gradients are gone. FAIL under the frozen rule: phase 3 (21 updates) did not run. The setting is not validated for the full gradient path; which backend is nearer the exact gradient is not established. Both CPU predictions matched. See #78.
+> **Search distillation D2, convolution-reference diagnostic (Post-closure entry 33, 2026-10-23, COMPLETED; both targets INHERITED).** Same setting, at the incumbent on the update-0 batch, no optimizer update. Entry 32's six failures reproduced bit for bit, and the operand capture was bitwise faithful (L2 included). Given identical operands, the CPU and GPU convolution weight-gradient kernels agree **bitwise**, within 0.006 of the tolerance of float64. Float64 alone, fed each device's own operands, reproduces the miss (2.05×, 1.57×): it is carried in by the upstream gradient (GPU against CPU 5.1× and 5.7× the tolerance, at 2 and 1 elements, all in channel 42), not made by either kernel. Which device's whole-model gradient is nearer the exact one is not established; entry 32's FAIL stands. See #79.
 
 ## Historical proposal check — programme now closed
 
@@ -1713,6 +1714,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 77. **The D2 full-float32 setting validation (entry 31) — CANDIDATE 2026-10-23.** Do **not** rerun it or extend it to other settings, shapes or sizes without a new card. Do **not** read CANDIDATE as a fix for training: it covers the isolated linear operations only, and the policy head and full-model gradient path must be validated against the saved fixtures before any GPU training resumes. Do **not** name the NAX kernel as the cause: it is the source reading, and no kernel was inspected. Do **not** make the setting persistent, or put it in production or training code, without that validation and its own approval. Do **not** read its timings as a benchmark.
 
 78. **The D2 full-float32 setting path validation (entry 32) — FAIL at phase 2, 2026-10-23.** Do **not** rerun it, retry phase 2, run phase 3's 21 updates, loosen or re-pick the tolerance, or swap the comparison base after seeing the result, without a new card and approval. Do **not** describe the setting as validated for the gradient path or for training: two encoder conv2 weight gradients missed the frozen tolerance on the update-0 batch. Do **not** call the remaining difference a GPU error, or a CPU one: it is a disagreement between two MLX backends with no independent encoder reference, and no cause was measured. Do **not** read phase 1's pass or the vanished gross gradients as rehabilitating the Stage 3 candidate or explaining its value drift. Adopting the setting, package changes, chunking, training, bug-report submission and pushing need their own approval.
+
+79. **The D2 convolution-reference diagnostic (entry 33) — both targets INHERITED, 2026-10-23.** Do **not** rerun it, extend it to other tensors, batches or states, or trace the upstream gradient further back, without a new card and approval. Do **not** read INHERITED as either backend being right: the whole-model gradients still differ, and no independent reference covers the upstream gradient. Do **not** read the bitwise kernel agreement as validating the setting for the gradient path or for training, or as relaxing or overturning entry 32's FAIL. Do **not** name a cause for the channel-42 concentration; it is an observation. Do **not** modify or delete the fixtures in `~/twixt-cache/search-distillation-d2/convref-fixtures-20261023T200104Z/`: they are this entry's evidence. Adopting the setting, training, package changes, bug-report submission and pushing need their own approval.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -4686,3 +4689,153 @@ validated** for the full gradient path.
 - **Not done:** no package change, no chunking, no persistent configuration change, no held-out access, no checkpoint
   or model state saved. Nothing submitted or pushed.
 - See do-not-repeat **#78**.
+
+### 33. Search distillation D2 — full-float32 setting: convolution-reference diagnostic for entry 32's two encoder gradients (2026-10-23, COMPLETED; CLASSIFIED: both INHERITED)
+
+**Test.** One fresh process launched with `MLX_ENABLE_TF32=0`, same packages and application code, at the incumbent on
+Stage 3's update-0 batch, with no optimizer update:
+1. **Reproduce:** entry 32's `full_block`, unchanged, three evaluations per device. The GPU's failures must be exactly
+   entry 32's six (`encoder.blocks.1.conv2.weight` and `encoder.blocks.2.conv2.weight` in each evaluation).
+2. **Capture, on each device:**
+   - the uninstrumented gradient, whose digest must equal step 1's;
+   - the same loss with a zero probe added to each target convolution's output, so the probe's gradient is the
+     upstream gradient `G`, and the convolution's input `X` is returned beside the loss. All 60 gradients must equal
+     the uninstrumented ones bitwise;
+   - the local reconstruction: the convolution's weight VJP from `X` and `G`, plus the separately calculated L2
+     contribution, against the original gradient.
+3. **Reference:** NumPy float64 weight gradients from the captured operands, after a layout check against MLX's
+   forward convolution and an adjoint identity. Then each device's local gradient on **identical** operands (each
+   device's set, copied to both), and the native operands separately.
+4. **Classified** per target by three flags: `local_gpu` and `local_cpu` (that device's local gradient outside the
+   tolerance of float64, for either operand set) and `inherited` (float64 of the GPU's operands against float64 of
+   the CPU's, outside the tolerance).
+
+Card `docs/superpowers/2026-10-23-search-distillation-d2-conv-reference-card.md` (frozen before the run).
+
+**Hypothesis.** None was favoured. The question was whether the remaining difference is made by one backend's
+convolution weight-gradient calculation itself (local), or carried into it by different operands from the rest of
+the network (inherited).
+**Why the check was plausible:**
+- Entry 32's two misses were small (2.05× and 1.57×), repeatable and additive, on 11 and 5 of 147,456 elements.
+- Every other output agreed, so a local kernel difference and a small upstream difference were both possible.
+
+**Prediction on record** (card §9, before the run):
+1. Reproduction: the teacher values' digest equals entry 32's (`abe2873a…`). On both devices, every evaluation's loss
+   terms, logits digest and gradient digest equal entry 32's `full.jsonl` for `S0_b0`, and step 1 reproduces.
+2. Capture fidelity: faithful on both devices, with the reconstruction **bitwise**. The basis was a CPU check on a
+   random 3-block network.
+3. The reference's self-checks pass.
+4. Each target's flags and class, and the overall class: **None stated in advance.**
+
+**Rule** (frozen):
+- **Tolerances:**
+  - comparisons use entry 26's `max|a − b| ≤ 1e-3 × max|b| + 1e-6`;
+  - instrumented against uninstrumented: bitwise;
+  - reconstruction: `≤ 1e-6 × max|orig|`;
+  - adjoint identity: 1e-9 relative.
+- **Stops:**
+  - `NOT_REPRODUCED` if step 1 does not give exactly entry 32's six failures (and the CPU none of its own);
+  - `CAPTURE_NOT_FAITHFUL` if any capture check fails;
+  - VOID if the reference fails a self-check.
+- **Entry 32's verdict is unchanged by any outcome.**
+
+**What ran:**
+- **Build `8cbfb852`,** then `6a9bb440` (entry 32's comparison recorded per key; a test expectation corrected) and
+  `1a3a0517` (a second test expectation corrected).
+  - 40 entry tests:
+    - reference correctness: a brute-force loop, MLX's convolution on the CPU, and the adjoint check catching a
+      flipped kernel and a 1e-6 scale error;
+    - capture fidelity: the instrumentation adds no parameter and restores the class even on an exception, and
+      omitting the L2 term or a non-zero probe is caught;
+    - each stop, LOCAL_GPU and INHERITED injected on the rig, SIGTERM retention, refusals, and fresh-process
+      setting checks;
+    - two real-state tests: the public entry stops `NOT_REPRODUCED` when "gpu" is the CPU, and a capture plus
+      reference on the real incumbent is bitwise faithful with its self-checks passing.
+  - 16 wrapper tests; the gate inventory has 42 gates.
+  - The regression equals the 58-id baseline (3,272 passed, 20 failed, 38 errors).
+  - **A process slip:** `1a3a0517` was committed while its test was failing. The cause was the
+    uncommitted-module safeguard, as before any build commit, and a pipe through `tail` hid pytest's exit code. The
+    test passed once rerun after the commit.
+- **Bug-report draft `1b23e19e`** (not submitted): entry 32 added, with the validated policy head kept apart from the
+  unresolved encoder comparison.
+- **Idle check:** the GPU's device utilization read 0% in six samples over 30 s (one earlier read showed 81%,
+  transiently), and no Python process was busy. **The CPU was not idle:** macOS Spotlight indexing was running, and
+  the load average was 5.6 at the start. I judged that acceptable for a GPU run of about a minute. Every reproduced
+  value came out bitwise identical to entry 32's.
+- **Gate 42:** opened `4c2c59a8` in a linked worktree.
+- **The run:** `docs/superpowers/evidence/search-distillation-d2-convref-run/01_wrapper.sh` once.
+- **Evidence and the restored gate:** `a90759b6`.
+  - The gate is byte-identical to the pre-open commit, and no process survived.
+  - main was fast-forwarded and the worktree and branch removed. The gate inventory test passes.
+- **Outcome:** COMPLETED, inner and outer exit 0, 15.1 s in the script, 15 s wall. The setting read `"0"` at the start
+  and at the end.
+- **Evidence:** `docs/superpowers/evidence/search-distillation-d2-convref/`:
+  - `record.json`, `progress.jsonl`;
+  - `full.jsonl` and `full/S0_b0.json`;
+  - `capture/{cpu,gpu}.json`, `reference/<target>.json`, `fixtures.jsonl`.
+- **Fixtures** (outside the repository; the only change in `~/twixt-cache`, verified):
+  - `~/twixt-cache/search-distillation-d2/convref-fixtures-20261023T200104Z/`;
+  - four `.npz` of about 5.4 MB each, holding `X`, `G` and the local gradient per device and target;
+  - SHA-256s in `fixtures.jsonl`, re-hashed after the run;
+  - no weights, model state or checkpoint saved. Held-out records read: 0.
+
+**Result.**
+- **Step 1: reproduced, bit for bit.**
+  - The teacher values' digest equals entry 32's.
+  - On both devices, all three evaluations' loss terms and their gradient, logits and values digests equal entry
+    32's, and `full/S0_b0.json` equals entry 32's.
+  - The GPU's failures are exactly the six.
+- **Step 2: faithful on both devices.**
+  - The instrumented loss terms, logits, values and all 60 gradients equal the uninstrumented ones bitwise.
+  - The reconstruction (local VJP plus the L2 contribution) equals the original gradient bitwise for both targets.
+  - The L2 contribution is not negligible: without it, the miss is 1.1e-4 and 1.4e-4, about a thousand times the
+    reconstruction tolerance.
+- **Step 3: the reference passed its self-checks.**
+  - Layout: at most 0.0004 of the tolerance.
+  - Adjoint identity: about 1e-15 relative.
+
+| | `blocks.1.conv2.weight` | `blocks.2.conv2.weight` |
+|---|---|---|
+| Identical operands: CPU kernel against float64 (CPU's set / GPU's set), × tolerance | 0.0026 / 0.0053 | 0.0026 / 0.0026 |
+| Identical operands: GPU kernel against float64 | 0.0026 / 0.0053 | 0.0026 / 0.0026 |
+| Identical operands: GPU kernel against CPU kernel | **bitwise equal** (both sets, all repeats) | **bitwise equal** |
+| Each device's original against float64 of its own operands (with L2): CPU / GPU | 0.0026 / 0.0053 | 0.0027 / 0.0026 |
+| Input `X`, GPU against CPU | 0.0037 | 0.0033 |
+| **Upstream gradient `G`, GPU against CPU** | **5.15** (2 elements outside) | **5.66** (1 element) |
+| **float64 of GPU operands against float64 of CPU operands** | **2.0475** (11 elements) | **1.5746** (5 elements) |
+| Original GPU against CPU (entry 32's comparison) | 2.0487 (11) | 1.5741 (5) |
+| Flags: local_gpu / local_cpu / inherited | no / no / **yes** | no / no / **yes** |
+| **Class** | **INHERITED** | **INHERITED** |
+
+- **Overall: INHERITED.** The kernel repeats were bitwise on both devices.
+- **Where the differences sit** (observations, not a cause):
+  - Every failed weight element of both targets is in **output channel 42**.
+  - The largest `G` difference in both blocks is at the same position: record 1, row 13, column 4, channel 42.
+    - Block 1: the CPU's `G` there is −1.08e-5 and the GPU's −2.74e-4.
+    - Block 2: the CPU's is exactly −0.0 and the GPU's −2.92e-4.
+- **Cancellation:** at the 16 failed elements, the sum of absolute terms from the CPU's operands is 2.5 to 40 times the
+  element's float64 value, with a median of about 4.3.
+
+**Did it match the prediction, and why.**
+1. **MATCHED:** teacher values, every line on both devices and the block all equal entry 32's, and step 1 reproduced.
+   The setting's GPU path repeated across processes as well as within one.
+2. **MATCHED:** the capture was bitwise faithful on both devices, the reconstruction included.
+3. **MATCHED:** both self-checks passed by wide margins.
+4. None stated. Observed: INHERITED for both targets.
+
+**Conclusion / status.** COMPLETED; **CLASSIFIED: both targets INHERITED.** Entry 32's FAIL at phase 2 stands.
+- **Established, for these two tensors on this batch, on this machine and MLX 0.30.3:**
+  - Neither backend's convolution weight-gradient calculation makes the difference. Given the same operands, the CPU
+    and GPU kernels return bitwise identical results, within 0.006 of the tolerance of float64.
+  - The miss is carried in by the operands, almost entirely by the upstream gradient `G`: float64 alone reproduces
+    it from each device's operands, and `X` agrees closely.
+- **Not established:**
+  - Which device's upstream gradient, and so which **whole-model** gradient, is nearer the exact one (the card's §1
+    limit).
+  - Where downstream the two backends' backward passes diverge, or why. The concentration in one channel and one
+    position is recorded, not explained.
+  - Anything for other tensors, batches or states, for training, the failed candidate or Stage 3's value drift.
+- **No retry,** and no localization further downstream without a new card.
+- **Not done:** no parameter, package or persistent configuration change; no held-out access; no checkpoint or model
+  state saved; nothing submitted or pushed. The bug-report draft does not yet include this entry.
+- See do-not-repeat **#79**.
