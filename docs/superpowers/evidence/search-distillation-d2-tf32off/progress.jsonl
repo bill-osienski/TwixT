@@ -1,0 +1,7 @@
+{"event": "start", "t": 0.0, "setting": {"MLX_ENABLE_TF32": "0"}}
+{"event": "set_a", "t": 2.321, "status": "COMPLETED"}
+{"event": "set_b_case", "t": 2.591, "id": "fc_S0_original"}
+{"event": "set_b_case", "t": 2.801, "id": "fc_S21_original"}
+{"event": "set_b_case", "t": 3.004, "id": "out_S0_original"}
+{"event": "set_b_case", "t": 3.207, "id": "out_S21_original"}
+{"event": "end", "t": 3.215, "status": "COMPLETED", "verdict": "CANDIDATE"}

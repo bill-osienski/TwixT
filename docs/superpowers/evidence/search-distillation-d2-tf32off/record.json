@@ -1,0 +1,330 @@
+{
+ "kind": "search-distillation-d2-tf32off-record/1",
+ "card": "docs/superpowers/2026-10-23-search-distillation-d2-tf32off-validation-card.md",
+ "card_sha256": "9704ce36ac7669941450ddc85dc62477dce7f23d0dae04cffdb42cbc2f786d67",
+ "frozen": {
+  "fixture_cases": [
+   "fc_S0_original",
+   "fc_S21_original",
+   "out_S0_original",
+   "out_S21_original"
+  ],
+  "implementations": [
+   "linear_autodiff",
+   "explicit_autodiff",
+   "explicit_products"
+  ],
+  "outputs": [
+   "Y",
+   "dX",
+   "dW",
+   "db"
+  ],
+  "gpu_repeats": 3,
+  "cpu_repeats": 1,
+  "ungated": {
+   "outputs": [
+    "dW",
+    "db"
+   ],
+   "layer_outputs": [
+    [
+     "out",
+     "Y"
+    ]
+   ]
+  },
+  "key_cap": 100
+ },
+ "status": "COMPLETED",
+ "written_by": "script",
+ "setting": {
+  "MLX_ENABLE_TF32": "0"
+ },
+ "example_dir": "/Users/bill/twixt-cache/search-distillation-d2/tf32off-20261023T150914Z",
+ "probe": {
+  "status": "COMPLETED",
+  "void": null,
+  "example": null,
+  "total_seconds": 2.319,
+  "cases_with_gpu_gross": [],
+  "cases_with_cpu_gross": [],
+  "cases_gpu_nonrepeatable": []
+ },
+ "fixture_cases_done": [
+  "fc_S0_original",
+  "fc_S21_original",
+  "out_S0_original",
+  "out_S21_original"
+ ],
+ "loadavg_before": [
+  4.19287109375,
+  2.177734375,
+  1.78125
+ ],
+ "fixture_seconds": 0.866,
+ "counts": {
+  "synthetic": {
+   "gpu": {
+    "evaluations": 324,
+    "T": 0,
+    "G": 0,
+    "R": 0,
+    "T_keys": [],
+    "G_keys": [],
+    "R_keys": [],
+    "tolerance_only_row_evaluations": 0,
+    "tolerance_only_rows": 0
+   },
+   "cpu": {
+    "evaluations": 108,
+    "T": 0,
+    "G": 0,
+    "R": 0,
+    "T_keys": [],
+    "G_keys": [],
+    "R_keys": [],
+    "tolerance_only_row_evaluations": 0,
+    "tolerance_only_rows": 0
+   }
+  },
+  "fixtures": {
+   "gpu": {
+    "evaluations": 144,
+    "T": 0,
+    "G": 0,
+    "R": 0,
+    "T_keys": [],
+    "G_keys": [],
+    "R_keys": [],
+    "tolerance_only_row_evaluations": 0,
+    "tolerance_only_rows": 0
+   },
+   "cpu": {
+    "evaluations": 48,
+    "T": 0,
+    "G": 0,
+    "R": 0,
+    "T_keys": [],
+    "G_keys": [],
+    "R_keys": [],
+    "tolerance_only_row_evaluations": 0,
+    "tolerance_only_rows": 0
+   }
+  }
+ },
+ "sets_pass": {
+  "synthetic": true,
+  "fixtures": true
+ },
+ "failed_counts": {
+  "synthetic": [],
+  "fixtures": []
+ },
+ "verdict": "CANDIDATE",
+ "gross_removed_but_tolerance_failing": {
+  "synthetic": false,
+  "fixtures": false
+ },
+ "comparisons": {
+  "synthetic_vs_entry30": {
+   "gpu_gated": {
+    "equal": 0,
+    "different": 135,
+    "different_keys": [
+     "fc_32704/probe/gpu/Y/0",
+     "fc_32704/probe/gpu/Y/1",
+     "fc_32704/probe/gpu/Y/2",
+     "fc_32704/probe/gpu/dX/0",
+     "fc_32704/probe/gpu/dX/1",
+     "fc_32704/probe/gpu/dX/2",
+     "fc_32736/probe/gpu/Y/0",
+     "fc_32736/probe/gpu/Y/1",
+     "fc_32736/probe/gpu/Y/2",
+     "fc_32736/probe/gpu/dX/0",
+     "fc_32736/probe/gpu/dX/1",
+     "fc_32736/probe/gpu/dX/2",
+     "fc_32737/probe/gpu/Y/0",
+     "fc_32737/probe/gpu/Y/1",
+     "fc_32737/probe/gpu/Y/2",
+     "fc_32737/probe/gpu/dX/0",
+     "fc_32737/probe/gpu/dX/1",
+     "fc_32737/probe/gpu/dX/2",
+     "fc_32767/probe/gpu/Y/0",
+     "fc_32767/probe/gpu/Y/1",
+     "fc_32767/probe/gpu/Y/2",
+     "fc_32767/probe/gpu/dX/0",
+     "fc_32767/probe/gpu/dX/1",
+     "fc_32767/probe/gpu/dX/2",
+     "fc_32768/probe/gpu/Y/0",
+     "fc_32768/probe/gpu/Y/1",
+     "fc_32768/probe/gpu/Y/2",
+     "fc_32768/probe/gpu/dX/0",
+     "fc_32768/probe/gpu/dX/1",
+     "fc_32768/probe/gpu/dX/2",
+     "fc_32769/probe/gpu/Y/0",
+     "fc_32769/probe/gpu/Y/1",
+     "fc_32769/probe/gpu/Y/2",
+     "fc_32769/probe/gpu/dX/0",
+     "fc_32769/probe/gpu/dX/1",
+     "fc_32769/probe/gpu/dX/2",
+     "fc_32800/probe/gpu/Y/0",
+     "fc_32800/probe/gpu/Y/1",
+     "fc_32800/probe/gpu/Y/2",
+     "fc_32800/probe/gpu/dX/0",
+     "fc_32800/probe/gpu/dX/1",
+     "fc_32800/probe/gpu/dX/2",
+     "fc_33600/probe/gpu/Y/0",
+     "fc_33600/probe/gpu/Y/1",
+     "fc_33600/probe/gpu/Y/2",
+     "fc_33600/probe/gpu/dX/0",
+     "fc_33600/probe/gpu/dX/1",
+     "fc_33600/probe/gpu/dX/2",
+     "fc_33728/probe/gpu/Y/0",
+     "fc_33728/probe/gpu/Y/1",
+     "fc_33728/probe/gpu/Y/2",
+     "fc_33728/probe/gpu/dX/0",
+     "fc_33728/probe/gpu/dX/1",
+     "fc_33728/probe/gpu/dX/2",
+     "out_32704/probe/gpu/dX/0",
+     "out_32704/probe/gpu/dX/1",
+     "out_32704/probe/gpu/dX/2",
+     "out_32736/probe/gpu/dX/0",
+     "out_32736/probe/gpu/dX/1",
+     "out_32736/probe/gpu/dX/2",
+     "out_32737/probe/gpu/dX/0",
+     "out_32737/probe/gpu/dX/1",
+     "out_32737/probe/gpu/dX/2",
+     "out_32767/probe/gpu/dX/0",
+     "out_32767/probe/gpu/dX/1",
+     "out_32767/probe/gpu/dX/2",
+     "out_32768/probe/gpu/dX/0",
+     "out_32768/probe/gpu/dX/1",
+     "out_32768/probe/gpu/dX/2",
+     "out_32769/probe/gpu/dX/0",
+     "out_32769/probe/gpu/dX/1",
+     "out_32769/probe/gpu/dX/2",
+     "out_32800/probe/gpu/dX/0",
+     "out_32800/probe/gpu/dX/1",
+     "out_32800/probe/gpu/dX/2",
+     "out_33600/probe/gpu/dX/0",
+     "out_33600/probe/gpu/dX/1",
+     "out_33600/probe/gpu/dX/2",
+     "out_33728/probe/gpu/dX/0",
+     "out_33728/probe/gpu/dX/1",
+     "out_33728/probe/gpu/dX/2",
+     "wide_32704/probe/gpu/Y/0",
+     "wide_32704/probe/gpu/Y/1",
+     "wide_32704/probe/gpu/Y/2",
+     "wide_32704/probe/gpu/dX/0",
+     "wide_32704/probe/gpu/dX/1",
+     "wide_32704/probe/gpu/dX/2",
+     "wide_32736/probe/gpu/Y/0",
+     "wide_32736/probe/gpu/Y/1",
+     "wide_32736/probe/gpu/Y/2",
+     "wide_32736/probe/gpu/dX/0",
+     "wide_32736/probe/gpu/dX/1",
+     "wide_32736/probe/gpu/dX/2",
+     "wide_32737/probe/gpu/Y/0",
+     "wide_32737/probe/gpu/Y/1",
+     "wide_32737/probe/gpu/Y/2",
+     "wide_32737/probe/gpu/dX/0",
+     "wide_32737/probe/gpu/dX/1",
+     "wide_32737/probe/gpu/dX/2",
+     "wide_32767/probe/gpu/Y/0"
+    ]
+   },
+   "gpu_ungated": {
+    "equal": 189,
+    "different": 0,
+    "different_keys": []
+   },
+   "cpu": {
+    "equal": 108,
+    "different": 0,
+    "different_keys": []
+   }
+  },
+  "fixtures_vs_entry27": {
+   "gpu_gated": {
+    "equal": 0,
+    "different": 54,
+    "different_keys": [
+     "fc_S0_original/linear_autodiff/gpu/Y/0",
+     "fc_S0_original/linear_autodiff/gpu/Y/1",
+     "fc_S0_original/linear_autodiff/gpu/Y/2",
+     "fc_S0_original/linear_autodiff/gpu/dX/0",
+     "fc_S0_original/linear_autodiff/gpu/dX/1",
+     "fc_S0_original/linear_autodiff/gpu/dX/2",
+     "fc_S0_original/explicit_autodiff/gpu/Y/0",
+     "fc_S0_original/explicit_autodiff/gpu/Y/1",
+     "fc_S0_original/explicit_autodiff/gpu/Y/2",
+     "fc_S0_original/explicit_autodiff/gpu/dX/0",
+     "fc_S0_original/explicit_autodiff/gpu/dX/1",
+     "fc_S0_original/explicit_autodiff/gpu/dX/2",
+     "fc_S0_original/explicit_products/gpu/Y/0",
+     "fc_S0_original/explicit_products/gpu/Y/1",
+     "fc_S0_original/explicit_products/gpu/Y/2",
+     "fc_S0_original/explicit_products/gpu/dX/0",
+     "fc_S0_original/explicit_products/gpu/dX/1",
+     "fc_S0_original/explicit_products/gpu/dX/2",
+     "fc_S21_original/linear_autodiff/gpu/Y/0",
+     "fc_S21_original/linear_autodiff/gpu/Y/1",
+     "fc_S21_original/linear_autodiff/gpu/Y/2",
+     "fc_S21_original/linear_autodiff/gpu/dX/0",
+     "fc_S21_original/linear_autodiff/gpu/dX/1",
+     "fc_S21_original/linear_autodiff/gpu/dX/2",
+     "fc_S21_original/explicit_autodiff/gpu/Y/0",
+     "fc_S21_original/explicit_autodiff/gpu/Y/1",
+     "fc_S21_original/explicit_autodiff/gpu/Y/2",
+     "fc_S21_original/explicit_autodiff/gpu/dX/0",
+     "fc_S21_original/explicit_autodiff/gpu/dX/1",
+     "fc_S21_original/explicit_autodiff/gpu/dX/2",
+     "fc_S21_original/explicit_products/gpu/Y/0",
+     "fc_S21_original/explicit_products/gpu/Y/1",
+     "fc_S21_original/explicit_products/gpu/Y/2",
+     "fc_S21_original/explicit_products/gpu/dX/0",
+     "fc_S21_original/explicit_products/gpu/dX/1",
+     "fc_S21_original/explicit_products/gpu/dX/2",
+     "out_S0_original/linear_autodiff/gpu/dX/0",
+     "out_S0_original/linear_autodiff/gpu/dX/1",
+     "out_S0_original/linear_autodiff/gpu/dX/2",
+     "out_S0_original/explicit_autodiff/gpu/dX/0",
+     "out_S0_original/explicit_autodiff/gpu/dX/1",
+     "out_S0_original/explicit_autodiff/gpu/dX/2",
+     "out_S0_original/explicit_products/gpu/dX/0",
+     "out_S0_original/explicit_products/gpu/dX/1",
+     "out_S0_original/explicit_products/gpu/dX/2",
+     "out_S21_original/linear_autodiff/gpu/dX/0",
+     "out_S21_original/linear_autodiff/gpu/dX/1",
+     "out_S21_original/linear_autodiff/gpu/dX/2",
+     "out_S21_original/explicit_autodiff/gpu/dX/0",
+     "out_S21_original/explicit_autodiff/gpu/dX/1",
+     "out_S21_original/explicit_autodiff/gpu/dX/2",
+     "out_S21_original/explicit_products/gpu/dX/0",
+     "out_S21_original/explicit_products/gpu/dX/1",
+     "out_S21_original/explicit_products/gpu/dX/2"
+    ]
+   },
+   "gpu_ungated": {
+    "equal": 90,
+    "different": 0,
+    "different_keys": []
+   },
+   "cpu": {
+    "equal": 48,
+    "different": 0,
+    "different_keys": []
+   }
+  }
+ },
+ "setting_at_end": {
+  "MLX_ENABLE_TF32": "0"
+ },
+ "total_seconds": 3.215,
+ "loadavg_after": [
+  4.19287109375,
+  2.177734375,
+  1.78125
+ ]
+}

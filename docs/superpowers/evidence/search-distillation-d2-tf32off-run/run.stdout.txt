@@ -1,0 +1,1 @@
+{"status": "COMPLETED", "void": null, "verdict": "CANDIDATE", "failed_counts": {"synthetic": [], "fixtures": []}, "gpu": {"synthetic": {"T": 0, "G": 0, "R": 0}, "fixtures": {"T": 0, "G": 0, "R": 0}}, "example": null}

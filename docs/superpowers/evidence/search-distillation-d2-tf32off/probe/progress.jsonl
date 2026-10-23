@@ -1,0 +1,29 @@
+{"event": "start", "t": 0.0}
+{"event": "case", "t": 0.199, "id": "fc_32704", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 0.351, "id": "fc_32736", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 0.408, "id": "fc_32737", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 0.465, "id": "fc_32767", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 0.522, "id": "fc_32768", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 0.582, "id": "fc_32769", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 0.639, "id": "fc_32800", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 0.701, "id": "fc_33600", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 0.764, "id": "fc_33728", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 0.843, "id": "out_32704", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 0.932, "id": "out_32736", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 0.986, "id": "out_32737", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 1.039, "id": "out_32767", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 1.092, "id": "out_32768", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 1.146, "id": "out_32769", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 1.199, "id": "out_32800", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 1.254, "id": "out_33600", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 1.31, "id": "out_33728", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 1.445, "id": "wide_32704", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 1.602, "id": "wide_32736", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 1.704, "id": "wide_32737", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 1.805, "id": "wide_32767", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 1.905, "id": "wide_32768", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 2.006, "id": "wide_32769", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 2.107, "id": "wide_32800", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 2.212, "id": "wide_33600", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 2.319, "id": "wide_33728", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "end", "t": 2.319, "status": "COMPLETED"}
