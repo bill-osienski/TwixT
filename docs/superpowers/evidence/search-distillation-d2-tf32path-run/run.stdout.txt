@@ -1,0 +1,1 @@
+{"status": "COMPLETED", "void": null, "verdict": "FAIL", "failed_phase": "full_model_incumbent", "phases": {"policy_head": "PASS", "full_model_incumbent": "FAIL"}, "gpu_failures": {"policy_head": 0, "full_model_incumbent": 6}, "head": "699859004d4200c38f33ac9270a6fef96045d6aa"}

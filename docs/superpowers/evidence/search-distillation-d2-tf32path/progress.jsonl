@@ -1,0 +1,14 @@
+{"event": "start", "t": 0.007, "setting": {"MLX_ENABLE_TF32": "0"}}
+{"event": "inputs_verified", "t": 3.134, "training_records": 6403, "fixtures": ["batch_members", "padding", "real_S0", "real_S21", "repeated_indices", "weighted_additivity"]}
+{"event": "policy_head_case", "t": 3.275, "case": "repeated_indices", "gpu_failures": 0}
+{"event": "policy_head_case", "t": 3.285, "case": "batch_members", "gpu_failures": 0}
+{"event": "policy_head_case", "t": 3.293, "case": "padding", "gpu_failures": 0}
+{"event": "policy_head_case", "t": 3.298, "case": "weighted_additivity", "gpu_failures": 0}
+{"event": "policy_head_case", "t": 4.298, "case": "real_S0", "gpu_failures": 0}
+{"event": "policy_head_case", "t": 5.267, "case": "real_S21", "gpu_failures": 0}
+{"event": "phase", "t": 5.268, "phase": "policy_head", "status": "PASS"}
+{"event": "teacher_values", "t": 7.101, "digest": "abe2873a0b06c8412bd947c32d01ec2b354f1dd8e2c09f039c2470c52ffcb37c", "entry26_digest": "817aa7bffc6bd1804b6d4d3fd7d4e27a8df572483fe9bb8b8bbdcc6cb8192814", "equals_entry26": false}
+{"event": "full_block", "t": 11.989, "block": "S0_b0", "gpu_failures": 6}
+{"event": "full_block", "t": 16.584, "block": "S0_b21", "gpu_failures": 0}
+{"event": "phase", "t": 16.585, "phase": "full_model_incumbent", "status": "FAIL"}
+{"event": "end", "t": 16.629, "status": "COMPLETED", "verdict": "FAIL"}
