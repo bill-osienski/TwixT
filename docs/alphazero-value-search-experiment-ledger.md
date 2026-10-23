@@ -4200,3 +4200,7 @@ derived. It would be consistent with corrupted rows that do not depend on the re
 - The Stage 3 candidate stays closed; `calib020_0001` stays the incumbent.
 - Stages 4–5, further learning experiments, backend upgrades, production workarounds, bug reports and pushing
   remain unapproved. See do-not-repeat **#73**.
+
+*Addendum (2026-10-23, the same day).* Entry 27's table left S21's legal/padded split blank. Of the 992 gross rows at
+S21, 883 are legal and 109 padded, from `cases.jsonl`; at S0, 848 and 16. In both cases the split simply follows
+where the padded slots fall within the leading rows.
