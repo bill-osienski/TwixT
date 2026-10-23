@@ -11,6 +11,9 @@
   Y alone, while the probe evaluates four products jointly.
 - Revised 2026-10-23 after entry 30: the title, the summary and the repeatability statement changed (the earlier draft
   said "very narrow operand", "first N − 32,736 rows" and "identical across three runs"; entry 30 contradicts all three).
+- Revised again 2026-10-23 (wording): outputs earlier called "clean" or "correct" on the GPU were often only **free of
+  gross errors**. Below, *within tolerance* (error ≤ 1e-4 × max|expected| + 1e-6) and *no gross error* (error ≤ 1e-2 ×
+  max|expected|) are kept apart.
 
 ---
 
@@ -27,19 +30,23 @@
   - `C @ W` with C (N, 64) and W (64, 2); with C (N, 1) and W (1, 64); with C (N, 64) and W (64, 64).
 - **Band sizes measured:** 32 rows at N = 32,769; 64 at 32,800; 864 at 33,600; 992 at 33,728. With fixture
   operands (entry 27), 864 at 33,600 and 992 at 33,728 too.
-- **Errors in the band** are of the order of the outputs themselves (the largest per output is 0.5 to 3.6 × max|expected|). Other rows stay
-  within about 1e-3 of max|expected|, as at the clean sizes (one exception: in one evaluation at 33,600, a row of the band fell just under the threshold, by inference).
-- **The CPU device is correct everywhere** (at most 3.9e-7 of max|expected|).
-- **What stays correct at every N tested:** reductions over the rows (`C.T @ X`, `C.sum(0)`) and the (N, 64) @ (64, 1)
-  product.
-- **Where nothing was wrong:** N = 32,704; 32,736; 32,737; 32,767; 32,768 (synthetic), and 512, 2,048, 8,192, 16,384
-  and 32,768 (fixtures).
+- **Errors in the band** are of the order of the outputs themselves (the largest per output is 0.5 to 3.6 ×
+  max|expected|).
+- **Outside the band, these GPU outputs are still not within tolerance.** Every GPU evaluation of them, at every N
+  tested (synthetic 32,704–33,728; fixtures 512–33,728), has elements beyond 1e-4 × max|expected|, up to about 1.2e-3 ×
+  max|expected|: free of gross errors, but outside the tolerance (one exception: in one evaluation at 33,600, a row of
+  the band fell just under the gross threshold, by inference).
+- **The CPU device is within tolerance everywhere** (at most 3.9e-7 of max|expected|).
+- **What stays within tolerance on the GPU at every N tested:** reductions over the rows (`C.T @ X`, `C.sum(0)`) and
+  the (N, 64) @ (64, 1) product.
+- **Where no row was grossly wrong** (but the products above were still outside tolerance): N = 32,704; 32,736;
+  32,737; 32,767; 32,768 (synthetic), and 512, 2,048, 8,192, 16,384 and 32,768 (fixtures).
 - **Repeatability:** the wrong rows are **not** bitwise repeatable within a process.
   - Three GPU evaluations of the same synthetic operands: the first differs from the second and third in every failing
     output (largest differences 2.5–6.5). The second and third agree on every reported statistic.
   - In the first evaluation, the band's rows of `X @ W.T + b` equal `b` alone (at 32,769, 33,600 and 33,728), as if the
     X·Wᵀ term were missing. In the later ones they hold other wrong values.
-  - Correct outputs repeat bitwise.
+  - Outputs with no gross error repeat bitwise.
   - Across two separate processes, the first evaluation's band for one case (N = 32,769, rows 0–39 saved) was byte
     identical.
 - **What did not change it** (fixtures, entry 27): `nn.Linear` or plain `@`; autodiff (`mx.vjp`) or explicit products;
@@ -70,15 +77,18 @@ for dev in (mx.gpu, mx.cpu):
 ```
 
 **Results with synthetic operands** (entry 30; 27 cases, GPU three times and CPU once each, against NumPy float64;
-gross = error above 1e-2 × max|expected|):
+gross = error above 1e-2 × max|expected|; "no gross" = no gross element but elements outside the 1e-4 tolerance in
+every GPU evaluation; "within tol" = every element within it):
 
 | N | fc 2→64: Y, dX | out 64→1: Y | out 64→1: dX | wide 64→64: Y, dX | every dW, db | CPU |
 |---|---|---|---|---|---|---|
-| 32,704 – 32,768 (5 sizes) | clean | clean | clean | clean | clean | clean |
-| 32,769 | rows [0, 32) | clean | rows [0, 32) | rows [0, 32) | clean | clean |
-| 32,800 | rows [0, 64) | clean | rows [0, 64) | rows [0, 64) | clean | clean |
-| 33,600 | rows [0, 864) | clean | rows [0, 864) | rows [0, 864) | clean | clean |
-| 33,728 | rows [0, 992) | clean | rows [0, 992) | rows [0, 992) | clean | clean |
+| 32,704 – 32,768 (5 sizes) | no gross | within tol | no gross | no gross | within tol | within tol |
+| 32,769 | rows [0, 32) gross | within tol | rows [0, 32) gross | rows [0, 32) gross | within tol | within tol |
+| 32,800 | rows [0, 64) gross | within tol | rows [0, 64) gross | rows [0, 64) gross | within tol | within tol |
+| 33,600 | rows [0, 864) gross | within tol | rows [0, 864) gross | rows [0, 864) gross | within tol | within tol |
+| 33,728 | rows [0, 992) gross | within tol | rows [0, 992) gross | rows [0, 992) gross | within tol | within tol |
+
+In the rows marked gross, the other rows of the same outputs are also outside tolerance.
 
 **Not claimed:**
 - the kernel or dispatch path responsible;

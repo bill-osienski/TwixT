@@ -4446,3 +4446,15 @@ no surviving process).
   512 legal moves. The same correction is appended to the audit document (§8). #75's instruction stands.
 - **Entry 29's disclosure:** the user's assessment is that the delegated width count's held-out access **exceeded the
   audit's training-only scope**. The disclosure stands. No further corpus access was needed or made for this probe.
+
+**Dated correction to entry 30 (2026-10-23, later; the user's review).** "Clean" and "correct" were used there for
+outputs that were only **free of gross errors**. Read with the frozen tolerance (|error| > 1e-4 × scale + 1e-6) kept
+apart:
+- **Outside the tolerance in every GPU evaluation, at every N** (27 of 27 each), gross rows or not: fc Y, fc dX,
+  out dX, wide Y and wide dX, by up to about 1.2e-3 of scale outside the gross rows.
+- **Within the tolerance in every GPU evaluation:** every dW, every db and out's Y.
+- **The CPU:** within the tolerance everywhere.
+- **Entry 27's fixtures, the same pattern:** every GPU Y and dX evaluation (fc) and dX (out) was outside the tolerance
+  at every size, 512–33,728 rows; its CPU results were within it.
+- "None at ≤ 32,768" in entry 30 means **no gross rows**, not results within the tolerance. The bug-report draft now
+  keeps the two apart.
