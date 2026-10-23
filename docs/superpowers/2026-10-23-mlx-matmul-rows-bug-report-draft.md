@@ -17,6 +17,8 @@
   max|expected|) are kept apart.
 - Revised 2026-10-23 after **entry 32**: a section on the setting through a training gradient was added below entry
   31's. It keeps the validated policy-head result apart from the unresolved encoder comparison.
+- Revised 2026-10-23 after **entry 33**: the encoder comparison's convolution-reference result was added. The
+  convolution kernels passed on identical operands.
 
 ---
 
@@ -126,6 +128,17 @@ tolerance here is entry 26's, error ≤ 1e-3 × max|reference| + 1e-6, looser th
   - Without the setting (entry 26), 59 of 60 tensors failed on that batch, those two at 1,169× and 581× the tolerance.
   - **Which backend is nearer the exact gradient for those two tensors is not established.** No independent reference
     exists for the encoder. This is not reported as an MLX defect.
+- **The two encoder tensors: the convolution kernels passed on identical operands** (ledger entry 33; a fresh
+  process, the same batch and weights).
+  - Each convolution's input and upstream gradient were captured on both devices. Plus the separately calculated L2
+    term, they rebuilt each device's original weight gradient bitwise.
+  - **Given identical operands, the CPU and GPU weight-gradient kernels returned bitwise identical results**, within
+    0.006 of the tolerance of a NumPy float64 reference, for both operand sets.
+  - The difference is carried in by the operands, almost entirely the upstream gradient. A float64 calculation from
+    each device's own operands reproduces the 2.05× and 1.57× misses. The upstream gradients differ at 2 and 1
+    elements, all in one channel; the inputs agree within 0.004 of the tolerance.
+  - So the remaining encoder difference is not attributed to the convolution kernels. Which device's whole-model
+    gradient is nearer the exact one is still not established. This is not reported as an MLX defect.
 
 **Not claimed:**
 - the kernel or dispatch path responsible (the setting's effect points at the NAX path, but proves nothing about it);
