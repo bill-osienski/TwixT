@@ -144,6 +144,10 @@ EXPECTED_GATES = {
     #: loads no network but runs GPU computations on the gradient check's saved fixtures under a frozen case list,
     #: so it takes its own reviewed door, in a single-declaration module.
     "search_distillation_d2_linrepro_authorization.py": "SEARCH_DISTILLATION_D2_LINREPRO_AUTHORIZED",
+    #: 🔴 THE THIRTY-NINTH, ADDED 2026-10-23 (search distillation D2, synthetic row-count probe card). The probe
+    #: loads no network and no fixture but runs GPU computations on synthetic operands under a frozen case list, so
+    #: it takes its own reviewed door, in a single-declaration module.
+    "search_distillation_d2_mlxrows_authorization.py": "SEARCH_DISTILLATION_D2_MLXROWS_AUTHORIZED",
     "l0_match_command.py": "L0_EXECUTION_AUTHORIZED",
     "lowply_qualification.py": "LOWPLY_QUALIFICATION_AUTHORIZED",
     "runtime_requalification.py": "RUNTIME_REQUAL_AUTHORIZED",
@@ -175,7 +179,7 @@ def test_THE_COUNT_IS_DERIVED_AND_ANY_REPORT_SAYING_OTHERWISE_IS_WRONG():
     #: single deliberate edit, to the dict above.
     assert INVENTORY.gate_count() == len(discover_gates()) == len(EXPECTED_GATES), (
         "the derived inventory and EXPECTED_GATES must agree")
-    assert len(EXPECTED_GATES) == 38, (
+    assert len(EXPECTED_GATES) == 39, (
         "the total moved: add or remove the entry in EXPECTED_GATES above "
         "deliberately, then update this number in the same edit")
 
@@ -221,7 +225,7 @@ def _stale_count_claims(text):
              "twenty-eight": 28, "twenty-nine": 29, "thirty": 30, "thirty-one": 31,
              "thirty-two": 32, "thirty-three": 33, "thirty-four": 34,
              "thirty-five": 35, "thirty-six": 36, "thirty-seven": 37,
-             "thirty-eight": 38}
+             "thirty-eight": 38, "thirty-nine": 39}
     n = len(EXPECTED_GATES)
     bad = []
     for word, value in words.items():
@@ -287,4 +291,5 @@ def test_THE_STALE_COUNT_GUARD_IS_NOT_VACUOUS():
     assert _stale_count_claims("all thirty-five gates are False")  # was right, now stale
     assert _stale_count_claims("all thirty-six gates are False")  # was right, now stale
     assert _stale_count_claims("all thirty-seven gates are False")  # was right, now stale
-    assert not _stale_count_claims("all thirty-eight gates are False")  # correct total
+    assert _stale_count_claims("all thirty-eight gates are False")  # was right, now stale
+    assert not _stale_count_claims("all thirty-nine gates are False")  # correct total
