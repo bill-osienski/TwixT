@@ -112,6 +112,8 @@ knob) is not a new hypothesis.
 
 > **Search distillation D2, reproducibility diagnostic (Post-closure entry 25, 2026-10-22, MEASURED).** Updates 0–21 replayed three times in one process: A (plain), B (attribution at 20 and 21), C (plain), each from a fresh load of the incumbent. **The GPU update path does not repeat.** Pass A reproduced Stage 3 bit for bit through update 21. B and C differed from A from update 0, with the same loss terms but a different pre-clip norm (16.63 against 12.45). They agreed with each other through update 20, and before update 21 they held identical model, Adam and input digests, yet their update-21 norms differed (3,867 against 3,512). At B's update 21, each record's own policy gradient had norm ≈ 3,867, and the 64 summed to about 64 times the batch gradient. The gradient of the stated loss is linear in the record weights (at update 20 the gap is 0.0), so that computed gradient is not the stated loss's gradient. Re-running the policy head step by step gave logits up to 11.5 away from the module's own on the same state. The mechanism is not derived. See #71.
 
+> **Search distillation D2, gradient correctness check (Post-closure entry 26, 2026-10-22, MEASURED).** Two states: the incumbent, and a reconstructed pre-update-21 state whose digest equals entry 25's pass A. **CPU/GPU agreement: no.** The CPU is bitwise repeatable and additive. On the GPU, 59 of 60 gradient tensors fall outside the tolerance at both states; the GPU is not repeatable at S21 (norms 4.32, 834 and 2,900, against the CPU's 4.23); and weighted-record additivity fails. **Independent NumPy reference (policy head): the CPU agrees in all 6 cases and the GPU in none** (about 1e-3 off on small synthetic cases; grossly off on the real batches, where additivity misses by about 10⁴). **First localized discrepancy, from identical inputs:** the encoder's forward differs from the CPU's by 0.19 but repeats on the GPU, and which device is right is not established. Inside the policy head, the conv, BatchNorm, ReLU, gather, masks, log-softmax and CE agree to about 1e-7. The **fc layer (2→64) forward and input gradient**, and the **out layer (64→1) input gradient**, are outside the tolerance and not repeatable. The mechanism is not derived. See #72.
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -1683,6 +1685,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 70. **The D2 gradient diagnostic (entry 24) — MISMATCH 2026-10-22.** Do **not** rerun it, rerun it without the attribution passes, on the CPU, with other settings or from update 21, or extend it to more updates: it was one run under a frozen card and it stopped where its card says to stop. Do **not** read the replayed update 21's per-tensor norms as Stage 3's (the two runs differ at that update), or one spike as a description of all 86. Do **not** name a cause for the spikes or for the divergence at update 21 — GPU non-determinism, an effect of the attribution pass, large gathered policy features and the zero-variance BatchNorm channels are hypotheses, none measured as a cause — and do **not** read anything here as a cause of Stage 3's value drift. A next diagnostic needs its own card and approval.
 
 71. **The D2 reproducibility diagnostic (entry 25) — MEASURED 2026-10-22.** Do **not** rerun it, extend it past update 21, add passes or reorder them: it was one run under a frozen card. Do **not** treat any GPU training result on this update path (`forward_padded` → masked policy cross-entropy → `nn.value_and_grad`, MLX 0.30.3, Metal) as a deterministic function of its inputs until that is re-established. Two passes from identical state and inputs produced different gradients, and one update's computed gradient violated the linearity of the stated loss. Do **not** read the Stage 3 spikes as properties of the data, the records or the BatchNorm statistics, and do **not** name the mechanism (which operation, why the first pass in a process differs from later ones) until one is derived. Do **not** start another learning recipe on this path before the gradient is checked against an independent reference. A next step needs its own card and approval.
+
+72. **The D2 gradient correctness check (entry 26) — MEASURED 2026-10-22.** Do **not** rerun it, rerun it at other states or batches, or treat its fixtures as a test suite to iterate against without a new card. Do **not** train, fine-tune or evaluate a learning recipe on the MLX 0.30.3 Metal path (`forward_padded` → masked policy CE → autodiff) on the strength of its gradients: against the NumPy reference, the GPU policy-head gradients on real batches are wrong and not repeatable, and the CPU's are within tolerance. Do **not** call the CPU an oracle (it shares MLX's autodiff), or call the GPU encoder wrong or right: its 0.19 forward difference repeats on the GPU, and no independent reference covers it. Do **not** name the mechanism behind the fc and out discrepancies (kernel, shape, memory or graph-context dependence) until one is derived, or say whether earlier checkpoints' training or Stage 3's value drift was affected: both remain unresolved. Earlier match results remain evidence about those checkpoints. Backend upgrades and production fixes need their own approval.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -3950,3 +3954,131 @@ value drift is not measured.
 - The mechanism is not derived.
 - The Stage 3 candidate stays closed; `calib020_0001` stays the incumbent.
 - Stages 4–5, further learning experiments, promotion and pushing remain unapproved. See do-not-repeat **#71**.
+
+### 26. Search distillation D2 — gradient correctness check, CPU/GPU and an independent reference (2026-10-22, MEASURED)
+
+**Test.** One run under card `docs/superpowers/2026-10-22-search-distillation-d2-gradient-check-card.md` (pinned by
+SHA-256 in `scripts/GPU/alphazero/search_distillation_d2_gradcheck.py`), approved after entry 25 as a diagnostic-only
+exception to the closed replay restriction.
+- **Two fixed states:**
+  - **S0**, the incumbent, on Stage 3's update-0 batch;
+  - **S21**, a newly reconstructed pre-update-21 state, on the update-21 batch. It comes from ONE GPU prefix of
+    updates 0–20, and its digest was compared with entry 25's recorded digests.
+- **CPU/GPU comparison:** at each state, three evaluations per device of the training loss's forward outputs and all
+  60 gradient tensors, each from fresh copies of the state and batch arrays with digests checked. No optimizer
+  update. Plus weighted-record additivity.
+- **An independent reference:** NumPy float64 with hand-derived derivatives for the policy head (1×1 conv,
+  BatchNorm in evaluation mode, ReLU, gather with scatter-add, two linear layers, masks, masked cross-entropy). It is
+  validated by fixed directional finite differences where no ReLU boundary is crossed. Cases: four synthetic
+  (repeated indices, batch members, padding, weighted additivity) and the real batches at both states.
+- **Stage-by-stage localization:** each stage's output and vector-Jacobian product on each device, three times, from
+  the CPU chain's identical inputs and cotangents. A decomposition check compares the composed chain with autodiff.
+- Every result was written as it was produced. Fixtures for disagreeing components were saved outside the
+  repository; no encoder weights and no checkpoint were saved.
+
+**Hypothesis.** None about a mechanism. The questions: do the CPU and GPU agree; does either agree with an
+independent reference; where is the first discrepancy, given identical inputs.
+
+**Why it was plausible.** Entry 25 measured gradients that differ from identical state and inputs, and a failure of
+the linearity identity, without locating either.
+
+**Prediction on record.** None stated in advance.
+
+**What ran.**
+- **Build `06c2a74d`:** the entry point; the gate `SEARCH_DISTILLATION_D2_GRADCHECK_AUTHORIZED` (the thirty-seventh); a
+  wrapper with TERM at 590 s and KILL 10 s later; the card.
+  - It had 24 run-module and 16 wrapper tests. These include injected faults at the gather, the masked log-softmax
+    and the encoder, each located at that stage with its fixture saved; a stage that is not bitwise repeatable
+    being flagged; and an every-coordinate finite-difference test of the NumPy derivatives.
+  - All 13 injected defects were caught, including a non-accumulating scatter, a dropped BatchNorm scale and a
+    policy-only encoder cotangent.
+  - Regression equalled the 58-id baseline (3,272 passed).
+- **Run:** gate opened by `84d7b00c`; one run through `01_wrapper.sh` in a clean linked worktree. Evidence and the
+  restored gate are in `a30c852f`.
+  - Ten fixtures, 64 MB, read-only, are at `~/twixt-cache/search-distillation-d2/gradcheck-fixtures-20261023T034401Z/`.
+    Their hashes are in `fixtures.jsonl`.
+  - No game seeds were drawn.
+
+**Result.** Outer exit 0, **COMPLETED**, 29 s wall clock. The record was written by the script; there were no
+survivors; the gate was restored and read back; stderr was empty. The teacher values' digest equalled entry 25's.
+- **S21:** the reconstruction reproduced Stage 3's updates 0–20 bit for bit. Its digest (`91816a99…`) **equals pass
+  A's recorded pre-update-21 digest**, not passes B and C's. It is a reconstruction, not the state entry 25 held.
+
+***1. CPU/GPU agreement: they do not agree.***
+- **CPU:** bitwise repeatable at both states (all 60 tensors and the forward outputs, three times each). Additivity
+  held for every tensor.
+- **GPU forward:**
+  - logits differ from the CPU by at most 0.18 (S0) and 0.12 (S21), within the tolerance;
+  - values differ by 0.038 and 0.016, outside it;
+  - loss terms are bitwise repeatable on the GPU.
+- **GPU gradients:**
+  - 59 of 60 tensors are outside the tolerance in every evaluation at both states;
+  - S0 norms are 16.63 three times, against the CPU's 13.71; the second evaluation's tensors were bitwise equal to
+    the first for only 19 of 60;
+  - **S21 norms are 4.32, 833.5 and 2,900.0**, against the CPU's 4.23 three times; only 4 of 60 tensors repeated
+    bitwise;
+  - additivity failed for 58 of 60 tensors at both states.
+- **Context dependence of a GPU forward value:** at S0 on update 0's batch, the policy term was 4.576662 inside the
+  training loop (Stage 3, pass A and this run's reconstruction), but 4.563246 in this run's standalone GPU
+  evaluation of the same state and batch. The CPU gave 4.563363.
+
+***2. Agreement with the independent reference (NumPy float64, policy head only).***
+- The NumPy derivatives agreed with central finite differences in the four synthetic cases (relative 1e-8–1e-10).
+  The real-batch directional checks were **skipped**: every step down to ε = 6.25e-7 crossed a ReLU boundary.
+- **CPU MLX** agreed with NumPy within the tolerance in **all 6 cases**: every tensor and the features' gradient,
+  bitwise repeatable, single-record gradients adding up.
+- **GPU MLX** disagreed in **all 6 cases**:
+  - **Synthetic cases:** relative errors of about 1e-3, repeatable, slightly beyond the tolerance. Directional
+    derivatives were 0.3–0.6% off the finite difference, against the CPU's agreement to about 1e-6.
+  - **Real batches:** off by up to 8% of scale in the conv, BatchNorm and features' gradients, not repeatable. The
+    summed single-record gradients missed the full gradient by about 10⁴: for the features' gradient, 910 against a
+    scale of 0.042 at S0 and 4,300 against 0.044 at S21; for the BatchNorm bias, 5.5e4 and 6.3e4.
+
+***3. The first localized discrepancy (identical stage inputs and cotangents, GPU against the CPU chain).***
+- **Decomposition:** the CPU chain reproduced CPU autodiff bitwise for all 60 tensors at both states.
+- **Canonicalization:** bitwise identical on the GPU.
+- **First in forward order: the encoder.** Its output differs by 0.19 (S0) and 0.17 (S21) against values up to
+  about 13, and all 52 of its tensor gradients are outside the tolerance. It **repeats bitwise on the GPU**. No
+  independent reference covers the encoder, so which device is right is not established.
+- **Inside the policy head:**
+  - **Agree within the tolerance and bitwise repeatable**, in forward and backward: the 1×1 conv, BatchNorm, ReLU,
+    gather (its scatter-add backward included), fc ReLU, head mask, masked log-softmax, policy CE, value head and
+    anchor. Differences are at most about 1e-6 absolute; the value head's 0.0011 at S21 is the exception, outside
+    the tolerance.
+  - **The fc layer** (Linear 2→64 on 33,600 and 33,728 rows): forward outside the tolerance by 0.36–1.7. Its
+    gradient with respect to its input is off by 2.3 against a scale of 0.065, and **neither repeats bitwise**. Its
+    weight and bias gradients are within the tolerance.
+  - **The out layer** (Linear 64→1): forward within the tolerance (3.8e-6). Its **input gradient** is off by 1.7
+    against a scale of 0.013, and is not repeatable at S0. **This is the first discrepancy in backward order.** Its
+    weight and bias gradients are within the tolerance.
+
+**Did it match the prediction, and why.** None was stated.
+
+**Measured attribution:**
+- the GPU path disagrees with the CPU and with an independent reference for the policy head, where the CPU agrees
+  with the reference;
+- from identical inputs, the policy head's discrepancies are confined to the two small linear layers: fc's forward
+  and input gradient, and out's input gradient;
+- the encoder differs from the CPU, repeatably on the GPU, and its correct value is not established;
+- a GPU forward value depends on the computation it is evaluated within.
+
+**Causal hypotheses, none tested:**
+- a GPU defect in matrix products with a very narrow dimension (inner dimension 2 for fc's forward, 1 for out's
+  input gradient, output width 2 for fc's input gradient) at about 33,000 rows;
+- dependence on memory layout or buffer reuse, which would fit the context-dependent forward value and the passes in
+  entry 25;
+- the encoder's difference coming from ordinary float32 rounding amplified by the zero-variance BatchNorm channels
+  (×316 per layer), rather than from a defect.
+
+Whether earlier checkpoints' training, or Stage 3's value drift, was affected remains unresolved. Earlier match
+results remain evidence about those checkpoints.
+
+**Conclusion / status.** MEASURED, closed.
+- On this machine's MLX 0.30.3 Metal path, the policy-head gradients on real training batches are wrong against an
+  independent reference and not repeatable.
+- The discrepancy localizes, from identical inputs, to the policy head's two small linear layers; the encoder's
+  difference is unresolved.
+- No learning recipe should run on this path until the defect is understood or avoided.
+- The Stage 3 candidate stays closed; `calib020_0001` stays the incumbent.
+- Stages 4–5, further learning experiments, backend upgrades, production fixes, promotion and pushing remain
+  unapproved. See do-not-repeat **#72**.
