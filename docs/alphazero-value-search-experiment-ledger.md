@@ -118,6 +118,10 @@ knob) is not a new hypothesis.
 
 > **Search distillation D2, linear-layer reproducer (Post-closure entry 27, 2026-10-23, REPRODUCED IN ISOLATION).** The policy head's `fc` (2→64) and `out` (64→1) operations were run alone on the saved fixtures' float32 operands, against NumPy float64. **The failure reproduces in isolation** at all four original shapes, in all three implementations (`nn.Linear`, explicit matmul with autodiff, and explicit products), with the CPU clean. **The gross errors are confined to exactly the first N − 32,736 rows** (rows 0–863 of 33,600 at S0; rows 0–991 of 33,728 at S21), legal and padded rows alike. They appear in `fc`'s forward and input gradient and in `out`'s input gradient. In `fc`'s forward those rows equal the bias alone. **At 32,768 rows and below, nothing is gross.** The alternative layout and evaluation context reproduce too. Other rows carry a GPU error of about 1e-3 of scale (the CPU's is about 1e-7). The mechanism is not derived. See #73.
 
+> **Search distillation D2, synthetic row-count probe — UNPLANNED GPU EXECUTION during mutation controls (Post-closure entry 28, 2026-10-23, INCIDENT; the approved run NOT made).** Under the injected defect "gate unchecked", a closed-gate test with no device or path isolation reached the real entry. The full frozen probe ran once on the GPU inside the disposable control worktree. Its evidence was deleted with that worktree. It left one read-only `compact_example.npz` (SHA-256 `7c412fd3…`) in `~/twixt-cache/search-distillation-d2/mlxrows-20261023T122440Z/`. That file is not evidence of the approved run and is not interpreted. Every test is now isolated, and the control harness stops if `~/twixt-cache` changes. The approved invocation waits for the user's decision. See #74.
+
+> **Search distillation D2, historical exposure audit (Post-closure entry 29, 2026-10-23, READ-ONLY).** Until `ffe6b342` (2026-10-20), the trainer capped the policy-head move width at 512. Every `checkpoints/` run therefore had at most 64 × 512 = 32,768 rows, including every ancestor of the incumbent. Those runs are **insufficient records**: machine and MLX version per run were not recorded, and 32,768 was measured clean only on the M5 Max under 0.30.3. **Confirmed matching shapes:** D2 Stage 3 updates 0–21, 33,600–33,792 rows, derived from the recorded batch identities. **Possible exposure:** Stage 3 updates 22–400 and D2's evaluation `forward()`. A delegated width count read the held-out records' legal-move counts; this is disclosed and the figure is unused. Not a finding of corruption, nor a statement on measured strength. See #75.
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -1693,6 +1697,10 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 72. **The D2 gradient correctness check (entry 26) — MEASURED 2026-10-22.** Do **not** rerun it, rerun it at other states or batches, or treat its fixtures as a test suite to iterate against without a new card. Do **not** train, fine-tune or evaluate a learning recipe on the MLX 0.30.3 Metal path (`forward_padded` → masked policy CE → autodiff) on the strength of its gradients: against the NumPy reference, the GPU policy-head gradients on real batches are wrong and not repeatable, and the CPU's are within tolerance. Do **not** call the CPU an oracle (it shares MLX's autodiff), or call the GPU encoder wrong or right: its 0.19 forward difference repeats on the GPU, and no independent reference covers it. Do **not** name the mechanism behind the fc and out discrepancies (kernel, shape, memory or graph-context dependence) until one is derived, or say whether earlier checkpoints' training or Stage 3's value drift was affected: both remain unresolved. Earlier match results remain evidence about those checkpoints. Backend upgrades and production fixes need their own approval.
 
 73. **The D2 linear-layer reproducer (entry 27) — REPRODUCED 2026-10-23.** Do **not** rerun it, add row counts, layouts or contexts, or search for the exact threshold without a new card: one run under a frozen case list. Do **not** read the two failing sizes (33,600 and 33,728 rows), and the clean 32,768, as an established rule ("any matrix with more than 32,768 rows"). The rows-0…N−32,736 pattern was measured at two sizes only. Do **not** name the kernel, dispatch or indexing cause until it is derived. Do **not** read the `out` layer's "gross" bias-gradient flags (on the CPU too), or the 512-row `out` cases' "reproduces" flags that rest on them, as the failure: the cotangent there sums almost to zero, so the scale is tiny. Do **not** run any GPU learning step on a path with these shapes until the defect is avoided or fixed and checked against the saved expected results. Backend upgrades, workarounds in production code, bug reports and pushing need their own approval.
+
+74. **The unplanned GPU execution of the D2 synthetic row-count probe during mutation controls (entry 28) — INCIDENT 2026-10-23.** Do **not** treat the stray `mlxrows-20261023T122440Z/compact_example.npz` as the probe's result, or count that execution as the approved invocation: it ran outside the gate procedure and left no record. Do **not** write a test that can reach a public entry point without remapping devices and redirecting outputs, **whatever the gate says**: a mutant that removes the gate check turns such a test into a real run. Do **not** run a control harness without a check that stops it when files outside the worktree change.
+
+75. **The D2 historical exposure audit (entry 29) — READ-ONLY 2026-10-23.** Do **not** read "≤ 32,768 rows" as "unaffected": that count was measured clean only on the M5 Max under MLX 0.30.3, and the earlier runs' machine and version were not recorded. Do **not** read Stage 3's confirmed shapes as proof that the defect caused its value drift. Do **not** use the 27.85% width figure that included held-out records. Do **not** run the trainer with its current default cap (576) and B = 64 on the GPU until the defect is avoided or fixed and checked.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -4204,3 +4212,106 @@ derived. It would be consistent with corrupted rows that do not depend on the re
 *Addendum (2026-10-23, the same day).* Entry 27's table left S21's legal/padded split blank. Of the 992 gross rows at
 S21, 883 are legal and 109 padded, from `cases.jsonl`; at S0, 848 and 16. In both cases the split simply follows
 where the padded slots fall within the leading rows.
+
+
+### 28. Search distillation D2 — synthetic row-count probe: unplanned GPU execution during mutation controls (2026-10-23, INCIDENT)
+
+**What was approved.** One synthetic-only probe under a single 10-minute ceiling, a bug-report draft (submission
+separate), and a read-only historical exposure audit (entry 29).
+- **Card:** `docs/superpowers/2026-10-23-search-distillation-d2-synthetic-rows-probe-card.md`.
+- **Generator:** the standalone `scripts/GPU/alphazero/mlx_matmul_rows_probe.py` (standard library, NumPy and MLX
+  only).
+- **Gated entry:** `search_distillation_d2_mlxrows.py`, gate `SEARCH_DISTILLATION_D2_MLXROWS_AUTHORIZED` (the
+  thirty-ninth).
+- **Cases:** 27 — fc 2→64, out 64→1 and a wide 64→64 control at nine row counts.
+- **Predictions on record**, card §8, stated before any run:
+  - **fc Y, fc dX and out dX on the GPU:** no gross rows at N ≤ 32,768; exactly rows [0, N − 32,736) gross at
+    32,769, 32,800, 33,600 and 33,728;
+  - out Y, every dW and every db clean;
+  - the CPU clean;
+  - GPU repeats bitwise identical;
+  - none for the wide control.
+
+**What happened.**
+- **Build `38deadf6`:** 17 generator, 9 entry and 16 wrapper tests. All 28 injected defects were caught, and
+  regression equalled the 58-id baseline.
+- **During the mutation-control pass, before that commit, under the defect "entry_gate_unchecked":**
+  - The test `test_THE_GATE_IS_CLOSED_IN_THE_SOURCE_and_a_closed_gate_refuses` called the public entry **without**
+    the device remap or the output redirection. Only the gate-open tests had them.
+  - With the gate check removed, the entry ran the full frozen probe on the **real GPU**, inside the disposable
+    control worktree, at 2026-10-23 12:24 UTC.
+  - The test then failed, so the control counted as "caught".
+  - The probe's evidence directory lay inside that worktree and was deleted with it. No `record.json`,
+    `cases.jsonl` or environment survives.
+  - Its example directory was the real `~/twixt-cache/search-distillation-d2/mlxrows-20261023T122440Z/`. It holds
+    one read-only file, `compact_example.npz` (266,867 bytes, SHA-256
+    `7c412fd35ab6b55c40d1232d918b66d90ed4d4a3f12e9e5e913ef26a5e80bdc9`).
+  - Under the generator's rule, that file is written only when some case had gross GPU rows in Y or dX. Nothing else
+    about that execution is known, and the file has not been opened.
+- **Found** when the stray directory was seen during the idle check, after the gate-open commit `db2220d4` on a
+  linked worktree and before any wrapper invocation.
+- **Response:**
+  - That worktree and branch were removed; all 39 gates were read back closed.
+  - The approved invocation was **not** made.
+  - **Fix `0c4b96bc`:** every entry test is now isolated by an autouse fixture (CPU devices, tmp outputs), and a test
+    asserts it.
+  - The control harness now stops if `~/twixt-cache` changes under any mutant. Rerun: 28 of 28 caught, cache
+    unchanged.
+- The earlier diagnostics' cache directories (one each for the gradient check and the linear reproducer) show no
+  similar stray outputs.
+
+**Result.** None. This is an execution without a record, not a measurement. The stray file is preserved untouched
+and is not interpreted.
+
+**Did it match the prediction, and why.** Not assessable: no record survives.
+
+**Conclusion / status.** INCIDENT, closed.
+- **The cause:** a test design that isolated only the gate-open path. A mutant that removes the gate check turns a
+  closed-gate test into a real run.
+- **Open decision for the user:** whether the approved single invocation may still be made, given this unrecorded
+  GPU execution of the same frozen probe.
+- See do-not-repeat **#74**.
+
+### 29. Search distillation D2 — historical exposure audit (2026-10-23, READ-ONLY)
+
+**Test.** A read-only audit, approved with the probe. Document:
+`docs/superpowers/2026-10-23-search-distillation-d2-exposure-audit.md` (`93d52b46`).
+- **The question:** which historical GPU trainings ran the policy head at the defect's shape, B × M rows above
+  32,768, where M is the batch's padded move width.
+- **The labels:** confirmed matching shapes, possible exposure, or insufficient records.
+- **How it was done:** source and git history, sidecars, logs, records and `.venv` metadata were read, partly through
+  a delegated read-only agent. The trainer cap, the batch sizes, the D2 widths and the `.venv` dates were re-checked
+  directly.
+
+**Hypothesis.** None. **Why it was plausible.** The incumbent's metadata records batch size 64. **Prediction on
+record.** None stated in advance.
+
+**Result.**
+- **The trainer:** `make_padded_batch` sets M = min(batch maximum, `max_moves_cap`). The default cap was **512** until
+  `ffe6b342` (2026-10-20, raised to 576), and no caller overrides it. All 542 sidecars record B = 64.
+  - So every `checkpoints/` run, including every ancestor of the incumbent, ran at most **32,768** rows.
+  - INFERENCE: essentially always exactly 32,768, since 25.4% of self-play positions exceed 512 legal moves.
+  - Value-only and partial trainings still computed the policy head's forward and backward on the GPU.
+- **Those runs are labelled insufficient records:**
+  - their structure excludes the observed N > 32,768 failure;
+  - their machine (INFERENCE: the old M3 Pro) and MLX version (unrecorded; 0.30.3 after 2026-05-09 by INFERENCE;
+    unknown before) leave 32,768 itself unmeasured on that hardware.
+- **D2 Stage 3, updates 0–21: confirmed matching shapes.** 64 × M = 33,600, 33,792, 33,664 and 33,728 rows, derived
+  from the batch identities recorded in the gradient diagnostic's `trace.jsonl` and the training-game widths (training
+  reader only), on MLX 0.30.3 and the M5 Max, where the defect reproduced.
+- **Possible exposure:**
+  - **Stage 3 updates 22–400:** identities not recorded; 27.5% of training positions exceed 512.
+  - **D2's evaluation `forward()`:** chunks of 64, cap 576.
+- **Inference paths:** self-play stays at or below 7,392 rows and play at or below 528.
+- **Disclosure:** the delegated agent's width count (27.85% of 7,020 records) read legal-move counts from **all** D2
+  corpus game files, held-out games included, and printed truncated fields of one game file's structure. The audit uses
+  the training-only figure instead.
+
+**Did it match the prediction, and why.** None was stated.
+
+**Conclusion / status.** READ-ONLY AUDIT, closed.
+- Only D2 Stage 3 is confirmed at the defect's shapes.
+- No checkpoint is found corrupted.
+- Measured playing-strength results stand as evidence about their checkpoints.
+- Since `ffe6b342`, the trainer's default cap would put B = 64 training above 32,768 rows on the GPU.
+- See do-not-repeat **#75**.
