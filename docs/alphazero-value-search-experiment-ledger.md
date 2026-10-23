@@ -116,6 +116,8 @@ knob) is not a new hypothesis.
 
 > *Correction to the entry 26 line (2026-10-22, the same day, on rechecking the evidence):* "agree to about 1e-7" should read "agree within 1.5e-5 of each tensor's scale". The real-batch figures are corrected in the entry's own correction note.
 
+> **Search distillation D2, linear-layer reproducer (Post-closure entry 27, 2026-10-23, REPRODUCED IN ISOLATION).** The policy head's `fc` (2→64) and `out` (64→1) operations were run alone on the saved fixtures' float32 operands, against NumPy float64. **The failure reproduces in isolation** at all four original shapes, in all three implementations (`nn.Linear`, explicit matmul with autodiff, and explicit products), with the CPU clean. **The gross errors are confined to exactly the first N − 32,736 rows** (rows 0–863 of 33,600 at S0; rows 0–991 of 33,728 at S21), legal and padded rows alike. They appear in `fc`'s forward and input gradient and in `out`'s input gradient. In `fc`'s forward those rows equal the bias alone. **At 32,768 rows and below, nothing is gross.** The alternative layout and evaluation context reproduce too. Other rows carry a GPU error of about 1e-3 of scale (the CPU's is about 1e-7). The mechanism is not derived. See #73.
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -1689,6 +1691,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 71. **The D2 reproducibility diagnostic (entry 25) — MEASURED 2026-10-22.** Do **not** rerun it, extend it past update 21, add passes or reorder them: it was one run under a frozen card. Do **not** treat any GPU training result on this update path (`forward_padded` → masked policy cross-entropy → `nn.value_and_grad`, MLX 0.30.3, Metal) as a deterministic function of its inputs until that is re-established. Two passes from identical state and inputs produced different gradients, and one update's computed gradient violated the linearity of the stated loss. Do **not** read the Stage 3 spikes as properties of the data, the records or the BatchNorm statistics, and do **not** name the mechanism (which operation, why the first pass in a process differs from later ones) until one is derived. Do **not** start another learning recipe on this path before the gradient is checked against an independent reference. A next step needs its own card and approval.
 
 72. **The D2 gradient correctness check (entry 26) — MEASURED 2026-10-22.** Do **not** rerun it, rerun it at other states or batches, or treat its fixtures as a test suite to iterate against without a new card. Do **not** train, fine-tune or evaluate a learning recipe on the MLX 0.30.3 Metal path (`forward_padded` → masked policy CE → autodiff) on the strength of its gradients: against the NumPy reference, the GPU policy-head gradients on real batches are wrong and not repeatable, and the CPU's are within tolerance. Do **not** call the CPU an oracle (it shares MLX's autodiff), or call the GPU encoder wrong or right: its 0.19 forward difference repeats on the GPU, and no independent reference covers it. Do **not** name the mechanism behind the fc and out discrepancies (kernel, shape, memory or graph-context dependence) until one is derived, or say whether earlier checkpoints' training or Stage 3's value drift was affected: both remain unresolved. Earlier match results remain evidence about those checkpoints. Backend upgrades and production fixes need their own approval.
+
+73. **The D2 linear-layer reproducer (entry 27) — REPRODUCED 2026-10-23.** Do **not** rerun it, add row counts, layouts or contexts, or search for the exact threshold without a new card: one run under a frozen case list. Do **not** read the two failing sizes (33,600 and 33,728 rows), and the clean 32,768, as an established rule ("any matrix with more than 32,768 rows"). The rows-0…N−32,736 pattern was measured at two sizes only. Do **not** name the kernel, dispatch or indexing cause until it is derived. Do **not** read the `out` layer's "gross" bias-gradient flags (on the CPU too), or the 512-row `out` cases' "reproduces" flags that rest on them, as the failure: the cotangent there sums almost to zero, so the scale is tiny. Do **not** run any GPU learning step on a path with these shapes until the defect is avoided or fixed and checked against the saved expected results. Backend upgrades, workarounds in production code, bug reports and pushing need their own approval.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -4098,3 +4102,101 @@ entry 26 are wrong:
   absolute, in the conv weight's gradient at S0), not "at most about 1e-6 absolute".
 
 The conclusions do not change.
+
+### 27. Search distillation D2 — linear-layer reproducer (2026-10-23, REPRODUCED IN ISOLATION)
+
+**Test.** One run under card `docs/superpowers/2026-10-23-search-distillation-d2-linear-reproducer-card.md` (pinned by
+SHA-256 in `scripts/GPU/alphazero/search_distillation_d2_linrepro.py`), approved after entry 26.
+- **Operations:** the policy head's `fc` (Linear 2→64) and `out` (Linear 64→1), run in isolation.
+- **Operands:** float32, from entry 26's saved fixtures, each checked against its recorded hash.
+  - `out` uses its `stage_<S>_out` fixtures as saved.
+  - `fc` has no fixture of its own, so its operands are derived from the `reference_real_<S>` fixtures by the NumPy
+    reference and saved.
+- **Expected results:** NumPy float64 accumulation of the same operands.
+- **Implementations:** `nn.Linear` with `mx.vjp`; explicit `x @ w.T + b` with `mx.vjp`; and explicit products without
+  autodiff. Each ran three times on the GPU and once on the CPU.
+- **Judgement, frozen:** an element is outside the tolerance beyond 1e-4 of scale + 1e-6, and gross beyond 1e-2 of
+  scale. Legal and padded rows are reported separately.
+- **Targeted cases**, run only where the original shape reproduced: five row counts, one layout and one evaluation
+  context.
+- No network was loaded, nothing was trained and no checkpoint was written.
+
+**Hypothesis.** None about a mechanism. The question: does one linear operation alone reproduce entry 26's
+discrepancy, against an independently computed result?
+
+**Why it was plausible.** Entry 26 localized the discrepancy, given identical stage inputs, to these two operations.
+
+**Prediction on record.** None stated in advance.
+
+**What ran.**
+- **Build `9c874e2a`:** the entry point; the gate `SEARCH_DISTILLATION_D2_LINREPRO_AUTHORIZED` (the thirty-eighth); a
+  wrapper with TERM at 590 s and KILL 10 s later, and no checkpoint argument; the card with its 32-case list.
+  - It had 17 run-module and 16 wrapper tests.
+  - All 15 injected defects were caught. One of them, a cotangent without the ReLU mask, was caught first by the
+    clean-run test through a cancellation artifact; the operand test also catches it.
+  - Regression equalled the 58-id baseline (3,272 passed).
+- **Run:** gate opened by `12f0de35`; one run through `01_wrapper.sh` in a clean linked worktree. Evidence and the
+  restored gate are in `024ca0fe`.
+- **Artifacts:** 34 artifacts (1.6 GB, read-only) are at `~/twixt-cache/search-distillation-d2/linrepro-20261023T041634Z/`,
+  with their SHA-256s in `artifacts.jsonl`.
+  - The size comes from the frozen rule: every output outside the tolerance in every repeat was saved, including
+    the GPU's ~1e-3 deviations in nearly every case.
+
+**Result.** Outer exit 0, **COMPLETED**, 43 s wall clock. The record was written by the script; there were no
+survivors; the gate was restored and read back; stderr was empty.
+- **The failure reproduces in isolation** at all four original shapes (`fc` and `out`, S0 and S21), in **all three
+  implementations**, so neither `nn.Linear` nor autodiff is required.
+  - **CPU:** every output within the tolerance, up to 2e-6 of scale, except the `out` bias artifact below.
+- **The gross rows are exactly the first N − 32,736**, in every repeat, every implementation, and the alternative
+  layout and context:
+
+| Case | Rows | Gross rows | Legal | Padded |
+|---|---|---|---|---|
+| S0 | 33,600 | 0–863 (864) | 848 | 16 |
+| S21 | 33,728 | 0–991 (992) | — | — |
+
+  - The same rows are affected in `fc`'s forward Y, `fc`'s input gradient dX and `out`'s input gradient dX.
+  - In `fc`'s forward, those rows' outputs equal the bias alone to within 0.002–0.009, as if their X·Wᵀ term were
+    missing.
+  - In the two input gradients, the corrupted rows match neither zero nor the rows 32,736 further on. Their content
+    is not characterized.
+  - The weight and bias gradients, which sum over rows, are within the tolerance.
+- **Row counts:** with the first 512, 2,048, 8,192, 16,384 or **32,768** rows, **no element is gross** in any
+  implementation.
+- **Elsewhere the GPU carries a tolerance-level error:** `fc`'s forward is off by about 1.1e-3 of scale and the
+  input gradients by about 8e-4, against the CPU's about 1e-7.
+- **Alternative layout** (X as a transposed view) and **alternative context** (each output evaluated alone): the same
+  gross rows.
+- **Repeats:** in `explicit_products` the corrupted rows were bitwise identical across the three repeats. Some
+  `linear_autodiff` outputs did not repeat bitwise.
+- **A judgement artifact, measured:** `out`'s bias gradient is flagged "gross" on the CPU too (6.2 of scale at S0).
+  The cotangent sums nearly to zero, so the scale is tiny.
+  - That flag alone is why the 512-row `out` cases are marked "reproduces".
+  - Their input gradients are only at tolerance level (9e-4 of scale).
+
+**Did it match the prediction, and why.** None was stated.
+
+**Measured attribution:**
+- a single float32 linear operation on the GPU, alone, from saved operands, gives wrong values in a contiguous block
+  of leading rows when the operation has 33,600 or 33,728 rows, and none at 32,768;
+- the error does not depend on `nn.Linear`, on autodiff, on X's layout or on whether outputs are evaluated jointly;
+- in the forward pass, the corrupted rows look like rows whose X·Wᵀ term is missing.
+
+**Causal hypotheses, none tested:**
+- a GPU matrix-multiply dispatch or indexing defect for very narrow operands when the row count passes a
+  power-of-two boundary (2¹⁵ = 32,768). The constant 32,736 = 2¹⁵ − 32 would fit a tiling of the row dimension;
+- the ~1e-3 tolerance-level error coming from reduced-precision accumulation in the same kernels.
+
+How this produced entry 25's linearity failure (every record's gradient carrying the same ~3,867 component) is not
+derived. It would be consistent with corrupted rows that do not depend on the record weights.
+
+**Conclusion / status.** REPRODUCED IN ISOLATION, closed.
+- There is now a compact reproducer with an independently computed expected result: `fc_S0_original.npz`
+  (SHA-256 `8b610769…`), containing operands `X` (33,600 × 2), `W` (64 × 2), `b` (64) and `C`, and
+  `expected.Y = X·Wᵀ + b` in float64.
+- It supports a precise bug report or fix, and serves as the check for validating a repair.
+- The mechanism is not derived.
+- Training on this path stays blocked.
+- The Stage 3 candidate stays closed; `calib020_0001` stays the incumbent.
+- Stages 4–5, further learning experiments, backend upgrades, production workarounds, bug reports and pushing
+  remain unapproved. See do-not-repeat **#73**.
