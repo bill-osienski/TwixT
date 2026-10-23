@@ -15,6 +15,8 @@
 - Revised again 2026-10-23 (wording): outputs earlier called "clean" or "correct" on the GPU were often only **free of
   gross errors**. Below, *within tolerance* (error ≤ 1e-4 × max|expected| + 1e-6) and *no gross error* (error ≤ 1e-2 ×
   max|expected|) are kept apart.
+- Revised 2026-10-23 after **entry 32**: a section on the setting through a training gradient was added below entry
+  31's. It keeps the validated policy-head result apart from the unresolved encoder comparison.
 
 ---
 
@@ -102,6 +104,28 @@ four original fixture cases, GPU three times and CPU once each):
 By that source reading, the setting chooses between the NAX kernel and the standard fused GEMM for float32
 (`steel_matmul_regular_axpby`). The result is consistent with both the precision loss and the leading-row corruption
 lying on the NAX path; no kernel was inspected.
+
+**With `MLX_ENABLE_TF32=0`, through a training gradient** (ledger entry 32; a fresh process, same packages; the
+tolerance here is entry 26's, error ≤ 1e-3 × max|reference| + 1e-6, looser than the 1e-4 above):
+
+- **Policy head: validated against an independent reference.**
+  - The model's policy head (1×1 convolution, BatchNorm in evaluation mode, ReLU, a gather at legal moves, two linear
+    layers, masked cross-entropy) was compared with a NumPy float64 forward pass and hand-derived derivatives.
+  - Six saved cases were used: four synthetic, and two real training batches whose fc layers see 33,600 and 33,728
+    rows.
+  - Every GPU gradient was within the tolerance (the worst at 0.05 of it), bitwise repeatable and additive over
+    records.
+  - Without the setting (entry 26), the GPU disagreed with the reference in all six cases.
+- **Full model: an unresolved encoder comparison, not a validation.**
+  - CPU against GPU (MLX's two backends; neither is an oracle), at the same weights on two training batches of 64,
+    three evaluations each.
+  - On one batch, all 60 gradient tensors agreed within the tolerance. On the other, 58 of 60 did.
+  - The two that did not are 3×3 convolution weight gradients in the encoder: 2.05× and 1.57× the tolerance, on 11
+    and 5 of 147,456 elements, the same in all three GPU evaluations.
+  - Logits, values and loss terms agreed, and every GPU result repeated bitwise.
+  - Without the setting (entry 26), 59 of 60 tensors failed on that batch, those two at 1,169× and 581× the tolerance.
+  - **Which backend is nearer the exact gradient for those two tensors is not established.** No independent reference
+    exists for the encoder. This is not reported as an MLX defect.
 
 **Not claimed:**
 - the kernel or dispatch path responsible (the setting's effect points at the NAX path, but proves nothing about it);
