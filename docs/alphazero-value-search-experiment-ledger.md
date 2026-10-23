@@ -124,6 +124,8 @@ knob) is not a new hypothesis.
 
 > **Search distillation D2, synthetic row-count probe (Post-closure entry 30, 2026-10-23, COMPLETED; predictions 1 and 4 NOT MATCHED).** The first retained complete record, not the first execution: the same frozen probe ran once unrecorded in entry 28, and its stray example had already shown a gross GPU failure. On synthetic operands, 12 of 27 cases are gross on the GPU — fc, out and the wide 64→64 control at 32,769, 32,800, 33,600 and 33,728 rows — and none at ≤ 32,768 or on the CPU. The gross rows are the leading 32, 64, 864 and 992: **at 32,769 the band is 32 rows, not the predicted N − 32,736 = 33**. Gross outputs are **not repeatable** (repeat 0 differs from repeats 1–2); clean outputs repeat bitwise. dW, db and out Y stay correct. No universal boundary, safe chunk size or mechanism is established. Carries dated corrections to entries 28 (wide control: none stated) and 29 (the 576 cap permits, not forces, more than 32,768 rows). See #76.
 
+> **Search distillation D2, full-float32 setting validation (Post-closure entry 31, 2026-10-23, COMPLETED; CANDIDATE for the isolated operations).** A fresh process launched with `MLX_ENABLE_TF32=0` ran the unchanged synthetic probe and entry 27's four saved cases. On the GPU: no evaluation outside the 1e-4 tolerance (Y and dX now ≤ 3.9e-7 of scale, from about 1e-3), no gross rows at any size, every output bitwise repeatable, in both sets. The CPU and the ungated GPU outputs (dW, db, out Y) are unchanged to the bit, as predicted. A candidate workaround for the isolated operations only: the policy head, full-model gradients and training are not validated, and the cause is not established. See #77.
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -1705,6 +1707,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 75. **The D2 historical exposure audit (entry 29) — READ-ONLY 2026-10-23.** Do **not** read "≤ 32,768 rows" as "unaffected": that count was measured clean only on the M5 Max under MLX 0.30.3, and the earlier runs' machine and version were not recorded. Do **not** read Stage 3's confirmed shapes as proof that the defect caused its value drift. Do **not** use the 27.85% width figure that included held-out records. Do **not** run the trainer with its current default cap (576) and B = 64 on the GPU until the defect is avoided or fixed and checked.
 
 76. **The D2 synthetic row-count probe (entry 30) — COMPLETED 2026-10-23.** Do **not** rerun it, add row counts, layers or contexts, or search for the band's rule without a new card. Do **not** state N − 32,736, or the post-hoc 32 × ⌊(N − 32,736)/32⌋, as the rule, or 32,768 as a universal boundary or a safe chunk size: one MLX version, one machine, three shapes, nine sizes. Do **not** call the defect a narrow-operand defect: the wide 64→64 control fails too. Do **not** judge a fix or workaround on one GPU repeat: gross outputs differ between repeats. Do **not** treat the stray entry 28 file as an independent result. Validating a fix or workaround, package changes, training, bug-report submission and pushing need their own approval.
+
+77. **The D2 full-float32 setting validation (entry 31) — CANDIDATE 2026-10-23.** Do **not** rerun it or extend it to other settings, shapes or sizes without a new card. Do **not** read CANDIDATE as a fix for training: it covers the isolated linear operations only, and the policy head and full-model gradient path must be validated against the saved fixtures before any GPU training resumes. Do **not** name the NAX kernel as the cause: it is the source reading, and no kernel was inspected. Do **not** make the setting persistent, or put it in production or training code, without that validation and its own approval. Do **not** read its timings as a benchmark.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -4458,3 +4462,94 @@ apart:
   at every size, 512–33,728 rows; its CPU results were within it.
 - "None at ≤ 32,768" in entry 30 means **no gross rows**, not results within the tolerance. The bug-report draft now
   keeps the two apart.
+
+### 31. Search distillation D2 — full-float32 setting validation, MLX_ENABLE_TF32=0 (2026-10-23, COMPLETED; CANDIDATE for the isolated operations)
+
+**Test.** One fresh process launched with `MLX_ENABLE_TF32=0`, same packages and application code. It ran:
+- **Set A:** the unchanged synthetic probe of entry 30 (27 cases).
+- **Set B:** entry 27's four original saved cases (fc and out at S0 and S21), with entry 27's three implementations.
+- **Repeats:** each evaluation on the GPU three times and on the CPU once.
+
+Card `docs/superpowers/2026-10-23-search-distillation-d2-tf32off-validation-card.md` (frozen before the run).
+
+**Hypothesis.** MLX's documented reduced-precision float32 matmul path, which `MLX_ENABLE_TF32=0` turns off, carries
+both the tolerance failures and the gross leading-row corruption of entries 27 and 30.
+**Why it was plausible:**
+- MLX's precision page documents the setting.
+- In 0.30.3 (`mlx/backend/metal/matmul.cpp`), the setting decides between the NAX kernel and the standard fused GEMM
+  for float32. It is read once per process (`mlx/utils.h`), and the installed binary contains it.
+- In entry 30, the outputs within tolerance (dW, db, out Y) were exactly those on paths the setting does not gate.
+
+**Prediction on record** (card §6, before the run):
+1. The CPU's largest errors equal entries 30 and 27's, case by case.
+2. GPU ungated outputs (every dW and db, and out's Y): largest errors equal to the earlier records'.
+3. No GPU Y or dX row is outside the tolerance unless it holds a gross element.
+4. Gross rows: none stated in advance.
+5. Repeatability: none stated in advance.
+6. Verdict: none stated in advance.
+
+**Pass rule** (frozen):
+- **Per set:** GPU T (evaluations outside the 1e-4 tolerance) = G (gross evaluations) = R (non-repeatable triples)
+  = 0.
+- **CANDIDATE:** both sets pass.
+- **Not enough:** removing gross corruption alone.
+
+**What ran:**
+- **Build `ddbf5b80`:** 32 entry and 16 wrapper tests; 30 of 30 injected defects caught with `~/twixt-cache`
+  unchanged; regression equal to the 58-id baseline (3,272 passed, 20 failed, 38 errors).
+- **Gate 40:** opened `05248995` in a linked worktree after an idle check.
+- **The run:** `docs/superpowers/evidence/search-distillation-d2-tf32off-run/01_wrapper.sh` once.
+- **Evidence and the restored gate:** `5d12d5f2`. main fast-forwarded; worktree and branch removed; the gate
+  inventory test passes; no surviving process.
+- **Outcome:** COMPLETED, inner and outer exit 0, 3.2 s in the script (set B 0.9 s), 4 s wall. The setting read `"0"`
+  at the start and the end; MLX 0.30.3, NumPy 2.4.1, Python 3.14.9, macOS 27.0.1, Apple M5 Max, default device GPU.
+- **Evidence:** `docs/superpowers/evidence/search-distillation-d2-tf32off/`: `record.json`, `progress.jsonl`,
+  `fixture_cases.jsonl`, and `probe/` (the probe's own record, cases, environment and progress). No compact example
+  was written, since nothing was gross.
+
+**Result.**
+- **Verdict: CANDIDATE**, for the isolated operations.
+
+  | Set | GPU evaluations | T | G | R | CPU T, G, R |
+  |---|---|---|---|---|---|
+  | A, synthetic | 324 | 0 | 0 | 0 | 0, 0, 0 (108) |
+  | B, fixtures | 144 | 0 | 0 | 0 | 0, 0, 0 (48) |
+
+- **Largest GPU error over scale:**
+  - Y and dX: at most 3.9e-7 (synthetic) and 1.4e-7 (fixtures). In entry 30, without the setting, they were up to
+    about 1.2e-3 outside the gross rows and 0.5–3.6 × scale inside them.
+  - dW: at most 8.5e-6. db: at most 1e-8.
+  - The tolerance is 1e-4 of scale.
+- **Tolerance-only rows: 0** in every evaluation.
+- **No gross rows at any size**, including 32,769–33,728 rows and the original fixture shapes (33,600 and 33,728).
+- **Repeatability:** every GPU output was bitwise identical across its three repeats.
+- **Comparisons with the earlier records:**
+  - CPU: 108 of 108 (synthetic, entry 30) and 48 of 48 (fixtures, entry 27) largest errors equal.
+  - GPU ungated: 189 of 189 and 90 of 90 equal.
+  - GPU gated: 0 of 135 and 0 of 54 equal, all changed.
+- **Not in the frozen criteria:** 183 of the 189 gated GPU evaluations now have exactly the CPU's largest error in the
+  same case. The six that do not are `nn.Linear`'s forward Y at fc (`linear_autodiff`, S0 and S21, all repeats),
+  still within the tolerance.
+
+**Did it match the prediction, and why.**
+1. **MATCHED:** the CPU is unaffected by the setting.
+2. **MATCHED:** the ungated outputs are unchanged to the bit, as the source reading predicts. The setting changed only
+   the gated products.
+3. **MATCHED:** no tolerance-only rows.
+4. Gross: none stated. Observed: none.
+5. Repeatability: none stated. Observed: all bitwise repeatable.
+6. Verdict: none stated. Observed: CANDIDATE.
+
+**Conclusion / status.** COMPLETED; **CANDIDATE workaround for the isolated linear operations only.**
+- With `MLX_ENABLE_TF32=0` in a fresh process, on this machine and MLX 0.30.3, these products give results within the
+  frozen tolerance, with no gross rows and bitwise repeatable, in both sets.
+- **Not established:**
+  - **The cause.** The result is consistent with both defects lying on the path this setting disables (the NAX
+    kernel, by the source reading), but no kernel was inspected.
+  - **Behaviour through the policy head, the full model's gradients, or training.** That validation is the next
+    step, and it needs its own approval.
+  - **Behaviour on other machines, MLX versions, shapes or sizes.**
+  - **Speed:** the timings are not a benchmark.
+- **Not done:** no package change, no chunking, no persistent environment change, no training, no held-out access.
+  The bug-report draft is updated with this result and is still not submitted. Nothing pushed.
+- See do-not-repeat **#77**.

@@ -4,6 +4,7 @@
 - **Its evidence:** ledger entry 27 (fixture operands) and **entry 30** (the synthetic probe, card
   `2026-10-23-search-distillation-d2-synthetic-rows-probe-card.md`, evidence
   `docs/superpowers/evidence/search-distillation-d2-mlxrows/`).
+- **Entry 31** (`MLX_ENABLE_TF32=0`) is added below the results.
 - **Entry 30 is the first retained complete record of the probe, not its first execution.** The same frozen probe ran
   once before, unrecorded, during mutation controls (entry 28). Its stray example already showed a gross GPU failure.
   Entry 30's measurements are reproducible, but they are not an independent first test.
@@ -90,8 +91,20 @@ every GPU evaluation; "within tol" = every element within it):
 
 In the rows marked gross, the other rows of the same outputs are also outside tolerance.
 
+**With `MLX_ENABLE_TF32=0`** (ledger entry 31; a fresh process, same packages, the same 27 synthetic cases plus the
+four original fixture cases, GPU three times and CPU once each):
+- every GPU output is within the 1e-4 tolerance (Y and dX now at most 3.9e-7 × max|expected|);
+- no gross rows at any size;
+- every output is bitwise repeatable;
+- the CPU's results, and the GPU products the setting does not gate in the 0.30.3 source (GEMV, split-K and the
+  reductions), are bit-for-bit unchanged.
+
+By that source reading, the setting chooses between the NAX kernel and the standard fused GEMM for float32
+(`steel_matmul_regular_axpby`). The result is consistent with both the precision loss and the leading-row corruption
+lying on the NAX path; no kernel was inspected.
+
 **Not claimed:**
-- the kernel or dispatch path responsible;
+- the kernel or dispatch path responsible (the setting's effect points at the NAX path, but proves nothing about it);
 - a rule for the band's size (N − 32,736 fits three sizes and fails at 32,769);
 - a general rule for other shapes, devices or MLX versions;
 - a safe row count.
