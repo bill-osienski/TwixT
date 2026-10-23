@@ -6,4 +6,4 @@ LOADS the network and REPLAYS optimizer updates, so it takes its own reviewed do
 gradient diagnostic. Opened for ONE approved run and restored on every exit. Created closed. This file may hold ONLY
 this declaration.
 """
-SEARCH_DISTILLATION_D2_GRADREPEAT_AUTHORIZED = True
+SEARCH_DISTILLATION_D2_GRADREPEAT_AUTHORIZED = False

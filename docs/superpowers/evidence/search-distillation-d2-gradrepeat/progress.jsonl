@@ -1,0 +1,11 @@
+{"event": "start", "t": 0.007}
+{"event": "inputs_verified", "t": 3.046, "training_records": 6403}
+{"event": "teacher_values", "t": 4.908}
+{"event": "pass_start", "t": 4.91, "name": "A", "attribution": []}
+{"event": "pass_end", "t": 6.56, "name": "A", "grad_norm_21": 11404.4013671875}
+{"event": "pass_start", "t": 6.561, "name": "B", "attribution": [20, 21]}
+{"event": "pass_end", "t": 20.235, "name": "B", "grad_norm_21": 3866.951416015625}
+{"event": "pass_start", "t": 20.236, "name": "C", "attribution": []}
+{"event": "pass_end", "t": 21.795, "name": "C", "grad_norm_21": 3511.6083984375}
+{"event": "compared", "t": 21.8}
+{"event": "end", "t": 21.838, "status": "COMPLETED"}
