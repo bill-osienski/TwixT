@@ -5,4 +5,4 @@
 REPLAYS optimizer updates, so it takes its own reviewed door, separate from Stages 1-3. Opened for ONE approved run and
 restored on every exit. Created closed. This file may hold ONLY this declaration.
 """
-SEARCH_DISTILLATION_D2_GRADTRACE_AUTHORIZED = False
+SEARCH_DISTILLATION_D2_GRADTRACE_AUTHORIZED = True
