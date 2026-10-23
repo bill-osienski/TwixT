@@ -503,14 +503,18 @@ def test_FRESH_with_the_setting_and_the_gate_open_every_real_check_passes():
 def test_THE_PUBLIC_ENTRY_IN_THE_REAL_STATE_STOPS_NOT_REPRODUCED_when_gpu_is_the_cpu(opened, capsys):
     """The gate open, the frozen spec, the pinned card, code and evidence, the real corpus (training-only reader) and
     the real incumbent. "gpu" is the CPU here, so entry 32's discrepancy cannot reproduce and the run stops before any
-    capture; the CPU's step-1 lines repeat entry 32's exactly (prediction 1's CPU half)."""
+    capture. The teacher values come from the CPU here, not the GPU, so the CPU's anchor term and gradients cannot
+    repeat entry 32's; its policy term, logits and values must, exactly."""
     assert C.main(["run", "--checkpoint", str(_checkpoint())]) == C.EXIT_COMPLETED
     ev = opened / "evidence"
     rec = json.loads((ev / "record.json").read_text())
     assert rec["status"] == "COMPLETED" and rec["outcome"] == "NOT_REPRODUCED", rec.get("void")
     assert rec["spec"] == json.loads(json.dumps(C.FROZEN)) and rec["checkpoint"]["sha1"] == M.CHECKPOINT_SHA1
     assert rec["step1"]["gpu_failures"] == [] and rec["step1"]["cpu_own_failures"] == []
-    assert rec["entry32"]["cpu"] == {"compared": 3, "lines_equal": True}
+    cpu = rec["entry32"]["cpu"]
+    assert cpu["compared"] == 3 and not rec["teacher_values"]["equals_entry32"]
+    assert cpu["keys_equal"] == {"loss": False, "policy": True, "anchor": False, "grad_digest": False,
+                                 "logits_digest": True, "values_digest": True}
     assert rec["batch_draw"] == json.loads((C.ROOT / C.ENTRY32 / "record.json").read_text())["batches"]["0"]
     assert rec["held_out_records_read"] == 0 and not (opened / "fixture-parent").exists()
     out = json.loads(capsys.readouterr().out.strip().splitlines()[-1])

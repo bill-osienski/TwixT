@@ -432,8 +432,10 @@ def entry32_compare(seams: Seams, out_dir: pathlib.Path) -> Dict[str, Any]:
     for dev in ("cpu", "gpu"):
         o = [x for x in old if x["block"] == "S0_b0" and x["device"] == dev]
         n = [x for x in new if x["block"] == "S0_b0" and x["device"] == dev]
+        same = len(o) == len(n) > 0
         res[dev] = {"compared": min(len(o), len(n)),
-                    "lines_equal": len(o) == len(n) > 0 and all(all(a[k] == b[k] for k in keys) for a, b in zip(n, o))}
+                    "keys_equal": {k: same and all(a[k] == b[k] for a, b in zip(n, o)) for k in keys}}
+        res[dev]["lines_equal"] = all(res[dev]["keys_equal"].values())
     old_blk = json.loads(seams.read_repo(f"{ENTRY32}/full/S0_b0.json"))
     res["block_equal"] = json.loads((out_dir / "full" / "S0_b0.json").read_text()) == old_blk
     return res
