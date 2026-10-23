@@ -7,4 +7,4 @@ optimizer updates. Saves no model, but loads the incumbent and runs GPU optimize
 reviewed door. Opened for ONE approved run and restored on every exit. Created closed. This file may hold ONLY this
 declaration.
 """
-SEARCH_DISTILLATION_D2_TF32PATH_AUTHORIZED = False
+SEARCH_DISTILLATION_D2_TF32PATH_AUTHORIZED = True
