@@ -108,6 +108,8 @@ knob) is not a new hypothesis.
 
 > **Search distillation D2, Stage 3 training (Post-closure entry 23, 2026-10-22, STOP).** One run of the frozen recipe (401 updates of the encoder and policy head on the 6,403 training records; teacher, value head and BatchNorm statistics unchanged): held-out policy cross-entropy fell from 4.824 to 4.147, but absolute value drift from the teacher on the 617 held-out records was **mean 0.103 (limit 0.05) and p95 0.279 (limit 0.15)**, so the verdict is **STOP**. The candidate is kept as a research artifact only. Pre-clip gradient norms exceeded 10,000 on 86 of 401 updates; the cause was not derived. Stages 4–5 are not entered under this card. See #69.
 
+> **Search distillation D2, gradient diagnostic (Post-closure entry 24, 2026-10-22, MISMATCH).** One instrumented replay of Stage 3's 401 updates, from the unchanged incumbent, on the 108 training games only: **updates 0–20 reproduced Stage 3's trace bit for bit; update 21, the first spike, did not** (policy term 4.37707 against 4.36954, anchor term bitwise equal, pre-clip norm 12,854 against 11,404), so the replay stopped there as its card requires. Measured on the replayed update 21: the policy head carried 96% of the squared pre-clip norm (`policy_head.fc.weight` alone 75%), against 2% on update 20. Stage 3's spikes therefore do not replay exactly; the cause of either the spikes or the divergence is not derived. No checkpoint written; no held-out game file opened. See #70.
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -1675,6 +1677,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 68. **The D2 Stage 2 corpus generation (entry 22) — COMPLETED 2026-10-22.** Do **not** rerun it, top it up, replace any game or phase, or add games to the corpus: it is fixed at 120 games in 12 phases. Do **not** move games between the training and held-out sets (held out: slot ≡ 9 mod 10, 12 games), train on the held-out games, or use any of the 120 games (seeds `[202692100, 202692220)`, EXPOSED and RETIRED) for strength or screen games. Do **not** read the run's 2.3 h, its 1.19 s per ply or its length distribution as a cost bound for other configurations, or anything here as evidence about target quality or strength. Training needs its own approval and a frozen Stage 3 card with the recipe fixed before training.
 
 69. **The D2 Stage 3 training run (entry 23) — STOP 2026-10-22.** Do **not** rerun it, rerun it with other seeds, or retune its recipe (anchor weight, learning rate, updates, batch, clipping, L2, surface) and judge the result on the same 12 held-out games: they have served as this recipe's final check, and re-judging retuned recipes on them is selection. Do **not** use the candidate (`student-stage3-20261022T232207Z.safetensors`, state digest `9c73feb2…`) in a screen, a strength comparison or promotion, or as a starting point for further training. Do **not** read its lower held-out cross-entropy as evidence of stronger play, or the STOP as evidence that search distillation cannot work: the run shows only that this recipe moved the value output beyond the fixed limits. Do **not** name a cause for the gradient-norm spikes until one is derived. A new recipe needs a new card, fresh held-out data and its own approval.
+
+70. **The D2 gradient diagnostic (entry 24) — MISMATCH 2026-10-22.** Do **not** rerun it, rerun it without the attribution passes, on the CPU, with other settings or from update 21, or extend it to more updates: it was one run under a frozen card and it stopped where its card says to stop. Do **not** read the replayed update 21's per-tensor norms as Stage 3's (the two runs differ at that update), or one spike as a description of all 86. Do **not** name a cause for the spikes or for the divergence at update 21 — GPU non-determinism, an effect of the attribution pass, large gathered policy features and the zero-variance BatchNorm channels are hypotheses, none measured as a cause — and do **not** read anything here as a cause of Stage 3's value drift. A next diagnostic needs its own card and approval.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -3743,3 +3747,94 @@ derived cause. Promotion and pushing remain unapproved. See do-not-repeat **#69*
 updates with pre-clip gradient norms above 10,000 came "in 68 separate runs between updates 21 and 389". The 68
 runs counted the 88 updates above **100**. The 86 updates above 10,000 form **69** runs; their first and last
 updates are also 21 and 389. Nothing else in the entry changes.
+
+### 24. Search distillation D2 — gradient diagnostic, one instrumented replay (2026-10-22, MISMATCH)
+
+**Test.** One instrumented replay under card `docs/superpowers/2026-10-22-search-distillation-d2-gradient-diagnostic-card.md`
+(pinned by SHA-256 in `scripts/GPU/alphazero/search_distillation_d2_gradtrace.py`), approved as a diagnostic-only
+exception to #69's replay restriction. It does not reopen the Stage 3 candidate. Replaying optimizer updates is
+training computation, recorded here as a diagnostic replay.
+- **Inputs:** the unchanged incumbent (`ae0e71fc…`), loaded as teacher and student. Stage 3's exact recipe and draw
+  order: 401 updates, batch 64, Adam 1e-4 with resolved defaults checked, clip 1.0, anchor 1.0, L2 1e-4, seed 0.
+- **Training games only:** each phase's context, receipts and completion marker were checked against the manifest,
+  and only the 108 training games' files were opened, each against its receipt. The record lists the 144 files
+  opened: 36 phase files and 108 training games. No held-out game file was opened. The 6,403 training records'
+  identities matched a digest pinned in the card (`e90df4d3…`).
+- **Reference:** Stage 3's record, by SHA-256 (`30b1d3ad…`).
+- **Comparison:** every update's loss, policy term, anchor term and pre-clip norm must satisfy
+  `|replayed − reference| ≤ 1e-8 + 1e-5 × |reference|`. The first update outside that stops the replay: MISMATCH.
+- **Recorded:** per update, the batch, every surface tensor's pre-clip gradient norm, the clip scale, and each
+  tensor's applied update. Detailed attribution (loss components, per-record gradients, BatchNorm taps) was planned
+  at updates 20, 21 and 361 only.
+- No checkpoint was written; nothing about the student was judged.
+
+**Hypothesis.** None about a cause. The diagnostic's question was descriptive: which tensors, records and loss terms
+carry Stage 3's spike norms.
+
+**Why it was plausible.** The pre-run inspection, read-only and recorded in the card's §2:
+- the logged norms were bimodal (303 below 10, 86 above 10,000) with ordinary loss values on spike updates;
+- the draw order alone ruled out a fixed set of records that spike whenever drawn;
+- 297 encoder BatchNorm channels hold a stored variance of exactly 0. Evaluation mode multiplies them by about 316.
+
+These made a per-tensor and per-record measurement informative.
+
+**Prediction on record.** From the card's §7:
+- **P1:** the replay reproduces the trace within the tolerance.
+- **P2:** on spike updates, one surface tensor carries more than half the squared pre-clip norm.
+- None on which tensor, records or loss component, or on any link to the value drift.
+
+**What ran.**
+- **Build `1e26b8fa`:** the entry point; the gate `SEARCH_DISTILLATION_D2_GRADTRACE_AUTHORIZED` (the thirty-fifth); a
+  wrapper with TERM at 590 s and KILL 10 s later; the card. It had 36 run-module and 17 wrapper tests.
+  - The tests showed that `train_student`, the bare replay and the replay attributing every update leave the same
+    student to the bit, and that the replay reproduces a Stage 3 fixture run's trace to the bit on the CPU.
+  - Of 18 injected defects, 17 were caught at first. The miss was recording post-clip norms as pre-clip: the
+    fixture's norms never reached the clip. A test with a binding clip was added, and it was then caught.
+  - Regression equalled the 58-id baseline (3,272 passed).
+- **Run:** gate opened by `959488e9`; one run through `01_wrapper.sh` in a clean linked worktree. Evidence and the
+  restored gate are in `5f1a6a05`. No game seeds were drawn.
+
+**Result.** Outer exit 6, **COMPLETED, trace MISMATCH**, 19 s wall clock. The record was written by the script;
+there were no survivors; the gate was restored and read back; stderr was empty.
+- **Updates 0–20:** all four logged values were **bitwise identical** to Stage 3's, including update 20, which ran
+  after its own attribution pass.
+- **Update 21** (Stage 3's first spike):
+  - loss 4.500528 against 4.492997;
+  - policy term 4.377072 against 4.369541;
+  - anchor term bitwise identical;
+  - pre-clip norm 12,854 against 11,404.
+
+  The replay stopped there, with 22 updates traced.
+- **Measured on the replayed update 21** (`trace.jsonl`, Stage 3's batch, the replay's own values):
+  - the policy head carried 96.1% of the squared pre-clip norm: `policy_head.fc.weight` 75.1%, `policy_head.fc.bias`
+    16.0%, `policy_head.bn.bias` 2.8%, `policy_head.conv.weight` 1.8%;
+  - the encoder carried 3.9%, which is still a norm of about 2,500 against a total of 2–12 on updates 0–20;
+  - the largest encoder tensor was `encoder.conv1.weight` at 1,413.
+  - On updates 0–20 the policy head's share was between 0.5% and 7.9%.
+  - The clip scaled update 21's gradient by 7.8e-5, yet its applied update had a total L2 of 0.116 against 0.128 on
+    update 20. Adam's step is not proportional to the clipped gradient.
+- **Lost diagnostics (a defect in the build):** the step-20 and step-21 attribution passes ran, but the record keeps
+  attribution only for a completed replay, so the mismatch discarded them. The card required diagnostics to be
+  kept, and the tests did not check that attribution survives a mismatch. The per-update trace for 0–21 was kept.
+
+**Did it match the prediction, and why.**
+- **P1 failed.** The replay is not bitwise reproducible at Stage 3's first spike, although it was for the 21 updates
+  before it.
+- **P2** held for the one spike measured (75%), but that spike is the replay's, not Stage 3's, and one update cannot
+  describe all 86.
+- **Measured attribution:**
+  - the divergence appeared at the first spike update and nowhere earlier;
+  - it changed the policy term but not the anchor term;
+  - the replayed spike's norm sat mostly in the policy head's small fully connected layer.
+- **Causal hypotheses, none tested:**
+  - a non-deterministic GPU computation in the policy path on such batches;
+  - a GPU-side effect of the attribution pass that ran just before update 21. Update 20 argues against this but does
+    not exclude it;
+  - very large gathered policy-head inputs in particular positions, possibly fed by the zero-variance BatchNorm
+    channels. The BatchNorm taps that would have measured this were among the discarded attribution.
+- None of this is shown to cause Stage 3's value drift.
+
+**Conclusion / status.** MISMATCH, closed. The diagnostic showed that Stage 3's trace is reproducible up to its first
+spike and not at it, and that the replayed spike sits in the policy head. It did not attribute the spikes to records
+or loss terms, and it derived no cause. The Stage 3 candidate stays unused. Stages 4–5, further learning
+experiments, promotion and pushing remain unapproved. See do-not-repeat **#70**.
