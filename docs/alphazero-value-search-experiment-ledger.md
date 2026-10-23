@@ -110,6 +110,8 @@ knob) is not a new hypothesis.
 
 > **Search distillation D2, gradient diagnostic (Post-closure entry 24, 2026-10-22, MISMATCH).** One instrumented replay of Stage 3's 401 updates, from the unchanged incumbent, on the 108 training games only: **updates 0–20 reproduced Stage 3's trace bit for bit; update 21, the first spike, did not** (policy term 4.37707 against 4.36954, anchor term bitwise equal, pre-clip norm 12,854 against 11,404), so the replay stopped there as its card requires. Measured on the replayed update 21: the policy head carried 96% of the squared pre-clip norm (`policy_head.fc.weight` alone 75%), against 2% on update 20. Stage 3's spikes therefore do not replay exactly; the cause of either the spikes or the divergence is not derived. No checkpoint written; no held-out game file opened. See #70.
 
+> **Search distillation D2, reproducibility diagnostic (Post-closure entry 25, 2026-10-22, MEASURED).** Updates 0–21 replayed three times in one process: A (plain), B (attribution at 20 and 21), C (plain), each from a fresh load of the incumbent. **The GPU update path does not repeat.** Pass A reproduced Stage 3 bit for bit through update 21. B and C differed from A from update 0, with the same loss terms but a different pre-clip norm (16.63 against 12.45). They agreed with each other through update 20, and before update 21 they held identical model, Adam and input digests, yet their update-21 norms differed (3,867 against 3,512). At B's update 21, each record's own policy gradient had norm ≈ 3,867, and the 64 summed to about 64 times the batch gradient. The gradient of the stated loss is linear in the record weights (at update 20 the gap is 0.0), so that computed gradient is not the stated loss's gradient. Re-running the policy head step by step gave logits up to 11.5 away from the module's own on the same state. The mechanism is not derived. See #71.
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -1679,6 +1681,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 69. **The D2 Stage 3 training run (entry 23) — STOP 2026-10-22.** Do **not** rerun it, rerun it with other seeds, or retune its recipe (anchor weight, learning rate, updates, batch, clipping, L2, surface) and judge the result on the same 12 held-out games: they have served as this recipe's final check, and re-judging retuned recipes on them is selection. Do **not** use the candidate (`student-stage3-20261022T232207Z.safetensors`, state digest `9c73feb2…`) in a screen, a strength comparison or promotion, or as a starting point for further training. Do **not** read its lower held-out cross-entropy as evidence of stronger play, or the STOP as evidence that search distillation cannot work: the run shows only that this recipe moved the value output beyond the fixed limits. Do **not** name a cause for the gradient-norm spikes until one is derived. A new recipe needs a new card, fresh held-out data and its own approval.
 
 70. **The D2 gradient diagnostic (entry 24) — MISMATCH 2026-10-22.** Do **not** rerun it, rerun it without the attribution passes, on the CPU, with other settings or from update 21, or extend it to more updates: it was one run under a frozen card and it stopped where its card says to stop. Do **not** read the replayed update 21's per-tensor norms as Stage 3's (the two runs differ at that update), or one spike as a description of all 86. Do **not** name a cause for the spikes or for the divergence at update 21 — GPU non-determinism, an effect of the attribution pass, large gathered policy features and the zero-variance BatchNorm channels are hypotheses, none measured as a cause — and do **not** read anything here as a cause of Stage 3's value drift. A next diagnostic needs its own card and approval.
+
+71. **The D2 reproducibility diagnostic (entry 25) — MEASURED 2026-10-22.** Do **not** rerun it, extend it past update 21, add passes or reorder them: it was one run under a frozen card. Do **not** treat any GPU training result on this update path (`forward_padded` → masked policy cross-entropy → `nn.value_and_grad`, MLX 0.30.3, Metal) as a deterministic function of its inputs until that is re-established. Two passes from identical state and inputs produced different gradients, and one update's computed gradient violated the linearity of the stated loss. Do **not** read the Stage 3 spikes as properties of the data, the records or the BatchNorm statistics, and do **not** name the mechanism (which operation, why the first pass in a process differs from later ones) until one is derived. Do **not** start another learning recipe on this path before the gradient is checked against an independent reference. A next step needs its own card and approval.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -3838,3 +3842,111 @@ there were no survivors; the gate was restored and read back; stderr was empty.
 spike and not at it, and that the replayed spike sits in the policy head. It did not attribute the spikes to records
 or loss terms, and it derived no cause. The Stage 3 candidate stays unused. Stages 4–5, further learning
 experiments, promotion and pushing remain unapproved. See do-not-repeat **#70**.
+
+### 25. Search distillation D2 — reproducibility diagnostic, three passes over updates 0–21 (2026-10-22, MEASURED)
+
+**Test.** One run under card `docs/superpowers/2026-10-22-search-distillation-d2-reproducibility-card.md` (pinned by
+SHA-256 in `scripts/GPU/alphazero/search_distillation_d2_gradrepeat.py`), approved after entry 24.
+- **Three passes in one process, in this order, each on Stage 3's updates 0–21:**
+  - **A**, plain;
+  - **B**, with entry 24's attribution before updates 20 and 21;
+  - **C**, plain.
+- **Identical inputs for every pass:** a fresh load of the incumbent (digest checked), a fresh Adam, the same
+  training records (training games only, read by entry 24's reader; no held-out game file opened), the same draw
+  order and the same teacher values. Those values were computed once, and their digest recorded.
+- **Recorded:**
+  - every update's values;
+  - at update 21, the model, Adam and input digests, before the attribution point, before the update and after it;
+  - B's attribution, written and fsynced before each of its updates;
+  - after each pass, at that pass's own pre-update-21 state reloaded into a fresh network, the scale of update 21's
+    batch: policy-head inputs, hidden layer, legal-logit magnitude and spread, BatchNorm taps, and a recomputation
+    of update 21.
+- A difference was an observation, not a stop. No checkpoint was saved.
+
+**Hypothesis.** None about a cause. The question was whether the update path repeats, and whether instrumentation
+accompanies a difference.
+
+**Why it was plausible.** Entry 24 matched Stage 3 bit for bit through update 20 and diverged at update 21. Matching
+scalars did not establish matching weights or Adam state.
+
+**Prediction on record.** None stated in advance.
+
+**What ran.**
+- **Build `aaf86625`:** the entry point; the gate `SEARCH_DISTILLATION_D2_GRADREPEAT_AUTHORIZED` (the thirty-sixth); a
+  wrapper with TERM at 590 s and KILL 10 s later; the card.
+  - It had 23 run-module and 16 wrapper tests. These include an attribution surviving a later non-finite stop and a
+    SIGTERM, and the plain passes running nothing between their updates.
+  - All 16 injected defects were caught. One of them restores entry 24's retention defect.
+  - Regression equalled the 58-id baseline (3,272 passed).
+- **Run:** gate opened by `3d59b75e`; one run through `01_wrapper.sh` in a clean linked worktree. Evidence and the
+  restored gate are in `be47a5ea`. No game seeds were drawn.
+
+**Result.** Outer exit 0, **COMPLETED**, 22 s wall clock. The record was written by the script; there were no
+survivors; the gate was restored and read back; stderr was empty. All five planned files were written.
+
+Pre-clip norms:
+
+| Pass | Update 0 | Update 20 | Update 21 |
+|---|---|---|---|
+| A | 12.445 | 4.863 | **11,404.4** |
+| B | 16.628 | 4.624 | **3,867.0** |
+| C | 16.628 | 4.624 | **3,511.6** |
+| Stage 3 | 12.445 | 4.863 | 11,404.4 |
+| Entry 24 | 12.445 | 4.863 | 12,854.4 |
+
+- **Pass A** equalled Stage 3 bit for bit on all four logged values at all 22 updates, update 21 included.
+- **Passes B and C differed from A from update 0.** At update 0 all three had the same loss, policy and anchor terms
+  (the starting state is the same), but B and C's pre-clip norm was 16.628 against A's 12.445.
+  - B and C were bitwise identical to each other on updates 0–20.
+  - Before update 21 they held **identical model, Adam and input digests**, at both digest points.
+  - At update 21 their loss terms were bitwise identical, but their pre-clip norms differed (3,866.95 against
+    3,511.61), and so did their states after the update.
+- **B's attribution left the state unchanged.** In every pass the digests before and after the attribution point
+  were equal.
+- **Linearity:**
+  - At update 20, B's per-record policy gradients summed to the batch gradient exactly (relative gap 0.0).
+  - At update 21, **every one of the 64 records' own policy gradients had norm ≈ 3,867**: median 3,867.41,
+    maximum 3,867.71. Each was computed with that record's weight alone set to 1/64. Their sum was about 64 times
+    the batch gradient (relative gap 63.0).
+  - The anchor gradients stayed linear (gap 0.0).
+- **Recomputation at each pass's own pre-update-21 state.** The loss terms equalled the pass's bit for bit. The
+  pre-clip norms did not: 3,075 against A's 11,404, and 192 against B's 3,867 and C's 3,512.
+- **Two evaluations of the same logits disagreed.** The policy head re-run step by step gave legal-move logits differing from
+  the module's own, on the same state, by up to 2.77 in A, 0 in B and 11.5 in C. The BatchNorm re-run matched to
+  0 in every pass.
+- **Scale of update 21's batch** (module values, all passes alike):
+  - legal-logit magnitude at most 14.4 (median 11.6); spread at most 15.3 (median 6.3–6.4);
+  - gathered policy-head inputs at most 2.7; hidden layer at most 2.2; encoder output at most 13.6.
+  - Normalized inputs in the low-variance BatchNorm channels reached 55–61, against 27–28 in the other channels.
+    At update 20 they reached 47.
+
+**Did it match the prediction, and why.** None was stated.
+
+**Measured attribution:**
+- the update path is **not a deterministic function of state and inputs** here: the same digests gave different
+  gradients;
+- the first pass in each process (Stage 3, entry 24 and A) agreed with one another on updates 0–20, and the later
+  passes in this process (B and C) agreed with each other there, but the two groups differed from update 0;
+- the attribution pass did not change the state, and a pass without attribution (C) also differed;
+- at update 21, the policy part of the computed gradient violates the linearity that the stated loss's gradient must
+  have.
+- The batch's forward values are of ordinary scale. No large policy-head input or logit appeared in this
+  measurement, though the step-by-step policy-head forward was not repeatable either.
+
+**Causal hypotheses, none tested:**
+- an operation in the policy path (the gather at legal moves, its backward, or the masked log-softmax) reading or
+  accumulating stale or uninitialized memory. This would fit results that depend on what ran earlier in the
+  process;
+- a different MLX or Metal defect on this path.
+
+Whether Stage 3's 86 spikes share this property is not measured; only update 21 was. Whether it explains Stage 3's
+value drift is not measured.
+
+**Conclusion / status.** MEASURED, closed.
+- The Stage 3 spikes at update 21 are not the gradient of the stated loss: the computed gradient there fails
+  linearity, and it is not repeatable from identical state and inputs.
+- Training on this GPU path cannot be taken as deterministic, and its gradients cannot be taken as correct, until
+  they are checked against an independent reference.
+- The mechanism is not derived.
+- The Stage 3 candidate stays closed; `calib020_0001` stays the incumbent.
+- Stages 4–5, further learning experiments, promotion and pushing remain unapproved. See do-not-repeat **#71**.
