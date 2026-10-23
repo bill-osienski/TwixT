@@ -1,0 +1,29 @@
+{"event": "start", "t": 0.0}
+{"event": "case", "t": 0.116, "id": "fc_32704", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 0.186, "id": "fc_32736", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 0.25, "id": "fc_32737", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 0.311, "id": "fc_32767", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 0.372, "id": "fc_32768", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 0.437, "id": "fc_32769", "gpu_gross": ["Y", "dX"], "cpu_gross": [], "gpu_nonrepeatable": ["Y", "dX"]}
+{"event": "case", "t": 0.507, "id": "fc_32800", "gpu_gross": ["Y", "dX"], "cpu_gross": [], "gpu_nonrepeatable": ["Y", "dX"]}
+{"event": "case", "t": 0.575, "id": "fc_33600", "gpu_gross": ["Y", "dX"], "cpu_gross": [], "gpu_nonrepeatable": ["Y", "dX"]}
+{"event": "case", "t": 0.642, "id": "fc_33728", "gpu_gross": ["Y", "dX"], "cpu_gross": [], "gpu_nonrepeatable": ["Y", "dX"]}
+{"event": "case", "t": 0.698, "id": "out_32704", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 0.752, "id": "out_32736", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 0.807, "id": "out_32737", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 0.861, "id": "out_32767", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 0.916, "id": "out_32768", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 0.971, "id": "out_32769", "gpu_gross": ["dX"], "cpu_gross": [], "gpu_nonrepeatable": ["dX"]}
+{"event": "case", "t": 1.027, "id": "out_32800", "gpu_gross": ["dX"], "cpu_gross": [], "gpu_nonrepeatable": ["dX"]}
+{"event": "case", "t": 1.084, "id": "out_33600", "gpu_gross": ["dX"], "cpu_gross": [], "gpu_nonrepeatable": ["dX"]}
+{"event": "case", "t": 1.141, "id": "out_33728", "gpu_gross": ["dX"], "cpu_gross": [], "gpu_nonrepeatable": ["dX"]}
+{"event": "case", "t": 1.272, "id": "wide_32704", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 1.403, "id": "wide_32736", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 1.537, "id": "wide_32737", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 1.666, "id": "wide_32767", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 1.793, "id": "wide_32768", "gpu_gross": [], "cpu_gross": [], "gpu_nonrepeatable": []}
+{"event": "case", "t": 1.926, "id": "wide_32769", "gpu_gross": ["Y", "dX"], "cpu_gross": [], "gpu_nonrepeatable": ["Y", "dX"]}
+{"event": "case", "t": 2.054, "id": "wide_32800", "gpu_gross": ["Y", "dX"], "cpu_gross": [], "gpu_nonrepeatable": ["Y", "dX"]}
+{"event": "case", "t": 2.19, "id": "wide_33600", "gpu_gross": ["Y", "dX"], "cpu_gross": [], "gpu_nonrepeatable": ["Y", "dX"]}
+{"event": "case", "t": 2.325, "id": "wide_33728", "gpu_gross": ["Y", "dX"], "cpu_gross": [], "gpu_nonrepeatable": ["Y", "dX"]}
+{"event": "end", "t": 2.325, "status": "COMPLETED"}

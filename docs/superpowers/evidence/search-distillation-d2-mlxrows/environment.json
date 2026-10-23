@@ -1,0 +1,25 @@
+{
+ "python": "3.14.9 (main, Oct 21 2026, 06:02:15) [Clang 21.0.0 (clang-2100.3.34.2)]",
+ "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+ "mac_ver": "27.0.1",
+ "machine": "arm64",
+ "numpy": "2.4.1",
+ "mlx": "0.30.3",
+ "executable": "/Users/bill/projects/TwixT_Game/.venv/bin/python",
+ "generator": "/Users/bill/projects/TwixT_Game-d2-mlxrows/scripts/GPU/alphazero/mlx_matmul_rows_probe.py",
+ "generator_sha256": "1217bc8e48589b077bbe0962564ffb5c0298326f96de6658ae39a83cf739bb57",
+ "default_device": "Device(gpu, 0)",
+ "loadavg": [
+  4.150390625,
+  1.9755859375,
+  1.50390625
+ ],
+ "metal_device_info": {
+  "resource_limit": 499000,
+  "max_buffer_length": 30150672384,
+  "architecture": "applegpu_g17s",
+  "memory_size": 51539607552,
+  "max_recommended_working_set_size": 40200896512,
+  "device_name": "Apple M5 Max"
+ }
+}
