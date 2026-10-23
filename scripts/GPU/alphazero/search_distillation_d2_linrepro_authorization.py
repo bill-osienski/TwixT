@@ -5,4 +5,4 @@ isolated from the gradient check's saved fixtures, on the GPU against NumPy. Loa
 replays no model, but runs GPU computations under a frozen case list, so it takes its own reviewed door. Opened for
 ONE approved run and restored on every exit. Created closed. This file may hold ONLY this declaration.
 """
-SEARCH_DISTILLATION_D2_LINREPRO_AUTHORIZED = True
+SEARCH_DISTILLATION_D2_LINREPRO_AUTHORIZED = False

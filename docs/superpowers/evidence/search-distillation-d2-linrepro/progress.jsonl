@@ -1,0 +1,35 @@
+{"event": "start", "t": 0.01}
+{"event": "operands", "t": 0.451, "out_S0": "stage_S0_out (as saved)", "fc_S0": "derived from reference_real_S0 by the NumPy reference", "out_S21": "stage_S21_out (as saved)", "fc_S21": "derived from reference_real_S21 by the NumPy reference"}
+{"event": "case", "t": 2.948, "id": "fc_S0_original", "reproduces": true, "outside_tol": true}
+{"event": "case", "t": 5.01, "id": "fc_S21_original", "reproduces": true, "outside_tol": true}
+{"event": "case", "t": 7.182, "id": "out_S0_original", "reproduces": true, "outside_tol": true}
+{"event": "case", "t": 9.379, "id": "out_S21_original", "reproduces": true, "outside_tol": true}
+{"event": "case", "t": 9.596, "id": "fc_S0_rows_512", "reproduces": false, "outside_tol": true}
+{"event": "case", "t": 9.729, "id": "fc_S0_rows_2048", "reproduces": false, "outside_tol": true}
+{"event": "case", "t": 10.241, "id": "fc_S0_rows_8192", "reproduces": false, "outside_tol": true}
+{"event": "case", "t": 11.272, "id": "fc_S0_rows_16384", "reproduces": false, "outside_tol": true}
+{"event": "case", "t": 13.298, "id": "fc_S0_rows_32768", "reproduces": false, "outside_tol": true}
+{"event": "case", "t": 16.216, "id": "fc_S0_layout", "reproduces": true, "outside_tol": true}
+{"event": "case", "t": 18.296, "id": "fc_S0_context", "reproduces": true, "outside_tol": true}
+{"event": "case", "t": 18.335, "id": "fc_S21_rows_512", "reproduces": false, "outside_tol": true}
+{"event": "case", "t": 18.464, "id": "fc_S21_rows_2048", "reproduces": false, "outside_tol": true}
+{"event": "case", "t": 18.972, "id": "fc_S21_rows_8192", "reproduces": false, "outside_tol": true}
+{"event": "case", "t": 19.997, "id": "fc_S21_rows_16384", "reproduces": false, "outside_tol": true}
+{"event": "case", "t": 22.003, "id": "fc_S21_rows_32768", "reproduces": false, "outside_tol": true}
+{"event": "case", "t": 24.073, "id": "fc_S21_layout", "reproduces": true, "outside_tol": true}
+{"event": "case", "t": 26.147, "id": "fc_S21_context", "reproduces": true, "outside_tol": true}
+{"event": "case", "t": 26.186, "id": "out_S0_rows_512", "reproduces": true, "outside_tol": true}
+{"event": "case", "t": 26.326, "id": "out_S0_rows_2048", "reproduces": false, "outside_tol": true}
+{"event": "case", "t": 26.859, "id": "out_S0_rows_8192", "reproduces": false, "outside_tol": true}
+{"event": "case", "t": 27.923, "id": "out_S0_rows_16384", "reproduces": false, "outside_tol": true}
+{"event": "case", "t": 30.035, "id": "out_S0_rows_32768", "reproduces": false, "outside_tol": true}
+{"event": "case", "t": 32.239, "id": "out_S0_layout", "reproduces": true, "outside_tol": true}
+{"event": "case", "t": 34.405, "id": "out_S0_context", "reproduces": true, "outside_tol": true}
+{"event": "case", "t": 34.445, "id": "out_S21_rows_512", "reproduces": true, "outside_tol": true}
+{"event": "case", "t": 34.578, "id": "out_S21_rows_2048", "reproduces": false, "outside_tol": true}
+{"event": "case", "t": 35.117, "id": "out_S21_rows_8192", "reproduces": false, "outside_tol": true}
+{"event": "case", "t": 36.207, "id": "out_S21_rows_16384", "reproduces": false, "outside_tol": true}
+{"event": "case", "t": 38.345, "id": "out_S21_rows_32768", "reproduces": false, "outside_tol": true}
+{"event": "case", "t": 40.561, "id": "out_S21_layout", "reproduces": true, "outside_tol": true}
+{"event": "case", "t": 42.765, "id": "out_S21_context", "reproduces": true, "outside_tol": true}
+{"event": "end", "t": 42.765, "status": "COMPLETED"}
