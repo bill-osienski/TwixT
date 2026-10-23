@@ -1,0 +1,136 @@
+{
+ "block": 1,
+ "count": 0,
+ "focus_flip": false,
+ "local_checks": {
+  "cpu": {
+   "backward": {
+    "blocks.1.block_input": {
+     "bitwise": false,
+     "max_abs": 5.741603865960787e-09,
+     "scale": 0.08001374349925097,
+     "within_tol": true
+    },
+    "blocks.1.bn1": {
+     "bitwise": false,
+     "max_abs": 9.068167466930177e-10,
+     "scale": 0.01989016283235757,
+     "within_tol": true
+    },
+    "blocks.1.bn2": {
+     "bitwise": false,
+     "max_abs": 6.462892984671065e-09,
+     "scale": 0.05023023221495219,
+     "within_tol": true
+    },
+    "blocks.1.conv2_input": {
+     "bitwise": false,
+     "max_abs": 1.04485338575655e-08,
+     "scale": 0.034201131340062585,
+     "within_tol": true
+    },
+    "blocks.1.relu_inner": {
+     "bitwise": true
+    },
+    "blocks.1.relu_outer": {
+     "bitwise": true
+    }
+   },
+   "forward": {
+    "blocks.1.a1": {
+     "bitwise": false,
+     "max_abs": 3.788460478659772e-07,
+     "scale": 3.404034433504362,
+     "within_tol": true
+    },
+    "blocks.1.s": {
+     "bitwise": false,
+     "max_abs": 5.869746244613339e-07,
+     "scale": 6.640098257461632,
+     "within_tol": true
+    },
+    "blocks.1.z1": {
+     "bitwise": false,
+     "max_abs": 2.520804462058379e-06,
+     "scale": 6.47755040730981,
+     "within_tol": true
+    },
+    "blocks.1.z2": {
+     "bitwise": false,
+     "max_abs": 1.7394830416073148e-06,
+     "scale": 3.9752253749582973,
+     "within_tol": true
+    }
+   }
+  },
+  "gpu": {
+   "backward": {
+    "blocks.1.block_input": {
+     "bitwise": false,
+     "max_abs": 4.078352378034111e-09,
+     "scale": 0.08001379158392324,
+     "within_tol": true
+    },
+    "blocks.1.bn1": {
+     "bitwise": false,
+     "max_abs": 1.1221843281006283e-09,
+     "scale": 0.01989017537129341,
+     "within_tol": true
+    },
+    "blocks.1.bn2": {
+     "bitwise": false,
+     "max_abs": 1.83266911368829e-09,
+     "scale": 0.0502302664963654,
+     "within_tol": true
+    },
+    "blocks.1.conv2_input": {
+     "bitwise": false,
+     "max_abs": 6.0956172331927405e-09,
+     "scale": 0.034201137577435974,
+     "within_tol": true
+    },
+    "blocks.1.relu_inner": {
+     "bitwise": true
+    },
+    "blocks.1.relu_outer": {
+     "bitwise": true
+    }
+   },
+   "forward": {
+    "blocks.1.a1": {
+     "bitwise": false,
+     "max_abs": 4.497957646343309e-07,
+     "scale": 3.404032465235832,
+     "within_tol": true
+    },
+    "blocks.1.s": {
+     "bitwise": false,
+     "max_abs": 4.770886214977565e-07,
+     "scale": 6.640101515170628,
+     "within_tol": true
+    },
+    "blocks.1.z1": {
+     "bitwise": false,
+     "max_abs": 3.052463368136138e-05,
+     "scale": 6.477547462438123,
+     "within_tol": true
+    },
+    "blocks.1.z2": {
+     "bitwise": false,
+     "max_abs": 1.5037289017083566e-05,
+     "scale": 3.9752251795707476,
+     "within_tol": true
+    }
+   }
+  }
+ },
+ "noise_max_abs_pre_diff": 1.8358230590820312e-05,
+ "pre_compare": {
+  "bitwise": false,
+  "max_abs": 1.8358230590820312e-05,
+  "scale": 3.404034376144409,
+  "within_tol": true
+ },
+ "recorded": [],
+ "relu": "blocks.1.relu_inner"
+}

@@ -1,0 +1,9 @@
+{"event": "start", "t": 0.012, "setting": {"MLX_ENABLE_TF32": "0"}}
+{"event": "inputs_verified", "t": 3.081, "training_records": 6403}
+{"event": "teacher_values", "t": 4.917, "digest": "abe2873a0b06c8412bd947c32d01ec2b354f1dd8e2c09f039c2470c52ffcb37c", "entry33_digest": "abe2873a0b06c8412bd947c32d01ec2b354f1dd8e2c09f039c2470c52ffcb37c", "equals_entry33": true}
+{"event": "step1", "t": 5.853, "ok": true}
+{"event": "trace", "t": 7.259, "device": "cpu", "faithful": true}
+{"event": "trace", "t": 7.97, "device": "gpu", "faithful": true}
+{"event": "stages", "t": 10.798, "flips": {"stem.relu": 0, "blocks.0.relu_inner": 0, "blocks.0.relu_outer": 1, "blocks.1.relu_inner": 0, "blocks.1.relu_outer": 0, "blocks.2.relu_inner": 1, "blocks.2.relu_outer": 3, "blocks.3.relu_inner": 0, "blocks.3.relu_outer": 0, "blocks.4.relu_inner": 2, "blocks.4.relu_outer": 3, "blocks.5.relu_inner": 3, "blocks.5.relu_outer": 1}}
+{"event": "accounting", "t": 11.792, "both_explained": true}
+{"event": "end", "t": 11.871, "status": "COMPLETED", "outcome": "BRANCH_CHANGE"}

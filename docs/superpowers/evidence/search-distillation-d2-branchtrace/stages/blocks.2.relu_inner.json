@@ -1,0 +1,179 @@
+{
+ "block": 2,
+ "count": 1,
+ "focus_flip": false,
+ "local_checks": {
+  "cpu": {
+   "backward": {
+    "blocks.2.block_input": {
+     "bitwise": false,
+     "max_abs": 4.829052588362082e-09,
+     "scale": 0.08733464294564376,
+     "within_tol": true
+    },
+    "blocks.2.bn1": {
+     "bitwise": false,
+     "max_abs": 9.185299621600196e-10,
+     "scale": 0.012845207949854399,
+     "within_tol": true
+    },
+    "blocks.2.bn2": {
+     "bitwise": false,
+     "max_abs": 2.9589638447791167e-09,
+     "scale": 0.05051036671536287,
+     "within_tol": true
+    },
+    "blocks.2.conv2_input": {
+     "bitwise": false,
+     "max_abs": 7.889897639737353e-09,
+     "scale": 0.023276263192326063,
+     "within_tol": true
+    },
+    "blocks.2.relu_inner": {
+     "bitwise": true
+    },
+    "blocks.2.relu_outer": {
+     "bitwise": true
+    }
+   },
+   "forward": {
+    "blocks.2.a1": {
+     "bitwise": false,
+     "max_abs": 3.557058345649011e-07,
+     "scale": 4.049208901229928,
+     "within_tol": true
+    },
+    "blocks.2.s": {
+     "bitwise": false,
+     "max_abs": 4.228653232019042e-07,
+     "scale": 6.562167811026866,
+     "within_tol": true
+    },
+    "blocks.2.z1": {
+     "bitwise": false,
+     "max_abs": 3.237305998382567e-06,
+     "scale": 5.615315380623226,
+     "within_tol": true
+    },
+    "blocks.2.z2": {
+     "bitwise": false,
+     "max_abs": 9.94397051812257e-07,
+     "scale": 3.1771428921383693,
+     "within_tol": true
+    }
+   }
+  },
+  "gpu": {
+   "backward": {
+    "blocks.2.block_input": {
+     "bitwise": false,
+     "max_abs": 3.7270436008263186e-09,
+     "scale": 0.08733470553967757,
+     "within_tol": true
+    },
+    "blocks.2.bn1": {
+     "bitwise": false,
+     "max_abs": 5.921000009734279e-10,
+     "scale": 0.012845218482360903,
+     "within_tol": true
+    },
+    "blocks.2.bn2": {
+     "bitwise": false,
+     "max_abs": 1.4305870446595925e-09,
+     "scale": 0.05051040419943737,
+     "within_tol": true
+    },
+    "blocks.2.conv2_input": {
+     "bitwise": false,
+     "max_abs": 7.589364730414827e-09,
+     "scale": 0.02327626584487479,
+     "within_tol": true
+    },
+    "blocks.2.relu_inner": {
+     "bitwise": true
+    },
+    "blocks.2.relu_outer": {
+     "bitwise": true
+    }
+   },
+   "forward": {
+    "blocks.2.a1": {
+     "bitwise": false,
+     "max_abs": 3.0267883710521915e-07,
+     "scale": 4.04921192001332,
+     "within_tol": true
+    },
+    "blocks.2.s": {
+     "bitwise": false,
+     "max_abs": 3.1712457992938425e-07,
+     "scale": 6.562171149821778,
+     "within_tol": true
+    },
+    "blocks.2.z1": {
+     "bitwise": false,
+     "max_abs": 3.006020851736846e-05,
+     "scale": 5.615320175315058,
+     "within_tol": true
+    },
+    "blocks.2.z2": {
+     "bitwise": false,
+     "max_abs": 1.2988520923712388e-05,
+     "scale": 3.1771438169974684,
+     "within_tol": true
+    }
+   }
+  }
+ },
+ "noise_max_abs_pre_diff": 1.4424324035644531e-05,
+ "pre_compare": {
+  "bitwise": false,
+  "max_abs": 1.4424324035644531e-05,
+  "scale": 4.049209117889404,
+  "within_tol": true
+ },
+ "recorded": [
+  {
+   "abs_pre_over_noise": 0.03305785123966942,
+   "bn_channel": {
+    "bias": 0.13573811948299408,
+    "eps": 1e-05,
+    "mean": -0.1247926726937294,
+    "var": 0.45937615633010864,
+    "weight": 0.33583366870880127
+   },
+   "cpu": {
+    "float64_sign_agrees": true,
+    "grad_post": 1.668128970777616e-05,
+    "grad_pre": 1.668128970777616e-05,
+    "mask": true,
+    "operands": {
+     "bn_input": -0.39873895049095154
+    },
+    "pre": 3.725290298461914e-07,
+    "pre_float64_own_operands": 3.570064073532553e-07,
+    "pre_over_operand_ulp": 12.5
+   },
+   "gpu": {
+    "float64_sign_agrees": true,
+    "grad_post": 1.6681276974850334e-05,
+    "grad_pre": 0.0,
+    "mask": false,
+    "operands": {
+     "bn_input": -0.39874064922332764
+    },
+    "pre": -4.76837158203125e-07,
+    "pre_float64_own_operands": -4.846992497919977e-07,
+    "pre_over_operand_ulp": 16.0
+   },
+   "index": [
+    24,
+    2,
+    23,
+    43
+   ],
+   "noise_max_abs_pre_diff": 1.4424324035644531e-05,
+   "pre_gpu_minus_cpu": -8.493661880493164e-07
+  }
+ ],
+ "relu": "blocks.2.relu_inner"
+}

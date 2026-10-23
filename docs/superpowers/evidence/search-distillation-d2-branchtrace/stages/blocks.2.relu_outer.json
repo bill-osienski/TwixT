@@ -1,0 +1,269 @@
+{
+ "block": 2,
+ "count": 3,
+ "focus_flip": true,
+ "local_checks": {
+  "cpu": {
+   "backward": {
+    "blocks.2.block_input": {
+     "bitwise": false,
+     "max_abs": 4.829052588362082e-09,
+     "scale": 0.08733464294564376,
+     "within_tol": true
+    },
+    "blocks.2.bn1": {
+     "bitwise": false,
+     "max_abs": 9.185299621600196e-10,
+     "scale": 0.012845207949854399,
+     "within_tol": true
+    },
+    "blocks.2.bn2": {
+     "bitwise": false,
+     "max_abs": 2.9589638447791167e-09,
+     "scale": 0.05051036671536287,
+     "within_tol": true
+    },
+    "blocks.2.conv2_input": {
+     "bitwise": false,
+     "max_abs": 7.889897639737353e-09,
+     "scale": 0.023276263192326063,
+     "within_tol": true
+    },
+    "blocks.2.relu_inner": {
+     "bitwise": true
+    },
+    "blocks.2.relu_outer": {
+     "bitwise": true
+    }
+   },
+   "forward": {
+    "blocks.2.a1": {
+     "bitwise": false,
+     "max_abs": 3.557058345649011e-07,
+     "scale": 4.049208901229928,
+     "within_tol": true
+    },
+    "blocks.2.s": {
+     "bitwise": false,
+     "max_abs": 4.228653232019042e-07,
+     "scale": 6.562167811026866,
+     "within_tol": true
+    },
+    "blocks.2.z1": {
+     "bitwise": false,
+     "max_abs": 3.237305998382567e-06,
+     "scale": 5.615315380623226,
+     "within_tol": true
+    },
+    "blocks.2.z2": {
+     "bitwise": false,
+     "max_abs": 9.94397051812257e-07,
+     "scale": 3.1771428921383693,
+     "within_tol": true
+    }
+   }
+  },
+  "gpu": {
+   "backward": {
+    "blocks.2.block_input": {
+     "bitwise": false,
+     "max_abs": 3.7270436008263186e-09,
+     "scale": 0.08733470553967757,
+     "within_tol": true
+    },
+    "blocks.2.bn1": {
+     "bitwise": false,
+     "max_abs": 5.921000009734279e-10,
+     "scale": 0.012845218482360903,
+     "within_tol": true
+    },
+    "blocks.2.bn2": {
+     "bitwise": false,
+     "max_abs": 1.4305870446595925e-09,
+     "scale": 0.05051040419943737,
+     "within_tol": true
+    },
+    "blocks.2.conv2_input": {
+     "bitwise": false,
+     "max_abs": 7.589364730414827e-09,
+     "scale": 0.02327626584487479,
+     "within_tol": true
+    },
+    "blocks.2.relu_inner": {
+     "bitwise": true
+    },
+    "blocks.2.relu_outer": {
+     "bitwise": true
+    }
+   },
+   "forward": {
+    "blocks.2.a1": {
+     "bitwise": false,
+     "max_abs": 3.0267883710521915e-07,
+     "scale": 4.04921192001332,
+     "within_tol": true
+    },
+    "blocks.2.s": {
+     "bitwise": false,
+     "max_abs": 3.1712457992938425e-07,
+     "scale": 6.562171149821778,
+     "within_tol": true
+    },
+    "blocks.2.z1": {
+     "bitwise": false,
+     "max_abs": 3.006020851736846e-05,
+     "scale": 5.615320175315058,
+     "within_tol": true
+    },
+    "blocks.2.z2": {
+     "bitwise": false,
+     "max_abs": 1.2988520923712388e-05,
+     "scale": 3.1771438169974684,
+     "within_tol": true
+    }
+   }
+  }
+ },
+ "noise_max_abs_pre_diff": 2.0205974578857422e-05,
+ "pre_compare": {
+  "bitwise": false,
+  "max_abs": 2.0205974578857422e-05,
+  "scale": 6.562167644500732,
+  "within_tol": true
+ },
+ "recorded": [
+  {
+   "abs_pre_over_noise": 0.04830383480825959,
+   "bn_channel": {
+    "bias": -0.154501274228096,
+    "eps": 1e-05,
+    "mean": 0.05451596528291702,
+    "var": 0.08677415549755096,
+    "weight": 0.3943782150745392
+   },
+   "cpu": {
+    "float64_sign_agrees": true,
+    "grad_post": -0.0002177737042075023,
+    "grad_pre": -0.0,
+    "mask": false,
+    "operands": {
+     "bn_input": 0.10157866030931473,
+     "residual": 0.09149609506130219
+    },
+    "pre": -9.760260581970215e-07,
+    "pre_float64_own_operands": -9.809009338390684e-07,
+    "pre_over_operand_ulp": 131.0
+   },
+   "gpu": {
+    "float64_sign_agrees": true,
+    "grad_post": -0.00021777446090709418,
+    "grad_pre": -0.00021777446090709418,
+    "mask": true,
+    "operands": {
+     "bn_input": 0.10158006846904755,
+     "residual": 0.09149608761072159
+    },
+    "pre": 9.015202522277832e-07,
+    "pre_float64_own_operands": 8.967928647185541e-07,
+    "pre_over_operand_ulp": 121.0
+   },
+   "index": [
+    1,
+    13,
+    4,
+    42
+   ],
+   "noise_max_abs_pre_diff": 2.0205974578857422e-05,
+   "pre_gpu_minus_cpu": 1.8775463104248047e-06
+  },
+  {
+   "abs_pre_over_noise": 0.06637168141592921,
+   "bn_channel": {
+    "bias": -0.10103005170822144,
+    "eps": 1e-05,
+    "mean": 0.173919677734375,
+    "var": 0.019852833822369576,
+    "weight": 0.15522357821464539
+   },
+   "cpu": {
+    "float64_sign_agrees": true,
+    "grad_post": -2.692945827220683e-06,
+    "grad_pre": -0.0,
+    "mask": false,
+    "operands": {
+     "bn_input": 0.2071826308965683,
+     "residual": 0.06439356505870819
+    },
+    "pre": -1.341104507446289e-06,
+    "pre_float64_own_operands": -1.3437204268718084e-06,
+    "pre_over_operand_ulp": 90.0
+   },
+   "gpu": {
+    "float64_sign_agrees": true,
+    "grad_post": -2.6928994429908926e-06,
+    "grad_pre": -2.6928994429908926e-06,
+    "mask": true,
+    "operands": {
+     "bn_input": 0.2071841061115265,
+     "residual": 0.06439381092786789
+    },
+    "pre": 5.289912223815918e-07,
+    "pre_float64_own_operands": 5.269206098390544e-07,
+    "pre_over_operand_ulp": 35.5
+   },
+   "index": [
+    39,
+    7,
+    1,
+    30
+   ],
+   "noise_max_abs_pre_diff": 2.0205974578857422e-05,
+   "pre_gpu_minus_cpu": 1.8700957298278809e-06
+  },
+  {
+   "abs_pre_over_noise": 0.04830383480825959,
+   "bn_channel": {
+    "bias": -0.19799791276454926,
+    "eps": 1e-05,
+    "mean": -0.12604914605617523,
+    "var": 0.03288751840591431,
+    "weight": -0.07984507083892822
+   },
+   "cpu": {
+    "float64_sign_agrees": true,
+    "grad_post": -1.4786043038839125e-06,
+    "grad_pre": -0.0,
+    "mask": false,
+    "operands": {
+     "bn_input": -0.29381972551345825,
+     "residual": 0.12414151430130005
+    },
+    "pre": -9.760260581970215e-07,
+    "pre_float64_own_operands": -9.82961063669685e-07,
+    "pre_over_operand_ulp": 32.75
+   },
+   "gpu": {
+    "float64_sign_agrees": true,
+    "grad_post": -1.4786721749260323e-06,
+    "grad_pre": -1.4786721749260323e-06,
+    "mask": true,
+    "operands": {
+     "bn_input": -0.29381945729255676,
+     "residual": 0.12414288520812988
+    },
+    "pre": 2.7567148208618164e-07,
+    "pre_float64_own_operands": 2.69870438607267e-07,
+    "pre_over_operand_ulp": 9.25
+   },
+   "index": [
+    37,
+    11,
+    2,
+    12
+   ],
+   "noise_max_abs_pre_diff": 2.0205974578857422e-05,
+   "pre_gpu_minus_cpu": 1.2516975402832031e-06
+  }
+ ],
+ "relu": "blocks.2.relu_outer"
+}

@@ -1,0 +1,39 @@
+{
+ "device": "cpu",
+ "fidelity": {
+  "grads_compared": 60,
+  "grads_equal": true,
+  "logits_equal": true,
+  "ok": true,
+  "terms_equal": true,
+  "values_equal": true
+ },
+ "fixture": {
+  "name": "cpu_record1",
+  "sha256": "06e4754b90eb2b4c72d83fbe9e95bc812dfa011bc43aae331c9f5c15af230c58"
+ },
+ "grad_digest": "3d49eeb12c2ddb618ba8194aadcd40be8ac36ce010e70ebc883db00cb8fa63b5",
+ "step1": {
+  "expected": {
+   "grad_digest": "3d49eeb12c2ddb618ba8194aadcd40be8ac36ce010e70ebc883db00cb8fa63b5",
+   "logits_digest": "e1657a407942f6b67e39502e852bafaf0de8a86ca08c5488df20107851d38023",
+   "terms": [
+    4.656035423278809,
+    4.5633625984191895,
+    9.026216406249343e-12
+   ],
+   "values_digest": "b6f57f8f31c33039127d2de8391046e6ee6a4cdc6244ea2206a9f88c7bd4c5d1"
+  },
+  "got": {
+   "grad_digest": "3d49eeb12c2ddb618ba8194aadcd40be8ac36ce010e70ebc883db00cb8fa63b5",
+   "logits_digest": "e1657a407942f6b67e39502e852bafaf0de8a86ca08c5488df20107851d38023",
+   "terms": [
+    4.656035423278809,
+    4.5633625984191895,
+    9.026216406249343e-12
+   ],
+   "values_digest": "b6f57f8f31c33039127d2de8391046e6ee6a4cdc6244ea2206a9f88c7bd4c5d1"
+  },
+  "ok": true
+ }
+}

@@ -1,0 +1,263 @@
+{
+ "block": 5,
+ "count": 3,
+ "focus_flip": false,
+ "local_checks": {
+  "cpu": {
+   "backward": {
+    "blocks.5.block_input": {
+     "bitwise": false,
+     "max_abs": 1.0666598299069463e-08,
+     "scale": 0.07682254487012766,
+     "within_tol": true
+    },
+    "blocks.5.bn1": {
+     "bitwise": false,
+     "max_abs": 1.645411681905351e-09,
+     "scale": 0.022782794170969966,
+     "within_tol": true
+    },
+    "blocks.5.bn2": {
+     "bitwise": false,
+     "max_abs": 4.34930323006677e-09,
+     "scale": 0.0368152627069235,
+     "within_tol": true
+    },
+    "blocks.5.conv2_input": {
+     "bitwise": false,
+     "max_abs": 8.805838221798146e-09,
+     "scale": 0.04489444671564419,
+     "within_tol": true
+    },
+    "blocks.5.relu_inner": {
+     "bitwise": true
+    },
+    "blocks.5.relu_outer": {
+     "bitwise": true
+    }
+   },
+   "forward": {
+    "blocks.5.a1": {
+     "bitwise": false,
+     "max_abs": 3.977364819718332e-07,
+     "scale": 5.640601482424455,
+     "within_tol": true
+    },
+    "blocks.5.s": {
+     "bitwise": false,
+     "max_abs": 1.6495541252936619e-06,
+     "scale": 17.435009317378608,
+     "within_tol": true
+    },
+    "blocks.5.z1": {
+     "bitwise": false,
+     "max_abs": 2.410447327516607e-06,
+     "scale": 7.179793304487828,
+     "within_tol": true
+    },
+    "blocks.5.z2": {
+     "bitwise": false,
+     "max_abs": 9.384252941391225e-07,
+     "scale": 3.7806153341158097,
+     "within_tol": true
+    }
+   }
+  },
+  "gpu": {
+   "backward": {
+    "blocks.5.block_input": {
+     "bitwise": false,
+     "max_abs": 3.5926404941266643e-09,
+     "scale": 0.07682259027488186,
+     "within_tol": true
+    },
+    "blocks.5.bn1": {
+     "bitwise": false,
+     "max_abs": 1.125168725552017e-09,
+     "scale": 0.022782809294891283,
+     "within_tol": true
+    },
+    "blocks.5.bn2": {
+     "bitwise": false,
+     "max_abs": 1.7546249279909443e-09,
+     "scale": 0.03681528280519097,
+     "within_tol": true
+    },
+    "blocks.5.conv2_input": {
+     "bitwise": false,
+     "max_abs": 1.5667713681999373e-08,
+     "scale": 0.04489446727272173,
+     "within_tol": true
+    },
+    "blocks.5.relu_inner": {
+     "bitwise": true
+    },
+    "blocks.5.relu_outer": {
+     "bitwise": true
+    }
+   },
+   "forward": {
+    "blocks.5.a1": {
+     "bitwise": false,
+     "max_abs": 4.996509126442561e-07,
+     "scale": 5.64059931250907,
+     "within_tol": true
+    },
+    "blocks.5.s": {
+     "bitwise": false,
+     "max_abs": 1.8413927040938916e-06,
+     "scale": 17.435002670799186,
+     "within_tol": true
+    },
+    "blocks.5.z1": {
+     "bitwise": false,
+     "max_abs": 3.0021040967387336e-05,
+     "scale": 7.179791188109542,
+     "within_tol": true
+    },
+    "blocks.5.z2": {
+     "bitwise": false,
+     "max_abs": 1.2500623244732223e-05,
+     "scale": 3.780615266349627,
+     "within_tol": true
+    }
+   }
+  }
+ },
+ "noise_max_abs_pre_diff": 2.7686357498168945e-05,
+ "pre_compare": {
+  "bitwise": false,
+  "max_abs": 2.7686357498168945e-05,
+  "scale": 5.640601634979248,
+  "within_tol": true
+ },
+ "recorded": [
+  {
+   "abs_pre_over_noise": 0.014094456404736276,
+   "bn_channel": {
+    "bias": -0.01471678912639618,
+    "eps": 1e-05,
+    "mean": -0.053044624626636505,
+    "var": 0.017961332574486732,
+    "weight": -0.09613063186407089
+   },
+   "cpu": {
+    "float64_sign_agrees": true,
+    "grad_post": 1.1773591722885612e-05,
+    "grad_pre": 0.0,
+    "mask": false,
+    "operands": {
+     "bn_input": -0.07356710731983185
+    },
+    "pre": -3.902241587638855e-07,
+    "pre_float64_own_operands": -3.901188262434019e-07,
+    "pre_over_operand_ulp": 52.375
+   },
+   "gpu": {
+    "float64_sign_agrees": true,
+    "grad_post": 1.1773591722885612e-05,
+    "grad_pre": 1.1773591722885612e-05,
+    "mask": true,
+    "operands": {
+     "bn_input": -0.07356777787208557
+    },
+    "pre": 9.033828973770142e-08,
+    "pre_float64_own_operands": 9.07252640531403e-08,
+    "pre_over_operand_ulp": 12.125
+   },
+   "index": [
+    14,
+    18,
+    5,
+    90
+   ],
+   "noise_max_abs_pre_diff": 2.7686357498168945e-05,
+   "pre_gpu_minus_cpu": 4.805624485015869e-07
+  },
+  {
+   "abs_pre_over_noise": 0.002152852529601722,
+   "bn_channel": {
+    "bias": -0.22532342374324799,
+    "eps": 1e-05,
+    "mean": -0.27721667289733887,
+    "var": 0.1992737054824829,
+    "weight": 0.22383274137973785
+   },
+   "cpu": {
+    "float64_sign_agrees": true,
+    "grad_post": -7.571296464448096e-06,
+    "grad_pre": -7.571296464448096e-06,
+    "mask": true,
+    "operands": {
+     "bn_input": 0.1721685230731964
+    },
+    "pre": 5.960464477539063e-08,
+    "pre_float64_own_operands": 7.190575251891929e-08,
+    "pre_over_operand_ulp": 4.0
+   },
+   "gpu": {
+    "float64_sign_agrees": true,
+    "grad_post": -7.571291007479886e-06,
+    "grad_pre": -0.0,
+    "mask": false,
+    "operands": {
+     "bn_input": 0.1721683144569397
+    },
+    "pre": -4.470348358154297e-08,
+    "pre_float64_own_operands": -3.2695254892356473e-08,
+    "pre_over_operand_ulp": 3.0
+   },
+   "index": [
+    16,
+    15,
+    8,
+    49
+   ],
+   "noise_max_abs_pre_diff": 2.7686357498168945e-05,
+   "pre_gpu_minus_cpu": -1.043081283569336e-07
+  },
+  {
+   "abs_pre_over_noise": 0.2077502691065662,
+   "bn_channel": {
+    "bias": -0.3501148819923401,
+    "eps": 1e-05,
+    "mean": -0.26588550209999084,
+    "var": 0.17318038642406464,
+    "weight": 0.4283481538295746
+   },
+   "cpu": {
+    "float64_sign_agrees": true,
+    "grad_post": -9.051122447090165e-07,
+    "grad_pre": -9.051122447090165e-07,
+    "mask": true,
+    "operands": {
+     "bn_input": 0.074271060526371
+    },
+    "pre": 2.652406692504883e-06,
+    "pre_float64_own_operands": 2.6537130046744295e-06,
+    "pre_over_operand_ulp": 356.0
+   },
+   "gpu": {
+    "float64_sign_agrees": true,
+    "grad_post": -9.051045140040515e-07,
+    "grad_pre": -0.0,
+    "mask": false,
+    "operands": {
+     "bn_input": 0.07426290214061737
+    },
+    "pre": -5.751848220825195e-06,
+    "pre_float64_own_operands": -5.743578799233262e-06,
+    "pre_over_operand_ulp": 772.0
+   },
+   "index": [
+    0,
+    0,
+    23,
+    33
+   ],
+   "noise_max_abs_pre_diff": 2.7686357498168945e-05,
+   "pre_gpu_minus_cpu": -8.404254913330078e-06
+  }
+ ],
+ "relu": "blocks.5.relu_inner"
+}

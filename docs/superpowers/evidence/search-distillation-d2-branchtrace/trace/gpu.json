@@ -1,0 +1,39 @@
+{
+ "device": "gpu",
+ "fidelity": {
+  "grads_compared": 60,
+  "grads_equal": true,
+  "logits_equal": true,
+  "ok": true,
+  "terms_equal": true,
+  "values_equal": true
+ },
+ "fixture": {
+  "name": "gpu_record1",
+  "sha256": "df3b5218c1845eb1bbe6b10513059ffe8b22e5e451135bc45c0e8aaf41c9d77f"
+ },
+ "grad_digest": "5e32e291a42156343ca403db562ef6e54ba3d32e8c3119726ba04a20057d24fe",
+ "step1": {
+  "expected": {
+   "grad_digest": "5e32e291a42156343ca403db562ef6e54ba3d32e8c3119726ba04a20057d24fe",
+   "logits_digest": "b399e0a0b02f213fc841cdd964c9805dcbc08555874dba951822a9243b405bc2",
+   "terms": [
+    4.656036376953125,
+    4.563363075256348,
+    0.0
+   ],
+   "values_digest": "01001b805d829c8f4c3d6c001f3db06d80edb8667f2ab687bdcbeed1da6c9744"
+  },
+  "got": {
+   "grad_digest": "5e32e291a42156343ca403db562ef6e54ba3d32e8c3119726ba04a20057d24fe",
+   "logits_digest": "b399e0a0b02f213fc841cdd964c9805dcbc08555874dba951822a9243b405bc2",
+   "terms": [
+    4.656036376953125,
+    4.563363075256348,
+    0.0
+   ],
+   "values_digest": "01001b805d829c8f4c3d6c001f3db06d80edb8667f2ab687bdcbeed1da6c9744"
+  },
+  "ok": true
+ }
+}

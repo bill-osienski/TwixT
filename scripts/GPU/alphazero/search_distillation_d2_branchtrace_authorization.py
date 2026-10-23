@@ -7,4 +7,4 @@ accounts for any branch flips. No optimizer update and no model state saved, but
 GPU and writes fixtures outside the repository, so it takes its own reviewed door. Opened for ONE approved run and
 restored on every exit. Created closed. This file may hold ONLY this declaration.
 """
-SEARCH_DISTILLATION_D2_BRANCHTRACE_AUTHORIZED = True
+SEARCH_DISTILLATION_D2_BRANCHTRACE_AUTHORIZED = False

@@ -1,0 +1,105 @@
+{
+ "both_explained": true,
+ "targets": {
+  "encoder.blocks.1.conv2.weight": {
+   "cpu_original_vs_gpu_original": {
+    "bitwise": false,
+    "max_abs": 0.00024303141981363297,
+    "n_outside": 11,
+    "scale": 0.11763309687376022,
+    "within_tol": false,
+    "worst": {
+     "got": -0.00983169674873352,
+     "index": [
+      42,
+      1,
+      0,
+      73
+     ],
+     "reference": -0.010074728168547153
+    }
+   },
+   "explained": true,
+   "predicted_dG_nonzero": 14884,
+   "predicted_dG_vs_actual_dG": {
+    "bitwise": false,
+    "max_abs": 1.187509042210877e-07,
+    "scale": 0.0002636194685692317,
+    "within_tol": true
+   },
+   "with_flips": {
+    "bitwise": false,
+    "max_abs": 6.963035097812265e-07,
+    "scale": 0.11763309687376022,
+    "within_tol": true
+   },
+   "without_flips": {
+    "bitwise": false,
+    "max_abs": 0.0002430144820801776,
+    "n_outside": 11,
+    "scale": 0.11763309687376022,
+    "within_tol": false,
+    "worst": {
+     "got": -0.009831713686466976,
+     "index": [
+      42,
+      1,
+      0,
+      73
+     ],
+     "reference": -0.010074728168547153
+    }
+   }
+  },
+  "encoder.blocks.2.conv2.weight": {
+   "cpu_original_vs_gpu_original": {
+    "bitwise": false,
+    "max_abs": 0.0003393888473510742,
+    "n_outside": 5,
+    "scale": 0.21461713314056396,
+    "within_tol": false,
+    "worst": {
+     "got": -0.05759405344724655,
+     "index": [
+      42,
+      1,
+      1,
+      33
+     ],
+     "reference": -0.057933442294597626
+    }
+   },
+   "explained": true,
+   "predicted_dG_nonzero": 8798,
+   "predicted_dG_vs_actual_dG": {
+    "bitwise": false,
+    "max_abs": 1.0956136975437403e-07,
+    "scale": 0.0002915410150308162,
+    "within_tol": true
+   },
+   "with_flips": {
+    "bitwise": false,
+    "max_abs": 8.35753605307743e-07,
+    "scale": 0.21461713314056396,
+    "within_tol": true
+   },
+   "without_flips": {
+    "bitwise": false,
+    "max_abs": 0.0003395404540408112,
+    "n_outside": 5,
+    "scale": 0.21461713314056396,
+    "within_tol": false,
+    "worst": {
+     "got": -0.057593901840556815,
+     "index": [
+      42,
+      1,
+      1,
+      33
+     ],
+     "reference": -0.057933442294597626
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,810 @@
+{
+ "accounting": {
+  "encoder.blocks.1.conv2.weight": {
+   "explained": true,
+   "with_flips": {
+    "bitwise": false,
+    "max_abs": 6.963035097812265e-07,
+    "scale": 0.11763309687376022,
+    "within_tol": true
+   },
+   "without_flips": {
+    "bitwise": false,
+    "max_abs": 0.0002430144820801776,
+    "n_outside": 11,
+    "scale": 0.11763309687376022,
+    "within_tol": false,
+    "worst": {
+     "got": -0.009831713686466976,
+     "index": [
+      42,
+      1,
+      0,
+      73
+     ],
+     "reference": -0.010074728168547153
+    }
+   }
+  },
+  "encoder.blocks.2.conv2.weight": {
+   "explained": true,
+   "with_flips": {
+    "bitwise": false,
+    "max_abs": 8.35753605307743e-07,
+    "scale": 0.21461713314056396,
+    "within_tol": true
+   },
+   "without_flips": {
+    "bitwise": false,
+    "max_abs": 0.0003395404540408112,
+    "n_outside": 5,
+    "scale": 0.21461713314056396,
+    "within_tol": false,
+    "worst": {
+     "got": -0.057593901840556815,
+     "index": [
+      42,
+      1,
+      1,
+      33
+     ],
+     "reference": -0.057933442294597626
+    }
+   }
+  }
+ },
+ "batch_draw": [
+  3559,
+  1628,
+  5283,
+  2638,
+  5682,
+  550,
+  2447,
+  4952,
+  1675,
+  474,
+  5513,
+  4153,
+  1005,
+  4196,
+  2698,
+  5454,
+  1620,
+  6331,
+  925,
+  296,
+  356,
+  1600,
+  2998,
+  610,
+  2888,
+  3100,
+  3222,
+  6223,
+  2661,
+  2999,
+  2722,
+  1566,
+  3421,
+  1830,
+  6097,
+  4146,
+  2156,
+  4789,
+  5618,
+  2017,
+  5493,
+  5332,
+  838,
+  555,
+  485,
+  6119,
+  3879,
+  1023,
+  2564,
+  4906,
+  4862,
+  1193,
+  3755,
+  2529,
+  2470,
+  2687,
+  183,
+  2574,
+  5308,
+  1290,
+  3908,
+  1807,
+  3299,
+  192
+ ],
+ "card": "docs/superpowers/2026-10-23-search-distillation-d2-branch-trace-card.md",
+ "card_sha256": "b2166516916326aacb8e97d24692cae0b6c656596d78de1c2597880aed4c25a3",
+ "causal_claims": null,
+ "checkpoint": {
+  "path": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e"
+ },
+ "corpus": {
+  "corpus_dir": "/Users/bill/twixt-cache/search-distillation-d2/corpus-20261022T162940Z",
+  "corpus_json_sha256": "a9a425f28c296e36ba334e55bcd26c56164e982145f11a09427436f5351edeb0",
+  "files_opened": [
+   "phase_00/finalized.json",
+   "phase_00/context.json",
+   "phase_00/receipts.jsonl",
+   "phase_00/games/game_0.json",
+   "phase_00/games/game_1.json",
+   "phase_00/games/game_2.json",
+   "phase_00/games/game_3.json",
+   "phase_00/games/game_4.json",
+   "phase_00/games/game_5.json",
+   "phase_00/games/game_6.json",
+   "phase_00/games/game_7.json",
+   "phase_00/games/game_8.json",
+   "phase_01/finalized.json",
+   "phase_01/context.json",
+   "phase_01/receipts.jsonl",
+   "phase_01/games/game_10.json",
+   "phase_01/games/game_11.json",
+   "phase_01/games/game_12.json",
+   "phase_01/games/game_13.json",
+   "phase_01/games/game_14.json",
+   "phase_01/games/game_15.json",
+   "phase_01/games/game_16.json",
+   "phase_01/games/game_17.json",
+   "phase_01/games/game_18.json",
+   "phase_02/finalized.json",
+   "phase_02/context.json",
+   "phase_02/receipts.jsonl",
+   "phase_02/games/game_20.json",
+   "phase_02/games/game_21.json",
+   "phase_02/games/game_22.json",
+   "phase_02/games/game_23.json",
+   "phase_02/games/game_24.json",
+   "phase_02/games/game_25.json",
+   "phase_02/games/game_26.json",
+   "phase_02/games/game_27.json",
+   "phase_02/games/game_28.json",
+   "phase_03/finalized.json",
+   "phase_03/context.json",
+   "phase_03/receipts.jsonl",
+   "phase_03/games/game_30.json",
+   "phase_03/games/game_31.json",
+   "phase_03/games/game_32.json",
+   "phase_03/games/game_33.json",
+   "phase_03/games/game_34.json",
+   "phase_03/games/game_35.json",
+   "phase_03/games/game_36.json",
+   "phase_03/games/game_37.json",
+   "phase_03/games/game_38.json",
+   "phase_04/finalized.json",
+   "phase_04/context.json",
+   "phase_04/receipts.jsonl",
+   "phase_04/games/game_40.json",
+   "phase_04/games/game_41.json",
+   "phase_04/games/game_42.json",
+   "phase_04/games/game_43.json",
+   "phase_04/games/game_44.json",
+   "phase_04/games/game_45.json",
+   "phase_04/games/game_46.json",
+   "phase_04/games/game_47.json",
+   "phase_04/games/game_48.json",
+   "phase_05/finalized.json",
+   "phase_05/context.json",
+   "phase_05/receipts.jsonl",
+   "phase_05/games/game_50.json",
+   "phase_05/games/game_51.json",
+   "phase_05/games/game_52.json",
+   "phase_05/games/game_53.json",
+   "phase_05/games/game_54.json",
+   "phase_05/games/game_55.json",
+   "phase_05/games/game_56.json",
+   "phase_05/games/game_57.json",
+   "phase_05/games/game_58.json",
+   "phase_06/finalized.json",
+   "phase_06/context.json",
+   "phase_06/receipts.jsonl",
+   "phase_06/games/game_60.json",
+   "phase_06/games/game_61.json",
+   "phase_06/games/game_62.json",
+   "phase_06/games/game_63.json",
+   "phase_06/games/game_64.json",
+   "phase_06/games/game_65.json",
+   "phase_06/games/game_66.json",
+   "phase_06/games/game_67.json",
+   "phase_06/games/game_68.json",
+   "phase_07/finalized.json",
+   "phase_07/context.json",
+   "phase_07/receipts.jsonl",
+   "phase_07/games/game_70.json",
+   "phase_07/games/game_71.json",
+   "phase_07/games/game_72.json",
+   "phase_07/games/game_73.json",
+   "phase_07/games/game_74.json",
+   "phase_07/games/game_75.json",
+   "phase_07/games/game_76.json",
+   "phase_07/games/game_77.json",
+   "phase_07/games/game_78.json",
+   "phase_08/finalized.json",
+   "phase_08/context.json",
+   "phase_08/receipts.jsonl",
+   "phase_08/games/game_80.json",
+   "phase_08/games/game_81.json",
+   "phase_08/games/game_82.json",
+   "phase_08/games/game_83.json",
+   "phase_08/games/game_84.json",
+   "phase_08/games/game_85.json",
+   "phase_08/games/game_86.json",
+   "phase_08/games/game_87.json",
+   "phase_08/games/game_88.json",
+   "phase_09/finalized.json",
+   "phase_09/context.json",
+   "phase_09/receipts.jsonl",
+   "phase_09/games/game_90.json",
+   "phase_09/games/game_91.json",
+   "phase_09/games/game_92.json",
+   "phase_09/games/game_93.json",
+   "phase_09/games/game_94.json",
+   "phase_09/games/game_95.json",
+   "phase_09/games/game_96.json",
+   "phase_09/games/game_97.json",
+   "phase_09/games/game_98.json",
+   "phase_10/finalized.json",
+   "phase_10/context.json",
+   "phase_10/receipts.jsonl",
+   "phase_10/games/game_100.json",
+   "phase_10/games/game_101.json",
+   "phase_10/games/game_102.json",
+   "phase_10/games/game_103.json",
+   "phase_10/games/game_104.json",
+   "phase_10/games/game_105.json",
+   "phase_10/games/game_106.json",
+   "phase_10/games/game_107.json",
+   "phase_10/games/game_108.json",
+   "phase_11/finalized.json",
+   "phase_11/context.json",
+   "phase_11/receipts.jsonl",
+   "phase_11/games/game_110.json",
+   "phase_11/games/game_111.json",
+   "phase_11/games/game_112.json",
+   "phase_11/games/game_113.json",
+   "phase_11/games/game_114.json",
+   "phase_11/games/game_115.json",
+   "phase_11/games/game_116.json",
+   "phase_11/games/game_117.json",
+   "phase_11/games/game_118.json"
+  ],
+  "held_out_games_never_opened": [
+   9,
+   19,
+   29,
+   39,
+   49,
+   59,
+   69,
+   79,
+   89,
+   99,
+   109,
+   119
+  ],
+  "phases": [
+   {
+    "dir": "phase_00",
+    "training_games": 9,
+    "training_records": 509
+   },
+   {
+    "dir": "phase_01",
+    "training_games": 9,
+    "training_records": 530
+   },
+   {
+    "dir": "phase_02",
+    "training_games": 9,
+    "training_records": 438
+   },
+   {
+    "dir": "phase_03",
+    "training_games": 9,
+    "training_records": 472
+   },
+   {
+    "dir": "phase_04",
+    "training_games": 9,
+    "training_records": 757
+   },
+   {
+    "dir": "phase_05",
+    "training_games": 9,
+    "training_records": 438
+   },
+   {
+    "dir": "phase_06",
+    "training_games": 9,
+    "training_records": 447
+   },
+   {
+    "dir": "phase_07",
+    "training_games": 9,
+    "training_records": 475
+   },
+   {
+    "dir": "phase_08",
+    "training_games": 9,
+    "training_records": 520
+   },
+   {
+    "dir": "phase_09",
+    "training_games": 9,
+    "training_records": 500
+   },
+   {
+    "dir": "phase_10",
+    "training_games": 9,
+    "training_records": 834
+   },
+   {
+    "dir": "phase_11",
+    "training_games": 9,
+    "training_records": 483
+   }
+  ],
+  "training_games": [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   10,
+   11,
+   12,
+   13,
+   14,
+   15,
+   16,
+   17,
+   18,
+   20,
+   21,
+   22,
+   23,
+   24,
+   25,
+   26,
+   27,
+   28,
+   30,
+   31,
+   32,
+   33,
+   34,
+   35,
+   36,
+   37,
+   38,
+   40,
+   41,
+   42,
+   43,
+   44,
+   45,
+   46,
+   47,
+   48,
+   50,
+   51,
+   52,
+   53,
+   54,
+   55,
+   56,
+   57,
+   58,
+   60,
+   61,
+   62,
+   63,
+   64,
+   65,
+   66,
+   67,
+   68,
+   70,
+   71,
+   72,
+   73,
+   74,
+   75,
+   76,
+   77,
+   78,
+   80,
+   81,
+   82,
+   83,
+   84,
+   85,
+   86,
+   87,
+   88,
+   90,
+   91,
+   92,
+   93,
+   94,
+   95,
+   96,
+   97,
+   98,
+   100,
+   101,
+   102,
+   103,
+   104,
+   105,
+   106,
+   107,
+   108,
+   110,
+   111,
+   112,
+   113,
+   114,
+   115,
+   116,
+   117,
+   118
+  ],
+  "training_ids_sha256": "e90df4d31214eb95d496eb1f30a3945f1aa38b938e44ae0e139600d859cfe07d",
+  "training_records": 6403
+ },
+ "diagnostic": true,
+ "elapsed_is_a_benchmark": false,
+ "entry32_verdict": "FAIL at phase 2 (unchanged)",
+ "environment": {
+  "executable": "/Users/bill/projects/TwixT_Game/.venv/bin/python",
+  "numpy": "2.4.1",
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "python": "3.14.9 (main, Oct 21 2026, 06:02:15) [Clang 21.0.0 (clang-2100.3.34.2)]"
+ },
+ "files": [
+  "trace/cpu.json",
+  "trace/gpu.json",
+  "stages/stem.relu.json",
+  "stages/blocks.0.relu_inner.json",
+  "stages/blocks.0.relu_outer.json",
+  "stages/blocks.1.relu_inner.json",
+  "stages/blocks.1.relu_outer.json",
+  "stages/blocks.2.relu_inner.json",
+  "stages/blocks.2.relu_outer.json",
+  "stages/blocks.3.relu_inner.json",
+  "stages/blocks.3.relu_outer.json",
+  "stages/blocks.4.relu_inner.json",
+  "stages/blocks.4.relu_outer.json",
+  "stages/blocks.5.relu_inner.json",
+  "stages/blocks.5.relu_outer.json",
+  "walk.json",
+  "focus.json",
+  "accounting.json"
+ ],
+ "fixture_dir": "/Users/bill/twixt-cache/search-distillation-d2/branchtrace-fixtures-20261023T210537Z",
+ "fixtures": [
+  {
+   "bytes": 12050603,
+   "name": "cpu_record1",
+   "path": "/Users/bill/twixt-cache/search-distillation-d2/branchtrace-fixtures-20261023T210537Z/cpu_record1.npz",
+   "sha256": "06e4754b90eb2b4c72d83fbe9e95bc812dfa011bc43aae331c9f5c15af230c58"
+  },
+  {
+   "bytes": 12040923,
+   "name": "gpu_record1",
+   "path": "/Users/bill/twixt-cache/search-distillation-d2/branchtrace-fixtures-20261023T210537Z/gpu_record1.npz",
+   "sha256": "df3b5218c1845eb1bbe6b10513059ffe8b22e5e451135bc45c0e8aaf41c9d77f"
+  }
+ ],
+ "flips": {
+  "blocks.0.relu_inner": {
+   "count": 0,
+   "focus_flip": false
+  },
+  "blocks.0.relu_outer": {
+   "count": 1,
+   "focus_flip": false
+  },
+  "blocks.1.relu_inner": {
+   "count": 0,
+   "focus_flip": false
+  },
+  "blocks.1.relu_outer": {
+   "count": 0,
+   "focus_flip": false
+  },
+  "blocks.2.relu_inner": {
+   "count": 1,
+   "focus_flip": false
+  },
+  "blocks.2.relu_outer": {
+   "count": 3,
+   "focus_flip": true
+  },
+  "blocks.3.relu_inner": {
+   "count": 0,
+   "focus_flip": false
+  },
+  "blocks.3.relu_outer": {
+   "count": 0,
+   "focus_flip": false
+  },
+  "blocks.4.relu_inner": {
+   "count": 2,
+   "focus_flip": false
+  },
+  "blocks.4.relu_outer": {
+   "count": 3,
+   "focus_flip": false
+  },
+  "blocks.5.relu_inner": {
+   "count": 3,
+   "focus_flip": false
+  },
+  "blocks.5.relu_outer": {
+   "count": 1,
+   "focus_flip": false
+  },
+  "stem.relu": {
+   "count": 0,
+   "focus_flip": false
+  }
+ },
+ "head": "e20ae7c435e4eadc63e904d8d3bcf520145d9d2f",
+ "held_out_records_read": 0,
+ "kind": "search-distillation-d2-branchtrace-record/1",
+ "loadavg_after": [
+  3.927734375,
+  2.51904296875,
+  1.9541015625
+ ],
+ "loadavg_before": [
+  2.2763671875,
+  2.14892578125,
+  1.818359375
+ ],
+ "local_checks": {
+  "cpu": {
+   "backward_failures": [],
+   "forward_failures": []
+  },
+  "gpu": {
+   "backward_failures": [],
+   "forward_failures": []
+  }
+ },
+ "mlx": "0.30.3",
+ "model_state_saved": false,
+ "modules": {
+  "scripts/GPU/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "scripts/GPU/alphazero/__init__.py": "c6f13806151399f9e6be707271537b166ec79ba9729d8339800127c826adc4ab",
+  "scripts/GPU/alphazero/connectivity_diagnostics.py": "77a63a54c0f1c17cb2814061a04331402f120c14562d042119b3c390eba6ea78",
+  "scripts/GPU/alphazero/curriculum.py": "8992d18e124014db89dfc560479170a0400e55e75211677bd67bb70ee2d833e9",
+  "scripts/GPU/alphazero/e4_screen_reference.py": "dd89a6804ae1879fa0eedc34c3e066f443238fa1c80142ab28a19435df0b8528",
+  "scripts/GPU/alphazero/evaluator.py": "043388192eaeb55eda58057d5f15160866b7ba0ecd8d117ff4e913f00327d8c2",
+  "scripts/GPU/alphazero/game/__init__.py": "b8cba656f4cdd17ca1fce240224623d2ed631904a035425a30ef4a7be2069122",
+  "scripts/GPU/alphazero/game/twixt_state.py": "291275223b71b522a19181ae33a34518c0ca3c8f585275770f4c72e651cba5e2",
+  "scripts/GPU/alphazero/game_saver.py": "7311ca2ae8773bcf7056d86eb4e4bdc64aadd4977bb72b8bcb349155d372065c",
+  "scripts/GPU/alphazero/inheritance_probe.py": "d8e073b8303d5db5f43a5613f82aff6a9cc1a0bc6249e7a312fec73242688203",
+  "scripts/GPU/alphazero/local_evaluator.py": "7fbeb49d3eb210fae4c74098a29e257b34916d8837f6735cd875c3184447ea4e",
+  "scripts/GPU/alphazero/mcts.py": "0769b22ae47923da2600584da1bcf7c955bb975f0bd4985d7d11605d5196050f",
+  "scripts/GPU/alphazero/network.py": "81465fe7106d4d7161cc5bdaf2b00a002ac337a77aff5d354a3bcd26986873bc",
+  "scripts/GPU/alphazero/opening_diagnostics.py": "03e40f0ea8110f194bb94b6f99b03b7aa367937882bf9c9cd5de57adc5a13106",
+  "scripts/GPU/alphazero/probe_eval.py": "e2a2943604d6b3efd5f4c3edac2c8c547b4ebe8b04e1cbf5a0b47b4f3d9a0a25",
+  "scripts/GPU/alphazero/recovery_retargeting_diagnostics.py": "25f36b6df0295c5d3baf27a07f0a2be9faebe9df0eb1a2ff53f06454d6ee32ea",
+  "scripts/GPU/alphazero/search_distillation_d2.py": "bc8fd0c80fc533f50273ebda60c81375c5131d068a70344e07afef9a73617be9",
+  "scripts/GPU/alphazero/search_distillation_d2_branchtrace_authorization.py": "12c8d23270cc3630ebbf1c706735017ed19d3bb0889726888985e0caa9448a10",
+  "scripts/GPU/alphazero/search_distillation_d2_convref.py": "1a399d8a9d972a0aafdd51849709462cb118e0797bb03b14742695de2a2621b6",
+  "scripts/GPU/alphazero/search_distillation_d2_convref_authorization.py": "2f9b44a3e3e2a47cdc28e82e011cb451436597c1472f5ea60b89a217c35fb0ca",
+  "scripts/GPU/alphazero/search_distillation_d2_generate.py": "38b0aba68d9cef583f5e8af118ba1ffc6361bf8851fcdbafa90d268de4cab347",
+  "scripts/GPU/alphazero/search_distillation_d2_generate_authorization.py": "dc6ab2f3584eb2a3572b6f28e3990d61a99c016c1fcea473b81b79a9a72e82e9",
+  "scripts/GPU/alphazero/search_distillation_d2_gradcheck.py": "4ba735994e4e559bd1be655b0c6800f18a7ff7ac8ecad29b7a5119c79063d14e",
+  "scripts/GPU/alphazero/search_distillation_d2_gradcheck_authorization.py": "754d934895867a196b83365ca8df734024d8db5a0654abebe585eb5ed100a835",
+  "scripts/GPU/alphazero/search_distillation_d2_gradrepeat.py": "2ee88e9e353c99595682b4d49ac47691181316dc7977576356205964675b8d24",
+  "scripts/GPU/alphazero/search_distillation_d2_gradrepeat_authorization.py": "4ccc65ea82d825ab2c0bdb4938a7d996565b9aed3991d1e86a7d734e20b9b6da",
+  "scripts/GPU/alphazero/search_distillation_d2_gradtrace.py": "85b84b074b3359be938fe3e40cc2849ce2b1f7e6db88b909a784b625e3e35c97",
+  "scripts/GPU/alphazero/search_distillation_d2_gradtrace_authorization.py": "51d9c328c708d4d555d1dc30755c49db01e5eeb36e13c62f5c148bb053f5434f",
+  "scripts/GPU/alphazero/search_distillation_d2_measure.py": "c2ecd81d7939a3879895b8bdfb36221c5cedecc616c345a37d4ef26f03b30669",
+  "scripts/GPU/alphazero/search_distillation_d2_measure_authorization.py": "d01a9d09970d4803e49c1fac70c595fc22955ff77d0221eb43690d91078ac8d2",
+  "scripts/GPU/alphazero/search_distillation_d2_tf32path.py": "8afaf9d097e1beb14cc2fa93c6c2c42325dde8dfa4eb6da8e9d701a866371762",
+  "scripts/GPU/alphazero/search_distillation_d2_tf32path_authorization.py": "70a407ca1ec5ae62cac22307a22d90396667c584d4aaecd408474b90d84683c7",
+  "scripts/GPU/alphazero/search_distillation_d2_train.py": "1988e08871a2bdedc4128ca9eef2353aa32f395ba6fadda3558c4157473fcb3f",
+  "scripts/GPU/alphazero/search_distillation_d2_train_authorization.py": "44f84e2cf671b0c6665e8951ef0189d117defa4d0b0b479550cb6ab664bc845a",
+  "scripts/GPU/alphazero/self_play.py": "c7019373aacde3e22656278d99380fdf8e0c26466549e6521cda791fddfe9394",
+  "scripts/GPU/alphazero/trainer.py": "cf89dfafc10f85dd881c87732bc5bc0b90b43d9f3b35e694805e6ca75fad81db",
+  "scripts/GPU/alphazero/training_replay_capture.py": "b58765b13f798133fb685ae4599f4b32d9f262d7659a402f44c10600f8974f32",
+  "scripts/GPU/alphazero/twixtbot_g3_reference.py": "f68af1525d7997467904e2dfe7ea8aaf5400fffce3e5513625643ec442e3e55e",
+  "scripts/GPU/alphazero/twixtbot_g3_schedule.py": "7624c4e61c8ca5cba7641a641d74800c4c2a6d8e6c1ffb13115bed177b92a600"
+ },
+ "optimizer_updates": 0,
+ "outcome": "BRANCH_CHANGE",
+ "recipe": {
+  "anchor_weight": 1.0,
+  "batch_size": 64,
+  "clip_norm": 1.0,
+  "l2_weight": 0.0001,
+  "learning_rate": 0.0001,
+  "seed": 0,
+  "steps": 401
+ },
+ "self_check": {
+  "adjoint_input_grad": {
+   "abs_diff": 5.551115123125783e-17,
+   "lhs": -0.2716785363718656,
+   "ok": true,
+   "rhs": -0.27167853637186556
+  },
+  "block": 2
+ },
+ "setting": {
+  "MLX_ENABLE_TF32": "0"
+ },
+ "setting_at_end": {
+  "MLX_ENABLE_TF32": "0"
+ },
+ "spec": {
+  "adjoint_rel_tol": 1e-09,
+  "anchor_weight": 1.0,
+  "batch": 0,
+  "batch_size": 64,
+  "clip_norm": 1.0,
+  "corpus_sha256": "a9a425f28c296e36ba334e55bcd26c56164e982145f11a09427436f5351edeb0",
+  "cross_abs_tol": 1e-06,
+  "cross_rel_tol": 0.001,
+  "devices": [
+   "cpu",
+   "gpu"
+  ],
+  "direction_seed": 0,
+  "elements_recorded": 64,
+  "fixture_record": 1,
+  "flips_recorded": 64,
+  "focus": [
+   1,
+   13,
+   4,
+   42
+  ],
+  "held_out_games": 12,
+  "l2_weight": 0.0001,
+  "learning_rate": 0.0001,
+  "passes": 4,
+  "seed": 0,
+  "state": "S0",
+  "steps": 401,
+  "targets": [
+   "encoder.blocks.1.conv2.weight",
+   "encoder.blocks.2.conv2.weight"
+  ],
+  "teacher_digest": "ae0e71fc395ce6b95d24f9e696f02870c7b3bfc6f8ea83f9d5d0a85c4979816b",
+  "training_games": 108,
+  "training_ids_sha256": "e90df4d31214eb95d496eb1f30a3945f1aa38b938e44ae0e139600d859cfe07d",
+  "training_records": 6403
+ },
+ "status": "COMPLETED",
+ "step1": {
+  "cpu": {
+   "expected": {
+    "grad_digest": "3d49eeb12c2ddb618ba8194aadcd40be8ac36ce010e70ebc883db00cb8fa63b5",
+    "logits_digest": "e1657a407942f6b67e39502e852bafaf0de8a86ca08c5488df20107851d38023",
+    "terms": [
+     4.656035423278809,
+     4.5633625984191895,
+     9.026216406249343e-12
+    ],
+    "values_digest": "b6f57f8f31c33039127d2de8391046e6ee6a4cdc6244ea2206a9f88c7bd4c5d1"
+   },
+   "got": {
+    "grad_digest": "3d49eeb12c2ddb618ba8194aadcd40be8ac36ce010e70ebc883db00cb8fa63b5",
+    "logits_digest": "e1657a407942f6b67e39502e852bafaf0de8a86ca08c5488df20107851d38023",
+    "terms": [
+     4.656035423278809,
+     4.5633625984191895,
+     9.026216406249343e-12
+    ],
+    "values_digest": "b6f57f8f31c33039127d2de8391046e6ee6a4cdc6244ea2206a9f88c7bd4c5d1"
+   },
+   "ok": true
+  },
+  "gpu": {
+   "expected": {
+    "grad_digest": "5e32e291a42156343ca403db562ef6e54ba3d32e8c3119726ba04a20057d24fe",
+    "logits_digest": "b399e0a0b02f213fc841cdd964c9805dcbc08555874dba951822a9243b405bc2",
+    "terms": [
+     4.656036376953125,
+     4.563363075256348,
+     0.0
+    ],
+    "values_digest": "01001b805d829c8f4c3d6c001f3db06d80edb8667f2ab687bdcbeed1da6c9744"
+   },
+   "got": {
+    "grad_digest": "5e32e291a42156343ca403db562ef6e54ba3d32e8c3119726ba04a20057d24fe",
+    "logits_digest": "b399e0a0b02f213fc841cdd964c9805dcbc08555874dba951822a9243b405bc2",
+    "terms": [
+     4.656036376953125,
+     4.563363075256348,
+     0.0
+    ],
+    "values_digest": "01001b805d829c8f4c3d6c001f3db06d80edb8667f2ab687bdcbeed1da6c9744"
+   },
+   "ok": true
+  },
+  "ok": true,
+  "targets_gpu_vs_cpu": {
+   "encoder.blocks.1.conv2.weight": {
+    "bitwise": false,
+    "max_abs": 0.00024303141981363297,
+    "n_outside": 11,
+    "scale": 0.11762849986553192,
+    "within_tol": false,
+    "worst": {
+     "got": -0.010074728168547153,
+     "index": [
+      42,
+      1,
+      0,
+      73
+     ],
+     "reference": -0.00983169674873352
+    }
+   },
+   "encoder.blocks.2.conv2.weight": {
+    "bitwise": false,
+    "max_abs": 0.0003393888473510742,
+    "n_outside": 5,
+    "scale": 0.21460981667041779,
+    "within_tol": false,
+    "worst": {
+     "got": -0.057933442294597626,
+     "index": [
+      42,
+      1,
+      1,
+      33
+     ],
+     "reference": -0.05759405344724655
+    }
+   }
+  }
+ },
+ "step2": {
+  "cpu": {
+   "faithful": true
+  },
+  "gpu": {
+   "faithful": true
+  }
+ },
+ "strength_verdict": null,
+ "teacher_values": {
+  "digest": "abe2873a0b06c8412bd947c32d01ec2b354f1dd8e2c09f039c2470c52ffcb37c",
+  "entry33_digest": "abe2873a0b06c8412bd947c32d01ec2b354f1dd8e2c09f039c2470c52ffcb37c",
+  "equals_entry33": true
+ },
+ "total_seconds": 11.871,
+ "walk_entry": {
+  "n_outside": 1,
+  "outside": [
+   [
+    52,
+    17,
+    7,
+    48
+   ]
+  ],
+  "point": "blocks.4.s"
+ },
+ "written_by": "script"
+}
