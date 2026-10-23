@@ -2,7 +2,13 @@
 
 The public entry is tested in the REAL state: the gate open (monkeypatched, never edited), the pinned card and
 generator, the frozen SPEC end to end, with the "gpu" label remapped to the CPU and both outputs redirected to
-tmp_path. No GPU computation runs here."""
+tmp_path. No GPU computation runs here.
+
+🔴 EVERY TEST IS ISOLATED, NOT ONLY THE ONES THAT OPEN THE GATE. The first build isolated only the gate-open tests.
+Under the injected defect "gate unchecked", the closed-gate test reached the real entry with the real devices and
+paths: the full frozen probe ran on the GPU inside the control worktree and left a compact example in the real
+~/twixt-cache (ledger, post-closure entry 28). So the autouse fixture below remaps the devices to the CPU and
+redirects both outputs for every test, whatever the gate says."""
 import json
 import re
 
@@ -13,10 +19,9 @@ from scripts.GPU.alphazero import search_distillation_d2_mlxrows as E
 from scripts.GPU.alphazero import search_distillation_d2_mlxrows_authorization as GATE
 
 
-@pytest.fixture
-def opened(monkeypatch, tmp_path):
+@pytest.fixture(autouse=True)
+def isolated(monkeypatch, tmp_path):
     import mlx.core as mx
-    monkeypatch.setattr(GATE, "SEARCH_DISTILLATION_D2_MLXROWS_AUTHORIZED", True)
     monkeypatch.setattr(P, "DEVICES", {"gpu": mx.cpu, "cpu": mx.cpu})
     monkeypatch.setattr(E, "EVIDENCE_DIR", str(tmp_path / "evidence"))
     (tmp_path / "cache").mkdir()
@@ -24,10 +29,23 @@ def opened(monkeypatch, tmp_path):
     return tmp_path
 
 
-def test_THE_GATE_IS_CLOSED_IN_THE_SOURCE_and_a_closed_gate_refuses(capsys):
+@pytest.fixture
+def opened(monkeypatch, isolated):
+    monkeypatch.setattr(GATE, "SEARCH_DISTILLATION_D2_MLXROWS_AUTHORIZED", True)
+    return isolated
+
+
+def test_THE_GATE_IS_CLOSED_IN_THE_SOURCE_and_a_closed_gate_refuses(isolated, capsys):
     assert GATE.SEARCH_DISTILLATION_D2_MLXROWS_AUTHORIZED is False
     assert E.main(["run"]) == 4
     assert "is closed" in capsys.readouterr().err
+    assert not (isolated / "evidence").exists() and list((isolated / "cache").iterdir()) == []
+
+
+def test_NO_TEST_HERE_CAN_REACH_THE_REAL_DEVICES_OR_PATHS(isolated):
+    import mlx.core as mx
+    assert P.DEVICES == {"gpu": mx.cpu, "cpu": mx.cpu}
+    assert E.OUTPUT_PARENT == isolated / "cache" and E.EVIDENCE_DIR == str(isolated / "evidence")
 
 
 def test_ANYTHING_BUT_run_IS_USAGE():
