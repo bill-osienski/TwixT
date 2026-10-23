@@ -1,0 +1,349 @@
+{
+ "case": "padding",
+ "devices": {
+  "cpu": {
+   "additivity_vs_full": {
+    "F": {
+     "bitwise": true,
+     "max_abs": 0.0,
+     "scale": 0.004431036300957203,
+     "within_tol": true
+    },
+    "bn.bias": {
+     "bitwise": true,
+     "max_abs": 0.0,
+     "scale": 0.007311422377824783,
+     "within_tol": true
+    },
+    "bn.weight": {
+     "bitwise": false,
+     "max_abs": 2.3283064365386963e-10,
+     "scale": 0.0042691584676504135,
+     "within_tol": true
+    },
+    "conv.bias": {
+     "bitwise": false,
+     "max_abs": 4.656612873077393e-10,
+     "scale": 0.006892845965921879,
+     "within_tol": true
+    },
+    "conv.weight": {
+     "bitwise": false,
+     "max_abs": 6.984919309616089e-10,
+     "scale": 0.021840965375304222,
+     "within_tol": true
+    },
+    "fc.bias": {
+     "bitwise": false,
+     "max_abs": 1.7462298274040222e-10,
+     "scale": 0.004624303430318832,
+     "within_tol": true
+    },
+    "fc.weight": {
+     "bitwise": false,
+     "max_abs": 1.7462298274040222e-10,
+     "scale": 0.0049605113454163074,
+     "within_tol": true
+    },
+    "out.bias": {
+     "bitwise": true,
+     "max_abs": 0.0,
+     "scale": 1.1175870895385742e-08,
+     "within_tol": true
+    },
+    "out.weight": {
+     "bitwise": false,
+     "max_abs": 1.6298145055770874e-09,
+     "scale": 0.014763785526156425,
+     "within_tol": true
+    }
+   },
+   "disagrees": false,
+   "loss": [
+    0.7644212245941162,
+    0.7644212245941162,
+    0.7644212245941162
+   ],
+   "loss_vs_numpy": {
+    "bitwise": false,
+    "max_abs": 2.399195508928642e-09,
+    "scale": 0.7644212221949207,
+    "within_tol": true
+   },
+   "repeats": {
+    "F": [
+     true,
+     true
+    ],
+    "bn.bias": [
+     true,
+     true
+    ],
+    "bn.weight": [
+     true,
+     true
+    ],
+    "conv.bias": [
+     true,
+     true
+    ],
+    "conv.weight": [
+     true,
+     true
+    ],
+    "fc.bias": [
+     true,
+     true
+    ],
+    "fc.weight": [
+     true,
+     true
+    ],
+    "out.bias": [
+     true,
+     true
+    ],
+    "out.weight": [
+     true,
+     true
+    ]
+   },
+   "vs_numpy": {
+    "F": {
+     "bitwise": false,
+     "max_abs": 6.877693332386914e-10,
+     "scale": 0.004431036481866671,
+     "within_tol": true
+    },
+    "bn.bias": {
+     "bitwise": false,
+     "max_abs": 1.0502537966909642e-09,
+     "scale": 0.007311421537663229,
+     "within_tol": true
+    },
+    "bn.weight": {
+     "bitwise": false,
+     "max_abs": 1.6039569253941538e-09,
+     "scale": 0.004269157580199136,
+     "within_tol": true
+    },
+    "conv.bias": {
+     "bitwise": false,
+     "max_abs": 5.437524681819322e-10,
+     "scale": 0.006892845491769436,
+     "within_tol": true
+    },
+    "conv.weight": {
+     "bitwise": false,
+     "max_abs": 2.408419887134361e-09,
+     "scale": 0.02184096778372411,
+     "within_tol": true
+    },
+    "fc.bias": {
+     "bitwise": false,
+     "max_abs": 2.7882935287916466e-09,
+     "scale": 0.0046243042772190265,
+     "within_tol": true
+    },
+    "fc.weight": {
+     "bitwise": false,
+     "max_abs": 1.3930699102951416e-09,
+     "scale": 0.0049605122380455,
+     "within_tol": true
+    },
+    "out.bias": {
+     "bitwise": false,
+     "max_abs": 1.1175870888446848e-08,
+     "scale": 6.938893903907228e-18,
+     "within_tol": true
+    },
+    "out.weight": {
+     "bitwise": false,
+     "max_abs": 1.1764049272916521e-08,
+     "scale": 0.014763785471171886,
+     "within_tol": true
+    }
+   }
+  },
+  "gpu": {
+   "additivity_vs_full": {
+    "F": {
+     "bitwise": true,
+     "max_abs": 0.0,
+     "scale": 0.004426563158631325,
+     "within_tol": true
+    },
+    "bn.bias": {
+     "bitwise": true,
+     "max_abs": 0.0,
+     "scale": 0.007306989282369614,
+     "within_tol": true
+    },
+    "bn.weight": {
+     "bitwise": false,
+     "max_abs": 2.3283064365386963e-10,
+     "scale": 0.004267048090696335,
+     "within_tol": true
+    },
+    "conv.bias": {
+     "bitwise": false,
+     "max_abs": 2.3283064365386963e-10,
+     "scale": 0.0068886661902070045,
+     "within_tol": true
+    },
+    "conv.weight": {
+     "bitwise": false,
+     "max_abs": 4.656612873077393e-10,
+     "scale": 0.021815761923789978,
+     "within_tol": true
+    },
+    "fc.bias": {
+     "bitwise": true,
+     "max_abs": 0.0,
+     "scale": 0.004620124585926533,
+     "within_tol": true
+    },
+    "fc.weight": {
+     "bitwise": false,
+     "max_abs": 1.1641532182693481e-10,
+     "scale": 0.004953691270202398,
+     "within_tol": true
+    },
+    "out.bias": {
+     "bitwise": true,
+     "max_abs": 0.0,
+     "scale": 3.3527612686157227e-08,
+     "within_tol": true
+    },
+    "out.weight": {
+     "bitwise": false,
+     "max_abs": 4.6566128730773926e-09,
+     "scale": 0.01475398987531662,
+     "within_tol": true
+    }
+   },
+   "disagrees": true,
+   "loss": [
+    0.7644203305244446,
+    0.7644203305244446,
+    0.7644203305244446
+   ],
+   "loss_vs_numpy": {
+    "bitwise": false,
+    "max_abs": 8.916704761219307e-07,
+    "scale": 0.7644212221949207,
+    "within_tol": true
+   },
+   "repeats": {
+    "F": [
+     true,
+     true
+    ],
+    "bn.bias": [
+     true,
+     true
+    ],
+    "bn.weight": [
+     true,
+     true
+    ],
+    "conv.bias": [
+     true,
+     true
+    ],
+    "conv.weight": [
+     true,
+     true
+    ],
+    "fc.bias": [
+     true,
+     true
+    ],
+    "fc.weight": [
+     true,
+     true
+    ],
+    "out.bias": [
+     true,
+     true
+    ],
+    "out.weight": [
+     true,
+     true
+    ]
+   },
+   "vs_numpy": {
+    "F": {
+     "bitwise": false,
+     "max_abs": 4.473323235346105e-06,
+     "scale": 0.004431036481866671,
+     "within_tol": true
+    },
+    "bn.bias": {
+     "bitwise": false,
+     "max_abs": 9.19576017053116e-06,
+     "scale": 0.007311421537663229,
+     "within_tol": false
+    },
+    "bn.weight": {
+     "bitwise": false,
+     "max_abs": 2.109489502801279e-06,
+     "scale": 0.004269157580199136,
+     "within_tol": true
+    },
+    "conv.bias": {
+     "bitwise": false,
+     "max_abs": 4.2170669419998395e-06,
+     "scale": 0.006892845491769436,
+     "within_tol": true
+    },
+    "conv.weight": {
+     "bitwise": false,
+     "max_abs": 2.5205859934131214e-05,
+     "scale": 0.02184096778372411,
+     "within_tol": false
+    },
+    "fc.bias": {
+     "bitwise": false,
+     "max_abs": 4.179691292493723e-06,
+     "scale": 0.0046243042772190265,
+     "within_tol": true
+    },
+    "fc.weight": {
+     "bitwise": false,
+     "max_abs": 7.4059560977073405e-06,
+     "scale": 0.0049605122380455,
+     "within_tol": false
+    },
+    "out.bias": {
+     "bitwise": false,
+     "max_abs": 3.352761269309612e-08,
+     "scale": 6.938893903907228e-18,
+     "within_tol": true
+    },
+    "out.weight": {
+     "bitwise": false,
+     "max_abs": 2.404425537210972e-05,
+     "scale": 0.014763785471171886,
+     "within_tol": false
+    }
+   }
+  }
+ },
+ "directional": {
+  "analytic": 0.034323991269200105,
+  "analytic_ok": true,
+  "eps": 1e-05,
+  "finite_difference": 0.03432399128255881,
+  "mlx_cpu": 0.03432395248516836,
+  "mlx_cpu_ok": true,
+  "mlx_gpu": 0.03428806499683134,
+  "mlx_gpu_ok": false,
+  "skipped": false
+ },
+ "fixture": {
+  "name": "reference_padding",
+  "sha256": "620f7487bb4964ba8dc18bc7eb023c4915c5c227eb2b048e95737f174dfeeef9"
+ },
+ "numpy_loss": 0.7644212221949207
+}

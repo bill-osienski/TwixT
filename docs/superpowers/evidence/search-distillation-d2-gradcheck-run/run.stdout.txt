@@ -1,0 +1,1 @@
+{"status": "COMPLETED", "void": null, "head": "84d7b00c8ebc9a7d2959d12b581978cddb63e865", "first_disagreement": {"S0": {"cpu": {"forward": null, "backward": null}, "gpu": {"forward": "encoder", "backward": "out"}}, "S21": {"cpu": {"forward": null, "backward": null}, "gpu": {"forward": "encoder", "backward": "out"}}}, "fixtures": 10}

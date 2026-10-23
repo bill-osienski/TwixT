@@ -1,0 +1,15 @@
+{"event": "start", "t": 0.007}
+{"event": "inputs_verified", "t": 3.167, "training_records": 6403}
+{"event": "teacher_values", "t": 5.063, "digest": "817aa7bffc6bd1804b6d4d3fd7d4e27a8df572483fe9bb8b8bbdcc6cb8192814", "equals_reproducibility_diagnostic_s": true}
+{"event": "states", "t": 6.443, "S0": "ae0e71fc395ce6b95d24f9e696f02870c7b3bfc6f8ea83f9d5d0a85c4979816b", "S21": "91816a99d165e35ad2c73d6d83aa4fc2abaafc920ed04819ba740c99047189e4"}
+{"event": "full_model", "t": 11.123, "state": "S0"}
+{"event": "localized", "t": 16.181, "state": "S0", "first": {"cpu": {"forward": null, "backward": null}, "gpu": {"forward": "encoder", "backward": "out"}}}
+{"event": "reference", "t": 17.864, "case": "real_S0"}
+{"event": "full_model", "t": 22.441, "state": "S21"}
+{"event": "localized", "t": 27.403, "state": "S21", "first": {"cpu": {"forward": null, "backward": null}, "gpu": {"forward": "encoder", "backward": "out"}}}
+{"event": "reference", "t": 29.013, "case": "real_S21"}
+{"event": "reference", "t": 29.071, "case": "repeated_indices"}
+{"event": "reference", "t": 29.085, "case": "batch_members"}
+{"event": "reference", "t": 29.094, "case": "padding"}
+{"event": "reference", "t": 29.103, "case": "weighted_additivity"}
+{"event": "end", "t": 29.147, "status": "COMPLETED"}
