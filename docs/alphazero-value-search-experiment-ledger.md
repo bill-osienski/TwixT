@@ -126,6 +126,8 @@ knob) is not a new hypothesis.
 
 > **Search distillation D2, full-float32 setting validation (Post-closure entry 31, 2026-10-23, COMPLETED; CANDIDATE for the isolated operations).** A fresh process launched with `MLX_ENABLE_TF32=0` ran the unchanged synthetic probe and entry 27's four saved cases. On the GPU: no evaluation outside the 1e-4 tolerance (Y and dX now ≤ 3.9e-7 of scale, from about 1e-3), no gross rows at any size, every output bitwise repeatable, in both sets. The CPU and the ungated GPU outputs (dW, db, out Y) are unchanged to the bit, as predicted. A candidate workaround for the isolated operations only: the policy head, full-model gradients and training are not validated, and the cause is not established. See #77.
 
+> **Search distillation D2, full-float32 setting through the policy head and full gradient path (Post-closure entry 32, 2026-10-23, COMPLETED; FAIL at phase 2).** A fresh process with `MLX_ENABLE_TF32=0`. Phase 1, the policy head against the independent NumPy reference: PASS in all six cases (worst 0.05 of the tolerance). Phase 2, the full model at the incumbent against the CPU: the update-21 batch passes everywhere; on the update-0 batch, 2 of 60 gradient tensors (`encoder.blocks.1` and `.2` `conv2.weight`) differ from the CPU by 2.05 and 1.57 × entry 26's 1e-3 tolerance, repeatably. Everything else is within it, and entry 26's gross, non-repeatable GPU gradients are gone. FAIL under the frozen rule: phase 3 (21 updates) did not run. The setting is not validated for the full gradient path; which backend is nearer the exact gradient is not established. Both CPU predictions matched. See #78.
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -1709,6 +1711,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 76. **The D2 synthetic row-count probe (entry 30) — COMPLETED 2026-10-23.** Do **not** rerun it, add row counts, layers or contexts, or search for the band's rule without a new card. Do **not** state N − 32,736, or the post-hoc 32 × ⌊(N − 32,736)/32⌋, as the rule, or 32,768 as a universal boundary or a safe chunk size: one MLX version, one machine, three shapes, nine sizes. Do **not** call the defect a narrow-operand defect: the wide 64→64 control fails too. Do **not** judge a fix or workaround on one GPU repeat: gross outputs differ between repeats. Do **not** treat the stray entry 28 file as an independent result. Validating a fix or workaround, package changes, training, bug-report submission and pushing need their own approval.
 
 77. **The D2 full-float32 setting validation (entry 31) — CANDIDATE 2026-10-23.** Do **not** rerun it or extend it to other settings, shapes or sizes without a new card. Do **not** read CANDIDATE as a fix for training: it covers the isolated linear operations only, and the policy head and full-model gradient path must be validated against the saved fixtures before any GPU training resumes. Do **not** name the NAX kernel as the cause: it is the source reading, and no kernel was inspected. Do **not** make the setting persistent, or put it in production or training code, without that validation and its own approval. Do **not** read its timings as a benchmark.
+
+78. **The D2 full-float32 setting path validation (entry 32) — FAIL at phase 2, 2026-10-23.** Do **not** rerun it, retry phase 2, run phase 3's 21 updates, loosen or re-pick the tolerance, or swap the comparison base after seeing the result, without a new card and approval. Do **not** describe the setting as validated for the gradient path or for training: two encoder conv2 weight gradients missed the frozen tolerance on the update-0 batch. Do **not** call the remaining difference a GPU error, or a CPU one: it is a disagreement between two MLX backends with no independent encoder reference, and no cause was measured. Do **not** read phase 1's pass or the vanished gross gradients as rehabilitating the Stage 3 candidate or explaining its value drift. Adopting the setting, package changes, chunking, training, bug-report submission and pushing need their own approval.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -4553,3 +4557,132 @@ both the tolerance failures and the gross leading-row corruption of entries 27 a
 - **Not done:** no package change, no chunking, no persistent environment change, no training, no held-out access.
   The bug-report draft is updated with this result and is still not submitted. Nothing pushed.
 - See do-not-repeat **#77**.
+
+### 32. Search distillation D2 — full-float32 setting through the policy head and the full gradient path (2026-10-23, COMPLETED; FAIL at phase 2)
+
+**Test.** One fresh process launched with `MLX_ENABLE_TF32=0`, same packages and application code, ran three
+sequential checks. Each was judged on the GPU only, and a failing phase stops the later ones:
+1. **Policy head:** entry 26's six saved reference cases (four synthetic; the real batch at S0 and at entry 26's S21)
+   against entry 26's independent NumPy float64 reference, with MLX three times per device. Also single-record
+   additivity and the directional central difference.
+2. **Full model at the incumbent:** Stage 3's update-0 and update-21 batches. On each device three times, each from a
+   fresh network and fresh batch arrays (digests checked): the loss terms, logits (legal moves; the padding bitwise),
+   values and all 60 gradient tensors, against the CPU's first evaluation. Also half + half additivity.
+3. **Updated state, only if 1 and 2 pass:** a prefix of updates 0–20 on the GPU (21 in-memory updates), then phase
+   2's checks at that state.
+
+Card `docs/superpowers/2026-10-23-search-distillation-d2-tf32off-path-validation-card.md` (frozen before the run).
+
+**Hypothesis.** Entry 31's candidate setting also brings the policy head and the full model's gradients on the GPU
+within entry 26's tolerances, at the incumbent and after 21 updates.
+**Why it was plausible:**
+- Entry 31: with the setting, every isolated linear product was within a 1e-4 tolerance, with no gross rows and
+  bitwise repeatable.
+- Entry 26 located the GPU disagreement in the encoder's forward and in fc and out, and entry 27 reproduced the fc and
+  out failures in isolation.
+
+**Prediction on record** (card §9, before the run):
+1. Phase 1: the CPU's losses, and its largest differences from NumPy for every tensor, equal entry 26's in all six
+   cases. NumPy's losses equal entry 26's too.
+2. Phase 2: at S0 on the update-0 batch, the CPU's logits digest and policy term equal entry 26's.
+3. The teacher values' digest: none stated in advance.
+4. Each phase's result, and the verdict: none stated in advance.
+5. The updated state's digest and the prefix's trace: none stated in advance.
+
+**Pass rule** (frozen):
+- **Tolerances:** entry 26's, unchanged. A tensor passes if max|a − b| ≤ 1e-3 × max|b| + 1e-6. Repeats must be
+  bitwise equal. Finite differences use entry 26's two rules.
+- **Phase 1:** every case on the GPU, against NumPy:
+  - every gradient, the input-feature gradient and the loss within the tolerance;
+  - repeats bitwise;
+  - the summed single-record gradients within the tolerance;
+  - the directional check within its tolerance wherever it ran.
+- **The reference must validate itself** on the four synthetic cases. On the real batches, entry 26's directional
+  check was skipped (a ReLU boundary at every ε), and a skip there is recorded, not a VOID.
+- **Phases 2 and 3:** on both batches on the GPU:
+  - every evaluation's loss terms, legal logits, values and 60 gradients within the tolerance of the CPU's first;
+  - padded logits equal;
+  - repeats bitwise;
+  - half + half additivity within the tolerance.
+- **Logits:** compared at legal moves only. Entry 26 compared the whole array, whose −1e9 padding set the scale, so
+  that comparison could not fail.
+
+**What ran:**
+- **Build `1679b1c6`:** 40 entry and 16 wrapper tests.
+  - The gate inventory has 41 gates.
+  - One end-to-end test of the public entry runs in the real state (the real incumbent, corpus and fixtures, with both
+    device labels on the CPU) and passes all three phases.
+  - `~/twixt-cache` was unchanged.
+  - The regression equals the 58-id baseline (3,272 passed, 20 failed, 38 errors).
+  - Per the approval, no broad mutation campaign.
+- **Corrected before the card was frozen:** my draft claimed entry 26's directional check was validated in all six
+  cases. It was skipped on both real batches. The card states the actual rule.
+- **Gate 41:** opened `69985900` in a linked worktree after an idle check (load about 1.5).
+- **The run:** `docs/superpowers/evidence/search-distillation-d2-tf32path-run/01_wrapper.sh` once.
+- **Evidence and the restored gate:** `2efeb5fd`. main fast-forwarded; worktree and branch removed; the gate
+  inventory test passes; no surviving process.
+- **Outcome:** COMPLETED, inner and outer exit 0, 16.6 s in the script, 17 s wall. The setting read `"0"` at the start
+  and at the end; MLX 0.30.3.
+- **Evidence:** `docs/superpowers/evidence/search-distillation-d2-tf32path/`: `record.json`, `progress.jsonl`,
+  `reference/<case>.json` (six), `full.jsonl` and `full/S0_b0.json`, `full/S0_b21.json`. No array, model state or
+  checkpoint was saved; held-out records read: 0.
+
+**Result.**
+- **Verdict: FAIL at phase 2** (full model at the incumbent). Phase 3 did not run: no optimizer update was made.
+- **Phase 1: PASS.**
+  - In all six cases, every GPU gradient was within the tolerance of NumPy, and the worst was 0.05 of it.
+  - Largest relative difference: at most 1e-5 of scale.
+  - Repeats bitwise; additivity at most 0.0084 of the tolerance.
+  - The directional check passed on the four synthetic cases and was skipped on the two real batches, as in entry 26.
+  - In entry 26, without the setting, the GPU disagreed with NumPy in all six cases.
+- **Teacher values:** computed on the GPU in this process. Digest `abe2873a…`, not entry 26's `817aa7bf…`. An
+  observation; no prediction was stated.
+- **Phase 2, update-21 batch: every comparison passes.**
+  - The worst gradient was 0.12 of the tolerance.
+  - Logits within 5.3e-6 of scale; values within 9.2e-6.
+  - Loss terms within the tolerance; padding equal; repeats bitwise; additivity at most 0.009 of the tolerance.
+- **Phase 2, update-0 batch: two of 60 gradient tensors outside the tolerance,** in all three GPU evaluations:
+
+  | Tensor | max abs difference | scale (CPU) | × tolerance | elements outside | entry 26 (no setting) |
+  |---|---|---|---|---|---|
+  | `encoder.blocks.1.conv2.weight` | 2.43e-4 | 0.1176 | 2.05 | 11 | 0.139 (1,169 ×) |
+  | `encoder.blocks.2.conv2.weight` | 3.39e-4 | 0.2146 | 1.57 | 5 | 0.126 (581 ×) |
+
+  - Everything else in this block is within the tolerance:
+    - the other 58 tensors, with a median of 0.19 of the tolerance;
+    - logits, within 3.3e-6 of scale;
+    - values, within 1.25e-5;
+    - the loss terms.
+  - The padding is equal.
+  - The GPU evaluations are bitwise repeatable, and the additivity is at most 0.005 of the tolerance.
+  - The GPU's global gradient norm is 13.6991, against the CPU's 13.6988. In entry 26 it was 16.63, against 13.71.
+- **The CPU's own checks** (repeats, additivity, against NumPy in phase 1) all pass.
+- **The comparison base:** the failing comparison is between two MLX backends. It does not show which device is
+  nearer the exact gradient: there is no independent reference for the encoder.
+
+**Did it match the prediction, and why.**
+1. **MATCHED:** the CPU's three losses and every largest difference from NumPy equal entry 26's, in all six cases.
+   NumPy's losses equal too.
+2. **MATCHED:** the CPU's logits digest and policy term at S0 on the update-0 batch equal entry 26's, in all three
+   evaluations. As stated, the anchor and gradients differ, since the teacher values changed.
+3. Teacher values: none stated. Observed: a new digest.
+4. Verdict: none stated. Observed: phase 1 PASS, phase 2 FAIL.
+5. Not run.
+
+**Conclusion / status.** COMPLETED; **FAIL at phase 2 under the frozen rule.** `MLX_ENABLE_TF32=0` is **not
+validated** for the full gradient path.
+- **What the setting did, on this machine and MLX 0.30.3:**
+  - The policy head agrees with the independent NumPy reference within the tolerance, by a wide margin.
+  - At the incumbent, the full model's forward outputs and 58 of 60 gradients (all 60 on the update-21 batch) agree
+    with the CPU within the tolerance, repeatably and additively.
+  - Entry 26's gross and non-repeatable GPU gradients are gone in these two batches.
+- **What remains:** two encoder conv2 weight gradients on one batch differ from the CPU by 1.6–2.1 × the frozen
+  tolerance.
+- **Not established:**
+  - **Where that difference comes from,** and which backend is nearer the exact value. Nothing was measured to say.
+  - **Behaviour after updates:** phase 3 never ran.
+  - **Anything about training, the failed candidate, or the cause of Stage 3's value drift.**
+- **No retry, and no other setting or tolerance.**
+- **Not done:** no package change, no chunking, no persistent configuration change, no held-out access, no checkpoint
+  or model state saved. Nothing submitted or pushed.
+- See do-not-repeat **#78**.
