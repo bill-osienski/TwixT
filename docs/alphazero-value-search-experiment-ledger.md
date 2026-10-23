@@ -122,6 +122,8 @@ knob) is not a new hypothesis.
 
 > **Search distillation D2, historical exposure audit (Post-closure entry 29, 2026-10-23, READ-ONLY).** Until `ffe6b342` (2026-10-20), the trainer capped the policy-head move width at 512. Every `checkpoints/` run therefore had at most 64 × 512 = 32,768 rows, including every ancestor of the incumbent. Those runs are **insufficient records**: machine and MLX version per run were not recorded, and 32,768 was measured clean only on the M5 Max under 0.30.3. **Confirmed matching shapes:** D2 Stage 3 updates 0–21, 33,600–33,792 rows, derived from the recorded batch identities. **Possible exposure:** Stage 3 updates 22–400 and D2's evaluation `forward()`. A delegated width count read the held-out records' legal-move counts; this is disclosed and the figure is unused. Not a finding of corruption, nor a statement on measured strength. See #75.
 
+> **Search distillation D2, synthetic row-count probe (Post-closure entry 30, 2026-10-23, COMPLETED; predictions 1 and 4 NOT MATCHED).** The first retained complete record, not the first execution: the same frozen probe ran once unrecorded in entry 28, and its stray example had already shown a gross GPU failure. On synthetic operands, 12 of 27 cases are gross on the GPU — fc, out and the wide 64→64 control at 32,769, 32,800, 33,600 and 33,728 rows — and none at ≤ 32,768 or on the CPU. The gross rows are the leading 32, 64, 864 and 992: **at 32,769 the band is 32 rows, not the predicted N − 32,736 = 33**. Gross outputs are **not repeatable** (repeat 0 differs from repeats 1–2); clean outputs repeat bitwise. dW, db and out Y stay correct. No universal boundary, safe chunk size or mechanism is established. Carries dated corrections to entries 28 (wide control: none stated) and 29 (the 576 cap permits, not forces, more than 32,768 rows). See #76.
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -1701,6 +1703,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 74. **The unplanned GPU execution of the D2 synthetic row-count probe during mutation controls (entry 28) — INCIDENT 2026-10-23.** Do **not** treat the stray `mlxrows-20261023T122440Z/compact_example.npz` as the probe's result, or count that execution as the approved invocation: it ran outside the gate procedure and left no record. Do **not** write a test that can reach a public entry point without remapping devices and redirecting outputs, **whatever the gate says**: a mutant that removes the gate check turns such a test into a real run. Do **not** run a control harness without a check that stops it when files outside the worktree change.
 
 75. **The D2 historical exposure audit (entry 29) — READ-ONLY 2026-10-23.** Do **not** read "≤ 32,768 rows" as "unaffected": that count was measured clean only on the M5 Max under MLX 0.30.3, and the earlier runs' machine and version were not recorded. Do **not** read Stage 3's confirmed shapes as proof that the defect caused its value drift. Do **not** use the 27.85% width figure that included held-out records. Do **not** run the trainer with its current default cap (576) and B = 64 on the GPU until the defect is avoided or fixed and checked.
+
+76. **The D2 synthetic row-count probe (entry 30) — COMPLETED 2026-10-23.** Do **not** rerun it, add row counts, layers or contexts, or search for the band's rule without a new card. Do **not** state N − 32,736, or the post-hoc 32 × ⌊(N − 32,736)/32⌋, as the rule, or 32,768 as a universal boundary or a safe chunk size: one MLX version, one machine, three shapes, nine sizes. Do **not** call the defect a narrow-operand defect: the wide 64→64 control fails too. Do **not** judge a fix or workaround on one GPU repeat: gross outputs differ between repeats. Do **not** treat the stray entry 28 file as an independent result. Validating a fix or workaround, package changes, training, bug-report submission and pushing need their own approval.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -4315,3 +4319,130 @@ record.** None stated in advance.
 - Measured playing-strength results stand as evidence about their checkpoints.
 - Since `ffe6b342`, the trainer's default cap would put B = 64 training above 32,768 rows on the GPU.
 - See do-not-repeat **#75**.
+
+### 30. Search distillation D2 — synthetic row-count probe, the first retained complete record (2026-10-23, COMPLETED; predictions 1 and 4 NOT MATCHED)
+
+**Test.** The frozen probe of entry 28, unchanged: card
+`docs/superpowers/2026-10-23-search-distillation-d2-synthetic-rows-probe-card.md`, generator
+`scripts/GPU/alphazero/mlx_matmul_rows_probe.py` (SHA-256 `1217bc8e…`, pinned), 27 cases (fc 2→64, out 64→1 and the
+wide 64→64 control at 32,704; 32,736; 32,737; 32,767; 32,768; 32,769; 32,800; 33,600 and 33,728 rows), each on the GPU
+three times and on the CPU once, against NumPy float64. Synthetic operands only; no repository model, fixture or corpus.
+
+**This is the first retained complete record, not the first execution.**
+- The same frozen probe ran once before, unrecorded, during mutation controls (entry 28; fix `0c4b96bc`). That
+  execution left `~/twixt-cache/search-distillation-d2/mlxrows-20261023T122440Z/compact_example.npz` (266,867 bytes,
+  SHA-256 `7c412fd35ab6b55c40d1232d918b66d90ed4d4a3f12e9e5e913ef26a5e80bdc9`). It is preserved unchanged and was not
+  opened.
+- **Disclosure:** that file's existence already showed, before this run, that at least one case had gross GPU rows in
+  Y or dX. This run gives reproducible measurements; it is **not an independent first test**.
+- The user approved this repeat explicitly after reviewing the isolation fix.
+
+**Hypothesis.** The entry 27 failure (GPU, first N − 32,736 rows gross above 32,768 rows) is a property of the
+backend at these shapes, not of the D2 fixtures' values. **Why it was plausible.** Entry 27 reproduced it in
+isolation, in three implementations, with the CPU clean.
+
+**Prediction on record** (card §8, stated before either execution, derived from entry 27 only):
+1. fc Y, fc dX and out dX on the GPU: no gross rows at N ≤ 32,768; at N = 32,769, 32,800, 33,600 and 33,728 the gross
+   rows are exactly [0, N − 32,736): 33, 64, 864 and 992 rows.
+2. out Y, every dW and every db: no gross element at any N on either device (db under the new absolute scale).
+3. CPU: nothing gross anywhere.
+4. GPU repeats bitwise identical.
+5. Wide control: **None stated in advance.**
+
+**What ran.** Gate-open commit `a59e0f5f` in a linked worktree (machine idle by `ps`; load average 1.42 before),
+`docs/superpowers/evidence/search-distillation-d2-mlxrows-run/01_wrapper.sh` once; evidence and the restored gate
+`046dc41e` (main fast-forwarded; worktree and branch removed; the gate inventory test passes, all 39 gates closed;
+no surviving process).
+- **Outcome:** COMPLETED, inner exit 0, outer exit 0, 2.3 s in the script, 3 s wall, under the 600 s ceiling.
+  `record_by: script`; stderr empty.
+- **Environment** (`environment.json`): MLX 0.30.3, NumPy 2.4.1, Python 3.14.9, macOS 27.0.1, Apple M5 Max
+  (`applegpu_g17s`), default device `Device(gpu, 0)`; 1-minute load average 4.15 at the script's start.
+- **Evidence:** `docs/superpowers/evidence/search-distillation-d2-mlxrows/` (`environment.json`, `progress.jsonl`,
+  `cases.jsonl`, `artifacts.jsonl`, `record.json`) and the run directory's `run.stdout.txt`, `run.stderr.txt`,
+  `outer.json`.
+- **Compact example** (outside the repository, read-only):
+  `~/twixt-cache/search-distillation-d2/mlxrows-20261023T140758Z/compact_example.npz`, case `fc_32769`, output Y,
+  full operands, rows 0–39, expected rows and GPU repeat 0's rows.
+
+**Result.**
+- **GPU gross cases: 12 of 27** — every layer at 32,769, 32,800, 33,600 and 33,728 rows. **None at ≤ 32,768**, for
+  all three layers, including 32,737 and 32,767. **CPU: nothing gross in any case** (CPU max error on Y and dX ≤ 9.4e-6, at most 3.9e-7 of scale;
+  scales 1–26).
+- **Which outputs are gross:**
+  - fc: Y and dX. out: dX only. wide: Y and dX.
+  - **Every dW and every db is clean** on both devices; out Y is clean at every N.
+- **Gross row ranges** (identical for every gross output and every repeat, except fc_33600 repeat 0):
+
+  | N | gross rows | N − 32,736 |
+  |---|---|---|
+  | 32,769 | [0, 32) — 32 rows | 33 |
+  | 32,800 | [0, 64) — 64 rows | 64 |
+  | 33,600 | [0, 864) — 864 rows | 864 |
+  | 33,728 | [0, 992) — 992 rows | 992 |
+
+  - **fc_33600, GPU repeat 0:** 863 gross rows, Y [0, 192) + [193, 864) and dX [0, 543) + [544, 864). The largest
+    error outside the gross rows in that repeat was 0.108 for Y (gross threshold 0.119) and 0.246 for dX (threshold
+    0.259), against 0.010 and 0.021 in repeats 1–2. INFERENCE: rows 192 and 543 were wrong but just under the gross
+    threshold; full outputs are not saved, so this is not checked.
+  - **Row 32 at N = 32,769** (from the compact example, fc Y, repeat 0): error 0.0024 against a scale of 10.3, in the
+    range of normal GPU rows. Rows 0–31 equal the bias exactly (max |observed − b| = 0).
+- **Absolute errors:**
+  - Inside the gross rows, the largest error per output was 5.5–11.2 for fc Y (scale 10–12), 13.8–21.3 for fc dX
+    (scale 22–26), 3.2–4.7 for out dX (scale 1.2–1.3), 3.7–6.3 for wide Y (scale 6.7–8.1) and 3.3–6.6 for wide dX
+    (scale 5.2–6.1).
+  - Outside them, GPU Y and dX errors stayed at about 1e-3 of scale or below (fc Y ≤ 0.013, fc dX ≤ 0.023, out dX ≤
+    0.0016, wide ≤ 0.0055), except fc_33600 repeat 0 above. The CPU's were at most 3.9e-7 of scale.
+- **Repeatability:**
+  - **All 15 clean cases:** the three GPU repeats are bitwise identical in every output.
+  - **All 12 gross cases:** each gross output (Y and/or dX) of repeats 1 and 2 differs from repeat 0 (largest
+    differences 2.5–6.5). Their dW, db and out Y are bitwise identical across repeats.
+  - Repeats 1 and 2 agree with each other on every reported statistic. The record compares each repeat only with
+    repeat 0, so their mutual bitwise identity is **not recorded**.
+  - The number of rows outside the tolerance was the same in all three repeats of every case.
+  - **The pattern in repeat 0:** at 32,769, 33,600 and 33,728, every gross Y row of fc and wide equals the bias alone
+    (within 1e-2 × scale), and every gross wide dX row is near zero; at 32,800, none is near the bias. In repeats 1–2
+    no gross Y row is near the bias. out dX's gross rows are never near zero.
+- **Across the two executions:** the new compact example has the **same SHA-256** as the stray file from entry 28
+  (`7c412fd3…`): the same case, operands, expected rows and GPU repeat-0 rows 0–39, byte for byte. The stray file
+  itself was not opened; only the hash recorded in entry 28 was compared.
+
+**Did it match the prediction, and why.**
+1. **NOT MATCHED.**
+   - No gross rows at N ≤ 32,768, for fc Y, fc dX and out dX: matched.
+   - At 32,800 and 33,728: exactly [0, N − 32,736), matched. At 33,600: matched in repeats 1–2 and for out dX in all
+     repeats; fc Y and dX in repeat 0 had 863 gross rows (above).
+   - **At 32,769: 32 gross rows, [0, 32), not 33**, in every gross product and every repeat. The formula, seen at two
+     sizes in entry 27, does not hold at the first size it extrapolated to.
+   - A description fitted afterwards to the four sizes, **not tested and not a prediction**: the band is
+     32 × ⌊(N − 32,736) / 32⌋ rows.
+2. **MATCHED:** out Y, every dW and every db clean on both devices.
+3. **MATCHED:** the CPU is clean everywhere.
+4. **NOT MATCHED:** every gross output differs between repeat 0 and repeats 1–2, though clean outputs repeat bitwise.
+   Entry 27's repeatability was measured on the fixtures' explicit products; why repeat 0 differs here is not derived.
+5. **Wide control: none stated.** Observed: wide Y and dX fail at the same row bands as fc, and nothing is gross at
+   ≤ 32,768.
+
+**Conclusion / status.** COMPLETED; predictions 1 and 4 NOT MATCHED.
+- **The defect reproduces on synthetic operands**, so it is not specific to the D2 fixtures' values. On this machine
+  and MLX version, the leading rows of the row-indexed outputs are wrong at every probed size above 32,768 and at none
+  at or below it. That includes the wide 64 → 64 control, so the defect is not limited to narrow operands. Reductions
+  over the rows (dW, db) and out Y stay correct.
+- **Not established:** a universal boundary, a safe chunk size, the band's rule, or the mechanism. One MLX version,
+  one machine, three layer shapes, nine row counts.
+- **Gross output is not repeatable**: a check for a repair must judge every repeat, not only the first.
+- **Portable check for a repair:** the standalone generator with the frozen SPEC. A repaired backend should give
+  COMPLETED with no GPU gross case and no non-repeatable case. Validating any fix or workaround needs its own approval.
+- **Bug-report draft** `docs/superpowers/2026-10-23-mlx-matmul-rows-bug-report-draft.md`: updated with these results;
+  still not submitted.
+- See do-not-repeat **#76**.
+
+**Dated corrections (2026-10-23, made with this entry).**
+- **Entry 28, "none for the wide control":** the card states **"None stated in advance"** for the wide control. That
+  line records the absence of a prediction, not a prediction of no gross rows. The report above is judged against
+  the card's wording.
+- **Entry 29, "the trainer's default cap would put B = 64 training above 32,768 rows on the GPU":** overstated. The
+  576 cap **permits** batches above 32,768 rows; it does not make every batch exceed it. At B = 64 a batch exceeds
+  32,768 rows only when its padded width M is greater than 512, that is, when some position in the batch has more than
+  512 legal moves. The same correction is appended to the audit document (§8). #75's instruction stands.
+- **Entry 29's disclosure:** the user's assessment is that the delegated width count's held-out access **exceeded the
+  audit's training-only scope**. The disclosure stands. No further corpus access was needed or made for this probe.

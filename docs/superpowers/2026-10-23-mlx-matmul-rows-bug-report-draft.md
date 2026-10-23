@@ -1,38 +1,51 @@
 # DRAFT — MLX bug report (not submitted)
 
 **Status:** draft only. Submitting it, and where, is a separate decision for the user.
-- **Its evidence today:** ledger entry 27 (fixture operands).
-- **Not yet included:** the synthetic probe's results (card `2026-10-23-search-distillation-d2-synthetic-rows-probe-card.md`). That probe has not been run under its approval (ledger entry 28).
-- **Snippet below:** not run on its own. It mirrors the probe's code for one case.
+- **Its evidence:** ledger entry 27 (fixture operands) and **entry 30** (the synthetic probe, card
+  `2026-10-23-search-distillation-d2-synthetic-rows-probe-card.md`, evidence
+  `docs/superpowers/evidence/search-distillation-d2-mlxrows/`).
+- **Entry 30 is the first retained complete record of the probe, not its first execution.** The same frozen probe ran
+  once before, unrecorded, during mutation controls (entry 28). Its stray example already showed a gross GPU failure.
+  Entry 30's measurements are reproducible, but they are not an independent first test.
+- **Snippet below:** not run on its own. Its X, W and b follow the probe's draws for case `fc_33600`, but it evaluates
+  Y alone, while the probe evaluates four products jointly.
+- Revised 2026-10-23 after entry 30: the title, the summary and the repeatability statement changed (the earlier draft
+  said "very narrow operand", "first N − 32,736 rows" and "identical across three runs"; entry 30 contradicts all three).
 
 ---
 
-**Title:** Metal: float32 matmul with a very narrow operand returns wrong leading rows when the row count exceeds 32,768 (wrong first N − 32,736 rows)
+**Title:** Metal: float32 matmul returns wrong leading rows when the row count exceeds 32,768 (M5 Max, MLX 0.30.3)
 
-**Environment** (from the measured run, ledger entry 27):
+**Environment** (recorded in both runs):
 - MLX 0.30.3 (pip), NumPy 2.4.1, Python 3.14.9;
 - macOS 27.0.1, Apple M5 Max (`applegpu_g17s`), default GPU device.
 
 **Summary.**
-- On the GPU, `X @ W.T + b` with X float32 of shape (N, 2) and W of shape (64, 2) returns grossly wrong values in exactly rows 0 … N − 32,737 when N = 33,600 or N = 33,728.
-  - Those rows equal `b` alone, as if the X·Wᵀ term were missing.
-  - All other rows are correct to within about 1e-3 of scale.
-- The CPU device gives correct results everywhere, to about 1e-7.
-- The same leading rows are wrong, at those two sizes, in:
-  - `C @ W` with C (N, 64) and W (64, 2);
-  - `C @ W` with C (N, 1) and W (1, 64).
-- **What stays correct:**
-  - reductions over the rows (`C.T @ X` and `C.sum(0)`);
-  - the (N, 64) @ (64, 1) product.
-- **Where nothing was wrong:** with N = 512, 2,048, 8,192, 16,384 and 32,768.
-- **What does not change it:**
-  - `nn.Linear` or plain `@`;
-  - autodiff (`mx.vjp`) or explicit products;
-  - X contiguous or a transposed view;
-  - outputs evaluated jointly or one at a time.
-- **Repeatability:** for the explicit products, the wrong rows were identical across three runs.
+- On the GPU, for X float32 of shape (N, K) and W of shape (F, K), the products below return grossly wrong values in
+  a band of **leading rows** whenever N was above 32,768 in our tests, and in no row at N ≤ 32,768:
+  - `X @ W.T + b` with (K, F) = (2, 64) and (64, 64);
+  - `C @ W` with C (N, 64) and W (64, 2); with C (N, 1) and W (1, 64); with C (N, 64) and W (64, 64).
+- **Band sizes measured:** 32 rows at N = 32,769; 64 at 32,800; 864 at 33,600; 992 at 33,728. With fixture
+  operands (entry 27), 864 at 33,600 and 992 at 33,728 too.
+- **Errors in the band** are of the order of the outputs themselves (the largest per output is 0.5 to 3.6 × max|expected|). Other rows stay
+  within about 1e-3 of max|expected|, as at the clean sizes (one exception: in one evaluation at 33,600, a row of the band fell just under the threshold, by inference).
+- **The CPU device is correct everywhere** (at most 3.9e-7 of max|expected|).
+- **What stays correct at every N tested:** reductions over the rows (`C.T @ X`, `C.sum(0)`) and the (N, 64) @ (64, 1)
+  product.
+- **Where nothing was wrong:** N = 32,704; 32,736; 32,737; 32,767; 32,768 (synthetic), and 512, 2,048, 8,192, 16,384
+  and 32,768 (fixtures).
+- **Repeatability:** the wrong rows are **not** bitwise repeatable within a process.
+  - Three GPU evaluations of the same synthetic operands: the first differs from the second and third in every failing
+    output (largest differences 2.5–6.5). The second and third agree on every reported statistic.
+  - In the first evaluation, the band's rows of `X @ W.T + b` equal `b` alone (at 32,769, 33,600 and 33,728), as if the
+    X·Wᵀ term were missing. In the later ones they hold other wrong values.
+  - Correct outputs repeat bitwise.
+  - Across two separate processes, the first evaluation's band for one case (N = 32,769, rows 0–39 saved) was byte
+    identical.
+- **What did not change it** (fixtures, entry 27): `nn.Linear` or plain `@`; autodiff (`mx.vjp`) or explicit products;
+  X contiguous or a transposed view; outputs evaluated jointly or one at a time.
 
-**Minimal reproduction** (synthetic; mirrors case `fc_33600` of the probe, not run on its own):
+**Minimal reproduction** (synthetic; the probe's case `fc_33600` operands, Y only; not run on its own):
 
 ```python
 import numpy as np, mlx.core as mx
@@ -46,24 +59,34 @@ b = rng.standard_normal(64).astype(np.float32)
 expected = X.astype(np.float64) @ W.astype(np.float64).T + b
 for dev in (mx.gpu, mx.cpu):
     mx.set_default_device(dev)
-    y = mx.array(X) @ mx.array(W).T + mx.array(b)
-    mx.eval(y)
-    err = np.abs(np.array(y) - expected).max(axis=1)
-    bad = np.flatnonzero(err > 1e-2 * np.abs(expected).max())
-    print(dev, "bad rows:", (bad.min(), bad.max(), bad.size) if bad.size else None)
-# Observed with the fixture operands (entry 27): GPU bad rows 0..863 (864 = N - 32,736); CPU none.
+    for rep in range(3):
+        y = mx.array(X) @ mx.array(W).T + mx.array(b)
+        mx.eval(y)
+        err = np.abs(np.array(y) - expected).max(axis=1)
+        bad = np.flatnonzero(err > 1e-2 * np.abs(expected).max())
+        print(dev, rep, "bad rows:", (bad.min(), bad.max(), bad.size) if bad.size else None)
+# Probe (four products evaluated jointly), case fc_33600, Y on the GPU: bad rows [0, 864) in repeats 1-2; 863 of
+# them in repeat 0, one row of the band falling just under the threshold (inferred). CPU: none.
 ```
 
-**Results with synthetic operands:** *pending the approved probe run.*
-- The probe predicts: no wrong rows at N ≤ 32,768, and exactly [0, N − 32,736) at N = 32,769, 32,800, 33,600 and 33,728.
-- It also covers a 64→64 control.
+**Results with synthetic operands** (entry 30; 27 cases, GPU three times and CPU once each, against NumPy float64;
+gross = error above 1e-2 × max|expected|):
+
+| N | fc 2→64: Y, dX | out 64→1: Y | out 64→1: dX | wide 64→64: Y, dX | every dW, db | CPU |
+|---|---|---|---|---|---|---|
+| 32,704 – 32,768 (5 sizes) | clean | clean | clean | clean | clean | clean |
+| 32,769 | rows [0, 32) | clean | rows [0, 32) | rows [0, 32) | clean | clean |
+| 32,800 | rows [0, 64) | clean | rows [0, 64) | rows [0, 64) | clean | clean |
+| 33,600 | rows [0, 864) | clean | rows [0, 864) | rows [0, 864) | clean | clean |
+| 33,728 | rows [0, 992) | clean | rows [0, 992) | rows [0, 992) | clean | clean |
 
 **Not claimed:**
 - the kernel or dispatch path responsible;
+- a rule for the band's size (N − 32,736 fits three sizes and fails at 32,769);
 - a general rule for other shapes, devices or MLX versions;
 - a safe row count.
 
 **Attachments to consider:**
-- the standalone script `mlx_matmul_rows_probe.py`;
-- the probe's `environment.json` and `cases.jsonl` (once run);
-- one compact `.npz` with operands and the expected rows.
+- the standalone script `mlx_matmul_rows_probe.py` (standard library, NumPy and MLX only);
+- the probe's `environment.json` and `cases.jsonl`;
+- one compact `.npz` (case fc_32769, Y: full operands, rows 0–39, expected rows and GPU repeat 0's rows).

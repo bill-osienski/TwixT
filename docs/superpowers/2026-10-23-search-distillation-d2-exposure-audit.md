@@ -114,3 +114,15 @@ The width count was delegated. The delegated read computed "27.85% of 7,020 D2 r
 - **Not a statement on measured playing strength.** Checkpoints' measured match results remain evidence about those checkpoints.
 - **Not a cause for Stage 3's value drift:** whether the defect caused it remains unresolved.
 - **The cap change is a forward risk:** since `ffe6b342`, the trainer's default cap is 576. Any trainer run with B = 64 on 24×24 data would now run above 32,768 rows on the GPU. No trainer run has happened since then: the only weights written after 2026-10-20 under `checkpoints/`, `runs/` or `~/twixt-cache/` are D2's Stage 3 student, a file-time check.
+
+## 8. Dated correction (2026-10-23, later; ledger entry 30)
+
+- **§7, "Any trainer run with B = 64 on 24×24 data would now run above 32,768 rows on the GPU":** overstated. The
+  576 cap **permits** batches above 32,768 rows; it does not make every batch exceed it. At B = 64 a batch exceeds
+  32,768 rows only when its padded width M is greater than 512, that is, when some position in the batch has more than
+  512 legal moves. The forward risk stands in that form.
+- **§6:** the user's assessment is that the held-out access **exceeded this audit's training-only scope**. The
+  disclosure stands; no further corpus access was made.
+- **What the synthetic probe adds** (entry 30, MLX 0.30.3 on the M5 Max only): the failure is not limited to narrow
+  operands (a 64 → 64 product fails too), and at 32,769 rows the band is 32 rows, not N − 32,736. Nothing here
+  changes a label in §4.
