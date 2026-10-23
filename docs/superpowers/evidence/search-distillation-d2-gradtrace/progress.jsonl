@@ -1,0 +1,7 @@
+{"event": "start", "t": 0.006}
+{"event": "inputs_verified", "t": 3.047, "training_records": 6403, "reference_steps": 401}
+{"event": "loaded", "t": 3.093}
+{"event": "teacher_values", "t": 4.918}
+{"event": "step", "t": 5.056, "step": 0, "grad_norm": 12.44531536102295}
+{"event": "mismatch", "t": 18.481, "step": 21, "fields": ["loss", "policy", "grad_norm"], "replayed": {"loss": 4.500527858734131, "policy": 4.377071857452393, "grad_norm": 12854.4384765625}, "reference": {"loss": 4.492997169494629, "policy": 4.369541168212891, "grad_norm": 11404.4013671875}, "steps_replayed": 22}
+{"event": "end", "t": 18.518, "status": "COMPLETED", "trace": "MISMATCH"}
