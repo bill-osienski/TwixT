@@ -6,4 +6,4 @@ GPU against NumPy. Loads no network, trains nothing, but runs GPU computations u
 its own reviewed door. Opened for ONE approved run and restored on every exit. Created closed. This file may hold
 ONLY this declaration.
 """
-SEARCH_DISTILLATION_D2_TF32OFF_AUTHORIZED = False
+SEARCH_DISTILLATION_D2_TF32OFF_AUTHORIZED = True
