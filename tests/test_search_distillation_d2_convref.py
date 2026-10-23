@@ -513,8 +513,8 @@ def test_THE_PUBLIC_ENTRY_IN_THE_REAL_STATE_STOPS_NOT_REPRODUCED_when_gpu_is_the
     assert rec["step1"]["gpu_failures"] == [] and rec["step1"]["cpu_own_failures"] == []
     cpu = rec["entry32"]["cpu"]
     assert cpu["compared"] == 3 and not rec["teacher_values"]["equals_entry32"]
-    assert cpu["keys_equal"] == {"loss": False, "policy": True, "anchor": False, "grad_digest": False,
-                                 "logits_digest": True, "values_digest": True}
+    assert cpu["keys_equal"] == {"loss": True, "policy": True, "anchor": False, "grad_digest": False,
+                                 "logits_digest": True, "values_digest": True}   # anchor ~1e-11: below loss's ulp
     assert rec["batch_draw"] == json.loads((C.ROOT / C.ENTRY32 / "record.json").read_text())["batches"]["0"]
     assert rec["held_out_records_read"] == 0 and not (opened / "fixture-parent").exists()
     out = json.loads(capsys.readouterr().out.strip().splitlines()[-1])
