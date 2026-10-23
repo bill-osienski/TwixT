@@ -114,6 +114,8 @@ knob) is not a new hypothesis.
 
 > **Search distillation D2, gradient correctness check (Post-closure entry 26, 2026-10-22, MEASURED).** Two states: the incumbent, and a reconstructed pre-update-21 state whose digest equals entry 25's pass A. **CPU/GPU agreement: no.** The CPU is bitwise repeatable and additive. On the GPU, 59 of 60 gradient tensors fall outside the tolerance at both states; the GPU is not repeatable at S21 (norms 4.32, 834 and 2,900, against the CPU's 4.23); and weighted-record additivity fails. **Independent NumPy reference (policy head): the CPU agrees in all 6 cases and the GPU in none** (about 1e-3 off on small synthetic cases; grossly off on the real batches, where additivity misses by about 10⁴). **First localized discrepancy, from identical inputs:** the encoder's forward differs from the CPU's by 0.19 but repeats on the GPU, and which device is right is not established. Inside the policy head, the conv, BatchNorm, ReLU, gather, masks, log-softmax and CE agree to about 1e-7. The **fc layer (2→64) forward and input gradient**, and the **out layer (64→1) input gradient**, are outside the tolerance and not repeatable. The mechanism is not derived. See #72.
 
+> *Correction to the entry 26 line (2026-10-22, the same day, on rechecking the evidence):* "agree to about 1e-7" should read "agree within 1.5e-5 of each tensor's scale". The real-batch figures are corrected in the entry's own correction note.
+
 ## Historical proposal check — programme now closed
 
 This checklist remains as process history and a guard against relabelling an exhausted local
@@ -4082,3 +4084,17 @@ results remain evidence about those checkpoints.
 - The Stage 3 candidate stays closed; `calib020_0001` stays the incumbent.
 - Stages 4–5, further learning experiments, backend upgrades, production fixes, promotion and pushing remain
   unapproved. See do-not-repeat **#72**.
+
+*Correction (2026-10-22, the same day, on rechecking entry 26's figures against its evidence files).* Four figures in
+entry 26 are wrong:
+- **GPU policy-head gradients against NumPy on the real batches.** The entry says they are off by "up to 8% of
+  scale in the conv, BatchNorm and features' gradients".
+  - At S0 they are off by 7–8% of scale, and the fc weight and bias gradients are off by the same amount.
+  - At S21 they are off by up to **27%** (the features' gradient), 12–14% for the BatchNorm weight and conv weight,
+    and 8–10% for the fc tensors.
+- **The NumPy derivatives against central finite differences** agreed to a relative 4e-10–2.3e-8, not "1e-8–1e-10".
+- **The GPU's directional derivatives** were 0.1–0.3% off the finite difference, not "0.3–0.6%".
+- **The policy-head stages that agree** differ from the CPU chain by at most 1.5e-5 of the tensor's scale (2.2e-5
+  absolute, in the conv weight's gradient at S0), not "at most about 1e-6 absolute".
+
+The conclusions do not change.
