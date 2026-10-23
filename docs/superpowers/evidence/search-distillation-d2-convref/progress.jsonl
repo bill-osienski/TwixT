@@ -1,0 +1,9 @@
+{"event": "start", "t": 0.008, "setting": {"MLX_ENABLE_TF32": "0"}}
+{"event": "inputs_verified", "t": 3.085, "training_records": 6403}
+{"event": "teacher_values", "t": 4.928, "digest": "abe2873a0b06c8412bd947c32d01ec2b354f1dd8e2c09f039c2470c52ffcb37c", "entry32_digest": "abe2873a0b06c8412bd947c32d01ec2b354f1dd8e2c09f039c2470c52ffcb37c", "equals_entry32": true}
+{"event": "step1", "t": 9.747, "ok": true, "gpu_failures": 6}
+{"event": "capture", "t": 12.464, "device": "cpu", "faithful": true}
+{"event": "capture", "t": 13.748, "device": "gpu", "faithful": true}
+{"event": "reference", "t": 14.452, "target": "encoder.blocks.1.conv2.weight", "cls": "INHERITED", "local_gpu": false, "local_cpu": false, "inherited": true}
+{"event": "reference", "t": 15.094, "target": "encoder.blocks.2.conv2.weight", "cls": "INHERITED", "local_gpu": false, "local_cpu": false, "inherited": true}
+{"event": "end", "t": 15.134, "status": "COMPLETED", "outcome": "CLASSIFIED"}
