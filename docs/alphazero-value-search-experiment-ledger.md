@@ -133,6 +133,7 @@ knob) is not a new hypothesis.
 > **Full-float32 setting — 21-update prefix card (addendum to the decision note, 2026-10-23).** Reviewed, amended and FROZEN; built in `ad873a12` (gate 44, closed; 39 + 16 tests; regression = the 58-id baseline). With both labels on the CPU, a full real-state run qualifies, with every reference passing. NOT RUN: execution awaits the user's review of the frozen implementation. Supersedes the decision note's "DRAFT" status line above. See #81.
 > **Search distillation D2, full-float32 setting: the 21-update diagnostic prefix (Post-closure entry 35, 2026-10-23, COMPLETED; QUALIFIED_AT_U21).** The frozen card (`ad873a12`) ran once with `MLX_ENABLE_TF32=0` in 35 s. Entry 32's incumbent lines and teacher digest were reproduced bitwise (prediction 1 matched). Two GPU prefixes of 21 updates were equal at every update on scalars, model and Adam digests, all finite. At U21, on the update-0 and update-21 batches: repeatable, additive, forward agreement within the tolerance, every local, parameter (52, with L2) and policy-head reference passing. Batch 0's two failing native gradients (`blocks.3` conv1 1.49×, conv2 1.24×) were explained by near-zero branch flips; batch 21 had none. **Scope: that state and those two batches only.** Training remains unqualified; no branch change is shown harmless; entry 32 remains a FAIL. Supersedes the addendum's "NOT RUN" line above. See #82.
 > **Search distillation D2 — bounded learning trial (decision note after Post-closure entry 35, 2026-10-23, the user's).** Entry 35 accepted; no further diagnostics are the next task. OPEN: a DRAFT successor card (`2026-10-23-search-distillation-d2-corrected-trial-card.md`) awaiting review. Its terms: unchanged incumbent and Stage 3 recipe and criteria, `MLX_ENABLE_TF32=0` in every process, 108 training games reused, 12 fresh held-out games, one candidate, no retries; strength evaluation only after a pass. Nothing generated, registered or trained; no gate. GPU-training reliability in general is not established. See #83.
+> **Search distillation D2 — bounded learning trial: card FROZEN and built (addendum to the decision note after Post-closure entry 35, 2026-10-24).** Card `9f2c6096…`, build `d7d458ad` (gates 45 and 46, closed; regression = the 58-id baseline). The 12-seed held-out block [202692300, 202692312) is surveyed CLEAN, proven before and after registration, and registered in ACCOUNTED. Outcome prediction: None stated in advance. NOT RUN: generation awaits the user's review. Supersedes the "DRAFT" status in the line above. See #83.
 
 ## Historical proposal check — programme now closed
 
@@ -5212,3 +5213,46 @@ equal entry 32's, as the same frozen data, code and setting should give. Predict
   gate), awaiting review.
 - **Prediction on record:** None stated in advance for this decision. The card proposes predictions (§9) for review.
 - See do-not-repeat **#83**.
+
+**Addendum to the decision note (2026-10-24): the trial card reviewed, frozen and built; seeds registered; nothing generated or trained.**
+- **The user's review decisions,** written into the card (§11):
+  - held-out labels generated with `MLX_ENABLE_TF32=0`;
+  - the 2-hour and 30-minute ceilings approved, as estimates with no extension or top-up after a timeout;
+  - "None stated in advance" for the outcome. The draft's proposed figures are withdrawn and are not a prediction on
+    record.
+- **Wording fixes,** in the card:
+  - zero original held-out files and records read is recorded apart from access to the new set, and the new set is
+    scored only for the baseline and the final check;
+  - the old processes' setting is unknown, not asserted;
+  - the row counts are flattened policy-head rows;
+  - the strength threshold's exact formula belongs to its future card.
+- **Build `d7d458ad`:** card frozen (sha `9f2c6096…`).
+  - `search_distillation_d2_heldout` (gate 45, closed): a copy of Stage 2's loop for one phase of 12 held-out games.
+  - `search_distillation_d2_trial` (gate 46, closed): a copy of Stage 3's loop, with gradtrace's training-only reader,
+    admission of the new set only from a COMPLETED generation record under the card, the scorings ledger and the spike
+    count.
+  - Both refuse without the setting before MLX is imported, check the MLX, NumPy and Python versions, and pin the card
+    and the reused modules.
+  - Two wrappers (copies of Stage 2's and Stage 3's with the setting added), the 12-slot survey script (a copy of
+    Stage 2's) and focused tests: 33 + 53 + 16 + 17, plus the gate inventory at 46.
+  - Real-state tests, scoped:
+    - the real corpus through the training-only reader: 6,403 records, 0 original held-out files opened;
+    - the real incumbent loads twice as the pinned teacher;
+    - the public entry refuses until a generated, committed held-out set exists;
+    - the registered plan is read through the entry's own seams.
+  - **No test trains the real incumbent.** A full real-state run would be the trial itself, about 6–7 minutes on the
+    CPU.
+- **Verification:**
+  - the regression equals the 58-id baseline (3,272 passed, 20 failed, 38 errors), with the fingerprint unchanged;
+  - the focused tests and their neighbours pass (198, exit 0), on the committed build.
+- **Seeds:** in the method of Stage 2, in a worktree on a clean committed tree, each step run once:
+  - S1, survey (`21d703ea`): THE D2 HELD-OUT BLOCK IS CLEAN, [202692300, 202692312), 45 of 45 controls, gap 74 against
+    a floor of 12;
+  - S2, pre-registration proof (`ede8faed`): CLEAN, the state HOLDS, 45 of 45;
+  - S3, registration (`926aed49`): appended last to ACCOUNTED (41 → 42, the prefix identical), plus `plan.json`.
+    Registry tests 48 passed; registry readers 593 passed;
+  - S4, post-registration proof (`62f93fe3`): CLEAN, the state HOLDS, 45 of 45.
+
+  The block is not exposed and not retired.
+- **Not done:** no generation, training, GPU use or gate opening. Nothing submitted or pushed. Generation needs the
+  user's approval after review of the frozen implementation, plan and proof records.
