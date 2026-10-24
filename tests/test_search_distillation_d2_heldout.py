@@ -286,3 +286,25 @@ def test_FRESH_with_the_setting_and_the_gate_open_every_real_check_passes():
 
 def test_THE_REAL_VERSIONS_ARE_THE_CARD_S():
     assert H.versions() == H.VERSIONS
+
+
+# ─────────────────────────────── the REAL registered plan ───────────────────────────────
+
+def test_REAL_THE_REGISTERED_PLAN_through_the_entry_s_own_seams_is_12_usable_seeds_and_the_survey_s_build_plan():
+    """After S3 (registration) and S4 (post-registration proof): the plan the public entry will read, and every seed
+    the entry's own seed check will judge, in the REAL registry. Read-only; nothing is drawn or exposed."""
+    import importlib.util
+    seams = H._real_seams(_checkpoint())
+    plan = seams.read_plan()
+    assert plan["n_slots"] == H.FROZEN["games"] == 12 and type(plan["base"]) is int
+    assert all(seams.seed_ok(plan["base"] + s) for s in range(12))
+    here = H.ROOT / "docs/superpowers/evidence/search-distillation-d2-heldout-seed-survey"
+    spec = importlib.util.spec_from_file_location("_heldout_survey", here / "01_seed_survey.py")
+    survey = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(survey)
+    record = (here / "02_seed_survey_run.txt").read_bytes()
+    assert plan == survey.build_plan(plan["base"], hashlib.sha256(record).hexdigest())
+    assert f"block = [{plan['base']}, {plan['base'] + 12})" in record.decode()
+    from scripts.GPU.alphazero import e4_screen_reference as REG
+    assert REG.ACCOUNTED_SEED_INTERVALS[-1] == (plan["base"], plan["base"] + 12)
+    assert not REG.seed_is_unavailable(plan["base"]) and not REG.seed_is_test_only(plan["base"] + 11)
