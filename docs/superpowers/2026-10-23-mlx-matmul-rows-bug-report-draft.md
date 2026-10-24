@@ -19,6 +19,8 @@
   31's. It keeps the validated policy-head result apart from the unresolved encoder comparison.
 - Revised 2026-10-23 after **entry 33**: the encoder comparison's convolution-reference result was added. The
   convolution kernels passed on identical operands.
+- Revised 2026-10-23 after **entry 34**: the encoder comparison is explained as a numerical branch change, added
+  below. It is kept apart from the defect this report is about.
 
 ---
 
@@ -139,6 +141,22 @@ tolerance here is entry 26's, error ≤ 1e-3 × max|reference| + 1e-6, looser th
     elements, all in one channel; the inputs agree within 0.004 of the tolerance.
   - So the remaining encoder difference is not attributed to the convolution kernels. Which device's whole-model
     gradient is nearer the exact one is still not established. This is not reported as an MLX defect.
+
+**Two different things, kept apart** (after ledger entry 34):
+- **The defect this report is about:** gross, non-repeatable float32 matmul errors in leading rows above 32,768 rows on
+  the GPU, and outputs outside tolerance elsewhere. They disappear with `MLX_ENABLE_TF32=0` (entry 31), and with it the
+  policy head agrees with an independent reference (entry 32).
+- **The remaining encoder difference: explained, and not reported as an MLX defect.** Entry 34 traced the encoder's
+  BatchNorms, residual additions and ReLUs on both devices, at the same weights and batch, with the setting.
+  - Every local forward and backward step (convolutions, BatchNorm, residual add, ReLU) agreed with NumPy float64
+    from that device's own operands.
+  - 14 ReLU inputs within about 1e-6 of zero (at most 6e-6) had opposite signs on the two devices. Each device's branch
+    matches the sign of float64 from its own inputs.
+  - Those branch flips alone account for both tensors' differences: a float64 model of them predicts the GPU's
+    gradients within 0.006 of the tolerance, against 2.05× and 1.57× without them.
+  - So the difference is a branch change at near-zero inputs, not an incorrect local derivative. Where the ~1e-6
+    forward differences come from was not traced, and no cause is named for them. The branch change is not shown
+    harmless, and which device is more accurate is not established.
 
 **Not claimed:**
 - the kernel or dispatch path responsible (the setting's effect points at the NAX path, but proves nothing about it);
