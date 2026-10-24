@@ -129,6 +129,7 @@ knob) is not a new hypothesis.
 > **Search distillation D2, full-float32 setting through the policy head and full gradient path (Post-closure entry 32, 2026-10-23, COMPLETED; FAIL at phase 2).** A fresh process with `MLX_ENABLE_TF32=0`. Phase 1, the policy head against the independent NumPy reference: PASS in all six cases (worst 0.05 of the tolerance). Phase 2, the full model at the incumbent against the CPU: the update-21 batch passes everywhere; on the update-0 batch, 2 of 60 gradient tensors (`encoder.blocks.1` and `.2` `conv2.weight`) differ from the CPU by 2.05 and 1.57 × entry 26's 1e-3 tolerance, repeatably. Everything else is within it, and entry 26's gross, non-repeatable GPU gradients are gone. FAIL under the frozen rule: phase 3 (21 updates) did not run. The setting is not validated for the full gradient path; which backend is nearer the exact gradient is not established. Both CPU predictions matched. See #78.
 > **Search distillation D2, convolution-reference diagnostic (Post-closure entry 33, 2026-10-23, COMPLETED; both targets INHERITED).** Same setting, at the incumbent on the update-0 batch, no optimizer update. Entry 32's six failures reproduced bit for bit, and the operand capture was bitwise faithful (L2 included). Given identical operands, the CPU and GPU convolution weight-gradient kernels agree **bitwise**, within 0.006 of the tolerance of float64. Float64 alone, fed each device's own operands, reproduces the miss (2.05×, 1.57×): it is carried in by the upstream gradient (GPU against CPU 5.1× and 5.7× the tolerance, at 2 and 1 elements, all in channel 42), not made by either kernel. Which device's whole-model gradient is nearer the exact one is not established; entry 32's FAIL stands. See #79.
 > **Search distillation D2, encoder branch trace (Post-closure entry 34, 2026-10-23, COMPLETED; BRANCH_CHANGE).** Same setting, incumbent and batch, no update. Reproduced bitwise; the trace was bitwise faithful; every local forward and backward step (convolutions, BN, residual, ReLU) is correct on both devices against float64 from their own operands. 14 ReLU elements with inputs within about 1e-6 of zero take different branches on the CPU and GPU, each following from its own device's operands; among them is block 2's outer ReLU at `[1, 13, 4, 42]` (CPU off, GPU on). Those flips alone account for both target gradients (0.006× and 0.004× the tolerance with them, 2.05× and 1.57× without). A numerical branch change, not an incorrect derivative; not shown harmless, and which device is more accurate is not established. Entry 32's FAIL stands; next is the user's qualification decision. See #80.
+> **Full-float32 setting — qualification decision (decision note after Post-closure entry 34, 2026-10-23, the user's).** Entry 34's BRANCH_CHANGE accepted; no further localization. `MLX_ENABLE_TF32=0` is required for authorized GPU work on this machine and runtime (per process; no persistent change). Validated within the tested scope: isolated operations, the policy head, the incumbent-state local derivatives. **Training stays unqualified**: the updated-state check never ran, and neither the branch change's harmlessness nor training reliability is established. Entry 32 remains a FAIL. OPEN: a DRAFT card for completing the 21-update diagnostic prefix under a prospective criterion (`8b255801`), awaiting review; every gate closed. See #81.
 
 ## Historical proposal check — programme now closed
 
@@ -1719,6 +1720,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 79. **The D2 convolution-reference diagnostic (entry 33) — both targets INHERITED, 2026-10-23.** Do **not** rerun it, extend it to other tensors, batches or states, or trace the upstream gradient further back, without a new card and approval. Do **not** read INHERITED as either backend being right: the whole-model gradients still differ, and no independent reference covers the upstream gradient. Do **not** read the bitwise kernel agreement as validating the setting for the gradient path or for training, or as relaxing or overturning entry 32's FAIL. Do **not** name a cause for the channel-42 concentration; it is an observation. Do **not** modify or delete the fixtures in `~/twixt-cache/search-distillation-d2/convref-fixtures-20261023T200104Z/`: they are this entry's evidence. Adopting the setting, training, package changes, bug-report submission and pushing need their own approval.
 
 80. **The D2 encoder branch trace (entry 34) — BRANCH_CHANGE, 2026-10-23.** Do **not** rerun it, trace the operand differences further upstream, or extend it to other batches or states, without a new card and approval; the next step is a qualification decision, not another, more detailed diagnostic. Do **not** call the branch change harmless rounding: small pre-activations do not establish that, and it moves two gradients past the frozen criterion. Do **not** call either device's branch or gradient correct. Do **not** use it to relax, re-judge or overturn entry 32's FAIL, or to force CPU/GPU agreement (for example by perturbing or masking ReLU inputs). Keep the fixtures in `~/twixt-cache/search-distillation-d2/branchtrace-fixtures-20261023T210537Z/` unmodified. Adopting the setting, training, package changes, bug-report submission and pushing need their own approval.
+
+81. **The full-float32 qualification decision (after entry 34), 2026-10-23.** Do **not** trace or localize entry 32's encoder discrepancy further: it is explained as a branch change. Do **not** re-judge entry 32 under the prefix card's new criterion; that criterion is prospective, for the updated state only. Do **not** run authorized GPU work on this machine and runtime without `MLX_ENABLE_TF32=0` in that process, and do **not** make the setting persistent without approval. Do **not** read the setting as qualified for training, or the branch change as harmless. Do **not** satisfy a failing native comparison by widening entry 26's tolerance; only the card's explicit accounting can explain one, and an unexplained discrepancy stops qualification without automatic follow-up. Do **not** freeze, build, gate or run the prefix card before the user reviews it. Training, a candidate checkpoint, strength claims, bug-report submission and pushing need their own approval.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -4999,3 +5002,38 @@ relaxed.
 - **Not done:** no parameter, package or persistent configuration change; no held-out access; no checkpoint or model
   state saved; nothing submitted or pushed.
 - See do-not-repeat **#80**.
+
+### Decision note — full-float32 setting: qualification after entries 31–34 (2026-10-23, the user's decision)
+
+**Not an experiment;** nothing ran. This records the user's decision on what entries 31–34 establish.
+
+- **Entry 34's BRANCH_CHANGE accepted.** The two residual encoder discrepancies are explained, and further localization
+  is not warranted. **Entry 32 remains a FAIL under its original rule.**
+- **The decision:**
+  - `MLX_ENABLE_TF32=0` is **required** for subsequent authorized GPU work on this machine and runtime (M5 Max, MLX
+    0.30.3). It is set per process, as before; persistent environment changes remain unauthorized.
+  - **Validated within the tested scope:** the isolated operations (entry 31), the policy head (entry 32, phase 1)
+    and the incumbent-state local derivatives (entry 34).
+  - **Training stays unqualified.** The updated-state check (entry 32's phase 3) never ran. Neither the branch
+    change's harmlessness nor general training reliability is established.
+- **A wording correction to my report of entry 34.** I wrote that a ReLU input near zero *will* make a CPU/GPU
+  gradient comparison fail. The correct statement is that it **can**. That wording was in the report only, not in this
+  ledger.
+- **Authorized and done: a design-only card** for completing the 21-update diagnostic prefix:
+  `docs/superpowers/2026-10-23-search-distillation-d2-prefix-qualification-card.md`, commit `8b255801`.
+  - **Status:** DRAFT for review. Not frozen and not built, and no gate exists for it. Every gate stays closed.
+  - **Its prospective criterion,** at the state after updates 0–20 (U21), on Stage 3's update-0 and update-21 batches:
+    - finite results;
+    - repeatability: two prefixes bitwise equal, evaluations bitwise equal;
+    - additivity;
+    - forward agreement on legal logits and pre-tanh values;
+    - independent float64 checks of every local derivative and all 60 parameter gradients;
+    - for any native gradient comparison that fails, entry 34's explicit branch accounting. Entry 26's tolerance is
+      unchanged.
+  - Anything unexplained stops qualification, with no automatic follow-up.
+  - The prefix stays diagnostic: training records only, no candidate checkpoint, no strength claim.
+  - Three questions are open for review in its §10.
+- **Bug-report draft `bf6f5daa`** (not submitted): entry 34 added. It keeps the gross matmul defect apart from the
+  explained branch change, and names no cause for the forward differences.
+- **Not done:** nothing submitted or pushed; no persistent environment change; no run.
+- See do-not-repeat **#81**.
