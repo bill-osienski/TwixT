@@ -132,6 +132,7 @@ knob) is not a new hypothesis.
 > **Full-float32 setting — qualification decision (decision note after Post-closure entry 34, 2026-10-23, the user's).** Entry 34's BRANCH_CHANGE accepted; no further localization. `MLX_ENABLE_TF32=0` is required for authorized GPU work on this machine and runtime (per process; no persistent change). Validated within the tested scope: isolated operations, the policy head, the incumbent-state local derivatives. **Training stays unqualified**: the updated-state check never ran, and neither the branch change's harmlessness nor training reliability is established. Entry 32 remains a FAIL. OPEN: a DRAFT card for completing the 21-update diagnostic prefix under a prospective criterion (`8b255801`), awaiting review; every gate closed. See #81.
 > **Full-float32 setting — 21-update prefix card (addendum to the decision note, 2026-10-23).** Reviewed, amended and FROZEN; built in `ad873a12` (gate 44, closed; 39 + 16 tests; regression = the 58-id baseline). With both labels on the CPU, a full real-state run qualifies, with every reference passing. NOT RUN: execution awaits the user's review of the frozen implementation. Supersedes the decision note's "DRAFT" status line above. See #81.
 > **Search distillation D2, full-float32 setting: the 21-update diagnostic prefix (Post-closure entry 35, 2026-10-23, COMPLETED; QUALIFIED_AT_U21).** The frozen card (`ad873a12`) ran once with `MLX_ENABLE_TF32=0` in 35 s. Entry 32's incumbent lines and teacher digest were reproduced bitwise (prediction 1 matched). Two GPU prefixes of 21 updates were equal at every update on scalars, model and Adam digests, all finite. At U21, on the update-0 and update-21 batches: repeatable, additive, forward agreement within the tolerance, every local, parameter (52, with L2) and policy-head reference passing. Batch 0's two failing native gradients (`blocks.3` conv1 1.49×, conv2 1.24×) were explained by near-zero branch flips; batch 21 had none. **Scope: that state and those two batches only.** Training remains unqualified; no branch change is shown harmless; entry 32 remains a FAIL. Supersedes the addendum's "NOT RUN" line above. See #82.
+> **Search distillation D2 — bounded learning trial (decision note after Post-closure entry 35, 2026-10-23, the user's).** Entry 35 accepted; no further diagnostics are the next task. OPEN: a DRAFT successor card (`2026-10-23-search-distillation-d2-corrected-trial-card.md`) awaiting review. Its terms: unchanged incumbent and Stage 3 recipe and criteria, `MLX_ENABLE_TF32=0` in every process, 108 training games reused, 12 fresh held-out games, one candidate, no retries; strength evaluation only after a pass. Nothing generated, registered or trained; no gate. GPU-training reliability in general is not established. See #83.
 
 ## Historical proposal check — programme now closed
 
@@ -1726,6 +1727,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 81. **The full-float32 qualification decision (after entry 34), 2026-10-23.** Do **not** trace or localize entry 32's encoder discrepancy further: it is explained as a branch change. Do **not** re-judge entry 32 under the prefix card's new criterion; that criterion is prospective, for the updated state only. Do **not** run authorized GPU work on this machine and runtime without `MLX_ENABLE_TF32=0` in that process, and do **not** make the setting persistent without approval. Do **not** read the setting as qualified for training, or the branch change as harmless. Do **not** satisfy a failing native comparison by widening entry 26's tolerance; only the card's explicit accounting can explain one, and an unexplained discrepancy stops qualification without automatic follow-up. Do **not** freeze, build, gate or run the prefix card before the user reviews it. Training, a candidate checkpoint, strength claims, bug-report submission and pushing need their own approval.
 
 82. **The D2 21-update diagnostic prefix (entry 35) — QUALIFIED_AT_U21, 2026-10-23.** Do **not** rerun it, extend it to more updates, other states, other batches or the failed candidate, or open gate 44 again, without a new card and approval. Do **not** read `QUALIFIED_AT_U21` as qualifying GPU training, as showing any branch change harmless, or as naming the more accurate device; it covers only the tested updated state and two batches. Do **not** use it to re-judge entry 32, which remains a FAIL, or to explain Stage 3's value drift or its differing logged scalars. Do **not** run authorized GPU work without `MLX_ENABLE_TF32=0` in that process. Training, a candidate checkpoint, held-out access, persistent environment changes, bug-report submission and pushing need their own approval.
+
+83. **The decision to plan a bounded D2 learning trial (after entry 35), 2026-10-23.** Do **not** run further numerical diagnostics as the next step, or make the trial wait on proving the runtime correct for every state. Do **not** tune the recipe (anchor, learning rate, surface, steps, criteria) together with the numerical change. Do **not** open, train on or re-judge with the original 12 held-out games, or use the old Stage 3 candidate. Do **not** top up, replace or retry held-out games, training or a candidate: one candidate, and a STOP or VOID closes the trial. Do **not** judge the candidate by lower loss alone, or reuse a strength baseline measured under the old setting. Do **not** freeze, build, register seeds, generate, train, open a gate or push without the user's approval of each step.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -5185,3 +5188,27 @@ equal entry 32's, as the same frozen data, code and setting should give. Predict
     version or machine.
 - **Unchanged:** entry 32 remains a FAIL; training remains unqualified.
 - **Next:** the user's decision. Nothing was submitted or pushed. See do-not-repeat **#82**.
+
+### Decision note — after entry 35: a bounded learning trial under the corrected configuration (2026-10-23, the user's decision)
+
+- **Accepted:** entry 35's `QUALIFIED_AT_U21`. In the user's words, the numerical evidence is enough to plan a bounded
+  learning trial; further diagnostics are not the next task.
+- **What the acceptance does not establish:** general GPU-training reliability, or an explanation of the old
+  candidate's value drift.
+- **Authorized:** a short, design-only successor card. Its terms:
+  - unchanged `calib020_0001` with process-local `MLX_ENABLE_TF32=0`;
+  - the 108 immutable training games reused; the original corpus unchanged and its 12 held-out games spent;
+  - exactly 12 fresh, separately stored held-out games, with fresh seed accounting and no top-ups;
+  - Stage 3's 401-update recipe fixed: anchor, learning rate and update surface unchanged, and no tuning alongside the
+    numerical change;
+  - Stage 3's held-out policy-improvement and value-drift criteria retained;
+  - at most one candidate. A failure closes the trial, with no retry or selection;
+  - the numerical configuration stated for generation, training and evaluation, including the provenance difference
+    from the existing labels;
+  - compute ceilings and stop conditions frozen, and the fresh strength evaluation outlined. Lower loss alone is not
+    enough.
+- **Not authorized:** generation, seed registration, training, gate opening and pushing.
+- **Drafted:** `docs/superpowers/2026-10-23-search-distillation-d2-corrected-trial-card.md` (DRAFT, not frozen; no
+  gate), awaiting review.
+- **Prediction on record:** None stated in advance for this decision. The card proposes predictions (§9) for review.
+- See do-not-repeat **#83**.
