@@ -1,0 +1,99 @@
+{
+ "block": 5,
+ "count": 2,
+ "focus_flip": false,
+ "noise_max_abs_pre_diff": 1.7523765563964844e-05,
+ "pre_compare": {
+  "bitwise": false,
+  "max_abs": 1.7523765563964844e-05,
+  "scale": 4.084607124328613,
+  "within_tol": true
+ },
+ "recorded": [
+  {
+   "abs_pre_over_noise": 0.0026041666666666665,
+   "bn_channel": {
+    "bias": -0.009313594549894333,
+    "eps": 1e-05,
+    "mean": -0.0017670979723334312,
+    "var": 0.00033690815325826406,
+    "weight": -0.010480880737304688
+   },
+   "cpu": {
+    "float64_sign_agrees": true,
+    "grad_post": -5.0309181460761465e-06,
+    "grad_pre": -0.0,
+    "mask": false,
+    "operands": {
+     "bn_input": -0.018318120390176773
+    },
+    "pre": -4.190951585769653e-08,
+    "pre_float64_own_operands": -4.235995867789277e-08,
+    "pre_over_operand_ulp": 22.5
+   },
+   "gpu": {
+    "float64_sign_agrees": true,
+    "grad_post": -5.030818556406302e-06,
+    "grad_pre": -5.030818556406302e-06,
+    "mask": true,
+    "operands": {
+     "bn_input": -0.01831827685236931
+    },
+    "pre": 4.563480615615845e-08,
+    "pre_float64_own_operands": 4.568407625631099e-08,
+    "pre_over_operand_ulp": 24.5
+   },
+   "index": [
+    20,
+    1,
+    6,
+    86
+   ],
+   "noise_max_abs_pre_diff": 1.7523765563964844e-05,
+   "pre_gpu_minus_cpu": 8.754432201385498e-08
+  },
+  {
+   "abs_pre_over_noise": 0.04591836734693878,
+   "bn_channel": {
+    "bias": -0.36585909128189087,
+    "eps": 1e-05,
+    "mean": -0.05050227791070938,
+    "var": 0.12482509762048721,
+    "weight": 0.30122998356819153
+   },
+   "cpu": {
+    "float64_sign_agrees": true,
+    "grad_post": -4.606820311892079e-06,
+    "grad_pre": -0.0,
+    "mask": false,
+    "operands": {
+     "bn_input": 0.3786226212978363
+    },
+    "pre": -2.384185791015625e-07,
+    "pre_float64_own_operands": -2.454981311572624e-07,
+    "pre_over_operand_ulp": 8.0
+   },
+   "gpu": {
+    "float64_sign_agrees": true,
+    "grad_post": -4.606816673913272e-06,
+    "grad_pre": -4.606816673913272e-06,
+    "mask": true,
+    "operands": {
+     "bn_input": 0.3786238431930542
+    },
+    "pre": 8.046627044677734e-07,
+    "pre_float64_own_operands": 7.962525920279795e-07,
+    "pre_over_operand_ulp": 27.0
+   },
+   "index": [
+    12,
+    1,
+    0,
+    46
+   ],
+   "noise_max_abs_pre_diff": 1.7523765563964844e-05,
+   "pre_gpu_minus_cpu": 1.043081283569336e-06
+  }
+ ],
+ "relu": "blocks.5.relu_inner"
+}

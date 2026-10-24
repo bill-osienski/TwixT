@@ -6,4 +6,4 @@ in-memory diagnostic optimizer updates, no state saved) and checks the updated s
 criterion. It loads the incumbent, runs on the GPU and makes optimizer updates, so it takes its own reviewed door.
 Opened for ONE approved run and restored on every exit. Created closed. This file may hold ONLY this declaration.
 """
-SEARCH_DISTILLATION_D2_PREFIX_AUTHORIZED = True
+SEARCH_DISTILLATION_D2_PREFIX_AUTHORIZED = False

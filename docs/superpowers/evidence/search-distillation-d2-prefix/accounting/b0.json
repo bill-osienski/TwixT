@@ -1,0 +1,71 @@
+{
+ "encoder_output_gradient": {
+  "bitwise": false,
+  "max_abs": 5.21540641784668e-08,
+  "scale": 0.040110498666763306,
+  "within_tol": true
+ },
+ "tensors": {
+  "encoder.blocks.3.conv1.weight": {
+   "explained": true,
+   "flips_on_path": {
+    "blocks.3.relu_outer": 1,
+    "blocks.5.relu_outer": 3
+   },
+   "with_flips": {
+    "bitwise": false,
+    "max_abs": 2.188006626054062e-07,
+    "scale": 0.037361156195402145,
+    "within_tol": true
+   },
+   "without_flips": {
+    "bitwise": false,
+    "max_abs": 5.701731535823554e-05,
+    "n_outside": 3,
+    "scale": 0.037361156195402145,
+    "within_tol": false,
+    "worst": {
+     "got": -0.005663911461651013,
+     "index": [
+      106,
+      2,
+      0,
+      48
+     ],
+     "reference": -0.005720928777009249
+    }
+   }
+  },
+  "encoder.blocks.3.conv2.weight": {
+   "explained": true,
+   "flips_on_path": {
+    "blocks.3.relu_outer": 1,
+    "blocks.5.relu_outer": 3
+   },
+   "with_flips": {
+    "bitwise": false,
+    "max_abs": 2.905503226000028e-07,
+    "scale": 0.06848295778036118,
+    "within_tol": true
+   },
+   "without_flips": {
+    "bitwise": false,
+    "max_abs": 8.581537060073797e-05,
+    "n_outside": 5,
+    "scale": 0.06848295778036118,
+    "within_tol": false,
+    "worst": {
+     "got": 0.0032009311927891594,
+     "index": [
+      5,
+      0,
+      0,
+      81
+     ],
+     "reference": 0.0032867465633898973
+    }
+   }
+  }
+ },
+ "unexplained": []
+}

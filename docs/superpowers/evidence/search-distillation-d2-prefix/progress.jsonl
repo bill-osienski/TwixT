@@ -1,0 +1,16 @@
+{"event": "start", "t": 0.008, "setting": {"MLX_ENABLE_TF32": "0"}}
+{"event": "inputs_verified", "t": 3.072, "training_records": 6403}
+{"event": "teacher_values", "t": 4.869, "digest": "abe2873a0b06c8412bd947c32d01ec2b354f1dd8e2c09f039c2470c52ffcb37c", "entry32_digest": "abe2873a0b06c8412bd947c32d01ec2b354f1dd8e2c09f039c2470c52ffcb37c", "equals_entry32": true}
+{"event": "reproduce", "t": 6.599, "ok": true}
+{"event": "prefix", "t": 8.719, "label": "P1", "digest": "37ad56e1fcc9eeba1ffcffb7b92e5e5d75865658e5588ddede89ccc89f6e3fdc", "updates": 21}
+{"event": "prefix", "t": 10.798, "label": "P2", "digest": "37ad56e1fcc9eeba1ffcffb7b92e5e5d75865658e5588ddede89ccc89f6e3fdc", "updates": 21}
+{"event": "native", "t": 15.382, "block": "U21_b0", "failures": 6}
+{"event": "native", "t": 19.983, "block": "U21_b21", "failures": 0}
+{"event": "fidelity", "t": 22.003, "batch": 0, "cpu": {"trace": true, "pretanh_capture": true}, "gpu": {"trace": true, "pretanh_capture": true}}
+{"event": "local_checks", "t": 26.783, "batch": 0, "derivative": 0, "forward": 0}
+{"event": "flips", "t": 27.005, "batch": 0, "flips": {"stem.relu": 0, "blocks.0.relu_inner": 0, "blocks.0.relu_outer": 0, "blocks.1.relu_inner": 0, "blocks.1.relu_outer": 1, "blocks.2.relu_inner": 0, "blocks.2.relu_outer": 0, "blocks.3.relu_inner": 0, "blocks.3.relu_outer": 1, "blocks.4.relu_inner": 0, "blocks.4.relu_outer": 0, "blocks.5.relu_inner": 0, "blocks.5.relu_outer": 3}, "encoder_output_within_tol": true}
+{"event": "accounting", "t": 27.819, "batch": 0, "unexplained": []}
+{"event": "fidelity", "t": 29.835, "batch": 21, "cpu": {"trace": true, "pretanh_capture": true}, "gpu": {"trace": true, "pretanh_capture": true}}
+{"event": "local_checks", "t": 34.641, "batch": 21, "derivative": 0, "forward": 0}
+{"event": "flips", "t": 34.865, "batch": 21, "flips": {"stem.relu": 0, "blocks.0.relu_inner": 0, "blocks.0.relu_outer": 0, "blocks.1.relu_inner": 1, "blocks.1.relu_outer": 0, "blocks.2.relu_inner": 0, "blocks.2.relu_outer": 3, "blocks.3.relu_inner": 0, "blocks.3.relu_outer": 1, "blocks.4.relu_inner": 0, "blocks.4.relu_outer": 1, "blocks.5.relu_inner": 2, "blocks.5.relu_outer": 5}, "encoder_output_within_tol": true}
+{"event": "end", "t": 34.931, "status": "COMPLETED", "outcome": "QUALIFIED_AT_U21", "reason": null}

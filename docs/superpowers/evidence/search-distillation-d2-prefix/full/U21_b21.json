@@ -1,0 +1,3436 @@
+{
+ "batch_update": 21,
+ "block": "U21_b21",
+ "devices": {
+  "cpu": {
+   "additivity": {
+    "encoder.blocks.0.bn1.bias": {
+     "bitwise": false,
+     "max_abs": 5.811452865600586e-07,
+     "scale": 0.21929791569709778,
+     "within_tol": true
+    },
+    "encoder.blocks.0.bn1.weight": {
+     "bitwise": false,
+     "max_abs": 4.973262548446655e-07,
+     "scale": 0.1623290777206421,
+     "within_tol": true
+    },
+    "encoder.blocks.0.bn2.bias": {
+     "bitwise": false,
+     "max_abs": 6.705522537231445e-07,
+     "scale": 0.20366327464580536,
+     "within_tol": true
+    },
+    "encoder.blocks.0.bn2.weight": {
+     "bitwise": false,
+     "max_abs": 3.259629011154175e-07,
+     "scale": 0.09867452830076218,
+     "within_tol": true
+    },
+    "encoder.blocks.0.conv1.bias": {
+     "bitwise": false,
+     "max_abs": 4.172325134277344e-07,
+     "scale": 0.148128479719162,
+     "within_tol": true
+    },
+    "encoder.blocks.0.conv1.weight": {
+     "bitwise": false,
+     "max_abs": 2.8265640139579773e-07,
+     "scale": 0.07671179622411728,
+     "within_tol": true
+    },
+    "encoder.blocks.0.conv2.bias": {
+     "bitwise": false,
+     "max_abs": 2.868473529815674e-07,
+     "scale": 0.1120779812335968,
+     "within_tol": true
+    },
+    "encoder.blocks.0.conv2.weight": {
+     "bitwise": false,
+     "max_abs": 2.530869096517563e-07,
+     "scale": 0.06928754597902298,
+     "within_tol": true
+    },
+    "encoder.blocks.1.bn1.bias": {
+     "bitwise": false,
+     "max_abs": 2.868473529815674e-07,
+     "scale": 0.15597659349441528,
+     "within_tol": true
+    },
+    "encoder.blocks.1.bn1.weight": {
+     "bitwise": false,
+     "max_abs": 2.6635825634002686e-07,
+     "scale": 0.1436125934123993,
+     "within_tol": true
+    },
+    "encoder.blocks.1.bn2.bias": {
+     "bitwise": false,
+     "max_abs": 4.0978193283081055e-07,
+     "scale": 0.22792944312095642,
+     "within_tol": true
+    },
+    "encoder.blocks.1.bn2.weight": {
+     "bitwise": false,
+     "max_abs": 4.917383193969727e-07,
+     "scale": 0.3473123610019684,
+     "within_tol": true
+    },
+    "encoder.blocks.1.conv1.bias": {
+     "bitwise": false,
+     "max_abs": 5.774199962615967e-08,
+     "scale": 0.07092789560556412,
+     "within_tol": true
+    },
+    "encoder.blocks.1.conv1.weight": {
+     "bitwise": false,
+     "max_abs": 1.7695128917694092e-07,
+     "scale": 0.05472689867019653,
+     "within_tol": true
+    },
+    "encoder.blocks.1.conv2.bias": {
+     "bitwise": false,
+     "max_abs": 1.778826117515564e-07,
+     "scale": 0.09883731603622437,
+     "within_tol": true
+    },
+    "encoder.blocks.1.conv2.weight": {
+     "bitwise": false,
+     "max_abs": 1.6391277313232422e-07,
+     "scale": 0.08411607891321182,
+     "within_tol": true
+    },
+    "encoder.blocks.2.bn1.bias": {
+     "bitwise": false,
+     "max_abs": 1.4975666999816895e-06,
+     "scale": 0.38975226879119873,
+     "within_tol": true
+    },
+    "encoder.blocks.2.bn1.weight": {
+     "bitwise": false,
+     "max_abs": 6.556510925292969e-07,
+     "scale": 0.30366528034210205,
+     "within_tol": true
+    },
+    "encoder.blocks.2.bn2.bias": {
+     "bitwise": false,
+     "max_abs": 5.755573511123657e-07,
+     "scale": 0.20891420543193817,
+     "within_tol": true
+    },
+    "encoder.blocks.2.bn2.weight": {
+     "bitwise": false,
+     "max_abs": 5.355104804039001e-07,
+     "scale": 0.08908800035715103,
+     "within_tol": true
+    },
+    "encoder.blocks.2.conv1.bias": {
+     "bitwise": false,
+     "max_abs": 3.427267074584961e-07,
+     "scale": 0.24207837879657745,
+     "within_tol": true
+    },
+    "encoder.blocks.2.conv1.weight": {
+     "bitwise": false,
+     "max_abs": 4.842877388000488e-07,
+     "scale": 0.18063931167125702,
+     "within_tol": true
+    },
+    "encoder.blocks.2.conv2.bias": {
+     "bitwise": false,
+     "max_abs": 3.427267074584961e-07,
+     "scale": 0.1726549118757248,
+     "within_tol": true
+    },
+    "encoder.blocks.2.conv2.weight": {
+     "bitwise": false,
+     "max_abs": 2.998858690261841e-07,
+     "scale": 0.08030775934457779,
+     "within_tol": true
+    },
+    "encoder.blocks.3.bn1.bias": {
+     "bitwise": false,
+     "max_abs": 2.8312206268310547e-07,
+     "scale": 0.16707324981689453,
+     "within_tol": true
+    },
+    "encoder.blocks.3.bn1.weight": {
+     "bitwise": false,
+     "max_abs": 7.227063179016113e-07,
+     "scale": 0.15299458801746368,
+     "within_tol": true
+    },
+    "encoder.blocks.3.bn2.bias": {
+     "bitwise": false,
+     "max_abs": 1.1771917343139648e-06,
+     "scale": 0.20670007169246674,
+     "within_tol": true
+    },
+    "encoder.blocks.3.bn2.weight": {
+     "bitwise": false,
+     "max_abs": 6.48200511932373e-07,
+     "scale": 0.2955959141254425,
+     "within_tol": true
+    },
+    "encoder.blocks.3.conv1.bias": {
+     "bitwise": false,
+     "max_abs": 2.086162567138672e-07,
+     "scale": 0.09049905836582184,
+     "within_tol": true
+    },
+    "encoder.blocks.3.conv1.weight": {
+     "bitwise": false,
+     "max_abs": 1.210719347000122e-07,
+     "scale": 0.040732529014348984,
+     "within_tol": true
+    },
+    "encoder.blocks.3.conv2.bias": {
+     "bitwise": false,
+     "max_abs": 5.811452865600586e-07,
+     "scale": 0.16979746520519257,
+     "within_tol": true
+    },
+    "encoder.blocks.3.conv2.weight": {
+     "bitwise": false,
+     "max_abs": 1.1455267667770386e-07,
+     "scale": 0.05137846618890762,
+     "within_tol": true
+    },
+    "encoder.blocks.4.bn1.bias": {
+     "bitwise": false,
+     "max_abs": 9.406358003616333e-07,
+     "scale": 0.24467353522777557,
+     "within_tol": true
+    },
+    "encoder.blocks.4.bn1.weight": {
+     "bitwise": false,
+     "max_abs": 6.295740604400635e-07,
+     "scale": 0.15719173848628998,
+     "within_tol": true
+    },
+    "encoder.blocks.4.bn2.bias": {
+     "bitwise": false,
+     "max_abs": 2.477318048477173e-07,
+     "scale": 0.1957734376192093,
+     "within_tol": true
+    },
+    "encoder.blocks.4.bn2.weight": {
+     "bitwise": false,
+     "max_abs": 1.4528632164001465e-07,
+     "scale": 0.11965891718864441,
+     "within_tol": true
+    },
+    "encoder.blocks.4.conv1.bias": {
+     "bitwise": false,
+     "max_abs": 1.126900315284729e-07,
+     "scale": 0.13488554954528809,
+     "within_tol": true
+    },
+    "encoder.blocks.4.conv1.weight": {
+     "bitwise": false,
+     "max_abs": 3.5117409424856305e-07,
+     "scale": 0.10272196680307388,
+     "within_tol": true
+    },
+    "encoder.blocks.4.conv2.bias": {
+     "bitwise": false,
+     "max_abs": 3.241002559661865e-07,
+     "scale": 0.11866749078035355,
+     "within_tol": true
+    },
+    "encoder.blocks.4.conv2.weight": {
+     "bitwise": false,
+     "max_abs": 1.4062970876693726e-07,
+     "scale": 0.05403754487633705,
+     "within_tol": true
+    },
+    "encoder.blocks.5.bn1.bias": {
+     "bitwise": false,
+     "max_abs": 6.891787052154541e-07,
+     "scale": 0.20841264724731445,
+     "within_tol": true
+    },
+    "encoder.blocks.5.bn1.weight": {
+     "bitwise": false,
+     "max_abs": 5.066394805908203e-07,
+     "scale": 0.3924597501754761,
+     "within_tol": true
+    },
+    "encoder.blocks.5.bn2.bias": {
+     "bitwise": false,
+     "max_abs": 1.5944242477416992e-06,
+     "scale": 0.1321403831243515,
+     "within_tol": true
+    },
+    "encoder.blocks.5.bn2.weight": {
+     "bitwise": false,
+     "max_abs": 5.066394805908203e-07,
+     "scale": 0.2613361179828644,
+     "within_tol": true
+    },
+    "encoder.blocks.5.conv1.bias": {
+     "bitwise": false,
+     "max_abs": 5.587935447692871e-08,
+     "scale": 0.10722792148590088,
+     "within_tol": true
+    },
+    "encoder.blocks.5.conv1.weight": {
+     "bitwise": false,
+     "max_abs": 1.6123522073030472e-07,
+     "scale": 0.08584331721067429,
+     "within_tol": true
+    },
+    "encoder.blocks.5.conv2.bias": {
+     "bitwise": false,
+     "max_abs": 9.136274456977844e-07,
+     "scale": 0.18390655517578125,
+     "within_tol": true
+    },
+    "encoder.blocks.5.conv2.weight": {
+     "bitwise": false,
+     "max_abs": 5.878973752260208e-08,
+     "scale": 0.06877493113279343,
+     "within_tol": true
+    },
+    "encoder.bn1.bias": {
+     "bitwise": false,
+     "max_abs": 3.129243850708008e-07,
+     "scale": 0.336052268743515,
+     "within_tol": true
+    },
+    "encoder.bn1.weight": {
+     "bitwise": false,
+     "max_abs": 1.0356307029724121e-06,
+     "scale": 0.36616429686546326,
+     "within_tol": true
+    },
+    "encoder.conv1.bias": {
+     "bitwise": false,
+     "max_abs": 3.427267074584961e-07,
+     "scale": 0.41934579610824585,
+     "within_tol": true
+    },
+    "encoder.conv1.weight": {
+     "bitwise": false,
+     "max_abs": 1.7061829566955566e-06,
+     "scale": 0.42086973786354065,
+     "within_tol": true
+    },
+    "policy_head.bn.bias": {
+     "bitwise": false,
+     "max_abs": 3.632158041000366e-07,
+     "scale": 0.13691173493862152,
+     "within_tol": true
+    },
+    "policy_head.bn.weight": {
+     "bitwise": false,
+     "max_abs": 4.6566128730773926e-07,
+     "scale": 0.20930929481983185,
+     "within_tol": true
+    },
+    "policy_head.conv.bias": {
+     "bitwise": false,
+     "max_abs": 4.284083843231201e-08,
+     "scale": 0.08792193233966827,
+     "within_tol": true
+    },
+    "policy_head.conv.weight": {
+     "bitwise": false,
+     "max_abs": 3.7066638469696045e-07,
+     "scale": 0.18922485411167145,
+     "within_tol": true
+    },
+    "policy_head.fc.bias": {
+     "bitwise": false,
+     "max_abs": 1.959269866347313e-07,
+     "scale": 0.029038939625024796,
+     "within_tol": true
+    },
+    "policy_head.fc.weight": {
+     "bitwise": false,
+     "max_abs": 9.685754776000977e-08,
+     "scale": 0.04904383420944214,
+     "within_tol": true
+    },
+    "policy_head.out.bias": {
+     "bitwise": false,
+     "max_abs": 1.6763806343078613e-08,
+     "scale": 3.725290298461914e-08,
+     "within_tol": true
+    },
+    "policy_head.out.weight": {
+     "bitwise": false,
+     "max_abs": 1.83936208486557e-08,
+     "scale": 0.009218806400895119,
+     "within_tol": true
+    }
+   },
+   "failures": [],
+   "grads_vs_reference": [
+    {
+     "encoder.blocks.0.bn1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.2193136364221573,
+      "within_tol": true
+     },
+     "encoder.blocks.0.bn1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.16240042448043823,
+      "within_tol": true
+     },
+     "encoder.blocks.0.bn2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.20366282761096954,
+      "within_tol": true
+     },
+     "encoder.blocks.0.bn2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.09861738234758377,
+      "within_tol": true
+     },
+     "encoder.blocks.0.conv1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.14813435077667236,
+      "within_tol": true
+     },
+     "encoder.blocks.0.conv1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.07674767076969147,
+      "within_tol": true
+     },
+     "encoder.blocks.0.conv2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.11207219213247299,
+      "within_tol": true
+     },
+     "encoder.blocks.0.conv2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.0693001002073288,
+      "within_tol": true
+     },
+     "encoder.blocks.1.bn1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.155982106924057,
+      "within_tol": true
+     },
+     "encoder.blocks.1.bn1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.1435205191373825,
+      "within_tol": true
+     },
+     "encoder.blocks.1.bn2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.22794575989246368,
+      "within_tol": true
+     },
+     "encoder.blocks.1.bn2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.34726014733314514,
+      "within_tol": true
+     },
+     "encoder.blocks.1.conv1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.07092785835266113,
+      "within_tol": true
+     },
+     "encoder.blocks.1.conv1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.0547386072576046,
+      "within_tol": true
+     },
+     "encoder.blocks.1.conv2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.09884627163410187,
+      "within_tol": true
+     },
+     "encoder.blocks.1.conv2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.08417333662509918,
+      "within_tol": true
+     },
+     "encoder.blocks.2.bn1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.38972362875938416,
+      "within_tol": true
+     },
+     "encoder.blocks.2.bn1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.3037649989128113,
+      "within_tol": true
+     },
+     "encoder.blocks.2.bn2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.20898902416229248,
+      "within_tol": true
+     },
+     "encoder.blocks.2.bn2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.08902458846569061,
+      "within_tol": true
+     },
+     "encoder.blocks.2.conv1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.24208499491214752,
+      "within_tol": true
+     },
+     "encoder.blocks.2.conv1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.18068799376487732,
+      "within_tol": true
+     },
+     "encoder.blocks.2.conv2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.17265553772449493,
+      "within_tol": true
+     },
+     "encoder.blocks.2.conv2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.080307736992836,
+      "within_tol": true
+     },
+     "encoder.blocks.3.bn1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.16703592240810394,
+      "within_tol": true
+     },
+     "encoder.blocks.3.bn1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.15294907987117767,
+      "within_tol": true
+     },
+     "encoder.blocks.3.bn2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.20672392845153809,
+      "within_tol": true
+     },
+     "encoder.blocks.3.bn2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.2955753803253174,
+      "within_tol": true
+     },
+     "encoder.blocks.3.conv1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.09050710499286652,
+      "within_tol": true
+     },
+     "encoder.blocks.3.conv1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.04074065387248993,
+      "within_tol": true
+     },
+     "encoder.blocks.3.conv2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.16978928446769714,
+      "within_tol": true
+     },
+     "encoder.blocks.3.conv2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.05137404799461365,
+      "within_tol": true
+     },
+     "encoder.blocks.4.bn1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.24470169842243195,
+      "within_tol": true
+     },
+     "encoder.blocks.4.bn1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.15727558732032776,
+      "within_tol": true
+     },
+     "encoder.blocks.4.bn2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.19578444957733154,
+      "within_tol": true
+     },
+     "encoder.blocks.4.bn2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.11967523396015167,
+      "within_tol": true
+     },
+     "encoder.blocks.4.conv1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.13488233089447021,
+      "within_tol": true
+     },
+     "encoder.blocks.4.conv1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.10273486375808716,
+      "within_tol": true
+     },
+     "encoder.blocks.4.conv2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.1186629980802536,
+      "within_tol": true
+     },
+     "encoder.blocks.4.conv2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.05398523434996605,
+      "within_tol": true
+     },
+     "encoder.blocks.5.bn1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.2084561586380005,
+      "within_tol": true
+     },
+     "encoder.blocks.5.bn1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.39240792393684387,
+      "within_tol": true
+     },
+     "encoder.blocks.5.bn2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.13228219747543335,
+      "within_tol": true
+     },
+     "encoder.blocks.5.bn2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.2612619698047638,
+      "within_tol": true
+     },
+     "encoder.blocks.5.conv1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.1072208434343338,
+      "within_tol": true
+     },
+     "encoder.blocks.5.conv1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.08577854186296463,
+      "within_tol": true
+     },
+     "encoder.blocks.5.conv2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.18390251696109772,
+      "within_tol": true
+     },
+     "encoder.blocks.5.conv2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.06868647783994675,
+      "within_tol": true
+     },
+     "encoder.bn1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.3360481858253479,
+      "within_tol": true
+     },
+     "encoder.bn1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.3661646246910095,
+      "within_tol": true
+     },
+     "encoder.conv1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.4193708598613739,
+      "within_tol": true
+     },
+     "encoder.conv1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.42087429761886597,
+      "within_tol": true
+     },
+     "policy_head.bn.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.1371486932039261,
+      "within_tol": true
+     },
+     "policy_head.bn.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.20920829474925995,
+      "within_tol": true
+     },
+     "policy_head.conv.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.08792946487665176,
+      "within_tol": true
+     },
+     "policy_head.conv.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.18920378386974335,
+      "within_tol": true
+     },
+     "policy_head.fc.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.02901250123977661,
+      "within_tol": true
+     },
+     "policy_head.fc.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.049011778086423874,
+      "within_tol": true
+     },
+     "policy_head.out.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 4.173330125922803e-08,
+      "within_tol": true
+     },
+     "policy_head.out.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.009350288659334183,
+      "within_tol": true
+     }
+    },
+    {
+     "encoder.blocks.0.bn1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.2193136364221573,
+      "within_tol": true
+     },
+     "encoder.blocks.0.bn1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.16240042448043823,
+      "within_tol": true
+     },
+     "encoder.blocks.0.bn2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.20366282761096954,
+      "within_tol": true
+     },
+     "encoder.blocks.0.bn2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.09861738234758377,
+      "within_tol": true
+     },
+     "encoder.blocks.0.conv1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.14813435077667236,
+      "within_tol": true
+     },
+     "encoder.blocks.0.conv1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.07674767076969147,
+      "within_tol": true
+     },
+     "encoder.blocks.0.conv2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.11207219213247299,
+      "within_tol": true
+     },
+     "encoder.blocks.0.conv2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.0693001002073288,
+      "within_tol": true
+     },
+     "encoder.blocks.1.bn1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.155982106924057,
+      "within_tol": true
+     },
+     "encoder.blocks.1.bn1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.1435205191373825,
+      "within_tol": true
+     },
+     "encoder.blocks.1.bn2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.22794575989246368,
+      "within_tol": true
+     },
+     "encoder.blocks.1.bn2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.34726014733314514,
+      "within_tol": true
+     },
+     "encoder.blocks.1.conv1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.07092785835266113,
+      "within_tol": true
+     },
+     "encoder.blocks.1.conv1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.0547386072576046,
+      "within_tol": true
+     },
+     "encoder.blocks.1.conv2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.09884627163410187,
+      "within_tol": true
+     },
+     "encoder.blocks.1.conv2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.08417333662509918,
+      "within_tol": true
+     },
+     "encoder.blocks.2.bn1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.38972362875938416,
+      "within_tol": true
+     },
+     "encoder.blocks.2.bn1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.3037649989128113,
+      "within_tol": true
+     },
+     "encoder.blocks.2.bn2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.20898902416229248,
+      "within_tol": true
+     },
+     "encoder.blocks.2.bn2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.08902458846569061,
+      "within_tol": true
+     },
+     "encoder.blocks.2.conv1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.24208499491214752,
+      "within_tol": true
+     },
+     "encoder.blocks.2.conv1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.18068799376487732,
+      "within_tol": true
+     },
+     "encoder.blocks.2.conv2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.17265553772449493,
+      "within_tol": true
+     },
+     "encoder.blocks.2.conv2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.080307736992836,
+      "within_tol": true
+     },
+     "encoder.blocks.3.bn1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.16703592240810394,
+      "within_tol": true
+     },
+     "encoder.blocks.3.bn1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.15294907987117767,
+      "within_tol": true
+     },
+     "encoder.blocks.3.bn2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.20672392845153809,
+      "within_tol": true
+     },
+     "encoder.blocks.3.bn2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.2955753803253174,
+      "within_tol": true
+     },
+     "encoder.blocks.3.conv1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.09050710499286652,
+      "within_tol": true
+     },
+     "encoder.blocks.3.conv1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.04074065387248993,
+      "within_tol": true
+     },
+     "encoder.blocks.3.conv2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.16978928446769714,
+      "within_tol": true
+     },
+     "encoder.blocks.3.conv2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.05137404799461365,
+      "within_tol": true
+     },
+     "encoder.blocks.4.bn1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.24470169842243195,
+      "within_tol": true
+     },
+     "encoder.blocks.4.bn1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.15727558732032776,
+      "within_tol": true
+     },
+     "encoder.blocks.4.bn2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.19578444957733154,
+      "within_tol": true
+     },
+     "encoder.blocks.4.bn2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.11967523396015167,
+      "within_tol": true
+     },
+     "encoder.blocks.4.conv1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.13488233089447021,
+      "within_tol": true
+     },
+     "encoder.blocks.4.conv1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.10273486375808716,
+      "within_tol": true
+     },
+     "encoder.blocks.4.conv2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.1186629980802536,
+      "within_tol": true
+     },
+     "encoder.blocks.4.conv2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.05398523434996605,
+      "within_tol": true
+     },
+     "encoder.blocks.5.bn1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.2084561586380005,
+      "within_tol": true
+     },
+     "encoder.blocks.5.bn1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.39240792393684387,
+      "within_tol": true
+     },
+     "encoder.blocks.5.bn2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.13228219747543335,
+      "within_tol": true
+     },
+     "encoder.blocks.5.bn2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.2612619698047638,
+      "within_tol": true
+     },
+     "encoder.blocks.5.conv1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.1072208434343338,
+      "within_tol": true
+     },
+     "encoder.blocks.5.conv1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.08577854186296463,
+      "within_tol": true
+     },
+     "encoder.blocks.5.conv2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.18390251696109772,
+      "within_tol": true
+     },
+     "encoder.blocks.5.conv2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.06868647783994675,
+      "within_tol": true
+     },
+     "encoder.bn1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.3360481858253479,
+      "within_tol": true
+     },
+     "encoder.bn1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.3661646246910095,
+      "within_tol": true
+     },
+     "encoder.conv1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.4193708598613739,
+      "within_tol": true
+     },
+     "encoder.conv1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.42087429761886597,
+      "within_tol": true
+     },
+     "policy_head.bn.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.1371486932039261,
+      "within_tol": true
+     },
+     "policy_head.bn.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.20920829474925995,
+      "within_tol": true
+     },
+     "policy_head.conv.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.08792946487665176,
+      "within_tol": true
+     },
+     "policy_head.conv.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.18920378386974335,
+      "within_tol": true
+     },
+     "policy_head.fc.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.02901250123977661,
+      "within_tol": true
+     },
+     "policy_head.fc.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.049011778086423874,
+      "within_tol": true
+     },
+     "policy_head.out.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 4.173330125922803e-08,
+      "within_tol": true
+     },
+     "policy_head.out.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.009350288659334183,
+      "within_tol": true
+     }
+    },
+    {
+     "encoder.blocks.0.bn1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.2193136364221573,
+      "within_tol": true
+     },
+     "encoder.blocks.0.bn1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.16240042448043823,
+      "within_tol": true
+     },
+     "encoder.blocks.0.bn2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.20366282761096954,
+      "within_tol": true
+     },
+     "encoder.blocks.0.bn2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.09861738234758377,
+      "within_tol": true
+     },
+     "encoder.blocks.0.conv1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.14813435077667236,
+      "within_tol": true
+     },
+     "encoder.blocks.0.conv1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.07674767076969147,
+      "within_tol": true
+     },
+     "encoder.blocks.0.conv2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.11207219213247299,
+      "within_tol": true
+     },
+     "encoder.blocks.0.conv2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.0693001002073288,
+      "within_tol": true
+     },
+     "encoder.blocks.1.bn1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.155982106924057,
+      "within_tol": true
+     },
+     "encoder.blocks.1.bn1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.1435205191373825,
+      "within_tol": true
+     },
+     "encoder.blocks.1.bn2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.22794575989246368,
+      "within_tol": true
+     },
+     "encoder.blocks.1.bn2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.34726014733314514,
+      "within_tol": true
+     },
+     "encoder.blocks.1.conv1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.07092785835266113,
+      "within_tol": true
+     },
+     "encoder.blocks.1.conv1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.0547386072576046,
+      "within_tol": true
+     },
+     "encoder.blocks.1.conv2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.09884627163410187,
+      "within_tol": true
+     },
+     "encoder.blocks.1.conv2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.08417333662509918,
+      "within_tol": true
+     },
+     "encoder.blocks.2.bn1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.38972362875938416,
+      "within_tol": true
+     },
+     "encoder.blocks.2.bn1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.3037649989128113,
+      "within_tol": true
+     },
+     "encoder.blocks.2.bn2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.20898902416229248,
+      "within_tol": true
+     },
+     "encoder.blocks.2.bn2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.08902458846569061,
+      "within_tol": true
+     },
+     "encoder.blocks.2.conv1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.24208499491214752,
+      "within_tol": true
+     },
+     "encoder.blocks.2.conv1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.18068799376487732,
+      "within_tol": true
+     },
+     "encoder.blocks.2.conv2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.17265553772449493,
+      "within_tol": true
+     },
+     "encoder.blocks.2.conv2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.080307736992836,
+      "within_tol": true
+     },
+     "encoder.blocks.3.bn1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.16703592240810394,
+      "within_tol": true
+     },
+     "encoder.blocks.3.bn1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.15294907987117767,
+      "within_tol": true
+     },
+     "encoder.blocks.3.bn2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.20672392845153809,
+      "within_tol": true
+     },
+     "encoder.blocks.3.bn2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.2955753803253174,
+      "within_tol": true
+     },
+     "encoder.blocks.3.conv1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.09050710499286652,
+      "within_tol": true
+     },
+     "encoder.blocks.3.conv1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.04074065387248993,
+      "within_tol": true
+     },
+     "encoder.blocks.3.conv2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.16978928446769714,
+      "within_tol": true
+     },
+     "encoder.blocks.3.conv2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.05137404799461365,
+      "within_tol": true
+     },
+     "encoder.blocks.4.bn1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.24470169842243195,
+      "within_tol": true
+     },
+     "encoder.blocks.4.bn1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.15727558732032776,
+      "within_tol": true
+     },
+     "encoder.blocks.4.bn2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.19578444957733154,
+      "within_tol": true
+     },
+     "encoder.blocks.4.bn2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.11967523396015167,
+      "within_tol": true
+     },
+     "encoder.blocks.4.conv1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.13488233089447021,
+      "within_tol": true
+     },
+     "encoder.blocks.4.conv1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.10273486375808716,
+      "within_tol": true
+     },
+     "encoder.blocks.4.conv2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.1186629980802536,
+      "within_tol": true
+     },
+     "encoder.blocks.4.conv2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.05398523434996605,
+      "within_tol": true
+     },
+     "encoder.blocks.5.bn1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.2084561586380005,
+      "within_tol": true
+     },
+     "encoder.blocks.5.bn1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.39240792393684387,
+      "within_tol": true
+     },
+     "encoder.blocks.5.bn2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.13228219747543335,
+      "within_tol": true
+     },
+     "encoder.blocks.5.bn2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.2612619698047638,
+      "within_tol": true
+     },
+     "encoder.blocks.5.conv1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.1072208434343338,
+      "within_tol": true
+     },
+     "encoder.blocks.5.conv1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.08577854186296463,
+      "within_tol": true
+     },
+     "encoder.blocks.5.conv2.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.18390251696109772,
+      "within_tol": true
+     },
+     "encoder.blocks.5.conv2.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.06868647783994675,
+      "within_tol": true
+     },
+     "encoder.bn1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.3360481858253479,
+      "within_tol": true
+     },
+     "encoder.bn1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.3661646246910095,
+      "within_tol": true
+     },
+     "encoder.conv1.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.4193708598613739,
+      "within_tol": true
+     },
+     "encoder.conv1.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.42087429761886597,
+      "within_tol": true
+     },
+     "policy_head.bn.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.1371486932039261,
+      "within_tol": true
+     },
+     "policy_head.bn.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.20920829474925995,
+      "within_tol": true
+     },
+     "policy_head.conv.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.08792946487665176,
+      "within_tol": true
+     },
+     "policy_head.conv.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.18920378386974335,
+      "within_tol": true
+     },
+     "policy_head.fc.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.02901250123977661,
+      "within_tol": true
+     },
+     "policy_head.fc.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.049011778086423874,
+      "within_tol": true
+     },
+     "policy_head.out.bias": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 4.173330125922803e-08,
+      "within_tol": true
+     },
+     "policy_head.out.weight": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.009350288659334183,
+      "within_tol": true
+     }
+    }
+   ],
+   "logits_legal_vs_reference": [
+    {
+     "bitwise": true,
+     "max_abs": 0.0,
+     "scale": 14.370525360107422,
+     "within_tol": true
+    },
+    {
+     "bitwise": true,
+     "max_abs": 0.0,
+     "scale": 14.370525360107422,
+     "within_tol": true
+    },
+    {
+     "bitwise": true,
+     "max_abs": 0.0,
+     "scale": 14.370525360107422,
+     "within_tol": true
+    }
+   ],
+   "logits_padding_equal": [
+    true,
+    true,
+    true
+   ],
+   "loss_terms": [
+    {
+     "anchor": 0.028391383588314056,
+     "loss": 4.37118673324585,
+     "policy": 4.250805854797363
+    },
+    {
+     "anchor": 0.028391383588314056,
+     "loss": 4.37118673324585,
+     "policy": 4.250805854797363
+    },
+    {
+     "anchor": 0.028391383588314056,
+     "loss": 4.37118673324585,
+     "policy": 4.250805854797363
+    }
+   ],
+   "loss_terms_vs_reference": [
+    {
+     "anchor": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.028391383588314056,
+      "within_tol": true
+     },
+     "loss": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 4.37118673324585,
+      "within_tol": true
+     },
+     "policy": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 4.250805854797363,
+      "within_tol": true
+     }
+    },
+    {
+     "anchor": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.028391383588314056,
+      "within_tol": true
+     },
+     "loss": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 4.37118673324585,
+      "within_tol": true
+     },
+     "policy": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 4.250805854797363,
+      "within_tol": true
+     }
+    },
+    {
+     "anchor": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 0.028391383588314056,
+      "within_tol": true
+     },
+     "loss": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 4.37118673324585,
+      "within_tol": true
+     },
+     "policy": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 4.250805854797363,
+      "within_tol": true
+     }
+    }
+   ],
+   "repeats_bitwise": [
+    {
+     "grads": {
+      "encoder.blocks.0.bn1.bias": true,
+      "encoder.blocks.0.bn1.weight": true,
+      "encoder.blocks.0.bn2.bias": true,
+      "encoder.blocks.0.bn2.weight": true,
+      "encoder.blocks.0.conv1.bias": true,
+      "encoder.blocks.0.conv1.weight": true,
+      "encoder.blocks.0.conv2.bias": true,
+      "encoder.blocks.0.conv2.weight": true,
+      "encoder.blocks.1.bn1.bias": true,
+      "encoder.blocks.1.bn1.weight": true,
+      "encoder.blocks.1.bn2.bias": true,
+      "encoder.blocks.1.bn2.weight": true,
+      "encoder.blocks.1.conv1.bias": true,
+      "encoder.blocks.1.conv1.weight": true,
+      "encoder.blocks.1.conv2.bias": true,
+      "encoder.blocks.1.conv2.weight": true,
+      "encoder.blocks.2.bn1.bias": true,
+      "encoder.blocks.2.bn1.weight": true,
+      "encoder.blocks.2.bn2.bias": true,
+      "encoder.blocks.2.bn2.weight": true,
+      "encoder.blocks.2.conv1.bias": true,
+      "encoder.blocks.2.conv1.weight": true,
+      "encoder.blocks.2.conv2.bias": true,
+      "encoder.blocks.2.conv2.weight": true,
+      "encoder.blocks.3.bn1.bias": true,
+      "encoder.blocks.3.bn1.weight": true,
+      "encoder.blocks.3.bn2.bias": true,
+      "encoder.blocks.3.bn2.weight": true,
+      "encoder.blocks.3.conv1.bias": true,
+      "encoder.blocks.3.conv1.weight": true,
+      "encoder.blocks.3.conv2.bias": true,
+      "encoder.blocks.3.conv2.weight": true,
+      "encoder.blocks.4.bn1.bias": true,
+      "encoder.blocks.4.bn1.weight": true,
+      "encoder.blocks.4.bn2.bias": true,
+      "encoder.blocks.4.bn2.weight": true,
+      "encoder.blocks.4.conv1.bias": true,
+      "encoder.blocks.4.conv1.weight": true,
+      "encoder.blocks.4.conv2.bias": true,
+      "encoder.blocks.4.conv2.weight": true,
+      "encoder.blocks.5.bn1.bias": true,
+      "encoder.blocks.5.bn1.weight": true,
+      "encoder.blocks.5.bn2.bias": true,
+      "encoder.blocks.5.bn2.weight": true,
+      "encoder.blocks.5.conv1.bias": true,
+      "encoder.blocks.5.conv1.weight": true,
+      "encoder.blocks.5.conv2.bias": true,
+      "encoder.blocks.5.conv2.weight": true,
+      "encoder.bn1.bias": true,
+      "encoder.bn1.weight": true,
+      "encoder.conv1.bias": true,
+      "encoder.conv1.weight": true,
+      "policy_head.bn.bias": true,
+      "policy_head.bn.weight": true,
+      "policy_head.conv.bias": true,
+      "policy_head.conv.weight": true,
+      "policy_head.fc.bias": true,
+      "policy_head.fc.weight": true,
+      "policy_head.out.bias": true,
+      "policy_head.out.weight": true
+     },
+     "logits": true,
+     "loss_terms": true,
+     "values": true
+    },
+    {
+     "grads": {
+      "encoder.blocks.0.bn1.bias": true,
+      "encoder.blocks.0.bn1.weight": true,
+      "encoder.blocks.0.bn2.bias": true,
+      "encoder.blocks.0.bn2.weight": true,
+      "encoder.blocks.0.conv1.bias": true,
+      "encoder.blocks.0.conv1.weight": true,
+      "encoder.blocks.0.conv2.bias": true,
+      "encoder.blocks.0.conv2.weight": true,
+      "encoder.blocks.1.bn1.bias": true,
+      "encoder.blocks.1.bn1.weight": true,
+      "encoder.blocks.1.bn2.bias": true,
+      "encoder.blocks.1.bn2.weight": true,
+      "encoder.blocks.1.conv1.bias": true,
+      "encoder.blocks.1.conv1.weight": true,
+      "encoder.blocks.1.conv2.bias": true,
+      "encoder.blocks.1.conv2.weight": true,
+      "encoder.blocks.2.bn1.bias": true,
+      "encoder.blocks.2.bn1.weight": true,
+      "encoder.blocks.2.bn2.bias": true,
+      "encoder.blocks.2.bn2.weight": true,
+      "encoder.blocks.2.conv1.bias": true,
+      "encoder.blocks.2.conv1.weight": true,
+      "encoder.blocks.2.conv2.bias": true,
+      "encoder.blocks.2.conv2.weight": true,
+      "encoder.blocks.3.bn1.bias": true,
+      "encoder.blocks.3.bn1.weight": true,
+      "encoder.blocks.3.bn2.bias": true,
+      "encoder.blocks.3.bn2.weight": true,
+      "encoder.blocks.3.conv1.bias": true,
+      "encoder.blocks.3.conv1.weight": true,
+      "encoder.blocks.3.conv2.bias": true,
+      "encoder.blocks.3.conv2.weight": true,
+      "encoder.blocks.4.bn1.bias": true,
+      "encoder.blocks.4.bn1.weight": true,
+      "encoder.blocks.4.bn2.bias": true,
+      "encoder.blocks.4.bn2.weight": true,
+      "encoder.blocks.4.conv1.bias": true,
+      "encoder.blocks.4.conv1.weight": true,
+      "encoder.blocks.4.conv2.bias": true,
+      "encoder.blocks.4.conv2.weight": true,
+      "encoder.blocks.5.bn1.bias": true,
+      "encoder.blocks.5.bn1.weight": true,
+      "encoder.blocks.5.bn2.bias": true,
+      "encoder.blocks.5.bn2.weight": true,
+      "encoder.blocks.5.conv1.bias": true,
+      "encoder.blocks.5.conv1.weight": true,
+      "encoder.blocks.5.conv2.bias": true,
+      "encoder.blocks.5.conv2.weight": true,
+      "encoder.bn1.bias": true,
+      "encoder.bn1.weight": true,
+      "encoder.conv1.bias": true,
+      "encoder.conv1.weight": true,
+      "policy_head.bn.bias": true,
+      "policy_head.bn.weight": true,
+      "policy_head.conv.bias": true,
+      "policy_head.conv.weight": true,
+      "policy_head.fc.bias": true,
+      "policy_head.fc.weight": true,
+      "policy_head.out.bias": true,
+      "policy_head.out.weight": true
+     },
+     "logits": true,
+     "loss_terms": true,
+     "values": true
+    }
+   ],
+   "values_vs_reference": [
+    {
+     "bitwise": true,
+     "max_abs": 0.0,
+     "scale": 0.9825365543365479,
+     "within_tol": true
+    },
+    {
+     "bitwise": true,
+     "max_abs": 0.0,
+     "scale": 0.9825365543365479,
+     "within_tol": true
+    },
+    {
+     "bitwise": true,
+     "max_abs": 0.0,
+     "scale": 0.9825365543365479,
+     "within_tol": true
+    }
+   ]
+  },
+  "gpu": {
+   "additivity": {
+    "encoder.blocks.0.bn1.bias": {
+     "bitwise": false,
+     "max_abs": 3.725290298461914e-08,
+     "scale": 0.21930141746997833,
+     "within_tol": true
+    },
+    "encoder.blocks.0.bn1.weight": {
+     "bitwise": false,
+     "max_abs": 1.30385160446167e-08,
+     "scale": 0.16232839226722717,
+     "within_tol": true
+    },
+    "encoder.blocks.0.bn2.bias": {
+     "bitwise": false,
+     "max_abs": 2.2351741790771484e-08,
+     "scale": 0.20365679264068604,
+     "within_tol": true
+    },
+    "encoder.blocks.0.bn2.weight": {
+     "bitwise": false,
+     "max_abs": 1.6763806343078613e-08,
+     "scale": 0.09868058562278748,
+     "within_tol": true
+    },
+    "encoder.blocks.0.conv1.bias": {
+     "bitwise": false,
+     "max_abs": 1.4901161193847656e-08,
+     "scale": 0.1481305956840515,
+     "within_tol": true
+    },
+    "encoder.blocks.0.conv1.weight": {
+     "bitwise": false,
+     "max_abs": 3.5297125577926636e-07,
+     "scale": 0.07671433687210083,
+     "within_tol": true
+    },
+    "encoder.blocks.0.conv2.bias": {
+     "bitwise": false,
+     "max_abs": 1.30385160446167e-08,
+     "scale": 0.11207429319620132,
+     "within_tol": true
+    },
+    "encoder.blocks.0.conv2.weight": {
+     "bitwise": false,
+     "max_abs": 2.0489096641540527e-07,
+     "scale": 0.06929080188274384,
+     "within_tol": true
+    },
+    "encoder.blocks.1.bn1.bias": {
+     "bitwise": false,
+     "max_abs": 3.3527612686157227e-08,
+     "scale": 0.15601608157157898,
+     "within_tol": true
+    },
+    "encoder.blocks.1.bn1.weight": {
+     "bitwise": false,
+     "max_abs": 3.166496753692627e-08,
+     "scale": 0.14362700283527374,
+     "within_tol": true
+    },
+    "encoder.blocks.1.bn2.bias": {
+     "bitwise": false,
+     "max_abs": 1.4901161193847656e-08,
+     "scale": 0.2279377281665802,
+     "within_tol": true
+    },
+    "encoder.blocks.1.bn2.weight": {
+     "bitwise": false,
+     "max_abs": 1.4901161193847656e-08,
+     "scale": 0.3473207950592041,
+     "within_tol": true
+    },
+    "encoder.blocks.1.conv1.bias": {
+     "bitwise": false,
+     "max_abs": 1.30385160446167e-08,
+     "scale": 0.0709458440542221,
+     "within_tol": true
+    },
+    "encoder.blocks.1.conv1.weight": {
+     "bitwise": false,
+     "max_abs": 1.9744038581848145e-07,
+     "scale": 0.05473393574357033,
+     "within_tol": true
+    },
+    "encoder.blocks.1.conv2.bias": {
+     "bitwise": false,
+     "max_abs": 1.4901161193847656e-08,
+     "scale": 0.09884098172187805,
+     "within_tol": true
+    },
+    "encoder.blocks.1.conv2.weight": {
+     "bitwise": false,
+     "max_abs": 2.1047890186309814e-07,
+     "scale": 0.08411659300327301,
+     "within_tol": true
+    },
+    "encoder.blocks.2.bn1.bias": {
+     "bitwise": false,
+     "max_abs": 2.2351741790771484e-08,
+     "scale": 0.38975709676742554,
+     "within_tol": true
+    },
+    "encoder.blocks.2.bn1.weight": {
+     "bitwise": false,
+     "max_abs": 2.9802322387695312e-08,
+     "scale": 0.30368298292160034,
+     "within_tol": true
+    },
+    "encoder.blocks.2.bn2.bias": {
+     "bitwise": false,
+     "max_abs": 2.0489096641540527e-08,
+     "scale": 0.20891492068767548,
+     "within_tol": true
+    },
+    "encoder.blocks.2.bn2.weight": {
+     "bitwise": false,
+     "max_abs": 2.60770320892334e-08,
+     "scale": 0.08908899873495102,
+     "within_tol": true
+    },
+    "encoder.blocks.2.conv1.bias": {
+     "bitwise": false,
+     "max_abs": 2.1420419216156006e-08,
+     "scale": 0.24208156764507294,
+     "within_tol": true
+    },
+    "encoder.blocks.2.conv1.weight": {
+     "bitwise": false,
+     "max_abs": 5.699694156646729e-07,
+     "scale": 0.18063798546791077,
+     "within_tol": true
+    },
+    "encoder.blocks.2.conv2.bias": {
+     "bitwise": false,
+     "max_abs": 1.862645149230957e-08,
+     "scale": 0.1726544350385666,
+     "within_tol": true
+    },
+    "encoder.blocks.2.conv2.weight": {
+     "bitwise": false,
+     "max_abs": 3.3527612686157227e-07,
+     "scale": 0.08030782639980316,
+     "within_tol": true
+    },
+    "encoder.blocks.3.bn1.bias": {
+     "bitwise": false,
+     "max_abs": 2.2351741790771484e-08,
+     "scale": 0.1670786291360855,
+     "within_tol": true
+    },
+    "encoder.blocks.3.bn1.weight": {
+     "bitwise": false,
+     "max_abs": 2.421438694000244e-08,
+     "scale": 0.15299886465072632,
+     "within_tol": true
+    },
+    "encoder.blocks.3.bn2.bias": {
+     "bitwise": false,
+     "max_abs": 1.1175870895385742e-08,
+     "scale": 0.2067009061574936,
+     "within_tol": true
+    },
+    "encoder.blocks.3.bn2.weight": {
+     "bitwise": false,
+     "max_abs": 1.862645149230957e-08,
+     "scale": 0.29559510946273804,
+     "within_tol": true
+    },
+    "encoder.blocks.3.conv1.bias": {
+     "bitwise": false,
+     "max_abs": 5.122274160385132e-09,
+     "scale": 0.09050215780735016,
+     "within_tol": true
+    },
+    "encoder.blocks.3.conv1.weight": {
+     "bitwise": false,
+     "max_abs": 2.0489096641540527e-07,
+     "scale": 0.040733058005571365,
+     "within_tol": true
+    },
+    "encoder.blocks.3.conv2.bias": {
+     "bitwise": false,
+     "max_abs": 1.4901161193847656e-08,
+     "scale": 0.16979661583900452,
+     "within_tol": true
+    },
+    "encoder.blocks.3.conv2.weight": {
+     "bitwise": false,
+     "max_abs": 1.555308699607849e-07,
+     "scale": 0.05137854814529419,
+     "within_tol": true
+    },
+    "encoder.blocks.4.bn1.bias": {
+     "bitwise": false,
+     "max_abs": 1.1175870895385742e-08,
+     "scale": 0.24467523396015167,
+     "within_tol": true
+    },
+    "encoder.blocks.4.bn1.weight": {
+     "bitwise": false,
+     "max_abs": 9.313225746154785e-09,
+     "scale": 0.1571923792362213,
+     "within_tol": true
+    },
+    "encoder.blocks.4.bn2.bias": {
+     "bitwise": false,
+     "max_abs": 4.842877388000488e-08,
+     "scale": 0.19577273726463318,
+     "within_tol": true
+    },
+    "encoder.blocks.4.bn2.weight": {
+     "bitwise": false,
+     "max_abs": 7.450580596923828e-09,
+     "scale": 0.11966072022914886,
+     "within_tol": true
+    },
+    "encoder.blocks.4.conv1.bias": {
+     "bitwise": false,
+     "max_abs": 7.450580596923828e-09,
+     "scale": 0.1348857879638672,
+     "within_tol": true
+    },
+    "encoder.blocks.4.conv1.weight": {
+     "bitwise": false,
+     "max_abs": 3.744280547834933e-07,
+     "scale": 0.10272188484668732,
+     "within_tol": true
+    },
+    "encoder.blocks.4.conv2.bias": {
+     "bitwise": false,
+     "max_abs": 8.847564458847046e-09,
+     "scale": 0.11866787075996399,
+     "within_tol": true
+    },
+    "encoder.blocks.4.conv2.weight": {
+     "bitwise": false,
+     "max_abs": 1.4156103134155273e-07,
+     "scale": 0.05403733253479004,
+     "within_tol": true
+    },
+    "encoder.blocks.5.bn1.bias": {
+     "bitwise": false,
+     "max_abs": 2.9802322387695312e-08,
+     "scale": 0.20841282606124878,
+     "within_tol": true
+    },
+    "encoder.blocks.5.bn1.weight": {
+     "bitwise": false,
+     "max_abs": 4.470348358154297e-08,
+     "scale": 0.3924594223499298,
+     "within_tol": true
+    },
+    "encoder.blocks.5.bn2.bias": {
+     "bitwise": false,
+     "max_abs": 1.862645149230957e-08,
+     "scale": 0.13214083015918732,
+     "within_tol": true
+    },
+    "encoder.blocks.5.bn2.weight": {
+     "bitwise": false,
+     "max_abs": 7.450580596923828e-09,
+     "scale": 0.2613357901573181,
+     "within_tol": true
+    },
+    "encoder.blocks.5.conv1.bias": {
+     "bitwise": false,
+     "max_abs": 2.0489096641540527e-08,
+     "scale": 0.1072278693318367,
+     "within_tol": true
+    },
+    "encoder.blocks.5.conv1.weight": {
+     "bitwise": false,
+     "max_abs": 1.705484464764595e-07,
+     "scale": 0.08584308624267578,
+     "within_tol": true
+    },
+    "encoder.blocks.5.conv2.bias": {
+     "bitwise": false,
+     "max_abs": 2.9802322387695312e-08,
+     "scale": 0.18390721082687378,
+     "within_tol": true
+    },
+    "encoder.blocks.5.conv2.weight": {
+     "bitwise": false,
+     "max_abs": 5.4929842008277774e-08,
+     "scale": 0.06877506524324417,
+     "within_tol": true
+    },
+    "encoder.bn1.bias": {
+     "bitwise": false,
+     "max_abs": 2.60770320892334e-08,
+     "scale": 0.33604297041893005,
+     "within_tol": true
+    },
+    "encoder.bn1.weight": {
+     "bitwise": false,
+     "max_abs": 2.60770320892334e-08,
+     "scale": 0.3661702573299408,
+     "within_tol": true
+    },
+    "encoder.conv1.bias": {
+     "bitwise": false,
+     "max_abs": 7.450580596923828e-08,
+     "scale": 0.41933494806289673,
+     "within_tol": true
+    },
+    "encoder.conv1.weight": {
+     "bitwise": false,
+     "max_abs": 1.0281801223754883e-06,
+     "scale": 0.4208577871322632,
+     "within_tol": true
+    },
+    "policy_head.bn.bias": {
+     "bitwise": false,
+     "max_abs": 1.4901161193847656e-08,
+     "scale": 0.1369105577468872,
+     "within_tol": true
+    },
+    "policy_head.bn.weight": {
+     "bitwise": false,
+     "max_abs": 1.862645149230957e-08,
+     "scale": 0.20930850505828857,
+     "within_tol": true
+    },
+    "policy_head.conv.bias": {
+     "bitwise": false,
+     "max_abs": 5.587935447692871e-09,
+     "scale": 0.08792124688625336,
+     "within_tol": true
+    },
+    "policy_head.conv.weight": {
+     "bitwise": false,
+     "max_abs": 1.4901161193847656e-08,
+     "scale": 0.18922455608844757,
+     "within_tol": true
+    },
+    "policy_head.fc.bias": {
+     "bitwise": false,
+     "max_abs": 5.587935447692871e-09,
+     "scale": 0.029038608074188232,
+     "within_tol": true
+    },
+    "policy_head.fc.weight": {
+     "bitwise": false,
+     "max_abs": 1.862645149230957e-09,
+     "scale": 0.04904372990131378,
+     "within_tol": true
+    },
+    "policy_head.out.bias": {
+     "bitwise": false,
+     "max_abs": 5.122274160385132e-09,
+     "scale": 1.210719347000122e-08,
+     "within_tol": true
+    },
+    "policy_head.out.weight": {
+     "bitwise": false,
+     "max_abs": 1.1362135410308838e-07,
+     "scale": 0.009218787774443626,
+     "within_tol": true
+    }
+   },
+   "failures": [],
+   "grads_vs_reference": [
+    {
+     "encoder.blocks.0.bn1.bias": {
+      "bitwise": false,
+      "max_abs": 2.0503997802734375e-05,
+      "scale": 0.2193136364221573,
+      "within_tol": true
+     },
+     "encoder.blocks.0.bn1.weight": {
+      "bitwise": false,
+      "max_abs": 2.338271588087082e-05,
+      "scale": 0.16240042448043823,
+      "within_tol": true
+     },
+     "encoder.blocks.0.bn2.bias": {
+      "bitwise": false,
+      "max_abs": 3.441423177719116e-05,
+      "scale": 0.20366282761096954,
+      "within_tol": true
+     },
+     "encoder.blocks.0.bn2.weight": {
+      "bitwise": false,
+      "max_abs": 3.079324960708618e-05,
+      "scale": 0.09861738234758377,
+      "within_tol": true
+     },
+     "encoder.blocks.0.conv1.bias": {
+      "bitwise": false,
+      "max_abs": 1.2680888175964355e-05,
+      "scale": 0.14813435077667236,
+      "within_tol": true
+     },
+     "encoder.blocks.0.conv1.weight": {
+      "bitwise": false,
+      "max_abs": 2.037733793258667e-05,
+      "scale": 0.07674767076969147,
+      "within_tol": true
+     },
+     "encoder.blocks.0.conv2.bias": {
+      "bitwise": false,
+      "max_abs": 3.451108932495117e-05,
+      "scale": 0.11207219213247299,
+      "within_tol": true
+     },
+     "encoder.blocks.0.conv2.weight": {
+      "bitwise": false,
+      "max_abs": 1.531955786049366e-05,
+      "scale": 0.0693001002073288,
+      "within_tol": true
+     },
+     "encoder.blocks.1.bn1.bias": {
+      "bitwise": false,
+      "max_abs": 3.948807716369629e-05,
+      "scale": 0.155982106924057,
+      "within_tol": true
+     },
+     "encoder.blocks.1.bn1.weight": {
+      "bitwise": false,
+      "max_abs": 2.8565526008605957e-05,
+      "scale": 0.1435205191373825,
+      "within_tol": true
+     },
+     "encoder.blocks.1.bn2.bias": {
+      "bitwise": false,
+      "max_abs": 2.3595988750457764e-05,
+      "scale": 0.22794575989246368,
+      "within_tol": true
+     },
+     "encoder.blocks.1.bn2.weight": {
+      "bitwise": false,
+      "max_abs": 2.4124979972839355e-05,
+      "scale": 0.34726014733314514,
+      "within_tol": true
+     },
+     "encoder.blocks.1.conv1.bias": {
+      "bitwise": false,
+      "max_abs": 1.7948448657989502e-05,
+      "scale": 0.07092785835266113,
+      "within_tol": true
+     },
+     "encoder.blocks.1.conv1.weight": {
+      "bitwise": false,
+      "max_abs": 3.695808118209243e-05,
+      "scale": 0.0547386072576046,
+      "within_tol": true
+     },
+     "encoder.blocks.1.conv2.bias": {
+      "bitwise": false,
+      "max_abs": 2.8349459171295166e-05,
+      "scale": 0.09884627163410187,
+      "within_tol": true
+     },
+     "encoder.blocks.1.conv2.weight": {
+      "bitwise": false,
+      "max_abs": 2.6768073439598083e-05,
+      "scale": 0.08417333662509918,
+      "within_tol": true
+     },
+     "encoder.blocks.2.bn1.bias": {
+      "bitwise": false,
+      "max_abs": 5.327165126800537e-05,
+      "scale": 0.38972362875938416,
+      "within_tol": true
+     },
+     "encoder.blocks.2.bn1.weight": {
+      "bitwise": false,
+      "max_abs": 4.6566128730773926e-05,
+      "scale": 0.3037649989128113,
+      "within_tol": true
+     },
+     "encoder.blocks.2.bn2.bias": {
+      "bitwise": false,
+      "max_abs": 4.8257410526275635e-05,
+      "scale": 0.20898902416229248,
+      "within_tol": true
+     },
+     "encoder.blocks.2.bn2.weight": {
+      "bitwise": false,
+      "max_abs": 1.3455748558044434e-05,
+      "scale": 0.08902458846569061,
+      "within_tol": true
+     },
+     "encoder.blocks.2.conv1.bias": {
+      "bitwise": false,
+      "max_abs": 2.6360154151916504e-05,
+      "scale": 0.24208499491214752,
+      "within_tol": true
+     },
+     "encoder.blocks.2.conv1.weight": {
+      "bitwise": false,
+      "max_abs": 2.5554094463586807e-05,
+      "scale": 0.18068799376487732,
+      "within_tol": true
+     },
+     "encoder.blocks.2.conv2.bias": {
+      "bitwise": false,
+      "max_abs": 7.23227858543396e-05,
+      "scale": 0.17265553772449493,
+      "within_tol": true
+     },
+     "encoder.blocks.2.conv2.weight": {
+      "bitwise": false,
+      "max_abs": 4.2105093598365784e-05,
+      "scale": 0.080307736992836,
+      "within_tol": true
+     },
+     "encoder.blocks.3.bn1.bias": {
+      "bitwise": false,
+      "max_abs": 5.379319190979004e-06,
+      "scale": 0.16703592240810394,
+      "within_tol": true
+     },
+     "encoder.blocks.3.bn1.weight": {
+      "bitwise": false,
+      "max_abs": 7.733702659606934e-06,
+      "scale": 0.15294907987117767,
+      "within_tol": true
+     },
+     "encoder.blocks.3.bn2.bias": {
+      "bitwise": false,
+      "max_abs": 1.2684613466262817e-05,
+      "scale": 0.20672392845153809,
+      "within_tol": true
+     },
+     "encoder.blocks.3.bn2.weight": {
+      "bitwise": false,
+      "max_abs": 1.9706785678863525e-06,
+      "scale": 0.2955753803253174,
+      "within_tol": true
+     },
+     "encoder.blocks.3.conv1.bias": {
+      "bitwise": false,
+      "max_abs": 3.0994415283203125e-06,
+      "scale": 0.09050710499286652,
+      "within_tol": true
+     },
+     "encoder.blocks.3.conv1.weight": {
+      "bitwise": false,
+      "max_abs": 5.68293035030365e-06,
+      "scale": 0.04074065387248993,
+      "within_tol": true
+     },
+     "encoder.blocks.3.conv2.bias": {
+      "bitwise": false,
+      "max_abs": 1.2408941984176636e-05,
+      "scale": 0.16978928446769714,
+      "within_tol": true
+     },
+     "encoder.blocks.3.conv2.weight": {
+      "bitwise": false,
+      "max_abs": 1.0327785275876522e-05,
+      "scale": 0.05137404799461365,
+      "within_tol": true
+     },
+     "encoder.blocks.4.bn1.bias": {
+      "bitwise": false,
+      "max_abs": 1.6987323760986328e-06,
+      "scale": 0.24470169842243195,
+      "within_tol": true
+     },
+     "encoder.blocks.4.bn1.weight": {
+      "bitwise": false,
+      "max_abs": 1.1110678315162659e-06,
+      "scale": 0.15727558732032776,
+      "within_tol": true
+     },
+     "encoder.blocks.4.bn2.bias": {
+      "bitwise": false,
+      "max_abs": 2.086162567138672e-06,
+      "scale": 0.19578444957733154,
+      "within_tol": true
+     },
+     "encoder.blocks.4.bn2.weight": {
+      "bitwise": false,
+      "max_abs": 2.6188790798187256e-06,
+      "scale": 0.11967523396015167,
+      "within_tol": true
+     },
+     "encoder.blocks.4.conv1.bias": {
+      "bitwise": false,
+      "max_abs": 7.394701242446899e-07,
+      "scale": 0.13488233089447021,
+      "within_tol": true
+     },
+     "encoder.blocks.4.conv1.weight": {
+      "bitwise": false,
+      "max_abs": 1.0586809366941452e-06,
+      "scale": 0.10273486375808716,
+      "within_tol": true
+     },
+     "encoder.blocks.4.conv2.bias": {
+      "bitwise": false,
+      "max_abs": 2.2351741790771484e-06,
+      "scale": 0.1186629980802536,
+      "within_tol": true
+     },
+     "encoder.blocks.4.conv2.weight": {
+      "bitwise": false,
+      "max_abs": 1.0747462511062622e-06,
+      "scale": 0.05398523434996605,
+      "within_tol": true
+     },
+     "encoder.blocks.5.bn1.bias": {
+      "bitwise": false,
+      "max_abs": 5.012378096580505e-06,
+      "scale": 0.2084561586380005,
+      "within_tol": true
+     },
+     "encoder.blocks.5.bn1.weight": {
+      "bitwise": false,
+      "max_abs": 5.688518285751343e-06,
+      "scale": 0.39240792393684387,
+      "within_tol": true
+     },
+     "encoder.blocks.5.bn2.bias": {
+      "bitwise": false,
+      "max_abs": 7.040798664093018e-07,
+      "scale": 0.13228219747543335,
+      "within_tol": true
+     },
+     "encoder.blocks.5.bn2.weight": {
+      "bitwise": false,
+      "max_abs": 3.594905138015747e-07,
+      "scale": 0.2612619698047638,
+      "within_tol": true
+     },
+     "encoder.blocks.5.conv1.bias": {
+      "bitwise": false,
+      "max_abs": 3.9227306842803955e-06,
+      "scale": 0.1072208434343338,
+      "within_tol": true
+     },
+     "encoder.blocks.5.conv1.weight": {
+      "bitwise": false,
+      "max_abs": 7.1320682764053345e-06,
+      "scale": 0.08577854186296463,
+      "within_tol": true
+     },
+     "encoder.blocks.5.conv2.bias": {
+      "bitwise": false,
+      "max_abs": 2.4295877665281296e-06,
+      "scale": 0.18390251696109772,
+      "within_tol": true
+     },
+     "encoder.blocks.5.conv2.weight": {
+      "bitwise": false,
+      "max_abs": 8.587630873080343e-07,
+      "scale": 0.06868647783994675,
+      "within_tol": true
+     },
+     "encoder.bn1.bias": {
+      "bitwise": false,
+      "max_abs": 2.3633241653442383e-05,
+      "scale": 0.3360481858253479,
+      "within_tol": true
+     },
+     "encoder.bn1.weight": {
+      "bitwise": false,
+      "max_abs": 2.6434659957885742e-05,
+      "scale": 0.3661646246910095,
+      "within_tol": true
+     },
+     "encoder.conv1.bias": {
+      "bitwise": false,
+      "max_abs": 3.423541784286499e-05,
+      "scale": 0.4193708598613739,
+      "within_tol": true
+     },
+     "encoder.conv1.weight": {
+      "bitwise": false,
+      "max_abs": 4.1894614696502686e-05,
+      "scale": 0.42087429761886597,
+      "within_tol": true
+     },
+     "policy_head.bn.bias": {
+      "bitwise": false,
+      "max_abs": 1.1771917343139648e-06,
+      "scale": 0.1371486932039261,
+      "within_tol": true
+     },
+     "policy_head.bn.weight": {
+      "bitwise": false,
+      "max_abs": 9.909272193908691e-07,
+      "scale": 0.20920829474925995,
+      "within_tol": true
+     },
+     "policy_head.conv.bias": {
+      "bitwise": false,
+      "max_abs": 6.854534149169922e-07,
+      "scale": 0.08792946487665176,
+      "within_tol": true
+     },
+     "policy_head.conv.weight": {
+      "bitwise": false,
+      "max_abs": 1.8272548913955688e-06,
+      "scale": 0.18920378386974335,
+      "within_tol": true
+     },
+     "policy_head.fc.bias": {
+      "bitwise": false,
+      "max_abs": 3.3155083656311035e-07,
+      "scale": 0.02901250123977661,
+      "within_tol": true
+     },
+     "policy_head.fc.weight": {
+      "bitwise": false,
+      "max_abs": 1.601874828338623e-07,
+      "scale": 0.049011778086423874,
+      "within_tol": true
+     },
+     "policy_head.out.bias": {
+      "bitwise": false,
+      "max_abs": 2.514571129097476e-08,
+      "scale": 4.173330125922803e-08,
+      "within_tol": true
+     },
+     "policy_head.out.weight": {
+      "bitwise": false,
+      "max_abs": 1.3457611203193665e-07,
+      "scale": 0.009350288659334183,
+      "within_tol": true
+     }
+    },
+    {
+     "encoder.blocks.0.bn1.bias": {
+      "bitwise": false,
+      "max_abs": 2.0503997802734375e-05,
+      "scale": 0.2193136364221573,
+      "within_tol": true
+     },
+     "encoder.blocks.0.bn1.weight": {
+      "bitwise": false,
+      "max_abs": 2.338271588087082e-05,
+      "scale": 0.16240042448043823,
+      "within_tol": true
+     },
+     "encoder.blocks.0.bn2.bias": {
+      "bitwise": false,
+      "max_abs": 3.441423177719116e-05,
+      "scale": 0.20366282761096954,
+      "within_tol": true
+     },
+     "encoder.blocks.0.bn2.weight": {
+      "bitwise": false,
+      "max_abs": 3.079324960708618e-05,
+      "scale": 0.09861738234758377,
+      "within_tol": true
+     },
+     "encoder.blocks.0.conv1.bias": {
+      "bitwise": false,
+      "max_abs": 1.2680888175964355e-05,
+      "scale": 0.14813435077667236,
+      "within_tol": true
+     },
+     "encoder.blocks.0.conv1.weight": {
+      "bitwise": false,
+      "max_abs": 2.037733793258667e-05,
+      "scale": 0.07674767076969147,
+      "within_tol": true
+     },
+     "encoder.blocks.0.conv2.bias": {
+      "bitwise": false,
+      "max_abs": 3.451108932495117e-05,
+      "scale": 0.11207219213247299,
+      "within_tol": true
+     },
+     "encoder.blocks.0.conv2.weight": {
+      "bitwise": false,
+      "max_abs": 1.531955786049366e-05,
+      "scale": 0.0693001002073288,
+      "within_tol": true
+     },
+     "encoder.blocks.1.bn1.bias": {
+      "bitwise": false,
+      "max_abs": 3.948807716369629e-05,
+      "scale": 0.155982106924057,
+      "within_tol": true
+     },
+     "encoder.blocks.1.bn1.weight": {
+      "bitwise": false,
+      "max_abs": 2.8565526008605957e-05,
+      "scale": 0.1435205191373825,
+      "within_tol": true
+     },
+     "encoder.blocks.1.bn2.bias": {
+      "bitwise": false,
+      "max_abs": 2.3595988750457764e-05,
+      "scale": 0.22794575989246368,
+      "within_tol": true
+     },
+     "encoder.blocks.1.bn2.weight": {
+      "bitwise": false,
+      "max_abs": 2.4124979972839355e-05,
+      "scale": 0.34726014733314514,
+      "within_tol": true
+     },
+     "encoder.blocks.1.conv1.bias": {
+      "bitwise": false,
+      "max_abs": 1.7948448657989502e-05,
+      "scale": 0.07092785835266113,
+      "within_tol": true
+     },
+     "encoder.blocks.1.conv1.weight": {
+      "bitwise": false,
+      "max_abs": 3.695808118209243e-05,
+      "scale": 0.0547386072576046,
+      "within_tol": true
+     },
+     "encoder.blocks.1.conv2.bias": {
+      "bitwise": false,
+      "max_abs": 2.8349459171295166e-05,
+      "scale": 0.09884627163410187,
+      "within_tol": true
+     },
+     "encoder.blocks.1.conv2.weight": {
+      "bitwise": false,
+      "max_abs": 2.6768073439598083e-05,
+      "scale": 0.08417333662509918,
+      "within_tol": true
+     },
+     "encoder.blocks.2.bn1.bias": {
+      "bitwise": false,
+      "max_abs": 5.327165126800537e-05,
+      "scale": 0.38972362875938416,
+      "within_tol": true
+     },
+     "encoder.blocks.2.bn1.weight": {
+      "bitwise": false,
+      "max_abs": 4.6566128730773926e-05,
+      "scale": 0.3037649989128113,
+      "within_tol": true
+     },
+     "encoder.blocks.2.bn2.bias": {
+      "bitwise": false,
+      "max_abs": 4.8257410526275635e-05,
+      "scale": 0.20898902416229248,
+      "within_tol": true
+     },
+     "encoder.blocks.2.bn2.weight": {
+      "bitwise": false,
+      "max_abs": 1.3455748558044434e-05,
+      "scale": 0.08902458846569061,
+      "within_tol": true
+     },
+     "encoder.blocks.2.conv1.bias": {
+      "bitwise": false,
+      "max_abs": 2.6360154151916504e-05,
+      "scale": 0.24208499491214752,
+      "within_tol": true
+     },
+     "encoder.blocks.2.conv1.weight": {
+      "bitwise": false,
+      "max_abs": 2.5554094463586807e-05,
+      "scale": 0.18068799376487732,
+      "within_tol": true
+     },
+     "encoder.blocks.2.conv2.bias": {
+      "bitwise": false,
+      "max_abs": 7.23227858543396e-05,
+      "scale": 0.17265553772449493,
+      "within_tol": true
+     },
+     "encoder.blocks.2.conv2.weight": {
+      "bitwise": false,
+      "max_abs": 4.2105093598365784e-05,
+      "scale": 0.080307736992836,
+      "within_tol": true
+     },
+     "encoder.blocks.3.bn1.bias": {
+      "bitwise": false,
+      "max_abs": 5.379319190979004e-06,
+      "scale": 0.16703592240810394,
+      "within_tol": true
+     },
+     "encoder.blocks.3.bn1.weight": {
+      "bitwise": false,
+      "max_abs": 7.733702659606934e-06,
+      "scale": 0.15294907987117767,
+      "within_tol": true
+     },
+     "encoder.blocks.3.bn2.bias": {
+      "bitwise": false,
+      "max_abs": 1.2684613466262817e-05,
+      "scale": 0.20672392845153809,
+      "within_tol": true
+     },
+     "encoder.blocks.3.bn2.weight": {
+      "bitwise": false,
+      "max_abs": 1.9706785678863525e-06,
+      "scale": 0.2955753803253174,
+      "within_tol": true
+     },
+     "encoder.blocks.3.conv1.bias": {
+      "bitwise": false,
+      "max_abs": 3.0994415283203125e-06,
+      "scale": 0.09050710499286652,
+      "within_tol": true
+     },
+     "encoder.blocks.3.conv1.weight": {
+      "bitwise": false,
+      "max_abs": 5.68293035030365e-06,
+      "scale": 0.04074065387248993,
+      "within_tol": true
+     },
+     "encoder.blocks.3.conv2.bias": {
+      "bitwise": false,
+      "max_abs": 1.2408941984176636e-05,
+      "scale": 0.16978928446769714,
+      "within_tol": true
+     },
+     "encoder.blocks.3.conv2.weight": {
+      "bitwise": false,
+      "max_abs": 1.0327785275876522e-05,
+      "scale": 0.05137404799461365,
+      "within_tol": true
+     },
+     "encoder.blocks.4.bn1.bias": {
+      "bitwise": false,
+      "max_abs": 1.6987323760986328e-06,
+      "scale": 0.24470169842243195,
+      "within_tol": true
+     },
+     "encoder.blocks.4.bn1.weight": {
+      "bitwise": false,
+      "max_abs": 1.1110678315162659e-06,
+      "scale": 0.15727558732032776,
+      "within_tol": true
+     },
+     "encoder.blocks.4.bn2.bias": {
+      "bitwise": false,
+      "max_abs": 2.086162567138672e-06,
+      "scale": 0.19578444957733154,
+      "within_tol": true
+     },
+     "encoder.blocks.4.bn2.weight": {
+      "bitwise": false,
+      "max_abs": 2.6188790798187256e-06,
+      "scale": 0.11967523396015167,
+      "within_tol": true
+     },
+     "encoder.blocks.4.conv1.bias": {
+      "bitwise": false,
+      "max_abs": 7.394701242446899e-07,
+      "scale": 0.13488233089447021,
+      "within_tol": true
+     },
+     "encoder.blocks.4.conv1.weight": {
+      "bitwise": false,
+      "max_abs": 1.0586809366941452e-06,
+      "scale": 0.10273486375808716,
+      "within_tol": true
+     },
+     "encoder.blocks.4.conv2.bias": {
+      "bitwise": false,
+      "max_abs": 2.2351741790771484e-06,
+      "scale": 0.1186629980802536,
+      "within_tol": true
+     },
+     "encoder.blocks.4.conv2.weight": {
+      "bitwise": false,
+      "max_abs": 1.0747462511062622e-06,
+      "scale": 0.05398523434996605,
+      "within_tol": true
+     },
+     "encoder.blocks.5.bn1.bias": {
+      "bitwise": false,
+      "max_abs": 5.012378096580505e-06,
+      "scale": 0.2084561586380005,
+      "within_tol": true
+     },
+     "encoder.blocks.5.bn1.weight": {
+      "bitwise": false,
+      "max_abs": 5.688518285751343e-06,
+      "scale": 0.39240792393684387,
+      "within_tol": true
+     },
+     "encoder.blocks.5.bn2.bias": {
+      "bitwise": false,
+      "max_abs": 7.040798664093018e-07,
+      "scale": 0.13228219747543335,
+      "within_tol": true
+     },
+     "encoder.blocks.5.bn2.weight": {
+      "bitwise": false,
+      "max_abs": 3.594905138015747e-07,
+      "scale": 0.2612619698047638,
+      "within_tol": true
+     },
+     "encoder.blocks.5.conv1.bias": {
+      "bitwise": false,
+      "max_abs": 3.9227306842803955e-06,
+      "scale": 0.1072208434343338,
+      "within_tol": true
+     },
+     "encoder.blocks.5.conv1.weight": {
+      "bitwise": false,
+      "max_abs": 7.1320682764053345e-06,
+      "scale": 0.08577854186296463,
+      "within_tol": true
+     },
+     "encoder.blocks.5.conv2.bias": {
+      "bitwise": false,
+      "max_abs": 2.4295877665281296e-06,
+      "scale": 0.18390251696109772,
+      "within_tol": true
+     },
+     "encoder.blocks.5.conv2.weight": {
+      "bitwise": false,
+      "max_abs": 8.587630873080343e-07,
+      "scale": 0.06868647783994675,
+      "within_tol": true
+     },
+     "encoder.bn1.bias": {
+      "bitwise": false,
+      "max_abs": 2.3633241653442383e-05,
+      "scale": 0.3360481858253479,
+      "within_tol": true
+     },
+     "encoder.bn1.weight": {
+      "bitwise": false,
+      "max_abs": 2.6434659957885742e-05,
+      "scale": 0.3661646246910095,
+      "within_tol": true
+     },
+     "encoder.conv1.bias": {
+      "bitwise": false,
+      "max_abs": 3.423541784286499e-05,
+      "scale": 0.4193708598613739,
+      "within_tol": true
+     },
+     "encoder.conv1.weight": {
+      "bitwise": false,
+      "max_abs": 4.1894614696502686e-05,
+      "scale": 0.42087429761886597,
+      "within_tol": true
+     },
+     "policy_head.bn.bias": {
+      "bitwise": false,
+      "max_abs": 1.1771917343139648e-06,
+      "scale": 0.1371486932039261,
+      "within_tol": true
+     },
+     "policy_head.bn.weight": {
+      "bitwise": false,
+      "max_abs": 9.909272193908691e-07,
+      "scale": 0.20920829474925995,
+      "within_tol": true
+     },
+     "policy_head.conv.bias": {
+      "bitwise": false,
+      "max_abs": 6.854534149169922e-07,
+      "scale": 0.08792946487665176,
+      "within_tol": true
+     },
+     "policy_head.conv.weight": {
+      "bitwise": false,
+      "max_abs": 1.8272548913955688e-06,
+      "scale": 0.18920378386974335,
+      "within_tol": true
+     },
+     "policy_head.fc.bias": {
+      "bitwise": false,
+      "max_abs": 3.3155083656311035e-07,
+      "scale": 0.02901250123977661,
+      "within_tol": true
+     },
+     "policy_head.fc.weight": {
+      "bitwise": false,
+      "max_abs": 1.601874828338623e-07,
+      "scale": 0.049011778086423874,
+      "within_tol": true
+     },
+     "policy_head.out.bias": {
+      "bitwise": false,
+      "max_abs": 2.514571129097476e-08,
+      "scale": 4.173330125922803e-08,
+      "within_tol": true
+     },
+     "policy_head.out.weight": {
+      "bitwise": false,
+      "max_abs": 1.3457611203193665e-07,
+      "scale": 0.009350288659334183,
+      "within_tol": true
+     }
+    },
+    {
+     "encoder.blocks.0.bn1.bias": {
+      "bitwise": false,
+      "max_abs": 2.0503997802734375e-05,
+      "scale": 0.2193136364221573,
+      "within_tol": true
+     },
+     "encoder.blocks.0.bn1.weight": {
+      "bitwise": false,
+      "max_abs": 2.338271588087082e-05,
+      "scale": 0.16240042448043823,
+      "within_tol": true
+     },
+     "encoder.blocks.0.bn2.bias": {
+      "bitwise": false,
+      "max_abs": 3.441423177719116e-05,
+      "scale": 0.20366282761096954,
+      "within_tol": true
+     },
+     "encoder.blocks.0.bn2.weight": {
+      "bitwise": false,
+      "max_abs": 3.079324960708618e-05,
+      "scale": 0.09861738234758377,
+      "within_tol": true
+     },
+     "encoder.blocks.0.conv1.bias": {
+      "bitwise": false,
+      "max_abs": 1.2680888175964355e-05,
+      "scale": 0.14813435077667236,
+      "within_tol": true
+     },
+     "encoder.blocks.0.conv1.weight": {
+      "bitwise": false,
+      "max_abs": 2.037733793258667e-05,
+      "scale": 0.07674767076969147,
+      "within_tol": true
+     },
+     "encoder.blocks.0.conv2.bias": {
+      "bitwise": false,
+      "max_abs": 3.451108932495117e-05,
+      "scale": 0.11207219213247299,
+      "within_tol": true
+     },
+     "encoder.blocks.0.conv2.weight": {
+      "bitwise": false,
+      "max_abs": 1.531955786049366e-05,
+      "scale": 0.0693001002073288,
+      "within_tol": true
+     },
+     "encoder.blocks.1.bn1.bias": {
+      "bitwise": false,
+      "max_abs": 3.948807716369629e-05,
+      "scale": 0.155982106924057,
+      "within_tol": true
+     },
+     "encoder.blocks.1.bn1.weight": {
+      "bitwise": false,
+      "max_abs": 2.8565526008605957e-05,
+      "scale": 0.1435205191373825,
+      "within_tol": true
+     },
+     "encoder.blocks.1.bn2.bias": {
+      "bitwise": false,
+      "max_abs": 2.3595988750457764e-05,
+      "scale": 0.22794575989246368,
+      "within_tol": true
+     },
+     "encoder.blocks.1.bn2.weight": {
+      "bitwise": false,
+      "max_abs": 2.4124979972839355e-05,
+      "scale": 0.34726014733314514,
+      "within_tol": true
+     },
+     "encoder.blocks.1.conv1.bias": {
+      "bitwise": false,
+      "max_abs": 1.7948448657989502e-05,
+      "scale": 0.07092785835266113,
+      "within_tol": true
+     },
+     "encoder.blocks.1.conv1.weight": {
+      "bitwise": false,
+      "max_abs": 3.695808118209243e-05,
+      "scale": 0.0547386072576046,
+      "within_tol": true
+     },
+     "encoder.blocks.1.conv2.bias": {
+      "bitwise": false,
+      "max_abs": 2.8349459171295166e-05,
+      "scale": 0.09884627163410187,
+      "within_tol": true
+     },
+     "encoder.blocks.1.conv2.weight": {
+      "bitwise": false,
+      "max_abs": 2.6768073439598083e-05,
+      "scale": 0.08417333662509918,
+      "within_tol": true
+     },
+     "encoder.blocks.2.bn1.bias": {
+      "bitwise": false,
+      "max_abs": 5.327165126800537e-05,
+      "scale": 0.38972362875938416,
+      "within_tol": true
+     },
+     "encoder.blocks.2.bn1.weight": {
+      "bitwise": false,
+      "max_abs": 4.6566128730773926e-05,
+      "scale": 0.3037649989128113,
+      "within_tol": true
+     },
+     "encoder.blocks.2.bn2.bias": {
+      "bitwise": false,
+      "max_abs": 4.8257410526275635e-05,
+      "scale": 0.20898902416229248,
+      "within_tol": true
+     },
+     "encoder.blocks.2.bn2.weight": {
+      "bitwise": false,
+      "max_abs": 1.3455748558044434e-05,
+      "scale": 0.08902458846569061,
+      "within_tol": true
+     },
+     "encoder.blocks.2.conv1.bias": {
+      "bitwise": false,
+      "max_abs": 2.6360154151916504e-05,
+      "scale": 0.24208499491214752,
+      "within_tol": true
+     },
+     "encoder.blocks.2.conv1.weight": {
+      "bitwise": false,
+      "max_abs": 2.5554094463586807e-05,
+      "scale": 0.18068799376487732,
+      "within_tol": true
+     },
+     "encoder.blocks.2.conv2.bias": {
+      "bitwise": false,
+      "max_abs": 7.23227858543396e-05,
+      "scale": 0.17265553772449493,
+      "within_tol": true
+     },
+     "encoder.blocks.2.conv2.weight": {
+      "bitwise": false,
+      "max_abs": 4.2105093598365784e-05,
+      "scale": 0.080307736992836,
+      "within_tol": true
+     },
+     "encoder.blocks.3.bn1.bias": {
+      "bitwise": false,
+      "max_abs": 5.379319190979004e-06,
+      "scale": 0.16703592240810394,
+      "within_tol": true
+     },
+     "encoder.blocks.3.bn1.weight": {
+      "bitwise": false,
+      "max_abs": 7.733702659606934e-06,
+      "scale": 0.15294907987117767,
+      "within_tol": true
+     },
+     "encoder.blocks.3.bn2.bias": {
+      "bitwise": false,
+      "max_abs": 1.2684613466262817e-05,
+      "scale": 0.20672392845153809,
+      "within_tol": true
+     },
+     "encoder.blocks.3.bn2.weight": {
+      "bitwise": false,
+      "max_abs": 1.9706785678863525e-06,
+      "scale": 0.2955753803253174,
+      "within_tol": true
+     },
+     "encoder.blocks.3.conv1.bias": {
+      "bitwise": false,
+      "max_abs": 3.0994415283203125e-06,
+      "scale": 0.09050710499286652,
+      "within_tol": true
+     },
+     "encoder.blocks.3.conv1.weight": {
+      "bitwise": false,
+      "max_abs": 5.68293035030365e-06,
+      "scale": 0.04074065387248993,
+      "within_tol": true
+     },
+     "encoder.blocks.3.conv2.bias": {
+      "bitwise": false,
+      "max_abs": 1.2408941984176636e-05,
+      "scale": 0.16978928446769714,
+      "within_tol": true
+     },
+     "encoder.blocks.3.conv2.weight": {
+      "bitwise": false,
+      "max_abs": 1.0327785275876522e-05,
+      "scale": 0.05137404799461365,
+      "within_tol": true
+     },
+     "encoder.blocks.4.bn1.bias": {
+      "bitwise": false,
+      "max_abs": 1.6987323760986328e-06,
+      "scale": 0.24470169842243195,
+      "within_tol": true
+     },
+     "encoder.blocks.4.bn1.weight": {
+      "bitwise": false,
+      "max_abs": 1.1110678315162659e-06,
+      "scale": 0.15727558732032776,
+      "within_tol": true
+     },
+     "encoder.blocks.4.bn2.bias": {
+      "bitwise": false,
+      "max_abs": 2.086162567138672e-06,
+      "scale": 0.19578444957733154,
+      "within_tol": true
+     },
+     "encoder.blocks.4.bn2.weight": {
+      "bitwise": false,
+      "max_abs": 2.6188790798187256e-06,
+      "scale": 0.11967523396015167,
+      "within_tol": true
+     },
+     "encoder.blocks.4.conv1.bias": {
+      "bitwise": false,
+      "max_abs": 7.394701242446899e-07,
+      "scale": 0.13488233089447021,
+      "within_tol": true
+     },
+     "encoder.blocks.4.conv1.weight": {
+      "bitwise": false,
+      "max_abs": 1.0586809366941452e-06,
+      "scale": 0.10273486375808716,
+      "within_tol": true
+     },
+     "encoder.blocks.4.conv2.bias": {
+      "bitwise": false,
+      "max_abs": 2.2351741790771484e-06,
+      "scale": 0.1186629980802536,
+      "within_tol": true
+     },
+     "encoder.blocks.4.conv2.weight": {
+      "bitwise": false,
+      "max_abs": 1.0747462511062622e-06,
+      "scale": 0.05398523434996605,
+      "within_tol": true
+     },
+     "encoder.blocks.5.bn1.bias": {
+      "bitwise": false,
+      "max_abs": 5.012378096580505e-06,
+      "scale": 0.2084561586380005,
+      "within_tol": true
+     },
+     "encoder.blocks.5.bn1.weight": {
+      "bitwise": false,
+      "max_abs": 5.688518285751343e-06,
+      "scale": 0.39240792393684387,
+      "within_tol": true
+     },
+     "encoder.blocks.5.bn2.bias": {
+      "bitwise": false,
+      "max_abs": 7.040798664093018e-07,
+      "scale": 0.13228219747543335,
+      "within_tol": true
+     },
+     "encoder.blocks.5.bn2.weight": {
+      "bitwise": false,
+      "max_abs": 3.594905138015747e-07,
+      "scale": 0.2612619698047638,
+      "within_tol": true
+     },
+     "encoder.blocks.5.conv1.bias": {
+      "bitwise": false,
+      "max_abs": 3.9227306842803955e-06,
+      "scale": 0.1072208434343338,
+      "within_tol": true
+     },
+     "encoder.blocks.5.conv1.weight": {
+      "bitwise": false,
+      "max_abs": 7.1320682764053345e-06,
+      "scale": 0.08577854186296463,
+      "within_tol": true
+     },
+     "encoder.blocks.5.conv2.bias": {
+      "bitwise": false,
+      "max_abs": 2.4295877665281296e-06,
+      "scale": 0.18390251696109772,
+      "within_tol": true
+     },
+     "encoder.blocks.5.conv2.weight": {
+      "bitwise": false,
+      "max_abs": 8.587630873080343e-07,
+      "scale": 0.06868647783994675,
+      "within_tol": true
+     },
+     "encoder.bn1.bias": {
+      "bitwise": false,
+      "max_abs": 2.3633241653442383e-05,
+      "scale": 0.3360481858253479,
+      "within_tol": true
+     },
+     "encoder.bn1.weight": {
+      "bitwise": false,
+      "max_abs": 2.6434659957885742e-05,
+      "scale": 0.3661646246910095,
+      "within_tol": true
+     },
+     "encoder.conv1.bias": {
+      "bitwise": false,
+      "max_abs": 3.423541784286499e-05,
+      "scale": 0.4193708598613739,
+      "within_tol": true
+     },
+     "encoder.conv1.weight": {
+      "bitwise": false,
+      "max_abs": 4.1894614696502686e-05,
+      "scale": 0.42087429761886597,
+      "within_tol": true
+     },
+     "policy_head.bn.bias": {
+      "bitwise": false,
+      "max_abs": 1.1771917343139648e-06,
+      "scale": 0.1371486932039261,
+      "within_tol": true
+     },
+     "policy_head.bn.weight": {
+      "bitwise": false,
+      "max_abs": 9.909272193908691e-07,
+      "scale": 0.20920829474925995,
+      "within_tol": true
+     },
+     "policy_head.conv.bias": {
+      "bitwise": false,
+      "max_abs": 6.854534149169922e-07,
+      "scale": 0.08792946487665176,
+      "within_tol": true
+     },
+     "policy_head.conv.weight": {
+      "bitwise": false,
+      "max_abs": 1.8272548913955688e-06,
+      "scale": 0.18920378386974335,
+      "within_tol": true
+     },
+     "policy_head.fc.bias": {
+      "bitwise": false,
+      "max_abs": 3.3155083656311035e-07,
+      "scale": 0.02901250123977661,
+      "within_tol": true
+     },
+     "policy_head.fc.weight": {
+      "bitwise": false,
+      "max_abs": 1.601874828338623e-07,
+      "scale": 0.049011778086423874,
+      "within_tol": true
+     },
+     "policy_head.out.bias": {
+      "bitwise": false,
+      "max_abs": 2.514571129097476e-08,
+      "scale": 4.173330125922803e-08,
+      "within_tol": true
+     },
+     "policy_head.out.weight": {
+      "bitwise": false,
+      "max_abs": 1.3457611203193665e-07,
+      "scale": 0.009350288659334183,
+      "within_tol": true
+     }
+    }
+   ],
+   "logits_legal_vs_reference": [
+    {
+     "bitwise": false,
+     "max_abs": 5.1021575927734375e-05,
+     "scale": 14.370525360107422,
+     "within_tol": true
+    },
+    {
+     "bitwise": false,
+     "max_abs": 5.1021575927734375e-05,
+     "scale": 14.370525360107422,
+     "within_tol": true
+    },
+    {
+     "bitwise": false,
+     "max_abs": 5.1021575927734375e-05,
+     "scale": 14.370525360107422,
+     "within_tol": true
+    }
+   ],
+   "logits_padding_equal": [
+    true,
+    true,
+    true
+   ],
+   "loss_terms": [
+    {
+     "anchor": 0.02839137241244316,
+     "loss": 4.371187210083008,
+     "policy": 4.250805854797363
+    },
+    {
+     "anchor": 0.02839137241244316,
+     "loss": 4.371187210083008,
+     "policy": 4.250805854797363
+    },
+    {
+     "anchor": 0.02839137241244316,
+     "loss": 4.371187210083008,
+     "policy": 4.250805854797363
+    }
+   ],
+   "loss_terms_vs_reference": [
+    {
+     "anchor": {
+      "bitwise": false,
+      "max_abs": 1.1175870895385742e-08,
+      "scale": 0.028391383588314056,
+      "within_tol": true
+     },
+     "loss": {
+      "bitwise": false,
+      "max_abs": 4.76837158203125e-07,
+      "scale": 4.37118673324585,
+      "within_tol": true
+     },
+     "policy": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 4.250805854797363,
+      "within_tol": true
+     }
+    },
+    {
+     "anchor": {
+      "bitwise": false,
+      "max_abs": 1.1175870895385742e-08,
+      "scale": 0.028391383588314056,
+      "within_tol": true
+     },
+     "loss": {
+      "bitwise": false,
+      "max_abs": 4.76837158203125e-07,
+      "scale": 4.37118673324585,
+      "within_tol": true
+     },
+     "policy": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 4.250805854797363,
+      "within_tol": true
+     }
+    },
+    {
+     "anchor": {
+      "bitwise": false,
+      "max_abs": 1.1175870895385742e-08,
+      "scale": 0.028391383588314056,
+      "within_tol": true
+     },
+     "loss": {
+      "bitwise": false,
+      "max_abs": 4.76837158203125e-07,
+      "scale": 4.37118673324585,
+      "within_tol": true
+     },
+     "policy": {
+      "bitwise": true,
+      "max_abs": 0.0,
+      "scale": 4.250805854797363,
+      "within_tol": true
+     }
+    }
+   ],
+   "repeats_bitwise": [
+    {
+     "grads": {
+      "encoder.blocks.0.bn1.bias": true,
+      "encoder.blocks.0.bn1.weight": true,
+      "encoder.blocks.0.bn2.bias": true,
+      "encoder.blocks.0.bn2.weight": true,
+      "encoder.blocks.0.conv1.bias": true,
+      "encoder.blocks.0.conv1.weight": true,
+      "encoder.blocks.0.conv2.bias": true,
+      "encoder.blocks.0.conv2.weight": true,
+      "encoder.blocks.1.bn1.bias": true,
+      "encoder.blocks.1.bn1.weight": true,
+      "encoder.blocks.1.bn2.bias": true,
+      "encoder.blocks.1.bn2.weight": true,
+      "encoder.blocks.1.conv1.bias": true,
+      "encoder.blocks.1.conv1.weight": true,
+      "encoder.blocks.1.conv2.bias": true,
+      "encoder.blocks.1.conv2.weight": true,
+      "encoder.blocks.2.bn1.bias": true,
+      "encoder.blocks.2.bn1.weight": true,
+      "encoder.blocks.2.bn2.bias": true,
+      "encoder.blocks.2.bn2.weight": true,
+      "encoder.blocks.2.conv1.bias": true,
+      "encoder.blocks.2.conv1.weight": true,
+      "encoder.blocks.2.conv2.bias": true,
+      "encoder.blocks.2.conv2.weight": true,
+      "encoder.blocks.3.bn1.bias": true,
+      "encoder.blocks.3.bn1.weight": true,
+      "encoder.blocks.3.bn2.bias": true,
+      "encoder.blocks.3.bn2.weight": true,
+      "encoder.blocks.3.conv1.bias": true,
+      "encoder.blocks.3.conv1.weight": true,
+      "encoder.blocks.3.conv2.bias": true,
+      "encoder.blocks.3.conv2.weight": true,
+      "encoder.blocks.4.bn1.bias": true,
+      "encoder.blocks.4.bn1.weight": true,
+      "encoder.blocks.4.bn2.bias": true,
+      "encoder.blocks.4.bn2.weight": true,
+      "encoder.blocks.4.conv1.bias": true,
+      "encoder.blocks.4.conv1.weight": true,
+      "encoder.blocks.4.conv2.bias": true,
+      "encoder.blocks.4.conv2.weight": true,
+      "encoder.blocks.5.bn1.bias": true,
+      "encoder.blocks.5.bn1.weight": true,
+      "encoder.blocks.5.bn2.bias": true,
+      "encoder.blocks.5.bn2.weight": true,
+      "encoder.blocks.5.conv1.bias": true,
+      "encoder.blocks.5.conv1.weight": true,
+      "encoder.blocks.5.conv2.bias": true,
+      "encoder.blocks.5.conv2.weight": true,
+      "encoder.bn1.bias": true,
+      "encoder.bn1.weight": true,
+      "encoder.conv1.bias": true,
+      "encoder.conv1.weight": true,
+      "policy_head.bn.bias": true,
+      "policy_head.bn.weight": true,
+      "policy_head.conv.bias": true,
+      "policy_head.conv.weight": true,
+      "policy_head.fc.bias": true,
+      "policy_head.fc.weight": true,
+      "policy_head.out.bias": true,
+      "policy_head.out.weight": true
+     },
+     "logits": true,
+     "loss_terms": true,
+     "values": true
+    },
+    {
+     "grads": {
+      "encoder.blocks.0.bn1.bias": true,
+      "encoder.blocks.0.bn1.weight": true,
+      "encoder.blocks.0.bn2.bias": true,
+      "encoder.blocks.0.bn2.weight": true,
+      "encoder.blocks.0.conv1.bias": true,
+      "encoder.blocks.0.conv1.weight": true,
+      "encoder.blocks.0.conv2.bias": true,
+      "encoder.blocks.0.conv2.weight": true,
+      "encoder.blocks.1.bn1.bias": true,
+      "encoder.blocks.1.bn1.weight": true,
+      "encoder.blocks.1.bn2.bias": true,
+      "encoder.blocks.1.bn2.weight": true,
+      "encoder.blocks.1.conv1.bias": true,
+      "encoder.blocks.1.conv1.weight": true,
+      "encoder.blocks.1.conv2.bias": true,
+      "encoder.blocks.1.conv2.weight": true,
+      "encoder.blocks.2.bn1.bias": true,
+      "encoder.blocks.2.bn1.weight": true,
+      "encoder.blocks.2.bn2.bias": true,
+      "encoder.blocks.2.bn2.weight": true,
+      "encoder.blocks.2.conv1.bias": true,
+      "encoder.blocks.2.conv1.weight": true,
+      "encoder.blocks.2.conv2.bias": true,
+      "encoder.blocks.2.conv2.weight": true,
+      "encoder.blocks.3.bn1.bias": true,
+      "encoder.blocks.3.bn1.weight": true,
+      "encoder.blocks.3.bn2.bias": true,
+      "encoder.blocks.3.bn2.weight": true,
+      "encoder.blocks.3.conv1.bias": true,
+      "encoder.blocks.3.conv1.weight": true,
+      "encoder.blocks.3.conv2.bias": true,
+      "encoder.blocks.3.conv2.weight": true,
+      "encoder.blocks.4.bn1.bias": true,
+      "encoder.blocks.4.bn1.weight": true,
+      "encoder.blocks.4.bn2.bias": true,
+      "encoder.blocks.4.bn2.weight": true,
+      "encoder.blocks.4.conv1.bias": true,
+      "encoder.blocks.4.conv1.weight": true,
+      "encoder.blocks.4.conv2.bias": true,
+      "encoder.blocks.4.conv2.weight": true,
+      "encoder.blocks.5.bn1.bias": true,
+      "encoder.blocks.5.bn1.weight": true,
+      "encoder.blocks.5.bn2.bias": true,
+      "encoder.blocks.5.bn2.weight": true,
+      "encoder.blocks.5.conv1.bias": true,
+      "encoder.blocks.5.conv1.weight": true,
+      "encoder.blocks.5.conv2.bias": true,
+      "encoder.blocks.5.conv2.weight": true,
+      "encoder.bn1.bias": true,
+      "encoder.bn1.weight": true,
+      "encoder.conv1.bias": true,
+      "encoder.conv1.weight": true,
+      "policy_head.bn.bias": true,
+      "policy_head.bn.weight": true,
+      "policy_head.conv.bias": true,
+      "policy_head.conv.weight": true,
+      "policy_head.fc.bias": true,
+      "policy_head.fc.weight": true,
+      "policy_head.out.bias": true,
+      "policy_head.out.weight": true
+     },
+     "logits": true,
+     "loss_terms": true,
+     "values": true
+    }
+   ],
+   "values_vs_reference": [
+    {
+     "bitwise": false,
+     "max_abs": 1.2382864952087402e-05,
+     "scale": 0.9825365543365479,
+     "within_tol": true
+    },
+    {
+     "bitwise": false,
+     "max_abs": 1.2382864952087402e-05,
+     "scale": 0.9825365543365479,
+     "within_tol": true
+    },
+    {
+     "bitwise": false,
+     "max_abs": 1.2382864952087402e-05,
+     "scale": 0.9825365543365479,
+     "within_tol": true
+    }
+   ]
+  }
+ },
+ "inputs_digest": "8be2e5bd2b7b14757ca6c4817b184ae298ff0c5b351625ca6111ae7d251eae3d",
+ "legal_slots": 31164,
+ "state": "U21",
+ "state_digest": "37ad56e1fcc9eeba1ffcffb7b92e5e5d75865658e5588ddede89ccc89f6e3fdc"
+}

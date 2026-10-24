@@ -1,0 +1,339 @@
+{
+ "case": "U21_b0",
+ "devices": {
+  "cpu": {
+   "additivity_vs_full": {
+    "F": {
+     "bitwise": true,
+     "max_abs": 0.0,
+     "scale": 0.04011041298508644,
+     "within_tol": true
+    },
+    "bn.bias": {
+     "bitwise": false,
+     "max_abs": 1.015829184325412e-06,
+     "scale": 0.1333264708518982,
+     "within_tol": true
+    },
+    "bn.weight": {
+     "bitwise": false,
+     "max_abs": 4.387875378597528e-07,
+     "scale": 0.1328555792570114,
+     "within_tol": true
+    },
+    "conv.bias": {
+     "bitwise": false,
+     "max_abs": 2.50616722041741e-07,
+     "scale": 0.0856199711561203,
+     "within_tol": true
+    },
+    "conv.weight": {
+     "bitwise": false,
+     "max_abs": 4.5951674110256135e-07,
+     "scale": 0.18845488131046295,
+     "within_tol": true
+    },
+    "fc.bias": {
+     "bitwise": false,
+     "max_abs": 2.856177161447704e-08,
+     "scale": 0.017628416419029236,
+     "within_tol": true
+    },
+    "fc.weight": {
+     "bitwise": false,
+     "max_abs": 3.9832229958847165e-07,
+     "scale": 0.03789961710572243,
+     "within_tol": true
+    },
+    "out.bias": {
+     "bitwise": false,
+     "max_abs": 2.0579136617016047e-08,
+     "scale": 1.30385160446167e-08,
+     "within_tol": true
+    },
+    "out.weight": {
+     "bitwise": false,
+     "max_abs": 5.8349542086943984e-08,
+     "scale": 0.03062707744538784,
+     "within_tol": true
+    }
+   },
+   "disagrees": false,
+   "loss": [
+    4.093371391296387,
+    4.093371391296387,
+    4.093371391296387
+   ],
+   "loss_vs_numpy": {
+    "bitwise": false,
+    "max_abs": 3.110700390607235e-07,
+    "scale": 4.093371702366426,
+    "within_tol": true
+   },
+   "repeats": {
+    "F": [
+     true,
+     true
+    ],
+    "bn.bias": [
+     true,
+     true
+    ],
+    "bn.weight": [
+     true,
+     true
+    ],
+    "conv.bias": [
+     true,
+     true
+    ],
+    "conv.weight": [
+     true,
+     true
+    ],
+    "fc.bias": [
+     true,
+     true
+    ],
+    "fc.weight": [
+     true,
+     true
+    ],
+    "out.bias": [
+     true,
+     true
+    ],
+    "out.weight": [
+     true,
+     true
+    ]
+   },
+   "vs_numpy": {
+    "F": {
+     "bitwise": false,
+     "max_abs": 4.059876664019857e-09,
+     "scale": 0.04011041441924712,
+     "within_tol": true
+    },
+    "bn.bias": {
+     "bitwise": false,
+     "max_abs": 1.1017655130174386e-06,
+     "scale": 0.1333275726174112,
+     "within_tol": true
+    },
+    "bn.weight": {
+     "bitwise": false,
+     "max_abs": 6.019422378045203e-07,
+     "scale": 0.13285618119924922,
+     "within_tol": true
+    },
+    "conv.bias": {
+     "bitwise": false,
+     "max_abs": 3.6633134903318876e-07,
+     "scale": 0.08562033748746933,
+     "within_tol": true
+    },
+    "conv.weight": {
+     "bitwise": false,
+     "max_abs": 4.259506382331413e-07,
+     "scale": 0.1884549384338151,
+     "within_tol": true
+    },
+    "fc.bias": {
+     "bitwise": false,
+     "max_abs": 8.604337837191112e-08,
+     "scale": 0.01762847139764775,
+     "within_tol": true
+    },
+    "fc.weight": {
+     "bitwise": false,
+     "max_abs": 3.446670044718325e-07,
+     "scale": 0.037899272438717956,
+     "within_tol": true
+    },
+    "out.bias": {
+     "bitwise": false,
+     "max_abs": 1.30385160010521e-08,
+     "scale": 4.3564598543183175e-17,
+     "within_tol": true
+    },
+    "out.weight": {
+     "bitwise": false,
+     "max_abs": 6.310338924314651e-08,
+     "scale": 0.030627113798057205,
+     "within_tol": true
+    }
+   }
+  },
+  "gpu": {
+   "additivity_vs_full": {
+    "F": {
+     "bitwise": true,
+     "max_abs": 0.0,
+     "scale": 0.04011041298508644,
+     "within_tol": true
+    },
+    "bn.bias": {
+     "bitwise": false,
+     "max_abs": 1.9910658011212945e-08,
+     "scale": 0.1333274394273758,
+     "within_tol": true
+    },
+    "bn.weight": {
+     "bitwise": false,
+     "max_abs": 8.482402336085215e-08,
+     "scale": 0.13285601139068604,
+     "within_tol": true
+    },
+    "conv.bias": {
+     "bitwise": false,
+     "max_abs": 8.607457857578993e-09,
+     "scale": 0.08562025427818298,
+     "within_tol": true
+    },
+    "conv.weight": {
+     "bitwise": false,
+     "max_abs": 1.435710146324709e-07,
+     "scale": 0.18845495581626892,
+     "within_tol": true
+    },
+    "fc.bias": {
+     "bitwise": false,
+     "max_abs": 6.8973804445704445e-09,
+     "scale": 0.017628425732254982,
+     "within_tol": true
+    },
+    "fc.weight": {
+     "bitwise": false,
+     "max_abs": 2.609476723591797e-08,
+     "scale": 0.037899199873209,
+     "within_tol": true
+    },
+    "out.bias": {
+     "bitwise": false,
+     "max_abs": 1.3671524357050657e-08,
+     "scale": 1.0244548320770264e-08,
+     "within_tol": true
+    },
+    "out.weight": {
+     "bitwise": false,
+     "max_abs": 1.0782241588458419e-07,
+     "scale": 0.030627083033323288,
+     "within_tol": true
+    }
+   },
+   "disagrees": false,
+   "loss": [
+    4.093371868133545,
+    4.093371868133545,
+    4.093371868133545
+   ],
+   "loss_vs_numpy": {
+    "bitwise": false,
+    "max_abs": 1.657671191424015e-07,
+    "scale": 4.093371702366426,
+    "within_tol": true
+   },
+   "repeats": {
+    "F": [
+     true,
+     true
+    ],
+    "bn.bias": [
+     true,
+     true
+    ],
+    "bn.weight": [
+     true,
+     true
+    ],
+    "conv.bias": [
+     true,
+     true
+    ],
+    "conv.weight": [
+     true,
+     true
+    ],
+    "fc.bias": [
+     true,
+     true
+    ],
+    "fc.weight": [
+     true,
+     true
+    ],
+    "out.bias": [
+     true,
+     true
+    ],
+    "out.weight": [
+     true,
+     true
+    ]
+   },
+   "vs_numpy": {
+    "F": {
+     "bitwise": false,
+     "max_abs": 4.059876664019857e-09,
+     "scale": 0.04011041441924712,
+     "within_tol": true
+    },
+    "bn.bias": {
+     "bitwise": false,
+     "max_abs": 1.3319003541734098e-07,
+     "scale": 0.1333275726174112,
+     "within_tol": true
+    },
+    "bn.weight": {
+     "bitwise": false,
+     "max_abs": 1.6980856318293824e-07,
+     "scale": 0.13285618119924922,
+     "within_tol": true
+    },
+    "conv.bias": {
+     "bitwise": false,
+     "max_abs": 8.320928635008329e-08,
+     "scale": 0.08562033748746933,
+     "within_tol": true
+    },
+    "conv.weight": {
+     "bitwise": false,
+     "max_abs": 1.1242493648186414e-07,
+     "scale": 0.1884549384338151,
+     "within_tol": true
+    },
+    "fc.bias": {
+     "bitwise": false,
+     "max_abs": 4.9721797961907455e-08,
+     "scale": 0.01762847139764775,
+     "within_tol": true
+    },
+    "fc.weight": {
+     "bitwise": false,
+     "max_abs": 9.754584889831719e-08,
+     "scale": 0.037899272438717956,
+     "within_tol": true
+    },
+    "out.bias": {
+     "bitwise": false,
+     "max_abs": 1.0244548364334862e-08,
+     "scale": 4.3564598543183175e-17,
+     "within_tol": true
+    },
+    "out.weight": {
+     "bitwise": false,
+     "max_abs": 1.3247435142610398e-07,
+     "scale": 0.030627113798057205,
+     "within_tol": true
+    }
+   }
+  }
+ },
+ "directional": {
+  "eps": 6.25e-07,
+  "reason": "every step tried crossed a ReLU boundary",
+  "skipped": true
+ },
+ "numpy_loss": 4.093371702366426
+}

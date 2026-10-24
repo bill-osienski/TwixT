@@ -1,0 +1,749 @@
+{
+ "fidelity": {
+  "pretanh_capture": {
+   "grad_equal": true,
+   "logits_equal": true,
+   "ok": true,
+   "terms_equal": true,
+   "values_equal": true
+  },
+  "trace": {
+   "grad_equal": true,
+   "logits_equal": true,
+   "ok": true,
+   "terms_equal": true,
+   "values_equal": true
+  }
+ },
+ "local_checks": {
+  "backward": {
+   "blocks.0.block_input": {
+    "bitwise": false,
+    "max_abs": 1.0216045391586714e-08,
+    "scale": 0.05161606582803696,
+    "within_tol": true
+   },
+   "blocks.0.bn1": {
+    "bitwise": false,
+    "max_abs": 1.7586160652727223e-09,
+    "scale": 0.025185350200257042,
+    "within_tol": true
+   },
+   "blocks.0.bn2": {
+    "bitwise": false,
+    "max_abs": 7.582076383405578e-09,
+    "scale": 0.06309752179420788,
+    "within_tol": true
+   },
+   "blocks.0.conv2_input": {
+    "bitwise": false,
+    "max_abs": 1.011741748713213e-08,
+    "scale": 0.04846550212290145,
+    "within_tol": true
+   },
+   "blocks.0.relu_inner": {
+    "bitwise": true
+   },
+   "blocks.0.relu_outer": {
+    "bitwise": true
+   },
+   "blocks.1.block_input": {
+    "bitwise": false,
+    "max_abs": 6.395550771268188e-09,
+    "scale": 0.08261114160648102,
+    "within_tol": true
+   },
+   "blocks.1.bn1": {
+    "bitwise": false,
+    "max_abs": 1.0068338072988237e-09,
+    "scale": 0.022937897532197566,
+    "within_tol": true
+   },
+   "blocks.1.bn2": {
+    "bitwise": false,
+    "max_abs": 1.1443618361944852e-09,
+    "scale": 0.052238539723993574,
+    "within_tol": true
+   },
+   "blocks.1.conv2_input": {
+    "bitwise": false,
+    "max_abs": 9.053313022866494e-09,
+    "scale": 0.040432762482046664,
+    "within_tol": true
+   },
+   "blocks.1.relu_inner": {
+    "bitwise": true
+   },
+   "blocks.1.relu_outer": {
+    "bitwise": true
+   },
+   "blocks.2.block_input": {
+    "bitwise": false,
+    "max_abs": 4.179947499238779e-09,
+    "scale": 0.09131401565460878,
+    "within_tol": true
+   },
+   "blocks.2.bn1": {
+    "bitwise": false,
+    "max_abs": 9.592837791477793e-10,
+    "scale": 0.02015902061206394,
+    "within_tol": true
+   },
+   "blocks.2.bn2": {
+    "bitwise": false,
+    "max_abs": 1.9137750169317957e-09,
+    "scale": 0.056677921326757016,
+    "within_tol": true
+   },
+   "blocks.2.conv2_input": {
+    "bitwise": false,
+    "max_abs": 1.3783352091623069e-08,
+    "scale": 0.03245651982702465,
+    "within_tol": true
+   },
+   "blocks.2.relu_inner": {
+    "bitwise": true
+   },
+   "blocks.2.relu_outer": {
+    "bitwise": true
+   },
+   "blocks.3.block_input": {
+    "bitwise": false,
+    "max_abs": 2.219598727037919e-09,
+    "scale": 0.08974874241582675,
+    "within_tol": true
+   },
+   "blocks.3.bn1": {
+    "bitwise": false,
+    "max_abs": 5.804432151937378e-10,
+    "scale": 0.014941276841582748,
+    "within_tol": true
+   },
+   "blocks.3.bn2": {
+    "bitwise": false,
+    "max_abs": 3.0529873004669916e-09,
+    "scale": 0.03276404805656508,
+    "within_tol": true
+   },
+   "blocks.3.conv2_input": {
+    "bitwise": false,
+    "max_abs": 7.0482646091080126e-09,
+    "scale": 0.016837425250876017,
+    "within_tol": true
+   },
+   "blocks.3.relu_inner": {
+    "bitwise": true
+   },
+   "blocks.3.relu_outer": {
+    "bitwise": true
+   },
+   "blocks.4.block_input": {
+    "bitwise": false,
+    "max_abs": 4.064040617923759e-09,
+    "scale": 0.08892829309801535,
+    "within_tol": true
+   },
+   "blocks.4.bn1": {
+    "bitwise": false,
+    "max_abs": 1.4796710037789929e-09,
+    "scale": 0.0234439269727514,
+    "within_tol": true
+   },
+   "blocks.4.bn2": {
+    "bitwise": false,
+    "max_abs": 1.6627668790458738e-09,
+    "scale": 0.04473495222852645,
+    "within_tol": true
+   },
+   "blocks.4.conv2_input": {
+    "bitwise": false,
+    "max_abs": 7.032024570280404e-09,
+    "scale": 0.020064313053713503,
+    "within_tol": true
+   },
+   "blocks.4.relu_inner": {
+    "bitwise": true
+   },
+   "blocks.4.relu_outer": {
+    "bitwise": true
+   },
+   "blocks.5.block_input": {
+    "bitwise": false,
+    "max_abs": 7.651721901924535e-09,
+    "scale": 0.08178581434254685,
+    "within_tol": true
+   },
+   "blocks.5.bn1": {
+    "bitwise": false,
+    "max_abs": 1.4456850543076438e-09,
+    "scale": 0.024824548087018904,
+    "within_tol": true
+   },
+   "blocks.5.bn2": {
+    "bitwise": false,
+    "max_abs": 2.5810831388861644e-09,
+    "scale": 0.06732424948034292,
+    "within_tol": true
+   },
+   "blocks.5.conv2_input": {
+    "bitwise": false,
+    "max_abs": 3.671880161731922e-08,
+    "scale": 0.049063275534839516,
+    "within_tol": true
+   },
+   "blocks.5.relu_inner": {
+    "bitwise": true
+   },
+   "blocks.5.relu_outer": {
+    "bitwise": true
+   },
+   "stem.bn": {
+    "bitwise": false,
+    "max_abs": 5.147855877685181e-09,
+    "scale": 0.08248085819254639,
+    "within_tol": true
+   },
+   "stem.relu": {
+    "bitwise": true
+   }
+  },
+  "backward_failures": [],
+  "forward": {
+   "blocks.0.a1": {
+    "bitwise": false,
+    "max_abs": 5.816051280582712e-07,
+    "scale": 7.842620251259423,
+    "within_tol": true
+   },
+   "blocks.0.s": {
+    "bitwise": false,
+    "max_abs": 7.458535007387468e-07,
+    "scale": 5.501031436019849,
+    "within_tol": true
+   },
+   "blocks.0.z1": {
+    "bitwise": false,
+    "max_abs": 3.2903624133218123e-05,
+    "scale": 12.021434262009674,
+    "within_tol": true
+   },
+   "blocks.0.z2": {
+    "bitwise": false,
+    "max_abs": 2.2946502904019894e-05,
+    "scale": 6.048559270543002,
+    "within_tol": true
+   },
+   "blocks.1.a1": {
+    "bitwise": false,
+    "max_abs": 4.573477934144421e-07,
+    "scale": 3.652958734690099,
+    "within_tol": true
+   },
+   "blocks.1.s": {
+    "bitwise": false,
+    "max_abs": 3.63763432265074e-07,
+    "scale": 5.553232314409827,
+    "within_tol": true
+   },
+   "blocks.1.z1": {
+    "bitwise": false,
+    "max_abs": 3.2427633932297084e-05,
+    "scale": 6.026301137649399,
+    "within_tol": true
+   },
+   "blocks.1.z2": {
+    "bitwise": false,
+    "max_abs": 1.3428464410880636e-05,
+    "scale": 4.351941248281008,
+    "within_tol": true
+   },
+   "blocks.2.a1": {
+    "bitwise": false,
+    "max_abs": 3.5636947215422765e-07,
+    "scale": 3.50061329636003,
+    "within_tol": true
+   },
+   "blocks.2.s": {
+    "bitwise": false,
+    "max_abs": 3.3669144006154283e-07,
+    "scale": 5.242363109163257,
+    "within_tol": true
+   },
+   "blocks.2.z1": {
+    "bitwise": false,
+    "max_abs": 2.543154354572863e-05,
+    "scale": 6.201271246303199,
+    "within_tol": true
+   },
+   "blocks.2.z2": {
+    "bitwise": false,
+    "max_abs": 9.40576187125064e-06,
+    "scale": 3.4079628065636354,
+    "within_tol": true
+   },
+   "blocks.3.a1": {
+    "bitwise": false,
+    "max_abs": 3.7494863169840187e-07,
+    "scale": 3.12659751098165,
+    "within_tol": true
+   },
+   "blocks.3.s": {
+    "bitwise": false,
+    "max_abs": 3.336973670720056e-07,
+    "scale": 5.095903754756124,
+    "within_tol": true
+   },
+   "blocks.3.z1": {
+    "bitwise": false,
+    "max_abs": 2.6014019606446226e-05,
+    "scale": 5.012266000053992,
+    "within_tol": true
+   },
+   "blocks.3.z2": {
+    "bitwise": false,
+    "max_abs": 1.1647531787062348e-05,
+    "scale": 2.979075438621836,
+    "within_tol": true
+   },
+   "blocks.4.a1": {
+    "bitwise": false,
+    "max_abs": 3.849056051663524e-07,
+    "scale": 3.11800718615684,
+    "within_tol": true
+   },
+   "blocks.4.s": {
+    "bitwise": false,
+    "max_abs": 5.280393278184192e-07,
+    "scale": 5.273961302549488,
+    "within_tol": true
+   },
+   "blocks.4.z1": {
+    "bitwise": false,
+    "max_abs": 2.254505763038539e-05,
+    "scale": 3.9732769429762276,
+    "within_tol": true
+   },
+   "blocks.4.z2": {
+    "bitwise": false,
+    "max_abs": 7.723781722063228e-06,
+    "scale": 2.99130660276259,
+    "within_tol": true
+   },
+   "blocks.5.a1": {
+    "bitwise": false,
+    "max_abs": 3.9050712752342065e-07,
+    "scale": 4.084602006757886,
+    "within_tol": true
+   },
+   "blocks.5.s": {
+    "bitwise": false,
+    "max_abs": 1.1834956463729895e-06,
+    "scale": 13.584926487351643,
+    "within_tol": true
+   },
+   "blocks.5.z1": {
+    "bitwise": false,
+    "max_abs": 3.44645474775751e-05,
+    "scale": 5.453753281863364,
+    "within_tol": true
+   },
+   "blocks.5.z2": {
+    "bitwise": false,
+    "max_abs": 9.983677280528402e-06,
+    "scale": 2.705889056852048,
+    "within_tol": true
+   },
+   "stem.a0": {
+    "bitwise": false,
+    "max_abs": 9.056491574455094e-07,
+    "scale": 6.9077407777865245,
+    "within_tol": true
+   },
+   "stem.z0": {
+    "bitwise": false,
+    "max_abs": 1.6288476336612234e-06,
+    "scale": 4.400261720537791,
+    "within_tol": true
+   }
+  },
+  "forward_failures": []
+ },
+ "parameters": {
+  "failures": [],
+  "tensors": {
+   "encoder.blocks.0.bn1.bias": {
+    "bitwise": false,
+    "max_abs": 2.0057292077213518e-08,
+    "scale": 0.2193171187262368,
+    "within_tol": true
+   },
+   "encoder.blocks.0.bn1.weight": {
+    "bitwise": false,
+    "max_abs": 2.4185884600624874e-08,
+    "scale": 0.1623997474060638,
+    "within_tol": true
+   },
+   "encoder.blocks.0.bn2.bias": {
+    "bitwise": false,
+    "max_abs": 3.003780471577677e-08,
+    "scale": 0.20365634430540788,
+    "within_tol": true
+   },
+   "encoder.blocks.0.bn2.weight": {
+    "bitwise": false,
+    "max_abs": 2.1722307397276097e-08,
+    "scale": 0.0986234317766677,
+    "within_tol": true
+   },
+   "encoder.blocks.0.conv1.bias": {
+    "bitwise": false,
+    "max_abs": 1.0708285674843054e-08,
+    "scale": 0.14813645603327621,
+    "within_tol": true
+   },
+   "encoder.blocks.0.conv1.weight": {
+    "bitwise": false,
+    "max_abs": 3.5414305935010937e-07,
+    "scale": 0.07675031950631542,
+    "within_tol": true
+   },
+   "encoder.blocks.0.conv2.bias": {
+    "bitwise": false,
+    "max_abs": 1.2194899968315243e-08,
+    "scale": 0.11206849753121999,
+    "within_tol": true
+   },
+   "encoder.blocks.0.conv2.weight": {
+    "bitwise": false,
+    "max_abs": 2.433772629678588e-07,
+    "scale": 0.06930320654109613,
+    "within_tol": true
+   },
+   "encoder.blocks.1.bn1.bias": {
+    "bitwise": false,
+    "max_abs": 3.292366865248475e-08,
+    "scale": 0.15602160308321567,
+    "within_tol": true
+   },
+   "encoder.blocks.1.bn1.weight": {
+    "bitwise": false,
+    "max_abs": 1.6125537183331318e-08,
+    "scale": 0.14353493362853897,
+    "within_tol": true
+   },
+   "encoder.blocks.1.bn2.bias": {
+    "bitwise": false,
+    "max_abs": 8.795548178675006e-09,
+    "scale": 0.22795404584314746,
+    "within_tol": true
+   },
+   "encoder.blocks.1.bn2.weight": {
+    "bitwise": false,
+    "max_abs": 2.940482220215035e-08,
+    "scale": 0.3472685708509918,
+    "within_tol": true
+   },
+   "encoder.blocks.1.conv1.bias": {
+    "bitwise": false,
+    "max_abs": 1.1562801698755676e-08,
+    "scale": 0.07094580874184626,
+    "within_tol": true
+   },
+   "encoder.blocks.1.conv1.weight": {
+    "bitwise": false,
+    "max_abs": 1.7937285123198476e-07,
+    "scale": 0.05474569063013795,
+    "within_tol": true
+   },
+   "encoder.blocks.1.conv2.bias": {
+    "bitwise": false,
+    "max_abs": 9.966238553177353e-09,
+    "scale": 0.09884993956883928,
+    "within_tol": true
+   },
+   "encoder.blocks.1.conv2.weight": {
+    "bitwise": false,
+    "max_abs": 2.3344385723794714e-07,
+    "scale": 0.08417384668283368,
+    "within_tol": true
+   },
+   "encoder.blocks.2.bn1.bias": {
+    "bitwise": false,
+    "max_abs": 2.2835189628089836e-08,
+    "scale": 0.3897284744687648,
+    "within_tol": true
+   },
+   "encoder.blocks.2.bn1.weight": {
+    "bitwise": false,
+    "max_abs": 1.4828857919368943e-08,
+    "scale": 0.30378268666345165,
+    "within_tol": true
+   },
+   "encoder.blocks.2.bn2.bias": {
+    "bitwise": false,
+    "max_abs": 2.4597244768775894e-08,
+    "scale": 0.20898976145779116,
+    "within_tol": true
+   },
+   "encoder.blocks.2.bn2.weight": {
+    "bitwise": false,
+    "max_abs": 5.1426616548555515e-08,
+    "scale": 0.08902557517002462,
+    "within_tol": true
+   },
+   "encoder.blocks.2.conv1.bias": {
+    "bitwise": false,
+    "max_abs": 1.012712155801232e-08,
+    "scale": 0.24208818936957074,
+    "within_tol": true
+   },
+   "encoder.blocks.2.conv1.weight": {
+    "bitwise": false,
+    "max_abs": 5.897140114285992e-07,
+    "scale": 0.18068642060248563,
+    "within_tol": true
+   },
+   "encoder.blocks.2.conv2.bias": {
+    "bitwise": false,
+    "max_abs": 1.3678570803810075e-08,
+    "scale": 0.17265506164163874,
+    "within_tol": true
+   },
+   "encoder.blocks.2.conv2.weight": {
+    "bitwise": false,
+    "max_abs": 3.429661619980262e-07,
+    "scale": 0.08030779666832863,
+    "within_tol": true
+   },
+   "encoder.blocks.3.bn1.bias": {
+    "bitwise": false,
+    "max_abs": 1.3519220104507568e-08,
+    "scale": 0.16704129951915717,
+    "within_tol": true
+   },
+   "encoder.blocks.3.bn1.weight": {
+    "bitwise": false,
+    "max_abs": 1.2242399871631449e-08,
+    "scale": 0.15295336874684018,
+    "within_tol": true
+   },
+   "encoder.blocks.3.bn2.bias": {
+    "bitwise": false,
+    "max_abs": 8.893005998267256e-09,
+    "scale": 0.20672476205004744,
+    "within_tol": true
+   },
+   "encoder.blocks.3.bn2.weight": {
+    "bitwise": false,
+    "max_abs": 1.7058081169807338e-08,
+    "scale": 0.29557455874728356,
+    "within_tol": true
+   },
+   "encoder.blocks.3.conv1.bias": {
+    "bitwise": false,
+    "max_abs": 5.2227908629853825e-09,
+    "scale": 0.09051020499791634,
+    "within_tol": true
+   },
+   "encoder.blocks.3.conv1.weight": {
+    "bitwise": false,
+    "max_abs": 2.19002177774541e-07,
+    "scale": 0.040741227670064634,
+    "within_tol": true
+   },
+   "encoder.blocks.3.conv2.bias": {
+    "bitwise": false,
+    "max_abs": 1.682319852869263e-08,
+    "scale": 0.16978841827831057,
+    "within_tol": true
+   },
+   "encoder.blocks.3.conv2.weight": {
+    "bitwise": false,
+    "max_abs": 1.7099089294481118e-07,
+    "scale": 0.05137420279399688,
+    "within_tol": true
+   },
+   "encoder.blocks.4.bn1.bias": {
+    "bitwise": false,
+    "max_abs": 1.0551057708085843e-08,
+    "scale": 0.2447034053731683,
+    "within_tol": true
+   },
+   "encoder.blocks.4.bn1.weight": {
+    "bitwise": false,
+    "max_abs": 1.4994714594984693e-08,
+    "scale": 0.1572762428727869,
+    "within_tol": true
+   },
+   "encoder.blocks.4.bn2.bias": {
+    "bitwise": false,
+    "max_abs": 8.608420615230372e-09,
+    "scale": 0.19578375783117605,
+    "within_tol": true
+   },
+   "encoder.blocks.4.bn2.weight": {
+    "bitwise": false,
+    "max_abs": 7.763775358715641e-09,
+    "scale": 0.11967704476443149,
+    "within_tol": true
+   },
+   "encoder.blocks.4.conv1.bias": {
+    "bitwise": false,
+    "max_abs": 5.538975681763925e-09,
+    "scale": 0.13488257298520312,
+    "within_tol": true
+   },
+   "encoder.blocks.4.conv1.weight": {
+    "bitwise": false,
+    "max_abs": 3.971510943515111e-07,
+    "scale": 0.10273484342263071,
+    "within_tol": true
+   },
+   "encoder.blocks.4.conv2.bias": {
+    "bitwise": false,
+    "max_abs": 7.3057716404312245e-09,
+    "scale": 0.1186633852459449,
+    "within_tol": true
+   },
+   "encoder.blocks.4.conv2.weight": {
+    "bitwise": false,
+    "max_abs": 1.7318120228149159e-07,
+    "scale": 0.05398507776603257,
+    "within_tol": true
+   },
+   "encoder.blocks.5.bn1.bias": {
+    "bitwise": false,
+    "max_abs": 3.177670135356969e-08,
+    "scale": 0.20845635188275424,
+    "within_tol": true
+   },
+   "encoder.blocks.5.bn1.weight": {
+    "bitwise": false,
+    "max_abs": 3.5761725081240314e-08,
+    "scale": 0.39240760527492585,
+    "within_tol": true
+   },
+   "encoder.blocks.5.bn2.bias": {
+    "bitwise": false,
+    "max_abs": 2.84817170369267e-09,
+    "scale": 0.13228264206071558,
+    "within_tol": true
+   },
+   "encoder.blocks.5.bn2.weight": {
+    "bitwise": false,
+    "max_abs": 3.47356007845967e-08,
+    "scale": 0.26126160724361674,
+    "within_tol": true
+   },
+   "encoder.blocks.5.conv1.bias": {
+    "bitwise": false,
+    "max_abs": 5.444988238068049e-09,
+    "scale": 0.10722079335795343,
+    "within_tol": true
+   },
+   "encoder.blocks.5.conv1.weight": {
+    "bitwise": false,
+    "max_abs": 1.8568723824871625e-07,
+    "scale": 0.08577840458487346,
+    "within_tol": true
+   },
+   "encoder.blocks.5.conv2.bias": {
+    "bitwise": false,
+    "max_abs": 1.790027154280338e-08,
+    "scale": 0.1839031905124618,
+    "within_tol": true
+   },
+   "encoder.blocks.5.conv2.weight": {
+    "bitwise": false,
+    "max_abs": 7.268606907334663e-08,
+    "scale": 0.06868664331419835,
+    "within_tol": true
+   },
+   "encoder.bn1.bias": {
+    "bitwise": false,
+    "max_abs": 2.2155050183325642e-08,
+    "scale": 0.33603887487331735,
+    "within_tol": true
+   },
+   "encoder.bn1.weight": {
+    "bitwise": false,
+    "max_abs": 3.373072970935809e-08,
+    "scale": 0.36617057936759556,
+    "within_tol": true
+   },
+   "encoder.conv1.bias": {
+    "bitwise": false,
+    "max_abs": 5.9216028192032866e-08,
+    "scale": 0.419360071032053,
+    "within_tol": true
+   },
+   "encoder.conv1.weight": {
+    "bitwise": false,
+    "max_abs": 1.1928665694660445e-06,
+    "scale": 0.4208634848616145,
+    "within_tol": true
+   }
+  }
+ },
+ "policy_head_native": {
+  "failures": [],
+  "native_policy_term": 4.250805854797363,
+  "numpy_policy_term": 4.250806136991745,
+  "policy_term_vs_numpy": {
+   "bitwise": false,
+   "max_abs": 2.8219438164001076e-07,
+   "scale": 4.250806136991745,
+   "within_tol": true
+  },
+  "tensors": {
+   "bn.bias": {
+    "bitwise": false,
+    "max_abs": 1.1451460402156499e-07,
+    "scale": 0.13714740149758775,
+    "within_tol": true
+   },
+   "bn.weight": {
+    "bitwise": false,
+    "max_abs": 3.327283194937136e-07,
+    "scale": 0.20920759527686447,
+    "within_tol": true
+   },
+   "conv.bias": {
+    "bitwise": false,
+    "max_abs": 6.537985944299329e-08,
+    "scale": 0.0879287140433774,
+    "within_tol": true
+   },
+   "conv.weight": {
+    "bitwise": false,
+    "max_abs": 2.6740838425520774e-07,
+    "scale": 0.1892035015858735,
+    "within_tol": true
+   },
+   "fc.bias": {
+    "bitwise": false,
+    "max_abs": 4.5743530654313025e-08,
+    "scale": 0.029012123945409394,
+    "within_tol": true
+   },
+   "fc.weight": {
+    "bitwise": false,
+    "max_abs": 1.5155783619075214e-07,
+    "scale": 0.049011522220459326,
+    "within_tol": true
+   },
+   "out.bias": {
+    "bitwise": false,
+    "max_abs": 1.210719279799085e-08,
+    "scale": 4.480397170262418e-09,
+    "within_tol": true
+   },
+   "out.weight": {
+    "bitwise": false,
+    "max_abs": 9.967874801258825e-08,
+    "scale": 0.009350208245105695,
+    "within_tol": true
+   }
+  }
+ }
+}

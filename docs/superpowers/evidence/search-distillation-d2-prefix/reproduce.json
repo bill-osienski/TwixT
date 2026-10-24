@@ -1,0 +1,102 @@
+{
+ "blocks": {
+  "S0_b0": {
+   "cpu": {
+    "expected": {
+     "grad_digest": "3d49eeb12c2ddb618ba8194aadcd40be8ac36ce010e70ebc883db00cb8fa63b5",
+     "logits_digest": "e1657a407942f6b67e39502e852bafaf0de8a86ca08c5488df20107851d38023",
+     "terms": [
+      4.656035423278809,
+      4.5633625984191895,
+      9.026216406249343e-12
+     ],
+     "values_digest": "b6f57f8f31c33039127d2de8391046e6ee6a4cdc6244ea2206a9f88c7bd4c5d1"
+    },
+    "got": {
+     "grad_digest": "3d49eeb12c2ddb618ba8194aadcd40be8ac36ce010e70ebc883db00cb8fa63b5",
+     "logits_digest": "e1657a407942f6b67e39502e852bafaf0de8a86ca08c5488df20107851d38023",
+     "terms": [
+      4.656035423278809,
+      4.5633625984191895,
+      9.026216406249343e-12
+     ],
+     "values_digest": "b6f57f8f31c33039127d2de8391046e6ee6a4cdc6244ea2206a9f88c7bd4c5d1"
+    },
+    "ok": true
+   },
+   "gpu": {
+    "expected": {
+     "grad_digest": "5e32e291a42156343ca403db562ef6e54ba3d32e8c3119726ba04a20057d24fe",
+     "logits_digest": "b399e0a0b02f213fc841cdd964c9805dcbc08555874dba951822a9243b405bc2",
+     "terms": [
+      4.656036376953125,
+      4.563363075256348,
+      0.0
+     ],
+     "values_digest": "01001b805d829c8f4c3d6c001f3db06d80edb8667f2ab687bdcbeed1da6c9744"
+    },
+    "got": {
+     "grad_digest": "5e32e291a42156343ca403db562ef6e54ba3d32e8c3119726ba04a20057d24fe",
+     "logits_digest": "b399e0a0b02f213fc841cdd964c9805dcbc08555874dba951822a9243b405bc2",
+     "terms": [
+      4.656036376953125,
+      4.563363075256348,
+      0.0
+     ],
+     "values_digest": "01001b805d829c8f4c3d6c001f3db06d80edb8667f2ab687bdcbeed1da6c9744"
+    },
+    "ok": true
+   }
+  },
+  "S0_b21": {
+   "cpu": {
+    "expected": {
+     "grad_digest": "d375b57f4ccb4e700d677b83e44474b8c30a8cf8a3491aa8f8026e5b90324a39",
+     "logits_digest": "b23bdd605e076e267cd8acc54f1e06edd494a9c9ace39057fe0f60fcd17029ce",
+     "terms": [
+      4.903298854827881,
+      4.810626029968262,
+      8.209129556679962e-12
+     ],
+     "values_digest": "67d64f43f0ad11ad09a21c6417630fd3809afc530dd056ef2f4c57d7ba3531b8"
+    },
+    "got": {
+     "grad_digest": "d375b57f4ccb4e700d677b83e44474b8c30a8cf8a3491aa8f8026e5b90324a39",
+     "logits_digest": "b23bdd605e076e267cd8acc54f1e06edd494a9c9ace39057fe0f60fcd17029ce",
+     "terms": [
+      4.903298854827881,
+      4.810626029968262,
+      8.209129556679962e-12
+     ],
+     "values_digest": "67d64f43f0ad11ad09a21c6417630fd3809afc530dd056ef2f4c57d7ba3531b8"
+    },
+    "ok": true
+   },
+   "gpu": {
+    "expected": {
+     "grad_digest": "c06f3e9eb02d1f414cf83427918b99702493f4e66f05ee26a60f8d816e46401b",
+     "logits_digest": "5a9e2935842c16c9d46d2a8a8664320092669eacd8c8b9fc9be91de276c6ac08",
+     "terms": [
+      4.903299331665039,
+      4.810626029968262,
+      0.0
+     ],
+     "values_digest": "fdf9dafb1e21963a3372633984c9eb376aacbe46d89d7cfd420ef15463951513"
+    },
+    "got": {
+     "grad_digest": "c06f3e9eb02d1f414cf83427918b99702493f4e66f05ee26a60f8d816e46401b",
+     "logits_digest": "5a9e2935842c16c9d46d2a8a8664320092669eacd8c8b9fc9be91de276c6ac08",
+     "terms": [
+      4.903299331665039,
+      4.810626029968262,
+      0.0
+     ],
+     "values_digest": "fdf9dafb1e21963a3372633984c9eb376aacbe46d89d7cfd420ef15463951513"
+    },
+    "ok": true
+   }
+  }
+ },
+ "ok": true,
+ "teacher_values_equal": true
+}

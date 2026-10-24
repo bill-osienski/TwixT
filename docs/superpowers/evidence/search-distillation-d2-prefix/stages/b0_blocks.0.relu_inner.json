@@ -1,0 +1,14 @@
+{
+ "block": 0,
+ "count": 0,
+ "focus_flip": false,
+ "noise_max_abs_pre_diff": 1.9371509552001953e-05,
+ "pre_compare": {
+  "bitwise": false,
+  "max_abs": 1.9371509552001953e-05,
+  "scale": 7.362799644470215,
+  "within_tol": true
+ },
+ "recorded": [],
+ "relu": "blocks.0.relu_inner"
+}
