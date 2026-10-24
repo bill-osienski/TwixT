@@ -130,6 +130,7 @@ knob) is not a new hypothesis.
 > **Search distillation D2, convolution-reference diagnostic (Post-closure entry 33, 2026-10-23, COMPLETED; both targets INHERITED).** Same setting, at the incumbent on the update-0 batch, no optimizer update. Entry 32's six failures reproduced bit for bit, and the operand capture was bitwise faithful (L2 included). Given identical operands, the CPU and GPU convolution weight-gradient kernels agree **bitwise**, within 0.006 of the tolerance of float64. Float64 alone, fed each device's own operands, reproduces the miss (2.05×, 1.57×): it is carried in by the upstream gradient (GPU against CPU 5.1× and 5.7× the tolerance, at 2 and 1 elements, all in channel 42), not made by either kernel. Which device's whole-model gradient is nearer the exact one is not established; entry 32's FAIL stands. See #79.
 > **Search distillation D2, encoder branch trace (Post-closure entry 34, 2026-10-23, COMPLETED; BRANCH_CHANGE).** Same setting, incumbent and batch, no update. Reproduced bitwise; the trace was bitwise faithful; every local forward and backward step (convolutions, BN, residual, ReLU) is correct on both devices against float64 from their own operands. 14 ReLU elements with inputs within about 1e-6 of zero take different branches on the CPU and GPU, each following from its own device's operands; among them is block 2's outer ReLU at `[1, 13, 4, 42]` (CPU off, GPU on). Those flips alone account for both target gradients (0.006× and 0.004× the tolerance with them, 2.05× and 1.57× without). A numerical branch change, not an incorrect derivative; not shown harmless, and which device is more accurate is not established. Entry 32's FAIL stands; next is the user's qualification decision. See #80.
 > **Full-float32 setting — qualification decision (decision note after Post-closure entry 34, 2026-10-23, the user's).** Entry 34's BRANCH_CHANGE accepted; no further localization. `MLX_ENABLE_TF32=0` is required for authorized GPU work on this machine and runtime (per process; no persistent change). Validated within the tested scope: isolated operations, the policy head, the incumbent-state local derivatives. **Training stays unqualified**: the updated-state check never ran, and neither the branch change's harmlessness nor training reliability is established. Entry 32 remains a FAIL. OPEN: a DRAFT card for completing the 21-update diagnostic prefix under a prospective criterion (`8b255801`), awaiting review; every gate closed. See #81.
+> **Full-float32 setting — 21-update prefix card (addendum to the decision note, 2026-10-23).** Reviewed, amended and FROZEN; built in `ad873a12` (gate 44, closed; 39 + 16 tests; regression = the 58-id baseline). With both labels on the CPU, a full real-state run qualifies, with every reference passing. NOT RUN: execution awaits the user's review of the frozen implementation. Supersedes the decision note's "DRAFT" status line above. See #81.
 
 ## Historical proposal check — programme now closed
 
@@ -5037,3 +5038,43 @@ relaxed.
   explained branch change, and names no cause for the forward differences.
 - **Not done:** nothing submitted or pushed; no persistent environment change; no run.
 - See do-not-repeat **#81**.
+
+**Addendum to the decision note (2026-10-23, later): the prefix card reviewed, frozen and built; not run.**
+- **The user's review answers,** written into the card (§10):
+  - two prefixes (42 diagnostic updates), each from a fresh incumbent and a fresh Adam, compared update by update on
+    the scalars, the model digest and the Adam-state digest;
+  - "raw values" are the tanh'd predictions the loss uses: the acceptance comparison, as in entry 32. Pre-tanh values
+    are supplementary, and their capture must be bitwise faithful;
+  - unexplained failures stop qualification, and the accounting is not extended. Internal encoder flips cannot excuse
+    a discrepancy entering from the encoder-output gradient.
+- **Two requirements the user added:**
+  - every encoder parameter reference gates, L2 included;
+  - the native policy-head gradients are validated per device from that device's own encoder output, apart from the
+    common-input check.
+- **Build `ad873a12`:** card frozen (sha `cdd900c2…`), `scripts/GPU/alphazero/search_distillation_d2_prefix.py`, gate
+  44 (`SEARCH_DISTILLATION_D2_PREFIX_AUTHORIZED`, closed), the wrapper `search-distillation-d2-prefix-run/01_wrapper.sh`,
+  39 entry and 16 wrapper tests.
+  - The prefix loop's final state equals `gradcheck.reconstruct`'s bitwise. A changed Adam is caught by the digests at
+    update 0, where that update's scalars agree.
+  - On the rig, each criterion is produced by an injected fault, among them:
+    - a weight-only gradient fault caught only by the parameter reference;
+    - a policy-head fault caught by the native check and not by the common-input one;
+    - an encoder-output gradient fault, unexplained;
+    - near-zero branch flips, explained, which qualify;
+    - flips large enough to show in the forward, a local forward error;
+    - a whole-forward perturbation, unexplained despite its flips.
+  - **Real state, both labels on the CPU:**
+    - the public entry stops `NOT_REPRODUCED`, as it must when "gpu" is the CPU;
+    - a full run with entry 32's digests replaced in the test only is `QUALIFIED_AT_U21`: the two 21-update prefixes
+      bitwise equal, all 52 parameter references and the policy-head references passing on the real operands, with
+      nothing flipping.
+    - In that run the parameter references were at most 0.015 of the tolerance and the policy head at most 0.093
+      (`out.bias`). It says nothing about the GPU.
+  - The regression equals the 58-id baseline (3,272 passed, 20 failed, 38 errors). The new tests' exit code was checked
+    directly.
+- **Card wording settled during the build:**
+  - the checks' running order: prefixes, then native evaluations, then batch by batch, judged in number order at each
+    point;
+  - a non-finite evaluation at the incumbent is `NOT_REPRODUCED`, not a VOID.
+- **Not done:** no run, no GPU use, the gate never opened. Execution needs the user's approval after review of the
+  frozen implementation. Nothing submitted or pushed.
