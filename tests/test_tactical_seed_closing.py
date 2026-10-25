@@ -337,8 +337,14 @@ def test_the_pilot_block_is_ACCOUNTED_EXPOSED_and_RETIRED_exactly_as_itself_and_
             f"another interval overlaps the pilot block in {short}"
     # RE-ANCHORED 2026-10-09 (external-engine learning closing edit): appended LAST at its own closing, the
     # pilot block is now followed by a LATER closing -- in both lists alike, and only by higher blocks.
+    # RE-ANCHORED 2026-10-25 (the D2 corrected trial attempt 1's closing, after a reboot interrupted its run): a later
+    # closing may EXPOSE only the started prefix of the block it RETIRES whole, so each later EXPOSED entry is now a
+    # prefix of the RETIRED entry at the same position, rather than equal to it.
     ex, rt = REF.EXPOSED_SEED_INTERVALS, REF.RETIRED_SEED_INTERVALS
-    assert ex[ex.index(block):] == rt[rt.index(block):] and all(iv[0] >= hi for iv in ex[ex.index(block) + 1:]), \
+    ex_after, rt_after = ex[ex.index(block):], rt[rt.index(block):]
+    assert len(ex_after) == len(rt_after) and ex_after[0] == rt_after[0] == block and \
+        all(e[0] == r[0] and e[1] <= r[1] for e, r in zip(ex_after, rt_after)) and \
+        all(iv[0] >= hi for iv in ex_after[1:] + rt_after[1:]), \
         "the pilot block is not the LAST entry of EXPOSED and RETIRED"
     assert not any(iv[0] <= lo - 1 < iv[1] or iv[0] <= hi < iv[1] for name in
                    ("ACCOUNTED_SEED_INTERVALS", "EXPOSED_SEED_INTERVALS", "RETIRED_SEED_INTERVALS", "TEST_ONLY_SEED_INTERVALS")
