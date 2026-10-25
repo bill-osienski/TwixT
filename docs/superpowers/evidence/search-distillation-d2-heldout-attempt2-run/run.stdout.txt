@@ -1,0 +1,1 @@
+{"status": "COMPLETED", "void": null, "head": "1b55c1f01b738d557862a5a0be0cf60b09fc6f4d", "heldout_dir": "/Users/bill/twixt-cache/search-distillation-d2/heldout-tf32off-attempt2-20261025T214428Z", "totals": {"games": 12, "plies": 660, "game_seconds": 1084.936, "records": 660, "bytes": 4793599}}

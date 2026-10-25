@@ -1,0 +1,47 @@
+{
+ "eligible": true,
+ "held_out_games": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11
+ ],
+ "heldout_dir": "/Users/bill/twixt-cache/search-distillation-d2/heldout-tf32off-attempt2-20261025T214428Z",
+ "kind": "search-distillation-d2-heldout/1",
+ "model_digest": "ae0e71fc395ce6b95d24f9e696f02870c7b3bfc6f8ea83f9d5d0a85c4979816b",
+ "phase": {
+  "context_sha256": "7d15326739e5d493e6a9fc4ec621396a2c38be1a83fbf42a8671a844b85069d3",
+  "dir": "phase_00",
+  "finalized_sha256": "4905dcbb88959f07005009ff3dccbfab3c4e25995e68431116e0bfae8c74ff08",
+  "games": [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11
+  ],
+  "records": 660
+ },
+ "seeds": {
+  "base": 202692400,
+  "n_slots": 12
+ },
+ "setting": {
+  "MLX_ENABLE_TF32": "0"
+ }
+}

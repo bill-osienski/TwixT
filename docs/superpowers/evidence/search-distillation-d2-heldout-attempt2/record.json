@@ -1,0 +1,302 @@
+{
+ "card": "docs/superpowers/2026-10-25-search-distillation-d2-corrected-trial-attempt2-card.md",
+ "card_sha256": "bde310a31d28d2d4e1d434ffde31aa2292d667f68945351ee6ce1e5954e67ca2",
+ "checkpoint": {
+  "path": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+  "sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e"
+ },
+ "configuration": {
+  "add_noise": true,
+  "mcts": {
+   "c_puct": 1.5,
+   "closeout_selection_tiebreak_enabled": false,
+   "closeout_selection_tiebreak_max_distance": 2,
+   "closeout_selection_tiebreak_min_share": 0.05,
+   "closeout_selection_tiebreak_min_value": 0.95,
+   "closeout_selection_tiebreak_topk": 5,
+   "closeout_td1_high_value_threshold": 0.95,
+   "closeout_td1_max_forced_moves": 4,
+   "closeout_td1_min_visits": 8,
+   "closeout_td1_require_high_value": false,
+   "closeout_td1_visit_forcing_enabled": false,
+   "dirichlet_alpha": 0.3,
+   "dirichlet_eps": 0.25,
+   "eval_batch_size": 14,
+   "fpu_policy_mass_reduction": null,
+   "fpu_value": 0.0,
+   "n_simulations": 1600,
+   "opening_dirichlet_alpha": 1.0,
+   "opening_dirichlet_eps": 0.5,
+   "opening_noise_ply": 0,
+   "pending_virtual_visits": 8,
+   "root_edge_band_penalty": 0.0,
+   "root_edge_band_penalty_ply": 0,
+   "root_edge_band_width": 2,
+   "root_near_corner_penalty": 0.0,
+   "root_near_corner_penalty_early": 0.0,
+   "root_near_corner_penalty_early_plies": 0,
+   "root_near_corner_penalty_ply": 0,
+   "root_near_corner_radius": 2,
+   "stall_flush_sims": 16,
+   "temp_high": 1.0,
+   "temp_low": 0.1,
+   "temp_threshold_ply": 20
+  },
+  "mirror_prob": 0.0,
+  "n_simulations": 1600,
+  "play_kwargs": {
+   "goal_completion_emit_enabled": false,
+   "goal_completion_record_enabled": false
+  },
+  "position_cap": null
+ },
+ "eligible": true,
+ "environment": {
+  "executable": "/Users/bill/projects/TwixT_Game/.venv/bin/python",
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "python": "3.14.9 (main, Oct 21 2026, 06:02:15) [Clang 21.0.0 (clang-2100.3.34.2)]"
+ },
+ "games": [
+  {
+   "draw_reason": null,
+   "game": 0,
+   "held_out": true,
+   "plies": 42,
+   "seconds": 49.24,
+   "seconds_per_ply": 1.1724,
+   "seed": 202692400,
+   "start_player": "red",
+   "winner": "black"
+  },
+  {
+   "draw_reason": null,
+   "game": 1,
+   "held_out": true,
+   "plies": 63,
+   "seconds": 79.222,
+   "seconds_per_ply": 1.2575,
+   "seed": 202692401,
+   "start_player": "black",
+   "winner": "black"
+  },
+  {
+   "draw_reason": null,
+   "game": 2,
+   "held_out": true,
+   "plies": 74,
+   "seconds": 85.18,
+   "seconds_per_ply": 1.1511,
+   "seed": 202692402,
+   "start_player": "black",
+   "winner": "red"
+  },
+  {
+   "draw_reason": null,
+   "game": 3,
+   "held_out": true,
+   "plies": 71,
+   "seconds": 81.423,
+   "seconds_per_ply": 1.1468,
+   "seed": 202692403,
+   "start_player": "black",
+   "winner": "black"
+  },
+  {
+   "draw_reason": null,
+   "game": 4,
+   "held_out": true,
+   "plies": 51,
+   "seconds": 55.636,
+   "seconds_per_ply": 1.0909,
+   "seed": 202692404,
+   "start_player": "black",
+   "winner": "black"
+  },
+  {
+   "draw_reason": null,
+   "game": 5,
+   "held_out": true,
+   "plies": 55,
+   "seconds": 63.516,
+   "seconds_per_ply": 1.1548,
+   "seed": 202692405,
+   "start_player": "black",
+   "winner": "black"
+  },
+  {
+   "draw_reason": null,
+   "game": 6,
+   "held_out": true,
+   "plies": 38,
+   "seconds": 48.319,
+   "seconds_per_ply": 1.2716,
+   "seed": 202692406,
+   "start_player": "black",
+   "winner": "red"
+  },
+  {
+   "draw_reason": null,
+   "game": 7,
+   "held_out": true,
+   "plies": 72,
+   "seconds": 164.053,
+   "seconds_per_ply": 2.2785,
+   "seed": 202692407,
+   "start_player": "black",
+   "winner": "red"
+  },
+  {
+   "draw_reason": null,
+   "game": 8,
+   "held_out": true,
+   "plies": 63,
+   "seconds": 156.826,
+   "seconds_per_ply": 2.4893,
+   "seed": 202692408,
+   "start_player": "red",
+   "winner": "red"
+  },
+  {
+   "draw_reason": null,
+   "game": 9,
+   "held_out": true,
+   "plies": 37,
+   "seconds": 83.518,
+   "seconds_per_ply": 2.2573,
+   "seed": 202692409,
+   "start_player": "black",
+   "winner": "black"
+  },
+  {
+   "draw_reason": null,
+   "game": 10,
+   "held_out": true,
+   "plies": 55,
+   "seconds": 124.675,
+   "seconds_per_ply": 2.2668,
+   "seed": 202692410,
+   "start_player": "black",
+   "winner": "black"
+  },
+  {
+   "draw_reason": null,
+   "game": 11,
+   "held_out": true,
+   "plies": 39,
+   "seconds": 93.328,
+   "seconds_per_ply": 2.393,
+   "seed": 202692411,
+   "start_player": "red",
+   "winner": "red"
+  }
+ ],
+ "head": "1b55c1f01b738d557862a5a0be0cf60b09fc6f4d",
+ "heldout_dir": "/Users/bill/twixt-cache/search-distillation-d2/heldout-tf32off-attempt2-20261025T214428Z",
+ "heldout_sha256": "da96b9e93caa4e75ecd301907a2c81a97de59f2b74dc9dbc2deaa5613f616ec1",
+ "kind": "search-distillation-d2-heldout-record/1",
+ "loadavg_after": [
+  14.80615234375,
+  13.431640625,
+  11.119140625
+ ],
+ "loadavg_before": [
+  4.19384765625,
+  7.80322265625,
+  11.0712890625
+ ],
+ "model_digest_after": "ae0e71fc395ce6b95d24f9e696f02870c7b3bfc6f8ea83f9d5d0a85c4979816b",
+ "model_digest_before": "ae0e71fc395ce6b95d24f9e696f02870c7b3bfc6f8ea83f9d5d0a85c4979816b",
+ "modes_at_end": {
+  "batchnorm": 14,
+  "modules": 42,
+  "modules_in_training_mode": 0
+ },
+ "modes_at_load": {
+  "batchnorm": 14,
+  "modules": 42,
+  "modules_in_training_mode": 0
+ },
+ "modules": {
+  "scripts/GPU/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "scripts/GPU/alphazero/__init__.py": "c6f13806151399f9e6be707271537b166ec79ba9729d8339800127c826adc4ab",
+  "scripts/GPU/alphazero/connectivity_diagnostics.py": "77a63a54c0f1c17cb2814061a04331402f120c14562d042119b3c390eba6ea78",
+  "scripts/GPU/alphazero/curriculum.py": "8992d18e124014db89dfc560479170a0400e55e75211677bd67bb70ee2d833e9",
+  "scripts/GPU/alphazero/e4_screen_reference.py": "5e8f062d1abb814a8bf0660dcdf1a26617cc2916247486242c8b8ed869ee898b",
+  "scripts/GPU/alphazero/evaluator.py": "043388192eaeb55eda58057d5f15160866b7ba0ecd8d117ff4e913f00327d8c2",
+  "scripts/GPU/alphazero/game/__init__.py": "b8cba656f4cdd17ca1fce240224623d2ed631904a035425a30ef4a7be2069122",
+  "scripts/GPU/alphazero/game/twixt_state.py": "291275223b71b522a19181ae33a34518c0ca3c8f585275770f4c72e651cba5e2",
+  "scripts/GPU/alphazero/game_saver.py": "7311ca2ae8773bcf7056d86eb4e4bdc64aadd4977bb72b8bcb349155d372065c",
+  "scripts/GPU/alphazero/inheritance_probe.py": "d8e073b8303d5db5f43a5613f82aff6a9cc1a0bc6249e7a312fec73242688203",
+  "scripts/GPU/alphazero/local_evaluator.py": "7fbeb49d3eb210fae4c74098a29e257b34916d8837f6735cd875c3184447ea4e",
+  "scripts/GPU/alphazero/mcts.py": "0769b22ae47923da2600584da1bcf7c955bb975f0bd4985d7d11605d5196050f",
+  "scripts/GPU/alphazero/network.py": "81465fe7106d4d7161cc5bdaf2b00a002ac337a77aff5d354a3bcd26986873bc",
+  "scripts/GPU/alphazero/opening_diagnostics.py": "03e40f0ea8110f194bb94b6f99b03b7aa367937882bf9c9cd5de57adc5a13106",
+  "scripts/GPU/alphazero/probe_eval.py": "e2a2943604d6b3efd5f4c3edac2c8c547b4ebe8b04e1cbf5a0b47b4f3d9a0a25",
+  "scripts/GPU/alphazero/recovery_retargeting_diagnostics.py": "25f36b6df0295c5d3baf27a07f0a2be9faebe9df0eb1a2ff53f06454d6ee32ea",
+  "scripts/GPU/alphazero/search_distillation_d2.py": "bc8fd0c80fc533f50273ebda60c81375c5131d068a70344e07afef9a73617be9",
+  "scripts/GPU/alphazero/search_distillation_d2_heldout_authorization.py": "1ba6472976208ab757d58bbd08ba0df74b47e3b56dc659d697844d7cba9f9149",
+  "scripts/GPU/alphazero/search_distillation_d2_measure.py": "c2ecd81d7939a3879895b8bdfb36221c5cedecc616c345a37d4ef26f03b30669",
+  "scripts/GPU/alphazero/search_distillation_d2_measure_authorization.py": "d01a9d09970d4803e49c1fac70c595fc22955ff77d0221eb43690d91078ac8d2",
+  "scripts/GPU/alphazero/self_play.py": "c7019373aacde3e22656278d99380fdf8e0c26466549e6521cda791fddfe9394",
+  "scripts/GPU/alphazero/trainer.py": "cf89dfafc10f85dd881c87732bc5bc0b90b43d9f3b35e694805e6ca75fad81db",
+  "scripts/GPU/alphazero/training_capture_serial.py": "89d86be91f424e73c8b464935454a61c5f347f0a2161d7f78fb6fba37b21c4f0",
+  "scripts/GPU/alphazero/training_replay_capture.py": "b58765b13f798133fb685ae4599f4b32d9f262d7659a402f44c10600f8974f32",
+  "scripts/GPU/alphazero/twixtbot_g3_reference.py": "f68af1525d7997467904e2dfe7ea8aaf5400fffce3e5513625643ec442e3e55e",
+  "scripts/GPU/alphazero/twixtbot_g3_schedule.py": "7624c4e61c8ca5cba7641a641d74800c4c2a6d8e6c1ffb13115bed177b92a600"
+ },
+ "phase": {
+  "bytes": 4793599,
+  "context_sha256": "7d15326739e5d493e6a9fc4ec621396a2c38be1a83fbf42a8671a844b85069d3",
+  "dir": "phase_00",
+  "finalized_sha256": "4905dcbb88959f07005009ff3dccbfab3c4e25995e68431116e0bfae8c74ff08",
+  "games": [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11
+  ],
+  "records": 660,
+  "reopen_validate_s": 0.1421749990004173,
+  "rows_with_inherited_child_visits": 639,
+  "write_s": 0.16729775099884137
+ },
+ "seeds": {
+  "base": 202692400,
+  "n_slots": 12
+ },
+ "setting": {
+  "MLX_ENABLE_TF32": "0"
+ },
+ "setting_at_end": {
+  "MLX_ENABLE_TF32": "0"
+ },
+ "spec": {
+  "games": 12,
+  "n_simulations": 1600,
+  "phase_bytes": 104857600
+ },
+ "status": "COMPLETED",
+ "strength_verdict": null,
+ "total_seconds": 1086.175,
+ "totals": {
+  "bytes": 4793599,
+  "game_seconds": 1084.936,
+  "games": 12,
+  "plies": 660,
+  "records": 660
+ },
+ "versions": {
+  "mlx": "0.30.3",
+  "numpy": "2.4.1",
+  "python": "3.14.9"
+ },
+ "written_by": "script"
+}
