@@ -1,0 +1,32 @@
+D2 HELD-OUT SET GENERATION -- INTERRUPTION NOTE (written by hand after the fact; NOT a wrapper or script record)
+================================================================================================================
+Written 2026-10-25 after the machine rebooted. Every statement below is an observation from files on disk; nothing
+was recomputed or inferred about the games' content.
+
+What ran: ONE invocation of 01_wrapper.sh in a linked worktree (branch heldout-run), HEAD 98b4a031 = the one-line
+opening of gate 45 on b887dd04. run.stdout.txt / run.stderr.txt created 2026-10-25T09:36:51-0400 (both 0 bytes).
+
+What progress.jsonl shows (sha256 744daff38a47481567920f0dd20c257b35f3043400d16b63270ab85597fee8b5, 5 lines):
+  start (setting MLX_ENABLE_TF32 "0"), loaded, game_start 0, game_end 0, game_start 1 (t = 75.976 s).
+  Last write 09:38:07. Games started: slots 0 and 1. Games finished: slot 0 only.
+
+What stopped it: a macOS kernel panic at 2026-10-25 09:39:35 -0400 (/Library/Logs/DiagnosticReports/
+panic-full-2026-10-25-093935.0002.panic; panicked task kernel_task; panic string begins "PMC0 Assert ID: 0x4c
+(PMC_ASSERT_TIMER_TRANSITION_LATENCY_TIMEOUT), rail:DCS"), then a reboot (`last reboot`: 09:39). Its cause is not
+established here.
+
+What is missing: outer.json and record.json. The wrapper's EXIT trap never ran, so it neither restored the gate nor
+wrote either file. Neither was written by hand.
+
+Gate: found OPEN on the run branch after the reboot (main's copy was never opened). Restored in the same commit as
+this note by the wrapper's own edit (`= True` -> `= False`), read back equal to 98b4a031~1.
+
+Processes: after the reboot no process matched the run module; no perl supervisor survived.
+
+Partial labels left in place, untouched (outside the repo):
+  ~/twixt-cache/search-distillation-d2/heldout-tf32off-20261025T133651Z/phase_00/context.json
+    sha256 c8a9e5890bff1ab27bba93e7e7a821a3f6a56d6fa4326cebc6b56ffb3718be10
+  ~/twixt-cache/search-distillation-d2/heldout-tf32off-20261025T133651Z/phase_00/games/game_0.json
+    sha256 e75d9d7a6213a5ce838ca8a25a75776d413cb6b43b065ecfcd9ebee7e478620b
+  No manifest (heldout.json) was written. Under the card and the authorization, the set is INCOMPLETE and the trial
+  is closed: no retry, replacement, extension or top-up.

@@ -6,4 +6,4 @@ held-out set, stored outside the repository apart from the original corpus. It l
 consumes registered seeds, so it takes its own reviewed door. Opened for ONE approved run and restored on every exit.
 Created closed. This file may hold ONLY this declaration.
 """
-SEARCH_DISTILLATION_D2_HELDOUT_AUTHORIZED = True
+SEARCH_DISTILLATION_D2_HELDOUT_AUTHORIZED = False

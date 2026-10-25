@@ -1,0 +1,5 @@
+{"event": "start", "t": 0.015, "setting": {"MLX_ENABLE_TF32": "0"}}
+{"event": "loaded", "t": 0.122}
+{"event": "game_start", "t": 0.14, "game": 0, "start": "black"}
+{"event": "game_end", "t": 75.945, "game": 0, "seed": 202692300, "held_out": true, "start_player": "black", "plies": 61, "winner": "black", "draw_reason": null, "seconds": 75.804, "seconds_per_ply": 1.2427}
+{"event": "game_start", "t": 75.976, "game": 1, "start": "black"}
