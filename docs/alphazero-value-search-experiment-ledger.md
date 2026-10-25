@@ -136,6 +136,7 @@ knob) is not a new hypothesis.
 > **Search distillation D2 — bounded learning trial: card FROZEN and built (addendum to the decision note after Post-closure entry 35, 2026-10-24).** Card `9f2c6096…`, build `d7d458ad` (gates 45 and 46, closed; regression = the 58-id baseline). The 12-seed held-out block [202692300, 202692312) is surveyed CLEAN, proven before and after registration, and registered in ACCOUNTED. Outcome prediction: None stated in advance. NOT RUN: generation awaits the user's review. Supersedes the "DRAFT" status in the line above. See #83.
 > **Search distillation D2 — bounded trial CLOSED: held-out generation INTERRUPTED (Post-closure entry 36, 2026-10-25).** A macOS kernel panic rebooted the machine during game 1 of 12 (2 started, 1 finished). There is no wrapper record and the exit status is unknown; the set is incomplete and ineligible. Seeds: [202692300, 202692302) EXPOSED and the block RETIRED, through an amended reboot derivation (16/16). There is no learning result: the panic's cause is not established and the hypothesis is not rejected. Training was never run. Supersedes the line above. See #84.
 > **Search distillation D2 — bounded trial ATTEMPT 2 prepared (decision note after Post-closure entry 36, 2026-10-25).** One fresh attempt, by the user's decision. Successor card FROZEN (`bde310a3…`; records and paths only). Build `e3f90078`, gates 45 and 46 closed. Fresh block [202692400, 202692412): surveyed CLEAN, proven before and after registration, registered. No new kernel panic found. A second panic stops GPU experiments pending a system-stability decision. Outcome prediction: None stated in advance. NOT RUN: generation awaits approval of the frozen plan. See #85.
+> **Search distillation D2 — bounded trial ATTEMPT 2: held-out generation COMPLETED and eligible (Post-closure entry 37, 2026-10-25).** One approved run (gate 45 only): 12 games, 660 records, 1,086 s of the 2-hour ceiling; in-run reader and alignment checks passed; model digest unchanged; `MLX_ENABLE_TF32` "0" at start and end. Seeds [202692400, 202692412) EXPOSED and RETIRED whole (15/15). No new kernel panic before or after. Regression = the 58-id baseline. Training NOT RUN: gate 46 closed, awaiting approval. Outcome prediction: None stated in advance. See #86.
 
 ## Historical proposal check — programme now closed
 
@@ -1736,6 +1737,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 84. **The D2 bounded trial's held-out generation (entry 36) — INTERRUPTED by a kernel panic, 2026-10-25; the trial is CLOSED.** Do **not** retry, resume, replace, extend or top up the generation, reuse the block [202692300, 202692312), or open gate 45 or 46 for this trial again. Do **not** train or score on the partial capture in `~/twixt-cache/search-distillation-d2/heldout-tf32off-20261025T133651Z/`, and keep it unchanged. Do **not** synthesize an `outer.json`, `record.json` or exit status for the run. Do **not** read the interruption as a learning result, as evidence against the learning hypothesis, or as establishing the panic's cause (the workload is neither blamed nor cleared). Do **not** run a stress test or reproduction of the panic without approval. Any new trial needs a new card, fresh seeds and the user's approval of each step.
 
 85. **The decision to make one fresh attempt at the D2 bounded trial (after entry 36), 2026-10-25.** Do **not** make a third attempt automatically: if another kernel panic interrupts attempt 2, stop all further GPU experiments pending the user's system-stability decision. Do **not** tune the recipe, criteria, ceilings or numerical setting, or start a learning-method or panic investigation (stress tests, reproductions, system changes), before attempt 2 has had a completed test. Do **not** reuse attempt 1's seeds, records or partial capture, or admit attempt 1's held-out records into training. Do **not** schedule generation or training without a fresh read-only panic check and the user's approval of each step.
+
+86. **The D2 bounded trial attempt 2's held-out generation (entry 37) — COMPLETED and eligible, 2026-10-25.** Do **not** regenerate, rerun, replace, extend or top up the held-out set, reuse the block [202692400, 202692412), or open gate 45 for attempt 2 again. Keep the capture in `~/twixt-cache/search-distillation-d2/heldout-tf32off-attempt2-20261025T214428Z/` unchanged; its games are held-out scoring data for attempt 2's one training run only, never training or strength-comparison data. Do **not** read the completed generation as a learning result or as evidence about the kernel panic's cause. Do **not** open gate 46 or schedule training without a fresh read-only panic check, an idle machine and the user's approval; it runs at most once, with the frozen recipe, criteria and 30-minute ceiling.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -5375,3 +5378,66 @@ equal entry 32's, as the same frozen data, code and setting should give. Predict
     still match the note.
 - **Not done:** no generation, training, GPU use or gate opening. Nothing submitted or pushed.
 - See do-not-repeat **#85**.
+
+### 37. Search distillation D2 — bounded trial attempt 2: the 12-game held-out generation (2026-10-25, COMPLETED; ELIGIBLE)
+
+- **Test:** attempt 2's step 2 (successor card
+  `docs/superpowers/2026-10-25-search-distillation-d2-corrected-trial-attempt2-card.md`, sha `bde310a3…`; the original
+  card `9f2c6096…` §4 governs). One invocation of the attempt 2 held-out wrapper: 12 fresh held-out games under
+  `MLX_ENABLE_TF32=0`, from build `e3f90078` and the registered plan [202692400, 202692412), under the 2-hour ceiling.
+- **Hypothesis:** none was being tested by this step itself. It produces the held-out set that the trial's training
+  step (gate 46) is scored on. The learning hypothesis is in the decision note after entry 35.
+- **Why it was plausible:** Stage 2 (entry 22) generated 120 games with the same loop and finished cleanly. Attempt 1
+  (entry 36) was cut off by a kernel panic, with no evidence about the loop itself.
+- **Prediction on record:** None stated in advance (attempt 2 card §6).
+- **Approval:** the user approved the single generation run on 2026-10-25 (gate 45 only), and accepted the targeted
+  re-anchor `c96e205b` with the post-fix full-suite status recorded as unverified at that point.
+- **Before scheduling (read-only):** no new kernel panic. `/Library/Logs/DiagnosticReports/` held only the 09:39
+  `.contents.panic`, and the reports newer than it were ordinary diag and cpu_resource files. `last reboot` showed no
+  reboot after 09:39. The machine was idle: 1-minute load 1.6, top process 12% CPU, no python job other than the
+  telemetry logger running since boot.
+- **What ran:**
+  - `1b55c1f0`: gate 45 opened by a one-line commit on a linked-worktree branch. Main's copy was never opened.
+  - The wrapper ran from 17:44:28 to 18:02:34 (EDT).
+- **Result:**
+  - `outer.json`: inner exit 0, COMPLETED, outer exit 0, gate restored and read back equal to the pre-open commit
+    `e38edbfd`, no survivors, record written by the script, 1,086 s wall against TERM at 7,190 s.
+  - `record.json`: status COMPLETED, `eligible: true`, `card_sha256` the attempt 2 card's. 12 games, 660 plies and
+    660 records, 4,793,599 bytes. The seeds are exactly [202692400, 202692412) in slot order, all held out.
+  - **Alignment:** the run's VOID checks passed, so the 660 rebuilt records equal the learner rows (board, side to
+    move, legal moves, visits, outcome) and the reader count matches.
+  - **Model immutability:** model digest `ae0e71fc…` before and after; checkpoint SHA-1 `209cf2d4…`; all 42 modules
+    (14 BatchNorm) in eval mode at load and at end.
+  - **Setting:** `MLX_ENABLE_TF32` = `"0"` at start and end. Versions mlx 0.30.3, numpy 2.4.1, python 3.14.9.
+  - **Capture:** `~/twixt-cache/search-distillation-d2/heldout-tf32off-attempt2-20261025T214428Z/`, with
+    `context.json` `7d153267…` and `finalized.json` `4905dcbb…` matching the record. The manifest `heldout.json` is
+    `da96b9e9…`, and the evidence copies of the three phase files are byte-identical to the capture.
+  - `e358b3d7`: the evidence and the restored gate committed.
+  - No game result was read for this entry; the held-out games are scoring data for the training step.
+- **Seed closing:**
+  - `3a68abb4`, K1: the frozen derivation `01_derive_usage.py` ran once and exited 0. It RECONCILES, with 15 of 15
+    controls passing: 12 starts, so expose [202692400, 202692412) and retire [202692400, 202692412). The record is
+    create-only.
+  - `a6102976`, K2: the block appended last to EXPOSED (40 → 41) and RETIRED (38 → 39); AST check, prefixes
+    identical; ACCOUNTED unchanged.
+    - Registry tests: 48 passed. Registry readers: 593 passed. Gate inventory: 8 passed.
+    - Three real-state D2 tests moved to the new state: the attempt 2 plan's seeds are now all refused; with the gate
+      open, the trial entry admits the committed attempt 2 set and reaches the autouse stub boundary once (in process
+      and in a fresh process; nothing trained). D2 held-out, trial, wrapper and seed-closing tests: 139 passed.
+  - **Full regression at `a6102976`, in the main checkout:** exactly the 58-id baseline (3,272 passed, 20 failed, 38
+    errors, 1,334 s). This also verifies the `c96e205b` re-anchor; the decision note's "not rerun" is now resolved.
+    - A first run in the linked worktree gave 127 ids. The 69 extra were ERRORs in
+      `tests/test_e4_screen_command.py` and `tests/test_l0_match_runner.py`, from a relative checkpoint path that does
+      not exist in a worktree (`checkpoints/` lives only in the main checkout). That run is not a valid comparison and
+      is superseded by the main-checkout run.
+- **After the run (read-only):** no new panic report and no reboot since 09:39.
+- **Attempt 1 untouched:** its tracked evidence is unchanged since `bb0ff9b6`, and its partial capture's sha256 still
+  match the note.
+- **Did it match the prediction?** There was none.
+- **Conclusion / status: COMPLETED — the attempt 2 held-out set is eligible.**
+  - Gate 45 was used once and is closed; the block is spent.
+  - Gate 46 was never opened; nothing was trained, scored or evaluated. Training needs the user's approval, a fresh
+    panic check and an idle machine.
+  - This is not a learning result, and it says nothing about the cause of entry 36's panic.
+  - `calib020_0001` stays the incumbent (SHA-1 `209cf2d4…`).
+  - See do-not-repeat **#86**.
