@@ -1,0 +1,29 @@
+SEARCH DISTILLATION D2 HELD-OUT SET, ATTEMPT 2 -- SEED-USAGE DERIVATION (closing)
+================================================================================================
+HEAD e358b3d76d86125ea01db57be817f5bc93d1e9cd; working tree clean
+input docs/superpowers/evidence/search-distillation-d2-heldout-attempt2-run/plan.json (committed, unmodified)
+input docs/superpowers/evidence/search-distillation-d2-heldout-attempt2/progress.jsonl (committed, unmodified)
+input docs/superpowers/evidence/search-distillation-d2-heldout-attempt2-run/outer.json (committed, unmodified)
+input docs/superpowers/evidence/search-distillation-d2-heldout-attempt2/record.json (committed, unmodified)
+outer exit 0; survivors ''; status 'COMPLETED'
+game starts (slots): [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+
+CONTROLS
+  PASS   completed: 12 starts, expose all, retire all  [expose (202692400, 202692412), retire (202692400, 202692412)]
+  PASS   REFUSED before any game: expose NONE, retire all  [expose None, retire (202692400, 202692412)]
+  PASS   timeout during loading: expose none  [expose None, retire (202692400, 202692412)]
+  PASS   timeout in game 0: expose slot 0 only  [expose (202692400, 202692401), retire (202692400, 202692412)]
+  PASS   timeout in game 5: expose slots 0-5  [expose (202692400, 202692406), retire (202692400, 202692412)]
+  PASS   kill in the last game: expose all 12  [expose (202692400, 202692412), retire (202692400, 202692412)]
+  PASS   VOID in game 11: expose all  [expose (202692400, 202692412), retire (202692400, 202692412)]
+  PASS   survivors: refused  [termination NOT confirmed: survivors '123 ']
+  PASS   slots out of order: refused  [game_start slots [1, 0] are not a prefix 0..k-1 of the 12 slots]
+  PASS   a slot started twice: refused  [game_start slots [0, 1, 1] are not a prefix 0..k-1 of the 12 slots]
+  PASS   more than 12 starts: refused  [game_start slots [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] are not a prefix 0..k-1 of the 12 slots]
+  PASS   exit 0 with 11 starts: refused  [outer exit 0 but 11 games started, verdict 'COMPLETED']
+  PASS   REFUSED after a game: refused  [a REFUSED run started 1 games]
+  PASS   block not ACCOUNTED: refused  [the block is not ACCOUNTED exactly once]
+  PASS   block already RETIRED in part: refused  [a seed of the block is already EXPOSED or RETIRED]
+
+controls passed: 15/15
+VERDICT: RECONCILES -- EXPOSE [202692400, 202692412]; RETIRE [202692400, 202692412]
