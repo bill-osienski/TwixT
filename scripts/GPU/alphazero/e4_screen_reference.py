@@ -956,6 +956,15 @@ EXPOSED_SEED_INTERVALS = (
     # they are never strength-comparison data. A post-run accounting edit to a bound file: the committed
     # plan, survey/proof and run records keep their hashes; nothing is rerun.
     (202692100, 202692220),  # SEARCH DISTILLATION D2 STAGE 2 -- 120 game seeds, all started
+    # 🔴 SEARCH DISTILLATION D2 CORRECTED TRIAL HELD-OUT SET -- THE CLOSING EDIT (2026-10-25), after the ONE
+    # authorized 12-game held-out generation was INTERRUPTED by a macOS kernel panic and reboot during game 1
+    # (runtime exit status UNKNOWN; no outer.json or record.json; process absence observed after the reboot,
+    # not wrapper-verified). Use DERIVED from the committed run evidence by the amended derivation
+    # evidence/search-distillation-d2-heldout-seed-closing/04_* (RECONCILES, 16/16): slots 0-1 started,
+    # so only those 2 seeds are EXPOSED. The set is INCOMPLETE and ineligible; its games are never training, held-out or
+    # strength-comparison data. A post-run accounting edit to a bound file: the committed plan, survey/proof
+    # and run records keep their hashes; nothing is rerun.
+    (202692300, 202692302),  # SEARCH DISTILLATION D2 CORRECTED TRIAL -- 2 held-out seeds started
 )
 
 #: Seeds RESERVED PERMANENTLY FOR TESTS. Unit tests must draw from something, and
@@ -1297,6 +1306,15 @@ RETIRED_SEED_INTERVALS = (
     # they are never strength-comparison data. A post-run accounting edit to a bound file: the committed
     # plan, survey/proof and run records keep their hashes; nothing is rerun.
     (202692100, 202692220),  # SEARCH DISTILLATION D2 STAGE 2 -- 120 game seeds, all started
+    # 🔴 SEARCH DISTILLATION D2 CORRECTED TRIAL HELD-OUT SET -- THE CLOSING EDIT (2026-10-25), after the ONE
+    # authorized 12-game held-out generation was INTERRUPTED by a macOS kernel panic and reboot during game 1
+    # (runtime exit status UNKNOWN; no outer.json or record.json; process absence observed after the reboot,
+    # not wrapper-verified). Use DERIVED from the committed run evidence by the amended derivation
+    # evidence/search-distillation-d2-heldout-seed-closing/04_* (RECONCILES, 16/16): slots 0-1 started,
+    # and the whole 12-seed block is RETIRED. The set is INCOMPLETE and ineligible; its games are never training, held-out or
+    # strength-comparison data. A post-run accounting edit to a bound file: the committed plan, survey/proof
+    # and run records keep their hashes; nothing is rerun.
+    (202692300, 202692312),  # SEARCH DISTILLATION D2 CORRECTED TRIAL -- 12 held-out seeds, 2 started
 )
 
 

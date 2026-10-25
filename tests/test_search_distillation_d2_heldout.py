@@ -290,14 +290,15 @@ def test_THE_REAL_VERSIONS_ARE_THE_CARD_S():
 
 # ─────────────────────────────── the REAL registered plan ───────────────────────────────
 
-def test_REAL_THE_REGISTERED_PLAN_through_the_entry_s_own_seams_is_12_usable_seeds_and_the_survey_s_build_plan():
-    """After S3 (registration) and S4 (post-registration proof): the plan the public entry will read, and every seed
-    the entry's own seed check will judge, in the REAL registry. Read-only; nothing is drawn or exposed."""
+def test_REAL_THE_REGISTERED_PLAN_is_the_survey_s_build_plan_and_CLOSED_after_the_interrupted_run():
+    """The plan the public entry reads is still the survey's build_plan, but since the 2026-10-25 closing edit (the run
+    was INTERRUPTED by a reboot during game 1) the entry's own seed check refuses every seed: the started prefix
+    [base, base + 2) is EXPOSED and the whole block RETIRED, each last. Read-only; nothing is drawn."""
     import importlib.util
     seams = H._real_seams(_checkpoint())
     plan = seams.read_plan()
     assert plan["n_slots"] == H.FROZEN["games"] == 12 and type(plan["base"]) is int
-    assert all(seams.seed_ok(plan["base"] + s) for s in range(12))
+    assert not any(seams.seed_ok(plan["base"] + s) for s in range(12))
     here = H.ROOT / "docs/superpowers/evidence/search-distillation-d2-heldout-seed-survey"
     spec = importlib.util.spec_from_file_location("_heldout_survey", here / "01_seed_survey.py")
     survey = importlib.util.module_from_spec(spec)
@@ -307,4 +308,6 @@ def test_REAL_THE_REGISTERED_PLAN_through_the_entry_s_own_seams_is_12_usable_see
     assert f"block = [{plan['base']}, {plan['base'] + 12})" in record.decode()
     from scripts.GPU.alphazero import e4_screen_reference as REG
     assert REG.ACCOUNTED_SEED_INTERVALS[-1] == (plan["base"], plan["base"] + 12)
-    assert not REG.seed_is_unavailable(plan["base"]) and not REG.seed_is_test_only(plan["base"] + 11)
+    assert REG.EXPOSED_SEED_INTERVALS[-1] == (plan["base"], plan["base"] + 2)
+    assert REG.RETIRED_SEED_INTERVALS[-1] == (plan["base"], plan["base"] + 12)
+    assert all(REG.seed_is_unavailable(plan["base"] + s) for s in range(12))

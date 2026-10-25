@@ -427,8 +427,9 @@ def test_WITH_EVERY_CHECK_PASSING_THE_PUBLIC_ENTRY_REACHES_THE_BOUNDARY_ONCE(ope
 # ─────────────────────────────── the REAL state ───────────────────────────────
 
 def test_REAL_THE_PUBLIC_ENTRY_REFUSES_until_a_generated_committed_held_out_set_exists(opened, capsys):
-    """The gate open, the setting, the pinned card and code, the real paths: no held-out set has been generated."""
-    assert not (TR.ROOT / H.EVIDENCE_DIR).exists()
+    """The gate open, the setting, the pinned card and code, the real paths: no held-out set exists -- the one
+    generation run was INTERRUPTED (2026-10-25) and left only progress.jsonl, no record and no manifest."""
+    assert not (TR.ROOT / TR.HELDOUT_RECORD).exists() and not (TR.ROOT / TR.HELDOUT_JSON).exists()
     assert TR.main(["run", "--checkpoint", str(_checkpoint())]) == TR.EXIT_REFUSED
     assert "must be generated and committed" in capsys.readouterr().err and opened["reached"] == []
 
