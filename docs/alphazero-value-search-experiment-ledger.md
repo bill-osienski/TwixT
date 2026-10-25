@@ -135,6 +135,7 @@ knob) is not a new hypothesis.
 > **Search distillation D2 — bounded learning trial (decision note after Post-closure entry 35, 2026-10-23, the user's).** Entry 35 accepted; no further diagnostics are the next task. OPEN: a DRAFT successor card (`2026-10-23-search-distillation-d2-corrected-trial-card.md`) awaiting review. Its terms: unchanged incumbent and Stage 3 recipe and criteria, `MLX_ENABLE_TF32=0` in every process, 108 training games reused, 12 fresh held-out games, one candidate, no retries; strength evaluation only after a pass. Nothing generated, registered or trained; no gate. GPU-training reliability in general is not established. See #83.
 > **Search distillation D2 — bounded learning trial: card FROZEN and built (addendum to the decision note after Post-closure entry 35, 2026-10-24).** Card `9f2c6096…`, build `d7d458ad` (gates 45 and 46, closed; regression = the 58-id baseline). The 12-seed held-out block [202692300, 202692312) is surveyed CLEAN, proven before and after registration, and registered in ACCOUNTED. Outcome prediction: None stated in advance. NOT RUN: generation awaits the user's review. Supersedes the "DRAFT" status in the line above. See #83.
 > **Search distillation D2 — bounded trial CLOSED: held-out generation INTERRUPTED (Post-closure entry 36, 2026-10-25).** A macOS kernel panic rebooted the machine during game 1 of 12 (2 started, 1 finished). There is no wrapper record and the exit status is unknown; the set is incomplete and ineligible. Seeds: [202692300, 202692302) EXPOSED and the block RETIRED, through an amended reboot derivation (16/16). There is no learning result: the panic's cause is not established and the hypothesis is not rejected. Training was never run. Supersedes the line above. See #84.
+> **Search distillation D2 — bounded trial ATTEMPT 2 prepared (decision note after Post-closure entry 36, 2026-10-25).** One fresh attempt, by the user's decision. Successor card FROZEN (`bde310a3…`; records and paths only). Build `e3f90078`, gates 45 and 46 closed. Fresh block [202692400, 202692412): surveyed CLEAN, proven before and after registration, registered. No new kernel panic found. A second panic stops GPU experiments pending a system-stability decision. Outcome prediction: None stated in advance. NOT RUN: generation awaits approval of the frozen plan. See #85.
 
 ## Historical proposal check — programme now closed
 
@@ -1733,6 +1734,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 83. **The decision to plan a bounded D2 learning trial (after entry 35), 2026-10-23.** Do **not** run further numerical diagnostics as the next step, or make the trial wait on proving the runtime correct for every state. Do **not** tune the recipe (anchor, learning rate, surface, steps, criteria) together with the numerical change. Do **not** open, train on or re-judge with the original 12 held-out games, or use the old Stage 3 candidate. Do **not** top up, replace or retry held-out games, training or a candidate: one candidate, and a STOP or VOID closes the trial. Do **not** judge the candidate by lower loss alone, or reuse a strength baseline measured under the old setting. Do **not** freeze, build, register seeds, generate, train, open a gate or push without the user's approval of each step.
 
 84. **The D2 bounded trial's held-out generation (entry 36) — INTERRUPTED by a kernel panic, 2026-10-25; the trial is CLOSED.** Do **not** retry, resume, replace, extend or top up the generation, reuse the block [202692300, 202692312), or open gate 45 or 46 for this trial again. Do **not** train or score on the partial capture in `~/twixt-cache/search-distillation-d2/heldout-tf32off-20261025T133651Z/`, and keep it unchanged. Do **not** synthesize an `outer.json`, `record.json` or exit status for the run. Do **not** read the interruption as a learning result, as evidence against the learning hypothesis, or as establishing the panic's cause (the workload is neither blamed nor cleared). Do **not** run a stress test or reproduction of the panic without approval. Any new trial needs a new card, fresh seeds and the user's approval of each step.
+
+85. **The decision to make one fresh attempt at the D2 bounded trial (after entry 36), 2026-10-25.** Do **not** make a third attempt automatically: if another kernel panic interrupts attempt 2, stop all further GPU experiments pending the user's system-stability decision. Do **not** tune the recipe, criteria, ceilings or numerical setting, or start a learning-method or panic investigation (stress tests, reproductions, system changes), before attempt 2 has had a completed test. Do **not** reuse attempt 1's seeds, records or partial capture, or admit attempt 1's held-out records into training. Do **not** schedule generation or training without a fresh read-only panic check and the user's approval of each step.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -5312,3 +5315,63 @@ equal entry 32's, as the same frozen data, code and setting should give. Predict
   - It **does not reject the learning hypothesis**, which was never tested.
   - `calib020_0001` stays the incumbent (SHA-1 `209cf2d4…`, unchanged after the reboot).
   - See do-not-repeat **#84**.
+
+### Decision note — after entry 36: one fresh attempt at the bounded trial (2026-10-25, the user's decision)
+
+- **Decided:** exactly one fresh attempt is justified. The reboot prevented the learning test and gave no evidence for
+  or against the recipe.
+- **Terms:**
+  - preserve the closed trial and its partial capture unchanged;
+  - 12 fresh seeds and a separate held-out set;
+  - the training corpus, recipe, `MLX_ENABLE_TF32=0`, acceptance criteria and compute ceilings unchanged;
+  - a short successor card and fresh seed accounting, reusing the implementation with minimal changes for the new
+    records and paths;
+  - before scheduling, a read-only check for further kernel panics. No stress test or system change.
+- **If another panic interrupts attempt 2:** further GPU experiments stop pending a system-stability decision, with no
+  automatic third attempt.
+- **Not to be done:** turn the interruption into another learning-method investigation, or tune the recipe before it
+  has had a completed test.
+- **Authorized:** preparation only. Generation and training need approval of the frozen plan.
+- **Prediction on record:** None stated in advance.
+- **Preparation done:**
+  - **Panic check (read-only):** no panic since the 09:39 one in entry 36, and `last reboot` shows only that reboot
+    since 2026-10-20. Correction to entry 36's citation: the report it cites
+    (`/Library/Logs/DiagnosticReports/panic-full-2026-10-25-093935.0002.panic`) is no longer in that directory. Only
+    the system's `.contents.panic` from 09:39 remains there.
+  - **Card:** `docs/superpowers/2026-10-25-search-distillation-d2-corrected-trial-attempt2-card.md`, FROZEN (sha
+    `bde310a3…`). The original card (`9f2c6096…`) stays the authority for everything it does not change. The new card
+    changes only the records and paths. It adds the stability rule and states "None stated in advance".
+  - **Build (`e3f90078`):**
+    - both entries pin the new card;
+    - the held-out evidence, plan and capture paths are renamed `attempt2`;
+    - copies of attempt 1's wrapper (paths and header), seed survey (paths, titles, last-EXPOSED label) and closing
+      derivation (paths and titles; synthetic controls 15/15);
+    - gates 45 and 46 are reused, closed; the training entry's paths and wrapper are unchanged and were never used.
+    - The training entry admits only a generation record whose card hash is the new card's, so attempt 1's records
+      cannot be admitted.
+    - The tests were retargeted. The focused D2 tests, the gate inventory and the tactical closing test pass on the
+      committed build (163).
+  - **Regression:** 59 ids, i.e. the 58-id baseline plus
+    `tests/test_tactical_seed_closing.py::test_the_pilot_block_is_ACCOUNTED_EXPOSED_and_RETIRED_exactly_as_itself_and_LAST`.
+    The fingerprint is unchanged.
+    - That test broke at attempt 1's K2 (`164774e2`). It required every later EXPOSED entry to equal its RETIRED
+      entry, and K2 exposed only the started prefix.
+    - **Correction to entry 36:** its "registry checks" were the registry tests and the registry readers only. The
+      regression was not run after K2.
+    - `c96e205b` re-anchors the test: each later EXPOSED entry must start where its RETIRED entry does and end no
+      later. Two mutants are caught, and the file passes 36 of 36. The full regression was not rerun after this
+      re-anchor.
+  - **Seeds:** in a clean linked worktree, each step run once, by attempt 1's method:
+    - S1, survey (`0b195c4c`): THE D2 HELD-OUT BLOCK IS CLEAN, [202692400, 202692412), 45 of 45 controls, gap 82
+      against a floor of 12;
+    - S2, pre-registration proof (`45b836c1`): CLEAN, the state HOLDS, 45 of 45;
+    - S3, registration (`7777b019`): appended last to ACCOUNTED (42 → 43), with `plan.json`. Registry tests 48
+      passed; registry readers 593 passed; tactical closing 36 passed;
+    - S4, post-registration proof (`0784a7be`): CLEAN, the state HOLDS, 45 of 45;
+    - `cadebaf3`: a real-state test of the registered plan through the entry's own seams.
+
+    The block is not exposed and not retired.
+  - **Attempt 1 untouched:** its tracked evidence is unchanged since `bb0ff9b6`, and its partial capture's sha256
+    still match the note.
+- **Not done:** no generation, training, GPU use or gate opening. Nothing submitted or pushed.
+- See do-not-repeat **#85**.
