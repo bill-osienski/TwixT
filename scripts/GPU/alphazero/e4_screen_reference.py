@@ -978,6 +978,13 @@ EXPOSED_SEED_INTERVALS = (
     # strength-comparison data. A post-run accounting edit to a bound file: the committed plan, survey/proof
     # and run records keep their hashes; nothing is rerun.
     (202692300, 202692302),  # SEARCH DISTILLATION D2 CORRECTED TRIAL -- 2 held-out seeds started
+    # 🔴 SEARCH DISTILLATION D2 CORRECTED TRIAL ATTEMPT 2 HELD-OUT SET -- THE CLOSING EDIT (2026-10-25), after the
+    # ONE authorized 12-game held-out generation (outer exit 0, COMPLETED, no survivors). Use DERIVED from the
+    # committed run evidence by evidence/search-distillation-d2-heldout-attempt2-seed-closing/02_* (RECONCILES,
+    # 15/15): all 12 games started, so the block is EXPOSED WHOLE. The games are the attempt 2 held-out set,
+    # never training or strength-comparison data. A post-run accounting edit to a bound file: the committed
+    # plan, survey/proof and run records keep their hashes; nothing is rerun.
+    (202692400, 202692412),  # SEARCH DISTILLATION D2 CORRECTED TRIAL ATTEMPT 2 -- 12 held-out seeds, all started
 )
 
 #: Seeds RESERVED PERMANENTLY FOR TESTS. Unit tests must draw from something, and
@@ -1328,6 +1335,13 @@ RETIRED_SEED_INTERVALS = (
     # strength-comparison data. A post-run accounting edit to a bound file: the committed plan, survey/proof
     # and run records keep their hashes; nothing is rerun.
     (202692300, 202692312),  # SEARCH DISTILLATION D2 CORRECTED TRIAL -- 12 held-out seeds, 2 started
+    # 🔴 SEARCH DISTILLATION D2 CORRECTED TRIAL ATTEMPT 2 HELD-OUT SET -- THE CLOSING EDIT (2026-10-25), after the
+    # ONE authorized 12-game held-out generation (outer exit 0, COMPLETED, no survivors). Use DERIVED from the
+    # committed run evidence by evidence/search-distillation-d2-heldout-attempt2-seed-closing/02_* (RECONCILES,
+    # 15/15): all 12 games started, so the block is EXPOSED WHOLE. The games are the attempt 2 held-out set,
+    # never training or strength-comparison data. A post-run accounting edit to a bound file: the committed
+    # plan, survey/proof and run records keep their hashes; nothing is rerun.
+    (202692400, 202692412),  # SEARCH DISTILLATION D2 CORRECTED TRIAL ATTEMPT 2 -- 12 held-out seeds, all started
 )
 
 

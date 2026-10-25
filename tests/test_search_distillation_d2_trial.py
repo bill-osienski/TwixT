@@ -426,12 +426,12 @@ def test_WITH_EVERY_CHECK_PASSING_THE_PUBLIC_ENTRY_REACHES_THE_BOUNDARY_ONCE(ope
 
 # ─────────────────────────────── the REAL state ───────────────────────────────
 
-def test_REAL_THE_PUBLIC_ENTRY_REFUSES_until_a_generated_committed_held_out_set_exists(opened, capsys):
-    """The gate open, the setting, the pinned card and code, the real paths: no held-out set exists -- the one
-    generation run was INTERRUPTED (2026-10-25) and left only progress.jsonl, no record and no manifest."""
-    assert not (TR.ROOT / TR.HELDOUT_RECORD).exists() and not (TR.ROOT / TR.HELDOUT_JSON).exists()
-    assert TR.main(["run", "--checkpoint", str(_checkpoint())]) == TR.EXIT_REFUSED
-    assert "must be generated and committed" in capsys.readouterr().err and opened["reached"] == []
+def test_REAL_THE_PUBLIC_ENTRY_ADMITS_attempt_2_s_committed_held_out_set_and_reaches_the_stubbed_boundary_once(opened):
+    """The gate open, the setting, the pinned card and code, the real paths: attempt 2's one generation run COMPLETED
+    (2026-10-25) and its record and manifest are committed, so every real check passes to the boundary -- which the
+    autouse fixture replaces with a stub. Nothing is trained."""
+    assert (TR.ROOT / TR.HELDOUT_RECORD).exists() and (TR.ROOT / TR.HELDOUT_JSON).exists()
+    assert TR.main(["run", "--checkpoint", str(_checkpoint())]) == TR.EXIT_PASS and opened["reached"] == [1]
 
 
 def test_REAL_THE_TRAINING_ONLY_READER_on_the_real_corpus_opens_no_original_held_out_file():
@@ -498,7 +498,6 @@ def test_FRESH_MLX_imported_before_the_check_refuses():
     assert p.returncode == 4 and "imported" in p.stderr and "CONCLUDE_REACHED" not in p.stdout
 
 
-def test_FRESH_with_the_setting_and_the_gate_open_the_real_checks_pass_to_the_held_out_precondition():
+def test_FRESH_with_the_setting_and_the_gate_open_every_real_check_passes_to_the_stubbed_boundary():
     p = _fresh("GATE.SEARCH_DISTILLATION_D2_TRIAL_AUTHORIZED = True", "0")
-    assert p.returncode == 4 and "must be generated and committed" in p.stderr, p.stderr
-    assert "CONCLUDE_REACHED" not in p.stdout
+    assert p.returncode == 0 and "CONCLUDE_REACHED" in p.stdout, p.stderr
