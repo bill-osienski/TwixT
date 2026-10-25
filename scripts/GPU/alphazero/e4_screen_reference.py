@@ -634,6 +634,19 @@ ACCOUNTED_SEED_INTERVALS = (
     # Accounted, NOT exposed and NOT retired: exposure follows actual use (the started-game
     # prefix); the closing edit retires the whole block. No gate is opened by this.
     (202692300, 202692312),          # SEARCH DISTILLATION D2 CORRECTED TRIAL -- 12 held-out game seeds
+    # 🔴 SEARCH DISTILLATION D2 CORRECTED-CONFIGURATION TRIAL, ATTEMPT 2 -- 12 HELD-OUT GAME SEEDS, registered
+    # 2026-10-25: the 12-seed block of attempt 2's held-out survey
+    # (evidence/search-distillation-d2-heldout-attempt2-seed-survey/02_*), READ from that record, not chosen here, by the
+    # replacement rule (seed_selection.candidate). Attempt 1's block above was closed after a reboot interrupted its
+    # run (ledger entry 36); nothing of it is reused. One seed per self-play game of calib020_0001 in evaluation mode
+    # at 1,600 simulations with MLX_ENABLE_TF32=0, one phase, all 12 held out (attempt 2's fresh held-out set; never
+    # training material). The plan is evidence/search-distillation-d2-heldout-attempt2-run/plan.json (base + slot
+    # count + survey hash). Registered ONLY after the pre-registration collision proof (same directory, 03_*) was
+    # CLEAN, 45/45.
+    #
+    # Accounted, NOT exposed and NOT retired: exposure follows actual use (the started-game
+    # prefix); the closing edit retires the whole block. No gate is opened by this.
+    (202692400, 202692412),          # SEARCH DISTILLATION D2 CORRECTED TRIAL ATTEMPT 2 -- 12 held-out game seeds
 )
 
 #: EXPERIMENTAL EXPOSURE: seeds drawn from OUTSIDE the permanently unschedulable
