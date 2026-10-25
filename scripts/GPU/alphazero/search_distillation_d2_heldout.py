@@ -1,8 +1,9 @@
 """SEARCH DISTILLATION D2 -- CORRECTED-CONFIGURATION TRIAL, STEP 1: the 12 fresh held-out games, in ONE fresh process
 launched with MLX_ENABLE_TF32=0. BUILT; run only through its wrapper.
 
-Card: `docs/superpowers/2026-10-23-search-distillation-d2-corrected-trial-card.md` (§2, §4), pinned below by sha256,
-with the reused modules pinned by hash. Nothing runs on import, and importing this module loads no MLX. `run` refuses
+Card: `docs/superpowers/2026-10-25-search-distillation-d2-corrected-trial-attempt2-card.md` (ATTEMPT 2; it keeps
+`docs/superpowers/2026-10-23-search-distillation-d2-corrected-trial-card.md` §2 and §4 as the authority and changes
+only the records and paths), pinned below by sha256, with the reused modules pinned by hash. Nothing runs on import, and importing this module loads no MLX. `run` refuses
 unless MLX_ENABLE_TF32 is exactly "0" and no `mlx` module is loaded when it starts, then unless
 `search_distillation_d2_heldout_authorization.SEARCH_DISTILLATION_D2_HELDOUT_AUTHORIZED` is open (read at call time).
 
@@ -41,10 +42,10 @@ from . import search_distillation_d2_measure as M
 ROOT = M.ROOT
 RECORD_KIND = "search-distillation-d2-heldout-record/1"
 MANIFEST_KIND = "search-distillation-d2-heldout/1"
-CARD = "docs/superpowers/2026-10-23-search-distillation-d2-corrected-trial-card.md"
-CARD_SHA256 = "9f2c60967792bc8d970f00472b50bbc91f8c3ab599acb7c59aa417815dc10062"
-EVIDENCE_DIR = "docs/superpowers/evidence/search-distillation-d2-heldout"
-PLAN = "docs/superpowers/evidence/search-distillation-d2-heldout-run/plan.json"
+CARD = "docs/superpowers/2026-10-25-search-distillation-d2-corrected-trial-attempt2-card.md"
+CARD_SHA256 = "bde310a31d28d2d4e1d434ffde31aa2292d667f68945351ee6ce1e5954e67ca2"
+EVIDENCE_DIR = "docs/superpowers/evidence/search-distillation-d2-heldout-attempt2"
+PLAN = "docs/superpowers/evidence/search-distillation-d2-heldout-attempt2-run/plan.json"
 HELDOUT_PARENT = pathlib.Path.home() / "twixt-cache" / "search-distillation-d2"     # outside the repository
 SETTING, SETTING_VALUE = "MLX_ENABLE_TF32", "0"
 VERSIONS = {"mlx": "0.30.3", "numpy": "2.4.1", "python": "3.14.9"}
@@ -260,7 +261,7 @@ def run(checkpoint: str) -> int:
     if os.path.lexists(out):
         raise Refused(f"{out} exists: the run is one-shot")
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    heldout = HELDOUT_PARENT / f"heldout-tf32off-{stamp}"
+    heldout = HELDOUT_PARENT / f"heldout-tf32off-attempt2-{stamp}"
     if not HELDOUT_PARENT.is_dir() or os.path.lexists(heldout):
         raise Refused(f"{HELDOUT_PARENT} is not a directory, or {heldout} exists")
     code, rec = conclude(FROZEN, _real_seams(ckpt), out, heldout, head=M._git("rev-parse", "HEAD"))

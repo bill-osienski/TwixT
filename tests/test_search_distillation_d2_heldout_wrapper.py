@@ -1,5 +1,5 @@
-"""The corrected-configuration trial's held-out generation wrapper: `docs/superpowers/evidence/
-search-distillation-d2-heldout-run/01_wrapper.sh`. A copy of the 21-update prefix's wrapper tests
+"""The corrected-configuration trial's held-out generation wrapper, ATTEMPT 2: `docs/superpowers/evidence/
+search-distillation-d2-heldout-attempt2-run/01_wrapper.sh` (attempt 1's copy, with the two evidence paths changed). A copy of the 21-update prefix's wrapper tests
 (`tests/test_search_distillation_d2_prefix_wrapper.py`); the diff: the names, the 2-hour ceiling, the mirror switch
 (this run sets TWIXT_MIRROR_PROB=0, as Stage 2's did) and the header's statement of what is written outside the
 repository. The stub reports MLX_ENABLE_TF32 and TWIXT_MIRROR_PROB as it sees them, and every run is launched with the
@@ -22,7 +22,7 @@ from scripts.GPU.alphazero import search_distillation_d2_heldout as PL
 from scripts.GPU.alphazero import search_distillation_d2_heldout_authorization as GATE
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-WRAPPER_REL = "docs/superpowers/evidence/search-distillation-d2-heldout-run/01_wrapper.sh"
+WRAPPER_REL = "docs/superpowers/evidence/search-distillation-d2-heldout-attempt2-run/01_wrapper.sh"
 GATE_REL = "scripts/GPU/alphazero/search_distillation_d2_heldout_authorization.py"
 STUB_REL = "scripts/GPU/alphazero/search_distillation_d2_heldout.py"
 NAME = "SEARCH_DISTILLATION_D2_HELDOUT_AUTHORIZED"
@@ -37,7 +37,7 @@ print("GATE_OPEN", "AUTHORIZED = True" in GATE.read_text(), flush=True)
 print("MIRROR", os.environ.get("TWIXT_MIRROR_PROB"), flush=True)
 print("SETTING", os.environ.get("MLX_ENABLE_TF32"), flush=True)
 if mode == "done":
-    pathlib.Path("docs/superpowers/evidence/search-distillation-d2-heldout").mkdir()
+    pathlib.Path("docs/superpowers/evidence/search-distillation-d2-heldout-attempt2").mkdir()
     sys.exit(0)
 if mode == "stop":
     sys.exit(6)
@@ -50,7 +50,7 @@ if mode == "stubborn":
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
 if mode == "term_records":                       # as the real script does: SIGTERM -> its own VOID record
     def on_term(*_):
-        d = pathlib.Path("docs/superpowers/evidence/search-distillation-d2-heldout")
+        d = pathlib.Path("docs/superpowers/evidence/search-distillation-d2-heldout-attempt2")
         d.mkdir(exist_ok=True)
         (d / "record.json").write_text('{"written_by": "script", "status": "VOID", "void": {"step": "terminated"}}')
         sys.exit(3)
@@ -141,7 +141,7 @@ def test_the_wrapper_names_this_gate_this_module_and_the_card_s_ceiling():
                          '"$CKPT"') == 1
     assert "export MLX_ENABLE_TF32" not in WRAPPER                       # the run's environment only
     assert subprocess.run(["/bin/bash", "-n", str(ROOT / WRAPPER_REL)]).returncode == 0
-    assert "(~/twixt-cache/search-distillation-d2/heldout-tf32off-<UTC stamp>, create-only)" in WRAPPER
+    assert "(~/twixt-cache/search-distillation-d2/heldout-tf32off-attempt2-<UTC stamp>,\n# create-only)," in WRAPPER
     assert "# apart from the original corpus." in WRAPPER and PL.HELDOUT_PARENT.name == "search-distillation-d2"
 
 

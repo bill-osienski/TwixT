@@ -116,7 +116,7 @@ def test_THE_FROZEN_SPEC_IS_THE_CARD_S():
     assert H.VERSIONS == {"mlx": "0.30.3", "numpy": "2.4.1", "python": "3.14.9"}
     assert (H.SETTING, H.SETTING_VALUE) == ("MLX_ENABLE_TF32", "0")
     assert REAL_PARENT.is_relative_to(os.path.expanduser("~")) and not REAL_PARENT.is_relative_to(H.ROOT)
-    assert H.PLAN == "docs/superpowers/evidence/search-distillation-d2-heldout-run/plan.json"
+    assert H.PLAN == "docs/superpowers/evidence/search-distillation-d2-heldout-attempt2-run/plan.json"
 
 
 @pytest.mark.parametrize("case, step", [("versions", "versions"), ("plan", "seeds"), ("seed", "seeds"),
@@ -290,13 +290,17 @@ def test_THE_REAL_VERSIONS_ARE_THE_CARD_S():
 
 # ─────────────────────────────── the REAL registered plan ───────────────────────────────
 
-def test_REAL_THE_REGISTERED_PLAN_is_the_survey_s_build_plan_and_CLOSED_after_the_interrupted_run():
-    """The plan the public entry reads is still the survey's build_plan, but since the 2026-10-25 closing edit (the run
+def _accounted_once(reg, block):
+    return reg.ACCOUNTED_SEED_INTERVALS.count(block) == 1
+
+
+def test_REAL_ATTEMPT_1_S_PLAN_is_the_survey_s_build_plan_and_CLOSED_after_the_interrupted_run():
+    """Attempt 1's plan (no longer the one the public entry reads) is still its survey's build_plan, but since the 2026-10-25 closing edit (the run
     was INTERRUPTED by a reboot during game 1) the entry's own seed check refuses every seed: the started prefix
     [base, base + 2) is EXPOSED and the whole block RETIRED, each last. Read-only; nothing is drawn."""
     import importlib.util
     seams = H._real_seams(_checkpoint())
-    plan = seams.read_plan()
+    plan = json.loads((H.ROOT / "docs/superpowers/evidence/search-distillation-d2-heldout-run/plan.json").read_text())
     assert plan["n_slots"] == H.FROZEN["games"] == 12 and type(plan["base"]) is int
     assert not any(seams.seed_ok(plan["base"] + s) for s in range(12))
     here = H.ROOT / "docs/superpowers/evidence/search-distillation-d2-heldout-seed-survey"
@@ -307,7 +311,7 @@ def test_REAL_THE_REGISTERED_PLAN_is_the_survey_s_build_plan_and_CLOSED_after_th
     assert plan == survey.build_plan(plan["base"], hashlib.sha256(record).hexdigest())
     assert f"block = [{plan['base']}, {plan['base'] + 12})" in record.decode()
     from scripts.GPU.alphazero import e4_screen_reference as REG
-    assert REG.ACCOUNTED_SEED_INTERVALS[-1] == (plan["base"], plan["base"] + 12)
-    assert REG.EXPOSED_SEED_INTERVALS[-1] == (plan["base"], plan["base"] + 2)
-    assert REG.RETIRED_SEED_INTERVALS[-1] == (plan["base"], plan["base"] + 12)
+    assert _accounted_once(REG, (plan["base"], plan["base"] + 12))
+    assert (plan["base"], plan["base"] + 2) in REG.EXPOSED_SEED_INTERVALS
+    assert (plan["base"], plan["base"] + 12) in REG.RETIRED_SEED_INTERVALS
     assert all(REG.seed_is_unavailable(plan["base"] + s) for s in range(12))

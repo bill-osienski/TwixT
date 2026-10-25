@@ -1,8 +1,10 @@
 """SEARCH DISTILLATION D2 -- CORRECTED-CONFIGURATION TRIAL, STEP 2: ONE training run and its held-out check, in ONE
 fresh process launched with MLX_ENABLE_TF32=0. BUILT; run only through its wrapper.
 
-Card: `docs/superpowers/2026-10-23-search-distillation-d2-corrected-trial-card.md` (§2, §3, §5), pinned below by
-sha256, with the reused modules pinned by hash. Nothing runs on import, and importing this module loads no MLX. `run`
+Card: `docs/superpowers/2026-10-25-search-distillation-d2-corrected-trial-attempt2-card.md` (ATTEMPT 2; it keeps
+`docs/superpowers/2026-10-23-search-distillation-d2-corrected-trial-card.md` §2, §3 and §5 as the authority and
+changes only the records and paths), pinned below by sha256 (the held-out entry's), with the reused modules pinned by
+hash. Nothing runs on import, and importing this module loads no MLX. `run`
 refuses unless MLX_ENABLE_TF32 is exactly "0" and no `mlx` module is loaded when it starts, then unless
 `search_distillation_d2_trial_authorization.SEARCH_DISTILLATION_D2_TRIAL_AUTHORIZED` is open (read at call time), and
 until the new held-out set's record and manifest are committed unchanged.
@@ -72,7 +74,7 @@ CODE = {"heldout": "scripts/GPU/alphazero/search_distillation_d2_heldout.py",
         "distill": "scripts/GPU/alphazero/search_distillation_d2.py",
         "measure": "scripts/GPU/alphazero/search_distillation_d2_measure.py",
         "capture": "scripts/GPU/alphazero/training_replay_capture.py"}
-PINNED = {CODE["heldout"]: "f31579d0f8dd7c103795a19808020e0b450484a67aed94b46f5483bc8375f66d",
+PINNED = {CODE["heldout"]: "e6b897b0c8cd0d6b5e1a0e3c647a400566f63af0b8b4c63d47eb6d327b96b8fa",
           CODE["train"]: "1988e08871a2bdedc4128ca9eef2353aa32f395ba6fadda3558c4157473fcb3f",
           CODE["gradtrace"]: "85b84b074b3359be938fe3e40cc2849ce2b1f7e6db88b909a784b625e3e35c97",
           CODE["distill"]: "bc8fd0c80fc533f50273ebda60c81375c5131d068a70344e07afef9a73617be9",
