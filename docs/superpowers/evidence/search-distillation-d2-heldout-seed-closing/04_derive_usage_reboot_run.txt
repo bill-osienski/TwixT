@@ -1,0 +1,34 @@
+SEARCH DISTILLATION D2 HELD-OUT SET -- SEED-USAGE DERIVATION, AMENDED FOR A REBOOT (closing)
+================================================================================================
+HEAD b588475aa2a5c4321b72e8088d233a34ac427b0d; working tree clean
+input docs/superpowers/evidence/search-distillation-d2-heldout-run/plan.json (committed, unmodified; sha256 MATCHES)
+input docs/superpowers/evidence/search-distillation-d2-heldout/progress.jsonl (committed, unmodified; sha256 MATCHES)
+input docs/superpowers/evidence/search-distillation-d2-heldout-run/02_interruption_note.txt (committed, unmodified; sha256 MATCHES)
+absent /Users/bill/twixt-worktrees/heldout-closing/docs/superpowers/evidence/search-distillation-d2-heldout-run/outer.json: yes
+absent /Users/bill/twixt-worktrees/heldout-closing/docs/superpowers/evidence/search-distillation-d2-heldout/record.json: yes
+absent /Users/bill/twixt-worktrees/heldout-closing/docs/superpowers/evidence/search-distillation-d2-heldout/heldout.json: yes
+absent /Users/bill/twixt-cache/search-distillation-d2/heldout-tf32off-20261025T133651Z/phase_00/finalized.json: yes
+termination: interrupted by a kernel panic and reboot; runtime exit status UNKNOWN; process absence observed after the reboot (02_interruption_note.txt), NOT wrapper-verified
+events read (names and slots only): ['start', 'loaded', 'game_start', 'game_end', 'game_start']
+game starts (slots): [0, 1]
+
+CONTROLS
+  PASS   reboot in game 1 (slot 0 finished): expose slots 0-1  [expose (202692300, 202692302), retire (202692300, 202692312)]
+  PASS   reboot during loading: expose NONE, retire all  [expose None, retire (202692300, 202692312)]
+  PASS   reboot in game 0: expose slot 0 only  [expose (202692300, 202692301), retire (202692300, 202692312)]
+  PASS   reboot in game 11 (no manifest): expose all 12  [expose (202692300, 202692312), retire (202692300, 202692312)]
+  PASS   more than 12 starts: refused  [game_start slots [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] are not a prefix 0..k-1 of the 12 slots]
+  PASS   outer.json present: refused  [not a reboot interruption: outer.json exists]
+  PASS   record.json present: refused  [not a reboot interruption: record.json exists]
+  PASS   heldout.json (manifest) present: refused  [not a reboot interruption: heldout.json exists]
+  PASS   finalized.json present: refused  [not a reboot interruption: finalized.json exists]
+  PASS   progress hash mismatch: refused  [bound input does not match its pinned sha256: docs/superpowers/evidence/search-distillation-d2-heldout/progress.jsonl]
+  PASS   note hash mismatch: refused  [bound input does not match its pinned sha256: docs/superpowers/evidence/search-distillation-d2-heldout-run/02_interruption_note.txt]
+  PASS   no start event: refused  [progress does not begin with start]
+  PASS   slots out of order: refused  [game_start slots [1, 0] are not a prefix 0..k-1 of the 12 slots]
+  PASS   a slot started twice: refused  [game_start slots [0, 1, 1] are not a prefix 0..k-1 of the 12 slots]
+  PASS   block not ACCOUNTED: refused  [the block is not ACCOUNTED exactly once]
+  PASS   block already EXPOSED in part: refused  [a seed of the block is already EXPOSED or RETIRED]
+
+controls passed: 16/16
+VERDICT: RECONCILES -- EXPOSE [202692300, 202692302]; RETIRE [202692300, 202692312]
