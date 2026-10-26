@@ -1,0 +1,1 @@
+COMPLETED: PASS (a PASS, b PASS); b game 0 state_cap 280 plies, 130 halving searches, readout would differ at 53; b game 1 state_cap 280 plies, 130 halving searches, readout would differ at 64; 108.926 s
