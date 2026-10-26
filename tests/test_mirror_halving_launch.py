@@ -242,9 +242,33 @@ def test_THE_SEED_COPIES_MATCH_THE_RUN_THEY_SERVE(kind):
     assert all(ok for _label, ok, _detail in closing._controls(202700000))
 
 
-@pytest.mark.parametrize("kind", KINDS)
-def test_NO_PLAN_IS_COMMITTED_YET_the_seed_blocks_are_unselected(kind):
-    """The pre-registration proof requires that no plan exists; the match refuses a plan without an int base."""
+def test_NO_PLAN_IS_COMMITTED_YET_the_strength_block_is_unselected():
+    """The pre-registration proof requires that no plan exists; the match refuses a plan without an int base.
+    RE-ANCHORED 2026-10-26: the screen's block was surveyed, proven and registered (see the next test); only the
+    strength comparison's stays unselected."""
+    kind = "strength"
     assert not (ROOT / MATCH.KINDS[kind]["plan"]).exists()
     assert not list((EV / f"mirror-halving-{kind}-seed-survey").glob("0[234]_*"))
     assert not (EV / f"mirror-halving-{kind}-seed-closing/02_derive_usage_run.txt").exists()
+
+
+def test_THE_SCREEN_PLAN_is_the_survey_s_build_plan_and_its_block_is_REGISTERED():
+    """The screen's plan (the one the public entry reads) is its survey's build_plan, bound to the committed survey
+    record, and the block is in ACCOUNTED exactly once with every seed passing the entry's own seed predicates
+    (registered 2026-10-26, aa977403; post-registration proof 4dc418db). Read-only; nothing is drawn."""
+    import hashlib
+    from scripts.GPU.alphazero import e4_screen_reference as REG
+    here = EV / "mirror-halving-screen-seed-survey"
+    survey = _load("mirror-halving-screen-seed-survey/01_seed_survey.py", "_survey_screen_registered")
+    record = (here / "02_seed_survey_run.txt").read_bytes()
+    plan = json.loads((ROOT / MATCH.KINDS["screen"]["plan"]).read_text(encoding="utf-8"))
+    assert type(plan["base"]) is int and plan["n_slots"] == KINDS["screen"]["slots"]
+    assert plan == survey.build_plan(plan["base"], hashlib.sha256(record).hexdigest())
+    block = (plan["base"], plan["base"] + plan["n_slots"])
+    assert f"block = [{block[0]}, {block[1]})" in record.decode()
+    for rel, mode in (("03_collision_proof_pre_run.txt", "pre"), ("04_collision_proof_post_run.txt", "post")):
+        text = (here / rel).read_text(encoding="utf-8")
+        assert f"EXPECTED STATE ({mode}): HOLDS" in text and "controls passed: 45/45" in text
+    assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1
+    assert all(REG.seed_is_accounted(s) and not REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s)
+               for s in range(*block))

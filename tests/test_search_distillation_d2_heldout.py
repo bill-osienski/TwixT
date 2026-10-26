@@ -312,7 +312,10 @@ def test_REAL_THE_REGISTERED_ATTEMPT_2_PLAN_is_the_survey_s_build_plan_and_CLOSE
     assert f"block = [{plan['base']}, {plan['base'] + 12})" in record.decode()
     from scripts.GPU.alphazero import e4_screen_reference as REG
     block = (plan["base"], plan["base"] + 12)
-    assert REG.ACCOUNTED_SEED_INTERVALS[-1] == block and _accounted_once(REG, block)
+    # RE-ANCHORED 2026-10-26 (the mirror-halving screen's registration): appended LAST at its own registration, the
+    # block may now be followed in ACCOUNTED by LATER registrations -- only by higher blocks.
+    acc = REG.ACCOUNTED_SEED_INTERVALS
+    assert _accounted_once(REG, block) and all(iv[0] >= block[1] for iv in acc[acc.index(block) + 1:])
     assert REG.EXPOSED_SEED_INTERVALS[-1] == block and REG.RETIRED_SEED_INTERVALS[-1] == block
     assert all(REG.seed_is_unavailable(plan["base"] + s) for s in range(12))
 
