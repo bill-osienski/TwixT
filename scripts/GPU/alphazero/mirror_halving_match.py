@@ -15,7 +15,8 @@ THE GAMES: the candidate (halving over the averaging wrapper, 200 simulations) a
 readout, no root noise); colour-reversed pairs from eval_runner's agent builder (candidate red in even games), game g
 with seed plan.base + g from a block registered in ACCOUNTED, through the shared copied loop
 (`mirror_halving_combination.play_and_build`). Per game: cost per side, and the incumbent never supplies a halving
-choice. Each game's row is appended to games.jsonl as it ends.
+choice. A `game_start` event (game = slot) is logged BEFORE each game, so the closing derivation exposes an
+interrupted game; each game's row is appended to games.jsonl as it ends.
 
 VERDICTS (mirror_halving_combination): the screen STOPs below a mean pair score of 0.40, else CONTINUE (no strength
 claim); the strength comparison PASSes only if the exact Hoeffding lower bound exceeds 0.5 AND both cost guards hold
@@ -157,6 +158,7 @@ def _execute(kind: str, seams: Seams, out_dir: pathlib.Path, rec: Dict[str, Any]
                 c["halving_searches"] += halving
                 c["search_seconds"] += secs
 
+            log("game_start", game=task.game_idx, slot=task.seed - plan["base"], red=task.red_agent.agent_id)
             before = {k: dict(v) for k, v in cost.items()}
             t = time.monotonic()
             r = seams.play_and_build(task, evaluators[task.red_agent.agent_id], evaluators[task.black_agent.agent_id],

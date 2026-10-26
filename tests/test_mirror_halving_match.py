@@ -318,3 +318,19 @@ def test_A_GAME_THAT_FAILS_MID_RUN_LEAVES_NO_SCORE(opened, monkeypatch):
     rec = _record(opened, "screen")
     assert rec["status"] == "VOID" and "pair_scores" not in rec and rec["screen_verdict"] is None
     assert len((opened / "screen" / "games.jsonl").read_text().splitlines()) == 10
+
+
+def test_EVERY_GAME_IS_LOGGED_AS_STARTED_BEFORE_IT_IS_PLAYED(opened, monkeypatch):
+    """The closing derivation exposes the started prefix from `game_start` (game = slot), logged BEFORE each game."""
+    def play(task, *a):
+        events = [json.loads(x) for x in (opened / "screen" / "progress.jsonl").read_text().splitlines()]
+        assert events[-1]["event"] == "game_start" and events[-1]["game"] == events[-1]["slot"] == task.game_idx
+        if task.game_idx == 3:
+            raise RuntimeError("interrupted mid-game")
+        return ALL_CANDIDATE(task, *a)
+
+    monkeypatch.setattr(MATCH, "_real_seams", lambda ckpt: seams(play))
+    assert _run(opened, "screen") == 3
+    events = [json.loads(x) for x in (opened / "screen" / "progress.jsonl").read_text().splitlines()]
+    assert [e["game"] for e in events if e["event"] == "game_start"] == [0, 1, 2, 3]
+    assert [e["game"] for e in events if e["event"] == "game_end"] == [0, 1, 2]
