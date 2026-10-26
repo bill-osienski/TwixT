@@ -1,0 +1,14 @@
+STOP_ERROR: Traceback (most recent call last):
+  File "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/mirror-halving-loop-check/01_loop_check.py", line 200, in <module>
+    verdict = main(rec, out)
+  File "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/mirror-halving-loop-check/01_loop_check.py", line 184, in main
+    rec["b"] = part_b(M, ER, RSH, MCTS, MirrorAveragingEvaluator, PROTOCOL, seed, out)
+               ~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/mirror-halving-loop-check/01_loop_check.py", line 107, in part_b
+    (p, v), (q, w) = probe.infer(*args), MirrorAveragingEvaluator(probe).infer(*args)
+                                         ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/mirror_averaging.py", line 19, in __init__
+    self.network = base.network
+                   ^^^^^^^^^^^^
+AttributeError: 'BoardFake' object has no attribute 'network'
+

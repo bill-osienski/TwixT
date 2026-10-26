@@ -47,7 +47,7 @@ class BoardFake:
 
     def __init__(self):
         import numpy as np
-        self.np = np
+        self.np, self.network = np, None                             # MirrorAveragingEvaluator reads .network
 
     def build_input_tensor(self, state):
         return state.to_tensor().astype(self.np.float32)            # (C, H, W), the real 30-channel encoding

@@ -1,0 +1,69 @@
+{
+ "a": {
+  "answer": "PASS",
+  "games": [
+   {
+    "differing_result_fields": [],
+    "game_idx": 0,
+    "n_moves": 280,
+    "reason": "state_cap",
+    "replays_identical": true,
+    "results_identical": true,
+    "seed": 90009000
+   },
+   {
+    "differing_result_fields": [],
+    "game_idx": 1,
+    "n_moves": 280,
+    "reason": "state_cap",
+    "replays_identical": true,
+    "results_identical": true,
+    "seed": 90009001
+   }
+  ],
+  "seconds": 6.564
+ },
+ "head": "0ad4de3537ca56a1b72b3581543a5b2349b3c5d0",
+ "kind": "mirror-halving-loop-check/1",
+ "modules": {
+  "docs/superpowers/evidence/mirror-halving-loop-check/01_loop_check.py": "d3e2b6c9e1db5f9feb5f76556936843757ac26d2fa5ab61e6276b04c9302b743",
+  "scripts/GPU/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "scripts/GPU/alphazero/__init__.py": "c6f13806151399f9e6be707271537b166ec79ba9729d8339800127c826adc4ab",
+  "scripts/GPU/alphazero/connectivity_diagnostics.py": "77a63a54c0f1c17cb2814061a04331402f120c14562d042119b3c390eba6ea78",
+  "scripts/GPU/alphazero/e4_screen_reference.py": "85f0a4cb8aac57fd16a8a520caf972f14fe61984c1778cdfc7b7f80ba191fcbe",
+  "scripts/GPU/alphazero/eval_integrity.py": "bfedf8d677dd5391e389f4152de2a220f4cd70510e17b0643eaf1fbb011b3310",
+  "scripts/GPU/alphazero/eval_readout.py": "f0f5908854365988b5311fd5f90e154144a9ed3ad4721eac38073600d6165b63",
+  "scripts/GPU/alphazero/eval_replay.py": "702c924fecac9a211470f077e2e65dc0c1ee7f6461665de00fb4d2a08aa70cd6",
+  "scripts/GPU/alphazero/eval_runner.py": "6bc43781ab92c3bbdbb2718078f385e3d908f7637678333418ed65fc92bdb9a3",
+  "scripts/GPU/alphazero/evaluator.py": "043388192eaeb55eda58057d5f15160866b7ba0ecd8d117ff4e913f00327d8c2",
+  "scripts/GPU/alphazero/external_learning.py": "569a4a2b25e543d22494032563711af1225017ff433e69e90494c7c3c187caee",
+  "scripts/GPU/alphazero/external_learning_authorization.py": "a125240f2971eba42d64c7681896626edd87bc77c5167c2d091f4390f3223260",
+  "scripts/GPU/alphazero/external_learning_stage2.py": "002c8f153077fe0d799d0a73eb03d08d703db372ad0e419fe0b0c69363a132c8",
+  "scripts/GPU/alphazero/external_learning_stage2_authorization.py": "ce3ec3b6b82798483a5d1d65c98a24c71e39dd09b1dcdd5fc1d3146ba2b87bfb",
+  "scripts/GPU/alphazero/external_learning_stage3.py": "8bb0bea482565ca0d051cf8962c34d1e9ff0cd620fda14c34dd8df4381e2d21c",
+  "scripts/GPU/alphazero/external_learning_stage3_authorization.py": "3664ea262727f5f1b3c074b386f1dc5a072b123f9d52746754795b26951509bf",
+  "scripts/GPU/alphazero/game/__init__.py": "b8cba656f4cdd17ca1fce240224623d2ed631904a035425a30ef4a7be2069122",
+  "scripts/GPU/alphazero/game/twixt_state.py": "291275223b71b522a19181ae33a34518c0ca3c8f585275770f4c72e651cba5e2",
+  "scripts/GPU/alphazero/inheritance_probe.py": "d8e073b8303d5db5f43a5613f82aff6a9cc1a0bc6249e7a312fec73242688203",
+  "scripts/GPU/alphazero/mcts.py": "0769b22ae47923da2600584da1bcf7c955bb975f0bd4985d7d11605d5196050f",
+  "scripts/GPU/alphazero/mirror_averaging.py": "1f23ac6adeb6ea0a33b7fe5500edeb2c9929a9781089106d5925a99817340aef",
+  "scripts/GPU/alphazero/mirror_halving_combination.py": "907ce4342f95c28f30f71dfaf50406994a93cfaf70929c89f0a1c0bedca1a176",
+  "scripts/GPU/alphazero/opening_diagnostics.py": "03e40f0ea8110f194bb94b6f99b03b7aa367937882bf9c9cd5de57adc5a13106",
+  "scripts/GPU/alphazero/recovery_retargeting_diagnostics.py": "25f36b6df0295c5d3baf27a07f0a2be9faebe9df0eb1a2ff53f06454d6ee32ea",
+  "scripts/GPU/alphazero/root_sequential_halving.py": "0bec4ef1914b25541f5247c5dd6c0002cea171b2902c629e52cfc034e9402790",
+  "scripts/GPU/alphazero/self_play.py": "c7019373aacde3e22656278d99380fdf8e0c26466549e6521cda791fddfe9394",
+  "scripts/GPU/alphazero/twixtbot_adapter.py": "f0f2dfdee202c9f33a0575315e248746d318599bd170405b0a785d7ded806a2c",
+  "scripts/GPU/alphazero/twixtbot_g3_reference.py": "f68af1525d7997467904e2dfe7ea8aaf5400fffce3e5513625643ec442e3e55e",
+  "scripts/GPU/alphazero/twixtbot_g3_schedule.py": "7624c4e61c8ca5cba7641a641d74800c4c2a6d8e6c1ffb13115bed177b92a600",
+  "tests/__init__.py": "efda5bbfeae4bf2837b53c2f8c4c9aeb770bea6d136d1beee17c1e384a3244ec",
+  "tests/eval_fakes.py": "1374570cae891c84349f1ee86c2affdf2559ce623cf487d1cf645bbb05525277"
+ },
+ "reason": "Traceback (most recent call last):\n  File \"/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/mirror-halving-loop-check/01_loop_check.py\", line 200, in <module>\n    verdict = main(rec, out)\n  File \"/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/mirror-halving-loop-check/01_loop_check.py\", line 184, in main\n    rec[\"b\"] = part_b(M, ER, RSH, MCTS, MirrorAveragingEvaluator, PROTOCOL, seed, out)\n               ~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/bill/projects/TwixT_Game/docs/superpowers/evidence/mirror-halving-loop-check/01_loop_check.py\", line 107, in part_b\n    (p, v), (q, w) = probe.infer(*args), MirrorAveragingEvaluator(probe).infer(*args)\n                                         ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^\n  File \"/Users/bill/projects/TwixT_Game/scripts/GPU/alphazero/mirror_averaging.py\", line 19, in __init__\n    self.network = base.network\n                   ^^^^^^^^^^^^\nAttributeError: 'BoardFake' object has no attribute 'network'\n",
+ "script": "docs/superpowers/evidence/mirror-halving-loop-check/01_loop_check.py",
+ "seconds": 6.616,
+ "seeds": [
+  90009000,
+  90009001
+ ],
+ "verdict": "STOP_ERROR"
+}
