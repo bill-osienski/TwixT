@@ -6131,3 +6131,26 @@ seed survey and pre-registration proof approved.**
   loading or GPU work, no game, no training, no push.
 - **Prediction on record:** none (a seed procedure).
 - **Status:** awaiting the user's registration review. See do-not-repeat **#99**.
+
+**Addendum to entry 39 (2026-10-26, the user's decision): the strength block's registration review passed; its
+registration, plan and post-registration proof approved.**
+- **The user's checks:**
+  - both full record hashes, all 1,018 slot mappings, and 45 passing controls per record;
+  - the method pins match, and the pre-proof is bound to the survey;
+  - the live registry still matches the surveyed hash and contains no overlap;
+  - the selection arithmetic is correct; 49 gates, all closed.
+- **Approved, in order:**
+  1. Append `(202693600, 202694618)` last to ACCOUNTED (44 → 45), leaving every other registry state unchanged.
+  2. Create and commit the plan exactly as `build_plan` specifies: kind `mirror-halving-strength-plan/1`, base
+     202693600, n_slots 1018, survey_record_sha256 `7bdf6cf6caf7c6b9b7f98f2c9aa4f6ffcc805130d7f7e200756ca1ba67a2c0d6`.
+  3. Run post mode once from a clean committed checkout, preserving its create-only evidence.
+  4. Return the registration diff, the plan, the post-proof and the exact commits for run approval.
+
+  If the registry changes before registration or the post-proof fails: stop, with no block adjustment and no
+  automatic retry.
+- **Also approved:** the narrow lifecycle-test update for the registered state.
+  - Preserve the survey and proof provenance.
+  - Require unique registration, and confirm the block remains unexposed, unretired and schedulable.
+  - Focused CPU verification only: no full regression and no proof rerun.
+- **Unchanged:** the 509-pair design and the 55,601 s ceiling.
+- **Not authorized:** gate 49, checkpoint loading, GPU work, gameplay, training and pushing; the strength run itself.
