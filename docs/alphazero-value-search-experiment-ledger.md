@@ -6073,3 +6073,27 @@ block approved.**
   push.
 - **Status:** the screen is closed: result accepted (CONTINUE, not a strength result) and its block exposed and
   retired. The strength comparison awaits a separate decision. See do-not-repeat **#98**.
+
+**Addendum to entry 39 (2026-10-26, the user's decision): the screen's closing accepted; the strength comparison's
+seed survey and pre-registration proof approved.**
+- **The user's checks:**
+  - the K1 hash and its 15 passing controls;
+  - both exact registry appends, with the remaining registry statements unchanged;
+  - 49 gates closed;
+  - the lifecycle-test changes preserve the relevant protections;
+  - the bracket display and the corrected commit-command slip do not invalidate the evidence.
+- **What the screen supports:** it cleared its stopping rule at comparable measured cost. That supports proceeding
+  with the planned strength test; it does not establish stronger play or justify changing its size.
+- **Approved, in order:**
+  1. The strength seed survey, once, for 1,018 fresh seeds under the existing fixed rule against the current registry.
+  2. Only if it is CLEAN with every control passing: commit its create-only record, then run the pre-registration
+     proof once.
+  3. Return both records, their hashes and the exact commits for registration review.
+
+  If either fails: stop, with no block adjustment and no automatic retry.
+- **Also approved:** the narrow update to the strength test's obsolete "no survey records" assertion, preserving
+  provenance and unregistered-state checks; focused CPU verification only.
+- **Unchanged:** 509 pairs, the exact Hoeffding rule, both compute guards and the 55,601 s ceiling. Screen games must
+  not be pooled into the strength result.
+- **Not authorized:** registration, plan creation, the post-registration proof, gate 49, checkpoint loading, GPU
+  work, gameplay, training and pushing.
