@@ -2,10 +2,11 @@
 
 **Date:** 2026-10-26
 
-**Status:** DRAFT, for the user's review.
-- **Authorized:** this design-only card, including a narrowly scoped proposal to reopen #47, #59 and #62 for this
-  combination only (§7).
-- **Not authorized:** a build, model loading, seeds, GPU work, games and pushing.
+**Status:** FROZEN with the step-B build that pins it. The DRAFT was amended with the user's review (§11).
+- **Approved (2026-10-26):** the fixed combination; the narrow #47, #59 and #62 exceptions for this candidate and its
+  specified controls only (§7); step B (§5).
+- **Not authorized:** C1, the screen, the strength comparison, checkpoint loading, real GPU searches, seed
+  registration, gameplay, opening any gate and pushing.
 
 ## 1. Question
 
@@ -68,6 +69,17 @@ does not establish that adding halving will also be cheaper.
   - its search seconds ≤ 1.10 × the incumbent's.
 
   §5 applies them at C1 and at the strength step.
+- **Accounting, exactly:**
+  - A network evaluation is one position evaluated by an underlying network call. The averaging wrapper's two calls
+    per leaf count as two.
+  - Search seconds are the wall time inside `search_with_root`.
+  - Each guard is a **ratio of totals**: the combination's total over the incumbent's total, never a mean of per-search
+    ratios.
+  - **At C1:**
+    - the totals cover one search per side on each position of the fixed panel (§5);
+    - the warm-up search per side, entry 10's correctness check and the identity controls are excluded;
+    - the order alternates by position: incumbent first on even indices, combination first on odd.
+  - **At T:** the totals cover every search of the 1,018 games.
 - **Not a fair comparison:** an equal-simulation match (combination at 400 vs 400), which would give the combination
   twice the network compute.
 
@@ -78,24 +90,50 @@ does not establish that adding halving will also be cheaper.
   difference: the candidate agent's evaluator is wrapped as in `.../mirror-averaging-match/01_match.py` (lines
   175–200). Cost fields as in both scripts.
 - Wrapper, seed survey and closing: copies of the existing ones. No new framework.
-- **Focused tests (stub evaluators):**
+- **Focused tests (stub evaluators, CPU):**
   - halving receives the wrapper's averaged priors and values;
   - plies 0–19 of the combination equal averaging alone;
   - halving over a pass-through wrapper equals halving alone (visits and choice);
-  - halving's frozen allocation at 200 simulations gives the counts stated in §2.
-- **Loop-equivalence check:** a copy of `.../root-halving-match/03_loop_check.py`, extended to exercise the
-  `last_choice` branch, which entry 15's check never did. It runs with fake evaluators at 200 and 400 simulations.
-- **Regression:** must equal the 58-id baseline, run in the main checkout.
+  - halving's frozen allocation at 200 simulations gives the counts stated in §2;
+  - **a controlled `last_choice` case:** a search whose visit leader is the move the seeded readout picks, while
+    `last_choice` names a different move. The played and recorded move must be `last_choice`.
+- **Public-entry tests** always run with CPU isolation and temporary outputs, closed-gate tests included (#74).
+- **Loop checks (fake evaluators, CPU), run once each:**
+  - **(a) equivalence:** the copied loop reproduces `eval_runner`'s, ordinary vs ordinary, as in entry 15;
+  - **(b) the combination:** one colour-reversed pair, combination at 200 vs ordinary at 400, with fake evaluators
+    whose outputs depend on the board and the moves, so that averaging changes them. At every combination search from
+    ply 20, `last_choice` must be supplied and played. Plies where the readout would have chosen differently are
+    counted and reported.
+- **Regression:** one run, which must equal the 58-id baseline, in the main checkout.
+- **Sequencing:** the S and T entry is built and tested in step B with its gates closed. Their wrappers, plans and
+  seed-survey and closing copies follow C1, because their ceilings come from C1 (§6). They are put forward before the
+  screen's approval.
 
-**C1. Composition-and-cost check: one bounded GPU run, no games, no seeds, about 15 minutes.**
-- **Positions:** the committed positions timed in entry 19, which span plies before and after 20.
+**C1. Composition-and-cost check: one bounded GPU run, no games, no seed accounting; hard ceiling 15 minutes.**
+- **Ceiling:** the wrapper sends TERM at 890 s and KILL 10 s later.
+- **Fixed panel:** every position, plies 0 to n − 1, of entry 19's pair. That is inference-mode-match games 0 and 1:
+  104 positions, 40 before ply 20 and 64 from it. Both game files are pinned by SHA-256, and the replay must reproduce
+  each record.
+- **Check RNG (the repository's convention, as in `search-profile/04_batch_feasibility.py`):**
+  - every search gets a fresh `random.Random(s)`, with s = `TEST_ONLY_SEED_INTERVALS[0][0]` and its membership
+    verified;
+  - the two arms of each comparison therefore start from identical RNG states;
+  - no schedulable seed is drawn or accounted.
 - **Checks:**
   - entry 10's averaging correctness check, re-run unchanged against its independent reference and tolerance;
-  - the combination equals averaging alone at plies < 20 (bitwise);
-  - halving over a pass-through wrapper equals plain halving (bitwise).
-- **Measured on the same positions:** each side's network evaluations and search seconds per search. These also
-  price §6.
-- **Recorded:** `MLX_ENABLE_TF32` `"0"` at start and end, versions, and both networks in eval mode.
+  - **control (a):** at plies < 20, the combination equals averaging alone at 200 (visits, root value and no
+    `last_choice`, bitwise);
+  - **control (b):** at plies ≥ 20, halving over a pass-through wrapper equals halving over the plain evaluator at 200
+    (visits, root value and `last_choice`, bitwise).
+
+  These component-only calls are permitted **as the named identity controls only**; standalone component matches stay
+  closed.
+- **Measured on the panel:** each side's totals (§4), after one warm-up search per side on the panel's first position.
+  These also price §6.
+- **What the measurements may do:** price later runs. They may **not** change a simulation budget or a candidate
+  parameter.
+- **Recorded:** `MLX_ENABLE_TF32` `"0"` at start and end, versions, and both networks in eval mode at load and at the
+  end.
 - **STOP** on any failed check, or if either matching guard (§4) is exceeded.
 
 **S. Gross-regression screen.**
@@ -104,12 +142,14 @@ does not establish that adding halving will also be cheaper.
 
 **T. Strength comparison, funded in full before launch.**
 - 509 fresh pairs (1,018 games), a fixed size, with no early look and no extension.
-- **Pass** iff mean − √(ln 40 / (2·509)) > 0.5, i.e. a mean pair score above **0.56020**, **and** both matching
-  guards (§4) hold over the whole run.
+- **Pass** iff, computed in float64 from the 509 pair scores, mean − √(ln(2 / 0.05) / (2 · 509)) > 0.5 (the exact
+  Hoeffding formula), **and** both matching guards (§4) hold over the whole run.
+  - The threshold is a mean above about 0.56020; that rounded figure is an illustration, not the rule.
   - A score above the bound that fails a guard is reported as **NOT_COMPUTE_MATCHED**, not as a pass.
 - **Statistics:** state caps count as draws, and pairs are assumed independent. The size gives conservative 80%
   power at a true mean pair score of 0.60.
-- **A non-pass** can rule out a large benefit or reveal harm, but cannot resolve modest effects.
+- **A non-pass** can rule out a large benefit or reveal harm, but the comparison is not designed to reliably detect
+  modest gains.
 
 **Seeds.** Fresh blocks for S (64) and T (1,018), each through survey → pre-proof → registration → post-proof →
 closing (K1, K2). No old block is reused.
@@ -171,3 +211,23 @@ closing (K1, K2). No old block is reused.
 - That averaging improves evaluation accuracy, or halving's decisions, is a **hypothesis**.
 - The combination's runtime is **unmeasured**. Averaging alone being cheaper does not establish it.
 - Both screens ran in eval mode, but on a different machine and setting. **Their scores are not current baselines.**
+
+## 11. The user's review (2026-10-26)
+
+- **Approved:**
+  - the fixed combination;
+  - the narrow #47, #59 and #62 exceptions, for this candidate and its specified controls only;
+  - step B: the focused CPU tests, the fake-evaluator loop checks and one regression run.
+- **Not approved:** C1, the screen and the strength comparison. No checkpoint loading, real GPU search, seed
+  registration or gameplay; every gate stays closed. The frozen build returns for review before C1.
+- **Clarifications written into this card:**
+  - the identity checks use identical RNG states under the check-RNG convention (§5, C1);
+  - the cost accounting is ratios of totals over the fixed panel, with warm-up and the correctness and identity work
+    excluded. The guards stay 1.05 and 1.10 (§4);
+  - C1's hard ceiling is 15 minutes; its measurements price later runs but change no budget or parameter (§5);
+  - a controlled case where `last_choice` differs from the readout, with the played move following it (§5, B);
+  - component-only calls are permitted only as the named identity controls (§5, C1);
+  - the exact Hoeffding formula decides the strength verdict, and a non-pass "is not designed to reliably detect
+    modest gains" (§5, T).
+- **The user's framing:** the two positive screens justify this bounded combination hypothesis. They do not predict
+  that it will win.
