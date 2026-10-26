@@ -5,4 +5,4 @@ with MLX_ENABLE_TF32=0 plays the 32-pair gross-regression screen (64 games), the
 against the incumbent at 400, consuming registered seeds, so it takes its own reviewed door. Opened for ONE approved
 run and restored on every exit. Created closed. This file may hold ONLY this declaration.
 """
-MIRROR_HALVING_SCREEN_AUTHORIZED = False
+MIRROR_HALVING_SCREEN_AUTHORIZED = True
