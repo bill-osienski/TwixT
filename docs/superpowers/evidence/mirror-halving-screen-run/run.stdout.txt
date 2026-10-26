@@ -1,0 +1,1 @@
+{"status": "COMPLETED", "void": null, "run": "screen", "screen_verdict": "CONTINUE", "strength_verdict": null, "guards": {"evaluations_ratio": 0.9955802931775598, "search_seconds_ratio": 0.8158197687408222, "evaluations_within": true, "search_seconds_within": true, "guards": {"evaluations": 1.05, "search_seconds": 1.1}}}
