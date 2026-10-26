@@ -5945,3 +5945,30 @@ its plan and the post-registration proof approved.**
   procedure, no push.
 - **Prediction on record:** none (a seed procedure).
 - **Status:** registered and proven; awaiting the user's screen approval. See do-not-repeat **#96**.
+
+**Addendum to entry 39 (2026-10-26, the user's decision): registration accepted; two narrow test repairs and the screen,
+once, approved.**
+- **The user's read-only checks:**
+  - the exact ACCOUNTED append, with the other registry statements unchanged;
+  - the plan is correct, and the post-proof's full hash and 45 controls check out;
+  - the block is unexposed and unretired; 49 gates, all closed; the candidate and the wrapper are unchanged.
+- **Test maintenance (a separate, small commit):**
+  - Replace the screen's obsolete "no plan or records" assertion with checks of its approved plan, survey binding
+    and registration. Keep the strength block's unselected-state check.
+  - Let the historical D2 attempt-2 block have later registrations while preserving its unique-registration,
+    exposure, retirement and unavailability assertions. Do not simply remove the protection.
+  - Run only the affected focused CPU tests, with existing isolation preserved. No full regression, mutation
+    campaign or proof rerun. (The D2 test does not load a checkpoint; its model-loading helpers are deferred.)
+- **The screen, once, limited to:**
+  - 32 colour-reversed pairs (64 games) using exactly [202692500, 202692564);
+  - the frozen candidate at 200 simulations versus the incumbent at 400, process-local TF32=0, eval mode;
+  - a fresh read-only panic/reboot check, then the enforced idle gate;
+  - a clean run worktree and a one-line opening of gate 48 only, through the reviewed wrapper (TERM at 3,486 s,
+    KILL 10 s later);
+  - the frozen verdict: STOP below a mean pair score of 0.40; otherwise CONTINUE, which permits review, not a
+    strength claim.
+
+  No further approval round before the launch if the test repairs and preflight pass.
+- **Return:** the create-only run evidence, cost totals, gate restoration and cleanup verification, for result and
+  closing review. A started-run STOP, VOID or timeout closes the combination without retry.
+- **Not authorized:** strength-comparison seed work, gate 49, training and pushing.
