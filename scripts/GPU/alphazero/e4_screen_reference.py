@@ -996,6 +996,13 @@ EXPOSED_SEED_INTERVALS = (
     # never training or strength-comparison data. A post-run accounting edit to a bound file: the committed
     # plan, survey/proof and run records keep their hashes; nothing is rerun.
     (202692400, 202692412),  # SEARCH DISTILLATION D2 CORRECTED TRIAL ATTEMPT 2 -- 12 held-out seeds, all started
+    # 🔴 MIRROR AVERAGING + ROOT SEQUENTIAL HALVING SCREEN -- THE CLOSING EDIT (2026-10-26), after the ONE authorized
+    # 64-game screen (outer exit 0, COMPLETED, no survivors; verdict CONTINUE, not a strength result). Use DERIVED from
+    # the committed run evidence by evidence/mirror-halving-screen-seed-closing/02_* (RECONCILES, 15/15): all 64 games
+    # started, so the block is EXPOSED WHOLE. The games are the screen's only; never training data, and never pooled
+    # into the strength comparison. A post-run accounting edit to a bound file: the committed plan, survey/proof and
+    # run records keep their hashes; nothing is rerun.
+    (202692500, 202692564),  # MIRROR-HALVING SCREEN -- 64 game seeds, all started
 )
 
 #: Seeds RESERVED PERMANENTLY FOR TESTS. Unit tests must draw from something, and
@@ -1353,6 +1360,13 @@ RETIRED_SEED_INTERVALS = (
     # never training or strength-comparison data. A post-run accounting edit to a bound file: the committed
     # plan, survey/proof and run records keep their hashes; nothing is rerun.
     (202692400, 202692412),  # SEARCH DISTILLATION D2 CORRECTED TRIAL ATTEMPT 2 -- 12 held-out seeds, all started
+    # 🔴 MIRROR AVERAGING + ROOT SEQUENTIAL HALVING SCREEN -- THE CLOSING EDIT (2026-10-26), after the ONE authorized
+    # 64-game screen (outer exit 0, COMPLETED, no survivors; verdict CONTINUE, not a strength result). Use DERIVED from
+    # the committed run evidence by evidence/mirror-halving-screen-seed-closing/02_* (RECONCILES, 15/15): all 64 games
+    # started, so the block is EXPOSED WHOLE. The games are the screen's only; never training data, and never pooled
+    # into the strength comparison. A post-run accounting edit to a bound file: the committed plan, survey/proof and
+    # run records keep their hashes; nothing is rerun.
+    (202692500, 202692564),  # MIRROR-HALVING SCREEN -- 64 game seeds, all started
 )
 
 
