@@ -647,6 +647,17 @@ ACCOUNTED_SEED_INTERVALS = (
     # Accounted, NOT exposed and NOT retired: exposure follows actual use (the started-game
     # prefix); the closing edit retires the whole block. No gate is opened by this.
     (202692400, 202692412),          # SEARCH DISTILLATION D2 CORRECTED TRIAL ATTEMPT 2 -- 12 held-out game seeds
+    # 🔴 MIRROR AVERAGING + ROOT SEQUENTIAL HALVING SCREEN -- 64 GAME SEEDS, registered 2026-10-26: the 64-seed block
+    # of the screen's survey (evidence/mirror-halving-screen-seed-survey/02_*), READ from that record, not chosen here,
+    # by the replacement rule (seed_selection.candidate). One seed per game of the screen (card
+    # docs/superpowers/2026-10-26-mirror-averaging-plus-root-halving-combination-card.md §5: 32 colour-reversed
+    # pairs, candidate at 200 simulations vs calib020_0001 at 400; game g has seed BASE + g, pair g // 2). The plan is
+    # evidence/mirror-halving-screen-run/plan.json (base + slot count + survey hash). Registered ONLY after the
+    # pre-registration collision proof (same directory, 03_*) was CLEAN, 45/45.
+    #
+    # Accounted, NOT exposed and NOT retired: exposure follows actual use (the started-game
+    # prefix); the closing edit retires the whole block. No gate is opened by this.
+    (202692500, 202692564),          # MIRROR-HALVING SCREEN -- 64 game seeds
 )
 
 #: EXPERIMENTAL EXPOSURE: seeds drawn from OUTSIDE the permanently unschedulable
