@@ -242,30 +242,39 @@ def test_THE_SEED_COPIES_MATCH_THE_RUN_THEY_SERVE(kind):
     assert all(ok for _label, ok, _detail in closing._controls(202700000))
 
 
-def test_NO_PLAN_IS_COMMITTED_YET_the_strength_block_is_surveyed_and_UNREGISTERED():
-    """The pre-registration proof requires that no plan exists; the match refuses a plan without an int base.
-    RE-ANCHORED 2026-10-26: the strength block was surveyed (2ccc9037) and pre-proven (9631ec72) but not registered.
-    The pre-proof is bound to the committed survey record; no plan, post-proof or closing record exists; and no
-    registry holds any seed of the block. Read-only; nothing is drawn."""
+def test_THE_STRENGTH_PLAN_is_the_survey_s_build_plan_and_its_block_is_REGISTERED_and_SCHEDULABLE():
+    """The strength comparison's plan (the one the public entry reads) is its survey's build_plan, bound to the
+    committed survey record; the survey (2ccc9037), pre-proof (9631ec72) and post-proof (5c4b60a7) records all stand;
+    the block is in ACCOUNTED exactly once (registered 2026-10-26, 0c1c18b5) and, before any run, NOT exposed, NOT
+    retired and every seed schedulable by the entry's own seed predicates. No closing record exists.
+    Read-only; nothing is drawn."""
     import hashlib
     from scripts.GPU.alphazero import e4_screen_reference as REG
     kind = "strength"
     here = EV / f"mirror-halving-{kind}-seed-survey"
-    assert not (ROOT / MATCH.KINDS[kind]["plan"]).exists()
-    assert sorted(p.name for p in here.glob("0[234]_*")) == ["02_seed_survey_run.txt", "03_collision_proof_pre_run.txt"]
-    assert not (EV / f"mirror-halving-{kind}-seed-closing/02_derive_usage_run.txt").exists()
-    survey = (here / "02_seed_survey_run.txt").read_text(encoding="utf-8")
-    pre = (here / "03_collision_proof_pre_run.txt").read_text(encoding="utf-8")
     n = KINDS[kind]["slots"]
+    assert sorted(p.name for p in here.glob("0[234]_*")) == \
+        ["02_seed_survey_run.txt", "03_collision_proof_pre_run.txt", "04_collision_proof_post_run.txt"]
+    assert not (EV / f"mirror-halving-{kind}-seed-closing/02_derive_usage_run.txt").exists()
+    survey_raw = (here / "02_seed_survey_run.txt").read_bytes()
+    survey, sha = survey_raw.decode("utf-8"), hashlib.sha256(survey_raw).hexdigest()
     assert "SURVEY VERDICT   : THE MIRROR-HALVING STRENGTH BLOCK IS CLEAN\n" in survey and "controls passed: 45/45" in survey
-    sha = hashlib.sha256((here / "02_seed_survey_run.txt").read_bytes()).hexdigest()
-    assert f"02_seed_survey_run.txt sha256 {sha} (read at " in pre
-    assert "EXPECTED STATE (pre): HOLDS" in pre and "controls passed: 45/45" in pre
-    lo = int(survey.split("; BASE = ", 1)[1].split(";", 1)[0])
-    assert f"block = [{lo}, {lo + n}) -- {n} seeds" in survey and f"THE BLOCK, read from the record: [{lo}, {lo + n})" in pre
-    assert not any(a < lo + n and lo < b for name in ("ACCOUNTED_SEED_INTERVALS", "EXPOSED_SEED_INTERVALS",
-                                                      "RETIRED_SEED_INTERVALS", "TEST_ONLY_SEED_INTERVALS")
-                   for a, b in getattr(REG, name))
+    for rel, mode in (("03_collision_proof_pre_run.txt", "pre"), ("04_collision_proof_post_run.txt", "post")):
+        text = (here / rel).read_text(encoding="utf-8")
+        assert f"02_seed_survey_run.txt sha256 {sha} (read at " in text
+        assert f"EXPECTED STATE ({mode}): HOLDS" in text and "controls passed: 45/45" in text
+    survey_mod = _load(f"mirror-halving-{kind}-seed-survey/01_seed_survey.py", "_survey_strength_registered")
+    plan = json.loads((ROOT / MATCH.KINDS[kind]["plan"]).read_text(encoding="utf-8"))
+    assert type(plan["base"]) is int and plan["n_slots"] == n
+    assert plan == survey_mod.build_plan(plan["base"], sha)
+    block = (plan["base"], plan["base"] + n)
+    assert f"block = [{block[0]}, {block[1]}) -- {n} seeds" in survey
+    assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1
+    assert not any(lo < block[1] and block[0] < hi for name in
+                   ("EXPOSED_SEED_INTERVALS", "RETIRED_SEED_INTERVALS", "TEST_ONLY_SEED_INTERVALS")
+                   for lo, hi in getattr(REG, name))
+    assert all(REG.seed_is_accounted(s) and not REG.seed_is_exposed(s) and not REG.seed_is_retired(s) and
+               not REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s) for s in range(*block))
 
 
 def test_THE_SCREEN_PLAN_is_the_survey_s_build_plan_and_its_block_is_REGISTERED():
