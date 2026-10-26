@@ -6186,3 +6186,29 @@ registration, plan and post-registration proof approved.**
 - **Not done:** gate 49 closed (49 gates closed), no checkpoint loading, no GPU work, no game, no training, no push.
 - **Prediction on record:** none (a seed procedure).
 - **Status:** registered and proven; awaiting the user's run approval. See do-not-repeat **#100**.
+
+**Addendum to entry 39 (2026-10-26, the user's decision): the strength block's registration accepted; the strength
+comparison approved, once, within the frozen protocol.**
+- **The user's checks:**
+  - the exact ACCOUNTED append, with the other registry statements unchanged;
+  - the plan is correct, the post-proof's full hash checks out, and all 1,018 slot mappings and 45 controls pass;
+  - the block is unexposed and unretired, and the C1 and screen admission records qualify;
+  - the runtime code and the wrapper are unchanged; 49 gates, all closed.
+
+  No further preparation or testing is required.
+- **The run, once, limited to:**
+  - 509 pairs (1,018 games) using exactly [202693600, 202694618), with no screen games pooled in;
+  - the frozen candidate at 200 simulations versus the unchanged incumbent at 400, on 24×24 under the existing
+    rules, with process-local TF32=0 and eval mode;
+  - a fresh read-only panic/reboot check, then the enforced idle gate. A new panic stops GPU work pending a
+    stability decision;
+  - a clean run worktree, with gate 49 alone opened by a one-line commit, through the reviewed wrapper;
+  - TERM at 55,591 s and KILL 10 s later: a total ceiling of 55,601 s.
+- **The frozen judgement of a completed run:** PASS iff the mean pair score − √(ln(40)/(2×509)) > 0.5, with the
+  candidate/incumbent ratios of total network evaluations ≤ 1.05 and of total search seconds ≤ 1.10. Clearing the
+  score bound while failing a guard is NOT_COMPUTE_MATCHED.
+- **Forbidden:** interim strength scoring, an early success decision, extension, top-up, retry and parameter changes.
+  An incomplete run receives no score.
+- **Return:** the create-only results, cost totals, wrapper diagnostics, gate restoration and cleanup evidence, for
+  result and closing review.
+- **Not authorized:** seed closing, deployment, training and pushing.
