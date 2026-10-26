@@ -144,6 +144,7 @@ knob) is not a new hypothesis.
 > **Mirror averaging + root sequential halving — card FROZEN and step B built (addendum to the decision note, 2026-10-26).** The user approved the fixed combination, the narrow #47/#59/#62 exceptions (this candidate and its specified controls only) and step B; clarifications are in card §11. Build `0ad4de35`: a shared module (game loop copied verbatim from entry 15's match), the C1 entry with gate 47 and its 900-second wrapper, the screen/strength entry with gates 48 and 49 (their wrappers follow C1); 49 gates, all closed. 82 focused CPU tests pass. The CPU loop checks failed once on a defect in the check script (`0e134482`, kept) and passed on run 2 (`58924743`). Regression = the 58-id baseline. Nothing loaded, no GPU search, seeds or games. C1 awaits the user's review of the frozen build. Supersedes the "DRAFT" line above. See #91.
 > **Mirror averaging + root sequential halving — step B accepted; C1 approved once (addendum, 2026-10-26, the user's).** Read-only review found no blocking defect. Accepted: deferring the screen/strength wrappers, plans and seed copies until after C1; the disclosed loop-check repair (no retry permission for C1 or later). C1 may run once (gate 47 only, TF32=0, 890 s + 10 s). A STOP, VOID or timeout closes the combination. The screen, strength comparison, seeds and games remain unauthorized. See #92.
 > **Mirror averaging + root sequential halving — C1 PASS (Post-closure entry 39, 2026-10-26).** One run, 216 s of 900 s, gate 47 restored. Entry 10's check PASS; identity controls 40/40 and 64/64 bitwise; halving at all 64 positions from ply 20. Ratios of totals: evaluations 0.9961 (≤ 1.05), search seconds 0.8245 (≤ 1.10). Derived search-only projections at an assumed 59.8 plies: screen ≈ 0.65 h, strength ≈ 10.3 h. 🔴 Launched while NOT idle (load 4.0, Spotlight at ~313% CPU; check printed but not waited on), so the absolute timings may be inflated; not repeated. No strength claim. The screen, strength comparison and seeds remain unauthorized. Prediction: None stated in advance. See #93.
+> **Mirror averaging + root sequential halving — screen/strength build only (addendum to entry 39, 2026-10-26).** C1 accepted with its disclosed idle deviation (timings neither rerun nor discounted). Ceilings: screen 3,496 s, strength comparison 55,601 s (TERM 3,486 / 55,591 + 10 s). Built (`b6632003`): an idle gate the launch depends on (fake launches: busy → no launch; idle → the exact command), both wrappers, and seed survey and closing copies (64 / 1,018 slots; blocks unselected, no plan committed). The match now logs `game_start` for closing. Nothing run; 49 gates closed. See #94.
 
 ## Historical proposal check — programme now closed
 
@@ -1760,6 +1761,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 92. **C1 of the mirror-averaging + root-halving combination (approved once, 2026-10-26).** Do **not** retry, rerun or extend C1, or open gate 47 a second time: a STOP, VOID or timeout closes the combination. The accepted loop-check repair is not a precedent for any retry. Do **not** open gates 48 or 49, build the screen/strength wrappers, plans or seed blocks, or play a game without the user's review of C1's record and a separate approval. Do **not** rerun the step-B regression; its log is preserved as evidence.
 
 93. **C1's PASS (entry 39), 2026-10-26.** Do **not** rerun C1, open gate 47 again, or "correct" its timings under a quieter machine: it ran once, under recorded contention, and stands as recorded. Do **not** read the PASS or the 0.82 seconds ratio as evidence about playing strength, or the derived hours as whole-game measurements. Do **not** build the screen/strength wrappers, plans or seed blocks, open gates 48 or 49, or play a game without the user's review of entry 39 and a separate approval. Before any later GPU run, wait on the idle check (load below 3, no process above 50% CPU) rather than only printing it.
+
+94. **The screen/strength build (addendum to entry 39), 2026-10-26.** Do **not** run a seed survey, proof, registration or closing, commit a `plan.json`, open gates 48 or 49, or launch either wrapper without the user's review of the build and a separate approval for each step. Do **not** bypass the idle gate (for example by launching the module directly or editing the wrapper's precondition), relax its limits, or change a ceiling: they are C1's recorded projection × 1.5, undiscounted. Do **not** change the candidate, budgets, guards or stopping rules. A busy refusal by the idle gate is not a run; any other STOP, VOID or timeout closes the combination without retry.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -5802,3 +5805,39 @@ ceilings priced; build-only approval.**
   - C1's evidence and the pinned card are preserved.
 - **Not authorized:** running the seed procedures, registration, checkpoint loading, GPU work, games, training and
   pushing. Gates 47–49 stay closed.
+
+**Addendum to entry 39 (2026-10-26): the screen and strength build, built only (`b6632003`).**
+- **The idle gate, `scripts/GPU/alphazero/idle_gate.py`:**
+  - samples every 5 s; idle means a 1-minute load below 3 and no other process above 50% CPU, held 60 s in a row;
+  - exit 0 once held; exit 1 if 30 minutes pass first.
+- **The wrappers, `docs/superpowers/evidence/mirror-halving-{screen,strength}-run/01_wrapper.sh`:**
+  - copies of C1's (`mirror-halving-c1-run/01_wrapper.sh`), with TERM at 3,486 s and 55,591 s plus 10 s grace (the
+    pricing above);
+  - the idle gate is their last precondition. The launch line is reachable only if it exits 0; otherwise the wrapper
+    REFUSES (exit 1). Nothing then starts or is written, and the gate is restored;
+  - once a run starts, the idle samples are kept, create-only, in `idle_check.txt`.
+- **The seed-procedure copies:**
+  - surveys `mirror-halving-{screen,strength}-seed-survey/01_seed_survey.py` (64 and 1,018 slots) and closings
+    `…-seed-closing/01_derive_usage.py`, copied from attempt 2's with only the size, paths, titles, plan kind, slot
+    lines and one control's label changed;
+  - **the plans are prepared as each survey's `build_plan`, with no `plan.json` committed.** The pre-registration
+    proof requires that no plan exists, and the match refuses a plan without an integer base; the seed blocks are
+    unselected.
+- **One addition to `mirror_halving_match.py`:** it now logs `game_start` (game = slot) before each game, because the
+  copied closing derivation exposes the started prefix from those events, and the step-B build logged only
+  `game_end`.
+  - The candidate, budgets, guards and stopping rules are unchanged; no pinned file changed.
+- **Tests:** 23 new focused CPU tests (22 for the launch, 1 for the match); 86 pass across the shared-module, match,
+  launch and gate-inventory files.
+  - **Fake launches of the REAL wrapper bytes,** both kinds, in throwaway git repositories with a stub idle gate and a
+    stub match:
+    - busy → exit 1, the stub never reached, nothing written, the gate restored;
+    - idle → the stub reached with exactly `run <kind> --checkpoint <path>` and `MLX_ENABLE_TF32=0`, `idle_check.txt`
+      kept, the gate restored.
+  - The idle gate refuses entry 39's own launch conditions.
+  - **Each ceiling is checked against C1's committed record:** ⌈1.5 × projection⌉ = TERM + 10.
+- **Not done:** no additional full regression or mutation campaign, as approved.
+- **Commits:** the C1 evidence and the pinned card are unchanged. A message-only amend corrected the build commit's
+  test count before anything was pushed.
+- **Not run:** no seed procedure, registration, checkpoint loading, GPU work or game. 49 gates, all closed.
+- **Status:** the build awaits the user's review. See do-not-repeat **#94**.
