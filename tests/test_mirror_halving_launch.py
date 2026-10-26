@@ -254,8 +254,9 @@ def test_NO_PLAN_IS_COMMITTED_YET_the_strength_block_is_unselected():
 
 def test_THE_SCREEN_PLAN_is_the_survey_s_build_plan_and_its_block_is_REGISTERED():
     """The screen's plan (the one the public entry reads) is its survey's build_plan, bound to the committed survey
-    record, and the block is in ACCOUNTED exactly once with every seed passing the entry's own seed predicates
-    (registered 2026-10-26, aa977403; post-registration proof 4dc418db). Read-only; nothing is drawn."""
+    record, and the block is in ACCOUNTED exactly once (registered 2026-10-26, aa977403; post-registration proof
+    4dc418db). Since the closing edit after the one screen run, every seed is EXPOSED, RETIRED and refused.
+    Read-only; nothing is drawn."""
     import hashlib
     from scripts.GPU.alphazero import e4_screen_reference as REG
     here = EV / "mirror-halving-screen-seed-survey"
@@ -270,5 +271,10 @@ def test_THE_SCREEN_PLAN_is_the_survey_s_build_plan_and_its_block_is_REGISTERED(
         text = (here / rel).read_text(encoding="utf-8")
         assert f"EXPECTED STATE ({mode}): HOLDS" in text and "controls passed: 45/45" in text
     assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1
-    assert all(REG.seed_is_accounted(s) and not REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s)
-               for s in range(*block))
+    # RE-ANCHORED 2026-10-26 (the screen's closing, after K1 RECONCILES: all 64 games started): the whole block is
+    # EXPOSED and RETIRED, each exactly once, and every seed is refused.
+    assert REG.EXPOSED_SEED_INTERVALS.count(block) == 1 and REG.RETIRED_SEED_INTERVALS.count(block) == 1
+    assert all(REG.seed_is_accounted(s) and REG.seed_is_exposed(s) and REG.seed_is_retired(s) and
+               REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s) for s in range(*block))
+    assert not any(lo < block[1] and block[0] < hi and (lo, hi) != block
+                   for lo, hi in REG.EXPOSED_SEED_INTERVALS + REG.RETIRED_SEED_INTERVALS)

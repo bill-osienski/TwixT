@@ -316,7 +316,12 @@ def test_REAL_THE_REGISTERED_ATTEMPT_2_PLAN_is_the_survey_s_build_plan_and_CLOSE
     # block may now be followed in ACCOUNTED by LATER registrations -- only by higher blocks.
     acc = REG.ACCOUNTED_SEED_INTERVALS
     assert _accounted_once(REG, block) and all(iv[0] >= block[1] for iv in acc[acc.index(block) + 1:])
-    assert REG.EXPOSED_SEED_INTERVALS[-1] == block and REG.RETIRED_SEED_INTERVALS[-1] == block
+    # RE-ANCHORED 2026-10-26 (the mirror-halving screen's closing): appended LAST at its own closing, the block is now
+    # followed by a LATER closing -- in EXPOSED and RETIRED alike, at the same positions, and only by higher blocks.
+    ex, rt = REG.EXPOSED_SEED_INTERVALS, REG.RETIRED_SEED_INTERVALS
+    assert ex.count(block) == 1 and rt.count(block) == 1
+    ex_after, rt_after = ex[ex.index(block) + 1:], rt[rt.index(block) + 1:]
+    assert len(ex_after) == len(rt_after) and all(iv[0] >= block[1] for iv in ex_after + rt_after)
     assert all(REG.seed_is_unavailable(plan["base"] + s) for s in range(12))
 
 
