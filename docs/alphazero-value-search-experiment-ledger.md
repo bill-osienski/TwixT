@@ -139,6 +139,7 @@ knob) is not a new hypothesis.
 > **Search distillation D2 — bounded trial ATTEMPT 2: held-out generation COMPLETED and eligible (Post-closure entry 37, 2026-10-25).** One approved run (gate 45 only): 12 games, 660 records, 1,086 s of the 2-hour ceiling; in-run reader and alignment checks passed; model digest unchanged; `MLX_ENABLE_TF32` "0" at start and end. Seeds [202692400, 202692412) EXPOSED and RETIRED whole (15/15). No new kernel panic before or after. Regression = the 58-id baseline. Training NOT RUN: gate 46 closed, awaiting approval. Outcome prediction: None stated in advance. See #86.
 > **Search distillation D2 — bounded trial attempt 2: training STOP; the trial is CLOSED (Post-closure entry 38, 2026-10-25).** One approved run (gate 46 only), 401 updates under `MLX_ENABLE_TF32=0`, 46 s. Held-out policy CE 4.7878 → 4.1627 (strictly lower: met), but held-out value drift mean 0.1207 (limit 0.05) and p95 0.3433 (limit 0.15) both FAILED. The answer to the card's question is no: the unchanged recipe under TF32=0 did not pass Stage 3's held-out checks. No retry or tuning; no strength screen. `calib020_0001` stays the incumbent. Outcome prediction: None stated in advance. Supersedes the two lines above. See #87.
 > **Dual-encoder policy branch — design-only feasibility card (decision note after Post-closure entry 38, 2026-10-26, the user's).** Entry 38's STOP and closeout accepted: it closes the recipe, not the goal of stronger play. Authorized: a design-only card for a composite agent (the frozen incumbent supplies values; a trainable encoder and policy-head copy supplies priors), so that the value function is preserved by construction. DRAFT `2026-10-26-dual-encoder-policy-branch-feasibility-card.md`: two forward passes per leaf (2.00× FLOPs); compute-fair comparison at matched network evaluations, composite 200 vs incumbent 400 simulations; recommends REJECTING on paper. Nothing loaded, generated, trained or gated. See #88.
+> **Dual-encoder policy branch — REJECTED on paper (addendum to the decision note after Post-closure entry 38, 2026-10-26, the user's).** Step 1 not built; nothing executed (no model loaded; no seeds, games, training or gates). The value-preserving architecture's added inference cost is not justified by current evidence: this experiment has not earned its cost. This is not a result about dual encoders, value preservation, capacity, distillation or strength. The card is kept as the reviewed proposal (§8 records the decision). `calib020_0001` stays the incumbent; the stronger-play goal remains open with no supported next experiment. Supersedes the "DRAFT" line above. See #89.
 
 ## Historical proposal check — programme now closed
 
@@ -1745,6 +1746,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 87. **The D2 bounded trial attempt 2's training run (entry 38) — STOP 2026-10-25; the corrected-configuration trial is CLOSED.** Do **not** rerun, retry or extend the training, run it with other seeds, or retune the recipe (anchor weight, learning rate, updates, batch, clipping, L2, surface, numerical setting) and judge it on the same corpus or held-out set. Do **not** open gate 46 again, re-score the candidate on new criteria, or select it after the fact. Do **not** screen, evaluate or promote the candidate (`~/twixt-cache/search-distillation-d2/student-tf32off-20261026T000538Z.safetensors`, read-only research artifact): a STOP does not permit the strength screen. Do **not** read the STOP as explaining the value drift, or the absence of gradient spikes as a qualification of GPU training in general. Any further distillation work needs a new written design and the user's approval.
 
 88. **The dual-encoder policy-branch feasibility card (decision note after entry 38), 2026-10-26.** Do **not** build, load a model, account seeds, generate, train, open a gate, play games or push for it without the user's decision on the card and approval of each step. Do **not** judge the composite at equal simulations (400 vs 400) as a strength result: that gives it twice the network compute. Do **not** play or score the student file outside the composite: its own value head reads the trained encoder, which would be the closed D2 recipe with its anchor removed (#87). Do **not** reuse the old 108 training games or either spent held-out set (#69, #86, #87). Do **not** read the card's arithmetic (the log-linear Elo reading of Stage A, entry 11's cost precedent) as measurements on this machine and setting.
+
+89. **The dual-encoder policy-branch proposal — REJECTED on paper, 2026-10-26 (nothing executed).** Do **not** build, load a model, account seeds, generate, train, gate or play for this card. Do **not** cite the rejection as evidence that dual encoders, value preservation, capacity or distillation fail, or as a strength result: nothing was measured. Do **not** present the card's +175 Elo as a measured requirement (it is an illustrative scenario: log-linear gains from the old protocol, target 0.60), entry 11's 0.594 as isolating the cost of halving simulations (that match also changed the evaluator), or the 5–10% figure as a calibrated forecast (a subjective assessment, not adopted). Reviving the design needs new evidence that justifies its inference cost, a new card and the user's approval.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -5546,3 +5549,23 @@ equal entry 32's, as the same frozen data, code and setting should give. Predict
 - **Prediction on record:** None stated in advance. The card's estimate (strength pass about 5–10%) is offered for the
   decision; it is not a prediction on record unless the user adopts it.
 - **Status:** OPEN, awaiting the user's decision on the card. See do-not-repeat **#88**.
+
+**Addendum to the decision note (2026-10-26): the proposal REJECTED on paper; documentation-only closeout.**
+- **The user's decision:** reject on paper; do not build step 1. The architecture preserves value, but the current
+  evidence does not justify its added inference cost. In the user's words, this particular experiment "has not earned
+  its cost". That does not mean dual encoders cannot work or that preserving value cannot help.
+- **The rationale, kept narrower than the card's estimates:**
+  - +175 Elo is an illustrative scenario, conditional on log-linear search gains carried over from the old protocol
+    and a target true score of 0.60. It is not a measured requirement.
+  - Mirror averaging's 0.594 (entry 11) does not isolate the cost of halving simulations: it changed the evaluator too.
+  - A non-pass could reveal harm or rule out a large benefit. The match is not designed to resolve modest improvements
+    reliably.
+  - The 5–10% figure is the assistant's subjective assessment, not adopted as a calibrated forecast.
+- **What was executed:** nothing. No build, model loading, seed work, generation, training, games or gates. Not a
+  negative experimental result about capacity, distillation or playing strength.
+- **The card** is preserved unchanged as the reviewed proposal. Its §8 (appended) records the decision and the
+  corrections to §6–7.
+- **Prediction on record:** none (none was adopted).
+- **Status: CLOSED on paper.** `calib020_0001` remains the incumbent. The broader stronger-play goal remains open, but
+  this proposal does not provide a sufficiently supported next experiment. Nothing further is authorized. See
+  do-not-repeat **#89**.

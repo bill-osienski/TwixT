@@ -200,3 +200,30 @@ Measuring that is a separate experiment and is not proposed here.
 
 **Not proposed:** branching only the top blocks (a shared frozen trunk) would cut the cost ratio below 2. It would also
 reopen the frozen-feature question that #66 shelved, so it needs its own rationale.
+
+## 8. The user's decision (2026-10-26): REJECTED on paper
+
+**Status:** this section supersedes the "DRAFT" status at the top. The card is kept unchanged above as the reviewed
+proposal. Nothing in it was built or run: no model was loaded, and no seeds, games, training or gates were used.
+
+**Decision:** reject on paper; step 1 is not built. The architecture preserves value, but the current evidence does not
+justify its added inference cost. **This experiment has not earned its cost.** The decision does not say that dual
+encoders cannot work, or that preserving value cannot help.
+
+**The rationale, narrower than §7's estimates** (the user's corrections):
+- **+175 Elo is an illustrative scenario, not a measured requirement.** It assumes log-linear search gains, carried over
+  from the old protocol, and a target true score of 0.60.
+- **Mirror averaging's 0.594 does not isolate the cost of halving simulations:** that match changed the evaluator too.
+  §7's sentence "So halving may cost less" claims more than the result supports.
+- **A non-pass would not be uninformative.** It could reveal harm or rule out a large benefit. The match is simply not
+  designed to resolve modest improvements reliably. §6's and §7's wording ("weakly informative") understated this.
+- **The 5–10% figure is my subjective assessment.** It was not adopted as a calibrated forecast.
+
+**Not to be read as** a negative experimental result about capacity, distillation or playing strength. Nothing was
+measured.
+
+**Status after the decision:**
+- `calib020_0001` remains the incumbent.
+- The broader goal of stronger play remains open. This proposal does not provide a sufficiently supported next
+  experiment.
+- No build, model loading, seed work, training, games or pushing is authorized.
