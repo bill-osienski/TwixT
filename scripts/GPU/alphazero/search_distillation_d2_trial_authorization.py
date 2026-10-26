@@ -6,4 +6,4 @@ and judges it on the 12 fresh held-out games. It loads the incumbent, runs on th
 a candidate, so it takes its own reviewed door. Opened for ONE approved run and restored on every exit. Created closed.
 This file may hold ONLY this declaration.
 """
-SEARCH_DISTILLATION_D2_TRIAL_AUTHORIZED = False
+SEARCH_DISTILLATION_D2_TRIAL_AUTHORIZED = True
