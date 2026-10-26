@@ -150,6 +150,7 @@ knob) is not a new hypothesis.
 > **Mirror averaging + root sequential halving — SCREEN CONTINUE (addendum to entry 39, 2026-10-26).** One run (`59bcd53d`), COMPLETED in 2,271 s of 3,486 s; gate 48 restored. 32 pairs / 64 games on [202692500, 202692564), all started: candidate 36, incumbent 27, 1 draw (state cap). Mean pair score 0.5703 ≥ 0.40, so CONTINUE: a gross-regression check only, not a strength result (descriptive Hoeffding95 [0.330, 0.810] includes 0.5). Guards held: evaluations 0.9956, search seconds 0.8158. Block not yet closed; awaits result and closing review. Prediction: None stated in advance. See #97.
 > **Mirror averaging + root sequential halving — screen accepted and CLOSED (addendum to entry 39, 2026-10-26).** Result accepted: CONTINUE, encouraging but inconclusive; stronger play not demonstrated. K1 RECONCILES (`adbb31b2`, 15/15: all 64 started); K2 (`52d179da`) appended [202692500, 202692564) last to EXPOSED (41 → 42) and RETIRED (39 → 40), ACCOUNTED 44 unchanged. Lifecycle tests re-anchored (`00c0d7b4`, 184 focused passed). The strength comparison (ceiling 55,601 s) awaits a separate decision. See #98.
 > **Mirror averaging + root sequential halving — the strength comparison's seed survey and pre-proof (addendum to entry 39, 2026-10-26).** Each run once in a clean worktree. Survey CLEAN (`2ccc9037`, 45/45): block [202693600, 202694618), 1,018 seeds, gap 1,030 (floor 1,018). Pre-proof HOLDS (`9631ec72`, 45/45). Not registered; no plan; gate 49 closed; nothing played. Awaits registration review. See #99.
+> **Mirror averaging + root sequential halving — the strength block registered and proven (addendum to entry 39, 2026-10-26).** Registration review passed (`c665e938`). [202693600, 202694618) appended last in ACCOUNTED (44 → 45) with `plan.json` = `build_plan` (`0c1c18b5`). The post-registration proof, run once in a clean worktree, HOLDS (`5c4b60a7`, 45/45). Test re-anchored (`5e07bba4`, 184 focused passed). Accounted, not exposed or retired; gate 49 closed; nothing played. Awaits run approval. See #100.
 
 ## Historical proposal check — programme now closed
 
@@ -1778,6 +1779,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 98. **The screen's closing (2026-10-26).** Do **not** rerun K1, re-derive usage, or edit, move or reuse [202692500, 202692564) in any registry: it is EXPOSED and RETIRED whole. Do **not** retry the screen. Do **not** run strength-comparison seed work, open gate 49, train, or change the strength ceiling (55,601 s) without separate approval.
 
 99. **The strength comparison's seed survey and pre-proof (2026-10-26).** Do **not** rerun either mode, choose another block, or adjust [202693600, 202694618). Do **not** register it, commit its `plan.json`, run the post-registration proof, open gate 49 or launch the strength comparison without the user's registration review and separate approval of each step. Do **not** change its 509 pairs, the Hoeffding rule, the guards or the 55,601 s ceiling, or pool the screen's games into it.
+
+100. **The strength block's registration and post-proof (2026-10-26).** Do **not** rerun the post-registration proof, edit the strength `plan.json`, or move, widen, expose or retire [202693600, 202694618) outside its closing procedure. Do **not** open gate 49 or launch the strength comparison without the user's run approval; the launch stays behind the idle gate. Do **not** change the 509 pairs, the Hoeffding rule, the guards or the 55,601 s ceiling.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -6154,3 +6157,32 @@ registration, plan and post-registration proof approved.**
   - Focused CPU verification only: no full regression and no proof rerun.
 - **Unchanged:** the 509-pair design and the 55,601 s ceiling.
 - **Not authorized:** gate 49, checkpoint loading, GPU work, gameplay, training and pushing; the strength run itself.
+
+**Addendum to entry 39 (2026-10-26): the strength block registered; the post-registration proof run once.**
+- **Before registering:** the registry's sha256 was `e39aa059…`, the hash the survey read; unchanged.
+- **Registration and plan (`0c1c18b5`):**
+  - `(202693600, 202694618)` appended last in `ACCOUNTED_SEED_INTERVALS` with its comment block. An AST check
+    against the parent: ACCOUNTED 44 → 45, the prefix identical; EXPOSED (42), RETIRED (40), TEST_ONLY and every
+    other statement unchanged.
+  - `docs/superpowers/evidence/mirror-halving-strength-run/plan.json` is the survey script's
+    `build_plan(202693600, sha256 of record 02)`, in the screen plan's byte format: kind
+    `mirror-halving-strength-plan/1`, base 202693600, n_slots 1018, survey_record_sha256 `7bdf6cf6…c0d6`.
+- **The post-registration proof (`5c4b60a7`):** exit 0; `04_collision_proof_post_run.txt`, sha256 `ca26c5a5…`, in a
+  clean linked worktree at `0c1c18b5` (branch `mirror-halving-strength-post`; main fast-forwarded and the worktree
+  removed afterwards).
+  - It read the block from survey record 02. Expected state (post) HOLDS: ACCOUNTED is the survey's plus exactly
+    the block appended last, nothing else changed, and the plan is committed and equal to `build_plan`.
+  - Direct overlap none, 0 derived streams, injective, nearest gap 1,030 (floor 1,018). Scope: 5,240 + 47,931
+    regular files, no symbolic links.
+  - Controls 45/45. Verdict: THE MIRROR-HALVING STRENGTH BLOCK IS CLEAN AND THE STATE IS AS EXPECTED.
+- **Lifecycle test (`5e07bba4`):** the strength test now requires records 02, 03 and 04, each proof bound to record 02's
+  sha256. Its other conditions:
+  - the plan equals `build_plan` of the surveyed block;
+  - the block is in ACCOUNTED exactly once, with no EXPOSED, RETIRED or TEST_ONLY overlap;
+  - every seed is schedulable by the entry's own predicates;
+  - no closing record exists.
+
+  Focused CPU tests: 184 passed. No regression and no proof rerun.
+- **Not done:** gate 49 closed (49 gates closed), no checkpoint loading, no GPU work, no game, no training, no push.
+- **Prediction on record:** none (a seed procedure).
+- **Status:** registered and proven; awaiting the user's run approval. See do-not-repeat **#100**.
