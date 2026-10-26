@@ -5771,3 +5771,34 @@ the recorded contention.
   wrappers, plans and seed blocks, the screen, the strength comparison and any game remain unauthorized pending the
   user's review.
 - See do-not-repeat **#93**.
+
+**Addendum to entry 39 (2026-10-26, the user's decision): C1 accepted with the disclosed deviation; screen and strength
+ceilings priced; build-only approval.**
+- **Accepted, qualified.** The user's read-only reconciliation:
+  - the committed record shows correctness PASS, identities 40/40 and 64/64, evaluations ratio 0.99605 and seconds
+    ratio 0.82445;
+  - all 35 recorded module hashes match the execution commit;
+  - the wrapper recorded exit 0, gate restoration and no survivors;
+  - main `c36488fa`; 49 gates, all closed.
+- **The idle requirement was violated.** Alternating the search order reduces exposure to timing drift, but it does
+  **not** establish an equal slowdown or an unaffected ratio. The run is accepted for preparation with that
+  qualification. **C1 is not rerun and its timings are not discounted:** there is no measured correction factor.
+- **Ceilings:** entry 39's recorded projections, unchanged, × the frozen 1.5, rounded up to whole seconds. These are
+  estimates from search time and an assumed game length, not measured whole-game durations.
+
+| Step | Total ceiling | TERM, then 10 s grace |
+|---|---:|---:|
+| Screen, 32 pairs | 3,496 s (58 min 16 s) | 3,486 s |
+| Strength comparison, 509 pairs | 55,601 s (15 h 26 min 41 s) | 55,591 s |
+
+- **Approved: a build only.**
+  - The screen and strength wrappers, copied from the existing ones.
+  - The seed-procedure copies, with the plans prepared but the seed blocks unselected.
+  - **Launch must depend on the idle check passing.** A printed check or a memory reminder is not sufficient. Focused
+    CPU-only fake-launch checks must show that a busy machine prevents the launch and an idle one may reach the fake
+    command.
+  - The frozen candidate, budgets, guards and stopping rules are preserved. No additional full regression or mutation
+    campaign.
+  - C1's evidence and the pinned card are preserved.
+- **Not authorized:** running the seed procedures, registration, checkpoint loading, GPU work, games, training and
+  pushing. Gates 47–49 stay closed.
