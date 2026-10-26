@@ -143,6 +143,7 @@ knob) is not a new hypothesis.
 > **Mirror averaging + root sequential halving — one fixed combination, design-only card (decision note after the dual-encoder rejection, 2026-10-26, the user's).** After a read-only review, the user authorized a DRAFT card (`2026-10-26-mirror-averaging-plus-root-halving-combination-card.md`). It proposes: the averaged evaluator at 200 simulations, ordinary opening through ply 19, the unchanged halving rule from ply 20, against the unchanged incumbent at 400, both under `MLX_ENABLE_TF32=0`, at approximately matched network evaluations (guards 1.05× evaluations, 1.10× search seconds); a composition-and-cost check, a 32-pair gross-regression screen and a 509-pair strength comparison (pass > 0.56020). It also proposes a narrow reopening of #47, #59 and #62 for this combination only. The two screens' scores are not current baselines and are not to be added. Nothing built, loaded, seeded or run. Prediction: None stated in advance. See #90.
 > **Mirror averaging + root sequential halving — card FROZEN and step B built (addendum to the decision note, 2026-10-26).** The user approved the fixed combination, the narrow #47/#59/#62 exceptions (this candidate and its specified controls only) and step B; clarifications are in card §11. Build `0ad4de35`: a shared module (game loop copied verbatim from entry 15's match), the C1 entry with gate 47 and its 900-second wrapper, the screen/strength entry with gates 48 and 49 (their wrappers follow C1); 49 gates, all closed. 82 focused CPU tests pass. The CPU loop checks failed once on a defect in the check script (`0e134482`, kept) and passed on run 2 (`58924743`). Regression = the 58-id baseline. Nothing loaded, no GPU search, seeds or games. C1 awaits the user's review of the frozen build. Supersedes the "DRAFT" line above. See #91.
 > **Mirror averaging + root sequential halving — step B accepted; C1 approved once (addendum, 2026-10-26, the user's).** Read-only review found no blocking defect. Accepted: deferring the screen/strength wrappers, plans and seed copies until after C1; the disclosed loop-check repair (no retry permission for C1 or later). C1 may run once (gate 47 only, TF32=0, 890 s + 10 s). A STOP, VOID or timeout closes the combination. The screen, strength comparison, seeds and games remain unauthorized. See #92.
+> **Mirror averaging + root sequential halving — C1 PASS (Post-closure entry 39, 2026-10-26).** One run, 216 s of 900 s, gate 47 restored. Entry 10's check PASS; identity controls 40/40 and 64/64 bitwise; halving at all 64 positions from ply 20. Ratios of totals: evaluations 0.9961 (≤ 1.05), search seconds 0.8245 (≤ 1.10). Derived search-only projections at an assumed 59.8 plies: screen ≈ 0.65 h, strength ≈ 10.3 h. 🔴 Launched while NOT idle (load 4.0, Spotlight at ~313% CPU; check printed but not waited on), so the absolute timings may be inflated; not repeated. No strength claim. The screen, strength comparison and seeds remain unauthorized. Prediction: None stated in advance. See #93.
 
 ## Historical proposal check — programme now closed
 
@@ -1757,6 +1758,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 91. **The mirror-averaging + root-halving exceptions and frozen build (2026-10-26).** #47, #59 and #62 are reopened ONLY for card §2's frozen candidate and C1's two named identity controls (averaging alone at plies < 20; halving over a pass-through wrapper at plies ≥ 20; both at 200 simulations). Do **not** run either component in a match, change a budget or candidate parameter, or let C1's measurements change one: they only price later runs. Do **not** open gate 47 without the user's approval, an idle machine and a fresh panic check; it runs once under its 15-minute ceiling. Do **not** build or run the screen or strength wrappers, plans or seed blocks before C1's result is reviewed; their ceilings come from C1 by card §6. Do **not** edit the card or a pinned module without re-freezing its pins. Do **not** read the loop check's readout-difference counts (fake evaluators) as evidence about play.
 
 92. **C1 of the mirror-averaging + root-halving combination (approved once, 2026-10-26).** Do **not** retry, rerun or extend C1, or open gate 47 a second time: a STOP, VOID or timeout closes the combination. The accepted loop-check repair is not a precedent for any retry. Do **not** open gates 48 or 49, build the screen/strength wrappers, plans or seed blocks, or play a game without the user's review of C1's record and a separate approval. Do **not** rerun the step-B regression; its log is preserved as evidence.
+
+93. **C1's PASS (entry 39), 2026-10-26.** Do **not** rerun C1, open gate 47 again, or "correct" its timings under a quieter machine: it ran once, under recorded contention, and stands as recorded. Do **not** read the PASS or the 0.82 seconds ratio as evidence about playing strength, or the derived hours as whole-game measurements. Do **not** build the screen/strength wrappers, plans or seed blocks, open gates 48 or 49, or play a game without the user's review of entry 39 and a separate approval. Before any later GPU run, wait on the idle check (load below 3, no process above 50% CPU) rather than only printing it.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -5691,3 +5694,80 @@ equal entry 32's, as the same frozen data, code and setting should give. Predict
 - **The pinned card is unchanged.**
 - **Still not authorized:** the screen, the strength comparison, seed registration, gameplay, training and pushing.
 - See do-not-repeat **#92**.
+
+### 39. Mirror averaging + root sequential halving — C1, the composition-and-cost check (2026-10-26, COMPLETED; PASS)
+
+**Test.** Card `docs/superpowers/2026-10-26-mirror-averaging-plus-root-halving-combination-card.md` §4 and §5 C1, built
+in `0ad4de35`. One bounded GPU run, no games and no schedulable seeds, on a fixed panel of 104 committed positions
+(inference-mode-match games 0 and 1, as entry 19). Every search used a fresh `random.Random(90009000)` (test-only band).
+- **Checks:**
+  1. entry 10's averaging correctness check, run unchanged;
+  2. control (a), plies < 20: the candidate equals averaging alone at 200 simulations;
+  3. control (b), plies ≥ 20: halving over a pass-through wrapper equals halving over the plain evaluator at 200;
+  4. cost: one search per side per position after one warm-up search each. The guards are ratios of totals: network
+     evaluations ≤ 1.05× the incumbent's, search seconds ≤ 1.10×.
+- **Sides:** the candidate (halving over the averaging wrapper, 200 simulations) and the incumbent (400).
+
+**Hypothesis.** The composition works as specified (bitwise identities, halving at every position from ply 20), and
+at 200 simulations the combination's cost is within the guards of the incumbent's at 400.
+
+**Why it was plausible.** Each prototype ran in its own screen (entries 11 and 15). Entry 11 found the averaging side
+cheaper in search time at matched evaluations, but on another machine and setting, and without halving.
+
+**Prediction on record.** None stated in advance.
+
+**What ran.**
+- `92dbe110`: the approval was recorded; the read-only panic check found no new panic or reboot since 2026-10-25
+  09:39.
+- `7454e393`: gate 47 opened, in a clean run worktree.
+- The wrapper:
+  - inner and outer exit 0, COMPLETED; 216 s of the 900 s ceiling;
+  - record written by the script;
+  - no survivors; gate restored and read back.
+- `e6a0b23a`: the evidence and the restored gate committed. Main fast-forwarded; the worktree and branch removed.
+- `MLX_ENABLE_TF32` was `"0"` at start and end. Versions: MLX 0.30.3, NumPy 2.4.1, Python 3.14.9. 0 modules were in
+  training mode at load and at the end, on both sides.
+- **🔴 The idle condition was NOT met at launch, an execution lapse.** The pre-launch check was printed but not
+  waited on.
+  - At launch: load average 4.00, with Spotlight's `mds_stores` at about 313% CPU (the record's `loadavg_before` is
+    3.997). At the end the load was 2.95.
+  - The criterion used before GPU runs in this programme (load below 3, no process above 50% CPU) was therefore not
+    satisfied.
+  - The run is not repeated: the approval was one run, with no retry.
+  - The two sides were interleaved position by position (the order alternating), so contention fell on both. Even so,
+    **the absolute seconds and the projections derived from them may be inflated**, and the seconds ratio is not
+    shown to be unaffected.
+
+**Result.** **PASS**: every check held, and the failed-check list is empty.
+- **Entry 10:** PASS, with 16 calls; the largest value difference was 3.0e-8 and the largest prior difference
+  1.1e-8 (tolerance 1e-5).
+- **Control (a):** 40 of 40 identical. **Control (b):** 64 of 64 identical. The candidate used its halving choice at
+  all 64 positions from ply 20; the incumbent used none.
+- **Totals (ratios of totals):**
+
+| Side | Searches | Network evaluations | Network seconds | Search seconds |
+|---|---|---|---|---|
+| Candidate | 104 | 40,858 | 43.96 | 57.23 |
+| Incumbent | 104 | 41,020 | 45.31 | 69.42 |
+
+  - **Evaluations ratio 0.9961** (guard ≤ 1.05); **search-seconds ratio 0.8245** (guard ≤ 1.10).
+  - The halves of the panel gave seconds ratios of 0.816 and 0.833.
+  - Plies < 20: evaluations 1.0025, seconds 0.809. Plies ≥ 20: 0.9919 and 0.835.
+  - Per-position seconds ratios ranged from 0.117 to 7.178 (median 0.815). Only the totals are gated.
+- **DERIVED (search seconds only, at an assumed 59.8 plies per game, entry 15's mean):**
+  - 0.550 s per search for the candidate and 0.667 s for the incumbent;
+  - about 36.4 s of search per game;
+  - screen about 0.65 h, strength comparison about 10.3 h (below the 30 h repricing line).
+  - Whole-game time is unmeasured, and the contention above may inflate these figures.
+
+**Did it match the prediction, and why?** There was none. The composition behaved as built: it consumed the
+wrapper's outputs and its identities were exact. Its cost per search came in below the incumbent's, in line with
+entry 11's direction (half the tree operations at equal network work). That is not shown to be the cause.
+
+**Conclusion / status.** C1 PASS: the composition is verified and approximately compute-matched on this panel, under
+the recorded contention.
+- **Not shown:** anything about playing strength.
+- The ceilings for the screen and the strength comparison may now be priced from these figures (card §6). Their
+  wrappers, plans and seed blocks, the screen, the strength comparison and any game remain unauthorized pending the
+  user's review.
+- See do-not-repeat **#93**.
