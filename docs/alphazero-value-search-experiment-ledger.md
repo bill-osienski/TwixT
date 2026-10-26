@@ -142,6 +142,7 @@ knob) is not a new hypothesis.
 > **Dual-encoder policy branch — REJECTED on paper (addendum to the decision note after Post-closure entry 38, 2026-10-26, the user's).** Step 1 not built; nothing executed (no model loaded; no seeds, games, training or gates). The value-preserving architecture's added inference cost is not justified by current evidence: this experiment has not earned its cost. This is not a result about dual encoders, value preservation, capacity, distillation or strength. The card is kept as the reviewed proposal (§8 records the decision). `calib020_0001` stays the incumbent; the stronger-play goal remains open with no supported next experiment. Supersedes the "DRAFT" line above. See #89.
 > **Mirror averaging + root sequential halving — one fixed combination, design-only card (decision note after the dual-encoder rejection, 2026-10-26, the user's).** After a read-only review, the user authorized a DRAFT card (`2026-10-26-mirror-averaging-plus-root-halving-combination-card.md`). It proposes: the averaged evaluator at 200 simulations, ordinary opening through ply 19, the unchanged halving rule from ply 20, against the unchanged incumbent at 400, both under `MLX_ENABLE_TF32=0`, at approximately matched network evaluations (guards 1.05× evaluations, 1.10× search seconds); a composition-and-cost check, a 32-pair gross-regression screen and a 509-pair strength comparison (pass > 0.56020). It also proposes a narrow reopening of #47, #59 and #62 for this combination only. The two screens' scores are not current baselines and are not to be added. Nothing built, loaded, seeded or run. Prediction: None stated in advance. See #90.
 > **Mirror averaging + root sequential halving — card FROZEN and step B built (addendum to the decision note, 2026-10-26).** The user approved the fixed combination, the narrow #47/#59/#62 exceptions (this candidate and its specified controls only) and step B; clarifications are in card §11. Build `0ad4de35`: a shared module (game loop copied verbatim from entry 15's match), the C1 entry with gate 47 and its 900-second wrapper, the screen/strength entry with gates 48 and 49 (their wrappers follow C1); 49 gates, all closed. 82 focused CPU tests pass. The CPU loop checks failed once on a defect in the check script (`0e134482`, kept) and passed on run 2 (`58924743`). Regression = the 58-id baseline. Nothing loaded, no GPU search, seeds or games. C1 awaits the user's review of the frozen build. Supersedes the "DRAFT" line above. See #91.
+> **Mirror averaging + root sequential halving — step B accepted; C1 approved once (addendum, 2026-10-26, the user's).** Read-only review found no blocking defect. Accepted: deferring the screen/strength wrappers, plans and seed copies until after C1; the disclosed loop-check repair (no retry permission for C1 or later). C1 may run once (gate 47 only, TF32=0, 890 s + 10 s). A STOP, VOID or timeout closes the combination. The screen, strength comparison, seeds and games remain unauthorized. See #92.
 
 ## Historical proposal check — programme now closed
 
@@ -1754,6 +1755,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 90. **The mirror-averaging + root-halving combination card (DRAFT, 2026-10-26).** Do **not** build, load a model, account seeds, use the GPU or play games for it without the user's review of the card and approval of each step. Until the user approves §7's narrow reopening, #47, #59 and #62 stand unchanged; even then they open only for this one frozen combination, never for either component alone, another budget, candidate count, score, tie, start ply or orientation, a rerun or extension of entries 11 or 15, or a second combination. Do **not** use entry 11's or 15's scores as current baselines, add them, or present the hypothesis that averaging helps halving as measured. Do **not** treat simulation counts as proof of matched compute: the recorded network evaluations and runtime decide (card §4). A win would not establish synergy or attribute the gain to either component.
 
 91. **The mirror-averaging + root-halving exceptions and frozen build (2026-10-26).** #47, #59 and #62 are reopened ONLY for card §2's frozen candidate and C1's two named identity controls (averaging alone at plies < 20; halving over a pass-through wrapper at plies ≥ 20; both at 200 simulations). Do **not** run either component in a match, change a budget or candidate parameter, or let C1's measurements change one: they only price later runs. Do **not** open gate 47 without the user's approval, an idle machine and a fresh panic check; it runs once under its 15-minute ceiling. Do **not** build or run the screen or strength wrappers, plans or seed blocks before C1's result is reviewed; their ceilings come from C1 by card §6. Do **not** edit the card or a pinned module without re-freezing its pins. Do **not** read the loop check's readout-difference counts (fake evaluators) as evidence about play.
+
+92. **C1 of the mirror-averaging + root-halving combination (approved once, 2026-10-26).** Do **not** retry, rerun or extend C1, or open gate 47 a second time: a STOP, VOID or timeout closes the combination. The accepted loop-check repair is not a precedent for any retry. Do **not** open gates 48 or 49, build the screen/strength wrappers, plans or seed blocks, or play a game without the user's review of C1's record and a separate approval. Do **not** rerun the step-B regression; its log is preserved as evidence.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -5660,3 +5663,31 @@ equal entry 32's, as the same frozen data, code and setting should give. Predict
   closed.
 - **Prediction on record:** None stated in advance.
 - **Status:** OPEN. The frozen build awaits the user's review before C1. See do-not-repeat **#91**.
+
+**Addendum to the decision note (2026-10-26): step B accepted; C1 approved once.**
+- **The user's review of step B:** accepted, with no blocking implementation defect found.
+  - **Independently verified (read-only):**
+    - the frozen card matches its pin, both prototypes match their historical hashes, and the copied loop functions
+      are unchanged;
+    - C1 implements identical starting RNG states, the fixed panel, excluded control and warm-up costs, ratios of
+      totals and the unchanged guards;
+    - the controlled `last_choice` test distinguishes the two move paths;
+    - the loop evidence supports the reported equivalence and the 130 halving searches per game;
+    - the regression log reports 3,272 passed / 20 failed / 38 errors, with the 58 ids equal to the baseline;
+    - main `e04657d5`; 49 gates, all closed.
+- **Accepted deviations:**
+  - The screen and strength wrappers, plans and seed copies are deferred until after C1, whose measurements set
+    their ceilings.
+  - The loop check's disclosed CPU-harness repair and run 2, with run 1's failed evidence preserved. **This grants no
+    retry permission for C1 or any later run.** No mutation campaign or additional regression is needed.
+- **Evidence preserved, not rerun:** the step-B regression log and its failure-id comparison, create-only and
+  read-only, in `docs/superpowers/evidence/mirror-halving-step-b-regression/`.
+- **Approved: C1 only, once.** It follows a fresh read-only panic check and waits for an idle machine. It runs
+  through its wrapper in a clean run worktree, opening gate 47 only, with:
+  - process-local `MLX_ENABLE_TF32=0` and eval mode;
+  - TERM at 890 s plus 10 s grace;
+  - gate restoration and cleanup verified.
+- **What closes the combination:** a C1 STOP, VOID or timeout, with no automatic retry.
+- **The pinned card is unchanged.**
+- **Still not authorized:** the screen, the strength comparison, seed registration, gameplay, training and pushing.
+- See do-not-repeat **#92**.

@@ -1,0 +1,666 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.9, pytest-9.0.2, pluggy-1.6.0
+rootdir: /Users/bill/projects/TwixT_Game
+configfile: pytest.ini
+collected 3330 items
+
+tests/test_e4_screen_command.py ........................................ [  1%]
+..................                                                       [  1%]
+tests/test_e4_screen_integration.py ................................     [  2%]
+tests/test_e4_screen_reference.py ...............................        [  3%]
+tests/test_e4_screen_rules.py ........................                   [  4%]
+tests/test_e4_screen_runner.py ......................................... [  5%]
+....................................................                     [  7%]
+tests/test_gate_inventory.py ........                                    [  7%]
+tests/test_h1_match_command.py .................................         [  8%]
+tests/test_h1_runner.py ................................................ [  9%]
+.........................................                                [ 11%]
+tests/test_h1_viability.py ............................................. [ 12%]
+.....................                                                    [ 13%]
+tests/test_h2_containment.py ................                            [ 13%]
+tests/test_h2_match.py ................................................. [ 14%]
+........................................................................ [ 17%]
+..................................................                       [ 18%]
+tests/test_h2_replay_export.py .....                                     [ 18%]
+tests/test_h3_combine.py ............................................... [ 20%]
+                                                                         [ 20%]
+tests/test_h3_coproduced_retired.py ..............................       [ 21%]
+tests/test_h3_final_state.py ...............                             [ 21%]
+tests/test_h3_pilot_analysis.py ........................................ [ 22%]
+...................                                                      [ 23%]
+tests/test_h3_pilot_openings.py ........................................ [ 24%]
+........                                                                 [ 24%]
+tests/test_h3_pilot_runner.py .......................................... [ 26%]
+............................................                             [ 27%]
+tests/test_h3_study_analysis.py ................................         [ 28%]
+tests/test_h3_study_rules.py .......................                     [ 29%]
+tests/test_h3_study_runner.py .......................................... [ 30%]
+....                                                                     [ 30%]
+tests/test_h3_uniform_population.py .................................... [ 31%]
+........................................................................ [ 33%]
+................................................                         [ 35%]
+tests/test_h4_4a_characterization.py ................................... [ 36%]
+.....................................                                    [ 37%]
+tests/test_h4_4b_acceptance_qualification.py ........................... [ 38%]
+........................................................................ [ 40%]
+.........                                                                [ 40%]
+tests/test_h4_confirmatory_analysis.py ................................. [ 41%]
+......................................................                   [ 43%]
+tests/test_h4_manifest_writer.py ..................                      [ 43%]
+tests/test_h4_pilot_decision.py ....................                     [ 44%]
+tests/test_h4_pilot_feasibility.py ..................................... [ 45%]
+........................................                                 [ 46%]
+tests/test_h4_production_path.py ....................................... [ 47%]
+..............................                                           [ 48%]
+tests/test_h4_repair_qualification.py .................................. [ 49%]
+........................................                                 [ 50%]
+tests/test_h4_runner.py ................................................ [ 52%]
+.......................                                                  [ 52%]
+tests/test_h5_cap_completion.py ........................................ [ 54%]
+................................................                         [ 55%]
+tests/test_h5_confirmatory_analysis.py ................................. [ 56%]
+.......................                                                  [ 57%]
+tests/test_h5_incumbent_defence_factors.py ............................. [ 58%]
+...................                                                      [ 58%]
+tests/test_h5_incumbent_defence.py ..................................... [ 59%]
+................                                                         [ 60%]
+tests/test_h5_incumbent_tactics.py ..................................... [ 61%]
+.....................................                                    [ 62%]
+tests/test_h5_manifest_writer.py .....................                   [ 63%]
+tests/test_h5_production_qualification.py ...........F.F.F.FFFF.F.FF.... [ 64%]
+..F......                                                                [ 64%]
+tests/test_h5_runner.py .............F.................................. [ 65%]
+.............................................                            [ 67%]
+tests/test_h5_weakness_review.py ..................                      [ 67%]
+tests/test_injected_defect_controls.py ................................. [ 68%]
+.                                                                        [ 68%]
+tests/test_l0_match_runner.py .......................................... [ 69%]
+...............................                                          [ 70%]
+tests/test_l0_match.py ................................................. [ 72%]
+...............................................................          [ 74%]
+tests/test_t1j_adapter.py .............................................. [ 75%]
+.....................                                                    [ 76%]
+tests/test_t1j_toolchain.py ................                             [ 76%]
+tests/test_trainer_teacher_mode_gate.py ..                               [ 76%]
+tests/test_tactical_candidate.py ....................................... [ 77%]
+...                                                                      [ 78%]
+tests/test_candidate_match_runner.py ................................... [ 79%]
+........................................................................ [ 81%]
+........................................................................ [ 83%]
+...............................                                          [ 84%]
+tests/test_tactical_corpus.py .............EEFEFFFFEEEEEEEEEEEEEEEEEEEEE [ 85%]
+EFEEEEEEEEE.....EEEEFF                                                   [ 86%]
+tests/test_tactical_qualification.py ................................... [ 87%]
+...............................................                          [ 88%]
+tests/test_tactical_pilot.py ........................................... [ 90%]
+........................................................................ [ 92%]
+......................................................................   [ 94%]
+tests/test_tactical_seed_survey.py .................                     [ 94%]
+tests/test_tactical_seed_proof.py ...............................        [ 95%]
+tests/test_tactical_r1_binding.py ...................................... [ 96%]
+...................................................................      [ 98%]
+tests/test_tactical_seed_closing.py .................................... [100%]
+
+==================================== ERRORS ====================================
+_ ERROR at setup of test_RUN_COMPLETE_writes_a_PROVISIONAL_payload_and_NEVER_corpus_json _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_____ ERROR at setup of test_RUN_every_completed_game_is_DURABLE_in_order ______
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_____ ERROR at setup of test_RUN_a_PRIOR_position_is_EXCLUDED_and_counted ______
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_the_PARENT_publishes_the_provisional_BYTES_after_a_COMPLETE_exit _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_the_PARENT_publishes_NOTHING_unless_everything_holds[the payload altered after the record] _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_the_PARENT_publishes_NOTHING_unless_everything_holds[the record is STOP] _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_the_PARENT_publishes_NOTHING_unless_everything_holds[a nonzero exit] _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_the_PARENT_publishes_NOTHING_unless_everything_holds[terminated] _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_the_PARENT_publishes_NOTHING_unless_everything_holds[another specification] _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_the_PARENT_publishes_NOTHING_unless_everything_holds[inventory.json altered] _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_the_PARENT_publishes_NOTHING_unless_everything_holds[a position's moves altered] _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_the_PARENT_publishes_NOTHING_unless_everything_holds[a class altered] _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_the_PARENT_publishes_NOTHING_unless_everything_holds[a cross-check not agreeing] _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_the_PARENT_publishes_NOTHING_unless_everything_holds[a quota exceeded] _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_the_PARENT_publishes_NOTHING_unless_everything_holds[a ZERO-game budget] _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_the_PARENT_publishes_NOTHING_unless_everything_holds[the candidate log altered] _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_the_PARENT_publishes_NOTHING_unless_everything_holds[the candidate log missing] _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_the_PARENT_publishes_NOTHING_unless_everything_holds[a game out of order] _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_the_PARENT_publishes_NOTHING_unless_everything_holds[the record's count] _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_the_PARENT_publishes_NOTHING_unless_everything_holds[the won count] _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_the_PARENT_publishes_NOTHING_unless_everything_holds[a class count] _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_the_PARENT_publishes_NOTHING_unless_everything_holds[a selection outside the log] _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_the_PARENT_publishes_NOTHING_unless_everything_holds[the record's specification] _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_the_PARENT_publishes_NOTHING_unless_everything_holds[unpinned sources] _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_a_COMPLETED_child_payload_followed_by_TERMINATION_is_NEVER_published _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_QUALIFICATION_requires_the_parents_COMPLETE_publication[watchdog not COMPLETE] _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_QUALIFICATION_requires_the_parents_COMPLETE_publication[corpus altered] _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_QUALIFICATION_requires_the_parents_COMPLETE_publication[an altered child record (watchdog binding)] _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_QUALIFICATION_requires_the_parents_COMPLETE_publication[record hash mismatch] _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_QUALIFICATION_requires_the_parents_COMPLETE_publication[watchdog provisional hash] _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_QUALIFICATION_requires_the_parents_COMPLETE_publication[inventory altered] _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_QUALIFICATION_requires_the_parents_COMPLETE_publication[candidate log altered] _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_QUALIFICATION_requires_the_parents_COMPLETE_publication[sources not pinned] _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+______ ERROR at setup of test_QUALIFICATION_requires_the_corpus_COMMITTED ______
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+__ ERROR at setup of test_an_ERROR_in_validation_is_a_recorded_NOT_PUBLISHED ___
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_a_FAILED_publication_write_leaves_NO_corpus_json[at once] _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ ERROR at setup of test_a_FAILED_publication_write_leaves_NO_corpus_json[after 9 bytes] _
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+______________ ERROR at setup of test_publication_is_CREATE_ONLY _______________
+tests/test_tactical_corpus.py:272: in small_run
+    return d, TQ._run(SMALL, EMPTY, d)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+=================================== FAILURES ===================================
+__________ test_the_REAL_code_state_is_EQUIVALENT_to_H4s_bound_record __________
+tests/test_h5_production_qualification.py:137: in test_the_REAL_code_state_is_EQUIVALENT_to_H4s_bound_record
+    obs = Q.h4_equivalence(real_bound())
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/h5_production_qualification.py:167: in h4_equivalence
+    _stop(f"H4 play-path files changed since H4 was bound: {moved[:3]}")
+scripts/GPU/alphazero/h5_production_qualification.py:83: in _stop
+    raise _Stop(reason)
+E   scripts.GPU.alphazero.h5_production_qualification._Stop: H4 play-path files changed since H4 was bound: ['scripts/GPU/alphazero/eval_integrity.py', 'scripts/GPU/alphazero/eval_runner.py', 'scripts/GPU/alphazero/probe_eval.py']
+________ test_a_MOVED_H4_file_or_card_STOPS[<lambda>-H4 cards changed] _________
+tests/test_h5_production_qualification.py:144: in _stops
+    fn()
+tests/test_h5_production_qualification.py:159: in <lambda>
+    _stops(lambda: Q.h4_equivalence(real_bound()), match)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/h5_production_qualification.py:167: in h4_equivalence
+    _stop(f"H4 play-path files changed since H4 was bound: {moved[:3]}")
+scripts/GPU/alphazero/h5_production_qualification.py:83: in _stop
+    raise _Stop(reason)
+E   scripts.GPU.alphazero.h5_production_qualification._Stop: H4 play-path files changed since H4 was bound: ['scripts/GPU/alphazero/eval_integrity.py', 'scripts/GPU/alphazero/eval_runner.py', 'scripts/GPU/alphazero/probe_eval.py']
+
+During handling of the above exception, another exception occurred:
+tests/test_h5_production_qualification.py:159: in test_a_MOVED_H4_file_or_card_STOPS
+    _stops(lambda: Q.h4_equivalence(real_bound()), match)
+tests/test_h5_production_qualification.py:143: in _stops
+    with pytest.raises(Q._Stop, match=match):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AssertionError: Regex pattern did not match.
+E     Expected regex: 'H4 cards changed'
+E     Actual message: "H4 play-path files changed since H4 was bound: ['scripts/GPU/alphazero/eval_integrity.py', 'scripts/GPU/alphazero/eval_runner.py', 'scripts/GPU/alphazero/probe_eval.py']"
+________ test_a_REGISTRY_changed_OUTSIDE_its_interval_registries_STOPS _________
+tests/test_h5_production_qualification.py:144: in _stops
+    fn()
+tests/test_h5_production_qualification.py:172: in <lambda>
+    _stops(lambda: Q.h4_equivalence(real_bound()), "changed outside its four interval")
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/h5_production_qualification.py:167: in h4_equivalence
+    _stop(f"H4 play-path files changed since H4 was bound: {moved[:3]}")
+scripts/GPU/alphazero/h5_production_qualification.py:83: in _stop
+    raise _Stop(reason)
+E   scripts.GPU.alphazero.h5_production_qualification._Stop: H4 play-path files changed since H4 was bound: ['scripts/GPU/alphazero/eval_integrity.py', 'scripts/GPU/alphazero/eval_runner.py', 'scripts/GPU/alphazero/probe_eval.py']
+
+During handling of the above exception, another exception occurred:
+tests/test_h5_production_qualification.py:172: in test_a_REGISTRY_changed_OUTSIDE_its_interval_registries_STOPS
+    _stops(lambda: Q.h4_equivalence(real_bound()), "changed outside its four interval")
+tests/test_h5_production_qualification.py:143: in _stops
+    with pytest.raises(Q._Stop, match=match):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AssertionError: Regex pattern did not match.
+E     Expected regex: 'changed outside its four interval'
+E     Actual message: "H4 play-path files changed since H4 was bound: ['scripts/GPU/alphazero/eval_integrity.py', 'scripts/GPU/alphazero/eval_runner.py', 'scripts/GPU/alphazero/probe_eval.py']"
+______________________ test_a_DIFFERENT_T1J_RUNTIME_STOPS ______________________
+tests/test_h5_production_qualification.py:144: in _stops
+    fn()
+tests/test_h5_production_qualification.py:187: in <lambda>
+    _stops(lambda: Q.h4_equivalence(fake), "runtime differs from H4's in \\['toolchain'\\]")
+                   ^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/h5_production_qualification.py:167: in h4_equivalence
+    _stop(f"H4 play-path files changed since H4 was bound: {moved[:3]}")
+scripts/GPU/alphazero/h5_production_qualification.py:83: in _stop
+    raise _Stop(reason)
+E   scripts.GPU.alphazero.h5_production_qualification._Stop: H4 play-path files changed since H4 was bound: ['scripts/GPU/alphazero/eval_integrity.py', 'scripts/GPU/alphazero/eval_runner.py', 'scripts/GPU/alphazero/probe_eval.py']
+
+During handling of the above exception, another exception occurred:
+tests/test_h5_production_qualification.py:187: in test_a_DIFFERENT_T1J_RUNTIME_STOPS
+    _stops(lambda: Q.h4_equivalence(fake), "runtime differs from H4's in \\['toolchain'\\]")
+tests/test_h5_production_qualification.py:143: in _stops
+    with pytest.raises(Q._Stop, match=match):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AssertionError: Regex pattern did not match.
+E     Expected regex: "runtime differs from H4's in \\['toolchain'\\]"
+E     Actual message: "H4 play-path files changed since H4 was bound: ['scripts/GPU/alphazero/eval_integrity.py', 'scripts/GPU/alphazero/eval_runner.py', 'scripts/GPU/alphazero/probe_eval.py']"
+_______ test_an_IDENTITY_differing_in_more_than_design_STOPS[<lambda>0] ________
+tests/test_h5_production_qualification.py:144: in _stops
+    fn()
+tests/test_h5_production_qualification.py:197: in <lambda>
+    _stops(lambda: Q.h4_equivalence(b), "identity differs from H4's")
+                   ^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/h5_production_qualification.py:167: in h4_equivalence
+    _stop(f"H4 play-path files changed since H4 was bound: {moved[:3]}")
+scripts/GPU/alphazero/h5_production_qualification.py:83: in _stop
+    raise _Stop(reason)
+E   scripts.GPU.alphazero.h5_production_qualification._Stop: H4 play-path files changed since H4 was bound: ['scripts/GPU/alphazero/eval_integrity.py', 'scripts/GPU/alphazero/eval_runner.py', 'scripts/GPU/alphazero/probe_eval.py']
+
+During handling of the above exception, another exception occurred:
+tests/test_h5_production_qualification.py:197: in test_an_IDENTITY_differing_in_more_than_design_STOPS
+    _stops(lambda: Q.h4_equivalence(b), "identity differs from H4's")
+tests/test_h5_production_qualification.py:143: in _stops
+    with pytest.raises(Q._Stop, match=match):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AssertionError: Regex pattern did not match.
+E     Expected regex: "identity differs from H4's"
+E     Actual message: "H4 play-path files changed since H4 was bound: ['scripts/GPU/alphazero/eval_integrity.py', 'scripts/GPU/alphazero/eval_runner.py', 'scripts/GPU/alphazero/probe_eval.py']"
+_______ test_an_IDENTITY_differing_in_more_than_design_STOPS[<lambda>1] ________
+tests/test_h5_production_qualification.py:144: in _stops
+    fn()
+tests/test_h5_production_qualification.py:197: in <lambda>
+    _stops(lambda: Q.h4_equivalence(b), "identity differs from H4's")
+                   ^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/h5_production_qualification.py:167: in h4_equivalence
+    _stop(f"H4 play-path files changed since H4 was bound: {moved[:3]}")
+scripts/GPU/alphazero/h5_production_qualification.py:83: in _stop
+    raise _Stop(reason)
+E   scripts.GPU.alphazero.h5_production_qualification._Stop: H4 play-path files changed since H4 was bound: ['scripts/GPU/alphazero/eval_integrity.py', 'scripts/GPU/alphazero/eval_runner.py', 'scripts/GPU/alphazero/probe_eval.py']
+
+During handling of the above exception, another exception occurred:
+tests/test_h5_production_qualification.py:197: in test_an_IDENTITY_differing_in_more_than_design_STOPS
+    _stops(lambda: Q.h4_equivalence(b), "identity differs from H4's")
+tests/test_h5_production_qualification.py:143: in _stops
+    with pytest.raises(Q._Stop, match=match):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AssertionError: Regex pattern did not match.
+E     Expected regex: "identity differs from H4's"
+E     Actual message: "H4 play-path files changed since H4 was bound: ['scripts/GPU/alphazero/eval_integrity.py', 'scripts/GPU/alphazero/eval_runner.py', 'scripts/GPU/alphazero/probe_eval.py']"
+_______ test_an_IDENTITY_differing_in_more_than_design_STOPS[<lambda>2] ________
+tests/test_h5_production_qualification.py:144: in _stops
+    fn()
+tests/test_h5_production_qualification.py:197: in <lambda>
+    _stops(lambda: Q.h4_equivalence(b), "identity differs from H4's")
+                   ^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/h5_production_qualification.py:167: in h4_equivalence
+    _stop(f"H4 play-path files changed since H4 was bound: {moved[:3]}")
+scripts/GPU/alphazero/h5_production_qualification.py:83: in _stop
+    raise _Stop(reason)
+E   scripts.GPU.alphazero.h5_production_qualification._Stop: H4 play-path files changed since H4 was bound: ['scripts/GPU/alphazero/eval_integrity.py', 'scripts/GPU/alphazero/eval_runner.py', 'scripts/GPU/alphazero/probe_eval.py']
+
+During handling of the above exception, another exception occurred:
+tests/test_h5_production_qualification.py:197: in test_an_IDENTITY_differing_in_more_than_design_STOPS
+    _stops(lambda: Q.h4_equivalence(b), "identity differs from H4's")
+tests/test_h5_production_qualification.py:143: in _stops
+    with pytest.raises(Q._Stop, match=match):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AssertionError: Regex pattern did not match.
+E     Expected regex: "identity differs from H4's"
+E     Actual message: "H4 play-path files changed since H4 was bound: ['scripts/GPU/alphazero/eval_integrity.py', 'scripts/GPU/alphazero/eval_runner.py', 'scripts/GPU/alphazero/probe_eval.py']"
+_ test_a_PIN_that_does_not_recompute_STOPS_before_its_content_is_used[H4_REGISTRY_BLOB_SHA256] _
+tests/test_h5_production_qualification.py:144: in _stops
+    fn()
+tests/test_h5_production_qualification.py:203: in <lambda>
+    _stops(lambda: Q.h4_equivalence(real_bound()), "does not hash to its pin")
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/h5_production_qualification.py:167: in h4_equivalence
+    _stop(f"H4 play-path files changed since H4 was bound: {moved[:3]}")
+scripts/GPU/alphazero/h5_production_qualification.py:83: in _stop
+    raise _Stop(reason)
+E   scripts.GPU.alphazero.h5_production_qualification._Stop: H4 play-path files changed since H4 was bound: ['scripts/GPU/alphazero/eval_integrity.py', 'scripts/GPU/alphazero/eval_runner.py', 'scripts/GPU/alphazero/probe_eval.py']
+
+During handling of the above exception, another exception occurred:
+tests/test_h5_production_qualification.py:203: in test_a_PIN_that_does_not_recompute_STOPS_before_its_content_is_used
+    _stops(lambda: Q.h4_equivalence(real_bound()), "does not hash to its pin")
+tests/test_h5_production_qualification.py:143: in _stops
+    with pytest.raises(Q._Stop, match=match):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AssertionError: Regex pattern did not match.
+E     Expected regex: 'does not hash to its pin'
+E     Actual message: "H4 play-path files changed since H4 was bound: ['scripts/GPU/alphazero/eval_integrity.py', 'scripts/GPU/alphazero/eval_runner.py', 'scripts/GPU/alphazero/probe_eval.py']"
+_______ test_an_EARLY_qualification_runs_CLEAN_and_says_it_binds_NOTHING _______
+tests/test_h5_production_qualification.py:256: in test_an_EARLY_qualification_runs_CLEAN_and_says_it_binds_NOTHING
+    assert (rec["role"], rec["result"], rec["failing_stage"]) == ("EARLY", "CLEAN", None), \
+E   AssertionError: H4 play-path files changed since H4 was bound: ['scripts/GPU/alphazero/eval_integrity.py', 'scripts/GPU/alphazero/eval_runner.py', 'scripts/GPU/alphazero/probe_eval.py']
+E   assert ('EARLY', 'ST..._equivalence') == ('EARLY', 'CLEAN', None)
+E     
+E     At index 1 diff: 'STOP' != 'CLEAN'
+E     Use -v to get more diff
+_________ test_a_BINDING_qualification_writes_ONLY_to_the_binding_dir __________
+tests/test_h5_production_qualification.py:278: in test_a_BINDING_qualification_writes_ONLY_to_the_binding_dir
+    assert (rec["role"], rec["result"]) == ("BINDING", "CLEAN"), rec["reason"]
+E   AssertionError: H4 play-path files changed since H4 was bound: ['scripts/GPU/alphazero/eval_integrity.py', 'scripts/GPU/alphazero/eval_runner.py', 'scripts/GPU/alphazero/probe_eval.py']
+E   assert ('BINDING', 'STOP') == ('BINDING', 'CLEAN')
+E     
+E     At index 1 diff: 'STOP' != 'CLEAN'
+E     Use -v to get more diff
+_________ test_a_NON_H4_TOOLCHAIN_is_a_recorded_STOP_at_h4_equivalence _________
+tests/test_h5_production_qualification.py:327: in test_a_NON_H4_TOOLCHAIN_is_a_recorded_STOP_at_h4_equivalence
+    assert "runtime differs from H4's in ['toolchain']" in rec["reason"]
+E   assert "runtime differs from H4's in ['toolchain']" in "H4 play-path files changed since H4 was bound: ['scripts/GPU/alphazero/eval_integrity.py', 'scripts/GPU/alphazero/eval_runner.py', 'scripts/GPU/alphazero/probe_eval.py']"
+___________________________ test_H5_edits_NO_H4_file ___________________________
+tests/test_h5_runner.py:219: in test_H5_edits_NO_H4_file
+    assert moved == []
+E   AssertionError: assert ['scripts/GPU...robe_eval.py'] == []
+E     
+E     Left contains 3 more items, first extra item: 'scripts/GPU/alphazero/eval_integrity.py'
+E     Use -v to get more diff
+_______________ test_the_whole_RUN_is_REPRODUCIBLE_byte_for_byte _______________
+tests/test_tactical_corpus.py:306: in test_the_whole_RUN_is_REPRODUCIBLE_byte_for_byte
+    TQ._run(SMALL, EMPTY, a)
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+____________ test_RUN_a_CHECKER_DISAGREEMENT_STOPS_with_no_payload _____________
+tests/test_tactical_corpus.py:329: in test_RUN_a_CHECKER_DISAGREEMENT_STOPS_with_no_payload
+    rec = TQ._run(SMALL, EMPTY, d)
+          ^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+______ test_RUN_an_INTERRUPTION_keeps_every_completed_game_and_no_payload ______
+tests/test_tactical_corpus.py:345: in test_RUN_an_INTERRUPTION_keeps_every_completed_game_and_no_payload
+    TQ._run(SMALL, EMPTY, d)
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_________________ test_RUN_a_NON_REPRODUCIBLE_generator_STOPS __________________
+tests/test_tactical_corpus.py:362: in test_RUN_a_NON_REPRODUCIBLE_generator_STOPS
+    rec = TQ._run(SMALL, EMPTY, claimed(tmp_path))
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+____________ test_RUN_the_DEADLINE_and_the_INTERPRETER_are_enforced ____________
+tests/test_tactical_corpus.py:378: in test_RUN_the_DEADLINE_and_the_INTERPRETER_are_enforced
+    rec = TQ._run(SMALL, EMPTY, claimed(tmp_path / "t"), clock=clock, wall_s=5000.0)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:303: in _run
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not {spec['python']}")
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+______ test_PUBLIC_ENTRY_runs_in_the_real_state_and_the_PARENT_publishes _______
+tests/test_tactical_corpus.py:533: in test_PUBLIC_ENTRY_runs_in_the_real_state_and_the_PARENT_publishes
+    w = TQ.freeze()
+        ^^^^^^^^^^^
+scripts/GPU/alphazero/tactical_corpus.py:625: in freeze
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not "
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ test_a_SETTLEMENT_failure_or_interruption_still_leaves_watchdog_json[RuntimeError-SETTLE_FAILED] _
+tests/test_tactical_corpus.py:664: in test_a_SETTLEMENT_failure_or_interruption_still_leaves_watchdog_json
+    TQ.freeze()
+scripts/GPU/alphazero/tactical_corpus.py:625: in freeze
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not "
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+_ test_a_SETTLEMENT_failure_or_interruption_still_leaves_watchdog_json[KeyboardInterrupt-INTERRUPTED] _
+tests/test_tactical_corpus.py:664: in test_a_SETTLEMENT_failure_or_interruption_still_leaves_watchdog_json
+    TQ.freeze()
+scripts/GPU/alphazero/tactical_corpus.py:625: in freeze
+    raise CorpusRefused(f"the interpreter is {platform.python_version()}, not "
+E   scripts.GPU.alphazero.tactical_corpus.CorpusRefused: the interpreter is 3.14.9, not 3.14.7
+=========================== short test summary info ============================
+FAILED tests/test_h5_production_qualification.py::test_the_REAL_code_state_is_EQUIVALENT_to_H4s_bound_record
+FAILED tests/test_h5_production_qualification.py::test_a_MOVED_H4_file_or_card_STOPS[<lambda>-H4 cards changed]
+FAILED tests/test_h5_production_qualification.py::test_a_REGISTRY_changed_OUTSIDE_its_interval_registries_STOPS
+FAILED tests/test_h5_production_qualification.py::test_a_DIFFERENT_T1J_RUNTIME_STOPS
+FAILED tests/test_h5_production_qualification.py::test_an_IDENTITY_differing_in_more_than_design_STOPS[<lambda>0]
+FAILED tests/test_h5_production_qualification.py::test_an_IDENTITY_differing_in_more_than_design_STOPS[<lambda>1]
+FAILED tests/test_h5_production_qualification.py::test_an_IDENTITY_differing_in_more_than_design_STOPS[<lambda>2]
+FAILED tests/test_h5_production_qualification.py::test_a_PIN_that_does_not_recompute_STOPS_before_its_content_is_used[H4_REGISTRY_BLOB_SHA256]
+FAILED tests/test_h5_production_qualification.py::test_an_EARLY_qualification_runs_CLEAN_and_says_it_binds_NOTHING
+FAILED tests/test_h5_production_qualification.py::test_a_BINDING_qualification_writes_ONLY_to_the_binding_dir
+FAILED tests/test_h5_production_qualification.py::test_a_NON_H4_TOOLCHAIN_is_a_recorded_STOP_at_h4_equivalence
+FAILED tests/test_h5_runner.py::test_H5_edits_NO_H4_file - AssertionError: as...
+FAILED tests/test_tactical_corpus.py::test_the_whole_RUN_is_REPRODUCIBLE_byte_for_byte
+FAILED tests/test_tactical_corpus.py::test_RUN_a_CHECKER_DISAGREEMENT_STOPS_with_no_payload
+FAILED tests/test_tactical_corpus.py::test_RUN_an_INTERRUPTION_keeps_every_completed_game_and_no_payload
+FAILED tests/test_tactical_corpus.py::test_RUN_a_NON_REPRODUCIBLE_generator_STOPS
+FAILED tests/test_tactical_corpus.py::test_RUN_the_DEADLINE_and_the_INTERPRETER_are_enforced
+FAILED tests/test_tactical_corpus.py::test_PUBLIC_ENTRY_runs_in_the_real_state_and_the_PARENT_publishes
+FAILED tests/test_tactical_corpus.py::test_a_SETTLEMENT_failure_or_interruption_still_leaves_watchdog_json[RuntimeError-SETTLE_FAILED]
+FAILED tests/test_tactical_corpus.py::test_a_SETTLEMENT_failure_or_interruption_still_leaves_watchdog_json[KeyboardInterrupt-INTERRUPTED]
+ERROR tests/test_tactical_corpus.py::test_RUN_COMPLETE_writes_a_PROVISIONAL_payload_and_NEVER_corpus_json
+ERROR tests/test_tactical_corpus.py::test_RUN_every_completed_game_is_DURABLE_in_order
+ERROR tests/test_tactical_corpus.py::test_RUN_a_PRIOR_position_is_EXCLUDED_and_counted
+ERROR tests/test_tactical_corpus.py::test_the_PARENT_publishes_the_provisional_BYTES_after_a_COMPLETE_exit
+ERROR tests/test_tactical_corpus.py::test_the_PARENT_publishes_NOTHING_unless_everything_holds[the payload altered after the record]
+ERROR tests/test_tactical_corpus.py::test_the_PARENT_publishes_NOTHING_unless_everything_holds[the record is STOP]
+ERROR tests/test_tactical_corpus.py::test_the_PARENT_publishes_NOTHING_unless_everything_holds[a nonzero exit]
+ERROR tests/test_tactical_corpus.py::test_the_PARENT_publishes_NOTHING_unless_everything_holds[terminated]
+ERROR tests/test_tactical_corpus.py::test_the_PARENT_publishes_NOTHING_unless_everything_holds[another specification]
+ERROR tests/test_tactical_corpus.py::test_the_PARENT_publishes_NOTHING_unless_everything_holds[inventory.json altered]
+ERROR tests/test_tactical_corpus.py::test_the_PARENT_publishes_NOTHING_unless_everything_holds[a position's moves altered]
+ERROR tests/test_tactical_corpus.py::test_the_PARENT_publishes_NOTHING_unless_everything_holds[a class altered]
+ERROR tests/test_tactical_corpus.py::test_the_PARENT_publishes_NOTHING_unless_everything_holds[a cross-check not agreeing]
+ERROR tests/test_tactical_corpus.py::test_the_PARENT_publishes_NOTHING_unless_everything_holds[a quota exceeded]
+ERROR tests/test_tactical_corpus.py::test_the_PARENT_publishes_NOTHING_unless_everything_holds[a ZERO-game budget]
+ERROR tests/test_tactical_corpus.py::test_the_PARENT_publishes_NOTHING_unless_everything_holds[the candidate log altered]
+ERROR tests/test_tactical_corpus.py::test_the_PARENT_publishes_NOTHING_unless_everything_holds[the candidate log missing]
+ERROR tests/test_tactical_corpus.py::test_the_PARENT_publishes_NOTHING_unless_everything_holds[a game out of order]
+ERROR tests/test_tactical_corpus.py::test_the_PARENT_publishes_NOTHING_unless_everything_holds[the record's count]
+ERROR tests/test_tactical_corpus.py::test_the_PARENT_publishes_NOTHING_unless_everything_holds[the won count]
+ERROR tests/test_tactical_corpus.py::test_the_PARENT_publishes_NOTHING_unless_everything_holds[a class count]
+ERROR tests/test_tactical_corpus.py::test_the_PARENT_publishes_NOTHING_unless_everything_holds[a selection outside the log]
+ERROR tests/test_tactical_corpus.py::test_the_PARENT_publishes_NOTHING_unless_everything_holds[the record's specification]
+ERROR tests/test_tactical_corpus.py::test_the_PARENT_publishes_NOTHING_unless_everything_holds[unpinned sources]
+ERROR tests/test_tactical_corpus.py::test_a_COMPLETED_child_payload_followed_by_TERMINATION_is_NEVER_published
+ERROR tests/test_tactical_corpus.py::test_QUALIFICATION_requires_the_parents_COMPLETE_publication[watchdog not COMPLETE]
+ERROR tests/test_tactical_corpus.py::test_QUALIFICATION_requires_the_parents_COMPLETE_publication[corpus altered]
+ERROR tests/test_tactical_corpus.py::test_QUALIFICATION_requires_the_parents_COMPLETE_publication[an altered child record (watchdog binding)]
+ERROR tests/test_tactical_corpus.py::test_QUALIFICATION_requires_the_parents_COMPLETE_publication[record hash mismatch]
+ERROR tests/test_tactical_corpus.py::test_QUALIFICATION_requires_the_parents_COMPLETE_publication[watchdog provisional hash]
+ERROR tests/test_tactical_corpus.py::test_QUALIFICATION_requires_the_parents_COMPLETE_publication[inventory altered]
+ERROR tests/test_tactical_corpus.py::test_QUALIFICATION_requires_the_parents_COMPLETE_publication[candidate log altered]
+ERROR tests/test_tactical_corpus.py::test_QUALIFICATION_requires_the_parents_COMPLETE_publication[sources not pinned]
+ERROR tests/test_tactical_corpus.py::test_QUALIFICATION_requires_the_corpus_COMMITTED
+ERROR tests/test_tactical_corpus.py::test_an_ERROR_in_validation_is_a_recorded_NOT_PUBLISHED
+ERROR tests/test_tactical_corpus.py::test_a_FAILED_publication_write_leaves_NO_corpus_json[at once]
+ERROR tests/test_tactical_corpus.py::test_a_FAILED_publication_write_leaves_NO_corpus_json[after 9 bytes]
+ERROR tests/test_tactical_corpus.py::test_publication_is_CREATE_ONLY - script...
+============ 20 failed, 3272 passed, 38 errors in 967.01s (0:16:07) ============
