@@ -242,14 +242,30 @@ def test_THE_SEED_COPIES_MATCH_THE_RUN_THEY_SERVE(kind):
     assert all(ok for _label, ok, _detail in closing._controls(202700000))
 
 
-def test_NO_PLAN_IS_COMMITTED_YET_the_strength_block_is_unselected():
+def test_NO_PLAN_IS_COMMITTED_YET_the_strength_block_is_surveyed_and_UNREGISTERED():
     """The pre-registration proof requires that no plan exists; the match refuses a plan without an int base.
-    RE-ANCHORED 2026-10-26: the screen's block was surveyed, proven and registered (see the next test); only the
-    strength comparison's stays unselected."""
+    RE-ANCHORED 2026-10-26: the strength block was surveyed (2ccc9037) and pre-proven (9631ec72) but not registered.
+    The pre-proof is bound to the committed survey record; no plan, post-proof or closing record exists; and no
+    registry holds any seed of the block. Read-only; nothing is drawn."""
+    import hashlib
+    from scripts.GPU.alphazero import e4_screen_reference as REG
     kind = "strength"
+    here = EV / f"mirror-halving-{kind}-seed-survey"
     assert not (ROOT / MATCH.KINDS[kind]["plan"]).exists()
-    assert not list((EV / f"mirror-halving-{kind}-seed-survey").glob("0[234]_*"))
+    assert sorted(p.name for p in here.glob("0[234]_*")) == ["02_seed_survey_run.txt", "03_collision_proof_pre_run.txt"]
     assert not (EV / f"mirror-halving-{kind}-seed-closing/02_derive_usage_run.txt").exists()
+    survey = (here / "02_seed_survey_run.txt").read_text(encoding="utf-8")
+    pre = (here / "03_collision_proof_pre_run.txt").read_text(encoding="utf-8")
+    n = KINDS[kind]["slots"]
+    assert "SURVEY VERDICT   : THE MIRROR-HALVING STRENGTH BLOCK IS CLEAN\n" in survey and "controls passed: 45/45" in survey
+    sha = hashlib.sha256((here / "02_seed_survey_run.txt").read_bytes()).hexdigest()
+    assert f"02_seed_survey_run.txt sha256 {sha} (read at " in pre
+    assert "EXPECTED STATE (pre): HOLDS" in pre and "controls passed: 45/45" in pre
+    lo = int(survey.split("; BASE = ", 1)[1].split(";", 1)[0])
+    assert f"block = [{lo}, {lo + n}) -- {n} seeds" in survey and f"THE BLOCK, read from the record: [{lo}, {lo + n})" in pre
+    assert not any(a < lo + n and lo < b for name in ("ACCOUNTED_SEED_INTERVALS", "EXPOSED_SEED_INTERVALS",
+                                                      "RETIRED_SEED_INTERVALS", "TEST_ONLY_SEED_INTERVALS")
+                   for a, b in getattr(REG, name))
 
 
 def test_THE_SCREEN_PLAN_is_the_survey_s_build_plan_and_its_block_is_REGISTERED():
