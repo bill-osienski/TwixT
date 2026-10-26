@@ -6021,3 +6021,24 @@ once, approved.**
   strength-comparison seed work, gate 49 closed, no training, no push.
 - **Conclusion / status:** CONTINUE. This is permission to review, not a strength claim. Awaits the user's result and
   closing review. See do-not-repeat **#97**.
+
+**Addendum to entry 39 (2026-10-26, the user's decision): the screen's result accepted (CONTINUE); closing its seed
+block approved.**
+- **The result is encouraging but inconclusive:** stronger play has not been demonstrated.
+- **The user's independent reconciliation:**
+  - the mean pair score is 0.5703125, with interval [0.3302, 0.8104];
+  - all 64 games started and completed, with correct seed and colour bindings;
+  - the per-game costs sum exactly to the reported totals, and both guards held;
+  - all 37 recorded module hashes match the execution commit;
+  - the idle hold preceded the launch, the gate restoration matches, and 49 gates are closed.
+- **Approved, in order:**
+  1. Run the existing K1 usage derivation once, from a clean committed checkout, preserving its create-only evidence.
+  2. Only if it RECONCILES with every control passing, append `(202692500, 202692564)` last to EXPOSED (41 → 42) and
+     to RETIRED (39 → 40). Leave ACCOUNTED at 44 and all other registry state unchanged.
+- **Also approved:** the small lifecycle-test updates this closure requires.
+  - Assert the screen block's full exposure, retirement and unavailability.
+  - Allow later, higher closures after the historical D2 block, while preserving its closure checks.
+  - Run only the affected focused CPU tests: no full regression and no proof rerun.
+- **Return:** the K1 record, the exact closing diff, the focused-test results and the commits.
+- **Not authorized:** a screen retry, strength-comparison seed work, gate 49, training and pushing. The frozen
+  strength ceiling remains 55,601 s.
