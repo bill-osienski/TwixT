@@ -148,6 +148,7 @@ knob) is not a new hypothesis.
 > **Mirror averaging + root sequential halving — the screen's seed survey and pre-proof (addendum to entry 39, 2026-10-26).** Each run once in a clean worktree. The survey CLEAN (`28cabf0e`, 45/45): block [202692500, 202692564), 64 seeds, gap 82 (floor 64). The pre-proof HOLDS (`8c52583d`, 45/45). Not registered; no plan; nothing played. Awaits registration review. See #95.
 > **Mirror averaging + root sequential halving — the screen block registered and proven (addendum to entry 39, 2026-10-26).** Registration review passed (`eeaac8cf`). [202692500, 202692564) appended last in ACCOUNTED (43 → 44) with the screen's `plan.json` = `build_plan` (`aa977403`). The post-registration proof, run once in a clean worktree, HOLDS (`4dc418db`, 45/45). Accounted, not exposed or retired; gate 48 closed; nothing played. Awaits screen approval. See #96.
 > **Mirror averaging + root sequential halving — SCREEN CONTINUE (addendum to entry 39, 2026-10-26).** One run (`59bcd53d`), COMPLETED in 2,271 s of 3,486 s; gate 48 restored. 32 pairs / 64 games on [202692500, 202692564), all started: candidate 36, incumbent 27, 1 draw (state cap). Mean pair score 0.5703 ≥ 0.40, so CONTINUE: a gross-regression check only, not a strength result (descriptive Hoeffding95 [0.330, 0.810] includes 0.5). Guards held: evaluations 0.9956, search seconds 0.8158. Block not yet closed; awaits result and closing review. Prediction: None stated in advance. See #97.
+> **Mirror averaging + root sequential halving — screen accepted and CLOSED (addendum to entry 39, 2026-10-26).** Result accepted: CONTINUE, encouraging but inconclusive; stronger play not demonstrated. K1 RECONCILES (`adbb31b2`, 15/15: all 64 started); K2 (`52d179da`) appended [202692500, 202692564) last to EXPOSED (41 → 42) and RETIRED (39 → 40), ACCOUNTED 44 unchanged. Lifecycle tests re-anchored (`00c0d7b4`, 184 focused passed). The strength comparison (ceiling 55,601 s) awaits a separate decision. See #98.
 
 ## Historical proposal check — programme now closed
 
@@ -1772,6 +1773,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 96. **The screen block's registration and post-proof (2026-10-26).** Do **not** rerun the post-registration proof, edit the screen's `plan.json`, or move, widen, expose or retire [202692500, 202692564) outside its closing procedure. Do **not** open gate 48 or launch the screen without the user's screen approval; the launch stays behind the idle gate. Do **not** start any strength-comparison seed procedure until it is separately approved.
 
 97. **The screen (2026-10-26), CONTINUE.** Do **not** rerun, extend or rescore the screen, or read its 0.5703 (32 pairs) as a strength result or an effect estimate. Do **not** pool its games into the strength comparison, use them to choose a parameter, or change the candidate, budgets, guards or the strength verdict rule. Do **not** run its seed closing, any strength-comparison seed procedure, or open gate 49 without separate approval of each step. All 64 seeds were started, so the closing must expose the whole block.
+
+98. **The screen's closing (2026-10-26).** Do **not** rerun K1, re-derive usage, or edit, move or reuse [202692500, 202692564) in any registry: it is EXPOSED and RETIRED whole. Do **not** retry the screen. Do **not** run strength-comparison seed work, open gate 49, train, or change the strength ceiling (55,601 s) without separate approval.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -6042,3 +6045,31 @@ block approved.**
 - **Return:** the K1 record, the exact closing diff, the focused-test results and the commits.
 - **Not authorized:** a screen retry, strength-comparison seed work, gate 49, training and pushing. The frozen
   strength ceiling remains 55,601 s.
+
+**Addendum to entry 39 (2026-10-26): the screen seed block closed.**
+- **K1, the usage derivation (`adbb31b2`):** exit 0, run once in a clean linked worktree at `35732676` (branch
+  `mirror-halving-screen-close`; main fast-forwarded and the worktree removed afterwards).
+  - Record: `mirror-halving-screen-seed-closing/02_derive_usage_run.txt`, sha256 `984afe63…`.
+  - It read the committed, unmodified inputs: the plan, the progress log, `outer.json` and `record.json`. Outer
+    exit 0, no survivors, status COMPLETED; the `game_start` slots were exactly 0..63. It read no score, winner or
+    move.
+  - Controls 15/15. Verdict: RECONCILES, so expose and retire the whole block. (Its verdict line prints the block
+    with a closing bracket; the controls' tuples show the half-open interval.)
+- **K2, the closing edit (`52d179da`):** `(202692500, 202692564)` appended last, with its comment block, to
+  `EXPOSED_SEED_INTERVALS` (41 → 42) and `RETIRED_SEED_INTERVALS` (39 → 40).
+  - An AST check against the parent: both prefixes identical; ACCOUNTED (44), TEST_ONLY and every other statement
+    unchanged.
+- **Lifecycle tests (`00c0d7b4`):**
+  - The screen test asserts the block is EXPOSED and RETIRED exactly once each, with no other interval overlapping
+    it, and that every seed is accounted, exposed, retired and unavailable.
+  - The D2 attempt-2 test keeps its block in EXPOSED and RETIRED exactly once each, followed in both by the same
+    number of later, higher entries; every seed is still unavailable.
+  - Focused CPU tests (seed selection, the registry, mirror-halving launch and match, D2 held-out, tactical seed
+    closing, the gate inventory): 184 passed. No regression and no proof rerun.
+- **A process slip, caught before anything was wrong:** my first K2 and test commits used a shell variable for the
+  git identity, which zsh does not split. Both commands failed, and I had hidden stderr. Nothing was committed; I
+  saw the files still modified and recommitted with the flags written out.
+- **Not done:** no screen retry, no strength-comparison seed work, gate 49 closed (49 gates closed), no training, no
+  push.
+- **Status:** the screen is closed: result accepted (CONTINUE, not a strength result) and its block exposed and
+  retired. The strength comparison awaits a separate decision. See do-not-repeat **#98**.
