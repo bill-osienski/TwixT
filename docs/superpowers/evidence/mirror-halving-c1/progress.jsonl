@@ -1,0 +1,7 @@
+{"event": "start", "t": 0.012, "setting": {"MLX_ENABLE_TF32": "0"}}
+{"event": "entry10_start", "t": 0.059}
+{"event": "entry10_end", "t": 0.895, "answer": "PASS", "verdict": "COMPLETED"}
+{"event": "loaded", "t": 0.912, "seconds": 0.002}
+{"event": "controls_end", "t": 88.049, "a": 40, "b": 64}
+{"event": "cost_end", "t": 216.079, "guards": {"evaluations_ratio": 0.9960507069722087, "search_seconds_ratio": 0.8244521274968651}, "verdict": "PASS"}
+{"event": "end", "t": 216.08, "status": "COMPLETED", "verdict": "PASS"}

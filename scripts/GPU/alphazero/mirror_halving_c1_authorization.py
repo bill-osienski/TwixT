@@ -6,4 +6,4 @@ with MLX_ENABLE_TF32=0 loads calib020_0001 and runs real GPU searches on a fixed
 door. Opened for ONE approved run and restored on every exit. Created closed. This file may hold ONLY this
 declaration.
 """
-MIRROR_HALVING_C1_AUTHORIZED = True
+MIRROR_HALVING_C1_AUTHORIZED = False
