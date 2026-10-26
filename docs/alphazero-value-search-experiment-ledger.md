@@ -5888,3 +5888,26 @@ pre-registration proof approved.**
   game, no strength-comparison seed procedure, no checkpoint loading or GPU work. 49 gates, all closed.
 - **Prediction on record:** none (a seed procedure).
 - **Status:** awaiting the user's registration review. See do-not-repeat **#95**.
+
+**Addendum to entry 39 (2026-10-26, the user's decision): registration review passed; the screen block's registration,
+its plan and the post-registration proof approved.**
+- **The user's read-only checks:**
+  - both full record hashes, and 45 passing controls in each;
+  - the pre-proof is bound to the survey;
+  - the live registry still matches the surveyed hash, contains no overlapping interval, and has 43 ACCOUNTED
+    blocks;
+  - the fixed rule gives BASE 202692500;
+  - no implementation changed since the reviewed build; 49 gates, all closed.
+- **The memory-note slip is not a blocker;** the committed evidence is authoritative.
+- **Approved, in order:**
+  1. Append `(202692500, 202692564)` last in `ACCOUNTED_SEED_INTERVALS` (43 → 44), leaving all other registry state
+     unchanged.
+  2. Create and commit the screen plan exactly as `build_plan` specifies: kind `mirror-halving-screen-plan/1`, base
+     202692500, n_slots 64, survey_record_sha256 `44b1fd0c2d612ffe2d1f7dac1cbc31b9015d6983a16514d0b2a4bd905fa4be98`.
+  3. From a clean committed checkout, run post mode once, preserving its create-only evidence.
+  4. Return the registration diff, the plan, the post-proof and the exact commits for screen approval.
+
+  If the registry has changed before registration, or the post-proof fails: stop and return, with no block
+  adjustment and no automatic retry.
+- **Not authorized:** opening any gate, checkpoint loading, GPU work, gameplay (the screen itself), the strength
+  comparison's seed work and pushing.
