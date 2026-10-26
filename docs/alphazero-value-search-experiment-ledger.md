@@ -147,6 +147,7 @@ knob) is not a new hypothesis.
 > **Mirror averaging + root sequential halving — screen/strength build only (addendum to entry 39, 2026-10-26).** C1 accepted with its disclosed idle deviation (timings neither rerun nor discounted). Ceilings: screen 3,496 s, strength comparison 55,601 s (TERM 3,486 / 55,591 + 10 s). Built (`b6632003`): an idle gate the launch depends on (fake launches: busy → no launch; idle → the exact command), both wrappers, and seed survey and closing copies (64 / 1,018 slots; blocks unselected, no plan committed). The match now logs `game_start` for closing. Nothing run; 49 gates closed. See #94.
 > **Mirror averaging + root sequential halving — the screen's seed survey and pre-proof (addendum to entry 39, 2026-10-26).** Each run once in a clean worktree. The survey CLEAN (`28cabf0e`, 45/45): block [202692500, 202692564), 64 seeds, gap 82 (floor 64). The pre-proof HOLDS (`8c52583d`, 45/45). Not registered; no plan; nothing played. Awaits registration review. See #95.
 > **Mirror averaging + root sequential halving — the screen block registered and proven (addendum to entry 39, 2026-10-26).** Registration review passed (`eeaac8cf`). [202692500, 202692564) appended last in ACCOUNTED (43 → 44) with the screen's `plan.json` = `build_plan` (`aa977403`). The post-registration proof, run once in a clean worktree, HOLDS (`4dc418db`, 45/45). Accounted, not exposed or retired; gate 48 closed; nothing played. Awaits screen approval. See #96.
+> **Mirror averaging + root sequential halving — SCREEN CONTINUE (addendum to entry 39, 2026-10-26).** One run (`59bcd53d`), COMPLETED in 2,271 s of 3,486 s; gate 48 restored. 32 pairs / 64 games on [202692500, 202692564), all started: candidate 36, incumbent 27, 1 draw (state cap). Mean pair score 0.5703 ≥ 0.40, so CONTINUE: a gross-regression check only, not a strength result (descriptive Hoeffding95 [0.330, 0.810] includes 0.5). Guards held: evaluations 0.9956, search seconds 0.8158. Block not yet closed; awaits result and closing review. Prediction: None stated in advance. See #97.
 
 ## Historical proposal check — programme now closed
 
@@ -1769,6 +1770,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 95. **The screen's seed survey and pre-proof (2026-10-26).** Do **not** rerun either mode, choose another block, or adjust [202692500, 202692564): the rule chose it and both records stand. Do **not** register it, commit the screen's `plan.json`, run the post-registration proof, open gate 48 or launch the screen without the user's registration review and separate approval of each step. Do **not** run any strength-comparison seed procedure yet: its block must be surveyed against the registry as it stands when that step is approved.
 
 96. **The screen block's registration and post-proof (2026-10-26).** Do **not** rerun the post-registration proof, edit the screen's `plan.json`, or move, widen, expose or retire [202692500, 202692564) outside its closing procedure. Do **not** open gate 48 or launch the screen without the user's screen approval; the launch stays behind the idle gate. Do **not** start any strength-comparison seed procedure until it is separately approved.
+
+97. **The screen (2026-10-26), CONTINUE.** Do **not** rerun, extend or rescore the screen, or read its 0.5703 (32 pairs) as a strength result or an effect estimate. Do **not** pool its games into the strength comparison, use them to choose a parameter, or change the candidate, budgets, guards or the strength verdict rule. Do **not** run its seed closing, any strength-comparison seed procedure, or open gate 49 without separate approval of each step. All 64 seeds were started, so the closing must expose the whole block.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -5972,3 +5975,49 @@ once, approved.**
 - **Return:** the create-only run evidence, cost totals, gate restoration and cleanup verification, for result and
   closing review. A started-run STOP, VOID or timeout closes the combination without retry.
 - **Not authorized:** strength-comparison seed work, gate 49, training and pushing.
+
+**Addendum to entry 39 (2026-10-26): the screen, run once — COMPLETED, verdict CONTINUE.**
+- **Test:** the card's §5 S, a gross-regression screen. The frozen combination (MirrorAveragingEvaluator around
+  eval-mode calib020_0001 at 200 simulations, root sequential halving from ply 20, 16 candidates) against the
+  unchanged incumbent at 400 simulations, in 32 colour-reversed pairs.
+- **Hypothesis:** the combination is not grossly weaker than the incumbent at comparable compute. Why plausible:
+  entries 11 and 15 (each component alone was above parity in 16 pairs, both intervals including parity) and C1's
+  composition and cost check (entry 39).
+- **Prediction on record:** None stated in advance. The 0.40 bar is a frozen stopping rule, not a prediction.
+- **Before the run:**
+  - test repairs at `dceac987` (23 focused CPU tests pass);
+  - read-only panic/reboot check: no new panic and no reboot since 2026-10-25 09:39;
+  - a clean run worktree from `dceac987`, with gate 48 alone opened by a one-line commit `0aaad193`.
+- **The run (`59bcd53d`):** the reviewed wrapper, once.
+  - **Idle gate:** busy at first (load 3.9, `mds` at 148% CPU); it held 60 s idle at t = 116 s and only then
+    launched. Samples are in `idle_check.txt`.
+  - **Outcome:** inner exit 0, COMPLETED, 2,271 s of the 3,486 s ceiling. The script wrote the record; no
+    process survived; the gate was restored and read back equal to `dceac987`.
+  - **Record:** `mirror-halving-screen/record.json`, sha256 `08342fe4…`, with `games.jsonl`, 64 replays and
+    `progress.jsonl`.
+  - **Integrity:**
+    - TF32=0 at start and end;
+    - both sides in eval mode at load and at the end (0 of 42 modules in training mode);
+    - checkpoint sha1 `209cf2d4…`.
+  - **Seeds:** base 202692500, 64 slots; `game_start` was logged for slots 0–63 (all started), and all 64 ended.
+- **Result:**
+  - **Games:** candidate 36 wins, incumbent 27, 1 draw (a state cap at 280 plies); 63 games ended by a connection.
+    Mean length 57.5 plies (min 35).
+  - **Pair scores:** 1.0 ×11, 0.75 ×1, 0.5 ×13, 0.0 ×7. Mean pair score **0.5703125** ≥ 0.40, so **CONTINUE**.
+  - **Descriptive interval:** Hoeffding95 over 32 pairs is [0.330, 0.810], which includes 0.5. The screen was not
+    designed to measure strength.
+  - **Cost totals:**
+    - candidate: 722,632 network evaluations, 1,018.0 s search, 1,843 searches (1,203 halving);
+    - incumbent: 725,840 evaluations, 1,247.9 s search, 1,838 searches;
+    - ratios: evaluations **0.9956** (≤ 1.05), search seconds **0.8158** (≤ 1.10). Both guards hold.
+  - **Derived, not measured:** 35.5 s per game here suggests about 10.0 h for the strength comparison's 1,018 games,
+    inside its 55,601 s ceiling. This assumes comparable game lengths (here 57.5 plies against the 59.8 assumed
+    from C1).
+- **Did it match the prediction?** No prediction was stated. The result passes the stopping rule and is consistent
+  with C1's cost picture (C1: 0.9961 and 0.8245).
+- **After the run (read-only):** no new panic and no reboot; no run process left. The worktree and branch were
+  removed and main fast-forwarded. 49 gates, all closed (gate inventory 8 passed).
+- **Not done:** no seed closing (all 64 seeds are started and must be exposed; the whole block retired), no
+  strength-comparison seed work, gate 49 closed, no training, no push.
+- **Conclusion / status:** CONTINUE. This is permission to review, not a strength claim. Awaits the user's result and
+  closing review. See do-not-repeat **#97**.
