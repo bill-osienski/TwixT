@@ -5841,3 +5841,25 @@ ceilings priced; build-only approval.**
   test count before anything was pushed.
 - **Not run:** no seed procedure, registration, checkpoint loading, GPU work or game. 49 gates, all closed.
 - **Status:** the build awaits the user's review. See do-not-repeat **#94**.
+
+**Addendum to entry 39 (2026-10-26, the user's decision): the screen/strength build accepted; the screen's seed survey and
+pre-registration proof approved.**
+- **Accepted, with no blocking finding.** The user's read-only checks:
+  - both ceilings match C1's undiscounted projections (3,496 s and 55,601 s);
+  - the launch depends on the idle gate, and the fake launches cover the busy refusal and the exact permitted
+    command;
+  - both seed-method pins match, the sizes are 64 and 1,018, and no plan or survey output exists;
+  - the frozen card, the candidate's components and C1's evidence are unchanged; 49 gates, all closed.
+- **Both deviations accepted:**
+  - `build_plan` prepares the plan while meeting the pre-proof's no-plan requirement;
+  - the `game_start` event is a necessary exposure-accounting correction that does not change play.
+- **Approved, in order:**
+  1. The screen's seed survey, once, under its fixed selection rule, from a clean committed checkout.
+  2. Only if it is CLEAN with every control passing: commit its create-only evidence, then run the screen's
+     pre-registration proof once.
+  3. Return both records and the exact commits for registration review.
+
+  If either fails: stop, with no block adjustment and no automatic retry. No additional regression or mutation
+  testing.
+- **Not authorized:** registration, plan creation, the post-registration proof, either gameplay run, the strength
+  comparison's seed procedures, checkpoint loading, GPU work and pushing.
