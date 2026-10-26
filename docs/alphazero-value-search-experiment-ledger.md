@@ -137,6 +137,7 @@ knob) is not a new hypothesis.
 > **Search distillation D2 — bounded trial CLOSED: held-out generation INTERRUPTED (Post-closure entry 36, 2026-10-25).** A macOS kernel panic rebooted the machine during game 1 of 12 (2 started, 1 finished). There is no wrapper record and the exit status is unknown; the set is incomplete and ineligible. Seeds: [202692300, 202692302) EXPOSED and the block RETIRED, through an amended reboot derivation (16/16). There is no learning result: the panic's cause is not established and the hypothesis is not rejected. Training was never run. Supersedes the line above. See #84.
 > **Search distillation D2 — bounded trial ATTEMPT 2 prepared (decision note after Post-closure entry 36, 2026-10-25).** One fresh attempt, by the user's decision. Successor card FROZEN (`bde310a3…`; records and paths only). Build `e3f90078`, gates 45 and 46 closed. Fresh block [202692400, 202692412): surveyed CLEAN, proven before and after registration, registered. No new kernel panic found. A second panic stops GPU experiments pending a system-stability decision. Outcome prediction: None stated in advance. NOT RUN: generation awaits approval of the frozen plan. See #85.
 > **Search distillation D2 — bounded trial ATTEMPT 2: held-out generation COMPLETED and eligible (Post-closure entry 37, 2026-10-25).** One approved run (gate 45 only): 12 games, 660 records, 1,086 s of the 2-hour ceiling; in-run reader and alignment checks passed; model digest unchanged; `MLX_ENABLE_TF32` "0" at start and end. Seeds [202692400, 202692412) EXPOSED and RETIRED whole (15/15). No new kernel panic before or after. Regression = the 58-id baseline. Training NOT RUN: gate 46 closed, awaiting approval. Outcome prediction: None stated in advance. See #86.
+> **Search distillation D2 — bounded trial attempt 2: training STOP; the trial is CLOSED (Post-closure entry 38, 2026-10-25).** One approved run (gate 46 only), 401 updates under `MLX_ENABLE_TF32=0`, 46 s. Held-out policy CE 4.7878 → 4.1627 (strictly lower: met), but held-out value drift mean 0.1207 (limit 0.05) and p95 0.3433 (limit 0.15) both FAILED. The answer to the card's question is no: the unchanged recipe under TF32=0 did not pass Stage 3's held-out checks. No retry or tuning; no strength screen. `calib020_0001` stays the incumbent. Outcome prediction: None stated in advance. Supersedes the two lines above. See #87.
 
 ## Historical proposal check — programme now closed
 
@@ -1739,6 +1740,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 85. **The decision to make one fresh attempt at the D2 bounded trial (after entry 36), 2026-10-25.** Do **not** make a third attempt automatically: if another kernel panic interrupts attempt 2, stop all further GPU experiments pending the user's system-stability decision. Do **not** tune the recipe, criteria, ceilings or numerical setting, or start a learning-method or panic investigation (stress tests, reproductions, system changes), before attempt 2 has had a completed test. Do **not** reuse attempt 1's seeds, records or partial capture, or admit attempt 1's held-out records into training. Do **not** schedule generation or training without a fresh read-only panic check and the user's approval of each step.
 
 86. **The D2 bounded trial attempt 2's held-out generation (entry 37) — COMPLETED and eligible, 2026-10-25.** Do **not** regenerate, rerun, replace, extend or top up the held-out set, reuse the block [202692400, 202692412), or open gate 45 for attempt 2 again. Keep the capture in `~/twixt-cache/search-distillation-d2/heldout-tf32off-attempt2-20261025T214428Z/` unchanged; its games are held-out scoring data for attempt 2's one training run only, never training or strength-comparison data. Do **not** read the completed generation as a learning result or as evidence about the kernel panic's cause. Do **not** open gate 46 or schedule training without a fresh read-only panic check, an idle machine and the user's approval; it runs at most once, with the frozen recipe, criteria and 30-minute ceiling.
+
+87. **The D2 bounded trial attempt 2's training run (entry 38) — STOP 2026-10-25; the corrected-configuration trial is CLOSED.** Do **not** rerun, retry or extend the training, run it with other seeds, or retune the recipe (anchor weight, learning rate, updates, batch, clipping, L2, surface, numerical setting) and judge it on the same corpus or held-out set. Do **not** open gate 46 again, re-score the candidate on new criteria, or select it after the fact. Do **not** screen, evaluate or promote the candidate (`~/twixt-cache/search-distillation-d2/student-tf32off-20261026T000538Z.safetensors`, read-only research artifact): a STOP does not permit the strength screen. Do **not** read the STOP as explaining the value drift, or the absence of gradient spikes as a qualification of GPU training in general. Any further distillation work needs a new written design and the user's approval.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -5441,3 +5444,63 @@ equal entry 32's, as the same frozen data, code and setting should give. Predict
   - This is not a learning result, and it says nothing about the cause of entry 36's panic.
   - `calib020_0001` stays the incumbent (SHA-1 `209cf2d4…`).
   - See do-not-repeat **#86**.
+
+### 38. Search distillation D2 — bounded trial attempt 2: the one training run (2026-10-25, COMPLETED; STOP; the trial CLOSED)
+
+- **Test:** attempt 2's step 4 (successor card `bde310a3…`; the original card `9f2c6096…` §5 governs). One invocation of
+  the training wrapper: Stage 3's recipe unchanged (401 updates, batch 64, Adam 1e-4, clip 1.0, anchor 1.0, L2 1e-4,
+  draw-order seed 0, encoder and policy head) under process-local `MLX_ENABLE_TF32=0`, on the 108 immutable training
+  games, scored on attempt 2's new held-out set at baseline and final only, under the 30-minute ceiling.
+- **Hypothesis (the card's question, §1):** the fixed D2 recipe, unchanged, can produce a candidate that passes Stage
+  3's held-out checks when every process runs with `MLX_ENABLE_TF32=0`.
+- **Why it was plausible:** entries 31–35 traced Stage 3's numerical faults to the GPU's reduced-precision path, and
+  qualified the corrected setting within their tested scope (entry 35, `QUALIFIED_AT_U21`). Whether those faults
+  caused Stage 3's value drift was never established.
+- **Prediction on record:** None stated in advance (original card §10; attempt 2 card §6).
+- **Approval:** the user approved the single training run on 2026-10-25 (gate 46 only), after reviewing entry 37's
+  record, manifest, game hashes, receipts, metadata copies, seed closure, versions, checkpoint hash and code pins.
+- **Before scheduling (read-only):** no new kernel panic and no reboot since 09:39. The machine was first busy
+  (Spotlight's `corespotlightd` at about 295% CPU, 1-minute load 9.5); the run waited until the 1-minute load stayed
+  under 3, with no process above 50% CPU, for a minute (20:05; load 1.9).
+- **What ran:**
+  - `3290a05d`: gate 46 opened by a one-line commit on a linked-worktree branch. Main's copy was never opened; gate 45
+    stayed closed.
+  - The wrapper ran from 20:05:37 to 20:06:24 (EDT).
+- **Result:**
+  - `outer.json`: inner exit 6, outcome STOP, outer exit 6, gate restored and read back equal to the pre-open commit
+    `83636fb5`, no survivors, record written by the script, 46 s wall against TERM at 1,790 s. Stderr empty.
+  - `record.json`: status COMPLETED, **verdict STOP**, `card_sha256` the attempt 2 card's, strength verdict none.
+  - **Inputs:** 6,403 training records from the 108 training games (ids sha256 `e90df4d3…`); the original 12 held-out
+    games' files opened 0, records read 0. The new set: 660 records, manifest `da96b9e9…`, record `d42de735…`, scored
+    `baseline` and `final` only.
+  - **Training checks:** 401 updates in 37.0 s on the GPU; all 60 surface tensors changed, the 32 off-surface tensors
+    unchanged; teacher digest `ae0e71fc…` before and after; every metric finite. `MLX_ENABLE_TF32` = `"0"` at start
+    and end; mlx 0.30.3; Adam's resolved defaults recorded (betas 0.9, 0.999; eps 1e-8; no bias correction).
+  - **Held-out policy cross-entropy:** 4.7878 for the teacher, 4.1627 for the candidate (KL to the targets 2.0196 →
+    1.3945): **strictly lower, met**.
+  - **Held-out absolute value drift from the teacher: mean 0.1207 (limit 0.05), p95 0.3433 (limit 0.15)**, max 0.6339.
+    **Both limits failed.**
+  - **Training-set diagnostics** (judging nothing): cross-entropy 4.6965 → 3.9370; drift mean 0.0636, p95 0.1804, max
+    0.4060.
+  - **Training log:** every update was clipped (pre-clip gradient norm above 1 on all 401; median 3.38, maximum 13.70
+    at update 0). **None exceeded the 10,000 spike norm** (Stage 3, entry 23: 86 of 401, maximum 43,779). The anchor
+    term's batch mean fell from 0.036 over the first 50 updates to 0.009 over the last 50.
+  - **Candidate:** saved create-only at
+    `~/twixt-cache/search-distillation-d2/student-tf32off-20261026T000538Z.safetensors`, SHA-256 `71b76698…`; the
+    strict reload reproduced its state digest `48565952…` with all 42 modules (14 BatchNorm) in eval mode. Made
+    read-only after the run, as Stage 3's was. A research artifact only.
+  - `bf0d7064`: the evidence and the restored gate committed. No game seeds were drawn.
+- **After the run (read-only):** no new panic report and no reboot since 09:39; no run process left. Both gates closed;
+  gate inventory and D2 tests 95 passed.
+- **Did it match the prediction?** There was none. Compared with Stage 3 (entry 23, default setting, a different
+  held-out set): the policy gain is similar (CE 4.8243 → 4.1474 there), the value drift is no smaller (mean 0.1026, p95
+  0.2791 there), and the gradient-norm spikes are absent. Why the value output still moved this far was not derived.
+- **Conclusion / status: STOP — the corrected-configuration trial is CLOSED.**
+  - The answer to the card's question is **no**: the unchanged recipe under `MLX_ENABLE_TF32=0` did not pass Stage 3's
+    held-out checks; it failed both value-drift limits.
+  - Under the card, a STOP closes the trial, with no retry, tuning, rerun or selection. The strength screen is not
+    permitted (only a PASS would have allowed review for one).
+  - This does not establish why the value output drifts, does not qualify GPU training in general, and says nothing
+    about the cause of entry 36's panic.
+  - `calib020_0001` stays the incumbent (SHA-1 `209cf2d4…`). Nothing was evaluated, promoted, submitted or pushed.
+  - See do-not-repeat **#87**.
