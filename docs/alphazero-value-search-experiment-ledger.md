@@ -149,6 +149,7 @@ knob) is not a new hypothesis.
 > **Mirror averaging + root sequential halving — the screen block registered and proven (addendum to entry 39, 2026-10-26).** Registration review passed (`eeaac8cf`). [202692500, 202692564) appended last in ACCOUNTED (43 → 44) with the screen's `plan.json` = `build_plan` (`aa977403`). The post-registration proof, run once in a clean worktree, HOLDS (`4dc418db`, 45/45). Accounted, not exposed or retired; gate 48 closed; nothing played. Awaits screen approval. See #96.
 > **Mirror averaging + root sequential halving — SCREEN CONTINUE (addendum to entry 39, 2026-10-26).** One run (`59bcd53d`), COMPLETED in 2,271 s of 3,486 s; gate 48 restored. 32 pairs / 64 games on [202692500, 202692564), all started: candidate 36, incumbent 27, 1 draw (state cap). Mean pair score 0.5703 ≥ 0.40, so CONTINUE: a gross-regression check only, not a strength result (descriptive Hoeffding95 [0.330, 0.810] includes 0.5). Guards held: evaluations 0.9956, search seconds 0.8158. Block not yet closed; awaits result and closing review. Prediction: None stated in advance. See #97.
 > **Mirror averaging + root sequential halving — screen accepted and CLOSED (addendum to entry 39, 2026-10-26).** Result accepted: CONTINUE, encouraging but inconclusive; stronger play not demonstrated. K1 RECONCILES (`adbb31b2`, 15/15: all 64 started); K2 (`52d179da`) appended [202692500, 202692564) last to EXPOSED (41 → 42) and RETIRED (39 → 40), ACCOUNTED 44 unchanged. Lifecycle tests re-anchored (`00c0d7b4`, 184 focused passed). The strength comparison (ceiling 55,601 s) awaits a separate decision. See #98.
+> **Mirror averaging + root sequential halving — the strength comparison's seed survey and pre-proof (addendum to entry 39, 2026-10-26).** Each run once in a clean worktree. Survey CLEAN (`2ccc9037`, 45/45): block [202693600, 202694618), 1,018 seeds, gap 1,030 (floor 1,018). Pre-proof HOLDS (`9631ec72`, 45/45). Not registered; no plan; gate 49 closed; nothing played. Awaits registration review. See #99.
 
 ## Historical proposal check — programme now closed
 
@@ -1775,6 +1776,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 97. **The screen (2026-10-26), CONTINUE.** Do **not** rerun, extend or rescore the screen, or read its 0.5703 (32 pairs) as a strength result or an effect estimate. Do **not** pool its games into the strength comparison, use them to choose a parameter, or change the candidate, budgets, guards or the strength verdict rule. Do **not** run its seed closing, any strength-comparison seed procedure, or open gate 49 without separate approval of each step. All 64 seeds were started, so the closing must expose the whole block.
 
 98. **The screen's closing (2026-10-26).** Do **not** rerun K1, re-derive usage, or edit, move or reuse [202692500, 202692564) in any registry: it is EXPOSED and RETIRED whole. Do **not** retry the screen. Do **not** run strength-comparison seed work, open gate 49, train, or change the strength ceiling (55,601 s) without separate approval.
+
+99. **The strength comparison's seed survey and pre-proof (2026-10-26).** Do **not** rerun either mode, choose another block, or adjust [202693600, 202694618). Do **not** register it, commit its `plan.json`, run the post-registration proof, open gate 49 or launch the strength comparison without the user's registration review and separate approval of each step. Do **not** change its 509 pairs, the Hoeffding rule, the guards or the 55,601 s ceiling, or pool the screen's games into it.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -6097,3 +6100,34 @@ seed survey and pre-registration proof approved.**
   not be pooled into the strength result.
 - **Not authorized:** registration, plan creation, the post-registration proof, gate 49, checkpoint loading, GPU
   work, gameplay, training and pushing.
+
+**Addendum to entry 39 (2026-10-26): the strength comparison's seed survey and pre-registration proof, each run once.**
+- **Where it ran:** a clean linked worktree (branch `mirror-halving-strength-seeds`, from `8e5665df`); main
+  fast-forwarded and the worktree removed afterwards.
+  - The scope was this tree's and the main checkout's `scripts`, `tests` and `docs/superpowers`, fail-closed: 5,237
+    and 47,928 regular files, no symbolic links, 5,314 band literal values.
+- **The survey (`2ccc9037`):** exit 0; `02_seed_survey_run.txt`, sha256 `7bdf6cf6…`, at `8e5665df`, working tree
+  clean. It read the registry at sha256 `e39aa059…` (ACCOUNTED 44, EXPOSED 42, RETIRED 40).
+  - The fixed rule: the highest registered or named-spent seed in the band is 202692563 (the screen's last), so
+    BASE = 202693600.
+  - **Block [202693600, 202694618), 1,018 seeds:** no direct overlap, 0 derived streams, injective, nearest gap
+    1,030 (floor 1,018). CLEAN.
+  - Controls 45/45. Verdict: THE MIRROR-HALVING STRENGTH BLOCK IS CLEAN.
+- **The pre-registration proof (`9631ec72`):** exit 0; `03_collision_proof_pre_run.txt`, sha256 `b692d3b0…`, at
+  `2ccc9037`, working tree clean.
+  - It read the block from the committed survey record.
+  - Expected state (pre) HOLDS: the registry unchanged, the block unregistered, no plan.
+  - The block is CLEAN again; controls 45/45. Verdict: THE MIRROR-HALVING STRENGTH BLOCK IS CLEAN AND THE STATE IS
+    AS EXPECTED.
+- **Test update (`8d302a7f`):** the strength test's "no survey records" check now requires exactly records 02 and
+  03. Its other conditions:
+  - the survey is CLEAN, 45/45;
+  - the pre-proof HOLDS, 45/45, bound to record 02's sha256 and block;
+  - there is no plan, post-proof or closing record;
+  - no registry interval overlaps the block.
+
+  Focused CPU tests (mirror-halving launch and match): 58 passed.
+- **Not done:** no registration, no plan, no post-registration proof, gate 49 closed (49 gates closed), no checkpoint
+  loading or GPU work, no game, no training, no push.
+- **Prediction on record:** none (a seed procedure).
+- **Status:** awaiting the user's registration review. See do-not-repeat **#99**.
