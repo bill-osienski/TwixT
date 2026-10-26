@@ -141,6 +141,7 @@ knob) is not a new hypothesis.
 > **Dual-encoder policy branch — design-only feasibility card (decision note after Post-closure entry 38, 2026-10-26, the user's).** Entry 38's STOP and closeout accepted: it closes the recipe, not the goal of stronger play. Authorized: a design-only card for a composite agent (the frozen incumbent supplies values; a trainable encoder and policy-head copy supplies priors), so that the value function is preserved by construction. DRAFT `2026-10-26-dual-encoder-policy-branch-feasibility-card.md`: two forward passes per leaf (2.00× FLOPs); compute-fair comparison at matched network evaluations, composite 200 vs incumbent 400 simulations; recommends REJECTING on paper. Nothing loaded, generated, trained or gated. See #88.
 > **Dual-encoder policy branch — REJECTED on paper (addendum to the decision note after Post-closure entry 38, 2026-10-26, the user's).** Step 1 not built; nothing executed (no model loaded; no seeds, games, training or gates). The value-preserving architecture's added inference cost is not justified by current evidence: this experiment has not earned its cost. This is not a result about dual encoders, value preservation, capacity, distillation or strength. The card is kept as the reviewed proposal (§8 records the decision). `calib020_0001` stays the incumbent; the stronger-play goal remains open with no supported next experiment. Supersedes the "DRAFT" line above. See #89.
 > **Mirror averaging + root sequential halving — one fixed combination, design-only card (decision note after the dual-encoder rejection, 2026-10-26, the user's).** After a read-only review, the user authorized a DRAFT card (`2026-10-26-mirror-averaging-plus-root-halving-combination-card.md`). It proposes: the averaged evaluator at 200 simulations, ordinary opening through ply 19, the unchanged halving rule from ply 20, against the unchanged incumbent at 400, both under `MLX_ENABLE_TF32=0`, at approximately matched network evaluations (guards 1.05× evaluations, 1.10× search seconds); a composition-and-cost check, a 32-pair gross-regression screen and a 509-pair strength comparison (pass > 0.56020). It also proposes a narrow reopening of #47, #59 and #62 for this combination only. The two screens' scores are not current baselines and are not to be added. Nothing built, loaded, seeded or run. Prediction: None stated in advance. See #90.
+> **Mirror averaging + root sequential halving — card FROZEN and step B built (addendum to the decision note, 2026-10-26).** The user approved the fixed combination, the narrow #47/#59/#62 exceptions (this candidate and its specified controls only) and step B; clarifications are in card §11. Build `0ad4de35`: a shared module (game loop copied verbatim from entry 15's match), the C1 entry with gate 47 and its 900-second wrapper, the screen/strength entry with gates 48 and 49 (their wrappers follow C1); 49 gates, all closed. 82 focused CPU tests pass. The CPU loop checks failed once on a defect in the check script (`0e134482`, kept) and passed on run 2 (`58924743`). Regression = the 58-id baseline. Nothing loaded, no GPU search, seeds or games. C1 awaits the user's review of the frozen build. Supersedes the "DRAFT" line above. See #91.
 
 ## Historical proposal check — programme now closed
 
@@ -1751,6 +1752,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 89. **The dual-encoder policy-branch proposal — REJECTED on paper, 2026-10-26 (nothing executed).** Do **not** build, load a model, account seeds, generate, train, gate or play for this card. Do **not** cite the rejection as evidence that dual encoders, value preservation, capacity or distillation fail, or as a strength result: nothing was measured. Do **not** present the card's +175 Elo as a measured requirement (it is an illustrative scenario: log-linear gains from the old protocol, target 0.60), entry 11's 0.594 as isolating the cost of halving simulations (that match also changed the evaluator), or the 5–10% figure as a calibrated forecast (a subjective assessment, not adopted). Reviving the design needs new evidence that justifies its inference cost, a new card and the user's approval.
 
 90. **The mirror-averaging + root-halving combination card (DRAFT, 2026-10-26).** Do **not** build, load a model, account seeds, use the GPU or play games for it without the user's review of the card and approval of each step. Until the user approves §7's narrow reopening, #47, #59 and #62 stand unchanged; even then they open only for this one frozen combination, never for either component alone, another budget, candidate count, score, tie, start ply or orientation, a rerun or extension of entries 11 or 15, or a second combination. Do **not** use entry 11's or 15's scores as current baselines, add them, or present the hypothesis that averaging helps halving as measured. Do **not** treat simulation counts as proof of matched compute: the recorded network evaluations and runtime decide (card §4). A win would not establish synergy or attribute the gain to either component.
+
+91. **The mirror-averaging + root-halving exceptions and frozen build (2026-10-26).** #47, #59 and #62 are reopened ONLY for card §2's frozen candidate and C1's two named identity controls (averaging alone at plies < 20; halving over a pass-through wrapper at plies ≥ 20; both at 200 simulations). Do **not** run either component in a match, change a budget or candidate parameter, or let C1's measurements change one: they only price later runs. Do **not** open gate 47 without the user's approval, an idle machine and a fresh panic check; it runs once under its 15-minute ceiling. Do **not** build or run the screen or strength wrappers, plans or seed blocks before C1's result is reviewed; their ceilings come from C1 by card §6. Do **not** edit the card or a pinned module without re-freezing its pins. Do **not** read the loop check's readout-difference counts (fake evaluators) as evidence about play.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -5610,3 +5613,50 @@ equal entry 32's, as the same frozen data, code and setting should give. Predict
   - **The untested element:** halving's unchanged rule at 200 simulations (3/6/12/28 visits per round).
 - **Prediction on record:** None stated in advance.
 - **Status:** OPEN, awaiting the user's review of the card. See do-not-repeat **#90**.
+
+**Addendum to the decision note (2026-10-26): the card approved and FROZEN; step B built and checked; C1 not run.**
+- **The user's review:**
+  - **Approved:** the fixed combination; the narrow #47, #59 and #62 exceptions, for this candidate and its specified
+    controls only; step B.
+  - **Not approved:** C1, the screen, the strength comparison, checkpoint loading, real GPU searches, seed
+    registration and gameplay.
+  - **Clarifications written into card §11:**
+    - identical RNG states under the check-RNG convention (a fresh `random.Random(90009000)` per search, test-only
+      band);
+    - cost as ratios of totals over the fixed panel, with warm-up and the correctness and identity work excluded;
+      guards unchanged at 1.05 and 1.10;
+    - C1's hard ceiling of 15 minutes, its measurements pricing later runs without changing any budget or parameter;
+    - a controlled case where `last_choice` differs from the readout;
+    - component-only calls only as the named identity controls;
+    - the exact Hoeffding formula; a non-pass "is not designed to reliably detect modest gains".
+- **What ran:**
+  - **Build `0ad4de35`:**
+    - `scripts/GPU/alphazero/mirror_halving_combination.py`: the game loop copied verbatim from
+      `root-halving-match/01_match.py` (a test checks the source), the composition, the pass-through control, the
+      cost totals and both verdicts;
+    - `mirror_halving_c1.py` with gate `MIRROR_HALVING_C1_AUTHORIZED` and
+      `docs/superpowers/evidence/mirror-halving-c1-run/01_wrapper.sh` (TERM 890 s, KILL 10 s later);
+    - `mirror_halving_match.py` with gates `MIRROR_HALVING_SCREEN_AUTHORIZED` and `MIRROR_HALVING_STRENGTH_AUTHORIZED`.
+      It admits the screen only after a committed C1 PASS, and the strength comparison only after that and a screen
+      CONTINUE;
+    - the gate inventory 46 → 49, all closed.
+  - **The prototypes are byte-identical** to the files entries 11 and 15 ran (SHA-256 checked against their records).
+  - **Focused tests:** 20 (shared module), 27 (C1), 35 (match) passed; gate inventory 8 passed. Every public-entry test
+    runs with its outputs redirected and the real seams replaced by fakes, closed-gate tests included.
+  - **Loop checks (CPU, fake evaluators):**
+    - **Run 1** (evidence in `0e134482`): STOP_ERROR. Part (a) had passed; part (b) stopped at its symmetry probe,
+      before any game, because my check script's fake evaluator lacked the `.network` attribute the averaging wrapper
+      reads. Kept as evidence; a one-line fix.
+    - **Run 2** (`58924743`): COMPLETED, PASS.
+      - (a) the copied loop reproduced `eval_runner`'s in both games.
+      - (b) the combination at 200 against ordinary search at 400, with board-dependent fakes that make averaging
+        change the outputs: two games to the 280-ply cap, 130 halving searches each. Every move from ply 20 was
+        `last_choice`; none was supplied before ply 20 or by the incumbent. The readout would have chosen differently
+        at 53 and 64 of those plies. These are fake evaluators, so this is not a signal about play.
+  - **Regression, one run in the main checkout:** 3,272 passed / 20 failed / 38 errors, failure set equal to the
+    58-id baseline.
+- **Not done:** no injected-defect (mutation) controls for this build.
+- **Executed against the model:** nothing. No checkpoint loaded, no GPU search, no seeds, no games; every gate is
+  closed.
+- **Prediction on record:** None stated in advance.
+- **Status:** OPEN. The frozen build awaits the user's review before C1. See do-not-repeat **#91**.
