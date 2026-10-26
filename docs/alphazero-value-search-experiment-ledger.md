@@ -140,6 +140,7 @@ knob) is not a new hypothesis.
 > **Search distillation D2 — bounded trial attempt 2: training STOP; the trial is CLOSED (Post-closure entry 38, 2026-10-25).** One approved run (gate 46 only), 401 updates under `MLX_ENABLE_TF32=0`, 46 s. Held-out policy CE 4.7878 → 4.1627 (strictly lower: met), but held-out value drift mean 0.1207 (limit 0.05) and p95 0.3433 (limit 0.15) both FAILED. The answer to the card's question is no: the unchanged recipe under TF32=0 did not pass Stage 3's held-out checks. No retry or tuning; no strength screen. `calib020_0001` stays the incumbent. Outcome prediction: None stated in advance. Supersedes the two lines above. See #87.
 > **Dual-encoder policy branch — design-only feasibility card (decision note after Post-closure entry 38, 2026-10-26, the user's).** Entry 38's STOP and closeout accepted: it closes the recipe, not the goal of stronger play. Authorized: a design-only card for a composite agent (the frozen incumbent supplies values; a trainable encoder and policy-head copy supplies priors), so that the value function is preserved by construction. DRAFT `2026-10-26-dual-encoder-policy-branch-feasibility-card.md`: two forward passes per leaf (2.00× FLOPs); compute-fair comparison at matched network evaluations, composite 200 vs incumbent 400 simulations; recommends REJECTING on paper. Nothing loaded, generated, trained or gated. See #88.
 > **Dual-encoder policy branch — REJECTED on paper (addendum to the decision note after Post-closure entry 38, 2026-10-26, the user's).** Step 1 not built; nothing executed (no model loaded; no seeds, games, training or gates). The value-preserving architecture's added inference cost is not justified by current evidence: this experiment has not earned its cost. This is not a result about dual encoders, value preservation, capacity, distillation or strength. The card is kept as the reviewed proposal (§8 records the decision). `calib020_0001` stays the incumbent; the stronger-play goal remains open with no supported next experiment. Supersedes the "DRAFT" line above. See #89.
+> **Mirror averaging + root sequential halving — one fixed combination, design-only card (decision note after the dual-encoder rejection, 2026-10-26, the user's).** After a read-only review, the user authorized a DRAFT card (`2026-10-26-mirror-averaging-plus-root-halving-combination-card.md`). It proposes: the averaged evaluator at 200 simulations, ordinary opening through ply 19, the unchanged halving rule from ply 20, against the unchanged incumbent at 400, both under `MLX_ENABLE_TF32=0`, at approximately matched network evaluations (guards 1.05× evaluations, 1.10× search seconds); a composition-and-cost check, a 32-pair gross-regression screen and a 509-pair strength comparison (pass > 0.56020). It also proposes a narrow reopening of #47, #59 and #62 for this combination only. The two screens' scores are not current baselines and are not to be added. Nothing built, loaded, seeded or run. Prediction: None stated in advance. See #90.
 
 ## Historical proposal check — programme now closed
 
@@ -1749,6 +1750,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 
 89. **The dual-encoder policy-branch proposal — REJECTED on paper, 2026-10-26 (nothing executed).** Do **not** build, load a model, account seeds, generate, train, gate or play for this card. Do **not** cite the rejection as evidence that dual encoders, value preservation, capacity or distillation fail, or as a strength result: nothing was measured. Do **not** present the card's +175 Elo as a measured requirement (it is an illustrative scenario: log-linear gains from the old protocol, target 0.60), entry 11's 0.594 as isolating the cost of halving simulations (that match also changed the evaluator), or the 5–10% figure as a calibrated forecast (a subjective assessment, not adopted). Reviving the design needs new evidence that justifies its inference cost, a new card and the user's approval.
 
+90. **The mirror-averaging + root-halving combination card (DRAFT, 2026-10-26).** Do **not** build, load a model, account seeds, use the GPU or play games for it without the user's review of the card and approval of each step. Until the user approves §7's narrow reopening, #47, #59 and #62 stand unchanged; even then they open only for this one frozen combination, never for either component alone, another budget, candidate count, score, tie, start ply or orientation, a rerun or extension of entries 11 or 15, or a second combination. Do **not** use entry 11's or 15's scores as current baselines, add them, or present the hypothesis that averaging helps halving as measured. Do **not** treat simulation counts as proof of matched compute: the recorded network evaluations and runtime decide (card §4). A win would not establish synergy or attribute the gain to either component.
+
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
 
@@ -3064,6 +3067,8 @@ survivors, both networks in eval mode at load and end); closing K1 `60a35d6e` (R
 and the interval includes 0.5, so the screen cannot distinguish a small benefit from none. Network evaluations
 were matched within 0.1%; averaging used about 17% less search time (half the tree operations), so the comparison
 did not disadvantage it on runtime.
+
+*Correction to entry 11 (2026-10-26):* the pair-score summary above ("4 × 1.0, 10 × 0.5, 2 × 0.0") and "10 of 16 pairs split" are wrong. The ordered list in the same entry, and the committed record's `.screen.pair_scores`, give **5 × 1.0, 9 × 0.5 (split), 2 × 0.0**, which totals the recorded 19 points. The mean pair score 0.594, the interval and the verdict are unchanged. Found during the 2026-10-26 combination review, which had repeated the error.
 
 **Conclusion / status.** CLOSED for this configuration: no confirmatory study, no budget, weighting or
 orientation change. Not evidence that averaging helps or hurts. `calib020_0001` and production defaults unchanged.
@@ -5569,3 +5574,39 @@ equal entry 32's, as the same frozen data, code and setting should give. Predict
 - **Status: CLOSED on paper.** `calib020_0001` remains the incumbent. The broader stronger-play goal remains open, but
   this proposal does not provide a sufficiently supported next experiment. Nothing further is authorized. See
   do-not-repeat **#89**.
+
+### Decision note — after the dual-encoder rejection: one fixed combination, mirror averaging + root sequential halving (2026-10-26, the user's decision)
+
+- **Background:** a read-only review of the ledger and prototypes asked whether at most two existing, compatible
+  interventions merit one combined experiment. It shortlisted mirror averaging (entry 11, #59) and root sequential
+  halving (entry 15, #62).
+  - **Why these two:** they are the only two strength screens of inference-level changes at matched network cost, both
+    under eval-mode inference.
+  - **Their strength:** both point estimates leaned positive, both intervals include 0.5, and neither established an
+    advantage.
+- **The user's corrections to the review:**
+  - mirror averaging had 9 split pairs, not 10 (dated correction under entry 11);
+  - halving's score is 0.672, unclipped interval [0.332, 1.011];
+  - whether reflection consistency improves evaluation accuracy or halving's decisions is a hypothesis;
+  - the combination's runtime is unmeasured;
+  - the screens' machine and numerical setting differ from the proposed run, so their scores are not current baselines.
+- **Authorized:** a design-only card for one candidate frozen without tuning:
+  - the averaged evaluator at 200 simulations;
+  - the ordinary opening search and readout through ply 19;
+  - the existing halving rule from ply 20;
+  - against the unchanged incumbent at 400, both under process-local `MLX_ENABLE_TF32=0`;
+  - actual network evaluations and runtime recorded, with compute matching approximate.
+
+  The card prices a composition-and-cost check, a gross-regression screen and a fully funded fresh strength
+  comparison. It proposes reopening #47, #59 and #62 narrowly for this combination only; the individual
+  configurations and old evidence stay closed. A win would not establish synergy, and no factorial study is needed to
+  learn whether the combination wins.
+- **Not authorized:** a build, model loading, seeds, GPU work, games and pushing.
+- **Drafted:** `docs/superpowers/2026-10-26-mirror-averaging-plus-root-halving-combination-card.md` (DRAFT).
+  - **Steps:** the build (CPU), C1 (≤ 15 min, no games), the screen (32 pairs, stop below 0.40), and the strength
+    comparison (509 pairs; pass if the mean pair score exceeds 0.56020 and both matching guards hold).
+  - **Machine time:** about 13–16 h estimated, from entry 19's derived rate. The combination's runtime and the TF32=0
+    effect on play are unmeasured.
+  - **The untested element:** halving's unchanged rule at 200 simulations (3/6/12/28 visits per round).
+- **Prediction on record:** None stated in advance.
+- **Status:** OPEN, awaiting the user's review of the card. See do-not-repeat **#90**.
