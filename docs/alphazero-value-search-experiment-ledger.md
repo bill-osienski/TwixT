@@ -145,6 +145,7 @@ knob) is not a new hypothesis.
 > **Mirror averaging + root sequential halving — step B accepted; C1 approved once (addendum, 2026-10-26, the user's).** Read-only review found no blocking defect. Accepted: deferring the screen/strength wrappers, plans and seed copies until after C1; the disclosed loop-check repair (no retry permission for C1 or later). C1 may run once (gate 47 only, TF32=0, 890 s + 10 s). A STOP, VOID or timeout closes the combination. The screen, strength comparison, seeds and games remain unauthorized. See #92.
 > **Mirror averaging + root sequential halving — C1 PASS (Post-closure entry 39, 2026-10-26).** One run, 216 s of 900 s, gate 47 restored. Entry 10's check PASS; identity controls 40/40 and 64/64 bitwise; halving at all 64 positions from ply 20. Ratios of totals: evaluations 0.9961 (≤ 1.05), search seconds 0.8245 (≤ 1.10). Derived search-only projections at an assumed 59.8 plies: screen ≈ 0.65 h, strength ≈ 10.3 h. 🔴 Launched while NOT idle (load 4.0, Spotlight at ~313% CPU; check printed but not waited on), so the absolute timings may be inflated; not repeated. No strength claim. The screen, strength comparison and seeds remain unauthorized. Prediction: None stated in advance. See #93.
 > **Mirror averaging + root sequential halving — screen/strength build only (addendum to entry 39, 2026-10-26).** C1 accepted with its disclosed idle deviation (timings neither rerun nor discounted). Ceilings: screen 3,496 s, strength comparison 55,601 s (TERM 3,486 / 55,591 + 10 s). Built (`b6632003`): an idle gate the launch depends on (fake launches: busy → no launch; idle → the exact command), both wrappers, and seed survey and closing copies (64 / 1,018 slots; blocks unselected, no plan committed). The match now logs `game_start` for closing. Nothing run; 49 gates closed. See #94.
+> **Mirror averaging + root sequential halving — the screen's seed survey and pre-proof (addendum to entry 39, 2026-10-26).** Each run once in a clean worktree. The survey CLEAN (`28cabf0e`, 45/45): block [202692500, 202692564), 64 seeds, gap 82 (floor 64). The pre-proof HOLDS (`8c52583d`, 45/45). Not registered; no plan; nothing played. Awaits registration review. See #95.
 
 ## Historical proposal check — programme now closed
 
@@ -1763,6 +1764,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 93. **C1's PASS (entry 39), 2026-10-26.** Do **not** rerun C1, open gate 47 again, or "correct" its timings under a quieter machine: it ran once, under recorded contention, and stands as recorded. Do **not** read the PASS or the 0.82 seconds ratio as evidence about playing strength, or the derived hours as whole-game measurements. Do **not** build the screen/strength wrappers, plans or seed blocks, open gates 48 or 49, or play a game without the user's review of entry 39 and a separate approval. Before any later GPU run, wait on the idle check (load below 3, no process above 50% CPU) rather than only printing it.
 
 94. **The screen/strength build (addendum to entry 39), 2026-10-26.** Do **not** run a seed survey, proof, registration or closing, commit a `plan.json`, open gates 48 or 49, or launch either wrapper without the user's review of the build and a separate approval for each step. Do **not** bypass the idle gate (for example by launching the module directly or editing the wrapper's precondition), relax its limits, or change a ceiling: they are C1's recorded projection × 1.5, undiscounted. Do **not** change the candidate, budgets, guards or stopping rules. A busy refusal by the idle gate is not a run; any other STOP, VOID or timeout closes the combination without retry.
+
+95. **The screen's seed survey and pre-proof (2026-10-26).** Do **not** rerun either mode, choose another block, or adjust [202692500, 202692564): the rule chose it and both records stand. Do **not** register it, commit the screen's `plan.json`, run the post-registration proof, open gate 48 or launch the screen without the user's registration review and separate approval of each step. Do **not** run any strength-comparison seed procedure yet: its block must be surveyed against the registry as it stands when that step is approved.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -5863,3 +5866,25 @@ pre-registration proof approved.**
   testing.
 - **Not authorized:** registration, plan creation, the post-registration proof, either gameplay run, the strength
   comparison's seed procedures, checkpoint loading, GPU work and pushing.
+
+**Addendum to entry 39 (2026-10-26): the screen's seed survey and pre-registration proof, each run once.**
+- **Where it ran:** a clean linked worktree (branch `mirror-halving-screen-seeds`, from `d4ceb641`); main
+  fast-forwarded and the worktree removed afterwards.
+  - The scope was this tree's and the main checkout's `scripts`, `tests` and `docs/superpowers`, fail-closed: 5,161
+    and 47,852 regular files, no symbolic links, 5,248 band literal values.
+- **The survey (`28cabf0e`):** exit 0; `02_seed_survey_run.txt`, sha256 `44b1fd0c…`, at `d4ceb641`, working tree
+  clean.
+  - The fixed rule: the highest registered or named-spent seed in the band is 202692411, so BASE = 202692500.
+  - **Block [202692500, 202692564), 64 seeds:** no direct overlap, 0 derived streams, injective, nearest gap 82
+    (floor 64). CLEAN.
+  - Controls 45/45. Verdict: THE MIRROR-HALVING SCREEN BLOCK IS CLEAN.
+- **The pre-registration proof (`8c52583d`):** exit 0; `03_collision_proof_pre_run.txt`, sha256 `631026a3…`, at
+  `28cabf0e`, working tree clean.
+  - It read the block from the committed survey record.
+  - Expected state (pre) HOLDS: the registry unchanged, the block unregistered, no plan.
+  - The block is CLEAN again; controls 45/45. Verdict: THE MIRROR-HALVING SCREEN BLOCK IS CLEAN AND THE STATE IS AS
+    EXPECTED.
+- **Not done:** no registration (the block appears nowhere in the registry), no plan, no post-registration proof, no
+  game, no strength-comparison seed procedure, no checkpoint loading or GPU work. 49 gates, all closed.
+- **Prediction on record:** none (a seed procedure).
+- **Status:** awaiting the user's registration review. See do-not-repeat **#95**.
