@@ -22,7 +22,8 @@ from scripts.GPU.alphazero import mirror_halving_match as MATCH
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 EV = ROOT / "docs/superpowers/evidence"
-KINDS = {"screen": {"term": 3486, "slots": 64}, "strength": {"term": 55591, "slots": 1018}}
+KINDS = {"screen": {"term": 3486, "slots": 64}, "strength": {"term": 55591, "slots": 1018},
+         "strength2": {"term": 55591, "slots": 1018}}          # attempt 2: the strength comparison's ceiling
 
 
 # ─────────────────────────────── the idle gate ───────────────────────────────
@@ -103,13 +104,13 @@ def _wrapper(kind):
 @pytest.mark.parametrize("kind", KINDS)
 def test_THE_CEILING_IS_C1_S_PROJECTION_TIMES_1_5_ROUNDED_UP(kind):
     rec = json.loads((EV / "mirror-halving-c1/record.json").read_text())
-    total = math.ceil(rec["derived"]["search_hours"][kind] * 3600 * 1.5)
+    total = math.ceil(rec["derived"]["search_hours"][{"strength2": "strength"}.get(kind, kind)] * 3600 * 1.5)
     w = _wrapper(kind)
     assert f"\nTERM_S={KINDS[kind]['term']}\n" in w and "\nGRACE_S=10\n" in w
-    assert KINDS[kind]["term"] + 10 == total == {"screen": 3496, "strength": 55601}[kind]
+    assert KINDS[kind]["term"] + 10 == total == {"screen": 3496, "strength": 55601, "strength2": 55601}[kind]
 
 
-@pytest.mark.parametrize("kind", KINDS)
+@pytest.mark.parametrize("kind", ["screen", "strength"])
 def test_THE_WRAPPER_IS_C1_S_WITH_ONLY_THE_STATED_DIFFERENCES(kind):
     c1 = (EV / "mirror-halving-c1-run/01_wrapper.sh").read_text().split("set -u\n", 1)[1].splitlines()
     w = _wrapper(kind).split("set -u\n", 1)[1].splitlines()
@@ -139,6 +140,36 @@ def test_THE_IDLE_GATE_PRECEDES_EVERY_LAUNCH_LINE(kind):
     assert gate < started < perl and w.count("/usr/bin/perl -e") == 1 and w.count("idle_gate wait") == 1
 
 
+def test_ATTEMPT_2_S_WRAPPER_IS_ATTEMPT_1_S_WITH_ONLY_THE_STATED_DIFFERENCES():
+    """Amendment 2026-10-27: the paths, the gate, `run strength2`, and the background-compute check after the idle
+    gate, recorded in bg_check.txt. Everything else -- the ceiling, the supervisor, the restore -- byte-identical."""
+    one = _wrapper("strength").split("set -u\n", 1)[1].splitlines()
+    two = _wrapper("strength2").split("set -u\n", 1)[1].splitlines()
+    removed, added = sorted(set(one) - set(two)), sorted(set(two) - set(one))
+    assert set(added) == {
+        "OUT_REL=docs/superpowers/evidence/mirror-halving-strength2-run",
+        "RUN_REL=docs/superpowers/evidence/mirror-halving-strength2",
+        "GATE_REL=scripts/GPU/alphazero/mirror_halving_strength2_authorization.py",
+        "GATE=MIRROR_HALVING_STRENGTH2_AUTHORIZED",
+        "for f in idle_check.txt bg_check.txt run.stdout.txt run.stderr.txt outer.json; do",
+        "# THE BACKGROUND-COMPUTE CHECK (after the idle gate): the launch below is reached ONLY if it exits 0.",
+        'BG_LOG=$(env PYTHONPATH=. "$PY" -B -m scripts.GPU.alphazero.background_compute check 2>&1) || {',
+        "  bg_rc=$?", "  printf '%s\\n' \"$BG_LOG\" >&2",
+        '  refuse "BOINC detected or the check failed (background_compute exit $bg_rc): nothing launched"',
+        "printf '%s\\n' \"$BG_LOG\" > \"$OUT_REL/bg_check.txt\"",
+        '/usr/bin/perl -e "$SUPERVISOR" "$TERM_S" "$GRACE_S" env MLX_ENABLE_TF32=0 PYTHONPATH=. "$PY" -B -m "$MODULE" '
+        'run strength2 --checkpoint "$CKPT" \\'}, added
+    assert len(removed) == 6, removed                       # the four settings, the one-shot list, the launch line
+    assert len(two) == len(one) + 7                         # the six-line check and its record line
+
+
+def test_ATTEMPT_2_S_BACKGROUND_CHECK_FOLLOWS_THE_IDLE_GATE_AND_PRECEDES_THE_LAUNCH():
+    w = _wrapper("strength2").split("set -u\n", 1)[1]
+    idle, bg, started, perl = (w.index(x) for x in ("idle_gate wait", "background_compute check", "\nstarted=true",
+                                                    '/usr/bin/perl -e "$SUPERVISOR"'))
+    assert idle < bg < started < perl and w.count("background_compute check") == 1
+
+
 # ─────────────────────────────── fake launches of the REAL wrapper ───────────────────────────────
 
 STUB_IDLE = """import os, sys
@@ -147,6 +178,11 @@ sys.exit(0 if os.environ.get("FAKE_IDLE") == "idle" else 1)
 """
 STUB_MATCH = """import json, os, sys
 print("FAKE_LAUNCHED", json.dumps({"argv": sys.argv[1:], "tf32": os.environ.get("MLX_ENABLE_TF32")}))
+"""
+STUB_BG = """import os, sys
+state = os.environ.get("FAKE_BG")
+print("STUB_BACKGROUND_COMPUTE", sys.argv[1:], state)
+sys.exit({"clear": 0, "boinc": 1}.get(state, 3))
 """
 
 
@@ -166,6 +202,7 @@ def _fake_repo(tmp, kind):
     gate = pkg / f"mirror_halving_{kind}_authorization.py"
     gate.write_text(f'"""stub gate"""\n{gate_name} = False\n')
     (pkg / "idle_gate.py").write_text(STUB_IDLE)
+    (pkg / "background_compute.py").write_text(STUB_BG)
     (pkg / "mirror_halving_match.py").write_text(STUB_MATCH)
     wdir = repo / f"docs/superpowers/evidence/mirror-halving-{kind}-run"
     wdir.mkdir(parents=True)
@@ -184,9 +221,9 @@ def _fake_repo(tmp, kind):
     return repo, wdir, gate, gate_name
 
 
-def _launch(repo, wdir, idle):
+def _launch(repo, wdir, idle, bg="clear"):
     env = {k: v for k, v in os.environ.items() if k not in ("MLX_ENABLE_TF32", "PYTHONPATH")}
-    env.update(FAKE_IDLE=idle, PYTHONDONTWRITEBYTECODE="1")
+    env.update(FAKE_IDLE=idle, FAKE_BG=bg, PYTHONDONTWRITEBYTECODE="1")
     return subprocess.run(["bash", str(wdir / "01_wrapper.sh")], cwd=str(repo), env=env, capture_output=True,
                           text=True, timeout=60)
 
@@ -214,6 +251,36 @@ def test_FAKE_LAUNCH_AN_IDLE_MACHINE_REACHES_THE_COMMAND_with_its_exact_argument
     assert (wdir / "idle_check.txt").read_text() == "STUB_IDLE_GATE ['wait'] idle\n"
     outer = json.loads((wdir / "outer.json").read_text())
     assert outer["outcome"] == "COMPLETED" and outer["gate_restored"] is True and outer["term_s"] == KINDS[kind]["term"]
+    assert f"{gate_name} = False\n" in gate.read_text()
+
+
+@pytest.mark.parametrize("bg, why", [("boinc", "exit 1"), ("failed", "exit 3")], ids=["boinc-present", "check-fails"])
+def test_FAKE_LAUNCH_ATTEMPT_2_BOINC_PRESENT_OR_A_FAILED_CHECK_PREVENTS_THE_LAUNCH(tmp_path, bg, why):
+    repo, wdir, gate, gate_name = _fake_repo(tmp_path, "strength2")
+    p = _launch(repo, wdir, "idle", bg)
+    assert p.returncode == 1 and f"BOINC detected or the check failed (background_compute {why}): nothing launched" \
+        in p.stderr, p.stderr
+    assert f"STUB_BACKGROUND_COMPUTE ['check'] {bg}" in p.stderr and "FAKE_LAUNCHED" not in p.stdout + p.stderr
+    assert sorted(x.name for x in wdir.iterdir()) == ["01_wrapper.sh"]          # nothing written, nothing started
+    assert not (repo / "docs/superpowers/evidence/mirror-halving-strength2").exists()
+    assert f"{gate_name} = False\n" in gate.read_text()                           # the gate restored anyway
+
+
+def test_FAKE_LAUNCH_ATTEMPT_2_A_BUSY_MACHINE_IS_REFUSED_BEFORE_THE_BACKGROUND_CHECK(tmp_path):
+    repo, wdir, _gate, _name = _fake_repo(tmp_path, "strength2")
+    p = _launch(repo, wdir, "busy", "boinc")
+    assert p.returncode == 1 and "did not become idle" in p.stderr and "STUB_BACKGROUND_COMPUTE" not in p.stderr
+
+
+def test_FAKE_LAUNCH_ATTEMPT_2_BOINC_ABSENT_REACHES_THE_COMMAND_and_keeps_the_observation(tmp_path):
+    repo, wdir, gate, gate_name = _fake_repo(tmp_path, "strength2")
+    p = _launch(repo, wdir, "idle", "clear")
+    assert p.returncode == 0, p.stderr
+    launched = json.loads((wdir / "run.stdout.txt").read_text().split("FAKE_LAUNCHED", 1)[1])
+    assert launched["argv"][:2] == ["run", "strength2"] and launched["tf32"] == "0"
+    assert (wdir / "bg_check.txt").read_text() == "STUB_BACKGROUND_COMPUTE ['check'] clear\n"
+    assert (wdir / "idle_check.txt").read_text() == "STUB_IDLE_GATE ['wait'] idle\n"
+    assert json.loads((wdir / "outer.json").read_text())["gate_restored"] is True
     assert f"{gate_name} = False\n" in gate.read_text()
 
 
@@ -308,3 +375,30 @@ def test_THE_SCREEN_PLAN_is_the_survey_s_build_plan_and_its_block_is_REGISTERED(
                REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s) for s in range(*block))
     assert not any(lo < block[1] and block[0] < hi and (lo, hi) != block
                    for lo, hi in REG.EXPOSED_SEED_INTERVALS + REG.RETIRED_SEED_INTERVALS)
+
+
+def _code(rel):
+    """The file below its module docstring."""
+    return (EV / rel).read_text().split('"""', 2)[2]
+
+
+@pytest.mark.parametrize("rel", ["seed-survey/01_seed_survey.py", "seed-closing/01_derive_usage.py"])
+def test_ATTEMPT_2_S_SEED_COPIES_ARE_ATTEMPT_1_S_WITH_ONLY_THE_NAMES_CHANGED(rel):
+    """Amendment 2026-10-27: the same method and rule. Below the docstring, attempt 2's code with its one name put back
+    is attempt 1's, byte for byte: the paths, the plan's kind, the module names and the titles are all that differ."""
+    one, two = _code(f"mirror-halving-strength-{rel}"), _code(f"mirror-halving-strength2-{rel}")
+    assert two != one and two.replace("strength2", "strength").replace("STRENGTH2", "STRENGTH") == one
+    assert "strength2" not in one and "STRENGTH2" not in one
+
+
+def test_ATTEMPT_2_HAS_NO_SEEDS_YET():
+    """Built only: no survey or proof record, no plan, no closing record, no run output, and its gate closed. Fresh seeds
+    are chosen by the survey's rule only when that survey is separately approved and run."""
+    from scripts.GPU.alphazero import mirror_halving_strength2_authorization as GATE2
+    assert GATE2.MIRROR_HALVING_STRENGTH2_AUTHORIZED is False
+    def names(d):
+        return sorted(p.name for p in (EV / d).iterdir() if p.name != "__pycache__")
+    assert names("mirror-halving-strength2-seed-survey") == ["01_seed_survey.py"]
+    assert names("mirror-halving-strength2-seed-closing") == ["01_derive_usage.py"]
+    assert names("mirror-halving-strength2-run") == ["01_wrapper.sh"]
+    assert not (EV / "mirror-halving-strength2").exists() and not (ROOT / MATCH.KINDS["strength2"]["plan"]).exists()

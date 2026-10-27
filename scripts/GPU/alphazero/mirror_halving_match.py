@@ -10,6 +10,12 @@ unless MLX_ENABLE_TF32 is exactly "0" and no `mlx` module is loaded when it star
 ADMISSION: the screen only after C1's committed record is COMPLETED with verdict PASS under this card; the strength
 comparison only after that AND the screen's committed record is COMPLETED with verdict CONTINUE under this card.
 
+ATTEMPT 2 (`run strength2`; amendment `docs/superpowers/2026-10-27-mirror-halving-strength-attempt2-amendment.md`,
+pinned by sha256): the ONE fresh attempt after attempt 1's BOINC-contended timeout -- the strength comparison exactly,
+admitted as it is, on its own fresh block, plan, evidence directory and gate (`mirror_halving_strength2_authorization`).
+One addition: `background_compute.observe` is read before loading, after every game and once before the verdict, each
+logged as a `bg_check` event; BOINC detected, or a failed check, is a VOID at step "background_compute".
+
 THE GAMES: the candidate (halving over the averaging wrapper, 200 simulations) against the unchanged incumbent (MCTS,
 400), each from its OWN eval-mode load of calib020_0001; Stage B's protocol (24x24, 280-ply cap, opening-temperature
 readout, no root noise); colour-reversed pairs from eval_runner's agent builder (candidate red in even games), game g
@@ -23,7 +29,7 @@ claim); the strength comparison PASSes only if the exact Hoeffding lower bound e
 over the whole run (above the bound with a guard failed: NOT_COMPUTE_MATCHED); otherwise NON_PASS. An incomplete cohort
 gets no score: any failure, exception or SIGTERM is a VOID. One shot each; no retry, top-up or extension.
 
-    MLX_ENABLE_TF32=0 python -m scripts.GPU.alphazero.mirror_halving_match run screen|strength --checkpoint <path>
+    MLX_ENABLE_TF32=0 python -m scripts.GPU.alphazero.mirror_halving_match run screen|strength|strength2 --checkpoint <path>
 """
 from __future__ import annotations
 
@@ -42,6 +48,7 @@ from typing import Any, Callable, Dict, Mapping, Sequence, Tuple
 from . import mirror_halving_c1 as C1
 from . import mirror_halving_combination as K
 from . import mirror_halving_screen_authorization as SCREEN_GATE
+from . import mirror_halving_strength2_authorization as STRENGTH2_GATE
 from . import mirror_halving_strength_authorization as STRENGTH_GATE
 from . import search_distillation_d2_measure as M
 
@@ -54,10 +61,17 @@ KINDS = {"screen": {"pairs": K.SCREEN["pairs"], "gate": (SCREEN_GATE, "MIRROR_HA
                     "plan": "docs/superpowers/evidence/mirror-halving-screen-run/plan.json"},
          "strength": {"pairs": K.STRENGTH["pairs"], "gate": (STRENGTH_GATE, "MIRROR_HALVING_STRENGTH_AUTHORIZED"),
                       "evidence": "docs/superpowers/evidence/mirror-halving-strength",
-                      "plan": "docs/superpowers/evidence/mirror-halving-strength-run/plan.json"}}
+                      "plan": "docs/superpowers/evidence/mirror-halving-strength-run/plan.json"},
+         "strength2": {"pairs": K.STRENGTH["pairs"], "gate": (STRENGTH2_GATE, "MIRROR_HALVING_STRENGTH2_AUTHORIZED"),
+                       "evidence": "docs/superpowers/evidence/mirror-halving-strength2",
+                       "plan": "docs/superpowers/evidence/mirror-halving-strength2-run/plan.json",
+                       "amendment": ("docs/superpowers/2026-10-27-mirror-halving-strength-attempt2-amendment.md",
+                                     "99fd9cb3b9034dceb50d7f566059d7bc1cd6a4237ebffdfc62de5f1a0acdcd3f"),
+                       "watch_background": True}}
 ADMISSION = {"screen": [(C1.EVIDENCE_DIR, "verdict", "PASS")],
              "strength": [(C1.EVIDENCE_DIR, "verdict", "PASS"),
                           (KINDS["screen"]["evidence"], "screen_verdict", "CONTINUE")]}
+ADMISSION["strength2"] = list(ADMISSION["strength"])
 PINNED = {rel: sha for rel, sha in C1.PINNED.items() if not rel.startswith(C1.PANEL_SOURCE) and rel != C1.ENTRY10}
 PINNED["scripts/GPU/alphazero/mirror_halving_c1.py"] = "b23379e59bd31bf51715f41debf028910efbf37f306457bba96902d048fbbde8"
 EXIT_COMPLETED, EXIT_USAGE, EXIT_VOID, EXIT_REFUSED = 0, 2, 3, 4
@@ -81,6 +95,7 @@ class Seams:
     seed_ok: Callable[[int], bool]
     play_and_build: Callable[..., Any]
     between_games: Callable[[], None]
+    background: Callable[[], Dict[str, Any]] | None = None   # attempt 2 only: background_compute.observe
 
 
 def admitted(kind: str, read_record: Callable[[str], Mapping[str, Any]]) -> Dict[str, str]:
@@ -96,6 +111,21 @@ def admitted(kind: str, read_record: Callable[[str], Mapping[str, Any]]) -> Dict
                           f"admitted")
         seen[rel] = want
     return seen
+
+
+def _watch(kind: str, seams: Seams, rec: Dict[str, Any], log, when: str) -> None:
+    """Attempt 2's background-compute check: logged every time; BOINC detected or a failed check is a VOID."""
+    if not KINDS[kind].get("watch_background"):
+        return
+    if seams.background is None:
+        raise Void("background_compute", f"{when}: no background-compute check is wired")
+    obs = seams.background()
+    rec["background_checks"] = rec.get("background_checks", 0) + 1
+    log("bg_check", when=when, ok=obs.get("ok") is True, n_procs=obs.get("n_procs"), hits=obs.get("hits"),
+        exempt=obs.get("exempt"), error=obs.get("error"))
+    if obs.get("ok") is not True:
+        raise Void("background_compute", f"{when}: " + (f"the check failed: {obs.get('error')}" if obs.get("error")
+                                                         else f"BOINC detected: {obs.get('hits')}"))
 
 
 def _execute(kind: str, seams: Seams, out_dir: pathlib.Path, rec: Dict[str, Any], log) -> None:
@@ -124,6 +154,7 @@ def _execute(kind: str, seams: Seams, out_dir: pathlib.Path, rec: Dict[str, Any]
     if sha1 != M.CHECKPOINT_SHA1:
         raise Void("checkpoint", f"SHA-1 {sha1} is not calib020_0001's")
     rec["checkpoint_sha1"] = sha1
+    _watch(kind, seams, rec, log, "before load")
 
     t = time.monotonic()
     base = {K.CANDIDATE: seams.load_evaluator(), K.INCUMBENT: seams.load_evaluator()}
@@ -174,6 +205,8 @@ def _execute(kind: str, seams: Seams, out_dir: pathlib.Path, rec: Dict[str, Any]
             results.append(r)
             log("game_end", game=task.game_idx, n_moves=r.n_moves, reason=r.reason)
             seams.between_games()
+            _watch(kind, seams, rec, log, f"after game {task.game_idx}")
+    _watch(kind, seams, rec, log, "before the verdict")
     rec["modes_at_end"] = {k: seams.require_eval(ev, "at the end") for k, ev in base.items()}
     rec["cost_totals"] = cost
     g = K.guards(cost[K.CANDIDATE], cost[K.INCUMBENT])
@@ -204,6 +237,8 @@ def conclude(kind: str, seams: Seams, out_dir: pathlib.Path, admission: Mapping[
                            "environment": {"python": sys.version, "platform": platform.platform(),
                                            "executable": sys.executable},
                            "loadavg_before": os.getloadavg()}
+    if "amendment" in KINDS[kind]:
+        rec["amendment"], rec["amendment_sha256"] = KINDS[kind]["amendment"]
     log_fh = open(out_dir / "progress.jsonl", "x")
 
     def log(event, **kw):
@@ -264,6 +299,8 @@ def _real_seams(checkpoint: pathlib.Path) -> Seams:
     from . import e4_screen_reference as REG
     from . import eval_runner as ER
 
+    from . import background_compute as BG
+
     def seed_ok(s):
         return REG.seed_is_accounted(s) and not REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s)
 
@@ -273,7 +310,8 @@ def _real_seams(checkpoint: pathlib.Path) -> Seams:
                  require_eval=lambda ev, when: M._require_eval(ev.network, when),
                  loaded_modules=M._real_seams(checkpoint).loaded_modules,
                  read_plan=lambda rel: json.loads((ROOT / rel).read_text()),
-                 seed_ok=seed_ok, play_and_build=K.play_and_build, between_games=_between_games)
+                 seed_ok=seed_ok, play_and_build=K.play_and_build, between_games=_between_games,
+                 background=BG.observe)
 
 
 def _read_record(rel: str) -> Mapping[str, Any]:
@@ -299,6 +337,10 @@ def run(kind: str, checkpoint: str) -> int:
         raise Refused(f"{name} is closed: the {kind} is not authorized")
     if M._sha((ROOT / CARD).read_bytes()) != CARD_SHA256:
         raise Refused(f"{CARD} is not the pinned card")
+    if "amendment" in KINDS[kind]:
+        rel, sha = KINDS[kind]["amendment"]
+        if not (ROOT / rel).is_file() or M._sha((ROOT / rel).read_bytes()) != sha:
+            raise Refused(f"{rel} is not the pinned amendment")
     for rel, sha in PINNED.items():
         if M._sha((ROOT / rel).read_bytes()) != sha:
             raise Refused(f"{rel} is not the pinned bytes")
@@ -323,8 +365,8 @@ def _mlx_loaded() -> bool:
 def main(argv: Sequence[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if len(argv) != 4 or argv[0] != "run" or argv[1] not in KINDS or argv[2] != "--checkpoint":
-        print("usage: MLX_ENABLE_TF32=0 python -m scripts.GPU.alphazero.mirror_halving_match run screen|strength "
-              "--checkpoint <abs path>", file=sys.stderr)
+        print("usage: MLX_ENABLE_TF32=0 python -m scripts.GPU.alphazero.mirror_halving_match run "
+              "screen|strength|strength2 --checkpoint <abs path>", file=sys.stderr)
         return EXIT_USAGE
     try:
         return run(argv[1], argv[3])

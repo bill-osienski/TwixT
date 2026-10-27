@@ -22,6 +22,8 @@ from scripts.GPU.alphazero import mirror_halving_c1 as C1
 from scripts.GPU.alphazero import mirror_halving_combination as K
 from scripts.GPU.alphazero import mirror_halving_match as MATCH
 from scripts.GPU.alphazero import mirror_halving_screen_authorization as SCREEN_GATE
+from scripts.GPU.alphazero import background_compute as BG
+from scripts.GPU.alphazero import mirror_halving_strength2_authorization as STRENGTH2_GATE
 from scripts.GPU.alphazero import mirror_halving_strength_authorization as STRENGTH_GATE
 from scripts.GPU.alphazero import root_sequential_halving as RSH
 from scripts.GPU.alphazero import search_distillation_d2_measure as M
@@ -180,7 +182,10 @@ def test_THE_ADMISSION_RECORDS_ARE_THE_COMMITTED_ONES():
     assert MATCH.ADMISSION == {"screen": [("docs/superpowers/evidence/mirror-halving-c1", "verdict", "PASS")],
                                "strength": [("docs/superpowers/evidence/mirror-halving-c1", "verdict", "PASS"),
                                             ("docs/superpowers/evidence/mirror-halving-screen", "screen_verdict",
-                                             "CONTINUE")]}
+                                             "CONTINUE")],
+                               "strength2": [("docs/superpowers/evidence/mirror-halving-c1", "verdict", "PASS"),
+                                             ("docs/superpowers/evidence/mirror-halving-screen", "screen_verdict",
+                                              "CONTINUE")]}       # attempt 2: admitted exactly as attempt 1
     with pytest.raises(FileNotFoundError):
         REAL_READ_RECORD("docs/superpowers/evidence/no-such-run")
 
@@ -334,3 +339,129 @@ def test_EVERY_GAME_IS_LOGGED_AS_STARTED_BEFORE_IT_IS_PLAYED(opened, monkeypatch
     events = [json.loads(x) for x in (opened / "screen" / "progress.jsonl").read_text().splitlines()]
     assert [e["game"] for e in events if e["event"] == "game_start"] == [0, 1, 2, 3]
     assert [e["game"] for e in events if e["event"] == "game_end"] == [0, 1, 2]
+
+
+# ─────────────────────────────── attempt 2: the one fresh attempt, BOINC kept out ───────────────────────────────
+
+CLEAR = {"ok": True, "n_procs": 800, "hits": [], "n_hits": 0, "exempt": ["97693 boinc_project /opt/podman/bin/krunkit"],
+         "error": None}
+BOINC = {"ok": False, "n_procs": 801, "hits": ["5635 boinc_project hsgamma_FGRP5"], "n_hits": 1, "exempt": [],
+         "error": None}
+FAILED = {"ok": False, "n_procs": 0, "hits": [], "n_hits": 0, "exempt": [], "error": "OSError: ps failed"}
+
+
+def scripted(*answers, then=CLEAR):
+    """A background check answering in turn, then `then` for ever; the calls are counted."""
+    calls = []
+
+    def check():
+        calls.append(1)
+        return dict(answers[len(calls) - 1] if len(calls) <= len(answers) else then)
+    return check, calls
+
+
+@pytest.fixture
+def opened2(monkeypatch, isolated):
+    monkeypatch.setattr(STRENGTH2_GATE, "MIRROR_HALVING_STRENGTH2_AUTHORIZED", True)
+    RECORDS[SCREEN_REL] = dict(SCREEN_CONTINUE)
+    return isolated
+
+
+def _events(tmp, kind):
+    return [json.loads(x) for x in (tmp / kind / "progress.jsonl").read_text().splitlines()]
+
+
+def test_ATTEMPT_2_S_GATE_IS_CLOSED_IN_THE_SOURCE_and_a_closed_gate_refuses(isolated, capsys):
+    assert STRENGTH2_GATE.MIRROR_HALVING_STRENGTH2_AUTHORIZED is False
+    RECORDS[SCREEN_REL] = dict(SCREEN_CONTINUE)
+    assert _run(isolated, "strength2") == 4 and "MIRROR_HALVING_STRENGTH2_AUTHORIZED is closed" in capsys.readouterr().err
+    assert not (isolated / "strength2").exists()
+
+
+def test_ATTEMPT_2_IS_THE_STRENGTH_COMPARISON_ON_ITS_OWN_PATHS():
+    one, two = MATCH.KINDS["strength"], MATCH.KINDS["strength2"]
+    assert two["pairs"] == one["pairs"] == 509 and MATCH.ADMISSION["strength2"] == MATCH.ADMISSION["strength"]
+    assert two["plan"] == "docs/superpowers/evidence/mirror-halving-strength2-run/plan.json" != one["plan"]
+    assert two["gate"] == (STRENGTH2_GATE, "MIRROR_HALVING_STRENGTH2_AUTHORIZED") and two["watch_background"] is True
+    assert "watch_background" not in one and "amendment" not in one and "amendment" not in MATCH.KINDS["screen"]
+    rel, sha = two["amendment"]
+    assert M._sha((MATCH.ROOT / rel).read_bytes()) == sha
+
+
+def test_ATTEMPT_2_PLAYS_1018_GAMES_CHECKING_FOR_BOINC_BEFORE_LOAD_AFTER_EVERY_GAME_AND_BEFORE_THE_VERDICT(
+        opened2, monkeypatch):
+    check, calls = scripted()
+    monkeypatch.setattr(MATCH, "_real_seams", lambda ckpt: seams(ALL_CANDIDATE, background=check))
+    assert _run(opened2, "strength2") == 0
+    rec = _record(opened2, "strength2")
+    assert rec["status"] == "COMPLETED" and rec["run"] == "strength2" and rec["strength_verdict"] == "PASS"
+    assert len(rec["pair_scores"]) == 509 and rec["screen_verdict"] is None
+    assert (rec["amendment"], rec["amendment_sha256"]) == MATCH.KINDS["strength2"]["amendment"]
+    checks = [e for e in _events(opened2, "strength2") if e["event"] == "bg_check"]
+    assert len(calls) == len(checks) == rec["background_checks"] == 1 + 1018 + 1
+    assert [c["when"] for c in checks[:2]] == ["before load", "after game 0"] and checks[-1]["when"] == "before the verdict"
+    assert all(c["ok"] is True and c["exempt"] == CLEAR["exempt"] for c in checks)
+
+
+@pytest.mark.parametrize("answer, said", [(BOINC, "BOINC detected: ['5635 boinc_project hsgamma_FGRP5']"),
+                                          (FAILED, "the check failed: OSError: ps failed")], ids=["boinc", "failed"])
+def test_ATTEMPT_2_BOINC_OR_A_FAILED_CHECK_MID_RUN_IS_A_VOID_WITH_NO_SCORE(opened2, monkeypatch, answer, said):
+    check, _calls = scripted(*([CLEAR] * 6), answer)            # before load, then after games 0-4; then game 5
+    played = []
+    monkeypatch.setattr(MATCH, "_real_seams",
+                        lambda ckpt: seams(stub_play(lambda g, r: K.CANDIDATE, calls=played), background=check))
+    assert _run(opened2, "strength2") == 3
+    rec = _record(opened2, "strength2")
+    assert rec["status"] == "VOID" and rec["void"] == {"step": "background_compute", "detail": f"after game 5: {said}"}
+    assert "pair_scores" not in rec and "guards" not in rec and rec["strength_verdict"] is None
+    assert played == list(range(6)) and len((opened2 / "strength2" / "games.jsonl").read_text().splitlines()) == 6
+    last = [e for e in _events(opened2, "strength2") if e["event"] == "bg_check"][-1]
+    assert last["when"] == "after game 5" and last["ok"] is False and _events(opened2, "strength2")[-1]["event"] == "end"
+
+
+@pytest.mark.parametrize("answer", [BOINC, FAILED], ids=["boinc", "failed"])
+def test_ATTEMPT_2_BOINC_BEFORE_LOAD_IS_A_VOID_BEFORE_ANY_LOAD_OR_GAME(opened2, monkeypatch, answer):
+    check, _calls = scripted(answer)
+    loads, played = [], []
+
+    def load():
+        loads.append(1)
+        return FakeEv()
+    monkeypatch.setattr(MATCH, "_real_seams", lambda ckpt: seams(stub_play(lambda g, r: K.CANDIDATE, calls=played),
+                                                                 background=check, load_evaluator=load))
+    assert _run(opened2, "strength2") == 3
+    rec = _record(opened2, "strength2")
+    assert rec["void"]["step"] == "background_compute" and rec["void"]["detail"].startswith("before load: ")
+    assert loads == [] and played == [] and not (opened2 / "strength2" / "games.jsonl").exists()
+
+
+def test_ATTEMPT_2_WITHOUT_A_WIRED_CHECK_IS_A_VOID(opened2, monkeypatch):
+    monkeypatch.setattr(MATCH, "_real_seams", lambda ckpt: seams(ALL_CANDIDATE))      # background left None
+    assert _run(opened2, "strength2") == 3
+    assert _record(opened2, "strength2")["void"] == {"step": "background_compute",
+                                                     "detail": "before load: no background-compute check is wired"}
+
+
+@pytest.mark.parametrize("kind", ["screen", "strength"])
+def test_ATTEMPT_1_AND_THE_SCREEN_NEVER_CALL_THE_CHECK(opened, monkeypatch, kind):
+    RECORDS[SCREEN_REL] = dict(SCREEN_CONTINUE)
+
+    def never():
+        raise AssertionError("checked")
+    monkeypatch.setattr(MATCH, "_real_seams", lambda ckpt: seams(ALL_CANDIDATE, background=never))
+    assert _run(opened, kind) == 0
+    rec = _record(opened, kind)
+    assert rec["status"] == "COMPLETED" and "background_checks" not in rec and "amendment" not in rec
+    assert not any(e["event"] == "bg_check" for e in _events(opened, kind))
+
+
+def test_ATTEMPT_2_REFUSES_AN_AMENDMENT_THAT_IS_NOT_THE_PINNED_ONE(opened2, monkeypatch, capsys):
+    rel, _sha = MATCH.KINDS["strength2"]["amendment"]
+    monkeypatch.setitem(MATCH.KINDS["strength2"], "amendment", (rel, "0" * 64))
+    assert _run(opened2, "strength2") == 4 and "is not the pinned amendment" in capsys.readouterr().err
+    assert not (opened2 / "strength2").exists()
+
+
+def test_THE_REAL_SEAMS_WIRE_THE_REAL_CHECK():
+    """Construction only: the real seams are lazy, so nothing is loaded or read."""
+    assert REAL_SEAMS(MATCH.ROOT / "no-such-checkpoint").background is BG.observe
