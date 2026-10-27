@@ -5,4 +5,4 @@ fresh process launched with MLX_ENABLE_TF32=0 plays the ONE fresh attempt at the
 games) on fresh seeds, with BOINC kept out for the whole run, so it takes its own reviewed door, separate from attempt
 1's. Opened for ONE approved run and restored on every exit. Created closed. This file may hold ONLY this declaration.
 """
-MIRROR_HALVING_STRENGTH2_AUTHORIZED = False
+MIRROR_HALVING_STRENGTH2_AUTHORIZED = True
