@@ -152,6 +152,7 @@ knob) is not a new hypothesis.
 > **Mirror averaging + root sequential halving — the strength comparison's seed survey and pre-proof (addendum to entry 39, 2026-10-26).** Each run once in a clean worktree. Survey CLEAN (`2ccc9037`, 45/45): block [202693600, 202694618), 1,018 seeds, gap 1,030 (floor 1,018). Pre-proof HOLDS (`9631ec72`, 45/45). Not registered; no plan; gate 49 closed; nothing played. Awaits registration review. See #99.
 > **Mirror averaging + root sequential halving — the strength block registered and proven (addendum to entry 39, 2026-10-26).** Registration review passed (`c665e938`). [202693600, 202694618) appended last in ACCOUNTED (44 → 45) with `plan.json` = `build_plan` (`0c1c18b5`). The post-registration proof, run once in a clean worktree, HOLDS (`5c4b60a7`, 45/45). Test re-anchored (`5e07bba4`, 184 focused passed). Accounted, not exposed or retired; gate 49 closed; nothing played. Awaits run approval. See #100.
 > **Mirror averaging + root sequential halving — the strength comparison → TIMEOUT / VOID, no score (addendum to entry 39, 2026-10-27).** Run once (`264df589` → `28737707`): TERM at 55,591 s with 799 of 1,018 games ended; record VOID (terminated), verdict and guards null; outcomes not read. Pace 0.61 s/move until a BOINC client started mid-run (19:55 EDT) took the idle machine; then up to 2.2 s/move. Gate 49 restored and read back; 49 gates closed; no panic. Stronger play not demonstrated. Seed closing not yet authorized. See #101.
+> **Mirror averaging + root sequential halving — the void strength block closed; one new attempt approved in principle (addendum to entry 39, 2026-10-27).** User's decision recorded (`376b75a3`). K1 RECONCILES once (`8ad03a26`, 15/15); K2 (`21a2c6f0`) EXPOSED [202693600, 202694400) (800 started), RETIRED [202693600, 202694618) whole; test re-anchored (`214063bb`, 184 passed). Partial games unscored. New attempt: same 509 pairs, fresh seeds, unchanged rule and guards, BOINC suspended until completion; its seeds, build and run each await approval. See #102.
 
 ## Historical proposal check — programme now closed
 
@@ -1783,6 +1784,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 
 100. **The strength block's registration and post-proof (2026-10-26).** Do **not** rerun the post-registration proof, edit the strength `plan.json`, or move, widen, expose or retire [202693600, 202694618) outside its closing procedure. Do **not** open gate 49 or launch the strength comparison without the user's run approval; the launch stays behind the idle gate. Do **not** change the 509 pairs, the Hoeffding rule, the guards or the 55,601 s ceiling.
 101. **The strength comparison → TIMEOUT / VOID (2026-10-27).** Do **not** retry, rerun, extend or top up the comparison, and do **not** score, pool or reuse its 799 partial games: an incomplete run receives no score. Do **not** reuse [202693600, 202694618); the block is consumed and awaits closing, which needs its own authorization. Any later GPU run on this machine must keep background compute (BOINC) out for its whole duration, not only at launch: the idle gate checks the launch only.
+102. **The void strength block's closing (2026-10-27).** Do **not** rerun K1, edit the K2 intervals, or reuse any seed of [202693600, 202694618). Do **not** run the one new attempt on the old plan or evidence paths, or with any change to the 509 pairs, the Hoeffding rule, the two compute guards or the 55,601 s ceiling. Do **not** launch it unless BOINC is suspended for the whole run.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -6267,3 +6269,23 @@ principle because of the documented machine contention.**
   and both compute guards unchanged, and BOINC suspended until the run completes.
 - **Not yet done:** the new attempt's seeds (survey, pre-proof, registration, post-proof) and any gate opening, GPU
   work or run. Each follows the same step-by-step approvals. Deployment, training and pushing remain unauthorized.
+
+**Addendum to entry 39 (2026-10-27): the void strength block closed.**
+- **K1 (`8ad03a26`):** the `b6632003` strength seed-usage derivation, run once in a clean worktree at `376b75a3`.
+  - It read only the plan, the progress events and slots, outer.json and the record's status.
+  - Inputs: outer exit 124, no survivors, status VOID, game starts at slots 0..799 in order.
+  - Controls 15/15. Verdict RECONCILES: expose [202693600, 202694400), the 800 started slots; retire the whole block
+    [202693600, 202694618).
+- **K2 (`21a2c6f0`):** EXPOSED 42 → 43 and RETIRED 40 → 41, each with the new interval appended last.
+  - An AST check against the parent: only those two statements changed, with prefixes identical.
+  - ACCOUNTED (45), TEST_ONLY and every other statement unchanged.
+- **Lifecycle tests (`214063bb`):**
+  - The strength test is renamed `…_REGISTERED_and_CLOSED`. It now asserts the K1 verdict line, the started prefix
+    EXPOSED once, the whole block RETIRED once, and no other overlapping interval.
+  - It also asserts every seed is accounted, retired and unavailable, and exposed exactly when it was started.
+  - No duplicate test names. Focused CPU tests: 184 passed.
+- **Not done:** the 799 games stay unscored. No outcome, pair score or cost ratio was read. No gate opening, GPU work,
+  new seed work, training or push.
+- **Prediction on record:** none (a seed procedure).
+- **Status:** block closed. The one new attempt (approved in principle, above) needs fresh seeds and its own run
+  paths, because the strength evidence and plan paths are create-only and now used. See do-not-repeat **#102**.
