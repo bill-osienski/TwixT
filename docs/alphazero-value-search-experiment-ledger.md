@@ -6254,3 +6254,16 @@ comparison approved, once, within the frozen protocol.**
 - **Status:** VOID by timeout, no strength verdict; stronger play not demonstrated. The frozen terms forbid retry,
   extension, top-up and scoring of the partial games, so the strength comparison cannot be rerun under this approval.
   Closing review is the user's. See do-not-repeat **#101**.
+
+**Addendum to entry 39 (2026-10-27, the user's decision): close the void strength block; one new attempt approved in
+principle because of the documented machine contention.**
+- **Step 1, approved now:** close [202693600, 202694618) through its closing procedure. This means K1 (the
+  `b6632003` strength seed-usage derivation) run once, then the K2 registry edit it reconciles to, plus the lifecycle
+  tests re-anchored. The 799 partial games stay unscored.
+- **Step 2, the user's decision:** one new attempt is explicitly approved because of the BOINC contention documented
+  above. This is new text that narrows do-not-repeat #101 for exactly that one attempt. #101 is otherwise unchanged:
+  the void run's games are never scored, pooled or extended.
+- **Step 3, the new attempt's frozen terms:** the same fixed 509-pair comparison on fresh seeds, with the scoring rule
+  and both compute guards unchanged, and BOINC suspended until the run completes.
+- **Not yet done:** the new attempt's seeds (survey, pre-proof, registration, post-proof) and any gate opening, GPU
+  work or run. Each follows the same step-by-step approvals. Deployment, training and pushing remain unauthorized.
