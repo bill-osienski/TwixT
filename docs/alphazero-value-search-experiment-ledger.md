@@ -6289,3 +6289,23 @@ principle because of the documented machine contention.**
 - **Prediction on record:** none (a seed procedure).
 - **Status:** block closed. The one new attempt (approved in principle, above) needs fresh seeds and its own run
   paths, because the strength evidence and plan paths are create-only and now used. See do-not-repeat **#102**.
+
+**Addendum to entry 39 (2026-10-27, the user's decision): the void run's closing accepted; the minimal attempt-2 build
+approved, for review only.**
+- **BOINC:** the user quits BOINC and keeps it quit until the new run finishes. Nothing suspends or restores it
+  automatically.
+- **The build, limited to:**
+  - separate plan, evidence and closing paths, and gate 50, initially closed;
+  - the existing search and scoring code, with the 509 pairs, simulations, guards and the 55,601 s ceiling unchanged;
+  - copies of the wrapper and the seed procedures, with fresh seeds left unselected;
+  - simple read-only checks for the BOINC client and workers, before launch and periodically during the run. Each
+    observation is recorded; detection or a failed check prevents the launch or ends the attempt as VOID;
+  - focused CPU tests with fake launches and temporary outputs, including BOINC absent and present, and the updated
+    gate inventory. No full regression or mutation campaign.
+- **Records:** a short dated attempt-2 amendment beside the original card, which stays unchanged, as does attempt 1's
+  evidence.
+- **The exception:** it permits one fresh attempt only. The original 799 games remain unscored.
+- **Mid-build (2026-10-27), the user's decision:** BOINC's podman VM (`/opt/podman/bin/` gvproxy and krunkit) "is
+  fine": it does none of the work that slowed attempt 1, so the check lists it as exempt.
+- **Not authorized:** seed procedures, registration, checkpoint loading, GPU work, gameplay, opening gate 50 and
+  pushing.
