@@ -6398,3 +6398,23 @@ approved as one sequence.**
 - **Not done:** opening gate 50, checkpoint loading, GPU work, gameplay, push.
 - **Prediction on record:** none (a seed procedure).
 - **Status:** registered and proven; awaiting the user's launch approval. See do-not-repeat **#104**.
+
+**Addendum to entry 39 (2026-10-27, the user's decision): attempt 2 approved for launch, once.**
+- **The user's checks:**
+  - all three seed records, 45/45 controls each, and all 1,018 slot mappings;
+  - the exact registration and plan, and unchanged runtime code;
+  - all 50 gates closed and no run output.
+
+  No further build or testing is needed.
+- **The run, once, limited to:**
+  - a fresh read-only panic/reboot check, then a clean run worktree with gate 50 alone opened by a one-line commit;
+  - the reviewed `run strength2` wrapper, with BOINC kept quit and the existing checks (idle gate, background-compute
+    check before launch and during the run) unchanged;
+  - 509 pairs (1,018 games) using exactly [202695700, 202696718), the candidate at 200 simulations versus the
+    incumbent at 400, with TF32=0 and eval mode;
+  - TERM at 55,591 s and KILL 10 s later.
+- **The frozen judgement:** the Hoeffding rule and compute guards of the amendment, unchanged.
+- **Forbidden:** interim scoring, an early decision, extension, top-up and any further retry. An incomplete run
+  receives no score, and attempt 1's games remain excluded.
+- **Return:** the results, wrapper diagnostics, gate restoration and cleanup evidence, for result and closing review.
+- **Not authorized:** deployment, training and pushing.
