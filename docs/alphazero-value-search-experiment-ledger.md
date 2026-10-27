@@ -153,6 +153,7 @@ knob) is not a new hypothesis.
 > **Mirror averaging + root sequential halving — the strength block registered and proven (addendum to entry 39, 2026-10-26).** Registration review passed (`c665e938`). [202693600, 202694618) appended last in ACCOUNTED (44 → 45) with `plan.json` = `build_plan` (`0c1c18b5`). The post-registration proof, run once in a clean worktree, HOLDS (`5c4b60a7`, 45/45). Test re-anchored (`5e07bba4`, 184 focused passed). Accounted, not exposed or retired; gate 49 closed; nothing played. Awaits run approval. See #100.
 > **Mirror averaging + root sequential halving — the strength comparison → TIMEOUT / VOID, no score (addendum to entry 39, 2026-10-27).** Run once (`264df589` → `28737707`): TERM at 55,591 s with 799 of 1,018 games ended; record VOID (terminated), verdict and guards null; outcomes not read. Pace 0.61 s/move until a BOINC client started mid-run (19:55 EDT) took the idle machine; then up to 2.2 s/move. Gate 49 restored and read back; 49 gates closed; no panic. Stronger play not demonstrated. Seed closing not yet authorized. See #101.
 > **Mirror averaging + root sequential halving — the void strength block closed; one new attempt approved in principle (addendum to entry 39, 2026-10-27).** User's decision recorded (`376b75a3`). K1 RECONCILES once (`8ad03a26`, 15/15); K2 (`21a2c6f0`) EXPOSED [202693600, 202694400) (800 started), RETIRED [202693600, 202694618) whole; test re-anchored (`214063bb`, 184 passed). Partial games unscored. New attempt: same 509 pairs, fresh seeds, unchanged rule and guards, BOINC suspended until completion; its seeds, build and run each await approval. See #102.
+> **Mirror averaging + root sequential halving — strength attempt 2 BUILT, for review (addendum to entry 39, 2026-10-27).** Approval `d687a1fc`; build `d39aa58e`. Pinned amendment; gate 50 closed (50 gates, all closed); `run strength2` on its own paths, otherwise the strength comparison unchanged. A read-only BOINC check (executable path or BOINC account; podman VM exempt) runs before launch and after every game: detection or a failed check refuses the launch or VOIDs. 40 new tests; 271 focused passed. No seeds chosen; nothing run. See #103.
 
 ## Historical proposal check — programme now closed
 
@@ -1785,6 +1786,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 100. **The strength block's registration and post-proof (2026-10-26).** Do **not** rerun the post-registration proof, edit the strength `plan.json`, or move, widen, expose or retire [202693600, 202694618) outside its closing procedure. Do **not** open gate 49 or launch the strength comparison without the user's run approval; the launch stays behind the idle gate. Do **not** change the 509 pairs, the Hoeffding rule, the guards or the 55,601 s ceiling.
 101. **The strength comparison → TIMEOUT / VOID (2026-10-27).** Do **not** retry, rerun, extend or top up the comparison, and do **not** score, pool or reuse its 799 partial games: an incomplete run receives no score. Do **not** reuse [202693600, 202694618); the block is consumed and awaits closing, which needs its own authorization. Any later GPU run on this machine must keep background compute (BOINC) out for its whole duration, not only at launch: the idle gate checks the launch only.
 102. **The void strength block's closing (2026-10-27).** Do **not** rerun K1, edit the K2 intervals, or reuse any seed of [202693600, 202694618). Do **not** run the one new attempt on the old plan or evidence paths, or with any change to the 509 pairs, the Hoeffding rule, the two compute guards or the 55,601 s ceiling. Do **not** launch it unless BOINC is suspended for the whole run.
+103. **The attempt-2 build (2026-10-27).** Do **not** run its seed procedures, register a block, create its plan, open gate 50 or launch it without the user's approval of each step. Do **not** change the amendment without re-pinning it under review, or weaken the BOINC check to match command lines (it voided on a mention) or to exempt more than `/opt/podman/bin/`. Do **not** make a third attempt: the exception covers this one only.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -6309,3 +6311,44 @@ approved, for review only.**
   fine": it does none of the work that slowed attempt 1, so the check lists it as exempt.
 - **Not authorized:** seed procedures, registration, checkpoint loading, GPU work, gameplay, opening gate 50 and
   pushing.
+
+**Addendum to entry 39 (2026-10-27): the attempt-2 build (`d39aa58e`), for review; nothing run.**
+- **Amendment:** `docs/superpowers/2026-10-27-mirror-halving-strength-attempt2-amendment.md`, beside the unchanged
+  card. `mirror_halving_match` pins its sha256 `99fd9cb3…`; any other amendment refuses.
+- **Gate 50:** `MIRROR_HALVING_STRENGTH2_AUTHORIZED`, closed, in its own module. The inventory is 49 → 50, all closed.
+- **`run strength2`:**
+  - the strength comparison's pairs (509), admission (C1 PASS, screen CONTINUE) and scoring, unchanged;
+  - its own plan (`mirror-halving-strength2-run/plan.json`, not yet created) and evidence directory
+    (`mirror-halving-strength2/`);
+  - the record carries the amendment and its hash.
+- **The BOINC check** (`background_compute.py`):
+  - one read-only `ps -o pid,user,comm` listing;
+  - BOINC means an executable path containing "boinc", or a BOINC account (`boinc_master`, `boinc_project`) running
+    outside macOS's system directories;
+  - the podman VM (`/opt/podman/bin/`) is exempt by the user's decision and listed in every observation;
+  - a `ps` failure or an empty listing is a failed check.
+- **Where it runs:**
+  - before launch, the wrapper runs it after the idle gate; detection or a failed check refuses, and the observation
+    goes to `bg_check.txt`;
+  - in the run, before load, after every game and before the verdict, each logged as a `bg_check` event; detection or
+    a failed check is a VOID at step `background_compute`;
+  - the screen and attempt 1 never call it.
+  - On this machine with BOINC quit it reads CLEAR among about 880 processes, with gvproxy and krunkit exempt.
+- **A correction made during the build:** the first version matched the full command line. It flagged my own shell,
+  whose arguments mentioned BOINC; in a run, a status command such as `pgrep boinc` would have voided the attempt. It
+  now matches the executable only, and a test pins that.
+- **Copies:**
+  - the wrapper is attempt 1's plus the check, its record line, and the new paths, gate and run name;
+  - the survey and closing scripts are attempt 1's with only the names changed, asserted byte for byte below the
+    docstring.
+- **Tests:**
+  - 66 → 106 in the four touched files (40 new). They include fake launches of the real wrapper for BOINC absent,
+    present and a failed check, mid-run and pre-load VOIDs, an unwired check, the amendment pin, and the gate
+    inventory;
+  - focused CPU set: 271 passed;
+  - no full regression and no mutation campaign.
+- **Records:** the build commit's first message said "52 new focused tests". That was not counted, so I corrected it
+  before pushing anything (unpushed amend, `d39aa58e`).
+- **Not done:** seed procedures, registration, checkpoint loading, GPU work, gameplay, opening gate 50, push.
+- **Prediction on record:** none (a build).
+- **Status:** built and awaiting review. See do-not-repeat **#103**.
