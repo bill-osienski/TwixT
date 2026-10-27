@@ -670,6 +670,18 @@ ACCOUNTED_SEED_INTERVALS = (
     # Accounted, NOT exposed and NOT retired: exposure follows actual use (the started-game
     # prefix); the closing edit retires the whole block. No gate is opened by this.
     (202693600, 202694618),          # MIRROR-HALVING STRENGTH COMPARISON -- 1,018 game seeds
+    # 🔴 MIRROR AVERAGING + ROOT SEQUENTIAL HALVING STRENGTH COMPARISON, ATTEMPT 2 -- 1,018 GAME SEEDS, registered
+    # 2026-10-27: the 1,018-seed block of attempt 2's survey (evidence/mirror-halving-strength2-seed-survey/02_*), READ
+    # from that record, not chosen here, by the replacement rule (seed_selection.candidate). One seed per game of the ONE
+    # fresh attempt (amendment docs/superpowers/2026-10-27-mirror-halving-strength-attempt2-amendment.md to the card's
+    # §5 T: 509 colour-reversed pairs, candidate at 200 simulations vs calib020_0001 at 400; game g has seed BASE + g,
+    # pair g // 2). No game of the screen or attempt 1 is pooled into it. The plan is
+    # evidence/mirror-halving-strength2-run/plan.json (base + slot count + survey hash). Registered ONLY after the
+    # pre-registration collision proof (same directory, 03_*) was CLEAN, 45/45.
+    #
+    # Accounted, NOT exposed and NOT retired: exposure follows actual use (the started-game
+    # prefix); the closing edit retires the whole block. No gate is opened by this.
+    (202695700, 202696718),          # MIRROR-HALVING STRENGTH COMPARISON ATTEMPT 2 -- 1,018 game seeds
 )
 
 #: EXPERIMENTAL EXPOSURE: seeds drawn from OUTSIDE the permanently unschedulable
