@@ -1,0 +1,1 @@
+{"status": "VOID", "void": {"step": "terminated", "detail": "SIGTERM after 55590.9 s"}, "run": "strength", "screen_verdict": null, "strength_verdict": null, "guards": null}
