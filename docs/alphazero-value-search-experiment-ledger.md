@@ -6352,3 +6352,15 @@ approved, for review only.**
 - **Not done:** seed procedures, registration, checkpoint loading, GPU work, gameplay, opening gate 50, push.
 - **Prediction on record:** none (a build).
 - **Status:** built and awaiting review. See do-not-repeat **#103**.
+
+**Addendum to entry 39 (2026-10-27, the user's decision): the attempt-2 build accepted; fresh-seed preparation
+approved as one sequence.**
+- **Accepted:** the build (`d39aa58e`), with no further BOINC work required. The podman exemption is acknowledged.
+- **Approved:** the attempt-2 seed preparation, run once in order with no intermediate approval rounds:
+  1. the survey;
+  2. the pre-registration proof;
+  3. registration of exactly the surveyed block, with its plan;
+  4. the post-registration proof.
+- **The condition:** each check must pass. Otherwise the sequence stops, with no adjustment or retry.
+- **Then:** record the evidence and return once ready to launch.
+- **Not authorized:** opening gate 50, checkpoint loading, GPU work, gameplay and pushing.
