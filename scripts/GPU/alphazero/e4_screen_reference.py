@@ -1015,6 +1015,13 @@ EXPOSED_SEED_INTERVALS = (
     # into the strength comparison. A post-run accounting edit to a bound file: the committed plan, survey/proof and
     # run records keep their hashes; nothing is rerun.
     (202692500, 202692564),  # MIRROR-HALVING SCREEN -- 64 game seeds, all started
+    # 🔴 MIRROR AVERAGING + ROOT SEQUENTIAL HALVING STRENGTH COMPARISON -- THE CLOSING EDIT (2026-10-27), after the
+    # ONE authorized 1,018-game run (outer exit 124, TIMEOUT at 55,591 s; record VOID; no survivors; NO SCORE).
+    # Use DERIVED from the committed run evidence by evidence/mirror-halving-strength-seed-closing/02_* (RECONCILES,
+    # 15/15): 800 games started (slots 0-799), so only that prefix is EXPOSED. The 799 completed games are never scored,
+    # pooled, extended or used as training data. A post-run accounting edit to a bound file: the committed plan,
+    # survey/proof and run records keep their hashes; nothing is rerun.
+    (202693600, 202694400),  # MIRROR-HALVING STRENGTH (VOID) -- the 800 started game seeds
 )
 
 #: Seeds RESERVED PERMANENTLY FOR TESTS. Unit tests must draw from something, and
@@ -1379,6 +1386,13 @@ RETIRED_SEED_INTERVALS = (
     # into the strength comparison. A post-run accounting edit to a bound file: the committed plan, survey/proof and
     # run records keep their hashes; nothing is rerun.
     (202692500, 202692564),  # MIRROR-HALVING SCREEN -- 64 game seeds, all started
+    # 🔴 MIRROR AVERAGING + ROOT SEQUENTIAL HALVING STRENGTH COMPARISON -- THE CLOSING EDIT (2026-10-27), after the
+    # ONE authorized 1,018-game run (outer exit 124, TIMEOUT at 55,591 s; record VOID; no survivors; NO SCORE).
+    # Use DERIVED from the committed run evidence by evidence/mirror-halving-strength-seed-closing/02_* (RECONCILES,
+    # 15/15): the WHOLE block is RETIRED, the 218 unstarted seeds included. The 799 completed games are never scored,
+    # pooled, extended or used as training data. A post-run accounting edit to a bound file: the committed plan,
+    # survey/proof and run records keep their hashes; nothing is rerun.
+    (202693600, 202694618),  # MIRROR-HALVING STRENGTH (VOID) -- 1,018 game seeds, retired whole
 )
 
 
