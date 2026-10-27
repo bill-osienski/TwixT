@@ -154,6 +154,7 @@ knob) is not a new hypothesis.
 > **Mirror averaging + root sequential halving — the strength comparison → TIMEOUT / VOID, no score (addendum to entry 39, 2026-10-27).** Run once (`264df589` → `28737707`): TERM at 55,591 s with 799 of 1,018 games ended; record VOID (terminated), verdict and guards null; outcomes not read. Pace 0.61 s/move until a BOINC client started mid-run (19:55 EDT) took the idle machine; then up to 2.2 s/move. Gate 49 restored and read back; 49 gates closed; no panic. Stronger play not demonstrated. Seed closing not yet authorized. See #101.
 > **Mirror averaging + root sequential halving — the void strength block closed; one new attempt approved in principle (addendum to entry 39, 2026-10-27).** User's decision recorded (`376b75a3`). K1 RECONCILES once (`8ad03a26`, 15/15); K2 (`21a2c6f0`) EXPOSED [202693600, 202694400) (800 started), RETIRED [202693600, 202694618) whole; test re-anchored (`214063bb`, 184 passed). Partial games unscored. New attempt: same 509 pairs, fresh seeds, unchanged rule and guards, BOINC suspended until completion; its seeds, build and run each await approval. See #102.
 > **Mirror averaging + root sequential halving — strength attempt 2 BUILT, for review (addendum to entry 39, 2026-10-27).** Approval `d687a1fc`; build `d39aa58e`. Pinned amendment; gate 50 closed (50 gates, all closed); `run strength2` on its own paths, otherwise the strength comparison unchanged. A read-only BOINC check (executable path or BOINC account; podman VM exempt) runs before launch and after every game: detection or a failed check refuses the launch or VOIDs. 40 new tests; 271 focused passed. No seeds chosen; nothing run. See #103.
+> **Mirror averaging + root sequential halving — strength attempt 2 seeds prepared, ready to launch (addendum to entry 39, 2026-10-27).** Approved as one sequence (`b075bfaa`); every check passed. Survey CLEAN (`393c4e27`, 45/45): [202695700, 202696718), gap 1,076. Pre-proof HOLDS (`fa514913`). Registered last in ACCOUNTED, 45 → 46, with `plan.json` = `build_plan` (`827641cc`). Post-proof HOLDS (`828e39e4`). Test `7cd199b2`, 271 focused passed. Gate 50 closed; nothing played. Awaits launch approval. See #104.
 
 ## Historical proposal check — programme now closed
 
@@ -1787,6 +1788,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 101. **The strength comparison → TIMEOUT / VOID (2026-10-27).** Do **not** retry, rerun, extend or top up the comparison, and do **not** score, pool or reuse its 799 partial games: an incomplete run receives no score. Do **not** reuse [202693600, 202694618); the block is consumed and awaits closing, which needs its own authorization. Any later GPU run on this machine must keep background compute (BOINC) out for its whole duration, not only at launch: the idle gate checks the launch only.
 102. **The void strength block's closing (2026-10-27).** Do **not** rerun K1, edit the K2 intervals, or reuse any seed of [202693600, 202694618). Do **not** run the one new attempt on the old plan or evidence paths, or with any change to the 509 pairs, the Hoeffding rule, the two compute guards or the 55,601 s ceiling. Do **not** launch it unless BOINC is suspended for the whole run.
 103. **The attempt-2 build (2026-10-27).** Do **not** run its seed procedures, register a block, create its plan, open gate 50 or launch it without the user's approval of each step. Do **not** change the amendment without re-pinning it under review, or weaken the BOINC check to match command lines (it voided on a mention) or to exempt more than `/opt/podman/bin/`. Do **not** make a third attempt: the exception covers this one only.
+104. **Attempt 2's seed preparation (2026-10-27).** Do **not** rerun the survey or either proof, edit the strength2 `plan.json`, or move, widen, expose or retire [202695700, 202696718) outside its closing procedure. Do **not** open gate 50 or launch attempt 2 without the user's launch approval. The launch stays behind the idle gate and the BOINC check, with BOINC quit until the run finishes.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -6364,3 +6366,35 @@ approved as one sequence.**
 - **The condition:** each check must pass. Otherwise the sequence stops, with no adjustment or retry.
 - **Then:** record the evidence and return once ready to launch.
 - **Not authorized:** opening gate 50, checkpoint loading, GPU work, gameplay and pushing.
+
+**Addendum to entry 39 (2026-10-27): attempt 2's fresh seeds prepared in one sequence; every check passed.**
+- **Where:** a clean linked worktree (branch `mh-strength2-seeds`, from `b075bfaa`). Each record was committed before
+  the next step.
+- **Survey (`393c4e27`), run once:** CLEAN, controls 45/45, at a clean tree.
+  - The rule's block is [202695700, 202696718): BASE 202695700, 1,018 seeds, above attempt 1's highest seed
+    202694617.
+  - Direct overlap none, 0 derived streams, injective, nearest gap 1,076 (floor 1,018). Record sha256 `38b7c008…`.
+- **Pre-proof (`fa514913`), run once:** HOLDS, controls 45/45. Bound to that survey record; block unregistered, no plan.
+- **Registration (`827641cc`):** exactly the surveyed block appended last in ACCOUNTED (45 → 46), with
+  `mirror-halving-strength2-run/plan.json` = the survey's `build_plan(202695700, 38b7c008…)`.
+  - An AST check against the parent: only ACCOUNTED changed, prefix identical.
+  - EXPOSED (43), RETIRED (41), TEST_ONLY and every other statement unchanged.
+- **Post-proof (`828e39e4`), run once:** HOLDS, controls 45/45, at a clean tree.
+- **Lifecycle test (`7cd199b2`):** the "no seeds yet" test was replaced by the registered-and-schedulable test. It
+  checks:
+  - the records' provenance, with each proof bound to the survey's sha256;
+  - the plan equals `build_plan`, and the block is ACCOUNTED once and last;
+  - no EXPOSED, RETIRED or TEST_ONLY overlap, and every seed schedulable;
+  - the block lies above attempt 1's;
+  - gate 50 closed, and no closing record or run output.
+
+  Focused CPU tests: 271 passed.
+- **Ready to launch:**
+  - main fast-forwarded and the worktree removed;
+  - 50 gates, all closed;
+  - the evidence directory `mirror-halving-strength2/` is absent, and the run directory holds only the wrapper and the
+    plan;
+  - the BOINC check reads CLEAR (846 processes; podman VM exempt); load 1.2.
+- **Not done:** opening gate 50, checkpoint loading, GPU work, gameplay, push.
+- **Prediction on record:** none (a seed procedure).
+- **Status:** registered and proven; awaiting the user's launch approval. See do-not-repeat **#104**.
