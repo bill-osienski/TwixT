@@ -151,6 +151,7 @@ knob) is not a new hypothesis.
 > **Mirror averaging + root sequential halving — screen accepted and CLOSED (addendum to entry 39, 2026-10-26).** Result accepted: CONTINUE, encouraging but inconclusive; stronger play not demonstrated. K1 RECONCILES (`adbb31b2`, 15/15: all 64 started); K2 (`52d179da`) appended [202692500, 202692564) last to EXPOSED (41 → 42) and RETIRED (39 → 40), ACCOUNTED 44 unchanged. Lifecycle tests re-anchored (`00c0d7b4`, 184 focused passed). The strength comparison (ceiling 55,601 s) awaits a separate decision. See #98.
 > **Mirror averaging + root sequential halving — the strength comparison's seed survey and pre-proof (addendum to entry 39, 2026-10-26).** Each run once in a clean worktree. Survey CLEAN (`2ccc9037`, 45/45): block [202693600, 202694618), 1,018 seeds, gap 1,030 (floor 1,018). Pre-proof HOLDS (`9631ec72`, 45/45). Not registered; no plan; gate 49 closed; nothing played. Awaits registration review. See #99.
 > **Mirror averaging + root sequential halving — the strength block registered and proven (addendum to entry 39, 2026-10-26).** Registration review passed (`c665e938`). [202693600, 202694618) appended last in ACCOUNTED (44 → 45) with `plan.json` = `build_plan` (`0c1c18b5`). The post-registration proof, run once in a clean worktree, HOLDS (`5c4b60a7`, 45/45). Test re-anchored (`5e07bba4`, 184 focused passed). Accounted, not exposed or retired; gate 49 closed; nothing played. Awaits run approval. See #100.
+> **Mirror averaging + root sequential halving — the strength comparison → TIMEOUT / VOID, no score (addendum to entry 39, 2026-10-27).** Run once (`264df589` → `28737707`): TERM at 55,591 s with 799 of 1,018 games ended; record VOID (terminated), verdict and guards null; outcomes not read. Pace 0.61 s/move until a BOINC client started mid-run (19:55 EDT) took the idle machine; then up to 2.2 s/move. Gate 49 restored and read back; 49 gates closed; no panic. Stronger play not demonstrated. Seed closing not yet authorized. See #101.
 
 ## Historical proposal check — programme now closed
 
@@ -1781,6 +1782,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 99. **The strength comparison's seed survey and pre-proof (2026-10-26).** Do **not** rerun either mode, choose another block, or adjust [202693600, 202694618). Do **not** register it, commit its `plan.json`, run the post-registration proof, open gate 49 or launch the strength comparison without the user's registration review and separate approval of each step. Do **not** change its 509 pairs, the Hoeffding rule, the guards or the 55,601 s ceiling, or pool the screen's games into it.
 
 100. **The strength block's registration and post-proof (2026-10-26).** Do **not** rerun the post-registration proof, edit the strength `plan.json`, or move, widen, expose or retire [202693600, 202694618) outside its closing procedure. Do **not** open gate 49 or launch the strength comparison without the user's run approval; the launch stays behind the idle gate. Do **not** change the 509 pairs, the Hoeffding rule, the guards or the 55,601 s ceiling.
+101. **The strength comparison → TIMEOUT / VOID (2026-10-27).** Do **not** retry, rerun, extend or top up the comparison, and do **not** score, pool or reuse its 799 partial games: an incomplete run receives no score. Do **not** reuse [202693600, 202694618); the block is consumed and awaits closing, which needs its own authorization. Any later GPU run on this machine must keep background compute (BOINC) out for its whole duration, not only at launch: the idle gate checks the launch only.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -6212,3 +6214,43 @@ comparison approved, once, within the frozen protocol.**
 - **Return:** the create-only results, cost totals, wrapper diagnostics, gate restoration and cleanup evidence, for
   result and closing review.
 - **Not authorized:** seed closing, deployment, training and pushing.
+
+**Addendum to entry 39 (2026-10-27): the strength comparison, run once → TIMEOUT / VOID; no score.**
+- **Test:** the frozen combination (MirrorAveragingEvaluator around eval-mode `calib020_0001` at 200 simulations,
+  root sequential halving from ply 20 with 16 candidates) against the unchanged incumbent at 400 simulations, over
+  509 colour-reversed pairs on seeds [202693600, 202694618), TF32=0 on both sides.
+- **Hypothesis:** the combination plays more strongly than the incumbent at comparable compute.
+- **Why it was plausible:** the screen's CONTINUE (mean pair score 0.5703 over 32 pairs, encouraging but
+  inconclusive), with an evaluation ratio of 0.9956 and a search-seconds ratio of 0.8158.
+- **Prediction on record:** None stated in advance. The Hoeffding rule is a frozen decision rule, not a prediction.
+- **What ran:**
+  - pre-run panic/reboot check clean (boot time unchanged since Oct 25 09:39:28; no new panic report);
+  - clean run worktree, gate 49 opened alone (`264df589`, pre-open `396a1f1c`), through the reviewed wrapper;
+  - idle gate: busy at t = 0 (mds 107 %), idle held 60 s at t = 65.6 s, then launched at load 2.0.
+- **Result (`28737707`):**
+  - wrapper outer exit 124, outcome TIMEOUT, wall 55,591 s;
+  - record status VOID, step "terminated", "SIGTERM after 55590.9 s", written by the script;
+  - strength_verdict and guards null; 800 games started and 799 ended of 1,018;
+  - TF32=0 at start and end; survivors none; gate 49 restored by the wrapper and read back equal to `396a1f1c`.
+- **Cause of the overrun (derived from timing only):**
+  - games 0–349 ran at 0.61–0.63 s per move, matching the screen's 35 s per game;
+  - from about t ≈ 14,000 s, 0.9 to 2.2 s per move; load average 14 at the end (2.0 at the start);
+  - the BOINC client (Einstein@Home, NFS@Home, PrimeGrid) was started at 19:55 and 19:58 EDT, about 3.8 h into the
+    run. It computes whenever there has been no keyboard or mouse input for 5 minutes;
+  - its "suspend if non-BOINC CPU load exceeds 25 %" rule did not hold it off: a single-process run stays under that
+    share of a many-core machine;
+  - at TERM, eight or more nice'd BOINC tasks were each at about 99 % CPU;
+  - the idle gate guards the launch only, as designed.
+- **Not read:** no game outcome, pair score or cost ratio was read, during or after the run. An incomplete run receives
+  no score under the frozen terms.
+- **Did it match the prediction:** there was no prediction, and the run produced no score to compare.
+- **Post-run checks:**
+  - boot time unchanged; no panic report;
+  - worktree committed by exact paths, main fast-forwarded to `28737707`, worktree and branch
+    `mirror-halving-strength-run` removed;
+  - 49 gates, all `False`.
+- **Not done:** seed closing (block [202693600, 202694618) consumed in fact, not yet EXPOSED or RETIRED), deployment,
+  training, push.
+- **Status:** VOID by timeout, no strength verdict; stronger play not demonstrated. The frozen terms forbid retry,
+  extension, top-up and scoring of the partial games, so the strength comparison cannot be rerun under this approval.
+  Closing review is the user's. See do-not-repeat **#101**.
