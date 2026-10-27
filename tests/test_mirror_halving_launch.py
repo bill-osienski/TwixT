@@ -391,14 +391,41 @@ def test_ATTEMPT_2_S_SEED_COPIES_ARE_ATTEMPT_1_S_WITH_ONLY_THE_NAMES_CHANGED(rel
     assert "strength2" not in one and "STRENGTH2" not in one
 
 
-def test_ATTEMPT_2_HAS_NO_SEEDS_YET():
-    """Built only: no survey or proof record, no plan, no closing record, no run output, and its gate closed. Fresh seeds
-    are chosen by the survey's rule only when that survey is separately approved and run."""
+def test_ATTEMPT_2_S_PLAN_is_the_survey_s_build_plan_and_its_block_is_REGISTERED_and_SCHEDULABLE():
+    """RE-ANCHORED 2026-10-27 (the fresh-seed preparation, run once in sequence): the survey (393c4e27), pre-proof
+    (fa514913) and post-proof (828e39e4) records stand, each proof bound to the survey record's sha256; the plan is the
+    survey's build_plan; the block is in ACCOUNTED exactly once (827641cc) and, before any run, NOT exposed, NOT retired
+    and every seed schedulable. Gate 50 is closed; no closing record and no run output exist. Read-only."""
+    import hashlib
+    from scripts.GPU.alphazero import e4_screen_reference as REG
     from scripts.GPU.alphazero import mirror_halving_strength2_authorization as GATE2
+    kind, n = "strength2", KINDS["strength2"]["slots"]
     assert GATE2.MIRROR_HALVING_STRENGTH2_AUTHORIZED is False
-    def names(d):
-        return sorted(p.name for p in (EV / d).iterdir() if p.name != "__pycache__")
-    assert names("mirror-halving-strength2-seed-survey") == ["01_seed_survey.py"]
-    assert names("mirror-halving-strength2-seed-closing") == ["01_derive_usage.py"]
-    assert names("mirror-halving-strength2-run") == ["01_wrapper.sh"]
-    assert not (EV / "mirror-halving-strength2").exists() and not (ROOT / MATCH.KINDS["strength2"]["plan"]).exists()
+    here = EV / f"mirror-halving-{kind}-seed-survey"
+    assert sorted(p.name for p in here.glob("0[234]_*")) == \
+        ["02_seed_survey_run.txt", "03_collision_proof_pre_run.txt", "04_collision_proof_post_run.txt"]
+    assert sorted(p.name for p in (EV / f"mirror-halving-{kind}-seed-closing").iterdir()
+                  if p.name != "__pycache__") == ["01_derive_usage.py"]
+    assert sorted(p.name for p in (EV / f"mirror-halving-{kind}-run").iterdir()) == ["01_wrapper.sh", "plan.json"]
+    assert not (EV / f"mirror-halving-{kind}").exists()
+    raw = (here / "02_seed_survey_run.txt").read_bytes()
+    survey, sha = raw.decode("utf-8"), hashlib.sha256(raw).hexdigest()
+    assert "SURVEY VERDICT   : THE MIRROR-HALVING STRENGTH2 BLOCK IS CLEAN\n" in survey
+    assert "controls passed: 45/45" in survey
+    for rel, mode in (("03_collision_proof_pre_run.txt", "pre"), ("04_collision_proof_post_run.txt", "post")):
+        text = (here / rel).read_text(encoding="utf-8")
+        assert f"02_seed_survey_run.txt sha256 {sha} (read at " in text
+        assert f"EXPECTED STATE ({mode}): HOLDS" in text and "controls passed: 45/45" in text
+    survey_mod = _load(f"mirror-halving-{kind}-seed-survey/01_seed_survey.py", "_survey_strength2_registered")
+    plan = json.loads((ROOT / MATCH.KINDS[kind]["plan"]).read_text(encoding="utf-8"))
+    assert type(plan["base"]) is int and plan["n_slots"] == n and plan == survey_mod.build_plan(plan["base"], sha)
+    block = (plan["base"], plan["base"] + n)
+    assert f"block = [{block[0]}, {block[1]}) -- {n} seeds" in survey
+    assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1 and REG.ACCOUNTED_SEED_INTERVALS[-1] == block
+    assert not any(lo < block[1] and block[0] < hi for name in
+                   ("EXPOSED_SEED_INTERVALS", "RETIRED_SEED_INTERVALS", "TEST_ONLY_SEED_INTERVALS")
+                   for lo, hi in getattr(REG, name))
+    assert all(REG.seed_is_accounted(s) and not REG.seed_is_exposed(s) and not REG.seed_is_retired(s) and
+               not REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s) for s in range(*block))
+    one = json.loads((ROOT / MATCH.KINDS["strength"]["plan"]).read_text(encoding="utf-8"))
+    assert block[0] >= one["base"] + one["n_slots"]                  # nothing shared with attempt 1's block
