@@ -1034,6 +1034,13 @@ EXPOSED_SEED_INTERVALS = (
     # pooled, extended or used as training data. A post-run accounting edit to a bound file: the committed plan,
     # survey/proof and run records keep their hashes; nothing is rerun.
     (202693600, 202694400),  # MIRROR-HALVING STRENGTH (VOID) -- the 800 started game seeds
+    # 🔴 MIRROR AVERAGING + ROOT SEQUENTIAL HALVING STRENGTH COMPARISON, ATTEMPT 2 -- THE CLOSING EDIT (2026-10-28),
+    # after the ONE authorized 1,018-game run (outer exit 0, COMPLETED, no survivors; verdict PASS). Use DERIVED from
+    # the committed run evidence by evidence/mirror-halving-strength2-seed-closing/02_* (RECONCILES, 15/15): all
+    # 1,018 games started, so the block is EXPOSED WHOLE. The games are attempt 2's only; never training data, and never
+    # pooled with attempt 1's or the screen's. A post-run accounting edit to a bound file: the committed plan,
+    # survey/proof and run records keep their hashes; nothing is rerun.
+    (202695700, 202696718),  # MIRROR-HALVING STRENGTH ATTEMPT 2 -- 1,018 game seeds, all started
 )
 
 #: Seeds RESERVED PERMANENTLY FOR TESTS. Unit tests must draw from something, and
@@ -1405,6 +1412,13 @@ RETIRED_SEED_INTERVALS = (
     # pooled, extended or used as training data. A post-run accounting edit to a bound file: the committed plan,
     # survey/proof and run records keep their hashes; nothing is rerun.
     (202693600, 202694618),  # MIRROR-HALVING STRENGTH (VOID) -- 1,018 game seeds, retired whole
+    # 🔴 MIRROR AVERAGING + ROOT SEQUENTIAL HALVING STRENGTH COMPARISON, ATTEMPT 2 -- THE CLOSING EDIT (2026-10-28),
+    # after the ONE authorized 1,018-game run (outer exit 0, COMPLETED, no survivors; verdict PASS). Use DERIVED from
+    # the committed run evidence by evidence/mirror-halving-strength2-seed-closing/02_* (RECONCILES, 15/15): all
+    # 1,018 games started, so the block is RETIRED WHOLE. The games are attempt 2's only; never training data, and never
+    # pooled with attempt 1's or the screen's. A post-run accounting edit to a bound file: the committed plan,
+    # survey/proof and run records keep their hashes; nothing is rerun.
+    (202695700, 202696718),  # MIRROR-HALVING STRENGTH ATTEMPT 2 -- 1,018 game seeds, retired whole
 )
 
 
