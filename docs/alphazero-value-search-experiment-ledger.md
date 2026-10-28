@@ -156,6 +156,7 @@ knob) is not a new hypothesis.
 > **Mirror averaging + root sequential halving — strength attempt 2 BUILT, for review (addendum to entry 39, 2026-10-27).** Approval `d687a1fc`; build `d39aa58e`. Pinned amendment; gate 50 closed (50 gates, all closed); `run strength2` on its own paths, otherwise the strength comparison unchanged. A read-only BOINC check (executable path or BOINC account; podman VM exempt) runs before launch and after every game: detection or a failed check refuses the launch or VOIDs. 40 new tests; 271 focused passed. No seeds chosen; nothing run. See #103.
 > **Mirror averaging + root sequential halving — strength attempt 2 seeds prepared, ready to launch (addendum to entry 39, 2026-10-27).** Approved as one sequence (`b075bfaa`); every check passed. Survey CLEAN (`393c4e27`, 45/45): [202695700, 202696718), gap 1,076. Pre-proof HOLDS (`fa514913`). Registered last in ACCOUNTED, 45 → 46, with `plan.json` = `build_plan` (`827641cc`). Post-proof HOLDS (`828e39e4`). Test `7cd199b2`, 271 focused passed. Gate 50 closed; nothing played. Awaits launch approval. See #104.
 > **Mirror averaging + root sequential halving — strength attempt 2 → COMPLETED, PASS (addendum to entry 39, 2026-10-28).** Run once (`babbd858` → `f1f4e2da`, approval `c04cde0b`): all 1,018 games on [202695700, 202696718) in 36,124 s; mean pair score 0.6793, Hoeffding lower 0.6191 > 0.5; guards 0.9975 (evaluations) and 0.8202 (search seconds), compute matched. 1,020 background checks, all CLEAR. Gate 50 restored and read back; no panic. Under this protocol, the fixed combination beats the incumbent within the declared cost allowances; this shows neither synergy nor either component's benefit. Seed closing, deployment, training and pushing not authorized. See #105.
+> **Mirror averaging + root sequential halving — attempt 2's PASS accepted; block CLOSED (addendum to entry 39, 2026-10-28).** The user's independent recomputation matches (`7bacc265`): stronger play at comparable compute for this fixed combination under the tested protocol, assuming independent pairs; no synergy or component claim; no further match needed for the frozen question. K1 RECONCILES (`af838eb2`, 15/15: all 1,018 started); K2 (`b563792d`) appended [202695700, 202696718) last to EXPOSED (43 → 44) and RETIRED (41 → 42), ACCOUNTED 46 unchanged. Lifecycle test re-anchored (`3ffc9924`, 174 focused passed). Attempt 1 stays VOID and unscored. Deployment, training and pushing not authorized. See #106.
 
 ## Historical proposal check — programme now closed
 
@@ -1791,6 +1792,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 103. **The attempt-2 build (2026-10-27).** Do **not** run its seed procedures, register a block, create its plan, open gate 50 or launch it without the user's approval of each step. Do **not** change the amendment without re-pinning it under review, or weaken the BOINC check to match command lines (it voided on a mention) or to exempt more than `/opt/podman/bin/`. Do **not** make a third attempt: the exception covers this one only.
 104. **Attempt 2's seed preparation (2026-10-27).** Do **not** rerun the survey or either proof, edit the strength2 `plan.json`, or move, widen, expose or retire [202695700, 202696718) outside its closing procedure. Do **not** open gate 50 or launch attempt 2 without the user's launch approval. The launch stays behind the idle gate and the BOINC check, with BOINC quit until the run finishes.
 105. **Strength attempt 2 → COMPLETED, PASS (2026-10-28).** Do **not** rerun, extend, top up or re-score it, recompute its verdict under another rule, or pool attempt 1's 799 games or the screen's 64 into it. Do **not** reuse [202695700, 202696718); the block is consumed and awaits closing, which needs its own authorization. Do **not** read the PASS as evidence of synergy, of either component's benefit, of strength at other simulation counts, boards or opponents, or as a deployment decision. Do **not** tune the combination's parameters (16 candidates, ply 20, 200 vs 400) on the strength games.
+106. **Attempt 2's closing (2026-10-28).** Do **not** rerun K1, edit the K2 intervals, or move, widen or reopen [202695700, 202696718); every seed is refused. Do **not** run another strength match, extension or replication to "confirm" the accepted PASS, re-score attempt 2 or pool attempt 1's 799 void games with it. Do **not** treat the PASS as a deployment, training or product decision, or as evidence for either component alone; each needs its own approval.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -6486,3 +6488,24 @@ approved as one sequence.**
      tests only.
 - **Ledger:** the accepted PASS and the actual closing records are appended; attempt 1's void record is unchanged.
 - **Not authorized:** deployment, training and pushing.
+
+**Addendum to entry 39 (2026-10-28): attempt 2's block closed.**
+- **What ran (each once, in a clean worktree at `7bacc265`):**
+  - K1 (`af838eb2`): `mirror-halving-strength2-seed-closing/01_derive_usage.py` → RECONCILES, controls 15/15. It read
+    outer exit 0, no survivors, status COMPLETED, and game starts 0–1,017 in order. Verdict: EXPOSE [202695700,
+    202696718); RETIRE [202695700, 202696718). Record `02_derive_usage_run.txt` sha256
+    73a71da8e738f2f7917c164c2cf01797afaf9dab168e679db55203ad32a780c6.
+  - K2 (`b563792d`): (202695700, 202696718) appended last to EXPOSED (43 → 44) and RETIRED (41 → 42), each with a
+    comment block. An AST check against the parent showed only those two statements changed, with identical
+    prefixes; ACCOUNTED (46), TEST_ONLY and every other statement unchanged. Every seed of the block is now
+    accounted, exposed, retired and unavailable.
+  - Test (`3ffc9924`): `test_ATTEMPT_2_S_PLAN_…_REGISTERED_and_SCHEDULABLE` renamed `…_REGISTERED_and_CLOSED` and
+    re-anchored to the K1 verdict line and controls, full exposure and retirement (once, last), every seed refused,
+    and the run outputs and K1 record present. Affected focused CPU tests: 174 passed (registry, seed selection,
+    the mirror-halving launch, match and combination tests, the background check and the gate inventory).
+- **Prediction on record:** none (a closing procedure).
+- **Unchanged:** attempt 1's void record, its closed block and its 799 unscored games; the PASS record and its
+  evidence; 50 gates, all closed.
+- **Not done:** deployment, training, push.
+- **Status:** the strength line's frozen question is answered (PASS, accepted) and its seeds are closed. Any further
+  use of the combination needs a new decision. See do-not-repeat **#106**.
