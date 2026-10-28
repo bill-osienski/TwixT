@@ -1,0 +1,1 @@
+{"status": "COMPLETED", "void": null, "run": "strength2", "screen_verdict": null, "strength_verdict": "PASS", "guards": {"evaluations_ratio": 0.9974697535742015, "search_seconds_ratio": 0.8201587581916255, "evaluations_within": true, "search_seconds_within": true, "guards": {"evaluations": 1.05, "search_seconds": 1.1}}}

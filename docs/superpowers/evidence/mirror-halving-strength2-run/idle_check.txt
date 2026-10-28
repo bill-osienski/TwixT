@@ -1,0 +1,53 @@
+t=    0.0s BUSY: load 4.15 >= 3.0; /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mds at 50.7% CPU > 50.0%; /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mds_stores at 50.3% CPU > 50.0%
+t=    5.0s BUSY: load 3.82 >= 3.0
+t=   10.1s BUSY: load 3.51 >= 3.0
+t=   15.1s BUSY: load 3.47 >= 3.0
+t=   20.2s BUSY: load 3.19 >= 3.0
+t=   25.2s BUSY: load 3.10 >= 3.0
+t=   30.3s idle for 0.0s
+t=   35.3s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 100.0% CPU > 50.0%
+t=   40.4s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 87.1% CPU > 50.0%
+t=   45.4s idle for 0.0s
+t=   50.5s idle for 5.0s
+t=   55.5s idle for 10.1s
+t=   60.6s idle for 15.2s
+t=   65.6s idle for 20.2s
+t=   70.6s idle for 25.2s
+t=   75.7s idle for 30.3s
+t=   80.7s idle for 35.3s
+t=   85.8s idle for 40.4s
+t=   90.8s idle for 45.4s
+t=   95.9s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 99.9% CPU > 50.0%
+t=  100.9s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 107.9% CPU > 50.0%
+t=  106.0s idle for 0.0s
+t=  111.0s idle for 5.1s
+t=  116.1s idle for 10.1s
+t=  121.1s idle for 15.2s
+t=  126.2s idle for 20.2s
+t=  131.2s idle for 25.3s
+t=  136.3s idle for 30.3s
+t=  141.3s idle for 35.4s
+t=  146.4s idle for 40.4s
+t=  151.4s idle for 45.5s
+t=  156.5s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 101.4% CPU > 50.0%
+t=  161.5s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 100.2% CPU > 50.0%
+t=  166.6s idle for 0.0s
+t=  171.6s idle for 5.1s
+t=  176.7s idle for 10.1s
+t=  181.7s idle for 15.2s
+t=  186.8s idle for 20.2s
+t=  191.8s BUSY: /Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer) at 56.8% CPU > 50.0%
+t=  196.9s idle for 0.0s
+t=  201.9s idle for 5.0s
+t=  207.0s idle for 10.1s
+t=  212.0s idle for 15.1s
+t=  217.1s idle for 20.2s
+t=  222.1s idle for 25.3s
+t=  227.2s idle for 30.3s
+t=  232.2s idle for 35.4s
+t=  237.3s idle for 40.4s
+t=  242.3s idle for 45.5s
+t=  247.4s idle for 50.5s
+t=  252.4s idle for 55.6s
+t=  257.5s idle for 60.6s
+IDLE: held 60s (load < 3.0, no process > 50.0% CPU)
