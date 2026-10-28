@@ -6469,3 +6469,20 @@ approved as one sequence.**
   test re-anchoring, deployment, training, push.
 - **Status:** PASS; the strength line's frozen question is answered. Result and closing review are the user's. See
   do-not-repeat **#105**.
+
+**Addendum to entry 39 (2026-10-28, the user's decision): attempt 2's PASS accepted; the block's closing approved.**
+- **Accepted:** the PASS, independently recomputed by the user: mean pair score 0.67927, Hoeffding lower bound
+  0.61908 > 0.5, evaluations ratio 0.9975 and search-seconds ratio 0.8202. All 1,018 games, seed bindings, pair
+  scores and cost totals reconcile. All 39 module hashes match the execution commit, the 1,020 background checks
+  were clear, and all 50 gates are closed.
+- **What it establishes:** stronger play at comparable compute for this fixed combination under the tested protocol,
+  assuming independent pairs. It does not establish synergy or either component's benefit. No additional match is
+  needed to answer the frozen question.
+- **Approved, once:**
+  1. the existing K1 derivation (`mirror-halving-strength2-seed-closing/01_derive_usage.py`), run once;
+  2. only if it RECONCILES with every control passing: append (202695700, 202696718) last to EXPOSED (43 → 44) and
+     RETIRED (41 → 42), with ACCOUNTED left at 46 and every other registry statement unchanged;
+  3. re-anchor the lifecycle test to full exposure, retirement and unavailability, and run the affected focused CPU
+     tests only.
+- **Ledger:** the accepted PASS and the actual closing records are appended; attempt 1's void record is unchanged.
+- **Not authorized:** deployment, training and pushing.
