@@ -43,20 +43,42 @@ def isolated(monkeypatch, tmp_path):
     monkeypatch.setenv(P.SETTING, P.SETTING_VALUE)
 
 
-def test_THE_GATE_IS_CLOSED_and_the_launch_is_not_run_only_the_survey_and_the_pre_proof_have_run():
+def test_THE_THROUGHPUT_BLOCK_IS_REGISTERED_with_the_survey_s_build_plan_and_the_launch_is_not_run():
+    """RE-ANCHORED 2026-10-29 (registration, 88c5d162): the survey (cd4217a9) and pre-proof (086d6e37) records stand,
+    the proof bound to the survey record's sha256; the plan is the survey copy's build_plan; the block is in ACCOUNTED
+    exactly once and last, NOT exposed, NOT retired, and every seed schedulable by the pilot's own predicate. No
+    post-proof yet; the gate is closed; no closing record and no run output exist. Read-only."""
+    import hashlib
     from scripts.GPU.alphazero import combination_policy_throughput_authorization as G
+    from scripts.GPU.alphazero import e4_screen_reference as REG
     assert getattr(G, GATE_NAME) is False
     run = EV / "combination-policy-throughput-run"
-    assert sorted(x.name for x in run.iterdir()) == ["01_wrapper.sh"]          # no plan, no outer record
+    assert sorted(x.name for x in run.iterdir()) == ["01_wrapper.sh", "plan.json"]     # no outer record
     assert not (EV / "combination-policy-throughput").exists()
-    survey = sorted(x.name for x in (EV / SURVEY).parent.iterdir() if x.name != "__pycache__")
-    assert survey == ["01_seed_survey.py", "02_seed_survey_run.txt",            # the survey and the pre-proof
-                      "03_collision_proof_pre_run.txt"]                         # (2026-10-29); no post-proof yet
-    assert (EV / SURVEY).parent.joinpath("02_seed_survey_run.txt").read_text().endswith(
-        "SURVEY VERDICT   : THE COMBINATION-POLICY THROUGHPUT BLOCK IS CLEAN\n")
-    assert (EV / SURVEY).parent.joinpath("03_collision_proof_pre_run.txt").read_text().endswith(
-        "PROOF VERDICT (pre): THE COMBINATION-POLICY THROUGHPUT BLOCK IS CLEAN AND THE STATE IS AS EXPECTED\n")
+    here = (EV / SURVEY).parent
+    assert sorted(x.name for x in here.iterdir() if x.name != "__pycache__") == \
+        ["01_seed_survey.py", "02_seed_survey_run.txt", "03_collision_proof_pre_run.txt"]     # no post-proof yet
     assert sorted(x.name for x in (EV / CLOSING).parent.iterdir() if x.name != "__pycache__") == ["01_derive_usage.py"]
+    raw = (here / "02_seed_survey_run.txt").read_bytes()
+    survey, sha = raw.decode("utf-8"), hashlib.sha256(raw).hexdigest()
+    assert survey.endswith("SURVEY VERDICT   : THE COMBINATION-POLICY THROUGHPUT BLOCK IS CLEAN\n")
+    assert "controls passed: 45/45" in survey
+    pre = (here / "03_collision_proof_pre_run.txt").read_text(encoding="utf-8")
+    assert f"02_seed_survey_run.txt sha256 {sha} (read at " in pre
+    assert "EXPECTED STATE (pre): HOLDS" in pre and "controls passed: 45/45" in pre
+    assert pre.endswith("PROOF VERDICT (pre): THE COMBINATION-POLICY THROUGHPUT BLOCK IS CLEAN AND THE STATE IS AS "
+                        "EXPECTED\n")
+    survey_mod = _load(SURVEY, "_survey_throughput_registered")
+    plan = json.loads((ROOT / P.KINDS["throughput"]["plan"]).read_text(encoding="utf-8"))
+    n = P.KINDS["throughput"]["slots"]
+    assert type(plan["base"]) is int and plan["n_slots"] == n and plan == survey_mod.build_plan(plan["base"], sha)
+    block = (plan["base"], plan["base"] + n)
+    assert f"block = [{block[0]}, {block[1]}) -- {n} seeds" in survey
+    assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1 and REG.ACCOUNTED_SEED_INTERVALS[-1] == block
+    for k in ("EXPOSED_SEED_INTERVALS", "RETIRED_SEED_INTERVALS", "TEST_ONLY_SEED_INTERVALS"):
+        assert not any(lo < block[1] and block[0] < hi for lo, hi in getattr(REG, k)), k
+    assert all(REG.seed_is_accounted(s) and not REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s)
+               for s in range(*block))
 
 
 # ─────────────────────────────── the wrapper's bytes ───────────────────────────────

@@ -425,7 +425,11 @@ def test_ATTEMPT_2_S_PLAN_is_the_survey_s_build_plan_and_its_block_is_REGISTERED
     assert type(plan["base"]) is int and plan["n_slots"] == n and plan == survey_mod.build_plan(plan["base"], sha)
     block = (plan["base"], plan["base"] + n)
     assert f"block = [{block[0]}, {block[1]}) -- {n} seeds" in survey
-    assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1 and REG.ACCOUNTED_SEED_INTERVALS[-1] == block
+    assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1
+    # RE-ANCHORED 2026-10-29 (the pilot's throughput block registered after it, 88c5d162): it was last until then;
+    # every entry registered after it lies wholly above it.
+    later = REG.ACCOUNTED_SEED_INTERVALS[REG.ACCOUNTED_SEED_INTERVALS.index(block) + 1:]
+    assert all(lo >= block[1] for lo, _hi in later)
     # RE-ANCHORED 2026-10-28 (the closing, after K1 RECONCILES: COMPLETED, all 1,018 games started): the whole block
     # is EXPOSED and RETIRED, each exactly once and appended last, and every seed is refused.
     closing = (EV / f"mirror-halving-{kind}-seed-closing/02_derive_usage_run.txt").read_text(encoding="utf-8")
