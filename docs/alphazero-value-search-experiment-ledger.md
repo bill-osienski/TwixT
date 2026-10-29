@@ -160,6 +160,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — card FROZEN; step 1 (build only) approved (decision note after entry 39, 2026-10-28).** One round of policy-only learning from the proven agent's own halving decisions: weights-only `calib020_0001`, encoder, value head and BatchNorm statistics frozen, arm R's residual policy branch trained on the CPU toward a completed-Q target within halving's 16 candidates, the objective the mirror-averaged policy. After two reviews the user froze the card (`docs/superpowers/2026-10-28-combination-policy-pilot-card.md`) and approved only the build, its focused CPU tests and a 20-update CPU timing on synthetic inputs, with a narrow #66 exception (reuse of the residual head, no capacity claim). A distinct recipe: continuation (#48, #49) and D2 (#69, #87) stay closed. The target is the main uncertainty and is not validated by the combination's PASS. Seeds, checkpoint, GPU, corpus, real-data training and games remain unauthorized. See do-not-repeat **#107**.
 > **Combination policy pilot — step 1 BUILT and the CPU timing → COMPLETED (entry 40, 2026-10-28).** Build `b1ad8f00` + `c0bf2452` (52 focused CPU tests; three gates created closed, 50 → 53). The one-shot timing ran once at `c0bf2452` with BOINC quit and no BOINC process before or after: 20 synchronized updates at the real architecture on synthetic inputs, random weights, CPU, mean 0.487 s per update (range 0.481–0.498). Projected training (3,000 updates plus the pre-fit, held-out and value passes over the card's estimated 37,000 / 3,700 rows) ≈ 1,799 s; step 4's ceiling is therefore **45 min** (1.5×). Loading and the corpus replay are not timed. Synthetic timing only: no checkpoint, no real data, nothing about the target. See do-not-repeat **#108**.
 > **Combination policy pilot — step 1 ACCEPTED; the throughput wrapper and its seed copies approved to build (decision note after entry 40, 2026-10-28).** The user's review found no material blocker in the build or the timing; the timing record stands (its load readings above 3 do not invalidate it under its declared checks; no rerun). Approved: build only the throughput check's wrapper and its seed-survey/proof and closing copies, with focused CPU checks, for review before any seed procedure or GPU work. The 144-in-15-minute rule stands: a timeout rejects this setup's operational feasibility, not policy learning. See do-not-repeat **#109**.
+> **Combination policy pilot — the throughput check's wrapper and seed copies BUILT, for review (addendum to the decision note after entry 40, 2026-10-28).** Wrapper, survey/proof copy and closing copy, each a copy of strength attempt 2's with named differences: the 15-minute ceiling (TERM 890 s + 10 s), the run's process group counted for survivors (18 spawned workers do not carry the module's name), and the card's closing rule for parallel workers (started slots a prefix as a set, the claim counter equal to k, else the whole block exposed). 20 new focused CPU tests. Nothing run: no seed procedure, gate, checkpoint or GPU. See #109.
 
 ## Historical proposal check — programme now closed
 
@@ -6614,3 +6615,35 @@ approved as one sequence.**
   operational feasibility; it would say nothing about whether policy learning works.
 - **Still unauthorized:** checkpoint loading, executing any seed procedure, GPU work, generation, real-data training,
   games and pushing. See do-not-repeat **#109**.
+
+#### Addendum — the throughput check's launch, built for review (2026-10-28)
+
+- **Built only** (no seed procedure run, no gate opened, no checkpoint loaded, no GPU), each a copy of strength attempt
+  2's, its differences named in its header and pinned by a test:
+  - `docs/superpowers/evidence/combination-policy-throughput-run/01_wrapper.sh` -- the paths, the gate (still closed),
+    `run throughput`, the record kind, and **the card's 15-minute ceiling: TERM at 890 s, KILL 10 s later** (the
+    precedent counts the ceiling to the KILL). **The run's process group:** the run spawns 18 workers whose command
+    lines do not name the module, so attempt 2's name-only survivor search would miss one. The supervisor writes the
+    group id, create-only, to `pgid.txt`; survivors are the named processes plus everything left in that group; a
+    started run with no readable `pgid.txt` records survivors as unknown, so closing refuses. A supervisor that cannot
+    write `pgid.txt` KILLs the group and exits 126 (CRASHED).
+  - `combination-policy-throughput-seed-survey/01_seed_survey.py` -- 144 slots, the paths, the plan's kind, the
+    titles and verdict lines, and slot lines without pairs (`SLOT g seed BASE + g`). The pinned method, the rule and
+    the three modes are unchanged; its four XOR masks are exactly the game's four streams.
+  - `combination-policy-throughput-seed-closing/01_derive_usage.py` -- card §5's one diff: the `game_start` slots
+    (field `slot`) must form {0..k-1} as a set, each once, and the one `claims` event must equal k; otherwise k is not
+    established and the whole block is exposed. A slot outside the block is a fault; a REFUSED run has k = 0. The
+    whole block is retired whatever happened. 21 built-in controls.
+- **Tests:** `tests/test_combination_policy_launch.py`, 20 CPU tests. The copies' diffs against attempt 2's files are
+  exactly the named ones. Fake launches of the real wrapper bytes cover: busy, BOINC or a failed check refuse with
+  nothing written and the gate restored; an idle launch reaches `run throughput --checkpoint <abs>` with TF32=0 and
+  records the group; a process left in the group is reported as a survivor; with TERM_S changed to 2 in a test copy
+  only, the ceiling ends the run and its worker and the wrapper writes a VOID timeout record; a lost `pgid.txt` gives
+  unknown survivors. The closing copy reconciles the progress the real `_generate` writes through the real record
+  boundary, both completed with starts out of order and VOID mid-run with no claims (whole block exposed). With the
+  pilot, gate-inventory, mirror-halving launch and background-compute suites: 129 passed, 1 deselected (opt-in).
+- **Defects found and fixed before commit:** a Perl scoping error in the new `pgid.txt` write (the supervisor would
+  have crashed every launch; caught by the fake launch, which also showed the fail-closed path working), and a survivor
+  list that would have read as non-empty when empty.
+- **Still unauthorized:** the survey, the proofs, registration, the plan, opening the gate, the checkpoint, the GPU,
+  the launch, closing, and every later stage. See do-not-repeat **#109**.
