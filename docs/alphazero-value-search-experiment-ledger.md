@@ -165,6 +165,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — throughput seed survey → CLEAN; the supervisor repaired (addendum, 2026-10-29).** Survey run once (`cd4217a9`, clean worktree at `fea251fa`): block [202696900, 202697044), 144 seeds, controls 45/45, nearest gap 176 (floor 144); not registered, no plan. The supervisor now keeps the ceiling armed until the whole process group has gone, so a TERM-ignoring worker is KILLed; the new fake-launch test failed before the repair and passes after. Awaiting review; pre-proof and every later step unauthorized. See #111.
 > **Combination policy pilot — survey accepted; pre-proof approved once; post-KILL wait to be bounded; TIMEOUT overrides COMPLETED (addendum, 2026-10-29, the user's decision).** The pre-registration proof runs once on the committed survey record and the unchanged block, its record returned before registration. The supervisor's wait after KILL must be bounded and report survivors or unconfirmed cleanup (minimal repair and one CPU check). An outer TIMEOUT closes the pilot even over a script COMPLETED record; it cannot admit generation (not yet enforced by `admitted`). Registration and later steps unauthorized. See #112.
 > **Combination policy pilot — throughput pre-proof → HOLDS; the post-KILL wait bounded (addendum, 2026-10-29).** Pre-proof run once (`086d6e37`, clean worktree at `7aa0aea8`): bound to the survey record, block [202696900, 202697044) unregistered, no plan, controls 45/45. The supervisor stops watching 10 s after KILL and exits 125 (TIMEOUT, cleanup unconfirmed in survivors); the wrapper never waits past 910 s. The new test hung on the previous wrapper and passes now. Awaiting review; registration and later steps unauthorized. See #113.
+> **Combination policy pilot — pre-proof and bounded supervisor accepted; registration with its plan, and the admission fix, approved (addendum, 2026-10-29, the user's decision).** Register exactly [202696900, 202697044) in ACCOUNTED with the plan from `build_plan`; separately, generation admission must require the committed `outer.json` too (zero exits, gate restored, survivors confirmed empty), refusing missing outer evidence, TIMEOUT or unconfirmed cleanup whatever the inner record says. Both return for review; the post-proof, gate, checkpoint, GPU, closing and pushing are unauthorized. See #114.
 
 ## Historical proposal check — programme now closed
 
@@ -1808,6 +1809,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 111. **The throughput seed survey record and the supervisor repair (2026-10-29).** Do **not** rerun the survey or edit its record (`02_seed_survey_run.txt`, sha256 `dbe3e91c…`); [202696900, 202697044) is surveyed, not registered, and becomes usable only through the separately approved pre-proof, registration with its plan, and post-proof. Do **not** remove the supervisor's group wait, or treat a group that outlived its main process past the ceiling as COMPLETED.
 112. **The throughput pre-proof, the bounded post-KILL wait, and TIMEOUT over COMPLETED (2026-10-29).** Do **not** rerun the pre-proof, register the block, write the plan or run the post-proof without the user's approval of each. Do **not** launch with a supervisor whose wait after KILL is unbounded. Do **not** admit generation, or read the pilot as continuing, from a throughput run whose `outer.json` says TIMEOUT, whatever its `record.json` says; keep both records as written, and do **not** rewrite either to agree.
 113. **The throughput pre-proof and the bounded wait (2026-10-29).** Do **not** rerun the pre-proof or edit its record (`03_collision_proof_pre_run.txt`, sha256 `5f60b891…`); register the block, write the plan or run the post-proof only on the user's approval. Do **not** remove the supervisor's bound or read exit 125 (cleanup unconfirmed) as anything but TIMEOUT with survivors; closing refuses it.
+114. **The throughput registration and the admission fix (2026-10-29).** Do **not** register any block but [202696900, 202697044), change any registry list but ACCOUNTED, or write the plan by hand rather than through `build_plan`. Do **not** run the post-proof, open the gate, load the checkpoint, launch or close without the user's approval of each. Do **not** admit generation on the inner record alone, or weaken the outer checks (zero inner and outer exits, gate restored, survivors exactly empty). Do **not** push without approval.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -6764,3 +6766,24 @@ approved as one sequence.**
 - **Prediction on record:** none (a seed procedure and a repair).
 - **Status:** awaiting the user's review. Registration, the plan, the post-proof, the gate, the checkpoint, the GPU
   launch and closing remain unauthorized. See do-not-repeat **#113**.
+
+#### Addendum — the pre-proof and the bounded supervisor accepted; registration with its plan, and the admission fix, approved (2026-10-29, the user's decision)
+
+- **Accepted:** the pre-proof (`086d6e37`) and the bounded supervisor repair (`c3b2a6a2`). The user verified the
+  proof's hash, its binding to the survey, all 144 slots, the 45/45 recorded controls and the unchanged registry; the
+  block is unregistered, no plan exists, and all 53 gates are closed. The extra 10 s after KILL are cleanup
+  observation, not run time.
+- **Approved, two independent changes, each returned for review:**
+  1. **Registration and plan:** append exactly [202696900, 202697044) to ACCOUNTED, leaving every other list
+     unchanged, and create the plan through the existing `build_plan`, bound to the accepted survey hash
+     (`dbe3e91c…`).
+  2. **The admission fix, CPU tests only:** generation must require both the committed inner record and the
+     committed `outer.json` to show successful completion: inner and outer exits zero, the gate restored, survivors
+     confirmed empty. Missing outer evidence, a TIMEOUT or unconfirmed cleanup refuses admission, even when the inner
+     record says COMPLETED. Focused tests cover those cases.
+- **Git note from the review:** the local `origin/main` reflog shows a push through `50e10824` at 10:52 EDT on
+  2026-10-29, which accounts for "3 ahead"; the review could not attribute its authorization. For the record: the user
+  answered "push" in this session after being asked whether to run `git push origin main`, and that single
+  fast-forward (`e5f3055e..50e10824`) was the push. This review authorizes no push.
+- **Still unauthorized:** the post-proof, opening the gate, checkpoint loading, the GPU launch, closing and pushing.
+  Existing evidence is preserved. See do-not-repeat **#114**.
