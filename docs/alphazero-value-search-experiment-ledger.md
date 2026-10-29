@@ -157,6 +157,7 @@ knob) is not a new hypothesis.
 > **Mirror averaging + root sequential halving — strength attempt 2 seeds prepared, ready to launch (addendum to entry 39, 2026-10-27).** Approved as one sequence (`b075bfaa`); every check passed. Survey CLEAN (`393c4e27`, 45/45): [202695700, 202696718), gap 1,076. Pre-proof HOLDS (`fa514913`). Registered last in ACCOUNTED, 45 → 46, with `plan.json` = `build_plan` (`827641cc`). Post-proof HOLDS (`828e39e4`). Test `7cd199b2`, 271 focused passed. Gate 50 closed; nothing played. Awaits launch approval. See #104.
 > **Mirror averaging + root sequential halving — strength attempt 2 → COMPLETED, PASS (addendum to entry 39, 2026-10-28).** Run once (`babbd858` → `f1f4e2da`, approval `c04cde0b`): all 1,018 games on [202695700, 202696718) in 36,124 s; mean pair score 0.6793, Hoeffding lower 0.6191 > 0.5; guards 0.9975 (evaluations) and 0.8202 (search seconds), compute matched. 1,020 background checks, all CLEAR. Gate 50 restored and read back; no panic. Under this protocol, the fixed combination beats the incumbent within the declared cost allowances; this shows neither synergy nor either component's benefit. Seed closing, deployment, training and pushing not authorized. See #105.
 > **Mirror averaging + root sequential halving — attempt 2's PASS accepted; block CLOSED (addendum to entry 39, 2026-10-28).** The user's independent recomputation matches (`7bacc265`): stronger play at comparable compute for this fixed combination under the tested protocol, assuming independent pairs; no synergy or component claim; no further match needed for the frozen question. K1 RECONCILES (`af838eb2`, 15/15: all 1,018 started); K2 (`b563792d`) appended [202695700, 202696718) last to EXPOSED (43 → 44) and RETIRED (41 → 42), ACCOUNTED 46 unchanged. Lifecycle test re-anchored (`3ffc9924`, 174 focused passed). Attempt 1 stays VOID and unscored. Deployment, training and pushing not authorized. See #106.
+> **Combination policy pilot — card FROZEN; step 1 (build only) approved (decision note after entry 39, 2026-10-28).** One round of policy-only learning from the proven agent's own halving decisions: weights-only `calib020_0001`, encoder, value head and BatchNorm statistics frozen, arm R's residual policy branch trained on the CPU toward a completed-Q target within halving's 16 candidates, the objective the mirror-averaged policy. After two reviews the user froze the card (`docs/superpowers/2026-10-28-combination-policy-pilot-card.md`) and approved only the build, its focused CPU tests and a 20-update CPU timing on synthetic inputs, with a narrow #66 exception (reuse of the residual head, no capacity claim). A distinct recipe: continuation (#48, #49) and D2 (#69, #87) stay closed. The target is the main uncertainty and is not validated by the combination's PASS. Seeds, checkpoint, GPU, corpus, real-data training and games remain unauthorized. See do-not-repeat **#107**.
 
 ## Historical proposal check — programme now closed
 
@@ -1793,6 +1794,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 104. **Attempt 2's seed preparation (2026-10-27).** Do **not** rerun the survey or either proof, edit the strength2 `plan.json`, or move, widen, expose or retire [202695700, 202696718) outside its closing procedure. Do **not** open gate 50 or launch attempt 2 without the user's launch approval. The launch stays behind the idle gate and the BOINC check, with BOINC quit until the run finishes.
 105. **Strength attempt 2 → COMPLETED, PASS (2026-10-28).** Do **not** rerun, extend, top up or re-score it, recompute its verdict under another rule, or pool attempt 1's 799 games or the screen's 64 into it. Do **not** reuse [202695700, 202696718); the block is consumed and awaits closing, which needs its own authorization. Do **not** read the PASS as evidence of synergy, of either component's benefit, of strength at other simulation counts, boards or opponents, or as a deployment decision. Do **not** tune the combination's parameters (16 candidates, ply 20, 200 vs 400) on the strength games.
 106. **Attempt 2's closing (2026-10-28).** Do **not** rerun K1, edit the K2 intervals, or move, widen or reopen [202695700, 202696718); every seed is refused. Do **not** run another strength match, extension or replication to "confirm" the accepted PASS, re-score attempt 2 or pool attempt 1's 799 void games with it. Do **not** treat the PASS as a deployment, training or product decision, or as evidence for either component alone; each needs its own approval.
+107. **The combination policy pilot — card frozen, step 1 build only, #66 exception (2026-10-28).** Do **not** run its throughput check, corpus generation, training, screen or strength comparison, run any of its seed procedures, or load the checkpoint for it, without the user's approval of each step. Do **not** change the frozen card -- the objective (the mirror-averaged policy), the target, the recipe and seeds, the stopping rules or the rule that all 144 throughput games finish inside 15 minutes -- without re-pinning it under review. The #66 exception covers reusing `ResidualPolicyHead` in this pilot only: do **not** cite the pilot or its outcome as evidence about the policy head's capacity, and do **not** extend the exception to any other use. Do **not** treat the combination's PASS as support for the pilot's target.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -6509,3 +6511,41 @@ approved as one sequence.**
 - **Not done:** deployment, training, push.
 - **Status:** the strength line's frozen question is answered (PASS, accepted) and its seeds are closed. Any further
   use of the combination needs a new decision. See do-not-repeat **#106**.
+
+### Decision note — after entry 39: a combination policy pilot, card frozen, step 1 built only (2026-10-28, the user's decision)
+
+- **The proposal:** `docs/superpowers/2026-10-28-combination-policy-pilot-card.md`, first drafted as a proposal and
+  amended once after the first review. One round of policy-only learning from the proven agent's own halving decisions:
+  - weights-only `calib020_0001` (SHA-1 checked; no `--resume`), the encoder, value head and every BatchNorm running
+    statistic frozen, so the value output is bit-identical by construction rather than by an anchor;
+  - arm R's residual policy branch (8,840 parameters, `policy_head_capacity.ResidualPolicyHead`) trained on the CPU;
+  - the target: within halving's 16 first-round candidates, π = P_C · softmax(log p + (50 + N_max)(q + 1)/2); outside
+    them π = p (halving's visit counts are a schedule and are never the target);
+  - 1,000 fresh self-play games of the proven agent on a registered block, then a 32-pair screen and a 509-pair strength
+    comparison against the proven agent with identical search.
+- **First review (amendments requested):** freeze one objective, the mirror-averaged policy, for the pre-fit
+  measurement, the training and the held-out check; assign each game's seed by slot, independent of worker
+  scheduling, keeping the match's four streams, with fresh registered blocks for the throughput check and generation;
+  remove the claim that the 519-parameter head is too small; correct the CPU rationale (GPU training is unqualified;
+  this recipe is not claimed to reproduce #75 under TF32=0); fix the initialization and sampling seeds (20261028,
+  20261029); state hard stage ceilings before each execution approval.
+- **Second review (this decision):** the amendments resolve both findings. Approved:
+  - freezing the card;
+  - step 1's build only: the minimal implementation and the proposed focused CPU tests, with temporary outputs and
+    fake evaluators;
+  - the 20-update CPU timing with synthetic inputs and random weights, with MLX evaluation synchronized so it measures
+    completed updates;
+  - a narrow **#66 exception**: reusing the residual head for this pilot, with no capacity claim.
+- **Two clarifications, put into the frozen card without another review:** the comparison of p̄_θ₀ with the stored
+  prior is a *probability discrepancy*, not a numerical floor on the KL (a maximum probability error does not bound the
+  KL error); and all 144 throughput-check games must finish inside the 15-minute ceiling, or the run is VOID and the
+  pilot closes, unless separately amended.
+- **As accepted:** a distinct proposed learning recipe. The closed continuation (#48, #49) and D2 (#69, #87) trials
+  remain closed. The constructed target is the main scientific uncertainty -- it can heavily favour a move eliminated
+  after three visits -- and the combination's PASS does not validate it. 18 workers and arbiter cap 14 are reasonable
+  starting settings, not established optima for this search.
+- **Prediction on record (card §5, written before any run):** directional only -- the candidate's held-out
+  cross-entropy falls, and it scores above 0.5 against the proven agent. No magnitude; low confidence.
+- **Not requested:** additional experimental arms, a broad regression or mutation campaign, a numerical investigation.
+- **Still unauthorized:** seed procedures, checkpoint loading, GPU work, corpus generation, real-data training, games
+  and pushing. See do-not-repeat **#107**.
