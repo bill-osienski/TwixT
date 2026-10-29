@@ -856,13 +856,26 @@ def run(kind: str, checkpoint: str) -> int:
 
 
 def run_timing() -> int:
-    """THE BUILD'S CPU TIMING: approved with the build; no gate, no checkpoint, no GPU; one shot."""
+    """THE BUILD'S CPU TIMING: approved with the build; no gate, no checkpoint, no GPU; one shot. It times the CPU, so
+    it refuses (consuming nothing) while BOINC runs, and is VOID if BOINC appears by the end."""
+    from . import background_compute as BG
+
     _preflight()
     out = ROOT / TIMING_EVIDENCE
     if os.path.lexists(out):
         raise Refused(f"{out} exists: the timing is one-shot")
-    code, rec = conclude("time", lambda o, r, lg: _timing(TIMING, RECIPE, o, r, lg), out, {},
-                         head=M._git("rev-parse", "HEAD"))
+    first = BG.observe()
+    if first.get("ok") is not True:
+        raise Refused(f"{BG.describe(first)}: the CPU is shared; quit BOINC before the timing")
+
+    def execute(o, r, lg):
+        r["background_before"] = first
+        _timing(TIMING, RECIPE, o, r, lg)
+        r["background_after"] = after = BG.observe()
+        if after.get("ok") is not True:
+            raise Void("background_compute", f"by the end of the timing: {BG.describe(after)}")
+
+    code, rec = conclude("time", execute, out, {}, head=M._git("rev-parse", "HEAD"))
     print(json.dumps({"status": rec["status"], "void": rec.get("void"), "projection": rec.get("projection")}))
     return code
 

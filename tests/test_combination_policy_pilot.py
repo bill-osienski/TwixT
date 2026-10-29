@@ -682,3 +682,31 @@ def test_IMPORTING_THE_PILOT_LOADS_NO_MLX():
             "scripts.GPU.alphazero.combination_selfplay, scripts.GPU.alphazero.halving_policy_target; "
             "sys.exit(any(m == 'mlx' or m.startswith('mlx.') for m in sys.modules))")
     assert subprocess.run([sys.executable, "-B", "-c", code], cwd=ROOT).returncode == 0
+
+
+def _bg(ok):
+    return {"ok": ok, "n_procs": 9, "hits": [] if ok else ["2090 boinc_project hsgamma"], "n_hits": 0 if ok else 1,
+            "exempt": [], "error": None}
+
+
+def test_THE_TIMING_REFUSES_WHILE_BOINC_RUNS_AND_CONSUMES_NOTHING(monkeypatch, tmp_path, capsys):
+    from scripts.GPU.alphazero import background_compute as BG
+    monkeypatch.setattr(P, "_preflight", lambda: None)
+    monkeypatch.setattr(P, "ROOT", tmp_path)
+    monkeypatch.setattr(BG, "observe", lambda: _bg(False))
+    assert P.main(["time"]) == P.EXIT_REFUSED and "quit BOINC" in capsys.readouterr().err
+    assert not (tmp_path / P.TIMING_EVIDENCE).exists()
+
+
+def test_THE_TIMING_IS_VOID_IF_BOINC_APPEARS_BY_THE_END(monkeypatch, tmp_path):
+    from scripts.GPU.alphazero import background_compute as BG
+    seen = iter([_bg(True), _bg(False)])
+    monkeypatch.setattr(P, "_preflight", lambda: None)
+    monkeypatch.setattr(P, "ROOT", tmp_path)
+    monkeypatch.setattr(P, "_timing", lambda *a: None)
+    monkeypatch.setattr(P, "conclude", _REAL_CONCLUDE)
+    monkeypatch.setattr(BG, "observe", lambda: next(seen))
+    assert P.main(["time"]) == P.EXIT_VOID
+    rec = json.loads((tmp_path / P.TIMING_EVIDENCE / "record.json").read_text())
+    assert rec["status"] == "VOID" and rec["void"]["step"] == "background_compute"
+    assert rec["background_before"]["ok"] and not rec["background_after"]["ok"]
