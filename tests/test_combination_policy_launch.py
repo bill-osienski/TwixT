@@ -180,6 +180,14 @@ if mode == "deaf":                      # a worker that ignores TERM; the main p
     time.sleep(60)
 if mode == "outlive":
     time.sleep(60)
+if mode in ("record", "record_outlive"):   # the script's own COMPLETED record (the wrapper runs from the repo root)
+    rec = pathlib.Path("docs/superpowers/evidence/combination-policy-throughput")
+    rec.mkdir()
+    head = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+    (rec / "record.json").write_text(json.dumps({"status": "COMPLETED", "card_sha256": os.environ["FAKE_CARD_SHA"],
+                                                 "head": head, "written_by": "script"}))
+if mode == "record_outlive":            # ... and then the run outlives the ceiling
+    time.sleep(60)
 if mode == "lose_pgid":                 # the wrapper runs from the repository root
     pathlib.Path("docs/superpowers/evidence/combination-policy-throughput-run/pgid.txt").unlink()
 """
@@ -230,7 +238,8 @@ def _fake_repo(tmp, term_s=None, sentinel=None):
 
 def _launch(repo, wdir, idle="idle", bg="clear", run="ok", timeout=60):
     env = {k: v for k, v in os.environ.items() if k not in ("MLX_ENABLE_TF32", "PYTHONPATH")}
-    env.update(FAKE_IDLE=idle, FAKE_BG=bg, FAKE_RUN=run, FAKE_OUT=str(repo / "scratch"), PYTHONDONTWRITEBYTECODE="1")
+    env.update(FAKE_IDLE=idle, FAKE_BG=bg, FAKE_RUN=run, FAKE_OUT=str(repo / "scratch"), PYTHONDONTWRITEBYTECODE="1",
+               FAKE_CARD_SHA=P.CARD_SHA256)
     return subprocess.run(["bash", str(wdir / "01_wrapper.sh")], cwd=str(repo), env=env, capture_output=True,
                           text=True, timeout=timeout)
 
@@ -286,6 +295,7 @@ def test_FAKE_LAUNCH_A_WORKER_LEFT_IN_THE_GROUP_IS_A_SURVIVOR_although_its_comma
         assert p.returncode == 137 and _alive(child) and outer["record_by"] == "none"
         pgid = (wdir / "pgid.txt").read_text().strip()
         assert outer["survivors"].startswith(f"unconfirmed cleanup: process group {pgid} "), outer
+        assert P.outer_faults(outer, {"head": outer["head"]})          # never admits generation
         assert str(child) in outer["survivors"].split(), outer      # strength2's name-only search would miss it
         assert "combination_policy_pilot" not in subprocess.run(["ps", "-o", "command=", "-p", str(child)],
                                                                capture_output=True, text=True).stdout
@@ -329,6 +339,7 @@ def test_FAKE_LAUNCH_A_WORKER_THAT_IGNORES_TERM_IS_KILLED_within_the_ceiling_aft
         rec = json.loads((repo / "docs/superpowers/evidence/combination-policy-throughput/record.json").read_text())
         assert outer["record_by"] == "wrapper" and rec["status"] == "VOID" and rec["void"]["step"] == "timeout"
         assert f"{GATE_NAME} = False\n" in gate.read_text()
+        assert P.outer_faults(outer, {"head": outer["head"]})          # never admits generation
     finally:
         if _alive(child):
             os.kill(child, signal.SIGKILL)
@@ -354,6 +365,7 @@ def test_FAKE_LAUNCH_A_GROUP_THAT_OUTLIVES_KILL_IS_REPORTED_NOT_WAITED_FOR_FOREV
         assert not (repo / "docs/superpowers/evidence/combination-policy-throughput/record.json").exists()
         assert not _alive(int((repo / "scratch/child.pid").read_text()))      # the real group itself was KILLed
         assert f"{GATE_NAME} = False\n" in gate.read_text()
+        assert P.outer_faults(outer, {"head": outer["head"]})          # never admits generation
     finally:
         sentinel.kill()
         sentinel.wait()
@@ -364,6 +376,45 @@ def test_FAKE_LAUNCH_A_MISSING_PGID_RECORDS_SURVIVORS_AS_UNKNOWN(tmp_path):
     p = _launch(repo, wdir, run="lose_pgid")
     outer = json.loads((wdir / "outer.json").read_text())
     assert p.returncode == 0 and outer["survivors"].startswith("unknown: no readable pgid.txt")
+    assert P.outer_faults(outer, {"head": outer["head"]})              # never admits generation
+
+
+def _commit_evidence_and_admit(repo, monkeypatch):
+    """Commit the fake run's outputs, then ask the REAL admission (the real committed readers) about generation."""
+    def git(*a):
+        return subprocess.check_output(["git", "-c", "user.name=t", "-c", "user.email=t@t", *a], cwd=repo,
+                                       text=True).strip()
+    monkeypatch.setattr(P, "ROOT", repo)
+    monkeypatch.setattr(P.M, "_git", git)
+    with pytest.raises(P.Refused, match="uncommitted or differs from HEAD"):     # not yet committed
+        P.admitted("generate", P._read_record, P._read_outer)
+    git("add", "docs/superpowers/evidence")
+    git("commit", "-qm", "the run's evidence")
+    return lambda: P.admitted("generate", P._read_record, P._read_outer)
+
+
+def test_ADMISSION_ACCEPTS_THE_REAL_WRAPPER_S_COMPLETED_RUN(tmp_path, monkeypatch):
+    repo, wdir, _gate = _fake_repo(tmp_path)
+    p = _launch(repo, wdir, run="record")
+    outer = json.loads((wdir / "outer.json").read_text())
+    assert p.returncode == 0 and outer["outcome"] == "COMPLETED" and outer["record_by"] == "script", outer
+    admit = _commit_evidence_and_admit(repo, monkeypatch)
+    assert admit() == {"docs/superpowers/evidence/combination-policy-throughput": "COMPLETED",
+                       "docs/superpowers/evidence/combination-policy-throughput-run/outer.json": "COMPLETED"}
+
+
+def test_ADMISSION_REFUSES_AN_OUTER_TIMEOUT_OVER_THE_SCRIPT_S_COMPLETED_RECORD(tmp_path, monkeypatch):
+    """The user's ruling (2026-10-29): the script wrote COMPLETED, then the run outlived the ceiling (TERM_S 2 in this
+    copy only). Both records stand as written; generation is refused."""
+    repo, wdir, _gate = _fake_repo(tmp_path, term_s=2)
+    p = _launch(repo, wdir, run="record_outlive")
+    outer = json.loads((wdir / "outer.json").read_text())
+    rec = json.loads((repo / "docs/superpowers/evidence/combination-policy-throughput/record.json").read_text())
+    assert p.returncode == 124 and outer["outcome"] == "TIMEOUT" and outer["record_by"] == "script", outer
+    assert rec["status"] == "COMPLETED" and rec["written_by"] == "script"        # the inner record is untouched
+    admit = _commit_evidence_and_admit(repo, monkeypatch)
+    with pytest.raises(P.Refused, match="inner_exit is 124, not 0"):
+        admit()
 
 
 # ─────────────────────────────── the seed-procedure copies (built, never run here) ───────────────────────────────

@@ -85,6 +85,9 @@ TIMING_EVIDENCE = "docs/superpowers/evidence/combination-policy-timing"
 ADMISSION = {"throughput": [(TIMING_EVIDENCE, "status", "COMPLETED")],
              "generate": [(KINDS["throughput"]["evidence"], "status", "COMPLETED")],
              "train": [(KINDS["generate"]["evidence"], "status", "COMPLETED"), (TIMING_EVIDENCE, "status", "COMPLETED")]}
+#: what each step needs from the launch wrapper's committed outer.json too (the user's ruling, ledger 2026-10-29): an
+#: outer TIMEOUT, unconfirmed cleanup or missing outer evidence refuses, whatever the inner record says
+OUTER_ADMISSION = {"generate": [(str(pathlib.Path(KINDS["throughput"]["plan"]).parent), KINDS["throughput"]["evidence"])]}
 GENERATE_CEILING = {"factor": 1.5, "max_seconds": 6 * 3600}
 #: card §4: the one recipe. Not a tuning point.
 RECIPE = {"updates": 3000, "batch": 64, "lr": 1e-3, "l2": 1e-4, "betas": [0.9, 0.999], "eps": 1e-8,
@@ -790,15 +793,37 @@ def _versions() -> Dict[str, str]:
 
 def _read_record(rel: str) -> Mapping[str, Any]:
     """A committed record: it must exist and be unchanged from HEAD."""
-    path = f"{rel}/record.json"
+    return _read_committed(f"{rel}/record.json")
+
+
+def _read_outer(rel: str) -> Mapping[str, Any]:
+    """A launch wrapper's committed outer.json: it must exist and be unchanged from HEAD."""
+    return _read_committed(f"{rel}/outer.json")
+
+
+def _read_committed(path: str) -> Mapping[str, Any]:
+    """Tracked and unchanged from HEAD, or FileNotFoundError (absent) / Refused (untracked, ignored or modified)."""
     if not (ROOT / path).is_file():
         raise FileNotFoundError(path)
-    if M._git("status", "--porcelain", "--untracked-files=all", "--", path):
+    if not M._git("ls-files", "--", path) or M._git("status", "--porcelain", "--untracked-files=all", "--", path):
         raise Refused(f"{path} is uncommitted or differs from HEAD")
     return json.loads((ROOT / path).read_text())
 
 
-def admitted(kind: str, read_record: Callable[[str], Mapping[str, Any]]) -> Dict[str, str]:
+def outer_faults(outer: Mapping[str, Any], inner: Mapping[str, Any]) -> List[str]:
+    """Why a wrapper's outer.json does not show a successful run whose record is `inner` ([] when it does)."""
+    faults = []
+    for key, want in (("inner_exit", 0), ("outer_exit", 0), ("outcome", "COMPLETED"), ("gate_restored", True),
+                      ("survivors", ""), ("record_by", "script")):
+        if outer.get(key) != want or type(outer.get(key)) is not type(want):
+            faults.append(f"{key} is {outer.get(key)!r}, not {want!r}")
+    if not outer.get("head") or outer.get("head") != inner.get("head"):
+        faults.append(f"head {outer.get('head')!r} is not the record's {inner.get('head')!r}")
+    return faults
+
+
+def admitted(kind: str, read_record: Callable[[str], Mapping[str, Any]],
+             read_outer: Optional[Callable[[str], Mapping[str, Any]]] = None) -> Dict[str, str]:
     """{record: value} for every earlier step this kind needs, or Refused."""
     seen = {}
     for rel, field, want in ADMISSION[kind]:
@@ -810,6 +835,18 @@ def admitted(kind: str, read_record: Callable[[str], Mapping[str, Any]]) -> Dict
             raise Refused(f"{rel}/record.json is not COMPLETED with {field} {want} under this card: {kind} is not "
                           f"admitted")
         seen[rel] = want
+    for run_rel, rel in OUTER_ADMISSION.get(kind, ()):
+        try:
+            outer = read_outer(run_rel) if read_outer is not None else None
+        except FileNotFoundError:
+            outer = None
+        if outer is None:
+            raise Refused(f"{run_rel}/outer.json does not exist: {kind} is not admitted")
+        faults = outer_faults(outer, read_record(rel))
+        if faults:
+            raise Refused(f"{run_rel}/outer.json does not show a successful run ({'; '.join(faults)}): {kind} is not "
+                          f"admitted")
+        seen[f"{run_rel}/outer.json"] = "COMPLETED"
     return seen
 
 
@@ -834,7 +871,7 @@ def run(kind: str, checkpoint: str) -> int:
     gate, name = KINDS[kind]["gate"]
     if getattr(gate, name) is not True:
         raise Refused(f"{name} is closed: the {kind} step is not authorized")
-    admission = admitted(kind, _read_record)
+    admission = admitted(kind, _read_record, _read_outer)
     ckpt = pathlib.Path(checkpoint)
     if not (ckpt.is_absolute() and ckpt.is_file()):
         raise Refused("--checkpoint must name an existing file by absolute path")

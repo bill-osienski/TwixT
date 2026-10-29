@@ -654,6 +654,99 @@ def test_ADMISSION_NEEDS_EACH_EARLIER_COMMITTED_RECORD():
         P.admitted("train", reader({P.KINDS["generate"]["evidence"]: ok}))
 
 
+THROUGHPUT_RUN = str(pathlib.Path(P.KINDS["throughput"]["plan"]).parent)
+GOOD_OUTER = {"inner_exit": 0, "outcome": "COMPLETED", "outer_exit": 0, "gate_restored": True, "survivors": "",
+              "record_by": "script", "head": "a" * 40}
+
+
+def _gen_readers(inner, outer):
+    """Readers for generation's admission: the throughput record, and its outer.json (None: absent)."""
+    def read_record(rel):
+        assert rel == P.KINDS["throughput"]["evidence"], rel
+        return inner
+
+    def read_outer(rel):
+        assert rel == THROUGHPUT_RUN, rel
+        if outer is None:
+            raise FileNotFoundError(rel)
+        return outer
+    return read_record, read_outer
+
+
+def test_GENERATION_IS_ADMITTED_ONLY_WITH_A_SUCCESSFUL_COMMITTED_OUTER_JSON():
+    """The user's ruling (2026-10-29): the inner record AND the wrapper's outer.json must both show success."""
+    inner = {"status": "COMPLETED", "card_sha256": P.CARD_SHA256, "head": "a" * 40}
+    assert P.admitted("generate", *_gen_readers(inner, GOOD_OUTER)) == \
+        {P.KINDS["throughput"]["evidence"]: "COMPLETED", f"{THROUGHPUT_RUN}/outer.json": "COMPLETED"}
+    with pytest.raises(P.Refused, match="outer.json does not exist"):           # missing outer evidence
+        P.admitted("generate", *_gen_readers(inner, None))
+    with pytest.raises(P.Refused, match="outer.json does not exist"):           # no outer reader at all
+        P.admitted("generate", _gen_readers(inner, GOOD_OUTER)[0])
+
+
+@pytest.mark.parametrize("change", [
+    {"inner_exit": 124, "outcome": "TIMEOUT", "outer_exit": 124},                  # TERM sufficed
+    {"inner_exit": 137, "outcome": "TIMEOUT", "outer_exit": 137, "record_by": "script"},   # KILL needed
+    {"inner_exit": 125, "outcome": "TIMEOUT", "outer_exit": 125,                   # the supervisor gave up
+     "survivors": "unconfirmed cleanup: process group 4242 "},
+    {"survivors": "unconfirmed cleanup: process group 4242 4243 "},                # the group remained
+    {"survivors": "unknown: no readable pgid.txt "},
+    {"survivors": "4243 "},
+    {"survivors": None},
+    {"gate_restored": False, "outer_exit": 5},
+    {"outer_exit": 5},
+    {"record_by": "wrapper"}, {"record_by": "none"},
+    {"inner_exit": False}, {"inner_exit": "0"}, {"inner_exit": None},
+    {"outcome": "VOID", "inner_exit": 3, "outer_exit": 3},
+    {"head": "b" * 40}, {"head": None}],
+    ids=["timeout-124", "timeout-137", "unconfirmed-125", "group-remains", "unknown", "survivor", "no-survivors-field",
+         "gate-not-restored", "outer-exit-5", "wrapper-record", "no-record", "exit-bool", "exit-str", "exit-null",
+         "void", "other-head", "no-head"])
+def test_AN_OUTER_FAILURE_REFUSES_GENERATION_EVEN_OVER_A_COMPLETED_INNER_RECORD(change):
+    inner = {"status": "COMPLETED", "card_sha256": P.CARD_SHA256, "head": "a" * 40}
+    with pytest.raises(P.Refused, match="does not show a successful run"):
+        P.admitted("generate", *_gen_readers(inner, {**GOOD_OUTER, **change}))
+
+
+def test_ONLY_GENERATION_READS_AN_OUTER_JSON():
+    ok = {"status": "COMPLETED", "card_sha256": P.CARD_SHA256}
+    assert P.admitted("throughput", lambda rel: ok) == {P.TIMING_EVIDENCE: "COMPLETED"}
+    assert set(P.OUTER_ADMISSION) == {"generate"}
+
+
+@pytest.mark.parametrize("state", ["committed", "absent", "untracked", "ignored", "modified"])
+def test_THE_COMMITTED_READER_needs_the_file_tracked_and_unchanged(tmp_path, monkeypatch, state):
+    import subprocess
+
+    def git(*a):
+        return subprocess.check_output(["git", "-c", "user.name=t", "-c", "user.email=t@t", *a], cwd=tmp_path,
+                                       text=True).strip()
+    git("init", "-q")
+    (tmp_path / ".gitignore").write_text("ignored/\n")
+    git("add", "-A")
+    git("commit", "-qm", "base")
+    rel = {"ignored": "ignored/outer.json"}.get(state, "run/outer.json")
+    path = tmp_path / rel
+    if state != "absent":
+        path.parent.mkdir(parents=True)
+        path.write_text(json.dumps(GOOD_OUTER))
+    if state in ("committed", "modified"):
+        git("add", rel)
+        git("commit", "-qm", "outer")
+    if state == "modified":
+        path.write_text(json.dumps({**GOOD_OUTER, "outcome": "TIMEOUT"}))
+    monkeypatch.setattr(P, "ROOT", tmp_path)
+    monkeypatch.setattr(P.M, "_git", git)
+    if state == "committed":
+        assert P._read_outer(str(pathlib.Path(rel).parent)) == GOOD_OUTER
+    elif state == "absent":
+        with pytest.raises(FileNotFoundError):
+            P._read_outer("run")
+    else:
+        with pytest.raises(P.Refused, match="uncommitted or differs from HEAD"):
+            P._read_outer(str(pathlib.Path(rel).parent))
+
+
 def test_USAGE():
     assert P.main([]) == P.main(["run", "screen", "--checkpoint", "/x"]) == P.main(["time", "now"]) == P.EXIT_USAGE
 

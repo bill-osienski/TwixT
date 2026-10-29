@@ -166,6 +166,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — survey accepted; pre-proof approved once; post-KILL wait to be bounded; TIMEOUT overrides COMPLETED (addendum, 2026-10-29, the user's decision).** The pre-registration proof runs once on the committed survey record and the unchanged block, its record returned before registration. The supervisor's wait after KILL must be bounded and report survivors or unconfirmed cleanup (minimal repair and one CPU check). An outer TIMEOUT closes the pilot even over a script COMPLETED record; it cannot admit generation (not yet enforced by `admitted`). Registration and later steps unauthorized. See #112.
 > **Combination policy pilot — throughput pre-proof → HOLDS; the post-KILL wait bounded (addendum, 2026-10-29).** Pre-proof run once (`086d6e37`, clean worktree at `7aa0aea8`): bound to the survey record, block [202696900, 202697044) unregistered, no plan, controls 45/45. The supervisor stops watching 10 s after KILL and exits 125 (TIMEOUT, cleanup unconfirmed in survivors); the wrapper never waits past 910 s. The new test hung on the previous wrapper and passes now. Awaiting review; registration and later steps unauthorized. See #113.
 > **Combination policy pilot — pre-proof and bounded supervisor accepted; registration with its plan, and the admission fix, approved (addendum, 2026-10-29, the user's decision).** Register exactly [202696900, 202697044) in ACCOUNTED with the plan from `build_plan`; separately, generation admission must require the committed `outer.json` too (zero exits, gate restored, survivors confirmed empty), refusing missing outer evidence, TIMEOUT or unconfirmed cleanup whatever the inner record says. Both return for review; the post-proof, gate, checkpoint, GPU, closing and pushing are unauthorized. See #114.
+> **Combination policy pilot — throughput block REGISTERED with its plan; generation admission requires the outer record (addendum, 2026-10-29).** [202696900, 202697044) appended last to ACCOUNTED (`88c5d162`; AST: only ACCOUNTED changed), plan = `build_plan` bound to `dbe3e91c…`; registry tests unchanged from the parent (the same older failures, none new). `admitted("generate")` now also requires the committed `outer.json` (zero exits, gate restored, survivors empty, script record, same head); before, an inner COMPLETED alone admitted. Awaiting review; the post-proof and later steps unauthorized. See #115.
 
 ## Historical proposal check — programme now closed
 
@@ -1810,6 +1811,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 112. **The throughput pre-proof, the bounded post-KILL wait, and TIMEOUT over COMPLETED (2026-10-29).** Do **not** rerun the pre-proof, register the block, write the plan or run the post-proof without the user's approval of each. Do **not** launch with a supervisor whose wait after KILL is unbounded. Do **not** admit generation, or read the pilot as continuing, from a throughput run whose `outer.json` says TIMEOUT, whatever its `record.json` says; keep both records as written, and do **not** rewrite either to agree.
 113. **The throughput pre-proof and the bounded wait (2026-10-29).** Do **not** rerun the pre-proof or edit its record (`03_collision_proof_pre_run.txt`, sha256 `5f60b891…`); register the block, write the plan or run the post-proof only on the user's approval. Do **not** remove the supervisor's bound or read exit 125 (cleanup unconfirmed) as anything but TIMEOUT with survivors; closing refuses it.
 114. **The throughput registration and the admission fix (2026-10-29).** Do **not** register any block but [202696900, 202697044), change any registry list but ACCOUNTED, or write the plan by hand rather than through `build_plan`. Do **not** run the post-proof, open the gate, load the checkpoint, launch or close without the user's approval of each. Do **not** admit generation on the inner record alone, or weaken the outer checks (zero inner and outer exits, gate restored, survivors exactly empty). Do **not** push without approval.
+115. **The throughput registration and the outer-record admission (2026-10-29).** Do **not** edit the plan, move or widen [202696900, 202697044), or register it again; the post-proof runs once, only on approval. Do **not** relax `outer_faults` or the committed reader's tracked-file check, or admit generation through any path that skips `outer.json`. Do **not** read the older registry-test failures as caused by this registration; they predate it.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -6787,3 +6789,54 @@ approved as one sequence.**
   fast-forward (`e5f3055e..50e10824`) was the push. This review authorizes no push.
 - **Still unauthorized:** the post-proof, opening the gate, checkpoint loading, the GPU launch, closing and pushing.
   Existing evidence is preserved. See do-not-repeat **#114**.
+
+#### Addendum — the throughput block registered with its plan; generation admission now requires the outer record (2026-10-29)
+
+- **Registration (`88c5d162`),** in a clean linked worktree (branch `cp-throughput-reg`, from `158f12ba`; main
+  fast-forwarded and the worktree removed afterwards):
+  - The block READ from the accepted survey record (sha256 `dbe3e91c…` recomputed; the survey copy's own
+    `read_record`), not typed: [202696900, 202697044), BASE 202696900.
+  - ACCOUNTED: exactly that block appended last (46 → 47), with a comment in the precedent's form. An AST check
+    against the parent: only ACCOUNTED changed, its prefix identical; EXPOSED (44), RETIRED (42), TEST_ONLY and every
+    other statement unchanged; no list overlaps the block.
+  - `combination-policy-throughput-run/plan.json` = the survey copy's `build_plan(202696900, dbe3e91c…)`, written
+    create-only: kind `combination-policy-throughput-plan/1`, base 202696900, n_slots 144.
+- **Tests re-anchored (`f20c47cf`):** the launch file's state test now checks the survey and pre-proof provenance
+  (the proof bound to the survey's sha256), plan = `build_plan`, the block ACCOUNTED once and last, unexposed,
+  unretired and every seed schedulable by the pilot's own predicate, no post-proof, the gate closed and no run output.
+  Strength attempt 2's state test asserted its block was ACCOUNTED's last entry; it now requires every later entry to
+  lie above it.
+  - Every test file that reads the registry (41 files), run at the parent `158f12ba` and after registration: the
+    same 16 failures and 69 errors in both, none new. They predate this work (tests needing the checkpoint, absent
+    in a linked worktree, and older seed-closing tests asserting their block is the last EXPOSED/RETIRED entry).
+- **The admission fix** (`combination_policy_pilot.py`):
+  - `OUTER_ADMISSION`: generation also needs the throughput wrapper's `outer.json`. `outer_faults` refuses unless
+    `inner_exit` 0, `outer_exit` 0, outcome COMPLETED, `gate_restored` true, survivors exactly empty and
+    `record_by` "script", each of the right type. **Beyond the approval's list:** the outer `head` must equal the
+    inner record's `head`, so both files come from one run.
+  - Missing outer evidence refuses, whatever the inner record says. `run` now passes the real outer reader.
+  - **The committed reader is tightened** for both files: it now also requires the file to be tracked, so an
+    ignored, never-committed file no longer passes as committed (`git status` is silent about ignored files).
+  - **Before the fix,** the old `admitted("generate")` admitted a COMPLETED inner record with no outer evidence at
+    all (checked directly). Of the 25 new unit tests, 24 fail on the old code.
+  - **Tests:** unit cases in `tests/test_combination_policy_pilot.py`:
+    - success, plus 17 refusals: TIMEOUT 124/137, 125 unconfirmed, the group remaining, unknown or listed
+      survivors, gate not restored, outer exit 5, a wrapper or missing record, non-integer exits, VOID, another or
+      no head;
+    - missing outer evidence;
+    - only generation reads an outer record;
+    - the committed reader on tracked, absent, untracked, ignored and modified files.
+
+    In `tests/test_combination_policy_launch.py`, the real wrapper's own outputs go through the real committed
+    readers:
+    - a completed fake run with the script's COMPLETED record is refused until committed, then admitted;
+    - a fake run whose script wrote COMPLETED and then outlived a 2 s ceiling (in a test copy only) ends 124
+      TIMEOUT, both records stand as written, and admission refuses it;
+    - the VOID, KILL, unconfirmed-cleanup, lost-supervisor and unknown-pgid outputs all fail `outer_faults`.
+
+    Those two end-to-end tests fail on the old code only because the outer reader did not exist.
+  - Results: 99 passed (three consecutive runs). With the gate-inventory, mirror-halving launch, background-compute,
+    seed-selection and tactical-survey suites: 191 passed, 1 deselected (opt-in).
+- **Prediction on record:** none (a seed procedure and a fix).
+- **Status:** both await the user's review. The post-proof, opening the gate, checkpoint loading, the GPU launch,
+  closing and pushing remain unauthorized. See do-not-repeat **#115**.
