@@ -4,8 +4,8 @@ copies. CPU only; nothing here loads a model, touches a device, runs a seed proc
 
 THE FAKE-LAUNCH CHECKS run the REAL wrapper's bytes in a throwaway git repository holding only what it needs: its gate
 (opened by a one-line commit), stub `idle_gate` and `background_compute` that report as the test says, and a stub
-`combination_policy_pilot` that prints what it was launched with and, when told, leaves a process in its group,
-outlives the ceiling, or deletes pgid.txt. THE CLOSING CHECKS feed the copy the progress.jsonl the REAL `_generate`
+`combination_policy_pilot` that prints what it was launched with and, when told, leaves a process in its group and
+kills its supervisor, outlives the ceiling, keeps a worker that ignores TERM, or deletes pgid.txt. THE CLOSING CHECKS feed the copy the progress.jsonl the REAL `_generate`
 writes through the REAL record boundary (fake seams, temporary output)."""
 import ast
 import importlib.util
@@ -43,13 +43,16 @@ def isolated(monkeypatch, tmp_path):
     monkeypatch.setenv(P.SETTING, P.SETTING_VALUE)
 
 
-def test_THE_GATE_IS_CLOSED_and_the_launch_is_not_run():
+def test_THE_GATE_IS_CLOSED_and_the_launch_is_not_run_only_the_survey_has_run():
     from scripts.GPU.alphazero import combination_policy_throughput_authorization as G
     assert getattr(G, GATE_NAME) is False
     run = EV / "combination-policy-throughput-run"
     assert sorted(x.name for x in run.iterdir()) == ["01_wrapper.sh"]          # no plan, no outer record
     assert not (EV / "combination-policy-throughput").exists()
-    assert sorted(x.name for x in (EV / SURVEY).parent.iterdir() if x.name != "__pycache__") == ["01_seed_survey.py"]
+    survey = sorted(x.name for x in (EV / SURVEY).parent.iterdir() if x.name != "__pycache__")
+    assert survey == ["01_seed_survey.py", "02_seed_survey_run.txt"]           # the survey (2026-10-29), no proof yet
+    assert (EV / SURVEY).parent.joinpath("02_seed_survey_run.txt").read_text().endswith(
+        "SURVEY VERDICT   : THE COMBINATION-POLICY THROUGHPUT BLOCK IS CLEAN\n")
     assert sorted(x.name for x in (EV / CLOSING).parent.iterdir() if x.name != "__pycache__") == ["01_derive_usage.py"]
 
 
@@ -60,8 +63,9 @@ def _code(path):
 
 
 def test_THE_WRAPPER_IS_STRENGTH2_S_WITH_ONLY_THE_STATED_DIFFERENCES():
-    """The paths, the gate, the module and `run throughput`, the record kind, the ceiling, and the run's process group
-    (pgid.txt, written by the supervisor; survivors include the group). Everything else byte-identical."""
+    """The paths, the gate, the module and `run throughput`, the record kind, the ceiling, the run's process group
+    (pgid.txt, written by the supervisor; survivors include the group), and the escalation outliving the main process
+    (2026-10-29). Everything else byte-identical."""
     two = _code(EV / "mirror-halving-strength2-run/01_wrapper.sh").splitlines()
     tp = _code(WRAPPER).splitlines()
     removed, added = sorted(set(two) - set(tp)), sorted(set(tp) - set(two))
@@ -80,10 +84,12 @@ def test_THE_WRAPPER_IS_STRENGTH2_S_WITH_ONLY_THE_STATED_DIFFERENCES():
         "my ($pgid_file, $term, $grace, @cmd) = @ARGV;",
         "my $pf;", 'sysopen($pf, $pgid_file, O_WRONLY | O_CREAT | O_EXCL) && print($pf "$pid\\n") && close($pf)',
         '  or do { kill "KILL", -$pid; waitpid($pid, 0); exit 126; };',
+        "select(undef, undef, undef, 0.1) while kill(0, -$pid);     # the ceiling stays armed while any of the group "
+        "survives",
         '/usr/bin/perl -e "$SUPERVISOR" "$OUT_REL/pgid.txt" "$TERM_S" "$GRACE_S" env MLX_ENABLE_TF32=0 PYTHONPATH=. '
         '"$PY" -B -m "$MODULE" run throughput --checkpoint "$CKPT" \\'}, added
     assert len(removed) == 11, removed      # seven settings, the one-shot list, two perl lines, the launch line
-    assert len(tp) == len(two) + 10         # the seven-line group check and the three-line pgid write
+    assert len(tp) == len(two) + 11         # the seven-line group check, the three-line pgid write, the group wait
 
 
 def test_THE_CEILING_IS_THE_CARD_S_15_MINUTES():
@@ -127,6 +133,13 @@ mode, here = os.environ.get("FAKE_RUN", "ok"), pathlib.Path(os.environ["FAKE_OUT
 if mode in ("linger", "outlive"):        # a 'worker': same process group, a command line without the module's name
     child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
     (here / "child.pid").write_text(str(child.pid))
+if mode == "linger":                    # the supervisor lost (the only way a group member now outlives it)
+    os.kill(os.getppid(), 9)
+if mode == "deaf":                      # a worker that ignores TERM; the main process dies of it
+    child = subprocess.Popen([sys.executable, "-c",
+                              "import signal, time; signal.signal(signal.SIGTERM, signal.SIG_IGN); time.sleep(60)"])
+    (here / "child.pid").write_text(str(child.pid))
+    time.sleep(60)
 if mode == "outlive":
     time.sleep(60)
 if mode == "lose_pgid":                 # the wrapper runs from the repository root
@@ -222,12 +235,14 @@ def test_FAKE_LAUNCH_AN_IDLE_MACHINE_REACHES_THE_COMMAND_with_its_exact_argument
 
 
 def test_FAKE_LAUNCH_A_WORKER_LEFT_IN_THE_GROUP_IS_A_SURVIVOR_although_its_command_does_not_name_the_module(tmp_path):
+    """The supervisor now waits for the whole group, so the worker can outlive it only if the supervisor is lost:
+    the stub KILLs it (the wrapper reads 137 as TIMEOUT), and the wrapper's group search must still find the worker."""
     repo, wdir, _gate = _fake_repo(tmp_path)
     p = _launch(repo, wdir, run="linger")
     child = int((repo / "scratch/child.pid").read_text())
     try:
         outer = json.loads((wdir / "outer.json").read_text())
-        assert p.returncode == 0 and _alive(child)
+        assert p.returncode == 137 and _alive(child) and outer["record_by"] == "none"
         assert str(child) in outer["survivors"].split(), outer      # strength2's name-only search would miss it
         assert "combination_policy_pilot" not in subprocess.run(["ps", "-o", "command=", "-p", str(child)],
                                                                capture_output=True, text=True).stdout
@@ -253,6 +268,27 @@ def test_FAKE_LAUNCH_THE_CEILING_TERMINATES_THE_WHOLE_GROUP_workers_included(tmp
     assert outer["record_by"] == "wrapper" and rec["written_by"] == "wrapper" and rec["status"] == "VOID"
     assert rec["void"]["step"] == "timeout" and rec["kind"] == P.RECORD_KIND
     assert f"{GATE_NAME} = False\n" in gate.read_text()
+
+
+def test_FAKE_LAUNCH_A_WORKER_THAT_IGNORES_TERM_IS_KILLED_within_the_ceiling_after_the_main_process_exits(tmp_path):
+    """TERM_S changed to 2 in this copy only (ceiling 12 s): the main process dies of the group TERM, its worker
+    ignores it, and the KILL 10 s later must still come (the user's review, 2026-10-29)."""
+    repo, wdir, gate = _fake_repo(tmp_path, term_s=2)
+    t = time.monotonic()
+    p = _launch(repo, wdir, run="deaf")
+    elapsed = time.monotonic() - t
+    child = int((repo / "scratch/child.pid").read_text())
+    try:
+        assert not _alive(child), "the worker survived the ceiling"
+        assert p.returncode == 137 and 12 <= elapsed < 30, (p.returncode, elapsed, p.stderr)
+        outer = json.loads((wdir / "outer.json").read_text())
+        assert outer["outcome"] == "TIMEOUT" and outer["inner_exit"] == 137 and outer["survivors"] == ""
+        rec = json.loads((repo / "docs/superpowers/evidence/combination-policy-throughput/record.json").read_text())
+        assert outer["record_by"] == "wrapper" and rec["status"] == "VOID" and rec["void"]["step"] == "timeout"
+        assert f"{GATE_NAME} = False\n" in gate.read_text()
+    finally:
+        if _alive(child):
+            os.kill(child, signal.SIGKILL)
 
 
 def test_FAKE_LAUNCH_A_MISSING_PGID_RECORDS_SURVIVORS_AS_UNKNOWN(tmp_path):

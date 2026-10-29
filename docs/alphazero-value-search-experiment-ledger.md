@@ -162,6 +162,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — step 1 ACCEPTED; the throughput wrapper and its seed copies approved to build (decision note after entry 40, 2026-10-28).** The user's review found no material blocker in the build or the timing; the timing record stands (its load readings above 3 do not invalidate it under its declared checks; no rerun). Approved: build only the throughput check's wrapper and its seed-survey/proof and closing copies, with focused CPU checks, for review before any seed procedure or GPU work. The 144-in-15-minute rule stands: a timeout rejects this setup's operational feasibility, not policy learning. See do-not-repeat **#109**.
 > **Combination policy pilot — the throughput check's wrapper and seed copies BUILT, for review (addendum to the decision note after entry 40, 2026-10-28).** Wrapper, survey/proof copy and closing copy, each a copy of strength attempt 2's with named differences: the 15-minute ceiling (TERM 890 s + 10 s), the run's process group counted for survivors (18 spawned workers do not carry the module's name), and the card's closing rule for parallel workers (started slots a prefix as a set, the claim counter equal to k, else the whole block exposed). 20 new focused CPU tests. Nothing run: no seed procedure, gate, checkpoint or GPU. See #109.
 > **Combination policy pilot — the build reviewed; the throughput seed survey approved once; a supervisor repair approved (addendum, 2026-10-29, the user's decision).** The seed scripts are ready. One wrapper defect must be fixed before any launch: the supervisor cancels its alarm when the main process exits, so a worker that ignores TERM is never KILLed and the 900 s ceiling is not enforced. Approved: that repair with one fake-launch test, and the survey once in a clean worktree, its record committed for review before the pre-proof. Pre-proof, registration, post-proof, the gate, the checkpoint and the GPU remain unauthorized. See do-not-repeat **#110**.
+> **Combination policy pilot — throughput seed survey → CLEAN; the supervisor repaired (addendum, 2026-10-29).** Survey run once (`cd4217a9`, clean worktree at `fea251fa`): block [202696900, 202697044), 144 seeds, controls 45/45, nearest gap 176 (floor 144); not registered, no plan. The supervisor now keeps the ceiling armed until the whole process group has gone, so a TERM-ignoring worker is KILLed; the new fake-launch test failed before the repair and passes after. Awaiting review; pre-proof and every later step unauthorized. See #111.
 
 ## Historical proposal check — programme now closed
 
@@ -1802,6 +1803,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 108. **The combination policy pilot's CPU timing (2026-10-28).** Do **not** rerun, repeat or extend the timing; it is one-shot and its record (`docs/superpowers/evidence/combination-policy-timing/`) prices step 4's ceiling at 45 min, which is never extended. Do **not** read it as a measurement of real-data training, of the GPU, or of anything about the target or the candidate's strength. Its approval did not authorize the throughput check, seed procedures, checkpoint loading, generation, training or games; each still needs its own approval.
 109. **The pilot's step 1 accepted; the throughput launch build (2026-10-28).** Do **not** run the throughput check's seed survey, proofs, registration or closing, open its gate, load the checkpoint or launch the wrapper without the user's approval of each. Do **not** build the generation or training wrappers or their seed copies under this approval. Do **not** read a throughput timeout as evidence about whether policy learning works: it rejects only this setup's operational feasibility (and, as frozen, closes the pilot). Do **not** rerun the timing; its record stands as accepted.
 110. **The throughput seed survey and the supervisor repair (2026-10-29).** Do **not** rerun the survey, adjust its block or select another one if it is not CLEAN; do **not** run the pre-proof, register the block, write the plan or run the post-proof without the user's approval of each. Do **not** open the throughput gate, load the checkpoint or launch the wrapper until the supervisor repair is reviewed: a supervisor that stops escalating when the main process exits does not enforce the ceiling, and a survivor found afterwards is not a substitute.
+111. **The throughput seed survey record and the supervisor repair (2026-10-29).** Do **not** rerun the survey or edit its record (`02_seed_survey_run.txt`, sha256 `dbe3e91c…`); [202696900, 202697044) is surveyed, not registered, and becomes usable only through the separately approved pre-proof, registration with its plan, and post-proof. Do **not** remove the supervisor's group wait, or treat a group that outlived its main process past the ceiling as COMPLETED.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -6667,3 +6669,39 @@ approved as one sequence.**
   independently.
 - **Still unauthorized:** the pre-proof, registration, the plan, the post-proof, opening the gate, checkpoint loading,
   the GPU launch, closing, and every later stage. See do-not-repeat **#110**.
+
+#### Addendum — the throughput seed survey run once (CLEAN); the supervisor repaired (2026-10-29)
+
+- **The survey (`cd4217a9`), run once** in a clean linked worktree (branch `cp-throughput-seeds`, from `fea251fa`;
+  main fast-forwarded and the worktree removed afterwards):
+  `.venv/bin/python -B docs/superpowers/evidence/combination-policy-throughput-seed-survey/01_seed_survey.py --mode
+  survey`, exit 0. A first launch command was refused by the shell before Python started (a mistyped stderr path), so
+  nothing ran and no record existed; the command was corrected and run once.
+  - Verdict: **THE COMBINATION-POLICY THROUGHPUT BLOCK IS CLEAN**, controls **45/45**, clean tree at `fea251fa`; the
+    main checkout scanned too (49,810 files; its 2 untracked files are not required clean).
+  - The rule's block is **[202696900, 202697044)**: BASE 202696900, 144 seeds, above the highest registered seed
+    202696717 (attempt 2's last). Direct overlap none, 0 derived streams, injective, nearest gap 176 (floor 144).
+  - Slot g plays seed BASE + g, slots 0–143 listed. Record
+    `combination-policy-throughput-seed-survey/02_seed_survey_run.txt`, sha256 `dbe3e91c…`.
+  - **Not registered:** no proof run, ACCOUNTED unchanged, no plan.
+- **The supervisor repair** (approved in the previous addendum): once it has reaped the main process, the supervisor
+  now keeps its alarm armed and waits until no process of the run's group survives (`kill 0` to the group, every
+  0.1 s). A worker that ignores TERM is therefore KILLed at the ceiling. A group that outlives its main process past
+  890 s is a TIMEOUT (124, or 137 if KILL was needed), whatever the script recorded; the closing then still exposes
+  the seeds the progress shows used and retires the block.
+  - **The focused test** (fake launch, TERM_S 2 in a test copy only, so a 12 s ceiling): the main process dies of the
+    group TERM, its worker ignores TERM, and KILL removes it; the wrapper returns 137 after 12 s or more, the worker
+    is gone, outer TIMEOUT with no survivors, the wrapper's VOID timeout record. **It failed on the unrepaired
+    wrapper** (the worker survived) and passes on the repaired one.
+  - **Two existing tests changed, because the behaviour changed:** the wrapper-diff pin (one more added line), and
+    the group-survivor test. The worker can now outlive the supervisor only if the supervisor itself is lost, so its
+    stub now KILLs the supervisor; the wrapper's group search must still report the worker. The "nothing has run"
+    test now expects the survey record and nothing after it.
+  - `tests/test_combination_policy_launch.py`: 21 passed (three consecutive runs). With the pilot, gate-inventory,
+    mirror-halving launch and background-compute suites: 130 passed, 1 deselected (opt-in).
+  - **Not covered by a test:** the path where the main process exits normally while a worker lingers; it uses the
+    same wait loop. A process that survives KILL (uninterruptible) would hold the supervisor, as an unkillable main
+    process already would.
+- **Prediction on record:** none (a seed procedure and a repair).
+- **Status:** the survey record and the repaired wrapper await the user's review. The pre-proof, registration, plan,
+  post-proof, gate, checkpoint, GPU launch and closing remain unauthorized. See do-not-repeat **#111**.

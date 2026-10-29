@@ -9,6 +9,9 @@
 # run's process group id, create-only, to pgid.txt here, and the survivors are the processes that name the module
 # PLUS every process still in that group. A started run whose pgid.txt cannot be read records survivors as unknown
 # (closing then refuses). If the supervisor cannot write pgid.txt it KILLs the group and exits 126 (CRASHED).
+# AND THE ESCALATION OUTLIVES THE MAIN PROCESS (the user's review, 2026-10-29): once it has reaped the main process,
+# the supervisor keeps its alarm armed until no process of the group survives, so a worker that ignores TERM is still
+# KILLed at the ceiling; a group that outlives its main process past TERM_S is a TIMEOUT (124, or 137 if KILL was needed).
 #
 # MIRROR AVERAGING + ROOT SEQUENTIAL HALVING: THE STRENGTH COMPARISON, ATTEMPT 2 -- THE ONE FRESH ATTEMPT (509 PAIRS,
 # 1,018 GAMES) -- OUTER WRAPPER (amendment docs/superpowers/2026-10-27-mirror-halving-strength-attempt2-amendment.md
@@ -171,6 +174,7 @@ alarm $term;
 my $w;
 do { $w = waitpid($pid, 0); } while ($w == -1 && $!{EINTR});
 my $st = $?;
+select(undef, undef, undef, 0.1) while kill(0, -$pid);     # the ceiling stays armed while any of the group survives
 alarm 0;
 exit($killed ? 137 : 124) if $timed_out;
 exit(($st & 127) ? 128 + ($st & 127) : ($st >> 8));
