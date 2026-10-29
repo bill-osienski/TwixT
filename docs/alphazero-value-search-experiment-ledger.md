@@ -167,6 +167,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — throughput pre-proof → HOLDS; the post-KILL wait bounded (addendum, 2026-10-29).** Pre-proof run once (`086d6e37`, clean worktree at `7aa0aea8`): bound to the survey record, block [202696900, 202697044) unregistered, no plan, controls 45/45. The supervisor stops watching 10 s after KILL and exits 125 (TIMEOUT, cleanup unconfirmed in survivors); the wrapper never waits past 910 s. The new test hung on the previous wrapper and passes now. Awaiting review; registration and later steps unauthorized. See #113.
 > **Combination policy pilot — pre-proof and bounded supervisor accepted; registration with its plan, and the admission fix, approved (addendum, 2026-10-29, the user's decision).** Register exactly [202696900, 202697044) in ACCOUNTED with the plan from `build_plan`; separately, generation admission must require the committed `outer.json` too (zero exits, gate restored, survivors confirmed empty), refusing missing outer evidence, TIMEOUT or unconfirmed cleanup whatever the inner record says. Both return for review; the post-proof, gate, checkpoint, GPU, closing and pushing are unauthorized. See #114.
 > **Combination policy pilot — throughput block REGISTERED with its plan; generation admission requires the outer record (addendum, 2026-10-29).** [202696900, 202697044) appended last to ACCOUNTED (`88c5d162`; AST: only ACCOUNTED changed), plan = `build_plan` bound to `dbe3e91c…`; registry tests unchanged from the parent (the same older failures, none new). `admitted("generate")` now also requires the committed `outer.json` (zero exits, gate restored, survivors empty, script record, same head); before, an inner COMPLETED alone admitted. Awaiting review; the post-proof and later steps unauthorized. See #115.
+> **Combination policy pilot — registration, plan and admission fix accepted; the post-proof approved once (addendum, 2026-10-29, the user's decision).** The post-registration proof runs once in a clean worktree against the committed registration and unchanged plan; its create-only record is committed with the lifecycle-test update and focused CPU checks, then returns for review before the gate. The gate, checkpoint, GPU launch, closing and pushing remain unauthorized. See #116.
 
 ## Historical proposal check — programme now closed
 
@@ -1812,6 +1813,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 113. **The throughput pre-proof and the bounded wait (2026-10-29).** Do **not** rerun the pre-proof or edit its record (`03_collision_proof_pre_run.txt`, sha256 `5f60b891…`); register the block, write the plan or run the post-proof only on the user's approval. Do **not** remove the supervisor's bound or read exit 125 (cleanup unconfirmed) as anything but TIMEOUT with survivors; closing refuses it.
 114. **The throughput registration and the admission fix (2026-10-29).** Do **not** register any block but [202696900, 202697044), change any registry list but ACCOUNTED, or write the plan by hand rather than through `build_plan`. Do **not** run the post-proof, open the gate, load the checkpoint, launch or close without the user's approval of each. Do **not** admit generation on the inner record alone, or weaken the outer checks (zero inner and outer exits, gate restored, survivors exactly empty). Do **not** push without approval.
 115. **The throughput registration and the outer-record admission (2026-10-29).** Do **not** edit the plan, move or widen [202696900, 202697044), or register it again; the post-proof runs once, only on approval. Do **not** relax `outer_faults` or the committed reader's tracked-file check, or admit generation through any path that skips `outer.json`. Do **not** read the older registry-test failures as caused by this registration; they predate it.
+116. **The throughput post-proof (2026-10-29).** Do **not** run the post-registration proof more than once, on a dirty tree, or against anything but the committed registration (`88c5d162`) and the unchanged plan; do **not** rerun or overwrite its record whatever its verdict. Do **not** open the gate, load the checkpoint, launch, close or push on this approval.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -6840,3 +6842,17 @@ approved as one sequence.**
 - **Prediction on record:** none (a seed procedure and a fix).
 - **Status:** both await the user's review. The post-proof, opening the gate, checkpoint loading, the GPU launch,
   closing and pushing remain unauthorized. See do-not-repeat **#115**.
+
+#### Addendum — registration, plan and admission fix accepted; the post-registration proof approved once (2026-10-29, the user's decision)
+
+- **Accepted:** the registration and plan (`88c5d162`, tests `f20c47cf`) and the admission fix (`c38e9483`). The user
+  independently verified that ACCOUNTED holds exactly the new block appended last with every other registry statement
+  unchanged; that the plan equals `build_plan` bound to the accepted survey hash; that admission now refuses missing
+  outer evidence, TIMEOUT and unconfirmed cleanup despite an inner COMPLETED record; that the added matching-head and
+  tracked-file checks are appropriate; and that all 53 gates are closed with no post-proof or run output. The
+  pre-existing registry-test failures need no repair for this step. The user thanked us for the push attribution.
+- **Approved, once:** the post-registration proof (`--mode post` of the throughput survey copy), in a clean linked
+  worktree, against the committed registration and the unchanged plan. Its create-only record is committed, with the
+  necessary lifecycle-test update and focused CPU checks, and returns for review before the gate is opened.
+- **Still unauthorized:** opening the gate, checkpoint loading, the GPU launch, closing and further pushing. Existing
+  evidence is preserved. See do-not-repeat **#116**.
