@@ -168,6 +168,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — pre-proof and bounded supervisor accepted; registration with its plan, and the admission fix, approved (addendum, 2026-10-29, the user's decision).** Register exactly [202696900, 202697044) in ACCOUNTED with the plan from `build_plan`; separately, generation admission must require the committed `outer.json` too (zero exits, gate restored, survivors confirmed empty), refusing missing outer evidence, TIMEOUT or unconfirmed cleanup whatever the inner record says. Both return for review; the post-proof, gate, checkpoint, GPU, closing and pushing are unauthorized. See #114.
 > **Combination policy pilot — throughput block REGISTERED with its plan; generation admission requires the outer record (addendum, 2026-10-29).** [202696900, 202697044) appended last to ACCOUNTED (`88c5d162`; AST: only ACCOUNTED changed), plan = `build_plan` bound to `dbe3e91c…`; registry tests unchanged from the parent (the same older failures, none new). `admitted("generate")` now also requires the committed `outer.json` (zero exits, gate restored, survivors empty, script record, same head); before, an inner COMPLETED alone admitted. Awaiting review; the post-proof and later steps unauthorized. See #115.
 > **Combination policy pilot — registration, plan and admission fix accepted; the post-proof approved once (addendum, 2026-10-29, the user's decision).** The post-registration proof runs once in a clean worktree against the committed registration and unchanged plan; its create-only record is committed with the lifecycle-test update and focused CPU checks, then returns for review before the gate. The gate, checkpoint, GPU launch, closing and pushing remain unauthorized. See #116.
+> **Combination policy pilot — the throughput post-proof HOLDS (addendum, 2026-10-29).** Run once at `d28f5baf` in a clean worktree (`20486339`): the block CLEAN, the state as expected (ACCOUNTED = the survey's + the block last, nothing else changed, plan = `build_plan`), controls 45/45, exit 0. The lifecycle test now expects it and pins the proved registry to the current one. Awaiting review; the gate, checkpoint, GPU launch, closing and pushing remain unauthorized. See #117.
 
 ## Historical proposal check — programme now closed
 
@@ -1814,6 +1815,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 114. **The throughput registration and the admission fix (2026-10-29).** Do **not** register any block but [202696900, 202697044), change any registry list but ACCOUNTED, or write the plan by hand rather than through `build_plan`. Do **not** run the post-proof, open the gate, load the checkpoint, launch or close without the user's approval of each. Do **not** admit generation on the inner record alone, or weaken the outer checks (zero inner and outer exits, gate restored, survivors exactly empty). Do **not** push without approval.
 115. **The throughput registration and the outer-record admission (2026-10-29).** Do **not** edit the plan, move or widen [202696900, 202697044), or register it again; the post-proof runs once, only on approval. Do **not** relax `outer_faults` or the committed reader's tracked-file check, or admit generation through any path that skips `outer.json`. Do **not** read the older registry-test failures as caused by this registration; they predate it.
 116. **The throughput post-proof (2026-10-29).** Do **not** run the post-registration proof more than once, on a dirty tree, or against anything but the committed registration (`88c5d162`) and the unchanged plan; do **not** rerun or overwrite its record whatever its verdict. Do **not** open the gate, load the checkpoint, launch, close or push on this approval.
+117. **The throughput post-proof record (2026-10-29).** Do **not** rerun the post-proof, or edit or regenerate `04_collision_proof_post_run.txt` (sha256 `03d04570…`). Do **not** change the registry or the plan before the run without a new proof: the lifecycle test pins the proved registry hash to the current file. Do **not** open the gate, load the checkpoint, launch, close or push without the user's approval of each.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -6856,3 +6858,33 @@ approved as one sequence.**
   necessary lifecycle-test update and focused CPU checks, and returns for review before the gate is opened.
 - **Still unauthorized:** opening the gate, checkpoint loading, the GPU launch, closing and further pushing. Existing
   evidence is preserved. See do-not-repeat **#116**.
+
+#### Addendum — the throughput post-registration proof HOLDS (2026-10-29)
+
+- **What ran, once:** `01_seed_survey.py --mode post` of the throughput survey copy, with `.venv/bin/python -B`, in a
+  clean linked worktree (branch `cp-throughput-post` at the decision commit `d28f5baf`); exit 0, stderr empty. The
+  record was committed there (`20486339`), main fast-forwarded and the worktree removed.
+- **Result** (`combination-policy-throughput-seed-survey/04_collision_proof_post_run.txt`, sha256 `03d04570…`):
+  - HEAD `d28f5baf`, working tree clean; the main checkout scanned too.
+  - Bound to the survey record (sha256 `dbe3e91c…` recomputed, read at `fea251fa`); the block read from it:
+    [202696900, 202697044), BASE 202696900.
+  - **EXPECTED STATE (post): HOLDS.** The registry it read (sha256 `71770f79…`, ACCOUNTED 47, EXPOSED 44, RETIRED 42,
+    TEST_ONLY 1) is the one committed at `88c5d162`, and the registry and plan are unchanged since then: ACCOUNTED is
+    the survey-time registry's with exactly the block appended last; every other list and statement is unchanged; the
+    plan is committed and equals `build_plan`.
+  - Direct overlap none, 0 derived streams, injective, nearest gap 176 (floor 144), CLEAN. Controls 45/45.
+  - **PROOF VERDICT (post): THE COMBINATION-POLICY THROUGHPUT BLOCK IS CLEAN AND THE STATE IS AS EXPECTED.**
+- **Lifecycle test** (`tests/test_combination_policy_launch.py`): the state test failed once the record existed
+  ("one more item: 04_collision_proof_post_run.txt"), as it should. It is re-anchored and renamed
+  (`…_REGISTERED_AND_PROVEN_…`): both proofs are bound to the survey hash, run on a clean tree, HOLD with 45/45 and end
+  with the verdict; the post-proof names the plan's block; and the registry hash it proved must equal the current
+  registry file's, so any registry change before the run fails the test until it is proven again. The gate closed, no
+  closing record and no run output are still asserted.
+- **Checks:** launch + pilot: 99 passed, 1 deselected (three consecutive runs). With the gate-inventory, mirror-halving
+  launch, background-compute, seed-selection and tactical-survey suites: 191 passed, 1 deselected (opt-in). The
+  gate inventory derives 53 gates, all closed. No test process left behind.
+- **Observed, not changed:** as in the strength-2 precedent, the pilot's own launch admission does not read the
+  post-proof; the lifecycle test is what guards it.
+- **Prediction on record:** none (a seed procedure).
+- **Status:** awaiting the user's review. Opening the gate, checkpoint loading, the GPU launch, closing and pushing
+  remain unauthorized. See do-not-repeat **#117**.
