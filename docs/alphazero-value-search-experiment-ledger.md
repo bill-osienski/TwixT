@@ -163,6 +163,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — the throughput check's wrapper and seed copies BUILT, for review (addendum to the decision note after entry 40, 2026-10-28).** Wrapper, survey/proof copy and closing copy, each a copy of strength attempt 2's with named differences: the 15-minute ceiling (TERM 890 s + 10 s), the run's process group counted for survivors (18 spawned workers do not carry the module's name), and the card's closing rule for parallel workers (started slots a prefix as a set, the claim counter equal to k, else the whole block exposed). 20 new focused CPU tests. Nothing run: no seed procedure, gate, checkpoint or GPU. See #109.
 > **Combination policy pilot — the build reviewed; the throughput seed survey approved once; a supervisor repair approved (addendum, 2026-10-29, the user's decision).** The seed scripts are ready. One wrapper defect must be fixed before any launch: the supervisor cancels its alarm when the main process exits, so a worker that ignores TERM is never KILLed and the 900 s ceiling is not enforced. Approved: that repair with one fake-launch test, and the survey once in a clean worktree, its record committed for review before the pre-proof. Pre-proof, registration, post-proof, the gate, the checkpoint and the GPU remain unauthorized. See do-not-repeat **#110**.
 > **Combination policy pilot — throughput seed survey → CLEAN; the supervisor repaired (addendum, 2026-10-29).** Survey run once (`cd4217a9`, clean worktree at `fea251fa`): block [202696900, 202697044), 144 seeds, controls 45/45, nearest gap 176 (floor 144); not registered, no plan. The supervisor now keeps the ceiling armed until the whole process group has gone, so a TERM-ignoring worker is KILLed; the new fake-launch test failed before the repair and passes after. Awaiting review; pre-proof and every later step unauthorized. See #111.
+> **Combination policy pilot — survey accepted; pre-proof approved once; post-KILL wait to be bounded; TIMEOUT overrides COMPLETED (addendum, 2026-10-29, the user's decision).** The pre-registration proof runs once on the committed survey record and the unchanged block, its record returned before registration. The supervisor's wait after KILL must be bounded and report survivors or unconfirmed cleanup (minimal repair and one CPU check). An outer TIMEOUT closes the pilot even over a script COMPLETED record; it cannot admit generation (not yet enforced by `admitted`). Registration and later steps unauthorized. See #112.
 
 ## Historical proposal check — programme now closed
 
@@ -1804,6 +1805,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 109. **The pilot's step 1 accepted; the throughput launch build (2026-10-28).** Do **not** run the throughput check's seed survey, proofs, registration or closing, open its gate, load the checkpoint or launch the wrapper without the user's approval of each. Do **not** build the generation or training wrappers or their seed copies under this approval. Do **not** read a throughput timeout as evidence about whether policy learning works: it rejects only this setup's operational feasibility (and, as frozen, closes the pilot). Do **not** rerun the timing; its record stands as accepted.
 110. **The throughput seed survey and the supervisor repair (2026-10-29).** Do **not** rerun the survey, adjust its block or select another one if it is not CLEAN; do **not** run the pre-proof, register the block, write the plan or run the post-proof without the user's approval of each. Do **not** open the throughput gate, load the checkpoint or launch the wrapper until the supervisor repair is reviewed: a supervisor that stops escalating when the main process exits does not enforce the ceiling, and a survivor found afterwards is not a substitute.
 111. **The throughput seed survey record and the supervisor repair (2026-10-29).** Do **not** rerun the survey or edit its record (`02_seed_survey_run.txt`, sha256 `dbe3e91c…`); [202696900, 202697044) is surveyed, not registered, and becomes usable only through the separately approved pre-proof, registration with its plan, and post-proof. Do **not** remove the supervisor's group wait, or treat a group that outlived its main process past the ceiling as COMPLETED.
+112. **The throughput pre-proof, the bounded post-KILL wait, and TIMEOUT over COMPLETED (2026-10-29).** Do **not** rerun the pre-proof, register the block, write the plan or run the post-proof without the user's approval of each. Do **not** launch with a supervisor whose wait after KILL is unbounded. Do **not** admit generation, or read the pilot as continuing, from a throughput run whose `outer.json` says TIMEOUT, whatever its `record.json` says; keep both records as written, and do **not** rewrite either to agree.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -6705,3 +6707,21 @@ approved as one sequence.**
 - **Prediction on record:** none (a seed procedure and a repair).
 - **Status:** the survey record and the repaired wrapper await the user's review. The pre-proof, registration, plan,
   post-proof, gate, checkpoint, GPU launch and closing remain unauthorized. See do-not-repeat **#111**.
+
+#### Addendum — the survey accepted; the pre-registration proof approved once; the post-KILL wait to be bounded (2026-10-29, the user's decision)
+
+- **The survey accepted** (`cd4217a9`). The user verified the record's hash, all 144 slot lines, the 45/45 recorded
+  controls, the pinned method hashes and the unchanged registry; no plan or proof exists; all 53 gates closed.
+- **The supervisor repair accepted** (`50e10824`): it addresses the TERM-ignoring worker, and the new test covers
+  that case.
+- **Approved: the pre-registration proof, once,** on the committed survey record and the unchanged block
+  [202696900, 202697044). Its create-only record is committed and returned before registration.
+- **One disclosed issue to fix before launch, approved independently of the pre-proof:** the post-exit wait loop can
+  wait forever after KILL. The observation must be bounded, and must then report the surviving processes or
+  unconfirmed cleanup instead of hanging, so the wrapper stays bounded. The minimal repair and a focused CPU check.
+- **Ruling: an outer TIMEOUT overrides an inner COMPLETED record.** Such a run closes the pilot and cannot admit
+  generation. Both original records (the script's `record.json` and the wrapper's `outer.json`) are preserved.
+  - **Not yet enforced in code:** `combination_policy_pilot.admitted("generate")` reads only the throughput
+    `record.json` status. Changing it was not part of this approval; it is recorded here as an open item.
+- **Still unauthorized:** registration, creating the plan, the post-proof, opening the gate, checkpoint loading, the
+  GPU launch and closing. See do-not-repeat **#112**.
