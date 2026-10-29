@@ -197,6 +197,13 @@ EXPECTED_GATES = {
     #: strength comparison after attempt 1's BOINC-contended timeout: fresh seeds, the same run, BOINC kept out. It takes
     #: its own reviewed door, so opening it can never relaunch attempt 1's paths, in a single-declaration module.
     "mirror_halving_strength2_authorization.py": "MIRROR_HALVING_STRENGTH2_AUTHORIZED",
+    #: 🔴 THE FIFTY-FIRST TO FIFTY-THIRD, ADDED 2026-10-28 (the combination policy pilot card, §5 steps 2-4). The
+    #: throughput check and the corpus generation each load calib020_0001 on the GPU and consume a registered block;
+    #: the training loads it weights-only and fits the residual policy branch on the CPU. Each takes its own reviewed
+    #: door, in a single-declaration module.
+    "combination_policy_throughput_authorization.py": "COMBINATION_POLICY_THROUGHPUT_AUTHORIZED",
+    "combination_policy_generate_authorization.py": "COMBINATION_POLICY_GENERATE_AUTHORIZED",
+    "combination_policy_train_authorization.py": "COMBINATION_POLICY_TRAIN_AUTHORIZED",
     "l0_match_command.py": "L0_EXECUTION_AUTHORIZED",
     "lowply_qualification.py": "LOWPLY_QUALIFICATION_AUTHORIZED",
     "runtime_requalification.py": "RUNTIME_REQUAL_AUTHORIZED",
@@ -228,7 +235,7 @@ def test_THE_COUNT_IS_DERIVED_AND_ANY_REPORT_SAYING_OTHERWISE_IS_WRONG():
     #: single deliberate edit, to the dict above.
     assert INVENTORY.gate_count() == len(discover_gates()) == len(EXPECTED_GATES), (
         "the derived inventory and EXPECTED_GATES must agree")
-    assert len(EXPECTED_GATES) == 50, (
+    assert len(EXPECTED_GATES) == 53, (
         "the total moved: add or remove the entry in EXPECTED_GATES above "
         "deliberately, then update this number in the same edit")
 
@@ -277,7 +284,7 @@ def _stale_count_claims(text):
              "thirty-eight": 38, "thirty-nine": 39, "forty": 40, "forty-one": 41,
              "forty-two": 42, "forty-three": 43, "forty-four": 44,
              "forty-five": 45, "forty-six": 46, "forty-seven": 47, "forty-eight": 48,
-             "forty-nine": 49, "fifty": 50}
+             "forty-nine": 49, "fifty": 50, "fifty-one": 51, "fifty-two": 52, "fifty-three": 53}
     n = len(EXPECTED_GATES)
     bad = []
     for word, value in words.items():
@@ -355,4 +362,7 @@ def test_THE_STALE_COUNT_GUARD_IS_NOT_VACUOUS():
     assert _stale_count_claims("all forty-seven gates are False")  # never the total; stale
     assert _stale_count_claims("all forty-eight gates are False")  # never the total; stale
     assert _stale_count_claims("all forty-nine gates are False")  # was right, now stale
-    assert not _stale_count_claims("all fifty gates are False")  # correct total
+    assert _stale_count_claims("all fifty gates are False")  # was right, now stale
+    assert _stale_count_claims("all fifty-one gates are False")  # never the total; stale
+    assert _stale_count_claims("all fifty-two gates are False")  # never the total; stale
+    assert not _stale_count_claims("all fifty-three gates are False")  # correct total
