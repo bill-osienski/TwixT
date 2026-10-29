@@ -1,0 +1,137 @@
+{
+ "admission": {},
+ "arch": {
+  "hidden": 128,
+  "in_channels": 30,
+  "n_blocks": 6
+ },
+ "background_after": {
+  "error": null,
+  "exempt": [
+   "97690 boinc_project /opt/podman/bin/gvproxy",
+   "97693 boinc_project /opt/podman/bin/krunkit"
+  ],
+  "hits": [],
+  "n_hits": 0,
+  "n_procs": 897,
+  "ok": true
+ },
+ "background_before": {
+  "error": null,
+  "exempt": [
+   "97690 boinc_project /opt/podman/bin/gvproxy",
+   "97693 boinc_project /opt/podman/bin/krunkit"
+  ],
+  "hits": [],
+  "n_hits": 0,
+  "n_procs": 898,
+  "ok": true
+ },
+ "card": "docs/superpowers/2026-10-28-combination-policy-pilot-card.md",
+ "card_sha256": "237424bd90bc8273ebab246fe87f19188f2e264f347ccd002352e930a5a1e389",
+ "device": "Device(cpu, 0)",
+ "environment": {
+  "executable": "/Users/bill/projects/TwixT_Game/.venv/bin/python",
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "python": "3.14.9 (main, Oct 21 2026, 06:02:15) [Clang 21.0.0 (clang-2100.3.34.2)]"
+ },
+ "head": "c0bf24526f0f4040fd9119be3fefe677abf02426",
+ "kind": "combination-policy-pilot-record/1",
+ "loadavg_after": [
+  3.5419921875,
+  9.72705078125,
+  12.568359375
+ ],
+ "loadavg_before": [
+  3.13427734375,
+  9.85595703125,
+  12.646484375
+ ],
+ "projection": {
+  "ceiling_factor": 1.5,
+  "ceiling_seconds": 2700,
+  "corpus_tensor_seconds": 4.345464997168165,
+  "measure_seconds": 305.6243709460068,
+  "note": "projected rows are the card's estimates (about 37,000 rows, 3,700 held out); loading and replay are not timed",
+  "total_seconds": 1799.3518635976216,
+  "updates_seconds": 1461.5979939320823,
+  "value_seconds": 27.784033722364256
+ },
+ "run": "time",
+ "setting": {
+  "MLX_ENABLE_TF32": "0"
+ },
+ "setting_at_end": {
+  "MLX_ENABLE_TF32": "0"
+ },
+ "spec": {
+  "ceiling_factor": 1.5,
+  "forward_batches": 5,
+  "n_legal": 500,
+  "projected_heldout_rows": 3700,
+  "projected_rows": 37000,
+  "seed": 20261030,
+  "tensor_calls": 200,
+  "updates": 20,
+  "warmup": 2
+ },
+ "status": "COMPLETED",
+ "timing": {
+  "forward_seconds": [
+   0.47459024999989197,
+   0.4888174579828046,
+   0.48397745803231373,
+   0.48044225003104657,
+   0.4751160410232842
+  ],
+  "max_update_seconds": 0.4978309170110151,
+  "mean_update_seconds": 0.4871993313106941,
+  "per_row_pair_forward_seconds": 0.007509198303341691,
+  "per_to_tensor_seconds": 0.00011744499992346392,
+  "surface": [
+   "policy_head.bn.bias",
+   "policy_head.bn.weight",
+   "policy_head.conv.bias",
+   "policy_head.conv.weight",
+   "policy_head.extra_fc.bias",
+   "policy_head.extra_fc.weight",
+   "policy_head.extra_out.bias",
+   "policy_head.extra_out.weight",
+   "policy_head.fc.bias",
+   "policy_head.fc.weight",
+   "policy_head.out.bias",
+   "policy_head.out.weight"
+  ],
+  "update_seconds": [
+   0.4891909579746425,
+   0.48521454201545566,
+   0.4858408750151284,
+   0.4834301670198329,
+   0.4978309170110151,
+   0.48602412501350045,
+   0.48775595804909244,
+   0.4960946250357665,
+   0.48823758302023634,
+   0.49063662497792393,
+   0.48759091598913074,
+   0.4856140830088407,
+   0.4843295839964412,
+   0.48565362504450604,
+   0.48404516704613343,
+   0.48366937501123175,
+   0.48157179198460653,
+   0.48416620900388807,
+   0.4854857079917565,
+   0.4916037920047529
+  ]
+ },
+ "total_seconds": 13.456,
+ "verdict": null,
+ "versions": {
+  "mlx": "0.30.3",
+  "numpy": "2.4.1",
+  "python": "3.14.9"
+ },
+ "weights": "random (create_network under mx.random.seed), arm R installed; no checkpoint read",
+ "written_by": "script"
+}

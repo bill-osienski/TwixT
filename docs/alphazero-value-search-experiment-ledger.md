@@ -158,6 +158,7 @@ knob) is not a new hypothesis.
 > **Mirror averaging + root sequential halving — strength attempt 2 → COMPLETED, PASS (addendum to entry 39, 2026-10-28).** Run once (`babbd858` → `f1f4e2da`, approval `c04cde0b`): all 1,018 games on [202695700, 202696718) in 36,124 s; mean pair score 0.6793, Hoeffding lower 0.6191 > 0.5; guards 0.9975 (evaluations) and 0.8202 (search seconds), compute matched. 1,020 background checks, all CLEAR. Gate 50 restored and read back; no panic. Under this protocol, the fixed combination beats the incumbent within the declared cost allowances; this shows neither synergy nor either component's benefit. Seed closing, deployment, training and pushing not authorized. See #105.
 > **Mirror averaging + root sequential halving — attempt 2's PASS accepted; block CLOSED (addendum to entry 39, 2026-10-28).** The user's independent recomputation matches (`7bacc265`): stronger play at comparable compute for this fixed combination under the tested protocol, assuming independent pairs; no synergy or component claim; no further match needed for the frozen question. K1 RECONCILES (`af838eb2`, 15/15: all 1,018 started); K2 (`b563792d`) appended [202695700, 202696718) last to EXPOSED (43 → 44) and RETIRED (41 → 42), ACCOUNTED 46 unchanged. Lifecycle test re-anchored (`3ffc9924`, 174 focused passed). Attempt 1 stays VOID and unscored. Deployment, training and pushing not authorized. See #106.
 > **Combination policy pilot — card FROZEN; step 1 (build only) approved (decision note after entry 39, 2026-10-28).** One round of policy-only learning from the proven agent's own halving decisions: weights-only `calib020_0001`, encoder, value head and BatchNorm statistics frozen, arm R's residual policy branch trained on the CPU toward a completed-Q target within halving's 16 candidates, the objective the mirror-averaged policy. After two reviews the user froze the card (`docs/superpowers/2026-10-28-combination-policy-pilot-card.md`) and approved only the build, its focused CPU tests and a 20-update CPU timing on synthetic inputs, with a narrow #66 exception (reuse of the residual head, no capacity claim). A distinct recipe: continuation (#48, #49) and D2 (#69, #87) stay closed. The target is the main uncertainty and is not validated by the combination's PASS. Seeds, checkpoint, GPU, corpus, real-data training and games remain unauthorized. See do-not-repeat **#107**.
+> **Combination policy pilot — step 1 BUILT and the CPU timing → COMPLETED (entry 40, 2026-10-28).** Build `b1ad8f00` + `c0bf2452` (52 focused CPU tests; three gates created closed, 50 → 53). The one-shot timing ran once at `c0bf2452` with BOINC quit and no BOINC process before or after: 20 synchronized updates at the real architecture on synthetic inputs, random weights, CPU, mean 0.487 s per update (range 0.481–0.498). Projected training (3,000 updates plus the pre-fit, held-out and value passes over the card's estimated 37,000 / 3,700 rows) ≈ 1,799 s; step 4's ceiling is therefore **45 min** (1.5×). Loading and the corpus replay are not timed. Synthetic timing only: no checkpoint, no real data, nothing about the target. See do-not-repeat **#108**.
 
 ## Historical proposal check — programme now closed
 
@@ -1795,6 +1796,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 105. **Strength attempt 2 → COMPLETED, PASS (2026-10-28).** Do **not** rerun, extend, top up or re-score it, recompute its verdict under another rule, or pool attempt 1's 799 games or the screen's 64 into it. Do **not** reuse [202695700, 202696718); the block is consumed and awaits closing, which needs its own authorization. Do **not** read the PASS as evidence of synergy, of either component's benefit, of strength at other simulation counts, boards or opponents, or as a deployment decision. Do **not** tune the combination's parameters (16 candidates, ply 20, 200 vs 400) on the strength games.
 106. **Attempt 2's closing (2026-10-28).** Do **not** rerun K1, edit the K2 intervals, or move, widen or reopen [202695700, 202696718); every seed is refused. Do **not** run another strength match, extension or replication to "confirm" the accepted PASS, re-score attempt 2 or pool attempt 1's 799 void games with it. Do **not** treat the PASS as a deployment, training or product decision, or as evidence for either component alone; each needs its own approval.
 107. **The combination policy pilot — card frozen, step 1 build only, #66 exception (2026-10-28).** Do **not** run its throughput check, corpus generation, training, screen or strength comparison, run any of its seed procedures, or load the checkpoint for it, without the user's approval of each step. Do **not** change the frozen card -- the objective (the mirror-averaged policy), the target, the recipe and seeds, the stopping rules or the rule that all 144 throughput games finish inside 15 minutes -- without re-pinning it under review. The #66 exception covers reusing `ResidualPolicyHead` in this pilot only: do **not** cite the pilot or its outcome as evidence about the policy head's capacity, and do **not** extend the exception to any other use. Do **not** treat the combination's PASS as support for the pilot's target.
+108. **The combination policy pilot's CPU timing (2026-10-28).** Do **not** rerun, repeat or extend the timing; it is one-shot and its record (`docs/superpowers/evidence/combination-policy-timing/`) prices step 4's ceiling at 45 min, which is never extended. Do **not** read it as a measurement of real-data training, of the GPU, or of anything about the target or the candidate's strength. Its approval did not authorize the throughput check, seed procedures, checkpoint loading, generation, training or games; each still needs its own approval.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -6549,3 +6551,46 @@ approved as one sequence.**
 - **Not requested:** additional experimental arms, a broad regression or mutation campaign, a numerical investigation.
 - **Still unauthorized:** seed procedures, checkpoint loading, GPU work, corpus generation, real-data training, games
   and pushing. See do-not-repeat **#107**.
+
+### 40. Combination policy pilot — step 1 built; the CPU timing (2026-10-28, COMPLETED)
+
+- **Test:** step 1 of the frozen card (`docs/superpowers/2026-10-28-combination-policy-pilot-card.md`, sha256
+  `237424bd…`): the build, its focused CPU tests, and the one-shot CPU timing of 20 training updates at the real
+  architecture (30 / 128 / 6, arm R installed) on synthetic inputs with random weights, which prices step 4's ceiling.
+- **Hypothesis:** none; this is a build and a cost measurement, not an experiment on the target.
+- **Why it was needed:** the card's training-time estimate (§8: about 2–6 h for 3,000 × 64) rested on a CPU throughput
+  that had never been measured, and step 4's hard ceiling must be stated before its approval.
+- **Prediction on record:** the card's §8 cost estimate, about 2–6 h for CPU training, written before the timing. No
+  per-update figure was stated in advance.
+- **What was built** (`b1ad8f00`, plus the BOINC guard `c0bf2452`; card §10 lists the deviations from the code-change
+  plan):
+  - `halving_policy_target.py` -- the target, read from the root of the same search that chose the move;
+  - `combination_selfplay.py` -- slot-seeded self-play that calls the strength match's own game loop (the four seed
+    streams, the readout and `last_choice` are the match's code), through one inference server and spawned CPU
+    workers; slot g plays seed base + g whichever worker claims it;
+  - `combination_policy_pilot.py` -- `run throughput|generate|train` behind three new gates, all closed (50 → 53), and
+    `time`, the timing, which refuses while BOINC runs and is VOID if BOINC appears by its end;
+  - no change to `self_play.py`, `self_play_worker.py`, `trainer.py`, `train.py`, `mcts.py` or any frozen module.
+- **Tests:** `tests/test_combination_policy_pilot.py`, 52 CPU tests with fake evaluators and temporary outputs, plus the
+  gate inventory: 59 passed, 1 deselected (the opt-in end-to-end arbiter test, which passed once in 503 s). Earlier,
+  with the other suites that import the gate inventory: 341 passed.
+- **What ran:** `MLX_ENABLE_TF32=0 .venv/bin/python -B -m scripts.GPU.alphazero.combination_policy_pilot time`, once, at
+  `c0bf2452`. A first launch attempt earlier the same day was not made: BOINC was running (16 processes, load about
+  15), so the guard was added instead. On the run: the user quit BOINC; the background check reported no BOINC process
+  (the podman VM exempt) before and after; the launch waited for the 1-minute load to fall below 3 (it read 3.13 at the
+  start and 3.54 at the end; the 5- and 15-minute averages still carried BOINC's earlier run). 13.5 s wall.
+- **Result** (`docs/superpowers/evidence/combination-policy-timing/record.json`, COMPLETED):
+  - 20 synchronized updates (after 2 warm-up), each both orientations through the full network, the loss, the
+    gradient and the Adam step: mean **0.487 s**, range 0.481–0.498 s (max / mean 1.02);
+  - a forward pass of the averaged prediction: 7.51 ms per row (both orientations); `to_tensor` 0.117 ms per state;
+  - projection over the card's estimated rows: updates 1,462 s, pre-fit and held-out passes 306 s, value check 28 s,
+    corpus tensors 4 s; **total 1,799 s (30.0 min)**; **step 4's ceiling: 45 min** (1.5×, rounded up to the minute).
+  - Not timed: checkpoint loading, the corpus replay with target re-verification, and the post-fit checks.
+- **Did it match the prediction?** No: the projection (30 min) is well under the card's 2–6 h estimate. The estimate
+  assumed a CPU throughput that was not measured; the timing replaces it, as §8 said it would. No cause beyond the
+  measured rate is claimed.
+- **Conclusion / status:** step 1 is complete and awaits the user's review. The 45-minute ceiling is the price for
+  step 4 when that is requested; it rests on estimated row counts, and the untimed replay must fit inside its margin.
+  Unchanged risk for step 2: all 144 throughput games must finish in 15 minutes (about 576 games/h against a 350–700
+  estimate), or the pilot closes. Seeds, checkpoint loading, GPU work, generation, real-data training, games and
+  pushing remain unauthorized. See do-not-repeat **#108**.
