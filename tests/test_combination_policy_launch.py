@@ -43,16 +43,19 @@ def isolated(monkeypatch, tmp_path):
     monkeypatch.setenv(P.SETTING, P.SETTING_VALUE)
 
 
-def test_THE_GATE_IS_CLOSED_and_the_launch_is_not_run_only_the_survey_has_run():
+def test_THE_GATE_IS_CLOSED_and_the_launch_is_not_run_only_the_survey_and_the_pre_proof_have_run():
     from scripts.GPU.alphazero import combination_policy_throughput_authorization as G
     assert getattr(G, GATE_NAME) is False
     run = EV / "combination-policy-throughput-run"
     assert sorted(x.name for x in run.iterdir()) == ["01_wrapper.sh"]          # no plan, no outer record
     assert not (EV / "combination-policy-throughput").exists()
     survey = sorted(x.name for x in (EV / SURVEY).parent.iterdir() if x.name != "__pycache__")
-    assert survey == ["01_seed_survey.py", "02_seed_survey_run.txt"]           # the survey (2026-10-29), no proof yet
+    assert survey == ["01_seed_survey.py", "02_seed_survey_run.txt",            # the survey and the pre-proof
+                      "03_collision_proof_pre_run.txt"]                         # (2026-10-29); no post-proof yet
     assert (EV / SURVEY).parent.joinpath("02_seed_survey_run.txt").read_text().endswith(
         "SURVEY VERDICT   : THE COMBINATION-POLICY THROUGHPUT BLOCK IS CLEAN\n")
+    assert (EV / SURVEY).parent.joinpath("03_collision_proof_pre_run.txt").read_text().endswith(
+        "PROOF VERDICT (pre): THE COMBINATION-POLICY THROUGHPUT BLOCK IS CLEAN AND THE STATE IS AS EXPECTED\n")
     assert sorted(x.name for x in (EV / CLOSING).parent.iterdir() if x.name != "__pycache__") == ["01_derive_usage.py"]
 
 
@@ -64,8 +67,9 @@ def _code(path):
 
 def test_THE_WRAPPER_IS_STRENGTH2_S_WITH_ONLY_THE_STATED_DIFFERENCES():
     """The paths, the gate, the module and `run throughput`, the record kind, the ceiling, the run's process group
-    (pgid.txt, written by the supervisor; survivors include the group), and the escalation outliving the main process
-    (2026-10-29). Everything else byte-identical."""
+    (pgid.txt, written by the supervisor; survivors include the group), the escalation outliving the main process, and
+    that observation bounded at GRACE_S s after KILL (exit 125, cleanup unconfirmed) (2026-10-29). Everything else
+    byte-identical."""
     two = _code(EV / "mirror-halving-strength2-run/01_wrapper.sh").splitlines()
     tp = _code(WRAPPER).splitlines()
     removed, added = sorted(set(two) - set(tp)), sorted(set(tp) - set(two))
@@ -80,16 +84,28 @@ def test_THE_WRAPPER_IS_STRENGTH2_S_WITH_ONLY_THE_STATED_DIFFERENCES():
         "tr '\\n' ' ')",
         '    else', '      survivors="unknown: no readable pgid.txt ${survivors}"',
         "for f in idle_check.txt bg_check.txt pgid.txt run.stdout.txt run.stderr.txt outer.json; do",
-        "use strict; use warnings; use Fcntl;",
+        "use strict; use warnings; use Fcntl; use POSIX \":sys_wait_h\";",
         "my ($pgid_file, $term, $grace, @cmd) = @ARGV;",
         "my $pf;", 'sysopen($pf, $pgid_file, O_WRONLY | O_CREAT | O_EXCL) && print($pf "$pid\\n") && close($pf)',
         '  or do { kill "KILL", -$pid; waitpid($pid, 0); exit 126; };',
-        "select(undef, undef, undef, 0.1) while kill(0, -$pid);     # the ceiling stays armed while any of the group "
-        "survives",
+        '      if [ "$inner" = 125 ] || kill -0 -- "-$PGID" 2>/dev/null; then    # the supervisor gave up, or the '
+        'group remains',
+        '        survivors="unconfirmed cleanup: process group $PGID ${survivors}"',      # its `fi` pre-exists
+        "  124|125|137) outcome=TIMEOUT ;;",
+        "my ($termed, $killed, $gave_up, $timed_out) = (0, 0, 0, 0);",
+        'my $stop = sub { if (!$termed) { $termed = 1; kill "TERM", -$pid; alarm $grace; }',
+        '                 elsif (!$killed) { $killed = 1; kill "KILL", -$pid; alarm $grace; } else { $gave_up = 1; } };',
+        "my $st;",
+        "until ($gave_up) {                     # the ceiling stays armed while the run or any of its group survives, "
+        "and at",
+        "  $st = $? if !defined $st && waitpid($pid, WNOHANG) == $pid;    # most GRACE_S s after KILL",
+        "  last if defined $st && !kill(0, -$pid);",
+        "  select(undef, undef, undef, 0.1);",
+        "exit 125 if $gave_up;",
         '/usr/bin/perl -e "$SUPERVISOR" "$OUT_REL/pgid.txt" "$TERM_S" "$GRACE_S" env MLX_ENABLE_TF32=0 PYTHONPATH=. '
         '"$PY" -B -m "$MODULE" run throughput --checkpoint "$CKPT" \\'}, added
-    assert len(removed) == 11, removed      # seven settings, the one-shot list, two perl lines, the launch line
-    assert len(tp) == len(two) + 11         # the seven-line group check, the three-line pgid write, the group wait
+    assert len(removed) == 17, removed      # seven settings, the one-shot list, the launch line, TIMEOUT's codes, and
+    assert len(tp) == len(two) + 18         # seven perl lines; plus the group check, the pgid write, the bounded wait
 
 
 def test_THE_CEILING_IS_THE_CARD_S_15_MINUTES():
@@ -152,9 +168,9 @@ def _git(repo, *a):
                           capture_output=True, text=True).stdout
 
 
-def _fake_repo(tmp, term_s=None):
-    """A throwaway repository: the real wrapper (with TERM_S changed only when a test says so), its gate opened by a
-    one-line commit, and three stubs."""
+def _fake_repo(tmp, term_s=None, sentinel=None):
+    """A throwaway repository: the real wrapper (with TERM_S changed, and the group probe also counting a sentinel pid,
+    only when a test says so), its gate opened by a one-line commit, and three stubs."""
     repo = tmp / "repo"
     pkg = repo / "scripts/GPU/alphazero"
     pkg.mkdir(parents=True)
@@ -171,6 +187,9 @@ def _fake_repo(tmp, term_s=None):
     if term_s is not None:
         assert raw.count(b"\nTERM_S=890\n") == 1
         raw = raw.replace(b"\nTERM_S=890\n", f"\nTERM_S={term_s}\n".encode())
+    if sentinel is not None:
+        assert raw.count(b"kill(0, -$pid)") == 1
+        raw = raw.replace(b"kill(0, -$pid)", f"(kill(0, -$pid) || kill(0, {sentinel}))".encode())
     (wdir / "01_wrapper.sh").write_bytes(raw)
     (repo / ".venv/bin").mkdir(parents=True)
     (repo / ".venv/bin/python").symlink_to(sys.executable)
@@ -243,6 +262,8 @@ def test_FAKE_LAUNCH_A_WORKER_LEFT_IN_THE_GROUP_IS_A_SURVIVOR_although_its_comma
     try:
         outer = json.loads((wdir / "outer.json").read_text())
         assert p.returncode == 137 and _alive(child) and outer["record_by"] == "none"
+        pgid = (wdir / "pgid.txt").read_text().strip()
+        assert outer["survivors"].startswith(f"unconfirmed cleanup: process group {pgid} "), outer
         assert str(child) in outer["survivors"].split(), outer      # strength2's name-only search would miss it
         assert "combination_policy_pilot" not in subprocess.run(["ps", "-o", "command=", "-p", str(child)],
                                                                capture_output=True, text=True).stdout
@@ -289,6 +310,31 @@ def test_FAKE_LAUNCH_A_WORKER_THAT_IGNORES_TERM_IS_KILLED_within_the_ceiling_aft
     finally:
         if _alive(child):
             os.kill(child, signal.SIGKILL)
+
+
+def test_FAKE_LAUNCH_A_GROUP_THAT_OUTLIVES_KILL_IS_REPORTED_NOT_WAITED_FOR_FOREVER(tmp_path):
+    """No real process survives KILL here, so in this copy only (besides TERM_S 2) the supervisor's group probe also
+    counts a sentinel process outside the group, which KILL cannot reach: to the supervisor, a group that never
+    empties. It must stop watching GRACE_S s after KILL, exit 125, and the wrapper must record TIMEOUT with cleanup
+    unconfirmed (the user's review, 2026-10-29)."""
+    sentinel = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(120)"])
+    try:
+        repo, wdir, gate = _fake_repo(tmp_path, term_s=2, sentinel=sentinel.pid)
+        t = time.monotonic()
+        p = _launch(repo, wdir, run="outlive")
+        elapsed = time.monotonic() - t
+        assert p.returncode == 125 and 22 <= elapsed < 40, (p.returncode, elapsed, p.stderr)   # TERM 2 + 10 + 10 s
+        outer = json.loads((wdir / "outer.json").read_text())
+        assert outer["outcome"] == "TIMEOUT" and outer["inner_exit"] == 125
+        pgid = (wdir / "pgid.txt").read_text().strip()
+        assert outer["survivors"].startswith(f"unconfirmed cleanup: process group {pgid}"), outer
+        assert outer["record_by"] == "none"                           # no wrapper record while cleanup is unconfirmed
+        assert not (repo / "docs/superpowers/evidence/combination-policy-throughput/record.json").exists()
+        assert not _alive(int((repo / "scratch/child.pid").read_text()))      # the real group itself was KILLed
+        assert f"{GATE_NAME} = False\n" in gate.read_text()
+    finally:
+        sentinel.kill()
+        sentinel.wait()
 
 
 def test_FAKE_LAUNCH_A_MISSING_PGID_RECORDS_SURVIVORS_AS_UNKNOWN(tmp_path):

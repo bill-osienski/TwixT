@@ -164,6 +164,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — the build reviewed; the throughput seed survey approved once; a supervisor repair approved (addendum, 2026-10-29, the user's decision).** The seed scripts are ready. One wrapper defect must be fixed before any launch: the supervisor cancels its alarm when the main process exits, so a worker that ignores TERM is never KILLed and the 900 s ceiling is not enforced. Approved: that repair with one fake-launch test, and the survey once in a clean worktree, its record committed for review before the pre-proof. Pre-proof, registration, post-proof, the gate, the checkpoint and the GPU remain unauthorized. See do-not-repeat **#110**.
 > **Combination policy pilot — throughput seed survey → CLEAN; the supervisor repaired (addendum, 2026-10-29).** Survey run once (`cd4217a9`, clean worktree at `fea251fa`): block [202696900, 202697044), 144 seeds, controls 45/45, nearest gap 176 (floor 144); not registered, no plan. The supervisor now keeps the ceiling armed until the whole process group has gone, so a TERM-ignoring worker is KILLed; the new fake-launch test failed before the repair and passes after. Awaiting review; pre-proof and every later step unauthorized. See #111.
 > **Combination policy pilot — survey accepted; pre-proof approved once; post-KILL wait to be bounded; TIMEOUT overrides COMPLETED (addendum, 2026-10-29, the user's decision).** The pre-registration proof runs once on the committed survey record and the unchanged block, its record returned before registration. The supervisor's wait after KILL must be bounded and report survivors or unconfirmed cleanup (minimal repair and one CPU check). An outer TIMEOUT closes the pilot even over a script COMPLETED record; it cannot admit generation (not yet enforced by `admitted`). Registration and later steps unauthorized. See #112.
+> **Combination policy pilot — throughput pre-proof → HOLDS; the post-KILL wait bounded (addendum, 2026-10-29).** Pre-proof run once (`086d6e37`, clean worktree at `7aa0aea8`): bound to the survey record, block [202696900, 202697044) unregistered, no plan, controls 45/45. The supervisor stops watching 10 s after KILL and exits 125 (TIMEOUT, cleanup unconfirmed in survivors); the wrapper never waits past 910 s. The new test hung on the previous wrapper and passes now. Awaiting review; registration and later steps unauthorized. See #113.
 
 ## Historical proposal check — programme now closed
 
@@ -1806,6 +1807,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 110. **The throughput seed survey and the supervisor repair (2026-10-29).** Do **not** rerun the survey, adjust its block or select another one if it is not CLEAN; do **not** run the pre-proof, register the block, write the plan or run the post-proof without the user's approval of each. Do **not** open the throughput gate, load the checkpoint or launch the wrapper until the supervisor repair is reviewed: a supervisor that stops escalating when the main process exits does not enforce the ceiling, and a survivor found afterwards is not a substitute.
 111. **The throughput seed survey record and the supervisor repair (2026-10-29).** Do **not** rerun the survey or edit its record (`02_seed_survey_run.txt`, sha256 `dbe3e91c…`); [202696900, 202697044) is surveyed, not registered, and becomes usable only through the separately approved pre-proof, registration with its plan, and post-proof. Do **not** remove the supervisor's group wait, or treat a group that outlived its main process past the ceiling as COMPLETED.
 112. **The throughput pre-proof, the bounded post-KILL wait, and TIMEOUT over COMPLETED (2026-10-29).** Do **not** rerun the pre-proof, register the block, write the plan or run the post-proof without the user's approval of each. Do **not** launch with a supervisor whose wait after KILL is unbounded. Do **not** admit generation, or read the pilot as continuing, from a throughput run whose `outer.json` says TIMEOUT, whatever its `record.json` says; keep both records as written, and do **not** rewrite either to agree.
+113. **The throughput pre-proof and the bounded wait (2026-10-29).** Do **not** rerun the pre-proof or edit its record (`03_collision_proof_pre_run.txt`, sha256 `5f60b891…`); register the block, write the plan or run the post-proof only on the user's approval. Do **not** remove the supervisor's bound or read exit 125 (cleanup unconfirmed) as anything but TIMEOUT with survivors; closing refuses it.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -6725,3 +6727,40 @@ approved as one sequence.**
     `record.json` status. Changing it was not part of this approval; it is recorded here as an open item.
 - **Still unauthorized:** registration, creating the plan, the post-proof, opening the gate, checkpoint loading, the
   GPU launch and closing. See do-not-repeat **#112**.
+
+#### Addendum — the throughput pre-registration proof run once (HOLDS); the post-KILL wait bounded (2026-10-29)
+
+- **The pre-proof (`086d6e37`), run once** in a clean linked worktree (branch `cp-throughput-pre`, from `7aa0aea8`; main
+  fast-forwarded and the worktree removed afterwards): `--mode pre`, exit 0.
+  - Verdict: **THE COMBINATION-POLICY THROUGHPUT BLOCK IS CLEAN AND THE STATE IS AS EXPECTED**, controls **45/45**,
+    clean tree at `7aa0aea8`.
+  - Bound to the committed survey record (sha256 `dbe3e91c…`, read at `fea251fa`); the block read from it,
+    [202696900, 202697044), BASE 202696900; EXPECTED STATE (pre) HOLDS: the registry is the one the survey read
+    (sha256 `06e442c0…`; ACCOUNTED 46, EXPOSED 44, RETIRED 42), the block unregistered, no plan.
+  - Direct overlap none, 0 derived streams, injective, nearest gap 176 (floor 144). Record
+    `combination-policy-throughput-seed-survey/03_collision_proof_pre_run.txt`, sha256 `5f60b891…`.
+- **The bounded wait** (approved in the previous addendum):
+  - **What a test could and could not reproduce:** no real process survives KILL here. On this macOS a group holding
+    only an unreaped zombie answers `kill 0` with EPERM, which the supervisor reads as empty, so a zombie cannot
+    stand in, and late-joining processes would race the KILL.
+  - **The supervisor:** one polling loop now watches both the main process (`waitpid` WNOHANG, replacing the
+    blocking `waitpid`, so an unkillable main process is bounded too) and its group. The alarm has a third stage:
+    TERM at 890 s, KILL 10 s later, and 10 s after that the watch ends. If the group can still be signalled then, the
+    supervisor exits **125**, which the wrapper maps to TIMEOUT. The wrapper never waits past 910 s.
+  - **The wrapper's report:** survivors read `unconfirmed cleanup: process group <pgid> <pids>` when the supervisor
+    gave up (125), or when the wrapper's own `kill -0` finds the group still there once the supervisor has gone (a
+    lost supervisor, or the wrapper interrupted, whose trap never sees the supervisor's exit code). Closing refuses
+    on any survivors, and no wrapper record is written over them.
+  - **The focused test:** a copy whose TERM_S is 2 and whose group probe also counts a sentinel process outside the
+    group, which KILL cannot reach: to the supervisor, a group that never empties. The wrapper returns 125 after about
+    22 s; outer TIMEOUT, survivors `unconfirmed cleanup: process group <pgid>`, no wrapper record, the real group
+    killed, the gate restored. **On the previous wrapper (`50e10824`) the same test hung until its 60 s timeout.** The
+    lost-supervisor test now also checks the `unconfirmed cleanup` prefix, which covers the wrapper's own check.
+  - The "nothing has run" test now expects the survey and pre-proof records. `tests/test_combination_policy_launch.py`:
+    22 passed (three consecutive runs). With the pilot, gate-inventory, mirror-halving launch and background-compute
+    suites: 131 passed, 1 deselected (opt-in). No test process left behind.
+- **Still open:** the user's ruling that an outer TIMEOUT overrides an inner COMPLETED record is not enforced by
+  `admitted("generate")` (it reads only `record.json`); changing it needs approval.
+- **Prediction on record:** none (a seed procedure and a repair).
+- **Status:** awaiting the user's review. Registration, the plan, the post-proof, the gate, the checkpoint, the GPU
+  launch and closing remain unauthorized. See do-not-repeat **#113**.

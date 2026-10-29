@@ -12,6 +12,11 @@
 # AND THE ESCALATION OUTLIVES THE MAIN PROCESS (the user's review, 2026-10-29): once it has reaped the main process,
 # the supervisor keeps its alarm armed until no process of the group survives, so a worker that ignores TERM is still
 # KILLed at the ceiling; a group that outlives its main process past TERM_S is a TIMEOUT (124, or 137 if KILL was needed).
+# AND THAT OBSERVATION IS BOUNDED (the user's review, 2026-10-29): the main process and the group are watched for at most
+# GRACE_S seconds after KILL. If the group can still be signalled then, the supervisor stops waiting and exits 125:
+# TIMEOUT with cleanup unconfirmed. The wrapper never waits past TERM_S + 2 x GRACE_S (910 s). Survivors read
+# "unconfirmed cleanup: process group <pgid> <pids>" when the supervisor gave up (125) or the group can still be
+# signalled once the supervisor has gone (a lost supervisor, or the wrapper interrupted); closing then refuses.
 #
 # MIRROR AVERAGING + ROOT SEQUENTIAL HALVING: THE STRENGTH COMPARISON, ATTEMPT 2 -- THE ONE FRESH ATTEMPT (509 PAIRS,
 # 1,018 GAMES) -- OUTER WRAPPER (amendment docs/superpowers/2026-10-27-mirror-halving-strength-attempt2-amendment.md
@@ -47,7 +52,7 @@
 # WRAPPER writes record.json there, create-only, marked "written_by": "wrapper", status VOID, step timeout |
 # crashed | interrupted. outer.json's "record_by" says who wrote it: script | wrapper | none.
 #
-#   inner exit -> outcome: 0 COMPLETED | 3 VOID | 4 REFUSED | 2 USAGE | 124, 137 TIMEOUT | anything else CRASHED;
+#   inner exit -> outcome: 0 COMPLETED | 3 VOID | 4 REFUSED | 2 USAGE | 124, 125, 137 TIMEOUT | anything else CRASHED;
 #                          a signal to the wrapper -> INTERRUPTED
 #   outer exit: the inner exit; 1 if the wrapper refused before the run (the idle gate included); 130 if
 #               interrupted; 5 if the gate was NOT restored, or a needed wrapper record could not be written
@@ -81,6 +86,9 @@ finish() {
   if [ "$started" = true ]; then
     if PGID=$(cat "$OUT_REL/pgid.txt" 2>/dev/null) && [[ "$PGID" =~ ^[0-9]+$ ]]; then
       survivors=$( { printf '%s\n' $survivors; pgrep -g "$PGID"; } | grep -E '^[0-9]+$' | sort -un | tr '\n' ' ')
+      if [ "$inner" = 125 ] || kill -0 -- "-$PGID" 2>/dev/null; then    # the supervisor gave up, or the group remains
+        survivors="unconfirmed cleanup: process group $PGID ${survivors}"
+      fi
     else
       survivors="unknown: no readable pgid.txt ${survivors}"
     fi
@@ -157,7 +165,7 @@ BG_LOG=$(env PYTHONPATH=. "$PY" -B -m scripts.GPU.alphazero.background_compute c
 }
 
 SUPERVISOR='
-use strict; use warnings; use Fcntl;
+use strict; use warnings; use Fcntl; use POSIX ":sys_wait_h";
 my ($pgid_file, $term, $grace, @cmd) = @ARGV;
 my $pid = fork();
 die "fork: $!" unless defined $pid;
@@ -166,16 +174,20 @@ setpgrp($pid, $pid);
 my $pf;
 sysopen($pf, $pgid_file, O_WRONLY | O_CREAT | O_EXCL) && print($pf "$pid\n") && close($pf)
   or do { kill "KILL", -$pid; waitpid($pid, 0); exit 126; };
-my ($termed, $killed, $timed_out) = (0, 0, 0);
-my $stop = sub { if (!$termed) { $termed = 1; kill "TERM", -$pid; alarm $grace; } else { $killed = 1; kill "KILL", -$pid; } };
+my ($termed, $killed, $gave_up, $timed_out) = (0, 0, 0, 0);
+my $stop = sub { if (!$termed) { $termed = 1; kill "TERM", -$pid; alarm $grace; }
+                 elsif (!$killed) { $killed = 1; kill "KILL", -$pid; alarm $grace; } else { $gave_up = 1; } };
 $SIG{ALRM} = sub { $timed_out = 1 unless $termed; $stop->(); };
 $SIG{$_} = $stop for qw(INT TERM HUP);
 alarm $term;
-my $w;
-do { $w = waitpid($pid, 0); } while ($w == -1 && $!{EINTR});
-my $st = $?;
-select(undef, undef, undef, 0.1) while kill(0, -$pid);     # the ceiling stays armed while any of the group survives
+my $st;
+until ($gave_up) {                     # the ceiling stays armed while the run or any of its group survives, and at
+  $st = $? if !defined $st && waitpid($pid, WNOHANG) == $pid;    # most GRACE_S s after KILL
+  last if defined $st && !kill(0, -$pid);
+  select(undef, undef, undef, 0.1);
+}
 alarm 0;
+exit 125 if $gave_up;
 exit($killed ? 137 : 124) if $timed_out;
 exit(($st & 127) ? 128 + ($st & 127) : ($st >> 8));
 '
@@ -193,7 +205,7 @@ case "$inner" in
   3) outcome=VOID ;;
   4) outcome=REFUSED ;;
   2) outcome=USAGE ;;
-  124|137) outcome=TIMEOUT ;;
+  124|125|137) outcome=TIMEOUT ;;
   *) outcome=CRASHED ;;
 esac
 status=$inner
