@@ -5,4 +5,4 @@ MLX_ENABLE_TF32=0 loads calib020_0001 on the GPU and plays the 144-slot throughp
 takes its own reviewed door. Opened for ONE approved run and restored on every exit. Created closed. This file may
 hold ONLY this declaration.
 """
-COMBINATION_POLICY_THROUGHPUT_AUTHORIZED = False
+COMBINATION_POLICY_THROUGHPUT_AUTHORIZED = True
