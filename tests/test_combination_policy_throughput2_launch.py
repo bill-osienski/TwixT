@@ -45,15 +45,37 @@ def isolated(monkeypatch, tmp_path):
     monkeypatch.setenv(P.SETTING, P.SETTING_VALUE)
 
 
-def test_NOTHING_OF_ATTEMPT_2_HAS_RUN_and_attempt_1_stays_closed():
-    """Built only: the gate closed, no plan, no seed record, no run output. Attempt 1's evidence is untouched by the
-    build (its own closed-state test checks its content)."""
+def test_ATTEMPT_2_IS_SURVEYED_AND_PRE_PROVEN_ONLY_and_attempt_1_stays_closed():
+    """RE-ANCHORED 2026-10-30 (survey df0c0ec9, pre-proof fcd3969d): the survey record is CLEAN and the pre-proof HOLDS,
+    bound to the survey record's sha256, on a clean tree. Nothing else: the block (read from the record; no seed
+    literal here) is in no registry, the gate is closed, no plan, no run output, no closing record. Attempt 1's evidence
+    is untouched (its own closed-state test checks its content)."""
+    import hashlib
     from scripts.GPU.alphazero import combination_policy_throughput2_authorization as G
+    from scripts.GPU.alphazero import e4_screen_reference as REG
     assert getattr(G, GATE_NAME) is False
     assert sorted(x.name for x in WRAPPER.parent.iterdir()) == ["01_wrapper.sh"]          # no plan.json yet
     assert not (ROOT / P.KINDS["throughput2"]["evidence"]).exists()
-    for rel, only in ((SURVEY, "01_seed_survey.py"), (CLOSING, "01_derive_usage.py")):
-        assert sorted(x.name for x in (EV / rel).parent.iterdir() if x.name != "__pycache__") == [only]
+    here = (EV / SURVEY).parent
+    assert sorted(x.name for x in here.iterdir() if x.name != "__pycache__") == \
+        ["01_seed_survey.py", "02_seed_survey_run.txt", "03_collision_proof_pre_run.txt"]
+    assert sorted(x.name for x in (EV / CLOSING).parent.iterdir() if x.name != "__pycache__") == ["01_derive_usage.py"]
+    raw = (here / "02_seed_survey_run.txt").read_bytes()
+    survey, sha = raw.decode("utf-8"), hashlib.sha256(raw).hexdigest()
+    assert survey.splitlines()[2].endswith("; working tree clean")
+    assert survey.endswith("SURVEY VERDICT   : THE COMBINATION-POLICY THROUGHPUT ATTEMPT-2 BLOCK IS CLEAN\n")
+    assert "controls passed: 45/45" in survey
+    pre = (here / "03_collision_proof_pre_run.txt").read_text(encoding="utf-8")
+    assert pre.splitlines()[2].endswith("; working tree clean")
+    assert f"02_seed_survey_run.txt sha256 {sha} (read at " in pre
+    assert "EXPECTED STATE (pre): HOLDS" in pre and "controls passed: 45/45" in pre
+    assert pre.endswith("PROOF VERDICT (pre): THE COMBINATION-POLICY THROUGHPUT ATTEMPT-2 BLOCK IS CLEAN AND THE STATE "
+                        "IS AS EXPECTED\n")
+    lo, hi = map(int, re.search(r"THE BLOCK, read from the record: \[(\d+), (\d+)\)", pre).groups())
+    assert hi - lo == 144 and f"THE BLOCK ({lo}, {hi})  n=144" in survey
+    for name in ("ACCOUNTED_SEED_INTERVALS", "EXPOSED_SEED_INTERVALS", "RETIRED_SEED_INTERVALS",
+                 "TEST_ONLY_SEED_INTERVALS"):
+        assert not [iv for iv in getattr(REG, name) if iv[0] < hi and lo < iv[1]], name   # not registered
     assert subprocess.run(["git", "-C", str(ROOT), "diff", "--quiet", "e30e277c", "HEAD", "--",
                            "docs/superpowers/evidence/combination-policy-throughput",
                            "docs/superpowers/evidence/combination-policy-throughput-run",

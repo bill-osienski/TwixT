@@ -176,6 +176,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — closeout ACCEPTED (addendum, 2026-10-29, the user's review).** The pilot and its seeds are fully closed. Policy learning remains untested; the combination's earlier strength PASS stands. Nothing further is authorized. See #121.
 > **Combination policy pilot — ONE fresh attempt at the throughput check: amendment and build only (decision note after entry 41, 2026-10-29, the user's decision).** Attempt 1's 15-minute ceiling was too tight (113 games in ~890 s, roughly 19 minutes for 144). Attempt 2: the same 144 games, model, search, 18 workers and cap 14; TERM 1,790 s, KILL 1,800 s, observation to 1,810 s; fresh seeds, separate paths, gate 54 closed; generation admitted from attempt 2's committed inner and outer records only. Built for review; nothing run. See #122.
 > **Combination policy pilot — attempt 2's build ACCEPTED; the seed survey and pre-proof approved once each (addendum, 2026-10-30, the user's decision).** "No further attempt" (amendment, #122) means one attempt now with no automatic retry; after a TIMEOUT or interruption the cause, cost and worth of another attempt are assessed, and any further attempt is the user's fresh decision (#123). The pinned amendment is unchanged. Registration, GPU work, games, training and pushing remain unauthorized.
+> **Combination policy pilot — attempt 2's seed survey → CLEAN; pre-proof → HOLDS (addendum, 2026-10-30).** Survey run once (`df0c0ec9`, clean worktree at `a3a54485`): block [202697200, 202697344), 144 seeds, gap 150 (floor 144), controls 45/45. Pre-proof run once (`fcd3969d`, clean worktree at `df0c0ec9`), bound to the survey record (sha256 `26ef8470…`): the state HOLDS, the block CLEAN, 45/45. Not registered; awaiting review.
 
 ## Historical proposal check — programme now closed
 
@@ -7145,3 +7146,35 @@ approved as one sequence.**
   return both results for review before registration.
 - **Not authorized:** registration, the plan, the post-proof, opening the gate, checkpoint loading, GPU work, games,
   training and pushing.
+
+#### Addendum — attempt 2's seed survey → CLEAN; its pre-registration proof → HOLDS (2026-10-30)
+
+- **The survey (`df0c0ec9`), run once** in a clean linked worktree (branch `cp-throughput2-seeds`, from `a3a54485`;
+  main fast-forwarded and the worktree removed afterwards):
+  `.venv/bin/python -B docs/superpowers/evidence/combination-policy-throughput2-seed-survey/01_seed_survey.py --mode
+  survey`, exit 0, nothing on stderr.
+  - Verdict: **THE COMBINATION-POLICY THROUGHPUT ATTEMPT-2 BLOCK IS CLEAN**, controls **45/45**, clean tree at
+    `a3a54485`; the main checkout scanned too (49,837 files; its 2 untracked files are not required clean).
+  - Registries as read: ACCOUNTED 47, EXPOSED 45, RETIRED 43, TEST_ONLY 1 (registry sha256 `f04ae6c7…`).
+  - The rule's block is **[202697200, 202697344)**: BASE 202697200, 144 seeds, above the highest registered seed
+    202697043 (attempt 1's last, EXPOSED and RETIRED). Direct overlap none, 0 derived streams, injective, nearest gap
+    150 (floor 144). Slot g plays seed BASE + g, slots 0–143 listed.
+  - Record `combination-policy-throughput2-seed-survey/02_seed_survey_run.txt`, sha256 `26ef8470…`.
+- **The pre-registration proof (`fcd3969d`), run once** in a fresh clean linked worktree (branch `cp-throughput2-pre`,
+  from `df0c0ec9`; main fast-forwarded and the worktree removed afterwards): the same script, `--mode pre`, exit 0,
+  nothing on stderr.
+  - Bound to the committed survey record (sha256 `26ef8470…`, read at `a3a54485`); the block read from it.
+  - **EXPECTED STATE (pre): HOLDS** (the survey's registry, the block unregistered, no plan). The block re-checked on
+    the tree at `df0c0ec9`: direct none, 0 streams, injective, gap 150 (floor 144), CLEAN. Controls **45/45**.
+  - Verdict: **THE COMBINATION-POLICY THROUGHPUT ATTEMPT-2 BLOCK IS CLEAN AND THE STATE IS AS EXPECTED.**
+  - Record `03_collision_proof_pre_run.txt`, sha256 `803a93d9…`.
+- **One test re-anchored:** the build-state test in `tests/test_combination_policy_throughput2_launch.py` asserted that
+  no seed record exists, so it failed once both records were committed (the only failure). It now asserts the survey
+  and pre-proof state: both records with their verdicts, 45/45 controls and clean trees; the proof bound to the survey
+  record's sha256; the block, read from the record (the test holds no seed literal, since the post-proof scans
+  `tests/`), in no registry; the gate closed; no plan, run output or closing record; attempt 1's evidence unchanged
+  since `e30e277c`. The overlap check fires on attempt 1's block (all three registries). The three combination files
+  and the gate inventory: 128 passed, 1 deselected.
+- **Not done:** registration, the plan, the post-proof, the gate, checkpoint loading, GPU work, games, training and
+  pushing. ACCOUNTED and the registry are unchanged; all 54 gates are closed.
+- **Status:** awaiting the user's review before registration.
