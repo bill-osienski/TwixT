@@ -175,6 +175,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — the throughput block CLOSED (addendum, 2026-10-29).** K1 RECONCILES 21/21 (`b69515d5`; no `claims` event); K2 (`e30e277c`) appends [202696900, 202697044) last to EXPOSED (44 → 45) and RETIRED (42 → 43), ACCOUNTED (47) and TEST_ONLY unchanged; the lifecycle test asserts the closed state (`3dee44a9`). The pilot is closed with no policy-learning result. Awaiting review; nothing further authorized. See #121.
 > **Combination policy pilot — closeout ACCEPTED (addendum, 2026-10-29, the user's review).** The pilot and its seeds are fully closed. Policy learning remains untested; the combination's earlier strength PASS stands. Nothing further is authorized. See #121.
 > **Combination policy pilot — ONE fresh attempt at the throughput check: amendment and build only (decision note after entry 41, 2026-10-29, the user's decision).** Attempt 1's 15-minute ceiling was too tight (113 games in ~890 s, roughly 19 minutes for 144). Attempt 2: the same 144 games, model, search, 18 workers and cap 14; TERM 1,790 s, KILL 1,800 s, observation to 1,810 s; fresh seeds, separate paths, gate 54 closed; generation admitted from attempt 2's committed inner and outer records only. Built for review; nothing run. See #122.
+> **Combination policy pilot — attempt 2's build ACCEPTED; the seed survey and pre-proof approved once each (addendum, 2026-10-30, the user's decision).** "No further attempt" (amendment, #122) means one attempt now with no automatic retry; after a TIMEOUT or interruption the cause, cost and worth of another attempt are assessed, and any further attempt is the user's fresh decision (#123). The pinned amendment is unchanged. Registration, GPU work, games, training and pushing remain unauthorized.
 
 ## Historical proposal check — programme now closed
 
@@ -1827,6 +1828,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 120. **The throughput seed closing (2026-10-29).** Do **not** run K1 more than once, or edit the registry if it does not RECONCILE. Do **not** expose only the 131 recorded starts: with no final `claims` event the frozen rule exposes the whole block. Do **not** change ACCOUNTED or TEST_ONLY. Do **not** retry, amend, profile, generate a corpus, train or push on this approval.
 121. **The throughput block, closed (2026-10-29).** Do **not** reuse, unexpose, unretire or re-register any seed of [202696900, 202697044), rerun K1 or K2, or edit `02_derive_usage_run.txt` (sha256 `502e164a…`). Do **not** use the 113 finished throughput games for anything. Do **not** read the older registry-test failures (the same 16 failed / 69 errors before and after K2) as caused by this closing. A retry, amendment, profiling run, corpus generation, training or push needs a new decision.
 122. **The throughput check, attempt 2 (2026-10-29).** Do **not** make a third attempt, retry, extend or top up attempt 2, or change its ceiling (TERM 1,790 s, KILL 1,800 s, observation to 1,810 s). Do **not** admit generation from attempt 1's records or paths, from an attempt-2 record without the pinned amendment's sha256, or without attempt 2's successful committed `outer.json`. Do **not** change the learning target, training recipe or evaluation criteria, repeat the CPU timing, profile or sweep parameters on this amendment. Do **not** edit the pinned amendment (sha256 `6dba686d…`) or attempt 1's evidence, closed seeds or registry entries. Seed procedures, checkpoint loading, GPU work, gameplay, training and pushing each need their own approval.
+123. **Clarification of #122 (2026-10-30, the user's review).** #122's "a third attempt" and the amendment's "no further attempt, whatever happens" mean: one attempt is authorized now, with **no automatic** retry, extension or top-up. If attempt 2 times out or is interrupted, do **not** retry it on the spot; assess the cause, the likely cost and whether another attempt is worthwhile, and return that to the user, whose fresh decision any further attempt needs. Do **not** edit the pinned amendment to say this, and do **not** build a retry in advance.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -7127,3 +7129,19 @@ approved as one sequence.**
 - **Nothing run:** no seed procedure, registration, checkpoint, GPU, game, training or push. Attempt 1's evidence,
   closed seeds and registry entries are unchanged. All 54 gates are closed.
 - **Status:** awaiting the user's review. See do-not-repeat **#122**.
+
+#### Addendum — attempt 2's build accepted; "no further attempt" clarified; the seed survey and pre-proof approved once each (2026-10-30, the user's decision)
+
+- **The build is accepted** (`d5340a0e`): no material implementation blocker. The 30-minute wrapper, separate paths and
+  closed gate match the proposal; generation requires attempt 2's successful inner and outer records; attempt 1's
+  evidence and registry entries are unchanged. All 54 gates are closed.
+- **Clarification of the amendment's "no further attempt, whatever happens" and of #122's "a third attempt".** The
+  authorization is for **one attempt now, with no automatic retry**. If attempt 2 times out or is interrupted, the cause,
+  the likely cost and whether another attempt is worthwhile are assessed then, and any further attempt is a fresh
+  decision by the user. Nothing is built for a retry now. The pinned amendment (sha256 `6dba686d…`) is **not** edited:
+  this dated text clarifies it. See **#123**.
+- **Approved:** the attempt-2 seed survey, once, in a clean linked worktree. **Only if it is CLEAN:** commit its
+  create-only record, then run the pre-registration proof once against that committed record, commit its record, and
+  return both results for review before registration.
+- **Not authorized:** registration, the plan, the post-proof, opening the gate, checkpoint loading, GPU work, games,
+  training and pushing.
