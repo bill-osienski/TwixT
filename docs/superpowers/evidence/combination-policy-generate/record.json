@@ -1,0 +1,207 @@
+{
+ "admission": {
+  "docs/superpowers/evidence/combination-policy-timing": "COMPLETED"
+ },
+ "amendment": "docs/superpowers/2026-10-30-combination-policy-generation-amendment.md",
+ "amendment_sha256": "11ced08185bd5e2727de07628a95e7cdc872ec31dae808e898640539742d7f55",
+ "background_checks": 1002,
+ "card": "docs/superpowers/2026-10-28-combination-policy-pilot-card.md",
+ "card_sha256": "237424bd90bc8273ebab246fe87f19188f2e264f347ccd002352e930a5a1e389",
+ "checkpoint_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+ "environment": {
+  "executable": "/Users/bill/projects/TwixT_Game/.venv/bin/python",
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "python": "3.14.9 (main, Oct 21 2026, 06:02:15) [Clang 21.0.0 (clang-2100.3.34.2)]"
+ },
+ "generation_seconds": 9928.672,
+ "head": "acf07d2417e76dd33f8866032b66452e97108964",
+ "kind": "combination-policy-pilot-record/1",
+ "load_seconds": 0.013,
+ "loadavg_after": [
+  0.837890625,
+  0.9716796875,
+  1.51025390625
+ ],
+ "loadavg_before": [
+  1.90673828125,
+  1.7001953125,
+  1.41357421875
+ ],
+ "mode_at_end": {
+  "batchnorm": 14,
+  "modules": 42,
+  "modules_in_training_mode": 0
+ },
+ "mode_at_load": {
+  "batchnorm": 14,
+  "modules": 42,
+  "modules_in_training_mode": 0
+ },
+ "modules": {
+  "scripts/GPU/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "scripts/GPU/alphazero/__init__.py": "c6f13806151399f9e6be707271537b166ec79ba9729d8339800127c826adc4ab",
+  "scripts/GPU/alphazero/background_compute.py": "b26c2c5c1dea53a9587b2d8c0e3235de5b8c6fa0d1bfb1bf638dc4e57744722e",
+  "scripts/GPU/alphazero/combination_policy_generate_authorization.py": "74ed16ccbbedfd8c4d7456517ed7e6a7f17f87e9ff808d054c9b714e4d98505a",
+  "scripts/GPU/alphazero/combination_policy_throughput2_authorization.py": "3bfe7bc510e1e34260c0bf0c897e5795bb651f066e48c0166eb9d15f0c953059",
+  "scripts/GPU/alphazero/combination_policy_throughput_authorization.py": "8b4c577eca00c3d0d7ca329ee28319a460f36ca67bb4b5df3148a0348edf52c6",
+  "scripts/GPU/alphazero/combination_policy_train_authorization.py": "ebf070b43051c4ff4bb3e7fe688c115a6580a77eff7deb63d5e88d9a73c18cc5",
+  "scripts/GPU/alphazero/combination_selfplay.py": "1872145992f87b824283b0696b0e24d98c92fa597d81753fe9329afb8a22f124",
+  "scripts/GPU/alphazero/connectivity_diagnostics.py": "77a63a54c0f1c17cb2814061a04331402f120c14562d042119b3c390eba6ea78",
+  "scripts/GPU/alphazero/e4_screen_reference.py": "ee1070bb6c4959eb6f54df7e691c7e139549dd0c7af3d54ec8d63177f26f2bd2",
+  "scripts/GPU/alphazero/evaluator.py": "043388192eaeb55eda58057d5f15160866b7ba0ecd8d117ff4e913f00327d8c2",
+  "scripts/GPU/alphazero/game/__init__.py": "b8cba656f4cdd17ca1fce240224623d2ed631904a035425a30ef4a7be2069122",
+  "scripts/GPU/alphazero/game/twixt_state.py": "291275223b71b522a19181ae33a34518c0ca3c8f585275770f4c72e651cba5e2",
+  "scripts/GPU/alphazero/halving_policy_target.py": "b39c93da3e5f850738bf0e3a3af81575e51de9026894958c0580de66320edbcc",
+  "scripts/GPU/alphazero/inheritance_probe.py": "d8e073b8303d5db5f43a5613f82aff6a9cc1a0bc6249e7a312fec73242688203",
+  "scripts/GPU/alphazero/local_evaluator.py": "7fbeb49d3eb210fae4c74098a29e257b34916d8837f6735cd875c3184447ea4e",
+  "scripts/GPU/alphazero/mcts.py": "0769b22ae47923da2600584da1bcf7c955bb975f0bd4985d7d11605d5196050f",
+  "scripts/GPU/alphazero/mirror_halving_combination.py": "907ce4342f95c28f30f71dfaf50406994a93cfaf70929c89f0a1c0bedca1a176",
+  "scripts/GPU/alphazero/network.py": "81465fe7106d4d7161cc5bdaf2b00a002ac337a77aff5d354a3bcd26986873bc",
+  "scripts/GPU/alphazero/opening_diagnostics.py": "03e40f0ea8110f194bb94b6f99b03b7aa367937882bf9c9cd5de57adc5a13106",
+  "scripts/GPU/alphazero/probe_eval.py": "e2a2943604d6b3efd5f4c3edac2c8c547b4ebe8b04e1cbf5a0b47b4f3d9a0a25",
+  "scripts/GPU/alphazero/recovery_retargeting_diagnostics.py": "25f36b6df0295c5d3baf27a07f0a2be9faebe9df0eb1a2ff53f06454d6ee32ea",
+  "scripts/GPU/alphazero/root_sequential_halving.py": "0bec4ef1914b25541f5247c5dd6c0002cea171b2902c629e52cfc034e9402790",
+  "scripts/GPU/alphazero/search_distillation_d2_measure.py": "c2ecd81d7939a3879895b8bdfb36221c5cedecc616c345a37d4ef26f03b30669",
+  "scripts/GPU/alphazero/search_distillation_d2_measure_authorization.py": "d01a9d09970d4803e49c1fac70c595fc22955ff77d0221eb43690d91078ac8d2",
+  "scripts/GPU/alphazero/self_play.py": "c7019373aacde3e22656278d99380fdf8e0c26466549e6521cda791fddfe9394",
+  "scripts/GPU/alphazero/twixtbot_g3_reference.py": "f68af1525d7997467904e2dfe7ea8aaf5400fffce3e5513625643ec442e3e55e",
+  "scripts/GPU/alphazero/twixtbot_g3_schedule.py": "7624c4e61c8ca5cba7641a641d74800c4c2a6d8e6c1ffb13115bed177b92a600"
+ },
+ "rows_dir": "/Users/bill/twixt-cache/combination-policy-pilot/generate",
+ "run": "generate",
+ "seeds": {
+  "base": 202739800,
+  "n_slots": 1000
+ },
+ "setting": {
+  "MLX_ENABLE_TF32": "0"
+ },
+ "setting_at_end": {
+  "MLX_ENABLE_TF32": "0"
+ },
+ "status": "COMPLETED",
+ "summary": {
+  "duplicate_rows": 0,
+  "duplicates_note": "rows whose move sequence repeats an earlier row's; transpositions not merged",
+  "games": 1000,
+  "mean_entropy": 2.4949229910217356,
+  "mean_kl_target_prior": 1.4317875071343946,
+  "mean_mass_played": 0.4277612245602999,
+  "mean_mass_round1_out": 0.07049865197054668,
+  "other_draws": 0,
+  "plies": 64747,
+  "rows": 44747,
+  "state_caps": 43,
+  "wins": 957
+ },
+ "telemetry": {
+  "claims": 1000,
+  "ended": 1000,
+  "hellos": {
+   "0": {
+    "mlx_loaded": false,
+    "setting": "0"
+   },
+   "1": {
+    "mlx_loaded": false,
+    "setting": "0"
+   },
+   "10": {
+    "mlx_loaded": false,
+    "setting": "0"
+   },
+   "11": {
+    "mlx_loaded": false,
+    "setting": "0"
+   },
+   "12": {
+    "mlx_loaded": false,
+    "setting": "0"
+   },
+   "13": {
+    "mlx_loaded": false,
+    "setting": "0"
+   },
+   "14": {
+    "mlx_loaded": false,
+    "setting": "0"
+   },
+   "15": {
+    "mlx_loaded": false,
+    "setting": "0"
+   },
+   "16": {
+    "mlx_loaded": false,
+    "setting": "0"
+   },
+   "17": {
+    "mlx_loaded": false,
+    "setting": "0"
+   },
+   "2": {
+    "mlx_loaded": false,
+    "setting": "0"
+   },
+   "3": {
+    "mlx_loaded": false,
+    "setting": "0"
+   },
+   "4": {
+    "mlx_loaded": false,
+    "setting": "0"
+   },
+   "5": {
+    "mlx_loaded": false,
+    "setting": "0"
+   },
+   "6": {
+    "mlx_loaded": false,
+    "setting": "0"
+   },
+   "7": {
+    "mlx_loaded": false,
+    "setting": "0"
+   },
+   "8": {
+    "mlx_loaded": false,
+    "setting": "0"
+   },
+   "9": {
+    "mlx_loaded": false,
+    "setting": "0"
+   }
+  },
+  "max_batch_rows": 14,
+  "server": {
+   "batches": 1897590,
+   "requests": 25406558,
+   "rows": 25406558
+  },
+  "started": 1000,
+  "workers": 18
+ },
+ "throughput": {
+  "arbiter_calls": 1897590,
+  "arbiter_rows": 25406558,
+  "games_per_hour": 362.58624236686666,
+  "max_batch_rows": 14,
+  "mean_rows_per_call": 13.388855337559747,
+  "n_workers": 18
+ },
+ "total_seconds": 9928.831,
+ "variant": {
+  "BOARD": 24,
+  "CANDIDATES": 16,
+  "C_SCALE": 1.0,
+  "C_VISIT": 50.0,
+  "FROM_PLY": 20,
+  "PRIOR_FLOOR": 1e-12
+ },
+ "verdict": null,
+ "versions": {
+  "mlx": "0.30.3",
+  "numpy": "2.4.1",
+  "python": "3.14.9"
+ },
+ "written_by": "script"
+}

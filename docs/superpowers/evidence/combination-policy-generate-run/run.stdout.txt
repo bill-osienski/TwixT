@@ -1,0 +1,1 @@
+{"status": "COMPLETED", "void": null, "run": "generate", "verdict": null, "stop": null, "throughput": {"games_per_hour": 362.58624236686666, "arbiter_rows": 25406558, "arbiter_calls": 1897590, "mean_rows_per_call": 13.388855337559747, "n_workers": 18, "max_batch_rows": 14}}
