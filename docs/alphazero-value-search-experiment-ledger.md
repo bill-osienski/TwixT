@@ -173,6 +173,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — the throughput check: outer TIMEOUT; the pilot CLOSED at step 2 (entry 41, 2026-10-29).** The one approved run hit the 890 s ceiling (inner 124, TERM sufficed; script record VOID "terminated"): 131 of 144 slots started, 113 finished, about 457 finished games/h against the ~576 the ceiling needed. Gate restored, no survivors, generation refused. No policy-learning result; the hypothesis is neither supported nor rejected. Seed closing awaits approval. See #119.
 > **Combination policy pilot — TIMEOUT/VOID and closure at step 2 accepted; seed closing approved as one conditional sequence (addendum, 2026-10-29, the user's decision).** No policy-learning result; the combination's earlier strength PASS stands. K1 once in a clean worktree; only if it RECONCILES, all of [202696900, 202697044) to EXPOSED and RETIRED (no final `claims` event, so the frozen rule exposes all 144); then the lifecycle-test re-anchor and focused CPU checks. See #120.
 > **Combination policy pilot — the throughput block CLOSED (addendum, 2026-10-29).** K1 RECONCILES 21/21 (`b69515d5`; no `claims` event); K2 (`e30e277c`) appends [202696900, 202697044) last to EXPOSED (44 → 45) and RETIRED (42 → 43), ACCOUNTED (47) and TEST_ONLY unchanged; the lifecycle test asserts the closed state (`3dee44a9`). The pilot is closed with no policy-learning result. Awaiting review; nothing further authorized. See #121.
+> **Combination policy pilot — closeout ACCEPTED (addendum, 2026-10-29, the user's review).** The pilot and its seeds are fully closed. Policy learning remains untested; the combination's earlier strength PASS stands. Nothing further is authorized. See #121.
 
 ## Historical proposal check — programme now closed
 
@@ -7032,3 +7033,13 @@ approved as one sequence.**
 - **Status:** the combination policy pilot is CLOSED at step 2 and its throughput block is closed. No result on policy
   learning; the combination's earlier strength PASS stands. No retry, amendment, profiling run, corpus generation,
   training or push is authorized. See do-not-repeat **#121**.
+
+#### Addendum — the closeout accepted (2026-10-29, the user's review)
+
+- **Accepted, with no further corrections or tests needed.** The user verified K1's committed record and hash
+  (RECONCILES, 21/21); the whole block [202696900, 202697044) appended exactly once to EXPOSED and RETIRED; ACCOUNTED,
+  TEST_ONLY and every other registry statement unchanged; the historical run, plan and proof evidence unchanged; ledger
+  edits additions only; all 53 gates closed; the two unrelated untracked files untouched.
+- **Status:** the combination policy pilot and its seeds are fully closed. Policy learning remains untested; the
+  combination's earlier strength PASS stands. No retry, amendment, profiling, generation, training or push is
+  authorized. See do-not-repeat **#121**.
