@@ -1,0 +1,1 @@
+{"status": "VOID", "void": {"step": "terminated", "detail": "SIGTERM after 889.9 s"}, "run": "throughput", "verdict": null, "stop": null, "throughput": null}
