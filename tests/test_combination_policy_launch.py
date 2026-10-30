@@ -43,25 +43,31 @@ def isolated(monkeypatch, tmp_path):
     monkeypatch.setenv(P.SETTING, P.SETTING_VALUE)
 
 
-def test_THE_THROUGHPUT_BLOCK_IS_REGISTERED_AND_PROVEN_with_the_survey_s_build_plan_and_the_launch_is_not_run():
+def test_THE_THROUGHPUT_BLOCK_IS_REGISTERED_PROVEN_RUN_ONCE_AND_CLOSED_with_the_survey_s_build_plan():
     """RE-ANCHORED 2026-10-29 (registration, 88c5d162): the survey (cd4217a9) and pre-proof (086d6e37) records stand,
     the proof bound to the survey record's sha256; the plan is the survey copy's build_plan; the block is in ACCOUNTED
-    exactly once and last, NOT exposed, NOT retired, and every seed schedulable by the pilot's own predicate.
-    RE-ANCHORED 2026-10-29 (post-proof, 20486339): the post-registration proof HOLDS, bound to the same survey record,
-    on a clean tree, and the registry it proved is the registry now. The gate is closed; no closing record and no run
-    output exist. Read-only."""
+    exactly once. RE-ANCHORED 2026-10-29 (post-proof, 20486339): the post-registration proof HOLDS, bound to the same
+    survey record, on a clean tree, and the registry it proved is the registry the run launched with.
+    RE-ANCHORED 2026-10-29 (the run, dba747bf, and its closing, K1 b69515d5 + K2 e30e277c): the ONE run hit the 890 s
+    ceiling -- outer TIMEOUT (inner 124), record VOID, gate restored, no survivors -- so generation is never admitted
+    from it; K1 RECONCILES with no final `claims` event, so the WHOLE block is EXPOSED and RETIRED, each exactly once
+    and appended last, ACCOUNTED unchanged, and every seed is refused. The gate is closed. Read-only."""
     import hashlib
+    import subprocess
     from scripts.GPU.alphazero import combination_policy_throughput_authorization as G
     from scripts.GPU.alphazero import e4_screen_reference as REG
     assert getattr(G, GATE_NAME) is False
     run = EV / "combination-policy-throughput-run"
-    assert sorted(x.name for x in run.iterdir()) == ["01_wrapper.sh", "plan.json"]     # no outer record
-    assert not (EV / "combination-policy-throughput").exists()
+    assert sorted(x.name for x in run.iterdir()) == ["01_wrapper.sh", "bg_check.txt", "idle_check.txt", "outer.json",
+                                                      "pgid.txt", "plan.json", "run.stderr.txt", "run.stdout.txt"]
+    out = EV / "combination-policy-throughput"
+    assert sorted(x.name for x in out.iterdir()) == ["games.jsonl", "progress.jsonl", "record.json"]
     here = (EV / SURVEY).parent
     assert sorted(x.name for x in here.iterdir() if x.name != "__pycache__") == \
         ["01_seed_survey.py", "02_seed_survey_run.txt", "03_collision_proof_pre_run.txt",
          "04_collision_proof_post_run.txt"]
-    assert sorted(x.name for x in (EV / CLOSING).parent.iterdir() if x.name != "__pycache__") == ["01_derive_usage.py"]
+    assert sorted(x.name for x in (EV / CLOSING).parent.iterdir() if x.name != "__pycache__") == \
+        ["01_derive_usage.py", "02_derive_usage_run.txt"]
     raw = (here / "02_seed_survey_run.txt").read_bytes()
     survey, sha = raw.decode("utf-8"), hashlib.sha256(raw).hexdigest()
     assert survey.endswith("SURVEY VERDICT   : THE COMBINATION-POLICY THROUGHPUT BLOCK IS CLEAN\n")
@@ -74,8 +80,17 @@ def test_THE_THROUGHPUT_BLOCK_IS_REGISTERED_AND_PROVEN_with_the_survey_s_build_p
         assert text.endswith(f"PROOF VERDICT ({mode}): THE COMBINATION-POLICY THROUGHPUT BLOCK IS CLEAN AND THE STATE "
                              "IS AS EXPECTED\n")
     post = (here / "04_collision_proof_post_run.txt").read_text(encoding="utf-8")
-    registry = (ROOT / "scripts/GPU/alphazero/e4_screen_reference.py").read_bytes()
-    assert f"e4_screen_reference.py sha256 {hashlib.sha256(registry).hexdigest()}\n" in post    # proved = current
+    # the run: outer TIMEOUT over a VOID record, launched on the proved registry; generation never admitted from it
+    outer = json.loads((run / "outer.json").read_text(encoding="utf-8"))
+    record = json.loads((out / "record.json").read_text(encoding="utf-8"))
+    assert (outer["inner_exit"], outer["outcome"], outer["gate_restored"], outer["survivors"], outer["record_by"]) == \
+        (124, "TIMEOUT", True, "", "script")
+    assert record["status"] == "VOID" and record["void"]["step"] == "terminated" and record["head"] == outer["head"]
+    assert P.outer_faults(outer, record)
+    reg_rel = "scripts/GPU/alphazero/e4_screen_reference.py"
+    launched = subprocess.run(["git", "-C", str(ROOT), "show", f"{outer['head']}:{reg_rel}"],
+                              capture_output=True, check=True).stdout
+    assert f"e4_screen_reference.py sha256 {hashlib.sha256(launched).hexdigest()}\n" in post    # proved = launched
     survey_mod = _load(SURVEY, "_survey_throughput_registered")
     plan = json.loads((ROOT / P.KINDS["throughput"]["plan"]).read_text(encoding="utf-8"))
     n = P.KINDS["throughput"]["slots"]
@@ -83,11 +98,20 @@ def test_THE_THROUGHPUT_BLOCK_IS_REGISTERED_AND_PROVEN_with_the_survey_s_build_p
     block = (plan["base"], plan["base"] + n)
     assert f"block = [{block[0]}, {block[1]}) -- {n} seeds" in survey
     assert f"THE BLOCK, read from the record: [{block[0]}, {block[1]}) -- BASE {block[0]}\n" in post
-    assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1 and REG.ACCOUNTED_SEED_INTERVALS[-1] == block
-    for k in ("EXPOSED_SEED_INTERVALS", "RETIRED_SEED_INTERVALS", "TEST_ONLY_SEED_INTERVALS"):
-        assert not any(lo < block[1] and block[0] < hi for lo, hi in getattr(REG, k)), k
-    assert all(REG.seed_is_accounted(s) and not REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s)
-               for s in range(*block))
+    assert record["seeds"] == {"base": block[0], "n_slots": n}
+    # the closing: no final `claims` event, so the WHOLE block is EXPOSED and RETIRED, each once and last
+    closing = (EV / CLOSING).parent.joinpath("02_derive_usage_run.txt").read_text(encoding="utf-8")
+    assert "claims events: []\n" in closing and "controls passed: 21/21" in closing
+    assert closing.endswith(f"VERDICT: RECONCILES -- EXPOSE {list(block)}; RETIRE {list(block)}\n")
+    assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1
+    later = REG.ACCOUNTED_SEED_INTERVALS[REG.ACCOUNTED_SEED_INTERVALS.index(block) + 1:]
+    assert all(lo >= block[1] for lo, _hi in later)
+    assert REG.EXPOSED_SEED_INTERVALS.count(block) == 1 and REG.EXPOSED_SEED_INTERVALS[-1] == block
+    assert REG.RETIRED_SEED_INTERVALS.count(block) == 1 and REG.RETIRED_SEED_INTERVALS[-1] == block
+    assert not any(lo < block[1] and block[0] < hi and (lo, hi) != block
+                   for lo, hi in REG.EXPOSED_SEED_INTERVALS + REG.RETIRED_SEED_INTERVALS + REG.TEST_ONLY_SEED_INTERVALS)
+    assert all(REG.seed_is_accounted(s) and REG.seed_is_exposed(s) and REG.seed_is_retired(s) and
+               REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s) for s in range(*block))
 
 
 # ─────────────────────────────── the wrapper's bytes ───────────────────────────────

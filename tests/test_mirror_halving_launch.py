@@ -435,8 +435,12 @@ def test_ATTEMPT_2_S_PLAN_is_the_survey_s_build_plan_and_its_block_is_REGISTERED
     closing = (EV / f"mirror-halving-{kind}-seed-closing/02_derive_usage_run.txt").read_text(encoding="utf-8")
     assert f"VERDICT: RECONCILES -- EXPOSE {list(block)}; RETIRE {list(block)}\n" in closing
     assert "controls passed: 15/15" in closing
-    assert REG.EXPOSED_SEED_INTERVALS.count(block) == 1 and REG.EXPOSED_SEED_INTERVALS[-1] == block
-    assert REG.RETIRED_SEED_INTERVALS.count(block) == 1 and REG.RETIRED_SEED_INTERVALS[-1] == block
+    # RE-ANCHORED 2026-10-29 (the pilot's throughput block closed after it, e30e277c): it was last in EXPOSED and
+    # RETIRED until then; every entry appended after it lies wholly above it.
+    for name in ("EXPOSED_SEED_INTERVALS", "RETIRED_SEED_INTERVALS"):
+        ivs = getattr(REG, name)
+        assert ivs.count(block) == 1, name
+        assert all(lo >= block[1] for lo, _hi in ivs[ivs.index(block) + 1:]), name
     assert not any(lo < block[1] and block[0] < hi and (lo, hi) != block
                    for lo, hi in REG.EXPOSED_SEED_INTERVALS + REG.RETIRED_SEED_INTERVALS + REG.TEST_ONLY_SEED_INTERVALS)
     assert all(REG.seed_is_accounted(s) and REG.seed_is_exposed(s) and REG.seed_is_retired(s) and
