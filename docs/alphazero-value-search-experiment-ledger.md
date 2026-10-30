@@ -181,6 +181,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — attempt 2's block REGISTERED with its plan; post-proof → HOLDS (addendum, 2026-10-30).** [202697200, 202697344) appended last to ACCOUNTED (47 → 48), nothing else changed; plan = `build_plan` (`22f81be1`). Post-proof run once (`1c2f4220`), bound to the survey record: the state HOLDS, the block CLEAN, 45/45. Lifecycle test re-anchored; 243 passed. Gate closed; awaiting review before it is opened.
 > **Combination policy pilot — attempt 2's registration and post-proof ACCEPTED; the ONE attempt-2 launch approved with its closing (addendum, 2026-10-30, the user's decision).** Panic/reboot check and registry/plan recheck; only gate 54 opened in a clean worktree; the existing wrapper once (idle + BOINC checks, TF32=0, TERM 1,790 s / KILL 1,800 s / observation to 1,810 s). After a started run: K1 once; only if it RECONCILES, its exposure verdict and the whole block retired. No automatic retry. Generation, training and pushing remain unauthorized. See #124.
 > **Combination policy pilot — the throughput check, ATTEMPT 2: outer TIMEOUT; VOID; block closed (entry 42, 2026-10-30).** All 144 games started and 143 finished; slot 108 (started at 711 s) was in flight at the 1,790 s TERM (inner 124; record VOID; gate restored; no survivors). The bulk ran at attempt 1's pace; four 280-move state-cap games took 686–1,091 s, and that tail, not the mean, sank the run. K1 RECONCILES 21/21 (no claims event); K2 EXPOSES and RETIRES [202697200, 202697344) whole. No policy-learning result; no automatic retry (#123). See #125.
+> **Combination policy pilot — generation without a completed throughput check: amendment, admission and wrapper BUILT; the seed survey NOT run (decision note + addendum after entry 42, 2026-10-30).** The user accepted attempt 2's TIMEOUT and closing and approved preparation for one 1,000-game generation run with a six-hour ceiling (amendment `11ced081…`, `7295e765`): admitted by the committed CPU timing alone; neither throughput record is read or relabelled; a timeout is VOID and assessed, with no automatic retry. The existing seed rule's 1,000-seed block [202698400, 202699400) contains the H4 fixture literals 202699000 and 202699032, so its survey could only be NOT CLEAN; it was not run. The seed method needs the user's decision. Nothing run; 54 gates closed. See #126.
 
 ## Historical proposal check — programme now closed
 
@@ -1836,6 +1837,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 123. **Clarification of #122 (2026-10-30, the user's review).** #122's "a third attempt" and the amendment's "no further attempt, whatever happens" mean: one attempt is authorized now, with **no automatic** retry, extension or top-up. If attempt 2 times out or is interrupted, do **not** retry it on the spot; assess the cause, the likely cost and whether another attempt is worthwhile, and return that to the user, whose fresh decision any further attempt needs. Do **not** edit the pinned amendment to say this, and do **not** build a retry in advance.
 124. **The one attempt-2 launch (2026-10-30).** Do **not** run the attempt-2 wrapper more than once, retry, extend, top up or rerun any part of a started run, or change its ceiling (TERM 1,790 s, KILL 1,800 s, observation to 1,810 s), workers, cap, checks or TF32 setting. An outer TIMEOUT overrides an inner COMPLETED record. Do **not** open any gate but gate 54, edit the registry before the closing derivation RECONCILES, or use the throughput games for training or strength evidence. After a TIMEOUT or interruption, assess before any further attempt (#123). Corpus generation, training and pushing need their own approval.
 125. **The throughput check, attempt 2, VOID and closed (2026-10-30).** Do **not** reuse, unexpose, unretire or re-register any seed of [202697200, 202697344), rerun K1 or K2, edit attempt 2's run, closing or seed records, or use its games (143 finished) as training, throughput or strength evidence. Do **not** retry, extend or top up attempt 2. Do **not** read its 288 games/h (descriptive, VOID) as the pilot's measurement. Any further attempt is the user's fresh decision after assessing the cause (the 280-move state-cap tail: four games took 686–1,091 s), the cost and the worth (#123).
+126. **Generation without a completed throughput check (2026-10-30).** Do **not** read either throughput record (each VOID under an outer TIMEOUT) as a pass, rewrite either, or admit generation through them; do **not** use either throughput run's games for training. Do **not** change the generation ceiling (TERM 21,590 s, KILL 21,600 s, observation to 21,610 s), the recipe, the target, the workers or the cap under this amendment. Do **not** run the generation seed survey under the existing rule (its 1,000-seed block holds in-band repository literals, so it cannot be CLEAN); do **not** adjust the rule, its gap floor or the block size, edit or remove the H4 fixture literals to make room, or move to a new band without a reviewed method. A generation timeout is VOID and is assessed by the user; no automatic retry, extension or top-up.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -7324,3 +7326,95 @@ approved as one sequence.**
 - Entry 42's "about 4 s per move against about 2 s for the rest" overstates the state-cap games' rate. From the
   committed logs: the four 280-move games ran **2.5–3.9 s per move** (686–1,091 s), against about **2.2 s per move**
   for a median game (120.8 s, 54 moves). The rest of entry 42 stands.
+
+### Decision note — after entry 42: generation without a completed throughput check; preparation only (2026-10-30, the user's decision)
+
+- **Accepted:** attempt 2's timeout and closing. The records support the report: all 144 games started and 143
+  finished, and slot 108 was running at TERM; the gate was restored and the recorded survivors are empty; K1 reconciled
+  and the whole block was correctly exposed and retired. All 54 gates are closed. The VOID run is **no formal
+  throughput pass and no training result**; its elapsed-time observations help plan the next budget.
+- **The reviewer's own correction:** the 30-minute recommendation was too optimistic. It extrapolated from average
+  completions without allowing for a late, long game.
+- **Decision:** move directly to preparing the 1,000-game training corpus, with a six-hour generation ceiling. Another
+  144-game throughput run is unlikely to answer the learning question and could meet the same long-game tail.
+- **Approved, for review before any GPU launch:**
+  - a short prospective amendment that removes the requirement for a completed 144-game throughput check and sets six
+    hours as the ceiling for one 1,000-game generation run. That is the card's existing maximum generation budget,
+    not a guarantee that the corpus will finish;
+  - the minimal changes needed for generation admission under that explicit exception. The old TIMEOUT records stay
+    VOID, and the runner must not relabel them as a pass;
+  - fresh seed preparation by the existing method: the survey, proofs and registration once each if their checks pass,
+    the combined preparation returned for review;
+  - focused CPU tests. The model, search, learning target, training recipe and strength-evaluation criteria stay
+    unchanged.
+- **If generation later times out,** progress and the cost of continuing are assessed; the learning question is not
+  abandoned automatically.
+- **Not authorized:** generation, checkpoint loading, training and pushing. The two throughput runs' games remain
+  excluded from training.
+- **Prediction on record:** none.
+
+#### Addendum — generation's amendment, admission and wrapper built; the seed survey NOT run: the existing rule cannot place a clean 1,000-seed block (2026-10-30)
+
+- **The amendment** `docs/superpowers/2026-10-30-combination-policy-generation-amendment.md` (sha256 `11ced081…`,
+  pinned in the pilot), committed in `7295e765` with everything below:
+  - why (entries 41 and 42), and the exception: no completed throughput check; generation is admitted by the committed
+    CPU timing and the pinned amendment; neither throughput record is read or relabelled;
+  - the six-hour ceiling: TERM at 21,590 s, KILL at 21,600 s, the cleanup observation through 21,610 s;
+  - a timeout is VOID and its games are not used; the user then assesses progress and cost; no automatic retry;
+  - what is unchanged, the paths, and what it does not authorize. It does not choose the seed method.
+  - The card and the throughput amendment are unchanged.
+- **The pilot** (`combination_policy_pilot.py`, 14 lines added, 8 removed):
+  - `KINDS["generate"]` pins the amendment, by the mechanism attempt 2 used: `run generate` refuses a changed file,
+    and its record carries `amendment` and `amendment_sha256`.
+  - `ADMISSION["generate"]` is now the committed CPU timing record (COMPLETED under the card) only, as for the
+    throughput kinds. `OUTER_ADMISSION` is empty: generation reads no throughput `record.json` or `outer.json`.
+    `outer_faults` itself is kept.
+  - Nothing else changed: the slots, rows, paths, gate, workers, cap, recipe, target and training admission.
+  - On the real repository `admitted("generate")` now returns the timing alone. Generation still cannot start: its
+    gate is closed and no plan exists.
+- **The wrapper** `combination-policy-generate-run/01_wrapper.sh`: throughput attempt 2's, with only `OUT_REL`,
+  `RUN_REL`, `GATE_REL`, `GATE` (the existing `COMBINATION_POLICY_GENERATE_AUTHORIZED`, still closed), `TERM_S=21590`
+  and `run generate` changed, plus a header paragraph before attempt 2's unchanged header. No new gate (54).
+- **Tests:**
+  - `tests/test_combination_policy_pilot.py` (80 → 81): generation is admitted by the timing alone and reads no
+    throughput record or outer.json, whatever those records say; no step reads an outer.json now; `outer_faults` keeps
+    its 17 failure cases as a unit check; the amendment is pinned and nothing else moved; `run generate` refuses a
+    changed amendment; the generation record carries the amendment.
+  - `tests/test_combination_policy_launch.py` (23): attempt 1's completed fake run still admits nothing; the refusal
+    now names the missing timing record.
+  - `tests/test_combination_policy_throughput2_launch.py` (17): the closed-state test now asserts that generation's
+    real admission reads only the timing record; attempt 2's completed fake run admits nothing; its TIMEOUT over
+    COMPLETED keeps both records as written, and `outer_faults` rejects it.
+  - New `tests/test_combination_policy_generate_launch.py` (14): nothing of generation has run, and both throughput
+    runs stay VOID and unchanged since their closings; the wrapper is attempt 2's with only the stated differences;
+    the ceiling is 21,590 / 21,600 / 21,610 s; it serves the pilot's generate paths; fake launches (busy, BOINC, a
+    failed check refuse; an idle machine reaches `run generate` with its exact arguments; TERM_S 2 in a copy ends the
+    whole group with the VOID record at generation's path); through the real committed readers, a committed COMPLETED
+    timing admits generation without reading either throughput record, and an absent, uncommitted, VOID or other-card
+    timing refuses.
+- **Mutation checks** (each a temporary edit, restored byte-equal): generation re-pointed at attempt 2 → 8 failures;
+  generation's outer read restored → 4; the amendment pin removed → 4; attempt 2's TERM_S in the generation wrapper → 4.
+- **Results:** the four combination files and the gate inventory: 143 passed, 1 deselected. With the
+  background-compute, mirror-halving launch, seed-selection and tactical-survey suites: 227 passed, 1 deselected. No
+  test process left behind.
+- **The seed survey was NOT run.** Before running it, the existing rule (`seed_selection.candidate`, ALIGN 100) was
+  evaluated arithmetically on the current registry, writing nothing:
+  - the highest registered seed is 202697343, so BASE = 202698400 and the block is [202698400, 202699400);
+  - that block contains two in-band repository literals, 202699000 and 202699032: an H4 fixture in
+    `tests/test_h4_runner.py`, also quoted in H4/H5 cards and in create-only H4 evidence records;
+  - the pinned check counts repository literals as direct overlaps and in the gap floor (the block's own size), so
+    the survey could only return NOT CLEAN. The largest block the rule can place clear of 202699000 by its own floor
+    is 550 seeds;
+  - `seed_selection.py`'s docstring already says the band's room ends at that fixture, and that going beyond it needs
+    a new band, a new scanner and its own review.
+  - Running the survey would have spent its one run on a known NOT CLEAN, so it was not run. No seed record,
+    registration, plan or proof exists. The literals sit partly in create-only evidence, so removing them is not an
+    option.
+- **Open for the user's decision:**
+  - the seed method for the 1,000-slot block, since the existing method is exhausted in the 2026 band;
+  - flagged, not changed: training's admission reads only generation's `record.json`. The 2026-10-29 ruling (an outer
+    TIMEOUT overrides an inner COMPLETED record) was made for the throughput → generation step and is not enforced for
+    generation → training.
+- **Not done:** seed procedures, registration, the plan, opening the gate, checkpoint loading, GPU work, generation,
+  training and pushing. All 54 gates are closed.
+- **Status:** awaiting the user's review. See do-not-repeat **#126**.
