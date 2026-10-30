@@ -178,6 +178,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — attempt 2's build ACCEPTED; the seed survey and pre-proof approved once each (addendum, 2026-10-30, the user's decision).** "No further attempt" (amendment, #122) means one attempt now with no automatic retry; after a TIMEOUT or interruption the cause, cost and worth of another attempt are assessed, and any further attempt is the user's fresh decision (#123). The pinned amendment is unchanged. Registration, GPU work, games, training and pushing remain unauthorized.
 > **Combination policy pilot — attempt 2's seed survey → CLEAN; pre-proof → HOLDS (addendum, 2026-10-30).** Survey run once (`df0c0ec9`, clean worktree at `a3a54485`): block [202697200, 202697344), 144 seeds, gap 150 (floor 144), controls 45/45. Pre-proof run once (`fcd3969d`, clean worktree at `df0c0ec9`), bound to the survey record (sha256 `26ef8470…`): the state HOLDS, the block CLEAN, 45/45. Not registered; awaiting review.
 > **Combination policy pilot — attempt 2's survey and pre-proof ACCEPTED; registration, plan and post-proof approved as one conditional sequence (addendum, 2026-10-30, the user's decision).** Append exactly the surveyed block to ACCOUNTED and create the plan via `build_plan`; only if both are exactly as expected, run the post-proof once. Stop on any difference. The gate, GPU work, games, training and pushing remain unauthorized.
+> **Combination policy pilot — attempt 2's block REGISTERED with its plan; post-proof → HOLDS (addendum, 2026-10-30).** [202697200, 202697344) appended last to ACCOUNTED (47 → 48), nothing else changed; plan = `build_plan` (`22f81be1`). Post-proof run once (`1c2f4220`), bound to the survey record: the state HOLDS, the block CLEAN, 45/45. Lifecycle test re-anchored; 243 passed. Gate closed; awaiting review before it is opened.
 
 ## Historical proposal check — programme now closed
 
@@ -7195,3 +7196,34 @@ approved as one sequence.**
 - **Stop and return** if the registration differs or the proof does not hold. Otherwise return the combined results
   before the gate is opened.
 - **Not authorized:** opening the gate, checkpoint loading, GPU work, games, training and pushing.
+
+#### Addendum — attempt 2's block registered with its plan; the post-registration proof → HOLDS (2026-10-30)
+
+- **Registration (`22f81be1`),** in a clean linked worktree (branch `cp-throughput2-reg`, from `8b381f96`; main
+  fast-forwarded and the worktree removed afterwards):
+  - The block READ from the accepted survey record (sha256 `26ef8470…` recomputed; the survey copy's own
+    `read_record`), checked equal to the approved [202697200, 202697344) before anything was written; the registry
+    checked equal to the one the survey read.
+  - ACCOUNTED: exactly that block appended last (47 → 48), with a comment in the precedent's form holding no seed
+    literal. An AST check against the parent: only ACCOUNTED changed, its prefix identical; EXPOSED (45), RETIRED (43),
+    TEST_ONLY (1) and every other statement unchanged; no list overlaps the block.
+  - `combination-policy-throughput2-run/plan.json` = the survey copy's `build_plan(202697200, 26ef8470…)`, written
+    create-only: kind `combination-policy-throughput2-plan/1`, base 202697200, n_slots 144.
+- **The post-registration proof (`1c2f4220`), run once** in the same worktree on the clean committed tree at
+  `22f81be1`: `--mode post`, exit 0, nothing on stderr.
+  - Bound to the survey record (sha256 `26ef8470…`, read at `a3a54485`); registry sha256 `0aa5c3b0…`.
+  - **EXPECTED STATE (post): HOLDS** (ACCOUNTED = the survey's with exactly the block appended last, every other list
+    and statement unchanged, the plan committed and equal to `build_plan`). The block re-checked: direct none, 0
+    streams, injective, gap 150 (floor 144), CLEAN. Controls **45/45**.
+  - Verdict: **THE COMBINATION-POLICY THROUGHPUT ATTEMPT-2 BLOCK IS CLEAN AND THE STATE IS AS EXPECTED.**
+  - Record `04_collision_proof_post_run.txt`, sha256 `8973a56d…`.
+- **The lifecycle test re-anchored** (`tests/test_combination_policy_throughput2_launch.py`, no seed literal): the
+  survey, pre- and post-proof records with their verdicts, 45/45 and clean trees, both proofs bound to the survey
+  record's sha256; the plan equal to `build_plan`; the block (from the plan) the record's block, ACCOUNTED once and
+  last, in no other list, every seed schedulable; the registry the post-proof proved is the registry now; the gate
+  closed; no run output or closing record; attempt 1's evidence unchanged since `e30e277c`. Two temporary mutations
+  (a registry comment appended; the plan's n_slots 143) each fail it, restored byte-equal.
+- **Results:** the three combination files with the gate-inventory, mirror-halving launch, seed-selection, registry,
+  background-compute and tactical-survey suites: 243 passed, 1 deselected. No test process left behind.
+- **Not done:** opening the gate, checkpoint loading, GPU work, games, training and pushing. All 54 gates are closed.
+- **Status:** awaiting the user's review before the gate is opened.
