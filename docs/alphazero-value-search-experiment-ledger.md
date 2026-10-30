@@ -7604,3 +7604,21 @@ and the worktree was removed.
   closed.
 - **Status:** the generation run's seed preparation is complete; awaiting the user's launch review. See do-not-repeat
   **#128**.
+
+#### Addendum — the one 1,000-game generation run approved, with its conditional seed closing (2026-10-30, the user's decision)
+
+- **Verified by the user:** all three seed records and their hashes, 55/55 recorded controls in each, the exact
+  ACCOUNTED append, the plan binding and the current registry and scanner hashes; the closing copy preserves the
+  reviewed rule; all 54 gates closed; no generation output.
+- **Approved, as one sequence:**
+  1. record this decision; a fresh read-only panic/reboot check; recheck the proved registry and the plan;
+  2. in a clean worktree, open **only** the generation gate by a one-line commit and run the existing wrapper once,
+     BOINC quit, the idle gate and the background-compute check enforced;
+  3. the limits unchanged: TERM at 21,590 s, KILL at 21,600 s, cleanup observation through 21,610 s;
+  4. after a started run: restore the gate and run K1 once. Only if it RECONCILES: apply its exposure verdict, retire
+     the whole block, and update the lifecycle checks. If it does not reconcile, stop before any registry edit;
+  5. commit the evidence and the closeout, and return for the corpus and training-readiness review.
+- **If generation is incomplete:** preserve the partial capture, and bring back the progress, the cause and the likely
+  cost of continuing for assessment. No automatic retry.
+- **This run produces the actual training corpus.** Training and pushing remain unauthorized.
+- **Prediction on record:** none.
