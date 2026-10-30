@@ -1,0 +1,27 @@
+t=    0.0s BUSY: load 3.77 >= 3.0; /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mds_stores at 390.2% CPU > 50.0%
+t=    5.0s BUSY: load 4.11 >= 3.0
+t=   10.1s BUSY: load 3.78 >= 3.0
+t=   15.1s BUSY: load 3.56 >= 3.0
+t=   20.2s BUSY: load 3.43 >= 3.0
+t=   25.3s BUSY: load 3.24 >= 3.0
+t=   30.3s BUSY: load 3.06 >= 3.0
+t=   35.4s BUSY: /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/corespotlightd at 141.4% CPU > 50.0%
+t=   40.5s idle for 0.0s
+t=   45.5s idle for 5.1s
+t=   50.6s idle for 10.1s
+t=   55.6s idle for 15.2s
+t=   60.7s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 103.1% CPU > 50.0%
+t=   65.8s idle for 0.0s
+t=   70.8s idle for 5.1s
+t=   75.9s idle for 10.1s
+t=   81.0s idle for 15.2s
+t=   86.0s idle for 20.3s
+t=   91.1s idle for 25.3s
+t=   96.1s idle for 30.4s
+t=  101.2s idle for 35.4s
+t=  106.3s idle for 40.5s
+t=  111.3s idle for 45.6s
+t=  116.4s idle for 50.6s
+t=  121.5s idle for 55.7s
+t=  126.5s idle for 60.7s
+IDLE: held 60s (load < 3.0, no process > 50.0% CPU)
