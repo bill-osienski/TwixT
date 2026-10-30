@@ -7318,3 +7318,9 @@ approved as one sequence.**
   policy-learning result; the combination's earlier strength PASS stands. Per #123 there is no automatic retry: the
   cause (the state-cap tail), the likely cost and whether another attempt is worthwhile are for the user to assess.
   Corpus generation, training and pushing remain unauthorized. See do-not-repeat **#125**.
+
+#### Correction to entry 42 (2026-10-30)
+
+- Entry 42's "about 4 s per move against about 2 s for the rest" overstates the state-cap games' rate. From the
+  committed logs: the four 280-move games ran **2.5–3.9 s per move** (686–1,091 s), against about **2.2 s per move**
+  for a median game (120.8 s, 54 moves). The rest of entry 42 stands.
