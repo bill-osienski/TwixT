@@ -170,6 +170,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — registration, plan and admission fix accepted; the post-proof approved once (addendum, 2026-10-29, the user's decision).** The post-registration proof runs once in a clean worktree against the committed registration and unchanged plan; its create-only record is committed with the lifecycle-test update and focused CPU checks, then returns for review before the gate. The gate, checkpoint, GPU launch, closing and pushing remain unauthorized. See #116.
 > **Combination policy pilot — the throughput post-proof HOLDS (addendum, 2026-10-29).** Run once at `d28f5baf` in a clean worktree (`20486339`): the block CLEAN, the state as expected (ACCOUNTED = the survey's + the block last, nothing else changed, plan = `build_plan`), controls 45/45, exit 0. The lifecycle test now expects it and pins the proved registry to the current one. Awaiting review; the gate, checkpoint, GPU launch, closing and pushing remain unauthorized. See #117.
 > **Combination policy pilot — post-proof accepted; ONE throughput launch approved (addendum, 2026-10-29, the user's decision).** After a recorded approval, a fresh read-only panic/reboot check and a recheck that the registry and plan are unchanged, open only the throughput gate (one-line commit, clean worktree) and run the existing wrapper once, BOINC quit, both launch checks enforced; ceiling TERM 890 s / KILL 900 s / cleanup observation to 910 s. No retry, extension or top-up; outer TIMEOUT overrides inner COMPLETED and closes the pilot. Closing, corpus generation, real-data training and pushing remain unauthorized. See #118.
+> **Combination policy pilot — the throughput check: outer TIMEOUT; the pilot CLOSED at step 2 (entry 41, 2026-10-29).** The one approved run hit the 890 s ceiling (inner 124, TERM sufficed; script record VOID "terminated"): 131 of 144 slots started, 113 finished, about 457 finished games/h against the ~576 the ceiling needed. Gate restored, no survivors, generation refused. No policy-learning result; the hypothesis is neither supported nor rejected. Seed closing awaits approval. See #119.
 
 ## Historical proposal check — programme now closed
 
@@ -1818,6 +1819,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 116. **The throughput post-proof (2026-10-29).** Do **not** run the post-registration proof more than once, on a dirty tree, or against anything but the committed registration (`88c5d162`) and the unchanged plan; do **not** rerun or overwrite its record whatever its verdict. Do **not** open the gate, load the checkpoint, launch, close or push on this approval.
 117. **The throughput post-proof record (2026-10-29).** Do **not** rerun the post-proof, or edit or regenerate `04_collision_proof_post_run.txt` (sha256 `03d04570…`). Do **not** change the registry or the plan before the run without a new proof: the lifecycle test pins the proved registry hash to the current file. Do **not** open the gate, load the checkpoint, launch, close or push without the user's approval of each.
 118. **The one throughput launch (2026-10-29).** Do **not** run the throughput wrapper more than once, retry, extend, top up or rerun any part of a started run, or change its ceiling (TERM 890 s, KILL 900 s, observation to 910 s). Do **not** open any gate but the throughput gate, or open it if the registry or plan differ from what the post-proof proved: that returns for review, not to an automatic proof rerun. Do **not** count an outer TIMEOUT as a completed run, or use the 144 throughput games as training or strength evidence. Do **not** close, generate the corpus, train on real data or push without approval.
+119. **The combination policy pilot, closed at the throughput check (2026-10-29).** Do **not** retry, extend, top up or rerun the throughput check, raise its 15-minute ceiling, reuse its block or its 144 games (never training or strength evidence), or proceed to generation or training: the pilot is closed by its own rule (card §5 step 2). Do **not** read the TIMEOUT as evidence about policy learning, or the descriptive games/h as the card's measurement (the record's `throughput` is null). A new pilot, a card amendment or seed closing needs the user's decision. Do **not** chain a merge after a commit whose failure a pipe can hide.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -6909,3 +6911,56 @@ approved as one sequence.**
 - **Rules:** a started run gets no retry, extension or top-up. An outer TIMEOUT overrides an inner COMPLETED record
   and closes the pilot. The throughput games stay excluded from training and strength evidence.
 - **Still unauthorized:** closing, corpus generation, real-data training and pushing. See do-not-repeat **#118**.
+
+### 41. Combination policy pilot — step 2, the throughput check (2026-10-29, outer TIMEOUT; VOID; the pilot CLOSED)
+
+- **Test:** card §5 step 2 (`docs/superpowers/2026-10-28-combination-policy-pilot-card.md`): 144 slots on the
+  registered block [202696900, 202697044), 18 workers, calib020_0001 on the GPU with `MLX_ENABLE_TF32=0`, inside a
+  15-minute ceiling (TERM at 890 s, KILL at 900 s, cleanup observation to 910 s). All 144 games must finish inside
+  it; a run the ceiling stops is VOID and closes the pilot. Its games are never used.
+- **Hypothesis:** the combination self-play runs fast enough at 18 workers for step 3's 1,000-game generation to be
+  priced from it.
+- **Why it was plausible:** card §7 estimated about 350–700 games/h (strength 2: about 32 s per single-process
+  combination game; the arbiter's batching at 18 workers unknown).
+- **Prediction on record:** card §7's 350–700 games/h estimate (written before any run). The build's unresolved
+  issues (card, "Unresolved issues found in the build"; entry 40) recorded that 144 games in 900 s needs about
+  576 games/h, so the 15-minute rule might close the pilot on throughput alone.
+- **What ran:** decision `bdb691dc` (#118). A fresh read-only panic/reboot check (no reboot since 2026-10-25 09:39; the
+  only panic report is that one) and a recheck: registry sha256 `71770f79…` = the post-proof's, registry and run
+  directory unchanged since `88c5d162`; BOINC check CLEAR (podman exempt); load about 1.2. Clean linked worktree
+  `cp-throughput-run`; the one-line gate opening `60493787` (only `COMBINATION_POLICY_THROUGHPUT_AUTHORIZED`); the
+  existing wrapper run once at 20:03:33 EDT. Idle gate held 60 s, background check CLEAR, then launch. Evidence
+  `dba747bf`.
+- **Result:**
+  - **Wrapper:** inner exit **124** (the ceiling fired and TERM sufficed), outer exit 124, outcome **TIMEOUT**,
+    `gate_restored` true, survivors empty, `record_by` script, wall 890 s. The gate file is identical to the pre-open
+    commit; no pilot process remained; pgid 71921 was empty.
+  - **Inner record:** status **VOID**, step "terminated", "SIGTERM after 889.9 s"; `throughput` null, verdict null. So
+    the inner and outer records agree (no COMPLETED to override). TF32 "0" at start and end; the model loaded with 0
+    of 42 modules in training mode; 114 BOINC checks, all clear; stderr empty.
+  - **Slots:** 131 started (exactly slots 0–130, a prefix), 113 finished, 18 in flight at TERM (running 1–327 s);
+    slots 131–143 never started.
+  - **Descriptive timing, derived from the committed logs (not the card's measurement):** 113 finished games over
+    889.9 s is about 457 games/h. Finished games took mean 130.3 s (median 123.5, range 70.2–695.5) and 58.5 moves
+    (median 56, range 33–280); 2 ended at the state cap. Finished games alone account for 817.7 s per worker of the
+    890 s, so the workers were busy almost throughout: at about 130 s per game, 144 games at 18 workers need roughly
+    1,040 s of work before any tail.
+  - **Admission:** `admitted("generate")` on the committed evidence REFUSES (the record is not COMPLETED).
+  - **Post-run:** no new panic report and no reboot; the gate inventory derives 53 gates, all closed.
+- **Did it match the prediction?** The descriptive rate (about 457 games/h) lies inside §7's 350–700 range but below
+  the about 576 games/h the 15-minute rule needed, which is the risk the build recorded. Per-game time at 18 workers
+  (about 130 s) is about four times strength 2's single-process 32 s; why is not established here (the arbiter's
+  rows per call were not recorded, because the run was VOID).
+- **Process slip, disclosed:** after the run, the first evidence commit failed (zsh passed the path list as one
+  argument), a pipe hid the failure, and the chained `git merge --ff-only` fast-forwarded main to the gate-opening
+  commit `60493787`. For about a minute the main checkout held the gate open; nothing ran. The worktree still held the
+  evidence and the restored gate; it was committed (`dba747bf`) and main fast-forwarded to it, gate identical to
+  `bdb691dc`. Nothing was pushed.
+- **Lifecycle test:** `test_THE_THROUGHPUT_BLOCK_IS_REGISTERED_AND_PROVEN_…` now fails, as it should (it asserts no
+  run output); re-anchoring it was not in this approval and awaits the user.
+- **Conclusion / status:** the throughput check is **VOID**; by card §5 step 2 the **combination policy pilot is
+  CLOSED** at step 2. There is no policy-learning result: the card's hypothesis (§4: the search-derived target
+  improves the agent's prior; §1: one round of learning from the agent's own search makes it stronger) is neither
+  supported nor rejected. Seed closing for the block (131 slots started), any amendment and any
+  new design need the user's decision. Closing, corpus generation, real-data training and pushing remain
+  unauthorized. See do-not-repeat **#119**.
