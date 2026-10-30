@@ -1,0 +1,6 @@
+{
+ "base": 202697200,
+ "kind": "combination-policy-throughput2-plan/1",
+ "n_slots": 144,
+ "survey_record_sha256": "26ef84708284c3d08cbe41371db83f84e9548141ddb657908ab1eebc59ed452a"
+}

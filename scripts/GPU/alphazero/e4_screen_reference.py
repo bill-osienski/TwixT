@@ -693,6 +693,18 @@ ACCOUNTED_SEED_INTERVALS = (
     # Accounted, NOT exposed and NOT retired: exposure follows actual use (the started slots, as the closing rule
     # establishes them); the closing edit retires the whole block. No gate is opened by this.
     (202696900, 202697044),          # COMBINATION POLICY PILOT THROUGHPUT CHECK -- 144 game seeds
+    # 🔴 COMBINATION POLICY PILOT -- THE THROUGHPUT CHECK, ATTEMPT 2 -- 144 GAME SEEDS, registered 2026-10-30: the
+    # 144-seed block of attempt 2's survey (evidence/combination-policy-throughput2-seed-survey/02_*), READ from that
+    # record, not chosen here, by the replacement rule (seed_selection.candidate). One seed per slot of the ONE fresh
+    # attempt (amendment docs/superpowers/2026-10-29-combination-policy-throughput-attempt2-amendment.md to card
+    # docs/superpowers/2026-10-28-combination-policy-pilot-card.md §5 step 2; `combination_policy_pilot run
+    # throughput2`: slot g plays seed BASE + g, whichever worker claims it). No game of attempt 1 is pooled into it. The
+    # plan is evidence/combination-policy-throughput2-run/plan.json (base + slot count + survey hash). Registered ONLY
+    # after the pre-registration collision proof (same directory, 03_*) was CLEAN, 45/45.
+    #
+    # Accounted, NOT exposed and NOT retired: exposure follows actual use (the started slots, as the closing rule
+    # establishes them); the closing edit retires the whole block. No gate is opened by this.
+    (202697200, 202697344),          # COMBINATION POLICY PILOT THROUGHPUT CHECK ATTEMPT 2 -- 144 game seeds
 )
 
 #: EXPERIMENTAL EXPOSURE: seeds drawn from OUTSIDE the permanently unschedulable
