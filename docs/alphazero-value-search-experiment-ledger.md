@@ -7519,3 +7519,22 @@ Committed in `f870de24`; nothing run on the real repository.
 - **Not done:** the real survey, the proofs, registration, the plan, the gate, checkpoint loading, GPU work,
   generation, training and pushing. All 54 gates are closed.
 - **Status:** awaiting the user's review before the real survey. See do-not-repeat **#127**.
+
+#### Addendum — the two-band method accepted; the generation seed preparation approved as one conditional sequence, with the closing copy (2026-10-30, the user's decision)
+
+- **Accepted:** the two-band seed method and training's admission fix (`f870de24`). The rule may use repository
+  literals for its anchor; that is outcome-blind bookkeeping, and counting the hex-digest fragment conservatively is
+  acceptable. The user verified the pinned methods intact, the registry and historical evidence unchanged, all 54
+  gates closed and no generation plan or output; training now needs generation's successful committed inner and outer
+  records.
+- **Approved, as one conditional sequence:**
+  1. run the real generation seed survey once;
+  2. only if it is CLEAN with 55/55 controls: commit its record, then run the pre-proof once;
+  3. only if the pre-proof HOLDS: register exactly the surveyed block in ACCOUNTED and create the plan through
+     `build_plan`, the other registry lists unchanged;
+  4. run the post-proof once, then update the affected lifecycle checks and run focused CPU tests.
+- **If any check fails:** stop and return the result; the block is never adjusted.
+- **Also approved, alongside:** the generation seed-closing copy, by the reviewed parallel-worker rule, with focused
+  CPU checks.
+- **Not authorized:** checkpoint loading, GPU generation, training and pushing.
+- **Prediction on record:** none.
