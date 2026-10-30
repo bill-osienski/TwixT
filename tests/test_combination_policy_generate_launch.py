@@ -33,6 +33,8 @@ WRAPPER = EV / "combination-policy-generate-run/01_wrapper.sh"
 GATE_NAME = "COMBINATION_POLICY_GENERATE_AUTHORIZED"
 SURVEY2 = "combination-policy-throughput2-seed-survey/01_seed_survey.py"
 SURVEY = "combination-policy-generate-seed-survey/01_seed_survey.py"
+CLOSING2 = "combination-policy-throughput2-seed-closing/01_derive_usage.py"
+CLOSING = "combination-policy-generate-seed-closing/01_derive_usage.py"
 AMENDMENT = ("docs/superpowers/2026-10-30-combination-policy-generation-amendment.md",
              "11ced08185bd5e2727de07628a95e7cdc872ec31dae808e898640539742d7f55")
 
@@ -49,20 +51,58 @@ def isolated(monkeypatch, tmp_path):
     monkeypatch.setenv(P.SETTING, P.SETTING_VALUE)
 
 
-def test_NOTHING_OF_GENERATION_HAS_RUN_and_both_throughput_runs_stay_VOID():
-    """Built only: the gate is closed; the wrapper is the run directory's only file; no plan, run evidence, seed record
-    or corpus exists. Both throughput runs stand as written -- VOID records under outer TIMEOUTs -- and their evidence
-    is unchanged since their closings (attempt 1 e30e277c, attempt 2 ae361458). Read-only."""
+def test_GENERATION_S_BLOCK_IS_SURVEYED_PROVEN_AND_REGISTERED_NOTHING_HAS_RUN_and_both_throughput_runs_stay_VOID():
+    """RE-ANCHORED 2026-10-30 (survey bb1549ea, pre-proof 4701b1d3, registration 326004d0, post-proof 5a17ea92): the
+    survey is CLEAN and both proofs HOLD, each 55/55 on a clean tree, the proofs bound to the survey record's sha256;
+    the plan is the copy's build_plan; the block (read from the plan and the records -- no seed literal here, since
+    the proofs scan tests/) is the first in the 2027 band, ACCOUNTED exactly once and last, in no other registry, every
+    seed schedulable; the registry the post-proof proved is the current one. Nothing has run: the gate is closed, the
+    run directory holds the wrapper and the plan only, and no run evidence, closing record or corpus exists. Both
+    throughput runs stand as written -- VOID records under outer TIMEOUTs -- unchanged since their closings (attempt 1
+    e30e277c, attempt 2 ae361458). Read-only."""
+    import hashlib
     from scripts.GPU.alphazero import combination_policy_generate_authorization as G
+    from scripts.GPU.alphazero import e4_screen_reference as REG
+    from scripts.GPU.alphazero import seed_band_2027 as SB
     assert getattr(G, GATE_NAME) is False
     assert P.KINDS["generate"]["amendment"] == AMENDMENT
     assert P.M._sha((ROOT / AMENDMENT[0]).read_bytes()) == AMENDMENT[1]
-    assert sorted(x.name for x in WRAPPER.parent.iterdir()) == ["01_wrapper.sh"]
-    assert not (ROOT / P.KINDS["generate"]["plan"]).exists()
+    assert sorted(x.name for x in WRAPPER.parent.iterdir()) == ["01_wrapper.sh", "plan.json"]
     assert not (ROOT / P.KINDS["generate"]["evidence"]).exists()
-    assert sorted(x.name for x in (EV / SURVEY).parent.iterdir() if x.name != "__pycache__") == ["01_seed_survey.py"]
-    assert not (EV / "combination-policy-generate-seed-closing").exists()
+    here = (EV / SURVEY).parent
+    assert sorted(x.name for x in here.iterdir() if x.name != "__pycache__") == \
+        ["01_seed_survey.py", "02_seed_survey_run.txt", "03_collision_proof_pre_run.txt",
+         "04_collision_proof_post_run.txt"]
+    assert sorted(x.name for x in (EV / CLOSING).parent.iterdir() if x.name != "__pycache__") == ["01_derive_usage.py"]
     assert not (pathlib.Path.home() / "twixt-cache/combination-policy-pilot/generate").exists()
+    raw = (here / "02_seed_survey_run.txt").read_bytes()
+    survey, sha = raw.decode("utf-8"), hashlib.sha256(raw).hexdigest()
+    assert survey.splitlines()[2].endswith("; working tree clean") and "controls passed: 55/55" in survey
+    assert survey.endswith("SURVEY VERDICT   : THE COMBINATION-POLICY GENERATION BLOCK IS CLEAN\n")
+    for rel, mode in (("03_collision_proof_pre_run.txt", "pre"), ("04_collision_proof_post_run.txt", "post")):
+        text = (here / rel).read_text(encoding="utf-8")
+        assert text.splitlines()[2].endswith("; working tree clean")
+        assert f"02_seed_survey_run.txt sha256 {sha} (read at " in text
+        assert f"EXPECTED STATE ({mode}): HOLDS" in text and "controls passed: 55/55" in text
+        assert text.endswith(f"PROOF VERDICT ({mode}): THE COMBINATION-POLICY GENERATION BLOCK IS CLEAN AND THE STATE "
+                             "IS AS EXPECTED\n")
+    post = (here / "04_collision_proof_post_run.txt").read_text(encoding="utf-8")
+    reg_rel = "scripts/GPU/alphazero/e4_screen_reference.py"
+    assert f"\nregistry {reg_rel} sha256 {hashlib.sha256((ROOT / reg_rel).read_bytes()).hexdigest()}\n" in post
+    plan = json.loads((ROOT / P.KINDS["generate"]["plan"]).read_text(encoding="utf-8"))
+    n = P.KINDS["generate"]["slots"]
+    assert type(plan["base"]) is int and plan["n_slots"] == n == 1000
+    assert plan == _load(SURVEY, "_gen_survey_registered").build_plan(plan["base"], sha)
+    block = (plan["base"], plan["base"] + n)
+    assert SB.BAND[0] <= block[0] < block[1] <= SB.BAND[1] and block[0] % SB.ALIGN == 0
+    assert f"block = [{block[0]}, {block[1]}) -- {n} seeds" in survey
+    assert f"THE BLOCK, read from the record: [{block[0]}, {block[1]}) -- BASE {block[0]}" in post
+    assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1 and REG.ACCOUNTED_SEED_INTERVALS[-1] == block
+    assert not any(lo < block[1] and block[0] < hi
+                   for lo, hi in REG.EXPOSED_SEED_INTERVALS + REG.RETIRED_SEED_INTERVALS + REG.TEST_ONLY_SEED_INTERVALS)
+    assert [iv for iv in REG.ACCOUNTED_SEED_INTERVALS if iv[1] > SB.BAND[0]] == [block]     # the band's first block
+    assert all(REG.seed_is_accounted(s) and not REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s)
+               for s in range(*block))
     for kind in ("throughput", "throughput2"):
         rec = json.loads((ROOT / P.KINDS[kind]["evidence"] / "record.json").read_text(encoding="utf-8"))
         run_dir = ROOT / pathlib.Path(P.KINDS[kind]["plan"]).parent
@@ -495,7 +535,9 @@ def test_THE_THREE_MODES_REHEARSED_ON_A_SYNTHETIC_REPOSITORY(tmp_path, monkeypat
     for rel in (*PINNED_FILES, f"docs/superpowers/evidence/{SURVEY}"):
         (repo / rel).parent.mkdir(parents=True, exist_ok=True)
         (repo / rel).write_bytes((ROOT / rel).read_bytes())
-    old, new = SB.BAND_2026[0] + 61_000, SB.BAND[0] + 23_456
+    from scripts.GPU.alphazero import e4_screen_reference as REG
+    top = max([SB.BAND[0]] + [hi for lo, hi in REG.ACCOUNTED_SEED_INTERVALS if hi > SB.BAND[0]])
+    old, new = SB.BAND_2026[0] + 61_000, top + 23_456          # the planted 2027 literal above every registered block
     reg = repo / "scripts/GPU/alphazero/e4_screen_reference.py"
     reg.write_text(f"ACCOUNTED_SEED_INTERVALS = (\n    ({old}, {old + 10}),\n)\nEXPOSED_SEED_INTERVALS = ()\n"
                    "RETIRED_SEED_INTERVALS = ()\nTEST_ONLY_SEED_INTERVALS = ()\n")
@@ -508,7 +550,8 @@ def test_THE_THREE_MODES_REHEARSED_ON_A_SYNTHETIC_REPOSITORY(tmp_path, monkeypat
 
     mod, code, survey = _mode(repo, "survey", monkeypatch, capsys)
     assert code == 0, survey[-2500:]
-    _a, base, block = SB.candidate([], [new], 1000)
+    anchor, base, block = SB.candidate(REG.ACCOUNTED_SEED_INTERVALS, [new], 1000)
+    assert anchor == new                                     # the rule read the planted literal
     assert f"in the 2027 band = {new}; BASE = {base}; block = [{block[0]}, {block[1]}) -- 1000 seeds" in survey
     assert survey.endswith("SURVEY VERDICT   : THE COMBINATION-POLICY GENERATION BLOCK IS CLEAN\n")
     passed, total = re.search(r"^controls passed: (\d+)/(\d+)$", survey, re.M).groups()
@@ -535,3 +578,39 @@ def test_THE_THREE_MODES_REHEARSED_ON_A_SYNTHETIC_REPOSITORY(tmp_path, monkeypat
     assert post.endswith("PROOF VERDICT (post): THE COMBINATION-POLICY GENERATION BLOCK IS CLEAN AND THE STATE IS AS "
                          "EXPECTED\n")
 
+
+
+# ─────────────────────────────── the generation closing copy (built, never run here) ───────────────────────────────
+
+def test_THE_CLOSING_COPY_IS_THROUGHPUT_ATTEMPT_2_S_WITH_ONLY_THE_STATED_DIFFERENCES():
+    """Below the docstring: the paths, the block size and the title, line for line -- the reviewed parallel-worker
+    rule is untouched. The docstring is generation's paragraph followed by attempt 2's description unchanged."""
+    doc2, code2 = _split(CLOSING2)
+    doc, code = _split(CLOSING)
+    assert doc.endswith(doc2) and AMENDMENT[0] in doc[:-len(doc2)]
+    a, b = code2.splitlines(), code.splitlines()
+    assert len(a) == len(b)
+    assert {y.strip() for x, y in zip(a, b) if x != y} == {
+        'HERE = "docs/superpowers/evidence/combination-policy-generate-seed-closing"',
+        'RUN = "docs/superpowers/evidence/combination-policy-generate"',
+        'RUN_DIR = "docs/superpowers/evidence/combination-policy-generate-run"', "N_SLOTS = 1000",
+        'lines = ["COMBINATION POLICY PILOT -- GENERATION SEED-USAGE DERIVATION (closing)", "=" * 96,'}
+
+
+def test_THE_CLOSING_COPY_SERVES_THE_GENERATION_RUN_and_holds_no_seed_literal():
+    from scripts.GPU.alphazero import seed_band_2027 as SB
+    closing = _load(CLOSING, "_gen_closing")
+    kind = P.KINDS["generate"]
+    assert closing.N_SLOTS == kind["slots"] == 1000 and closing.INPUTS[0] == kind["plan"]
+    assert closing.RUN == kind["evidence"] and closing.RUN_DIR == str(pathlib.Path(kind["plan"]).parent)
+    assert closing.OUT == "docs/superpowers/evidence/combination-policy-generate-seed-closing/02_derive_usage_run.txt"
+    code = _split(CLOSING)[1]
+    assert not SB.scan(code) and not re.search(r"\b20[0-9]{7}\b", code)
+
+
+def test_THE_CLOSING_COPY_S_CONTROLS_ALL_PASS_at_the_registered_base():
+    """Its 21 controls (the parallel-worker rule: out-of-order starts, claims, gaps, duplicates, refusals, survivors)
+    at the plan's BASE, read from the committed plan."""
+    base = json.loads((ROOT / P.KINDS["generate"]["plan"]).read_text(encoding="utf-8"))["base"]
+    results = _load(CLOSING, "_gen_closing_c")._controls(base)
+    assert len(results) == 21 and all(ok for _l, ok, _d in results), [r for r in results if not r[1]]

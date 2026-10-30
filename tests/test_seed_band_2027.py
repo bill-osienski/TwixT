@@ -188,11 +188,17 @@ def test_THE_GAP_FLOOR_IS_THE_BLOCK_S_SIZE_against_literals_in_either_band():
 
 # ─────────────────────────────── the real state ───────────────────────────────
 
-def test_REAL_STATE_nothing_is_registered_in_the_2027_band_yet():
+def test_REAL_STATE_the_2027_band_holds_only_the_generation_block_in_ACCOUNTED():
+    """RE-ANCHORED 2026-10-30 (registration 326004d0): the band's first and only registered block is generation's,
+    read from its committed plan (no literal here), ACCOUNTED only; the rule would now place a later block above it."""
+    import json
     from scripts.GPU.alphazero import e4_screen_reference as REG
-    for name in ("ACCOUNTED_SEED_INTERVALS", "EXPOSED_SEED_INTERVALS", "RETIRED_SEED_INTERVALS",
-                 "TEST_ONLY_SEED_INTERVALS"):
+    plan = json.loads((ROOT / "docs/superpowers/evidence/combination-policy-generate-run/plan.json").read_text())
+    block = (plan["base"], plan["base"] + plan["n_slots"])
+    assert [iv for iv in REG.ACCOUNTED_SEED_INTERVALS if iv[1] > NEW] == [block]
+    for name in ("EXPOSED_SEED_INTERVALS", "RETIRED_SEED_INTERVALS", "TEST_ONLY_SEED_INTERVALS"):
         assert all(hi <= NEW for _lo, hi in getattr(REG, name)), name
+    assert B.candidate(REG.ACCOUNTED_SEED_INTERVALS, [], 64)[2][0] >= block[1] + 64
 
 
 def test_THIS_MODULE_HOLDS_NO_SEED_LITERAL():
