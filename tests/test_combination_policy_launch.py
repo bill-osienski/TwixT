@@ -51,7 +51,9 @@ def test_THE_THROUGHPUT_BLOCK_IS_REGISTERED_PROVEN_RUN_ONCE_AND_CLOSED_with_the_
     RE-ANCHORED 2026-10-29 (the run, dba747bf, and its closing, K1 b69515d5 + K2 e30e277c): the ONE run hit the 890 s
     ceiling -- outer TIMEOUT (inner 124), record VOID, gate restored, no survivors -- so generation is never admitted
     from it; K1 RECONCILES with no final `claims` event, so the WHOLE block is EXPOSED and RETIRED, each exactly once
-    and appended last, ACCOUNTED unchanged, and every seed is refused. The gate is closed. Read-only."""
+    and appended last, ACCOUNTED unchanged, and every seed is refused. The gate is closed. Read-only.
+    RE-ANCHORED 2026-10-30 (attempt 2's closing, ae361458): the block is no longer the last EXPOSED/RETIRED entry;
+    every later entry lies above it."""
     import hashlib
     import subprocess
     from scripts.GPU.alphazero import combination_policy_throughput_authorization as G
@@ -106,8 +108,9 @@ def test_THE_THROUGHPUT_BLOCK_IS_REGISTERED_PROVEN_RUN_ONCE_AND_CLOSED_with_the_
     assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1
     later = REG.ACCOUNTED_SEED_INTERVALS[REG.ACCOUNTED_SEED_INTERVALS.index(block) + 1:]
     assert all(lo >= block[1] for lo, _hi in later)
-    assert REG.EXPOSED_SEED_INTERVALS.count(block) == 1 and REG.EXPOSED_SEED_INTERVALS[-1] == block
-    assert REG.RETIRED_SEED_INTERVALS.count(block) == 1 and REG.RETIRED_SEED_INTERVALS[-1] == block
+    for name in ("EXPOSED_SEED_INTERVALS", "RETIRED_SEED_INTERVALS"):      # attempt 2's closing (2026-10-30) lies above
+        ivs = getattr(REG, name)
+        assert ivs.count(block) == 1 and all(lo >= block[1] for lo, _hi in ivs[ivs.index(block) + 1:]), name
     assert not any(lo < block[1] and block[0] < hi and (lo, hi) != block
                    for lo, hi in REG.EXPOSED_SEED_INTERVALS + REG.RETIRED_SEED_INTERVALS + REG.TEST_ONLY_SEED_INTERVALS)
     assert all(REG.seed_is_accounted(s) and REG.seed_is_exposed(s) and REG.seed_is_retired(s) and
