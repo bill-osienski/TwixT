@@ -177,6 +177,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — ONE fresh attempt at the throughput check: amendment and build only (decision note after entry 41, 2026-10-29, the user's decision).** Attempt 1's 15-minute ceiling was too tight (113 games in ~890 s, roughly 19 minutes for 144). Attempt 2: the same 144 games, model, search, 18 workers and cap 14; TERM 1,790 s, KILL 1,800 s, observation to 1,810 s; fresh seeds, separate paths, gate 54 closed; generation admitted from attempt 2's committed inner and outer records only. Built for review; nothing run. See #122.
 > **Combination policy pilot — attempt 2's build ACCEPTED; the seed survey and pre-proof approved once each (addendum, 2026-10-30, the user's decision).** "No further attempt" (amendment, #122) means one attempt now with no automatic retry; after a TIMEOUT or interruption the cause, cost and worth of another attempt are assessed, and any further attempt is the user's fresh decision (#123). The pinned amendment is unchanged. Registration, GPU work, games, training and pushing remain unauthorized.
 > **Combination policy pilot — attempt 2's seed survey → CLEAN; pre-proof → HOLDS (addendum, 2026-10-30).** Survey run once (`df0c0ec9`, clean worktree at `a3a54485`): block [202697200, 202697344), 144 seeds, gap 150 (floor 144), controls 45/45. Pre-proof run once (`fcd3969d`, clean worktree at `df0c0ec9`), bound to the survey record (sha256 `26ef8470…`): the state HOLDS, the block CLEAN, 45/45. Not registered; awaiting review.
+> **Combination policy pilot — attempt 2's survey and pre-proof ACCEPTED; registration, plan and post-proof approved as one conditional sequence (addendum, 2026-10-30, the user's decision).** Append exactly the surveyed block to ACCOUNTED and create the plan via `build_plan`; only if both are exactly as expected, run the post-proof once. Stop on any difference. The gate, GPU work, games, training and pushing remain unauthorized.
 
 ## Historical proposal check — programme now closed
 
@@ -7178,3 +7179,19 @@ approved as one sequence.**
 - **Not done:** registration, the plan, the post-proof, the gate, checkpoint loading, GPU work, games, training and
   pushing. ACCOUNTED and the registry are unchanged; all 54 gates are closed.
 - **Status:** awaiting the user's review before registration.
+
+#### Addendum — attempt 2's survey and pre-proof accepted; registration, plan and post-proof approved as one conditional sequence (2026-10-30, the user's decision)
+
+- **Accepted:** the survey (`df0c0ec9`) and pre-proof (`fcd3969d`). The user verified both committed hashes, their
+  binding, all 144 slot lines, the 45/45 controls and the unchanged registry. The block is unregistered, all 54 gates
+  are closed and attempt 1's evidence is unchanged. The lifecycle-test re-anchoring was routine upkeep of approved work
+  and needed no separate approval. #123 matches the intended policy: any interruption is assessed before deciding what
+  to do next.
+- **Approved, as one conditional sequence:**
+  1. Append exactly [202697200, 202697344) to ACCOUNTED and create the plan through the survey copy's `build_plan`,
+     bound to the survey record's sha256. The other registry lists stay unchanged.
+  2. Only if the registration and plan are exactly as expected: run the post-registration proof once, commit its
+     record, and update the affected lifecycle test with focused CPU checks.
+- **Stop and return** if the registration differs or the proof does not hold. Otherwise return the combined results
+  before the gate is opened.
+- **Not authorized:** opening the gate, checkpoint loading, GPU work, games, training and pushing.
