@@ -179,6 +179,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — attempt 2's seed survey → CLEAN; pre-proof → HOLDS (addendum, 2026-10-30).** Survey run once (`df0c0ec9`, clean worktree at `a3a54485`): block [202697200, 202697344), 144 seeds, gap 150 (floor 144), controls 45/45. Pre-proof run once (`fcd3969d`, clean worktree at `df0c0ec9`), bound to the survey record (sha256 `26ef8470…`): the state HOLDS, the block CLEAN, 45/45. Not registered; awaiting review.
 > **Combination policy pilot — attempt 2's survey and pre-proof ACCEPTED; registration, plan and post-proof approved as one conditional sequence (addendum, 2026-10-30, the user's decision).** Append exactly the surveyed block to ACCOUNTED and create the plan via `build_plan`; only if both are exactly as expected, run the post-proof once. Stop on any difference. The gate, GPU work, games, training and pushing remain unauthorized.
 > **Combination policy pilot — attempt 2's block REGISTERED with its plan; post-proof → HOLDS (addendum, 2026-10-30).** [202697200, 202697344) appended last to ACCOUNTED (47 → 48), nothing else changed; plan = `build_plan` (`22f81be1`). Post-proof run once (`1c2f4220`), bound to the survey record: the state HOLDS, the block CLEAN, 45/45. Lifecycle test re-anchored; 243 passed. Gate closed; awaiting review before it is opened.
+> **Combination policy pilot — attempt 2's registration and post-proof ACCEPTED; the ONE attempt-2 launch approved with its closing (addendum, 2026-10-30, the user's decision).** Panic/reboot check and registry/plan recheck; only gate 54 opened in a clean worktree; the existing wrapper once (idle + BOINC checks, TF32=0, TERM 1,790 s / KILL 1,800 s / observation to 1,810 s). After a started run: K1 once; only if it RECONCILES, its exposure verdict and the whole block retired. No automatic retry. Generation, training and pushing remain unauthorized. See #124.
 
 ## Historical proposal check — programme now closed
 
@@ -1832,6 +1833,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 121. **The throughput block, closed (2026-10-29).** Do **not** reuse, unexpose, unretire or re-register any seed of [202696900, 202697044), rerun K1 or K2, or edit `02_derive_usage_run.txt` (sha256 `502e164a…`). Do **not** use the 113 finished throughput games for anything. Do **not** read the older registry-test failures (the same 16 failed / 69 errors before and after K2) as caused by this closing. A retry, amendment, profiling run, corpus generation, training or push needs a new decision.
 122. **The throughput check, attempt 2 (2026-10-29).** Do **not** make a third attempt, retry, extend or top up attempt 2, or change its ceiling (TERM 1,790 s, KILL 1,800 s, observation to 1,810 s). Do **not** admit generation from attempt 1's records or paths, from an attempt-2 record without the pinned amendment's sha256, or without attempt 2's successful committed `outer.json`. Do **not** change the learning target, training recipe or evaluation criteria, repeat the CPU timing, profile or sweep parameters on this amendment. Do **not** edit the pinned amendment (sha256 `6dba686d…`) or attempt 1's evidence, closed seeds or registry entries. Seed procedures, checkpoint loading, GPU work, gameplay, training and pushing each need their own approval.
 123. **Clarification of #122 (2026-10-30, the user's review).** #122's "a third attempt" and the amendment's "no further attempt, whatever happens" mean: one attempt is authorized now, with **no automatic** retry, extension or top-up. If attempt 2 times out or is interrupted, do **not** retry it on the spot; assess the cause, the likely cost and whether another attempt is worthwhile, and return that to the user, whose fresh decision any further attempt needs. Do **not** edit the pinned amendment to say this, and do **not** build a retry in advance.
+124. **The one attempt-2 launch (2026-10-30).** Do **not** run the attempt-2 wrapper more than once, retry, extend, top up or rerun any part of a started run, or change its ceiling (TERM 1,790 s, KILL 1,800 s, observation to 1,810 s), workers, cap, checks or TF32 setting. An outer TIMEOUT overrides an inner COMPLETED record. Do **not** open any gate but gate 54, edit the registry before the closing derivation RECONCILES, or use the throughput games for training or strength evidence. After a TIMEOUT or interruption, assess before any further attempt (#123). Corpus generation, training and pushing need their own approval.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -7227,3 +7229,25 @@ approved as one sequence.**
   background-compute and tactical-survey suites: 243 passed, 1 deselected. No test process left behind.
 - **Not done:** opening the gate, checkpoint loading, GPU work, games, training and pushing. All 54 gates are closed.
 - **Status:** awaiting the user's review before the gate is opened.
+
+#### Addendum — attempt 2's registration and post-proof accepted; the ONE attempt-2 launch approved, with its closing as one conditional sequence (2026-10-30, the user's decision)
+
+- **Accepted:** the registration (`22f81be1`) and post-proof (`1c2f4220`). The user verified the exact ACCOUNTED append,
+  the unchanged other registry statements, the plan and its survey binding, the post-proof hash and its 45/45 controls;
+  the card and amendment pins match, all 54 gates are closed, and no attempt-2 run output exists.
+- **Approved sequence:**
+  1. Record this decision; a fresh read-only panic/reboot check; recheck that the proved registry and the plan are
+     unchanged.
+  2. In a clean worktree, open **only gate 54** with the one-line commit and run the existing wrapper
+     (`combination-policy-throughput2-run/01_wrapper.sh`) **once**. This authorizes checkpoint loading and GPU work for
+     these 144 throughput games.
+  3. The idle and BOINC checks, TF32=0 and the ceiling (TERM 1,790 s, KILL 1,800 s, cleanup observation to 1,810 s)
+     stay as built.
+  4. After a **started** run: the gate restored, then the existing seed-closing derivation
+     (`combination-policy-throughput2-seed-closing/01_derive_usage.py`) once. If it RECONCILES, apply its exposure
+     verdict, retire the full block and update the lifecycle test with focused CPU checks. If it does not reconcile,
+     stop before editing the registry.
+- Commit the evidence and the closeout, then return for review. A pre-launch refusal is not a started run. If the
+  attempt times out or is interrupted, the cause and whether another attempt is worthwhile are assessed (#123); there is
+  no automatic retry.
+- **Not authorized:** corpus generation, training and pushing. See **#124**.
