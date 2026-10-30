@@ -182,6 +182,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — attempt 2's registration and post-proof ACCEPTED; the ONE attempt-2 launch approved with its closing (addendum, 2026-10-30, the user's decision).** Panic/reboot check and registry/plan recheck; only gate 54 opened in a clean worktree; the existing wrapper once (idle + BOINC checks, TF32=0, TERM 1,790 s / KILL 1,800 s / observation to 1,810 s). After a started run: K1 once; only if it RECONCILES, its exposure verdict and the whole block retired. No automatic retry. Generation, training and pushing remain unauthorized. See #124.
 > **Combination policy pilot — the throughput check, ATTEMPT 2: outer TIMEOUT; VOID; block closed (entry 42, 2026-10-30).** All 144 games started and 143 finished; slot 108 (started at 711 s) was in flight at the 1,790 s TERM (inner 124; record VOID; gate restored; no survivors). The bulk ran at attempt 1's pace; four 280-move state-cap games took 686–1,091 s, and that tail, not the mean, sank the run. K1 RECONCILES 21/21 (no claims event); K2 EXPOSES and RETIRES [202697200, 202697344) whole. No policy-learning result; no automatic retry (#123). See #125.
 > **Combination policy pilot — generation without a completed throughput check: amendment, admission and wrapper BUILT; the seed survey NOT run (decision note + addendum after entry 42, 2026-10-30).** The user accepted attempt 2's TIMEOUT and closing and approved preparation for one 1,000-game generation run with a six-hour ceiling (amendment `11ced081…`, `7295e765`): admitted by the committed CPU timing alone; neither throughput record is read or relabelled; a timeout is VOID and assessed, with no automatic retry. The existing seed rule's 1,000-seed block [202698400, 202699400) contains the H4 fixture literals 202699000 and 202699032, so its survey could only be NOT CLEAN; it was not run. The seed method needs the user's decision. Nothing run; 54 gates closed. See #126.
+> **Combination policy pilot — the two-band seed method and training's outer-record admission BUILT; the real survey NOT run (decision note + addendum, 2026-10-30).** The user accepted the generation build and the seed blocker and chose the 2027 band [202700000, 202800000) for generation's seeds. `seed_band_2027.py` (`f870de24`) widens the pinned scanner to both bands (plain and underscore-grouped) inside a private copy of the pinned module and places the block above every registered seed and repository literal in the 2027 band (an empty band: N above its edge); the gap floor stays 1,000 and the check is the pinned one. Training now also needs generation's committed `outer.json` to pass `outer_faults`. A three-mode rehearsal on a synthetic repository passes 55/55 controls per mode. Nothing run on the real repository; 54 gates closed. See #127.
 
 ## Historical proposal check — programme now closed
 
@@ -1838,6 +1839,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 124. **The one attempt-2 launch (2026-10-30).** Do **not** run the attempt-2 wrapper more than once, retry, extend, top up or rerun any part of a started run, or change its ceiling (TERM 1,790 s, KILL 1,800 s, observation to 1,810 s), workers, cap, checks or TF32 setting. An outer TIMEOUT overrides an inner COMPLETED record. Do **not** open any gate but gate 54, edit the registry before the closing derivation RECONCILES, or use the throughput games for training or strength evidence. After a TIMEOUT or interruption, assess before any further attempt (#123). Corpus generation, training and pushing need their own approval.
 125. **The throughput check, attempt 2, VOID and closed (2026-10-30).** Do **not** reuse, unexpose, unretire or re-register any seed of [202697200, 202697344), rerun K1 or K2, edit attempt 2's run, closing or seed records, or use its games (143 finished) as training, throughput or strength evidence. Do **not** retry, extend or top up attempt 2. Do **not** read its 288 games/h (descriptive, VOID) as the pilot's measurement. Any further attempt is the user's fresh decision after assessing the cause (the 280-move state-cap tail: four games took 686–1,091 s), the cost and the worth (#123).
 126. **Generation without a completed throughput check (2026-10-30).** Do **not** read either throughput record (each VOID under an outer TIMEOUT) as a pass, rewrite either, or admit generation through them; do **not** use either throughput run's games for training. Do **not** change the generation ceiling (TERM 21,590 s, KILL 21,600 s, observation to 21,610 s), the recipe, the target, the workers or the cap under this amendment. Do **not** run the generation seed survey under the existing rule (its 1,000-seed block holds in-band repository literals, so it cannot be CLEAN); do **not** adjust the rule, its gap floor or the block size, edit or remove the H4 fixture literals to make room, or move to a new band without a reviewed method. A generation timeout is VOID and is assessed by the user; no automatic retry, extension or top-up.
+127. **The two-band seed method (2026-10-30).** Do **not** run the generation survey, either proof or the registration without the user's approval of each; each runs once. Do **not** adjust the rule, the band, the 1,000-seed gap floor or the block after the survey reads its literals: a NOT CLEAN or refused block is returned for review. Do **not** edit, add or remove repository literals in either band to steer the rule or the check, and never write a candidate seed of the 2027 band into `scripts/`, `tests/` or `docs/superpowers/` outside the survey's own records, the plan and the registry tuple. Do **not** rehearse the survey on the real repository: the synthetic rehearsal is a code check, not a survey. Do **not** admit training on generation's record alone or weaken `outer_faults`.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -7418,3 +7420,102 @@ approved as one sequence.**
 - **Not done:** seed procedures, registration, the plan, opening the gate, checkpoint loading, GPU work, generation,
   training and pushing. All 54 gates are closed.
 - **Status:** awaiting the user's review. See do-not-repeat **#126**.
+
+### Decision note — the generation build accepted; the 2027 band chosen; the seed method and training admission to be built (2026-10-30, the user's decision)
+
+- **Accepted:** the generation build (`7295e765`) and the seed blocker. The existing rule selects [202698400,
+  202699400), which holds the documented H4 fixture values, and the scanner recognizes only the 2026 band, so any other
+  range needs the scanner extended. The user verified the amendment pin, the unchanged throughput evidence and all 54
+  gates closed; no plan or generation output exists.
+- **Decision:** generation's seeds come from the **2027 band** [202700000, 202800000). It is a range of numbers only;
+  nothing is scheduled in 2027. No block is selected or proven yet.
+- **Approved, built together with focused CPU tests, returned for review before the real survey:**
+  - extend the existing scanner to plain and underscore-grouped literals of both the 2026 and the 2027 band, keeping
+    the scan scope and the checks against registered and named-spent seeds and all four derived streams;
+  - a deterministic selection rule, defined before the survey and covering an empty band, keeping the 1,000-seed gap
+    floor and the collision checks. A failing block returns for review; it is never adjusted on the spot;
+  - training's admission requires generation's committed `record.json` and `outer.json` to show successful completion
+    and confirmed cleanup; an outer TIMEOUT refuses training even over a COMPLETED record.
+- **Focused checks:** synthetic inputs, including old- and new-band literals and cross-band stream collisions.
+- **Not authorized:** seed procedures, registration, checkpoint loading, GPU work, training and pushing.
+- **Prediction on record:** none.
+
+#### Addendum — the two-band seed method and training's outer-record admission built (2026-10-30)
+
+Committed in `f870de24`; nothing run on the real repository.
+
+- **`scripts/GPU/alphazero/seed_band_2027.py`** (new; holds no seed literal):
+  - **The scanner** `scan`: the pinned survey's, with the prefix widened from 2026 to 2026 or 2027. Plain and
+    underscore-grouped nine-digit literals, the same boundaries (no digit or `.` before, no digit after), every
+    occurrence counted, the same (line, column) exemption. Other prefixes, ten-digit runs and decimals are not counted.
+  - **`install(S)`** rebinds `scan` on a private copy of the pinned survey module, after checking that the copy's
+    scanner is the pinned one. Its `repo_literals` looks the name up at call time, so the scope, fail-closed reading,
+    exemptions, prior terms, four derived streams and the check (gap floor = the block's own size) stay the pinned
+    ones. The pinned files are not edited.
+  - **The rule** `candidate(intervals, literals, n)`, in the 2027 band:
+    - anchor = the largest of: the band's lower edge − 1; the last seed of every registered or named-spent interval
+      ending at or above the edge; every repository literal at or above the edge;
+    - BASE = the least multiple of 100 ≥ anchor + 1 + N, and the block is [BASE, BASE + N);
+    - **an empty band** gives BASE = the least multiple of 100 at least N above the edge, so the 2026 band's top lies
+      at least N below the block;
+    - it is refused (`Exhausted`) if the block would leave the band, and never wraps or searches.
+  - **Why the rule reads literals (unlike `seed_selection`):** before writing the rule I listed the 2027-band literals
+    in scope. There are four values: three synthetic test bases (202700000, 202700143, 202700144) and a hex-digest
+    fragment in the tactical candidates corpus (202738776). A literal-blind rule would pick [202701000, 202702000),
+    which the gap floor is known to reject against the test bases. Reading the literals avoids that without editing
+    anything. On those four values the expected block is [202739800, 202740800). That is arithmetic on a grep, not a
+    survey result: the survey decides.
+  - **Cross-band streams:** computed exhaustively, no 2026-band value shares a derived stream with a 2027-band value
+    under the four real masks. The pinned check is band-agnostic anyway, and it rejects a synthetic-mask cross-band
+    collision.
+- **The generation survey copy** `combination-policy-generate-seed-survey/01_seed_survey.py` is throughput attempt 2's
+  with these changes:
+  - N = 1000; the paths, the plan's kind, the module name, the titles and the verdicts;
+  - the rule module `seed_band_2027`, installed into the pinned survey copy;
+  - in survey mode, the scan runs first: once with no block, so the plan is never exempt for the rule. The rule reads
+    those literals, and the check then scans as before;
+  - ten two-band controls: both prefixes seen in plain and grouped form, the neighbours not seen, the install in
+    effect, the rule on an empty band and above the literals, a differential cross-band stream collision rejected,
+    and no real-mask cross-band stream.
+  - The three modes, the state checks, the exemptions and the 45 copied controls are unchanged, so each mode now runs
+    55 controls.
+- **Training's admission** (`combination_policy_pilot.py`): `OUTER_ADMISSION["train"]` reads generation's committed
+  `outer.json` (`combination-policy-generate-run/`) through `outer_faults`: zero inner and outer exits, COMPLETED, the
+  gate restored, survivors exactly empty, the script's record and the same head. This is in addition to the generation
+  and timing records.
+- **Tests:**
+  - `tests/test_seed_band_2027.py` (44):
+    - both bands, plain and grouped; the neighbours are not counted;
+    - occurrences and exemptions; a 300-text differential against the pinned scanner on 2026-only text;
+    - the pinned scanner alone misses the 2027 band; the install, its refusal and that nothing else changes;
+    - the rule: empty band, ignoring the 2026 band, above intervals and literals with the least margin, a straddling
+      interval, the input left unchanged, `Exhausted`, a bad N;
+    - cross-band stream collisions both ways (synthetic masks), none with the real masks, the gap floor at exactly
+      1,000 either side;
+    - nothing registered in the 2027 band yet; the module holds no literal. That check caught two example literals I
+      had written in the module's docstring; they were removed before the commit.
+  - `tests/test_combination_policy_generate_launch.py` (14 → 23):
+    - training admitted by a completed, committed fake generation run; refused by an outer TIMEOUT over a COMPLETED
+      record, and by an uncommitted `outer.json`;
+    - the survey copy differs from attempt 2's only as stated, line by line; it serves the generation run; its code
+      holds no literal in either band;
+    - all its controls pass on a synthetic 2027 block (12 + 8 + 6 + 6 + 10); without the install, six plant controls
+      fail;
+    - **a three-mode rehearsal on a synthetic git repository** (the copy and the pinned method; a synthetic registry;
+      one planted literal per band; the real prior terms): survey CLEAN with the block above the planted 2027
+      literal, then pre HOLDS, a registration, and post HOLDS, each 55/55. It scans only the synthetic tree.
+  - `tests/test_combination_policy_pilot.py` (81 → 82): only training reads an `outer.json`, and it is generation's.
+    Training is admitted only with it, and each of the 17 outer failures refuses training over a COMPLETED record.
+- **Mutation checks** (each a temporary edit, restored byte-equal):
+  - the scanner sees only the 2026 prefix → 7 failures; the plain pattern only 2026 → 7;
+  - the install a no-op → 4;
+  - the rule ignoring literals → 6; the rule dropping the N margin → 9;
+  - training reading no `outer.json` → 22.
+- **Results:**
+  - the combination files, the seed method and the gate inventory, with the background-compute, mirror-halving launch,
+    seed-selection and tactical survey/proof suites: **312 passed**, 1 deselected;
+  - no test process left behind.
+- **Not built:** the generation closing copy (K1), which is needed only after a run.
+- **Not done:** the real survey, the proofs, registration, the plan, the gate, checkpoint loading, GPU work,
+  generation, training and pushing. All 54 gates are closed.
+- **Status:** awaiting the user's review before the real survey. See do-not-repeat **#127**.
