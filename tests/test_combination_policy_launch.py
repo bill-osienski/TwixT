@@ -428,15 +428,16 @@ def _commit_evidence(repo, monkeypatch):
 
 def test_ATTEMPT_1_S_PATHS_NEVER_ADMIT_GENERATION_even_after_a_completed_committed_run(tmp_path, monkeypatch):
     """RE-ANCHORED 2026-10-29 (the attempt-2 amendment): generation is admitted from attempt 2's records only, so a
-    COMPLETED fake run on attempt 1's wrapper, its records committed, admits nothing. Attempt 2's accept and
-    TIMEOUT-over-COMPLETED checks live in tests/test_combination_policy_throughput2_launch.py."""
+    COMPLETED fake run on attempt 1's wrapper, its records committed, admits nothing. RE-ANCHORED 2026-10-30 (the
+    generation amendment): generation reads no throughput record at all, only the committed CPU timing, which this
+    throwaway repository lacks -- so attempt 1's completed run still admits nothing."""
     repo, wdir, _gate = _fake_repo(tmp_path)
     p = _launch(repo, wdir, run="record")
     outer = json.loads((wdir / "outer.json").read_text())
     assert p.returncode == 0 and outer["outcome"] == "COMPLETED" and outer["record_by"] == "script", outer
     _commit_evidence(repo, monkeypatch)
     assert not P.outer_faults(outer, json.loads((repo / P.KINDS["throughput"]["evidence"] / "record.json").read_text()))
-    with pytest.raises(P.Refused, match="combination-policy-throughput2/record.json does not exist"):
+    with pytest.raises(P.Refused, match="combination-policy-timing/record.json does not exist"):
         P.admitted("generate", P._read_record, P._read_outer)
 
 

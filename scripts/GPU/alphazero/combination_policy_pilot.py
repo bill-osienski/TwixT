@@ -14,9 +14,12 @@ THE STEPS (card §5; each a separate approval, each in ONE fresh process under i
 * `run throughput2`: ATTEMPT 2 (amendment `docs/superpowers/2026-10-29-combination-policy-throughput-attempt2-amendment.md`,
   pinned by sha256): the ONE fresh throughput check after attempt 1's timeout -- the same 144 games, workers and cap, on
   its own fresh block, plan, evidence directory and gate; its wrapper's ceiling is 30 minutes. Its record carries the
-  amendment's sha256, and generation is admitted from attempt 2's committed records only, never from attempt 1's.
+  amendment's sha256. It timed out (VOID), as attempt 1 did; neither admits anything.
 * `run generate`: 1,000 slots on its own registered block; each game's rows go to one create-only file OUTSIDE the
-  repository (CACHE_DIR), named with its sha256 in the committed games.jsonl. Any incomplete run is VOID.
+  repository (CACHE_DIR), named with its sha256 in the committed games.jsonl. Any incomplete run is VOID. Amendment
+  `docs/superpowers/2026-10-30-combination-policy-generation-amendment.md` (pinned by sha256; the record carries it):
+  admitted by the committed CPU timing alone -- no throughput check is required, and no throughput record is read;
+  its wrapper's ceiling is six hours.
 Both: slot g plays seed plan.base + g (combination_selfplay); a `game_start` event (slot, worker) is logged BEFORE
 each game and the final claim count after the last; background_compute is read before loading and after every game
 (BOINC detected, or a failed check, is a VOID); eval mode at load and at the end.
@@ -88,19 +91,22 @@ KINDS = {"throughput": {"slots": 144, "keep_rows": False, "gate": (THROUGHPUT_GA
                                        "6dba686d5b6e82938e4abfd7a8d6e881b16122ae4b38e23f54edff6a62d106fe")},
          "generate": {"slots": 1000, "keep_rows": True, "gate": (GENERATE_GATE, "COMBINATION_POLICY_GENERATE_AUTHORIZED"),
                       "evidence": "docs/superpowers/evidence/combination-policy-generate",
-                      "plan": "docs/superpowers/evidence/combination-policy-generate-run/plan.json"},
+                      "plan": "docs/superpowers/evidence/combination-policy-generate-run/plan.json",
+                      "amendment": ("docs/superpowers/2026-10-30-combination-policy-generation-amendment.md",
+                                    "11ced08185bd5e2727de07628a95e7cdc872ec31dae808e898640539742d7f55")},
          "train": {"gate": (TRAIN_GATE, "COMBINATION_POLICY_TRAIN_AUTHORIZED"),
                    "evidence": "docs/superpowers/evidence/combination-policy-train"}}
 TIMING_EVIDENCE = "docs/superpowers/evidence/combination-policy-timing"
 #: what each step needs committed first: (evidence dir, record field, value)
 ADMISSION = {"throughput": [(TIMING_EVIDENCE, "status", "COMPLETED")],
              "throughput2": [(TIMING_EVIDENCE, "status", "COMPLETED")],
-             #: attempt 2 only (amendment, 2026-10-29): a record of attempt 2 under its pinned amendment; attempt 1 never
-             "generate": [(KINDS["throughput2"]["evidence"], "amendment_sha256", KINDS["throughput2"]["amendment"][1])],
+             #: the generation amendment (2026-10-30): the committed timing only; no throughput record is read
+             "generate": [(TIMING_EVIDENCE, "status", "COMPLETED")],
              "train": [(KINDS["generate"]["evidence"], "status", "COMPLETED"), (TIMING_EVIDENCE, "status", "COMPLETED")]}
-#: what each step needs from the launch wrapper's committed outer.json too (the user's ruling, ledger 2026-10-29): an
-#: outer TIMEOUT, unconfirmed cleanup or missing outer evidence refuses, whatever the inner record says
-OUTER_ADMISSION = {"generate": [(str(pathlib.Path(KINDS["throughput2"]["plan"]).parent), KINDS["throughput2"]["evidence"])]}
+#: what each step needs from a launch wrapper's committed outer.json too (the user's ruling, ledger 2026-10-29): an
+#: outer TIMEOUT, unconfirmed cleanup or missing outer evidence refuses, whatever the inner record says. Generation
+#: read the throughput check's until the generation amendment (2026-10-30) removed that requirement.
+OUTER_ADMISSION: Dict[str, List[Tuple[str, str]]] = {}
 GENERATE_CEILING = {"factor": 1.5, "max_seconds": 6 * 3600}
 #: card §4: the one recipe. Not a tuning point.
 RECIPE = {"updates": 3000, "batch": 64, "lr": 1e-3, "l2": 1e-4, "betas": [0.9, 0.999], "eps": 1e-8,

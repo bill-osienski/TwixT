@@ -5,8 +5,8 @@ copies. CPU only; nothing here loads a model, touches a device, runs a seed proc
 
 Each is a copy of attempt 1's with only the stated differences, asserted line by line. THE FAKE-LAUNCH CHECKS run the
 REAL attempt-2 wrapper's bytes in a throwaway git repository with attempt 1's stubs (tests/test_combination_policy_launch)
-moved to attempt 2's paths: the exact command, the ceiling, and generation's admission through the real committed
-readers."""
+moved to attempt 2's paths: the exact command, the ceiling, and the records a completed or timed-out run leaves.
+Since the generation amendment (2026-10-30) generation reads no throughput record, so attempt 2 admits nothing."""
 import importlib.util
 import json
 import os
@@ -55,7 +55,9 @@ def test_ATTEMPT_2_IS_REGISTERED_PROVEN_RUN_ONCE_AND_CLOSED_with_the_survey_s_bu
     generation is never admitted from it (asked of the real committed readers); the registry it launched with is the
     one the post-proof proved; K1 RECONCILES with no final `claims` event, so the WHOLE block is EXPOSED and RETIRED,
     each exactly once and appended last, ACCOUNTED unchanged, and every seed is refused. The gate is closed. Attempt 1's
-    evidence is untouched (its own closed-state test checks its content). Read-only."""
+    evidence is untouched (its own closed-state test checks its content). RE-ANCHORED 2026-10-30 (the generation
+    amendment): generation's admission no longer reads this run at all -- through the real committed readers it reads
+    the CPU timing record only. The run's records stay as written: VOID, outer TIMEOUT. Read-only."""
     import hashlib
     from scripts.GPU.alphazero import combination_policy_throughput2_authorization as G
     from scripts.GPU.alphazero import e4_screen_reference as REG
@@ -92,8 +94,13 @@ def test_ATTEMPT_2_IS_REGISTERED_PROVEN_RUN_ONCE_AND_CLOSED_with_the_survey_s_bu
     assert record["status"] == "VOID" and record["void"]["step"] == "terminated" and record["head"] == outer["head"]
     assert record["run"] == "throughput2" and record["amendment_sha256"] == AMENDMENT_SHA
     assert P.outer_faults(outer, record)
-    with pytest.raises(P.Refused):
-        P.admitted("generate", P._read_record, P._read_outer)
+    reads = []
+
+    def read_record(rel):
+        reads.append(rel)
+        return P._read_record(rel)
+    assert P.admitted("generate", read_record, P._read_outer) == {P.TIMING_EVIDENCE: "COMPLETED"}
+    assert reads == [P.TIMING_EVIDENCE]
     reg_rel = "scripts/GPU/alphazero/e4_screen_reference.py"
     launched = subprocess.run(["git", "-C", str(ROOT), "show", f"{outer['head']}:{reg_rel}"],
                               capture_output=True, check=True).stdout
@@ -271,42 +278,46 @@ def test_FAKE_LAUNCH_THE_CEILING_TERMINATES_THE_WHOLE_GROUP_at_attempt_2_s_paths
     assert f"{GATE_NAME} = False\n" in gate.read_text()
 
 
-def _commit_evidence_and_admit(repo, monkeypatch):
-    """Commit the fake run's outputs, then ask the REAL admission (the real committed readers) about generation."""
+def _commit_evidence(repo, monkeypatch):
+    """Commit the fake run's outputs, then point the REAL committed readers at the throwaway repository."""
     def git(*a):
         return subprocess.check_output(["git", "-c", "user.name=t", "-c", "user.email=t@t", *a], cwd=repo,
                                        text=True).strip()
     monkeypatch.setattr(P, "ROOT", repo)
     monkeypatch.setattr(P.M, "_git", git)
-    with pytest.raises(P.Refused, match="uncommitted or differs from HEAD"):     # not yet committed
-        P.admitted("generate", P._read_record, P._read_outer)
     git("add", "docs/superpowers/evidence")
     git("commit", "-qm", "the run's evidence")
-    return lambda: P.admitted("generate", P._read_record, P._read_outer)
 
 
-def test_ADMISSION_ACCEPTS_ATTEMPT_2_S_COMPLETED_RUN_once_committed(tmp_path, monkeypatch):
+def test_ATTEMPT_2_S_PATHS_NO_LONGER_ADMIT_GENERATION_even_after_a_completed_committed_run(tmp_path, monkeypatch):
+    """RE-ANCHORED 2026-10-30 (the generation amendment): generation reads only the committed CPU timing, which this
+    throwaway repository lacks, so attempt 2's completed and committed fake run admits nothing; its records pass
+    outer_faults and are simply not read."""
     repo, wdir, _gate = _fake_repo(tmp_path)
     p = _launch(repo, wdir, run="record")
     outer = json.loads((wdir / "outer.json").read_text())
     assert p.returncode == 0 and outer["outcome"] == "COMPLETED" and outer["record_by"] == "script", outer
-    admit = _commit_evidence_and_admit(repo, monkeypatch)
-    assert admit() == {"docs/superpowers/evidence/combination-policy-throughput2": AMENDMENT_SHA,
-                       "docs/superpowers/evidence/combination-policy-throughput2-run/outer.json": "COMPLETED"}
+    _commit_evidence(repo, monkeypatch)
+    rec = P._read_record(P.KINDS["throughput2"]["evidence"])
+    assert rec["amendment_sha256"] == AMENDMENT_SHA and not P.outer_faults(P._read_outer(str(wdir.relative_to(repo))),
+                                                                           rec)
+    with pytest.raises(P.Refused, match="combination-policy-timing/record.json does not exist"):
+        P.admitted("generate", P._read_record, P._read_outer)
 
 
-def test_ADMISSION_REFUSES_AN_OUTER_TIMEOUT_OVER_ATTEMPT_2_S_COMPLETED_RECORD(tmp_path, monkeypatch):
+def test_AN_OUTER_TIMEOUT_OVER_ATTEMPT_2_S_COMPLETED_RECORD_STANDS_AS_WRITTEN(tmp_path, monkeypatch):
     """The user's ruling (2026-10-29), at attempt 2's paths: the script wrote COMPLETED, then the run outlived the
-    ceiling (TERM_S 2 in this copy only). Both records stand as written; generation is refused."""
+    ceiling (TERM_S 2 in this copy only). Both records stand as written, and outer_faults says the run did not
+    succeed."""
     repo, wdir, _gate = _fake_repo(tmp_path, term_s=2)
     p = _launch(repo, wdir, run="record_outlive")
     outer = json.loads((wdir / "outer.json").read_text())
     rec = json.loads((repo / "docs/superpowers/evidence/combination-policy-throughput2/record.json").read_text())
     assert p.returncode == 124 and outer["outcome"] == "TIMEOUT" and outer["record_by"] == "script", outer
     assert rec["status"] == "COMPLETED" and rec["amendment_sha256"] == AMENDMENT_SHA
-    admit = _commit_evidence_and_admit(repo, monkeypatch)
-    with pytest.raises(P.Refused, match="inner_exit is 124, not 0"):
-        admit()
+    _commit_evidence(repo, monkeypatch)
+    assert "inner_exit is 124, not 0" in P.outer_faults(P._read_outer(str(wdir.relative_to(repo))),
+                                                        P._read_record(P.KINDS["throughput2"]["evidence"]))
 
 
 # ─────────────────────────────── the seed-procedure copies (built, never run here) ───────────────────────────────
