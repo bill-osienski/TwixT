@@ -172,6 +172,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — post-proof accepted; ONE throughput launch approved (addendum, 2026-10-29, the user's decision).** After a recorded approval, a fresh read-only panic/reboot check and a recheck that the registry and plan are unchanged, open only the throughput gate (one-line commit, clean worktree) and run the existing wrapper once, BOINC quit, both launch checks enforced; ceiling TERM 890 s / KILL 900 s / cleanup observation to 910 s. No retry, extension or top-up; outer TIMEOUT overrides inner COMPLETED and closes the pilot. Closing, corpus generation, real-data training and pushing remain unauthorized. See #118.
 > **Combination policy pilot — the throughput check: outer TIMEOUT; the pilot CLOSED at step 2 (entry 41, 2026-10-29).** The one approved run hit the 890 s ceiling (inner 124, TERM sufficed; script record VOID "terminated"): 131 of 144 slots started, 113 finished, about 457 finished games/h against the ~576 the ceiling needed. Gate restored, no survivors, generation refused. No policy-learning result; the hypothesis is neither supported nor rejected. Seed closing awaits approval. See #119.
 > **Combination policy pilot — TIMEOUT/VOID and closure at step 2 accepted; seed closing approved as one conditional sequence (addendum, 2026-10-29, the user's decision).** No policy-learning result; the combination's earlier strength PASS stands. K1 once in a clean worktree; only if it RECONCILES, all of [202696900, 202697044) to EXPOSED and RETIRED (no final `claims` event, so the frozen rule exposes all 144); then the lifecycle-test re-anchor and focused CPU checks. See #120.
+> **Combination policy pilot — the throughput block CLOSED (addendum, 2026-10-29).** K1 RECONCILES 21/21 (`b69515d5`; no `claims` event); K2 (`e30e277c`) appends [202696900, 202697044) last to EXPOSED (44 → 45) and RETIRED (42 → 43), ACCOUNTED (47) and TEST_ONLY unchanged; the lifecycle test asserts the closed state (`3dee44a9`). The pilot is closed with no policy-learning result. Awaiting review; nothing further authorized. See #121.
 
 ## Historical proposal check — programme now closed
 
@@ -1822,6 +1823,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 118. **The one throughput launch (2026-10-29).** Do **not** run the throughput wrapper more than once, retry, extend, top up or rerun any part of a started run, or change its ceiling (TERM 890 s, KILL 900 s, observation to 910 s). Do **not** open any gate but the throughput gate, or open it if the registry or plan differ from what the post-proof proved: that returns for review, not to an automatic proof rerun. Do **not** count an outer TIMEOUT as a completed run, or use the 144 throughput games as training or strength evidence. Do **not** close, generate the corpus, train on real data or push without approval.
 119. **The combination policy pilot, closed at the throughput check (2026-10-29).** Do **not** retry, extend, top up or rerun the throughput check, raise its 15-minute ceiling, reuse its block or its 144 games (never training or strength evidence), or proceed to generation or training: the pilot is closed by its own rule (card §5 step 2). Do **not** read the TIMEOUT as evidence about policy learning, or the descriptive games/h as the card's measurement (the record's `throughput` is null). A new pilot, a card amendment or seed closing needs the user's decision. Do **not** chain a merge after a commit whose failure a pipe can hide.
 120. **The throughput seed closing (2026-10-29).** Do **not** run K1 more than once, or edit the registry if it does not RECONCILE. Do **not** expose only the 131 recorded starts: with no final `claims` event the frozen rule exposes the whole block. Do **not** change ACCOUNTED or TEST_ONLY. Do **not** retry, amend, profile, generate a corpus, train or push on this approval.
+121. **The throughput block, closed (2026-10-29).** Do **not** reuse, unexpose, unretire or re-register any seed of [202696900, 202697044), rerun K1 or K2, or edit `02_derive_usage_run.txt` (sha256 `502e164a…`). Do **not** use the 113 finished throughput games for anything. Do **not** read the older registry-test failures (the same 16 failed / 69 errors before and after K2) as caused by this closing. A retry, amendment, profiling run, corpus generation, training or push needs a new decision.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -6987,3 +6989,46 @@ approved as one sequence.**
   If K1 does not reconcile, stop before the registry edit.
 - **Not approved:** any retry, amendment, profiling run, corpus generation, training or push. See do-not-repeat
   **#120**.
+
+#### Addendum — the throughput block closed: K1 RECONCILES, K2 exposes and retires the whole block (2026-10-29)
+
+- **K1, run once** (`01_derive_usage.py`, `.venv/bin/python -B`) in a clean linked worktree (`cp-throughput-k1` at the
+  decision commit `3b6df508`); exit 0, stderr empty. Record `combination-policy-throughput-seed-closing/
+  02_derive_usage_run.txt` (sha256 `502e164a…`), committed `b69515d5`:
+  - all four inputs (plan, progress, outer.json, record.json) committed and unmodified; outer exit 124, survivors
+    empty, status VOID;
+  - game starts: the 131 slots 0–130, each once (logged out of order at the start, as the frozen rule allows);
+    **claims events: none**, so k is not established;
+  - controls 21/21;
+  - **VERDICT: RECONCILES -- EXPOSE [202696900, 202697044]; RETIRE [202696900, 202697044]**: the frozen rule exposes
+    the whole block, not just the 131 recorded starts.
+- **K2** (`e30e277c`): [202696900, 202697044) appended last to EXPOSED and to RETIRED, each with a comment block in the
+  precedent's form. An AST check against the parent: only EXPOSED (44 → 45) and RETIRED (42 → 43) changed, each the
+  parent's tuple plus the block; no earlier entry overlaps it; ACCOUNTED (47), TEST_ONLY and every other statement
+  unchanged.
+- **Tests** (`3dee44a9`):
+  - The lifecycle test is renamed `test_THE_THROUGHPUT_BLOCK_IS_REGISTERED_PROVEN_RUN_ONCE_AND_CLOSED_…` and keeps
+    the registration and proof checks (survey and both proofs bound to the survey hash, clean trees, HOLDS 45/45,
+    plan = `build_plan`). The post-proof's "proved = current registry" check becomes "proved = the registry at the
+    launch commit `60493787`", since K2 has changed the current one. It now asserts the run (outer TIMEOUT, inner
+    124, gate restored, no survivors, script record VOID "terminated", same head, `outer_faults` non-empty) and the
+    closing (no claims event, 21/21, the RECONCILES verdict; the block EXPOSED and RETIRED once and last; ACCOUNTED
+    once with every later entry above it; every seed refused).
+  - Strength attempt 2's closed-state test asserted its block was the last EXPOSED/RETIRED entry; it now requires every
+    later entry to lie above it.
+- **Checks:**
+  - launch + pilot: 99 passed, 1 deselected (three consecutive runs);
+  - with the gate-inventory, mirror-halving launch, background-compute, seed-selection and tactical-survey suites:
+    191 passed, 1 deselected (opt-in);
+  - every test file that reads the registry (41), with the default marker exclusion, in linked worktrees: at the
+    parent `b69515d5`, 17 failed and 69 errors (the older 16 + 69 plus the stale lifecycle test); after K2 alone, one
+    more (strength 2's "last entry" assert); after the re-anchor, 16 failed and 69 errors, exactly this morning's older
+    set (tests needing the checkpoint, absent in a linked worktree, and older "last entry" asserts). None new.
+  - The gate inventory derives 53 gates, all closed.
+- **A disclosed misstep:** the first comparison run passed `-o addopts=""`, which also drops the default
+  `-m "not integration and not oracle and not parity"`. It was stopped within seconds. None of the 41 files carries
+  those markers, so it selected no extra test; it was rerun with the exclusion stated explicitly.
+- **Prediction on record:** none (a closing procedure).
+- **Status:** the combination policy pilot is CLOSED at step 2 and its throughput block is closed. No result on policy
+  learning; the combination's earlier strength PASS stands. No retry, amendment, profiling run, corpus generation,
+  training or push is authorized. See do-not-repeat **#121**.
