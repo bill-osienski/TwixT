@@ -183,6 +183,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — the throughput check, ATTEMPT 2: outer TIMEOUT; VOID; block closed (entry 42, 2026-10-30).** All 144 games started and 143 finished; slot 108 (started at 711 s) was in flight at the 1,790 s TERM (inner 124; record VOID; gate restored; no survivors). The bulk ran at attempt 1's pace; four 280-move state-cap games took 686–1,091 s, and that tail, not the mean, sank the run. K1 RECONCILES 21/21 (no claims event); K2 EXPOSES and RETIRES [202697200, 202697344) whole. No policy-learning result; no automatic retry (#123). See #125.
 > **Combination policy pilot — generation without a completed throughput check: amendment, admission and wrapper BUILT; the seed survey NOT run (decision note + addendum after entry 42, 2026-10-30).** The user accepted attempt 2's TIMEOUT and closing and approved preparation for one 1,000-game generation run with a six-hour ceiling (amendment `11ced081…`, `7295e765`): admitted by the committed CPU timing alone; neither throughput record is read or relabelled; a timeout is VOID and assessed, with no automatic retry. The existing seed rule's 1,000-seed block [202698400, 202699400) contains the H4 fixture literals 202699000 and 202699032, so its survey could only be NOT CLEAN; it was not run. The seed method needs the user's decision. Nothing run; 54 gates closed. See #126.
 > **Combination policy pilot — the two-band seed method and training's outer-record admission BUILT; the real survey NOT run (decision note + addendum, 2026-10-30).** The user accepted the generation build and the seed blocker and chose the 2027 band [202700000, 202800000) for generation's seeds. `seed_band_2027.py` (`f870de24`) widens the pinned scanner to both bands (plain and underscore-grouped) inside a private copy of the pinned module and places the block above every registered seed and repository literal in the 2027 band (an empty band: N above its edge); the gap floor stays 1,000 and the check is the pinned one. Training now also needs generation's committed `outer.json` to pass `outer_faults`. A three-mode rehearsal on a synthetic repository passes 55/55 controls per mode. Nothing run on the real repository; 54 gates closed. See #127.
+> **Combination policy pilot — generation's seeds SURVEYED, PROVEN and REGISTERED in the 2027 band; the closing copy built (addendum, 2026-10-30).** Survey (`bb1549ea`) CLEAN 55/55: block [202739800, 202740800), anchored on the corpus hex fragment 202738776, gap 1,023 (floor 1,000). Pre-proof (`4701b1d3`) HOLDS 55/55; registration (`326004d0`) appends the block last to ACCOUNTED (48 → 49) with `plan.json` = `build_plan`; post-proof (`5a17ea92`) HOLDS 55/55 on the current registry. The closing copy (`e8ae01cc`) keeps the parallel-worker rule, 21/21. Nothing run on the GPU; 54 gates closed; awaiting launch review. See #128.
 
 ## Historical proposal check — programme now closed
 
@@ -1840,6 +1841,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 125. **The throughput check, attempt 2, VOID and closed (2026-10-30).** Do **not** reuse, unexpose, unretire or re-register any seed of [202697200, 202697344), rerun K1 or K2, edit attempt 2's run, closing or seed records, or use its games (143 finished) as training, throughput or strength evidence. Do **not** retry, extend or top up attempt 2. Do **not** read its 288 games/h (descriptive, VOID) as the pilot's measurement. Any further attempt is the user's fresh decision after assessing the cause (the 280-move state-cap tail: four games took 686–1,091 s), the cost and the worth (#123).
 126. **Generation without a completed throughput check (2026-10-30).** Do **not** read either throughput record (each VOID under an outer TIMEOUT) as a pass, rewrite either, or admit generation through them; do **not** use either throughput run's games for training. Do **not** change the generation ceiling (TERM 21,590 s, KILL 21,600 s, observation to 21,610 s), the recipe, the target, the workers or the cap under this amendment. Do **not** run the generation seed survey under the existing rule (its 1,000-seed block holds in-band repository literals, so it cannot be CLEAN); do **not** adjust the rule, its gap floor or the block size, edit or remove the H4 fixture literals to make room, or move to a new band without a reviewed method. A generation timeout is VOID and is assessed by the user; no automatic retry, extension or top-up.
 127. **The two-band seed method (2026-10-30).** Do **not** run the generation survey, either proof or the registration without the user's approval of each; each runs once. Do **not** adjust the rule, the band, the 1,000-seed gap floor or the block after the survey reads its literals: a NOT CLEAN or refused block is returned for review. Do **not** edit, add or remove repository literals in either band to steer the rule or the check, and never write a candidate seed of the 2027 band into `scripts/`, `tests/` or `docs/superpowers/` outside the survey's own records, the plan and the registry tuple. Do **not** rehearse the survey on the real repository: the synthetic rehearsal is a code check, not a survey. Do **not** admit training on generation's record alone or weaken `outer_faults`.
+128. **Generation's seed block (2026-10-30).** Do **not** rerun the generation survey or either proof, edit their records (`02_*` sha256 `69ce5b87…`, `03_*` `295ce85c…`, `04_*` `f3c3d5dc…`), edit the plan, or move, widen or re-register [202739800, 202740800). Do **not** open the generation gate, load the checkpoint, launch, close the block, train or push without the user's approval of each. Do **not** write any seed of this block into `scripts/`, `tests/` or `docs/superpowers/` outside its own records, the plan and the registry tuple.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -7538,3 +7540,67 @@ Committed in `f870de24`; nothing run on the real repository.
   CPU checks.
 - **Not authorized:** checkpoint loading, GPU generation, training and pushing.
 - **Prediction on record:** none.
+
+#### Addendum — generation's seed block surveyed, proven and registered in the 2027 band; the closing copy built (2026-10-30)
+
+Each procedure ran once in a fresh clean linked worktree, under `/Users/bill/twixt-worktrees/`, with the main
+checkout's `.venv/bin/python -B`. Each record was committed in its worktree, main was fast-forwarded as a separate step,
+and the worktree was removed.
+
+- **The survey (`bb1549ea`, worktree `cp-gen-seeds` from `4fff63bc`):** `--mode survey`, exit 0, nothing on stderr.
+  - The rule's anchor is 202738776 (the hex-digest fragment in the tactical candidates corpus; nothing is registered
+    in the 2027 band), so BASE = 202739800 and the block is **[202739800, 202740800)**. The rule read the literals of
+    this tree and of the main checkout (7,141 and 49,863 files).
+  - The check: direct none, streams 0, injective, gap **1,023** (floor 1,000), CLEAN. Controls **55/55**, clean tree.
+    Registry sha256 `d041e293…` (ACCOUNTED 48, EXPOSED 46, RETIRED 44, TEST_ONLY 1).
+  - Verdict: **THE COMBINATION-POLICY GENERATION BLOCK IS CLEAN**. Record `02_seed_survey_run.txt`, sha256
+    `69ce5b87…`; 1,000 slot lines.
+- **The pre-registration proof (`4701b1d3`, worktree `cp-gen-pre` from `bb1549ea`):** `--mode pre`, exit 0, nothing on
+  stderr.
+  - Bound to the survey record (`69ce5b87…`, read at `4fff63bc`); the block read from it.
+  - **EXPECTED STATE (pre): HOLDS**; CLEAN, gap 1,023; controls **55/55**. Record `03_collision_proof_pre_run.txt`,
+    sha256 `295ce85c…`.
+- **The registration (`326004d0`, worktree `cp-gen-register` from `4701b1d3`):**
+  - A script checked everything before writing:
+    - the survey record's hash, and the block read from it equal to the surveyed one;
+    - the registry unchanged since the survey, and no plan;
+    - a comment holding no literal of either band.
+  - It appended [202739800, 202740800) last to ACCOUNTED (48 → 49) and wrote `combination-policy-generate-run/plan.json`
+    = `build_plan(202739800, 69ce5b87…)`, create-only.
+  - An AST comparison against the parent: only ACCOUNTED changed, by exactly that tuple; every other statement is
+    unchanged. The plan equals `build_plan`.
+  - Its first attempt stopped on a line-length assertion before anything was written; the comment was rewrapped and
+    the script rerun.
+- **The post-registration proof (`5a17ea92`, worktree `cp-gen-post` from `326004d0`):** `--mode post`, exit 0, nothing
+  on stderr.
+  - **EXPECTED STATE (post): HOLDS**; CLEAN, gap 1,023; controls **55/55**. The registry it proved has sha256
+    `ee1070bb…`, the current file.
+  - Record `04_collision_proof_post_run.txt`, sha256 `f3c3d5dc…`.
+- **The closing copy** `combination-policy-generate-seed-closing/01_derive_usage.py` (`e8ae01cc`) is throughput attempt
+  2's with only the paths, N_SLOTS 1000 and the title changed. The reviewed parallel-worker rule is unchanged:
+  - the started slots must form {0..k−1} as a set, and the one final `claims` event must equal k; otherwise the whole
+    block is exposed;
+  - the whole block is retired.
+  - Its 21 controls pass at the registered base. Built, not run.
+- **Tests re-anchored (`e8ae01cc`):**
+  - The generation state test now asserts:
+    - the three records, their verdicts, 55/55 and clean trees, and both proofs bound to the survey hash;
+    - the plan = `build_plan`, and the block read from the plan (no literal in tests): the first block in the 2027
+      band, ACCOUNTED once and last, in no other list, every seed schedulable;
+    - the proved registry is the current one;
+    - nothing run: the gate closed, the run directory holding only the wrapper and the plan, no evidence, closing
+      record or corpus;
+    - both throughput runs unchanged.
+  - The seed-method state test now expects exactly this block in the 2027 band. The synthetic rehearsal now plants its
+    2027 literal above the registered block, since its prior terms are the real ones.
+  - New closing-copy tests: the diff, the paths, no literal, and 21/21.
+  - Temporary breakages (the registry entry removed; the closing N_SLOTS set to 144) each fail 2 tests; both were
+    restored byte-equal.
+  - The combination, seed-method, gate-inventory, background-compute, mirror-halving launch, seed-selection and
+    tactical survey/proof suites: **315 passed**, 1 deselected.
+- **Disclosed:** the pre-proof record's commit command sent its own output to `/dev/null`, but it printed the commit's
+  exit code (0), and the commit is in the log. No failure was hidden; the other commits printed their output.
+- **Not done:** opening the gate, checkpoint loading, GPU generation, closing, training and pushing. All 54 gates are
+  closed.
+- **Status:** the generation run's seed preparation is complete; awaiting the user's launch review. See do-not-repeat
+  **#128**.
