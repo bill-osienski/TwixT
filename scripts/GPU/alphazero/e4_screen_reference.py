@@ -705,6 +705,19 @@ ACCOUNTED_SEED_INTERVALS = (
     # Accounted, NOT exposed and NOT retired: exposure follows actual use (the started slots, as the closing rule
     # establishes them); the closing edit retires the whole block. No gate is opened by this.
     (202697200, 202697344),          # COMBINATION POLICY PILOT THROUGHPUT CHECK ATTEMPT 2 -- 144 game seeds
+    # 🔴 COMBINATION POLICY PILOT -- CORPUS GENERATION -- 1,000 GAME SEEDS, registered 2026-10-30: the 1,000-seed
+    # block of the generation survey (evidence/combination-policy-generate-seed-survey/02_*), READ from that record,
+    # not chosen here, by the two-band rule (seed_band_2027.candidate) -- the FIRST block in the 2027 band. One seed
+    # per slot of the ONE generation run (amendment
+    # docs/superpowers/2026-10-30-combination-policy-generation-amendment.md to card
+    # docs/superpowers/2026-10-28-combination-policy-pilot-card.md §5 step 3; `combination_policy_pilot run generate`:
+    # slot g plays seed BASE + g, whichever worker claims it). The plan is
+    # evidence/combination-policy-generate-run/plan.json (base + slot count + survey hash). Registered ONLY after the
+    # pre-registration collision proof (same directory, 03_*) was CLEAN, 55/55.
+    #
+    # Accounted, NOT exposed and NOT retired: exposure follows actual use (the started slots, as the closing rule
+    # establishes them); the closing edit retires the whole block. No gate is opened by this.
+    (202739800, 202740800),          # COMBINATION POLICY PILOT CORPUS GENERATION -- 1,000 game seeds
 )
 
 #: EXPERIMENTAL EXPOSURE: seeds drawn from OUTSIDE the permanently unschedulable

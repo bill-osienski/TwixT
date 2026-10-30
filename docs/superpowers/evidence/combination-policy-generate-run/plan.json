@@ -1,0 +1,6 @@
+{
+ "base": 202739800,
+ "kind": "combination-policy-generate-plan/1",
+ "n_slots": 1000,
+ "survey_record_sha256": "69ce5b873f91f83ec47d84fd04e1d27cc9a593336c7c5a9fcd8be786b316130a"
+}
