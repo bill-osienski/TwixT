@@ -389,11 +389,15 @@ def test_GENERATION_WRITES_EACH_GAME_ITS_ROWS_AND_THE_CLOSING_EVENTS(tmp_path, m
     assert 0.0 < rec["summary"]["mean_mass_round1_out"] < 1.0
 
 
-def test_THE_THROUGHPUT_CHECK_KEEPS_NO_ROWS_AND_PRICES_GENERATION(tmp_path, monkeypatch):
-    monkeypatch.setitem(P.KINDS["throughput"], "slots", 3)
-    h = GenHarness(tmp_path, kind="throughput", n=3)
-    code, rec = _conclude("throughput", lambda o, r, lg: P._generate("throughput", h.seams, o, r, lg), tmp_path / "e")
+@pytest.mark.parametrize("kind", ["throughput", "throughput2"])
+def test_THE_THROUGHPUT_CHECK_KEEPS_NO_ROWS_AND_PRICES_GENERATION(tmp_path, monkeypatch, kind):
+    """Attempt 2 (amendment, 2026-10-29) runs exactly attempt 1's check; only its record adds the amendment."""
+    monkeypatch.setitem(P.KINDS[kind], "slots", 3)
+    h = GenHarness(tmp_path, kind=kind, n=3)
+    code, rec = _conclude(kind, lambda o, r, lg: P._generate(kind, h.seams, o, r, lg), tmp_path / "e")
     assert code == P.EXIT_COMPLETED, rec.get("void")
+    assert rec["run"] == kind and (rec.get("amendment"), rec.get("amendment_sha256")) == \
+        (P.KINDS[kind]["amendment"] if kind == "throughput2" else (None, None))
     assert not (tmp_path / "cache").exists()
     games = [json.loads(x) for x in (tmp_path / "e" / "games.jsonl").read_text().splitlines()]
     assert all("rows_file" not in g for g in games)
@@ -599,9 +603,10 @@ def test_THE_TIMING_SYNCHRONIZES_EACH_UPDATE_AND_PRICES_THE_CEILING(tmp_path):
 
 # ─────────────────────────────── the entry, the gates and the default path ───────────────────────────────
 
-def test_ALL_THREE_GATES_ARE_CLOSED_SINGLE_DECLARATIONS():
+def test_EVERY_PILOT_GATE_IS_A_CLOSED_SINGLE_DECLARATION():
     import ast
-    for kind in ("throughput", "generate", "train"):
+    assert sorted(P.KINDS) == ["generate", "throughput", "throughput2", "train"]
+    for kind in P.KINDS:
         gate, name = P.KINDS[kind]["gate"]
         assert getattr(gate, name) is False
         tree = ast.parse(pathlib.Path(gate.__file__).read_text())
@@ -615,7 +620,7 @@ def test_THE_ENTRY_REFUSES_WITHOUT_THE_SETTING_AND_ON_A_CLOSED_GATE(monkeypatch,
     monkeypatch.setenv(P.SETTING, "0")
     monkeypatch.setattr(P, "_mlx_loaded", lambda: False)
     monkeypatch.setattr(P, "CARD_SHA256", P.M._sha((ROOT / P.CARD).read_bytes()))
-    for kind in ("throughput", "generate", "train"):
+    for kind in ("throughput", "throughput2", "generate", "train"):
         assert P.main(["run", kind, "--checkpoint", "/x"]) == P.EXIT_REFUSED
         assert "is closed" in capsys.readouterr().err
 
@@ -649,20 +654,24 @@ def test_ADMISSION_NEEDS_EACH_EARLIER_COMMITTED_RECORD():
         P.admitted("throughput", reader({}))
     assert P.admitted("throughput", reader({P.TIMING_EVIDENCE: ok})) == {P.TIMING_EVIDENCE: "COMPLETED"}
     with pytest.raises(P.Refused, match="not COMPLETED"):
-        P.admitted("generate", reader({P.KINDS["throughput"]["evidence"]: {**ok, "status": "VOID"}}))
+        P.admitted("generate", reader({P.KINDS["throughput2"]["evidence"]: {**ok, "status": "VOID",
+                                                                             "amendment_sha256": AMENDMENT_SHA}}))
     with pytest.raises(P.Refused):
         P.admitted("train", reader({P.KINDS["generate"]["evidence"]: ok}))
 
 
-THROUGHPUT_RUN = str(pathlib.Path(P.KINDS["throughput"]["plan"]).parent)
+#: generation is admitted from ATTEMPT 2 only (amendment, 2026-10-29)
+THROUGHPUT_RUN = str(pathlib.Path(P.KINDS["throughput2"]["plan"]).parent)
+AMENDMENT_SHA = P.KINDS["throughput2"]["amendment"][1]
+GOOD_INNER = {"status": "COMPLETED", "card_sha256": P.CARD_SHA256, "head": "a" * 40, "amendment_sha256": AMENDMENT_SHA}
 GOOD_OUTER = {"inner_exit": 0, "outcome": "COMPLETED", "outer_exit": 0, "gate_restored": True, "survivors": "",
               "record_by": "script", "head": "a" * 40}
 
 
 def _gen_readers(inner, outer):
-    """Readers for generation's admission: the throughput record, and its outer.json (None: absent)."""
+    """Readers for generation's admission: attempt 2's throughput record, and its outer.json (None: absent)."""
     def read_record(rel):
-        assert rel == P.KINDS["throughput"]["evidence"], rel
+        assert rel == P.KINDS["throughput2"]["evidence"], rel
         return inner
 
     def read_outer(rel):
@@ -675,9 +684,9 @@ def _gen_readers(inner, outer):
 
 def test_GENERATION_IS_ADMITTED_ONLY_WITH_A_SUCCESSFUL_COMMITTED_OUTER_JSON():
     """The user's ruling (2026-10-29): the inner record AND the wrapper's outer.json must both show success."""
-    inner = {"status": "COMPLETED", "card_sha256": P.CARD_SHA256, "head": "a" * 40}
+    inner = GOOD_INNER
     assert P.admitted("generate", *_gen_readers(inner, GOOD_OUTER)) == \
-        {P.KINDS["throughput"]["evidence"]: "COMPLETED", f"{THROUGHPUT_RUN}/outer.json": "COMPLETED"}
+        {P.KINDS["throughput2"]["evidence"]: AMENDMENT_SHA, f"{THROUGHPUT_RUN}/outer.json": "COMPLETED"}
     with pytest.raises(P.Refused, match="outer.json does not exist"):           # missing outer evidence
         P.admitted("generate", *_gen_readers(inner, None))
     with pytest.raises(P.Refused, match="outer.json does not exist"):           # no outer reader at all
@@ -703,7 +712,7 @@ def test_GENERATION_IS_ADMITTED_ONLY_WITH_A_SUCCESSFUL_COMMITTED_OUTER_JSON():
          "gate-not-restored", "outer-exit-5", "wrapper-record", "no-record", "exit-bool", "exit-str", "exit-null",
          "void", "other-head", "no-head"])
 def test_AN_OUTER_FAILURE_REFUSES_GENERATION_EVEN_OVER_A_COMPLETED_INNER_RECORD(change):
-    inner = {"status": "COMPLETED", "card_sha256": P.CARD_SHA256, "head": "a" * 40}
+    inner = GOOD_INNER
     with pytest.raises(P.Refused, match="does not show a successful run"):
         P.admitted("generate", *_gen_readers(inner, {**GOOD_OUTER, **change}))
 
@@ -711,6 +720,7 @@ def test_AN_OUTER_FAILURE_REFUSES_GENERATION_EVEN_OVER_A_COMPLETED_INNER_RECORD(
 def test_ONLY_GENERATION_READS_AN_OUTER_JSON():
     ok = {"status": "COMPLETED", "card_sha256": P.CARD_SHA256}
     assert P.admitted("throughput", lambda rel: ok) == {P.TIMING_EVIDENCE: "COMPLETED"}
+    assert P.admitted("throughput2", lambda rel: ok) == {P.TIMING_EVIDENCE: "COMPLETED"}
     assert set(P.OUTER_ADMISSION) == {"generate"}
 
 
@@ -757,7 +767,8 @@ def test_THE_FROZEN_RECIPE_IS_THE_CARD_S():
         (3000, 64, 1e-3, 1e-4, 20261028, 20261029, 0.01)
     assert (r["heldout_mod"], r["heldout_rem"], r["from_ply"]) == (10, 9, 20)
     assert (P.N_WORKERS, P.MAX_BATCH_ROWS) == (18, 14)
-    assert {k: v["slots"] for k, v in P.KINDS.items() if "slots" in v} == {"throughput": 144, "generate": 1000}
+    assert {k: v["slots"] for k, v in P.KINDS.items() if "slots" in v} == {"throughput": 144, "throughput2": 144,
+                                                                          "generate": 1000}
     assert P.GENERATE_CEILING == {"factor": 1.5, "max_seconds": 21600}
 
 
@@ -803,3 +814,74 @@ def test_THE_TIMING_IS_VOID_IF_BOINC_APPEARS_BY_THE_END(monkeypatch, tmp_path):
     rec = json.loads((tmp_path / P.TIMING_EVIDENCE / "record.json").read_text())
     assert rec["status"] == "VOID" and rec["void"]["step"] == "background_compute"
     assert rec["background_before"]["ok"] and not rec["background_after"]["ok"]
+
+
+# ─────────────────────────────── attempt 2 of the throughput check (amendment, 2026-10-29) ───────────────────────────────
+
+def test_ATTEMPT_2_IS_ATTEMPT_1_S_CHECK_ON_ITS_OWN_PATHS_GATE_AND_PINNED_AMENDMENT():
+    one, two = P.KINDS["throughput"], P.KINDS["throughput2"]
+    assert (two["slots"], two["keep_rows"]) == (one["slots"], one["keep_rows"]) == (144, False)
+    assert two["evidence"] == "docs/superpowers/evidence/combination-policy-throughput2"
+    assert two["plan"] == "docs/superpowers/evidence/combination-policy-throughput2-run/plan.json"
+    assert two["gate"][1] == "COMBINATION_POLICY_THROUGHPUT2_AUTHORIZED" and two["gate"][0] is not one["gate"][0]
+    rel, sha = two["amendment"]
+    assert rel == "docs/superpowers/2026-10-29-combination-policy-throughput-attempt2-amendment.md"
+    assert P.M._sha((ROOT / rel).read_bytes()) == sha
+    assert P.ADMISSION["throughput2"] == P.ADMISSION["throughput"] and "amendment" not in one
+    assert (P.N_WORKERS, P.MAX_BATCH_ROWS) == (18, 14) and P.RECIPE["updates"] == 3000     # nothing else moved
+
+
+def test_GENERATION_IS_NEVER_ADMITTED_FROM_ATTEMPT_1():
+    """Attempt 1's paths are never read: a COMPLETED attempt-1 record with a perfect outer.json admits nothing, and an
+    attempt-2 record without the pinned amendment's sha256 is refused."""
+    one = P.KINDS["throughput"]
+    one_run = str(pathlib.Path(one["plan"]).parent)
+    reads = []
+
+    def read_record(rel):
+        reads.append(rel)
+        if rel == one["evidence"]:
+            return {**GOOD_INNER, "amendment_sha256": None}
+        raise FileNotFoundError(rel)
+
+    def read_outer(rel):
+        reads.append(rel)
+        if rel == one_run:
+            return GOOD_OUTER
+        raise FileNotFoundError(rel)
+    with pytest.raises(P.Refused, match="combination-policy-throughput2/record.json does not exist"):
+        P.admitted("generate", read_record, read_outer)
+    assert one["evidence"] not in reads and one_run not in reads
+    for sha in (None, "0" * 64, P.CARD_SHA256):
+        with pytest.raises(P.Refused, match="not COMPLETED with amendment_sha256"):
+            P.admitted("generate", *_gen_readers({**GOOD_INNER, "amendment_sha256": sha}, GOOD_OUTER))
+
+
+def test_RUN_THROUGHPUT2_REFUSES_AN_AMENDMENT_THAT_IS_NOT_THE_PINNED_ONE(monkeypatch, capsys):
+    """Its gate opened in this process only; the isolation keeps every real seam and the record boundary
+    unreachable. With the pinned amendment the entry goes on to its next refusal (the checkpoint)."""
+    gate, name = P.KINDS["throughput2"]["gate"]
+    monkeypatch.setattr(gate, name, True)
+    monkeypatch.setattr(P, "_mlx_loaded", lambda: False)
+    monkeypatch.setattr(P, "admitted", lambda kind, *_a: {"stub": kind})
+    assert P.main(["run", "throughput2", "--checkpoint", "/no/such/file"]) == P.EXIT_REFUSED
+    assert "--checkpoint must name an existing file" in capsys.readouterr().err
+    rel, _sha = P.KINDS["throughput2"]["amendment"]
+    monkeypatch.setitem(P.KINDS["throughput2"], "amendment", (rel, "0" * 64))
+    assert P.main(["run", "throughput2", "--checkpoint", "/no/such/file"]) == P.EXIT_REFUSED
+    assert "is not the pinned amendment" in capsys.readouterr().err
+
+
+def test_ATTEMPT_1_STAYS_ONE_SHOT_even_with_its_gate_open(tmp_path, monkeypatch, capsys):
+    """Its gate opened in this process only, admission stubbed: attempt 1's committed evidence makes `run throughput`
+    refuse as one-shot before any seam (the isolation keeps them unreachable)."""
+    assert (ROOT / P.KINDS["throughput"]["evidence"] / "record.json").is_file()
+    gate, name = P.KINDS["throughput"]["gate"]
+    assert getattr(gate, name) is False
+    monkeypatch.setattr(gate, name, True)
+    monkeypatch.setattr(P, "_mlx_loaded", lambda: False)
+    monkeypatch.setattr(P, "admitted", lambda kind, *_a: {"stub": kind})
+    ckpt = tmp_path / "model.safetensors"
+    ckpt.write_bytes(b"not a model")
+    assert P.main(["run", "throughput", "--checkpoint", str(ckpt)]) == P.EXIT_REFUSED
+    assert "exists: the run is one-shot" in capsys.readouterr().err

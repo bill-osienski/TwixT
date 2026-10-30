@@ -412,42 +412,29 @@ def test_FAKE_LAUNCH_A_MISSING_PGID_RECORDS_SURVIVORS_AS_UNKNOWN(tmp_path):
     assert P.outer_faults(outer, {"head": outer["head"]})              # never admits generation
 
 
-def _commit_evidence_and_admit(repo, monkeypatch):
-    """Commit the fake run's outputs, then ask the REAL admission (the real committed readers) about generation."""
+def _commit_evidence(repo, monkeypatch):
+    """Commit the fake run's outputs and point the REAL admission (the real committed readers) at the fake repo."""
     def git(*a):
         return subprocess.check_output(["git", "-c", "user.name=t", "-c", "user.email=t@t", *a], cwd=repo,
                                        text=True).strip()
     monkeypatch.setattr(P, "ROOT", repo)
     monkeypatch.setattr(P.M, "_git", git)
-    with pytest.raises(P.Refused, match="uncommitted or differs from HEAD"):     # not yet committed
-        P.admitted("generate", P._read_record, P._read_outer)
     git("add", "docs/superpowers/evidence")
     git("commit", "-qm", "the run's evidence")
-    return lambda: P.admitted("generate", P._read_record, P._read_outer)
 
 
-def test_ADMISSION_ACCEPTS_THE_REAL_WRAPPER_S_COMPLETED_RUN(tmp_path, monkeypatch):
+def test_ATTEMPT_1_S_PATHS_NEVER_ADMIT_GENERATION_even_after_a_completed_committed_run(tmp_path, monkeypatch):
+    """RE-ANCHORED 2026-10-29 (the attempt-2 amendment): generation is admitted from attempt 2's records only, so a
+    COMPLETED fake run on attempt 1's wrapper, its records committed, admits nothing. Attempt 2's accept and
+    TIMEOUT-over-COMPLETED checks live in tests/test_combination_policy_throughput2_launch.py."""
     repo, wdir, _gate = _fake_repo(tmp_path)
     p = _launch(repo, wdir, run="record")
     outer = json.loads((wdir / "outer.json").read_text())
     assert p.returncode == 0 and outer["outcome"] == "COMPLETED" and outer["record_by"] == "script", outer
-    admit = _commit_evidence_and_admit(repo, monkeypatch)
-    assert admit() == {"docs/superpowers/evidence/combination-policy-throughput": "COMPLETED",
-                       "docs/superpowers/evidence/combination-policy-throughput-run/outer.json": "COMPLETED"}
-
-
-def test_ADMISSION_REFUSES_AN_OUTER_TIMEOUT_OVER_THE_SCRIPT_S_COMPLETED_RECORD(tmp_path, monkeypatch):
-    """The user's ruling (2026-10-29): the script wrote COMPLETED, then the run outlived the ceiling (TERM_S 2 in this
-    copy only). Both records stand as written; generation is refused."""
-    repo, wdir, _gate = _fake_repo(tmp_path, term_s=2)
-    p = _launch(repo, wdir, run="record_outlive")
-    outer = json.loads((wdir / "outer.json").read_text())
-    rec = json.loads((repo / "docs/superpowers/evidence/combination-policy-throughput/record.json").read_text())
-    assert p.returncode == 124 and outer["outcome"] == "TIMEOUT" and outer["record_by"] == "script", outer
-    assert rec["status"] == "COMPLETED" and rec["written_by"] == "script"        # the inner record is untouched
-    admit = _commit_evidence_and_admit(repo, monkeypatch)
-    with pytest.raises(P.Refused, match="inner_exit is 124, not 0"):
-        admit()
+    _commit_evidence(repo, monkeypatch)
+    assert not P.outer_faults(outer, json.loads((repo / P.KINDS["throughput"]["evidence"] / "record.json").read_text()))
+    with pytest.raises(P.Refused, match="combination-policy-throughput2/record.json does not exist"):
+        P.admitted("generate", P._read_record, P._read_outer)
 
 
 # ─────────────────────────────── the seed-procedure copies (built, never run here) ───────────────────────────────

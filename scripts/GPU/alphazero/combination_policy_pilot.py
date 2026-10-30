@@ -11,6 +11,10 @@ THE STEPS (card §5; each a separate approval, each in ONE fresh process under i
 * `run throughput`: 144 slots on a registered block, n_workers 18, arbiter cap 14 rows per call. Its games are never
   used: no rows are written. ALL 144 must finish inside the 15-minute ceiling or the run is VOID and the pilot is
   closed. Records games/h, the arbiter's mean rows per call and the generation ceiling (1.5x the projection, <= 6 h).
+* `run throughput2`: ATTEMPT 2 (amendment `docs/superpowers/2026-10-29-combination-policy-throughput-attempt2-amendment.md`,
+  pinned by sha256): the ONE fresh throughput check after attempt 1's timeout -- the same 144 games, workers and cap, on
+  its own fresh block, plan, evidence directory and gate; its wrapper's ceiling is 30 minutes. Its record carries the
+  amendment's sha256, and generation is admitted from attempt 2's committed records only, never from attempt 1's.
 * `run generate`: 1,000 slots on its own registered block; each game's rows go to one create-only file OUTSIDE the
   repository (CACHE_DIR), named with its sha256 in the committed games.jsonl. Any incomplete run is VOID.
 Both: slot g plays seed plan.base + g (combination_selfplay); a `game_start` event (slot, worker) is logged BEFORE
@@ -27,7 +31,7 @@ each game and the final claim count after the last; background_compute is read b
 Any failure, exception or SIGTERM inside the record boundary is a VOID with record.json written by the script; a
 STOP rule is a COMPLETED run with verdict STOP. One shot each; no retry, top-up or extension.
 
-    MLX_ENABLE_TF32=0 python -m scripts.GPU.alphazero.combination_policy_pilot run throughput|generate|train --checkpoint <abs path>
+    MLX_ENABLE_TF32=0 python -m scripts.GPU.alphazero.combination_policy_pilot run throughput|throughput2|generate|train --checkpoint <abs path>
     MLX_ENABLE_TF32=0 python -m scripts.GPU.alphazero.combination_policy_pilot time
 """
 from __future__ import annotations
@@ -49,6 +53,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 import numpy as np
 
 from . import combination_policy_generate_authorization as GENERATE_GATE
+from . import combination_policy_throughput2_authorization as THROUGHPUT2_GATE
 from . import combination_policy_throughput_authorization as THROUGHPUT_GATE
 from . import combination_policy_train_authorization as TRAIN_GATE
 from . import combination_selfplay as CS
@@ -75,6 +80,12 @@ N_WORKERS, MAX_BATCH_ROWS = 18, 14              # entry 20's measured starting s
 KINDS = {"throughput": {"slots": 144, "keep_rows": False, "gate": (THROUGHPUT_GATE, "COMBINATION_POLICY_THROUGHPUT_AUTHORIZED"),
                         "evidence": "docs/superpowers/evidence/combination-policy-throughput",
                         "plan": "docs/superpowers/evidence/combination-policy-throughput-run/plan.json"},
+         "throughput2": {"slots": 144, "keep_rows": False,
+                         "gate": (THROUGHPUT2_GATE, "COMBINATION_POLICY_THROUGHPUT2_AUTHORIZED"),
+                         "evidence": "docs/superpowers/evidence/combination-policy-throughput2",
+                         "plan": "docs/superpowers/evidence/combination-policy-throughput2-run/plan.json",
+                         "amendment": ("docs/superpowers/2026-10-29-combination-policy-throughput-attempt2-amendment.md",
+                                       "6dba686d5b6e82938e4abfd7a8d6e881b16122ae4b38e23f54edff6a62d106fe")},
          "generate": {"slots": 1000, "keep_rows": True, "gate": (GENERATE_GATE, "COMBINATION_POLICY_GENERATE_AUTHORIZED"),
                       "evidence": "docs/superpowers/evidence/combination-policy-generate",
                       "plan": "docs/superpowers/evidence/combination-policy-generate-run/plan.json"},
@@ -83,11 +94,13 @@ KINDS = {"throughput": {"slots": 144, "keep_rows": False, "gate": (THROUGHPUT_GA
 TIMING_EVIDENCE = "docs/superpowers/evidence/combination-policy-timing"
 #: what each step needs committed first: (evidence dir, record field, value)
 ADMISSION = {"throughput": [(TIMING_EVIDENCE, "status", "COMPLETED")],
-             "generate": [(KINDS["throughput"]["evidence"], "status", "COMPLETED")],
+             "throughput2": [(TIMING_EVIDENCE, "status", "COMPLETED")],
+             #: attempt 2 only (amendment, 2026-10-29): a record of attempt 2 under its pinned amendment; attempt 1 never
+             "generate": [(KINDS["throughput2"]["evidence"], "amendment_sha256", KINDS["throughput2"]["amendment"][1])],
              "train": [(KINDS["generate"]["evidence"], "status", "COMPLETED"), (TIMING_EVIDENCE, "status", "COMPLETED")]}
 #: what each step needs from the launch wrapper's committed outer.json too (the user's ruling, ledger 2026-10-29): an
 #: outer TIMEOUT, unconfirmed cleanup or missing outer evidence refuses, whatever the inner record says
-OUTER_ADMISSION = {"generate": [(str(pathlib.Path(KINDS["throughput"]["plan"]).parent), KINDS["throughput"]["evidence"])]}
+OUTER_ADMISSION = {"generate": [(str(pathlib.Path(KINDS["throughput2"]["plan"]).parent), KINDS["throughput2"]["evidence"])]}
 GENERATE_CEILING = {"factor": 1.5, "max_seconds": 6 * 3600}
 #: card §4: the one recipe. Not a tuning point.
 RECIPE = {"updates": 3000, "batch": 64, "lr": 1e-3, "l2": 1e-4, "betas": [0.9, 0.999], "eps": 1e-8,
@@ -273,7 +286,7 @@ def _generate(kind: str, seams: GenSeams, out_dir: pathlib.Path, rec: Dict[str, 
                       "mean_mass_round1_out": totals["mass_round1_out"] / rows_total if rows_total else None,
                       "duplicate_rows": len(keys) - len(set(keys)),
                       "duplicates_note": "rows whose move sequence repeats an earlier row's; transpositions not merged"}
-    if kind == "throughput":
+    if kind in ("throughput", "throughput2"):
         projected = KINDS["generate"]["slots"] / rec["throughput"]["games_per_hour"] * 3600.0
         rec["generate_ceiling"] = {"projected_seconds": projected,
                                    "ceiling_seconds": min(math.ceil(GENERATE_CEILING["factor"] * projected),
@@ -742,6 +755,8 @@ def conclude(kind: str, execute: Callable[[pathlib.Path, Dict[str, Any], Callabl
                            "environment": {"python": sys.version, "platform": platform.platform(),
                                            "executable": sys.executable},
                            "loadavg_before": os.getloadavg()}
+    if "amendment" in KINDS.get(kind, {}):
+        rec["amendment"], rec["amendment_sha256"] = KINDS[kind]["amendment"]
     log_fh = open(out_dir / "progress.jsonl", "x")
 
     def log(event, **kw):
@@ -871,6 +886,10 @@ def run(kind: str, checkpoint: str) -> int:
     gate, name = KINDS[kind]["gate"]
     if getattr(gate, name) is not True:
         raise Refused(f"{name} is closed: the {kind} step is not authorized")
+    if "amendment" in KINDS[kind]:
+        rel, sha = KINDS[kind]["amendment"]
+        if not (ROOT / rel).is_file() or M._sha((ROOT / rel).read_bytes()) != sha:
+            raise Refused(f"{rel} is not the pinned amendment")
     admission = admitted(kind, _read_record, _read_outer)
     ckpt = pathlib.Path(checkpoint)
     if not (ckpt.is_absolute() and ckpt.is_file()):
@@ -924,7 +943,7 @@ def _mlx_loaded() -> bool:
 def main(argv: Sequence[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     usage = ("usage: MLX_ENABLE_TF32=0 python -m scripts.GPU.alphazero.combination_policy_pilot "
-             "run throughput|generate|train --checkpoint <abs path> | time")
+             "run throughput|throughput2|generate|train --checkpoint <abs path> | time")
     try:
         if argv == ["time"]:
             return run_timing()

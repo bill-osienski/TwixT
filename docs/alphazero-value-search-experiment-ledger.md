@@ -174,6 +174,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — TIMEOUT/VOID and closure at step 2 accepted; seed closing approved as one conditional sequence (addendum, 2026-10-29, the user's decision).** No policy-learning result; the combination's earlier strength PASS stands. K1 once in a clean worktree; only if it RECONCILES, all of [202696900, 202697044) to EXPOSED and RETIRED (no final `claims` event, so the frozen rule exposes all 144); then the lifecycle-test re-anchor and focused CPU checks. See #120.
 > **Combination policy pilot — the throughput block CLOSED (addendum, 2026-10-29).** K1 RECONCILES 21/21 (`b69515d5`; no `claims` event); K2 (`e30e277c`) appends [202696900, 202697044) last to EXPOSED (44 → 45) and RETIRED (42 → 43), ACCOUNTED (47) and TEST_ONLY unchanged; the lifecycle test asserts the closed state (`3dee44a9`). The pilot is closed with no policy-learning result. Awaiting review; nothing further authorized. See #121.
 > **Combination policy pilot — closeout ACCEPTED (addendum, 2026-10-29, the user's review).** The pilot and its seeds are fully closed. Policy learning remains untested; the combination's earlier strength PASS stands. Nothing further is authorized. See #121.
+> **Combination policy pilot — ONE fresh attempt at the throughput check: amendment and build only (decision note after entry 41, 2026-10-29, the user's decision).** Attempt 1's 15-minute ceiling was too tight (113 games in ~890 s, roughly 19 minutes for 144). Attempt 2: the same 144 games, model, search, 18 workers and cap 14; TERM 1,790 s, KILL 1,800 s, observation to 1,810 s; fresh seeds, separate paths, gate 54 closed; generation admitted from attempt 2's committed inner and outer records only. Built for review; nothing run. See #122.
 
 ## Historical proposal check — programme now closed
 
@@ -1825,6 +1826,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 119. **The combination policy pilot, closed at the throughput check (2026-10-29).** Do **not** retry, extend, top up or rerun the throughput check, raise its 15-minute ceiling, reuse its block or its 144 games (never training or strength evidence), or proceed to generation or training: the pilot is closed by its own rule (card §5 step 2). Do **not** read the TIMEOUT as evidence about policy learning, or the descriptive games/h as the card's measurement (the record's `throughput` is null). A new pilot, a card amendment or seed closing needs the user's decision. Do **not** chain a merge after a commit whose failure a pipe can hide.
 120. **The throughput seed closing (2026-10-29).** Do **not** run K1 more than once, or edit the registry if it does not RECONCILE. Do **not** expose only the 131 recorded starts: with no final `claims` event the frozen rule exposes the whole block. Do **not** change ACCOUNTED or TEST_ONLY. Do **not** retry, amend, profile, generate a corpus, train or push on this approval.
 121. **The throughput block, closed (2026-10-29).** Do **not** reuse, unexpose, unretire or re-register any seed of [202696900, 202697044), rerun K1 or K2, or edit `02_derive_usage_run.txt` (sha256 `502e164a…`). Do **not** use the 113 finished throughput games for anything. Do **not** read the older registry-test failures (the same 16 failed / 69 errors before and after K2) as caused by this closing. A retry, amendment, profiling run, corpus generation, training or push needs a new decision.
+122. **The throughput check, attempt 2 (2026-10-29).** Do **not** make a third attempt, retry, extend or top up attempt 2, or change its ceiling (TERM 1,790 s, KILL 1,800 s, observation to 1,810 s). Do **not** admit generation from attempt 1's records or paths, from an attempt-2 record without the pinned amendment's sha256, or without attempt 2's successful committed `outer.json`. Do **not** change the learning target, training recipe or evaluation criteria, repeat the CPU timing, profile or sweep parameters on this amendment. Do **not** edit the pinned amendment (sha256 `6dba686d…`) or attempt 1's evidence, closed seeds or registry entries. Seed procedures, checkpoint loading, GPU work, gameplay, training and pushing each need their own approval.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -7043,3 +7045,85 @@ approved as one sequence.**
 - **Status:** the combination policy pilot and its seeds are fully closed. Policy learning remains untested; the
   combination's earlier strength PASS stands. No retry, amendment, profiling, generation, training or push is
   authorized. See do-not-repeat **#121**.
+
+### Decision note — after entry 41: one fresh attempt at the throughput check, amendment and build only (2026-10-29, the user's decision)
+
+- **Reason (the user's):** attempt 1 completed 113 games in about 890 s, which suggests roughly 19 minutes for 144
+  games. Its 15-minute deadline was too tight. This gives no result on policy learning.
+- **Approved: documentation, implementation and focused CPU tests only,** for one fresh attempt:
+  - the same 144 games, model, search, 18 workers and inference batch cap 14;
+  - ceiling TERM at 1,790 s, KILL at 1,800 s, bounded cleanup observation through 1,810 s;
+  - one attempt only, with no automatic retry, extension or top-up;
+  - fresh seeds through the existing procedure, with separate create-only plan and evidence paths;
+  - a separate gate, created closed;
+  - the existing BOINC, idle, TF32, eval-mode and process-group cleanup checks preserved.
+- **Also required:** a short prospective amendment granting this narrow exception to the pilot's closure; attempt 1's
+  VOID record, closed seeds and historical evidence unchanged; the existing implementation reused with the smallest
+  necessary changes; seed-procedure copies prepared but not executed; focused CPU checks for the new paths, the ceiling
+  and admission. Future generation must require successful committed inner AND outer records from attempt 2; attempt 1
+  must remain ineligible.
+- **Not changed:** the learning target, the training recipe and the evaluation criteria. No repeat of the CPU timing,
+  no profiling and no parameter sweep.
+- **Not authorized:** seed-procedure execution, checkpoint loading, GPU work, gameplay, training and pushing.
+- **Prediction on record:** none.
+
+#### Addendum — attempt 2 of the throughput check, built for review (2026-10-29)
+
+- **The amendment** `docs/superpowers/2026-10-29-combination-policy-throughput-attempt2-amendment.md` (sha256
+  `6dba686d…`, pinned in the pilot): why, the one exception, what is unchanged, the five changes (ceiling, fresh seeds,
+  separate paths, gate 54, generation admitted from attempt 2 only), attempt 1 preserved, and what it does not
+  authorize. The card is unchanged.
+- **The pilot** (`combination_policy_pilot.py`, 24 lines added, 5 removed):
+  - `KINDS["throughput2"]`: attempt 1's 144 slots, no rows kept, with its own gate, evidence
+    (`combination-policy-throughput2`), plan (`combination-policy-throughput2-run/plan.json`) and the pinned amendment.
+    Admitted, as attempt 1 was, by the committed CPU timing.
+  - `run` refuses `throughput2` unless the amendment file has the pinned sha256 (checked after the gate). Its record
+    carries `amendment` and `amendment_sha256`. It prices generation exactly as attempt 1 would have.
+  - **Generation's admission now reads attempt 2 only:** its committed record must be COMPLETED under the card with the
+    pinned `amendment_sha256`, and its committed `outer.json` must pass `outer_faults` unchanged (zero inner and outer
+    exits, COMPLETED, the gate restored, survivors empty, the script's record, the same head). Attempt 1's paths are
+    never read.
+  - Nothing else changed: 18 workers, the cap of 14, the recipe, the target, the timing, the checks.
+- **The gate:** `combination_policy_throughput2_authorization.py`, `COMBINATION_POLICY_THROUGHPUT2_AUTHORIZED = False`,
+  a single declaration. The gate inventory goes 53 → 54.
+- **The wrapper** `combination-policy-throughput2-run/01_wrapper.sh`: attempt 1's with only `OUT_REL`, `RUN_REL`,
+  `GATE_REL`, `GATE`, `TERM_S=1790` and `run throughput2` changed, plus a header paragraph before attempt 1's unchanged
+  header. GRACE_S stays 10, so KILL comes at 1,800 s and the observation ends by 1,810 s. The idle gate, the BOINC
+  check, the process-group supervisor, the survivors, the records and the gate restoration are byte-identical.
+- **The seed copies** (built, not run): `combination-policy-throughput2-seed-survey/01_seed_survey.py` and
+  `combination-policy-throughput2-seed-closing/01_derive_usage.py`, attempt 1's with only the paths, the plan's kind
+  (`combination-policy-throughput2-plan/1`), the module names and the titles and verdict lines changed. Each docstring
+  is attempt 2's paragraph followed by attempt 1's description unchanged. The method pins are unchanged.
+- **Tests:**
+  - `tests/test_combination_policy_pilot.py` (75 → 80):
+    - the throughput pricing test now covers both attempts;
+    - every pilot gate is checked closed;
+    - generation's admission tests now read attempt 2's paths and need the amendment's sha256;
+    - new: attempt 2 is attempt 1's check on its own paths, gate and pinned amendment; generation is never admitted
+      from attempt 1 (a COMPLETED attempt-1 record with a perfect outer admits nothing, and its paths are never read),
+      nor from an attempt-2 record without the pinned sha256; `run throughput2` refuses a changed amendment; attempt 1
+      stays one-shot even with its gate opened in-process.
+  - `tests/test_combination_policy_launch.py` (24 → 23): its two end-to-end admission tests assumed generation reads
+    attempt 1. They are replaced by one: attempt 1's completed, committed fake run admits nothing. Their accept and
+    TIMEOUT-over-COMPLETED cases move to attempt 2's file.
+  - New `tests/test_combination_policy_throughput2_launch.py` (17):
+    - nothing of attempt 2 has run, and attempt 1's evidence is unchanged since `e30e277c`;
+    - the wrapper is attempt 1's with only the stated differences, line for line;
+    - the ceiling is 1,790 / 1,800 / 1,810 s;
+    - the wrapper serves the pilot's attempt-2 paths;
+    - fake launches of the real attempt-2 wrapper: a busy machine, BOINC or a failed check refuses; an idle one reaches
+      `run throughput2` with its exact arguments and `term_s` 1790; the ceiling (TERM_S 2 in a copy) ends the whole
+      group and the VOID record lands at attempt 2's path;
+    - through the real committed readers: attempt 2's completed run admits generation once committed; an outer TIMEOUT
+      over its COMPLETED record refuses;
+    - the seed copies differ from attempt 1's only as stated, serve attempt 2's paths, hold no seed literal, and their
+      controls pass (12 and 21).
+  - `tests/test_gate_inventory.py`: 54 gates, the stale-count guard extended.
+- **Mutation checks** (each on a temporary edit, restored byte-equal): generation re-pointed at attempt 1 → 23 tests
+  fail; the amendment pin check removed → 1 fails; attempt 1's TERM_S in the attempt-2 wrapper → 4 fail.
+- **Results:** the three combination test files: 120 passed, 1 deselected (opt-in), three consecutive runs. With the
+  gate-inventory, mirror-halving launch, background-compute, seed-selection and tactical-survey suites: 212 passed,
+  1 deselected. No test process left behind.
+- **Nothing run:** no seed procedure, registration, checkpoint, GPU, game, training or push. Attempt 1's evidence,
+  closed seeds and registry entries are unchanged. All 54 gates are closed.
+- **Status:** awaiting the user's review. See do-not-repeat **#122**.
