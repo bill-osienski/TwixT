@@ -7,4 +7,4 @@ registered block, under a 30-minute ceiling. It takes its own reviewed door, so 
 attempt 1's paths. Opened for ONE approved run and restored on every exit. Created closed. This file may
 hold ONLY this declaration.
 """
-COMBINATION_POLICY_THROUGHPUT2_AUTHORIZED = False
+COMBINATION_POLICY_THROUGHPUT2_AUTHORIZED = True
