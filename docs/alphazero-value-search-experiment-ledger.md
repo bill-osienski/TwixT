@@ -180,6 +180,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — attempt 2's survey and pre-proof ACCEPTED; registration, plan and post-proof approved as one conditional sequence (addendum, 2026-10-30, the user's decision).** Append exactly the surveyed block to ACCOUNTED and create the plan via `build_plan`; only if both are exactly as expected, run the post-proof once. Stop on any difference. The gate, GPU work, games, training and pushing remain unauthorized.
 > **Combination policy pilot — attempt 2's block REGISTERED with its plan; post-proof → HOLDS (addendum, 2026-10-30).** [202697200, 202697344) appended last to ACCOUNTED (47 → 48), nothing else changed; plan = `build_plan` (`22f81be1`). Post-proof run once (`1c2f4220`), bound to the survey record: the state HOLDS, the block CLEAN, 45/45. Lifecycle test re-anchored; 243 passed. Gate closed; awaiting review before it is opened.
 > **Combination policy pilot — attempt 2's registration and post-proof ACCEPTED; the ONE attempt-2 launch approved with its closing (addendum, 2026-10-30, the user's decision).** Panic/reboot check and registry/plan recheck; only gate 54 opened in a clean worktree; the existing wrapper once (idle + BOINC checks, TF32=0, TERM 1,790 s / KILL 1,800 s / observation to 1,810 s). After a started run: K1 once; only if it RECONCILES, its exposure verdict and the whole block retired. No automatic retry. Generation, training and pushing remain unauthorized. See #124.
+> **Combination policy pilot — the throughput check, ATTEMPT 2: outer TIMEOUT; VOID; block closed (entry 42, 2026-10-30).** All 144 games started and 143 finished; slot 108 (started at 711 s) was in flight at the 1,790 s TERM (inner 124; record VOID; gate restored; no survivors). The bulk ran at attempt 1's pace; four 280-move state-cap games took 686–1,091 s, and that tail, not the mean, sank the run. K1 RECONCILES 21/21 (no claims event); K2 EXPOSES and RETIRES [202697200, 202697344) whole. No policy-learning result; no automatic retry (#123). See #125.
 
 ## Historical proposal check — programme now closed
 
@@ -1834,6 +1835,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 122. **The throughput check, attempt 2 (2026-10-29).** Do **not** make a third attempt, retry, extend or top up attempt 2, or change its ceiling (TERM 1,790 s, KILL 1,800 s, observation to 1,810 s). Do **not** admit generation from attempt 1's records or paths, from an attempt-2 record without the pinned amendment's sha256, or without attempt 2's successful committed `outer.json`. Do **not** change the learning target, training recipe or evaluation criteria, repeat the CPU timing, profile or sweep parameters on this amendment. Do **not** edit the pinned amendment (sha256 `6dba686d…`) or attempt 1's evidence, closed seeds or registry entries. Seed procedures, checkpoint loading, GPU work, gameplay, training and pushing each need their own approval.
 123. **Clarification of #122 (2026-10-30, the user's review).** #122's "a third attempt" and the amendment's "no further attempt, whatever happens" mean: one attempt is authorized now, with **no automatic** retry, extension or top-up. If attempt 2 times out or is interrupted, do **not** retry it on the spot; assess the cause, the likely cost and whether another attempt is worthwhile, and return that to the user, whose fresh decision any further attempt needs. Do **not** edit the pinned amendment to say this, and do **not** build a retry in advance.
 124. **The one attempt-2 launch (2026-10-30).** Do **not** run the attempt-2 wrapper more than once, retry, extend, top up or rerun any part of a started run, or change its ceiling (TERM 1,790 s, KILL 1,800 s, observation to 1,810 s), workers, cap, checks or TF32 setting. An outer TIMEOUT overrides an inner COMPLETED record. Do **not** open any gate but gate 54, edit the registry before the closing derivation RECONCILES, or use the throughput games for training or strength evidence. After a TIMEOUT or interruption, assess before any further attempt (#123). Corpus generation, training and pushing need their own approval.
+125. **The throughput check, attempt 2, VOID and closed (2026-10-30).** Do **not** reuse, unexpose, unretire or re-register any seed of [202697200, 202697344), rerun K1 or K2, edit attempt 2's run, closing or seed records, or use its games (143 finished) as training, throughput or strength evidence. Do **not** retry, extend or top up attempt 2. Do **not** read its 288 games/h (descriptive, VOID) as the pilot's measurement. Any further attempt is the user's fresh decision after assessing the cause (the 280-move state-cap tail: four games took 686–1,091 s), the cost and the worth (#123).
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -7251,3 +7253,68 @@ approved as one sequence.**
   attempt times out or is interrupted, the cause and whether another attempt is worthwhile are assessed (#123); there is
   no automatic retry.
 - **Not authorized:** corpus generation, training and pushing. See **#124**.
+
+### 42. Combination policy pilot — step 2, the throughput check, ATTEMPT 2 (2026-10-30, outer TIMEOUT; VOID; closed; awaiting assessment)
+
+- **Test:** amendment `docs/superpowers/2026-10-29-combination-policy-throughput-attempt2-amendment.md` (sha256
+  `6dba686d…`) to card §5 step 2: the same 144 games (calib020_0001 in eval mode, mirror averaging, root sequential
+  halving from ply 20, 24×24, `MLX_ENABLE_TF32=0`), 18 workers, inference cap 14, on the fresh registered block
+  [202697200, 202697344), inside a 30-minute ceiling (TERM at 1,790 s, KILL at 1,800 s, cleanup observation to
+  1,810 s). All 144 games must finish inside it; a run the ceiling stops is VOID. Its games are never used.
+- **Hypothesis:** with the ceiling no longer binding at attempt 1's pace, the 144 games finish, and the run prices step
+  3's generation.
+- **Why it was plausible:** attempt 1 finished 113 games in about 890 s (entry 41), about 457 games/h, which projects
+  roughly 19 minutes for 144.
+- **Prediction on record:** the amendment's "At that pace 144 games need roughly 19 minutes" (written before the run).
+  No prediction was stated about the tail of long games.
+- **What ran:** decision `b560ad6e` (#124). A fresh read-only panic/reboot check (no reboot since 2026-10-25 09:39; the
+  only panic report is that one; a JetsamEvent report at 2026-10-29 21:01, not a panic); load about 1.4. Recheck:
+  registry sha256 `0aa5c3b0…` = the post-proof's; registry, run directory, pilot and amendment unchanged since
+  `1c2f4220`; no gate open; BOINC check CLEAR (podman exempt); checkpoint present. Clean linked worktree
+  `cp-throughput2-run`; the one-line gate opening `a01f17c0` (only `COMBINATION_POLICY_THROUGHPUT2_AUTHORIZED`); the
+  existing wrapper run once at 12:35:28 EDT, ended 13:07:26. Idle gate held 60 s, background check CLEAR, then launch.
+  Evidence `e95b0e51` (the worktree's evidence commit, with the restored gate, then main fast-forwarded to it).
+- **Result:**
+  - **Wrapper:** inner exit **124** (the ceiling fired and TERM sufficed), outer exit 124, outcome **TIMEOUT**,
+    `gate_restored` true, survivors empty, `record_by` script, wall 1,791 s. The gate file is identical to the
+    pre-open commit; no pilot process remained; pgid 12724 was empty.
+  - **Inner record:** status **VOID**, step "terminated", "SIGTERM after 1789.9 s"; `throughput` null, verdict null.
+    The amendment's sha256 recorded. TF32 "0" at start and end; the model loaded with 0 of 42 modules in training
+    mode; 144 BOINC checks, all clear; stderr empty.
+  - **Slots:** all **144 started** (slots 0–143, the last start at 1,015 s), **143 finished**; slot 108 was in flight
+    at TERM, having started at 711 s and run 1,079 s.
+  - **Descriptive timing, derived from the committed logs (not the card's measurement):** finished games took mean
+    150.4 s (median 120.8, range 71.2–1,091.5) and 60.5 moves (median 54, range 33–280). 111 games had ended by 900 s,
+    136 by 1,200 s, 141 by 1,500 s; the 143rd ended at 1,724 s. **Four games reached the 280-move state cap and took
+    686, 696, 1,044 and 1,091 s**; every other finished game took at most 408 s. Finished-game time summed to 21,507 s,
+    about 1,195 s per worker (range 711–1,724 s). Over the whole 1,790 s, 143 finished games is about 288 games/h;
+    with no tail, the summed work alone would need about 20 minutes.
+  - **Concurrent activity:** macOS diagnostic reports during the run: `appstoreagent` (12:54) and an `installd`
+    CPU-resource report (12:57). The launch checks do not cover them; whether they slowed the run is not established.
+  - **Admission:** `admitted("generate")` on the committed evidence REFUSES (the record is not COMPLETED with the
+    amendment's sha256).
+  - **Post-run:** no new panic report and no reboot; all 54 gates closed.
+- **Did it match the prediction?** No. The bulk matched it: 111 games by 900 s, about attempt 1's pace, and the summed
+  work is about 20 minutes. The run was lost to the tail: state-cap games take 700–1,100 s each, and a long game
+  started late (slot 108 at 711 s) cannot finish inside 1,790 s. The amendment's projection used the mean game time
+  and did not price that tail. Why the state-cap games take this long (about 4 s per move against about 2 s for the
+  rest) is not established here.
+- **Closing:**
+  - **K1 (`f79174c4`), run once** in a clean linked worktree (`cp-throughput2-close`, from `e95b0e51`), exit 0:
+    **RECONCILES**, controls **21/21**. Inputs committed and unmodified; outer exit 124, survivors '', status VOID; no
+    `claims` event, so k is not established and the **whole block is EXPOSED**; the whole block is RETIRED. Record
+    `combination-policy-throughput2-seed-closing/02_derive_usage_run.txt`, sha256 `9d020cb4…`.
+  - **K2 (`ae361458`):** the verdict read from K1's committed record and checked against the plan; [202697200,
+    202697344) appended last to EXPOSED (45 → 46) and to RETIRED (43 → 44), with comments holding no other seed
+    literal. AST check against the parent: only those two lists changed, ACCOUNTED (48) and TEST_ONLY (1) unchanged.
+    Every seed of the block is refused.
+- **Tests re-anchored (`5a243133`):** the attempt-2 lifecycle test asserts the closed state (one run, outer TIMEOUT
+  over a VOID record at 1,790 s, gate restored, no survivors, generation refused by the real committed readers; the
+  proved registry = the launched one; K1 RECONCILES with no claims event; the whole block EXPOSED and RETIRED once and
+  last, ACCOUNTED unchanged; every seed refused), keeping the survey and proof checks and no seed literal. Attempt 1's
+  test now requires every later EXPOSED/RETIRED entry to lie above its block. A temporary deletion of the RETIRED entry
+  fails the test (restored byte-equal). The focused suites: 243 passed, 1 deselected.
+- **Conclusion / status:** the throughput check, attempt 2, is **VOID** and its block is **closed**. There is still no
+  policy-learning result; the combination's earlier strength PASS stands. Per #123 there is no automatic retry: the
+  cause (the state-cap tail), the likely cost and whether another attempt is worthwhile are for the user to assess.
+  Corpus generation, training and pushing remain unauthorized. See do-not-repeat **#125**.
