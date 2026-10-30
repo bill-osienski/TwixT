@@ -1,14 +1,18 @@
 """The combination policy pilot's CORPUS GENERATION (amendment
 `docs/superpowers/2026-10-30-combination-policy-generation-amendment.md`), built only: the wrapper
 (`docs/superpowers/evidence/combination-policy-generate-run/01_wrapper.sh`) and generation's admission without a
-completed throughput check. CPU only; nothing here loads a model, touches a device, runs a seed procedure or opens a
-real gate.
+completed throughput check, its seed-survey copy in the 2027 band (`seed_band_2027`, the user's review 2026-10-30),
+and training's admission through generation's outer.json. CPU only; nothing here loads a model, touches a device, runs a
+seed procedure or opens a real gate.
 
 The wrapper is the throughput check's attempt-2 wrapper with only the stated differences, asserted line by line. THE
 FAKE-LAUNCH CHECKS run the REAL generation wrapper's bytes in a throwaway git repository with the throughput tests'
 stubs (tests/test_combination_policy_launch) moved to generation's paths: the exact command and the ceiling. THE
 ADMISSION CHECKS use the real committed readers on a throwaway repository: the committed CPU timing alone admits
-generation, and no throughput record is read."""
+generation, and no throughput record is read; training needs generation's committed record AND outer.json to show
+success, so an outer TIMEOUT over a COMPLETED record refuses it."""
+import difflib
+import importlib.util
 import json
 import os
 import pathlib
@@ -27,6 +31,8 @@ EV = ROOT / "docs/superpowers/evidence"
 WRAPPER2 = EV / "combination-policy-throughput2-run/01_wrapper.sh"
 WRAPPER = EV / "combination-policy-generate-run/01_wrapper.sh"
 GATE_NAME = "COMBINATION_POLICY_GENERATE_AUTHORIZED"
+SURVEY2 = "combination-policy-throughput2-seed-survey/01_seed_survey.py"
+SURVEY = "combination-policy-generate-seed-survey/01_seed_survey.py"
 AMENDMENT = ("docs/superpowers/2026-10-30-combination-policy-generation-amendment.md",
              "11ced08185bd5e2727de07628a95e7cdc872ec31dae808e898640539742d7f55")
 
@@ -54,11 +60,13 @@ def test_NOTHING_OF_GENERATION_HAS_RUN_and_both_throughput_runs_stay_VOID():
     assert sorted(x.name for x in WRAPPER.parent.iterdir()) == ["01_wrapper.sh"]
     assert not (ROOT / P.KINDS["generate"]["plan"]).exists()
     assert not (ROOT / P.KINDS["generate"]["evidence"]).exists()
-    assert not [x.name for x in EV.iterdir() if x.name.startswith("combination-policy-generate-seed")]
+    assert sorted(x.name for x in (EV / SURVEY).parent.iterdir() if x.name != "__pycache__") == ["01_seed_survey.py"]
+    assert not (EV / "combination-policy-generate-seed-closing").exists()
     assert not (pathlib.Path.home() / "twixt-cache/combination-policy-pilot/generate").exists()
     for kind in ("throughput", "throughput2"):
         rec = json.loads((ROOT / P.KINDS[kind]["evidence"] / "record.json").read_text(encoding="utf-8"))
-        outer = json.loads((ROOT / pathlib.Path(P.KINDS[kind]["plan"]).parent / "outer.json").read_text(encoding="utf-8"))
+        run_dir = ROOT / pathlib.Path(P.KINDS[kind]["plan"]).parent
+        outer = json.loads((run_dir / "outer.json").read_text(encoding="utf-8"))
         assert (rec["status"], rec["void"]["step"], outer["outcome"]) == ("VOID", "terminated", "TIMEOUT"), kind
     for since, kind in (("e30e277c", "throughput"), ("ae361458", "throughput2")):
         dirs = [f"docs/superpowers/evidence/combination-policy-{kind}{s}" for s in ("", "-run", "-seed-survey",
@@ -271,3 +279,259 @@ def test_WITHOUT_A_COMMITTED_COMPLETED_TIMING_GENERATION_IS_REFUSED(tmp_path, mo
     _admission_repo(tmp_path, monkeypatch, timing, commit)
     with pytest.raises(P.Refused, match=why):
         P.admitted("generate", P._read_record, P._read_outer)
+
+
+# ─────────────────────────────── training's admission through the fake generation wrapper ─────────────────────────────
+
+def _commit_with_timing(repo, monkeypatch):
+    """Add a COMPLETED timing record, commit everything the fake run wrote, and point the REAL committed readers
+    here."""
+    def git(*a):
+        return subprocess.check_output(["git", "-c", "user.name=t", "-c", "user.email=t@t", *a], cwd=repo,
+                                       text=True).strip()
+    (repo / P.TIMING_EVIDENCE).mkdir(parents=True)
+    (repo / P.TIMING_EVIDENCE / "record.json").write_text(json.dumps({"status": "COMPLETED",
+                                                                     "card_sha256": P.CARD_SHA256}))
+    monkeypatch.setattr(P, "ROOT", repo)
+    monkeypatch.setattr(P.M, "_git", git)
+    git("add", "docs/superpowers/evidence")
+    git("commit", "-qm", "the run's evidence and the timing")
+
+
+def test_TRAINING_IS_ADMITTED_BY_A_COMPLETED_COMMITTED_GENERATION_RUN(tmp_path, monkeypatch):
+    repo, wdir, _gate = _fake_repo(tmp_path)
+    p = _launch(repo, wdir, run="record")
+    assert p.returncode == 0, p.stderr
+    _commit_with_timing(repo, monkeypatch)
+    assert P.admitted("train", P._read_record, P._read_outer) == {
+        "docs/superpowers/evidence/combination-policy-generate": "COMPLETED", P.TIMING_EVIDENCE: "COMPLETED",
+        "docs/superpowers/evidence/combination-policy-generate-run/outer.json": "COMPLETED"}
+
+
+def test_AN_OUTER_TIMEOUT_OVER_GENERATION_S_COMPLETED_RECORD_REFUSES_TRAINING(tmp_path, monkeypatch):
+    """The user's ruling (2026-10-29), now at generation -> training (review, 2026-10-30): the script wrote COMPLETED,
+    then the run outlived the ceiling (TERM_S 2 in this copy only). Both records stand as written; training is
+    refused."""
+    repo, wdir, _gate = _fake_repo(tmp_path, term_s=2)
+    p = _launch(repo, wdir, run="record_outlive")
+    outer = json.loads((wdir / "outer.json").read_text())
+    rec = json.loads((repo / "docs/superpowers/evidence/combination-policy-generate/record.json").read_text())
+    assert p.returncode == 124 and outer["outcome"] == "TIMEOUT" and outer["record_by"] == "script", outer
+    assert rec["status"] == "COMPLETED"
+    _commit_with_timing(repo, monkeypatch)
+    with pytest.raises(P.Refused, match="inner_exit is 124, not 0"):
+        P.admitted("train", P._read_record, P._read_outer)
+
+
+def test_A_GENERATION_RUN_WITHOUT_ITS_OUTER_JSON_COMMITTED_DOES_NOT_ADMIT_TRAINING(tmp_path, monkeypatch):
+    repo, wdir, _gate = _fake_repo(tmp_path)
+    assert _launch(repo, wdir, run="record").returncode == 0
+    (wdir / "outer.json").rename(repo / "scratch" / "outer.json")          # the wrapper's record never committed
+    _commit_with_timing(repo, monkeypatch)
+    with pytest.raises(P.Refused, match="outer.json does not exist"):
+        P.admitted("train", P._read_record, P._read_outer)
+
+
+# ─────────────────────────────── the generation seed-survey copy (built, never run here) ─────────────────────────────
+
+def _load(rel, name):
+    spec = importlib.util.spec_from_file_location(name, EV / rel)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)                     # module level only: no mode runs, nothing is written
+    return mod
+
+
+def _split(rel):
+    text = (EV / rel).read_text()
+    end = text.index('"""', 3)
+    return text[3:end], text[end + 3:]
+
+
+def test_THE_SURVEY_COPY_IS_THROUGHPUT_ATTEMPT_2_S_WITH_ONLY_THE_STATED_DIFFERENCES():
+    """Below the docstring: the block size, paths, plan kind, module name, titles and verdict lines, the rule module
+    and its install, the survey-mode rule moved after the scan (it reads the literals), and the two-band controls --
+    nothing else. The docstring is generation's paragraph followed by attempt 2's description unchanged."""
+    doc2, code2 = _split(SURVEY2)
+    doc, code = _split(SURVEY)
+    assert doc.endswith(doc2) and AMENDMENT[0] in doc[:-len(doc2)] and "seed_band_2027" in doc[:-len(doc2)]
+    a, b = code2.splitlines(), code.splitlines()
+    removed, added = [], []
+    for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(None, a, b, autojunk=False).get_opcodes():
+        if tag != "equal":
+            removed += [x.strip() for x in a[i1:i2]]
+            added += list(range(j1, j2))
+    assert removed == [
+        "N_SLOTS = 144", 'HERE = "docs/superpowers/evidence/combination-policy-throughput2-seed-survey"',
+        'PLAN = "docs/superpowers/evidence/combination-policy-throughput2-run/plan.json"',
+        'VERDICT_OK = "THE COMBINATION-POLICY THROUGHPUT ATTEMPT-2 BLOCK IS CLEAN"',
+        '"""The two pinned modules, private copies; this line\'s values rebound on the SURVEY copy only."""',
+        'spec = importlib.util.spec_from_file_location(f"_combination_policy_throughput2_{key}", p)',
+        "from scripts.GPU.alphazero import seed_selection as SEL",
+        'return {"kind": "combination-policy-throughput2-plan/1", "base": base, "n_slots": N_SLOTS,',
+        'faults.append("the throughput attempt-2 plan is absent or not committed")',
+        'faults.append("the throughput attempt-2 plan is not build_plan of the surveyed block")',
+        "say(f\"COMBINATION POLICY PILOT -- THROUGHPUT ATTEMPT-2 GAME-SEED {'SURVEY' if mode == 'survey' else "
+        "'COLLISION PROOF, mode ' + mode.upper()}\")",
+        'sel_rel = "scripts/GPU/alphazero/seed_selection.py"',
+        'say(f"rule {sel_rel} sha256 {_sha((ROOT / sel_rel).read_bytes())} (ALIGN {SEL.ALIGN})")',
+        "reserved = [iv for v in registries.values() for iv in v] + [iv for v in named.values() for iv in v]",
+        "highest, base, block = SEL.candidate(reserved, N_SLOTS)",
+        'say(f"\\nCANDIDATE RULE: highest registered/named-spent SEED in the band = {highest}; BASE = {base}; "',
+        'f"block = [{block[0]}, {block[1]}) -- {N_SLOTS} seeds")',
+        "say(f\"PROOF VERDICT ({mode}): {'THE COMBINATION-POLICY THROUGHPUT ATTEMPT-2 BLOCK IS CLEAN AND THE STATE IS "
+        "AS EXPECTED' if ok else 'NOT PROVEN -- STOP'}\""], removed
+    fn = (next(i for i, x in enumerate(b) if x.startswith("def _two_band_controls(")),
+          next(i for i, x in enumerate(b) if x.startswith("def _git(")))
+    rule_start = ("if block is None:                         # survey: the rule's literals, the plan never exempt "
+                  "(no block yet)")
+    rule = (next(i for i, x in enumerate(b) if x.strip() == rule_start),
+            next(i for i, x in enumerate(b) if x.strip() == "literals = S.repo_literals(files, block)"))
+    stray = [b[j].strip() for j in added if not (fn[0] <= j < fn[1] or rule[0] <= j < rule[1])]
+    assert stray == [
+        "N_SLOTS = 1000", 'HERE = "docs/superpowers/evidence/combination-policy-generate-seed-survey"',
+        'PLAN = "docs/superpowers/evidence/combination-policy-generate-run/plan.json"',
+        'VERDICT_OK = "THE COMBINATION-POLICY GENERATION BLOCK IS CLEAN"',
+        '"""The two pinned modules, private copies; this line\'s values rebound on the SURVEY copy only, its scanner',
+        'extended to both bands; the rule is the two-band method\'s."""',
+        'spec = importlib.util.spec_from_file_location(f"_combination_policy_generate_{key}", p)',
+        "from scripts.GPU.alphazero import seed_band_2027 as SEL", "SEL.install(S)",
+        'return {"kind": "combination-policy-generate-plan/1", "base": base, "n_slots": N_SLOTS,',
+        'faults.append("the generation plan is absent or not committed")',
+        'faults.append("the generation plan is not build_plan of the surveyed block")',
+        "say(f\"COMBINATION POLICY PILOT -- GENERATION GAME-SEED {'SURVEY' if mode == 'survey' else "
+        "'COLLISION PROOF, mode ' + mode.upper()}\")",
+        'sel_rel = "scripts/GPU/alphazero/seed_band_2027.py"',
+        'say(f"rule and scanner {sel_rel} sha256 {_sha((ROOT / sel_rel).read_bytes())} '
+        '(ALIGN {SEL.ALIGN}; the rule\'s "',
+        'f"band {list(SEL.BAND)}; literals scanned in {list(SEL.BAND_2026)} and {list(SEL.BAND)})")',
+        "block = None                              # the rule reads the scan\'s literals: chosen below, after the scan",
+        "results += _two_band_controls(S, SEL, block, prior, masks)",
+        "say(f\"PROOF VERDICT ({mode}): {'THE COMBINATION-POLICY GENERATION BLOCK IS CLEAN AND THE STATE IS AS "
+        "EXPECTED' if ok else 'NOT PROVEN -- STOP'}\""], stray
+
+
+def test_THE_SURVEY_COPY_SERVES_THE_GENERATION_RUN_IN_THE_2027_BAND():
+    survey = _load(SURVEY, "_gen_survey")
+    kind = P.KINDS["generate"]
+    assert survey.N_SLOTS == kind["slots"] == 1000 and survey.PLAN == kind["plan"]
+    S, _Pf, SEL = survey.load_method()
+    assert S.N == 1000 and S.scan is SEL.scan and SEL.__name__.endswith("seed_band_2027")
+    assert survey.PINNED == _load(SURVEY2, "_tp2_survey_pins").PINNED
+    base = SEL.candidate([], [], 1000)[1]
+    assert survey.build_plan(base, "0" * 64) == {"kind": "combination-policy-generate-plan/1", "base": base,
+                                                 "n_slots": 1000, "survey_record_sha256": "0" * 64}
+    assert set(survey.OUT.values()) & set(_load(SURVEY2, "_tp2_survey_out").OUT.values()) == set()
+
+
+def test_THE_SURVEY_COPY_S_CODE_HOLDS_NO_SEED_LITERAL_in_either_band():
+    from scripts.GPU.alphazero import seed_band_2027 as SB
+    code = _split(SURVEY)[1]
+    assert not SB.scan(code) and not re.search(r"\b20[0-9]{7}\b", code)
+
+
+def _synthetic(survey):
+    S, Pf, SEL = survey.load_method()
+    registries, named, gen, masks, consumed = S.prior_terms()
+    block = SEL.candidate([], [], survey.N_SLOTS)[2]
+    return S, Pf, SEL, block, (registries, named, gen, consumed, {}), masks
+
+
+def test_THE_SURVEY_COPY_S_CONTROLS_ALL_PASS_on_a_synthetic_2027_block():
+    """The copied controls (state 12, plants 8, exemptions 6, enumeration 6) and the two-band controls (10), with the
+    real prior terms and a block the rule places in an empty band; the repository's literals are not scanned here."""
+    survey = _load(SURVEY, "_gen_survey_controls")
+    S, Pf, SEL, block, prior, masks = _synthetic(survey)
+    rec = {"head": "0" * 40, "registry_sha256": "0" * 64, "base": block[0], "block": block}
+    groups = {"state": survey._state_controls(S, Pf, rec, "a" * 64),
+              "plants": S._plant_controls(block, prior, masks, {}, True),
+              "exemptions": S._exemption_controls(block), "enumeration": Pf._enumeration_controls(S),
+              "two-band": survey._two_band_controls(S, SEL, block, prior, masks)}
+    assert {k: len(v) for k, v in groups.items()} == {"state": 12, "plants": 8, "exemptions": 6, "enumeration": 6,
+                                                      "two-band": 10}
+    for k, v in groups.items():
+        assert all(ok for _l, ok, _d in v), (k, [r for r in v if not r[1]])
+
+
+def test_WITHOUT_THE_INSTALL_A_2027_BLOCK_S_PLANT_CONTROLS_FAIL():
+    """Necessity: the pinned scanner alone would not see a planted 2027-band seed, so the copied differential controls
+    fail -- the extension is what makes them pass."""
+    survey = _load(SURVEY, "_gen_survey_uninstalled")
+    S, _Pf, SEL, block, prior, masks = _synthetic(survey)
+    S.scan = _load("tactical-candidate-seed-survey/01_seed_survey.py", "_pinned_scan").scan
+    results = S._plant_controls(block, prior, masks, {}, True)
+    assert sum(not ok for _l, ok, _d in results) == 6        # every plant missed; the two fail-closed cases still stop
+
+
+# ─────────────────────────────── the three modes, rehearsed on a SYNTHETIC repository ───────────────────────────────
+
+PINNED_FILES = ("docs/superpowers/evidence/tactical-candidate-seed-survey/01_seed_survey.py",
+                "docs/superpowers/evidence/tactical-candidate-seed-registration/01_collision_proof.py",
+                "scripts/GPU/alphazero/injected_defect_controls.py", "scripts/GPU/alphazero/seed_band_2027.py")
+
+
+def _mode(repo, mode, monkeypatch, capsys):
+    """Run the copy's `main` for one mode, loaded from the synthetic repository (so its ROOT, the pinned method's and
+    every output are there); the prior terms are the real ones, the scanned tree is the synthetic one."""
+    monkeypatch.setattr(sys, "dont_write_bytecode", True)
+    spec = importlib.util.spec_from_file_location(f"_gen_survey_{mode}", repo / "docs/superpowers/evidence" / SURVEY)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    code = mod.main(["x", "--mode", mode])
+    capsys.readouterr()
+    return mod, code, (repo / mod.OUT[mode]).read_text(encoding="utf-8")
+
+
+def test_THE_THREE_MODES_REHEARSED_ON_A_SYNTHETIC_REPOSITORY(tmp_path, monkeypatch, capsys):
+    """survey -> pre -> registration -> post, on a throwaway git repository holding only the copy, the pinned method,
+    a synthetic registry and two planted literals (one per band): the rule reads the 2027-band literal and places the
+    block above it; every mode's controls pass and each verdict holds. Nothing of the real repository is scanned or
+    written; this is no survey of it."""
+    from scripts.GPU.alphazero import seed_band_2027 as SB
+    repo = tmp_path / "synthetic"
+
+    def git(*a):
+        return subprocess.check_output(["git", "-c", "user.name=t", "-c", "user.email=t@t", *a], cwd=repo,
+                                       text=True).strip()
+    for rel in (*PINNED_FILES, f"docs/superpowers/evidence/{SURVEY}"):
+        (repo / rel).parent.mkdir(parents=True, exist_ok=True)
+        (repo / rel).write_bytes((ROOT / rel).read_bytes())
+    old, new = SB.BAND_2026[0] + 61_000, SB.BAND[0] + 23_456
+    reg = repo / "scripts/GPU/alphazero/e4_screen_reference.py"
+    reg.write_text(f"ACCOUNTED_SEED_INTERVALS = (\n    ({old}, {old + 10}),\n)\nEXPOSED_SEED_INTERVALS = ()\n"
+                   "RETIRED_SEED_INTERVALS = ()\nTEST_ONLY_SEED_INTERVALS = ()\n")
+    (repo / "tests").mkdir()
+    (repo / "tests/test_planted.py").write_text(f"A = {old + 500}\nB = {new:_}\n")
+    (repo / "docs/superpowers/evidence/combination-policy-generate-run").mkdir(parents=True)
+    git("init", "-q")
+    git("add", "-A")
+    git("commit", "-qm", "synthetic")
+
+    mod, code, survey = _mode(repo, "survey", monkeypatch, capsys)
+    assert code == 0, survey[-2500:]
+    _a, base, block = SB.candidate([], [new], 1000)
+    assert f"in the 2027 band = {new}; BASE = {base}; block = [{block[0]}, {block[1]}) -- 1000 seeds" in survey
+    assert survey.endswith("SURVEY VERDICT   : THE COMBINATION-POLICY GENERATION BLOCK IS CLEAN\n")
+    passed, total = re.search(r"^controls passed: (\d+)/(\d+)$", survey, re.M).groups()
+    assert passed == total and int(total) == 55, total
+    S, _Pf, SEL = mod.load_method()
+    assert mod.read_record(survey, S, SEL)["block"] == block
+    git("add", "-A")
+    git("commit", "-qm", "survey record")
+
+    _m, code, pre = _mode(repo, "pre", monkeypatch, capsys)
+    assert code == 0 and "EXPECTED STATE (pre): HOLDS" in pre, pre[-2500:]
+    git("add", "-A")
+    git("commit", "-qm", "pre record")
+
+    import hashlib
+    sha = hashlib.sha256((repo / mod.OUT["survey"]).read_bytes()).hexdigest()
+    reg.write_text(reg.read_text().replace(f"    ({old}, {old + 10}),\n)",
+                                           f"    ({old}, {old + 10}),\n    ({block[0]}, {block[1]}),\n)"))
+    (repo / mod.PLAN).write_text(json.dumps(mod.build_plan(block[0], sha), indent=1, sort_keys=True) + "\n")
+    git("add", "-A")
+    git("commit", "-qm", "registration")
+    _m, code, post = _mode(repo, "post", monkeypatch, capsys)
+    assert code == 0 and "EXPECTED STATE (post): HOLDS" in post, post[-2500:]
+    assert post.endswith("PROOF VERDICT (post): THE COMBINATION-POLICY GENERATION BLOCK IS CLEAN AND THE STATE IS AS "
+                         "EXPECTED\n")
+

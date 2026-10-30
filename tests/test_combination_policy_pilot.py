@@ -694,12 +694,42 @@ def test_GENERATION_IS_ADMITTED_BY_THE_TIMING_ALONE_and_reads_no_throughput_reco
     assert P.ADMISSION["generate"] == P.ADMISSION["throughput"] == [(P.TIMING_EVIDENCE, "status", "COMPLETED")]
 
 
-def test_NO_STEP_READS_AN_OUTER_JSON_NOW():
-    """Generation was the only reader of a wrapper's outer.json (the throughput check's); the amendment removed it.
-    Training's admission is unchanged: the generation and timing records."""
-    assert P.OUTER_ADMISSION == {}
+def test_ONLY_TRAINING_READS_AN_OUTER_JSON_and_it_is_generation_s():
+    """Generation read the throughput check's outer.json until the amendment removed it. Training reads generation's
+    (the user's review, 2026-10-30), beside the generation and timing records."""
+    assert P.OUTER_ADMISSION == {"train": [(GEN_RUN, P.KINDS["generate"]["evidence"])]}
     assert P.ADMISSION["train"] == [(P.KINDS["generate"]["evidence"], "status", "COMPLETED"),
                                     (P.TIMING_EVIDENCE, "status", "COMPLETED")]
+
+
+GEN_RUN = str(pathlib.Path(P.KINDS["generate"]["plan"]).parent)
+
+
+def _train_readers(outer):
+    """Readers for training's admission: generation's and the timing's records, and generation's outer.json (None:
+    absent). Nothing else may be read."""
+    ok = {"status": "COMPLETED", "card_sha256": P.CARD_SHA256}
+
+    def read_record(rel):
+        assert rel in (P.KINDS["generate"]["evidence"], P.TIMING_EVIDENCE), rel
+        return GOOD_INNER if rel == P.KINDS["generate"]["evidence"] else ok
+
+    def read_outer(rel):
+        assert rel == GEN_RUN, rel
+        if outer is None:
+            raise FileNotFoundError(rel)
+        return outer
+    return read_record, read_outer
+
+
+def test_TRAINING_IS_ADMITTED_ONLY_WITH_GENERATION_S_SUCCESSFUL_COMMITTED_OUTER_JSON():
+    assert P.admitted("train", *_train_readers(GOOD_OUTER)) == {P.KINDS["generate"]["evidence"]: "COMPLETED",
+                                                               P.TIMING_EVIDENCE: "COMPLETED",
+                                                               f"{GEN_RUN}/outer.json": "COMPLETED"}
+    with pytest.raises(P.Refused, match="outer.json does not exist"):           # missing outer evidence
+        P.admitted("train", *_train_readers(None))
+    with pytest.raises(P.Refused, match="outer.json does not exist"):           # no outer reader at all
+        P.admitted("train", _train_readers(GOOD_OUTER)[0])
 
 
 @pytest.mark.parametrize("change", [
@@ -720,11 +750,13 @@ def test_NO_STEP_READS_AN_OUTER_JSON_NOW():
     ids=["timeout-124", "timeout-137", "unconfirmed-125", "group-remains", "unknown", "survivor", "no-survivors-field",
          "gate-not-restored", "outer-exit-5", "wrapper-record", "no-record", "exit-bool", "exit-str", "exit-null",
          "void", "other-head", "no-head"])
-def test_OUTER_FAULTS_FINDS_EVERY_UNSUCCESSFUL_OUTER_RECORD(change):
-    """The user's ruling (2026-10-29), kept as a function: an outer TIMEOUT, unconfirmed cleanup or a missing field is
-    not a successful run, whatever the inner record says. Nothing admits through it now (see the test above)."""
+def test_AN_OUTER_FAILURE_REFUSES_TRAINING_EVEN_OVER_A_COMPLETED_GENERATION_RECORD(change):
+    """The user's ruling (2026-10-29), applied to generation -> training (review, 2026-10-30): an outer TIMEOUT,
+    unconfirmed cleanup or a missing field refuses, whatever the inner record says."""
     assert P.outer_faults(GOOD_OUTER, GOOD_INNER) == []
     assert P.outer_faults({**GOOD_OUTER, **change}, GOOD_INNER)
+    with pytest.raises(P.Refused, match="does not show a successful run"):
+        P.admitted("train", *_train_readers({**GOOD_OUTER, **change}))
 
 
 @pytest.mark.parametrize("state", ["committed", "absent", "untracked", "ignored", "modified"])

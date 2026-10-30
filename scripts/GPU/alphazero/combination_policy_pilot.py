@@ -23,7 +23,9 @@ THE STEPS (card §5; each a separate approval, each in ONE fresh process under i
 Both: slot g plays seed plan.base + g (combination_selfplay); a `game_start` event (slot, worker) is logged BEFORE
 each game and the final claim count after the last; background_compute is read before loading and after every game
 (BOINC detected, or a failed check, is a VOID); eval mode at load and at the end.
-* `run train`: weights-only calib020_0001 (SHA-1 checked), on the CPU; arm R installed with init_seed 20261028 and
+* `run train`: admitted by generation's committed record.json AND its wrapper's committed outer.json, both showing
+  success with confirmed cleanup (an outer TIMEOUT refuses whatever the record says), and the timing; weights-only
+  calib020_0001 (SHA-1 checked), on the CPU; arm R installed with init_seed 20261028 and
   checked bit-equal to the parent; the corpus verified file by file and target by target; then card §4's one
   objective -- the MIRROR-AVERAGED policy, log p_bar = logaddexp(log p(s), log p(Ms) mapped back) - log 2 -- for the
   pre-fit KL, the loss and the held-out check; 3,000 Adam updates of batch 64 in the order from PCG64(20261029); then
@@ -105,8 +107,10 @@ ADMISSION = {"throughput": [(TIMING_EVIDENCE, "status", "COMPLETED")],
              "train": [(KINDS["generate"]["evidence"], "status", "COMPLETED"), (TIMING_EVIDENCE, "status", "COMPLETED")]}
 #: what each step needs from a launch wrapper's committed outer.json too (the user's ruling, ledger 2026-10-29): an
 #: outer TIMEOUT, unconfirmed cleanup or missing outer evidence refuses, whatever the inner record says. Generation
-#: read the throughput check's until the generation amendment (2026-10-30) removed that requirement.
-OUTER_ADMISSION: Dict[str, List[Tuple[str, str]]] = {}
+#: read the throughput check's until the generation amendment (2026-10-30) removed that requirement; training reads
+#: generation's (the user's review, 2026-10-30): (wrapper output dir, the run's evidence dir)
+OUTER_ADMISSION: Dict[str, List[Tuple[str, str]]] = {
+    "train": [(str(pathlib.Path(KINDS["generate"]["plan"]).parent), KINDS["generate"]["evidence"])]}
 GENERATE_CEILING = {"factor": 1.5, "max_seconds": 6 * 3600}
 #: card §4: the one recipe. Not a tuning point.
 RECIPE = {"updates": 3000, "batch": 64, "lr": 1e-3, "l2": 1e-4, "betas": [0.9, 0.999], "eps": 1e-8,
