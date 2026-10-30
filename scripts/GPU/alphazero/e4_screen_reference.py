@@ -1072,6 +1072,15 @@ EXPOSED_SEED_INTERVALS = (
     # accounting edit to a bound file: the committed plan, survey/proof and run records keep their hashes; nothing
     # is rerun.
     (202696900, 202697044),  # COMBINATION POLICY THROUGHPUT (VOID) -- 144 game seeds, exposed whole (no claims event)
+    # 🔴 THE COMBINATION POLICY PILOT -- THE THROUGHPUT CHECK, ATTEMPT 2 -- THE CLOSING EDIT (2026-10-30), after the ONE
+    # authorized 144-slot attempt-2 run (outer exit 124, TIMEOUT at 1,790 s; record VOID 'terminated'; no survivors; 143
+    # of 144 games finished). Use DERIVED from the committed run evidence by
+    # evidence/combination-policy-throughput2-seed-closing/02_* (RECONCILES, 21/21):
+    # no final `claims` event, so k is not established and the WHOLE block is EXPOSED (all 144 slots recorded as
+    # started).
+    # The throughput games are never used as training or strength evidence. A post-run accounting edit to a bound file:
+    # the committed plan, survey/proof and run records keep their hashes; nothing is rerun.
+    (202697200, 202697344),  # COMBINATION POLICY THROUGHPUT ATTEMPT 2 (VOID) -- 144 game seeds, exposed whole
 )
 
 #: Seeds RESERVED PERMANENTLY FOR TESTS. Unit tests must draw from something, and
@@ -1457,6 +1466,14 @@ RETIRED_SEED_INTERVALS = (
     # evidence. A post-run accounting edit to a bound file: the committed plan, survey/proof and run records keep
     # their hashes; nothing is rerun.
     (202696900, 202697044),  # COMBINATION POLICY THROUGHPUT (VOID) -- 144 game seeds, retired whole
+    # 🔴 THE COMBINATION POLICY PILOT -- THE THROUGHPUT CHECK, ATTEMPT 2 -- THE CLOSING EDIT (2026-10-30), after the ONE
+    # authorized 144-slot attempt-2 run (outer exit 124, TIMEOUT at 1,790 s; record VOID 'terminated'; no survivors; 143
+    # of 144 games finished). Use DERIVED from the committed run evidence by
+    # evidence/combination-policy-throughput2-seed-closing/02_* (RECONCILES, 21/21):
+    # the WHOLE block is RETIRED.
+    # The throughput games are never used as training or strength evidence. A post-run accounting edit to a bound file:
+    # the committed plan, survey/proof and run records keep their hashes; nothing is rerun.
+    (202697200, 202697344),  # COMBINATION POLICY THROUGHPUT ATTEMPT 2 (VOID) -- 144 game seeds, retired whole
 )
 
 
