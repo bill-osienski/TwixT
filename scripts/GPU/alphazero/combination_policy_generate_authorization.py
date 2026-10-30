@@ -5,4 +5,4 @@ MLX_ENABLE_TF32=0 loads calib020_0001 on the GPU and plays the 1,000 self-play g
 registered block, so it takes its own reviewed door, separate from the throughput check's. Opened for ONE approved run
 and restored on every exit. Created closed. This file may hold ONLY this declaration.
 """
-COMBINATION_POLICY_GENERATE_AUTHORIZED = False
+COMBINATION_POLICY_GENERATE_AUTHORIZED = True
