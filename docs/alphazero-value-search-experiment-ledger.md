@@ -171,6 +171,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — the throughput post-proof HOLDS (addendum, 2026-10-29).** Run once at `d28f5baf` in a clean worktree (`20486339`): the block CLEAN, the state as expected (ACCOUNTED = the survey's + the block last, nothing else changed, plan = `build_plan`), controls 45/45, exit 0. The lifecycle test now expects it and pins the proved registry to the current one. Awaiting review; the gate, checkpoint, GPU launch, closing and pushing remain unauthorized. See #117.
 > **Combination policy pilot — post-proof accepted; ONE throughput launch approved (addendum, 2026-10-29, the user's decision).** After a recorded approval, a fresh read-only panic/reboot check and a recheck that the registry and plan are unchanged, open only the throughput gate (one-line commit, clean worktree) and run the existing wrapper once, BOINC quit, both launch checks enforced; ceiling TERM 890 s / KILL 900 s / cleanup observation to 910 s. No retry, extension or top-up; outer TIMEOUT overrides inner COMPLETED and closes the pilot. Closing, corpus generation, real-data training and pushing remain unauthorized. See #118.
 > **Combination policy pilot — the throughput check: outer TIMEOUT; the pilot CLOSED at step 2 (entry 41, 2026-10-29).** The one approved run hit the 890 s ceiling (inner 124, TERM sufficed; script record VOID "terminated"): 131 of 144 slots started, 113 finished, about 457 finished games/h against the ~576 the ceiling needed. Gate restored, no survivors, generation refused. No policy-learning result; the hypothesis is neither supported nor rejected. Seed closing awaits approval. See #119.
+> **Combination policy pilot — TIMEOUT/VOID and closure at step 2 accepted; seed closing approved as one conditional sequence (addendum, 2026-10-29, the user's decision).** No policy-learning result; the combination's earlier strength PASS stands. K1 once in a clean worktree; only if it RECONCILES, all of [202696900, 202697044) to EXPOSED and RETIRED (no final `claims` event, so the frozen rule exposes all 144); then the lifecycle-test re-anchor and focused CPU checks. See #120.
 
 ## Historical proposal check — programme now closed
 
@@ -1820,6 +1821,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 117. **The throughput post-proof record (2026-10-29).** Do **not** rerun the post-proof, or edit or regenerate `04_collision_proof_post_run.txt` (sha256 `03d04570…`). Do **not** change the registry or the plan before the run without a new proof: the lifecycle test pins the proved registry hash to the current file. Do **not** open the gate, load the checkpoint, launch, close or push without the user's approval of each.
 118. **The one throughput launch (2026-10-29).** Do **not** run the throughput wrapper more than once, retry, extend, top up or rerun any part of a started run, or change its ceiling (TERM 890 s, KILL 900 s, observation to 910 s). Do **not** open any gate but the throughput gate, or open it if the registry or plan differ from what the post-proof proved: that returns for review, not to an automatic proof rerun. Do **not** count an outer TIMEOUT as a completed run, or use the 144 throughput games as training or strength evidence. Do **not** close, generate the corpus, train on real data or push without approval.
 119. **The combination policy pilot, closed at the throughput check (2026-10-29).** Do **not** retry, extend, top up or rerun the throughput check, raise its 15-minute ceiling, reuse its block or its 144 games (never training or strength evidence), or proceed to generation or training: the pilot is closed by its own rule (card §5 step 2). Do **not** read the TIMEOUT as evidence about policy learning, or the descriptive games/h as the card's measurement (the record's `throughput` is null). A new pilot, a card amendment or seed closing needs the user's decision. Do **not** chain a merge after a commit whose failure a pipe can hide.
+120. **The throughput seed closing (2026-10-29).** Do **not** run K1 more than once, or edit the registry if it does not RECONCILE. Do **not** expose only the 131 recorded starts: with no final `claims` event the frozen rule exposes the whole block. Do **not** change ACCOUNTED or TEST_ONLY. Do **not** retry, amend, profile, generate a corpus, train or push on this approval.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -6964,3 +6966,24 @@ approved as one sequence.**
   supported nor rejected. Seed closing for the block (131 slots started), any amendment and any
   new design need the user's decision. Closing, corpus generation, real-data training and pushing remain
   unauthorized. See do-not-repeat **#119**.
+
+#### Addendum — TIMEOUT/VOID and the closure at step 2 accepted; seed closing approved (2026-10-29, the user's decision)
+
+- **Accepted:** the throughput check's TIMEOUT/VOID (entry 41) and the pilot's closure at step 2. It gives no result
+  on policy learning and does not undo the combination's earlier strength PASS (entry 39 and the strength attempt 2).
+  The user verified 131 unique starts, 113 finishes, 18 unfinished games, no final `claims` event and 114 clear BOINC
+  checks; the gate matches its pre-open bytes, all 53 gates are closed, and the recorded module hashes match the
+  launch commit.
+- **The temporary gate opening on main** (entry 41's process slip) is confirmed by the reflog and repaired. The
+  disclosure and all evidence are preserved.
+- **Approved, closing only, as one conditional sequence:**
+  1. run the existing K1 usage derivation once in a clean worktree;
+  2. only if it RECONCILES: append all of [202696900, 202697044) to both EXPOSED and RETIRED. With no final `claims`
+     event the frozen rule conservatively exposes all 144 seeds, not just the 131 recorded starts. ACCOUNTED and
+     TEST_ONLY unchanged;
+  3. re-anchor the lifecycle test to the closed state, keeping the historical registration and proof checks; focused
+     CPU checks; the closeout recorded append-only.
+
+  If K1 does not reconcile, stop before the registry edit.
+- **Not approved:** any retry, amendment, profiling run, corpus generation, training or push. See do-not-repeat
+  **#120**.
