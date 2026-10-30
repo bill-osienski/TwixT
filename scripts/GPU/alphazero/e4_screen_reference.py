@@ -1094,6 +1094,16 @@ EXPOSED_SEED_INTERVALS = (
     # The throughput games are never used as training or strength evidence. A post-run accounting edit to a bound file:
     # the committed plan, survey/proof and run records keep their hashes; nothing is rerun.
     (202697200, 202697344),  # COMBINATION POLICY THROUGHPUT ATTEMPT 2 (VOID) -- 144 game seeds, exposed whole
+    # 🔴 THE COMBINATION POLICY PILOT -- CORPUS GENERATION -- THE CLOSING EDIT (2026-10-30), after the ONE authorized
+    # 1,000-slot generation run (outer exit 0, COMPLETED at 9,929 s of the six-hour ceiling; record COMPLETED; no
+    # survivors; 1,000 of 1,000 games finished). Use DERIVED from the committed run evidence by
+    # evidence/combination-policy-generate-seed-closing/02_* (RECONCILES, 21/21):
+    # all 1,000 slots started (as a set) and the one final `claims` event is 1,000, so k = 1,000 and the WHOLE block is
+    # EXPOSED.
+    # These games are the pilot's training corpus (card §5 step 3; the strength comparison, step 6, plays a fresh
+    # registered block). A post-run accounting edit to a bound file: the committed plan, survey/proof and run records
+    # keep their hashes; nothing is rerun.
+    (202739800, 202740800),  # COMBINATION POLICY CORPUS GENERATION -- 1,000 game seeds, exposed whole
 )
 
 #: Seeds RESERVED PERMANENTLY FOR TESTS. Unit tests must draw from something, and
@@ -1487,6 +1497,15 @@ RETIRED_SEED_INTERVALS = (
     # The throughput games are never used as training or strength evidence. A post-run accounting edit to a bound file:
     # the committed plan, survey/proof and run records keep their hashes; nothing is rerun.
     (202697200, 202697344),  # COMBINATION POLICY THROUGHPUT ATTEMPT 2 (VOID) -- 144 game seeds, retired whole
+    # 🔴 THE COMBINATION POLICY PILOT -- CORPUS GENERATION -- THE CLOSING EDIT (2026-10-30), after the ONE authorized
+    # 1,000-slot generation run (outer exit 0, COMPLETED at 9,929 s of the six-hour ceiling; record COMPLETED; no
+    # survivors; 1,000 of 1,000 games finished). Use DERIVED from the committed run evidence by
+    # evidence/combination-policy-generate-seed-closing/02_* (RECONCILES, 21/21):
+    # the WHOLE block is RETIRED.
+    # These games are the pilot's training corpus (card §5 step 3; the strength comparison, step 6, plays a fresh
+    # registered block). A post-run accounting edit to a bound file: the committed plan, survey/proof and run records
+    # keep their hashes; nothing is rerun.
+    (202739800, 202740800),  # COMBINATION POLICY CORPUS GENERATION -- 1,000 game seeds, retired whole
 )
 
 
