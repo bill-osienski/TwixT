@@ -218,9 +218,12 @@ def test_the_stage2_seed_is_ACCOUNTED_EXPOSED_and_RETIRED_exactly_as_itself(M):
         assert intervals.count(block) == 1, f"the stage-2 seed is not registered as exactly itself in {short}"
         assert [iv for iv in intervals if iv[0] < hi and lo < iv[1]] == [block], \
             f"another interval overlaps the stage-2 seed in {short}"
-    ex, rt = REF.EXPOSED_SEED_INTERVALS, REF.RETIRED_SEED_INTERVALS
-    assert ex[ex.index(block):] == rt[rt.index(block):] and all(iv[0] >= hi for iv in ex[ex.index(block) + 1:]), \
-        "the stage-2 seed is not the LAST entry of EXPOSED and RETIRED"
+    # RE-ANCHORED 2026-10-31 (the user's review): later closings append above this one, but an interrupted run exposes
+    # only its started prefix while retiring its whole block (D2's held-out set, 164774e2), so the two lists' later
+    # portions need not match. Each list must still hold nothing at or below this block after it.
+    for intervals in (REF.EXPOSED_SEED_INTERVALS, REF.RETIRED_SEED_INTERVALS):
+        assert all(iv[0] >= hi for iv in intervals[intervals.index(block) + 1:]), \
+            "an entry after the stage-2 seed in EXPOSED or RETIRED lies at or below it"
     st = REF.seed_status(lo)
     assert (st["accounted"], st["exposed"], st["retired"], st["test_only"]) == (True, True, True, False), \
         "the stage-2 seed is not accounted, exposed and retired"
