@@ -187,6 +187,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — CORPUS GENERATION: 1,000 games COMPLETED; block closed (entry 43, 2026-10-30).** The one approved run (gate opening `acf07d24`, evidence `56e6f386`) finished in 9,929 s of the six-hour ceiling (outer exit 0, record COMPLETED, gate restored, no survivors; 362.6 games/h, inside the card's 1.5–3 h estimate). 1,000 of 1,000 slots claimed, started and ended; 44,747 rows (40,589 training, 4,158 held out) in 1,000 files, 0 hash mismatches. 43 state-cap games took 664–1,779 s each. K1 RECONCILES 21/21 (`claims` 1,000); K2 EXPOSES and RETIRES [202739800, 202740800) whole. Training is now admitted by the committed records but not authorized; the 2,700 s training ceiling was priced from 37,000 estimated rows (1.45× the real-count projection). Awaiting the corpus and training-readiness review. See #129.
 > **Combination policy pilot — generation ACCEPTED; training ceiling set at 2,820 s; the training wrapper to be prepared (decision note after entry 43, 2026-10-31, the user's decision).** The ceiling is the timing record's formula on the real counts (1,865.3 s) × 1.5, rounded up: TERM 2,810 s / KILL 2,820 s / observation to 2,830 s; the timing record (2,700 s) stays as written. Approved: the wrapper copy for CPU `run train` with recipe, checkpoint, admission and STOP rules unchanged, focused fake-launch checks, then launch review; and a limited repair of the external-learning closing tests' stale EXPOSED/RETIRED-tail assertions. Training and pushing remain unauthorized.
 > **Combination policy pilot — the training wrapper BUILT for launch review; the external-learning closing tests repaired (addendum, 2026-10-31).** `combination-policy-train-run/01_wrapper.sh` (`f50465f8`) = generation's wrapper with the paths, the training gate (closed), `run train` and TERM 2,810 s / KILL 2,820 s / observation to 2,830 s only; the pilot is unchanged. 10 focused checks (ceiling re-derived from the committed records; fake launches) and four caught mutations; 158 focused tests pass. The stale EXPOSED/RETIRED-tail assertions repaired (`e7b35d5d`); entry 43's cause corrected (D2's held-out set, not stage 2). Training and pushing remain unauthorized. See #130.
+> **Combination policy pilot — the ONE CPU training run APPROVED (addendum, 2026-10-31, the user's decision).** Panic/reboot check; idle and BOINC checks enforced; only the training gate opened by a one-line commit in a clean worktree; the wrapper once (calib020_0001 weights-only, CPU, the frozen recipe of 3,000 updates and STOP rules; TERM 2,810 s / KILL 2,820 s / observation to 2,830 s). A timeout is VOID with no automatic retry and does not permanently reject the method (#131). Strength games, deployment and pushing remain unauthorized, even on ELIGIBLE.
 
 ## Historical proposal check — programme now closed
 
@@ -1847,6 +1848,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 128. **Generation's seed block (2026-10-30).** Do **not** rerun the generation survey or either proof, edit their records (`02_*` sha256 `69ce5b87…`, `03_*` `295ce85c…`, `04_*` `f3c3d5dc…`), edit the plan, or move, widen or re-register [202739800, 202740800). Do **not** open the generation gate, load the checkpoint, launch, close the block, train or push without the user's approval of each. Do **not** write any seed of this block into `scripts/`, `tests/` or `docs/superpowers/` outside its own records, the plan and the registry tuple.
 129. **The training corpus (2026-10-30).** Do **not** rerun, extend, top up or regenerate generation, or reuse [202739800, 202740800) (EXPOSED and RETIRED whole). Do **not** edit, move or delete the committed run evidence (`record.json` sha256 `df9ecaef…`, `games.jsonl` `e75ba513…`, `progress.jsonl` `db4aa7b9…`, `outer.json` `b6b2e7c8…`), K1's record (`ac143aba…`), or any of the 1,000 row files under `~/twixt-cache/combination-policy-pilot/generate/`: training verifies each against `games.jsonl` and refuses a changed one. Do **not** read the games' winners or reasons outside a reviewed training or analysis step. Do **not** open the training gate, train, change the recipe or the training ceiling, or push without the user's approval of each. These games are never strength evidence; the throughput runs' games stay excluded.
 130. **The training wrapper and ceiling (2026-10-31).** Do **not** change the training ceiling (2,820 s: TERM 2,810 / KILL 2,820 / observation 2,830), relabel or edit the timing record, or rerun the timing. Do **not** open the training gate or launch without the user's approval; the wrapper runs once, and a run the ceiling stops is VOID and closes the pilot (card §5) — no retry, extension or top-up. Do **not** change the recipe, the starting checkpoint, admission or the STOP rules for this run, and do **not** push without approval.
+131. **Clarification to #130 (2026-10-31, the user's wording).** A training run the ceiling stops is **VOID**, with **no automatic retry** — it does not permanently reject the learning method; its progress, cause and likely continuation cost go to the user for assessment. Do **not** retry, extend, top up or rerun it without a new approval. Do **not** run strength games, deploy, or push on an ELIGIBLE verdict without the user's approval of each.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -7769,3 +7771,28 @@ and the worktree was removed.
   and RETIRED, no overlap, nothing just outside, every seed accounted, exposed, retired and not test-only). The
   registry and all evidence are untouched. 60 passed; a later low entry in either list fails all three.
 - **Not done:** opening the training gate, training and pushing. All 54 gates closed. Awaiting launch review.
+
+#### Addendum — the ONE CPU training run approved; a clarification to #130 (2026-10-31, the user's decision)
+
+- **Verified by the user:** the wrapper has exactly the six executable-line changes reported; the 2,820 s budget
+  checks out; the recipe, the admission checks and the evidence are unchanged; all 54 gates are closed. The limited
+  test repairs are accepted. The user ran no tests or experiments.
+- **Approved, as one sequence:**
+  1. record this approval; a fresh read-only panic/reboot check; the existing idle and BOINC checks enforced;
+  2. in a clean worktree, open **only** `COMBINATION_POLICY_TRAIN_AUTHORIZED` by a one-line commit and run the
+     wrapper once;
+  3. the frozen weights-only starting checkpoint (calib020_0001), CPU-only training and the unchanged recipe: 3,000
+     updates, subject to the existing STOP rules; TERM at 2,810 s, KILL at 2,820 s, cleanup observation through
+     2,830 s;
+  4. restore and verify the gate, commit the evidence, re-anchor the lifecycle test with focused checks, and return
+     the initial KL, the probability discrepancy, the held-out CE before and after, the value-preservation checks,
+     the verdict and the cleanup results.
+- **Clarification to #130 and to the wrapper header's "closes the pilot":** a timeout makes this run **VOID**, with
+  **no automatic retry**. It does not permanently reject the learning method. If the run is interrupted, the progress,
+  the cause and the likely cost of continuing come back for the user's assessment. (The wrapper's bytes are not
+  edited for this; its header is read with this clarification.) See #131.
+- **No further timing or full-suite run is needed.**
+- **Not authorized, even if training reports ELIGIBLE:** strength games (the screen included), deployment and
+  pushing.
+- **Prediction on record:** the card's, unchanged ("The candidate's held-out cross-entropy falls (step 4)"; directional
+  only; confidence low); none added here.
