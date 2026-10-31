@@ -184,6 +184,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — generation without a completed throughput check: amendment, admission and wrapper BUILT; the seed survey NOT run (decision note + addendum after entry 42, 2026-10-30).** The user accepted attempt 2's TIMEOUT and closing and approved preparation for one 1,000-game generation run with a six-hour ceiling (amendment `11ced081…`, `7295e765`): admitted by the committed CPU timing alone; neither throughput record is read or relabelled; a timeout is VOID and assessed, with no automatic retry. The existing seed rule's 1,000-seed block [202698400, 202699400) contains the H4 fixture literals 202699000 and 202699032, so its survey could only be NOT CLEAN; it was not run. The seed method needs the user's decision. Nothing run; 54 gates closed. See #126.
 > **Combination policy pilot — the two-band seed method and training's outer-record admission BUILT; the real survey NOT run (decision note + addendum, 2026-10-30).** The user accepted the generation build and the seed blocker and chose the 2027 band [202700000, 202800000) for generation's seeds. `seed_band_2027.py` (`f870de24`) widens the pinned scanner to both bands (plain and underscore-grouped) inside a private copy of the pinned module and places the block above every registered seed and repository literal in the 2027 band (an empty band: N above its edge); the gap floor stays 1,000 and the check is the pinned one. Training now also needs generation's committed `outer.json` to pass `outer_faults`. A three-mode rehearsal on a synthetic repository passes 55/55 controls per mode. Nothing run on the real repository; 54 gates closed. See #127.
 > **Combination policy pilot — generation's seeds SURVEYED, PROVEN and REGISTERED in the 2027 band; the closing copy built (addendum, 2026-10-30).** Survey (`bb1549ea`) CLEAN 55/55: block [202739800, 202740800), anchored on the corpus hex fragment 202738776, gap 1,023 (floor 1,000). Pre-proof (`4701b1d3`) HOLDS 55/55; registration (`326004d0`) appends the block last to ACCOUNTED (48 → 49) with `plan.json` = `build_plan`; post-proof (`5a17ea92`) HOLDS 55/55 on the current registry. The closing copy (`e8ae01cc`) keeps the parallel-worker rule, 21/21. Nothing run on the GPU; 54 gates closed; awaiting launch review. See #128.
+> **Combination policy pilot — CORPUS GENERATION: 1,000 games COMPLETED; block closed (entry 43, 2026-10-30).** The one approved run (gate opening `acf07d24`, evidence `56e6f386`) finished in 9,929 s of the six-hour ceiling (outer exit 0, record COMPLETED, gate restored, no survivors; 362.6 games/h, inside the card's 1.5–3 h estimate). 1,000 of 1,000 slots claimed, started and ended; 44,747 rows (40,589 training, 4,158 held out) in 1,000 files, 0 hash mismatches. 43 state-cap games took 664–1,779 s each. K1 RECONCILES 21/21 (`claims` 1,000); K2 EXPOSES and RETIRES [202739800, 202740800) whole. Training is now admitted by the committed records but not authorized; the 2,700 s training ceiling was priced from 37,000 estimated rows (1.45× the real-count projection). Awaiting the corpus and training-readiness review. See #129.
 
 ## Historical proposal check — programme now closed
 
@@ -1842,6 +1843,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 126. **Generation without a completed throughput check (2026-10-30).** Do **not** read either throughput record (each VOID under an outer TIMEOUT) as a pass, rewrite either, or admit generation through them; do **not** use either throughput run's games for training. Do **not** change the generation ceiling (TERM 21,590 s, KILL 21,600 s, observation to 21,610 s), the recipe, the target, the workers or the cap under this amendment. Do **not** run the generation seed survey under the existing rule (its 1,000-seed block holds in-band repository literals, so it cannot be CLEAN); do **not** adjust the rule, its gap floor or the block size, edit or remove the H4 fixture literals to make room, or move to a new band without a reviewed method. A generation timeout is VOID and is assessed by the user; no automatic retry, extension or top-up.
 127. **The two-band seed method (2026-10-30).** Do **not** run the generation survey, either proof or the registration without the user's approval of each; each runs once. Do **not** adjust the rule, the band, the 1,000-seed gap floor or the block after the survey reads its literals: a NOT CLEAN or refused block is returned for review. Do **not** edit, add or remove repository literals in either band to steer the rule or the check, and never write a candidate seed of the 2027 band into `scripts/`, `tests/` or `docs/superpowers/` outside the survey's own records, the plan and the registry tuple. Do **not** rehearse the survey on the real repository: the synthetic rehearsal is a code check, not a survey. Do **not** admit training on generation's record alone or weaken `outer_faults`.
 128. **Generation's seed block (2026-10-30).** Do **not** rerun the generation survey or either proof, edit their records (`02_*` sha256 `69ce5b87…`, `03_*` `295ce85c…`, `04_*` `f3c3d5dc…`), edit the plan, or move, widen or re-register [202739800, 202740800). Do **not** open the generation gate, load the checkpoint, launch, close the block, train or push without the user's approval of each. Do **not** write any seed of this block into `scripts/`, `tests/` or `docs/superpowers/` outside its own records, the plan and the registry tuple.
+129. **The training corpus (2026-10-30).** Do **not** rerun, extend, top up or regenerate generation, or reuse [202739800, 202740800) (EXPOSED and RETIRED whole). Do **not** edit, move or delete the committed run evidence (`record.json` sha256 `df9ecaef…`, `games.jsonl` `e75ba513…`, `progress.jsonl` `db4aa7b9…`, `outer.json` `b6b2e7c8…`), K1's record (`ac143aba…`), or any of the 1,000 row files under `~/twixt-cache/combination-policy-pilot/generate/`: training verifies each against `games.jsonl` and refuses a changed one. Do **not** read the games' winners or reasons outside a reviewed training or analysis step. Do **not** open the training gate, train, change the recipe or the training ceiling, or push without the user's approval of each. These games are never strength evidence; the throughput runs' games stay excluded.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -7622,3 +7624,87 @@ and the worktree was removed.
   cost of continuing for assessment. No automatic retry.
 - **This run produces the actual training corpus.** Training and pushing remain unauthorized.
 - **Prediction on record:** none.
+
+### 43. Combination policy pilot — step 3, CORPUS GENERATION: 1,000 games (2026-10-30, COMPLETED; block closed; awaiting the corpus and training-readiness review)
+
+- **Test:** amendment `docs/superpowers/2026-10-30-combination-policy-generation-amendment.md` (sha256 `11ced081…`) to
+  card §5 step 3: 1,000 games of calib020_0001 playing itself (eval mode, mirror averaging, 200 simulations, root
+  sequential halving from ply 20, 24×24, `MLX_ENABLE_TF32=0`), 18 workers, inference cap 14, slot g on seed BASE + g
+  of the registered 2027-band block [202739800, 202740800), inside a six-hour ceiling (TERM at 21,590 s, KILL at
+  21,600 s, cleanup observation to 21,610 s). Admitted by the committed CPU timing alone. A run the ceiling stops is
+  VOID and assessed. These games are the pilot's training corpus.
+- **Hypothesis:** the 1,000 games finish inside six hours and leave a complete, verifiable corpus outside the
+  repository.
+- **Why it was plausible:** attempt 2 (entry 42) finished 143 of 144 games at about attempt 1's pace; its summed
+  game time (about 20 minutes for 144) projects roughly 2.3 h of work for 1,000 games over 18 workers, and the
+  six-hour ceiling leaves room for a state-cap tail of the kind that sank attempt 2's 30-minute run.
+- **Prediction on record:** the approval addendum stated none. The card's §7 "Estimated cost (unmeasured …)", written
+  2026-10-28 before any run, gives "Generation, 1,000 games ~1.5–3 h (roughly 350–700 games/h)"; the amendment adds
+  that six hours "does not guarantee that the corpus will finish". No prediction was stated for the row count beyond
+  the card's §4 estimate ("about 37,000 rows").
+- **What ran:** decision `92bdb38e`. A fresh read-only panic/reboot check (no reboot since 2026-10-25 09:39; the only
+  panic report is that one; the newest report a `spotlightknowledged` CPU-resource report at 16:06, not a panic); load
+  about 1.35; BOINC check CLEAR (podman exempt). Recheck: registry sha256 `ee1070bb…` = the post-proof's, unchanged
+  since `326004d0`; plan unchanged; no gate open; checkpoint present; no generation output. Clean linked worktree
+  `cp-gen-run`; the one-line gate opening `acf07d24` (only `COMBINATION_POLICY_GENERATE_AUTHORIZED`); the existing
+  wrapper run once at 16:53:31 EDT, ended 19:41:01. The idle gate held 60 s (passed at 121 s, after load fell below
+  3.0), the background check CLEAR, then launch. Evidence `56e6f386` (the worktree's evidence commit, with the
+  restored gate; main fast-forwarded to it).
+- **Result:**
+  - **Wrapper:** inner exit **0**, outer exit 0, outcome **COMPLETED**, `gate_restored` true, survivors empty,
+    `record_by` script, wall **9,929 s** (2.76 h) of the 21,590 s ceiling. `outer_faults` is empty. `outer.json`
+    sha256 `b6b2e7c8…`.
+  - **Inner record** (sha256 `df9ecaef…`): status **COMPLETED**, run `generate`, the amendment's sha256 recorded, seeds
+    {base, 1,000 slots}. TF32 "0" at start and end; 0 of 42 modules in training mode at load and at end; 1,002 BOINC
+    checks, all clear; stderr empty. Generation 9,928.7 s, **362.6 games/h**; 1,897,590 arbiter calls, 13.39 rows per
+    call (cap 14).
+  - **Slots:** telemetry claims, started and ended all **1,000**; `progress.jsonl` (sha256 `db4aa7b9…`) has 1,000
+    `game_start`, 1,000 `game_end` and one `claims` event. `games.jsonl` (sha256 `e75ba513…`) has one line per slot,
+    slot g on seed BASE + g.
+  - **Corpus** (read for slot, seed, file, hash, row and move counts only — never a winner or reason): 1,000
+    create-only files in `~/twixt-cache/combination-policy-pilot/generate/` (314 MB), exactly the files
+    `games.jsonl` names, **0 sha256 mismatches**. **44,747 rows** (ply ≥ 20; 9–260 per game, no game without rows):
+    **40,589 training** rows from 900 games and **4,158 held-out** rows from the 100 games with slot ≡ 9 (mod 10).
+    The record's summary: 0 duplicate rows.
+  - **Descriptive timing, derived from the committed logs (not a measurement the card defines):** games took mean
+    153.3 s (median 121.7, range 63.8–1,778.6) and 64.7 moves (median 54, range 29–280). **43 games reached the
+    280-move state cap**, taking 664–1,779 s each (median 696 s, 32,897 s in all, 21% of the 153,275 s of game time);
+    every other game took at most 524 s. Per-worker busy time 8,182–9,928 s.
+  - **Concurrent activity:** a scheduled job outside this repository (launchd coalition
+    `com.user.autotrade.weekly-review`) wrote a disk-writes report for 17:30–17:35, and `spotlightknowledged` a
+    CPU-resource report at 17:32. The launch checks do not cover them; whether they slowed the run is not established.
+  - **Admission:** through the real committed readers, `admitted("train")` now admits (the timing record, the
+    generation record and its `outer.json`, each COMPLETED). The training gate is closed.
+  - **Post-run:** no new panic report and no reboot; all 54 gates closed.
+- **Did it match the prediction?** Yes for time: 2.76 h at 362.6 games/h, inside the card's 1.5–3 h range, near its
+  slow end, and 37% of the ceiling. The state-cap tail recurred (43 games, 4.3%, against 4 of 143 in attempt 2) and
+  cost about a fifth of the game time, but with 1,000 slots the long games overlapped the rest of the work instead of
+  ending the run. The rows exceeded the card's estimate: 44,747 against about 37,000, because games ran longer (mean
+  64.7 moves against strength2's 56.8, the basis of that estimate).
+- **Closing:**
+  - **K1 (`4cf54bac`), run once** in a clean linked worktree (`cp-gen-k1`, from `56e6f386`), exit 0: **RECONCILES**,
+    controls **21/21**. Inputs committed and unmodified; outer exit 0, survivors '', status COMPLETED; the 1,000
+    started slots form {0..999} as a set and the one `claims` event is 1,000, so k = 1,000 and the **whole block is
+    EXPOSED**; the whole block is RETIRED. Record `combination-policy-generate-seed-closing/02_derive_usage_run.txt`,
+    sha256 `ac143aba…`.
+  - **K2 (`569ba2a4`):** the verdict read from K1's committed record and checked against the plan; [202739800,
+    202740800) appended last to EXPOSED (46 → 47) and to RETIRED (44 → 45), with comments holding no seed literal. AST
+    check against the parent: only those two lists changed, ACCOUNTED (49) and TEST_ONLY (1) unchanged. Every seed of
+    the block is refused; its neighbours are not. Registry sha256 now `10f76e3b…`.
+- **Tests re-anchored (6e8032ab):** the generation lifecycle test now asserts the run-and-closed state (one run from
+  the one-line gate opening on the post-proof's state, outer COMPLETED with `outer_faults` empty, record COMPLETED with
+  the amendment's sha256 and every slot claimed, started and ended, TF32 0 and eval mode throughout, the proved registry
+  = the launched one, games.jsonl's slots and seeds read without outcomes, K1 RECONCILES with `claims` 1,000, the whole
+  block EXPOSED and RETIRED once and last, every seed refused, the run evidence unchanged since `56e6f386`), keeping the
+  survey and proof checks and no seed literal. The two-band real-state test requires the block to be the 2027 band's
+  only entry in ACCOUNTED, EXPOSED and RETIRED; attempt 2's test requires every later EXPOSED/RETIRED entry to lie
+  above its block. The focused suites: 296 passed, 1 deselected. The full fast suite was run in a linked worktree alongside a baseline run at 92bdb38e (the pre-run main): 174 failure ids common to both are pre-existing (ignored files absent from a linked worktree: the checkpoint, .venv and game logs; the frozen guards of the 58-id regression baseline; load-sensitive fake launches; and the external-learning seed-closing tests, which fail at baseline too because stage 2's EXPOSED entry differs from its RETIRED entry). Every id that differed between the two (fake launches under the doubled load, and real-state checks refusing the then-uncommitted test edits) passed when its 8 files were rerun alone after the commit: 235 passed.
+- **For the readiness review (derived, not measured):** the committed training ceiling, 2,700 s, was priced from the
+  card's estimated counts (37,000 rows, 3,700 held out). The timing record's own formula on the real counts (44,747
+  and 4,158; the 3,000 updates do not scale with rows) gives about 1,865 s, so the ceiling is about 1.45× that
+  projection rather than the card's 1.5×; the card's rule on the real counts would give 2,820 s. Loading and replay
+  are not timed. Whether to keep the committed ceiling is the user's decision.
+- **Conclusion / status:** corpus generation **COMPLETED** and its block is **closed**. The corpus is complete and
+  verifiable against the committed hashes. There is still no policy-learning result. Training, checkpoint loading for
+  training and pushing remain unauthorized; the corpus and training-readiness review is next. See do-not-repeat
+  **#129**.
