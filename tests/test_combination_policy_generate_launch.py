@@ -51,15 +51,20 @@ def isolated(monkeypatch, tmp_path):
     monkeypatch.setenv(P.SETTING, P.SETTING_VALUE)
 
 
-def test_GENERATION_S_BLOCK_IS_SURVEYED_PROVEN_AND_REGISTERED_NOTHING_HAS_RUN_and_both_throughput_runs_stay_VOID():
+def test_GENERATION_RAN_ONCE_COMPLETED_AND_IS_CLOSED_and_both_throughput_runs_stay_VOID():
     """RE-ANCHORED 2026-10-30 (survey bb1549ea, pre-proof 4701b1d3, registration 326004d0, post-proof 5a17ea92): the
     survey is CLEAN and both proofs HOLD, each 55/55 on a clean tree, the proofs bound to the survey record's sha256;
     the plan is the copy's build_plan; the block (read from the plan and the records -- no seed literal here, since
-    the proofs scan tests/) is the first in the 2027 band, ACCOUNTED exactly once and last, in no other registry, every
-    seed schedulable; the registry the post-proof proved is the current one. Nothing has run: the gate is closed, the
-    run directory holds the wrapper and the plan only, and no run evidence, closing record or corpus exists. Both
-    throughput runs stand as written -- VOID records under outer TIMEOUTs -- unchanged since their closings (attempt 1
-    e30e277c, attempt 2 ae361458). Read-only."""
+    the proofs scan tests/) is the first in the 2027 band, ACCOUNTED exactly once and last.
+    RE-ANCHORED 2026-10-30 (the run, acf07d24 -> 56e6f386, and its closing, K1 4cf54bac + K2 569ba2a4): the ONE run
+    COMPLETED inside the ceiling -- outer exit 0, record COMPLETED, gate restored, no survivors, outer_faults empty --
+    launched from the one-line gate opening on top of the post-proof's state, so the registry it launched with is the
+    one the post-proof proved; every slot was claimed, started and ended once, slot g on seed BASE + g (games.jsonl is
+    read for slot, seed and file fields only -- never a winner or reason); K1 RECONCILES with the one final `claims`
+    event equal to the slot count, so the WHOLE block is EXPOSED and RETIRED, each exactly once and appended last,
+    ACCOUNTED unchanged, and every seed is refused. The gate is closed. The run evidence is unchanged since it was
+    committed. Both throughput runs stand as written -- VOID records under outer TIMEOUTs -- unchanged since their
+    closings (attempt 1 e30e277c, attempt 2 ae361458). Read-only."""
     import hashlib
     from scripts.GPU.alphazero import combination_policy_generate_authorization as G
     from scripts.GPU.alphazero import e4_screen_reference as REG
@@ -67,14 +72,15 @@ def test_GENERATION_S_BLOCK_IS_SURVEYED_PROVEN_AND_REGISTERED_NOTHING_HAS_RUN_an
     assert getattr(G, GATE_NAME) is False
     assert P.KINDS["generate"]["amendment"] == AMENDMENT
     assert P.M._sha((ROOT / AMENDMENT[0]).read_bytes()) == AMENDMENT[1]
-    assert sorted(x.name for x in WRAPPER.parent.iterdir()) == ["01_wrapper.sh", "plan.json"]
-    assert not (ROOT / P.KINDS["generate"]["evidence"]).exists()
+    run_dir, evidence = WRAPPER.parent, ROOT / P.KINDS["generate"]["evidence"]
+    assert sorted(x.name for x in run_dir.iterdir()) == ["01_wrapper.sh", "bg_check.txt", "idle_check.txt",
+                                                         "outer.json", "pgid.txt", "plan.json", "run.stderr.txt",
+                                                         "run.stdout.txt"]
+    assert sorted(x.name for x in evidence.iterdir()) == ["games.jsonl", "progress.jsonl", "record.json"]
     here = (EV / SURVEY).parent
     assert sorted(x.name for x in here.iterdir() if x.name != "__pycache__") == \
         ["01_seed_survey.py", "02_seed_survey_run.txt", "03_collision_proof_pre_run.txt",
          "04_collision_proof_post_run.txt"]
-    assert sorted(x.name for x in (EV / CLOSING).parent.iterdir() if x.name != "__pycache__") == ["01_derive_usage.py"]
-    assert not (pathlib.Path.home() / "twixt-cache/combination-policy-pilot/generate").exists()
     raw = (here / "02_seed_survey_run.txt").read_bytes()
     survey, sha = raw.decode("utf-8"), hashlib.sha256(raw).hexdigest()
     assert survey.splitlines()[2].endswith("; working tree clean") and "controls passed: 55/55" in survey
@@ -87,8 +93,6 @@ def test_GENERATION_S_BLOCK_IS_SURVEYED_PROVEN_AND_REGISTERED_NOTHING_HAS_RUN_an
         assert text.endswith(f"PROOF VERDICT ({mode}): THE COMBINATION-POLICY GENERATION BLOCK IS CLEAN AND THE STATE "
                              "IS AS EXPECTED\n")
     post = (here / "04_collision_proof_post_run.txt").read_text(encoding="utf-8")
-    reg_rel = "scripts/GPU/alphazero/e4_screen_reference.py"
-    assert f"\nregistry {reg_rel} sha256 {hashlib.sha256((ROOT / reg_rel).read_bytes()).hexdigest()}\n" in post
     plan = json.loads((ROOT / P.KINDS["generate"]["plan"]).read_text(encoding="utf-8"))
     n = P.KINDS["generate"]["slots"]
     assert type(plan["base"]) is int and plan["n_slots"] == n == 1000
@@ -97,22 +101,59 @@ def test_GENERATION_S_BLOCK_IS_SURVEYED_PROVEN_AND_REGISTERED_NOTHING_HAS_RUN_an
     assert SB.BAND[0] <= block[0] < block[1] <= SB.BAND[1] and block[0] % SB.ALIGN == 0
     assert f"block = [{block[0]}, {block[1]}) -- {n} seeds" in survey
     assert f"THE BLOCK, read from the record: [{block[0]}, {block[1]}) -- BASE {block[0]}" in post
+    # the run: launched from the one-line gate opening, COMPLETED, gate restored, no survivors
+    outer = json.loads((run_dir / "outer.json").read_text(encoding="utf-8"))
+    record = json.loads((evidence / "record.json").read_text(encoding="utf-8"))
+    assert P.outer_faults(outer, record) == []
+    assert (outer["outcome"], outer["inner_exit"], outer["outer_exit"]) == ("COMPLETED", 0, 0)
+    assert outer["wall_seconds"] < outer["term_s"] == 21590 and outer["grace_s"] == 10
+    assert (record["status"], record["run"], record["verdict"]) == ("COMPLETED", "generate", None)
+    assert record["amendment_sha256"] == AMENDMENT[1] and record["seeds"] == {"base": block[0], "n_slots": n}
+    assert record["setting"] == record["setting_at_end"] == {P.SETTING: P.SETTING_VALUE}
+    assert record["mode_at_load"]["modules_in_training_mode"] == record["mode_at_end"]["modules_in_training_mode"] == 0
+    tel = record["telemetry"]
+    assert (tel["claims"], tel["started"], tel["ended"], tel["workers"], tel["max_batch_rows"]) == (n, n, n, 18, 14)
+    gate_rel = "scripts/GPU/alphazero/combination_policy_generate_authorization.py"
+    assert subprocess.run(["git", "-C", str(ROOT), "rev-parse", f"{outer['head']}^"], capture_output=True, text=True,
+                          check=True).stdout.strip() == outer["pre_open"]
+    opened = subprocess.run(["git", "-C", str(ROOT), "diff", "--unified=0", outer["pre_open"], outer["head"]],
+                            capture_output=True, text=True, check=True).stdout
+    assert [ln for ln in opened.splitlines() if ln[:1] in "+-" and ln[:3] not in ("+++", "---")] == \
+        [f"-{GATE_NAME} = False", f"+{GATE_NAME} = True"] and f"b/{gate_rel}" in opened
+    reg_rel = "scripts/GPU/alphazero/e4_screen_reference.py"
+    launched = subprocess.run(["git", "-C", str(ROOT), "show", f"{outer['head']}:{reg_rel}"],
+                              capture_output=True, check=True).stdout
+    assert f"\nregistry {reg_rel} sha256 {hashlib.sha256(launched).hexdigest()}\n" in post     # proved = launched
+    games = [json.loads(line) for line in (evidence / "games.jsonl").read_text(encoding="utf-8").splitlines()]
+    seen = [(g["slot"], g["seed"], g["rows_file"], g["rows_sha256"]) for g in games]           # no winner or reason
+    assert sorted(s for s, *_ in seen) == list(range(n)) and all(seed == block[0] + s for s, seed, *_ in seen)
+    assert len({f for _s, _seed, f, _h in seen}) == n and all(re.fullmatch(r"[0-9a-f]{64}", h) for *_, h in seen)
+    # the closing: every slot started and the one claims event equals n, so the WHOLE block is EXPOSED and RETIRED
+    closing = (EV / CLOSING).parent
+    assert sorted(x.name for x in closing.iterdir() if x.name != "__pycache__") == \
+        ["01_derive_usage.py", "02_derive_usage_run.txt"]
+    k1 = (closing / "02_derive_usage_run.txt").read_text(encoding="utf-8")
+    assert k1.splitlines()[2].endswith("; working tree clean")
+    assert f"claims events: [{n}]\n" in k1 and "controls passed: 21/21" in k1
+    assert k1.endswith(f"VERDICT: RECONCILES -- EXPOSE {list(block)}; RETIRE {list(block)}\n")
     assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1 and REG.ACCOUNTED_SEED_INTERVALS[-1] == block
-    assert not any(lo < block[1] and block[0] < hi
+    assert REG.EXPOSED_SEED_INTERVALS.count(block) == 1 and REG.EXPOSED_SEED_INTERVALS[-1] == block
+    assert REG.RETIRED_SEED_INTERVALS.count(block) == 1 and REG.RETIRED_SEED_INTERVALS[-1] == block
+    assert not any(lo < block[1] and block[0] < hi and (lo, hi) != block
                    for lo, hi in REG.EXPOSED_SEED_INTERVALS + REG.RETIRED_SEED_INTERVALS + REG.TEST_ONLY_SEED_INTERVALS)
-    assert [iv for iv in REG.ACCOUNTED_SEED_INTERVALS if iv[1] > SB.BAND[0]] == [block]     # the band's first block
-    assert all(REG.seed_is_accounted(s) and not REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s)
-               for s in range(*block))
+    assert all(REG.seed_is_accounted(s) and REG.seed_is_exposed(s) and REG.seed_is_retired(s) and
+               REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s) for s in range(*block))
+    assert subprocess.run(["git", "-C", str(ROOT), "diff", "--quiet", "56e6f386", "HEAD", "--", str(run_dir),
+                           str(evidence)]).returncode == 0
     for kind in ("throughput", "throughput2"):
         rec = json.loads((ROOT / P.KINDS[kind]["evidence"] / "record.json").read_text(encoding="utf-8"))
-        run_dir = ROOT / pathlib.Path(P.KINDS[kind]["plan"]).parent
-        outer = json.loads((run_dir / "outer.json").read_text(encoding="utf-8"))
-        assert (rec["status"], rec["void"]["step"], outer["outcome"]) == ("VOID", "terminated", "TIMEOUT"), kind
+        tp_dir = ROOT / pathlib.Path(P.KINDS[kind]["plan"]).parent
+        tp_outer = json.loads((tp_dir / "outer.json").read_text(encoding="utf-8"))
+        assert (rec["status"], rec["void"]["step"], tp_outer["outcome"]) == ("VOID", "terminated", "TIMEOUT"), kind
     for since, kind in (("e30e277c", "throughput"), ("ae361458", "throughput2")):
         dirs = [f"docs/superpowers/evidence/combination-policy-{kind}{s}" for s in ("", "-run", "-seed-survey",
                                                                                     "-seed-closing")]
         assert subprocess.run(["git", "-C", str(ROOT), "diff", "--quiet", since, "HEAD", "--", *dirs]).returncode == 0
-
 
 # ─────────────────────────────── the wrapper's bytes ───────────────────────────────
 

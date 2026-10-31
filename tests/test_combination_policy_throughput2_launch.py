@@ -57,7 +57,9 @@ def test_ATTEMPT_2_IS_REGISTERED_PROVEN_RUN_ONCE_AND_CLOSED_with_the_survey_s_bu
     each exactly once and appended last, ACCOUNTED unchanged, and every seed is refused. The gate is closed. Attempt 1's
     evidence is untouched (its own closed-state test checks its content). RE-ANCHORED 2026-10-30 (the generation
     amendment): generation's admission no longer reads this run at all -- through the real committed readers it reads
-    the CPU timing record only. The run's records stay as written: VOID, outer TIMEOUT. Read-only."""
+    the CPU timing record only. The run's records stay as written: VOID, outer TIMEOUT. Read-only.
+    RE-ANCHORED 2026-10-30 (generation's closing, K2 569ba2a4): the block is no longer the last EXPOSED/RETIRED entry;
+    every later entry lies above it."""
     import hashlib
     from scripts.GPU.alphazero import combination_policy_throughput2_authorization as G
     from scripts.GPU.alphazero import e4_screen_reference as REG
@@ -121,8 +123,9 @@ def test_ATTEMPT_2_IS_REGISTERED_PROVEN_RUN_ONCE_AND_CLOSED_with_the_survey_s_bu
     assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1
     later = REG.ACCOUNTED_SEED_INTERVALS[REG.ACCOUNTED_SEED_INTERVALS.index(block) + 1:]
     assert all(lo >= block[1] for lo, _hi in later)
-    assert REG.EXPOSED_SEED_INTERVALS.count(block) == 1 and REG.EXPOSED_SEED_INTERVALS[-1] == block
-    assert REG.RETIRED_SEED_INTERVALS.count(block) == 1 and REG.RETIRED_SEED_INTERVALS[-1] == block
+    for name in ("EXPOSED_SEED_INTERVALS", "RETIRED_SEED_INTERVALS"):      # generation's closing lies above
+        ivs = getattr(REG, name)
+        assert ivs.count(block) == 1 and all(lo >= block[1] for lo, _hi in ivs[ivs.index(block) + 1:]), name
     assert not any(lo < block[1] and block[0] < hi and (lo, hi) != block
                    for lo, hi in REG.EXPOSED_SEED_INTERVALS + REG.RETIRED_SEED_INTERVALS + REG.TEST_ONLY_SEED_INTERVALS)
     assert all(REG.seed_is_accounted(s) and REG.seed_is_exposed(s) and REG.seed_is_retired(s) and
