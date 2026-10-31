@@ -185,6 +185,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — the two-band seed method and training's outer-record admission BUILT; the real survey NOT run (decision note + addendum, 2026-10-30).** The user accepted the generation build and the seed blocker and chose the 2027 band [202700000, 202800000) for generation's seeds. `seed_band_2027.py` (`f870de24`) widens the pinned scanner to both bands (plain and underscore-grouped) inside a private copy of the pinned module and places the block above every registered seed and repository literal in the 2027 band (an empty band: N above its edge); the gap floor stays 1,000 and the check is the pinned one. Training now also needs generation's committed `outer.json` to pass `outer_faults`. A three-mode rehearsal on a synthetic repository passes 55/55 controls per mode. Nothing run on the real repository; 54 gates closed. See #127.
 > **Combination policy pilot — generation's seeds SURVEYED, PROVEN and REGISTERED in the 2027 band; the closing copy built (addendum, 2026-10-30).** Survey (`bb1549ea`) CLEAN 55/55: block [202739800, 202740800), anchored on the corpus hex fragment 202738776, gap 1,023 (floor 1,000). Pre-proof (`4701b1d3`) HOLDS 55/55; registration (`326004d0`) appends the block last to ACCOUNTED (48 → 49) with `plan.json` = `build_plan`; post-proof (`5a17ea92`) HOLDS 55/55 on the current registry. The closing copy (`e8ae01cc`) keeps the parallel-worker rule, 21/21. Nothing run on the GPU; 54 gates closed; awaiting launch review. See #128.
 > **Combination policy pilot — CORPUS GENERATION: 1,000 games COMPLETED; block closed (entry 43, 2026-10-30).** The one approved run (gate opening `acf07d24`, evidence `56e6f386`) finished in 9,929 s of the six-hour ceiling (outer exit 0, record COMPLETED, gate restored, no survivors; 362.6 games/h, inside the card's 1.5–3 h estimate). 1,000 of 1,000 slots claimed, started and ended; 44,747 rows (40,589 training, 4,158 held out) in 1,000 files, 0 hash mismatches. 43 state-cap games took 664–1,779 s each. K1 RECONCILES 21/21 (`claims` 1,000); K2 EXPOSES and RETIRES [202739800, 202740800) whole. Training is now admitted by the committed records but not authorized; the 2,700 s training ceiling was priced from 37,000 estimated rows (1.45× the real-count projection). Awaiting the corpus and training-readiness review. See #129.
+> **Combination policy pilot — generation ACCEPTED; training ceiling set at 2,820 s; the training wrapper to be prepared (decision note after entry 43, 2026-10-31, the user's decision).** The ceiling is the timing record's formula on the real counts (1,865.3 s) × 1.5, rounded up: TERM 2,810 s / KILL 2,820 s / observation to 2,830 s; the timing record (2,700 s) stays as written. Approved: the wrapper copy for CPU `run train` with recipe, checkpoint, admission and STOP rules unchanged, focused fake-launch checks, then launch review; and a limited repair of the external-learning closing tests' stale EXPOSED/RETIRED-tail assertions. Training and pushing remain unauthorized.
 
 ## Historical proposal check — programme now closed
 
@@ -7708,3 +7709,27 @@ and the worktree was removed.
   verifiable against the committed hashes. There is still no policy-learning result. Training, checkpoint loading for
   training and pushing remain unauthorized; the corpus and training-readiness review is next. See do-not-repeat
   **#129**.
+
+### Decision note — after entry 43: generation and its closing accepted; the training ceiling set at 2,820 s; the training wrapper to be prepared (2026-10-31, the user's decision)
+
+- **Accepted:** generation (entry 43) and its seed closing. The user's own read-only review confirmed all 1,000 file
+  hashes, the 40,589 / 4,158 training–held-out split, complete slot accounting, unchanged evidence and all 54 gates
+  closed. This establishes data readiness only; learning is untested.
+- **The training ceiling (card §5 step 4, "stated before approval"): 2,820 s (47 minutes).** The timing record's own
+  formula on the real corpus counts (44,747 rows, 4,158 held out; the 3,000 updates do not scale with rows) gives
+  1,865.3 s; the card's 1.5× rule, rounded up to the minute, gives 2,820 s. The user derived 1,865.3 s independently.
+  The wrapper enforces it: TERM at 2,810 s, KILL at 2,820 s, cleanup observation through 2,830 s. The timing record
+  (`combination-policy-timing/record.json`, `ceiling_seconds` 2,700, priced from the card's estimated 37,000 / 3,700)
+  is kept as written: nothing edits or relabels it, and no new timing run is made.
+- **Approved now: minimal training-wrapper preparation.** A copy of the reviewed generation wrapper for the CPU
+  `run train`, with that ceiling. The frozen recipe, the starting checkpoint (calib020_0001), the admission checks and
+  the STOP rules are unchanged. Focused fake-launch checks are sufficient. The build returns for launch review.
+- **Approved separately: a limited repair of the external-learning seed-closing tests' stale assertions.** They
+  require the later portions of EXPOSED and RETIRED to match, but an interrupted run legitimately exposes a prefix and
+  retires its whole block (stage 2: 2 seeds exposed, 12 retired, each exactly once). The repair keeps the
+  seed-unavailability checks and leaves the registry and all evidence untouched. It does not block training.
+- **No further full-suite run is needed.** The next experiment is CPU training on this corpus — not another generation
+  or throughput run.
+- **Not authorized:** opening the training gate, training and pushing.
+- **Prediction on record:** the card's, unchanged ("directional only. The candidate's held-out cross-entropy falls
+  (step 4) …"); none added here.
