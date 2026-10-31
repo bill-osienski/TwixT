@@ -186,6 +186,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — generation's seeds SURVEYED, PROVEN and REGISTERED in the 2027 band; the closing copy built (addendum, 2026-10-30).** Survey (`bb1549ea`) CLEAN 55/55: block [202739800, 202740800), anchored on the corpus hex fragment 202738776, gap 1,023 (floor 1,000). Pre-proof (`4701b1d3`) HOLDS 55/55; registration (`326004d0`) appends the block last to ACCOUNTED (48 → 49) with `plan.json` = `build_plan`; post-proof (`5a17ea92`) HOLDS 55/55 on the current registry. The closing copy (`e8ae01cc`) keeps the parallel-worker rule, 21/21. Nothing run on the GPU; 54 gates closed; awaiting launch review. See #128.
 > **Combination policy pilot — CORPUS GENERATION: 1,000 games COMPLETED; block closed (entry 43, 2026-10-30).** The one approved run (gate opening `acf07d24`, evidence `56e6f386`) finished in 9,929 s of the six-hour ceiling (outer exit 0, record COMPLETED, gate restored, no survivors; 362.6 games/h, inside the card's 1.5–3 h estimate). 1,000 of 1,000 slots claimed, started and ended; 44,747 rows (40,589 training, 4,158 held out) in 1,000 files, 0 hash mismatches. 43 state-cap games took 664–1,779 s each. K1 RECONCILES 21/21 (`claims` 1,000); K2 EXPOSES and RETIRES [202739800, 202740800) whole. Training is now admitted by the committed records but not authorized; the 2,700 s training ceiling was priced from 37,000 estimated rows (1.45× the real-count projection). Awaiting the corpus and training-readiness review. See #129.
 > **Combination policy pilot — generation ACCEPTED; training ceiling set at 2,820 s; the training wrapper to be prepared (decision note after entry 43, 2026-10-31, the user's decision).** The ceiling is the timing record's formula on the real counts (1,865.3 s) × 1.5, rounded up: TERM 2,810 s / KILL 2,820 s / observation to 2,830 s; the timing record (2,700 s) stays as written. Approved: the wrapper copy for CPU `run train` with recipe, checkpoint, admission and STOP rules unchanged, focused fake-launch checks, then launch review; and a limited repair of the external-learning closing tests' stale EXPOSED/RETIRED-tail assertions. Training and pushing remain unauthorized.
+> **Combination policy pilot — the training wrapper BUILT for launch review; the external-learning closing tests repaired (addendum, 2026-10-31).** `combination-policy-train-run/01_wrapper.sh` (`f50465f8`) = generation's wrapper with the paths, the training gate (closed), `run train` and TERM 2,810 s / KILL 2,820 s / observation to 2,830 s only; the pilot is unchanged. 10 focused checks (ceiling re-derived from the committed records; fake launches) and four caught mutations; 158 focused tests pass. The stale EXPOSED/RETIRED-tail assertions repaired (`e7b35d5d`); entry 43's cause corrected (D2's held-out set, not stage 2). Training and pushing remain unauthorized. See #130.
 
 ## Historical proposal check — programme now closed
 
@@ -1845,6 +1846,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 127. **The two-band seed method (2026-10-30).** Do **not** run the generation survey, either proof or the registration without the user's approval of each; each runs once. Do **not** adjust the rule, the band, the 1,000-seed gap floor or the block after the survey reads its literals: a NOT CLEAN or refused block is returned for review. Do **not** edit, add or remove repository literals in either band to steer the rule or the check, and never write a candidate seed of the 2027 band into `scripts/`, `tests/` or `docs/superpowers/` outside the survey's own records, the plan and the registry tuple. Do **not** rehearse the survey on the real repository: the synthetic rehearsal is a code check, not a survey. Do **not** admit training on generation's record alone or weaken `outer_faults`.
 128. **Generation's seed block (2026-10-30).** Do **not** rerun the generation survey or either proof, edit their records (`02_*` sha256 `69ce5b87…`, `03_*` `295ce85c…`, `04_*` `f3c3d5dc…`), edit the plan, or move, widen or re-register [202739800, 202740800). Do **not** open the generation gate, load the checkpoint, launch, close the block, train or push without the user's approval of each. Do **not** write any seed of this block into `scripts/`, `tests/` or `docs/superpowers/` outside its own records, the plan and the registry tuple.
 129. **The training corpus (2026-10-30).** Do **not** rerun, extend, top up or regenerate generation, or reuse [202739800, 202740800) (EXPOSED and RETIRED whole). Do **not** edit, move or delete the committed run evidence (`record.json` sha256 `df9ecaef…`, `games.jsonl` `e75ba513…`, `progress.jsonl` `db4aa7b9…`, `outer.json` `b6b2e7c8…`), K1's record (`ac143aba…`), or any of the 1,000 row files under `~/twixt-cache/combination-policy-pilot/generate/`: training verifies each against `games.jsonl` and refuses a changed one. Do **not** read the games' winners or reasons outside a reviewed training or analysis step. Do **not** open the training gate, train, change the recipe or the training ceiling, or push without the user's approval of each. These games are never strength evidence; the throughput runs' games stay excluded.
+130. **The training wrapper and ceiling (2026-10-31).** Do **not** change the training ceiling (2,820 s: TERM 2,810 / KILL 2,820 / observation 2,830), relabel or edit the timing record, or rerun the timing. Do **not** open the training gate or launch without the user's approval; the wrapper runs once, and a run the ceiling stops is VOID and closes the pilot (card §5) — no retry, extension or top-up. Do **not** change the recipe, the starting checkpoint, admission or the STOP rules for this run, and do **not** push without approval.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -7733,3 +7735,37 @@ and the worktree was removed.
 - **Not authorized:** opening the training gate, training and pushing.
 - **Prediction on record:** the card's, unchanged ("directional only. The candidate's held-out cross-entropy falls
   (step 4) …"); none added here.
+
+#### Correction to entry 43 (2026-10-31)
+
+- Entry 43 says the external-learning seed-closing tests fail "because stage 2's EXPOSED entry differs from its
+  RETIRED entry". That is wrong. Stage 2's seed is exposed and retired exactly once. The differing entry is **D2's
+  held-out set** (K2 `164774e2`, 2026-10-25: [202692300, 202692302) exposed, the 12-seed block [202692300, 202692312)
+  retired). All three tests (stages 1, 2 and 3) compared the two lists' portions after their own block, so every
+  later partial exposure broke them. The rest of entry 43 stands.
+
+#### Addendum — the training wrapper built; the external-learning closing tests repaired (2026-10-31)
+
+- **Training wrapper (`f50465f8`), built only:** `combination-policy-train-run/01_wrapper.sh` is generation's
+  wrapper with only the paths (`combination-policy-train-run/`, `combination-policy-train/`), the training gate
+  (`COMBINATION_POLICY_TRAIN_AUTHORIZED`, closed), `run train` and the ceiling changed: TERM_S 2,810, GRACE_S 10, so
+  KILL at 2,820 s and the cleanup observation through 2,830 s. The idle gate, the background-compute check, the
+  process-group supervisor, the survivors, the records and the gate restoration are byte-identical. It refuses unless
+  HEAD is the one-line gate opening. The pilot module is not edited, so the recipe, the starting checkpoint
+  (calib020_0001 from the main checkout), the admission checks and the STOP rules are unchanged; the timing record is
+  kept as written.
+- **Its checks (`tests/test_combination_policy_train_launch.py`, 10):** the built-not-run state (gate closed, the run
+  directory holds the wrapper only, no training evidence; `admitted("train")` through the real committed readers
+  admits on the timing, generation's record and its `outer.json`; the timing record still says 2,700 s, unchanged);
+  the line-by-line diff against generation's wrapper; the ceiling re-derived from the committed timing record and
+  the committed corpus counts (44,747 and 4,158 → 1,865.3 s → 2,820 s); the paths; and fake launches of the real
+  wrapper's bytes: a busy machine, BOINC or a failed check refuses with nothing launched; a gate opening that also
+  changes another file refuses; an idle machine reaches exactly `run train --checkpoint <calib020_0001>` with
+  TF32=0, TERM_S 2,810 and a clean outer record; a shortened ceiling ends the whole process group with the wrapper's
+  VOID record in training's evidence directory. Four wrapper mutations (the ceiling, the subcommand, the idle gate,
+  the gate check) were each caught. Focused suites: 158 passed, 1 deselected.
+- **External-learning test repair (`e7b35d5d`):** the three stale assertions now require only that nothing at or
+  below each block follows it in EXPOSED or RETIRED; every other check is kept (exactly once in ACCOUNTED, EXPOSED
+  and RETIRED, no overlap, nothing just outside, every seed accounted, exposed, retired and not test-only). The
+  registry and all evidence are untouched. 60 passed; a later low entry in either list fails all three.
+- **Not done:** opening the training gate, training and pushing. All 54 gates closed. Awaiting launch review.
