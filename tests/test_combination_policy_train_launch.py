@@ -63,26 +63,63 @@ def _ceiling():
     return rows, held, projected, int(math.ceil(timing["spec"]["ceiling_factor"] * projected / 60.0) * 60), timing
 
 
-def test_TRAINING_IS_BUILT_NOT_RUN_its_gate_closed_and_the_timing_record_kept_as_written():
-    """BUILT 2026-10-31: the gate is closed; the run directory holds the wrapper only; no training evidence exists.
-    Training is admitted through the REAL committed readers (generation's record and outer.json, and the timing). The
-    timing record still says 2,700 s, unchanged since it was committed: the 2,820 s ceiling lives in the wrapper and
-    the ledger, not in an edited record. Read-only."""
+def test_TRAINING_RAN_ONCE_COMPLETED_ELIGIBLE_and_the_timing_record_kept_as_written():
+    """BUILT 2026-10-31. RE-ANCHORED 2026-10-31 (the run, 9b7479f7 -> 578577f2): the ONE run COMPLETED inside the
+    ceiling -- outer exit 0, record COMPLETED, gate restored, no survivors, outer_faults empty -- launched from the
+    one-line gate opening; admitted through the real committed readers on the timing, generation's record and its
+    outer.json; on the CPU from calib020_0001 (generation's SHA-1) with the recipe unchanged and the corpus's real
+    counts; the pre-fit KL at or above the recipe's floor; 3,000 finite losses; the value outputs bitwise equal on every
+    held-out row and the encoder and value-head digests unchanged while the policy head's changed; the held-out CE below
+    its pre-fit value, so the verdict is ELIGIBLE, with head.npz's sha256 recorded. The gate is closed. The timing
+    record still says 2,700 s, unchanged: the 2,820 s ceiling lives in the wrapper and the ledger. Read-only."""
+    import hashlib
     from scripts.GPU.alphazero import combination_policy_train_authorization as G
     assert getattr(G, GATE_NAME) is False
-    assert sorted(x.name for x in WRAPPER.parent.iterdir()) == ["01_wrapper.sh"]
-    assert not (ROOT / P.KINDS["train"]["evidence"]).exists()
-    assert P.admitted("train", P._read_record, P._read_outer) == {
+    run_dir, evidence = WRAPPER.parent, ROOT / P.KINDS["train"]["evidence"]
+    assert sorted(x.name for x in run_dir.iterdir()) == ["01_wrapper.sh", "bg_check.txt", "idle_check.txt",
+                                                         "outer.json", "pgid.txt", "run.stderr.txt", "run.stdout.txt"]
+    assert sorted(x.name for x in evidence.iterdir()) == ["head.npz", "progress.jsonl", "record.json"]
+    outer = json.loads((run_dir / "outer.json").read_text(encoding="utf-8"))
+    rec = json.loads((evidence / "record.json").read_text(encoding="utf-8"))
+    assert P.outer_faults(outer, rec) == [] and (outer["inner_exit"], outer["outer_exit"]) == (0, 0)
+    assert outer["wall_seconds"] < outer["term_s"] == 2810 and outer["grace_s"] == 10
+    gate_rel = "scripts/GPU/alphazero/combination_policy_train_authorization.py"
+    assert subprocess.run(["git", "-C", str(ROOT), "rev-parse", f"{outer['head']}^"], capture_output=True, text=True,
+                          check=True).stdout.strip() == outer["pre_open"]
+    opened = subprocess.run(["git", "-C", str(ROOT), "diff", "--unified=0", outer["pre_open"], outer["head"]],
+                            capture_output=True, text=True, check=True).stdout
+    assert [ln for ln in opened.splitlines() if ln[:1] in "+-" and ln[:3] not in ("+++", "---")] == \
+        [f"-{GATE_NAME} = False", f"+{GATE_NAME} = True"] and f"b/{gate_rel}" in opened
+    assert (rec["status"], rec["run"], rec["verdict"], rec.get("stop"), rec["written_by"]) == \
+        ("COMPLETED", "train", "ELIGIBLE", None, "script")
+    assert rec["admission"] == P.admitted("train", P._read_record, P._read_outer) == {
         P.KINDS["generate"]["evidence"]: "COMPLETED", P.TIMING_EVIDENCE: "COMPLETED",
         f"{pathlib.Path(P.KINDS['generate']['plan']).parent}/outer.json": "COMPLETED"}
+    gen = json.loads((ROOT / P.KINDS["generate"]["evidence"] / "record.json").read_text(encoding="utf-8"))
+    assert rec["device"] == "Device(cpu, 0)" and rec["checkpoint_sha1"] == gen["checkpoint_sha1"]
+    assert rec["recipe"] == json.loads(json.dumps(P.RECIPE)) and rec["setting"] == rec["setting_at_end"] == \
+        {P.SETTING: P.SETTING_VALUE}
     rows, held, _projected, _ceiling_s, timing = _ceiling()
+    assert (rec["corpus"]["rows"], rec["corpus"]["heldout_rows"], rec["corpus"]["train_rows"]) == \
+        (rows, held, rows - held)
+    assert rec["prefit_train"]["kl"] >= P.RECIPE["min_kl"] and rec["prefit_train"]["rows"] == rows - held
+    losses = rec["losses"]
+    assert len(losses) == P.RECIPE["updates"] and all(math.isfinite(x) for x in losses)
+    assert rec["value_check"] == {"rows": held, "bitwise_equal": True, "max_abs_diff": 0.0}
+    before, after = rec["digests_before"], rec["digests_after"]
+    assert before["encoder."] == after["encoder."] and before["value_head."] == after["value_head."]
+    assert before["policy_head."] != after["policy_head."]
+    assert rec["heldout_after"]["rows"] == rec["prefit_heldout"]["rows"] == held
+    assert rec["heldout_after"]["ce"] < rec["prefit_heldout"]["ce"]
+    assert rec["head_file"] == "head.npz" and \
+        hashlib.sha256((evidence / "head.npz").read_bytes()).hexdigest() == rec["head_sha256"]
     assert timing["projection"]["ceiling_seconds"] == 2700 and timing["head"].startswith(TIMING_COMMIT)
     assert (timing["spec"]["projected_rows"], timing["spec"]["projected_heldout_rows"]) == (37000, 3700)
-    assert (rows, held) != (37000, 3700)
     assert subprocess.run(["git", "-C", str(ROOT), "diff", "--quiet", "56e6f386", "HEAD", "--", P.TIMING_EVIDENCE,
                            P.KINDS["generate"]["evidence"],
                            str(pathlib.Path(P.KINDS["generate"]["plan"]).parent)]).returncode == 0
-
+    assert subprocess.run(["git", "-C", str(ROOT), "diff", "--quiet", "578577f2", "HEAD", "--", str(run_dir),
+                           str(evidence)]).returncode == 0
 
 # ─────────────────────────────── the wrapper's bytes ───────────────────────────────
 
