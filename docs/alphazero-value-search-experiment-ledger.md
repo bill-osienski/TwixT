@@ -188,6 +188,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — generation ACCEPTED; training ceiling set at 2,820 s; the training wrapper to be prepared (decision note after entry 43, 2026-10-31, the user's decision).** The ceiling is the timing record's formula on the real counts (1,865.3 s) × 1.5, rounded up: TERM 2,810 s / KILL 2,820 s / observation to 2,830 s; the timing record (2,700 s) stays as written. Approved: the wrapper copy for CPU `run train` with recipe, checkpoint, admission and STOP rules unchanged, focused fake-launch checks, then launch review; and a limited repair of the external-learning closing tests' stale EXPOSED/RETIRED-tail assertions. Training and pushing remain unauthorized.
 > **Combination policy pilot — the training wrapper BUILT for launch review; the external-learning closing tests repaired (addendum, 2026-10-31).** `combination-policy-train-run/01_wrapper.sh` (`f50465f8`) = generation's wrapper with the paths, the training gate (closed), `run train` and TERM 2,810 s / KILL 2,820 s / observation to 2,830 s only; the pilot is unchanged. 10 focused checks (ceiling re-derived from the committed records; fake launches) and four caught mutations; 158 focused tests pass. The stale EXPOSED/RETIRED-tail assertions repaired (`e7b35d5d`); entry 43's cause corrected (D2's held-out set, not stage 2). Training and pushing remain unauthorized. See #130.
 > **Combination policy pilot — the ONE CPU training run APPROVED (addendum, 2026-10-31, the user's decision).** Panic/reboot check; idle and BOINC checks enforced; only the training gate opened by a one-line commit in a clean worktree; the wrapper once (calib020_0001 weights-only, CPU, the frozen recipe of 3,000 updates and STOP rules; TERM 2,810 s / KILL 2,820 s / observation to 2,830 s). A timeout is VOID with no automatic retry and does not permanently reject the method (#131). Strength games, deployment and pushing remain unauthorized, even on ELIGIBLE.
+> **Combination policy pilot — CPU TRAINING: COMPLETED, verdict ELIGIBLE (entry 44, 2026-10-31).** The one approved run (gate opening `9b7479f7`, evidence `578577f2`) finished in 1,866 s of the 2,810 s TERM (outer exit 0, gate restored, no survivors). Pre-fit KL 1.434 nats (floor 0.01); probability discrepancy ≤ 1.03 × 10⁻⁵; held-out CE 3.862 → 3.645 (−0.217 nats); value outputs bitwise equal on 4,158 held-out rows, encoder and value-head digests unchanged; 3,000 finite updates. The card's directional prediction held. No strength result; the screen may be proposed, but strength games, deployment and pushing remain unauthorized. See #132.
 
 ## Historical proposal check — programme now closed
 
@@ -1849,6 +1850,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 129. **The training corpus (2026-10-30).** Do **not** rerun, extend, top up or regenerate generation, or reuse [202739800, 202740800) (EXPOSED and RETIRED whole). Do **not** edit, move or delete the committed run evidence (`record.json` sha256 `df9ecaef…`, `games.jsonl` `e75ba513…`, `progress.jsonl` `db4aa7b9…`, `outer.json` `b6b2e7c8…`), K1's record (`ac143aba…`), or any of the 1,000 row files under `~/twixt-cache/combination-policy-pilot/generate/`: training verifies each against `games.jsonl` and refuses a changed one. Do **not** read the games' winners or reasons outside a reviewed training or analysis step. Do **not** open the training gate, train, change the recipe or the training ceiling, or push without the user's approval of each. These games are never strength evidence; the throughput runs' games stay excluded.
 130. **The training wrapper and ceiling (2026-10-31).** Do **not** change the training ceiling (2,820 s: TERM 2,810 / KILL 2,820 / observation 2,830), relabel or edit the timing record, or rerun the timing. Do **not** open the training gate or launch without the user's approval; the wrapper runs once, and a run the ceiling stops is VOID and closes the pilot (card §5) — no retry, extension or top-up. Do **not** change the recipe, the starting checkpoint, admission or the STOP rules for this run, and do **not** push without approval.
 131. **Clarification to #130 (2026-10-31, the user's wording).** A training run the ceiling stops is **VOID**, with **no automatic retry** — it does not permanently reject the learning method; its progress, cause and likely continuation cost go to the user for assessment. Do **not** retry, extend, top up or rerun it without a new approval. Do **not** run strength games, deploy, or push on an ELIGIBLE verdict without the user's approval of each.
+132. **The trained head (2026-10-31).** Do **not** rerun, extend or continue training, change the recipe, or edit the run evidence (`record.json`, `progress.jsonl`, `head.npz` sha256 `ead156e2…`, `outer.json`). Do **not** read ELIGIBLE as a strength result: it is a held-out fit on the same agent's games. Do **not** run the screen, any strength games, deploy the head or push without the user's approval of each; the screen needs its own registered seed block and ceiling.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -7796,3 +7798,59 @@ and the worktree was removed.
   pushing.
 - **Prediction on record:** the card's, unchanged ("The candidate's held-out cross-entropy falls (step 4)"; directional
   only; confidence low); none added here.
+
+### 44. Combination policy pilot — step 4, CPU TRAINING, then the check (2026-10-31, COMPLETED; verdict ELIGIBLE; awaiting review)
+
+- **Test:** card §5 step 4 on the committed corpus (entry 43): calib020_0001 weights-only, on the CPU, arm R's residual
+  policy branch installed (init_seed 20261028) and checked bit-equal to the parent; card §4's one objective, the
+  mirror-averaged policy p̄; 3,000 Adam updates of batch 64 (lr 1e-3, l2 1e-4, order from PCG64(20261029)) on the
+  40,589 training rows; then the STOP rules in order: pre-fit KL(π ‖ p̄_θ₀) below 0.01 nats; any non-finite loss or
+  gradient; value outputs not bitwise equal on the held-out rows, or the encoder or value-head digests changed;
+  held-out CE(π, p̄_θ) not below CE(π, p̄_θ₀). Ceiling 2,820 s (TERM 2,810 s; decision note after entry 43).
+- **Hypothesis:** the corpus holds a learnable policy signal: the policy head, trained toward the halving target,
+  moves the averaged policy toward it on held-out games while the value path stays exactly the parent's.
+- **Why it was plausible:** generation's summary showed the target differs from the prior (mean KL(target ‖ prior)
+  about 1.43 nats, entry 43's record), and only the policy head's surface is trained, so the value path cannot move.
+- **Prediction on record:** the card's: "directional only. The candidate's held-out cross-entropy falls (step 4)"; no
+  magnitude; confidence low (§8). Nothing was added before the run.
+- **What ran:** approval `9d6d48bf` (#131). A fresh read-only panic/reboot check (no reboot since 2026-10-25 09:39;
+  the only panic report is that one; a JetsamEvent report at 10:20 that morning, not a panic); load about 1.0;
+  BOINC check CLEAR (podman exempt). Nothing in `scripts/` or `docs/superpowers/` changed since the build
+  (`f50465f8`); no gate open; no training evidence; checkpoint SHA-1 `209cf2d4…`. Clean linked worktree
+  `cp-train-run`; the one-line gate opening `9b7479f7` (only `COMBINATION_POLICY_TRAIN_AUTHORIZED`); the wrapper run
+  once at 11:42:02 EDT, ended 12:15:04. The idle gate held 60 s (passed at 116 s), the background check CLEAR, then
+  launch. Evidence `578577f2` (the worktree's evidence commit, with the restored gate; main fast-forwarded to it).
+- **Result:**
+  - **Wrapper:** inner exit **0**, outer exit 0, outcome **COMPLETED**, `gate_restored` true, survivors empty,
+    `record_by` script, wall **1,866 s** of the 2,810 s TERM. `outer_faults` is empty; stderr empty; no pilot
+    process remained.
+  - **Record:** status **COMPLETED**, verdict **ELIGIBLE**, no STOP. Device CPU; TF32 "0" at start and end; versions
+    the card's; checkpoint SHA-1 = calib020_0001's; admission on the timing record, generation's record and its
+    `outer.json`. Corpus 1,000 games, 44,747 rows: 40,589 training, 4,158 held out (slot % 10 == 9). Surface: the
+    policy head's 12 arrays, 8,840 parameters.
+  - **Pre-fit (the parent, θ₀):** training rows KL(π ‖ p̄) **1.4339** nats (floor 0.01), CE 3.9333; held-out KL
+    1.4113, CE **3.8620**. Probability discrepancy |p̄ − stored prior| over legal moves, the largest over the rows:
+    **1.03 × 10⁻⁵** (training) and **4.74 × 10⁻⁶** (held-out): the recomputed parent policy agrees with the prior
+    the corpus stored.
+  - **Fit:** 3,000 updates, every loss and gradient finite, 1,458.4 s. Batch loss mean 3.782 over the first 100
+    updates and 3.712 over the last 100 (descriptive; the batch loss is noisy and includes the l2 term).
+  - **Value preserved:** value outputs **bitwise equal** to the parent's on all 4,158 held-out rows (max |Δ| 0.0);
+    the encoder and value-head digests unchanged; the policy head's digest changed.
+  - **Held-out after:** CE **3.6454** (from 3.8620: −0.2166 nats, −5.6%); KL 1.1947 (from 1.4113, the same −0.2166,
+    since the targets' entropy is fixed). Probability discrepancy 0.696 against the stored (parent) prior:
+    descriptive; the head has moved, and the measure does not bound the KL.
+  - **Output:** `head.npz` (sha256 `ead156e2…`), the trained head's arrays.
+  - **Phase times:** corpus verification 12.7 s, load 15.8 s, pre-fit measurement 333.0 s, fit 1,458.4 s, check
+    46.2 s. The timing record's projection for the updates (1,461.6 s) matched the fit.
+  - **Post-run:** no new panic report and no reboot; all 54 gates closed.
+- **Did it match the prediction?** Yes, in direction: the held-out cross-entropy fell, by 0.217 nats, with the value
+  path bit-identical. No magnitude was predicted. This is a held-out fit to the halving target on games from the
+  same agent and distribution; it says nothing yet about playing strength.
+- **Tests re-anchored (`1d5c3080`):** the training lifecycle test asserts the ran-once state from the committed
+  records (outer COMPLETED inside TERM from the one-line opening; COMPLETED/ELIGIBLE; CPU, checkpoint and recipe
+  unchanged; real counts; pre-fit KL at or above the floor; 3,000 finite losses; values bitwise equal and the
+  encoder and value-head digests unchanged, the policy head changed; held-out CE below pre-fit; the head's sha256;
+  the timing record unchanged at 2,700 s). Focused suites: 158 passed, 1 deselected.
+- **Conclusion / status:** step 4 is **ELIGIBLE**: by the card, the screen (step 5) may be proposed. No seed was used.
+  There is no strength result. Strength games (the screen included), deployment and pushing remain unauthorized
+  (#131). See do-not-repeat **#132**.
