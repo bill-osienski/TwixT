@@ -190,6 +190,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — the ONE CPU training run APPROVED (addendum, 2026-10-31, the user's decision).** Panic/reboot check; idle and BOINC checks enforced; only the training gate opened by a one-line commit in a clean worktree; the wrapper once (calib020_0001 weights-only, CPU, the frozen recipe of 3,000 updates and STOP rules; TERM 2,810 s / KILL 2,820 s / observation to 2,830 s). A timeout is VOID with no automatic retry and does not permanently reject the method (#131). Strength games, deployment and pushing remain unauthorized, even on ELIGIBLE.
 > **Combination policy pilot — CPU TRAINING: COMPLETED, verdict ELIGIBLE (entry 44, 2026-10-31).** The one approved run (gate opening `9b7479f7`, evidence `578577f2`) finished in 1,866 s of the 2,810 s TERM (outer exit 0, gate restored, no survivors). Pre-fit KL 1.434 nats (floor 0.01); probability discrepancy ≤ 1.03 × 10⁻⁵; held-out CE 3.862 → 3.645 (−0.217 nats); value outputs bitwise equal on 4,158 held-out rows, encoder and value-head digests unchanged; 3,000 finite updates. The card's directional prediction held. No strength result; the screen may be proposed, but strength games, deployment and pushing remain unauthorized. See #132.
 > **Combination policy pilot — training ACCEPTED as ELIGIBLE; the 64-game screen approved to BUILD only (addendum, 2026-10-31, the user's review).** The user verified the head's hash and parameter digest, the unchanged source and evidence, the gate's restoration and all 54 gates closed. Learning toward the search targets is shown; whether it improves play is open. Build: the trained head (sha256 `ead156e2…`, bound to the successful inner and outer training records) against the frozen proven combination, both averaged, 200 simulations, halving from ply 20; the existing match loop and wrapper with a new closed gate, its own paths and fresh-seed survey and closing copies; STOP below a mean pair score of 0.40, otherwise CONTINUE, no strength claim; a fixed ceiling proposed from completed match timings. Seed procedures, checkpoint loading for evaluation, GPU games, further training, deployment and pushing remain unauthorized. See #133.
+> **Combination policy pilot — the 64-game screen BUILT for review; ceiling PROPOSED at 3,480 s (addendum, 2026-10-31).** Build `6c908ca8`; nothing run. `run screen` behind a new closed gate (55 in all), admitted only by training's committed ELIGIBLE record and clean outer.json, bound to head.npz `ead156e2…` and its digests; the head installed before any inference; a probe must find the candidate's opening priors changed. Both sides averaged halving at 200 simulations through the strength match's loop; STOP below 0.40, else CONTINUE. Ceiling from completed match timings: 64 × 64.75 plies × 0.5508 s = 2,282.3 s × 1.5 → 3,480 s (TERM 3,470), room for 10 capped games against 2.75 expected. Survey and closing copies built, not run. Compiled values can differ from the parent's in the last bits (recorded, not gated). Awaiting review (#133).
 
 ## Historical proposal check — programme now closed
 
@@ -7880,3 +7881,82 @@ and the worktree was removed.
   pushing.
 - **Prediction on record:** the card's, unchanged ("it scores above 0.5 against the proven agent (steps 5–6)";
   directional only; confidence low); none added here. The screen's own rule is gross regression only.
+
+#### Addendum — the 64-game screen BUILT for review; its ceiling proposed (2026-10-31)
+
+Build `6c908ca8`, as approved in the addendum above. Nothing was run: no seed procedure, no checkpoint or head loaded for
+evaluation, no GPU, no game. All 55 gates are closed.
+
+- **The entry:** `combination_policy_pilot run screen` (card §5 step 5), behind a new closed gate,
+  `combination_policy_screen_authorization` (the fifty-fifth). Its own paths: `combination-policy-screen` (the
+  script's) and `combination-policy-screen-run` (the wrapper's, with the plan the seed steps would add).
+- **Admission and the head binding.** The screen is admitted only by the training run's committed `record.json`
+  (COMPLETED, verdict ELIGIBLE, this card) and its wrapper's committed `outer.json`, through the existing
+  `outer_faults` (inner and outer exit 0, COMPLETED, gate restored, no survivors, record by the script, the same head).
+  `TRAINED_HEAD` pins the head:
+  - `head.npz` sha256 `ead156e2…`, and the record's digests after training (policy head `f653aca2…`; encoder
+    `92498b02…` and value head `576391a7…`, both also the record's digests before training);
+  - the record must name exactly these, and the committed file must be these bytes;
+  - the bytes checked are the bytes loaded.
+- **The candidate and the reference.**
+  - calib020_0001 is loaded twice, with the strength match's loader (`eval_runner._default_evaluator_factory`,
+    eval mode, compiled).
+  - One copy gets arm R's head (the recipe's init_seed) with every saved array loaded over it. Its digests must equal
+    the pinned ones, or the run is VOID at step "head".
+  - The other copy must keep the parent's encoder and value-head digests and a different policy head, or the run is
+    VOID at step "reference".
+  - The head is installed before any inference, so the compiled forward pass is traced with it.
+- **Search reaches the residual head through `forward_padded` (card §10.10), confirmed by the build.**
+  - The evaluator calls `network.forward_padded`, which calls `ResidualPolicyHead.forward_padded`. The head's
+    `__call__` (the list API) refuses.
+  - In the tests on tiny random CPU networks, every underlying evaluation of a real 200-simulation halving search at
+    ply 20, made through the averaging wrapper, went through `ResidualPolicyHead.forward_padded`.
+  - The compiled evaluator's averaged prior equals training's own prediction, exp(log p̄), on positions from several
+    plies.
+  - At run time, a probe at the empty board must find the candidate's priors different from the reference's, or the
+    run is VOID.
+- **The games:** 32 colour-reversed pairs, with game g on seed plan.base + g, through the strength match's loop
+  (`mirror_halving_combination.play_and_build`). Both sides are `MirrorAveragingEvaluator` +
+  `RootSequentialHalvingMCTS` at 200 simulations, with halving from ply 20. The candidate is red in even games.
+  - `game_start` is logged before each game.
+  - The background-compute check runs before loading, after every game and before the verdict.
+  - Each game's searches must account for its moves, with both sides searching.
+  - The frozen rule: `screen_verdict`, STOP below a mean pair score of 0.40, otherwise CONTINUE. There is no strength
+    claim, and the cost ratios are descriptive only.
+- **Found in the build (measured on tiny CPU networks, not on the real model):** the compiled evaluator's value output
+  can differ from the parent's in the last bits (1.45 × 10⁻⁷ there). Compilation fuses the graph differently once the
+  residual branch exists; the parent's own compiled and uncompiled values differ by the same amount. Uncompiled, the
+  values are bitwise equal. The run records the opening value difference (`head_probe.value_abs_diff`) and does not
+  gate on it. Entry 44's bitwise check was uncompiled, on the CPU, and stands.
+- **The wrapper:** `combination-policy-screen-run/01_wrapper.sh` is a copy of training's. It differs only in its paths,
+  its gate, `run screen`, TERM_S 3470 and its header. The idle gate, the BOINC check, the supervisor, its bounded
+  observation, the records and the gate restoration are byte-identical.
+- **Proposed ceiling, for the user's review: 3,480 s** (TERM 3,470 s, KILL 3,480 s, cleanup observation through
+  3,490 s). The card prices the screen from the throughput check, which never completed. Per the user's instruction,
+  it is priced instead from completed match timings, reading per-side costs and move counts only:
+  - per search: 0.5508 s per combination search, strength2's candidate side (29,453 searches; the same loop, loader,
+    machine and TF32=0);
+  - per game: 64.75 plies, from generation's 1,000 games of this agent against itself (strength2's games against the
+    incumbent averaged 57.7);
+  - projection: 64 games × 64.75 plies × 0.5508 s = 2,282.3 s; × 1.5, rounded up to the minute, gives 3,480 s;
+  - capped games: a 280-ply game at the slowest per-search rate of any capped game in the two completed combination
+    matches (0.6285 s) takes about 176 s;
+  - room: with the other games at generation's uncapped mean (55.1 plies), TERM leaves room for 10 capped games of
+    the 64; 2.75 are expected at generation's 4.3% rate, and the chance of 11 or more at that rate is about 8 × 10⁻⁵;
+  - a candidate that lengthens games more than that would time out: a VOID, with no automatic retry (#131's
+    reading).
+- **The seed copies, built and never run:**
+  - **Survey** (`combination-policy-screen-seed-survey/01_seed_survey.py`): a copy of generation's (the two-band
+    method). It differs in the block size (64), the paths, the plan kind, the module name, the titles and verdict
+    lines, and the slot listing's heading. One control's expected value is corrected: on an empty band the rule gives
+    the least multiple of 100 at least 64 above the edge, not the edge + 64 that the copied control wrote out for
+    1,000. The rule itself is unchanged. The three modes were rehearsed on a synthetic repository (55/55 controls).
+  - **Closing** (`combination-policy-screen-seed-closing/01_derive_usage.py`): a copy of strength2's, not
+    generation's. The screen plays its games in order in one process and logs the match's events, so the sequential
+    rule applies: the started games must be the prefix 0..k−1 in order, and only those are exposed. It differs in
+    the block size (64), the paths and the title. All 15 controls pass, and it reconciles the screen's own events
+    (complete: the whole block exposed; VOID in game 9: games 0–9 exposed; retired whole either way).
+- **Tests:** `tests/test_combination_policy_screen.py` (new). The pilot's tests are updated: the kind list, the
+  outer-record admission, the usage case and the isolation. The gate inventory is now 55. Focused suites, run serially (all six combination-pilot files, seed band, gate inventory, the mirror-halving match and launch, the registry): 390 passed, 1 deselected; after one added test and line wrapping, the screen and pilot files: 148 passed, 1 deselected. No full-suite run.
+- **Status:** built, for review. Seed procedures, checkpoint loading for evaluation, GPU games, further training,
+  deployment and pushing remain unauthorized (#133). The ceiling is a proposal until the user accepts it.
