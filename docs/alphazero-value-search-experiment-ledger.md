@@ -189,6 +189,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — the training wrapper BUILT for launch review; the external-learning closing tests repaired (addendum, 2026-10-31).** `combination-policy-train-run/01_wrapper.sh` (`f50465f8`) = generation's wrapper with the paths, the training gate (closed), `run train` and TERM 2,810 s / KILL 2,820 s / observation to 2,830 s only; the pilot is unchanged. 10 focused checks (ceiling re-derived from the committed records; fake launches) and four caught mutations; 158 focused tests pass. The stale EXPOSED/RETIRED-tail assertions repaired (`e7b35d5d`); entry 43's cause corrected (D2's held-out set, not stage 2). Training and pushing remain unauthorized. See #130.
 > **Combination policy pilot — the ONE CPU training run APPROVED (addendum, 2026-10-31, the user's decision).** Panic/reboot check; idle and BOINC checks enforced; only the training gate opened by a one-line commit in a clean worktree; the wrapper once (calib020_0001 weights-only, CPU, the frozen recipe of 3,000 updates and STOP rules; TERM 2,810 s / KILL 2,820 s / observation to 2,830 s). A timeout is VOID with no automatic retry and does not permanently reject the method (#131). Strength games, deployment and pushing remain unauthorized, even on ELIGIBLE.
 > **Combination policy pilot — CPU TRAINING: COMPLETED, verdict ELIGIBLE (entry 44, 2026-10-31).** The one approved run (gate opening `9b7479f7`, evidence `578577f2`) finished in 1,866 s of the 2,810 s TERM (outer exit 0, gate restored, no survivors). Pre-fit KL 1.434 nats (floor 0.01); probability discrepancy ≤ 1.03 × 10⁻⁵; held-out CE 3.862 → 3.645 (−0.217 nats); value outputs bitwise equal on 4,158 held-out rows, encoder and value-head digests unchanged; 3,000 finite updates. The card's directional prediction held. No strength result; the screen may be proposed, but strength games, deployment and pushing remain unauthorized. See #132.
+> **Combination policy pilot — training ACCEPTED as ELIGIBLE; the 64-game screen approved to BUILD only (addendum, 2026-10-31, the user's review).** The user verified the head's hash and parameter digest, the unchanged source and evidence, the gate's restoration and all 54 gates closed. Learning toward the search targets is shown; whether it improves play is open. Build: the trained head (sha256 `ead156e2…`, bound to the successful inner and outer training records) against the frozen proven combination, both averaged, 200 simulations, halving from ply 20; the existing match loop and wrapper with a new closed gate, its own paths and fresh-seed survey and closing copies; STOP below a mean pair score of 0.40, otherwise CONTINUE, no strength claim; a fixed ceiling proposed from completed match timings. Seed procedures, checkpoint loading for evaluation, GPU games, further training, deployment and pushing remain unauthorized. See #133.
 
 ## Historical proposal check — programme now closed
 
@@ -1851,6 +1852,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 130. **The training wrapper and ceiling (2026-10-31).** Do **not** change the training ceiling (2,820 s: TERM 2,810 / KILL 2,820 / observation 2,830), relabel or edit the timing record, or rerun the timing. Do **not** open the training gate or launch without the user's approval; the wrapper runs once, and a run the ceiling stops is VOID and closes the pilot (card §5) — no retry, extension or top-up. Do **not** change the recipe, the starting checkpoint, admission or the STOP rules for this run, and do **not** push without approval.
 131. **Clarification to #130 (2026-10-31, the user's wording).** A training run the ceiling stops is **VOID**, with **no automatic retry** — it does not permanently reject the learning method; its progress, cause and likely continuation cost go to the user for assessment. Do **not** retry, extend, top up or rerun it without a new approval. Do **not** run strength games, deploy, or push on an ELIGIBLE verdict without the user's approval of each.
 132. **The trained head (2026-10-31).** Do **not** rerun, extend or continue training, change the recipe, or edit the run evidence (`record.json`, `progress.jsonl`, `head.npz` sha256 `ead156e2…`, `outer.json`). Do **not** read ELIGIBLE as a strength result: it is a held-out fit on the same agent's games. Do **not** run the screen, any strength games, deploy the head or push without the user's approval of each; the screen needs its own registered seed block and ceiling.
+133. **The screen's preparation (2026-10-31).** Build only. Do **not** run the screen's seed survey, proofs, registration or closing, open its gate, load the checkpoint or the trained head for evaluation, play any GPU game, train further, deploy or push without the user's approval of each. Do **not** change the screen's frozen rule (STOP below a mean pair score of 0.40, otherwise CONTINUE) or read CONTINUE as a strength result.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -7854,3 +7856,27 @@ and the worktree was removed.
 - **Conclusion / status:** step 4 is **ELIGIBLE**: by the card, the screen (step 5) may be proposed. No seed was used.
   There is no strength result. Strength games (the screen included), deployment and pushing remain unauthorized
   (#131). See do-not-repeat **#132**.
+
+#### Addendum — training ACCEPTED as ELIGIBLE; build-only preparation of the 64-game screen approved (2026-10-31, the user's review)
+
+- **Accepted:** the training result, as **ELIGIBLE** (entry 44). The held-out CE fell by 0.2166 nats and the recorded
+  value checks passed. The user independently verified the saved head's hash and parameter digest, that the source
+  and evidence are unchanged, the gate's restoration, and that all 54 gates are closed. No blocking finding.
+- **The user's reading:** the pilot has now shown learning toward the search targets. Whether it improves play is the
+  next unanswered question.
+- **Approved: build-only preparation of the card's 64-game screen (§5 step 5):**
+  - the trained head against the frozen proven combination, both with mirror averaging, 200 simulations and halving
+    from ply 20;
+  - the candidate bound to this exact saved head (`head.npz`, sha256 `ead156e2…`) and to the successful inner and
+    outer training records;
+  - the existing match loop and wrapper reused, with a new closed gate, separate evidence paths and fresh-seed survey
+    and closing copies; the build to confirm that search reaches the residual head through `forward_padded`;
+  - the frozen rule kept: a mean pair score below 0.40 is STOP, otherwise CONTINUE; the screen makes no strength
+    claim;
+  - a fixed ceiling proposed from completed match timings, allowing for long capped games; no additional timing or
+    profiling run is needed;
+  - focused CPU tests and fake launches; the build returned for review.
+- **Not authorized:** seed procedures, checkpoint loading for evaluation, GPU games, further training, deployment and
+  pushing.
+- **Prediction on record:** the card's, unchanged ("it scores above 0.5 against the proven agent (steps 5–6)";
+  directional only; confidence low); none added here. The screen's own rule is gross regression only.
