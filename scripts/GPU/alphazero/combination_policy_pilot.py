@@ -30,13 +30,24 @@ each game and the final claim count after the last; background_compute is read b
   objective -- the MIRROR-AVERAGED policy, log p_bar = logaddexp(log p(s), log p(Ms) mapped back) - log 2 -- for the
   pre-fit KL, the loss and the held-out check; 3,000 Adam updates of batch 64 in the order from PCG64(20261029); then
   card §5's STOP rules in order. The verdict is ELIGIBLE (the screen may be proposed) or STOP with its reason.
+* `run screen` (card §5 step 5; BUILT 2026-10-31 on the user's review, its gate closed): admitted by the training
+  run's committed record.json (COMPLETED, ELIGIBLE) AND its wrapper's committed outer.json, both showing success with
+  confirmed cleanup, and by TRAINED_HEAD: the record names exactly the pinned head.npz (sha256 and digests) and the
+  committed file is those bytes. calib020_0001 is loaded twice, as the strength match loads it; one copy gets arm R's
+  head with the saved arrays over it (its digests must be the record's), the other stays the parent. A probe at the
+  empty board must find their priors different (search reaches the trained head through forward_padded). Then 32
+  colour-reversed pairs, game g on seed plan.base + g, through the strength match's loop
+  (mirror_halving_combination.play_and_build): both sides MirrorAveragingEvaluator + RootSequentialHalvingMCTS at
+  200 simulations (halving from ply 20), the candidate red in even games; `game_start` logged before each game;
+  background_compute read before loading, after every game and before the verdict. The frozen rule: a mean pair
+  score below 0.40 is STOP, otherwise CONTINUE -- gross regression only, no strength claim. Costs are descriptive.
 * `time`: the build's CPU timing (card §5 step 1) -- 20 synchronized updates at the real architecture on synthetic
   inputs with random weights, no checkpoint -- and the training ceiling it prices.
 
 Any failure, exception or SIGTERM inside the record boundary is a VOID with record.json written by the script; a
 STOP rule is a COMPLETED run with verdict STOP. One shot each; no retry, top-up or extension.
 
-    MLX_ENABLE_TF32=0 python -m scripts.GPU.alphazero.combination_policy_pilot run throughput|throughput2|generate|train --checkpoint <abs path>
+    MLX_ENABLE_TF32=0 python -m scripts.GPU.alphazero.combination_policy_pilot run throughput|throughput2|generate|train|screen --checkpoint <abs path>
     MLX_ENABLE_TF32=0 python -m scripts.GPU.alphazero.combination_policy_pilot time
 """
 from __future__ import annotations
@@ -58,6 +69,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 import numpy as np
 
 from . import combination_policy_generate_authorization as GENERATE_GATE
+from . import combination_policy_screen_authorization as SCREEN_GATE
 from . import combination_policy_throughput2_authorization as THROUGHPUT2_GATE
 from . import combination_policy_throughput_authorization as THROUGHPUT_GATE
 from . import combination_policy_train_authorization as TRAIN_GATE
@@ -97,20 +109,34 @@ KINDS = {"throughput": {"slots": 144, "keep_rows": False, "gate": (THROUGHPUT_GA
                       "amendment": ("docs/superpowers/2026-10-30-combination-policy-generation-amendment.md",
                                     "11ced08185bd5e2727de07628a95e7cdc872ec31dae808e898640539742d7f55")},
          "train": {"gate": (TRAIN_GATE, "COMBINATION_POLICY_TRAIN_AUTHORIZED"),
-                   "evidence": "docs/superpowers/evidence/combination-policy-train"}}
+                   "evidence": "docs/superpowers/evidence/combination-policy-train"},
+         "screen": {"pairs": K.SCREEN["pairs"], "gate": (SCREEN_GATE, "COMBINATION_POLICY_SCREEN_AUTHORIZED"),
+                    "evidence": "docs/superpowers/evidence/combination-policy-screen",
+                    "plan": "docs/superpowers/evidence/combination-policy-screen-run/plan.json"}}
 TIMING_EVIDENCE = "docs/superpowers/evidence/combination-policy-timing"
 #: what each step needs committed first: (evidence dir, record field, value)
 ADMISSION = {"throughput": [(TIMING_EVIDENCE, "status", "COMPLETED")],
              "throughput2": [(TIMING_EVIDENCE, "status", "COMPLETED")],
              #: the generation amendment (2026-10-30): the committed timing only; no throughput record is read
              "generate": [(TIMING_EVIDENCE, "status", "COMPLETED")],
-             "train": [(KINDS["generate"]["evidence"], "status", "COMPLETED"), (TIMING_EVIDENCE, "status", "COMPLETED")]}
+             "train": [(KINDS["generate"]["evidence"], "status", "COMPLETED"), (TIMING_EVIDENCE, "status", "COMPLETED")],
+             #: the screen (the user's review, 2026-10-31): the one training run's record, ELIGIBLE
+             "screen": [(KINDS["train"]["evidence"], "verdict", "ELIGIBLE")]}
 #: what each step needs from a launch wrapper's committed outer.json too (the user's ruling, ledger 2026-10-29): an
 #: outer TIMEOUT, unconfirmed cleanup or missing outer evidence refuses, whatever the inner record says. Generation
 #: read the throughput check's until the generation amendment (2026-10-30) removed that requirement; training reads
 #: generation's (the user's review, 2026-10-30): (wrapper output dir, the run's evidence dir)
 OUTER_ADMISSION: Dict[str, List[Tuple[str, str]]] = {
-    "train": [(str(pathlib.Path(KINDS["generate"]["plan"]).parent), KINDS["generate"]["evidence"])]}
+    "train": [(str(pathlib.Path(KINDS["generate"]["plan"]).parent), KINDS["generate"]["evidence"])],
+    "screen": [("docs/superpowers/evidence/combination-policy-train-run", KINDS["train"]["evidence"])]}
+#: the screen's candidate (the user's review, 2026-10-31): exactly the head the one training run saved -- these bytes,
+#: named by its committed record with these digests after training (the encoder's and value head's unchanged)
+TRAINED_HEAD = {"file": f"{KINDS['train']['evidence']}/head.npz",
+                "sha256": "ead156e2eab2ebc26f96879edf9d5705c7150bb0a6f8beca74d7e63d6a4d4947",
+                "digests": {"encoder.": "92498b02d398a48ffb42b86414a4e7bbde96509cff13d86cd2da4dc8b0b635b0",
+                            "policy_head.": "f653aca2da64ec27eeedb28539ecb65c8c1eb1cac040f68a64327bb570b669cb",
+                            "value_head.": "576391a7950704a73fbd076a68995a768d973c6826cc24964d37b43850c2f301"}}
+REFERENCE = "reference"                         # the screen's opponent: the frozen proven combination
 GENERATE_CEILING = {"factor": 1.5, "max_seconds": 6 * 3600}
 #: card §4: the one recipe. Not a tuning point.
 RECIPE = {"updates": 3000, "batch": 64, "lr": 1e-3, "l2": 1e-4, "betas": [0.9, 0.999], "eps": 1e-8,
@@ -656,6 +682,227 @@ def _real_train_seams(checkpoint: pathlib.Path) -> TrainSeams:
                       load_network=load_network, loaded_modules=M._real_seams(checkpoint).loaded_modules)
 
 
+# ─────────────────────────────── the screen (card §5 step 5) ───────────────────────────────
+
+def trained_head(read_record: Callable[[str], Mapping[str, Any]], read_bytes: Callable[[str], bytes]) -> Dict[str, Any]:
+    """The screen's candidate head, or Refused: the committed training record (ELIGIBLE) names exactly TRAINED_HEAD --
+    its file, sha256 and digests after training, the encoder's and value head's unchanged from before -- and the
+    committed file is those bytes. Returns the binding with the bytes read: the bytes loaded are the bytes checked."""
+    rel = KINDS["train"]["evidence"]
+    try:
+        rec = read_record(rel)
+        data = read_bytes(TRAINED_HEAD["file"])
+    except FileNotFoundError as e:
+        raise Refused(f"{e} does not exist: the screen has no trained head") from None
+    want, before = TRAINED_HEAD["digests"], rec.get("digests_before") or {}
+    faults = []
+    if (rec.get("run"), rec.get("status"), rec.get("verdict")) != ("train", "COMPLETED", "ELIGIBLE"):
+        faults.append(f"the record is {rec.get('run')!r} {rec.get('status')!r} {rec.get('verdict')!r}, not an "
+                      f"ELIGIBLE training run")
+    if rec.get("head_file") != "head.npz" or rec.get("head_sha256") != TRAINED_HEAD["sha256"]:
+        faults.append(f"the record names {rec.get('head_file')!r} sha256 {rec.get('head_sha256')!r}, not the "
+                      f"pinned head")
+    if rec.get("digests_after") != want:
+        faults.append("the record's digests after training are not the pinned head's")
+    if (before.get("encoder."), before.get("value_head.")) != (want["encoder."], want["value_head."]):
+        faults.append("the record's encoder or value-head digest before training is not the pinned one")
+    if hashlib.sha256(data).hexdigest() != TRAINED_HEAD["sha256"]:
+        faults.append(f"{TRAINED_HEAD['file']} is not the pinned bytes")
+    if faults:
+        raise Refused(f"{rel}: {'; '.join(faults)}: the screen is not admitted")
+    return {"file": TRAINED_HEAD["file"], "sha256": TRAINED_HEAD["sha256"], "digests": dict(want), "bytes": data}
+
+
+def network_digests(network) -> Dict[str, str]:
+    arrays = snapshot(network)
+    return {p: digest(arrays, p) for p in ("encoder.", "value_head.", "policy_head.")}
+
+
+def install_trained_head(network, arrays: Mapping[str, np.ndarray]) -> Dict[str, str]:
+    """Arm R's head (the recipe's init_seed) with the trained arrays loaded over every one of its arrays, the network
+    left in eval mode; returns its digests. Refuses arrays that are not exactly the head's names, shapes and dtypes."""
+    import mlx.core as mx
+    from mlx.utils import tree_unflatten
+
+    from . import policy_head_capacity as PHC
+
+    PHC.install(network, "R", init_seed=RECIPE["init_seed"])
+    have = {k: v for k, v in snapshot(network).items() if k.startswith("policy_head.")}
+    if sorted(arrays) != sorted(have) or any((arrays[k].shape, arrays[k].dtype) != (v.shape, v.dtype)
+                                             for k, v in have.items()):
+        raise Void("head", "the saved arrays are not exactly arm R's head (names, shapes, dtypes)")
+    network.policy_head.update(tree_unflatten([(k[len("policy_head."):], mx.array(v)) for k, v in arrays.items()]))
+    network.eval()
+    return network_digests(network)
+
+
+def opening_probe(candidate, reference) -> Dict[str, Any]:
+    """Both sides' plain evaluators at the empty 24x24 board, input built as search builds it: the largest difference
+    in the priors (positive when search reaches the trained head through forward_padded) and in the values."""
+    from .game.twixt_state import TwixtState
+
+    state = TwixtState(active_size=BOARD, to_move="red", max_plies_limit=280)
+    legal = state.legal_moves()
+    rows = np.array([[m[0] for m in legal]], np.int32)
+    cols = np.array([[m[1] for m in legal]], np.int32)
+    out = {}
+    for name, ev in (("candidate", candidate), ("reference", reference)):
+        board = np.transpose(ev.build_input_tensor(state), (1, 2, 0))[None].astype(np.float32)
+        p, v = ev.infer(board, rows, cols, np.ones(rows.shape, np.float32), BOARD)
+        out[name] = (np.asarray(p, np.float64)[0, :len(legal)], float(np.asarray(v).reshape(-1)[0]))
+    return {"legal": len(legal), "max_prior_abs_diff": float(np.max(np.abs(out["candidate"][0] - out["reference"][0]))),
+            "value_abs_diff": abs(out["candidate"][1] - out["reference"][1])}
+
+
+@dataclasses.dataclass
+class ScreenSeams:
+    """What the screen reads from outside this module. TEST seams; `run` passes `_real_screen_seams` only."""
+    versions: Callable[[], Dict[str, str]]
+    read_plan: Callable[[str], Mapping[str, Any]]
+    seed_ok: Callable[[int], bool]
+    checkpoint_sha1: Callable[[], str]
+    load_evaluator: Callable[[], Any]
+    install_head: Callable[[Any], Dict[str, str]]          # the candidate's network -> its digests
+    digests: Callable[[Any], Dict[str, str]]
+    require_eval: Callable[[Any, str], Dict[str, Any]]
+    loaded_modules: Callable[[], Dict[str, str]]
+    background: Callable[[], Dict[str, Any]]
+    play_and_build: Callable[..., Any]
+    between_games: Callable[[], None]
+
+
+def _screen(seams: ScreenSeams, head: Mapping[str, Any], out_dir: pathlib.Path, rec: Dict[str, Any], log) -> None:
+    """Card §5 step 5 through the strength match's loop (mirror_halving_match), both sides the combination."""
+    from . import eval_runner as ER
+    from . import root_sequential_halving as RSH
+    from .external_learning_stage3 import PROTOCOL
+    from .mirror_averaging import MirrorAveragingEvaluator
+
+    spec = KINDS["screen"]
+    rec["versions"] = seams.versions()
+    if rec["versions"] != VERSIONS:
+        raise Void("versions", f"{rec['versions']} are not the card's {VERSIONS}")
+    rec["variant"] = K.check_variant(RSH)
+    config = ER.EvalConfig(**PROTOCOL)
+    if (config.board_size, config.max_moves) != (BOARD, 280):
+        raise Void("protocol", "PROTOCOL is not 24x24 / 280 plies")
+    pairs, games = spec["pairs"], 2 * spec["pairs"]
+    plan = seams.read_plan(spec["plan"])
+    if plan.get("n_slots") != games or type(plan.get("base")) is not int:
+        raise Void("seeds", f"the plan is not exactly {games} slots from an int base: {plan}")
+    bad = [plan["base"] + s for s in range(games) if not seams.seed_ok(plan["base"] + s)]
+    if bad:
+        raise Void("seeds", f"{len(bad)} seeds not ACCOUNTED, available and schedulable, first {bad[0]}")
+    rec["seeds"] = {"base": plan["base"], "n_slots": games}
+    sha1 = seams.checkpoint_sha1()
+    if sha1 != M.CHECKPOINT_SHA1:
+        raise Void("checkpoint", f"SHA-1 {sha1} is not calib020_0001's")
+    rec["checkpoint_sha1"] = sha1
+    rec["trained_head"] = {k: head[k] for k in ("file", "sha256", "digests")}
+    _watch(seams, rec, log, "before load")
+
+    t = time.monotonic()
+    base = {K.CANDIDATE: seams.load_evaluator(), REFERENCE: seams.load_evaluator()}
+    if base[K.CANDIDATE] is base[REFERENCE] or base[K.CANDIDATE].network is base[REFERENCE].network:
+        raise Void("load", "the two sides share an evaluator or a network")
+    got = {K.CANDIDATE: seams.install_head(base[K.CANDIDATE].network),
+           REFERENCE: seams.digests(base[REFERENCE].network)}
+    rec["load_seconds"] = round(time.monotonic() - t, 3)
+    rec["digests"] = got
+    if got[K.CANDIDATE] != head["digests"]:
+        raise Void("head", "the candidate's arrays are not the trained head's")
+    if any(got[REFERENCE][p] != head["digests"][p] for p in ("encoder.", "value_head.")) or \
+            got[REFERENCE]["policy_head."] == head["digests"]["policy_head."]:
+        raise Void("reference", "the reference is not calib020_0001's parent network")
+    rec["modes_at_load"] = {k: seams.require_eval(ev, "after load") for k, ev in base.items()}
+    rec["modules"] = seams.loaded_modules()
+    rec["head_probe"] = opening_probe(base[K.CANDIDATE], base[REFERENCE])
+    if not rec["head_probe"]["max_prior_abs_diff"] > 0.0:
+        raise Void("head", "the candidate's opening priors equal the reference's: search does not reach the head")
+    cost = {k: K.new_cost() for k in base}
+    for k, ev in base.items():
+        K.instrument(ev, cost[k])
+    evaluators = {k: MirrorAveragingEvaluator(ev) for k, ev in base.items()}
+    classes = {k: RSH.RootSequentialHalvingMCTS for k in base}
+    rd = ER.readout_from_eval_config(config)
+    a = ER.AgentSpec(K.CANDIDATE, f"{M.CHECKPOINT}+{head['file']}", rd, mcts_sims=K.CANDIDATE_SIMS)
+    b = ER.AgentSpec(REFERENCE, M.CHECKPOINT, rd, mcts_sims=K.CANDIDATE_SIMS)
+    rec["protocol"] = {"PROTOCOL": dict(PROTOCOL), "eval_config": dataclasses.asdict(config),
+                       "agents": [dataclasses.asdict(a), dataclasses.asdict(b)],
+                       "classes": {k: f"{v.__module__}.{v.__qualname__}" for k, v in classes.items()},
+                       "evaluators": {k: type(v).__name__ for k, v in evaluators.items()}}
+    tasks = ER.build_agent_pairing_tasks("combination-policy-screen", a, b, games, base_seed=plan["base"])
+    log("loaded", seconds=rec["load_seconds"])
+
+    results = []
+    with open(out_dir / "games.jsonl", "x") as games_fh:
+        for task in tasks:
+            colour = {True: task.red_agent.agent_id, False: task.black_agent.agent_id}
+
+            def on_search(is_red, secs, halving, _c=colour):
+                c = cost[_c[is_red]]
+                c["searches"] += 1
+                c["halving_searches"] += halving
+                c["search_seconds"] += secs
+
+            log("game_start", game=task.game_idx, slot=task.seed - plan["base"], red=task.red_agent.agent_id)
+            before = {k: dict(v) for k, v in cost.items()}
+            t = time.monotonic()
+            r = seams.play_and_build(task, evaluators[task.red_agent.agent_id], evaluators[task.black_agent.agent_id],
+                                     config, True, str(out_dir / "games"), classes, on_search)
+            game_cost = {k: K.delta(cost[k], before[k]) for k in cost}
+            if any(c["searches"] == 0 for c in game_cost.values()) or \
+                    sum(c["searches"] for c in game_cost.values()) != r.n_moves:
+                raise Void("attribution", f"game {task.game_idx}: the searches do not account for its moves")
+            row = {**dataclasses.asdict(r), "slot": task.seed - plan["base"],
+                   "seconds": round(time.monotonic() - t, 3), "cost": game_cost}
+            games_fh.write(json.dumps(row) + "\n")
+            games_fh.flush()
+            os.fsync(games_fh.fileno())
+            results.append(r)
+            log("game_end", game=task.game_idx, n_moves=r.n_moves, reason=r.reason)
+            seams.between_games()
+            _watch(seams, rec, log, f"after game {task.game_idx}")
+    _watch(seams, rec, log, "before the verdict")
+    rec["modes_at_end"] = {k: seams.require_eval(ev, "at the end") for k, ev in base.items()}
+    rec["cost_totals"] = cost
+    g = K.guards(cost[K.CANDIDATE], cost[REFERENCE])
+    rec["cost_ratios"] = {"evaluations_ratio": g["evaluations_ratio"],
+                          "search_seconds_ratio": g["search_seconds_ratio"],
+                          "note": "descriptive: the screen has no cost guard (card §5 step 5)"}
+    scores = K.pair_scores(results, pairs)
+    rec["pair_scores"] = scores
+    rec["games_summary"] = {"candidate_wins": sum(r.winner_agent_id == K.CANDIDATE for r in results),
+                            "reference_wins": sum(r.winner_agent_id == REFERENCE for r in results),
+                            "draws": sum(r.winner is None for r in results),
+                            "state_caps": sum(r.reason == "state_cap" for r in results)}
+    rec["screen"] = K.screen_verdict(scores)
+    rec["verdict"] = rec["screen"]["verdict"]
+
+
+def _npz_arrays(data: bytes) -> Dict[str, np.ndarray]:
+    with np.load(io.BytesIO(data)) as z:
+        return {k: z[k] for k in z.files}
+
+
+def _real_screen_seams(checkpoint: pathlib.Path, head: Mapping[str, Any]) -> ScreenSeams:
+    from . import background_compute as BG
+    from . import e4_screen_reference as REG
+    from . import eval_runner as ER
+    from . import mirror_halving_match as MHM
+
+    def seed_ok(s):
+        return REG.seed_is_accounted(s) and not REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s)
+
+    return ScreenSeams(versions=_versions, read_plan=lambda rel: json.loads((ROOT / rel).read_text()), seed_ok=seed_ok,
+                       checkpoint_sha1=lambda: hashlib.sha1(checkpoint.read_bytes()).hexdigest(),
+                       load_evaluator=lambda: ER._default_evaluator_factory(str(checkpoint)),   # the match's loader
+                       install_head=lambda net: install_trained_head(net, _npz_arrays(head["bytes"])),
+                       digests=network_digests, require_eval=lambda ev, when: M._require_eval(ev.network, when),
+                       loaded_modules=M._real_seams(checkpoint).loaded_modules, background=BG.observe,
+                       play_and_build=K.play_and_build, between_games=MHM._between_games)
+
+
 # ─────────────────────────────── the build's CPU timing (card §5 step 1) ───────────────────────────────
 
 def synthetic_batch(rng: np.random.Generator, batch: int, n_legal: int) -> Dict[str, np.ndarray]:
@@ -828,11 +1075,16 @@ def _read_outer(rel: str) -> Mapping[str, Any]:
 
 def _read_committed(path: str) -> Mapping[str, Any]:
     """Tracked and unchanged from HEAD, or FileNotFoundError (absent) / Refused (untracked, ignored or modified)."""
+    return json.loads(_read_committed_bytes(path))
+
+
+def _read_committed_bytes(path: str) -> bytes:
+    """_read_committed's rule, returning the file's bytes."""
     if not (ROOT / path).is_file():
         raise FileNotFoundError(path)
     if not M._git("ls-files", "--", path) or M._git("status", "--porcelain", "--untracked-files=all", "--", path):
         raise Refused(f"{path} is uncommitted or differs from HEAD")
-    return json.loads((ROOT / path).read_text())
+    return (ROOT / path).read_bytes()
 
 
 def outer_faults(outer: Mapping[str, Any], inner: Mapping[str, Any]) -> List[str]:
@@ -889,7 +1141,7 @@ def _preflight() -> None:
 
 
 def run(kind: str, checkpoint: str) -> int:
-    """THE PUBLIC ENTRY for the three gated steps. No seam: the setting, the gate, the pins, admission, real sources."""
+    """THE PUBLIC ENTRY for the gated steps. No seam: the setting, the gate, the pins, admission, real sources."""
     if kind not in KINDS:
         raise Refused(f"unknown run {kind!r}")
     _preflight()
@@ -901,6 +1153,7 @@ def run(kind: str, checkpoint: str) -> int:
         if not (ROOT / rel).is_file() or M._sha((ROOT / rel).read_bytes()) != sha:
             raise Refused(f"{rel} is not the pinned amendment")
     admission = admitted(kind, _read_record, _read_outer)
+    head = trained_head(_read_record, _read_committed_bytes) if kind == "screen" else None
     ckpt = pathlib.Path(checkpoint)
     if not (ckpt.is_absolute() and ckpt.is_file()):
         raise Refused("--checkpoint must name an existing file by absolute path")
@@ -910,6 +1163,9 @@ def run(kind: str, checkpoint: str) -> int:
     if kind == "train":
         seams = _real_train_seams(ckpt)
         execute = lambda o, r, lg: _train(RECIPE, seams, o, r, lg)    # noqa: E731
+    elif kind == "screen":
+        seams = _real_screen_seams(ckpt, head)
+        execute = lambda o, r, lg: _screen(seams, head, o, r, lg)     # noqa: E731
     else:
         if KINDS[kind]["keep_rows"] and os.path.lexists(CACHE_DIR / kind):
             raise Refused(f"{CACHE_DIR / kind} exists: the corpus is written once")
@@ -917,7 +1173,8 @@ def run(kind: str, checkpoint: str) -> int:
         execute = lambda o, r, lg: _generate(kind, seams, o, r, lg)   # noqa: E731
     code, rec = conclude(kind, execute, out, admission, head=M._git("rev-parse", "HEAD"))
     print(json.dumps({"status": rec["status"], "void": rec.get("void"), "run": kind, "verdict": rec.get("verdict"),
-                      "stop": rec.get("stop"), "throughput": rec.get("throughput")}))
+                      "stop": rec.get("stop"), "throughput": rec.get("throughput"),
+                      "screen": rec.get("screen")}))
     return code
 
 
@@ -953,7 +1210,7 @@ def _mlx_loaded() -> bool:
 def main(argv: Sequence[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     usage = ("usage: MLX_ENABLE_TF32=0 python -m scripts.GPU.alphazero.combination_policy_pilot "
-             "run throughput|throughput2|generate|train --checkpoint <abs path> | time")
+             "run throughput|throughput2|generate|train|screen --checkpoint <abs path> | time")
     try:
         if argv == ["time"]:
             return run_timing()
