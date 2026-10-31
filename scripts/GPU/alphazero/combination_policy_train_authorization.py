@@ -5,4 +5,4 @@ MLX_ENABLE_TF32=0 loads calib020_0001 weights-only and trains the residual polic
 corpus, then applies the check's STOP rules, so it takes its own reviewed door. Opened for ONE approved run and
 restored on every exit. Created closed. This file may hold ONLY this declaration.
 """
-COMBINATION_POLICY_TRAIN_AUTHORIZED = False
+COMBINATION_POLICY_TRAIN_AUTHORIZED = True
