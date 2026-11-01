@@ -82,26 +82,35 @@ def test_THE_ISOLATION_IS_IN_FORCE():
         P.conclude("screen", None, pathlib.Path("/nonexistent"), {})
 
 
-def test_THE_SCREEN_S_BLOCK_IS_SURVEYED_PROVEN_AND_REGISTERED_NOTHING_HAS_RUN():
+def test_THE_SCREEN_RAN_ONCE_COMPLETED_AND_IS_CLOSED():
     """RE-ANCHORED 2026-10-31 (survey 297e4a1c, pre-proof 0638c9c0, registration 3aaff337, post-proof 4b85468b): the
     survey is CLEAN and both proofs HOLD, each 55/55 on a clean tree, the proofs bound to the survey record's sha256;
     the plan is the copy's build_plan; the block (read from the plan and the records -- no seed literal here, since
-    the proofs scan tests/) lies in the 2027 band above generation's, ACCOUNTED exactly once and last, in no other
-    registry, every seed schedulable; the registry the post-proof proved is the current one. Nothing has run: the gate
-    is closed, the run directory holds the wrapper and the plan only, and no run evidence or closing record exists.
-    Read-only."""
+    the proofs scan tests/) lies in the 2027 band above generation's, ACCOUNTED exactly once and last.
+    RE-ANCHORED 2026-10-31 (the run, 31afe004 -> 82a882fd, and its closing, K1 44bb32b8 + K2 572d1dda): the ONE run
+    COMPLETED inside the ceiling -- outer exit 0, record COMPLETED, gate restored, no survivors, outer_faults empty --
+    launched from the one-line gate opening on top of the post-proof's state, so the registry it launched with is the
+    one the post-proof proved. The record binds the pinned head (the candidate's digests are the head's; the
+    reference's are the parent's), the checkpoint's SHA-1, TF32 0 and eval mode throughout, the background check
+    before loading, after every game and before the verdict, and a changed opening prior. All 64 games were played in
+    order, game g on seed BASE + g, the candidate red in even games, every move a search. The verdict is the frozen
+    rule applied to the recorded pair scores. K1 RECONCILES (all 64 started in order), so the WHOLE block is EXPOSED
+    and RETIRED, each exactly once and appended last, ACCOUNTED unchanged, and every seed is refused. The gate is
+    closed. The run evidence is unchanged since it was committed. Read-only."""
     from scripts.GPU.alphazero import combination_policy_screen_authorization as G
     from scripts.GPU.alphazero import e4_screen_reference as REG
     from scripts.GPU.alphazero import seed_band_2027 as SB
     kind = P.KINDS["screen"]
     assert getattr(G, GATE_NAME) is False
-    assert sorted(x.name for x in WRAPPER.parent.iterdir()) == ["01_wrapper.sh", "plan.json"]
-    assert not (ROOT / kind["evidence"]).exists()
+    run_dir, evidence = WRAPPER.parent, ROOT / kind["evidence"]
+    assert sorted(x.name for x in run_dir.iterdir()) == ["01_wrapper.sh", "bg_check.txt", "idle_check.txt",
+                                                         "outer.json", "pgid.txt", "plan.json", "run.stderr.txt",
+                                                         "run.stdout.txt"]
+    assert sorted(x.name for x in evidence.iterdir()) == ["games", "games.jsonl", "progress.jsonl", "record.json"]
     here = (EV / SURVEY).parent
     assert sorted(x.name for x in here.iterdir() if x.name != "__pycache__") == \
         ["01_seed_survey.py", "02_seed_survey_run.txt", "03_collision_proof_pre_run.txt",
          "04_collision_proof_post_run.txt"]
-    assert sorted(x.name for x in (EV / CLOSING).parent.iterdir() if x.name != "__pycache__") == ["01_derive_usage.py"]
     raw = (here / "02_seed_survey_run.txt").read_bytes()
     survey, sha = raw.decode("utf-8"), hashlib.sha256(raw).hexdigest()
     assert survey.splitlines()[2].endswith("; working tree clean") and "controls passed: 55/55" in survey
@@ -114,8 +123,6 @@ def test_THE_SCREEN_S_BLOCK_IS_SURVEYED_PROVEN_AND_REGISTERED_NOTHING_HAS_RUN():
         assert text.endswith(f"PROOF VERDICT ({mode}): THE COMBINATION-POLICY SCREEN BLOCK IS CLEAN AND THE STATE IS "
                              "AS EXPECTED\n")
     post = (here / "04_collision_proof_post_run.txt").read_text(encoding="utf-8")
-    reg_rel = "scripts/GPU/alphazero/e4_screen_reference.py"
-    assert f"\nregistry {reg_rel} sha256 {hashlib.sha256((ROOT / reg_rel).read_bytes()).hexdigest()}\n" in post
     plan = json.loads((ROOT / kind["plan"]).read_text(encoding="utf-8"))
     n = 2 * kind["pairs"]
     assert type(plan["base"]) is int and plan["n_slots"] == n == 64
@@ -124,15 +131,61 @@ def test_THE_SCREEN_S_BLOCK_IS_SURVEYED_PROVEN_AND_REGISTERED_NOTHING_HAS_RUN():
     assert SB.BAND[0] <= block[0] < block[1] <= SB.BAND[1] and block[0] % SB.ALIGN == 0
     assert f"block = [{block[0]}, {block[1]}) -- {n} seeds" in survey
     assert f"THE BLOCK, read from the record: [{block[0]}, {block[1]}) -- BASE {block[0]}" in post
-    assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1 and REG.ACCOUNTED_SEED_INTERVALS[-1] == block
-    assert not any(lo < block[1] and block[0] < hi
+    # the run: launched from the one-line gate opening, COMPLETED, gate restored, no survivors
+    outer = json.loads((run_dir / "outer.json").read_text(encoding="utf-8"))
+    record = json.loads((evidence / "record.json").read_text(encoding="utf-8"))
+    assert P.outer_faults(outer, record) == []
+    assert (outer["outcome"], outer["inner_exit"], outer["outer_exit"]) == ("COMPLETED", 0, 0)
+    assert outer["wall_seconds"] < outer["term_s"] == 3470 and outer["grace_s"] == 10
+    gate_rel = "scripts/GPU/alphazero/combination_policy_screen_authorization.py"
+    assert subprocess.run(["git", "-C", str(ROOT), "rev-parse", f"{outer['head']}^"], capture_output=True, text=True,
+                          check=True).stdout.strip() == outer["pre_open"]
+    opened = subprocess.run(["git", "-C", str(ROOT), "diff", "--unified=0", outer["pre_open"], outer["head"]],
+                            capture_output=True, text=True, check=True).stdout
+    assert [ln for ln in opened.splitlines() if ln[:1] in "+-" and ln[:3] not in ("+++", "---")] == \
+        [f"-{GATE_NAME} = False", f"+{GATE_NAME} = True"] and f"b/{gate_rel}" in opened
+    reg_rel = "scripts/GPU/alphazero/e4_screen_reference.py"
+    launched = subprocess.run(["git", "-C", str(ROOT), "show", f"{outer['head']}:{reg_rel}"],
+                              capture_output=True, check=True).stdout
+    assert f"\nregistry {reg_rel} sha256 {hashlib.sha256(launched).hexdigest()}\n" in post     # proved = launched
+    # the record: the pinned head against the parent, as approved
+    assert (record["status"], record["run"], record["written_by"]) == ("COMPLETED", "screen", "script")
+    assert record["seeds"] == {"base": block[0], "n_slots": n} and record["checkpoint_sha1"] == P.M.CHECKPOINT_SHA1
+    assert record["trained_head"] == P.TRAINED_HEAD and record["digests"]["candidate"] == HEAD_D
+    ref = record["digests"]["reference"]
+    assert (ref["encoder."], ref["value_head."]) == (HEAD_D["encoder."], HEAD_D["value_head."])
+    assert ref["policy_head."] != HEAD_D["policy_head."]
+    assert record["setting"] == record["setting_at_end"] == {P.SETTING: P.SETTING_VALUE}
+    for side in ("candidate", "reference"):
+        assert record["modes_at_load"][side]["modules_in_training_mode"] == 0
+        assert record["modes_at_end"][side]["modules_in_training_mode"] == 0
+    assert record["head_probe"]["max_prior_abs_diff"] > 0 and record["background_checks"] == n + 2
+    assert [a["mcts_sims"] for a in record["protocol"]["agents"]] == [K.CANDIDATE_SIMS, K.CANDIDATE_SIMS]
+    assert record["screen"] == K.screen_verdict(record["pair_scores"])
+    assert record["verdict"] == record["screen"]["verdict"]
+    games = [json.loads(line) for line in (evidence / "games.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert [g["slot"] for g in games] == list(range(n))
+    assert all((g["red_agent_id"] == K.CANDIDATE) == (g["slot"] % 2 == 0) for g in games)
+    costs = record["cost_totals"]
+    assert sum(g["n_moves"] for g in games) == costs["candidate"]["searches"] + costs["reference"]["searches"]
+    starts = [json.loads(line) for line in (evidence / "progress.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert [e["slot"] for e in starts if e["event"] == "game_start"] == list(range(n))
+    # the closing: all 64 started in order, so the WHOLE block is EXPOSED and RETIRED
+    closing = (EV / CLOSING).parent
+    assert sorted(x.name for x in closing.iterdir() if x.name != "__pycache__") == \
+        ["01_derive_usage.py", "02_derive_usage_run.txt"]
+    k1 = (closing / "02_derive_usage_run.txt").read_text(encoding="utf-8")
+    assert k1.splitlines()[2].endswith("; working tree clean") and "controls passed: 15/15" in k1
+    assert k1.endswith(f"VERDICT: RECONCILES -- EXPOSE {list(block)}; RETIRE {list(block)}\n")
+    for name in ("ACCOUNTED", "EXPOSED", "RETIRED"):
+        intervals = getattr(REG, f"{name}_SEED_INTERVALS")
+        assert intervals.count(block) == 1 and intervals[-1] == block, name
+    assert not any(lo < block[1] and block[0] < hi and (lo, hi) != block
                    for lo, hi in REG.EXPOSED_SEED_INTERVALS + REG.RETIRED_SEED_INTERVALS + REG.TEST_ONLY_SEED_INTERVALS)
-    gen = json.loads((ROOT / P.KINDS["generate"]["plan"]).read_text(encoding="utf-8"))
-    gen_block = (gen["base"], gen["base"] + gen["n_slots"])
-    assert [iv for iv in REG.ACCOUNTED_SEED_INTERVALS if iv[1] > SB.BAND[0]] == [gen_block, block]
-    assert all(REG.seed_is_accounted(s) and not REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s)
-               for s in range(*block))
-
+    assert all(REG.seed_is_accounted(s) and REG.seed_is_exposed(s) and REG.seed_is_retired(s) and
+               REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s) for s in range(*block))
+    assert subprocess.run(["git", "-C", str(ROOT), "diff", "--quiet", "82a882fd", "HEAD", "--", str(run_dir),
+                           str(evidence)]).returncode == 0
 
 # ─────────────────────────────── the gate, the kind and admission ───────────────────────────────
 
@@ -157,7 +210,7 @@ def test_THE_SCREEN_IS_32_PAIRS_ON_ITS_OWN_PATHS_and_the_card_s_rule():
     others = {P.KINDS[k]["evidence"] for k in ("throughput", "throughput2", "generate", "train")}
     others |= {str(pathlib.Path(P.KINDS[k]["plan"]).parent) for k in ("throughput", "throughput2", "generate")}
     assert {s["evidence"], str(pathlib.Path(s["plan"]).parent)} & others == set()
-    assert "amendment" not in s and "slots" not in s and not (ROOT / s["evidence"]).exists()
+    assert "amendment" not in s and "slots" not in s
     assert P.ADMISSION["screen"] == [(TRAIN, "verdict", "ELIGIBLE")]
     assert P.OUTER_ADMISSION["screen"] == [(TRAIN_RUN, TRAIN)]
     assert (K.CANDIDATE, P.REFERENCE) == ("candidate", "reference") and K.CANDIDATE_SIMS == 200
@@ -237,10 +290,10 @@ def test_THE_HEAD_BINDING_REFUSES_ANYTHING_BUT_THE_SAVED_HEAD(rec, data, why):
         P.trained_head(rr, rb)
 
 
-def test_RUN_SCREEN_WITH_ITS_GATE_OPEN_PASSES_EVERY_REAL_CHECK_TO_THE_SEAMS(monkeypatch, capsys, tmp_path):
-    """The gate opened in this process only. Through the REAL pins, admission and head binding the entry reaches its
-    checkpoint refusal; with a checkpoint file present it reaches the real seams -- unreachable here -- and nothing
-    else: no evidence directory is made."""
+def test_RUN_SCREEN_STAYS_ONE_SHOT_even_with_its_gate_open(monkeypatch, capsys, tmp_path):
+    """RE-ANCHORED 2026-10-31 (the run, 82a882fd): the gate opened in this process only. Through the REAL pins,
+    admission and head binding the entry reaches its checkpoint refusal; with a checkpoint file present it now refuses
+    because the screen's evidence exists -- before the real seams, unreachable here -- and the evidence is untouched."""
     gate, name = P.KINDS["screen"]["gate"]
     monkeypatch.setattr(gate, name, True)
     monkeypatch.setattr(P, "_mlx_loaded", lambda: False)
@@ -248,9 +301,11 @@ def test_RUN_SCREEN_WITH_ITS_GATE_OPEN_PASSES_EVERY_REAL_CHECK_TO_THE_SEAMS(monk
     assert "--checkpoint must name an existing file" in capsys.readouterr().err
     ckpt = tmp_path / "model.safetensors"
     ckpt.write_bytes(b"not a model")
-    with pytest.raises(AssertionError, match="real seam"):
-        P.main(["run", "screen", "--checkpoint", str(ckpt)])
-    assert not (ROOT / P.KINDS["screen"]["evidence"]).exists()
+    evidence = ROOT / P.KINDS["screen"]["evidence"]
+    before = {p: p.read_bytes() for p in evidence.rglob("*") if p.is_file()}
+    assert P.main(["run", "screen", "--checkpoint", str(ckpt)]) == P.EXIT_REFUSED
+    assert "exists: the run is one-shot" in capsys.readouterr().err
+    assert {p: p.read_bytes() for p in evidence.rglob("*") if p.is_file()} == before
 
 
 # ─────────────────────────────── the screen on fakes, through the real record boundary ───────────────────────────────
@@ -696,7 +751,7 @@ def test_THE_WRAPPER_SERVES_THE_PILOT_S_SCREEN_PATHS():
         str(pathlib.Path(kind["gate"][0].__file__).relative_to(ROOT))
     assert re.search(r"^MODULE=(\S+)$", w, re.M).group(1) == P.__name__ and f"RECORD_KIND={P.RECORD_KIND}\n" in w
     assert "CKPT=\"$MAIN/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors\"" in w
-    assert sorted(x.name for x in WRAPPER.parent.iterdir()) == ["01_wrapper.sh", "plan.json"]  # the seeds' plan only
+    assert {"01_wrapper.sh", "plan.json"} <= {x.name for x in WRAPPER.parent.iterdir()}   # the rest: the lifecycle test
 
 
 # ─────────────────────────────── fake launches of the REAL screen wrapper ───────────────────────────────
@@ -1006,7 +1061,7 @@ def test_THE_CLOSING_COPY_SERVES_THE_SCREEN_and_holds_no_seed_literal():
     assert closing.N_SLOTS == 2 * kind["pairs"] == 64 and closing.INPUTS[0] == kind["plan"]
     assert closing.RUN == kind["evidence"] and closing.RUN_DIR == str(pathlib.Path(kind["plan"]).parent)
     assert closing.OUT == "docs/superpowers/evidence/combination-policy-screen-seed-closing/02_derive_usage_run.txt"
-    assert not (ROOT / closing.OUT).exists()
+    assert (ROOT / closing.OUT).is_file()                  # run once (the lifecycle test)
     code = _split(CLOSING)[1]
     assert not SB.scan(code) and not re.search(r"\b20[0-9]{7}\b", code)
 

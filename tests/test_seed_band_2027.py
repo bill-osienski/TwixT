@@ -188,14 +188,16 @@ def test_THE_GAP_FLOOR_IS_THE_BLOCK_S_SIZE_against_literals_in_either_band():
 
 # ─────────────────────────────── the real state ───────────────────────────────
 
-def test_REAL_STATE_the_2027_band_holds_generation_s_closed_block_and_the_screen_s_ACCOUNTED_block():
+def test_REAL_STATE_the_2027_band_holds_generation_s_and_the_screen_s_closed_blocks():
     """RE-ANCHORED 2026-10-30 (registration 326004d0): the band's first and only registered block is generation's,
     read from its committed plan (no literal here), ACCOUNTED only; the rule would now place a later block above it.
     RE-ANCHORED 2026-10-30 (generation's closing, K2 569ba2a4): that block is now also EXPOSED and RETIRED whole, the
     band's only entry in each; nothing in the band is TEST_ONLY.
     RE-ANCHORED 2026-10-31 (the screen's registration 3aaff337): the screen's block, read from its committed plan, is
     the band's second ACCOUNTED entry, above generation's, and in no other list; generation's is still the band's only
-    EXPOSED and RETIRED entry; the rule would now place a later block above the screen's."""
+    EXPOSED and RETIRED entry; the rule would now place a later block above the screen's.
+    RE-ANCHORED 2026-10-31 (the screen's closing, K2 572d1dda): the screen's block is now also EXPOSED and RETIRED
+    whole, after generation's, in each list."""
     import json
     from scripts.GPU.alphazero import e4_screen_reference as REG
     blocks = []
@@ -206,7 +208,7 @@ def test_REAL_STATE_the_2027_band_holds_generation_s_closed_block_and_the_screen
     assert gen[1] <= screen[0]
     assert [iv for iv in REG.ACCOUNTED_SEED_INTERVALS if iv[1] > NEW] == [gen, screen]
     for name in ("EXPOSED_SEED_INTERVALS", "RETIRED_SEED_INTERVALS"):
-        assert [iv for iv in getattr(REG, name) if iv[1] > NEW] == [gen], name
+        assert [iv for iv in getattr(REG, name) if iv[1] > NEW] == [gen, screen], name
     assert all(hi <= NEW for _lo, hi in REG.TEST_ONLY_SEED_INTERVALS)
     assert B.candidate(REG.ACCOUNTED_SEED_INTERVALS, [], 64)[2][0] >= screen[1] + 64
 

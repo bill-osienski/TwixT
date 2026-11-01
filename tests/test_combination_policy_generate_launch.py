@@ -66,7 +66,9 @@ def test_GENERATION_RAN_ONCE_COMPLETED_AND_IS_CLOSED_and_both_throughput_runs_st
     committed. Both throughput runs stand as written -- VOID records under outer TIMEOUTs -- unchanged since their
     closings (attempt 1 e30e277c, attempt 2 ae361458). Read-only.
     RE-ANCHORED 2026-10-31 (the screen's registration 3aaff337): the block is no longer last in ACCOUNTED; every later
-    entry lies above it."""
+    entry lies above it.
+    RE-ANCHORED 2026-10-31 (the screen's closing, K2 572d1dda): nor last in EXPOSED or RETIRED; every later entry in
+    each lies above it."""
     import hashlib
     from scripts.GPU.alphazero import combination_policy_generate_authorization as G
     from scripts.GPU.alphazero import e4_screen_reference as REG
@@ -138,13 +140,11 @@ def test_GENERATION_RAN_ONCE_COMPLETED_AND_IS_CLOSED_and_both_throughput_runs_st
     assert k1.splitlines()[2].endswith("; working tree clean")
     assert f"claims events: [{n}]\n" in k1 and "controls passed: 21/21" in k1
     assert k1.endswith(f"VERDICT: RECONCILES -- EXPOSE {list(block)}; RETIRE {list(block)}\n")
-    # RE-ANCHORED 2026-10-31 (the screen's registration 3aaff337): no longer last in ACCOUNTED; every later entry
-    # lies above it
-    i = REG.ACCOUNTED_SEED_INTERVALS.index(block)
-    assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1
-    assert all(lo >= block[1] for lo, _hi in REG.ACCOUNTED_SEED_INTERVALS[i + 1:])
-    assert REG.EXPOSED_SEED_INTERVALS.count(block) == 1 and REG.EXPOSED_SEED_INTERVALS[-1] == block
-    assert REG.RETIRED_SEED_INTERVALS.count(block) == 1 and REG.RETIRED_SEED_INTERVALS[-1] == block
+    # RE-ANCHORED 2026-10-31 (the screen's registration 3aaff337, then its closing 572d1dda): no longer last in
+    # ACCOUNTED, EXPOSED or RETIRED; every later entry in each lies above it
+    for intervals in (REG.ACCOUNTED_SEED_INTERVALS, REG.EXPOSED_SEED_INTERVALS, REG.RETIRED_SEED_INTERVALS):
+        assert intervals.count(block) == 1
+        assert all(lo >= block[1] for lo, _hi in intervals[intervals.index(block) + 1:])
     assert not any(lo < block[1] and block[0] < hi and (lo, hi) != block
                    for lo, hi in REG.EXPOSED_SEED_INTERVALS + REG.RETIRED_SEED_INTERVALS + REG.TEST_ONLY_SEED_INTERVALS)
     assert all(REG.seed_is_accounted(s) and REG.seed_is_exposed(s) and REG.seed_is_retired(s) and
