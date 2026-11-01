@@ -8179,3 +8179,22 @@ for evaluation, no GPU, no game. All 56 gates are closed.
   17, seed band 44, e4 reference 31, H3 uniform population 156, marathon diagnostics 23. No full-suite run.
 - **Status:** built, for review. Seed procedures, the strength run, further training, deployment and pushing remain
   unauthorized (#136).
+
+#### Addendum — the strength build ACCEPTED; its seed preparation approved as one conditional sequence (2026-11-01, the user's review)
+
+- **Accepted:** the strength build (`9a3e236e`), with no blocking finding. The user's read-only review found that the
+  shared match path, the exact statistical rule, the whole-run cost guards, the admission checks and the head binding
+  match the approved design; the two added checks (the screen's record must have played the pinned head; the block
+  must not overlap the screen's) are appropriate; the wrapper and the seed copies have only the stated differences;
+  prior evidence is unchanged and all 56 gates are closed. The user ran no tests or experiments.
+- **Approved, as one conditional sequence:**
+  1. run the 1,018-seed survey once; proceed only if it is CLEAN with 55/55 controls;
+  2. commit its record, then run the pre-proof once; require HOLDS and 55/55;
+  3. register exactly the surveyed block and create its plan through `build_plan`;
+  4. run the post-proof once; require HOLDS and 55/55; then update the lifecycle tests with focused CPU checks.
+- **If any step fails:** return the result; the block and the method are never adjusted. The existing selection rule
+  and the 1,018-seed gap floor are kept. No further engineering, timing, profiling or full-suite run.
+- **The ceiling, unchanged:** TERM 51,770 s, KILL 51,780 s, cleanup observation through 51,790 s.
+- **Not authorized:** the launch (the committed plan and the post-proof are returned for that decision), evaluation
+  loading, GPU games, further training, deployment and pushing.
+- **Prediction on record:** none added.
