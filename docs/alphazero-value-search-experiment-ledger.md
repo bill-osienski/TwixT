@@ -192,6 +192,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — training ACCEPTED as ELIGIBLE; the 64-game screen approved to BUILD only (addendum, 2026-10-31, the user's review).** The user verified the head's hash and parameter digest, the unchanged source and evidence, the gate's restoration and all 54 gates closed. Learning toward the search targets is shown; whether it improves play is open. Build: the trained head (sha256 `ead156e2…`, bound to the successful inner and outer training records) against the frozen proven combination, both averaged, 200 simulations, halving from ply 20; the existing match loop and wrapper with a new closed gate, its own paths and fresh-seed survey and closing copies; STOP below a mean pair score of 0.40, otherwise CONTINUE, no strength claim; a fixed ceiling proposed from completed match timings. Seed procedures, checkpoint loading for evaluation, GPU games, further training, deployment and pushing remain unauthorized. See #133.
 > **Combination policy pilot — the 64-game screen BUILT for review; ceiling PROPOSED at 3,480 s (addendum, 2026-10-31).** Build `6c908ca8`; nothing run. `run screen` behind a new closed gate (55 in all), admitted only by training's committed ELIGIBLE record and clean outer.json, bound to head.npz `ead156e2…` and its digests; the head installed before any inference; a probe must find the candidate's opening priors changed. Both sides averaged halving at 200 simulations through the strength match's loop; STOP below 0.40, else CONTINUE. Ceiling from completed match timings: 64 × 64.75 plies × 0.5508 s = 2,282.3 s × 1.5 → 3,480 s (TERM 3,470), room for 10 capped games against 2.75 expected. Survey and closing copies built, not run. Compiled values can differ from the parent's in the last bits (recorded, not gated). Awaiting review (#133).
 > **Combination policy pilot — the screen's seeds PREPARED; awaiting the launch decision (addendum, 2026-10-31).** Build and ceiling accepted (TERM 3,470 / KILL 3,480 / cleanup through 3,490 s). Survey CLEAN 55/55 (`297e4a1c`), pre-proof HOLDS (`0638c9c0`), [202740900, 202740964) registered in ACCOUNTED with its plan (`3aaff337`), post-proof HOLDS (`4b85468b`); lifecycle tests re-anchored (`360ca0b0`). Nothing run: gate closed (55 closed), no evaluation loading, no GPU game. See #134.
+> **Combination policy pilot — the 64-game SCREEN: COMPLETED, verdict CONTINUE (entry 45, 2026-10-31).** One run from the one-line gate opening (`31afe004` → `82a882fd`): outer COMPLETED in 2,169 s of the 3,470 s TERM, gate restored, no survivors. The pinned trained head against the proven combination, both averaged halving at 200 simulations: mean pair score **0.578** over 32 pairs (36–26, 2 drawn state caps), above the 0.40 STOP line; this is a gross-regression check only, not a strength result (Hoeffding95 [0.338, 0.818]). Opening value difference 0.0 on the compiled GPU model. Block closed: K1 RECONCILES 15/15 (`44bb32b8`), K2 exposes and retires it whole (`572d1dda`). Step 6, training, deployment and pushing unauthorized. See #135.
 
 ## Historical proposal check — programme now closed
 
@@ -1856,6 +1857,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 132. **The trained head (2026-10-31).** Do **not** rerun, extend or continue training, change the recipe, or edit the run evidence (`record.json`, `progress.jsonl`, `head.npz` sha256 `ead156e2…`, `outer.json`). Do **not** read ELIGIBLE as a strength result: it is a held-out fit on the same agent's games. Do **not** run the screen, any strength games, deploy the head or push without the user's approval of each; the screen needs its own registered seed block and ceiling.
 133. **The screen's preparation (2026-10-31).** Build only. Do **not** run the screen's seed survey, proofs, registration or closing, open its gate, load the checkpoint or the trained head for evaluation, play any GPU game, train further, deploy or push without the user's approval of each. Do **not** change the screen's frozen rule (STOP below a mean pair score of 0.40, otherwise CONTINUE) or read CONTINUE as a strength result.
 134. **The screen's seed block (2026-10-31).** Do **not** rerun the screen survey or either proof, edit their records (`02_*` sha256 `358f11a0…`, `03_*` `a8bf811a…`, `04_*` `2f2c6789…`), edit the plan, or move, widen or re-register [202740900, 202740964). Do **not** open the screen gate, load the checkpoint or the trained head for evaluation, launch, close the block, train further, deploy or push without the user's approval of each. Do **not** write any seed of this block into `scripts/`, `tests/` or `docs/superpowers/` outside its own records, the plan and the registry tuple.
+135. **The screen's result (2026-10-31).** Do **not** rerun, extend or pool the screen, re-score it, edit its evidence (`record.json`, `games.jsonl`, `games/`, `progress.jsonl`, `outer.json`) or its closing record, or reuse any seed of [202740900, 202740964). Do **not** read CONTINUE (0.578 over 32 pairs) as a strength result or a component claim, or use these games as training data. Do **not** run the 509-pair comparison (step 6), train further, deploy the head or push without the user's approval of each.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -8033,3 +8035,64 @@ record committed before the next step:
 - **Not authorized:** the 509-pair comparison, further training, deployment and pushing.
 - **Prediction on record:** the card's, unchanged ("it scores above 0.5 against the proven agent (steps 5–6)";
   directional only; confidence low). The screen's own rule tests gross regression only.
+
+### 45. Combination policy pilot — step 5, the 64-GAME SCREEN (2026-10-31, COMPLETED; verdict CONTINUE; block closed; awaiting review)
+
+- **Test:** card §5 step 5. The trained policy head (entry 44, `head.npz` sha256 `ead156e2…`) installed on
+  calib020_0001 as arm R's residual branch, against the frozen proven combination (calib020_0001 with its own head).
+  Both sides use mirror averaging and root sequential halving from ply 20, at 200 simulations. 32 colour-reversed
+  pairs; game g on seed BASE + g, with the candidate red in even games. The frozen rule: a mean pair score below 0.40
+  is STOP, otherwise CONTINUE. Ceiling 3,480 s (TERM 3,470 s; accepted in the addendum after the build).
+- **Hypothesis:** the trained head does not make the proven agent grossly worse in play (the screen's rule). The
+  card's step-6 hypothesis, that it plays better, is not tested here.
+- **Why it was plausible:** the head moved the averaged policy toward the search targets on held-out games, while
+  the value path stayed exactly the parent's on the CPU (entry 44). The averaged prior is the thing the search uses.
+- **Prediction on record:** the card's, unchanged: "it scores above 0.5 against the proven agent (steps 5–6)";
+  directional only; confidence low. Nothing was added before the run.
+- **What ran:** approval `1e599104`. A fresh read-only panic/reboot check: no reboot since 2026-10-25 09:39, and no
+  panic report since then. Load about 1.2; BOINC check CLEAR (podman exempt). Since the build (`6c908ca8`), only the
+  seed records, the plan and the registry append had changed in `scripts/` and `docs/superpowers/`. No gate was
+  open, and no screen evidence existed. The checks also confirmed:
+  - the admission (training ELIGIBLE, its outer.json COMPLETED);
+  - the head binding (sha256 and digests);
+  - the plan = `build_plan`;
+  - the block last in ACCOUNTED;
+  - the post-proof's registry = the current one.
+
+  Clean linked worktree `cp-screen-run`; the one-line gate opening `31afe004` (only
+  `COMBINATION_POLICY_SCREEN_AUTHORIZED`). The wrapper ran once from 23:10:15 to 23:47:29 EDT. The idle gate held
+  60 s and the background check was CLEAR before launch. Evidence `82a882fd` (with the restored gate; main
+  fast-forwarded to it).
+- **Result:**
+  - **Wrapper:** inner exit **0**, outer exit 0, outcome **COMPLETED**, `gate_restored` true, survivors empty,
+    `record_by` script, wall **2,169 s** of the 3,470 s TERM. `outer_faults` is empty and stderr is empty; no pilot
+    process remained and no gate is open.
+  - **Integrity:**
+    - the candidate's digests are the pinned head's; the reference's encoder and value head are the same and its
+      policy head is the parent's (`83299f8e…`); checkpoint SHA-1 `209cf2d4…`;
+    - MLX_ENABLE_TF32 0 at the start and the end; no module in training mode at load or at the end;
+    - 66 background checks, all clear: before loading, after each of the 64 games, before the verdict;
+    - opening probe: 528 legal moves, max prior difference 0.114; **value difference 0.0** at the opening on the
+      real compiled GPU model (one position only; this does not establish equality elsewhere);
+    - all 64 games were played in slot order and ended (62 wins, 2 at the 280-ply state cap), with both sides at
+      200 simulations;
+    - 3,915 moves = 1,960 candidate + 1,955 reference searches.
+  - **Cost (descriptive; no guard):** 0.5551 s per candidate search against 0.5488 s per reference search (search
+    seconds ratio 1.014, evaluations ratio 1.004). Mean game length 61.2 plies. The 2,169 s wall time was under the
+    2,282 s projection.
+  - **Score:** candidate 36 wins, reference 26, 2 drawn state caps; pair scores 9 × 1.0, 2 × 0.75, 16 × 0.5,
+    5 × 0.0. **Mean pair score 0.578** (18.5 of 32), so the frozen rule gives **CONTINUE** (STOP below 0.40).
+  - **Not a strength result.** For scale only: the two-sided 95% Hoeffding interval on 32 pairs is
+    [0.338, 0.818], so this screen cannot tell 0.578 from 0.5.
+- **Closing:**
+  - K1 (`44bb32b8`, once, at clean tree `82a882fd`): **RECONCILES**, 15/15 controls; all 64 games started, in order.
+  - K2 (`572d1dda`): [202740900, 202740964) EXPOSED whole and RETIRED whole, each appended last (EXPOSED 47 → 48,
+    RETIRED 45 → 46). ACCOUNTED and TEST_ONLY are unchanged, and the AST check against the parent shows only those
+    two lists changed. Every seed of the block is refused; its neighbours are not.
+  - Tests re-anchored (`7ed36571`); the focused suites, run one file at a time: 309 pass.
+- **Did it match the prediction?** The direction agrees: the candidate scored above 0.5. The screen has no power to
+  test the prediction, which belongs to step 6.
+- **Conclusion / status:** the screen did not find a gross regression; by the frozen rule, CONTINUE. There is no
+  strength claim, no component claim, and the games are not training data. The block is closed. The 509-pair
+  comparison (step 6), further training, deployment and pushing remain unauthorized. Awaiting the user's result
+  review. See do-not-repeat **#135**.
