@@ -78,6 +78,62 @@ def test_THE_ISOLATION_IS_IN_FORCE():
         P.conclude("strength", None, pathlib.Path("/nonexistent"), {})
 
 
+def test_THE_COMPARISON_S_BLOCK_IS_SURVEYED_PROVEN_AND_REGISTERED_NOTHING_HAS_RUN():
+    """RE-ANCHORED 2026-11-01 (survey 11e3e485, pre-proof fa9cd930, registration ea2376d7, post-proof 10e44eb9): the
+    survey is CLEAN and both proofs HOLD, each 55/55 on a clean tree, the proofs bound to the survey record's sha256;
+    the plan is the copy's build_plan; the block (read from the plan and the records -- no seed literal here, since
+    the proofs scan tests/) lies in the 2027 band above the screen's, with the gap at least its own size, ACCOUNTED
+    exactly once and last, in no other registry, every seed schedulable, disjoint from the screen's block; the
+    registry the post-proof proved is the current one. Nothing has run: the gate is closed, the run directory holds
+    the wrapper and the plan only, and no run evidence or closing record exists. Read-only."""
+    from scripts.GPU.alphazero import combination_policy_strength_authorization as G
+    from scripts.GPU.alphazero import e4_screen_reference as REG
+    from scripts.GPU.alphazero import seed_band_2027 as SB
+    kind = P.KINDS["strength"]
+    assert getattr(G, GATE_NAME) is False
+    assert sorted(x.name for x in WRAPPER.parent.iterdir()) == ["01_wrapper.sh", "plan.json"]
+    assert not (ROOT / kind["evidence"]).exists()
+    here = (EV / SURVEY).parent
+    assert sorted(x.name for x in here.iterdir() if x.name != "__pycache__") == \
+        ["01_seed_survey.py", "02_seed_survey_run.txt", "03_collision_proof_pre_run.txt",
+         "04_collision_proof_post_run.txt"]
+    assert sorted(x.name for x in (EV / CLOSING).parent.iterdir() if x.name != "__pycache__") == ["01_derive_usage.py"]
+    raw = (here / "02_seed_survey_run.txt").read_bytes()
+    survey, sha = raw.decode("utf-8"), hashlib.sha256(raw).hexdigest()
+    assert survey.splitlines()[2].endswith("; working tree clean") and "controls passed: 55/55" in survey
+    assert survey.endswith("SURVEY VERDICT   : THE COMBINATION-POLICY STRENGTH BLOCK IS CLEAN\n")
+    for rel, mode in (("03_collision_proof_pre_run.txt", "pre"), ("04_collision_proof_post_run.txt", "post")):
+        text = (here / rel).read_text(encoding="utf-8")
+        assert text.splitlines()[2].endswith("; working tree clean")
+        assert f"02_seed_survey_run.txt sha256 {sha} (read at " in text
+        assert f"EXPECTED STATE ({mode}): HOLDS" in text and "controls passed: 55/55" in text
+        assert text.endswith(f"PROOF VERDICT ({mode}): THE COMBINATION-POLICY STRENGTH BLOCK IS CLEAN AND THE STATE "
+                             "IS AS EXPECTED\n")
+    post = (here / "04_collision_proof_post_run.txt").read_text(encoding="utf-8")
+    reg_rel = "scripts/GPU/alphazero/e4_screen_reference.py"
+    assert f"\nregistry {reg_rel} sha256 {hashlib.sha256((ROOT / reg_rel).read_bytes()).hexdigest()}\n" in post
+    plan = json.loads((ROOT / kind["plan"]).read_text(encoding="utf-8"))
+    assert type(plan["base"]) is int and plan["n_slots"] == GAMES
+    assert plan == _load(SURVEY, "_strength_survey_registered").build_plan(plan["base"], sha)
+    block = (plan["base"], plan["base"] + GAMES)
+    assert SB.BAND[0] <= block[0] < block[1] <= SB.BAND[1] and block[0] % SB.ALIGN == 0
+    assert f"block = [{block[0]}, {block[1]}) -- {GAMES} seeds" in survey
+    assert f"THE BLOCK, read from the record: [{block[0]}, {block[1]}) -- BASE {block[0]}" in post
+    gap = int(re.search(rf"^THE BLOCK \({block[0]}, {block[1]}\) .* gap=(\d+) \(floor {GAMES}\)", post, re.M).group(1))
+    assert gap >= GAMES
+    assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1 and REG.ACCOUNTED_SEED_INTERVALS[-1] == block
+    assert not any(lo < block[1] and block[0] < hi
+                   for lo, hi in REG.EXPOSED_SEED_INTERVALS + REG.RETIRED_SEED_INTERVALS + REG.TEST_ONLY_SEED_INTERVALS)
+    screen = json.loads((ROOT / P.KINDS["screen"]["plan"]).read_text(encoding="utf-8"))
+    screen_block = (screen["base"], screen["base"] + screen["n_slots"])
+    gen = json.loads((ROOT / P.KINDS["generate"]["plan"]).read_text(encoding="utf-8"))
+    gen_block = (gen["base"], gen["base"] + gen["n_slots"])
+    assert screen_block[1] <= block[0]
+    assert [iv for iv in REG.ACCOUNTED_SEED_INTERVALS if iv[1] > SB.BAND[0]] == [gen_block, screen_block, block]
+    assert all(REG.seed_is_accounted(s) and not REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s)
+               for s in range(*block))
+
+
 # ─────────────────────────────── the gate, the kind, the rule and admission ───────────────────────────────
 
 def test_THE_STRENGTH_GATE_IS_A_CLOSED_SINGLE_DECLARATION_and_the_closed_gate_refuses(monkeypatch, capsys):
@@ -102,7 +158,7 @@ def test_THE_COMPARISON_IS_509_PAIRS_ON_ITS_OWN_PATHS():
     others |= {str(pathlib.Path(v["plan"]).parent) for k, v in P.KINDS.items() if k != "strength" and "plan" in v}
     assert {s["evidence"], str(pathlib.Path(s["plan"]).parent)} & others == set()
     assert "amendment" not in s and "slots" not in s and not (ROOT / s["evidence"]).exists()
-    assert sorted(x.name for x in WRAPPER.parent.iterdir()) == ["01_wrapper.sh"]      # no plan: no seeds yet
+    assert sorted(x.name for x in WRAPPER.parent.iterdir()) == ["01_wrapper.sh", "plan.json"]  # the seeds' plan only
 
 
 def test_THE_RULE_IS_THE_CARD_S_EXACTLY():
@@ -630,7 +686,7 @@ def test_THE_SURVEY_COPY_SERVES_THE_COMPARISON_IN_THE_2027_BAND_and_holds_no_see
     assert survey.build_plan(base, "0" * 64) == {"kind": "combination-policy-strength-plan/1", "base": base,
                                                  "n_slots": GAMES, "survey_record_sha256": "0" * 64}
     assert set(survey.OUT.values()) & set(_load(SURVEY_SCREEN, "_screen_survey_out").OUT.values()) == set()
-    assert not any((ROOT / p).exists() for p in survey.OUT.values())            # never run
+    assert all((ROOT / p).is_file() for p in survey.OUT.values())   # each mode ran once (the lifecycle test above)
     code = _split(SURVEY)[1]
     assert not SB.scan(code) and not re.search(r"\b20[0-9]{7}\b", code)
 
@@ -759,6 +815,13 @@ def test_THE_CLOSING_COPY_SERVES_THE_COMPARISON_and_holds_no_seed_literal():
 
 def test_THE_CLOSING_COPY_S_CONTROLS_ALL_PASS_at_a_synthetic_base():
     results = _load(CLOSING, "_strength_closing_c")._controls(BASE)
+    assert len(results) == 15 and all(ok for _l, ok, _d in results), [r for r in results if not r[1]]
+
+
+def test_THE_CLOSING_COPY_S_CONTROLS_ALL_PASS_at_the_registered_base():
+    """The same 15 controls at the plan's BASE, read from the committed plan."""
+    base = json.loads((ROOT / P.KINDS["strength"]["plan"]).read_text(encoding="utf-8"))["base"]
+    results = _load(CLOSING, "_strength_closing_rb")._controls(base)
     assert len(results) == 15 and all(ok for _l, ok, _d in results), [r for r in results if not r[1]]
 
 

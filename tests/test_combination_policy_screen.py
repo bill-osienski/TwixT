@@ -96,7 +96,9 @@ def test_THE_SCREEN_RAN_ONCE_COMPLETED_AND_IS_CLOSED():
     order, game g on seed BASE + g, the candidate red in even games, every move a search. The verdict is the frozen
     rule applied to the recorded pair scores. K1 RECONCILES (all 64 started in order), so the WHOLE block is EXPOSED
     and RETIRED, each exactly once and appended last, ACCOUNTED unchanged, and every seed is refused. The gate is
-    closed. The run evidence is unchanged since it was committed. Read-only."""
+    closed. The run evidence is unchanged since it was committed. Read-only.
+    RE-ANCHORED 2026-11-01 (the strength comparison's registration ea2376d7): the block is no longer last in
+    ACCOUNTED; every later entry there lies above it. It is still last in EXPOSED and RETIRED."""
     from scripts.GPU.alphazero import combination_policy_screen_authorization as G
     from scripts.GPU.alphazero import e4_screen_reference as REG
     from scripts.GPU.alphazero import seed_band_2027 as SB
@@ -179,7 +181,9 @@ def test_THE_SCREEN_RAN_ONCE_COMPLETED_AND_IS_CLOSED():
     assert k1.endswith(f"VERDICT: RECONCILES -- EXPOSE {list(block)}; RETIRE {list(block)}\n")
     for name in ("ACCOUNTED", "EXPOSED", "RETIRED"):
         intervals = getattr(REG, f"{name}_SEED_INTERVALS")
-        assert intervals.count(block) == 1 and intervals[-1] == block, name
+        later = intervals[intervals.index(block) + 1:]
+        assert intervals.count(block) == 1 and all(lo >= block[1] for lo, _hi in later), name
+        assert not later or name == "ACCOUNTED", name
     assert not any(lo < block[1] and block[0] < hi and (lo, hi) != block
                    for lo, hi in REG.EXPOSED_SEED_INTERVALS + REG.RETIRED_SEED_INTERVALS + REG.TEST_ONLY_SEED_INTERVALS)
     assert all(REG.seed_is_accounted(s) and REG.seed_is_exposed(s) and REG.seed_is_retired(s) and
