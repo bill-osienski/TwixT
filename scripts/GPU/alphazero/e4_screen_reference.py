@@ -1115,6 +1115,15 @@ EXPOSED_SEED_INTERVALS = (
     # registered block). A post-run accounting edit to a bound file: the committed plan, survey/proof and run records
     # keep their hashes; nothing is rerun.
     (202739800, 202740800),  # COMBINATION POLICY CORPUS GENERATION -- 1,000 game seeds, exposed whole
+    # 🔴 THE COMBINATION POLICY PILOT -- THE 64-GAME SCREEN -- THE CLOSING EDIT (2026-10-31), after the ONE authorized
+    # screen run (outer exit 0, COMPLETED at 2,169 s of the 3,470 s TERM; record COMPLETED; no survivors; 64 of 64
+    # games finished). Use DERIVED from the committed run evidence by
+    # evidence/combination-policy-screen-seed-closing/02_* (RECONCILES, 15/15):
+    # all 64 games started, in order, so k = 64 and the WHOLE block is EXPOSED.
+    # These games are the screen's only (card §5 step 5, a gross-regression check); never training data, and never
+    # pooled with any other match's games. A post-run accounting edit to a bound file: the committed plan,
+    # survey/proof and run records keep their hashes; nothing is rerun.
+    (202740900, 202740964),  # COMBINATION POLICY 64-GAME SCREEN -- 64 game seeds, exposed whole
 )
 
 #: Seeds RESERVED PERMANENTLY FOR TESTS. Unit tests must draw from something, and
@@ -1517,6 +1526,15 @@ RETIRED_SEED_INTERVALS = (
     # registered block). A post-run accounting edit to a bound file: the committed plan, survey/proof and run records
     # keep their hashes; nothing is rerun.
     (202739800, 202740800),  # COMBINATION POLICY CORPUS GENERATION -- 1,000 game seeds, retired whole
+    # 🔴 THE COMBINATION POLICY PILOT -- THE 64-GAME SCREEN -- THE CLOSING EDIT (2026-10-31), after the ONE authorized
+    # screen run (outer exit 0, COMPLETED at 2,169 s of the 3,470 s TERM; record COMPLETED; no survivors; 64 of 64
+    # games finished). Use DERIVED from the committed run evidence by
+    # evidence/combination-policy-screen-seed-closing/02_* (RECONCILES, 15/15):
+    # the WHOLE block is RETIRED.
+    # These games are the screen's only (card §5 step 5, a gross-regression check); never training data, and never
+    # pooled with any other match's games. A post-run accounting edit to a bound file: the committed plan,
+    # survey/proof and run records keep their hashes; nothing is rerun.
+    (202740900, 202740964),  # COMBINATION POLICY 64-GAME SCREEN -- 64 game seeds, retired whole
 )
 
 
