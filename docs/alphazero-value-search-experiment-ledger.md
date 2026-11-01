@@ -8010,3 +8010,26 @@ record committed before the next step:
   deployment and pushing. All 55 gates are closed.
 - **Status:** the registered plan and the post-proof are returned for the launch decision. The ceiling is fixed at TERM
   3,470 s, KILL 3,480 s, cleanup through 3,490 s. See do-not-repeat **#134**.
+
+#### Addendum — the ONE 64-game screen approved, with its conditional seed closing (2026-10-31, the user's review)
+
+- **Checked by the user:** the plan, the proof hashes, all 64 slot mappings and the exact registry append; the
+  post-proof matches the current registry; the reviewed code and the training evidence are unchanged; all 55 gates are
+  closed.
+- **Approved:**
+  1. record this approval; a fresh read-only panic/reboot check; recheck the plan, the registry and the candidate
+     binding;
+  2. in a clean worktree, open only `COMBINATION_POLICY_SCREEN_AUTHORIZED` with a one-line commit, and run the
+     existing wrapper once, with BOINC quit and the idle and background checks enforced;
+  3. TERM **3,470 s**, KILL **3,480 s**, cleanup observation through **3,490 s**; the exact trained head against the
+     frozen proven combination, with the approved search settings;
+  4. after a started run: verify the gate's restoration and the cleanup, then run K1 once. If it RECONCILES, apply its
+     exposure verdict, retire the whole block, update the lifecycle tests and run focused CPU checks. If it does not,
+     stop before any registry edit;
+  5. commit the evidence and a dated ledger closeout, then return for result review.
+- **Scoring:** only a completed screen is scored: a mean pair score below 0.40 is STOP, otherwise CONTINUE, with no
+  strength claim. A timeout is VOID, with no partial score and no automatic retry; its progress and cause are returned
+  for assessment.
+- **Not authorized:** the 509-pair comparison, further training, deployment and pushing.
+- **Prediction on record:** the card's, unchanged ("it scores above 0.5 against the proven agent (steps 5–6)";
+  directional only; confidence low). The screen's own rule tests gross regression only.
