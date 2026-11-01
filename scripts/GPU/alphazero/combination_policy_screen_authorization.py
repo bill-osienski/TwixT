@@ -5,4 +5,4 @@ MLX_ENABLE_TF32=0 loads calib020_0001 twice on the GPU, installs the trained pol
 colour-reversed pairs against the proven combination on a registered block, so it takes its own reviewed door. Opened
 for ONE approved run and restored on every exit. Created closed. This file may hold ONLY this declaration.
 """
-COMBINATION_POLICY_SCREEN_AUTHORIZED = True
+COMBINATION_POLICY_SCREEN_AUTHORIZED = False
