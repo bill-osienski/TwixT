@@ -193,6 +193,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — the 64-game screen BUILT for review; ceiling PROPOSED at 3,480 s (addendum, 2026-10-31).** Build `6c908ca8`; nothing run. `run screen` behind a new closed gate (55 in all), admitted only by training's committed ELIGIBLE record and clean outer.json, bound to head.npz `ead156e2…` and its digests; the head installed before any inference; a probe must find the candidate's opening priors changed. Both sides averaged halving at 200 simulations through the strength match's loop; STOP below 0.40, else CONTINUE. Ceiling from completed match timings: 64 × 64.75 plies × 0.5508 s = 2,282.3 s × 1.5 → 3,480 s (TERM 3,470), room for 10 capped games against 2.75 expected. Survey and closing copies built, not run. Compiled values can differ from the parent's in the last bits (recorded, not gated). Awaiting review (#133).
 > **Combination policy pilot — the screen's seeds PREPARED; awaiting the launch decision (addendum, 2026-10-31).** Build and ceiling accepted (TERM 3,470 / KILL 3,480 / cleanup through 3,490 s). Survey CLEAN 55/55 (`297e4a1c`), pre-proof HOLDS (`0638c9c0`), [202740900, 202740964) registered in ACCOUNTED with its plan (`3aaff337`), post-proof HOLDS (`4b85468b`); lifecycle tests re-anchored (`360ca0b0`). Nothing run: gate closed (55 closed), no evaluation loading, no GPU game. See #134.
 > **Combination policy pilot — the 64-game SCREEN: COMPLETED, verdict CONTINUE (entry 45, 2026-10-31).** One run from the one-line gate opening (`31afe004` → `82a882fd`): outer COMPLETED in 2,169 s of the 3,470 s TERM, gate restored, no survivors. The pinned trained head against the proven combination, both averaged halving at 200 simulations: mean pair score **0.578** over 32 pairs (36–26, 2 drawn state caps), above the 0.40 STOP line; this is a gross-regression check only, not a strength result (Hoeffding95 [0.338, 0.818]). Opening value difference 0.0 on the compiled GPU model. Block closed: K1 RECONCILES 15/15 (`44bb32b8`), K2 exposes and retires it whole (`572d1dda`). Step 6, training, deployment and pushing unauthorized. See #135.
+> **Combination policy pilot — the screen's CONTINUE ACCEPTED; the 509-pair strength comparison approved to BUILD only (addendum, 2026-11-01, the user's review).** The user reproduced 0.578125, the interval and the cost totals, and verified the replay bindings, the closing edits, the unchanged evidence and all 55 gates closed. Build: the same trained head against the same frozen proven combination, search unchanged; admitted only from training's successful records and the screen's CONTINUE with its outer record and the head binding; PASS iff mean pair score − √(ln 40 / 1018) > 0.5 and evaluations ≤ 1.05 and search seconds ≤ 1.10; a new closed gate, its own paths, copies for 1,018 fresh seeds and their closing; the screen's games excluded. Ceiling 51,780 s (TERM 51,770 / KILL 51,780 / cleanup through 51,790 s). Seed procedures, the run, training, deployment and pushing remain unauthorized. See #136.
 
 ## Historical proposal check — programme now closed
 
@@ -1858,6 +1859,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 133. **The screen's preparation (2026-10-31).** Build only. Do **not** run the screen's seed survey, proofs, registration or closing, open its gate, load the checkpoint or the trained head for evaluation, play any GPU game, train further, deploy or push without the user's approval of each. Do **not** change the screen's frozen rule (STOP below a mean pair score of 0.40, otherwise CONTINUE) or read CONTINUE as a strength result.
 134. **The screen's seed block (2026-10-31).** Do **not** rerun the screen survey or either proof, edit their records (`02_*` sha256 `358f11a0…`, `03_*` `a8bf811a…`, `04_*` `2f2c6789…`), edit the plan, or move, widen or re-register [202740900, 202740964). Do **not** open the screen gate, load the checkpoint or the trained head for evaluation, launch, close the block, train further, deploy or push without the user's approval of each. Do **not** write any seed of this block into `scripts/`, `tests/` or `docs/superpowers/` outside its own records, the plan and the registry tuple.
 135. **The screen's result (2026-10-31).** Do **not** rerun, extend or pool the screen, re-score it, edit its evidence (`record.json`, `games.jsonl`, `games/`, `progress.jsonl`, `outer.json`) or its closing record, or reuse any seed of [202740900, 202740964). Do **not** read CONTINUE (0.578 over 32 pairs) as a strength result or a component claim, or use these games as training data. Do **not** run the 509-pair comparison (step 6), train further, deploy the head or push without the user's approval of each.
+136. **The strength comparison's preparation (2026-11-01).** Build only. Do **not** run its seed survey, proofs, registration or closing, open its gate, load the checkpoint or the trained head for evaluation, play any GPU game, train further, deploy or push without the user's approval of each. Do **not** change the frozen rule (PASS iff the mean pair score − √(ln 40 / 1018) > 0.5, the evaluations ratio ≤ 1.05 and the search-seconds ratio ≤ 1.10), the 509 pairs, the search settings or the 51,780 s ceiling, pool the screen's games into the result, or add an interim look, extension, top-up or retry.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -8096,3 +8098,27 @@ record committed before the next step:
   strength claim, no component claim, and the games are not training data. The block is closed. The 509-pair
   comparison (step 6), further training, deployment and pushing remain unauthorized. Awaiting the user's result
   review. See do-not-repeat **#135**.
+
+#### Addendum — the screen's CONTINUE and its seed closing ACCEPTED; build-only preparation of the 509-pair strength comparison approved (2026-11-01, the user's review)
+
+- **Accepted:** the screen's result, **CONTINUE** (entry 45), and its completed seed closing. The user independently
+  reproduced the mean pair score 0.578125, the interval and the cost totals, and verified the replay bindings, the
+  exact closing edits, the unchanged evidence and that all 55 gates are closed. No blocking finding.
+- **The user's reading:** the trained agent cleared the gross-regression screen. Whether learning made it stronger
+  remains unanswered.
+- **Approved: build-only preparation of the card's fixed 509-pair strength comparison (§5 step 6):**
+  - the same trained head against the same frozen proven combination, with the search settings unchanged;
+  - admitted only from the successful training records and the completed screen with CONTINUE, including the
+    successful outer records and the existing head binding;
+  - the exact rule kept: PASS iff the mean pair score − √(ln 40 / 1018) > 0.5, **and** the evaluations ratio ≤ 1.05
+    **and** the search-seconds ratio ≤ 1.10;
+  - separate evidence paths, a new closed gate, and copies for 1,018 fresh seeds and their later closing; the
+    screen's games are excluded from the strength result;
+  - the reviewed implementation and wrapper reused, with focused CPU and fake-launch checks; no further timing,
+    profiling or full-suite run.
+- **The ceiling, set before launch (the user's figure):** 2,169 s × 1,018 / 64 × 1.5 = 51,751.0 s, rounded up to the
+  minute: **51,780 s (14 h 23 min)**. TERM at 51,770 s, KILL at 51,780 s, cleanup observation through 51,790 s. It is
+  an operational estimate, not a completion guarantee.
+- **Not authorized:** seed procedures and the strength run, further training, deployment and pushing.
+- **Prediction on record:** the card's, unchanged ("it scores above 0.5 against the proven agent (steps 5–6)";
+  directional only; confidence low); none added here. Step 6 is the test of it.
