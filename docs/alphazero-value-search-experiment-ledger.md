@@ -195,6 +195,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — the 64-game SCREEN: COMPLETED, verdict CONTINUE (entry 45, 2026-10-31).** One run from the one-line gate opening (`31afe004` → `82a882fd`): outer COMPLETED in 2,169 s of the 3,470 s TERM, gate restored, no survivors. The pinned trained head against the proven combination, both averaged halving at 200 simulations: mean pair score **0.578** over 32 pairs (36–26, 2 drawn state caps), above the 0.40 STOP line; this is a gross-regression check only, not a strength result (Hoeffding95 [0.338, 0.818]). Opening value difference 0.0 on the compiled GPU model. Block closed: K1 RECONCILES 15/15 (`44bb32b8`), K2 exposes and retires it whole (`572d1dda`). Step 6, training, deployment and pushing unauthorized. See #135.
 > **Combination policy pilot — the screen's CONTINUE ACCEPTED; the 509-pair strength comparison approved to BUILD only (addendum, 2026-11-01, the user's review).** The user reproduced 0.578125, the interval and the cost totals, and verified the replay bindings, the closing edits, the unchanged evidence and all 55 gates closed. Build: the same trained head against the same frozen proven combination, search unchanged; admitted only from training's successful records and the screen's CONTINUE with its outer record and the head binding; PASS iff mean pair score − √(ln 40 / 1018) > 0.5 and evaluations ≤ 1.05 and search seconds ≤ 1.10; a new closed gate, its own paths, copies for 1,018 fresh seeds and their closing; the screen's games excluded. Ceiling 51,780 s (TERM 51,770 / KILL 51,780 / cleanup through 51,790 s). Seed procedures, the run, training, deployment and pushing remain unauthorized. See #136.
 > **Combination policy pilot — the 509-pair strength comparison BUILT for review (addendum, 2026-11-01).** Build `9a3e236e`; nothing run. `run strength` behind a new closed gate (56 in all): the screen's reviewed path on 509 pairs, admitted by training's ELIGIBLE record and the screen's CONTINUE record with both outer.json files, bound to head.npz `ead156e2…` and to the screen having played it; the frozen strength_verdict (PASS iff mean − √(ln 40 / 1018) > 0.5 and evaluations ≤ 1.05 and search seconds ≤ 1.10); a block overlapping the screen's is VOID. Wrapper TERM 51,770 / KILL 51,780 / cleanup through 51,790 s. Survey and closing copies built, not run. Awaiting review (#136).
+> **Combination policy pilot — the strength comparison's seeds PREPARED; awaiting the launch decision (addendum, 2026-11-01).** Build accepted (`9a3e236e`). Survey CLEAN 55/55 (`11e3e485`), pre-proof HOLDS (`fa9cd930`), [202742000, 202743018) registered in ACCOUNTED with its plan (`ea2376d7`), post-proof HOLDS (`10e44eb9`); lifecycle tests re-anchored (`00e310d0`). Ceiling TERM 51,770 / KILL 51,780 / cleanup through 51,790 s. Nothing run: gate closed (56 closed), no evaluation loading, no GPU game. See #137.
 
 ## Historical proposal check — programme now closed
 
@@ -1861,6 +1862,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 134. **The screen's seed block (2026-10-31).** Do **not** rerun the screen survey or either proof, edit their records (`02_*` sha256 `358f11a0…`, `03_*` `a8bf811a…`, `04_*` `2f2c6789…`), edit the plan, or move, widen or re-register [202740900, 202740964). Do **not** open the screen gate, load the checkpoint or the trained head for evaluation, launch, close the block, train further, deploy or push without the user's approval of each. Do **not** write any seed of this block into `scripts/`, `tests/` or `docs/superpowers/` outside its own records, the plan and the registry tuple.
 135. **The screen's result (2026-10-31).** Do **not** rerun, extend or pool the screen, re-score it, edit its evidence (`record.json`, `games.jsonl`, `games/`, `progress.jsonl`, `outer.json`) or its closing record, or reuse any seed of [202740900, 202740964). Do **not** read CONTINUE (0.578 over 32 pairs) as a strength result or a component claim, or use these games as training data. Do **not** run the 509-pair comparison (step 6), train further, deploy the head or push without the user's approval of each.
 136. **The strength comparison's preparation (2026-11-01).** Build only. Do **not** run its seed survey, proofs, registration or closing, open its gate, load the checkpoint or the trained head for evaluation, play any GPU game, train further, deploy or push without the user's approval of each. Do **not** change the frozen rule (PASS iff the mean pair score − √(ln 40 / 1018) > 0.5, the evaluations ratio ≤ 1.05 and the search-seconds ratio ≤ 1.10), the 509 pairs, the search settings or the 51,780 s ceiling, pool the screen's games into the result, or add an interim look, extension, top-up or retry.
+137. **The strength comparison's seed block (2026-11-01).** Do **not** rerun the strength survey or either proof, edit their records (`02_*` sha256 `fa74a89d…`, `03_*` `66599166…`, `04_*` `5e1a39c8…`), edit the plan, or move, widen or re-register [202742000, 202743018). Do **not** open the strength gate, load the checkpoint or the trained head for evaluation, launch, close the block, train further, deploy or push without the user's approval of each. Do **not** write any seed of this block into `scripts/`, `tests/` or `docs/superpowers/` outside its own records, the plan and the registry tuple.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -8198,3 +8200,31 @@ for evaluation, no GPU, no game. All 56 gates are closed.
 - **Not authorized:** the launch (the committed plan and the post-proof are returned for that decision), evaluation
   loading, GPU games, further training, deployment and pushing.
 - **Prediction on record:** none added.
+
+#### Addendum — the strength comparison's seed block surveyed (CLEAN 55/55), pre-proven (HOLDS), registered with its plan and post-proven (HOLDS); awaiting the launch decision (2026-11-01)
+
+Run as the conditional sequence approved in the addendum above, each step once in the clean linked worktree
+`cp-strength-seeds`, each record committed before the next step:
+
+- **Survey** (`11e3e485`, at clean tree `f5e6ff4f`): **CLEAN, controls 55/55**. By the two-band rule, the anchor is
+  202740969, the highest repository literal in the 2027 band: a synthetic value that one of the screen's own controls
+  printed into the screen's survey and proof records (counted conservatively, as the accepted method does). BASE =
+  202742000, block **[202742000, 202743018)**, 1,018 seeds; no direct hit, no derived-stream collision, injective, gap
+  1,030 (floor 1,018). Record sha256 `fa74a89d…`.
+- **Pre-registration proof** (`fa9cd930`, at `11e3e485`): **HOLDS**, CLEAN, controls 55/55, bound to the survey
+  record. Record sha256 `66599166…`.
+- **Registration** (`ea2376d7`): exactly the surveyed block appended last to ACCOUNTED (50 → 51; the band's third
+  block, above the screen's); the AST check against the parent shows only ACCOUNTED changed, so EXPOSED, RETIRED and
+  TEST_ONLY are unchanged. `combination-policy-strength-run/plan.json` = `build_plan(202742000, survey record
+  fa74a89d…)` (1,018 slots). No gate opened.
+- **Post-registration proof** (`10e44eb9`, at `ea2376d7`): **HOLDS**, CLEAN, controls 55/55, bound to the survey
+  record; it proved registry sha256 `0210d3b1…`, the current one. Record sha256 `5e1a39c8…`. Main was fast-forwarded
+  to it.
+- **Tests** (`00e310d0`): a new strength lifecycle test asserts this state, with the block read from the plan and the
+  records (no seed literal); the closing copy's 15 controls also pass at the registered base. The checks that expected
+  no plan or records, the 2027-band real-state test, and the screen's "last in ACCOUNTED" check are re-anchored. The
+  focused suites, run one file at a time: 365 pass. No full-suite run (not requested).
+- **Not done:** the gate, the launch, checkpoint or head loading for evaluation, any GPU game, the closing, training,
+  deployment and pushing. All 56 gates are closed.
+- **Status:** the committed plan and the post-proof are returned for the launch decision. The ceiling is fixed at TERM
+  51,770 s, KILL 51,780 s, cleanup through 51,790 s. See do-not-repeat **#137**.
