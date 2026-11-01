@@ -194,6 +194,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — the screen's seeds PREPARED; awaiting the launch decision (addendum, 2026-10-31).** Build and ceiling accepted (TERM 3,470 / KILL 3,480 / cleanup through 3,490 s). Survey CLEAN 55/55 (`297e4a1c`), pre-proof HOLDS (`0638c9c0`), [202740900, 202740964) registered in ACCOUNTED with its plan (`3aaff337`), post-proof HOLDS (`4b85468b`); lifecycle tests re-anchored (`360ca0b0`). Nothing run: gate closed (55 closed), no evaluation loading, no GPU game. See #134.
 > **Combination policy pilot — the 64-game SCREEN: COMPLETED, verdict CONTINUE (entry 45, 2026-10-31).** One run from the one-line gate opening (`31afe004` → `82a882fd`): outer COMPLETED in 2,169 s of the 3,470 s TERM, gate restored, no survivors. The pinned trained head against the proven combination, both averaged halving at 200 simulations: mean pair score **0.578** over 32 pairs (36–26, 2 drawn state caps), above the 0.40 STOP line; this is a gross-regression check only, not a strength result (Hoeffding95 [0.338, 0.818]). Opening value difference 0.0 on the compiled GPU model. Block closed: K1 RECONCILES 15/15 (`44bb32b8`), K2 exposes and retires it whole (`572d1dda`). Step 6, training, deployment and pushing unauthorized. See #135.
 > **Combination policy pilot — the screen's CONTINUE ACCEPTED; the 509-pair strength comparison approved to BUILD only (addendum, 2026-11-01, the user's review).** The user reproduced 0.578125, the interval and the cost totals, and verified the replay bindings, the closing edits, the unchanged evidence and all 55 gates closed. Build: the same trained head against the same frozen proven combination, search unchanged; admitted only from training's successful records and the screen's CONTINUE with its outer record and the head binding; PASS iff mean pair score − √(ln 40 / 1018) > 0.5 and evaluations ≤ 1.05 and search seconds ≤ 1.10; a new closed gate, its own paths, copies for 1,018 fresh seeds and their closing; the screen's games excluded. Ceiling 51,780 s (TERM 51,770 / KILL 51,780 / cleanup through 51,790 s). Seed procedures, the run, training, deployment and pushing remain unauthorized. See #136.
+> **Combination policy pilot — the 509-pair strength comparison BUILT for review (addendum, 2026-11-01).** Build `9a3e236e`; nothing run. `run strength` behind a new closed gate (56 in all): the screen's reviewed path on 509 pairs, admitted by training's ELIGIBLE record and the screen's CONTINUE record with both outer.json files, bound to head.npz `ead156e2…` and to the screen having played it; the frozen strength_verdict (PASS iff mean − √(ln 40 / 1018) > 0.5 and evaluations ≤ 1.05 and search seconds ≤ 1.10); a block overlapping the screen's is VOID. Wrapper TERM 51,770 / KILL 51,780 / cleanup through 51,790 s. Survey and closing copies built, not run. Awaiting review (#136).
 
 ## Historical proposal check — programme now closed
 
@@ -8122,3 +8123,59 @@ record committed before the next step:
 - **Not authorized:** seed procedures and the strength run, further training, deployment and pushing.
 - **Prediction on record:** the card's, unchanged ("it scores above 0.5 against the proven agent (steps 5–6)";
   directional only; confidence low); none added here. Step 6 is the test of it.
+
+#### Addendum — the 509-pair strength comparison BUILT for review (2026-11-01)
+
+Build `9a3e236e`, as approved in the addendum above. Nothing was run: no seed procedure, no checkpoint or head loaded
+for evaluation, no GPU, no game. All 56 gates are closed.
+
+- **The entry:** `combination_policy_pilot run strength` (card §5 step 6), behind a new closed gate,
+  `combination_policy_strength_authorization` (the fifty-sixth). Its own paths: `combination-policy-strength` (the
+  script's) and `combination-policy-strength-run` (the wrapper's, with the plan the seed steps would add).
+- **The reviewed implementation, reused.** The screen's `_screen` now takes a `kind` argument. With "strength" it runs
+  the screen's path unchanged:
+  - the match's loader twice; arm R's head with the saved arrays installed before any inference; the digest checks on
+    both sides; the opening probe;
+  - the strength match's loop, with both sides `MirrorAveragingEvaluator` + `RootSequentialHalvingMCTS` at 200
+    simulations, halving from ply 20, the candidate red in even games, game g on seed plan.base + g;
+  - `game_start` before each game; the background check before loading, after every game and before the verdict
+    (1,020 checks in a complete run); each game's searches must account for its moves.
+
+  The two kinds differ only in their pairs (509, not 32), plan, pairing id and rule. For kind "screen" the path is
+  unchanged: the screen's tests pass as they were, and a new test pins it.
+- **Admission and the head binding:**
+  - training's committed record (ELIGIBLE) and its `outer.json`, as for the screen, **and** the screen's committed
+    record (COMPLETED, CONTINUE) and its wrapper's `outer.json`, all through the existing `outer_faults`;
+  - the existing binding, `TRAINED_HEAD` (`head.npz` sha256 `ead156e2…` and its digests; the bytes checked are the
+    bytes loaded), plus one check: the screen's record must have played exactly that head (its `trained_head` and
+    candidate digests) on calib020_0001;
+  - read-only on the real committed records, both admit and bind.
+- **The rule, unchanged:** the pinned `mirror_halving_combination.strength_verdict`, with `guards` over the whole
+  run's totals. PASS iff the mean pair score − √(ln 40 / 1018) > 0.5 **and** the evaluations ratio ≤ 1.05 **and** the
+  search-seconds ratio ≤ 1.10. A bound above 0.5 with a guard failed is NOT_COMPUTE_MATCHED; otherwise NON_PASS. The
+  bound clears 0.5 only above a mean of 0.5602 (at least 570.5 of the 1,018 game points).
+- **The screen's games excluded:** only this run's 1,018 games are scored. Its plan's block must not overlap the
+  screen's, read from the screen's committed plan; otherwise the run is VOID at step "seeds" before anything is
+  loaded. The excluded block is recorded (`screen_block_excluded`). The screen's seeds are also RETIRED, so the seed
+  check refuses them anyway.
+- **The wrapper:** `combination-policy-strength-run/01_wrapper.sh` is a copy of the screen's. It differs only in its
+  paths, its gate, `run strength`, TERM_S 51770 and its header. The ceiling is the user's 51,780 s (TERM 51,770 s,
+  KILL 51,780 s, cleanup observation through 51,790 s), stated in the header as an operational estimate.
+- **The seed copies, built and never run:**
+  - **Survey** (`combination-policy-strength-seed-survey/01_seed_survey.py`): a copy of the screen's. It differs in
+    the block size (1018), the paths, the plan kind (`combination-policy-strength-plan/1`), the module name, the titles
+    and verdict lines, and the slot listing's heading. The method, the rule and the controls (the screen's corrected
+    empty-band control included) are unchanged. The three modes were rehearsed on a synthetic repository (55/55
+    controls). From the registry's bounds alone (no scan), the 2027 band has 59,036 seeds above the highest ACCOUNTED
+    seed.
+  - **Closing** (`combination-policy-strength-seed-closing/01_derive_usage.py`): a copy of the screen's (the
+    sequential rule). It differs in the block size (1018), the paths and the title. All 15 controls pass, and it
+    reconciles the comparison's own events (complete: the whole block exposed; VOID in game 900: games 0–900 exposed;
+    retired whole either way).
+- **Tests:** `tests/test_combination_policy_strength.py` (new, 54). The pilot's tests are updated (the kind list, the
+  closed-gate refusal, the outer admission, the usage case), and the gate inventory is now 56. Two mutations were
+  caught: removing the overlap check (3 failures) and ignoring the guards (2). The focused suites, run one file at a
+  time, all pass: strength 54, pilot 82, screen 68, gate inventory 8, launch 23, generate 26, train 10, throughput2
+  17, seed band 44, e4 reference 31, H3 uniform population 156, marathon diagnostics 23. No full-suite run.
+- **Status:** built, for review. Seed procedures, the strength run, further training, deployment and pushing remain
+  unauthorized (#136).
