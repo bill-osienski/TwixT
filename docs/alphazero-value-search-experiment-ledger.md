@@ -7960,3 +7960,24 @@ evaluation, no GPU, no game. All 55 gates are closed.
   outer-record admission, the usage case and the isolation. The gate inventory is now 55. Focused suites, run serially (all six combination-pilot files, seed band, gate inventory, the mirror-halving match and launch, the registry): 390 passed, 1 deselected; after one added test and line wrapping, the screen and pilot files: 148 passed, 1 deselected. No full-suite run.
 - **Status:** built, for review. Seed procedures, checkpoint loading for evaluation, GPU games, further training,
   deployment and pushing remain unauthorized (#133). The ceiling is a proposal until the user accepts it.
+
+#### Addendum — the screen build and its 3,480 s ceiling ACCEPTED; the screen's seed preparation approved as one conditional sequence (2026-10-31, the user's review)
+
+- **Accepted:** the screen build (`6c908ca8`) and the ceiling, fixed at **TERM 3,470 s, KILL 3,480 s, cleanup
+  observation through 3,490 s**. The user's read-only review found no blocking issue: the head binding, the loading
+  order, both agents' search settings, the wrapper and the seed copies match the approved scope; all 55 gates are
+  closed and prior evidence is unchanged.
+- **The user's reading of the budget:** the arithmetic checks out; its long-game allowance is an estimate based on the
+  parent's games, not a completion guarantee for the trained candidate.
+- **The compiled-value caveat, accepted as disclosed:** entry 44's CPU bitwise-preservation result stands; the
+  tiny-network observations do not establish exact equality on the real compiled GPU model.
+- **Approved, as one conditional sequence:**
+  1. run the screen's seed survey once; proceed only if it is CLEAN with 55/55 controls;
+  2. commit its record, then run the pre-proof once; require HOLDS;
+  3. register exactly that block in ACCOUNTED and create its plan through `build_plan`;
+  4. run the post-proof once; require HOLDS; then update the lifecycle test with focused CPU checks.
+- **If any check fails:** return the result; the block and the method are never adjusted. No additional engineering,
+  profiling or full-suite run.
+- **Not authorized:** the launch (the registered plan and the post-proof are returned for that decision), checkpoint
+  loading for evaluation, GPU games, further training, deployment and pushing.
+- **Prediction on record:** none added.
