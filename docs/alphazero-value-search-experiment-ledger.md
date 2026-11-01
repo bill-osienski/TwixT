@@ -8228,3 +8228,28 @@ Run as the conditional sequence approved in the addendum above, each step once i
   deployment and pushing. All 56 gates are closed.
 - **Status:** the committed plan and the post-proof are returned for the launch decision. The ceiling is fixed at TERM
   51,770 s, KILL 51,780 s, cleanup through 51,790 s. See do-not-repeat **#137**.
+
+#### Addendum — the ONE 509-pair strength comparison approved, with its conditional seed closing (2026-11-01, the user's review)
+
+- **Checked by the user:** all three record hashes, the 1,018 slot mappings, the exact registry append, the current
+  post-proof binding, the unchanged implementation and head, the successful admission records, and that all 56 gates
+  are closed. No blocking finding; the user ran no tests or experiments.
+- **Approved:**
+  1. record this approval; a fresh read-only panic/reboot check; recheck the plan, the proved registry and the
+     candidate binding;
+  2. in a clean worktree, open only `COMBINATION_POLICY_STRENGTH_AUTHORIZED` with a one-line commit, and run the
+     existing wrapper once, with BOINC quit and both launch checks (idle and background) enforced;
+  3. TERM **51,770 s**, KILL **51,780 s**, cleanup observation through **51,790 s**; the fixed candidate, opponent and
+     search settings preserved;
+  4. all **509 pairs** completed before scoring; no interim outcome inspection or scoring (operational progress and
+     timing checks are allowed). PASS requires the exact frozen Hoeffding bound and both whole-run compute guards; the
+     screen's games are excluded;
+  5. after a started run: verify the gate's restoration and the cleanup, then run K1 once. Only if it RECONCILES:
+     expose the derived started prefix, retire the whole block, re-anchor the lifecycle tests and run focused CPU
+     checks;
+  6. commit the evidence and a dated ledger closeout, then return for independent result review.
+- **An incomplete run** is VOID, with no partial score and no automatic retry; its progress, cause and likely
+  continuation cost are returned for assessment.
+- **Not authorized:** further training, deployment and pushing.
+- **Prediction on record:** the card's, unchanged ("it scores above 0.5 against the proven agent (steps 5–6)";
+  directional only; confidence low); none added here. This run is the card's test of it.
