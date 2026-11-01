@@ -64,7 +64,9 @@ def test_GENERATION_RAN_ONCE_COMPLETED_AND_IS_CLOSED_and_both_throughput_runs_st
     event equal to the slot count, so the WHOLE block is EXPOSED and RETIRED, each exactly once and appended last,
     ACCOUNTED unchanged, and every seed is refused. The gate is closed. The run evidence is unchanged since it was
     committed. Both throughput runs stand as written -- VOID records under outer TIMEOUTs -- unchanged since their
-    closings (attempt 1 e30e277c, attempt 2 ae361458). Read-only."""
+    closings (attempt 1 e30e277c, attempt 2 ae361458). Read-only.
+    RE-ANCHORED 2026-10-31 (the screen's registration 3aaff337): the block is no longer last in ACCOUNTED; every later
+    entry lies above it."""
     import hashlib
     from scripts.GPU.alphazero import combination_policy_generate_authorization as G
     from scripts.GPU.alphazero import e4_screen_reference as REG
@@ -136,7 +138,11 @@ def test_GENERATION_RAN_ONCE_COMPLETED_AND_IS_CLOSED_and_both_throughput_runs_st
     assert k1.splitlines()[2].endswith("; working tree clean")
     assert f"claims events: [{n}]\n" in k1 and "controls passed: 21/21" in k1
     assert k1.endswith(f"VERDICT: RECONCILES -- EXPOSE {list(block)}; RETIRE {list(block)}\n")
-    assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1 and REG.ACCOUNTED_SEED_INTERVALS[-1] == block
+    # RE-ANCHORED 2026-10-31 (the screen's registration 3aaff337): no longer last in ACCOUNTED; every later entry
+    # lies above it
+    i = REG.ACCOUNTED_SEED_INTERVALS.index(block)
+    assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1
+    assert all(lo >= block[1] for lo, _hi in REG.ACCOUNTED_SEED_INTERVALS[i + 1:])
     assert REG.EXPOSED_SEED_INTERVALS.count(block) == 1 and REG.EXPOSED_SEED_INTERVALS[-1] == block
     assert REG.RETIRED_SEED_INTERVALS.count(block) == 1 and REG.RETIRED_SEED_INTERVALS[-1] == block
     assert not any(lo < block[1] and block[0] < hi and (lo, hi) != block

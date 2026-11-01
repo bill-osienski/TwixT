@@ -82,6 +82,58 @@ def test_THE_ISOLATION_IS_IN_FORCE():
         P.conclude("screen", None, pathlib.Path("/nonexistent"), {})
 
 
+def test_THE_SCREEN_S_BLOCK_IS_SURVEYED_PROVEN_AND_REGISTERED_NOTHING_HAS_RUN():
+    """RE-ANCHORED 2026-10-31 (survey 297e4a1c, pre-proof 0638c9c0, registration 3aaff337, post-proof 4b85468b): the
+    survey is CLEAN and both proofs HOLD, each 55/55 on a clean tree, the proofs bound to the survey record's sha256;
+    the plan is the copy's build_plan; the block (read from the plan and the records -- no seed literal here, since
+    the proofs scan tests/) lies in the 2027 band above generation's, ACCOUNTED exactly once and last, in no other
+    registry, every seed schedulable; the registry the post-proof proved is the current one. Nothing has run: the gate
+    is closed, the run directory holds the wrapper and the plan only, and no run evidence or closing record exists.
+    Read-only."""
+    from scripts.GPU.alphazero import combination_policy_screen_authorization as G
+    from scripts.GPU.alphazero import e4_screen_reference as REG
+    from scripts.GPU.alphazero import seed_band_2027 as SB
+    kind = P.KINDS["screen"]
+    assert getattr(G, GATE_NAME) is False
+    assert sorted(x.name for x in WRAPPER.parent.iterdir()) == ["01_wrapper.sh", "plan.json"]
+    assert not (ROOT / kind["evidence"]).exists()
+    here = (EV / SURVEY).parent
+    assert sorted(x.name for x in here.iterdir() if x.name != "__pycache__") == \
+        ["01_seed_survey.py", "02_seed_survey_run.txt", "03_collision_proof_pre_run.txt",
+         "04_collision_proof_post_run.txt"]
+    assert sorted(x.name for x in (EV / CLOSING).parent.iterdir() if x.name != "__pycache__") == ["01_derive_usage.py"]
+    raw = (here / "02_seed_survey_run.txt").read_bytes()
+    survey, sha = raw.decode("utf-8"), hashlib.sha256(raw).hexdigest()
+    assert survey.splitlines()[2].endswith("; working tree clean") and "controls passed: 55/55" in survey
+    assert survey.endswith("SURVEY VERDICT   : THE COMBINATION-POLICY SCREEN BLOCK IS CLEAN\n")
+    for rel, mode in (("03_collision_proof_pre_run.txt", "pre"), ("04_collision_proof_post_run.txt", "post")):
+        text = (here / rel).read_text(encoding="utf-8")
+        assert text.splitlines()[2].endswith("; working tree clean")
+        assert f"02_seed_survey_run.txt sha256 {sha} (read at " in text
+        assert f"EXPECTED STATE ({mode}): HOLDS" in text and "controls passed: 55/55" in text
+        assert text.endswith(f"PROOF VERDICT ({mode}): THE COMBINATION-POLICY SCREEN BLOCK IS CLEAN AND THE STATE IS "
+                             "AS EXPECTED\n")
+    post = (here / "04_collision_proof_post_run.txt").read_text(encoding="utf-8")
+    reg_rel = "scripts/GPU/alphazero/e4_screen_reference.py"
+    assert f"\nregistry {reg_rel} sha256 {hashlib.sha256((ROOT / reg_rel).read_bytes()).hexdigest()}\n" in post
+    plan = json.loads((ROOT / kind["plan"]).read_text(encoding="utf-8"))
+    n = 2 * kind["pairs"]
+    assert type(plan["base"]) is int and plan["n_slots"] == n == 64
+    assert plan == _load(SURVEY, "_screen_survey_registered").build_plan(plan["base"], sha)
+    block = (plan["base"], plan["base"] + n)
+    assert SB.BAND[0] <= block[0] < block[1] <= SB.BAND[1] and block[0] % SB.ALIGN == 0
+    assert f"block = [{block[0]}, {block[1]}) -- {n} seeds" in survey
+    assert f"THE BLOCK, read from the record: [{block[0]}, {block[1]}) -- BASE {block[0]}" in post
+    assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1 and REG.ACCOUNTED_SEED_INTERVALS[-1] == block
+    assert not any(lo < block[1] and block[0] < hi
+                   for lo, hi in REG.EXPOSED_SEED_INTERVALS + REG.RETIRED_SEED_INTERVALS + REG.TEST_ONLY_SEED_INTERVALS)
+    gen = json.loads((ROOT / P.KINDS["generate"]["plan"]).read_text(encoding="utf-8"))
+    gen_block = (gen["base"], gen["base"] + gen["n_slots"])
+    assert [iv for iv in REG.ACCOUNTED_SEED_INTERVALS if iv[1] > SB.BAND[0]] == [gen_block, block]
+    assert all(REG.seed_is_accounted(s) and not REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s)
+               for s in range(*block))
+
+
 # ─────────────────────────────── the gate, the kind and admission ───────────────────────────────
 
 def test_THE_SCREEN_GATE_IS_A_CLOSED_SINGLE_DECLARATION_and_the_closed_gate_refuses(monkeypatch, capsys):
@@ -644,7 +696,7 @@ def test_THE_WRAPPER_SERVES_THE_PILOT_S_SCREEN_PATHS():
         str(pathlib.Path(kind["gate"][0].__file__).relative_to(ROOT))
     assert re.search(r"^MODULE=(\S+)$", w, re.M).group(1) == P.__name__ and f"RECORD_KIND={P.RECORD_KIND}\n" in w
     assert "CKPT=\"$MAIN/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors\"" in w
-    assert sorted(x.name for x in WRAPPER.parent.iterdir()) == ["01_wrapper.sh"]      # no plan: no seeds yet
+    assert sorted(x.name for x in WRAPPER.parent.iterdir()) == ["01_wrapper.sh", "plan.json"]  # the seeds' plan only
 
 
 # ─────────────────────────────── fake launches of the REAL screen wrapper ───────────────────────────────
@@ -824,7 +876,7 @@ def test_THE_SURVEY_COPY_SERVES_THE_SCREEN_IN_THE_2027_BAND_and_holds_no_seed_li
     assert survey.build_plan(base, "0" * 64) == {"kind": "combination-policy-screen-plan/1", "base": base,
                                                  "n_slots": 64, "survey_record_sha256": "0" * 64}
     assert set(survey.OUT.values()) & set(_load(SURVEY_GEN, "_gen_survey_out").OUT.values()) == set()
-    assert not any((ROOT / p).exists() for p in survey.OUT.values())            # never run
+    assert all((ROOT / p).is_file() for p in survey.OUT.values())   # each mode ran once (the lifecycle test above)
     code = _split(SURVEY)[1]
     assert not SB.scan(code) and not re.search(r"\b20[0-9]{7}\b", code)
 
@@ -961,6 +1013,13 @@ def test_THE_CLOSING_COPY_SERVES_THE_SCREEN_and_holds_no_seed_literal():
 
 def test_THE_CLOSING_COPY_S_CONTROLS_ALL_PASS_at_a_synthetic_base():
     results = _load(CLOSING, "_screen_closing_c")._controls(BASE)
+    assert len(results) == 15 and all(ok for _l, ok, _d in results), [r for r in results if not r[1]]
+
+
+def test_THE_CLOSING_COPY_S_CONTROLS_ALL_PASS_at_the_registered_base():
+    """The same 15 controls at the plan's BASE, read from the committed plan."""
+    base = json.loads((ROOT / P.KINDS["screen"]["plan"]).read_text(encoding="utf-8"))["base"]
+    results = _load(CLOSING, "_screen_closing_r")._controls(base)
     assert len(results) == 15 and all(ok for _l, ok, _d in results), [r for r in results if not r[1]]
 
 
