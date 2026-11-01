@@ -191,6 +191,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — CPU TRAINING: COMPLETED, verdict ELIGIBLE (entry 44, 2026-10-31).** The one approved run (gate opening `9b7479f7`, evidence `578577f2`) finished in 1,866 s of the 2,810 s TERM (outer exit 0, gate restored, no survivors). Pre-fit KL 1.434 nats (floor 0.01); probability discrepancy ≤ 1.03 × 10⁻⁵; held-out CE 3.862 → 3.645 (−0.217 nats); value outputs bitwise equal on 4,158 held-out rows, encoder and value-head digests unchanged; 3,000 finite updates. The card's directional prediction held. No strength result; the screen may be proposed, but strength games, deployment and pushing remain unauthorized. See #132.
 > **Combination policy pilot — training ACCEPTED as ELIGIBLE; the 64-game screen approved to BUILD only (addendum, 2026-10-31, the user's review).** The user verified the head's hash and parameter digest, the unchanged source and evidence, the gate's restoration and all 54 gates closed. Learning toward the search targets is shown; whether it improves play is open. Build: the trained head (sha256 `ead156e2…`, bound to the successful inner and outer training records) against the frozen proven combination, both averaged, 200 simulations, halving from ply 20; the existing match loop and wrapper with a new closed gate, its own paths and fresh-seed survey and closing copies; STOP below a mean pair score of 0.40, otherwise CONTINUE, no strength claim; a fixed ceiling proposed from completed match timings. Seed procedures, checkpoint loading for evaluation, GPU games, further training, deployment and pushing remain unauthorized. See #133.
 > **Combination policy pilot — the 64-game screen BUILT for review; ceiling PROPOSED at 3,480 s (addendum, 2026-10-31).** Build `6c908ca8`; nothing run. `run screen` behind a new closed gate (55 in all), admitted only by training's committed ELIGIBLE record and clean outer.json, bound to head.npz `ead156e2…` and its digests; the head installed before any inference; a probe must find the candidate's opening priors changed. Both sides averaged halving at 200 simulations through the strength match's loop; STOP below 0.40, else CONTINUE. Ceiling from completed match timings: 64 × 64.75 plies × 0.5508 s = 2,282.3 s × 1.5 → 3,480 s (TERM 3,470), room for 10 capped games against 2.75 expected. Survey and closing copies built, not run. Compiled values can differ from the parent's in the last bits (recorded, not gated). Awaiting review (#133).
+> **Combination policy pilot — the screen's seeds PREPARED; awaiting the launch decision (addendum, 2026-10-31).** Build and ceiling accepted (TERM 3,470 / KILL 3,480 / cleanup through 3,490 s). Survey CLEAN 55/55 (`297e4a1c`), pre-proof HOLDS (`0638c9c0`), [202740900, 202740964) registered in ACCOUNTED with its plan (`3aaff337`), post-proof HOLDS (`4b85468b`); lifecycle tests re-anchored (`360ca0b0`). Nothing run: gate closed (55 closed), no evaluation loading, no GPU game. See #134.
 
 ## Historical proposal check — programme now closed
 
@@ -1854,6 +1855,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 131. **Clarification to #130 (2026-10-31, the user's wording).** A training run the ceiling stops is **VOID**, with **no automatic retry** — it does not permanently reject the learning method; its progress, cause and likely continuation cost go to the user for assessment. Do **not** retry, extend, top up or rerun it without a new approval. Do **not** run strength games, deploy, or push on an ELIGIBLE verdict without the user's approval of each.
 132. **The trained head (2026-10-31).** Do **not** rerun, extend or continue training, change the recipe, or edit the run evidence (`record.json`, `progress.jsonl`, `head.npz` sha256 `ead156e2…`, `outer.json`). Do **not** read ELIGIBLE as a strength result: it is a held-out fit on the same agent's games. Do **not** run the screen, any strength games, deploy the head or push without the user's approval of each; the screen needs its own registered seed block and ceiling.
 133. **The screen's preparation (2026-10-31).** Build only. Do **not** run the screen's seed survey, proofs, registration or closing, open its gate, load the checkpoint or the trained head for evaluation, play any GPU game, train further, deploy or push without the user's approval of each. Do **not** change the screen's frozen rule (STOP below a mean pair score of 0.40, otherwise CONTINUE) or read CONTINUE as a strength result.
+134. **The screen's seed block (2026-10-31).** Do **not** rerun the screen survey or either proof, edit their records (`02_*` sha256 `358f11a0…`, `03_*` `a8bf811a…`, `04_*` `2f2c6789…`), edit the plan, or move, widen or re-register [202740900, 202740964). Do **not** open the screen gate, load the checkpoint or the trained head for evaluation, launch, close the block, train further, deploy or push without the user's approval of each. Do **not** write any seed of this block into `scripts/`, `tests/` or `docs/superpowers/` outside its own records, the plan and the registry tuple.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -7981,3 +7983,30 @@ evaluation, no GPU, no game. All 55 gates are closed.
 - **Not authorized:** the launch (the registered plan and the post-proof are returned for that decision), checkpoint
   loading for evaluation, GPU games, further training, deployment and pushing.
 - **Prediction on record:** none added.
+
+#### Addendum — the screen's seed block surveyed (CLEAN 55/55), pre-proven (HOLDS), registered with its plan and post-proven (HOLDS); awaiting the launch decision (2026-10-31)
+
+Run as the conditional sequence approved in the addendum above, each step once in a clean linked worktree, each
+record committed before the next step:
+
+- **Survey** (`297e4a1c`, at clean tree `0fe4d885`): **CLEAN, controls 55/55**. By the two-band rule, the anchor is
+  202740805, the highest repository literal in the 2027 band: a synthetic value that one of generation's own controls
+  printed into generation's survey and proof records (counted conservatively, as the accepted method does). BASE =
+  202740900, block **[202740900, 202740964)**, 64 seeds; no direct hit, no derived-stream collision, gap 94 (floor
+  64). Record sha256 `358f11a0…`.
+- **Pre-registration proof** (`0638c9c0`, at `297e4a1c`): **HOLDS**, CLEAN, controls 55/55, bound to the survey
+  record. Record sha256 `a8bf811a…`.
+- **Registration** (`3aaff337`): exactly the surveyed block appended last to ACCOUNTED (49 → 50; the band's second
+  block, above generation's); EXPOSED, RETIRED and TEST_ONLY unchanged, and nothing else in the registry changed;
+  `combination-policy-screen-run/plan.json` = `build_plan(202740900, survey record 358f11a0…)` (64 slots). No gate
+  opened.
+- **Post-registration proof** (`4b85468b`, at `3aaff337`): **HOLDS**, CLEAN, controls 55/55, bound to the survey
+  record; it proved registry sha256 `164eba48…`, the current one. Record sha256 `2f2c6789…`.
+- **Tests** (`360ca0b0`): a new screen lifecycle test asserts this state, with the block read from the plan and the
+  records (no seed literal); the closing copy's 15 controls also pass at the registered base. The checks that expected
+  no plan or records, the 2027-band real-state test, and generation's "last in ACCOUNTED" check are re-anchored. The
+  focused suites, run one file at a time: 309 pass. No full-suite run (not requested).
+- **Not done:** the gate, the launch, checkpoint or head loading for evaluation, any GPU game, the closing, training,
+  deployment and pushing. All 55 gates are closed.
+- **Status:** the registered plan and the post-proof are returned for the launch decision. The ceiling is fixed at TERM
+  3,470 s, KILL 3,480 s, cleanup through 3,490 s. See do-not-repeat **#134**.
