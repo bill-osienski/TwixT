@@ -607,7 +607,7 @@ def test_THE_TIMING_SYNCHRONIZES_EACH_UPDATE_AND_PRICES_THE_CEILING(tmp_path):
 
 def test_EVERY_PILOT_GATE_IS_A_CLOSED_SINGLE_DECLARATION():
     import ast
-    assert sorted(P.KINDS) == ["generate", "screen", "throughput", "throughput2", "train"]
+    assert sorted(P.KINDS) == ["generate", "screen", "strength", "throughput", "throughput2", "train"]
     for kind in P.KINDS:
         gate, name = P.KINDS[kind]["gate"]
         assert getattr(gate, name) is False
@@ -622,7 +622,7 @@ def test_THE_ENTRY_REFUSES_WITHOUT_THE_SETTING_AND_ON_A_CLOSED_GATE(monkeypatch,
     monkeypatch.setenv(P.SETTING, "0")
     monkeypatch.setattr(P, "_mlx_loaded", lambda: False)
     monkeypatch.setattr(P, "CARD_SHA256", P.M._sha((ROOT / P.CARD).read_bytes()))
-    for kind in ("throughput", "throughput2", "generate", "train", "screen"):
+    for kind in ("throughput", "throughput2", "generate", "train", "screen", "strength"):
         assert P.main(["run", kind, "--checkpoint", "/x"]) == P.EXIT_REFUSED
         assert "is closed" in capsys.readouterr().err
 
@@ -695,13 +695,17 @@ def test_GENERATION_IS_ADMITTED_BY_THE_TIMING_ALONE_and_reads_no_throughput_reco
     assert P.ADMISSION["generate"] == P.ADMISSION["throughput"] == [(P.TIMING_EVIDENCE, "status", "COMPLETED")]
 
 
-def test_ONLY_TRAINING_AND_THE_SCREEN_READ_AN_OUTER_JSON_generation_s_and_training_s():
+def test_ONLY_TRAINING_THE_SCREEN_AND_STRENGTH_READ_AN_OUTER_JSON_generation_s_training_s_and_the_screen_s():
     """Generation read the throughput check's outer.json until the amendment removed it. Training reads generation's
     (the user's review, 2026-10-30), beside the generation and timing records; the screen reads training's (the
-    user's review, 2026-10-31), beside training's record."""
+    user's review, 2026-10-31), beside training's record; the strength comparison reads training's and the screen's
+    (the user's review, 2026-11-01), beside their records."""
+    train_run = "docs/superpowers/evidence/combination-policy-train-run"
     assert P.OUTER_ADMISSION == {"train": [(GEN_RUN, P.KINDS["generate"]["evidence"])],
-                                 "screen": [("docs/superpowers/evidence/combination-policy-train-run",
-                                             P.KINDS["train"]["evidence"])]}
+                                 "screen": [(train_run, P.KINDS["train"]["evidence"])],
+                                 "strength": [(train_run, P.KINDS["train"]["evidence"]),
+                                              ("docs/superpowers/evidence/combination-policy-screen-run",
+                                               P.KINDS["screen"]["evidence"])]}
     assert P.ADMISSION["train"] == [(P.KINDS["generate"]["evidence"], "status", "COMPLETED"),
                                     (P.TIMING_EVIDENCE, "status", "COMPLETED")]
 
@@ -797,7 +801,7 @@ def test_THE_COMMITTED_READER_needs_the_file_tracked_and_unchanged(tmp_path, mon
 
 
 def test_USAGE():
-    assert P.main([]) == P.main(["run", "strength", "--checkpoint", "/x"]) == P.main(["time", "now"]) == P.EXIT_USAGE
+    assert P.main([]) == P.main(["run", "strength2", "--checkpoint", "/x"]) == P.main(["time", "now"]) == P.EXIT_USAGE
 
 
 def test_THE_FROZEN_RECIPE_IS_THE_CARD_S():

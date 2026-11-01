@@ -41,13 +41,21 @@ each game and the final claim count after the last; background_compute is read b
   200 simulations (halving from ply 20), the candidate red in even games; `game_start` logged before each game;
   background_compute read before loading, after every game and before the verdict. The frozen rule: a mean pair
   score below 0.40 is STOP, otherwise CONTINUE -- gross regression only, no strength claim. Costs are descriptive.
+* `run strength` (card §5 step 6; BUILT 2026-11-01 on the user's review, its gate closed): the screen's path exactly --
+  the same loader, head install and checks, probe, loop, both sides and search settings -- on 509 colour-reversed
+  pairs (1,018 games) on its own registered block, which must not overlap the screen's. Admitted by training's
+  committed record and outer.json as the screen is, AND by the screen's committed record (COMPLETED, CONTINUE) and its
+  wrapper's outer.json, both showing success, the screen's record bound to this same head and checkpoint. The frozen
+  rule (mirror_halving_combination.strength_verdict): PASS iff the mean pair score - sqrt(ln 40 / 1018) > 0.5 AND the
+  evaluations ratio <= 1.05 AND the search-seconds ratio <= 1.10, ratios of the whole run's totals. Only this run's
+  games are scored; the screen's are not pooled.
 * `time`: the build's CPU timing (card §5 step 1) -- 20 synchronized updates at the real architecture on synthetic
   inputs with random weights, no checkpoint -- and the training ceiling it prices.
 
 Any failure, exception or SIGTERM inside the record boundary is a VOID with record.json written by the script; a
 STOP rule is a COMPLETED run with verdict STOP. One shot each; no retry, top-up or extension.
 
-    MLX_ENABLE_TF32=0 python -m scripts.GPU.alphazero.combination_policy_pilot run throughput|throughput2|generate|train|screen --checkpoint <abs path>
+    MLX_ENABLE_TF32=0 python -m scripts.GPU.alphazero.combination_policy_pilot run throughput|throughput2|generate|train|screen|strength --checkpoint <abs path>
     MLX_ENABLE_TF32=0 python -m scripts.GPU.alphazero.combination_policy_pilot time
 """
 from __future__ import annotations
@@ -70,6 +78,7 @@ import numpy as np
 
 from . import combination_policy_generate_authorization as GENERATE_GATE
 from . import combination_policy_screen_authorization as SCREEN_GATE
+from . import combination_policy_strength_authorization as STRENGTH_GATE
 from . import combination_policy_throughput2_authorization as THROUGHPUT2_GATE
 from . import combination_policy_throughput_authorization as THROUGHPUT_GATE
 from . import combination_policy_train_authorization as TRAIN_GATE
@@ -112,7 +121,10 @@ KINDS = {"throughput": {"slots": 144, "keep_rows": False, "gate": (THROUGHPUT_GA
                    "evidence": "docs/superpowers/evidence/combination-policy-train"},
          "screen": {"pairs": K.SCREEN["pairs"], "gate": (SCREEN_GATE, "COMBINATION_POLICY_SCREEN_AUTHORIZED"),
                     "evidence": "docs/superpowers/evidence/combination-policy-screen",
-                    "plan": "docs/superpowers/evidence/combination-policy-screen-run/plan.json"}}
+                    "plan": "docs/superpowers/evidence/combination-policy-screen-run/plan.json"},
+         "strength": {"pairs": K.STRENGTH["pairs"], "gate": (STRENGTH_GATE, "COMBINATION_POLICY_STRENGTH_AUTHORIZED"),
+                      "evidence": "docs/superpowers/evidence/combination-policy-strength",
+                      "plan": "docs/superpowers/evidence/combination-policy-strength-run/plan.json"}}
 TIMING_EVIDENCE = "docs/superpowers/evidence/combination-policy-timing"
 #: what each step needs committed first: (evidence dir, record field, value)
 ADMISSION = {"throughput": [(TIMING_EVIDENCE, "status", "COMPLETED")],
@@ -121,14 +133,19 @@ ADMISSION = {"throughput": [(TIMING_EVIDENCE, "status", "COMPLETED")],
              "generate": [(TIMING_EVIDENCE, "status", "COMPLETED")],
              "train": [(KINDS["generate"]["evidence"], "status", "COMPLETED"), (TIMING_EVIDENCE, "status", "COMPLETED")],
              #: the screen (the user's review, 2026-10-31): the one training run's record, ELIGIBLE
-             "screen": [(KINDS["train"]["evidence"], "verdict", "ELIGIBLE")]}
+             "screen": [(KINDS["train"]["evidence"], "verdict", "ELIGIBLE")],
+             #: the strength comparison (the user's review, 2026-11-01): training's record and the screen's, CONTINUE
+             "strength": [(KINDS["train"]["evidence"], "verdict", "ELIGIBLE"),
+                          (KINDS["screen"]["evidence"], "verdict", "CONTINUE")]}
 #: what each step needs from a launch wrapper's committed outer.json too (the user's ruling, ledger 2026-10-29): an
 #: outer TIMEOUT, unconfirmed cleanup or missing outer evidence refuses, whatever the inner record says. Generation
 #: read the throughput check's until the generation amendment (2026-10-30) removed that requirement; training reads
 #: generation's (the user's review, 2026-10-30): (wrapper output dir, the run's evidence dir)
 OUTER_ADMISSION: Dict[str, List[Tuple[str, str]]] = {
     "train": [(str(pathlib.Path(KINDS["generate"]["plan"]).parent), KINDS["generate"]["evidence"])],
-    "screen": [("docs/superpowers/evidence/combination-policy-train-run", KINDS["train"]["evidence"])]}
+    "screen": [("docs/superpowers/evidence/combination-policy-train-run", KINDS["train"]["evidence"])],
+    "strength": [("docs/superpowers/evidence/combination-policy-train-run", KINDS["train"]["evidence"]),
+                 (str(pathlib.Path(KINDS["screen"]["plan"]).parent), KINDS["screen"]["evidence"])]}
 #: the screen's candidate (the user's review, 2026-10-31): exactly the head the one training run saved -- these bytes,
 #: named by its committed record with these digests after training (the encoder's and value head's unchanged)
 TRAINED_HEAD = {"file": f"{KINDS['train']['evidence']}/head.npz",
@@ -136,7 +153,7 @@ TRAINED_HEAD = {"file": f"{KINDS['train']['evidence']}/head.npz",
                 "digests": {"encoder.": "92498b02d398a48ffb42b86414a4e7bbde96509cff13d86cd2da4dc8b0b635b0",
                             "policy_head.": "f653aca2da64ec27eeedb28539ecb65c8c1eb1cac040f68a64327bb570b669cb",
                             "value_head.": "576391a7950704a73fbd076a68995a768d973c6826cc24964d37b43850c2f301"}}
-REFERENCE = "reference"                         # the screen's opponent: the frozen proven combination
+REFERENCE = "reference"                         # the screen's and strength's opponent: the frozen proven combination
 GENERATE_CEILING = {"factor": 1.5, "max_seconds": 6 * 3600}
 #: card §4: the one recipe. Not a tuning point.
 RECIPE = {"updates": 3000, "batch": 64, "lr": 1e-3, "l2": 1e-4, "betas": [0.9, 0.999], "eps": 1e-8,
@@ -684,16 +701,19 @@ def _real_train_seams(checkpoint: pathlib.Path) -> TrainSeams:
 
 # ─────────────────────────────── the screen (card §5 step 5) ───────────────────────────────
 
-def trained_head(read_record: Callable[[str], Mapping[str, Any]], read_bytes: Callable[[str], bytes]) -> Dict[str, Any]:
-    """The screen's candidate head, or Refused: the committed training record (ELIGIBLE) names exactly TRAINED_HEAD --
-    its file, sha256 and digests after training, the encoder's and value head's unchanged from before -- and the
-    committed file is those bytes. Returns the binding with the bytes read: the bytes loaded are the bytes checked."""
+def trained_head(read_record: Callable[[str], Mapping[str, Any]], read_bytes: Callable[[str], bytes],
+                 kind: str = "screen") -> Dict[str, Any]:
+    """The screen's or strength's candidate head, or Refused: the committed training record (ELIGIBLE) names exactly
+    TRAINED_HEAD -- its file, sha256 and digests after training, the encoder's and value head's unchanged from before --
+    and the committed file is those bytes; for strength, the screen's committed record also played exactly this head on
+    calib020_0001. Returns the binding with the bytes read: the bytes loaded are the bytes checked."""
     rel = KINDS["train"]["evidence"]
     try:
         rec = read_record(rel)
+        screen = read_record(KINDS["screen"]["evidence"]) if kind == "strength" else None
         data = read_bytes(TRAINED_HEAD["file"])
     except FileNotFoundError as e:
-        raise Refused(f"{e} does not exist: the screen has no trained head") from None
+        raise Refused(f"{e} does not exist: the {kind} has no trained head") from None
     want, before = TRAINED_HEAD["digests"], rec.get("digests_before") or {}
     faults = []
     if (rec.get("run"), rec.get("status"), rec.get("verdict")) != ("train", "COMPLETED", "ELIGIBLE"):
@@ -708,8 +728,13 @@ def trained_head(read_record: Callable[[str], Mapping[str, Any]], read_bytes: Ca
         faults.append("the record's encoder or value-head digest before training is not the pinned one")
     if hashlib.sha256(data).hexdigest() != TRAINED_HEAD["sha256"]:
         faults.append(f"{TRAINED_HEAD['file']} is not the pinned bytes")
+    if screen is not None:
+        bound = {k: TRAINED_HEAD[k] for k in ("file", "sha256", "digests")}
+        if screen.get("trained_head") != bound or (screen.get("digests") or {}).get(K.CANDIDATE) != want or \
+                screen.get("checkpoint_sha1") != M.CHECKPOINT_SHA1:
+            faults.append("the screen's record did not play the pinned head on calib020_0001")
     if faults:
-        raise Refused(f"{rel}: {'; '.join(faults)}: the screen is not admitted")
+        raise Refused(f"{rel}: {'; '.join(faults)}: the {kind} is not admitted")
     return {"file": TRAINED_HEAD["file"], "sha256": TRAINED_HEAD["sha256"], "digests": dict(want), "bytes": data}
 
 
@@ -771,14 +796,16 @@ class ScreenSeams:
     between_games: Callable[[], None]
 
 
-def _screen(seams: ScreenSeams, head: Mapping[str, Any], out_dir: pathlib.Path, rec: Dict[str, Any], log) -> None:
-    """Card §5 step 5 through the strength match's loop (mirror_halving_match), both sides the combination."""
+def _screen(seams: ScreenSeams, head: Mapping[str, Any], out_dir: pathlib.Path, rec: Dict[str, Any], log,
+            kind: str = "screen") -> None:
+    """Card §5 step 5 (kind "screen") or step 6 (kind "strength") through the strength match's loop
+    (mirror_halving_match), both sides the combination. The two kinds differ only in their pairs, plan and rule."""
     from . import eval_runner as ER
     from . import root_sequential_halving as RSH
     from .external_learning_stage3 import PROTOCOL
     from .mirror_averaging import MirrorAveragingEvaluator
 
-    spec = KINDS["screen"]
+    spec = KINDS[kind]
     rec["versions"] = seams.versions()
     if rec["versions"] != VERSIONS:
         raise Void("versions", f"{rec['versions']} are not the card's {VERSIONS}")
@@ -794,6 +821,12 @@ def _screen(seams: ScreenSeams, head: Mapping[str, Any], out_dir: pathlib.Path, 
     if bad:
         raise Void("seeds", f"{len(bad)} seeds not ACCOUNTED, available and schedulable, first {bad[0]}")
     rec["seeds"] = {"base": plan["base"], "n_slots": games}
+    if kind == "strength":                       # the screen's games are never pooled: its block is not this one
+        screen = seams.read_plan(KINDS["screen"]["plan"])
+        lo, n = screen.get("base"), screen.get("n_slots")
+        if type(lo) is not int or type(n) is not int or (plan["base"] < lo + n and lo < plan["base"] + games):
+            raise Void("seeds", f"the block overlaps the screen's, or the screen's plan is unreadable: {screen}")
+        rec["screen_block_excluded"] = [lo, lo + n]
     sha1 = seams.checkpoint_sha1()
     if sha1 != M.CHECKPOINT_SHA1:
         raise Void("checkpoint", f"SHA-1 {sha1} is not calib020_0001's")
@@ -831,7 +864,7 @@ def _screen(seams: ScreenSeams, head: Mapping[str, Any], out_dir: pathlib.Path, 
                        "agents": [dataclasses.asdict(a), dataclasses.asdict(b)],
                        "classes": {k: f"{v.__module__}.{v.__qualname__}" for k, v in classes.items()},
                        "evaluators": {k: type(v).__name__ for k, v in evaluators.items()}}
-    tasks = ER.build_agent_pairing_tasks("combination-policy-screen", a, b, games, base_seed=plan["base"])
+    tasks = ER.build_agent_pairing_tasks(f"combination-policy-{kind}", a, b, games, base_seed=plan["base"])
     log("loaded", seconds=rec["load_seconds"])
 
     results = []
@@ -867,17 +900,20 @@ def _screen(seams: ScreenSeams, head: Mapping[str, Any], out_dir: pathlib.Path, 
     rec["modes_at_end"] = {k: seams.require_eval(ev, "at the end") for k, ev in base.items()}
     rec["cost_totals"] = cost
     g = K.guards(cost[K.CANDIDATE], cost[REFERENCE])
-    rec["cost_ratios"] = {"evaluations_ratio": g["evaluations_ratio"],
-                          "search_seconds_ratio": g["search_seconds_ratio"],
-                          "note": "descriptive: the screen has no cost guard (card §5 step 5)"}
+    if kind == "screen":
+        rec["cost_ratios"] = {"evaluations_ratio": g["evaluations_ratio"],
+                              "search_seconds_ratio": g["search_seconds_ratio"],
+                              "note": "descriptive: the screen has no cost guard (card §5 step 5)"}
+    else:
+        rec["guards"] = g
     scores = K.pair_scores(results, pairs)
     rec["pair_scores"] = scores
     rec["games_summary"] = {"candidate_wins": sum(r.winner_agent_id == K.CANDIDATE for r in results),
                             "reference_wins": sum(r.winner_agent_id == REFERENCE for r in results),
                             "draws": sum(r.winner is None for r in results),
                             "state_caps": sum(r.reason == "state_cap" for r in results)}
-    rec["screen"] = K.screen_verdict(scores)
-    rec["verdict"] = rec["screen"]["verdict"]
+    rec[kind] = K.screen_verdict(scores) if kind == "screen" else K.strength_verdict(scores, g)
+    rec["verdict"] = rec[kind]["verdict"]
 
 
 def _npz_arrays(data: bytes) -> Dict[str, np.ndarray]:
@@ -1153,7 +1189,7 @@ def run(kind: str, checkpoint: str) -> int:
         if not (ROOT / rel).is_file() or M._sha((ROOT / rel).read_bytes()) != sha:
             raise Refused(f"{rel} is not the pinned amendment")
     admission = admitted(kind, _read_record, _read_outer)
-    head = trained_head(_read_record, _read_committed_bytes) if kind == "screen" else None
+    head = trained_head(_read_record, _read_committed_bytes, kind) if kind in ("screen", "strength") else None
     ckpt = pathlib.Path(checkpoint)
     if not (ckpt.is_absolute() and ckpt.is_file()):
         raise Refused("--checkpoint must name an existing file by absolute path")
@@ -1163,9 +1199,9 @@ def run(kind: str, checkpoint: str) -> int:
     if kind == "train":
         seams = _real_train_seams(ckpt)
         execute = lambda o, r, lg: _train(RECIPE, seams, o, r, lg)    # noqa: E731
-    elif kind == "screen":
+    elif kind in ("screen", "strength"):
         seams = _real_screen_seams(ckpt, head)
-        execute = lambda o, r, lg: _screen(seams, head, o, r, lg)     # noqa: E731
+        execute = lambda o, r, lg: _screen(seams, head, o, r, lg, kind)   # noqa: E731
     else:
         if KINDS[kind]["keep_rows"] and os.path.lexists(CACHE_DIR / kind):
             raise Refused(f"{CACHE_DIR / kind} exists: the corpus is written once")
@@ -1174,7 +1210,7 @@ def run(kind: str, checkpoint: str) -> int:
     code, rec = conclude(kind, execute, out, admission, head=M._git("rev-parse", "HEAD"))
     print(json.dumps({"status": rec["status"], "void": rec.get("void"), "run": kind, "verdict": rec.get("verdict"),
                       "stop": rec.get("stop"), "throughput": rec.get("throughput"),
-                      "screen": rec.get("screen")}))
+                      "screen": rec.get("screen"), "strength": rec.get("strength")}))
     return code
 
 
@@ -1210,7 +1246,7 @@ def _mlx_loaded() -> bool:
 def main(argv: Sequence[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     usage = ("usage: MLX_ENABLE_TF32=0 python -m scripts.GPU.alphazero.combination_policy_pilot "
-             "run throughput|throughput2|generate|train|screen --checkpoint <abs path> | time")
+             "run throughput|throughput2|generate|train|screen|strength --checkpoint <abs path> | time")
     try:
         if argv == ["time"]:
             return run_timing()
