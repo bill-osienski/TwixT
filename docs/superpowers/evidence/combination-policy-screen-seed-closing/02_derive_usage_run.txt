@@ -1,0 +1,29 @@
+COMBINATION POLICY PILOT -- SCREEN SEED-USAGE DERIVATION (closing)
+================================================================================================
+HEAD 82a882fdf0d8b95d699ef168d0a5661f281326b7; working tree clean
+input docs/superpowers/evidence/combination-policy-screen-run/plan.json (committed, unmodified)
+input docs/superpowers/evidence/combination-policy-screen/progress.jsonl (committed, unmodified)
+input docs/superpowers/evidence/combination-policy-screen-run/outer.json (committed, unmodified)
+input docs/superpowers/evidence/combination-policy-screen/record.json (committed, unmodified)
+outer exit 0; survivors ''; status 'COMPLETED'
+game starts (slots): [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63]
+
+CONTROLS
+  PASS   completed: 64 starts, expose all, retire all  [expose (202740900, 202740964), retire (202740900, 202740964)]
+  PASS   REFUSED before any game: expose NONE, retire all  [expose None, retire (202740900, 202740964)]
+  PASS   timeout during loading: expose none  [expose None, retire (202740900, 202740964)]
+  PASS   timeout in game 0: expose slot 0 only  [expose (202740900, 202740901), retire (202740900, 202740964)]
+  PASS   timeout in game 5: expose slots 0-5  [expose (202740900, 202740906), retire (202740900, 202740964)]
+  PASS   kill in the last game: expose all 64  [expose (202740900, 202740964), retire (202740900, 202740964)]
+  PASS   VOID in game 63: expose all  [expose (202740900, 202740964), retire (202740900, 202740964)]
+  PASS   survivors: refused  [termination NOT confirmed: survivors '123 ']
+  PASS   slots out of order: refused  [game_start slots [1, 0] are not a prefix 0..k-1 of the 64 slots]
+  PASS   a slot started twice: refused  [game_start slots [0, 1, 1] are not a prefix 0..k-1 of the 64 slots]
+  PASS   more than 64 starts: refused  [game_start slots [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64] are not a prefix 0..k-1 of the 64 slots]
+  PASS   exit 0 with 63 starts: refused  [outer exit 0 but 63 games started, verdict 'COMPLETED']
+  PASS   REFUSED after a game: refused  [a REFUSED run started 1 games]
+  PASS   block not ACCOUNTED: refused  [the block is not ACCOUNTED exactly once]
+  PASS   block already RETIRED in part: refused  [a seed of the block is already EXPOSED or RETIRED]
+
+controls passed: 15/15
+VERDICT: RECONCILES -- EXPOSE [202740900, 202740964]; RETIRE [202740900, 202740964]
