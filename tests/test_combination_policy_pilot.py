@@ -607,7 +607,8 @@ def test_THE_TIMING_SYNCHRONIZES_EACH_UPDATE_AND_PRICES_THE_CEILING(tmp_path):
 
 def test_EVERY_PILOT_GATE_IS_A_CLOSED_SINGLE_DECLARATION():
     import ast
-    assert sorted(P.KINDS) == ["generate", "screen", "strength", "throughput", "throughput2", "train"]
+    assert sorted(P.KINDS) == ["cycle2_generate", "cycle2_train", "generate", "screen", "strength", "throughput",
+                               "throughput2", "train"]
     for kind in P.KINDS:
         gate, name = P.KINDS[kind]["gate"]
         assert getattr(gate, name) is False
@@ -622,7 +623,8 @@ def test_THE_ENTRY_REFUSES_WITHOUT_THE_SETTING_AND_ON_A_CLOSED_GATE(monkeypatch,
     monkeypatch.setenv(P.SETTING, "0")
     monkeypatch.setattr(P, "_mlx_loaded", lambda: False)
     monkeypatch.setattr(P, "CARD_SHA256", P.M._sha((ROOT / P.CARD).read_bytes()))
-    for kind in ("throughput", "throughput2", "generate", "train", "screen", "strength"):
+    for kind in ("throughput", "throughput2", "generate", "train", "screen", "strength", "cycle2_generate",
+                 "cycle2_train"):
         assert P.main(["run", kind, "--checkpoint", "/x"]) == P.EXIT_REFUSED
         assert "is closed" in capsys.readouterr().err
 
@@ -699,13 +701,17 @@ def test_ONLY_TRAINING_THE_SCREEN_AND_STRENGTH_READ_AN_OUTER_JSON_generation_s_t
     """Generation read the throughput check's outer.json until the amendment removed it. Training reads generation's
     (the user's review, 2026-10-30), beside the generation and timing records; the screen reads training's (the
     user's review, 2026-10-31), beside training's record; the strength comparison reads training's and the screen's
-    (the user's review, 2026-11-01), beside their records."""
+    (the user's review, 2026-11-01), beside their records. The second cycle's two kinds (the user's review, 2026-11-02)
+    read the first training run's and, for the fit, the new corpus's; tests/test_combination_policy_cycle2.py checks them."""
     train_run = "docs/superpowers/evidence/combination-policy-train-run"
+    corpus2 = (str(pathlib.Path(P.KINDS["cycle2_generate"]["plan"]).parent), P.KINDS["cycle2_generate"]["evidence"])
     assert P.OUTER_ADMISSION == {"train": [(GEN_RUN, P.KINDS["generate"]["evidence"])],
                                  "screen": [(train_run, P.KINDS["train"]["evidence"])],
                                  "strength": [(train_run, P.KINDS["train"]["evidence"]),
                                               ("docs/superpowers/evidence/combination-policy-screen-run",
-                                               P.KINDS["screen"]["evidence"])]}
+                                               P.KINDS["screen"]["evidence"])],
+                                 "cycle2_generate": [(train_run, P.KINDS["train"]["evidence"])],
+                                 "cycle2_train": [(train_run, P.KINDS["train"]["evidence"]), corpus2]}
     assert P.ADMISSION["train"] == [(P.KINDS["generate"]["evidence"], "status", "COMPLETED"),
                                     (P.TIMING_EVIDENCE, "status", "COMPLETED")]
 
@@ -810,8 +816,9 @@ def test_THE_FROZEN_RECIPE_IS_THE_CARD_S():
         (3000, 64, 1e-3, 1e-4, 20261028, 20261029, 0.01)
     assert (r["heldout_mod"], r["heldout_rem"], r["from_ply"]) == (10, 9, 20)
     assert (P.N_WORKERS, P.MAX_BATCH_ROWS) == (18, 14)
-    assert {k: v["slots"] for k, v in P.KINDS.items() if "slots" in v} == {"throughput": 144, "throughput2": 144,
-                                                                          "generate": 1000}
+    assert {k: v["slots"] for k, v in P.KINDS.items() if "slots" in v} == {"cycle2_generate": 1000, "throughput": 144,
+                                                                           "throughput2": 144,
+                                                                           "generate": 1000}
     assert P.GENERATE_CEILING == {"factor": 1.5, "max_seconds": 21600}
 
 

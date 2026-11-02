@@ -1,0 +1,880 @@
+"""THE SECOND POLICY-IMPROVEMENT CYCLE, BUILD A (amendment
+`docs/superpowers/2026-11-02-combination-policy-second-cycle-amendment.md`, approved 2026-11-02): `run cycle2_generate`
+and `run cycle2_train`, their closed gates, wrappers and generation seed and closing copies. CPU only: fake evaluators,
+tiny random networks and temporary outputs. Nothing here loads the real model, runs a seed procedure on the real
+repository, opens a real gate or plays a real game.
+
+It reuses the first cycle's checks and fixtures. What is new is the teacher: the binding and probe before any worker
+starts, the fit's start, the corpus's separation, and that the first cycle's evidence and kinds stay as they are."""
+import difflib
+import hashlib
+import io
+import json
+import math
+import os
+import pathlib
+import re
+import subprocess
+import sys
+import time
+
+import numpy as np
+import pytest
+
+from scripts.GPU.alphazero import combination_policy_cycle2_generate_authorization as GATE_GEN
+from scripts.GPU.alphazero import combination_policy_cycle2_train_authorization as GATE_TRAIN
+from scripts.GPU.alphazero import combination_policy_pilot as P
+from scripts.GPU.alphazero import seed_band_2027 as SB
+from tests import _combination_fakes as F
+from tests.test_combination_policy_generate_launch import PINNED_FILES, _load, _split, _synthetic
+from tests.test_combination_policy_launch import STUB_BG, STUB_IDLE, STUB_PILOT, _alive, _git
+from tests.test_combination_policy_pilot import (GOOD_INNER, GOOD_OUTER, TINY_ARCH, GenHarness, _conclude, _recipe,
+                                                 _tiny_network, _train_seams, corpus_game)  # noqa: F401
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+EV = ROOT / "docs/superpowers/evidence"
+AMEND = "docs/superpowers/2026-11-02-combination-policy-second-cycle-amendment.md"
+GEN, TRAIN = "cycle2_generate", "cycle2_train"
+SURVEY_1, SURVEY = ("combination-policy-generate-seed-survey/01_seed_survey.py",
+                    "combination-policy-cycle2-generate-seed-survey/01_seed_survey.py")
+CLOSING_1, CLOSING = ("combination-policy-generate-seed-closing/01_derive_usage.py",
+                      "combination-policy-cycle2-generate-seed-closing/01_derive_usage.py")
+_REAL_GEN_SEAMS, _REAL_TRAIN_SEAMS = P._real_gen_seams, P._real_train_seams   # bound before the isolation replaces them
+
+
+@pytest.fixture(autouse=True)
+def isolated(monkeypatch, tmp_path):
+    """EVERY test (#74): the pilot's real seams, its record boundary and the real cache are unreachable, on the CPU."""
+    def unreachable(*_a, **_k):
+        raise AssertionError("a test reached a real seam or the real record boundary")
+    for name in ("_real_gen_seams", "_real_train_seams", "_real_screen_seams", "conclude"):
+        monkeypatch.setattr(P, name, unreachable)
+    monkeypatch.setattr(P, "CACHE_DIR", tmp_path / "cache")
+    monkeypatch.setenv(P.SETTING, P.SETTING_VALUE)
+    import mlx.core as mx
+    previous = mx.default_device()
+    mx.set_default_device(mx.cpu)
+    yield
+    mx.set_default_device(previous)
+
+
+# ─────────────────────────────── the frozen amendment, the build state, the first cycle ───────────────────────────────
+
+def test_THE_AMENDMENT_IS_FROZEN_PINNED_AND_NAMES_THE_REAL_BINDINGS():
+    rel, sha = P.CYCLE2_AMENDMENT
+    assert rel == AMEND and P.M._sha((ROOT / rel).read_bytes()) == sha
+    assert P.KINDS[GEN]["amendment"] == P.KINDS[TRAIN]["amendment"] == P.CYCLE2_AMENDMENT
+    text = (ROOT / rel).read_text(encoding="utf-8")
+    flat = " ".join(text.split())
+    assert "FROZEN 2026-11-02" in text.splitlines()[0]
+    assert P.M.CHECKPOINT_SHA1 in text and P.TRAINED_HEAD["sha256"] in text and P.TRAINED_HEAD["file"] in text
+    assert "may change the candidate set at a recorded root" in flat
+    assert "Neither a changed candidate set nor better targets is guaranteed" in flat
+    assert "through the actual uncompiled generation evaluator" in flat
+
+
+def test_BUILD_A_ONLY_two_closed_gates_and_no_plan_run_or_corpus():
+    """RE-ANCHOR when a seed procedure or run is approved. The gates are closed, no plan, run output, seed record or
+    corpus exists, and the registry names no block for this cycle. Build B's kinds do not exist."""
+    assert GATE_GEN.COMBINATION_POLICY_CYCLE2_GENERATE_AUTHORIZED is False
+    assert GATE_TRAIN.COMBINATION_POLICY_CYCLE2_TRAIN_AUTHORIZED is False
+    assert (P.KINDS[GEN]["gate"][0], P.KINDS[TRAIN]["gate"][0]) == (GATE_GEN, GATE_TRAIN)
+    assert not any(k.startswith("cycle2") and k not in (GEN, TRAIN) for k in P.KINDS)
+    assert sorted(x.name for x in (EV / "combination-policy-cycle2-generate-run").iterdir()) == ["01_wrapper.sh"]
+    assert sorted(x.name for x in (EV / "combination-policy-cycle2-train-run").iterdir()) == ["01_wrapper.sh"]
+    for rel, only in ((SURVEY, "01_seed_survey.py"), (CLOSING, "01_derive_usage.py")):
+        assert [x.name for x in (EV / rel).parent.iterdir() if x.name != "__pycache__"] == [only]
+    assert not (ROOT / P.KINDS[GEN]["evidence"]).exists() and not (ROOT / P.KINDS[TRAIN]["evidence"]).exists()
+    assert not (pathlib.Path.home() / "twixt-cache/combination-policy-pilot" / GEN).exists()
+
+
+def test_THE_FIRST_CYCLE_S_EVIDENCE_AND_HEAD_ARE_UNCHANGED():
+    dirs = [f"docs/superpowers/evidence/combination-policy-{k}{s}"
+            for k in ("generate", "train", "screen", "strength")
+            for s in ("", "-run", "-seed-survey", "-seed-closing")]
+    assert subprocess.run(["git", "-C", str(ROOT), "diff", "--quiet", "0557dff1", "HEAD", "--", *dirs]).returncode == 0
+    raw = (ROOT / P.TRAINED_HEAD["file"]).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == P.TRAINED_HEAD["sha256"]
+    assert subprocess.run(["git", "-C", str(ROOT), "diff", "--quiet", "HEAD", "--", P.CARD]).returncode == 0
+    assert P.M._sha((ROOT / P.CARD).read_bytes()) == P.CARD_SHA256
+
+
+@pytest.mark.parametrize("kind", ["generate", "train"])
+def test_THE_FIRST_CYCLE_S_KINDS_STAY_ONE_SHOT_even_with_their_gates_open(tmp_path, monkeypatch, capsys, kind):
+    gate, name = P.KINDS[kind]["gate"]
+    monkeypatch.setattr(gate, name, True)
+    monkeypatch.setattr(P, "_mlx_loaded", lambda: False)
+    monkeypatch.setattr(P, "admitted", lambda k, *_a: {"stub": k})
+    ckpt = tmp_path / "model.safetensors"
+    ckpt.write_bytes(b"not a model")
+    assert P.main(["run", kind, "--checkpoint", str(ckpt)]) == P.EXIT_REFUSED
+    assert "the run is one-shot" in capsys.readouterr().err
+
+
+def test_ONLY_THE_TEACHER_AND_THE_CORPUS_DIFFER_the_settings_recipe_and_block_size_are_the_first_cycle_s():
+    one, two = P.KINDS["generate"], P.KINDS[GEN]
+    assert (two["slots"], two["keep_rows"]) == (one["slots"], one["keep_rows"]) == (1000, True)
+    assert (P.N_WORKERS, P.MAX_BATCH_ROWS) == (18, 14)
+    assert P.RECIPE == {"updates": 3000, "batch": 64, "lr": 1e-3, "l2": 1e-4, "betas": [0.9, 0.999], "eps": 1e-8,
+                        "bias_correction": False, "init_seed": 20261028, "order_seed": 20261029, "min_kl": 0.01,
+                        "heldout_mod": 10, "heldout_rem": 9, "from_ply": 20,
+                        "arch": {"in_channels": 30, "hidden": 128, "n_blocks": 6}}
+    paths = {P.KINDS[k][f] for k in P.KINDS for f in ("evidence", "plan") if f in P.KINDS[k]}
+    assert len(paths) == sum(f in P.KINDS[k] for k in P.KINDS for f in ("evidence", "plan"))   # nothing shared
+
+
+# ─────────────────────────────── generation: the binding and the teacher-reach probe ───────────────────────────────
+
+DIGESTS = {"encoder.": "e", "value_head.": "v", "policy_head.": "teacher"}
+BINDING = {"file": "first/head.npz", "sha256": "a" * 64, "digests": dict(DIGESTS), "bytes": b"x"}
+
+
+def _fake(seed):
+    ev = F.FakeEvaluator(seed)
+    ev.network = object()
+    return ev
+
+
+def _gen_harness(tmp_path, monkeypatch, calls, **change):
+    monkeypatch.setitem(P.KINDS[GEN], "slots", 3)
+    h = GenHarness(tmp_path, kind=GEN, n=3)
+    generate = h.generate
+
+    def counted(**kw):
+        calls.append("generate")
+        return generate(**kw)
+    s = h.seams
+    s.generate, s.load_evaluator, s.teacher = counted, lambda: _fake(7), BINDING
+    s.digests = lambda net: {**DIGESTS, "policy_head.": "parent"}
+    s.load_parent = lambda: _fake(8)
+
+    def install(net):
+        calls.append("install")
+        return dict(DIGESTS)
+    s.install_teacher = install
+    for k, v in change.items():
+        setattr(s, k, v)
+    return h
+
+
+def _run_gen(tmp_path, h):
+    return _conclude(GEN, lambda o, r, lg: P._generate(GEN, h.seams, o, r, lg), tmp_path / "ev")
+
+
+def test_GENERATION_BINDS_AND_PROBES_THE_TEACHER_BEFORE_ANY_WORKER_and_writes_its_own_corpus(tmp_path, monkeypatch):
+    calls = []
+    h = _gen_harness(tmp_path, monkeypatch, calls)
+    code, rec = _run_gen(tmp_path, h)
+    assert code == P.EXIT_COMPLETED, rec.get("void")
+    assert calls == ["install", "generate"]
+    assert rec["teacher"] == {k: BINDING[k] for k in ("file", "sha256", "digests")} and "bytes" not in rec["teacher"]
+    assert rec["teacher_digests"] == DIGESTS and rec["teacher_probe"]["max_prior_abs_diff"] > 0.0
+    assert (rec["amendment"], rec["amendment_sha256"]) == P.CYCLE2_AMENDMENT
+    games = [json.loads(x) for x in (tmp_path / "ev" / "games.jsonl").read_text().splitlines()]
+    assert all(P._sha_file(tmp_path / "cache" / GEN / g["rows_file"]) == g["rows_sha256"] for g in games)
+    assert not (tmp_path / "cache" / "generate").exists()
+
+
+@pytest.mark.parametrize("what, change", [
+    ("the served network's digests", {"install_teacher": lambda net: {**DIGESTS, "policy_head.": "other"}}),
+    ("the parent's encoder", {"digests": lambda net: {**DIGESTS, "encoder.": "other", "policy_head.": "parent"}}),
+    ("the parent's value head", {"digests": lambda net: {**DIGESTS, "value_head.": "other", "policy_head.": "parent"}}),
+    ("a parent that is the teacher", {"digests": lambda net: dict(DIGESTS)}),
+    ("equal opening priors", {"load_parent": lambda: _fake(7)})],
+    ids=["digests", "encoder", "value-head", "parent-is-teacher", "equal-priors"])
+def test_A_FAILED_BINDING_OR_PROBE_IS_A_VOID_BEFORE_ANY_WORKER_OR_ROW(tmp_path, monkeypatch, what, change):
+    calls = []
+    h = _gen_harness(tmp_path, monkeypatch, calls, **change)
+    code, rec = _run_gen(tmp_path, h)
+    assert code == P.EXIT_VOID and rec["status"] == "VOID" and rec["void"]["step"] == "teacher", (what, rec.get("void"))
+    assert "generate" not in calls and not (tmp_path / "cache").exists()
+
+
+def test_A_PROBE_PARENT_SHARING_THE_SERVED_EVALUATOR_OR_NETWORK_IS_A_VOID(tmp_path, monkeypatch):
+    calls = []
+    served = _fake(7)
+    other = _fake(8)
+    other.network = served.network
+    for parent in (served, other):
+        h = _gen_harness(tmp_path, monkeypatch, calls, load_evaluator=lambda: served, load_parent=lambda p=parent: p)
+        code, rec = _conclude(GEN, lambda o, r, lg: P._generate(GEN, h.seams, o, r, lg),
+                              tmp_path / f"ev{id(parent)}")
+        assert rec["void"]["step"] == "teacher" and "shares" in rec["void"]["detail"]
+    assert "generate" not in calls
+
+
+@pytest.mark.parametrize("kind, teacher", [(GEN, None), ("generate", BINDING)], ids=["no-teacher", "first-cycle"])
+def test_A_KIND_AND_ITS_SEAMS_MUST_AGREE_ABOUT_A_TEACHER(tmp_path, monkeypatch, kind, teacher):
+    monkeypatch.setitem(P.KINDS[kind], "slots", 3)
+    h = GenHarness(tmp_path, kind=kind, n=3)
+    h.seams.teacher = teacher
+    code, rec = _conclude(kind, lambda o, r, lg: P._generate(kind, h.seams, o, r, lg), tmp_path / "ev")
+    assert code == P.EXIT_VOID and rec["void"]["step"] == "teacher"
+
+
+# ─────────────────────────────── the teacher on a tiny real network, through the real seams ───────────────────────────
+
+def _teacher_arrays(perturb=True):
+    """A first-cycle head stand-in: arm R on the tiny network, its residual output moved. Returns (arrays, digests)."""
+    import mlx.core as mx
+
+    from scripts.GPU.alphazero import policy_head_capacity as PHC
+    net = _tiny_network()
+    PHC.install(net, "R", init_seed=P.RECIPE["init_seed"])
+    if perturb:
+        w = net.policy_head.extra_out.weight
+        net.policy_head.extra_out.weight = mx.array(np.random.default_rng(3).normal(0, 0.2, w.shape).astype(np.float32))
+    arrays = {k: v for k, v in P.snapshot(net).items() if k.startswith("policy_head.")}
+    return arrays, P.network_digests(net)
+
+
+def _binding(arrays, digests):
+    buf = io.BytesIO()
+    np.savez(buf, **arrays)
+    return {"file": "first/head.npz", "sha256": "a" * 64, "digests": digests, "bytes": buf.getvalue()}
+
+
+def _real_gen(monkeypatch, binding):
+    from scripts.GPU.alphazero import probe_eval
+    monkeypatch.setattr(probe_eval, "load_network_for_scoring", lambda path, verbose=False: (_tiny_network(), 30, 128, 1))
+    return _REAL_GEN_SEAMS(pathlib.Path("/unused"), binding)
+
+
+def test_THE_REAL_SEAMS_REACH_THE_HEAD_THROUGH_THE_UNCOMPILED_GENERATION_EVALUATOR(monkeypatch):
+    """The real `_real_gen_seams` over a tiny network: both sides are uncompiled LocalGPUEvaluators, the digests are the
+    teacher's, the priors differ and the value path does not. No checkpoint is read."""
+    from scripts.GPU.alphazero.local_evaluator import LocalGPUEvaluator
+    arrays, digests = _teacher_arrays()
+    seams = _real_gen(monkeypatch, _binding(arrays, digests))
+    served = seams.load_evaluator()
+    parent = seams.load_parent()
+    assert type(served) is type(parent) is LocalGPUEvaluator and served._use_compile is parent._use_compile is False
+    rec = {}
+    P._bind_teacher(seams, served, rec)
+    assert rec["teacher_digests"] == digests and served._compiled_forward is None
+    assert rec["teacher_probe"]["max_prior_abs_diff"] > 0.0 and rec["teacher_probe"]["value_abs_diff"] == 0.0
+    assert not any(m.training for _n, m in served.network.named_modules())
+    assert np.array_equal(np.asarray(P.snapshot(served.network)["policy_head.extra_out.weight"]),
+                          arrays["policy_head.extra_out.weight"])
+
+
+def test_THE_REAL_PROBE_VOIDS_A_HEAD_THAT_DOES_NOT_CHANGE_THE_OPENING_PRIORS(monkeypatch):
+    """Arm R with its residual at zero passes the digest checks (it has arm R's arrays) yet equals the parent: only the
+    probe can catch it, through the real evaluator."""
+    arrays, digests = _teacher_arrays(perturb=False)
+    seams = _real_gen(monkeypatch, _binding(arrays, digests))
+    with pytest.raises(P.Void) as e:
+        P._bind_teacher(seams, seams.load_evaluator(), {})
+    assert e.value.step == "teacher" and "does not reach the head" in e.value.detail
+
+
+def test_THE_REAL_SEAMS_REFUSE_SAVED_ARRAYS_THAT_ARE_NOT_ARM_R_S_HEAD(monkeypatch):
+    arrays, digests = _teacher_arrays()
+    arrays.pop("policy_head.extra_out.weight")
+    seams = _real_gen(monkeypatch, _binding(arrays, digests))
+    with pytest.raises(P.Void) as e:
+        P._bind_teacher(seams, seams.load_evaluator(), {})
+    assert e.value.step == "head"
+
+
+# ─────────────────────────────── the fit: the teacher's start ───────────────────────────────
+
+def _teacher_seams(game, arrays, digests, played=None, order=None, **kw):
+    seams = _train_seams(game, **kw)
+    binding = {"file": "first/head.npz", "sha256": "a" * 64, "digests": digests}
+    good = {"arch": dict(TINY_ARCH), "teacher": binding, "checkpoint_sha1": P.M.CHECKPOINT_SHA1}
+    seams.read_record = lambda rel: {**good, **(played or {})}
+    seams.teacher, seams.corpus_evidence = binding, "the-corpus"
+
+    def install(net):
+        if order is not None:
+            order.append("install")
+        return P._install_r_arrays(net, arrays)
+    seams.install_teacher = install
+    return seams
+
+
+def _fit(tmp_path, seams, recipe, name="train"):
+    return _conclude(TRAIN, lambda o, r, lg: P._train(recipe, seams, o, r, lg), tmp_path / name)
+
+
+def test_THE_FIT_STARTS_FROM_ALL_THREE_TEACHER_DIGESTS_AND_LEAVES_THE_VALUE_BITWISE_THE_PARENT_S(tmp_path, corpus_game):
+    arrays, digests = _teacher_arrays()
+    assert np.any(arrays["policy_head.extra_out.weight"])          # the learned residual branch is not reset
+    code, rec = _fit(tmp_path, _teacher_seams(corpus_game, arrays, digests), _recipe())
+    assert code == P.EXIT_COMPLETED and rec["verdict"] == "ELIGIBLE", (rec.get("void"), rec.get("stop"))
+    assert rec["digests_before"] == digests and rec["teacher"]["digests"] == digests
+    assert rec["digests_after"]["encoder."] == digests["encoder."]
+    assert rec["digests_after"]["value_head."] == digests["value_head."]
+    assert rec["digests_after"]["policy_head."] != digests["policy_head."]
+    assert rec["value_check"]["bitwise_equal"] and rec["value_check"]["max_abs_diff"] == 0.0
+    assert rec["surface"]["parameters"] == 8840 and "r_init_sha256" not in rec
+    assert rec["device"].startswith("Device(cpu") and len(rec["losses"]) == 12
+    assert rec["heldout_after"]["ce"] < rec["prefit_heldout"]["ce"]
+    with np.load(tmp_path / "train" / "head.npz") as z:
+        assert sorted(z.files) == sorted(arrays)                   # the head alone: no optimizer state
+        assert not np.array_equal(z["policy_head.extra_out.weight"], arrays["policy_head.extra_out.weight"])
+    assert (rec["amendment"], rec["amendment_sha256"]) == P.CYCLE2_AMENDMENT
+
+
+def test_THE_FIT_MEASURES_FROM_THE_TEACHER_NOT_THE_PARENT(tmp_path, corpus_game):
+    arrays, digests = _teacher_arrays()
+    _c, rec = _fit(tmp_path, _teacher_seams(corpus_game, arrays, digests), _recipe(), "t")
+    _c, first = _fit(tmp_path, _train_seams(corpus_game), _recipe(), "p")
+    assert rec["prefit_heldout"]["ce"] != first["prefit_heldout"]["ce"]
+    assert first["digests_before"]["policy_head."] != digests["policy_head."] and "r_init_sha256" in first
+
+
+def test_THE_VALUE_BASELINE_IS_TAKEN_FROM_THE_PARENT_BEFORE_THE_HEAD_IS_INSTALLED(tmp_path, corpus_game, monkeypatch):
+    order = []
+    real = P.values
+
+    def spy(*a, **k):
+        order.append("values")
+        return real(*a, **k)
+    monkeypatch.setattr(P, "values", spy)
+    arrays, digests = _teacher_arrays()
+    _c, rec = _fit(tmp_path, _teacher_seams(corpus_game, arrays, digests, order=order), _recipe())
+    assert order == ["values", "install", "values"] and rec["verdict"] == "ELIGIBLE"
+
+
+def test_THE_OPTIMIZER_IS_FRESH_ONE_ADAM_UNINITIALIZED_AT_ITS_FIRST_UPDATE(tmp_path, corpus_game, monkeypatch):
+    import mlx.optimizers as optim
+    made, seen = [], []
+    base = optim.Adam
+
+    class Spy(base):
+        def __init__(self, *a, **k):
+            super().__init__(*a, **k)
+            made.append(self)
+
+        def update(self, model, grads):
+            seen.append(self._initialized)
+            return super().update(model, grads)
+    monkeypatch.setattr(optim, "Adam", Spy)
+    arrays, digests = _teacher_arrays()
+    _c, rec = _fit(tmp_path, _teacher_seams(corpus_game, arrays, digests), _recipe())
+    assert rec["verdict"] == "ELIGIBLE" and len(made) == 1 and len(seen) == 12
+    assert seen[0] is False and all(seen[1:])
+
+
+@pytest.mark.parametrize("recipe, rule", [
+    ({"min_kl": 1e9}, "prefit_kl"), ({"l2": float("inf")}, "nonfinite"), ({"lr": 0.0, "l2": 0.0}, "heldout_not_improved")],
+    ids=["prefit-kl", "non-finite", "heldout"])
+def test_THE_FIRST_CYCLE_S_STOP_RULES_FIRE_FROM_THE_TEACHER(tmp_path, corpus_game, recipe, rule):
+    arrays, digests = _teacher_arrays()
+    code, rec = _fit(tmp_path, _teacher_seams(corpus_game, arrays, digests), _recipe(**recipe))
+    assert code == P.EXIT_COMPLETED and rec["verdict"] == "STOP" and rec["stop"]["rule"] == rule
+
+
+def test_A_CHANGED_VALUE_OUTPUT_STOPS_THE_FIT(tmp_path, corpus_game, monkeypatch):
+    real, calls = P.values, []
+
+    def shifted(*a, **k):
+        calls.append(1)
+        out = real(*a, **k)
+        return out + 1e-6 if len(calls) == 2 else out
+    monkeypatch.setattr(P, "values", shifted)
+    arrays, digests = _teacher_arrays()
+    _c, rec = _fit(tmp_path, _teacher_seams(corpus_game, arrays, digests), _recipe())
+    assert rec["verdict"] == "STOP" and rec["stop"]["rule"] == "value_changed"
+    assert not (tmp_path / "train" / "head.npz").exists()
+
+
+@pytest.mark.parametrize("change, where", [
+    ({"policy_head.": "0" * 64}, "policy head"), ({"encoder.": "0" * 64}, "encoder"), ({"value_head.": "0" * 64}, "value")],
+    ids=["policy-head", "encoder", "value-head"])
+def test_ANY_OF_THE_THREE_STARTING_DIGESTS_OFF_IS_A_VOID_BEFORE_FITTING(tmp_path, corpus_game, change, where):
+    arrays, digests = _teacher_arrays()
+    wrong = {**digests, **change}
+    seams = _teacher_seams(corpus_game, arrays, wrong)
+    code, rec = _fit(tmp_path, seams, _recipe())
+    assert code == P.EXIT_VOID and rec["void"]["step"] == "teacher" and "starting digests" in rec["void"]["detail"], where
+    assert "losses" not in rec and not (tmp_path / "train" / "head.npz").exists()
+
+
+@pytest.mark.parametrize("played", [{"teacher": None}, {"teacher": {"file": "x", "sha256": "b" * 64, "digests": {}}},
+                                    {"checkpoint_sha1": "0" * 40}], ids=["no-teacher", "another-teacher", "checkpoint"])
+def test_A_CORPUS_THAT_DID_NOT_PLAY_THIS_TEACHER_IS_A_VOID_BEFORE_IT_IS_READ(tmp_path, corpus_game, played):
+    arrays, digests = _teacher_arrays()
+    seams = _teacher_seams(corpus_game, arrays, digests, played=played)
+
+    def no_corpus():
+        raise AssertionError("the corpus was read")
+    seams.read_games = no_corpus
+    code, rec = _fit(tmp_path, seams, _recipe())
+    assert code == P.EXIT_VOID and rec["void"]["step"] == "teacher" and "did not play" in rec["void"]["detail"]
+
+
+# ─────────────────────────────── the corpus's separation, through the real seam ───────────────────────────────
+
+def test_THE_REAL_FIT_SEAM_READS_ONLY_THE_NEW_CORPUS(tmp_path, monkeypatch):
+    """A file under the first corpus's name is not reachable from the second cycle's reader, whose games and rows are its
+    own kind's; the first cycle's reader keeps its own paths."""
+    arrays, digests = _teacher_arrays()
+    root = tmp_path / "cache"
+    for kind in ("generate", GEN):
+        (root / kind).mkdir(parents=True)
+    np.savez(root / "generate" / "only_first.npz", a=np.zeros(1))
+    np.savez(root / GEN / "only_second.npz", a=np.ones(1))
+    seams = _REAL_TRAIN_SEAMS(pathlib.Path("/unused"), GEN, _binding(arrays, digests))
+    first = _REAL_TRAIN_SEAMS(pathlib.Path("/unused"))
+    assert seams.corpus_evidence == P.KINDS[GEN]["evidence"] and seams.teacher is not None
+    assert first.teacher is None and first.corpus_evidence is None
+    second_game = {"rows_file": "only_second.npz", "rows_sha256": P._sha_file(root / GEN / "only_second.npz")}
+    first_game = {"rows_file": "only_first.npz", "rows_sha256": P._sha_file(root / "generate" / "only_first.npz")}
+    assert seams.read_rows(second_game)["a"].tolist() == [1.0]
+    assert first.read_rows(first_game)["a"].tolist() == [0.0]
+    with pytest.raises(FileNotFoundError):
+        seams.read_rows(first_game)
+    with pytest.raises(P.Void, match="not the file generation wrote"):
+        seams.read_rows({**second_game, "rows_sha256": "0" * 64})
+    with pytest.raises(FileNotFoundError, match="cycle2-generate"):
+        seams.read_games()                    # the new corpus does not exist; the first one's games are never read
+
+
+def test_THE_REAL_FIT_SEAM_INSTALLS_THE_TEACHER_S_SAVED_BYTES(monkeypatch):
+    arrays, digests = _teacher_arrays()
+    seams = _REAL_TRAIN_SEAMS(pathlib.Path("/unused"), GEN, _binding(arrays, digests))
+    from scripts.GPU.alphazero import policy_head_capacity as PHC
+    net = _tiny_network()
+    assert tuple(sorted(seams.install_teacher(net))) == PHC.SURFACES["R"][0]
+    assert P.network_digests(net) == digests
+
+
+# ─────────────────────────────── the entry and admission ───────────────────────────────
+
+@pytest.mark.parametrize("kind", [GEN, TRAIN])
+def test_THE_ENTRY_REFUSES_ON_A_CLOSED_GATE(monkeypatch, capsys, kind):
+    monkeypatch.setattr(P, "_mlx_loaded", lambda: False)
+    assert P.main(["run", kind, "--checkpoint", "/x"]) == P.EXIT_REFUSED
+    assert "is closed" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("kind", [GEN, TRAIN])
+def test_THE_ENTRY_REFUSES_AN_AMENDMENT_THAT_IS_NOT_THE_PINNED_ONE(monkeypatch, capsys, kind):
+    gate, name = P.KINDS[kind]["gate"]
+    monkeypatch.setattr(gate, name, True)
+    monkeypatch.setattr(P, "_mlx_loaded", lambda: False)
+    monkeypatch.setattr(P, "admitted", lambda k, *_a: {"stub": k})
+    monkeypatch.setitem(P.KINDS[kind], "amendment", (AMEND, "0" * 64))
+    assert P.main(["run", kind, "--checkpoint", "/x"]) == P.EXIT_REFUSED
+    assert "is not the pinned amendment" in capsys.readouterr().err
+
+
+def _open_entry(monkeypatch, tmp_path, kind, seen):
+    """The gate open in this process only; admission and the record boundary stubbed; the head read for real."""
+    gate, name = P.KINDS[kind]["gate"]
+    monkeypatch.setattr(gate, name, True)
+    monkeypatch.setattr(P, "_mlx_loaded", lambda: False)
+    monkeypatch.setattr(P, "admitted", lambda k, *_a: {"stub": k})
+    monkeypatch.setitem(P.KINDS[kind], "evidence", str(tmp_path / "ev"))
+    monkeypatch.setattr(P, "conclude", lambda k, execute, out, admission, head=None: (0, {"status": "COMPLETED"}))
+    monkeypatch.setattr(P, "_real_gen_seams", lambda *a, **k: seen.update(gen=a))
+    monkeypatch.setattr(P, "_real_train_seams", lambda *a, **k: seen.update(train=a))
+    ckpt = tmp_path / "model.safetensors"
+    ckpt.write_bytes(b"not a model")
+    return ckpt
+
+
+def test_RUN_CYCLE2_GENERATE_PASSES_THE_COMMITTED_TEACHER_TO_THE_GENERATION_SEAMS(tmp_path, monkeypatch, capsys):
+    seen = {}
+    ckpt = _open_entry(monkeypatch, tmp_path, GEN, seen)
+    assert P.main(["run", GEN, "--checkpoint", str(ckpt)]) == 0
+    assert "train" not in seen and seen["gen"][0] == ckpt
+    teacher = seen["gen"][1]
+    assert teacher["sha256"] == P.TRAINED_HEAD["sha256"] and teacher["digests"] == P.TRAINED_HEAD["digests"]
+    assert hashlib.sha256(teacher["bytes"]).hexdigest() == P.TRAINED_HEAD["sha256"]
+
+
+def test_RUN_CYCLE2_TRAIN_PASSES_ITS_CORPUS_AND_THE_TEACHER_TO_THE_TRAINING_SEAMS(tmp_path, monkeypatch, capsys):
+    seen = {}
+    ckpt = _open_entry(monkeypatch, tmp_path, TRAIN, seen)
+    assert P.main(["run", TRAIN, "--checkpoint", str(ckpt)]) == 0
+    assert "gen" not in seen and seen["train"][:2] == (ckpt, GEN)
+    assert seen["train"][2]["sha256"] == P.TRAINED_HEAD["sha256"]
+
+
+def test_RUN_CYCLE2_GENERATE_REFUSES_AN_EXISTING_ROWS_DIRECTORY(tmp_path, monkeypatch, capsys):
+    seen = {}
+    ckpt = _open_entry(monkeypatch, tmp_path, GEN, seen)
+    (tmp_path / "cache" / GEN).mkdir(parents=True)
+    assert P.main(["run", GEN, "--checkpoint", str(ckpt)]) == P.EXIT_REFUSED
+    assert "the corpus is written once" in capsys.readouterr().err and not seen
+
+
+def test_THE_TEACHER_COMES_FROM_THE_COMMITTED_FIRST_TRAINING_RUN_for_both_kinds():
+    """The real committed readers, read-only."""
+    for kind in (GEN, TRAIN):
+        h = P.trained_head(P._read_record, P._read_committed_bytes, kind)
+        assert h["file"] == P.KINDS["train"]["evidence"] + "/head.npz" and h["sha256"] == P.TRAINED_HEAD["sha256"]
+    train_rel = P.KINDS["train"]["evidence"]
+    assert P.admitted(GEN, P._read_record, P._read_outer) == {
+        train_rel: "ELIGIBLE", P.TIMING_EVIDENCE: "COMPLETED", f"{train_rel}-run/outer.json": "COMPLETED"}
+
+
+def _readers(have, outers):
+    def rec(rel):
+        if rel not in have:
+            raise FileNotFoundError(rel)
+        return have[rel]
+
+    def out(rel):
+        if rel not in outers:
+            raise FileNotFoundError(rel)
+        return outers[rel]
+    return rec, out
+
+
+FIRST, FIRST_RUN = P.KINDS["train"]["evidence"], P.KINDS["train"]["evidence"] + "-run"
+CORPUS, CORPUS_RUN = P.KINDS[GEN]["evidence"], str(pathlib.Path(P.KINDS[GEN]["plan"]).parent)
+ELIGIBLE = {**GOOD_INNER, "verdict": "ELIGIBLE"}
+FULL = {FIRST: ELIGIBLE, CORPUS: GOOD_INNER, P.TIMING_EVIDENCE: {"status": "COMPLETED", "card_sha256": P.CARD_SHA256}}
+FULL_OUTER = {FIRST_RUN: GOOD_OUTER, CORPUS_RUN: GOOD_OUTER}
+
+
+def test_THE_FIT_IS_ADMITTED_BY_BOTH_RUNS_RECORDS_AND_OUTERS_AND_THE_TIMING():
+    assert P.admitted(TRAIN, *_readers(FULL, FULL_OUTER)) == {
+        FIRST: "ELIGIBLE", CORPUS: "COMPLETED", P.TIMING_EVIDENCE: "COMPLETED", f"{FIRST_RUN}/outer.json": "COMPLETED",
+        f"{CORPUS_RUN}/outer.json": "COMPLETED"}
+
+
+@pytest.mark.parametrize("have, outers, why", [
+    ({FIRST: ELIGIBLE, P.TIMING_EVIDENCE: FULL[P.TIMING_EVIDENCE]}, FULL_OUTER, "does not exist"),
+    ({**FULL, CORPUS: {**GOOD_INNER, "status": "VOID"}}, FULL_OUTER, "not COMPLETED"),
+    ({**FULL, FIRST: {**GOOD_INNER, "verdict": "STOP"}}, FULL_OUTER, "not COMPLETED"),
+    ({**FULL, CORPUS: {**GOOD_INNER, "card_sha256": "0" * 64}}, FULL_OUTER, "not COMPLETED"),
+    (FULL, {FIRST_RUN: GOOD_OUTER}, "outer.json does not exist"),
+    (FULL, {FIRST_RUN: GOOD_OUTER, CORPUS_RUN: {**GOOD_OUTER, "outcome": "TIMEOUT"}}, "outcome is 'TIMEOUT'"),
+    (FULL, {FIRST_RUN: {**GOOD_OUTER, "survivors": "1 "}, CORPUS_RUN: GOOD_OUTER}, "survivors")],
+    ids=["no-corpus", "corpus-void", "first-stop", "other-card", "no-corpus-outer", "corpus-timeout", "first-survivors"])
+def test_THE_FIT_IS_REFUSED_WITHOUT_ANY_OF_THEM(have, outers, why):
+    with pytest.raises(P.Refused, match=why):
+        P.admitted(TRAIN, *_readers(have, outers))
+
+
+# ─────────────────────────────── the wrappers ───────────────────────────────
+
+WRAPPERS = {
+    GEN: {"base": EV / "combination-policy-generate-run/01_wrapper.sh", "term": 21590, "stem": "cycle2-generate",
+          "gate": "COMBINATION_POLICY_CYCLE2_GENERATE_AUTHORIZED",
+          "gate_rel": "combination_policy_cycle2_generate_authorization.py"},
+    TRAIN: {"base": EV / "combination-policy-train-run/01_wrapper.sh", "term": 2810, "stem": "cycle2-train",
+            "gate": "COMBINATION_POLICY_CYCLE2_TRAIN_AUTHORIZED",
+            "gate_rel": "combination_policy_cycle2_train_authorization.py"}}
+
+
+def _path(kind):
+    return EV / f"combination-policy-{WRAPPERS[kind]['stem']}-run/01_wrapper.sh"
+
+
+def _code(path):
+    return path.read_text().split("set -u\n", 1)[1]
+
+
+@pytest.mark.parametrize("kind", [GEN, TRAIN])
+def test_THE_WRAPPER_IS_THE_FIRST_CYCLE_S_WITH_ONLY_THE_STATED_DIFFERENCES(kind):
+    """The paths, the gate and the `run` argument, line for line; TERM_S is the first cycle's. The header is this cycle's
+    paragraph followed by the first cycle's header unchanged."""
+    w = WRAPPERS[kind]
+    old, new = _code(w["base"]).splitlines(), _code(_path(kind)).splitlines()
+    assert len(old) == len(new)
+    assert [b for a, b in zip(old, new) if a != b] == [
+        f"OUT_REL=docs/superpowers/evidence/combination-policy-{w['stem']}-run",
+        f"RUN_REL=docs/superpowers/evidence/combination-policy-{w['stem']}",
+        f"GATE_REL=scripts/GPU/alphazero/{w['gate_rel']}", f"GATE={w['gate']}",
+        '/usr/bin/perl -e "$SUPERVISOR" "$OUT_REL/pgid.txt" "$TERM_S" "$GRACE_S" env MLX_ENABLE_TF32=0 PYTHONPATH=. '
+        f'"$PY" -B -m "$MODULE" run {kind} --checkpoint "$CKPT" \\']
+    head_old = w["base"].read_text().split("set -u\n", 1)[0]
+    head = _path(kind).read_text().split("set -u\n", 1)[0]
+    assert head.startswith("#!/bin/bash\n# THE SECOND POLICY-IMPROVEMENT CYCLE: ") and AMEND in head
+    assert head.endswith(head_old[len("#!/bin/bash\n"):])
+    assert os.access(_path(kind), os.R_OK) and subprocess.run(["bash", "-n", str(_path(kind))]).returncode == 0
+    assert _path(kind).stat().st_mode == w["base"].stat().st_mode
+
+
+@pytest.mark.parametrize("kind", [GEN, TRAIN])
+def test_THE_WRAPPER_SERVES_ITS_KIND_S_PATHS(kind):
+    w, spec = _code(_path(kind)), P.KINDS[kind]
+    out, run = (re.search(rf"^{k}=(\S+)$", w, re.M).group(1) for k in ("OUT_REL", "RUN_REL"))
+    assert run == spec["evidence"] and out == str(_path(kind).parent.relative_to(ROOT))
+    assert re.search(r"^GATE_REL=(\S+)$", w, re.M).group(1) == str(pathlib.Path(spec["gate"][0].__file__).relative_to(ROOT))
+    assert spec["gate"][1] == WRAPPERS[kind]["gate"] and f"RECORD_KIND={P.RECORD_KIND}\n" in w
+    assert 'CKPT="$MAIN/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors"' in w
+    first = {P.KINDS[k]["evidence"] for k in P.KINDS if not k.startswith("cycle2")}
+    assert run not in first and out not in {f"{p}-run" for p in first}
+
+
+def test_THE_GENERATION_CEILING_IS_THE_AMENDMENT_S_SIX_HOURS():
+    w = _code(_path(GEN))
+    term, grace = (int(re.search(rf"^{k}=(\d+)$", w, re.M).group(1)) for k in ("TERM_S", "GRACE_S"))
+    assert (term, grace) == (21590, 10) and term + grace == 6 * 3600 and term + 2 * grace == 21610
+
+
+def _fit_ceiling(games_path):
+    """The timing record's formula on a corpus's counts x 1.5, rounded up to the minute (slots and row counts only --
+    never a winner or reason)."""
+    timing = json.loads((ROOT / P.TIMING_EVIDENCE / "record.json").read_text(encoding="utf-8"))
+    counts = [(g["slot"], g["n_rows"]) for g in
+              (json.loads(line) for line in games_path.read_text(encoding="utf-8").splitlines())]
+    rows = sum(n for _s, n in counts)
+    held = sum(n for s, n in counts if s % P.RECIPE["heldout_mod"] == P.RECIPE["heldout_rem"])
+    t = timing["timing"]
+    projected = math.fsum([t["mean_update_seconds"] * P.RECIPE["updates"], t["per_row_pair_forward_seconds"] * (rows + held),
+                           t["per_row_pair_forward_seconds"] * held, t["per_to_tensor_seconds"] * rows])
+    return int(math.ceil(timing["spec"]["ceiling_factor"] * projected / 60.0) * 60)
+
+
+def test_THE_FIT_CEILING_IS_PROVISIONAL_UNTIL_THE_NEW_CORPUS_EXISTS_THEN_THE_FORMULA_ON_ITS_COUNTS():
+    """Today the wrapper holds the first corpus's derivation and its header says so. Once the new corpus's games.jsonl
+    exists this fails until TERM_S is re-derived from the new counts, by a reviewed edit, as the amendment's §7 requires."""
+    new = ROOT / P.KINDS[GEN]["evidence"] / "games.jsonl"
+    games = new if new.exists() else ROOT / P.KINDS["generate"]["evidence"] / "games.jsonl"
+    w = _code(_path(TRAIN))
+    term, grace = (int(re.search(rf"^{k}=(\d+)$", w, re.M).group(1)) for k in ("TERM_S", "GRACE_S"))
+    assert term + grace == _fit_ceiling(games) and grace == 10
+    if not new.exists():
+        assert term + grace == 2820 and "PROVISIONAL" in _path(TRAIN).read_text().split("set -u\n", 1)[0]
+
+
+# ─────────────────────────────── fake launches of the REAL wrappers ───────────────────────────────
+
+def _fake_repo(tmp, kind, term_s=None):
+    """A throwaway repository: the real wrapper (TERM_S changed only when a test says so), its gate opened by a one-line
+    commit, and three stubs at this kind's paths."""
+    w = WRAPPERS[kind]
+    repo = tmp / "repo"
+    pkg = repo / "scripts/GPU/alphazero"
+    pkg.mkdir(parents=True)
+    for d in (repo / "scripts", repo / "scripts/GPU", pkg):
+        (d / "__init__.py").write_text("")
+    gate = pkg / w["gate_rel"]
+    gate.write_text(f'"""stub gate"""\n{w["gate"]} = False\n')
+    (pkg / "idle_gate.py").write_text(STUB_IDLE)
+    (pkg / "background_compute.py").write_text(STUB_BG)
+    stub = STUB_PILOT.replace("combination-policy-throughput", f"combination-policy-{w['stem']}").replace(
+        '"head": head, "written_by": "script"}', '"head": head, "written_by": "script",\n'
+        '                                                 "amendment_sha256": os.environ["FAKE_AMENDMENT_SHA"]}')
+    assert stub.count(f"combination-policy-{w['stem']}") == 2 and "FAKE_AMENDMENT_SHA" in stub
+    (pkg / "combination_policy_pilot.py").write_text(stub)
+    wdir = repo / f"docs/superpowers/evidence/combination-policy-{w['stem']}-run"
+    wdir.mkdir(parents=True)
+    raw = _path(kind).read_bytes()
+    if term_s is not None:
+        assert raw.count(f"\nTERM_S={w['term']}\n".encode()) == 1
+        raw = raw.replace(f"\nTERM_S={w['term']}\n".encode(), f"\nTERM_S={term_s}\n".encode())
+    (wdir / "01_wrapper.sh").write_bytes(raw)
+    (repo / ".venv/bin").mkdir(parents=True)
+    (repo / ".venv/bin/python").symlink_to(sys.executable)
+    ckpt = repo / "checkpoints/alphazero-v2-calib020-from0409"
+    ckpt.mkdir(parents=True)
+    (ckpt / "model_iter_0001.safetensors").write_bytes(b"not a model")
+    (repo / ".gitignore").write_text(".venv/\ncheckpoints/\n__pycache__/\nscratch/\n")
+    _git(tmp, "init", "-q", str(repo))
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-qm", "base")
+    gate.write_text(gate.read_text().replace(f"{w['gate']} = False", f"{w['gate']} = True"))
+    _git(repo, "commit", "-qam", "open the gate")
+    (repo / "scratch").mkdir()
+    return repo, wdir, gate
+
+
+def _launch(repo, wdir, idle="idle", bg="clear", run="ok", timeout=60):
+    env = {k: v for k, v in os.environ.items() if k not in ("MLX_ENABLE_TF32", "PYTHONPATH")}
+    env.update(FAKE_IDLE=idle, FAKE_BG=bg, FAKE_RUN=run, FAKE_OUT=str(repo / "scratch"), PYTHONDONTWRITEBYTECODE="1",
+               FAKE_CARD_SHA=P.CARD_SHA256, FAKE_AMENDMENT_SHA=P.CYCLE2_AMENDMENT[1])
+    return subprocess.run(["bash", str(wdir / "01_wrapper.sh")], cwd=str(repo), env=env, capture_output=True,
+                          text=True, timeout=timeout)
+
+
+@pytest.mark.parametrize("kind", [GEN, TRAIN])
+@pytest.mark.parametrize("idle, bg", [("busy", "clear"), ("idle", "boinc"), ("idle", "failed")],
+                         ids=["busy", "boinc", "check-fails"])
+def test_FAKE_LAUNCH_A_BUSY_MACHINE_BOINC_OR_A_FAILED_CHECK_PREVENTS_THE_LAUNCH(tmp_path, kind, idle, bg):
+    repo, wdir, gate = _fake_repo(tmp_path, kind)
+    p = _launch(repo, wdir, idle, bg)
+    assert p.returncode == 1 and ": nothing launched" in p.stderr, p.stderr
+    assert "FAKE_LAUNCHED" not in p.stdout + p.stderr
+    assert sorted(x.name for x in wdir.iterdir()) == ["01_wrapper.sh"]
+    assert f"{WRAPPERS[kind]['gate']} = False\n" in gate.read_text()
+
+
+@pytest.mark.parametrize("kind", [GEN, TRAIN])
+def test_FAKE_LAUNCH_AN_IDLE_MACHINE_REACHES_ITS_RUN_with_its_exact_arguments_and_ceiling(tmp_path, kind):
+    repo, wdir, gate = _fake_repo(tmp_path, kind)
+    p = _launch(repo, wdir, run="record")
+    assert p.returncode == 0, p.stderr
+    launched = json.loads((wdir / "run.stdout.txt").read_text().split("FAKE_LAUNCHED", 1)[1])
+    ckpt = str(repo.resolve() / "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors")
+    assert launched["argv"] == ["run", kind, "--checkpoint", ckpt] and launched["tf32"] == "0"
+    outer = json.loads((wdir / "outer.json").read_text())
+    assert outer["outcome"] == "COMPLETED" and outer["survivors"] == "" and outer["gate_restored"] is True
+    assert outer["term_s"] == WRAPPERS[kind]["term"] and outer["grace_s"] == 10 and outer["record_by"] == "script"
+    rec = json.loads((wdir.parent / f"combination-policy-{WRAPPERS[kind]['stem']}" / "record.json").read_text())
+    assert rec["amendment_sha256"] == P.CYCLE2_AMENDMENT[1] and not P.outer_faults(outer, rec)
+    assert f"{WRAPPERS[kind]['gate']} = False\n" in gate.read_text()
+
+
+@pytest.mark.parametrize("kind", [GEN, TRAIN])
+def test_FAKE_LAUNCH_THE_CEILING_TERMINATES_THE_WHOLE_GROUP_at_its_paths(tmp_path, kind):
+    """TERM_S changed to 2 in this copy only: the run and its child outlive it; the group TERM ends both, and the
+    wrapper's VOID record lands in this kind's evidence directory."""
+    repo, wdir, gate = _fake_repo(tmp_path, kind, term_s=2)
+    t = time.monotonic()
+    p = _launch(repo, wdir, run="outlive")
+    child = int((repo / "scratch/child.pid").read_text())
+    assert time.monotonic() - t < 30 and p.returncode == 124, p.stderr
+    for _ in range(50):
+        if not _alive(child):
+            break
+        time.sleep(0.1)
+    assert not _alive(child)
+    outer = json.loads((wdir / "outer.json").read_text())
+    assert outer["outcome"] == "TIMEOUT" and outer["inner_exit"] == 124 and outer["survivors"] == ""
+    rec = json.loads((wdir.parent / f"combination-policy-{WRAPPERS[kind]['stem']}" / "record.json").read_text())
+    assert outer["record_by"] == "wrapper" and rec["status"] == "VOID" and rec["void"]["step"] == "timeout"
+    assert f"{WRAPPERS[kind]['gate']} = False\n" in gate.read_text()
+
+
+# ─────────────────────────────── the generation seed-survey copy (built, never run here) ──────────────────────────────
+
+def test_THE_SURVEY_COPY_IS_THE_FIRST_CORPUS_S_WITH_ONLY_THE_STATED_DIFFERENCES():
+    """Below the docstring: the paths, the plan's kind, the module name, the titles and verdict lines, line for line. The
+    block size, method, rule, scope and controls are the first corpus's. The docstring is this cycle's paragraph followed
+    by the first corpus's description unchanged."""
+    doc1, code1 = _split(SURVEY_1)
+    doc, code = _split(SURVEY)
+    assert doc.endswith(doc1) and AMEND in doc[:-len(doc1)]
+    a, b = code1.splitlines(), code.splitlines()
+    assert len(a) == len(b)
+    assert [y.strip() for x, y in zip(a, b) if x != y] == [
+        'HERE = "docs/superpowers/evidence/combination-policy-cycle2-generate-seed-survey"',
+        'PLAN = "docs/superpowers/evidence/combination-policy-cycle2-generate-run/plan.json"',
+        'VERDICT_OK = "THE COMBINATION-POLICY CYCLE-2 GENERATION BLOCK IS CLEAN"',
+        'spec = importlib.util.spec_from_file_location(f"_combination_policy_cycle2_generate_{key}", p)',
+        'return {"kind": "combination-policy-cycle2-generate-plan/1", "base": base, "n_slots": N_SLOTS,',
+        'faults.append("the cycle-2 generation plan is absent or not committed")',
+        'faults.append("the cycle-2 generation plan is not build_plan of the surveyed block")',
+        "say(f\"COMBINATION POLICY PILOT -- CYCLE-2 GENERATION GAME-SEED {'SURVEY' if mode == 'survey' else "
+        "'COLLISION PROOF, mode ' + mode.upper()}\")",
+        "say(f\"PROOF VERDICT ({mode}): {'THE COMBINATION-POLICY CYCLE-2 GENERATION BLOCK IS CLEAN AND THE STATE IS AS "
+        "EXPECTED' if ok else 'NOT PROVEN -- STOP'}\""]
+
+
+def test_THE_SURVEY_COPY_SERVES_THE_KIND_IN_THE_2027_BAND_and_holds_no_seed_literal():
+    survey = _load(SURVEY, "_c2_survey")
+    kind = P.KINDS[GEN]
+    assert survey.N_SLOTS == kind["slots"] == 1000 and survey.PLAN == kind["plan"]
+    S, _Pf, SEL = survey.load_method()
+    assert S.N == 1000 and S.scan is SEL.scan and SEL.__name__.endswith("seed_band_2027")
+    assert survey.PINNED == _load(SURVEY_1, "_c1_survey_pins").PINNED
+    base = SEL.candidate([], [], 1000)[1]
+    assert survey.build_plan(base, "0" * 64) == {"kind": "combination-policy-cycle2-generate-plan/1", "base": base,
+                                                 "n_slots": 1000, "survey_record_sha256": "0" * 64}
+    assert set(survey.OUT.values()) & set(_load(SURVEY_1, "_c1_survey_out").OUT.values()) == set()
+    code = _split(SURVEY)[1]
+    assert not SB.scan(code) and not re.search(r"\b20[0-9]{7}\b", code)
+
+
+def test_THE_SURVEY_COPY_S_CONTROLS_ALL_PASS_on_a_synthetic_2027_block():
+    survey = _load(SURVEY, "_c2_survey_controls")
+    S, Pf, SEL, block, prior, masks = _synthetic(survey)
+    rec = {"head": "0" * 40, "registry_sha256": "0" * 64, "base": block[0], "block": block}
+    groups = {"state": survey._state_controls(S, Pf, rec, "a" * 64),
+              "plants": S._plant_controls(block, prior, masks, {}, True),
+              "exemptions": S._exemption_controls(block), "enumeration": Pf._enumeration_controls(S),
+              "two-band": survey._two_band_controls(S, SEL, block, prior, masks)}
+    assert {k: len(v) for k, v in groups.items()} == {"state": 12, "plants": 8, "exemptions": 6, "enumeration": 6,
+                                                      "two-band": 10}
+    for k, v in groups.items():
+        assert all(ok for _l, ok, _d in v), (k, [r for r in v if not r[1]])
+
+
+def _mode(repo, mode, monkeypatch, capsys):
+    """Run the copy's `main` for one mode, loaded from the synthetic repository, so every output is there."""
+    import importlib.util
+    monkeypatch.setattr(sys, "dont_write_bytecode", True)
+    spec = importlib.util.spec_from_file_location(f"_c2_survey_{mode}", repo / "docs/superpowers/evidence" / SURVEY)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    code = mod.main(["x", "--mode", mode])
+    capsys.readouterr()
+    return mod, code, (repo / mod.OUT[mode]).read_text(encoding="utf-8")
+
+
+def test_THE_THREE_MODES_REHEARSED_ON_A_SYNTHETIC_REPOSITORY(tmp_path, monkeypatch, capsys):
+    """survey -> pre -> registration -> post, on a throwaway repository holding only the copy, the pinned method, a
+    synthetic registry and two planted literals. Nothing of the real repository is scanned or written: this is no
+    survey of it."""
+    from scripts.GPU.alphazero import e4_screen_reference as REG
+    repo = tmp_path / "synthetic"
+
+    def git(*a):
+        return subprocess.check_output(["git", "-c", "user.name=t", "-c", "user.email=t@t", *a], cwd=repo,
+                                       text=True).strip()
+    for rel in (*PINNED_FILES, f"docs/superpowers/evidence/{SURVEY}"):
+        (repo / rel).parent.mkdir(parents=True, exist_ok=True)
+        (repo / rel).write_bytes((ROOT / rel).read_bytes())
+    top = max([SB.BAND[0]] + [hi for lo, hi in REG.ACCOUNTED_SEED_INTERVALS if hi > SB.BAND[0]])
+    old, new = SB.BAND_2026[0] + 61_000, top + 23_456
+    reg = repo / "scripts/GPU/alphazero/e4_screen_reference.py"
+    reg.write_text(f"ACCOUNTED_SEED_INTERVALS = (\n    ({old}, {old + 10}),\n)\nEXPOSED_SEED_INTERVALS = ()\n"
+                   "RETIRED_SEED_INTERVALS = ()\nTEST_ONLY_SEED_INTERVALS = ()\n")
+    (repo / "tests").mkdir()
+    (repo / "tests/test_planted.py").write_text(f"A = {old + 500}\nB = {new:_}\n")
+    (repo / "docs/superpowers/evidence/combination-policy-cycle2-generate-run").mkdir(parents=True)
+    git("init", "-q")
+    git("add", "-A")
+    git("commit", "-qm", "synthetic")
+
+    mod, code, survey = _mode(repo, "survey", monkeypatch, capsys)
+    assert code == 0, survey[-2500:]
+    anchor, base, block = SB.candidate(REG.ACCOUNTED_SEED_INTERVALS, [new], 1000)
+    assert anchor == new and f"BASE = {base}; block = [{block[0]}, {block[1]}) -- 1000 seeds" in survey
+    assert survey.endswith("SURVEY VERDICT   : THE COMBINATION-POLICY CYCLE-2 GENERATION BLOCK IS CLEAN\n")
+    passed, total = re.search(r"^controls passed: (\d+)/(\d+)$", survey, re.M).groups()
+    assert passed == total and int(total) == 55, total
+    git("add", "-A")
+    git("commit", "-qm", "survey record")
+    _m, code, pre = _mode(repo, "pre", monkeypatch, capsys)
+    assert code == 0 and "EXPECTED STATE (pre): HOLDS" in pre, pre[-2500:]
+    git("add", "-A")
+    git("commit", "-qm", "pre record")
+    sha = hashlib.sha256((repo / mod.OUT["survey"]).read_bytes()).hexdigest()
+    reg.write_text(reg.read_text().replace(f"    ({old}, {old + 10}),\n)",
+                                           f"    ({old}, {old + 10}),\n    ({block[0]}, {block[1]}),\n)"))
+    (repo / mod.PLAN).write_text(json.dumps(mod.build_plan(block[0], sha), indent=1, sort_keys=True) + "\n")
+    git("add", "-A")
+    git("commit", "-qm", "registration")
+    _m, code, post = _mode(repo, "post", monkeypatch, capsys)
+    assert code == 0 and "EXPECTED STATE (post): HOLDS" in post, post[-2500:]
+    assert post.endswith("PROOF VERDICT (post): THE COMBINATION-POLICY CYCLE-2 GENERATION BLOCK IS CLEAN AND THE STATE "
+                         "IS AS EXPECTED\n")
+
+
+# ─────────────────────────────── the generation closing copy (built, never run here) ──────────────────────────────────
+
+def test_THE_CLOSING_COPY_IS_THE_FIRST_CORPUS_S_WITH_ONLY_THE_STATED_DIFFERENCES():
+    doc1, code1 = _split(CLOSING_1)
+    doc, code = _split(CLOSING)
+    assert doc.endswith(doc1) and AMEND in doc[:-len(doc1)]
+    a, b = code1.splitlines(), code.splitlines()
+    assert len(a) == len(b) and not [t for t in difflib.SequenceMatcher(None, a, b, autojunk=False).get_opcodes()
+                                     if t[0] in ("insert", "delete")]
+    assert {y.strip() for x, y in zip(a, b) if x != y} == {
+        'HERE = "docs/superpowers/evidence/combination-policy-cycle2-generate-seed-closing"',
+        'RUN = "docs/superpowers/evidence/combination-policy-cycle2-generate"',
+        'RUN_DIR = "docs/superpowers/evidence/combination-policy-cycle2-generate-run"',
+        'lines = ["COMBINATION POLICY PILOT -- CYCLE-2 GENERATION SEED-USAGE DERIVATION (closing)", "=" * 96,'}
+
+
+def test_THE_CLOSING_COPY_SERVES_THE_KIND_and_holds_no_seed_literal_and_its_controls_pass():
+    closing = _load(CLOSING, "_c2_closing")
+    kind = P.KINDS[GEN]
+    assert closing.N_SLOTS == kind["slots"] == 1000 and closing.INPUTS[0] == kind["plan"]
+    assert closing.RUN == kind["evidence"] and closing.RUN_DIR == str(pathlib.Path(kind["plan"]).parent)
+    assert closing.OUT == "docs/superpowers/evidence/combination-policy-cycle2-generate-seed-closing/02_derive_usage_run.txt"
+    code = _split(CLOSING)[1]
+    assert not SB.scan(code) and not re.search(r"\b20[0-9]{7}\b", code)
+    results = closing._controls(SB.candidate([], [], 1000)[1])          # a synthetic base: no block is registered
+    assert len(results) == 21 and all(ok for _l, ok, _d in results), [r for r in results if not r[1]]

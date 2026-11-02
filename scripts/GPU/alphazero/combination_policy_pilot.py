@@ -49,13 +49,24 @@ each game and the final claim count after the last; background_compute is read b
   rule (mirror_halving_combination.strength_verdict): PASS iff the mean pair score - sqrt(ln 40 / 1018) > 0.5 AND the
   evaluations ratio <= 1.05 AND the search-seconds ratio <= 1.10, ratios of the whole run's totals. Only this run's
   games are scored; the screen's are not pooled.
+* `run cycle2_generate` (amendment `docs/superpowers/2026-11-02-combination-policy-second-cycle-amendment.md`, pinned by
+  sha256; BUILT 2026-11-02 on the user's review, its gate closed): generation's path exactly, on its own registered
+  block, evidence and rows directory, with the frozen first-cycle head as the teacher on both sides. Admitted by the
+  first training run's committed record (ELIGIBLE) and outer.json, TRAINED_HEAD and the timing. Before any worker starts,
+  `_bind_teacher` installs the head on the served network and requires the pinned digests, then compares the teacher's
+  and the parent's opening priors through the same uncompiled evaluator: equal priors are a VOID.
+* `run cycle2_train` (the same amendment; BUILT 2026-11-02, its gate closed): training's path exactly, on the CPU, on
+  cycle2_generate's corpus alone, starting from the teacher's weights on a fresh optimizer. The value baseline is still
+  the parent's, taken before the head is installed; all three starting digests must be the teacher's; the corpus's
+  record must have played this teacher. Admitted by the first training run's record and outer.json, cycle2_generate's
+  record and outer.json, TRAINED_HEAD and the timing. Its verdict permits proposing evaluation and nothing else.
 * `time`: the build's CPU timing (card §5 step 1) -- 20 synchronized updates at the real architecture on synthetic
   inputs with random weights, no checkpoint -- and the training ceiling it prices.
 
 Any failure, exception or SIGTERM inside the record boundary is a VOID with record.json written by the script; a
 STOP rule is a COMPLETED run with verdict STOP. One shot each; no retry, top-up or extension.
 
-    MLX_ENABLE_TF32=0 python -m scripts.GPU.alphazero.combination_policy_pilot run throughput|throughput2|generate|train|screen|strength --checkpoint <abs path>
+    MLX_ENABLE_TF32=0 python -m scripts.GPU.alphazero.combination_policy_pilot run throughput|throughput2|generate|train|screen|strength|cycle2_generate|cycle2_train --checkpoint <abs path>
     MLX_ENABLE_TF32=0 python -m scripts.GPU.alphazero.combination_policy_pilot time
 """
 from __future__ import annotations
@@ -76,6 +87,8 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 
+from . import combination_policy_cycle2_generate_authorization as CYCLE2_GENERATE_GATE
+from . import combination_policy_cycle2_train_authorization as CYCLE2_TRAIN_GATE
 from . import combination_policy_generate_authorization as GENERATE_GATE
 from . import combination_policy_screen_authorization as SCREEN_GATE
 from . import combination_policy_strength_authorization as STRENGTH_GATE
@@ -103,6 +116,9 @@ PINNED = {"scripts/GPU/alphazero/mirror_halving_combination.py":
           "beca0ec7e182b010185473b2550c1edd2a6245dab2b6b4d9b3222db2b4750476"}
 CACHE_DIR = pathlib.Path.home() / "twixt-cache" / "combination-policy-pilot"     # the corpus: outside the repo
 N_WORKERS, MAX_BATCH_ROWS = 18, 14              # entry 20's measured starting settings; not established optima here
+#: the second policy-improvement cycle (the user's review, 2026-11-02): one amendment, pinned by both of its kinds
+CYCLE2_AMENDMENT = ("docs/superpowers/2026-11-02-combination-policy-second-cycle-amendment.md",
+                    "94c7f0df5860aac9d78f3c6736fe8b76f0c4279d8ce7a23edc1f4172b10a9ed3")
 KINDS = {"throughput": {"slots": 144, "keep_rows": False, "gate": (THROUGHPUT_GATE, "COMBINATION_POLICY_THROUGHPUT_AUTHORIZED"),
                         "evidence": "docs/superpowers/evidence/combination-policy-throughput",
                         "plan": "docs/superpowers/evidence/combination-policy-throughput-run/plan.json"},
@@ -124,7 +140,16 @@ KINDS = {"throughput": {"slots": 144, "keep_rows": False, "gate": (THROUGHPUT_GA
                     "plan": "docs/superpowers/evidence/combination-policy-screen-run/plan.json"},
          "strength": {"pairs": K.STRENGTH["pairs"], "gate": (STRENGTH_GATE, "COMBINATION_POLICY_STRENGTH_AUTHORIZED"),
                       "evidence": "docs/superpowers/evidence/combination-policy-strength",
-                      "plan": "docs/superpowers/evidence/combination-policy-strength-run/plan.json"}}
+                      "plan": "docs/superpowers/evidence/combination-policy-strength-run/plan.json"},
+         "cycle2_generate": {"role": "generate", "teacher": True, "slots": 1000, "keep_rows": True,
+                             "gate": (CYCLE2_GENERATE_GATE, "COMBINATION_POLICY_CYCLE2_GENERATE_AUTHORIZED"),
+                             "evidence": "docs/superpowers/evidence/combination-policy-cycle2-generate",
+                             "plan": "docs/superpowers/evidence/combination-policy-cycle2-generate-run/plan.json",
+                             "amendment": CYCLE2_AMENDMENT},
+         "cycle2_train": {"role": "train", "teacher": True, "corpus": "cycle2_generate",
+                          "gate": (CYCLE2_TRAIN_GATE, "COMBINATION_POLICY_CYCLE2_TRAIN_AUTHORIZED"),
+                          "evidence": "docs/superpowers/evidence/combination-policy-cycle2-train",
+                          "amendment": CYCLE2_AMENDMENT}}
 TIMING_EVIDENCE = "docs/superpowers/evidence/combination-policy-timing"
 #: what each step needs committed first: (evidence dir, record field, value)
 ADMISSION = {"throughput": [(TIMING_EVIDENCE, "status", "COMPLETED")],
@@ -136,7 +161,13 @@ ADMISSION = {"throughput": [(TIMING_EVIDENCE, "status", "COMPLETED")],
              "screen": [(KINDS["train"]["evidence"], "verdict", "ELIGIBLE")],
              #: the strength comparison (the user's review, 2026-11-01): training's record and the screen's, CONTINUE
              "strength": [(KINDS["train"]["evidence"], "verdict", "ELIGIBLE"),
-                          (KINDS["screen"]["evidence"], "verdict", "CONTINUE")]}
+                          (KINDS["screen"]["evidence"], "verdict", "CONTINUE")],
+             #: the second cycle (the user's review, 2026-11-02): the teacher's training run, ELIGIBLE, then its corpus
+             "cycle2_generate": [(KINDS["train"]["evidence"], "verdict", "ELIGIBLE"),
+                                 (TIMING_EVIDENCE, "status", "COMPLETED")],
+             "cycle2_train": [(KINDS["train"]["evidence"], "verdict", "ELIGIBLE"),
+                              (KINDS["cycle2_generate"]["evidence"], "status", "COMPLETED"),
+                              (TIMING_EVIDENCE, "status", "COMPLETED")]}
 #: what each step needs from a launch wrapper's committed outer.json too (the user's ruling, ledger 2026-10-29): an
 #: outer TIMEOUT, unconfirmed cleanup or missing outer evidence refuses, whatever the inner record says. Generation
 #: read the throughput check's until the generation amendment (2026-10-30) removed that requirement; training reads
@@ -145,7 +176,10 @@ OUTER_ADMISSION: Dict[str, List[Tuple[str, str]]] = {
     "train": [(str(pathlib.Path(KINDS["generate"]["plan"]).parent), KINDS["generate"]["evidence"])],
     "screen": [("docs/superpowers/evidence/combination-policy-train-run", KINDS["train"]["evidence"])],
     "strength": [("docs/superpowers/evidence/combination-policy-train-run", KINDS["train"]["evidence"]),
-                 (str(pathlib.Path(KINDS["screen"]["plan"]).parent), KINDS["screen"]["evidence"])]}
+                 (str(pathlib.Path(KINDS["screen"]["plan"]).parent), KINDS["screen"]["evidence"])],
+    "cycle2_generate": [("docs/superpowers/evidence/combination-policy-train-run", KINDS["train"]["evidence"])],
+    "cycle2_train": [("docs/superpowers/evidence/combination-policy-train-run", KINDS["train"]["evidence"]),
+                     (str(pathlib.Path(KINDS["cycle2_generate"]["plan"]).parent), KINDS["cycle2_generate"]["evidence"])]}
 #: the screen's candidate (the user's review, 2026-10-31): exactly the head the one training run saved -- these bytes,
 #: named by its committed record with these digests after training (the encoder's and value head's unchanged)
 TRAINED_HEAD = {"file": f"{KINDS['train']['evidence']}/head.npz",
@@ -243,6 +277,31 @@ class GenSeams:
     background: Callable[[], Dict[str, Any]]
     generate: Callable[..., Dict[str, Any]]
     rows_dir: pathlib.Path
+    #: the second cycle only (the amendment's §2 and §8.1): the binding, its install, the digests, the parent to compare
+    teacher: Optional[Mapping[str, Any]] = None
+    install_teacher: Optional[Callable[[Any], Dict[str, str]]] = None
+    digests: Optional[Callable[[Any], Dict[str, str]]] = None
+    load_parent: Optional[Callable[[], Any]] = None
+
+
+def _bind_teacher(seams: GenSeams, evaluator: Any, rec: Dict[str, Any]) -> None:
+    """Before any worker starts: the frozen head on the served network, its digests the pinned ones (the primary identity
+    check), then the teacher-reach probe through the same uncompiled evaluator class. A VOID unless all of it holds."""
+    teacher = seams.teacher
+    rec["teacher"] = {k: teacher[k] for k in ("file", "sha256", "digests")}
+    rec["teacher_digests"] = seams.install_teacher(evaluator.network)
+    if rec["teacher_digests"] != teacher["digests"]:
+        raise Void("teacher", "the served network's digests are not the teacher's")
+    parent = seams.load_parent()
+    if parent is evaluator or parent.network is evaluator.network:
+        raise Void("teacher", "the probe's parent shares the teacher's evaluator or network")
+    got = seams.digests(parent.network)
+    if any(got[p] != teacher["digests"][p] for p in ("encoder.", "value_head.")) or \
+            got["policy_head."] == teacher["digests"]["policy_head."]:
+        raise Void("teacher", "the probe's parent is not calib020_0001's parent network")
+    rec["teacher_probe"] = opening_probe(evaluator, parent)
+    if not rec["teacher_probe"]["max_prior_abs_diff"] > 0.0:
+        raise Void("teacher", "the teacher's opening priors equal the parent's: generation does not reach the head")
 
 
 def _generate(kind: str, seams: GenSeams, out_dir: pathlib.Path, rec: Dict[str, Any], log) -> None:
@@ -250,6 +309,8 @@ def _generate(kind: str, seams: GenSeams, out_dir: pathlib.Path, rec: Dict[str, 
 
     spec = KINDS[kind]
     n = spec["slots"]
+    if bool(spec.get("teacher")) != (seams.teacher is not None):
+        raise Void("teacher", f"{kind} and its seams disagree about a teacher")
     rec["versions"] = seams.versions()
     if rec["versions"] != VERSIONS:
         raise Void("versions", f"{rec['versions']} are not the card's {VERSIONS}")
@@ -269,6 +330,8 @@ def _generate(kind: str, seams: GenSeams, out_dir: pathlib.Path, rec: Dict[str, 
     t = time.monotonic()
     evaluator = seams.load_evaluator()
     rec["load_seconds"] = round(time.monotonic() - t, 3)
+    if seams.teacher is not None:
+        _bind_teacher(seams, evaluator, rec)
     rec["mode_at_load"] = seams.require_eval(evaluator, "after load")
     rec["modules"] = seams.loaded_modules()
     rows_dir = seams.rows_dir / kind
@@ -347,7 +410,7 @@ def _generate(kind: str, seams: GenSeams, out_dir: pathlib.Path, rec: Dict[str, 
                                    **GENERATE_CEILING}
 
 
-def _real_gen_seams(checkpoint: pathlib.Path) -> GenSeams:
+def _real_gen_seams(checkpoint: pathlib.Path, teacher: Optional[Mapping[str, Any]] = None) -> GenSeams:
     from . import background_compute as BG
     from . import e4_screen_reference as REG
 
@@ -361,11 +424,14 @@ def _real_gen_seams(checkpoint: pathlib.Path) -> GenSeams:
         network.eval()
         return LocalGPUEvaluator(network)          # compile=False: the self-play arbiter's evaluator
 
+    extra = {} if teacher is None else {
+        "teacher": teacher, "digests": network_digests, "load_parent": load_evaluator,
+        "install_teacher": lambda net: install_trained_head(net, _npz_arrays(teacher["bytes"]))}
     return GenSeams(versions=_versions, read_plan=lambda rel: json.loads((ROOT / rel).read_text()), seed_ok=seed_ok,
                     checkpoint_sha1=lambda: hashlib.sha1(checkpoint.read_bytes()).hexdigest(),
                     load_evaluator=load_evaluator, require_eval=lambda ev, when: M._require_eval(ev.network, when),
                     loaded_modules=M._real_seams(checkpoint).loaded_modules, background=BG.observe,
-                    generate=CS.generate, rows_dir=CACHE_DIR)
+                    generate=CS.generate, rows_dir=CACHE_DIR, **extra)
 
 
 # ─────────────────────────────── the objective (card §4) ───────────────────────────────
@@ -547,6 +613,10 @@ class TrainSeams:
     checkpoint_sha1: Callable[[], str]
     load_network: Callable[[], Tuple[Any, Dict[str, int]]]
     loaded_modules: Callable[[], Dict[str, str]]
+    #: the second cycle only (the amendment's §2 and §8.2): the binding, its install, the corpus's evidence directory
+    teacher: Optional[Mapping[str, Any]] = None
+    install_teacher: Optional[Callable[[Any], List[str]]] = None
+    corpus_evidence: Optional[str] = None
 
 
 def _train(recipe: Mapping[str, Any], seams: TrainSeams, out_dir: pathlib.Path, rec: Dict[str, Any], log) -> None:
@@ -572,6 +642,12 @@ def _train(recipe: Mapping[str, Any], seams: TrainSeams, out_dir: pathlib.Path, 
     if sha1 != M.CHECKPOINT_SHA1:
         raise Void("checkpoint", f"SHA-1 {sha1} is not calib020_0001's")
     rec["checkpoint_sha1"] = sha1
+    teacher = None if seams.teacher is None else {k: seams.teacher[k] for k in ("file", "sha256", "digests")}
+    if teacher is not None:
+        played = seams.read_record(seams.corpus_evidence)
+        if played.get("teacher") != teacher or played.get("checkpoint_sha1") != sha1:
+            raise Void("teacher", "the corpus's record did not play this teacher on calib020_0001")
+        rec["teacher"] = teacher
 
     log("phase", name="corpus")
     games = seams.read_games()
@@ -594,17 +670,23 @@ def _train(recipe: Mapping[str, Any], seams: TrainSeams, out_dir: pathlib.Path, 
     probe = i_held[:min(len(i_held), 32)]
     parent_logits = np.array(network.policy_head.forward_padded(*batch_inputs(network, data, probe)[0]))
     v_parent = values(network, data, i_held)
-    surface = PHC.install(network, "R", init_seed=recipe["init_seed"])
-    rec["surface"] = {"names": surface, "parameters": PHC.SURFACES["R"][1]}
-    rec["r_init_sha256"] = PHC.residual_sha256(PHC.residual_arrays(network.policy_head))
-    if rec["r_init_sha256"] != PHC.residual_sha256(PHC.residual_init(recipe["init_seed"])):
-        raise Void("install", "arm R's residual path does not start at its seed's arrays")
-    if not np.array_equal(np.array(network.policy_head.forward_padded(*batch_inputs(network, data, probe)[0])),
-                          parent_logits):
-        raise Void("install", "arm R does not start bit-equal to the parent's policy head")
+    if teacher is None:
+        surface = PHC.install(network, "R", init_seed=recipe["init_seed"])
+        rec["surface"] = {"names": surface, "parameters": PHC.SURFACES["R"][1]}
+        rec["r_init_sha256"] = PHC.residual_sha256(PHC.residual_arrays(network.policy_head))
+        if rec["r_init_sha256"] != PHC.residual_sha256(PHC.residual_init(recipe["init_seed"])):
+            raise Void("install", "arm R's residual path does not start at its seed's arrays")
+        if not np.array_equal(np.array(network.policy_head.forward_padded(*batch_inputs(network, data, probe)[0])),
+                              parent_logits):
+            raise Void("install", "arm R does not start bit-equal to the parent's policy head")
+    else:                                           # v_parent above stays the baseline: taken before this install
+        surface = seams.install_teacher(network)
+        rec["surface"] = {"names": surface, "parameters": PHC.SURFACES["R"][1]}
     _require_eval_mode(network, "after install")
     before = snapshot(network)
     rec["digests_before"] = {p: digest(before, p) for p in ("encoder.", "value_head.", "policy_head.")}
+    if teacher is not None and rec["digests_before"] != teacher["digests"]:
+        raise Void("teacher", "the student's three starting digests are not the teacher's")
 
     def stop(reason: str, detail: str) -> None:
         rec["verdict"], rec["stop"] = "STOP", {"rule": reason, "detail": detail}
@@ -672,8 +754,9 @@ def _train(recipe: Mapping[str, Any], seams: TrainSeams, out_dir: pathlib.Path, 
     rec["verdict"] = "ELIGIBLE"
 
 
-def _real_train_seams(checkpoint: pathlib.Path) -> TrainSeams:
-    corpus = KINDS["generate"]["evidence"]
+def _real_train_seams(checkpoint: pathlib.Path, corpus_kind: str = "generate",
+                      teacher: Optional[Mapping[str, Any]] = None) -> TrainSeams:
+    corpus = KINDS[corpus_kind]["evidence"]
 
     def read_games():
         rel = f"{corpus}/games.jsonl"
@@ -682,7 +765,7 @@ def _real_train_seams(checkpoint: pathlib.Path) -> TrainSeams:
         return [json.loads(line) for line in (ROOT / rel).read_text().splitlines() if line.strip()]
 
     def read_rows(game):
-        path = CACHE_DIR / "generate" / game["rows_file"]
+        path = CACHE_DIR / corpus_kind / game["rows_file"]
         if _sha_file(path) != game["rows_sha256"]:
             raise Void("corpus", f"{path} is not the file generation wrote")
         with np.load(path) as z:
@@ -694,9 +777,12 @@ def _real_train_seams(checkpoint: pathlib.Path) -> TrainSeams:
         network.eval()
         return network, {"in_channels": in_channels, "hidden": hidden, "n_blocks": n_blocks}
 
+    extra = {} if teacher is None else {
+        "teacher": teacher, "corpus_evidence": corpus,
+        "install_teacher": lambda net: _install_r_arrays(net, _npz_arrays(teacher["bytes"]))}
     return TrainSeams(versions=_versions, read_record=_read_record, read_games=read_games, read_rows=read_rows,
                       checkpoint_sha1=lambda: hashlib.sha1(checkpoint.read_bytes()).hexdigest(),
-                      load_network=load_network, loaded_modules=M._real_seams(checkpoint).loaded_modules)
+                      load_network=load_network, loaded_modules=M._real_seams(checkpoint).loaded_modules, **extra)
 
 
 # ─────────────────────────────── the screen (card §5 step 5) ───────────────────────────────
@@ -743,21 +829,27 @@ def network_digests(network) -> Dict[str, str]:
     return {p: digest(arrays, p) for p in ("encoder.", "value_head.", "policy_head.")}
 
 
-def install_trained_head(network, arrays: Mapping[str, np.ndarray]) -> Dict[str, str]:
-    """Arm R's head (the recipe's init_seed) with the trained arrays loaded over every one of its arrays, the network
-    left in eval mode; returns its digests. Refuses arrays that are not exactly the head's names, shapes and dtypes."""
+def _install_r_arrays(network, arrays: Mapping[str, np.ndarray]) -> List[str]:
+    """Arm R's head (the recipe's init_seed) with the saved arrays loaded over every one of its arrays, the network left
+    in eval mode; returns arm R's surface. Refuses arrays that are not exactly the head's names, shapes and dtypes."""
     import mlx.core as mx
     from mlx.utils import tree_unflatten
 
     from . import policy_head_capacity as PHC
 
-    PHC.install(network, "R", init_seed=RECIPE["init_seed"])
+    surface = PHC.install(network, "R", init_seed=RECIPE["init_seed"])
     have = {k: v for k, v in snapshot(network).items() if k.startswith("policy_head.")}
     if sorted(arrays) != sorted(have) or any((arrays[k].shape, arrays[k].dtype) != (v.shape, v.dtype)
                                              for k, v in have.items()):
         raise Void("head", "the saved arrays are not exactly arm R's head (names, shapes, dtypes)")
     network.policy_head.update(tree_unflatten([(k[len("policy_head."):], mx.array(v)) for k, v in arrays.items()]))
     network.eval()
+    return surface
+
+
+def install_trained_head(network, arrays: Mapping[str, np.ndarray]) -> Dict[str, str]:
+    """`_install_r_arrays`, returning the network's digests."""
+    _install_r_arrays(network, arrays)
     return network_digests(network)
 
 
@@ -1181,6 +1273,7 @@ def run(kind: str, checkpoint: str) -> int:
     if kind not in KINDS:
         raise Refused(f"unknown run {kind!r}")
     _preflight()
+    role = KINDS[kind].get("role", kind)
     gate, name = KINDS[kind]["gate"]
     if getattr(gate, name) is not True:
         raise Refused(f"{name} is closed: the {kind} step is not authorized")
@@ -1189,15 +1282,16 @@ def run(kind: str, checkpoint: str) -> int:
         if not (ROOT / rel).is_file() or M._sha((ROOT / rel).read_bytes()) != sha:
             raise Refused(f"{rel} is not the pinned amendment")
     admission = admitted(kind, _read_record, _read_outer)
-    head = trained_head(_read_record, _read_committed_bytes, kind) if kind in ("screen", "strength") else None
+    needs_head = kind in ("screen", "strength") or KINDS[kind].get("teacher")
+    head = trained_head(_read_record, _read_committed_bytes, kind) if needs_head else None
     ckpt = pathlib.Path(checkpoint)
     if not (ckpt.is_absolute() and ckpt.is_file()):
         raise Refused("--checkpoint must name an existing file by absolute path")
     out = ROOT / KINDS[kind]["evidence"]
     if os.path.lexists(out):
         raise Refused(f"{out} exists: the run is one-shot")
-    if kind == "train":
-        seams = _real_train_seams(ckpt)
+    if role == "train":
+        seams = _real_train_seams(ckpt, KINDS[kind].get("corpus", "generate"), head)
         execute = lambda o, r, lg: _train(RECIPE, seams, o, r, lg)    # noqa: E731
     elif kind in ("screen", "strength"):
         seams = _real_screen_seams(ckpt, head)
@@ -1205,7 +1299,7 @@ def run(kind: str, checkpoint: str) -> int:
     else:
         if KINDS[kind]["keep_rows"] and os.path.lexists(CACHE_DIR / kind):
             raise Refused(f"{CACHE_DIR / kind} exists: the corpus is written once")
-        seams = _real_gen_seams(ckpt)
+        seams = _real_gen_seams(ckpt, head)
         execute = lambda o, r, lg: _generate(kind, seams, o, r, lg)   # noqa: E731
     code, rec = conclude(kind, execute, out, admission, head=M._git("rev-parse", "HEAD"))
     print(json.dumps({"status": rec["status"], "void": rec.get("void"), "run": kind, "verdict": rec.get("verdict"),
@@ -1246,7 +1340,8 @@ def _mlx_loaded() -> bool:
 def main(argv: Sequence[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     usage = ("usage: MLX_ENABLE_TF32=0 python -m scripts.GPU.alphazero.combination_policy_pilot "
-             "run throughput|throughput2|generate|train|screen|strength --checkpoint <abs path> | time")
+             "run throughput|throughput2|generate|train|screen|strength|cycle2_generate|cycle2_train "
+             "--checkpoint <abs path> | time")
     try:
         if argv == ["time"]:
             return run_timing()
