@@ -1174,6 +1174,13 @@ EXPOSED_SEED_INTERVALS = (
     # A post-run accounting edit to a bound file: the committed plan, survey/proof and run records keep their hashes;
     # nothing is rerun.
     (202744100, 202745100),  # SECOND POLICY-IMPROVEMENT CYCLE CORPUS GENERATION -- 1,000 game seeds, exposed whole (no game played)
+    # 🔴 THE SECOND POLICY-IMPROVEMENT CYCLE -- GENERATION ATTEMPT 2 -- THE CLOSING EDIT (2026-11-02), after the ONE authorized
+    # run (inner and outer exit 0, COMPLETED, no survivors). Use DERIVED from the committed run evidence by
+    # evidence/combination-policy-cycle2-generate2-seed-closing/02_* (RECONCILES, 21/21): all 1,000 slots started, with one `claims` event
+    # of 1,000, so the WHOLE BLOCK IS EXPOSED.
+    # A post-run accounting edit to a bound file: the committed plan, survey/proof and run records keep their hashes;
+    # nothing is rerun.
+    (202746200, 202747200),  # SECOND POLICY-IMPROVEMENT CYCLE GENERATION ATTEMPT 2 -- 1,000 game seeds, exposed whole
 )
 
 #: Seeds RESERVED PERMANENTLY FOR TESTS. Unit tests must draw from something, and
@@ -1601,6 +1608,12 @@ RETIRED_SEED_INTERVALS = (
     # A post-run accounting edit to a bound file: the committed plan, survey/proof and run records keep their hashes;
     # nothing is rerun.
     (202744100, 202745100),  # SECOND POLICY-IMPROVEMENT CYCLE CORPUS GENERATION -- 1,000 game seeds, retired whole
+    # 🔴 THE SECOND POLICY-IMPROVEMENT CYCLE -- GENERATION ATTEMPT 2 -- THE CLOSING EDIT (2026-11-02), after the ONE authorized
+    # run (inner and outer exit 0, COMPLETED, no survivors). Use DERIVED from the committed run evidence by
+    # evidence/combination-policy-cycle2-generate2-seed-closing/02_* (RECONCILES, 21/21): the WHOLE block is RETIRED.
+    # A post-run accounting edit to a bound file: the committed plan, survey/proof and run records keep their hashes;
+    # nothing is rerun.
+    (202746200, 202747200),  # SECOND POLICY-IMPROVEMENT CYCLE GENERATION ATTEMPT 2 -- 1,000 game seeds, retired whole
 )
 
 
