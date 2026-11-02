@@ -188,7 +188,7 @@ def test_THE_GAP_FLOOR_IS_THE_BLOCK_S_SIZE_against_literals_in_either_band():
 
 # ─────────────────────────────── the real state ───────────────────────────────
 
-def test_REAL_STATE_the_2027_band_holds_four_closed_blocks():
+def test_REAL_STATE_the_2027_band_holds_four_closed_blocks_and_the_new_attempt_s_registered_one():
     """RE-ANCHORED 2026-10-30 (registration 326004d0): the band's first and only registered block is generation's,
     read from its committed plan (no literal here), ACCOUNTED only; the rule would now place a later block above it.
     RE-ANCHORED 2026-10-30 (generation's closing, K2 569ba2a4): that block is now also EXPOSED and RETIRED whole, the
@@ -208,21 +208,24 @@ def test_REAL_STATE_the_2027_band_holds_four_closed_blocks():
     is the band's fourth ACCOUNTED entry, above the strength comparison's, and in no other list; the first three are still
     the band's only EXPOSED and RETIRED entries; the rule would now place a later block above it.
     RE-ANCHORED 2026-11-02 (that run's VOID and closing, K2): its block is now also EXPOSED and RETIRED whole, after the
-    strength comparison's, in each list."""
+    strength comparison's, in each list.
+    RE-ANCHORED 2026-11-02 (the new attempt's registration 4c599111): its block, read from its committed plan, is the band's
+    fifth ACCOUNTED entry, above the first attempt's, and in no other list; the rule would now place a later block above it."""
     import json
     from scripts.GPU.alphazero import e4_screen_reference as REG
     blocks = []
-    for kind in ("generate", "screen", "strength", "cycle2-generate"):
+    for kind in ("generate", "screen", "strength", "cycle2-generate", "cycle2-generate2"):
         plan = json.loads((ROOT / f"docs/superpowers/evidence/combination-policy-{kind}-run/plan.json").read_text())
         blocks.append((plan["base"], plan["base"] + plan["n_slots"]))
-    gen, screen, strength, cycle2 = blocks
+    gen, screen, strength, cycle2, attempt2 = blocks
     assert gen[1] <= screen[0] and screen[1] <= strength[0] and strength[1] - strength[0] == 1018
     assert strength[1] <= cycle2[0] and cycle2[1] - cycle2[0] == 1000
-    assert [iv for iv in REG.ACCOUNTED_SEED_INTERVALS if iv[1] > NEW] == [gen, screen, strength, cycle2]
+    assert cycle2[1] <= attempt2[0] and attempt2[1] - attempt2[0] == 1000
+    assert [iv for iv in REG.ACCOUNTED_SEED_INTERVALS if iv[1] > NEW] == [gen, screen, strength, cycle2, attempt2]
     for name in ("EXPOSED_SEED_INTERVALS", "RETIRED_SEED_INTERVALS"):
         assert [iv for iv in getattr(REG, name) if iv[1] > NEW] == [gen, screen, strength, cycle2], name
     assert all(hi <= NEW for _lo, hi in REG.TEST_ONLY_SEED_INTERVALS)
-    assert B.candidate(REG.ACCOUNTED_SEED_INTERVALS, [], 64)[2][0] >= cycle2[1] + 64
+    assert B.candidate(REG.ACCOUNTED_SEED_INTERVALS, [], 64)[2][0] >= attempt2[1] + 64
 
 
 def test_THIS_MODULE_HOLDS_NO_SEED_LITERAL():
