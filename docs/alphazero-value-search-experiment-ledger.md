@@ -210,6 +210,7 @@ knob) is not a new hypothesis.
 > **Combination policy second cycle — the new attempt's seed sequence approved (decision note, 2026-11-02, the user's decision).** The user accepted the returned build and approved the next step: live versions read against the pin, then survey, pre-proof, registration and post-proof, each once, with the method and 1,000-seed gap floor unchanged; any failure returned, nothing adjusted. Real model loading, generation, training, Build B, evaluation, deployment and pushing remain unauthorized. See #149.
 > **Combination policy second cycle — the new attempt's block surveyed, proven and registered; nothing run (addendum, 2026-11-02).** [202746200, 202747200): survey CLEAN 55/55 (`4fbb855a`), pre-proof HOLDS 55/55 (`0043d826`), registered last in ACCOUNTED, 52 -> 53 (`4c599111`), post-proof HOLDS 55/55 (`96245e21`). Plan = `build_plan`. Three lifecycle tests re-anchored (`7992efed`); 445 focused pass. Returned for launch review. Real model loading, generation, training, Build B, evaluation, deployment and pushing remain unauthorized. See #150.
 > **Combination policy second cycle — ONE run of `cycle2_generate2` and its conditional seed closing APPROVED (decision note, 2026-11-02, the user's review).** The version amendment, new build and seed preparation accepted; the first attempt stays VOID with its block closed, and it produced no result about the teacher. TERM 21,590 s, KILL 21,600 s, cleanup through 21,610 s; teacher checks before workers start. An incomplete corpus is ineligible for training, with no automatic retry. Training, including under the provisional ceiling, Build B, evaluation, deployment and pushing remain unauthorized. See #151.
+> **Combination policy second cycle — the new corpus GENERATED; block closed (Post-closure entry 48, 2026-11-02, generation only; no strength result).** The ONE run of `cycle2_generate2` COMPLETED: 1,000 of 1,000 games in 9,987 s (360.5 games/h), 42,515 rows (38,405 train, 4,110 held-out); every row file matches its sha256; teacher digests bound, probe max prior difference 0.1141. K1 RECONCILES, 21/21; [202746200, 202747200) exposed and retired whole. The fit ceiling re-derived from the actual counts rounds to the same 2,820 s, as a proposal. Training, Build B, evaluation, deployment and pushing remain unauthorized.
 
 ## Historical proposal check — programme now closed
 
@@ -1891,6 +1892,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 149. **The new attempt's seed approval (2026-11-02).** Do **not** adjust the selection method, the 1,000-seed gap floor or the block; a failure of the survey, a proof or the registration is returned as it stands. Each mode runs once. Do **not** load the real model, open a gate, launch, train, build Build B, evaluate, deploy or push without the user's approval of each.
 150. **The new attempt's block (2026-11-02).** Do **not** rerun the survey or either proof, edit their records (`02_*` sha256 `9d7cfb72…`, `03_*` `7a303063…`, `04_*` `75dd0de5…`), edit the plan, or move, widen or re-register [202746200, 202747200). Do **not** open the gate, load the checkpoint or the first head for it, launch, close the block, train, build Build B, evaluate, deploy or push without the user's approval of each. Do **not** launch without reading the live versions against the pin again. Do **not** write any seed of this block into `scripts/`, `tests/` or `docs/superpowers/` outside its own records, the plan and the registry tuple.
 151. **The new attempt's run (2026-11-02).** One run only: do **not** retry, extend, top up or continue it, or change the ceiling (TERM 21,590 s, KILL 21,600 s, observation through 21,610 s). Do **not** launch without rechecking live versions, panic and reboot state, the plan, the proved registry, both amendments and the teacher binding immediately before. Do **not** apply K2 unless K1 RECONCILES. Do **not** train on an incomplete corpus, delete it or score it. Do **not** train, including under the provisional ceiling, build Build B, evaluate, deploy or push without the user's approval of each.
+152. **The second cycle's corpus (2026-11-02).** The ONE run of `cycle2_generate2` is spent and its block is retired: do **not** generate more games, top up, replace or re-filter this corpus, or reuse its seeds. Do **not** read its counts, entropy, KL or win totals as evidence of strength; none is a test of the teacher. Do **not** train without the user's approval, including at the proposed 2,820 s ceiling. Do **not** build Build B, evaluate, deploy or push without the user's approval of each.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -8675,3 +8677,59 @@ Run as the conditional sequence approved in the addendum above, each step once i
 - **An incomplete corpus** stays ineligible for training. It is preserved, and its progress, cause and continuation cost are returned. No
   automatic retry.
 - **Not authorized:** training, including under the provisional ceiling; Build B, evaluation, deployment and pushing.
+
+#### Post-closure entry 48 — the second cycle's generation attempt 2: 1,000 games COMPLETED; block closed (2026-11-02)
+
+- **Test:** the ONE approved run of `run cycle2_generate2`: 1,000 self-play games with the frozen first head as teacher, on
+  [202746200, 202747200), under TERM 21,590 s / KILL 21,600 s, observed through 21,610 s.
+- **Hypothesis (amendment §1):** repeating policy improvement helps. **Not tested here:** this step only produces the corpus.
+- **Why plausible:** a teacher's different priors may change the candidate set at a recorded root, allowing fresh search evidence there.
+  Neither a changed set nor better targets is guaranteed.
+- **Prediction on record:** for this step, only a cost estimate of 2.76 h; the experiment's directional prediction (held-out CE and score
+  above 0.5; low confidence; no magnitude) remains untested.
+- **What ran:** decision note `bf74ec5f`; one-line gate opening `fc86a031`; run evidence and restored gate `09ccb288`; K1 `41fad25f`; K2
+  `ba2ef9af`; tests `90757029`. Live rechecks passed immediately before launch. The idle gate held, and teacher digests and reach were
+  checked before workers started. Worktree `cp-cycle2-gen2-run`.
+- **Result, run:** inner and outer exit 0, outcome COMPLETED, 9,989 s wall, gate restored, no survivors, run stderr empty. Python 3.14.10,
+  MLX 0.30.3, NumPy 2.4.1; `MLX_ENABLE_TF32=0` at load and end; 14 BatchNorm layers, 0 modules in training mode at load and end. All 1,002
+  background checks passed. Record sha256 `c5e82140455e7aff14bf0b63403e069ca1358bf84bd56be10cce05538f0ce85d`.
+- **Result, corpus (summary counts, not attributed to either side or to strength):**
+
+  | | First corpus | This corpus |
+  |---|---:|---:|
+  | Games | 1,000 | 1,000 |
+  | Generation seconds | 9,929 | 9,987 |
+  | Games/h | 362.6 | 360.5 |
+  | Plies | 64,747 | 62,515 |
+  | Rows | 44,747 | 42,515 |
+  | Train / held-out rows | 40,589 / 4,158 | 38,405 / 4,110 |
+  | State caps | 43 | 32 |
+  | Other draws | 0 | 0 |
+  | Duplicate rows | 0 | 0 |
+  | Mean entropy | 2.4949 | 2.7057 |
+  | Mean KL(target, prior) | 1.4318 | 1.1399 |
+  | Mean mass played | 0.4278 | 0.4315 |
+  | Mean mass out at round 1 | 0.0705 | 0.0489 |
+  | Mean rows per GPU call | 13.39 | 13.58 |
+
+- **Result, integrity:** slots 0–999 each claimed, started and ended once; slot g on seed BASE + g; 1,000 row files, matching `games.jsonl`
+  by name and sha256 and by row count in every array; 299 MB, kept at `~/twixt-cache/combination-policy-pilot/cycle2_generate2/`, outside the
+  repository.
+- **Result, teacher:** the record's head sha256 `ead156e2…` and three digests are the first head's. The probe through the generation
+  evaluator (uncompiled) found max prior difference 0.1141442358493805, value difference 0.0, over 528 legal moves. Those are the same values the screen
+  recorded for the head on the compiled path.
+- **Closing:** K1 ran once on a clean tree: RECONCILES, controls 21/21, one `claims` event of 1,000. K2 appended the block last to EXPOSED (50 → 51)
+  and RETIRED (48 → 49); an AST check shows only those lists changed. The 2027 band holds five closed blocks. All 59 gates are closed.
+- **The fit ceiling, proposed:** the formula on the actual counts (rows 42,515, held-out 4,110) gives 1,847.57 s, ×1.5 = 2,771.36 s, rounded up to the
+  minute: **2,820 s (TERM 2,810 s, observation through 2,830 s)**. The number stays the same as the placeholder but is now derived from this corpus.
+  The training wrapper is unedited and still marked PROVISIONAL. The timing record was taken on Python 3.14.9, so it remains an estimate.
+- **Pace, as observed:** the first 900 games ran at about 437 games/h, and the last 100 took 2,576 s; the slowest game took 2,277 s. The first corpus had
+  the same shape. A midway estimate from the early rate (16:30–16:40) was too early; the run ended at 16:55. While it ran, each worker showed about 9% CPU, the
+  server about 52% and the GPU about 57%, with the machine about 85% idle. That suggests the single server loop limits the pace, an inference not measured
+  directly.
+- **Tests:** three lifecycle tests failed as expected at the closing and were re-anchored with no seed literal; the ceiling test now asserts the derived
+  2,820 s with the wrapper still provisional. Focused suites, serially: 445 pass, 1 deselected.
+- **Did it match the prediction?** The cost estimate held: 2.77 h against 2.76 h. Nothing about the scientific prediction can be read from this step. The lower
+  KL and higher entropy describe this corpus's targets against its teacher's priors, and neither shows the teacher or a future student is stronger.
+- **Conclusion / status:** the corpus is complete, its integrity checks hold and its block is closed. It awaits the user's review. **Not authorized:** training,
+  including at the proposed ceiling; Build B, evaluation, deployment and pushing.
