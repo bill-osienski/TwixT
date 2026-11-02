@@ -78,26 +78,38 @@ def test_THE_ISOLATION_IS_IN_FORCE():
         P.conclude("strength", None, pathlib.Path("/nonexistent"), {})
 
 
-def test_THE_COMPARISON_S_BLOCK_IS_SURVEYED_PROVEN_AND_REGISTERED_NOTHING_HAS_RUN():
+def test_THE_COMPARISON_RAN_ONCE_COMPLETED_AND_IS_CLOSED():
     """RE-ANCHORED 2026-11-01 (survey 11e3e485, pre-proof fa9cd930, registration ea2376d7, post-proof 10e44eb9): the
     survey is CLEAN and both proofs HOLD, each 55/55 on a clean tree, the proofs bound to the survey record's sha256;
     the plan is the copy's build_plan; the block (read from the plan and the records -- no seed literal here, since
-    the proofs scan tests/) lies in the 2027 band above the screen's, with the gap at least its own size, ACCOUNTED
-    exactly once and last, in no other registry, every seed schedulable, disjoint from the screen's block; the
-    registry the post-proof proved is the current one. Nothing has run: the gate is closed, the run directory holds
-    the wrapper and the plan only, and no run evidence or closing record exists. Read-only."""
+    the proofs scan tests/) lies in the 2027 band above the screen's, with the gap at least its own size, disjoint
+    from the screen's block.
+    RE-ANCHORED 2026-11-01 (the run, 8621df8b -> 5e6cda34, and its closing, K1 1cf65da9 + K2 0557dff1): the ONE run
+    COMPLETED inside the ceiling -- outer exit 0, record COMPLETED, gate restored, no survivors, outer_faults empty --
+    launched from the one-line gate opening on top of the post-proof's state, so the registry it launched with is the
+    one the post-proof proved. The record binds the pinned head (the candidate's digests are the head's; the
+    reference's are the screen's reference, the proven combination), the checkpoint's SHA-1, TF32 0 and eval mode
+    throughout, the background check before loading, after every game and before the verdict, a changed opening
+    prior, and the screen's block excluded. All 1,018 games were played in order, game g on seed BASE + g, the
+    candidate red in even games, every move a search; the pair scores recomputed from the games are the record's. The
+    verdict is the frozen rule applied to the recorded pair scores and the whole-run guards. K1 RECONCILES (all 1,018
+    started in order), so the WHOLE block is EXPOSED and RETIRED, each exactly once and appended last, ACCOUNTED
+    unchanged, and every seed is refused. The gate is closed. The run evidence is unchanged since it was committed.
+    Read-only."""
     from scripts.GPU.alphazero import combination_policy_strength_authorization as G
     from scripts.GPU.alphazero import e4_screen_reference as REG
     from scripts.GPU.alphazero import seed_band_2027 as SB
     kind = P.KINDS["strength"]
     assert getattr(G, GATE_NAME) is False
-    assert sorted(x.name for x in WRAPPER.parent.iterdir()) == ["01_wrapper.sh", "plan.json"]
-    assert not (ROOT / kind["evidence"]).exists()
+    run_dir, evidence = WRAPPER.parent, ROOT / kind["evidence"]
+    assert sorted(x.name for x in run_dir.iterdir()) == ["01_wrapper.sh", "bg_check.txt", "idle_check.txt",
+                                                         "outer.json", "pgid.txt", "plan.json", "run.stderr.txt",
+                                                         "run.stdout.txt"]
+    assert sorted(x.name for x in evidence.iterdir()) == ["games", "games.jsonl", "progress.jsonl", "record.json"]
     here = (EV / SURVEY).parent
     assert sorted(x.name for x in here.iterdir() if x.name != "__pycache__") == \
         ["01_seed_survey.py", "02_seed_survey_run.txt", "03_collision_proof_pre_run.txt",
          "04_collision_proof_post_run.txt"]
-    assert sorted(x.name for x in (EV / CLOSING).parent.iterdir() if x.name != "__pycache__") == ["01_derive_usage.py"]
     raw = (here / "02_seed_survey_run.txt").read_bytes()
     survey, sha = raw.decode("utf-8"), hashlib.sha256(raw).hexdigest()
     assert survey.splitlines()[2].endswith("; working tree clean") and "controls passed: 55/55" in survey
@@ -110,8 +122,6 @@ def test_THE_COMPARISON_S_BLOCK_IS_SURVEYED_PROVEN_AND_REGISTERED_NOTHING_HAS_RU
         assert text.endswith(f"PROOF VERDICT ({mode}): THE COMBINATION-POLICY STRENGTH BLOCK IS CLEAN AND THE STATE "
                              "IS AS EXPECTED\n")
     post = (here / "04_collision_proof_post_run.txt").read_text(encoding="utf-8")
-    reg_rel = "scripts/GPU/alphazero/e4_screen_reference.py"
-    assert f"\nregistry {reg_rel} sha256 {hashlib.sha256((ROOT / reg_rel).read_bytes()).hexdigest()}\n" in post
     plan = json.loads((ROOT / kind["plan"]).read_text(encoding="utf-8"))
     assert type(plan["base"]) is int and plan["n_slots"] == GAMES
     assert plan == _load(SURVEY, "_strength_survey_registered").build_plan(plan["base"], sha)
@@ -121,17 +131,73 @@ def test_THE_COMPARISON_S_BLOCK_IS_SURVEYED_PROVEN_AND_REGISTERED_NOTHING_HAS_RU
     assert f"THE BLOCK, read from the record: [{block[0]}, {block[1]}) -- BASE {block[0]}" in post
     gap = int(re.search(rf"^THE BLOCK \({block[0]}, {block[1]}\) .* gap=(\d+) \(floor {GAMES}\)", post, re.M).group(1))
     assert gap >= GAMES
-    assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1 and REG.ACCOUNTED_SEED_INTERVALS[-1] == block
-    assert not any(lo < block[1] and block[0] < hi
-                   for lo, hi in REG.EXPOSED_SEED_INTERVALS + REG.RETIRED_SEED_INTERVALS + REG.TEST_ONLY_SEED_INTERVALS)
     screen = json.loads((ROOT / P.KINDS["screen"]["plan"]).read_text(encoding="utf-8"))
     screen_block = (screen["base"], screen["base"] + screen["n_slots"])
     gen = json.loads((ROOT / P.KINDS["generate"]["plan"]).read_text(encoding="utf-8"))
     gen_block = (gen["base"], gen["base"] + gen["n_slots"])
     assert screen_block[1] <= block[0]
-    assert [iv for iv in REG.ACCOUNTED_SEED_INTERVALS if iv[1] > SB.BAND[0]] == [gen_block, screen_block, block]
-    assert all(REG.seed_is_accounted(s) and not REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s)
-               for s in range(*block))
+    # the run: launched from the one-line gate opening, COMPLETED, gate restored, no survivors
+    outer = json.loads((run_dir / "outer.json").read_text(encoding="utf-8"))
+    record = json.loads((evidence / "record.json").read_text(encoding="utf-8"))
+    assert P.outer_faults(outer, record) == []
+    assert (outer["outcome"], outer["inner_exit"], outer["outer_exit"]) == ("COMPLETED", 0, 0)
+    assert outer["wall_seconds"] < outer["term_s"] == 51770 and outer["grace_s"] == 10
+    gate_rel = "scripts/GPU/alphazero/combination_policy_strength_authorization.py"
+    assert subprocess.run(["git", "-C", str(ROOT), "rev-parse", f"{outer['head']}^"], capture_output=True, text=True,
+                          check=True).stdout.strip() == outer["pre_open"]
+    opened = subprocess.run(["git", "-C", str(ROOT), "diff", "--unified=0", outer["pre_open"], outer["head"]],
+                            capture_output=True, text=True, check=True).stdout
+    assert [ln for ln in opened.splitlines() if ln[:1] in "+-" and ln[:3] not in ("+++", "---")] == \
+        [f"-{GATE_NAME} = False", f"+{GATE_NAME} = True"] and f"b/{gate_rel}" in opened
+    reg_rel = "scripts/GPU/alphazero/e4_screen_reference.py"
+    launched = subprocess.run(["git", "-C", str(ROOT), "show", f"{outer['head']}:{reg_rel}"],
+                              capture_output=True, check=True).stdout
+    assert f"\nregistry {reg_rel} sha256 {hashlib.sha256(launched).hexdigest()}\n" in post     # proved = launched
+    # the record: the pinned head against the screen's opponent, as approved
+    assert (record["status"], record["run"], record["written_by"]) == ("COMPLETED", "strength", "script")
+    assert record["seeds"] == {"base": block[0], "n_slots": GAMES} and record["checkpoint_sha1"] == P.M.CHECKPOINT_SHA1
+    assert record["trained_head"] == P.TRAINED_HEAD and record["digests"]["candidate"] == HEAD_D
+    screen_rec = json.loads((ROOT / SCREEN / "record.json").read_text(encoding="utf-8"))
+    assert record["digests"] == screen_rec["digests"] and record["protocol"] == screen_rec["protocol"]
+    assert record["digests"]["reference"]["policy_head."] != HEAD_D["policy_head."]
+    assert record["screen_block_excluded"] == list(screen_block)
+    assert record["setting"] == record["setting_at_end"] == {P.SETTING: P.SETTING_VALUE}
+    for side in ("candidate", "reference"):
+        assert record["modes_at_load"][side]["modules_in_training_mode"] == 0
+        assert record["modes_at_end"][side]["modules_in_training_mode"] == 0
+    assert record["head_probe"]["max_prior_abs_diff"] > 0 and record["background_checks"] == GAMES + 2
+    assert [a["mcts_sims"] for a in record["protocol"]["agents"]] == [K.CANDIDATE_SIMS, K.CANDIDATE_SIMS]
+    costs = record["cost_totals"]
+    assert record["guards"] == K.guards(costs["candidate"], costs["reference"])
+    assert record["strength"] == K.strength_verdict(record["pair_scores"], record["guards"])
+    assert record["verdict"] == record["strength"]["verdict"]
+    games = [json.loads(line) for line in (evidence / "games.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert [g["slot"] for g in games] == list(range(GAMES))
+    assert all((g["red_agent_id"] == K.CANDIDATE) == (g["slot"] % 2 == 0) for g in games)
+    assert sum(g["n_moves"] for g in games) == costs["candidate"]["searches"] + costs["reference"]["searches"]
+
+    def points(g):
+        return 0.5 if g["winner_agent_id"] is None else float(g["winner_agent_id"] == K.CANDIDATE)
+    assert [(points(games[2 * i]) + points(games[2 * i + 1])) / 2 for i in range(GAMES // 2)] == record["pair_scores"]
+    starts = [json.loads(line) for line in (evidence / "progress.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert [e["slot"] for e in starts if e["event"] == "game_start"] == list(range(GAMES))
+    # the closing: all 1,018 started in order, so the WHOLE block is EXPOSED and RETIRED
+    closing = (EV / CLOSING).parent
+    assert sorted(x.name for x in closing.iterdir() if x.name != "__pycache__") == \
+        ["01_derive_usage.py", "02_derive_usage_run.txt"]
+    k1 = (closing / "02_derive_usage_run.txt").read_text(encoding="utf-8")
+    assert k1.splitlines()[2].endswith("; working tree clean") and "controls passed: 15/15" in k1
+    assert k1.endswith(f"VERDICT: RECONCILES -- EXPOSE {list(block)}; RETIRE {list(block)}\n")
+    for name in ("ACCOUNTED", "EXPOSED", "RETIRED"):
+        intervals = getattr(REG, f"{name}_SEED_INTERVALS")
+        assert intervals.count(block) == 1 and intervals[-1] == block, name
+        assert [iv for iv in intervals if iv[1] > SB.BAND[0]] == [gen_block, screen_block, block], name
+    assert not any(lo < block[1] and block[0] < hi and (lo, hi) != block
+                   for lo, hi in REG.EXPOSED_SEED_INTERVALS + REG.RETIRED_SEED_INTERVALS + REG.TEST_ONLY_SEED_INTERVALS)
+    assert all(REG.seed_is_accounted(s) and REG.seed_is_exposed(s) and REG.seed_is_retired(s) and
+               REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s) for s in range(*block))
+    assert subprocess.run(["git", "-C", str(ROOT), "diff", "--quiet", "5e6cda34", "HEAD", "--", str(run_dir),
+                           str(evidence)]).returncode == 0
 
 
 # ─────────────────────────────── the gate, the kind, the rule and admission ───────────────────────────────
@@ -157,8 +223,8 @@ def test_THE_COMPARISON_IS_509_PAIRS_ON_ITS_OWN_PATHS():
     others = {P.KINDS[k]["evidence"] for k in P.KINDS if k != "strength"}
     others |= {str(pathlib.Path(v["plan"]).parent) for k, v in P.KINDS.items() if k != "strength" and "plan" in v}
     assert {s["evidence"], str(pathlib.Path(s["plan"]).parent)} & others == set()
-    assert "amendment" not in s and "slots" not in s and not (ROOT / s["evidence"]).exists()
-    assert sorted(x.name for x in WRAPPER.parent.iterdir()) == ["01_wrapper.sh", "plan.json"]  # the seeds' plan only
+    assert "amendment" not in s and "slots" not in s
+    assert {"01_wrapper.sh", "plan.json"} <= {x.name for x in WRAPPER.parent.iterdir()}   # the rest: the lifecycle test
 
 
 def test_THE_RULE_IS_THE_CARD_S_EXACTLY():
@@ -276,10 +342,11 @@ def test_THE_HEAD_BINDING_KEEPS_EVERY_TRAINING_CHECK_FOR_THE_COMPARISON():
         P.trained_head(rr, rb, "strength")
 
 
-def test_RUN_STRENGTH_WITH_ITS_GATE_OPEN_PASSES_EVERY_REAL_CHECK_TO_THE_SCREEN_S_SEAMS(monkeypatch, capsys, tmp_path):
-    """The gate opened in this process only. Through the REAL pins, admission and head binding the entry reaches its
-    checkpoint refusal; with a checkpoint file present it reaches the screen's real seams with the bound head -- here a
-    recorder that stops -- and nothing else: no evidence directory is made."""
+def test_RUN_STRENGTH_STAYS_ONE_SHOT_even_with_its_gate_open(monkeypatch, capsys, tmp_path):
+    """RE-ANCHORED 2026-11-01 (the run, 5e6cda34): the gate opened in this process only. Through the REAL pins,
+    admission and head binding the entry reaches its checkpoint refusal; with a checkpoint file present it now refuses
+    because the comparison's evidence exists -- before the screen's real seams (here a recorder that is never
+    called) -- and the evidence is untouched."""
     gate, name = P.KINDS["strength"]["gate"]
     monkeypatch.setattr(gate, name, True)
     monkeypatch.setattr(P, "_mlx_loaded", lambda: False)
@@ -288,15 +355,12 @@ def test_RUN_STRENGTH_WITH_ITS_GATE_OPEN_PASSES_EVERY_REAL_CHECK_TO_THE_SCREEN_S
     ckpt = tmp_path / "model.safetensors"
     ckpt.write_bytes(b"not a model")
     seen = []
-
-    def recorder(path, head):
-        seen.append((path, head["sha256"], head["bytes"] == (ROOT / P.TRAINED_HEAD["file"]).read_bytes()))
-        raise AssertionError("stopped at the screen's real seams")
-    monkeypatch.setattr(P, "_real_screen_seams", recorder)
-    with pytest.raises(AssertionError, match="the screen's real seams"):
-        P.main(["run", "strength", "--checkpoint", str(ckpt)])
-    assert seen == [(ckpt, P.TRAINED_HEAD["sha256"], True)]
-    assert not (ROOT / P.KINDS["strength"]["evidence"]).exists()
+    monkeypatch.setattr(P, "_real_screen_seams", lambda *a: seen.append(a))
+    evidence = ROOT / P.KINDS["strength"]["evidence"]
+    before = {p: p.read_bytes() for p in evidence.rglob("*") if p.is_file()}
+    assert P.main(["run", "strength", "--checkpoint", str(ckpt)]) == P.EXIT_REFUSED
+    assert "exists: the run is one-shot" in capsys.readouterr().err
+    assert seen == [] and {p: p.read_bytes() for p in evidence.rglob("*") if p.is_file()} == before
 
 
 # ─────────────────────────────── the comparison on fakes, through the real record boundary ────────────────────────────
@@ -808,7 +872,7 @@ def test_THE_CLOSING_COPY_SERVES_THE_COMPARISON_and_holds_no_seed_literal():
     assert closing.N_SLOTS == 2 * kind["pairs"] == GAMES and closing.INPUTS[0] == kind["plan"]
     assert closing.RUN == kind["evidence"] and closing.RUN_DIR == str(pathlib.Path(kind["plan"]).parent)
     assert closing.OUT == "docs/superpowers/evidence/combination-policy-strength-seed-closing/02_derive_usage_run.txt"
-    assert not (ROOT / closing.OUT).exists()
+    assert (ROOT / closing.OUT).is_file()                  # run once (the lifecycle test)
     code = _split(CLOSING)[1]
     assert not SB.scan(code) and not re.search(r"\b20[0-9]{7}\b", code)
 
