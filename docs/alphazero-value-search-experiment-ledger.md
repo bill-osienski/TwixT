@@ -200,6 +200,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — NON_PASS ACCEPTED; the pilot FINISHED as inconclusive on strength (addendum, 2026-11-02, the user's review).** The user reproduced 0.530943, the lower bound 0.470746 and both ratios, and verified the bindings, the closing edits and all 56 gates closed. Learning toward the search targets with the value path preserved is shown; stronger play than the proven combination is not, and that combination remains the best demonstrated reference. A paper-only confirmation proposal is returned for the user's decision (`docs/superpowers/2026-11-02-combination-policy-confirmation-proposal.md`). New games, training, deployment and pushing remain unauthorized. See #139.
 > **Combination policy pilot — NO confirmation match now (decision note, 2026-11-02, the user's decision).** Resolving a possible modest gain would cost substantial time without improving the candidate. The proven combination stays the reference; this head stays a research artifact; the pilot stays inconclusive on strength. Qualifications to the proposal: a fresh predeclared variance-based test is legitimate and would not change the old NON_PASS; its power and false-PASS figures are model-based and conditional; 12 hours is not an established limit, and neither segmentation nor a timing check after the OS update is automatically required. A future learning proposal should justify a specific new improvement. Training, deployment and pushing remain unauthorized. See #140.
 > **Combination policy — one additional policy-improvement cycle SPECIFIED, design only (decision note, 2026-11-02, the user's specification).** The first head would teach one fresh 1,000-game corpus and start one CPU fit under the unchanged recipe; the candidate would face the original proven combination under the unchanged screen and 509-pair rule. Draft amendment and plan committed for review (about 14.5 h, indicative ceilings 22.2-24.2 h). The first pilot stays inconclusive on strength and unchanged. The build, seeds, model loading, games, training, deployment and pushing remain unauthorized. See #141.
+> **Combination policy second cycle — amendment FROZEN, Build A approved (decision note, 2026-11-02, the user's review).** Accepted: the teacher-reach probe through the actual uncompiled generation evaluator (equal priors VOID; digests stay the primary identity checks), the fit's start check on all three digests with the parent's value baseline and a fresh optimizer, the opening changes (reported, no control), and the directional prediction. Granted for this one cycle: a narrow #66/#107 exception with no capacity claim, and the teacher and start use under #132/#139/#140 within its separately approved stages. Seed procedures, real model loading, generation, training, Build B, evaluation, deployment and pushing remain unauthorized. See #142.
 
 ## Historical proposal check — programme now closed
 
@@ -1871,6 +1872,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 139. **The combination policy pilot's close (2026-11-02).** The pilot is finished as inconclusive on strength. Do **not** describe the head as stronger than the proven combination, or as shown to have no benefit. Do **not** change this result or candidate, or pool or rescore the completed tests. The confirmation proposal is paper only: do **not** build, freeze a rule, take timings, prepare seeds or run any game from it, train further, deploy or push without the user's approval of each.
 140. **No confirmation of this head now (2026-11-02).** Do **not** start a confirmation build, timing check, seed procedure or match of this head without the user's new approval of each, and do **not** train further, deploy or push. Do **not** propose another learning run without justifying a specific new improvement. Do **not** cite the proposal as establishing a 12-hour limit, mandatory segmentation, a required timing check after the OS update, or a variance-based test as inherently inferior; do **not** treat its power and false-PASS figures as more than model-based estimates, conditional on completion and the compute guards. A fresh predeclared test under any rule would not change the completed NON_PASS.
 141. **The second policy-improvement cycle's design (2026-11-02).** Design only. Do **not** build it, run its seed procedures, load the model for it, generate, train, evaluate, deploy or push without the user's approval of each. Do **not** reuse `ResidualPolicyHead` for it without a new #66/#107 exception. Do **not** treat the draft amendment as frozen, or its proposed prediction as accepted, before review. Do **not** overwrite the first head, corpus or evidence, or use the training, screen, strength or VOID-run games as this corpus. Do **not** read the first head's inconclusive result as support for the hypothesis, or treat the second cycle as a confirmation of the first head. One cycle only: a completed NON_PASS or scientific STOP ends it.
+142. **The second cycle's freeze and Build A approval (2026-11-02).** Do **not** change the frozen amendment without re-pinning it under review. Build A only: do **not** run a seed procedure, load the real model, open a gate, generate, train, build `cycle2_screen` or `cycle2_strength`, evaluate, deploy or push without the user's approval of each. Do **not** cite the #66/#107 exception for anything beyond this one cycle or as evidence about capacity, or the #132/#139/#140 permission for the first pilot, which stays closed and unchanged. Do **not** read the mechanism as guaranteed: neither a changed candidate set nor better targets is. Do **not** treat the cost figures as a commitment to fund every stage.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -8426,3 +8428,26 @@ Run as the conditional sequence approved in the addendum above, each step once i
   first head's confirmation stays unfunded.
 - **Not authorized:** the build, seed procedures, model loading, generation, training, evaluation, deployment and
   pushing. Each needs its own approval.
+
+#### Decision note — the second cycle's amendment frozen; Build A approved (2026-11-02, the user's review)
+
+- **The user's check:** the bindings and recipe match the committed records, the original evidence is unchanged and all
+  56 gates are closed.
+- **Accepted:**
+  - the teacher-reach probe: teacher and parent opening priors compared through the actual uncompiled generation
+    evaluator, before workers start; equal priors make the run VOID; the digest checks stay the primary identity checks;
+  - the fit's initialization: all three starting digests must match the teacher, with the original parent's CPU value
+    baseline and a fresh optimizer;
+  - the opening changes, as part of using this teacher: reported, with no separate opening control;
+  - **the prediction on record:** directional improvement in held-out CE and a score above 0.5, with low confidence and
+    no predicted magnitude.
+- **The wording clarification, applied at the freeze:** different priors **may change the candidate set at a recorded
+  root**, allowing fresh search evidence there. Neither a changed candidate set nor better targets is guaranteed.
+- **Granted:** a narrow #66/#107 exception for reusing the residual head in this one additional cycle, with no capacity
+  claim. The teacher and start use covered by #132/#139/#140 is permitted only within this experiment and its separately
+  approved stages. The first pilot stays closed and unchanged.
+- **Approved:** freezing and pinning the amendment; building `cycle2_generate` and `cycle2_train`, their two closed gates,
+  wrappers, generation seed and closing copies and focused CPU tests; returning Build A for review. Existing checks and
+  fixtures are reused. No new timing run, profiling, full regression or broad mutation campaign is required.
+- **Not authorized:** any seed procedure, real model loading, generation or training; Build B, evaluation, deployment and
+  pushing. The cost figures are estimates, not a commitment to fund every stage.

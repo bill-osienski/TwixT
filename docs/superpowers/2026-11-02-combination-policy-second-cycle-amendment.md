@@ -1,7 +1,9 @@
-# Combination policy: second policy-improvement cycle (amendment, draft for review, 2026-11-02)
+# Combination policy: second policy-improvement cycle (amendment, FROZEN 2026-11-02)
 
-**Status:** design only, not frozen and not pinned. It authorizes no build, seed procedure, model loading, generation,
-training, evaluation, deployment or push.
+**Status:** frozen on the user's review (2026-11-02), and pinned by sha256 in `combination_policy_pilot.py`. The review
+approved this amendment and Build A only. Seed procedures, real model loading, generation, training, Build B,
+evaluation, deployment and pushing each still need their own approval. The cost figures are estimates, not a commitment
+to fund every stage.
 
 This amends `docs/superpowers/2026-10-28-combination-policy-pilot-card.md` and
 `docs/superpowers/2026-10-30-combination-policy-generation-amendment.md` for one new experiment. Those files stay
@@ -20,9 +22,8 @@ and its changed priors may improve the next targets or reinforce mistakes.
 
 **The specific new improvement (#140):** halving searches only the teacher's 16 highest-prior moves, and the target
 leaves every other move at its prior. The first corpus therefore holds no search evidence about moves outside the
-parent's candidates, and refitting it could not add any. A teacher with different priors searches a different set of
-candidates, so its corpus can contain evaluations the first cycle never made. Nothing yet shows that those evaluations
-improve play.
+parent's candidates, and refitting it could not add any. A teacher's different priors may change the candidate set at a
+recorded root, allowing fresh search evidence there. Neither a changed candidate set nor better targets is guaranteed.
 
 **The only deliberate changes:** the teacher and the student's starting policy. The search, target formula, trainable
 surface, optimizer recipe and evaluation criteria stay fixed.
@@ -66,8 +67,9 @@ excluded. These games are never strength evidence, and their winners and reasons
 
 **A known difference in the corpus:** the first head was fitted only on rows from ply 20 onward, yet it also changes
 earlier priors (the screen's probe found a largest change of 0.114 at the empty board). The teacher's openings
-therefore use priors never fitted there, and the corpus's positions will shift from the first corpus's. This is
-reported through the existing summary and duplicate counts; it is not a gate.
+therefore use priors never fitted there, and the corpus's positions will shift from the first corpus's. The user
+accepts this as part of using this teacher. It is reported through the existing summary and duplicate counts, with no
+separate opening control and no gate.
 
 ## 4. Fit the second-cycle student
 
@@ -131,35 +133,37 @@ Fresh seed blocks follow the existing survey, proof, registration and closing pr
 An interrupted or timed-out run is incomplete and receives no score. Its progress, cause and continuation cost return
 for assessment, with no automatic retry.
 
-## 8. Additions to the reviewed specification
+## 8. Additions to the reviewed specification (accepted)
 
 These come from auditing the code, and they do not change the search, target, recipe or criteria.
 
 1. **A teacher-reach probe at generation.** Generation serves the network through the uncompiled evaluator, while only
    the compiled path has played a trained head. Both call `forward_padded`, so I expect the head to be reached.
    However, the prior discrepancy is descriptive and could not stop a corpus generated without the teacher. Before any
-   worker starts, the run compares the teacher's and the parent's opening priors, and it is VOID if they are equal.
+   worker starts, the run compares the teacher's and the parent's opening priors through the actual uncompiled
+   generation evaluator, and it is VOID if they are equal. The digest checks stay the primary identity checks.
 2. **The fit's start check changes.** The first cycle checked that arm R started bit-equal to the parent, which cannot
-   hold here. It is replaced by checking that the student's three digests are the teacher's. The value baseline stays
-   the parent's held-out CPU outputs, taken before the head is installed.
+   hold here. It is replaced by requiring all three starting digests to match the teacher. The value baseline stays the
+   original parent's held-out CPU outputs, taken before the head is installed, and the optimizer is fresh.
 3. **STOP and VOID as built.** A gradient outside the surface is currently a VOID, and a changed array is a STOP. Both
    admit no head, so the code stays as it is.
 
-## 9. Exceptions needing explicit approval
+## 9. Exceptions granted on the user's review
 
-- **#66 and #107:** the exception for reusing `ResidualPolicyHead` covers the first pilot only and says not to extend
-  it. This experiment needs a new narrow exception, again with no capacity claim.
-- **#132, #139 and #140:** these bar further training and new seed procedures without the user's approval. Approval
-  here would cover this one cycle, step by step. The first head's own confirmation stays unfunded.
+- **#66 and #107:** a new narrow exception permits reusing `ResidualPolicyHead` in this one additional cycle, with no
+  capacity claim.
+- **#132, #139 and #140:** the teacher and start use they cover is permitted only within this experiment and its
+  separately approved stages. The first pilot stays closed and unchanged, and the first head's own confirmation stays
+  unfunded.
 - **Card §8.9 and §9:** the first pilot was one round, and iterative training was not requested. This amendment is that
   separate request.
 - **#49:** the closed family trained the whole network with ordinary self-play targets. This keeps the card §2
   distinction: the encoder and value path do not move, and the target is the halving target.
 
-## 10. Prediction proposed for the record
+## 10. Prediction on record
 
-Directional only, with low confidence and no magnitude: the held-out CE falls, and the candidate scores above 0.5
-against the proven reference.
+Accepted on the user's review. Directional only, with low confidence and no predicted magnitude: the held-out CE falls,
+and the candidate scores above 0.5 against the proven reference.
 
 ## 11. Completion
 

@@ -1,7 +1,9 @@
-# Combination policy second cycle: minimal implementation plan and total cost (draft for review, 2026-11-02)
+# Combination policy second cycle: minimal implementation plan and total cost (2026-11-02)
 
-**Status:** a plan only; it authorizes nothing. The science is in
-`docs/superpowers/2026-11-02-combination-policy-second-cycle-amendment.md`.
+**Status:** a plan only; it authorizes nothing by itself. The science is in the frozen
+`docs/superpowers/2026-11-02-combination-policy-second-cycle-amendment.md`. Step 0 is done and Build A is approved
+(2026-11-02); every later row still needs its own approval, and the cost figures are estimates, not a commitment to fund
+every stage.
 
 ## Total cost
 
