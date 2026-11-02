@@ -1135,6 +1135,15 @@ EXPOSED_SEED_INTERVALS = (
     # pooled with any other match's games. A post-run accounting edit to a bound file: the committed plan,
     # survey/proof and run records keep their hashes; nothing is rerun.
     (202740900, 202740964),  # COMBINATION POLICY 64-GAME SCREEN -- 64 game seeds, exposed whole
+    # 🔴 THE COMBINATION POLICY PILOT -- THE 509-PAIR STRENGTH COMPARISON -- THE CLOSING EDIT (2026-11-01), after the
+    # ONE authorized run (outer exit 0, COMPLETED at 38,133 s of the 51,770 s TERM; record COMPLETED; no survivors;
+    # 1,018 of 1,018 games finished). Use DERIVED from the committed run evidence by
+    # evidence/combination-policy-strength-seed-closing/02_* (RECONCILES, 15/15):
+    # all 1,018 games started, in order, so k = 1,018 and the WHOLE block is EXPOSED.
+    # These games are the strength comparison's only (card §5 step 6); never training data, and never pooled with
+    # any other match's games, the screen's included. A post-run accounting edit to a bound file: the committed plan,
+    # survey/proof and run records keep their hashes; nothing is rerun.
+    (202742000, 202743018),  # COMBINATION POLICY PILOT STRENGTH COMPARISON -- 1,018 game seeds, exposed whole
 )
 
 #: Seeds RESERVED PERMANENTLY FOR TESTS. Unit tests must draw from something, and
@@ -1546,6 +1555,15 @@ RETIRED_SEED_INTERVALS = (
     # pooled with any other match's games. A post-run accounting edit to a bound file: the committed plan,
     # survey/proof and run records keep their hashes; nothing is rerun.
     (202740900, 202740964),  # COMBINATION POLICY 64-GAME SCREEN -- 64 game seeds, retired whole
+    # 🔴 THE COMBINATION POLICY PILOT -- THE 509-PAIR STRENGTH COMPARISON -- THE CLOSING EDIT (2026-11-01), after the
+    # ONE authorized run (outer exit 0, COMPLETED at 38,133 s of the 51,770 s TERM; record COMPLETED; no survivors;
+    # 1,018 of 1,018 games finished). Use DERIVED from the committed run evidence by
+    # evidence/combination-policy-strength-seed-closing/02_* (RECONCILES, 15/15):
+    # the WHOLE block is RETIRED.
+    # These games are the strength comparison's only (card §5 step 6); never training data, and never pooled with
+    # any other match's games, the screen's included. A post-run accounting edit to a bound file: the committed plan,
+    # survey/proof and run records keep their hashes; nothing is rerun.
+    (202742000, 202743018),  # COMBINATION POLICY PILOT STRENGTH COMPARISON -- 1,018 game seeds, retired whole
 )
 
 
