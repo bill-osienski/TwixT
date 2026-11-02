@@ -198,6 +198,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — the strength comparison's seeds PREPARED; awaiting the launch decision (addendum, 2026-11-01).** Build accepted (`9a3e236e`). Survey CLEAN 55/55 (`11e3e485`), pre-proof HOLDS (`fa9cd930`), [202742000, 202743018) registered in ACCOUNTED with its plan (`ea2376d7`), post-proof HOLDS (`10e44eb9`); lifecycle tests re-anchored (`00e310d0`). Ceiling TERM 51,770 / KILL 51,780 / cleanup through 51,790 s. Nothing run: gate closed (56 closed), no evaluation loading, no GPU game. See #137.
 > **Combination policy pilot — the 509-pair STRENGTH COMPARISON: COMPLETED, verdict NON_PASS (entry 46, 2026-11-01).** One run from the one-line gate opening (`8621df8b` → `5e6cda34`): outer COMPLETED in 38,133 s of the 51,770 s TERM, gate restored, no survivors. The pinned trained head against the proven combination, both averaged halving at 200 simulations: mean pair score **0.5309** over 509 pairs (521–458, 39 drawn state caps), frozen Hoeffding lower bound **0.4707** ≤ 0.5, so NON_PASS; compute matched (evaluations 1.0029, search seconds 1.0139). The direction is the card's, but the comparison cannot tell it from 0.5; no strength claim, and not evidence of no effect. Block closed: K1 RECONCILES 15/15 (`1cf65da9`), K2 exposes and retires it whole (`0557dff1`); tests re-anchored (`558ef223`). Next steps, training, deployment and pushing await the user. See #138.
 > **Combination policy pilot — NON_PASS ACCEPTED; the pilot FINISHED as inconclusive on strength (addendum, 2026-11-02, the user's review).** The user reproduced 0.530943, the lower bound 0.470746 and both ratios, and verified the bindings, the closing edits and all 56 gates closed. Learning toward the search targets with the value path preserved is shown; stronger play than the proven combination is not, and that combination remains the best demonstrated reference. A paper-only confirmation proposal is returned for the user's decision (`docs/superpowers/2026-11-02-combination-policy-confirmation-proposal.md`). New games, training, deployment and pushing remain unauthorized. See #139.
+> **Combination policy pilot — NO confirmation match now (decision note, 2026-11-02, the user's decision).** Resolving a possible modest gain would cost substantial time without improving the candidate. The proven combination stays the reference; this head stays a research artifact; the pilot stays inconclusive on strength. Qualifications to the proposal: a fresh predeclared variance-based test is legitimate and would not change the old NON_PASS; its power and false-PASS figures are model-based and conditional; 12 hours is not an established limit, and neither segmentation nor a timing check after the OS update is automatically required. A future learning proposal should justify a specific new improvement. Training, deployment and pushing remain unauthorized. See #140.
 
 ## Historical proposal check — programme now closed
 
@@ -1867,6 +1868,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 137. **The strength comparison's seed block (2026-11-01).** Do **not** rerun the strength survey or either proof, edit their records (`02_*` sha256 `fa74a89d…`, `03_*` `66599166…`, `04_*` `5e1a39c8…`), edit the plan, or move, widen or re-register [202742000, 202743018). Do **not** open the strength gate, load the checkpoint or the trained head for evaluation, launch, close the block, train further, deploy or push without the user's approval of each. Do **not** write any seed of this block into `scripts/`, `tests/` or `docs/superpowers/` outside its own records, the plan and the registry tuple.
 138. **The strength comparison's result (2026-11-01).** Do **not** rerun, extend, top up or pool the 509-pair comparison, re-score it under any other rule, threshold, subset, colour split or exclusion, edit its evidence (`record.json`, `games.jsonl`, `games/`, `progress.jsonl`, `outer.json`) or its closing record (`02_*` sha256 `e93cf253…`), or reuse any seed of [202742000, 202743018). Do **not** read NON_PASS (mean 0.5309, lower bound 0.4707) as a strength result, as evidence that the head has no effect, or as a component claim; do **not** read the 0.531 point estimate as confirming the card's prediction. Do **not** use these games as training data. Do **not** start a new comparison, a new design, further training, deployment or pushing without the user's approval of each.
 139. **The combination policy pilot's close (2026-11-02).** The pilot is finished as inconclusive on strength. Do **not** describe the head as stronger than the proven combination, or as shown to have no benefit. Do **not** change this result or candidate, or pool or rescore the completed tests. The confirmation proposal is paper only: do **not** build, freeze a rule, take timings, prepare seeds or run any game from it, train further, deploy or push without the user's approval of each.
+140. **No confirmation of this head now (2026-11-02).** Do **not** start a confirmation build, timing check, seed procedure or match of this head without the user's new approval of each, and do **not** train further, deploy or push. Do **not** propose another learning run without justifying a specific new improvement. Do **not** cite the proposal as establishing a 12-hour limit, mandatory segmentation, a required timing check after the OS update, or a variance-based test as inherently inferior; do **not** treat its power and false-PASS figures as more than model-based estimates, conditional on completion and the compute guards. A fresh predeclared test under any rule would not change the completed NON_PASS.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -8371,3 +8373,30 @@ Run as the conditional sequence approved in the addendum above, each step once i
 - **Housekeeping approved:** the retained run worktree may be removed once confirmed clean and fully merged.
 - **Not authorized:** new games, training, deployment and pushing. This result and candidate stay unchanged; the
   completed tests are not pooled or rescored.
+
+#### Decision note — no confirmation match of this head now; three qualifications to the proposal (2026-11-02, the user's decision)
+
+- **Decision:** **do not fund another match of this head now.** The planning arithmetic broadly checks out, but
+  resolving a possible modest gain would cost substantial time without improving the candidate itself. The proven
+  combination stays the reference, and this head stays a research artifact. The completed pilot remains inconclusive
+  on strength.
+- **Three qualifications, recorded as corrections to the proposal**
+  (`docs/superpowers/2026-11-02-combination-policy-confirmation-proposal.md`, whose text is left as written; read it
+  with this note):
+  1. **A fresh, predeclared variance-based test is legitimate.** It would use different statistical assumptions, and
+     it would not retroactively change the old NON_PASS. The proposal's "looks like moving the goalposts", and its
+     treatment of such a test's evidence as weaker than a Hoeffding PASS, are too strong.
+  2. **The power and false-PASS figures are model-based estimates**, conditional on the run completing and passing the
+     compute guards. The simulated pair-score shape does not establish those rates for every possible outcome
+     distribution.
+  3. **Twelve hours is not an established runtime limit.** Segmentation may be useful, but the previous panic and the
+     resolved BOINC interference do not make it mandatory, so the proposal's "needs a new segmented design" is too
+     strong. Likewise, the OS update alone does not automatically require another timing experiment, so its "a timing
+     check would be needed" is too strong.
+- **Effect:** these points reduce the proposed engineering burden. They do not change the recommendation against
+  another confirmation run now.
+- **Accepted:** the merged-branch cleanup (`cp-strength-run` deleted with its worktree). Source and evidence remain
+  unchanged, and all 56 gates are closed.
+- **Not approved:** any further confirmation build, timing check, seed procedure or match.
+- **Not authorized:** training, deployment and pushing.
+- **Going forward:** a future learning proposal should justify a specific new improvement.
