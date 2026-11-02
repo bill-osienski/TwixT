@@ -201,6 +201,7 @@ knob) is not a new hypothesis.
 > **Combination policy pilot — NO confirmation match now (decision note, 2026-11-02, the user's decision).** Resolving a possible modest gain would cost substantial time without improving the candidate. The proven combination stays the reference; this head stays a research artifact; the pilot stays inconclusive on strength. Qualifications to the proposal: a fresh predeclared variance-based test is legitimate and would not change the old NON_PASS; its power and false-PASS figures are model-based and conditional; 12 hours is not an established limit, and neither segmentation nor a timing check after the OS update is automatically required. A future learning proposal should justify a specific new improvement. Training, deployment and pushing remain unauthorized. See #140.
 > **Combination policy — one additional policy-improvement cycle SPECIFIED, design only (decision note, 2026-11-02, the user's specification).** The first head would teach one fresh 1,000-game corpus and start one CPU fit under the unchanged recipe; the candidate would face the original proven combination under the unchanged screen and 509-pair rule. Draft amendment and plan committed for review (about 14.5 h, indicative ceilings 22.2-24.2 h). The first pilot stays inconclusive on strength and unchanged. The build, seeds, model loading, games, training, deployment and pushing remain unauthorized. See #141.
 > **Combination policy second cycle — amendment FROZEN, Build A approved (decision note, 2026-11-02, the user's review).** Accepted: the teacher-reach probe through the actual uncompiled generation evaluator (equal priors VOID; digests stay the primary identity checks), the fit's start check on all three digests with the parent's value baseline and a fresh optimizer, the opening changes (reported, no control), and the directional prediction. Granted for this one cycle: a narrow #66/#107 exception with no capacity claim, and the teacher and start use under #132/#139/#140 within its separately approved stages. Seed procedures, real model loading, generation, training, Build B, evaluation, deployment and pushing remain unauthorized. See #142.
+> **Combination policy second cycle — BUILD A built for review; nothing run (addendum, 2026-11-02).** `run cycle2_generate` and `run cycle2_train` behind two closed gates (58 in all), pinning the amendment `94c7f0df` (`91103162`). Generation binds the first head before any worker and runs the teacher-reach probe; the fit reads only the new corpus and starts from all three teacher digests. The fit wrapper's TERM_S 2810 is PROVISIONAL until the new corpus's counts exist. 72 new tests, focused suites 426 pass, 10 of 10 mutants caught; no real model, seed procedure or gate was touched. Seed procedures, real model loading, generation, training, Build B, evaluation, deployment and pushing remain unauthorized. See #143.
 
 ## Historical proposal check — programme now closed
 
@@ -1873,6 +1874,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 140. **No confirmation of this head now (2026-11-02).** Do **not** start a confirmation build, timing check, seed procedure or match of this head without the user's new approval of each, and do **not** train further, deploy or push. Do **not** propose another learning run without justifying a specific new improvement. Do **not** cite the proposal as establishing a 12-hour limit, mandatory segmentation, a required timing check after the OS update, or a variance-based test as inherently inferior; do **not** treat its power and false-PASS figures as more than model-based estimates, conditional on completion and the compute guards. A fresh predeclared test under any rule would not change the completed NON_PASS.
 141. **The second policy-improvement cycle's design (2026-11-02).** Design only. Do **not** build it, run its seed procedures, load the model for it, generate, train, evaluate, deploy or push without the user's approval of each. Do **not** reuse `ResidualPolicyHead` for it without a new #66/#107 exception. Do **not** treat the draft amendment as frozen, or its proposed prediction as accepted, before review. Do **not** overwrite the first head, corpus or evidence, or use the training, screen, strength or VOID-run games as this corpus. Do **not** read the first head's inconclusive result as support for the hypothesis, or treat the second cycle as a confirmation of the first head. One cycle only: a completed NON_PASS or scientific STOP ends it.
 142. **The second cycle's freeze and Build A approval (2026-11-02).** Do **not** change the frozen amendment without re-pinning it under review. Build A only: do **not** run a seed procedure, load the real model, open a gate, generate, train, build `cycle2_screen` or `cycle2_strength`, evaluate, deploy or push without the user's approval of each. Do **not** cite the #66/#107 exception for anything beyond this one cycle or as evidence about capacity, or the #132/#139/#140 permission for the first pilot, which stays closed and unchanged. Do **not** read the mechanism as guaranteed: neither a changed candidate set nor better targets is. Do **not** treat the cost figures as a commitment to fund every stage.
+143. **The second cycle's Build A (2026-11-02).** Build only. Do **not** run its survey, proofs, registration or closing, open either gate, load the real model or head for it, launch either wrapper, generate, train, build Build B, evaluate, deploy or push without the user's approval of each. Do **not** launch the fit under the provisional TERM_S 2810: re-derive it by a reviewed edit from the new corpus's actual counts. Do **not** write a seed of this cycle's block into `scripts/`, `tests/` or `docs/superpowers/` outside its own records, the plan and the registry tuple. Do **not** read a tiny-network or fake-evaluator test as evidence about the real teacher, its priors, its corpus or its strength.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -8451,3 +8453,38 @@ Run as the conditional sequence approved in the addendum above, each step once i
   fixtures are reused. No new timing run, profiling, full regression or broad mutation campaign is required.
 - **Not authorized:** any seed procedure, real model loading, generation or training; Build B, evaluation, deployment and
   pushing. The cost figures are estimates, not a commitment to fund every stage.
+
+#### Addendum — the second cycle's Build A built for review; nothing run (2026-11-02)
+
+- **What ran:** CPU tests only, on fake evaluators and tiny random networks. No real model, head load for play, seed
+  procedure on the real repository, opened gate or game. No result exists, so the prediction on record is untested.
+- **Built (`91103162`):**
+  - `run cycle2_generate` and `run cycle2_train` in `combination_policy_pilot.py`, each pinning the frozen amendment
+    (sha256 `94c7f0df…`) and with its own gate, evidence and, for generation, plan and rows directory. First-cycle paths
+    stay the default.
+  - Two closed gates, `COMBINATION_POLICY_CYCLE2_GENERATE_AUTHORIZED` and `COMBINATION_POLICY_CYCLE2_TRAIN_AUTHORIZED`;
+    the inventory goes from 56 to 58.
+  - **Generation:** before any worker starts, `_bind_teacher` installs the committed head on the served network and
+    requires the pinned digests, then compares teacher and parent opening priors through uncompiled evaluators. Equal
+    priors, or any failed check, are a VOID before any row exists.
+  - **The fit:** the parent's held-out CPU values are taken before the head is installed; all three starting digests must
+    be the teacher's; the Adam is fresh; only the new corpus is readable.
+  - Wrappers, the generation survey and its closing: copies of the first cycle's, with only the named differences
+    asserted line by line.
+- **Beyond the approved list, for review:**
+  1. The fit also requires the corpus's record to have played this teacher on calib020_0001, read before the corpus. It
+     follows the strength comparison's check that the screen played the pinned head.
+  2. `cycle2_train`'s admission reads the first training run's record and `outer.json` as well as the new corpus's.
+  3. A kind and its seams must agree about having a teacher, or the run is a VOID.
+- **A known provisional value:** the fit wrapper's TERM_S 2810 is the first corpus's derivation (2,820 s), because the
+  amendment prices the run from the new corpus's counts, which do not exist yet. A test fails once the new corpus exists
+  until TERM_S matches the formula on the new counts. It does not block a launch by itself; the launch approval does.
+- **Tests:** `tests/test_combination_policy_cycle2.py` (72); `test_combination_policy_pilot.py` and
+  `test_gate_inventory.py` updated for the new kinds and count only. Focused suites, serially: 426 pass. No full
+  regression, timing run or profiling, as the review allowed. A small mutant check in a throwaway worktree, since removed:
+  10 of 10 caught (the probe, both digest checks, the compiled evaluator, the corpus's teacher, the corpus paths, both
+  entry dispatches, the value baseline's order).
+- **State-dependent tests to re-anchor later:** `test_BUILD_A_ONLY_…` asserts that no plan, run or corpus exists, and the
+  real fit seam's test expects the new `games.jsonl` to be absent. Both are expected to change at the seed and run steps.
+- **Not authorized:** seed procedures, real model loading, generation, training, Build B, evaluation, deployment and
+  pushing.
