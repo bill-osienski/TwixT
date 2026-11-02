@@ -5,4 +5,4 @@ first-cycle head as the teacher and plays the 1,000 self-play games of a fresh c
 its own reviewed door. Opened for ONE approved run and restored on every exit. Created closed. This file may hold ONLY
 this declaration.
 """
-COMBINATION_POLICY_CYCLE2_GENERATE_AUTHORIZED = False
+COMBINATION_POLICY_CYCLE2_GENERATE_AUTHORIZED = True
