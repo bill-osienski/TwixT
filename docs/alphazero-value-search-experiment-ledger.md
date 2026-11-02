@@ -205,6 +205,7 @@ knob) is not a new hypothesis.
 > **Combination policy second cycle — Build A ACCEPTED; the generation seed sequence approved as one conditional process (decision note, 2026-11-02, the user's review).** No blocking findings; the three added checks are appropriate. The fit's 2,820 s is accepted only as a build placeholder and must be re-derived from the new corpus's actual counts before training approval, even if the number stays the same. Survey, pre-proof, registration and post-proof each once, each requiring its verdict and 55/55; the method and the 1,000-seed gap floor unchanged; any failure returned, nothing adjusted. Real model loading, generation, training, Build B, evaluation, deployment and pushing remain unauthorized. See #144.
 > **Combination policy second cycle — the generation block surveyed, proven and registered; nothing run (addendum, 2026-11-02).** [202744100, 202745100): survey CLEAN 55/55 (`b657bee5`), pre-proof HOLDS 55/55, registered last in ACCOUNTED, 51 -> 52 (`8a24c602`), post-proof HOLDS 55/55 (`14869ca1`). Plan = `build_plan`. Three lifecycle tests re-anchored; 426 focused pass. Returned for generation launch review. Real model loading, generation, training, Build B, evaluation, deployment and pushing remain unauthorized. See #145.
 > **Combination policy second cycle — the ONE 1,000-game generation run and its conditional seed closing APPROVED (decision note, 2026-11-02, the user's review).** Hashes, proof bindings, slot mappings and the registry append verified; all 58 gates closed. TERM 21,590 s, KILL 21,600 s, cleanup through 21,610 s; teacher digest and reach checks before workers start. A six-commit stderr redirection in the seed sequence is disclosed; no seed procedure repeats. An incomplete corpus is ineligible for training, with no automatic retry. Training, even under the provisional fit ceiling, Build B, evaluation, deployment and pushing remain unauthorized. See #146.
+> **Combination policy second cycle — the ONE generation run VOID at the version check, before any game; block closed (entry 47, 2026-11-02).** Python is 3.14.10 and the card pins 3.14.9, so the script stopped 0.055 s in (exit 3, gate restored, no survivors; `9449a1e1`). No checkpoint read, no teacher installed, no game, no row: a process stop, not a result about the teacher or the hypothesis. K1 RECONCILES 21/21 (`e5b97daf`); with no claims event the reviewed rule exposes [202744100, 202745100) whole, and it is retired whole (`afbb01c6`). No corpus exists, so no fit ceiling is proposed. No automatic retry; a new attempt needs the user's decision on the pin, a new kind and a fresh block. Training, Build B, evaluation, deployment and pushing remain unauthorized. See #147.
 
 ## Historical proposal check — programme now closed
 
@@ -1881,6 +1882,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 144. **The second cycle's generation seed approval (2026-11-02).** Do **not** adjust the selection method, the 1,000-seed gap floor or the block; any failure of the survey, a proof or the registration is returned as it stands. Each mode runs once. Do **not** approve or launch training under the fit wrapper's 2,820 s placeholder: re-derive it from the new corpus's actual counts first, with no new timing run, even if the number stays the same. Do **not** load the real model, open a gate, generate, train, build Build B, evaluate, deploy or push without the user's approval of each.
 145. **The second cycle's generation block (2026-11-02).** Do **not** rerun the survey or either proof, edit their records (`02_*` sha256 `181c6f43…`, `03_*` `c96df303…`, `04_*` `bc5aa252…`), edit the plan, or move, widen or re-register [202744100, 202745100). Do **not** open the generation gate, load the checkpoint or the first head for it, launch, close the block, train, build Build B, evaluate, deploy or push without the user's approval of each. Do **not** write any seed of this block into `scripts/`, `tests/` or `docs/superpowers/` outside its own records, the plan and the registry tuple.
 146. **The second cycle's generation run (2026-11-02).** One run only: do **not** retry, extend, top up or continue it. Do **not** change the ceiling (TERM 21,590 s, KILL 21,600 s, observation through 21,610 s). Do **not** train on an incomplete corpus, delete it or score it; preserve it and return its progress, cause and continuation cost. Do **not** apply K2 unless K1 RECONCILES. Do **not** train, including under the provisional fit ceiling, build Build B, evaluate, deploy or push without the user's approval of each. Do **not** pipe or redirect a commit's output: leave it unfiltered.
+147. **The second cycle's generation VOID (2026-11-02).** Do **not** retry or relaunch, edit `VERSIONS`, change the interpreter or packages, reuse any seed of [202744100, 202745100) or rerun K1 without the user's decision. Do **not** edit the run evidence (`record.json`, `progress.jsonl`, `outer.json`) or K1's record (`ed752ea0…`). Do **not** read this VOID as evidence about the teacher, its reach through the uncompiled evaluator, the hypothesis or the prediction: none of them was reached. Do **not** read the block's exposure as games played: none started. Do **not** assert a pre-launch environment from memory or from older records: read the live versions against `VERSIONS` before a launch, because a test double supplies them in the CPU suites. Training stays unauthorized.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -8552,3 +8554,43 @@ Run as the conditional sequence approved in the addendum above, each step once i
   files. **The user's finding:** the committed states check out, so no seed procedure needs repeating. Future commit output stays
   unfiltered.
 - **Not authorized:** training, including under the provisional fit ceiling; Build B, evaluation, deployment and pushing.
+
+#### Post-closure entry 47 — the second cycle's generation run: VOID at the version check, before any game (2026-11-02)
+
+- **Test:** the ONE approved run of `run cycle2_generate`: 1,000 self-play games with the frozen first head as teacher, on
+  [202744100, 202745100), under TERM 21,590 s / KILL 21,600 s.
+- **Hypothesis (amendment §1):** repeating policy improvement helps. Not tested here.
+- **Why plausible:** a teacher's different priors may change the candidate set at a recorded root, allowing fresh search
+  evidence there. Neither a changed set nor better targets is guaranteed.
+- **Prediction on record (amendment §10):** directional improvement in held-out CE and a score above 0.5, low confidence, no
+  magnitude. No prediction was made about this run's failure, and none is backfilled.
+- **What ran:** decision note `5658b1b4`; gate opening `9ff326a7`, worktree only; evidence `9449a1e1`. Before launch: no new panic
+  report and a boot at the user's restart; BOINC check clear; plan, registry, amendment pin, teacher binding, admission and
+  checkpoint SHA-1 all rechecked. The idle gate waited for Unreal Editor and a browser process to go quiet, and held at t = 1,711 s
+  of its 1,800 s limit.
+- **Result:** inner and outer exit 3, outcome VOID, gate restored, no survivors. The script stopped at its first check, 0.055 s in:
+  `{'mlx': '0.30.3', 'numpy': '2.4.1', 'python': '3.14.10'}` are not the card's `python 3.14.9`. Progress holds only `start` and
+  `end`. **Not reached:** the seed checks, checkpoint, teacher digests, teacher-reach probe, workers and rows. No rows directory
+  exists.
+- **Cause, as far as established:** `.venv/bin/python` resolves through Homebrew's `python@3.14` to the Cellar's 3.14.10, whose
+  directory is dated Nov 1 11:45. All four first-cycle records (generation, training, screen, strength) carry 3.14.9. **Who or what
+  upgraded it is not established:** no log was found.
+- **How it got past me:** my pre-launch recheck verified the pins, bindings and checksums but never compared the live versions with
+  `VERSIONS`, and the CPU suites pass because their seams supply `dict(P.VERSIONS)`. The check itself worked as designed. It could
+  have been caught before the seed sequence, which would have saved this block.
+- **Closing, as approved:** K1 once at `9449a1e1`: RECONCILES, 21/21, record sha256 `ed752ea0…` (`e5b97daf`). With no `claims` event
+  the record cannot establish k, so the reviewed parallel-worker rule exposes the **whole** block, although no game started. K2
+  (`afbb01c6`): EXPOSED 49 -> 50, RETIRED 47 -> 48, ACCOUNTED and TEST_ONLY unchanged. Tests re-anchored; focused suites, serially:
+  427 pass.
+- **Returned results:** corpus counts: none. Integrity: no file to check. Teacher probe: not reached. Fit ceiling: none proposed,
+  because there are no new counts; the 2,820 s placeholder stays a placeholder.
+- **Did it match the prediction:** not applicable; the prediction concerns the fit and the match.
+- **Conclusion:** a process stop, **not** a result about the teacher, the method or the hypothesis. The first pilot's evidence and
+  the first head are unchanged. No automatic retry.
+- **Continuation cost, for the user's assessment:**
+  - lost: this 1,000-seed block and about 29 minutes of idle wait; 54,900 seeds remain above it in the 2027 band;
+  - needed: a decision on the interpreter, then, because `run cycle2_generate` is now one-shot, a new kind with its own gate,
+    evidence, wrapper, survey and closing copies, plus a fresh block's survey, proofs and registration (about 4 minutes per mode);
+  - then the run itself, an estimated 2.8 h against the unchanged six-hour cap.
+- **Not authorized:** a retry, a change to `VERSIONS`, the interpreter or packages, training, Build B, evaluation, deployment and
+  pushing.
