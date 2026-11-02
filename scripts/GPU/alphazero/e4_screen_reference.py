@@ -1155,6 +1155,14 @@ EXPOSED_SEED_INTERVALS = (
     # any other match's games, the screen's included. A post-run accounting edit to a bound file: the committed plan,
     # survey/proof and run records keep their hashes; nothing is rerun.
     (202742000, 202743018),  # COMBINATION POLICY PILOT STRENGTH COMPARISON -- 1,018 game seeds, exposed whole
+    # 🔴 THE SECOND POLICY-IMPROVEMENT CYCLE -- CORPUS GENERATION -- THE CLOSING EDIT (2026-11-02), after the ONE authorized
+    # run (inner and outer exit 3, VOID at the version check, 0.055 s into the script; no survivors). NO GAME STARTED and no
+    # checkpoint was read. Use DERIVED from the committed run evidence by
+    # evidence/combination-policy-cycle2-generate-seed-closing/02_* (RECONCILES, 21/21): with no `claims` event the record cannot
+    # establish k, so the reviewed parallel-worker rule EXPOSES THE WHOLE BLOCK, although its progress log shows no game_start.
+    # A post-run accounting edit to a bound file: the committed plan, survey/proof and run records keep their hashes;
+    # nothing is rerun.
+    (202744100, 202745100),  # SECOND POLICY-IMPROVEMENT CYCLE CORPUS GENERATION -- 1,000 game seeds, exposed whole (no game played)
 )
 
 #: Seeds RESERVED PERMANENTLY FOR TESTS. Unit tests must draw from something, and
@@ -1575,6 +1583,13 @@ RETIRED_SEED_INTERVALS = (
     # any other match's games, the screen's included. A post-run accounting edit to a bound file: the committed plan,
     # survey/proof and run records keep their hashes; nothing is rerun.
     (202742000, 202743018),  # COMBINATION POLICY PILOT STRENGTH COMPARISON -- 1,018 game seeds, retired whole
+    # 🔴 THE SECOND POLICY-IMPROVEMENT CYCLE -- CORPUS GENERATION -- THE CLOSING EDIT (2026-11-02), after the ONE authorized
+    # run (inner and outer exit 3, VOID at the version check, 0.055 s into the script; no survivors). NO GAME STARTED and no
+    # checkpoint was read. Use DERIVED from the committed run evidence by
+    # evidence/combination-policy-cycle2-generate-seed-closing/02_* (RECONCILES, 21/21): the WHOLE block is RETIRED.
+    # A post-run accounting edit to a bound file: the committed plan, survey/proof and run records keep their hashes;
+    # nothing is rerun.
+    (202744100, 202745100),  # SECOND POLICY-IMPROVEMENT CYCLE CORPUS GENERATION -- 1,000 game seeds, retired whole
 )
 
 
