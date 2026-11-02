@@ -209,6 +209,7 @@ knob) is not a new hypothesis.
 > **Combination policy second cycle — Python 3.14.10 pinned by amendment; the new generation attempt BUILT for review; nothing run (decision note and addendum, 2026-11-02, the user's decision).** Amendment `aa646d2d…` pins 3.14.10 per kind for `cycle2_generate2` and `cycle2_train`; `VERSIONS` stays 3.14.9 for the first cycle and the spent `cycle2_generate`. `run cycle2_generate2` is the same run on its own paths behind a closed gate (59 in all), and the fit reads only its corpus (`ef30ad1f`). 445 focused pass. Seed procedures, real model loading, generation, training, Build B, evaluation, deployment and pushing remain unauthorized. See #148.
 > **Combination policy second cycle — the new attempt's seed sequence approved (decision note, 2026-11-02, the user's decision).** The user accepted the returned build and approved the next step: live versions read against the pin, then survey, pre-proof, registration and post-proof, each once, with the method and 1,000-seed gap floor unchanged; any failure returned, nothing adjusted. Real model loading, generation, training, Build B, evaluation, deployment and pushing remain unauthorized. See #149.
 > **Combination policy second cycle — the new attempt's block surveyed, proven and registered; nothing run (addendum, 2026-11-02).** [202746200, 202747200): survey CLEAN 55/55 (`4fbb855a`), pre-proof HOLDS 55/55 (`0043d826`), registered last in ACCOUNTED, 52 -> 53 (`4c599111`), post-proof HOLDS 55/55 (`96245e21`). Plan = `build_plan`. Three lifecycle tests re-anchored (`7992efed`); 445 focused pass. Returned for launch review. Real model loading, generation, training, Build B, evaluation, deployment and pushing remain unauthorized. See #150.
+> **Combination policy second cycle — ONE run of `cycle2_generate2` and its conditional seed closing APPROVED (decision note, 2026-11-02, the user's review).** The version amendment, new build and seed preparation accepted; the first attempt stays VOID with its block closed, and it produced no result about the teacher. TERM 21,590 s, KILL 21,600 s, cleanup through 21,610 s; teacher checks before workers start. An incomplete corpus is ineligible for training, with no automatic retry. Training, including under the provisional ceiling, Build B, evaluation, deployment and pushing remain unauthorized. See #151.
 
 ## Historical proposal check — programme now closed
 
@@ -1889,6 +1890,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 148. **The second cycle's Python pin and new attempt (2026-11-02).** Build only. Do **not** run its survey, proofs, registration or closing, open its gate, load the real model or head for it, launch, train, build Build B, evaluate, deploy or push without the user's approval of each. Do **not** change `VERSIONS` or extend the 3.14.10 pin to a first-cycle kind or to `cycle2_generate`, which stays spent. Do **not** claim 3.14.9 and 3.14.10 behave identically on this code: they were not compared. Do **not** start a seed sequence or a launch without reading the live versions against the pin. Do **not** change the amendment without re-pinning it under review.
 149. **The new attempt's seed approval (2026-11-02).** Do **not** adjust the selection method, the 1,000-seed gap floor or the block; a failure of the survey, a proof or the registration is returned as it stands. Each mode runs once. Do **not** load the real model, open a gate, launch, train, build Build B, evaluate, deploy or push without the user's approval of each.
 150. **The new attempt's block (2026-11-02).** Do **not** rerun the survey or either proof, edit their records (`02_*` sha256 `9d7cfb72…`, `03_*` `7a303063…`, `04_*` `75dd0de5…`), edit the plan, or move, widen or re-register [202746200, 202747200). Do **not** open the gate, load the checkpoint or the first head for it, launch, close the block, train, build Build B, evaluate, deploy or push without the user's approval of each. Do **not** launch without reading the live versions against the pin again. Do **not** write any seed of this block into `scripts/`, `tests/` or `docs/superpowers/` outside its own records, the plan and the registry tuple.
+151. **The new attempt's run (2026-11-02).** One run only: do **not** retry, extend, top up or continue it, or change the ceiling (TERM 21,590 s, KILL 21,600 s, observation through 21,610 s). Do **not** launch without rechecking live versions, panic and reboot state, the plan, the proved registry, both amendments and the teacher binding immediately before. Do **not** apply K2 unless K1 RECONCILES. Do **not** train on an incomplete corpus, delete it or score it. Do **not** train, including under the provisional ceiling, build Build B, evaluate, deploy or push without the user's approval of each.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -8649,3 +8651,27 @@ Run as the conditional sequence approved in the addendum above, each step once i
 - **Commit output:** left unfiltered on every commit in this sequence.
 - **Nothing else ran:** no model or head load, gate opening or game. All 59 gates are closed, and the block is ACCOUNTED only.
 - **Returned for launch review.** Not authorized: real model loading, generation, training, Build B, evaluation, deployment and pushing.
+
+#### Decision note — one run of `cycle2_generate2` and its conditional closing approved (2026-11-02, the user's review)
+
+- **Accepted:** the version amendment, the new build and the seed preparation. The first attempt correctly remains VOID with its block
+  closed, and it produced no result about the teacher.
+- **The user's check:** the new plan, proof hashes, 1,000 slot mappings and exact registry append check out. Both amendment pins and the
+  teacher binding match, all 59 gates are closed, and the interpreter and installed package metadata match the new pin.
+- **A correction to this ledger's earlier note:** the note above recorded "Lets go to the next step" as accepting the returned build. The
+  user reads that phrase as approving seed preparation only, which the user finds appropriately narrow. The acceptance of the build and
+  amendment is **this** review.
+- **Approved:**
+  1. this record, then, immediately before launch, a recheck of live versions, panic and reboot state, the plan, the proved registry, both
+     amendments and the teacher binding;
+  2. Unreal Editor closed and BOINC quit, with the existing idle and background checks enforced;
+  3. in a clean worktree, opening only `COMBINATION_POLICY_CYCLE2_GENERATE2_AUTHORIZED` by a one-line commit, and running the existing wrapper
+     once;
+  4. TERM 21,590 s, KILL 21,600 s, cleanup through 21,610 s, with the teacher checks before workers start;
+  5. after a started run: verifying gate restoration and cleanup, then K1 once; only if it RECONCILES, applying its exposure verdict, retiring
+     the whole block, re-anchoring lifecycle tests and running focused CPU checks;
+  6. committing the evidence and a dated closeout, and returning corpus counts, integrity and teacher-probe results and the proposed fit
+     ceiling from the actual counts.
+- **An incomplete corpus** stays ineligible for training. It is preserved, and its progress, cause and continuation cost are returned. No
+  automatic retry.
+- **Not authorized:** training, including under the provisional ceiling; Build B, evaluation, deployment and pushing.
