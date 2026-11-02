@@ -60,13 +60,17 @@ each game and the final claim count after the last; background_compute is read b
   the parent's, taken before the head is installed; all three starting digests must be the teacher's; the corpus's
   record must have played this teacher. Admitted by the first training run's record and outer.json, cycle2_generate's
   record and outer.json, TRAINED_HEAD and the timing. Its verdict permits proposing evaluation and nothing else.
+* `run cycle2_generate2` (amendment `docs/superpowers/2026-11-02-combination-policy-second-cycle-generation-attempt2-amendment.md`, pinned by sha256 with the one above; BUILT 2026-11-02, its gate closed):
+  cycle2_generate's run on its own block, evidence, rows directory and gate, after that kind went VOID at the version check
+  (ledger entry 47). It and `cycle2_train`, which now reads its corpus, require the amendment's own pin, Python 3.14.10;
+  `VERSIONS` stays the first cycle's and cycle2_generate's.
 * `time`: the build's CPU timing (card §5 step 1) -- 20 synchronized updates at the real architecture on synthetic
   inputs with random weights, no checkpoint -- and the training ceiling it prices.
 
 Any failure, exception or SIGTERM inside the record boundary is a VOID with record.json written by the script; a
 STOP rule is a COMPLETED run with verdict STOP. One shot each; no retry, top-up or extension.
 
-    MLX_ENABLE_TF32=0 python -m scripts.GPU.alphazero.combination_policy_pilot run throughput|throughput2|generate|train|screen|strength|cycle2_generate|cycle2_train --checkpoint <abs path>
+    MLX_ENABLE_TF32=0 python -m scripts.GPU.alphazero.combination_policy_pilot run throughput|throughput2|generate|train|screen|strength|cycle2_generate|cycle2_generate2|cycle2_train --checkpoint <abs path>
     MLX_ENABLE_TF32=0 python -m scripts.GPU.alphazero.combination_policy_pilot time
 """
 from __future__ import annotations
@@ -88,6 +92,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 import numpy as np
 
 from . import combination_policy_cycle2_generate_authorization as CYCLE2_GENERATE_GATE
+from . import combination_policy_cycle2_generate2_authorization as CYCLE2_GENERATE2_GATE
 from . import combination_policy_cycle2_train_authorization as CYCLE2_TRAIN_GATE
 from . import combination_policy_generate_authorization as GENERATE_GATE
 from . import combination_policy_screen_authorization as SCREEN_GATE
@@ -114,9 +119,14 @@ PINNED = {"scripts/GPU/alphazero/mirror_halving_combination.py":
           "0bec4ef1914b25541f5247c5dd6c0002cea171b2902c629e52cfc034e9402790",
           "scripts/GPU/alphazero/policy_head_capacity.py":
           "beca0ec7e182b010185473b2550c1edd2a6245dab2b6b4d9b3222db2b4750476"}
+#: the second cycle's own pin (the user's decision, 2026-11-02): per kind; VERSIONS stays the first cycle's
+CYCLE2_VERSIONS = {**VERSIONS, "python": "3.14.10"}
 CACHE_DIR = pathlib.Path.home() / "twixt-cache" / "combination-policy-pilot"     # the corpus: outside the repo
 N_WORKERS, MAX_BATCH_ROWS = 18, 14              # entry 20's measured starting settings; not established optima here
-#: the second policy-improvement cycle (the user's review, 2026-11-02): one amendment, pinned by both of its kinds
+#: the new generation attempt's amendment (the user's decision, 2026-11-02), pinned beside the one it amends
+CYCLE2_ATTEMPT2_AMENDMENT = ("docs/superpowers/2026-11-02-combination-policy-second-cycle-generation-attempt2-amendment.md",
+                             "aa646d2d9bc689417cced4fe26c533eba7f2165dc1c4dbba0a4c6eaa1d4d039c")
+#: the second policy-improvement cycle (the user's review, 2026-11-02): one amendment, pinned by each of its kinds
 CYCLE2_AMENDMENT = ("docs/superpowers/2026-11-02-combination-policy-second-cycle-amendment.md",
                     "94c7f0df5860aac9d78f3c6736fe8b76f0c4279d8ce7a23edc1f4172b10a9ed3")
 KINDS = {"throughput": {"slots": 144, "keep_rows": False, "gate": (THROUGHPUT_GATE, "COMBINATION_POLICY_THROUGHPUT_AUTHORIZED"),
@@ -146,10 +156,16 @@ KINDS = {"throughput": {"slots": 144, "keep_rows": False, "gate": (THROUGHPUT_GA
                              "evidence": "docs/superpowers/evidence/combination-policy-cycle2-generate",
                              "plan": "docs/superpowers/evidence/combination-policy-cycle2-generate-run/plan.json",
                              "amendment": CYCLE2_AMENDMENT},
-         "cycle2_train": {"role": "train", "teacher": True, "corpus": "cycle2_generate",
+         "cycle2_generate2": {"role": "generate", "teacher": True, "slots": 1000, "keep_rows": True,
+                              "versions": CYCLE2_VERSIONS,
+                              "gate": (CYCLE2_GENERATE2_GATE, "COMBINATION_POLICY_CYCLE2_GENERATE2_AUTHORIZED"),
+                              "evidence": "docs/superpowers/evidence/combination-policy-cycle2-generate2",
+                              "plan": "docs/superpowers/evidence/combination-policy-cycle2-generate2-run/plan.json",
+                              "amendment": CYCLE2_ATTEMPT2_AMENDMENT, "base_amendment": CYCLE2_AMENDMENT},
+         "cycle2_train": {"role": "train", "teacher": True, "corpus": "cycle2_generate2", "versions": CYCLE2_VERSIONS,
                           "gate": (CYCLE2_TRAIN_GATE, "COMBINATION_POLICY_CYCLE2_TRAIN_AUTHORIZED"),
                           "evidence": "docs/superpowers/evidence/combination-policy-cycle2-train",
-                          "amendment": CYCLE2_AMENDMENT}}
+                          "amendment": CYCLE2_ATTEMPT2_AMENDMENT, "base_amendment": CYCLE2_AMENDMENT}}
 TIMING_EVIDENCE = "docs/superpowers/evidence/combination-policy-timing"
 #: what each step needs committed first: (evidence dir, record field, value)
 ADMISSION = {"throughput": [(TIMING_EVIDENCE, "status", "COMPLETED")],
@@ -165,8 +181,10 @@ ADMISSION = {"throughput": [(TIMING_EVIDENCE, "status", "COMPLETED")],
              #: the second cycle (the user's review, 2026-11-02): the teacher's training run, ELIGIBLE, then its corpus
              "cycle2_generate": [(KINDS["train"]["evidence"], "verdict", "ELIGIBLE"),
                                  (TIMING_EVIDENCE, "status", "COMPLETED")],
+             "cycle2_generate2": [(KINDS["train"]["evidence"], "verdict", "ELIGIBLE"),
+                                  (TIMING_EVIDENCE, "status", "COMPLETED")],
              "cycle2_train": [(KINDS["train"]["evidence"], "verdict", "ELIGIBLE"),
-                              (KINDS["cycle2_generate"]["evidence"], "status", "COMPLETED"),
+                              (KINDS["cycle2_generate2"]["evidence"], "status", "COMPLETED"),
                               (TIMING_EVIDENCE, "status", "COMPLETED")]}
 #: what each step needs from a launch wrapper's committed outer.json too (the user's ruling, ledger 2026-10-29): an
 #: outer TIMEOUT, unconfirmed cleanup or missing outer evidence refuses, whatever the inner record says. Generation
@@ -178,8 +196,9 @@ OUTER_ADMISSION: Dict[str, List[Tuple[str, str]]] = {
     "strength": [("docs/superpowers/evidence/combination-policy-train-run", KINDS["train"]["evidence"]),
                  (str(pathlib.Path(KINDS["screen"]["plan"]).parent), KINDS["screen"]["evidence"])],
     "cycle2_generate": [("docs/superpowers/evidence/combination-policy-train-run", KINDS["train"]["evidence"])],
+    "cycle2_generate2": [("docs/superpowers/evidence/combination-policy-train-run", KINDS["train"]["evidence"])],
     "cycle2_train": [("docs/superpowers/evidence/combination-policy-train-run", KINDS["train"]["evidence"]),
-                     (str(pathlib.Path(KINDS["cycle2_generate"]["plan"]).parent), KINDS["cycle2_generate"]["evidence"])]}
+                     (str(pathlib.Path(KINDS["cycle2_generate2"]["plan"]).parent), KINDS["cycle2_generate2"]["evidence"])]}
 #: the screen's candidate (the user's review, 2026-10-31): exactly the head the one training run saved -- these bytes,
 #: named by its committed record with these digests after training (the encoder's and value head's unchanged)
 TRAINED_HEAD = {"file": f"{KINDS['train']['evidence']}/head.npz",
@@ -312,8 +331,9 @@ def _generate(kind: str, seams: GenSeams, out_dir: pathlib.Path, rec: Dict[str, 
     if bool(spec.get("teacher")) != (seams.teacher is not None):
         raise Void("teacher", f"{kind} and its seams disagree about a teacher")
     rec["versions"] = seams.versions()
-    if rec["versions"] != VERSIONS:
-        raise Void("versions", f"{rec['versions']} are not the card's {VERSIONS}")
+    pinned = spec.get("versions", VERSIONS)
+    if rec["versions"] != pinned:
+        raise Void("versions", f"{rec['versions']} are not {kind}'s pinned {pinned}")
     rec["variant"] = K.check_variant(RSH)
     plan = seams.read_plan(spec["plan"])
     if plan.get("n_slots") != n or type(plan.get("base")) is not int:
@@ -617,6 +637,7 @@ class TrainSeams:
     teacher: Optional[Mapping[str, Any]] = None
     install_teacher: Optional[Callable[[Any], List[str]]] = None
     corpus_evidence: Optional[str] = None
+    pinned_versions: Optional[Mapping[str, str]] = None      # None: VERSIONS, the first cycle's
 
 
 def _train(recipe: Mapping[str, Any], seams: TrainSeams, out_dir: pathlib.Path, rec: Dict[str, Any], log) -> None:
@@ -633,8 +654,9 @@ def _train(recipe: Mapping[str, Any], seams: TrainSeams, out_dir: pathlib.Path, 
     rec["device"] = str(mx.default_device())
     rec["recipe"] = dict(recipe)
     rec["versions"] = seams.versions()
-    if rec["versions"] != VERSIONS:
-        raise Void("versions", f"{rec['versions']} are not the card's {VERSIONS}")
+    pinned = VERSIONS if seams.pinned_versions is None else seams.pinned_versions
+    if rec["versions"] != pinned:
+        raise Void("versions", f"{rec['versions']} are not the pinned {pinned}")
     timing = seams.read_record(TIMING_EVIDENCE)
     if timing.get("arch") != recipe["arch"]:
         raise Void("timing", f"the timed architecture {timing.get('arch')} is not the recipe's {recipe['arch']}")
@@ -755,7 +777,8 @@ def _train(recipe: Mapping[str, Any], seams: TrainSeams, out_dir: pathlib.Path, 
 
 
 def _real_train_seams(checkpoint: pathlib.Path, corpus_kind: str = "generate",
-                      teacher: Optional[Mapping[str, Any]] = None) -> TrainSeams:
+                      teacher: Optional[Mapping[str, Any]] = None,
+                      pinned_versions: Optional[Mapping[str, str]] = None) -> TrainSeams:
     corpus = KINDS[corpus_kind]["evidence"]
 
     def read_games():
@@ -778,7 +801,7 @@ def _real_train_seams(checkpoint: pathlib.Path, corpus_kind: str = "generate",
         return network, {"in_channels": in_channels, "hidden": hidden, "n_blocks": n_blocks}
 
     extra = {} if teacher is None else {
-        "teacher": teacher, "corpus_evidence": corpus,
+        "teacher": teacher, "corpus_evidence": corpus, "pinned_versions": pinned_versions,
         "install_teacher": lambda net: _install_r_arrays(net, _npz_arrays(teacher["bytes"]))}
     return TrainSeams(versions=_versions, read_record=_read_record, read_games=read_games, read_rows=read_rows,
                       checkpoint_sha1=lambda: hashlib.sha1(checkpoint.read_bytes()).hexdigest(),
@@ -1142,6 +1165,8 @@ def conclude(kind: str, execute: Callable[[pathlib.Path, Dict[str, Any], Callabl
                            "loadavg_before": os.getloadavg()}
     if "amendment" in KINDS.get(kind, {}):
         rec["amendment"], rec["amendment_sha256"] = KINDS[kind]["amendment"]
+    if "base_amendment" in KINDS.get(kind, {}):
+        rec["base_amendment"], rec["base_amendment_sha256"] = KINDS[kind]["base_amendment"]
     log_fh = open(out_dir / "progress.jsonl", "x")
 
     def log(event, **kw):
@@ -1277,10 +1302,11 @@ def run(kind: str, checkpoint: str) -> int:
     gate, name = KINDS[kind]["gate"]
     if getattr(gate, name) is not True:
         raise Refused(f"{name} is closed: the {kind} step is not authorized")
-    if "amendment" in KINDS[kind]:
-        rel, sha = KINDS[kind]["amendment"]
-        if not (ROOT / rel).is_file() or M._sha((ROOT / rel).read_bytes()) != sha:
-            raise Refused(f"{rel} is not the pinned amendment")
+    for key in ("amendment", "base_amendment"):
+        if key in KINDS[kind]:
+            rel, sha = KINDS[kind][key]
+            if not (ROOT / rel).is_file() or M._sha((ROOT / rel).read_bytes()) != sha:
+                raise Refused(f"{rel} is not the pinned amendment")
     admission = admitted(kind, _read_record, _read_outer)
     needs_head = kind in ("screen", "strength") or KINDS[kind].get("teacher")
     head = trained_head(_read_record, _read_committed_bytes, kind) if needs_head else None
@@ -1291,7 +1317,7 @@ def run(kind: str, checkpoint: str) -> int:
     if os.path.lexists(out):
         raise Refused(f"{out} exists: the run is one-shot")
     if role == "train":
-        seams = _real_train_seams(ckpt, KINDS[kind].get("corpus", "generate"), head)
+        seams = _real_train_seams(ckpt, KINDS[kind].get("corpus", "generate"), head, KINDS[kind].get("versions"))
         execute = lambda o, r, lg: _train(RECIPE, seams, o, r, lg)    # noqa: E731
     elif kind in ("screen", "strength"):
         seams = _real_screen_seams(ckpt, head)
@@ -1340,7 +1366,7 @@ def _mlx_loaded() -> bool:
 def main(argv: Sequence[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     usage = ("usage: MLX_ENABLE_TF32=0 python -m scripts.GPU.alphazero.combination_policy_pilot "
-             "run throughput|throughput2|generate|train|screen|strength|cycle2_generate|cycle2_train "
+             "run throughput|throughput2|generate|train|screen|strength|cycle2_generate|cycle2_generate2|cycle2_train "
              "--checkpoint <abs path> | time")
     try:
         if argv == ["time"]:

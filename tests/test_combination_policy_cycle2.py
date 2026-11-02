@@ -22,6 +22,7 @@ import numpy as np
 import pytest
 
 from scripts.GPU.alphazero import combination_policy_cycle2_generate_authorization as GATE_GEN
+from scripts.GPU.alphazero import combination_policy_cycle2_generate2_authorization as GATE_GEN2
 from scripts.GPU.alphazero import combination_policy_cycle2_train_authorization as GATE_TRAIN
 from scripts.GPU.alphazero import combination_policy_pilot as P
 from scripts.GPU.alphazero import seed_band_2027 as SB
@@ -34,11 +35,14 @@ from tests.test_combination_policy_pilot import (GOOD_INNER, GOOD_OUTER, TINY_AR
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 EV = ROOT / "docs/superpowers/evidence"
 AMEND = "docs/superpowers/2026-11-02-combination-policy-second-cycle-amendment.md"
-GEN, TRAIN = "cycle2_generate", "cycle2_train"
+AMEND2 = "docs/superpowers/2026-11-02-combination-policy-second-cycle-generation-attempt2-amendment.md"
+GEN, GEN2, TRAIN = "cycle2_generate", "cycle2_generate2", "cycle2_train"       # GEN is spent: VOID, ledger entry 47
 SURVEY_1, SURVEY = ("combination-policy-generate-seed-survey/01_seed_survey.py",
                     "combination-policy-cycle2-generate-seed-survey/01_seed_survey.py")
 CLOSING_1, CLOSING = ("combination-policy-generate-seed-closing/01_derive_usage.py",
                       "combination-policy-cycle2-generate-seed-closing/01_derive_usage.py")
+SURVEY2 = "combination-policy-cycle2-generate2-seed-survey/01_seed_survey.py"
+CLOSING2 = "combination-policy-cycle2-generate2-seed-closing/01_derive_usage.py"
 _REAL_GEN_SEAMS, _REAL_TRAIN_SEAMS = P._real_gen_seams, P._real_train_seams   # bound before the isolation replaces them
 
 
@@ -63,7 +67,8 @@ def isolated(monkeypatch, tmp_path):
 def test_THE_AMENDMENT_IS_FROZEN_PINNED_AND_NAMES_THE_REAL_BINDINGS():
     rel, sha = P.CYCLE2_AMENDMENT
     assert rel == AMEND and P.M._sha((ROOT / rel).read_bytes()) == sha
-    assert P.KINDS[GEN]["amendment"] == P.KINDS[TRAIN]["amendment"] == P.CYCLE2_AMENDMENT
+    assert P.KINDS[GEN]["amendment"] == P.KINDS[GEN2]["base_amendment"] == P.KINDS[TRAIN]["base_amendment"] == \
+        P.CYCLE2_AMENDMENT
     text = (ROOT / rel).read_text(encoding="utf-8")
     flat = " ".join(text.split())
     assert "FROZEN 2026-11-02" in text.splitlines()[0]
@@ -154,7 +159,7 @@ def test_THE_ONE_RUN_WENT_VOID_AT_THE_VERSION_CHECK_BEFORE_ANY_GAME_AND_THE_BLOC
     assert GATE_GEN.COMBINATION_POLICY_CYCLE2_GENERATE_AUTHORIZED is False
     assert GATE_TRAIN.COMBINATION_POLICY_CYCLE2_TRAIN_AUTHORIZED is False
     assert (P.KINDS[GEN]["gate"][0], P.KINDS[TRAIN]["gate"][0]) == (GATE_GEN, GATE_TRAIN)
-    assert not any(k.startswith("cycle2") and k not in (GEN, TRAIN) for k in P.KINDS)
+    assert not any(k.startswith("cycle2") and k not in (GEN, GEN2, TRAIN) for k in P.KINDS)
     assert sorted(x.name for x in (EV / "combination-policy-cycle2-train-run").iterdir()) == ["01_wrapper.sh"]
     assert not (ROOT / P.KINDS[TRAIN]["evidence"]).exists()
 
@@ -162,8 +167,9 @@ def test_THE_ONE_RUN_WENT_VOID_AT_THE_VERSION_CHECK_BEFORE_ANY_GAME_AND_THE_BLOC
 def test_THE_VOID_RUN_ADMITS_NOTHING_AND_ITS_KIND_STAYS_ONE_SHOT(tmp_path, monkeypatch, capsys):
     """The real committed readers: the fit is refused on generation's VOID record. With the gate open in this process only
     and admission stubbed, `run cycle2_generate` refuses as one-shot before any seam."""
-    with pytest.raises(P.Refused, match="is not COMPLETED"):
-        P.admitted(TRAIN, P._read_record, P._read_outer)
+    spent = P.KINDS[GEN]["evidence"]
+    assert P.KINDS[TRAIN]["corpus"] == GEN2 and all(rel != spent for rel, *_ in P.ADMISSION[TRAIN])
+    assert all(rel != spent for _run, rel in P.OUTER_ADMISSION[TRAIN])
     gate, name = P.KINDS[GEN]["gate"]
     monkeypatch.setattr(gate, name, True)
     monkeypatch.setattr(P, "_mlx_loaded", lambda: False)
@@ -221,9 +227,9 @@ def _fake(seed):
     return ev
 
 
-def _gen_harness(tmp_path, monkeypatch, calls, **change):
-    monkeypatch.setitem(P.KINDS[GEN], "slots", 3)
-    h = GenHarness(tmp_path, kind=GEN, n=3)
+def _gen_harness(tmp_path, monkeypatch, calls, kind=GEN, **change):
+    monkeypatch.setitem(P.KINDS[kind], "slots", 3)
+    h = GenHarness(tmp_path, kind=kind, n=3)
     generate = h.generate
 
     def counted(**kw):
@@ -400,7 +406,8 @@ def test_THE_FIT_STARTS_FROM_ALL_THREE_TEACHER_DIGESTS_AND_LEAVES_THE_VALUE_BITW
     with np.load(tmp_path / "train" / "head.npz") as z:
         assert sorted(z.files) == sorted(arrays)                   # the head alone: no optimizer state
         assert not np.array_equal(z["policy_head.extra_out.weight"], arrays["policy_head.extra_out.weight"])
-    assert (rec["amendment"], rec["amendment_sha256"]) == P.CYCLE2_AMENDMENT
+    assert (rec["amendment"], rec["amendment_sha256"]) == P.CYCLE2_ATTEMPT2_AMENDMENT
+    assert (rec["base_amendment"], rec["base_amendment_sha256"]) == P.CYCLE2_AMENDMENT
 
 
 def test_THE_FIT_MEASURES_FROM_THE_TEACHER_NOT_THE_PARENT(tmp_path, corpus_game):
@@ -499,15 +506,16 @@ def test_THE_REAL_FIT_SEAM_READS_ONLY_THE_NEW_CORPUS(tmp_path, monkeypatch):
     own kind's; the first cycle's reader keeps its own paths."""
     arrays, digests = _teacher_arrays()
     root = tmp_path / "cache"
-    for kind in ("generate", GEN):
+    for kind in ("generate", GEN2):
         (root / kind).mkdir(parents=True)
     np.savez(root / "generate" / "only_first.npz", a=np.zeros(1))
-    np.savez(root / GEN / "only_second.npz", a=np.ones(1))
-    seams = _REAL_TRAIN_SEAMS(pathlib.Path("/unused"), GEN, _binding(arrays, digests))
+    np.savez(root / GEN2 / "only_second.npz", a=np.ones(1))
+    seams = _REAL_TRAIN_SEAMS(pathlib.Path("/unused"), GEN2, _binding(arrays, digests), P.CYCLE2_VERSIONS)
     first = _REAL_TRAIN_SEAMS(pathlib.Path("/unused"))
-    assert seams.corpus_evidence == P.KINDS[GEN]["evidence"] and seams.teacher is not None
+    assert seams.corpus_evidence == P.KINDS[GEN2]["evidence"] and seams.teacher is not None
+    assert seams.pinned_versions == P.CYCLE2_VERSIONS and first.pinned_versions is None
     assert first.teacher is None and first.corpus_evidence is None
-    second_game = {"rows_file": "only_second.npz", "rows_sha256": P._sha_file(root / GEN / "only_second.npz")}
+    second_game = {"rows_file": "only_second.npz", "rows_sha256": P._sha_file(root / GEN2 / "only_second.npz")}
     first_game = {"rows_file": "only_first.npz", "rows_sha256": P._sha_file(root / "generate" / "only_first.npz")}
     assert seams.read_rows(second_game)["a"].tolist() == [1.0]
     assert first.read_rows(first_game)["a"].tolist() == [0.0]
@@ -515,13 +523,13 @@ def test_THE_REAL_FIT_SEAM_READS_ONLY_THE_NEW_CORPUS(tmp_path, monkeypatch):
         seams.read_rows(first_game)
     with pytest.raises(P.Void, match="not the file generation wrote"):
         seams.read_rows({**second_game, "rows_sha256": "0" * 64})
-    with pytest.raises(FileNotFoundError, match="cycle2-generate"):
+    with pytest.raises(FileNotFoundError, match="cycle2-generate2"):
         seams.read_games()                    # the new corpus does not exist; the first one's games are never read
 
 
 def test_THE_REAL_FIT_SEAM_INSTALLS_THE_TEACHER_S_SAVED_BYTES(monkeypatch):
     arrays, digests = _teacher_arrays()
-    seams = _REAL_TRAIN_SEAMS(pathlib.Path("/unused"), GEN, _binding(arrays, digests))
+    seams = _REAL_TRAIN_SEAMS(pathlib.Path("/unused"), GEN2, _binding(arrays, digests))
     from scripts.GPU.alphazero import policy_head_capacity as PHC
     net = _tiny_network()
     assert tuple(sorted(seams.install_teacher(net))) == PHC.SURFACES["R"][0]
@@ -530,20 +538,21 @@ def test_THE_REAL_FIT_SEAM_INSTALLS_THE_TEACHER_S_SAVED_BYTES(monkeypatch):
 
 # ─────────────────────────────── the entry and admission ───────────────────────────────
 
-@pytest.mark.parametrize("kind", [GEN, TRAIN])
+@pytest.mark.parametrize("kind", [GEN, GEN2, TRAIN])
 def test_THE_ENTRY_REFUSES_ON_A_CLOSED_GATE(monkeypatch, capsys, kind):
     monkeypatch.setattr(P, "_mlx_loaded", lambda: False)
     assert P.main(["run", kind, "--checkpoint", "/x"]) == P.EXIT_REFUSED
     assert "is closed" in capsys.readouterr().err
 
 
-@pytest.mark.parametrize("kind", [GEN, TRAIN])
-def test_THE_ENTRY_REFUSES_AN_AMENDMENT_THAT_IS_NOT_THE_PINNED_ONE(monkeypatch, capsys, kind):
+@pytest.mark.parametrize("kind, key", [(GEN, "amendment"), (GEN2, "amendment"), (GEN2, "base_amendment"),
+                                       (TRAIN, "amendment"), (TRAIN, "base_amendment")])
+def test_THE_ENTRY_REFUSES_AN_AMENDMENT_THAT_IS_NOT_THE_PINNED_ONE(monkeypatch, capsys, kind, key):
     gate, name = P.KINDS[kind]["gate"]
     monkeypatch.setattr(gate, name, True)
     monkeypatch.setattr(P, "_mlx_loaded", lambda: False)
     monkeypatch.setattr(P, "admitted", lambda k, *_a: {"stub": k})
-    monkeypatch.setitem(P.KINDS[kind], "amendment", (AMEND, "0" * 64))
+    monkeypatch.setitem(P.KINDS[kind], key, (AMEND, "0" * 64))
     assert P.main(["run", kind, "--checkpoint", "/x"]) == P.EXIT_REFUSED
     assert "is not the pinned amendment" in capsys.readouterr().err
 
@@ -565,8 +574,8 @@ def _open_entry(monkeypatch, tmp_path, kind, seen):
 
 def test_RUN_CYCLE2_GENERATE_PASSES_THE_COMMITTED_TEACHER_TO_THE_GENERATION_SEAMS(tmp_path, monkeypatch, capsys):
     seen = {}
-    ckpt = _open_entry(monkeypatch, tmp_path, GEN, seen)
-    assert P.main(["run", GEN, "--checkpoint", str(ckpt)]) == 0
+    ckpt = _open_entry(monkeypatch, tmp_path, GEN2, seen)
+    assert P.main(["run", GEN2, "--checkpoint", str(ckpt)]) == 0
     assert "train" not in seen and seen["gen"][0] == ckpt
     teacher = seen["gen"][1]
     assert teacher["sha256"] == P.TRAINED_HEAD["sha256"] and teacher["digests"] == P.TRAINED_HEAD["digests"]
@@ -577,26 +586,27 @@ def test_RUN_CYCLE2_TRAIN_PASSES_ITS_CORPUS_AND_THE_TEACHER_TO_THE_TRAINING_SEAM
     seen = {}
     ckpt = _open_entry(monkeypatch, tmp_path, TRAIN, seen)
     assert P.main(["run", TRAIN, "--checkpoint", str(ckpt)]) == 0
-    assert "gen" not in seen and seen["train"][:2] == (ckpt, GEN)
+    assert "gen" not in seen and seen["train"][:2] == (ckpt, GEN2) and seen["train"][3] == P.CYCLE2_VERSIONS
     assert seen["train"][2]["sha256"] == P.TRAINED_HEAD["sha256"]
 
 
 def test_RUN_CYCLE2_GENERATE_REFUSES_AN_EXISTING_ROWS_DIRECTORY(tmp_path, monkeypatch, capsys):
     seen = {}
-    ckpt = _open_entry(monkeypatch, tmp_path, GEN, seen)
-    (tmp_path / "cache" / GEN).mkdir(parents=True)
-    assert P.main(["run", GEN, "--checkpoint", str(ckpt)]) == P.EXIT_REFUSED
+    ckpt = _open_entry(monkeypatch, tmp_path, GEN2, seen)
+    (tmp_path / "cache" / GEN2).mkdir(parents=True)
+    assert P.main(["run", GEN2, "--checkpoint", str(ckpt)]) == P.EXIT_REFUSED
     assert "the corpus is written once" in capsys.readouterr().err and not seen
 
 
 def test_THE_TEACHER_COMES_FROM_THE_COMMITTED_FIRST_TRAINING_RUN_for_both_kinds():
     """The real committed readers, read-only."""
-    for kind in (GEN, TRAIN):
+    for kind in (GEN, GEN2, TRAIN):
         h = P.trained_head(P._read_record, P._read_committed_bytes, kind)
         assert h["file"] == P.KINDS["train"]["evidence"] + "/head.npz" and h["sha256"] == P.TRAINED_HEAD["sha256"]
     train_rel = P.KINDS["train"]["evidence"]
-    assert P.admitted(GEN, P._read_record, P._read_outer) == {
-        train_rel: "ELIGIBLE", P.TIMING_EVIDENCE: "COMPLETED", f"{train_rel}-run/outer.json": "COMPLETED"}
+    for kind in (GEN, GEN2):
+        assert P.admitted(kind, P._read_record, P._read_outer) == {
+            train_rel: "ELIGIBLE", P.TIMING_EVIDENCE: "COMPLETED", f"{train_rel}-run/outer.json": "COMPLETED"}
 
 
 def _readers(have, outers):
@@ -613,7 +623,7 @@ def _readers(have, outers):
 
 
 FIRST, FIRST_RUN = P.KINDS["train"]["evidence"], P.KINDS["train"]["evidence"] + "-run"
-CORPUS, CORPUS_RUN = P.KINDS[GEN]["evidence"], str(pathlib.Path(P.KINDS[GEN]["plan"]).parent)
+CORPUS, CORPUS_RUN = P.KINDS[GEN2]["evidence"], str(pathlib.Path(P.KINDS[GEN2]["plan"]).parent)
 ELIGIBLE = {**GOOD_INNER, "verdict": "ELIGIBLE"}
 FULL = {FIRST: ELIGIBLE, CORPUS: GOOD_INNER, P.TIMING_EVIDENCE: {"status": "COMPLETED", "card_sha256": P.CARD_SHA256}}
 FULL_OUTER = {FIRST_RUN: GOOD_OUTER, CORPUS_RUN: GOOD_OUTER}
@@ -645,6 +655,9 @@ WRAPPERS = {
     GEN: {"base": EV / "combination-policy-generate-run/01_wrapper.sh", "term": 21590, "stem": "cycle2-generate",
           "gate": "COMBINATION_POLICY_CYCLE2_GENERATE_AUTHORIZED",
           "gate_rel": "combination_policy_cycle2_generate_authorization.py"},
+    GEN2: {"base": EV / "combination-policy-cycle2-generate-run/01_wrapper.sh", "term": 21590, "stem": "cycle2-generate2",
+           "gate": "COMBINATION_POLICY_CYCLE2_GENERATE2_AUTHORIZED",
+           "gate_rel": "combination_policy_cycle2_generate2_authorization.py"},
     TRAIN: {"base": EV / "combination-policy-train-run/01_wrapper.sh", "term": 2810, "stem": "cycle2-train",
             "gate": "COMBINATION_POLICY_CYCLE2_TRAIN_AUTHORIZED",
             "gate_rel": "combination_policy_cycle2_train_authorization.py"}}
@@ -658,7 +671,7 @@ def _code(path):
     return path.read_text().split("set -u\n", 1)[1]
 
 
-@pytest.mark.parametrize("kind", [GEN, TRAIN])
+@pytest.mark.parametrize("kind", [GEN, GEN2, TRAIN])
 def test_THE_WRAPPER_IS_THE_FIRST_CYCLE_S_WITH_ONLY_THE_STATED_DIFFERENCES(kind):
     """The paths, the gate and the `run` argument, line for line; TERM_S is the first cycle's. The header is this cycle's
     paragraph followed by the first cycle's header unchanged."""
@@ -679,7 +692,7 @@ def test_THE_WRAPPER_IS_THE_FIRST_CYCLE_S_WITH_ONLY_THE_STATED_DIFFERENCES(kind)
     assert _path(kind).stat().st_mode == w["base"].stat().st_mode
 
 
-@pytest.mark.parametrize("kind", [GEN, TRAIN])
+@pytest.mark.parametrize("kind", [GEN, GEN2, TRAIN])
 def test_THE_WRAPPER_SERVES_ITS_KIND_S_PATHS(kind):
     w, spec = _code(_path(kind)), P.KINDS[kind]
     out, run = (re.search(rf"^{k}=(\S+)$", w, re.M).group(1) for k in ("OUT_REL", "RUN_REL"))
@@ -691,8 +704,9 @@ def test_THE_WRAPPER_SERVES_ITS_KIND_S_PATHS(kind):
     assert run not in first and out not in {f"{p}-run" for p in first}
 
 
-def test_THE_GENERATION_CEILING_IS_THE_AMENDMENT_S_SIX_HOURS():
-    w = _code(_path(GEN))
+@pytest.mark.parametrize("kind", [GEN, GEN2])
+def test_THE_GENERATION_CEILING_IS_THE_AMENDMENT_S_SIX_HOURS(kind):
+    w = _code(_path(kind))
     term, grace = (int(re.search(rf"^{k}=(\d+)$", w, re.M).group(1)) for k in ("TERM_S", "GRACE_S"))
     assert (term, grace) == (21590, 10) and term + grace == 6 * 3600 and term + 2 * grace == 21610
 
@@ -714,7 +728,7 @@ def _fit_ceiling(games_path):
 def test_THE_FIT_CEILING_IS_PROVISIONAL_UNTIL_THE_NEW_CORPUS_EXISTS_THEN_THE_FORMULA_ON_ITS_COUNTS():
     """Today the wrapper holds the first corpus's derivation and its header says so. Once the new corpus's games.jsonl
     exists this fails until TERM_S is re-derived from the new counts, by a reviewed edit, as the amendment's §7 requires."""
-    new = ROOT / P.KINDS[GEN]["evidence"] / "games.jsonl"
+    new = ROOT / P.KINDS[GEN2]["evidence"] / "games.jsonl"
     games = new if new.exists() else ROOT / P.KINDS["generate"]["evidence"] / "games.jsonl"
     w = _code(_path(TRAIN))
     term, grace = (int(re.search(rf"^{k}=(\d+)$", w, re.M).group(1)) for k in ("TERM_S", "GRACE_S"))
@@ -773,7 +787,7 @@ def _launch(repo, wdir, idle="idle", bg="clear", run="ok", timeout=60):
                           text=True, timeout=timeout)
 
 
-@pytest.mark.parametrize("kind", [GEN, TRAIN])
+@pytest.mark.parametrize("kind", [GEN2, TRAIN])
 @pytest.mark.parametrize("idle, bg", [("busy", "clear"), ("idle", "boinc"), ("idle", "failed")],
                          ids=["busy", "boinc", "check-fails"])
 def test_FAKE_LAUNCH_A_BUSY_MACHINE_BOINC_OR_A_FAILED_CHECK_PREVENTS_THE_LAUNCH(tmp_path, kind, idle, bg):
@@ -785,7 +799,7 @@ def test_FAKE_LAUNCH_A_BUSY_MACHINE_BOINC_OR_A_FAILED_CHECK_PREVENTS_THE_LAUNCH(
     assert f"{WRAPPERS[kind]['gate']} = False\n" in gate.read_text()
 
 
-@pytest.mark.parametrize("kind", [GEN, TRAIN])
+@pytest.mark.parametrize("kind", [GEN2, TRAIN])
 def test_FAKE_LAUNCH_AN_IDLE_MACHINE_REACHES_ITS_RUN_with_its_exact_arguments_and_ceiling(tmp_path, kind):
     repo, wdir, gate = _fake_repo(tmp_path, kind)
     p = _launch(repo, wdir, run="record")
@@ -801,7 +815,7 @@ def test_FAKE_LAUNCH_AN_IDLE_MACHINE_REACHES_ITS_RUN_with_its_exact_arguments_an
     assert f"{WRAPPERS[kind]['gate']} = False\n" in gate.read_text()
 
 
-@pytest.mark.parametrize("kind", [GEN, TRAIN])
+@pytest.mark.parametrize("kind", [GEN2, TRAIN])
 def test_FAKE_LAUNCH_THE_CEILING_TERMINATES_THE_WHOLE_GROUP_at_its_paths(tmp_path, kind):
     """TERM_S changed to 2 in this copy only: the run and its child outlive it; the group TERM ends both, and the
     wrapper's VOID record lands in this kind's evidence directory."""
@@ -848,22 +862,22 @@ def test_THE_SURVEY_COPY_IS_THE_FIRST_CORPUS_S_WITH_ONLY_THE_STATED_DIFFERENCES(
 
 
 def test_THE_SURVEY_COPY_SERVES_THE_KIND_IN_THE_2027_BAND_and_holds_no_seed_literal():
-    survey = _load(SURVEY, "_c2_survey")
-    kind = P.KINDS[GEN]
+    survey = _load(SURVEY2, "_c2_survey")
+    kind = P.KINDS[GEN2]
     assert survey.N_SLOTS == kind["slots"] == 1000 and survey.PLAN == kind["plan"]
     S, _Pf, SEL = survey.load_method()
     assert S.N == 1000 and S.scan is SEL.scan and SEL.__name__.endswith("seed_band_2027")
     assert survey.PINNED == _load(SURVEY_1, "_c1_survey_pins").PINNED
     base = SEL.candidate([], [], 1000)[1]
-    assert survey.build_plan(base, "0" * 64) == {"kind": "combination-policy-cycle2-generate-plan/1", "base": base,
+    assert survey.build_plan(base, "0" * 64) == {"kind": "combination-policy-cycle2-generate2-plan/1", "base": base,
                                                  "n_slots": 1000, "survey_record_sha256": "0" * 64}
-    assert set(survey.OUT.values()) & set(_load(SURVEY_1, "_c1_survey_out").OUT.values()) == set()
-    code = _split(SURVEY)[1]
+    assert set(survey.OUT.values()) & set(_load(SURVEY, "_c2_first_out").OUT.values()) == set()
+    code = _split(SURVEY2)[1]
     assert not SB.scan(code) and not re.search(r"\b20[0-9]{7}\b", code)
 
 
 def test_THE_SURVEY_COPY_S_CONTROLS_ALL_PASS_on_a_synthetic_2027_block():
-    survey = _load(SURVEY, "_c2_survey_controls")
+    survey = _load(SURVEY2, "_c2_survey_controls")
     S, Pf, SEL, block, prior, masks = _synthetic(survey)
     rec = {"head": "0" * 40, "registry_sha256": "0" * 64, "base": block[0], "block": block}
     groups = {"state": survey._state_controls(S, Pf, rec, "a" * 64),
@@ -880,7 +894,7 @@ def _mode(repo, mode, monkeypatch, capsys):
     """Run the copy's `main` for one mode, loaded from the synthetic repository, so every output is there."""
     import importlib.util
     monkeypatch.setattr(sys, "dont_write_bytecode", True)
-    spec = importlib.util.spec_from_file_location(f"_c2_survey_{mode}", repo / "docs/superpowers/evidence" / SURVEY)
+    spec = importlib.util.spec_from_file_location(f"_c2_survey_{mode}", repo / "docs/superpowers/evidence" / SURVEY2)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     code = mod.main(["x", "--mode", mode])
@@ -898,7 +912,7 @@ def test_THE_THREE_MODES_REHEARSED_ON_A_SYNTHETIC_REPOSITORY(tmp_path, monkeypat
     def git(*a):
         return subprocess.check_output(["git", "-c", "user.name=t", "-c", "user.email=t@t", *a], cwd=repo,
                                        text=True).strip()
-    for rel in (*PINNED_FILES, f"docs/superpowers/evidence/{SURVEY}"):
+    for rel in (*PINNED_FILES, f"docs/superpowers/evidence/{SURVEY2}"):
         (repo / rel).parent.mkdir(parents=True, exist_ok=True)
         (repo / rel).write_bytes((ROOT / rel).read_bytes())
     top = max([SB.BAND[0]] + [hi for lo, hi in REG.ACCOUNTED_SEED_INTERVALS if hi > SB.BAND[0]])
@@ -908,7 +922,7 @@ def test_THE_THREE_MODES_REHEARSED_ON_A_SYNTHETIC_REPOSITORY(tmp_path, monkeypat
                    "RETIRED_SEED_INTERVALS = ()\nTEST_ONLY_SEED_INTERVALS = ()\n")
     (repo / "tests").mkdir()
     (repo / "tests/test_planted.py").write_text(f"A = {old + 500}\nB = {new:_}\n")
-    (repo / "docs/superpowers/evidence/combination-policy-cycle2-generate-run").mkdir(parents=True)
+    (repo / "docs/superpowers/evidence/combination-policy-cycle2-generate2-run").mkdir(parents=True)
     git("init", "-q")
     git("add", "-A")
     git("commit", "-qm", "synthetic")
@@ -917,7 +931,7 @@ def test_THE_THREE_MODES_REHEARSED_ON_A_SYNTHETIC_REPOSITORY(tmp_path, monkeypat
     assert code == 0, survey[-2500:]
     anchor, base, block = SB.candidate(REG.ACCOUNTED_SEED_INTERVALS, [new], 1000)
     assert anchor == new and f"BASE = {base}; block = [{block[0]}, {block[1]}) -- 1000 seeds" in survey
-    assert survey.endswith("SURVEY VERDICT   : THE COMBINATION-POLICY CYCLE-2 GENERATION BLOCK IS CLEAN\n")
+    assert survey.endswith("SURVEY VERDICT   : THE COMBINATION-POLICY CYCLE-2 GENERATION ATTEMPT-2 BLOCK IS CLEAN\n")
     passed, total = re.search(r"^controls passed: (\d+)/(\d+)$", survey, re.M).groups()
     assert passed == total and int(total) == 55, total
     git("add", "-A")
@@ -934,8 +948,8 @@ def test_THE_THREE_MODES_REHEARSED_ON_A_SYNTHETIC_REPOSITORY(tmp_path, monkeypat
     git("commit", "-qm", "registration")
     _m, code, post = _mode(repo, "post", monkeypatch, capsys)
     assert code == 0 and "EXPECTED STATE (post): HOLDS" in post, post[-2500:]
-    assert post.endswith("PROOF VERDICT (post): THE COMBINATION-POLICY CYCLE-2 GENERATION BLOCK IS CLEAN AND THE STATE "
-                         "IS AS EXPECTED\n")
+    assert post.endswith("PROOF VERDICT (post): THE COMBINATION-POLICY CYCLE-2 GENERATION ATTEMPT-2 BLOCK IS CLEAN AND THE "
+                         "STATE IS AS EXPECTED\n")
 
 
 # ─────────────────────────────── the generation closing copy (built, never run here) ──────────────────────────────────
@@ -963,4 +977,118 @@ def test_THE_CLOSING_COPY_SERVES_THE_KIND_and_holds_no_seed_literal_and_its_cont
     code = _split(CLOSING)[1]
     assert not SB.scan(code) and not re.search(r"\b20[0-9]{7}\b", code)
     results = closing._controls(json.loads((ROOT / kind["plan"]).read_text(encoding="utf-8"))["base"])
+    assert len(results) == 21 and all(ok for _l, ok, _d in results), [r for r in results if not r[1]]
+
+
+# ─────────────────────────────── the new generation attempt: the pin, its kind and its copies ──────────────────────────
+
+def test_THE_ATTEMPT_2_AMENDMENT_IS_PINNED_AND_THE_PIN_IS_PER_KIND():
+    rel, sha = P.CYCLE2_ATTEMPT2_AMENDMENT
+    assert rel == AMEND2 and P.M._sha((ROOT / rel).read_bytes()) == sha
+    text = (ROOT / rel).read_text(encoding="utf-8")
+    assert AMEND in text and "3.14.10" in text and "COMBINATION_POLICY_CYCLE2_GENERATE2_AUTHORIZED" in text
+    assert P.CYCLE2_VERSIONS == {**P.VERSIONS, "python": "3.14.10"} and P.VERSIONS["python"] == "3.14.9"
+    assert {k for k, v in P.KINDS.items() if "versions" in v} == {GEN2, TRAIN}
+    assert P.KINDS[GEN2]["versions"] == P.KINDS[TRAIN]["versions"] == P.CYCLE2_VERSIONS
+    assert P.KINDS[GEN2]["amendment"] == P.KINDS[TRAIN]["amendment"] == P.CYCLE2_ATTEMPT2_AMENDMENT
+
+
+def test_THE_LIVE_ENVIRONMENT_IS_THE_PINNED_ONE():
+    """Not a seam: the suites' doubles supply the expected versions, which is how entry 47's mismatch got past them. This
+    reads the real interpreter and packages, so an upgrade fails here before it can reach a seed sequence or a launch."""
+    assert P._versions() == P.CYCLE2_VERSIONS
+
+
+def test_THE_NEW_ATTEMPT_IS_BUILT_ONLY_gate_closed_and_no_plan_seed_record_run_or_corpus():
+    """RE-ANCHOR when its seed sequence or run is approved."""
+    from scripts.GPU.alphazero import e4_screen_reference as REG
+    assert GATE_GEN2.COMBINATION_POLICY_CYCLE2_GENERATE2_AUTHORIZED is False and P.KINDS[GEN2]["gate"][0] is GATE_GEN2
+    assert sorted(x.name for x in _path(GEN2).parent.iterdir()) == ["01_wrapper.sh"]
+    for rel, only in ((SURVEY2, "01_seed_survey.py"), (CLOSING2, "01_derive_usage.py")):
+        assert [x.name for x in (EV / rel).parent.iterdir() if x.name != "__pycache__"] == [only]
+    assert not (ROOT / P.KINDS[GEN2]["evidence"]).exists() and not (ROOT / P.KINDS[TRAIN]["evidence"]).exists()
+    assert not (pathlib.Path.home() / "twixt-cache/combination-policy-pilot" / GEN2).exists()
+    first = json.loads((ROOT / P.KINDS[GEN]["plan"]).read_text(encoding="utf-8"))
+    assert REG.ACCOUNTED_SEED_INTERVALS[-1] == (first["base"], first["base"] + first["n_slots"])
+
+
+def test_THE_NEW_ATTEMPT_IS_THE_SAME_RUN_ON_ITS_OWN_PATHS():
+    one, two = P.KINDS[GEN], P.KINDS[GEN2]
+    for key in ("role", "teacher", "slots", "keep_rows"):
+        assert one[key] == two[key], key
+    assert two["evidence"].endswith("combination-policy-cycle2-generate2") and two["plan"] != one["plan"]
+    assert two["gate"][0] is not one["gate"][0] and P.ADMISSION[GEN2] == P.ADMISSION[GEN]
+    assert P.OUTER_ADMISSION[GEN2] == P.OUTER_ADMISSION[GEN]
+
+
+def test_THE_NEW_ATTEMPT_GENERATES_ON_ITS_PIN(tmp_path, monkeypatch):
+    calls = []
+    h = _gen_harness(tmp_path, monkeypatch, calls, kind=GEN2, versions=lambda: dict(P.CYCLE2_VERSIONS))
+    code, rec = _conclude(GEN2, lambda o, r, lg: P._generate(GEN2, h.seams, o, r, lg), tmp_path / "ev")
+    assert code == P.EXIT_COMPLETED, rec.get("void")
+    assert calls == ["install", "generate"] and rec["versions"] == P.CYCLE2_VERSIONS
+    assert (rec["amendment"], rec["amendment_sha256"]) == P.CYCLE2_ATTEMPT2_AMENDMENT
+    assert (rec["base_amendment"], rec["base_amendment_sha256"]) == P.CYCLE2_AMENDMENT
+    assert len(list((tmp_path / "cache" / GEN2).iterdir())) == 3 and not (tmp_path / "cache" / GEN).exists()
+
+
+@pytest.mark.parametrize("kind, live", [(GEN2, P.VERSIONS), (GEN2, {**P.CYCLE2_VERSIONS, "mlx": "0.0"}),
+                                        (GEN, P.CYCLE2_VERSIONS)], ids=["attempt-2-on-3.14.9", "attempt-2-other-mlx",
+                                                                        "first-attempt-on-3.14.10"])
+def test_EACH_GENERATION_KIND_REFUSES_ANY_VERSIONS_BUT_ITS_OWN_PIN(tmp_path, monkeypatch, kind, live):
+    calls = []
+    h = _gen_harness(tmp_path, monkeypatch, calls, kind=kind, versions=lambda: dict(live))
+    code, rec = _conclude(kind, lambda o, r, lg: P._generate(kind, h.seams, o, r, lg), tmp_path / "ev")
+    assert code == P.EXIT_VOID and rec["void"]["step"] == "versions" and calls == []
+
+
+def test_THE_FIT_ON_ITS_PIN_RUNS_AND_ON_ANY_OTHER_VERSIONS_IS_A_VOID(tmp_path, corpus_game):
+    arrays, digests = _teacher_arrays()
+    seams = _teacher_seams(corpus_game, arrays, digests)
+    seams.pinned_versions, seams.versions = P.CYCLE2_VERSIONS, lambda: dict(P.CYCLE2_VERSIONS)
+    _c, rec = _fit(tmp_path, seams, _recipe(), "good")
+    assert rec["verdict"] == "ELIGIBLE" and rec["versions"] == P.CYCLE2_VERSIONS
+    seams = _teacher_seams(corpus_game, arrays, digests)
+    seams.pinned_versions = P.CYCLE2_VERSIONS                 # the live versions are still the first cycle's
+    code, rec = _fit(tmp_path, seams, _recipe(), "bad")
+    assert code == P.EXIT_VOID and rec["void"]["step"] == "versions"
+
+
+def test_THE_NEW_SURVEY_COPY_IS_THE_FIRST_ATTEMPT_S_WITH_ONLY_THE_STATED_DIFFERENCES():
+    doc1, code1 = _split(SURVEY)
+    doc, code = _split(SURVEY2)
+    assert doc.endswith(doc1) and AMEND2 in doc[:-len(doc1)]
+    a, b = code1.splitlines(), code.splitlines()
+    assert len(a) == len(b)
+    assert [y.strip() for x, y in zip(a, b) if x != y] == [
+        'HERE = "docs/superpowers/evidence/combination-policy-cycle2-generate2-seed-survey"',
+        'PLAN = "docs/superpowers/evidence/combination-policy-cycle2-generate2-run/plan.json"',
+        'VERDICT_OK = "THE COMBINATION-POLICY CYCLE-2 GENERATION ATTEMPT-2 BLOCK IS CLEAN"',
+        'spec = importlib.util.spec_from_file_location(f"_combination_policy_cycle2_generate2_{key}", p)',
+        'return {"kind": "combination-policy-cycle2-generate2-plan/1", "base": base, "n_slots": N_SLOTS,',
+        'faults.append("the cycle-2 generation attempt-2 plan is absent or not committed")',
+        'faults.append("the cycle-2 generation attempt-2 plan is not build_plan of the surveyed block")',
+        "say(f\"COMBINATION POLICY PILOT -- CYCLE-2 GENERATION ATTEMPT-2 GAME-SEED {'SURVEY' if mode == 'survey' else "
+        "'COLLISION PROOF, mode ' + mode.upper()}\")",
+        "say(f\"PROOF VERDICT ({mode}): {'THE COMBINATION-POLICY CYCLE-2 GENERATION ATTEMPT-2 BLOCK IS CLEAN AND THE STATE IS "
+        "AS EXPECTED' if ok else 'NOT PROVEN -- STOP'}\""]
+
+
+def test_THE_NEW_CLOSING_COPY_IS_THE_FIRST_ATTEMPT_S_AND_SERVES_THE_KIND_and_its_controls_pass():
+    doc1, code1 = _split(CLOSING)
+    doc, code = _split(CLOSING2)
+    assert doc.endswith(doc1) and AMEND2 in doc[:-len(doc1)]
+    a, b = code1.splitlines(), code.splitlines()
+    assert len(a) == len(b)
+    assert {y.strip() for x, y in zip(a, b) if x != y} == {
+        'HERE = "docs/superpowers/evidence/combination-policy-cycle2-generate2-seed-closing"',
+        'RUN = "docs/superpowers/evidence/combination-policy-cycle2-generate2"',
+        'RUN_DIR = "docs/superpowers/evidence/combination-policy-cycle2-generate2-run"',
+        'lines = ["COMBINATION POLICY PILOT -- CYCLE-2 GENERATION ATTEMPT-2 SEED-USAGE DERIVATION (closing)", "=" * 96,'}
+    closing = _load(CLOSING2, "_c2_closing2")
+    kind = P.KINDS[GEN2]
+    assert closing.N_SLOTS == kind["slots"] == 1000 and closing.INPUTS[0] == kind["plan"]
+    assert closing.RUN == kind["evidence"] and closing.RUN_DIR == str(pathlib.Path(kind["plan"]).parent)
+    assert not SB.scan(code) and not re.search(r"\b20[0-9]{7}\b", code)
+    results = closing._controls(SB.candidate([], [], 1000)[1])          # a synthetic base: no block is registered
     assert len(results) == 21 and all(ok for _l, ok, _d in results), [r for r in results if not r[1]]
