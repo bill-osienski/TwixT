@@ -4,4 +4,4 @@
 first-cycle head on the second cycle's corpus, so it takes its own reviewed door. Opened for ONE approved run and restored
 on every exit. Created closed. This file may hold ONLY this declaration.
 """
-COMBINATION_POLICY_CYCLE2_TRAIN_AUTHORIZED = False
+COMBINATION_POLICY_CYCLE2_TRAIN_AUTHORIZED = True
