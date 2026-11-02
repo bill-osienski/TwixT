@@ -1,0 +1,6 @@
+{
+ "base": 202744100,
+ "kind": "combination-policy-cycle2-generate-plan/1",
+ "n_slots": 1000,
+ "survey_record_sha256": "181c6f43d002bbe2ffadd87d32cd304b256f0377e1335fd5b9130afc0abb8b1d"
+}
