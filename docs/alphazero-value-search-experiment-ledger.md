@@ -204,6 +204,7 @@ knob) is not a new hypothesis.
 > **Combination policy second cycle — BUILD A built for review; nothing run (addendum, 2026-11-02).** `run cycle2_generate` and `run cycle2_train` behind two closed gates (58 in all), pinning the amendment `94c7f0df` (`91103162`). Generation binds the first head before any worker and runs the teacher-reach probe; the fit reads only the new corpus and starts from all three teacher digests. The fit wrapper's TERM_S 2810 is PROVISIONAL until the new corpus's counts exist. 72 new tests, focused suites 426 pass, 10 of 10 mutants caught; no real model, seed procedure or gate was touched. Seed procedures, real model loading, generation, training, Build B, evaluation, deployment and pushing remain unauthorized. See #143.
 > **Combination policy second cycle — Build A ACCEPTED; the generation seed sequence approved as one conditional process (decision note, 2026-11-02, the user's review).** No blocking findings; the three added checks are appropriate. The fit's 2,820 s is accepted only as a build placeholder and must be re-derived from the new corpus's actual counts before training approval, even if the number stays the same. Survey, pre-proof, registration and post-proof each once, each requiring its verdict and 55/55; the method and the 1,000-seed gap floor unchanged; any failure returned, nothing adjusted. Real model loading, generation, training, Build B, evaluation, deployment and pushing remain unauthorized. See #144.
 > **Combination policy second cycle — the generation block surveyed, proven and registered; nothing run (addendum, 2026-11-02).** [202744100, 202745100): survey CLEAN 55/55 (`b657bee5`), pre-proof HOLDS 55/55, registered last in ACCOUNTED, 51 -> 52 (`8a24c602`), post-proof HOLDS 55/55 (`14869ca1`). Plan = `build_plan`. Three lifecycle tests re-anchored; 426 focused pass. Returned for generation launch review. Real model loading, generation, training, Build B, evaluation, deployment and pushing remain unauthorized. See #145.
+> **Combination policy second cycle — the ONE 1,000-game generation run and its conditional seed closing APPROVED (decision note, 2026-11-02, the user's review).** Hashes, proof bindings, slot mappings and the registry append verified; all 58 gates closed. TERM 21,590 s, KILL 21,600 s, cleanup through 21,610 s; teacher digest and reach checks before workers start. A six-commit stderr redirection in the seed sequence is disclosed; no seed procedure repeats. An incomplete corpus is ineligible for training, with no automatic retry. Training, even under the provisional fit ceiling, Build B, evaluation, deployment and pushing remain unauthorized. See #146.
 
 ## Historical proposal check — programme now closed
 
@@ -1879,6 +1880,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 143. **The second cycle's Build A (2026-11-02).** Build only. Do **not** run its survey, proofs, registration or closing, open either gate, load the real model or head for it, launch either wrapper, generate, train, build Build B, evaluate, deploy or push without the user's approval of each. Do **not** launch the fit under the provisional TERM_S 2810: re-derive it by a reviewed edit from the new corpus's actual counts. Do **not** write a seed of this cycle's block into `scripts/`, `tests/` or `docs/superpowers/` outside its own records, the plan and the registry tuple. Do **not** read a tiny-network or fake-evaluator test as evidence about the real teacher, its priors, its corpus or its strength.
 144. **The second cycle's generation seed approval (2026-11-02).** Do **not** adjust the selection method, the 1,000-seed gap floor or the block; any failure of the survey, a proof or the registration is returned as it stands. Each mode runs once. Do **not** approve or launch training under the fit wrapper's 2,820 s placeholder: re-derive it from the new corpus's actual counts first, with no new timing run, even if the number stays the same. Do **not** load the real model, open a gate, generate, train, build Build B, evaluate, deploy or push without the user's approval of each.
 145. **The second cycle's generation block (2026-11-02).** Do **not** rerun the survey or either proof, edit their records (`02_*` sha256 `181c6f43…`, `03_*` `c96df303…`, `04_*` `bc5aa252…`), edit the plan, or move, widen or re-register [202744100, 202745100). Do **not** open the generation gate, load the checkpoint or the first head for it, launch, close the block, train, build Build B, evaluate, deploy or push without the user's approval of each. Do **not** write any seed of this block into `scripts/`, `tests/` or `docs/superpowers/` outside its own records, the plan and the registry tuple.
+146. **The second cycle's generation run (2026-11-02).** One run only: do **not** retry, extend, top up or continue it. Do **not** change the ceiling (TERM 21,590 s, KILL 21,600 s, observation through 21,610 s). Do **not** train on an incomplete corpus, delete it or score it; preserve it and return its progress, cause and continuation cost. Do **not** apply K2 unless K1 RECONCILES. Do **not** train, including under the provisional fit ceiling, build Build B, evaluate, deploy or push without the user's approval of each. Do **not** pipe or redirect a commit's output: leave it unfiltered.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -8526,3 +8528,27 @@ Run as the conditional sequence approved in the addendum above, each step once i
 - **Nothing else ran:** no model or head load, gate opening or game. All 58 gates are closed, and the block is ACCOUNTED only.
 - **Returned for generation launch review.** Not authorized: real model loading, generation, training, Build B, evaluation,
   deployment and pushing.
+
+#### Decision note — the second cycle's generation run and conditional closing approved; a commit-output disclosure (2026-11-02, the user's review)
+
+- **The user's check:** the hashes, proof bindings, all slot mappings and the exact registry append check out. The
+  post-proof matches the current registry, reviewed code and teacher evidence are unchanged, and all 58 gates are closed.
+- **Approved:**
+  1. a fresh read-only panic and reboot check, and a recheck of the plan, registry, amendment pin and teacher binding;
+  2. in a clean worktree, opening only `COMBINATION_POLICY_CYCLE2_GENERATE_AUTHORIZED` by a one-line commit, and running the
+     existing wrapper once, with BOINC quit and the idle and background checks enforced;
+  3. TERM 21,590 s, KILL 21,600 s, cleanup through 21,610 s, with the teacher digest and reach checks before workers start;
+  4. after a started run: verifying gate restoration and cleanup, then K1 once; only if it RECONCILES, applying its exposure
+     verdict under the reviewed parallel-worker rule, retiring the whole block, re-anchoring lifecycle tests and running focused
+     CPU checks;
+  5. committing the evidence and a dated ledger closeout, and returning corpus counts, integrity results, teacher-probe
+     results and the proposed fit ceiling derived from the new counts.
+- **An incomplete corpus** is ineligible for training. It is preserved, and its progress, cause and continuation cost are
+  returned. No automatic retry.
+- **Disclosure, commit output:** on the six commits `b657bee5`, `111a2c1d`, `8a24c602`, `14869ca1`, `81714559` and `12eb8f88`, I
+  sent stderr to a scratch file to drop ESLint noise, against the standing rule to leave commit output unfiltered. Each commit
+  overwrote that file, so only the last commit's output survives (the warning that `eslint` is not available in the worktree);
+  **the other five outputs are unavailable.** Each exit status was checked and was 0, and each commit landed with the expected
+  files. **The user's finding:** the committed states check out, so no seed procedure needs repeating. Future commit output stays
+  unfiltered.
+- **Not authorized:** training, including under the provisional fit ceiling; Build B, evaluation, deployment and pushing.
