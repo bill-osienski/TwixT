@@ -1,0 +1,2 @@
+{"event": "start", "t": 0.009, "setting": {"MLX_ENABLE_TF32": "0"}}
+{"event": "end", "t": 0.055, "status": "VOID", "verdict": null}

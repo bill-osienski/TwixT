@@ -1,0 +1,341 @@
+t=    0.0s BUSY: load 8.23 >= 3.0
+t=    5.0s BUSY: load 8.29 >= 3.0
+t=   10.1s BUSY: load 7.94 >= 3.0
+t=   15.1s BUSY: load 9.47 >= 3.0
+t=   20.2s BUSY: load 8.95 >= 3.0
+t=   25.3s BUSY: load 9.84 >= 3.0
+t=   30.3s BUSY: load 9.29 >= 3.0
+t=   35.4s BUSY: load 8.78 >= 3.0
+t=   40.5s BUSY: load 8.24 >= 3.0; /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 95.7% CPU > 50.0%
+t=   45.5s BUSY: load 7.66 >= 3.0; /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 102.9% CPU > 50.0%
+t=   50.5s BUSY: load 7.21 >= 3.0
+t=   55.6s BUSY: load 6.63 >= 3.0
+t=   60.7s BUSY: load 6.10 >= 3.0
+t=   65.7s BUSY: load 5.69 >= 3.0
+t=   70.8s BUSY: load 5.31 >= 3.0
+t=   75.8s BUSY: load 5.21 >= 3.0
+t=   80.9s BUSY: load 4.87 >= 3.0
+t=   86.0s BUSY: load 4.48 >= 3.0
+t=   91.0s BUSY: load 4.20 >= 3.0
+t=   96.1s BUSY: load 3.95 >= 3.0; /Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor at 94.0% CPU > 50.0%
+t=  101.1s BUSY: load 3.71 >= 3.0; /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 76.5% CPU > 50.0%
+t=  106.2s BUSY: load 3.81 >= 3.0; /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 59.6% CPU > 50.0%
+t=  111.2s BUSY: load 3.59 >= 3.0
+t=  116.3s BUSY: load 3.38 >= 3.0
+t=  121.3s BUSY: load 3.19 >= 3.0
+t=  126.4s idle for 0.0s
+t=  131.5s idle for 5.1s
+t=  136.5s idle for 10.1s
+t=  141.6s idle for 15.2s
+t=  146.7s idle for 20.3s
+t=  151.7s idle for 25.3s
+t=  156.8s idle for 30.4s
+t=  161.8s idle for 35.4s
+t=  166.9s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 67.0% CPU > 50.0%
+t=  171.9s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 68.2% CPU > 50.0%
+t=  177.0s idle for 0.0s
+t=  182.0s idle for 5.1s
+t=  187.1s idle for 10.1s
+t=  192.1s idle for 15.2s
+t=  197.2s idle for 20.2s
+t=  202.3s idle for 25.3s
+t=  207.3s idle for 30.4s
+t=  212.4s idle for 35.4s
+t=  217.4s idle for 40.5s
+t=  222.5s idle for 45.5s
+t=  227.6s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 72.2% CPU > 50.0%
+t=  232.6s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 69.2% CPU > 50.0%
+t=  237.6s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 92.0% CPU > 50.0%
+t=  242.7s idle for 0.0s
+t=  247.8s idle for 5.1s
+t=  252.8s idle for 10.1s
+t=  257.9s idle for 15.2s
+t=  262.9s idle for 20.2s
+t=  268.0s idle for 25.3s
+t=  273.1s idle for 30.4s
+t=  278.1s idle for 35.4s
+t=  283.2s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 97.1% CPU > 50.0%
+t=  288.2s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 95.0% CPU > 50.0%
+t=  293.2s idle for 0.0s
+t=  298.3s idle for 5.0s
+t=  303.3s idle for 10.1s
+t=  308.4s idle for 15.2s
+t=  313.5s idle for 20.2s
+t=  318.5s idle for 25.3s
+t=  323.6s idle for 30.3s
+t=  328.6s idle for 35.4s
+t=  333.7s idle for 40.4s
+t=  338.7s idle for 45.5s
+t=  343.8s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 104.6% CPU > 50.0%
+t=  348.8s idle for 0.0s
+t=  353.9s idle for 5.1s
+t=  359.0s idle for 10.1s
+t=  364.0s idle for 15.2s
+t=  369.1s idle for 20.2s
+t=  374.1s idle for 25.3s
+t=  379.2s idle for 30.4s
+t=  384.2s idle for 35.4s
+t=  389.3s BUSY: /opt/homebrew/Cellar/python@3.14/3.14.10/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python at 86.1% CPU > 50.0%
+t=  394.3s idle for 0.0s
+t=  399.4s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 104.5% CPU > 50.0%
+t=  404.4s idle for 0.0s
+t=  409.5s idle for 5.0s
+t=  414.5s idle for 10.1s
+t=  419.6s idle for 15.1s
+t=  424.6s BUSY: /Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor at 304.3% CPU > 50.0%
+t=  429.7s idle for 0.0s
+t=  434.7s idle for 5.1s
+t=  439.8s idle for 10.1s
+t=  444.8s idle for 15.2s
+t=  449.9s BUSY: /opt/homebrew/Cellar/python@3.14/3.14.10/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python at 82.5% CPU > 50.0%
+t=  454.9s idle for 0.0s
+t=  459.9s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 92.8% CPU > 50.0%
+t=  465.0s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 72.9% CPU > 50.0%
+t=  470.0s idle for 0.0s
+t=  475.1s BUSY: /Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor at 205.0% CPU > 50.0%
+t=  480.1s BUSY: /Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor at 272.8% CPU > 50.0%
+t=  485.1s BUSY: /Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor at 283.4% CPU > 50.0%
+t=  490.2s BUSY: /Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor at 304.2% CPU > 50.0%
+t=  495.2s BUSY: /Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor at 336.6% CPU > 50.0%
+t=  500.3s idle for 0.0s
+t=  505.3s idle for 5.1s
+t=  510.4s BUSY: /opt/homebrew/Cellar/python@3.14/3.14.10/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python at 79.2% CPU > 50.0%
+t=  515.4s idle for 0.0s
+t=  520.4s idle for 5.1s
+t=  525.5s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 100.2% CPU > 50.0%; /Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor at 333.8% CPU > 50.0%
+t=  530.5s BUSY: load 3.79 >= 3.0; /Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor at 253.4% CPU > 50.0%
+t=  535.6s BUSY: load 3.57 >= 3.0; /Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor at 279.2% CPU > 50.0%
+t=  540.6s BUSY: load 3.28 >= 3.0; /Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor at 296.7% CPU > 50.0%
+t=  545.6s BUSY: load 3.10 >= 3.0; /Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor at 234.6% CPU > 50.0%
+t=  550.7s BUSY: /Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor at 191.3% CPU > 50.0%
+t=  555.7s BUSY: /Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor at 193.5% CPU > 50.0%
+t=  560.8s BUSY: load 4.17 >= 3.0; /Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor at 210.7% CPU > 50.0%
+t=  565.8s BUSY: load 4.16 >= 3.0; /Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor at 171.6% CPU > 50.0%
+t=  570.8s BUSY: load 4.15 >= 3.0; /Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor at 174.9% CPU > 50.0%
+t=  575.9s BUSY: load 3.89 >= 3.0; /Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor at 193.4% CPU > 50.0%
+t=  580.9s BUSY: load 3.98 >= 3.0; /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 105.1% CPU > 50.0%; /Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor at 194.5% CPU > 50.0%
+t=  586.0s BUSY: load 4.78 >= 3.0; /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 103.4% CPU > 50.0%; /Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor at 185.4% CPU > 50.0%
+t=  591.0s BUSY: load 5.52 >= 3.0; /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 93.1% CPU > 50.0%; /Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor at 239.4% CPU > 50.0%
+t=  596.0s BUSY: load 5.08 >= 3.0; /Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor at 209.2% CPU > 50.0%
+t=  601.1s BUSY: load 4.75 >= 3.0
+t=  606.1s BUSY: load 4.37 >= 3.0
+t=  611.2s BUSY: load 4.02 >= 3.0
+t=  616.2s BUSY: load 3.86 >= 3.0
+t=  621.3s BUSY: load 3.55 >= 3.0
+t=  626.3s BUSY: load 3.35 >= 3.0
+t=  631.4s BUSY: load 3.24 >= 3.0
+t=  636.4s BUSY: load 3.06 >= 3.0; /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 52.1% CPU > 50.0%
+t=  641.5s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 73.6% CPU > 50.0%
+t=  646.5s BUSY: /opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python at 98.7% CPU > 50.0%
+t=  651.5s BUSY: /opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python at 100.0% CPU > 50.0%
+t=  656.6s BUSY: /opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python at 99.6% CPU > 50.0%
+t=  661.6s BUSY: /opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python at 100.0% CPU > 50.0%
+t=  666.6s BUSY: /opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python at 100.0% CPU > 50.0%
+t=  671.7s BUSY: /opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python at 99.3% CPU > 50.0%
+t=  676.7s BUSY: /opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python at 98.5% CPU > 50.0%
+t=  681.7s BUSY: /opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python at 100.0% CPU > 50.0%
+t=  686.7s BUSY: /opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python at 98.4% CPU > 50.0%
+t=  691.8s BUSY: /opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python at 100.0% CPU > 50.0%
+t=  696.8s BUSY: /opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python at 99.3% CPU > 50.0%
+t=  701.8s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 106.9% CPU > 50.0%; /opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python at 100.0% CPU > 50.0%
+t=  706.9s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 98.3% CPU > 50.0%; /opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python at 99.4% CPU > 50.0%
+t=  711.9s idle for 0.0s
+t=  716.9s idle for 5.0s
+t=  722.0s idle for 10.1s
+t=  727.0s idle for 15.1s
+t=  732.1s idle for 20.2s
+t=  737.1s idle for 25.3s
+t=  742.2s idle for 30.3s
+t=  747.2s idle for 35.3s
+t=  752.3s idle for 40.4s
+t=  757.3s idle for 45.4s
+t=  762.4s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 64.2% CPU > 50.0%
+t=  767.4s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 102.0% CPU > 50.0%
+t=  772.4s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 82.1% CPU > 50.0%
+t=  777.5s idle for 0.0s
+t=  782.5s idle for 5.0s
+t=  787.6s idle for 10.1s
+t=  792.6s idle for 15.1s
+t=  797.7s idle for 20.2s
+t=  802.7s idle for 25.2s
+t=  807.8s idle for 30.3s
+t=  812.8s idle for 35.3s
+t=  817.9s idle for 40.4s
+t=  822.9s idle for 45.4s
+t=  828.0s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 67.5% CPU > 50.0%
+t=  833.0s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 103.9% CPU > 50.0%
+t=  838.1s idle for 0.0s
+t=  843.1s idle for 5.0s
+t=  848.2s idle for 10.1s
+t=  853.2s idle for 15.1s
+t=  858.2s BUSY: /opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python at 99.1% CPU > 50.0%
+t=  863.3s BUSY: /opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python at 100.0% CPU > 50.0%
+t=  868.3s BUSY: /opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python at 99.5% CPU > 50.0%
+t=  873.3s BUSY: /opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python at 98.7% CPU > 50.0%
+t=  878.4s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 51.0% CPU > 50.0%; /opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python at 100.0% CPU > 50.0%
+t=  883.4s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 92.4% CPU > 50.0%; /opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python at 100.0% CPU > 50.0%
+t=  888.4s BUSY: /usr/libexec/spotlightknowledged.updater at 71.0% CPU > 50.0%; /opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python at 100.0% CPU > 50.0%
+t=  893.4s BUSY: /opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python at 100.0% CPU > 50.0%
+t=  898.5s BUSY: /opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python at 99.3% CPU > 50.0%
+t=  903.5s BUSY: /opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python at 99.1% CPU > 50.0%
+t=  908.5s BUSY: /opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python at 99.1% CPU > 50.0%
+t=  913.6s BUSY: /opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python at 100.0% CPU > 50.0%
+t=  918.6s BUSY: /opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python at 100.0% CPU > 50.0%
+t=  923.6s idle for 0.0s
+t=  928.7s idle for 5.1s
+t=  933.7s idle for 10.1s
+t=  938.7s BUSY: /opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python at 97.4% CPU > 50.0%
+t=  943.8s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 103.0% CPU > 50.0%; /opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python at 100.0% CPU > 50.0%
+t=  948.8s idle for 0.0s
+t=  953.8s idle for 5.1s
+t=  958.9s idle for 10.1s
+t=  963.9s idle for 15.1s
+t=  969.0s idle for 20.2s
+t=  974.0s idle for 25.2s
+t=  979.1s idle for 30.3s
+t=  984.1s BUSY: /Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/ShaderCompileWorker at 81.6% CPU > 50.0%; /Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/ShaderCompileWorker at 81.5% CPU > 50.0%
+t=  989.2s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 68.9% CPU > 50.0%
+t=  994.2s idle for 0.0s
+t=  999.2s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 76.7% CPU > 50.0%
+t= 1004.3s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 52.1% CPU > 50.0%
+t= 1009.3s idle for 0.0s
+t= 1014.4s idle for 5.0s
+t= 1019.4s idle for 10.1s
+t= 1024.4s idle for 15.1s
+t= 1029.5s idle for 20.2s
+t= 1034.5s idle for 25.2s
+t= 1039.6s idle for 30.3s
+t= 1044.7s idle for 35.3s
+t= 1049.7s idle for 40.4s
+t= 1054.7s idle for 45.4s
+t= 1059.8s idle for 50.5s
+t= 1064.8s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 104.6% CPU > 50.0%
+t= 1069.9s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 100.6% CPU > 50.0%
+t= 1074.9s idle for 0.0s
+t= 1080.0s idle for 5.0s
+t= 1085.0s idle for 10.1s
+t= 1090.1s idle for 15.1s
+t= 1095.1s idle for 20.2s
+t= 1100.2s idle for 25.2s
+t= 1105.2s idle for 30.3s
+t= 1110.3s idle for 35.4s
+t= 1115.3s idle for 40.4s
+t= 1120.4s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 99.2% CPU > 50.0%
+t= 1125.4s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 101.5% CPU > 50.0%
+t= 1130.5s idle for 0.0s
+t= 1135.5s idle for 5.1s
+t= 1140.6s idle for 10.1s
+t= 1145.6s idle for 15.1s
+t= 1150.7s idle for 20.2s
+t= 1155.7s idle for 25.3s
+t= 1160.8s idle for 30.3s
+t= 1165.8s idle for 35.3s
+t= 1170.8s idle for 40.4s
+t= 1175.9s idle for 45.4s
+t= 1180.9s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 72.6% CPU > 50.0%
+t= 1186.0s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 104.6% CPU > 50.0%
+t= 1191.0s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 85.7% CPU > 50.0%
+t= 1196.0s idle for 0.0s
+t= 1201.1s idle for 5.0s
+t= 1206.1s idle for 10.1s
+t= 1211.2s idle for 15.2s
+t= 1216.2s BUSY: /Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor at 107.7% CPU > 50.0%
+t= 1221.3s idle for 0.0s
+t= 1226.3s idle for 5.0s
+t= 1231.4s idle for 10.1s
+t= 1236.4s idle for 15.1s
+t= 1241.5s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 97.8% CPU > 50.0%
+t= 1246.5s idle for 0.0s
+t= 1251.6s idle for 5.0s
+t= 1256.6s idle for 10.1s
+t= 1261.6s idle for 15.1s
+t= 1266.7s idle for 20.2s
+t= 1271.7s idle for 25.2s
+t= 1276.8s idle for 30.3s
+t= 1281.8s idle for 35.3s
+t= 1286.9s idle for 40.4s
+t= 1291.9s idle for 45.4s
+t= 1297.0s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 70.2% CPU > 50.0%
+t= 1302.0s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 97.8% CPU > 50.0%
+t= 1307.0s idle for 0.0s
+t= 1312.1s idle for 5.0s
+t= 1317.1s idle for 10.1s
+t= 1322.2s idle for 15.1s
+t= 1327.2s idle for 20.2s
+t= 1332.3s idle for 25.3s
+t= 1337.3s BUSY: load 3.58 >= 3.0
+t= 1342.4s BUSY: load 4.01 >= 3.0
+t= 1347.4s BUSY: load 3.77 >= 3.0
+t= 1352.5s BUSY: load 3.55 >= 3.0
+t= 1357.5s BUSY: load 3.58 >= 3.0
+t= 1362.6s BUSY: load 3.54 >= 3.0; /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 103.8% CPU > 50.0%
+t= 1367.6s BUSY: load 3.49 >= 3.0
+t= 1372.7s BUSY: load 3.29 >= 3.0
+t= 1377.7s BUSY: load 3.03 >= 3.0
+t= 1382.7s idle for 0.0s
+t= 1387.8s idle for 5.0s
+t= 1392.8s idle for 10.1s
+t= 1397.9s idle for 15.1s
+t= 1402.9s idle for 20.2s
+t= 1408.0s idle for 25.2s
+t= 1413.0s BUSY: /Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor at 108.2% CPU > 50.0%
+t= 1418.1s idle for 0.0s
+t= 1423.1s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 110.3% CPU > 50.0%
+t= 1428.2s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 75.1% CPU > 50.0%
+t= 1433.2s idle for 0.0s
+t= 1438.3s idle for 5.1s
+t= 1443.3s idle for 10.1s
+t= 1448.4s idle for 15.2s
+t= 1453.4s idle for 20.2s
+t= 1458.5s idle for 25.2s
+t= 1463.5s idle for 30.3s
+t= 1468.5s idle for 35.3s
+t= 1473.6s idle for 40.4s
+t= 1478.6s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 87.3% CPU > 50.0%
+t= 1483.7s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 104.5% CPU > 50.0%
+t= 1488.7s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 77.9% CPU > 50.0%
+t= 1493.8s idle for 0.0s
+t= 1498.8s idle for 5.1s
+t= 1503.9s idle for 10.1s
+t= 1508.9s idle for 15.2s
+t= 1514.0s idle for 20.2s
+t= 1519.0s idle for 25.3s
+t= 1524.1s idle for 30.3s
+t= 1529.1s idle for 35.4s
+t= 1534.2s idle for 40.4s
+t= 1539.2s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 78.2% CPU > 50.0%
+t= 1544.3s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 75.4% CPU > 50.0%
+t= 1549.3s idle for 0.0s
+t= 1554.4s idle for 5.1s
+t= 1559.4s idle for 10.1s
+t= 1564.5s idle for 15.2s
+t= 1569.5s idle for 20.2s
+t= 1574.6s idle for 25.3s
+t= 1579.6s idle for 30.3s
+t= 1584.7s idle for 35.4s
+t= 1589.7s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 53.1% CPU > 50.0%; /opt/homebrew/Cellar/python@3.14/3.14.10/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python at 81.7% CPU > 50.0%
+t= 1594.8s idle for 0.0s
+t= 1599.8s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 78.0% CPU > 50.0%
+t= 1604.9s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 62.3% CPU > 50.0%
+t= 1609.9s idle for 0.0s
+t= 1615.0s idle for 5.1s
+t= 1620.0s idle for 10.1s
+t= 1625.1s idle for 15.2s
+t= 1630.1s idle for 20.2s
+t= 1635.2s idle for 25.3s
+t= 1640.2s idle for 30.3s
+t= 1645.3s BUSY: /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent at 59.6% CPU > 50.0%
+t= 1650.3s idle for 0.0s
+t= 1655.4s idle for 5.1s
+t= 1660.4s idle for 10.1s
+t= 1665.5s idle for 15.2s
+t= 1670.5s idle for 20.2s
+t= 1675.6s idle for 25.3s
+t= 1680.6s idle for 30.3s
+t= 1685.7s idle for 35.4s
+t= 1690.8s idle for 40.4s
+t= 1695.8s idle for 45.5s
+t= 1700.9s idle for 50.5s
+t= 1705.9s idle for 55.6s
+t= 1711.0s idle for 60.7s
+IDLE: held 60s (load < 3.0, no process > 50.0% CPU)

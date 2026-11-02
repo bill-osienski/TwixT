@@ -1,0 +1,48 @@
+{
+ "admission": {
+  "docs/superpowers/evidence/combination-policy-timing": "COMPLETED",
+  "docs/superpowers/evidence/combination-policy-train": "ELIGIBLE",
+  "docs/superpowers/evidence/combination-policy-train-run/outer.json": "COMPLETED"
+ },
+ "amendment": "docs/superpowers/2026-11-02-combination-policy-second-cycle-amendment.md",
+ "amendment_sha256": "94c7f0df5860aac9d78f3c6736fe8b76f0c4279d8ce7a23edc1f4172b10a9ed3",
+ "card": "docs/superpowers/2026-10-28-combination-policy-pilot-card.md",
+ "card_sha256": "237424bd90bc8273ebab246fe87f19188f2e264f347ccd002352e930a5a1e389",
+ "environment": {
+  "executable": "/Users/bill/projects/TwixT_Game/.venv/bin/python",
+  "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+  "python": "3.14.10 (main, Oct 25 2026, 17:12:00) [Clang 21.0.0 (clang-2100.3.34.2)]"
+ },
+ "head": "9ff326a755ee8ba45b059461b257c86c9355233b",
+ "kind": "combination-policy-pilot-record/1",
+ "loadavg_after": [
+  1.15771484375,
+  1.61865234375,
+  1.9462890625
+ ],
+ "loadavg_before": [
+  1.15771484375,
+  1.61865234375,
+  1.9462890625
+ ],
+ "run": "cycle2_generate",
+ "setting": {
+  "MLX_ENABLE_TF32": "0"
+ },
+ "setting_at_end": {
+  "MLX_ENABLE_TF32": "0"
+ },
+ "status": "VOID",
+ "total_seconds": 0.055,
+ "verdict": null,
+ "versions": {
+  "mlx": "0.30.3",
+  "numpy": "2.4.1",
+  "python": "3.14.10"
+ },
+ "void": {
+  "detail": "{'mlx': '0.30.3', 'numpy': '2.4.1', 'python': '3.14.10'} are not the card's {'mlx': '0.30.3', 'numpy': '2.4.1', 'python': '3.14.9'}",
+  "step": "versions"
+ },
+ "written_by": "script"
+}
