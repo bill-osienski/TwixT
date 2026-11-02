@@ -729,17 +729,20 @@ def _fit_ceiling(games_path):
     return int(math.ceil(timing["spec"]["ceiling_factor"] * projected / 60.0) * 60)
 
 
-def test_THE_FIT_CEILING_IS_PROVISIONAL_UNTIL_THE_NEW_CORPUS_EXISTS_THEN_THE_FORMULA_ON_ITS_COUNTS():
-    """Today the wrapper holds the first corpus's derivation and its header says so. Once the new corpus's games.jsonl
-    exists this fails until TERM_S is re-derived from the new counts, by a reviewed edit, as the amendment's §7 requires.
-    RE-ANCHORED 2026-11-02 (the new corpus, 09ccb288): the formula on its actual counts rounds up to the same 2,820 s, so the
-    wrapper is unedited and its header still says PROVISIONAL: that number is a proposal until the user reviews training."""
+def test_THE_FIT_CEILING_IS_THE_FORMULA_ON_THE_NEW_CORPUS_S_ACTUAL_COUNTS():
+    """BUILT provisional, on the first corpus's derivation. RE-ANCHORED 2026-11-02 (the user's review): the header states the
+    derivation from the new corpus's counts, recomputed here from its committed games and the timing record. The executable
+    limits did not change: TERM 2,810 s, KILL 2,820 s, observation through 2,830 s."""
     new = ROOT / P.KINDS[GEN2]["evidence"] / "games.jsonl"
-    games = new if new.exists() else ROOT / P.KINDS["generate"]["evidence"] / "games.jsonl"
+    counts = [(g["slot"], g["n_rows"]) for g in (json.loads(x) for x in new.read_text(encoding="utf-8").splitlines())]
+    rows = sum(n for _s, n in counts)
+    held = sum(n for s, n in counts if s % P.RECIPE["heldout_mod"] == P.RECIPE["heldout_rem"])
     w = _code(_path(TRAIN))
     term, grace = (int(re.search(rf"^{k}=(\d+)$", w, re.M).group(1)) for k in ("TERM_S", "GRACE_S"))
-    assert term + grace == _fit_ceiling(games) and grace == 10
-    assert new.exists() and term + grace == 2820 and "PROVISIONAL" in _path(TRAIN).read_text().split("set -u\n", 1)[0]
+    assert (term, grace) == (2810, 10) and term + grace == _fit_ceiling(new) == 2820
+    header = " ".join(ln.lstrip("# ") for ln in _path(TRAIN).read_text(encoding="utf-8").split("set -u\n", 1)[0].splitlines())
+    assert "PROVISIONAL" not in header
+    assert f"{rows:,} rows, {held:,} held out" in header and "2,820 s" in header and "through 2830 s" in header
 
 
 # ─────────────────────────────── fake launches of the REAL wrappers ───────────────────────────────

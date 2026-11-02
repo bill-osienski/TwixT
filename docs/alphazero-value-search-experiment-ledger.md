@@ -211,6 +211,7 @@ knob) is not a new hypothesis.
 > **Combination policy second cycle — the new attempt's block surveyed, proven and registered; nothing run (addendum, 2026-11-02).** [202746200, 202747200): survey CLEAN 55/55 (`4fbb855a`), pre-proof HOLDS 55/55 (`0043d826`), registered last in ACCOUNTED, 52 -> 53 (`4c599111`), post-proof HOLDS 55/55 (`96245e21`). Plan = `build_plan`. Three lifecycle tests re-anchored (`7992efed`); 445 focused pass. Returned for launch review. Real model loading, generation, training, Build B, evaluation, deployment and pushing remain unauthorized. See #150.
 > **Combination policy second cycle — ONE run of `cycle2_generate2` and its conditional seed closing APPROVED (decision note, 2026-11-02, the user's review).** The version amendment, new build and seed preparation accepted; the first attempt stays VOID with its block closed, and it produced no result about the teacher. TERM 21,590 s, KILL 21,600 s, cleanup through 21,610 s; teacher checks before workers start. An incomplete corpus is ineligible for training, with no automatic retry. Training, including under the provisional ceiling, Build B, evaluation, deployment and pushing remain unauthorized. See #151.
 > **Combination policy second cycle — the new corpus GENERATED; block closed (Post-closure entry 48, 2026-11-02, generation only; no strength result).** The ONE run of `cycle2_generate2` COMPLETED: 1,000 of 1,000 games in 9,987 s (360.5 games/h), 42,515 rows (38,405 train, 4,110 held-out); every row file matches its sha256; teacher digests bound, probe max prior difference 0.1141. K1 RECONCILES, 21/21; [202746200, 202747200) exposed and retired whole. The fit ceiling re-derived from the actual counts rounds to the same 2,820 s, as a proposal. Training, Build B, evaluation, deployment and pushing remain unauthorized.
+> **Combination policy second cycle — corpus and closing ACCEPTED; ONE CPU run of `cycle2_train` APPROVED (decision note, 2026-11-02, the user's review).** The ceiling, re-derived from the corpus's actual counts, stays 2,820 s (TERM 2,810 s, KILL 2,820 s, cleanup through 2,830 s), still an estimate from the earlier Python timing. Build B, evaluation games, deployment and pushing remain unauthorized, even on ELIGIBLE.
 
 ## Historical proposal check — programme now closed
 
@@ -1893,6 +1894,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 150. **The new attempt's block (2026-11-02).** Do **not** rerun the survey or either proof, edit their records (`02_*` sha256 `9d7cfb72…`, `03_*` `7a303063…`, `04_*` `75dd0de5…`), edit the plan, or move, widen or re-register [202746200, 202747200). Do **not** open the gate, load the checkpoint or the first head for it, launch, close the block, train, build Build B, evaluate, deploy or push without the user's approval of each. Do **not** launch without reading the live versions against the pin again. Do **not** write any seed of this block into `scripts/`, `tests/` or `docs/superpowers/` outside its own records, the plan and the registry tuple.
 151. **The new attempt's run (2026-11-02).** One run only: do **not** retry, extend, top up or continue it, or change the ceiling (TERM 21,590 s, KILL 21,600 s, observation through 21,610 s). Do **not** launch without rechecking live versions, panic and reboot state, the plan, the proved registry, both amendments and the teacher binding immediately before. Do **not** apply K2 unless K1 RECONCILES. Do **not** train on an incomplete corpus, delete it or score it. Do **not** train, including under the provisional ceiling, build Build B, evaluate, deploy or push without the user's approval of each.
 152. **The second cycle's corpus (2026-11-02).** The ONE run of `cycle2_generate2` is spent and its block is retired: do **not** generate more games, top up, replace or re-filter this corpus, or reuse its seeds. Do **not** read its counts, entropy, KL or win totals as evidence of strength; none is a test of the teacher. Do **not** train without the user's approval, including at the proposed 2,820 s ceiling. Do **not** build Build B, evaluate, deploy or push without the user's approval of each.
+153. **The second cycle's fit (2026-11-02).** One CPU run only: do **not** retry, extend, top up, resume or continue it, or change the ceiling (TERM 2,810 s, KILL 2,820 s, observation through 2,830 s), the recipe, the start or the corpus. Do **not** launch without rechecking live versions, panic and reboot state, admission records, both amendment pins and the teacher binding immediately before. Do **not** read a result into an interrupted run: it is VOID. Do **not** build Build B, play evaluation games, deploy or push, even on ELIGIBLE, without the user's approval of each.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -8733,3 +8735,23 @@ Run as the conditional sequence approved in the addendum above, each step once i
   KL and higher entropy describe this corpus's targets against its teacher's priors, and neither shows the teacher or a future student is stronger.
 - **Conclusion / status:** the corpus is complete, its integrity checks hold and its block is closed. It awaits the user's review. **Not authorized:** training,
   including at the proposed ceiling; Build B, evaluation, deployment and pushing.
+
+#### Decision note — the corpus and closing accepted; one CPU run of `cycle2_train` approved (2026-11-02, the user's review)
+
+- **Accepted, no blocking findings:** the corpus and the seed closing.
+- **The user's check:** all 1,000 file hashes and array row counts, the 38,405 training / 4,110 held-out split, the teacher binding, the
+  completed-run records and the exact closing edits. All 59 gates are closed.
+- **The budget:** 1,847.57 s, ×1.5 = 2,771.36 s, rounded up to 2,820 s. It remains an estimate from the earlier Python timing.
+- **Approved, as one sequence:**
+  1. this record; the wrapper's PROVISIONAL wording replaced by the corpus-based derivation and the focused budget check updated, with the
+     executable limits unchanged: TERM 2,810 s, KILL 2,820 s, cleanup through 2,830 s;
+  2. a recheck of live versions, panic and reboot state, admission records, both amendment pins and the teacher binding, with the existing
+     idle and BOINC checks enforced;
+  3. in a clean worktree, opening only `COMBINATION_POLICY_CYCLE2_TRAIN_AUTHORIZED` by a one-line commit, and running the wrapper once;
+  4. starting from the exact first trained head with a fresh Adam, on the new corpus only, with the frozen recipe and STOP rules; fitting
+     entirely on the CPU and retaining the original parent's value baseline;
+  5. verifying gate restoration and cleanup, committing evidence, re-anchoring lifecycle tests and running focused CPU checks; returning
+     initial KL, prior discrepancy, held-out CE before and after, preservation checks, the saved head's hash and the verdict.
+- **Housekeeping approved:** the two retained generation worktrees and their branches may go once confirmed clean and fully merged.
+- **An interrupted run** is VOID with no automatic retry; its progress and cause return for assessment.
+- **Not authorized, even on ELIGIBLE:** Build B, evaluation games, deployment and pushing.

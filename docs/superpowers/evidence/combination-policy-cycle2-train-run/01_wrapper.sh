@@ -1,12 +1,13 @@
 #!/bin/bash
 # THE SECOND POLICY-IMPROVEMENT CYCLE: CPU FIT FROM THE FIRST HEAD, THEN THE CHECK -- OUTER WRAPPER (amendment
 # docs/superpowers/2026-11-02-combination-policy-second-cycle-amendment.md §4, §5, §7).
-# THE CEILING HERE IS PROVISIONAL (TERM_S 2810): it is the first corpus's derivation. The amendment prices this run from
-# the new corpus's actual counts, so TERM_S must be re-derived by a reviewed edit once that corpus exists, before any
-# launch approval; tests/test_combination_policy_cycle2.py fails until the wrapper matches the formula on the new counts.
+# THE CEILING, derived from the new corpus's actual counts (amendment §7; the user's review, ledger 2026-11-02): the timing
+# record's formula on 42,515 rows, 4,110 held out, gives 1,847.57 s; x 1.5 = 2,771.36 s, rounded up to the minute: 2,820 s --
+# TERM at 2810 s, KILL 10 s later, 2820 s in all; cleanup observation bounded through 2830 s. The timing was taken on
+# Python 3.14.9, so this remains an estimate. tests/test_combination_policy_cycle2.py recomputes it from the corpus.
 # A run the ceiling stops is incomplete and receives no score; its progress, cause and continuation cost return for
 # assessment. No automatic retry, extension or top-up.
-# BUILT ONLY (ledger, 2026-11-02): launching it is a separate approval.
+# BUILT 2026-11-02; ONE launch approved by the user's review (ledger decision note, 2026-11-02).
 # A copy of combination-policy-train-run/01_wrapper.sh (the first fit's, whose header follows); the diff: the paths, the
 # gate, `run cycle2_train` and this header. The value of TERM_S and everything else are byte-identical: the idle gate,
 # the background-compute check, the process-group supervisor and its bounded observation, the survivors, the records and
