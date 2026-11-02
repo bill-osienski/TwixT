@@ -73,14 +73,15 @@ def test_THE_AMENDMENT_IS_FROZEN_PINNED_AND_NAMES_THE_REAL_BINDINGS():
     assert "through the actual uncompiled generation evaluator" in flat
 
 
-def test_THE_BLOCK_IS_SURVEYED_PROVEN_AND_REGISTERED_AND_NOTHING_HAS_RUN():
-    """BUILT 2026-11-02 as the build-only state. RE-ANCHORED 2026-11-02 (survey b657bee5, pre-proof, registration 8a24c602,
-    post-proof 14869ca1): the survey is CLEAN and both proofs HOLD, each 55/55 on a clean tree, the proofs bound to the
-    survey record's sha256; the plan is the copy's build_plan; the block (read from the plan and the records -- no seed
-    literal here, since the proofs scan tests/) is ACCOUNTED exactly once and last, above every other 2027-band entry, and
-    in no other list; the post-proof proved the registry as it stands now; every seed is schedulable; each mode refuses
-    to run again. The gates are closed, no run output or corpus exists, and Build B's kinds do not exist. RE-ANCHOR at the
-    launch and the closing."""
+def test_THE_ONE_RUN_WENT_VOID_AT_THE_VERSION_CHECK_BEFORE_ANY_GAME_AND_THE_BLOCK_IS_CLOSED():
+    """BUILT 2026-11-02 as the build-only state; RE-ANCHORED at the seed preparation (survey b657bee5, registration 8a24c602,
+    post-proof 14869ca1). RE-ANCHORED 2026-11-02 (the run, 9ff326a7 -> 9449a1e1, and its closing): the survey is CLEAN and
+    both proofs HOLD, each 55/55 on a clean tree and bound to the survey record; the plan is the copy's build_plan; the
+    post-proof proved the registry the run launched with. The ONE run, launched from the one-line gate opening, went VOID
+    at the version check (Python 3.14.10 against the card's 3.14.9): exit 3, gate restored, no survivors, no checkpoint
+    read, no teacher installed, no game_start or claims event, no rows directory. It admits nothing. K1 RECONCILES, so the
+    WHOLE block is EXPOSED (no claims event: the rule cannot establish k) and RETIRED, each exactly once and last, every
+    seed refused; `run cycle2_generate` stays one-shot. No block literal here: the proofs scan tests/."""
     from scripts.GPU.alphazero import e4_screen_reference as REG
     here = (EV / SURVEY).parent
     assert sorted(x.name for x in here.iterdir() if x.name != "__pycache__") == \
@@ -95,8 +96,6 @@ def test_THE_BLOCK_IS_SURVEYED_PROVEN_AND_REGISTERED_AND_NOTHING_HAS_RUN():
         assert text.splitlines()[2].endswith("; working tree clean")
         assert f"02_seed_survey_run.txt sha256 {sha} (read at " in text
         assert f"EXPECTED STATE ({mode}): HOLDS" in text and "controls passed: 55/55" in text
-        assert text.endswith(f"PROOF VERDICT ({mode}): THE COMBINATION-POLICY CYCLE-2 GENERATION BLOCK IS CLEAN AND THE "
-                             "STATE IS AS EXPECTED\n")
     post = (here / "04_collision_proof_post_run.txt").read_text(encoding="utf-8")
     plan = json.loads((ROOT / P.KINDS[GEN]["plan"]).read_text(encoding="utf-8"))
     n = P.KINDS[GEN]["slots"]
@@ -104,30 +103,75 @@ def test_THE_BLOCK_IS_SURVEYED_PROVEN_AND_REGISTERED_AND_NOTHING_HAS_RUN():
     mod = _load(SURVEY, "_c2_survey_registered")
     assert plan == mod.build_plan(plan["base"], sha)
     block = (plan["base"], plan["base"] + n)
-    assert SB.BAND[0] <= block[0] < block[1] <= SB.BAND[1] and block[0] % SB.ALIGN == 0
-    assert f"block = [{block[0]}, {block[1]}) -- {n} seeds" in survey
-    assert f"THE BLOCK, read from the record: [{block[0]}, {block[1]}) -- BASE {block[0]}" in post
-    reg_rel = "scripts/GPU/alphazero/e4_screen_reference.py"
-    assert f"\nregistry {reg_rel} sha256 {P.M._sha((ROOT / reg_rel).read_bytes())}\n" in post    # proved = current
-    assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1 and REG.ACCOUNTED_SEED_INTERVALS[-1] == block
-    assert all(hi <= block[0] for lo, hi in REG.ACCOUNTED_SEED_INTERVALS[:-1] if hi > SB.BAND[0])
-    assert not any(lo < block[1] and block[0] < hi
-                   for lo, hi in REG.EXPOSED_SEED_INTERVALS + REG.RETIRED_SEED_INTERVALS + REG.TEST_ONLY_SEED_INTERVALS)
-    assert all(REG.seed_is_accounted(s) and not REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s)
-               for s in range(*block))
     for mode in ("survey", "pre", "post"):
         with pytest.raises(mod.Refused, match="each mode runs once"):
             mod.main(["x", "--mode", mode])
+    # the run
+    run_dir, evidence = _path(GEN).parent, ROOT / P.KINDS[GEN]["evidence"]
+    assert sorted(x.name for x in run_dir.iterdir()) == ["01_wrapper.sh", "bg_check.txt", "idle_check.txt", "outer.json",
+                                                         "pgid.txt", "plan.json", "run.stderr.txt", "run.stdout.txt"]
+    assert sorted(x.name for x in evidence.iterdir()) == ["progress.jsonl", "record.json"]
+    outer = json.loads((run_dir / "outer.json").read_text(encoding="utf-8"))
+    rec = json.loads((evidence / "record.json").read_text(encoding="utf-8"))
+    assert (outer["outcome"], outer["inner_exit"], outer["outer_exit"]) == ("VOID", 3, 3)
+    assert outer["gate_restored"] is True and outer["survivors"] == "" and outer["record_by"] == "script"
+    assert outer["term_s"] == 21590 and outer["grace_s"] == 10 and outer["head"] == rec["head"]
+    assert (rec["status"], rec["run"], rec["verdict"], rec["void"]["step"]) == ("VOID", GEN, None, "versions")
+    assert rec["versions"] == {**P.VERSIONS, "python": "3.14.10"} and P.VERSIONS["python"] == "3.14.9"
+    assert rec["amendment_sha256"] == P.CYCLE2_AMENDMENT[1]
+    for key in ("checkpoint_sha1", "teacher", "teacher_probe", "teacher_digests", "seeds", "telemetry", "background_checks"):
+        assert key not in rec, key                           # the check stopped it before any of these
+    events = [json.loads(x)["event"] for x in (evidence / "progress.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert events == ["start", "end"]
+    assert not (pathlib.Path.home() / "twixt-cache/combination-policy-pilot" / GEN).exists()
+    gate_rel = "scripts/GPU/alphazero/combination_policy_cycle2_generate_authorization.py"
+    assert subprocess.run(["git", "-C", str(ROOT), "rev-parse", f"{outer['head']}^"], capture_output=True, text=True,
+                          check=True).stdout.strip() == outer["pre_open"]
+    opened = subprocess.run(["git", "-C", str(ROOT), "diff", "--unified=0", outer["pre_open"], outer["head"]],
+                            capture_output=True, text=True, check=True).stdout
+    assert [ln for ln in opened.splitlines() if ln[:1] in "+-" and ln[:3] not in ("+++", "---")] == \
+        [f"-{WRAPPERS[GEN]['gate']} = False", f"+{WRAPPERS[GEN]['gate']} = True"] and f"b/{gate_rel}" in opened
+    reg_rel = "scripts/GPU/alphazero/e4_screen_reference.py"
+    launched = subprocess.run(["git", "-C", str(ROOT), "show", f"{outer['head']}:{reg_rel}"], capture_output=True,
+                              check=True).stdout
+    assert f"\nregistry {reg_rel} sha256 {hashlib.sha256(launched).hexdigest()}\n" in post     # proved = launched
+    assert subprocess.run(["git", "-C", str(ROOT), "diff", "--quiet", "9449a1e1", "HEAD", "--", str(run_dir),
+                           str(evidence)]).returncode == 0
+    # the closing
+    closing = (EV / CLOSING).parent
+    assert sorted(x.name for x in closing.iterdir() if x.name != "__pycache__") == \
+        ["01_derive_usage.py", "02_derive_usage_run.txt"]
+    k1 = (closing / "02_derive_usage_run.txt").read_text(encoding="utf-8")
+    assert k1.splitlines()[2].endswith("; working tree clean") and "controls passed: 21/21" in k1
+    assert "game starts (slots, as logged): []\nclaims events: []\n" in k1
+    assert k1.endswith(f"VERDICT: RECONCILES -- EXPOSE {list(block)}; RETIRE {list(block)}\n")
+    for intervals in (REG.ACCOUNTED_SEED_INTERVALS, REG.EXPOSED_SEED_INTERVALS, REG.RETIRED_SEED_INTERVALS):
+        assert intervals.count(block) == 1 and intervals[-1] == block
+        assert all(hi <= block[0] for lo, hi in intervals[:-1] if hi > SB.BAND[0])
+    assert all(REG.seed_is_accounted(s) and REG.seed_is_exposed(s) and REG.seed_is_retired(s) and
+               REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s) for s in range(*block))
+    # the gates, the rest of the state
     assert GATE_GEN.COMBINATION_POLICY_CYCLE2_GENERATE_AUTHORIZED is False
     assert GATE_TRAIN.COMBINATION_POLICY_CYCLE2_TRAIN_AUTHORIZED is False
     assert (P.KINDS[GEN]["gate"][0], P.KINDS[TRAIN]["gate"][0]) == (GATE_GEN, GATE_TRAIN)
     assert not any(k.startswith("cycle2") and k not in (GEN, TRAIN) for k in P.KINDS)
-    assert sorted(x.name for x in (EV / "combination-policy-cycle2-generate-run").iterdir()) == \
-        ["01_wrapper.sh", "plan.json"]
     assert sorted(x.name for x in (EV / "combination-policy-cycle2-train-run").iterdir()) == ["01_wrapper.sh"]
-    assert [x.name for x in (EV / CLOSING).parent.iterdir() if x.name != "__pycache__"] == ["01_derive_usage.py"]
-    assert not (ROOT / P.KINDS[GEN]["evidence"]).exists() and not (ROOT / P.KINDS[TRAIN]["evidence"]).exists()
-    assert not (pathlib.Path.home() / "twixt-cache/combination-policy-pilot" / GEN).exists()
+    assert not (ROOT / P.KINDS[TRAIN]["evidence"]).exists()
+
+
+def test_THE_VOID_RUN_ADMITS_NOTHING_AND_ITS_KIND_STAYS_ONE_SHOT(tmp_path, monkeypatch, capsys):
+    """The real committed readers: the fit is refused on generation's VOID record. With the gate open in this process only
+    and admission stubbed, `run cycle2_generate` refuses as one-shot before any seam."""
+    with pytest.raises(P.Refused, match="is not COMPLETED"):
+        P.admitted(TRAIN, P._read_record, P._read_outer)
+    gate, name = P.KINDS[GEN]["gate"]
+    monkeypatch.setattr(gate, name, True)
+    monkeypatch.setattr(P, "_mlx_loaded", lambda: False)
+    monkeypatch.setattr(P, "admitted", lambda k, *_a: {"stub": k})
+    ckpt = tmp_path / "model.safetensors"
+    ckpt.write_bytes(b"not a model")
+    assert P.main(["run", GEN, "--checkpoint", str(ckpt)]) == P.EXIT_REFUSED
+    assert "the run is one-shot" in capsys.readouterr().err
 
 
 def test_THE_FIRST_CYCLE_S_EVIDENCE_AND_HEAD_ARE_UNCHANGED():
