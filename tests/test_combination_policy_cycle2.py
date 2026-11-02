@@ -525,8 +525,10 @@ def test_THE_REAL_FIT_SEAM_READS_ONLY_THE_NEW_CORPUS(tmp_path, monkeypatch):
         seams.read_rows(first_game)
     with pytest.raises(P.Void, match="not the file generation wrote"):
         seams.read_rows({**second_game, "rows_sha256": "0" * 64})
-    with pytest.raises(FileNotFoundError, match="cycle2-generate2"):
-        seams.read_games()                    # the new corpus does not exist; the first one's games are never read
+    # RE-ANCHORED 2026-11-02 (the new corpus, 09ccb288): the reader returns its games, on its own block; the first one's are never read
+    plan = json.loads((ROOT / P.KINDS[GEN2]["plan"]).read_text(encoding="utf-8"))
+    read = seams.read_games()
+    assert len(read) == plan["n_slots"] and all(g["seed"] == plan["base"] + g["slot"] for g in read)
 
 
 def test_THE_REAL_FIT_SEAM_INSTALLS_THE_TEACHER_S_SAVED_BYTES(monkeypatch):
@@ -729,14 +731,15 @@ def _fit_ceiling(games_path):
 
 def test_THE_FIT_CEILING_IS_PROVISIONAL_UNTIL_THE_NEW_CORPUS_EXISTS_THEN_THE_FORMULA_ON_ITS_COUNTS():
     """Today the wrapper holds the first corpus's derivation and its header says so. Once the new corpus's games.jsonl
-    exists this fails until TERM_S is re-derived from the new counts, by a reviewed edit, as the amendment's §7 requires."""
+    exists this fails until TERM_S is re-derived from the new counts, by a reviewed edit, as the amendment's §7 requires.
+    RE-ANCHORED 2026-11-02 (the new corpus, 09ccb288): the formula on its actual counts rounds up to the same 2,820 s, so the
+    wrapper is unedited and its header still says PROVISIONAL: that number is a proposal until the user reviews training."""
     new = ROOT / P.KINDS[GEN2]["evidence"] / "games.jsonl"
     games = new if new.exists() else ROOT / P.KINDS["generate"]["evidence"] / "games.jsonl"
     w = _code(_path(TRAIN))
     term, grace = (int(re.search(rf"^{k}=(\d+)$", w, re.M).group(1)) for k in ("TERM_S", "GRACE_S"))
     assert term + grace == _fit_ceiling(games) and grace == 10
-    if not new.exists():
-        assert term + grace == 2820 and "PROVISIONAL" in _path(TRAIN).read_text().split("set -u\n", 1)[0]
+    assert new.exists() and term + grace == 2820 and "PROVISIONAL" in _path(TRAIN).read_text().split("set -u\n", 1)[0]
 
 
 # ─────────────────────────────── fake launches of the REAL wrappers ───────────────────────────────
@@ -1001,13 +1004,17 @@ def test_THE_LIVE_ENVIRONMENT_IS_THE_PINNED_ONE():
     assert P._versions() == P.CYCLE2_VERSIONS
 
 
-def test_THE_NEW_ATTEMPT_S_BLOCK_IS_SURVEYED_PROVEN_AND_REGISTERED_AND_NOTHING_HAS_RUN():
-    """BUILT 2026-11-02 as the build-only state. RE-ANCHORED 2026-11-02 (survey 4fbb855a, pre-proof 0043d826, registration 4c599111,
-    post-proof 96245e21): the survey is CLEAN and both proofs HOLD, each 55/55 on a clean tree and bound to the survey record;
-    the plan is the copy's build_plan; the block (read from the plan and the records -- no seed literal here, since the
-    proofs scan tests/) is ACCOUNTED exactly once and last, above the first attempt's block, and in no other list; the
-    post-proof proved the registry as it stands now; every seed is schedulable; each mode refuses to run again. The gate
-    is closed, and no run output or corpus exists. RE-ANCHOR at the launch and the closing."""
+def test_THE_NEW_ATTEMPT_RAN_ONCE_COMPLETED_AND_ITS_BLOCK_IS_CLOSED():
+    """BUILT 2026-11-02 as the build-only state. RE-ANCHORED 2026-11-02 at the seed preparation (survey 4fbb855a, pre-proof
+    0043d826, registration 4c599111, post-proof 96245e21). RE-ANCHORED 2026-11-02 (the run, fc86a031 -> 09ccb288, and its
+    closing, K1 41fad25f + K2 ba2ef9af): the survey is CLEAN and both proofs HOLD, each 55/55 on a clean tree and bound to
+    the survey record; the plan is the copy's build_plan; the post-proof proved the registry the run launched with. The ONE
+    run, launched from the one-line gate opening, COMPLETED inside its ceiling: outer exit 0, gate restored, no survivors,
+    the pinned versions, the teacher bound by digests and its probe differing from the parent. Every slot was claimed,
+    started and ended once, slot g on seed BASE + g, and every row file is the one generation wrote (games.jsonl is read
+    for slot, seed, row-count and file fields only -- never a winner or reason). K1 RECONCILES, so the WHOLE block is EXPOSED
+    and RETIRED, each exactly once and last, ACCOUNTED unchanged, every seed refused. Every mode refuses to run again. The
+    gates stay closed and the fit has not run. No block literal here: the proofs scan tests/."""
     from scripts.GPU.alphazero import e4_screen_reference as REG
     here = (EV / SURVEY2).parent
     assert sorted(x.name for x in here.iterdir() if x.name != "__pycache__") == \
@@ -1036,21 +1043,68 @@ def test_THE_NEW_ATTEMPT_S_BLOCK_IS_SURVEYED_PROVEN_AND_REGISTERED_AND_NOTHING_H
     assert SB.BAND[0] <= block[0] < block[1] <= SB.BAND[1] and block[0] % SB.ALIGN == 0
     assert f"block = [{block[0]}, {block[1]}) -- {n} seeds" in survey
     assert f"THE BLOCK, read from the record: [{block[0]}, {block[1]}) -- BASE {block[0]}" in post
-    reg_rel = "scripts/GPU/alphazero/e4_screen_reference.py"
-    assert f"\nregistry {reg_rel} sha256 {P.M._sha((ROOT / reg_rel).read_bytes())}\n" in post    # proved = current
-    assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1 and REG.ACCOUNTED_SEED_INTERVALS[-1] == block
-    assert not any(lo < block[1] and block[0] < hi
-                   for lo, hi in REG.EXPOSED_SEED_INTERVALS + REG.RETIRED_SEED_INTERVALS + REG.TEST_ONLY_SEED_INTERVALS)
-    assert all(REG.seed_is_accounted(s) and not REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s)
-               for s in range(*block))
     for mode in ("survey", "pre", "post"):
         with pytest.raises(mod.Refused, match="each mode runs once"):
             mod.main(["x", "--mode", mode])
+    # the run
+    run_dir, evidence = _path(GEN2).parent, ROOT / P.KINDS[GEN2]["evidence"]
+    assert sorted(x.name for x in run_dir.iterdir()) == ["01_wrapper.sh", "bg_check.txt", "idle_check.txt", "outer.json",
+                                                         "pgid.txt", "plan.json", "run.stderr.txt", "run.stdout.txt"]
+    assert sorted(x.name for x in evidence.iterdir()) == ["games.jsonl", "progress.jsonl", "record.json"]
+    outer = json.loads((run_dir / "outer.json").read_text(encoding="utf-8"))
+    rec = json.loads((evidence / "record.json").read_text(encoding="utf-8"))
+    assert P.outer_faults(outer, rec) == [] and (outer["term_s"], outer["grace_s"]) == (21590, 10)
+    assert (rec["status"], rec["run"], rec["verdict"]) == ("COMPLETED", GEN2, None)
+    assert rec["versions"] == P.CYCLE2_VERSIONS and rec["amendment_sha256"] == P.CYCLE2_ATTEMPT2_AMENDMENT[1]
+    assert rec["base_amendment_sha256"] == P.CYCLE2_AMENDMENT[1] and rec["seeds"] == {"base": block[0], "n_slots": n}
+    head_file = ROOT / rec["teacher"]["file"]
+    assert rec["teacher"]["sha256"] == hashlib.sha256(head_file.read_bytes()).hexdigest()
+    assert rec["teacher_digests"] == rec["teacher"]["digests"] and rec["teacher_probe"]["max_prior_abs_diff"] > 0.0
+    assert rec["checkpoint_sha1"] == json.loads((ROOT / P.KINDS["generate"]["evidence"] / "record.json").read_text(
+        encoding="utf-8"))["checkpoint_sha1"]
+    events = [json.loads(x) for x in (evidence / "progress.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert events[0]["event"] == "start" and events[-1]["event"] == "end"
+    assert sorted(e["slot"] for e in events if e["event"] == "game_start") == list(range(n))
+    assert sorted(e["slot"] for e in events if e["event"] == "game_end") == list(range(n))
+    assert [e["claims"] for e in events if e["event"] == "claims"] == [n]
+    games = [json.loads(x) for x in (evidence / "games.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert [g["slot"] for g in sorted(games, key=lambda g: g["slot"])] == list(range(n))
+    assert all(g["seed"] == block[0] + g["slot"] for g in games)
+    assert sum(g["n_rows"] for g in games) == rec["summary"]["rows"] and rec["summary"]["games"] == n
+    rows_dir = pathlib.Path.home() / "twixt-cache/combination-policy-pilot" / GEN2
+    assert sorted(x.name for x in rows_dir.iterdir()) == sorted(g["rows_file"] for g in games)
+    assert all(P._sha_file(rows_dir / g["rows_file"]) == g["rows_sha256"] for g in games)
+    gate_rel = "scripts/GPU/alphazero/combination_policy_cycle2_generate2_authorization.py"
+    assert subprocess.run(["git", "-C", str(ROOT), "rev-parse", f"{outer['head']}^"], capture_output=True, text=True,
+                          check=True).stdout.strip() == outer["pre_open"]
+    opened = subprocess.run(["git", "-C", str(ROOT), "diff", "--unified=0", outer["pre_open"], outer["head"]],
+                            capture_output=True, text=True, check=True).stdout
+    assert [ln for ln in opened.splitlines() if ln[:1] in "+-" and ln[:3] not in ("+++", "---")] == \
+        [f"-{WRAPPERS[GEN2]['gate']} = False", f"+{WRAPPERS[GEN2]['gate']} = True"] and f"b/{gate_rel}" in opened
+    reg_rel = "scripts/GPU/alphazero/e4_screen_reference.py"
+    launched = subprocess.run(["git", "-C", str(ROOT), "show", f"{outer['head']}:{reg_rel}"], capture_output=True,
+                              check=True).stdout
+    assert f"\nregistry {reg_rel} sha256 {hashlib.sha256(launched).hexdigest()}\n" in post     # proved = launched
+    assert subprocess.run(["git", "-C", str(ROOT), "diff", "--quiet", "09ccb288", "HEAD", "--", str(run_dir),
+                           str(evidence)]).returncode == 0
+    # the closing
+    closing = (EV / CLOSING2).parent
+    assert sorted(x.name for x in closing.iterdir() if x.name != "__pycache__") == \
+        ["01_derive_usage.py", "02_derive_usage_run.txt"]
+    k1 = (closing / "02_derive_usage_run.txt").read_text(encoding="utf-8")
+    assert k1.splitlines()[2].endswith("; working tree clean") and "controls passed: 21/21" in k1
+    assert f"\nclaims events: [{n}]\n" in k1
+    assert k1.endswith(f"VERDICT: RECONCILES -- EXPOSE {list(block)}; RETIRE {list(block)}\n")
+    for intervals in (REG.ACCOUNTED_SEED_INTERVALS, REG.EXPOSED_SEED_INTERVALS, REG.RETIRED_SEED_INTERVALS):
+        assert intervals.count(block) == 1 and intervals[-1] == block
+        assert all(hi <= block[0] for lo, hi in intervals[:-1] if hi > SB.BAND[0])
+    assert all(REG.seed_is_accounted(s) and REG.seed_is_exposed(s) and REG.seed_is_retired(s) and
+               REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s) for s in range(*block))
+    # the gates, the rest of the state
     assert GATE_GEN2.COMBINATION_POLICY_CYCLE2_GENERATE2_AUTHORIZED is False and P.KINDS[GEN2]["gate"][0] is GATE_GEN2
-    assert sorted(x.name for x in _path(GEN2).parent.iterdir()) == ["01_wrapper.sh", "plan.json"]
-    assert [x.name for x in (EV / CLOSING2).parent.iterdir() if x.name != "__pycache__"] == ["01_derive_usage.py"]
-    assert not (ROOT / P.KINDS[GEN2]["evidence"]).exists() and not (ROOT / P.KINDS[TRAIN]["evidence"]).exists()
-    assert not (pathlib.Path.home() / "twixt-cache/combination-policy-pilot" / GEN2).exists()
+    assert GATE_TRAIN.COMBINATION_POLICY_CYCLE2_TRAIN_AUTHORIZED is False
+    assert not (ROOT / P.KINDS[TRAIN]["evidence"]).exists()
+    assert sorted(x.name for x in (EV / "combination-policy-cycle2-train-run").iterdir()) == ["01_wrapper.sh"]
 
 
 def test_THE_NEW_ATTEMPT_IS_THE_SAME_RUN_ON_ITS_OWN_PATHS():
