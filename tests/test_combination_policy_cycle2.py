@@ -73,17 +73,59 @@ def test_THE_AMENDMENT_IS_FROZEN_PINNED_AND_NAMES_THE_REAL_BINDINGS():
     assert "through the actual uncompiled generation evaluator" in flat
 
 
-def test_BUILD_A_ONLY_two_closed_gates_and_no_plan_run_or_corpus():
-    """RE-ANCHOR when a seed procedure or run is approved. The gates are closed, no plan, run output, seed record or
-    corpus exists, and the registry names no block for this cycle. Build B's kinds do not exist."""
+def test_THE_BLOCK_IS_SURVEYED_PROVEN_AND_REGISTERED_AND_NOTHING_HAS_RUN():
+    """BUILT 2026-11-02 as the build-only state. RE-ANCHORED 2026-11-02 (survey b657bee5, pre-proof, registration 8a24c602,
+    post-proof 14869ca1): the survey is CLEAN and both proofs HOLD, each 55/55 on a clean tree, the proofs bound to the
+    survey record's sha256; the plan is the copy's build_plan; the block (read from the plan and the records -- no seed
+    literal here, since the proofs scan tests/) is ACCOUNTED exactly once and last, above every other 2027-band entry, and
+    in no other list; the post-proof proved the registry as it stands now; every seed is schedulable; each mode refuses
+    to run again. The gates are closed, no run output or corpus exists, and Build B's kinds do not exist. RE-ANCHOR at the
+    launch and the closing."""
+    from scripts.GPU.alphazero import e4_screen_reference as REG
+    here = (EV / SURVEY).parent
+    assert sorted(x.name for x in here.iterdir() if x.name != "__pycache__") == \
+        ["01_seed_survey.py", "02_seed_survey_run.txt", "03_collision_proof_pre_run.txt",
+         "04_collision_proof_post_run.txt"]
+    raw = (here / "02_seed_survey_run.txt").read_bytes()
+    survey, sha = raw.decode("utf-8"), hashlib.sha256(raw).hexdigest()
+    assert survey.splitlines()[2].endswith("; working tree clean") and "controls passed: 55/55" in survey
+    assert survey.endswith("SURVEY VERDICT   : THE COMBINATION-POLICY CYCLE-2 GENERATION BLOCK IS CLEAN\n")
+    for rel, mode in (("03_collision_proof_pre_run.txt", "pre"), ("04_collision_proof_post_run.txt", "post")):
+        text = (here / rel).read_text(encoding="utf-8")
+        assert text.splitlines()[2].endswith("; working tree clean")
+        assert f"02_seed_survey_run.txt sha256 {sha} (read at " in text
+        assert f"EXPECTED STATE ({mode}): HOLDS" in text and "controls passed: 55/55" in text
+        assert text.endswith(f"PROOF VERDICT ({mode}): THE COMBINATION-POLICY CYCLE-2 GENERATION BLOCK IS CLEAN AND THE "
+                             "STATE IS AS EXPECTED\n")
+    post = (here / "04_collision_proof_post_run.txt").read_text(encoding="utf-8")
+    plan = json.loads((ROOT / P.KINDS[GEN]["plan"]).read_text(encoding="utf-8"))
+    n = P.KINDS[GEN]["slots"]
+    assert type(plan["base"]) is int and plan["n_slots"] == n == 1000
+    mod = _load(SURVEY, "_c2_survey_registered")
+    assert plan == mod.build_plan(plan["base"], sha)
+    block = (plan["base"], plan["base"] + n)
+    assert SB.BAND[0] <= block[0] < block[1] <= SB.BAND[1] and block[0] % SB.ALIGN == 0
+    assert f"block = [{block[0]}, {block[1]}) -- {n} seeds" in survey
+    assert f"THE BLOCK, read from the record: [{block[0]}, {block[1]}) -- BASE {block[0]}" in post
+    reg_rel = "scripts/GPU/alphazero/e4_screen_reference.py"
+    assert f"\nregistry {reg_rel} sha256 {P.M._sha((ROOT / reg_rel).read_bytes())}\n" in post    # proved = current
+    assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1 and REG.ACCOUNTED_SEED_INTERVALS[-1] == block
+    assert all(hi <= block[0] for lo, hi in REG.ACCOUNTED_SEED_INTERVALS[:-1] if hi > SB.BAND[0])
+    assert not any(lo < block[1] and block[0] < hi
+                   for lo, hi in REG.EXPOSED_SEED_INTERVALS + REG.RETIRED_SEED_INTERVALS + REG.TEST_ONLY_SEED_INTERVALS)
+    assert all(REG.seed_is_accounted(s) and not REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s)
+               for s in range(*block))
+    for mode in ("survey", "pre", "post"):
+        with pytest.raises(mod.Refused, match="each mode runs once"):
+            mod.main(["x", "--mode", mode])
     assert GATE_GEN.COMBINATION_POLICY_CYCLE2_GENERATE_AUTHORIZED is False
     assert GATE_TRAIN.COMBINATION_POLICY_CYCLE2_TRAIN_AUTHORIZED is False
     assert (P.KINDS[GEN]["gate"][0], P.KINDS[TRAIN]["gate"][0]) == (GATE_GEN, GATE_TRAIN)
     assert not any(k.startswith("cycle2") and k not in (GEN, TRAIN) for k in P.KINDS)
-    assert sorted(x.name for x in (EV / "combination-policy-cycle2-generate-run").iterdir()) == ["01_wrapper.sh"]
+    assert sorted(x.name for x in (EV / "combination-policy-cycle2-generate-run").iterdir()) == \
+        ["01_wrapper.sh", "plan.json"]
     assert sorted(x.name for x in (EV / "combination-policy-cycle2-train-run").iterdir()) == ["01_wrapper.sh"]
-    for rel, only in ((SURVEY, "01_seed_survey.py"), (CLOSING, "01_derive_usage.py")):
-        assert [x.name for x in (EV / rel).parent.iterdir() if x.name != "__pycache__"] == [only]
+    assert [x.name for x in (EV / CLOSING).parent.iterdir() if x.name != "__pycache__"] == ["01_derive_usage.py"]
     assert not (ROOT / P.KINDS[GEN]["evidence"]).exists() and not (ROOT / P.KINDS[TRAIN]["evidence"]).exists()
     assert not (pathlib.Path.home() / "twixt-cache/combination-policy-pilot" / GEN).exists()
 
@@ -868,7 +910,7 @@ def test_THE_CLOSING_COPY_IS_THE_FIRST_CORPUS_S_WITH_ONLY_THE_STATED_DIFFERENCES
         'lines = ["COMBINATION POLICY PILOT -- CYCLE-2 GENERATION SEED-USAGE DERIVATION (closing)", "=" * 96,'}
 
 
-def test_THE_CLOSING_COPY_SERVES_THE_KIND_and_holds_no_seed_literal_and_its_controls_pass():
+def test_THE_CLOSING_COPY_SERVES_THE_KIND_and_holds_no_seed_literal_and_its_controls_pass_at_the_registered_base():
     closing = _load(CLOSING, "_c2_closing")
     kind = P.KINDS[GEN]
     assert closing.N_SLOTS == kind["slots"] == 1000 and closing.INPUTS[0] == kind["plan"]
@@ -876,5 +918,5 @@ def test_THE_CLOSING_COPY_SERVES_THE_KIND_and_holds_no_seed_literal_and_its_cont
     assert closing.OUT == "docs/superpowers/evidence/combination-policy-cycle2-generate-seed-closing/02_derive_usage_run.txt"
     code = _split(CLOSING)[1]
     assert not SB.scan(code) and not re.search(r"\b20[0-9]{7}\b", code)
-    results = closing._controls(SB.candidate([], [], 1000)[1])          # a synthetic base: no block is registered
+    results = closing._controls(json.loads((ROOT / kind["plan"]).read_text(encoding="utf-8"))["base"])
     assert len(results) == 21 and all(ok for _l, ok, _d in results), [r for r in results if not r[1]]

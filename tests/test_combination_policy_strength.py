@@ -188,10 +188,13 @@ def test_THE_COMPARISON_RAN_ONCE_COMPLETED_AND_IS_CLOSED():
     k1 = (closing / "02_derive_usage_run.txt").read_text(encoding="utf-8")
     assert k1.splitlines()[2].endswith("; working tree clean") and "controls passed: 15/15" in k1
     assert k1.endswith(f"VERDICT: RECONCILES -- EXPOSE {list(block)}; RETIRE {list(block)}\n")
+    # RE-ANCHORED 2026-11-02 (the second cycle's registration 8a24c602): no longer last in ACCOUNTED; every later entry in
+    # each list lies above it
     for name in ("ACCOUNTED", "EXPOSED", "RETIRED"):
         intervals = getattr(REG, f"{name}_SEED_INTERVALS")
-        assert intervals.count(block) == 1 and intervals[-1] == block, name
-        assert [iv for iv in intervals if iv[1] > SB.BAND[0]] == [gen_block, screen_block, block], name
+        assert intervals.count(block) == 1, name
+        assert all(lo >= block[1] for lo, _hi in intervals[intervals.index(block) + 1:]), name
+        assert [iv for iv in intervals if iv[1] > SB.BAND[0]][:3] == [gen_block, screen_block, block], name
     assert not any(lo < block[1] and block[0] < hi and (lo, hi) != block
                    for lo, hi in REG.EXPOSED_SEED_INTERVALS + REG.RETIRED_SEED_INTERVALS + REG.TEST_ONLY_SEED_INTERVALS)
     assert all(REG.seed_is_accounted(s) and REG.seed_is_exposed(s) and REG.seed_is_retired(s) and
