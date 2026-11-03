@@ -212,6 +212,7 @@ knob) is not a new hypothesis.
 > **Combination policy second cycle — ONE run of `cycle2_generate2` and its conditional seed closing APPROVED (decision note, 2026-11-02, the user's review).** The version amendment, new build and seed preparation accepted; the first attempt stays VOID with its block closed, and it produced no result about the teacher. TERM 21,590 s, KILL 21,600 s, cleanup through 21,610 s; teacher checks before workers start. An incomplete corpus is ineligible for training, with no automatic retry. Training, including under the provisional ceiling, Build B, evaluation, deployment and pushing remain unauthorized. See #151.
 > **Combination policy second cycle — the new corpus GENERATED; block closed (Post-closure entry 48, 2026-11-02, generation only; no strength result).** The ONE run of `cycle2_generate2` COMPLETED: 1,000 of 1,000 games in 9,987 s (360.5 games/h), 42,515 rows (38,405 train, 4,110 held-out); every row file matches its sha256; teacher digests bound, probe max prior difference 0.1141. K1 RECONCILES, 21/21; [202746200, 202747200) exposed and retired whole. The fit ceiling re-derived from the actual counts rounds to the same 2,820 s, as a proposal. Training, Build B, evaluation, deployment and pushing remain unauthorized.
 > **Combination policy second cycle — corpus and closing ACCEPTED; ONE CPU run of `cycle2_train` APPROVED (decision note, 2026-11-02, the user's review).** The ceiling, re-derived from the corpus's actual counts, stays 2,820 s (TERM 2,810 s, KILL 2,820 s, cleanup through 2,830 s), still an estimate from the earlier Python timing. Build B, evaluation games, deployment and pushing remain unauthorized, even on ELIGIBLE.
+> **Combination policy second cycle — the student FITTED; verdict ELIGIBLE (Post-closure entry 49, 2026-11-02; no strength result).** The ONE CPU run of `cycle2_train` COMPLETED in 1,950 s from the first head on the new corpus: initial training KL 1.1480, held-out CE 3.8277 → 3.7895 (a drop of 0.0382, about a fifth of the first cycle's 0.2166, on a different held-out set); values bitwise equal, encoder and value digests unchanged; head sha256 `c7e96802…`. Build B, evaluation games, deployment and pushing remain unauthorized.
 
 ## Historical proposal check — programme now closed
 
@@ -1895,6 +1896,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 151. **The new attempt's run (2026-11-02).** One run only: do **not** retry, extend, top up or continue it, or change the ceiling (TERM 21,590 s, KILL 21,600 s, observation through 21,610 s). Do **not** launch without rechecking live versions, panic and reboot state, the plan, the proved registry, both amendments and the teacher binding immediately before. Do **not** apply K2 unless K1 RECONCILES. Do **not** train on an incomplete corpus, delete it or score it. Do **not** train, including under the provisional ceiling, build Build B, evaluate, deploy or push without the user's approval of each.
 152. **The second cycle's corpus (2026-11-02).** The ONE run of `cycle2_generate2` is spent and its block is retired: do **not** generate more games, top up, replace or re-filter this corpus, or reuse its seeds. Do **not** read its counts, entropy, KL or win totals as evidence of strength; none is a test of the teacher. Do **not** train without the user's approval, including at the proposed 2,820 s ceiling. Do **not** build Build B, evaluate, deploy or push without the user's approval of each.
 153. **The second cycle's fit (2026-11-02).** One CPU run only: do **not** retry, extend, top up, resume or continue it, or change the ceiling (TERM 2,810 s, KILL 2,820 s, observation through 2,830 s), the recipe, the start or the corpus. Do **not** launch without rechecking live versions, panic and reboot state, admission records, both amendment pins and the teacher binding immediately before. Do **not** read a result into an interrupted run: it is VOID. Do **not** build Build B, play evaluation games, deploy or push, even on ELIGIBLE, without the user's approval of each.
+154. **The second cycle's student (2026-11-02).** The ONE fit is spent and its verdict is ELIGIBLE: do **not** refit, continue training, select another state, or change the recipe, corpus or start. Do **not** read ELIGIBLE or the lower held-out CE as stronger play: neither was tested. Do **not** compare the two cycles' CE values as if they shared a held-out set. Do **not** build Build B, play evaluation games, deploy or push without the user's approval of each.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -8755,3 +8757,44 @@ Run as the conditional sequence approved in the addendum above, each step once i
 - **Housekeeping approved:** the two retained generation worktrees and their branches may go once confirmed clean and fully merged.
 - **An interrupted run** is VOID with no automatic retry; its progress and cause return for assessment.
 - **Not authorized, even on ELIGIBLE:** Build B, evaluation games, deployment and pushing.
+
+#### Post-closure entry 49 — the second cycle's fit: 3,000 CPU updates from the first head, verdict ELIGIBLE (2026-11-02)
+
+- **Test:** the ONE approved CPU run of `run cycle2_train`: the recipe's 3,000 updates on the new corpus, from the first head's exact weights with a fresh
+  Adam, under TERM 2,810 s / KILL 2,820 s, observed through 2,830 s.
+- **Hypothesis (amendment §1):** repeating policy improvement helps. This step tests only whether the student learns on held-out rows; strength is not tested.
+- **Why plausible:** the corpus's search targets differ from the teacher's priors (mean KL 1.14), so the policy head has something to fit. Lower CE on search
+  targets need not mean stronger play: the first cycle's lower CE was followed by NON_PASS at strength (entry 46).
+- **Prediction on record:** directional improvement in held-out CE and score above 0.5; low confidence; no magnitude. Cost estimate 1,847.57 s.
+- **What ran:** decision note `0dd78d2c`; prelaunch rechecks all passed; one-line gate opening `cafc78b4`; evidence and restored gate `200e7eee`; tests `381e3714`.
+  Idle gate held after 196 s; BOINC clear. Worktree `cp-cycle2-train-run`.
+- **Result, run:** inner and outer exit 0, COMPLETED, 1,950 s wall, gate restored, no survivors, run stderr empty. Python 3.14.10, MLX 0.30.3, NumPy 2.4.1, device
+  CPU, `MLX_ENABLE_TF32=0` at start and end. Fit 1,538.6 s, total 1,949.8 s: about 5.5% above the estimate, 860 s inside TERM.
+- **Result, learning:**
+
+  | | First cycle | This fit |
+  |---|---:|---:|
+  | Train / held-out rows | 40,589 / 4,158 | 38,405 / 4,110 |
+  | Initial training KL | 1.4339 | **1.1480** |
+  | Initial training CE | 3.9333 | 3.8475 |
+  | Held-out CE, before | 3.8620 | **3.8277** |
+  | Held-out CE, after | 3.6454 | **3.7895** |
+  | Held-out CE drop | 0.2166 | **0.0382** |
+  | Held-out KL, before → after | 1.4113 → 1.1947 | 1.0637 → 1.0255 |
+  | Mean loss, first → last 100 updates | 3.7817 → 3.7116 | 3.8234 → 3.8108 |
+  | Prior discrepancy before fit, training / held-out | 1.03e-5 / 4.74e-6 | **5.64e-6 / 4.05e-6** |
+  | Discrepancy after fit, held-out (movement from stored priors) | 0.6961 | 0.4543 |
+
+  Each column uses its own corpus and held-out set, so the comparison is descriptive. The pre-fit discrepancy is the largest difference between the CPU's mirrored
+  prediction and the prior stored during generation; it is not a KL bound. It shows the fit started from the teacher that played the corpus.
+- **Result, preservation:** all STOP checks passed. 3,000 finite losses. Held-out value outputs bitwise equal to the original parent's baseline on all 4,110 rows,
+  max difference 0.0. Encoder `92498b02…` and value head `576391a7…` digests unchanged. Policy head `f653aca2…` → `fc068850…`. 8,840 parameters on the permitted surface;
+  BatchNorm's running statistics unchanged from the first head. The first head's bytes are untouched (`ead156e2…`).
+- **Saved head:** `docs/superpowers/evidence/combination-policy-cycle2-train/head.npz`, sha256 `c7e968027708d0b500517566ca8ffa26b03c7e436fea49f864f006ca2392b6c8`.
+- **Verdict:** **ELIGIBLE**: final held-out CE is strictly below its initial value. That permits proposing evaluation; it does not authorize games or establish stronger play.
+- **Tests:** two state tests failed as expected; a new state test holds the fit's evidence. Its first version failed on my assumption that the head file held only surface
+  arrays, and was corrected after checking that the extra arrays are unchanged BatchNorm statistics. Focused suites, serially: 446 pass, 1 deselected.
+- **Did it match the prediction?** The CE direction matched. The score half is untested. The prediction gave no magnitude; the drop is about 18% of the first cycle's, and the
+  mean training loss barely moved. The record does not establish why: it may reflect less left to learn (initial KL is lower), but no measurement here separates that from other causes.
+- **Conclusion / status:** the student exists and is ELIGIBLE. No game has been played with it. It awaits the user's review. **Not authorized:** Build B, evaluation games,
+  deployment and pushing.
