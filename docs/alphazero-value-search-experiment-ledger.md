@@ -220,6 +220,7 @@ knob) is not a new hypothesis.
 > **Combination policy second cycle — seed preparation ACCEPTED; ONE screen run and its seed closing APPROVED (decision note, 2026-11-02, the user's review).** 32 colour-reversed pairs, head `c7e96802…` against the original proven combination, TERM 3,650 s, KILL 3,660 s, cleanup through 3,670 s. Strength seed work or launch, further training, benchmarks, deployment and pushing remain unauthorized.
 > **Combination policy second cycle — the 64-game screen: CONTINUE (Post-closure entry 50, 2026-11-02; no strength result).** The ONE run of `cycle2_screen` COMPLETED in 2,110 s: mean pair score 0.5547 over 32 pairs, above the 0.40 STOP line; it clears only the gross-regression screen. K1 RECONCILES, 15/15; [202747300, 202747364) exposed and retired whole. The strength ceiling derived from this screen: 50,400 s, proposed; the wrapper still holds the PROVISIONAL 51,780 s. Strength seed work or launch, further training, benchmarks, deployment and pushing remain unauthorized.
 > **Combination policy second cycle — the screen and its closing ACCEPTED; strength's PREPARATION approved (decision note, 2026-11-02, the user's review).** The user reproduced 0.5546875 (35–28–1) and both cost ratios; Hoeffding 95% ≈ [0.315, 0.795], so it shows neither stronger play nor a decline from the first head. The wrapper set to TERM 50,390 s / KILL 50,400 s / cleanup through 50,410 s; strength's seed survey, proofs, registration and plan approved. Strength launch, further training, benchmarks, deployment and pushing remain unauthorized.
+> **Combination policy second cycle — strength PREPARED; awaiting the launch decision (addendum, 2026-11-02).** Ceiling set: TERM 50,390 s / KILL 50,400 s / cleanup through 50,410 s (`4711d457`). Survey CLEAN 55/55 (`056feaf0`), pre-proof HOLDS (`7ebb4533`), [202748400, 202749418) registered with its bound plan (`8ff1d724`), post-proof HOLDS (`f33eeff9`). 517 focused pass. Nothing run. Strength launch, further training, benchmarks, deployment and pushing remain unauthorized.
 
 ## Historical proposal check — programme now closed
 
@@ -1911,6 +1912,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 159. **The new screen's run (2026-11-02).** One run only: do **not** retry, extend, top up or continue it, or change the ceiling (TERM 3,650 s, KILL 3,660 s, observation through 3,670 s), the head, the opponent or the search settings. Do **not** apply K2 unless K1 RECONCILES. Do **not** read CONTINUE as a strength result: it clears only the gross-regression screen. Do **not** score an incomplete run. Do **not** start strength seed work or launch, train further, run a benchmark, deploy or push without the user's approval of each.
 160. **The second cycle's screen (2026-11-02).** The ONE run is spent and its block is retired: do **not** rerun, extend or top up the screen, reuse its seeds, or pool its 64 games with any strength comparison. Do **not** read CONTINUE or its 0.5547 as a strength result. Do **not** launch strength at the wrapper's PROVISIONAL 51,780 s, or without a reviewed edit to the derived ceiling, its own seed preparation and the user's approval of each.
 161. **Strength's preparation (2026-11-02).** The wrapper's ceiling is set once to TERM 50,390 s / KILL 50,400 s / cleanup through 50,410 s, derived from the new screen; do **not** change it again. The survey and both proofs run once each, in order; do **not** repeat, adjust or re-select after a failed check: stop and report. Do **not** launch strength, train further, run a benchmark, deploy or push under this approval.
+162. **Strength's block (2026-11-02).** Do **not** rerun the survey or proofs, select another block, or edit [202748400, 202749418). Do **not** open gate 61 or launch without the user's approval and a recheck of live versions, panic and reboot state, the plan, the proved registry, both amendments, the head binding and the screen's admission immediately before. Do **not** train further, run a benchmark, deploy or push under this preparation.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -8931,3 +8933,19 @@ Run as the sequence approved above, each step once in a clean linked worktree (`
   3. this decision and the results recorded here, then a return for launch review. Stop on any failed check without adjusting or repeating the selection.
 - **Housekeeping approved:** the clean, merged screen worktree and its branch, removed once confirmed (done).
 - **Not authorized:** strength launch, further training, benchmarks, deployment and pushing.
+
+#### Addendum — strength prepared; returned for launch review (2026-11-02)
+
+Run as the sequence approved above, each step once in a clean linked worktree (`cp-cycle2-strength-prep`), on the decision note `a38f23c5`. Live versions matched the pin before the seed sequence.
+
+- **The ceiling (`4711d457`):** TERM_S 51770 → 50390 in `combination-policy-cycle2-strength-run/01_wrapper.sh`, KILL 10 s later (50,400 s), cleanup observation through 50,410 s; the PROVISIONAL paragraph replaced by
+  the derivation (2,110 s × 1,018 / 64 × 1.5 = 50,343.3 s, rounded up to the minute). No other executable line changed. The budget test now requires the derived value.
+- **Survey (`056feaf0`):** CLEAN, controls 55/55, clean tree. Highest registered, named-spent or literal seed in the 2027 band: 202747369. The rule selected BASE 202748400, block **[202748400, 202749418)**, 1,018 seeds.
+  Record sha256 `31e7402eb9e2b1959747e89004f313e952ea8b90b0df99543e4cdb73111bd762`.
+- **Pre-registration proof (`7ebb4533`):** HOLDS, CLEAN, controls 55/55, bound to the survey record. Record sha256 begins `46872f1a`.
+- **Registration (`8ff1d724`):** exactly that block, read from the record, appended last to ACCOUNTED (54 → 55); an AST check shows no other registry list changed. `plan.json` = `build_plan(BASE, survey record sha256)`.
+  The block lies above the new screen's, so the screen's games cannot be pooled with it.
+- **Post-registration proof (`f33eeff9`):** HOLDS, CLEAN, controls 55/55, bound to the survey record. Registry sha256 `56972553586a36131299129163c6202c8c8447cb50ed4876c1500dee40bd952c`. Record sha256 begins `66c32e9c`.
+- **Tests (`72fdd021`):** two lifecycle tests failed as expected after registration and were re-anchored, and strength's own state test was added, with no seed literal. Focused suites, serially: 517 pass, 1 deselected.
+- **Nothing else ran:** no model or head load, gate opening or game. All 61 gates are closed, and the block is ACCOUNTED only.
+- **Returned for launch review.** Not authorized: strength launch, further training, benchmarks, deployment and pushing.
