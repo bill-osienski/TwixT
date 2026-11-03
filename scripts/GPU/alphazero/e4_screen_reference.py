@@ -762,6 +762,17 @@ ACCOUNTED_SEED_INTERVALS = (
     # Accounted, NOT exposed and NOT retired: exposure follows actual use (the started games, as the closing rule
     # establishes them); the closing edit retires the whole block. No gate is opened by this.
     (202746200, 202747200),          # SECOND POLICY-IMPROVEMENT CYCLE GENERATION ATTEMPT 2 -- 1,000 game seeds
+    # 🔴 THE SECOND POLICY-IMPROVEMENT CYCLE -- THE SCREEN -- 64 GAME SEEDS, registered 2026-11-02: the 64-seed block of the
+    # screen's survey (evidence/combination-policy-cycle2-screen-seed-survey/02_*), READ from that record, not chosen here, by the
+    # two-band rule (seed_band_2027.candidate) in the 2027 band. One seed per game of the ONE screen run (amendment
+    # docs/superpowers/2026-11-02-combination-policy-second-cycle-amendment.md §6; `combination_policy_pilot run cycle2_screen`:
+    # game g plays seed BASE + g, in order, in one process). The plan is evidence/combination-policy-cycle2-screen-run/plan.json
+    # (base + slot count + survey hash). Registered ONLY after the pre-registration collision proof (same directory, 03_*) was
+    # CLEAN, 55/55.
+    #
+    # Accounted, NOT exposed and NOT retired: exposure follows actual use (the started games, as the closing rule establishes
+    # them); the closing edit retires the whole block. No gate is opened by this.
+    (202747300, 202747364),          # SECOND POLICY-IMPROVEMENT CYCLE SCREEN -- 64 game seeds
 )
 
 #: EXPERIMENTAL EXPOSURE: seeds drawn from OUTSIDE the permanently unschedulable
