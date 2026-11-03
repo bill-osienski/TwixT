@@ -5,4 +5,4 @@ saved on one copy and plays the 32-pair screen (64 games) against the original p
 takes its own reviewed door. Opened for ONE approved run and restored on every exit. Created closed. This file may hold ONLY this
 declaration.
 """
-COMBINATION_POLICY_CYCLE2_SCREEN_AUTHORIZED = False
+COMBINATION_POLICY_CYCLE2_SCREEN_AUTHORIZED = True
