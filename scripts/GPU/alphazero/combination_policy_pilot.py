@@ -64,13 +64,17 @@ each game and the final claim count after the last; background_compute is read b
   cycle2_generate's run on its own block, evidence, rows directory and gate, after that kind went VOID at the version check
   (ledger entry 47). It and `cycle2_train`, which now reads its corpus, require the amendment's own pin, Python 3.14.10;
   `VERSIONS` stays the first cycle's and cycle2_generate's.
+* `run cycle2_screen` / `run cycle2_strength` (amendment `docs/superpowers/2026-11-02-combination-policy-second-cycle-amendment.md` §6; BUILT 2026-11-02, Build B, gates closed): the screen's and
+  strength's path exactly, on their own blocks, evidence and gates, under the second cycle's pin: the candidate is the head the
+  ONE fit saved, bound by sha256 and that fit's committed inner and outer records; the opponent is the original proven
+  combination, both sides averaged, 200 simulations, halving from ply 20. The rules, including both compute guards, are unchanged.
 * `time`: the build's CPU timing (card §5 step 1) -- 20 synchronized updates at the real architecture on synthetic
   inputs with random weights, no checkpoint -- and the training ceiling it prices.
 
 Any failure, exception or SIGTERM inside the record boundary is a VOID with record.json written by the script; a
 STOP rule is a COMPLETED run with verdict STOP. One shot each; no retry, top-up or extension.
 
-    MLX_ENABLE_TF32=0 python -m scripts.GPU.alphazero.combination_policy_pilot run throughput|throughput2|generate|train|screen|strength|cycle2_generate|cycle2_generate2|cycle2_train --checkpoint <abs path>
+    MLX_ENABLE_TF32=0 python -m scripts.GPU.alphazero.combination_policy_pilot run throughput|throughput2|generate|train|screen|strength|cycle2_generate|cycle2_generate2|cycle2_train|cycle2_screen|cycle2_strength --checkpoint <abs path>
     MLX_ENABLE_TF32=0 python -m scripts.GPU.alphazero.combination_policy_pilot time
 """
 from __future__ import annotations
@@ -93,6 +97,8 @@ import numpy as np
 
 from . import combination_policy_cycle2_generate_authorization as CYCLE2_GENERATE_GATE
 from . import combination_policy_cycle2_generate2_authorization as CYCLE2_GENERATE2_GATE
+from . import combination_policy_cycle2_screen_authorization as CYCLE2_SCREEN_GATE
+from . import combination_policy_cycle2_strength_authorization as CYCLE2_STRENGTH_GATE
 from . import combination_policy_cycle2_train_authorization as CYCLE2_TRAIN_GATE
 from . import combination_policy_generate_authorization as GENERATE_GATE
 from . import combination_policy_screen_authorization as SCREEN_GATE
@@ -129,6 +135,13 @@ CYCLE2_ATTEMPT2_AMENDMENT = ("docs/superpowers/2026-11-02-combination-policy-sec
 #: the second policy-improvement cycle (the user's review, 2026-11-02): one amendment, pinned by each of its kinds
 CYCLE2_AMENDMENT = ("docs/superpowers/2026-11-02-combination-policy-second-cycle-amendment.md",
                     "94c7f0df5860aac9d78f3c6736fe8b76f0c4279d8ce7a23edc1f4172b10a9ed3")
+#: the second cycle's candidate (the user's review, 2026-11-02): exactly the head the ONE fit saved -- these bytes, with these
+#: digests after the fit; the encoder's and value head's are the first head's and the parent's
+CYCLE2_HEAD = {"file": "docs/superpowers/evidence/combination-policy-cycle2-train/head.npz",
+               "sha256": "c7e968027708d0b500517566ca8ffa26b03c7e436fea49f864f006ca2392b6c8",
+               "digests": {"encoder.": "92498b02d398a48ffb42b86414a4e7bbde96509cff13d86cd2da4dc8b0b635b0",
+                           "policy_head.": "fc068850301943ec0e8d84970fbdbae8fae68b19bf85b61aaf0292a5bbabcd02",
+                           "value_head.": "576391a7950704a73fbd076a68995a768d973c6826cc24964d37b43850c2f301"}}
 KINDS = {"throughput": {"slots": 144, "keep_rows": False, "gate": (THROUGHPUT_GATE, "COMBINATION_POLICY_THROUGHPUT_AUTHORIZED"),
                         "evidence": "docs/superpowers/evidence/combination-policy-throughput",
                         "plan": "docs/superpowers/evidence/combination-policy-throughput-run/plan.json"},
@@ -165,7 +178,19 @@ KINDS = {"throughput": {"slots": 144, "keep_rows": False, "gate": (THROUGHPUT_GA
          "cycle2_train": {"role": "train", "teacher": True, "corpus": "cycle2_generate2", "versions": CYCLE2_VERSIONS,
                           "gate": (CYCLE2_TRAIN_GATE, "COMBINATION_POLICY_CYCLE2_TRAIN_AUTHORIZED"),
                           "evidence": "docs/superpowers/evidence/combination-policy-cycle2-train",
-                          "amendment": CYCLE2_ATTEMPT2_AMENDMENT, "base_amendment": CYCLE2_AMENDMENT}}
+                          "amendment": CYCLE2_ATTEMPT2_AMENDMENT, "base_amendment": CYCLE2_AMENDMENT},
+         "cycle2_screen": {"role": "screen", "pairs": K.SCREEN["pairs"], "fit": "cycle2_train", "candidate": CYCLE2_HEAD,
+                           "versions": CYCLE2_VERSIONS,
+                           "gate": (CYCLE2_SCREEN_GATE, "COMBINATION_POLICY_CYCLE2_SCREEN_AUTHORIZED"),
+                           "evidence": "docs/superpowers/evidence/combination-policy-cycle2-screen",
+                           "plan": "docs/superpowers/evidence/combination-policy-cycle2-screen-run/plan.json",
+                           "amendment": CYCLE2_ATTEMPT2_AMENDMENT, "base_amendment": CYCLE2_AMENDMENT},
+         "cycle2_strength": {"role": "strength", "pairs": K.STRENGTH["pairs"], "fit": "cycle2_train", "candidate": CYCLE2_HEAD,
+                             "screen_kind": "cycle2_screen", "versions": CYCLE2_VERSIONS,
+                             "gate": (CYCLE2_STRENGTH_GATE, "COMBINATION_POLICY_CYCLE2_STRENGTH_AUTHORIZED"),
+                             "evidence": "docs/superpowers/evidence/combination-policy-cycle2-strength",
+                             "plan": "docs/superpowers/evidence/combination-policy-cycle2-strength-run/plan.json",
+                             "amendment": CYCLE2_ATTEMPT2_AMENDMENT, "base_amendment": CYCLE2_AMENDMENT}}
 TIMING_EVIDENCE = "docs/superpowers/evidence/combination-policy-timing"
 #: what each step needs committed first: (evidence dir, record field, value)
 ADMISSION = {"throughput": [(TIMING_EVIDENCE, "status", "COMPLETED")],
@@ -185,7 +210,11 @@ ADMISSION = {"throughput": [(TIMING_EVIDENCE, "status", "COMPLETED")],
                                   (TIMING_EVIDENCE, "status", "COMPLETED")],
              "cycle2_train": [(KINDS["train"]["evidence"], "verdict", "ELIGIBLE"),
                               (KINDS["cycle2_generate2"]["evidence"], "status", "COMPLETED"),
-                              (TIMING_EVIDENCE, "status", "COMPLETED")]}
+                              (TIMING_EVIDENCE, "status", "COMPLETED")],
+             #: Build B (the user's review, 2026-11-02): the ONE fit's record, ELIGIBLE, then the new screen's, CONTINUE
+             "cycle2_screen": [(KINDS["cycle2_train"]["evidence"], "verdict", "ELIGIBLE")],
+             "cycle2_strength": [(KINDS["cycle2_train"]["evidence"], "verdict", "ELIGIBLE"),
+                                 (KINDS["cycle2_screen"]["evidence"], "verdict", "CONTINUE")]}
 #: what each step needs from a launch wrapper's committed outer.json too (the user's ruling, ledger 2026-10-29): an
 #: outer TIMEOUT, unconfirmed cleanup or missing outer evidence refuses, whatever the inner record says. Generation
 #: read the throughput check's until the generation amendment (2026-10-30) removed that requirement; training reads
@@ -198,7 +227,10 @@ OUTER_ADMISSION: Dict[str, List[Tuple[str, str]]] = {
     "cycle2_generate": [("docs/superpowers/evidence/combination-policy-train-run", KINDS["train"]["evidence"])],
     "cycle2_generate2": [("docs/superpowers/evidence/combination-policy-train-run", KINDS["train"]["evidence"])],
     "cycle2_train": [("docs/superpowers/evidence/combination-policy-train-run", KINDS["train"]["evidence"]),
-                     (str(pathlib.Path(KINDS["cycle2_generate2"]["plan"]).parent), KINDS["cycle2_generate2"]["evidence"])]}
+                     (str(pathlib.Path(KINDS["cycle2_generate2"]["plan"]).parent), KINDS["cycle2_generate2"]["evidence"])],
+    "cycle2_screen": [("docs/superpowers/evidence/combination-policy-cycle2-train-run", KINDS["cycle2_train"]["evidence"])],
+    "cycle2_strength": [("docs/superpowers/evidence/combination-policy-cycle2-train-run", KINDS["cycle2_train"]["evidence"]),
+                        (str(pathlib.Path(KINDS["cycle2_screen"]["plan"]).parent), KINDS["cycle2_screen"]["evidence"])]}
 #: the screen's candidate (the user's review, 2026-10-31): exactly the head the one training run saved -- these bytes,
 #: named by its committed record with these digests after training (the encoder's and value head's unchanged)
 TRAINED_HEAD = {"file": f"{KINDS['train']['evidence']}/head.npz",
@@ -815,36 +847,46 @@ def trained_head(read_record: Callable[[str], Mapping[str, Any]], read_bytes: Ca
     """The screen's or strength's candidate head, or Refused: the committed training record (ELIGIBLE) names exactly
     TRAINED_HEAD -- its file, sha256 and digests after training, the encoder's and value head's unchanged from before --
     and the committed file is those bytes; for strength, the screen's committed record also played exactly this head on
-    calib020_0001. Returns the binding with the bytes read: the bytes loaded are the bytes checked."""
-    rel = KINDS["train"]["evidence"]
+    calib020_0001. Returns the binding with the bytes read: the bytes loaded are the bytes checked. A kind naming its own
+    `candidate` reads its own `fit` and screen, and that fit's record must also show it started from the first head on the
+    kind's pin."""
+    spec = KINDS.get(kind, {})
+    pinned, fit, role = spec.get("candidate", TRAINED_HEAD), spec.get("fit", "train"), spec.get("role", kind)
+    rel = KINDS[fit]["evidence"]
     try:
         rec = read_record(rel)
-        screen = read_record(KINDS["screen"]["evidence"]) if kind == "strength" else None
-        data = read_bytes(TRAINED_HEAD["file"])
+        screen = read_record(KINDS[spec.get("screen_kind", "screen")]["evidence"]) if role == "strength" else None
+        data = read_bytes(pinned["file"])
     except FileNotFoundError as e:
         raise Refused(f"{e} does not exist: the {kind} has no trained head") from None
-    want, before = TRAINED_HEAD["digests"], rec.get("digests_before") or {}
+    want, before = pinned["digests"], rec.get("digests_before") or {}
     faults = []
-    if (rec.get("run"), rec.get("status"), rec.get("verdict")) != ("train", "COMPLETED", "ELIGIBLE"):
+    if (rec.get("run"), rec.get("status"), rec.get("verdict")) != (fit, "COMPLETED", "ELIGIBLE"):
         faults.append(f"the record is {rec.get('run')!r} {rec.get('status')!r} {rec.get('verdict')!r}, not an "
                       f"ELIGIBLE training run")
-    if rec.get("head_file") != "head.npz" or rec.get("head_sha256") != TRAINED_HEAD["sha256"]:
+    if rec.get("head_file") != "head.npz" or rec.get("head_sha256") != pinned["sha256"]:
         faults.append(f"the record names {rec.get('head_file')!r} sha256 {rec.get('head_sha256')!r}, not the "
                       f"pinned head")
     if rec.get("digests_after") != want:
         faults.append("the record's digests after training are not the pinned head's")
     if (before.get("encoder."), before.get("value_head.")) != (want["encoder."], want["value_head."]):
         faults.append("the record's encoder or value-head digest before training is not the pinned one")
-    if hashlib.sha256(data).hexdigest() != TRAINED_HEAD["sha256"]:
-        faults.append(f"{TRAINED_HEAD['file']} is not the pinned bytes")
+    if hashlib.sha256(data).hexdigest() != pinned["sha256"]:
+        faults.append(f"{pinned['file']} is not the pinned bytes")
+    if "candidate" in spec:
+        first = {k: TRAINED_HEAD[k] for k in ("file", "sha256", "digests")}
+        if rec.get("teacher") != first or before != TRAINED_HEAD["digests"]:
+            faults.append("the fit's record did not start from the first head")
+        if rec.get("versions") != spec["versions"]:
+            faults.append(f"the fit's record ran on {rec.get('versions')}, not {spec['versions']}")
     if screen is not None:
-        bound = {k: TRAINED_HEAD[k] for k in ("file", "sha256", "digests")}
+        bound = {k: pinned[k] for k in ("file", "sha256", "digests")}
         if screen.get("trained_head") != bound or (screen.get("digests") or {}).get(K.CANDIDATE) != want or \
                 screen.get("checkpoint_sha1") != M.CHECKPOINT_SHA1:
             faults.append("the screen's record did not play the pinned head on calib020_0001")
     if faults:
         raise Refused(f"{rel}: {'; '.join(faults)}: the {kind} is not admitted")
-    return {"file": TRAINED_HEAD["file"], "sha256": TRAINED_HEAD["sha256"], "digests": dict(want), "bytes": data}
+    return {"file": pinned["file"], "sha256": pinned["sha256"], "digests": dict(want), "bytes": data}
 
 
 def network_digests(network) -> Dict[str, str]:
@@ -914,16 +956,19 @@ class ScreenSeams:
 def _screen(seams: ScreenSeams, head: Mapping[str, Any], out_dir: pathlib.Path, rec: Dict[str, Any], log,
             kind: str = "screen") -> None:
     """Card §5 step 5 (kind "screen") or step 6 (kind "strength") through the strength match's loop
-    (mirror_halving_match), both sides the combination. The two kinds differ only in their pairs, plan and rule."""
+    (mirror_halving_match), both sides the combination. The two kinds differ only in their pairs, plan and rule. A kind
+    with a `role` (the second cycle's) is that step on its own pin, pairs, plan and candidate."""
     from . import eval_runner as ER
     from . import root_sequential_halving as RSH
     from .external_learning_stage3 import PROTOCOL
     from .mirror_averaging import MirrorAveragingEvaluator
 
     spec = KINDS[kind]
+    role = spec.get("role", kind)
     rec["versions"] = seams.versions()
-    if rec["versions"] != VERSIONS:
-        raise Void("versions", f"{rec['versions']} are not the card's {VERSIONS}")
+    if rec["versions"] != spec.get("versions", VERSIONS):
+        where = f"{kind}'s pinned" if "versions" in spec else "the card's"
+        raise Void("versions", f"{rec['versions']} are not {where} {spec.get('versions', VERSIONS)}")
     rec["variant"] = K.check_variant(RSH)
     config = ER.EvalConfig(**PROTOCOL)
     if (config.board_size, config.max_moves) != (BOARD, 280):
@@ -936,8 +981,8 @@ def _screen(seams: ScreenSeams, head: Mapping[str, Any], out_dir: pathlib.Path, 
     if bad:
         raise Void("seeds", f"{len(bad)} seeds not ACCOUNTED, available and schedulable, first {bad[0]}")
     rec["seeds"] = {"base": plan["base"], "n_slots": games}
-    if kind == "strength":                       # the screen's games are never pooled: its block is not this one
-        screen = seams.read_plan(KINDS["screen"]["plan"])
+    if role == "strength":                       # the screen's games are never pooled: its block is not this one
+        screen = seams.read_plan(KINDS[spec.get("screen_kind", "screen")]["plan"])
         lo, n = screen.get("base"), screen.get("n_slots")
         if type(lo) is not int or type(n) is not int or (plan["base"] < lo + n and lo < plan["base"] + games):
             raise Void("seeds", f"the block overlaps the screen's, or the screen's plan is unreadable: {screen}")
@@ -962,6 +1007,8 @@ def _screen(seams: ScreenSeams, head: Mapping[str, Any], out_dir: pathlib.Path, 
     if any(got[REFERENCE][p] != head["digests"][p] for p in ("encoder.", "value_head.")) or \
             got[REFERENCE]["policy_head."] == head["digests"]["policy_head."]:
         raise Void("reference", "the reference is not calib020_0001's parent network")
+    if "candidate" in spec and got[REFERENCE]["policy_head."] == TRAINED_HEAD["digests"]["policy_head."]:
+        raise Void("reference", "the reference is the first trained head, not the original proven combination")
     rec["modes_at_load"] = {k: seams.require_eval(ev, "after load") for k, ev in base.items()}
     rec["modules"] = seams.loaded_modules()
     rec["head_probe"] = opening_probe(base[K.CANDIDATE], base[REFERENCE])
@@ -979,7 +1026,7 @@ def _screen(seams: ScreenSeams, head: Mapping[str, Any], out_dir: pathlib.Path, 
                        "agents": [dataclasses.asdict(a), dataclasses.asdict(b)],
                        "classes": {k: f"{v.__module__}.{v.__qualname__}" for k, v in classes.items()},
                        "evaluators": {k: type(v).__name__ for k, v in evaluators.items()}}
-    tasks = ER.build_agent_pairing_tasks(f"combination-policy-{kind}", a, b, games, base_seed=plan["base"])
+    tasks = ER.build_agent_pairing_tasks(pathlib.Path(spec["evidence"]).name, a, b, games, base_seed=plan["base"])
     log("loaded", seconds=rec["load_seconds"])
 
     results = []
@@ -1015,7 +1062,7 @@ def _screen(seams: ScreenSeams, head: Mapping[str, Any], out_dir: pathlib.Path, 
     rec["modes_at_end"] = {k: seams.require_eval(ev, "at the end") for k, ev in base.items()}
     rec["cost_totals"] = cost
     g = K.guards(cost[K.CANDIDATE], cost[REFERENCE])
-    if kind == "screen":
+    if role == "screen":
         rec["cost_ratios"] = {"evaluations_ratio": g["evaluations_ratio"],
                               "search_seconds_ratio": g["search_seconds_ratio"],
                               "note": "descriptive: the screen has no cost guard (card §5 step 5)"}
@@ -1027,8 +1074,8 @@ def _screen(seams: ScreenSeams, head: Mapping[str, Any], out_dir: pathlib.Path, 
                             "reference_wins": sum(r.winner_agent_id == REFERENCE for r in results),
                             "draws": sum(r.winner is None for r in results),
                             "state_caps": sum(r.reason == "state_cap" for r in results)}
-    rec[kind] = K.screen_verdict(scores) if kind == "screen" else K.strength_verdict(scores, g)
-    rec["verdict"] = rec[kind]["verdict"]
+    rec[role] = K.screen_verdict(scores) if role == "screen" else K.strength_verdict(scores, g)
+    rec["verdict"] = rec[role]["verdict"]
 
 
 def _npz_arrays(data: bytes) -> Dict[str, np.ndarray]:
@@ -1308,7 +1355,7 @@ def run(kind: str, checkpoint: str) -> int:
             if not (ROOT / rel).is_file() or M._sha((ROOT / rel).read_bytes()) != sha:
                 raise Refused(f"{rel} is not the pinned amendment")
     admission = admitted(kind, _read_record, _read_outer)
-    needs_head = kind in ("screen", "strength") or KINDS[kind].get("teacher")
+    needs_head = role in ("screen", "strength") or KINDS[kind].get("teacher")
     head = trained_head(_read_record, _read_committed_bytes, kind) if needs_head else None
     ckpt = pathlib.Path(checkpoint)
     if not (ckpt.is_absolute() and ckpt.is_file()):
@@ -1319,7 +1366,7 @@ def run(kind: str, checkpoint: str) -> int:
     if role == "train":
         seams = _real_train_seams(ckpt, KINDS[kind].get("corpus", "generate"), head, KINDS[kind].get("versions"))
         execute = lambda o, r, lg: _train(RECIPE, seams, o, r, lg)    # noqa: E731
-    elif kind in ("screen", "strength"):
+    elif role in ("screen", "strength"):
         seams = _real_screen_seams(ckpt, head)
         execute = lambda o, r, lg: _screen(seams, head, o, r, lg, kind)   # noqa: E731
     else:
@@ -1366,7 +1413,8 @@ def _mlx_loaded() -> bool:
 def main(argv: Sequence[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     usage = ("usage: MLX_ENABLE_TF32=0 python -m scripts.GPU.alphazero.combination_policy_pilot "
-             "run throughput|throughput2|generate|train|screen|strength|cycle2_generate|cycle2_generate2|cycle2_train "
+             "run throughput|throughput2|generate|train|screen|strength|cycle2_generate|cycle2_generate2|cycle2_train|"
+             "cycle2_screen|cycle2_strength "
              "--checkpoint <abs path> | time")
     try:
         if argv == ["time"]:

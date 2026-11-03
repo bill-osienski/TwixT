@@ -607,7 +607,8 @@ def test_THE_TIMING_SYNCHRONIZES_EACH_UPDATE_AND_PRICES_THE_CEILING(tmp_path):
 
 def test_EVERY_PILOT_GATE_IS_A_CLOSED_SINGLE_DECLARATION():
     import ast
-    assert sorted(P.KINDS) == ["cycle2_generate", "cycle2_generate2", "cycle2_train", "generate", "screen", "strength",
+    assert sorted(P.KINDS) == ["cycle2_generate", "cycle2_generate2", "cycle2_screen", "cycle2_strength", "cycle2_train",
+                               "generate", "screen", "strength",
                                "throughput",
                                "throughput2", "train"]
     for kind in P.KINDS:
@@ -625,7 +626,7 @@ def test_THE_ENTRY_REFUSES_WITHOUT_THE_SETTING_AND_ON_A_CLOSED_GATE(monkeypatch,
     monkeypatch.setattr(P, "_mlx_loaded", lambda: False)
     monkeypatch.setattr(P, "CARD_SHA256", P.M._sha((ROOT / P.CARD).read_bytes()))
     for kind in ("throughput", "throughput2", "generate", "train", "screen", "strength", "cycle2_generate",
-                 "cycle2_generate2", "cycle2_train"):
+                 "cycle2_generate2", "cycle2_train", "cycle2_screen", "cycle2_strength"):
         assert P.main(["run", kind, "--checkpoint", "/x"]) == P.EXIT_REFUSED
         assert "is closed" in capsys.readouterr().err
 
@@ -706,6 +707,8 @@ def test_ONLY_TRAINING_THE_SCREEN_AND_STRENGTH_READ_AN_OUTER_JSON_generation_s_t
     read the first training run's and, for the fit, the new corpus's; tests/test_combination_policy_cycle2.py checks them."""
     train_run = "docs/superpowers/evidence/combination-policy-train-run"
     corpus2 = (str(pathlib.Path(P.KINDS["cycle2_generate2"]["plan"]).parent), P.KINDS["cycle2_generate2"]["evidence"])
+    fit2 = ("docs/superpowers/evidence/combination-policy-cycle2-train-run", P.KINDS["cycle2_train"]["evidence"])
+    screen2 = (str(pathlib.Path(P.KINDS["cycle2_screen"]["plan"]).parent), P.KINDS["cycle2_screen"]["evidence"])
     assert P.OUTER_ADMISSION == {"train": [(GEN_RUN, P.KINDS["generate"]["evidence"])],
                                  "screen": [(train_run, P.KINDS["train"]["evidence"])],
                                  "strength": [(train_run, P.KINDS["train"]["evidence"]),
@@ -713,7 +716,8 @@ def test_ONLY_TRAINING_THE_SCREEN_AND_STRENGTH_READ_AN_OUTER_JSON_generation_s_t
                                                P.KINDS["screen"]["evidence"])],
                                  "cycle2_generate": [(train_run, P.KINDS["train"]["evidence"])],
                                  "cycle2_generate2": [(train_run, P.KINDS["train"]["evidence"])],
-                                 "cycle2_train": [(train_run, P.KINDS["train"]["evidence"]), corpus2]}
+                                 "cycle2_train": [(train_run, P.KINDS["train"]["evidence"]), corpus2],
+                                 "cycle2_screen": [fit2], "cycle2_strength": [fit2, screen2]}
     assert P.ADMISSION["train"] == [(P.KINDS["generate"]["evidence"], "status", "COMPLETED"),
                                     (P.TIMING_EVIDENCE, "status", "COMPLETED")]
 

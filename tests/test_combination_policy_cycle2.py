@@ -23,8 +23,11 @@ import pytest
 
 from scripts.GPU.alphazero import combination_policy_cycle2_generate_authorization as GATE_GEN
 from scripts.GPU.alphazero import combination_policy_cycle2_generate2_authorization as GATE_GEN2
+from scripts.GPU.alphazero import combination_policy_cycle2_screen_authorization as GATE_CS
+from scripts.GPU.alphazero import combination_policy_cycle2_strength_authorization as GATE_CST
 from scripts.GPU.alphazero import combination_policy_cycle2_train_authorization as GATE_TRAIN
 from scripts.GPU.alphazero import combination_policy_pilot as P
+from scripts.GPU.alphazero import mirror_halving_combination as K
 from scripts.GPU.alphazero import seed_band_2027 as SB
 from tests import _combination_fakes as F
 from tests.test_combination_policy_generate_launch import PINNED_FILES, _load, _split, _synthetic
@@ -37,6 +40,7 @@ EV = ROOT / "docs/superpowers/evidence"
 AMEND = "docs/superpowers/2026-11-02-combination-policy-second-cycle-amendment.md"
 AMEND2 = "docs/superpowers/2026-11-02-combination-policy-second-cycle-generation-attempt2-amendment.md"
 GEN, GEN2, TRAIN = "cycle2_generate", "cycle2_generate2", "cycle2_train"       # GEN is spent: VOID, ledger entry 47
+CS, CST = "cycle2_screen", "cycle2_strength"                                   # Build B
 SURVEY_1, SURVEY = ("combination-policy-generate-seed-survey/01_seed_survey.py",
                     "combination-policy-cycle2-generate-seed-survey/01_seed_survey.py")
 CLOSING_1, CLOSING = ("combination-policy-generate-seed-closing/01_derive_usage.py",
@@ -161,7 +165,7 @@ def test_THE_ONE_RUN_WENT_VOID_AT_THE_VERSION_CHECK_BEFORE_ANY_GAME_AND_THE_BLOC
     assert GATE_GEN.COMBINATION_POLICY_CYCLE2_GENERATE_AUTHORIZED is False
     assert GATE_TRAIN.COMBINATION_POLICY_CYCLE2_TRAIN_AUTHORIZED is False
     assert (P.KINDS[GEN]["gate"][0], P.KINDS[TRAIN]["gate"][0]) == (GATE_GEN, GATE_TRAIN)
-    assert not any(k.startswith("cycle2") and k not in (GEN, GEN2, TRAIN) for k in P.KINDS)
+    assert not any(k.startswith("cycle2") and k not in (GEN, GEN2, TRAIN, CS, CST) for k in P.KINDS)
     # RE-ANCHORED 2026-11-02 (the fit, cafc78b4 -> 200e7eee): the fit's own state test holds its evidence
 
 
@@ -663,7 +667,12 @@ WRAPPERS = {
            "gate_rel": "combination_policy_cycle2_generate2_authorization.py"},
     TRAIN: {"base": EV / "combination-policy-train-run/01_wrapper.sh", "term": 2810, "stem": "cycle2-train",
             "gate": "COMBINATION_POLICY_CYCLE2_TRAIN_AUTHORIZED",
-            "gate_rel": "combination_policy_cycle2_train_authorization.py"}}
+            "gate_rel": "combination_policy_cycle2_train_authorization.py"},
+    CS: {"base": EV / "combination-policy-screen-run/01_wrapper.sh", "term": 3650, "stem": "cycle2-screen",
+         "gate": "COMBINATION_POLICY_CYCLE2_SCREEN_AUTHORIZED", "gate_rel": "combination_policy_cycle2_screen_authorization.py"},
+    CST: {"base": EV / "combination-policy-strength-run/01_wrapper.sh", "term": 51770, "stem": "cycle2-strength",
+          "gate": "COMBINATION_POLICY_CYCLE2_STRENGTH_AUTHORIZED",
+          "gate_rel": "combination_policy_cycle2_strength_authorization.py"}}
 
 
 def _path(kind):
@@ -695,7 +704,7 @@ def test_THE_WRAPPER_IS_THE_FIRST_CYCLE_S_WITH_ONLY_THE_STATED_DIFFERENCES(kind)
     assert _path(kind).stat().st_mode == w["base"].stat().st_mode
 
 
-@pytest.mark.parametrize("kind", [GEN, GEN2, TRAIN])
+@pytest.mark.parametrize("kind", [GEN, GEN2, TRAIN, CS, CST])
 def test_THE_WRAPPER_SERVES_ITS_KIND_S_PATHS(kind):
     w, spec = _code(_path(kind)), P.KINDS[kind]
     out, run = (re.search(rf"^{k}=(\S+)$", w, re.M).group(1) for k in ("OUT_REL", "RUN_REL"))
@@ -794,7 +803,7 @@ def _launch(repo, wdir, idle="idle", bg="clear", run="ok", timeout=60):
                           text=True, timeout=timeout)
 
 
-@pytest.mark.parametrize("kind", [GEN2, TRAIN])
+@pytest.mark.parametrize("kind", [GEN2, TRAIN, CS, CST])
 @pytest.mark.parametrize("idle, bg", [("busy", "clear"), ("idle", "boinc"), ("idle", "failed")],
                          ids=["busy", "boinc", "check-fails"])
 def test_FAKE_LAUNCH_A_BUSY_MACHINE_BOINC_OR_A_FAILED_CHECK_PREVENTS_THE_LAUNCH(tmp_path, kind, idle, bg):
@@ -806,7 +815,7 @@ def test_FAKE_LAUNCH_A_BUSY_MACHINE_BOINC_OR_A_FAILED_CHECK_PREVENTS_THE_LAUNCH(
     assert f"{WRAPPERS[kind]['gate']} = False\n" in gate.read_text()
 
 
-@pytest.mark.parametrize("kind", [GEN2, TRAIN])
+@pytest.mark.parametrize("kind", [GEN2, TRAIN, CS, CST])
 def test_FAKE_LAUNCH_AN_IDLE_MACHINE_REACHES_ITS_RUN_with_its_exact_arguments_and_ceiling(tmp_path, kind):
     repo, wdir, gate = _fake_repo(tmp_path, kind)
     p = _launch(repo, wdir, run="record")
@@ -822,7 +831,7 @@ def test_FAKE_LAUNCH_AN_IDLE_MACHINE_REACHES_ITS_RUN_with_its_exact_arguments_an
     assert f"{WRAPPERS[kind]['gate']} = False\n" in gate.read_text()
 
 
-@pytest.mark.parametrize("kind", [GEN2, TRAIN])
+@pytest.mark.parametrize("kind", [GEN2, TRAIN, CS, CST])
 def test_FAKE_LAUNCH_THE_CEILING_TERMINATES_THE_WHOLE_GROUP_at_its_paths(tmp_path, kind):
     """TERM_S changed to 2 in this copy only: the run and its child outlive it; the group TERM ends both, and the
     wrapper's VOID record lands in this kind's evidence directory."""
@@ -995,7 +1004,7 @@ def test_THE_ATTEMPT_2_AMENDMENT_IS_PINNED_AND_THE_PIN_IS_PER_KIND():
     text = (ROOT / rel).read_text(encoding="utf-8")
     assert AMEND in text and "3.14.10" in text and "COMBINATION_POLICY_CYCLE2_GENERATE2_AUTHORIZED" in text
     assert P.CYCLE2_VERSIONS == {**P.VERSIONS, "python": "3.14.10"} and P.VERSIONS["python"] == "3.14.9"
-    assert {k for k, v in P.KINDS.items() if "versions" in v} == {GEN2, TRAIN}
+    assert {k for k, v in P.KINDS.items() if "versions" in v} == {GEN2, TRAIN, CS, CST}
     assert P.KINDS[GEN2]["versions"] == P.KINDS[TRAIN]["versions"] == P.CYCLE2_VERSIONS
     assert P.KINDS[GEN2]["amendment"] == P.KINDS[TRAIN]["amendment"] == P.CYCLE2_ATTEMPT2_AMENDMENT
 
@@ -1248,3 +1257,408 @@ def test_THE_NEW_CLOSING_COPY_IS_THE_FIRST_ATTEMPT_S_AND_SERVES_THE_KIND_and_its
     assert not SB.scan(code) and not re.search(r"\b20[0-9]{7}\b", code)
     results = closing._controls(json.loads((ROOT / kind["plan"]).read_text(encoding="utf-8"))["base"])
     assert len(results) == 21 and all(ok for _l, ok, _d in results), [r for r in results if not r[1]]
+
+# ─────────────────────────────── Build B: the candidate, the two evaluation kinds, their wrappers and seed copies ─────────
+
+from tests.test_combination_policy_screen import PARENT_D, ScreenFake, screen_seams, stub_play  # noqa: E402
+from tests.test_combination_policy_strength import _skewed  # noqa: E402
+
+C2_D = dict(P.CYCLE2_HEAD["digests"])
+C2_HEAD = {"file": P.CYCLE2_HEAD["file"], "sha256": P.CYCLE2_HEAD["sha256"], "digests": C2_D, "bytes": b""}
+FIT, FIT_RUN = P.KINDS[TRAIN]["evidence"], "docs/superpowers/evidence/combination-policy-cycle2-train-run"
+CS_EV, CS_RUN = P.KINDS[CS]["evidence"], "docs/superpowers/evidence/combination-policy-cycle2-screen-run"
+FAKE_BASE, SCREEN_BASE = 777000, 700000
+SURVEYS = {CS: ("combination-policy-screen-seed-survey/01_seed_survey.py", "combination-policy-cycle2-screen-seed-survey/01_seed_survey.py"),
+           CST: ("combination-policy-strength-seed-survey/01_seed_survey.py", "combination-policy-cycle2-strength-seed-survey/01_seed_survey.py")}
+CLOSINGS = {CS: ("combination-policy-screen-seed-closing/01_derive_usage.py", "combination-policy-cycle2-screen-seed-closing/01_derive_usage.py"),
+            CST: ("combination-policy-strength-seed-closing/01_derive_usage.py", "combination-policy-cycle2-strength-seed-closing/01_derive_usage.py")}
+
+
+def test_THE_CANDIDATE_IS_THE_ONE_FIT_S_HEAD_AND_ITS_REAL_RECORDS_ADMIT_THE_SCREEN_ONLY():
+    """Read-only, through the real committed readers: the fit's record and outer.json admit the new screen, the binding is
+    exactly the committed bytes, and strength stays refused until the new screen's CONTINUE exists."""
+    assert P.CYCLE2_HEAD["sha256"] == "c7e968027708d0b500517566ca8ffa26b03c7e436fea49f864f006ca2392b6c8"
+    assert P.admitted(CS, P._read_record, P._read_outer) == {FIT: "ELIGIBLE", f"{FIT_RUN}/outer.json": "COMPLETED"}
+    h = P.trained_head(P._read_record, P._read_committed_bytes, CS)
+    raw = (ROOT / P.CYCLE2_HEAD["file"]).read_bytes()
+    assert h["bytes"] == raw and hashlib.sha256(raw).hexdigest() == h["sha256"] == P.CYCLE2_HEAD["sha256"]
+    rec = json.loads((ROOT / FIT / "record.json").read_text(encoding="utf-8"))
+    assert h["digests"] == rec["digests_after"] and rec["head_sha256"] == h["sha256"] and rec["run"] == TRAIN
+    assert P.digest(P._npz_arrays(raw), "policy_head.") == h["digests"]["policy_head."]
+    assert h["sha256"] != P.TRAINED_HEAD["sha256"] and h["digests"]["policy_head."] != P.TRAINED_HEAD["digests"]["policy_head."]
+    assert {p: h["digests"][p] for p in ("encoder.", "value_head.")} == \
+        {p: P.TRAINED_HEAD["digests"][p] for p in ("encoder.", "value_head.")}
+    with pytest.raises(P.Refused, match="does not exist"):
+        P.admitted(CST, P._read_record, P._read_outer)
+    with pytest.raises(P.Refused, match="does not exist"):
+        P.trained_head(P._read_record, P._read_committed_bytes, CST)
+    # the first cycle's kinds keep their own head
+    assert P.trained_head(P._read_record, P._read_committed_bytes, "screen")["sha256"] == P.TRAINED_HEAD["sha256"]
+
+
+def test_THE_TWO_KINDS_ARE_THE_RULES_ON_THEIR_OWN_PATHS_AND_THE_SECOND_CYCLE_S_PIN():
+    for kind, role, pairs in ((CS, "screen", 32), (CST, "strength", 509)):
+        spec = P.KINDS[kind]
+        assert (spec["role"], spec["pairs"], spec["fit"]) == (role, pairs, TRAIN) and spec["candidate"] is P.CYCLE2_HEAD
+        assert spec["versions"] == P.CYCLE2_VERSIONS and spec["versions"]["python"] == "3.14.10"
+        assert spec["amendment"] == P.CYCLE2_ATTEMPT2_AMENDMENT and spec["base_amendment"] == P.CYCLE2_AMENDMENT
+        assert spec["evidence"] != P.KINDS[role]["evidence"] and spec["plan"] != P.KINDS[role]["plan"]
+    assert P.KINDS[CST]["screen_kind"] == CS and "versions" not in P.KINDS["screen"] and "versions" not in P.KINDS["strength"]
+    assert P.ADMISSION[CS] == [(FIT, "verdict", "ELIGIBLE")]
+    assert P.ADMISSION[CST] == [(FIT, "verdict", "ELIGIBLE"), (CS_EV, "verdict", "CONTINUE")]
+    assert P.OUTER_ADMISSION[CS] == [(FIT_RUN, FIT)] and P.OUTER_ADMISSION[CST] == [(FIT_RUN, FIT), (CS_RUN, CS_EV)]
+    assert (K.SCREEN["pairs"], K.STRENGTH["pairs"]) == (32, 509)
+    flat = " ".join((ROOT / AMEND).read_text(encoding="utf-8").split())
+    assert "plays the **original proven combination**, not the first trained head" in flat and "`0.40`" in flat
+
+
+GOOD_FIT = {"run": TRAIN, "status": "COMPLETED", "verdict": "ELIGIBLE", "card_sha256": P.CARD_SHA256, "head": "a" * 40,
+            "head_file": "head.npz", "head_sha256": P.CYCLE2_HEAD["sha256"], "digests_after": C2_D,
+            "digests_before": dict(P.TRAINED_HEAD["digests"]), "versions": dict(P.CYCLE2_VERSIONS),
+            "teacher": {k: P.TRAINED_HEAD[k] for k in ("file", "sha256", "digests")}}
+GOOD_C2_SCREEN = {"run": CS, "status": "COMPLETED", "verdict": "CONTINUE", "card_sha256": P.CARD_SHA256, "head": "c" * 40,
+                  "trained_head": {k: P.CYCLE2_HEAD[k] for k in ("file", "sha256", "digests")},
+                  "digests": {K.CANDIDATE: C2_D, P.REFERENCE: dict(PARENT_D)}, "checkpoint_sha1": P.M.CHECKPOINT_SHA1}
+
+
+def _c2_readers(fit=None, screen=None, data=None):
+    recs = {FIT: GOOD_FIT if fit is None else fit, CS_EV: GOOD_C2_SCREEN if screen is None else screen}
+
+    def read_record(rel):
+        if recs[rel] is False:
+            raise FileNotFoundError(rel)
+        return recs[rel]
+
+    def read_bytes(rel):
+        assert rel == P.CYCLE2_HEAD["file"], rel
+        return (ROOT / rel).read_bytes() if data is None else data
+    return read_record, read_bytes
+
+
+def test_A_GOOD_FIT_RECORD_BINDS_BOTH_KINDS():
+    for kind in (CS, CST):
+        assert P.trained_head(*_c2_readers(), kind)["sha256"] == P.CYCLE2_HEAD["sha256"]
+
+
+@pytest.mark.parametrize("change, why", [
+    ({"run": "train"}, "not an ELIGIBLE training run"), ({"verdict": "STOP"}, "not an ELIGIBLE training run"),
+    ({"head_sha256": P.TRAINED_HEAD["sha256"]}, "not the pinned head"),
+    ({"digests_after": dict(P.TRAINED_HEAD["digests"])}, "digests after training"),
+    ({"teacher": None}, "did not start from the first head"),
+    ({"digests_before": {**P.TRAINED_HEAD["digests"], "policy_head.": "another"}}, "did not start from the first head"),
+    ({"versions": dict(P.VERSIONS)}, "ran on")],
+    ids=["first-fit", "stop", "first-head-sha", "first-head-digests", "no-teacher", "other-start", "other-versions"])
+@pytest.mark.parametrize("kind", [CS, CST])
+def test_THE_BINDING_REFUSES_ANY_OTHER_FIT(kind, change, why):
+    with pytest.raises(P.Refused, match=why):
+        P.trained_head(*_c2_readers(fit={**GOOD_FIT, **change}), kind)
+
+
+def test_THE_BINDING_REFUSES_OTHER_BYTES_AND_THE_FIRST_HEAD_S_BYTES():
+    for data in (b"altered", (ROOT / P.TRAINED_HEAD["file"]).read_bytes()):
+        with pytest.raises(P.Refused, match="is not the pinned bytes"):
+            P.trained_head(*_c2_readers(data=data), CS)
+
+
+@pytest.mark.parametrize("change", [{"trained_head": None}, {"digests": {K.CANDIDATE: dict(P.TRAINED_HEAD["digests"])}},
+                                    {"checkpoint_sha1": "0" * 40},
+                                    {"trained_head": {k: P.TRAINED_HEAD[k] for k in ("file", "sha256", "digests")}}],
+                         ids=["absent", "first-head-digests", "checkpoint", "first-head-binding"])
+def test_STRENGTH_NEEDS_THE_NEW_SCREEN_TO_HAVE_PLAYED_THIS_HEAD(change):
+    with pytest.raises(P.Refused, match="did not play the pinned head"):
+        P.trained_head(*_c2_readers(screen={**GOOD_C2_SCREEN, **change}), CST)
+    with pytest.raises(P.Refused, match="does not exist"):
+        P.trained_head(*_c2_readers(screen=False), CST)
+
+
+def _c2_plans(kind):
+    games = 2 * P.KINDS[kind]["pairs"]
+
+    def read(rel):
+        return {P.KINDS[kind]["plan"]: {"base": FAKE_BASE, "n_slots": games},
+                P.KINDS[CS]["plan"]: {"base": FAKE_BASE if kind == CS else SCREEN_BASE, "n_slots": 64}}[rel]
+    return read
+
+
+def _c2_seams(kind, play, **over):
+    def install(net):
+        net.trained = True
+        return dict(C2_D)
+    base = dict(versions=lambda: dict(P.CYCLE2_VERSIONS), read_plan=_c2_plans(kind), install_head=install)
+    return screen_seams(play, **{**base, **over})
+
+
+def _c2_run(tmp_path, kind, seams):
+    from tests.test_combination_policy_screen import _REAL_CONCLUDE
+    return _REAL_CONCLUDE(kind, lambda o, r, lg: P._screen(seams, C2_HEAD, o, r, lg, kind), tmp_path / "ev", {})
+
+
+@pytest.mark.parametrize("kind, outcome, verdict", [
+    (CS, lambda g, cr: K.CANDIDATE, "CONTINUE"), (CS, lambda g, cr: P.REFERENCE, "STOP"),
+    (CST, lambda g, cr: K.CANDIDATE, "PASS"), (CST, lambda g, cr: K.CANDIDATE if g % 4 < 2 else P.REFERENCE, "NON_PASS")],
+    ids=["screen-continue", "screen-stop", "strength-pass", "strength-even"])
+def test_THE_FROZEN_RULE_DECIDES_ON_THE_ROLE_S_FIELDS(tmp_path, kind, outcome, verdict):
+    code, rec = _c2_run(tmp_path, kind, _c2_seams(kind, stub_play(outcome)))
+    role = P.KINDS[kind]["role"]
+    assert code == P.EXIT_COMPLETED and rec["verdict"] == rec[role]["verdict"] == verdict, rec.get("void")
+    assert rec["versions"] == P.CYCLE2_VERSIONS and rec["trained_head"]["sha256"] == P.CYCLE2_HEAD["sha256"]
+    assert (rec["amendment_sha256"], rec["base_amendment_sha256"]) == (P.CYCLE2_ATTEMPT2_AMENDMENT[1], P.CYCLE2_AMENDMENT[1])
+    assert kind not in rec
+    games = [json.loads(x) for x in (tmp_path / "ev" / "games.jsonl").read_text().splitlines()]
+    assert len(games) == 2 * P.KINDS[kind]["pairs"]
+    assert {g["pairing_id"] for g in games} == {f"combination-policy-{WRAPPERS[kind]['stem']}"}
+    agents = rec["protocol"]["agents"]
+    assert agents[0]["mcts_sims"] == agents[1]["mcts_sims"] == 200
+    assert P.M.CHECKPOINT in agents[1].values() and f"{P.M.CHECKPOINT}+{P.CYCLE2_HEAD['file']}" in agents[0].values()
+    assert set(rec["protocol"]["evaluators"].values()) == {"MirrorAveragingEvaluator"}
+    assert len(set(rec["protocol"]["classes"].values())) == 1 and "RootSequentialHalving" in rec["protocol"]["classes"][K.CANDIDATE]
+
+
+@pytest.mark.parametrize("kw, guard", [({"seconds": 1.2}, "search"), ({"extra_candidate_calls": 2}, "evaluations")],
+                         ids=["search-seconds", "evaluations"])
+def test_BOTH_COMPUTE_GUARDS_STILL_STOP_A_PASS(tmp_path, kw, guard):
+    code, rec = _c2_run(tmp_path, CST, _c2_seams(CST, _skewed(lambda g, cr: K.CANDIDATE, **kw)))
+    assert code == P.EXIT_COMPLETED and rec["verdict"] == "NOT_COMPUTE_MATCHED", guard
+    assert rec["strength"]["compute_matched"] is False and rec["strength"]["bound_above_null"] is True
+    assert rec["guards"]["evaluations_ratio"] > 0 and rec["guards"]["search_seconds_ratio"] > 0
+
+
+@pytest.mark.parametrize("kind", [CS, CST])
+@pytest.mark.parametrize("over, step, why", [
+    ({"versions": lambda: dict(P.VERSIONS)}, "versions", "pinned"),
+    ({"versions": lambda: {**P.CYCLE2_VERSIONS, "mlx": "0.0"}}, "versions", "pinned"),
+    ({"digests": lambda net: dict(P.TRAINED_HEAD["digests"])}, "reference", "first trained head"),
+    ({"install_head": lambda net: dict(P.TRAINED_HEAD["digests"])}, "head", "not the trained head's"),
+    ({"digests": lambda net: {**PARENT_D, "value_head.": "other"}}, "reference", "not calib020_0001's parent"),
+    ({"checkpoint_sha1": lambda: "0" * 40}, "checkpoint", "calib020_0001"),
+    ({"seed_ok": lambda s: False}, "seeds", "not ACCOUNTED")],
+    ids=["first-cycle-python", "other-mlx", "first-head-as-reference", "first-head-as-candidate", "other-parent", "checkpoint", "seeds"])
+def test_EACH_PRECONDITION_IS_A_VOID_BEFORE_ANY_GAME(tmp_path, kind, over, step, why):
+    calls = []
+    code, rec = _c2_run(tmp_path, kind, _c2_seams(kind, stub_play(lambda g, cr: K.CANDIDATE, calls=calls), **over))
+    assert code == P.EXIT_VOID and rec["void"]["step"] == step and why in rec["void"]["detail"], rec.get("void")
+    assert calls == [] and rec["verdict"] is None
+
+
+def test_STRENGTH_S_BLOCK_MUST_NOT_OVERLAP_THE_NEW_SCREEN_S(tmp_path):
+    seams = _c2_seams(CST, stub_play(lambda g, cr: K.CANDIDATE), read_plan=lambda rel: {
+        P.KINDS[CST]["plan"]: {"base": FAKE_BASE, "n_slots": 1018}, P.KINDS[CS]["plan"]: {"base": FAKE_BASE + 10, "n_slots": 64},
+        P.KINDS["screen"]["plan"]: {"base": SCREEN_BASE, "n_slots": 64}}[rel])
+    code, rec = _c2_run(tmp_path, CST, seams)
+    assert code == P.EXIT_VOID and rec["void"]["step"] == "seeds" and "overlaps" in rec["void"]["detail"]
+
+
+def test_THE_FIRST_CYCLE_S_SCREEN_STILL_PINS_ITS_OWN_PYTHON_AND_PAIRING_ID(tmp_path):
+    from tests.test_combination_policy_screen import _REAL_CONCLUDE, HEAD
+    code, rec = _REAL_CONCLUDE("screen", lambda o, r, lg: P._screen(
+        screen_seams(stub_play(lambda g, cr: K.CANDIDATE), versions=lambda: dict(P.CYCLE2_VERSIONS)), HEAD, o, r, lg),
+        tmp_path / "ev", {})
+    assert code == P.EXIT_VOID and rec["void"]["step"] == "versions" and "are not the card's" in rec["void"]["detail"]
+
+
+@pytest.mark.parametrize("kind", [CS, CST])
+def test_THE_NEW_ENTRIES_REFUSE_ON_A_CLOSED_GATE_AN_ALTERED_AMENDMENT_OR_AN_EXISTING_OUTPUT(monkeypatch, capsys, tmp_path, kind):
+    monkeypatch.setattr(P, "_mlx_loaded", lambda: False)
+    assert P.main(["run", kind, "--checkpoint", "/x"]) == P.EXIT_REFUSED and "is closed" in capsys.readouterr().err
+    gate, name = P.KINDS[kind]["gate"]
+    monkeypatch.setattr(gate, name, True)
+    monkeypatch.setitem(P.KINDS[kind], "base_amendment", (AMEND, "0" * 64))
+    assert P.main(["run", kind, "--checkpoint", "/x"]) == P.EXIT_REFUSED and "pinned amendment" in capsys.readouterr().err
+    monkeypatch.setitem(P.KINDS[kind], "base_amendment", P.CYCLE2_AMENDMENT)
+    monkeypatch.setattr(P, "admitted", lambda k, *_a: {"stub": k})
+    monkeypatch.setattr(P, "trained_head", lambda *_a: dict(C2_HEAD))
+    ckpt = tmp_path / "model.safetensors"
+    ckpt.write_bytes(b"not a model")
+    monkeypatch.setitem(P.KINDS[kind], "evidence", str(tmp_path))
+    assert P.main(["run", kind, "--checkpoint", str(ckpt)]) == P.EXIT_REFUSED and "one-shot" in capsys.readouterr().err
+
+
+def test_RUN_CYCLE2_SCREEN_PASSES_THE_COMMITTED_CANDIDATE_TO_THE_MATCH_SEAMS(tmp_path, monkeypatch, capsys):
+    seen = {}
+    gate, name = P.KINDS[CS]["gate"]
+    monkeypatch.setattr(gate, name, True)
+    monkeypatch.setattr(P, "_mlx_loaded", lambda: False)
+    monkeypatch.setattr(P, "admitted", lambda k, *_a: {"stub": k})
+    monkeypatch.setitem(P.KINDS[CS], "evidence", str(tmp_path / "ev"))
+    monkeypatch.setattr(P, "conclude", lambda k, execute, out, admission, head=None: (0, {"status": "COMPLETED"}))
+    monkeypatch.setattr(P, "_real_screen_seams", lambda c, h: seen.update(ckpt=c, head=h))
+    ckpt = tmp_path / "model.safetensors"
+    ckpt.write_bytes(b"not a model")
+    assert P.main(["run", CS, "--checkpoint", str(ckpt)]) == 0
+    assert seen["ckpt"] == ckpt and seen["head"]["sha256"] == P.CYCLE2_HEAD["sha256"]
+    assert hashlib.sha256(seen["head"]["bytes"]).hexdigest() == P.CYCLE2_HEAD["sha256"]
+    capsys.readouterr()
+
+
+@pytest.mark.parametrize("kind", [CS, CST])
+def test_THE_EVALUATION_WRAPPER_IS_THE_FIRST_CYCLE_S_WITH_ONLY_THE_STATED_DIFFERENCES(kind):
+    w = WRAPPERS[kind]
+    old, new = _code(w["base"]).splitlines(), _code(_path(kind)).splitlines()
+    assert len(old) == len(new)
+    changed = [b for a, b in zip(old, new) if a != b]
+    term = ["TERM_S=3650"] if kind == CS else []
+    assert changed[:4] == [f"OUT_REL=docs/superpowers/evidence/combination-policy-{w['stem']}-run",
+                           f"RUN_REL=docs/superpowers/evidence/combination-policy-{w['stem']}",
+                           f"GATE_REL=scripts/GPU/alphazero/{w['gate_rel']}", f"GATE={w['gate']}"]
+    assert changed[4:] == term + ['/usr/bin/perl -e "$SUPERVISOR" "$OUT_REL/pgid.txt" "$TERM_S" "$GRACE_S" env MLX_ENABLE_TF32=0 '
+                                  f'PYTHONPATH=. "$PY" -B -m "$MODULE" run {kind} --checkpoint "$CKPT" \\']
+    head_old = w["base"].read_text().split("set -u\n", 1)[0]
+    head = _path(kind).read_text().split("set -u\n", 1)[0]
+    assert head.startswith("#!/bin/bash\n# THE SECOND POLICY-IMPROVEMENT CYCLE: ") and AMEND in head and AMEND2 in head
+    assert head.endswith(head_old[len("#!/bin/bash\n"):]) and "BUILT ONLY" in head
+    assert subprocess.run(["bash", "-n", str(_path(kind))]).returncode == 0 and _path(kind).stat().st_mode == w["base"].stat().st_mode
+
+
+def test_THE_SCREEN_CEILING_IS_THE_COMPLETED_SEARCH_TIMINGS_ON_THIS_CORPUS_S_MOVE_COUNTS():
+    """Amendment §7, recomputed from the committed records. The candidate's whole-run seconds per search in the first strength
+    comparison x the new corpus's plies per game x 64 x 1.5, rounded up to the minute."""
+    cost = json.loads((ROOT / P.KINDS["strength"]["evidence"] / "record.json").read_text(encoding="utf-8"))["cost_totals"][K.CANDIDATE]
+    rate = cost["search_seconds"] / cost["searches"]
+    games = [json.loads(x) for x in (ROOT / P.KINDS[GEN2]["evidence"] / "games.jsonl").read_text(encoding="utf-8").splitlines()]
+    plies = sum(g["n_moves"] for g in games) / len(games)
+    projected = rate * plies * 64
+    ceiling = int(math.ceil(1.5 * projected / 60.0) * 60)
+    w = _code(_path(CS))
+    term, grace = (int(re.search(rf"^{k}=(\d+)$", w, re.M).group(1)) for k in ("TERM_S", "GRACE_S"))
+    assert (round(rate, 4), plies, round(projected, 1)) == (0.6002, 62.515, 2401.4)
+    assert ceiling == 3660 == term + grace and grace == 10
+    header = " ".join(ln.lstrip("# ") for ln in _path(CS).read_text(encoding="utf-8").split("set -u\n", 1)[0].splitlines())
+    assert "0.6002 s per combination search" in header and "62.515 plies per game" in header and "3,660 s" in header
+    assert "through 3670 s" in header
+
+
+def test_THE_STRENGTH_CEILING_IS_PROVISIONAL_UNTIL_THE_NEW_SCREEN_EXISTS_THEN_ITS_WALL_TIME_SCALED():
+    """Today the first comparison's derivation, and the header says so. Once the new screen's outer.json exists this fails until
+    TERM_S is re-derived by a reviewed edit, as §7 requires."""
+    new = ROOT / CS_RUN / "outer.json"
+    outer = new if new.exists() else EV / "combination-policy-screen-run/outer.json"
+    wall = json.loads(outer.read_text(encoding="utf-8"))["wall_seconds"]
+    w = _code(_path(CST))
+    term, grace = (int(re.search(rf"^{k}=(\d+)$", w, re.M).group(1)) for k in ("TERM_S", "GRACE_S"))
+    assert term + grace == int(math.ceil(wall * 1018 / 64 * 1.5 / 60.0) * 60) and grace == 10
+    if not new.exists():
+        assert term + grace == 51780 and "PROVISIONAL" in _path(CST).read_text().split("set -u\n", 1)[0]
+
+
+@pytest.mark.parametrize("kind", [CS, CST])
+def test_THE_EVALUATION_SURVEY_COPY_IS_THE_FIRST_CYCLE_S_AND_SERVES_ITS_KIND(kind):
+    base, rel = SURVEYS[kind]
+    name = P.KINDS[kind]["role"]
+    doc1, code1 = _split(base)
+    doc, code = _split(rel)
+    assert doc.endswith(doc1) and AMEND in doc[:-len(doc1)]
+    a, b = code1.splitlines(), code.splitlines()
+    assert len(a) == len(b)
+    U = name.upper()
+    assert [y.strip() for x, y in zip(a, b) if x != y] == [
+        f'HERE = "docs/superpowers/evidence/combination-policy-cycle2-{name}-seed-survey"',
+        f'PLAN = "docs/superpowers/evidence/combination-policy-cycle2-{name}-run/plan.json"',
+        f'VERDICT_OK = "THE COMBINATION-POLICY CYCLE-2 {U} BLOCK IS CLEAN"',
+        f'spec = importlib.util.spec_from_file_location(f"_combination_policy_cycle2_{name}_{{key}}", p)',
+        f'return {{"kind": "combination-policy-cycle2-{name}-plan/1", "base": base, "n_slots": N_SLOTS,',
+        f'faults.append("the cycle-2 {name} plan is absent or not committed")',
+        f'faults.append("the cycle-2 {name} plan is not build_plan of the surveyed block")',
+        f"say(f\"COMBINATION POLICY PILOT -- CYCLE-2 {U} GAME-SEED {{'SURVEY' if mode == 'survey' else 'COLLISION PROOF, mode ' + mode.upper()}}\")",
+        f'say("SLOTS (combination_policy_pilot run cycle2_{name}: game g plays seed BASE + g, in order, in one process):")',
+        f"say(f\"PROOF VERDICT ({{mode}}): {{'THE COMBINATION-POLICY CYCLE-2 {U} BLOCK IS CLEAN AND THE STATE IS AS EXPECTED' if ok else 'NOT PROVEN -- STOP'}}\""]
+    survey = _load(rel, f"_c2_{name}_survey")
+    assert survey.N_SLOTS == 2 * P.KINDS[kind]["pairs"] and survey.PLAN == P.KINDS[kind]["plan"]
+    assert survey.PINNED == _load(base, f"_c1_{name}_survey").PINNED
+    assert not SB.scan(code) and not re.search(r"\b20[0-9]{7}\b", code)
+    S, Pf, SEL, block, prior, masks = _synthetic(survey)
+    rec = {"head": "0" * 40, "registry_sha256": "0" * 64, "base": block[0], "block": block}
+    groups = {"state": survey._state_controls(S, Pf, rec, "a" * 64), "plants": S._plant_controls(block, prior, masks, {}, True),
+              "exemptions": S._exemption_controls(block), "enumeration": Pf._enumeration_controls(S),
+              "two-band": survey._two_band_controls(S, SEL, block, prior, masks)}
+    assert {k: len(v) for k, v in groups.items()} == {"state": 12, "plants": 8, "exemptions": 6, "enumeration": 6, "two-band": 10}
+    for k, v in groups.items():
+        assert all(ok for _l, ok, _d in v), (k, [r for r in v if not r[1]])
+
+
+@pytest.mark.parametrize("kind", [CS, CST])
+def test_THE_EVALUATION_SURVEY_S_THREE_MODES_REHEARSED_ON_A_SYNTHETIC_REPOSITORY(tmp_path, monkeypatch, capsys, kind):
+    """Nothing of the real repository is scanned or written: this is no survey of it."""
+    import importlib.util
+    from scripts.GPU.alphazero import e4_screen_reference as REG
+    rel, name = SURVEYS[kind][1], P.KINDS[kind]["role"]
+    n, repo = 2 * P.KINDS[kind]["pairs"], tmp_path / "synthetic"
+
+    def git(*a):
+        return subprocess.check_output(["git", "-c", "user.name=t", "-c", "user.email=t@t", *a], cwd=repo, text=True).strip()
+
+    def mode(m):
+        monkeypatch.setattr(sys, "dont_write_bytecode", True)
+        spec = importlib.util.spec_from_file_location(f"_c2_{name}_{m}", repo / "docs/superpowers/evidence" / rel)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        code = mod.main(["x", "--mode", m])
+        capsys.readouterr()
+        return mod, code, (repo / mod.OUT[m]).read_text(encoding="utf-8")
+    for r in (*PINNED_FILES, f"docs/superpowers/evidence/{rel}"):
+        (repo / r).parent.mkdir(parents=True, exist_ok=True)
+        (repo / r).write_bytes((ROOT / r).read_bytes())
+    top = max([SB.BAND[0]] + [hi for lo, hi in REG.ACCOUNTED_SEED_INTERVALS if hi > SB.BAND[0]])
+    old, new = SB.BAND_2026[0] + 61_000, top + 23_456
+    reg = repo / "scripts/GPU/alphazero/e4_screen_reference.py"
+    reg.write_text(f"ACCOUNTED_SEED_INTERVALS = (\n    ({old}, {old + 10}),\n)\nEXPOSED_SEED_INTERVALS = ()\n"
+                   "RETIRED_SEED_INTERVALS = ()\nTEST_ONLY_SEED_INTERVALS = ()\n")
+    (repo / "tests").mkdir()
+    (repo / "tests/test_planted.py").write_text(f"A = {old + 500}\nB = {new:_}\n")
+    (repo / f"docs/superpowers/evidence/combination-policy-cycle2-{name}-run").mkdir(parents=True)
+    git("init", "-q")
+    git("add", "-A")
+    git("commit", "-qm", "synthetic")
+    mod, code, survey = mode("survey")
+    assert code == 0, survey[-2500:]
+    _anchor, _base, block = SB.candidate(REG.ACCOUNTED_SEED_INTERVALS, [new], n)
+    assert f"block = [{block[0]}, {block[1]}) -- {n} seeds" in survey
+    assert survey.endswith(f"SURVEY VERDICT   : THE COMBINATION-POLICY CYCLE-2 {name.upper()} BLOCK IS CLEAN\n")
+    git("add", "-A")
+    git("commit", "-qm", "survey record")
+    _m, code, pre = mode("pre")
+    assert code == 0 and "EXPECTED STATE (pre): HOLDS" in pre, pre[-2500:]
+    git("add", "-A")
+    git("commit", "-qm", "pre record")
+    sha = hashlib.sha256((repo / mod.OUT["survey"]).read_bytes()).hexdigest()
+    reg.write_text(reg.read_text().replace(f"    ({old}, {old + 10}),\n)", f"    ({old}, {old + 10}),\n    ({block[0]}, {block[1]}),\n)"))
+    (repo / mod.PLAN).write_text(json.dumps(mod.build_plan(block[0], sha), indent=1, sort_keys=True) + "\n")
+    git("add", "-A")
+    git("commit", "-qm", "registration")
+    _m, code, post = mode("post")
+    assert code == 0 and "EXPECTED STATE (post): HOLDS" in post, post[-2500:]
+
+
+@pytest.mark.parametrize("kind", [CS, CST])
+def test_THE_EVALUATION_CLOSING_COPY_IS_THE_FIRST_CYCLE_S_AND_ITS_CONTROLS_PASS(kind):
+    base, rel = CLOSINGS[kind]
+    name = P.KINDS[kind]["role"]
+    doc1, code1 = _split(base)
+    doc, code = _split(rel)
+    assert doc.endswith(doc1) and AMEND in doc[:-len(doc1)]
+    a, b = code1.splitlines(), code.splitlines()
+    assert len(a) == len(b)
+    assert {y.strip() for x, y in zip(a, b) if x != y} == {
+        f'HERE = "docs/superpowers/evidence/combination-policy-cycle2-{name}-seed-closing"',
+        f'RUN = "docs/superpowers/evidence/combination-policy-cycle2-{name}"',
+        f'RUN_DIR = "docs/superpowers/evidence/combination-policy-cycle2-{name}-run"',
+        f'lines = ["COMBINATION POLICY PILOT -- CYCLE-2 {name.upper()} SEED-USAGE DERIVATION (closing)", "=" * 96,'}
+    closing = _load(rel, f"_c2_{name}_closing")
+    spec = P.KINDS[kind]
+    assert closing.N_SLOTS == 2 * spec["pairs"] and closing.INPUTS[0] == spec["plan"] and closing.RUN == spec["evidence"]
+    assert not SB.scan(code) and not re.search(r"\b20[0-9]{7}\b", code)
+    results = closing._controls(FAKE_BASE)
+    assert len(results) == 15 and all(ok for _l, ok, _d in results), [r for r in results if not r[1]]
+
+
+def test_BUILD_B_IS_BUILT_ONLY_gates_closed_and_no_plan_seed_record_run_or_game():
+    """RE-ANCHOR when its seed sequence or run is approved."""
+    from scripts.GPU.alphazero import e4_screen_reference as REG
+    assert GATE_CS.COMBINATION_POLICY_CYCLE2_SCREEN_AUTHORIZED is False and P.KINDS[CS]["gate"][0] is GATE_CS
+    assert GATE_CST.COMBINATION_POLICY_CYCLE2_STRENGTH_AUTHORIZED is False and P.KINDS[CST]["gate"][0] is GATE_CST
+    for kind in (CS, CST):
+        assert sorted(x.name for x in _path(kind).parent.iterdir()) == ["01_wrapper.sh"]
+        assert not (ROOT / P.KINDS[kind]["evidence"]).exists()
+        for rel, only in ((SURVEYS[kind][1], "01_seed_survey.py"), (CLOSINGS[kind][1], "01_derive_usage.py")):
+            assert [x.name for x in (EV / rel).parent.iterdir() if x.name != "__pycache__"] == [only]
+    plan = json.loads((ROOT / P.KINDS[GEN2]["plan"]).read_text(encoding="utf-8"))
+    assert REG.ACCOUNTED_SEED_INTERVALS[-1] == (plan["base"], plan["base"] + plan["n_slots"])
