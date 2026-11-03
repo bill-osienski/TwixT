@@ -221,6 +221,7 @@ knob) is not a new hypothesis.
 > **Combination policy second cycle — the 64-game screen: CONTINUE (Post-closure entry 50, 2026-11-02; no strength result).** The ONE run of `cycle2_screen` COMPLETED in 2,110 s: mean pair score 0.5547 over 32 pairs, above the 0.40 STOP line; it clears only the gross-regression screen. K1 RECONCILES, 15/15; [202747300, 202747364) exposed and retired whole. The strength ceiling derived from this screen: 50,400 s, proposed; the wrapper still holds the PROVISIONAL 51,780 s. Strength seed work or launch, further training, benchmarks, deployment and pushing remain unauthorized.
 > **Combination policy second cycle — the screen and its closing ACCEPTED; strength's PREPARATION approved (decision note, 2026-11-02, the user's review).** The user reproduced 0.5546875 (35–28–1) and both cost ratios; Hoeffding 95% ≈ [0.315, 0.795], so it shows neither stronger play nor a decline from the first head. The wrapper set to TERM 50,390 s / KILL 50,400 s / cleanup through 50,410 s; strength's seed survey, proofs, registration and plan approved. Strength launch, further training, benchmarks, deployment and pushing remain unauthorized.
 > **Combination policy second cycle — strength PREPARED; awaiting the launch decision (addendum, 2026-11-02).** Ceiling set: TERM 50,390 s / KILL 50,400 s / cleanup through 50,410 s (`4711d457`). Survey CLEAN 55/55 (`056feaf0`), pre-proof HOLDS (`7ebb4533`), [202748400, 202749418) registered with its bound plan (`8ff1d724`), post-proof HOLDS (`f33eeff9`). 517 focused pass. Nothing run. Strength launch, further training, benchmarks, deployment and pushing remain unauthorized.
+> **Combination policy second cycle — strength preparation ACCEPTED; ONE strength run and its seed closing APPROVED (decision note, 2026-11-02, the user's review).** 509 pairs / 1,018 games, head `c7e96802…` against the original proven combination, search, scoring and compute guards unchanged; TERM 50,390 s, KILL 50,400 s, cleanup through 50,410 s. No interim outcome inspection or pooling with screen games. Further training, benchmarks, deployment and pushing remain unauthorized.
 
 ## Historical proposal check — programme now closed
 
@@ -1913,6 +1914,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 160. **The second cycle's screen (2026-11-02).** The ONE run is spent and its block is retired: do **not** rerun, extend or top up the screen, reuse its seeds, or pool its 64 games with any strength comparison. Do **not** read CONTINUE or its 0.5547 as a strength result. Do **not** launch strength at the wrapper's PROVISIONAL 51,780 s, or without a reviewed edit to the derived ceiling, its own seed preparation and the user's approval of each.
 161. **Strength's preparation (2026-11-02).** The wrapper's ceiling is set once to TERM 50,390 s / KILL 50,400 s / cleanup through 50,410 s, derived from the new screen; do **not** change it again. The survey and both proofs run once each, in order; do **not** repeat, adjust or re-select after a failed check: stop and report. Do **not** launch strength, train further, run a benchmark, deploy or push under this approval.
 162. **Strength's block (2026-11-02).** Do **not** rerun the survey or proofs, select another block, or edit [202748400, 202749418). Do **not** open gate 61 or launch without the user's approval and a recheck of live versions, panic and reboot state, the plan, the proved registry, both amendments, the head binding and the screen's admission immediately before. Do **not** train further, run a benchmark, deploy or push under this preparation.
+163. **The second cycle's strength run (2026-11-02).** One run only: do **not** retry, extend, top up or continue it, or change the ceiling (TERM 50,390 s, KILL 50,400 s, observation through 50,410 s), the head, the opponent, the search, the scoring or the compute guards. Do **not** inspect outcomes before the run ends or pool any screen game. Do **not** apply K2 unless K1 RECONCILES. Do **not** score an incomplete run. A completed NON_PASS or scientific STOP ends the experiment: do **not** rescue it. Do **not** train further, run a benchmark, deploy or push without the user's approval of each.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -8949,3 +8951,19 @@ Run as the sequence approved above, each step once in a clean linked worktree (`
 - **Tests (`72fdd021`):** two lifecycle tests failed as expected after registration and were re-anchored, and strength's own state test was added, with no seed literal. Focused suites, serially: 517 pass, 1 deselected.
 - **Nothing else ran:** no model or head load, gate opening or game. All 61 gates are closed, and the block is ACCOUNTED only.
 - **Returned for launch review.** Not authorized: strength launch, further training, benchmarks, deployment and pushing.
+
+#### Decision note — strength's preparation accepted; one strength run and its closing approved (2026-11-02, the user's review)
+
+- **The user's check, read-only:** the proof hashes and bindings, exact ACCOUNTED-only registration, matching plan, unchanged candidate and successful fit and screen admission records. The
+  wrapper's only executable change is the approved ceiling. All 61 gates are closed, and no strength output exists.
+- **Approved:**
+  1. this record, then a recheck of live versions, panic and reboot state, plan, proved registry, amendments, head binding and admission, with BOINC quit, Unreal Editor closed and the
+     existing launch checks enforced;
+  2. in a clean worktree, opening only `COMBINATION_POLICY_CYCLE2_STRENGTH_AUTHORIZED` by the one-line commit;
+  3. the wrapper once: 509 pairs / 1,018 games, head `c7e96802…` against the original proven combination, with unchanged search, scoring and compute guards;
+  4. TERM 50,390 s, KILL 50,400 s, cleanup observation through 50,410 s;
+  5. restoring the gate, confirming cleanup and preserving create-only evidence; K1 once; only if it RECONCILES, K2 exactly as derived, then lifecycle updates and focused checks.
+- **Conduct:** no interim outcome inspection, and no pooling with screen games.
+- **To return:** the final verdict, score and bound, both cost ratios, integrity evidence and closing records.
+- **The reading:** an incomplete run remains VOID and returns for assessment without automatic retry. A completed NON_PASS or scientific STOP ends this experiment.
+- **Not authorized:** further training, benchmarks, deployment and pushing.
