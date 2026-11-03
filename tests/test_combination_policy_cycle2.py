@@ -162,8 +162,7 @@ def test_THE_ONE_RUN_WENT_VOID_AT_THE_VERSION_CHECK_BEFORE_ANY_GAME_AND_THE_BLOC
     assert GATE_TRAIN.COMBINATION_POLICY_CYCLE2_TRAIN_AUTHORIZED is False
     assert (P.KINDS[GEN]["gate"][0], P.KINDS[TRAIN]["gate"][0]) == (GATE_GEN, GATE_TRAIN)
     assert not any(k.startswith("cycle2") and k not in (GEN, GEN2, TRAIN) for k in P.KINDS)
-    assert sorted(x.name for x in (EV / "combination-policy-cycle2-train-run").iterdir()) == ["01_wrapper.sh"]
-    assert not (ROOT / P.KINDS[TRAIN]["evidence"]).exists()
+    # RE-ANCHORED 2026-11-02 (the fit, cafc78b4 -> 200e7eee): the fit's own state test holds its evidence
 
 
 def test_THE_VOID_RUN_ADMITS_NOTHING_AND_ITS_KIND_STAYS_ONE_SHOT(tmp_path, monkeypatch, capsys):
@@ -1017,7 +1016,8 @@ def test_THE_NEW_ATTEMPT_RAN_ONCE_COMPLETED_AND_ITS_BLOCK_IS_CLOSED():
     started and ended once, slot g on seed BASE + g, and every row file is the one generation wrote (games.jsonl is read
     for slot, seed, row-count and file fields only -- never a winner or reason). K1 RECONCILES, so the WHOLE block is EXPOSED
     and RETIRED, each exactly once and last, ACCOUNTED unchanged, every seed refused. Every mode refuses to run again. The
-    gates stay closed and the fit has not run. No block literal here: the proofs scan tests/."""
+    gates stay closed. No block literal here: the proofs scan tests/. RE-ANCHORED 2026-11-02 (the fit, cafc78b4 -> 200e7eee): its
+    evidence moved to its own state test below."""
     from scripts.GPU.alphazero import e4_screen_reference as REG
     here = (EV / SURVEY2).parent
     assert sorted(x.name for x in here.iterdir() if x.name != "__pycache__") == \
@@ -1106,8 +1106,66 @@ def test_THE_NEW_ATTEMPT_RAN_ONCE_COMPLETED_AND_ITS_BLOCK_IS_CLOSED():
     # the gates, the rest of the state
     assert GATE_GEN2.COMBINATION_POLICY_CYCLE2_GENERATE2_AUTHORIZED is False and P.KINDS[GEN2]["gate"][0] is GATE_GEN2
     assert GATE_TRAIN.COMBINATION_POLICY_CYCLE2_TRAIN_AUTHORIZED is False
-    assert not (ROOT / P.KINDS[TRAIN]["evidence"]).exists()
-    assert sorted(x.name for x in (EV / "combination-policy-cycle2-train-run").iterdir()) == ["01_wrapper.sh"]
+
+
+def test_THE_FIT_RAN_ONCE_COMPLETED_ELIGIBLE_FROM_THE_FIRST_HEAD_ON_THE_NEW_CORPUS():
+    """BUILT 2026-11-02 at the run (cafc78b4 -> 200e7eee): the ONE run COMPLETED inside the ceiling, launched from the one-line
+    gate opening, gate restored, no survivors. Admitted through the real committed readers. On the CPU in the pinned
+    versions, with the recipe unchanged, from the first head (the teacher's three digests), the new corpus's real counts.
+    The pre-fit KL is at or above the floor; 3,000 finite losses; the parent's value baseline bitwise equal on every held-out
+    row; encoder and value-head digests unchanged while the policy head's changed; held-out CE below its pre-fit value, so
+    ELIGIBLE. head.npz holds exactly the digest and sha256 recorded, on the permitted surface, and the first head's bytes
+    are unchanged. Every other gate stays closed. Read-only."""
+    run_dir, evidence = _path(TRAIN).parent, ROOT / P.KINDS[TRAIN]["evidence"]
+    assert GATE_TRAIN.COMBINATION_POLICY_CYCLE2_TRAIN_AUTHORIZED is False and P.KINDS[TRAIN]["gate"][0] is GATE_TRAIN
+    assert sorted(x.name for x in run_dir.iterdir()) == ["01_wrapper.sh", "bg_check.txt", "idle_check.txt", "outer.json",
+                                                         "pgid.txt", "run.stderr.txt", "run.stdout.txt"]
+    assert sorted(x.name for x in evidence.iterdir()) == ["head.npz", "progress.jsonl", "record.json"]
+    outer = json.loads((run_dir / "outer.json").read_text(encoding="utf-8"))
+    rec = json.loads((evidence / "record.json").read_text(encoding="utf-8"))
+    assert P.outer_faults(outer, rec) == [] and outer["wall_seconds"] < outer["term_s"] == 2810 and outer["grace_s"] == 10
+    assert subprocess.run(["git", "-C", str(ROOT), "rev-parse", f"{outer['head']}^"], capture_output=True, text=True,
+                          check=True).stdout.strip() == outer["pre_open"]
+    opened = subprocess.run(["git", "-C", str(ROOT), "diff", "--unified=0", outer["pre_open"], outer["head"]],
+                            capture_output=True, text=True, check=True).stdout
+    assert [ln for ln in opened.splitlines() if ln[:1] in "+-" and ln[:3] not in ("+++", "---")] == \
+        [f"-{WRAPPERS[TRAIN]['gate']} = False", f"+{WRAPPERS[TRAIN]['gate']} = True"]
+    assert (rec["status"], rec["run"], rec["verdict"], rec.get("stop"), rec["written_by"]) == \
+        ("COMPLETED", TRAIN, "ELIGIBLE", None, "script")
+    assert rec["admission"] == P.admitted(TRAIN, P._read_record, P._read_outer)
+    assert rec["versions"] == P.CYCLE2_VERSIONS and rec["device"] == "Device(cpu, 0)"
+    assert rec["amendment_sha256"] == P.CYCLE2_ATTEMPT2_AMENDMENT[1] and rec["base_amendment_sha256"] == P.CYCLE2_AMENDMENT[1]
+    assert rec["recipe"] == json.loads(json.dumps(P.RECIPE)) and rec["setting"] == rec["setting_at_end"] == \
+        {P.SETTING: P.SETTING_VALUE}
+    corpus = json.loads((ROOT / P.KINDS[GEN2]["evidence"] / "record.json").read_text(encoding="utf-8"))
+    teacher = {k: P.TRAINED_HEAD[k] for k in ("file", "sha256", "digests")}
+    assert rec["teacher"] == corpus["teacher"] == teacher and rec["checkpoint_sha1"] == corpus["checkpoint_sha1"]
+    assert rec["digests_before"] == teacher["digests"]
+    assert hashlib.sha256((ROOT / teacher["file"]).read_bytes()).hexdigest() == teacher["sha256"]    # the first head is untouched
+    rows = corpus["summary"]["rows"]
+    held = rec["corpus"]["heldout_rows"]
+    assert (rec["corpus"]["games"], rec["corpus"]["rows"], rec["corpus"]["train_rows"]) == (1000, rows, rows - held)
+    assert rec["prefit_train"]["kl"] >= P.RECIPE["min_kl"] and rec["prefit_train"]["rows"] == rows - held
+    assert len(rec["losses"]) == P.RECIPE["updates"] and all(math.isfinite(x) for x in rec["losses"])
+    assert rec["value_check"] == {"rows": held, "bitwise_equal": True, "max_abs_diff": 0.0}
+    before, after = rec["digests_before"], rec["digests_after"]
+    assert before["encoder."] == after["encoder."] and before["value_head."] == after["value_head."]
+    assert before["policy_head."] != after["policy_head."]
+    assert rec["heldout_after"]["rows"] == rec["prefit_heldout"]["rows"] == held
+    assert rec["heldout_after"]["ce"] < rec["prefit_heldout"]["ce"]
+    raw = (evidence / "head.npz").read_bytes()
+    assert rec["head_file"] == "head.npz" and hashlib.sha256(raw).hexdigest() == rec["head_sha256"] != teacher["sha256"]
+    with np.load(evidence / "head.npz") as z:
+        head = {k: z[k] for k in z.files}
+    with np.load(ROOT / teacher["file"]) as z:
+        first = {k: z[k] for k in z.files}
+    surface = set(rec["surface"]["names"])
+    assert sorted(head) == sorted(first) and surface < set(head) and sum(head[k].size for k in surface) == 8840
+    assert all(np.array_equal(head[k], first[k]) for k in set(head) - surface)     # BatchNorm's running statistics: frozen
+    assert any(not np.array_equal(head[k], first[k]) for k in surface)
+    assert P.digest(head, "policy_head.") == after["policy_head."]
+    assert subprocess.run(["git", "-C", str(ROOT), "diff", "--quiet", "200e7eee", "HEAD", "--", str(run_dir),
+                           str(evidence)]).returncode == 0
 
 
 def test_THE_NEW_ATTEMPT_IS_THE_SAME_RUN_ON_ITS_OWN_PATHS():
