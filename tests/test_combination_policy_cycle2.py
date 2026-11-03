@@ -1108,8 +1108,10 @@ def test_THE_NEW_ATTEMPT_RAN_ONCE_COMPLETED_AND_ITS_BLOCK_IS_CLOSED():
     assert f"\nclaims events: [{n}]\n" in k1
     assert k1.endswith(f"VERDICT: RECONCILES -- EXPOSE {list(block)}; RETIRE {list(block)}\n")
     for intervals in (REG.ACCOUNTED_SEED_INTERVALS, REG.EXPOSED_SEED_INTERVALS, REG.RETIRED_SEED_INTERVALS):
-        assert intervals.count(block) == 1 and intervals[-1] == block
-        assert all(hi <= block[0] for lo, hi in intervals[:-1] if hi > SB.BAND[0])
+        # RE-ANCHORED 2026-11-02 (the screen's registration 322aae07): no longer last in ACCOUNTED; later entries lie above
+        i = intervals.index(block)
+        assert intervals.count(block) == 1 and all(lo >= block[1] for lo, _hi in intervals[i + 1:])
+        assert all(hi <= block[0] for lo, hi in intervals[:i] if hi > SB.BAND[0])
     assert all(REG.seed_is_accounted(s) and REG.seed_is_exposed(s) and REG.seed_is_retired(s) and
                REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s) for s in range(*block))
     # the gates, the rest of the state
@@ -1650,15 +1652,56 @@ def test_THE_EVALUATION_CLOSING_COPY_IS_THE_FIRST_CYCLE_S_AND_ITS_CONTROLS_PASS(
     assert len(results) == 15 and all(ok for _l, ok, _d in results), [r for r in results if not r[1]]
 
 
-def test_BUILD_B_IS_BUILT_ONLY_gates_closed_and_no_plan_seed_record_run_or_game():
-    """RE-ANCHOR when its seed sequence or run is approved."""
+def test_THE_SCREEN_S_BLOCK_IS_SURVEYED_PROVEN_AND_REGISTERED_AND_NOTHING_ELSE_OF_BUILD_B_HAS_RUN():
+    """BUILT 2026-11-02 as the build-only state. RE-ANCHORED 2026-11-02 (survey 1b2c5a8e, pre-proof 3df7caca, registration 322aae07,
+    post-proof 884389bb): the screen's survey is CLEAN and both proofs HOLD, each 55/55 on a clean tree and bound to the survey
+    record; the plan is the copy's build_plan; the block (read from the plan and the records -- no seed literal here, since the
+    proofs scan tests/) is ACCOUNTED exactly once and last, above the corpus's block, and in no other list; the post-proof proved
+    the registry as it stands now; every seed is schedulable; each mode refuses to run again. Both gates are closed; no screen
+    output exists; strength has no seed work. RE-ANCHOR at the launch and the closing."""
     from scripts.GPU.alphazero import e4_screen_reference as REG
+    rel = SURVEYS[CS][1]
+    here = (EV / rel).parent
+    assert sorted(x.name for x in here.iterdir() if x.name != "__pycache__") == \
+        ["01_seed_survey.py", "02_seed_survey_run.txt", "03_collision_proof_pre_run.txt", "04_collision_proof_post_run.txt"]
+    raw = (here / "02_seed_survey_run.txt").read_bytes()
+    survey, sha = raw.decode("utf-8"), hashlib.sha256(raw).hexdigest()
+    assert survey.splitlines()[2].endswith("; working tree clean") and "controls passed: 55/55" in survey
+    assert survey.endswith("SURVEY VERDICT   : THE COMBINATION-POLICY CYCLE-2 SCREEN BLOCK IS CLEAN\n")
+    for name, mode in (("03_collision_proof_pre_run.txt", "pre"), ("04_collision_proof_post_run.txt", "post")):
+        text = (here / name).read_text(encoding="utf-8")
+        assert text.splitlines()[2].endswith("; working tree clean")
+        assert f"02_seed_survey_run.txt sha256 {sha} (read at " in text
+        assert f"EXPECTED STATE ({mode}): HOLDS" in text and "controls passed: 55/55" in text
+        assert text.endswith(f"PROOF VERDICT ({mode}): THE COMBINATION-POLICY CYCLE-2 SCREEN BLOCK IS CLEAN AND THE STATE IS AS EXPECTED\n")
+    post = (here / "04_collision_proof_post_run.txt").read_text(encoding="utf-8")
+    plan = json.loads((ROOT / P.KINDS[CS]["plan"]).read_text(encoding="utf-8"))
+    n = 2 * P.KINDS[CS]["pairs"]
+    assert type(plan["base"]) is int and plan["n_slots"] == n == 64
+    mod = _load(rel, "_c2_screen_registered")
+    assert plan == mod.build_plan(plan["base"], sha)
+    block = (plan["base"], plan["base"] + n)
+    corpus = json.loads((ROOT / P.KINDS[GEN2]["plan"]).read_text(encoding="utf-8"))
+    assert corpus["base"] + corpus["n_slots"] <= block[0]
+    assert SB.BAND[0] <= block[0] < block[1] <= SB.BAND[1] and block[0] % SB.ALIGN == 0
+    assert f"block = [{block[0]}, {block[1]}) -- {n} seeds" in survey
+    assert f"THE BLOCK, read from the record: [{block[0]}, {block[1]}) -- BASE {block[0]}" in post
+    reg_rel = "scripts/GPU/alphazero/e4_screen_reference.py"
+    assert f"\nregistry {reg_rel} sha256 {P.M._sha((ROOT / reg_rel).read_bytes())}\n" in post    # proved = current
+    assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1 and REG.ACCOUNTED_SEED_INTERVALS[-1] == block
+    assert not any(lo < block[1] and block[0] < hi
+                   for lo, hi in REG.EXPOSED_SEED_INTERVALS + REG.RETIRED_SEED_INTERVALS + REG.TEST_ONLY_SEED_INTERVALS)
+    assert all(REG.seed_is_accounted(s) and not REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s) for s in range(*block))
+    for mode in ("survey", "pre", "post"):
+        with pytest.raises(mod.Refused, match="each mode runs once"):
+            mod.main(["x", "--mode", mode])
     assert GATE_CS.COMBINATION_POLICY_CYCLE2_SCREEN_AUTHORIZED is False and P.KINDS[CS]["gate"][0] is GATE_CS
     assert GATE_CST.COMBINATION_POLICY_CYCLE2_STRENGTH_AUTHORIZED is False and P.KINDS[CST]["gate"][0] is GATE_CST
+    assert sorted(x.name for x in _path(CS).parent.iterdir()) == ["01_wrapper.sh", "plan.json"]
+    assert sorted(x.name for x in _path(CST).parent.iterdir()) == ["01_wrapper.sh"]
     for kind in (CS, CST):
-        assert sorted(x.name for x in _path(kind).parent.iterdir()) == ["01_wrapper.sh"]
         assert not (ROOT / P.KINDS[kind]["evidence"]).exists()
-        for rel, only in ((SURVEYS[kind][1], "01_seed_survey.py"), (CLOSINGS[kind][1], "01_derive_usage.py")):
-            assert [x.name for x in (EV / rel).parent.iterdir() if x.name != "__pycache__"] == [only]
-    plan = json.loads((ROOT / P.KINDS[GEN2]["plan"]).read_text(encoding="utf-8"))
-    assert REG.ACCOUNTED_SEED_INTERVALS[-1] == (plan["base"], plan["base"] + plan["n_slots"])
+        assert [x.name for x in (EV / CLOSINGS[kind][1]).parent.iterdir() if x.name != "__pycache__"] == ["01_derive_usage.py"]
+    assert [x.name for x in (EV / SURVEYS[CST][1]).parent.iterdir() if x.name != "__pycache__"] == ["01_seed_survey.py"]
+    results = _load(CLOSINGS[CS][1], "_c2_screen_closing_rb")._controls(plan["base"])
+    assert len(results) == 15 and all(ok for _l, ok, _d in results), [r for r in results if not r[1]]
