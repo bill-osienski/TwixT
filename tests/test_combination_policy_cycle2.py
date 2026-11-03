@@ -1290,10 +1290,11 @@ def test_THE_CANDIDATE_IS_THE_ONE_FIT_S_HEAD_AND_ITS_REAL_RECORDS_ADMIT_THE_SCRE
     assert h["sha256"] != P.TRAINED_HEAD["sha256"] and h["digests"]["policy_head."] != P.TRAINED_HEAD["digests"]["policy_head."]
     assert {p: h["digests"][p] for p in ("encoder.", "value_head.")} == \
         {p: P.TRAINED_HEAD["digests"][p] for p in ("encoder.", "value_head.")}
-    with pytest.raises(P.Refused, match="does not exist"):
-        P.admitted(CST, P._read_record, P._read_outer)
-    with pytest.raises(P.Refused, match="does not exist"):
-        P.trained_head(P._read_record, P._read_committed_bytes, CST)
+    # RE-ANCHORED 2026-11-02 (the new screen, 0860246e -> a87e750e, CONTINUE): the real records now admit strength too, and bind
+    # the same bytes; only its closed gate and the user's approval stand between it and a launch
+    assert P.admitted(CST, P._read_record, P._read_outer) == {
+        FIT: "ELIGIBLE", f"{FIT_RUN}/outer.json": "COMPLETED", CS_EV: "CONTINUE", f"{CS_RUN}/outer.json": "COMPLETED"}
+    assert P.trained_head(P._read_record, P._read_committed_bytes, CST)["bytes"] == raw
     # the first cycle's kinds keep their own head
     assert P.trained_head(P._read_record, P._read_committed_bytes, "screen")["sha256"] == P.TRAINED_HEAD["sha256"]
 
@@ -1529,17 +1530,20 @@ def test_THE_SCREEN_CEILING_IS_THE_COMPLETED_SEARCH_TIMINGS_ON_THIS_CORPUS_S_MOV
     assert "through 3670 s" in header
 
 
-def test_THE_STRENGTH_CEILING_IS_PROVISIONAL_UNTIL_THE_NEW_SCREEN_EXISTS_THEN_ITS_WALL_TIME_SCALED():
-    """Today the first comparison's derivation, and the header says so. Once the new screen's outer.json exists this fails until
-    TERM_S is re-derived by a reviewed edit, as §7 requires."""
-    new = ROOT / CS_RUN / "outer.json"
-    outer = new if new.exists() else EV / "combination-policy-screen-run/outer.json"
-    wall = json.loads(outer.read_text(encoding="utf-8"))["wall_seconds"]
+def test_THE_STRENGTH_CEILING_IS_DERIVED_FROM_THE_NEW_SCREEN_AND_THE_WRAPPER_STILL_HOLDS_THE_PLACEHOLDER():
+    """BUILT provisional. RE-ANCHORED 2026-11-02 (the new screen, a87e750e): §7's formula on the new screen's completed wall time
+    gives the PROPOSED ceiling, recomputed here; the wrapper is unedited, still the first comparison's 51,780 s and marked
+    PROVISIONAL, because replacing it is a reviewed edit the user has not approved. RE-ANCHOR when that edit is approved: the
+    wrapper must then equal the derived value."""
+    outer = json.loads((ROOT / CS_RUN / "outer.json").read_text(encoding="utf-8"))
+    rec = json.loads((ROOT / CS_EV / "record.json").read_text(encoding="utf-8"))
+    assert P.outer_faults(outer, rec) == [] and rec["verdict"] == "CONTINUE"
+    derived = int(math.ceil(outer["wall_seconds"] * 1018 / 64 * 1.5 / 60.0) * 60)
+    assert (outer["wall_seconds"], derived) == (2110, 50400)
     w = _code(_path(CST))
     term, grace = (int(re.search(rf"^{k}=(\d+)$", w, re.M).group(1)) for k in ("TERM_S", "GRACE_S"))
-    assert term + grace == int(math.ceil(wall * 1018 / 64 * 1.5 / 60.0) * 60) and grace == 10
-    if not new.exists():
-        assert term + grace == 51780 and "PROVISIONAL" in _path(CST).read_text().split("set -u\n", 1)[0]
+    assert (term, grace) == (51770, 10) and term + grace != derived
+    assert "PROVISIONAL" in _path(CST).read_text().split("set -u\n", 1)[0]
 
 
 @pytest.mark.parametrize("kind", [CS, CST])
@@ -1652,13 +1656,16 @@ def test_THE_EVALUATION_CLOSING_COPY_IS_THE_FIRST_CYCLE_S_AND_ITS_CONTROLS_PASS(
     assert len(results) == 15 and all(ok for _l, ok, _d in results), [r for r in results if not r[1]]
 
 
-def test_THE_SCREEN_S_BLOCK_IS_SURVEYED_PROVEN_AND_REGISTERED_AND_NOTHING_ELSE_OF_BUILD_B_HAS_RUN():
-    """BUILT 2026-11-02 as the build-only state. RE-ANCHORED 2026-11-02 (survey 1b2c5a8e, pre-proof 3df7caca, registration 322aae07,
-    post-proof 884389bb): the screen's survey is CLEAN and both proofs HOLD, each 55/55 on a clean tree and bound to the survey
-    record; the plan is the copy's build_plan; the block (read from the plan and the records -- no seed literal here, since the
-    proofs scan tests/) is ACCOUNTED exactly once and last, above the corpus's block, and in no other list; the post-proof proved
-    the registry as it stands now; every seed is schedulable; each mode refuses to run again. Both gates are closed; no screen
-    output exists; strength has no seed work. RE-ANCHOR at the launch and the closing."""
+def test_THE_NEW_SCREEN_RAN_ONCE_COMPLETED_CONTINUE_AND_ITS_BLOCK_IS_CLOSED():
+    """BUILT 2026-11-02 as the build-only state. RE-ANCHORED 2026-11-02 at the seed preparation (survey 1b2c5a8e, pre-proof 3df7caca,
+    registration 322aae07, post-proof 884389bb). RE-ANCHORED 2026-11-02 (the run, 0860246e -> a87e750e, and its closing, K1 6a360aa0
+    + K2 291b6cc9): the survey is CLEAN and both proofs HOLD, each 55/55 on a clean tree and bound to the survey record; the plan is
+    the copy's build_plan; the post-proof proved the registry the run launched with. The ONE run, launched from the one-line gate
+    opening, COMPLETED inside its ceiling: outer exit 0, gate restored, no survivors, the pinned versions, the candidate's bytes and
+    digests, the original parent as the reference (the first screen's own reference digests), its probe nonzero; all 64 games
+    started in order, slot g on seed BASE + g. The verdict is the frozen rule's on the recorded pair scores. K1 RECONCILES, so the
+    WHOLE block is EXPOSED and RETIRED, each exactly once and last, ACCOUNTED unchanged, every seed refused. Every mode refuses to
+    run again. Both gates are closed; strength has no seed work. No block literal here: the proofs scan tests/."""
     from scripts.GPU.alphazero import e4_screen_reference as REG
     rel = SURVEYS[CS][1]
     here = (EV / rel).parent
@@ -1673,7 +1680,6 @@ def test_THE_SCREEN_S_BLOCK_IS_SURVEYED_PROVEN_AND_REGISTERED_AND_NOTHING_ELSE_O
         assert text.splitlines()[2].endswith("; working tree clean")
         assert f"02_seed_survey_run.txt sha256 {sha} (read at " in text
         assert f"EXPECTED STATE ({mode}): HOLDS" in text and "controls passed: 55/55" in text
-        assert text.endswith(f"PROOF VERDICT ({mode}): THE COMBINATION-POLICY CYCLE-2 SCREEN BLOCK IS CLEAN AND THE STATE IS AS EXPECTED\n")
     post = (here / "04_collision_proof_post_run.txt").read_text(encoding="utf-8")
     plan = json.loads((ROOT / P.KINDS[CS]["plan"]).read_text(encoding="utf-8"))
     n = 2 * P.KINDS[CS]["pairs"]
@@ -1681,27 +1687,62 @@ def test_THE_SCREEN_S_BLOCK_IS_SURVEYED_PROVEN_AND_REGISTERED_AND_NOTHING_ELSE_O
     mod = _load(rel, "_c2_screen_registered")
     assert plan == mod.build_plan(plan["base"], sha)
     block = (plan["base"], plan["base"] + n)
-    corpus = json.loads((ROOT / P.KINDS[GEN2]["plan"]).read_text(encoding="utf-8"))
-    assert corpus["base"] + corpus["n_slots"] <= block[0]
-    assert SB.BAND[0] <= block[0] < block[1] <= SB.BAND[1] and block[0] % SB.ALIGN == 0
-    assert f"block = [{block[0]}, {block[1]}) -- {n} seeds" in survey
-    assert f"THE BLOCK, read from the record: [{block[0]}, {block[1]}) -- BASE {block[0]}" in post
-    reg_rel = "scripts/GPU/alphazero/e4_screen_reference.py"
-    assert f"\nregistry {reg_rel} sha256 {P.M._sha((ROOT / reg_rel).read_bytes())}\n" in post    # proved = current
-    assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1 and REG.ACCOUNTED_SEED_INTERVALS[-1] == block
-    assert not any(lo < block[1] and block[0] < hi
-                   for lo, hi in REG.EXPOSED_SEED_INTERVALS + REG.RETIRED_SEED_INTERVALS + REG.TEST_ONLY_SEED_INTERVALS)
-    assert all(REG.seed_is_accounted(s) and not REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s) for s in range(*block))
     for mode in ("survey", "pre", "post"):
         with pytest.raises(mod.Refused, match="each mode runs once"):
             mod.main(["x", "--mode", mode])
+    # the run
+    run_dir, evidence = _path(CS).parent, ROOT / CS_EV
+    assert sorted(x.name for x in run_dir.iterdir()) == ["01_wrapper.sh", "bg_check.txt", "idle_check.txt", "outer.json",
+                                                         "pgid.txt", "plan.json", "run.stderr.txt", "run.stdout.txt"]
+    assert sorted(x.name for x in evidence.iterdir()) == ["games", "games.jsonl", "progress.jsonl", "record.json"]
+    assert sorted(x.name for x in (evidence / "games").iterdir()) == [f"game_{i:06d}.json" for i in range(n)]
+    outer = json.loads((run_dir / "outer.json").read_text(encoding="utf-8"))
+    rec = json.loads((evidence / "record.json").read_text(encoding="utf-8"))
+    assert P.outer_faults(outer, rec) == [] and outer["wall_seconds"] < outer["term_s"] == 3650 and outer["grace_s"] == 10
+    assert (rec["status"], rec["run"], rec["written_by"]) == ("COMPLETED", CS, "script")
+    assert rec["versions"] == P.CYCLE2_VERSIONS and rec["seeds"] == {"base": block[0], "n_slots": n}
+    assert (rec["amendment_sha256"], rec["base_amendment_sha256"]) == (P.CYCLE2_ATTEMPT2_AMENDMENT[1], P.CYCLE2_AMENDMENT[1])
+    assert rec["admission"] == {FIT: "ELIGIBLE", f"{FIT_RUN}/outer.json": "COMPLETED"}
+    assert rec["trained_head"] == {k: P.CYCLE2_HEAD[k] for k in ("file", "sha256", "digests")}
+    assert rec["digests"][K.CANDIDATE] == P.CYCLE2_HEAD["digests"] and rec["checkpoint_sha1"] == P.M.CHECKPOINT_SHA1
+    first = json.loads((EV / "combination-policy-screen/record.json").read_text(encoding="utf-8"))
+    assert rec["digests"][P.REFERENCE] == first["digests"][P.REFERENCE]                       # the original proven combination
+    assert rec["digests"][P.REFERENCE]["policy_head."] != P.TRAINED_HEAD["digests"]["policy_head."]
+    assert rec["head_probe"]["max_prior_abs_diff"] > 0.0 and rec["protocol"] == {**first["protocol"], "agents": rec["protocol"]["agents"]}
+    assert [a["mcts_sims"] for a in rec["protocol"]["agents"]] == [a["mcts_sims"] for a in first["protocol"]["agents"]]
+    events = [json.loads(x) for x in (evidence / "progress.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert [e["slot"] for e in events if e["event"] == "game_start"] == list(range(n))
+    assert all(e["ok"] for e in events if e["event"] == "bg_check") and rec["background_checks"] == sum(
+        e["event"] == "bg_check" for e in events)
+    games = [json.loads(x) for x in (evidence / "games.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert [g["slot"] for g in games] == list(range(n)) and {g["pairing_id"] for g in games} == {"combination-policy-cycle2-screen"}
+    assert rec["screen"] == K.screen_verdict(rec["pair_scores"]) and rec["verdict"] == rec["screen"]["verdict"]
+    gate_rel = "scripts/GPU/alphazero/combination_policy_cycle2_screen_authorization.py"
+    assert subprocess.run(["git", "-C", str(ROOT), "rev-parse", f"{outer['head']}^"], capture_output=True, text=True,
+                          check=True).stdout.strip() == outer["pre_open"]
+    opened = subprocess.run(["git", "-C", str(ROOT), "diff", "--unified=0", outer["pre_open"], outer["head"]],
+                            capture_output=True, text=True, check=True).stdout
+    assert [ln for ln in opened.splitlines() if ln[:1] in "+-" and ln[:3] not in ("+++", "---")] == \
+        [f"-{WRAPPERS[CS]['gate']} = False", f"+{WRAPPERS[CS]['gate']} = True"] and f"b/{gate_rel}" in opened
+    reg_rel = "scripts/GPU/alphazero/e4_screen_reference.py"
+    launched = subprocess.run(["git", "-C", str(ROOT), "show", f"{outer['head']}:{reg_rel}"], capture_output=True, check=True).stdout
+    assert f"\nregistry {reg_rel} sha256 {hashlib.sha256(launched).hexdigest()}\n" in post     # proved = launched
+    assert subprocess.run(["git", "-C", str(ROOT), "diff", "--quiet", "a87e750e", "HEAD", "--", str(run_dir),
+                           str(evidence)]).returncode == 0
+    # the closing
+    closing = (EV / CLOSINGS[CS][1]).parent
+    assert sorted(x.name for x in closing.iterdir() if x.name != "__pycache__") == ["01_derive_usage.py", "02_derive_usage_run.txt"]
+    k1 = (closing / "02_derive_usage_run.txt").read_text(encoding="utf-8")
+    assert k1.splitlines()[2].endswith("; working tree clean") and "controls passed: 15/15" in k1
+    assert k1.endswith(f"VERDICT: RECONCILES -- EXPOSE {list(block)}; RETIRE {list(block)}\n")
+    for intervals in (REG.ACCOUNTED_SEED_INTERVALS, REG.EXPOSED_SEED_INTERVALS, REG.RETIRED_SEED_INTERVALS):
+        assert intervals.count(block) == 1 and intervals[-1] == block
+        assert all(hi <= block[0] for lo, hi in intervals[:-1] if hi > SB.BAND[0])
+    assert all(REG.seed_is_accounted(s) and REG.seed_is_exposed(s) and REG.seed_is_retired(s) and REG.seed_is_unavailable(s)
+               and not REG.seed_is_test_only(s) for s in range(*block))
+    # the gates, strength
     assert GATE_CS.COMBINATION_POLICY_CYCLE2_SCREEN_AUTHORIZED is False and P.KINDS[CS]["gate"][0] is GATE_CS
     assert GATE_CST.COMBINATION_POLICY_CYCLE2_STRENGTH_AUTHORIZED is False and P.KINDS[CST]["gate"][0] is GATE_CST
-    assert sorted(x.name for x in _path(CS).parent.iterdir()) == ["01_wrapper.sh", "plan.json"]
-    assert sorted(x.name for x in _path(CST).parent.iterdir()) == ["01_wrapper.sh"]
-    for kind in (CS, CST):
-        assert not (ROOT / P.KINDS[kind]["evidence"]).exists()
-        assert [x.name for x in (EV / CLOSINGS[kind][1]).parent.iterdir() if x.name != "__pycache__"] == ["01_derive_usage.py"]
+    assert sorted(x.name for x in _path(CST).parent.iterdir()) == ["01_wrapper.sh"] and not (ROOT / P.KINDS[CST]["evidence"]).exists()
     assert [x.name for x in (EV / SURVEYS[CST][1]).parent.iterdir() if x.name != "__pycache__"] == ["01_seed_survey.py"]
-    results = _load(CLOSINGS[CS][1], "_c2_screen_closing_rb")._controls(plan["base"])
-    assert len(results) == 15 and all(ok for _l, ok, _d in results), [r for r in results if not r[1]]
+    assert [x.name for x in (EV / CLOSINGS[CST][1]).parent.iterdir() if x.name != "__pycache__"] == ["01_derive_usage.py"]
