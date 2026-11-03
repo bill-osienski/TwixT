@@ -214,6 +214,7 @@ knob) is not a new hypothesis.
 > **Combination policy second cycle — corpus and closing ACCEPTED; ONE CPU run of `cycle2_train` APPROVED (decision note, 2026-11-02, the user's review).** The ceiling, re-derived from the corpus's actual counts, stays 2,820 s (TERM 2,810 s, KILL 2,820 s, cleanup through 2,830 s), still an estimate from the earlier Python timing. Build B, evaluation games, deployment and pushing remain unauthorized, even on ELIGIBLE.
 > **Combination policy second cycle — the student FITTED; verdict ELIGIBLE (Post-closure entry 49, 2026-11-02; no strength result).** The ONE CPU run of `cycle2_train` COMPLETED in 1,950 s from the first head on the new corpus: initial training KL 1.1480, held-out CE 3.8277 → 3.7895 (a drop of 0.0382, about a fifth of the first cycle's 0.2166, on a different held-out set); values bitwise equal, encoder and value digests unchanged; head sha256 `c7e96802…`. Build B, evaluation games, deployment and pushing remain unauthorized.
 > **Combination policy second cycle — ELIGIBLE ACCEPTED; Build B approved to BUILD only (decision note, 2026-11-02, the user's review).** Held-out CE improved by 0.03822 nats, about 1%: that meets the frozen criterion, and its smaller size neither establishes weaker play nor justifies changing the evaluation criteria. Seed procedures, evaluation loading, GPU games, further training, deployment and pushing remain unauthorized.
+> **Combination policy second cycle — Build B BUILT for review; screen ceiling PROPOSED at 3,660 s (addendum, 2026-11-02).** Build `3581ee83`; nothing run. `run cycle2_screen` and `run cycle2_strength` on the reviewed match path, behind two new closed gates (61 in all), bound to head `c7e96802…` and the fit's inner and outer records, against the original proven combination on Python 3.14.10; rules and both compute guards unchanged. Strength's ceiling stays PROVISIONAL until the new screen. Focused suites 516 pass; 9 of 9 focused mutants caught. Seed procedures, evaluation loading, GPU games, further training, deployment and pushing remain unauthorized.
 
 ## Historical proposal check — programme now closed
 
@@ -1899,6 +1900,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 153. **The second cycle's fit (2026-11-02).** One CPU run only: do **not** retry, extend, top up, resume or continue it, or change the ceiling (TERM 2,810 s, KILL 2,820 s, observation through 2,830 s), the recipe, the start or the corpus. Do **not** launch without rechecking live versions, panic and reboot state, admission records, both amendment pins and the teacher binding immediately before. Do **not** read a result into an interrupted run: it is VOID. Do **not** build Build B, play evaluation games, deploy or push, even on ELIGIBLE, without the user's approval of each.
 154. **The second cycle's student (2026-11-02).** The ONE fit is spent and its verdict is ELIGIBLE: do **not** refit, continue training, select another state, or change the recipe, corpus or start. Do **not** read ELIGIBLE or the lower held-out CE as stronger play: neither was tested. Do **not** compare the two cycles' CE values as if they shared a held-out set. Do **not** build Build B, play evaluation games, deploy or push without the user's approval of each.
 155. **Build B's acceptance (2026-11-02).** Do **not** change the evaluation criteria because of the smaller CE drop, or read that size as weaker play. Do **not** run seed procedures, load the head for evaluation, play GPU games, train further, deploy or push: all remain unauthorized.
+156. **Build B (2026-11-02).** Built only. Do **not** run its seed surveys, proofs, registrations or closings, commit a `plan.json`, open gates 60 or 61, launch either wrapper, or load the head for evaluation without the user's review and approval of each. Do **not** launch `cycle2_strength` at its PROVISIONAL ceiling: it must be re-derived from the new screen's completed wall time. Do **not** change either rule, compute guard, opponent or search setting.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -8817,3 +8819,27 @@ Run as the conditional sequence approved in the addendum above, each step once i
   - focused CPU tests and fake launches only: no new timing, profiling, full regression or broad mutation campaign.
 - **Housekeeping approved:** the clean, merged training worktree and its branch, removed once confirmed (done).
 - **Not authorized:** seed procedures, evaluation loading, GPU games, further training, deployment and pushing.
+
+#### Addendum — Build B built; returned for review (2026-11-02)
+
+Build `3581ee83`, on decision note `61b398e3`. Nothing ran: no seed mode, no model or head load, no gate opening, no game.
+
+- **The kinds:** `cycle2_screen` (32 pairs) and `cycle2_strength` (509 pairs) take the screen's and strength's path through `_screen`, each with a `role`, its own
+  evidence, plan and gate, and both amendments pinned. First-cycle kinds keep their Python 3.14.9 pin, paths and pairing ids.
+- **The candidate:** `CYCLE2_HEAD`: `head.npz` sha256 `c7e968027708d0b500517566ca8ffa26b03c7e436fea49f864f006ca2392b6c8`, with the fit's three digests. The binding requires the committed fit
+  record to be `cycle2_train`, COMPLETED, ELIGIBLE, on the pin, started from the first head (teacher and all three starting digests), and the committed bytes to match. Admission needs the fit's
+  record and `outer.json`; strength also needs the new screen's CONTINUE, its `outer.json`, and that screen to have played these bytes on calib020_0001.
+- **The opponent:** the original proven combination, loaded from calib020_0001 with no head installed. One addition: a reference carrying the first trained head's policy digest is a VOID.
+  Both sides stay averaged, at 200 simulations, halving from ply 20.
+- **The pin:** Python 3.14.10, MLX 0.30.3, NumPy 2.4.1 on both kinds, checked before any load; anything else is a VOID.
+- **The rules, unchanged:** the screen STOPs below a mean pair score of 0.40, otherwise CONTINUE. Strength PASSes only if mean − sqrt(ln 40 / 1018) > 0.5, evaluations ratio ≤ 1.05 and search-seconds ratio ≤ 1.10;
+  a bound above 0.5 with a failed guard is NOT_COMPUTE_MATCHED.
+- **Gates:** `COMBINATION_POLICY_CYCLE2_SCREEN_AUTHORIZED` and `COMBINATION_POLICY_CYCLE2_STRENGTH_AUTHORIZED`, closed, 61 in all.
+- **Wrappers and seed copies:** copies of the first cycle's, tested line for line. Survey and closing copies differ only in paths, plan kind, names, titles and verdict lines; none has run.
+- **The screen ceiling, PROPOSED (amendment §7):** 0.6002 s per combination search (the first strength comparison's 31,885 candidate searches, the most recent and largest completed timing) × 62.515 plies per game
+  (this corpus) × 64 games = 2,401.4 s; × 1.5 = 3,602.1 s; rounded up to the minute: **3,660 s (TERM 3,650 s, KILL 3,660 s, cleanup through 3,670 s)**. For long games: 280 plies at that comparison's slowest capped-game rate (1.0668 s per ply)
+  takes about 299 s; with the rest at this corpus's uncapped mean, TERM leaves room for 5 capped games of 64, against about 2 expected at the corpus's 3.2% rate. The first screen took 2,168 s. These timings come from Python 3.14.9, so this is an estimate.
+- **The strength ceiling, PROVISIONAL:** TERM stays the first comparison's 51,770 s and the header says so. The new screen's completed wall time × 1,018 / 64 × 1.5, rounded up to the minute, must replace it before any launch approval; a test fails
+  once that screen's `outer.json` exists until the wrapper matches.
+- **Tests:** focused CPU suites and fake launches of both real wrappers, serially: 516 pass, 1 deselected. Nine focused mutants of the new safeguards, all caught. One test's expectation was mine and wrong: a failed compute guard is NOT_COMPUTE_MATCHED, not NON_PASS. No new timing, profiling or full regression.
+- **Returned for review.** Not authorized: seed procedures, evaluation loading, GPU games, further training, deployment and pushing.
