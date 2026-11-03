@@ -219,6 +219,7 @@ knob) is not a new hypothesis.
 > **Combination policy second cycle — the screen's seeds PREPARED; awaiting the launch decision (addendum, 2026-11-02).** Survey CLEAN 55/55 (`1b2c5a8e`), pre-proof HOLDS (`3df7caca`), [202747300, 202747364) registered with its bound plan (`322aae07`), post-proof HOLDS (`884389bb`). 516 focused pass. Nothing run. Screen launch, strength seed work, evaluation loading, GPU games, further training, deployment and pushing remain unauthorized.
 > **Combination policy second cycle — seed preparation ACCEPTED; ONE screen run and its seed closing APPROVED (decision note, 2026-11-02, the user's review).** 32 colour-reversed pairs, head `c7e96802…` against the original proven combination, TERM 3,650 s, KILL 3,660 s, cleanup through 3,670 s. Strength seed work or launch, further training, benchmarks, deployment and pushing remain unauthorized.
 > **Combination policy second cycle — the 64-game screen: CONTINUE (Post-closure entry 50, 2026-11-02; no strength result).** The ONE run of `cycle2_screen` COMPLETED in 2,110 s: mean pair score 0.5547 over 32 pairs, above the 0.40 STOP line; it clears only the gross-regression screen. K1 RECONCILES, 15/15; [202747300, 202747364) exposed and retired whole. The strength ceiling derived from this screen: 50,400 s, proposed; the wrapper still holds the PROVISIONAL 51,780 s. Strength seed work or launch, further training, benchmarks, deployment and pushing remain unauthorized.
+> **Combination policy second cycle — the screen and its closing ACCEPTED; strength's PREPARATION approved (decision note, 2026-11-02, the user's review).** The user reproduced 0.5546875 (35–28–1) and both cost ratios; Hoeffding 95% ≈ [0.315, 0.795], so it shows neither stronger play nor a decline from the first head. The wrapper set to TERM 50,390 s / KILL 50,400 s / cleanup through 50,410 s; strength's seed survey, proofs, registration and plan approved. Strength launch, further training, benchmarks, deployment and pushing remain unauthorized.
 
 ## Historical proposal check — programme now closed
 
@@ -1909,6 +1910,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 158. **The new screen's block (2026-11-02).** Do **not** rerun the survey or proofs, select another block, or edit [202747300, 202747364). Do **not** open gate 60 or launch without the user's approval and a recheck of live versions, panic and reboot state, the plan, the proved registry, both amendments and the head binding immediately before. Do **not** start strength seed work, play GPU games, train further, deploy, push or run a benchmark under this preparation.
 159. **The new screen's run (2026-11-02).** One run only: do **not** retry, extend, top up or continue it, or change the ceiling (TERM 3,650 s, KILL 3,660 s, observation through 3,670 s), the head, the opponent or the search settings. Do **not** apply K2 unless K1 RECONCILES. Do **not** read CONTINUE as a strength result: it clears only the gross-regression screen. Do **not** score an incomplete run. Do **not** start strength seed work or launch, train further, run a benchmark, deploy or push without the user's approval of each.
 160. **The second cycle's screen (2026-11-02).** The ONE run is spent and its block is retired: do **not** rerun, extend or top up the screen, reuse its seeds, or pool its 64 games with any strength comparison. Do **not** read CONTINUE or its 0.5547 as a strength result. Do **not** launch strength at the wrapper's PROVISIONAL 51,780 s, or without a reviewed edit to the derived ceiling, its own seed preparation and the user's approval of each.
+161. **Strength's preparation (2026-11-02).** The wrapper's ceiling is set once to TERM 50,390 s / KILL 50,400 s / cleanup through 50,410 s, derived from the new screen; do **not** change it again. The survey and both proofs run once each, in order; do **not** repeat, adjust or re-select after a failed check: stop and report. Do **not** launch strength, train further, run a benchmark, deploy or push under this approval.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -8915,3 +8917,17 @@ Run as the sequence approved above, each step once in a clean linked worktree (`
 - **Did it match the prediction?** No prediction was stated for the screen. CONTINUE meets the frozen rule; the score cannot be read as strength (32 pairs).
 - **Conclusion / status:** the screen is CONTINUE and its block is closed. It awaits the user's review. **Not authorized:** strength seed work or launch, further training,
   benchmarks, deployment and pushing.
+
+#### Decision note — the screen accepted; strength's preparation approved (2026-11-02, the user's review)
+
+- **Accepted, no material issue:** the screen and its seed closing.
+- **The user's check:** independently reproduced the 0.5546875 score, 35 wins / 28 losses / 1 draw, and both cost ratios. Head and opponent bindings, settings, cleanup and closing
+  edits match the records. All 61 gates are closed.
+- **The user's reading:** this clears the gross-regression screen only. Its 95% Hoeffding interval is approximately **[0.315, 0.795]**; it establishes neither stronger play nor a
+  decline from the first head.
+- **Approved, in order:**
+  1. the wrapper set to **TERM 50,390 s, KILL 50,400 s, cleanup through 50,410 s** (the calculation reproduces), the provisional wording replaced, and the budget test requiring that derived value;
+  2. strength's survey once, then the pre-proof, the exact registration and bound plan, and the post-proof, proceeding only on CLEAN / HOLDS, with routine lifecycle updates and focused checks;
+  3. this decision and the results recorded here, then a return for launch review. Stop on any failed check without adjusting or repeating the selection.
+- **Housekeeping approved:** the clean, merged screen worktree and its branch, removed once confirmed (done).
+- **Not authorized:** strength launch, further training, benchmarks, deployment and pushing.
