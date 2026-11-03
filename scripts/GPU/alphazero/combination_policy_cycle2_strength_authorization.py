@@ -5,4 +5,4 @@ saved on one copy and plays the 509-pair strength comparison (1,018 games) again
 takes its own reviewed door. Opened for ONE approved run and restored on every exit. Created closed. This file may hold ONLY this
 declaration.
 """
-COMBINATION_POLICY_CYCLE2_STRENGTH_AUTHORIZED = True
+COMBINATION_POLICY_CYCLE2_STRENGTH_AUTHORIZED = False
