@@ -1,0 +1,1 @@
+{"status": "COMPLETED", "void": null, "run": "cycle2_screen", "verdict": "CONTINUE", "stop": null, "throughput": null, "screen": {"pairs": 32, "mean_pair_score": 0.5546875, "stop_below": 0.4, "verdict": "CONTINUE", "note": "gross-regression check only; not a strength result"}, "strength": null}

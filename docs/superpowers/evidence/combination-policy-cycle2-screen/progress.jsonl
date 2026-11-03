@@ -1,0 +1,197 @@
+{"event": "start", "t": 0.007, "setting": {"MLX_ENABLE_TF32": "0"}}
+{"event": "bg_check", "t": 0.088, "when": "before load", "ok": true, "n_procs": 867, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "loaded", "t": 1.186, "seconds": 0.035}
+{"event": "game_start", "t": 1.186, "game": 0, "slot": 0, "red": "candidate"}
+{"event": "game_end", "t": 31.893, "game": 0, "n_moves": 55, "reason": "win"}
+{"event": "bg_check", "t": 31.966, "when": "after game 0", "ok": true, "n_procs": 873, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 31.967, "game": 1, "slot": 1, "red": "reference"}
+{"event": "game_end", "t": 62.317, "game": 1, "n_moves": 54, "reason": "win"}
+{"event": "bg_check", "t": 62.376, "when": "after game 1", "ok": true, "n_procs": 867, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 62.377, "game": 2, "slot": 2, "red": "candidate"}
+{"event": "game_end", "t": 85.354, "game": 2, "n_moves": 41, "reason": "win"}
+{"event": "bg_check", "t": 85.442, "when": "after game 2", "ok": true, "n_procs": 867, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 85.443, "game": 3, "slot": 3, "red": "reference"}
+{"event": "game_end", "t": 112.074, "game": 3, "n_moves": 48, "reason": "win"}
+{"event": "bg_check", "t": 112.168, "when": "after game 3", "ok": true, "n_procs": 867, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 112.168, "game": 4, "slot": 4, "red": "candidate"}
+{"event": "game_end", "t": 144.29, "game": 4, "n_moves": 57, "reason": "win"}
+{"event": "bg_check", "t": 144.366, "when": "after game 4", "ok": true, "n_procs": 867, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 144.367, "game": 5, "slot": 5, "red": "reference"}
+{"event": "game_end", "t": 168.004, "game": 5, "n_moves": 43, "reason": "win"}
+{"event": "bg_check", "t": 168.085, "when": "after game 5", "ok": true, "n_procs": 867, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 168.086, "game": 6, "slot": 6, "red": "candidate"}
+{"event": "game_end", "t": 196.244, "game": 6, "n_moves": 50, "reason": "win"}
+{"event": "bg_check", "t": 196.291, "when": "after game 6", "ok": true, "n_procs": 867, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 196.291, "game": 7, "slot": 7, "red": "reference"}
+{"event": "game_end", "t": 223.697, "game": 7, "n_moves": 49, "reason": "win"}
+{"event": "bg_check", "t": 223.75, "when": "after game 7", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 223.751, "game": 8, "slot": 8, "red": "candidate"}
+{"event": "game_end", "t": 246.951, "game": 8, "n_moves": 42, "reason": "win"}
+{"event": "bg_check", "t": 247.039, "when": "after game 8", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 247.039, "game": 9, "slot": 9, "red": "reference"}
+{"event": "game_end", "t": 269.652, "game": 9, "n_moves": 41, "reason": "win"}
+{"event": "bg_check", "t": 269.725, "when": "after game 9", "ok": true, "n_procs": 867, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 269.725, "game": 10, "slot": 10, "red": "candidate"}
+{"event": "game_end", "t": 301.26, "game": 10, "n_moves": 56, "reason": "win"}
+{"event": "bg_check", "t": 301.322, "when": "after game 10", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 301.322, "game": 11, "slot": 11, "red": "reference"}
+{"event": "game_end", "t": 333.272, "game": 11, "n_moves": 57, "reason": "win"}
+{"event": "bg_check", "t": 333.351, "when": "after game 11", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 333.352, "game": 12, "slot": 12, "red": "candidate"}
+{"event": "game_end", "t": 357.82, "game": 12, "n_moves": 44, "reason": "win"}
+{"event": "bg_check", "t": 357.91, "when": "after game 12", "ok": true, "n_procs": 871, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 357.91, "game": 13, "slot": 13, "red": "reference"}
+{"event": "game_end", "t": 410.552, "game": 13, "n_moves": 93, "reason": "win"}
+{"event": "bg_check", "t": 410.636, "when": "after game 13", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 410.636, "game": 14, "slot": 14, "red": "candidate"}
+{"event": "game_end", "t": 445.482, "game": 14, "n_moves": 63, "reason": "win"}
+{"event": "bg_check", "t": 445.579, "when": "after game 14", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 445.579, "game": 15, "slot": 15, "red": "reference"}
+{"event": "game_end", "t": 466.559, "game": 15, "n_moves": 38, "reason": "win"}
+{"event": "bg_check", "t": 466.632, "when": "after game 15", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 466.633, "game": 16, "slot": 16, "red": "candidate"}
+{"event": "game_end", "t": 505.649, "game": 16, "n_moves": 68, "reason": "win"}
+{"event": "bg_check", "t": 505.701, "when": "after game 16", "ok": true, "n_procs": 869, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 505.701, "game": 17, "slot": 17, "red": "reference"}
+{"event": "game_end", "t": 539.833, "game": 17, "n_moves": 61, "reason": "win"}
+{"event": "bg_check", "t": 539.922, "when": "after game 17", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 539.923, "game": 18, "slot": 18, "red": "candidate"}
+{"event": "game_end", "t": 577.616, "game": 18, "n_moves": 67, "reason": "win"}
+{"event": "bg_check", "t": 577.723, "when": "after game 18", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 577.723, "game": 19, "slot": 19, "red": "reference"}
+{"event": "game_end", "t": 613.964, "game": 19, "n_moves": 64, "reason": "win"}
+{"event": "bg_check", "t": 614.055, "when": "after game 19", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 614.055, "game": 20, "slot": 20, "red": "candidate"}
+{"event": "game_end", "t": 639.84, "game": 20, "n_moves": 46, "reason": "win"}
+{"event": "bg_check", "t": 639.937, "when": "after game 20", "ok": true, "n_procs": 870, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 639.938, "game": 21, "slot": 21, "red": "reference"}
+{"event": "game_end", "t": 676.458, "game": 21, "n_moves": 65, "reason": "win"}
+{"event": "bg_check", "t": 676.557, "when": "after game 21", "ok": true, "n_procs": 869, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 676.557, "game": 22, "slot": 22, "red": "candidate"}
+{"event": "game_end", "t": 696.888, "game": 22, "n_moves": 37, "reason": "win"}
+{"event": "bg_check", "t": 696.955, "when": "after game 22", "ok": true, "n_procs": 869, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 696.956, "game": 23, "slot": 23, "red": "reference"}
+{"event": "game_end", "t": 862.882, "game": 23, "n_moves": 280, "reason": "state_cap"}
+{"event": "bg_check", "t": 862.957, "when": "after game 23", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 862.958, "game": 24, "slot": 24, "red": "candidate"}
+{"event": "game_end", "t": 893.32, "game": 24, "n_moves": 54, "reason": "win"}
+{"event": "bg_check", "t": 893.387, "when": "after game 24", "ok": true, "n_procs": 867, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 893.387, "game": 25, "slot": 25, "red": "reference"}
+{"event": "game_end", "t": 921.875, "game": 25, "n_moves": 51, "reason": "win"}
+{"event": "bg_check", "t": 921.928, "when": "after game 25", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 921.928, "game": 26, "slot": 26, "red": "candidate"}
+{"event": "game_end", "t": 954.977, "game": 26, "n_moves": 59, "reason": "win"}
+{"event": "bg_check", "t": 955.058, "when": "after game 26", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 955.058, "game": 27, "slot": 27, "red": "reference"}
+{"event": "game_end", "t": 981.813, "game": 27, "n_moves": 48, "reason": "win"}
+{"event": "bg_check", "t": 981.907, "when": "after game 27", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 981.908, "game": 28, "slot": 28, "red": "candidate"}
+{"event": "game_end", "t": 1025.73, "game": 28, "n_moves": 77, "reason": "win"}
+{"event": "bg_check", "t": 1025.812, "when": "after game 28", "ok": true, "n_procs": 867, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1025.812, "game": 29, "slot": 29, "red": "reference"}
+{"event": "game_end", "t": 1064.938, "game": 29, "n_moves": 69, "reason": "win"}
+{"event": "bg_check", "t": 1065.043, "when": "after game 29", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1065.044, "game": 30, "slot": 30, "red": "candidate"}
+{"event": "game_end", "t": 1094.497, "game": 30, "n_moves": 52, "reason": "win"}
+{"event": "bg_check", "t": 1094.567, "when": "after game 30", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1094.567, "game": 31, "slot": 31, "red": "reference"}
+{"event": "game_end", "t": 1122.575, "game": 31, "n_moves": 50, "reason": "win"}
+{"event": "bg_check", "t": 1122.628, "when": "after game 31", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1122.628, "game": 32, "slot": 32, "red": "candidate"}
+{"event": "game_end", "t": 1144.096, "game": 32, "n_moves": 39, "reason": "win"}
+{"event": "bg_check", "t": 1144.177, "when": "after game 32", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1144.177, "game": 33, "slot": 33, "red": "reference"}
+{"event": "game_end", "t": 1179.608, "game": 33, "n_moves": 63, "reason": "win"}
+{"event": "bg_check", "t": 1179.712, "when": "after game 33", "ok": true, "n_procs": 869, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1179.712, "game": 34, "slot": 34, "red": "candidate"}
+{"event": "game_end", "t": 1210.422, "game": 34, "n_moves": 55, "reason": "win"}
+{"event": "bg_check", "t": 1210.498, "when": "after game 34", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1210.498, "game": 35, "slot": 35, "red": "reference"}
+{"event": "game_end", "t": 1250.153, "game": 35, "n_moves": 70, "reason": "win"}
+{"event": "bg_check", "t": 1250.208, "when": "after game 35", "ok": true, "n_procs": 869, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1250.208, "game": 36, "slot": 36, "red": "candidate"}
+{"event": "game_end", "t": 1277.229, "game": 36, "n_moves": 49, "reason": "win"}
+{"event": "bg_check", "t": 1277.283, "when": "after game 36", "ok": true, "n_procs": 869, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1277.283, "game": 37, "slot": 37, "red": "reference"}
+{"event": "game_end", "t": 1321.453, "game": 37, "n_moves": 78, "reason": "win"}
+{"event": "bg_check", "t": 1321.539, "when": "after game 37", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1321.54, "game": 38, "slot": 38, "red": "candidate"}
+{"event": "game_end", "t": 1354.667, "game": 38, "n_moves": 59, "reason": "win"}
+{"event": "bg_check", "t": 1354.738, "when": "after game 38", "ok": true, "n_procs": 869, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1354.738, "game": 39, "slot": 39, "red": "reference"}
+{"event": "game_end", "t": 1375.762, "game": 39, "n_moves": 38, "reason": "win"}
+{"event": "bg_check", "t": 1375.839, "when": "after game 39", "ok": true, "n_procs": 869, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1375.839, "game": 40, "slot": 40, "red": "candidate"}
+{"event": "game_end", "t": 1397.644, "game": 40, "n_moves": 39, "reason": "win"}
+{"event": "bg_check", "t": 1397.73, "when": "after game 40", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1397.73, "game": 41, "slot": 41, "red": "reference"}
+{"event": "game_end", "t": 1440.968, "game": 41, "n_moves": 76, "reason": "win"}
+{"event": "bg_check", "t": 1441.045, "when": "after game 41", "ok": true, "n_procs": 869, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1441.046, "game": 42, "slot": 42, "red": "candidate"}
+{"event": "game_end", "t": 1485.179, "game": 42, "n_moves": 78, "reason": "win"}
+{"event": "bg_check", "t": 1485.262, "when": "after game 42", "ok": true, "n_procs": 869, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1485.262, "game": 43, "slot": 43, "red": "reference"}
+{"event": "game_end", "t": 1529.142, "game": 43, "n_moves": 78, "reason": "win"}
+{"event": "bg_check", "t": 1529.232, "when": "after game 43", "ok": true, "n_procs": 869, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1529.232, "game": 44, "slot": 44, "red": "candidate"}
+{"event": "game_end", "t": 1548.403, "game": 44, "n_moves": 35, "reason": "win"}
+{"event": "bg_check", "t": 1548.478, "when": "after game 44", "ok": true, "n_procs": 869, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1548.478, "game": 45, "slot": 45, "red": "reference"}
+{"event": "game_end", "t": 1579.967, "game": 45, "n_moves": 56, "reason": "win"}
+{"event": "bg_check", "t": 1580.046, "when": "after game 45", "ok": true, "n_procs": 869, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1580.046, "game": 46, "slot": 46, "red": "candidate"}
+{"event": "game_end", "t": 1624.51, "game": 46, "n_moves": 80, "reason": "win"}
+{"event": "bg_check", "t": 1624.597, "when": "after game 46", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1624.597, "game": 47, "slot": 47, "red": "reference"}
+{"event": "game_end", "t": 1655.977, "game": 47, "n_moves": 56, "reason": "win"}
+{"event": "bg_check", "t": 1656.052, "when": "after game 47", "ok": true, "n_procs": 869, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1656.052, "game": 48, "slot": 48, "red": "candidate"}
+{"event": "game_end", "t": 1682.342, "game": 48, "n_moves": 47, "reason": "win"}
+{"event": "bg_check", "t": 1682.437, "when": "after game 48", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1682.437, "game": 49, "slot": 49, "red": "reference"}
+{"event": "game_end", "t": 1720.23, "game": 49, "n_moves": 67, "reason": "win"}
+{"event": "bg_check", "t": 1720.28, "when": "after game 49", "ok": true, "n_procs": 869, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1720.28, "game": 50, "slot": 50, "red": "candidate"}
+{"event": "game_end", "t": 1744.224, "game": 50, "n_moves": 43, "reason": "win"}
+{"event": "bg_check", "t": 1744.317, "when": "after game 50", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1744.317, "game": 51, "slot": 51, "red": "reference"}
+{"event": "game_end", "t": 1773.963, "game": 51, "n_moves": 53, "reason": "win"}
+{"event": "bg_check", "t": 1774.014, "when": "after game 51", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1774.014, "game": 52, "slot": 52, "red": "candidate"}
+{"event": "game_end", "t": 1803.769, "game": 52, "n_moves": 53, "reason": "win"}
+{"event": "bg_check", "t": 1803.83, "when": "after game 52", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1803.83, "game": 53, "slot": 53, "red": "reference"}
+{"event": "game_end", "t": 1836.24, "game": 53, "n_moves": 58, "reason": "win"}
+{"event": "bg_check", "t": 1836.308, "when": "after game 53", "ok": true, "n_procs": 869, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1836.308, "game": 54, "slot": 54, "red": "candidate"}
+{"event": "game_end", "t": 1858.969, "game": 54, "n_moves": 41, "reason": "win"}
+{"event": "bg_check", "t": 1859.055, "when": "after game 54", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1859.055, "game": 55, "slot": 55, "red": "reference"}
+{"event": "game_end", "t": 1877.274, "game": 55, "n_moves": 34, "reason": "win"}
+{"event": "bg_check", "t": 1877.345, "when": "after game 55", "ok": true, "n_procs": 869, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1877.345, "game": 56, "slot": 56, "red": "candidate"}
+{"event": "game_end", "t": 1898.009, "game": 56, "n_moves": 38, "reason": "win"}
+{"event": "bg_check", "t": 1898.088, "when": "after game 56", "ok": true, "n_procs": 869, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1898.088, "game": 57, "slot": 57, "red": "reference"}
+{"event": "game_end", "t": 1925.489, "game": 57, "n_moves": 49, "reason": "win"}
+{"event": "bg_check", "t": 1925.543, "when": "after game 57", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1925.543, "game": 58, "slot": 58, "red": "candidate"}
+{"event": "game_end", "t": 1949.954, "game": 58, "n_moves": 44, "reason": "win"}
+{"event": "bg_check", "t": 1950.044, "when": "after game 58", "ok": true, "n_procs": 869, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1950.044, "game": 59, "slot": 59, "red": "reference"}
+{"event": "game_end", "t": 1978.029, "game": 59, "n_moves": 50, "reason": "win"}
+{"event": "bg_check", "t": 1978.082, "when": "after game 59", "ok": true, "n_procs": 867, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 1978.082, "game": 60, "slot": 60, "red": "candidate"}
+{"event": "game_end", "t": 2028.013, "game": 60, "n_moves": 88, "reason": "win"}
+{"event": "bg_check", "t": 2028.077, "when": "after game 60", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 2028.077, "game": 61, "slot": 61, "red": "reference"}
+{"event": "game_end", "t": 2058.354, "game": 61, "n_moves": 54, "reason": "win"}
+{"event": "bg_check", "t": 2058.416, "when": "after game 61", "ok": true, "n_procs": 867, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 2058.417, "game": 62, "slot": 62, "red": "candidate"}
+{"event": "game_end", "t": 2081.732, "game": 62, "n_moves": 42, "reason": "win"}
+{"event": "bg_check", "t": 2081.815, "when": "after game 62", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "game_start", "t": 2081.816, "game": 63, "slot": 63, "red": "reference"}
+{"event": "game_end", "t": 2110.318, "game": 63, "n_moves": 51, "reason": "win"}
+{"event": "bg_check", "t": 2110.376, "when": "after game 63", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "bg_check", "t": 2110.413, "when": "before the verdict", "ok": true, "n_procs": 868, "hits": [], "exempt": ["808 boinc_project /opt/podman/bin/gvproxy", "823 boinc_project /opt/podman/bin/krunkit"], "error": null}
+{"event": "end", "t": 2110.413, "status": "COMPLETED", "verdict": "CONTINUE"}
