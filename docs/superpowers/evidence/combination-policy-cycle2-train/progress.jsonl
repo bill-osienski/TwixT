@@ -1,0 +1,37 @@
+{"event": "start", "t": 0.007, "setting": {"MLX_ENABLE_TF32": "0"}}
+{"event": "phase", "t": 0.08, "name": "corpus"}
+{"event": "phase", "t": 12.794, "name": "load"}
+{"event": "phase", "t": 29.12, "name": "prefit"}
+{"event": "phase", "t": 363.255, "name": "fit"}
+{"event": "progress", "t": 363.771, "step": 0, "loss": 3.8115673065185547, "seconds": 0.5}
+{"event": "progress", "t": 414.834, "step": 100, "loss": 3.736077070236206, "seconds": 51.6}
+{"event": "progress", "t": 465.862, "step": 200, "loss": 4.0815253257751465, "seconds": 102.6}
+{"event": "progress", "t": 517.152, "step": 300, "loss": 3.909290313720703, "seconds": 153.9}
+{"event": "progress", "t": 568.803, "step": 400, "loss": 3.7653541564941406, "seconds": 205.5}
+{"event": "progress", "t": 620.269, "step": 500, "loss": 3.646073579788208, "seconds": 257.0}
+{"event": "progress", "t": 671.836, "step": 600, "loss": 3.9178287982940674, "seconds": 308.6}
+{"event": "progress", "t": 723.551, "step": 700, "loss": 3.850444793701172, "seconds": 360.3}
+{"event": "progress", "t": 775.125, "step": 800, "loss": 3.6103484630584717, "seconds": 411.9}
+{"event": "progress", "t": 826.65, "step": 900, "loss": 3.956871509552002, "seconds": 463.4}
+{"event": "progress", "t": 878.026, "step": 1000, "loss": 3.677140712738037, "seconds": 514.8}
+{"event": "progress", "t": 929.398, "step": 1100, "loss": 3.6817355155944824, "seconds": 566.1}
+{"event": "progress", "t": 980.833, "step": 1200, "loss": 3.7610340118408203, "seconds": 617.6}
+{"event": "progress", "t": 1032.242, "step": 1300, "loss": 3.58626651763916, "seconds": 669.0}
+{"event": "progress", "t": 1083.696, "step": 1400, "loss": 3.77927303314209, "seconds": 720.4}
+{"event": "progress", "t": 1135.025, "step": 1500, "loss": 3.5700926780700684, "seconds": 771.8}
+{"event": "progress", "t": 1186.039, "step": 1600, "loss": 4.0348286628723145, "seconds": 822.8}
+{"event": "progress", "t": 1236.983, "step": 1700, "loss": 3.6509931087493896, "seconds": 873.7}
+{"event": "progress", "t": 1287.992, "step": 1800, "loss": 3.551839590072632, "seconds": 924.7}
+{"event": "progress", "t": 1338.957, "step": 1900, "loss": 3.991271495819092, "seconds": 975.7}
+{"event": "progress", "t": 1389.942, "step": 2000, "loss": 4.018451690673828, "seconds": 1026.7}
+{"event": "progress", "t": 1441.038, "step": 2100, "loss": 4.00106954574585, "seconds": 1077.8}
+{"event": "progress", "t": 1492.341, "step": 2200, "loss": 3.588897228240967, "seconds": 1129.1}
+{"event": "progress", "t": 1543.543, "step": 2300, "loss": 4.179004192352295, "seconds": 1180.3}
+{"event": "progress", "t": 1594.766, "step": 2400, "loss": 3.9590046405792236, "seconds": 1231.5}
+{"event": "progress", "t": 1645.955, "step": 2500, "loss": 3.586566686630249, "seconds": 1282.7}
+{"event": "progress", "t": 1697.163, "step": 2600, "loss": 3.4361777305603027, "seconds": 1333.9}
+{"event": "progress", "t": 1748.451, "step": 2700, "loss": 3.6778104305267334, "seconds": 1385.2}
+{"event": "progress", "t": 1799.818, "step": 2800, "loss": 3.8503730297088623, "seconds": 1436.6}
+{"event": "progress", "t": 1851.093, "step": 2900, "loss": 4.078332901000977, "seconds": 1487.8}
+{"event": "phase", "t": 1901.819, "name": "check"}
+{"event": "end", "t": 1949.816, "status": "COMPLETED", "verdict": "ELIGIBLE"}
