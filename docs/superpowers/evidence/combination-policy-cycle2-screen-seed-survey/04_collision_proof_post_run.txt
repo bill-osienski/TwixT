@@ -1,0 +1,151 @@
+COMBINATION POLICY PILOT -- CYCLE-2 SCREEN GAME-SEED COLLISION PROOF, mode POST
+================================================================================================
+HEAD 322aae0751b04771d30d58889899adaa21ecb8ca; working tree clean
+this tree /Users/bill/twixt-worktrees/cp-cycle2-screen-seeds
+main checkout /Users/bill/projects/TwixT_Game (scanned too; HEAD ca6f4375b5ac8cedb250f467a3edbe93bdb59cee; 2 uncommitted entries, not required clean)
+method (survey) docs/superpowers/evidence/tactical-candidate-seed-survey/01_seed_survey.py sha256 6f6e55dbd5da672848c757753d4e61a3e9d110d96569b7ef468f902cf46f8860 (pinned)
+method (proof) docs/superpowers/evidence/tactical-candidate-seed-registration/01_collision_proof.py sha256 dd192011938ca5c6674092b243681174e669e1e96b22b8d13da2a264b340764d (pinned)
+rule and scanner scripts/GPU/alphazero/seed_band_2027.py sha256 bda0ba6ef34a1efe998b64149b15a27d815cb78e63fa7e1db0a35d81fd94bb45 (ALIGN 100; the rule's band [202700000, 202800000]; literals scanned in [202600000, 202700000] and [202700000, 202800000])
+registry scripts/GPU/alphazero/e4_screen_reference.py sha256 69e2fa82bfd876b2a982fe3ffe088ebb33a952da4963f20c6a930f5139403c8d
+masks (imported): ['0x3c3c3c', '0x5a5a5a', '0xa5a5a5', '0xc3c3c3']
+registries: ACCOUNTED 54, EXPOSED 51, RETIRED 49, TEST_ONLY 1
+named spent blocks: D1 paper 1, H1 2, H2 3, H3 6, H4 5, H5 4; H3 generation ranges 4; CONSUMED_SEEDS 1
+EXEMPT PATHS (exact; plus registry tuple elements by parsing): 4 + the plan
+    docs/superpowers/evidence/combination-policy-cycle2-screen-seed-survey/01_seed_survey.py
+    docs/superpowers/evidence/combination-policy-cycle2-screen-seed-survey/02_seed_survey_run.txt
+    docs/superpowers/evidence/combination-policy-cycle2-screen-seed-survey/03_collision_proof_pre_run.txt
+    docs/superpowers/evidence/combination-policy-cycle2-screen-seed-survey/04_collision_proof_post_run.txt
+    docs/superpowers/evidence/combination-policy-cycle2-screen-run/plan.json  (only if every band literal in it is a slot of the block)
+
+survey record docs/superpowers/evidence/combination-policy-cycle2-screen-seed-survey/02_seed_survey_run.txt sha256 48d0216f292fcd8c69d4100c416e443c3d24c8dc5f1a903600c858fcc38180fa (read at ca6f4375b5ac8cedb250f467a3edbe93bdb59cee)
+THE BLOCK, read from the record: [202747300, 202747364) -- BASE 202747300
+EXPECTED STATE (post): HOLDS
+
+SCOPE (fail-closed enumeration) under ['scripts', 'tests', 'docs/superpowers']: this tree 8349 regular files, 0 symbolic links (not followed); main checkout 51069 regular files, 0 symbolic links; band literal values counted: 11750
+THE BLOCK (202747300, 202747364)  n=64  direct=NONE  streams=0  injective=True  gap=94 (floor 64)  CLEAN=True
+SLOTS (combination_policy_pilot run cycle2_screen: game g plays seed BASE + g, in order, in one process):
+    SLOT 0 seed 202747300
+    SLOT 1 seed 202747301
+    SLOT 2 seed 202747302
+    SLOT 3 seed 202747303
+    SLOT 4 seed 202747304
+    SLOT 5 seed 202747305
+    SLOT 6 seed 202747306
+    SLOT 7 seed 202747307
+    SLOT 8 seed 202747308
+    SLOT 9 seed 202747309
+    SLOT 10 seed 202747310
+    SLOT 11 seed 202747311
+    SLOT 12 seed 202747312
+    SLOT 13 seed 202747313
+    SLOT 14 seed 202747314
+    SLOT 15 seed 202747315
+    SLOT 16 seed 202747316
+    SLOT 17 seed 202747317
+    SLOT 18 seed 202747318
+    SLOT 19 seed 202747319
+    SLOT 20 seed 202747320
+    SLOT 21 seed 202747321
+    SLOT 22 seed 202747322
+    SLOT 23 seed 202747323
+    SLOT 24 seed 202747324
+    SLOT 25 seed 202747325
+    SLOT 26 seed 202747326
+    SLOT 27 seed 202747327
+    SLOT 28 seed 202747328
+    SLOT 29 seed 202747329
+    SLOT 30 seed 202747330
+    SLOT 31 seed 202747331
+    SLOT 32 seed 202747332
+    SLOT 33 seed 202747333
+    SLOT 34 seed 202747334
+    SLOT 35 seed 202747335
+    SLOT 36 seed 202747336
+    SLOT 37 seed 202747337
+    SLOT 38 seed 202747338
+    SLOT 39 seed 202747339
+    SLOT 40 seed 202747340
+    SLOT 41 seed 202747341
+    SLOT 42 seed 202747342
+    SLOT 43 seed 202747343
+    SLOT 44 seed 202747344
+    SLOT 45 seed 202747345
+    SLOT 46 seed 202747346
+    SLOT 47 seed 202747347
+    SLOT 48 seed 202747348
+    SLOT 49 seed 202747349
+    SLOT 50 seed 202747350
+    SLOT 51 seed 202747351
+    SLOT 52 seed 202747352
+    SLOT 53 seed 202747353
+    SLOT 54 seed 202747354
+    SLOT 55 seed 202747355
+    SLOT 56 seed 202747356
+    SLOT 57 seed 202747357
+    SLOT 58 seed 202747358
+    SLOT 59 seed 202747359
+    SLOT 60 seed 202747360
+    SLOT 61 seed 202747361
+    SLOT 62 seed 202747362
+    SLOT 63 seed 202747363
+
+CONTROLS
+------------------------------------------------------------------------------------------------
+  PASS   REJECTED: D1 paper block (202615000, 202615221)
+  PASS   REJECTED: H1 block (202616000, 202616224)
+  PASS   REJECTED: H2 block (202618000, 202618736)
+  PASS   REJECTED: H3 block (202624000, 202624040)
+  PASS   REJECTED: H4 block (202632000, 202632032)
+  PASS   REJECTED: H5 block (202650000, 202650148)
+  PASS   REJECTED: the TEST_ONLY band
+  PASS   REJECTED: inside the live H3 uniform generation range
+  PASS   REJECTED: overlaps the block by one seed
+  PASS   REJECTED: starts where the block ends -- inside the floor
+  PASS   REJECTED: one seed inside the floor
+  PASS   REJECTED: the most recently EXPOSED block (whichever block was closed most recently at survey time)
+  PASS   REJECTED: a block at the H4-4b MUTATION literal 202642000
+  PASS   an UNDERSCORE-GROUPED candidate seed (.py)  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=94; dropping undecodable bytes instead would see it]
+  PASS   a PLAIN candidate seed (.py)  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=94; dropping undecodable bytes instead would see it]
+  PASS   an UNDERSCORE-GROUPED exclusive end (.py)  [without it CLEAN=True; with it direct=NONE gap=0; dropping undecodable bytes instead would see it]
+  PASS   a candidate seed in a .log -- a suffix H5's filter skipped  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=94; dropping undecodable bytes instead would see it]
+  PASS   a candidate seed inside a .gz  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=94; dropping undecodable bytes instead would see it]
+  PASS   a candidate seed after an undecodable byte after a digit  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=94; dropping undecodable bytes instead would MISS it]
+  PASS   an UNREADABLE file stops the survey  [SurveyStop]
+  PASS   a CORRUPT .gz stops the survey  [SurveyStop]
+  PASS   an own record (exact path) is exempt  [None]
+  PASS   a sibling path that is NOT listed is counted  [[('docs/superpowers/evidence/combination-policy-cycle2-screen-seed-survey/04_not_listed.txt', 1)]]
+  PASS   the plan holding only block seeds is exempt  [None]
+  PASS   registry tuple elements are exempt by parsing (a non-ASCII char BEFORE them)  [[202747311]]
+  PASS   the same value outside a registry tuple is counted  [[('scripts/GPU/alphazero/e4_screen_reference.py', 1)]]
+  PASS   a plan with a seed OUTSIDE the block is not exempt  [[202747300, 202747369]]
+  PASS   an UNREADABLE directory  [STOPPED: a directory could not be read]
+  PASS   an UNREADABLE nested directory  [STOPPED: a directory could not be read]
+  PASS   a missing root  [STOPPED: <tmp>/tests: the root is not a directory]
+  PASS   a root that is a file  [STOPPED: <tmp>/scripts: the root is not a directory]
+  PASS   a FIFO inside a root  [STOPPED: <tmp>/scripts/pipe: neither a regular file, a directory nor a symbolic link]
+  PASS   a sound tree with a symbolic link  [enumerated: 3 files, 1 links]
+  PASS   pre: the survey's registry, no plan  [the expected state]
+  PASS   pre: the registry changed  [the registry is not the one the survey read]
+  PASS   pre: the block already registered  [the registry is not the one the survey read; a registry already holds seeds of the block: [('ACCOUNTED_SEED_INTERVALS', (202747300, 202747364))]]
+  PASS   pre: a plan already exists  [a pilot plan already exists]
+  PASS   post: exactly the block appended last, the plan  [the expected state]
+  PASS   post: the block appended FIRST  [ACCOUNTED is not the survey's state with exactly the block appended last]
+  PASS   post: a wider tuple  [ACCOUNTED is not the survey's state with exactly the block appended last]
+  PASS   post: EXPOSED changed too  [EXPOSED_SEED_INTERVALS changed]
+  PASS   post: no plan  [the cycle-2 screen plan is absent or not committed]
+  PASS   post: a plan with another BASE  [the cycle-2 screen plan is not build_plan of the surveyed block]
+  PASS   post: a plan of 65 slots  [the cycle-2 screen plan is not build_plan of the surveyed block]
+  PASS   post: a plan bound to another survey record  [the cycle-2 screen plan is not build_plan of the surveyed block]
+  PASS   a PLAIN 2026-band literal is seen  [{202654321: 1}]
+  PASS   an UNDERSCORE-GROUPED 2026-band literal is seen  [{202654321: 1}]
+  PASS   a PLAIN 2027-band literal is seen  [{202747307: 1}]
+  PASS   an UNDERSCORE-GROUPED 2027-band literal is seen  [{202747307: 1}]
+  PASS   neither band's neighbours are counted (the 2025 and 2028 prefixes, ten digits, a decimal)  [{}]
+  PASS   the install took effect: the pinned plain pattern alone misses a 2027-band literal
+  PASS   the rule on an EMPTY band: the least multiple of 100 at least N above the band's edge
+  PASS   the rule lies above the band's highest literal as well as its intervals  [(202705000, 202705100, (202705100, 202705164))]
+  PASS   REJECTED: a cross-band derived-stream collision (a synthetic mask onto a planted 2026-band literal)  [streams without the plant 0, with it 2]
+  PASS   with the real masks, no 2026-band value shares a derived stream with a 2027-band value  [masks ['0x3c3c3c', '0x5a5a5a', '0xa5a5a5', '0xc3c3c3']]
+
+controls passed: 55/55
+PROOF VERDICT (post): THE COMBINATION-POLICY CYCLE-2 SCREEN BLOCK IS CLEAN AND THE STATE IS AS EXPECTED
