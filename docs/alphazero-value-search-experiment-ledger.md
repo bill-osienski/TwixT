@@ -222,6 +222,7 @@ knob) is not a new hypothesis.
 > **Combination policy second cycle — the screen and its closing ACCEPTED; strength's PREPARATION approved (decision note, 2026-11-02, the user's review).** The user reproduced 0.5546875 (35–28–1) and both cost ratios; Hoeffding 95% ≈ [0.315, 0.795], so it shows neither stronger play nor a decline from the first head. The wrapper set to TERM 50,390 s / KILL 50,400 s / cleanup through 50,410 s; strength's seed survey, proofs, registration and plan approved. Strength launch, further training, benchmarks, deployment and pushing remain unauthorized.
 > **Combination policy second cycle — strength PREPARED; awaiting the launch decision (addendum, 2026-11-02).** Ceiling set: TERM 50,390 s / KILL 50,400 s / cleanup through 50,410 s (`4711d457`). Survey CLEAN 55/55 (`056feaf0`), pre-proof HOLDS (`7ebb4533`), [202748400, 202749418) registered with its bound plan (`8ff1d724`), post-proof HOLDS (`f33eeff9`). 517 focused pass. Nothing run. Strength launch, further training, benchmarks, deployment and pushing remain unauthorized.
 > **Combination policy second cycle — strength preparation ACCEPTED; ONE strength run and its seed closing APPROVED (decision note, 2026-11-02, the user's review).** 509 pairs / 1,018 games, head `c7e96802…` against the original proven combination, search, scoring and compute guards unchanged; TERM 50,390 s, KILL 50,400 s, cleanup through 50,410 s. No interim outcome inspection or pooling with screen games. Further training, benchmarks, deployment and pushing remain unauthorized.
+> **Combination policy second cycle — the 509-pair strength comparison: NON_PASS; the experiment ends (Post-closure entry 51, 2026-11-03).** The ONE run of `cycle2_strength` COMPLETED in 35,978 s: mean pair score 0.5201 over 509 pairs, frozen Hoeffding lower bound 0.4599 ≤ 0.5; compute matched (evaluations ratio 1.0023, search-seconds ratio 1.0115). K1 RECONCILES, 15/15; [202748400, 202749418) exposed and retired whole. The prediction's direction held at the point estimate but was not shown. Under amendment §11, a completed NON_PASS ends this experiment. Further training, benchmarks, deployment and pushing remain unauthorized.
 
 ## Historical proposal check — programme now closed
 
@@ -1915,6 +1916,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 161. **Strength's preparation (2026-11-02).** The wrapper's ceiling is set once to TERM 50,390 s / KILL 50,400 s / cleanup through 50,410 s, derived from the new screen; do **not** change it again. The survey and both proofs run once each, in order; do **not** repeat, adjust or re-select after a failed check: stop and report. Do **not** launch strength, train further, run a benchmark, deploy or push under this approval.
 162. **Strength's block (2026-11-02).** Do **not** rerun the survey or proofs, select another block, or edit [202748400, 202749418). Do **not** open gate 61 or launch without the user's approval and a recheck of live versions, panic and reboot state, the plan, the proved registry, both amendments, the head binding and the screen's admission immediately before. Do **not** train further, run a benchmark, deploy or push under this preparation.
 163. **The second cycle's strength run (2026-11-02).** One run only: do **not** retry, extend, top up or continue it, or change the ceiling (TERM 50,390 s, KILL 50,400 s, observation through 50,410 s), the head, the opponent, the search, the scoring or the compute guards. Do **not** inspect outcomes before the run ends or pool any screen game. Do **not** apply K2 unless K1 RECONCILES. Do **not** score an incomplete run. A completed NON_PASS or scientific STOP ends the experiment: do **not** rescue it. Do **not** train further, run a benchmark, deploy or push without the user's approval of each.
+164. **The second cycle's strength comparison (2026-11-03).** The ONE run is spent, NON_PASS at matched compute, and its block is retired; under amendment §11 and the decision note, this ends the second-cycle experiment. Do **not** rerun, extend, top up, continue or re-score it, change its rule, bound or guards after the fact, or pool its 1,018 games with the screen's, the first comparison's or any other games. Do **not** combine the two cycles' comparisons into one test, or rank head `c7e96802…` against the first head from two separate comparisons. Do **not** read the 0.5201 point estimate as a gain, or the NON_PASS as evidence of no effect. Do **not** start another cycle, train further, deploy either head or use these games as training data without a new justification, design and the user's approval.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -8967,3 +8969,68 @@ Run as the sequence approved above, each step once in a clean linked worktree (`
 - **To return:** the final verdict, score and bound, both cost ratios, integrity evidence and closing records.
 - **The reading:** an incomplete run remains VOID and returns for assessment without automatic retry. A completed NON_PASS or scientific STOP ends this experiment.
 - **Not authorized:** further training, benchmarks, deployment and pushing.
+
+#### Post-closure entry 51 — the second cycle's strength comparison: 509 colour-reversed pairs, NON_PASS; the experiment ends (2026-11-03)
+
+- **Test:** the ONE approved run of `run cycle2_strength`: 1,018 games (509 colour-reversed pairs), head `c7e96802…` against the original proven combination,
+  both mirror-averaged, 200 simulations each, halving from ply 20, on [202748400, 202749418), under TERM 50,390 s / KILL 50,400 s, observed through 50,410 s.
+  Frozen rule: PASS only if the mean pair score − √(ln 40 / 1,018) > 0.5 (a mean above 0.5602) and the evaluations ratio ≤ 1.05 and the search-seconds ratio
+  ≤ 1.10; a bound above 0.5 with a failed guard is NOT_COMPUTE_MATCHED; anything else is NON_PASS.
+- **Hypothesis (amendment §1):** repeating policy improvement helps: one more self-play and policy-learning cycle, with the first head as teacher, produces an
+  agent stronger than the frozen proven combination at comparable compute.
+- **Why plausible:** the teacher's different priors could change the halving candidate set at recorded roots and so add fresh search evidence (#140). The student's
+  held-out CE fell by 0.03822 nats, about 1% (entry 49), and the screen found no gross regression (0.5547 over 32 pairs, entry 50). Neither guaranteed stronger play.
+- **Prediction on record (amendment §10):** directional only, low confidence, no magnitude: the held-out CE falls, and the candidate scores above 0.5 against the
+  proven reference. Nothing was added before the run.
+- **What ran:**
+  - Decision note `1e68a5b9` (#163). Prelaunch rechecks, all of which held: live versions (Python 3.14.10, MLX 0.30.3, NumPy 2.4.1) equal to the pin; boot
+    unchanged and no panic report; BOINC clear and Unreal Editor closed; both amendments' pins; admission (fit ELIGIBLE, screen CONTINUE, both outer.json files
+    COMPLETED); head `c7e96802…` bytes and digests; plan = `build_plan`; the post-proof's registry `56972553…` = the current one; the block last in ACCOUNTED and
+    clear of the screen's; checkpoint SHA-1; TERM_S 50390 and GRACE_S 10; the gate closed and no strength evidence.
+  - Clean linked worktree `cp-cycle2-strength-run`; the one-line gate opening `7b70b5c6` (only `COMBINATION_POLICY_CYCLE2_STRENGTH_AUTHORIZED`). The wrapper ran
+    once, from 22:44 on 2026-11-02 to 08:44 on 2026-11-03. Its idle gate saw load above 3.0 for the first ~50 s (Spotlight's `mds_stores`), then held 60 s idle;
+    the background check was CLEAR before launch (podman exempt).
+  - Monitoring: during the run, only the startup events, the count of finished game files, the count of progress lines, the load and a BOINC check were read. No
+    outcome was read and nothing was scored before the wrapper exited. A one-word "stop" from the user mid-run was taken as stopping my status check, not the
+    run; the run was not touched, and the user then asked for status.
+  - Evidence and the restored gate `1de96b3c`; K1 `2ee7bb52`; K2 `47294971`; tests `abc8ed06`.
+- **Result:**
+  - **Wrapper:** inner exit **0**, outer exit 0, outcome **COMPLETED**; `gate_restored` true, survivors empty, `record_by` script, wall **35,978 s** of the 50,390 s
+    TERM, stderr empty. The gate file is byte-identical to its state at `1e68a5b9`; no pilot process remained in the process group or elsewhere.
+  - **Integrity:**
+    - Python 3.14.10, MLX 0.30.3, NumPy 2.4.1, as pinned. The candidate's digests are the fit's (`c7e96802…`; policy head `fc068850…`). The reference's are the
+      first strength comparison's: the same encoder and value head, and the parent's policy head `83299f8e…`. The reference agent and the protocol, apart from the
+      candidate agent, equal the first comparison's. Checkpoint SHA-1 `209cf2d4…`.
+    - MLX_ENABLE_TF32 was 0 at the start and the end; no module was in training mode at load or at the end.
+    - 1,020 background checks, all clear: before loading, after each of the 1,018 games and before the verdict. No error events.
+    - Opening probe: 528 legal moves, max prior difference 0.1029, value difference 0.0.
+    - All 1,018 games started in slot order and ended: 973 wins and 45 at the 280-ply state cap; the candidate was red in even slots. Both sides ran at 200
+      simulations. 64,872 moves = 32,447 candidate + 32,425 reference searches.
+    - `screen_block_excluded` names the screen's block.
+    - Recomputed independently from `games.jsonl` and the cost totals: the pair scores, the mean, the bound and both ratios equal the record's.
+  - **Compute guards (frozen):** evaluations ratio **1.0023** (≤ 1.05) and search-seconds ratio **1.0115** (≤ 1.10), so the run is compute matched. That is
+    0.5559 s per candidate search against 0.5499 s per reference search, and 393.0 against 392.4 network positions per search.
+  - **Score:** the candidate won 507 games and the reference 466, with 45 drawn state caps; that is 529.5 of 1,018 game points. Pair scores: 136 × 1.0,
+    19 × 0.75, 217 × 0.5, 24 × 0.25, 113 × 0.0. **Mean pair score 0.5201**; frozen Hoeffding lower bound **0.4599** ≤ 0.5. **Verdict NON_PASS.** For scale only,
+    the two-sided interval with the same half-width (0.0602) is [0.460, 0.580].
+  - **Descriptive, not part of the rule:**
+    - The candidate scored 285–203 (21 caps) as red and 222–263 (24 caps) as black; red won 548 of the 973 decisive games.
+    - Mean game length 63.7 plies.
+    - The wall time was 1.072 × the screen-scaled 33,562 s (2,110 s × 1,018 / 64).
+    - The first cycle's comparison, against the same reference on different seeds, scored 0.5309 (bound 0.4707). The two are separate tests; they are not pooled
+      or compared as a test of one head against the other.
+- **Closing:**
+  - K1 (`2ee7bb52`, once, at clean tree `1de96b3c`): **RECONCILES**, 15/15 controls; all 1,018 games started, in order. Record sha256 begins `13752780`.
+  - K2 (`47294971`): [202748400, 202749418) EXPOSED whole and RETIRED whole, each appended last (EXPOSED 52 → 53, RETIRED 50 → 51). ACCOUNTED and TEST_ONLY are
+    unchanged, and the AST check shows only those two lists changed. Every seed of the block is refused.
+  - Tests re-anchored (`abc8ed06`): strength's state test now asserts the ran-once, closed state; it recomputes the pair scores from the games and the guards from
+    the totals, and requires the frozen rule's NON_PASS. The 2027-band real-state test holds seven closed blocks. No seed literal. Focused suites, serially:
+    517 pass, 1 deselected. No full-suite run (not requested).
+- **Did it match the prediction?** **Partly, and the part that matters is not shown.** The held-out CE fell (entry 49). The point estimate, 0.520, is above 0.5,
+  the predicted direction. But the frozen test needs a lower bound above 0.5, and the bound is 0.460. This comparison cannot tell a true score of 0.520 from 0.5.
+  A non-pass is not designed to reliably detect modest gains, so it does not show that the head has no effect, or a negative one.
+- **Conclusion / status:** by the frozen rule, **NON_PASS** at matched compute. The second-cycle hypothesis is not supported at this design's resolution. Under
+  amendment §11 and the decision note, a completed NON_PASS ends this experiment; another cycle would need a new justification and decision. There is no strength
+  claim and no component claim; the games are not training data and are not pooled with any other games. The block is closed, all 61 gates are closed, and main
+  is fast-forwarded to the closing. The worktree `cp-cycle2-strength-run` is kept until the user clears it. **Not authorized:** further training, benchmarks,
+  deployment and pushing.
