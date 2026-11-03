@@ -1747,13 +1747,17 @@ def test_THE_NEW_SCREEN_RAN_ONCE_COMPLETED_CONTINUE_AND_ITS_BLOCK_IS_CLOSED():
     assert GATE_CST.COMBINATION_POLICY_CYCLE2_STRENGTH_AUTHORIZED is False and P.KINDS[CST]["gate"][0] is GATE_CST
 
 
-def test_STRENGTH_S_BLOCK_IS_SURVEYED_PROVEN_AND_REGISTERED_AND_NOTHING_HAS_RUN():
-    """BUILT 2026-11-02 (survey 056feaf0, pre-proof 7ebb4533, registration 8ff1d724, post-proof f33eeff9): strength's survey is CLEAN
-    and both proofs HOLD, each 55/55 on a clean tree and bound to the survey record; the plan is the copy's build_plan; the block
-    (read from the plan and the records -- no seed literal here) is ACCOUNTED exactly once and last, above the new screen's, and in no
-    other list; it does not overlap the screen's block; the post-proof proved the registry as it stands now; every seed is
-    schedulable; each mode refuses to run again. The gate is closed and no strength output exists. RE-ANCHOR at the launch and
-    the closing."""
+def test_THE_STRENGTH_COMPARISON_RAN_ONCE_COMPLETED_NON_PASS_AND_ITS_BLOCK_IS_CLOSED():
+    """BUILT 2026-11-02 as the prepared state (survey 056feaf0, pre-proof 7ebb4533, registration 8ff1d724, post-proof f33eeff9).
+    RE-ANCHORED 2026-11-03 (the run, 7b70b5c6 -> 1de96b3c, and its closing, K1 2ee7bb52 + K2 47294971): the survey is CLEAN and
+    both proofs HOLD, each 55/55 on a clean tree and bound to the survey record; the plan is the copy's build_plan; the post-proof
+    proved the registry the run launched with. The ONE run, launched from the one-line gate opening, COMPLETED inside its
+    ceiling: outer exit 0, gate restored, no survivors, the pinned versions, the candidate's bytes and digests, the original
+    proven combination as the reference (the first strength comparison's own reference digests, agent and protocol), both
+    compute guards recomputed from the cost totals; all 1,018 games started in order, the candidate red in even slots, the pair
+    scores recomputed from the games. The verdict is the frozen rule's: NON_PASS. K1 RECONCILES, so the WHOLE block is EXPOSED
+    and RETIRED, each exactly once and last, ACCOUNTED last, every seed refused. Every mode refuses to run again; both gates are
+    closed. No block literal here: the proofs scan tests/."""
     from scripts.GPU.alphazero import e4_screen_reference as REG
     rel = SURVEYS[CST][1]
     here = (EV / rel).parent
@@ -1777,22 +1781,84 @@ def test_STRENGTH_S_BLOCK_IS_SURVEYED_PROVEN_AND_REGISTERED_AND_NOTHING_HAS_RUN(
     assert plan == mod.build_plan(plan["base"], sha)
     block = (plan["base"], plan["base"] + n)
     screen = json.loads((ROOT / P.KINDS[CS]["plan"]).read_text(encoding="utf-8"))
-    assert screen["base"] + screen["n_slots"] <= block[0]
+    screen_block = (screen["base"], screen["base"] + screen["n_slots"])
+    assert screen_block[1] <= block[0]
     assert SB.BAND[0] <= block[0] < block[1] <= SB.BAND[1] and block[0] % SB.ALIGN == 0
     assert f"block = [{block[0]}, {block[1]}) -- {n} seeds" in survey
     assert f"THE BLOCK, read from the record: [{block[0]}, {block[1]}) -- BASE {block[0]}" in post
-    reg_rel = "scripts/GPU/alphazero/e4_screen_reference.py"
-    assert f"\nregistry {reg_rel} sha256 {P.M._sha((ROOT / reg_rel).read_bytes())}\n" in post    # proved = current
-    assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1 and REG.ACCOUNTED_SEED_INTERVALS[-1] == block
-    assert not any(lo < block[1] and block[0] < hi
-                   for lo, hi in REG.EXPOSED_SEED_INTERVALS + REG.RETIRED_SEED_INTERVALS + REG.TEST_ONLY_SEED_INTERVALS)
-    assert all(REG.seed_is_accounted(s) and not REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s) for s in range(*block))
     for mode in ("survey", "pre", "post"):
         with pytest.raises(mod.Refused, match="each mode runs once"):
             mod.main(["x", "--mode", mode])
+    # the run
+    run_dir, evidence = _path(CST).parent, ROOT / P.KINDS[CST]["evidence"]
+    assert sorted(x.name for x in run_dir.iterdir()) == ["01_wrapper.sh", "bg_check.txt", "idle_check.txt", "outer.json",
+                                                         "pgid.txt", "plan.json", "run.stderr.txt", "run.stdout.txt"]
+    assert sorted(x.name for x in evidence.iterdir()) == ["games", "games.jsonl", "progress.jsonl", "record.json"]
+    assert sorted(x.name for x in (evidence / "games").iterdir()) == [f"game_{i:06d}.json" for i in range(n)]
+    outer = json.loads((run_dir / "outer.json").read_text(encoding="utf-8"))
+    rec = json.loads((evidence / "record.json").read_text(encoding="utf-8"))
+    assert P.outer_faults(outer, rec) == [] and (outer["outcome"], outer["inner_exit"], outer["outer_exit"]) == ("COMPLETED", 0, 0)
+    assert outer["wall_seconds"] < outer["term_s"] == 50390 and outer["grace_s"] == 10
+    assert (rec["status"], rec["run"], rec["written_by"]) == ("COMPLETED", CST, "script")
+    assert rec["versions"] == P.CYCLE2_VERSIONS and rec["seeds"] == {"base": block[0], "n_slots": n}
+    assert (rec["amendment_sha256"], rec["base_amendment_sha256"]) == (P.CYCLE2_ATTEMPT2_AMENDMENT[1], P.CYCLE2_AMENDMENT[1])
+    assert rec["admission"] == {FIT: "ELIGIBLE", f"{FIT_RUN}/outer.json": "COMPLETED", CS_EV: "CONTINUE",
+                                f"{CS_RUN}/outer.json": "COMPLETED"}
+    assert rec["trained_head"] == {k: P.CYCLE2_HEAD[k] for k in ("file", "sha256", "digests")}
+    assert rec["digests"][K.CANDIDATE] == P.CYCLE2_HEAD["digests"] and rec["checkpoint_sha1"] == P.M.CHECKPOINT_SHA1
+    assert rec["screen_block_excluded"] == list(screen_block)
+    first = json.loads((EV / "combination-policy-strength/record.json").read_text(encoding="utf-8"))
+    assert rec["digests"][P.REFERENCE] == first["digests"][P.REFERENCE]                       # the original proven combination
+    assert rec["digests"][P.REFERENCE]["policy_head."] != P.TRAINED_HEAD["digests"]["policy_head."]
+    assert rec["protocol"] == {**first["protocol"], "agents": rec["protocol"]["agents"]}
+    assert [a for a in rec["protocol"]["agents"] if a["agent_id"] == P.REFERENCE] == \
+        [a for a in first["protocol"]["agents"] if a["agent_id"] == P.REFERENCE]
+    assert [a["mcts_sims"] for a in rec["protocol"]["agents"]] == [K.CANDIDATE_SIMS, K.CANDIDATE_SIMS]
+    assert rec["setting"] == rec["setting_at_end"] == {P.SETTING: P.SETTING_VALUE}
+    for side in (K.CANDIDATE, P.REFERENCE):
+        assert rec["modes_at_load"][side]["modules_in_training_mode"] == 0 == rec["modes_at_end"][side]["modules_in_training_mode"]
+    assert rec["head_probe"]["max_prior_abs_diff"] > 0.0 and rec["background_checks"] == n + 2
+    costs = rec["cost_totals"]
+    assert rec["guards"] == K.guards(costs[K.CANDIDATE], costs[P.REFERENCE])
+    assert rec["guards"]["evaluations_within"] is True and rec["guards"]["search_seconds_within"] is True
+    assert rec["strength"] == K.strength_verdict(rec["pair_scores"], rec["guards"])
+    assert rec["verdict"] == rec["strength"]["verdict"] == "NON_PASS" and rec["strength"]["compute_matched"] is True
+    events = [json.loads(x) for x in (evidence / "progress.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert [e["slot"] for e in events if e["event"] == "game_start"] == list(range(n))
+    assert all(e["ok"] for e in events if e["event"] == "bg_check") and rec["background_checks"] == sum(
+        e["event"] == "bg_check" for e in events)
+    games = [json.loads(x) for x in (evidence / "games.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert [g["slot"] for g in games] == list(range(n)) and {g["pairing_id"] for g in games} == {"combination-policy-cycle2-strength"}
+    assert all((g["red_agent_id"] == K.CANDIDATE) == (g["slot"] % 2 == 0) for g in games)
+    assert sum(g["n_moves"] for g in games) == costs[K.CANDIDATE]["searches"] + costs[P.REFERENCE]["searches"]
+
+    def points(g):
+        return 0.5 if g["winner_agent_id"] is None else float(g["winner_agent_id"] == K.CANDIDATE)
+    assert [(points(games[2 * i]) + points(games[2 * i + 1])) / 2 for i in range(n // 2)] == rec["pair_scores"]
+    gate_rel = "scripts/GPU/alphazero/combination_policy_cycle2_strength_authorization.py"
+    assert subprocess.run(["git", "-C", str(ROOT), "rev-parse", f"{outer['head']}^"], capture_output=True, text=True,
+                          check=True).stdout.strip() == outer["pre_open"]
+    opened = subprocess.run(["git", "-C", str(ROOT), "diff", "--unified=0", outer["pre_open"], outer["head"]],
+                            capture_output=True, text=True, check=True).stdout
+    assert [ln for ln in opened.splitlines() if ln[:1] in "+-" and ln[:3] not in ("+++", "---")] == \
+        [f"-{WRAPPERS[CST]['gate']} = False", f"+{WRAPPERS[CST]['gate']} = True"] and f"b/{gate_rel}" in opened
+    reg_rel = "scripts/GPU/alphazero/e4_screen_reference.py"
+    launched = subprocess.run(["git", "-C", str(ROOT), "show", f"{outer['head']}:{reg_rel}"], capture_output=True, check=True).stdout
+    assert f"\nregistry {reg_rel} sha256 {hashlib.sha256(launched).hexdigest()}\n" in post     # proved = launched
+    assert subprocess.run(["git", "-C", str(ROOT), "diff", "--quiet", "1de96b3c", "HEAD", "--", str(run_dir),
+                           str(evidence)]).returncode == 0
+    # the closing
+    closing = (EV / CLOSINGS[CST][1]).parent
+    assert sorted(x.name for x in closing.iterdir() if x.name != "__pycache__") == ["01_derive_usage.py", "02_derive_usage_run.txt"]
+    k1 = (closing / "02_derive_usage_run.txt").read_text(encoding="utf-8")
+    assert k1.splitlines()[2].endswith("; working tree clean") and "controls passed: 15/15" in k1
+    assert k1.endswith(f"VERDICT: RECONCILES -- EXPOSE {list(block)}; RETIRE {list(block)}\n")
+    for intervals in (REG.ACCOUNTED_SEED_INTERVALS, REG.EXPOSED_SEED_INTERVALS, REG.RETIRED_SEED_INTERVALS):
+        assert intervals.count(block) == 1 and intervals[-1] == block
+        assert all(hi <= block[0] for lo, hi in intervals[:-1] if hi > SB.BAND[0])
+    assert not any(lo < block[1] and block[0] < hi for lo, hi in REG.TEST_ONLY_SEED_INTERVALS)
+    assert all(REG.seed_is_accounted(s) and REG.seed_is_exposed(s) and REG.seed_is_retired(s) and REG.seed_is_unavailable(s)
+               and not REG.seed_is_test_only(s) for s in range(*block))
+    # the gates
+    assert GATE_CS.COMBINATION_POLICY_CYCLE2_SCREEN_AUTHORIZED is False and P.KINDS[CS]["gate"][0] is GATE_CS
     assert GATE_CST.COMBINATION_POLICY_CYCLE2_STRENGTH_AUTHORIZED is False and P.KINDS[CST]["gate"][0] is GATE_CST
-    assert sorted(x.name for x in _path(CST).parent.iterdir()) == ["01_wrapper.sh", "plan.json"]
-    assert not (ROOT / P.KINDS[CST]["evidence"]).exists()
-    assert [x.name for x in (EV / CLOSINGS[CST][1]).parent.iterdir() if x.name != "__pycache__"] == ["01_derive_usage.py"]
-    results = _load(CLOSINGS[CST][1], "_c2_strength_closing_rb")._controls(plan["base"])
-    assert len(results) == 15 and all(ok for _l, ok, _d in results), [r for r in results if not r[1]]

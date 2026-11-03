@@ -188,7 +188,7 @@ def test_THE_GAP_FLOOR_IS_THE_BLOCK_S_SIZE_against_literals_in_either_band():
 
 # ─────────────────────────────── the real state ───────────────────────────────
 
-def test_REAL_STATE_the_2027_band_holds_six_closed_blocks_and_strength_s_registered_one():
+def test_REAL_STATE_the_2027_band_holds_seven_closed_blocks():
     """RE-ANCHORED 2026-10-30 (registration 326004d0): the band's first and only registered block is generation's,
     read from its committed plan (no literal here), ACCOUNTED only; the rule would now place a later block above it.
     RE-ANCHORED 2026-10-30 (generation's closing, K2 569ba2a4): that block is now also EXPOSED and RETIRED whole, the
@@ -218,7 +218,9 @@ def test_REAL_STATE_the_2027_band_holds_six_closed_blocks_and_strength_s_registe
     RE-ANCHORED 2026-11-02 (that screen's run and closing, K2 291b6cc9): its block is now also EXPOSED and RETIRED whole, after the
     corpus's, in each list.
     RE-ANCHORED 2026-11-02 (strength's registration 8ff1d724): its block, read from its committed plan, is the band's seventh ACCOUNTED
-    entry, above the new screen's, and in no other list; the rule would now place a later block above it."""
+    entry, above the new screen's, and in no other list; the rule would now place a later block above it.
+    RE-ANCHORED 2026-11-03 (strength's run and closing, K2 47294971): its block is now also EXPOSED and RETIRED whole,
+    after the new screen's, in each list."""
     import json
     from scripts.GPU.alphazero import e4_screen_reference as REG
     blocks = []
@@ -233,7 +235,8 @@ def test_REAL_STATE_the_2027_band_holds_six_closed_blocks_and_strength_s_registe
     assert cycle2[1] <= attempt2[0] and attempt2[1] - attempt2[0] == 1000
     assert [iv for iv in REG.ACCOUNTED_SEED_INTERVALS if iv[1] > NEW] == [gen, screen, strength, cycle2, attempt2, screen2, strength2]
     for name in ("EXPOSED_SEED_INTERVALS", "RETIRED_SEED_INTERVALS"):
-        assert [iv for iv in getattr(REG, name) if iv[1] > NEW] == [gen, screen, strength, cycle2, attempt2, screen2], name
+        assert [iv for iv in getattr(REG, name) if iv[1] > NEW] == \
+            [gen, screen, strength, cycle2, attempt2, screen2, strength2], name
     assert all(hi <= NEW for _lo, hi in REG.TEST_ONLY_SEED_INTERVALS)
     assert B.candidate(REG.ACCOUNTED_SEED_INTERVALS, [], 64)[2][0] >= strength2[1] + 64
 
