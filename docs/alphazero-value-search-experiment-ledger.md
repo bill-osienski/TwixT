@@ -217,6 +217,7 @@ knob) is not a new hypothesis.
 > **Combination policy second cycle — Build B BUILT for review; screen ceiling PROPOSED at 3,660 s (addendum, 2026-11-02).** Build `3581ee83`; nothing run. `run cycle2_screen` and `run cycle2_strength` on the reviewed match path, behind two new closed gates (61 in all), bound to head `c7e96802…` and the fit's inner and outer records, against the original proven combination on Python 3.14.10; rules and both compute guards unchanged. Strength's ceiling stays PROVISIONAL until the new screen. Focused suites 516 pass; 9 of 9 focused mutants caught. Seed procedures, evaluation loading, GPU games, further training, deployment and pushing remain unauthorized.
 > **Combination policy second cycle — Build B ACCEPTED; the 3,660-s screen ceiling accepted; the screen's SEED PREPARATION approved only (decision note, 2026-11-02, the user's review).** Strength's ceiling stays provisional until the new screen completes. Screen launch, strength seed work, evaluation loading, GPU games, further training, deployment and pushing remain unauthorized, and this review grants no benchmark authorization.
 > **Combination policy second cycle — the screen's seeds PREPARED; awaiting the launch decision (addendum, 2026-11-02).** Survey CLEAN 55/55 (`1b2c5a8e`), pre-proof HOLDS (`3df7caca`), [202747300, 202747364) registered with its bound plan (`322aae07`), post-proof HOLDS (`884389bb`). 516 focused pass. Nothing run. Screen launch, strength seed work, evaluation loading, GPU games, further training, deployment and pushing remain unauthorized.
+> **Combination policy second cycle — seed preparation ACCEPTED; ONE screen run and its seed closing APPROVED (decision note, 2026-11-02, the user's review).** 32 colour-reversed pairs, head `c7e96802…` against the original proven combination, TERM 3,650 s, KILL 3,660 s, cleanup through 3,670 s. Strength seed work or launch, further training, benchmarks, deployment and pushing remain unauthorized.
 
 ## Historical proposal check — programme now closed
 
@@ -1905,6 +1906,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 156. **Build B (2026-11-02).** Built only. Do **not** run its seed surveys, proofs, registrations or closings, commit a `plan.json`, open gates 60 or 61, launch either wrapper, or load the head for evaluation without the user's review and approval of each. Do **not** launch `cycle2_strength` at its PROVISIONAL ceiling: it must be re-derived from the new screen's completed wall time. Do **not** change either rule, compute guard, opponent or search setting.
 157. **The new screen's seed preparation (2026-11-02).** Each of the survey and the two proofs runs once, in order, and the block is appended exactly as the record names it. Do **not** repeat, adjust or re-select after a failed check: stop and report. Do **not** launch the screen, start strength seed work, load the head for evaluation, play GPU games, train further, deploy, push or run a benchmark under this approval.
 158. **The new screen's block (2026-11-02).** Do **not** rerun the survey or proofs, select another block, or edit [202747300, 202747364). Do **not** open gate 60 or launch without the user's approval and a recheck of live versions, panic and reboot state, the plan, the proved registry, both amendments and the head binding immediately before. Do **not** start strength seed work, play GPU games, train further, deploy, push or run a benchmark under this preparation.
+159. **The new screen's run (2026-11-02).** One run only: do **not** retry, extend, top up or continue it, or change the ceiling (TERM 3,650 s, KILL 3,660 s, observation through 3,670 s), the head, the opponent or the search settings. Do **not** apply K2 unless K1 RECONCILES. Do **not** read CONTINUE as a strength result: it clears only the gross-regression screen. Do **not** score an incomplete run. Do **not** start strength seed work or launch, train further, run a benchmark, deploy or push without the user's approval of each.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -8871,3 +8873,17 @@ Run as the sequence approved above, each step once in a clean linked worktree (`
 - **Tests (`9e8a9928`):** three lifecycle tests failed as expected after registration and were re-anchored with no seed literal. Focused suites, serially: 516 pass, 1 deselected.
 - **Nothing else ran:** no model or head load, gate opening or game. All 61 gates are closed, and the block is ACCOUNTED only.
 - **Returned for launch review.** Not authorized: screen launch, strength seed work, evaluation loading, GPU games, further training, deployment and pushing. No benchmark is authorized.
+
+#### Decision note — the screen's seed preparation accepted; one run and its closing approved (2026-11-02, the user's review)
+
+- **The user's check, read-only:** the record hashes, proof bindings, exact ACCOUNTED-only registration and matching plan. The reviewed implementation, wrapper, amendments and candidate head
+  are unchanged. All 61 gates are closed, and no screen output exists.
+- **Approved:**
+  1. this record, then a recheck of live versions, panic and reboot state, registry, plan, amendments and head binding, with BOINC quit, Unreal Editor closed and the existing idle and background checks enforced;
+  2. in a clean worktree, opening only `COMBINATION_POLICY_CYCLE2_SCREEN_AUTHORIZED` by the one-line commit;
+  3. the wrapper once: 32 colour-reversed pairs, head `c7e96802…` against the original proven combination, unchanged search settings, TERM 3,650 s, KILL 3,660 s, cleanup observation through 3,670 s;
+  4. restoring the gate, confirming cleanup and preserving create-only evidence;
+  5. K1 once; only if it RECONCILES, K2 exactly as derived, re-anchored lifecycle tests and focused checks.
+- **To return:** the result, integrity and cleanup evidence, closing records and, if completed, the proposed strength ceiling calculated from this screen.
+- **The reading:** a CONTINUE clears only the gross-regression screen. An incomplete run stays VOID and returns for assessment without automatic retry.
+- **Not authorized:** strength seed work or launch, further training, benchmarks, deployment and pushing.
