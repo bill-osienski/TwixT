@@ -2,14 +2,14 @@
 # THE SECOND POLICY-IMPROVEMENT CYCLE: THE STRENGTH COMPARISON, 509 COLOUR-REVERSED PAIRS (1,018 GAMES) -- OUTER WRAPPER (amendment
 # docs/superpowers/2026-11-02-combination-policy-second-cycle-amendment.md §6, §7; Python 3.14.10 by docs/superpowers/2026-11-02-combination-policy-second-cycle-generation-attempt2-amendment.md; the user's review 2026-11-02: head sha256 c7e96802... against the original proven
 # combination, the search settings unchanged).
-# THE CEILING HERE IS PROVISIONAL (TERM_S 51770): it is the first comparison's. The amendment prices this run from the NEW screen's
-# completed wall time x 1,018 / 64 x 1.5, rounded up to the minute, so TERM_S must be re-derived by a reviewed edit once that screen
-# exists, before any launch approval; tests/test_combination_policy_cycle2.py fails until the wrapper matches. The frozen rule (PASS
+# THE CEILING, derived from the new screen's completed wall time (amendment §7; set on the user's review, ledger 2026-11-02): 2,110 s
+# x 1,018 / 64 x 1.5 = 50,343.3 s, rounded up to the minute: 50,400 s (about 14.0 h) -- TERM at 50390 s, KILL 10 s later, 50400 s in
+# all; cleanup observation bounded through 50410 s. An operational estimate, not a completion guarantee. The frozen rule (PASS
 # iff the mean pair score - sqrt(ln 40 / 1018) > 0.5 and the evaluations ratio <= 1.05 and the search-seconds ratio <= 1.10) is
 # unchanged. A run the ceiling stops is incomplete and receives no score, with no automatic retry.
 # BUILT ONLY (ledger, 2026-11-02): launching it is a separate approval.
 # A copy of combination-policy-strength-run/01_wrapper.sh (the first cycle's, whose header follows); the diff: the paths, the gate,
-# `run cycle2_strength` and this header. The value of TERM_S and everything else are byte-identical.
+# `run cycle2_strength`, the ceiling (TERM_S 50390) and this header. Everything else is byte-identical.
 #
 # THE COMBINATION POLICY PILOT: THE STRENGTH COMPARISON, 509 COLOUR-REVERSED PAIRS (1,018 GAMES, CARD STEP 6) -- OUTER
 # WRAPPER (card docs/superpowers/2026-10-28-combination-policy-pilot-card.md §5 step 6; the user's review 2026-11-01:
@@ -148,7 +148,7 @@ RUN_REL=docs/superpowers/evidence/combination-policy-cycle2-strength
 GATE_REL=scripts/GPU/alphazero/combination_policy_cycle2_strength_authorization.py
 GATE=COMBINATION_POLICY_CYCLE2_STRENGTH_AUTHORIZED
 MODULE=scripts.GPU.alphazero.combination_policy_pilot
-TERM_S=51770
+TERM_S=50390
 GRACE_S=10
 
 W=$(cd "$(dirname "$0")/../../../.." && pwd -P) || exit 1

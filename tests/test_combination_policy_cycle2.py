@@ -670,7 +670,7 @@ WRAPPERS = {
             "gate_rel": "combination_policy_cycle2_train_authorization.py"},
     CS: {"base": EV / "combination-policy-screen-run/01_wrapper.sh", "term": 3650, "stem": "cycle2-screen",
          "gate": "COMBINATION_POLICY_CYCLE2_SCREEN_AUTHORIZED", "gate_rel": "combination_policy_cycle2_screen_authorization.py"},
-    CST: {"base": EV / "combination-policy-strength-run/01_wrapper.sh", "term": 51770, "stem": "cycle2-strength",
+    CST: {"base": EV / "combination-policy-strength-run/01_wrapper.sh", "term": 50390, "stem": "cycle2-strength",
           "gate": "COMBINATION_POLICY_CYCLE2_STRENGTH_AUTHORIZED",
           "gate_rel": "combination_policy_cycle2_strength_authorization.py"}}
 
@@ -1499,7 +1499,7 @@ def test_THE_EVALUATION_WRAPPER_IS_THE_FIRST_CYCLE_S_WITH_ONLY_THE_STATED_DIFFER
     old, new = _code(w["base"]).splitlines(), _code(_path(kind)).splitlines()
     assert len(old) == len(new)
     changed = [b for a, b in zip(old, new) if a != b]
-    term = ["TERM_S=3650"] if kind == CS else []
+    term = ["TERM_S=3650"] if kind == CS else ["TERM_S=50390"]             # RE-ANCHORED 2026-11-02: strength's set from the screen
     assert changed[:4] == [f"OUT_REL=docs/superpowers/evidence/combination-policy-{w['stem']}-run",
                            f"RUN_REL=docs/superpowers/evidence/combination-policy-{w['stem']}",
                            f"GATE_REL=scripts/GPU/alphazero/{w['gate_rel']}", f"GATE={w['gate']}"]
@@ -1530,20 +1530,20 @@ def test_THE_SCREEN_CEILING_IS_THE_COMPLETED_SEARCH_TIMINGS_ON_THIS_CORPUS_S_MOV
     assert "through 3670 s" in header
 
 
-def test_THE_STRENGTH_CEILING_IS_DERIVED_FROM_THE_NEW_SCREEN_AND_THE_WRAPPER_STILL_HOLDS_THE_PLACEHOLDER():
-    """BUILT provisional. RE-ANCHORED 2026-11-02 (the new screen, a87e750e): §7's formula on the new screen's completed wall time
-    gives the PROPOSED ceiling, recomputed here; the wrapper is unedited, still the first comparison's 51,780 s and marked
-    PROVISIONAL, because replacing it is a reviewed edit the user has not approved. RE-ANCHOR when that edit is approved: the
-    wrapper must then equal the derived value."""
+def test_THE_STRENGTH_CEILING_IS_THE_NEW_SCREEN_S_WALL_TIME_SCALED():
+    """BUILT provisional. RE-ANCHORED 2026-11-02 at the screen (a87e750e) while the placeholder stood. RE-ANCHORED 2026-11-02 (the
+    user's review): the wrapper now holds §7's derivation from the new screen's completed wall time, recomputed here, and its header
+    states it: TERM 50,390 s, KILL 50,400 s, observation through 50,410 s."""
     outer = json.loads((ROOT / CS_RUN / "outer.json").read_text(encoding="utf-8"))
     rec = json.loads((ROOT / CS_EV / "record.json").read_text(encoding="utf-8"))
     assert P.outer_faults(outer, rec) == [] and rec["verdict"] == "CONTINUE"
     derived = int(math.ceil(outer["wall_seconds"] * 1018 / 64 * 1.5 / 60.0) * 60)
-    assert (outer["wall_seconds"], derived) == (2110, 50400)
     w = _code(_path(CST))
     term, grace = (int(re.search(rf"^{k}=(\d+)$", w, re.M).group(1)) for k in ("TERM_S", "GRACE_S"))
-    assert (term, grace) == (51770, 10) and term + grace != derived
-    assert "PROVISIONAL" in _path(CST).read_text().split("set -u\n", 1)[0]
+    assert (term, grace) == (50390, 10) and term + grace == derived == 50400 and outer["wall_seconds"] == 2110
+    header = " ".join(ln.lstrip("# ") for ln in _path(CST).read_text(encoding="utf-8").split("set -u\n", 1)[0].splitlines())
+    assert "PROVISIONAL" not in header.split("THE COMBINATION POLICY PILOT")[0]
+    assert "2,110 s x 1,018 / 64 x 1.5 = 50,343.3 s" in header and "50,400 s" in header and "through 50410 s" in header
 
 
 @pytest.mark.parametrize("kind", [CS, CST])
