@@ -240,6 +240,12 @@ knob) is not a new hypothesis.
 > - **Card §13:** clarifies the surrogate loss and the test-arm metadata access; the recipe is unchanged. sha256 `96269e17…`.
 > - **Tests:** 50 focused + gate inventory = 58 pass.
 > - **Not authorized:** TensorFlow, checkout, timing, labelling, fitting, games, GPU and pushing. See #169.
+> **H-TB pilot — repaired build ACCEPTED; isolated teacher setup DONE; timing plan returned for review (decision note and addendum, 2026-11-04).**
+> - **Checkout:** twixtbot-ui re-acquired at `83749f23…` into the fresh `~/twixt-cache/htb-teacher/`. All 70 tracked files content-verified, model pins match, LICENSE retained.
+> - **Interpreter:** TensorFlow 2.21.0 has no cp314 wheel, and no 3.13 interpreter remained on the machine. By the user's choice: standalone CPython 3.13.15 (astral-sh 20260929, sha256 `003d459a…`), a different distributor from October's unrecorded build.
+> - **Environment:** a separate venv with exactly the 44-package baseline freeze; every wheel matches PyPI's digest. The project `.venv` and Homebrew are unchanged.
+> - **Not done:** no TensorFlow import, model initialization, teacher query or corpus read.
+> - Surrogate wording corrected (dated clarification). Plan: `2026-11-04-htb-bounded-timing-plan.md`. See #170.
 
 ## Historical proposal check — programme now closed
 
@@ -1957,6 +1963,16 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
    - read the injected-defect evidence in `evidence/htb-build/` as covering the repaired module: it ran against `a00d41f2…`, and the user asked for no further mutation campaign.
 
    Approval of the repairs and of the local branch commit grants no runtime step: TensorFlow, checkout acquisition, timing, labelling, fitting, games, GPU work and pushing each still need their own approval.
+170. **The H-TB teacher setup (2026-11-04).** Do **not** modify, upgrade, add to or reinstall anything under `~/twixt-cache/htb-teacher/`:
+   - the checkout, the standalone 3.13.15 interpreter, the teacher venv or its wheelhouse;
+   - in particular, no `pip install` and no pip upgrade.
+
+   Do **not**:
+   - use that interpreter or venv for fitting or anything else, or put it on PATH;
+   - substitute a different interpreter build or package version without reporting the incompatibility first and getting the user's approval;
+   - describe the matching version as an equivalent of the October interpreter: the distributor differs, and October's build was never recorded.
+
+   This setup authorizes no TensorFlow import, model initialization, teacher query or corpus read. The timing plan is paper only: building its gate and entry, and running it, each need approval. Card §13's surrogate sentence is superseded by the dated clarification: lowering the surrogate lowers an upper bound and does not guarantee a lower measured mirror-averaged KL; only F1–F3 can establish that.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -9243,3 +9259,52 @@ The full test, hypothesis, prediction, protocol, integrity checks and seed closi
   The gates are opened only in memory, by monkeypatch; the gate files stay closed (63, none open). No further injected-defect run was made, as directed; `evidence/htb-build/` covers the earlier module `a00d41f2…` only.
 - **Conclusion / status:** repaired build returned for review. It is committed locally on a branch by exact paths (below); not pushed.
 - **Execution / authorization:** no TensorFlow, checkout, weights, corpus, labelling, fitting, timing, games, seeds or GPU work. Earlier ledger text is unchanged. Codex's addenda are preserved and are included in this commit only because they sit in the same file. The two unrelated untracked files were neither touched nor committed. See #169.
+
+#### Decision note — repaired build accepted; isolated dependency setup approved; interpreter source chosen (2026-11-04, the user's review)
+
+- **Accepted:** the repaired build. Both findings are resolved. The user verified the committed card pin, the early destination checks, the label/selection binding and the terminal-record handling, and that the new fake-entry tests cover the requested refusal and failure paths. All 63 gates are closed and main remains at `bc37487e`. The user did not rerun the tests or either entry.
+- **Dated clarification to card §13.1** (the card text stays as written): reducing the surrogate loss lowers an **upper bound**; it does **not** guarantee that the measured mirror-averaged KL decreases. The card's sentence "driving the surrogate down drives Q_MA's KL down too" overstated this and is superseded here. F1–F3 must establish any improvement. No recipe change follows.
+- **Approved, this step only — isolated dependency setup:**
+  - Re-acquire twixtbot-ui at `83749f230a0bae1766b46a05bfde0ed87f0a9a0a`.
+  - Create a separate CPU teacher environment with the recorded TensorFlow 2.21.0 setup as the baseline, leaving the project's fitting environment and global packages unchanged.
+  - Verify the source and model-file hashes, and retain the notices.
+  - Record exact interpreter and package versions through metadata reads.
+  - Use fresh destinations and create-only evidence. Do not initialize either model, query the teacher or read the corpus.
+  - Return the evidence with a concrete bounded timing plan that uses train-arm rows only.
+  - If the pinned setup cannot be reproduced, report the incompatibility before substituting versions.
+- **Interpreter decision, made during the step after I reported the incompatibility.** TensorFlow 2.21.0 publishes macOS arm64 wheels for cp310–cp313 only, so the project's 3.14.10 cannot host it. No Python 3.13 remained on the machine: Homebrew had 3.14.10 and 3.15.2, and its python@3.13 formula now offers 3.13.18. The October build's source was never recorded.
+  - **The user chose** CPython 3.13.15 from astral-sh/python-build-standalone release 20260929, `cpython-3.13.15+20260929-aarch64-apple-darwin-install_only.tar.gz`, with published sha256 `003d459a75ff6949a6590812b1e02a65e849b5b2a9f47c421010138ec643a11c` (verified by the user against the release metadata). It is to be verified, extracted into the fresh `~/twixt-cache/htb-teacher/python` and used by its explicit path. Global PATH, Homebrew and the project environment are to stay unchanged.
+  - Record the archive identity and the distributor change. **A matching Python version does not establish equivalence with the October interpreter.**
+- **Not authorized:** TensorFlow or model initialization, timing, labelling, fitting, games, GPU work, deployment and pushing.
+
+#### Addendum — the isolated teacher setup; returned with the bounded timing plan (2026-11-04)
+
+- **Test:** none was run; dependency setup only. **Prediction:** none stated.
+- **What ran**, each once, with fresh destinations under `~/twixt-cache/htb-teacher/` and create-only evidence in `docs/superpowers/evidence/htb-teacher-setup/`:
+  1. **Checkout** (`01_checkout.py` sha256 `45a29b48…`, run with the system `python3 -I`; `02_checkout.json` `aca7a4d1…`).
+     - Cloned, then detached at the pin. HEAD equals the pin and the status is clean.
+     - **All 70 tracked files content-verified:** `git hash-object` equals the HEAD tree's blob ids.
+     - The three model pins match (weights `1958f847…`, saved_model `e0c2b882…`, index `1d4073c4…`). Every `model/` file's sha256 and blob is recorded; the `meta`, `pb` and `pbtxt` variable copies share blobs `310672e9…` and `10123d89…`.
+     - LICENSE was retained as `03_notice_0_LICENSE.txt` (`cef0d970…`, equal to the October setup's). It is the only license or notice file in the tree.
+  2. **Our pinned-runtime verifier,** `twixtbot_g3_runner.verify_anchor_runtime`, run from the project `.venv` on the new checkout: it passed (`04_verify_anchor_runtime.json`). TensorFlow was not imported and no checkout module was imported.
+  3. **The environment** (`05_environment.py` `877d4bb8…`, run with the project `.venv` interpreter `-I`, standard library only; `06_requirements.txt` `4fff5440…`, identical to the October freeze; `07_environment.json` `58f673e7…`).
+     - **Archive:** downloaded and checked against the full published sha256 (match). Every member lies under `python/`, and it was extracted with the `data` filter.
+     - **Interpreter:** `python/bin/python3.13` reports 3.13.15 (`3.13.15 (main, Sep 29 2026, 14:49:54) [Clang 22.1.3]`, macOS-27.2-arm64).
+     - **Venv:** a separate one at `teacher-venv/`, with `include-system-site-packages = false` and pip 26.2.1 as bundled (not upgraded).
+     - **Wheels:** the 44 baseline wheels were downloaded with `--only-binary --no-deps`, and **every wheel's sha256 equals PyPI's published digest**. They were installed offline from that wheelhouse with `--no-index --no-deps`. `pip check`: "No broken requirements found." pip ran with no config file, no cache and no user site.
+     - **Versions and licenses** were read through `importlib.metadata` in the new interpreter. **They match the baseline freeze exactly**, `tensorflow==2.21.0` included. TensorFlow was not imported.
+  4. **Isolation** (`08_project_env_after.txt` `1c63b3a4…`): the project `.venv` freeze (37 lines, sha256 `99b01823…`) and `brew list --versions` (36 formulae) are identical before and after. Nothing was written outside `~/twixt-cache/htb-teacher/` and the evidence directory.
+  5. **A static AST walk** of the label path's module-level imports (`htb_pilot`, `external_learning`, `twixtbot_g3_runner` and the package `__init__`s; nothing imported): it reaches only the standard library and NumPy, with no MLX and no TensorFlow; TensorFlow is imported lazily inside `load_runtime`. Recorded here only; it is not an evidence file.
+- **Not done:** no TensorFlow import, model initialization, teacher query, corpus read, timing, labelling, fitting, games or GPU work.
+- **Differences from October, for the record:**
+  - the interpreter's distributor: standalone 20260929, against October's unrecorded build at the same version;
+  - the checkout's location;
+  - pip 26.2.1;
+  - the baseline freeze includes `mlx==0.32.1`, against the project's pin of 0.30.3, because it was reproduced exactly. The label path does not import MLX at module level, and the timing plan asserts that it is never imported.
+- **The bounded timing plan** (paper only): [`docs/superpowers/2026-11-04-htb-bounded-timing-plan.md`](superpowers/2026-11-04-htb-bounded-timing-plan.md), sha256 `bb37dec90dd8d1fb8d756127fa78d3c7e42a0010310209b90493f3198b12263c`.
+  - **T-label** runs in the teacher venv: corpus authentication; keying 200 games; about 860 `eval_one` calls over 40 games, both orientations in lockstep; one zero shard. TERM 1,200 s.
+  - **T-fit** runs in the project `.venv` on the CPU: 640 synthetic-target examples; two checkpoint loads; 60 updates of the frozen shape, the first 10 being warm-up; mirror-averaged scoring. TERM 1,800 s.
+  - Train arm only, enforced by an arm guard, and `select` is never called.
+  - Only counts and seconds are recorded: no teacher outputs, losses or metrics.
+  - It projects each run, with the ceiling at 1.5×. It needs its own gate (the 64th, `HTB_TIMING_AUTHORIZED`), entry, wrappers and tests, and approval of each.
+- **Conclusion / status:** setup COMPLETE and verified; returned for review with the timing plan. Not committed (the earlier approval covered only the repair commit); branch `htb-pilot-build` at `8b1cc44b`, main `bc37487e`, nothing pushed. See #170.

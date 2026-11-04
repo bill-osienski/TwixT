@@ -1,0 +1,6 @@
+H-TB teacher setup: the project environment and Homebrew before vs after part 2 (2026-11-04)
+project .venv: 3.14.10  freeze sha256 before 99b0182395877d88a973078f4600fef3ed5a391688fbac67a489ceb0e9f91f26  after 99b0182395877d88a973078f4600fef3ed5a391688fbac67a489ceb0e9f91f26
+project .venv freeze: IDENTICAL (37 lines)
+brew list --versions: IDENTICAL (36 formulae)
+PATH unchanged by setup: the scripts ran children with PATH=/usr/bin:/bin and wrote nothing outside ~/twixt-cache/htb-teacher and this evidence directory
+global pip cache untouched: PIP_NO_CACHE_DIR=1, PIP_CONFIG_FILE=/dev/null, PYTHONNOUSERSITE=1

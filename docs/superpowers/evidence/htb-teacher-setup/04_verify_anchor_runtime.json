@@ -1,0 +1,12 @@
+{
+ "artifact_sha256": {
+  "model/pb/saved_model.pb": "e0c2b882bc97c4661ac92af47ae5ef78443e57b42d0cb7c9c3a8cb7e8d01993b",
+  "model/pb/variables/variables.data-00000-of-00001": "1958f8476e9d56cbb87fa570db88f9cc9d389b30e20571fd66e8e779a4cefbab",
+  "model/pb/variables/variables.index": "1d4073c4da30e515a984faef2c3cc9c8b8ba402353a01933c8bb80e1f279f8cd"
+ },
+ "clone_modules_imported": [],
+ "clone_root": "/Users/bill/twixt-cache/htb-teacher/twixtbot-ui",
+ "commit": "83749f230a0bae1766b46a05bfde0ed87f0a9a0a",
+ "model_artifacts": 3,
+ "tensorflow_imported": false
+}

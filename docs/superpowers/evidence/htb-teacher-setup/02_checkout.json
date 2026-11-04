@@ -1,0 +1,343 @@
+{
+ "commit": "83749f230a0bae1766b46a05bfde0ed87f0a9a0a",
+ "content_verified": true,
+ "destination": "/Users/bill/twixt-cache/htb-teacher/twixtbot-ui",
+ "git": "git version 2.54.0 (Apple Git-157)",
+ "kind": "htb-teacher-setup-checkout/1",
+ "license_matches_october_setup": true,
+ "manifest": {
+  ".flake8": {
+   "blob": "4d682649880ddc28c519a308a827fcff13b9031e",
+   "sha256": "a768025b4b4acc4cf20ef7a67f65e0ec6d7f7442010463d0392ae0e6db655275"
+  },
+  ".github/workflows/python-package.yml": {
+   "blob": "ed0fc3e492b8f27d448cf3392f0531162206678c",
+   "sha256": "049caacbb05361bf1abcf2bd10b1c550fe26626a34d3d4d5a88f3407b8a719d9"
+  },
+  ".github/workflows/quality_format.yml": {
+   "blob": "cf05139c8aaed1a7dddb06837c1ab853d4192381",
+   "sha256": "74eadd47051b6125d8d483ff5a4cdbbe4ef85a9d196aef6b2880f7502da97b3b"
+  },
+  ".gitignore": {
+   "blob": "b689e6e2b79c0fc552d16298220008d14a85aad7",
+   "sha256": "41afa346e58f3e3261d02e3542a0450630a90443553f5ea39547d1887ff6d4f9"
+  },
+  ".settings/org.sonarlint.eclipse.core.prefs": {
+   "blob": "6c51637588535e2441b77dd55d8f6bf2bbb26646",
+   "sha256": "127c80ecbe8bb58500c3a3b48b31ed21680a1257e1b9ffd054f09189caf9bdc1"
+  },
+  ".vscode/launch.json": {
+   "blob": "67e722cdd350c208a579b7d3c5e7b4c3e0588a0d",
+   "sha256": "c5d5892ea470d3a59378dd267c9400ee4a83ef3ad7dfbb3eab2700dd9a29ee05"
+  },
+  ".vscode/settings.json": {
+   "blob": "a6699acf23ffe706132df18e4d3e6f0383d19f7b",
+   "sha256": "85d28d988fda7514e92c26e258df9f05e0fd9de764546213b7763b1b54e02f0a"
+  },
+  "LICENSE": {
+   "blob": "f772e4de0d9d53f43ffa8fd4c4cea68de6aadef8",
+   "sha256": "cef0d970b9a3dcdc2d3b7bc2ecee97a67d57cc1d1287d1ea5e13fe86b6dbd36b"
+  },
+  "README.md": {
+   "blob": "ad66736d1e075b52570237d4893a2c93b89598fa",
+   "sha256": "255557f4f964b279f75c1015ecd25f345512d41fb73418bbe56fdb18ea9c5fbe"
+  },
+  "games/drawngame.T1": {
+   "blob": "691d1e23805d6edae7756be989069d057995aa97",
+   "sha256": "5d3dee9cd7e06cc801a333b814cf01001f2b20f385dbd44ea4427812fa1efd2a"
+  },
+  "games/full_board.T1": {
+   "blob": "c7df10ef5c324cf72467e075602d2a59d15cfdc6",
+   "sha256": "8080956a57cef5be8fe24a6b577e20c2b1f2f790f30ce51ffc4a0a91ce182e24"
+  },
+  "games/game2206555.tsgf": {
+   "blob": "f0b5cf537e40d877542dfeb63c42cc4289b1ecc0",
+   "sha256": "3631ea2a7d66e35df356cbe9652d535f60ef9c4264770637e6863a5fd2025d87"
+  },
+  "games/game2209801.tsgf": {
+   "blob": "f94a3852acb2acc85150d88d8ad6ebaa1bef5fbc",
+   "sha256": "2b9f97dd84a24d68fc93aa8d02b8b94a07961e0b1eaf82d9506c134e812424c8"
+  },
+  "games/game2220939.tsgf": {
+   "blob": "d985364818e58d71cc22c476bccdb3d9acf2c724",
+   "sha256": "ab1ccec6496e374be132370145c424d566a5be391af955350b633caf01da8521"
+  },
+  "games/game2232217.tsgf": {
+   "blob": "93df93d37c3be9777f69dcf19b925ad3d5d8f1ab",
+   "sha256": "6dca330f8aca8c32ed8f2749e5c81e552a896d05b7bdddca924a5d745497197f"
+  },
+  "games/sample.T1": {
+   "blob": "a07d5638937f08ccaf4ea60520403625b0269ec3",
+   "sha256": "b80de1a8c295ac34763b6170a3830685d03af1bd6af06bb8fbf43fdef311df6a"
+  },
+  "games/scl-issue.T1": {
+   "blob": "c2234200de6866581f9b6de42fcbb2cbc3e52db9",
+   "sha256": "81a67d69ef54a86e82d1ae9a73d9f273aca3d3d1e9ee0cd211db877708bafc1d"
+  },
+  "img/A-Game.JPG": {
+   "blob": "db37d2e04c0fce9f47b61358b012180d5f4faaeb",
+   "sha256": "b18b3b893be3f7ca4293fd8dd6348b596b321d8351f194abc3543bfa1725090d"
+  },
+  "img/EmptyBoard.JPG": {
+   "blob": "56a53aa922d65084bdc652eac3180542732cdf6d",
+   "sha256": "3a2f5a433a023442cc5ced833ae557a4a543c648404ab45c3bc72e23c66e80fe"
+  },
+  "img/Heatmap.JPG": {
+   "blob": "3b3a5f7c80c3c9576859e5d4584c42b1a1474345",
+   "sha256": "f4fd063502ae49e8ccf228cdbc7fae1e91621c3ea540f77a9d80b87b9d594d5e"
+  },
+  "img/Settings.JPG": {
+   "blob": "919783dbbe2cab2b5a21f71af4dbae0e69a1ea25",
+   "sha256": "fd96b3fab7594f79e708b2472652ad10fae5ff70c11afcf29f8a7764178878e2"
+  },
+  "img/VisMCTS.JPG": {
+   "blob": "7e423495189a141fe7216dce9a4e91e184168d56",
+   "sha256": "c5408743c4d8a92dc26f70d691d818d1a1ca74bcdf6e8936b82172c3c0608b50"
+  },
+  "img/wheel.gif": {
+   "blob": "c9f56a58cf7d6ab57b10fadab4946b58d1b51423",
+   "sha256": "f8ac3473d904d78d1d4634940da011ded95d3deb2de3e78874362befb35016eb"
+  },
+  "model/meta/six-917000.data-00000-of-00001": {
+   "blob": "310672e9384f473f21381da1ad8b5054146aea78",
+   "sha256": "1958f8476e9d56cbb87fa570db88f9cc9d389b30e20571fd66e8e779a4cefbab"
+  },
+  "model/meta/six-917000.index": {
+   "blob": "10123d8940cf17ba42ed5f4d0baf9e7db426356e",
+   "sha256": "1d4073c4da30e515a984faef2c3cc9c8b8ba402353a01933c8bb80e1f279f8cd"
+  },
+  "model/meta/six-917000.meta": {
+   "blob": "ab69573497df741855b772bb8a45c4517e511fa5",
+   "sha256": "e862b0ccfc0dd0ed2a7c487fcacead1e06f1a6e80d307094c6d10a4722be0ef2"
+  },
+  "model/pb/saved_model.pb": {
+   "blob": "7cd432882ab358fe80be94e9406bdc8211eaec9c",
+   "sha256": "e0c2b882bc97c4661ac92af47ae5ef78443e57b42d0cb7c9c3a8cb7e8d01993b"
+  },
+  "model/pb/variables/variables.data-00000-of-00001": {
+   "blob": "310672e9384f473f21381da1ad8b5054146aea78",
+   "sha256": "1958f8476e9d56cbb87fa570db88f9cc9d389b30e20571fd66e8e779a4cefbab"
+  },
+  "model/pb/variables/variables.index": {
+   "blob": "10123d8940cf17ba42ed5f4d0baf9e7db426356e",
+   "sha256": "1d4073c4da30e515a984faef2c3cc9c8b8ba402353a01933c8bb80e1f279f8cd"
+  },
+  "model/pbtxt/saved_model.pbtxt": {
+   "blob": "0db3dfb9d20caa5019458eb38e443a1b4bc5c884",
+   "sha256": "2e1045f56ed43961d7bde3af78db0c473ae1e6a2b105dbb37bb967e10f986233"
+  },
+  "model/pbtxt/variables/variables.data-00000-of-00001": {
+   "blob": "310672e9384f473f21381da1ad8b5054146aea78",
+   "sha256": "1958f8476e9d56cbb87fa570db88f9cc9d389b30e20571fd66e8e779a4cefbab"
+  },
+  "model/pbtxt/variables/variables.index": {
+   "blob": "10123d8940cf17ba42ed5f4d0baf9e7db426356e",
+   "sha256": "1d4073c4da30e515a984faef2c3cc9c8b8ba402353a01933c8bb80e1f279f8cd"
+  },
+  "requirements.txt": {
+   "blob": "06ce19a91fac35b952663531af02b6d0c6725911",
+   "sha256": "42711089e030d2f5722fef81dc8f86db70651b291c06890aca1cdf0543f3dec7"
+  },
+  "src/__init__.py": {
+   "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "src/backend/__init__.py": {
+   "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "src/backend/board.py": {
+   "blob": "ffb98aa79158f37aa740faac00fc32d1ea0f4288",
+   "sha256": "2638a690335260183151057954ce5f7cc09d77c45d2c00a53d5205e2cc56d585"
+  },
+  "src/backend/naf.py": {
+   "blob": "7f292541dd62194e8e0379b31108193aadab839f",
+   "sha256": "c7d191190a7dc2da2be18d23ac384ce73d0be3115f1b69581b85193c34fc2cba"
+  },
+  "src/backend/nneval.py": {
+   "blob": "9b1c823cd41a3e4872ef6d10ad498d281ff716b6",
+   "sha256": "e21af5eeaebc1ecd1943869d42dbfc575aa320b61b3d5487526485a3fc681930"
+  },
+  "src/backend/nnmcts.py": {
+   "blob": "760ddbf7f5411aad7879760668b11a959afe745a",
+   "sha256": "85b0330c2d61a6534abaa3b6a5c2e679425df6260c6d0fa2560754595879ef5f"
+  },
+  "src/backend/nnmplayer.py": {
+   "blob": "4aeff90b771c69827f410e6b67637ca74ccd2567",
+   "sha256": "48a9f1fd3808a5bf17d1d307b88bded08deb6b95663253e50e49f8587d088c36"
+  },
+  "src/backend/point.py": {
+   "blob": "da51b05cf869dad420c8787db32d54ad564c7678",
+   "sha256": "fc5a900cf757a5771d5cc40b17c3a4e79e431e91c54957045d098708771d91d5"
+  },
+  "src/backend/select_set.py": {
+   "blob": "3263b837500c49597131558b0ab36cb36d814a19",
+   "sha256": "8babdb462e17acb9687bad91985a257c7fc8b7f20e30e2a15aa3140db8b00cec"
+  },
+  "src/backend/swapmodel.py": {
+   "blob": "303fc69f04add89bad172faf8a1a25113782e8a5",
+   "sha256": "d350cb6e1cfc6ed3f0766f2983fb6fae65565310771a9f7e10265685c61a3ec7"
+  },
+  "src/backend/twixt.py": {
+   "blob": "c7901bfcf15abd9dd4b309f109e41db856354d17",
+   "sha256": "b337f800e8b17aaed781af1e0904a68ced0942c481da25ad012e9eb017add656"
+  },
+  "src/constants.py": {
+   "blob": "dc1e8c8ebb0a058eda86432be17332b2338c07b8",
+   "sha256": "bc129f78aaa79dbe89f62f981081549b09bd2e821dac3f37ed24bf9e3496ffa8"
+  },
+  "src/convert/meta2pbtxt.py": {
+   "blob": "c95fa39a7a33edc0666a9646684132507227da64",
+   "sha256": "319d355955893c51381f4c6f6b368ff12c7982831399cbfa42d7d5c69e75cbb6"
+  },
+  "src/convert/pbtxt2pb.py": {
+   "blob": "ca2bdbe7bdca5439fac0ec02f43d6e792e367da1",
+   "sha256": "efa2ce544d3bcab2f948616df765fac4ed663f791b6b17d4c7dd2a5e1cd802e6"
+  },
+  "src/files.py": {
+   "blob": "4be23da99c24cb23d2c02569a569d290bc159abd",
+   "sha256": "89fe9cf8f7b4a8e578ea8fd545a6a5215f82c13a3f5f927f92e18b07b56f469e"
+  },
+  "src/heatmap.py": {
+   "blob": "7700c95d3b1165363c25ccbca3fa51c995bb9170",
+   "sha256": "8835e6958a2911cf9a09f168071de8ea89ec439c5b7918edabba27473a22eea1"
+  },
+  "src/layout.py": {
+   "blob": "7ddbbba57b5768c3b2cc28f8a27ec9c0eb767bd1",
+   "sha256": "06fe9f07e5358fef4f7149d1e9fc81cd83dda25757b4a7d2e48f275eedd5d76d"
+  },
+  "src/plot.py": {
+   "blob": "1e5c0584be096118351177df27fe956637077a60",
+   "sha256": "e4c95943ddb23a2f595ecf55e91332ae465361f2c9fea8ca39d885a781666773"
+  },
+  "src/settings.py": {
+   "blob": "7128bbf1a640f3b0fc9c160e6f563892d3270bad",
+   "sha256": "4d489f04478ac8deb4e4f584b8e4935869ae1bc05b7c20cb43b314b1bbd37242"
+  },
+  "src/tbui.py": {
+   "blob": "c665210833b477ad33606210ad7c0c7c5e4db4a9",
+   "sha256": "59756290aab446a0ba47b2aa88e0e3816e37cd004c0b6ad1d79fd39fdfdeb956"
+  },
+  "src/uiboard.py": {
+   "blob": "7d7a928adc1f6efafd9ea39d444c35b1e511c6a8",
+   "sha256": "e0c30deacf25321dad66bd06eaf08fc8dfd8bb1bd2bd02a643aa0f30d9a550d6"
+  },
+  "src/util/__init__.py": {
+   "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "src/util/pmeter.py": {
+   "blob": "e54cd10d9ff37925cc7743acab6d8084bb44debe",
+   "sha256": "f5a979a9e77ca915b5047981c3005b3053319f87125ce938920d3281768ae0f4"
+  },
+  "tests/backend/test_board.py": {
+   "blob": "4e2095001021eb0ebc57472eea4accc06ab0f1be",
+   "sha256": "92c49d73b31a4d87d578fb838093f3f3d04ee826957ff2649da34983aba13762"
+  },
+  "tests/backend/test_naf.py": {
+   "blob": "6d44a46531318b16a4abc5aaf65fbc90dd5c24c4",
+   "sha256": "d557fced8fd3446bdd6805f89ea0f0532c8cf69be3fbeeaac68a03743cdee63e"
+  },
+  "tests/backend/test_neuralmcts.py": {
+   "blob": "05a7e5370b39d69d175ad4c5a5616c7857ea2aa4",
+   "sha256": "df23153853fee18ad1a29844e217fadf0b82ad6f646f0f2f752b481700eadf6b"
+  },
+  "tests/backend/test_nneval.py": {
+   "blob": "ea78c37283ae6b4b8616324bb7729949ed3a1540",
+   "sha256": "ec5459be602d8c695fdd4cb6bdb961147cd29501a460c4ec3b967c0b233d78ff"
+  },
+  "tests/backend/test_nnmcts.py": {
+   "blob": "1a91f8ee443ab8d5165b5860d3a85c3ee4eaaa52",
+   "sha256": "8cc5965f2a99b50c12a5966c9fe5a67eef098dfe15918255589f2c3f56d00cfb"
+  },
+  "tests/backend/test_player.py": {
+   "blob": "da827e8aed6e9b8925e1c7c851b332cfdf5aed91",
+   "sha256": "6dbc8b8d9f5acb38a40332157d8cacfab0de127f94a2e42aaa57df1cfe7fef35"
+  },
+  "tests/backend/test_point.py": {
+   "blob": "cbc405c6bbc45f3c19f1845c15964f9c2cd0cff8",
+   "sha256": "89f9942fd3f0d254f93467fc1465497a9f265b794151ae191ceb01ee55535220"
+  },
+  "tests/backend/test_select_set.py": {
+   "blob": "9214a3af1ad3b00bec6a77ff6e359f886c72547c",
+   "sha256": "7925fcc4cc9f69308ef1e2d6fae86f160963dfcabaca8aaa79c911fe845216d3"
+  },
+  "tests/test_game.py": {
+   "blob": "70c39f6210fa26fc35f0a9aaadd1c051be69b701",
+   "sha256": "8fae4f080c41939215df8966164d93270b5ab98f2afcb7c332a32896b87d932e"
+  },
+  "tests/test_heatmap.py": {
+   "blob": "fcaf77a2dac0e146dfd8e8f441bfd5008c7e0394",
+   "sha256": "36da892beb054c8a1abceee3ee950fca0f04bc008959d38c76f2e8fc64e7b5e5"
+  },
+  "tests/test_layout_dialogs.py": {
+   "blob": "e39a08bb4a42c4093def8f285f06581c8d1ee576",
+   "sha256": "c8aa02b09c1a1878f1e4888a0c92dfb8152420156c2f0ff1cafad236fa000f4b"
+  },
+  "tests/test_plot.py": {
+   "blob": "4aec949ebcd54763a5ce36b0fbeb17d0cbb3e169",
+   "sha256": "63204baa750c1ca3fb7c1fe0e6592065db4e19618472e59614124367ab4c3bf4"
+  },
+  "tests/test_settings.py": {
+   "blob": "db1b998e875f35cf35fd21711c20f0ad5502c971",
+   "sha256": "e58f847ff39ff6e677911fcc4b7343fb8bf815dbb74fba0dd12e4252a4550d05"
+  },
+  "tests/test_uiboard.py": {
+   "blob": "1fcfb391775e39a28307187a1a68a836aa3fd8a8",
+   "sha256": "b35652e1d63d46dbb880db6b4744a1f1d1669954d24c02ead8b2503ecf096286"
+  }
+ },
+ "manifest_sha256": "2f631e6f1dc1b63a3c49754fbf35653024a948022f7a1ad08e15d9d96441232f",
+ "model_files": {
+  "model/meta/six-917000.data-00000-of-00001": {
+   "blob": "310672e9384f473f21381da1ad8b5054146aea78",
+   "sha256": "1958f8476e9d56cbb87fa570db88f9cc9d389b30e20571fd66e8e779a4cefbab"
+  },
+  "model/meta/six-917000.index": {
+   "blob": "10123d8940cf17ba42ed5f4d0baf9e7db426356e",
+   "sha256": "1d4073c4da30e515a984faef2c3cc9c8b8ba402353a01933c8bb80e1f279f8cd"
+  },
+  "model/meta/six-917000.meta": {
+   "blob": "ab69573497df741855b772bb8a45c4517e511fa5",
+   "sha256": "e862b0ccfc0dd0ed2a7c487fcacead1e06f1a6e80d307094c6d10a4722be0ef2"
+  },
+  "model/pb/saved_model.pb": {
+   "blob": "7cd432882ab358fe80be94e9406bdc8211eaec9c",
+   "sha256": "e0c2b882bc97c4661ac92af47ae5ef78443e57b42d0cb7c9c3a8cb7e8d01993b"
+  },
+  "model/pb/variables/variables.data-00000-of-00001": {
+   "blob": "310672e9384f473f21381da1ad8b5054146aea78",
+   "sha256": "1958f8476e9d56cbb87fa570db88f9cc9d389b30e20571fd66e8e779a4cefbab"
+  },
+  "model/pb/variables/variables.index": {
+   "blob": "10123d8940cf17ba42ed5f4d0baf9e7db426356e",
+   "sha256": "1d4073c4da30e515a984faef2c3cc9c8b8ba402353a01933c8bb80e1f279f8cd"
+  },
+  "model/pbtxt/saved_model.pbtxt": {
+   "blob": "0db3dfb9d20caa5019458eb38e443a1b4bc5c884",
+   "sha256": "2e1045f56ed43961d7bde3af78db0c473ae1e6a2b105dbb37bb967e10f986233"
+  },
+  "model/pbtxt/variables/variables.data-00000-of-00001": {
+   "blob": "310672e9384f473f21381da1ad8b5054146aea78",
+   "sha256": "1958f8476e9d56cbb87fa570db88f9cc9d389b30e20571fd66e8e779a4cefbab"
+  },
+  "model/pbtxt/variables/variables.index": {
+   "blob": "10123d8940cf17ba42ed5f4d0baf9e7db426356e",
+   "sha256": "1d4073c4da30e515a984faef2c3cc9c8b8ba402353a01933c8bb80e1f279f8cd"
+  }
+ },
+ "model_pins_verified": [
+  "model/pb/saved_model.pb",
+  "model/pb/variables/variables.data-00000-of-00001",
+  "model/pb/variables/variables.index"
+ ],
+ "notices": [
+  {
+   "path": "LICENSE",
+   "retained_as": "03_notice_0_LICENSE.txt",
+   "sha256": "cef0d970b9a3dcdc2d3b7bc2ecee97a67d57cc1d1287d1ea5e13fe86b6dbd36b"
+  }
+ ],
+ "repo": "https://github.com/stevens68/twixtbot-ui",
+ "tracked_files": 70
+}
