@@ -229,6 +229,11 @@ EXPECTED_GATES = {
     #: GPU, installs the head the ONE fit saved on one copy and plays the original proven combination on a registered block.
     "combination_policy_cycle2_screen_authorization.py": "COMBINATION_POLICY_CYCLE2_SCREEN_AUTHORIZED",
     "combination_policy_cycle2_strength_authorization.py": "COMBINATION_POLICY_CYCLE2_STRENGTH_AUTHORIZED",
+    #: 🔴 THE SIXTY-SECOND AND SIXTY-THIRD, ADDED 2026-11-03 (the H-TB pilot card and build, on the user's decision).
+    #: Labelling runs twixtbot's raw network on the CPU over C0 positions; the fit trains calib020_0001 whole on the
+    #: CPU and scores F1-F3. Each takes its own reviewed door, in a single-declaration module.
+    "htb_label_authorization.py": "HTB_LABEL_AUTHORIZED",
+    "htb_fit_authorization.py": "HTB_FIT_AUTHORIZED",
     "l0_match_command.py": "L0_EXECUTION_AUTHORIZED",
     "lowply_qualification.py": "LOWPLY_QUALIFICATION_AUTHORIZED",
     "runtime_requalification.py": "RUNTIME_REQUAL_AUTHORIZED",
@@ -260,7 +265,7 @@ def test_THE_COUNT_IS_DERIVED_AND_ANY_REPORT_SAYING_OTHERWISE_IS_WRONG():
     #: single deliberate edit, to the dict above.
     assert INVENTORY.gate_count() == len(discover_gates()) == len(EXPECTED_GATES), (
         "the derived inventory and EXPECTED_GATES must agree")
-    assert len(EXPECTED_GATES) == 61, (
+    assert len(EXPECTED_GATES) == 63, (
         "the total moved: add or remove the entry in EXPECTED_GATES above "
         "deliberately, then update this number in the same edit")
 
@@ -310,7 +315,8 @@ def _stale_count_claims(text):
              "forty-two": 42, "forty-three": 43, "forty-four": 44,
              "forty-five": 45, "forty-six": 46, "forty-seven": 47, "forty-eight": 48,
              "forty-nine": 49, "fifty": 50, "fifty-one": 51, "fifty-two": 52, "fifty-three": 53,
-             "fifty-four": 54, "fifty-five": 55, "fifty-six": 56, "fifty-seven": 57, "fifty-eight": 58, "fifty-nine": 59, "sixty": 60, "sixty-one": 61}
+             "fifty-four": 54, "fifty-five": 55, "fifty-six": 56, "fifty-seven": 57, "fifty-eight": 58, "fifty-nine": 59, "sixty": 60, "sixty-one": 61,
+             "sixty-two": 62, "sixty-three": 63}
     n = len(EXPECTED_GATES)
     bad = []
     for word, value in words.items():
@@ -398,4 +404,6 @@ def test_THE_STALE_COUNT_GUARD_IS_NOT_VACUOUS():
     assert _stale_count_claims("all fifty-seven gates are False")  # never the total; stale
     assert _stale_count_claims("all fifty-eight gates are False")  # was right, now stale
     assert _stale_count_claims("all fifty-nine gates are False")  # was right, now stale
-    assert not _stale_count_claims("all sixty-one gates are False")  # correct total
+    assert _stale_count_claims("all sixty-one gates are False")  # was right, now stale
+    assert _stale_count_claims("all sixty-two gates are False")  # never the total; stale
+    assert not _stale_count_claims("all sixty-three gates are False")  # correct total

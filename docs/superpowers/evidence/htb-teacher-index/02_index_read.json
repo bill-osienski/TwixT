@@ -1,0 +1,2554 @@
+{
+ "sha256": "1d4073c4da30e515a984faef2c3cc9c8b8ba402353a01933c8bb80e1f279f8cd",
+ "n_variables": 240,
+ "data_bytes_sum": 10270828,
+ "variables": [
+  {
+   "name": "BatchNorm/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 0,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 192,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 384,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 576,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_1/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 768,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_1/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 960,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_1/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 1152,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_1/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 1344,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_10/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 1536,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_10/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 1728,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_10/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 1920,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_10/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 2112,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_11/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 2304,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_11/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 2496,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_11/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 2688,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_11/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 2880,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_12/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 3072,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_12/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 3264,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_12/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 3456,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_12/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 3648,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_13/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 3840,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_13/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 4032,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_13/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 4224,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_13/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 4416,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_14/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 4608,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_14/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 4800,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_14/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 4992,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_14/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 5184,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_15/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 5376,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_15/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 5568,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_15/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 5760,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_15/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 5952,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_16/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 6144,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_16/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 6336,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_16/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 6528,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_16/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 6720,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_17/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 6912,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_17/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 7104,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_17/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 7296,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_17/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 7488,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_18/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 7680,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_18/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 7872,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_18/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 8064,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_18/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 8256,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_19/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 8448,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_19/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 8640,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_19/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 8832,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_19/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 9024,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_2/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 9216,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_2/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 9408,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_2/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 9600,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_2/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 9792,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_20/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 9984,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_20/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 10176,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_20/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 10368,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_20/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 10560,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_21/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 10752,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_21/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 10944,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_21/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 11136,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_21/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 11328,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_22/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 11520,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_22/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 11712,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_22/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 11904,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_22/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 12096,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_23/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 12288,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_23/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 12480,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_23/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 12672,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_23/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 12864,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_24/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 13056,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_24/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 13248,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_24/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 13440,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_24/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 13632,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_25/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 13824,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_25/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 14016,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_25/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 14208,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_25/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 14400,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_26/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 14592,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_26/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 14784,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_26/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 14976,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_26/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 15168,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_27/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 15360,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_27/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 15552,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_27/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 15744,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_27/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 15936,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_28/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 16128,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_28/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 16320,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_28/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 16512,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_28/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 16704,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_29/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 16896,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_29/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 17088,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_29/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 17280,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_29/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 17472,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_3/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 17664,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_3/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 17856,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_3/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 18048,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_3/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 18240,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_30/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 18432,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_30/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 18624,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_30/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 18816,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_30/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 19008,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_31/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 19200,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_31/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 19392,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_31/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 19584,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_31/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 19776,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_32/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 19968,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_32/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 20160,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_32/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 20352,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_32/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 20544,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_33/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 20736,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_33/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 20928,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_33/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 21120,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_33/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 21312,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_34/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 21504,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_34/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 21696,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_34/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 21888,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_34/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 22080,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_35/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 22272,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_35/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 22464,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_35/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 22656,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_35/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 22848,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_36/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 23040,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_36/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 23232,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_36/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 23424,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_36/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 23616,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_37/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 23808,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_37/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 24000,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_37/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 24192,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_37/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 24384,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_38/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 24576,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_38/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 24768,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_38/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 24960,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_38/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 25152,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_39/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 25344,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_39/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 25536,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_39/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 25728,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_39/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 25920,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_4/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 26112,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_4/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 26304,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_4/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 26496,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_4/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 26688,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_40/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 26880,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_40/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 27072,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_40/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 27264,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_40/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 27456,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_41/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 27648,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_41/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 27840,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_41/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 28032,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_41/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 28224,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_42/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 28416,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_42/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 28608,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_42/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 28800,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_42/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 28992,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_43/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 29184,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_43/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 29376,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_43/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 29568,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_43/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 29760,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_44/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 29952,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_44/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 30144,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_44/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 30336,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_44/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 30528,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_45/beta",
+   "dtype": "float32",
+   "shape": [
+    80
+   ],
+   "shard": 0,
+   "offset": 30720,
+   "size": 320
+  },
+  {
+   "name": "BatchNorm_45/gamma",
+   "dtype": "float32",
+   "shape": [
+    80
+   ],
+   "shard": 0,
+   "offset": 31040,
+   "size": 320
+  },
+  {
+   "name": "BatchNorm_45/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    80
+   ],
+   "shard": 0,
+   "offset": 31360,
+   "size": 320
+  },
+  {
+   "name": "BatchNorm_45/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    80
+   ],
+   "shard": 0,
+   "offset": 31680,
+   "size": 320
+  },
+  {
+   "name": "BatchNorm_46/beta",
+   "dtype": "float32",
+   "shape": [
+    2
+   ],
+   "shard": 0,
+   "offset": 32000,
+   "size": 8
+  },
+  {
+   "name": "BatchNorm_46/gamma",
+   "dtype": "float32",
+   "shape": [
+    2
+   ],
+   "shard": 0,
+   "offset": 32008,
+   "size": 8
+  },
+  {
+   "name": "BatchNorm_46/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    2
+   ],
+   "shard": 0,
+   "offset": 32016,
+   "size": 8
+  },
+  {
+   "name": "BatchNorm_46/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    2
+   ],
+   "shard": 0,
+   "offset": 32024,
+   "size": 8
+  },
+  {
+   "name": "BatchNorm_5/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 32032,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_5/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 32224,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_5/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 32416,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_5/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 32608,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_6/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 32800,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_6/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 32992,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_6/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 33184,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_6/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 33376,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_7/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 33568,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_7/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 33760,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_7/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 33952,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_7/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 34144,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_8/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 34336,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_8/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 34528,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_8/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 34720,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_8/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 34912,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_9/beta",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 35104,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_9/gamma",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 35296,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_9/moving_mean",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 35488,
+   "size": 192
+  },
+  {
+   "name": "BatchNorm_9/moving_variance",
+   "dtype": "float32",
+   "shape": [
+    48
+   ],
+   "shard": 0,
+   "offset": 35680,
+   "size": 192
+  },
+  {
+   "name": "block0/Variable",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 35872,
+   "size": 230400
+  },
+  {
+   "name": "block0/Variable_1",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 266272,
+   "size": 230400
+  },
+  {
+   "name": "block1/Variable",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 496672,
+   "size": 230400
+  },
+  {
+   "name": "block1/Variable_1",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 727072,
+   "size": 230400
+  },
+  {
+   "name": "block10/Variable",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 957472,
+   "size": 230400
+  },
+  {
+   "name": "block10/Variable_1",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 1187872,
+   "size": 230400
+  },
+  {
+   "name": "block11/Variable",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 1418272,
+   "size": 230400
+  },
+  {
+   "name": "block11/Variable_1",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 1648672,
+   "size": 230400
+  },
+  {
+   "name": "block12/Variable",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 1879072,
+   "size": 230400
+  },
+  {
+   "name": "block12/Variable_1",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 2109472,
+   "size": 230400
+  },
+  {
+   "name": "block13/Variable",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 2339872,
+   "size": 230400
+  },
+  {
+   "name": "block13/Variable_1",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 2570272,
+   "size": 230400
+  },
+  {
+   "name": "block14/Variable",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 2800672,
+   "size": 230400
+  },
+  {
+   "name": "block14/Variable_1",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 3031072,
+   "size": 230400
+  },
+  {
+   "name": "block15/Variable",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 3261472,
+   "size": 230400
+  },
+  {
+   "name": "block15/Variable_1",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 3491872,
+   "size": 230400
+  },
+  {
+   "name": "block16/Variable",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 3722272,
+   "size": 230400
+  },
+  {
+   "name": "block16/Variable_1",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 3952672,
+   "size": 230400
+  },
+  {
+   "name": "block17/Variable",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 4183072,
+   "size": 230400
+  },
+  {
+   "name": "block17/Variable_1",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 4413472,
+   "size": 230400
+  },
+  {
+   "name": "block18/Variable",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 4643872,
+   "size": 230400
+  },
+  {
+   "name": "block18/Variable_1",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 4874272,
+   "size": 230400
+  },
+  {
+   "name": "block19/Variable",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 5104672,
+   "size": 230400
+  },
+  {
+   "name": "block19/Variable_1",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 5335072,
+   "size": 230400
+  },
+  {
+   "name": "block2/Variable",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 5565472,
+   "size": 230400
+  },
+  {
+   "name": "block2/Variable_1",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 5795872,
+   "size": 230400
+  },
+  {
+   "name": "block3/Variable",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 6026272,
+   "size": 230400
+  },
+  {
+   "name": "block3/Variable_1",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 6256672,
+   "size": 230400
+  },
+  {
+   "name": "block4/Variable",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 6487072,
+   "size": 230400
+  },
+  {
+   "name": "block4/Variable_1",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 6717472,
+   "size": 230400
+  },
+  {
+   "name": "block5/Variable",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 6947872,
+   "size": 230400
+  },
+  {
+   "name": "block5/Variable_1",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 7178272,
+   "size": 230400
+  },
+  {
+   "name": "block6/Variable",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 7408672,
+   "size": 230400
+  },
+  {
+   "name": "block6/Variable_1",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 7639072,
+   "size": 230400
+  },
+  {
+   "name": "block7/Variable",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 7869472,
+   "size": 230400
+  },
+  {
+   "name": "block7/Variable_1",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 8099872,
+   "size": 230400
+  },
+  {
+   "name": "block8/Variable",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 8330272,
+   "size": 230400
+  },
+  {
+   "name": "block8/Variable_1",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 8560672,
+   "size": 230400
+  },
+  {
+   "name": "block9/Variable",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 8791072,
+   "size": 230400
+  },
+  {
+   "name": "block9/Variable_1",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 9021472,
+   "size": 230400
+  },
+  {
+   "name": "movelogits/Variable",
+   "dtype": "float32",
+   "shape": [
+    1,
+    1,
+    48,
+    2
+   ],
+   "shard": 0,
+   "offset": 9251872,
+   "size": 384
+  },
+  {
+   "name": "movelogits/Variable_1",
+   "dtype": "float32",
+   "shape": [
+    1,
+    1,
+    2,
+    1
+   ],
+   "shard": 0,
+   "offset": 9252256,
+   "size": 8
+  },
+  {
+   "name": "optimizer/global_step",
+   "dtype": "int32",
+   "shape": [],
+   "shard": 0,
+   "offset": 9252264,
+   "size": 4
+  },
+  {
+   "name": "primary_links/Variable",
+   "dtype": "float32",
+   "shape": [
+    4,
+    4,
+    8,
+    48
+   ],
+   "shard": 0,
+   "offset": 9252268,
+   "size": 24576
+  },
+  {
+   "name": "primary_location/Variable",
+   "dtype": "float32",
+   "shape": [
+    1,
+    1,
+    2,
+    48
+   ],
+   "shard": 0,
+   "offset": 9276844,
+   "size": 384
+  },
+  {
+   "name": "primary_pegs/Variable",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    2,
+    48
+   ],
+   "shard": 0,
+   "offset": 9277228,
+   "size": 9600
+  },
+  {
+   "name": "pwin/Variable",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 9286828,
+   "size": 230400
+  },
+  {
+   "name": "pwin/Variable_1",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 9517228,
+   "size": 230400
+  },
+  {
+   "name": "pwin/Variable_2",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 9747628,
+   "size": 230400
+  },
+  {
+   "name": "pwin/Variable_3",
+   "dtype": "float32",
+   "shape": [
+    5,
+    5,
+    48,
+    48
+   ],
+   "shard": 0,
+   "offset": 9978028,
+   "size": 230400
+  },
+  {
+   "name": "pwin/Variable_4",
+   "dtype": "float32",
+   "shape": [
+    192,
+    80
+   ],
+   "shard": 0,
+   "offset": 10208428,
+   "size": 61440
+  },
+  {
+   "name": "pwin/Variable_5",
+   "dtype": "float32",
+   "shape": [
+    80,
+    3
+   ],
+   "shard": 0,
+   "offset": 10269868,
+   "size": 960
+  }
+ ]
+}
