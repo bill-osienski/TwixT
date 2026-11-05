@@ -566,7 +566,8 @@ def _cfg(tmp_path, committed=None):
     allowed = committed if committed is not None else {H.CARD}
     return H.Config(
         root=root, data_root=root, cache=tmp_path / "cache", n_train=16, n_val=8,
-        memory_required_bytes=1, available_memory=lambda: {"physical_bytes": 2, "available_bytes": 2, "page_size": 1},
+        memory_required_bytes=1, label_memory_required_bytes=1,
+        available_memory=lambda: {"physical_bytes": 2, "available_bytes": 2, "page_size": 1},
         recipe=H.Recipe(epochs=1, rows_per_batch=4, learning_rate=1e-3), start_rows=16, shard_rows=5,
         committed=lambda r, rel: rel in allowed,
         games=_Spy(lambda r: games),
@@ -739,14 +740,16 @@ def test_THE_FIT_REFUSES_ON_MEMORY_BEFORE_LOADING_SHARDS_OR_THE_CHECKPOINT(tmp_p
     cfg.memory_required_bytes = required
     cfg.available_memory = lambda: {"physical_bytes": 2 * available, "available_bytes": available, "page_size": 1}
     loads = []
-    monkeypatch.setattr(H, "load_label_shards", lambda *a: loads.append(a))
+    monkeypatch.setattr(H, "load_label_compact", lambda *a: loads.append(a))
     assert H.main(["run", "fit"], cfg) == 2
     assert match in capsys.readouterr().err
     assert not loads and cfg.load_reference.calls == 0 and not cfg.evidence_fit.exists()
 
 
-def test_THE_REAL_DEFAULT_MEMORY_REQUIREMENT_IS_UNSET_SO_THE_FIT_REFUSES():
-    assert H.Config().memory_required_bytes is None
+def test_THE_DEFAULT_MEMORY_REQUIREMENTS_ARE_THE_APPROVED_FIT_AND_THE_PROPOSED_LABEL_ONES():
+    cfg = H.Config()
+    assert cfg.memory_required_bytes == H.FIT_MEMORY_REQUIRED == 12 * 2 ** 30 == 12_884_901_888    # the user's approval
+    assert cfg.label_memory_required_bytes == H.LABEL_MEMORY_REQUIRED == 11 * 2 ** 30         # proposed, for review
     mem = H.available_memory()
     assert mem["physical_bytes"] > 0 and 0 < mem["available_bytes"] <= mem["physical_bytes"]
 
@@ -856,3 +859,115 @@ def test_THE_BATCHED_FIT_START_CHECK_AND_SCORE_EQUAL_THE_EAGER_ONES_BITWISE(tmp_
         assert H.score(net, store) == H.score(net, eager)     # every metric, bitwise
     assert calls and max(calls) <= H.SCORE_CHUNK and sum(calls) == 2 * len(store)
     assert H.start_check(ref, store, n=12) == H.start_check(ref, eager, n=12)
+
+
+@pytest.mark.parametrize("required,available,match", [(None, 10 ** 12, "not set"), (10 ** 9, 10 ** 8, "below")])
+def test_THE_LABEL_RUN_REFUSES_ON_MEMORY_BEFORE_THE_TEACHER_OR_THE_CORPUS(tmp_path, opened, capsys, required,
+                                                                        available, match):
+    """Card §16.3."""
+    cfg, _ = _cfg(tmp_path)
+    cfg.label_memory_required_bytes = required
+    cfg.available_memory = lambda: {"physical_bytes": 2 * available, "available_bytes": available, "page_size": 1}
+    assert H.main(["run", "label", "--clone-root", "/fake"], cfg) == 2
+    assert match in capsys.readouterr().err
+    assert cfg.load_teacher.calls == cfg.games.calls == 0 and not cfg.evidence_label.exists()
+
+
+def _label_rows(n_games=6, every=2, seed0=80):
+    moves_by_game, rows, sel, seen = {}, [], [], set()
+    for i, gid in enumerate(ids_in("train", n_games)):
+        moves = random_game(seed0 + i, 36)
+        moves_by_game[gid] = moves
+        want = [{"game_id": gid, "ply": k, "key": H.state_key(s)} for k, s in H.positions(moves) if k % every == 1]
+        want = [r for r in want if not (r["key"] in seen or seen.add(r["key"]))]
+        sel += want
+        rows += H.label_game(gid, moves, want, FakeTeacher(smooth=True))
+    order = sorted(range(len(sel)), key=lambda i: H._sha(sel[i]["key"].encode()))    # a non-game selection order
+    return [sel[i] for i in order], {r["key"]: r for r in rows}
+
+
+def test_COMPACT_LABELS_WRITE_BYTE_IDENTICAL_SHARDS_ROW_LISTS_AND_MANIFEST(tmp_path):
+    """Card §16.2: the compact path against the previous one, on the same labelled rows and selection order."""
+    sel, by_key = _label_rows()
+    old = H.write_label_shards([by_key[r["key"]] for r in sel], tmp_path / "old", shard_rows=7)
+    arrays = H.LabelArrays(sel)
+    for r in reversed(list(by_key.values())):                  # filled in any order, game by game
+        arrays.put(r)
+    new = H.write_label_arrays(arrays, tmp_path / "new", shard_rows=7)
+    assert new == old and len(old["shards"]) > 2
+    names = sorted(p.name for p in (tmp_path / "old").iterdir())
+    assert names == sorted(p.name for p in (tmp_path / "new").iterdir())
+    for name in names:
+        assert (tmp_path / "old" / name).read_bytes() == (tmp_path / "new" / name).read_bytes(), name
+    assert arrays.target.dtype == np.float32 and not hasattr(arrays, "legal")
+
+
+def test_COMPACT_LABELS_REFUSE_A_MISSING_REPEATED_OR_FOREIGN_ROW(tmp_path):
+    sel, by_key = _label_rows(n_games=3)
+    rows = [by_key[r["key"]] for r in sel]
+    a = H.LabelArrays(sel)
+    for r in rows[1:]:
+        a.put(r)
+    with pytest.raises(H.Stop, match="never labelled"):
+        H.write_label_arrays(a, tmp_path / "x")
+    assert not (tmp_path / "x").exists()
+    with pytest.raises(H.Stop, match="labelled twice"):
+        a.put(rows[1])
+    with pytest.raises(H.Stop, match="does not hold"):
+        a.put({**rows[0], "ply": rows[0]["ply"] + 1})
+    with pytest.raises(H.Stop, match="repeats a key"):
+        H.LabelArrays(sel + sel[:1])
+
+
+def test_THE_FAKE_LABEL_RUN_WRITES_WHAT_THE_PREVIOUS_PATH_WOULD_HAVE(tmp_path, opened):
+    """The whole `run label` on fakes, against the previous path rebuilt from its own selection and FakeTeacher."""
+    cfg, _ = _cfg(tmp_path)
+    assert H.run_label("/fake-clone", cfg) == 0
+    sel = json.loads((cfg.evidence_label / "selection.json").read_text())
+    games = {g["id"]: g for g in _fake_games()}
+    for arm in H.ARMS:
+        by_game = {}
+        for r in sel["rows"][arm]:
+            by_game.setdefault(r["game_id"], []).append(r)
+        got = {}
+        for gid in sorted(by_game):
+            for row in H.label_game(gid, games[gid]["moves"], by_game[gid], FakeTeacher(smooth=True)):
+                got[row["key"]] = row
+        H.write_label_shards([got[r["key"]] for r in sel["rows"][arm]], tmp_path / f"old-{arm}", cfg.shard_rows)
+        names = sorted(p.name for p in cfg.labels(arm).iterdir())
+        assert names == sorted(p.name for p in (tmp_path / f"old-{arm}").iterdir())
+        for name in names:
+            assert (cfg.labels(arm) / name).read_bytes() == (tmp_path / f"old-{arm}" / name).read_bytes()
+    rec = json.loads((cfg.evidence_label / "record.json").read_text())
+    assert rec["status"] == "COMPLETED" and rec["label_memory_required_bytes"] == 1 and rec["memory_at_start"]
+
+
+# ─────────────────────────────── the full-run wrappers (built only) ───────────────────────────────
+
+@pytest.mark.parametrize("kind", ["label", "fit"])
+def test_EACH_FULL_RUN_WRAPPER_IS_THE_DECLARED_DERIVATION_WITH_THE_ADOPTED_CEILING(kind):
+    import hashlib
+    import os
+    import subprocess
+    import sys
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+    import htb_run_wrapper_spec as RW
+    src = (ROOT / RW.SOURCE).read_bytes()
+    assert hashlib.sha256(src).hexdigest() == RW.SOURCE_SHA256
+    p = ROOT / RW.TARGETS[kind]
+    text = p.read_text()
+    assert text == RW.derive(kind, src.decode()) and os.access(p, os.X_OK)
+    assert subprocess.run(["bash", "-n", str(p)]).returncode == 0
+    term = {"label": 13_190, "fit": 18_590}[kind]                       # the user's adoption, 2026-11-05
+    assert f"\nTERM_S={term}\n" in text and "\nGRACE_S=10\n" in text
+    gate = {"label": "HTB_LABEL_AUTHORIZED", "fit": "HTB_FIT_AUTHORIZED"}[kind]
+    assert f"\nGATE={gate}\n" in text and getattr({"label": LABEL_GATE, "fit": FIT_GATE}[kind], gate) is False
+    assert f"\nRUN_REL={ {'label': H.EVIDENCE_LABEL, 'fit': H.EVIDENCE_FIT}[kind] }\n" in text
+    assert f'-m "$MODULE" run {kind}' in text and "\nMODULE=scripts.GPU.alphazero.htb_pilot\n" in text
+    assert f"\nRECORD_KIND=htb-{kind}-record/1\n" in text
+    if kind == "label":
+        assert '"$TPY" -B -m "$MODULE" run label --clone-root "$CKPT"' in text
+        assert '"$W" "$HEAD_C" "$PRE" "$TPY" "$PY" "$CKPT" > "$OUT_REL/outer.json"' in text
+    else:
+        assert "TPY" not in text and '"$PY" -B -m "$MODULE" run fit \\' in text
+    assert not (ROOT / RW.RUN_REL[kind]).exists()                       # never run

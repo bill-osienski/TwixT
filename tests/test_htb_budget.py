@@ -51,14 +51,23 @@ def test_THE_BUDGETS_AND_THE_PROJECTION_RECOMPUTE_FROM_THE_COMMITTED_RECORDS():
     assert fb["feature_map_bytes"] == 64 * 24 * 24 * 128 * 4
     assert fb["terms_bytes"]["networks_optimizer_gradients_snapshots"] == 4 * fit["measurements"]["networks_bytes"]
     assert fb["conservative_sum_bytes"] < min(fb["available_bytes_observed"])
-    lb = B.label_budget(lab, fit)
-    assert lb["terms_bytes"]["labelled_rows_of_the_larger_arm"] == 240_000 * 56_000
-    assert lb["conservative_sum_bytes"] == sum(lb["terms_bytes"].values()) == 23_562_292_049
+    old = B.label_budget(lab, fit, compact=False)                   # the previous label path, as budgeted 2026-11-04
+    assert old["terms_bytes"]["labelled_rows_of_the_larger_arm"] == 240_000 * 56_000
+    assert old["conservative_sum_bytes"] == sum(old["terms_bytes"].values()) == 23_562_292_049
+    lb = B.label_budget(lab, fit)                                   # card §16: compact as produced
+    assert "labelled_rows_of_the_larger_arm" not in lb["terms_bytes"] and lb["compact"] is True
+    assert lb["terms_bytes"]["compact_labels_of_the_larger_arm"] == 240_000 * (2_333 + 300 + 200)
+    assert lb["conservative_sum_bytes"] == sum(lb["terms_bytes"].values()) == 10_840_404_049
+    assert lb["proposed_memory_required_bytes"] == H.LABEL_MEMORY_REQUIRED == 11 * B.GIB
+    assert fb["proposed_memory_required_bytes"] == H.FIT_MEMORY_REQUIRED
+    inv = json.loads((ROOT / H.C0_INVENTORY).read_text())
+    assert inv["eligible"]["plies_per_game"]["max"] == B.MAX_GAME_PLIES
     cfg = T.TimingConfig(root=ROOT, data_root=ROOT)
     p = B.batched_fit_projection(fit, cfg)
     m = fit["measurements"]
     r = m["lazy_board_s_per_row"] + m["examples_s_per_row"]
-    assert p["rebuild_s_per_row_upper_bound"] == r and p["rows_built_in_updates"] == 15_000 * 32
+    assert p["rebuild_s_per_row_estimate"] == r and p["rows_built_in_updates"] == 15_000 * 32
+    assert "planning estimate" in p["basis"] and "upper bound" not in p["basis"]
     u = m["updates"]
     assert p["terms"]["updates_s"] == round(u["warmup_s"] + 14_990 * u["steady_mean_s"] + 480_000 * r, 1)
     assert p["projected_s"] == 12_301.3 and (p["term_s"], p["kill_s"], p["cleanup_through_s"]) == (18_590, 18_600, 18_610)
@@ -105,3 +114,11 @@ def test_A_BUILT_EXAMPLE_ON_FAKES_IS_INSIDE_THE_TEMPORARY_EXAMPLE_ALLOWANCE():
             for g in games for k, s in H.positions(g["moves"]) if k % 7 == 3]
     ex, b = _peak(lambda: H.build_examples(rows, {g["id"]: g["moves"] for g in games}))
     assert b / len(ex) <= fit["measurements"]["example_bytes_traced"] * B.EXAMPLE_MARGIN
+
+
+def test_A_COMPACT_LABEL_ROW_IS_INSIDE_ITS_ALLOWANCE():
+    games = _games()
+    sel = [{"game_id": g["id"], "ply": k, "key": H.state_key(s)} for g in games for k, s in H.positions(g["moves"])]
+    sel = list({r["key"]: r for r in sel}.values())
+    arrays, b = _peak(lambda: H.LabelArrays(sel))
+    assert H.PADDED * 4 < b / len(sel) <= B.COMPACT_ROW_B + B.META_ROW_B + B.KEY_INDEX_B

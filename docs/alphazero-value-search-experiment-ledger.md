@@ -256,6 +256,7 @@ knob) is not a new hypothesis.
 > **H-TB — STOP accepted as a replay defect; red-first repair BUILT for review; neither timing approved (decision note and addendum, 2026-11-04).** Card §14 (re-pinned `d82e2956…`): red-first games only, after authenticating the complete corpus; the starting player is checked against the move players and never defaulted; counts, split, dedup, recipe and scoring unchanged. Plan §6 (`632eb445…`): fresh T-label paths (`label2`), red-first counts in the projections, partial measurements kept, the output check on every terminal record. 93 focused tests pass. See #173.
 > **H-TB timing — T-label attempt 2 and T-fit each COMPLETED once (addendum, 2026-11-04).** Red-first pool: 15,590 train / 1,899 val games (842,171 / 103,078 positions). Projected full label 8,719 s and full fit 11,173 s (proposed ceilings 13,200 s and 16,800 s, **not adopted**). Teacher 11.9 ms/call; update 0.708 s. **Memory: the full fit as built needs about 66.4 GB of examples alone (246,540 B traced per example), above the 51.5 GB physical** — boards are 36.5 GB of it and the other 28.6 GB is non-board example data, so batch-at-a-time construction must cover whole examples, not boards only. Peak training memory not measured. Returned for review. See #174.
 > **H-TB — timings accepted; batched whole-example construction BUILT for review; nothing run (decision note and addendum, 2026-11-04).** Card §15 (`edab9fe9…`): compact labels + move lists kept, complete examples built per 32-row batch / 64-row scoring chunk; batched fit, start check and scores equal the eager ones bitwise on fakes. Conservative fit budget 12.55 GB (proposed requirement 12 GiB, not set). Revised fit projection 12,301 s, an upper bound (proposed KILL 18,600 s, not adopted). **The existing label path's conservative budget is 23.56 GB, about the lowest available memory observed (23.93 GB)**, dominated by 13.44 GB of held label rows. See #175.
+> **H-TB — batched fit accepted; fit requirement 12 GiB and both full-run ceilings ADOPTED; compact label storage and both full-run wrappers BUILT for launch review; nothing run (decision note, clarification and addendum, 2026-11-05).** Card §16 (`ccb3bc67…`): labels compacted as produced, with byte-identical shards, row lists and manifest on fakes; label budget 23.56 → 10.84 GB (proposed launch requirement 11 GiB); memory checks at both launches. Ceilings: label 13,190/13,200/13,210 s, fit 18,590/18,600/18,610 s. The 2.441 ms/row and 3.42 h fit figures are planning estimates, not bounds. Neither full run authorized. See #176.
 
 ## Historical proposal check — programme now closed
 
@@ -2019,6 +2020,12 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
    - read the 12,301 s revised projection as a measurement: its rebuild term is an upper bound derived from T-fit;
    - launch `run label` as built without reviewing its memory: its conservative budget (23.56 GB) is about equal to the lowest available memory observed;
    - run a further timing, full labelling or full fitting without the user's approval.
+176. **The H-TB launch build (2026-11-05): built, not run.** Card §16 (`ccb3bc67…`). Do **not**:
+   - keep a labelled row's legal-move list beyond its game, or write labels by any path that is not byte-identical to the previous shards, row lists and manifest;
+   - weaken either launch memory check, lower the approved fit requirement (12 GiB), or treat the proposed 11 GiB label requirement as approved before the launch review;
+   - change the adopted ceilings (label TERM 13,190 / KILL 13,200 / cleanup 13,210 s; fit TERM 18,590 / KILL 18,600 / cleanup 18,610 s), or hand-edit a full-run wrapper: each stays the derivation in `tests/htb_run_wrapper_spec.py`;
+   - call the 2.441 ms/row rebuild figure, or the 12,301 s (about 3.42 h) fit projection, an upper bound: both are planning estimates;
+   - open `HTB_LABEL_AUTHORIZED` or `HTB_FIT_AUTHORIZED`, or launch either wrapper, without the user's launch approval.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -9656,3 +9663,68 @@ The full test, hypothesis, prediction, protocol, integrity checks and seed closi
   - Proposed ceiling: **TERM 18,590 / KILL 18,600 / cleanup 18,610 s. Not adopted.**
   - With the label run's 8,719 s, about 5.8 h in all.
 - **Conclusion / status:** built; returned for review with the budget and the revised projection. Neither proposed ceiling is adopted, the memory requirement is not set, and the label path's memory is flagged. See #175.
+
+#### Clarification — the batched fit projection is an estimate, not a bound (2026-11-05, the user's review)
+
+The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper bound". **That is wrong: it is a derived planning estimate, not a demonstrated upper bound.** It adds T-fit's board-rebuild time per row to its up-front example time per row. Both were measured once on 640 timing rows, and full-run rows, ply mixes or machine states can cost more. The about 3.42 h (12,301 s) fit projection built on it is therefore an estimate too. The earlier text stays as written. From `htb_budget` on, the field is `rebuild_s_per_row_estimate` and its basis says "planning estimate".
+
+#### Decision note — batched fit accepted; fit requirement and ceilings adopted; compact label build approved (2026-11-05, the user's review)
+
+- **The user's review** (read-only): checked the source, the equivalence tests, the budget arithmetic and the pins. Historical timing evidence is unchanged, and all 64 gates are closed. **Batched fit accepted.**
+- **Decisions:**
+  1. **Fit requirement approved:** 12 GiB (12,884,901,888 B) as the launch requirement. The budget is an estimate (12.55 GB), and peak memory remains unmeasured.
+  2. **Compact the label storage before launch.** Its 23.56 GB budget left about 0.37 GB against the lowest observed availability. Do not retain every row's Python legal-move lists.
+  3. **Ceilings adopted** for the forthcoming wrappers: label TERM 13,190 / KILL 13,200 / cleanup 13,210 s; fit TERM 18,590 / KILL 18,600 / cleanup 18,610 s.
+- **Wording correction:** see the clarification above.
+- **Approved build:**
+  - compact labels as they are produced, keeping the target and value arrays, selection order, metadata, manifests and binding checks;
+  - focused fake-run equivalence checks against the existing label path;
+  - the label memory budget updated, its launch memory check added, and the approved fit requirement set;
+  - both full-run wrappers, on the reviewed wrapper pattern and the existing gates;
+  - the storage amendment appended and pinned, this clarification in a dated note, and an exact-path local commit.
+- **No** additional real timing, full regression or mutation campaign. Return the build for launch review.
+- **Not authorized:** either full run; games, GPU work, deployment and pushing.
+
+#### Addendum — compact label storage, launch memory checks and both full-run wrappers built; nothing run (2026-11-05)
+
+- **Test:** none was run. This is a build plus CPU tests on fakes. **Prediction:** none stated.
+- **Card §16** (sha256 `ccb3bc67…`, replacing `edab9fe9…`): the label rule (compact as produced; every selected row filled exactly once), unchanged definitions and shard format, memory checks at both launches, the adopted ceilings, and the estimate wording.
+- **`htb_pilot.py`** (`1e981274…`):
+  - `LabelArrays` holds one arm's labels in selection order: float32 (n, 576) targets, float64 values, int32 plies, a filled mask, the selection's own metadata and a key-to-row map. `put` consumes a label row's legal moves and target, the same assignment `write_label_shards` made, and keeps neither list. A row the selection does not hold, a row labelled twice, or a repeated key STOPs at `labels`.
+  - `write_label_arrays` writes the same shards, row lists and manifest from the arrays, refusing until every row is filled.
+  - `run_label` fills `LabelArrays` game by game and writes from it; `write_label_shards` is unchanged and still used by the timing code.
+  - `check_label_memory` runs after the destination refusals and before the teacher or corpus loads. The label record now carries `memory_at_start` and `label_memory_required_bytes`.
+  - `Config.memory_required_bytes` defaults to **12 GiB** (`FIT_MEMORY_REQUIRED`, the user's approval). `Config.label_memory_required_bytes` defaults to **11 GiB** (`LABEL_MEMORY_REQUIRED`, **proposed** from the budget, for the launch review).
+- **Equivalence checks on fakes** (all byte-for-byte):
+  - the compact writer against `write_label_shards`, on the same labelled rows in a selection order that is not game order, filled in reverse: identical manifest, every shard file, every row list (3+ shards of 7 rows);
+  - a whole fake `run label` against the previous path rebuilt from its own `selection.json` with the same fake teacher: every file in both arms' label directories identical;
+  - refusals of missing, repeated and foreign rows, with nothing written;
+  - the label memory refusal (unset requirement or insufficient memory) before any teacher or corpus load.
+- **`htb_budget.py`** (`5cf448ae…`): `label_budget(compact=True)` models card §16, with compact arrays at 2,333 B per row plus 300 B metadata and a 200 B key-map allowance, and one game's label rows and replays (2 × 341 plies × 56,000 B). `compact=False` reproduces the 2026-11-04 figure exactly. The estimate wording is corrected.
+- **Label budget, compact** (conservative sum, an estimate):
+
+  | Term | GB |
+  |---|---|
+  | baseline with TensorFlow | 3.000 |
+  | corpus authentication, parsed | 6.283 |
+  | pool | 0.189 |
+  | selection peak | 0.473 |
+  | selection record and JSON | 0.158 |
+  | compact labels of the larger arm | 0.680 |
+  | one game's label rows and replays | 0.038 |
+  | shard buffer | 0.019 |
+  | **total** | **10.840** (was 23.562) |
+
+  The per-phase peak is 4.56 GB. **Proposed label launch requirement: 11 GiB (11,811,160,064 B), against observed availability of 23.93–28.48 GB.** A fresh `tracemalloc` check puts a compact row inside its allowance. The fit budget is unchanged at 12.55 GB, with the 12 GiB requirement set.
+- **Full-run wrappers** (generated from the pinned cycle-2 wrapper by `tests/htb_run_wrapper_spec.py`, and re-derived by a test):
+
+  | Wrapper | sha256 | Gate | Command | Interpreter | TERM_S | Writes |
+  |---|---|---|---|---|---|---|
+  | `htb-label-run/01_wrapper.sh` | `fdc7a25e…` | `HTB_LABEL_AUTHORIZED` | `run label --clone-root` (pinned clone) | teacher venv | 13190 | `evidence/htb-label/` |
+  | `htb-fit-run/01_wrapper.sh` | `28c5a0e4…` | `HTB_FIT_AUTHORIZED` | `run fit` | project `.venv` | 18590 | `evidence/htb-fit/` |
+
+  - GRACE_S is 10, so KILL is at +10 s and cleanup is observed through +20 s. The label wrapper's `outer.json` records the teacher interpreter with the checks' interpreter beside it.
+  - The label wrapper differs from the run T-label attempt-2 wrapper only in its paths, gate, module, TERM_S, record kind, command, survivors pattern (`run`, the source's own) and header. Both gates stay closed.
+- **Checks:** 109 focused tests pass (75 pilot, 21 timing, 5 budget, 8 gate inventory), with all 64 gates closed. `htb_pilot` still has no module-level MLX import and parses as Python 3.13, for the teacher interpreter.
+- **Conclusion / status:** built; returned for launch review. Open for that review: the proposed 11 GiB label requirement; the launch order (label, then committing its evidence, then fit); and each run's approval. See #176.
+

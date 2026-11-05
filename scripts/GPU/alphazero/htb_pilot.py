@@ -37,7 +37,7 @@ from .game.twixt_state import TwixtState
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
 CARD = "docs/superpowers/2026-11-03-htb-twixtbot-distillation-pilot-card.md"
-CARD_SHA256 = "edab9fe93316694557f4caf45cbac464b2f74b0bd8a0ce76575929f99b26fdcd"   # §15: examples per batch
+CARD_SHA256 = "ccb3bc67e32e1e8ac0f60858fcac57e99e25f1e451df8ba9c45688e19e7ab423"   # §16: compact labels
 BOARD = 24
 PADDED = BOARD * BOARD                       # neutral cell index r*24+c; never truncates a legal list
 LAST = BOARD - 1
@@ -72,6 +72,9 @@ CACHE = pathlib.Path.home() / "twixt-cache" / "htb-pilot"      # outside the rep
 EVIDENCE_LABEL = "docs/superpowers/evidence/htb-label"
 EVIDENCE_FIT = "docs/superpowers/evidence/htb-fit"
 SHARD_ROWS = 8192
+GIB = 1 << 30
+FIT_MEMORY_REQUIRED = 12 * GIB      # 12,884,901,888 B: the user's approval (2026-11-05)
+LABEL_MEMORY_REQUIRED = 11 * GIB    # 11,811,160,064 B: PROPOSED (htb_budget.label_budget rounded up), for review
 
 
 class Stop(RuntimeError):
@@ -391,6 +394,58 @@ def write_label_shards(rows: Sequence[Mapping[str, Any]], out_dir: pathlib.Path,
         (out_dir / (name + ".rows.json")).open("x").write(json.dumps(meta))
         shards.append({"file": name, "sha256": _sha(path.read_bytes()), "rows_sha256": _jsha(meta), "n": len(part)})
     manifest = {"kind": "htb-labels/1", "n": len(rows), "shards": shards}
+    (out_dir / "manifest.json").open("x").write(json.dumps(manifest, sort_keys=True, indent=1))
+    return manifest
+
+
+class LabelArrays:
+    """Card §16.1: one arm's labels held compactly AS THEY ARE PRODUCED, in selection order: float32 targets on the
+    576-cell index, float64 values, int32 plies, and the selection's own row metadata. A label row's legal-move list
+    is consumed by `put` and not kept. Every selected row must be filled exactly once."""
+
+    def __init__(self, selected: Sequence[Mapping[str, Any]]):
+        self.meta = [{"game_id": r["game_id"], "ply": int(r["ply"]), "key": r["key"]} for r in selected]
+        self.at = {m["key"]: i for i, m in enumerate(self.meta)}
+        if len(self.at) != len(self.meta):
+            raise Stop("labels", "the selection repeats a key within an arm")
+        n = len(self.meta)
+        self.target = np.zeros((n, PADDED), dtype=np.float32)
+        self.value, self.value_id, self.value_ref = (np.zeros(n, dtype=np.float64) for _ in range(3))
+        self.ply = np.array([m["ply"] for m in self.meta], dtype=np.int32)
+        self.filled = np.zeros(n, dtype=bool)
+
+    def put(self, row: Mapping[str, Any]) -> None:
+        i = self.at.get(row["key"])
+        if i is None or self.meta[i]["game_id"] != row["game_id"] or self.meta[i]["ply"] != int(row["ply"]):
+            raise Stop("labels", f"{row['game_id']} ply {row['ply']}: a labelled row the selection does not hold")
+        if self.filled[i]:
+            raise Stop("labels", f"{row['game_id']} ply {row['ply']}: labelled twice")
+        for (rr, cc), t in zip(row["legal"], row["target"]):              # as write_label_shards always stored it
+            self.target[i, A.padded_index(rr, cc)] = t
+        self.value[i], self.value_id[i], self.value_ref[i] = row["value"], row["value_id"], row["value_ref"]
+        self.filled[i] = True
+
+    def complete(self) -> None:
+        if not self.filled.all():
+            raise Stop("labels", f"{int((~self.filled).sum())} selected rows were never labelled")
+
+
+def write_label_arrays(arrays: LabelArrays, out_dir: pathlib.Path, shard_rows: int = SHARD_ROWS) -> Dict[str, Any]:
+    """`write_label_shards`' exact format (shards, row lists, manifest), written from compact arrays."""
+    arrays.complete()
+    out_dir.mkdir(parents=True, exist_ok=False)
+    shards = []
+    for i in range(0, len(arrays.meta), shard_rows):
+        j = min(i + shard_rows, len(arrays.meta))
+        name = f"labels-{i // shard_rows:05d}.npz"
+        path = out_dir / name
+        with open(path, "xb") as fh:
+            np.savez(fh, target=arrays.target[i:j], value=arrays.value[i:j], value_id=arrays.value_id[i:j],
+                     value_ref=arrays.value_ref[i:j], ply=arrays.ply[i:j])
+        meta = arrays.meta[i:j]
+        (out_dir / (name + ".rows.json")).open("x").write(json.dumps(meta))
+        shards.append({"file": name, "sha256": _sha(path.read_bytes()), "rows_sha256": _jsha(meta), "n": j - i})
+    manifest = {"kind": "htb-labels/1", "n": len(arrays.meta), "shards": shards}
     (out_dir / "manifest.json").open("x").write(json.dumps(manifest, sort_keys=True, indent=1))
     return manifest
 
@@ -803,8 +858,11 @@ class Config:
     save_student: Callable[[Any, pathlib.Path], Dict[str, str]] = _save_student_real
     shard_rows: int = SHARD_ROWS
     start_rows: int = START_ROWS
-    #: bytes the full fit needs. None REFUSES: it is set only by a reviewed edit from the committed T-fit memory estimate
-    memory_required_bytes: Optional[int] = None
+    #: bytes the full fit needs at launch: 12 GiB, approved by the user (2026-11-05) from the card §15 budget (12.55 GB,
+    #: an estimate; peak memory not measured). None REFUSES.
+    memory_required_bytes: Optional[int] = FIT_MEMORY_REQUIRED
+    #: bytes `run label` needs at launch (card §16.3): PROPOSED from the compact label budget, for the launch review
+    label_memory_required_bytes: Optional[int] = LABEL_MEMORY_REQUIRED
     available_memory: Callable[[], Dict[str, int]] = lambda: available_memory()
 
     def labels(self, arm: str) -> pathlib.Path:
@@ -919,8 +977,10 @@ def run_label(clone_root: str, cfg: Optional[Config] = None) -> int:
     cfg = cfg or Config()
     preconditions(LABEL_GATE, "HTB_LABEL_AUTHORIZED", cfg)
     _absent(cfg.evidence_label, *(cfg.labels(a) for a in ARMS))
+    memory = check_label_memory(cfg)                   # card §16.3: before the teacher or the corpus is loaded
     rec: Dict[str, Any] = {"kind": "htb-label-record/1", "card_sha256": CARD_SHA256, "teacher": TEACHER,
-                           "counts": {"train": cfg.n_train, "val": cfg.n_val}}
+                           "counts": {"train": cfg.n_train, "val": cfg.n_val},
+                           "memory_at_start": memory, "label_memory_required_bytes": cfg.label_memory_required_bytes}
 
     def body(rec):
         teacher, identity = cfg.load_teacher(clone_root)
@@ -933,11 +993,12 @@ def run_label(clone_root: str, cfg: Optional[Config] = None) -> int:
             by_game: Dict[str, List[Mapping[str, Any]]] = {}
             for r in sel["rows"][arm]:
                 by_game.setdefault(r["game_id"], []).append(r)
-            got = {}
+            arrays = LabelArrays(sel["rows"][arm])                       # card §16.1: compact as produced
             for gid in sorted(by_game):
                 for row in label_game(gid, games[gid]["moves"], by_game[gid], teacher):
-                    got[row["key"]] = row
-            manifest = write_label_shards([got[r["key"]] for r in sel["rows"][arm]], cfg.labels(arm), cfg.shard_rows)
+                    arrays.put(row)
+            manifest = write_label_arrays(arrays, cfg.labels(arm), cfg.shard_rows)
+            del arrays
             rec["labels"].append({"arm": arm, "n": manifest["n"],
                                   "manifest_sha256": _sha((cfg.labels(arm) / "manifest.json").read_bytes())})
         rec["teacher_calls"] = getattr(teacher, "calls", None)
@@ -988,15 +1049,23 @@ def load_bound_labels(cfg: Config, label: Mapping[str, Any], sel: Mapping[str, A
     return out
 
 
+def _check_available(cfg: Config, required: Optional[int], who: str) -> Dict[str, int]:
+    if required is None:
+        raise Refused(f"the {who}'s memory requirement is not set (only a reviewed edit sets it)")
+    mem = cfg.available_memory()
+    if mem["available_bytes"] < required:
+        raise Refused(f"available memory {mem['available_bytes']} B is below the {who}'s requirement {required} B")
+    return mem
+
+
 def check_memory(cfg: Config) -> Dict[str, int]:
     """Refuse unless a reviewed memory requirement is set and the machine has at least that much available now."""
-    if cfg.memory_required_bytes is None:
-        raise Refused("the fit's memory requirement is not set (a reviewed edit from the T-fit estimate sets it)")
-    mem = cfg.available_memory()
-    if mem["available_bytes"] < cfg.memory_required_bytes:
-        raise Refused(f"available memory {mem['available_bytes']} B is below the fit's requirement "
-                      f"{cfg.memory_required_bytes} B")
-    return mem
+    return _check_available(cfg, cfg.memory_required_bytes, "fit")
+
+
+def check_label_memory(cfg: Config) -> Dict[str, int]:
+    """Card §16.3: the same check for `run label`, before the teacher or the corpus is loaded."""
+    return _check_available(cfg, cfg.label_memory_required_bytes, "label run")
 
 
 def run_fit(cfg: Optional[Config] = None) -> int:

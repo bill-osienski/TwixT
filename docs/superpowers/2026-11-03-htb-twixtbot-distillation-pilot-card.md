@@ -289,3 +289,24 @@ Boards are 36.5 GB of the examples; the other 28.6 GB is non-board example data.
 4. **Memory.** A conservative budget of retained data, temporary examples, optimizer state, gradients and working
    buffers is recorded in the ledger. The fit still refuses until `memory_required_bytes` is set by a reviewed edit,
    and refuses at launch if less than that is available.
+
+## 16. Amendment: labels compacted as they are produced; memory checks at both launches (2026-11-05, the user's review)
+
+**Why.** The label path held every labelled row of an arm (its legal moves as Python lists, about 44.8 KB each)
+until that arm's shards were written. Its conservative budget, 23.56 GB, left about 0.37 GB against the lowest
+available memory observed (23.93 GB).
+
+**The rule.**
+1. **Compact as produced.** Each arm's labels are held in preallocated arrays, in selection order, from the moment
+   each game is labelled: the target as float32 on the 576-cell index, and value, value_id, value_ref (float64) and
+   ply (int32). The row metadata (game_id, ply, key) comes from the selection. No row's legal-move list is kept after
+   its game is labelled. Every selected row must be filled exactly once; otherwise the run STOPs.
+2. **Unchanged:** the target and value definitions (§5), the float32 rounding of the stored target, the selection and
+   its order, the shard format and size (8,192 rows), each shard's row list, the manifest, the selection hash, and
+   every binding check in §13.3. The shards, row lists and manifest are byte-identical to the previous path's.
+3. **Memory checks at both launches.** `run label` refuses unless its requirement is set and at least that much is
+   available, before the teacher or the corpus is loaded. `run fit` keeps its check, with the requirement the user
+   approved: **12 GiB (12,884,901,888 B)**. Both budgets are estimates; peak memory has not been measured.
+4. **Ceilings adopted by the user** for the full-run wrappers: label TERM 13,190 / KILL 13,200 / cleanup through
+   13,210 s; fit TERM 18,590 / KILL 18,600 / cleanup through 18,610 s. The fit projection (about 3.42 h) and its
+   2.441 ms rebuilt-row figure are planning estimates, not demonstrated bounds.
