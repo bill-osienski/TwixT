@@ -1,0 +1,33 @@
+{
+ "card_sha256": "96269e173d143aeed3cff8a564a85c228adb1107f115f560499b2df979607ef4",
+ "ceiling": {
+  "cleanup_through_s": 1210,
+  "kill_s": 1200,
+  "term_s": 1190
+ },
+ "environment": {
+  "executable": "/Users/bill/twixt-cache/htb-teacher/teacher-venv/bin/python",
+  "numpy": "2.5.2",
+  "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+  "python": "3.13.15"
+ },
+ "kind": "htb-timing-label-record/1",
+ "plan_sha256": "ca147b4ee3bf1da469f05e17ce9bb5dd43c424cb7da1a07aee576432bbfa8596",
+ "runtime": {
+  "artifact_sha256": {
+   "model/pb/saved_model.pb": "e0c2b882bc97c4661ac92af47ae5ef78443e57b42d0cb7c9c3a8cb7e8d01993b",
+   "model/pb/variables/variables.data-00000-of-00001": "1958f8476e9d56cbb87fa570db88f9cc9d389b30e20571fd66e8e779a4cefbab",
+   "model/pb/variables/variables.index": "1d4073c4da30e515a984faef2c3cc9c8b8ba402353a01933c8bb80e1f279f8cd"
+  },
+  "commit": "83749f230a0bae1766b46a05bfde0ed87f0a9a0a",
+  "model_artifacts": 3,
+  "runtime_sha256": "32e4e14d5ca02c2cb2ad7a774def23138fb0ec7a5b83537680ec165a5045817e",
+  "tensorflow": "2.21.0"
+ },
+ "status": "STOP",
+ "stop": {
+  "detail": "ply 0: recorded player black but red to move",
+  "step": "corpus"
+ },
+ "train_games_available": 31026
+}

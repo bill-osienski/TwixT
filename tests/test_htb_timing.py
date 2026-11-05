@@ -79,7 +79,18 @@ def test_THE_TIMING_GATE_IS_CLOSED_AND_BOTH_ENTRIES_REFUSE(capsys):
     assert T.main(["time", "label", "--clone-root", "/nonexistent"]) == 2
     assert T.main(["time", "fit"]) == 2
     assert capsys.readouterr().err.count("HTB_TIMING_AUTHORIZED is closed") == 2
-    assert not (ROOT / T.EVIDENCE).exists()
+    # re-anchored at the ONE T-label run (gate opening 87c5365c; ledger #172): it STOPPED at selection on a
+    # black-first game; T-fit has never run
+    ev = ROOT / T.EVIDENCE
+    assert sorted(x.name for x in ev.iterdir()) == ["label"]
+    assert sorted(x.name for x in (ev / "label").iterdir()) == ["record.json", "started.json"]
+    rec = json.loads((ev / "label" / "record.json").read_text())
+    assert rec["status"] == "STOP" and rec["stop"] == {"step": "corpus",
+                                                        "detail": "ply 0: recorded player black but red to move"}
+    assert "measurements" not in rec and "projection" not in rec
+    outer = json.loads((ROOT / "docs/superpowers/evidence/htb-timing-label-run/outer.json").read_text())
+    assert (outer["inner_exit"], outer["outer_exit"], outer["gate_restored"], outer["survivors"]) == (3, 3, True, "")
+    assert not (ROOT / "docs/superpowers/evidence/htb-timing-fit-run/outer.json").exists()
 
 
 def test_THE_PLAN_IS_PINNED_AND_THE_CEILINGS_ARE_THE_USERS_EXACTLY():

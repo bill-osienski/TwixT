@@ -252,6 +252,7 @@ knob) is not a new hypothesis.
 > - **Memory finding:** the full fit's boards alone are about **36.5 GB on a 48 GiB machine** (about 19.8 GB available at build time). `run_fit` now refuses until a reviewed memory requirement is set; a lazy-board alternative is priced for decision.
 > - **Tests:** 78 focused + gate inventory pass. See #171.
 > **H-TB timing — two corrections made; build committed; T-label then T-fit approved once each (decision note, 2026-11-04, the user's review).** Lazy-board pricing no longer doubles the per-row time; the T-label outer record names the teacher interpreter. Full labelling and fitting remain unauthorized. Results: see the addendum that follows the decision note.
+> **H-TB T-label — the ONE run STOPPED at selection after 38 s (exit 3; addendum, 2026-11-04); T-fit NOT run; returned for assessment.** About half the corpus games start with black (self-play picks the first mover at random and records `starting_player`), but H-TB replays every game from a red-first `TwixtState()`, and the twixtbot adapter assumes red first. The card and build never handled black-first games. Gate restored, no survivors, no cache written, no retry. See #172.
 
 ## Historical proposal check — programme now closed
 
@@ -1992,6 +1993,10 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
    - start the full fit while the estimate exceeds the available memory. As built, the boards alone are about 36.5 GB on a 48 GiB machine.
 
    The lazy-board alternative is an implementation change. It needs its own approval, and the recipe stays unchanged.
+172. **H-TB T-label STOPPED on black-first games (2026-11-04).** The one approved T-label run is spent. Do **not**:
+   - rerun T-label, or run T-fit, without the user's assessment and a new approval; T-fit's row picker replays through the same red-first `positions()`;
+   - repair it by silently dropping black-first games, by starting every replay red, or by colour-swapping positions, without a reviewed card change: each choice changes the selection pool, the counts or the teacher mapping that the frozen card (`96269e17…`) fixes;
+   - read the STOP's 38 s as a timing: no measurement was recorded, because the record keeps measurements only on completion.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -9397,3 +9402,36 @@ The full test, hypothesis, prediction, protocol, integrity checks and seed closi
 - **If either run fails or times out,** its evidence is returned for assessment, with no automatic retry.
 - **Still unauthorized:** full labelling and fitting; games, GPU training, deployment and pushing.
 - **The user's direction on memory:** the finding calls for changing how boards are stored, not abandoning the hypothesis. After timing, review batch-at-a-time board construction. Its memory budget must allow for optimizer state, gradients and working buffers: the current data-and-weights estimate is **not** peak training memory.
+
+#### Addendum — T-label run once: STOP at selection, black-first games; T-fit not run (2026-11-04)
+
+- **Test:** the bounded T-label timing (plan §5), run once as approved. **Prediction:** none stated in advance.
+- **What ran:**
+  - Build `593183ee`; clean linked worktree `TwixT_Game-htb-timing-run` (branch `htb-timing-run`).
+  - One-line gate opening `87c5365c` (only `HTB_TIMING_AUTHORIZED`).
+  - Wrapper `htb-timing-label-run/01_wrapper.sh` with the teacher venv (Python 3.13.15, TensorFlow 2.21.0, NumPy 2.5.2) on the pinned clone (`83749f23…`, clean).
+  - Pre-launch checks before the opening, kept as `00_prelaunch.txt`: no panic report, booted 2026-11-01, no Unreal Editor, no BOINC process apart from the exempt podman VM, live versions as pinned.
+  - Idle gate: busy for about 55 s (load 5.7 falling to 3.2, from my own pre-launch commands), then idle held 60 s. That is **116 s of idle wait**, outside the execution allowance. The BOINC check was CLEAR.
+- **Result:**
+  - Inner exit 3 (**STOP**), outer exit 3, **38 s** wall inside the ceiling (TERM 1,190 s never reached).
+  - Gate restored (`HTB_TIMING_AUTHORIZED = False`, equal to the pre-open commit), no survivors, `record_by: script`.
+  - `record.json`: status STOP, step `corpus`, detail **"ply 0: recorded player black but red to move"**.
+  - The steps that completed before the STOP:
+    - the runtime verified (the three model hashes match the pins);
+    - TensorFlow 2.21.0 loaded CPU-only;
+    - the corpus authenticated against C0's eligible digest, with 31,026 train games available.
+  - The STOP came in L2, `select` over the first 200 train games. No teacher call was timed, `~/twixt-cache/htb-timing/` was never created, and no outputs were recorded.
+- **Cause (traced in source; corpus `player` and `starting_player` fields only):**
+  - Self-play chooses the first mover at random (`self_play.py`, `start_player = "red" if rng.random() < 0.5 else "black"`, then `TwixtState(to_move=start_player)`) and records `starting_player`. Of the first 2,000 train games read, 1,005 start with black.
+  - `htb_pilot.positions` always replays from `TwixtState()`, which is red to move, and `eligible_games` never reads `starting_player`.
+  - `twixtbot_adapter` maps red to twixtbot's WHITE, which always moves first.
+  - The card, the build and the fake-game tests all assumed red first. `select`'s side-to-move check is what caught it.
+- **Did it match the prediction?** None was stated. The run did not reach the timed sections, so it tells us nothing about time per unit.
+- **Record-keeping gap:** `time_label` keeps measurements only on completion, so the teacher-load and corpus-authentication times measured before the STOP were not recorded.
+- **T-fit was not run.** The user's instruction for a failed run is to return its evidence for assessment, with no automatic retry. T-fit's `_fit_rows` replays through the same red-first `positions()` with no player check, so its rows would include colour-wrong states for black-first games.
+- **Conclusion / status:** T-label's one approved run is spent, with STOP. Returned to the user for assessment. Possible repairs, each needing a reviewed card change because the card fixes the pool and the teacher mapping:
+  - start each replay from `starting_player`, and map black-first games to twixtbot by the colour-swap transpose;
+  - or restrict the pool to red-first games.
+
+  Nothing else changed. See #172.
+- **Tests re-anchored:** `test_THE_TIMING_GATE_IS_CLOSED_AND_BOTH_ENTRIES_REFUSE` asserted that no timing evidence existed. It now asserts the run's actual state: only `htb-timing/label/` holds `record.json` (STOP, the exact detail, no measurements) and `started.json`; outer exits 3/3, gate restored, no survivors; no T-fit outer record. 79 focused tests pass in the worktree with the gate closed.
