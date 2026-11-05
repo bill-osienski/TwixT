@@ -1,0 +1,51 @@
+# T-fit pre-launch checks, written 2026-11-04T22:10:44-0500 by Claude before the gate-opening commit
+## uptime
+22:10  up 2 days, 23:36, 6 users, load averages: 1.84 2.00 1.65
+## last boot
+{ sec = 1793590487, usec = 837585 } Sun Nov  1 22:34:47 2026
+## panic reports (DiagnosticReports *.panic, both locations)
+none
+## Unreal Editor processes
+none
+## BOINC-named processes (podman VM exempt)
+none besides the podman VM
+## memory
+51539607552
+Mach Virtual Memory Statistics: (page size of 16384 bytes)
+Pages free:                                   460497.
+Pages active:                                1128147.
+Pages inactive:                              1236701.
+Pages speculative:                             39210.
+Pages throttled:                                   0.
+## project .venv (metadata reads only, -I)
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.10/Frameworks/Python.framework/Versions/3.14/lib/python3.14/importlib/metadata/__init__.py", line 407, in from_name
+    return next(iter(cls.discover(name=name)))
+StopIteration
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    import sys, importlib.metadata as m; print(sys.version); print({d: m.version(d) for d in ('mlx','numpy','safetensors')}); print('mlx imported:', 'mlx' in sys.modules)
+                                                                       ~~~~~~~~~^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.10/Frameworks/Python.framework/Versions/3.14/lib/python3.14/importlib/metadata/__init__.py", line 987, in version
+    return distribution(distribution_name).version
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.10/Frameworks/Python.framework/Versions/3.14/lib/python3.14/importlib/metadata/__init__.py", line 960, in distribution
+    return Distribution.from_name(distribution_name)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.10/Frameworks/Python.framework/Versions/3.14/lib/python3.14/importlib/metadata/__init__.py", line 409, in from_name
+    raise PackageNotFoundError(name)
+importlib.metadata.PackageNotFoundError: No package metadata was found for safetensors
+3.14.10 (main, Oct 25 2026, 17:12:00) [Clang 21.0.0 (clang-2100.3.34.2)]
+## reference checkpoint
+-rwx------@ 1 bill  staff  7524333 Jun 20 22:14 /Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors
+209cf2d4fd24a48553d259dd71b4954867b9473e  /Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors
+## destinations
+ls: /Users/bill/projects/TwixT_Game-htb-timing-run2/docs/superpowers/evidence/htb-timing/fit: No such file or directory
+ls: /Users/bill/twixt-cache/htb-timing/fit: No such file or directory
+## project .venv, re-read 22:10:55 (the read above named safetensors, which is not an installed distribution; MLX reads .safetensors itself)
+3.14.10
+{'mlx': '0.30.3', 'numpy': '2.4.1'}
+mlx imported: False

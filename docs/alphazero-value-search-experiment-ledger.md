@@ -254,6 +254,7 @@ knob) is not a new hypothesis.
 > **H-TB timing — two corrections made; build committed; T-label then T-fit approved once each (decision note, 2026-11-04, the user's review).** Lazy-board pricing no longer doubles the per-row time; the T-label outer record names the teacher interpreter. Full labelling and fitting remain unauthorized. Results: see the addendum that follows the decision note.
 > **H-TB T-label — the ONE run STOPPED at selection after 38 s (exit 3; addendum, 2026-11-04); T-fit NOT run; returned for assessment.** About half the corpus games start with black (self-play picks the first mover at random and records `starting_player`), but H-TB replays every game from a red-first `TwixtState()`, and the twixtbot adapter assumes red first. The card and build never handled black-first games. Gate restored, no survivors, no cache written, no retry. See #172.
 > **H-TB — STOP accepted as a replay defect; red-first repair BUILT for review; neither timing approved (decision note and addendum, 2026-11-04).** Card §14 (re-pinned `d82e2956…`): red-first games only, after authenticating the complete corpus; the starting player is checked against the move players and never defaulted; counts, split, dedup, recipe and scoring unchanged. Plan §6 (`632eb445…`): fresh T-label paths (`label2`), red-first counts in the projections, partial measurements kept, the output check on every terminal record. 93 focused tests pass. See #173.
+> **H-TB timing — T-label attempt 2 and T-fit each COMPLETED once (addendum, 2026-11-04).** Red-first pool: 15,590 train / 1,899 val games (842,171 / 103,078 positions). Projected full label 8,719 s and full fit 11,173 s (proposed ceilings 13,200 s and 16,800 s, **not adopted**). Teacher 11.9 ms/call; update 0.708 s. **Memory: the full fit as built needs about 66.4 GB of examples alone (246,540 B traced per example), above the 51.5 GB physical** — boards are 36.5 GB of it and the other 28.6 GB is non-board example data, so batch-at-a-time construction must cover whole examples, not boards only. Peak training memory not measured. Returned for review. See #174.
 
 ## Historical proposal check — programme now closed
 
@@ -2004,6 +2005,12 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
    - change N_TRAIN/N_VAL, the split, dedup, recipe or scoring, or replace the short-pool refusal with a fallback;
    - touch T-label attempt 1's evidence (`htb-timing/label/`, `htb-timing-label-run/`), or regenerate its wrapper (pinned in `tests/htb_timing_wrapper_spec.py`);
    - run T-label attempt 2 or T-fit without a new approval. The ceilings stay the proposed limits.
+174. **The H-TB timings are spent (2026-11-04).** T-label attempt 2 and T-fit each ran once and COMPLETED. Do **not**:
+   - rerun either timing to refine a number, or adopt either proposed ceiling (13,200 s label, 16,800 s fit) without review;
+   - start the full fit as built: its examples alone are estimated at about 66.4 GB against 51.5 GB of physical memory;
+   - size a memory route from the boards alone: 28.6 GB of the estimate is non-board example data;
+   - treat the data-and-weights estimate as peak training memory: optimizer state, gradients and working buffers were not measured;
+   - build batch-at-a-time construction, or run full labelling or fitting, without the user's approval.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -9496,3 +9503,63 @@ The full test, hypothesis, prediction, protocol, integrity checks and seed closi
   - Existing fakes now carry red-first metadata. With the gate inventory (8): **93 pass**.
 - **State:** all 64 gates closed. Attempt 1's evidence is unchanged and `~/twixt-cache/htb-timing/` does not exist. The changed modules parse as Python 3.13.
 - **Conclusion / status:** repair built; returned for review. Neither timing is approved. See #173.
+
+#### Addendum — T-label attempt 2 and T-fit, each run once: both COMPLETED; projections and memory (2026-11-04)
+
+- **Test:** the bounded timings (plan §§5–6) under card §14 (red-first). **Prediction:** none stated in advance.
+- **Approval:** the user's review accepted the repair (`f9cfd81f`). It approved T-label attempt 2 once, then T-fit once if T-label completed normally with confirmed cleanup.
+- **What ran:**
+  - One clean linked worktree, `TwixT_Game-htb-timing-run2` (branch `htb-timing-run2`), from `f9cfd81f`.
+  - **T-label attempt 2:** gate opening `643f3e59`; wrapper `htb-timing-label2-run/01_wrapper.sh` in the teacher venv (3.13.15, TensorFlow 2.21.0) on the pinned clone. Evidence commit `a02f331c`, which closes the gate again.
+  - **T-fit:** gate opening `aad72047`, on top of `a02f331c`; wrapper `htb-timing-fit-run/01_wrapper.sh` in the project `.venv` (3.14.10, MLX 0.30.3 CPU, NumPy 2.4.1, `MLX_ENABLE_TF32=0`).
+  - **Pre-launch checks before each opening** (`00_prelaunch.txt`): no panic report (booted 2026-11-01), no Unreal Editor, no BOINC process apart from the exempt podman VM, live versions as pinned, the clone clean at `83749f23…`, the reference checkpoint's SHA-1 `209cf2d4…` equal to the pin, destinations absent. The first T-fit version read named `safetensors`, which is not an installed distribution. That line failed, and a corrected read follows it in the same file.
+- **Results:**
+
+  | | T-label attempt 2 | T-fit |
+  |---|---|---|
+  | inner / outer exit | 0 / 0, COMPLETED | 0 / 0, COMPLETED |
+  | run wall time | 37 s | 63 s |
+  | idle wait (outside the allowance) | about 66 s | about 61 s |
+  | gate restored / survivors / record by | yes / none / script | yes / none / script |
+
+  Both records hold time, counts and memory only. The output-field check passed, and the lifecycle test recomputes both projections and the memory estimate from the stored measurements.
+- **Red-first pool** (both records agree):
+
+  | Arm | Kept games | Kept positions | Black-first games excluded | Black-first positions excluded |
+  |---|---|---|---|---|
+  | train | 15,590 | 842,171 | 15,436 | 834,282 |
+  | val | 1,899 | 103,078 | 1,924 | 104,258 |
+
+  Whether 240,000 / 24,000 distinct positions survive dedup and leakage exclusion is still settled only by `run label`'s short-pool refusal (card §14.5).
+- **T-label measurements:**
+  - teacher load 2.23 s; corpus authentication 18.9 s;
+  - selection 1.17 s over 10,456 train positions;
+  - 808 teacher calls: warm-up 20 calls in 0.333 s, then a steady mean of **11.88 ms/call** (p95 12.80 ms);
+  - label_game 14.26 s over 3,720 plies replayed, of which 4.56 s is replay overhead excluding teacher time;
+  - one zero shard written in 0.021 s; selection serialization 0.074 s.
+- **Projected full `run label`: 8,719 s (2.42 h).**
+  - Terms: teacher calls 6,272.0 s; replay overhead 2,318.9 s; selection 106.1 s; corpus authentication 18.9 s; teacher load 2.2 s; shards 0.7 s; serialization 0.1 s.
+  - The replay term is an upper bound: every red-first train+val position, in both orientations.
+  - Proposed ceiling (1.5×, rounded up to 10 minutes): **TERM 13,190 / KILL 13,200 / cleanup 13,210 s. Not adopted.**
+- **T-fit measurements:**
+  - corpus authentication 13.0 s;
+  - shard reload 0.0165 s per shard;
+  - examples 0.626 ms/row; lazy board rebuild (both orientations) 1.81 ms/row;
+  - checkpoint loads 0.016 s and 0.003 s;
+  - **updates: 10 warm-up in 7.21 s, then a steady 0.708 s/update** (p95 0.711 s) at 32 rows × 2 orientations;
+  - scoring 7.55 ms per row per network; save 0.007 s.
+- **Projected full `run fit`: 11,173 s (3.10 h).**
+  - Terms: updates 10,616.2 s; validation scoring 362.5 s; examples 165.4 s; start check 15.5 s; corpus authentication 13.0 s; label reload 0.5 s; loads and save about 0.
+  - Proposed ceiling: **TERM 16,790 / KILL 16,800 / cleanup 16,810 s. Not adopted.**
+- **Together** (derived): 19,892 s, about 5.5 h, inside the card's provisional 5–12 h. The proposed ceilings sum to 30,000 s.
+- **Unpriced, as named in the records:** the label run's KB-scale writes and selection-file write; the fit's label-binding read (tens of MB of JSON), step log and record writes; any memory pressure.
+- **Memory (T-fit):**
+  - Physical 51,539,607,552 B. Available (free + inactive + speculative) was 28.48 GB before the run and 23.93 GB after.
+  - Board 69,120 B per orientation. **Traced 246,540 B per built example**, over 64 examples. Label row 4,808 B. Both networks' parameters 15.0 MB.
+  - **Full-size estimate as built: 66.37 GB**: examples 65.09 GB, labels 1.27 GB, networks 0.015 GB. **It exceeds physical memory** (`fits_physical: false`), not only available memory.
+  - **Derived from those figures:** two boards are 138,240 B of each example. The other **108,300 B per example (28.6 GB at full size)** is non-board example data. `tracemalloc` measured the total; the parts were not itemized.
+  - **So a batch-at-a-time route must build whole examples per batch, not only boards.** Rebuilding them is priced only for boards, at 1.81 ms/row: 15,000 × 32 rows ≈ 871 s added. As a rough derived figure, the fit would become about 11,879 s, replacing the 165 s up-front example build.
+  - **Not measured:** peak training memory, meaning optimizer state, gradients and working buffers including MLX activations. From the parameter bytes, Adam's two moments and the gradients are about 22 MB, but activations and allocator behaviour are unmeasured. The label run's own memory, holding 264,000 rows of 576 targets, is unpriced.
+- **Did it match the prediction?** None was stated. The plan expected the boards alone (36.5 GB) to exceed available memory. The measured per-example size shows the example as a whole exceeds physical memory.
+- **Cache left by the timings** (synthetic only, under `~/twixt-cache/htb-timing/`): `label2/shard-write/` (zero shards), `fit/reload/` (zero shards) and `fit/student-timing.safetensors`, the student after 60 synthetic-target updates, not a training result.
+- **Conclusion / status:** both timings are spent and COMPLETED, and the evidence is committed. Returned to the user to review the projected cost and the complete memory budget before choosing the next step. Full labelling, full fitting, batch-at-a-time construction, games, GPU work and pushing remain unauthorized. The worktree `TwixT_Game-htb-timing-run2` is kept until the user clears it. See #174.

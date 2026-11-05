@@ -95,9 +95,9 @@ def test_THE_TIMING_GATE_IS_CLOSED_AND_BOTH_ENTRIES_REFUSE(capsys):
     assert T.main(["time", "fit"]) == 2
     assert capsys.readouterr().err.count("HTB_TIMING_AUTHORIZED is closed") == 2
     # re-anchored at the T-label runs. Attempt 1 (gate opening 87c5365c; ledger #172) STOPPED at selection on a
-    # black-first game and is unchanged; T-fit has not run yet
+    # black-first game and is unchanged; attempt 2 and then T-fit each COMPLETED once
     ev = ROOT / T.EVIDENCE
-    assert sorted(x.name for x in ev.iterdir()) == ["label", "label2"]
+    assert sorted(x.name for x in ev.iterdir()) == ["fit", "label", "label2"]
     assert sorted(x.name for x in (ev / "label").iterdir()) == ["record.json", "started.json"]
     rec = json.loads((ev / "label" / "record.json").read_text())
     assert rec["status"] == "STOP" and rec["stop"] == {"step": "corpus",
@@ -116,7 +116,17 @@ def test_THE_TIMING_GATE_IS_CLOSED_AND_BOTH_ENTRIES_REFUSE(capsys):
     outer2 = json.loads((ROOT / "docs/superpowers/evidence/htb-timing-label2-run/outer.json").read_text())
     assert (outer2["inner_exit"], outer2["outer_exit"], outer2["gate_restored"], outer2["survivors"]) == (0, 0, True, "")
     assert outer2["python"].endswith("htb-teacher/teacher-venv/bin/python")
-    assert not (ROOT / "docs/superpowers/evidence/htb-timing-fit-run/outer.json").exists()
+    # T-fit (gate opening aad72047): COMPLETED with confirmed cleanup; time, counts and memory only
+    fit = json.loads((ev / "fit" / "record.json").read_text())
+    assert fit["status"] == "COMPLETED" and fit["card_sha256"] == H.CARD_SHA256 and fit["plan_sha256"] == T.PLAN_SHA256
+    tcfg = T.TimingConfig(root=ROOT, data_root=ROOT)
+    assert fit["projection"] == T.project_fit(fit["measurements"], tcfg)
+    assert fit["memory_estimate"] == T.memory_estimate(fit["measurements"], tcfg)
+    assert fit["memory_estimate"]["fits_physical"] is False and fit["measurements"]["updates"]["updates"] == 60
+    assert fit["pool_counts"] == rec2["pool_counts"]
+    T.assert_no_outputs(fit)
+    outer3 = json.loads((ROOT / "docs/superpowers/evidence/htb-timing-fit-run/outer.json").read_text())
+    assert (outer3["inner_exit"], outer3["outer_exit"], outer3["gate_restored"], outer3["survivors"]) == (0, 0, True, "")
 
 
 def test_THE_PLAN_IS_PINNED_AND_THE_CEILINGS_ARE_THE_USERS_EXACTLY():

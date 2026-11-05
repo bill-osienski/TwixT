@@ -1,0 +1,107 @@
+{
+ "card_sha256": "d82e29562e78034abc74c749bf4e83f41966ee3985f16c15ef2e8037ab9b8c26",
+ "ceiling": {
+  "cleanup_through_s": 1810,
+  "kill_s": 1800,
+  "term_s": 1790
+ },
+ "environment": {
+  "device": "Device(cpu, 0)",
+  "executable": "/Users/bill/projects/TwixT_Game/.venv/bin/python",
+  "mlx": "0.30.3",
+  "numpy": "2.4.1",
+  "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+  "python": "3.14.10"
+ },
+ "kind": "htb-timing-fit-record/1",
+ "measurements": {
+  "board_bytes": 69120,
+  "corpus_auth_s": 12.993241042015143,
+  "example_bytes_traced": 246540,
+  "examples_s_per_row": 0.0006263270187901071,
+  "label_row_bytes": 4808,
+  "lazy_board_s_per_row": 0.001814362304730821,
+  "load_s": [
+   0.016229957982432097,
+   0.0033146249770652503
+  ],
+  "memory_after": {
+   "available_bytes": 23934500864,
+   "page_size": 16384,
+   "physical_bytes": 51539607552
+  },
+  "memory_before": {
+   "available_bytes": 28480438272,
+   "page_size": 16384,
+   "physical_bytes": 51539607552
+  },
+  "networks_bytes": 15031392,
+  "reload_s_per_shard": 0.01648762499098666,
+  "save_s": 0.0073697920015547425,
+  "score_s_per_row_network": 0.007551192251548855,
+  "updates": {
+   "steady_mean_s": 0.7077403974998743,
+   "steady_p95_s": 0.7107983022971893,
+   "updates": 60,
+   "warmup_s": 7.214709749998292,
+   "warmup_updates": 10
+  }
+ },
+ "memory_estimate": {
+  "available_bytes": 28480438272,
+  "boards_only_bytes": 36495360000,
+  "estimate_bytes": 66370903392,
+  "examples_bytes": 65086560000,
+  "fits_available": false,
+  "fits_physical": false,
+  "label_rows_bytes": 1269312000,
+  "lazy_boards_projected_s": 870.8939062707941,
+  "lazy_boards_s_per_row": 0.001814362304730821,
+  "networks_bytes": 15031392,
+  "note": "boards are float32 (H, W, 30) for both orientations of every row, materialized at once by build_examples; the lazy figure prices rebuilding each batch's boards per update instead (the measured per-row time already builds both orientations, so it is multiplied by rows, not by 2 x rows).",
+  "physical_bytes": 51539607552,
+  "rows": 264000
+ },
+ "plan_sha256": "632eb445194b700dacf0403df5ed14b99af47ea0a6d1359c4dba84c72af71dc8",
+ "pool_counts": {
+  "train": {
+   "black_first_games_excluded": 15436,
+   "black_first_positions_excluded": 834282,
+   "games": 15590,
+   "positions": 842171
+  },
+  "val": {
+   "black_first_games_excluded": 1924,
+   "black_first_positions_excluded": 104258,
+   "games": 1899,
+   "positions": 103078
+  }
+ },
+ "projection": {
+  "basis": {
+   "rows": 264000,
+   "shards": 33,
+   "updates": 15000
+  },
+  "cleanup_through_s": 16810,
+  "factor": 1.5,
+  "kill_s": 16800,
+  "projected_s": 11173.1,
+  "term_s": 16790,
+  "terms": {
+   "corpus_auth_s": 13.0,
+   "examples_s": 165.4,
+   "label_reload_s": 0.5,
+   "model_loads_s": 0.0,
+   "save_s": 0.0,
+   "start_check_s": 15.5,
+   "updates_s": 10616.2,
+   "validation_scoring_s": 362.5
+  },
+  "unpriced": [
+   "check_label_binding: reading record.json and selection.json (tens of MB of JSON)",
+   "the fit's step log and record writes"
+  ]
+ },
+ "status": "COMPLETED"
+}
