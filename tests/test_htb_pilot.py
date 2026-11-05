@@ -769,3 +769,90 @@ def test_LABEL_AND_FIT_STOP_ON_A_GAME_THAT_IS_NOT_RED_FIRST(tmp_path, opened, en
         assert H.run_fit(cfg) == 3
         rec = _record(cfg.evidence_fit)
     assert rec["status"] == "STOP" and rec["stop"]["step"] == "pool"
+
+
+# ─────────────────────────────── card §15: examples built per batch ───────────────────────────────
+
+def _stored(tmp_path, n_games=5, every=3, smooth=True, seed0=60):
+    """Real label shards from FakeTeacher labels, reloaded both ways: (eager examples, ExampleStore, moves)."""
+    moves_by_game, rows, seen = {}, [], set()
+    for i, gid in enumerate(ids_in("train", n_games)):
+        moves = random_game(seed0 + i, 36)
+        moves_by_game[gid] = moves
+        want = [{"ply": k, "key": H.state_key(s)} for k, s in H.positions(moves) if k % every == 1]
+        want = [r for r in want if not (r["key"] in seen or seen.add(r["key"]))]
+        rows += H.label_game(gid, moves, want, FakeTeacher(smooth=smooth))
+    d = tmp_path / "labels"
+    H.write_label_shards(rows, d, shard_rows=5)
+    msha = H._sha((d / "manifest.json").read_bytes())
+    eager = H.build_examples(H.load_label_shards(d, msha), moves_by_game)
+    store = H.ExampleStore(*H.load_label_compact(d, msha), moves_by_game)
+    return eager, store, moves_by_game, (d, msha)
+
+
+def _same_example(a, b):
+    assert a["key"] == b["key"] and a["value"] == b["value"]
+    assert a["target"].dtype == b["target"].dtype and np.array_equal(a["target"], b["target"])
+    for w in ("record", "mirror"):
+        x, y = a[w], b[w]
+        assert x.board_tensor.dtype == y.board_tensor.dtype and np.array_equal(x.board_tensor, y.board_tensor)
+        assert x.legal_moves == y.legal_moves and x.visit_counts == y.visit_counts
+        assert (x.to_move, x.ply, x.active_size, x.outcome) == (y.to_move, y.ply, y.active_size, y.outcome)
+
+
+def test_THE_COMPACT_LOADER_HOLDS_EXACTLY_WHAT_THE_ROW_LOADER_DID(tmp_path):
+    _, store, _, (d, msha) = _stored(tmp_path)
+    meta, target, value = H.load_label_compact(d, msha)
+    rows = H.load_label_shards(d, msha)
+    assert target.dtype == np.float32 and target.shape == (len(rows), H.PADDED) and value.dtype == np.float64
+    for i, r in enumerate(rows):
+        assert {k: r[k] for k in ("game_id", "ply", "key")} == meta[i]
+        assert np.array_equal(r["target576"], target[i].astype(np.float64)) and r["value"] == value[i]
+        s = store.row(i)
+        assert s.keys() == r.keys() and np.array_equal(s["target576"], r["target576"]) and s["value"] == r["value"]
+
+
+def test_THE_STORE_BUILDS_EXACTLY_THE_EAGER_EXAMPLES_AND_ONLY_THE_ONES_ASKED_FOR(tmp_path, monkeypatch):
+    eager, store, _, _ = _stored(tmp_path)
+    assert len(store) == len(eager) > 20 and store.keys == [e["key"] for e in eager]
+    calls = []
+    real = H.build_examples
+    monkeypatch.setattr(H, "build_examples", lambda labelled, moves: calls.append(len(labelled)) or real(labelled, moves))
+    len(store), store.keys, store.row(3)                       # metadata: nothing built
+    assert calls == []
+    idx = [7, 2, 19, 2 + 1, 11]
+    got = store.take(idx)
+    assert calls == [5] and len(got) == 5
+    for j, i in enumerate(idx):
+        _same_example(got[j], eager[i])
+
+
+def test_THE_STORE_REFUSES_LABELS_THAT_DO_NOT_MATCH_OR_A_GAME_OUTSIDE_THE_POOL(tmp_path):
+    _, store, moves, _ = _stored(tmp_path)
+    with pytest.raises(H.Stop, match="not in the pool"):
+        H.ExampleStore(store.meta, store.target, store.value, {k: v for k, v in list(moves.items())[1:]})
+    with pytest.raises(H.Stop, match="do not match"):
+        H.ExampleStore(store.meta, store.target.astype(np.float64), store.value, moves)
+    with pytest.raises(H.Stop, match="do not match"):
+        H.ExampleStore(store.meta[:-1], store.target, store.value, moves)
+
+
+def test_THE_BATCHED_FIT_START_CHECK_AND_SCORE_EQUAL_THE_EAGER_ONES_BITWISE(tmp_path, monkeypatch):
+    eager, store, moves, _ = _stored(tmp_path, n_games=8)
+    n = 16
+    small = H.ExampleStore(store.meta[:n], store.target[:n], store.value[:n], moves)
+    recipe = H.Recipe(epochs=2, rows_per_batch=4, learning_rate=1e-3)
+    ref = tiny_net(0)
+    a, b = twin(ref), twin(ref)
+    rec_a = H.fit(a, ref, eager[:n], recipe)
+    calls = []
+    real = H.build_examples
+    monkeypatch.setattr(H, "build_examples", lambda labelled, mv: calls.append(len(labelled)) or real(labelled, mv))
+    rec_b = H.fit(b, ref, small, recipe)
+    assert calls == [4] * 8                                    # one batch of 4 rows per update, nothing more
+    assert rec_a == rec_b and rec_a["student_digest"] != rec_a["reference_digest"]
+    calls.clear()
+    for net in (ref, a):
+        assert H.score(net, store) == H.score(net, eager)     # every metric, bitwise
+    assert calls and max(calls) <= H.SCORE_CHUNK and sum(calls) == 2 * len(store)
+    assert H.start_check(ref, store, n=12) == H.start_check(ref, eager, n=12)

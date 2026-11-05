@@ -268,3 +268,24 @@ red-to-move states have equal peg counts and black-to-move states one more red p
    Projections use the filtered pool's counts.
 5. **No separate full selection scan now.** Whether the red-first pool holds 240,000 and 24,000 distinct positions is
    settled by `run label`'s own short-pool refusal.
+
+## 15. Amendment: examples built per batch, not held (2026-11-04, the user's review after the timings)
+
+**Why.** T-fit measured 246,540 B per built example (both orientations), so holding all 264,000 examples needs about
+65.09 GB, and 66.37 GB with labels and weights. Both exceed this machine's 51.5 GB of physical memory (ledger #174).
+Boards are 36.5 GB of the examples; the other 28.6 GB is non-board example data. So the change covers whole examples.
+
+**The storage rule.**
+1. **Kept for the whole fit:** compact labels (each arm's targets as a float32 array on the 576-cell index, values as
+   float64, and each row's game_id, ply and key) and the move lists of the games the rows come from.
+2. **Built only when used:** complete examples, both orientations, exactly as §5 and `build_examples` define them.
+   They are built for the current training batch (32 rows) or scoring chunk (64 rows) and then released.
+   Metadata (keys for the epoch order, values, counts) is read from the compact rows and never builds an example.
+3. **Unchanged:** the selected rows and their order, the sha256 epoch ordering, the targets (the float32 label
+   renormalized over the legal moves, as before), both orientations, the fit recipe (§6, Adam 1e-4, clip 1.0, value
+   weight 1.0, L2 1e-4, 32 rows × 2 orientations, 15,000 updates), the start check, scoring (§7, with the same
+   64-row chunks) and the verdict (§8). Built per batch, an example is identical to the one built up front, and so is
+   every update and score.
+4. **Memory.** A conservative budget of retained data, temporary examples, optimizer state, gradients and working
+   buffers is recorded in the ledger. The fit still refuses until `memory_required_bytes` is set by a reviewed edit,
+   and refuses at launch if less than that is available.

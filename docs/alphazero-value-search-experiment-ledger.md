@@ -255,6 +255,7 @@ knob) is not a new hypothesis.
 > **H-TB T-label — the ONE run STOPPED at selection after 38 s (exit 3; addendum, 2026-11-04); T-fit NOT run; returned for assessment.** About half the corpus games start with black (self-play picks the first mover at random and records `starting_player`), but H-TB replays every game from a red-first `TwixtState()`, and the twixtbot adapter assumes red first. The card and build never handled black-first games. Gate restored, no survivors, no cache written, no retry. See #172.
 > **H-TB — STOP accepted as a replay defect; red-first repair BUILT for review; neither timing approved (decision note and addendum, 2026-11-04).** Card §14 (re-pinned `d82e2956…`): red-first games only, after authenticating the complete corpus; the starting player is checked against the move players and never defaulted; counts, split, dedup, recipe and scoring unchanged. Plan §6 (`632eb445…`): fresh T-label paths (`label2`), red-first counts in the projections, partial measurements kept, the output check on every terminal record. 93 focused tests pass. See #173.
 > **H-TB timing — T-label attempt 2 and T-fit each COMPLETED once (addendum, 2026-11-04).** Red-first pool: 15,590 train / 1,899 val games (842,171 / 103,078 positions). Projected full label 8,719 s and full fit 11,173 s (proposed ceilings 13,200 s and 16,800 s, **not adopted**). Teacher 11.9 ms/call; update 0.708 s. **Memory: the full fit as built needs about 66.4 GB of examples alone (246,540 B traced per example), above the 51.5 GB physical** — boards are 36.5 GB of it and the other 28.6 GB is non-board example data, so batch-at-a-time construction must cover whole examples, not boards only. Peak training memory not measured. Returned for review. See #174.
+> **H-TB — timings accepted; batched whole-example construction BUILT for review; nothing run (decision note and addendum, 2026-11-04).** Card §15 (`edab9fe9…`): compact labels + move lists kept, complete examples built per 32-row batch / 64-row scoring chunk; batched fit, start check and scores equal the eager ones bitwise on fakes. Conservative fit budget 12.55 GB (proposed requirement 12 GiB, not set). Revised fit projection 12,301 s, an upper bound (proposed KILL 18,600 s, not adopted). **The existing label path's conservative budget is 23.56 GB, about the lowest available memory observed (23.93 GB)**, dominated by 13.44 GB of held label rows. See #175.
 
 ## Historical proposal check — programme now closed
 
@@ -2011,6 +2012,13 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
    - size a memory route from the boards alone: 28.6 GB of the estimate is non-board example data;
    - treat the data-and-weights estimate as peak training memory: optimizer state, gradients and working buffers were not measured;
    - build batch-at-a-time construction, or run full labelling or fitting, without the user's approval.
+175. **The H-TB batched-construction build (2026-11-04): built, not run.** Card §15 (`edab9fe9…`). Do **not**:
+   - hold complete examples for the whole fit, or let metadata reads (keys, values, counts) build examples;
+   - change the scoring chunk (64) or the batch (32 rows × 2 orientations): scores and updates are bitwise equal to the eager path only with those;
+   - set `memory_required_bytes`, or adopt the 12 GiB proposal or the 18,600 s ceiling, without review;
+   - read the 12,301 s revised projection as a measurement: its rebuild term is an upper bound derived from T-fit;
+   - launch `run label` as built without reviewing its memory: its conservative budget (23.56 GB) is about equal to the lowest available memory observed;
+   - run a further timing, full labelling or full fitting without the user's approval.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -9563,3 +9571,88 @@ The full test, hypothesis, prediction, protocol, integrity checks and seed closi
 - **Did it match the prediction?** None was stated. The plan expected the boards alone (36.5 GB) to exceed available memory. The measured per-example size shows the example as a whole exceeds physical memory.
 - **Cache left by the timings** (synthetic only, under `~/twixt-cache/htb-timing/`): `label2/shard-write/` (zero shards), `fit/reload/` (zero shards) and `fit/student-timing.safetensors`, the student after 60 synthetic-target updates, not a training result.
 - **Conclusion / status:** both timings are spent and COMPLETED, and the evidence is committed. Returned to the user to review the projected cost and the complete memory budget before choosing the next step. Full labelling, full fitting, batch-at-a-time construction, games, GPU work and pushing remain unauthorized. The worktree `TwixT_Game-htb-timing-run2` is kept until the user clears it. See #174.
+
+#### Decision note — timings accepted; a minimal build for whole-example construction in batches approved (2026-11-04, the user's review)
+
+- **The user's review** (read-only): independently reproduced the projections and memory arithmetic, checked the pins and gate restoration, and confirmed all 64 gates closed.
+  - **Labelling:** about 2.42 h, with a proposed 13,200 s ceiling.
+  - **Current fit:** about 3.10 h, before batch reconstruction overhead.
+  - **Memory:** examples alone about 65.09 GB, and 66.37 GB with labels and weights. Both exceed physical memory.
+  - These are operational measurements, with no result yet on learning or playing strength.
+- **Approved:** a minimal build for whole-example construction in batches:
+  1. compact labels and game histories kept; complete examples built only for the current training batch or scoring chunk; metadata lookup must not rebuild every example;
+  2. the exact selected rows, hash ordering, targets, two orientations, optimizer recipe and scoring definitions preserved;
+  3. a conservative memory budget covering retained data, temporary examples, optimizer state, gradients and working buffers, and a budget for the existing label path before its launch;
+  4. focused CPU tests comparing reconstructed examples, and a small training and scoring run, against the existing implementation; no full regression, mutation campaign or additional real timing;
+  5. the storage amendment appended and pinned, the historical timing records unchanged, and the exact build paths committed locally.
+- **The 871 s estimate covers board reconstruction only** and does not establish the revised fit cost. Return the build, memory budget and revised projection for review. The proposed full-run ceilings are not adopted.
+- **Housekeeping approved:** remove the timing worktree and branch once confirmed clean and fully merged.
+- **Not approved:** full labelling, full fitting, games, GPU work, deployment and pushing.
+
+#### Addendum — batched whole-example construction built; memory budget and revised projection; nothing run (2026-11-04)
+
+- **Test:** none was run. This is a build plus CPU tests on fakes and arithmetic over the committed records. **Prediction:** none stated.
+- **Housekeeping:** `TwixT_Game-htb-timing-run2` was clean, and `htb-timing-run2` equalled `htb-pilot-build` (`6ec66a6a`). Both were removed.
+- **Card §15** (sha256 `edab9fe9…`, replacing `d82e2956…`): the storage rule. Compact labels and move lists are kept; complete examples are built per training batch (32 rows) or scoring chunk (64 rows); metadata never builds; everything in §§4–8 is unchanged. The timing records stay as they are, with their card hash `d82e2956…`; the lifecycle test now pins that historical hash.
+- **`htb_pilot.py`** (`b2a1af49…`):
+  - `load_label_compact` returns the rows' (game_id, ply, key), one preallocated float32 (n, 576) target array and the values, after the same manifest and shard checks. `load_label_shards` is now that loader expanded, with identical output.
+  - `ExampleStore` holds the compact labels and the labelled games' move lists. `take(idx)` calls the unchanged `build_examples` on just those rows. `keys`, `len` and `row` never build.
+  - `fit`, `score` and `start_check` take either a store or a built list. The fit builds each update's 4/32 rows when it uses them and releases them after `mx.eval`. `score` builds one 64-row chunk at a time, the same chunks `mirror_averaged` always used.
+  - `run_fit` loads compact labels and fits and scores from stores, and drops the pool after taking the move lists. It still refuses on memory: `memory_required_bytes` is unchanged at `None`.
+- **`htb_budget.py`** (`7a3bb343…`, new): pure arithmetic over the committed records.
+- **Focused checks** (101 pass: 68 pilot, 21 timing, 4 budget, 8 gate inventory). The four new pilot tests:
+  - **compact vs row loader:** identical rows, targets and values;
+  - **store vs `build_examples`:** for arbitrary indices, every field of both orientations is equal (boards bitwise, legal moves, targets, values); metadata reads build nothing; one `take` builds exactly the rows asked for;
+  - **mismatches refused:** labels that do not match, or a game missing from the pool;
+  - **small run, both ways:** a 16-row, 8-update fit gives an **identical fit record, student digest and loss log**, with exactly one 4-row build per update. `score` gives identical metrics for the reference and the student, with no build over 64 rows; `start_check` is identical too.
+- **The budget tests** recompute both budgets and the projection from the committed records. They also measure each per-unit allowance afresh with `tracemalloc` on fakes: label row, compact metadata, selection peak, pool entries from freshly parsed corpus-shaped JSON, and a built example.
+- **Per-unit measurements** (fakes, real structures; plus 50 train-arm files for the parsed ratio):
+
+  | Unit | Measured | Allowance |
+  |---|---|---|
+  | label row, as `run_label` holds it (mean 500 legal moves) | 44,803 B | 56,000 B |
+  | compact metadata row | 193 B | 300 B |
+  | selection peak per position | 358–370 B | 500 B |
+  | built example | 235,973 B (T-fit, real: 246,540 B) | 1.25 × 246,540 B |
+  | parsed JSON per corpus byte | 2.00× | 2.5× |
+
+  The corpus is 2,513,232,495 B (41,400 files). Not measured, allowances only: the process baselines (1.5 GB for the fit, 3.0 GB for labelling with TensorFlow) and the working buffers.
+- **Fit memory budget, batched** (a conservative sum that assumes nothing freed is returned to the system):
+
+  | Term | GB |
+  |---|---|
+  | process baseline | 1.500 |
+  | corpus authentication, parsed | 6.283 |
+  | pool move lists | 0.189 |
+  | compact labels | 0.690 |
+  | shard reads | 0.038 |
+  | temporary examples (one 64-row chunk) | 0.020 |
+  | networks, Adam m+v, gradients, snapshots (4 × both networks' parameters) | 0.060 |
+  | working buffers (200 × one 64 × 24 × 24 × 128 float32 map of 18.9 MB) | 3.775 |
+  | **total** | **12.555** |
+
+  - The per-phase peak is 8.66 GB. Against that, the as-built estimate was 66.37 GB.
+  - **Proposed `memory_required_bytes`: 12 GiB (12,884,901,888 B). Not set; it needs a reviewed edit.** Available memory observed: 28.48 GB and 23.93 GB.
+  - The working-buffer term is an allowance: one forward keeps about 50 feature maps, so 200 is about 4×. MLX's real peak for one update was not measured.
+- **Existing label path budget, unchanged code:**
+
+  | Term | GB |
+  |---|---|
+  | baseline with TensorFlow | 3.000 |
+  | corpus authentication, parsed | 6.283 |
+  | pool | 0.189 |
+  | selection peak | 0.473 |
+  | selection record and JSON | 0.158 |
+  | **labelled training rows held before their shards are written (240,000 × 56,000 B)** | **13.440** |
+  | shard buffer | 0.019 |
+  | **total** | **23.562** |
+
+  - The per-phase peak is 17.28 GB. **The conservative total is about equal to the lowest available memory observed (23.93 GB).**
+  - This is a finding for review, not a change: the label path was not modified. One option, which would need approval, is to write each row's float32 576-cell target as it is labelled instead of keeping its legal-move lists. That would bring the held rows to about 0.6 GB.
+- **Revised full-fit projection, batched** (derived from the committed T-fit record, an upper bound, not a measurement):
+  - Rebuilding one complete example is bounded above by T-fit's lazy board rebuild (1.814 ms: prefix replay, board, mirror) plus its whole up-front example time per row (0.626 ms, which contains every other per-row step): **2.441 ms/row**.
+  - Terms: updates 10,616.2 + 480,000 × 2.441 ms = 11,787.8 s; validation scoring 2 × 24,000 × (7.551 + 2.441) ms = 479.6 s; start check 20.5 s; corpus authentication 13.0 s; label reload 0.5 s.
+  - It drops the 165.4 s up-front example build. **Total 12,301.3 s (3.42 h).** The board-only 871 s is not this figure.
+  - Proposed ceiling: **TERM 18,590 / KILL 18,600 / cleanup 18,610 s. Not adopted.**
+  - With the label run's 8,719 s, about 5.8 h in all.
+- **Conclusion / status:** built; returned for review with the budget and the revised projection. Neither proposed ceiling is adopted, the memory requirement is not set, and the label path's memory is flagged. See #175.

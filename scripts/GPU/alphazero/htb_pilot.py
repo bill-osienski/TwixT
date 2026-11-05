@@ -37,7 +37,7 @@ from .game.twixt_state import TwixtState
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
 CARD = "docs/superpowers/2026-11-03-htb-twixtbot-distillation-pilot-card.md"
-CARD_SHA256 = "d82e29562e78034abc74c749bf4e83f41966ee3985f16c15ef2e8037ab9b8c26"   # §14: red-first games only
+CARD_SHA256 = "edab9fe93316694557f4caf45cbac464b2f74b0bd8a0ce76575929f99b26fdcd"   # §15: examples per batch
 BOARD = 24
 PADDED = BOARD * BOARD                       # neutral cell index r*24+c; never truncates a legal list
 LAST = BOARD - 1
@@ -395,29 +395,42 @@ def write_label_shards(rows: Sequence[Mapping[str, Any]], out_dir: pathlib.Path,
     return manifest
 
 
-def load_label_shards(out_dir: pathlib.Path, manifest_sha256: str) -> List[Dict[str, Any]]:
-    """Reload, verifying the manifest and every shard; targets stay on the 576-cell index."""
+def load_label_compact(out_dir: pathlib.Path, manifest_sha256: str
+                       ) -> Tuple[List[Dict[str, Any]], np.ndarray, np.ndarray]:
+    """Card §15.1: reload, verifying the manifest and every shard, into compact form -- the rows' (game_id, ply, key),
+    one preallocated float32 (n, 576) target array and a float64 value array. Each shard's arrays are read once."""
     raw = (out_dir / "manifest.json").read_bytes()
     if _sha(raw) != manifest_sha256:
         raise Refused("the label manifest is not the pinned one")
-    manifest, rows = json.loads(raw), []
+    manifest = json.loads(raw)
+    n = manifest["n"]
+    if sum(sh["n"] for sh in manifest["shards"]) != n:
+        raise Refused("the shards do not hold the manifest's row count")
+    meta: List[Dict[str, Any]] = []
+    target = np.empty((n, PADDED), dtype=np.float32)
+    value = np.empty(n, dtype=np.float64)
     for sh in manifest["shards"]:
         data = (out_dir / sh["file"]).read_bytes()
         if _sha(data) != sh["sha256"]:
             raise Refused(f"{sh['file']} changed since labelling")
-        meta = json.loads((out_dir / (sh["file"] + ".rows.json")).read_text())
-        if _jsha(meta) != sh["rows_sha256"]:
+        rows = json.loads((out_dir / (sh["file"] + ".rows.json")).read_text())
+        if _jsha(rows) != sh["rows_sha256"] or len(rows) != sh["n"]:
             raise Refused(f"{sh['file']} row list changed since labelling")
         with np.load(out_dir / sh["file"]) as z:            # each array materialized ONCE per shard: indexing
-            target, value = z["target"], z["value"]          # z["..."] inside the row loop re-reads the whole array
-        if target.shape != (len(meta), PADDED) or value.shape != (len(meta),):
+            t, v = z["target"], z["value"]                   # z["..."] inside a row loop re-reads the whole array
+        if t.shape != (len(rows), PADDED) or v.shape != (len(rows),):
             raise Refused(f"{sh['file']} arrays do not match its row list")
-        target = target.astype(np.float64)
-        for j, m in enumerate(meta):
-            rows.append({**m, "target576": target[j], "value": float(value[j])})
-    if len(rows) != manifest["n"]:
-        raise Refused("the shards do not hold the manifest's row count")
-    return rows
+        i = len(meta)
+        target[i:i + len(rows)] = t
+        value[i:i + len(rows)] = v
+        meta += rows
+    return meta, target, value
+
+
+def load_label_shards(out_dir: pathlib.Path, manifest_sha256: str) -> List[Dict[str, Any]]:
+    """Reload as one dict per row (targets as float64 on the 576-cell index): `load_label_compact`, expanded."""
+    meta, target, value = load_label_compact(out_dir, manifest_sha256)
+    return [{**m, "target576": target[i].astype(np.float64), "value": float(value[i])} for i, m in enumerate(meta)]
 
 
 # ─────────────────────────────── records for the network ───────────────────────────────
@@ -456,6 +469,67 @@ def build_examples(labelled: Sequence[Mapping[str, Any]], moves_by_game: Mapping
             out[row["key"]] = {"key": row["key"], "record": rec, "mirror": mrec, "value": float(row["value"]),
                                "target": t}
     return [out[r["key"]] for r in labelled]
+
+
+SCORE_CHUNK = 64                               # scoring's chunk, unchanged (mirror_averaged's default)
+
+
+class ExampleStore:
+    """Card §15: compact labelled rows plus the move lists of their games. COMPLETE examples -- both orientations,
+    made by `build_examples` itself -- exist only for the indices passed to `take`, and are released by the caller.
+    `keys`, `values` and `len` read the compact rows and never build an example."""
+
+    def __init__(self, meta: Sequence[Mapping[str, Any]], target: np.ndarray, value: np.ndarray,
+                 moves_by_game: Mapping[str, Sequence]):
+        n = len(meta)
+        if target.shape != (n, PADDED) or target.dtype != np.float32 or value.shape != (n,):
+            raise Stop("examples", "the compact labels do not match their row list")
+        missing = sorted({m["game_id"] for m in meta} - set(moves_by_game))
+        if missing:
+            raise Stop("examples", f"{len(missing)} labelled games are not in the pool, e.g. {missing[:3]}")
+        self.meta, self.target, self.value = list(meta), target, value
+        self.moves = {gid: moves_by_game[gid] for gid in {m["game_id"] for m in meta}}
+        self.keys = [m["key"] for m in self.meta]
+
+    def __len__(self) -> int:
+        return len(self.meta)
+
+    def row(self, i: int) -> Dict[str, Any]:
+        """The row exactly as `load_label_shards` gives it."""
+        return {**self.meta[i], "target576": self.target[i].astype(np.float64), "value": float(self.value[i])}
+
+    def take(self, idx: Iterable[int]) -> List[Dict[str, Any]]:
+        return build_examples([self.row(i) for i in idx], self.moves)
+
+
+class _Built:
+    """A list of examples built up front, behind the same interface (the timing and the tests use this form)."""
+
+    def __init__(self, examples: Sequence[Mapping[str, Any]]):
+        self.examples = list(examples)
+        self.keys = [e["key"] for e in self.examples]
+
+    def __len__(self) -> int:
+        return len(self.examples)
+
+    def take(self, idx: Iterable[int]) -> List[Mapping[str, Any]]:
+        return [self.examples[i] for i in idx]
+
+
+class _Subset:
+    def __init__(self, src, idx: Sequence[int]):
+        self.src, self.idx = src, list(idx)
+        self.keys = [src.keys[i] for i in self.idx]
+
+    def __len__(self) -> int:
+        return len(self.idx)
+
+    def take(self, idx: Iterable[int]) -> List[Mapping[str, Any]]:
+        return self.src.take([self.idx[i] for i in idx])
+
+
+def _source(examples):
+    return examples if isinstance(examples, (ExampleStore, _Built, _Subset)) else _Built(examples)
 
 
 # ─────────────────────────────── network side: forward, MA, scoring (card §5, §7) ───────────────────────────────
@@ -505,19 +579,26 @@ def top1(x: np.ndarray) -> int:
     return int(np.flatnonzero(x == x.max())[0])
 
 
-def score(network, examples: Sequence[Mapping[str, Any]]) -> Dict[str, float]:
-    """KL_Q, TOP_Q and MSE_Q of card §7 for the network's mirror-averaged predictions."""
-    q, vq = mirror_averaged(network, examples)
-    kls, tops = [], []
-    for e, qi in zip(examples, q):
-        t = e["target"]
-        pos = t > 0
-        if np.any(qi[pos] <= 0):
-            raise Stop("score", "a mirror-averaged probability underflowed to zero where the target has mass")
-        kls.append(float(np.sum(t[pos] * (np.log(t[pos]) - np.log(qi[pos])))))
-        tops.append(top1(qi) == top1(t))
-    vt = np.array([e["value"] for e in examples], dtype=np.float64)
-    out = {"n": len(examples), "kl": float(np.mean(kls)), "top1": float(np.mean(tops)),
+def score(network, examples) -> Dict[str, float]:
+    """KL_Q, TOP_Q and MSE_Q of card §7 for the network's mirror-averaged predictions. Examples are built one
+    64-row chunk at a time (card §15), the same chunks `mirror_averaged` always used."""
+    src = _source(examples)
+    kls, tops, vqs, vts = [], [], [], []
+    for i in range(0, len(src), SCORE_CHUNK):
+        part = src.take(range(i, min(i + SCORE_CHUNK, len(src))))
+        q, vq = mirror_averaged(network, part, chunk=SCORE_CHUNK)
+        for e, qi in zip(part, q):
+            t = e["target"]
+            pos = t > 0
+            if np.any(qi[pos] <= 0):
+                raise Stop("score", "a mirror-averaged probability underflowed to zero where the target has mass")
+            kls.append(float(np.sum(t[pos] * (np.log(t[pos]) - np.log(qi[pos])))))
+            tops.append(top1(qi) == top1(t))
+        vqs.append(vq)
+        vts += [e["value"] for e in part]
+        del part, q
+    vq, vt = np.concatenate(vqs), np.array(vts, dtype=np.float64)
+    out = {"n": len(src), "kl": float(np.mean(kls)), "top1": float(np.mean(tops)),
            "value_mse": float(np.mean((vq - vt) ** 2))}
     if not all(np.isfinite(v) for v in out.values()):
         raise Stop("score", f"non-finite metric {out}")
@@ -537,8 +618,9 @@ def epoch_order(keys: Sequence[str], epoch: int) -> List[int]:
     return sorted(range(len(keys)), key=lambda i: _sha(f"{FIT_TAG}|{epoch}|{keys[i]}".encode()))
 
 
-def start_check(reference, examples: Sequence[Mapping[str, Any]], n: int = START_ROWS) -> Dict[str, float]:
-    first = [examples[i] for i in epoch_order([e["key"] for e in examples], 0)[:n]]
+def start_check(reference, examples, n: int = START_ROWS) -> Dict[str, float]:
+    src = _source(examples)
+    first = _Subset(src, epoch_order(src.keys, 0)[:n])
     s = score(reference, first)
     if not s["kl"] >= START_KL_FLOOR:
         raise Stop("start", f"KL(T || reference_MA) {s['kl']} on the first {len(first)} rows is below {START_KL_FLOOR}")
@@ -566,10 +648,11 @@ def surface_names(network) -> List[str]:
     return names
 
 
-def fit(student, reference, examples: Sequence[Mapping[str, Any]], recipe: Recipe = FROZEN_RECIPE,
+def fit(student, reference, examples, recipe: Recipe = FROZEN_RECIPE,
         on_step: Optional[Callable[[Dict[str, Any]], None]] = None,
         update_times: Optional[List[float]] = None) -> Dict[str, Any]:
-    """Train `student` in place, whole network, evaluation-mode BatchNorm, on both orientations of every row."""
+    """Train `student` in place, whole network, evaluation-mode BatchNorm, on both orientations of every row.
+    `examples` is an ExampleStore (each batch's examples built when it is used, card §15) or a built list."""
     import mlx.core as mx
     import mlx.nn as nn
     import mlx.optimizers as optim
@@ -583,7 +666,8 @@ def fit(student, reference, examples: Sequence[Mapping[str, Any]], recipe: Recip
     ref_digest = _digest(reference)
     if _digest(student) != ref_digest:
         raise Stop("fit", "the student does not start as an exact copy of the reference")
-    n = len(examples)
+    src = _source(examples)
+    n = len(src)
     if n < recipe.rows_per_batch or n % recipe.rows_per_batch:
         raise Stop("fit", f"{n} rows do not divide into batches of {recipe.rows_per_batch}")
     names = surface_names(student)
@@ -592,7 +676,7 @@ def fit(student, reference, examples: Sequence[Mapping[str, Any]], recipe: Recip
     resolved = {"betas": [float(b) for b in opt.betas], "eps": float(opt.eps), "bias_correction": bool(opt.bias_correction)}
     if resolved != ADAM_DEFAULTS:
         raise Stop("optimizer", f"MLX's Adam resolves to {resolved}, not {ADAM_DEFAULTS}")
-    keys = [e["key"] for e in examples]
+    keys = src.keys
     if len(set(keys)) != n:
         raise Stop("fit", "duplicate keys among the training rows")
 
@@ -610,15 +694,16 @@ def fit(student, reference, examples: Sequence[Mapping[str, Any]], recipe: Recip
         for b in range(0, n, recipe.rows_per_batch):
             idx = order[b:b + recipe.rows_per_batch]
             recs, tv = [], []
-            for i in idx:
-                recs += [examples[i]["record"], examples[i]["mirror"]]
-                tv += [examples[i]["value"]] * 2
+            for e in src.take(idx):                          # this batch's complete examples only
+                recs += [e["record"], e["mirror"]]
+                tv += [e["value"]] * 2
             boards, rows, cols, mask, target = _batch(recs)
             (loss, policy, value), grads = grad_fn(student, boards, rows, cols, mask, target,
                                                    mx.array(np.asarray(tv, dtype=np.float32)))
             grads, norm = clip_grad_norm(grads, recipe.clip_norm)
             opt.update(student, grads)
             mx.eval(student.parameters(), opt.state, loss, policy, value, norm)
+            del recs, boards, rows, cols, mask, target, grads
             if update_times is not None:                     # timing only: a perf_counter stamp per finished update
                 update_times.append(time.perf_counter())
             vals = (float(loss), float(policy), float(value), float(norm))
@@ -888,12 +973,14 @@ def check_label_binding(cfg: Config) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     return label, sel
 
 
-def load_bound_labels(cfg: Config, label: Mapping[str, Any], sel: Mapping[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
-    """Each arm's shards, verified against the record's manifest hash, with row identities equal to the selection's."""
+def load_bound_labels(cfg: Config, label: Mapping[str, Any], sel: Mapping[str, Any]
+                      ) -> Dict[str, Tuple[List[Dict[str, Any]], np.ndarray, np.ndarray]]:
+    """Each arm's shards in compact form (card §15.1), verified against the record's manifest hash, with row
+    identities equal to the selection's, in order."""
     out = {}
     for e in label["labels"]:
-        rows = load_label_shards(cfg.labels(e["arm"]), e["manifest_sha256"])
-        got = [(r["game_id"], int(r["ply"]), r["key"]) for r in rows]
+        rows = load_label_compact(cfg.labels(e["arm"]), e["manifest_sha256"])
+        got = [(r["game_id"], int(r["ply"]), r["key"]) for r in rows[0]]
         want = [(r["game_id"], int(r["ply"]), r["key"]) for r in sel["rows"][e["arm"]]]
         if got != want:
             raise Refused(f"the {e['arm']} labels are not the selection's rows, in order")
@@ -931,7 +1018,10 @@ def run_fit(cfg: Optional[Config] = None) -> int:
         pool = cfg.games(cfg.data_root)
         require_red_first(pool)                                          # card §14.4
         games = {g["id"]: g["moves"] for g in pool}
-        arms = {a: build_examples(rows[a], games) for a in ARMS}
+        del pool
+        arms = {a: ExampleStore(*rows[a], games) for a in ARMS}          # card §15: built per batch / chunk
+        rec["storage"] = {"examples": "built per training batch and scoring chunk (card §15)",
+                          "rows_per_batch": cfg.recipe.rows_per_batch, "score_chunk": SCORE_CHUNK}
         reference, student = cfg.load_reference(cfg.data_root), cfg.load_reference(cfg.data_root)
         rec["start"] = start_check(reference, arms["train"], n=cfg.start_rows)
         rec["reference_val"] = score(reference, arms["val"])

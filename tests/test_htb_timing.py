@@ -26,6 +26,8 @@ import htb_timing_wrapper_spec as W                       # noqa: E402
 from test_htb_pilot import FakeTeacher, _Spy, ids_in, random_game, tiny_net   # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+#: the card pin both timings ran under (§14); card §15 re-pinned it afterwards, and the records stay unchanged
+TIMED_CARD_SHA256 = "d82e29562e78034abc74c749bf4e83f41966ee3985f16c15ef2e8037ab9b8c26"
 
 
 @pytest.fixture(autouse=True)
@@ -107,7 +109,7 @@ def test_THE_TIMING_GATE_IS_CLOSED_AND_BOTH_ENTRIES_REFUSE(capsys):
     assert (outer["inner_exit"], outer["outer_exit"], outer["gate_restored"], outer["survivors"]) == (3, 3, True, "")
     # attempt 2 (gate opening 643f3e59): COMPLETED with confirmed cleanup; its record carries time and counts only
     rec2 = json.loads((ev / "label2" / "record.json").read_text())
-    assert rec2["status"] == "COMPLETED" and rec2["card_sha256"] == H.CARD_SHA256 and rec2["plan_sha256"] == T.PLAN_SHA256
+    assert rec2["status"] == "COMPLETED" and rec2["card_sha256"] == TIMED_CARD_SHA256 and rec2["plan_sha256"] == T.PLAN_SHA256
     assert rec2["train_games_available"] == rec2["pool_counts"]["train"]["games"] == 15_590
     assert rec2["projection"]["basis"]["positions_train_val"] == 842_171 + 103_078
     assert rec2["projection"] == T.project_label(rec2["measurements"], rec2["pool_counts"], T.TimingConfig(root=ROOT,
@@ -118,7 +120,7 @@ def test_THE_TIMING_GATE_IS_CLOSED_AND_BOTH_ENTRIES_REFUSE(capsys):
     assert outer2["python"].endswith("htb-teacher/teacher-venv/bin/python")
     # T-fit (gate opening aad72047): COMPLETED with confirmed cleanup; time, counts and memory only
     fit = json.loads((ev / "fit" / "record.json").read_text())
-    assert fit["status"] == "COMPLETED" and fit["card_sha256"] == H.CARD_SHA256 and fit["plan_sha256"] == T.PLAN_SHA256
+    assert fit["status"] == "COMPLETED" and fit["card_sha256"] == TIMED_CARD_SHA256 and fit["plan_sha256"] == T.PLAN_SHA256
     tcfg = T.TimingConfig(root=ROOT, data_root=ROOT)
     assert fit["projection"] == T.project_fit(fit["measurements"], tcfg)
     assert fit["memory_estimate"] == T.memory_estimate(fit["measurements"], tcfg)
