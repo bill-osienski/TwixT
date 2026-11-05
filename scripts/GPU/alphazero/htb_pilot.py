@@ -861,7 +861,8 @@ class Config:
     #: bytes the full fit needs at launch: 12 GiB, approved by the user (2026-11-05) from the card §15 budget (12.55 GB,
     #: an estimate; peak memory not measured). None REFUSES.
     memory_required_bytes: Optional[int] = FIT_MEMORY_REQUIRED
-    #: bytes `run label` needs at launch (card §16.3): PROPOSED from the compact label budget, for the launch review
+    #: bytes `run label` needs at launch (card §16.3): 11 GiB, approved by the user (launch review, 2026-11-05) from the
+    #: compact label budget (10.84 GB, an estimate; peak memory not measured). None REFUSES.
     label_memory_required_bytes: Optional[int] = LABEL_MEMORY_REQUIRED
     available_memory: Callable[[], Dict[str, int]] = lambda: available_memory()
 

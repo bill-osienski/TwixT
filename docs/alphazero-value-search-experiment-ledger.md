@@ -9728,3 +9728,21 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
 - **Checks:** 109 focused tests pass (75 pilot, 21 timing, 5 budget, 8 gate inventory), with all 64 gates closed. `htb_pilot` still has no module-level MLX import and parses as Python 3.13, for the teacher interpreter.
 - **Conclusion / status:** built; returned for launch review. Open for that review: the proposed 11 GiB label requirement; the launch order (label, then committing its evidence, then fit); and each run's approval. See #176.
 
+#### Decision note — launch build accepted; 11 GiB label requirement approved; one label run, then one CPU fit (2026-11-05, the user's launch review)
+
+- **The user's review** (read-only): verified the card pin, the compact-storage implementation and its equivalence checks, the memory arithmetic, the wrapper changes, fresh destinations and all 64 gates closed; the historical timing evidence is unchanged.
+- **Approved:**
+  - the **11 GiB** label launch requirement (11,811,160,064 B). The fit requirement stays 12 GiB (12,884,901,888 B);
+  - **one** `run label`, via `htb-label-run/01_wrapper.sh`, from a clean worktree with only `HTB_LABEL_AUTHORIZED` opened (TERM 13,190 / KILL 13,200 / cleanup through 13,210 s);
+  - then **one** CPU `run fit`, via `htb-fit-run/01_wrapper.sh`, with only `HTB_FIT_AUTHORIZED` opened in a separate gate-opening commit (TERM 18,590 / KILL 18,600 / cleanup through 18,610 s). The recipe is unchanged, and the fit uses the committed labels.
+- **Conditions before fitting:**
+  - The label run must complete successfully both inside and outside: inner and outer exit 0, a script-written record, the gate restored and no survivors.
+  - The exact 240,000 / 24,000 rows, and every selection, manifest and shard binding, must be verified.
+  - The label evidence must be committed first.
+- **Standing conditions:**
+  - BOINC stays quit and Unreal Editor closed; the idle and memory checks are enforced.
+  - `MLX_ENABLE_TF32=0` is set for the run process only, in the reviewed CPU environments.
+  - Idle waiting stays outside the ceilings.
+- **If a run stops, fails, times out or leaves cleanup uncertain,** the sequence stops and its evidence is returned. An inner COMPLETED record cannot override an outer TIMEOUT. No automatic retry.
+- **Not approved:** evaluation games, GPU work, additional training, deployment or pushing.
+- **Code:** the only edit is the comment on `Config.label_memory_required_bytes`, which now says approved. The value (11 GiB) is unchanged.
