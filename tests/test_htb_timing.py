@@ -94,10 +94,10 @@ def test_THE_TIMING_GATE_IS_CLOSED_AND_BOTH_ENTRIES_REFUSE(capsys):
     assert T.main(["time", "label", "--clone-root", "/nonexistent"]) == 2
     assert T.main(["time", "fit"]) == 2
     assert capsys.readouterr().err.count("HTB_TIMING_AUTHORIZED is closed") == 2
-    # re-anchored at the ONE T-label run (gate opening 87c5365c; ledger #172): it STOPPED at selection on a
-    # black-first game; T-fit has never run
+    # re-anchored at the T-label runs. Attempt 1 (gate opening 87c5365c; ledger #172) STOPPED at selection on a
+    # black-first game and is unchanged; T-fit has not run yet
     ev = ROOT / T.EVIDENCE
-    assert sorted(x.name for x in ev.iterdir()) == ["label"]
+    assert sorted(x.name for x in ev.iterdir()) == ["label", "label2"]
     assert sorted(x.name for x in (ev / "label").iterdir()) == ["record.json", "started.json"]
     rec = json.loads((ev / "label" / "record.json").read_text())
     assert rec["status"] == "STOP" and rec["stop"] == {"step": "corpus",
@@ -105,6 +105,17 @@ def test_THE_TIMING_GATE_IS_CLOSED_AND_BOTH_ENTRIES_REFUSE(capsys):
     assert "measurements" not in rec and "projection" not in rec
     outer = json.loads((ROOT / "docs/superpowers/evidence/htb-timing-label-run/outer.json").read_text())
     assert (outer["inner_exit"], outer["outer_exit"], outer["gate_restored"], outer["survivors"]) == (3, 3, True, "")
+    # attempt 2 (gate opening 643f3e59): COMPLETED with confirmed cleanup; its record carries time and counts only
+    rec2 = json.loads((ev / "label2" / "record.json").read_text())
+    assert rec2["status"] == "COMPLETED" and rec2["card_sha256"] == H.CARD_SHA256 and rec2["plan_sha256"] == T.PLAN_SHA256
+    assert rec2["train_games_available"] == rec2["pool_counts"]["train"]["games"] == 15_590
+    assert rec2["projection"]["basis"]["positions_train_val"] == 842_171 + 103_078
+    assert rec2["projection"] == T.project_label(rec2["measurements"], rec2["pool_counts"], T.TimingConfig(root=ROOT,
+                                                                                                         data_root=ROOT))
+    T.assert_no_outputs(rec2)
+    outer2 = json.loads((ROOT / "docs/superpowers/evidence/htb-timing-label2-run/outer.json").read_text())
+    assert (outer2["inner_exit"], outer2["outer_exit"], outer2["gate_restored"], outer2["survivors"]) == (0, 0, True, "")
+    assert outer2["python"].endswith("htb-teacher/teacher-venv/bin/python")
     assert not (ROOT / "docs/superpowers/evidence/htb-timing-fit-run/outer.json").exists()
 
 

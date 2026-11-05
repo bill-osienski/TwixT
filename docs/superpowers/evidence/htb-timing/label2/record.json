@@ -1,0 +1,87 @@
+{
+ "card_sha256": "d82e29562e78034abc74c749bf4e83f41966ee3985f16c15ef2e8037ab9b8c26",
+ "ceiling": {
+  "cleanup_through_s": 1210,
+  "kill_s": 1200,
+  "term_s": 1190
+ },
+ "environment": {
+  "executable": "/Users/bill/twixt-cache/htb-teacher/teacher-venv/bin/python",
+  "numpy": "2.5.2",
+  "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+  "python": "3.13.15"
+ },
+ "kind": "htb-timing-label-record/1",
+ "measurements": {
+  "corpus_auth_s": 18.938033083017217,
+  "label_game_total_s": 14.256669669906842,
+  "plies_replayed": 3720,
+  "replay_overhead_s": 4.563013976934599,
+  "selection_positions": 10456,
+  "selection_s": 1.1734610830026213,
+  "selection_serialization_s": 0.0744468750199303,
+  "shard_write_s": 0.02071075001731515,
+  "teacher_calls": {
+   "calls": 808,
+   "steady_mean_s": 0.011878669763936514,
+   "steady_p95_s": 0.012798754413961434,
+   "warmup_calls": 20,
+   "warmup_s": 0.3332639189902693
+  },
+  "teacher_load_s": 2.2261052499816287
+ },
+ "plan_sha256": "632eb445194b700dacf0403df5ed14b99af47ea0a6d1359c4dba84c72af71dc8",
+ "pool_counts": {
+  "train": {
+   "black_first_games_excluded": 15436,
+   "black_first_positions_excluded": 834282,
+   "games": 15590,
+   "positions": 842171
+  },
+  "val": {
+   "black_first_games_excluded": 1924,
+   "black_first_positions_excluded": 104258,
+   "games": 1899,
+   "positions": 103078
+  }
+ },
+ "projection": {
+  "basis": {
+   "positions_train_val": 945249,
+   "replay": "upper bound: every red-first train and val position replayed in both orientations",
+   "shards": 33,
+   "teacher_calls": 528000
+  },
+  "cleanup_through_s": 13210,
+  "factor": 1.5,
+  "kill_s": 13200,
+  "projected_s": 8719.0,
+  "term_s": 13190,
+  "terms": {
+   "corpus_auth_s": 18.9,
+   "replay_overhead_s": 2318.9,
+   "selection_s": 106.1,
+   "selection_serialization_s": 0.1,
+   "shard_writes_s": 0.7,
+   "teacher_calls_s": 6272.0,
+   "teacher_load_s": 2.2
+  },
+  "unpriced": [
+   "record, manifest and started.json writes (KB-scale JSON)",
+   "the selection record's file write beyond its in-memory serialization"
+  ]
+ },
+ "runtime": {
+  "artifact_sha256": {
+   "model/pb/saved_model.pb": "e0c2b882bc97c4661ac92af47ae5ef78443e57b42d0cb7c9c3a8cb7e8d01993b",
+   "model/pb/variables/variables.data-00000-of-00001": "1958f8476e9d56cbb87fa570db88f9cc9d389b30e20571fd66e8e779a4cefbab",
+   "model/pb/variables/variables.index": "1d4073c4da30e515a984faef2c3cc9c8b8ba402353a01933c8bb80e1f279f8cd"
+  },
+  "commit": "83749f230a0bae1766b46a05bfde0ed87f0a9a0a",
+  "model_artifacts": 3,
+  "runtime_sha256": "32e4e14d5ca02c2cb2ad7a774def23138fb0ec7a5b83537680ec165a5045817e",
+  "tensorflow": "2.21.0"
+ },
+ "status": "COMPLETED",
+ "train_games_available": 15590
+}
