@@ -481,7 +481,8 @@ def _cfg(tmp_path, committed=None):
     games = _fake_games()
     allowed = committed if committed is not None else {H.CARD}
     return H.Config(
-        root=root, cache=tmp_path / "cache", n_train=16, n_val=8,
+        root=root, data_root=root, cache=tmp_path / "cache", n_train=16, n_val=8,
+        memory_required_bytes=1, available_memory=lambda: {"physical_bytes": 2, "available_bytes": 2, "page_size": 1},
         recipe=H.Recipe(epochs=1, rows_per_batch=4, learning_rate=1e-3), start_rows=16, shard_rows=5,
         committed=lambda r, rel: rel in allowed,
         games=_Spy(lambda r: games),
@@ -609,3 +610,58 @@ def test_A_STOP_INSIDE_LABELLING_LEAVES_A_TERMINAL_RECORD(tmp_path, opened):
     assert H.run_label("/fake", cfg) == 3
     rec = _record(cfg.evidence_label)
     assert rec["status"] == "STOP" and rec["stop"]["step"] == "lockstep"
+
+
+
+# ─────────────────────────────── the 2026-11-04 review: shard reload and memory ───────────────────────────────
+
+def test_A_SHARDS_ARRAYS_ARE_READ_ONCE_NOT_ONCE_PER_ROW(tmp_path, monkeypatch):
+    moves = random_game(11, 40)
+    rows = _label(moves, set(range(0, 40, 2)))
+    H.write_label_shards(rows, tmp_path / "labels", shard_rows=6)
+    msha = hashlib.sha256((tmp_path / "labels" / "manifest.json").read_bytes()).hexdigest()
+    expected = H.load_label_shards(tmp_path / "labels", msha)
+    real, reads = np.load, []
+
+    class Counting:
+        def __init__(self, z):
+            self.z = z
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            self.z.close()
+
+        def __getitem__(self, k):
+            reads.append(k)
+            return self.z[k]
+
+    monkeypatch.setattr(np, "load", lambda *a, **k: Counting(real(*a, **k)))
+    got = H.load_label_shards(tmp_path / "labels", msha)
+    n_shards = -(-len(rows) // 6)
+    assert sorted(reads) == sorted(["target", "value"] * n_shards)       # once per shard, whatever the row count
+    assert len(got) == len(expected) == len(rows)
+    for a, b in zip(got, expected):
+        assert (a["game_id"], a["ply"], a["key"], a["value"]) == (b["game_id"], b["ply"], b["key"], b["value"])
+        np.testing.assert_array_equal(a["target576"], b["target576"])
+
+
+@pytest.mark.parametrize("required,available,match", [(None, 10**12, "not set"), (10**9, 10**8, "below")])
+def test_THE_FIT_REFUSES_ON_MEMORY_BEFORE_LOADING_SHARDS_OR_THE_CHECKPOINT(tmp_path, opened, capsys, monkeypatch,
+                                                                         required, available, match):
+    cfg, allowed = _labelled(tmp_path)
+    cfg.committed = lambda r, rel: rel in allowed
+    cfg.memory_required_bytes = required
+    cfg.available_memory = lambda: {"physical_bytes": 2 * available, "available_bytes": available, "page_size": 1}
+    loads = []
+    monkeypatch.setattr(H, "load_label_shards", lambda *a: loads.append(a))
+    assert H.main(["run", "fit"], cfg) == 2
+    assert match in capsys.readouterr().err
+    assert not loads and cfg.load_reference.calls == 0 and not cfg.evidence_fit.exists()
+
+
+def test_THE_REAL_DEFAULT_MEMORY_REQUIREMENT_IS_UNSET_SO_THE_FIT_REFUSES():
+    assert H.Config().memory_required_bytes is None
+    mem = H.available_memory()
+    assert mem["physical_bytes"] > 0 and 0 < mem["available_bytes"] <= mem["physical_bytes"]

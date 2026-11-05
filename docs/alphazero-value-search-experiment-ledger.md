@@ -246,6 +246,12 @@ knob) is not a new hypothesis.
 > - **Environment:** a separate venv with exactly the 44-package baseline freeze; every wheel matches PyPI's digest. The project `.venv` and Homebrew are unchanged.
 > - **Not done:** no TensorFlow import, model initialization, teacher query or corpus read.
 > - Surrogate wording corrected (dated clarification). Plan: `2026-11-04-htb-bounded-timing-plan.md`. See #170.
+> **H-TB pilot — setup ACCEPTED and committed (`7831e94e`); timing BUILT for review; nothing run (decision note and addendum, 2026-11-04).**
+> - **Shard reload fixed:** arrays read once per shard; the old per-row re-read was about 4.94 TB at full size (calculated).
+> - **Build:** `htb_timing.py` with the closed 64th gate `HTB_TIMING_AUTHORIZED`, two wrappers derived from the cycle-2 wrapper, exact ceilings (T-label 1,190/1,200/1,210 s; T-fit 1,790/1,800/1,810 s), and complete-run pricing.
+> - **Memory finding:** the full fit's boards alone are about **36.5 GB on a 48 GiB machine** (about 19.8 GB available at build time). `run_fit` now refuses until a reviewed memory requirement is set; a lazy-board alternative is priced for decision.
+> - **Tests:** 78 focused + gate inventory pass. See #171.
+> **H-TB timing — two corrections made; build committed; T-label then T-fit approved once each (decision note, 2026-11-04, the user's review).** Lazy-board pricing no longer doubles the per-row time; the T-label outer record names the teacher interpreter. Full labelling and fitting remain unauthorized. Results: see the addendum that follows the decision note.
 
 ## Historical proposal check — programme now closed
 
@@ -1973,6 +1979,19 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
    - describe the matching version as an equivalent of the October interpreter: the distributor differs, and October's build was never recorded.
 
    This setup authorizes no TensorFlow import, model initialization, teacher query or corpus read. The timing plan is paper only: building its gate and entry, and running it, each need approval. Card §13's surrogate sentence is superseded by the dated clarification: lowering the surrogate lowers an upper bound and does not guarantee a lower measured mirror-averaged KL; only F1–F3 can establish that.
+171. **The H-TB timing build (2026-11-04): built, not run.** Do **not**, without the user's separate approval:
+   - open `HTB_TIMING_AUTHORIZED`, run either wrapper, initialize either model, or query the teacher;
+   - change the ceilings (T-label TERM 1,190 / KILL 1,200 / cleanup through 1,210 s; T-fit TERM 1,790 / KILL 1,800 / cleanup through 1,810 s);
+   - count idle waiting inside the 3,000 s execution allowance;
+   - hand-edit a wrapper: each must stay the derivation in `tests/htb_timing_wrapper_spec.py` of the pinned cycle-2 wrapper.
+
+   Do **not**:
+   - feed the timing anything but train-arm games, or record a teacher output, label, prediction, loss or metric in its records;
+   - adopt a projected ceiling before review;
+   - set `Config.memory_required_bytes` except by a reviewed edit from the committed T-fit memory estimate;
+   - start the full fit while the estimate exceeds the available memory. As built, the boards alone are about 36.5 GB on a 48 GiB machine.
+
+   The lazy-board alternative is an implementation change. It needs its own approval, and the recipe stays unchanged.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -9308,3 +9327,73 @@ The full test, hypothesis, prediction, protocol, integrity checks and seed closi
   - Only counts and seconds are recorded: no teacher outputs, losses or metrics.
   - It projects each run, with the ceiling at 1.5×. It needs its own gate (the 64th, `HTB_TIMING_AUTHORIZED`), entry, wrappers and tests, and approval of each.
 - **Conclusion / status:** setup COMPLETE and verified; returned for review with the timing plan. Not committed (the earlier approval covered only the repair commit); branch `htb-pilot-build` at `8b1cc44b`, main `bc37487e`, nothing pushed. See #170.
+
+#### Decision note — setup accepted; setup commit and the timing build approved, with four corrections (2026-11-04, the user's review)
+
+- **The user verified:** the 70-file checkout manifest, the interpreter archive hash, the 44 wheel hashes and the installed-package metadata. The separate environment matches the recorded baseline without importing its packages.
+- **Approved:** an exact-path local commit of the setup evidence, plan and ledger updates, then the timing build, with these corrections:
+  1. **The shard-loading inefficiency first.** `load_label_shards` indexed `z["target"]` inside the row loop, which makes NumPy reload the whole array on every access: about 4.94 TB of repeated reads at full size (calculated, not measured). Materialize each shard's arrays once, preserving outputs and hash checks, and add a focused regression check.
+  2. **Price the complete runs:** authentication, label reloads, example construction, selection and order preparation, model loading, warm-up and saving. Reuse measurements where appropriate; keep teacher-call time separate from replay overhead so it is not counted twice; state any remaining allowances explicitly.
+  3. **Account for memory.** Full-size example boards alone occupy about 36.5 GB, before labels, move lists and other overhead. Include a memory estimate and an available-memory check before full-fit approval; no stress test.
+  4. **Exact ceilings:** T-label TERM 1,190 / KILL 1,200 / cleanup through 1,210 s, and T-fit TERM 1,790 / KILL 1,800 / cleanup through 1,810 s. Report idle-wait time separately from the 50-minute execution allowance.
+- **Also:** build the closed timing gate, the entries, reused wrappers and focused fake checks; keep the frozen learning recipe unchanged; append this decision.
+- **Not approved:** timing, model initialization, real queries, labelling, fitting, games, GPU work and pushing.
+
+#### Addendum — the timing build, returned for review; nothing run (2026-11-04)
+
+- **Test:** none was run; build only. **Prediction:** none stated.
+- **The commit:** setup evidence, plan and ledger committed at `7831e94e` on `htb-pilot-build`, by exact paths. The two unrelated untracked files stay uncommitted. Main is still `bc37487e`.
+- **1. Shard reload** (`htb_pilot.py`, now sha256 `a90c678c…`): each shard's `target` and `value` arrays are read once, their shapes are checked against the row list, and the hash checks are unchanged. Regression test: a counting proxy over `np.load` shows exactly one read of each array per shard, with outputs equal to the previous loader's.
+- **2. Complete-run pricing** (`htb_timing.py`, `c8c1b6d4…`; plan §5 appended, plan now `ca147b4e…`, pinned):
+  - **`run label`:** teacher runtime load; corpus authentication; selection (replay, keys, dedup, order preparation), measured with `select(n_val=0)` on 200 train games and scaled by C0's train+val positions; teacher calls (measured warm-up, then the rest at the steady per-call mean); replay overhead (label_game time minus the timed teacher calls, per ply replayed, as an upper bound over every train+val position in both orientations); 33 shard writes; selection serialization.
+  - **`run fit`:** corpus authentication, measured again in the fit environment; label reload (two synthetic full-size shards through the fixed loader, × 33); examples (per row × 264,000); two model loads; the start check and validation scoring (per row, per network); updates (10 measured warm-up updates, then 14,990 × the steady mean); the save.
+  - Teacher time is counted once. The remaining unpriced items are named in each projection.
+- **3. Memory:**
+  - T-fit records physical and available memory (`sysctl` plus `vm_stat` free+inactive+speculative), exact board bytes, traced bytes per example (`tracemalloc`), label and network bytes. It estimates the full fit's need, and prices a lazy-board alternative (boards rebuilt per batch).
+  - `htb_pilot.run_fit` now refuses unless `Config.memory_required_bytes` is set (it is `None`) **and** available memory is at least that. The check runs after the label binding and before any shard, corpus or checkpoint load.
+  - **Arithmetic finding:** the boards alone are 2 × 69,120 B × 264,000 = 36,495,360,000 B. The machine has 51,539,607,552 B (48 GiB), and `vm_stat` showed about 19.8 GB available. **The full fit as built is not expected to fit in available memory.** That is a decision for review; the recipe is unchanged.
+- **4. Ceilings:** `htb_timing.CEILINGS` holds exactly the user's values. The wrappers have TERM_S 1190 and 1790 with GRACE_S 10, so KILL is at +10 s and cleanup is observed through +20 s.
+  - The execution allowance is 3,000 s.
+  - **Idle wait is separate:** up to `idle_gate.MAX_WAIT_S` = 1,800 s per wrapper before launch, not counted in that allowance.
+- **The build:**
+  - Gate `htb_timing_authorization.HTB_TIMING_AUTHORIZED` (64th, closed).
+  - Entries `htb_timing time label|fit`. Refusals come first: gate, card, plan pin and commit, `MLX_ENABLE_TF32=0`, destinations. Then a terminal record.
+  - **Train-arm only:** `eligible_games(arms=("train",))` plus an arm guard.
+  - **Time only:** a recursive output-field check STOPs any record that would carry a teacher output, label, prediction, loss or metric.
+  - The label process STOPs if MLX was imported.
+  - `htb_pilot.Config` and `TimingConfig` gain `data_root` (the main checkout, derived from git) for the untracked corpus and checkpoint that a clean linked worktree lacks. Evidence still goes to the executing tree.
+  - Each fit update stamps `perf_counter` only when asked; the recipe is untouched.
+- **Wrappers** (`htb-timing-label-run/01_wrapper.sh` `391a6ca4…`, `htb-timing-fit-run/01_wrapper.sh` `b759ccc0…`): generated from the pinned `combination-policy-cycle2-train-run/01_wrapper.sh` by the replacement table in `tests/htb_timing_wrapper_spec.py`, and re-derived by a test.
+  - **The diff:** paths, gate, module and its `time` command, record kind, survivors pattern, TERM_S, the inner-exit table (htb codes), the header, and for T-label the teacher interpreter and clone instead of the checkpoint.
+  - **Unchanged:** the idle gate, the BOINC check, the supervisor, survivors, records and gate restoration.
+- **A defect found while building, and fixed:** the timing's row picker could pick the same state twice, as shared openings make likely at ply 1, and `fit` correctly refuses duplicate keys. It now keeps distinct keys only, and a shared-opening test covers it.
+- **Checks:**
+  - `tests/test_htb_timing.py` (`ddacb728…`), 16 tests:
+    - the closed gate and refusing entries;
+    - the plan pin and the exact ceilings;
+    - both projections and the memory estimate by hand-computed arithmetic;
+    - T-label and T-fit completing on fakes with no output fields;
+    - STOP on a val game and on a forbidden import;
+    - refusals before any load when an evidence or cache destination exists, or the plan is uncommitted or changed;
+    - a shared-opening fit;
+    - the nested output check;
+    - both wrapper derivations (`bash -n`, executable).
+  - `tests/test_htb_pilot.py`, 53 tests (shard-read regression and two memory refusals added), plus the gate inventory (64): **78 pass**. The H3/H4 gate-reading suites: 295 pass. Gates: 64, none open. The tests left nothing under the real evidence or cache paths.
+- **Conclusion / status:** timing build returned for review, not committed. Next, each needing approval: commit the build; open the gate and run T-label, then T-fit; review the projections and the memory estimate, and decide the memory route before any full-fit approval. See #171.
+- **Correction to this addendum (2026-11-04):** `tests/test_htb_pilot.py` holds **54** tests, not 53. The total of 78 (54 + 16 + the gate inventory's 8) stands.
+
+#### Decision note — two corrections, then commit and one run of each timing (2026-11-04, the user's review)
+
+- **The user's review** (read-only; the user did not run tests or experiments): verified the card and plan hashes, the shard-loader repair, the full-fit memory refusal and all 64 gates closed, and that the ledger diff only adds text.
+- **Two corrections required, and made:**
+  1. **Lazy-board cost was doubled.** `lazy_board_s_per_row` already times both orientations (the board and its mirror), so `memory_estimate` multiplied by 2 once too often. It is now per-row time × 15,000 updates × 32 rows; the arithmetic test is updated.
+  2. **T-label recorded the wrong interpreter.** Its `outer.json` wrote `$PY` (the project `.venv`) but launched `$TPY`. It now records `"python": $TPY`, with `"checks_python": $PY` (the interpreter of the idle and background checks only) and `"clone_root"` in place of the misnamed `"checkpoint"`. `TPY` is initialized with the other variables under `set -u`. The change is three label-only rows in `tests/htb_timing_wrapper_spec.py`; the wrapper was regenerated from it, and the fit wrapper is unchanged.
+  - Focused checks: the projection test, a new outer-record test (`$TPY` recorded; the fit wrapper has no `TPY`), and both derivation tests. In all **79 pass** (54 pilot, 17 timing, 8 gate inventory). No other review round or mutation campaign, as the user directed.
+- **Approved after the corrections:**
+  - commit the exact build paths locally, keeping the two unrelated files out;
+  - run **T-label once, then T-fit once**, each through its wrapper and its own one-line gate opening;
+  - TERM/KILL/cleanup at 1,190/1,200/1,210 s and 1,790/1,800/1,810 s;
+  - the stated environment and machine checks, gate-restoration and cleanup checks, and the actual results and projections appended here.
+- **If either run fails or times out,** its evidence is returned for assessment, with no automatic retry.
+- **Still unauthorized:** full labelling and fitting; games, GPU training, deployment and pushing.
+- **The user's direction on memory:** the finding calls for changing how boards are stored, not abandoning the hypothesis. After timing, review batch-at-a-time board construction. Its memory budget must allow for optimizer state, gradients and working buffers: the current data-and-weights estimate is **not** peak training memory.

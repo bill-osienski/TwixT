@@ -24,6 +24,7 @@ import os
 import pathlib
 import subprocess
 import sys
+import time
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
@@ -357,9 +358,13 @@ def load_label_shards(out_dir: pathlib.Path, manifest_sha256: str) -> List[Dict[
         meta = json.loads((out_dir / (sh["file"] + ".rows.json")).read_text())
         if _jsha(meta) != sh["rows_sha256"]:
             raise Refused(f"{sh['file']} row list changed since labelling")
-        with np.load(out_dir / sh["file"]) as z:
-            for j, m in enumerate(meta):
-                rows.append({**m, "target576": z["target"][j].astype(np.float64), "value": float(z["value"][j])})
+        with np.load(out_dir / sh["file"]) as z:            # each array materialized ONCE per shard: indexing
+            target, value = z["target"], z["value"]          # z["..."] inside the row loop re-reads the whole array
+        if target.shape != (len(meta), PADDED) or value.shape != (len(meta),):
+            raise Refused(f"{sh['file']} arrays do not match its row list")
+        target = target.astype(np.float64)
+        for j, m in enumerate(meta):
+            rows.append({**m, "target576": target[j], "value": float(value[j])})
     if len(rows) != manifest["n"]:
         raise Refused("the shards do not hold the manifest's row count")
     return rows
@@ -512,7 +517,8 @@ def surface_names(network) -> List[str]:
 
 
 def fit(student, reference, examples: Sequence[Mapping[str, Any]], recipe: Recipe = FROZEN_RECIPE,
-        on_step: Optional[Callable[[Dict[str, Any]], None]] = None) -> Dict[str, Any]:
+        on_step: Optional[Callable[[Dict[str, Any]], None]] = None,
+        update_times: Optional[List[float]] = None) -> Dict[str, Any]:
     """Train `student` in place, whole network, evaluation-mode BatchNorm, on both orientations of every row."""
     import mlx.core as mx
     import mlx.nn as nn
@@ -563,6 +569,8 @@ def fit(student, reference, examples: Sequence[Mapping[str, Any]], recipe: Recip
             grads, norm = clip_grad_norm(grads, recipe.clip_norm)
             opt.update(student, grads)
             mx.eval(student.parameters(), opt.state, loss, policy, value, norm)
+            if update_times is not None:                     # timing only: a perf_counter stamp per finished update
+                update_times.append(time.perf_counter())
             vals = (float(loss), float(policy), float(value), float(norm))
             if not all(np.isfinite(vals)):
                 raise Stop("fit", f"update {step}: non-finite loss or gradient norm {vals}")
@@ -612,6 +620,14 @@ def _committed_git(root: pathlib.Path, rel: str) -> bool:
     return r.returncode == 0 and d.returncode == 0 and c.returncode == 0
 
 
+def main_checkout(root: pathlib.Path = ROOT) -> pathlib.Path:
+    """The main checkout (the parent of the shared git directory): it holds the untracked corpus and checkpoint that a
+    clean linked worktree lacks. Evidence still goes to the tree the run executes in."""
+    out = subprocess.run(["git", "-C", str(root), "rev-parse", "--path-format=absolute", "--git-common-dir"],
+                         capture_output=True, text=True, check=True).stdout.strip()
+    return pathlib.Path(out).parent
+
+
 def _load_reference_real(root: pathlib.Path):   # pragma: no cover - loads the checkpoint; never under this approval
     from .probe_eval import load_network_for_scoring
 
@@ -640,6 +656,7 @@ def _save_student_real(network, path: pathlib.Path) -> Dict[str, str]:
 class Config:
     """Everything an entry touches. The defaults ARE the card; tests substitute fakes and smaller counts."""
     root: pathlib.Path = ROOT
+    data_root: pathlib.Path = dataclasses.field(default_factory=main_checkout)   # corpus + checkpoint
     cache: pathlib.Path = CACHE
     n_train: int = N_TRAIN
     n_val: int = N_VAL
@@ -651,6 +668,9 @@ class Config:
     save_student: Callable[[Any, pathlib.Path], Dict[str, str]] = _save_student_real
     shard_rows: int = SHARD_ROWS
     start_rows: int = START_ROWS
+    #: bytes the full fit needs. None REFUSES: it is set only by a reviewed edit from the committed T-fit memory estimate
+    memory_required_bytes: Optional[int] = None
+    available_memory: Callable[[], Dict[str, int]] = lambda: available_memory()
 
     def labels(self, arm: str) -> pathlib.Path:
         return self.cache / f"labels-{arm}"
@@ -666,6 +686,23 @@ class Config:
     @property
     def evidence_fit(self) -> pathlib.Path:
         return self.root / EVIDENCE_FIT
+
+
+def available_memory() -> Dict[str, int]:
+    """Physical memory and what macOS reports as reclaimable now: (free + inactive + speculative) pages, from
+    `sysctl hw.memsize` and `vm_stat`. A conservative reading: purgeable and compressible memory are not counted."""
+    phys = int(subprocess.run(["sysctl", "-n", "hw.memsize"], capture_output=True, text=True, check=True).stdout)
+    out = subprocess.run(["vm_stat"], capture_output=True, text=True, check=True).stdout.splitlines()
+    page = int(out[0].split("page size of")[1].split()[0])
+    pages = {}
+    for line in out[1:]:
+        if ":" in line:
+            k, v = line.split(":", 1)
+            v = v.strip().rstrip(".")
+            if v.isdigit():
+                pages[k.strip()] = int(v)
+    avail = sum(pages.get(k, 0) for k in ("Pages free", "Pages inactive", "Pages speculative")) * page
+    return {"physical_bytes": phys, "available_bytes": avail, "page_size": page}
 
 
 def preconditions(gate_module, gate_name: str, cfg: Config) -> None:
@@ -742,7 +779,7 @@ def run_label(clone_root: str, cfg: Optional[Config] = None) -> int:
     def body(rec):
         teacher, identity = cfg.load_teacher(clone_root)
         rec["runtime"] = identity
-        games = {g["id"]: g for g in cfg.games(cfg.root)}
+        games = {g["id"]: g for g in cfg.games(cfg.data_root)}
         sel = select(list(games.values()), n_train=cfg.n_train, n_val=cfg.n_val)
         rec["selection_sha256"] = _write_create_only(cfg.evidence_label / "selection.json", sel)
         rec["labels"] = []
@@ -803,23 +840,36 @@ def load_bound_labels(cfg: Config, label: Mapping[str, Any], sel: Mapping[str, A
     return out
 
 
+def check_memory(cfg: Config) -> Dict[str, int]:
+    """Refuse unless a reviewed memory requirement is set and the machine has at least that much available now."""
+    if cfg.memory_required_bytes is None:
+        raise Refused("the fit's memory requirement is not set (a reviewed edit from the T-fit estimate sets it)")
+    mem = cfg.available_memory()
+    if mem["available_bytes"] < cfg.memory_required_bytes:
+        raise Refused(f"available memory {mem['available_bytes']} B is below the fit's requirement "
+                      f"{cfg.memory_required_bytes} B")
+    return mem
+
+
 def run_fit(cfg: Optional[Config] = None) -> int:
     cfg = cfg or Config()
     preconditions(FIT_GATE, "HTB_FIT_AUTHORIZED", cfg)
     _absent(cfg.evidence_fit, cfg.student)
     label, sel = check_label_binding(cfg)
+    memory = check_memory(cfg)                         # before the shards (and everything heavier) are loaded
     rows = load_bound_labels(cfg, label, sel)          # before any corpus replay, checkpoint or update
     rec: Dict[str, Any] = {"kind": "htb-fit-record/1", "card_sha256": CARD_SHA256,
                            "label_record_sha256": _sha((cfg.root / EVIDENCE_LABEL / "record.json").read_bytes()),
-                           "selection_sha256": label["selection_sha256"], "recipe": dataclasses.asdict(cfg.recipe)}
+                           "selection_sha256": label["selection_sha256"], "recipe": dataclasses.asdict(cfg.recipe),
+                           "memory_at_start": memory, "memory_required_bytes": cfg.memory_required_bytes}
 
     def body(rec):
         import mlx.core as mx
 
         mx.set_default_device(mx.cpu)
-        games = {g["id"]: g["moves"] for g in cfg.games(cfg.root)}
+        games = {g["id"]: g["moves"] for g in cfg.games(cfg.data_root)}
         arms = {a: build_examples(rows[a], games) for a in ARMS}
-        reference, student = cfg.load_reference(cfg.root), cfg.load_reference(cfg.root)
+        reference, student = cfg.load_reference(cfg.data_root), cfg.load_reference(cfg.data_root)
         rec["start"] = start_check(reference, arms["train"], n=cfg.start_rows)
         rec["reference_val"] = score(reference, arms["val"])
         rec["fit"] = fit(student, reference, arms["train"], cfg.recipe)
