@@ -253,6 +253,7 @@ knob) is not a new hypothesis.
 > - **Tests:** 78 focused + gate inventory pass. See #171.
 > **H-TB timing — two corrections made; build committed; T-label then T-fit approved once each (decision note, 2026-11-04, the user's review).** Lazy-board pricing no longer doubles the per-row time; the T-label outer record names the teacher interpreter. Full labelling and fitting remain unauthorized. Results: see the addendum that follows the decision note.
 > **H-TB T-label — the ONE run STOPPED at selection after 38 s (exit 3; addendum, 2026-11-04); T-fit NOT run; returned for assessment.** About half the corpus games start with black (self-play picks the first mover at random and records `starting_player`), but H-TB replays every game from a red-first `TwixtState()`, and the twixtbot adapter assumes red first. The card and build never handled black-first games. Gate restored, no survivors, no cache written, no retry. See #172.
+> **H-TB — STOP accepted as a replay defect; red-first repair BUILT for review; neither timing approved (decision note and addendum, 2026-11-04).** Card §14 (re-pinned `d82e2956…`): red-first games only, after authenticating the complete corpus; the starting player is checked against the move players and never defaulted; counts, split, dedup, recipe and scoring unchanged. Plan §6 (`632eb445…`): fresh T-label paths (`label2`), red-first counts in the projections, partial measurements kept, the output check on every terminal record. 93 focused tests pass. See #173.
 
 ## Historical proposal check — programme now closed
 
@@ -1997,6 +1998,12 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
    - rerun T-label, or run T-fit, without the user's assessment and a new approval; T-fit's row picker replays through the same red-first `positions()`;
    - repair it by silently dropping black-first games, by starting every replay red, or by colour-swapping positions, without a reviewed card change: each choice changes the selection pool, the counts or the teacher mapping that the frozen card (`96269e17…`) fixes;
    - read the STOP's 38 s as a timing: no measurement was recorded, because the record keeps measurements only on completion.
+173. **The H-TB red-first repair (2026-11-04): built, not run.** Card §14 (`d82e2956…`) and plan §6 (`632eb445…`). Do **not**:
+   - filter before authenticating the complete original corpus, or default a missing, invalid or inconsistent `starting_player`: each STOPs at step `corpus`;
+   - feed any consumer (selection, labelling, example construction or either timing) a game that is not a checked red-first game, or add black-first games by colour-swap mapping, without a new reviewed card change: that would reopen §4.4's colour-canonicalization argument;
+   - change N_TRAIN/N_VAL, the split, dedup, recipe or scoring, or replace the short-pool refusal with a fallback;
+   - touch T-label attempt 1's evidence (`htb-timing/label/`, `htb-timing-label-run/`), or regenerate its wrapper (pinned in `tests/htb_timing_wrapper_spec.py`);
+   - run T-label attempt 2 or T-fit without a new approval. The ceilings stay the proposed limits.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -9435,3 +9442,57 @@ The full test, hypothesis, prediction, protocol, integrity checks and seed closi
 
   Nothing else changed. See #172.
 - **Tests re-anchored:** `test_THE_TIMING_GATE_IS_CLOSED_AND_BOTH_ENTRIES_REFUSE` asserted that no timing evidence existed. It now asserts the run's actual state: only `htb-timing/label/` holds `record.json` (STOP, the exact detail, no measurements) and `started.json`; outer exits 3/3, gate restored, no survivors; no T-fit outer record. 79 focused tests pass in the worktree with the gate closed.
+
+#### Decision note — the STOP accepted as a replay defect; red-first repair approved for build (2026-11-04, the user's review)
+
+- **The user's review** (read-only): verified the committed STOP records, the gate restoration and all 64 gates closed. Holding T-fit was correct. **This is a replay defect, not evidence against distillation.**
+- **Choice: option 2, red-first games only, for this pilot.** They still contain positions with both colours to move, and they match the planned red-first evaluation protocol. This keeps the reviewed teacher adapter and adds no colour-swap mapping. Supporting both starting colours would also mean revisiting the card's leakage argument about colour canonicalization.
+- **Approved:** the revised card and plan and a minimal repair build, with an exact-path local commit:
+  - restrict selection to red-first games **after** authenticating the complete original corpus; check the recorded starting player against the move-player sequence, and never default silently;
+  - keep 240,000 train and 24,000 val rows, the split, dedup, recipe and scoring unchanged, and keep the short-pool refusal; no separate full selection scan now;
+  - apply the rule consistently to selection, labelling, example construction and both timings, with filtered-pool counts in the projections;
+  - focused fake-game checks: red-first acceptance, black-first exclusion, inconsistent metadata;
+  - keep completed timing measurements when a later step stops, still excluding teacher outputs and learning metrics;
+  - fresh T-label evidence paths, with this STOP kept unchanged; T-fit's unused paths can stay; the timing gate is reused.
+- **No full regression or mutation campaign.** Return the amended pins, changes and focused checks for review.
+- **Not approved:** either timing run (the existing ceilings stay the proposed limits); full labelling, fitting, GPU work, games and pushing.
+- **Housekeeping approved:** remove the spent timing worktree and branch once confirmed clean and fully merged.
+
+#### Addendum — the red-first repair, built and returned for review; nothing run (2026-11-04)
+
+- **Test:** none was run; build only. **Prediction:** none stated.
+- **Housekeeping:** `TwixT_Game-htb-timing-run` was clean (only ignored caches) and its branch `htb-timing-run` equalled `htb-pilot-build` (`1899550b`). Both were removed.
+- **Card §14** (sha256 `d82e2956…`, replacing the pin `96269e17…`): the red-first rule; authenticate first, filter after; the starting player checked, never defaulted; everything else in §§4–8 unchanged; applied to every consumer. §4.4's colour-canonicalization argument holds as written for red-first games.
+- **Plan §6** (sha256 `632eb445…`, replacing `ca147b4e…`): fresh T-label paths `htb-timing/label2/`, `htb-timing-label2-run/` and `~/twixt-cache/htb-timing/label2/`; T-fit's paths unchanged; the gate reused; ceilings unchanged. Red-first counts in projections; partial measurements kept; the output check on every terminal record.
+- **`htb_pilot.py`** (`6118a2e5…`):
+  - `recorded_start` checks `starting_player` ∈ {red, black} and that the moves' `player` sequence alternates from it. Otherwise STOP at `corpus`.
+  - `pool_from` checks every train and val game, excludes black-first games, counts kept and excluded games and positions per arm from move-list lengths (no replay or keying), and returns the red-first games of the requested arms. Test-arm games are neither checked, counted nor returned.
+  - `eligible_pool` runs C0's digest over the **whole** eligible set first, then `pool_from`. `eligible_games` returns its games, for the existing callers.
+  - `require_red_first` (STOP at `pool`) guards `select`, which now requires `players`. That covers selection and labelling. It also guards `run_fit`'s games for example construction.
+  - `_terminal` accepts an optional record guard that runs on **every** terminal record before it is written.
+- **`htb_timing.py`** (`1c5e487b…`):
+  - Both timings take `pool_train` (`eligible_pool(arms=("train",))`). The arm guard also requires red-first, and replays pass the recorded players.
+  - The record holds `pool_counts`, and `project_label` prices selection and replay from red-first train+val positions instead of C0's totals.
+  - `measurements` is in the record from the start of each body, so a later STOP, failure or interruption keeps everything already measured.
+  - `assert_no_outputs` is the terminal guard. On a hit, only kind, card and plan hashes and ceiling survive, with STOP at `outputs`.
+  - `RUN_DIRS` maps label to `label2`.
+- **Wrappers:**
+  - `htb-timing-label2-run/01_wrapper.sh` (`6f8d4820…`) is derived by the same spec. It differs from attempt 1's only in OUT_REL, RUN_REL and two header lines.
+  - The fit wrapper is unchanged (`b759ccc0…`).
+  - Attempt 1's wrapper is pinned as SPENT (`23e4085a…`), never regenerated.
+- **Focused checks:**
+  - **`tests/test_htb_pilot.py`, 64 tests** (+10):
+    - red-first acceptance with exact kept and excluded counts, and selection over the filtered pool;
+    - four inconsistent-metadata cases (missing, invalid, disagreeing, non-alternating), each a STOP at `corpus`;
+    - a test-arm game neither checked nor counted;
+    - authentication over the complete corpus before filtering: the black-first file is inside the digest;
+    - `select` refusing four kinds of non-checked game;
+    - `run_label` and `run_fit` each STOP at `pool` on a black-first game.
+  - **`tests/test_htb_timing.py`, 21 tests** (+4):
+    - both timings STOP at `pool` on a black-first game and keep exactly the measurements already taken;
+    - a teacher STOP after 5 calls keeps teacher load, corpus and selection measurements;
+    - the output guard fires on a STOP record carrying an output field in the runtime, and leaves only the identity;
+    - the label2 paths, and attempt 1's wrapper unchanged.
+  - Existing fakes now carry red-first metadata. With the gate inventory (8): **93 pass**.
+- **State:** all 64 gates closed. Attempt 1's evidence is unchanged and `~/twixt-cache/htb-timing/` does not exist. The changed modules parse as Python 3.13.
+- **Conclusion / status:** repair built; returned for review. Neither timing is approved. See #173.

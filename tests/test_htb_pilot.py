@@ -168,6 +168,12 @@ def test_A_TRUE_REFLECTION_MISMATCH_IS_DETECTED():
 
 # ─────────────────────────────── selection ───────────────────────────────
 
+def _red(gid, moves):
+    """A checked red-first game, as `eligible_pool` returns it (card §14)."""
+    return {"id": gid, "starting_player": "red", "moves": list(moves),
+            "players": [("red", "black")[k % 2] for k in range(len(moves))]}
+
+
 def _games(opening, specs):
     out = []
     for gid, seed in specs:
@@ -178,7 +184,7 @@ def _games(opening, specs):
             if m in s.legal_moves() and s.winner() is None:
                 moves.append(m)
                 s = s.apply_move(m)
-        out.append({"id": gid, "moves": moves})
+        out.append(_red(gid, moves))
     return out
 
 
@@ -187,7 +193,7 @@ def test_SELECTION_DEDUPS_EXCLUDES_EVERY_TRAIN_STATE_FROM_VAL_AND_IS_DETERMINIST
     tr, va = ids_in("train", 6), ids_in("val", 4)
     games = _games(opening, [(g, 100 + i) for i, g in enumerate(tr)] + [(g, 200 + i) for i, g in enumerate(va)])
     # a val game that is the exact reflection of a train game: every one of its states must leak out
-    games.append({"id": ids_in("val", 1, start=10_000)[0], "moves": [H.reflect_rc(m) for m in games[0]["moves"]]})
+    games.append(_red(ids_in("val", 1, start=10_000)[0], [H.reflect_rc(m) for m in games[0]["moves"]]))
     train_keys = {H.state_key(s) for g in games if split_of(g["id"]) == "train" for _, s in H.positions(g["moves"])}
     sel = H.select(games, n_train=40, n_val=20)
     assert sel["val_keys_excluded_as_in_train"] >= len(games[0]["moves"])        # opening + the reflected game
@@ -208,12 +214,90 @@ def test_SELECTION_REFUSES_A_SMALL_POOL_AND_ANY_TEST_ARM_GAME():
     with pytest.raises(H.Refused, match="fewer than"):
         H.select(games, n_train=10_000, n_val=1)
     with pytest.raises(H.Refused, match="test arm"):
-        H.select(games + [{"id": ids_in("test", 1)[0], "moves": [(10, 10)]}], n_train=1, n_val=1)
+        H.select(games + [_red(ids_in("test", 1)[0], [(10, 10)])], n_train=1, n_val=1)
 
 
 def test_A_RECORDED_PLAYER_THAT_DISAGREES_STOPS():
     with pytest.raises(H.Stop, match="recorded player"):
         list(H.positions([(10, 10), (5, 8)], ["red", "red"]))
+
+
+# ─────────────────────────────── card §14: red-first games only ───────────────────────────────
+
+def _raw(gid, moves, start, players=None, **extra):
+    """A corpus file's JSON, as self-play writes it."""
+    other = {"red": "black", "black": "red"}.get(start, "red")
+    pl = players or [(start, other)[k % 2] for k in range(len(moves))]
+    g = {"id": gid, "timestamp": "2026-01-01T00:00:00", "winner": "red",
+         "meta": {"iteration": 1, "reason": "win", "board_size": 24, "n_moves": len(moves)},
+         "moves": [{"turn": k + 1, "player": pl[k], "row": r, "col": c} for k, (r, c) in enumerate(moves)], **extra}
+    if start is not None:
+        g["starting_player"] = start
+    return g
+
+
+def test_THE_POOL_ACCEPTS_RED_FIRST_GAMES_AND_EXCLUDES_BLACK_FIRST_ONES_COUNTING_BOTH():
+    tr, va, te = ids_in("train", 3), ids_in("val", 2), ids_in("test", 1)
+    red = random_game(900, 20)
+    black = [(5, 10), (10, 5), (6, 12)]                       # legal for black (rows 1-22) then red (cols 1-22) ...
+    raw = [_raw(tr[0], red, "red"), _raw(tr[1], black, "black"), _raw(tr[2], red[:9], "red"),
+           _raw(va[0], random_game(905, 7), "red"), _raw(va[1], black, "black"), _raw(te[0], red, "red")]
+    pool = H.pool_from(raw)
+    assert [g["id"] for g in pool["games"]] == [tr[0], tr[2], va[0]]
+    assert all(g["starting_player"] == "red" and g["players"][0] == "red" for g in pool["games"])
+    assert pool["counts"] == {
+        "train": {"games": 2, "positions": 29, "black_first_games_excluded": 1, "black_first_positions_excluded": 3},
+        "val": {"games": 1, "positions": 7, "black_first_games_excluded": 1, "black_first_positions_excluded": 3}}
+    assert [g["id"] for g in H.pool_from(raw, arms=("train",))["games"]] == [tr[0], tr[2]]
+    assert H.pool_from(raw, arms=("train",))["counts"] == pool["counts"]      # val counted, never returned
+    sel = H.select(pool["games"], n_train=5, n_val=2)                         # the filtered pool selects as before
+    assert sel["games"] == {"train": 2, "val": 1}
+
+
+@pytest.mark.parametrize("case", ["missing", "invalid", "disagrees", "not_alternating"])
+def test_INCONSISTENT_START_METADATA_STOPS_AND_IS_NEVER_DEFAULTED(case):
+    gid, mv = ids_in("train", 1)[0], random_game(901, 6)
+    raw = {"missing": _raw(gid, mv, None),
+           "invalid": _raw(gid, mv, "white"),
+           "disagrees": _raw(gid, mv, "black", players=[("red", "black")[k % 2] for k in range(6)]),
+           "not_alternating": _raw(gid, mv, "red", players=["red", "black", "black", "red", "black", "red"])}[case]
+    with pytest.raises(H.Stop, match="starting_player") as e:
+        H.pool_from([raw])
+    assert e.value.step == "corpus"
+
+
+def test_A_TEST_ARM_GAME_IS_NEITHER_CHECKED_NOR_COUNTED():
+    raw = [_raw(ids_in("test", 1)[0], random_game(902, 6), None)]             # would STOP if it were checked
+    assert H.pool_from(raw) == {"games": [], "counts": {a: {"games": 0, "positions": 0, "black_first_games_excluded": 0,
+                                                            "black_first_positions_excluded": 0} for a in H.ARMS}}
+
+
+def test_THE_POOL_AUTHENTICATES_THE_COMPLETE_CORPUS_BEFORE_FILTERING(tmp_path, monkeypatch):
+    tr = ids_in("train", 2)
+    files = {"a.json": _raw(tr[0], random_game(903, 8), "red"), "b.json": _raw(tr[1], [(5, 10)], "black")}
+    for name, g in files.items():
+        (tmp_path / name).write_text(json.dumps(g))
+    seen = []
+
+    def digest(pairs):
+        seen.extend(name for name, _ in pairs)
+        return H.ELIGIBLE_DIGEST
+    monkeypatch.setattr(H.C0, "_digest_of", digest)
+    monkeypatch.setattr(H.C0, "intact_suffix", lambda w: (1, 1))
+    pool = H.eligible_pool(tmp_path)
+    assert seen == ["a.json", "b.json"]                        # the black-first game is inside the digest
+    assert [g["id"] for g in pool["games"]] == [tr[0]] and pool["counts"]["train"]["black_first_games_excluded"] == 1
+    assert H.eligible_games(tmp_path) == pool["games"]
+
+
+def test_EVERY_CONSUMER_REFUSES_A_GAME_THAT_IS_NOT_A_CHECKED_RED_FIRST_GAME():
+    g = _red(ids_in("train", 1)[0], random_game(904, 6))
+    for bad in ({**g, "starting_player": "black"}, {k: v for k, v in g.items() if k != "starting_player"},
+                {k: v for k, v in g.items() if k != "players"}, {**g, "players": ["black"] + g["players"][1:]}):
+        with pytest.raises(H.Stop, match="red-first") as e:
+            H.select([bad], n_train=1, n_val=0)
+        assert e.value.step == "pool"
+    H.require_red_first([g])
 
 
 def test_THE_LIVE_CORPUS_CHECK_REFUSES_A_CORPUS_THAT_IS_NOT_C0S(tmp_path):
@@ -470,7 +554,7 @@ def _fake_games():
     games = []
     for i, gid in enumerate(ids_in("train", 4) + ids_in("val", 3)):
         moves = random_game(400 + i, 30)
-        games.append({"id": gid, "moves": moves, "players": [("red", "black")[k % 2] for k in range(len(moves))]})
+        games.append(_red(gid, moves))
     return games
 
 
@@ -665,3 +749,23 @@ def test_THE_REAL_DEFAULT_MEMORY_REQUIREMENT_IS_UNSET_SO_THE_FIT_REFUSES():
     assert H.Config().memory_required_bytes is None
     mem = H.available_memory()
     assert mem["physical_bytes"] > 0 and 0 < mem["available_bytes"] <= mem["physical_bytes"]
+
+
+@pytest.mark.parametrize("entry", ["label", "fit"])
+def test_LABEL_AND_FIT_STOP_ON_A_GAME_THAT_IS_NOT_RED_FIRST(tmp_path, opened, entry):
+    """Card §14.4: selection/labelling and example construction both take only checked red-first games."""
+    if entry == "label":
+        cfg, _ = _cfg(tmp_path)
+    else:
+        cfg, allowed = _labelled(tmp_path)
+        cfg.committed = lambda r, rel: rel in allowed
+    games = _fake_games()
+    games[0] = {**games[0], "starting_player": "black"}
+    cfg.games = _Spy(lambda r: games)
+    if entry == "label":
+        assert H.run_label("/fake-clone", cfg) == 3
+        rec = _record(cfg.evidence_label)
+    else:
+        assert H.run_fit(cfg) == 3
+        rec = _record(cfg.evidence_fit)
+    assert rec["status"] == "STOP" and rec["stop"]["step"] == "pool"

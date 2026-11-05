@@ -5,8 +5,12 @@ import pathlib
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SOURCE = "docs/superpowers/evidence/combination-policy-cycle2-train-run/01_wrapper.sh"
 SOURCE_SHA256 = "249ead56a496092b3ba5432b6d3431cfb5b6d3d916335b50e177105b9a27db19"
-TARGETS = {"label": "docs/superpowers/evidence/htb-timing-label-run/01_wrapper.sh",
+#: plan §6: T-label attempt 2 runs from fresh label2 paths; T-fit's paths are unused and unchanged
+RUN_DIRS = {"label": "label2", "fit": "fit"}
+TARGETS = {"label": "docs/superpowers/evidence/htb-timing-label2-run/01_wrapper.sh",
            "fit": "docs/superpowers/evidence/htb-timing-fit-run/01_wrapper.sh"}
+#: attempt 1's wrapper, spent (STOP, ledger #172): kept byte-for-byte, never regenerated
+SPENT = {"docs/superpowers/evidence/htb-timing-label-run/01_wrapper.sh": "23e4085a8ee2eca8d6c54994e2a0f39c5e95355005b18d0e21b1539111e9a9a1"}
 
 
 def header(kind):
@@ -18,7 +22,9 @@ def header(kind):
             f"# H-TB BOUNDED TIMING, T-{kind.upper()} -- OUTER WRAPPER (plan docs/superpowers/2026-11-04-htb-bounded-timing-plan.md\n"
             f"# §5; the user's exact ceiling: TERM at {term} s, KILL 10 s later, {term + 10} s in all; cleanup observation bounded\n"
             f"# through {term + 20} s). Idle waiting before launch (idle_gate, at most its MAX_WAIT_S) is NOT part of that ceiling.\n"
-            f"# Runs `htb_timing time {kind}` ONCE in {env}. BUILT ONLY (ledger, 2026-11-04): launching it is a separate approval.\n"
+            + ({"label": "# ATTEMPT 2, from fresh paths (plan §6): attempt 1 (htb-timing-label-run/, htb-timing/label/) STOPPED on a\n"
+                         "# black-first game and stays unchanged (ledger #172). Card §14: red-first games only.\n"}.get(kind, ""))
+            + f"# Runs `htb_timing time {kind}` ONCE in {env}. BUILT ONLY (ledger, 2026-11-04): launching it is a separate approval.\n"
             f"# A copy of combination-policy-cycle2-train-run/01_wrapper.sh (whose header follows, from its line 2); the diff: the\n"
             f"# paths, the gate, the module and its `time {kind}` command, the record kind, the interpreter and inputs it\n"
             f"# checks, the inner-exit table (htb codes: 0 COMPLETED, 2 REFUSED, 3 STOP, 4 FAILED, 5 INTERRUPTED), TERM_S and this\n"
@@ -30,9 +36,9 @@ def replacements(kind):
     term = {"label": 1190, "fit": 1790}[kind]
     common = [
         ("OUT_REL=docs/superpowers/evidence/combination-policy-cycle2-train-run\n",
-         f"OUT_REL=docs/superpowers/evidence/htb-timing-{kind}-run\n"),
+         f"OUT_REL=docs/superpowers/evidence/htb-timing-{RUN_DIRS[kind]}-run\n"),
         ("RUN_REL=docs/superpowers/evidence/combination-policy-cycle2-train\n",
-         f"RUN_REL=docs/superpowers/evidence/htb-timing/{kind}\n"),
+         f"RUN_REL=docs/superpowers/evidence/htb-timing/{RUN_DIRS[kind]}\n"),
         ("GATE_REL=scripts/GPU/alphazero/combination_policy_cycle2_train_authorization.py\n",
          "GATE_REL=scripts/GPU/alphazero/htb_timing_authorization.py\n"),
         ("GATE=COMBINATION_POLICY_CYCLE2_TRAIN_AUTHORIZED\n", "GATE=HTB_TIMING_AUTHORIZED\n"),

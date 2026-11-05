@@ -8,7 +8,9 @@ Two entries, each run once under its own wrapper, behind the closed gate `HTB_TI
 They reuse the pilot's own code paths (`htb_pilot`): its refusals, its terminal-record boundary, `select`,
 `label_game`, `write_label_shards`, `load_label_shards`, `build_examples`, `fit` and `score`.
 
-**Train arm only.** Games come from `eligible_games(arms=("train",))`, and an arm guard STOPs on any other game.
+**Train arm only, red-first only (card §14).** Games come from `eligible_pool(arms=("train",))`, which authenticates
+the complete corpus, checks every train/val game's starting player and excludes black-first games; an arm-and-start
+guard STOPs on any game that is not a checked red-first train game. Projections use the pool's red-first counts.
 `select` is called on train games only, with `n_val=0`, so no validation or test position is replayed or keyed.
 
 **Time only.** Teacher outputs, labels, predictions, losses and metrics are discarded in memory. A recursive check
@@ -38,9 +40,13 @@ from . import htb_timing_authorization as GATE
 from .capacity_c0_inventory import split_of
 
 PLAN = "docs/superpowers/2026-11-04-htb-bounded-timing-plan.md"
-PLAN_SHA256 = "ca147b4ee3bf1da469f05e17ce9bb5dd43c424cb7da1a07aee576432bbfa8596"
+PLAN_SHA256 = "632eb445194b700dacf0403df5ed14b99af47ea0a6d1359c4dba84c72af71dc8"   # §6: red-first, label2
 EVIDENCE = "docs/superpowers/evidence/htb-timing"
 CACHE = pathlib.Path.home() / "twixt-cache" / "htb-timing"
+#: plan §6: attempt 1's STOP stays in htb-timing/label/; attempt 2 writes fresh label2/ paths. T-fit's are unused.
+RUN_DIRS = {"label": "label2", "fit": "fit"}
+#: the only record fields kept when the output check fails on a terminal record (plan §6.4)
+KEEP_ON_OUTPUTS = ("kind", "card_sha256", "plan_sha256", "ceiling")
 
 # the user's exact ceilings (2026-11-04): TERM / KILL / cleanup observed through
 CEILINGS = {"label": {"term_s": 1190, "kill_s": 1200, "cleanup_through_s": 1210},
@@ -53,12 +59,6 @@ FORBIDDEN_KEYS = frozenset({"target", "target576", "value", "value_id", "value_r
                             "kl", "top1", "value_mse", "grad_norm", "log", "probs", "logits", "verdict"})
 
 
-def _counts_from_c0(root: pathlib.Path) -> Dict[str, Dict[str, int]]:
-    inv = json.loads((root / H.C0_INVENTORY).read_text())
-    return {a: {"games": inv["split"]["arms"][a]["games"], "positions": inv["split"]["arms"][a]["positions"]}
-            for a in H.ARMS}
-
-
 @dataclasses.dataclass
 class TimingConfig:
     """The defaults ARE the plan; tests substitute fakes and smaller sizes."""
@@ -66,8 +66,8 @@ class TimingConfig:
     data_root: pathlib.Path = dataclasses.field(default_factory=H.main_checkout)  # corpus + checkpoint
     cache: pathlib.Path = CACHE
     committed: Callable[[pathlib.Path, str], bool] = H._committed_git
-    games_train: Callable[[pathlib.Path], List[Dict[str, Any]]] = \
-        lambda root: H.eligible_games(root / H.CORPUS, arms=("train",))
+    pool_train: Callable[[pathlib.Path], Dict[str, Any]] = \
+        lambda root: H.eligible_pool(root / H.CORPUS, arms=("train",))
     load_teacher: Callable[[str], Any] = H._load_teacher_real
     load_reference: Callable[[pathlib.Path], Any] = H._load_reference_real
     save_student: Callable[[Any, pathlib.Path], Dict[str, str]] = H._save_student_real
@@ -95,10 +95,10 @@ class TimingConfig:
     rows_per_batch: int = H.FROZEN_RECIPE.rows_per_batch
 
     def evidence(self, kind: str) -> pathlib.Path:
-        return self.root / EVIDENCE / kind
+        return self.root / EVIDENCE / RUN_DIRS[kind]
 
     def cache_dir(self, kind: str) -> pathlib.Path:
-        return self.cache / kind
+        return self.cache / RUN_DIRS[kind]
 
 
 def _preconditions(cfg: TimingConfig, kind: str) -> None:
@@ -114,6 +114,7 @@ def arm_guard(games: Sequence[Mapping[str, Any]]) -> None:
     other = [g["id"] for g in games if split_of(g["id"]) != "train"]
     if other:
         raise H.Stop("arm", f"{len(other)} non-train games reached the timing, e.g. {other[:3]}")
+    H.require_red_first(games)                                           # card §14.4
 
 
 def assert_no_outputs(obj: Any, path: str = "record") -> None:
@@ -156,8 +157,8 @@ class _TimedTeacher:
 
 # ─────────────────────────────── projections (pure) ───────────────────────────────
 
-def project_label(m: Mapping[str, Any], c0: Mapping[str, Mapping[str, int]], cfg: TimingConfig) -> Dict[str, Any]:
-    pos = c0["train"]["positions"] + c0["val"]["positions"]
+def project_label(m: Mapping[str, Any], pool: Mapping[str, Mapping[str, int]], cfg: TimingConfig) -> Dict[str, Any]:
+    pos = pool["train"]["positions"] + pool["val"]["positions"]             # red-first only (card §14)
     rows = cfg.n_train + cfg.n_val
     calls = 2 * rows
     d = m["teacher_calls"]
@@ -173,7 +174,7 @@ def project_label(m: Mapping[str, Any], c0: Mapping[str, Mapping[str, int]], cfg
     }
     return {"terms": {k: round(v, 1) for k, v in terms.items()}, **_ceiling(sum(terms.values())),
             "basis": {"positions_train_val": pos, "teacher_calls": calls, "shards": shards,
-                      "replay": "upper bound: every train and val position replayed in both orientations"},
+                      "replay": "upper bound: every red-first train and val position replayed in both orientations"},
             "unpriced": ["record, manifest and started.json writes (KB-scale JSON)",
                          "the selection record's file write beyond its in-memory serialization"]}
 
@@ -225,7 +226,7 @@ def time_label(clone_root: str, cfg: Optional[TimingConfig] = None) -> int:
                            "plan_sha256": PLAN_SHA256, "ceiling": CEILINGS["label"]}
 
     def body(rec):
-        m: Dict[str, Any] = {}
+        m: Dict[str, Any] = rec.setdefault("measurements", {})            # each kept as taken (plan §6.4)
         rec["environment"] = {"python": sys.version.split()[0], "executable": sys.executable,
                               "numpy": np.__version__, "platform": platform.platform()}
         t = time.perf_counter()
@@ -233,8 +234,10 @@ def time_label(clone_root: str, cfg: Optional[TimingConfig] = None) -> int:
         m["teacher_load_s"] = time.perf_counter() - t
         rec["runtime"] = identity
         t = time.perf_counter()
-        games = cfg.games_train(cfg.data_root)
+        pool = cfg.pool_train(cfg.data_root)
         m["corpus_auth_s"] = time.perf_counter() - t
+        rec["pool_counts"] = pool["counts"]
+        games = pool["games"]
         arm_guard(games)
         games = sorted(games, key=lambda g: g["id"])
         rec["train_games_available"] = len(games)
@@ -248,7 +251,8 @@ def time_label(clone_root: str, cfg: Optional[TimingConfig] = None) -> int:
 
         timed, plies, total = _TimedTeacher(teacher), 0, 0.0              # L3: label_game, both orientations
         for g in games[:cfg.teacher_games]:
-            rows = [{"ply": k, "key": H.state_key(s)} for k, s in H.positions(g["moves"]) if k % cfg.teacher_ply_mod == 0]
+            rows = [{"ply": k, "key": H.state_key(s)} for k, s in H.positions(g["moves"], g["players"])
+                    if k % cfg.teacher_ply_mod == 0]
             plies += 2 * (max(r["ply"] for r in rows) + 1)
             t = time.perf_counter()
             out = H.label_game(g["id"], g["moves"], rows, timed)
@@ -278,17 +282,16 @@ def time_label(clone_root: str, cfg: Optional[TimingConfig] = None) -> int:
         loaded = [x for x in cfg.forbid_modules if x in sys.modules]
         if loaded:
             raise H.Stop("isolation", f"the label process imported {loaded}")
-        rec["measurements"] = m
-        rec["projection"] = project_label(m, _counts_from_c0(cfg.root), cfg)
+        rec["projection"] = project_label(m, pool["counts"], cfg)
         assert_no_outputs(rec)
 
-    return H._terminal(cfg.evidence("label"), rec, body)
+    return H._terminal(cfg.evidence("label"), rec, body, guard=assert_no_outputs, keep=KEEP_ON_OUTPUTS)
 
 
 def _fit_rows(games, cfg):
     labelled, by_game, seen = [], {}, set()
     for g in games[cfg.fit_first_game:]:
-        for k, s in H.positions(g["moves"]):
+        for k, s in H.positions(g["moves"], g["players"]):
             if k % cfg.fit_ply_mod != cfg.fit_ply_rem:
                 continue
             key = H.state_key(s)
@@ -321,12 +324,15 @@ def time_fit(cfg: Optional[TimingConfig] = None) -> int:
         from .self_play import _mirror_position_lr
 
         mx.set_default_device(mx.cpu)
-        m: Dict[str, Any] = {"memory_before": cfg.available_memory()}
+        m: Dict[str, Any] = rec.setdefault("measurements", {})            # each kept as taken (plan §6.4)
+        m["memory_before"] = cfg.available_memory()
         rec["environment"] = {"python": sys.version.split()[0], "executable": sys.executable, "numpy": np.__version__,
                               "mlx": mx.__version__, "device": str(mx.default_device()), "platform": platform.platform()}
         t = time.perf_counter()
-        games = cfg.games_train(cfg.data_root)
+        pool = cfg.pool_train(cfg.data_root)
         m["corpus_auth_s"] = time.perf_counter() - t
+        rec["pool_counts"] = pool["counts"]
+        games = pool["games"]
         arm_guard(games)
         games = sorted(games, key=lambda g: g["id"])
 
@@ -392,12 +398,11 @@ def time_fit(cfg: Optional[TimingConfig] = None) -> int:
         m["save_s"] = time.perf_counter() - t
         m["memory_after"] = cfg.available_memory()
 
-        rec["measurements"] = m
         rec["projection"] = project_fit(m, cfg)
         rec["memory_estimate"] = memory_estimate(m, cfg)
         assert_no_outputs(rec)
 
-    return H._terminal(cfg.evidence("fit"), rec, body)
+    return H._terminal(cfg.evidence("fit"), rec, body, guard=assert_no_outputs, keep=KEEP_ON_OUTPUTS)
 
 
 def main(argv: Optional[Sequence[str]] = None, cfg: Optional[TimingConfig] = None) -> int:

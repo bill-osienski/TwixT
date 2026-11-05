@@ -19,6 +19,7 @@ from scripts.GPU.alphazero import htb_pilot as H
 from scripts.GPU.alphazero import htb_timing as T
 from scripts.GPU.alphazero import htb_timing_authorization as GATE
 from scripts.GPU.alphazero import idle_gate
+from scripts.GPU.alphazero.capacity_c0_inventory import split_of
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import htb_timing_wrapper_spec as W                       # noqa: E402
@@ -41,8 +42,22 @@ def opened(monkeypatch):
     monkeypatch.setenv("MLX_ENABLE_TF32", "0")
 
 
+def _red(gid, moves):
+    """A checked red-first game, as `eligible_pool` returns it (card §14)."""
+    return {"id": gid, "starting_player": "red", "moves": list(moves),
+            "players": [("red", "black")[k % 2] for k in range(len(moves))]}
+
+
 def _train_games(n=8):
-    return [{"id": gid, "moves": random_game(600 + i, 32)} for i, gid in enumerate(ids_in("train", n))]
+    return [_red(gid, random_game(600 + i, 32)) for i, gid in enumerate(ids_in("train", n))]
+
+
+def _pool(games):
+    """What `eligible_pool(arms=("train",))` returns: the games plus red-first counts for train and val."""
+    tr = [g for g in games if split_of(g["id"]) == "train"]
+    z = {"black_first_games_excluded": 7, "black_first_positions_excluded": 350}
+    return {"games": games, "counts": {"train": {"games": len(tr), "positions": sum(len(g["moves"]) for g in tr), **z},
+                                       "val": {"games": 3, "positions": 120, **z}}}
 
 
 class SlowTeacher(FakeTeacher):
@@ -58,7 +73,7 @@ def _tcfg(tmp_path, games=None, **kw):
         shutil.copyfile(ROOT / rel, root / rel)
     g = games if games is not None else _train_games()
     base = dict(root=root, data_root=root, cache=tmp_path / "cache", committed=lambda r, rel: rel in (H.CARD, T.PLAN),
-                games_train=_Spy(lambda r: g), load_teacher=_Spy(lambda c: (SlowTeacher(smooth=True), {"fake": 1})),
+                pool_train=_Spy(lambda r: _pool(g)), load_teacher=_Spy(lambda c: (SlowTeacher(smooth=True), {"fake": 1})),
                 load_reference=_Spy(lambda r: tiny_net(0)),
                 available_memory=lambda: {"physical_bytes": 48 << 30, "available_bytes": 20 << 30, "page_size": 16384},
                 forbid_modules=("a_module_nothing_imports",),
@@ -108,7 +123,7 @@ def test_THE_PLAN_IS_PINNED_AND_THE_CEILINGS_ARE_THE_USERS_EXACTLY():
 
 def test_THE_LABEL_PROJECTION_PRICES_EVERY_TERM_AND_COUNTS_TEACHER_TIME_ONCE():
     cfg = T.TimingConfig(root=ROOT, data_root=ROOT)
-    c0 = {"train": {"games": 10, "positions": 900}, "val": {"games": 1, "positions": 100}}
+    c0 = {"train": {"games": 10, "positions": 900}, "val": {"games": 1, "positions": 100}}   # red-first pool counts
     m = {"teacher_load_s": 5.0, "corpus_auth_s": 60.0, "selection_s": 2.0, "selection_positions": 100,
          "teacher_calls": {"calls": 100, "warmup_calls": 20, "warmup_s": 4.0, "steady_mean_s": 0.001},
          "replay_overhead_s": 1.0, "plies_replayed": 1000, "shard_write_s": 0.5, "selection_serialization_s": 3.0}
@@ -163,7 +178,7 @@ def test_T_LABEL_COMPLETES_ON_FAKES_TRAIN_ONLY_AND_RECORDS_NO_OUTPUTS(tmp_path, 
 
 
 def test_T_LABEL_STOPS_ON_A_NON_TRAIN_GAME_AND_ON_A_FORBIDDEN_IMPORT(tmp_path, opened):
-    val = [{"id": ids_in("val", 1)[0], "moves": random_game(700, 20)}]
+    val = [_red(ids_in("val", 1)[0], random_game(700, 20))]
     cfg = _tcfg(tmp_path / "a", games=_train_games(4) + val)
     assert T.time_label("/fake", cfg) == 3
     assert _rec(cfg, "label")["stop"]["step"] == "arm"
@@ -179,7 +194,7 @@ def test_A_TIMING_REFUSES_BEFORE_ANY_LOAD_WHEN_A_DESTINATION_EXISTS(tmp_path, op
     (cfg.evidence(kind) if where == "evidence" else cfg.cache_dir(kind)).mkdir(parents=True)
     argv = ["time", kind] + (["--clone-root", "/fake"] if kind == "label" else [])
     assert T.main(argv, cfg) == 2 and "already exists" in capsys.readouterr().err
-    assert cfg.load_teacher.calls == cfg.games_train.calls == cfg.load_reference.calls == 0
+    assert cfg.load_teacher.calls == cfg.pool_train.calls == cfg.load_reference.calls == 0
     assert not (cfg.evidence(kind) / "record.json").exists()
 
 
@@ -190,7 +205,7 @@ def test_A_TIMING_REFUSES_AN_UNCOMMITTED_OR_CHANGED_PLAN(tmp_path, opened, capsy
     with open(cfg.root / T.PLAN, "a") as f:
         f.write("\n")
     assert T.main(["time", "fit"], cfg) == 2 and "plan is not the pinned one" in capsys.readouterr().err
-    assert cfg.games_train.calls == cfg.load_reference.calls == 0
+    assert cfg.pool_train.calls == cfg.load_reference.calls == 0
 
 
 def test_T_FIT_COMPLETES_ON_FAKES_PRICES_THE_RUN_AND_ESTIMATES_MEMORY(tmp_path, opened):
@@ -219,9 +234,59 @@ def test_T_FIT_KEEPS_DISTINCT_STATES_WHEN_GAMES_SHARE_AN_OPENING(tmp_path, opene
             if m in s.legal_moves() and s.winner() is None:
                 moves.append(m)
                 s = s.apply_move(m)
-        games.append({"id": gid, "moves": moves})
+        games.append(_red(gid, moves))
     cfg = _tcfg(tmp_path, games=games)
     assert T.time_fit(cfg) == 0, _rec(cfg, "fit").get("stop")
+
+
+def test_BOTH_TIMINGS_STOP_ON_A_GAME_THAT_IS_NOT_RED_FIRST_AND_KEEP_WHAT_WAS_MEASURED(tmp_path, opened):
+    games = _train_games(4)
+    games[1] = {**games[1], "starting_player": "black"}
+    cfg = _tcfg(tmp_path, games=games)
+    assert T.time_label("/fake", cfg) == 3 and T.time_fit(cfg) == 3
+    lab, fit = _rec(cfg, "label"), _rec(cfg, "fit")
+    assert lab["stop"]["step"] == fit["stop"]["step"] == "pool"
+    assert set(lab["measurements"]) == {"teacher_load_s", "corpus_auth_s"}           # plan §6.4: kept on a STOP
+    assert set(fit["measurements"]) == {"memory_before", "corpus_auth_s"}
+    assert lab["pool_counts"]["val"]["games"] == 3 and "projection" not in lab
+
+
+def test_A_LATER_STOP_KEEPS_EVERY_COMPLETED_MEASUREMENT_AND_NO_OUTPUT(tmp_path, opened):
+    class StopsLate(SlowTeacher):
+        def evaluate(self, tb, colour, legal):
+            if self.calls >= 5:
+                raise H.Stop("teacher", "injected after 5 calls")
+            return super().evaluate(tb, colour, legal)
+    cfg = _tcfg(tmp_path, load_teacher=_Spy(lambda c: (StopsLate(smooth=True), {"fake": 1})))
+    assert T.time_label("/fake", cfg) == 3
+    rec = _rec(cfg, "label")
+    assert rec["stop"] == {"step": "teacher", "detail": "injected after 5 calls"}
+    m = rec["measurements"]
+    assert {"teacher_load_s", "corpus_auth_s", "selection_s", "selection_positions"} <= set(m)
+    assert "teacher_calls" not in m and "projection" not in rec
+    T.assert_no_outputs(rec)
+
+
+def test_THE_OUTPUT_CHECK_RUNS_ON_EVERY_TERMINAL_RECORD_AND_KEEPS_ONLY_ITS_IDENTITY(tmp_path, opened):
+    def boom(r):
+        raise H.Stop("corpus", "injected")
+    cfg = _tcfg(tmp_path, load_teacher=_Spy(lambda c: (SlowTeacher(smooth=True), {"loss": 0.5})), pool_train=boom)
+    assert T.time_label("/fake", cfg) == 3                                  # STOPPED before the body's own check
+    rec = _rec(cfg, "label")
+    assert rec["stop"]["step"] == "outputs" and "loss" in rec["stop"]["detail"]
+    assert set(rec) == set(T.KEEP_ON_OUTPUTS) | {"status", "stop"}
+    T.assert_no_outputs(rec)
+
+
+def test_T_LABEL_ATTEMPT_2_WRITES_FRESH_PATHS_AND_ATTEMPT_1_IS_KEPT_UNCHANGED(tmp_path):
+    cfg = T.TimingConfig(root=ROOT, data_root=ROOT, cache=tmp_path)
+    assert cfg.evidence("label") == ROOT / T.EVIDENCE / "label2" and cfg.cache_dir("label") == tmp_path / "label2"
+    assert cfg.evidence("fit") == ROOT / T.EVIDENCE / "fit" and T.RUN_DIRS == W.RUN_DIRS
+    for rel, sha in W.SPENT.items():
+        assert hashlib.sha256((ROOT / rel).read_bytes()).hexdigest() == sha
+    text = (ROOT / W.TARGETS["label"]).read_text()
+    assert "\nOUT_REL=docs/superpowers/evidence/htb-timing-label2-run\n" in text
+    assert "\nRUN_REL=docs/superpowers/evidence/htb-timing/label2\n" in text
 
 
 def test_THE_OUTPUT_CHECK_FINDS_A_NESTED_OUTPUT_FIELD():

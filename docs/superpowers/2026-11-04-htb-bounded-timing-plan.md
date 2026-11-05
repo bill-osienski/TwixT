@@ -143,3 +143,26 @@ the whole array per row: about 4.94 TB at full size (calculated, not measured).
    today) and the available memory at launch is at least that. No stress test.
 4. Train arm only, time only, no outputs recorded, no MLX in the label process: as in §§1–4, enforced in code
    (arm guard, recursive output-field check, module check).
+
+## 6. Revision after T-label attempt 1's STOP (2026-11-04, the user's review). This supersedes §§1–5 where they differ
+
+**The STOP is kept unchanged:** `evidence/htb-timing/label/` and `evidence/htb-timing-label-run/` (attempt 1, exit 3,
+ledger #172). The card's §14 amendment (red-first games only) applies to both timings.
+
+1. **Fresh T-label paths.** Attempt 2 writes `docs/superpowers/evidence/htb-timing/label2/`, its wrapper is
+   `docs/superpowers/evidence/htb-timing-label2-run/01_wrapper.sh`, and its cache is `~/twixt-cache/htb-timing/label2/`.
+   All are create-only. T-fit's paths (`htb-timing/fit/`, `htb-timing-fit-run/`, `~/twixt-cache/htb-timing/fit/`) are
+   unused and stay. The gate `HTB_TIMING_AUTHORIZED` is reused. The ceilings are unchanged and remain the proposed
+   limits: T-label 1,190/1,200/1,210 s; T-fit 1,790/1,800/1,810 s.
+2. **The filtered pool.** Both timings take their games from the pilot's one filtered pool: authenticated over the
+   complete corpus, starting players checked, black-first games excluded, train arm only. An arm-and-start guard
+   STOPs on any game that is not a checked red-first train game. T-label's L2 and L3 and T-fit's F1 rows therefore come
+   from red-first games.
+3. **Filtered counts in the projections.** The pool records, per arm (train and val), the red-first games and
+   positions kept and the black-first games and positions excluded. These counts come from the move lists' lengths
+   and starting players read during authentication. No val position is replayed or keyed. The label projection's
+   replay and selection terms use the red-first train+val positions instead of C0's totals.
+4. **Partial measurements kept.** Each completed measurement is in the record as soon as it is taken, so a later STOP,
+   failure or interruption keeps it. The output-field check now runs on **every** terminal record before it is
+   written. If it finds an output field anywhere, everything except the record's identity fields (kind, card and plan
+   hashes, ceiling) is dropped, measurements and projection included, and the record is a STOP at step `outputs`.

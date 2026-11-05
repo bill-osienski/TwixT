@@ -37,7 +37,7 @@ from .game.twixt_state import TwixtState
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
 CARD = "docs/superpowers/2026-11-03-htb-twixtbot-distillation-pilot-card.md"
-CARD_SHA256 = "96269e173d143aeed3cff8a564a85c228adb1107f115f560499b2df979607ef4"
+CARD_SHA256 = "d82e29562e78034abc74c749bf4e83f41966ee3985f16c15ef2e8037ab9b8c26"   # §14: red-first games only
 BOARD = 24
 PADDED = BOARD * BOARD                       # neutral cell index r*24+c; never truncates a legal list
 LAST = BOARD - 1
@@ -47,6 +47,7 @@ CORPUS = "scripts/GPU/logs/games"
 C0_INVENTORY = "docs/superpowers/evidence/2026-08-24-capacity-c0/inventory_games.json"
 ELIGIBLE_DIGEST = "dc7713c601ae6fc861b47b21fbfa7939ecdb6a361e05eef2f8ff09671ec22832"
 ARMS = ("train", "val")                      # the test arm is never replayed, keyed, labelled or scored
+START = "red"                                # card §14: red-first games only (TwixtState() and the adapter)
 N_TRAIN, N_VAL = 240_000, 24_000
 SELECT_TAG, FIT_TAG = "htb-select/1", "htb-fit/1"
 
@@ -165,9 +166,10 @@ def _order_key(arm: str, key: str) -> str:
 
 
 def select(games: Sequence[Mapping[str, Any]], n_train: int = N_TRAIN, n_val: int = N_VAL) -> Dict[str, Any]:
-    """Card §4.5-4.8 over `games` = [{"id", "moves", "players"?}], already C0-eligible. Deterministic; no RNG.
+    """Card §4.5-4.8 over `games` = [{"id", "moves", "players", "starting_player"}], C0-eligible red-first games. Deterministic; no RNG.
 
     The arm is C0's split_of(id). A test-arm game is refused outright: it must never reach this function."""
+    require_red_first(games)
     by_arm: Dict[str, List[Mapping[str, Any]]] = {a: [] for a in ARMS}
     for g in games:
         arm = C0.split_of(g["id"])
@@ -178,7 +180,7 @@ def select(games: Sequence[Mapping[str, Any]], n_train: int = N_TRAIN, n_val: in
     occurrences = {a: 0 for a in ARMS}
     for arm in ARMS:
         for g in sorted(by_arm[arm], key=lambda g: g["id"]):
-            for ply, s in positions(g["moves"], g.get("players")):
+            for ply, s in positions(g["moves"], g["players"]):
                 occurrences[arm] += 1
                 first[arm].setdefault(state_key(s), (g["id"], ply))
     train_keys = set(first["train"])
@@ -199,8 +201,53 @@ def select(games: Sequence[Mapping[str, Any]], n_train: int = N_TRAIN, n_val: in
     return out
 
 
-def eligible_games(root: pathlib.Path, arms: Sequence[str] = ARMS) -> List[Dict[str, Any]]:
-    """The C0-eligible games of `arms`, authenticated by recomputing C0's eligible digest over the WHOLE eligible set.
+def recorded_start(g: Mapping[str, Any]) -> str:
+    """Card §14.2: the recorded `starting_player`, checked against the moves' `player` sequence. Never defaulted."""
+    sp = g.get("starting_player")
+    if sp not in ("red", "black"):
+        raise Stop("corpus", f"{g.get('id')}: starting_player is {sp!r}, not 'red' or 'black'")
+    other = {"red": "black", "black": "red"}[sp]
+    players = [m.get("player") for m in g.get("moves") or []]
+    if players != [(sp, other)[k % 2] for k in range(len(players))]:
+        raise Stop("corpus", f"{g.get('id')}: the moves' players do not alternate from starting_player {sp}")
+    return sp
+
+
+def require_red_first(games: Iterable[Mapping[str, Any]]) -> None:
+    """Card §14.4: every corpus consumer takes only checked red-first games from the filtered pool."""
+    bad = [g.get("id") for g in games if g.get("starting_player") != START
+           or not g.get("players") or g["players"][0] != START]
+    if bad:
+        raise Stop("pool", f"{len(bad)} games are not checked red-first games, e.g. {bad[:3]}")
+
+
+def pool_from(elig: Sequence[Mapping[str, Any]], arms: Sequence[str] = ARMS) -> Dict[str, Any]:
+    """Card §14 over authenticated C0-eligible raw games: check every train/val game's starting player, exclude
+    black-first games, count both per arm (move-list lengths only: nothing is replayed or keyed), and return the
+    red-first games of `arms`. Test-arm games are neither checked nor counted nor returned."""
+    counts = {a: {"games": 0, "positions": 0, "black_first_games_excluded": 0, "black_first_positions_excluded": 0}
+              for a in ARMS}
+    out = []
+    for g in elig:
+        arm = C0.split_of(g["id"])
+        if arm not in ARMS:
+            continue
+        sp, n = recorded_start(g), len(g["moves"])
+        if sp != START:
+            counts[arm]["black_first_games_excluded"] += 1
+            counts[arm]["black_first_positions_excluded"] += n
+            continue
+        counts[arm]["games"] += 1
+        counts[arm]["positions"] += n
+        if arm in arms:
+            out.append({"id": g["id"], "starting_player": sp, "moves": [(m["row"], m["col"]) for m in g["moves"]],
+                        "players": [m["player"] for m in g["moves"]]})
+    return {"games": out, "counts": counts}
+
+
+def eligible_pool(root: pathlib.Path, arms: Sequence[str] = ARMS) -> Dict[str, Any]:
+    """The C0-eligible games authenticated by recomputing C0's eligible digest over the WHOLE eligible set, then
+    filtered to red-first games (card §14) by `pool_from`.
 
     Isolation, stated exactly: EVERY file -- test arm included -- is read, hashed and JSON-parsed, because the
     eligibility predicate needs each game's metadata (reason, board size, iteration, timestamp) and the digest needs
@@ -225,9 +272,12 @@ def eligible_games(root: pathlib.Path, arms: Sequence[str] = ARMS) -> List[Dict[
             and suffix is not None and suffix[0] <= meta.get("iteration") <= suffix[1]]
     if C0._digest_of((name, sha) for name, sha, _ in elig) != ELIGIBLE_DIGEST:
         raise Refused("the live corpus does not reproduce C0's eligible digest")
-    return [{"id": g["id"], "moves": [(m["row"], m["col"]) for m in g["moves"]],
-             "players": [m["player"] for m in g["moves"]]}
-            for _, _, g in elig if C0.split_of(g["id"]) in arms]
+    return pool_from([g for _, _, g in elig], arms)
+
+
+def eligible_games(root: pathlib.Path, arms: Sequence[str] = ARMS) -> List[Dict[str, Any]]:
+    """The red-first games of `arms` from `eligible_pool` (card §14)."""
+    return eligible_pool(root, arms)["games"]
 
 
 # ─────────────────────────────── the teacher (card §3) ───────────────────────────────
@@ -738,8 +788,12 @@ def _write_create_only(path: pathlib.Path, obj: Any) -> str:
     return _sha(raw)
 
 
-def _terminal(ev_dir: pathlib.Path, rec: Dict[str, Any], body: Callable[[Dict[str, Any]], None]) -> int:
-    """Create ev_dir with started.json, run body(rec) and ALWAYS write record.json with the terminal status."""
+def _terminal(ev_dir: pathlib.Path, rec: Dict[str, Any], body: Callable[[Dict[str, Any]], None],
+              guard: Optional[Callable[[Dict[str, Any]], None]] = None, keep: Sequence[str] = ()) -> int:
+    """Create ev_dir with started.json, run body(rec) and ALWAYS write record.json with the terminal status.
+
+    `guard`, if given, runs on EVERY terminal record before it is written; if it raises Stop, only the `keep` fields
+    survive and the record becomes a STOP at the guard's step."""
     import signal
     import traceback
 
@@ -765,6 +819,13 @@ def _terminal(ev_dir: pathlib.Path, rec: Dict[str, Any], body: Callable[[Dict[st
     finally:
         for s, h in old.items():
             signal.signal(s, h)
+        if guard is not None:
+            try:
+                guard(rec)
+            except Stop as e:
+                for k in [k for k in rec if k not in keep]:
+                    del rec[k]
+                rec["status"], rec["stop"] = "STOP", {"step": e.step, "detail": e.detail}
         _write_create_only(ev_dir / "record.json", rec)
     return EXIT[rec["status"]]
 
@@ -867,7 +928,9 @@ def run_fit(cfg: Optional[Config] = None) -> int:
         import mlx.core as mx
 
         mx.set_default_device(mx.cpu)
-        games = {g["id"]: g["moves"] for g in cfg.games(cfg.data_root)}
+        pool = cfg.games(cfg.data_root)
+        require_red_first(pool)                                          # card §14.4
+        games = {g["id"]: g["moves"] for g in pool}
         arms = {a: build_examples(rows[a], games) for a in ARMS}
         reference, student = cfg.load_reference(cfg.data_root), cfg.load_reference(cfg.data_root)
         rec["start"] = start_check(reference, arms["train"], n=cfg.start_rows)

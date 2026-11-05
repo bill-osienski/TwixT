@@ -239,3 +239,32 @@ made by this card.
    directory with `started.json` and runs inside a boundary. Every exit writes a create-only `record.json` with
    status COMPLETED, STOP, FAILED (with the traceback) or INTERRUPTED (SIGTERM or SIGINT), and the matching exit code
    (0, 3, 4, 5). Refusals exit 2.
+
+## 14. Amendment: red-first games only (2026-11-04, the user's review after T-label's STOP)
+
+**Why.** T-label attempt 1 STOPPED at selection: "ply 0: recorded player black but red to move" (ledger #172).
+Self-play picks the first mover at random and records `starting_player`; about half the corpus starts with black.
+§4 replayed every game red-first, and the reviewed teacher adapter (`twixtbot_adapter`) maps red to twixtbot's WHITE,
+which always moves first. This is a replay defect, not evidence about distillation.
+
+**The rule (the user's choice: option 2).** This pilot uses **red-first games only**. They still contain positions with
+both colours to move, and they match the planned red-first evaluation protocol. The teacher adapter is unchanged and
+no colour-swap mapping is added. With red-first games only, §4.4's colour-canonicalization argument holds as written:
+red-to-move states have equal peg counts and black-to-move states one more red peg.
+
+1. **Authenticate first, filter after.** §4.1's verification runs over the complete original corpus, unchanged
+   (eligible digest `dc7713c6…`, every file read and hashed). The restriction is applied only to the authenticated
+   C0-eligible games.
+2. **The starting player is checked, never defaulted.** For each eligible train or val game, the recorded
+   `starting_player` must be `red` or `black`, and the moves' recorded `player` sequence must alternate from it,
+   starting at ply 0. A missing or invalid `starting_player`, or a player sequence that disagrees with it, STOPs the
+   run (step `corpus`). Black-first games are then excluded, and their number and positions are recorded.
+3. **Unchanged:** the arms (§4.2), positions (§4.3), canonical key (§4.4), pools and leakage exclusion (§4.5–4.6),
+   **N_TRAIN = 240,000 and N_VAL = 24,000** with the same ordering (§4.7), the short-pool **REFUSAL** with no fallback,
+   the selection record (§4.8), targets (§5), the fit recipe (§6), scoring (§7) and the verdict (§8). A black-first
+   game's positions are not in the training pool, so excluding them adds no leakage path.
+4. **Applied consistently.** Every consumer of the corpus (selection, labelling, example construction and both
+   timings) takes games from the one filtered pool and refuses (STOP) any game that is not a checked red-first game.
+   Projections use the filtered pool's counts.
+5. **No separate full selection scan now.** Whether the red-first pool holds 240,000 and 24,000 distinct positions is
+   settled by `run label`'s own short-pool refusal.
