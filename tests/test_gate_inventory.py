@@ -240,6 +240,9 @@ EXPECTED_GATES = {
     #: 🔴 THE SIXTY-FIFTH, ADDED 2026-11-06 (the H-TB screen build, on the user's review). The screen loads the WHOLE
     #: student and calib020_0001 on the GPU and plays the original proven combination on a registered block.
     "htb_screen_authorization.py": "HTB_SCREEN_AUTHORIZED",
+    #: 🔴 THE SIXTY-SIXTH, ADDED 2026-11-06 (the H-TB confirmation-test build, on the user's review). The test loads
+    #: the WHOLE student and calib020_0001 on the GPU and plays 110 fresh pairs against the original proven combination.
+    "htb_strength_authorization.py": "HTB_STRENGTH_AUTHORIZED",
     "l0_match_command.py": "L0_EXECUTION_AUTHORIZED",
     "lowply_qualification.py": "LOWPLY_QUALIFICATION_AUTHORIZED",
     "runtime_requalification.py": "RUNTIME_REQUAL_AUTHORIZED",
@@ -271,7 +274,7 @@ def test_THE_COUNT_IS_DERIVED_AND_ANY_REPORT_SAYING_OTHERWISE_IS_WRONG():
     #: single deliberate edit, to the dict above.
     assert INVENTORY.gate_count() == len(discover_gates()) == len(EXPECTED_GATES), (
         "the derived inventory and EXPECTED_GATES must agree")
-    assert len(EXPECTED_GATES) == 65, (
+    assert len(EXPECTED_GATES) == 66, (
         "the total moved: add or remove the entry in EXPECTED_GATES above "
         "deliberately, then update this number in the same edit")
 
@@ -322,7 +325,8 @@ def _stale_count_claims(text):
              "forty-five": 45, "forty-six": 46, "forty-seven": 47, "forty-eight": 48,
              "forty-nine": 49, "fifty": 50, "fifty-one": 51, "fifty-two": 52, "fifty-three": 53,
              "fifty-four": 54, "fifty-five": 55, "fifty-six": 56, "fifty-seven": 57, "fifty-eight": 58, "fifty-nine": 59, "sixty": 60, "sixty-one": 61,
-             "sixty-two": 62, "sixty-three": 63, "sixty-four": 64, "sixty-five": 65}
+             "sixty-two": 62, "sixty-three": 63, "sixty-four": 64, "sixty-five": 65,
+             "sixty-six": 66}
     n = len(EXPECTED_GATES)
     bad = []
     for word, value in words.items():
@@ -414,4 +418,5 @@ def test_THE_STALE_COUNT_GUARD_IS_NOT_VACUOUS():
     assert _stale_count_claims("all sixty-two gates are False")  # never the total; stale
     assert _stale_count_claims("all sixty-three gates are False")  # was right, now stale
     assert _stale_count_claims("all sixty-four gates are False")  # was right, now stale
-    assert not _stale_count_claims("all sixty-five gates are False")  # correct total
+    assert _stale_count_claims("all sixty-five gates are False")  # was right, now stale
+    assert not _stale_count_claims("all sixty-six gates are False")  # correct total

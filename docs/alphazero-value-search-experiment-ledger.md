@@ -265,6 +265,7 @@ knob) is not a new hypothesis.
 > **H-TB screen — seed preparation ACCEPTED; one GPU screen and its closing APPROVED (decision note, 2026-11-06, the user's launch review).** The wrapper once (TERM 3,410 / KILL 3,420 / cleanup 3,430 s), the whole student against the original proven combination, identity checks before any game; then K1 once and K2 only if it reconciles, retiring the whole block. No partial scoring or retry. Strength-test work, training, deployment and pushing not authorized. See #181.
 > **H-TB screen — CONTINUE (Post-closure entry 53, 2026-11-06).** The ONE run COMPLETED in 1,279 s (TERM 3,410 s); clean cleanup, gate restored. Mean pair score **0.953** over 32 pairs (candidate 61 wins, reference 3, no draws or caps); evaluations ratio 1.046 (guard 1.05), search-seconds ratio 1.039 (guard 1.10). Both digests and eval mode unchanged from load to end. K1 RECONCILES 15/15; the whole block [202759500, 202759564) exposed and retired. **A screen only: stronger play is not established**; CONTINUE permits proposing the strength test and nothing else. A missed failing band test disclosed and re-anchored; 875 focused pass. See #181.
 > **H-TB screen — CONTINUE ACCEPTED as strong preliminary evidence of a playing advantage against the reference; formal confirmation pending (decision note, 2026-11-06, the user's review).** The user reproduced the 61–3 score, pair scores and both cost ratios and checked the replays, identities, cleanup and closing. Entry 52's imitation results and the unresolved causes stand. Approved, build only: the card §9.2 confirmation test, 110 fresh pairs, PASS only if mean − √(ln 20 / 220) > 0.5 with both guards (evaluations guard unchanged at 1.05); ceiling to be proposed from the screen's pace. Seeds, GPU launch, training, deployment and pushing not authorized. See #182.
+> **H-TB confirmation test — BUILT for review; nothing run (addendum, 2026-11-06).** `htb_strength run strength`: 110 fresh pairs, the same frozen whole student against the original proven combination at 200 simulations; the screen's module pinned and reused (loop, boundary, seams, identities); admission adds the committed CONTINUE screen and its clean outer.json; the screen's block excluded. PASS only if mean − √(ln 20 / 220) > 0.5 (mean above 0.61669) with evaluations ≤ 1.05 and search seconds ≤ 1.10. Gate `HTB_STRENGTH_AUTHORIZED` closed (66 in all). Ceiling PROPOSED 6,600 s (TERM 6,590) from the screen's pace; its main risk is longer games. 82 new tests, 11/11 injected defects caught; 957 focused pass. See #182.
 
 ## Historical proposal check — programme now closed
 
@@ -2059,6 +2060,13 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
    - pool these 64 games with any strength games, or reuse this block's seeds;
    - treat the evaluations ratio (1.046, within 0.004 of the 1.05 guard) as headroom for a later run: each run's guards are measured on its own totals;
    - start strength-test work (card §9.2: its seeds, build or launch), further training, deployment or pushing without the user's approval of each step.
+182. **The H-TB confirmation test (2026-11-06): built, not run.** Plan `docs/superpowers/2026-11-06-htb-strength-plan.md` (`92e355a8…`). Do **not**:
+   - run any seed mode (survey, proofs, registration, closing), load the student or calib020_0001 for it, open `HTB_STRENGTH_AUTHORIZED` or launch its wrapper without the user's approval of each step;
+   - change the 110 pairs, the one-sided bound √(ln 20 / 220), either guard (the evaluations guard stays 1.05), the candidate, the opponent, the search settings or the loop without re-pinning the plan under review; or substitute `hoeffding_lower` (ln(2/α));
+   - pool its games with the screen's, reuse any screen seed, or top up, extend or rescore a stopped or VOID run;
+   - adopt the proposed 6,600 s ceiling without the launch review, or read a PASS as more than a one-sided result against this reference at these settings, or a NON_PASS as evidence of no advantage;
+   - treat the screen's 0.953 as a confirmed effect size, or as identifying a cause (entry 52's causes remain unresolved);
+   - start further training, deployment or pushing.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -10041,3 +10049,32 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
 - **To return:** the build, for review.
 - **Also permitted:** removing the clean, merged screen worktree and branch (done: `TwixT_Game-htb-screen-run` and `htb-screen-run` removed after confirming both clean and merged).
 - **Not authorized:** seed preparation and GPU launch for the confirmation test; further training; deployment; pushing.
+
+#### Addendum — the H-TB confirmation test built; returned for review; nothing run (2026-11-06)
+
+- **What was built** (decision note above; on `htb-pilot-build`, nothing pushed):
+  - **Plan** `docs/superpowers/2026-11-06-htb-strength-plan.md` (sha256 `92e355a8…`, pinned in the module). The card pin is unchanged.
+  - **Module** `scripts/GPU/alphazero/htb_strength.py`, `run strength --checkpoint <abs>`: the same frozen whole student (`0e1cb621…`, digest `586dca4f…` at load and at the end) against the original proven combination (`calib020_0001`, digest `ae0e71fc…`), both averaged, 200 simulations, halving from ply 20; **110 pairs, 220 games**, game g on seed BASE + g.
+  - **Reuse:** the screen's module (`htb_screen.py`, the one that ran) is pinned and imported, not modified. From it come the student and reference identities, the fit admission, the seams and their real wiring (the match's loader), the identity check, the background watch and the opening probe. The loop is text-identical to the screen's and the cycle-2 screen's. The record boundary and preflight equal the screen's, except the run name.
+  - **Admission, added:** the committed screen record must be `htb-screen-record/1`, COMPLETED, CONTINUE (its own `screen.verdict` too), under the card and screen-plan pins, written by the script, naming the pinned student with both digests the pinned ones at load and at the end. The screen's outer.json must show inner and outer exit 0, COMPLETED, gate restored, no survivors, record by script.
+  - **Screen games excluded:** the run reads the screen's committed plan and VOIDs a block that overlaps it. The screen's block is retired in any case.
+  - **The rule (card §9.2):** lower = mean − √(ln 20 / 220), half-width 0.116692, so a mean above 0.616692 (136/220 passes; 135/220 does not). PASS only if lower > 0.5 and the evaluations ratio ≤ 1.05 and the search-seconds ratio ≤ 1.10; otherwise NON_PASS, every reason listed. The evaluations guard is unchanged. This is deliberately **not** `mirror_halving_combination.hoeffding_lower`, which uses ln(2/α) (half-width 0.129490); a test pins the difference.
+  - **Gate** `HTB_STRENGTH_AUTHORIZED`, closed (`htb_strength_authorization.py`): **66 gates in all**, all closed. The screen's gate does not open it (tested).
+  - **Copies**, derived exactly (`tests/htb_strength_copies_spec.py`) from the H-TB screen's copies, the ones that ran: `evidence/htb-strength-run/01_wrapper.sh` (`7ad95530…`; paths, gate, module, `run strength`, record kind, TERM_S, header), `evidence/htb-strength-seed-survey/01_seed_survey.py` (`57cc607a…`; block size 220, paths, kind, names, titles) and `evidence/htb-strength-seed-closing/01_derive_usage.py` (`ca41cb8e…`; block size 220, paths, title).
+- **Ceiling PROPOSED** (plan §9; not adopted), from the screen's measured pace: 1,279 s × 220 / 64 × 1.5 = 6,594.8 s, rounded up to the minute: **6,600 s — TERM 6,590 s, KILL 6,600 s, cleanup observation through 6,610 s.** The screen's summed game time and its record's total give the same minute. Room for 16 capped 280-ply games at the screen's slowest per-ply rate, or 14 at the cycle-2 comparison's slowest capped rate.
+  - **Main risk, game length:** the screen's games averaged 37.1 plies because the student won 61 of 64. TERM covers 29.95 s per game on average, about 56 plies at the screen's pace. Games as long as the cycle-2 comparison's (63.7 plies, 35.3 s each) would reach TERM, and the run would be VOID.
+- **Tests:** `tests/test_htb_strength.py`, 82 new tests on GPU-free fakes, reusing the screen's fakes. They cover:
+  - the gate, the pins and the entry;
+  - admission on the real committed records, with 14 single-field refusals;
+  - the rule at both reachable boundaries, at the guard limits and against the two-sided formula;
+  - all 220 games through the real record boundary;
+  - the VOID preconditions, the screen-block overlap among them;
+  - the frozen-digest VOID;
+  - the loop, boundary and seam reuse;
+  - the copy derivations;
+  - the state with no seed step run;
+  - the ceiling recomputed from the committed screen evidence.
+
+  Eleven injected defects were each caught: the two-sided bound, a non-strict bound, an ignored guard, no overlap check, no end digests, 109 pairs, an unchecked gate, an unchecked screen verdict, a skipped screen admission, a changed loop and an unchecked student sha256. The module was restored byte for byte. The gate-inventory test now expects 66. Focused suites, serially (the 875 of entry 53 plus these): **957 pass**, 1 deselected.
+- **Nothing ran:** no seed step, model load, gate opening or game. No registry edit.
+- **For review:** the build, the plan and the proposed ceiling. Seed preparation (survey, pre-proof, registration, post-proof) and the GPU launch each need approval. See #182.
