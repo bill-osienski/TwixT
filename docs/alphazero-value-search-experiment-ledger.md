@@ -259,6 +259,7 @@ knob) is not a new hypothesis.
 > **H-TB — batched fit accepted; fit requirement 12 GiB and both full-run ceilings ADOPTED; compact label storage and both full-run wrappers BUILT for launch review; nothing run (decision note, clarification and addendum, 2026-11-05).** Card §16 (`ccb3bc67…`): labels compacted as produced, with byte-identical shards, row lists and manifest on fakes; label budget 23.56 → 10.84 GB (proposed launch requirement 11 GiB); memory checks at both launches. Ceilings: label 13,190/13,200/13,210 s, fit 18,590/18,600/18,610 s. The 2.441 ms/row and 3.42 h fit figures are planning estimates, not bounds. Neither full run authorized. See #176.
 > **H-TB full label run — COMPLETED once (addendum, 2026-11-05).** Inner and outer exit 0, 8,478 s of wall time against the projected 8,719 s and the 13,200 s ceiling; gate restored, no survivors, record by script. 240,000 train and 24,000 val rows (15,590 / 1,899 red-first games), 528,000 teacher calls; selection, manifests and all 33 shards verified. Labels committed as the fit's input. See #177.
 > **H-TB fit check — ELIGIBLE (Post-closure entry 52, 2026-11-06).** One CPU fit, 15,000 updates, COMPLETED in 12,180 s (estimate 12,301 s; ceiling 18,600 s); clean cleanup. On 24,000 validation rows the student against calib020_0001: KL 0.574 vs 2.911 (F1 ✓, ratio 0.197), top-1 65.1% vs 29.7% (F2 ✓), value MSE 0.0703 vs 0.2530 (F3 ✓, ratio 0.278); all 64 trainable tensors moved, the 28 BatchNorm statistics unchanged. **Imitation of twixtbot's raw network on this position distribution only; playing strength untested; ELIGIBLE authorizes nothing.** See #178.
+> **H-TB — ELIGIBLE accepted; the 32-pair screen BUILT for launch review; nothing run (decision note and addendum, 2026-11-06).** `htb_screen run screen`: the WHOLE student (`0e1cb621…`, digest `586dca4f…`, checked at load and at the end) in the proven combination against the original proven combination, both averaged, 200 simulations, halving from ply 20, through the cycle-2 screen's loop (text-identical). Rule: STOP below a mean pair score of 0.50 or on either compute guard (1.05 / 1.10). Plan `4201dbec…`; gate `HTB_SCREEN_AUTHORIZED` closed (65 in all); wrapper and seed copies derived from the cycle-2 screen's. Ceiling PROPOSED 3,420 s. 73 new tests. No timing, seed procedure, model load or game. See #179.
 
 ## Historical proposal check — programme now closed
 
@@ -2037,6 +2038,12 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
    - claim stronger play, or any cause of the gap (training scale, data, architecture), from F1–F3: they show imitation on this position distribution only (card §1);
    - reuse the 24,000 validation rows to tune or select a later method;
    - play, screen or deploy the student, or use it on the GPU, without a separately built and approved §9 stage.
+179. **The H-TB screen build (2026-11-06): built, not run.** Plan `docs/superpowers/2026-11-06-htb-screen-plan.md` (`4201dbec…`). Do **not**:
+   - run any seed mode (survey, proofs, registration, closing), load the student or calib020_0001 for the screen, open `HTB_SCREEN_AUTHORIZED` or launch its wrapper without the user's approval of each step;
+   - install a head on, train, edit or replace the candidate: it is the whole student, frozen, bound to the committed fit record and checked by sha256 and state digest at load and at the end;
+   - change the opponent (the original proven combination with calib020_0001), the search settings, the loop, the 0.50 STOP line or either compute guard without re-pinning the plan under review;
+   - adopt the proposed 3,420 s ceiling without the launch review, or read a screen result as strength, or pool screen games with strength games;
+   - start strength-test work, further training, deployment or pushing.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -9841,3 +9848,59 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
   - Per card §1, this shows imitation only. It does not show stronger play, and does not say that scale, data or anything else caused the gap.
   - ELIGIBLE authorizes nothing (card §8). Any §9 stage — screen or strength test, with its compute guards — needs its own build and approval. Not approved: evaluation games, GPU work, further training, deployment, pushing.
   - See #178.
+
+#### Decision note — ELIGIBLE accepted; the 32-pair screen's minimal build and paper launch plan approved (2026-11-06, the user's review)
+
+- **Accepted:** the fit check's ELIGIBLE (entry 52): a substantial improvement in teacher imitation, with playing strength still untested.
+- **The user's check** (independent): F1–F3 and the improvement ratios; the selection and label bindings, including all 33 shard hashes; the student's file hash and state digest; all 64 trainable tensors changed and all 28 BatchNorm statistics byte-identical; successful outer completion, the restored gate and all gates closed.
+- **Approved: the minimal build and paper launch plan of the 32-pair screen (card §9.1) only:**
+  - pin and load the **whole student**, not just its policy head;
+  - the opponent is the original proven combination; both sides keep mirror averaging, 200 simulations and halving from ply 20;
+  - keep the card's STOP line below **0.50** and both measured compute guards;
+  - reuse the reviewed match loop, seed procedure and wrapper pattern, with focused fake tests;
+  - return the build and a proposed ceiling for launch review.
+- **Kept:** the student frozen as the candidate; the proven combination as the reference.
+- **Housekeeping approved:** removing the clean, merged full-run worktree and branch (done: `TwixT_Game-htb-full-run` and `htb-full-run`, both at `809699be`, removed after confirming the worktree was clean).
+- **Not approved:** any real timing, seed procedure, model loading or game; further training; strength-test work; deployment; pushing.
+
+#### Addendum — the H-TB screen built; returned for launch review; nothing run (2026-11-06)
+
+- **What was built:**
+
+  | File | sha256 | What it is |
+  |---|---|---|
+  | `docs/superpowers/2026-11-06-htb-screen-plan.md` | `4201dbec…` | the screen's frozen plan and paper launch plan (card §9.1 and §9.3 filled in; the card's pin unchanged) |
+  | `scripts/GPU/alphazero/htb_screen.py` | `5d583cbb…` | `run screen`: admission, the record boundary, the screen |
+  | `scripts/GPU/alphazero/htb_screen_authorization.py` | `74b2a544…` | gate `HTB_SCREEN_AUTHORIZED`, closed (65 gates in all, all closed) |
+  | `evidence/htb-screen-run/01_wrapper.sh` | `2d221e31…` | derived from the cycle-2 screen's wrapper |
+  | `evidence/htb-screen-seed-survey/01_seed_survey.py` | `cecb6c98…` | derived from the cycle-2 screen's survey copy |
+  | `evidence/htb-screen-seed-closing/01_derive_usage.py` | `64e42aa6…` | derived from the cycle-2 screen's closing copy |
+  | `tests/htb_screen_copies_spec.py`, `tests/test_htb_screen.py` | `d46237dd…`, `53556f26…` | the derivations, and 73 focused tests |
+
+- **The candidate:**
+  - the whole student file (sha256 `0e1cb621…`), loaded by the match's own loader (`eval_runner._default_evaluator_factory`), with no head installed;
+  - its state digest must be the fit's `586dca4f…` at load **and at the end**, and the reference's must be `ae0e71fc…` both times;
+  - admission requires the committed fit record (COMPLETED, ELIGIBLE with F1–F3 true, on card `ccb3bc67…`, naming exactly this student, reference digest and label record) and the fit wrapper's `outer.json` (exit 0 inside and out, gate restored, no survivors, record by script).
+- **The match:**
+  - `combination_policy_pilot._screen`'s loop, which a test checks is text-identical (30 lines), with its background-check helper and opening probe imported unchanged;
+  - both sides `MirrorAveragingEvaluator` + `RootSequentialHalvingMCTS` at 200 simulations, halving from ply 20, on the frozen PROTOCOL;
+  - 32 colour-reversed pairs, the candidate red in even games; Python 3.14.10, MLX 0.30.3, NumPy 2.4.1.
+  - **Device:** the GPU, through that loader, as in every earlier screen; the launch review must cover GPU games.
+- **The rule (plan §5):** STOP if the mean pair score is below 0.50, the evaluations ratio exceeds 1.05, or the search-seconds ratio exceeds 1.10; otherwise CONTINUE. Every reason that applies is recorded. A mean of exactly 0.50 is CONTINUE, because the card's line is "below 0.50". Applying a failed guard as a STOP in the screen is my reading of card §9.3 ("common to both"); the earlier screens recorded costs as descriptive only.
+- **Pins checked before anything loads:** the plan, the card, the four frozen modules the cycle-2 screen pinned, `combination_policy_pilot.py` (`47d2e05e…`) and `htb_pilot.py` (`6c707c3f…`).
+- **The copies:**
+  - **Wrapper:** differs from the cycle-2 screen's only in the paths, the gate, the module and its `run screen` command, the record kind, TERM_S and the header.
+  - **Survey and closing copies:** differ only in the paths, the plan's kind (`htb-screen-plan/1`), the module name, the titles and verdict lines. The survey copy loads the pinned method, and the closing copy's 15 controls pass on a synthetic block.
+  - No mode has run, and no `plan.json` exists.
+- **The ceiling, PROPOSED (plan §8):**
+  - **Derivation:** 0.5559 s per candidate search (the cycle-2 strength comparison, Python 3.14.10) × 63.725 plies per game × 64 = 2,267.0 s; × 1.5 = 3,400.5 s, rounded up to the minute: **3,420 s — TERM 3,410 / KILL 3,420 / cleanup through 3,430 s**.
+  - **Cross-check:** that run's wall time per game gives 3,392.8 s.
+  - **Long games:** TERM leaves room for 8 capped games, against about 2.8 expected.
+  - **An estimate:** the student's game lengths and search cost are unmeasured.
+- **Tests:**
+  - 73 new tests pass, among them a CPU round trip on a random 128×6 network: saved as the fit saved the student, loaded as the screen loads it, its digest unchanged including the BatchNorm statistics, in evaluation mode.
+  - The neighbouring suites pass (gate inventory, H-TB pilot, timing and budget, the first and second cycles' screen and cycle tests).
+  - Two inventory updates: the 65th gate, and the stale-count control moved from sixty-four to sixty-five.
+  - No real timing, mutation campaign or full regression.
+- **Nothing ran:** no seed mode, model load, gate opening or game.
+- **For the launch review:** the proposed ceiling; the screen's guard reading (above); the seed preparation (plan §7, steps 1–4) as its own approval; the GPU games. See #179.
