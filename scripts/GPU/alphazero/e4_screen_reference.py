@@ -784,6 +784,16 @@ ACCOUNTED_SEED_INTERVALS = (
     # Accounted, NOT exposed and NOT retired: exposure follows actual use (the started games, as the closing rule establishes
     # them); the closing edit retires the whole block. No gate is opened by this.
     (202748400, 202749418),          # SECOND POLICY-IMPROVEMENT CYCLE STRENGTH COMPARISON -- 1,018 game seeds
+    # 🔴 THE H-TB SCREEN -- 64 GAME SEEDS, registered 2026-11-06: the 64-seed block of the H-TB screen's survey
+    # (evidence/htb-screen-seed-survey/02_*), READ from that record, not chosen here, by the two-band rule
+    # (seed_band_2027.candidate) in the 2027 band. One seed per game of the ONE screen run (plan
+    # docs/superpowers/2026-11-06-htb-screen-plan.md §7; `htb_screen run screen`: game g plays seed BASE + g, in order, in one
+    # process). The plan is evidence/htb-screen-run/plan.json (base + slot count + survey hash). Registered ONLY after the
+    # pre-registration collision proof (same directory, 03_*) was CLEAN, 55/55.
+    #
+    # Accounted, NOT exposed and NOT retired: exposure follows actual use (the started games, as the closing rule establishes
+    # them); the closing edit retires the whole block. No gate is opened by this.
+    (202759500, 202759564),          # H-TB SCREEN -- 64 game seeds
 )
 
 #: EXPERIMENTAL EXPOSURE: seeds drawn from OUTSIDE the permanently unschedulable
