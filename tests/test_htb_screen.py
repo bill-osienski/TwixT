@@ -140,7 +140,7 @@ def test_REAL_STATE_THE_COMMITTED_FIT_ADMITS_THE_SCREEN_AND_NAMES_THE_PINNED_STU
     assert fit["student"] == {"path": str(HS.STUDENT["path"]), "sha256": HS.STUDENT["sha256"],
                               "state_digest": HS.STUDENT["state_digest"]}
     assert fit["fit"]["reference_digest"] == HS.REFERENCE_DIGEST != HS.STUDENT["state_digest"]
-    assert not (ROOT / HS.EVIDENCE).exists() and not (ROOT / HS.PLAN).exists()   # never run; no seeds prepared
+    assert not (ROOT / HS.EVIDENCE).exists()                                         # never run (its seeds: below)
 
 
 def _good_fit():
@@ -475,11 +475,18 @@ def test_THE_WHOLE_NETWORK_SURVIVES_THE_FIT_S_SAVE_AND_THE_MATCH_S_LOAD_with_its
     ev = ER._default_evaluator_factory(saved["path"])
     assert H._digest(ev.network) == saved["state_digest"]
     assert M._require_eval(ev.network, "after load")["modules_in_training_mode"] == 0
+    # a deterministically DIFFERENT network: freshly initialized networks give near-uniform opening priors (about 1e-5
+    # apart, sometimes exactly equal), which made this check flaky (fixed 2026-11-06); a seeded shift of every weight
+    # makes the two networks' priors differ by construction
+    rng = np.random.default_rng(5)
     other = create_network(in_channels=30)
+    other.update(tree_unflatten([(k, v + mx.array(rng.normal(0, 0.2, v.shape).astype(np.float32)))
+                                 for k, v in tree_flatten(other.parameters())
+                                 if not k.endswith(("running_mean", "running_var"))]))
     other.eval()
     D.save_student(other, str(tmp_path / "other.safetensors"))
     probe = HS.opening_probe(ev, ER._default_evaluator_factory(str(tmp_path / "other.safetensors")))
-    assert probe["max_prior_abs_diff"] > 0 and probe["legal"] > 500
+    assert probe["max_prior_abs_diff"] > 1e-4 and probe["legal"] > 500
 
 
 # ─────────────────────────────── the wrapper and the seed copies ───────────────────────────────
@@ -503,7 +510,7 @@ def test_THE_WRAPPER_RUNS_THIS_MODULE_BEHIND_ITS_OWN_CLOSED_GATE_and_was_never_r
     assert "\nMODULE=scripts.GPU.alphazero.htb_screen\n" in text and '-m "$MODULE" run screen --checkpoint "$CKPT"' in text
     assert f"\nRECORD_KIND={HS.RECORD_KIND}\n" in text and "MLX_ENABLE_TF32=0" in text
     assert "  3) outcome=VOID ;;\n  4) outcome=REFUSED ;;\n  2) outcome=USAGE ;;\n" in text
-    assert sorted(x.name for x in p.parent.iterdir()) == ["01_wrapper.sh"]          # no plan, no run output
+    assert sorted(x.name for x in p.parent.iterdir()) == ["01_wrapper.sh", "plan.json"]   # the plan; no run output
     assert not (ROOT / HS.EVIDENCE).exists()
 
 
@@ -522,7 +529,40 @@ def test_THE_SURVEY_COPY_SERVES_THIS_SCREEN_S_PLAN_and_loads_the_pinned_method()
     assert S.slot_lines((BASE, BASE + 64))[63] == f"    SLOT 63 seed {BASE + 63}"
     survey, _proof, SEL = S.load_method()
     assert (survey.N, survey.PLAN, survey.HERE) == (64, HS.PLAN, S.HERE) and SEL.BAND[0] == 2027 * 10 ** 5
-    assert not any((ROOT / rel).exists() for rel in S.OUT.values())                 # no mode has run
+    assert all((ROOT / rel).is_file() for rel in S.OUT.values())                    # each mode ran once (below)
+
+
+def test_THE_SCREEN_S_SEEDS_ARE_SURVEYED_PROVEN_AND_REGISTERED_UNUSED_and_every_mode_refuses_to_rerun():
+    """Seed preparation (the user's review, 2026-11-06): survey 2ed2f3d4, pre-proof 5b326407, registration 7f2ab4d7,
+    post-proof bd876999. The block is READ from the committed plan and survey record -- no seed literal here."""
+    from scripts.GPU.alphazero import e4_screen_reference as REG
+    from scripts.GPU.alphazero import seed_band_2027 as SB
+    S = _module("survey")
+    method, _proof, sel = S.load_method()
+    plan = json.loads((ROOT / HS.PLAN).read_text())
+    raw = (ROOT / S.OUT["survey"]).read_bytes()
+    rec = S.read_record(raw.decode(), method, sel)                       # CLEAN, every control passed, a clean tree
+    block = rec["block"]
+    assert plan == S.build_plan(rec["base"], hashlib.sha256(raw).hexdigest()) and block == (plan["base"], plan["base"] + 64)
+    assert SB.BAND[0] <= block[0] and block[1] <= SB.BAND[1] and block[0] % SB.ALIGN == 0
+    for mode in ("pre", "post"):
+        text = (ROOT / S.OUT[mode]).read_text()
+        assert f"EXPECTED STATE ({mode}): HOLDS" in text and "controls passed: 55/55" in text
+        assert f"PROOF VERDICT ({mode}): THE H-TB SCREEN BLOCK IS CLEAN AND THE STATE IS AS EXPECTED\n" in text
+        assert text.splitlines()[2].endswith("; working tree clean")
+        assert f"sha256 {hashlib.sha256(raw).hexdigest()}" in text
+    assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1 and REG.ACCOUNTED_SEED_INTERVALS[-1] == block
+    assert all(hi <= block[0] for lo, hi in REG.ACCOUNTED_SEED_INTERVALS[:-1] if hi > SB.BAND[0])
+    for intervals in (REG.EXPOSED_SEED_INTERVALS, REG.RETIRED_SEED_INTERVALS, REG.TEST_ONLY_SEED_INTERVALS):
+        assert not any(lo < block[1] and block[0] < hi for lo, hi in intervals)
+    assert all(REG.seed_is_accounted(s) and not REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s)
+               for s in range(*block))
+    for mode in ("survey", "pre", "post"):
+        with pytest.raises(S.Refused, match="each mode runs once"):
+            S.main(["x", "--mode", mode])
+    C = _module("closing")
+    assert not (ROOT / C.OUT).exists() and all(ok for _l, ok, _d in C._controls(block[0]))
+    assert GATE.HTB_SCREEN_AUTHORIZED is False and not (ROOT / HS.EVIDENCE).exists()
 
 
 def test_THE_CLOSING_COPY_READS_THIS_SCREEN_S_RUN_and_its_controls_all_pass():

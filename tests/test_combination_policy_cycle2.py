@@ -1854,8 +1854,10 @@ def test_THE_STRENGTH_COMPARISON_RAN_ONCE_COMPLETED_NON_PASS_AND_ITS_BLOCK_IS_CL
     assert k1.splitlines()[2].endswith("; working tree clean") and "controls passed: 15/15" in k1
     assert k1.endswith(f"VERDICT: RECONCILES -- EXPOSE {list(block)}; RETIRE {list(block)}\n")
     for intervals in (REG.ACCOUNTED_SEED_INTERVALS, REG.EXPOSED_SEED_INTERVALS, REG.RETIRED_SEED_INTERVALS):
-        assert intervals.count(block) == 1 and intervals[-1] == block
-        assert all(hi <= block[0] for lo, hi in intervals[:-1] if hi > SB.BAND[0])
+        # RE-ANCHORED 2026-11-06 (the H-TB screen's registration 7f2ab4d7): no longer last in ACCOUNTED; later entries lie above
+        i = intervals.index(block)
+        assert intervals.count(block) == 1 and all(lo >= block[1] for lo, _hi in intervals[i + 1:])
+        assert all(hi <= block[0] for lo, hi in intervals[:i] if hi > SB.BAND[0])
     assert not any(lo < block[1] and block[0] < hi for lo, hi in REG.TEST_ONLY_SEED_INTERVALS)
     assert all(REG.seed_is_accounted(s) and REG.seed_is_exposed(s) and REG.seed_is_retired(s) and REG.seed_is_unavailable(s)
                and not REG.seed_is_test_only(s) for s in range(*block))

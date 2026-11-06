@@ -261,6 +261,7 @@ knob) is not a new hypothesis.
 > **H-TB fit check — ELIGIBLE (Post-closure entry 52, 2026-11-06).** One CPU fit, 15,000 updates, COMPLETED in 12,180 s (estimate 12,301 s; ceiling 18,600 s); clean cleanup. On 24,000 validation rows the student against calib020_0001: KL 0.574 vs 2.911 (F1 ✓, ratio 0.197), top-1 65.1% vs 29.7% (F2 ✓), value MSE 0.0703 vs 0.2530 (F3 ✓, ratio 0.278); all 64 trainable tensors moved, the 28 BatchNorm statistics unchanged. **Imitation of twixtbot's raw network on this position distribution only; playing strength untested; ELIGIBLE authorizes nothing.** See #178.
 > **H-TB — ELIGIBLE accepted; the 32-pair screen BUILT for launch review; nothing run (decision note and addendum, 2026-11-06).** `htb_screen run screen`: the WHOLE student (`0e1cb621…`, digest `586dca4f…`, checked at load and at the end) in the proven combination against the original proven combination, both averaged, 200 simulations, halving from ply 20, through the cycle-2 screen's loop (text-identical). Rule: STOP below a mean pair score of 0.50 or on either compute guard (1.05 / 1.10). Plan `4201dbec…`; gate `HTB_SCREEN_AUTHORIZED` closed (65 in all); wrapper and seed copies derived from the cycle-2 screen's. Ceiling PROPOSED 3,420 s. 73 new tests. No timing, seed procedure, model load or game. See #179.
 > **H-TB screen — build ACCEPTED; ceiling 3,420 s and the rule ADOPTED; the four seed-preparation steps APPROVED (decision note, 2026-11-06).** TERM 3,410 / KILL 3,420 / cleanup through 3,430 s, an estimate with no automatic extension. STOP below 0.50 or on either failed guard; exactly 0.50 is CONTINUE when both guards pass. Survey, pre-proof, registration with its bound plan, post-proof: once each, in order, in clean worktrees, each committed before the next; stop on any failed check. GPU model loading and games not authorized. See #179.
+> **H-TB screen — seeds PREPARED; returned for launch review; nothing run (addendum, 2026-11-06).** Block [202759500, 202759564), 64 seeds in the 2027 band: survey CLEAN 55/55 (`2ed2f3d4`), pre-proof HOLDS 55/55 (`5b326407`), registered last in ACCOUNTED, 55 → 56, with its bound plan (`7f2ab4d7`), post-proof HOLDS 55/55 (`bd876999`). Lifecycle tests re-anchored; one flaky test of mine fixed; 532 focused pass. GPU model loading and games not authorized. See #180.
 
 ## Historical proposal check — programme now closed
 
@@ -2045,6 +2046,10 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
    - change the opponent (the original proven combination with calib020_0001), the search settings, the loop, the 0.50 STOP line or either compute guard without re-pinning the plan under review;
    - adopt the proposed 3,420 s ceiling without the launch review, or read a screen result as strength, or pool screen games with strength games;
    - start strength-test work, further training, deployment or pushing.
+180. **The H-TB screen's seed preparation (2026-11-06).** Block [202759500, 202759564), ACCOUNTED only. Do **not**:
+   - rerun the survey or either proof, edit `evidence/htb-screen-run/plan.json`, or move, widen, expose or retire the block outside its closing procedure (plan §7.5);
+   - open `HTB_SCREEN_AUTHORIZED`, load the student or calib020_0001 on the GPU, or launch the wrapper without the user's launch approval;
+   - pool these games with any strength games, or play strength games on this block.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -9951,3 +9956,29 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
 - **The review addendum above** (Codex, at the user's request) is committed unchanged with this note.
 - **To return:** the prepared block and proofs, for launch review.
 - **Not authorized:** GPU model loading and games; strength-test work; further training; deployment; pushing.
+
+#### Addendum — the H-TB screen's seeds prepared; returned for launch review (2026-11-06)
+
+- **What ran:** the four approved steps, each once and in order, in one clean linked worktree (`TwixT_Game-htb-screen-prep`, branch `htb-screen-prep`) from the decision note `9e1dfffe`. Each result was committed before the next step. Every step's stderr was empty.
+- **Results:**
+
+  | Step | Commit | Result | Record sha256 |
+  |---|---|---|---|
+  | Survey (`--mode survey`) | `2ed2f3d4` | **CLEAN**, controls 55/55, clean tree at `9e1dfffe` | `ceccd5bb…` |
+  | Pre-registration proof (`--mode pre`) | `5b326407` | **HOLDS**, CLEAN, 55/55, clean tree, bound to the survey record | `92322acd…` |
+  | Registration | `7f2ab4d7` | the block appended last to ACCOUNTED, 55 → 56; `plan.json` = `build_plan(BASE, ceccd5bb…)` | — |
+  | Post-registration proof (`--mode post`) | `bd876999` | **HOLDS**, CLEAN, 55/55, clean tree at `7f2ab4d7`; registry sha256 `114b1694…` | `40c615f2…` |
+
+- **The block:** **[202759500, 202759564)**, BASE 202759500, 64 seeds. The two-band rule's anchor was the highest literal in the band, 202759408. The nearest gap is 91, against a floor of 64, with no direct hit, no stream collision and injectivity holding.
+- **Registration:**
+  - The block was read from the committed survey record by the survey copy's own `read_record`, not typed, after checking that the registry was the bytes the survey read.
+  - An AST check showed ACCOUNTED gained exactly that block, last; every other registry list and statement was unchanged.
+  - The plan (`htb-screen-plan/1`: base, 64 slots, survey hash) was written create-only.
+- **Lifecycle tests** (no seed literal in any test):
+  - Three H-TB screen tests now expect the prepared state.
+  - A new state test reads the block from the plan and survey record and checks: both proofs, ACCOUNTED last, nothing exposed, retired or test-only, every mode refusing to rerun, the closing copy's controls at the registered base, the gate closed and no run evidence.
+  - The cycle-2 strength test no longer requires its block to be last in ACCOUNTED, following the earlier re-anchor's pattern.
+- **A fault of mine, fixed:** the screen build's round-trip test compared opening priors between two freshly initialized networks. Those priors are near-uniform: they differed by about 1e-5, and in 4 of 40 trials were exactly equal. The test failed once here. Its second network now carries a seeded shift of every weight, with a 1e-4 floor on the difference; it passed 40 of 40 repeats. The screen's code is unchanged; the real student and reference differ widely (top-1 agreement 65.1% vs 29.7%).
+- **Checks:** the focused suites, serially, 532 pass (the H-TB screen, pilot, timing and budget; the registry; the gate inventory; the first and second cycles' screen, strength and cycle tests; the tactical seed proof). All 65 gates are closed.
+- **Nothing else ran:** no model load, gate opening or game. The block is ACCOUNTED only.
+- **For the launch review:** the prepared block and proofs. The ceiling (TERM 3,410 / KILL 3,420 / cleanup 3,430 s) and the rule are already adopted. GPU model loading and the 64 games need approval. See #180.
