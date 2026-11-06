@@ -188,7 +188,7 @@ def test_THE_GAP_FLOOR_IS_THE_BLOCK_S_SIZE_against_literals_in_either_band():
 
 # ─────────────────────────────── the real state ───────────────────────────────
 
-def test_REAL_STATE_the_2027_band_holds_seven_closed_blocks():
+def test_REAL_STATE_the_2027_band_holds_eight_closed_blocks():
     """RE-ANCHORED 2026-10-30 (registration 326004d0): the band's first and only registered block is generation's,
     read from its committed plan (no literal here), ACCOUNTED only; the rule would now place a later block above it.
     RE-ANCHORED 2026-10-30 (generation's closing, K2 569ba2a4): that block is now also EXPOSED and RETIRED whole, the
@@ -220,7 +220,11 @@ def test_REAL_STATE_the_2027_band_holds_seven_closed_blocks():
     RE-ANCHORED 2026-11-02 (strength's registration 8ff1d724): its block, read from its committed plan, is the band's seventh ACCOUNTED
     entry, above the new screen's, and in no other list; the rule would now place a later block above it.
     RE-ANCHORED 2026-11-03 (strength's run and closing, K2 47294971): its block is now also EXPOSED and RETIRED whole,
-    after the new screen's, in each list."""
+    after the new screen's, in each list.
+    RE-ANCHORED 2026-11-06 (the H-TB screen's registration 7f2ab4d7, its run 25f4863a and closing, K2 74025ee2): its
+    block, read from its committed plan, is the band's eighth ACCOUNTED entry, above cycle-2 strength's, and EXPOSED and
+    RETIRED whole, after it, in each list; the rule would now place a later block above it. (This test failed from
+    7f2ab4d7 until this re-anchor: the seed preparation's focused checks did not include this file.)"""
     import json
     from scripts.GPU.alphazero import e4_screen_reference as REG
     blocks = []
@@ -228,17 +232,21 @@ def test_REAL_STATE_the_2027_band_holds_seven_closed_blocks():
         plan = json.loads((ROOT / f"docs/superpowers/evidence/combination-policy-{kind}-run/plan.json").read_text())
         blocks.append((plan["base"], plan["base"] + plan["n_slots"]))
     gen, screen, strength, cycle2, attempt2, screen2, strength2 = blocks
+    plan = json.loads((ROOT / "docs/superpowers/evidence/htb-screen-run/plan.json").read_text())
+    htb = (plan["base"], plan["base"] + plan["n_slots"])
+    assert strength2[1] <= htb[0] and htb[1] - htb[0] == 64
     assert screen2[1] <= strength2[0] and strength2[1] - strength2[0] == 1018
     assert attempt2[1] <= screen2[0] and screen2[1] - screen2[0] == 64
     assert gen[1] <= screen[0] and screen[1] <= strength[0] and strength[1] - strength[0] == 1018
     assert strength[1] <= cycle2[0] and cycle2[1] - cycle2[0] == 1000
     assert cycle2[1] <= attempt2[0] and attempt2[1] - attempt2[0] == 1000
-    assert [iv for iv in REG.ACCOUNTED_SEED_INTERVALS if iv[1] > NEW] == [gen, screen, strength, cycle2, attempt2, screen2, strength2]
+    assert [iv for iv in REG.ACCOUNTED_SEED_INTERVALS if iv[1] > NEW] == \
+        [gen, screen, strength, cycle2, attempt2, screen2, strength2, htb]
     for name in ("EXPOSED_SEED_INTERVALS", "RETIRED_SEED_INTERVALS"):
         assert [iv for iv in getattr(REG, name) if iv[1] > NEW] == \
-            [gen, screen, strength, cycle2, attempt2, screen2, strength2], name
+            [gen, screen, strength, cycle2, attempt2, screen2, strength2, htb], name
     assert all(hi <= NEW for _lo, hi in REG.TEST_ONLY_SEED_INTERVALS)
-    assert B.candidate(REG.ACCOUNTED_SEED_INTERVALS, [], 64)[2][0] >= strength2[1] + 64
+    assert B.candidate(REG.ACCOUNTED_SEED_INTERVALS, [], 64)[2][0] >= htb[1] + 64
 
 
 def test_THIS_MODULE_HOLDS_NO_SEED_LITERAL():

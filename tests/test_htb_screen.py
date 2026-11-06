@@ -140,7 +140,9 @@ def test_REAL_STATE_THE_COMMITTED_FIT_ADMITS_THE_SCREEN_AND_NAMES_THE_PINNED_STU
     assert fit["student"] == {"path": str(HS.STUDENT["path"]), "sha256": HS.STUDENT["sha256"],
                               "state_digest": HS.STUDENT["state_digest"]}
     assert fit["fit"]["reference_digest"] == HS.REFERENCE_DIGEST != HS.STUDENT["state_digest"]
-    assert not (ROOT / HS.EVIDENCE).exists()                                         # never run (its seeds: below)
+    # RE-ANCHORED 2026-11-06 (the ONE run, gate 138ede34 -> evidence 25f4863a): the screen ran once, on this admission
+    rec = json.loads((ROOT / HS.EVIDENCE / "record.json").read_text())
+    assert rec["status"] == "COMPLETED" and rec["admission"] == adm and rec["student"] == fit["student"]
 
 
 def _good_fit():
@@ -500,7 +502,9 @@ def test_EACH_COPY_IS_THE_DECLARED_DERIVATION_OF_ITS_REVIEWED_SOURCE(kind):
     assert target.read_text() == SPEC.derive(kind, raw.decode())
 
 
-def test_THE_WRAPPER_RUNS_THIS_MODULE_BEHIND_ITS_OWN_CLOSED_GATE_and_was_never_run():
+def test_THE_WRAPPER_RUNS_THIS_MODULE_BEHIND_ITS_OWN_CLOSED_GATE_and_ran_once():
+    """RE-ANCHORED 2026-11-06 (the ONE run: gate 138ede34, evidence 25f4863a): its create-only outputs exist, the
+    run COMPLETED with cleanup confirmed, and the gate is closed again."""
     p = ROOT / SPEC.TARGETS["wrapper"]
     text = p.read_text()
     assert os.access(p, os.X_OK) and subprocess.run(["bash", "-n", str(p)]).returncode == 0
@@ -510,8 +514,16 @@ def test_THE_WRAPPER_RUNS_THIS_MODULE_BEHIND_ITS_OWN_CLOSED_GATE_and_was_never_r
     assert "\nMODULE=scripts.GPU.alphazero.htb_screen\n" in text and '-m "$MODULE" run screen --checkpoint "$CKPT"' in text
     assert f"\nRECORD_KIND={HS.RECORD_KIND}\n" in text and "MLX_ENABLE_TF32=0" in text
     assert "  3) outcome=VOID ;;\n  4) outcome=REFUSED ;;\n  2) outcome=USAGE ;;\n" in text
-    assert sorted(x.name for x in p.parent.iterdir()) == ["01_wrapper.sh", "plan.json"]   # the plan; no run output
-    assert not (ROOT / HS.EVIDENCE).exists()
+    assert sorted(x.name for x in p.parent.iterdir()) == [
+        "00_prelaunch.txt", "01_wrapper.sh", "bg_check.txt", "idle_check.txt", "outer.json", "pgid.txt", "plan.json",
+        "run.stderr.txt", "run.stdout.txt"]
+    outer = json.loads((p.parent / "outer.json").read_text())
+    assert {k: outer[k] for k in ("inner_exit", "outer_exit", "outcome", "gate_restored", "survivors", "record_by",
+                                  "term_s", "grace_s")} == {
+        "inner_exit": 0, "outer_exit": 0, "outcome": "COMPLETED", "gate_restored": True, "survivors": "",
+        "record_by": "script", "term_s": SPEC.TERM_S, "grace_s": 10}
+    assert outer["wall_seconds"] < SPEC.TERM_S and (ROOT / HS.EVIDENCE / "record.json").is_file()
+    assert GATE.HTB_SCREEN_AUTHORIZED is False
 
 
 def _module(kind):
@@ -532,9 +544,11 @@ def test_THE_SURVEY_COPY_SERVES_THIS_SCREEN_S_PLAN_and_loads_the_pinned_method()
     assert all((ROOT / rel).is_file() for rel in S.OUT.values())                    # each mode ran once (below)
 
 
-def test_THE_SCREEN_S_SEEDS_ARE_SURVEYED_PROVEN_AND_REGISTERED_UNUSED_and_every_mode_refuses_to_rerun():
+def test_THE_SCREEN_S_SEEDS_ARE_SURVEYED_PROVEN_REGISTERED_AND_CLOSED_and_every_mode_refuses_to_rerun():
     """Seed preparation (the user's review, 2026-11-06): survey 2ed2f3d4, pre-proof 5b326407, registration 7f2ab4d7,
-    post-proof bd876999. The block is READ from the committed plan and survey record -- no seed literal here."""
+    post-proof bd876999. The block is READ from the committed plan and survey record -- no seed literal here.
+    RE-ANCHORED 2026-11-06 (the ONE run 25f4863a; K1 e819742b RECONCILES 15/15; K2 74025ee2): every game started, so
+    the whole block is EXPOSED and RETIRED, each its list's last entry, and no seed of it is available again."""
     from scripts.GPU.alphazero import e4_screen_reference as REG
     from scripts.GPU.alphazero import seed_band_2027 as SB
     S = _module("survey")
@@ -553,16 +567,22 @@ def test_THE_SCREEN_S_SEEDS_ARE_SURVEYED_PROVEN_AND_REGISTERED_UNUSED_and_every_
         assert f"sha256 {hashlib.sha256(raw).hexdigest()}" in text
     assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1 and REG.ACCOUNTED_SEED_INTERVALS[-1] == block
     assert all(hi <= block[0] for lo, hi in REG.ACCOUNTED_SEED_INTERVALS[:-1] if hi > SB.BAND[0])
-    for intervals in (REG.EXPOSED_SEED_INTERVALS, REG.RETIRED_SEED_INTERVALS, REG.TEST_ONLY_SEED_INTERVALS):
-        assert not any(lo < block[1] and block[0] < hi for lo, hi in intervals)
-    assert all(REG.seed_is_accounted(s) and not REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s)
-               for s in range(*block))
+    for intervals in (REG.EXPOSED_SEED_INTERVALS, REG.RETIRED_SEED_INTERVALS):
+        assert intervals.count(block) == 1 and intervals[-1] == block
+    assert not any(lo < block[1] and block[0] < hi for lo, hi in REG.TEST_ONLY_SEED_INTERVALS)
+    assert all(REG.seed_is_accounted(s) and REG.seed_is_exposed(s) and REG.seed_is_retired(s)
+               and REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s) for s in range(*block))
     for mode in ("survey", "pre", "post"):
         with pytest.raises(S.Refused, match="each mode runs once"):
             S.main(["x", "--mode", mode])
     C = _module("closing")
-    assert not (ROOT / C.OUT).exists() and all(ok for _l, ok, _d in C._controls(block[0]))
-    assert GATE.HTB_SCREEN_AUTHORIZED is False and not (ROOT / HS.EVIDENCE).exists()
+    k1 = (ROOT / C.OUT).read_text()
+    assert f"VERDICT: RECONCILES -- EXPOSE {list(block)}; RETIRE {list(block)}\n" in k1
+    assert "controls passed: 15/15" in k1 and k1.splitlines()[2].endswith("; working tree clean")
+    assert all(ok for _l, ok, _d in C._controls(block[0]))
+    assert GATE.HTB_SCREEN_AUTHORIZED is False
+    rec = json.loads((ROOT / HS.EVIDENCE / "record.json").read_text())
+    assert rec["status"] == "COMPLETED" and rec["seeds"] == {"base": block[0], "n_slots": 64}
 
 
 def test_THE_CLOSING_COPY_READS_THIS_SCREEN_S_RUN_and_its_controls_all_pass():
@@ -570,7 +590,9 @@ def test_THE_CLOSING_COPY_READS_THIS_SCREEN_S_RUN_and_its_controls_all_pass():
     assert (C.RUN, C.RUN_DIR, C.N_SLOTS) == (HS.EVIDENCE, HS.RUN_DIR, 64)
     controls = C._controls(BASE)
     assert len(controls) == 15 and all(ok for _label, ok, _d in controls), controls
-    assert not (ROOT / C.OUT).exists()
+    # RE-ANCHORED 2026-11-06 (K1 run once, e819742b): its record exists, and a second run refuses before writing
+    before = (ROOT / C.OUT).read_bytes()
+    assert C.main() == 4 and (ROOT / C.OUT).read_bytes() == before
 
 
 # ─────────────────────────────── the proposed ceiling (plan §8) ───────────────────────────────
