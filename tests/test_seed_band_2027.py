@@ -224,7 +224,10 @@ def test_REAL_STATE_the_2027_band_holds_eight_closed_blocks():
     RE-ANCHORED 2026-11-06 (the H-TB screen's registration 7f2ab4d7, its run 25f4863a and closing, K2 74025ee2): its
     block, read from its committed plan, is the band's eighth ACCOUNTED entry, above cycle-2 strength's, and EXPOSED and
     RETIRED whole, after it, in each list; the rule would now place a later block above it. (This test failed from
-    7f2ab4d7 until this re-anchor: the seed preparation's focused checks did not include this file.)"""
+    7f2ab4d7 until this re-anchor: the seed preparation's focused checks did not include this file.)
+    RE-ANCHORED 2026-11-06 (the H-TB confirmation test's registration 427d6bd7): its block, read from its committed
+    plan, is the band's ninth ACCOUNTED entry, above the H-TB screen's, and in no other list; the eight closed blocks
+    are still the band's only EXPOSED and RETIRED entries; the rule would now place a later block above it."""
     import json
     from scripts.GPU.alphazero import e4_screen_reference as REG
     blocks = []
@@ -235,18 +238,21 @@ def test_REAL_STATE_the_2027_band_holds_eight_closed_blocks():
     plan = json.loads((ROOT / "docs/superpowers/evidence/htb-screen-run/plan.json").read_text())
     htb = (plan["base"], plan["base"] + plan["n_slots"])
     assert strength2[1] <= htb[0] and htb[1] - htb[0] == 64
+    plan = json.loads((ROOT / "docs/superpowers/evidence/htb-strength-run/plan.json").read_text())
+    htb_strength = (plan["base"], plan["base"] + plan["n_slots"])
+    assert htb[1] <= htb_strength[0] and htb_strength[1] - htb_strength[0] == 220
     assert screen2[1] <= strength2[0] and strength2[1] - strength2[0] == 1018
     assert attempt2[1] <= screen2[0] and screen2[1] - screen2[0] == 64
     assert gen[1] <= screen[0] and screen[1] <= strength[0] and strength[1] - strength[0] == 1018
     assert strength[1] <= cycle2[0] and cycle2[1] - cycle2[0] == 1000
     assert cycle2[1] <= attempt2[0] and attempt2[1] - attempt2[0] == 1000
     assert [iv for iv in REG.ACCOUNTED_SEED_INTERVALS if iv[1] > NEW] == \
-        [gen, screen, strength, cycle2, attempt2, screen2, strength2, htb]
+        [gen, screen, strength, cycle2, attempt2, screen2, strength2, htb, htb_strength]
     for name in ("EXPOSED_SEED_INTERVALS", "RETIRED_SEED_INTERVALS"):
         assert [iv for iv in getattr(REG, name) if iv[1] > NEW] == \
             [gen, screen, strength, cycle2, attempt2, screen2, strength2, htb], name
     assert all(hi <= NEW for _lo, hi in REG.TEST_ONLY_SEED_INTERVALS)
-    assert B.candidate(REG.ACCOUNTED_SEED_INTERVALS, [], 64)[2][0] >= htb[1] + 64
+    assert B.candidate(REG.ACCOUNTED_SEED_INTERVALS, [], 64)[2][0] >= htb_strength[1] + 64
 
 
 def test_THIS_MODULE_HOLDS_NO_SEED_LITERAL():

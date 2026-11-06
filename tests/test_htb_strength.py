@@ -490,7 +490,7 @@ def test_THE_WRAPPER_RUNS_THIS_MODULE_BEHIND_ITS_OWN_CLOSED_GATE_and_was_never_r
     assert f"\nRECORD_KIND={HT.RECORD_KIND}\n" in text and "MLX_ENABLE_TF32=0" in text
     assert "  3) outcome=VOID ;;\n  4) outcome=REFUSED ;;\n  2) outcome=USAGE ;;\n" in text
     assert "htb_screen" not in text.split("\nset -u\n", 1)[1]                # the body names only this run
-    assert sorted(x.name for x in p.parent.iterdir()) == ["01_wrapper.sh"]   # no plan, no run output
+    assert sorted(x.name for x in p.parent.iterdir()) == ["01_wrapper.sh", "plan.json"]   # the plan; no run output
     assert not (ROOT / HT.EVIDENCE).exists()
 
 
@@ -509,18 +509,47 @@ def test_THE_SURVEY_COPY_SERVES_THIS_TEST_S_PLAN_and_loads_the_pinned_method():
     assert S.slot_lines((BASE, BASE + 220))[219] == f"    SLOT 219 seed {BASE + 219}"
     survey, _proof, SEL = S.load_method()
     assert (survey.N, survey.PLAN, survey.HERE) == (220, HT.PLAN, S.HERE) and SEL.BAND[0] == 2027 * 10 ** 5
-    assert not any((ROOT / rel).exists() for rel in S.OUT.values())          # no mode has run
+    assert all((ROOT / rel).is_file() for rel in S.OUT.values())             # each mode ran once (below)
 
 
-def test_REAL_STATE_NO_SEED_STEP_HAS_RUN_and_the_gate_is_closed():
+def test_THE_CONFIRMATION_TEST_S_SEEDS_ARE_SURVEYED_PROVEN_AND_REGISTERED_UNUSED_and_every_mode_refuses_to_rerun():
+    """Seed preparation (the user's build review, 2026-11-06, after the corrections eb191192): survey ac1d9493, pre-proof 69d6b9c9, registration 427d6bd7, post-proof bf74c327.
+    RE-ANCHORS the build's no-seed-step state test. The block is READ from the committed plan and survey record -- no
+    seed literal here. It does not overlap the screen's block, which stays EXPOSED and RETIRED whole."""
     from scripts.GPU.alphazero import e4_screen_reference as REG
-    assert not (ROOT / HT.PLAN).exists() and not (ROOT / HT.EVIDENCE).exists()
-    assert not (ROOT / "docs/superpowers/evidence/htb-strength-seed-closing/02_derive_usage_run.txt").exists()
+    from scripts.GPU.alphazero import seed_band_2027 as SB
+    S = _module("survey")
+    method, _proof, sel = S.load_method()
+    plan = json.loads((ROOT / HT.PLAN).read_text())
+    raw = (ROOT / S.OUT["survey"]).read_bytes()
+    rec = S.read_record(raw.decode(), method, sel)                       # CLEAN, every control passed, a clean tree
+    block = rec["block"]
+    assert plan == S.build_plan(rec["base"], hashlib.sha256(raw).hexdigest()) and block == (plan["base"], plan["base"] + 220)
+    assert plan["kind"] == HT.PLAN_KIND and isinstance(plan["base"], int)
+    assert SB.BAND[0] <= block[0] and block[1] <= SB.BAND[1] and block[0] % SB.ALIGN == 0
+    for mode in ("pre", "post"):
+        text = (ROOT / S.OUT[mode]).read_text()
+        assert f"EXPECTED STATE ({mode}): HOLDS" in text and "controls passed: 55/55" in text
+        assert f"PROOF VERDICT ({mode}): THE H-TB CONFIRMATION-TEST BLOCK IS CLEAN AND THE STATE IS AS EXPECTED\n" in text
+        assert text.splitlines()[2].endswith("; working tree clean")
+        assert f"sha256 {hashlib.sha256(raw).hexdigest()}" in text
+    assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1 and REG.ACCOUNTED_SEED_INTERVALS[-1] == block
+    assert all(hi <= block[0] for lo, hi in REG.ACCOUNTED_SEED_INTERVALS[:-1] if hi > SB.BAND[0])
+    for intervals in (REG.EXPOSED_SEED_INTERVALS, REG.RETIRED_SEED_INTERVALS, REG.TEST_ONLY_SEED_INTERVALS):
+        assert not any(lo < block[1] and block[0] < hi for lo, hi in intervals)
+    assert all(REG.seed_is_accounted(s) and not REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s)
+               for s in range(*block))
     screen = json.loads((ROOT / HS.PLAN).read_text())
-    block = (screen["base"], screen["base"] + screen["n_slots"])
-    assert REG.ACCOUNTED_SEED_INTERVALS[-1] == REG.EXPOSED_SEED_INTERVALS[-1] == REG.RETIRED_SEED_INTERVALS[-1] == block
-    assert all(REG.seed_is_unavailable(s) for s in range(*block))         # the screen's seeds can never be reused
-    assert GATE.HTB_STRENGTH_AUTHORIZED is False
+    s_block = (screen["base"], screen["base"] + screen["n_slots"])
+    assert s_block[1] <= block[0]                                         # no overlap with the screen's block
+    assert REG.EXPOSED_SEED_INTERVALS[-1] == REG.RETIRED_SEED_INTERVALS[-1] == s_block
+    assert all(REG.seed_is_unavailable(s) for s in range(*s_block))       # the screen's seeds can never be reused
+    for mode in ("survey", "pre", "post"):
+        with pytest.raises(S.Refused, match="each mode runs once"):
+            S.main(["x", "--mode", mode])
+    C = _module("closing")
+    assert not (ROOT / C.OUT).exists() and all(ok for _l, ok, _d in C._controls(block[0]))
+    assert GATE.HTB_STRENGTH_AUTHORIZED is False and not (ROOT / HT.EVIDENCE).exists()
 
 
 def test_THE_CLOSING_COPY_READS_THIS_TEST_S_RUN_and_its_controls_all_pass():

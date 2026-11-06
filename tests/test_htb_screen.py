@@ -548,7 +548,9 @@ def test_THE_SCREEN_S_SEEDS_ARE_SURVEYED_PROVEN_REGISTERED_AND_CLOSED_and_every_
     """Seed preparation (the user's review, 2026-11-06): survey 2ed2f3d4, pre-proof 5b326407, registration 7f2ab4d7,
     post-proof bd876999. The block is READ from the committed plan and survey record -- no seed literal here.
     RE-ANCHORED 2026-11-06 (the ONE run 25f4863a; K1 e819742b RECONCILES 15/15; K2 74025ee2): every game started, so
-    the whole block is EXPOSED and RETIRED, each its list's last entry, and no seed of it is available again."""
+    the whole block is EXPOSED and RETIRED, each its list's last entry, and no seed of it is available again.
+    RE-ANCHORED 2026-11-06 (the H-TB confirmation test's registration 427d6bd7): its block, read from its committed plan,
+    is now ACCOUNTED's last entry, after this one and above it; this block is still EXPOSED's and RETIRED's last."""
     from scripts.GPU.alphazero import e4_screen_reference as REG
     from scripts.GPU.alphazero import seed_band_2027 as SB
     S = _module("survey")
@@ -565,8 +567,11 @@ def test_THE_SCREEN_S_SEEDS_ARE_SURVEYED_PROVEN_REGISTERED_AND_CLOSED_and_every_
         assert f"PROOF VERDICT ({mode}): THE H-TB SCREEN BLOCK IS CLEAN AND THE STATE IS AS EXPECTED\n" in text
         assert text.splitlines()[2].endswith("; working tree clean")
         assert f"sha256 {hashlib.sha256(raw).hexdigest()}" in text
-    assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1 and REG.ACCOUNTED_SEED_INTERVALS[-1] == block
-    assert all(hi <= block[0] for lo, hi in REG.ACCOUNTED_SEED_INTERVALS[:-1] if hi > SB.BAND[0])
+    strength = json.loads((ROOT / "docs/superpowers/evidence/htb-strength-run/plan.json").read_text())
+    later = (strength["base"], strength["base"] + strength["n_slots"])
+    assert REG.ACCOUNTED_SEED_INTERVALS.count(block) == 1 and REG.ACCOUNTED_SEED_INTERVALS[-2:] == (block, later)
+    assert block[1] <= later[0]
+    assert all(hi <= block[0] for lo, hi in REG.ACCOUNTED_SEED_INTERVALS[:-2] if hi > SB.BAND[0])
     for intervals in (REG.EXPOSED_SEED_INTERVALS, REG.RETIRED_SEED_INTERVALS):
         assert intervals.count(block) == 1 and intervals[-1] == block
     assert not any(lo < block[1] and block[0] < hi for lo, hi in REG.TEST_ONLY_SEED_INTERVALS)
