@@ -794,6 +794,16 @@ ACCOUNTED_SEED_INTERVALS = (
     # Accounted, NOT exposed and NOT retired: exposure follows actual use (the started games, as the closing rule establishes
     # them); the closing edit retires the whole block. No gate is opened by this.
     (202759500, 202759564),          # H-TB SCREEN -- 64 game seeds
+    # 🔴 THE H-TB CONFIRMATION TEST -- 220 GAME SEEDS, registered 2026-11-06: the 220-seed block of the confirmation test's
+    # survey (evidence/htb-strength-seed-survey/02_*), READ from that record, not chosen here, by the two-band rule
+    # (seed_band_2027.candidate) in the 2027 band. One seed per game of the ONE confirmation-test run (plan
+    # docs/superpowers/2026-11-06-htb-strength-plan.md §8; `htb_strength run strength`: game g plays seed BASE + g, in order,
+    # in one process). The plan is evidence/htb-strength-run/plan.json (base + slot count + survey hash). Registered ONLY
+    # after the pre-registration collision proof (same directory, 03_*) was CLEAN, 55/55.
+    #
+    # Accounted, NOT exposed and NOT retired: exposure follows actual use (the started games, as the closing rule establishes
+    # them); the closing edit retires the whole block. No gate is opened by this.
+    (202759800, 202760020),          # H-TB CONFIRMATION TEST -- 220 game seeds
 )
 
 #: EXPERIMENTAL EXPOSURE: seeds drawn from OUTSIDE the permanently unschedulable
