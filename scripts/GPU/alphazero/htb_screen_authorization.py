@@ -6,4 +6,4 @@ loader and plays the 32-pair screen (64 games) of the student in the proven comb
 combination on its own registered block, so it takes its own reviewed door. Opened for ONE approved run and restored on
 every exit. Created closed. This file may hold ONLY this declaration.
 """
-HTB_SCREEN_AUTHORIZED = True
+HTB_SCREEN_AUTHORIZED = False

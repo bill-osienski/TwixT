@@ -1,0 +1,60 @@
+# H-TB screen pre-launch checks, written 2026-11-06T11:04:17-0500 by Claude before the gate-opening commit
+## uptime
+11:04  up 4 days, 12:29, 6 users, load averages: 2.12 1.79 1.48
+## last boot
+{ sec = 1793590487, usec = 837585 } Sun Nov  1 22:34:47 2026
+## panic reports (find, both locations)
+none
+## Unreal Editor processes
+none
+## BOINC-named processes (podman VM exempt)
+none besides the podman VM
+## background_compute check (the wrapper's own check, run read-only here)
+CLEAR: no BOINC process among 891 (exempt: 808 boinc_project /opt/podman/bin/gvproxy; 823 boinc_project /opt/podman/bin/krunkit)
+exit 0
+## leftover htb / match processes
+none
+## memory
+51539607552
+Mach Virtual Memory Statistics: (page size of 16384 bytes)
+Pages free:                                    63481.
+Pages active:                                1386413.
+Pages inactive:                              1410992.
+Pages speculative:                               662.
+## project .venv (metadata reads only, -I)
+3.14.10
+{'mlx': '0.30.3', 'numpy': '2.4.1'}
+mlx imported: False
+## reference checkpoint
+-rwx------@ 1 bill  staff  7524333 Jun 20 22:14 /Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors
+209cf2d4fd24a48553d259dd71b4954867b9473e  /Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors
+## student
+-rw-r--r--  1 bill  staff  7524333 Nov  6 00:30 /Users/bill/twixt-cache/htb-pilot/student.safetensors
+0e1cb6211aa0b3e2dec6ab6f39bec74ceb8c472c7dcf603e7d331b1d1c1c34e5  /Users/bill/twixt-cache/htb-pilot/student.safetensors
+## worktree
+d8864b79d113358676636a6b6908e7b971765b4f
+dirty files: 0
+## pins, fit admission and the registry (htb_screen's own constants and readers; no MLX)
+pins: 8 files, mismatches: none
+plan doc 4201dbec card ccb3bc67
+admission: {'docs/superpowers/evidence/htb-fit/record.json': 'ELIGIBLE', 'docs/superpowers/evidence/htb-fit-run/outer.json': 'COMPLETED'}
+student pin 0e1cb621 586dca4f reference digest ae0e71fc
+plan.json dc3630a0 {'base': 202759500, 'kind': 'htb-screen-plan/1', 'n_slots': 64, 'survey_record_sha256': 'ceccd5bb1327e927fb02d89afbd405eac958a1fce495c0a92246dd7f590231a7'}
+seeds 202759500 .. 202759563 statuses over 64: {'exposed': 0, 'retired': 0, 'accounted': 64, 'test_only': 0}
+registry sha256 114b1694 last ACCOUNTED (202759500, 202759564) of 56
+post-proof record 40c615f2
+gate HTB_SCREEN_AUTHORIZED False
+mlx imported: False
+## gate lines in *_authorization.py files (the full 65-gate inventory: tests/test_gate_inventory.py, passed in this worktree before these checks)
+False: 50  True: 0
+## wrapper
+2d221e31a16f29de0fff7b9be3a46f2f8fbadda8f1145172f97f229a02c4b189
+## destinations (each must be absent)
+absent docs/superpowers/evidence/htb-screen
+absent docs/superpowers/evidence/htb-screen-run/idle_check.txt
+absent docs/superpowers/evidence/htb-screen-run/bg_check.txt
+absent docs/superpowers/evidence/htb-screen-run/pgid.txt
+absent docs/superpowers/evidence/htb-screen-run/run.stdout.txt
+absent docs/superpowers/evidence/htb-screen-run/run.stderr.txt
+absent docs/superpowers/evidence/htb-screen-run/outer.json
+absent docs/superpowers/evidence/htb-screen-seed-closing/02_derive_usage_run.txt
