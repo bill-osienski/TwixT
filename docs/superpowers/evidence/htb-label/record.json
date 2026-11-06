@@ -1,0 +1,48 @@
+{
+ "card_sha256": "ccb3bc67e32e1e8ac0f60858fcac57e99e25f1e451df8ba9c45688e19e7ab423",
+ "counts": {
+  "train": 240000,
+  "val": 24000
+ },
+ "kind": "htb-label-record/1",
+ "label_memory_required_bytes": 11811160064,
+ "labels": [
+  {
+   "arm": "train",
+   "manifest_sha256": "ec28e768bb57ea25ad0426caada4446219fb02695919bd38226dae88eea89282",
+   "n": 240000
+  },
+  {
+   "arm": "val",
+   "manifest_sha256": "5d3dcee9f862d77744f3cef68415a4c154906d7be88e9dc904fbc0ca4a1b2c5c",
+   "n": 24000
+  }
+ ],
+ "memory_at_start": {
+  "available_bytes": 26056998912,
+  "page_size": 16384,
+  "physical_bytes": 51539607552
+ },
+ "runtime": {
+  "artifact_sha256": {
+   "model/pb/saved_model.pb": "e0c2b882bc97c4661ac92af47ae5ef78443e57b42d0cb7c9c3a8cb7e8d01993b",
+   "model/pb/variables/variables.data-00000-of-00001": "1958f8476e9d56cbb87fa570db88f9cc9d389b30e20571fd66e8e779a4cefbab",
+   "model/pb/variables/variables.index": "1d4073c4da30e515a984faef2c3cc9c8b8ba402353a01933c8bb80e1f279f8cd"
+  },
+  "commit": "83749f230a0bae1766b46a05bfde0ed87f0a9a0a",
+  "model_artifacts": 3,
+  "runtime_sha256": "32e4e14d5ca02c2cb2ad7a774def23138fb0ec7a5b83537680ec165a5045817e",
+  "tensorflow": "2.21.0"
+ },
+ "selection_sha256": "161babe33e7cb32371a0d830ece02077e81051f08d66399e1623d3d1fe32ed3d",
+ "status": "COMPLETED",
+ "teacher": {
+  "commit": "83749f230a0bae1766b46a05bfde0ed87f0a9a0a",
+  "model_dir": "model/pb",
+  "repo": "github.com/stevens68/twixtbot-ui",
+  "saved_model_sha256": "e0c2b882bc97c4661ac92af47ae5ef78443e57b42d0cb7c9c3a8cb7e8d01993b",
+  "variables_index_sha256": "1d4073c4da30e515a984faef2c3cc9c8b8ba402353a01933c8bb80e1f279f8cd",
+  "weights_sha256": "1958f8476e9d56cbb87fa570db88f9cc9d389b30e20571fd66e8e779a4cefbab"
+ },
+ "teacher_calls": 528000
+}

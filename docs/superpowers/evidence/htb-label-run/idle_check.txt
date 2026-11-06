@@ -1,0 +1,17 @@
+t=    0.0s idle for 0.0s
+t=    5.0s idle for 5.0s
+t=   10.1s BUSY: /opt/homebrew/Cellar/python@3.14/3.14.10/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python at 100.0% CPU > 50.0%
+t=   15.1s idle for 0.0s
+t=   20.2s idle for 5.1s
+t=   25.2s idle for 10.1s
+t=   30.3s idle for 15.1s
+t=   35.3s idle for 20.2s
+t=   40.3s idle for 25.2s
+t=   45.4s idle for 30.3s
+t=   50.4s idle for 35.3s
+t=   55.5s idle for 40.4s
+t=   60.5s idle for 45.4s
+t=   65.6s idle for 50.5s
+t=   70.6s idle for 55.5s
+t=   75.7s idle for 60.6s
+IDLE: held 60s (load < 3.0, no process > 50.0% CPU)

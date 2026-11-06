@@ -257,6 +257,7 @@ knob) is not a new hypothesis.
 > **H-TB timing — T-label attempt 2 and T-fit each COMPLETED once (addendum, 2026-11-04).** Red-first pool: 15,590 train / 1,899 val games (842,171 / 103,078 positions). Projected full label 8,719 s and full fit 11,173 s (proposed ceilings 13,200 s and 16,800 s, **not adopted**). Teacher 11.9 ms/call; update 0.708 s. **Memory: the full fit as built needs about 66.4 GB of examples alone (246,540 B traced per example), above the 51.5 GB physical** — boards are 36.5 GB of it and the other 28.6 GB is non-board example data, so batch-at-a-time construction must cover whole examples, not boards only. Peak training memory not measured. Returned for review. See #174.
 > **H-TB — timings accepted; batched whole-example construction BUILT for review; nothing run (decision note and addendum, 2026-11-04).** Card §15 (`edab9fe9…`): compact labels + move lists kept, complete examples built per 32-row batch / 64-row scoring chunk; batched fit, start check and scores equal the eager ones bitwise on fakes. Conservative fit budget 12.55 GB (proposed requirement 12 GiB, not set). Revised fit projection 12,301 s, an upper bound (proposed KILL 18,600 s, not adopted). **The existing label path's conservative budget is 23.56 GB, about the lowest available memory observed (23.93 GB)**, dominated by 13.44 GB of held label rows. See #175.
 > **H-TB — batched fit accepted; fit requirement 12 GiB and both full-run ceilings ADOPTED; compact label storage and both full-run wrappers BUILT for launch review; nothing run (decision note, clarification and addendum, 2026-11-05).** Card §16 (`ccb3bc67…`): labels compacted as produced, with byte-identical shards, row lists and manifest on fakes; label budget 23.56 → 10.84 GB (proposed launch requirement 11 GiB); memory checks at both launches. Ceilings: label 13,190/13,200/13,210 s, fit 18,590/18,600/18,610 s. The 2.441 ms/row and 3.42 h fit figures are planning estimates, not bounds. Neither full run authorized. See #176.
+> **H-TB full label run — COMPLETED once (addendum, 2026-11-05).** Inner and outer exit 0, 8,478 s of wall time against the projected 8,719 s and the 13,200 s ceiling; gate restored, no survivors, record by script. 240,000 train and 24,000 val rows (15,590 / 1,899 red-first games), 528,000 teacher calls; selection, manifests and all 33 shards verified. Labels committed as the fit's input. See #177.
 
 ## Historical proposal check — programme now closed
 
@@ -2026,6 +2027,10 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
    - change the adopted ceilings (label TERM 13,190 / KILL 13,200 / cleanup 13,210 s; fit TERM 18,590 / KILL 18,600 / cleanup 18,610 s), or hand-edit a full-run wrapper: each stays the derivation in `tests/htb_run_wrapper_spec.py`;
    - call the 2.441 ms/row rebuild figure, or the 12,301 s (about 3.42 h) fit projection, an upper bound: both are planning estimates;
    - open `HTB_LABEL_AUTHORIZED` or `HTB_FIT_AUTHORIZED`, or launch either wrapper, without the user's launch approval.
+177. **The H-TB full label run is spent (2026-11-05).** It ran once and COMPLETED; its labels (`ec28e768…` train, `5d3dcee9…` val; selection `161babe3…`) are the fit's only input. Do **not**:
+   - rerun `run label`, relabel any row, or reopen `HTB_LABEL_AUTHORIZED`;
+   - edit, regenerate or reorder the committed selection or label record, or the shards in `~/twixt-cache/htb-pilot/labels-{train,val}`;
+   - read the val labels to choose a method: they are scored by the fit's F1–F3 only.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -9746,3 +9751,35 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
 - **If a run stops, fails, times out or leaves cleanup uncertain,** the sequence stops and its evidence is returned. An inner COMPLETED record cannot override an outer TIMEOUT. No automatic retry.
 - **Not approved:** evaluation games, GPU work, additional training, deployment or pushing.
 - **Code:** the only edit is the comment on `Config.label_memory_required_bytes`, which now says approved. The value (11 GiB) is unchanged.
+
+#### Addendum — the full label run, run once: COMPLETED (2026-11-05)
+
+- **Test:** card §10 step 4, `htb_pilot run label`, under card §§14–16. **Prediction:** none stated in advance for the label run itself; the card's §12 prediction concerns F1–F3.
+- **What ran:**
+  - Worktree `TwixT_Game-htb-full-run` (branch `htb-full-run`) from `2ba35ddd`, the launch-review commit.
+  - Gate opening `34245d81` (only `HTB_LABEL_AUTHORIZED`). Wrapper `htb-label-run/01_wrapper.sh` (`fdc7a25e…`), launched 2026-11-05T18:40:26-0500.
+  - Teacher venv 3.13.15, TensorFlow 2.21.0, clone `83749f23…` (clean), with `MLX_ENABLE_TF32=0` set for the process only.
+- **Pre-launch checks** (`00_prelaunch.txt`):
+  - no panic report (booted 2026-11-01), no Unreal Editor, no BOINC process apart from the exempt podman VM;
+  - 25.66 GB available against the 11 GiB requirement;
+  - card pin, wrapper hash and versions as reviewed;
+  - all destinations absent; no gate declaration open.
+  - The first panic-report read stopped on zsh's first unmatched glob; a `find` over both locations follows it in the same file and reads none.
+- **Result:**
+
+  | | |
+  |---|---|
+  | inner / outer exit | 0 / 0, COMPLETED |
+  | wall time (supervised) | 8,478 s (projection 8,719 s; ceiling TERM 13,190 / KILL 13,200 s) |
+  | idle wait (outside the ceiling) | about 75 s; the idle gate held 60 s; BOINC check CLEAR |
+  | gate restored / survivors / record by | yes / none / script |
+  | memory available at start (the script's check) | 26,056,998,912 B against 11,811,160,064 B required |
+  | teacher calls | 528,000 (264,000 rows × 2 orientations) |
+
+- **Verification before committing** (read-only, the review's condition 2):
+  - **Binding:** `check_label_binding` passed: kind, COMPLETED, card `ccb3bc67…`, teacher, counts 240,000 / 24,000, and the selection hash `161babe3…` equal to `selection.json`'s.
+  - **Selection:** keys distinct within and across arms; no game in both arms; every game in its C0 split arm (15,590 train and 1,899 val games).
+  - **Shards:** `load_bound_labels` verified each manifest against the record (train `ec28e768…`, 30 shards; val `5d3dcee9…`, 3 shards), every shard and row-list hash, and rows equal to the selection's, in order. The files on disk are exactly those the manifests list.
+  - **Arrays:** targets finite and non-negative, with mass summing to 1 within 4.9e-8, and 270–528 cells with mass (median 499). Values finite and within [-1, 1].
+- **Did it match a prediction?** None stated in advance for this step.
+- **Conclusion / status:** COMPLETED and verified. The label evidence is committed here, which `run fit` requires. The fit's gate opens in a separate one-line commit. See #177.

@@ -1,0 +1,5 @@
+WARNING:tensorflow:From /Users/bill/twixt-cache/htb-teacher/twixtbot-ui/src/backend/nneval.py:21: load (from tensorflow.python.saved_model.loader_impl) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use `tf.saved_model.load` instead.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1793922104.645173 3955381 mlir_graph_optimization_pass.cc:437] MLIR V1 optimization pass is not enabled

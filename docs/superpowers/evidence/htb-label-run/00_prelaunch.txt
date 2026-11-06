@@ -1,0 +1,52 @@
+# H-TB full label run pre-launch checks, written 2026-11-05T18:40:02-0500 by Claude before the gate-opening commit
+## uptime
+18:40  up 3 days, 20:05, 6 users, load averages: 3.93 2.14 1.76
+## last boot
+{ sec = 1793590487, usec = 837585 } Sun Nov  1 22:34:47 2026
+## panic reports (DiagnosticReports *.panic, both locations)
+(eval):7: no matches found: /Library/Logs/DiagnosticReports/*.panic
+none
+## Unreal Editor processes
+none
+## BOINC-named processes (podman VM exempt)
+none besides the podman VM
+## memory
+51539607552
+Mach Virtual Memory Statistics: (page size of 16384 bytes)
+Pages free:                                    71731.
+Pages active:                                1295438.
+Pages inactive:                              1494589.
+Pages speculative:                              1572.
+Pages throttled:                                   0.
+## available (htb_pilot.available_memory) vs the approved label requirement 11811160064 B
+{'physical_bytes': 51539607552, 'available_bytes': 25661964288, 'page_size': 16384} requirement 11811160064 ok
+## teacher interpreter (metadata reads only, -I)
+3.13.15 (main, Sep 29 2026, 14:49:54) [Clang 22.1.3 ]
+{'tensorflow': '2.21.0', 'numpy': '2.5.2', 'mlx': '0.32.1', 'keras': '3.15.1', 'protobuf': '7.36.0'}
+tensorflow imported: False
+## project .venv
+3.14.10
+{'mlx': '0.30.3', 'numpy': '2.4.1'}
+## clone
+83749f230a0bae1766b46a05bfde0ed87f0a9a0a
+dirty files: 0
+## worktree
+2ba35ddd1c8b98f9aa1e2c9d897b81776040f77b
+dirty files: 0
+## gates (all *_authorization.py in the worktree)
+False: 49  True: 0
+## card pin
+ccb3bc67e32e1e8ac0f60858fcac57e99e25f1e451df8ba9c45688e19e7ab423
+CARD_SHA256 = "ccb3bc67e32e1e8ac0f60858fcac57e99e25f1e451df8ba9c45688e19e7ab423"
+## wrapper
+fdc7a25e729d50e9b2de89a2759a156cb3b6e0e1bfe54ac3ab94a66bee678abe
+## destinations (each must be absent)
+absent /Users/bill/projects/TwixT_Game-htb-full-run/docs/superpowers/evidence/htb-label
+absent /Users/bill/projects/TwixT_Game-htb-full-run/docs/superpowers/evidence/htb-fit
+absent /Users/bill/twixt-cache/htb-pilot/labels-train
+absent /Users/bill/twixt-cache/htb-pilot/labels-val
+absent /Users/bill/twixt-cache/htb-pilot/student.safetensors
+01_wrapper.sh
+## panic reports, re-read 18:40:11 (zsh aborted the ls above on the first unmatched glob, so the second location was not read); find, both locations
+none
+## gate inventory note: 49 *_authorization.py declarations read False and 0 True above; the 64-gate count is the inventory test's
