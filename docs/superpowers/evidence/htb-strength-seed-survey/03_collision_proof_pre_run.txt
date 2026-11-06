@@ -1,0 +1,307 @@
+H-TB PILOT -- CONFIRMATION-TEST GAME-SEED COLLISION PROOF, mode PRE
+================================================================================================
+HEAD ac1d9493df49a53a3302eb44a2ac110c513ace86; working tree clean
+this tree /Users/bill/projects/TwixT_Game-htb-strength-prep
+main checkout /Users/bill/projects/TwixT_Game (scanned too; HEAD eb1911929ede7e5cebe61d1149bad45178c59066; 2 uncommitted entries, not required clean)
+method (survey) docs/superpowers/evidence/tactical-candidate-seed-survey/01_seed_survey.py sha256 6f6e55dbd5da672848c757753d4e61a3e9d110d96569b7ef468f902cf46f8860 (pinned)
+method (proof) docs/superpowers/evidence/tactical-candidate-seed-registration/01_collision_proof.py sha256 dd192011938ca5c6674092b243681174e669e1e96b22b8d13da2a264b340764d (pinned)
+rule and scanner scripts/GPU/alphazero/seed_band_2027.py sha256 bda0ba6ef34a1efe998b64149b15a27d815cb78e63fa7e1db0a35d81fd94bb45 (ALIGN 100; the rule's band [202700000, 202800000]; literals scanned in [202600000, 202700000] and [202700000, 202800000])
+registry scripts/GPU/alphazero/e4_screen_reference.py sha256 6fbf2b4e77b004cb58dd6bf0ee07c8f63cef30931ccc3a5f57dd9f3c4a9ca182
+masks (imported): ['0x3c3c3c', '0x5a5a5a', '0xa5a5a5', '0xc3c3c3']
+registries: ACCOUNTED 56, EXPOSED 54, RETIRED 52, TEST_ONLY 1
+named spent blocks: D1 paper 1, H1 2, H2 3, H3 6, H4 5, H5 4; H3 generation ranges 4; CONSUMED_SEEDS 1
+EXEMPT PATHS (exact; plus registry tuple elements by parsing): 4 + the plan
+    docs/superpowers/evidence/htb-strength-seed-survey/01_seed_survey.py
+    docs/superpowers/evidence/htb-strength-seed-survey/02_seed_survey_run.txt
+    docs/superpowers/evidence/htb-strength-seed-survey/03_collision_proof_pre_run.txt
+    docs/superpowers/evidence/htb-strength-seed-survey/04_collision_proof_post_run.txt
+    docs/superpowers/evidence/htb-strength-run/plan.json  (only if every band literal in it is a slot of the block)
+
+survey record docs/superpowers/evidence/htb-strength-seed-survey/02_seed_survey_run.txt sha256 3c246e72ec755a010aca9b282f7b9de1313156d650bd2923b0a1ce063abafec9 (read at eb1911929ede7e5cebe61d1149bad45178c59066)
+THE BLOCK, read from the record: [202759800, 202760020) -- BASE 202759800
+EXPECTED STATE (pre): HOLDS
+
+SCOPE (fail-closed enumeration) under ['scripts', 'tests', 'docs/superpowers']: this tree 9629 regular files, 0 symbolic links (not followed); main checkout 52202 regular files, 0 symbolic links; band literal values counted: 12910
+THE BLOCK (202759800, 202760020)  n=220  direct=NONE  streams=0  injective=True  gap=230 (floor 220)  CLEAN=True
+SLOTS (htb_strength run strength: game g plays seed BASE + g, in order, in one process):
+    SLOT 0 seed 202759800
+    SLOT 1 seed 202759801
+    SLOT 2 seed 202759802
+    SLOT 3 seed 202759803
+    SLOT 4 seed 202759804
+    SLOT 5 seed 202759805
+    SLOT 6 seed 202759806
+    SLOT 7 seed 202759807
+    SLOT 8 seed 202759808
+    SLOT 9 seed 202759809
+    SLOT 10 seed 202759810
+    SLOT 11 seed 202759811
+    SLOT 12 seed 202759812
+    SLOT 13 seed 202759813
+    SLOT 14 seed 202759814
+    SLOT 15 seed 202759815
+    SLOT 16 seed 202759816
+    SLOT 17 seed 202759817
+    SLOT 18 seed 202759818
+    SLOT 19 seed 202759819
+    SLOT 20 seed 202759820
+    SLOT 21 seed 202759821
+    SLOT 22 seed 202759822
+    SLOT 23 seed 202759823
+    SLOT 24 seed 202759824
+    SLOT 25 seed 202759825
+    SLOT 26 seed 202759826
+    SLOT 27 seed 202759827
+    SLOT 28 seed 202759828
+    SLOT 29 seed 202759829
+    SLOT 30 seed 202759830
+    SLOT 31 seed 202759831
+    SLOT 32 seed 202759832
+    SLOT 33 seed 202759833
+    SLOT 34 seed 202759834
+    SLOT 35 seed 202759835
+    SLOT 36 seed 202759836
+    SLOT 37 seed 202759837
+    SLOT 38 seed 202759838
+    SLOT 39 seed 202759839
+    SLOT 40 seed 202759840
+    SLOT 41 seed 202759841
+    SLOT 42 seed 202759842
+    SLOT 43 seed 202759843
+    SLOT 44 seed 202759844
+    SLOT 45 seed 202759845
+    SLOT 46 seed 202759846
+    SLOT 47 seed 202759847
+    SLOT 48 seed 202759848
+    SLOT 49 seed 202759849
+    SLOT 50 seed 202759850
+    SLOT 51 seed 202759851
+    SLOT 52 seed 202759852
+    SLOT 53 seed 202759853
+    SLOT 54 seed 202759854
+    SLOT 55 seed 202759855
+    SLOT 56 seed 202759856
+    SLOT 57 seed 202759857
+    SLOT 58 seed 202759858
+    SLOT 59 seed 202759859
+    SLOT 60 seed 202759860
+    SLOT 61 seed 202759861
+    SLOT 62 seed 202759862
+    SLOT 63 seed 202759863
+    SLOT 64 seed 202759864
+    SLOT 65 seed 202759865
+    SLOT 66 seed 202759866
+    SLOT 67 seed 202759867
+    SLOT 68 seed 202759868
+    SLOT 69 seed 202759869
+    SLOT 70 seed 202759870
+    SLOT 71 seed 202759871
+    SLOT 72 seed 202759872
+    SLOT 73 seed 202759873
+    SLOT 74 seed 202759874
+    SLOT 75 seed 202759875
+    SLOT 76 seed 202759876
+    SLOT 77 seed 202759877
+    SLOT 78 seed 202759878
+    SLOT 79 seed 202759879
+    SLOT 80 seed 202759880
+    SLOT 81 seed 202759881
+    SLOT 82 seed 202759882
+    SLOT 83 seed 202759883
+    SLOT 84 seed 202759884
+    SLOT 85 seed 202759885
+    SLOT 86 seed 202759886
+    SLOT 87 seed 202759887
+    SLOT 88 seed 202759888
+    SLOT 89 seed 202759889
+    SLOT 90 seed 202759890
+    SLOT 91 seed 202759891
+    SLOT 92 seed 202759892
+    SLOT 93 seed 202759893
+    SLOT 94 seed 202759894
+    SLOT 95 seed 202759895
+    SLOT 96 seed 202759896
+    SLOT 97 seed 202759897
+    SLOT 98 seed 202759898
+    SLOT 99 seed 202759899
+    SLOT 100 seed 202759900
+    SLOT 101 seed 202759901
+    SLOT 102 seed 202759902
+    SLOT 103 seed 202759903
+    SLOT 104 seed 202759904
+    SLOT 105 seed 202759905
+    SLOT 106 seed 202759906
+    SLOT 107 seed 202759907
+    SLOT 108 seed 202759908
+    SLOT 109 seed 202759909
+    SLOT 110 seed 202759910
+    SLOT 111 seed 202759911
+    SLOT 112 seed 202759912
+    SLOT 113 seed 202759913
+    SLOT 114 seed 202759914
+    SLOT 115 seed 202759915
+    SLOT 116 seed 202759916
+    SLOT 117 seed 202759917
+    SLOT 118 seed 202759918
+    SLOT 119 seed 202759919
+    SLOT 120 seed 202759920
+    SLOT 121 seed 202759921
+    SLOT 122 seed 202759922
+    SLOT 123 seed 202759923
+    SLOT 124 seed 202759924
+    SLOT 125 seed 202759925
+    SLOT 126 seed 202759926
+    SLOT 127 seed 202759927
+    SLOT 128 seed 202759928
+    SLOT 129 seed 202759929
+    SLOT 130 seed 202759930
+    SLOT 131 seed 202759931
+    SLOT 132 seed 202759932
+    SLOT 133 seed 202759933
+    SLOT 134 seed 202759934
+    SLOT 135 seed 202759935
+    SLOT 136 seed 202759936
+    SLOT 137 seed 202759937
+    SLOT 138 seed 202759938
+    SLOT 139 seed 202759939
+    SLOT 140 seed 202759940
+    SLOT 141 seed 202759941
+    SLOT 142 seed 202759942
+    SLOT 143 seed 202759943
+    SLOT 144 seed 202759944
+    SLOT 145 seed 202759945
+    SLOT 146 seed 202759946
+    SLOT 147 seed 202759947
+    SLOT 148 seed 202759948
+    SLOT 149 seed 202759949
+    SLOT 150 seed 202759950
+    SLOT 151 seed 202759951
+    SLOT 152 seed 202759952
+    SLOT 153 seed 202759953
+    SLOT 154 seed 202759954
+    SLOT 155 seed 202759955
+    SLOT 156 seed 202759956
+    SLOT 157 seed 202759957
+    SLOT 158 seed 202759958
+    SLOT 159 seed 202759959
+    SLOT 160 seed 202759960
+    SLOT 161 seed 202759961
+    SLOT 162 seed 202759962
+    SLOT 163 seed 202759963
+    SLOT 164 seed 202759964
+    SLOT 165 seed 202759965
+    SLOT 166 seed 202759966
+    SLOT 167 seed 202759967
+    SLOT 168 seed 202759968
+    SLOT 169 seed 202759969
+    SLOT 170 seed 202759970
+    SLOT 171 seed 202759971
+    SLOT 172 seed 202759972
+    SLOT 173 seed 202759973
+    SLOT 174 seed 202759974
+    SLOT 175 seed 202759975
+    SLOT 176 seed 202759976
+    SLOT 177 seed 202759977
+    SLOT 178 seed 202759978
+    SLOT 179 seed 202759979
+    SLOT 180 seed 202759980
+    SLOT 181 seed 202759981
+    SLOT 182 seed 202759982
+    SLOT 183 seed 202759983
+    SLOT 184 seed 202759984
+    SLOT 185 seed 202759985
+    SLOT 186 seed 202759986
+    SLOT 187 seed 202759987
+    SLOT 188 seed 202759988
+    SLOT 189 seed 202759989
+    SLOT 190 seed 202759990
+    SLOT 191 seed 202759991
+    SLOT 192 seed 202759992
+    SLOT 193 seed 202759993
+    SLOT 194 seed 202759994
+    SLOT 195 seed 202759995
+    SLOT 196 seed 202759996
+    SLOT 197 seed 202759997
+    SLOT 198 seed 202759998
+    SLOT 199 seed 202759999
+    SLOT 200 seed 202760000
+    SLOT 201 seed 202760001
+    SLOT 202 seed 202760002
+    SLOT 203 seed 202760003
+    SLOT 204 seed 202760004
+    SLOT 205 seed 202760005
+    SLOT 206 seed 202760006
+    SLOT 207 seed 202760007
+    SLOT 208 seed 202760008
+    SLOT 209 seed 202760009
+    SLOT 210 seed 202760010
+    SLOT 211 seed 202760011
+    SLOT 212 seed 202760012
+    SLOT 213 seed 202760013
+    SLOT 214 seed 202760014
+    SLOT 215 seed 202760015
+    SLOT 216 seed 202760016
+    SLOT 217 seed 202760017
+    SLOT 218 seed 202760018
+    SLOT 219 seed 202760019
+
+CONTROLS
+------------------------------------------------------------------------------------------------
+  PASS   REJECTED: D1 paper block (202615000, 202615221)
+  PASS   REJECTED: H1 block (202616000, 202616224)
+  PASS   REJECTED: H2 block (202618000, 202618736)
+  PASS   REJECTED: H3 block (202624000, 202624040)
+  PASS   REJECTED: H4 block (202632000, 202632032)
+  PASS   REJECTED: H5 block (202650000, 202650148)
+  PASS   REJECTED: the TEST_ONLY band
+  PASS   REJECTED: inside the live H3 uniform generation range
+  PASS   REJECTED: overlaps the block by one seed
+  PASS   REJECTED: starts where the block ends -- inside the floor
+  PASS   REJECTED: one seed inside the floor
+  PASS   REJECTED: the most recently EXPOSED block (whichever block was closed most recently at survey time)
+  PASS   REJECTED: a block at the H4-4b MUTATION literal 202642000
+  PASS   an UNDERSCORE-GROUPED candidate seed (.py)  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=230; dropping undecodable bytes instead would see it]
+  PASS   a PLAIN candidate seed (.py)  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=230; dropping undecodable bytes instead would see it]
+  PASS   an UNDERSCORE-GROUPED exclusive end (.py)  [without it CLEAN=True; with it direct=NONE gap=0; dropping undecodable bytes instead would see it]
+  PASS   a candidate seed in a .log -- a suffix H5's filter skipped  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=230; dropping undecodable bytes instead would see it]
+  PASS   a candidate seed inside a .gz  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=230; dropping undecodable bytes instead would see it]
+  PASS   a candidate seed after an undecodable byte after a digit  [without it CLEAN=True; with it direct={'REPO_LITERALS': 1} gap=230; dropping undecodable bytes instead would MISS it]
+  PASS   an UNREADABLE file stops the survey  [SurveyStop]
+  PASS   a CORRUPT .gz stops the survey  [SurveyStop]
+  PASS   an own record (exact path) is exempt  [None]
+  PASS   a sibling path that is NOT listed is counted  [[('docs/superpowers/evidence/htb-strength-seed-survey/04_not_listed.txt', 1)]]
+  PASS   the plan holding only block seeds is exempt  [None]
+  PASS   registry tuple elements are exempt by parsing (a non-ASCII char BEFORE them)  [[202759811]]
+  PASS   the same value outside a registry tuple is counted  [[('scripts/GPU/alphazero/e4_screen_reference.py', 1)]]
+  PASS   a plan with a seed OUTSIDE the block is not exempt  [[202759800, 202760025]]
+  PASS   an UNREADABLE directory  [STOPPED: a directory could not be read]
+  PASS   an UNREADABLE nested directory  [STOPPED: a directory could not be read]
+  PASS   a missing root  [STOPPED: <tmp>/tests: the root is not a directory]
+  PASS   a root that is a file  [STOPPED: <tmp>/scripts: the root is not a directory]
+  PASS   a FIFO inside a root  [STOPPED: <tmp>/scripts/pipe: neither a regular file, a directory nor a symbolic link]
+  PASS   a sound tree with a symbolic link  [enumerated: 3 files, 1 links]
+  PASS   pre: the survey's registry, no plan  [the expected state]
+  PASS   pre: the registry changed  [the registry is not the one the survey read]
+  PASS   pre: the block already registered  [the registry is not the one the survey read; a registry already holds seeds of the block: [('ACCOUNTED_SEED_INTERVALS', (202759800, 202760020))]]
+  PASS   pre: a plan already exists  [a pilot plan already exists]
+  PASS   post: exactly the block appended last, the plan  [the expected state]
+  PASS   post: the block appended FIRST  [ACCOUNTED is not the survey's state with exactly the block appended last]
+  PASS   post: a wider tuple  [ACCOUNTED is not the survey's state with exactly the block appended last]
+  PASS   post: EXPOSED changed too  [EXPOSED_SEED_INTERVALS changed]
+  PASS   post: no plan  [the H-TB confirmation-test plan is absent or not committed]
+  PASS   post: a plan with another BASE  [the H-TB confirmation-test plan is not build_plan of the surveyed block]
+  PASS   post: a plan of 221 slots  [the H-TB confirmation-test plan is not build_plan of the surveyed block]
+  PASS   post: a plan bound to another survey record  [the H-TB confirmation-test plan is not build_plan of the surveyed block]
+  PASS   a PLAIN 2026-band literal is seen  [{202654321: 1}]
+  PASS   an UNDERSCORE-GROUPED 2026-band literal is seen  [{202654321: 1}]
+  PASS   a PLAIN 2027-band literal is seen  [{202759807: 1}]
+  PASS   an UNDERSCORE-GROUPED 2027-band literal is seen  [{202759807: 1}]
+  PASS   neither band's neighbours are counted (the 2025 and 2028 prefixes, ten digits, a decimal)  [{}]
+  PASS   the install took effect: the pinned plain pattern alone misses a 2027-band literal
+  PASS   the rule on an EMPTY band: the least multiple of 100 at least N above the band's edge
+  PASS   the rule lies above the band's highest literal as well as its intervals  [(202705000, 202705300, (202705300, 202705520))]
+  PASS   REJECTED: a cross-band derived-stream collision (a synthetic mask onto a planted 2026-band literal)  [streams without the plant 0, with it 2]
+  PASS   with the real masks, no 2026-band value shares a derived stream with a 2027-band value  [masks ['0x3c3c3c', '0x5a5a5a', '0xa5a5a5', '0xc3c3c3']]
+
+controls passed: 55/55
+PROOF VERDICT (pre): THE H-TB CONFIRMATION-TEST BLOCK IS CLEAN AND THE STATE IS AS EXPECTED
