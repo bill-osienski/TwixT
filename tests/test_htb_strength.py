@@ -1,5 +1,5 @@
 """The H-TB CONFIRMATION TEST (plan `docs/superpowers/2026-11-06-htb-strength-plan.md`; card §9.2, §9.3), built only on
-the user's review (2026-11-06): `htb_strength run strength`, its wrapper, its proposed ceiling and its seed copies.
+the user's review (2026-11-06): `htb_strength run strength`, its wrapper, its ceiling (adopted on the build review) and its seed copies.
 
 CPU only. No test loads the student or calib020_0001, touches the GPU, opens a real gate, runs a seed mode on the real
 repository, writes the registry or plays a real game:
@@ -219,9 +219,19 @@ def _g(ev=1.0, sec=1.0):
 
 
 def _mean_over_220(k):
-    """110 pair scores whose mean is exactly k / 220 (pair scores are multiples of 0.5)."""
+    """110 pair scores whose mean is exactly k / 220, built from pair scores 1, 0.5 and 0 only (no drawn game). A drawn
+    game scores half a point, so a pair can also score 0.75 or 0.25 and reachable means are multiples of 1 / 440."""
     ones, half = divmod(k, 2)
     return [1.0] * ones + [0.5] * half + [0.0] * (110 - ones - half)
+
+
+def _with_a_draw(k_halves):
+    """110 pair scores whose mean is exactly (k_halves / 2) / 220 with k_halves odd: one pair is a win and a draw (0.75)."""
+    assert k_halves % 2 == 1
+    k = (k_halves - 1) // 2                                               # 135.5 = 135 + 0.5
+    ones, half = divmod(k, 2)
+    assert half == 1                                                      # 67 wins, one 0.5 pair -> make it 0.75
+    return [1.0] * ones + [0.75] + [0.0] * (110 - ones - 1)
 
 
 def test_THE_BOUND_IS_THE_CARD_S_ONE_SIDED_FORMULA_and_not_the_two_sided_one():
@@ -231,18 +241,24 @@ def test_THE_BOUND_IS_THE_CARD_S_ONE_SIDED_FORMULA_and_not_the_two_sided_one():
     assert round(two_sided, 6) == 0.129490 and HT.HALF_WIDTH < two_sided
     pairs = _mean_over_220(137)                                           # 0.6227: PASS here, not by ln(2 / alpha)
     assert HT.strength_verdict(pairs, _g())["verdict"] == "PASS" and K.hoeffding_lower(pairs, 0.05) < 0.5
+    # reachable means are multiples of 1 / 440 (a drawn game scores half a point): 272/440 = 136/220 is the least
+    # that passes and 271/440 = 135.5/220 the greatest that does not
+    passing = [k for k in range(441) if k / 440 - HT.HALF_WIDTH > 0.5]
+    assert passing[0] == 272 and sum(_with_a_draw(271)) == 67.75
 
 
 @pytest.mark.parametrize("pairs, g, verdict, n_reasons", [
     ([1.0] * 110, _g(), "PASS", 0),
     (_mean_over_220(136), _g(), "PASS", 0),                               # 0.6182: the least reachable mean that passes
-    (_mean_over_220(135), _g(), "NON_PASS", 1),                           # 0.6136: the greatest that does not
+    (_with_a_draw(271), _g(), "NON_PASS", 1),                             # 135.5/220 = 0.6159, a draw: the greatest that does not
+    (_mean_over_220(135), _g(), "NON_PASS", 1),                           # 0.6136: the greatest with no drawn game
     ([0.5] * 110, _g(), "NON_PASS", 1),
     ([1.0] * 110, _g(ev=1.06), "NON_PASS", 1),
     ([1.0] * 110, _g(sec=1.11), "NON_PASS", 1),
     ([1.0] * 110, _g(ev=1.05, sec=1.10), "PASS", 0),                      # the guards are inclusive
     ([0.0] * 110, _g(ev=2.0, sec=2.0), "NON_PASS", 3),
-], ids=["all-wins", "least-pass", "greatest-non-pass", "half", "evaluations", "seconds", "guards-at-limit", "all"])
+], ids=["all-wins", "least-pass", "greatest-non-pass-a-draw", "greatest-non-pass-no-draw", "half", "evaluations",
+        "seconds", "guards-at-limit", "all"])
 def test_THE_RULE_IS_PASS_ONLY_ABOVE_THE_BOUND_WITH_BOTH_GUARDS(pairs, g, verdict, n_reasons):
     v = HT.strength_verdict(pairs, g)
     assert v["verdict"] == verdict and len(v["reasons"]) == n_reasons, v
@@ -288,8 +304,10 @@ def _events(tmp_path):
     (lambda g, cr: HT.REFERENCE, 0.0, "NON_PASS"),
     (lambda g, cr: None, 0.5, "NON_PASS"),
     (TS._wins_first(136), 136 / 220, "PASS"),
+    (TS._wins_first(135.5), 135.5 / 220, "NON_PASS"),                     # game 135 drawn: pair 67 scores 0.75
     (TS._wins_first(135), 135 / 220, "NON_PASS"),
-], ids=["all-candidate", "all-reference", "all-drawn", "least-pass", "greatest-non-pass"])
+], ids=["all-candidate", "all-reference", "all-drawn", "least-pass", "greatest-non-pass-a-draw",
+        "greatest-non-pass-no-draw"])
 def test_THE_TEST_PLAYS_ALL_220_GAMES_WITH_THE_WHOLE_STUDENT_AND_APPLIES_THE_RULE(tmp_path, outcome, mean, verdict):
     calls, loaded = [], []
     code, rec = _run(tmp_path, seams(TS.stub_play(outcome, calls=calls), loaded=loaded))
@@ -463,7 +481,7 @@ def test_THE_WRAPPER_RUNS_THIS_MODULE_BEHIND_ITS_OWN_CLOSED_GATE_and_was_never_r
     p = ROOT / SPEC.TARGETS["wrapper"]
     text = p.read_text()
     assert os.access(p, os.X_OK) and subprocess.run(["bash", "-n", str(p)]).returncode == 0
-    assert f"\nTERM_S={SPEC.TERM_S}\n" in text and "\nGRACE_S=10\n" in text and SPEC.TERM_S == 6590
+    assert f"\nTERM_S={SPEC.TERM_S}\n" in text and "\nGRACE_S=10\n" in text and SPEC.TERM_S == 11690
     assert "\nGATE=HTB_STRENGTH_AUTHORIZED\n" in text and \
         "\nGATE_REL=scripts/GPU/alphazero/htb_strength_authorization.py\n" in text
     assert f"\nRUN_REL={HT.EVIDENCE}\n" in text and f"\nOUT_REL={HT.RUN_DIR}\n" in text
@@ -513,26 +531,34 @@ def test_THE_CLOSING_COPY_READS_THIS_TEST_S_RUN_and_its_controls_all_pass():
     assert not (ROOT / C.OUT).exists()
 
 
-# ─────────────────────────────── the proposed ceiling (plan §9) ───────────────────────────────
+# ─────────────────────────────── the adopted ceiling (plan §9) ───────────────────────────────
 
-def test_THE_PROPOSED_CEILING_RECOMPUTES_FROM_THE_COMMITTED_SCREEN():
+def test_THE_ADOPTED_CEILING_RECOMPUTES_FROM_THE_COMMITTED_CYCLE_2_STRENGTH_COMPARISON():
+    """The user's review (2026-11-06): TERM 11,690 s, KILL 11,700 s, cleanup through 11,710 s -- the historical
+    longer-game pace with the same 1.5 allowance; the proposed 6,600 s (from the screen's short games) not adopted."""
     ev = ROOT / "docs/superpowers/evidence"
+    c2_outer = json.loads((ev / "combination-policy-cycle2-strength-run/outer.json").read_text())
+    c2 = [json.loads(x) for x in (ev / "combination-policy-cycle2-strength/games.jsonl").read_text().splitlines()]
+    assert len(c2) == 1018 and c2_outer["wall_seconds"] == 35978
+    assert round(c2_outer["wall_seconds"] / 1018, 1) == 35.3 and round(sum(g["n_moves"] for g in c2) / 1018, 1) == 63.7
+    proj = c2_outer["wall_seconds"] * 220 / 1018
+    ceiling = math.ceil(proj * 1.5 / 60) * 60
+    assert (round(proj, 1), round(proj * 1.5, 1), ceiling) == (7775.2, 11662.8, 11700)
+    assert (SPEC.TERM_S, SPEC.TERM_S + 10, SPEC.TERM_S + 20) == (11690, ceiling, 11710)
+    c2_slow = max(g["seconds"] / g["n_moves"] for g in c2 if g["reason"] == "state_cap")
+    assert round(c2_slow, 4) == 0.6272 and int((SPEC.TERM_S - proj) / (280 * c2_slow - proj / 220)) == 27
+    # the expected runtime may still follow the screen's faster pace
     outer = json.loads((ev / "htb-screen-run/outer.json").read_text())
     rec = json.loads((ev / "htb-screen/record.json").read_text())
     games = [json.loads(x) for x in (ev / "htb-screen/games.jsonl").read_text().splitlines()]
     assert rec["versions"] == HT.VERSIONS and len(games) == 64 and outer["wall_seconds"] == 1279
-    proj = outer["wall_seconds"] * 220 / 64
-    ceiling = math.ceil(proj * 1.5 / 60) * 60
-    assert (round(proj, 1), round(proj * 1.5, 1), ceiling) == (4396.6, 6594.8, 6600) and ceiling == SPEC.TERM_S + 10
-    gs = sum(g["seconds"] for g in games)
-    assert round(gs, 1) == 1273.9 and math.ceil(gs * 220 / 64 * 1.5 / 60) * 60 == ceiling
-    assert math.ceil(rec["total_seconds"] * 220 / 64 * 1.5 / 60) * 60 == ceiling
-    per_game = outer["wall_seconds"] / 64
+    s_proj = outer["wall_seconds"] * 220 / 64
     slow = max(g["seconds"] / g["n_moves"] for g in games)
-    assert round(slow, 4) == 0.5492 and int((SPEC.TERM_S - proj) / (280 * slow - per_game)) == 16
-    c2 = [json.loads(x) for x in (ev / "combination-policy-cycle2-strength/games.jsonl").read_text().splitlines()]
-    c2_slow = max(g["seconds"] / g["n_moves"] for g in c2 if g["reason"] == "state_cap")
-    assert round(c2_slow, 4) == 0.6272 and int((SPEC.TERM_S - proj) / (280 * c2_slow - per_game)) == 14
-    assert round(SPEC.TERM_S / 220, 2) == 29.95 and round(sum(g["n_moves"] for g in games) / 64, 1) == 37.1
+    assert round(s_proj, 1) == 4396.6 and round(slow, 4) == 0.5492
+    assert int((SPEC.TERM_S - s_proj) / (280 * slow - outer["wall_seconds"] / 64)) == 54
+    per_ply = sum(g["seconds"] for g in games) / sum(g["n_moves"] for g in games)
+    assert round(SPEC.TERM_S / 220, 1) == 53.1 and round(SPEC.TERM_S / 220 / per_ply) == 99 and round(per_ply, 3) == 0.536
     doc = (ROOT / HT.PLAN_DOC).read_text()
-    assert "**6,600 s — TERM at\n  6,590 s, KILL 10 s later, cleanup observation through 6,610 s.**" in doc
+    assert "**11,700 s — TERM at 11,690 s, KILL 10 s later, cleanup\n  observation through 11,710 s.**" in doc
+    assert "## 9. The ceiling (ADOPTED by the user's review, 2026-11-06)" in doc and "PROPOSED" not in doc
+    assert "multiples of 1/440" in doc and "**135.5/220 = 0.6159**" in doc

@@ -4,12 +4,13 @@
 # §9.2, §9.3; the user's review 2026-11-06: the same frozen whole student, sha256 0e1cb621..., against the original
 # proven combination, both averaged, 200 simulations, halving from ply 20; PASS only if mean - sqrt(ln 20 / 220) > 0.5
 # with evaluations ratio <= 1.05 and search-seconds ratio <= 1.10).
-# CEILING PROPOSED FOR THE LAUNCH REVIEW (plan §9), from the H-TB screen's measured pace (Post-closure entry 53):
-# its wall time 1,279 s x 220 / 64 = 4,396.6 s; x 1.5 = 6,594.8 s, rounded up to the minute: 6,600 s -- TERM at
-# 6590 s, KILL 10 s later, 6600 s in all; cleanup observation bounded through 6610 s. An
-# estimate whose main risk is game length: the screen's games averaged 37.1 plies; TERM covers about 1.5 times its
-# pace (29.95 s per game). A run the ceiling stops is VOID, with no automatic retry; its progress and cause go to the
-# user. Idle waiting (idle_gate) is not part of the ceiling.
+# CEILING ADOPTED BY THE USER'S REVIEW (2026-11-06; plan §9), from the historical longer-game pace with the same
+# 1.5 allowance: the cycle-2 strength comparison's wall time 35,978 s over 1,018 games (63.7 plies, 35.3 s per
+# game) x 220 = 7,775.2 s; x 1.5 = 11,662.8 s, rounded up to the minute: 11,700 s -- TERM at
+# 11690 s, KILL 10 s later, 11700 s in all; cleanup observation bounded through 11710 s. The
+# expected runtime may still follow the H-TB screen's faster pace (about 4,397 s); the larger ceiling reduces the
+# risk of another incomplete test. A run the ceiling stops is VOID, with no automatic retry; its progress and cause
+# go to the user. Idle waiting (idle_gate) is not part of the ceiling.
 # BUILT ONLY (ledger, 2026-11-06): launching it is a separate approval.
 # A copy of htb-screen-run/01_wrapper.sh (the H-TB screen's, run once, whose header follows, from its line 2); the
 # diff: the paths, the gate (HTB_STRENGTH_AUTHORIZED), the module (htb_strength) and its `run strength` command,
@@ -166,7 +167,7 @@ RUN_REL=docs/superpowers/evidence/htb-strength
 GATE_REL=scripts/GPU/alphazero/htb_strength_authorization.py
 GATE=HTB_STRENGTH_AUTHORIZED
 MODULE=scripts.GPU.alphazero.htb_strength
-TERM_S=6590
+TERM_S=11690
 GRACE_S=10
 
 W=$(cd "$(dirname "$0")/../../../.." && pwd -P) || exit 1

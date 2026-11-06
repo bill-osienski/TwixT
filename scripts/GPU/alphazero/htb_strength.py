@@ -50,7 +50,7 @@ ROOT = M.ROOT
 RECORD_KIND = "htb-strength-record/1"
 CARD, CARD_SHA256 = HS.CARD, HS.CARD_SHA256                # the pilot card, its pin unchanged
 PLAN_DOC = "docs/superpowers/2026-11-06-htb-strength-plan.md"
-PLAN_DOC_SHA256 = "92e355a87c5686814aca372da12816364cd025b31b77464332be6b680963d49e"
+PLAN_DOC_SHA256 = "31440d671dbd2d90895cebc52e3a5812467e3b7326f907902f963e0d78172693"
 SETTING, SETTING_VALUE = HS.SETTING, HS.SETTING_VALUE
 VERSIONS = dict(HS.VERSIONS)
 #: the reviewed components this run reuses, imported and never modified: everything the screen pinned, the screen's

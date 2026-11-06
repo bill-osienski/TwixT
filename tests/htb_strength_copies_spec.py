@@ -7,8 +7,9 @@ import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 EV = "docs/superpowers/evidence"
-#: plan §9: PROPOSED for the launch review (not adopted) -- the screen's 1,279 s x 220 / 64 x 1.5, up to the minute
-TERM_S = 6590
+#: plan §9: ADOPTED by the user's review (2026-11-06) -- the cycle-2 strength comparison's longer-game pace (35,978 s
+#: over 1,018 games) x 220 x 1.5, up to the minute: 11,700 s; superseded the proposed 6,600 s (TERM 6,590)
+TERM_S = 11690
 N_SLOTS = 220
 SOURCES = {"wrapper": (f"{EV}/htb-screen-run/01_wrapper.sh",
                        "2d221e31a16f29de0fff7b9be3a46f2f8fbadda8f1145172f97f229a02c4b189"),
@@ -32,12 +33,13 @@ def header(kind):
             "# §9.2, §9.3; the user's review 2026-11-06: the same frozen whole student, sha256 0e1cb621..., against the original\n"
             "# proven combination, both averaged, 200 simulations, halving from ply 20; PASS only if mean - sqrt(ln 20 / 220) > 0.5\n"
             "# with evaluations ratio <= 1.05 and search-seconds ratio <= 1.10).\n"
-            "# CEILING PROPOSED FOR THE LAUNCH REVIEW (plan §9), from the H-TB screen's measured pace (Post-closure entry 53):\n"
-            "# its wall time 1,279 s x 220 / 64 = 4,396.6 s; x 1.5 = 6,594.8 s, rounded up to the minute: 6,600 s -- TERM at\n"
-            f"# {TERM_S} s, KILL 10 s later, {TERM_S + 10} s in all; cleanup observation bounded through {TERM_S + 20} s. An\n"
-            "# estimate whose main risk is game length: the screen's games averaged 37.1 plies; TERM covers about 1.5 times its\n"
-            "# pace (29.95 s per game). A run the ceiling stops is VOID, with no automatic retry; its progress and cause go to the\n"
-            "# user. Idle waiting (idle_gate) is not part of the ceiling.\n"
+            "# CEILING ADOPTED BY THE USER'S REVIEW (2026-11-06; plan §9), from the historical longer-game pace with the same\n"
+            "# 1.5 allowance: the cycle-2 strength comparison's wall time 35,978 s over 1,018 games (63.7 plies, 35.3 s per\n"
+            "# game) x 220 = 7,775.2 s; x 1.5 = 11,662.8 s, rounded up to the minute: 11,700 s -- TERM at\n"
+            f"# {TERM_S} s, KILL 10 s later, {TERM_S + 10} s in all; cleanup observation bounded through {TERM_S + 20} s. The\n"
+            "# expected runtime may still follow the H-TB screen's faster pace (about 4,397 s); the larger ceiling reduces the\n"
+            "# risk of another incomplete test. A run the ceiling stops is VOID, with no automatic retry; its progress and cause\n"
+            "# go to the user. Idle waiting (idle_gate) is not part of the ceiling.\n"
             "# BUILT ONLY (ledger, 2026-11-06): launching it is a separate approval.\n"
             "# A copy of htb-screen-run/01_wrapper.sh (the H-TB screen's, run once, whose header follows, from its line 2); the\n"
             "# diff: the paths, the gate (HTB_STRENGTH_AUTHORIZED), the module (htb_strength) and its `run strength` command,\n"

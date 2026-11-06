@@ -266,6 +266,7 @@ knob) is not a new hypothesis.
 > **H-TB screen — CONTINUE (Post-closure entry 53, 2026-11-06).** The ONE run COMPLETED in 1,279 s (TERM 3,410 s); clean cleanup, gate restored. Mean pair score **0.953** over 32 pairs (candidate 61 wins, reference 3, no draws or caps); evaluations ratio 1.046 (guard 1.05), search-seconds ratio 1.039 (guard 1.10). Both digests and eval mode unchanged from load to end. K1 RECONCILES 15/15; the whole block [202759500, 202759564) exposed and retired. **A screen only: stronger play is not established**; CONTINUE permits proposing the strength test and nothing else. A missed failing band test disclosed and re-anchored; 875 focused pass. See #181.
 > **H-TB screen — CONTINUE ACCEPTED as strong preliminary evidence of a playing advantage against the reference; formal confirmation pending (decision note, 2026-11-06, the user's review).** The user reproduced the 61–3 score, pair scores and both cost ratios and checked the replays, identities, cleanup and closing. Entry 52's imitation results and the unresolved causes stand. Approved, build only: the card §9.2 confirmation test, 110 fresh pairs, PASS only if mean − √(ln 20 / 220) > 0.5 with both guards (evaluations guard unchanged at 1.05); ceiling to be proposed from the screen's pace. Seeds, GPU launch, training, deployment and pushing not authorized. See #182.
 > **H-TB confirmation test — BUILT for review; nothing run (addendum, 2026-11-06).** `htb_strength run strength`: 110 fresh pairs, the same frozen whole student against the original proven combination at 200 simulations; the screen's module pinned and reused (loop, boundary, seams, identities); admission adds the committed CONTINUE screen and its clean outer.json; the screen's block excluded. PASS only if mean − √(ln 20 / 220) > 0.5 (mean above 0.61669) with evaluations ≤ 1.05 and search seconds ≤ 1.10. Gate `HTB_STRENGTH_AUTHORIZED` closed (66 in all). Ceiling PROPOSED 6,600 s (TERM 6,590) from the screen's pace; its main risk is longer games. 82 new tests, 11/11 injected defects caught; 957 focused pass. See #182.
+> **H-TB confirmation test — build ACCEPTED with two corrections; seed preparation APPROVED (decision note, 2026-11-06, the user's build review).** (1) The draw boundary: reachable means are multiples of 1/440, so 135.5/220 is the nearest failing score and 136/220 still the first passing one; the verdict function was already correct. (2) Ceiling ADOPTED: TERM 11,690 / KILL 11,700 / cleanup 11,710 s, from the cycle-2 comparison's longer-game pace × 1.5, in place of the proposed 6,600 s. Games, simulations, rule and guards unchanged. Plan re-pinned. Then the four seed steps, once each. GPU launch, training, deployment and pushing not authorized. See #182.
 
 ## Historical proposal check — programme now closed
 
@@ -2067,6 +2068,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
    - adopt the proposed 6,600 s ceiling without the launch review, or read a PASS as more than a one-sided result against this reference at these settings, or a NON_PASS as evidence of no advantage;
    - treat the screen's 0.953 as a confirmed effect size, or as identifying a cause (entry 52's causes remain unresolved);
    - start further training, deployment or pushing.
+   - *Correction (2026-11-06, the user's build review):* the 6,600 s ceiling above was not adopted. The adopted ceiling is TERM 11,690 s, KILL 11,700 s, cleanup through 11,710 s; do not shorten it, or price a rerun from the screen's pace, without review. Reachable means are multiples of 1/440: the nearest failing score is 135.5/220, not 135/220. The plan is re-pinned (`31440d67…`).
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -10078,3 +10080,28 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
   Eleven injected defects were each caught: the two-sided bound, a non-strict bound, an ignored guard, no overlap check, no end digests, 109 pairs, an unchecked gate, an unchecked screen verdict, a skipped screen admission, a changed loop and an unchecked student sha256. The module was restored byte for byte. The gate-inventory test now expects 66. Focused suites, serially (the 875 of entry 53 plus these): **957 pass**, 1 deselected.
 - **Nothing ran:** no seed step, model load, gate opening or game. No registry edit.
 - **For review:** the build, the plan and the proposed ceiling. Seed preparation (survey, pre-proof, registration, post-proof) and the GPU launch each need approval. See #182.
+
+#### Decision note — the confirmation-test build accepted with two corrections; seed preparation approved (2026-11-06, the user's build review)
+
+- **The user's check, read-only:** the one-sided rule, the reused loop, the pins, and all **66 gates closed**, verified.
+- **Correction 1: the draw boundary.** The plan and the build addendum above said reachable means are multiples of 1/220, and that 135/220 is the greatest failing mean. That was wrong.
+  - A drawn game scores half a point, so a pair can score 0.75 or 0.25, and reachable means are multiples of **1/440**.
+  - The nearest failing score is **135.5/220 = 0.6159**, a score that contains a draw. **136/220 = 0.6182** remains the first passing score.
+  - The verdict function was already correct; only the plan's text and the boundary tests were wrong.
+  - Corrected: plan §6. New tests, both NON_PASS: the rule at 135.5/220 with one win-and-draw pair, and a full 220-game run with game 135 drawn. Also a check that 272/440 is the least passing multiple of 1/440.
+- **Correction 2: the ceiling, ADOPTED now:** **TERM 11,690 s, KILL 11,700 s, cleanup through 11,710 s.** This replaces the proposed 6,600 s (TERM 6,590), which was priced from the screen's short games and is not adopted.
+  - The basis is the historical longer-game pace with the same 1.5 allowance. The cycle-2 strength comparison ran 35,978 s over 1,018 games (63.7 plies and 35.3 s per game). Scaled to 220 games that is 7,775.2 s; × 1.5 = 11,662.8 s, rounded up to the minute: 11,700 s.
+  - It reduces the risk of another incomplete test. The expected runtime can still follow the screen's faster pace, about 4,397 s.
+  - Room for 280-ply games: 27 at the cycle-2 pace, 54 at the screen's pace.
+  - The 220 games, the simulations, the statistical rule and the compute guards are unchanged.
+- **What changed** (one commit; nothing ran):
+  - **Plan** re-pinned: `92e355a8…` → `31440d67…`. Its status note and authorization lines are updated, and a §9-for-§10 slip in its "Not authorized" line is fixed.
+  - **Module** `htb_strength.py`: only `PLAN_DOC_SHA256`.
+  - **Wrapper copy** re-derived: `TERM_S=11690` and its header. The new sha256 is `935f577d…`.
+  - **Copies spec:** `TERM_S` and the wrapper header.
+  - **Tests:** 84, all pass. The ceiling test now recomputes from the committed cycle-2 strength evidence and checks the screen's pace as the expected runtime.
+  - **Focused suites:** the H-TB strength, H-TB screen, gate-inventory and 2027-band suites: 210 pass.
+  - As the user directed, no additional timing, mutation campaign or full regression.
+- **Approved after this commit:** the four seed-preparation steps, once each and in order: survey → pre-proof → registration with the bound plan → post-proof. Each result is committed before the next step. Stop on any failed check without adjusting or repeating the selection. Return the prepared block for launch review.
+- **Standing:** a timeout remains VOID and returns for assessment, with no automatic retry.
+- **Not authorized:** the GPU launch, further training, deployment, pushing.

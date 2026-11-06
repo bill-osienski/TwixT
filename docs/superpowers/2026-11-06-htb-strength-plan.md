@@ -6,8 +6,14 @@ sha256 `ccb3bc67…`) is unchanged; this plan fills in its §9.2 strength test a
 
 **Authorized by the user's review (2026-11-06):** the minimal build and this paper launch plan only.
 
-**Not authorized:** any seed procedure (survey, proofs, registration, closing), model loading or game; opening
-`HTB_STRENGTH_AUTHORIZED`; further training; deployment; pushing. Each step in §9 needs its own approval.
+**Corrected and re-pinned on the user's build review (2026-11-06):** §6's draw boundary (reachable means are
+multiples of 1/440, not 1/220) and §9's ceiling (11,700 s adopted in place of the proposed 6,600 s). The rule, the
+games, the simulations and the guards are unchanged. The seed preparation (§8, steps 1–4) is approved after this
+correction is committed.
+
+**Not authorized:** the seed closing, model loading or any game; opening `HTB_STRENGTH_AUTHORIZED`; further
+training; deployment; pushing. Each step in §10 needs its own approval. (The build as first pinned also listed the
+seed survey, proofs and registration here, and named §9 for §10 in error.)
 
 ## 1. What the test asks, and what it cannot show
 
@@ -68,8 +74,9 @@ sha256 `ccb3bc67…`) is unchanged; this plan fills in its §9.2 strength test a
 Over the 110 pair scores (a draw or state cap scores 0.5 per game), in float64:
 
 - **lower = mean − √(ln 20 / 220)**, the one-sided Hoeffding bound at α = 0.05 for 110 scores in [0, 1]. The
-  half-width is 0.116692; lower > 0.5 means a mean above **0.616692**. Reachable means are multiples of 1/220:
-  136/220 = 0.6182 passes and 135/220 = 0.6136 does not.
+  half-width is 0.116692; lower > 0.5 means a mean above **0.616692**. A drawn game scores half a point, so reachable
+  means are multiples of 1/440: **136/220 = 0.6182** is the least that passes and **135.5/220 = 0.6159** (a score
+  containing a draw) the greatest that does not.
 - **PASS** only if lower > 0.5 **and** the evaluations ratio ≤ **1.05** **and** the search-seconds ratio ≤ **1.10**
   (ratios of the run's totals, candidate over reference). The evaluations guard is unchanged despite the screen's
   narrow margin (1.0460).
@@ -103,30 +110,29 @@ lines.
 
 On any failed check: stop and report, without adjusting or repeating the selection.
 
-## 9. The ceiling (PROPOSED for the launch review)
+## 9. The ceiling (ADOPTED by the user's review, 2026-11-06)
 
-From the screen's measured pace (the same loader, loop, sides, settings and machine; ledger entry 53), as the
-cycle-2 strength ceiling was priced from its screen:
+The historical longer-game pace with the same 1.5 allowance. The proposed 6,600 s, priced from the screen's short
+games, was not adopted.
 
-- The screen's wall time 1,279 s × 220 / 64 × 1.5 = 6,594.8 s, rounded up to the minute: **6,600 s — TERM at
-  6,590 s, KILL 10 s later, cleanup observation through 6,610 s.**
-- Cross-checks: the screen's summed game time (1,273.9 s) gives 6,568.3 s, and its record's total (1,278.6 s) gives
-  6,593.0 s, both inside the same minute.
-- Long games: the screen had no capped game. A 280-ply game at the screen's slowest per-ply rate (0.5492 s) takes
-  about 153.8 s, or 175.6 s at the cycle-2 strength comparison's slowest capped rate (0.6272 s). With the other games
-  at the screen's pace (19.98 s), TERM leaves room for 16 or 14 such games of the 220.
-- **This is an estimate, and its main risk is game length.** The screen's games were short (37.1 plies on average,
-  27–66) because the student won 61 of 64. TERM covers an average of 29.95 s per game, 1.5 times the screen's pace,
-  or about 56 plies per game at the screen's 0.536 s per ply. If these games run as long as the cycle-2 strength
-  comparison's (63.7 plies, 35.3 s per game), the run reaches TERM and is VOID. A run the ceiling stops is VOID, with
-  no automatic retry; its progress and cause go to the user.
+- The cycle-2 strength comparison's wall time (35,978 s over 1,018 games: 63.7 plies, 35.3 s per game) × 220 =
+  7,775.2 s; × 1.5 = 11,662.8 s, rounded up to the minute: **11,700 s — TERM at 11,690 s, KILL 10 s later, cleanup
+  observation through 11,710 s.**
+- **Expected runtime** may still follow the screen's faster pace: its wall time 1,279 s × 220 / 64 = 4,396.6 s. The
+  larger ceiling reduces the risk of another incomplete test.
+- Long games: at the cycle-2 pace, a 280-ply game at that comparison's slowest capped rate (0.6272 s per ply) takes
+  about 175.6 s, and TERM leaves room for 27 such games of the 220. At the screen's pace and its slowest rate
+  (0.5492 s per ply), there is room for 54.
+- TERM covers an average of 53.1 s per game, about 99 plies at the screen's 0.536 s per ply.
+- The 220 games, the simulations, the rule (§6) and the compute guards are unchanged.
+- A run the ceiling stops is VOID, with no automatic retry; its progress and cause go to the user.
 - Idle waiting (the idle gate) is outside the ceiling.
 
 ## 10. Launch sequence (paper only; each step needs its own approval)
 
 1. **Seed preparation** (§8, steps 1–4), with routine lifecycle-test updates and focused checks; returned for launch
    review.
-2. **Launch review:** the ceiling, the prepared block and the GPU games.
+2. **Launch review:** the prepared block and the GPU games (the ceiling is adopted, §9).
 3. **Launch:** pre-launch checks recorded (panic reports, Unreal Editor closed, BOINC quit, versions, checkpoint
    SHA-1, student sha256, fit and screen admission, registry, gates); in a clean linked worktree, a one-line commit
    opening only `HTB_STRENGTH_AUTHORIZED`; the wrapper `evidence/htb-strength-run/01_wrapper.sh` once, behind its
