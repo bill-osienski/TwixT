@@ -116,13 +116,21 @@ def test_THE_CARD_IS_THE_PINNED_ONE():
     assert hashlib.sha256((ROOT / H.CARD).read_bytes()).hexdigest() == H.CARD_SHA256
 
 
+#: the full runs already made, each ONCE, with their terminal status (ledger #177)
+SPENT_RUNS = {"label": "COMPLETED"}
+
+
 def test_BOTH_GATES_ARE_CLOSED_AND_BOTH_ENTRIES_REFUSE_BEFORE_ANY_WORK(capsys):
     assert LABEL_GATE.HTB_LABEL_AUTHORIZED is False and FIT_GATE.HTB_FIT_AUTHORIZED is False
     assert H.main(["run", "label", "--clone-root", "/nonexistent"]) == 2
     assert H.main(["run", "fit"]) == 2
     err = capsys.readouterr().err
     assert err.count("REFUSED") == 2 and "HTB_LABEL_AUTHORIZED is closed" in err and "HTB_FIT_AUTHORIZED is closed" in err
-    assert not (ROOT / H.EVIDENCE_LABEL).exists() and not (ROOT / H.EVIDENCE_FIT).exists()
+    for kind, rel in (("label", H.EVIDENCE_LABEL), ("fit", H.EVIDENCE_FIT)):     # a refusal writes nothing
+        assert (ROOT / rel).exists() == (kind in SPENT_RUNS), kind
+    for kind in SPENT_RUNS:                                                      # each spent run's record, as committed
+        rec = json.loads((ROOT / {"label": H.EVIDENCE_LABEL, "fit": H.EVIDENCE_FIT}[kind] / "record.json").read_text())
+        assert rec["kind"] == f"htb-{kind}-record/1" and rec["status"] == SPENT_RUNS[kind]
 
 
 def test_THE_FROZEN_COUNTS_AND_RECIPE_ARE_THE_CARDS():
@@ -970,4 +978,9 @@ def test_EACH_FULL_RUN_WRAPPER_IS_THE_DECLARED_DERIVATION_WITH_THE_ADOPTED_CEILI
         assert '"$W" "$HEAD_C" "$PRE" "$TPY" "$PY" "$CKPT" > "$OUT_REL/outer.json"' in text
     else:
         assert "TPY" not in text and '"$PY" -B -m "$MODULE" run fit \\' in text
-    assert not (ROOT / RW.RUN_REL[kind]).exists()                       # never run
+    assert (ROOT / RW.RUN_REL[kind]).exists() == (kind in SPENT_RUNS)   # run once, or never
+    if kind in SPENT_RUNS:
+        outer = json.loads((ROOT / pathlib.Path(RW.TARGETS[kind]).parent / "outer.json").read_text())
+        assert (outer["inner_exit"], outer["outer_exit"], outer["outcome"]) == (0, 0, SPENT_RUNS[kind])
+        assert outer["gate_restored"] is True and outer["survivors"] == "" and outer["record_by"] == "script"
+        assert outer["term_s"] == term
