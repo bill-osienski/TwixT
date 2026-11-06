@@ -258,6 +258,7 @@ knob) is not a new hypothesis.
 > **H-TB — timings accepted; batched whole-example construction BUILT for review; nothing run (decision note and addendum, 2026-11-04).** Card §15 (`edab9fe9…`): compact labels + move lists kept, complete examples built per 32-row batch / 64-row scoring chunk; batched fit, start check and scores equal the eager ones bitwise on fakes. Conservative fit budget 12.55 GB (proposed requirement 12 GiB, not set). Revised fit projection 12,301 s, an upper bound (proposed KILL 18,600 s, not adopted). **The existing label path's conservative budget is 23.56 GB, about the lowest available memory observed (23.93 GB)**, dominated by 13.44 GB of held label rows. See #175.
 > **H-TB — batched fit accepted; fit requirement 12 GiB and both full-run ceilings ADOPTED; compact label storage and both full-run wrappers BUILT for launch review; nothing run (decision note, clarification and addendum, 2026-11-05).** Card §16 (`ccb3bc67…`): labels compacted as produced, with byte-identical shards, row lists and manifest on fakes; label budget 23.56 → 10.84 GB (proposed launch requirement 11 GiB); memory checks at both launches. Ceilings: label 13,190/13,200/13,210 s, fit 18,590/18,600/18,610 s. The 2.441 ms/row and 3.42 h fit figures are planning estimates, not bounds. Neither full run authorized. See #176.
 > **H-TB full label run — COMPLETED once (addendum, 2026-11-05).** Inner and outer exit 0, 8,478 s of wall time against the projected 8,719 s and the 13,200 s ceiling; gate restored, no survivors, record by script. 240,000 train and 24,000 val rows (15,590 / 1,899 red-first games), 528,000 teacher calls; selection, manifests and all 33 shards verified. Labels committed as the fit's input. See #177.
+> **H-TB fit check — ELIGIBLE (Post-closure entry 52, 2026-11-06).** One CPU fit, 15,000 updates, COMPLETED in 12,180 s (estimate 12,301 s; ceiling 18,600 s); clean cleanup. On 24,000 validation rows the student against calib020_0001: KL 0.574 vs 2.911 (F1 ✓, ratio 0.197), top-1 65.1% vs 29.7% (F2 ✓), value MSE 0.0703 vs 0.2530 (F3 ✓, ratio 0.278); all 64 trainable tensors moved, the 28 BatchNorm statistics unchanged. **Imitation of twixtbot's raw network on this position distribution only; playing strength untested; ELIGIBLE authorizes nothing.** See #178.
 
 ## Historical proposal check — programme now closed
 
@@ -2031,6 +2032,11 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
    - rerun `run label`, relabel any row, or reopen `HTB_LABEL_AUTHORIZED`;
    - edit, regenerate or reorder the committed selection or label record, or the shards in `~/twixt-cache/htb-pilot/labels-{train,val}`;
    - read the val labels to choose a method: they are scored by the fit's F1–F3 only.
+178. **The H-TB fit check is spent: ELIGIBLE (2026-11-06, entry 52).** Student `0e1cb621…` (state digest `586dca4f…`), in `~/twixt-cache/htb-pilot/`. Do **not**:
+   - rerun, extend or re-score the fit, or reopen `HTB_FIT_AUTHORIZED`;
+   - claim stronger play, or any cause of the gap (training scale, data, architecture), from F1–F3: they show imitation on this position distribution only (card §1);
+   - reuse the 24,000 validation rows to tune or select a later method;
+   - play, screen or deploy the student, or use it on the GPU, without a separately built and approved §9 stage.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -9783,3 +9789,55 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
   - **Arrays:** targets finite and non-negative, with mass summing to 1 within 4.9e-8, and 270–528 cells with mass (median 499). Values finite and within [-1, 1].
 - **Did it match a prediction?** None stated in advance for this step.
 - **Conclusion / status:** COMPLETED and verified. The label evidence is committed here, which `run fit` requires. The fit's gate opens in a separate one-line commit. See #177.
+
+#### Post-closure entry 52 — the H-TB fit check: whole-network distillation of twixtbot's raw network into calib020_0001's architecture, verdict ELIGIBLE (2026-11-06)
+
+- **Test:** card §§4–8 (`ccb3bc67…`).
+  - **Training data:** the unchanged 128×6 network, warm-started from `calib020_0001` (SHA-1 `209cf2d4…`, state digest `ae0e71fc…`), fitted as a whole to twixtbot's raw network's mirror-averaged policy and value. The data is 240,000 training rows from red-first C0 games (entry addendum, #177).
+  - **Scoring:** both networks are scored on 24,000 validation rows.
+- **Hypothesis (H-TB, card §1):** the student imitates the teacher much more closely than `calib020_0001` does.
+- **Why it was plausible:** recorded in the card and its source-comparison proposal (the read-only passes of 2026-11-03), and not restated here.
+- **Prediction on record (card §12):** "Directional only, with low-to-moderate confidence: F1–F3 pass." No probability, and no strength prediction.
+- **Criteria (fixed before any data):** F1 KL_S ≤ 0.5 × KL_R; F2 TOP_S > TOP_R (strict); F3 MSE_S ≤ 0.5 × MSE_R. ELIGIBLE needs all three, plus every §§3–6 check and unchanged BatchNorm statistics.
+- **What ran:**
+  - Worktree `TwixT_Game-htb-full-run`; fit gate opening `80d9ed43`, on top of the label evidence `4f2605e5` and the lifecycle test update `dfbaffd6`.
+  - Wrapper `htb-fit-run/01_wrapper.sh` (`28c5a0e4…`), launched 2026-11-05T21:06:20-0500, in the project `.venv` (3.14.10, MLX 0.30.3 CPU, NumPy 2.4.1, `MLX_ENABLE_TF32=0` for the process only).
+  - Recipe frozen and unchanged: 2 epochs, 32 rows per batch (both orientations), Adam lr 1e-4 (MLX defaults verified), value weight 1.0, L2 1e-4, clip 1.0, 15,000 updates. Examples are built per batch and per 64-row scoring chunk (card §15).
+- **Pre-launch checks** (`00_prelaunch.txt`):
+  - no panic report, no Unreal Editor, no BOINC process apart from the exempt podman VM, no leftover run process;
+  - 27.03 GB available against the 12 GiB requirement;
+  - checkpoint SHA-1 equal to the pin; label binding re-verified with the real commit check;
+  - no gate declaration open; destinations absent.
+- **Run:**
+
+  | | |
+  |---|---|
+  | inner / outer exit | 0 / 0, COMPLETED |
+  | wall time (supervised) | 12,180 s (planning estimate 12,301 s; ceiling TERM 18,590 / KILL 18,600 s) |
+  | idle wait (outside the ceiling) | about 60 s; idle gate held 60 s; BOINC check CLEAR |
+  | gate restored / survivors / record by | yes / none / script |
+  | memory available at start (the script's check) | 27,166,212,096 B against 12,884,901,888 B required |
+
+- **Result** (validation, 24,000 rows, mirror-averaged):
+
+  | Metric | calib020_0001 (R) | student (S) | criterion | holds |
+  |---|---|---|---|---|
+  | KL(T ‖ Q) | 2.9113 | 0.5745 | ≤ 1.4557 (S/R = 0.197) | **F1 ✓** |
+  | top-1 agreement | 0.2972 | 0.6514 | > 0.2972 | **F2 ✓** |
+  | value MSE | 0.2530 | 0.0703 | ≤ 0.1265 (S/R = 0.278) | **F3 ✓** |
+
+  **Verdict: ELIGIBLE.** The verdict was recomputed independently from the stored metrics and agrees.
+  - **Start check** (the reference on the first 2,048 training rows in epoch-0 order): KL 2.883, at or above the 0.01 floor; top-1 0.310; MSE 0.249.
+  - **Training log:** 600 entries, every one finite. The loss went from 4.60 at update 0 to about 1.5–1.9 at the end; these are single-batch values, not smoothed.
+- **Integrity:**
+  - 64 of 64 trainable tensors changed, with the encoder, policy head and value head all moved.
+  - All 28 BatchNorm running statistics unchanged, and no running statistic trainable.
+  - The reference digest stayed `ae0e71fc…` throughout, and the student started as its exact copy.
+  - The fit record binds the committed label record (`b71c785a…`) and selection (`161babe3…`). The student file's sha256 `0e1cb621…` equals the record's, and its state digest `586dca4f…` equals the fit's.
+  - The student stays in the cache, outside the repository.
+- **Did it match the prediction?** Yes, directionally: all three criteria pass, each by a wide margin (F1 at 0.20 of the reference, against the 0.5 needed; F3 at 0.28). No probability was offered, so there is no calibration to assess.
+- **Conclusion / status:**
+  - **ELIGIBLE: on this position distribution, the unchanged architecture can imitate twixtbot's raw network's policy and value far more closely than `calib020_0001` does.**
+  - Per card §1, this shows imitation only. It does not show stronger play, and does not say that scale, data or anything else caused the gap.
+  - ELIGIBLE authorizes nothing (card §8). Any §9 stage — screen or strength test, with its compute guards — needs its own build and approval. Not approved: evaluation games, GPU work, further training, deployment, pushing.
+  - See #178.

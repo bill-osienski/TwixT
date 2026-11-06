@@ -116,8 +116,8 @@ def test_THE_CARD_IS_THE_PINNED_ONE():
     assert hashlib.sha256((ROOT / H.CARD).read_bytes()).hexdigest() == H.CARD_SHA256
 
 
-#: the full runs already made, each ONCE, with their terminal status (ledger #177)
-SPENT_RUNS = {"label": "COMPLETED"}
+#: the full runs already made, each ONCE, with their terminal status (ledger #177, #178)
+SPENT_RUNS = {"label": "COMPLETED", "fit": "COMPLETED"}
 
 
 def test_BOTH_GATES_ARE_CLOSED_AND_BOTH_ENTRIES_REFUSE_BEFORE_ANY_WORK(capsys):

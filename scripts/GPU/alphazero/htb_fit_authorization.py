@@ -4,4 +4,4 @@
 CPU, fits the whole network to the committed labels and scores F1-F3, so it takes its own reviewed door. Opened for ONE
 approved run and restored on every exit. Created closed. This file may hold ONLY this declaration.
 """
-HTB_FIT_AUTHORIZED = True
+HTB_FIT_AUTHORIZED = False

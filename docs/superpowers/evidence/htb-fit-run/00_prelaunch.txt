@@ -1,0 +1,45 @@
+# H-TB full fit pre-launch checks, written 2026-11-05T21:06:05-0500 by Claude before the gate-opening commit
+## uptime
+21:06  up 3 days, 22:31, 6 users, load averages: 1.54 5.13 7.39
+## last boot
+{ sec = 1793590487, usec = 837585 } Sun Nov  1 22:34:47 2026
+## panic reports (find, both locations)
+none
+## Unreal Editor processes
+none
+## BOINC-named processes (podman VM exempt)
+none besides the podman VM
+## leftover htb processes
+none
+## memory
+51539607552
+Mach Virtual Memory Statistics: (page size of 16384 bytes)
+Pages free:                                   382200.
+Pages active:                                1233680.
+Pages inactive:                              1264430.
+Pages speculative:                              4717.
+Pages throttled:                                   0.
+## available (htb_pilot.available_memory) vs the approved fit requirement 12884901888 B
+{'physical_bytes': 51539607552, 'available_bytes': 27034107904, 'page_size': 16384} requirement 12884901888 ok
+## project .venv (metadata reads only, -I)
+3.14.10
+{'mlx': '0.30.3', 'numpy': '2.4.1'}
+mlx imported: False
+## reference checkpoint
+-rwx------@ 1 bill  staff  7524333 Jun 20 22:14 /Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors
+209cf2d4fd24a48553d259dd71b4954867b9473e  /Users/bill/projects/TwixT_Game/checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors
+## worktree
+dfbaffd68f142b4b22492b09a8ad69ca2d528b98
+dirty files: 0
+## label binding with the real commit check (read-only verifier)
+LABEL EVIDENCE VERIFIED (real commit check)
+## gates (all *_authorization.py in the worktree)
+False: 49  True: 0
+## card pin
+ccb3bc67e32e1e8ac0f60858fcac57e99e25f1e451df8ba9c45688e19e7ab423
+## wrapper
+28c5a0e4bf90a08c4e9cc06ce75ec12d69b1c667afb54c1b1fea74c74f160cd8
+## destinations (each must be absent)
+absent /Users/bill/projects/TwixT_Game-htb-full-run/docs/superpowers/evidence/htb-fit
+absent /Users/bill/twixt-cache/htb-pilot/student.safetensors
+01_wrapper.sh
