@@ -268,6 +268,8 @@ knob) is not a new hypothesis.
 > **H-TB confirmation test — BUILT for review; nothing run (addendum, 2026-11-06).** `htb_strength run strength`: 110 fresh pairs, the same frozen whole student against the original proven combination at 200 simulations; the screen's module pinned and reused (loop, boundary, seams, identities); admission adds the committed CONTINUE screen and its clean outer.json; the screen's block excluded. PASS only if mean − √(ln 20 / 220) > 0.5 (mean above 0.61669) with evaluations ≤ 1.05 and search seconds ≤ 1.10. Gate `HTB_STRENGTH_AUTHORIZED` closed (66 in all). Ceiling PROPOSED 6,600 s (TERM 6,590) from the screen's pace; its main risk is longer games. 82 new tests, 11/11 injected defects caught; 957 focused pass. See #182.
 > **H-TB confirmation test — build ACCEPTED with two corrections; seed preparation APPROVED (decision note, 2026-11-06, the user's build review).** (1) The draw boundary: reachable means are multiples of 1/440, so 135.5/220 is the nearest failing score and 136/220 still the first passing one; the verdict function was already correct. (2) Ceiling ADOPTED: TERM 11,690 / KILL 11,700 / cleanup 11,710 s, from the cycle-2 comparison's longer-game pace × 1.5, in place of the proposed 6,600 s. Games, simulations, rule and guards unchanged. Plan re-pinned. Then the four seed steps, once each. GPU launch, training, deployment and pushing not authorized. See #182.
 > **H-TB confirmation test — seeds PREPARED; returned for launch review; nothing run (addendum, 2026-11-06).** Block [202759800, 202760020), 220 seeds in the 2027 band, above the screen's retired block: survey CLEAN 55/55 (`ac1d9493`), pre-proof HOLDS 55/55 (`69d6b9c9`), registered last in ACCOUNTED, 56 → 57, with its bound plan (`427d6bd7`), post-proof HOLDS 55/55 (`bf74c327`). Lifecycle tests re-anchored. The ceiling (TERM 11,690 / KILL 11,700 / cleanup 11,710 s) and rule are adopted. GPU launch, training, deployment and pushing not authorized. See #183.
+> **H-TB confirmation test — seed preparation ACCEPTED; one GPU run of all 220 games and its closing APPROVED (decision note, 2026-11-06, the user's launch review).** The wrapper once (TERM 11,690 / KILL 11,700 / cleanup 11,710 s), opening only `HTB_STRENGTH_AUTHORIZED`; rule and settings frozen; then K1 once and K2 only if it reconciles. No partial scoring or retry. Training, deployment and pushing not authorized, including after a PASS. See #184.
+> **H-TB confirmation test — PASS (Post-closure entry 54, 2026-11-06).** The ONE run COMPLETED in 4,528 s (TERM 11,690 s); clean cleanup, gate restored. Mean pair score **0.9886** over 110 pairs (candidate 217 wins, reference 2, one state-cap draw); one-sided lower bound mean − √(ln 20 / 220) = **0.872 > 0.5**. Evaluations ratio **1.0495** (guard 1.05: within by 0.0005), search-seconds ratio 1.042 (guard 1.10). Both digests and eval mode unchanged from load to end. K1 RECONCILES 15/15; the whole block [202759800, 202760020) exposed and retired. **PASS is one-sided, against the original proven combination at 200 simulations only**; it does not identify a cause. Training, deployment and pushing not authorized. See #184.
 
 ## Historical proposal check — programme now closed
 
@@ -2075,6 +2077,14 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
    - rerun the survey or either proof, edit `evidence/htb-strength-run/plan.json`, or move, widen, expose or retire the block outside its closing procedure (plan §8.5);
    - open `HTB_STRENGTH_AUTHORIZED`, load the student or calib020_0001 on the GPU, or launch the wrapper without the user's launch approval;
    - pool these games with the screen's, or play any other run on this block.
+
+184. **The H-TB confirmation test is spent: PASS (2026-11-06, entry 54).** Block [202759800, 202760020) exposed and retired whole. Do **not**:
+   - rerun, extend, top up or re-score the test, rerun K1 or K2, or reopen `HTB_STRENGTH_AUTHORIZED`;
+   - pool its 220 games with the screen's 64, or reuse this block's seeds;
+   - read the PASS as more than a one-sided result against the original proven combination with `calib020_0001` at 200 simulations: not against other opponents, other simulation counts or twixtbot, and not as identifying which part of the distillation causes the difference (entry 52's causes remain unresolved);
+   - read 0.989 as a precise effect size: the bound is a lower bound (0.872), and the games are dominated by short wins;
+   - treat the evaluations guard's narrow pass (1.0495 against 1.05) as headroom, or loosen either guard for a later test without review;
+   - start further training, deployment or pushing on this result: none is authorized, including after a PASS.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -10148,3 +10158,80 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
   - All 66 gates are closed.
 - **Nothing else ran:** no model load, gate opening or game. The block is ACCOUNTED only.
 - **For the launch review:** the prepared block and proofs. The ceiling (TERM 11,690 / KILL 11,700 / cleanup 11,710 s) and the rule are already adopted. GPU model loading and the 220 games need approval. See #183.
+
+#### Decision note — seed preparation accepted; one GPU confirmation run of all 220 games and its seed closing approved (2026-11-06, the user's launch review)
+
+- **The user's check, read-only:** the proof hashes, the plan binding, the exact ACCOUNTED-only registration, the unused block, the revised pin and ceiling, the unchanged verdict logic and all 66 gates closed.
+- **Approved, launch conditions:**
+  1. fresh environment, artifact, registry, panic/reboot, idle and BOINC checks; Unreal Editor closed;
+  2. a clean worktree with a one-line commit opening only `HTB_STRENGTH_AUTHORIZED`;
+  3. the reviewed wrapper once: TERM 11,690 s, KILL 11,700 s, cleanup through 11,710 s;
+  4. the candidate, reference, simulations and rules frozen; screen games excluded.
+- **The rule:** PASS only if mean − √(ln 20 / 220) > 0.5, with evaluations ratio ≤ 1.05 and search-seconds ratio ≤ 1.10. Monitor progress and machine health; assess the score after completion.
+- **After a started run and confirmed cleanup:** commit the evidence; run K1 once; apply K2 only if it RECONCILES, exposing the derived started prefix and retiring the whole block; append the results to the ledger with routine lifecycle-test updates and focused checks.
+- **A timeout or interruption is VOID**, with no partial scoring or automatic retry. Any failure or uncertain cleanup returns for assessment.
+- **Also permitted:** removing the clean, merged preparation worktree and branch (done: `TwixT_Game-htb-strength-prep` and `htb-strength-prep`, after confirming both clean and merged).
+- **Not authorized:** further training, deployment and pushing, **including after a PASS**.
+
+#### Post-closure entry 54 — the H-TB confirmation test: the whole student in the proven combination, 110 fresh colour-reversed pairs, PASS (2026-11-06)
+
+- **Test:** the ONE approved run of `htb_strength run strength`: 220 games, the whole H-TB student (`0e1cb621…`, state digest `586dca4f…`) against the original proven combination (`calib020_0001`, digest `ae0e71fc…`), both averaged, `RootSequentialHalvingMCTS` at 200 simulations, halving from ply 20, on [202759800, 202760020), under TERM 11,690 s / KILL 11,700 s, observed through 11,710 s. The screen's block [202759500, 202759564) was excluded.
+- **Hypothesis (card §9.2):** the student, played whole inside the proven combination, scores above one half against that combination with `calib020_0001`, at equal measured compute.
+- **Why plausible:** the screen (entry 53) scored 0.953 over 32 pairs; the fit (entry 52) brought the student much closer to twixtbot's raw network than `calib020_0001` (KL 0.574 vs 2.911); twixtbot won all 128 G3 games against our model.
+- **Prediction on record:** None stated in advance (plan §1; card §12 makes no strength prediction).
+- **What ran:**
+  - **Pre-launch checks**, recorded in `evidence/htb-strength-run/00_prelaunch.txt`, all passed:
+    - no panic reports, and no reboot since 2026-11-01;
+    - Unreal Editor closed; no BOINC process (background check CLEAR, the podman VM exempt); no leftover processes;
+    - Python 3.14.10, MLX 0.30.3, NumPy 2.4.1, with MLX not imported;
+    - checkpoint SHA-1 `209cf2d4…`; student sha256 `0e1cb621…`;
+    - the plan (`31440d67…`), the card and all 8 pinned files matched;
+    - admission: fit ELIGIBLE / COMPLETED, screen CONTINUE / COMPLETED;
+    - `plan.json` bound to the survey record; all 220 seeds ACCOUNTED and none exposed, retired or test-only; no overlap with the screen's block;
+    - registry `b8ebebe8…`; post-proof record `455cf84e…`; every gate closed; wrapper `935f577d…`; every destination absent.
+
+    The gate-inventory and H-TB strength tests (92) passed in the worktree first.
+  - **Commits:** clean linked worktree `TwixT_Game-htb-strength-run` (branch `htb-strength-run`) from `8118cd28`. One-line gate opening `56a3bff0`. Evidence and the restored gate `3f0bac00`; K1 `b618cd32`; K2 `ff3d028d`; tests `ba01525e`.
+  - **Timing:** the idle gate held after about 192 s, outside the ceiling. The wrapper started at 20:29:14 and ended at 21:47:54 (-0500).
+  - **Monitoring:** every 10 minutes, games started, load, free memory, BOINC and Unreal were checked. No BOINC process appeared, Unreal stayed closed, and free memory stayed between 9.2 and 13.0 GiB. Game outcomes were not read until the run had ended.
+- **Result, run:**
+  - Inner and outer exit 0, COMPLETED, in **4,528 s** of wall time against the 11,690 s TERM.
+  - The gate was restored by the wrapper, equal to the pre-open commit. No survivors; record by script; run stderr empty.
+  - All 222 background checks passed.
+- **Identity and mode checks:**
+  - The student's state digest `586dca4f…` and the reference's `ae0e71fc…` were the fit's at load and again at the end.
+  - Both sides: 42 modules, 14 BatchNorm, 0 in training mode at load and at the end.
+  - Opening probe at the empty board: 528 legal moves, max prior difference 0.149, value difference 0.543.
+  - `MLX_ENABLE_TF32=0` at start and end.
+  - 220 of 220 games started in order (`game_start` slots 0–219) and ended. The candidate was red in the even games. 220 replays kept.
+- **Result, confirmation test:**
+  - Mean pair score **0.988636** over 110 pairs (108.75). Half-width √(ln 20 / 220) = 0.116692, so the **lower bound is 0.871945 > 0.5**. Verdict **PASS**, with no reasons against.
+  - Candidate 217 wins, reference 2, and one draw by state cap. As red the candidate won 110 of 110; as black, 107 of 110.
+  - The three non-wins, all with the candidate black: game 21 (lost in 49 plies), game 107 (state cap at 280 plies, a draw) and game 109 (lost in 43 plies). Pair scores: pair 10 scored 0.5, pair 53 scored 0.75 and pair 54 scored 0.5.
+  - This is the first run in this programme with a draw-containing pair score, the case the review's boundary correction covered.
+- **Compute guards (candidate over reference, the run's totals):**
+  - **Evaluations ratio 1.04955 (guard 1.05): within, by 0.00045.** Search-seconds ratio 1.0415 (guard 1.10): within.
+  - Searches 4,260 vs 4,152; network positions 1,666,198 vs 1,587,542; search seconds 2,299.6 vs 2,207.9.
+  - *Observation, not a rule change:* per search, the candidate evaluated 391.1 positions against 382.4, a ratio of 1.023. The rest of the totals' ratio comes from the candidate making 108 more searches. The guard is on totals, as frozen, and it passed.
+- **Timing against the ceiling:**
+  - Games averaged 38.2 plies (median 33, range 25–280) and 20.5 s, at 0.536 s per ply.
+  - Game time totalled 4,511.7 s, close to the screen-pace estimate of 4,396.6 s and well under the adopted 11,690 s TERM.
+  - The one 280-ply game took 160.9 s.
+- **Closing:**
+  - K1 was run once on a clean tree at `3f0bac00`: **RECONCILES**, controls 15/15, record sha256 `e2247972…`. All 220 games started, so the whole block is exposed.
+  - K2, read from the plan and the K1 record: [202759800, 202760020) appended last to EXPOSED (54 → 55) and RETIRED (52 → 53). An AST check showed only those two lists changed. The block is retired permanently. Registry sha256 `1f6b9ec5…`.
+- **Tests:** these lifecycle tests were re-anchored to the run and closing, with no seed literal:
+  - three H-TB strength tests: the wrapper, seed-state and closing tests;
+  - the H-TB screen's state test;
+  - the 2027-band test, now nine closed blocks.
+
+  Focused suites, serially (H-TB strength and screen, 2027 band, gate inventory, registry, seed selection, `test_h1_runner`): 347 pass. The wider sweep is recorded with the merge.
+- **Did it match the prediction?** No prediction was stated. PASS meets the frozen card §9.2 rule. The lower bound (0.872) is far above 0.5, and both compute guards hold, the evaluations guard narrowly.
+- **Conclusion / status:**
+  - **PASS: the H-TB student, played whole inside the original proven combination, scores above one half against that combination with `calib020_0001`, at equal measured compute (one-sided, α = 0.05).** This is the card's formal confirmation of the screen's preliminary evidence.
+  - Limits:
+    - The result is against this reference at these settings only. It says nothing about other opponents, other simulation counts or twixtbot itself.
+    - It does not identify which part of the distillation causes the difference; entry 52's causes remain unresolved.
+    - The screen's games are not pooled with these.
+  - The student file, the fit record and the screen record are unchanged.
+  - **Not authorized:** further training, deployment and pushing, including after this PASS. See #184.
