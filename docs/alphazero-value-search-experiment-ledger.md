@@ -10235,3 +10235,5 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
     - The screen's games are not pooled with these.
   - The student file, the fit record and the screen record are unchanged.
   - **Not authorized:** further training, deployment and pushing, including after this PASS. See #184.
+
+- **Wider sweep (addendum to entry 54, 2026-11-06), after the fast-forward of `htb-pilot-build` to `9c7355f8`, in the main checkout, serially:** every combination-policy, mirror-halving, H-TB, seed and E4 suite, the gate inventory and `test_h1_runner`: **1,399 pass**, 1 deselected, `test_e4_screen_command` included. All 66 gates are closed.
