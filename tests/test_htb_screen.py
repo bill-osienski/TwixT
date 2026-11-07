@@ -550,7 +550,9 @@ def test_THE_SCREEN_S_SEEDS_ARE_SURVEYED_PROVEN_REGISTERED_AND_CLOSED_and_every_
     RE-ANCHORED 2026-11-06 (the ONE run 25f4863a; K1 e819742b RECONCILES 15/15; K2 74025ee2): every game started, so
     the whole block is EXPOSED and RETIRED, each its list's last entry, and no seed of it is available again.
     RE-ANCHORED 2026-11-06 (the H-TB confirmation test's registration 427d6bd7): its block, read from its committed plan,
-    is now ACCOUNTED's last entry, after this one and above it; this block is still EXPOSED's and RETIRED's last."""
+    is now ACCOUNTED's last entry, after this one and above it; this block is still EXPOSED's and RETIRED's last.
+    RE-ANCHORED 2026-11-06 (the confirmation test's closing, K2 ff3d028d): its block is now also EXPOSED's and RETIRED's
+    last entry, after this one."""
     from scripts.GPU.alphazero import e4_screen_reference as REG
     from scripts.GPU.alphazero import seed_band_2027 as SB
     S = _module("survey")
@@ -573,7 +575,7 @@ def test_THE_SCREEN_S_SEEDS_ARE_SURVEYED_PROVEN_REGISTERED_AND_CLOSED_and_every_
     assert block[1] <= later[0]
     assert all(hi <= block[0] for lo, hi in REG.ACCOUNTED_SEED_INTERVALS[:-2] if hi > SB.BAND[0])
     for intervals in (REG.EXPOSED_SEED_INTERVALS, REG.RETIRED_SEED_INTERVALS):
-        assert intervals.count(block) == 1 and intervals[-1] == block
+        assert intervals.count(block) == 1 and intervals[-2:] == (block, later)
     assert not any(lo < block[1] and block[0] < hi for lo, hi in REG.TEST_ONLY_SEED_INTERVALS)
     assert all(REG.seed_is_accounted(s) and REG.seed_is_exposed(s) and REG.seed_is_retired(s)
                and REG.seed_is_unavailable(s) and not REG.seed_is_test_only(s) for s in range(*block))

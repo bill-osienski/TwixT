@@ -188,7 +188,7 @@ def test_THE_GAP_FLOOR_IS_THE_BLOCK_S_SIZE_against_literals_in_either_band():
 
 # ─────────────────────────────── the real state ───────────────────────────────
 
-def test_REAL_STATE_the_2027_band_holds_eight_closed_blocks():
+def test_REAL_STATE_the_2027_band_holds_nine_closed_blocks():
     """RE-ANCHORED 2026-10-30 (registration 326004d0): the band's first and only registered block is generation's,
     read from its committed plan (no literal here), ACCOUNTED only; the rule would now place a later block above it.
     RE-ANCHORED 2026-10-30 (generation's closing, K2 569ba2a4): that block is now also EXPOSED and RETIRED whole, the
@@ -227,7 +227,9 @@ def test_REAL_STATE_the_2027_band_holds_eight_closed_blocks():
     7f2ab4d7 until this re-anchor: the seed preparation's focused checks did not include this file.)
     RE-ANCHORED 2026-11-06 (the H-TB confirmation test's registration 427d6bd7): its block, read from its committed
     plan, is the band's ninth ACCOUNTED entry, above the H-TB screen's, and in no other list; the eight closed blocks
-    are still the band's only EXPOSED and RETIRED entries; the rule would now place a later block above it."""
+    are still the band's only EXPOSED and RETIRED entries; the rule would now place a later block above it.
+    RE-ANCHORED 2026-11-06 (the confirmation test's run and closing, K2 ff3d028d): its block is now also EXPOSED and
+    RETIRED whole, after the H-TB screen's, in each list: nine closed blocks."""
     import json
     from scripts.GPU.alphazero import e4_screen_reference as REG
     blocks = []
@@ -250,7 +252,7 @@ def test_REAL_STATE_the_2027_band_holds_eight_closed_blocks():
         [gen, screen, strength, cycle2, attempt2, screen2, strength2, htb, htb_strength]
     for name in ("EXPOSED_SEED_INTERVALS", "RETIRED_SEED_INTERVALS"):
         assert [iv for iv in getattr(REG, name) if iv[1] > NEW] == \
-            [gen, screen, strength, cycle2, attempt2, screen2, strength2, htb], name
+            [gen, screen, strength, cycle2, attempt2, screen2, strength2, htb, htb_strength], name
     assert all(hi <= NEW for _lo, hi in REG.TEST_ONLY_SEED_INTERVALS)
     assert B.candidate(REG.ACCOUNTED_SEED_INTERVALS, [], 64)[2][0] >= htb_strength[1] + 64
 
