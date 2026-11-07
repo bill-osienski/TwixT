@@ -270,6 +270,7 @@ knob) is not a new hypothesis.
 > **H-TB confirmation test — seeds PREPARED; returned for launch review; nothing run (addendum, 2026-11-06).** Block [202759800, 202760020), 220 seeds in the 2027 band, above the screen's retired block: survey CLEAN 55/55 (`ac1d9493`), pre-proof HOLDS 55/55 (`69d6b9c9`), registered last in ACCOUNTED, 56 → 57, with its bound plan (`427d6bd7`), post-proof HOLDS 55/55 (`bf74c327`). Lifecycle tests re-anchored. The ceiling (TERM 11,690 / KILL 11,700 / cleanup 11,710 s) and rule are adopted. GPU launch, training, deployment and pushing not authorized. See #183.
 > **H-TB confirmation test — seed preparation ACCEPTED; one GPU run of all 220 games and its closing APPROVED (decision note, 2026-11-06, the user's launch review).** The wrapper once (TERM 11,690 / KILL 11,700 / cleanup 11,710 s), opening only `HTB_STRENGTH_AUTHORIZED`; rule and settings frozen; then K1 once and K2 only if it reconciles. No partial scoring or retry. Training, deployment and pushing not authorized, including after a PASS. See #184.
 > **H-TB confirmation test — PASS (Post-closure entry 54, 2026-11-06).** The ONE run COMPLETED in 4,528 s (TERM 11,690 s); clean cleanup, gate restored. Mean pair score **0.9886** over 110 pairs (candidate 217 wins, reference 2, one state-cap draw); one-sided lower bound mean − √(ln 20 / 220) = **0.872 > 0.5**. Evaluations ratio **1.0495** (guard 1.05: within by 0.0005), search-seconds ratio 1.042 (guard 1.10). Both digests and eval mode unchanged from load to end. K1 RECONCILES 15/15; the whole block [202759800, 202760020) exposed and retired. **PASS is one-sided, against the original proven combination at 200 simulations only**; it does not identify a cause. Training, deployment and pushing not authorized. See #184.
+> **H-TB confirmation test — PASS ACCEPTED (decision note, 2026-11-06, the user's independent review).** Stronger play than the original proven combination is demonstrated **within the declared compute allowances** (evaluations ratio 1.049546 ≤ 1.05, search-seconds ratio 1.041526 ≤ 1.10), against this opponent and protocol only; no part of the distillation is isolated as the cause. No rerun needed. Two dated wording corrections to entry 54. The validated student stays unchanged. Integration may be considered separately; training, deployment and pushing not authorized. See #184.
 
 ## Historical proposal check — programme now closed
 
@@ -2085,6 +2086,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
    - read 0.989 as a precise effect size: the bound is a lower bound (0.872), and the games are dominated by short wins;
    - treat the evaluations guard's narrow pass (1.0495 against 1.05) as headroom, or loosen either guard for a later test without review;
    - start further training, deployment or pushing on this result: none is authorized, including after a PASS.
+   - *Clarification (2026-11-06, the user's acceptance):* describe the result as stronger play **within the declared compute allowances** (evaluations ≤ 1.05, search seconds ≤ 1.10), not at exactly equal compute; and do not modify the validated student file (`0e1cb621…`).
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -10237,3 +10239,34 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
   - **Not authorized:** further training, deployment and pushing, including after this PASS. See #184.
 
 - **Wider sweep (addendum to entry 54, 2026-11-06), after the fast-forward of `htb-pilot-build` to `9c7355f8`, in the main checkout, serially:** every combination-policy, mirror-halving, H-TB, seed and E4 suite, the gate inventory and `test_h1_runner`: **1,399 pass**, 1 deselected, `test_e4_screen_command` included. All 66 gates are closed.
+
+#### Decision note — the confirmation test's PASS accepted; two wording corrections to entry 54 (2026-11-06, the user's independent review)
+
+- **Accepted:** entry 54's PASS. In the user's words: stronger play than the original proven combination is demonstrated within the declared compute limits.
+- **The user's independent check, read-only:**
+  - 217 wins, 2 losses and 1 draw; mean pair score 0.988636;
+  - the predeclared one-sided lower bound, 0.871945 > 0.5;
+  - evaluations ratio 1.049546 and search-seconds ratio 1.041526, both within their guards;
+  - all 220 replay records, the frozen identities, the cleanup and the exact seed closing;
+  - all 66 gates closed.
+- **No rerun is needed for this claim.**
+- **Scope, unchanged:**
+  - The result is specific to this opponent (the original proven combination with `calib020_0001`) and this protocol (both averaged, 200 simulations, halving from ply 20, 24×24).
+  - It does not isolate which part of the distillation caused the advantage.
+- **Correction 1 (wording, 2026-11-06):** entry 54's hypothesis and conclusion, and plan §1, say "at equal measured compute". Read this as **within the declared compute allowances**: the candidate's totals were up to 1.05 times the reference's evaluations and 1.10 times its search seconds. The run's ratios were 1.049546 and 1.041526, so compute was not exactly equal. The plan, the rule and the record are unchanged.
+- **Correction 2 (fact, 2026-11-06):** entry 54 says "This is the first run in this programme with a draw-containing pair score". **That is incorrect.** Earlier committed records already contain 0.25 or 0.75 pair scores. Counted from each record's `pair_scores`:
+
+  | Record | Pairs | Pairs scoring 0.25 or 0.75 |
+  |---|---|---|
+  | mirror-halving screen | 32 | 1 |
+  | mirror-halving strength attempt 2 | 509 | 15 |
+  | combination-policy screen | 32 | 2 |
+  | combination-policy strength | 509 | 37 |
+  | cycle-2 screen | 32 | 1 |
+  | cycle-2 strength | 509 | 43 |
+
+  The rest of entry 54 stands. The historical evidence is preserved unchanged.
+- **The validated student stays unchanged:** `~/twixt-cache/htb-pilot/student.safetensors`, sha256 `0e1cb621…`, state digest `586dca4f…`.
+- **The experimental confirmation is complete.** Integration may be considered separately; it needs its own proposal and approval.
+- **Also permitted:** removing the clean, merged run worktree and branch (done: `TwixT_Game-htb-strength-run` and `htb-strength-run`, after confirming both clean and merged).
+- **Not authorized:** further training, deployment and pushing.
