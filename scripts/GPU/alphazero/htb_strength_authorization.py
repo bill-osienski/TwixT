@@ -6,4 +6,4 @@ loader and plays the 110-pair confirmation test (220 games) of the student in th
 proven combination on its own registered block, so it takes its own reviewed door. Opened for ONE approved run and
 restored on every exit. Created closed. This file may hold ONLY this declaration.
 """
-HTB_STRENGTH_AUTHORIZED = False
+HTB_STRENGTH_AUTHORIZED = True
