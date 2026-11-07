@@ -271,6 +271,7 @@ knob) is not a new hypothesis.
 > **H-TB confirmation test — seed preparation ACCEPTED; one GPU run of all 220 games and its closing APPROVED (decision note, 2026-11-06, the user's launch review).** The wrapper once (TERM 11,690 / KILL 11,700 / cleanup 11,710 s), opening only `HTB_STRENGTH_AUTHORIZED`; rule and settings frozen; then K1 once and K2 only if it reconciles. No partial scoring or retry. Training, deployment and pushing not authorized, including after a PASS. See #184.
 > **H-TB confirmation test — PASS (Post-closure entry 54, 2026-11-06).** The ONE run COMPLETED in 4,528 s (TERM 11,690 s); clean cleanup, gate restored. Mean pair score **0.9886** over 110 pairs (candidate 217 wins, reference 2, one state-cap draw); one-sided lower bound mean − √(ln 20 / 220) = **0.872 > 0.5**. Evaluations ratio **1.0495** (guard 1.05: within by 0.0005), search-seconds ratio 1.042 (guard 1.10). Both digests and eval mode unchanged from load to end. K1 RECONCILES 15/15; the whole block [202759800, 202760020) exposed and retired. **PASS is one-sided, against the original proven combination at 200 simulations only**; it does not identify a cause. Training, deployment and pushing not authorized. See #184.
 > **H-TB confirmation test — PASS ACCEPTED (decision note, 2026-11-06, the user's independent review).** Stronger play than the original proven combination is demonstrated **within the declared compute allowances** (evaluations ratio 1.049546 ≤ 1.05, search-seconds ratio 1.041526 ≤ 1.10), against this opponent and protocol only; no part of the distillation is isolated as the cause. No rerun needed. Two dated wording corrections to entry 54. The validated student stays unchanged. Integration may be considered separately; training, deployment and pushing not authorized. See #184.
+> **H-TB integration — PROPOSAL drafted for review; nothing implemented (decision note, 2026-11-06).** `docs/superpowers/2026-11-06-htb-integration-proposal.md`: the product already serves calib020_0001 (`c34b7ff3297c785a`), so the network swap is an ONNX export of the same architecture. The gap is the search: product `hard` is an 800-simulation argmax, not the tested mirror-averaged 200-simulation halving protocol. The proposal ports the reviewed Python into two new server modules for `hard` only, keeps c34b7ff for rollback, and lists behaviour outside the protocol, validation steps V1–V8 and 5–7 days of effort. No export, model load, game, deployment or push.
 
 ## Historical proposal check — programme now closed
 
@@ -10270,3 +10271,26 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
 - **The experimental confirmation is complete.** Integration may be considered separately; it needs its own proposal and approval.
 - **Also permitted:** removing the clean, merged run worktree and branch (done: `TwixT_Game-htb-strength-run` and `htb-strength-run`, after confirming both clean and merged).
 - **Not authorized:** further training, deployment and pushing.
+
+#### Decision note — the H-TB integration proposal drafted; returned for review (2026-11-06)
+
+- **Authorized (the user, 2026-11-06):** read-only source inspection, and writing the minimal integration proposal for the validated student (sha256 `0e1cb621…`) and this note. Not authorized: implementation, ONNX export or conversion, model loading, training, benchmarks, games, deployment and pushing.
+- **Written:** `docs/superpowers/2026-11-06-htb-integration-proposal.md`. Nothing else changed, and the student file is unchanged.
+- **Findings from inspection:**
+  - **The network swap is small.** The served default `c34b7ff3297c785a` is calib020_0001's ONNX export, and the student shares its architecture.
+  - **The search is the gap.** The tested protocol's search path (`search_with_root`) is serial, as the product's is. But product `hard` runs 800 plain simulations with argmax. The tested protocol is the mirror-averaged evaluator, 200 simulations, temperature-1.0 opening sampling at plies 0–19, and root sequential halving's choice from ply 20, with a 280-ply cap.
+  - **Smaller differences:** tie-breaking (product lexicographic exact; research seeded-random within 1e-8), the RNG streams, and the runtime (ORT CPU vs MLX GPU).
+- **Proposal, in brief:**
+  - One unmodified export into a new content-addressed `models/<id>/`.
+  - New `server/mirror_inference.js` and `server/root_halving.js`, transcribing the reviewed Python; `server/mcts.js` is not edited.
+  - `hard` routed to that protocol with the student (option B); easy, medium and the analysis endpoints unchanged.
+  - Rollback by two one-line reverts, with c34b7ff and 1d64027 retained byte-identical.
+- **Validation steps V1–V8, each needing approval:**
+  - exact mirror and halving transcription against Python fixtures, with no model;
+  - Phase 2's export-parity surfaces and tolerances for the student, plus averaged-output parity;
+  - routing, legal-move and unchanged-path checks;
+  - a smoke run;
+  - a recommended product-stack match before any deployment. The PASS transfers to the product only by argument: game-for-game reproduction is impossible, and the opponent differs.
+- **Decisions D1–D5 are for the user:** scope (hard only), the opening sampling, client overrides, the match requirement, and the analysis endpoints.
+- **Prediction:** None stated in advance. This is an engineering proposal, not an experiment.
+- **Not authorized:** implementation, export, model loading, training, benchmarks, games, deployment and pushing.
