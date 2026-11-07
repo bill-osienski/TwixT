@@ -1,0 +1,390 @@
+{
+ "admission": {
+  "docs/superpowers/evidence/htb-fit-run/outer.json": "COMPLETED",
+  "docs/superpowers/evidence/htb-fit/record.json": "ELIGIBLE",
+  "docs/superpowers/evidence/htb-screen-run/outer.json": "COMPLETED",
+  "docs/superpowers/evidence/htb-screen/record.json": "CONTINUE"
+ },
+ "background_checks": 222,
+ "card": "docs/superpowers/2026-11-03-htb-twixtbot-distillation-pilot-card.md",
+ "card_sha256": "ccb3bc67e32e1e8ac0f60858fcac57e99e25f1e451df8ba9c45688e19e7ab423",
+ "checkpoint_sha1": "209cf2d4fd24a48553d259dd71b4954867b9473e",
+ "cost_totals": {
+  "candidate": {
+   "halving_searches": 2060,
+   "network_infer_calls": 1666198,
+   "network_positions": 1666198,
+   "network_seconds": 1782.4438465695712,
+   "search_seconds": 2299.626735527476,
+   "searches": 4260
+  },
+  "reference": {
+   "halving_searches": 1952,
+   "network_infer_calls": 1587542,
+   "network_positions": 1587542,
+   "network_seconds": 1697.8167168170912,
+   "search_seconds": 2207.938993488904,
+   "searches": 4152
+  }
+ },
+ "digests": {
+  "candidate": "586dca4fcdb87c2611449099b4b7acfda460b13b6717c573a55011b8620a630b",
+  "reference": "ae0e71fc395ce6b95d24f9e696f02870c7b3bfc6f8ea83f9d5d0a85c4979816b"
+ },
+ "digests_at_end": {
+  "candidate": "586dca4fcdb87c2611449099b4b7acfda460b13b6717c573a55011b8620a630b",
+  "reference": "ae0e71fc395ce6b95d24f9e696f02870c7b3bfc6f8ea83f9d5d0a85c4979816b"
+ },
+ "environment": {
+  "executable": "/Users/bill/projects/TwixT_Game/.venv/bin/python",
+  "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+  "python": "3.14.10 (main, Oct 25 2026, 17:12:00) [Clang 21.0.0 (clang-2100.3.34.2)]"
+ },
+ "games_summary": {
+  "candidate_wins": 217,
+  "draws": 1,
+  "reference_wins": 2,
+  "state_caps": 1
+ },
+ "guards": {
+  "evaluations_ratio": 1.0495457757967979,
+  "evaluations_within": true,
+  "guards": {
+   "evaluations": 1.05,
+   "search_seconds": 1.1
+  },
+  "search_seconds_ratio": 1.041526392852771,
+  "search_seconds_within": true
+ },
+ "head": "56a3bff065ab9f35ad44dfae14d73b02fc30e0a0",
+ "kind": "htb-strength-record/1",
+ "load_seconds": 0.017,
+ "loadavg_after": [
+  2.09814453125,
+  2.24853515625,
+  2.26806640625
+ ],
+ "loadavg_before": [
+  1.5830078125,
+  2.0478515625,
+  1.80078125
+ ],
+ "modes_at_end": {
+  "candidate": {
+   "batchnorm": 14,
+   "modules": 42,
+   "modules_in_training_mode": 0
+  },
+  "reference": {
+   "batchnorm": 14,
+   "modules": 42,
+   "modules_in_training_mode": 0
+  }
+ },
+ "modes_at_load": {
+  "candidate": {
+   "batchnorm": 14,
+   "modules": 42,
+   "modules_in_training_mode": 0
+  },
+  "reference": {
+   "batchnorm": 14,
+   "modules": 42,
+   "modules_in_training_mode": 0
+  }
+ },
+ "modules": {
+  "scripts/GPU/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "scripts/GPU/alphazero/__init__.py": "c6f13806151399f9e6be707271537b166ec79ba9729d8339800127c826adc4ab",
+  "scripts/GPU/alphazero/background_compute.py": "b26c2c5c1dea53a9587b2d8c0e3235de5b8c6fa0d1bfb1bf638dc4e57744722e",
+  "scripts/GPU/alphazero/capacity_c0_inventory.py": "b31dce603ca4715525e73ea61a053ec8d5c19136d3ab6ca68f93a2e614b14786",
+  "scripts/GPU/alphazero/combination_policy_cycle2_generate2_authorization.py": "857a370aea24350ade7149984d781ee6e318bf012865709419a73c9de7e09dca",
+  "scripts/GPU/alphazero/combination_policy_cycle2_generate_authorization.py": "b2412aa83c775503e79c38dc33095c0658287709cf0bf7b5da5602c446f33087",
+  "scripts/GPU/alphazero/combination_policy_cycle2_screen_authorization.py": "52e41dd26fbb76b51dccbe17f56e1b1a107c8b5605d9d4d62b63d4ec66a57161",
+  "scripts/GPU/alphazero/combination_policy_cycle2_strength_authorization.py": "0b45cfaf4a9c0619fd4a07de5f18113f76c7694f45fbd300e7c401bbc5653359",
+  "scripts/GPU/alphazero/combination_policy_cycle2_train_authorization.py": "f6112efa4b038b1287ec71de587d9176aed551846a6644ee4cbfaa1720fb82ff",
+  "scripts/GPU/alphazero/combination_policy_generate_authorization.py": "7797a8b471ca846baf637b0bca0fbe85961d646b435ecdf679071621c3c390ae",
+  "scripts/GPU/alphazero/combination_policy_pilot.py": "47d2e05e64288f6040aecaedfee63f7ffd46e75d28c149d100ee8391b0f00aab",
+  "scripts/GPU/alphazero/combination_policy_screen_authorization.py": "53fac91d2f6c886aefe590098972965dbfb48d398298b68f037f1d2f889ecb18",
+  "scripts/GPU/alphazero/combination_policy_strength_authorization.py": "dc26f8f8ced18ae5a1f4f30d8ad9f9738cd51d388b19e29ea6606e487540655c",
+  "scripts/GPU/alphazero/combination_policy_throughput2_authorization.py": "3bfe7bc510e1e34260c0bf0c897e5795bb651f066e48c0166eb9d15f0c953059",
+  "scripts/GPU/alphazero/combination_policy_throughput_authorization.py": "8b4c577eca00c3d0d7ca329ee28319a460f36ca67bb4b5df3148a0348edf52c6",
+  "scripts/GPU/alphazero/combination_policy_train_authorization.py": "ebf070b43051c4ff4bb3e7fe688c115a6580a77eff7deb63d5e88d9a73c18cc5",
+  "scripts/GPU/alphazero/combination_selfplay.py": "1872145992f87b824283b0696b0e24d98c92fa597d81753fe9329afb8a22f124",
+  "scripts/GPU/alphazero/connectivity_diagnostics.py": "77a63a54c0f1c17cb2814061a04331402f120c14562d042119b3c390eba6ea78",
+  "scripts/GPU/alphazero/e4_screen_reference.py": "b8ebebe82d7efbe0c4b009c1fe2e04543da583c5a7aa2df893664c99792e75bc",
+  "scripts/GPU/alphazero/eval_integrity.py": "bfedf8d677dd5391e389f4152de2a220f4cd70510e17b0643eaf1fbb011b3310",
+  "scripts/GPU/alphazero/eval_readout.py": "f0f5908854365988b5311fd5f90e154144a9ed3ad4721eac38073600d6165b63",
+  "scripts/GPU/alphazero/eval_replay.py": "702c924fecac9a211470f077e2e65dc0c1ee7f6461665de00fb4d2a08aa70cd6",
+  "scripts/GPU/alphazero/eval_runner.py": "6bc43781ab92c3bbdbb2718078f385e3d908f7637678333418ed65fc92bdb9a3",
+  "scripts/GPU/alphazero/evaluator.py": "043388192eaeb55eda58057d5f15160866b7ba0ecd8d117ff4e913f00327d8c2",
+  "scripts/GPU/alphazero/external_learning.py": "569a4a2b25e543d22494032563711af1225017ff433e69e90494c7c3c187caee",
+  "scripts/GPU/alphazero/external_learning_authorization.py": "a125240f2971eba42d64c7681896626edd87bc77c5167c2d091f4390f3223260",
+  "scripts/GPU/alphazero/external_learning_stage2.py": "002c8f153077fe0d799d0a73eb03d08d703db372ad0e419fe0b0c69363a132c8",
+  "scripts/GPU/alphazero/external_learning_stage2_authorization.py": "ce3ec3b6b82798483a5d1d65c98a24c71e39dd09b1dcdd5fc1d3146ba2b87bfb",
+  "scripts/GPU/alphazero/external_learning_stage3.py": "8bb0bea482565ca0d051cf8962c34d1e9ff0cd620fda14c34dd8df4381e2d21c",
+  "scripts/GPU/alphazero/external_learning_stage3_authorization.py": "3664ea262727f5f1b3c074b386f1dc5a072b123f9d52746754795b26951509bf",
+  "scripts/GPU/alphazero/game/__init__.py": "b8cba656f4cdd17ca1fce240224623d2ed631904a035425a30ef4a7be2069122",
+  "scripts/GPU/alphazero/game/twixt_state.py": "291275223b71b522a19181ae33a34518c0ca3c8f585275770f4c72e651cba5e2",
+  "scripts/GPU/alphazero/halving_policy_target.py": "b39c93da3e5f850738bf0e3a3af81575e51de9026894958c0580de66320edbcc",
+  "scripts/GPU/alphazero/htb_fit_authorization.py": "96aedd75204c458698dbbdd6140ad2fbe90b060a9359712dbbc2194bacfc6fec",
+  "scripts/GPU/alphazero/htb_label_authorization.py": "b8e7c0152db2bc33397994a39d013ad5df91ef6428528dec81900e8aaff6b2fb",
+  "scripts/GPU/alphazero/htb_pilot.py": "6c707c3f399cff5539eaaf8849a16fce9b93e1aeedfed12c0bbf6986e107e423",
+  "scripts/GPU/alphazero/htb_screen.py": "5d583cbb2de9101a2fc08bf2e487e052f383da4e3ca70ac6687db91eb405bc92",
+  "scripts/GPU/alphazero/htb_screen_authorization.py": "74b2a544ade7e2a568d0fa40227bfc98efdf74a4a2dc018a069dbcbdb0cdfa76",
+  "scripts/GPU/alphazero/htb_strength_authorization.py": "7085b5fbe270e2b8d1984d5a44c9e1a7330735b601e522183083dd6ae335625d",
+  "scripts/GPU/alphazero/inheritance_probe.py": "d8e073b8303d5db5f43a5613f82aff6a9cc1a0bc6249e7a312fec73242688203",
+  "scripts/GPU/alphazero/local_evaluator.py": "7fbeb49d3eb210fae4c74098a29e257b34916d8837f6735cd875c3184447ea4e",
+  "scripts/GPU/alphazero/mcts.py": "0769b22ae47923da2600584da1bcf7c955bb975f0bd4985d7d11605d5196050f",
+  "scripts/GPU/alphazero/mirror_averaging.py": "1f23ac6adeb6ea0a33b7fe5500edeb2c9929a9781089106d5925a99817340aef",
+  "scripts/GPU/alphazero/mirror_halving_c1.py": "b23379e59bd31bf51715f41debf028910efbf37f306457bba96902d048fbbde8",
+  "scripts/GPU/alphazero/mirror_halving_c1_authorization.py": "17fdb94cb4506cc9f90d797d193100ab64b0761630e46d7418a379930c1da328",
+  "scripts/GPU/alphazero/mirror_halving_combination.py": "907ce4342f95c28f30f71dfaf50406994a93cfaf70929c89f0a1c0bedca1a176",
+  "scripts/GPU/alphazero/mirror_halving_match.py": "603598fcbb2d93c99980eec2cf2a73cc7cc256349efb0574e6f3ac2aa479cdda",
+  "scripts/GPU/alphazero/mirror_halving_screen_authorization.py": "8b2a4318d2a19e13741a630e51050fea7d16b8ee84ed597a5c2f9ee141b6c122",
+  "scripts/GPU/alphazero/mirror_halving_strength2_authorization.py": "7813708508f435870977b81d282d0150881f156326f70f0e469fac3bf0a78b7a",
+  "scripts/GPU/alphazero/mirror_halving_strength_authorization.py": "718957f5a60a1651c6077a0b99256aab2eae0ea6d9ac72842a9b4595ca71c693",
+  "scripts/GPU/alphazero/network.py": "81465fe7106d4d7161cc5bdaf2b00a002ac337a77aff5d354a3bcd26986873bc",
+  "scripts/GPU/alphazero/opening_diagnostics.py": "03e40f0ea8110f194bb94b6f99b03b7aa367937882bf9c9cd5de57adc5a13106",
+  "scripts/GPU/alphazero/probe_eval.py": "e2a2943604d6b3efd5f4c3edac2c8c547b4ebe8b04e1cbf5a0b47b4f3d9a0a25",
+  "scripts/GPU/alphazero/recovery_retargeting_diagnostics.py": "25f36b6df0295c5d3baf27a07f0a2be9faebe9df0eb1a2ff53f06454d6ee32ea",
+  "scripts/GPU/alphazero/root_sequential_halving.py": "0bec4ef1914b25541f5247c5dd6c0002cea171b2902c629e52cfc034e9402790",
+  "scripts/GPU/alphazero/search_distillation_d2_measure.py": "c2ecd81d7939a3879895b8bdfb36221c5cedecc616c345a37d4ef26f03b30669",
+  "scripts/GPU/alphazero/search_distillation_d2_measure_authorization.py": "d01a9d09970d4803e49c1fac70c595fc22955ff77d0221eb43690d91078ac8d2",
+  "scripts/GPU/alphazero/self_play.py": "c7019373aacde3e22656278d99380fdf8e0c26466549e6521cda791fddfe9394",
+  "scripts/GPU/alphazero/training_replay_capture.py": "b58765b13f798133fb685ae4599f4b32d9f262d7659a402f44c10600f8974f32",
+  "scripts/GPU/alphazero/twixtbot_adapter.py": "f0f2dfdee202c9f33a0575315e248746d318599bd170405b0a785d7ded806a2c",
+  "scripts/GPU/alphazero/twixtbot_g3_reference.py": "f68af1525d7997467904e2dfe7ea8aaf5400fffce3e5513625643ec442e3e55e",
+  "scripts/GPU/alphazero/twixtbot_g3_schedule.py": "7624c4e61c8ca5cba7641a641d74800c4c2a6d8e6c1ffb13115bed177b92a600"
+ },
+ "opening_probe": {
+  "legal": 528,
+  "max_prior_abs_diff": 0.1493575827917084,
+  "value_abs_diff": 0.5427292138338089
+ },
+ "pair_scores": [
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  0.5,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  0.75,
+  0.5,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0,
+  1.0
+ ],
+ "plan_doc": "docs/superpowers/2026-11-06-htb-strength-plan.md",
+ "plan_doc_sha256": "31440d671dbd2d90895cebc52e3a5812467e3b7326f907902f963e0d78172693",
+ "protocol": {
+  "PROTOCOL": {
+   "board_size": 24,
+   "max_moves": 280,
+   "mcts_eval_batch_size": 14,
+   "mcts_sims": 400,
+   "mcts_stall_flush_sims": 48,
+   "opening_temp_plies": 20,
+   "selection_mode": "opening_temperature",
+   "temp_high": 1.0,
+   "temp_low": 0.1
+  },
+  "agents": [
+   {
+    "agent_id": "candidate",
+    "checkpoint": "/Users/bill/twixt-cache/htb-pilot/student.safetensors",
+    "mcts_sims": 200,
+    "readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    }
+   },
+   {
+    "agent_id": "reference",
+    "checkpoint": "checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors",
+    "mcts_sims": 200,
+    "readout": {
+     "mode": "opening_temperature",
+     "opening_temp_plies": 20,
+     "temp_high": 1.0,
+     "temp_low": 0.1
+    }
+   }
+  ],
+  "classes": {
+   "candidate": "scripts.GPU.alphazero.root_sequential_halving.RootSequentialHalvingMCTS",
+   "reference": "scripts.GPU.alphazero.root_sequential_halving.RootSequentialHalvingMCTS"
+  },
+  "eval_config": {
+   "board_size": 24,
+   "max_moves": 280,
+   "mcts_eval_batch_size": 14,
+   "mcts_sims": 400,
+   "mcts_stall_flush_sims": 48,
+   "opening_temp_plies": 20,
+   "selection_mode": "opening_temperature",
+   "temp_high": 1.0,
+   "temp_low": 0.1
+  },
+  "evaluators": {
+   "candidate": "MirrorAveragingEvaluator",
+   "reference": "MirrorAveragingEvaluator"
+  }
+ },
+ "run": "strength",
+ "screen_block_excluded": [
+  202759500,
+  202759564
+ ],
+ "seeds": {
+  "base": 202759800,
+  "n_slots": 220
+ },
+ "setting": {
+  "MLX_ENABLE_TF32": "0"
+ },
+ "setting_at_end": {
+  "MLX_ENABLE_TF32": "0"
+ },
+ "status": "COMPLETED",
+ "strength": {
+  "alpha": 0.05,
+  "evaluations_ratio": 1.0495457757967979,
+  "guards": {
+   "evaluations": 1.05,
+   "search_seconds": 1.1
+  },
+  "half_width": 0.11669175154993118,
+  "lower_bound": 0.8719446120864325,
+  "mean_pair_score": 0.9886363636363636,
+  "note": "against the original proven combination at 200 simulations only; pairs assumed independent; never pooled with the screen; a NON_PASS is not evidence of no advantage",
+  "null": 0.5,
+  "one_sided": true,
+  "pairs": 110,
+  "reasons": [],
+  "search_seconds_ratio": 1.041526392852771,
+  "verdict": "PASS"
+ },
+ "student": {
+  "path": "/Users/bill/twixt-cache/htb-pilot/student.safetensors",
+  "sha256": "0e1cb6211aa0b3e2dec6ab6f39bec74ceb8c472c7dcf603e7d331b1d1c1c34e5",
+  "state_digest": "586dca4fcdb87c2611449099b4b7acfda460b13b6717c573a55011b8620a630b"
+ },
+ "total_seconds": 4527.689,
+ "variant": {
+  "BOARD": 24,
+  "CANDIDATES": 16,
+  "C_SCALE": 1.0,
+  "C_VISIT": 50.0,
+  "FROM_PLY": 20,
+  "PRIOR_FLOOR": 1e-12
+ },
+ "verdict": "PASS",
+ "versions": {
+  "mlx": "0.30.3",
+  "numpy": "2.4.1",
+  "python": "3.14.10"
+ },
+ "written_by": "script"
+}
