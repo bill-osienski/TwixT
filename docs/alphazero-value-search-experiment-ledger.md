@@ -10521,3 +10521,27 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
     1. Requalify V2 with a Python ORT that passes the minimal canary, first candidate `onnxruntime==1.23.2`, in an isolated environment. This needs a reviewed amendment naming the S2/S3 runtime version; the tolerances, corpus, exporter and artifact stay unchanged.
     2. Guard the product: add a model-free canary test to the server suite, and optionally pin `onnxruntime-node` exactly. `package.json` allows `^1.20.0`, and only the lockfile holds 1.23.2.
   - **Next discriminator:** run the canary across Python ORT versions in a throwaway environment. This needs approval (package installs).
+
+#### Decision note — the runtime repair pursued: an isolated canary check and the repair plan approved (2026-11-09)
+
+- **The review (the user, 2026-11-09):** the evidence supports pursuing the runtime repair.
+  - **Demonstrated:** parameter mix-up in Python ORT on these graphs.
+  - **Not proven:** its internal mechanism.
+  - **The student's strength result stands.**
+- **Review findings, addressed before the next run:**
+  1. **`diagnostic-1/runs/` was excluded by `.gitignore`** (the `runs/` rule), so the configuration outputs and reproduction logs were not in `61e238ea`. They are now committed by exact path in `3069f90d`, with no rerun.
+  2. **The canary must be self-contained.** `mini.py` loads a scratch `w.npz` even for synthetic cases. Runtime qualification must need no student weights or scratch files.
+  3. **The permanent canary must check correctness, not difference.** Each output is compared against its own independent expected result, including a cross-session case. The Node reproducer only reported whether two outputs differed.
+- **Approved now:**
+  - **The isolated canary check:**
+    - Python ORT **1.23.2 first**, in a new isolated environment built from a compatible existing interpreter;
+    - the project and teacher environments stay untouched;
+    - exact versions and package hashes are recorded;
+    - no broad version sweep if 1.23.2 works.
+  - **The repair-plan build:**
+    - if 1.23.2 passes, an **integration-specific parity amendment** naming that runtime, preserving August's specification and the original V2 FAIL unchanged;
+    - the product's `onnxruntime-node` pinned exactly to **1.23.2**;
+    - the correctness canary added to the product's test suite.
+- **Not yet:** requalifying the same exported artifact (same corpus, same tolerances) follows the amendment's review. A canary pass alone does not qualify it.
+- **Noted by the user:** a fresh install that honours the existing lockfile keeps 1.23.2. The upgrade risk arises when dependency resolution changes.
+- **Not authorized:** games, deployment and pushing.
