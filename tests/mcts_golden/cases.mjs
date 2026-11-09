@@ -101,6 +101,23 @@ export const STAGES = Object.freeze({
       'the H-TB integration surface: hard routed to the protocol (its own modules, ' +
       'outside this surface); the plain search byte-identical to candidate-default',
   }),
+  'protocol-hard-pinned': Object.freeze({
+    name: 'protocol-hard-pinned',
+    surfaceSha256: '61aacb5b440b69e059f8325ad1dd077aefaa8d80947cca266197a13a82226c75',
+    surfaceCommit: '99b1feaf0eda8f662b676c12aaa7ab5cd497cc01',
+    // NOT re-measured. `99b1fea` changes exactly one execution-surface byte
+    // range relative to protocol-hard: HARD_MODEL_ID in server/model_manifest.js
+    // (null -> '78c16a31c3dba37f', after V2-R's parity PASS). The plain search
+    // files are byte-identical, and this harness pins its models by directory,
+    // so the copy-count behaviour cannot differ. The golden comparison under
+    // this stage is G2's V7.
+    falsificationOutcome: 'satisfied',
+    artifactSchema: 'twixt-mcts-golden/2',
+    carriesStageField: true,
+    note:
+      'the H-TB integration surface with the student pinned as the hard model; ' +
+      'identical to protocol-hard except HARD_MODEL_ID',
+  }),
 });
 
 export const STAGE_NAMES = Object.freeze(Object.keys(STAGES));
