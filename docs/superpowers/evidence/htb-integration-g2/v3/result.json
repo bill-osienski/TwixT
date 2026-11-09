@@ -1,0 +1,84 @@
+{
+ "schema": "htb-mirror-parity/1",
+ "verdict": "PASS",
+ "failures": [],
+ "tolerances": {
+  "maxPrior": 0.00011,
+  "meanPrior": 0.000011,
+  "maxValue": 0.00011,
+  "band": 0.00022,
+  "cap": 6,
+  "topk_min": 0.95,
+  "tau_min": 0.99
+ },
+ "max_abs_prior_diff": 0.0000018477439880371094,
+ "max_abs_prior_at": "opening_04",
+ "mean_abs_prior_diff": 2.7914510832291904e-9,
+ "max_abs_value_diff": 0.0000023301690816879272,
+ "max_abs_value_at": "midgame_01",
+ "top1_outside_band": [],
+ "near_tie_exemptions": [],
+ "topk_set_agreement": 1,
+ "kendall_tau_median": 1,
+ "kendall_tau_min": 0.9999822340661781,
+ "edge": [
+  {
+   "id": "edge_empty_board",
+   "top1_agree": false,
+   "gap": 3.725290298461914e-9,
+   "topk_set_agree": false,
+   "tau": 0.9981024667931688
+  },
+  {
+   "id": "edge_one_move",
+   "top1_agree": true,
+   "gap": 0.06629473716020584,
+   "topk_set_agree": true,
+   "tau": 1
+  },
+  {
+   "id": "edge_fewest_legal",
+   "top1_agree": true,
+   "gap": null,
+   "topk_set_agree": true,
+   "tau": 1
+  },
+  {
+   "id": "edge_over_512_legal",
+   "top1_agree": true,
+   "gap": 0.5224439352750778,
+   "topk_set_agree": true,
+   "tau": 1
+  },
+  {
+   "id": "edge_black_to_move",
+   "top1_agree": true,
+   "gap": 0.014100857079029083,
+   "topk_set_agree": true,
+   "tau": 1
+  },
+  {
+   "id": "edge_red_to_move",
+   "top1_agree": true,
+   "gap": 0.2356051802635193,
+   "topk_set_agree": true,
+   "tau": 1
+  }
+ ],
+ "sign_disagreements": [],
+ "range_violations": [],
+ "python_side": {
+  "side": "research MirrorAveragingEvaluator(student)",
+  "environment": {
+   "python": "3.14.10",
+   "mlx": "0.30.3",
+   "numpy": "2.4.1"
+  },
+  "state_digest": "586dca4fcdb87c2611449099b4b7acfda460b13b6717c573a55011b8620a630b"
+ },
+ "node_side": {
+  "side": "product MirrorAveragingInference(hard model)",
+  "model_id": "78c16a31c3dba37f",
+  "node": "v24.22.0"
+ }
+}
