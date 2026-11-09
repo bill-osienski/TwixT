@@ -284,6 +284,7 @@ knob) is not a new hypothesis.
 > **H-TB integration — current-environment equivalence control: old code and integrated code EXACTLY equal (Post-closure entry 60, 2026-11-09).** A fresh capture at `aad5796` in today's environment matches V7's integrated capture exactly on all 92 cases. Against August's standard it shows the same 12,326 differences as V7. So V7's differences are environmental (Node v24.22.0 against v26.7.0; macOS 27.2), not caused by the integration. V7's MISMATCH stays on record; G2's remaining checks resume. *(Correction to entry 59: the step-632 reordering reading is plausible, not established; the discriminator commit was `aad5796`.)*
 > **H-TB integration — G2 COMPLETE; returned for review before G3 (Post-closure entry 61, 2026-11-09).** Suites pass (server 213, parity 39, match 152 after a G1 test-expectation fix, golden 140, research 259). Live REST and WS: 17 of 17 checks after a harness race in run 1 was fixed. Rollback against a recorded `80acd87e` reference over 142 positions: R1 (`HARD_MODE=legacy`, student unavailable) is exact on all `hard`, `easy` and `medium` answers; R2 (default) serves the student with `easy`/`medium` exact; R3 (code revert) is exact with its suites passing. The protocol mode refuses to start without the student. No games, deployment or push. See #190.
 > **H-TB integration — G2 ACCEPTED; G3 BUILT for one launch review; nothing played (decision note and build record, 2026-11-09).** The user independently reproduced the 92-case equivalence, the rollback comparisons and the live-check verdict. *(Wording correction to entry 61: easy and medium **search outputs** match exactly; their sampled moves were intentionally excluded.)* Built (`29c502d7`): card `2026-11-09-htb-g3-match-card.md`, a one-process product-stack driver, an analyser that imports nothing from it, two closed gates, two wrappers and an execution binding (digest `b024e9d1…`). New `hard` against today's `hard`: one colour-reversed smoke pair (excluded), then 110 fresh pairs under the product game-end rule; PASS iff mean − √(ln 20 / 220) > 0.5. Timing rule (the user's): L = max(64, smoke mean plies); projection = startup + 220 × ((L/2)(s_new + s_legacy) + overhead); hard ceiling 1.5× rounded up to the minute; the 24 h limit applies to that ceiling; EXCEEDS_24H stops before the match. Prediction on record: PASS, mean about 0.93. 15 model-free tests pass. Games await the launch review; deployment, training and pushing not authorized. See #191.
+> **H-TB integration — G3 repaired for launch clearance; nothing played (decision note and repair record, 2026-11-09).** The user's review found that the analyser and match admission trusted the script's COMPLETED record without the wrapper's `outer.json`, so a TIMEOUT, an unrestored gate or unconfirmed cleanup could still yield a timing or score. Repaired (`d0dfba20`): both stages and match admission now require integer exits of 0, outcome COMPLETED, the gate restored, no survivors and a script-written record. The outer record is tied to its run by HEAD and by pgid = the record's pid. The match needs committed, successful smoke evidence, and its verdict re-derives the committed timing. The binding now covers the Node executable and every file of both ORT packages (digest `da0b86bf…`); the card lists what is not bound. 20/20 tests (outer and admission failures each against a clean control); 3 mutants caught. The user accepted the 2,400 s smoke ceiling, the 24 h maximum and the browser → smoke → timing → conditional match sequence. Gates closed. See #191.
 
 ## Historical proposal check — programme now closed
 
@@ -10860,3 +10861,93 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
   `node_modules`, removed afterwards; no model loaded): the binding reproduces byte for byte. Both wrappers refuse
   cleanly with exit 1 ("HEAD does not change only the gate"), with the gate restored and nothing written. The driver
   refuses the match `GATE_CLOSED` (exit 4). `test_g3.mjs` passes 15 of 15 there. The tree stayed clean.
+
+#### Decision note — G3 launch clearance withheld pending one repair; a binding accuracy correction (2026-11-09)
+
+- **The user's review of the G3 build:** the match design and the timing rule are sound, but one repair is required
+  before launch.
+- **The defect:** the analyser checks the script's `COMPLETED` record but never reads the wrapper's `outer.json`. It
+  could therefore compute a timing or a score even when the wrapper reports TIMEOUT, a failed gate restoration or
+  unconfirmed cleanup. Match admission likewise trusted the committed timing without checking the outer evidence.
+- **Required, for both stages:**
+  - integer inner and outer exits of 0, outer outcome `COMPLETED`, the gate restored, empty survivors and a
+    script-written record;
+  - the outer record bound to its inner run;
+  - successful, committed smoke evidence before the match is admitted;
+  - focused tests for missing outer evidence, TIMEOUT over an inner COMPLETED, failed restoration and survivors, each
+    alongside a successful control.
+
+  This restores the rule earlier stages used, and needs no model runs.
+- **Accuracy correction:** the binding hashed the listed source files and the native ORT files, but recorded only
+  Node's version (not its executable's hash) and left out the installed ORT JavaScript. Either extend the binding or
+  narrow the "every byte" claim.
+- **Accepted:** the 2,400 s smoke ceiling, the 24-hour maximum match ceiling, and the browser → smoke → timing →
+  conditional match sequence. Repeating G2's live checks is unnecessary while its qualified code is unchanged.
+- **The user verified, from source and hashes only (no tests or games run):** the binding matched its listed files
+  and model artifacts, and both gates were closed.
+- **Asked for:** the focused repair, the updated binding and the test results, for launch clearance. Both gates stay
+  closed; deployment, training and pushing are not authorized.
+
+#### Repair record — G3: the wrapper's outer record required at both stages and for match admission; the runtime binding extended (2026-11-09)
+
+- **What changed (`d0dfba20`):**
+  - **Analyser** (`g3_analyse.mjs`): a stage counts only together with its wrapper's `<stage_dir>-run/outer.json` and
+    `pgid.txt`. It requires:
+    - `inner_exit` and `outer_exit` both the integer 0;
+    - `outcome` `COMPLETED`;
+    - `gate_restored` true;
+    - `survivors` empty;
+    - `record_by` `script`;
+    - the stage's ceiling (`term_s` 2,390 for the smoke, or the committed timing's `term_s` for the match) with
+      `grace_s` 10;
+    - an integer `wall_seconds`.
+
+    **Binding the outer record to the inner run:** the outer record's `head` must equal the record's, and `pgid.txt`
+    must equal the record's new `pid`. The supervisor's child leads the process group and `exec`s `env`, then `node`,
+    in place.
+
+    **`verdict` also requires:** nothing pending under either smoke directory; the smoke validating in full, wrapper
+    checks included; and its timing re-derived byte-equal to the committed `timing.json`.
+  - **Driver** (`g3_match.mjs`):
+    - the record now carries `pid`;
+    - match admission (`smokeAdmission`) requires:
+      - the smoke's `record.json`, `timing.json`, `outer.json` and `pgid.txt` committed and unchanged at HEAD;
+      - nothing else pending under `htb-g3-smoke{,-run}/`;
+      - the smoke record belonging to this binding;
+      - the same wrapper checks, in the driver's own, independent copy;
+      - a `WITHIN_24H` timing whose `kill_s` equals `--kill-s`.
+    - The match wrapper (unchanged) re-derives the timing through the analyser, so a smoke whose outer record fails
+      cannot yield a ceiling.
+  - **Binding** (`g3_binding.json`, digest `da0b86bf…`, replacing `b024e9d1…`):
+    - adds the Node executable's sha256 (`process.execPath`);
+    - adds every installed file of `onnxruntime-node` and `onnxruntime-common`, 239 files including their JavaScript.
+      These are the only installed packages in the module cache after importing `onnxruntime-node`; its other
+      declared dependencies serve its install script.
+    - The card now states what is **not** bound: the OS and its shared libraries, the hardware, and the Python
+      interpreter that runs the idle gate and background-compute check (its path is recorded).
+  - **Card:** §7 (binding, wrapper checks, admission, analyser), §8 (stop conditions) and §9 (tests) updated; status
+    line dated.
+- **Checks:**
+  - `test_g3.mjs`: **20 of 20 pass** (15 earlier, 5 new).
+    - The analyser judges the outer record. Each of these is caught and each has a clean control: missing
+      `outer.json`; TIMEOUT over an inner COMPLETED; the gate not restored; survivors; unconfirmed cleanup; a
+      wrapper-written record; a string exit; another HEAD; another ceiling; and another process group.
+    - The driver's and analyser's copies agree on every case.
+    - Match admission refuses each failure against a clean control: missing outer or pgid, every outer failure,
+      uncommitted smoke files, another binding, `EXCEEDS_24H`, and a different `--kill-s`. It also refuses in the real
+      state, where no smoke is committed.
+    - The runtime binding contains the executable and the package files.
+  - **Mutation checks,** run once with automatic restore and not committed: the analyser ignoring the outer record
+    (2 tests fail); admission ignoring outer problems (2); the driver ignoring gate restoration (1). All restored
+    byte-identical; 20/20 afterwards.
+  - Lint clean.
+  - **Rehearsal in a throwaway linked worktree at `d0dfba20`** (APFS-cloned `node_modules`; removed afterwards; no
+    model loaded):
+    - the binding reproduces byte for byte;
+    - both wrappers refuse with exit 1 and the gate restored;
+    - the driver refuses the match `GATE_CLOSED` (exit 4);
+    - the analyser's `timing` on the absent smoke is INVALID (exit 3);
+    - 20/20 tests pass there, and the tree stayed clean.
+- **Status:** returned for **launch clearance**. Both gates closed; no model loaded; no game. Deployment, training and
+  pushing not authorized. Do-not-repeat #191 applies unchanged; under it, the binding now covers the runtime packages
+  and the Node executable.
