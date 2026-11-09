@@ -1,0 +1,2 @@
+random_73zero_filters_x2.onnx node: max |y0 - y1| = 1.939e+1 (0 would mean the two convs were conflated)
+student_W0_W1.onnx node: max |y0 - y1| = 1.640e+1 (0 would mean the two convs were conflated)

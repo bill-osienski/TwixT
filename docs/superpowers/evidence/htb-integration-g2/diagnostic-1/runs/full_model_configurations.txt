@@ -1,0 +1,84 @@
+== c1 {'inputs': 'inputs', 'out': 'c1.json', 'model': '/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/bbf69511-6636-45f1-b20e-ad3d10cfc215/scratchpad/htb_export/placed_78c16a31c3dba37f/model.onnx', 'pre_import': '', 'after_import': '', 'threads': 0, 'first_model': ''}
+  opening_00         vs MLX logit 9.893e+00 value 2.589e-01 | vs Node logit 9.893e+00 value 2.589e-01 | vs V2 ort_py logit 0.000e+00
+  early_mid_10       vs MLX logit 9.603e+00 value 3.040e-01 | vs Node logit 9.603e+00 value 3.040e-01 | vs V2 ort_py logit 0.000e+00
+  midgame_20         vs MLX logit 6.604e+00 value 1.695e+00 | vs Node logit 6.604e+00 value 1.695e+00 | vs V2 ort_py logit 0.000e+00
+  late_29            vs MLX logit 2.350e+00 value 2.181e-02 | vs Node logit 2.350e+00 value 2.181e-02 | vs V2 ort_py logit 0.000e+00
+  edge_red_to_move   vs MLX logit 8.958e+00 value 1.431e-01 | vs Node logit 8.958e+00 value 1.431e-01 | vs V2 ort_py logit 0.000e+00
+== c2 {'inputs': 'inputs', 'out': 'c2.json', 'model': '/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/bbf69511-6636-45f1-b20e-ad3d10cfc215/scratchpad/htb_export/placed_78c16a31c3dba37f/model.onnx', 'pre_import': '', 'after_import': '', 'threads': 1, 'first_model': ''}
+  opening_00         vs MLX logit 9.893e+00 value 2.589e-01 | vs Node logit 9.893e+00 value 2.589e-01 | vs V2 ort_py logit 4.768e-06
+  early_mid_10       vs MLX logit 9.603e+00 value 3.040e-01 | vs Node logit 9.603e+00 value 3.040e-01 | vs V2 ort_py logit 5.722e-06
+  midgame_20         vs MLX logit 6.604e+00 value 1.695e+00 | vs Node logit 6.604e+00 value 1.695e+00 | vs V2 ort_py logit 3.815e-06
+  late_29            vs MLX logit 2.350e+00 value 2.181e-02 | vs Node logit 2.350e+00 value 2.181e-02 | vs V2 ort_py logit 2.861e-06
+  edge_red_to_move   vs MLX logit 8.958e+00 value 1.431e-01 | vs Node logit 8.958e+00 value 1.431e-01 | vs V2 ort_py logit 5.722e-06
+== c3 {'inputs': 'inputs', 'out': 'c3.json', 'model': '/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/bbf69511-6636-45f1-b20e-ad3d10cfc215/scratchpad/htb_export/placed_78c16a31c3dba37f/model.onnx', 'pre_import': '', 'after_import': '', 'threads': 0, 'first_model': '/Users/bill/projects/TwixT_Game/models/c34b7ff3297c785a/model.onnx'}
+  opening_00         vs MLX logit 1.142e+01 value 1.615e-01 | vs Node logit 1.142e+01 value 1.615e-01 | vs V2 ort_py logit 4.140e+00
+  early_mid_10       vs MLX logit 7.100e+00 value 1.509e-01 | vs Node logit 7.100e+00 value 1.509e-01 | vs V2 ort_py logit 5.394e+00
+  midgame_20         vs MLX logit 5.377e+00 value 8.839e-01 | vs Node logit 5.377e+00 value 8.839e-01 | vs V2 ort_py logit 1.159e+01
+  late_29            vs MLX logit 5.613e+00 value 9.355e-01 | vs Node logit 5.613e+00 value 9.355e-01 | vs V2 ort_py logit 7.413e+00
+  edge_red_to_move   vs MLX logit 6.140e+00 value 6.202e-02 | vs Node logit 6.140e+00 value 6.202e-02 | vs V2 ort_py logit 8.258e+00
+== c4 {'inputs': 'inputs', 'out': 'c4.json', 'model': '/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/bbf69511-6636-45f1-b20e-ad3d10cfc215/scratchpad/htb_export/placed_78c16a31c3dba37f/model.onnx', 'pre_import': '', 'after_import': '', 'threads': 1, 'first_model': '/Users/bill/projects/TwixT_Game/models/c34b7ff3297c785a/model.onnx'}
+  opening_00         vs MLX logit 1.142e+01 value 1.615e-01 | vs Node logit 1.142e+01 value 1.615e-01 | vs V2 ort_py logit 4.140e+00
+  early_mid_10       vs MLX logit 7.100e+00 value 1.509e-01 | vs Node logit 7.100e+00 value 1.509e-01 | vs V2 ort_py logit 5.394e+00
+  midgame_20         vs MLX logit 5.377e+00 value 8.839e-01 | vs Node logit 5.377e+00 value 8.839e-01 | vs V2 ort_py logit 1.159e+01
+  late_29            vs MLX logit 5.613e+00 value 9.355e-01 | vs Node logit 5.613e+00 value 9.355e-01 | vs V2 ort_py logit 7.413e+00
+  edge_red_to_move   vs MLX logit 6.140e+00 value 6.202e-02 | vs Node logit 6.140e+00 value 6.202e-02 | vs V2 ort_py logit 8.258e+00
+== c5 {'inputs': 'inputs', 'out': 'c5.json', 'model': '/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/bbf69511-6636-45f1-b20e-ad3d10cfc215/scratchpad/htb_export/placed_78c16a31c3dba37f/model.onnx', 'pre_import': 'mlx', 'after_import': '', 'threads': 0, 'first_model': ''}
+  opening_00         vs MLX logit 9.893e+00 value 2.589e-01 | vs Node logit 9.893e+00 value 2.589e-01 | vs V2 ort_py logit 0.000e+00
+  early_mid_10       vs MLX logit 9.603e+00 value 3.040e-01 | vs Node logit 9.603e+00 value 3.040e-01 | vs V2 ort_py logit 0.000e+00
+  midgame_20         vs MLX logit 6.604e+00 value 1.695e+00 | vs Node logit 6.604e+00 value 1.695e+00 | vs V2 ort_py logit 0.000e+00
+  late_29            vs MLX logit 2.350e+00 value 2.181e-02 | vs Node logit 2.350e+00 value 2.181e-02 | vs V2 ort_py logit 0.000e+00
+  edge_red_to_move   vs MLX logit 8.958e+00 value 1.431e-01 | vs Node logit 8.958e+00 value 1.431e-01 | vs V2 ort_py logit 0.000e+00
+== c6 {'inputs': 'inputs', 'out': 'c6.json', 'model': '/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/bbf69511-6636-45f1-b20e-ad3d10cfc215/scratchpad/htb_export/placed_78c16a31c3dba37f/model.onnx', 'pre_import': 'torch', 'after_import': '', 'threads': 0, 'first_model': ''}
+  opening_00         vs MLX logit 9.893e+00 value 2.589e-01 | vs Node logit 9.893e+00 value 2.589e-01 | vs V2 ort_py logit 0.000e+00
+  early_mid_10       vs MLX logit 9.603e+00 value 3.040e-01 | vs Node logit 9.603e+00 value 3.040e-01 | vs V2 ort_py logit 0.000e+00
+  midgame_20         vs MLX logit 6.604e+00 value 1.695e+00 | vs Node logit 6.604e+00 value 1.695e+00 | vs V2 ort_py logit 0.000e+00
+  late_29            vs MLX logit 2.350e+00 value 2.181e-02 | vs Node logit 2.350e+00 value 2.181e-02 | vs V2 ort_py logit 0.000e+00
+  edge_red_to_move   vs MLX logit 8.958e+00 value 1.431e-01 | vs Node logit 8.958e+00 value 1.431e-01 | vs V2 ort_py logit 0.000e+00
+== c7 {'inputs': 'inputs', 'out': 'c7.json', 'model': '/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/bbf69511-6636-45f1-b20e-ad3d10cfc215/scratchpad/htb_export/placed_78c16a31c3dba37f/model.onnx', 'pre_import': 'mlx,torch', 'after_import': '', 'threads': 0, 'first_model': ''}
+  opening_00         vs MLX logit 9.893e+00 value 2.589e-01 | vs Node logit 9.893e+00 value 2.589e-01 | vs V2 ort_py logit 0.000e+00
+  early_mid_10       vs MLX logit 9.603e+00 value 3.040e-01 | vs Node logit 9.603e+00 value 3.040e-01 | vs V2 ort_py logit 0.000e+00
+  midgame_20         vs MLX logit 6.604e+00 value 1.695e+00 | vs Node logit 6.604e+00 value 1.695e+00 | vs V2 ort_py logit 0.000e+00
+  late_29            vs MLX logit 2.350e+00 value 2.181e-02 | vs Node logit 2.350e+00 value 2.181e-02 | vs V2 ort_py logit 0.000e+00
+  edge_red_to_move   vs MLX logit 8.958e+00 value 1.431e-01 | vs Node logit 8.958e+00 value 1.431e-01 | vs V2 ort_py logit 0.000e+00
+== c8 {'inputs': 'inputs', 'out': 'c8.json', 'model': '/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/bbf69511-6636-45f1-b20e-ad3d10cfc215/scratchpad/htb_export/placed_78c16a31c3dba37f/model.onnx', 'pre_import': '', 'after_import': 'mlx', 'threads': 0, 'first_model': ''}
+  opening_00         vs MLX logit 9.893e+00 value 2.589e-01 | vs Node logit 9.893e+00 value 2.589e-01 | vs V2 ort_py logit 0.000e+00
+  early_mid_10       vs MLX logit 9.603e+00 value 3.040e-01 | vs Node logit 9.603e+00 value 3.040e-01 | vs V2 ort_py logit 0.000e+00
+  midgame_20         vs MLX logit 6.604e+00 value 1.695e+00 | vs Node logit 6.604e+00 value 1.695e+00 | vs V2 ort_py logit 0.000e+00
+  late_29            vs MLX logit 2.350e+00 value 2.181e-02 | vs Node logit 2.350e+00 value 2.181e-02 | vs V2 ort_py logit 0.000e+00
+  edge_red_to_move   vs MLX logit 8.958e+00 value 1.431e-01 | vs Node logit 8.958e+00 value 1.431e-01 | vs V2 ort_py logit 0.000e+00
+== c9 {'inputs': 'inputs', 'out': 'c9.json', 'model': '/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/bbf69511-6636-45f1-b20e-ad3d10cfc215/scratchpad/htb_export/placed_78c16a31c3dba37f/model.onnx', 'pre_import': '', 'after_import': '', 'threads': 0, 'config': 'session.disable_prepacking=1', 'no_arena': False, 'no_mempattern': False, 'opt': '', 'first_model': ''}
+  opening_00         vs MLX logit 9.893e+00 value 2.589e-01 | vs Node logit 9.893e+00 value 2.589e-01 | vs V2 ort_py logit 0.000e+00
+  early_mid_10       vs MLX logit 9.603e+00 value 3.040e-01 | vs Node logit 9.603e+00 value 3.040e-01 | vs V2 ort_py logit 0.000e+00
+  midgame_20         vs MLX logit 6.604e+00 value 1.695e+00 | vs Node logit 6.604e+00 value 1.695e+00 | vs V2 ort_py logit 0.000e+00
+  late_29            vs MLX logit 2.350e+00 value 2.181e-02 | vs Node logit 2.350e+00 value 2.181e-02 | vs V2 ort_py logit 0.000e+00
+  edge_red_to_move   vs MLX logit 8.958e+00 value 1.431e-01 | vs Node logit 8.958e+00 value 1.431e-01 | vs V2 ort_py logit 0.000e+00
+== c10 {'inputs': 'inputs', 'out': 'c10.json', 'model': '/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/bbf69511-6636-45f1-b20e-ad3d10cfc215/scratchpad/htb_export/placed_78c16a31c3dba37f/model.onnx', 'pre_import': '', 'after_import': '', 'threads': 0, 'config': '', 'no_arena': True, 'no_mempattern': False, 'opt': '', 'first_model': ''}
+  opening_00         vs MLX logit 9.893e+00 value 2.589e-01 | vs Node logit 9.893e+00 value 2.589e-01 | vs V2 ort_py logit 0.000e+00
+  early_mid_10       vs MLX logit 9.603e+00 value 3.040e-01 | vs Node logit 9.603e+00 value 3.040e-01 | vs V2 ort_py logit 0.000e+00
+  midgame_20         vs MLX logit 6.604e+00 value 1.695e+00 | vs Node logit 6.604e+00 value 1.695e+00 | vs V2 ort_py logit 0.000e+00
+  late_29            vs MLX logit 2.350e+00 value 2.181e-02 | vs Node logit 2.350e+00 value 2.181e-02 | vs V2 ort_py logit 0.000e+00
+  edge_red_to_move   vs MLX logit 8.958e+00 value 1.431e-01 | vs Node logit 8.958e+00 value 1.431e-01 | vs V2 ort_py logit 0.000e+00
+== c11 {'inputs': 'inputs', 'out': 'c11.json', 'model': '/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/bbf69511-6636-45f1-b20e-ad3d10cfc215/scratchpad/htb_export/placed_78c16a31c3dba37f/model.onnx', 'pre_import': '', 'after_import': '', 'threads': 0, 'config': '', 'no_arena': False, 'no_mempattern': True, 'opt': '', 'first_model': ''}
+  opening_00         vs MLX logit 9.893e+00 value 2.589e-01 | vs Node logit 9.893e+00 value 2.589e-01 | vs V2 ort_py logit 0.000e+00
+  early_mid_10       vs MLX logit 9.603e+00 value 3.040e-01 | vs Node logit 9.603e+00 value 3.040e-01 | vs V2 ort_py logit 0.000e+00
+  midgame_20         vs MLX logit 6.604e+00 value 1.695e+00 | vs Node logit 6.604e+00 value 1.695e+00 | vs V2 ort_py logit 0.000e+00
+  late_29            vs MLX logit 2.350e+00 value 2.181e-02 | vs Node logit 2.350e+00 value 2.181e-02 | vs V2 ort_py logit 0.000e+00
+  edge_red_to_move   vs MLX logit 8.958e+00 value 1.431e-01 | vs Node logit 8.958e+00 value 1.431e-01 | vs V2 ort_py logit 0.000e+00
+== c12 {'inputs': 'inputs', 'out': 'c12.json', 'model': '/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/bbf69511-6636-45f1-b20e-ad3d10cfc215/scratchpad/htb_export/placed_78c16a31c3dba37f/model.onnx', 'pre_import': '', 'after_import': '', 'threads': 0, 'config': '', 'no_arena': True, 'no_mempattern': True, 'opt': '', 'first_model': ''}
+  opening_00         vs MLX logit 9.893e+00 value 2.589e-01 | vs Node logit 9.893e+00 value 2.589e-01 | vs V2 ort_py logit 0.000e+00
+  early_mid_10       vs MLX logit 9.603e+00 value 3.040e-01 | vs Node logit 9.603e+00 value 3.040e-01 | vs V2 ort_py logit 0.000e+00
+  midgame_20         vs MLX logit 6.604e+00 value 1.695e+00 | vs Node logit 6.604e+00 value 1.695e+00 | vs V2 ort_py logit 0.000e+00
+  late_29            vs MLX logit 2.350e+00 value 2.181e-02 | vs Node logit 2.350e+00 value 2.181e-02 | vs V2 ort_py logit 0.000e+00
+  edge_red_to_move   vs MLX logit 8.958e+00 value 1.431e-01 | vs Node logit 8.958e+00 value 1.431e-01 | vs V2 ort_py logit 0.000e+00
+== c13 {'inputs': 'inputs', 'out': 'c13.json', 'model': '/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/bbf69511-6636-45f1-b20e-ad3d10cfc215/scratchpad/htb_export/placed_78c16a31c3dba37f/model.onnx', 'pre_import': '', 'after_import': '', 'threads': 0, 'config': '', 'no_arena': False, 'no_mempattern': False, 'opt': 'none', 'first_model': ''}
+  opening_00         vs MLX logit 9.893e+00 value 2.589e-01 | vs Node logit 9.893e+00 value 2.589e-01 | vs V2 ort_py logit 4.768e-06
+  early_mid_10       vs MLX logit 9.603e+00 value 3.040e-01 | vs Node logit 9.603e+00 value 3.040e-01 | vs V2 ort_py logit 4.768e-06
+  midgame_20         vs MLX logit 6.604e+00 value 1.695e+00 | vs Node logit 6.604e+00 value 1.695e+00 | vs V2 ort_py logit 3.815e-06
+  late_29            vs MLX logit 2.350e+00 value 2.181e-02 | vs Node logit 2.350e+00 value 2.181e-02 | vs V2 ort_py logit 3.815e-06
+  edge_red_to_move   vs MLX logit 8.958e+00 value 1.431e-01 | vs Node logit 8.958e+00 value 1.431e-01 | vs V2 ort_py logit 7.153e-06
+== c14 {'inputs': 'inputs', 'out': 'c14.json', 'model': '/private/tmp/claude-501/-Users-bill-projects-TwixT-Game/bbf69511-6636-45f1-b20e-ad3d10cfc215/scratchpad/htb_export/placed_78c16a31c3dba37f/model.onnx', 'pre_import': '', 'after_import': '', 'threads': 0, 'config': 'session.disable_prepacking=1', 'no_arena': False, 'no_mempattern': False, 'opt': 'none', 'first_model': ''}
+  opening_00         vs MLX logit 9.893e+00 value 2.589e-01 | vs Node logit 9.893e+00 value 2.589e-01 | vs V2 ort_py logit 4.768e-06
+  early_mid_10       vs MLX logit 9.603e+00 value 3.040e-01 | vs Node logit 9.603e+00 value 3.040e-01 | vs V2 ort_py logit 4.768e-06
+  midgame_20         vs MLX logit 6.604e+00 value 1.695e+00 | vs Node logit 6.604e+00 value 1.695e+00 | vs V2 ort_py logit 3.815e-06
+  late_29            vs MLX logit 2.350e+00 value 2.181e-02 | vs Node logit 2.350e+00 value 2.181e-02 | vs V2 ort_py logit 3.815e-06
+  edge_red_to_move   vs MLX logit 8.958e+00 value 1.431e-01 | vs Node logit 8.958e+00 value 1.431e-01 | vs V2 ort_py logit 7.153e-06
