@@ -278,6 +278,7 @@ knob) is not a new hypothesis.
 > **H-TB integration — G1 ACCEPTED; G2 APPROVED (decision note, 2026-11-09).** Scope: export and pin the exact student; real and mirror-averaged output parity at the declared tolerances; the deferred suites and the golden comparison; live REST and WS requests (value perspectives, refusals, cancellation); `HARD_MODE=legacy` reproducing the recorded baseline with the student artifact unavailable. Dated correction: G1's fixture has 27 cases (12 plain, 15 halving), not 28. Results return for review before any G3 game.
 > **H-TB integration — G2 STOPPED at V2: PARITY FAIL on the Python ONNX Runtime surface (Post-closure entry 55, 2026-11-09).** One unmodified export of the student (`78c16a31c3dba37f`; student sha256 unchanged). S1, masks, equivariance and **S4 (MLX ↔ the product's Node ORT) pass**: max logit difference 2.4e-5 against 1.1e-4, top-1 100%, τ 1.0. **S2 and S3 fail by about 12 logits**: Python ORT 1.24.4 gives deterministic but wrong outputs on this artifact only; it still reproduces August's c34b7ff. Not the external-data loader, graph optimization or subnormals; the cause is unexplained. Candidate not committed; `HARD_MODEL_ID` stays null; nothing after V2 ran. Returned for assessment. See #185.
 > **H-TB integration — V2 failure DIAGNOSED: Python onnxruntime 1.24.4 conflates same-shape Convs whose filter 0 is all zero (Post-closure entry 56, 2026-11-09).** The student has four such 128×128 convs; calib020_0001 has one. Python ORT computes all four with one set of parameters, within a session and across sessions, while the product's onnxruntime-node 1.23.2 computes the same graphs correctly. Not the MLX or PyTorch imports, threads, prepacking, arena or optimizations. The export is not defective. V2 stays FAIL and the model unpinned. Proposed: requalify with a Python ORT that passes a minimal canary, after a reviewed amendment; add a product canary test. See #186.
+> **H-TB integration — runtime canary: Python onnxruntime 1.23.2 PASSES, 1.24.4 FAILS; amendment drafted; product pinned (Post-closure entry 57, 2026-11-09).** A self-contained correctness canary (synthetic weights, each output against its own float64 reference, within and across sessions). It ran in a new isolated Python 3.13.15 venv; the teacher and project environments are untouched; wheel hashes are recorded. The draft amendment (`docs/superpowers/2026-11-09-htb-student-parity-amendment.md`) changes only the Python ORT surface to 1.23.2 for the same artifact, corpus and tolerances. `onnxruntime-node` is pinned to 1.23.2, with the canary in `test:server`. The model is still unpinned; V2-R awaits review. See #187.
 
 ## Historical proposal check — programme now closed
 
@@ -2097,6 +2098,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 
 185. **H-TB integration G2, V2 export parity: FAIL on the Python ONNX Runtime surface (2026-11-09, entry 55).** Do **not**, without a new reviewed plan: re-export the student, export with other arguments or another exporter, edit the exporter, revise or waive the Phase 2 tolerances, drop or swap the Python ORT surface to obtain a PASS, or pin `78c16a31c3dba37f` and continue G2 as though V2 had passed. S4's agreement with the product runtime is real, but under the preregistered rule it does not rescue S2 and S3. The cause is unexplained; any diagnosis needs its own scope.
 186. **The V2 failure's cause: Python onnxruntime 1.24.4 conflates same-shape Convs with an all-zero filter 0 (2026-11-09, entry 56).** Do **not**: treat it as an export defect; change the student's weights (for example, nudging zero filters) or the exported bytes to avoid it; run any Python ORT parity surface on this artifact without first passing the minimal two-conv canary (`docs/superpowers/evidence/htb-integration-g2/diagnostic-1/scripts/mini.py`); upgrade or reinstall `onnxruntime-node` for the product without the same canary; or read the diagnostic as establishing ORT's internal mechanism, or which other versions are safe.
+187. **The runtime canary (2026-11-09, entry 57).** Do **not**: treat Python onnxruntime 1.23.2's canary PASS as qualifying the student's export (only V2-R under the reviewed amendment can); run V2-R before the amendment is reviewed, or with tolerances, corpus, tools or exported bytes other than the amendment names; widen into a version sweep without cause; install into the project `.venv` or the teacher environment; or loosen the exact `onnxruntime-node` pin without the canary passing on the new version.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -10545,3 +10547,36 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
 - **Not yet:** requalifying the same exported artifact (same corpus, same tolerances) follows the amendment's review. A canary pass alone does not qualify it.
 - **Noted by the user:** a fresh install that honours the existing lockfile keeps 1.23.2. The upgrade risk arises when dependency resolution changes.
 - **Not authorized:** games, deployment and pushing.
+
+#### Post-closure entry 57 — the runtime canary: Python onnxruntime 1.23.2 PASSES, 1.24.4 FAILS; the parity amendment drafted and the product pinned (2026-11-09)
+
+- **Test:** does Python onnxruntime 1.23.2 (the product's ORT version) compute same-shape Convs with an all-zero filter 0 correctly, within a session and across sessions? Approved by the decision note above. 1.23.2 first, no version sweep.
+- **Hypothesis:** the mix-up of entry 56 is specific to Python ORT 1.24.4, so 1.23.2 can serve as the parity reference surface.
+- **Why it was plausible:** onnxruntime-node 1.23.2 computed the same graphs correctly (entry 56).
+- **Prediction on record:** None stated in advance.
+- **What ran:**
+  - **The canary, as the review required:** `tests/parity/ort_conv_canary.py`.
+    - Self-contained: synthetic weights from an integer generator, no model, no student weights, no scratch files.
+    - Correctness: each output against its own float64 reference.
+    - Cases: a dense control, three zero-filter convs in one session, and two zero-filter sessions run in sequence and again.
+  - **Its Node twin:** `server/test_ort_conv_canary.js`. It encodes the ONNX graphs itself, pins the shared generator to fixed Python values, and includes a constructed negative case.
+  - **The isolated environment:** `~/twixt-cache/ort-canary-1.23.2/venv`, from the existing standalone interpreter `~/twixt-cache/htb-teacher/python/bin/python3.13` (3.13.15).
+    - Wheels were downloaded, recorded with their sha256 (the onnxruntime wheel `2ff531ad…` equals PyPI's digest) and installed offline.
+    - **Untouched:** 0 files under `htb-teacher` changed (checked against a marker), and the project `.venv` was not modified.
+  - **Evidence:** `docs/superpowers/evidence/htb-integration-g2/canary-1/`.
+- **Result:**
+  - **Python ORT 1.24.4 (project `.venv`): FAIL.** The dense control is correct (≤ 5.1e-6); the zero-filter convs are off by 5.0–8.3, within the session and across sessions. This is the positive control.
+  - **Python ORT 1.23.2 (isolated): PASS.** Every output is ≤ 2.3e-6 from its reference, and a repeat run agrees.
+  - **onnxruntime-node 1.23.2: PASS.**
+  - **The Node twin is sensitive to the defect:** its JS-built graphs, run under Python 1.24.4, fail with the identical errors (5.62, 8.28).
+- **Did it match a prediction?** None was stated. The hypothesis held for 1.23.2.
+- **Conclusion / status:**
+  - **1.23.2 qualifies as a canary-passing reference runtime. It does not qualify the artifact.**
+  - **Drafted for review:** `docs/superpowers/2026-11-09-htb-student-parity-amendment.md`, an integration-specific amendment for **V2-R**.
+    - It changes only "ORT-py" to Python onnxruntime 1.23.2.
+    - It keeps the corpus, tolerances, gates, unmodified tools and the same exported pair.
+    - It preregisters three preconditions: hashes, canaries, and a 1e-4 MLX drift stop against V2's recorded MLX outputs.
+    - It needs `mlx`, `mlx-metal` and `torch` added to the isolated venv, with approval.
+  - **August's specification and the V2 FAIL are unchanged.**
+  - **Product guard:** `onnxruntime-node` pinned exactly to 1.23.2 in `package.json` and the lockfile root (`npm ls` consistent; nothing reinstalled). The canary has been added to `npm run test:server`, whose script now also lists the G1 test files it had omitted.
+  - **Status:** the model is still unpinned, and V2-R awaits the amendment's review.

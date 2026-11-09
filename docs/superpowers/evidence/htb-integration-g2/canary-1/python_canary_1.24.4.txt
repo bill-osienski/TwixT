@@ -1,0 +1,9 @@
+  ok   control_dense                                           conv0  max abs err 5.14e-06
+  ok   control_dense                                           conv1  max abs err 4.61e-06
+  FAIL within_session                                          conv0  max abs err 5.62e+00
+  FAIL within_session                                          conv1  max abs err 8.28e+00
+  ok   within_session                                          conv2  max abs err 4.97e-06
+  FAIL cross_session(first session, before the second exists)  conv0  max abs err 6.30e+00
+  FAIL cross_session(second session)                           conv0  max abs err 4.98e+00
+  FAIL cross_session(first session, after the second)          conv0  max abs err 6.30e+00
+CANARY FAIL  (onnxruntime 1.24.4, python 3.14.10)

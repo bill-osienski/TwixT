@@ -1,0 +1,59 @@
+{
+ "verdict": "FAIL",
+ "tolerance": 0.001,
+ "onnxruntime": "1.24.4",
+ "onnx": "1.20.1",
+ "numpy": "2.4.1",
+ "python": "3.14.10",
+ "executable": "/Users/bill/projects/TwixT_Game/.venv/bin/python",
+ "results": [
+  {
+   "case": "control_dense",
+   "conv": 0,
+   "max_abs_err": 5.139918196839233e-06,
+   "ok": true
+  },
+  {
+   "case": "control_dense",
+   "conv": 1,
+   "max_abs_err": 4.60541094415845e-06,
+   "ok": true
+  },
+  {
+   "case": "within_session",
+   "conv": 0,
+   "max_abs_err": 5.62349677809431,
+   "ok": false
+  },
+  {
+   "case": "within_session",
+   "conv": 1,
+   "max_abs_err": 8.283644289750956,
+   "ok": false
+  },
+  {
+   "case": "within_session",
+   "conv": 2,
+   "max_abs_err": 4.9704396407612705e-06,
+   "ok": true
+  },
+  {
+   "case": "cross_session(first session, before the second exists)",
+   "conv": 0,
+   "max_abs_err": 6.296288520613954,
+   "ok": false
+  },
+  {
+   "case": "cross_session(second session)",
+   "conv": 0,
+   "max_abs_err": 4.9804140856121055,
+   "ok": false
+  },
+  {
+   "case": "cross_session(first session, after the second)",
+   "conv": 0,
+   "max_abs_err": 6.296288520613954,
+   "ok": false
+  }
+ ]
+}
