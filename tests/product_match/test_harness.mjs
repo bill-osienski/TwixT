@@ -200,11 +200,15 @@ describe('playGame', () => {
     // The readout is the most drift-prone seam here, so the product owns it.
     // A caller must not be able to play at a different temperature while still
     // labelling the game 'hard'.
+    // The harness plays plain MCTS, so its hard is today's hard (LEGACY_HARD).
+    // `search` was added to the resolved policy by the H-TB integration (G1);
+    // it was missed there because this file loads models (ledger entry 61).
     const policy = hardPolicy();
     assert.deepStrictEqual(policy, {
       difficulty: 'hard',
       nSims: 800,
       moveTemp: 0,
+      search: 'plain',
     });
 
     const g = await playGame({
