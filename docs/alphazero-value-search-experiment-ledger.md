@@ -10951,3 +10951,21 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
 - **Status:** returned for **launch clearance**. Both gates closed; no model loaded; no game. Deployment, training and
   pushing not authorized. Do-not-repeat #191 applies unchanged; under it, the binding now covers the runtime packages
   and the Node executable.
+
+#### Decision note — the G3 launch sequence CLEARED, once; a dated count correction to the repair record (2026-11-09)
+
+- **The user's review of the repair:** it passes. The user recommends clearing the single G3 launch sequence, with no
+  further qualification round. Verified read-only (no tests, models or games): the updated binding, the Node
+  executable, the runtime package files and the model hashes; both gates closed; no G3 evidence directory exists.
+- **Cleared, once each, in order:**
+  1. one browser game, checking the client and the bar behaviour; stop if Chrome is unavailable or the check fails;
+  2. one smoke pair under TERM 2,390 s / KILL 2,400 s;
+  3. validate and commit the smoke evidence and the derived timing;
+  4. one 220-game confirmation match, only if the derived hard ceiling is at most 24 hours and every admission check
+     passes;
+  5. validate, commit and report the result and the cleanup.
+- **Conditions:** BOINC stays quit and Unreal Editor stays closed during execution. Any failure, timeout or invalid
+  evidence stops the sequence for assessment, with no automatic retry. A PASS does not authorize deployment, training
+  or pushing.
+- **Count correction to the repair record (dated 2026-11-09):** the binding contains **237** runtime package files,
+  not 239 (239 counted the two package keys as well). All 237 match the installed files. No test change is needed.
