@@ -274,6 +274,7 @@ knob) is not a new hypothesis.
 > **H-TB integration — PROPOSAL drafted for review; nothing implemented (decision note, 2026-11-06).** `docs/superpowers/2026-11-06-htb-integration-proposal.md`: the product already serves calib020_0001 (`c34b7ff3297c785a`), so the network swap is an ONNX export of the same architecture. The gap is the search: product `hard` is an 800-simulation argmax, not the tested mirror-averaged 200-simulation halving protocol. The proposal ports the reviewed Python into two new server modules for `hard` only, keeps c34b7ff for rollback, and lists behaviour outside the protocol, validation steps V1–V8 and 5–7 days of effort. No export, model load, game, deployment or push.
 > **H-TB integration — proposal REVIEWED; revision 1 returned for review; nothing implemented (decision note, 2026-11-09).** The review recommends the hard-only integration and decides D1–D5 (hard only; tested random opening; conflicting overrides refused; product-stack match before deployment; analysis endpoints unchanged). Revision 1 answers its five corrections: the research PUCT tie rule ported for `hard` only, tested seed for seed; the hard model on its own selection path; the product game-end rule kept as a stated variation, with boundary checks; the cache bypassed and the MCTS-bar value defined; a tested `HARD_MODE=legacy` switch-back. The work is grouped into G1 (fake tests), G2 (export and numerics) and G3 (smoke and match); D6–D8 are open; 7–9 days.
 > **H-TB integration — revision 1 ACCEPTED; D6–D8 decided; G1 APPROVED (decision note, 2026-11-09).** D6: the bar shows the played move's mean from ply 20, a search estimate. D7: `HARD_MODE=legacy`. D8: 110 pairs against today's `hard`, one-sided 95%, recording both sides' costs and latency. Build details: use actual visit counts; keep `rootValue` the true root mean and return the move's estimate separately; define the timing formula before the smoke run. Export, model loading, games, deployment and pushing remain separate approvals.
+> **H-TB integration — G1 BUILT and checked with fake evaluators; returned for review (build record, 2026-11-09).** Branch `htb-integration-g1` (`22c1a78d`, `a5ec10ed`). The research tie rule, mirror averaging, root halving and the opening readout match the Python research code exactly, seed for seed, ties included (fixtures from the research classes with a deterministic fake evaluator). `rootValue` stays the true root mean; the played move's value and actual visits are returned separately with `valueKind`. The hard model has its own path, conflicting overrides are refused, protocol requests bypass the cache, and `HARD_MODE=legacy` restores today's hard. 437 model-free tests pass (golden 140, others 297), 0 skipped. Deviations recorded: the surface file list is unchanged, with a new `protocol-hard` stage; `HARD_MODEL_ID` is null until G2. No export, model load or game.
 
 ## Historical proposal check — programme now closed
 
@@ -10339,3 +10340,66 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
 - **The Python RNG port** is acceptable for reproducible comparison tests, kept to the operations this search needs.
 - **Authorized now:** G1, the implementation and its tests with fake evaluators.
 - **Not authorized:** export, real-model loading, smoke games, the product match, deployment and pushing. Each remains a separate approval.
+
+#### Build record — H-TB integration G1: implementation with fake-evaluator tests; returned for review (2026-11-09)
+
+- **Authorized:** G1 (the user, 2026-11-09). **Branch:** `htb-integration-g1`, from `htb-pilot-build`, not pushed.
+- **Commits:**
+  - `8e2271ae`: the decision note above;
+  - `22c1a78d`: the implementation and its tests;
+  - `a5ec10ed`: the golden harness's `protocol-hard` stage.
+- **Nothing was exported, loaded or played.** No ONNX session was created by any test run here. The student still hashes to `0e1cb621…`. No file under `scripts/` changed.
+- **Built (`server/`):**
+  - `py_random.js`: the CPython `random.Random` subset the search uses.
+  - `mirror_inference.js`: mirror averaging, with a float32 mean as numpy computes it.
+  - `protocol_mcts.js`: the research tie rule and the T 1.0 opening readout, including CPython's compensated `sum`.
+  - `root_halving.js`: root sequential halving.
+  - `protocol_move.js`: one `hard` move.
+    - `rootValue` is always the true root mean. `moveValue` and `moveVisits` come from the played move's actual visits.
+    - `valueKind` is `root_mean` before ply 20 and `played_move_mean` from ply 20 (D6).
+  - Edited: `readout_policy.js`, `model_manifest.js`, `index.js`, and `tests/product_match/harness.mjs`.
+- **Checks, all model-free.** Fixtures come from the research classes driven by a deterministic fake evaluator (`tests/fixtures/htb_integration/`). Each fixture pins the sha256 of the research sources it describes. Regeneration reproduces them byte for byte.
+  - **V1:** the mirrored board, mirrored legal moves and averaged outputs equal Python's exactly on all 126 non-terminal parity-corpus positions.
+  - **V4 RNG:** seven seeds up to 2⁴⁸ − 2, stream for stream, across a 624-word regeneration.
+  - **V4 search,** seed for seed and exactly: visit counts, root value, rounds, choice, the choice's visits and value, and the opening readout.
+    - 12 plain cases and 16 halving cases: m = 16, 9, 5, 2 and 1; mirror-wrapped and bare; a winning child; a two-ply threat.
+    - The fixtures contain over a thousand exact tie sets, over five hundred within-1e-8 ties and over two hundred order-dependent running-best sets.
+    - Constructed controls show that a wrong seed, or the product's lexicographic rule, does not reproduce the research search.
+  - **V5:**
+    - policy, the hard modes and `PolicyConflict` (refused, D3);
+    - values and `valueKind`;
+    - a separate readout stream, and fresh streams per request;
+    - refusals of a non-24 board, a won root and a full board;
+    - an aborted search playing nothing, before and after ply 20.
+  - **V5, `index.js` wiring, source level only:** `index.js` starts a server on import, so these checks read its source:
+    - both transports call `protocolMove` with the hard session and no seeds;
+    - the REST protocol branch never touches the cache;
+    - refusals answer 400;
+    - protocol-only response fields;
+    - `HARD_MODE` is parsed first, and `legacy` never resolves the hard model.
+  - **V6:**
+    - played moves and candidates are legal from ply 0 to a nearly full board;
+    - `valueKind` switches at ply 19 / 20;
+    - plies 279–281 search normally under the product rule;
+    - 600 > 576 cells, so the move-number feature stays below 1.
+  - **Model paths:**
+    - `MODEL_MANIFEST` and `HARD_MODEL_MANIFEST` are separated, tested both ways;
+    - an unpinned hard path is refused with `HARD_MODEL_UNPINNED`;
+    - a tampered hard sidecar is refused with `DATA_HASH_MISMATCH`, against a passing control;
+    - both retained pins (c34b7ff, 1d64027) validate and hash to their pairs.
+- **Suites run, in a clean linked worktree at `a5ec10ed`** (removed afterwards):
+  - the golden suite: 140 pass, 0 skipped, so its clean-tree HEAD-surface guards ran;
+  - the model-free match, parity-corpus, smoke and server suites plus the new tests: 297 pass, 0 skipped;
+  - ESLint with no warnings.
+- **Not run here, because they load a model (G2):** `server/test_model_manifest.js` (spawns the server), `server/test_parity.js`, `tests/product_match/test_harness.mjs` and `tests/parity/test_compare.mjs`.
+- **Deviations from revision 1, and why:**
+  1. **`EXECUTION_SURFACE_FILES` is unchanged** (§4.8 proposed adding the new modules). The digest for a frozen stage is recomputed at that stage's commit, over today's file list. Adding files that did not exist at `74dca6e` / `85894b9` / `879b67c` would break that recomputation for `eager`, `lazy` and `candidate-default`. The new stage `protocol-hard` (`998dfeab…` at `22c1a78d`) is not re-measured, by candidate-default's argument: `mcts.js`, `gameLogic.js` and `inference.js` are byte-identical. **G3's match driver must bind the protocol modules and `index.js` in its own surface list.**
+  2. **Protocol-only response fields** (`search`, `valueKind`, `moveValue`, `moveVisits`, `modelId`) are added to protocol responses only. §4.6 said "both transports add", which conflicted with V5's "easy and medium byte-identical". The plain responses keep today's exact shape.
+  3. **`resolvePolicy` now requires `hardMode` for `hard`,** so no caller gets either mode by default. The August match harness therefore names `legacy` explicitly; it plays plain MCTS, so its behaviour is unchanged.
+  4. **`HARD_MODEL_ID` is `null` until G2 pins the export.** Until then a default-mode (`protocol`) server refuses to start, with `HARD_MODEL_UNPINNED`, unless `HARD_MODEL_MANIFEST` or `HARD_MODE=legacy` is set. `test_model_manifest.js`'s "starts with no environment override" therefore needs G2's pin, and it runs in G2.
+- **Noted, not changed:**
+  - The client's recorder derives its `root_value` from `valueRed` (`gameRecorder.js:303–305`). From ply 20 a new-`hard` recording therefore stores the played move's mean under that name. The client is unchanged (§5).
+  - JS `Math.log` / `Math.exp` may differ from libm by an ulp. All fixtures matched exactly; a difference could matter only at a decision boundary.
+- **Open before G3:** the timing formula (the review's detail 3) is to be written into the match card before the smoke run.
+- **Prediction:** None stated in advance. This is an engineering build, not an experiment.
+- **Not authorized:** export, model loading, smoke games, the product match, deployment and pushing.
