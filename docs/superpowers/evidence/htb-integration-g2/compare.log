@@ -1,0 +1,42 @@
+
+PARITY FAIL  (126 positions)
+
+S1 encoding   exact: PASS
+   legal moves:      PASS
+masks         exact: PASS
+equivariance mlx       PASS (10/10)
+equivariance ort_py    PASS (10/10)
+equivariance ort_node  PASS (10/10)
+
+S2  maxlogit 1.246e+1 / 1.000e-4   meanlogit 1.748e+0 / 1.000e-5   maxvalue 1.949e+0 / 1.000e-4
+     top1 disagreements 109   near-tie exemptions 0/6   top-k 0.0%   tau median 0.270983   [primary 120 positions only]
+     edge (reported separately): top1 1/6   top-k 1/6   tau min 0.158320   failures 5
+S3  maxlogit 1.246e+1 / 1.000e-5   meanlogit 1.748e+0 / 1.000e-6   maxvalue 1.949e+0 / 1.000e-5
+     top1 disagreements 109   near-tie exemptions 0/6   top-k 0.0%   tau median 0.270983   [primary 120 positions only]
+     edge (reported separately): top1 1/6   top-k 1/6   tau min 0.158320   failures 5
+S4  maxlogit 2.384e-5 / 1.100e-4   meanlogit 1.438e-6 / 1.100e-5   maxvalue 1.937e-6 / 1.100e-4
+     top1 disagreements 0   near-tie exemptions 0/6   top-k 100.0%   tau median 1.000000   [primary 120 positions only]
+     edge (reported separately): top1 6/6   top-k 6/6   tau min 1.000000   failures 0
+
+red-perspective max diff: 0 / 1.000e-6
+value range violations:   0
+
+16 FAILURE(S):
+  S2  max_abs_logit_diff
+  S2  mean_abs_logit_diff
+  S2  max_abs_value_diff
+  S2  top1_disagreement_outside_near_tie_band
+  S2  edge_top1_disagreement_outside_near_tie_band
+  S2  topk_set_agreement
+  S2  kendall_tau_median
+  S2  value_sign_disagreement
+  S3  max_abs_logit_diff
+  S3  mean_abs_logit_diff
+  S3  max_abs_value_diff
+  S3  top1_disagreement_outside_near_tie_band
+  S3  edge_top1_disagreement_outside_near_tie_band
+  S3  topk_set_agreement
+  S3  kendall_tau_median
+  S3  value_sign_disagreement
+
+wrote /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/bbf69511-6636-45f1-b20e-ad3d10cfc215/scratchpad/v2/parity_result.json

@@ -1,0 +1,21 @@
+W1109 11:09:32.522000 4774 .venv/lib/python3.14/site-packages/torch/onnx/_internal/exporter/_registration.py:110] torchvision is not installed. Skipping torchvision::nms
+W1109 11:09:32.523000 4774 .venv/lib/python3.14/site-packages/torch/onnx/_internal/exporter/_registration.py:110] torchvision is not installed. Skipping torchvision::roi_align
+W1109 11:09:32.523000 4774 .venv/lib/python3.14/site-packages/torch/onnx/_internal/exporter/_registration.py:110] torchvision is not installed. Skipping torchvision::roi_pool
+/opt/homebrew/Cellar/python@3.14/3.14.10/Frameworks/Python.framework/Versions/3.14/lib/python3.14/copyreg.py:104: FutureWarning: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+  return cls.__new__(cls, *args)
+============================================================
+ONNX EXPORT
+============================================================
+
+Loading MLX model from /Users/bill/twixt-cache/htb-pilot/student.safetensors...
+Exporting to /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/bbf69511-6636-45f1-b20e-ad3d10cfc215/scratchpad/htb_export/model.onnx...
+[torch.onnx] Obtain model graph for `OnnxAlphaZero([...]` with `torch.export.export(..., strict=False)`...
+[torch.onnx] Obtain model graph for `OnnxAlphaZero([...]` with `torch.export.export(..., strict=False)`... ✅
+[torch.onnx] Run decomposition...
+[torch.onnx] Run decomposition... ✅
+[torch.onnx] Translate the graph into ONNX...
+[torch.onnx] Translate the graph into ONNX... ✅
+Applied 15 of general pattern rewrite rules.
+Exported ONNX model to /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/bbf69511-6636-45f1-b20e-ad3d10cfc215/scratchpad/htb_export/model.onnx
+
+Done!

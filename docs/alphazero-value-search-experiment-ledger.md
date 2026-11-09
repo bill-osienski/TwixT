@@ -276,6 +276,7 @@ knob) is not a new hypothesis.
 > **H-TB integration — revision 1 ACCEPTED; D6–D8 decided; G1 APPROVED (decision note, 2026-11-09).** D6: the bar shows the played move's mean from ply 20, a search estimate. D7: `HARD_MODE=legacy`. D8: 110 pairs against today's `hard`, one-sided 95%, recording both sides' costs and latency. Build details: use actual visit counts; keep `rootValue` the true root mean and return the move's estimate separately; define the timing formula before the smoke run. Export, model loading, games, deployment and pushing remain separate approvals.
 > **H-TB integration — G1 BUILT and checked with fake evaluators; returned for review (build record, 2026-11-09).** Branch `htb-integration-g1` (`22c1a78d`, `a5ec10ed`). The research tie rule, mirror averaging, root halving and the opening readout match the Python research code exactly, seed for seed, ties included (fixtures from the research classes with a deterministic fake evaluator). `rootValue` stays the true root mean; the played move's value and actual visits are returned separately with `valueKind`. The hard model has its own path, conflicting overrides are refused, protocol requests bypass the cache, and `HARD_MODE=legacy` restores today's hard. 437 model-free tests pass (golden 140, others 297), 0 skipped. Deviations recorded: the surface file list is unchanged, with a new `protocol-hard` stage; `HARD_MODEL_ID` is null until G2. No export, model load or game.
 > **H-TB integration — G1 ACCEPTED; G2 APPROVED (decision note, 2026-11-09).** Scope: export and pin the exact student; real and mirror-averaged output parity at the declared tolerances; the deferred suites and the golden comparison; live REST and WS requests (value perspectives, refusals, cancellation); `HARD_MODE=legacy` reproducing the recorded baseline with the student artifact unavailable. Dated correction: G1's fixture has 27 cases (12 plain, 15 halving), not 28. Results return for review before any G3 game.
+> **H-TB integration — G2 STOPPED at V2: PARITY FAIL on the Python ONNX Runtime surface (Post-closure entry 55, 2026-11-09).** One unmodified export of the student (`78c16a31c3dba37f`; student sha256 unchanged). S1, masks, equivariance and **S4 (MLX ↔ the product's Node ORT) pass**: max logit difference 2.4e-5 against 1.1e-4, top-1 100%, τ 1.0. **S2 and S3 fail by about 12 logits**: Python ORT 1.24.4 gives deterministic but wrong outputs on this artifact only; it still reproduces August's c34b7ff. Not the external-data loader, graph optimization or subnormals; the cause is unexplained. Candidate not committed; `HARD_MODEL_ID` stays null; nothing after V2 ran. Returned for assessment. See #185.
 
 ## Historical proposal check — programme now closed
 
@@ -2092,6 +2093,8 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
    - treat the evaluations guard's narrow pass (1.0495 against 1.05) as headroom, or loosen either guard for a later test without review;
    - start further training, deployment or pushing on this result: none is authorized, including after a PASS.
    - *Clarification (2026-11-06, the user's acceptance):* describe the result as stronger play **within the declared compute allowances** (evaluations ≤ 1.05, search seconds ≤ 1.10), not at exactly equal compute; and do not modify the validated student file (`0e1cb621…`).
+
+185. **H-TB integration G2, V2 export parity: FAIL on the Python ONNX Runtime surface (2026-11-09, entry 55).** Do **not**, without a new reviewed plan: re-export the student, export with other arguments or another exporter, edit the exporter, revise or waive the Phase 2 tolerances, drop or swap the Python ORT surface to obtain a PASS, or pin `78c16a31c3dba37f` and continue G2 as though V2 had passed. S4's agreement with the product runtime is real, but under the preregistered rule it does not rescue S2 and S3. The cause is unexplained; any diagnosis needs its own scope.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -10422,3 +10425,45 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
   5. verify `HARD_MODE=legacy` reproduces the recorded baseline with the student artifact unavailable.
 - **The request wiring is the principal unverified area:** G1 inspected its source rather than exercising the server.
 - **G2's results return for review before any G3 game.** Training, deployment and pushing remain outside this scope.
+
+#### Post-closure entry 55 — H-TB integration G2, V2 export parity: PARITY FAIL on the Python ONNX Runtime surface; G2 stopped (2026-11-09)
+
+- **Test:** Phase 2's preregistered export-parity gate (`docs/superpowers/2026-08-13-phase2-parity-specification.md`, S1–S4, §7 "every metric on every surface"), applied to one unmodified ONNX export of the validated student. This is V2 of the integration proposal's G2.
+- **Hypothesis:** the unmodified exporter exports the student faithfully. The student has calib020_0001's architecture, and the exporter, network and state code are byte-identical to August's export commit `32751284`.
+- **Why it was plausible:** August's export of calib020_0001 passed every metric with large margins. The student's graph turns out node-for-node identical to that export's.
+- **Prediction on record:** None stated in advance.
+- **What ran,** once each, at `cef270de` with no modified tracked files:
+  - **The export:**
+    - student sha256 `0e1cb621…` before and after; SHA-1 `a35e3f4c…`;
+    - pair id **`78c16a31c3dba37f`**: graph `bc68a274…` (82,855 bytes), data `317d7a7c…` (7,493,120 bytes);
+    - validated through `resolveHardModel` with `HARD_MODEL_MANIFEST`.
+  - **The Phase 2 tooling, unmodified:** Python side with `MLX_ENABLE_TF32=0`, Node side through `MODEL_MANIFEST`, then `compare.mjs`.
+  - **Environment differences from August:** Python 3.14.10 (August 3.14.6) and Node v24.22.0 (August v26.7.0). The ORT versions are the same: 1.24.4 (Python) and 1.23.2 (Node).
+  - **Evidence:** `docs/superpowers/evidence/htb-integration-g2/`. The verdict recomputes from its gz halves.
+- **Result: PARITY FAIL,** 16 failures, all on S2 and S3.
+  - **Pass:** S1 (encoding and legal moves exact), masks, equivariance on all three runtimes, red perspective, value range.
+  - **S2 (MLX ↔ ORT-py) and S3 (ORT-py ↔ ORT-node):**
+    - max abs logit difference 12.46, against limits of 1e-4 and 1e-5;
+    - 109 of 120 top-1 moves disagree outside the near-tie band;
+    - top-5 set agreement 0%;
+    - Kendall τ median 0.271.
+  - **S4 (MLX ↔ ORT-node), the product path, passes with wide margins:**
+    - max abs logit difference 2.38e-5 against 1.1e-4;
+    - max abs value difference 1.94e-6;
+    - top-1 agreement 100%, top-5 sets 100%, τ 1.000;
+    - all six edge cases agree.
+- **Diagnostics after the verdict** (`DIAGNOSTICS.md`; each run once, in memory, no alternate artifact):
+  1. Python ORT reproduces August's c34b7ff output to 1.2e-5, so the runtime is not broken in general.
+  2. On the student it is **deterministic but wrong**. It gives the same 9.89 maximum deviation from MLX:
+     - across fresh sessions;
+     - when the bytes are loaded in memory, bypassing the external-data loader;
+     - with all graph optimizations off.
+  3. Process state affects it: after a c34b7ff session in the same process, the student result changed again. This was seen once.
+  4. The two graphs are structurally identical, with no non-finite weights. The student's weights hold 373,207 subnormals (c34b7ff: 3,044).
+  5. Flushing those subnormals to zero changes nothing, so they are not the cause.
+- **Did it match a prediction?** None was stated. The failure is located but not explained. Native MLX and the product's runtime (Node ORT 1.23.2) agree on the student to 2.4e-5 over all 126 positions. Python ORT 1.24.4 alone disagrees with both, on this artifact only.
+- **Conclusion / status:**
+  - **V2 FAILS as preregistered.** Under the Phase 2 rule that applies here, this is a stop.
+  - `models/78c16a31c3dba37f/` is **not committed**; the placed copy was moved to scratch. `HARD_MODEL_ID` stays `null`.
+  - G2's remaining steps (V3, the deferred suites, the golden comparison, the live requests, R1–R3) were not run.
+  - **Returned to the user for assessment.** No retry, alternate export, exporter change, tolerance revision or substitute surface.
