@@ -33,6 +33,9 @@ import {
   resolvePolicy,
   selectMoveForRequest,
 } from '../../server/readout_policy.js';
+
+/** The harness plays plain MCTS, so it plays today's hard (HARD_MODE=legacy). */
+export const HARNESS_HARD_MODE = 'legacy';
 import { openingMovesFrom } from './generate_openings.mjs';
 import {
   POOL_RELPATH,
@@ -134,7 +137,10 @@ export async function playGame({
   // Accepting it as a parameter would let a caller play at a different
   // temperature while still labelling the game 'hard' — the readout is the
   // single most drift-prone thing here, so the product owns it outright.
-  const policy = resolvePolicy({ difficulty });
+  // This harness plays PLAIN MCTS only, so its 'hard' is today's hard
+  // (LEGACY_HARD: 800 simulations, argmax), named explicitly. The H-TB protocol
+  // hard is not playable here; resolving 'hard' without a mode refuses.
+  const policy = resolvePolicy({ difficulty, hardMode: HARNESS_HARD_MODE });
   const nSims = nSimulations ?? policy.nSims;
 
   const redMcts = new MCTS(redInference, { nSimulations: nSims, cPuct });
@@ -173,6 +179,7 @@ export async function playGame({
     const { moveKey } = selectMoveForRequest({
       visitCounts,
       difficulty,
+      hardMode: HARNESS_HARD_MODE,
       selectMove: (counts, temp) => mcts.selectMove(counts, temp),
     });
     const move = moveKey.split(',').map(Number);
@@ -200,8 +207,8 @@ export async function playGame({
   };
 }
 
-/** The shipped hard-difficulty policy, so callers need not restate it. */
-export const hardPolicy = () => resolvePolicy({ difficulty: 'hard' });
+/** Today's hard-difficulty policy (LEGACY_HARD), the one this plain-MCTS harness plays. */
+export const hardPolicy = () => resolvePolicy({ difficulty: 'hard', hardMode: HARNESS_HARD_MODE });
 
 /**
  * Build a §10 sidecar.

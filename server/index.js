@@ -8,10 +8,12 @@
  * - GET /api/health - Health check
  * - WS /ws - WebSocket for real-time MCTS with progress streaming
  *
- * Difficulty levels map to MCTS simulation counts:
- * - easy: 100 simulations
- * - medium: 400 simulations
- * - hard: 800 simulations
+ * Difficulty levels (server/readout_policy.js):
+ * - easy: 100 simulations, plain MCTS
+ * - medium: 400 simulations, plain MCTS
+ * - hard: under HARD_MODE=protocol (the default), the validated H-TB protocol
+ *   with its own model (server/protocol_move.js); under HARD_MODE=legacy,
+ *   today's 800-simulation argmax on the default model.
  */
 /* global AbortController */
 import http from 'http';
@@ -26,8 +28,15 @@ import { AlphaZeroInference } from './inference.js';
 import { MCTS } from './mcts.js';
 import { TwixtState } from './gameLogic.js';
 import { BoardMovesCache } from './cache.js';
-import { resolvePolicy, selectMoveForRequest } from './readout_policy.js';
-import { resolveModel, assertSessionContract } from './model_manifest.js';
+import {
+  resolvePolicy,
+  selectMoveForRequest,
+  parseHardMode,
+  PolicyConflict,
+} from './readout_policy.js';
+import { resolveModel, resolveHardModel, assertSessionContract } from './model_manifest.js';
+import { MirrorAveragingInference } from './mirror_inference.js';
+import { protocolMove, displayValue, ProtocolRefusal } from './protocol_move.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -39,6 +48,25 @@ app.use(express.json({ limit: '10mb' }));
 let inference = null;
 let cache = null;
 let modelPath = null;
+let modelId = null;
+// hard's mode and, under 'protocol', its own model: set once at startup.
+let hardMode = null;
+let hardInference = null;
+let hardModelId = null;
+
+/** Errors a client caused: 400 on REST, an `error` message on WS, same text. */
+const isRequestRefusal = (err) => err instanceof PolicyConflict || err instanceof ProtocolRefusal;
+
+const toValueRed = (gameState, value) => {
+  const valueRed = gameState.toMove === 'red' ? value : -value;
+  return Math.max(-1, Math.min(1, valueRed));
+};
+
+const visitsObject = (visitCounts) => {
+  const visits = {};
+  for (const [key, count] of visitCounts) visits[key] = count;
+  return visits;
+};
 
 // Difficulty -> simulations and readout policy now lives in readout_policy.js,
 // which BOTH transports consume. Previously this table was used by the
@@ -75,7 +103,26 @@ app.post('/api/move', async (req, res) => {
       return res.json({ error: 'no_legal_moves' });
     }
 
-    const policy = resolvePolicy({ difficulty, deterministicMode, temperature });
+    const policy = resolvePolicy({ difficulty, deterministicMode, temperature, hardMode });
+    if (policy.search === 'protocol') {
+      // Never cached: every protocol request searches afresh (integration
+      // proposal §4.6).
+      const startTime = Date.now();
+      const out = await protocolMove({ gameState, policy, inference: hardInference });
+      const [row, col] = out.moveKey.split(',').map(Number);
+      return res.json({
+        move: { row, col },
+        value: out.rootValue,
+        visits: visitsObject(out.visitCounts),
+        elapsed: Date.now() - startTime,
+        cached: false,
+        search: 'protocol',
+        valueKind: out.valueKind,
+        moveValue: out.moveValue,
+        moveVisits: out.moveVisits,
+        modelId: hardModelId,
+      });
+    }
     // The cache holds RAW SEARCH OUTPUT, keyed by everything that changes it
     // but is not on the board. Readout policy is deliberately absent from the
     // scope: it is applied after the lookup, so a repeated stochastic request
@@ -102,6 +149,7 @@ app.post('/api/move', async (req, res) => {
       difficulty,
       deterministicMode,
       temperature,
+      hardMode,
       selectMove: (counts, temp) => mcts.selectMove(counts, temp),
     });
     const [row, col] = moveKey.split(',').map(Number);
@@ -114,6 +162,9 @@ app.post('/api/move', async (req, res) => {
       cached,
     });
   } catch (err) {
+    if (isRequestRefusal(err)) {
+      return res.status(400).json({ error: err.message, code: err.code });
+    }
     console.error('Error in /api/move:', err);
     res.status(500).json({ error: err.message });
   }
@@ -199,6 +250,9 @@ app.get('/api/model-info', (req, res) => {
 
   res.json({
     checkpoint_path: modelPath,
+    model_id: modelId,
+    hard_mode: hardMode,
+    hard_model_id: hardModelId,
     model_iter: null,
     network: { hidden: 128, blocks: 6 },
     mcts_defaults: {
@@ -477,6 +531,14 @@ wss.on('connection', (ws) => {
           elapsed: result.elapsed,
           nSimulations: result.nSimulations,
         };
+        // Protocol moves only; a plain response is unchanged.
+        if (result.search === 'protocol') {
+          response.search = result.search;
+          response.valueKind = result.valueKind;
+          response.moveValue = result.moveValue;
+          response.moveVisits = result.moveVisits;
+          response.modelId = result.modelId;
+        }
 
         // Add visit data only when requested
         if (includeVisits && result.visits) {
@@ -519,8 +581,34 @@ async function computeBestMove(stateDict, difficulty = 'medium', opts = {}) {
     difficulty,
     deterministicMode: opts.deterministicMode === true,
     temperature: opts.temperature,
+    hardMode,
   });
   const nSims = policy.nSims;
+
+  if (policy.search === 'protocol') {
+    const out = await protocolMove({
+      gameState,
+      policy,
+      inference: hardInference,
+      signal: opts.signal,
+      onProgress: opts.onProgress,
+    });
+    const [row, col] = out.moveKey.split(',').map(Number);
+    return {
+      move: { row, col },
+      evalToMove: gameState.toMove,
+      rootValue: out.rootValue, // the actual root mean (STM perspective)
+      valueRed: toValueRed(gameState, displayValue(out)), // for the bar, per valueKind
+      elapsed: Date.now() - t0,
+      nSimulations: nSims,
+      visits: visitsObject(out.visitCounts),
+      search: 'protocol',
+      valueKind: out.valueKind,
+      moveValue: out.moveValue,
+      moveVisits: out.moveVisits,
+      modelId: hardModelId,
+    };
+  }
 
   const mcts = new MCTS(inference, { nSimulations: nSims });
   const { visitCounts, rootValue } = await mcts.search(gameState, {
@@ -540,6 +628,7 @@ async function computeBestMove(stateDict, difficulty = 'medium', opts = {}) {
     difficulty,
     deterministicMode: opts.deterministicMode === true,
     temperature: opts.temperature,
+    hardMode,
     selectMove: (counts, temp) => mcts.selectMove(counts, temp),
   });
   const [row, col] = moveKey.split(',').map(Number);
@@ -575,8 +664,14 @@ async function main() {
   // default, and never from an environment variable naming a bare artifact.
   // Any validation failure throws and takes the process down; this server does
   // not serve unvalidated bytes.
+  // hard's mode first: an invalid HARD_MODE refuses to start before any model
+  // is read. Under 'legacy' the hard model is never resolved, so a missing or
+  // damaged hard artifact cannot block the rollback.
+  hardMode = parseHardMode();
   const { manifestPath, manifest, graphPath } = await resolveModel();
   modelPath = graphPath;
+  modelId = manifest.model_id;
+  const hard = hardMode === 'protocol' ? await resolveHardModel() : null;
   const port = process.env.PORT || 3001;
   const cacheSize = parseInt(process.env.CACHE_SIZE || '10000', 10);
 
@@ -586,6 +681,11 @@ async function main() {
   console.log(`Manifest:   ${manifestPath}`);
   console.log(`Model path: ${modelPath}`);
   console.log(`Provenance: source_checkpoint=${manifest.provenance.source_checkpoint_path}`);
+  console.log(`Hard mode:  ${hardMode}`);
+  if (hard) {
+    console.log(`Hard model id:   ${hard.manifest.model_id}`);
+    console.log(`Hard manifest:   ${hard.manifestPath}`);
+  }
   console.log(`Port: ${port}`);
   console.log(`Cache size: ${cacheSize}`);
   console.log();
@@ -596,6 +696,13 @@ async function main() {
   // Names, types, shapes, and the two semantic fields the tensor plumbing is
   // built from — including this wrapper's move-buffer size.
   assertSessionContract(manifest, inference.session, inference.maxMoves);
+  if (hard) {
+    const hardBase = new AlphaZeroInference(hard.graphPath);
+    await hardBase.load();
+    assertSessionContract(hard.manifest, hardBase.session, hardBase.maxMoves);
+    hardInference = new MirrorAveragingInference(hardBase);
+    hardModelId = hard.manifest.model_id;
+  }
 
   cache = new BoardMovesCache(cacheSize);
 

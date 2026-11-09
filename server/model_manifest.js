@@ -54,6 +54,16 @@ export const DEFAULT_MANIFEST_PATH = join(
   'manifest.json'
 );
 
+/**
+ * The model served for `hard` under HARD_MODE=protocol (integration proposal
+ * §4.7): its own selection path, separate from the default model's.
+ *
+ * Null until the validated student is exported and pinned (G2). While it is
+ * null, a protocol-mode server needs HARD_MODEL_MANIFEST or refuses to start;
+ * HARD_MODE=legacy never reads it.
+ */
+export const HARD_MODEL_ID = null;
+
 export const SUPPORTED_MANIFEST_VERSION = 1;
 
 /** Dotted paths that must be present. Absence is a hard failure, not a default. */
@@ -635,6 +645,37 @@ export function assertSessionContract(manifest, session, wrapperMaxMoves) {
  */
 export async function resolveModel(env = process.env, cwd = process.cwd()) {
   const manifestPath = resolveManifestPath(env, cwd);
+  const manifest = await loadManifest(manifestPath);
+  const { graphPath, dataPath } = await validateArtifact(
+    manifest,
+    dirname(manifestPath)
+  );
+  return { manifestPath, manifest, graphPath, dataPath };
+}
+
+/**
+ * Where to read the HARD model's manifest from.
+ *
+ * HARD_MODEL_MANIFEST is the hard model's own staging override, with the
+ * identical validation. It never affects the default model, and MODEL_MANIFEST
+ * never affects this one: the two paths share no variable.
+ */
+export function resolveHardManifestPath(env = process.env, cwd = process.cwd(), hardModelId = HARD_MODEL_ID) {
+  const override = env.HARD_MODEL_MANIFEST;
+  if (override) return isAbsolute(override) ? override : resolve(cwd, override);
+  if (hardModelId === null) {
+    fail(
+      'HARD_MODEL_UNPINNED',
+      'No hard model is pinned (HARD_MODEL_ID is null): set HARD_MODEL_MANIFEST, ' +
+        'or start with HARD_MODE=legacy'
+    );
+  }
+  return join(APP_ROOT, 'models', hardModelId, 'manifest.json');
+}
+
+/** Resolve, load and validate the hard model, as resolveModel does the default. */
+export async function resolveHardModel(env = process.env, cwd = process.cwd(), hardModelId = HARD_MODEL_ID) {
+  const manifestPath = resolveHardManifestPath(env, cwd, hardModelId);
   const manifest = await loadManifest(manifestPath);
   const { graphPath, dataPath } = await validateArtifact(
     manifest,

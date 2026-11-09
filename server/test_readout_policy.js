@@ -1,13 +1,74 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { resolvePolicy, selectMoveForRequest, DIFFICULTY_TABLE } from './readout_policy.js';
+import {
+  resolvePolicy,
+  selectMoveForRequest,
+  parseHardMode,
+  DIFFICULTY_TABLE,
+  LEGACY_HARD,
+  PROTOCOL_HARD,
+  PolicyConflict,
+  POLICY_CONFLICT_MESSAGE,
+} from './readout_policy.js';
 import { BoardMovesCache } from './cache.js';
 
-test('hard is deterministic by default', () => {
-  const p = resolvePolicy({ difficulty: 'hard' });
-  assert.equal(p.nSims, 800);
-  assert.equal(p.moveTemp, 0);
+// --- hard's two modes (H-TB integration proposal §4.5, §8) ----------------
+
+test('legacy hard is today\'s hard exactly: 800 simulations, argmax, plain search', () => {
+  const p = resolvePolicy({ difficulty: 'hard', hardMode: 'legacy' });
+  assert.deepEqual(p, { difficulty: 'hard', nSims: 800, moveTemp: 0, search: 'plain' });
+  assert.deepEqual({ ...LEGACY_HARD }, { nSims: 800, search: 'plain', moveTemp: 0 });
+});
+
+test('protocol hard is the validated protocol: 200 simulations, opening T 1.0, protocol search', () => {
+  const p = resolvePolicy({ difficulty: 'hard', hardMode: 'protocol' });
+  assert.deepEqual(p, { difficulty: 'hard', nSims: 200, moveTemp: 1.0, search: 'protocol' });
+  assert.equal(DIFFICULTY_TABLE.hard, PROTOCOL_HARD);
+  assert.ok(Object.isFrozen(PROTOCOL_HARD) && Object.isFrozen(LEGACY_HARD));
+});
+
+test('resolving hard without a mode refuses: no caller gets either mode by default', () => {
+  assert.throws(() => resolvePolicy({ difficulty: 'hard' }), /needs hardMode/);
+  assert.throws(() => resolvePolicy({ difficulty: 'hard', hardMode: 'fast' }), /needs hardMode/);
+  // easy and medium need no mode.
+  assert.equal(resolvePolicy({ difficulty: 'easy' }).search, 'plain');
+});
+
+test('protocol hard REFUSES conflicting overrides (D3), with one message', () => {
+  for (const extra of [{ temperature: 0.5 }, { temperature: 1.0 }, { temperature: 0 }, { deterministicMode: true }]) {
+    assert.throws(
+      () => resolvePolicy({ difficulty: 'hard', hardMode: 'protocol', ...extra }),
+      (e) => e instanceof PolicyConflict && e.message === POLICY_CONFLICT_MESSAGE,
+      JSON.stringify(extra)
+    );
+  }
+  // Asking for nothing different is accepted.
+  for (const extra of [{ deterministicMode: false }, { temperature: undefined }, { temperature: null }]) {
+    assert.equal(resolvePolicy({ difficulty: 'hard', hardMode: 'protocol', ...extra }).search, 'protocol');
+  }
+});
+
+test('legacy hard keeps today\'s override semantics', () => {
+  assert.equal(resolvePolicy({ difficulty: 'hard', hardMode: 'legacy', temperature: 0.7 }).moveTemp, 0.7);
+  assert.equal(resolvePolicy({ difficulty: 'hard', hardMode: 'legacy', deterministicMode: true }).moveTemp, 0);
+});
+
+test('the plain seam refuses a protocol policy', () => {
+  assert.throws(
+    () => selectMoveForRequest({ visitCounts: new Map([['1,1', 1]]), difficulty: 'hard', hardMode: 'protocol', selectMove: () => '1,1' }),
+    /plain searches only/
+  );
+});
+
+test('HARD_MODE: unset or empty is protocol; legacy is accepted; anything else refuses', () => {
+  assert.equal(parseHardMode({}), 'protocol');
+  assert.equal(parseHardMode({ HARD_MODE: '' }), 'protocol');
+  assert.equal(parseHardMode({ HARD_MODE: 'protocol' }), 'protocol');
+  assert.equal(parseHardMode({ HARD_MODE: 'legacy' }), 'legacy');
+  for (const bad of ['Legacy', 'plain', 'off', ' legacy']) {
+    assert.throws(() => parseHardMode({ HARD_MODE: bad }), /HARD_MODE must be one of/, bad);
+  }
 });
 
 test('easy and medium keep their difficulty temperature', () => {
@@ -17,10 +78,11 @@ test('easy and medium keep their difficulty temperature', () => {
   assert.equal(resolvePolicy({ difficulty: 'medium' }).nSims, 400);
 });
 
-test('deterministicMode forces temperature 0 at every difficulty', () => {
-  for (const d of Object.keys(DIFFICULTY_TABLE)) {
+test('deterministicMode forces temperature 0 at every plain difficulty', () => {
+  for (const d of ['easy', 'medium']) {
     assert.equal(resolvePolicy({ difficulty: d, deterministicMode: true }).moveTemp, 0);
   }
+  assert.equal(resolvePolicy({ difficulty: 'hard', hardMode: 'legacy', deterministicMode: true }).moveTemp, 0);
 });
 
 test('explicit temperature overrides the difficulty default', () => {
@@ -42,7 +104,7 @@ test('unknown difficulty falls back to medium', () => {
 // must be detectable as divergent. This proves the parity test in Task A2
 // can actually fail.
 test('divergent policies are detectable', () => {
-  const shared = resolvePolicy({ difficulty: 'hard' });
+  const shared = resolvePolicy({ difficulty: 'hard', hardMode: 'legacy' });
   const rogue = { nSims: 800, moveTemp: 0.25 };
   assert.notDeepEqual(shared.moveTemp, rogue.moveTemp);
 });
@@ -73,6 +135,7 @@ test('both transport option shapes produce the same readout temperature', () => 
     difficulty: 'hard',
     deterministicMode: false,
     temperature: undefined,
+    hardMode: 'legacy',
     selectMove: recordingSelectMove(log),
   });
   // WS shape: same fields arriving from a socket message.
@@ -82,10 +145,11 @@ test('both transport option shapes produce the same readout temperature', () => 
     difficulty: wsMsg.difficulty,
     deterministicMode: wsMsg.deterministicMode === true,
     temperature: wsMsg.temperature,
+    hardMode: 'legacy',
     selectMove: recordingSelectMove(log),
   });
   assert.deepEqual(log[0], log[1]);
-  assert.equal(log[0], 0, 'hard must reach the readout as temperature 0');
+  assert.equal(log[0], 0, 'legacy hard must reach the readout as temperature 0');
 });
 
 test('the parity test can actually fail', () => {
@@ -95,6 +159,7 @@ test('the parity test can actually fail', () => {
   selectMoveForRequest({
     visitCounts: COUNTS,
     difficulty: 'hard',
+    hardMode: 'legacy',
     selectMove: recordingSelectMove(log),
   });
   const rogueTemp = 0.25; // the old WS ladder for 'hard'
@@ -225,7 +290,7 @@ test('the same cached search yields different moves under different policy', () 
   const counts = new Map(Object.entries(hit.visits));
   const selectMove = (m, temp) => (temp < 0.01 ? '3,4' : '5,6');
 
-  const a = selectMoveForRequest({ visitCounts: counts, difficulty: 'hard', selectMove }).moveKey;
+  const a = selectMoveForRequest({ visitCounts: counts, difficulty: 'hard', hardMode: 'legacy', selectMove }).moveKey;
   const b = selectMoveForRequest({ visitCounts: counts, difficulty: 'medium', selectMove }).moveKey;
   assert.notEqual(a, b);
 });
