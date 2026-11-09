@@ -159,9 +159,11 @@ try {
   const o1 = await post('/api/move', { state: sd, difficulty: 'hard', temperature: 0.5 });
   const o2 = await post('/api/move', { state: sd, difficulty: 'hard', deterministicMode: true });
   const o3 = await post('/api/move', { state: sd, difficulty: 'hard', deterministicMode: false });
+  // One request at a time: on one connection a newer move aborts the older one (latest-wins), which would
+  // suppress the older refusal. Run 1 sent the L6 pair back-to-back and lost an answer that way.
   c.send({ type: 'move', id: 'o4', state: sd, difficulty: 'hard', temperature: 0.5 });
-  c.send({ type: 'move', id: 'o5', state: sd, difficulty: 'hard', deterministicMode: true });
   const o4 = await c.waitFor((x) => x.id === 'o4' && x.type !== 'progress', 5000);
+  c.send({ type: 'move', id: 'o5', state: sd, difficulty: 'hard', deterministicMode: true });
   const o5 = await c.waitFor((x) => x.id === 'o5' && x.type !== 'progress', 5000);
   check('L5 overrides refused (REST 400, WS error, one message); deterministicMode:false accepted',
     o1.status === 400 && o1.body.error === POLICY_CONFLICT_MESSAGE && o1.body.code === 'POLICY_CONFLICT' &&
@@ -179,8 +181,8 @@ try {
   const f1 = await post('/api/move', { state: won.toDict(), difficulty: 'hard' });
   const f2 = await post('/api/move', { state: small.toDict(), difficulty: 'hard' });
   c.send({ type: 'move', id: 'f3', state: won.toDict(), difficulty: 'hard' });
-  c.send({ type: 'move', id: 'f4', state: small.toDict(), difficulty: 'hard' });
   const f3 = await c.waitFor((x) => x.id === 'f3' && x.type !== 'progress', 5000);
+  c.send({ type: 'move', id: 'f4', state: small.toDict(), difficulty: 'hard' });
   const f4 = await c.waitFor((x) => x.id === 'f4' && x.type !== 'progress', 5000);
   check('L6 won position and 12x12 board refused on both transports', won.winner() === 'red' &&
     f1.status === 400 && f1.body.code === 'TERMINAL_ROOT' && f2.status === 400 && f2.body.code === 'NOT_24' &&
