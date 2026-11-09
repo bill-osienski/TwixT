@@ -272,6 +272,7 @@ knob) is not a new hypothesis.
 > **H-TB confirmation test — PASS (Post-closure entry 54, 2026-11-06).** The ONE run COMPLETED in 4,528 s (TERM 11,690 s); clean cleanup, gate restored. Mean pair score **0.9886** over 110 pairs (candidate 217 wins, reference 2, one state-cap draw); one-sided lower bound mean − √(ln 20 / 220) = **0.872 > 0.5**. Evaluations ratio **1.0495** (guard 1.05: within by 0.0005), search-seconds ratio 1.042 (guard 1.10). Both digests and eval mode unchanged from load to end. K1 RECONCILES 15/15; the whole block [202759800, 202760020) exposed and retired. **PASS is one-sided, against the original proven combination at 200 simulations only**; it does not identify a cause. Training, deployment and pushing not authorized. See #184.
 > **H-TB confirmation test — PASS ACCEPTED (decision note, 2026-11-06, the user's independent review).** Stronger play than the original proven combination is demonstrated **within the declared compute allowances** (evaluations ratio 1.049546 ≤ 1.05, search-seconds ratio 1.041526 ≤ 1.10), against this opponent and protocol only; no part of the distillation is isolated as the cause. No rerun needed. Two dated wording corrections to entry 54. The validated student stays unchanged. Integration may be considered separately; training, deployment and pushing not authorized. See #184.
 > **H-TB integration — PROPOSAL drafted for review; nothing implemented (decision note, 2026-11-06).** `docs/superpowers/2026-11-06-htb-integration-proposal.md`: the product already serves calib020_0001 (`c34b7ff3297c785a`), so the network swap is an ONNX export of the same architecture. The gap is the search: product `hard` is an 800-simulation argmax, not the tested mirror-averaged 200-simulation halving protocol. The proposal ports the reviewed Python into two new server modules for `hard` only, keeps c34b7ff for rollback, and lists behaviour outside the protocol, validation steps V1–V8 and 5–7 days of effort. No export, model load, game, deployment or push.
+> **H-TB integration — proposal REVIEWED; revision 1 returned for review; nothing implemented (decision note, 2026-11-09).** The review recommends the hard-only integration and decides D1–D5 (hard only; tested random opening; conflicting overrides refused; product-stack match before deployment; analysis endpoints unchanged). Revision 1 answers its five corrections: the research PUCT tie rule ported for `hard` only, tested seed for seed; the hard model on its own selection path; the product game-end rule kept as a stated variation, with boundary checks; the cache bypassed and the MCTS-bar value defined; a tested `HARD_MODE=legacy` switch-back. The work is grouped into G1 (fake tests), G2 (export and numerics) and G3 (smoke and match); D6–D8 are open; 7–9 days.
 
 ## Historical proposal check — programme now closed
 
@@ -10294,3 +10295,31 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
 - **Decisions D1–D5 are for the user:** scope (hard only), the opening sampling, client overrides, the match requirement, and the analysis endpoints.
 - **Prediction:** None stated in advance. This is an engineering proposal, not an experiment.
 - **Not authorized:** implementation, export, model loading, training, benchmarks, games, deployment and pushing.
+
+#### Decision note — the H-TB integration proposal reviewed; revision 1 returned for review (2026-11-09)
+
+- **The review (the user, 2026-11-09):** proceed with the hard-only integration, subject to five corrections to revision 0 (`80acd87e`). The review made no changes and ran no models, tests or games.
+- **Decided in the review:**
+  - D1, `hard` only;
+  - D2, keep the tested random opening;
+  - D3, **refuse** conflicting temperature or determinism overrides rather than ignore them;
+  - D4, a product-stack match before deployment;
+  - D5, keep the analysis endpoints on the current model.
+  - The remaining work is grouped into three approvals: G1 implementation with fake tests; G2 export and numerical checks; G3 product smoke test and match. Deployment remains a final, separate decision.
+- **The five corrections, as answered in revision 1** (`docs/superpowers/2026-11-06-htb-integration-proposal.md`, §13 maps each one):
+  - **Tie-breaking.** The research picks randomly among PUCT scores within 1e-8 of a running best, iterating an order shuffled with the search stream at each expansion (`mcts.py:1015–1022`, `1117–1156`). The product picks the lexicographic minimum of exact ties. These are different distributions. Revision 1 ports the research rule for the new `hard` only: a transcription of CPython's `random.Random` subset (`server/py_random.js`) and `ProtocolMCTS`, tested seed for seed **including** constructed ties. The halving's own rank and candidate tie-breaks were already deterministic.
+  - **Model staging.** `MODEL_MANIFEST` is the server's only model path, so it would move every level. Revision 1 adds `HARD_MODEL_ID`, `HARD_MODEL_MANIFEST` and `resolveHardModel`, with the separation tested both ways.
+  - **Move limit.** The product rule is kept as a stated variation. Ply 600 is unreachable on 24×24, since each ply fills one of 576 cells, so the product's effective rule is a win or a draw by exhaustion. Revision 1 adds boundary checks at plies 279–281 and plays the match under the product rule.
+  - **Caching and displays.**
+    - `protocol` requests bypass the cache.
+    - The MCTS bar shows the AI move's returned value (`gameController.js:466–468`). Revision 1 defines that value: the root mean at plies 0–19, and the played candidate's mean from ply 20 (D6, open). Under halving, 102 of the 200 visits go to eliminated candidates, which is why the root mean is not used from ply 20.
+    - In recording mode, the bar alternates with calib020_0001's analysis value after human moves.
+    - Recorded visit shares become halving allotments.
+  - **Rollback.** Today's `hard` is kept by name and selected by `HARD_MODE=legacy`, which never reads the hard model. Revision 1 tests the actual switch, with the hard artifact absent, against a recorded `80acd87e` reference (R1–R2), and rehearses the code revert (R3).
+- **Open for the user:**
+  - D6, the ply-20 value definition;
+  - D7, the rollback mechanism;
+  - D8, V8b's rule fixed in advance: 110 pairs, the one-sided 95% Hoeffding rule, and a ceiling of 1.5× the smoke projection, with a stop above 24 h.
+- **Effort:** about 7–9 working days, up from 5–7.
+- **Prediction:** None stated in advance. This is an engineering proposal, not an experiment.
+- **Not authorized:** implementation, export, model loading, training, benchmarks, games, deployment and pushing. G1 is the next approval to seek. The student file is unchanged.
