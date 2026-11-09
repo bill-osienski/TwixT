@@ -280,6 +280,7 @@ knob) is not a new hypothesis.
 > **H-TB integration — V2 failure DIAGNOSED: Python onnxruntime 1.24.4 conflates same-shape Convs whose filter 0 is all zero (Post-closure entry 56, 2026-11-09).** The student has four such 128×128 convs; calib020_0001 has one. Python ORT computes all four with one set of parameters, within a session and across sessions, while the product's onnxruntime-node 1.23.2 computes the same graphs correctly. Not the MLX or PyTorch imports, threads, prepacking, arena or optimizations. The export is not defective. V2 stays FAIL and the model unpinned. Proposed: requalify with a Python ORT that passes a minimal canary, after a reviewed amendment; add a product canary test. See #186.
 > **H-TB integration — runtime canary: Python onnxruntime 1.23.2 PASSES, 1.24.4 FAILS; amendment drafted; product pinned (Post-closure entry 57, 2026-11-09).** A self-contained correctness canary (synthetic weights, each output against its own float64 reference, within and across sessions). It ran in a new isolated Python 3.13.15 venv; the teacher and project environments are untouched; wheel hashes are recorded. The draft amendment (`docs/superpowers/2026-11-09-htb-student-parity-amendment.md`) changes only the Python ORT surface to 1.23.2 for the same artifact, corpus and tolerances. `onnxruntime-node` is pinned to 1.23.2, with the canary in `test:server`. The model is still unpinned; V2-R awaits review. See #187.
 > **H-TB integration — V2-R PARITY PASS; hard model `78c16a31c3dba37f` pinned (Post-closure entry 58, 2026-11-09).** The same exported pair under the approved amendment (Python 3.13.15 with ORT 1.23.2; corpus, tolerances and tools unchanged). MLX drift 0. S2 2.4e-5 against 1e-4; S3 exactly 0; S4 2.4e-5 against 1.1e-4; top-1 100%, τ 1.0. V2's FAIL stands as the record of the defective 1.24.4 surface. `HARD_MODEL_ID` pinned; G2's remaining checks follow. See #188.
+> **H-TB integration — G2: V3 PASS; V7 golden comparison MISMATCH in value numerics only; G2 stopped (Post-closure entry 59, 2026-11-09).** V3: the product's mirror wrapper matches the research evaluator; max prior difference 1.85e-6 and max value difference 2.3e-6, both against 1.1e-4; top-1 100%. V7: the plain search under the new stage against the August eager standard. **Visit counts and selected moves are identical in all 92 cases**, but root and progress values differ by about 1e-7 in 71 cases, with code and models byte-identical. Environment differences are recorded (Node v24.22.0 against v26.7.0; macOS 27.2); the cause is not established. The deferred suites, live requests and R1–R3 were not run. See #189.
 
 ## Historical proposal check — programme now closed
 
@@ -2101,6 +2102,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 186. **The V2 failure's cause: Python onnxruntime 1.24.4 conflates same-shape Convs with an all-zero filter 0 (2026-11-09, entry 56).** Do **not**: treat it as an export defect; change the student's weights (for example, nudging zero filters) or the exported bytes to avoid it; run any Python ORT parity surface on this artifact without first passing the minimal two-conv canary (`docs/superpowers/evidence/htb-integration-g2/diagnostic-1/scripts/mini.py`); upgrade or reinstall `onnxruntime-node` for the product without the same canary; or read the diagnostic as establishing ORT's internal mechanism, or which other versions are safe.
 187. **The runtime canary (2026-11-09, entry 57).** Do **not**: treat Python onnxruntime 1.23.2's canary PASS as qualifying the student's export (only V2-R under the reviewed amendment can); run V2-R before the amendment is reviewed, or with tolerances, corpus, tools or exported bytes other than the amendment names; widen into a version sweep without cause; install into the project `.venv` or the teacher environment; or loosen the exact `onnxruntime-node` pin without the canary passing on the new version.
 188. **V2-R is spent: PARITY PASS (2026-11-09, entry 58).** Do **not**: rerun, top up or re-score V2-R; read it as overturning V2's FAIL (each describes its own reference surface); read it as a strength or deployment result; re-export, alter or substitute the pinned pair `78c16a31c3dba37f`; or serve it through a runtime that has not passed the conv canary (#186).
+189. **G2 V7 golden comparison: MISMATCH in value numerics only (2026-11-09, entry 59).** Do **not**: edit the frozen `compare.mjs` or the eager standard; add a tolerance to the golden comparison; recapture and keep whichever run matches; attribute the about 1e-7 value differences to the integration, or to the environment, before a discriminator has run; read the identical visit counts and selected moves as a PASS of the exact-equality rule; or continue G2's remaining checks without the user's decision.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -10637,3 +10639,41 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
   - This moves the execution surface, so the golden comparison needs a new stage.
   - **Next:** G2's remaining approved steps (V3, the deferred suites, the golden comparison, live requests, R1–R3).
   - **No strength claim.** G3 games, deployment, training and pushing remain unauthorized.
+
+#### Post-closure entry 59 — G2: V3 mirror-averaged parity PASS; V7 golden comparison MISMATCH in value numerics only; G2 stopped (2026-11-09)
+
+- **Test 1, V3:** averaged-output parity between the research `MirrorAveragingEvaluator(student)` and the product's `MirrorAveragingInference(78c16a31c3dba37f)`.
+  - **Research side:** the H-TB runs' own loader; digest `586dca4f…` and eval mode checked at load and at the end.
+  - **Rule:** as declared in the proposal (S4 bounds and V2's ordering gates, on the averaged priors and value).
+  - **Tools:** `tests/parity/htb_mirror/`, committed in `c087f00a` before any output existed.
+- **Test 2, V7:** the golden comparison of the plain search under the new `protocol-hard-pinned` stage (`06b52aaa`) against the frozen eager standard. 92 cases; exact equality on visit counts, root value, selected move and progress.
+- **Hypotheses:**
+  - V3: the product's mirror wrapper reproduces the research evaluator's outputs within the declared bounds.
+  - V7: the plain search is unchanged by the integration.
+- **Why plausible:**
+  - V2-R passed, and the mirror transform was proven exact with a fake evaluator (G1, V1).
+  - The plain search files are byte-identical to the standard's stages.
+- **Prediction on record:** None stated in advance.
+- **What ran:** each once. Evidence is in `docs/superpowers/evidence/htb-integration-g2/v3/` and `…/v7/`.
+  - **V3:** the research side under `MLX_ENABLE_TF32=0` in the project `.venv`; the product side via `resolveHardModel`.
+  - **V7:** the capture ran in a clean linked worktree at `efc3238a`: 92 of 92 artifacts, VALID, 0 bytes on stderr.
+    - Frozen `compare.mjs` hard-codes a `lazy` subject; it was not edited.
+    - It was judged by `compare_stage.mjs` (`e144e7ce`), a thin driver over `compare.mjs`'s own exported comparison.
+    - Two controls ran first: the driver reproduces August's EXACT MATCH for the lazy corpus, and refuses it under the wrong stage.
+- **Result, V3: PASS.**
+  - Max abs prior difference 1.85e-6 against 1.1e-4; mean 2.8e-9; max abs value difference 2.33e-6 against 1.1e-4.
+  - Top-1 agrees on all 120 primary positions, with 0 exemptions; top-5 sets 100%; τ median 1.0.
+  - Edge cases: top-1 agrees on 5 of 6. The sixth is the empty board's exact mirror-pair tie: (12,16) and (12,7) are bit-equal in the product and 3.7e-9 apart on the research side, inside the near-tie band.
+- **Result, V7: MISMATCH,** 12,326 differences in 71 of 92 cases.
+  - **Visit counts and selected moves are identical in all 92 cases.**
+  - Every difference is in `root_value` (3.3e-9 to 1.43e-6, median 2e-7) or `progress.valueEstimate`.
+  - The one larger entry (3.3e-4 at `G_P11_baseline_s800`, step 632) is a single-entry transient: two simulations in a different order, the same end state.
+  - The differences appear in both models' cases (baseline 60 of 80, candidate 10 of 10) and in 1 of 2 abort cases.
+- **Did it match a prediction?** None was stated.
+  - V3 held.
+  - V7 failed its exact-equality rule. The code and models are byte-identical, so the network's value outputs differ by about 1e-7 from August's capture.
+  - Recorded environment differences: Node v24.22.0 against v26.7.0, and macOS since updated to 27.2. **The cause is not established.**
+- **Conclusion / status:**
+  - **V3 PASS. V7 MISMATCH is preserved, and G2 is stopped,** following compare.mjs's frozen interpretation and the user's instruction to report on failure.
+  - **Not run:** the deferred suites, the live REST/WS requests, R1–R3.
+  - **Next worthwhile discriminator, not run:** recapture at the lazy stage's own commit (`85894b9`) in today's environment, judged by the unedited `compare.mjs`. The same pattern would place the cause in the environment rather than in the integration.

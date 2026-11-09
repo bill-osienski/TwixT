@@ -1,0 +1,158 @@
+{
+  "outcome": "mismatch",
+  "subjectStage": "protocol-hard-pinned",
+  "comparedCases": 92,
+  "comparedFields": [
+    "visit_counts",
+    "root_value",
+    "selected_move",
+    "progress"
+  ],
+  "excludedFields": [
+    "progress_elapsed_ms"
+  ],
+  "eagerFingerprint": "9e3a9037409c6eb4e72206a8b01697c1c138b0a90291462d713116106f2239f6",
+  "eagerCaptureCommit": "841df6040a740a4b9f1753253e0e8bfc63e15366",
+  "subjectCaptureCommit": "efc3238a65e1b6c1de9401bb3d86f32e4469e091",
+  "subjectArtifactCount": 92,
+  "mismatches": [
+    {
+      "caseId": "G_P01_baseline_s1",
+      "field": "root_value",
+      "eager": -0.09874988347291946,
+      "lazy": -0.0987497940659523
+    },
+    {
+      "caseId": "G_P01_baseline_s1",
+      "field": "progress.valueEstimate",
+      "index": 0,
+      "eager": -0.09874988347291946,
+      "lazy": -0.0987497940659523
+    },
+    {
+      "caseId": "G_P01_baseline_s2",
+      "field": "root_value",
+      "eager": -0.15925279632210732,
+      "lazy": -0.15925289317965508
+    },
+    {
+      "caseId": "G_P01_baseline_s2",
+      "field": "progress.valueEstimate",
+      "index": 0,
+      "eager": -0.09874988347291946,
+      "lazy": -0.0987497940659523
+    },
+    {
+      "caseId": "G_P01_baseline_s2",
+      "field": "progress.valueEstimate",
+      "index": 1,
+      "eager": -0.15925279632210732,
+      "lazy": -0.15925289317965508
+    },
+    {
+      "caseId": "G_P01_baseline_s8",
+      "field": "root_value",
+      "eager": -0.026592574315145612,
+      "lazy": -0.02659267623675987
+    },
+    {
+      "caseId": "G_P01_baseline_s8",
+      "field": "progress.valueEstimate",
+      "index": 0,
+      "eager": -0.09874988347291946,
+      "lazy": -0.0987497940659523
+    },
+    {
+      "caseId": "G_P01_baseline_s8",
+      "field": "progress.valueEstimate",
+      "index": 1,
+      "eager": -0.15925279632210732,
+      "lazy": -0.15925289317965508
+    },
+    {
+      "caseId": "G_P01_baseline_s8",
+      "field": "progress.valueEstimate",
+      "index": 2,
+      "eager": -0.05164312571287155,
+      "lazy": -0.051643259823322296
+    },
+    {
+      "caseId": "G_P01_baseline_s8",
+      "field": "progress.valueEstimate",
+      "index": 3,
+      "eager": -0.08566146902740002,
+      "lazy": -0.08566158451139927
+    },
+    {
+      "caseId": "G_P01_baseline_s8",
+      "field": "progress.valueEstimate",
+      "index": 4,
+      "eager": -0.06544452272355557,
+      "lazy": -0.06544465236365796
+    },
+    {
+      "caseId": "G_P01_baseline_s8",
+      "field": "progress.valueEstimate",
+      "index": 5,
+      "eager": -0.05579835517952839,
+      "lazy": -0.05579845133858422
+    },
+    {
+      "caseId": "G_P01_baseline_s8",
+      "field": "progress.valueEstimate",
+      "index": 6,
+      "eager": -0.02484808729163238,
+      "lazy": -0.024848191001053368
+    },
+    {
+      "caseId": "G_P01_baseline_s8",
+      "field": "progress.valueEstimate",
+      "index": 7,
+      "eager": -0.026592574315145612,
+      "lazy": -0.02659267623675987
+    },
+    {
+      "caseId": "G_P01_baseline_s64",
+      "field": "root_value",
+      "eager": 0.010887126914894907,
+      "lazy": 0.010886904379731277
+    },
+    {
+      "caseId": "G_P01_baseline_s64",
+      "field": "progress.valueEstimate",
+      "index": 0,
+      "eager": -0.09874988347291946,
+      "lazy": -0.0987497940659523
+    },
+    {
+      "caseId": "G_P01_baseline_s64",
+      "field": "progress.valueEstimate",
+      "index": 1,
+      "eager": -0.15925279632210732,
+      "lazy": -0.15925289317965508
+    },
+    {
+      "caseId": "G_P01_baseline_s64",
+      "field": "progress.valueEstimate",
+      "index": 2,
+      "eager": -0.05164312571287155,
+      "lazy": -0.051643259823322296
+    },
+    {
+      "caseId": "G_P01_baseline_s64",
+      "field": "progress.valueEstimate",
+      "index": 3,
+      "eager": -0.08566146902740002,
+      "lazy": -0.08566158451139927
+    },
+    {
+      "caseId": "G_P01_baseline_s64",
+      "field": "progress.valueEstimate",
+      "index": 4,
+      "eager": -0.06544452272355557,
+      "lazy": -0.06544465236365796
+    }
+  ]
+}
+compared 92 cases on visit_counts, root_value, selected_move, progress; excluded progress_elapsed_ms
+MISMATCH: 12326 compared-field difference(s)
