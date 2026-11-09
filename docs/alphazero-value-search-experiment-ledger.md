@@ -277,6 +277,7 @@ knob) is not a new hypothesis.
 > **H-TB integration — G1 BUILT and checked with fake evaluators; returned for review (build record, 2026-11-09).** Branch `htb-integration-g1` (`22c1a78d`, `a5ec10ed`). The research tie rule, mirror averaging, root halving and the opening readout match the Python research code exactly, seed for seed, ties included (fixtures from the research classes with a deterministic fake evaluator). `rootValue` stays the true root mean; the played move's value and actual visits are returned separately with `valueKind`. The hard model has its own path, conflicting overrides are refused, protocol requests bypass the cache, and `HARD_MODE=legacy` restores today's hard. 437 model-free tests pass (golden 140, others 297), 0 skipped. Deviations recorded: the surface file list is unchanged, with a new `protocol-hard` stage; `HARD_MODEL_ID` is null until G2. No export, model load or game.
 > **H-TB integration — G1 ACCEPTED; G2 APPROVED (decision note, 2026-11-09).** Scope: export and pin the exact student; real and mirror-averaged output parity at the declared tolerances; the deferred suites and the golden comparison; live REST and WS requests (value perspectives, refusals, cancellation); `HARD_MODE=legacy` reproducing the recorded baseline with the student artifact unavailable. Dated correction: G1's fixture has 27 cases (12 plain, 15 halving), not 28. Results return for review before any G3 game.
 > **H-TB integration — G2 STOPPED at V2: PARITY FAIL on the Python ONNX Runtime surface (Post-closure entry 55, 2026-11-09).** One unmodified export of the student (`78c16a31c3dba37f`; student sha256 unchanged). S1, masks, equivariance and **S4 (MLX ↔ the product's Node ORT) pass**: max logit difference 2.4e-5 against 1.1e-4, top-1 100%, τ 1.0. **S2 and S3 fail by about 12 logits**: Python ORT 1.24.4 gives deterministic but wrong outputs on this artifact only; it still reproduces August's c34b7ff. Not the external-data loader, graph optimization or subnormals; the cause is unexplained. Candidate not committed; `HARD_MODEL_ID` stays null; nothing after V2 ran. Returned for assessment. See #185.
+> **H-TB integration — V2 failure DIAGNOSED: Python onnxruntime 1.24.4 conflates same-shape Convs whose filter 0 is all zero (Post-closure entry 56, 2026-11-09).** The student has four such 128×128 convs; calib020_0001 has one. Python ORT computes all four with one set of parameters, within a session and across sessions, while the product's onnxruntime-node 1.23.2 computes the same graphs correctly. Not the MLX or PyTorch imports, threads, prepacking, arena or optimizations. The export is not defective. V2 stays FAIL and the model unpinned. Proposed: requalify with a Python ORT that passes a minimal canary, after a reviewed amendment; add a product canary test. See #186.
 
 ## Historical proposal check — programme now closed
 
@@ -2095,6 +2096,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
    - *Clarification (2026-11-06, the user's acceptance):* describe the result as stronger play **within the declared compute allowances** (evaluations ≤ 1.05, search seconds ≤ 1.10), not at exactly equal compute; and do not modify the validated student file (`0e1cb621…`).
 
 185. **H-TB integration G2, V2 export parity: FAIL on the Python ONNX Runtime surface (2026-11-09, entry 55).** Do **not**, without a new reviewed plan: re-export the student, export with other arguments or another exporter, edit the exporter, revise or waive the Phase 2 tolerances, drop or swap the Python ORT surface to obtain a PASS, or pin `78c16a31c3dba37f` and continue G2 as though V2 had passed. S4's agreement with the product runtime is real, but under the preregistered rule it does not rescue S2 and S3. The cause is unexplained; any diagnosis needs its own scope.
+186. **The V2 failure's cause: Python onnxruntime 1.24.4 conflates same-shape Convs with an all-zero filter 0 (2026-11-09, entry 56).** Do **not**: treat it as an export defect; change the student's weights (for example, nudging zero filters) or the exported bytes to avoid it; run any Python ORT parity surface on this artifact without first passing the minimal two-conv canary (`docs/superpowers/evidence/htb-integration-g2/diagnostic-1/scripts/mini.py`); upgrade or reinstall `onnxruntime-node` for the product without the same canary; or read the diagnostic as establishing ORT's internal mechanism, or which other versions are safe.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -10482,3 +10484,40 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
 - **Cap:** one hour of execution. Every configuration and result is recorded, including unsuccessful checks. No package changes, alternate export or tolerance changes.
 - **Return:** either an identified cause with a proposed repair, or a narrowed explanation with the next worthwhile discriminator. A repair is reviewed before qualification is repeated.
 - **The hypothesis to test, not to assume:** the parity tool imports MLX and PyTorch before running ONNX Runtime, and a session-order effect was observed once.
+
+#### Post-closure entry 56 — the V2 failure's bounded diagnostic: Python onnxruntime 1.24.4 conflates same-shape Convs whose filter 0 is all zero; cause identified (2026-11-09)
+
+- **Test:** why Python ONNX Runtime disagrees with both native MLX and the product's Node runtime on the student's export (entry 55). Bounded diagnostic, authorized by the decision note above: one hour cap; about 5½ minutes used.
+- **Hypothesis under test** (the user's, not assumed): the parity tool's MLX and PyTorch imports, or session ordering, disturb Python ORT.
+- **Why it was plausible:**
+  - the tool imports both libraries before ORT;
+  - a session-order effect had been seen once.
+- **Prediction on record:** None stated in advance.
+- **What ran:** `docs/superpowers/evidence/htb-integration-g2/diagnostic-1/` holds the scripts, inputs, every configuration and every result, including the unsuccessful ones.
+  - **Unchanged and verified:** the student (`0e1cb621…`) and the exported pair, which was made read-only first.
+  - **Inputs:** five parity-corpus positions, byte-identical to V2's encodings.
+  - **Full model:** 14 configurations c1–c14.
+  - **A layer-by-layer comparison:** a diagnostic-only instrumented copy of the graph, run in both Python and Node ORT.
+  - **Minimal reproductions:** one fresh process per case, judged against a float64 NumPy reference.
+- **Result:**
+  - **Imports are not the cause.** NumPy and ORT alone reproduce V2's wrong output bit for bit, and pre-importing or post-importing MLX or PyTorch changes nothing.
+  - **Neither threads nor session options are the cause:**
+    - one thread changes the output by at most 6e-6;
+    - prepacking off, arena off, memory patterns off and optimizations off change nothing.
+  - **Session order is real and deterministic.** After a c34b7ff session, the student's output is wrong in a different way.
+  - **First divergence:** Python and Node agree to ≤ 3e-6 through `relu_2`. They first diverge at `getitem_9`, residual block 1's `conv1`. There, Python's output equals the convolution of the correct input with **block 0's `conv1` weight and bias**, to 1.6e-6. The same conv alone, in a fresh process, is correct.
+  - **The trigger, by minimal reproduction:**
+    - two or three same-shape Convs whose **filter 0 is entirely zero** (1, 8 or 73 leading zero filters) are computed with one set of parameters;
+    - dense weights compute correctly;
+    - so do zeros in the last filters, scattered zero filters, and 60% elementwise zeros.
+  - **onnxruntime-node 1.23.2** computes the same saved graphs correctly.
+  - **The student has four 128×128 convs with an all-zero filter 0** (`res_blocks.0–3.conv1`). calib020_0001 has one, so nothing can be conflated with it, which is why August passed.
+- **Did it match a prediction?** None was stated. The import hypothesis is refuted. The session-order observation is explained by the same conflation acting across sessions.
+- **Conclusion / status:**
+  - **Cause identified:** a defect in the **Python** ORT 1.24.4 measurement surface, triggered by the student's weight pattern. The export is not defective. The product's runtime is unaffected on the same graphs.
+  - **Not established:** ORT's internal mechanism, which other versions are affected, and conv shapes other than 128×128×3×3.
+  - **V2 remains FAIL and the model unpinned.**
+  - **Proposed repair, for review, nothing applied:**
+    1. Requalify V2 with a Python ORT that passes the minimal canary, first candidate `onnxruntime==1.23.2`, in an isolated environment. This needs a reviewed amendment naming the S2/S3 runtime version; the tolerances, corpus, exporter and artifact stay unchanged.
+    2. Guard the product: add a model-free canary test to the server suite, and optionally pin `onnxruntime-node` exactly. `package.json` allows `^1.20.0`, and only the lockfile holds 1.23.2.
+  - **Next discriminator:** run the canary across Python ORT versions in a throwaway environment. This needs approval (package installs).

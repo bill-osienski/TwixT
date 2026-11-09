@@ -1,0 +1,27 @@
+{
+ "opening_00": {
+  "index": 0,
+  "n_legal": 526,
+  "board_sha256": "e529c3360451dda2050b95cd9e9d505274ba1b202bae16b6f8da29a02d94b1c1"
+ },
+ "early_mid_10": {
+  "index": 40,
+  "n_legal": 500,
+  "board_sha256": "d9663853ad0505ccd4e4c58018ba17cdd3eb94252cb1d9e348ed1f986f7bc34a"
+ },
+ "midgame_20": {
+  "index": 80,
+  "n_legal": 448,
+  "board_sha256": "240a5042ab45b99e9d0129d802c27ceb094881ff1715e01970a39c4a0c694732"
+ },
+ "late_29": {
+  "index": 119,
+  "n_legal": 315,
+  "board_sha256": "f3ba57e642631bf7e9eae446ec44a03c146864decb1ee14058e2c5ef162bf1b7"
+ },
+ "edge_red_to_move": {
+  "index": 125,
+  "n_legal": 495,
+  "board_sha256": "bcc1d66b903c4fbb74a9c4ae5d406f9409f6a671bfe1bfa0747d706800cb087d"
+ }
+}
