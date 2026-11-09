@@ -1,0 +1,58 @@
+{
+ "schema": "htb-g3-binding/1",
+ "match_seed": 20261109,
+ "pairs": {
+  "smoke": 1,
+  "match": 110
+ },
+ "models": {
+  "new_hard": {
+   "model_id": "78c16a31c3dba37f",
+   "manifest": "models/78c16a31c3dba37f/manifest.json",
+   "manifest_sha256": "81bbf545ec332d5a56541fcb79c95a0ab1b94bb6176118e21fcd73733ccfd0d7"
+  },
+  "legacy_hard": {
+   "model_id": "c34b7ff3297c785a",
+   "manifest": "models/c34b7ff3297c785a/manifest.json",
+   "manifest_sha256": "5e096f63556f53811c514f8f5380809b80e88712ea05c28d742e97ec4f8d197e"
+  }
+ },
+ "runtime": {
+  "node": "v24.22.0",
+  "files": {
+   "node_modules/onnxruntime-node/package.json": "ceec2185556f4a6589ac92c9fd84645a4cb394394bf31bceb9c35c8bc63762b0",
+   "node_modules/onnxruntime-common/package.json": "2ddd4d8c592c073c6075002596add520cd7ef00e794be4b6f17be66a7ec584fe",
+   "node_modules/onnxruntime-node/bin/napi-v6/darwin/arm64/onnxruntime_binding.node": "29c18bc05a0c9577fde8856432f29cdcccf0e5c92440a69f196ac37505ad8b35",
+   "node_modules/onnxruntime-node/bin/napi-v6/darwin/arm64/libonnxruntime.1.23.2.dylib": "7d5ac8528f16a5d157c53eadb4c766bc23f0dbf02c994fb900303e27806e372c"
+  }
+ },
+ "driver_files": {
+  "server/gameLogic.js": "9bf61dd9d94cba10dfa403ee93d6d0593a557ce020f1c80775fb1ae80fc6f4ce",
+  "server/inference.js": "f355a3f8e87ba91659ce48666c6d1f94d74f50426ae1420b8efbf764c8ab6983",
+  "server/mcts.js": "e82ea03cb5287ceda616f8e7ce4a5334ff8b65f4a52bee48f5854b744a813821",
+  "server/mirror_inference.js": "8b830c4823b758aaf7fb18f99d07db9cfa27373edcef1033b8deb021315f149f",
+  "server/model_manifest.js": "ecde544b03b4e50f673edaf89f73434c878bfbda0a147341adb9197d788fc511",
+  "server/protocol_mcts.js": "8c25714d6d7b8bc40537b8f91d0eb1debe1528dc0c30fecd4a36b0003f5e4009",
+  "server/protocol_move.js": "2b7e42e4ae6b7b85d5ea2e704a345573187e7f5053eb9915d791821009e3a41b",
+  "server/py_random.js": "41437fcd00ae3c9bb1f630036d0c66c0e89928fe7a1f8b4bd5bc49c7e7b0153b",
+  "server/readout_policy.js": "ac2d6e8e51c5bce1a3727d929e04e3bf631bf95d45f7d3a39dbfd1f84209c1ea",
+  "server/root_halving.js": "9b04f8a386dbc20e1ac0b207a2920121a05f7a8aa5d7de7dc7bc581238644cbd",
+  "tests/htb_integration/g3_match.mjs": "3f5ddb29e8d833cb262a59e6f3e9babe5c68f95888436833d8fe181cce530efb"
+ },
+ "analyser_files": {
+  "server/gameLogic.js": "9bf61dd9d94cba10dfa403ee93d6d0593a557ce020f1c80775fb1ae80fc6f4ce",
+  "tests/htb_integration/g3_analyse.mjs": "697550391fbd030ab6cbf25a78feaa8c6a5cbd7e5981963c408d681f067177d0"
+ },
+ "extra_files": {
+  "package.json": "49c5afebf7e85afb1f5a74c4cdf1f46ec2cefa6b95aefd7ecf4b70335db56e7b",
+  "package-lock.json": "000f62186c915cf80a45bbcdc656fd3ff82f1d07ad5d593f82083b9f73dc05df",
+  "scripts/GPU/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "scripts/GPU/alphazero/__init__.py": "c6f13806151399f9e6be707271537b166ec79ba9729d8339800127c826adc4ab",
+  "scripts/GPU/alphazero/background_compute.py": "b26c2c5c1dea53a9587b2d8c0e3235de5b8c6fa0d1bfb1bf638dc4e57744722e",
+  "scripts/GPU/alphazero/idle_gate.py": "361bb97881be4850b1bb0bc3a30efaa8815a213389a07c4518de2e195629cce6",
+  "docs/superpowers/2026-11-09-htb-g3-match-card.md": "50ef994c68ed68bdd3de76341ce25c959ffeb90bb3f17a76c796f6a4b0e8e2ba",
+  "docs/superpowers/evidence/htb-g3-smoke-run/01_wrapper.sh": "4b5d8a5e40425dfc207a6e581b1bffd1111bb2b78f8cd04b341bc8cda9c2f1ed",
+  "docs/superpowers/evidence/htb-g3-match-run/01_wrapper.sh": "3c32bffc6d79811974bf3eab8f494e3c6696f1ca17d4d7045b7099c95889ac33"
+ },
+ "digest": "b024e9d158e165f540d61b0750690db3ee6074ab6bf2e26b0e4be3f5f2734157"
+}
