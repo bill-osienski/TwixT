@@ -1,0 +1,25 @@
+{
+  "outcome": "match",
+  "comparedCases": 92,
+  "comparedFields": [
+    "visit_counts",
+    "root_value",
+    "selected_move",
+    "progress"
+  ],
+  "excludedFields": [
+    "progress_elapsed_ms"
+  ],
+  "reference": {
+    "stage": "lazy",
+    "captureCommit": "aad579675967ba86a21e4b5faf826e685941bb3e",
+    "fingerprint": "30888e31fbcac62649cca18b5fca4e56ba76904b861b32e31324c82f4c8874c8"
+  },
+  "subject": {
+    "stage": "protocol-hard-pinned",
+    "captureCommit": "efc3238a65e1b6c1de9401bb3d86f32e4469e091",
+    "fingerprint": "10f383f20247caf565681b1aa22ca6962d38b2a6d3288c0445efe40c4aaa2c09"
+  },
+  "mismatches": []
+}
+EXACT MATCH: 92 cases on visit_counts, root_value, selected_move, progress; excluded progress_elapsed_ms

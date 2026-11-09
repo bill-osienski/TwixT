@@ -281,6 +281,7 @@ knob) is not a new hypothesis.
 > **H-TB integration — runtime canary: Python onnxruntime 1.23.2 PASSES, 1.24.4 FAILS; amendment drafted; product pinned (Post-closure entry 57, 2026-11-09).** A self-contained correctness canary (synthetic weights, each output against its own float64 reference, within and across sessions). It ran in a new isolated Python 3.13.15 venv; the teacher and project environments are untouched; wheel hashes are recorded. The draft amendment (`docs/superpowers/2026-11-09-htb-student-parity-amendment.md`) changes only the Python ORT surface to 1.23.2 for the same artifact, corpus and tolerances. `onnxruntime-node` is pinned to 1.23.2, with the canary in `test:server`. The model is still unpinned; V2-R awaits review. See #187.
 > **H-TB integration — V2-R PARITY PASS; hard model `78c16a31c3dba37f` pinned (Post-closure entry 58, 2026-11-09).** The same exported pair under the approved amendment (Python 3.13.15 with ORT 1.23.2; corpus, tolerances and tools unchanged). MLX drift 0. S2 2.4e-5 against 1e-4; S3 exactly 0; S4 2.4e-5 against 1.1e-4; top-1 100%, τ 1.0. V2's FAIL stands as the record of the defective 1.24.4 surface. `HARD_MODEL_ID` pinned; G2's remaining checks follow. See #188.
 > **H-TB integration — G2: V3 PASS; V7 golden comparison MISMATCH in value numerics only; G2 stopped (Post-closure entry 59, 2026-11-09).** V3: the product's mirror wrapper matches the research evaluator; max prior difference 1.85e-6 and max value difference 2.3e-6, both against 1.1e-4; top-1 100%. V7: the plain search under the new stage against the August eager standard. **Visit counts and selected moves are identical in all 92 cases**, but root and progress values differ by about 1e-7 in 71 cases, with code and models byte-identical. Environment differences are recorded (Node v24.22.0 against v26.7.0; macOS 27.2); the cause is not established. The deferred suites, live requests and R1–R3 were not run. See #189.
+> **H-TB integration — current-environment equivalence control: old code and integrated code EXACTLY equal (Post-closure entry 60, 2026-11-09).** A fresh capture at `aad5796` in today's environment matches V7's integrated capture exactly on all 92 cases. Against August's standard it shows the same 12,326 differences as V7. So V7's differences are environmental (Node v24.22.0 against v26.7.0; macOS 27.2), not caused by the integration. V7's MISMATCH stays on record; G2's remaining checks resume. *(Correction to entry 59: the step-632 reordering reading is plausible, not established; the discriminator commit was `aad5796`.)*
 
 ## Historical proposal check — programme now closed
 
@@ -10698,3 +10699,23 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
   - A similar mismatch pattern against August alone is **insufficient**.
 - **If step 3 matches exactly:** record a separate current-environment equivalence result under this amendment, and resume G2's remaining approved checks (the deferred suites, live REST and WS requests, R1–R3). V7's MISMATCH and the historical goldens stay unchanged.
 - **If step 3 differs:** return those differences before continuing.
+
+#### Post-closure entry 60 — the current-environment equivalence control: old code and integrated code EXACTLY equal; V7's differences are environmental (2026-11-09)
+
+- **Test:** the control declared in the preceding decision note (`09291a98`). Do the pre-integration code and the integrated code produce identical golden traces in the same, current environment?
+- **Hypothesis:** V7's about-1e-7 value differences from August's standard come from the environment, not from the integration.
+- **Why it was plausible:** the search, game and inference files and both models are byte-identical, and only value numerics differed.
+- **Prediction on record:** None stated in advance. The decision rule was declared: exact equality on the compared fields decides; a similar mismatch against August alone does not.
+- **What ran,** once:
+  - **Capture:** the 92 cases at `aad5796` (stage `lazy`), in a clean linked worktree, with today's `node_modules` (onnxruntime-node 1.23.2) and Node v24.22.0. The result was 92 of 92, VALID, and 0 bytes on stderr; fingerprint `30888e31…`.
+  - **Step 2:** the control against August's eager standard, with the unchanged `compare.mjs`.
+  - **Step 3:** the control against V7's integrated capture (`10f383f2…`), with `compare_pair.mjs`.
+  - **Evidence:** `docs/superpowers/evidence/htb-integration-g2/v7-control/`.
+- **Result:**
+  - **Step 2: MISMATCH, 12,326 differences,** the same count as V7.
+  - **Step 3: EXACT MATCH on all 92 cases:** visit counts (values and order), root values, selected moves, and progress `done` / `total` / `valueEstimate`.
+- **Did it match a prediction?** None was stated. Under the declared rule, the hypothesis holds: the pre-integration code reproduces V7's traces exactly in today's environment.
+- **Conclusion / status:**
+  - **The integration leaves the plain search's traces unchanged.** V7's differences from August are environmental. Recorded differences: Node v24.22.0 against v26.7.0, and macOS 27.2. Which component is responsible is not established.
+  - **V7's MISMATCH against August stays on record,** and the historical goldens are unchanged.
+  - **Per the declared plan, G2's remaining approved checks resume:** the deferred suites, live REST and WS requests, and R1–R3.
