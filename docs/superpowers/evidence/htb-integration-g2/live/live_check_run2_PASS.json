@@ -1,0 +1,314 @@
+{
+ "verdict": "PASS",
+ "port": 52563,
+ "node": "v24.22.0",
+ "checks": [
+  {
+   "id": "L1 banner",
+   "ok": true,
+   "detail": [
+    "Model id:   c34b7ff3297c785a",
+    "Hard mode:  protocol",
+    "Hard model id:   78c16a31c3dba37f",
+    "Hard manifest:   /Users/bill/projects/TwixT_Game/models/78c16a31c3dba37f/manifest.json"
+   ]
+  },
+  {
+   "id": "L2 model-info",
+   "ok": true,
+   "detail": {
+    "hard_mode": "protocol",
+    "hard_model_id": "78c16a31c3dba37f",
+    "model_id": "c34b7ff3297c785a"
+   }
+  },
+  {
+   "id": "L3 WS hard empty board (ply 0, red)",
+   "ok": true,
+   "detail": {
+    "move": {
+     "row": 11,
+     "col": 16
+    },
+    "valueKind": "root_mean",
+    "rootValue": 0.2503277663560584,
+    "moveValue": 0.2666447448887323,
+    "moveVisits": 38,
+    "valueRed": 0.2503277663560584,
+    "expectedRed": 0.2503277663560584,
+    "visitsTotal": 200,
+    "progressMessages": 16,
+    "elapsed": 1413,
+    "type": "bestmove"
+   }
+  },
+  {
+   "id": "L3 WS hard opening_00 (ply 2, red)",
+   "ok": true,
+   "detail": {
+    "move": {
+     "row": 13,
+     "col": 14
+    },
+    "valueKind": "root_mean",
+    "rootValue": 0.6524711906909942,
+    "moveValue": 0.66336406466088,
+    "moveVisits": 183,
+    "valueRed": 0.6524711906909942,
+    "expectedRed": 0.6524711906909942,
+    "visitsTotal": 200,
+    "progressMessages": 16,
+    "elapsed": 1373,
+    "type": "bestmove"
+   }
+  },
+  {
+   "id": "L3 WS hard opening_01 (ply 3, black)",
+   "ok": true,
+   "detail": {
+    "move": {
+     "row": 7,
+     "col": 14
+    },
+    "valueKind": "root_mean",
+    "rootValue": 0.3203198646614328,
+    "moveValue": 0.3693805657276491,
+    "moveVisits": 147,
+    "valueRed": -0.3203198646614328,
+    "expectedRed": -0.3203198646614328,
+    "visitsTotal": 200,
+    "progressMessages": 16,
+    "elapsed": 1366,
+    "type": "bestmove"
+   }
+  },
+  {
+   "id": "L3 WS hard early_mid_00 (ply 20, red)",
+   "ok": true,
+   "detail": {
+    "move": {
+     "row": 15,
+     "col": 17
+    },
+    "valueKind": "played_move_mean",
+    "rootValue": -0.7268607709743082,
+    "moveValue": -0.6962570595193882,
+    "moveVisits": 49,
+    "valueRed": -0.6962570595193882,
+    "expectedRed": -0.6962570595193882,
+    "visitsTotal": 200,
+    "progressMessages": 16,
+    "elapsed": 1367,
+    "type": "bestmove"
+   }
+  },
+  {
+   "id": "L3 WS hard early_mid_01 (ply 21, black)",
+   "ok": true,
+   "detail": {
+    "move": {
+     "row": 7,
+     "col": 14
+    },
+    "valueKind": "played_move_mean",
+    "rootValue": -0.0021749503444880246,
+    "moveValue": 0.17960200002607035,
+    "moveVisits": 49,
+    "valueRed": -0.17960200002607035,
+    "expectedRed": -0.17960200002607035,
+    "visitsTotal": 200,
+    "progressMessages": 16,
+    "elapsed": 1364,
+    "type": "bestmove"
+   }
+  },
+  {
+   "id": "L3 WS hard late_00 (ply 100, red)",
+   "ok": true,
+   "detail": {
+    "move": {
+     "row": 20,
+     "col": 21
+    },
+    "valueKind": "played_move_mean",
+    "rootValue": 0.4635919025167823,
+    "moveValue": 0.5762165673837369,
+    "moveVisits": 49,
+    "valueRed": 0.5762165673837369,
+    "expectedRed": 0.5762165673837369,
+    "visitsTotal": 200,
+    "progressMessages": 16,
+    "elapsed": 1382,
+    "type": "bestmove"
+   }
+  },
+  {
+   "id": "L3 WS hard late_01 (ply 101, black)",
+   "ok": true,
+   "detail": {
+    "move": {
+     "row": 15,
+     "col": 12
+    },
+    "valueKind": "played_move_mean",
+    "rootValue": 0.4190857708454132,
+    "moveValue": 0.608899183647365,
+    "moveVisits": 49,
+    "valueRed": -0.608899183647365,
+    "expectedRed": -0.608899183647365,
+    "visitsTotal": 200,
+    "progressMessages": 16,
+    "elapsed": 1380,
+    "type": "bestmove"
+   }
+  },
+  {
+   "id": "L4 REST hard, cache untouched",
+   "ok": true,
+   "detail": {
+    "status": 200,
+    "cached": false,
+    "statsBefore": {
+     "size": 0,
+     "maxSize": 10000,
+     "hits": 0,
+     "misses": 0,
+     "hitRate": "0.000"
+    },
+    "statsAfter": {
+     "size": 0,
+     "maxSize": 10000,
+     "hits": 0,
+     "misses": 0,
+     "hitRate": "0.000"
+    }
+   }
+  },
+  {
+   "id": "L4 control: REST medium is cached",
+   "ok": true,
+   "detail": {
+    "first": false,
+    "second": true,
+    "stats": {
+     "size": 1,
+     "maxSize": 10000,
+     "hits": 1,
+     "misses": 1,
+     "hitRate": "0.500"
+    }
+   }
+  },
+  {
+   "id": "L5 overrides refused (REST 400, WS error, one message); deterministicMode:false accepted",
+   "ok": true,
+   "detail": {
+    "rest": [
+     400,
+     400,
+     200
+    ],
+    "ws": [
+     "error",
+     "hard plays the validated protocol; temperature and deterministicMode overrides are not accepted",
+     "error"
+    ]
+   }
+  },
+  {
+   "id": "L6 won position and 12x12 board refused on both transports",
+   "ok": true,
+   "detail": {
+    "rest": [
+     400,
+     "TERMINAL_ROOT",
+     400,
+     "NOT_24"
+    ],
+    "ws": [
+     "hard does not search a finished position",
+     "hard plays the validated protocol on the 24x24 board only"
+    ]
+   }
+  },
+  {
+   "id": "L7 cancel answers nothing; a newer move aborts the older; the server keeps serving",
+   "ok": true,
+   "detail": {
+    "cancelledAnswers": 0,
+    "supersededAnswers": 0,
+    "latest": "bestmove"
+   }
+  },
+  {
+   "id": "L8 easy WS response keeps today's key set",
+   "ok": true,
+   "detail": {
+    "keys": [
+     "elapsed",
+     "evalToMove",
+     "id",
+     "move",
+     "nSimulations",
+     "rootValue",
+     "toMove",
+     "type",
+     "valueRed"
+    ]
+   }
+  },
+  {
+   "id": "L8 medium WS response keeps today's key set",
+   "ok": true,
+   "detail": {
+    "keys": [
+     "elapsed",
+     "evalToMove",
+     "id",
+     "move",
+     "nSimulations",
+     "rootValue",
+     "toMove",
+     "type",
+     "valueRed"
+    ]
+   }
+  },
+  {
+   "id": "L9 timing recorded (informational)",
+   "ok": true,
+   "detail": {
+    "hardMoves": [
+     {
+      "ply": 0,
+      "elapsedMs": 1413
+     },
+     {
+      "ply": 2,
+      "elapsedMs": 1373
+     },
+     {
+      "ply": 3,
+      "elapsedMs": 1366
+     },
+     {
+      "ply": 20,
+      "elapsedMs": 1367
+     },
+     {
+      "ply": 21,
+      "elapsedMs": 1364
+     },
+     {
+      "ply": 100,
+      "elapsedMs": 1382
+     },
+     {
+      "ply": 101,
+      "elapsedMs": 1380
+     }
+    ]
+   }
+  }
+ ]
+}

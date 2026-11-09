@@ -1,0 +1,20 @@
+{
+ "verdict": "PASS",
+ "hardRule": "exact",
+ "positions": 142,
+ "hardOk": 142,
+ "plainOk": 284,
+ "refModelInfo": {},
+ "subModelInfo": {
+  "model_id": "c34b7ff3297c785a",
+  "hard_mode": "legacy",
+  "hard_model_id": null
+ },
+ "subBanner": [
+  "Model id:   c34b7ff3297c785a",
+  "Manifest:   /Users/bill/projects/TwixT_Game/models/c34b7ff3297c785a/manifest.json",
+  "Hard mode:  legacy"
+ ],
+ "failures": [],
+ "failureCount": 0
+}

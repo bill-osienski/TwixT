@@ -1,0 +1,167 @@
+✔ default server URL follows the page hostname (0.290334ms)
+✔ default server URL remains usable outside a browser (0.047167ms)
+✔ an explicit server URL still overrides the page-derived default (0.039958ms)
+✔ IPv6 page hostnames are formatted as valid URLs (0.036542ms)
+[TwixTAI] sealed lane summary {
+  calls: 0,
+  openPaths: 0,
+  sealed: 0,
+  avgMs: 0,
+  maxMs: 0,
+  bridgeChecks: 0,
+  bridgeCacheMisses: 0,
+  nodesVisited: 0,
+  enqueued: 0,
+  reasons: {}
+}
+✔ expansion records candidate moves but materializes NO children (0.784292ms)
+✔ descending materializes exactly ONE child, and only the selected one (0.276625ms)
+✔ re-selecting the same move does not construct a second state (0.548625ms)
+✔ an unmaterialized move scores identically to a materialized-but-unvisited one (0.237125ms)
+✔ with all candidates tied, the lexicographically smallest key wins (0.419584ms)
+✔ the tie-break is STRING lexicographic, not numeric (0.066916ms)
+✔ a strictly better score wins, and an equal one only wins if lexicographically smaller (0.143292ms)
+✔ visitCounts covers EVERY legal root move, in order, including zeros (0.824917ms)
+✔ retention is bounded by simulations, not simulations x legal moves (1.055042ms)
+✔ an aborted-before-first-simulation search still returns the empty map (0.2565ms)
+✔ progress reports one entry per simulation with the running root value (0.441584ms)
+✔ each expansion performs exactly one evaluation (0.132ms)
+✔ re-selecting a materialized move reuses the cached child object (0.107292ms)
+✔ across a REAL search, no node is expanded twice and traversal repeats (7.533417ms)
+▶ manifest path resolution
+  ✔ defaults to an application-relative path, never cwd (0.281833ms)
+  ✔ honours MODEL_MANIFEST as an override (0.046542ms)
+  ✔ resolves a relative MODEL_MANIFEST against cwd, not the app (0.05175ms)
+  ✔ ignores MODEL_PATH entirely — it is no longer a serving override (0.0345ms)
+✔ manifest path resolution (0.811333ms)
+▶ model id addresses the whole pair
+  ✔ is derived from both hashes, not the graph alone (0.33375ms)
+  ✔ the committed baseline id follows from its own hashes (7.259583ms)
+✔ model id addresses the whole pair (7.774833ms)
+▶ committed baseline artifact
+  ✔ the default manifest exists, validates, and its pair hashes match (7.732875ms)
+  ✔ every external-data reference in the real graph names the declared sidecar (4.23775ms)
+  ✔ the BASELINE manifest still records provenance as unknown, not reconstructed (0.492334ms)
+  ✔ the SERVED default now records complete provenance (3.219167ms)
+  ✔ attaches no parity or strength claim (3.202417ms)
+  ✔ the live session matches the declared contract exactly (20.113708ms)
+✔ committed baseline artifact (39.285208ms)
+▶ fail-loud validation
+  ✔ accepts a well-formed fixture (control) (1.639084ms)
+  ✔ MANIFEST_MISSING when the manifest does not exist (0.18825ms)
+  ✔ MANIFEST_UNREADABLE when the manifest is not JSON (0.32275ms)
+  ✔ MANIFEST_INVALID when a required field is absent (0.642875ms)
+  ✔ MANIFEST_INVALID on an unsupported manifest_version (0.649292ms)
+  ✔ MANIFEST_INVALID when a filename is a path rather than a basename (0.676ms)
+  ✔ MODEL_ID_MISMATCH when the id does not follow from the declared hashes (0.635083ms)
+  ✔ GRAPH_MISSING when the graph file is absent (0.979833ms)
+  ✔ GRAPH_SIZE_MISMATCH when the declared size is wrong (0.716916ms)
+  ✔ GRAPH_HASH_MISMATCH when the graph bytes change (0.954959ms)
+  ✔ DATA_MISSING when the sidecar is absent (1.396625ms)
+  ✔ DATA_SIZE_MISMATCH when the declared sidecar size is wrong (0.937292ms)
+  ✔ DATA_HASH_MISMATCH when the weights change (1.180542ms)
+✔ fail-loud validation (12.768209ms)
+▶ external-data binding is structural, not textual
+  ✔ parses locations out of a synthetic graph (0.165667ms)
+  ✔ rejects a decoy filename carried in the doc string (0.697083ms)
+  ✔ rejects a graph loading from more than one sidecar (0.676625ms)
+  ✔ rejects a graph that references no external data at all (0.564875ms)
+  ✔ rejects external-data entries hidden outside graph.initializer (0.5895ms)
+  ✔ GRAPH_UNPARSEABLE on bytes that are not a protobuf message (0.621833ms)
+✔ external-data binding is structural, not textual (4.203792ms)
+▶ tensor contract is enforced, not merely recorded
+  ✔ accepts the matching contract in any tensor order (0.106708ms)
+  ✔ rejects a missing input (0.149041ms)
+  ✔ rejects a wrong tensor type (0.036958ms)
+  ✔ rejects a 24-channel board against the real 30-channel session (0.033209ms)
+  ✔ rejects a 512-move policy against the real 576-move session (0.039959ms)
+  ✔ rejects board_shape that contradicts its own declared board tensor (0.026041ms)
+  ✔ rejects max_moves that contradicts its own declared move tensors (0.025458ms)
+  ✔ rejects an artifact whose move count disagrees with AlphaZeroInference (0.031875ms)
+✔ tensor contract is enforced, not merely recorded (0.514375ms)
+▶ application compatibility, not just self-consistency
+  ✔ the derived application contract matches the pinned baseline (4.554709ms)
+  ✔ rejects a 24-channel model whose manifest agrees with it (0.161709ms)
+  ✔ rejects an output named `score` when the server reads `value` (0.06275ms)
+  ✔ rejects a renamed input — caught earlier, as an internal inconsistency (0.076916ms)
+  ✔ rejects int32 move indices when the server supplies int64 (0.039541ms)
+  ✔ rejects a board size other than the served 24 (0.053875ms)
+  ✔ rejects a self-consistent 512-move artifact against a 576-move server (0.041417ms)
+  ✔ rejects an extra output the server does not handle (0.048541ms)
+  ✔ rejects a non-scalar value head (0.044916ms)
+  ✔ requires the application move count to be supplied at all (0.036417ms)
+✔ application compatibility, not just self-consistency (5.215125ms)
+▶ inference server entry point
+  ✔ starts with no environment override at all (npm run server) (78.881375ms)
+  ✔ resolves the same artifact when started from a foreign cwd (74.162666ms)
+  ✔ exits non-zero on a missing manifest (56.922042ms)
+  ✔ exits non-zero on tampered weights (63.448583ms)
+  ✔ leaves the pinned artifact untouched throughout (6.136167ms)
+✔ inference server entry point (286.047ms)
+▶ launcher entry point
+  ✔ starts the AI server when the pinned artifact validates (103.661292ms)
+  ✔ refuses to start the AI server on a broken manifest, and exports nothing (32.153875ms)
+✔ launcher entry point (135.933583ms)
+▶ no startup export path
+  ✔ the loader cannot spawn an exporter (0.363208ms)
+  ✔ startServer.js no longer auto-exports the latest checkpoint (0.204625ms)
+  ✔ server/index.js takes its model from the manifest, not a cwd-relative default (0.171833ms)
+✔ no startup export path (0.825584ms)
+✔ hard is deterministic by default (0.418583ms)
+✔ easy and medium keep their difficulty temperature (0.055ms)
+✔ deterministicMode forces temperature 0 at every difficulty (0.049208ms)
+✔ explicit temperature overrides the difficulty default (0.043917ms)
+✔ deterministicMode beats an explicit temperature (0.046334ms)
+✔ unknown difficulty falls back to medium (0.048375ms)
+✔ divergent policies are detectable (0.151458ms)
+✔ both transport option shapes produce the same readout temperature (0.087333ms)
+✔ the parity test can actually fail (0.056542ms)
+✔ selectMoveForRequest returns the move and the resolved policy (0.0715ms)
+✔ neither transport calls selectMove directly (0.455125ms)
+✔ the direct-call detector actually detects a bypass (0.07375ms)
+✔ websocket client sends deterministicMode (0.083083ms)
+✔ cache scope separates simulation budgets (0.365959ms)
+✔ cache scope separates models (0.062ms)
+✔ an unscoped key really does collide (0.045708ms)
+✔ a cache hit re-applies the readout instead of returning a sticky move (0.069375ms)
+✔ the same cached search yields different moves under different policy (0.048958ms)
+✔ index.js caches raw search results, not selected moves (0.076916ms)
+Server tests loaded. Running...
+▶ TwixtState
+  ✔ should create empty initial state (0.303583ms)
+  ✔ should generate legal moves for red (0.654042ms)
+  ✔ should apply move and switch player (0.132875ms)
+  ✔ should create bridges between knight-move pegs (0.131ms)
+  ✔ should detect win for red (top to bottom) (0.215834ms)
+  ✔ should convert to tensor in HWC format (0.796541ms)
+  ✔ should serialize and deserialize correctly (0.122375ms)
+  ✔ should enforce MAX_PLIES draw (0.059625ms)
+✔ TwixtState (2.914084ms)
+▶ BoardMovesCache
+  ✔ should store and retrieve values (0.429958ms)
+  ✔ should return undefined for cache miss (0.102166ms)
+  ✔ should be move-order independent (0.239166ms)
+  ✔ should evict oldest entries when full (0.113917ms)
+  ✔ should track hit/miss statistics (0.073167ms)
+✔ BoardMovesCache (1.073417ms)
+▶ MCTSNode
+  ✔ should initialize with correct defaults (0.054166ms)
+  ✔ should calculate qValue correctly (0.021291ms)
+  ✔ should track expansion state (0.019125ms)
+✔ MCTSNode (0.129875ms)
+▶ MCTS selectMove
+  ✔ should select deterministically with temperature=0 (0.071375ms)
+  ✔ should use lexicographic tie-break (0.022083ms)
+  ✔ should return consistent moves with same temperature=0 (0.041125ms)
+✔ MCTS selectMove (0.167333ms)
+▶ TwixtState toTensorHWC parity
+  ✔ should match toTensorNested but transposed (2.122291ms)
+✔ TwixtState toTensorHWC parity (2.167417ms)
+ℹ tests 116
+ℹ suites 15
+ℹ pass 116
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 532.347917

@@ -1,0 +1,15 @@
+{
+ "verdict": "PASS",
+ "hardRule": "exact",
+ "positions": 142,
+ "hardOk": 142,
+ "plainOk": 284,
+ "refModelInfo": {},
+ "subModelInfo": {},
+ "subBanner": [
+  "Model id:   c34b7ff3297c785a",
+  "Manifest:   /Users/bill/projects/TwixT_Game-r3-revert/models/c34b7ff3297c785a/manifest.json"
+ ],
+ "failures": [],
+ "failureCount": 0
+}

@@ -1,0 +1,63 @@
+▶ comparator evidence validation
+  ✔ control: the committed evidence passes and reproduces the tracked verdict (171.180959ms)
+  ✔ the control really does carry the full evidence it claims (0.152125ms)
+  ✔ rejects 1 of the required 10 MLX measurements (208.7175ms)
+  ✔ rejects an empty MLX permuted-logit array (197.35275ms)
+  ✔ rejects a truncated MLX payload (197.719084ms)
+  ✔ rejects a truncated permutation (195.891958ms)
+  ✔ rejects a permutation that repeats an index (200.801167ms)
+  ✔ rejects a permutation index outside the legal-move range (193.418292ms)
+  ✔ rejects duplicated positions padding the count (195.12025ms)
+  ✔ rejects a missing equivariance array entirely (195.714417ms)
+  ✔ rejects surfaces measured on different position sets (194.789709ms)
+  ✔ rejects surfaces measured under different permutations (193.017834ms)
+  ✔ still catches a genuine equivariance violation (186.513667ms)
+✔ comparator evidence validation (2354.549792ms)
+▶ determinism
+  ✔ regenerating reproduces the committed corpus byte for byte (658.072125ms)
+  ✔ the byte comparison would actually notice a formatting change (657.456708ms)
+  ✔ the seed allocation is fully accounted for (0.166458ms)
+  ✔ spread is total and evenly distributed (0.072792ms)
+✔ determinism (1316.218208ms)
+▶ legality — re-derived, not trusted
+  ✔ every move was legal at the moment it was played (559.959292ms)
+  ✔ recorded ply, side to move, legal count and terminal status all re-derive (81.393625ms)
+  ✔ no position is terminal and every position has a legal move (0.149959ms)
+  ✔ side to move follows ply parity, so the colour split is structural (0.084583ms)
+✔ legality — re-derived, not trusted (641.7535ms)
+▶ uniqueness
+  ✔ all 126 positions are distinct under the canonical key (79.02525ms)
+  ✔ the key distinguishes bridge layout, not just pegs (0.10275ms)
+  ✔ move sequences are themselves distinct (0.332042ms)
+✔ uniqueness (79.545625ms)
+▶ strata and balance
+  ✔ 120 primary positions, exactly 30 per stratum (0.0685ms)
+  ✔ every primary position sits inside its stratum and hit its target ply (0.089167ms)
+  ✔ each side to move is at least 40% of the primary 120 (0.033584ms)
+  ✔ the aggregate gates are scoped to the primary set only (0.031583ms)
+✔ strata and balance (0.27075ms)
+▶ edge coverage
+  ✔ has exactly the six required, separately labelled cases (0.050042ms)
+  ✔ empty board is ply 0 with the maximum legal-move count (0.030125ms)
+  ✔ one-move case is ply 1 (0.015458ms)
+  ✔ fewest-legal case has the minimum legal-move count in the corpus (0.026833ms)
+  ✔ the >512 case exceeds 512 and is NOT the empty board (0.022458ms)
+  ✔ the two side-to-move cases are what they claim (0.019958ms)
+✔ edge coverage (0.213125ms)
+▶ the retry rule actually works
+  ✔ detects a target ply the game cannot reach (100.181583ms)
+  ✔ does not report ending early when the target is reached (2.038167ms)
+  ✔ records zero rejections, and says why rather than hiding it (0.097875ms)
+✔ the retry rule actually works (102.375125ms)
+▶ no model-derived quantities
+  ✔ the corpus declares and contains only game-derived facts (0.120875ms)
+  ✔ no serialized tensor, logit, value or policy appears anywhere (0.305166ms)
+✔ no model-derived quantities (0.452584ms)
+ℹ tests 39
+ℹ suites 8
+ℹ pass 39
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2390.066916

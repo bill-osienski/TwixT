@@ -1,0 +1,368 @@
+▶ statistics are exactly determined
+  ✔ the bootstrap is reproducible and uses the frozen order statistics (8.314042ms)
+  ✔ a degenerate sample yields a degenerate interval (0.820916ms)
+  ✔ the t interval uses the frozen critical value (0.102666ms)
+  ✔ refuses a P the specification does not allow (0.150125ms)
+  ✔ requires both methods to agree, in either direction (0.068042ms)
+  ✔ classifies three-valued, so weaker and inconclusive do not "agree" (0.045ms)
+✔ statistics are exactly determined (9.941917ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+▶ the committed pool flows through both consumers unchanged
+  ✔ runMatch and analyse both accept the real openings.json object (4445.706208ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+  ✔ also accepts the bare openings array, so neither shape is privileged (3541.373375ms)
+  ✔ rejects a pool that is not openings at all, rather than throwing (0.196708ms)
+✔ the committed pool flows through both consumers unchanged (7987.488167ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+▶ analysis of a real run
+  ✔ accepts a well-formed run and reaches a decision (15.511ms)
+  ✔ the fixture really is complete, or every negative test is vacuous (0.153208ms)
+  ✔ rejects a timing sidecar in the match namespace (2.908167ms)
+  ✔ rejects a run missing a game, measured against the committed P (1.573666ms)
+  ✔ rejects an incomplete pair even when the total count is right (16.586333ms)
+  ✔ rejects a run analysed against a larger committed P (2.095125ms)
+  ✔ rejects a run with no committed metadata (2.205208ms)
+  ✔ rejects run metadata with no fingerprint at all (1.60325ms)
+  ✔ rejects run metadata whose fingerprint is incomplete (1.686375ms)
+  ✔ rejects a P the specification does not support, before any replay (1.618791ms)
+  ✔ rejects a fingerprint that is not the committed run (16.934292ms)
+  ✔ rejects a sidecar missing required fields (2.302708ms)
+  ✔ rejects a sidecar carrying unexpected fields (1.950208ms)
+  ✔ rejects an empty match directory instead of throwing (0.771166ms)
+  ✔ rejects both games of a pair sharing a slot (15.767042ms)
+  ✔ rejects opening_id that is not pair_index (17.386208ms)
+  ✔ rejects an opening set that is not the frozen prefix (11.077084ms)
+  ✔ rejects fingerprint drift across sidecars (16.196292ms)
+  ✔ rejects a run whose simulation count is not the specified one (16.299666ms)
+  ✔ rejects a P the frozen specification does not allow (1.813709ms)
+  ✔ rejects a colour set that is not the two roles (16.767083ms)
+  ✔ rejects a colour assignment that contradicts game_in_pair (15.303709ms)
+  ✔ rejects a tampered result even when internally consistent (15.500166ms)
+  ✔ rejects a tampered candidate_score (14.66625ms)
+  ✔ rejects a tampered ply count (15.303875ms)
+  ✔ rejects a tampered termination reason (16.652125ms)
+  ✔ rejects an illegal move in the sequence (14.721167ms)
+  ✔ rejects a truncated game that never reached a terminal state (14.502625ms)
+  ✔ rejects moves that do not start with the declared opening (15.037916ms)
+  ✔ rejects an opening hash that does not match the pool (14.922917ms)
+✔ analysis of a real run (3604.74825ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+▶ model loading mirrors the product
+  ✔ loads both committed artifacts and reports their ids (0.270667ms)
+  ✔ performs the contract check, which resolveModel cannot do (0.457958ms)
+  ✔ refuses a manifest whose bytes do not match (0.777042ms)
+✔ model loading mirrors the product (26.855167ms)
+▶ execution commit
+  ✔ reports HEAD, and refuses a dirty worktree (89.6555ms)
+✔ execution commit (89.744208ms)
+▶ playGame
+  ✔ plays to a real terminal state and reports it consistently (807.89825ms)
+  ✔ is deterministic: the same inputs replay identically (842.813791ms)
+  ✔ swapping colours changes the game, so the pairing is not a no-op (1868.565417ms)
+  ✔ takes the readout temperature from the shipped table, and ignores a caller override (760.174584ms)
+  ✔ rejects an illegal opening rather than playing from a bad position (0.286625ms)
+✔ playGame (4282.145958ms)
+▶ sidecar construction
+  ✔ game_in_pair 0 puts the candidate on red (0.226666ms)
+  ✔ game_in_pair 1 puts the candidate on black (0.092625ms)
+  ✔ scores a draw as 0.5 from either colour (0.084041ms)
+  ✔ the fingerprint fields exclude the colours that swap (0.091042ms)
+✔ sidecar construction (0.6055ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+▶ runMatch and resumption
+  ✔ plays complete pairs and writes no temp files behind (2076.648208ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+  ✔ skips completed pairs on a clean re-run (26.2125ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+  ✔ quarantines a half-finished pair, replays it, and verifies the replay (1734.299417ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+  ✔ aborts when a replay does not reproduce the quarantined game (1261.599958ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+  ✔ validates existing sidecars on restart instead of trusting filenames (1098.107125ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+  ✔ validates a half-pair survivor before quarantining it (675.62075ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+  ✔ never overwrites a quarantine record, however often it is interrupted (1725.809333ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+  ✔ still owes the comparison after a crash between quarantine and replay (1262.442583ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+  ✔ re-checks a completed pair against its quarantine history on later restarts (1283.24825ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+  ✔ cannot be talked into accepting swapped roles (11.694375ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+  ✔ refuses to play if a model directory holds the wrong role (11.3825ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+  ✔ refuses to resume under a different configuration (20.77475ms)
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/1d64027db521a50f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-r3-revert/models/c34b7ff3297c785a/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+  ✔ refuses to resume with a different P (22.4855ms)
+  ✔ records a run fingerprint that every sidecar shares (0.549292ms)
+✔ runMatch and resumption (11213.852ms)
+▶ determinism
+  ✔ regenerating reproduces the committed pool byte for byte (52.864083ms)
+  ✔ would actually notice a formatting-only change (56.298208ms)
+  ✔ uses the frozen seed and PRNG the specification names (0.080833ms)
+✔ determinism (109.716666ms)
+▶ legality — re-derived, not trusted
+  ✔ every move was legal at the moment it was played (37.651791ms)
+  ✔ every opening is exactly four plies, two moves per side (0.562375ms)
+  ✔ moves are well-formed coordinates inside the board (0.307292ms)
+  ✔ recorded side to move, legal count and terminal status all re-derive (8.728791ms)
+✔ legality — re-derived, not trusted (47.460125ms)
+▶ non-terminal, with real choices remaining
+  ✔ no opening is terminal (7.232166ms)
+  ✔ every opening leaves at least two legal continuations (4.57225ms)
+  ✔ the continuations are genuinely playable, not merely counted (0.250833ms)
+✔ non-terminal, with real choices remaining (12.190958ms)
+▶ uniqueness
+  ✔ all 210 openings are distinct under the canonical position key (0.898417ms)
+  ✔ move sequences are themselves distinct (0.104208ms)
+  ✔ the key distinguishes bridge layout, not only pegs (0.057417ms)
+✔ uniqueness (1.11775ms)
+▶ pool shape and the match/timing split
+  ✔ holds exactly 210 openings with ids 0…209 in order (0.054459ms)
+  ✔ reserves 0…199 for the match and 200…209 for timing (0.092125ms)
+  ✔ the two sets are disjoint, so timing can never leak into the match (0.067333ms)
+  ✔ any P selects a PREFIX of the match set, never a chosen subset (0.065666ms)
+✔ pool shape and the match/timing split (0.3345ms)
+▶ seed and rejection accounting
+  ✔ every drawn seed is accounted for, with none unexplained (0.097208ms)
+  ✔ seeds are handed out in opening order, one per attempt (0.043458ms)
+  ✔ records zero rejections, and says why rather than hiding it (0.095583ms)
+✔ seed and rejection accounting (0.281416ms)
+▶ the rejection rule actually works
+  ✔ accepts a qualifying position (0.128917ms)
+  ✔ rejects a game that ended before the target ply (0.037ms)
+  ✔ rejects a terminal position (0.038709ms)
+  ✔ rejects a position with a single forced continuation (0.035958ms)
+  ✔ rejects a duplicate position and names what it duplicates (0.085ms)
+  ✔ playOpening reports an unreachable depth rather than silently truncating (0.193084ms)
+✔ the rejection rule actually works (0.592208ms)
+▶ the pool feeds its consumers in the shape they expect
+  ✔ yields bare four-move arrays from the committed pool (0.132833ms)
+  ✔ is idempotent, so a caller cannot be wrong about which shape it holds (0.056542ms)
+  ✔ refuses a pool that is not openings at all (0.172916ms)
+  ✔ the extracted moves replay exactly as the recorded openings do (0.186625ms)
+✔ the pool feeds its consumers in the shape they expect (0.600416ms)
+▶ scope: no model, no game
+  ✔ the generator imports nothing that could load a model or play a game (11.693583ms)
+  ✔ carries no model-derived quantity (0.367125ms)
+✔ scope: no model, no game (12.178458ms)
+▶ P is derived mechanically, never chosen
+  ✔ applies the frozen rule at, above and below the threshold (0.2485ms)
+  ✔ permits no third outcome (0.065875ms)
+  ✔ refuses a throughput that is not a number (0.162917ms)
+✔ P is derived mechanically, never chosen (0.849292ms)
+▶ throughput is one wall-clock span
+  ✔ uses the exact formula from the specification (0.06925ms)
+  ✔ refuses a non-positive span rather than dividing by it (0.05925ms)
+✔ throughput is one wall-clock span (0.192083ms)
+▶ the timing schedule is frozen and outcome-blind
+  ✔ is ten games, five per self-play arm, in the specified order (0.361083ms)
+  ✔ touches only the reserved openings, never a match opening (0.055375ms)
+  ✔ the frozen mapping cannot be mutated in place (0.043917ms)
+✔ the timing schedule is frozen and outcome-blind (0.540875ms)
+▶ runTimingSmoke, with the clock and games injected
+  ✔ writes exactly ten timing sidecars, in its own namespace (0.394708ms)
+  ✔ marks every sidecar as timing, self-play, on a reserved opening (0.877292ms)
+  ✔ opens the span at the pre-search seam and closes it at the last rename (0.074792ms)
+  ✔ derives the decision from that span alone (0.031958ms)
+  ✔ records the pool and surface digests it was given, not ones read later (0.022875ms)
+  ✔ hashes the evidence as written to disk (1.152792ms)
+  ✔ produces a decision that validates (0.26575ms)
+✔ runTimingSmoke, with the clock and games injected (11.05175ms)
+▶ the decision validator re-derives rather than trusting
+  ✔ accepts a well-formed decision (control) (0.184125ms)
+  ✔ rejects a P that its own throughput does not imply (0.087916ms)
+  ✔ rejects a throughput that its own wall time does not imply (0.049666ms)
+  ✔ rejects a restated threshold (0.039833ms)
+  ✔ rejects a P outside the two permitted values (0.036834ms)
+  ✔ rejects an altered opening mapping (0.039042ms)
+  ✔ rejects the wrong number of timing games (0.036ms)
+  ✔ requires exactly the schedule-derived filenames, not ten arbitrary ones (0.0645ms)
+  ✔ rejects two different files carrying the SAME digest (0.038875ms)
+  ✔ rejects malformed digests (0.039709ms)
+  ✔ rejects missing required fields before comparing anything (0.03875ms)
+  ✔ rejects a decision bound to a different pool, surface or settings (0.065583ms)
+  ✔ rejects a non-object (0.023667ms)
+✔ the decision validator re-derives rather than trusting (0.85425ms)
+▶ committed means committed, not merely tracked
+  ✔ accepts a committed, fully bound decision (561.861958ms)
+fatal: path 'tests/product_match/p_decision.json' exists on disk, but not in 'HEAD'
+  ✔ REFUSES a decision that is staged but never committed (296.1365ms)
+fatal: path 'tests/product_match/p_decision.json' exists on disk, but not in 'HEAD'
+  ✔ REFUSES a decision that exists only in the working tree (339.460792ms)
+  ✔ reads the COMMITTED bytes when the working tree was edited afterwards (462.913292ms)
+  ✔ refuses committed content that is unparseable (314.171083ms)
+  ✔ refuses a committed decision whose P its own throughput does not imply (427.8775ms)
+  ✔ refuses a decision bound to a different execution surface (420.220833ms)
+  ✔ notices when an execution-surface file changes AFTER the decision (523.648791ms)
+  ✔ refuses a decision bound to a different pool (436.069208ms)
+  ✔ refuses a decision bound to different search settings (555.955541ms)
+✔ committed means committed, not merely tracked (4373.231583ms)
+▶ nothing may run a match without the committed decision
+  ✔ the decision IS committed in this repository, and reads as a blob (15.737709ms)
+  ✔ the committed decision loads and validates as P = 100 at the MATCH commit (356.714708ms)
+  ✔ at HEAD the completed decision REFUSES — it cannot authorize another match (474.46825ms)
+  ✔ the working-tree decision is byte-identical to the committed blob (12.658ms)
+  ✔ the production analyser refuses an empty run even with a decision committed (463.498334ms)
+  ✔ the production analyser refuses a run with no commit in its fingerprint (0.907125ms)
+  ✔ the evidence pipeline rejects a P that disagrees with the decision (0.972917ms)
+  ✔ neither production API accepts a caller-supplied pool or standard (0.72975ms)
+  ✔ the frozen standard cannot be mutated in memory (0.25ms)
+  ✔ a mutated standard cannot change a computed interval (5.1925ms)
+  ✔ other exported constants are frozen too (0.105ms)
+  ✔ the analysis implementation is itself inside the execution surface (0.037625ms)
+  ✔ the production analyser has no opt-out and no run.json fallback (0.680292ms)
+  ✔ the unchecked core is named so its nature is visible at every call site (0.68975ms)
+✔ nothing may run a match without the committed decision (1334.037ms)
+▶ scope: this test file runs no timing game
+  ✔ imports no way to run a real timing game (0.504541ms)
+  ✔ the suite creates no match output in the repository (0.190375ms)
+✔ scope: this test file runs no timing game (0.780625ms)
+ℹ tests 152
+ℹ suites 25
+ℹ pass 152
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 15665.495917

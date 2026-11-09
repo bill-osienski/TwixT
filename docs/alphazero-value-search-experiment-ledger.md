@@ -282,6 +282,7 @@ knob) is not a new hypothesis.
 > **H-TB integration — V2-R PARITY PASS; hard model `78c16a31c3dba37f` pinned (Post-closure entry 58, 2026-11-09).** The same exported pair under the approved amendment (Python 3.13.15 with ORT 1.23.2; corpus, tolerances and tools unchanged). MLX drift 0. S2 2.4e-5 against 1e-4; S3 exactly 0; S4 2.4e-5 against 1.1e-4; top-1 100%, τ 1.0. V2's FAIL stands as the record of the defective 1.24.4 surface. `HARD_MODEL_ID` pinned; G2's remaining checks follow. See #188.
 > **H-TB integration — G2: V3 PASS; V7 golden comparison MISMATCH in value numerics only; G2 stopped (Post-closure entry 59, 2026-11-09).** V3: the product's mirror wrapper matches the research evaluator; max prior difference 1.85e-6 and max value difference 2.3e-6, both against 1.1e-4; top-1 100%. V7: the plain search under the new stage against the August eager standard. **Visit counts and selected moves are identical in all 92 cases**, but root and progress values differ by about 1e-7 in 71 cases, with code and models byte-identical. Environment differences are recorded (Node v24.22.0 against v26.7.0; macOS 27.2); the cause is not established. The deferred suites, live requests and R1–R3 were not run. See #189.
 > **H-TB integration — current-environment equivalence control: old code and integrated code EXACTLY equal (Post-closure entry 60, 2026-11-09).** A fresh capture at `aad5796` in today's environment matches V7's integrated capture exactly on all 92 cases. Against August's standard it shows the same 12,326 differences as V7. So V7's differences are environmental (Node v24.22.0 against v26.7.0; macOS 27.2), not caused by the integration. V7's MISMATCH stays on record; G2's remaining checks resume. *(Correction to entry 59: the step-632 reordering reading is plausible, not established; the discriminator commit was `aad5796`.)*
+> **H-TB integration — G2 COMPLETE; returned for review before G3 (Post-closure entry 61, 2026-11-09).** Suites pass (server 213, parity 39, match 152 after a G1 test-expectation fix, golden 140, research 259). Live REST and WS: 17 of 17 checks after a harness race in run 1 was fixed. Rollback against a recorded `80acd87e` reference over 142 positions: R1 (`HARD_MODE=legacy`, student unavailable) is exact on all `hard`, `easy` and `medium` answers; R2 (default) serves the student with `easy`/`medium` exact; R3 (code revert) is exact with its suites passing. The protocol mode refuses to start without the student. No games, deployment or push. See #190.
 
 ## Historical proposal check — programme now closed
 
@@ -2104,6 +2105,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 187. **The runtime canary (2026-11-09, entry 57).** Do **not**: treat Python onnxruntime 1.23.2's canary PASS as qualifying the student's export (only V2-R under the reviewed amendment can); run V2-R before the amendment is reviewed, or with tolerances, corpus, tools or exported bytes other than the amendment names; widen into a version sweep without cause; install into the project `.venv` or the teacher environment; or loosen the exact `onnxruntime-node` pin without the canary passing on the new version.
 188. **V2-R is spent: PARITY PASS (2026-11-09, entry 58).** Do **not**: rerun, top up or re-score V2-R; read it as overturning V2's FAIL (each describes its own reference surface); read it as a strength or deployment result; re-export, alter or substitute the pinned pair `78c16a31c3dba37f`; or serve it through a runtime that has not passed the conv canary (#186).
 189. **G2 V7 golden comparison: MISMATCH in value numerics only (2026-11-09, entry 59).** Do **not**: edit the frozen `compare.mjs` or the eager standard; add a tolerance to the golden comparison; recapture and keep whichever run matches; attribute the about 1e-7 value differences to the integration, or to the environment, before a discriminator has run; read the identical visit counts and selected moves as a PASS of the exact-equality rule; or continue G2's remaining checks without the user's decision.
+190. **G2 is complete (2026-11-09, entries 58–61).** Do **not**: deploy, push or serve the integration on these results (G3's smoke test and match, then a separate deployment decision, come first); start G3 before its timing formula is written into the match card; read the rollback or equivalence results as strength evidence; rerun R1–R3, V3 or the live check to "refresh" them without a change that calls for it; or merge the deleted R3 rehearsal (`9a63458e`).
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -10719,3 +10721,53 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
   - **The integration leaves the plain search's traces unchanged.** V7's differences from August are environmental. Recorded differences: Node v24.22.0 against v26.7.0, and macOS 27.2. Which component is responsible is not established.
   - **V7's MISMATCH against August stays on record,** and the historical goldens are unchanged.
   - **Per the declared plan, G2's remaining approved checks resume:** the deferred suites, live REST and WS requests, and R1–R3.
+
+#### Post-closure entry 61 — G2 completed: suites, live REST and WS, and rollback R1–R3 all pass; returned for review before G3 (2026-11-09)
+
+- **Test:** G2's remaining approved checks, resumed after entry 60's equivalence control:
+  - the deferred model-loading suites;
+  - live REST and WebSocket requests;
+  - `HARD_MODE=legacy` reproducing the recorded baseline with the student artifact unavailable (R1);
+  - the protocol default (R2);
+  - the code-revert rehearsal (R3).
+- **Hypothesis:**
+  - the request wiring behaves as G1's source-level checks said;
+  - today's `hard` is recoverable exactly by the startup switch and by the revert.
+- **Why it was plausible:** G1's model-free tests; V2-R, V3 and entry 60.
+- **Prediction on record:** None stated in advance. The checks were declared in committed scripts before they ran: `tests/htb_integration/live_check.mjs` (`781b5ace`) and `rollback_check.mjs` (`423bff25`).
+- **What ran,** with evidence under `docs/superpowers/evidence/htb-integration-g2/{suites,live,rollback}/`:
+  - **Suites,** in a clean linked worktree at HEAD:
+    - `test:server` 213 pass, including the startup tests, which now load both models;
+    - `test:parity` 39;
+    - `test:golden` 140;
+    - smoke 1;
+    - lint clean;
+    - `tests/test_htb_*` 259 pass, in the main checkout.
+  - **A G1 defect, fixed in `2db444c0`:** `test:match` first failed one test. `tests/product_match/test_harness.mjs` asserted the harness's resolved `hard` policy by deep equality, without the `search` field G1 added to every resolved policy. G1 could not catch it because that file loads models. Only the test's expected shape changed; the harness still plays 800 simulations at T 0 with plain search, and the file is outside the execution surface. Rerun: `test:match` 152 pass, `test:golden` 140.
+  - **Live check:** the real server in its default (protocol) mode, on a free port.
+    - Run 1 failed one check, L6. A harness defect: two WS refusal probes were sent back-to-back on one connection, so the server's existing latest-wins rule aborted the first and correctly suppressed its error. REST refused both correctly. L5 had the same race and passed by timing.
+    - The harness was fixed to send one probe at a time (`live_check.mjs`, committed), and run 1's output is preserved.
+    - **Run 2: PASS, 17 of 17 checks:**
+      - L1–L2: banner and model-info name both model ids and the hard mode.
+      - L3: WS `hard` on seven positions (ply 0 to 101, both colours). Protocol fields; legal moves; 200 visits; the played move's actual visits; `valueKind` by ply; `valueRed` exactly equal to the side-to-move conversion of the displayed value; progress messages.
+      - L4: REST `hard` returns `cached: false` and leaves the cache untouched. Control: a repeated REST `medium` request is served from the cache.
+      - L5: conflicting overrides refused on both transports with the one message; `deterministicMode: false` accepted.
+      - L6: a won position (`TERMINAL_ROOT`) and a 12×12 board (`NOT_24`) refused on both transports.
+      - L7: a cancelled request answers nothing; a newer move aborts the older; the server keeps serving.
+      - L8: `easy` and `medium` WS responses keep today's exact key set and simulation counts.
+      - L9: protocol `hard` takes about 1.36–1.40 s per move on this machine.
+  - **Reference:** today's `hard`, recorded by the rollback script from a server running at `80acd87e` (clean worktree, today's `node_modules`). 142 positions (126 corpus and 16 golden) × hard, easy and medium, over WS with visits.
+  - **Start-up control:** the integrated server in protocol mode with `HARD_MODEL_MANIFEST` pointing at an absent path **refuses to start** (`MANIFEST_MISSING`). No fallback.
+- **Result:**
+  - **R1, PASS:** the integrated server under `HARD_MODE=legacy` with the hard artifact unavailable starts and loads one model (banner and model-info: `hard_mode` legacy, `hard_model_id` null). Its `hard` answers equal the reference **exactly** on all 142 positions (move, visits, root value, `valueRed`, simulation count, key set). `easy` and `medium` match on all 284 pairs.
+  - **R2, PASS:** the default mode serves `hard` from `78c16a31c3dba37f` under the protocol on all 142 positions. `easy` and `medium` equal the reference on all 284.
+  - **R3, PASS:** a throwaway branch reverted the integration's code commits (`2db444c0`, `06b52aaa`, `99b1feaf`, `9a19496e`, `a5ec10ed`, `22c1a78d`), keeping docs and evidence; it was committed as `9a63458e` and then deleted.
+    - It is byte-identical to `80acd87e` in `server/`, both package files, `models/` and every surface and test file.
+    - Its server equals the reference exactly on all 426 answers.
+    - Its suites pass: server 116, parity 39, match 152, golden 140 (back on `candidate-default`), smoke 1, lint.
+- **Did it match a prediction?** None was stated. Both hypotheses held. One G1 test expectation was wrong and is fixed; one harness race was found and fixed.
+- **Conclusion / status:**
+  - **G2 complete.** The student is exported, qualified (V2-R) and pinned. Real and mirror-averaged outputs agree (V2-R, V3). The plain search is unchanged in the current environment (entry 60). The request wiring works live. Rollback is proven by the startup switch, with the student unavailable, and by the code revert.
+  - **Not done:** G3's smoke test and match. Its timing formula is to be written into the match card before the smoke run, per the review.
+  - **Not authorized:** deployment, training and pushing.
+  - **Returned for review before G3.**

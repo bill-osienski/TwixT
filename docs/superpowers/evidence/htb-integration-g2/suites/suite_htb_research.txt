@@ -1,0 +1,16 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.10, pytest-9.0.2, pluggy-1.6.0
+rootdir: /Users/bill/projects/TwixT_Game
+configfile: pytest.ini
+collected 259 items
+
+tests/test_htb_budget.py .....                                           [  1%]
+tests/test_htb_pilot.py ................................................ [ 20%]
+...........................                                              [ 30%]
+tests/test_htb_screen.py ............................................... [ 49%]
+...........................                                              [ 59%]
+tests/test_htb_strength.py ............................................. [ 76%]
+.......................................                                  [ 91%]
+tests/test_htb_timing.py .....................                           [100%]
+
+============================= 259 passed in 9.89s ==============================

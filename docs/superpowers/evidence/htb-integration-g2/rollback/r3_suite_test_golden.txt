@@ -1,0 +1,256 @@
+✔ the corpus is exactly 92 cases (0.585791ms)
+✔ the 16 positions match the literal table frozen in the specification (0.286333ms)
+✔ the immediate-win positions are exactly P04, P08, P12, P16 (0.060083ms)
+✔ the prefix rule is {4, 16, 28, plyCount - 1} (0.040541ms)
+✔ the matrix splits 80 baseline / 10 candidate / 2 abort (0.086791ms)
+✔ the candidate runs on exactly P02 and P11, at every simulation count (0.08825ms)
+✔ every baseline position carries the full simulation ladder (0.265625ms)
+✔ the abort cases are A1 and A2, on P07, at 64 simulations (0.048ms)
+✔ case ids are unique (0.060292ms)
+✔ the enumeration is frozen — mutation throws, and the result is unchanged (0.207875ms)
+✔ `list` is pure: it runs and prints 92 cases (26.955542ms)
+✔ parseArgs accepts exactly the documented shape (0.100125ms)
+✔ parseArgs rejects a missing mode, a typo, a doubled mode and a missing commit (0.374208ms)
+✔ the worker CLI exits 2 on a mode typo rather than capturing (25.1895ms)
+✔ runCase refuses without an explicit stage, mode or valid expectCommit (0.29125ms)
+✔ POSITIVE CONTROL: on a clean worktree a dry run reaches the fixture (135.480667ms)
+✔ N1: a modified capture harness refuses, fixtures unread (110.506958ms)
+✔ N2: a modified fixture sidecar refuses, fixtures unread (118.790417ms)
+✔ N3: a stray untracked file refuses, fixtures unread (115.875167ms)
+✔ N1 and N2 are independent: each dirties a different file (0.092042ms)
+✔ a commit made mid-run refuses at the NEXT case, fixtures unread (135.43925ms)
+✔ each case runs in its own process: three cases, three distinct pids (425.154625ms)
+✔ the worker refuses an unknown case id (24.884667ms)
+✔ a stale FINAL artifact refuses, and is not deleted or modified (125.9855ms)
+✔ a stale TEMP artifact refuses, and is not deleted or modified (127.5635ms)
+✔ POSITIVE CONTROL: the same case succeeds into an empty directory (129.757792ms)
+✔ the orchestrator refuses a partially completed corpus, deleting nothing (160.286584ms)
+✔ the orchestrator refuses even an EMPTY existing directory (154.701875ms)
+SECONDARY SESSION_RELEASE_FAILED: session.release() rejected: release blew up
+SECONDARY SESSION_RELEASE_FAILED: session.release() rejected: release blew up
+  (could not attach secondary to the primary error)
+SECONDARY SESSION_RELEASE_FAILED: session.release() rejected: release blew up
+  (could not attach secondary to the primary error)
+USAGE: usage: worker.mjs <case_id> <out_dir> --expect-commit <sha> --stage <eager|lazy|candidate-default> (--dry-run|--capture)
+UNKNOWN_CASE: no such case: G_NOPE
+CAPTURE_COMMIT_MOVED: HEAD is 9a63458ece041d04b985e6c3f0fcd00e15590f19 but this run was started at bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb; the repository moved mid-capture
+✔ two concurrent workers on one case: exactly one wins, its bytes intact (192.780417ms)
+✔ a fixture whose bytes do not match the pinned hash is refused (0.159ms)
+✔ every pinned sidecar hash matches the committed evidence (0.126875ms)
+✔ the COMMITTED eager corpus still validates, under the eager stage (28.497625ms)
+✔ the eager corpus is REJECTED when judged under the lazy stage (9.624125ms)
+✔ a NEW artifact records its stage, commit and surface (0.093833ms)
+✔ validateCorpus THROWS if either mandatory binding is omitted (0.23175ms)
+✔ POSITIVE CONTROL: a well-formed dry-run corpus validates clean (0.48325ms)
+✔ validation rejects 92 files carrying the wrong case ids (0.389333ms)
+✔ validation rejects a stale execution-surface digest (0.373041ms)
+✔ validation rejects a capture_commit that is not the preflighted commit (0.514125ms)
+✔ a reused pid is NOT a validation failure (operating systems recycle pids) (0.387375ms)
+✔ validation rejects a stray non-JSON file and a leftover .tmp (0.457584ms)
+✔ validation rejects a missing file and a stray file (0.4185ms)
+✔ validation rejects a dry-run artifact carrying a trace (0.352167ms)
+✔ COLLUDING MUTATION: changing keys, hash and count together still fails (22.832708ms)
+✔ REGRESSION: a fabricated corpus — empty visit maps, no progress, root_value 999 — is REJECTED (2.822916ms)
+✔ POSITIVE CONTROL: a semantically well-formed capture corpus validates clean (12.306125ms)
+✔ capture validation rejects an incomplete or reordered visit map (19.937583ms)
+✔ capture validation rejects duplicate move keys and negative counts (21.440583ms)
+✔ capture validation requires visit counts to sum to the simulation count (9.3905ms)
+✔ capture validation enforces the abort contract for A1 and A2 (19.849375ms)
+✔ capture validation rejects a broken done sequence and an out-of-range valueEstimate (20.280583ms)
+✔ capture validation rejects a selected_move that does not follow from the counts (10.142041ms)
+✔ capture validation rejects non-monotonic elapsed metadata (10.117958ms)
+✔ in capture mode, validation rejects `elapsed` smuggled into a compared entry (9.965042ms)
+✔ LIFECYCLE: the session is released after a successful trace (4.446291ms)
+✔ LIFECYCLE: the session is released when the search throws (0.442834ms)
+✔ LIFECYCLE: the session is released when the model role is wrong, and the role error survives (0.217542ms)
+✔ LIFECYCLE: a failing release does not mask the original error, and is attached (0.87025ms)
+✔ LIFECYCLE: a failing release FAILS an otherwise good trace (0.992916ms)
+✔ PRECEDENCE: a FROZEN primary error survives a release failure unchanged (0.981833ms)
+✔ PRECEDENCE: a falsy thrown value is a failure, not a success (1.5905ms)
+✔ PRECEDENCE: a falsy primary still takes precedence over a release failure (0.93425ms)
+✔ LIFECYCLE: a session with no callable release() fails rather than being skipped (1.186583ms)
+✔ LIFECYCLE: a release failure publishes NO artifact (132.342292ms)
+✔ EXIT: no harness entry point calls process.exit — all return codes (2.48325ms)
+dry-run G_P01_baseline_s1 pid=55482
+[ 1/92] G_P01_baseline_s1  FAILED
+  status: 3
+  signal: (none)
+  error : (none)
+  --- worker stdout (0 bytes) ---
+  --- worker stderr (163 bytes) ---
+ARTIFACT_EXISTS: /Users/bill/projects/TwixT_Game-r3-revert/runs/mcts_golden_failrec/G_P01_baseline_s1.json already exists; refusing to overwrite existing evidence
+  --- end worker output ---
+✔ EXIT: mainWithCode returns the documented codes without terminating (227.058334ms)
+✔ the orchestrator preserves worker stdout, stderr, signal and status on failure (0.142417ms)
+✔ runAll returns the full failure record for a refusing worker (154.651875ms)
+✔ INTEGRATION: real MCTS output satisfies the validator (normal case, A1, A2) (18.072666ms)
+{
+  "outcome": "match",
+  "comparedCases": 92,
+  "comparedFields": [],
+  "excludedFields": [],
+  "mismatches": []
+}
+
+compared 92 cases on 
+excluded 
+EXACT MATCH
+Interpretation, fixed before this ran: exact agreement on those fields across these 92 cases ONLY. It does not establish global implementation equivalence, heap safety, performance, strength, or correctness outside the frozen corpus.
+{
+  "outcome": "mismatch",
+  "comparedCases": 92,
+  "comparedFields": [],
+  "excludedFields": [],
+  "mismatches": [
+    {
+      "caseId": "A1",
+      "field": "root_value"
+    }
+  ]
+}
+
+compared 92 cases on 
+excluded 
+MISMATCH: 1 compared-field difference(s)
+Preserve this result. It stops the programme before any heap or timing work.
+LAZY_CORPUS_INVALID: bad
+ERROR: null
+ERROR: undefined
+ERROR: frozen
+USAGE: usage: compare.mjs <lazy_corpus_dir>
+USAGE: usage: compare.mjs <lazy_corpus_dir>
+✔ the compared and excluded field sets are frozen and disjoint (0.657625ms)
+✔ the eager standard is frozen to the committed corpus (3.925708ms)
+✔ the projection carries the compared fields and NOTHING else (0.222041ms)
+✔ POSITIVE CONTROL: a behaviourally identical lazy corpus MATCHES (60.924ms)
+✔ EXCLUDED: an elapsed-only difference still MATCHES (56.215125ms)
+✔ NEGATIVE: a visit-count VALUE difference is a mismatch (0.252459ms)
+✔ NEGATIVE: a visit-count ORDER difference is a mismatch (0.144ms)
+✔ NEGATIVE: a visit-count LENGTH difference is a mismatch (0.135417ms)
+✔ NEGATIVE: a root_value difference is a mismatch, with NO tolerance (0.200292ms)
+✔ NEGATIVE: a selected_move difference is a mismatch (0.210458ms)
+✔ NEGATIVE: each compared progress key is a mismatch (0.44225ms)
+✔ NEGATIVE: a progress LENGTH difference is a mismatch (0.166833ms)
+✔ NEGATIVE: an internally VALID root_value difference reaches the comparator (53.645458ms)
+✔ NEGATIVE: an internally VALID valueEstimate difference reaches the comparator (53.87375ms)
+✔ NEGATIVE: a REDISTRIBUTED visit count reaches the comparator (51.080625ms)
+✔ NEGATIVE: a mismatch in ANY single case fails the whole comparison (151.065292ms)
+✔ an internally INCONSISTENT lazy artifact is a CORPUS failure, not a mismatch (37.47325ms)
+✔ NEGATIVE: a MISSING case is a corpus failure, never a skip (35.9255ms)
+✔ NEGATIVE: an EXTRA artifact is a corpus failure (35.207416ms)
+✔ NEGATIVE: the WRONG STAGE in the lazy corpus is a corpus failure (36.232875ms)
+✔ NEGATIVE: the WRONG SURFACE in the lazy corpus is a corpus failure (37.508208ms)
+✔ NEGATIVE: a non-uniform lazy capture commit is a corpus failure (35.789542ms)
+✔ NEGATIVE: an unreadable lazy corpus is a corpus failure, not a mismatch (22.081209ms)
+✔ the three outcomes map to distinct exit codes (0.091875ms)
+✔ the CLI returns 0 on match, 1 on mismatch, 3 on corpus failure, 4 on fault (0.471417ms)
+✔ the CLI takes exactly one argument: the LAZY directory (0.109625ms)
+✔ compareArtifacts reports no difference for identical inputs (0.142958ms)
+✔ compareArtifacts ignores every non-compared field (0.161666ms)
+✔ compareArtifacts stops after the first ordering difference in a case (0.132667ms)
+ERROR: null
+ERROR: undefined
+ERROR: 0
+ERROR: 
+ERROR: frozen fault
+WORKTREE_DIRTY: dirty
+{
+  "copy_count": 4500,
+  "gateMaxCopies": 8,
+  "n_legal": 500,
+  "stage": "eager",
+  "satisfied": false,
+  "required_outcome": "violated"
+}
+
+copyCount 4500 vs gate 8 at 500 legal moves (stage: eager)
+COPY-COUNT GATE VIOLATED
+(this stage requires: violated)
+{
+  "copy_count": 8,
+  "gateMaxCopies": 8,
+  "n_legal": 500,
+  "stage": "eager",
+  "satisfied": true,
+  "required_outcome": "violated"
+}
+
+copyCount 8 vs gate 8 at 500 legal moves (stage: eager)
+COPY-COUNT GATE SATISFIED
+USAGE: --stage is required: usage: falsify.mjs --stage <eager|lazy|candidate-default>
+USAGE: unknown stage nope: usage: falsify.mjs --stage <eager|lazy|candidate-default>
+✔ the falsification parameters are exactly those frozen in §5 (0.557375ms)
+✔ the gate is the bound the algorithm claims: S, not 2*(1+S) (0.049166ms)
+✔ the parameters are frozen against mutation (0.114917ms)
+✔ the frozen fixture resolves, is P11 at prefix 28, and has >= 400 legal moves (2.166542ms)
+✔ measureCopies counts exactly the copies made inside the window (1.295416ms)
+✔ copies made BEFORE the spy is installed are not counted (1.174625ms)
+✔ measureCopies counts zero when nothing is constructed (0.056416ms)
+✔ the prototype is restored to the ORIGINAL function, even when the window throws (0.127083ms)
+✔ a leaked patch would be visible: two windows do not accumulate (1.040584ms)
+✔ the gate arithmetic: 8 satisfies, 9 violates (0.086958ms)
+✔ the falsification CLI is NOT part of the ordinary suite (0.121041ms)
+✔ every stage is frozen, with its own surface and required outcome (0.072541ms)
+✔ the older stages keep their own surfaces, unaffected by later ones (0.027167ms)
+✔ the golden suite runs its files SEQUENTIALLY (0.090333ms)
+✔ at the CURRENT HEAD only candidate-default is accepted; eager and lazy refuse (249.162667ms)
+✔ a stage NAME is required, and only a frozen name is accepted (0.219875ms)
+✔ INHERITED property names are not stages (0.172167ms)
+✔ each stage’s commit actually PRODUCES its recorded surface digest (235.42575ms)
+✔ a loader supplying a DIFFERENT model is refused, and the session is released (124.246792ms)
+✔ MODEL_ROLE is refused BEFORE the search, so no count is produced (122.536417ms)
+✔ describeThrown and codeOfThrown handle any value (0.083208ms)
+✔ EVERY harness fault maps to EXIT_ERROR, never to the gate-violation code (0.054333ms)
+✔ the CLI returns 4 for a thrown null, undefined or frozen Error — not 1 (0.202417ms)
+✔ the CLI returns 3 for a named refusal and 1 only for a real gate violation (0.136167ms)
+✔ parseArgs requires a known stage and rejects everything else (0.071916ms)
+✔ the CLI returns 2 on a usage error (0.040375ms)
+✔ the verdict wording claims a copy-count gate, not a scaling law (0.080125ms)
+✔ falsify.mjs never calls process.exit (0.126834ms)
+usage: heap_probe.mjs   (no arguments; every parameter is frozen by §6)
+{
+  "max_heap_used_mib": 1,
+  "observation_count": 3,
+  "m1_completed": true,
+  "m2_within_ceiling": true,
+  "passed": true
+}
+
+max observed heapUsed 1 MiB vs ceiling 512 MiB over 3 observations
+M1 completed: true   M2 within ceiling: true
+HEAP PROBE PASSED
+{
+  "max_heap_used_mib": 1,
+  "observation_count": 3,
+  "m1_completed": true,
+  "m2_within_ceiling": false,
+  "passed": false
+}
+
+max observed heapUsed 1 MiB vs ceiling 512 MiB over 3 observations
+M1 completed: true   M2 within ceiling: false
+HEAP PROBE FAILED — the ceiling is preregistered and may not be revised
+ERROR: null
+ERROR: frozen
+✔ every §6 parameter is frozen to its literal value (0.608334ms)
+✔ the probe measures the LAZY surface (0.041042ms)
+✔ the frozen fixture resolves to P11 @ 28 with 500 legal moves (2.15475ms)
+✔ a heap-size override is detected and refused (0.34125ms)
+✔ summarize reports the maximum and the per-seam counts (0.137042ms)
+✔ the criteria are exact at the boundary, with no tolerance (0.061375ms)
+✔ outcomes stay distinct, and no fault is reported as a ceiling failure (0.078709ms)
+✔ the CLI takes no arguments and maps outcomes to exit codes (0.447042ms)
+✔ the probe is not wired into any suite, and never calls process.exit (0.2775ms)
+✔ a complete observation set is accepted (0.09725ms)
+✔ an INCOMPLETE observation set is refused, never scored (0.091916ms)
+✔ an incomplete measurement is an ERROR, not a ceiling failure (0.040667ms)
+✔ the probe is STILL pinned to lazy — the recorded measurement is not re-attributed (0.164875ms)
+✔ at the moved surface the probe REFUSES before loading a model or searching (129.051ms)
+ℹ tests 140
+ℹ suites 0
+ℹ pass 140
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4483.501417

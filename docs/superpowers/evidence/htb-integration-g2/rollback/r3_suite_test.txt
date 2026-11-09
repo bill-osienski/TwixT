@@ -1,0 +1,21 @@
+[TwixTAI] sealed lane summary {
+  calls: 0,
+  openPaths: 0,
+  sealed: 0,
+  avgMs: 0,
+  maxMs: 0,
+  bridgeChecks: 0,
+  bridgeCacheMisses: 0,
+  nodesVisited: 0,
+  enqueued: 0,
+  reasons: {}
+}
+✔ tests/smoke.test.mjs (29.038ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 31.930625
