@@ -5,6 +5,10 @@
  *   node tests/htb_integration/g3_analyse.mjs timing  docs/superpowers/evidence/htb-g3-smoke [--write]
  *   node tests/htb_integration/g3_analyse.mjs verdict docs/superpowers/evidence/htb-g3-match [--write]
  *
+ * Each stage is judged with its wrapper's record in `<stage_dir>-run/` (outer.json, pgid.txt): the script's COMPLETED
+ * record counts only if the wrapper also reports a clean, completed, bound run. `verdict` also re-validates the
+ * committed smoke and re-derives its timing, which must equal the committed timing.json byte for byte.
+ *
  * Card: docs/superpowers/2026-11-09-htb-g3-match-card.md §5 (timing), §6 (verdict), §7 (validation).
  *
  * It imports nothing from g3_match.mjs, the driver that produced the evidence: the seeds, colours, model identities,
@@ -17,6 +21,7 @@
  *
  * Exit: timing 0 WITHIN_24H, 1 EXCEEDS_24H; verdict 0 PASS, 1 FAIL; both 3 INVALID, 2 USAGE.
  */
+import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -26,7 +31,8 @@ import { TwixtState } from '../../server/gameLogic.js';
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const BINDING_RELPATH = 'tests/htb_integration/g3_binding.json';
-const SMOKE_TIMING_RELPATH = 'docs/superpowers/evidence/htb-g3-smoke/timing.json';
+const SMOKE_RELPATH = 'docs/superpowers/evidence/htb-g3-smoke';
+const SMOKE_TIMING_RELPATH = `${SMOKE_RELPATH}/timing.json`;
 
 const deepFreeze = (o) => {
   for (const v of Object.values(o)) if (v && typeof v === 'object') deepFreeze(v);
@@ -44,6 +50,9 @@ export const SPEC = deepFreeze({
   sims: { new_hard: 200, legacy_hard: 800 },
   search: { new_hard: 'protocol', legacy_hard: 'plain' },
   halvingFromPly: 20,
+  // §5.1 and the wrappers
+  smokeTermS: 2390,
+  graceS: 10,
   // §5 timing rule
   projectedGames: 220,
   minProjectedPlies: 64,
@@ -93,11 +102,23 @@ function replay(sc) {
   return { out, state, termination };
 }
 
+/** The wrapper's outer record with its inner record (card §7); failures as strings. Independent of the driver's. */
+export function outerFailures({ outer, pgid, record, termS, spec = SPEC }) {
+  if (!outer) return ['wrapper: no readable outer.json'];
+  const f = [];
+  const want = { inner_exit: 0, outer_exit: 0, outcome: 'COMPLETED', gate_restored: true, survivors: '', record_by: 'script', term_s: termS, grace_s: spec.graceS };
+  for (const [k, v] of Object.entries(want)) if (outer[k] !== v) f.push(`wrapper: ${k} ${JSON.stringify(outer[k])}, expected ${JSON.stringify(v)}`);
+  if (!Number.isInteger(outer.wall_seconds) || outer.wall_seconds < 0) f.push('wrapper: wall_seconds');
+  if (outer.head !== record?.head) f.push('wrapper: head is not the record head');
+  if (!Number.isInteger(record?.pid) || pgid !== `${record.pid}\n`) f.push('wrapper: pgid.txt is not the record pid');
+  return f;
+}
+
 /**
  * Validate a stage directory against the card. Returns {failures, record, games, progress}. `timing` (match only) is
  * the committed smoke timing whose kill_s the record must carry.
  */
-export function validateRun({ dir, stage, binding, spec = SPEC, timing = null }) {
+export function validateRun({ dir, runDir, stage, binding, spec = SPEC, timing = null }) {
   const failures = [];
   const f = (m) => failures.push(m);
   const nPairs = spec.pairs[stage];
@@ -118,6 +139,16 @@ export function validateRun({ dir, stage, binding, spec = SPEC, timing = null })
     if (!timing || timing.verdict !== 'WITHIN_24H') f('no WITHIN_24H smoke timing');
     else if (record.kill_s !== timing.kill_s) f(`record kill_s ${record.kill_s} is not the timing's ${timing.kill_s}`);
   }
+  let outer = null;
+  let pgid = null;
+  try {
+    outer = readJson(join(runDir, 'outer.json'));
+    pgid = readFileSync(join(runDir, 'pgid.txt'), 'utf8');
+  } catch {
+    /* judged below */
+  }
+  const termS = stage === 'smoke' ? spec.smokeTermS : timing?.term_s;
+  for (const m of outerFailures({ outer, pgid, record, termS, spec })) f(m);
 
   const expectedNames = [];
   for (let p = 0; p < nPairs; p++) for (const g of [0, 1]) expectedNames.push(sidecarName(p, g));
@@ -336,9 +367,25 @@ if (isMain) {
     const binding = JSON.parse(readFileSync(join(REPO_ROOT, BINDING_RELPATH), 'utf8'));
     const stale = selfCheck(binding);
     const stage = cmd === 'timing' ? 'smoke' : 'match';
-    const timing = stage === 'match' ? JSON.parse(readFileSync(join(REPO_ROOT, SMOKE_TIMING_RELPATH), 'utf8')) : null;
-    const run = validateRun({ dir, stage, binding, timing });
-    const failures = [...stale.map((r) => `analyser file differs from the binding: ${r}`), ...run.failures];
+    const failures = stale.map((r) => `analyser file differs from the binding: ${r}`);
+    let timing = null;
+    if (stage === 'match') {
+      // The smoke must be committed, successful, and still derive the committed timing byte for byte.
+      const smokeDir = join(REPO_ROOT, SMOKE_RELPATH);
+      const pending = execFileSync('git', ['status', '--porcelain', '--untracked-files=all', '--', SMOKE_RELPATH, `${SMOKE_RELPATH}-run`], { cwd: REPO_ROOT }).toString();
+      if (pending) failures.push(`smoke evidence not committed: ${pending.split('\n')[0]}`);
+      const smoke = validateRun({ dir: smokeDir, runDir: `${smokeDir}-run`, stage: 'smoke', binding });
+      failures.push(...smoke.failures.map((m) => `smoke: ${m}`));
+      try {
+        const text = readFileSync(join(REPO_ROOT, SMOKE_TIMING_RELPATH), 'utf8');
+        timing = JSON.parse(text);
+        if (!smoke.failures.length && `${JSON.stringify(timingFrom(smoke), null, 1)}\n` !== text) failures.push('smoke: timing.json is not what the smoke derives');
+      } catch {
+        failures.push('smoke: timing.json unreadable');
+      }
+    }
+    const run = validateRun({ dir, runDir: `${dir.replace(/\/+$/, '')}-run`, stage, binding, timing });
+    failures.push(...run.failures);
     let out;
     let code;
     if (failures.length) {

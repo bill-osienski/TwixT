@@ -73,7 +73,14 @@ const TEST_BINDING = Object.freeze({
 });
 const HEADER = { binding_digest: TEST_BINDING.digest, head: 'f'.repeat(40), node_version: process.version, ort_version: '1.23.2' };
 
-/** runStage plus the record runCli writes, into a fresh temp dir. */
+const PID = 4242;
+/** outer.json as the wrapper writes it after a clean, completed run. */
+const cleanOuter = (termS) => ({
+  inner_exit: 0, outcome: 'COMPLETED', outer_exit: 0, gate_restored: true, survivors: '', record_by: 'script',
+  wall_seconds: 300, term_s: termS, grace_s: 10, tree: '/tmp/w', head: HEADER.head, pre_open: 'e'.repeat(40), python: '/py', node: '/node',
+});
+
+/** runStage plus the record runCli writes and the wrapper's outer record, into a fresh temp dir. */
 async function syntheticRun(stage, { nPairs, outcomeFor, killS = null, bgCheck = () => ({ ok: true, output: 'CLEAR' }) } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'g3-'));
   const outDir = join(root, stage);
@@ -90,9 +97,14 @@ async function syntheticRun(stage, { nPairs, outcomeFor, killS = null, bgCheck =
   });
   writeFileSync(
     join(outDir, 'record.json'),
-    JSON.stringify({ schema: D.RECORD_SCHEMA, stage, pairs: nPairs, head: HEADER.head, binding_digest: TEST_BINDING.digest, kill_s: killS, status: 'COMPLETED', ...r })
+    JSON.stringify({ schema: D.RECORD_SCHEMA, stage, pairs: nPairs, head: HEADER.head, binding_digest: TEST_BINDING.digest, kill_s: killS, pid: PID, status: 'COMPLETED', ...r })
   );
-  return { root, outDir };
+  // The wrapper's side, as a clean run leaves it.
+  const runDir = `${outDir}-run`;
+  mkdirSync(runDir);
+  writeFileSync(join(runDir, 'pgid.txt'), `${PID}\n`);
+  writeFileSync(join(runDir, 'outer.json'), JSON.stringify(cleanOuter(stage === 'smoke' ? 2390 : killS - 10)));
+  return { root, outDir, runDir };
 }
 const smokeSpec = A.SPEC;
 const tinyMatchSpec = (pairs) => ({ ...A.SPEC, pairs: { ...A.SPEC.pairs, match: pairs }, verdictGames: 2 * pairs });
@@ -217,9 +229,9 @@ test('runStage stops VOID on a failed background-compute check, after that game\
 });
 
 test('timing: a valid smoke validates, and the card §5 formula gives the hand-computed ceiling', async () => {
-  const { root, outDir } = await syntheticRun('smoke', { nPairs: 1 });
+  const { root, outDir, runDir } = await syntheticRun('smoke', { nPairs: 1 });
   try {
-    const run = A.validateRun({ dir: outDir, stage: 'smoke', binding: TEST_BINDING, spec: smokeSpec });
+    const run = A.validateRun({ dir: outDir, runDir, stage: 'smoke', binding: TEST_BINDING, spec: smokeSpec });
     assert.deepEqual(run.failures, []);
     const t = A.timingFrom(run, smokeSpec);
     // game 0: 25 plies, game 1: 26; each move 100 ms; each game's segment adds its 2 clock calls per move + 1.
@@ -244,10 +256,10 @@ test('timing: a valid smoke validates, and the card §5 formula gives the hand-c
 });
 
 test('the analyser refuses tampered evidence (each against an untampered control)', async () => {
-  const { root, outDir } = await syntheticRun('smoke', { nPairs: 1 });
+  const { root, outDir, runDir } = await syntheticRun('smoke', { nPairs: 1 });
   const g0 = join(outDir, 'games', 'pair_0000_game_0.json');
   const original = readFileSync(g0, 'utf8');
-  const check = () => A.validateRun({ dir: outDir, stage: 'smoke', binding: TEST_BINDING, spec: smokeSpec }).failures;
+  const check = () => A.validateRun({ dir: outDir, runDir, stage: 'smoke', binding: TEST_BINDING, spec: smokeSpec }).failures;
   const tampers = {
     illegal: (s) => ((s.moves[3] = s.moves[1]), s),
     seed: (s) => ((s.per_move[0].seeds.search += 1), s),
@@ -300,12 +312,12 @@ test('the verdict rule: mean - sqrt(ln 20 / 220) > 0.5; 135.5 / 220 fails, 136 /
 });
 
 test('a synthetic match validates under its timing and is scored (tiny spec, both outcomes)', async () => {
-  const timing = { verdict: 'WITHIN_24H', kill_s: 3000, projection_s: 1992 };
+  const timing = { verdict: 'WITHIN_24H', kill_s: 3000, term_s: 2990, projection_s: 1992 };
   const pairs = 4;
-  const { root, outDir } = await syntheticRun('match', { nPairs: pairs, outcomeFor: (k) => k !== 3, killS: 3000 });
+  const { root, outDir, runDir } = await syntheticRun('match', { nPairs: pairs, outcomeFor: (k) => k !== 3, killS: 3000 });
   try {
     const spec = tinyMatchSpec(pairs);
-    const run = A.validateRun({ dir: outDir, stage: 'match', binding: TEST_BINDING, spec, timing });
+    const run = A.validateRun({ dir: outDir, runDir, stage: 'match', binding: TEST_BINDING, spec, timing });
     assert.deepEqual(run.failures, []);
     const v = A.verdictFrom(run, timing, spec);
     assert.equal(v.total_score, 7);
@@ -314,8 +326,8 @@ test('a synthetic match validates under its timing and is scored (tiny spec, bot
     assert.equal(v.pair_score_counts['0.5'], 1);
     assert.equal(v.pair_score_counts['1'], 3);
     assert.equal(v.distinct_games, 2); // scripted games repeat; real ones are seeded
-    assert.ok(A.validateRun({ dir: outDir, stage: 'match', binding: TEST_BINDING, spec, timing: { ...timing, kill_s: 3060 } }).failures.length > 0);
-    assert.ok(A.validateRun({ dir: outDir, stage: 'match', binding: TEST_BINDING, spec, timing: null }).failures.length > 0);
+    assert.ok(A.validateRun({ dir: outDir, runDir, stage: 'match', binding: TEST_BINDING, spec, timing: { ...timing, kill_s: 3060, term_s: 3050 } }).failures.length > 0);
+    assert.ok(A.validateRun({ dir: outDir, runDir, stage: 'match', binding: TEST_BINDING, spec, timing: null }).failures.length > 0);
   } finally {
     rmSync(root, { recursive: true });
   }
@@ -338,4 +350,118 @@ test('the committed binding equals a fresh computation (no file in it has moved)
   assert.ok(!(D.GATE_RELPATH in fresh.driver_files));
   assert.deepEqual(A.selfCheck(committed), []);
   assert.deepEqual(D.bindingDiff(fresh, { ...fresh, match_seed: 1 }), ['match_seed']);
+});
+
+// ---------------------------------------------------------------------------------------------------------------
+// The wrapper's outer record (the user's launch-clearance review, 2026-11-09)
+// ---------------------------------------------------------------------------------------------------------------
+
+/** Failure modes of the outer evidence; each is checked against the untampered control. */
+const OUTER_TAMPERS = {
+  'missing outer.json': null,
+  'TIMEOUT over an inner COMPLETED': (o) => ({ ...o, inner_exit: 124, outer_exit: 124, outcome: 'TIMEOUT' }),
+  'gate not restored': (o) => ({ ...o, gate_restored: false, outer_exit: 5 }),
+  'survivors': (o) => ({ ...o, survivors: '4243 ' }),
+  'unconfirmed cleanup': (o) => ({ ...o, inner_exit: 125, outer_exit: 125, outcome: 'TIMEOUT', survivors: 'unconfirmed cleanup: process group 4242 4243 ' }),
+  'record written by the wrapper': (o) => ({ ...o, record_by: 'wrapper' }),
+  'string exit': (o) => ({ ...o, inner_exit: '0' }),
+  'another run (head)': (o) => ({ ...o, head: 'd'.repeat(40) }),
+  'another ceiling': (o) => ({ ...o, term_s: 2990 }),
+};
+
+test('the analyser judges the wrapper\'s outer record with the inner one (each failure against a clean control)', async () => {
+  const { root, outDir, runDir } = await syntheticRun('smoke', { nPairs: 1 });
+  const outerPath = join(runDir, 'outer.json');
+  const pgidPath = join(runDir, 'pgid.txt');
+  const original = readFileSync(outerPath, 'utf8');
+  const check = () => A.validateRun({ dir: outDir, runDir, stage: 'smoke', binding: TEST_BINDING, spec: smokeSpec }).failures;
+  try {
+    assert.deepEqual(check(), []);
+    for (const [name, fn] of Object.entries(OUTER_TAMPERS)) {
+      if (fn === null) unlinkSync(outerPath);
+      else writeFileSync(outerPath, JSON.stringify(fn(JSON.parse(original))));
+      assert.ok(check().some((m) => m.startsWith('wrapper:')), `${name} was not caught`);
+      writeFileSync(outerPath, original);
+      assert.deepEqual(check(), [], `control after ${name}`);
+    }
+    writeFileSync(pgidPath, '9999\n'); // another process group: the outer record is not this run's
+    assert.ok(check().some((m) => m.includes('pgid')));
+    writeFileSync(pgidPath, `${PID}\n`);
+    assert.deepEqual(check(), []);
+    // With a TIMEOUT outer record the run gets no timing at all from the CLI path: validateRun fails first.
+    writeFileSync(outerPath, JSON.stringify(OUTER_TAMPERS['TIMEOUT over an inner COMPLETED'](JSON.parse(original))));
+    assert.ok(A.validateRun({ dir: outDir, runDir, stage: 'smoke', binding: TEST_BINDING, spec: smokeSpec }).failures.length > 0);
+  } finally {
+    rmSync(root, { recursive: true });
+  }
+});
+
+test('the driver\'s outer check agrees with the analyser\'s on every case', () => {
+  const record = { status: 'COMPLETED', head: HEADER.head, pid: PID };
+  const pgid = `${PID}\n`;
+  const outer = cleanOuter(2390);
+  assert.deepEqual(D.outerProblems({ outer, record, pgid, termS: 2390 }), []);
+  assert.deepEqual(A.outerFailures({ outer, record, pgid, termS: 2390 }), []);
+  for (const [name, fn] of Object.entries(OUTER_TAMPERS)) {
+    const o = fn === null ? null : fn(outer);
+    assert.ok(D.outerProblems({ outer: o, record, pgid, termS: 2390 }).length > 0, `driver: ${name}`);
+    assert.ok(A.outerFailures({ outer: o, record, pgid, termS: 2390 }).length > 0, `analyser: ${name}`);
+  }
+  assert.ok(D.outerProblems({ outer, record: { ...record, status: 'VOID' }, pgid, termS: 2390 }).length > 0);
+  assert.ok(D.outerProblems({ outer, record, pgid: '1\n', termS: 2390 }).length > 0);
+});
+
+/** Committed smoke evidence, as smokeAdmission reads it, from an in-memory map. */
+function admissionFixture(edit = (f) => f) {
+  const files = edit({
+    'docs/superpowers/evidence/htb-g3-smoke/record.json': JSON.stringify({ stage: 'smoke', status: 'COMPLETED', head: HEADER.head, pid: PID, binding_digest: 'B' }),
+    'docs/superpowers/evidence/htb-g3-smoke/timing.json': JSON.stringify({ verdict: 'WITHIN_24H', kill_s: 46080, term_s: 46070 }),
+    'docs/superpowers/evidence/htb-g3-smoke-run/outer.json': JSON.stringify(cleanOuter(2390)),
+    'docs/superpowers/evidence/htb-g3-smoke-run/pgid.txt': `${PID}\n`,
+  });
+  return {
+    bound: { digest: 'B' },
+    readCommitted: (rel) => {
+      if (!(rel in files)) throw new Error(`${rel} is not committed`);
+      return files[rel];
+    },
+    untrackedOrChanged: () => [],
+  };
+}
+
+test('match admission requires committed, successful smoke evidence (each failure against a clean control)', () => {
+  const ok = admissionFixture();
+  assert.equal(D.smokeAdmission({ ...ok, killS: 46080 }), 46080);
+  const refused = (fx, killS = 46080, code = 'SMOKE_EVIDENCE') =>
+    assert.throws(() => D.smokeAdmission({ ...fx, killS }), (e) => e.code === code);
+  const outerPath = 'docs/superpowers/evidence/htb-g3-smoke-run/outer.json';
+  refused(admissionFixture((f) => (delete f[outerPath], f)));
+  refused(admissionFixture((f) => (delete f['docs/superpowers/evidence/htb-g3-smoke-run/pgid.txt'], f)));
+  for (const [name, fn] of Object.entries(OUTER_TAMPERS)) {
+    if (fn === null) continue;
+    refused(admissionFixture((f) => ({ ...f, [outerPath]: JSON.stringify(fn(cleanOuter(2390))) })), 46080, 'SMOKE_EVIDENCE');
+    assert.equal(D.smokeAdmission({ ...admissionFixture(), killS: 46080 }), 46080, `control after ${name}`);
+  }
+  refused({ ...ok, untrackedOrChanged: () => ['?? docs/superpowers/evidence/htb-g3-smoke/games/x.json'] });
+  refused({ ...ok, bound: { digest: 'other' } });
+  refused(admissionFixture((f) => ({ ...f, 'docs/superpowers/evidence/htb-g3-smoke/timing.json': JSON.stringify({ verdict: 'EXCEEDS_24H', kill_s: 90000 }) })), 90000, 'TIMING');
+  refused(ok, 46020, 'TIMING');
+});
+
+test('match admission refuses in the real state: no smoke evidence is committed', () => {
+  assert.throws(
+    () => D.smokeAdmission({ bound: { digest: 'x' }, killS: 60, readCommitted: D.gitReadCommitted, untrackedOrChanged: D.gitUntrackedOrChanged }),
+    (e) => e.code === 'SMOKE_EVIDENCE'
+  );
+});
+
+test('the binding hashes the Node executable and every file of the two runtime packages', () => {
+  const b = D.computeBinding();
+  assert.equal(b.runtime.node_executable.path, process.execPath);
+  assert.match(b.runtime.node_executable.sha256, /^[0-9a-f]{64}$/);
+  const ort = b.runtime.packages['node_modules/onnxruntime-node'];
+  for (const f of ['package.json', 'dist/index.js', 'dist/binding.js', 'bin/napi-v6/darwin/arm64/onnxruntime_binding.node', 'bin/napi-v6/darwin/arm64/libonnxruntime.1.23.2.dylib']) {
+    assert.ok(`node_modules/onnxruntime-node/${f}` in ort, f);
+  }
+  assert.ok('node_modules/onnxruntime-common/package.json' in b.runtime.packages['node_modules/onnxruntime-common']);
 });

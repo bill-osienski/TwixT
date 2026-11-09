@@ -32,7 +32,7 @@
  */
 import { spawnSync, execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync, appendFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync, appendFileSync } from 'node:fs';
 import { dirname, join, normalize, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { performance } from 'node:perf_hooks';
@@ -62,8 +62,12 @@ export const PAIRS = Object.freeze({ smoke: 1, match: 110 });
 export const GATE_FOR = Object.freeze({ smoke: 'G3_SMOKE_AUTHORIZED', match: 'G3_MATCH_AUTHORIZED' });
 export const NEW_MODEL_ID = '78c16a31c3dba37f';
 export const LEGACY_MODEL_ID = 'c34b7ff3297c785a';
-export const TIMING_RELPATH = 'docs/superpowers/evidence/htb-g3-smoke/timing.json';
 export const outDirRel = (stage) => `docs/superpowers/evidence/htb-g3-${stage}`;
+export const runDirRel = (stage) => `${outDirRel(stage)}-run`;
+export const TIMING_RELPATH = `${outDirRel('smoke')}/timing.json`;
+/** Card §5.1 and the wrappers: the smoke's fixed TERM, and the KILL lead every wrapper uses. */
+export const SMOKE_TERM_S = 2390;
+export const GRACE_S = 10;
 export const sidecarName = (pair, game) => `pair_${String(pair).padStart(4, '0')}_game_${game}.json`;
 
 export const EXIT = Object.freeze({ COMPLETED: 0, USAGE: 2, VOID: 3, REFUSED: 4 });
@@ -84,12 +88,11 @@ export const MODEL_MANIFESTS = Object.freeze({
   new_hard: `models/${NEW_MODEL_ID}/manifest.json`,
   legacy_hard: `models/${LEGACY_MODEL_ID}/manifest.json`,
 });
-export const ORT_FILES = Object.freeze([
-  'node_modules/onnxruntime-node/package.json',
-  'node_modules/onnxruntime-common/package.json',
-  'node_modules/onnxruntime-node/bin/napi-v6/darwin/arm64/onnxruntime_binding.node',
-  'node_modules/onnxruntime-node/bin/napi-v6/darwin/arm64/libonnxruntime.1.23.2.dylib',
-]);
+/**
+ * The installed packages loaded at run time: every file in each (onnxruntime-node loads only onnxruntime-common;
+ * checked 2026-11-09 from the module cache after importing it). Its other dependencies serve its install script only.
+ */
+export const ORT_PACKAGES = Object.freeze(['node_modules/onnxruntime-node', 'node_modules/onnxruntime-common']);
 
 export class G3Refusal extends Error {
   constructor(code, message) {
@@ -308,6 +311,21 @@ export function importClosure(entryRel, root = REPO_ROOT) {
 
 const hashed = (root, rels) => Object.fromEntries(rels.map((r) => [r, fileSha(root, r)]));
 
+/** Every file under a directory, as sorted repository-relative paths. */
+function filesUnder(root, rel) {
+  const out = [];
+  const walk = (r) => {
+    for (const e of readdirSync(join(root, r), { withFileTypes: true })) {
+      const child = `${r}/${e.name}`;
+      if (e.isDirectory()) walk(child);
+      else if (e.isFile()) out.push(child);
+      else throw new Error(`unexpected entry ${child}`);
+    }
+  };
+  walk(rel);
+  return out.sort();
+}
+
 /** The binding: every byte the stages execute or judge, except the gate. Deterministic; no timestamps. */
 export function computeBinding(root = REPO_ROOT) {
   const driver = importClosure(DRIVER_RELPATH, root).filter((r) => r !== GATE_RELPATH);
@@ -322,7 +340,11 @@ export function computeBinding(root = REPO_ROOT) {
     match_seed: MATCH_SEED,
     pairs: { ...PAIRS },
     models,
-    runtime: { node: process.version, files: hashed(root, ORT_FILES) },
+    runtime: {
+      node: process.version,
+      node_executable: { path: process.execPath, sha256: sha256(readFileSync(process.execPath)) },
+      packages: Object.fromEntries(ORT_PACKAGES.map((p) => [p, hashed(root, filesUnder(root, p))])),
+    },
     driver_files: hashed(root, driver),
     analyser_files: hashed(root, analyser),
     extra_files: hashed(root, EXTRA_FILES),
@@ -355,6 +377,64 @@ function committedJson(rel) {
   return JSON.parse(blob);
 }
 
+/**
+ * The wrapper's outer record, judged with its stage's inner record (card §7). An empty list is a pass:
+ * integer inner and outer exits of 0, outcome COMPLETED, the gate restored, no survivors, the record written by the
+ * script, the same HEAD, the stage's ceiling, and the supervised process group being the driver's own process.
+ */
+export function outerProblems({ outer, record, pgid, termS }) {
+  const p = [];
+  if (!outer) return ['no outer.json'];
+  if (outer.inner_exit !== 0) p.push(`inner_exit ${JSON.stringify(outer.inner_exit)}`);
+  if (outer.outer_exit !== 0) p.push(`outer_exit ${JSON.stringify(outer.outer_exit)}`);
+  if (outer.outcome !== 'COMPLETED') p.push(`outcome ${JSON.stringify(outer.outcome)}`);
+  if (outer.gate_restored !== true) p.push('gate not restored');
+  if (outer.survivors !== '') p.push(`survivors ${JSON.stringify(outer.survivors)}`);
+  if (outer.record_by !== 'script') p.push(`record_by ${JSON.stringify(outer.record_by)}`);
+  if (outer.term_s !== termS || outer.grace_s !== GRACE_S) p.push(`ceiling ${outer.term_s}+${outer.grace_s}, expected ${termS}+${GRACE_S}`);
+  if (!Number.isInteger(outer.wall_seconds) || outer.wall_seconds < 0) p.push('wall_seconds');
+  if (!record || record.status !== 'COMPLETED') p.push('inner record not COMPLETED');
+  else {
+    if (outer.head !== record.head) p.push('outer head is not the record head');
+    if (!Number.isInteger(record.pid) || pgid !== `${record.pid}\n`) p.push('pgid.txt is not the record pid');
+  }
+  return p;
+}
+
+/**
+ * Match admission (card §8): the smoke's evidence is committed, complete and successful. `readCommitted(rel)` returns
+ * the file's text if it is committed and unchanged at HEAD (else throws); `untrackedOrChanged(rels)` lists anything
+ * else under those paths. Production uses git; tests inject both.
+ */
+export function smokeAdmission({ bound, killS, readCommitted, untrackedOrChanged }) {
+  const smoke = outDirRel('smoke');
+  const run = runDirRel('smoke');
+  const extra = untrackedOrChanged([smoke, run]);
+  if (extra.length) refuse('SMOKE_EVIDENCE', `uncommitted smoke evidence: ${extra.slice(0, 5).join(', ')}`);
+  let record, outer, pgid, timing;
+  try {
+    record = JSON.parse(readCommitted(`${smoke}/record.json`));
+    timing = JSON.parse(readCommitted(TIMING_RELPATH));
+    outer = JSON.parse(readCommitted(`${run}/outer.json`));
+    pgid = readCommitted(`${run}/pgid.txt`);
+  } catch (err) {
+    refuse('SMOKE_EVIDENCE', `smoke evidence not committed: ${err.message}`);
+  }
+  if (record.stage !== 'smoke' || record.binding_digest !== bound.digest) refuse('SMOKE_EVIDENCE', 'the smoke record is not this binding\'s smoke');
+  const problems = outerProblems({ outer, record, pgid, termS: SMOKE_TERM_S });
+  if (problems.length) refuse('SMOKE_EVIDENCE', `the smoke did not succeed: ${problems.join('; ')}`);
+  if (timing.verdict !== 'WITHIN_24H') refuse('TIMING', `the committed timing verdict is ${timing.verdict}`);
+  if (!Number.isInteger(killS) || killS !== timing.kill_s) refuse('TIMING', `--kill-s ${killS} is not the committed ceiling ${timing.kill_s}`);
+  return timing.kill_s;
+}
+
+export const gitReadCommitted = (rel) => {
+  const blob = git('show', `HEAD:${rel}`);
+  if (readFileSync(join(REPO_ROOT, rel), 'utf8') !== blob) throw new Error(`${rel} differs from HEAD`);
+  return blob;
+};
+export const gitUntrackedOrChanged = (rels) => git('status', '--porcelain', '--untracked-files=all', '--', ...rels).split('\n').filter(Boolean);
+
 /** The preconditions of card §8, in order; any failure refuses before a model is read. */
 export function preflight(stage, args, env = process.env) {
   if (!GATES[GATE_FOR[stage]]) refuse('GATE_CLOSED', `${GATE_FOR[stage]} is not open`);
@@ -367,15 +447,10 @@ export function preflight(stage, args, env = process.env) {
   if (diff.length) refuse('BINDING_MISMATCH', `differs from ${BINDING_RELPATH}: ${diff.slice(0, 10).join(', ')}`);
   const outDir = join(REPO_ROOT, outDirRel(stage));
   if (existsSync(outDir)) refuse('EXISTS', `${outDirRel(stage)} exists (one-shot)`);
-  let killS = null;
-  if (stage === 'match') {
-    const timing = committedJson(TIMING_RELPATH);
-    if (timing.verdict !== 'WITHIN_24H') refuse('TIMING', `the committed timing verdict is ${timing.verdict}`);
-    if (!Number.isInteger(args.killS) || args.killS !== timing.kill_s) {
-      refuse('TIMING', `--kill-s ${args.killS} is not the committed ceiling ${timing.kill_s}`);
-    }
-    killS = timing.kill_s;
-  }
+  const killS =
+    stage === 'match'
+      ? smokeAdmission({ bound, killS: args.killS, readCommitted: gitReadCommitted, untrackedOrChanged: gitUntrackedOrChanged })
+      : null;
   if (!args.python || !existsSync(args.python)) refuse('USAGE', '--python must name an existing interpreter');
   return { bound, outDir, killS, head: git('rev-parse', 'HEAD').trim() };
 }
@@ -446,6 +521,7 @@ async function runCli(stage, args) {
     head: pre.head,
     binding_digest: pre.bound.digest,
     kill_s: pre.killS,
+    pid: process.pid,
     python: args.python,
     started_at: new Date().toISOString(),
   };
@@ -462,7 +538,7 @@ async function runCli(stage, args) {
     binding_digest: pre.bound.digest,
     head: pre.head,
     node_version: process.version,
-    ort_version: JSON.parse(readFileSync(join(REPO_ROOT, ORT_FILES[0]), 'utf8')).version,
+    ort_version: JSON.parse(readFileSync(join(REPO_ROOT, ORT_PACKAGES[0], 'package.json'), 'utf8')).version,
   };
   try {
     const r = await runStage({

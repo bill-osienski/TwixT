@@ -1,6 +1,8 @@
 # H-TB integration G3 — smoke and confirmation match card (2026-11-09)
 
-**Status:** BUILT for one launch review. No game has been played, no model has been loaded for G3, and no gate has been opened.
+**Status:** BUILT for one launch review; **repaired 2026-11-09** after the user's launch-clearance review (§7: the
+wrapper's outer record is now required at both stages and for match admission; the runtime binding is extended). No
+game has been played, no model has been loaded for G3, and no gate has been opened.
 
 **Authorized (the user's G2 review, 2026-11-09):** building and committing this plan and its driver. The review fixed the
 timing rule (§5) and kept the comparison agreed in D8 (§3, §6).
@@ -164,13 +166,19 @@ and before any launch. It records sha256 digests of:
 - **the model identities:** both manifests with their model ids. `resolveModel`/`resolveHardModel` re-hash the graph
   and data files at load;
 - **the runtime:**
-  - the Node version (v24.22.0);
-  - onnxruntime-node's and onnxruntime-common's `package.json` (1.23.2);
-  - the darwin-arm64 binding and `libonnxruntime.1.23.2.dylib`;
+  - the Node version (v24.22.0) and **the Node executable's bytes** (`process.execPath`);
+  - **every installed file of `onnxruntime-node` and `onnxruntime-common`** (1.23.2): their JavaScript, `package.json`
+    files and native binaries for every platform. These are the only installed packages the run loads; importing
+    `onnxruntime-node` puts nothing else in the module cache. Its other declared dependencies serve its install
+    script only;
 - **the files run alongside them:** `package.json`, `package-lock.json`, the background-compute check and the idle
   gate (`scripts/GPU/alphazero/{background_compute, idle_gate}.py`, with their two package `__init__.py` files), this
   card and both wrappers;
 - **the match seed and the pair counts.**
+
+**Not bound:** the operating system and its shared libraries, the hardware, and the Python interpreter that runs the
+idle gate and the background-compute check. Python's path is recorded in each record. The binding covers the listed
+bytes, not every byte the machine runs.
 
 **The driver refuses before loading a model if any of these holds:**
 - its stage's gate is closed;
@@ -179,9 +187,32 @@ and before any launch. It records sha256 digests of:
 - the binding file differs from HEAD;
 - a fresh binding differs from the committed one;
 - the stage's evidence directory exists;
-- for the match only:
+- for the match only, **the smoke's evidence is not committed, complete and successful** (`smokeAdmission`):
+  - anything under `htb-g3-smoke/` or `htb-g3-smoke-run/` is uncommitted or changed;
+  - any of `record.json`, `timing.json`, `outer.json` or `pgid.txt` is missing or differs from HEAD;
+  - the smoke record is not this binding's smoke;
+  - the smoke's outer record fails the wrapper checks below;
   - the committed smoke timing is not `WITHIN_24H`;
   - `--kill-s` differs from that timing's `kill`.
+
+**Wrapper checks** (the rule of earlier stages, restored). A stage's script-written COMPLETED record counts only if
+its wrapper's `outer.json` shows:
+- `inner_exit` and `outer_exit` both the integer 0;
+- `outcome` `COMPLETED`;
+- `gate_restored` true;
+- `survivors` empty (so no unconfirmed cleanup);
+- `record_by` `script`;
+- the stage's ceiling: `term_s` 2,390 for the smoke, or the committed timing's `term` for the match, with `grace_s` 10;
+- an integer `wall_seconds`.
+
+**The outer record is tied to its inner run by two checks:**
+- its `head` equals the record's;
+- `pgid.txt` holds the record's `pid`. The supervisor's child is the run's process group leader, and it `exec`s `env`
+  and then `node` in place, so the driver's pid is the group id the wrapper supervised.
+
+The driver applies these checks to the smoke when admitting the match. The analyser applies its own, independent
+copy to each stage it judges. The match wrapper re-derives the timing through the analyser, so a smoke whose outer
+record fails cannot yield a ceiling.
 
 **The analyser, which imports nothing from the driver:**
 - first checks that its own files are the bound bytes;
@@ -202,7 +233,12 @@ and before any launch. It records sha256 digests of:
   - a progress line in order, with its time increasing and agreeing with the sidecar;
 - and, for the run as a whole:
   - the record COMPLETED with the full game count and the binding digest;
-  - for the match, the record's `kill_s` equal to the committed smoke timing's.
+  - for the match, the record's `kill_s` equal to the committed smoke timing's;
+  - the wrapper checks above, on `<stage_dir>-run/outer.json` and `pgid.txt`;
+- and, for `verdict`, also:
+  - the smoke's evidence committed with nothing pending;
+  - the smoke validating in full, wrapper checks included;
+  - its timing re-derived byte-equal to the committed `timing.json`.
 
 ## 8. Launch sequence (one launch review covers all of it)
 
@@ -244,7 +280,8 @@ check after every game, and a detection or failed check makes the run VOID.
      time were covered by G2's live check, L1–L9 (entry 61). Do-not-repeat #190 bars rerunning it without a change
      that calls for it. The smoke pair adds per-move times split at ply 20 for both players.
 2. **The smoke** (`htb-g3-smoke-run/01_wrapper.sh` after the gate commit).
-   - **Stops** on anything but COMPLETED, and on an INVALID analyser result.
+   - **Stops** on anything but a wrapper `outcome` COMPLETED with exit 0, and on an INVALID analyser result. The
+     analyser's wrapper checks cover TIMEOUT, failed gate restoration and survivors.
    - **Then:**
      - `g3_analyse.mjs timing docs/superpowers/evidence/htb-g3-smoke --write`;
      - commit the evidence and the gate restoration;
@@ -253,7 +290,8 @@ check after every game, and a detection or failed check makes the run VOID.
    - `EXCEEDS_24H`: **stop** and return the estimate.
    - `WITHIN_24H`: continue.
 4. **The match** (`htb-g3-match-run/01_wrapper.sh` after the gate commit, under the committed ceiling).
-   - **Stops** on anything but COMPLETED.
+   - **Stops** on anything but a wrapper `outcome` COMPLETED with exit 0. The driver admits the match only on
+     committed, successful smoke evidence, as above.
 5. **The verdict:**
    - `g3_analyse.mjs verdict docs/superpowers/evidence/htb-g3-match --write`;
    - commit the evidence and the gate restoration;
@@ -283,9 +321,29 @@ check after every game, and a detection or failed check makes the run VOID.
   missing game.
 - **The verdict boundary:** 135.5/220 FAIL and 136/220 PASS.
 - **A synthetic match** validated and scored, refused under a different ceiling, and refused without a timing.
+- **The wrapper's outer record** (added by the repair). Each case is checked against a clean control:
+  - missing `outer.json`;
+  - TIMEOUT over an inner COMPLETED;
+  - the gate not restored;
+  - survivors;
+  - unconfirmed cleanup;
+  - a wrapper-written record;
+  - a string exit;
+  - another HEAD;
+  - another ceiling;
+  - another process group (`pgid.txt`).
+
+  The driver's and the analyser's copies of these checks agree on every case.
+- **Match admission:**
+  - each failure is refused against a clean control: missing `outer.json` or `pgid.txt`, every outer-record failure
+    above, uncommitted smoke files, another binding, `EXCEEDS_24H`, and a different `--kill-s`;
+  - in the real state, with no smoke committed, it refuses.
+- **Mutation checks,** run once and not committed. Each guard was disabled in turn and the tests caught it: the
+  analyser's wrapper check (2 tests failed), admission's outer check (2) and the driver's gate-restoration check (1).
 - **The binding:**
   - it covers both import closures, minus the gate;
   - the analyser imports only `gameLogic`;
+  - it includes the Node executable and every file of both runtime packages;
   - the committed binding equals a fresh one.
 
 **Not covered:** a real product game. The smoke is the first, and the analyser validates it before any number is
