@@ -10677,3 +10677,24 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
   - **V3 PASS. V7 MISMATCH is preserved, and G2 is stopped,** following compare.mjs's frozen interpretation and the user's instruction to report on failure.
   - **Not run:** the deferred suites, the live REST/WS requests, R1–R3.
   - **Next worthwhile discriminator, not run:** recapture at the lazy stage's own commit (`85894b9`) in today's environment, judged by the unedited `compare.mjs`. The same pattern would place the cause in the environment rather than in the integration.
+
+#### Decision note — the current-environment equivalence control declared before capture; a wording correction to entry 59 (2026-11-09)
+
+- **Correction to entry 59, its banner line and `v7/README.md` (2026-11-09):**
+  - They describe the `G_P11_baseline_s800` step-632 transient as "two simulations in a different order". That is a **plausible explanation, not established**: identical final visit counts do not prove it, and no instrumentation was added.
+  - Entry 59 also named `85894b9` as the discriminator. The user's review corrects this to **`aad5796`**, the original lazy capture commit. At `85894b9` the comparator is absent and the capture uses the older schema. At `aad5796`:
+    - `compare.mjs`, `worker.mjs`, `server/mcts.js`, `server/gameLogic.js` and `server/inference.js` are identical to today's;
+    - both models' `.onnx` and `.onnx.data` blobs are identical (checked: same git blobs).
+- **The user's review:**
+  - independently reproduced V7's result: 92 identical move and visit-count results, value differences in 71 cases;
+  - V2-R and V3 remain successful;
+  - this is a baseline-reproducibility question, and it does not touch the student's strength result.
+- **Declared before any capture (a prospective amendment for this control):**
+  1. Capture the 92 cases **once at `aad5796`** (stage `lazy`), in today's environment, with the same runtime binaries (today's `node_modules`, onnxruntime-node 1.23.2) and the same model files.
+  2. Compare it against August's frozen eager standard with the **unchanged `compare.mjs`**, and preserve any mismatch.
+  3. **Decisive:** compare the fresh control **directly against V7's integrated capture** (stage `protocol-hard-pinned`, fingerprint `10f383f2…`). Exact equality is required on all existing compared fields (`visit_counts` values and order, `root_value`, `selected_move`, progress `done` / `total` / `valueEstimate`; `progress_elapsed_ms` excluded). The tool is `tests/mcts_golden/compare_pair.mjs`, committed with this note.
+     - It reuses `compare.mjs`'s `compareArtifacts` and `cases.mjs`'s `validateCorpus`, unedited.
+     - Controls, run before the capture: August's eager standard against August's lazy corpus gives EXACT MATCH; V7 against itself gives EXACT MATCH; the eager standard against V7 reproduces the 12,326-difference mismatch; V7 under a wrong stage gives CORPUS INVALID.
+  - A similar mismatch pattern against August alone is **insufficient**.
+- **If step 3 matches exactly:** record a separate current-environment equivalence result under this amendment, and resume G2's remaining approved checks (the deferred suites, live REST and WS requests, R1–R3). V7's MISMATCH and the historical goldens stay unchanged.
+- **If step 3 differs:** return those differences before continuing.

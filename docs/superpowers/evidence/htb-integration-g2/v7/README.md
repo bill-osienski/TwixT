@@ -54,3 +54,8 @@
   - If it shows the same pattern, the integration is not involved.
 
 Under compare.mjs's own frozen interpretation, a mismatch is preserved and stops the programme. G2 stopped here.
+
+## Correction (2026-11-09, the user's review)
+
+"Two simulations in a different order" (the `G_P11_baseline_s800` entry 632 transient) is a **plausible explanation,
+not something the identical final visit counts prove**. No instrumentation was added to establish it.
