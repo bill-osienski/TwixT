@@ -10467,3 +10467,18 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
   - `models/78c16a31c3dba37f/` is **not committed**; the placed copy was moved to scratch. `HARD_MODEL_ID` stays `null`.
   - G2's remaining steps (V3, the deferred suites, the golden comparison, the live requests, R1–R3) were not run.
   - **Returned to the user for assessment.** No retry, alternate export, exporter change, tolerance revision or substitute surface.
+
+#### Decision note — a bounded diagnostic of the V2 failure; a dated correction to entry 55 (2026-11-09)
+
+- **Correction to entry 55 and its banner line (2026-11-09):** they describe the S2 and S3 failure in logits only ("by about 12 logits") and list "red perspective, value range" among the passes. That is incomplete.
+  - **Cross-runtime value agreement also failed on S2 and S3:** max abs side-to-move value difference **1.949** against limits of 1e-4 and 1e-5. The value-sign agreement gate (`value_sign_disagreement`) failed on both as well.
+  - What passed are two **different** checks: the **value-range** check (every raw value in [−1, 1]) and the **perspective-conversion** check (the JS red-perspective conversion against an independent Python one, diff 0).
+  - S4's value agreement passed (max 1.94e-6). Found by the user's review, which recomputed the maxima from the stored outputs: S4 logit 0.00002384, value 0.00000194.
+- **Decided (the user, 2026-11-09):** V2 stays FAIL and the model stays unpinned. One bounded diagnostic is authorized:
+  1. Preserve the failed V2 record, the student and the exported artifact unchanged.
+  2. Use a few fixed parity-corpus positions. Save the exact input bytes, artifact hashes and outputs.
+  3. Run Python ONNX Runtime with **NumPy only**, importing neither MLX nor PyTorch, and compare against the recorded native and Node outputs. Then check controlled import and session ordering, and single-thread execution.
+  4. If the discrepancy persists, locate the first divergent intermediate output with diagnostic-only instrumentation.
+- **Cap:** one hour of execution. Every configuration and result is recorded, including unsuccessful checks. No package changes, alternate export or tolerance changes.
+- **Return:** either an identified cause with a proposed repair, or a narrowed explanation with the next worthwhile discriminator. A repair is reviewed before qualification is repeated.
+- **The hypothesis to test, not to assume:** the parity tool imports MLX and PyTorch before running ONNX Runtime, and a session-order effect was observed once.
