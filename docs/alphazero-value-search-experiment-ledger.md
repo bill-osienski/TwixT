@@ -10580,3 +10580,22 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
   - **August's specification and the V2 FAIL are unchanged.**
   - **Product guard:** `onnxruntime-node` pinned exactly to 1.23.2 in `package.json` and the lockfile root (`npm ls` consistent; nothing reinstalled). The canary has been added to `npm run test:server`, whose script now also lists the G1 test files it had omitted.
   - **Status:** the model is still unpinned, and V2-R awaits the amendment's review.
+
+#### Decision note — the parity amendment APPROVED; one V2-R run authorized (2026-11-09)
+
+- **The review (the user, 2026-11-09):** approve the amendment and proceed with one V2-R qualification run. Independently confirmed:
+  - the recorded 1.23.2 canary passes all eight checks, and 1.24.4 fails five;
+  - the exporter and the three parity tools are unchanged;
+  - the student's hash is unchanged;
+  - the product dependency and the lockfile consistently pin 1.23.2.
+- **Two wording corrections, made in the approval commit with no further review round:**
+  1. The amendment is an **environment substitution**: Python changes to 3.13.15 as well as ORT to 1.23.2. Its §3 already recorded this.
+  2. The MLX drift check needs the new Python-side outputs. It runs **after the Python half and before the parity verdict**, not as a pre-measurement check.
+- **Authorized:**
+  - install the exact `mlx`, `mlx-metal` and `torch` versions, with their required dependencies, into the isolated environment;
+  - record the hashes and final versions;
+  - rerun both canaries;
+  - qualify the **same exported pair** under the unchanged tolerances, once.
+- **On PASS:** continue the remaining, already approved G2 checks.
+- **On FAIL or drift:** preserve the evidence and report back.
+- **Not authorized:** G3 games, deployment, training and pushing.

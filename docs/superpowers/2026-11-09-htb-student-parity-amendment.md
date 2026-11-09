@@ -1,6 +1,6 @@
 # H-TB student export parity — integration-specific amendment of the Python ONNX Runtime surface (2026-11-09)
 
-**Status:** DRAFT, for review. Nothing in §5 has run.
+**Status:** APPROVED by the user on 2026-11-09, with two wording corrections made in the approval commit (§2 and §4). One V2-R run is authorized.
 
 **Applies to:** one artifact only, the ONNX export of the validated H-TB student:
 - pair id `78c16a31c3dba37f`;
@@ -37,9 +37,14 @@ compares every output with its own float64 reference, within a session and acros
 
 A canary pass does not qualify the artifact. It qualifies a runtime to serve as the reference surface.
 
-## 2. The one change
+## 2. The change: an environment substitution on the Python side
 
-In S2 (MLX ↔ ORT-py) and S3 (ORT-py ↔ ORT-node), **"ORT-py" is Python onnxruntime 1.23.2**:
+*Corrected in the approval commit (2026-11-09):* the draft called this "the one change". It is an **environment
+substitution**: the Python side moves to a different environment, with **Python 3.13.15 in place of 3.14** as well as
+onnxruntime 1.23.2 in place of 1.24.4 (all differences are listed in §3).
+
+In S2 (MLX ↔ ORT-py) and S3 (ORT-py ↔ ORT-node), **"ORT-py" is Python onnxruntime 1.23.2**, and the whole Python side
+(MLX included) runs in the §3 environment:
 - wheel `onnxruntime-1.23.2-cp313-cp313-macosx_13_0_arm64.whl`, sha256 `2ff531ad8496281b…`, equal to PyPI's published
   digest;
 - the same version as the product's onnxruntime-node.
@@ -73,7 +78,11 @@ In S2 (MLX ↔ ORT-py) and S3 (ORT-py ↔ ORT-node), **"ORT-py" is Python onnxru
   - Node v24.22.0 (August v26.7.0);
   - protobuf 7.36.2 in the isolated venv.
 
-## 4. Preconditions, each recorded; any failure stops before measurement
+## 4. Checks, each recorded
+
+*Corrected in the approval commit (2026-11-09):* the draft listed the MLX drift check as a pre-measurement
+precondition. It needs the new Python-side outputs, so it runs **after the Python half and before the parity verdict**
+(check 3). Checks 1 and 2 still stop the run before any measurement.
 
 1. **The student and the export:**
    - the student's sha256 is `0e1cb621…`;
@@ -84,28 +93,30 @@ In S2 (MLX ↔ ORT-py) and S3 (ORT-py ↔ ORT-node), **"ORT-py" is Python onnxru
 2. **Canaries:** both pass immediately before the measurement, in the exact environments used:
    - `tests/parity/ort_conv_canary.py` in the V2-R Python environment, after MLX and torch are installed;
    - `server/test_ort_conv_canary.js` on the Node side.
-3. **MLX drift check:** this preregisters a stop condition, not a parity gate. V2-R's native MLX logits and values
+3. **MLX drift check, after the Python half and before the verdict:** this preregisters a stop condition, not a
+   parity gate. V2-R's native MLX logits and values
    are compared with V2's recorded MLX outputs (`python_side.json.gz`, Python 3.14.10). If any position differs by
-   more than **1e-4** (S2's max-abs tolerance), stop and report environment drift before applying §7. A different
+   more than **1e-4** (S2's max-abs tolerance), stop and report environment drift; no parity verdict is issued. A different
    Python build must not silently move the reference side.
 
 ## 5. Procedure (after this amendment is reviewed and approved)
 
 1. Commit the reviewed amendment.
-2. Install the three packages of §3 into the isolated venv, recording their hashes.
-3. Run the preconditions of §4.
-4. Run, once each:
-   - `MLX_ENABLE_TF32=0 <isolated python> tests/parity/run_python_side.py models/78c16a31c3dba37f <out>`;
-   - `MODEL_MANIFEST=models/78c16a31c3dba37f/manifest.json node tests/parity/run_node_side.mjs …`;
-   - `node tests/parity/compare.mjs …`.
-5. Apply August's §7 **as written**.
-6. **On PASS:**
+2. Install the exact versions of §3, with their required dependencies, into the isolated venv; record the hashes and
+   the final versions.
+3. Run checks 1 and 2 of §4.
+4. Run the Python half once:
+   `MLX_ENABLE_TF32=0 <isolated python> tests/parity/run_python_side.py models/78c16a31c3dba37f <out>`.
+5. Run check 3 of §4 (MLX drift). On drift, stop and report.
+6. Run the Node half once (`MODEL_MANIFEST=models/78c16a31c3dba37f/manifest.json node tests/parity/run_node_side.mjs …`),
+   then `node tests/parity/compare.mjs …`, and apply August's §7 **as written**.
+7. **On PASS:**
    - commit the pair and its manifest under `models/78c16a31c3dba37f/`;
    - pin `HARD_MODEL_ID`;
    - commit the gzipped halves and the verdict as V2-R evidence;
    - G2's remaining approved steps then follow (V3, the deferred suites and golden comparison, the live requests,
      R1–R3).
-7. **On FAIL:** stop and report. Nothing is committed under `models/`. There is no retry, no further runtime swap
+8. **On FAIL or drift:** stop, preserve the evidence and report. Nothing is committed under `models/`. There is no retry, no further runtime swap
    and no tolerance change.
 
 ## 6. What a PASS would and would not mean
