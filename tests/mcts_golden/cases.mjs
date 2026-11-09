@@ -80,6 +80,27 @@ export const STAGES = Object.freeze({
       'lazy child-state materialization with the CANDIDATE served by default; ' +
       'identical to the lazy stage except DEFAULT_MODEL_ID',
   }),
+  'protocol-hard': Object.freeze({
+    name: 'protocol-hard',
+    surfaceSha256: '998dfeab30358c879297579b9bd5bd7d39158e6ef5f878da5bfcaa13c97900ba',
+    surfaceCommit: '22c1a78dcc4a928ffa47f8c39bfb2373120b2b90',
+    // NOT re-measured, by the same argument as candidate-default. `22c1a78`
+    // (the H-TB integration's G1) changes three execution-surface files:
+    // server/model_manifest.js (a SEPARATE hard-model path; DEFAULT_MODEL_ID
+    // unchanged), server/readout_policy.js (hard's modes; easy and medium
+    // unchanged) and tests/product_match/harness.mjs (names today's hard
+    // explicitly). server/mcts.js, server/gameLogic.js and server/inference.js
+    // are byte-identical to candidate-default's commit, and this harness
+    // imports none of the changed files for its search, so the copy-count
+    // behaviour cannot differ. The golden comparison under this stage is G2's
+    // V7, which loads the model.
+    falsificationOutcome: 'satisfied',
+    artifactSchema: 'twixt-mcts-golden/2',
+    carriesStageField: true,
+    note:
+      'the H-TB integration surface: hard routed to the protocol (its own modules, ' +
+      'outside this surface); the plain search byte-identical to candidate-default',
+  }),
 });
 
 export const STAGE_NAMES = Object.freeze(Object.keys(STAGES));

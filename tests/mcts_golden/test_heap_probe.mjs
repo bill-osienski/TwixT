@@ -274,7 +274,7 @@ test('at the moved surface the probe REFUSES before loading a model or searching
   if (!gitClean()) return t.skip('worktree dirty');
   // Replaces the end-to-end seam-wiring test. That test ran the real H1-H4
   // sampling path against a fake inference, which required HEAD to carry the
-  // stage's surface; HEAD now carries candidate-default, and re-pinning the
+  // stage's surface; HEAD has moved on (now protocol-hard), and re-pinning the
   // probe to reach the wiring again is exactly what must not happen. What is
   // asserted instead is the refusal itself, and that it happens BEFORE any
   // model load or search — so an operational probe cannot produce a number on

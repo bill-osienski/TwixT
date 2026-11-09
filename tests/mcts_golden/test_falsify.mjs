@@ -44,12 +44,14 @@ const EAGER_SURFACE = '228f57b55448f44136ffd41d6f092c9da904ca469a1e7bc4055656ffd
 const LAZY_SURFACE = 'd7fb6bc3fbc722e306940accadc2b8bdda6c92d125710b9b22c32d31dac4c769';
 const CANDIDATE_DEFAULT_SURFACE =
   'ff80f895cecd4a491e27329ba6026862bf7507852c4672108dccb73a33528047';
+const PROTOCOL_HARD_SURFACE =
+  '998dfeab30358c879297579b9bd5bd7d39158e6ef5f878da5bfcaa13c97900ba';
 /**
- * HEAD carries the CANDIDATE-DEFAULT surface. Test attribution only — the
- * committed falsification records still belong to `eager` and `lazy`, and
- * nothing here re-runs a falsification.
+ * HEAD carries the PROTOCOL-HARD surface (the H-TB integration). Test
+ * attribution only — the committed falsification records still belong to
+ * `eager` and `lazy`, and nothing here re-runs a falsification.
  */
-const STAGE = 'candidate-default';
+const STAGE = 'protocol-hard';
 
 /** A model whose session records that release() was called. */
 function fakeModel({ modelId, log }) {
@@ -209,6 +211,8 @@ test('every stage is frozen, with its own surface and required outcome', () => {
   assert.equal(STAGES.lazy.falsificationOutcome, 'satisfied');
   assert.equal(STAGES['candidate-default'].surfaceSha256, CANDIDATE_DEFAULT_SURFACE);
   assert.equal(STAGES['candidate-default'].falsificationOutcome, 'satisfied');
+  assert.equal(STAGES['protocol-hard'].surfaceSha256, PROTOCOL_HARD_SURFACE);
+  assert.equal(STAGES['protocol-hard'].falsificationOutcome, 'satisfied');
   // No two stages may share a surface: a duplicate would let a measurement be
   // attributed to either one.
   const surfaces = Object.values(STAGES).map((s) => s.surfaceSha256);
@@ -243,18 +247,18 @@ test('the golden suite runs its files SEQUENTIALLY', () => {
   );
 });
 
-test('at the CURRENT HEAD only candidate-default is accepted; eager and lazy refuse', (t) => {
+test('at the CURRENT HEAD only protocol-hard is accepted; eager, lazy and candidate-default refuse', (t) => {
   if (!gitClean()) return t.skip('worktree dirty');
-  // HEAD carries the candidate-default surface, so that is the only stage that
-  // may make a measurement here. Both older stages must REFUSE rather than
-  // silently attribute a measurement of this code to the surface their
-  // committed evidence describes — including `lazy`, which was HEAD's stage
-  // until the served pin moved.
-  const ok = assertStageSurface('candidate-default', executionSurfaceDigest);
+  // HEAD carries the protocol-hard surface, so that is the only stage that
+  // may make a measurement here. Every older stage must REFUSE rather than
+  // silently attribute a measurement of this code to the surface its
+  // committed evidence describes — including `candidate-default`, which was
+  // HEAD's stage until the H-TB integration.
+  const ok = assertStageSurface('protocol-hard', executionSurfaceDigest);
   assert.match(ok.head, /^[0-9a-f]{40}$/);
-  assert.equal(ok.digest, CANDIDATE_DEFAULT_SURFACE);
+  assert.equal(ok.digest, PROTOCOL_HARD_SURFACE);
 
-  for (const stale of ['eager', 'lazy']) {
+  for (const stale of ['eager', 'lazy', 'candidate-default']) {
     assert.throws(
       () => assertStageSurface(stale, executionSurfaceDigest),
       (err) => err.code === 'EXECUTION_SURFACE_MOVED',
