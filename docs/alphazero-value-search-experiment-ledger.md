@@ -10856,3 +10856,7 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
 - **Status:** returned for **one launch review** covering the V8a browser check, the smoke pair, the timing test and
   the conditional match. No game played; both gates closed. Deployment, training and pushing not authorized. See
   do-not-repeat **#191**.
+- **Addendum (2026-11-09), the rehearsal repeated at `5433d9a1`** (throwaway linked worktree, APFS-cloned
+  `node_modules`, removed afterwards; no model loaded): the binding reproduces byte for byte. Both wrappers refuse
+  cleanly with exit 1 ("HEAD does not change only the gate"), with the gate restored and nothing written. The driver
+  refuses the match `GATE_CLOSED` (exit 4). `test_g3.mjs` passes 15 of 15 there. The tree stayed clean.
