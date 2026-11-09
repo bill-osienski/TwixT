@@ -283,6 +283,7 @@ knob) is not a new hypothesis.
 > **H-TB integration — G2: V3 PASS; V7 golden comparison MISMATCH in value numerics only; G2 stopped (Post-closure entry 59, 2026-11-09).** V3: the product's mirror wrapper matches the research evaluator; max prior difference 1.85e-6 and max value difference 2.3e-6, both against 1.1e-4; top-1 100%. V7: the plain search under the new stage against the August eager standard. **Visit counts and selected moves are identical in all 92 cases**, but root and progress values differ by about 1e-7 in 71 cases, with code and models byte-identical. Environment differences are recorded (Node v24.22.0 against v26.7.0; macOS 27.2); the cause is not established. The deferred suites, live requests and R1–R3 were not run. See #189.
 > **H-TB integration — current-environment equivalence control: old code and integrated code EXACTLY equal (Post-closure entry 60, 2026-11-09).** A fresh capture at `aad5796` in today's environment matches V7's integrated capture exactly on all 92 cases. Against August's standard it shows the same 12,326 differences as V7. So V7's differences are environmental (Node v24.22.0 against v26.7.0; macOS 27.2), not caused by the integration. V7's MISMATCH stays on record; G2's remaining checks resume. *(Correction to entry 59: the step-632 reordering reading is plausible, not established; the discriminator commit was `aad5796`.)*
 > **H-TB integration — G2 COMPLETE; returned for review before G3 (Post-closure entry 61, 2026-11-09).** Suites pass (server 213, parity 39, match 152 after a G1 test-expectation fix, golden 140, research 259). Live REST and WS: 17 of 17 checks after a harness race in run 1 was fixed. Rollback against a recorded `80acd87e` reference over 142 positions: R1 (`HARD_MODE=legacy`, student unavailable) is exact on all `hard`, `easy` and `medium` answers; R2 (default) serves the student with `easy`/`medium` exact; R3 (code revert) is exact with its suites passing. The protocol mode refuses to start without the student. No games, deployment or push. See #190.
+> **H-TB integration — G2 ACCEPTED; G3 BUILT for one launch review; nothing played (decision note and build record, 2026-11-09).** The user independently reproduced the 92-case equivalence, the rollback comparisons and the live-check verdict. *(Wording correction to entry 61: easy and medium **search outputs** match exactly; their sampled moves were intentionally excluded.)* Built (`29c502d7`): card `2026-11-09-htb-g3-match-card.md`, a one-process product-stack driver, an analyser that imports nothing from it, two closed gates, two wrappers and an execution binding (digest `b024e9d1…`). New `hard` against today's `hard`: one colour-reversed smoke pair (excluded), then 110 fresh pairs under the product game-end rule; PASS iff mean − √(ln 20 / 220) > 0.5. Timing rule (the user's): L = max(64, smoke mean plies); projection = startup + 220 × ((L/2)(s_new + s_legacy) + overhead); hard ceiling 1.5× rounded up to the minute; the 24 h limit applies to that ceiling; EXCEEDS_24H stops before the match. Prediction on record: PASS, mean about 0.93. 15 model-free tests pass. Games await the launch review; deployment, training and pushing not authorized. See #191.
 
 ## Historical proposal check — programme now closed
 
@@ -2106,6 +2107,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 188. **V2-R is spent: PARITY PASS (2026-11-09, entry 58).** Do **not**: rerun, top up or re-score V2-R; read it as overturning V2's FAIL (each describes its own reference surface); read it as a strength or deployment result; re-export, alter or substitute the pinned pair `78c16a31c3dba37f`; or serve it through a runtime that has not passed the conv canary (#186).
 189. **G2 V7 golden comparison: MISMATCH in value numerics only (2026-11-09, entry 59).** Do **not**: edit the frozen `compare.mjs` or the eager standard; add a tolerance to the golden comparison; recapture and keep whichever run matches; attribute the about 1e-7 value differences to the integration, or to the environment, before a discriminator has run; read the identical visit counts and selected moves as a PASS of the exact-equality rule; or continue G2's remaining checks without the user's decision.
 190. **G2 is complete (2026-11-09, entries 58–61).** Do **not**: deploy, push or serve the integration on these results (G3's smoke test and match, then a separate deployment decision, come first); start G3 before its timing formula is written into the match card; read the rollback or equivalence results as strength evidence; rerun R1–R3, V3 or the live check to "refresh" them without a change that calls for it; or merge the deleted R3 rehearsal (`9a63458e`).
+191. **G3 is built, not launched (2026-11-09).** Do **not**: open either G3 gate or play any product game before the user's launch review; edit any bound file (`tests/htb_integration/g3_binding.json` lists them) without rebinding and a fresh review; resize the match, change its rule, seeds or ceiling formula, or reuse the smoke pair in it; launch the match on a hand-edited or `EXCEEDS_24H` timing; score a VOID, INVALID or partial run, or retry one; rerun G2's live check as V8a's server items (#190); or read a PASS as authorizing deployment, training or pushing.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -10771,3 +10773,86 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
   - **Not done:** G3's smoke test and match. Its timing formula is to be written into the match card before the smoke run, per the review.
   - **Not authorized:** deployment, training and pushing.
   - **Returned for review before G3.**
+
+#### Decision note — G2 accepted; the G3 build authorized, with the timing rule; a dated wording correction to entry 61 (2026-11-09)
+
+- **The user's review of G2:** recommends accepting G2 and moving to the G3 build. The user independently reproduced
+  the 92-case equivalence result, the rollback comparisons and the saved live-check verdict, inspecting stored
+  evidence only (no models or tests run).
+- **Wording correction to entry 61 (dated 2026-11-09):** where entry 61 says `easy` and `medium` are exact, read:
+  their **search outputs** (visits, root value, `valueRed`, simulation count, response keys) match exactly; their
+  randomly sampled moves were intentionally excluded from the comparison. The user judges that appropriate.
+- **Authorized:** build and commit the G3 match plan and driver, and return the concrete build for **one launch
+  review** covering the smoke run and the conditional confirmation match.
+- **The timing rule (the user's):**
+  - measure startup and **both players** with a separate colour-reversed smoke pair, excluded from the confirmation;
+  - projected game length = the greater of **64 plies** and the smoke pair's mean length (a planning assumption,
+    not a bound);
+  - project all 220 games from each player's measured seconds per move, adding startup and the measured
+    game-recording overhead;
+  - hard ceiling = **1.5× that projection, rounded up to a minute**;
+  - the **24-hour limit applies to the hard ceiling**, with the cleanup observation stated separately; if it exceeds
+    24 h, stop and return the estimate before the confirmation starts.
+- **The comparison is unchanged:** 110 fresh colour-reversed pairs, new `hard` against legacy `hard`, under the
+  product's game-end rule; PASS requires mean pair score − √(ln 20 / 220) > 0.5. Costs and latency are recorded; it
+  compares two product settings, not matched compute.
+- **The build must bind:** the model identities, the complete execution source, the seed assignment, scoring, the
+  timing formula and cleanup behaviour. All historical failures and controls are preserved.
+- **Not authorized:** games (they await the G3 launch review); deployment, training and pushing. No further
+  diagnosis is needed before the build.
+
+#### Build record — H-TB integration G3: match card, driver, analyser, gates, wrappers and binding; returned for one launch review (2026-11-09)
+
+- **What was built (`29c502d7`, branch `htb-integration-g1`, not pushed):**
+  - **Card** `docs/superpowers/2026-11-09-htb-g3-match-card.md`: players, games, seeds, the timing rule, the verdict
+    rule, the binding, the launch sequence, tests and records.
+  - **Driver** `tests/htb_integration/g3_match.mjs`: both players in one Node process from the product's own modules.
+    - New `hard`: `resolvePolicy` (protocol), `protocolMove` on `78c16a31c3dba37f` wrapped in
+      `MirrorAveragingInference`, with per-move seeds from sha256 of the move's identity (`MATCH_SEED` 20261109).
+    - Today's `hard`: `resolvePolicy` (legacy), plain `MCTS` and `selectMoveForRequest` on `c34b7ff3297c785a`.
+    - Each state goes through `toDict`/`fromDict`. Games end at `state.isTerminal()` (no 280 cap).
+    - Writes, create-only, one sidecar per game, a progress line after each game's background-compute check, and a
+      record; SIGTERM aborts the search and writes a VOID record.
+  - **Analyser** `tests/htb_integration/g3_analyse.mjs`: imports only `TwixtState` from the product. It replays every
+    game, re-derives seeds, colours and scores, checks the per-move settings and timing consistency, and derives the
+    ceiling (smoke) or the verdict (match). Invalid evidence gets no number.
+  - **Gates** `tests/htb_integration/g3_authorization.mjs`: `G3_SMOKE_AUTHORIZED` and `G3_MATCH_AUTHORIZED`, both
+    closed.
+  - **Wrappers** `docs/superpowers/evidence/htb-g3-{smoke,match}-run/01_wrapper.sh`, derived from the H-TB confirmation
+    test's: the idle gate, the background-compute check, the one-line gate commit, the process-group supervisor (TERM,
+    KILL 10 s later, bounded cleanup observation), the survivors and the gate restoration.
+    - Smoke ceiling: TERM 2,390 s, KILL 2,400 s, cleanup through 2,410 s.
+    - Match ceiling: the committed smoke `timing.json`'s `kill_s`, which the wrapper re-derives and requires
+      byte-equal and within 24 h.
+  - **Binding** `tests/htb_integration/g3_binding.json`, digest `b024e9d1…`: both import closures (gate excluded),
+    both manifests and model ids, Node v24.22.0 and the onnxruntime-node 1.23.2 binaries, `package.json`, the
+    lockfile, the idle gate and background-compute check, the card and both wrappers.
+- **The timing formula, written before the smoke (card §5.2):**
+  `projection = startup + 220 × ((L/2) × (s_new + s_legacy) + overhead)`, with L = max(64, smoke mean plies);
+  `kill = ⌈1.5 × projection / 60⌉ × 60`; `term = kill − 10 s`; cleanup observed through `kill + 10 s`.
+  `WITHIN_24H` only if `kill ≤ 86,400 s`.
+  - Planning estimate (not a decision): about 1.37 s per move for new `hard` (G2's live check) and about 3.0 s for
+    today's `hard` (G2's rollback reference capture), so at 64 plies a projection of about 8.5 h and a ceiling of
+    about 12.8 h. The ceiling would reach 24 h at a projected length of about 120 plies.
+- **Prediction on record (mine, before any G3 game):** **PASS**, mean pair score about 0.93 (expected range
+  0.80–0.98). Basis and the reasons it could be lower are in card §6.
+- **Checks run:**
+  - `tests/htb_integration/test_g3.mjs`: 15 of 15 pass, model-free. They cover closed gates and a real-state refusal;
+    the constants shared with the analyser; seeds (deterministic, 48-bit, all distinct across both stages, re-derived
+    independently); both player adapters against the product functions with the G1 fake evaluator; the game loop on
+    scripted games; VOID on abort and on a failed background check; the timing formula against a hand computation
+    (kill 3,000 s); ten tamper kinds, each against an untampered control; the 135.5 / 136 verdict boundary; a
+    synthetic match; and the binding.
+  - Lint clean.
+  - **Rehearsal in a throwaway linked worktree at `29c502d7`** (APFS-cloned `node_modules`, no model loaded): the
+    binding reproduces byte for byte; the driver refuses `GATE_CLOSED` (exit 4); both wrappers refuse before
+    launching anything ("HEAD does not change only the gate").
+    - Both wrappers also reported "GATE NOT RESTORED" (exit 5). This is an artefact of rehearsing at the commit that
+      created the gate file: the restore check compares it with HEAD~1, where it did not exist. At a launch, HEAD~1
+      holds the closed gate. The rehearsal is repeated below at this record's commit.
+  - No other suite was rerun: no server, parity, golden or match file changed.
+- **Not covered by tests:** a real product game. The smoke is the first, and the analyser validates it before any
+  number is used.
+- **Status:** returned for **one launch review** covering the V8a browser check, the smoke pair, the timing test and
+  the conditional match. No game played; both gates closed. Deployment, training and pushing not authorized. See
+  do-not-repeat **#191**.
