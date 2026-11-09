@@ -273,6 +273,7 @@ knob) is not a new hypothesis.
 > **H-TB confirmation test — PASS ACCEPTED (decision note, 2026-11-06, the user's independent review).** Stronger play than the original proven combination is demonstrated **within the declared compute allowances** (evaluations ratio 1.049546 ≤ 1.05, search-seconds ratio 1.041526 ≤ 1.10), against this opponent and protocol only; no part of the distillation is isolated as the cause. No rerun needed. Two dated wording corrections to entry 54. The validated student stays unchanged. Integration may be considered separately; training, deployment and pushing not authorized. See #184.
 > **H-TB integration — PROPOSAL drafted for review; nothing implemented (decision note, 2026-11-06).** `docs/superpowers/2026-11-06-htb-integration-proposal.md`: the product already serves calib020_0001 (`c34b7ff3297c785a`), so the network swap is an ONNX export of the same architecture. The gap is the search: product `hard` is an 800-simulation argmax, not the tested mirror-averaged 200-simulation halving protocol. The proposal ports the reviewed Python into two new server modules for `hard` only, keeps c34b7ff for rollback, and lists behaviour outside the protocol, validation steps V1–V8 and 5–7 days of effort. No export, model load, game, deployment or push.
 > **H-TB integration — proposal REVIEWED; revision 1 returned for review; nothing implemented (decision note, 2026-11-09).** The review recommends the hard-only integration and decides D1–D5 (hard only; tested random opening; conflicting overrides refused; product-stack match before deployment; analysis endpoints unchanged). Revision 1 answers its five corrections: the research PUCT tie rule ported for `hard` only, tested seed for seed; the hard model on its own selection path; the product game-end rule kept as a stated variation, with boundary checks; the cache bypassed and the MCTS-bar value defined; a tested `HARD_MODE=legacy` switch-back. The work is grouped into G1 (fake tests), G2 (export and numerics) and G3 (smoke and match); D6–D8 are open; 7–9 days.
+> **H-TB integration — revision 1 ACCEPTED; D6–D8 decided; G1 APPROVED (decision note, 2026-11-09).** D6: the bar shows the played move's mean from ply 20, a search estimate. D7: `HARD_MODE=legacy`. D8: 110 pairs against today's `hard`, one-sided 95%, recording both sides' costs and latency. Build details: use actual visit counts; keep `rootValue` the true root mean and return the move's estimate separately; define the timing formula before the smoke run. Export, model loading, games, deployment and pushing remain separate approvals.
 
 ## Historical proposal check — programme now closed
 
@@ -10323,3 +10324,18 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
 - **Effort:** about 7–9 working days, up from 5–7.
 - **Prediction:** None stated in advance. This is an engineering proposal, not an experiment.
 - **Not authorized:** implementation, export, model loading, training, benchmarks, games, deployment and pushing. G1 is the next approval to seek. The student file is unchanged.
+
+#### Decision note — revision 1 accepted; D6–D8 decided; G1 APPROVED (2026-11-09)
+
+- **The review (the user, 2026-11-09):** revision 1 (`37c1b1d8`) addresses the main concerns. Proceed with G1 without another proposal-only round.
+- **Decided:**
+  - **D6:** the bar shows the played move's mean value from ply 20. It is a search estimate, not a calibrated win probability.
+  - **D7:** rollback by `HARD_MODE=legacy`, including the startup test with the student files unavailable.
+  - **D8:** 110 pairs against today's `hard`, under the one-sided 95% rule. This measures the complete product change: the research confirmation's compute allowances do not automatically apply. Both sides' costs and latency are to be recorded.
+- **Build details required by the review:**
+  1. **Use actual visit counts.** The proposal's "49 visits" and "102 visits on eliminated candidates" hold only for 16 candidates; fewer legal moves change the allocation.
+  2. **Keep value fields truthful.** `rootValue` stays the actual root mean. The chosen move's estimate is returned separately and used for the bar, with `valueKind`.
+  3. **Define the timing formula before the smoke run.** It must state how the smoke measurements project the complete 220-game match, including both players and startup, and whether the 24-hour threshold applies to the projection or to the resulting hard ceiling.
+- **The Python RNG port** is acceptable for reproducible comparison tests, kept to the operations this search needs.
+- **Authorized now:** G1, the implementation and its tests with fake evaluators.
+- **Not authorized:** export, real-model loading, smoke games, the product match, deployment and pushing. Each remains a separate approval.
