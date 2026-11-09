@@ -58,11 +58,13 @@ export const DEFAULT_MANIFEST_PATH = join(
  * The model served for `hard` under HARD_MODE=protocol (integration proposal
  * §4.7): its own selection path, separate from the default model's.
  *
- * Null until the validated student is exported and pinned (G2). While it is
- * null, a protocol-mode server needs HARD_MODEL_MANIFEST or refuses to start;
- * HARD_MODE=legacy never reads it.
+ * The validated H-TB student's export, pinned after its export parity passed
+ * (V2-R, ledger Post-closure entry 58, under the approved amendment
+ * docs/superpowers/2026-11-09-htb-student-parity-amendment.md). Changing it is a
+ * tracked, reviewable diff, as for DEFAULT_MODEL_ID. HARD_MODE=legacy never
+ * reads it.
  */
-export const HARD_MODEL_ID = null;
+export const HARD_MODEL_ID = '78c16a31c3dba37f';
 
 export const SUPPORTED_MANIFEST_VERSION = 1;
 

@@ -108,10 +108,14 @@ describe('the hard model has its own selection path', () => {
   });
   after(async () => rm(dir, { recursive: true, force: true }));
 
-  it('nothing is pinned until the export (G2); an unpinned hard path refuses with a distinct code', () => {
-    assert.equal(HARD_MODEL_ID, null);
+  it('the pinned hard model is the student export qualified by V2-R', () => {
+    assert.equal(HARD_MODEL_ID, '78c16a31c3dba37f');
+    assert.equal(resolveHardManifestPath({}), join(REPO_ROOT, 'models', '78c16a31c3dba37f', 'manifest.json'));
+  });
+
+  it('an unpinned hard path refuses with a distinct code', () => {
     assert.throws(
-      () => resolveHardManifestPath({}),
+      () => resolveHardManifestPath({}, process.cwd(), null),
       (e) => e instanceof ModelManifestError && e.code === 'HARD_MODEL_UNPINNED' && /HARD_MODE=legacy/.test(e.message)
     );
   });
@@ -126,7 +130,8 @@ describe('the hard model has its own selection path', () => {
   });
 
   it('MODEL_MANIFEST never changes the hard model', async () => {
-    assert.throws(() => resolveHardManifestPath({ MODEL_MANIFEST: A.path }), (e) => e.code === 'HARD_MODEL_UNPINNED');
+    assert.equal(resolveHardManifestPath({ MODEL_MANIFEST: A.path }), resolveHardManifestPath({}));
+    assert.throws(() => resolveHardManifestPath({ MODEL_MANIFEST: A.path }, process.cwd(), null), (e) => e.code === 'HARD_MODEL_UNPINNED');
     const hard = await resolveHardModel({ MODEL_MANIFEST: A.path, HARD_MODEL_MANIFEST: B.path });
     assert.equal(hard.manifest.model_id, B.id);
   });
@@ -149,8 +154,8 @@ describe('the hard model has its own selection path', () => {
   });
 });
 
-describe('the retained rollback pins are byte-identical (§8)', () => {
-  for (const id of [DEFAULT_MODEL_ID, '1d64027db521a50f']) {
+describe('the retained rollback pins and the pinned hard model are byte-identical (§8)', () => {
+  for (const id of [DEFAULT_MODEL_ID, '1d64027db521a50f', HARD_MODEL_ID]) {
     it(`models/${id}: the manifest validates and both files hash to its pair`, async () => {
       const manifestPath = join(REPO_ROOT, 'models', id, 'manifest.json');
       const manifest = await loadManifest(manifestPath);
@@ -158,6 +163,11 @@ describe('the retained rollback pins are byte-identical (§8)', () => {
       await validateArtifact(manifest, dirname(manifestPath)); // sizes and SHA-256 of graph and sidecar
     });
   }
+  it('the pinned hard model resolves through its own path with no environment override', async () => {
+    const hard = await resolveHardModel({});
+    assert.equal(hard.manifest.model_id, '78c16a31c3dba37f');
+    assert.equal(hard.manifest.provenance.source_checkpoint_sha256, '0e1cb6211aa0b3e2dec6ab6f39bec74ceb8c472c7dcf603e7d331b1d1c1c34e5');
+  });
   it('the served default is still c34b7ff3297c785a', () => {
     assert.equal(DEFAULT_MODEL_ID, 'c34b7ff3297c785a');
   });

@@ -1,0 +1,5 @@
+== check 1
+0e1cb6211aa0b3e2dec6ab6f39bec74ceb8c472c7dcf603e7d331b1d1c1c34e5  /Users/bill/twixt-cache/htb-pilot/student.safetensors
+bc68a2742803a8466856fa353958b168becff1044dd387da001ddcaeb7e54f24  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/bbf69511-6636-45f1-b20e-ad3d10cfc215/scratchpad/htb_export/placed_78c16a31c3dba37f/model.onnx
+317d7a7c0f704c5ab5527ff82599031911558dd04b522165b4bc4260b29f7f48  /private/tmp/claude-501/-Users-bill-projects-TwixT-Game/bbf69511-6636-45f1-b20e-ad3d10cfc215/scratchpad/htb_export/placed_78c16a31c3dba37f/model.onnx.data
+resolveHardModel validated 78c16a31c3dba37f

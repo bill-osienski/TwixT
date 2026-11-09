@@ -279,6 +279,7 @@ knob) is not a new hypothesis.
 > **H-TB integration — G2 STOPPED at V2: PARITY FAIL on the Python ONNX Runtime surface (Post-closure entry 55, 2026-11-09).** One unmodified export of the student (`78c16a31c3dba37f`; student sha256 unchanged). S1, masks, equivariance and **S4 (MLX ↔ the product's Node ORT) pass**: max logit difference 2.4e-5 against 1.1e-4, top-1 100%, τ 1.0. **S2 and S3 fail by about 12 logits**: Python ORT 1.24.4 gives deterministic but wrong outputs on this artifact only; it still reproduces August's c34b7ff. Not the external-data loader, graph optimization or subnormals; the cause is unexplained. Candidate not committed; `HARD_MODEL_ID` stays null; nothing after V2 ran. Returned for assessment. See #185.
 > **H-TB integration — V2 failure DIAGNOSED: Python onnxruntime 1.24.4 conflates same-shape Convs whose filter 0 is all zero (Post-closure entry 56, 2026-11-09).** The student has four such 128×128 convs; calib020_0001 has one. Python ORT computes all four with one set of parameters, within a session and across sessions, while the product's onnxruntime-node 1.23.2 computes the same graphs correctly. Not the MLX or PyTorch imports, threads, prepacking, arena or optimizations. The export is not defective. V2 stays FAIL and the model unpinned. Proposed: requalify with a Python ORT that passes a minimal canary, after a reviewed amendment; add a product canary test. See #186.
 > **H-TB integration — runtime canary: Python onnxruntime 1.23.2 PASSES, 1.24.4 FAILS; amendment drafted; product pinned (Post-closure entry 57, 2026-11-09).** A self-contained correctness canary (synthetic weights, each output against its own float64 reference, within and across sessions). It ran in a new isolated Python 3.13.15 venv; the teacher and project environments are untouched; wheel hashes are recorded. The draft amendment (`docs/superpowers/2026-11-09-htb-student-parity-amendment.md`) changes only the Python ORT surface to 1.23.2 for the same artifact, corpus and tolerances. `onnxruntime-node` is pinned to 1.23.2, with the canary in `test:server`. The model is still unpinned; V2-R awaits review. See #187.
+> **H-TB integration — V2-R PARITY PASS; hard model `78c16a31c3dba37f` pinned (Post-closure entry 58, 2026-11-09).** The same exported pair under the approved amendment (Python 3.13.15 with ORT 1.23.2; corpus, tolerances and tools unchanged). MLX drift 0. S2 2.4e-5 against 1e-4; S3 exactly 0; S4 2.4e-5 against 1.1e-4; top-1 100%, τ 1.0. V2's FAIL stands as the record of the defective 1.24.4 surface. `HARD_MODEL_ID` pinned; G2's remaining checks follow. See #188.
 
 ## Historical proposal check — programme now closed
 
@@ -2099,6 +2100,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 185. **H-TB integration G2, V2 export parity: FAIL on the Python ONNX Runtime surface (2026-11-09, entry 55).** Do **not**, without a new reviewed plan: re-export the student, export with other arguments or another exporter, edit the exporter, revise or waive the Phase 2 tolerances, drop or swap the Python ORT surface to obtain a PASS, or pin `78c16a31c3dba37f` and continue G2 as though V2 had passed. S4's agreement with the product runtime is real, but under the preregistered rule it does not rescue S2 and S3. The cause is unexplained; any diagnosis needs its own scope.
 186. **The V2 failure's cause: Python onnxruntime 1.24.4 conflates same-shape Convs with an all-zero filter 0 (2026-11-09, entry 56).** Do **not**: treat it as an export defect; change the student's weights (for example, nudging zero filters) or the exported bytes to avoid it; run any Python ORT parity surface on this artifact without first passing the minimal two-conv canary (`docs/superpowers/evidence/htb-integration-g2/diagnostic-1/scripts/mini.py`); upgrade or reinstall `onnxruntime-node` for the product without the same canary; or read the diagnostic as establishing ORT's internal mechanism, or which other versions are safe.
 187. **The runtime canary (2026-11-09, entry 57).** Do **not**: treat Python onnxruntime 1.23.2's canary PASS as qualifying the student's export (only V2-R under the reviewed amendment can); run V2-R before the amendment is reviewed, or with tolerances, corpus, tools or exported bytes other than the amendment names; widen into a version sweep without cause; install into the project `.venv` or the teacher environment; or loosen the exact `onnxruntime-node` pin without the canary passing on the new version.
+188. **V2-R is spent: PARITY PASS (2026-11-09, entry 58).** Do **not**: rerun, top up or re-score V2-R; read it as overturning V2's FAIL (each describes its own reference surface); read it as a strength or deployment result; re-export, alter or substitute the pinned pair `78c16a31c3dba37f`; or serve it through a runtime that has not passed the conv canary (#186).
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -10599,3 +10601,39 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
 - **On PASS:** continue the remaining, already approved G2 checks.
 - **On FAIL or drift:** preserve the evidence and report back.
 - **Not authorized:** G3 games, deployment, training and pushing.
+
+#### Post-closure entry 58 — V2-R, the student's export parity under the approved amendment: PARITY PASS; the hard model pinned (2026-11-09)
+
+- **Test:** August's Phase 2 parity gate, applied to the **same exported pair** `78c16a31c3dba37f` under the approved amendment (`docs/superpowers/2026-11-09-htb-student-parity-amendment.md`). The amendment is an environment substitution on the Python side: Python 3.13.15 and onnxruntime 1.23.2. The corpus, tolerances, gates and the three tools are unchanged.
+- **Hypothesis:** with a reference runtime that passes the canary, the export agrees with the native network on every surface.
+- **Why it was plausible:**
+  - V2's S4 had already passed;
+  - entry 56 located V2's failure in Python ORT 1.24.4;
+  - entry 57 showed 1.23.2 passes the canary.
+- **Prediction on record:** None stated in advance.
+- **What ran,** once each, in the amendment's order:
+  - **Install:** `mlx`, `mlx-metal` and `torch` (0.30.3 / 0.30.3 / 2.10.0) into the isolated venv, offline from hash-recorded wheels (`wheel2_sha256.txt`, `pip_freeze_v2r.txt`). Their hashes match PyPI's digests, and 0 files under `htb-teacher` changed.
+  - **Check 1:** the student `0e1cb621…` and the pair `bc68a274…` / `317d7a7c…` are unchanged. The pair was placed at `models/78c16a31c3dba37f/` and validated through `resolveHardModel`.
+  - **Check 2:** both canaries pass. Python: 8/8 under 1.23.2 and Python 3.13.15. Node: 6/6.
+  - **The Python half.**
+  - **Check 3, MLX drift:** **0** on all 126 positions. The native outputs are bit-identical to V2's (Python 3.14.10).
+  - **The Node half, `compare.mjs`, and §7.**
+  - **Evidence:** `docs/superpowers/evidence/htb-integration-g2/v2r/`. The verdict recomputes from its gz halves.
+- **Result: PARITY PASS.**
+  - S1 encoding and legal moves exact; masks exact; equivariance 10/10 on every runtime.
+  - **S2:** max abs logit 2.38e-5 against 1e-4; mean 1.44e-6; max abs value 1.94e-6.
+  - **S3:** **0** on every metric; Python ORT 1.23.2 and Node ORT 1.23.2 are bit-identical.
+  - **S4:** max abs logit 2.38e-5 against 1.1e-4; max abs value 1.94e-6.
+  - On every surface: top-1 100%, near-tie exemptions 0/6, top-5 sets 100%, τ median 1.000. All six edge cases agree.
+  - The red-perspective conversion agrees exactly, and no value falls outside the range.
+- **Did it match a prediction?** None was stated. The hypothesis held. S2 now equals S4 because the reference runtime computes the model correctly.
+- **Conclusion / status:**
+  - **The export is qualified for the product path under the amended surface.**
+  - **V2's FAIL stands** as the correct record of the defective 1.24.4 surface.
+  - **Committed per the amendment's on-PASS steps:**
+    - `models/78c16a31c3dba37f/` (pair and manifest);
+    - `HARD_MODEL_ID = '78c16a31c3dba37f'` in `server/model_manifest.js`;
+    - the V2-R evidence.
+  - This moves the execution surface, so the golden comparison needs a new stage.
+  - **Next:** G2's remaining approved steps (V3, the deferred suites, the golden comparison, live requests, R1–R3).
+  - **No strength claim.** G3 games, deployment, training and pushing remain unauthorized.

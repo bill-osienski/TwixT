@@ -1,0 +1,4 @@
+== check 2
+CANARY PASS  (onnxruntime 1.23.2, python 3.13.15)
+ℹ pass 6
+ℹ fail 0

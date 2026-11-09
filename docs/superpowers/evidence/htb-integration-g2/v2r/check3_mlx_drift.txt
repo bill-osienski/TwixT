@@ -1,0 +1,2 @@
+MLX drift (V2-R Python 3.13.15 vs V2 Python 3.14.10), 126 positions: max abs logit 0.000e+00 (at None), max abs value 0.000e+00; threshold 1e-4
+no drift: proceed to the Node half and the verdict
