@@ -275,6 +275,7 @@ knob) is not a new hypothesis.
 > **H-TB integration — proposal REVIEWED; revision 1 returned for review; nothing implemented (decision note, 2026-11-09).** The review recommends the hard-only integration and decides D1–D5 (hard only; tested random opening; conflicting overrides refused; product-stack match before deployment; analysis endpoints unchanged). Revision 1 answers its five corrections: the research PUCT tie rule ported for `hard` only, tested seed for seed; the hard model on its own selection path; the product game-end rule kept as a stated variation, with boundary checks; the cache bypassed and the MCTS-bar value defined; a tested `HARD_MODE=legacy` switch-back. The work is grouped into G1 (fake tests), G2 (export and numerics) and G3 (smoke and match); D6–D8 are open; 7–9 days.
 > **H-TB integration — revision 1 ACCEPTED; D6–D8 decided; G1 APPROVED (decision note, 2026-11-09).** D6: the bar shows the played move's mean from ply 20, a search estimate. D7: `HARD_MODE=legacy`. D8: 110 pairs against today's `hard`, one-sided 95%, recording both sides' costs and latency. Build details: use actual visit counts; keep `rootValue` the true root mean and return the move's estimate separately; define the timing formula before the smoke run. Export, model loading, games, deployment and pushing remain separate approvals.
 > **H-TB integration — G1 BUILT and checked with fake evaluators; returned for review (build record, 2026-11-09).** Branch `htb-integration-g1` (`22c1a78d`, `a5ec10ed`). The research tie rule, mirror averaging, root halving and the opening readout match the Python research code exactly, seed for seed, ties included (fixtures from the research classes with a deterministic fake evaluator). `rootValue` stays the true root mean; the played move's value and actual visits are returned separately with `valueKind`. The hard model has its own path, conflicting overrides are refused, protocol requests bypass the cache, and `HARD_MODE=legacy` restores today's hard. 437 model-free tests pass (golden 140, others 297), 0 skipped. Deviations recorded: the surface file list is unchanged, with a new `protocol-hard` stage; `HARD_MODEL_ID` is null until G2. No export, model load or game.
+> **H-TB integration — G1 ACCEPTED; G2 APPROVED (decision note, 2026-11-09).** Scope: export and pin the exact student; real and mirror-averaged output parity at the declared tolerances; the deferred suites and the golden comparison; live REST and WS requests (value perspectives, refusals, cancellation); `HARD_MODE=legacy` reproducing the recorded baseline with the student artifact unavailable. Dated correction: G1's fixture has 27 cases (12 plain, 15 halving), not 28. Results return for review before any G3 game.
 
 ## Historical proposal check — programme now closed
 
@@ -10403,3 +10404,21 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
 - **Open before G3:** the timing formula (the review's detail 3) is to be written into the match card before the smoke run.
 - **Prediction:** None stated in advance. This is an engineering build, not an experiment.
 - **Not authorized:** export, model loading, smoke games, the product match, deployment and pushing.
+
+#### Decision note — G1 accepted; G2 APPROVED; a dated correction to the G1 build record (2026-11-09)
+
+- **Correction to the G1 build record above (2026-11-09):** it says "12 plain cases and 16 halving cases". `tests/fixtures/htb_integration/search.json` contains **27 comparison cases: 12 plain and 15 halving**. The count was wrong, not the checks; every case passed. Found by the user's review, and confirmed by counting the fixture's `kind` fields. No rerun is needed.
+- **The review (the user, 2026-11-09):** G1 accepted, with no blocking defect found. Independently confirmed:
+  - the fixture source hashes match the current research code;
+  - the student's hash is unchanged;
+  - `server/mcts.js`, `server/gameLogic.js` and `server/inference.js` are byte-identical to `80acd87e`;
+  - the ledger changes only add text.
+- **Deviations accepted.** The `protocol-hard` golden stage covers the unchanged **plain** search. The later product-match record must separately bind every new protocol module.
+- **G2 approved, in this scope:**
+  1. export and pin this exact student;
+  2. check real model outputs and mirror-averaged outputs against the declared tolerances;
+  3. run the deferred suites and the golden comparison;
+  4. exercise actual REST and WebSocket requests, including value perspectives, override refusals and cancellation;
+  5. verify `HARD_MODE=legacy` reproduces the recorded baseline with the student artifact unavailable.
+- **The request wiring is the principal unverified area:** G1 inspected its source rather than exercising the server.
+- **G2's results return for review before any G3 game.** Training, deployment and pushing remain outside this scope.
