@@ -1,0 +1,73 @@
+{
+ "kind": "htb-g3-timing/1",
+ "inputs": {
+  "smoke_plies": [
+   41,
+   44
+  ],
+  "mean_plies": 42.5,
+  "projected_plies": 64,
+  "new_hard_s_per_move": 1.3119591860697672,
+  "legacy_hard_s_per_move": 2.7028404840952365,
+  "overhead_s_per_game": 0.0635476670000353,
+  "startup_s": 0.262212625
+ },
+ "formula": "projection = startup + 220 x ((L / 2) x (s_new + s_legacy) + overhead); kill = ceil(1.5 x projection / 60) x 60; term = kill - 10; cleanup observed through kill + 10",
+ "per_game_s": 128.53713711228013,
+ "projection_s": 28278.43237732663,
+ "kill_s": 42420,
+ "term_s": 42410,
+ "cleanup_through_s": 42430,
+ "limit_s": 86400,
+ "verdict": "WITHIN_24H",
+ "latency": {
+  "new_hard": {
+   "simulations_per_move": 200,
+   "all": {
+    "moves": 43,
+    "mean_s": 1.3119591860697672,
+    "p50_s": 1.3444416659999987,
+    "p95_s": 1.3527314579999947,
+    "max_s": 1.375773417
+   },
+   "ply_below_20": {
+    "moves": 20,
+    "mean_s": 1.3460867167000008,
+    "p50_s": 1.3447781250000117,
+    "p95_s": 1.3551784580000004,
+    "max_s": 1.375773417
+   },
+   "ply_20_on": {
+    "moves": 23,
+    "mean_s": 1.2822830724782597,
+    "p50_s": 1.343913332999975,
+    "p95_s": 1.3498558330000088,
+    "max_s": 1.3527314579999947
+   }
+  },
+  "legacy_hard": {
+   "simulations_per_move": 800,
+   "all": {
+    "moves": 42,
+    "mean_s": 2.7028404840952365,
+    "p50_s": 2.746105208000001,
+    "p95_s": 2.781800875000001,
+    "max_s": 2.798831166999997
+   },
+   "ply_below_20": {
+    "moves": 20,
+    "mean_s": 2.7580097917000006,
+    "p50_s": 2.757009167,
+    "p95_s": 2.7858784589999996,
+    "max_s": 2.798831166999997
+   },
+   "ply_20_on": {
+    "moves": 22,
+    "mean_s": 2.6526865680909064,
+    "p50_s": 2.7426864579999966,
+    "p95_s": 2.7739087080000027,
+    "max_s": 2.774456084000005
+   }
+  }
+ }
+}

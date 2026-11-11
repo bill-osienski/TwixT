@@ -6,5 +6,5 @@
  * exit. g3_match.mjs refuses to play a stage whose gate is closed. This file is excluded from the execution binding
  * because opening a gate is the one change a launch makes.
  */
-export const G3_SMOKE_AUTHORIZED = true;
+export const G3_SMOKE_AUTHORIZED = false;
 export const G3_MATCH_AUTHORIZED = false;

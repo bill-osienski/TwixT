@@ -1,0 +1,2 @@
+{"pair_index":0,"game_in_pair":0,"ended_ms":81844.251375,"move_ms_total":81518.87733599999,"ply_count":41,"bg_check":"CLEAR: no BOINC process among 924 (exempt: 808 boinc_project /opt/podman/bin/gvproxy; 823 boinc_project /opt/podman/bin/krunkit)"}
+{"pair_index":0,"game_in_pair":1,"ended_ms":170322.853292,"move_ms_total":88414.66799699995,"ply_count":44,"bg_check":"CLEAR: no BOINC process among 925 (exempt: 808 boinc_project /opt/podman/bin/gvproxy; 823 boinc_project /opt/podman/bin/krunkit)"}

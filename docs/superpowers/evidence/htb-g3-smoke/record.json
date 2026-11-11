@@ -1,0 +1,16 @@
+{
+ "schema": "htb-g3-record/1",
+ "stage": "smoke",
+ "pairs": 1,
+ "head": "c2f9832bc92c6993a62684ac98c65b2c53c540b3",
+ "binding_digest": "da0b86bf4dcbdf4364d26a5f4a483fa97360b41c60ed3abae15778f7a636c04a",
+ "kill_s": null,
+ "pid": 99643,
+ "python": "/Users/bill/projects/TwixT_Game/.venv/bin/python",
+ "started_at": "2026-11-11T03:17:39.025Z",
+ "status": "COMPLETED",
+ "games_completed": 2,
+ "startup_ms": 262.212625,
+ "ended_ms": 170323.12525,
+ "finished_at": "2026-11-11T03:20:29.109Z"
+}
