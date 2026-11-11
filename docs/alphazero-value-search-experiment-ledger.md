@@ -286,6 +286,7 @@ knob) is not a new hypothesis.
 > **H-TB integration — G2 ACCEPTED; G3 BUILT for one launch review; nothing played (decision note and build record, 2026-11-09).** The user independently reproduced the 92-case equivalence, the rollback comparisons and the live-check verdict. *(Wording correction to entry 61: easy and medium **search outputs** match exactly; their sampled moves were intentionally excluded.)* Built (`29c502d7`): card `2026-11-09-htb-g3-match-card.md`, a one-process product-stack driver, an analyser that imports nothing from it, two closed gates, two wrappers and an execution binding (digest `b024e9d1…`). New `hard` against today's `hard`: one colour-reversed smoke pair (excluded), then 110 fresh pairs under the product game-end rule; PASS iff mean − √(ln 20 / 220) > 0.5. Timing rule (the user's): L = max(64, smoke mean plies); projection = startup + 220 × ((L/2)(s_new + s_legacy) + overhead); hard ceiling 1.5× rounded up to the minute; the 24 h limit applies to that ceiling; EXCEEDS_24H stops before the match. Prediction on record: PASS, mean about 0.93. 15 model-free tests pass. Games await the launch review; deployment, training and pushing not authorized. See #191.
 > **H-TB integration — G3 repaired for launch clearance; nothing played (decision note and repair record, 2026-11-09).** The user's review found that the analyser and match admission trusted the script's COMPLETED record without the wrapper's `outer.json`, so a TIMEOUT, an unrestored gate or unconfirmed cleanup could still yield a timing or score. Repaired (`d0dfba20`): both stages and match admission now require integer exits of 0, outcome COMPLETED, the gate restored, no survivors and a script-written record. The outer record is tied to its run by HEAD and by pgid = the record's pid. The match needs committed, successful smoke evidence, and its verdict re-derives the committed timing. The binding now covers the Node executable and every file of both ORT packages (digest `da0b86bf…`); the card lists what is not bound. 20/20 tests (outer and admission failures each against a clean control); 3 mutants caught. The user accepted the 2,400 s smoke ceiling, the 24 h maximum and the browser → smoke → timing → conditional match sequence. Gates closed. See #191.
 > **H-TB integration — G3 steps 1–3 done: browser check PASS, smoke COMPLETED, timing WITHIN_24H; the match is next (Post-closure entry 62, 2026-11-10).** Run in a clean launch worktree at `542bb847` (binding `da0b86bf…` reproduced). Browser: banner `Hard mode: protocol` with both ids, 23/23 AI moves, the MCTS bar updated across ply 20 (D6), no client error, normal end. Smoke (`c2f9832b` → `13acf4c1`): outer COMPLETED with exit 0, gate restored, no survivors; 41 + 44 plies in 171 s. Timing: L 64; new `hard` 1.312 s/move, today's `hard` 2.703 s/move; projection 7.86 h; KILL 42,420 s (11.78 h). Below the planning estimate (8.5 h / 12.8 h). No strength claim; deployment, training and pushing not authorized. See #192.
+> **H-TB integration — G3 match COMPLETED: verdict PASS; G3 complete; returned for review (Post-closure entry 63, 2026-11-11).** 110 fresh colour-reversed pairs of new `hard` (student `78c16a31c3dba37f`, protocol) against today's `hard` (`c34b7ff3297c785a`, 800 sims, argmax) on the product stack, under the product game-end rule (`755de852` → `637917ca`; outer COMPLETED with exit 0, gate restored, no survivors; 7.02 h against KILL 11.78 h). Mean pair score **0.9318**, lower bound **0.8151 > 0.5**; 203 wins, 13 losses, 4 board-full draws. Matches the prediction (0.93). Cost: 1.349 against 2.865 s per move (0.47×). Observation: 192/220 distinct games; all 28 copies are new-as-Red wins, consistent with a peaked opening policy; scoring them as losses still gives a lower bound of 0.688 (post hoc). Product settings, not matched compute. A PASS does not authorize deployment, training or pushing. See #193.
 
 ## Historical proposal check — programme now closed
 
@@ -2111,6 +2112,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 190. **G2 is complete (2026-11-09, entries 58–61).** Do **not**: deploy, push or serve the integration on these results (G3's smoke test and match, then a separate deployment decision, come first); start G3 before its timing formula is written into the match card; read the rollback or equivalence results as strength evidence; rerun R1–R3, V3 or the live check to "refresh" them without a change that calls for it; or merge the deleted R3 rehearsal (`9a63458e`).
 191. **G3 is built, not launched (2026-11-09).** Do **not**: open either G3 gate or play any product game before the user's launch review; edit any bound file (`tests/htb_integration/g3_binding.json` lists them) without rebinding and a fresh review; resize the match, change its rule, seeds or ceiling formula, or reuse the smoke pair in it; launch the match on a hand-edited or `EXCEEDS_24H` timing; score a VOID, INVALID or partial run, or retry one; rerun G2's live check as V8a's server items (#190); or read a PASS as authorizing deployment, training or pushing.
 192. **G3 steps 1–3 are spent (2026-11-10, entry 62).** Do **not**: replay the browser check or the smoke pair, or rerun either to "refresh" the timing; re-derive the timing from anything but the committed smoke evidence, or hand-edit `htb-g3-smoke/timing.json`; read or report the smoke pair's outcomes, or count them in the match; run the match under any ceiling but KILL 42,420 s / TERM 42,410 s; or read the browser game (a deliberately weak human side) as strength evidence.
+193. **The G3 match is spent: PASS (2026-11-11, entry 63).** Do **not**: rerun, extend, top up or re-score the match, or rerun it to "confirm" the PASS; change the rule, the bound or the scoring of draws after the fact; drop or down-weight the duplicate games to reshape the verdict (the post-hoc sensitivity is exploratory only); read the result as matched-compute strength, or as covering `easy` or `medium`; or deploy, train or push on it without the user's separate deployment decision.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -11046,3 +11048,75 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
     one-line gate commit and the wrapper's re-derivation of this timing byte for byte.
   - No strength claim.
   - Not authorized: deployment, training or pushing. See #192.
+
+#### Post-closure entry 63 — G3 steps 4–5: the 220-game product-stack match, new `hard` against today's `hard` — COMPLETED; verdict PASS (2026-11-11)
+
+- **Test:** the cleared confirmation match (card §3, §6). New `hard` (student `78c16a31c3dba37f`: mirror averaging,
+  protocol search, T 1.0 opening readout at plies 0–19, root halving from ply 20) played today's `hard`
+  (`c34b7ff3297c785a`, `LEGACY_HARD`: 800 simulations, plain search, argmax).
+  - 110 fresh colour-reversed pairs, under the product game-end rule (`state.isTerminal()`, no ply cap);
+  - per-ply seeds from `htb-g3/20261109/match/…`;
+  - the smoke pair excluded.
+- **Hypothesis:** the new `hard` is stronger than today's `hard` on the product stack.
+- **Why it was plausible:** the H-TB confirmation test (the student's own result against `calib020_0001`) and G2's
+  exact equivalence of the served stack to the research protocol.
+- **Prediction on record** (build record, 2026-11-09, before any G3 game): **PASS**, mean pair score about 0.93
+  (expected range 0.80–0.98).
+- **Rule (D8, unchanged):** PASS iff mean pair score − √(ln 20 / 220) > 0.5.
+- **What ran:**
+  - **Launch:** the one-line gate commit `755de852` (`G3_MATCH_AUTHORIZED = true`, after the ledger commit
+    `be5c70d9`), then `htb-g3-match-run/01_wrapper.sh`, once, in the launch worktree. The wrapper re-derived the
+    committed smoke timing byte for byte.
+  - **Pre-launch checks:** the idle gate held idle for 60 s (after about 15 s busy at a load of about 3.3); the BOINC
+    check was CLEAR.
+  - **Match:** started 2026-11-11 03:23:10 UTC and finished at 10:24:25 UTC.
+  - **Analysis:** `g3_analyse.mjs verdict docs/superpowers/evidence/htb-g3-match --write`, which:
+    - re-validated the committed smoke;
+    - re-derived the timing;
+    - validated the match's outer record, records and games.
+  - **Committed** with the gate restoration in `637917ca`.
+- **Result:**
+  - **Run, COMPLETED and valid:**
+    - `outer.json`: inner and outer exit 0, outcome COMPLETED, gate restored, survivors empty, record by the script,
+      head `755de852`.
+    - Wall time 25,275 s (7.02 h), against TERM 42,410 s / KILL 42,420 s.
+    - 220 of 220 games. The background check was CLEAR after every game, and `run.stderr.txt` is empty.
+    - Analyser exit 0.
+  - **Verdict, PASS:**
+    - total 205 / 220; mean pair score **0.9318**; Hoeffding term 0.1167; **lower bound 0.8151 > 0.5**;
+    - new `hard` won 203 games, lost 13 and drew 4. As Red it won 107 of 110; as Black, 96 of 110;
+    - pair scores: 1 in 94 pairs, 0.75 in 4, 0.5 in 11, 0.25 in none, 0 in 1.
+  - **Terminations:**
+    - 216 wins;
+    - 4 `no_legal_moves` draws: board-full games of 572 plies, in pairs 17, 24, 57 and 75, each scored 0.5 under the
+      product rule;
+    - 0 at a ply cap, since there is none.
+  - **Plies:** mean 54.65, minimum 29, maximum 572.
+  - **Costs and latency** (product settings, not matched compute):
+    - **New `hard`:** 200 simulations; 6,059 moves at a mean of 1.349 s (p50 1.340 s, p95 1.631 s, max 1.967 s);
+      plies 0–19 mean 1.336 s; ply 20 on, 1.357 s.
+    - **Today's `hard`:** 800 simulations; 5,964 moves at a mean of 2.865 s (p50 2.737 s, p95 4.014 s, max 5.414 s);
+      ply 20 on, mean 2.942 s with p95 4.153 s.
+    - **Ratio and totals:** new over today's, 0.471 s per move. Search seconds 8,174 against 17,086. The 7.02 h run
+      came in under the 7.86 h projection.
+  - **Observation: duplicate games (reported by the analyser, not part of the rule).**
+    - Only 192 of the 220 games are distinct. The 28 extra copies fall into 14 groups, of sizes 6, 6, 5, 3, 3, 3 and
+      eight of 2.
+    - **Every copy is a game 0** (new `hard` as Red, moving first), and every one is a new-player win.
+    - With fresh per-ply seeds, the copies mean the student's T 1.0 opening readout sampled the same moves against
+      the deterministic legacy argmax. That points to a sharply peaked opening policy as Red. This is an
+      interpretation; the policy entropy wasn't measured.
+    - **Post-hoc sensitivity** (exploratory, not a rule): scoring all 28 copies as losses would give 177 / 220 =
+      0.8045 and a lower bound of 0.6878, still above 0.5.
+- **Did it match the prediction:** yes. PASS at 0.932, against the predicted 0.93 and inside the 0.80–0.98 range.
+- **Conclusion / status:**
+  - **G3 is complete:** browser check PASS (entry 62), smoke COMPLETED, timing WITHIN_24H, and the match PASS. On the
+    product stack, at product settings, the new `hard` is stronger than today's `hard` at the pre-registered bound,
+    while spending about 47% of today's `hard`'s time per move.
+  - **This is a strength result for product settings only.** It isn't a matched-compute comparison, and it doesn't
+    cover `easy` or `medium`.
+  - The duplicate-opening observation is for the deployment review to weigh, for example as variety in play against
+    a deterministic opponent. It doesn't change the verdict.
+  - **Not authorized:** deployment, training and pushing. The PASS doesn't authorize them; a separate deployment
+    decision is the user's.
+  - Returned for review. See #193.
