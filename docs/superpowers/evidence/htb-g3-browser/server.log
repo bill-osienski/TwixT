@@ -1,0 +1,54 @@
+
+> twixt_game@1.0.0 start
+> node scripts/startServer.js
+
+
+🎮 TwixT Game Server Starting...
+
+Checking AI model...
+  Model id: c34b7ff3297c785a
+  Manifest: /Users/bill/projects/TwixT_Game-g3/models/c34b7ff3297c785a/manifest.json
+
+Starting AI server...
+
+✅ Servers Running!
+
+   Game:      http://localhost:5500
+   AI:        http://localhost:3001
+   WebSocket: ws://localhost:3001/ws
+
+   Press Ctrl+C to stop
+
+  [AI] AlphaZero Inference Server
+  [AI] ==========================
+  [AI] Model id:   c34b7ff3297c785a
+  [AI] Manifest:   /Users/bill/projects/TwixT_Game-g3/models/c34b7ff3297c785a/manifest.json
+  [AI] Model path: /Users/bill/projects/TwixT_Game-g3/models/c34b7ff3297c785a/model.onnx
+  [AI] Provenance: source_checkpoint=checkpoints/alphazero-v2-calib020-from0409/model_iter_0001.safetensors
+  [AI] Hard mode:  protocol
+  [AI] Hard model id:   78c16a31c3dba37f
+  [AI] Hard manifest:   /Users/bill/projects/TwixT_Game-g3/models/78c16a31c3dba37f/manifest.json
+  [AI] Port: 3001
+  [AI] Cache size: 10000
+  [AI] 
+  [AI] Loading ONNX model...
+  [AI] ONNX model loaded: /Users/bill/projects/TwixT_Game-g3/models/c34b7ff3297c785a/model.onnx
+  [AI] Inputs: board, move_rows, move_cols, move_mask
+  [AI]   Outputs: policy_logits, value
+  [AI] ONNX model loaded: /Users/bill/projects/TwixT_Game-g3/models/78c16a31c3dba37f/model.onnx
+  [AI] Inputs: board, move_rows, move_cols, move_mask
+  [AI]   Outputs: policy_logits, value
+  [AI] 
+  [AI] Server running on http://localhost:3001
+  [AI] WebSocket available at ws://localhost:3001/ws
+  [AI] Endpoints:
+  [AI]   POST /api/move             - Get best move (HTTP fallback)
+  [AI]   POST /api/evaluate         - Quick position evaluation
+  [AI]   POST /api/analyze-position - Deterministic MCTS analysis
+  [AI]   GET  /api/health           - Health check
+  [AI]   GET  /api/stats            - Cache statistics
+  [AI]   WS   /ws                   - WebSocket for real-time MCTS
+File not found: /favicon.ico
+
+
+Shutting down...
