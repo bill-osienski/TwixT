@@ -1,0 +1,16 @@
+{
+ "schema": "htb-g3-record/1",
+ "stage": "match",
+ "pairs": 110,
+ "head": "755de852f13aa8c784e7da4e7fa4212497a61efb",
+ "binding_digest": "da0b86bf4dcbdf4364d26a5f4a483fa97360b41c60ed3abae15778f7a636c04a",
+ "kill_s": 42420,
+ "pid": 1314,
+ "python": "/Users/bill/projects/TwixT_Game/.venv/bin/python",
+ "started_at": "2026-11-11T03:23:10.840Z",
+ "status": "COMPLETED",
+ "games_completed": 220,
+ "startup_ms": 291.983666,
+ "ended_ms": 25274860.293625,
+ "finished_at": "2026-11-11T10:24:25.562Z"
+}

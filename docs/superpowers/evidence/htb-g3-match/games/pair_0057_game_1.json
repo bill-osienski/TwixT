@@ -1,0 +1,8319 @@
+{
+ "schema": "htb-g3-game/1",
+ "stage": "match",
+ "pair_index": 57,
+ "game_in_pair": 1,
+ "new_colour": "black",
+ "red_player": "legacy_hard",
+ "black_player": "new_hard",
+ "new_model_id": "78c16a31c3dba37f",
+ "legacy_model_id": "c34b7ff3297c785a",
+ "match_seed": 20261109,
+ "moves": [
+  [
+   18,
+   19
+  ],
+  [
+   14,
+   18
+  ],
+  [
+   14,
+   15
+  ],
+  [
+   12,
+   13
+  ],
+  [
+   12,
+   9
+  ],
+  [
+   3,
+   11
+  ],
+  [
+   11,
+   16
+  ],
+  [
+   9,
+   9
+  ],
+  [
+   9,
+   12
+  ],
+  [
+   12,
+   12
+  ],
+  [
+   11,
+   11
+  ],
+  [
+   20,
+   19
+  ],
+  [
+   4,
+   14
+  ],
+  [
+   10,
+   17
+  ],
+  [
+   14,
+   8
+  ],
+  [
+   7,
+   10
+  ],
+  [
+   7,
+   11
+  ],
+  [
+   7,
+   13
+  ],
+  [
+   6,
+   9
+  ],
+  [
+   13,
+   15
+  ],
+  [
+   16,
+   9
+  ],
+  [
+   5,
+   12
+  ],
+  [
+   4,
+   8
+  ],
+  [
+   2,
+   8
+  ],
+  [
+   2,
+   7
+  ],
+  [
+   1,
+   6
+  ],
+  [
+   1,
+   5
+  ],
+  [
+   20,
+   9
+  ],
+  [
+   0,
+   7
+  ],
+  [
+   17,
+   12
+  ],
+  [
+   18,
+   10
+  ],
+  [
+   19,
+   11
+  ],
+  [
+   19,
+   7
+  ],
+  [
+   21,
+   6
+  ],
+  [
+   19,
+   8
+  ],
+  [
+   21,
+   7
+  ],
+  [
+   20,
+   4
+  ],
+  [
+   20,
+   5
+  ],
+  [
+   16,
+   14
+  ],
+  [
+   18,
+   14
+  ],
+  [
+   19,
+   17
+  ],
+  [
+   17,
+   16
+  ],
+  [
+   13,
+   17
+  ],
+  [
+   16,
+   18
+  ],
+  [
+   15,
+   20
+  ],
+  [
+   13,
+   20
+  ],
+  [
+   10,
+   14
+  ],
+  [
+   19,
+   3
+  ],
+  [
+   18,
+   3
+  ],
+  [
+   18,
+   1
+  ],
+  [
+   13,
+   21
+  ],
+  [
+   12,
+   22
+  ],
+  [
+   15,
+   18
+  ],
+  [
+   14,
+   19
+  ],
+  [
+   17,
+   19
+  ],
+  [
+   10,
+   23
+  ],
+  [
+   16,
+   16
+  ],
+  [
+   14,
+   23
+  ],
+  [
+   5,
+   15
+  ],
+  [
+   20,
+   0
+  ],
+  [
+   3,
+   6
+  ],
+  [
+   21,
+   17
+  ],
+  [
+   21,
+   16
+  ],
+  [
+   12,
+   20
+  ],
+  [
+   5,
+   7
+  ],
+  [
+   22,
+   15
+  ],
+  [
+   22,
+   14
+  ],
+  [
+   12,
+   18
+  ],
+  [
+   0,
+   3
+  ],
+  [
+   22,
+   8
+  ],
+  [
+   18,
+   15
+  ],
+  [
+   16,
+   0
+  ],
+  [
+   17,
+   17
+  ],
+  [
+   14,
+   13
+  ],
+  [
+   23,
+   16
+  ],
+  [
+   18,
+   20
+  ],
+  [
+   16,
+   20
+  ],
+  [
+   15,
+   19
+  ],
+  [
+   15,
+   22
+  ],
+  [
+   17,
+   18
+  ],
+  [
+   18,
+   21
+  ],
+  [
+   14,
+   21
+  ],
+  [
+   20,
+   15
+  ],
+  [
+   16,
+   22
+  ],
+  [
+   19,
+   13
+  ],
+  [
+   20,
+   8
+  ],
+  [
+   17,
+   14
+  ],
+  [
+   20,
+   6
+  ],
+  [
+   15,
+   13
+  ],
+  [
+   15,
+   11
+  ],
+  [
+   17,
+   7
+  ],
+  [
+   19,
+   10
+  ],
+  [
+   18,
+   5
+  ],
+  [
+   18,
+   12
+  ],
+  [
+   20,
+   11
+  ],
+  [
+   17,
+   10
+  ],
+  [
+   22,
+   10
+  ],
+  [
+   21,
+   4
+  ],
+  [
+   22,
+   5
+  ],
+  [
+   19,
+   5
+  ],
+  [
+   23,
+   7
+  ],
+  [
+   19,
+   6
+  ],
+  [
+   22,
+   9
+  ],
+  [
+   21,
+   10
+  ],
+  [
+   12,
+   15
+  ],
+  [
+   17,
+   4
+  ],
+  [
+   23,
+   12
+  ],
+  [
+   16,
+   13
+  ],
+  [
+   14,
+   16
+  ],
+  [
+   19,
+   4
+  ],
+  [
+   22,
+   18
+  ],
+  [
+   20,
+   2
+  ],
+  [
+   14,
+   10
+  ],
+  [
+   14,
+   12
+  ],
+  [
+   21,
+   12
+  ],
+  [
+   21,
+   8
+  ],
+  [
+   9,
+   10
+  ],
+  [
+   13,
+   10
+  ],
+  [
+   17,
+   21
+  ],
+  [
+   19,
+   22
+  ],
+  [
+   23,
+   9
+  ],
+  [
+   18,
+   4
+  ],
+  [
+   11,
+   20
+  ],
+  [
+   18,
+   2
+  ],
+  [
+   10,
+   8
+  ],
+  [
+   20,
+   7
+  ],
+  [
+   8,
+   13
+  ],
+  [
+   21,
+   9
+  ],
+  [
+   12,
+   19
+  ],
+  [
+   19,
+   9
+  ],
+  [
+   18,
+   8
+  ],
+  [
+   22,
+   7
+  ],
+  [
+   10,
+   18
+  ],
+  [
+   19,
+   2
+  ],
+  [
+   5,
+   10
+  ],
+  [
+   18,
+   7
+  ],
+  [
+   15,
+   6
+  ],
+  [
+   20,
+   10
+  ],
+  [
+   23,
+   3
+  ],
+  [
+   22,
+   1
+  ],
+  [
+   12,
+   7
+  ],
+  [
+   15,
+   15
+  ],
+  [
+   13,
+   5
+  ],
+  [
+   22,
+   6
+  ],
+  [
+   1,
+   9
+  ],
+  [
+   18,
+   11
+  ],
+  [
+   3,
+   10
+  ],
+  [
+   13,
+   19
+  ],
+  [
+   16,
+   4
+  ],
+  [
+   13,
+   18
+  ],
+  [
+   6,
+   14
+  ],
+  [
+   14,
+   17
+  ],
+  [
+   7,
+   16
+  ],
+  [
+   10,
+   21
+  ],
+  [
+   13,
+   14
+  ],
+  [
+   12,
+   21
+  ],
+  [
+   3,
+   16
+  ],
+  [
+   14,
+   20
+  ],
+  [
+   1,
+   17
+  ],
+  [
+   11,
+   19
+  ],
+  [
+   6,
+   13
+  ],
+  [
+   11,
+   21
+  ],
+  [
+   9,
+   17
+  ],
+  [
+   17,
+   11
+  ],
+  [
+   14,
+   22
+  ],
+  [
+   17,
+   23
+  ],
+  [
+   15,
+   17
+  ],
+  [
+   18,
+   13
+  ],
+  [
+   0,
+   16
+  ],
+  [
+   19,
+   12
+  ],
+  [
+   19,
+   20
+  ],
+  [
+   17,
+   2
+  ],
+  [
+   5,
+   17
+  ],
+  [
+   18,
+   0
+  ],
+  [
+   3,
+   18
+  ],
+  [
+   17,
+   15
+  ],
+  [
+   4,
+   12
+  ],
+  [
+   16,
+   17
+  ],
+  [
+   7,
+   18
+  ],
+  [
+   16,
+   12
+  ],
+  [
+   5,
+   19
+  ],
+  [
+   21,
+   21
+  ],
+  [
+   1,
+   1
+  ],
+  [
+   20,
+   1
+  ],
+  [
+   23,
+   20
+  ],
+  [
+   16,
+   1
+  ],
+  [
+   14,
+   3
+  ],
+  [
+   14,
+   0
+  ],
+  [
+   8,
+   15
+  ],
+  [
+   16,
+   11
+  ],
+  [
+   11,
+   18
+  ],
+  [
+   15,
+   10
+  ],
+  [
+   9,
+   19
+  ],
+  [
+   17,
+   3
+  ],
+  [
+   11,
+   13
+  ],
+  [
+   17,
+   13
+  ],
+  [
+   13,
+   12
+  ],
+  [
+   18,
+   9
+  ],
+  [
+   7,
+   20
+  ],
+  [
+   8,
+   22
+  ],
+  [
+   3,
+   20
+  ],
+  [
+   12,
+   23
+  ],
+  [
+   1,
+   19
+  ],
+  [
+   10,
+   22
+  ],
+  [
+   5,
+   21
+  ],
+  [
+   13,
+   22
+  ],
+  [
+   0,
+   21
+  ],
+  [
+   9,
+   22
+  ],
+  [
+   2,
+   17
+  ],
+  [
+   15,
+   3
+  ],
+  [
+   11,
+   6
+  ],
+  [
+   16,
+   3
+  ],
+  [
+   1,
+   15
+  ],
+  [
+   12,
+   1
+  ],
+  [
+   2,
+   13
+  ],
+  [
+   10,
+   0
+  ],
+  [
+   1,
+   11
+  ],
+  [
+   9,
+   2
+  ],
+  [
+   12,
+   4
+  ],
+  [
+   8,
+   4
+  ],
+  [
+   2,
+   22
+  ],
+  [
+   8,
+   0
+  ],
+  [
+   0,
+   9
+  ],
+  [
+   7,
+   2
+  ],
+  [
+   1,
+   7
+  ],
+  [
+   21,
+   23
+  ],
+  [
+   9,
+   21
+  ],
+  [
+   6,
+   23
+  ],
+  [
+   21,
+   19
+  ],
+  [
+   4,
+   22
+  ],
+  [
+   7,
+   22
+  ],
+  [
+   20,
+   21
+  ],
+  [
+   2,
+   15
+  ],
+  [
+   11,
+   22
+  ],
+  [
+   0,
+   14
+  ],
+  [
+   6,
+   0
+  ],
+  [
+   2,
+   4
+  ],
+  [
+   22,
+   20
+  ],
+  [
+   2,
+   2
+  ],
+  [
+   4,
+   1
+  ],
+  [
+   0,
+   1
+  ],
+  [
+   5,
+   3
+  ],
+  [
+   4,
+   3
+  ],
+  [
+   6,
+   5
+  ],
+  [
+   5,
+   5
+  ],
+  [
+   15,
+   14
+  ],
+  [
+   7,
+   6
+  ],
+  [
+   18,
+   17
+  ],
+  [
+   9,
+   5
+  ],
+  [
+   14,
+   11
+  ],
+  [
+   10,
+   3
+  ],
+  [
+   14,
+   1
+  ],
+  [
+   9,
+   7
+  ],
+  [
+   12,
+   0
+  ],
+  [
+   22,
+   22
+  ],
+  [
+   11,
+   2
+  ],
+  [
+   12,
+   2
+  ],
+  [
+   13,
+   2
+  ],
+  [
+   21,
+   2
+  ],
+  [
+   10,
+   1
+  ],
+  [
+   23,
+   1
+  ],
+  [
+   8,
+   1
+  ],
+  [
+   0,
+   17
+  ],
+  [
+   15,
+   1
+  ],
+  [
+   0,
+   19
+  ],
+  [
+   6,
+   1
+  ],
+  [
+   2,
+   18
+  ],
+  [
+   5,
+   1
+  ],
+  [
+   2,
+   20
+  ],
+  [
+   7,
+   1
+  ],
+  [
+   3,
+   22
+  ],
+  [
+   11,
+   1
+  ],
+  [
+   1,
+   21
+  ],
+  [
+   4,
+   0
+  ],
+  [
+   3,
+   8
+  ],
+  [
+   3,
+   2
+  ],
+  [
+   4,
+   10
+  ],
+  [
+   2,
+   0
+  ],
+  [
+   7,
+   8
+  ],
+  [
+   16,
+   23
+  ],
+  [
+   0,
+   11
+  ],
+  [
+   18,
+   23
+  ],
+  [
+   4,
+   21
+  ],
+  [
+   18,
+   22
+  ],
+  [
+   0,
+   13
+  ],
+  [
+   18,
+   16
+  ],
+  [
+   2,
+   10
+  ],
+  [
+   6,
+   2
+  ],
+  [
+   1,
+   13
+  ],
+  [
+   22,
+   21
+  ],
+  [
+   0,
+   15
+  ],
+  [
+   20,
+   12
+  ],
+  [
+   2,
+   16
+  ],
+  [
+   22,
+   0
+  ],
+  [
+   3,
+   14
+  ],
+  [
+   8,
+   23
+  ],
+  [
+   19,
+   1
+  ],
+  [
+   11,
+   23
+  ],
+  [
+   4,
+   19
+  ],
+  [
+   7,
+   21
+  ],
+  [
+   6,
+   20
+  ],
+  [
+   21,
+   1
+  ],
+  [
+   7,
+   4
+  ],
+  [
+   9,
+   20
+  ],
+  [
+   3,
+   12
+  ],
+  [
+   1,
+   16
+  ],
+  [
+   1,
+   3
+  ],
+  [
+   22,
+   2
+  ],
+  [
+   2,
+   14
+  ],
+  [
+   18,
+   6
+  ],
+  [
+   8,
+   2
+  ],
+  [
+   9,
+   0
+  ],
+  [
+   9,
+   1
+  ],
+  [
+   21,
+   11
+  ],
+  [
+   3,
+   4
+  ],
+  [
+   20,
+   13
+  ],
+  [
+   0,
+   5
+  ],
+  [
+   17,
+   22
+  ],
+  [
+   2,
+   6
+  ],
+  [
+   19,
+   21
+  ],
+  [
+   5,
+   13
+  ],
+  [
+   19,
+   23
+  ],
+  [
+   4,
+   16
+  ],
+  [
+   21,
+   22
+  ],
+  [
+   4,
+   15
+  ],
+  [
+   20,
+   22
+  ],
+  [
+   6,
+   15
+  ],
+  [
+   6,
+   22
+  ],
+  [
+   14,
+   5
+  ],
+  [
+   4,
+   23
+  ],
+  [
+   13,
+   7
+  ],
+  [
+   2,
+   23
+  ],
+  [
+   23,
+   8
+  ],
+  [
+   3,
+   21
+  ],
+  [
+   22,
+   3
+  ],
+  [
+   7,
+   0
+  ],
+  [
+   23,
+   5
+  ],
+  [
+   10,
+   7
+  ],
+  [
+   11,
+   4
+  ],
+  [
+   19,
+   0
+  ],
+  [
+   9,
+   3
+  ],
+  [
+   10,
+   2
+  ],
+  [
+   2,
+   11
+  ],
+  [
+   1,
+   14
+  ],
+  [
+   16,
+   2
+  ],
+  [
+   5,
+   0
+  ],
+  [
+   12,
+   11
+  ],
+  [
+   3,
+   1
+  ],
+  [
+   10,
+   10
+  ],
+  [
+   5,
+   22
+  ],
+  [
+   8,
+   9
+  ],
+  [
+   5,
+   20
+  ],
+  [
+   5,
+   4
+  ],
+  [
+   19,
+   15
+  ],
+  [
+   23,
+   6
+  ],
+  [
+   20,
+   23
+  ],
+  [
+   21,
+   5
+  ],
+  [
+   22,
+   23
+  ],
+  [
+   6,
+   17
+  ],
+  [
+   1,
+   4
+  ],
+  [
+   17,
+   1
+  ],
+  [
+   19,
+   14
+  ],
+  [
+   8,
+   16
+  ],
+  [
+   1,
+   18
+  ],
+  [
+   2,
+   9
+  ],
+  [
+   1,
+   10
+  ],
+  [
+   0,
+   18
+  ],
+  [
+   22,
+   17
+  ],
+  [
+   7,
+   14
+  ],
+  [
+   9,
+   23
+  ],
+  [
+   9,
+   15
+  ],
+  [
+   22,
+   11
+  ],
+  [
+   8,
+   18
+  ],
+  [
+   22,
+   19
+  ],
+  [
+   21,
+   3
+  ],
+  [
+   22,
+   4
+  ],
+  [
+   23,
+   4
+  ],
+  [
+   20,
+   20
+  ],
+  [
+   16,
+   6
+  ],
+  [
+   1,
+   20
+  ],
+  [
+   7,
+   9
+  ],
+  [
+   11,
+   0
+  ],
+  [
+   15,
+   8
+  ],
+  [
+   1,
+   22
+  ],
+  [
+   23,
+   18
+  ],
+  [
+   13,
+   23
+  ],
+  [
+   2,
+   21
+  ],
+  [
+   13,
+   0
+  ],
+  [
+   2,
+   19
+  ],
+  [
+   17,
+   0
+  ],
+  [
+   2,
+   12
+  ],
+  [
+   1,
+   12
+  ],
+  [
+   0,
+   12
+  ],
+  [
+   15,
+   23
+  ],
+  [
+   0,
+   22
+  ],
+  [
+   3,
+   23
+  ],
+  [
+   0,
+   20
+  ],
+  [
+   1,
+   0
+  ],
+  [
+   6,
+   11
+  ],
+  [
+   1,
+   2
+  ],
+  [
+   20,
+   14
+  ],
+  [
+   21,
+   13
+  ],
+  [
+   8,
+   14
+  ],
+  [
+   13,
+   1
+  ],
+  [
+   8,
+   12
+  ],
+  [
+   15,
+   0
+  ],
+  [
+   14,
+   14
+  ],
+  [
+   1,
+   8
+  ],
+  [
+   8,
+   10
+  ],
+  [
+   22,
+   12
+  ],
+  [
+   0,
+   6
+  ],
+  [
+   21,
+   14
+  ],
+  [
+   0,
+   8
+  ],
+  [
+   7,
+   23
+  ],
+  [
+   23,
+   10
+  ],
+  [
+   22,
+   16
+  ],
+  [
+   0,
+   10
+  ],
+  [
+   21,
+   18
+  ],
+  [
+   4,
+   5
+  ],
+  [
+   20,
+   16
+  ],
+  [
+   6,
+   4
+  ],
+  [
+   2,
+   3
+  ],
+  [
+   6,
+   6
+  ],
+  [
+   21,
+   0
+  ],
+  [
+   4,
+   11
+  ],
+  [
+   2,
+   1
+  ],
+  [
+   8,
+   7
+  ],
+  [
+   3,
+   0
+  ],
+  [
+   15,
+   21
+  ],
+  [
+   2,
+   5
+  ],
+  [
+   23,
+   2
+  ],
+  [
+   20,
+   17
+  ],
+  [
+   23,
+   13
+  ],
+  [
+   19,
+   19
+  ],
+  [
+   13,
+   16
+  ],
+  [
+   21,
+   15
+  ],
+  [
+   5,
+   9
+  ],
+  [
+   22,
+   13
+  ],
+  [
+   4,
+   2
+  ],
+  [
+   11,
+   7
+  ],
+  [
+   3,
+   3
+  ],
+  [
+   11,
+   8
+  ],
+  [
+   6,
+   12
+  ],
+  [
+   13,
+   11
+  ],
+  [
+   0,
+   2
+  ],
+  [
+   13,
+   9
+  ],
+  [
+   4,
+   7
+  ],
+  [
+   5,
+   23
+  ],
+  [
+   5,
+   2
+  ],
+  [
+   11,
+   9
+  ],
+  [
+   10,
+   12
+  ],
+  [
+   11,
+   3
+  ],
+  [
+   20,
+   18
+  ],
+  [
+   6,
+   21
+  ],
+  [
+   23,
+   22
+  ],
+  [
+   1,
+   23
+  ],
+  [
+   4,
+   4
+  ],
+  [
+   8,
+   21
+  ],
+  [
+   5,
+   6
+  ],
+  [
+   12,
+   17
+  ],
+  [
+   20,
+   3
+  ],
+  [
+   15,
+   9
+  ],
+  [
+   6,
+   7
+  ],
+  [
+   19,
+   18
+  ],
+  [
+   17,
+   9
+  ],
+  [
+   13,
+   8
+  ],
+  [
+   23,
+   11
+  ],
+  [
+   11,
+   10
+  ],
+  [
+   23,
+   17
+  ],
+  [
+   10,
+   4
+  ],
+  [
+   8,
+   11
+  ],
+  [
+   14,
+   7
+  ],
+  [
+   8,
+   8
+  ],
+  [
+   12,
+   6
+  ],
+  [
+   23,
+   19
+  ],
+  [
+   11,
+   5
+  ],
+  [
+   23,
+   21
+  ],
+  [
+   12,
+   8
+  ],
+  [
+   21,
+   20
+  ],
+  [
+   9,
+   4
+  ],
+  [
+   23,
+   14
+  ],
+  [
+   10,
+   5
+  ],
+  [
+   4,
+   13
+  ],
+  [
+   10,
+   6
+  ],
+  [
+   3,
+   17
+  ],
+  [
+   12,
+   3
+  ],
+  [
+   4,
+   17
+  ],
+  [
+   14,
+   9
+  ],
+  [
+   9,
+   6
+  ],
+  [
+   8,
+   20
+  ],
+  [
+   9,
+   8
+  ],
+  [
+   19,
+   16
+  ],
+  [
+   3,
+   13
+  ],
+  [
+   12,
+   5
+  ],
+  [
+   3,
+   15
+  ],
+  [
+   13,
+   6
+  ],
+  [
+   7,
+   5
+  ],
+  [
+   13,
+   13
+  ],
+  [
+   4,
+   9
+  ],
+  [
+   9,
+   16
+  ],
+  [
+   5,
+   11
+  ],
+  [
+   11,
+   12
+  ],
+  [
+   5,
+   14
+  ],
+  [
+   3,
+   9
+  ],
+  [
+   6,
+   3
+  ],
+  [
+   10,
+   9
+  ],
+  [
+   7,
+   12
+  ],
+  [
+   10,
+   20
+  ],
+  [
+   6,
+   10
+  ],
+  [
+   10,
+   15
+  ],
+  [
+   9,
+   14
+  ],
+  [
+   6,
+   19
+  ],
+  [
+   12,
+   10
+  ],
+  [
+   4,
+   20
+  ],
+  [
+   3,
+   19
+  ],
+  [
+   17,
+   8
+  ],
+  [
+   4,
+   18
+  ],
+  [
+   13,
+   3
+  ],
+  [
+   5,
+   8
+  ],
+  [
+   3,
+   7
+  ],
+  [
+   7,
+   7
+  ],
+  [
+   10,
+   16
+  ],
+  [
+   6,
+   8
+  ],
+  [
+   11,
+   17
+  ],
+  [
+   8,
+   6
+  ],
+  [
+   9,
+   18
+  ],
+  [
+   8,
+   5
+  ],
+  [
+   7,
+   17
+  ],
+  [
+   8,
+   17
+  ],
+  [
+   15,
+   7
+  ],
+  [
+   6,
+   16
+  ],
+  [
+   16,
+   21
+  ],
+  [
+   17,
+   6
+  ],
+  [
+   16,
+   8
+  ],
+  [
+   15,
+   4
+  ],
+  [
+   10,
+   13
+  ],
+  [
+   14,
+   2
+  ],
+  [
+   15,
+   12
+  ],
+  [
+   5,
+   18
+  ],
+  [
+   8,
+   19
+  ],
+  [
+   0,
+   4
+  ],
+  [
+   14,
+   4
+  ],
+  [
+   11,
+   15
+  ],
+  [
+   14,
+   6
+  ],
+  [
+   13,
+   4
+  ],
+  [
+   16,
+   10
+  ],
+  [
+   12,
+   14
+  ],
+  [
+   7,
+   3
+  ],
+  [
+   16,
+   5
+  ],
+  [
+   18,
+   18
+  ],
+  [
+   15,
+   5
+  ],
+  [
+   6,
+   18
+  ],
+  [
+   7,
+   15
+  ],
+  [
+   7,
+   19
+  ],
+  [
+   9,
+   13
+  ],
+  [
+   16,
+   7
+  ],
+  [
+   5,
+   16
+  ],
+  [
+   10,
+   19
+  ],
+  [
+   10,
+   11
+  ],
+  [
+   12,
+   16
+  ],
+  [
+   17,
+   20
+  ],
+  [
+   17,
+   5
+  ],
+  [
+   11,
+   14
+  ],
+  [
+   15,
+   2
+  ],
+  [
+   9,
+   11
+  ],
+  [
+   3,
+   5
+  ],
+  [
+   15,
+   16
+  ],
+  [
+   8,
+   3
+  ],
+  [
+   23,
+   15
+  ],
+  [
+   16,
+   19
+  ],
+  [
+   4,
+   6
+  ],
+  [
+   16,
+   15
+  ]
+ ],
+ "per_move": [
+  {
+   "ply": 0,
+   "player": "legacy_hard",
+   "ms": 2725.0544999986887,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 1,
+   "player": "new_hard",
+   "ms": 1321.0770410001278,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "root_mean",
+   "seeds": {
+    "search": 109868459531656,
+    "readout": 99985941499416
+   }
+  },
+  {
+   "ply": 2,
+   "player": "legacy_hard",
+   "ms": 2727.1305830013007,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 3,
+   "player": "new_hard",
+   "ms": 1325.5564999990165,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "root_mean",
+   "seeds": {
+    "search": 64385576985098,
+    "readout": 18091754856140
+   }
+  },
+  {
+   "ply": 4,
+   "player": "legacy_hard",
+   "ms": 2736.642208000645,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 5,
+   "player": "new_hard",
+   "ms": 1316.7447919994593,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "root_mean",
+   "seeds": {
+    "search": 173991869749148,
+    "readout": 249909213285391
+   }
+  },
+  {
+   "ply": 6,
+   "player": "legacy_hard",
+   "ms": 2746.707417000085,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 7,
+   "player": "new_hard",
+   "ms": 1323.3886249996722,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "root_mean",
+   "seeds": {
+    "search": 144774750433612,
+    "readout": 87497895680975
+   }
+  },
+  {
+   "ply": 8,
+   "player": "legacy_hard",
+   "ms": 2730.863749999553,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 9,
+   "player": "new_hard",
+   "ms": 1329.7167499996722,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "root_mean",
+   "seeds": {
+    "search": 258334578778679,
+    "readout": 194105109259231
+   }
+  },
+  {
+   "ply": 10,
+   "player": "legacy_hard",
+   "ms": 2718.99025000073,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 11,
+   "player": "new_hard",
+   "ms": 1321.3185000009835,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "root_mean",
+   "seeds": {
+    "search": 163004768435652,
+    "readout": 120092636468495
+   }
+  },
+  {
+   "ply": 12,
+   "player": "legacy_hard",
+   "ms": 2714.6070830002427,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 13,
+   "player": "new_hard",
+   "ms": 1323.2530000004917,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "root_mean",
+   "seeds": {
+    "search": 233746778807881,
+    "readout": 212958785391002
+   }
+  },
+  {
+   "ply": 14,
+   "player": "legacy_hard",
+   "ms": 2718.154874999076,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 15,
+   "player": "new_hard",
+   "ms": 1325.7673339992762,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "root_mean",
+   "seeds": {
+    "search": 257804732618908,
+    "readout": 125238032995385
+   }
+  },
+  {
+   "ply": 16,
+   "player": "legacy_hard",
+   "ms": 2713.8946669995785,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 17,
+   "player": "new_hard",
+   "ms": 1321.39254200086,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "root_mean",
+   "seeds": {
+    "search": 104270608230224,
+    "readout": 100889458105414
+   }
+  },
+  {
+   "ply": 18,
+   "player": "legacy_hard",
+   "ms": 2715.4691249988973,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 19,
+   "player": "new_hard",
+   "ms": 1325.8142910003662,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "root_mean",
+   "seeds": {
+    "search": 254965659938723,
+    "readout": 236158929905296
+   }
+  },
+  {
+   "ply": 20,
+   "player": "legacy_hard",
+   "ms": 2716.019375000149,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 21,
+   "player": "new_hard",
+   "ms": 1340.5359160006046,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 28470036115651,
+    "readout": 269264309434754
+   }
+  },
+  {
+   "ply": 22,
+   "player": "legacy_hard",
+   "ms": 2731.8062500003725,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 23,
+   "player": "new_hard",
+   "ms": 1341.159375000745,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 42767299633560,
+    "readout": 34562235507003
+   }
+  },
+  {
+   "ply": 24,
+   "player": "legacy_hard",
+   "ms": 2728.950207998976,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 25,
+   "player": "new_hard",
+   "ms": 1338.674375001341,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 154747338185455,
+    "readout": 17746032335264
+   }
+  },
+  {
+   "ply": 26,
+   "player": "legacy_hard",
+   "ms": 2747.1215419992805,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 27,
+   "player": "new_hard",
+   "ms": 1342.5764160007238,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 277768955779347,
+    "readout": 158936620668578
+   }
+  },
+  {
+   "ply": 28,
+   "player": "legacy_hard",
+   "ms": 2728.5699579995126,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 29,
+   "player": "new_hard",
+   "ms": 1351.979707999155,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 160581072053693,
+    "readout": 23196808173964
+   }
+  },
+  {
+   "ply": 30,
+   "player": "legacy_hard",
+   "ms": 2745.1195420008153,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 31,
+   "player": "new_hard",
+   "ms": 1352.6896660011262,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 86885260658188,
+    "readout": 113453980072318
+   }
+  },
+  {
+   "ply": 32,
+   "player": "legacy_hard",
+   "ms": 2738.732000000775,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 33,
+   "player": "new_hard",
+   "ms": 1347.9857499990612,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 202127388607294,
+    "readout": 215193609168004
+   }
+  },
+  {
+   "ply": 34,
+   "player": "legacy_hard",
+   "ms": 2755.3895830009133,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 35,
+   "player": "new_hard",
+   "ms": 1266.900957999751,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 120151147881890,
+    "readout": 99125728695094
+   }
+  },
+  {
+   "ply": 36,
+   "player": "legacy_hard",
+   "ms": 2774.230707999319,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 37,
+   "player": "new_hard",
+   "ms": 1348.3582090009004,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 181542708355612,
+    "readout": 86755746021676
+   }
+  },
+  {
+   "ply": 38,
+   "player": "legacy_hard",
+   "ms": 2794.2715409994125,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 39,
+   "player": "new_hard",
+   "ms": 1337.376000000164,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 256719279440591,
+    "readout": 16115651317656
+   }
+  },
+  {
+   "ply": 40,
+   "player": "legacy_hard",
+   "ms": 2799.4126670006663,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 41,
+   "player": "new_hard",
+   "ms": 1341.236207999289,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 204872442877844,
+    "readout": 170892614227393
+   }
+  },
+  {
+   "ply": 42,
+   "player": "legacy_hard",
+   "ms": 2811.180249998346,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 43,
+   "player": "new_hard",
+   "ms": 1344.5125420000404,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 198220362553625,
+    "readout": 259526686735916
+   }
+  },
+  {
+   "ply": 44,
+   "player": "legacy_hard",
+   "ms": 2818.3158340007067,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 45,
+   "player": "new_hard",
+   "ms": 1343.5089999996126,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 240340203112515,
+    "readout": 58589095490518
+   }
+  },
+  {
+   "ply": 46,
+   "player": "legacy_hard",
+   "ms": 2842.4387090001255,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 47,
+   "player": "new_hard",
+   "ms": 1345.3313750009984,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 274344825729033,
+    "readout": 101690779923573
+   }
+  },
+  {
+   "ply": 48,
+   "player": "legacy_hard",
+   "ms": 2816.2114160005003,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 49,
+   "player": "new_hard",
+   "ms": 1350.8444170001894,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 231115035885604,
+    "readout": 15263528075193
+   }
+  },
+  {
+   "ply": 50,
+   "player": "legacy_hard",
+   "ms": 2788.2544999998063,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 51,
+   "player": "new_hard",
+   "ms": 1348.089333999902,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 99909566368966,
+    "readout": 71660621510143
+   }
+  },
+  {
+   "ply": 52,
+   "player": "legacy_hard",
+   "ms": 2772.886416999623,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 53,
+   "player": "new_hard",
+   "ms": 1350.8826659992337,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 277584121191176,
+    "readout": 124089537294875
+   }
+  },
+  {
+   "ply": 54,
+   "player": "legacy_hard",
+   "ms": 2763.192874999717,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 55,
+   "player": "new_hard",
+   "ms": 1347.0308330003172,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 133184288291707,
+    "readout": 100296061561399
+   }
+  },
+  {
+   "ply": 56,
+   "player": "legacy_hard",
+   "ms": 2773.413416000083,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 57,
+   "player": "new_hard",
+   "ms": 1344.0166669990867,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 207416174055942,
+    "readout": 145140286541801
+   }
+  },
+  {
+   "ply": 58,
+   "player": "legacy_hard",
+   "ms": 2840.366250000894,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 59,
+   "player": "new_hard",
+   "ms": 1346.2286249995232,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 254075363685902,
+    "readout": 259047627725217
+   }
+  },
+  {
+   "ply": 60,
+   "player": "legacy_hard",
+   "ms": 2899.4581669997424,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 61,
+   "player": "new_hard",
+   "ms": 1349.7220830004662,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 137357434810221,
+    "readout": 116419756857338
+   }
+  },
+  {
+   "ply": 62,
+   "player": "legacy_hard",
+   "ms": 2846.2786659989506,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 63,
+   "player": "new_hard",
+   "ms": 1355.647166999057,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 171827284695401,
+    "readout": 103530808104868
+   }
+  },
+  {
+   "ply": 64,
+   "player": "legacy_hard",
+   "ms": 2882.1923750005662,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 65,
+   "player": "new_hard",
+   "ms": 1359.0501249991357,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 73002743813614,
+    "readout": 164342547877458
+   }
+  },
+  {
+   "ply": 66,
+   "player": "legacy_hard",
+   "ms": 2873.9091669991612,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 67,
+   "player": "new_hard",
+   "ms": 1352.834707999602,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 51985575928869,
+    "readout": 36250155378604
+   }
+  },
+  {
+   "ply": 68,
+   "player": "legacy_hard",
+   "ms": 2878.560750000179,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 69,
+   "player": "new_hard",
+   "ms": 1361.7142089996487,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 129662906120364,
+    "readout": 224553411299959
+   }
+  },
+  {
+   "ply": 70,
+   "player": "legacy_hard",
+   "ms": 2930.702459000051,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 71,
+   "player": "new_hard",
+   "ms": 1365.010332999751,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 93538115354316,
+    "readout": 105412070876943
+   }
+  },
+  {
+   "ply": 72,
+   "player": "legacy_hard",
+   "ms": 2911.8698340002447,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 73,
+   "player": "new_hard",
+   "ms": 1369.320290999487,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 205175869247601,
+    "readout": 126650933132559
+   }
+  },
+  {
+   "ply": 74,
+   "player": "legacy_hard",
+   "ms": 2894.7300840001553,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 75,
+   "player": "new_hard",
+   "ms": 1371.1682080011815,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 177316223059446,
+    "readout": 232262107847776
+   }
+  },
+  {
+   "ply": 76,
+   "player": "legacy_hard",
+   "ms": 2896.522416001186,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 77,
+   "player": "new_hard",
+   "ms": 1375.057832999155,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 21821795852167,
+    "readout": 95394812288321
+   }
+  },
+  {
+   "ply": 78,
+   "player": "legacy_hard",
+   "ms": 2881.1375420000404,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 79,
+   "player": "new_hard",
+   "ms": 1368.2569579984993,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 129908574156088,
+    "readout": 234182473013329
+   }
+  },
+  {
+   "ply": 80,
+   "player": "legacy_hard",
+   "ms": 2984.6238749995828,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 81,
+   "player": "new_hard",
+   "ms": 1371.511916000396,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 189582164903705,
+    "readout": 206063083340826
+   }
+  },
+  {
+   "ply": 82,
+   "player": "legacy_hard",
+   "ms": 2928.1955000013113,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 83,
+   "player": "new_hard",
+   "ms": 1369.6262080017477,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 160859581772376,
+    "readout": 1648015663044
+   }
+  },
+  {
+   "ply": 84,
+   "player": "legacy_hard",
+   "ms": 2980.9237910006195,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 85,
+   "player": "new_hard",
+   "ms": 1368.5039169993252,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 134886661400466,
+    "readout": 90472715309064
+   }
+  },
+  {
+   "ply": 86,
+   "player": "legacy_hard",
+   "ms": 2943.4072919990867,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 87,
+   "player": "new_hard",
+   "ms": 1368.930665999651,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 132395553952351,
+    "readout": 134339717547771
+   }
+  },
+  {
+   "ply": 88,
+   "player": "legacy_hard",
+   "ms": 2945.7193340007216,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 89,
+   "player": "new_hard",
+   "ms": 1375.0691250003874,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 69232347901439,
+    "readout": 181259034412336
+   }
+  },
+  {
+   "ply": 90,
+   "player": "legacy_hard",
+   "ms": 3007.1306660007685,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 91,
+   "player": "new_hard",
+   "ms": 1382.4994169995189,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 159258770642420,
+    "readout": 31965822144748
+   }
+  },
+  {
+   "ply": 92,
+   "player": "legacy_hard",
+   "ms": 2977.9762499984354,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 93,
+   "player": "new_hard",
+   "ms": 1382.7596250008792,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 259226485236034,
+    "readout": 27863000067437
+   }
+  },
+  {
+   "ply": 94,
+   "player": "legacy_hard",
+   "ms": 2971.8161249998957,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 95,
+   "player": "new_hard",
+   "ms": 1383.2183340005577,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 128396737810074,
+    "readout": 95151114710729
+   }
+  },
+  {
+   "ply": 96,
+   "player": "legacy_hard",
+   "ms": 3042.7700420003384,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 97,
+   "player": "new_hard",
+   "ms": 1386.336874999106,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 259238011240019,
+    "readout": 63550401960865
+   }
+  },
+  {
+   "ply": 98,
+   "player": "legacy_hard",
+   "ms": 2956.7659579999745,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 99,
+   "player": "new_hard",
+   "ms": 1386.231625000015,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 12723614065324,
+    "readout": 206087442036960
+   }
+  },
+  {
+   "ply": 100,
+   "player": "legacy_hard",
+   "ms": 3009.976042000577,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 101,
+   "player": "new_hard",
+   "ms": 1394.814083000645,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 42715054642527,
+    "readout": 133390208903577
+   }
+  },
+  {
+   "ply": 102,
+   "player": "legacy_hard",
+   "ms": 3071.415084000677,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 103,
+   "player": "new_hard",
+   "ms": 1412.9473749995232,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 182679733920460,
+    "readout": 258626125852798
+   }
+  },
+  {
+   "ply": 104,
+   "player": "legacy_hard",
+   "ms": 3068.7057089991868,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 105,
+   "player": "new_hard",
+   "ms": 1405.1280829999596,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 276931369850751,
+    "readout": 224331293454663
+   }
+  },
+  {
+   "ply": 106,
+   "player": "legacy_hard",
+   "ms": 3083.0807089991868,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 107,
+   "player": "new_hard",
+   "ms": 1405.983084000647,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 104976864268431,
+    "readout": 153102748435277
+   }
+  },
+  {
+   "ply": 108,
+   "player": "legacy_hard",
+   "ms": 3029.488500000909,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 109,
+   "player": "new_hard",
+   "ms": 1413.305541999638,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 74875253285696,
+    "readout": 280329409316147
+   }
+  },
+  {
+   "ply": 110,
+   "player": "legacy_hard",
+   "ms": 3071.841459000483,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 111,
+   "player": "new_hard",
+   "ms": 1407.6107500009239,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 46882921187533,
+    "readout": 106730911097630
+   }
+  },
+  {
+   "ply": 112,
+   "player": "legacy_hard",
+   "ms": 3080.2769999988377,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 113,
+   "player": "new_hard",
+   "ms": 1408.557791000232,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 56892878691027,
+    "readout": 5773456495974
+   }
+  },
+  {
+   "ply": 114,
+   "player": "legacy_hard",
+   "ms": 3055.3874590005726,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 115,
+   "player": "new_hard",
+   "ms": 1417.02895799838,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 6914368922286,
+    "readout": 175588316815933
+   }
+  },
+  {
+   "ply": 116,
+   "player": "legacy_hard",
+   "ms": 3074.0282920002937,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 117,
+   "player": "new_hard",
+   "ms": 1419.6915419995785,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 3378181277056,
+    "readout": 181744081841840
+   }
+  },
+  {
+   "ply": 118,
+   "player": "legacy_hard",
+   "ms": 3116.1163750011474,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 119,
+   "player": "new_hard",
+   "ms": 1415.8086669985205,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 65408529707573,
+    "readout": 38287114334432
+   }
+  },
+  {
+   "ply": 120,
+   "player": "legacy_hard",
+   "ms": 3130.81366699934,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 121,
+   "player": "new_hard",
+   "ms": 1416.2692910004407,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 199402754471928,
+    "readout": 17212044151798
+   }
+  },
+  {
+   "ply": 122,
+   "player": "legacy_hard",
+   "ms": 3139.22308300063,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 123,
+   "player": "new_hard",
+   "ms": 1420.5018750000745,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 217202074776436,
+    "readout": 109202634971135
+   }
+  },
+  {
+   "ply": 124,
+   "player": "legacy_hard",
+   "ms": 3144.552625000477,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 125,
+   "player": "new_hard",
+   "ms": 1425.114667000249,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 12255752700696,
+    "readout": 50596472359275
+   }
+  },
+  {
+   "ply": 126,
+   "player": "legacy_hard",
+   "ms": 3145.5480000004172,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 127,
+   "player": "new_hard",
+   "ms": 1421.5891249999404,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 180626459616027,
+    "readout": 75683908979436
+   }
+  },
+  {
+   "ply": 128,
+   "player": "legacy_hard",
+   "ms": 3097.043749999255,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 129,
+   "player": "new_hard",
+   "ms": 1419.5504999998957,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 229734987318609,
+    "readout": 195261627285586
+   }
+  },
+  {
+   "ply": 130,
+   "player": "legacy_hard",
+   "ms": 3086.9939589984715,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 131,
+   "player": "new_hard",
+   "ms": 1422.2113749999553,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 205742599470208,
+    "readout": 222633341630047
+   }
+  },
+  {
+   "ply": 132,
+   "player": "legacy_hard",
+   "ms": 3127.3763330001384,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 133,
+   "player": "new_hard",
+   "ms": 1422.975874999538,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 228861543109800,
+    "readout": 258274438229131
+   }
+  },
+  {
+   "ply": 134,
+   "player": "legacy_hard",
+   "ms": 3138.641291998327,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 135,
+   "player": "new_hard",
+   "ms": 1427.3344999998808,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 106489923831360,
+    "readout": 214722563149686
+   }
+  },
+  {
+   "ply": 136,
+   "player": "legacy_hard",
+   "ms": 3153.1462089996785,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 137,
+   "player": "new_hard",
+   "ms": 1425.3805410005152,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 273911238027818,
+    "readout": 155449049717309
+   }
+  },
+  {
+   "ply": 138,
+   "player": "legacy_hard",
+   "ms": 3155.429833000526,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 139,
+   "player": "new_hard",
+   "ms": 1427.1976660005748,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 38113312691631,
+    "readout": 257927843653391
+   }
+  },
+  {
+   "ply": 140,
+   "player": "legacy_hard",
+   "ms": 3171.1031660009176,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 141,
+   "player": "new_hard",
+   "ms": 1428.2189170010388,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 171146082805286,
+    "readout": 82139115802448
+   }
+  },
+  {
+   "ply": 142,
+   "player": "legacy_hard",
+   "ms": 3170.958833999932,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 143,
+   "player": "new_hard",
+   "ms": 1437.166333001107,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 49321872648835,
+    "readout": 235355773538013
+   }
+  },
+  {
+   "ply": 144,
+   "player": "legacy_hard",
+   "ms": 3184.7756660003215,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 145,
+   "player": "new_hard",
+   "ms": 1437.2540000006557,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 59801715358080,
+    "readout": 167036506720528
+   }
+  },
+  {
+   "ply": 146,
+   "player": "legacy_hard",
+   "ms": 3197.6317500006407,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 147,
+   "player": "new_hard",
+   "ms": 1434.8622919991612,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 9856948981388,
+    "readout": 256539581181979
+   }
+  },
+  {
+   "ply": 148,
+   "player": "legacy_hard",
+   "ms": 3143.2299999985844,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 149,
+   "player": "new_hard",
+   "ms": 1437.452583000064,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 80245688285925,
+    "readout": 214572524225748
+   }
+  },
+  {
+   "ply": 150,
+   "player": "legacy_hard",
+   "ms": 3190.4579999987036,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 151,
+   "player": "new_hard",
+   "ms": 1444.762416999787,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 137254517083154,
+    "readout": 197746664213916
+   }
+  },
+  {
+   "ply": 152,
+   "player": "legacy_hard",
+   "ms": 3195.9132909998298,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 153,
+   "player": "new_hard",
+   "ms": 1442.5390000008047,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 145929520131024,
+    "readout": 31051872119276
+   }
+  },
+  {
+   "ply": 154,
+   "player": "legacy_hard",
+   "ms": 3238.1077080015093,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 155,
+   "player": "new_hard",
+   "ms": 1436.5675419997424,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 117599684403695,
+    "readout": 177498623900962
+   }
+  },
+  {
+   "ply": 156,
+   "player": "legacy_hard",
+   "ms": 3179.681583000347,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 157,
+   "player": "new_hard",
+   "ms": 1438.7188750002533,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 148368063573569,
+    "readout": 45474032775304
+   }
+  },
+  {
+   "ply": 158,
+   "player": "legacy_hard",
+   "ms": 3141.096667001024,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 159,
+   "player": "new_hard",
+   "ms": 1446.2817500010133,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 258831735340082,
+    "readout": 210324351238481
+   }
+  },
+  {
+   "ply": 160,
+   "player": "legacy_hard",
+   "ms": 3173.519750000909,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 161,
+   "player": "new_hard",
+   "ms": 1439.5007920004427,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 106235050798358,
+    "readout": 175324631298326
+   }
+  },
+  {
+   "ply": 162,
+   "player": "legacy_hard",
+   "ms": 3244.7907079998404,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 163,
+   "player": "new_hard",
+   "ms": 1431.5287919994444,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 146795120362172,
+    "readout": 270843510336655
+   }
+  },
+  {
+   "ply": 164,
+   "player": "legacy_hard",
+   "ms": 3230.797124998644,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 165,
+   "player": "new_hard",
+   "ms": 1434.6580420006067,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 106914572493727,
+    "readout": 43837027210164
+   }
+  },
+  {
+   "ply": 166,
+   "player": "legacy_hard",
+   "ms": 3233.7231670003384,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 167,
+   "player": "new_hard",
+   "ms": 1435.6419580001384,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 22548304382725,
+    "readout": 121744497769642
+   }
+  },
+  {
+   "ply": 168,
+   "player": "legacy_hard",
+   "ms": 3272.6955829989165,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 169,
+   "player": "new_hard",
+   "ms": 1442.0139170009643,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 183239735837952,
+    "readout": 227314134435126
+   }
+  },
+  {
+   "ply": 170,
+   "player": "legacy_hard",
+   "ms": 3240.5206669997424,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 171,
+   "player": "new_hard",
+   "ms": 1441.17225000076,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 66322331401039,
+    "readout": 45882144139155
+   }
+  },
+  {
+   "ply": 172,
+   "player": "legacy_hard",
+   "ms": 3241.2222910001874,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 173,
+   "player": "new_hard",
+   "ms": 1447.352792000398,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 8165732879375,
+    "readout": 204398676307713
+   }
+  },
+  {
+   "ply": 174,
+   "player": "legacy_hard",
+   "ms": 3247.5924170017242,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 175,
+   "player": "new_hard",
+   "ms": 1443.5705409999937,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 19038458739746,
+    "readout": 121391409219558
+   }
+  },
+  {
+   "ply": 176,
+   "player": "legacy_hard",
+   "ms": 3233.7382909990847,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 177,
+   "player": "new_hard",
+   "ms": 1450.3133749999106,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 125094639719055,
+    "readout": 203130315555378
+   }
+  },
+  {
+   "ply": 178,
+   "player": "legacy_hard",
+   "ms": 3175.3903749994934,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 179,
+   "player": "new_hard",
+   "ms": 1449.1268750000745,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 110968032510649,
+    "readout": 151260710307908
+   }
+  },
+  {
+   "ply": 180,
+   "player": "legacy_hard",
+   "ms": 3174.132333001122,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 181,
+   "player": "new_hard",
+   "ms": 1448.6697919983417,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 31926339806276,
+    "readout": 148179398858450
+   }
+  },
+  {
+   "ply": 182,
+   "player": "legacy_hard",
+   "ms": 3206.2267499994487,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 183,
+   "player": "new_hard",
+   "ms": 1447.413125000894,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 43754938554487,
+    "readout": 45828115700337
+   }
+  },
+  {
+   "ply": 184,
+   "player": "legacy_hard",
+   "ms": 3231.015041999519,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 185,
+   "player": "new_hard",
+   "ms": 1449.5800000000745,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 119270465096544,
+    "readout": 250000837230117
+   }
+  },
+  {
+   "ply": 186,
+   "player": "legacy_hard",
+   "ms": 3206.976208999753,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 187,
+   "player": "new_hard",
+   "ms": 1452.9927500002086,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 224486014270176,
+    "readout": 102074377556026
+   }
+  },
+  {
+   "ply": 188,
+   "player": "legacy_hard",
+   "ms": 3206.5171670001,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 189,
+   "player": "new_hard",
+   "ms": 1450.3302500005811,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 189796897344030,
+    "readout": 178985222059995
+   }
+  },
+  {
+   "ply": 190,
+   "player": "legacy_hard",
+   "ms": 3219.195041999221,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 191,
+   "player": "new_hard",
+   "ms": 1454.1657079998404,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 192178417062279,
+    "readout": 185247632509823
+   }
+  },
+  {
+   "ply": 192,
+   "player": "legacy_hard",
+   "ms": 3229.394917000085,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 193,
+   "player": "new_hard",
+   "ms": 1454.926583999768,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 121476476901814,
+    "readout": 241845312584831
+   }
+  },
+  {
+   "ply": 194,
+   "player": "legacy_hard",
+   "ms": 3291.9801660012454,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 195,
+   "player": "new_hard",
+   "ms": 1471.5329170003533,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 170747495965565,
+    "readout": 78362427262637
+   }
+  },
+  {
+   "ply": 196,
+   "player": "legacy_hard",
+   "ms": 3301.353082999587,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 197,
+   "player": "new_hard",
+   "ms": 1461.1927499994636,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 182229886859673,
+    "readout": 264792538764598
+   }
+  },
+  {
+   "ply": 198,
+   "player": "legacy_hard",
+   "ms": 3315.74295799993,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 199,
+   "player": "new_hard",
+   "ms": 1467.8137500006706,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 204710380505210,
+    "readout": 144787652198933
+   }
+  },
+  {
+   "ply": 200,
+   "player": "legacy_hard",
+   "ms": 3359.1506249997765,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 201,
+   "player": "new_hard",
+   "ms": 1466.6070830002427,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 47911889944517,
+    "readout": 135291970264055
+   }
+  },
+  {
+   "ply": 202,
+   "player": "legacy_hard",
+   "ms": 3388.502125000581,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 203,
+   "player": "new_hard",
+   "ms": 1474.3845000006258,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 144001908500663,
+    "readout": 26657365698978
+   }
+  },
+  {
+   "ply": 204,
+   "player": "legacy_hard",
+   "ms": 3336.521749999374,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 205,
+   "player": "new_hard",
+   "ms": 1471.6238340009004,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 247543869768046,
+    "readout": 149946259067330
+   }
+  },
+  {
+   "ply": 206,
+   "player": "legacy_hard",
+   "ms": 3372.4331670012325,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 207,
+   "player": "new_hard",
+   "ms": 1493.4619589988142,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 226065017847139,
+    "readout": 36833969945643
+   }
+  },
+  {
+   "ply": 208,
+   "player": "legacy_hard",
+   "ms": 3415.5922910012305,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 209,
+   "player": "new_hard",
+   "ms": 1490.5668330006301,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 93181634060857,
+    "readout": 73441283306343
+   }
+  },
+  {
+   "ply": 210,
+   "player": "legacy_hard",
+   "ms": 3398.0521249994636,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 211,
+   "player": "new_hard",
+   "ms": 1492.874041998759,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 105909133296714,
+    "readout": 71282736380391
+   }
+  },
+  {
+   "ply": 212,
+   "player": "legacy_hard",
+   "ms": 3422.0760420002043,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 213,
+   "player": "new_hard",
+   "ms": 1493.7382079996169,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 155374297546347,
+    "readout": 108510989659357
+   }
+  },
+  {
+   "ply": 214,
+   "player": "legacy_hard",
+   "ms": 3439.428416000679,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 215,
+   "player": "new_hard",
+   "ms": 1488.7935839984566,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 64381046868621,
+    "readout": 97058734613774
+   }
+  },
+  {
+   "ply": 216,
+   "player": "legacy_hard",
+   "ms": 3466.879667000845,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 217,
+   "player": "new_hard",
+   "ms": 1504.3150829989463,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 1805099118182,
+    "readout": 134188934706314
+   }
+  },
+  {
+   "ply": 218,
+   "player": "legacy_hard",
+   "ms": 3477.4508330002427,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 219,
+   "player": "new_hard",
+   "ms": 1510.6400420013815,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 235815572555493,
+    "readout": 79964372881902
+   }
+  },
+  {
+   "ply": 220,
+   "player": "legacy_hard",
+   "ms": 3478.1788750011474,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 221,
+   "player": "new_hard",
+   "ms": 1520.0915839988738,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 51404933493788,
+    "readout": 177958624380851
+   }
+  },
+  {
+   "ply": 222,
+   "player": "legacy_hard",
+   "ms": 3575.657167000696,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 223,
+   "player": "new_hard",
+   "ms": 1547.2489580009133,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 258420205928506,
+    "readout": 20099184612518
+   }
+  },
+  {
+   "ply": 224,
+   "player": "legacy_hard",
+   "ms": 3641.580874999985,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 225,
+   "player": "new_hard",
+   "ms": 1551.3033329993486,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 15959555341487,
+    "readout": 223698740987897
+   }
+  },
+  {
+   "ply": 226,
+   "player": "legacy_hard",
+   "ms": 3636.5919579993933,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 227,
+   "player": "new_hard",
+   "ms": 1559.3925839997828,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 25021697330732,
+    "readout": 112510840873665
+   }
+  },
+  {
+   "ply": 228,
+   "player": "legacy_hard",
+   "ms": 3631.599500000477,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 229,
+   "player": "new_hard",
+   "ms": 1553.6288330014795,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 243797113995727,
+    "readout": 244480632188225
+   }
+  },
+  {
+   "ply": 230,
+   "player": "legacy_hard",
+   "ms": 3641.1177500002086,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 231,
+   "player": "new_hard",
+   "ms": 1558.3991669993848,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 81427644523025,
+    "readout": 21685765893559
+   }
+  },
+  {
+   "ply": 232,
+   "player": "legacy_hard",
+   "ms": 3626.2616249993443,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 233,
+   "player": "new_hard",
+   "ms": 1557.4393339995295,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 145436571096996,
+    "readout": 77556033052992
+   }
+  },
+  {
+   "ply": 234,
+   "player": "legacy_hard",
+   "ms": 3663.0134159997106,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 235,
+   "player": "new_hard",
+   "ms": 1583.008875001222,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 177318866143090,
+    "readout": 242451462816594
+   }
+  },
+  {
+   "ply": 236,
+   "player": "legacy_hard",
+   "ms": 3766.611665999517,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 237,
+   "player": "new_hard",
+   "ms": 1593.8116669990122,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 73550231465440,
+    "readout": 105877825233723
+   }
+  },
+  {
+   "ply": 238,
+   "player": "legacy_hard",
+   "ms": 3771.77537499927,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 239,
+   "player": "new_hard",
+   "ms": 1594.4025420006365,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 184321239304951,
+    "readout": 215018899352324
+   }
+  },
+  {
+   "ply": 240,
+   "player": "legacy_hard",
+   "ms": 3783.7612079996616,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 241,
+   "player": "new_hard",
+   "ms": 1592.0408340003341,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 280512876810692,
+    "readout": 126865999920093
+   }
+  },
+  {
+   "ply": 242,
+   "player": "legacy_hard",
+   "ms": 3788.987124999985,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 243,
+   "player": "new_hard",
+   "ms": 1599.0602909997106,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 179643087431306,
+    "readout": 221035116466659
+   }
+  },
+  {
+   "ply": 244,
+   "player": "legacy_hard",
+   "ms": 3851.968333000317,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 245,
+   "player": "new_hard",
+   "ms": 1601.2473329994828,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 93160720601848,
+    "readout": 106791075086090
+   }
+  },
+  {
+   "ply": 246,
+   "player": "legacy_hard",
+   "ms": 3844.199750000611,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 247,
+   "player": "new_hard",
+   "ms": 1600.2262919992208,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 278513958843312,
+    "readout": 148664367739031
+   }
+  },
+  {
+   "ply": 248,
+   "player": "legacy_hard",
+   "ms": 3795.4728330001235,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 249,
+   "player": "new_hard",
+   "ms": 1597.5590419992805,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 190760883980909,
+    "readout": 17281685950037
+   }
+  },
+  {
+   "ply": 250,
+   "player": "legacy_hard",
+   "ms": 3766.9727090001106,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 251,
+   "player": "new_hard",
+   "ms": 1592.4606670010835,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 29226518393127,
+    "readout": 201472382173649
+   }
+  },
+  {
+   "ply": 252,
+   "player": "legacy_hard",
+   "ms": 3786.7511250004172,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 253,
+   "player": "new_hard",
+   "ms": 1594.4155410006642,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 36232445795439,
+    "readout": 166839534085490
+   }
+  },
+  {
+   "ply": 254,
+   "player": "legacy_hard",
+   "ms": 3803.148292001337,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 255,
+   "player": "new_hard",
+   "ms": 1593.6079159993678,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 147831835754782,
+    "readout": 93503521714044
+   }
+  },
+  {
+   "ply": 256,
+   "player": "legacy_hard",
+   "ms": 3785.355624999851,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 257,
+   "player": "new_hard",
+   "ms": 1598.1629590000957,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 261899001923684,
+    "readout": 81840844871252
+   }
+  },
+  {
+   "ply": 258,
+   "player": "legacy_hard",
+   "ms": 3804.1767920013517,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 259,
+   "player": "new_hard",
+   "ms": 1596.3612500000745,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 123794494075836,
+    "readout": 195656714236962
+   }
+  },
+  {
+   "ply": 260,
+   "player": "legacy_hard",
+   "ms": 3843.5576249994338,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 261,
+   "player": "new_hard",
+   "ms": 1601.7210000008345,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 235185159154105,
+    "readout": 138466672656342
+   }
+  },
+  {
+   "ply": 262,
+   "player": "legacy_hard",
+   "ms": 3864.126583999023,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 263,
+   "player": "new_hard",
+   "ms": 1621.3265409991145,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 180332756148812,
+    "readout": 172310228946488
+   }
+  },
+  {
+   "ply": 264,
+   "player": "legacy_hard",
+   "ms": 3973.0805420000106,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 265,
+   "player": "new_hard",
+   "ms": 1623.0222500003874,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 257515255911863,
+    "readout": 278148313433511
+   }
+  },
+  {
+   "ply": 266,
+   "player": "legacy_hard",
+   "ms": 3901.485290998593,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 267,
+   "player": "new_hard",
+   "ms": 1626.3710839990526,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 256918695948449,
+    "readout": 17798229065674
+   }
+  },
+  {
+   "ply": 268,
+   "player": "legacy_hard",
+   "ms": 3936.2953750006855,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 269,
+   "player": "new_hard",
+   "ms": 1630.3338329996914,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 249905187846638,
+    "readout": 271029966883316
+   }
+  },
+  {
+   "ply": 270,
+   "player": "legacy_hard",
+   "ms": 3939.4259580001235,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 271,
+   "player": "new_hard",
+   "ms": 1636.1851250007749,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 856764292441,
+    "readout": 170912699162524
+   }
+  },
+  {
+   "ply": 272,
+   "player": "legacy_hard",
+   "ms": 3978.9017910007387,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 273,
+   "player": "new_hard",
+   "ms": 1636.8429160006344,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 85386477846334,
+    "readout": 273229982111285
+   }
+  },
+  {
+   "ply": 274,
+   "player": "legacy_hard",
+   "ms": 3995.4038329999894,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 275,
+   "player": "new_hard",
+   "ms": 1637.9983750004321,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 159683949400246,
+    "readout": 277974677712660
+   }
+  },
+  {
+   "ply": 276,
+   "player": "legacy_hard",
+   "ms": 4013.7492089997977,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 277,
+   "player": "new_hard",
+   "ms": 1641.1482919994742,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 112778051723629,
+    "readout": 130935791860145
+   }
+  },
+  {
+   "ply": 278,
+   "player": "legacy_hard",
+   "ms": 4095.2753340005875,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 279,
+   "player": "new_hard",
+   "ms": 1657.0730419997126,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 135004657128231,
+    "readout": 17742830374701
+   }
+  },
+  {
+   "ply": 280,
+   "player": "legacy_hard",
+   "ms": 4204.6818749997765,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 281,
+   "player": "new_hard",
+   "ms": 1656.9754579998553,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 184981404848617,
+    "readout": 54468783767591
+   }
+  },
+  {
+   "ply": 282,
+   "player": "legacy_hard",
+   "ms": 4267.887041999027,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 283,
+   "player": "new_hard",
+   "ms": 1657.3521250002086,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 44364825702449,
+    "readout": 208482261299201
+   }
+  },
+  {
+   "ply": 284,
+   "player": "legacy_hard",
+   "ms": 4095.5242090001702,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 285,
+   "player": "new_hard",
+   "ms": 1678.6670829989016,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 271153152948039,
+    "readout": 247544509899165
+   }
+  },
+  {
+   "ply": 286,
+   "player": "legacy_hard",
+   "ms": 4485.909124998376,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 287,
+   "player": "new_hard",
+   "ms": 1687.1437909994274,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 205483477389914,
+    "readout": 94559480209020
+   }
+  },
+  {
+   "ply": 288,
+   "player": "legacy_hard",
+   "ms": 4383.553249999881,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 289,
+   "player": "new_hard",
+   "ms": 1690.0755410008132,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 120123574209872,
+    "readout": 272619578531438
+   }
+  },
+  {
+   "ply": 290,
+   "player": "legacy_hard",
+   "ms": 4325.785458000377,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 291,
+   "player": "new_hard",
+   "ms": 1680.3411249984056,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 63308022880462,
+    "readout": 197709868285760
+   }
+  },
+  {
+   "ply": 292,
+   "player": "legacy_hard",
+   "ms": 4442.542458999902,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 293,
+   "player": "new_hard",
+   "ms": 1683.2406250014901,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 213224535859658,
+    "readout": 121731859076433
+   }
+  },
+  {
+   "ply": 294,
+   "player": "legacy_hard",
+   "ms": 4300.249042000622,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 295,
+   "player": "new_hard",
+   "ms": 1683.887875000015,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 74054543612280,
+    "readout": 60931646845803
+   }
+  },
+  {
+   "ply": 296,
+   "player": "legacy_hard",
+   "ms": 4366.714833000675,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 297,
+   "player": "new_hard",
+   "ms": 1685.608833000064,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 65403590798207,
+    "readout": 232900592331289
+   }
+  },
+  {
+   "ply": 298,
+   "player": "legacy_hard",
+   "ms": 4328.059666000307,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 299,
+   "player": "new_hard",
+   "ms": 1684.9162080008537,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 114602606541198,
+    "readout": 203491191247707
+   }
+  },
+  {
+   "ply": 300,
+   "player": "legacy_hard",
+   "ms": 4312.37308299914,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 301,
+   "player": "new_hard",
+   "ms": 1687.3085830006748,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 181951976909405,
+    "readout": 32320449913099
+   }
+  },
+  {
+   "ply": 302,
+   "player": "legacy_hard",
+   "ms": 4329.497917000204,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 303,
+   "player": "new_hard",
+   "ms": 1686.3178749997169,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 5271701355767,
+    "readout": 233082805076022
+   }
+  },
+  {
+   "ply": 304,
+   "player": "legacy_hard",
+   "ms": 4336.740374999121,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 305,
+   "player": "new_hard",
+   "ms": 1685.1850829999894,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 151916621564118,
+    "readout": 90007497209931
+   }
+  },
+  {
+   "ply": 306,
+   "player": "legacy_hard",
+   "ms": 4342.1915830001235,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 307,
+   "player": "new_hard",
+   "ms": 1686.5907080005854,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 91462174626455,
+    "readout": 189047629853706
+   }
+  },
+  {
+   "ply": 308,
+   "player": "legacy_hard",
+   "ms": 4583.4840420000255,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 309,
+   "player": "new_hard",
+   "ms": 1692.9233330003917,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 35686169960393,
+    "readout": 9031816598252
+   }
+  },
+  {
+   "ply": 310,
+   "player": "legacy_hard",
+   "ms": 4585.112291999161,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 311,
+   "player": "new_hard",
+   "ms": 1684.2017919998616,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 188667293189176,
+    "readout": 178572549835563
+   }
+  },
+  {
+   "ply": 312,
+   "player": "legacy_hard",
+   "ms": 4562.08758299984,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 313,
+   "player": "new_hard",
+   "ms": 1694.559291999787,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 6909921301149,
+    "readout": 166685583778875
+   }
+  },
+  {
+   "ply": 314,
+   "player": "legacy_hard",
+   "ms": 4485.928249999881,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 315,
+   "player": "new_hard",
+   "ms": 1695.9102500006557,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 277333022613979,
+    "readout": 203054601832126
+   }
+  },
+  {
+   "ply": 316,
+   "player": "legacy_hard",
+   "ms": 4516.319208001718,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 317,
+   "player": "new_hard",
+   "ms": 1689.9607080016285,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 232379235568633,
+    "readout": 98647664245279
+   }
+  },
+  {
+   "ply": 318,
+   "player": "legacy_hard",
+   "ms": 4342.581166999415,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 319,
+   "player": "new_hard",
+   "ms": 1701.7294999994338,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 259632882659908,
+    "readout": 167365431271042
+   }
+  },
+  {
+   "ply": 320,
+   "player": "legacy_hard",
+   "ms": 4107.571000000462,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 321,
+   "player": "new_hard",
+   "ms": 1696.2948749996722,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 155969999249540,
+    "readout": 62968687659782
+   }
+  },
+  {
+   "ply": 322,
+   "player": "legacy_hard",
+   "ms": 4387.249416001141,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 323,
+   "player": "new_hard",
+   "ms": 1692.8264579996467,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 217085659913204,
+    "readout": 109737827455159
+   }
+  },
+  {
+   "ply": 324,
+   "player": "legacy_hard",
+   "ms": 4387.570916000754,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 325,
+   "player": "new_hard",
+   "ms": 1697.670291999355,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 197879509045947,
+    "readout": 244168716158493
+   }
+  },
+  {
+   "ply": 326,
+   "player": "legacy_hard",
+   "ms": 4316.252582998946,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 327,
+   "player": "new_hard",
+   "ms": 1696.8875830005854,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 100567518101791,
+    "readout": 27914983405677
+   }
+  },
+  {
+   "ply": 328,
+   "player": "legacy_hard",
+   "ms": 4304.142541998997,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 329,
+   "player": "new_hard",
+   "ms": 1699.786292001605,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 14692598022748,
+    "readout": 197783235790421
+   }
+  },
+  {
+   "ply": 330,
+   "player": "legacy_hard",
+   "ms": 4456.380208000541,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 331,
+   "player": "new_hard",
+   "ms": 1704.0333749987185,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 62916601955442,
+    "readout": 94845313254785
+   }
+  },
+  {
+   "ply": 332,
+   "player": "legacy_hard",
+   "ms": 4308.4921669997275,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 333,
+   "player": "new_hard",
+   "ms": 1699.6871670000255,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 164869954565613,
+    "readout": 29085381234488
+   }
+  },
+  {
+   "ply": 334,
+   "player": "legacy_hard",
+   "ms": 4274.651291999966,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 335,
+   "player": "new_hard",
+   "ms": 1701.3207089994103,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 53454378688162,
+    "readout": 134928292363842
+   }
+  },
+  {
+   "ply": 336,
+   "player": "legacy_hard",
+   "ms": 4357.387707998976,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 337,
+   "player": "new_hard",
+   "ms": 1702.5840000007302,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 103136116786065,
+    "readout": 247943301902527
+   }
+  },
+  {
+   "ply": 338,
+   "player": "legacy_hard",
+   "ms": 4244.089499998838,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 339,
+   "player": "new_hard",
+   "ms": 1708.957875000313,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 93477418943146,
+    "readout": 207706979859288
+   }
+  },
+  {
+   "ply": 340,
+   "player": "legacy_hard",
+   "ms": 4245.319041999057,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 341,
+   "player": "new_hard",
+   "ms": 1711.7733750008047,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 36515457964040,
+    "readout": 95199379593511
+   }
+  },
+  {
+   "ply": 342,
+   "player": "legacy_hard",
+   "ms": 4333.980374999344,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 343,
+   "player": "new_hard",
+   "ms": 1706.6007500011474,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 57186675971772,
+    "readout": 128305932114041
+   }
+  },
+  {
+   "ply": 344,
+   "player": "legacy_hard",
+   "ms": 4285.272833999246,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 345,
+   "player": "new_hard",
+   "ms": 1716.0593750011176,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 50027192957734,
+    "readout": 81280582219357
+   }
+  },
+  {
+   "ply": 346,
+   "player": "legacy_hard",
+   "ms": 4324.134332999587,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 347,
+   "player": "new_hard",
+   "ms": 1712.8946250006557,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 69128759919470,
+    "readout": 70570270258249
+   }
+  },
+  {
+   "ply": 348,
+   "player": "legacy_hard",
+   "ms": 4381.464250000194,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 349,
+   "player": "new_hard",
+   "ms": 1714.8962910007685,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 35484955832547,
+    "readout": 12498761935095
+   }
+  },
+  {
+   "ply": 350,
+   "player": "legacy_hard",
+   "ms": 4392.133375000209,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 351,
+   "player": "new_hard",
+   "ms": 1714.0952080003917,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 99873546151580,
+    "readout": 37367887438033
+   }
+  },
+  {
+   "ply": 352,
+   "player": "legacy_hard",
+   "ms": 4364.3341250009835,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 353,
+   "player": "new_hard",
+   "ms": 1715.4009589999914,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 142536105251472,
+    "readout": 84703266936226
+   }
+  },
+  {
+   "ply": 354,
+   "player": "legacy_hard",
+   "ms": 4332.483040999621,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 355,
+   "player": "new_hard",
+   "ms": 1719.9393330011517,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 233110496122289,
+    "readout": 244199738212893
+   }
+  },
+  {
+   "ply": 356,
+   "player": "legacy_hard",
+   "ms": 4350.993417000398,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 357,
+   "player": "new_hard",
+   "ms": 1718.873958999291,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 253498270556860,
+    "readout": 213302084829538
+   }
+  },
+  {
+   "ply": 358,
+   "player": "legacy_hard",
+   "ms": 4402.726208999753,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 359,
+   "player": "new_hard",
+   "ms": 1717.7073749992996,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 124400441269739,
+    "readout": 121859658659501
+   }
+  },
+  {
+   "ply": 360,
+   "player": "legacy_hard",
+   "ms": 4364.56720800139,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 361,
+   "player": "new_hard",
+   "ms": 1720.0185839999467,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 79064945376804,
+    "readout": 108355194811182
+   }
+  },
+  {
+   "ply": 362,
+   "player": "legacy_hard",
+   "ms": 4350.935499999672,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 363,
+   "player": "new_hard",
+   "ms": 1719.3841670006514,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 203082772217992,
+    "readout": 62704432625791
+   }
+  },
+  {
+   "ply": 364,
+   "player": "legacy_hard",
+   "ms": 4309.220750000328,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 365,
+   "player": "new_hard",
+   "ms": 1726.9048340003937,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 4907781447853,
+    "readout": 151557417639077
+   }
+  },
+  {
+   "ply": 366,
+   "player": "legacy_hard",
+   "ms": 4471.826082998887,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 367,
+   "player": "new_hard",
+   "ms": 1726.0604170002043,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 108717174142245,
+    "readout": 68549952315487
+   }
+  },
+  {
+   "ply": 368,
+   "player": "legacy_hard",
+   "ms": 4407.9981249999255,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 369,
+   "player": "new_hard",
+   "ms": 1726.2234169989824,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 235567293783150,
+    "readout": 242618357275763
+   }
+  },
+  {
+   "ply": 370,
+   "player": "legacy_hard",
+   "ms": 4416.652124999091,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 371,
+   "player": "new_hard",
+   "ms": 1728.263416999951,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 267599726835744,
+    "readout": 174147154130778
+   }
+  },
+  {
+   "ply": 372,
+   "player": "legacy_hard",
+   "ms": 4339.185750000179,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 373,
+   "player": "new_hard",
+   "ms": 1721.911290999502,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 75238655326921,
+    "readout": 34001003655896
+   }
+  },
+  {
+   "ply": 374,
+   "player": "legacy_hard",
+   "ms": 4334.710625000298,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 375,
+   "player": "new_hard",
+   "ms": 1720.3815839998424,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 145987704863135,
+    "readout": 137677384521221
+   }
+  },
+  {
+   "ply": 376,
+   "player": "legacy_hard",
+   "ms": 4331.941250000149,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 377,
+   "player": "new_hard",
+   "ms": 1720.3037499990314,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 241011734024647,
+    "readout": 236534305965121
+   }
+  },
+  {
+   "ply": 378,
+   "player": "legacy_hard",
+   "ms": 4361.55662499927,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 379,
+   "player": "new_hard",
+   "ms": 1730.5645000003278,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 241131760940733,
+    "readout": 276414001206822
+   }
+  },
+  {
+   "ply": 380,
+   "player": "legacy_hard",
+   "ms": 4384.316083999351,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 381,
+   "player": "new_hard",
+   "ms": 1718.4048330001533,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 169889298034891,
+    "readout": 220992901263143
+   }
+  },
+  {
+   "ply": 382,
+   "player": "legacy_hard",
+   "ms": 4381.6838330011815,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 383,
+   "player": "new_hard",
+   "ms": 1724.5491249989718,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 114523116536597,
+    "readout": 19143225002729
+   }
+  },
+  {
+   "ply": 384,
+   "player": "legacy_hard",
+   "ms": 4388.863916000351,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 385,
+   "player": "new_hard",
+   "ms": 1728.1175000015646,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 102180643888574,
+    "readout": 212869955459404
+   }
+  },
+  {
+   "ply": 386,
+   "player": "legacy_hard",
+   "ms": 4437.128708999604,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 387,
+   "player": "new_hard",
+   "ms": 1727.5067919995636,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 124054618940128,
+    "readout": 263793912537272
+   }
+  },
+  {
+   "ply": 388,
+   "player": "legacy_hard",
+   "ms": 4468.884291999042,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 389,
+   "player": "new_hard",
+   "ms": 1731.8741250000894,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 158925708340161,
+    "readout": 95257683502174
+   }
+  },
+  {
+   "ply": 390,
+   "player": "legacy_hard",
+   "ms": 4402.740499999374,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 391,
+   "player": "new_hard",
+   "ms": 1731.891625000164,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 205272243316399,
+    "readout": 139425981736273
+   }
+  },
+  {
+   "ply": 392,
+   "player": "legacy_hard",
+   "ms": 4431.8200420010835,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 393,
+   "player": "new_hard",
+   "ms": 1731.680958000943,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 196603215890832,
+    "readout": 10604247974157
+   }
+  },
+  {
+   "ply": 394,
+   "player": "legacy_hard",
+   "ms": 4365.60733400099,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 395,
+   "player": "new_hard",
+   "ms": 1736.3112499993294,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 128814462008416,
+    "readout": 268934456274575
+   }
+  },
+  {
+   "ply": 396,
+   "player": "legacy_hard",
+   "ms": 4636.715083999559,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 397,
+   "player": "new_hard",
+   "ms": 1734.1863340009004,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 271215376289486,
+    "readout": 52266944547802
+   }
+  },
+  {
+   "ply": 398,
+   "player": "legacy_hard",
+   "ms": 4638.375416999683,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 399,
+   "player": "new_hard",
+   "ms": 1737.0966250002384,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 255611626239531,
+    "readout": 228249850319454
+   }
+  },
+  {
+   "ply": 400,
+   "player": "legacy_hard",
+   "ms": 4471.095458999276,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 401,
+   "player": "new_hard",
+   "ms": 1741.7280000001192,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 75330396926246,
+    "readout": 52060742713489
+   }
+  },
+  {
+   "ply": 402,
+   "player": "legacy_hard",
+   "ms": 4476.396375000477,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 403,
+   "player": "new_hard",
+   "ms": 1743.0817919988185,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 76180512007425,
+    "readout": 219161109753430
+   }
+  },
+  {
+   "ply": 404,
+   "player": "legacy_hard",
+   "ms": 4440.391875000671,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 405,
+   "player": "new_hard",
+   "ms": 1740.118083000183,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 260828139301023,
+    "readout": 93621518942723
+   }
+  },
+  {
+   "ply": 406,
+   "player": "legacy_hard",
+   "ms": 4392.43124999851,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 407,
+   "player": "new_hard",
+   "ms": 1744.9955829996616,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 3614866136393,
+    "readout": 126337356198717
+   }
+  },
+  {
+   "ply": 408,
+   "player": "legacy_hard",
+   "ms": 4413.8649589996785,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 409,
+   "player": "new_hard",
+   "ms": 1735.0675419997424,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 212497285600200,
+    "readout": 35195172673377
+   }
+  },
+  {
+   "ply": 410,
+   "player": "legacy_hard",
+   "ms": 4365.187165999785,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 411,
+   "player": "new_hard",
+   "ms": 1744.266249999404,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 127791766232824,
+    "readout": 72183680132797
+   }
+  },
+  {
+   "ply": 412,
+   "player": "legacy_hard",
+   "ms": 4429.830916998908,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 413,
+   "player": "new_hard",
+   "ms": 1741.783458000049,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 131582812291931,
+    "readout": 40951347173850
+   }
+  },
+  {
+   "ply": 414,
+   "player": "legacy_hard",
+   "ms": 4505.749917000532,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 415,
+   "player": "new_hard",
+   "ms": 1748.2257500011474,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 19785770257438,
+    "readout": 194252197677943
+   }
+  },
+  {
+   "ply": 416,
+   "player": "legacy_hard",
+   "ms": 4596.4602920003235,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 417,
+   "player": "new_hard",
+   "ms": 1745.7262499984354,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 221506442295217,
+    "readout": 84010040826491
+   }
+  },
+  {
+   "ply": 418,
+   "player": "legacy_hard",
+   "ms": 4723.4919170010835,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 419,
+   "player": "new_hard",
+   "ms": 1746.1064999997616,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 87173947271989,
+    "readout": 44011220493423
+   }
+  },
+  {
+   "ply": 420,
+   "player": "legacy_hard",
+   "ms": 5042.5412499997765,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 421,
+   "player": "new_hard",
+   "ms": 1750.6973749995232,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 196015778602904,
+    "readout": 21808236429690
+   }
+  },
+  {
+   "ply": 422,
+   "player": "legacy_hard",
+   "ms": 4736.826209001243,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 423,
+   "player": "new_hard",
+   "ms": 1751.296875,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 116513892825686,
+    "readout": 67844927167335
+   }
+  },
+  {
+   "ply": 424,
+   "player": "legacy_hard",
+   "ms": 4457.514499999583,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 425,
+   "player": "new_hard",
+   "ms": 1748.1951669994742,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 141428026515277,
+    "readout": 154912187094184
+   }
+  },
+  {
+   "ply": 426,
+   "player": "legacy_hard",
+   "ms": 4611.422041000798,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 427,
+   "player": "new_hard",
+   "ms": 1747.7770840004086,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 49670880812927,
+    "readout": 226395966040006
+   }
+  },
+  {
+   "ply": 428,
+   "player": "legacy_hard",
+   "ms": 4567.6387910004705,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 429,
+   "player": "new_hard",
+   "ms": 1750.2332919985056,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 21038225416950,
+    "readout": 201093988392164
+   }
+  },
+  {
+   "ply": 430,
+   "player": "legacy_hard",
+   "ms": 4526.521709000692,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 431,
+   "player": "new_hard",
+   "ms": 1755.2767500001937,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 82955478571288,
+    "readout": 54462446678492
+   }
+  },
+  {
+   "ply": 432,
+   "player": "legacy_hard",
+   "ms": 4636.951083999127,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 433,
+   "player": "new_hard",
+   "ms": 1751.9952500015497,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 184092666588614,
+    "readout": 43391548686303
+   }
+  },
+  {
+   "ply": 434,
+   "player": "legacy_hard",
+   "ms": 4719.133791999891,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 435,
+   "player": "new_hard",
+   "ms": 1752.7027080003172,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 177803429375469,
+    "readout": 236794983601691
+   }
+  },
+  {
+   "ply": 436,
+   "player": "legacy_hard",
+   "ms": 4662.082167001441,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 437,
+   "player": "new_hard",
+   "ms": 1753.599957998842,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 155490713405525,
+    "readout": 90868367023180
+   }
+  },
+  {
+   "ply": 438,
+   "player": "legacy_hard",
+   "ms": 4684.131874999031,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 439,
+   "player": "new_hard",
+   "ms": 1751.7442499995232,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 53334897511,
+    "readout": 155547878597049
+   }
+  },
+  {
+   "ply": 440,
+   "player": "legacy_hard",
+   "ms": 4656.459959000349,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 441,
+   "player": "new_hard",
+   "ms": 1754.370332999155,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 42885392898263,
+    "readout": 56675551924606
+   }
+  },
+  {
+   "ply": 442,
+   "player": "legacy_hard",
+   "ms": 4403.926457999274,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 443,
+   "player": "new_hard",
+   "ms": 1753.7297499999404,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 125417462173099,
+    "readout": 72769345714873
+   }
+  },
+  {
+   "ply": 444,
+   "player": "legacy_hard",
+   "ms": 4569.3296670001,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 445,
+   "player": "new_hard",
+   "ms": 1758.5897920001298,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 226517487599446,
+    "readout": 46115695183170
+   }
+  },
+  {
+   "ply": 446,
+   "player": "legacy_hard",
+   "ms": 4603.638875000179,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 447,
+   "player": "new_hard",
+   "ms": 1758.9657909981906,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 192316162851632,
+    "readout": 39874807622655
+   }
+  },
+  {
+   "ply": 448,
+   "player": "legacy_hard",
+   "ms": 4735.104125000536,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 449,
+   "player": "new_hard",
+   "ms": 1757.0705420002341,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 3610547583328,
+    "readout": 218192249087863
+   }
+  },
+  {
+   "ply": 450,
+   "player": "legacy_hard",
+   "ms": 4460.199625000358,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 451,
+   "player": "new_hard",
+   "ms": 1759.6091670002788,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 58204278549018,
+    "readout": 270886970261700
+   }
+  },
+  {
+   "ply": 452,
+   "player": "legacy_hard",
+   "ms": 4434.46516700089,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 453,
+   "player": "new_hard",
+   "ms": 1758.848749998957,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 65715636542966,
+    "readout": 243696335074324
+   }
+  },
+  {
+   "ply": 454,
+   "player": "legacy_hard",
+   "ms": 4418.303582999855,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 455,
+   "player": "new_hard",
+   "ms": 1762.1546670012176,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 115029228037733,
+    "readout": 95836544817166
+   }
+  },
+  {
+   "ply": 456,
+   "player": "legacy_hard",
+   "ms": 4338.188667001203,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 457,
+   "player": "new_hard",
+   "ms": 1772.851584000513,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 76640402037667,
+    "readout": 262111488722919
+   }
+  },
+  {
+   "ply": 458,
+   "player": "legacy_hard",
+   "ms": 4318.634874999523,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 459,
+   "player": "new_hard",
+   "ms": 1770.7449999991804,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 148428312902881,
+    "readout": 7770144766913
+   }
+  },
+  {
+   "ply": 460,
+   "player": "legacy_hard",
+   "ms": 4223.269291000441,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 461,
+   "player": "new_hard",
+   "ms": 1775.0933750011027,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 147327015709547,
+    "readout": 179653418056061
+   }
+  },
+  {
+   "ply": 462,
+   "player": "legacy_hard",
+   "ms": 4233.005584001541,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 463,
+   "player": "new_hard",
+   "ms": 1780.1482090000063,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 157062946334180,
+    "readout": 21817650835257
+   }
+  },
+  {
+   "ply": 464,
+   "player": "legacy_hard",
+   "ms": 4240.609665999189,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 465,
+   "player": "new_hard",
+   "ms": 1783.3739579990506,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 200314442598573,
+    "readout": 26590124875888
+   }
+  },
+  {
+   "ply": 466,
+   "player": "legacy_hard",
+   "ms": 4267.615333000198,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 467,
+   "player": "new_hard",
+   "ms": 1783.1170830000192,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 146997702540014,
+    "readout": 174916441280958
+   }
+  },
+  {
+   "ply": 468,
+   "player": "legacy_hard",
+   "ms": 4619.341792000458,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 469,
+   "player": "new_hard",
+   "ms": 1789.8489159997553,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 68627177373886,
+    "readout": 163506456241194
+   }
+  },
+  {
+   "ply": 470,
+   "player": "legacy_hard",
+   "ms": 4557.591332999989,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 471,
+   "player": "new_hard",
+   "ms": 1791.3028750009835,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 253380010781310,
+    "readout": 149021633417595
+   }
+  },
+  {
+   "ply": 472,
+   "player": "legacy_hard",
+   "ms": 4556.026165999472,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 473,
+   "player": "new_hard",
+   "ms": 1789.296875,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 44985054775732,
+    "readout": 83831180814542
+   }
+  },
+  {
+   "ply": 474,
+   "player": "legacy_hard",
+   "ms": 4595.885375000536,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 475,
+   "player": "new_hard",
+   "ms": 1799.9217910002917,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 35633512128135,
+    "readout": 187591303158875
+   }
+  },
+  {
+   "ply": 476,
+   "player": "legacy_hard",
+   "ms": 4782.206042001024,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 477,
+   "player": "new_hard",
+   "ms": 1800.3542919997126,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 237743529906720,
+    "readout": 128822183727558
+   }
+  },
+  {
+   "ply": 478,
+   "player": "legacy_hard",
+   "ms": 5048.94454099983,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 479,
+   "player": "new_hard",
+   "ms": 1813.2212089989334,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 192142932803707,
+    "readout": 81958325942176
+   }
+  },
+  {
+   "ply": 480,
+   "player": "legacy_hard",
+   "ms": 4898.45824999921,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 481,
+   "player": "new_hard",
+   "ms": 1807.4124170001596,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 79996696554571,
+    "readout": 25652731810772
+   }
+  },
+  {
+   "ply": 482,
+   "player": "legacy_hard",
+   "ms": 4920.531958999112,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 483,
+   "player": "new_hard",
+   "ms": 1813.0042090006173,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 125458966849789,
+    "readout": 155994646641299
+   }
+  },
+  {
+   "ply": 484,
+   "player": "legacy_hard",
+   "ms": 4745.852041998878,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 485,
+   "player": "new_hard",
+   "ms": 1809.7354170009494,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 278032587025889,
+    "readout": 228792400427949
+   }
+  },
+  {
+   "ply": 486,
+   "player": "legacy_hard",
+   "ms": 4887.478458000347,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 487,
+   "player": "new_hard",
+   "ms": 1809.7910420000553,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 5555332785418,
+    "readout": 101428572943899
+   }
+  },
+  {
+   "ply": 488,
+   "player": "legacy_hard",
+   "ms": 4833.85233299993,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 489,
+   "player": "new_hard",
+   "ms": 1809.1805420015007,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 150866653185955,
+    "readout": 140006189812053
+   }
+  },
+  {
+   "ply": 490,
+   "player": "legacy_hard",
+   "ms": 4821.1189999990165,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 491,
+   "player": "new_hard",
+   "ms": 1812.429416000843,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 154338701949311,
+    "readout": 225598547441681
+   }
+  },
+  {
+   "ply": 492,
+   "player": "legacy_hard",
+   "ms": 4714.974457999691,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 493,
+   "player": "new_hard",
+   "ms": 1810.2044999990612,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 153454920655909,
+    "readout": 171420749169581
+   }
+  },
+  {
+   "ply": 494,
+   "player": "legacy_hard",
+   "ms": 4601.529916999862,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 495,
+   "player": "new_hard",
+   "ms": 1808.540292000398,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 195982703359424,
+    "readout": 262047053366083
+   }
+  },
+  {
+   "ply": 496,
+   "player": "legacy_hard",
+   "ms": 4617.2831250000745,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 497,
+   "player": "new_hard",
+   "ms": 1813.950541999191,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 209052518751618,
+    "readout": 239192296572704
+   }
+  },
+  {
+   "ply": 498,
+   "player": "legacy_hard",
+   "ms": 4741.875208999962,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 499,
+   "player": "new_hard",
+   "ms": 1817.2606659997255,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 77401829938349,
+    "readout": 23395690471677
+   }
+  },
+  {
+   "ply": 500,
+   "player": "legacy_hard",
+   "ms": 4724.818249998614,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 501,
+   "player": "new_hard",
+   "ms": 1823.9393330011517,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 69554405760392,
+    "readout": 27531342717550
+   }
+  },
+  {
+   "ply": 502,
+   "player": "legacy_hard",
+   "ms": 4875.1990419998765,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 503,
+   "player": "new_hard",
+   "ms": 1822.724417001009,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 237731747324571,
+    "readout": 85244374245282
+   }
+  },
+  {
+   "ply": 504,
+   "player": "legacy_hard",
+   "ms": 4863.722916999832,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 505,
+   "player": "new_hard",
+   "ms": 1830.4758330006152,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 151086688742324,
+    "readout": 124833280651675
+   }
+  },
+  {
+   "ply": 506,
+   "player": "legacy_hard",
+   "ms": 4837.877209000289,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 507,
+   "player": "new_hard",
+   "ms": 1826.0423750001937,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 116388006920817,
+    "readout": 214989888747741
+   }
+  },
+  {
+   "ply": 508,
+   "player": "legacy_hard",
+   "ms": 4815.095208000392,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 509,
+   "player": "new_hard",
+   "ms": 1837.8611249998212,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 220545313404722,
+    "readout": 80610485245090
+   }
+  },
+  {
+   "ply": 510,
+   "player": "legacy_hard",
+   "ms": 4828.05787499994,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 511,
+   "player": "new_hard",
+   "ms": 1839.4535830002278,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 26346261352696,
+    "readout": 91547461610897
+   }
+  },
+  {
+   "ply": 512,
+   "player": "legacy_hard",
+   "ms": 4809.5183329992,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 513,
+   "player": "new_hard",
+   "ms": 1829.4445840008557,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 238767576201033,
+    "readout": 235274962188402
+   }
+  },
+  {
+   "ply": 514,
+   "player": "legacy_hard",
+   "ms": 4785.652333000675,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 515,
+   "player": "new_hard",
+   "ms": 1833.1917920000851,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 166444863294857,
+    "readout": 131804470867339
+   }
+  },
+  {
+   "ply": 516,
+   "player": "legacy_hard",
+   "ms": 4753.083000000566,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 517,
+   "player": "new_hard",
+   "ms": 1835.144333999604,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 213597789997945,
+    "readout": 209351467835446
+   }
+  },
+  {
+   "ply": 518,
+   "player": "legacy_hard",
+   "ms": 4679.253667000681,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 519,
+   "player": "new_hard",
+   "ms": 1836.0012090001255,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 123837264464467,
+    "readout": 27546259829336
+   }
+  },
+  {
+   "ply": 520,
+   "player": "legacy_hard",
+   "ms": 4674.398749999702,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 521,
+   "player": "new_hard",
+   "ms": 1844.6877500005066,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 249254491495183,
+    "readout": 121088552861886
+   }
+  },
+  {
+   "ply": 522,
+   "player": "legacy_hard",
+   "ms": 4596.655500000343,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 523,
+   "player": "new_hard",
+   "ms": 1841.9772919993848,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 9843490729867,
+    "readout": 240554821918626
+   }
+  },
+  {
+   "ply": 524,
+   "player": "legacy_hard",
+   "ms": 4556.221583001316,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 525,
+   "player": "new_hard",
+   "ms": 1839.7442090008408,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 201398804099083,
+    "readout": 100066095215956
+   }
+  },
+  {
+   "ply": 526,
+   "player": "legacy_hard",
+   "ms": 4595.0443750005215,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 527,
+   "player": "new_hard",
+   "ms": 1835.6094159986824,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 177359616221287,
+    "readout": 257119135331061
+   }
+  },
+  {
+   "ply": 528,
+   "player": "legacy_hard",
+   "ms": 4493.521166998893,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 529,
+   "player": "new_hard",
+   "ms": 1844.0954579990357,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 211273241486404,
+    "readout": 31594528032948
+   }
+  },
+  {
+   "ply": 530,
+   "player": "legacy_hard",
+   "ms": 4832.631416000426,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 531,
+   "player": "new_hard",
+   "ms": 1849.9043749999255,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 182103353232336,
+    "readout": 195792955092656
+   }
+  },
+  {
+   "ply": 532,
+   "player": "legacy_hard",
+   "ms": 4512.736124999821,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 533,
+   "player": "new_hard",
+   "ms": 1845.0254589989781,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 200213994996010,
+    "readout": 278469294536658
+   }
+  },
+  {
+   "ply": 534,
+   "player": "legacy_hard",
+   "ms": 4544.27779199928,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 535,
+   "player": "new_hard",
+   "ms": 1852.0460419990122,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 18265632448528,
+    "readout": 55443335736576
+   }
+  },
+  {
+   "ply": 536,
+   "player": "legacy_hard",
+   "ms": 4559.987333001569,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 537,
+   "player": "new_hard",
+   "ms": 1853.3998750001192,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 77424900298117,
+    "readout": 116905054487918
+   }
+  },
+  {
+   "ply": 538,
+   "player": "legacy_hard",
+   "ms": 4579.5222910009325,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 539,
+   "player": "new_hard",
+   "ms": 1851.0665830001235,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 44584074836549,
+    "readout": 281218016871348
+   }
+  },
+  {
+   "ply": 540,
+   "player": "legacy_hard",
+   "ms": 4578.137749999762,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 541,
+   "player": "new_hard",
+   "ms": 1830.1477080006152,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 224807924288896,
+    "readout": 57240051426452
+   }
+  },
+  {
+   "ply": 542,
+   "player": "legacy_hard",
+   "ms": 4747.860749999061,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 543,
+   "player": "new_hard",
+   "ms": 1833.2095419988036,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 200634885615063,
+    "readout": 2192984536174
+   }
+  },
+  {
+   "ply": 544,
+   "player": "legacy_hard",
+   "ms": 4774.746500000358,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 545,
+   "player": "new_hard",
+   "ms": 1833.4661250002682,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 60223300787521,
+    "readout": 231082660027573
+   }
+  },
+  {
+   "ply": 546,
+   "player": "legacy_hard",
+   "ms": 4630.182083999738,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 547,
+   "player": "new_hard",
+   "ms": 1843.6884160004556,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 248307391270004,
+    "readout": 16128700235261
+   }
+  },
+  {
+   "ply": 548,
+   "player": "legacy_hard",
+   "ms": 4803.404167000204,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 549,
+   "player": "new_hard",
+   "ms": 1849.040541999042,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 160338518080237,
+    "readout": 238322840625969
+   }
+  },
+  {
+   "ply": 550,
+   "player": "legacy_hard",
+   "ms": 4696.393874999136,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 551,
+   "player": "new_hard",
+   "ms": 1845.8295830003917,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 253634648904878,
+    "readout": 50867786035388
+   }
+  },
+  {
+   "ply": 552,
+   "player": "legacy_hard",
+   "ms": 4728.2184580005705,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 553,
+   "player": "new_hard",
+   "ms": 1854.4392080008984,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 187352184962944,
+    "readout": 135944379647548
+   }
+  },
+  {
+   "ply": 554,
+   "player": "legacy_hard",
+   "ms": 4751.302459001541,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 555,
+   "player": "new_hard",
+   "ms": 1852.8761250004172,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 19339224328889,
+    "readout": 74912879692644
+   }
+  },
+  {
+   "ply": 556,
+   "player": "legacy_hard",
+   "ms": 4838.589790999889,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 557,
+   "player": "new_hard",
+   "ms": 1875.9611250013113,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 89400731175628,
+    "readout": 5859544606898
+   }
+  },
+  {
+   "ply": 558,
+   "player": "legacy_hard",
+   "ms": 4930.912957999855,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 559,
+   "player": "new_hard",
+   "ms": 1891.4533329997212,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 261023435169745,
+    "readout": 58023513859261
+   }
+  },
+  {
+   "ply": 560,
+   "player": "legacy_hard",
+   "ms": 5143.89716700092,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 561,
+   "player": "new_hard",
+   "ms": 1893.7053340002894,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 252155148423156,
+    "readout": 57272521707576
+   }
+  },
+  {
+   "ply": 562,
+   "player": "legacy_hard",
+   "ms": 5414.470750000328,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 563,
+   "player": "new_hard",
+   "ms": 1917.3731669988483,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 251553421766176,
+    "readout": 8259348307563
+   }
+  },
+  {
+   "ply": 564,
+   "player": "legacy_hard",
+   "ms": 5339.723916999996,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 565,
+   "player": "new_hard",
+   "ms": 1967.1777079999447,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 102265292568135,
+    "readout": 12539664756460
+   }
+  },
+  {
+   "ply": 566,
+   "player": "legacy_hard",
+   "ms": 4046.967749999836,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 567,
+   "player": "new_hard",
+   "ms": 1242.8441669996828,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 124463488464081,
+    "readout": 233666491528647
+   }
+  },
+  {
+   "ply": 568,
+   "player": "legacy_hard",
+   "ms": 2187.1367910001427,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 569,
+   "player": "new_hard",
+   "ms": 532.3605829998851,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 28895556310361,
+    "readout": 25478143816644
+   }
+  },
+  {
+   "ply": 570,
+   "player": "legacy_hard",
+   "ms": 1478.712249999866,
+   "n_simulations": 800,
+   "search": "plain",
+   "value_kind": null,
+   "seeds": null
+  },
+  {
+   "ply": 571,
+   "player": "new_hard",
+   "ms": 284.0786669999361,
+   "n_simulations": 200,
+   "search": "protocol",
+   "value_kind": "played_move_mean",
+   "seeds": {
+    "search": 116993273500009,
+    "readout": 162402553961613
+   }
+  }
+ ],
+ "result": "draw",
+ "termination": "no_legal_moves",
+ "ply_count": 572,
+ "new_score": 0.5,
+ "move_ms_total": 1560595.7842200138,
+ "binding_digest": "da0b86bf4dcbdf4364d26a5f4a483fa97360b41c60ed3abae15778f7a636c04a",
+ "head": "755de852f13aa8c784e7da4e7fa4212497a61efb",
+ "node_version": "v24.22.0",
+ "ort_version": "1.23.2"
+}

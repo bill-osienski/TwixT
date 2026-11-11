@@ -7,4 +7,4 @@
  * because opening a gate is the one change a launch makes.
  */
 export const G3_SMOKE_AUTHORIZED = false;
-export const G3_MATCH_AUTHORIZED = true;
+export const G3_MATCH_AUTHORIZED = false;
