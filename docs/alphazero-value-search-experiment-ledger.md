@@ -285,6 +285,7 @@ knob) is not a new hypothesis.
 > **H-TB integration — G2 COMPLETE; returned for review before G3 (Post-closure entry 61, 2026-11-09).** Suites pass (server 213, parity 39, match 152 after a G1 test-expectation fix, golden 140, research 259). Live REST and WS: 17 of 17 checks after a harness race in run 1 was fixed. Rollback against a recorded `80acd87e` reference over 142 positions: R1 (`HARD_MODE=legacy`, student unavailable) is exact on all `hard`, `easy` and `medium` answers; R2 (default) serves the student with `easy`/`medium` exact; R3 (code revert) is exact with its suites passing. The protocol mode refuses to start without the student. No games, deployment or push. See #190.
 > **H-TB integration — G2 ACCEPTED; G3 BUILT for one launch review; nothing played (decision note and build record, 2026-11-09).** The user independently reproduced the 92-case equivalence, the rollback comparisons and the live-check verdict. *(Wording correction to entry 61: easy and medium **search outputs** match exactly; their sampled moves were intentionally excluded.)* Built (`29c502d7`): card `2026-11-09-htb-g3-match-card.md`, a one-process product-stack driver, an analyser that imports nothing from it, two closed gates, two wrappers and an execution binding (digest `b024e9d1…`). New `hard` against today's `hard`: one colour-reversed smoke pair (excluded), then 110 fresh pairs under the product game-end rule; PASS iff mean − √(ln 20 / 220) > 0.5. Timing rule (the user's): L = max(64, smoke mean plies); projection = startup + 220 × ((L/2)(s_new + s_legacy) + overhead); hard ceiling 1.5× rounded up to the minute; the 24 h limit applies to that ceiling; EXCEEDS_24H stops before the match. Prediction on record: PASS, mean about 0.93. 15 model-free tests pass. Games await the launch review; deployment, training and pushing not authorized. See #191.
 > **H-TB integration — G3 repaired for launch clearance; nothing played (decision note and repair record, 2026-11-09).** The user's review found that the analyser and match admission trusted the script's COMPLETED record without the wrapper's `outer.json`, so a TIMEOUT, an unrestored gate or unconfirmed cleanup could still yield a timing or score. Repaired (`d0dfba20`): both stages and match admission now require integer exits of 0, outcome COMPLETED, the gate restored, no survivors and a script-written record. The outer record is tied to its run by HEAD and by pgid = the record's pid. The match needs committed, successful smoke evidence, and its verdict re-derives the committed timing. The binding now covers the Node executable and every file of both ORT packages (digest `da0b86bf…`); the card lists what is not bound. 20/20 tests (outer and admission failures each against a clean control); 3 mutants caught. The user accepted the 2,400 s smoke ceiling, the 24 h maximum and the browser → smoke → timing → conditional match sequence. Gates closed. See #191.
+> **H-TB integration — G3 steps 1–3 done: browser check PASS, smoke COMPLETED, timing WITHIN_24H; the match is next (Post-closure entry 62, 2026-11-10).** Run in a clean launch worktree at `542bb847` (binding `da0b86bf…` reproduced). Browser: banner `Hard mode: protocol` with both ids, 23/23 AI moves, the MCTS bar updated across ply 20 (D6), no client error, normal end. Smoke (`c2f9832b` → `13acf4c1`): outer COMPLETED with exit 0, gate restored, no survivors; 41 + 44 plies in 171 s. Timing: L 64; new `hard` 1.312 s/move, today's `hard` 2.703 s/move; projection 7.86 h; KILL 42,420 s (11.78 h). Below the planning estimate (8.5 h / 12.8 h). No strength claim; deployment, training and pushing not authorized. See #192.
 
 ## Historical proposal check — programme now closed
 
@@ -2109,6 +2110,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 189. **G2 V7 golden comparison: MISMATCH in value numerics only (2026-11-09, entry 59).** Do **not**: edit the frozen `compare.mjs` or the eager standard; add a tolerance to the golden comparison; recapture and keep whichever run matches; attribute the about 1e-7 value differences to the integration, or to the environment, before a discriminator has run; read the identical visit counts and selected moves as a PASS of the exact-equality rule; or continue G2's remaining checks without the user's decision.
 190. **G2 is complete (2026-11-09, entries 58–61).** Do **not**: deploy, push or serve the integration on these results (G3's smoke test and match, then a separate deployment decision, come first); start G3 before its timing formula is written into the match card; read the rollback or equivalence results as strength evidence; rerun R1–R3, V3 or the live check to "refresh" them without a change that calls for it; or merge the deleted R3 rehearsal (`9a63458e`).
 191. **G3 is built, not launched (2026-11-09).** Do **not**: open either G3 gate or play any product game before the user's launch review; edit any bound file (`tests/htb_integration/g3_binding.json` lists them) without rebinding and a fresh review; resize the match, change its rule, seeds or ceiling formula, or reuse the smoke pair in it; launch the match on a hand-edited or `EXCEEDS_24H` timing; score a VOID, INVALID or partial run, or retry one; rerun G2's live check as V8a's server items (#190); or read a PASS as authorizing deployment, training or pushing.
+192. **G3 steps 1–3 are spent (2026-11-10, entry 62).** Do **not**: replay the browser check or the smoke pair, or rerun either to "refresh" the timing; re-derive the timing from anything but the committed smoke evidence, or hand-edit `htb-g3-smoke/timing.json`; read or report the smoke pair's outcomes, or count them in the match; run the match under any ceiling but KILL 42,420 s / TERM 42,410 s; or read the browser game (a deliberately weak human side) as strength evidence.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -10969,3 +10971,78 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
   or pushing.
 - **Count correction to the repair record (dated 2026-11-09):** the binding contains **237** runtime package files,
   not 239 (239 counted the two package keys as well). All 237 match the installed files. No test change is needed.
+
+#### Post-closure entry 62 — G3 steps 1–3: the browser check PASS, the smoke pair COMPLETED, the timing WITHIN_24H (2026-11-10)
+
+- **Test:** the first three steps of the cleared G3 launch sequence (card §8), each run once:
+  1. the V8a browser check: one `hard` game in the browser client;
+  2. the timing smoke: one colour-reversed pair, new `hard` against today's `hard`, on the product stack, under TERM
+     2,390 s / KILL 2,400 s;
+  3. the timing derivation from the validated smoke, and the 24-hour test.
+- **Hypothesis:**
+  - the client serves the protocol `hard` end to end (banner, moves, bar across ply 20, no client error, normal end);
+  - the driver plays both players to the product game end under the wrapper;
+  - the derived hard ceiling is within 24 h.
+- **Why it was plausible:** G2's live check (entry 61) and the refusal rehearsals at `5433d9a1` and `d0dfba20`.
+- **Prediction on record:** for the outcomes, None stated in advance. For the timing, the build record's planning
+  estimate, stated before any game: about 1.37 s per move for new `hard` and 3.0 s for today's `hard`, so a
+  projection of about 8.5 h and a ceiling of about 12.8 h at 64 plies.
+- **What ran:**
+  - **Where:** a clean linked worktree `/Users/bill/projects/TwixT_Game-g3`, branch `htb-g3-launch` from
+    `542bb847`, with `node_modules` APFS-cloned. `g3_match.mjs bind` there reproduced the committed binding exactly
+    (digest `da0b86bf…`), both before the browser game and before the gate commit.
+  - **Machine:**
+    - Unreal Editor closed, with its editor process and `zenserver` gone. `UnrealEditorServices` and the Epic Games
+      Launcher were still running at about 1% CPU.
+    - BOINC quit; only the exempt podman VM ran.
+  - **Step 1, the browser check (`cc46c2cc`):**
+    - Run with `npm start`, default mode, with `TWIXT_NO_BROWSER=1` so the launcher didn't open its own window.
+    - Played in a Claude in Chrome tab: 1 Player, Hard, REC off; I played Red with mouse clicks.
+    - Claude in Chrome was not connected at the first attempt that morning. The server was started once, showed the
+      same banner and was stopped; no game was played then. After the user connected Chrome, the game was played.
+    - Evidence: `docs/superpowers/evidence/htb-g3-browser/README.md`, `server.log` and `final_board.jpg`.
+  - **Step 2, the smoke:**
+    - The one-line gate commit `c2f9832b` (`G3_SMOKE_AUTHORIZED = true`, after `cc46c2cc`), then
+      `htb-g3-smoke-run/01_wrapper.sh`, once.
+    - The idle gate waited about 60 s while the machine was busy. Load was 3.9–4.1 at first, and once a ChatGPT
+      `Codex (Aperitif Renderer)` process was at 85% CPU. It then held idle for 60 s. The BOINC check was CLEAR.
+  - **Step 3, the timing:** `g3_analyse.mjs timing docs/superpowers/evidence/htb-g3-smoke --write`, then the
+    evidence, the timing and the gate restoration were committed in `13acf4c1`.
+- **Result:**
+  - **Browser check, all five checks PASS:**
+    - **Banner:** `Hard mode: protocol`, hard id `78c16a31c3dba37f`, default id `c34b7ff3297c785a`.
+    - **AI moves:** 23 of 23 arrived. Per-move times were 1,425–1,509 ms at 200 simulations; the final, winning move
+      took 960 ms.
+    - **MCTS bar:** updated after the AI's moves, including at ply 20. From ply 20 it shows the played move's mean
+      (D6), so the console's root-mean `value` differs from `−valueRed` from then on, as designed.
+    - **Console:** no client error or exception.
+    - **Game end:** normal. Black (the AI) connected at ply 44; `gameOver` true, winner black, both bars terminal.
+    - **Two observations that are not failures:**
+      - the client's existing win `alert()` (`assets/js/game/gameController.js:219`) blocks browser automation
+        until it is dismissed by hand;
+      - after the dialog, the console reader re-listed the whole game with one timestamp. I read this as the
+        extension's buffered log on reattachment; it wasn't verified.
+  - **Smoke, COMPLETED:**
+    - `outer.json`: inner and outer exit 0, outcome COMPLETED, gate restored, survivors empty, record by the script,
+      head `c2f9832b`, pre_open `cc46c2cc`, wall 171 s against the 2,400 s ceiling.
+    - Record: 2 of 2 games, binding digest `da0b86bf…`, startup 0.26 s.
+    - Games: 41 plies in 81.5 s and 44 plies in 88.4 s. The per-game background check was CLEAR after each game, and
+      `run.stderr.txt` is empty.
+    - The smoke's outcomes are excluded from the match and are not read here.
+  - **Timing (`htb-g3-smoke/timing.json`), WITHIN_24H:**
+    - smoke mean 42.5 plies, so L = 64;
+    - new `hard` 1.312 s per move (43 moves; plies 0–19 mean 1.346 s, ply 20 on 1.282 s; p95 1.353 s);
+    - today's `hard` 2.703 s per move (42 moves, 800 simulations; p95 2.782 s);
+    - overhead 0.064 s per game; per game 128.5 s;
+    - **projection 28,278 s (7.86 h); KILL 42,420 s (11.78 h), TERM 42,410 s, cleanup observed through 42,430 s;**
+      within the 86,400 s limit.
+- **Did it match the prediction:** the timing came in slightly under the planning estimate. New `hard` was 1.31 s
+  against about 1.37 s; today's `hard` was 2.70 s against about 3.0 s. The projection was 7.86 h against about 8.5 h,
+  and the ceiling 11.78 h against about 12.8 h. The smoke games were shorter than 64 plies, so L stayed at its floor
+  of 64.
+- **Conclusion / status:**
+  - Steps 1–3 are complete and valid.
+  - The match (step 4) is admitted by the 24-hour test and runs next, once, under the committed ceiling. It needs its
+    one-line gate commit and the wrapper's re-derivation of this timing byte for byte.
+  - No strength claim.
+  - Not authorized: deployment, training or pushing. See #192.
