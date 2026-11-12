@@ -287,6 +287,7 @@ knob) is not a new hypothesis.
 > **H-TB integration — G3 repaired for launch clearance; nothing played (decision note and repair record, 2026-11-09).** The user's review found that the analyser and match admission trusted the script's COMPLETED record without the wrapper's `outer.json`, so a TIMEOUT, an unrestored gate or unconfirmed cleanup could still yield a timing or score. Repaired (`d0dfba20`): both stages and match admission now require integer exits of 0, outcome COMPLETED, the gate restored, no survivors and a script-written record. The outer record is tied to its run by HEAD and by pgid = the record's pid. The match needs committed, successful smoke evidence, and its verdict re-derives the committed timing. The binding now covers the Node executable and every file of both ORT packages (digest `da0b86bf…`); the card lists what is not bound. 20/20 tests (outer and admission failures each against a clean control); 3 mutants caught. The user accepted the 2,400 s smoke ceiling, the 24 h maximum and the browser → smoke → timing → conditional match sequence. Gates closed. See #191.
 > **H-TB integration — G3 steps 1–3 done: browser check PASS, smoke COMPLETED, timing WITHIN_24H; the match is next (Post-closure entry 62, 2026-11-10).** Run in a clean launch worktree at `542bb847` (binding `da0b86bf…` reproduced). Browser: banner `Hard mode: protocol` with both ids, 23/23 AI moves, the MCTS bar updated across ply 20 (D6), no client error, normal end. Smoke (`c2f9832b` → `13acf4c1`): outer COMPLETED with exit 0, gate restored, no survivors; 41 + 44 plies in 171 s. Timing: L 64; new `hard` 1.312 s/move, today's `hard` 2.703 s/move; projection 7.86 h; KILL 42,420 s (11.78 h). Below the planning estimate (8.5 h / 12.8 h). No strength claim; deployment, training and pushing not authorized. See #192.
 > **H-TB integration — G3 match COMPLETED: verdict PASS; G3 complete; returned for review (Post-closure entry 63, 2026-11-11).** 110 fresh colour-reversed pairs of new `hard` (student `78c16a31c3dba37f`, protocol) against today's `hard` (`c34b7ff3297c785a`, 800 sims, argmax) on the product stack, under the product game-end rule (`755de852` → `637917ca`; outer COMPLETED with exit 0, gate restored, no survivors; 7.02 h against KILL 11.78 h). Mean pair score **0.9318**, lower bound **0.8151 > 0.5**; 203 wins, 13 losses, 4 board-full draws. Matches the prediction (0.93). Cost: 1.349 against 2.865 s per move (0.47×). Observation: 192/220 distinct games; all 28 copies are new-as-Red wins, consistent with a peaked opening policy; scoring them as losses still gives a lower bound of 0.688 (post hoc). Product settings, not matched compute. A PASS does not authorize deployment, training or pushing. See #193.
+> **H-TB integration — G3 passes independent review; deployment recommended; awaiting the user's authorization (decision note, 2026-11-11).** The review replayed all 222 games and verified the timing and cleanup records (203-13-4, 0.9318, lower bound 0.8151). Repetitions are a variety observation: as Red, 13 opening cells, with four cells accounting for 77 of 110; it recommends keeping the tested opening policy. Dated correction: the post-hoc sensitivity bound is 0.6879 (entry 63 truncated it to 0.6878). Recommended: deploy `0e28b048` with student `78c16a31c3dba37f` and the pinned runtime; rollback is a restart with `HARD_MODE=legacy`. Deployment and pushing not yet authorized.
 
 ## Historical proposal check — programme now closed
 
@@ -11120,3 +11121,21 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
   - **Not authorized:** deployment, training and pushing. The PASS doesn't authorize them; a separate deployment
     decision is the user's.
   - Returned for review. See #193.
+
+#### Decision note — after Post-closure entry 63: G3 passes independent review; deployment recommended; deployment and pushing await the user's authorization (2026-11-11)
+
+- **Review result:** the user's independent review replayed all 222 smoke and match games and verified the timing and
+  cleanup records. It confirms 203 wins, 13 losses and 4 draws, a mean pair score of 0.9318 and a lower bound of 0.8151.
+  New `hard` averaged 1.35 s per move against 2.87 s for today's `hard`.
+- **Repetitions, read as a variety observation:** as Red, new `hard` opened on 13 different cells, and four cells account
+  for 77 of 110 openings (re-counted from the committed games: (10,7) 25, (11,16) 20, (10,16) 16, (11,7) 16). The
+  review verified that the repeated games used distinct seeds and recommends keeping the tested opening policy for this
+  release.
+- **Dated correction to entry 63 (2026-11-11):** the post-hoc sensitivity bound is **0.6879**, not 0.6878. That is
+  177 / 220 − √(ln 20 / 220) = 0.68785, and entry 63 truncated it instead of rounding. The banner's "0.688" stands.
+  This is exploratory and doesn't change the verdict.
+- **Recommendation (the review's):** deploy the configuration at `0e28b048`, with student `78c16a31c3dba37f` and the
+  pinned runtime. The tested rollback is a restart with `HARD_MODE=legacy`. The blocking win `alert()`
+  (`assets/js/game/gameController.js:219`) can be addressed separately.
+- **Status:** both gates closed; the launch worktree is clean. **Deployment and pushing are not yet authorized.** They
+  await the user's decision; training remains unauthorized.
