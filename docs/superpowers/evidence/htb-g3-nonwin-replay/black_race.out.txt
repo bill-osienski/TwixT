@@ -1,0 +1,3 @@
+after ply 9 (new=black dist - legacy dist): {"ahead":{"W":43,"L":0,"D":0},"level":{"W":25,"L":4,"D":1},"behind>=2":{"W":11,"L":2,"D":1},"behind 1":{"W":17,"L":6,"D":0}}
+after ply 19 (new=black dist - legacy dist): {"ahead":{"W":47,"L":0,"D":0},"level":{"W":10,"L":0,"D":0},"behind>=2":{"W":31,"L":12,"D":2},"behind 1":{"W":8,"L":0,"D":0}}
+after ply 29 (new=black dist - legacy dist): {"ahead":{"W":59,"L":0,"D":0},"behind>=2":{"W":25,"L":12,"D":2},"behind 1":{"W":7,"L":0,"D":0},"level":{"W":5,"L":0,"D":0}}

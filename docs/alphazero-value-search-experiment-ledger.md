@@ -288,6 +288,7 @@ knob) is not a new hypothesis.
 > **H-TB integration — G3 steps 1–3 done: browser check PASS, smoke COMPLETED, timing WITHIN_24H; the match is next (Post-closure entry 62, 2026-11-10).** Run in a clean launch worktree at `542bb847` (binding `da0b86bf…` reproduced). Browser: banner `Hard mode: protocol` with both ids, 23/23 AI moves, the MCTS bar updated across ply 20 (D6), no client error, normal end. Smoke (`c2f9832b` → `13acf4c1`): outer COMPLETED with exit 0, gate restored, no survivors; 41 + 44 plies in 171 s. Timing: L 64; new `hard` 1.312 s/move, today's `hard` 2.703 s/move; projection 7.86 h; KILL 42,420 s (11.78 h). Below the planning estimate (8.5 h / 12.8 h). No strength claim; deployment, training and pushing not authorized. See #192.
 > **H-TB integration — G3 match COMPLETED: verdict PASS; G3 complete; returned for review (Post-closure entry 63, 2026-11-11).** 110 fresh colour-reversed pairs of new `hard` (student `78c16a31c3dba37f`, protocol) against today's `hard` (`c34b7ff3297c785a`, 800 sims, argmax) on the product stack, under the product game-end rule (`755de852` → `637917ca`; outer COMPLETED with exit 0, gate restored, no survivors; 7.02 h against KILL 11.78 h). Mean pair score **0.9318**, lower bound **0.8151 > 0.5**; 203 wins, 13 losses, 4 board-full draws. Matches the prediction (0.93). Cost: 1.349 against 2.865 s per move (0.47×). Observation: 192/220 distinct games; all 28 copies are new-as-Red wins, consistent with a peaked opening policy; scoring them as losses still gives a lower bound of 0.688 (post hoc). Product settings, not matched compute. A PASS does not authorize deployment, training or pushing. See #193.
 > **H-TB integration — G3 passes independent review; deployment recommended; awaiting the user's authorization (decision note, 2026-11-11).** The review replayed all 222 games and verified the timing and cleanup records (203-13-4, 0.9318, lower bound 0.8151). Repetitions are a variety observation: as Red, 13 opening cells, with four cells accounting for 77 of 110; it recommends keeping the tested opening policy. Dated correction: the post-hoc sensitivity bound is 0.6879 (entry 63 truncated it to 0.6878). Recommended: deploy `0e28b048` with student `78c16a31c3dba37f` and the pinned runtime; rollback is a restart with `HARD_MODE=legacy`. Deployment and pushing not yet authorized.
+> **After G3 — read-only review of the non-wins and a next-experiment proposal; nothing run (2026-11-11).** A rules-only replay of all 220 games found no recurring losing position. All 12 losses as Black fell behind on a heuristic race measure between ply 3 and ply 13, inside the T 1.0 sampled opening, and every loss came from the 45 Black games 2 or more pegs behind after ply 19 (31 of those were won). Proposed first: Diagnostic O, about 2.1 h on CPU, which reproduces the 1,100 Black opening moves from their seeds and separates readout, search and network causes; a twixtbot benchmark card comes second. Awaiting approval.
 
 ## Historical proposal check — programme now closed
 
@@ -11139,3 +11140,33 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
   (`assets/js/game/gameController.js:219`) can be addressed separately.
 - **Status:** both gates closed; the launch worktree is clean. **Deployment and pushing are not yet authorized.** They
   await the user's decision; training remains unauthorized.
+
+#### Read-only review of the G3 non-wins and a next-experiment proposal; a proposal, not an experiment (2026-11-11)
+
+- **Request:** the user's. Find where the H-TB student (`0e1cb621…`, product `78c16a31c3dba37f`) still struggles, and
+  propose one bounded next experiment. Read-only: no model load, game, labelling or training.
+- **What ran:** a rules-only replay of all 220 G3 match games through `server/gameLogic.js`; no model was loaded. Scripts
+  and outputs: `docs/superpowers/evidence/htb-g3-nonwin-replay/`. Every replayed result equals the recorded result.
+  The race measure (fewest extra pegs to connect, ignoring the opponent's replies) is my heuristic and has not been
+  validated.
+- **Findings, descriptive:**
+  - The 13 losses split 1 as Red and 12 as Black. The 4 draws (2 as Red, 2 as Black) each filled the board.
+  - There is no recurring losing position. Legacy `hard` always opened (18,19). The student replied on 72 different
+    cells, and no two losses share more than 3 opening plies.
+  - All 12 losses as Black fell behind on the race measure for good between ply 3 and ply 13, inside the T 1.0 sampled
+    opening (plies 0–19). After ply 19, all 12 losses were 2 or more pegs behind. That group also holds 31 wins and 2
+    draws; the 65 games level or ahead had no losses.
+  - Red's first-move advantage (no swap rule) accounts for part of the colour skew.
+- **Unresolved by the records:** no visit counts or values were saved. So the games cannot separate a sampled readout
+  move, a 200-simulation search miss, or a network value blind spot. The recorded per-move seeds make every student move
+  exactly reproducible.
+- **Proposal:** `docs/superpowers/2026-11-11-htb-next-experiment-proposal.md`.
+  - First, Diagnostic O, about 2.1 h on CPU. It reproduces the student's 1,100 Black opening moves with their seeds,
+    re-searches the same positions at 800 simulations, and scores them with the pinned twixtbot raw network. A frozen
+    table maps each result to its next change: readout, search budget, value training, or a new line.
+  - Second, a fresh card for a colour-balanced twixtbot benchmark of the student.
+  - Any later fit starts from the current student, uses fresh training positions kept separate from evaluation, and
+    must show improvement against the current student on fresh games.
+- **Prediction on record (for Diagnostic O, before any run):** low confidence. The readout explains a minority of the
+  losses, and the student's ply-19 value separates the losses less well than the teacher's.
+- **Status:** a proposal only. Diagnostic O, the benchmark and any training each need the user's approval.
