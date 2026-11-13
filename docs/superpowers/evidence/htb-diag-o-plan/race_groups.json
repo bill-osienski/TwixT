@@ -1,0 +1,999 @@
+{
+ "schema": "htb-diag-o-groups/1",
+ "n_games": 110,
+ "W": 96,
+ "L": 12,
+ "D": 2,
+ "games": [
+  {
+   "file": "pair_0000_game_1.json",
+   "pair": 0,
+   "outcome": "W",
+   "plies": 40,
+   "race19": "ahead",
+   "dist_black": 7,
+   "dist_red": 10
+  },
+  {
+   "file": "pair_0001_game_1.json",
+   "pair": 1,
+   "outcome": "W",
+   "plies": 42,
+   "race19": "level",
+   "dist_black": 9,
+   "dist_red": 9
+  },
+  {
+   "file": "pair_0002_game_1.json",
+   "pair": 2,
+   "outcome": "W",
+   "plies": 48,
+   "race19": "ahead",
+   "dist_black": 8,
+   "dist_red": 10
+  },
+  {
+   "file": "pair_0003_game_1.json",
+   "pair": 3,
+   "outcome": "W",
+   "plies": 64,
+   "race19": "behind_2plus",
+   "dist_black": 10,
+   "dist_red": 6
+  },
+  {
+   "file": "pair_0004_game_1.json",
+   "pair": 4,
+   "outcome": "W",
+   "plies": 40,
+   "race19": "ahead",
+   "dist_black": 7,
+   "dist_red": 10
+  },
+  {
+   "file": "pair_0005_game_1.json",
+   "pair": 5,
+   "outcome": "W",
+   "plies": 74,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 8
+  },
+  {
+   "file": "pair_0006_game_1.json",
+   "pair": 6,
+   "outcome": "W",
+   "plies": 58,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 8
+  },
+  {
+   "file": "pair_0007_game_1.json",
+   "pair": 7,
+   "outcome": "W",
+   "plies": 36,
+   "race19": "ahead",
+   "dist_black": 7,
+   "dist_red": 10
+  },
+  {
+   "file": "pair_0008_game_1.json",
+   "pair": 8,
+   "outcome": "W",
+   "plies": 32,
+   "race19": "ahead",
+   "dist_black": 6,
+   "dist_red": 9
+  },
+  {
+   "file": "pair_0009_game_1.json",
+   "pair": 9,
+   "outcome": "W",
+   "plies": 40,
+   "race19": "ahead",
+   "dist_black": 9,
+   "dist_red": 10
+  },
+  {
+   "file": "pair_0010_game_1.json",
+   "pair": 10,
+   "outcome": "W",
+   "plies": 46,
+   "race19": "behind_1",
+   "dist_black": 9,
+   "dist_red": 8
+  },
+  {
+   "file": "pair_0011_game_1.json",
+   "pair": 11,
+   "outcome": "W",
+   "plies": 72,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 6
+  },
+  {
+   "file": "pair_0012_game_1.json",
+   "pair": 12,
+   "outcome": "W",
+   "plies": 40,
+   "race19": "ahead",
+   "dist_black": 6,
+   "dist_red": 11
+  },
+  {
+   "file": "pair_0013_game_1.json",
+   "pair": 13,
+   "outcome": "W",
+   "plies": 48,
+   "race19": "ahead",
+   "dist_black": 6,
+   "dist_red": 11
+  },
+  {
+   "file": "pair_0014_game_1.json",
+   "pair": 14,
+   "outcome": "W",
+   "plies": 40,
+   "race19": "ahead",
+   "dist_black": 7,
+   "dist_red": 9
+  },
+  {
+   "file": "pair_0015_game_1.json",
+   "pair": 15,
+   "outcome": "L",
+   "plies": 69,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 7
+  },
+  {
+   "file": "pair_0016_game_1.json",
+   "pair": 16,
+   "outcome": "W",
+   "plies": 42,
+   "race19": "ahead",
+   "dist_black": 8,
+   "dist_red": 10
+  },
+  {
+   "file": "pair_0017_game_1.json",
+   "pair": 17,
+   "outcome": "D",
+   "plies": 572,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 6
+  },
+  {
+   "file": "pair_0018_game_1.json",
+   "pair": 18,
+   "outcome": "W",
+   "plies": 60,
+   "race19": "behind_1",
+   "dist_black": 9,
+   "dist_red": 8
+  },
+  {
+   "file": "pair_0019_game_1.json",
+   "pair": 19,
+   "outcome": "W",
+   "plies": 56,
+   "race19": "behind_1",
+   "dist_black": 10,
+   "dist_red": 9
+  },
+  {
+   "file": "pair_0020_game_1.json",
+   "pair": 20,
+   "outcome": "W",
+   "plies": 52,
+   "race19": "behind_1",
+   "dist_black": 10,
+   "dist_red": 9
+  },
+  {
+   "file": "pair_0021_game_1.json",
+   "pair": 21,
+   "outcome": "L",
+   "plies": 35,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 7
+  },
+  {
+   "file": "pair_0022_game_1.json",
+   "pair": 22,
+   "outcome": "W",
+   "plies": 40,
+   "race19": "ahead",
+   "dist_black": 7,
+   "dist_red": 11
+  },
+  {
+   "file": "pair_0023_game_1.json",
+   "pair": 23,
+   "outcome": "W",
+   "plies": 52,
+   "race19": "ahead",
+   "dist_black": 8,
+   "dist_red": 10
+  },
+  {
+   "file": "pair_0024_game_1.json",
+   "pair": 24,
+   "outcome": "W",
+   "plies": 56,
+   "race19": "behind_1",
+   "dist_black": 10,
+   "dist_red": 9
+  },
+  {
+   "file": "pair_0025_game_1.json",
+   "pair": 25,
+   "outcome": "W",
+   "plies": 58,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 8
+  },
+  {
+   "file": "pair_0026_game_1.json",
+   "pair": 26,
+   "outcome": "W",
+   "plies": 44,
+   "race19": "level",
+   "dist_black": 9,
+   "dist_red": 9
+  },
+  {
+   "file": "pair_0027_game_1.json",
+   "pair": 27,
+   "outcome": "L",
+   "plies": 43,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 7
+  },
+  {
+   "file": "pair_0028_game_1.json",
+   "pair": 28,
+   "outcome": "W",
+   "plies": 48,
+   "race19": "ahead",
+   "dist_black": 8,
+   "dist_red": 9
+  },
+  {
+   "file": "pair_0029_game_1.json",
+   "pair": 29,
+   "outcome": "W",
+   "plies": 48,
+   "race19": "behind_2plus",
+   "dist_black": 10,
+   "dist_red": 7
+  },
+  {
+   "file": "pair_0030_game_1.json",
+   "pair": 30,
+   "outcome": "W",
+   "plies": 46,
+   "race19": "ahead",
+   "dist_black": 7,
+   "dist_red": 10
+  },
+  {
+   "file": "pair_0031_game_1.json",
+   "pair": 31,
+   "outcome": "W",
+   "plies": 62,
+   "race19": "behind_2plus",
+   "dist_black": 10,
+   "dist_red": 8
+  },
+  {
+   "file": "pair_0032_game_1.json",
+   "pair": 32,
+   "outcome": "W",
+   "plies": 50,
+   "race19": "behind_2plus",
+   "dist_black": 12,
+   "dist_red": 6
+  },
+  {
+   "file": "pair_0033_game_1.json",
+   "pair": 33,
+   "outcome": "W",
+   "plies": 34,
+   "race19": "ahead",
+   "dist_black": 7,
+   "dist_red": 10
+  },
+  {
+   "file": "pair_0034_game_1.json",
+   "pair": 34,
+   "outcome": "W",
+   "plies": 40,
+   "race19": "ahead",
+   "dist_black": 7,
+   "dist_red": 9
+  },
+  {
+   "file": "pair_0035_game_1.json",
+   "pair": 35,
+   "outcome": "W",
+   "plies": 34,
+   "race19": "ahead",
+   "dist_black": 6,
+   "dist_red": 11
+  },
+  {
+   "file": "pair_0036_game_1.json",
+   "pair": 36,
+   "outcome": "W",
+   "plies": 36,
+   "race19": "ahead",
+   "dist_black": 7,
+   "dist_red": 10
+  },
+  {
+   "file": "pair_0037_game_1.json",
+   "pair": 37,
+   "outcome": "W",
+   "plies": 62,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 8
+  },
+  {
+   "file": "pair_0038_game_1.json",
+   "pair": 38,
+   "outcome": "W",
+   "plies": 42,
+   "race19": "level",
+   "dist_black": 9,
+   "dist_red": 9
+  },
+  {
+   "file": "pair_0039_game_1.json",
+   "pair": 39,
+   "outcome": "L",
+   "plies": 37,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 6
+  },
+  {
+   "file": "pair_0040_game_1.json",
+   "pair": 40,
+   "outcome": "W",
+   "plies": 36,
+   "race19": "ahead",
+   "dist_black": 6,
+   "dist_red": 10
+  },
+  {
+   "file": "pair_0041_game_1.json",
+   "pair": 41,
+   "outcome": "W",
+   "plies": 50,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 9
+  },
+  {
+   "file": "pair_0042_game_1.json",
+   "pair": 42,
+   "outcome": "W",
+   "plies": 60,
+   "race19": "level",
+   "dist_black": 10,
+   "dist_red": 10
+  },
+  {
+   "file": "pair_0043_game_1.json",
+   "pair": 43,
+   "outcome": "W",
+   "plies": 58,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 7
+  },
+  {
+   "file": "pair_0044_game_1.json",
+   "pair": 44,
+   "outcome": "W",
+   "plies": 34,
+   "race19": "ahead",
+   "dist_black": 6,
+   "dist_red": 11
+  },
+  {
+   "file": "pair_0045_game_1.json",
+   "pair": 45,
+   "outcome": "W",
+   "plies": 66,
+   "race19": "ahead",
+   "dist_black": 8,
+   "dist_red": 10
+  },
+  {
+   "file": "pair_0046_game_1.json",
+   "pair": 46,
+   "outcome": "W",
+   "plies": 68,
+   "race19": "level",
+   "dist_black": 9,
+   "dist_red": 9
+  },
+  {
+   "file": "pair_0047_game_1.json",
+   "pair": 47,
+   "outcome": "W",
+   "plies": 36,
+   "race19": "ahead",
+   "dist_black": 6,
+   "dist_red": 10
+  },
+  {
+   "file": "pair_0048_game_1.json",
+   "pair": 48,
+   "outcome": "L",
+   "plies": 39,
+   "race19": "behind_2plus",
+   "dist_black": 10,
+   "dist_red": 8
+  },
+  {
+   "file": "pair_0049_game_1.json",
+   "pair": 49,
+   "outcome": "W",
+   "plies": 50,
+   "race19": "level",
+   "dist_black": 9,
+   "dist_red": 9
+  },
+  {
+   "file": "pair_0050_game_1.json",
+   "pair": 50,
+   "outcome": "W",
+   "plies": 38,
+   "race19": "ahead",
+   "dist_black": 7,
+   "dist_red": 10
+  },
+  {
+   "file": "pair_0051_game_1.json",
+   "pair": 51,
+   "outcome": "W",
+   "plies": 70,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 6
+  },
+  {
+   "file": "pair_0052_game_1.json",
+   "pair": 52,
+   "outcome": "W",
+   "plies": 44,
+   "race19": "ahead",
+   "dist_black": 7,
+   "dist_red": 11
+  },
+  {
+   "file": "pair_0053_game_1.json",
+   "pair": 53,
+   "outcome": "W",
+   "plies": 56,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 8
+  },
+  {
+   "file": "pair_0054_game_1.json",
+   "pair": 54,
+   "outcome": "W",
+   "plies": 46,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 7
+  },
+  {
+   "file": "pair_0055_game_1.json",
+   "pair": 55,
+   "outcome": "W",
+   "plies": 38,
+   "race19": "ahead",
+   "dist_black": 7,
+   "dist_red": 11
+  },
+  {
+   "file": "pair_0056_game_1.json",
+   "pair": 56,
+   "outcome": "W",
+   "plies": 64,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 8
+  },
+  {
+   "file": "pair_0057_game_1.json",
+   "pair": 57,
+   "outcome": "D",
+   "plies": 572,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 8
+  },
+  {
+   "file": "pair_0058_game_1.json",
+   "pair": 58,
+   "outcome": "W",
+   "plies": 54,
+   "race19": "ahead",
+   "dist_black": 8,
+   "dist_red": 10
+  },
+  {
+   "file": "pair_0059_game_1.json",
+   "pair": 59,
+   "outcome": "L",
+   "plies": 43,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 6
+  },
+  {
+   "file": "pair_0060_game_1.json",
+   "pair": 60,
+   "outcome": "L",
+   "plies": 39,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 7
+  },
+  {
+   "file": "pair_0061_game_1.json",
+   "pair": 61,
+   "outcome": "W",
+   "plies": 34,
+   "race19": "ahead",
+   "dist_black": 6,
+   "dist_red": 10
+  },
+  {
+   "file": "pair_0062_game_1.json",
+   "pair": 62,
+   "outcome": "L",
+   "plies": 43,
+   "race19": "behind_2plus",
+   "dist_black": 10,
+   "dist_red": 6
+  },
+  {
+   "file": "pair_0063_game_1.json",
+   "pair": 63,
+   "outcome": "W",
+   "plies": 48,
+   "race19": "level",
+   "dist_black": 9,
+   "dist_red": 9
+  },
+  {
+   "file": "pair_0064_game_1.json",
+   "pair": 64,
+   "outcome": "W",
+   "plies": 38,
+   "race19": "level",
+   "dist_black": 7,
+   "dist_red": 7
+  },
+  {
+   "file": "pair_0065_game_1.json",
+   "pair": 65,
+   "outcome": "L",
+   "plies": 37,
+   "race19": "behind_2plus",
+   "dist_black": 10,
+   "dist_red": 7
+  },
+  {
+   "file": "pair_0066_game_1.json",
+   "pair": 66,
+   "outcome": "W",
+   "plies": 38,
+   "race19": "ahead",
+   "dist_black": 7,
+   "dist_red": 12
+  },
+  {
+   "file": "pair_0067_game_1.json",
+   "pair": 67,
+   "outcome": "W",
+   "plies": 46,
+   "race19": "level",
+   "dist_black": 9,
+   "dist_red": 9
+  },
+  {
+   "file": "pair_0068_game_1.json",
+   "pair": 68,
+   "outcome": "W",
+   "plies": 78,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 8
+  },
+  {
+   "file": "pair_0069_game_1.json",
+   "pair": 69,
+   "outcome": "W",
+   "plies": 38,
+   "race19": "ahead",
+   "dist_black": 6,
+   "dist_red": 11
+  },
+  {
+   "file": "pair_0070_game_1.json",
+   "pair": 70,
+   "outcome": "W",
+   "plies": 34,
+   "race19": "ahead",
+   "dist_black": 6,
+   "dist_red": 11
+  },
+  {
+   "file": "pair_0071_game_1.json",
+   "pair": 71,
+   "outcome": "W",
+   "plies": 52,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 6
+  },
+  {
+   "file": "pair_0072_game_1.json",
+   "pair": 72,
+   "outcome": "W",
+   "plies": 60,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 9
+  },
+  {
+   "file": "pair_0073_game_1.json",
+   "pair": 73,
+   "outcome": "W",
+   "plies": 58,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 7
+  },
+  {
+   "file": "pair_0074_game_1.json",
+   "pair": 74,
+   "outcome": "W",
+   "plies": 40,
+   "race19": "ahead",
+   "dist_black": 7,
+   "dist_red": 11
+  },
+  {
+   "file": "pair_0075_game_1.json",
+   "pair": 75,
+   "outcome": "W",
+   "plies": 42,
+   "race19": "ahead",
+   "dist_black": 7,
+   "dist_red": 9
+  },
+  {
+   "file": "pair_0076_game_1.json",
+   "pair": 76,
+   "outcome": "W",
+   "plies": 54,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 6
+  },
+  {
+   "file": "pair_0077_game_1.json",
+   "pair": 77,
+   "outcome": "W",
+   "plies": 52,
+   "race19": "ahead",
+   "dist_black": 9,
+   "dist_red": 10
+  },
+  {
+   "file": "pair_0078_game_1.json",
+   "pair": 78,
+   "outcome": "W",
+   "plies": 38,
+   "race19": "ahead",
+   "dist_black": 6,
+   "dist_red": 9
+  },
+  {
+   "file": "pair_0079_game_1.json",
+   "pair": 79,
+   "outcome": "W",
+   "plies": 42,
+   "race19": "ahead",
+   "dist_black": 8,
+   "dist_red": 10
+  },
+  {
+   "file": "pair_0080_game_1.json",
+   "pair": 80,
+   "outcome": "W",
+   "plies": 36,
+   "race19": "ahead",
+   "dist_black": 7,
+   "dist_red": 8
+  },
+  {
+   "file": "pair_0081_game_1.json",
+   "pair": 81,
+   "outcome": "W",
+   "plies": 66,
+   "race19": "behind_2plus",
+   "dist_black": 10,
+   "dist_red": 8
+  },
+  {
+   "file": "pair_0082_game_1.json",
+   "pair": 82,
+   "outcome": "W",
+   "plies": 36,
+   "race19": "ahead",
+   "dist_black": 7,
+   "dist_red": 10
+  },
+  {
+   "file": "pair_0083_game_1.json",
+   "pair": 83,
+   "outcome": "W",
+   "plies": 66,
+   "race19": "behind_1",
+   "dist_black": 10,
+   "dist_red": 9
+  },
+  {
+   "file": "pair_0084_game_1.json",
+   "pair": 84,
+   "outcome": "W",
+   "plies": 58,
+   "race19": "ahead",
+   "dist_black": 7,
+   "dist_red": 10
+  },
+  {
+   "file": "pair_0085_game_1.json",
+   "pair": 85,
+   "outcome": "W",
+   "plies": 40,
+   "race19": "ahead",
+   "dist_black": 7,
+   "dist_red": 9
+  },
+  {
+   "file": "pair_0086_game_1.json",
+   "pair": 86,
+   "outcome": "W",
+   "plies": 46,
+   "race19": "level",
+   "dist_black": 8,
+   "dist_red": 8
+  },
+  {
+   "file": "pair_0087_game_1.json",
+   "pair": 87,
+   "outcome": "L",
+   "plies": 39,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 8
+  },
+  {
+   "file": "pair_0088_game_1.json",
+   "pair": 88,
+   "outcome": "W",
+   "plies": 58,
+   "race19": "behind_2plus",
+   "dist_black": 10,
+   "dist_red": 7
+  },
+  {
+   "file": "pair_0089_game_1.json",
+   "pair": 89,
+   "outcome": "L",
+   "plies": 55,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 7
+  },
+  {
+   "file": "pair_0090_game_1.json",
+   "pair": 90,
+   "outcome": "L",
+   "plies": 37,
+   "race19": "behind_2plus",
+   "dist_black": 10,
+   "dist_red": 7
+  },
+  {
+   "file": "pair_0091_game_1.json",
+   "pair": 91,
+   "outcome": "W",
+   "plies": 68,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 7
+  },
+  {
+   "file": "pair_0092_game_1.json",
+   "pair": 92,
+   "outcome": "W",
+   "plies": 60,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 9
+  },
+  {
+   "file": "pair_0093_game_1.json",
+   "pair": 93,
+   "outcome": "W",
+   "plies": 58,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 7
+  },
+  {
+   "file": "pair_0094_game_1.json",
+   "pair": 94,
+   "outcome": "W",
+   "plies": 42,
+   "race19": "ahead",
+   "dist_black": 7,
+   "dist_red": 11
+  },
+  {
+   "file": "pair_0095_game_1.json",
+   "pair": 95,
+   "outcome": "W",
+   "plies": 34,
+   "race19": "ahead",
+   "dist_black": 7,
+   "dist_red": 11
+  },
+  {
+   "file": "pair_0096_game_1.json",
+   "pair": 96,
+   "outcome": "W",
+   "plies": 38,
+   "race19": "ahead",
+   "dist_black": 6,
+   "dist_red": 11
+  },
+  {
+   "file": "pair_0097_game_1.json",
+   "pair": 97,
+   "outcome": "W",
+   "plies": 46,
+   "race19": "ahead",
+   "dist_black": 8,
+   "dist_red": 10
+  },
+  {
+   "file": "pair_0098_game_1.json",
+   "pair": 98,
+   "outcome": "W",
+   "plies": 44,
+   "race19": "behind_1",
+   "dist_black": 9,
+   "dist_red": 8
+  },
+  {
+   "file": "pair_0099_game_1.json",
+   "pair": 99,
+   "outcome": "W",
+   "plies": 42,
+   "race19": "ahead",
+   "dist_black": 8,
+   "dist_red": 9
+  },
+  {
+   "file": "pair_0100_game_1.json",
+   "pair": 100,
+   "outcome": "W",
+   "plies": 40,
+   "race19": "ahead",
+   "dist_black": 9,
+   "dist_red": 10
+  },
+  {
+   "file": "pair_0101_game_1.json",
+   "pair": 101,
+   "outcome": "W",
+   "plies": 58,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 8
+  },
+  {
+   "file": "pair_0102_game_1.json",
+   "pair": 102,
+   "outcome": "W",
+   "plies": 42,
+   "race19": "behind_2plus",
+   "dist_black": 10,
+   "dist_red": 8
+  },
+  {
+   "file": "pair_0103_game_1.json",
+   "pair": 103,
+   "outcome": "W",
+   "plies": 56,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 8
+  },
+  {
+   "file": "pair_0104_game_1.json",
+   "pair": 104,
+   "outcome": "W",
+   "plies": 58,
+   "race19": "behind_2plus",
+   "dist_black": 10,
+   "dist_red": 8
+  },
+  {
+   "file": "pair_0105_game_1.json",
+   "pair": 105,
+   "outcome": "W",
+   "plies": 34,
+   "race19": "ahead",
+   "dist_black": 7,
+   "dist_red": 10
+  },
+  {
+   "file": "pair_0106_game_1.json",
+   "pair": 106,
+   "outcome": "W",
+   "plies": 64,
+   "race19": "behind_2plus",
+   "dist_black": 10,
+   "dist_red": 6
+  },
+  {
+   "file": "pair_0107_game_1.json",
+   "pair": 107,
+   "outcome": "W",
+   "plies": 44,
+   "race19": "behind_1",
+   "dist_black": 10,
+   "dist_red": 9
+  },
+  {
+   "file": "pair_0108_game_1.json",
+   "pair": 108,
+   "outcome": "W",
+   "plies": 36,
+   "race19": "ahead",
+   "dist_black": 6,
+   "dist_red": 9
+  },
+  {
+   "file": "pair_0109_game_1.json",
+   "pair": 109,
+   "outcome": "W",
+   "plies": 48,
+   "race19": "behind_2plus",
+   "dist_black": 11,
+   "dist_red": 8
+  }
+ ]
+}
