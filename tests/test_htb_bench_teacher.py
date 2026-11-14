@@ -184,3 +184,34 @@ def test_canon_cli_prints_one_digest_per_ply(tmp_path):
     assert r.returncode == 0, r.stderr
     d = json.loads(r.stdout)
     assert len(d) == 3 and d[0] == T.canon_digest(TwixtState())
+
+
+@needs_clone
+def test_the_early_draw_flag_is_observational_in_both_lanes():
+    """A flag set in one lane only never stops play; each lane's first flagged ply is recorded separately (§6)."""
+    bench = T.BenchTeacher(FakeTeacher(), _twixt()[0])
+    bench.start([(10, 10), (5, 5), (12, 11), (5, 8)])
+    bench.rtb.result = "DRAW"  # the reflected lane alone
+    rep = bench.apply((14, 14))
+    assert rep["ok"] and rep["tb_draw"] is False and rep["tb_draw_ply"] is None
+    assert rep["tb_draw_ply_reflected"] == 5
+    bench.tb.result = "DRAW"
+    rep = bench.apply((7, 7))
+    assert rep["tb_draw_ply"] == 6 and rep["tb_draw_ply_reflected"] == 5
+    assert bench.apply((16, 14))["ok"]  # play continues
+
+
+def test_the_teacher_runtime_is_checked_before_any_model_loads(monkeypatch, capsys):
+    assert T.env_mismatches(dict(T.TEACHER_ENV)) == []
+    assert T.env_mismatches({**T.TEACHER_ENV, "tensorflow": "2.20.0"}) == ["tensorflow: 2.20.0 (card: 2.21.0)"]
+    monkeypatch.setattr(T, "gate_open", lambda stage, root=T.ROOT: True)
+    monkeypatch.setattr(T, "runtime_versions", lambda: {**T.TEACHER_ENV, "numpy": "2.4.0"})
+
+    def must_not_load(*a, **k):
+        raise AssertionError("the teacher model was loaded before the runtime check")
+    monkeypatch.setattr(T.P, "_load_teacher_real", must_not_load)
+    assert T.main(["serve", "--stage", "smoke", "--clone-root", "x"]) == 4
+    out = capsys.readouterr()
+    rep = json.loads(out.out.splitlines()[0])
+    assert rep == {"ok": False, "refused": "runtime", "detail": ["numpy: 2.4.0 (card: 2.5.2)"],
+                   "env": {**T.TEACHER_ENV, "numpy": "2.4.0"}}

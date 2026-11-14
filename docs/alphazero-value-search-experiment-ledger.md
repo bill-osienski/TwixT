@@ -293,6 +293,7 @@ knob) is not a new hypothesis.
 > **Diagnostic O's exit 134 — cause verified; shutdown probe added (dated note, 2026-11-14).** The user matched the macOS crash report to the run's process and reproduced the abort on onnxruntime-node 1.23.2 (forced exit 3/3 crash, `process.exitCode` 3/3 clean; microsoft/onnxruntime#26445). Entry 64's records and results stand. Future drivers set `process.exitCode` and pass `server/test_ort_shutdown.js` (`156c991d`).
 > **Student–teacher benchmark card DRAFTED; returned for review; nothing built or played (decision note, 2026-11-14).** The current H-TB student against its pinned twixtbot teacher under our rules: one teacher configuration (the mirror-averaged raw policy, no search); arm N (student network, no search, 200 pairs) and arm P (student as shipped, 110 pairs); fresh openings and seeds; Hoeffding TRAILS/AHEAD/UNRESOLVED; ceiling 6.0 h. It needs a narrow #52 exception (twixtbot only as the student's teacher, this one configuration, one run) and approval of the card. Diagnostic O stays recorded as no signal fired.
 > **Student–teacher benchmark: card revision 1 and the model-free build; returned for one launch review; nothing loaded or played (build record, 2026-11-14).** The product's game-end rule is authoritative, and twixtbot's early-draw flag is recorded only (G3 draws: flag at plies 73–127, product end at 572). The Node–Python canonical state is compared every ply. Smoke ceiling 1,800 s; match cap 6.0 h, fixed; the 1.5× launch estimate is from the smoke. Arm N alone decides the training reading. The #52 scope is exactly 4 smoke and 620 scored games. Frozen analyser `f3d40d45…`. Correction: the shutdown test is run by name and by the wrappers, not in `test:server` (G3 binding).
+> **Student–teacher benchmark: launch checks repaired (Repair 1); returned for launch review; nothing loaded or played (repair record, 2026-11-14).** Evidence bound to its run (same launch commit, `pgid.txt` = driver PID, stage ceiling, committed smoke for the match). One row per played ply, and 200 simulations budgeted and 200 visits spent on every arm P student move (a 64-simulation smoke is now refused). ORT and teacher runtime versions checked before any model loads. The early-draw flag is purely observational. Re-pinned: analyser `b162323e…`. Unchanged: 4 smoke + 620 scored games, the 6.0 h cap, arm N decides.
 
 ## Historical proposal check — programme now closed
 
@@ -11340,3 +11341,45 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
     created; Diagnostic O's frozen files are unchanged.
 - **Status:** built, gates closed. Next: the user's launch review, then the smoke, its committed `timing.json`, and the
   match, each through its own one-line gate-open commit.
+
+#### Repair record — the student–teacher benchmark's launch checks (Repair 1), before either gate opens; returned for launch review (2026-11-14)
+
+- **The user's review (2026-11-14):** repair the launch checks before opening either gate. Keep the four-game smoke,
+  the 620 scored games, the fixed 6.0 h cap and the arm N decision rule. The user had rerun the model-free smoke
+  fixture and confirmed that a smoke played at 64 simulations still produced a timing estimate.
+- **Repaired** (card Repair 1, §4 and §7.1):
+  1. **Evidence bound to its run**, with G3's checks:
+     - the outer and inner records name the same launch commit;
+     - `pgid.txt` is the driver's PID;
+     - both records carry the stage's ceiling (1,790 + 10 s for the smoke, 21,590 + 10 s for the match);
+     - the match admits only committed smoke evidence, checked by the driver (git: tracked, unchanged, nothing
+       untracked) and by the match wrapper.
+  2. **The search budget enforced.** There must be exactly one per-move row per played ply after the opening, in
+     order. Every arm P student row must record a budget of 200 and **200 root visits actually spent** (the sum of
+     `visitCounts`). `protocolMove` reports `nSimulations` by echoing the policy, so the spent visits are recorded too;
+     a model-free check found that they sum to exactly 200 in both phases (60 of 60 moves). Arm N and teacher rows may
+     carry no budget, visits or seeds. A wrong budget, short visits, or a duplicate, missing or extra row is rejected;
+     the 64-simulation fixture is now refused.
+  3. **Pinned runtimes checked before any model loads:**
+     - onnxruntime-node 1.23.2, as the server resolves it;
+     - the teacher's Python 3.13.15, TensorFlow 2.21.0 and NumPy 2.5.2, read from package metadata.
+     - The checks run in both wrappers, in the driver before the student loads, and in the teacher process, which
+       refuses (exit 4) before its model loads. The driver now starts the teacher first and loads the student only
+       after the teacher's check passes.
+     - The analyser requires the recorded versions to equal the pins.
+- **Clarified in the card:** smoke outcomes are replay-validated by the analyser and excluded from scoring and from
+  every report.
+- **The early-draw flag is purely observational:** the reflection-lane flag comparison that could stop the run on the
+  flag alone is removed. Each lane's first flagged ply is recorded.
+- **Found while checking:** the wrappers' restoration check compared the gate file with `HEAD~1`. In the main
+  checkout, `HEAD~1` predates the gate file, so a refused run reported "GATE NOT RESTORED" with exit 5, although the
+  file was unchanged and closed. The check now compares with `HEAD` when the pre-open commit lacks the gate file. In a
+  launch tree the pre-open commit has it, and the check is unchanged.
+- **Re-pinned** (card §11.1): analyser `b162323e…`, driver `7ad449a8…`, teacher process `ea2bab26…`, smoke wrapper
+  `56fb66de…`, match wrapper `e075a8c2…`. The gate file is unchanged (`f1cd212e…`).
+- **Model-free checks:**
+  - benchmark: Node 17 pass, Python 12 pass;
+  - neighbouring suites: gate inventory, Diagnostic O, G3 and the ORT shutdown test, all pass;
+  - both wrappers refuse in the main checkout with exit 1, creating nothing.
+  - **No model was loaded and no game was played.**
+- **Status:** returned for launch review. Both gates are closed.

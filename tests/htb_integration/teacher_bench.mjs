@@ -17,9 +17,10 @@
  * Usage: node tests/htb_integration/teacher_bench.mjs run <smoke|match> --teacher-python <py> --clone-root <dir> --kill-s <s>
  * Exit (set through process.exitCode; never process.exit, ledger entry 64): 0 COMPLETED, 2 USAGE, 3 VOID, 4 REFUSED.
  */
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { createInterface } from 'node:readline';
@@ -43,6 +44,39 @@ export const RUN_REL = {
   match: 'docs/superpowers/evidence/htb-teacher-bench-match',
 };
 export const TIMING_REL = `${RUN_REL.smoke}/timing.json`;
+export const OUTER_REL = {
+  smoke: 'docs/superpowers/evidence/htb-teacher-bench-smoke-run',
+  match: 'docs/superpowers/evidence/htb-teacher-bench-match-run',
+};
+/** Runtimes pinned in card §4, checked before either model loads. */
+export const ORT_VERSION = '1.23.2';
+export const TEACHER_ENV = Object.freeze({ python: '3.13.15', tensorflow: '2.21.0', numpy: '2.5.2' });
+
+/** The onnxruntime-node the server's inference module actually resolves. */
+export function ortVersion() {
+  const req = createRequire(join(REPO_ROOT, 'server', 'inference.js'));
+  return req('onnxruntime-node/package.json').version;
+}
+
+export function teacherEnvProblems(env) {
+  return Object.entries(TEACHER_ENV).filter(([k, v]) => env?.[k] !== v).map(([k, v]) => `${k}: ${env?.[k]} (card: ${v})`);
+}
+
+const git = (...args) => spawnSync('git', args, { cwd: REPO_ROOT, encoding: 'utf8' });
+
+/** Match admission (card §9): the smoke's evidence is committed and unchanged at HEAD, with nothing untracked. */
+export function smokeEvidenceProblems(g = git) {
+  const p = [];
+  const required = ['record.json', 'timing.json', 'progress.jsonl'].map((f) => `${RUN_REL.smoke}/${f}`)
+    .concat(['outer.json', 'pgid.txt', 'idle_check.txt', 'bg_check.txt'].map((f) => `${OUTER_REL.smoke}/${f}`));
+  for (const f of required) if (g('ls-files', '--error-unmatch', '--', f).status !== 0) p.push(`${f} is not committed`);
+  const games = g('ls-files', '--', `${RUN_REL.smoke}/games`).stdout.trim().split('\n').filter(Boolean);
+  if (games.length !== 4) p.push(`${games.length} committed smoke games, expected 4`);
+  if (g('diff', '--quiet', 'HEAD', '--', RUN_REL.smoke, OUTER_REL.smoke).status !== 0) p.push('smoke evidence differs from HEAD');
+  const others = g('ls-files', '--others', '--exclude-standard', '--', RUN_REL.smoke, OUTER_REL.smoke).stdout.trim();
+  if (others) p.push(`untracked smoke evidence: ${others.split('\n').slice(0, 3).join(', ')}`);
+  return p;
+}
 
 export class BenchStop extends Error {
   constructor(step, message) {
@@ -179,7 +213,11 @@ export function makeStudent(arm, inference, policy) {
       const seeds = moveSeeds(stage, pair, game, state.ply);
       const gameState = TwixtState.fromDict(state.toDict());
       const out = await protocolMove({ gameState, policy, inference, seeds });
-      return { moveKey: out.moveKey, extra: { seeds, nSimulations: out.nSimulations } };
+      // nSimulations is the budget protocolMove was given; visits is what its search actually spent (the root's
+      // visit counts summed). The analyser requires both to be 200 on every arm P student move.
+      let visits = 0;
+      for (const v of out.visitCounts.values()) visits += v;
+      return { moveKey: out.moveKey, extra: { seeds, nSimulations: out.nSimulations, visits } };
     } };
   }
   throw new Error(`unknown arm ${arm}`);
@@ -256,7 +294,8 @@ export async function playGame({ stage, task, student, teacher }) {
   checkReply(await teacher.request({ cmd: 'start', opening: task.opening }), state, 'start');
   const moves = task.opening.map((m) => [...m]);
   const perMove = [];
-  let tbDrawPly = null;
+  let tbDrawPly = null; // twixtbot's early-draw flag, both lanes: observational only (card §6)
+  let tbDrawPlyR = null;
   while (!state.isTerminal()) {
     const ply = state.ply;
     const mover = state.toMove === task.studentColour ? 'student' : 'teacher';
@@ -277,7 +316,8 @@ export async function playGame({ stage, task, student, teacher }) {
     state = applyLegal(state, mv, mover);
     const rep = await teacher.request({ cmd: 'apply', move: mv });
     checkReply(rep, state, `apply at ply ${ply}`);
-    if (rep.tb_draw && tbDrawPly === null) tbDrawPly = rep.tb_draw_ply;
+    if (tbDrawPly === null && rep.tb_draw_ply != null) tbDrawPly = rep.tb_draw_ply;
+    if (tbDrawPlyR === null && rep.tb_draw_ply_reflected != null) tbDrawPlyR = rep.tb_draw_ply_reflected;
     moves.push(mv);
     perMove.push({ ply, mover, move: mv, ms, ...extra });
   }
@@ -299,6 +339,7 @@ export async function playGame({ stage, task, student, teacher }) {
     student_score: studentScore,
     termination: winner === null ? 'no_legal_moves' : 'connection',
     tb_draw_flag_ply: tbDrawPly,
+    tb_draw_flag_ply_reflected: tbDrawPlyR,
     wall_ms: performance.now() - t0,
     per_move: perMove,
   };
@@ -325,14 +366,33 @@ async function run(stage, opts) {
   for (const k of ['teacher-python', 'clone-root', 'kill-s']) if (!opts[k]) throw new BenchRefusal(`missing --${k}`);
   if (Number(opts['kill-s']) !== KILL_S[stage]) throw new BenchRefusal(`--kill-s ${opts['kill-s']} is not the card's ${KILL_S[stage]}`);
   if (stage === 'match') {
-    const t = existsSync(join(REPO_ROOT, TIMING_REL)) ? JSON.parse(readFileSync(join(REPO_ROOT, TIMING_REL), 'utf8')) : null;
-    if (t?.verdict !== 'LAUNCH_OK') throw new BenchRefusal(`${TIMING_REL} is missing or not LAUNCH_OK`);
+    const sp = smokeEvidenceProblems();
+    if (sp.length) throw new BenchRefusal(`smoke evidence: ${sp.join('; ')}`);
+    const t = JSON.parse(readFileSync(join(REPO_ROOT, TIMING_REL), 'utf8'));
+    if (t?.verdict !== 'LAUNCH_OK' || t.match_cap_s !== KILL_S.match) throw new BenchRefusal(`${TIMING_REL} is not LAUNCH_OK at the ${KILL_S.match} s cap`);
   }
   const out = join(REPO_ROOT, RUN_REL[stage]);
   if (existsSync(out)) throw new BenchRefusal(`${RUN_REL[stage]} exists (one-shot)`);
+  const ort = ortVersion();
+  if (ort !== ORT_VERSION) throw new BenchRefusal(`onnxruntime-node ${ort}, the card pins ${ORT_VERSION}`);
+  const head = git('rev-parse', 'HEAD').stdout.trim();
+  if (!/^[0-9a-f]{40}$/.test(head)) throw new BenchRefusal('no HEAD');
   const tasks = schedule(stage);
 
+  // The teacher first: its process checks its runtime against the card before its model loads, and the student
+  // model is loaded only after that check has passed.
   const tStart = performance.now();
+  const teacher = TeacherClient.spawn(opts['teacher-python'], ['-B', '-m', 'scripts.GPU.alphazero.htb_bench_teacher', 'serve', '--stage', stage, '--clone-root', opts['clone-root']], {
+    cwd: REPO_ROOT,
+    env: { ...process.env, PYTHONPATH: '.' },
+  });
+  activeTeacher = teacher;
+  const ready = await teacher.next().catch(() => null);
+  if (ready?.refused === 'runtime') throw new BenchRefusal(`teacher runtime: ${JSON.stringify(ready.detail)}`);
+  if (!ready?.ok || !ready.ready) throw new BenchStop('teacher', `teacher did not start: ${JSON.stringify(ready).slice(0, 300)}`);
+  const envProblems = teacherEnvProblems(ready.env);
+  if (envProblems.length) throw new BenchRefusal(`teacher runtime: ${envProblems.join('; ')}`);
+
   const { resolveHardModel } = await import('../../server/model_manifest.js');
   const { AlphaZeroInference } = await import('../../server/inference.js');
   const { MirrorAveragingInference } = await import('../../server/mirror_inference.js');
@@ -342,20 +402,12 @@ async function run(stage, opts) {
   const policy = resolvePolicy({ difficulty: 'hard', hardMode: 'protocol' });
   if (policy.nSims !== 200 || policy.moveTemp !== 1.0 || policy.search !== 'protocol') throw new BenchRefusal(`unexpected policy ${JSON.stringify(policy)}`);
 
-  mkdirSync(join(out, 'games'), { recursive: true });
   const started = new Date().toISOString();
   const base = new AlphaZeroInference(hard.graphPath);
   await base.load();
   const inference = new MirrorAveragingInference(base);
   const onnxSha = sha256(readFileSync(hard.graphPath));
-
-  const teacher = TeacherClient.spawn(opts['teacher-python'], ['-B', '-m', 'scripts.GPU.alphazero.htb_bench_teacher', 'serve', '--stage', stage, '--clone-root', opts['clone-root']], {
-    cwd: REPO_ROOT,
-    env: { ...process.env, PYTHONPATH: '.' },
-  });
-  activeTeacher = teacher;
-  const ready = await teacher.next();
-  if (!ready?.ok || !ready.ready) throw new BenchStop('teacher', `teacher did not start: ${JSON.stringify(ready).slice(0, 300)}`);
+  mkdirSync(join(out, 'games'), { recursive: true });
   const startupSeconds = (performance.now() - tStart) / 1000;
 
   const students = { N: makeStudent('N', inference, policy), P: makeStudent('P', inference, policy) };
@@ -388,7 +440,9 @@ async function run(stage, opts) {
     student: { model_id: STUDENT_MODEL_ID, onnx_sha256: onnxSha, inference: 'MirrorAveragingInference(AlphaZeroInference)', policy },
     teacher: { identity: ready.identity, pins: ready.teacher, load_seconds: ready.load_seconds },
     kill_s: KILL_S[stage],
-    node_version: process.version,
+    head,
+    pid: process.pid,
+    runtime: { node: process.version, onnxruntime_node: ort, teacher_env: ready.env },
   };
   writeFileSync(join(out, 'record.json'), `${JSON.stringify(record, null, 1)}\n`, { flag: 'wx' });
 }

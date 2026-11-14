@@ -218,28 +218,102 @@ test('analyse: per-arm scores, draws and colours; the reading follows arm N only
   assert.match(a.reading.arm_P_note, /cannot say which/);
 });
 
-test('smoke admission and timing: outer.json required; the estimate reads wall times only', async () => {
+const REAL = resolvePolicy({ difficulty: 'hard', hardMode: 'protocol' }); // 200 simulations, as shipped
+const HEAD = 'a'.repeat(40);
+
+/** A smoke evidence tree as the wrapper and driver would leave it, games played at the card's 200-sim budget. */
+async function smokeTree() {
   const root = mkdtempSync(join(tmpdir(), 'bench-adm-'));
   const run = join(root, AN.DIRS.smoke.run);
   const outer = join(root, AN.DIRS.smoke.outer);
   mkdirSync(join(run, 'games'), { recursive: true });
   mkdirSync(outer, { recursive: true });
   const inference = new MirrorAveragingInference(fakeInference());
+  const games = {};
   for (const task of D.schedule('smoke')) {
-    const rec = await D.playGame({ stage: 'smoke', task, student: D.makeStudent(task.arm, inference, SMALL), teacher: fakeTeacher() });
-    writeFileSync(join(run, 'games', `${task.arm}_pair_0000_game_${task.game}.json`), JSON.stringify(rec));
+    const rec = await D.playGame({ stage: 'smoke', task, student: D.makeStudent(task.arm, inference, REAL), teacher: fakeTeacher() });
+    games[`${task.arm}_pair_0000_game_${task.game}.json`] = rec;
   }
-  writeFileSync(join(run, 'record.json'), JSON.stringify({ status: 'COMPLETED', written_by: 'script', stage: 'smoke', games: 4, startup_seconds: 12.5 }));
-  assert.throws(() => AN.admit('smoke', root), AN.Invalid); // no outer.json yet
-  const good = { inner_exit: 0, outcome: 'COMPLETED', outer_exit: 0, gate_restored: true, survivors: '', record_by: 'script' };
-  writeFileSync(join(outer, 'outer.json'), JSON.stringify({ ...good, outcome: 'CRASHED', inner_exit: 134, outer_exit: 134 }));
-  assert.throws(() => AN.admit('smoke', root), AN.Invalid);
-  writeFileSync(join(outer, 'outer.json'), JSON.stringify(good));
-  const t = AN.timing(AN.admit('smoke', root));
-  assert.ok(t.projection_s > 12.5 && t.launch_estimate_s === Math.round(1.5 * t.projection_s * 1000) / 1000);
-  assert.equal(t.match_cap_s, 21600);
-  assert.equal(t.verdict, t.launch_estimate_s <= 21600 ? 'LAUNCH_OK' : 'NO_LAUNCH');
-  assert.ok(!JSON.stringify(t).includes('score') && !JSON.stringify(t).includes('result'));
+  const record = { schema: 'htb-teacher-bench-record/1', written_by: 'script', status: 'COMPLETED', stage: 'smoke', games: 4, startup_seconds: 12.5, kill_s: 1800, head: HEAD, pid: 4242,
+    student: { model_id: '78c16a31c3dba37f', policy: REAL }, runtime: { node: process.version, onnxruntime_node: '1.23.2', teacher_env: { python: '3.13.15', tensorflow: '2.21.0', numpy: '2.5.2' } } };
+  const outerRec = { inner_exit: 0, outcome: 'COMPLETED', outer_exit: 0, gate_restored: true, survivors: '', record_by: 'script', wall_seconds: 300, term_s: 1790, grace_s: 10, head: HEAD };
+  const write = ({ g = games, r = record, o = outerRec, pgid = '4242\n' } = {}) => {
+    for (const [name, rec] of Object.entries(g)) writeFileSync(join(run, 'games', name), JSON.stringify(rec));
+    writeFileSync(join(run, 'record.json'), JSON.stringify(r));
+    writeFileSync(join(outer, 'outer.json'), JSON.stringify(o));
+    writeFileSync(join(outer, 'pgid.txt'), pgid);
+  };
+  return { root, games, record, outerRec, write };
+}
+
+test('smoke admission binds the evidence to its run; the timing estimate reads wall times only', async () => {
+  const t = await smokeTree();
+  t.write();
+  const est = AN.timing(AN.admit('smoke', t.root));
+  assert.ok(est.projection_s > 12.5 && Math.abs(est.launch_estimate_s - 1.5 * est.projection_s) < 0.002); // both rounded to ms
+  assert.equal(est.match_cap_s, 21600);
+  assert.equal(est.verdict, est.launch_estimate_s <= 21600 ? 'LAUNCH_OK' : 'NO_LAUNCH');
+  assert.match(est.smoke_outcomes, /excluded from scoring and from every report/);
+  assert.ok(!/score|result|"W"|"L"/.test(JSON.stringify(est)));
+  // each binding failure, against the clean control above
+  const bad = [
+    ['missing outer', () => t.write({ o: null })],
+    ['crashed', () => t.write({ o: { ...t.outerRec, outcome: 'CRASHED', inner_exit: 134, outer_exit: 134 } })],
+    ['another launch commit', () => t.write({ o: { ...t.outerRec, head: 'b'.repeat(40) } })],
+    ['pgid is not the driver', () => t.write({ pgid: '4243\n' })],
+    ['the match ceiling on the smoke', () => t.write({ o: { ...t.outerRec, term_s: 21590 } })],
+    ['record ceiling', () => t.write({ r: { ...t.record, kill_s: 21600 } })],
+    ['onnxruntime-node', () => t.write({ r: { ...t.record, runtime: { ...t.record.runtime, onnxruntime_node: '1.24.4' } } })],
+    ['teacher runtime', () => t.write({ r: { ...t.record, runtime: { ...t.record.runtime, teacher_env: { python: '3.13.15', tensorflow: '2.20.0', numpy: '2.5.2' } } } })],
+    ['student budget', () => t.write({ r: { ...t.record, student: { ...t.record.student, policy: { ...REAL, nSims: 64 } } } })],
+  ];
+  for (const [what, corrupt] of bad) {
+    corrupt();
+    assert.throws(() => AN.admit('smoke', t.root), AN.Invalid, what);
+    t.write();
+    AN.admit('smoke', t.root); // the control admits again
+  }
+});
+
+test('per-move evidence: one row per played ply, and exactly 200 simulations spent on every arm P student move', async () => {
+  const t = await smokeTree();
+  const name = 'P_pair_0000_game_0.json';
+  const g = t.games[name];
+  const sIdx = g.per_move.findIndex((m) => m.mover === 'student');
+  const variants = {
+    'a 64-simulation budget': { ...g, per_move: g.per_move.map((m, i) => (i === sIdx ? { ...m, nSimulations: 64 } : m)) },
+    'fewer visits than the budget': { ...g, per_move: g.per_move.map((m, i) => (i === sIdx ? { ...m, visits: 64 } : m)) },
+    'a duplicate row': { ...g, per_move: [...g.per_move.slice(0, 2), g.per_move[1], ...g.per_move.slice(3)] },
+    'a missing row': { ...g, per_move: g.per_move.slice(1) },
+    'an extra row': { ...g, per_move: [...g.per_move, g.per_move.at(-1)] },
+    'a teacher row with a budget': { ...g, per_move: g.per_move.map((m) => (m.mover === 'teacher' ? { ...m, nSimulations: 200 } : m)) },
+  };
+  for (const [what, bad] of Object.entries(variants)) {
+    t.write({ g: { ...t.games, [name]: bad } });
+    assert.throws(() => AN.admit('smoke', t.root), AN.Invalid, what);
+  }
+  t.write();
+  AN.admit('smoke', t.root);
+  // the old 64-simulation fixture: the whole smoke played at 64 sims is refused, so it can no longer yield an estimate
+  const inference = new MirrorAveragingInference(fakeInference());
+  const task = D.schedule('smoke').find((x) => x.arm === 'P');
+  const at64 = await D.playGame({ stage: 'smoke', task, student: D.makeStudent('P', inference, SMALL), teacher: fakeTeacher() });
+  assert.ok(at64.per_move.some((m) => m.mover === 'student' && m.nSimulations === 64 && m.visits === 64));
+  assert.throws(() => AN.validateGame(at64, { stage: 'smoke', arm: 'P', pair: 0, game: task.game, opening: AN.deriveOpenings('smoke opening', 1)[0] }), AN.Invalid);
+});
+
+test('runtime pins and committed smoke evidence: checked before any model loads', () => {
+  assert.equal(D.ortVersion(), '1.23.2');
+  assert.deepEqual(D.teacherEnvProblems({ python: '3.13.15', tensorflow: '2.21.0', numpy: '2.5.2' }), []);
+  assert.equal(D.teacherEnvProblems({ python: '3.13.15', tensorflow: '2.20.0', numpy: '2.5.2' }).length, 1);
+  assert.equal(D.teacherEnvProblems(undefined).length, 3);
+  const ok = (cmd) => (cmd[0] === 'ls-files' && cmd[1] === '--') ? { status: 0, stdout: 'a\nb\nc\nd\n' } : { status: 0, stdout: '' };
+  const fake = (over) => (...args) => over(args) ?? ok(args);
+  assert.deepEqual(D.smokeEvidenceProblems(fake(() => null)), []);
+  assert.ok(D.smokeEvidenceProblems(fake((a) => (a[0] === 'ls-files' && a[1] === '--error-unmatch' && a[3].endsWith('pgid.txt') ? { status: 1 } : null))).some((p) => /pgid.txt is not committed/.test(p)));
+  assert.ok(D.smokeEvidenceProblems(fake((a) => (a[0] === 'diff' ? { status: 1 } : null))).some((p) => /differs from HEAD/.test(p)));
+  assert.ok(D.smokeEvidenceProblems(fake((a) => (a[1] === '--others' ? { status: 0, stdout: 'x.json\n' } : null))).some((p) => /untracked/.test(p)));
+  assert.ok(D.smokeEvidenceProblems(fake((a) => (a[0] === 'ls-files' && a[1] === '--' ? { status: 0, stdout: 'a\n' } : null))).some((p) => /1 committed smoke games/.test(p)));
 });
 
 test('run refuses while the gate is closed, and creates nothing', () => {
@@ -265,12 +339,15 @@ test('end to end through the real serve loop: TeacherClient, Python lockstep on 
   const inference = new MirrorAveragingInference(fakeInference());
   const recs = [];
   for (const task of D.schedule('smoke')) {
-    recs.push(await D.playGame({ stage: 'smoke', task, student: D.makeStudent(task.arm, inference, SMALL), teacher }));
+    recs.push(await D.playGame({ stage: 'smoke', task, student: D.makeStudent(task.arm, inference, REAL), teacher }));
   }
   await teacher.close();
   assert.equal(teacher.exited.code, 0);
   const openings = AN.deriveOpenings('smoke opening', 1);
-  for (const r of recs) AN.validateGame(r, { stage: 'smoke', arm: r.arm, pair: 0, game: r.game, opening: openings[0] });
+  for (const r of recs) {
+    AN.validateGame(r, { stage: 'smoke', arm: r.arm, pair: 0, game: r.game, opening: openings[0] });
+    assert.ok('tb_draw_flag_ply_reflected' in r);
+  }
   // a stop in the Python lockstep reaches the driver as a BenchStop and the process exits 3
   const t2 = D.TeacherClient.spawn(PY, ['-B', '-c', boot], { cwd: D.REPO_ROOT, env: { ...process.env, PYTHONPATH: '.' } });
   await t2.next();

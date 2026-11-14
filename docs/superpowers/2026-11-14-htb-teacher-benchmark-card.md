@@ -25,6 +25,26 @@ followed by one review of the completed build before launch. The changes:
   result.
 - **Exception scope (§2):** exactly the four smoke games and the 620 scored games.
 
+**Repair 1 (2026-11-14, the user's launch-check review), before either gate opens.** Unchanged: the four-game smoke,
+the 620 scored games, the fixed 6.0 h cap and the arm N decision rule. The changes:
+- **Evidence bound to its run** (§7.1), with G3's checks:
+  - the inner and outer records name the same launch commit;
+  - `pgid.txt` is the driver's PID;
+  - the recorded ceiling is the stage's;
+  - the match admits only committed smoke evidence.
+- **The search budget enforced.** There must be exactly one evidence row per played ply. Every arm P student move
+  must record a 200-simulation budget and 200 root visits actually spent.
+  - A wrong budget, a duplicate row, a missing row or an extra row is rejected.
+  - The earlier model-free smoke fixture played at 64 simulations and still produced a timing estimate. It is now
+    refused.
+- **Pinned runtimes checked before any model loads** (§4):
+  - onnxruntime-node, as the server resolves it;
+  - the teacher's Python, TensorFlow and NumPy versions.
+  - The product's model resolver already verifies both student artifact files.
+- **Smoke outcomes:** replay-validated by the analyser, then excluded from scoring and from every report.
+- **The early-draw flag is purely observational** in both lanes. The reflection-lane comparison that could stop the
+  run on the flag alone is removed.
+
 ## 1. Question, and what this is not
 
 **Question:** does the current H-TB student still trail its teacher under our game rules?
@@ -100,6 +120,7 @@ not a setting chosen to lose.
 | **Teacher** | `github.com/stevens68/twixtbot-ui` @ `83749f230a0bae1766b46a05bfde0ed87f0a9a0a`, with weights `variables.data` sha256 `1958f847…`, `saved_model.pb` `e0c2b882…` and `variables.index` `1d4073c4…` (pilot card, "Identity"). These are checked at load, as in Diagnostic O. |
 | **Teacher inference** | the H-TB label path's wrapper (`htb_pilot.TwixtbotTeacher` via `_load_teacher_real`): one raw network call per position with rotation off, softmax over our legal moves, and averaging over the position and its left-right reflection (`reflect_rc`: column c → 23 − c), as in `label_game`. |
 | **Teacher runtime** | teacher venv: Python 3.13.15, TensorFlow 2.21.0, NumPy 2.5.2 (CPU), with the clone at `$HOME/twixt-cache/htb-teacher/twixtbot-ui`. |
+| **Runtime checks, before any model loads** | onnxruntime-node **1.23.2** (the copy `server/inference.js` resolves) and the teacher's three versions above. They are read from package metadata by each wrapper before launch. The driver checks ORT before loading the student. The teacher process checks its versions and refuses (exit 4) before loading its model, and the driver loads the student only after that check passes. The analyser requires the versions recorded in `record.json` to equal the pins. The student's two artifact files are verified by the product's model resolver. |
 
 ## 5. Arms and budgets: each budget for the question it answers
 
@@ -129,8 +150,9 @@ our legal moves, ties to the lower (row, col). It is deterministic.
   cap. A game ends in a win, or in a draw when no legal moves remain.
   - twixtbot's `Game` sets `result = DRAW` early, when its own test decides neither side can still connect. In G3's
     four draws that came at plies 73–127, against the product's 572.
-  - **That flag never ends a game and is not a divergence.** The first ply at which it is set is recorded per game, as
-    `tb_draw_flag_ply`, and summarised descriptively (§8).
+  - **That flag is purely observational.** It never ends a game, is never compared between lanes and is never a
+    stop. The first ply at which it is set is recorded per game and per lane (`tb_draw_flag_ply` for the position,
+    `tb_draw_flag_ply_reflected` for its reflection), and the position's flag is summarised descriptively (§8).
 - **Openings:** both players are deterministic in arm N, so without supplied openings arm N would play only one game
   per colour. So every game starts from a **supplied 4-ply opening** (plies 0–3, red–black–red–black).
   - **Generation:** opening *i*, ply *k*, takes index `int(sha256("htb-teacher-bench/20261114/opening <i>/ply <k>")[:12],
@@ -144,8 +166,9 @@ our legal moves, ties to the lower (row, col). It is deterministic.
   - **Arm N: 200 pairs (400 games)**, on openings 0–199. Deterministic, and cheap (§9).
   - **Arm P: 110 pairs (220 games)**, on openings 0–109, the same openings as arm N's first 110 pairs, so the two arms
     can be compared on common openings. 110 pairs is G3's size.
-  - **Smoke:** 1 pair in each arm (4 games) on a separate opening namespace (`…/smoke opening <i>/…`), excluded from
-    the result. Its outcomes are not read or reported; it exists only for the timing rule in §9.
+  - **Smoke:** 1 pair in each arm (4 games) on a separate opening namespace (`…/smoke opening <i>/…`). The analyser
+    replay-validates its four games on admission, like the match's (§7.1). Their outcomes are **excluded from scoring
+    and from every report**: `timing` reads wall times only. The smoke exists only for the launch estimate in §9.
 - **Seeds:** only arm P's student draws randomness.
   - Seed formula: `sha256("htb-teacher-bench/20261114/<stage>/pair <p>/game <g>/ply <ply>")`. Hex digits 0–11 are the
     search seed and digits 12–23 the readout seed, as in G3. `<stage>` is `smoke` or `match`.
@@ -176,6 +199,28 @@ our legal moves, ties to the lower (row, col). It is deterministic.
   ceiling.
   - A VOID run has **no score**, and no partial result is computed.
   - It is returned for assessment, with no retry.
+
+### 7.1 Admission: the evidence is bound to its run (Repair 1)
+
+The analyser admits a stage, smoke or match, only if every check below holds. Otherwise it exits 3 and computes no
+number.
+- **The run's records** (G3's binding):
+  - `outer.json` says COMPLETED, with inner and outer exits 0, the gate restored, no survivors and the record written
+    by the script.
+  - The stage's ceiling: TERM = KILL − 10 s, that is 1,790 + 10 s for the smoke and 21,590 + 10 s for the match.
+  - `record.json` is COMPLETED, with the stage's `kill_s`.
+  - Both records name the same launch commit, and `pgid.txt` is the driver's own PID (`record.json` `pid`).
+- **The pins:** `record.json` carries the pinned runtimes (§4) and the student's model id and 200-simulation policy.
+- **The games:** exactly the scheduled game files. Each one:
+  - replays legally under the product's game-end rule;
+  - matches the re-derived opening, colours, result and score;
+  - has **exactly one per-move row per played ply** after the opening, in order;
+  - has, on every **arm P student row**, the re-derived seeds, `nSimulations` = 200 and `visits` = 200 (the root
+    visits the search actually spent);
+  - has no seeds, budget or visits on any arm N or teacher row.
+- **The match additionally requires the smoke evidence to be committed.** The driver checks with git that it is
+  tracked, unchanged at HEAD and complete. The match wrapper checks the same files and the four games, then re-derives
+  `timing.json` byte for byte.
 
 ## 8. Scoring, classification and the meaning of a sweep (fixed before any game)
 
@@ -276,29 +321,40 @@ All model-free until launch:
   - the gate, which must refuse while closed.
 - **Then** one launch review, then one run. The ledger is updated when the run is judged.
 
-### 11.1 Built (2026-11-14, under revision 1): the frozen files
+### 11.1 Built (2026-11-14, revision 1), re-pinned after Repair 1: the frozen files
 
-The analysis, frozen before any model load: teacher_bench_analyse.mjs sha256 `f3d40d457f0e25bd7d0034e45a089ec18ec734ad5bdc8e298a951b7425046034`.
+The first build (`e4aa15b8`) pinned other hashes; Repair 1 changed the analyser, driver, teacher process and both
+wrappers, and the table below supersedes them. No file was ever run under the earlier pins.
+
+The analysis, frozen before any model load: teacher_bench_analyse.mjs sha256 `b162323e5db22bd8f1df08d11322feeba5183ce05fca0bf3fae4ec1212b81d4f`.
 Both wrappers refuse to launch if the analyser differs from it.
 
 | File | sha256 |
 |---|---|
-| `tests/htb_integration/teacher_bench.mjs` (driver) | `8b9be42c68c691c27865da7fb0e14501f3797fb1c7ad8756c28ee6f5109ce6e9` |
-| `scripts/GPU/alphazero/htb_bench_teacher.py` (teacher process) | `1bd935ce1baea0e35b1cf011f5cc79dedcd35cb08ad358251475766129060d97` |
+| `tests/htb_integration/teacher_bench.mjs` (driver) | `7ad449a80e545de7626dcedc7799b01323f5244e0082894ea4cdd204fa075bd7` |
+| `scripts/GPU/alphazero/htb_bench_teacher.py` (teacher process) | `ea2bab26be1af792616221853cc160bce5d06f91781e3778de843f2881f5c94f` |
 | `tests/htb_integration/teacher_bench_authorization.mjs` (both gates closed) | `f1cd212eaa43daff78ea93b3ec4e09e154955040fc2a3be08e3b592caeef340f` |
-| `docs/superpowers/evidence/htb-teacher-bench-smoke-run/01_wrapper.sh` | `2b34bb29fbd13170d52ff23bd03cc78eb6ecbe2abe58ede861bb0436dcb716be` |
-| `docs/superpowers/evidence/htb-teacher-bench-match-run/01_wrapper.sh` | `1d4d719049c2407baa180b4a24dd51fe5c0a9b13be2aeb41d2b47521820be7c8` |
+| `docs/superpowers/evidence/htb-teacher-bench-smoke-run/01_wrapper.sh` | `56fb66de49ca453600f4635890cf891c45595d0f5760a3c5adc9d3cf3fa62d7c` |
+| `docs/superpowers/evidence/htb-teacher-bench-match-run/01_wrapper.sh` | `e075a8c2fd5707b4f2eab63be201a7903e3b4daa103e6dfcc51b0d690b1adc10` |
 
 - **Model-free tests:**
-  - `tests/htb_integration/test_teacher_bench.mjs`: 15 pass. Among them:
+  - `tests/htb_integration/test_teacher_bench.mjs`: 17 pass (after Repair 1). Among them:
     - the cross-language canonical digest at every ply of a 572-ply G3 draw and a decisive game;
     - a full smoke schedule through the real Python serve loop, with twixtbot's `Game` in lockstep and a fake
       network;
-    - arm P checked move for move against `protocolMove`.
-  - `tests/test_htb_bench_teacher.py`: 10 pass. Among them:
+    - arm P checked move for move against `protocolMove`;
+    - run binding: each failure (no outer record, a crash, another launch commit, a wrong `pgid.txt`, the wrong
+      ceiling in either record, a wrong ORT or teacher version, a 64-simulation policy) rejected against a clean
+      control, with the smoke played at the real 200-simulation budget;
+    - per-move evidence: a 64-simulation budget, fewer visits, a duplicate, missing or extra row, and a teacher row
+      with a budget are each rejected; the old 64-simulation smoke fixture no longer yields an estimate;
+    - committed smoke evidence for the match, and the runtime pins.
+  - `tests/test_htb_bench_teacher.py`: 12 pass (after Repair 1). Among them:
     - the G3 `pair_0057_game_1` regression;
     - an own-crossing bridge mismatch that stops;
-    - the mirror averaging, which is identical to Diagnostic O's label-path implementation.
+    - the mirror averaging, which is identical to Diagnostic O's label-path implementation;
+    - the early-draw flag set in one lane only, which never stops play and is recorded per lane;
+    - a wrong teacher runtime, refused before the teacher model is loaded.
 - **Measured check cost (fake network, model-free):** about 5 ms per ply for both lanes' checks in a 41-ply game,
   rising to about 60 ms per ply late in a 572-ply draw (about 35 s for the whole replay). This is small against the
   §9 estimate; the smoke measures the real cost.

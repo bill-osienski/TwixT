@@ -5,10 +5,17 @@
  *   node tests/htb_integration/teacher_bench_analyse.mjs timing    -> the smoke's timing.json (stdout); reads no outcome
  *   node tests/htb_integration/teacher_bench_analyse.mjs analyse   -> the match analysis (stdout)
  *
- * Admission (both): the stage's outer.json says COMPLETED with exit 0, the gate restored, no survivors and the record
- * written by the script; record.json is COMPLETED; every scheduled game file exists, and nothing else; every game
- * replays legally from the empty board under the product's game-end rule and its opening, colours, result, score and
- * (arm P) seeds equal what is independently re-derived here. Anything else: exit 3, no number.
+ * Admission (both): the stage's outer.json says COMPLETED with exit 0, the gate restored, no survivors, the record
+ * written by the script and the stage's ceiling (TERM = KILL - 10 s); outer and inner records name the same launch
+ * commit; pgid.txt is the driver's pid; record.json is COMPLETED with the stage's kill_s, the pinned runtimes and
+ * the student's model and 200-simulation policy; every scheduled game file exists, and nothing else; every game replays
+ * legally from the empty board under the product's game-end rule; its opening, colours, result and score equal what
+ * is re-derived here; it has exactly one per-move row per played ply after the opening, in order; every arm P student
+ * row carries the re-derived seeds, a 200-simulation budget and 200 root visits spent; arm N and teacher rows carry none. Anything else:
+ * exit 3, no number. twixtbot's early-draw flag (both lanes) is observational: only its type is checked.
+ *
+ * The smoke's four games are admitted the same way (so they are replay-validated), but their outcomes are excluded
+ * from scoring and from every report: `timing` reads wall times only.
  *
  * Openings and seeds are re-derived HERE, independently of teacher_bench.mjs (a test checks they agree).
  */
@@ -23,6 +30,10 @@ export const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..
 const NS = 'htb-teacher-bench/20261114';
 export const PAIRS = { smoke: { N: 1, P: 1 }, match: { N: 200, P: 110 } };
 export const MATCH_CAP_S = 21600;
+export const KILL_S = { smoke: 1800, match: 21600 };
+export const GRACE_S = 10;
+export const P_SIMS = 200;
+export const PINS = { model_id: '78c16a31c3dba37f', onnxruntime_node: '1.23.2', teacher_env: { python: '3.13.15', tensorflow: '2.21.0', numpy: '2.5.2' } };
 export const LAUNCH_FACTOR = 1.5;
 export const DIRS = {
   smoke: { run: 'docs/superpowers/evidence/htb-teacher-bench-smoke', outer: 'docs/superpowers/evidence/htb-teacher-bench-smoke-run' },
@@ -111,26 +122,49 @@ export function validateGame(g, { stage, arm, pair, game, opening }) {
   if (g.result !== (winner ?? 'draw') || g.plies !== g.moves.length) throw new Invalid(`${where}: result or length`);
   const score = winner === null ? 0.5 : winner === colour ? 1 : 0;
   if (g.student_score !== score) throw new Invalid(`${where}: score`);
-  if (!Array.isArray(g.per_move) || g.per_move.length !== g.moves.length - 4) throw new Invalid(`${where}: per-move records`);
-  for (const pm of g.per_move) {
+  // Exactly one row per played ply after the opening, in order: no duplicate, no gap, no extra.
+  if (!Array.isArray(g.per_move) || g.per_move.length !== g.moves.length - 4) throw new Invalid(`${where}: ${g.per_move?.length} per-move rows for ${g.moves.length - 4} played plies`);
+  g.per_move.forEach((pm, i) => {
+    if (pm.ply !== 4 + i) throw new Invalid(`${where}: per-move row ${i} is ply ${pm.ply}, expected ${4 + i}`);
     const mover = (pm.ply % 2 === 0 ? 'red' : 'black') === colour ? 'student' : 'teacher';
     if (pm.mover !== mover || JSON.stringify(pm.move) !== JSON.stringify(g.moves[pm.ply])) throw new Invalid(`${where}: per-move ply ${pm.ply}`);
-    if (mover === 'student' && arm === 'P' && JSON.stringify(pm.seeds) !== JSON.stringify(deriveSeeds(stage, pair, game, pm.ply))) throw new Invalid(`${where}: seeds at ply ${pm.ply}`);
-    if (mover === 'student' && arm === 'N' && pm.seeds !== undefined) throw new Invalid(`${where}: arm N drew seeds`);
+    if (mover === 'student' && arm === 'P') {
+      if (JSON.stringify(pm.seeds) !== JSON.stringify(deriveSeeds(stage, pair, game, pm.ply))) throw new Invalid(`${where}: seeds at ply ${pm.ply}`);
+      if (pm.nSimulations !== P_SIMS || pm.visits !== P_SIMS) throw new Invalid(`${where}: budget ${pm.nSimulations}, visits ${pm.visits} at ply ${pm.ply}; the card's is ${P_SIMS}`);
+    } else if (pm.seeds !== undefined || pm.nSimulations !== undefined || pm.visits !== undefined) {
+      throw new Invalid(`${where}: a ${mover} row in arm ${arm} carries a search budget or seeds at ply ${pm.ply}`);
+    }
+  });
+  for (const f of ['tb_draw_flag_ply', 'tb_draw_flag_ply_reflected']) {
+    if (g[f] !== null && !(Number.isInteger(g[f]) && g[f] >= 0 && g[f] <= g.plies)) throw new Invalid(`${where}: ${f}`);
   }
-  if (g.tb_draw_flag_ply !== null && !(Number.isInteger(g.tb_draw_flag_ply) && g.tb_draw_flag_ply <= g.plies)) throw new Invalid(`${where}: tb_draw_flag_ply`);
   if (!(g.wall_ms > 0)) throw new Invalid(`${where}: wall time`);
   return g;
+}
+
+/** G3's outer/inner binding (g3_analyse.outerFailures), for this stage's ceiling. An empty list admits. */
+export function bindingFailures({ outer: o, record: rec, pgid, stage }) {
+  const f = [];
+  const want = { inner_exit: 0, outer_exit: 0, outcome: 'COMPLETED', gate_restored: true, survivors: '', record_by: 'script', term_s: KILL_S[stage] - GRACE_S, grace_s: GRACE_S };
+  for (const [k, v] of Object.entries(want)) if (o?.[k] !== v) f.push(`outer ${k} ${JSON.stringify(o?.[k])}, expected ${JSON.stringify(v)}`);
+  if (rec?.status !== 'COMPLETED' || rec?.written_by !== 'script' || rec?.stage !== stage) f.push(`record.json is not a COMPLETED ${stage} record`);
+  if (rec?.kill_s !== KILL_S[stage]) f.push(`record kill_s ${rec?.kill_s}, the card's ${stage} ceiling is ${KILL_S[stage]}`);
+  if (!/^[0-9a-f]{40}$/.test(rec?.head ?? '') || o?.head !== rec.head) f.push('the outer and inner records do not name the same launch commit');
+  if (!Number.isInteger(rec?.pid) || pgid !== `${rec.pid}\n`) f.push('pgid.txt is not the driver pid');
+  if (rec?.runtime?.onnxruntime_node !== PINS.onnxruntime_node) f.push(`onnxruntime-node ${rec?.runtime?.onnxruntime_node}`);
+  if (JSON.stringify(rec?.runtime?.teacher_env) !== JSON.stringify(PINS.teacher_env)) f.push(`teacher runtime ${JSON.stringify(rec?.runtime?.teacher_env)}`);
+  if (rec?.student?.model_id !== PINS.model_id || rec?.student?.policy?.nSims !== P_SIMS) f.push('student model or budget');
+  return f;
 }
 
 export function admit(stage, root = REPO_ROOT) {
   const { run, outer } = DIRS[stage];
   const o = readJson(join(root, outer, 'outer.json'), 'outer.json');
-  if (o.outcome !== 'COMPLETED' || o.inner_exit !== 0 || o.outer_exit !== 0 || o.gate_restored !== true || o.survivors !== '' || o.record_by !== 'script') {
-    throw new Invalid(`outer.json does not admit the ${stage}: ${JSON.stringify(o).slice(0, 300)}`);
-  }
   const rec = readJson(join(root, run, 'record.json'), 'record.json');
-  if (rec.status !== 'COMPLETED' || rec.written_by !== 'script' || rec.stage !== stage) throw new Invalid(`record.json is not a COMPLETED ${stage} record`);
+  const pgidPath = join(root, outer, 'pgid.txt');
+  const pgid = existsSync(pgidPath) ? readFileSync(pgidPath, 'utf8') : null;
+  const bf = bindingFailures({ outer: o, record: rec, pgid, stage });
+  if (bf.length) throw new Invalid(`the ${stage} evidence is not bound to its run: ${bf.join('; ')}`);
   const kind = stage === 'smoke' ? 'smoke opening' : 'opening';
   const openings = deriveOpenings(kind, Math.max(PAIRS[stage].N, PAIRS[stage].P));
   const expected = [];
@@ -168,6 +202,7 @@ export function timing(adm) {
     match_cap_s: MATCH_CAP_S,
     verdict: estimate <= MATCH_CAP_S ? 'LAUNCH_OK' : 'NO_LAUNCH',
     note: 'an estimate from 2 games per arm; long draws can exceed it; the 6.0 h match cap is fixed',
+    smoke_outcomes: 'replay-validated on admission; excluded from scoring and from every report',
   };
 }
 

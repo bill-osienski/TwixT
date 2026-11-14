@@ -8,9 +8,10 @@
 # BUILT ONLY: launching it needs the user's launch review.
 # A copy of docs/superpowers/evidence/htb-diag-o-run/01_wrapper.sh; the diff: the paths, the gate (a line of
 # tests/htb_integration/teacher_bench_authorization.mjs), the driver and its stage, the record kind, the ceiling, the
-# frozen analyser's sha256 checked against the card, the ONNX Runtime shutdown test as a precondition (ledger entry 64)
-# the smoke timing re-derivation,
-# the teacher module counted among survivors, and this header. Everything else is unchanged.
+# frozen analyser's sha256 checked against the card, the ONNX Runtime shutdown test as a precondition (ledger entry 64),
+# the pinned runtimes (card §4) checked before launch, the committed smoke evidence, the smoke timing re-derivation,
+# the teacher module counted among survivors, the gate-restoration reference when the pre-open commit predates the
+# gate file (a refused, never-launched run), and this header. Everything else is unchanged.
 set -u
 OUT_REL=docs/superpowers/evidence/htb-teacher-bench-match-run
 RUN_REL=docs/superpowers/evidence/htb-teacher-bench-match
@@ -38,7 +39,9 @@ finish() {
   trap - EXIT INT TERM HUP
   restore
   restored=false
-  if grep -qx "export const ${GATE} = false;" "$GATE_REL" && { [ -z "$PRE" ] || git diff --quiet "$PRE" -- "$GATE_REL"; }; then
+  REF=$PRE    # the pre-open commit; if it predates the gate file (no launch tree: the run was refused), HEAD instead
+  [ -n "$PRE" ] && ! git cat-file -e "$PRE:$GATE_REL" 2>/dev/null && REF=HEAD
+  if grep -qx "export const ${GATE} = false;" "$GATE_REL" && { [ -z "$REF" ] || git diff --quiet "$REF" -- "$GATE_REL"; }; then
     restored=true
   fi
   survivors=$( { pgrep -f -- "${DRIVER} run ${STAGE}"; pgrep -f -- "$TEACHER_MOD"; } | sort -un | tr '\n' ' ')
@@ -118,6 +121,17 @@ git ls-files --error-unmatch "$PLAN_REL" > /dev/null 2>&1 || refuse "$PLAN_REL i
 WANT=$(grep -oE 'teacher_bench_analyse.mjs sha256 `[0-9a-f]{64}`' "$PLAN_REL" | grep -oE '[0-9a-f]{64}') || refuse "the card records no analyser sha256"
 [ "$(shasum -a 256 "$ANALYSER" | cut -d' ' -f1)" = "$WANT" ] || refuse "$ANALYSER is not the analysis frozen in the card"
 "$NODE" --test server/test_ort_shutdown.js > /dev/null 2>&1 || refuse "the ONNX Runtime shutdown test fails (ledger entry 64)"
+# THE PINNED RUNTIMES (card §4), checked from package metadata before anything loads a model.
+ORT_V=$("$NODE" -e 'console.log(require("module").createRequire(process.argv[1])("onnxruntime-node/package.json").version)' "$W/server/inference.js") || refuse "cannot read the onnxruntime-node version"
+[ "$ORT_V" = "1.23.2" ] || refuse "onnxruntime-node $ORT_V, the card pins 1.23.2"
+TENV=$("$TPY" -I -c 'import sys; from importlib import metadata as m; print(".".join(map(str, sys.version_info[:3])), m.version("tensorflow"), m.version("numpy"))') || refuse "cannot read the teacher runtime versions"
+[ "$TENV" = "3.13.15 2.21.0 2.5.2" ] || refuse "teacher runtime '$TENV', the card pins '3.13.15 2.21.0 2.5.2'"
+# THE SMOKE EVIDENCE must be committed (and, the tree being clean, unchanged and complete).
+for f in docs/superpowers/evidence/htb-teacher-bench-smoke/record.json docs/superpowers/evidence/htb-teacher-bench-smoke/progress.jsonl \
+         docs/superpowers/evidence/htb-teacher-bench-smoke-run/outer.json docs/superpowers/evidence/htb-teacher-bench-smoke-run/pgid.txt; do
+  git ls-files --error-unmatch "$f" > /dev/null 2>&1 || refuse "$f is not committed"
+done
+[ "$(git ls-files -- docs/superpowers/evidence/htb-teacher-bench-smoke/games | wc -l | tr -d ' ')" = 4 ] || refuse "the 4 smoke games are not committed"
 # THE LAUNCH ESTIMATE, from the committed smoke timing, re-derived from the smoke's evidence by the frozen analyser.
 TIMING_REL=docs/superpowers/evidence/htb-teacher-bench-smoke/timing.json
 git ls-files --error-unmatch "$TIMING_REL" > /dev/null 2>&1 || refuse "$TIMING_REL is not committed"

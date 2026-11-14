@@ -8,8 +8,10 @@ tests/htb_integration/teacher_bench_authorization.mjs. It speaks JSON lines on s
   {"cmd": "move"}                             -> the teacher's move for the side to move (NOT applied)
   {"cmd": "close"}                            -> exit 0
 
-Every reply to start/apply carries the canonical state's sha256 (`canon`) and `tb_draw` (twixtbot's own early-draw
-flag, recorded, never acted on). Any check failure replies {"ok": false, "stop": ..., "detail": ...} and exits 3.
+Every reply to start/apply carries the canonical state's sha256 (`canon`) and twixtbot's own early-draw flag for both
+lanes (`tb_draw_ply`, `tb_draw_ply_reflected`): purely observational, never compared and never a stop. Any check
+failure replies {"ok": false, "stop": ..., "detail": ...} and exits 3. Before the teacher model loads, `serve` checks
+the runtime against card §4 (TEACHER_ENV) and refuses (exit 4) on any difference.
 
 THE TEACHER (card §4, §5): the H-TB label path's wrapper (htb_pilot.TwixtbotTeacher): the raw network, rotation off,
 softmax over our legal moves, averaged with the left-right reflection (reflect_rc), as in label_game. Its move is the
@@ -33,7 +35,7 @@ import pathlib
 import re
 import sys
 import time
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -44,6 +46,9 @@ from .game.twixt_state import TwixtState
 ROOT = pathlib.Path(__file__).resolve().parents[3]
 GATE_REL = "tests/htb_integration/teacher_bench_authorization.mjs"
 GATES = {"smoke": "BENCH_SMOKE_AUTHORIZED", "match": "BENCH_MATCH_AUTHORIZED"}
+#: The teacher runtime pinned in card §4, checked BEFORE the teacher model loads (package metadata only; nothing
+#: imported from TensorFlow for the check).
+TEACHER_ENV = {"python": "3.13.15", "tensorflow": "2.21.0", "numpy": "2.5.2"}
 
 
 class Stop(RuntimeError):
@@ -116,6 +121,7 @@ class BenchTeacher:
         self.teacher, self.twixt = teacher, twixt
         self.our = self.tb = self.rour = self.rtb = None
         self.tb_draw_ply: Optional[int] = None
+        self.rtb_draw_ply: Optional[int] = None
 
     def _check(self) -> None:
         for label, s, tb in (("position", self.our, self.tb), ("reflection", self.rour, self.rtb)):
@@ -124,19 +130,21 @@ class BenchTeacher:
                 raise Stop("lockstep", f"{label} at ply {s.ply}: {d[:3]}")
         if not P.reflect_state_matches(self.our, self.rour):
             raise Stop("lockstep", f"the reflected lane is not the reflection at ply {self.our.ply}")
-        if (self.tb.result is None) != (self.rtb.result is None):
-            raise Stop("lockstep", f"twixtbot's draw flag differs between the lanes at ply {self.our.ply}")
+        # twixtbot's early-draw flag is OBSERVATIONAL (card §6): recorded per lane, never compared, never a stop.
         if self.tb.result is not None and self.tb_draw_ply is None:
             self.tb_draw_ply = int(self.our.ply)
+        if self.rtb.result is not None and self.rtb_draw_ply is None:
+            self.rtb_draw_ply = int(self.our.ply)
 
     def _reply(self) -> Dict[str, Any]:
         return {"ok": True, "ply": int(self.our.ply), "canon": canon_digest(self.our),
-                "tb_draw": self.tb.result is not None, "tb_draw_ply": self.tb_draw_ply}
+                "tb_draw": self.tb.result is not None, "tb_draw_ply": self.tb_draw_ply,
+                "tb_draw_ply_reflected": self.rtb_draw_ply}
 
     def start(self, opening: Sequence[Sequence[int]]) -> Dict[str, Any]:
         self.our, self.tb = TwixtState(), self.teacher.new_game()
         self.rour, self.rtb = TwixtState(), self.teacher.new_game()
-        self.tb_draw_ply = None
+        self.tb_draw_ply = self.rtb_draw_ply = None
         self._check()
         for rc in opening:
             self._apply(rc)
@@ -219,6 +227,22 @@ def serve(bench: BenchTeacher, inp, out) -> int:
     return 3  # stdin closed without `close`: the driver is gone
 
 
+def runtime_versions() -> Dict[str, str]:
+    from importlib import metadata
+
+    def ver(dist: str) -> str:
+        try:
+            return metadata.version(dist)
+        except metadata.PackageNotFoundError:
+            return "absent"
+    return {"python": ".".join(map(str, sys.version_info[:3])), "tensorflow": ver("tensorflow"),
+            "numpy": ver("numpy")}
+
+
+def env_mismatches(found: Mapping[str, str]) -> List[str]:
+    return [f"{k}: {found.get(k)} (card: {v})" for k, v in TEACHER_ENV.items() if found.get(k) != v]
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -240,11 +264,18 @@ def main(argv=None) -> int:
     if not gate_open(a.stage):
         print(f"REFUSED: {GATES[a.stage]} is closed", file=sys.stderr)
         return 4
+    env = runtime_versions()
+    bad = env_mismatches(env)
+    if bad:  # before any model load
+        sys.stdout.write(json.dumps({"ok": False, "refused": "runtime", "detail": bad, "env": env}) + "\n")
+        sys.stdout.flush()
+        print(f"REFUSED: the teacher runtime is not the card's: {bad}", file=sys.stderr)
+        return 4
     t0 = time.time()
     with contextlib.redirect_stdout(sys.stderr):  # stdout carries the protocol only
         teacher, identity = P._load_teacher_real(a.clone_root)
     bench = BenchTeacher(teacher, teacher.rt["twixt"])
-    sys.stdout.write(json.dumps({"ok": True, "ready": True, "identity": identity, "teacher": P.TEACHER,
+    sys.stdout.write(json.dumps({"ok": True, "ready": True, "env": env, "identity": identity, "teacher": P.TEACHER,
                                  "load_seconds": time.time() - t0}, default=P._jsonable) + "\n")
     sys.stdout.flush()
     return serve(bench, sys.stdin, sys.stdout)
