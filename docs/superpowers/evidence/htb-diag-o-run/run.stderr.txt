@@ -1,0 +1,6 @@
+WARNING:tensorflow:From /Users/bill/twixt-cache/htb-teacher/twixtbot-ui/src/backend/nneval.py:21: load (from tensorflow.python.saved_model.loader_impl) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use `tf.saved_model.load` instead.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1794634671.483723 14143980 mlir_graph_optimization_pass.cc:437] MLIR V1 optimization pass is not enabled
+libc++abi: terminating due to uncaught exception of type std::__1::system_error: mutex lock failed: Invalid argument

@@ -1,0 +1,5610 @@
+{
+ "schema": "htb-diag-o-analysis/1",
+ "n_games": 110,
+ "counts": {
+  "L": 12,
+  "W": 96,
+  "D": 2,
+  "B2_L": 12,
+  "B2_W": 31,
+  "B2_D": 2
+ },
+ "bootstrap": {
+  "B": 10000,
+  "seed": 20261112,
+  "kind": "stratified by outcome, games resampled, 95% percentile"
+ },
+ "all_black_games": {
+  "R_off": {
+   "mean_L": 9.583333333333334,
+   "n_L": 12,
+   "mean_W": 5.541666666666667,
+   "n_W": 96,
+   "D_values": [
+    10,
+    10
+   ],
+   "diff_L_minus_W": 4.041666666666667,
+   "ci95": {
+    "lo": 3.333333333333333,
+    "hi": 4.739583333333333,
+    "n": 10000
+   }
+  },
+  "R_low": {
+   "mean_L": 9.833333333333334,
+   "n_L": 12,
+   "mean_W": 5.270833333333333,
+   "n_W": 96,
+   "D_values": [
+    10,
+    10
+   ],
+   "diff_L_minus_W": 4.562500000000001,
+   "ci95": {
+    "lo": 3.843750000000001,
+    "hi": 5.249999999999999,
+    "n": 10000
+   }
+  },
+  "B_diff": {
+   "mean_L": 2.75,
+   "n_L": 12,
+   "mean_W": 2.28125,
+   "n_W": 96,
+   "D_values": [
+    2,
+    3
+   ],
+   "diff_L_minus_W": 0.46875,
+   "ci95": {
+    "lo": -0.33333333333333304,
+    "hi": 1.3541666666666665,
+    "n": 10000
+   }
+  },
+  "T_top1": {
+   "mean_L": 0.25,
+   "n_L": 12,
+   "mean_W": 3.5208333333333335,
+   "n_W": 96,
+   "D_values": [
+    0,
+    0
+   ],
+   "diff_L_minus_W": -3.2708333333333335,
+   "ci95": {
+    "lo": -3.875260416666667,
+    "hi": -2.614583333333333,
+    "n": 10000
+   }
+  },
+  "T_prob_played": {
+   "mean_L": 0.015257597099795414,
+   "n_L": 12,
+   "mean_W": 0.28502820484435365,
+   "n_W": 96,
+   "D_values": [
+    0.0021067310425235204,
+    0.007907252874808016
+   ],
+   "diff_L_minus_W": -0.26977060774455824,
+   "ci95": {
+    "lo": -0.3156427840635828,
+    "hi": -0.2227420551359389,
+    "n": 10000
+   }
+  },
+  "S_prob_played": {
+   "mean_L": 0.017866304347368592,
+   "n_L": 12,
+   "mean_W": 0.24124208893332774,
+   "n_W": 96,
+   "D_values": [
+    0.002924570599134313,
+    0.02188836786481261
+   ],
+   "diff_L_minus_W": -0.22337578458595914,
+   "ci95": {
+    "lo": -0.26106578092487925,
+    "hi": -0.18581052889973712,
+    "n": 10000
+   }
+  },
+  "v19_student_raw": {
+   "mean_L": -0.9266849011182785,
+   "n_L": 12,
+   "mean_W": 0.10382177378050983,
+   "n_W": 96,
+   "D_values": [
+    -0.9911434054374695,
+    -0.9731536507606506
+   ],
+   "diff_L_minus_W": -1.0305066748987883,
+   "ci95": {
+    "lo": -1.1875971037021373,
+    "hi": -0.8680050849099643,
+    "n": 10000
+   }
+  },
+  "v19_teacher_raw": {
+   "mean_L": -0.96788734893168,
+   "n_L": 12,
+   "mean_W": 0.17605020643236627,
+   "n_W": 96,
+   "D_values": [
+    -0.9985045161380997,
+    -0.9282414509393919
+   ],
+   "diff_L_minus_W": -1.1439375553640463,
+   "ci95": {
+    "lo": -1.3030237874523884,
+    "hi": -0.9796594132462814,
+    "n": 10000
+   }
+  },
+  "v19_search200_root": {
+   "mean_L": -0.9680238091619686,
+   "n_L": 12,
+   "mean_W": 0.18812698957539395,
+   "n_W": 96,
+   "D_values": [
+    -0.9902540475130082,
+    -0.9873678299784661
+   ],
+   "diff_L_minus_W": -1.1561507987373625,
+   "ci95": {
+    "lo": -1.3260512842907266,
+    "hi": -0.9824427136521359,
+    "n": 10000
+   }
+  },
+  "v19_search800_root": {
+   "mean_L": -0.9671679444863307,
+   "n_L": 12,
+   "mean_W": 0.20346291397692165,
+   "n_W": 96,
+   "D_values": [
+    -0.9908599253743887,
+    -0.9775400490313768
+   ],
+   "diff_L_minus_W": -1.1706308584632523,
+   "ci95": {
+    "lo": -1.341697093882593,
+    "hi": -0.9927958024342272,
+    "n": 10000
+   }
+  },
+  "v9_student_raw": {
+   "mean_L": -0.6481805096069971,
+   "n_L": 12,
+   "mean_W": -0.12887567221575105,
+   "n_W": 96,
+   "D_values": [
+    -0.23962363600730896,
+    -0.5357893705368042
+   ],
+   "diff_L_minus_W": -0.5193048373912461,
+   "ci95": {
+    "lo": -0.634280544418046,
+    "hi": -0.4013272464692517,
+    "n": 10000
+   }
+  },
+  "v9_teacher_raw": {
+   "mean_L": -0.6175554036190017,
+   "n_L": 12,
+   "mean_W": -0.14667031115663942,
+   "n_W": 96,
+   "D_values": [
+    -0.4521085692674799,
+    -0.503509972902092
+   ],
+   "diff_L_minus_W": -0.4708850924623623,
+   "ci95": {
+    "lo": -0.5887557151657564,
+    "hi": -0.354490150169028,
+    "n": 10000
+   }
+  },
+  "alt200_delta_student_raw": {
+   "mean_L": 0.13895230820333515,
+   "n_L": 12,
+   "mean_W": 0.09252314745662109,
+   "n_W": 96,
+   "D_values": [
+    0.2581669718027115,
+    0.18206627182662488
+   ],
+   "diff_L_minus_W": 0.04642916074671406,
+   "ci95": {
+    "lo": -0.009251086874678426,
+    "hi": 0.10135241352846568,
+    "n": 10000
+   }
+  },
+  "alt200_delta_teacher_raw": {
+   "mean_L": 0.14257213538719155,
+   "n_L": 12,
+   "mean_W": 0.1226881148796205,
+   "n_W": 96,
+   "D_values": [
+    0.13292827415626166,
+    0.17265690607453005
+   ],
+   "diff_L_minus_W": 0.019884020507571043,
+   "ci95": {
+    "lo": -0.01879204733587654,
+    "hi": 0.05623647757892014,
+    "n": 10000
+   }
+  },
+  "alt200_delta_search200": {
+   "mean_L": 0.11828213017397292,
+   "n_L": 12,
+   "mean_W": 0.10060517685289289,
+   "n_W": 96,
+   "D_values": [
+    0.20120692397829537,
+    0.12949015220090976
+   ],
+   "diff_L_minus_W": 0.017676953321080033,
+   "ci95": {
+    "lo": -0.02420317317414245,
+    "hi": 0.05858644988448115,
+    "n": 10000
+   }
+  },
+  "alt800_delta_student_raw": {
+   "mean_L": 0.15373244376646147,
+   "n_L": 12,
+   "mean_W": 0.15530857130166995,
+   "n_W": 95,
+   "D_values": [
+    0.2786418467760086,
+    0.20845368318259716
+   ],
+   "diff_L_minus_W": -0.0015761275352084714,
+   "ci95": {
+    "lo": -0.0494571910462205,
+    "hi": 0.04953698520587459,
+    "n": 10000
+   }
+  },
+  "alt800_delta_teacher_raw": {
+   "mean_L": 0.14117331593134835,
+   "n_L": 12,
+   "mean_W": 0.12980202370246502,
+   "n_W": 95,
+   "D_values": [
+    0.14034670276445735,
+    0.18166110281024428
+   ],
+   "diff_L_minus_W": 0.011371292228883334,
+   "ci95": {
+    "lo": -0.02352653124923754,
+    "hi": 0.0455060972712088,
+    "n": 10000
+   }
+  },
+  "alt800_delta_search800": {
+   "mean_L": 0.10339233914751043,
+   "n_L": 12,
+   "mean_W": 0.16481836048924595,
+   "n_W": 95,
+   "D_values": [
+    0.14863889303172462,
+    0.12113499918130759
+   ],
+   "diff_L_minus_W": -0.06142602134173551,
+   "ci95": {
+    "lo": -0.091365433235823,
+    "hi": -0.030891965157374846,
+    "n": 10000
+   }
+  },
+  "any_R_off": {
+   "L": [
+    12,
+    12
+   ],
+   "W": [
+    96,
+    96
+   ],
+   "D": [
+    2,
+    2
+   ],
+   "wilson_L": {
+    "lo": 0.7575059933447592,
+    "hi": 1
+   },
+   "wilson_W": {
+    "lo": 0.9615244121423243,
+    "hi": 1
+   }
+  },
+  "any_R_low": {
+   "L": [
+    12,
+    12
+   ],
+   "W": [
+    96,
+    96
+   ],
+   "D": [
+    2,
+    2
+   ],
+   "wilson_L": {
+    "lo": 0.7575059933447592,
+    "hi": 1
+   },
+   "wilson_W": {
+    "lo": 0.9615244121423243,
+    "hi": 1
+   }
+  },
+  "any_B_diff": {
+   "L": [
+    12,
+    12
+   ],
+   "W": [
+    96,
+    96
+   ],
+   "D": [
+    2,
+    2
+   ],
+   "wilson_L": {
+    "lo": 0.7575059933447592,
+    "hi": 1
+   },
+   "wilson_W": {
+    "lo": 0.9615244121423243,
+    "hi": 1
+   }
+  },
+  "auc": {
+   "v19_student_raw": {
+    "auc": 0.875,
+    "ci95": {
+     "lo": 0.7925347222222222,
+     "hi": 0.9435763888888888,
+     "n": 10000
+    }
+   },
+   "v19_teacher_raw": {
+    "auc": 0.921875,
+    "ci95": {
+     "lo": 0.8628472222222222,
+     "hi": 0.9678819444444444,
+     "n": 10000
+    }
+   },
+   "v19_search200_root": {
+    "auc": 0.8732638888888888,
+    "ci95": {
+     "lo": 0.796875,
+     "hi": 0.9383680555555556,
+     "n": 10000
+    }
+   },
+   "v19_search800_root": {
+    "auc": 0.8871527777777778,
+    "ci95": {
+     "lo": 0.8133680555555556,
+     "hi": 0.9470486111111112,
+     "n": 10000
+    }
+   },
+   "v9_student_raw": {
+    "auc": 0.8541666666666666,
+    "ci95": {
+     "lo": 0.7682291666666666,
+     "hi": 0.9262152777777778,
+     "n": 10000
+    }
+   },
+   "v9_teacher_raw": {
+    "auc": 0.8289930555555556,
+    "ci95": {
+     "lo": 0.7317708333333334,
+     "hi": 0.9105902777777778,
+     "n": 10000
+    }
+   },
+   "v9_search200_root": {
+    "auc": 0.8350694444444444,
+    "ci95": {
+     "lo": 0.7378472222222222,
+     "hi": 0.9175347222222222,
+     "n": 10000
+    }
+   },
+   "v9_search800_root": {
+    "auc": 0.8342013888888888,
+    "ci95": {
+     "lo": 0.7335069444444444,
+     "hi": 0.9192708333333334,
+     "n": 10000
+    }
+   },
+   "v19_teacher_minus_student_raw": {
+    "diff": 0.046875,
+    "ci95": {
+     "lo": 0.0017361111111111605,
+     "hi": 0.09722222222222221,
+     "n": 10000
+    }
+   }
+  }
+ },
+ "behind_2plus_at_19": {
+  "R_off": {
+   "mean_L": 9.583333333333334,
+   "n_L": 12,
+   "mean_W": 8.838709677419354,
+   "n_W": 31,
+   "D_values": [
+    10,
+    10
+   ],
+   "diff_L_minus_W": 0.7446236559139798,
+   "ci95": {
+    "lo": 0.12634408602150415,
+    "hi": 1.39516129032258,
+    "n": 10000
+   }
+  },
+  "R_low": {
+   "mean_L": 9.833333333333334,
+   "n_L": 12,
+   "mean_W": 9.03225806451613,
+   "n_W": 31,
+   "D_values": [
+    10,
+    10
+   ],
+   "diff_L_minus_W": 0.801075268817204,
+   "ci95": {
+    "lo": 0.25268817204301186,
+    "hi": 1.413978494623656,
+    "n": 10000
+   }
+  },
+  "B_diff": {
+   "mean_L": 2.75,
+   "n_L": 12,
+   "mean_W": 2.774193548387097,
+   "n_W": 31,
+   "D_values": [
+    2,
+    3
+   ],
+   "diff_L_minus_W": -0.024193548387096975,
+   "ci95": {
+    "lo": -0.9166666666666665,
+    "hi": 0.905913978494624,
+    "n": 10000
+   }
+  },
+  "T_top1": {
+   "mean_L": 0.25,
+   "n_L": 12,
+   "mean_W": 0.8387096774193549,
+   "n_W": 31,
+   "D_values": [
+    0,
+    0
+   ],
+   "diff_L_minus_W": -0.5887096774193549,
+   "ci95": {
+    "lo": -1.1290322580645162,
+    "hi": -0.048387096774193505,
+    "n": 10000
+   }
+  },
+  "T_prob_played": {
+   "mean_L": 0.015257597099795414,
+   "n_L": 12,
+   "mean_W": 0.06317866964568714,
+   "n_W": 31,
+   "D_values": [
+    0.0021067310425235204,
+    0.007907252874808016
+   ],
+   "diff_L_minus_W": -0.04792107254589172,
+   "ci95": {
+    "lo": -0.07970784200320227,
+    "hi": -0.0186303279587325,
+    "n": 10000
+   }
+  },
+  "S_prob_played": {
+   "mean_L": 0.017866304347368592,
+   "n_L": 12,
+   "mean_W": 0.06032408079933203,
+   "n_W": 31,
+   "D_values": [
+    0.002924570599134313,
+    0.02188836786481261
+   ],
+   "diff_L_minus_W": -0.04245777645196344,
+   "ci95": {
+    "lo": -0.07068917398710432,
+    "hi": -0.015595869970513458,
+    "n": 10000
+   }
+  },
+  "v19_student_raw": {
+   "mean_L": -0.9266849011182785,
+   "n_L": 12,
+   "mean_W": -0.7576145121166783,
+   "n_W": 31,
+   "D_values": [
+    -0.9911434054374695,
+    -0.9731536507606506
+   ],
+   "diff_L_minus_W": -0.1690703890016002,
+   "ci95": {
+    "lo": -0.32775847339421826,
+    "hi": -0.03185458662769494,
+    "n": 10000
+   }
+  },
+  "v19_teacher_raw": {
+   "mean_L": -0.96788734893168,
+   "n_L": 12,
+   "mean_W": -0.7082950360755528,
+   "n_W": 31,
+   "D_values": [
+    -0.9985045161380997,
+    -0.9282414509393919
+   ],
+   "diff_L_minus_W": -0.25959231285612727,
+   "ci95": {
+    "lo": -0.4282960356040463,
+    "hi": -0.11827456140149328,
+    "n": 10000
+   }
+  },
+  "v19_search200_root": {
+   "mean_L": -0.9680238091619686,
+   "n_L": 12,
+   "mean_W": -0.751796625121046,
+   "n_W": 31,
+   "D_values": [
+    -0.9902540475130082,
+    -0.9873678299784661
+   ],
+   "diff_L_minus_W": -0.21622718404092267,
+   "ci95": {
+    "lo": -0.41370277540626443,
+    "hi": -0.057791194401754314,
+    "n": 10000
+   }
+  },
+  "v19_search800_root": {
+   "mean_L": -0.9671679444863307,
+   "n_L": 12,
+   "mean_W": -0.7312007759342856,
+   "n_W": 31,
+   "D_values": [
+    -0.9908599253743887,
+    -0.9775400490313768
+   ],
+   "diff_L_minus_W": -0.23596716855204514,
+   "ci95": {
+    "lo": -0.43966343093907656,
+    "hi": -0.07043953161948714,
+    "n": 10000
+   }
+  },
+  "v9_student_raw": {
+   "mean_L": -0.6481805096069971,
+   "n_L": 12,
+   "mean_W": -0.4814029800435228,
+   "n_W": 31,
+   "D_values": [
+    -0.23962363600730896,
+    -0.5357893705368042
+   ],
+   "diff_L_minus_W": -0.16677752956347436,
+   "ci95": {
+    "lo": -0.2773946865231439,
+    "hi": -0.05976888740295053,
+    "n": 10000
+   }
+  },
+  "v9_teacher_raw": {
+   "mean_L": -0.6175554036190017,
+   "n_L": 12,
+   "mean_W": -0.5204478344292551,
+   "n_W": 31,
+   "D_values": [
+    -0.4521085692674799,
+    -0.503509972902092
+   ],
+   "diff_L_minus_W": -0.09710756918974661,
+   "ci95": {
+    "lo": -0.20359789018422694,
+    "hi": 0.008422392422716135,
+    "n": 10000
+   }
+  },
+  "alt200_delta_student_raw": {
+   "mean_L": 0.13895230820333515,
+   "n_L": 12,
+   "mean_W": 0.1793312750931036,
+   "n_W": 31,
+   "D_values": [
+    0.2581669718027115,
+    0.18206627182662488
+   ],
+   "diff_L_minus_W": -0.04037896688976844,
+   "ci95": {
+    "lo": -0.09684501784163187,
+    "hi": 0.01600379910461654,
+    "n": 10000
+   }
+  },
+  "alt200_delta_teacher_raw": {
+   "mean_L": 0.14257213538719155,
+   "n_L": 12,
+   "mean_W": 0.16930477205076466,
+   "n_W": 31,
+   "D_values": [
+    0.13292827415626166,
+    0.17265690607453005
+   ],
+   "diff_L_minus_W": -0.026732636663573117,
+   "ci95": {
+    "lo": -0.07097474419993799,
+    "hi": 0.01625254939800857,
+    "n": 10000
+   }
+  },
+  "alt200_delta_search200": {
+   "mean_L": 0.11828213017397292,
+   "n_L": 12,
+   "mean_W": 0.143078856979506,
+   "n_W": 31,
+   "D_values": [
+    0.20120692397829537,
+    0.12949015220090976
+   ],
+   "diff_L_minus_W": -0.02479672680553309,
+   "ci95": {
+    "lo": -0.06586628185117682,
+    "hi": 0.016414253487624694,
+    "n": 10000
+   }
+  },
+  "alt800_delta_student_raw": {
+   "mean_L": 0.15373244376646147,
+   "n_L": 12,
+   "mean_W": 0.200593124373558,
+   "n_W": 31,
+   "D_values": [
+    0.2786418467760086,
+    0.20845368318259716
+   ],
+   "diff_L_minus_W": -0.04686068060709653,
+   "ci95": {
+    "lo": -0.09881133801955742,
+    "hi": 0.007784966959737676,
+    "n": 10000
+   }
+  },
+  "alt800_delta_teacher_raw": {
+   "mean_L": 0.14117331593134835,
+   "n_L": 12,
+   "mean_W": 0.18062120691969763,
+   "n_W": 31,
+   "D_values": [
+    0.14034670276445735,
+    0.18166110281024428
+   ],
+   "diff_L_minus_W": -0.03944789098834928,
+   "ci95": {
+    "lo": -0.08125308556491614,
+    "hi": 0.000013260055105519848,
+    "n": 10000
+   }
+  },
+  "alt800_delta_search800": {
+   "mean_L": 0.10339233914751043,
+   "n_L": 12,
+   "mean_W": 0.15983117589521015,
+   "n_W": 31,
+   "D_values": [
+    0.14863889303172462,
+    0.12113499918130759
+   ],
+   "diff_L_minus_W": -0.056438836747699714,
+   "ci95": {
+    "lo": -0.0921988449973782,
+    "hi": -0.021418556540119905,
+    "n": 10000
+   }
+  },
+  "any_R_off": {
+   "L": [
+    12,
+    12
+   ],
+   "W": [
+    31,
+    31
+   ],
+   "D": [
+    2,
+    2
+   ],
+   "wilson_L": {
+    "lo": 0.7575059933447592,
+    "hi": 1
+   },
+   "wilson_W": {
+    "lo": 0.889744604539564,
+    "hi": 1
+   }
+  },
+  "any_R_low": {
+   "L": [
+    12,
+    12
+   ],
+   "W": [
+    31,
+    31
+   ],
+   "D": [
+    2,
+    2
+   ],
+   "wilson_L": {
+    "lo": 0.7575059933447592,
+    "hi": 1
+   },
+   "wilson_W": {
+    "lo": 0.889744604539564,
+    "hi": 1
+   }
+  },
+  "any_B_diff": {
+   "L": [
+    12,
+    12
+   ],
+   "W": [
+    31,
+    31
+   ],
+   "D": [
+    2,
+    2
+   ],
+   "wilson_L": {
+    "lo": 0.7575059933447592,
+    "hi": 1
+   },
+   "wilson_W": {
+    "lo": 0.889744604539564,
+    "hi": 1
+   }
+  },
+  "auc": {
+   "v19_student_raw": {
+    "auc": 0.6586021505376344,
+    "ci95": {
+     "lo": 0.46774193548387094,
+     "hi": 0.8280241935483862,
+     "n": 10000
+    }
+   },
+   "v19_teacher_raw": {
+    "auc": 0.771505376344086,
+    "ci95": {
+     "lo": 0.6155913978494624,
+     "hi": 0.9005376344086021,
+     "n": 10000
+    }
+   },
+   "v19_search200_root": {
+    "auc": 0.6424731182795699,
+    "ci95": {
+     "lo": 0.46236559139784944,
+     "hi": 0.8118279569892473,
+     "n": 10000
+    }
+   },
+   "v19_search800_root": {
+    "auc": 0.6774193548387096,
+    "ci95": {
+     "lo": 0.5026881720430108,
+     "hi": 0.8360215053763441,
+     "n": 10000
+    }
+   },
+   "v9_student_raw": {
+    "auc": 0.7123655913978495,
+    "ci95": {
+     "lo": 0.5456989247311828,
+     "hi": 0.8602150537634409,
+     "n": 10000
+    }
+   },
+   "v9_teacher_raw": {
+    "auc": 0.6290322580645161,
+    "ci95": {
+     "lo": 0.4543010752688172,
+     "hi": 0.793010752688172,
+     "n": 10000
+    }
+   },
+   "v9_search200_root": {
+    "auc": 0.6774193548387096,
+    "ci95": {
+     "lo": 0.489247311827957,
+     "hi": 0.8360215053763441,
+     "n": 10000
+    }
+   },
+   "v9_search800_root": {
+    "auc": 0.6827956989247311,
+    "ci95": {
+     "lo": 0.4946236559139785,
+     "hi": 0.8440860215053764,
+     "n": 10000
+    }
+   },
+   "v19_teacher_minus_student_raw": {
+    "diff": 0.11290322580645162,
+    "ci95": {
+     "lo": -0.018817204301075252,
+     "hi": 0.2446236559139785,
+     "n": 10000
+    }
+   }
+  }
+ },
+ "signals": {
+  "readout": false,
+  "teacher": false,
+  "budget": false,
+  "n_losses": 12,
+  "fired": [],
+  "recommended": null,
+  "recommended_follow_up": "no signal: the diagnostic does not single out a follow-up; the proposal's second step (a twixtbot benchmark card) stands as the default"
+ },
+ "by_ply": {
+  "1": {
+   "L": {
+    "n": 12,
+    "played_not_leader200": 12,
+    "played_share_lt_10pct": 12,
+    "leader800_ne_leader200": 12,
+    "mean_student_raw_black": -0.4472923278808594,
+    "mean_teacher_raw_black": -0.426967077273888,
+    "mean_search200_root_black": -0.25486729883356013,
+    "mean_search800_root_black": -0.40980389167787507
+   },
+   "W": {
+    "n": 96,
+    "played_not_leader200": 90,
+    "played_share_lt_10pct": 96,
+    "leader800_ne_leader200": 96,
+    "mean_student_raw_black": -0.4472923278808594,
+    "mean_teacher_raw_black": -0.42696707727388694,
+    "mean_search200_root_black": -0.25486729883355985,
+    "mean_search800_root_black": -0.40980389167787484
+   },
+   "D": {
+    "n": 2,
+    "played_not_leader200": 2,
+    "played_share_lt_10pct": 2,
+    "leader800_ne_leader200": 2,
+    "mean_student_raw_black": -0.4472923278808594,
+    "mean_teacher_raw_black": -0.42696707727388794,
+    "mean_search200_root_black": -0.2548672988335602,
+    "mean_search800_root_black": -0.40980389167787507
+   }
+  },
+  "3": {
+   "L": {
+    "n": 12,
+    "played_not_leader200": 11,
+    "played_share_lt_10pct": 11,
+    "leader800_ne_leader200": 4,
+    "mean_student_raw_black": -0.44500085214773816,
+    "mean_teacher_raw_black": -0.47600104713307023,
+    "mean_search200_root_black": -0.3738828226729917,
+    "mean_search800_root_black": -0.5193536615755875
+   },
+   "W": {
+    "n": 96,
+    "played_not_leader200": 70,
+    "played_share_lt_10pct": 64,
+    "leader800_ne_leader200": 19,
+    "mean_student_raw_black": -0.4285454429530849,
+    "mean_teacher_raw_black": -0.3964521138489843,
+    "mean_search200_root_black": -0.25609053736433757,
+    "mean_search800_root_black": -0.39798062544022134
+   },
+   "D": {
+    "n": 2,
+    "played_not_leader200": 2,
+    "played_share_lt_10pct": 2,
+    "leader800_ne_leader200": 0,
+    "mean_student_raw_black": -0.5447134375572205,
+    "mean_teacher_raw_black": -0.48559892350806305,
+    "mean_search200_root_black": -0.46591945259831846,
+    "mean_search800_root_black": -0.6052470471395646
+   }
+  },
+  "5": {
+   "L": {
+    "n": 12,
+    "played_not_leader200": 11,
+    "played_share_lt_10pct": 12,
+    "leader800_ne_leader200": 2,
+    "mean_student_raw_black": -0.49349395185709,
+    "mean_teacher_raw_black": -0.4602735366695925,
+    "mean_search200_root_black": -0.4809824841977874,
+    "mean_search800_root_black": -0.5894077780079776
+   },
+   "W": {
+    "n": 96,
+    "played_not_leader200": 64,
+    "played_share_lt_10pct": 58,
+    "leader800_ne_leader200": 18,
+    "mean_student_raw_black": -0.35726855394508067,
+    "mean_teacher_raw_black": -0.3649533069855902,
+    "mean_search200_root_black": -0.19313513054212916,
+    "mean_search800_root_black": -0.2561449912886791
+   },
+   "D": {
+    "n": 2,
+    "played_not_leader200": 2,
+    "played_share_lt_10pct": 2,
+    "leader800_ne_leader200": 2,
+    "mean_student_raw_black": -0.48461557924747467,
+    "mean_teacher_raw_black": -0.42456264877431843,
+    "mean_search200_root_black": -0.5153697989881039,
+    "mean_search800_root_black": -0.5998749364377
+   }
+  },
+  "7": {
+   "L": {
+    "n": 12,
+    "played_not_leader200": 11,
+    "played_share_lt_10pct": 12,
+    "leader800_ne_leader200": 4,
+    "mean_student_raw_black": -0.6071812684337298,
+    "mean_teacher_raw_black": -0.5632215443931924,
+    "mean_search200_root_black": -0.6396853252220899,
+    "mean_search800_root_black": -0.6993673447720842
+   },
+   "W": {
+    "n": 96,
+    "played_not_leader200": 50,
+    "played_share_lt_10pct": 49,
+    "leader800_ne_leader200": 21,
+    "mean_student_raw_black": -0.2447884095211824,
+    "mean_teacher_raw_black": -0.24459654075561285,
+    "mean_search200_root_black": -0.08821506530641877,
+    "mean_search800_root_black": -0.10003577940006077
+   },
+   "D": {
+    "n": 2,
+    "played_not_leader200": 2,
+    "played_share_lt_10pct": 2,
+    "leader800_ne_leader200": 0,
+    "mean_student_raw_black": -0.5950784385204315,
+    "mean_teacher_raw_black": -0.39505348060219464,
+    "mean_search200_root_black": -0.5816685958113521,
+    "mean_search800_root_black": -0.6480626313990797
+   }
+  },
+  "9": {
+   "L": {
+    "n": 12,
+    "played_not_leader200": 12,
+    "played_share_lt_10pct": 12,
+    "leader800_ne_leader200": 2,
+    "mean_student_raw_black": -0.6481805096069971,
+    "mean_teacher_raw_black": -0.6175554036190017,
+    "mean_search200_root_black": -0.7216126844737057,
+    "mean_search800_root_black": -0.756303712658167
+   },
+   "W": {
+    "n": 96,
+    "played_not_leader200": 44,
+    "played_share_lt_10pct": 43,
+    "leader800_ne_leader200": 13,
+    "mean_student_raw_black": -0.12887567221575105,
+    "mean_teacher_raw_black": -0.14667031115663942,
+    "mean_search200_root_black": -0.026224196725136917,
+    "mean_search800_root_black": -0.013691860725875055
+   },
+   "D": {
+    "n": 2,
+    "played_not_leader200": 2,
+    "played_share_lt_10pct": 2,
+    "leader800_ne_leader200": 0,
+    "mean_student_raw_black": -0.3877065032720566,
+    "mean_teacher_raw_black": -0.47780927108478594,
+    "mean_search200_root_black": -0.5307100523635745,
+    "mean_search800_root_black": -0.6099440270161722
+   }
+  },
+  "11": {
+   "L": {
+    "n": 12,
+    "played_not_leader200": 12,
+    "played_share_lt_10pct": 12,
+    "leader800_ne_leader200": 1,
+    "mean_student_raw_black": -0.6295013912022114,
+    "mean_teacher_raw_black": -0.7011048357157857,
+    "mean_search200_root_black": -0.8276633688535852,
+    "mean_search800_root_black": -0.8336421837318145
+   },
+   "W": {
+    "n": 96,
+    "played_not_leader200": 46,
+    "played_share_lt_10pct": 42,
+    "leader800_ne_leader200": 15,
+    "mean_student_raw_black": -0.03817058253722886,
+    "mean_teacher_raw_black": -0.025163738138933255,
+    "mean_search200_root_black": 0.06424832882822862,
+    "mean_search800_root_black": 0.07812815869712716
+   },
+   "D": {
+    "n": 2,
+    "played_not_leader200": 2,
+    "played_share_lt_10pct": 2,
+    "leader800_ne_leader200": 0,
+    "mean_student_raw_black": -0.5865351408720016,
+    "mean_teacher_raw_black": -0.6456552337185175,
+    "mean_search200_root_black": -0.7824144611461088,
+    "mean_search800_root_black": -0.8116879282903392
+   }
+  },
+  "13": {
+   "L": {
+    "n": 12,
+    "played_not_leader200": 11,
+    "played_share_lt_10pct": 11,
+    "leader800_ne_leader200": 3,
+    "mean_student_raw_black": -0.6225336665908495,
+    "mean_teacher_raw_black": -0.7654252745116561,
+    "mean_search200_root_black": -0.887289005809774,
+    "mean_search800_root_black": -0.879509153344067
+   },
+   "W": {
+    "n": 96,
+    "played_not_leader200": 41,
+    "played_share_lt_10pct": 40,
+    "leader800_ne_leader200": 10,
+    "mean_student_raw_black": 0.020571636715127777,
+    "mean_teacher_raw_black": 0.04134976138064452,
+    "mean_search200_root_black": 0.09770766269880066,
+    "mean_search800_root_black": 0.14262482757668146
+   },
+   "D": {
+    "n": 2,
+    "played_not_leader200": 2,
+    "played_share_lt_10pct": 2,
+    "leader800_ne_leader200": 0,
+    "mean_student_raw_black": -0.8408616185188293,
+    "mean_teacher_raw_black": -0.6985762974934029,
+    "mean_search200_root_black": -0.9073447208851575,
+    "mean_search800_root_black": -0.8905169674248463
+   }
+  },
+  "15": {
+   "L": {
+    "n": 12,
+    "played_not_leader200": 12,
+    "played_share_lt_10pct": 12,
+    "leader800_ne_leader200": 2,
+    "mean_student_raw_black": -0.7531262338161469,
+    "mean_teacher_raw_black": -0.7926012933560003,
+    "mean_search200_root_black": -0.897264825605865,
+    "mean_search800_root_black": -0.9103245999232361
+   },
+   "W": {
+    "n": 96,
+    "played_not_leader200": 44,
+    "played_share_lt_10pct": 41,
+    "leader800_ne_leader200": 11,
+    "mean_student_raw_black": 0.017044056303954374,
+    "mean_teacher_raw_black": 0.10285742344799165,
+    "mean_search200_root_black": 0.11057545040496429,
+    "mean_search800_root_black": 0.1524708089130218
+   },
+   "D": {
+    "n": 2,
+    "played_not_leader200": 2,
+    "played_share_lt_10pct": 2,
+    "leader800_ne_leader200": 0,
+    "mean_student_raw_black": -0.9108670949935913,
+    "mean_teacher_raw_black": -0.8616945856596867,
+    "mean_search200_root_black": -0.9691455897688865,
+    "mean_search800_root_black": -0.9648961780965328
+   }
+  },
+  "17": {
+   "L": {
+    "n": 12,
+    "played_not_leader200": 11,
+    "played_share_lt_10pct": 12,
+    "leader800_ne_leader200": 2,
+    "mean_student_raw_black": -0.8852623254060745,
+    "mean_teacher_raw_black": -0.9593546445889315,
+    "mean_search200_root_black": -0.9542412131931632,
+    "mean_search800_root_black": -0.9568047776585445
+   },
+   "W": {
+    "n": 96,
+    "played_not_leader200": 45,
+    "played_share_lt_10pct": 37,
+    "leader800_ne_leader200": 7,
+    "mean_student_raw_black": 0.07852230456410325,
+    "mean_teacher_raw_black": 0.1440775412239303,
+    "mean_search200_root_black": 0.1705883098093424,
+    "mean_search800_root_black": 0.19479452912676906
+   },
+   "D": {
+    "n": 2,
+    "played_not_leader200": 2,
+    "played_share_lt_10pct": 2,
+    "leader800_ne_leader200": 0,
+    "mean_student_raw_black": -0.9487121999263763,
+    "mean_teacher_raw_black": -0.9322832887831075,
+    "mean_search200_root_black": -0.9794925630092621,
+    "mean_search800_root_black": -0.973782725809142
+   }
+  },
+  "19": {
+   "L": {
+    "n": 12,
+    "played_not_leader200": 12,
+    "played_share_lt_10pct": 12,
+    "leader800_ne_leader200": 1,
+    "mean_student_raw_black": -0.9266849011182785,
+    "mean_teacher_raw_black": -0.96788734893168,
+    "mean_search200_root_black": -0.9680238091619686,
+    "mean_search800_root_black": -0.9671679444863307
+   },
+   "W": {
+    "n": 96,
+    "played_not_leader200": 38,
+    "played_share_lt_10pct": 36,
+    "leader800_ne_leader200": 9,
+    "mean_student_raw_black": 0.10382177378050983,
+    "mean_teacher_raw_black": 0.17605020643236627,
+    "mean_search200_root_black": 0.18812698957539395,
+    "mean_search800_root_black": 0.20346291397692165
+   },
+   "D": {
+    "n": 2,
+    "played_not_leader200": 2,
+    "played_share_lt_10pct": 2,
+    "leader800_ne_leader200": 1,
+    "mean_student_raw_black": -0.9821485280990601,
+    "mean_teacher_raw_black": -0.9633729835387458,
+    "mean_search200_root_black": -0.9888109387457371,
+    "mean_search800_root_black": -0.9841999872028828
+   }
+  }
+ },
+ "games": [
+  {
+   "pair": 0,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 2,
+   "R_low": 1,
+   "B_diff": 2,
+   "T_top1": 7,
+   "T_prob_played": 0.5778164005670356,
+   "S_prob_played": 0.3997552428394556,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.6896045804023743,
+    "teacher_raw": 0.9962528149234249,
+    "search200_root": 0.9250559917092324,
+    "search800_root": 0.9480421943776309
+   },
+   "v9": {
+    "student_raw": 0.6717416048049927,
+    "teacher_raw": 0.781855933373726,
+    "search200_root": 0.7870063535124063,
+    "search800_root": 0.8539048889209516
+   },
+   "alt200": {
+    "n": 2,
+    "student_raw": -0.17096519097685814,
+    "teacher_raw": -0.3604277374678153,
+    "search": 0.06914024179520731,
+    "teacher_prefers_alt": 1,
+    "student_prefers_alt": 1
+   },
+   "alt800": {
+    "n": 3,
+    "student_raw": -0.025323885182539623,
+    "teacher_raw": -0.22495023945732093,
+    "search": 0.18619682783442928,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 2
+   }
+  },
+  {
+   "pair": 1,
+   "outcome": "W",
+   "race19": "level",
+   "R_off": 5,
+   "R_low": 4,
+   "B_diff": 2,
+   "T_top1": 4,
+   "T_prob_played": 0.26667120273881306,
+   "S_prob_played": 0.2649825551750837,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.6225497722625732,
+    "teacher_raw": -0.07813363584314101,
+    "search200_root": 0.7404934899508953,
+    "search800_root": 0.7926327929040418
+   },
+   "v9": {
+    "student_raw": -0.37197065353393555,
+    "teacher_raw": -0.3743108163908784,
+    "search200_root": 0.02211525449063629,
+    "search800_root": 0.13668391968705693
+   },
+   "alt200": {
+    "n": 5,
+    "student_raw": 0.11927100494503975,
+    "teacher_raw": 0.18230246894180172,
+    "search": 0.1111816906443069,
+    "teacher_prefers_alt": 5,
+    "student_prefers_alt": 4
+   },
+   "alt800": {
+    "n": 6,
+    "student_raw": 0.12371758185327053,
+    "teacher_raw": 0.15128510903909556,
+    "search": 0.22158934358697846,
+    "teacher_prefers_alt": 5,
+    "student_prefers_alt": 4
+   }
+  },
+  {
+   "pair": 2,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 4,
+   "R_low": 3,
+   "B_diff": 2,
+   "T_top1": 3,
+   "T_prob_played": 0.25250939816799783,
+   "S_prob_played": 0.33010407504625616,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.049270205199718475,
+    "teacher_raw": -0.4737116170564789,
+    "search200_root": 0.3936158714443445,
+    "search800_root": 0.5458908857544884
+   },
+   "v9": {
+    "student_raw": 0.3413008749485016,
+    "teacher_raw": 0.17067831228831118,
+    "search200_root": 0.3872427483461797,
+    "search800_root": 0.6563757408922538
+   },
+   "alt200": {
+    "n": 4,
+    "student_raw": 0.03835197165608406,
+    "teacher_raw": 0.006672420234700251,
+    "search": 0.08445399280357348,
+    "teacher_prefers_alt": 1,
+    "student_prefers_alt": 2
+   },
+   "alt800": {
+    "n": 4,
+    "student_raw": 0.1322429496794939,
+    "teacher_raw": -0.007668745036144828,
+    "search": 0.24945298081701486,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 3
+   }
+  },
+  {
+   "pair": 3,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 10,
+   "R_low": 10,
+   "B_diff": 1,
+   "T_top1": 0,
+   "T_prob_played": 0.0013870720487865944,
+   "S_prob_played": 0.006702344111545244,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.92549067735672,
+    "teacher_raw": -0.9996289059387018,
+    "search200_root": -0.9792732530832291,
+    "search800_root": -0.9650206003151834
+   },
+   "v9": {
+    "student_raw": -0.9031660556793213,
+    "teacher_raw": -0.8487581704111712,
+    "search200_root": -0.8301607475429773,
+    "search800_root": -0.8413342943694443
+   },
+   "alt200": {
+    "n": 10,
+    "student_raw": 0.1141679272055626,
+    "teacher_raw": 0.1450479576242174,
+    "search": 0.13741118184839135,
+    "teacher_prefers_alt": 6,
+    "student_prefers_alt": 7
+   },
+   "alt800": {
+    "n": 10,
+    "student_raw": 0.13550901263952256,
+    "teacher_raw": 0.14597441872902528,
+    "search": 0.10146428328839088,
+    "teacher_prefers_alt": 6,
+    "student_prefers_alt": 8
+   }
+  },
+  {
+   "pair": 4,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 1,
+   "R_low": 1,
+   "B_diff": 1,
+   "T_top1": 8,
+   "T_prob_played": 0.6529202921517486,
+   "S_prob_played": 0.449247770383954,
+   "played_share_min": 0.02,
+   "v19": {
+    "student_raw": 0.7148021459579468,
+    "teacher_raw": 0.6730025201788943,
+    "search200_root": 0.9261763583123684,
+    "search800_root": 0.9409677987359464
+   },
+   "v9": {
+    "student_raw": 0.774131178855896,
+    "teacher_raw": 0.33062531686932156,
+    "search200_root": 0.8451700976211578,
+    "search800_root": 0.8742529877834022
+   },
+   "alt200": {
+    "n": 1,
+    "student_raw": -0.2134108543395996,
+    "teacher_raw": -0.009264611048078852,
+    "search": -0.09021989357742394,
+    "teacher_prefers_alt": 0,
+    "student_prefers_alt": 0
+   },
+   "alt800": {
+    "n": 0,
+    "student_raw": null,
+    "teacher_raw": null,
+    "search": null,
+    "teacher_prefers_alt": 0,
+    "student_prefers_alt": 0
+   }
+  },
+  {
+   "pair": 5,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 10,
+   "R_low": 10,
+   "B_diff": 3,
+   "T_top1": 0,
+   "T_prob_played": 0.0007655876301192798,
+   "S_prob_played": 0.0008394060023420025,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.987518846988678,
+    "teacher_raw": -0.9932691094730217,
+    "search200_root": -0.9727655863761902,
+    "search800_root": -0.9496917176619172
+   },
+   "v9": {
+    "student_raw": -0.8121019601821899,
+    "teacher_raw": -0.7312901057213961,
+    "search200_root": -0.8122669062018395,
+    "search800_root": -0.8285726156644523
+   },
+   "alt200": {
+    "n": 10,
+    "student_raw": 0.26619423776865003,
+    "teacher_raw": 0.09407791080285718,
+    "search": 0.1570443440213504,
+    "teacher_prefers_alt": 8,
+    "student_prefers_alt": 8
+   },
+   "alt800": {
+    "n": 10,
+    "student_raw": 0.31478492766618726,
+    "teacher_raw": 0.12157753540644319,
+    "search": 0.13241723581959317,
+    "teacher_prefers_alt": 8,
+    "student_prefers_alt": 9
+   }
+  },
+  {
+   "pair": 6,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 10,
+   "R_low": 10,
+   "B_diff": 3,
+   "T_top1": 0,
+   "T_prob_played": 0.01650228917105797,
+   "S_prob_played": 0.008178115900955163,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.8173137307167053,
+    "teacher_raw": -0.5515471817920758,
+    "search200_root": -0.918061764985323,
+    "search800_root": -0.6340142651600763
+   },
+   "v9": {
+    "student_raw": -0.5775821208953857,
+    "teacher_raw": -0.5209544464770428,
+    "search200_root": -0.38014713948592543,
+    "search800_root": -0.4840302228904329
+   },
+   "alt200": {
+    "n": 10,
+    "student_raw": 0.1119336575269699,
+    "teacher_raw": 0.15872882054654358,
+    "search": 0.06061873241328632,
+    "teacher_prefers_alt": 9,
+    "student_prefers_alt": 7
+   },
+   "alt800": {
+    "n": 10,
+    "student_raw": 0.14689219295978545,
+    "teacher_raw": 0.18101697595119245,
+    "search": 0.23503378134030375,
+    "teacher_prefers_alt": 9,
+    "student_prefers_alt": 7
+   }
+  },
+  {
+   "pair": 7,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 2,
+   "R_low": 2,
+   "B_diff": 1,
+   "T_top1": 5,
+   "T_prob_played": 0.3204561810852867,
+   "S_prob_played": 0.3439648908388335,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.8113319873809814,
+    "teacher_raw": 0.9603065997118887,
+    "search200_root": 0.9470991992950439,
+    "search800_root": 0.9437840886041522
+   },
+   "v9": {
+    "student_raw": -0.1525043398141861,
+    "teacher_raw": -0.38092252076959754,
+    "search200_root": 0.4914388278126717,
+    "search800_root": 0.6199095760728233
+   },
+   "alt200": {
+    "n": 2,
+    "student_raw": 0.11299736797809601,
+    "teacher_raw": 0.09644407997509231,
+    "search": 0.036406414241638874,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 1
+   },
+   "alt800": {
+    "n": 2,
+    "student_raw": 0.2197027951478958,
+    "teacher_raw": 0.10107638549913174,
+    "search": 0.09469818058372993,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 2
+   }
+  },
+  {
+   "pair": 8,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 4,
+   "R_low": 3,
+   "B_diff": 1,
+   "T_top1": 6,
+   "T_prob_played": 0.5643039737272337,
+   "S_prob_played": 0.4111065361474175,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.9730066657066345,
+    "teacher_raw": 0.9865848046166021,
+    "search200_root": 0.9576339890807867,
+    "search800_root": 0.9713182912953198
+   },
+   "v9": {
+    "student_raw": 0.14957237243652344,
+    "teacher_raw": 0.48474257762591655,
+    "search200_root": 0.515888247564435,
+    "search800_root": 0.6274812350398861
+   },
+   "alt200": {
+    "n": 4,
+    "student_raw": 0.2277059219777584,
+    "teacher_raw": 0.12120834584791847,
+    "search": 0.11202127839137721,
+    "teacher_prefers_alt": 4,
+    "student_prefers_alt": 3
+   },
+   "alt800": {
+    "n": 4,
+    "student_raw": 0.2810586355626583,
+    "teacher_raw": 0.12352449860993818,
+    "search": 0.14548942358019182,
+    "teacher_prefers_alt": 4,
+    "student_prefers_alt": 3
+   }
+  },
+  {
+   "pair": 9,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 4,
+   "R_low": 2,
+   "B_diff": 2,
+   "T_top1": 5,
+   "T_prob_played": 0.4662062954916449,
+   "S_prob_played": 0.31345068939263,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.5896785259246826,
+    "teacher_raw": 0.7983120122410408,
+    "search200_root": 0.914999286904931,
+    "search800_root": 0.9361565702967346
+   },
+   "v9": {
+    "student_raw": 0.30620723962783813,
+    "teacher_raw": 0.7422309334395302,
+    "search200_root": 0.550329649373889,
+    "search800_root": 0.6930184035887942
+   },
+   "alt200": {
+    "n": 4,
+    "student_raw": -0.033374058082699776,
+    "teacher_raw": 0.050010046315254936,
+    "search": 0.06066141380653584,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 2
+   },
+   "alt800": {
+    "n": 3,
+    "student_raw": 0.024967528879642487,
+    "teacher_raw": 0.02138287409198932,
+    "search": 0.1983335068323062,
+    "teacher_prefers_alt": 1,
+    "student_prefers_alt": 2
+   }
+  },
+  {
+   "pair": 10,
+   "outcome": "W",
+   "race19": "behind_1",
+   "R_off": 5,
+   "R_low": 6,
+   "B_diff": 3,
+   "T_top1": 3,
+   "T_prob_played": 0.18659934203746223,
+   "S_prob_played": 0.19544987656263402,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.5435412526130676,
+    "teacher_raw": 0.876898250475814,
+    "search200_root": 0.8152536620199681,
+    "search800_root": 0.8499722124449909
+   },
+   "v9": {
+    "student_raw": -0.5896055102348328,
+    "teacher_raw": -0.6061429474364421,
+    "search200_root": -0.5854208882153035,
+    "search800_root": -0.6267243034252897
+   },
+   "alt200": {
+    "n": 5,
+    "student_raw": 0.12798785865306855,
+    "teacher_raw": 0.11378499133801404,
+    "search": 0.1326775607925714,
+    "teacher_prefers_alt": 4,
+    "student_prefers_alt": 4
+   },
+   "alt800": {
+    "n": 5,
+    "student_raw": 0.22352829873561858,
+    "teacher_raw": 0.06337724773283382,
+    "search": 0.2097453686028961,
+    "teacher_prefers_alt": 3,
+    "student_prefers_alt": 5
+   }
+  },
+  {
+   "pair": 11,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 9,
+   "R_low": 9,
+   "B_diff": 2,
+   "T_top1": 2,
+   "T_prob_played": 0.14274884137813898,
+   "S_prob_played": 0.08133602922025603,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.9391896724700928,
+    "teacher_raw": -0.7988566825535433,
+    "search200_root": -0.9654514816403389,
+    "search800_root": -0.9603511478193104
+   },
+   "v9": {
+    "student_raw": -0.6835689544677734,
+    "teacher_raw": -0.6939398249638444,
+    "search200_root": -0.7671617721021176,
+    "search800_root": -0.8177147804759443
+   },
+   "alt200": {
+    "n": 9,
+    "student_raw": 0.1453508229719268,
+    "teacher_raw": 0.06337877696668569,
+    "search": 0.12207581589211378,
+    "teacher_prefers_alt": 7,
+    "student_prefers_alt": 6
+   },
+   "alt800": {
+    "n": 8,
+    "student_raw": 0.21106928773224354,
+    "teacher_raw": 0.10878170488854623,
+    "search": 0.04617474686213913,
+    "teacher_prefers_alt": 7,
+    "student_prefers_alt": 7
+   }
+  },
+  {
+   "pair": 12,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 1,
+   "R_low": 1,
+   "B_diff": 1,
+   "T_top1": 8,
+   "T_prob_played": 0.5893966102970483,
+   "S_prob_played": 0.42949689980596306,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.9783773422241211,
+    "teacher_raw": 0.979844921042254,
+    "search200_root": 0.9762818419933319,
+    "search800_root": 0.9802936159074307
+   },
+   "v9": {
+    "student_raw": 0.5369929671287537,
+    "teacher_raw": 0.5720914120524551,
+    "search200_root": 0.8413589639216661,
+    "search800_root": 0.8502744993101805
+   },
+   "alt200": {
+    "n": 1,
+    "student_raw": 0.07332491874694824,
+    "teacher_raw": 0.04550053889990202,
+    "search": 0.062375070908191554,
+    "teacher_prefers_alt": 1,
+    "student_prefers_alt": 1
+   },
+   "alt800": {
+    "n": 1,
+    "student_raw": 0.28673577308654785,
+    "teacher_raw": 0.05476514994798087,
+    "search": 0.23092676739757642,
+    "teacher_prefers_alt": 1,
+    "student_prefers_alt": 1
+   }
+  },
+  {
+   "pair": 13,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 2,
+   "R_low": 2,
+   "B_diff": 2,
+   "T_top1": 5,
+   "T_prob_played": 0.3289023367585332,
+   "S_prob_played": 0.35750009436160324,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.8802990317344666,
+    "teacher_raw": 0.7948088384637895,
+    "search200_root": 0.9217986235022545,
+    "search800_root": 0.9471087347343564
+   },
+   "v9": {
+    "student_raw": 0.0981157049536705,
+    "teacher_raw": 0.10562549252987924,
+    "search200_root": 0.5039997140318155,
+    "search800_root": 0.5603464277624153
+   },
+   "alt200": {
+    "n": 2,
+    "student_raw": 0.004257678985595703,
+    "teacher_raw": 0.06620224145456749,
+    "search": 0.027802935095655096,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 1
+   },
+   "alt800": {
+    "n": 3,
+    "student_raw": 0.08387527490655582,
+    "teacher_raw": -0.0414617835077584,
+    "search": 0.12520773161663326,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 2
+   }
+  },
+  {
+   "pair": 14,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 2,
+   "R_low": 2,
+   "B_diff": 2,
+   "T_top1": 7,
+   "T_prob_played": 0.578890972821726,
+   "S_prob_played": 0.38794753678084815,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.5422041416168213,
+    "teacher_raw": 0.9555586627722317,
+    "search200_root": 0.7637242301739753,
+    "search800_root": 0.8171703014103696
+   },
+   "v9": {
+    "student_raw": 0.6572092175483704,
+    "teacher_raw": 0.8191975197087424,
+    "search200_root": 0.7869496743381024,
+    "search800_root": 0.8240799166541547
+   },
+   "alt200": {
+    "n": 2,
+    "student_raw": -0.02882973477244377,
+    "teacher_raw": 0.03342843990686373,
+    "search": -0.023394784333740717,
+    "teacher_prefers_alt": 1,
+    "student_prefers_alt": 1
+   },
+   "alt800": {
+    "n": 2,
+    "student_raw": -0.058896373957395554,
+    "teacher_raw": 0.07961571115685556,
+    "search": 0.08972795358820015,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 1
+   }
+  },
+  {
+   "pair": 15,
+   "outcome": "L",
+   "race19": "behind_2plus",
+   "R_off": 10,
+   "R_low": 10,
+   "B_diff": 4,
+   "T_top1": 0,
+   "T_prob_played": 0.00020691821215051113,
+   "S_prob_played": 0.0003823541799647501,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.985522985458374,
+    "teacher_raw": -0.9943192265448022,
+    "search200_root": -0.9356725889444352,
+    "search800_root": -0.9429951824247838
+   },
+   "v9": {
+    "student_raw": -0.6067487001419067,
+    "teacher_raw": -0.4475291332540339,
+    "search200_root": -0.6394443269819021,
+    "search800_root": -0.6583861222298583
+   },
+   "alt200": {
+    "n": 10,
+    "student_raw": 0.15829745382070542,
+    "teacher_raw": 0.17686890044283807,
+    "search": 0.08106302620625237,
+    "teacher_prefers_alt": 6,
+    "student_prefers_alt": 7
+   },
+   "alt800": {
+    "n": 10,
+    "student_raw": 0.177945838868618,
+    "teacher_raw": 0.18634569190836497,
+    "search": 0.09961643278992859,
+    "teacher_prefers_alt": 6,
+    "student_prefers_alt": 7
+   }
+  },
+  {
+   "pair": 16,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 5,
+   "R_low": 4,
+   "B_diff": 2,
+   "T_top1": 5,
+   "T_prob_played": 0.3715249396685173,
+   "S_prob_played": 0.19916538790566846,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.6143221855163574,
+    "teacher_raw": 0.942461988939183,
+    "search200_root": 0.846924964338541,
+    "search800_root": 0.8763917764904909
+   },
+   "v9": {
+    "student_raw": -0.10028184950351715,
+    "teacher_raw": 0.6198739766885095,
+    "search200_root": 0.8216971453092993,
+    "search800_root": 0.84249691109173
+   },
+   "alt200": {
+    "n": 5,
+    "student_raw": 0.07111806124448776,
+    "teacher_raw": 0.02633594311860186,
+    "search": 0.10880150613229209,
+    "teacher_prefers_alt": 3,
+    "student_prefers_alt": 2
+   },
+   "alt800": {
+    "n": 4,
+    "student_raw": 0.17272577621042728,
+    "teacher_raw": 0.05215882551593323,
+    "search": 0.22435086449944888,
+    "teacher_prefers_alt": 3,
+    "student_prefers_alt": 3
+   }
+  },
+  {
+   "pair": 17,
+   "outcome": "D",
+   "race19": "behind_2plus",
+   "R_off": 10,
+   "R_low": 10,
+   "B_diff": 2,
+   "T_top1": 0,
+   "T_prob_played": 0.0021067310425235204,
+   "S_prob_played": 0.002924570599134313,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.9911434054374695,
+    "teacher_raw": -0.9985045161380997,
+    "search200_root": -0.9902540475130082,
+    "search800_root": -0.9908599253743887
+   },
+   "v9": {
+    "student_raw": -0.23962363600730896,
+    "teacher_raw": -0.4521085692674799,
+    "search200_root": -0.46105007983744145,
+    "search800_root": -0.5423938656155951
+   },
+   "alt200": {
+    "n": 10,
+    "student_raw": 0.2581669718027115,
+    "teacher_raw": 0.13292827415626166,
+    "search": 0.20120692397829537,
+    "teacher_prefers_alt": 9,
+    "student_prefers_alt": 10
+   },
+   "alt800": {
+    "n": 10,
+    "student_raw": 0.2786418467760086,
+    "teacher_raw": 0.14034670276445735,
+    "search": 0.14863889303172462,
+    "teacher_prefers_alt": 9,
+    "student_prefers_alt": 10
+   }
+  },
+  {
+   "pair": 18,
+   "outcome": "W",
+   "race19": "behind_1",
+   "R_off": 10,
+   "R_low": 10,
+   "B_diff": 4,
+   "T_top1": 0,
+   "T_prob_played": 0.00429252875076022,
+   "S_prob_played": 0.001930606550013181,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.9798294305801392,
+    "teacher_raw": -0.9277729183728527,
+    "search200_root": -0.9761738377809525,
+    "search800_root": -0.9661740226764232
+   },
+   "v9": {
+    "student_raw": -0.6080800294876099,
+    "teacher_raw": -0.579722228044818,
+    "search200_root": -0.6768253817036748,
+    "search800_root": -0.7256357613368891
+   },
+   "alt200": {
+    "n": 10,
+    "student_raw": 0.11555629298090934,
+    "teacher_raw": 0.1146805232058676,
+    "search": 0.13688808810651107,
+    "teacher_prefers_alt": 9,
+    "student_prefers_alt": 9
+   },
+   "alt800": {
+    "n": 10,
+    "student_raw": 0.12696113362908362,
+    "teacher_raw": 0.13153359005150422,
+    "search": 0.12214937321076183,
+    "teacher_prefers_alt": 10,
+    "student_prefers_alt": 9
+   }
+  },
+  {
+   "pair": 19,
+   "outcome": "W",
+   "race19": "behind_1",
+   "R_off": 6,
+   "R_low": 5,
+   "B_diff": 1,
+   "T_top1": 2,
+   "T_prob_played": 0.1496412275386063,
+   "S_prob_played": 0.32716208330821245,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.8464114665985107,
+    "teacher_raw": -0.9370847988123244,
+    "search200_root": -0.9604612812399864,
+    "search800_root": -0.952628922984004
+   },
+   "v9": {
+    "student_raw": 0.5162058472633362,
+    "teacher_raw": 0.2282788580172502,
+    "search200_root": 0.5640145583078265,
+    "search800_root": 0.742117993668653
+   },
+   "alt200": {
+    "n": 6,
+    "student_raw": 0.16032389303048453,
+    "teacher_raw": 0.2498006996348258,
+    "search": 0.15592045587596567,
+    "teacher_prefers_alt": 4,
+    "student_prefers_alt": 3
+   },
+   "alt800": {
+    "n": 6,
+    "student_raw": 0.19589236875375113,
+    "teacher_raw": 0.2513448014761723,
+    "search": 0.1693978712100365,
+    "teacher_prefers_alt": 4,
+    "student_prefers_alt": 4
+   }
+  },
+  {
+   "pair": 20,
+   "outcome": "W",
+   "race19": "behind_1",
+   "R_off": 8,
+   "R_low": 6,
+   "B_diff": 5,
+   "T_top1": 2,
+   "T_prob_played": 0.16891191000985334,
+   "S_prob_played": 0.1426510281205992,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.7513656616210938,
+    "teacher_raw": -0.5422677848050754,
+    "search200_root": -0.9367736171931028,
+    "search800_root": -0.9209261102485471
+   },
+   "v9": {
+    "student_raw": -0.15087437629699707,
+    "teacher_raw": 0.13387776666678078,
+    "search200_root": 0.0002719210460782051,
+    "search800_root": -0.003453879358130507
+   },
+   "alt200": {
+    "n": 8,
+    "student_raw": 0.16118139773607254,
+    "teacher_raw": 0.3075019915561722,
+    "search": 0.1442131013113182,
+    "teacher_prefers_alt": 6,
+    "student_prefers_alt": 7
+   },
+   "alt800": {
+    "n": 10,
+    "student_raw": 0.12337770313024521,
+    "teacher_raw": 0.2604195667059255,
+    "search": 0.22485819035975804,
+    "teacher_prefers_alt": 7,
+    "student_prefers_alt": 9
+   }
+  },
+  {
+   "pair": 21,
+   "outcome": "L",
+   "race19": "behind_2plus",
+   "R_off": 10,
+   "R_low": 10,
+   "B_diff": 3,
+   "T_top1": 0,
+   "T_prob_played": 0.0002655310812856483,
+   "S_prob_played": 0.00048638590378686787,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.9901577830314636,
+    "teacher_raw": -0.9995483593171335,
+    "search200_root": -0.9868522122502327,
+    "search800_root": -0.9878839878737926
+   },
+   "v9": {
+    "student_raw": -0.7995976805686951,
+    "teacher_raw": -0.6798457453468004,
+    "search200_root": -0.8809331408143044,
+    "search800_root": -0.8888758083060384
+   },
+   "alt200": {
+    "n": 10,
+    "student_raw": 0.22076188325881957,
+    "teacher_raw": 0.14981743903283146,
+    "search": 0.17815112880437894,
+    "teacher_prefers_alt": 8,
+    "student_prefers_alt": 8
+   },
+   "alt800": {
+    "n": 10,
+    "student_raw": 0.17739255130290985,
+    "teacher_raw": 0.14916200698840315,
+    "search": 0.13963918520950805,
+    "teacher_prefers_alt": 8,
+    "student_prefers_alt": 7
+   }
+  },
+  {
+   "pair": 22,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 3,
+   "R_low": 2,
+   "B_diff": 4,
+   "T_top1": 4,
+   "T_prob_played": 0.2829506467472484,
+   "S_prob_played": 0.351979579552426,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.8348733186721802,
+    "teacher_raw": 0.5235949804231712,
+    "search200_root": 0.830877675190568,
+    "search800_root": 0.8849070490215672
+   },
+   "v9": {
+    "student_raw": 0.755814790725708,
+    "teacher_raw": 0.25872110293746425,
+    "search200_root": 0.7511087177135051,
+    "search800_root": 0.8392545806663111
+   },
+   "alt200": {
+    "n": 3,
+    "student_raw": 0.03378648807605108,
+    "teacher_raw": 0.16783097253464244,
+    "search": -0.00977193662711863,
+    "teacher_prefers_alt": 3,
+    "student_prefers_alt": 2
+   },
+   "alt800": {
+    "n": 5,
+    "student_raw": 0.17094264477491378,
+    "teacher_raw": 0.09317156985441254,
+    "search": 0.11378389775153183,
+    "teacher_prefers_alt": 4,
+    "student_prefers_alt": 4
+   }
+  },
+  {
+   "pair": 23,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 5,
+   "R_low": 6,
+   "B_diff": 1,
+   "T_top1": 3,
+   "T_prob_played": 0.17976749391959568,
+   "S_prob_played": 0.21876827158848755,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.10443735122680664,
+    "teacher_raw": -0.16220412081254293,
+    "search200_root": 0.7651874911040067,
+    "search800_root": 0.6383922210423043
+   },
+   "v9": {
+    "student_raw": -0.04272354021668434,
+    "teacher_raw": -0.3221370808554458,
+    "search200_root": -0.05994541280670092,
+    "search800_root": -0.19055015252670274
+   },
+   "alt200": {
+    "n": 5,
+    "student_raw": 0.04300014078617096,
+    "teacher_raw": 0.12158427271634302,
+    "search": 0.08621287548849177,
+    "teacher_prefers_alt": 4,
+    "student_prefers_alt": 2
+   },
+   "alt800": {
+    "n": 6,
+    "student_raw": 0.07140192637840907,
+    "teacher_raw": 0.10286432910496567,
+    "search": 0.23702153670925377,
+    "teacher_prefers_alt": 5,
+    "student_prefers_alt": 3
+   }
+  },
+  {
+   "pair": 24,
+   "outcome": "W",
+   "race19": "behind_1",
+   "R_off": 8,
+   "R_low": 8,
+   "B_diff": 2,
+   "T_top1": 3,
+   "T_prob_played": 0.20085901139309295,
+   "S_prob_played": 0.10226796430069954,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.5310578346252441,
+    "teacher_raw": 0.8046506656035631,
+    "search200_root": 0.5666039963066578,
+    "search800_root": 0.5977666902448981
+   },
+   "v9": {
+    "student_raw": -0.4513092637062073,
+    "teacher_raw": -0.7568847310843838,
+    "search200_root": -0.6351442329585553,
+    "search800_root": -0.685447042779997
+   },
+   "alt200": {
+    "n": 8,
+    "student_raw": 0.08946215780451894,
+    "teacher_raw": 0.08843781344426835,
+    "search": 0.11399043192272046,
+    "teacher_prefers_alt": 7,
+    "student_prefers_alt": 5
+   },
+   "alt800": {
+    "n": 8,
+    "student_raw": 0.14437152305617929,
+    "teacher_raw": 0.09991272270933976,
+    "search": 0.17380313923127697,
+    "teacher_prefers_alt": 7,
+    "student_prefers_alt": 6
+   }
+  },
+  {
+   "pair": 25,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 10,
+   "R_low": 10,
+   "B_diff": 2,
+   "T_top1": 0,
+   "T_prob_played": 0.0006647727290991006,
+   "S_prob_played": 0.00031347251697297904,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.9811885952949524,
+    "teacher_raw": -0.9921811894731399,
+    "search200_root": -0.9809422490000724,
+    "search800_root": -0.9809085202217102
+   },
+   "v9": {
+    "student_raw": -0.4862769842147827,
+    "teacher_raw": -0.5192773962818202,
+    "search200_root": -0.5619657767005265,
+    "search800_root": -0.5927079869434237
+   },
+   "alt200": {
+    "n": 10,
+    "student_raw": 0.23513855189085006,
+    "teacher_raw": 0.17732943126193204,
+    "search": 0.15713941556888328,
+    "teacher_prefers_alt": 9,
+    "student_prefers_alt": 8
+   },
+   "alt800": {
+    "n": 10,
+    "student_raw": 0.26958404928445817,
+    "teacher_raw": 0.16728555337701564,
+    "search": 0.14452566275888992,
+    "teacher_prefers_alt": 9,
+    "student_prefers_alt": 9
+   }
+  },
+  {
+   "pair": 26,
+   "outcome": "W",
+   "race19": "level",
+   "R_off": 5,
+   "R_low": 5,
+   "B_diff": 1,
+   "T_top1": 4,
+   "T_prob_played": 0.32363969631169215,
+   "S_prob_played": 0.2546810970292427,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.9148248434066772,
+    "teacher_raw": 0.9343590961381202,
+    "search200_root": 0.9170254270732403,
+    "search800_root": 0.9521329249814152
+   },
+   "v9": {
+    "student_raw": -0.5702813863754272,
+    "teacher_raw": -0.48612004342022563,
+    "search200_root": -0.8769648735225201,
+    "search800_root": -0.8612355460971594
+   },
+   "alt200": {
+    "n": 5,
+    "student_raw": 0.25916923955082893,
+    "teacher_raw": 0.24524992234205234,
+    "search": 0.1899505744190661,
+    "teacher_prefers_alt": 4,
+    "student_prefers_alt": 4
+   },
+   "alt800": {
+    "n": 5,
+    "student_raw": 0.30185141041874886,
+    "teacher_raw": 0.24710284455166814,
+    "search": 0.20948959185748536,
+    "teacher_prefers_alt": 5,
+    "student_prefers_alt": 5
+   }
+  },
+  {
+   "pair": 27,
+   "outcome": "L",
+   "race19": "behind_2plus",
+   "R_off": 9,
+   "R_low": 10,
+   "B_diff": 2,
+   "T_top1": 0,
+   "T_prob_played": 0.026025045810994102,
+   "S_prob_played": 0.031841246112890076,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.8514636158943176,
+    "teacher_raw": -0.9811916609676787,
+    "search200_root": -0.9770678424835205,
+    "search800_root": -0.9635183664411306
+   },
+   "v9": {
+    "student_raw": -0.5731695890426636,
+    "teacher_raw": -0.5804347004342292,
+    "search200_root": -0.6463411565124989,
+    "search800_root": -0.6757605048501865
+   },
+   "alt200": {
+    "n": 9,
+    "student_raw": 0.0962019455101755,
+    "teacher_raw": 0.07918568124890743,
+    "search": 0.10659109354898934,
+    "teacher_prefers_alt": 7,
+    "student_prefers_alt": 5
+   },
+   "alt800": {
+    "n": 9,
+    "student_raw": 0.10880749921003978,
+    "teacher_raw": 0.08272473211782287,
+    "search": 0.10693542913937859,
+    "teacher_prefers_alt": 7,
+    "student_prefers_alt": 5
+   }
+  },
+  {
+   "pair": 28,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 4,
+   "R_low": 4,
+   "B_diff": 2,
+   "T_top1": 4,
+   "T_prob_played": 0.3651145981134512,
+   "S_prob_played": 0.21257406853837893,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.7244381904602051,
+    "teacher_raw": 0.96368402277537,
+    "search200_root": 0.8395174238178879,
+    "search800_root": 0.8863695140532218
+   },
+   "v9": {
+    "student_raw": -0.5184491872787476,
+    "teacher_raw": -0.48109975576879627,
+    "search200_root": -0.12421054143807851,
+    "search800_root": -0.23140526353701715
+   },
+   "alt200": {
+    "n": 4,
+    "student_raw": 0.11112289223819971,
+    "teacher_raw": 0.133486689992813,
+    "search": -0.017914470271419052,
+    "teacher_prefers_alt": 4,
+    "student_prefers_alt": 3
+   },
+   "alt800": {
+    "n": 4,
+    "student_raw": 0.15292952675372362,
+    "teacher_raw": 0.15775938852801707,
+    "search": 0.033519303861619415,
+    "teacher_prefers_alt": 4,
+    "student_prefers_alt": 4
+   }
+  },
+  {
+   "pair": 29,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 10,
+   "R_low": 9,
+   "B_diff": 4,
+   "T_top1": 0,
+   "T_prob_played": 0.006340489458317239,
+   "S_prob_played": 0.023503824750878265,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.4319310188293457,
+    "teacher_raw": 0.2198187260624365,
+    "search200_root": -0.7179670103639364,
+    "search800_root": -0.7362359637953341
+   },
+   "v9": {
+    "student_raw": -0.5217323303222656,
+    "teacher_raw": -0.5296850517425207,
+    "search200_root": -0.6792051455378533,
+    "search800_root": -0.7157844519615173
+   },
+   "alt200": {
+    "n": 10,
+    "student_raw": 0.37086662352085115,
+    "teacher_raw": 0.2113241113446242,
+    "search": 0.28675739324293403,
+    "teacher_prefers_alt": 8,
+    "student_prefers_alt": 10
+   },
+   "alt800": {
+    "n": 10,
+    "student_raw": 0.3992538243532181,
+    "teacher_raw": 0.2771578732883043,
+    "search": 0.26613985928528017,
+    "teacher_prefers_alt": 7,
+    "student_prefers_alt": 9
+   }
+  },
+  {
+   "pair": 30,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 3,
+   "R_low": 2,
+   "B_diff": 1,
+   "T_top1": 6,
+   "T_prob_played": 0.5111467019587033,
+   "S_prob_played": 0.38859517134260385,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.2805059850215912,
+    "teacher_raw": 0.9441323610172061,
+    "search200_root": 0.8948746452480555,
+    "search800_root": 0.9106234168820083
+   },
+   "v9": {
+    "student_raw": 0.1002812460064888,
+    "teacher_raw": 0.4779786071481128,
+    "search200_root": 0.44953143008053303,
+    "search800_root": 0.5732762346975505
+   },
+   "alt200": {
+    "n": 3,
+    "student_raw": 0.06349678337574005,
+    "teacher_raw": 0.15792487593790855,
+    "search": 0.14550800869479327,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 3
+   },
+   "alt800": {
+    "n": 3,
+    "student_raw": 0.13463373482227325,
+    "teacher_raw": 0.1610130796206015,
+    "search": 0.3067934585793141,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 3
+   }
+  },
+  {
+   "pair": 31,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 8,
+   "R_low": 8,
+   "B_diff": 3,
+   "T_top1": 2,
+   "T_prob_played": 0.17079081037586546,
+   "S_prob_played": 0.10300160844853963,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.8720664381980896,
+    "teacher_raw": -0.793823847214737,
+    "search200_root": -0.8965658286213875,
+    "search800_root": -0.907677550688386
+   },
+   "v9": {
+    "student_raw": -0.4929300546646118,
+    "teacher_raw": -0.1996533738124128,
+    "search200_root": -0.8469465008983389,
+    "search800_root": -0.8649210052250419
+   },
+   "alt200": {
+    "n": 8,
+    "student_raw": 0.15511492220684886,
+    "teacher_raw": 0.22934704448538695,
+    "search": 0.1490943004777563,
+    "teacher_prefers_alt": 7,
+    "student_prefers_alt": 6
+   },
+   "alt800": {
+    "n": 8,
+    "student_raw": 0.1867400030605495,
+    "teacher_raw": 0.2465829757807786,
+    "search": 0.2452155490344889,
+    "teacher_prefers_alt": 6,
+    "student_prefers_alt": 7
+   }
+  },
+  {
+   "pair": 32,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 8,
+   "R_low": 9,
+   "B_diff": 3,
+   "T_top1": 2,
+   "T_prob_played": 0.12627878713351506,
+   "S_prob_played": 0.12075826419022632,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.30481088161468506,
+    "teacher_raw": -0.021730733363249793,
+    "search200_root": 0.3258829957060516,
+    "search800_root": 0.43074835526524113
+   },
+   "v9": {
+    "student_raw": -0.5480068325996399,
+    "teacher_raw": -0.7545773786699037,
+    "search200_root": -0.7721150031872094,
+    "search800_root": -0.7984363911766559
+   },
+   "alt200": {
+    "n": 8,
+    "student_raw": 0.29123352537862957,
+    "teacher_raw": 0.29622722454062034,
+    "search": 0.26130845712632117,
+    "teacher_prefers_alt": 7,
+    "student_prefers_alt": 7
+   },
+   "alt800": {
+    "n": 8,
+    "student_raw": 0.2887401070911437,
+    "teacher_raw": 0.3334372138589057,
+    "search": 0.3984995009251695,
+    "teacher_prefers_alt": 7,
+    "student_prefers_alt": 8
+   }
+  },
+  {
+   "pair": 33,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 4,
+   "R_low": 4,
+   "B_diff": 1,
+   "T_top1": 6,
+   "T_prob_played": 0.5131285657627104,
+   "S_prob_played": 0.3448160092684702,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.6657458543777466,
+    "teacher_raw": 0.9925221746656222,
+    "search200_root": 0.9249933496117592,
+    "search800_root": 0.9398580230772495
+   },
+   "v9": {
+    "student_raw": 0.04866752773523331,
+    "teacher_raw": 0.8324217790859487,
+    "search200_root": 0.5493107581418007,
+    "search800_root": 0.6479687676404137
+   },
+   "alt200": {
+    "n": 4,
+    "student_raw": 0.19847825914621353,
+    "teacher_raw": 0.20655882651734198,
+    "search": 0.27387941691365714,
+    "teacher_prefers_alt": 4,
+    "student_prefers_alt": 3
+   },
+   "alt800": {
+    "n": 4,
+    "student_raw": 0.25183097273111343,
+    "teacher_raw": 0.2088749792793617,
+    "search": 0.2352759574235784,
+    "teacher_prefers_alt": 4,
+    "student_prefers_alt": 3
+   }
+  },
+  {
+   "pair": 34,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 2,
+   "R_low": 2,
+   "B_diff": 1,
+   "T_top1": 4,
+   "T_prob_played": 0.3714662670122011,
+   "S_prob_played": 0.36040648180060086,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.7754149436950684,
+    "teacher_raw": 0.9529084696544075,
+    "search200_root": 0.8520994893275201,
+    "search800_root": 0.8899769610119983
+   },
+   "v9": {
+    "student_raw": 0.19378113746643066,
+    "teacher_raw": -0.029057016704438665,
+    "search200_root": 0.6070066381804645,
+    "search800_root": 0.6847615424811374
+   },
+   "alt200": {
+    "n": 2,
+    "student_raw": -0.1751953810453415,
+    "teacher_raw": 0.07072604022827855,
+    "search": 0.10346315893607488,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 0
+   },
+   "alt800": {
+    "n": 2,
+    "student_raw": -0.06848995387554169,
+    "teacher_raw": 0.07535834575231798,
+    "search": 0.35403165464637115,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 1
+   }
+  },
+  {
+   "pair": 35,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 1,
+   "R_low": 1,
+   "B_diff": 1,
+   "T_top1": 8,
+   "T_prob_played": 0.6787723776867712,
+   "S_prob_played": 0.5989794567227363,
+   "played_share_min": 0.02,
+   "v19": {
+    "student_raw": 0.9717141389846802,
+    "teacher_raw": 0.9819966492705705,
+    "search200_root": 0.9911499148607255,
+    "search800_root": 0.9925168731063604
+   },
+   "v9": {
+    "student_raw": 0.562868595123291,
+    "teacher_raw": 0.5175196086415532,
+    "search200_root": 0.6591967682540417,
+    "search800_root": 0.688107909320388
+   },
+   "alt200": {
+    "n": 1,
+    "student_raw": -0.0010974407196044922,
+    "teacher_raw": 0.04240102259640782,
+    "search": -0.030933411410925038,
+    "teacher_prefers_alt": 1,
+    "student_prefers_alt": 0
+   },
+   "alt800": {
+    "n": 1,
+    "student_raw": 0.21231341361999512,
+    "teacher_raw": 0.051665633644486675,
+    "search": 0.20172909078229487,
+    "teacher_prefers_alt": 1,
+    "student_prefers_alt": 1
+   }
+  },
+  {
+   "pair": 36,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 3,
+   "R_low": 4,
+   "B_diff": 3,
+   "T_top1": 5,
+   "T_prob_played": 0.5301973355898617,
+   "S_prob_played": 0.39320564741283304,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.9438074231147766,
+    "teacher_raw": 0.9887514242038058,
+    "search200_root": 0.9768749472498893,
+    "search800_root": 0.9769735813513398
+   },
+   "v9": {
+    "student_raw": -0.05525772646069527,
+    "teacher_raw": -0.29903096265512524,
+    "search200_root": -0.024766252376139164,
+    "search800_root": 0.1376300947774871
+   },
+   "alt200": {
+    "n": 3,
+    "student_raw": 0.16158862163623175,
+    "teacher_raw": 0.06615443365859852,
+    "search": 0.05999457277719911,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 2
+   },
+   "alt800": {
+    "n": 4,
+    "student_raw": 0.14023537002503872,
+    "teacher_raw": 0.0757051430406395,
+    "search": 0.09042507641282463,
+    "teacher_prefers_alt": 3,
+    "student_prefers_alt": 3
+   }
+  },
+  {
+   "pair": 37,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 10,
+   "R_low": 10,
+   "B_diff": 3,
+   "T_top1": 0,
+   "T_prob_played": 0.0010229983418667547,
+   "S_prob_played": 0.0028199293636134827,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.9654297828674316,
+    "teacher_raw": -0.7413943794247504,
+    "search200_root": -0.9898586699366569,
+    "search800_root": -0.9847286793356761
+   },
+   "v9": {
+    "student_raw": -0.8473118543624878,
+    "teacher_raw": -0.8086766715670921,
+    "search200_root": -0.880345741212368,
+    "search800_root": -0.8958334208652378
+   },
+   "alt200": {
+    "n": 10,
+    "student_raw": 0.09177452623844147,
+    "teacher_raw": 0.1074111928923418,
+    "search": 0.1061115595991394,
+    "teacher_prefers_alt": 7,
+    "student_prefers_alt": 10
+   },
+   "alt800": {
+    "n": 10,
+    "student_raw": 0.12788403332233428,
+    "teacher_raw": 0.12195916259348907,
+    "search": 0.10764354761575393,
+    "teacher_prefers_alt": 8,
+    "student_prefers_alt": 10
+   }
+  },
+  {
+   "pair": 38,
+   "outcome": "W",
+   "race19": "level",
+   "R_off": 4,
+   "R_low": 3,
+   "B_diff": 3,
+   "T_top1": 6,
+   "T_prob_played": 0.42713163794166853,
+   "S_prob_played": 0.3593299977626884,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.7038329243659973,
+    "teacher_raw": 0.8506896661785106,
+    "search200_root": 0.9173421069979668,
+    "search800_root": 0.9001271450798959
+   },
+   "v9": {
+    "student_raw": -0.352466344833374,
+    "teacher_raw": -0.5603221429713265,
+    "search200_root": -0.5858451802376657,
+    "search800_root": -0.6724778462317772
+   },
+   "alt200": {
+    "n": 4,
+    "student_raw": 0.09967111796140671,
+    "teacher_raw": 0.12456844625734682,
+    "search": 0.09503722030341923,
+    "teacher_prefers_alt": 4,
+    "student_prefers_alt": 2
+   },
+   "alt800": {
+    "n": 5,
+    "student_raw": 0.08470857739448548,
+    "teacher_raw": 0.10625022568367695,
+    "search": 0.07962362927168258,
+    "teacher_prefers_alt": 4,
+    "student_prefers_alt": 4
+   }
+  },
+  {
+   "pair": 39,
+   "outcome": "L",
+   "race19": "behind_2plus",
+   "R_off": 10,
+   "R_low": 10,
+   "B_diff": 1,
+   "T_top1": 0,
+   "T_prob_played": 0.0015139410234362165,
+   "S_prob_played": 0.006569129588024225,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.9918311238288879,
+    "teacher_raw": -0.9997074582455039,
+    "search200_root": -0.9873699694871902,
+    "search800_root": -0.9881939160078764
+   },
+   "v9": {
+    "student_raw": -0.8073448538780212,
+    "teacher_raw": -0.6026783148705273,
+    "search200_root": -0.924382900223136,
+    "search800_root": -0.9004089864110574
+   },
+   "alt200": {
+    "n": 10,
+    "student_raw": 0.07465136349201203,
+    "teacher_raw": 0.13433485204378384,
+    "search": 0.12021841989988054,
+    "teacher_prefers_alt": 6,
+    "student_prefers_alt": 7
+   },
+   "alt800": {
+    "n": 10,
+    "student_raw": 0.09599244892597199,
+    "teacher_raw": 0.13526131314859174,
+    "search": 0.09729782230437266,
+    "teacher_prefers_alt": 6,
+    "student_prefers_alt": 7
+   }
+  },
+  {
+   "pair": 40,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 3,
+   "R_low": 1,
+   "B_diff": 1,
+   "T_top1": 6,
+   "T_prob_played": 0.5741160969406562,
+   "S_prob_played": 0.4744003280065954,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.9151015281677246,
+    "teacher_raw": 0.9226129831316483,
+    "search200_root": 0.9708756625652313,
+    "search800_root": 0.974295135512948
+   },
+   "v9": {
+    "student_raw": 0.8290718793869019,
+    "teacher_raw": 0.6746181683057921,
+    "search200_root": 0.8989358013868332,
+    "search800_root": 0.9263428507372737
+   },
+   "alt200": {
+    "n": 3,
+    "student_raw": -0.017957131067911785,
+    "teacher_raw": 0.04231571753213873,
+    "search": -0.00988217207440891,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 0
+   },
+   "alt800": {
+    "n": 3,
+    "student_raw": 0.05317982037862142,
+    "teacher_raw": 0.04540392121483169,
+    "search": 0.04941049392832641,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 1
+   }
+  },
+  {
+   "pair": 41,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 5,
+   "R_low": 5,
+   "B_diff": 1,
+   "T_top1": 2,
+   "T_prob_played": 0.1519552245013686,
+   "S_prob_played": 0.12428786102609593,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.4911210536956787,
+    "teacher_raw": 0.7298145772801277,
+    "search200_root": 0.6678449911344796,
+    "search800_root": 0.7190446903486736
+   },
+   "v9": {
+    "student_raw": -0.2587682604789734,
+    "teacher_raw": -0.33641472554352125,
+    "search200_root": -0.15965465419692917,
+    "search800_root": -0.34439049745386
+   },
+   "alt200": {
+    "n": 5,
+    "student_raw": 0.09607290551066398,
+    "teacher_raw": 0.12914633965617178,
+    "search": 0.11511923373415259,
+    "teacher_prefers_alt": 3,
+    "student_prefers_alt": 2
+   },
+   "alt800": {
+    "n": 5,
+    "student_raw": 0.13875507637858392,
+    "teacher_raw": 0.1309992618657876,
+    "search": 0.17794527064518348,
+    "teacher_prefers_alt": 3,
+    "student_prefers_alt": 3
+   }
+  },
+  {
+   "pair": 42,
+   "outcome": "W",
+   "race19": "level",
+   "R_off": 6,
+   "R_low": 6,
+   "B_diff": 5,
+   "T_top1": 0,
+   "T_prob_played": 0.07863779577391436,
+   "S_prob_played": 0.16914449101750506,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.3450838327407837,
+    "teacher_raw": 0.5251051483566076,
+    "search200_root": 0.6276715788990259,
+    "search800_root": 0.6994631050922908
+   },
+   "v9": {
+    "student_raw": -0.11587804555892944,
+    "teacher_raw": -0.40815408315053603,
+    "search200_root": -0.050265709357336166,
+    "search800_root": -0.2734189517982304
+   },
+   "alt200": {
+    "n": 6,
+    "student_raw": 0.04609362532695135,
+    "teacher_raw": 0.14688210835426932,
+    "search": 0.2476562186514887,
+    "teacher_prefers_alt": 5,
+    "student_prefers_alt": 3
+   },
+   "alt800": {
+    "n": 5,
+    "student_raw": 0.1749519534409046,
+    "teacher_raw": -0.08645111757412176,
+    "search": 0.26615827878106146,
+    "teacher_prefers_alt": 3,
+    "student_prefers_alt": 5
+   }
+  },
+  {
+   "pair": 43,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 9,
+   "R_low": 9,
+   "B_diff": 2,
+   "T_top1": 1,
+   "T_prob_played": 0.030498455746918535,
+   "S_prob_played": 0.0464027032325248,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.9130361080169678,
+    "teacher_raw": -0.9937702798135768,
+    "search200_root": -0.9557716935873032,
+    "search800_root": -0.9626354213804007
+   },
+   "v9": {
+    "student_raw": -0.5491451025009155,
+    "teacher_raw": -0.6043684604341072,
+    "search200_root": -0.1940451798355207,
+    "search800_root": -0.44394066905253565
+   },
+   "alt200": {
+    "n": 9,
+    "student_raw": 0.1678180963628822,
+    "teacher_raw": 0.08065184068125791,
+    "search": 0.17751641964092899,
+    "teacher_prefers_alt": 6,
+    "student_prefers_alt": 7
+   },
+   "alt800": {
+    "n": 9,
+    "student_raw": 0.2110123506022824,
+    "teacher_raw": 0.0838397801229517,
+    "search": 0.1696786406482086,
+    "teacher_prefers_alt": 6,
+    "student_prefers_alt": 8
+   }
+  },
+  {
+   "pair": 44,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 1,
+   "R_low": 2,
+   "B_diff": 1,
+   "T_top1": 6,
+   "T_prob_played": 0.49783209874084333,
+   "S_prob_played": 0.4365433530882001,
+   "played_share_min": 0.01,
+   "v19": {
+    "student_raw": 0.9312542676925659,
+    "teacher_raw": 0.7119954142545823,
+    "search200_root": 0.9085596049949527,
+    "search800_root": 0.9288567622937262
+   },
+   "v9": {
+    "student_raw": 0.23808330297470093,
+    "teacher_raw": -0.13075316422096125,
+    "search200_root": 0.597169594541192,
+    "search800_root": 0.6938018426648341
+   },
+   "alt200": {
+    "n": 1,
+    "student_raw": -0.2669850252568722,
+    "teacher_raw": -0.015632950108040278,
+    "search": 0.0016328082730372728,
+    "teacher_prefers_alt": 0,
+    "student_prefers_alt": 0
+   },
+   "alt800": {
+    "n": 2,
+    "student_raw": -0.026787085458636284,
+    "teacher_raw": -0.0031841695299807127,
+    "search": 0.10507612508903191,
+    "teacher_prefers_alt": 1,
+    "student_prefers_alt": 1
+   }
+  },
+  {
+   "pair": 45,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 8,
+   "R_low": 8,
+   "B_diff": 1,
+   "T_top1": 2,
+   "T_prob_played": 0.1574735522783995,
+   "S_prob_played": 0.13961604056239593,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.11516053974628448,
+    "teacher_raw": 0.4923672698221937,
+    "search200_root": -0.6550116250105202,
+    "search800_root": -0.7997271004179493
+   },
+   "v9": {
+    "student_raw": -0.27066218852996826,
+    "teacher_raw": -0.40274666631669664,
+    "search200_root": -0.67778235739097,
+    "search800_root": -0.729783325222088
+   },
+   "alt200": {
+    "n": 8,
+    "student_raw": 0.31220658542588353,
+    "teacher_raw": 0.35064005176967805,
+    "search": 0.2633962012147175,
+    "teacher_prefers_alt": 6,
+    "student_prefers_alt": 6
+   },
+   "alt800": {
+    "n": 8,
+    "student_raw": 0.3388829422183335,
+    "teacher_raw": 0.3517981281506879,
+    "search": 0.23867659362538413,
+    "teacher_prefers_alt": 6,
+    "student_prefers_alt": 7
+   }
+  },
+  {
+   "pair": 46,
+   "outcome": "W",
+   "race19": "level",
+   "R_off": 10,
+   "R_low": 10,
+   "B_diff": 4,
+   "T_top1": 0,
+   "T_prob_played": 0.0008120917638012849,
+   "S_prob_played": 0.00935619178781053,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.9640805125236511,
+    "teacher_raw": -0.8607268142249229,
+    "search200_root": -0.9341677391529083,
+    "search800_root": -0.942220541536808
+   },
+   "v9": {
+    "student_raw": -0.7593806982040405,
+    "teacher_raw": -0.6030321985117777,
+    "search200_root": -0.7934138832986355,
+    "search800_root": -0.8005947127286345
+   },
+   "alt200": {
+    "n": 10,
+    "student_raw": 0.14405464380979538,
+    "teacher_raw": 0.195834081188196,
+    "search": 0.07722058190571073,
+    "teacher_prefers_alt": 10,
+    "student_prefers_alt": 8
+   },
+   "alt800": {
+    "n": 10,
+    "student_raw": 0.19360964447259904,
+    "teacher_raw": 0.17601105715615098,
+    "search": 0.0939056500493798,
+    "teacher_prefers_alt": 10,
+    "student_prefers_alt": 9
+   }
+  },
+  {
+   "pair": 47,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 2,
+   "R_low": 1,
+   "B_diff": 1,
+   "T_top1": 7,
+   "T_prob_played": 0.5829072071691409,
+   "S_prob_played": 0.5200043343007564,
+   "played_share_min": 0.02,
+   "v19": {
+    "student_raw": 0.5703755617141724,
+    "teacher_raw": 0.9884211824286095,
+    "search200_root": 0.9306734555959701,
+    "search800_root": 0.9537918407935649
+   },
+   "v9": {
+    "student_raw": 0.5915182828903198,
+    "teacher_raw": 0.7181801287808143,
+    "search200_root": 0.7876302739977836,
+    "search800_root": 0.8665173543756828
+   },
+   "alt200": {
+    "n": 2,
+    "student_raw": -0.05676742643117905,
+    "teacher_raw": 0.06798659968164175,
+    "search": -0.032625143083776204,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 1
+   },
+   "alt800": {
+    "n": 2,
+    "student_raw": 0.04993800073862076,
+    "teacher_raw": 0.07261890520568118,
+    "search": 0.07791790961143553,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 2
+   }
+  },
+  {
+   "pair": 48,
+   "outcome": "L",
+   "race19": "behind_2plus",
+   "R_off": 9,
+   "R_low": 9,
+   "B_diff": 6,
+   "T_top1": 0,
+   "T_prob_played": 0.010560519657218662,
+   "S_prob_played": 0.03577927220630954,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.731391191482544,
+    "teacher_raw": -0.8822866210226336,
+    "search200_root": -0.9330956909060478,
+    "search800_root": -0.9279970467276871
+   },
+   "v9": {
+    "student_raw": -0.4994969367980957,
+    "teacher_raw": -0.6312132475610142,
+    "search200_root": -0.5503312099725008,
+    "search800_root": -0.651280437684618
+   },
+   "alt200": {
+    "n": 9,
+    "student_raw": 0.2221953703297509,
+    "teacher_raw": 0.22266290021162824,
+    "search": 0.22758885271466628,
+    "teacher_prefers_alt": 7,
+    "student_prefers_alt": 8
+   },
+   "alt800": {
+    "n": 10,
+    "student_raw": 0.1909806527197361,
+    "teacher_raw": 0.17723611190257957,
+    "search": 0.18484259646246115,
+    "teacher_prefers_alt": 8,
+    "student_prefers_alt": 8
+   }
+  },
+  {
+   "pair": 49,
+   "outcome": "W",
+   "race19": "level",
+   "R_off": 5,
+   "R_low": 6,
+   "B_diff": 4,
+   "T_top1": 3,
+   "T_prob_played": 0.19844328088873447,
+   "S_prob_played": 0.19339599577542685,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.5110118389129639,
+    "teacher_raw": -0.8422065053263476,
+    "search200_root": -0.8892852003872395,
+    "search800_root": -0.8854019305296242
+   },
+   "v9": {
+    "student_raw": -0.3923327624797821,
+    "teacher_raw": -0.39744873998470454,
+    "search200_root": 0.13217497350648044,
+    "search800_root": 0.20316615992138395
+   },
+   "alt200": {
+    "n": 5,
+    "student_raw": 0.2262866958975792,
+    "teacher_raw": 0.3259135041403036,
+    "search": 0.21927667964490824,
+    "teacher_prefers_alt": 5,
+    "student_prefers_alt": 4
+   },
+   "alt800": {
+    "n": 7,
+    "student_raw": 0.24766385555267334,
+    "teacher_raw": 0.22405812318660948,
+    "search": 0.2546919351681803,
+    "teacher_prefers_alt": 7,
+    "student_prefers_alt": 7
+   }
+  },
+  {
+   "pair": 50,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 3,
+   "R_low": 4,
+   "B_diff": 2,
+   "T_top1": 5,
+   "T_prob_played": 0.36634681203756503,
+   "S_prob_played": 0.2747950392862549,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.70253986120224,
+    "teacher_raw": 0.9901003291028057,
+    "search200_root": 0.955585952848196,
+    "search800_root": 0.9214798109605908
+   },
+   "v9": {
+    "student_raw": -0.23596838116645813,
+    "teacher_raw": -0.48705309755995874,
+    "search200_root": 0.377428413904272,
+    "search800_root": 0.5675284552888479
+   },
+   "alt200": {
+    "n": 3,
+    "student_raw": 0.12003473440806071,
+    "teacher_raw": 0.09831147872940137,
+    "search": 0.06014667063370411,
+    "teacher_prefers_alt": 3,
+    "student_prefers_alt": 2
+   },
+   "alt800": {
+    "n": 4,
+    "student_raw": 0.15931019186973572,
+    "teacher_raw": 0.030644868366258612,
+    "search": 0.1345345727370829,
+    "teacher_prefers_alt": 4,
+    "student_prefers_alt": 3
+   }
+  },
+  {
+   "pair": 51,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 9,
+   "R_low": 10,
+   "B_diff": 2,
+   "T_top1": 1,
+   "T_prob_played": 0.10455764673534881,
+   "S_prob_played": 0.08114244215412328,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.9755814075469971,
+    "teacher_raw": -0.8009638338764302,
+    "search200_root": -0.978057681620121,
+    "search800_root": -0.9823460097610951
+   },
+   "v9": {
+    "student_raw": -0.40517932176589966,
+    "teacher_raw": -0.408826255712573,
+    "search200_root": -0.4586635955609381,
+    "search800_root": -0.6641594171477482
+   },
+   "alt200": {
+    "n": 9,
+    "student_raw": 0.2370840476618873,
+    "teacher_raw": 0.16977984062117776,
+    "search": 0.25795044171044856,
+    "teacher_prefers_alt": 7,
+    "student_prefers_alt": 6
+   },
+   "alt800": {
+    "n": 9,
+    "student_raw": 0.2808385127120548,
+    "teacher_raw": 0.15564993432799393,
+    "search": 0.1725006565409091,
+    "teacher_prefers_alt": 7,
+    "student_prefers_alt": 7
+   }
+  },
+  {
+   "pair": 52,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 3,
+   "R_low": 2,
+   "B_diff": 1,
+   "T_top1": 7,
+   "T_prob_played": 0.6423083495860993,
+   "S_prob_played": 0.628747189999558,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.506563127040863,
+    "teacher_raw": 0.5209068984544112,
+    "search200_root": 0.7906258515268564,
+    "search800_root": 0.8430575556028634
+   },
+   "v9": {
+    "student_raw": 0.336834192276001,
+    "teacher_raw": 0.6664655645481807,
+    "search200_root": 0.8523944989964366,
+    "search800_root": 0.8691333249956369
+   },
+   "alt200": {
+    "n": 3,
+    "student_raw": 0.10131610681613286,
+    "teacher_raw": 0.12739529039769976,
+    "search": 0.20238022685524437,
+    "teacher_prefers_alt": 1,
+    "student_prefers_alt": 2
+   },
+   "alt800": {
+    "n": 3,
+    "student_raw": 0.17245305826266608,
+    "teacher_raw": 0.1304834940803927,
+    "search": 0.3303840608436771,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 3
+   }
+  },
+  {
+   "pair": 53,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 10,
+   "R_low": 10,
+   "B_diff": 4,
+   "T_top1": 0,
+   "T_prob_played": 0.0018219615597150304,
+   "S_prob_played": 0.0016337526452844032,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.9154296517372131,
+    "teacher_raw": -0.7921613035184625,
+    "search200_root": -0.9807341027259827,
+    "search800_root": -0.9742325746826828
+   },
+   "v9": {
+    "student_raw": -0.4948773682117462,
+    "teacher_raw": -0.7882960222083286,
+    "search200_root": -0.7677913442254066,
+    "search800_root": -0.7739453168818727
+   },
+   "alt200": {
+    "n": 10,
+    "student_raw": 0.15658821165561676,
+    "teacher_raw": 0.18376615630048482,
+    "search": 0.06768336870178358,
+    "teacher_prefers_alt": 8,
+    "student_prefers_alt": 9
+   },
+   "alt800": {
+    "n": 10,
+    "student_raw": 0.17221237868070602,
+    "teacher_raw": 0.2100918647899724,
+    "search": 0.12631420227362958,
+    "teacher_prefers_alt": 8,
+    "student_prefers_alt": 9
+   }
+  },
+  {
+   "pair": 54,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 8,
+   "R_low": 7,
+   "B_diff": 4,
+   "T_top1": 2,
+   "T_prob_played": 0.16037426059008536,
+   "S_prob_played": 0.18120461626276665,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.40268027782440186,
+    "teacher_raw": -0.21890135652798795,
+    "search200_root": 0.5691231544688344,
+    "search800_root": 0.624181787383277
+   },
+   "v9": {
+    "student_raw": -0.5410327911376953,
+    "teacher_raw": -0.40825620025846265,
+    "search200_root": -0.6498780770599842,
+    "search800_root": -0.6747404047916643
+   },
+   "alt200": {
+    "n": 8,
+    "student_raw": 0.14785068668425083,
+    "teacher_raw": 0.20709034956256028,
+    "search": 0.24209629835656887,
+    "teacher_prefers_alt": 7,
+    "student_prefers_alt": 6
+   },
+   "alt800": {
+    "n": 8,
+    "student_raw": 0.1808855552226305,
+    "teacher_raw": 0.21934531737799398,
+    "search": 0.1801756195135878,
+    "teacher_prefers_alt": 7,
+    "student_prefers_alt": 6
+   }
+  },
+  {
+   "pair": 55,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 4,
+   "R_low": 2,
+   "B_diff": 1,
+   "T_top1": 6,
+   "T_prob_played": 0.5046406112736507,
+   "S_prob_played": 0.4516637010674458,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.7770735025405884,
+    "teacher_raw": 0.03950631636808766,
+    "search200_root": 0.6627314127609134,
+    "search800_root": 0.8627838780381717
+   },
+   "v9": {
+    "student_raw": 0.4403478801250458,
+    "teacher_raw": 0.8532591511456984,
+    "search200_root": 0.7387975787743926,
+    "search800_root": 0.7785286086122505
+   },
+   "alt200": {
+    "n": 4,
+    "student_raw": -0.0031363405287265778,
+    "teacher_raw": 0.22297353277354875,
+    "search": 0.12364330635903963,
+    "teacher_prefers_alt": 4,
+    "student_prefers_alt": 2
+   },
+   "alt800": {
+    "n": 4,
+    "student_raw": 0.050216373056173325,
+    "teacher_raw": 0.2252896855355685,
+    "search": 0.2634470379495637,
+    "teacher_prefers_alt": 4,
+    "student_prefers_alt": 3
+   }
+  },
+  {
+   "pair": 56,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 9,
+   "R_low": 10,
+   "B_diff": 5,
+   "T_top1": 0,
+   "T_prob_played": 0.02651520851821883,
+   "S_prob_played": 0.04723502068372909,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.7187105417251587,
+    "teacher_raw": -0.7577637699019206,
+    "search200_root": -0.8865122362971306,
+    "search800_root": -0.8799599803797901
+   },
+   "v9": {
+    "student_raw": -0.5763963460922241,
+    "teacher_raw": -0.6175372599037179,
+    "search200_root": -0.6828296113200486,
+    "search800_root": -0.7052590494649484
+   },
+   "alt200": {
+    "n": 9,
+    "student_raw": 0.24630905335976017,
+    "teacher_raw": 0.09767147274952159,
+    "search": 0.22651629826287106,
+    "teacher_prefers_alt": 8,
+    "student_prefers_alt": 8
+   },
+   "alt800": {
+    "n": 9,
+    "student_raw": 0.2721374699225028,
+    "teacher_raw": 0.09787395411452396,
+    "search": 0.2151390053748688,
+    "teacher_prefers_alt": 8,
+    "student_prefers_alt": 9
+   }
+  },
+  {
+   "pair": 57,
+   "outcome": "D",
+   "race19": "behind_2plus",
+   "R_off": 10,
+   "R_low": 10,
+   "B_diff": 3,
+   "T_top1": 0,
+   "T_prob_played": 0.007907252874808016,
+   "S_prob_played": 0.02188836786481261,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.9731536507606506,
+    "teacher_raw": -0.9282414509393919,
+    "search200_root": -0.9873678299784661,
+    "search800_root": -0.9775400490313768
+   },
+   "v9": {
+    "student_raw": -0.5357893705368042,
+    "teacher_raw": -0.503509972902092,
+    "search200_root": -0.6003700248897076,
+    "search800_root": -0.6774941884167492
+   },
+   "alt200": {
+    "n": 10,
+    "student_raw": 0.18206627182662488,
+    "teacher_raw": 0.17265690607453005,
+    "search": 0.12949015220090976,
+    "teacher_prefers_alt": 9,
+    "student_prefers_alt": 8
+   },
+   "alt800": {
+    "n": 10,
+    "student_raw": 0.20845368318259716,
+    "teacher_raw": 0.18166110281024428,
+    "search": 0.12113499918130759,
+    "teacher_prefers_alt": 10,
+    "student_prefers_alt": 9
+   }
+  },
+  {
+   "pair": 58,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 3,
+   "R_low": 2,
+   "B_diff": 1,
+   "T_top1": 6,
+   "T_prob_played": 0.4335744191869043,
+   "S_prob_played": 0.36025875039049426,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.09952230751514435,
+    "teacher_raw": 0.5158034192226562,
+    "search200_root": 0.7891701874881982,
+    "search800_root": 0.7872267589112744
+   },
+   "v9": {
+    "student_raw": 0.6888676881790161,
+    "teacher_raw": -0.0668907528835041,
+    "search200_root": 0.5508792375028133,
+    "search800_root": 0.5984572984324769
+   },
+   "alt200": {
+    "n": 3,
+    "student_raw": -0.08366484194993973,
+    "teacher_raw": 0.019898480159522752,
+    "search": 0.10423665408465839,
+    "teacher_prefers_alt": 1,
+    "student_prefers_alt": 1
+   },
+   "alt800": {
+    "n": 3,
+    "student_raw": -0.012527890503406525,
+    "teacher_raw": 0.022986683842215704,
+    "search": 0.24722899443997984,
+    "teacher_prefers_alt": 1,
+    "student_prefers_alt": 2
+   }
+  },
+  {
+   "pair": 59,
+   "outcome": "L",
+   "race19": "behind_2plus",
+   "R_off": 10,
+   "R_low": 10,
+   "B_diff": 3,
+   "T_top1": 0,
+   "T_prob_played": 0.00015716452357928673,
+   "S_prob_played": 0.00147264515835559,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.989087700843811,
+    "teacher_raw": -0.9987233021299424,
+    "search200_root": -0.9779180851578713,
+    "search800_root": -0.9800055661052466
+   },
+   "v9": {
+    "student_raw": -0.7722443342208862,
+    "teacher_raw": -0.7890042359577001,
+    "search200_root": -0.6700691011548042,
+    "search800_root": -0.7095587789546698
+   },
+   "alt200": {
+    "n": 10,
+    "student_raw": 0.18199286982417107,
+    "teacher_raw": 0.10723251154461413,
+    "search": 0.10375332746645935,
+    "teacher_prefers_alt": 8,
+    "student_prefers_alt": 8
+   },
+   "alt800": {
+    "n": 10,
+    "student_raw": 0.2310057744383812,
+    "teacher_raw": 0.13351315236920452,
+    "search": 0.10928962649714502,
+    "teacher_prefers_alt": 8,
+    "student_prefers_alt": 9
+   }
+  },
+  {
+   "pair": 60,
+   "outcome": "L",
+   "race19": "behind_2plus",
+   "R_off": 10,
+   "R_low": 10,
+   "B_diff": 2,
+   "T_top1": 0,
+   "T_prob_played": 0.00012705846093138132,
+   "S_prob_played": 0.0018403603273327463,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.9886320233345032,
+    "teacher_raw": -0.996146355110269,
+    "search200_root": -0.9892802008986473,
+    "search800_root": -0.9900647068023681
+   },
+   "v9": {
+    "student_raw": -0.768875241279602,
+    "teacher_raw": -0.7413261871757895,
+    "search200_root": -0.8363813507556915,
+    "search800_root": -0.8796566751599312
+   },
+   "alt200": {
+    "n": 10,
+    "student_raw": 0.1143297202885151,
+    "teacher_raw": 0.1238488130618681,
+    "search": 0.0678568224587355,
+    "teacher_prefers_alt": 9,
+    "student_prefers_alt": 9
+   },
+   "alt800": {
+    "n": 10,
+    "student_raw": 0.13773413375020027,
+    "teacher_raw": 0.12806579381207656,
+    "search": 0.04928611252181758,
+    "teacher_prefers_alt": 9,
+    "student_prefers_alt": 10
+   }
+  },
+  {
+   "pair": 61,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 4,
+   "R_low": 4,
+   "B_diff": 1,
+   "T_top1": 5,
+   "T_prob_played": 0.4603091750341995,
+   "S_prob_played": 0.2503320953765069,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.8434999585151672,
+    "teacher_raw": 0.9279496000457579,
+    "search200_root": 0.935503550991416,
+    "search800_root": 0.956159799285233
+   },
+   "v9": {
+    "student_raw": -0.6622419357299805,
+    "teacher_raw": 0.08189884018487883,
+    "search200_root": -0.2779576006997377,
+    "search800_root": -0.6769803876732476
+   },
+   "alt200": {
+    "n": 4,
+    "student_raw": 0.34573692083358765,
+    "teacher_raw": 0.501488784116845,
+    "search": 0.39467860558982854,
+    "teacher_prefers_alt": 4,
+    "student_prefers_alt": 4
+   },
+   "alt800": {
+    "n": 4,
+    "student_raw": 0.39908963441848755,
+    "teacher_raw": 0.5038049368788649,
+    "search": 0.34236611024862473,
+    "teacher_prefers_alt": 4,
+    "student_prefers_alt": 4
+   }
+  },
+  {
+   "pair": 62,
+   "outcome": "L",
+   "race19": "behind_2plus",
+   "R_off": 8,
+   "R_low": 9,
+   "B_diff": 1,
+   "T_top1": 2,
+   "T_prob_played": 0.09069784302716359,
+   "S_prob_played": 0.08928588781818689,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.9396272897720337,
+    "teacher_raw": -0.9363549141673377,
+    "search200_root": -0.9908997792005539,
+    "search800_root": -0.9857348559051752
+   },
+   "v9": {
+    "student_raw": -0.47422927618026733,
+    "teacher_raw": -0.5817503751898745,
+    "search200_root": -0.516417638156563,
+    "search800_root": -0.608951277534943
+   },
+   "alt200": {
+    "n": 8,
+    "student_raw": 0.30959709361195564,
+    "teacher_raw": 0.2135734154919041,
+    "search": 0.18028704185409386,
+    "teacher_prefers_alt": 8,
+    "student_prefers_alt": 6
+   },
+   "alt800": {
+    "n": 8,
+    "student_raw": 0.3362734504044056,
+    "teacher_raw": 0.21473149187291393,
+    "search": 0.112837534942516,
+    "teacher_prefers_alt": 8,
+    "student_prefers_alt": 7
+   }
+  },
+  {
+   "pair": 63,
+   "outcome": "W",
+   "race19": "level",
+   "R_off": 4,
+   "R_low": 1,
+   "B_diff": 1,
+   "T_top1": 4,
+   "T_prob_played": 0.3482141122411826,
+   "S_prob_played": 0.2595107762666885,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.6793026328086853,
+    "teacher_raw": 0.886444698166672,
+    "search200_root": 0.8515269296243787,
+    "search800_root": 0.8807565659005195
+   },
+   "v9": {
+    "student_raw": 0.48180174827575684,
+    "teacher_raw": -0.09498212980933379,
+    "search200_root": 0.5735360831278377,
+    "search800_root": 0.6736178698850562
+   },
+   "alt200": {
+    "n": 4,
+    "student_raw": 0.04390817880630493,
+    "teacher_raw": 0.16278789266478969,
+    "search": -0.01920188873444406,
+    "teacher_prefers_alt": 3,
+    "student_prefers_alt": 2
+   },
+   "alt800": {
+    "n": 4,
+    "student_raw": 0.09726089239120483,
+    "teacher_raw": 0.1651040454268094,
+    "search": 0.07046644833784219,
+    "teacher_prefers_alt": 3,
+    "student_prefers_alt": 3
+   }
+  },
+  {
+   "pair": 64,
+   "outcome": "W",
+   "race19": "level",
+   "R_off": 6,
+   "R_low": 6,
+   "B_diff": 2,
+   "T_top1": 3,
+   "T_prob_played": 0.1928623551723477,
+   "S_prob_played": 0.16882907713006717,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.8231590390205383,
+    "teacher_raw": 0.7467328672412442,
+    "search200_root": 0.8654523138329386,
+    "search800_root": 0.8953507731761783
+   },
+   "v9": {
+    "student_raw": -0.6344661712646484,
+    "teacher_raw": -0.541887033115825,
+    "search200_root": -0.22712175517808647,
+    "search800_root": -0.34940945661626754
+   },
+   "alt200": {
+    "n": 6,
+    "student_raw": 0.02710006944835186,
+    "teacher_raw": 0.009828962053621956,
+    "search": -0.03259344475813397,
+    "teacher_prefers_alt": 4,
+    "student_prefers_alt": 3
+   },
+   "alt800": {
+    "n": 6,
+    "student_raw": 0.06621187490721543,
+    "teacher_raw": 0.00943574445300017,
+    "search": 0.06423499261399493,
+    "teacher_prefers_alt": 4,
+    "student_prefers_alt": 4
+   }
+  },
+  {
+   "pair": 65,
+   "outcome": "L",
+   "race19": "behind_2plus",
+   "R_off": 9,
+   "R_low": 10,
+   "B_diff": 4,
+   "T_top1": 0,
+   "T_prob_played": 0.010564605421355865,
+   "S_prob_played": 0.02845352968215593,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.9409162998199463,
+    "teacher_raw": -0.9755236611567544,
+    "search200_root": -0.944949970152229,
+    "search800_root": -0.9492857518652454
+   },
+   "v9": {
+    "student_raw": -0.649215817451477,
+    "teacher_raw": -0.36974798333017284,
+    "search200_root": -0.883716048002243,
+    "search800_root": -0.8576870457606856
+   },
+   "alt200": {
+    "n": 9,
+    "student_raw": 0.19213196304109362,
+    "teacher_raw": 0.15884538528200143,
+    "search": 0.18036236314174595,
+    "teacher_prefers_alt": 8,
+    "student_prefers_alt": 9
+   },
+   "alt800": {
+    "n": 10,
+    "student_raw": 0.18830138742923735,
+    "teacher_raw": 0.13287871055224615,
+    "search": 0.16448284468169194,
+    "teacher_prefers_alt": 8,
+    "student_prefers_alt": 10
+   }
+  },
+  {
+   "pair": 66,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 2,
+   "R_low": 1,
+   "B_diff": 2,
+   "T_top1": 8,
+   "T_prob_played": 0.7765141091216428,
+   "S_prob_played": 0.6593516315217129,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.7810643911361694,
+    "teacher_raw": 0.9765300063918307,
+    "search200_root": 0.9208793902397155,
+    "search800_root": 0.9220728170126676
+   },
+   "v9": {
+    "student_raw": 0.6365522146224976,
+    "teacher_raw": 0.8869742906201752,
+    "search200_root": 0.8372998754866421,
+    "search800_root": 0.8991112955985591
+   },
+   "alt200": {
+    "n": 2,
+    "student_raw": 0.00724329799413681,
+    "teacher_raw": 0.002567085637875846,
+    "search": -0.07869678106098117,
+    "teacher_prefers_alt": 1,
+    "student_prefers_alt": 1
+   },
+   "alt800": {
+    "n": 1,
+    "student_raw": 0.058401450514793396,
+    "teacher_raw": 0.11635779356172726,
+    "search": 0.23040381859605893,
+    "teacher_prefers_alt": 1,
+    "student_prefers_alt": 1
+   }
+  },
+  {
+   "pair": 67,
+   "outcome": "W",
+   "race19": "level",
+   "R_off": 4,
+   "R_low": 4,
+   "B_diff": 2,
+   "T_top1": 6,
+   "T_prob_played": 0.34986695009427715,
+   "S_prob_played": 0.29438531362975484,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.533471405506134,
+    "teacher_raw": 0.8337504342959343,
+    "search200_root": 0.8537635807693005,
+    "search800_root": 0.8670916903577744
+   },
+   "v9": {
+    "student_raw": -0.33880624175071716,
+    "teacher_raw": -0.4628875836135099,
+    "search200_root": -0.5846626280061901,
+    "search800_root": -0.6941547276836354
+   },
+   "alt200": {
+    "n": 4,
+    "student_raw": 0.056455155834555626,
+    "teacher_raw": 0.11384992618621906,
+    "search": -0.07070953718098494,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 2
+   },
+   "alt800": {
+    "n": 4,
+    "student_raw": 0.16987958922982216,
+    "teacher_raw": 0.0788077776260615,
+    "search": -0.012539095905893857,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 4
+   }
+  },
+  {
+   "pair": 68,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 9,
+   "R_low": 10,
+   "B_diff": 5,
+   "T_top1": 0,
+   "T_prob_played": 0.01160755912308703,
+   "S_prob_played": 0.03878600560929044,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.9230390191078186,
+    "teacher_raw": -0.865975061047711,
+    "search200_root": -0.9329673922061921,
+    "search800_root": -0.9338648149371147
+   },
+   "v9": {
+    "student_raw": -0.4622706174850464,
+    "teacher_raw": -0.7091272636766841,
+    "search200_root": -0.4565048629324883,
+    "search800_root": -0.540170820413623
+   },
+   "alt200": {
+    "n": 9,
+    "student_raw": 0.10964401231871711,
+    "teacher_raw": 0.06589331034294602,
+    "search": 0.10005028276105804,
+    "teacher_prefers_alt": 6,
+    "student_prefers_alt": 6
+   },
+   "alt800": {
+    "n": 9,
+    "student_raw": 0.14728907744089761,
+    "teacher_raw": 0.09058556493802444,
+    "search": 0.09969406272521854,
+    "teacher_prefers_alt": 8,
+    "student_prefers_alt": 8
+   }
+  },
+  {
+   "pair": 69,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 3,
+   "R_low": 1,
+   "B_diff": 1,
+   "T_top1": 8,
+   "T_prob_played": 0.6015998089308894,
+   "S_prob_played": 0.554367579286918,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.9631198644638062,
+    "teacher_raw": 0.977899680533937,
+    "search200_root": 0.9565521711111069,
+    "search800_root": 0.9719705062359572
+   },
+   "v9": {
+    "student_raw": 0.6349542140960693,
+    "teacher_raw": 0.8592458605930794,
+    "search200_root": 0.9124545733258128,
+    "search800_root": 0.9037778033642099
+   },
+   "alt200": {
+    "n": 3,
+    "student_raw": 0.01628239204486211,
+    "teacher_raw": 0.008265143830621454,
+    "search": 0.09513327167016543,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 1
+   },
+   "alt800": {
+    "n": 3,
+    "student_raw": 0.08741934349139531,
+    "teacher_raw": 0.011353347513314405,
+    "search": 0.23402978709139655,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 2
+   }
+  },
+  {
+   "pair": 70,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 3,
+   "R_low": 3,
+   "B_diff": 1,
+   "T_top1": 7,
+   "T_prob_played": 0.5333994968270822,
+   "S_prob_played": 0.39170956949237734,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.8874427080154419,
+    "teacher_raw": 0.9888317146722907,
+    "search200_root": 0.9599549636244774,
+    "search800_root": 0.9693670861795545
+   },
+   "v9": {
+    "student_raw": -0.16101688146591187,
+    "teacher_raw": 0.10303347859811646,
+    "search200_root": 0.2403706905245781,
+    "search800_root": 0.47256199559662493
+   },
+   "alt200": {
+    "n": 3,
+    "student_raw": 0.02756791313489278,
+    "teacher_raw": 0.0034579736043550227,
+    "search": -0.04083247534207687,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 2
+   },
+   "alt800": {
+    "n": 3,
+    "student_raw": 0.09870486458142598,
+    "teacher_raw": 0.006546177287047973,
+    "search": -0.014642025166071567,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 3
+   }
+  },
+  {
+   "pair": 71,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 9,
+   "R_low": 9,
+   "B_diff": 2,
+   "T_top1": 0,
+   "T_prob_played": 0.01112105986103237,
+   "S_prob_played": 0.06320276905044012,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.8924887776374817,
+    "teacher_raw": -0.9897739379218822,
+    "search200_root": -0.9738735339045524,
+    "search800_root": -0.9746477720979602
+   },
+   "v9": {
+    "student_raw": -0.7473974227905273,
+    "teacher_raw": -0.7859521860881131,
+    "search200_root": -0.7017482672631741,
+    "search800_root": -0.7499654522165656
+   },
+   "alt200": {
+    "n": 9,
+    "student_raw": 0.1656860907872518,
+    "teacher_raw": 0.1960935269047723,
+    "search": 0.04628601479490054,
+    "teacher_prefers_alt": 6,
+    "student_prefers_alt": 7
+   },
+   "alt800": {
+    "n": 9,
+    "student_raw": 0.20244173208872476,
+    "teacher_raw": 0.20576576622925324,
+    "search": 0.07177037483790724,
+    "teacher_prefers_alt": 7,
+    "student_prefers_alt": 9
+   }
+  },
+  {
+   "pair": 72,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 9,
+   "R_low": 10,
+   "B_diff": 2,
+   "T_top1": 0,
+   "T_prob_played": 0.030865546249881137,
+   "S_prob_played": 0.0245401067804778,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.7054617404937744,
+    "teacher_raw": -0.7775521654114507,
+    "search200_root": -0.8321303882449865,
+    "search800_root": -0.822904638905311
+   },
+   "v9": {
+    "student_raw": -0.490031898021698,
+    "teacher_raw": -0.5016888244494204,
+    "search200_root": -0.5088610594160855,
+    "search800_root": -0.605099779125303
+   },
+   "alt200": {
+    "n": 9,
+    "student_raw": 0.2003081887960434,
+    "teacher_raw": 0.14398603529339427,
+    "search": 0.1252468284890623,
+    "teacher_prefers_alt": 9,
+    "student_prefers_alt": 9
+   },
+   "alt800": {
+    "n": 10,
+    "student_raw": 0.21675819009542466,
+    "teacher_raw": 0.13078775713540516,
+    "search": 0.0905492935905269,
+    "teacher_prefers_alt": 10,
+    "student_prefers_alt": 10
+   }
+  },
+  {
+   "pair": 73,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 10,
+   "R_low": 10,
+   "B_diff": 1,
+   "T_top1": 0,
+   "T_prob_played": 0.0008722795820269001,
+   "S_prob_played": 0.001667667213769164,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.9719862937927246,
+    "teacher_raw": -0.8995590813994041,
+    "search200_root": -0.9647008906304836,
+    "search800_root": -0.9643622660450637
+   },
+   "v9": {
+    "student_raw": -0.49621909856796265,
+    "teacher_raw": -0.5116313150041586,
+    "search200_root": -0.4767339733801782,
+    "search800_root": -0.6188345283828676
+   },
+   "alt200": {
+    "n": 10,
+    "student_raw": 0.11596964299678802,
+    "teacher_raw": 0.08065082601384836,
+    "search": 0.10637804714057064,
+    "teacher_prefers_alt": 8,
+    "student_prefers_alt": 10
+   },
+   "alt800": {
+    "n": 10,
+    "student_raw": 0.13731072843074799,
+    "teacher_raw": 0.08157728711865626,
+    "search": 0.0557540389006152,
+    "teacher_prefers_alt": 8,
+    "student_prefers_alt": 10
+   }
+  },
+  {
+   "pair": 74,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 3,
+   "R_low": 1,
+   "B_diff": 4,
+   "T_top1": 4,
+   "T_prob_played": 0.31984848712985814,
+   "S_prob_played": 0.4319642249378376,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.7665905952453613,
+    "teacher_raw": 0.5219862717385433,
+    "search200_root": 0.952955127954483,
+    "search800_root": 0.9622324384748936
+   },
+   "v9": {
+    "student_raw": -0.22943615913391113,
+    "teacher_raw": -0.35343584290880403,
+    "search200_root": 0.5704054677952081,
+    "search800_root": 0.6304530355124734
+   },
+   "alt200": {
+    "n": 3,
+    "student_raw": 0.011985797435045242,
+    "teacher_raw": -0.15074086610973245,
+    "search": 0.06982215732003523,
+    "teacher_prefers_alt": 1,
+    "student_prefers_alt": 1
+   },
+   "alt800": {
+    "n": 2,
+    "student_raw": 0.2979617938399315,
+    "teacher_raw": 0.6569425570212459,
+    "search": 0.12946134134669407,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 2
+   }
+  },
+  {
+   "pair": 75,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 3,
+   "R_low": 1,
+   "B_diff": 3,
+   "T_top1": 6,
+   "T_prob_played": 0.4968000697781325,
+   "S_prob_played": 0.4250782405550126,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.8972562551498413,
+    "teacher_raw": 0.9349227785332483,
+    "search200_root": 0.9229881076514721,
+    "search800_root": 0.9525197768106591
+   },
+   "v9": {
+    "student_raw": 0.46005186438560486,
+    "teacher_raw": 0.5963699631499797,
+    "search200_root": 0.7163744685798883,
+    "search800_root": 0.7610240752669051
+   },
+   "alt200": {
+    "n": 3,
+    "student_raw": -0.0627457822362582,
+    "teacher_raw": 0.03682291675873634,
+    "search": -0.0019743926730457864,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 1
+   },
+   "alt800": {
+    "n": 5,
+    "student_raw": -0.0709062673151493,
+    "teacher_raw": 0.02904712178607461,
+    "search": 0.11635966113781053,
+    "teacher_prefers_alt": 3,
+    "student_prefers_alt": 2
+   }
+  },
+  {
+   "pair": 76,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 7,
+   "R_low": 8,
+   "B_diff": 1,
+   "T_top1": 3,
+   "T_prob_played": 0.18901625586814838,
+   "S_prob_played": 0.18839051767899945,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.9934737682342529,
+    "teacher_raw": -0.9913219528644035,
+    "search200_root": -0.9967120099067688,
+    "search800_root": -0.9930618327856063
+   },
+   "v9": {
+    "student_raw": -0.5480846166610718,
+    "teacher_raw": -0.3083211935861181,
+    "search200_root": -0.8533109803404659,
+    "search800_root": -0.8528418628103099
+   },
+   "alt200": {
+    "n": 7,
+    "student_raw": 0.1181933129472392,
+    "teacher_raw": 0.22074297675532265,
+    "search": 0.18444630937179268,
+    "teacher_prefers_alt": 7,
+    "student_prefers_alt": 6
+   },
+   "alt800": {
+    "n": 7,
+    "student_raw": 0.1486805778528963,
+    "teacher_raw": 0.22206649261933395,
+    "search": 0.24153432825441687,
+    "teacher_prefers_alt": 7,
+    "student_prefers_alt": 6
+   }
+  },
+  {
+   "pair": 77,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 5,
+   "R_low": 4,
+   "B_diff": 3,
+   "T_top1": 0,
+   "T_prob_played": 0.10753450000829749,
+   "S_prob_played": 0.23106202847266105,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.270174503326416,
+    "teacher_raw": -0.41653914332142145,
+    "search200_root": -0.28549558704718947,
+    "search800_root": -0.7204185249563306
+   },
+   "v9": {
+    "student_raw": -0.5021904110908508,
+    "teacher_raw": -0.47730241996225825,
+    "search200_root": -0.7051329276151955,
+    "search800_root": -0.7512957493658178
+   },
+   "alt200": {
+    "n": 5,
+    "student_raw": 0.23586606085300446,
+    "teacher_raw": 0.25693483841401105,
+    "search": 0.13557781438218344,
+    "teacher_prefers_alt": 5,
+    "student_prefers_alt": 4
+   },
+   "alt800": {
+    "n": 6,
+    "student_raw": 0.245559332271417,
+    "teacher_raw": 0.22905731917483518,
+    "search": 0.1936686301205169,
+    "teacher_prefers_alt": 6,
+    "student_prefers_alt": 5
+   }
+  },
+  {
+   "pair": 78,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 2,
+   "R_low": 1,
+   "B_diff": 2,
+   "T_top1": 6,
+   "T_prob_played": 0.47266980287752763,
+   "S_prob_played": 0.47542066406458616,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.35661938786506653,
+    "teacher_raw": 0.8308747720676131,
+    "search200_root": 0.9065773516893387,
+    "search800_root": 0.9096683361101896
+   },
+   "v9": {
+    "student_raw": 0.3970264196395874,
+    "teacher_raw": 0.08462151761686015,
+    "search200_root": 0.531013672738336,
+    "search800_root": 0.6489814308320638
+   },
+   "alt200": {
+    "n": 2,
+    "student_raw": 0.035168446600437164,
+    "teacher_raw": 0.08065083135766976,
+    "search": -0.03836007992747745,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 1
+   },
+   "alt800": {
+    "n": 3,
+    "student_raw": 0.09097773333390553,
+    "teacher_raw": 0.030342660250190095,
+    "search": 0.09909664519850221,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 2
+   }
+  },
+  {
+   "pair": 79,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 4,
+   "R_low": 3,
+   "B_diff": 1,
+   "T_top1": 7,
+   "T_prob_played": 0.6386078707793893,
+   "S_prob_played": 0.36961615425534544,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.43781501054763794,
+    "teacher_raw": 0.7454139541420093,
+    "search200_root": 0.837361170295626,
+    "search800_root": 0.8585427685221657
+   },
+   "v9": {
+    "student_raw": 0.09287475794553757,
+    "teacher_raw": 0.32171870004711123,
+    "search200_root": 0.5936216501705348,
+    "search800_root": 0.6731647185375914
+   },
+   "alt200": {
+    "n": 4,
+    "student_raw": -0.05946584790945053,
+    "teacher_raw": -0.02005916061614764,
+    "search": 0.15428930407112584,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 0
+   },
+   "alt800": {
+    "n": 4,
+    "student_raw": -0.006113134324550629,
+    "teacher_raw": -0.017743007854127926,
+    "search": 0.273804615499228,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 1
+   }
+  },
+  {
+   "pair": 80,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 3,
+   "R_low": 2,
+   "B_diff": 2,
+   "T_top1": 7,
+   "T_prob_played": 0.5600759783010851,
+   "S_prob_played": 0.4999987125280313,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.7875250577926636,
+    "teacher_raw": 0.9734336842520184,
+    "search200_root": 0.9670435455441475,
+    "search800_root": 0.9743001993000507
+   },
+   "v9": {
+    "student_raw": -0.2272062748670578,
+    "teacher_raw": 0.002704229193892932,
+    "search200_root": 0.25694538799114525,
+    "search800_root": 0.433678146568127
+   },
+   "alt200": {
+    "n": 3,
+    "student_raw": -0.05548965744674206,
+    "teacher_raw": 0.01767853710216377,
+    "search": -0.06995643025551739,
+    "teacher_prefers_alt": 3,
+    "student_prefers_alt": 1
+   },
+   "alt800": {
+    "n": 3,
+    "student_raw": 0.06687797543903191,
+    "teacher_raw": 0.006357550802202082,
+    "search": 0.05363232482038058,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 2
+   }
+  },
+  {
+   "pair": 81,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 10,
+   "R_low": 10,
+   "B_diff": 4,
+   "T_top1": 0,
+   "T_prob_played": 0.02066863058611395,
+   "S_prob_played": 0.026048742794955615,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.9663829207420349,
+    "teacher_raw": -0.8810350369315814,
+    "search200_root": -0.9496796542406082,
+    "search800_root": -0.9332585025392472
+   },
+   "v9": {
+    "student_raw": -0.37860342860221863,
+    "teacher_raw": -0.625280329836509,
+    "search200_root": -0.46053768284618857,
+    "search800_root": -0.5005551348207519
+   },
+   "alt200": {
+    "n": 10,
+    "student_raw": 0.14636146724224092,
+    "teacher_raw": 0.10467328368491309,
+    "search": 0.0458345781815881,
+    "teacher_prefers_alt": 8,
+    "student_prefers_alt": 8
+   },
+   "alt800": {
+    "n": 10,
+    "student_raw": 0.21925217062234878,
+    "teacher_raw": 0.12274365849000488,
+    "search": 0.09707935698471964,
+    "teacher_prefers_alt": 8,
+    "student_prefers_alt": 9
+   }
+  },
+  {
+   "pair": 82,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 4,
+   "R_low": 3,
+   "B_diff": 3,
+   "T_top1": 5,
+   "T_prob_played": 0.4675302979373093,
+   "S_prob_played": 0.26840462858090175,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.9468200206756592,
+    "teacher_raw": 0.9275470199811551,
+    "search200_root": 0.9582136461138725,
+    "search800_root": 0.9612565134186297
+   },
+   "v9": {
+    "student_raw": -0.07728159427642822,
+    "teacher_raw": -0.1462192280709812,
+    "search200_root": 0.35860107564600185,
+    "search800_root": 0.45945715131412723
+   },
+   "alt200": {
+    "n": 4,
+    "student_raw": 0.01877664029598236,
+    "teacher_raw": 0.006645689489647451,
+    "search": 0.01604666320821716,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 3
+   },
+   "alt800": {
+    "n": 4,
+    "student_raw": 0.14983727782964706,
+    "teacher_raw": 0.0039752884337471844,
+    "search": 0.05174273043028804,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 4
+   }
+  },
+  {
+   "pair": 83,
+   "outcome": "W",
+   "race19": "behind_1",
+   "R_off": 10,
+   "R_low": 10,
+   "B_diff": 5,
+   "T_top1": 0,
+   "T_prob_played": 0.00084290500345339,
+   "S_prob_played": 0.001735574317353894,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.8040590286254883,
+    "teacher_raw": -0.7204600277000668,
+    "search200_root": -0.8401708516851067,
+    "search800_root": -0.8535335891973227
+   },
+   "v9": {
+    "student_raw": -0.658249020576477,
+    "teacher_raw": -0.5543315669457091,
+    "search200_root": -0.7016629407554865,
+    "search800_root": -0.721543924876023
+   },
+   "alt200": {
+    "n": 10,
+    "student_raw": 0.20449516400694848,
+    "teacher_raw": 0.22259459726572794,
+    "search": 0.3267299697981193,
+    "teacher_prefers_alt": 10,
+    "student_prefers_alt": 9
+   },
+   "alt800": {
+    "n": 10,
+    "student_raw": 0.26986226812005043,
+    "teacher_raw": 0.17290591458370436,
+    "search": 0.27912716314977865,
+    "teacher_prefers_alt": 10,
+    "student_prefers_alt": 10
+   }
+  },
+  {
+   "pair": 84,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 4,
+   "R_low": 2,
+   "B_diff": 4,
+   "T_top1": 6,
+   "T_prob_played": 0.5188030867490875,
+   "S_prob_played": 0.39706304395076586,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.5029319524765015,
+    "teacher_raw": 0.4324272499228753,
+    "search200_root": -0.4049438206851482,
+    "search800_root": -0.39861726492410526
+   },
+   "v9": {
+    "student_raw": 0.7528751492500305,
+    "teacher_raw": 0.5605778907332526,
+    "search200_root": 0.8002678853925318,
+    "search800_root": 0.8330865087127313
+   },
+   "alt200": {
+    "n": 4,
+    "student_raw": -0.07323383912444115,
+    "teacher_raw": 0.12392506995412172,
+    "search": 0.5315813463578225,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 1
+   },
+   "alt800": {
+    "n": 5,
+    "student_raw": 0.0726893462240696,
+    "teacher_raw": 0.07536209630188348,
+    "search": 0.4463434298976184,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 2
+   }
+  },
+  {
+   "pair": 85,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 2,
+   "R_low": 2,
+   "B_diff": 1,
+   "T_top1": 5,
+   "T_prob_played": 0.4026952410380485,
+   "S_prob_played": 0.38990081833326257,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.4358806908130646,
+    "teacher_raw": 0.7913833107123592,
+    "search200_root": 0.9309220538288355,
+    "search800_root": 0.9042837422061711
+   },
+   "v9": {
+    "student_raw": -0.19624446332454681,
+    "teacher_raw": -0.05079483890044209,
+    "search200_root": 0.26678245681803675,
+    "search800_root": 0.5692571611574385
+   },
+   "alt200": {
+    "n": 2,
+    "student_raw": -0.027500107884407043,
+    "teacher_raw": 0.08117461958519065,
+    "search": -0.021865486266147895,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 0
+   },
+   "alt800": {
+    "n": 2,
+    "student_raw": 0.07920531928539276,
+    "teacher_raw": 0.08580692510923008,
+    "search": 0.05678762254971257,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 1
+   }
+  },
+  {
+   "pair": 86,
+   "outcome": "W",
+   "race19": "level",
+   "R_off": 2,
+   "R_low": 3,
+   "B_diff": 2,
+   "T_top1": 5,
+   "T_prob_played": 0.315897985138785,
+   "S_prob_played": 0.23733430017018692,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.4210488200187683,
+    "teacher_raw": 0.5329749738901849,
+    "search200_root": 0.7404002310335636,
+    "search800_root": 0.7919720165524632
+   },
+   "v9": {
+    "student_raw": 0.48310932517051697,
+    "teacher_raw": 0.16132904513837384,
+    "search200_root": 0.2518185027781874,
+    "search800_root": 0.4938915990383248
+   },
+   "alt200": {
+    "n": 2,
+    "student_raw": 0.05770970694720745,
+    "teacher_raw": -0.006785023609044621,
+    "search": 0.11070924787085405,
+    "teacher_prefers_alt": 0,
+    "student_prefers_alt": 1
+   },
+   "alt800": {
+    "n": 3,
+    "student_raw": 0.10030720134576161,
+    "teacher_raw": -0.014313366987719697,
+    "search": 0.12906235076100098,
+    "teacher_prefers_alt": 1,
+    "student_prefers_alt": 2
+   }
+  },
+  {
+   "pair": 87,
+   "outcome": "L",
+   "race19": "behind_2plus",
+   "R_off": 10,
+   "R_low": 10,
+   "B_diff": 3,
+   "T_top1": 0,
+   "T_prob_played": 0.00036316763743241416,
+   "S_prob_played": 0.00028391872547217645,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.9304739832878113,
+    "teacher_raw": -0.9701565689263887,
+    "search200_root": -0.962789439857006,
+    "search800_root": -0.9666297353804112
+   },
+   "v9": {
+    "student_raw": -0.7566279172897339,
+    "teacher_raw": -0.7387398720498131,
+    "search200_root": -0.8389365059137345,
+    "search800_root": -0.8595258381962776
+   },
+   "alt200": {
+    "n": 10,
+    "student_raw": 0.0020637676119804383,
+    "teacher_raw": 0.16325076085273973,
+    "search": 0.013848415794748737,
+    "teacher_prefers_alt": 9,
+    "student_prefers_alt": 3
+   },
+   "alt800": {
+    "n": 10,
+    "student_raw": 0.07098063006997109,
+    "teacher_raw": 0.13976049316824285,
+    "search": 0.05317658574173846,
+    "teacher_prefers_alt": 10,
+    "student_prefers_alt": 5
+   }
+  },
+  {
+   "pair": 88,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 10,
+   "R_low": 10,
+   "B_diff": 1,
+   "T_top1": 0,
+   "T_prob_played": 0.0007193797490093162,
+   "S_prob_played": 0.0009003368745652551,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.9766707420349121,
+    "teacher_raw": -0.998461496421687,
+    "search200_root": -0.973111960887909,
+    "search800_root": -0.9748331341147423
+   },
+   "v9": {
+    "student_raw": -0.8002320528030396,
+    "teacher_raw": -0.472755127550866,
+    "search200_root": -0.8576111210882664,
+    "search800_root": -0.8408180214092136
+   },
+   "alt200": {
+    "n": 10,
+    "student_raw": 0.08966550678014755,
+    "teacher_raw": 0.09065485369893637,
+    "search": 0.07824962371001347,
+    "teacher_prefers_alt": 8,
+    "student_prefers_alt": 7
+   },
+   "alt800": {
+    "n": 10,
+    "student_raw": 0.11100659221410751,
+    "teacher_raw": 0.09158131480374426,
+    "search": 0.09937035703192781,
+    "teacher_prefers_alt": 8,
+    "student_prefers_alt": 8
+   }
+  },
+  {
+   "pair": 89,
+   "outcome": "L",
+   "race19": "behind_2plus",
+   "R_off": 10,
+   "R_low": 10,
+   "B_diff": 3,
+   "T_top1": 1,
+   "T_prob_played": 0.04237207139964724,
+   "S_prob_played": 0.017540549408295192,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.8083087205886841,
+    "teacher_raw": -0.8872905104097051,
+    "search200_root": -0.9547742080688476,
+    "search800_root": -0.9483157328888774
+   },
+   "v9": {
+    "student_raw": -0.48031216859817505,
+    "teacher_raw": -0.5481296876550078,
+    "search200_root": -0.6991808195412159,
+    "search800_root": -0.75808045017533
+   },
+   "alt200": {
+    "n": 10,
+    "student_raw": 0.0025278545916080477,
+    "teacher_raw": 0.02462532831121784,
+    "search": 0.0356286667001006,
+    "teacher_prefers_alt": 6,
+    "student_prefers_alt": 4
+   },
+   "alt800": {
+    "n": 9,
+    "student_raw": 0.015357459584871927,
+    "teacher_raw": 0.05685419510896201,
+    "search": 0.030529511805019713,
+    "teacher_prefers_alt": 6,
+    "student_prefers_alt": 5
+   }
+  },
+  {
+   "pair": 90,
+   "outcome": "L",
+   "race19": "behind_2plus",
+   "R_off": 10,
+   "R_low": 10,
+   "B_diff": 1,
+   "T_top1": 0,
+   "T_prob_played": 0.00023729894235005643,
+   "S_prob_played": 0.0004603730576491216,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.9728060960769653,
+    "teacher_raw": -0.9933995491820105,
+    "search200_root": -0.9756157225370408,
+    "search800_root": -0.9753904854133725
+   },
+   "v9": {
+    "student_raw": -0.5903035998344421,
+    "teacher_raw": -0.700265360603058,
+    "search200_root": -0.5732180156558752,
+    "search800_root": -0.6274726266344078
+   },
+   "alt200": {
+    "n": 10,
+    "student_raw": 0.09267641305923462,
+    "teacher_raw": 0.15661963712196386,
+    "search": 0.12403640349762328,
+    "teacher_prefers_alt": 10,
+    "student_prefers_alt": 7
+   },
+   "alt800": {
+    "n": 10,
+    "student_raw": 0.11401749849319458,
+    "teacher_raw": 0.15754609822677176,
+    "search": 0.09277438767454721,
+    "teacher_prefers_alt": 10,
+    "student_prefers_alt": 8
+   }
+  },
+  {
+   "pair": 91,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 10,
+   "R_low": 10,
+   "B_diff": 4,
+   "T_top1": 0,
+   "T_prob_played": 0.0047442185471985475,
+   "S_prob_played": 0.019632851827554986,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.9879231452941895,
+    "teacher_raw": -0.985804243256384,
+    "search200_root": -0.9927812927961349,
+    "search800_root": -0.9931933223456144
+   },
+   "v9": {
+    "student_raw": -0.13490226864814758,
+    "teacher_raw": -0.29019811666885165,
+    "search200_root": -0.2570579585526139,
+    "search800_root": -0.48140855645702685
+   },
+   "alt200": {
+    "n": 10,
+    "student_raw": 0.1592595476657152,
+    "teacher_raw": 0.10941293887499252,
+    "search": 0.1090936138408439,
+    "teacher_prefers_alt": 7,
+    "student_prefers_alt": 10
+   },
+   "alt800": {
+    "n": 10,
+    "student_raw": 0.1635887760668993,
+    "teacher_raw": 0.11501085380471701,
+    "search": 0.13343561741773852,
+    "teacher_prefers_alt": 7,
+    "student_prefers_alt": 10
+   }
+  },
+  {
+   "pair": 92,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 9,
+   "R_low": 9,
+   "B_diff": 3,
+   "T_top1": 0,
+   "T_prob_played": 0.012895929188787129,
+   "S_prob_played": 0.02402540354014491,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.9390780925750732,
+    "teacher_raw": -0.8980226511940796,
+    "search200_root": -0.9565701502561569,
+    "search800_root": -0.9525857799500227
+   },
+   "v9": {
+    "student_raw": -0.10861717164516449,
+    "teacher_raw": -0.542329911530092,
+    "search200_root": -0.22166705089621247,
+    "search800_root": -0.3815238604566548
+   },
+   "alt200": {
+    "n": 9,
+    "student_raw": 0.20870509495337805,
+    "teacher_raw": 0.3200455418851668,
+    "search": 0.16198758335557642,
+    "teacher_prefers_alt": 8,
+    "student_prefers_alt": 6
+   },
+   "alt800": {
+    "n": 9,
+    "student_raw": 0.2103600667582618,
+    "teacher_raw": 0.31972283946212454,
+    "search": 0.19563097248958902,
+    "teacher_prefers_alt": 8,
+    "student_prefers_alt": 7
+   }
+  },
+  {
+   "pair": 93,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 10,
+   "R_low": 10,
+   "B_diff": 2,
+   "T_top1": 0,
+   "T_prob_played": 0.0038044090069956683,
+   "S_prob_played": 0.01270520447542367,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.945514440536499,
+    "teacher_raw": -0.9761576419225882,
+    "search200_root": -0.9699329507350921,
+    "search800_root": -0.9707690439745784
+   },
+   "v9": {
+    "student_raw": -0.3018830716609955,
+    "teacher_raw": -0.735252799221092,
+    "search200_root": -0.8084685370698571,
+    "search800_root": -0.8273834827076644
+   },
+   "alt200": {
+    "n": 10,
+    "student_raw": 0.11925068646669387,
+    "teacher_raw": 0.1726921617816938,
+    "search": 0.1446539612413339,
+    "teacher_prefers_alt": 9,
+    "student_prefers_alt": 6
+   },
+   "alt800": {
+    "n": 10,
+    "student_raw": 0.1314769998192787,
+    "teacher_raw": 0.17338398113768047,
+    "search": 0.1121446369692981,
+    "teacher_prefers_alt": 9,
+    "student_prefers_alt": 7
+   }
+  },
+  {
+   "pair": 94,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 3,
+   "R_low": 2,
+   "B_diff": 2,
+   "T_top1": 4,
+   "T_prob_played": 0.31810891457027407,
+   "S_prob_played": 0.3081804440822452,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.8884103894233704,
+    "teacher_raw": 0.5754270631213242,
+    "search200_root": 0.8941258861124516,
+    "search800_root": 0.9363606954738498
+   },
+   "v9": {
+    "student_raw": 0.11902296543121338,
+    "teacher_raw": -0.2314857859084684,
+    "search200_root": 0.7671217061206699,
+    "search800_root": 0.8292148591065779
+   },
+   "alt200": {
+    "n": 3,
+    "student_raw": 0.015760963161786396,
+    "teacher_raw": 0.17572023644211962,
+    "search": -0.007621492745356793,
+    "teacher_prefers_alt": 3,
+    "student_prefers_alt": 1
+   },
+   "alt800": {
+    "n": 3,
+    "student_raw": 0.08883786698182423,
+    "teacher_raw": 0.03056103752829285,
+    "search": 0.0906508374176701,
+    "teacher_prefers_alt": 3,
+    "student_prefers_alt": 2
+   }
+  },
+  {
+   "pair": 95,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 3,
+   "R_low": 3,
+   "B_diff": 3,
+   "T_top1": 6,
+   "T_prob_played": 0.43864517236753076,
+   "S_prob_played": 0.38668175505590624,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.9320260286331177,
+    "teacher_raw": 0.9776990559404086,
+    "search200_root": 0.9201678460836411,
+    "search800_root": 0.9377175380289554
+   },
+   "v9": {
+    "student_raw": -0.11973351240158081,
+    "teacher_raw": 0.06370590528803055,
+    "search200_root": 0.5149772571772337,
+    "search800_root": 0.6030901476624422
+   },
+   "alt200": {
+    "n": 3,
+    "student_raw": -0.015129963556925455,
+    "teacher_raw": 0.011167588223249805,
+    "search": -0.0900030978834412,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 1
+   },
+   "alt800": {
+    "n": 3,
+    "student_raw": 0.056753113865852356,
+    "teacher_raw": 0.02256372327804022,
+    "search": 0.0796714141379983,
+    "teacher_prefers_alt": 3,
+    "student_prefers_alt": 2
+   }
+  },
+  {
+   "pair": 96,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 1,
+   "R_low": 1,
+   "B_diff": 1,
+   "T_top1": 6,
+   "T_prob_played": 0.5645065109748927,
+   "S_prob_played": 0.42103138836100695,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.8796441555023193,
+    "teacher_raw": 0.9273830837856344,
+    "search200_root": 0.9639456446841359,
+    "search800_root": 0.955995234940201
+   },
+   "v9": {
+    "student_raw": 0.42362773418426514,
+    "teacher_raw": 0.027833871217923106,
+    "search200_root": 0.6229775029048323,
+    "search800_root": 0.7070364941610023
+   },
+   "alt200": {
+    "n": 1,
+    "student_raw": -0.12085798382759094,
+    "teacher_raw": 0.08546843657926906,
+    "search": -0.13180783166634763,
+    "teacher_prefers_alt": 1,
+    "student_prefers_alt": 0
+   },
+   "alt800": {
+    "n": 1,
+    "student_raw": 0.09255287051200867,
+    "teacher_raw": 0.09473304762734791,
+    "search": 0.16315111558502302,
+    "teacher_prefers_alt": 1,
+    "student_prefers_alt": 1
+   }
+  },
+  {
+   "pair": 97,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 3,
+   "R_low": 3,
+   "B_diff": 1,
+   "T_top1": 4,
+   "T_prob_played": 0.3876151268264895,
+   "S_prob_played": 0.20974661796935834,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.8814859390258789,
+    "teacher_raw": 0.8863198349463579,
+    "search200_root": 0.8486117947101594,
+    "search800_root": 0.902623237920925
+   },
+   "v9": {
+    "student_raw": -0.18331709504127502,
+    "teacher_raw": -0.029038971203400238,
+    "search200_root": 0.25725904954597356,
+    "search800_root": 0.4659649241808802
+   },
+   "alt200": {
+    "n": 3,
+    "student_raw": -0.07745869581898053,
+    "teacher_raw": 0.12276794470200574,
+    "search": -0.0038446505266842845,
+    "teacher_prefers_alt": 3,
+    "student_prefers_alt": 0
+   },
+   "alt800": {
+    "n": 3,
+    "student_raw": -0.0063217443724473315,
+    "teacher_raw": 0.1258561483846987,
+    "search": 0.03654161970109376,
+    "teacher_prefers_alt": 3,
+    "student_prefers_alt": 1
+   }
+  },
+  {
+   "pair": 98,
+   "outcome": "W",
+   "race19": "behind_1",
+   "R_off": 8,
+   "R_low": 8,
+   "B_diff": 2,
+   "T_top1": 2,
+   "T_prob_played": 0.15328566520880643,
+   "S_prob_played": 0.11859532512098667,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.30705609917640686,
+    "teacher_raw": 0.4884226361466277,
+    "search200_root": 0.3390943673346192,
+    "search800_root": 0.4170015002717264
+   },
+   "v9": {
+    "student_raw": -0.8931888341903687,
+    "teacher_raw": -0.6598423713119466,
+    "search200_root": -0.8023483783006669,
+    "search800_root": -0.8170788612868637
+   },
+   "alt200": {
+    "n": 8,
+    "student_raw": 0.1027594655752182,
+    "teacher_raw": 0.1196343641986876,
+    "search": 0.10508385420228902,
+    "teacher_prefers_alt": 6,
+    "student_prefers_alt": 6
+   },
+   "alt800": {
+    "n": 7,
+    "student_raw": 0.14665533815111434,
+    "teacher_raw": 0.1290225658584659,
+    "search": 0.13264503560104093,
+    "teacher_prefers_alt": 6,
+    "student_prefers_alt": 6
+   }
+  },
+  {
+   "pair": 99,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 4,
+   "R_low": 2,
+   "B_diff": 1,
+   "T_top1": 6,
+   "T_prob_played": 0.46510890792469367,
+   "S_prob_played": 0.4013137367583113,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.7388832569122314,
+    "teacher_raw": 0.9631154415148162,
+    "search200_root": 0.924782339334488,
+    "search800_root": 0.9552051435783505
+   },
+   "v9": {
+    "student_raw": 0.517831563949585,
+    "teacher_raw": 0.349794421484127,
+    "search200_root": 0.869285460487008,
+    "search800_root": 0.9007280523516238
+   },
+   "alt200": {
+    "n": 4,
+    "student_raw": -0.09015754796564579,
+    "teacher_raw": -0.006624835398833212,
+    "search": 0.006451226716189522,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 1
+   },
+   "alt800": {
+    "n": 4,
+    "student_raw": -0.03680483438074589,
+    "teacher_raw": -0.004308682636813499,
+    "search": 0.06305414166904653,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 2
+   }
+  },
+  {
+   "pair": 100,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 4,
+   "R_low": 5,
+   "B_diff": 1,
+   "T_top1": 5,
+   "T_prob_played": 0.3735791045408553,
+   "S_prob_played": 0.371024706173921,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.6924996972084045,
+    "teacher_raw": 0.6404590466057244,
+    "search200_root": 0.8679190841317177,
+    "search800_root": 0.8977737612091005
+   },
+   "v9": {
+    "student_raw": -0.489663302898407,
+    "teacher_raw": -0.4323989813653324,
+    "search200_root": -0.5804681188007816,
+    "search800_root": -0.6270621495386877
+   },
+   "alt200": {
+    "n": 4,
+    "student_raw": 0.2593275401741266,
+    "teacher_raw": 0.25594645345557265,
+    "search": 0.17915374869572104,
+    "teacher_prefers_alt": 4,
+    "student_prefers_alt": 4
+   },
+   "alt800": {
+    "n": 4,
+    "student_raw": 0.3126802537590265,
+    "teacher_raw": 0.25826260621759234,
+    "search": 0.22698514417442067,
+    "teacher_prefers_alt": 4,
+    "student_prefers_alt": 4
+   }
+  },
+  {
+   "pair": 101,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 7,
+   "R_low": 6,
+   "B_diff": 2,
+   "T_top1": 2,
+   "T_prob_played": 0.1349065119849161,
+   "S_prob_played": 0.17368014365856652,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.9424610137939453,
+    "teacher_raw": -0.9770660940683824,
+    "search200_root": -0.9801184460520744,
+    "search800_root": -0.9807895969599485
+   },
+   "v9": {
+    "student_raw": 0.041513580828905106,
+    "teacher_raw": 0.27611433785115813,
+    "search200_root": -0.494390626270324,
+    "search800_root": -0.35859420479275284
+   },
+   "alt200": {
+    "n": 7,
+    "student_raw": 0.10910065046378545,
+    "teacher_raw": 0.1781449791686723,
+    "search": 0.06391068514967942,
+    "teacher_prefers_alt": 6,
+    "student_prefers_alt": 5
+   },
+   "alt800": {
+    "n": 8,
+    "student_raw": -0.0265261959284544,
+    "teacher_raw": 0.11095133898147609,
+    "search": 0.24720878301933483,
+    "teacher_prefers_alt": 6,
+    "student_prefers_alt": 6
+   }
+  },
+  {
+   "pair": 102,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 4,
+   "R_low": 4,
+   "B_diff": 3,
+   "T_top1": 5,
+   "T_prob_played": 0.3052635134176842,
+   "S_prob_played": 0.2616765175946057,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.19850470125675201,
+    "teacher_raw": 0.34286017772102606,
+    "search200_root": 0.7123706175014377,
+    "search800_root": 0.751243743286468
+   },
+   "v9": {
+    "student_raw": -0.0159470047801733,
+    "teacher_raw": -0.29020824980038995,
+    "search200_root": 0.0332219949469436,
+    "search800_root": 0.15193328807741635
+   },
+   "alt200": {
+    "n": 4,
+    "student_raw": 0.362302104011178,
+    "teacher_raw": 0.02483034050278403,
+    "search": 0.10675700546109027,
+    "teacher_prefers_alt": 3,
+    "student_prefers_alt": 3
+   },
+   "alt800": {
+    "n": 5,
+    "student_raw": 0.34211093187332153,
+    "teacher_raw": 0.05732675944524683,
+    "search": 0.14019453932146514,
+    "teacher_prefers_alt": 4,
+    "student_prefers_alt": 4
+   }
+  },
+  {
+   "pair": 103,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 7,
+   "R_low": 8,
+   "B_diff": 3,
+   "T_top1": 2,
+   "T_prob_played": 0.15021484163165452,
+   "S_prob_played": 0.11603233119840298,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.8904721736907959,
+    "teacher_raw": -0.9954632365165528,
+    "search200_root": -0.9497401964664459,
+    "search800_root": -0.9549952878057957
+   },
+   "v9": {
+    "student_raw": -0.6152676343917847,
+    "teacher_raw": -0.5546577880597681,
+    "search200_root": -0.5694047942198813,
+    "search800_root": -0.6567413174686954
+   },
+   "alt200": {
+    "n": 7,
+    "student_raw": 0.22521462983318738,
+    "teacher_raw": 0.46508179143704254,
+    "search": 0.1258175680592522,
+    "teacher_prefers_alt": 7,
+    "student_prefers_alt": 6
+   },
+   "alt800": {
+    "n": 7,
+    "student_raw": 0.27942540336932453,
+    "teacher_raw": 0.5095761002814819,
+    "search": 0.11330080984312751,
+    "teacher_prefers_alt": 7,
+    "student_prefers_alt": 7
+   }
+  },
+  {
+   "pair": 104,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 9,
+   "R_low": 10,
+   "B_diff": 3,
+   "T_top1": 1,
+   "T_prob_played": 0.0700579447003975,
+   "S_prob_played": 0.04880999646629789,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.9226050972938538,
+    "teacher_raw": -0.8602913623854161,
+    "search200_root": -0.9606285324692726,
+    "search800_root": -0.9151613333262503
+   },
+   "v9": {
+    "student_raw": -0.04496493190526962,
+    "teacher_raw": -0.5173343490922722,
+    "search200_root": -0.49486106015741826,
+    "search800_root": -0.5471318380057346
+   },
+   "alt200": {
+    "n": 9,
+    "student_raw": 0.23334357804722256,
+    "teacher_raw": 0.2099297879965708,
+    "search": 0.2258180675562935,
+    "teacher_prefers_alt": 8,
+    "student_prefers_alt": 7
+   },
+   "alt800": {
+    "n": 9,
+    "student_raw": 0.2676116857263777,
+    "teacher_raw": 0.24210132740914972,
+    "search": 0.2058768157796418,
+    "teacher_prefers_alt": 9,
+    "student_prefers_alt": 9
+   }
+  },
+  {
+   "pair": 105,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 7,
+   "R_low": 6,
+   "B_diff": 5,
+   "T_top1": 4,
+   "T_prob_played": 0.30391617902695967,
+   "S_prob_played": 0.2657507284427993,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.9654442071914673,
+    "teacher_raw": 0.9829215451731939,
+    "search200_root": 0.9637660238146782,
+    "search800_root": 0.9696693191491067
+   },
+   "v9": {
+    "student_raw": -0.11764433979988098,
+    "teacher_raw": -0.1387253748127867,
+    "search200_root": -0.27152293171733616,
+    "search800_root": -0.312150945328176
+   },
+   "alt200": {
+    "n": 7,
+    "student_raw": 0.016339197754859924,
+    "teacher_raw": 0.22599815763282877,
+    "search": 0.10598356180132648,
+    "teacher_prefers_alt": 5,
+    "student_prefers_alt": 5
+   },
+   "alt800": {
+    "n": 6,
+    "student_raw": 0.11584460114439328,
+    "teacher_raw": 0.3045750423282643,
+    "search": 0.285945012659433,
+    "teacher_prefers_alt": 6,
+    "student_prefers_alt": 5
+   }
+  },
+  {
+   "pair": 106,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 10,
+   "R_low": 10,
+   "B_diff": 4,
+   "T_top1": 0,
+   "T_prob_played": 0.041686333969388534,
+   "S_prob_played": 0.020247937598287535,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.9930537939071655,
+    "teacher_raw": -0.9933404433915975,
+    "search200_root": -0.9812533539533616,
+    "search800_root": -0.9823010881990194
+   },
+   "v9": {
+    "student_raw": -0.4590212106704712,
+    "teacher_raw": -0.15986335186953185,
+    "search200_root": -0.7341507598944008,
+    "search800_root": -0.7361838078941219
+   },
+   "alt200": {
+    "n": 10,
+    "student_raw": 0.1761900119483471,
+    "teacher_raw": 0.2993979342092774,
+    "search": 0.10070798715562904,
+    "teacher_prefers_alt": 6,
+    "student_prefers_alt": 9
+   },
+   "alt800": {
+    "n": 10,
+    "student_raw": 0.14895937032997608,
+    "teacher_raw": 0.24375000241149838,
+    "search": 0.16637642978352174,
+    "teacher_prefers_alt": 6,
+    "student_prefers_alt": 10
+   }
+  },
+  {
+   "pair": 107,
+   "outcome": "W",
+   "race19": "behind_1",
+   "R_off": 4,
+   "R_low": 5,
+   "B_diff": 2,
+   "T_top1": 4,
+   "T_prob_played": 0.2509455765116483,
+   "S_prob_played": 0.2683878520707367,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.48598629236221313,
+    "teacher_raw": 0.7667311532726033,
+    "search200_root": 0.7628409887477755,
+    "search800_root": 0.8245313897216693
+   },
+   "v9": {
+    "student_raw": -0.3846800923347473,
+    "teacher_raw": -0.5098288950937307,
+    "search200_root": -0.6882685028202832,
+    "search800_root": -0.6978679548110813
+   },
+   "alt200": {
+    "n": 4,
+    "student_raw": 0.41430686600506306,
+    "teacher_raw": 0.07872783399447335,
+    "search": 0.2878787838762108,
+    "teacher_prefers_alt": 2,
+    "student_prefers_alt": 3
+   },
+   "alt800": {
+    "n": 5,
+    "student_raw": 0.3757743388414383,
+    "teacher_raw": 0.045800496733399976,
+    "search": 0.23979851647218003,
+    "teacher_prefers_alt": 3,
+    "student_prefers_alt": 4
+   }
+  },
+  {
+   "pair": 108,
+   "outcome": "W",
+   "race19": "ahead",
+   "R_off": 2,
+   "R_low": 2,
+   "B_diff": 2,
+   "T_top1": 8,
+   "T_prob_played": 0.6840752560379307,
+   "S_prob_played": 0.43497261209413407,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": 0.835532546043396,
+    "teacher_raw": 0.9733515405930333,
+    "search200_root": 0.961524146720767,
+    "search800_root": 0.974560443367809
+   },
+   "v9": {
+    "student_raw": 0.32747897505760193,
+    "teacher_raw": 0.020472744301879953,
+    "search200_root": 0.49805571977747604,
+    "search800_root": 0.6211119553557364
+   },
+   "alt200": {
+    "n": 2,
+    "student_raw": -0.16225875820964575,
+    "teacher_raw": -0.041904495404231495,
+    "search": -0.08442710063068547,
+    "teacher_prefers_alt": 1,
+    "student_prefers_alt": 0
+   },
+   "alt800": {
+    "n": 2,
+    "student_raw": 0.20854354742914438,
+    "teacher_raw": -0.010022862693748885,
+    "search": 0.052076033111162365,
+    "teacher_prefers_alt": 1,
+    "student_prefers_alt": 2
+   }
+  },
+  {
+   "pair": 109,
+   "outcome": "W",
+   "race19": "behind_2plus",
+   "R_off": 9,
+   "R_low": 10,
+   "B_diff": 4,
+   "T_top1": 1,
+   "T_prob_played": 0.027869939631558465,
+   "S_prob_played": 0.020340581907657907,
+   "played_share_min": 0.005,
+   "v19": {
+    "student_raw": -0.838549017906189,
+    "teacher_raw": -0.7038226218010074,
+    "search200_root": -0.9447548265755177,
+    "search800_root": -0.9279117850586772
+   },
+   "v9": {
+    "student_raw": -0.6634871959686279,
+    "teacher_raw": -0.6348850550162847,
+    "search200_root": -0.7907447810098529,
+    "search800_root": -0.8096845335001126
+   },
+   "alt200": {
+    "n": 9,
+    "student_raw": 0.1865772066844834,
+    "teacher_raw": 0.21523917498698678,
+    "search": 0.18576314949907183,
+    "teacher_prefers_alt": 9,
+    "student_prefers_alt": 7
+   },
+   "alt800": {
+    "n": 9,
+    "student_raw": 0.18234196719196108,
+    "teacher_raw": 0.2807528437699056,
+    "search": 0.1659784738760694,
+    "teacher_prefers_alt": 9,
+    "student_prefers_alt": 8
+   }
+  }
+ ]
+}

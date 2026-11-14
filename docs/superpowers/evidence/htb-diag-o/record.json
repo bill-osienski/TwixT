@@ -1,0 +1,36 @@
+{
+ "schema": "htb-diag-o-record/1",
+ "written_by": "script",
+ "status": "COMPLETED",
+ "started": "2026-11-14T03:34:53.551Z",
+ "ended": "2026-11-14T05:39:51.918Z",
+ "positions": 1100,
+ "reproduced": 1100,
+ "student": {
+  "model_id": "78c16a31c3dba37f",
+  "onnx_sha256": "bc68a2742803a8466856fa353958b168becff1044dd387da001ddcaeb7e54f24",
+  "inference": "MirrorAveragingInference(AlphaZeroInference)",
+  "policy": {
+   "difficulty": "hard",
+   "nSims": 200,
+   "moveTemp": 1,
+   "search": "protocol"
+  }
+ },
+ "sims_deep": 800,
+ "seconds": {
+  "student": 7371.127326417,
+  "teacher": 126.04319374999963,
+  "analysis": 1.1537431659996509,
+  "total": 7498.324263332999
+ },
+ "search_seconds": {
+  "s200": 1475.7792546549927,
+  "s800": 5881.661012838005
+ },
+ "analyser_sha256": "3ff51fc822a81e658dc1f6079cd0804eccbc7dc3be1a44955ba144d0bc667eea",
+ "groups_sha256": "947d6d98f1d9138748dea287141e79d42386749bcc99c5fef68fcfe75e543696",
+ "kill_s": 11520,
+ "head": "b305bfa3eab320d70cb11fea9f0204b6c9f4f404",
+ "node_version": "v24.22.0"
+}
