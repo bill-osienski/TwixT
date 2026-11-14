@@ -291,6 +291,7 @@ knob) is not a new hypothesis.
 > **After G3 — read-only review of the non-wins and a next-experiment proposal; nothing run (2026-11-11).** A rules-only replay of all 220 games found no recurring losing position. All 12 losses as Black fell behind on a heuristic race measure between ply 3 and ply 13, inside the T 1.0 sampled opening, and every loss came from the 45 Black games 2 or more pegs behind after ply 19 (31 of those were won). Proposed first: Diagnostic O, about 2.1 h on CPU, which reproduces the 1,100 Black opening moves from their seeds and separates readout, search and network causes; a twixtbot benchmark card comes second. Awaiting approval.
 > **Diagnostic O RUN; wrapper CRASHED (exit 134) after a COMPLETED record; the evidence accepted by the user; no signal fired (Post-closure entry 64, 2026-11-14).** One run on the 1,100 saved Black opening positions (`a41eabd0` → `b305bfa3` → `a1d22c0d`; 7,499 s against TERM 11,510 s; every move reproduced; gate restored, no survivors). Node aborted at `process.exit` after the last write; the user accepted the evidence and reproduced `analysis.json` byte for byte. Readout: 12/12 losses had share < 10% moves, at a mean of 9.83 positions in losses against 5.27 in wins (difference interval [3.84, 5.25]); the signal failed only its 2× ratio, which these data could not reach (at most 1.90). Teacher: AUC 0.922 against the student's 0.875 (paired [0.002, 0.097]); failed on student ≤ 0.60. Budget: no difference. Frozen rule: no signal, so the twixtbot benchmark card is the default. No cause assigned. See #194.
 > **Diagnostic O's exit 134 — cause verified; shutdown probe added (dated note, 2026-11-14).** The user matched the macOS crash report to the run's process and reproduced the abort on onnxruntime-node 1.23.2 (forced exit 3/3 crash, `process.exitCode` 3/3 clean; microsoft/onnxruntime#26445). Entry 64's records and results stand. Future drivers set `process.exitCode` and pass `server/test_ort_shutdown.js` (`156c991d`).
+> **Student–teacher benchmark card DRAFTED; returned for review; nothing built or played (decision note, 2026-11-14).** The current H-TB student against its pinned twixtbot teacher under our rules: one teacher configuration (the mirror-averaged raw policy, no search); arm N (student network, no search, 200 pairs) and arm P (student as shipped, 110 pairs); fresh openings and seeds; Hoeffding TRAILS/AHEAD/UNRESOLVED; ceiling 6.0 h. It needs a narrow #52 exception (twixtbot only as the student's teacher, this one configuration, one run) and approval of the card. Diagnostic O stays recorded as no signal fired.
 
 ## Historical proposal check — programme now closed
 
@@ -11277,3 +11278,28 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
   probe's `forced` and `release-forced` modes each exited 134 with `mutex lock failed`.
 - **Rule for future drivers that load ONNX Runtime:** end by setting `process.exitCode`, never `process.exit()`, and
   pass the shutdown probe before launch. Diagnostic O's driver is left as it ran; it is spent (#194). No rerun.
+
+#### Decision note — the student–teacher benchmark card drafted; returned for review; nothing built, loaded or played (2026-11-14)
+
+- **Request:** the user's. Draft one bounded benchmark card for the current H-TB student against its pinned twixtbot
+  teacher, fixing identities, budgets, colour balance, game count, ceiling and the reading of a sweep before any game,
+  and naming the #52 exception it would need. Diagnostic O's recorded result is kept: **no signal fired** (entry 64).
+- **Card:** `docs/superpowers/2026-11-14-htb-teacher-benchmark-card.md`.
+  - **Teacher:** one configuration in both arms, the label path's mirror-averaged raw policy (argmax, no search):
+    the output the student was distilled from. Excluded: twixtbot's own player and any `trials` search.
+  - **Arm N:** the student network's mirror-averaged policy argmax, no search, 200 colour-reversed pairs.
+  - **Arm P:** the student as shipped in `hard` (200-simulation protocol), 110 pairs on arm N's first 110 openings.
+  - **Openings:** supplied 4-ply, hash-generated and distinct up to reflection. **Seeds:** a fresh `htb-teacher-bench`
+    namespace.
+  - **Classification:** two-sided Hoeffding at 95% over pairs (half-widths 0.0960 and 0.1295): TRAILS, AHEAD or
+    UNRESOLVED. A sweep reads as an ordering only.
+  - **Ceiling:** 6.0 h, never raised, with a smoke-based timing rule (1.5 × projection ≤ 6.0 h, or no launch). The
+    estimate is about 2.9 h.
+  - **The #52 exception requested:** twixtbot's pinned network as an opponent only as the student's teacher, in these
+    two arms, at this one configuration, for one run. No anchor use, no `trials`, no change after a result.
+  - **The rules mismatch** (twixtbot trained with own-link crossings allowed) is stated as a limitation: the result
+    compares the student with the teacher as it plays under our rules.
+- **Prediction on record (in the card, before any build):** low confidence. Arm N TRAILS (mean about 0.25); arm P
+  UNRESOLVED (about 0.5).
+- **Status:** a draft. The #52 exception and the card each need the user's approval. A build would return once for
+  launch review.
