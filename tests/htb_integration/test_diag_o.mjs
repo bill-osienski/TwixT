@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 
@@ -108,10 +108,13 @@ test('a game that is not the student as Black is refused', async () => {
 });
 
 test('run refuses while the gate is closed, and creates nothing', () => {
+  // Since the run (2026-11-14, a1d22c0d) its evidence directory exists; "nothing" now means nothing new.
+  const dir = join(D.REPO_ROOT, D.RUN_REL);
+  const before = existsSync(dir) ? readdirSync(dir).sort() : null;
   const r = spawnSync(process.execPath, [join(D.REPO_ROOT, 'tests/htb_integration/diag_o.mjs'), 'run', '--teacher-python', 'x', '--clone-root', 'y', '--kill-s', '1'], { encoding: 'utf8' });
   assert.equal(r.status, 4);
   assert.match(r.stderr, /DIAG_O_AUTHORIZED is closed/);
-  assert.equal(existsSync(join(D.REPO_ROOT, D.RUN_REL)), false);
+  assert.deepEqual(existsSync(dir) ? readdirSync(dir).sort() : null, before);
 });
 
 test('the frozen groups: 110 Black games, 96 W / 12 L / 2 D, the replay table', () => {

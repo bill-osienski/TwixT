@@ -7,6 +7,24 @@ this benchmark card is the default next step. Diagnostic O neither motivates nor
 This card needs two approvals before any game: the **#52 exception in §2**, and the card itself. A build would then
 return once for launch review, as G3 did.
 
+**Revision 1 (2026-11-14, the user's review).** The user's review keeps both arms, the fixed teacher configuration,
+the pair counts and the scoring thresholds. It recommends approving the §2 scope and this revised build together,
+followed by one review of the completed build before launch. The changes:
+- **Draw check (§6, §7).** The user replayed G3's four draws through the rules code. twixtbot's game declared a draw
+  at plies 73–127, while the product played on to ply 572, and every other field agreed throughout. (My replay: the
+  flag first appears after plies 73, 80, 95 and 127; it is never set in G3's 216 decisive games.)
+  - The product's game-end rule stays authoritative.
+  - twixtbot's early-draw flag is recorded separately and never ends a game.
+  - One of those replays becomes a regression test.
+  - Full canonical state is compared across Node and Python, so a real bridge or winner mismatch still voids the run.
+- **Timing (§9).** The four-game smoke has its own ceiling. The projection includes startup and the lockstep checks.
+  The 1.5× check is a launch estimate only, since two games per arm can miss long draws; the 6.0 h match cap stays
+  fixed.
+- **Training decision (§8).** Only arm N TRAILS would justify proposing a fresh distillation experiment. UNRESOLVED
+  leaves the question open. Arm P alone cannot say whether search, opening sampling or the network accounts for its
+  result.
+- **Exception scope (§2):** exactly the four smoke games and the 620 scored games.
+
 ## 1. Question, and what this is not
 
 **Question:** does the current H-TB student still trail its teacher under our game rules?
@@ -43,7 +61,8 @@ Read broadly, #52's last requirement covers it.
 - as the student's teacher, in this card's two arms;
 - at the one teacher configuration in §5, fixed here before any game;
 - on the openings and seeds of §6;
-- for one run of the game counts in §6.
+- for one run of exactly **4 smoke games** (unscored, for timing only) and **620 scored games** (arm N 400, arm P
+  220), and no others.
 
 **The exception does not cover:**
 - any anchor use: Elo, calibration, or ranking any other checkpoint;
@@ -106,8 +125,12 @@ our legal moves, ties to the lower (row, col). It is deterministic.
 
 - **Rules:** the empty 24×24 board, red first, no swap, our rules (`allow_scl=False`, automatic links, no link
   removal). Our `TwixtState` is authoritative.
-- **Game end:** the product's rule, as in G3: play to `isTerminal()`, with no ply cap. A game ends in a win, or in a
-  draw when no legal moves remain.
+- **Game end:** the product's rule, as in G3, and it alone: play until Node's `TwixtState.isTerminal()`, with no ply
+  cap. A game ends in a win, or in a draw when no legal moves remain.
+  - twixtbot's `Game` sets `result = DRAW` early, when its own test decides neither side can still connect. In G3's
+    four draws that came at plies 73–127, against the product's 572.
+  - **That flag never ends a game and is not a divergence.** The first ply at which it is set is recorded per game, as
+    `tb_draw_flag_ply`, and summarised descriptively (§8).
 - **Openings:** both players are deterministic in arm N, so without supplied openings arm N would play only one game
   per colour. So every game starts from a **supplied 4-ply opening** (plies 0–3, red–black–red–black).
   - **Generation:** opening *i*, ply *k*, takes index `int(sha256("htb-teacher-bench/20261114/opening <i>/ply <k>")[:12],
@@ -134,10 +157,20 @@ our legal moves, ties to the lower (row, col). It is deterministic.
 
 - **Teacher state.** The teacher keeps a twixtbot game and its reflection in lockstep with our `TwixtState` and its
   reflection, one move at a time.
-- **Check after every ply,** with the adapter's divergence check: pegs, bridges, side to move, the full legal set,
-  terminal status and winner. Both the position and its reflection are checked.
-- **Cross-engine check.** The driver (Node, product code) and the teacher process (Python) compare a digest of the
-  legal set every ply. Any difference stops the run.
+- **Check after every ply,** with the adapter's divergence check (`twixtbot_adapter.state_divergences`, no ply cap):
+  pegs, bridges, side to move, the full legal set, winner and ply. Both the position and its reflection are checked,
+  and the reflection must be the reflection of the position.
+  - The adapter's `terminal` comparison is the one field left out. With no cap, it differs only when twixtbot's
+    early-draw flag is set (§6), and the rules-level terminal status is already fixed by the winner and the legal set,
+    which are compared.
+  - Rules-level terminal status (a winner, or no legal moves) is also compared directly on both sides.
+- **Cross-engine check: full canonical state.** After the opening and after every ply, the driver (Node, product
+  code) and the teacher process (Python, our `TwixtState`, checked against twixtbot as above) each compute a
+  canonical state: ply, side to move, pegs by colour, bridges by colour, the sorted legal set, winner and rules-level
+  terminal status. They compare its sha256. Any difference stops the run, so a real bridge or winner mismatch voids it.
+- **Regression test:** G3's `pair_0057_game_1` (draw flag after ply 73, product end at ply 572) is replayed through
+  the teacher process's lockstep and must pass every ply. The same replay checks that the adapter's unfiltered check
+  would report the `terminal` difference, and that an injected bridge mismatch stops.
 - **Every move,** from either side, must be legal in our engine.
 - **Stops (VOID):** any divergence, illegal move, non-finite output, process failure, model-identity mismatch or
   ceiling.
@@ -170,13 +203,15 @@ our legal moves, ties to the lower (row, col). It is deterministic.
 - **What each outcome would support** (signals for choosing a follow-up, with no causes assigned; each follow-up
   needs its own approval):
 
-| Arm N | Arm P | Reading | Follow-up it would support |
-|---|---|---|---|
-| TRAILS | any | The student's network still trails the policy it imitated, under our rules | A card for **fresh training data from the student's own play, labelled by this teacher**. It would fit from the current student, keep training positions separate from evaluation, and be tested against the current student on fresh games. |
-| UNRESOLVED or AHEAD | TRAILS | No evidence that the network trails, but the shipped player does | No further distillation from this teacher; the gap lies elsewhere (a new design, outside this card) |
-| UNRESOLVED or AHEAD | UNRESOLVED or AHEAD | No evidence that the student trails its teacher in either form | No further distillation from this teacher; the next work needs a new design |
+| Arm N | Reading | Follow-up it would support |
+|---|---|---|
+| **TRAILS** | The student's raw policy still trails the policy it learned from, under our rules | Proposing a **fresh distillation experiment**: training data from the student's own play, labelled by this teacher, fitted from the current student, with training positions kept separate from evaluation, and tested against the current student on fresh games |
+| **UNRESOLVED** | The question stays open | None from this card |
+| **AHEAD** | The student's raw policy no longer trails its teacher under our rules | None toward more distillation from this teacher |
 
-Arm P is reported for product context. Only arm N bears on whether more distillation from this teacher could pay off.
+- **Arm P is reported for product context** and does not choose a follow-up. Its result mixes the network, our
+  search and the T 1.0 opening sampling, so arm P alone cannot say which of them accounts for it.
+- Draws, scores by colour, game lengths, `tb_draw_flag_ply` and arm P − arm N are descriptive.
 
 ## 9. Time ceiling (fixed before any game)
 
@@ -192,10 +227,17 @@ Arm P is reported for product context. Only arm N bears on whether more distilla
     per game, or **about 2.6 h** for 220 games.
   - **Total:** about 2.9 h. Games against the teacher may run longer than G3's (mean about 55 plies), so the ceiling
     covers a mean of about 120 plies.
-- **Timing rule, from the smoke** (4 games, outcomes unread):
-  - The projection is the arm N smoke's seconds per game × 400 plus the arm P smoke's seconds per game × 220.
+- **The smoke has its own ceiling:** TERM at 1,790 s and KILL at 1,800 s (30 min). Even if all four smoke games were
+  572-ply draws, they would fit with margin.
+- **Launch estimate, from the smoke** (4 games, outcomes unread):
+  - The projection is: the measured startup (model load, teacher load and the teacher's first reply), plus the arm N
+    smoke's mean wall seconds per game × 400, plus the arm P smoke's mean wall seconds per game × 220.
+  - The per-game wall time includes every lockstep and canonical-state check, since they run inside the game loop.
   - If **1.5 × the projection > 6.0 h**, the match is **not launched**, and the projection returns for review.
-  - The ceiling is not changed to fit.
+  - The 1.5× check is an **estimate**, not a guarantee: two games per arm can miss long draws.
+  - **The 6.0 h match cap stays fixed** whatever the estimate. A match it stops is VOID, with no partial score.
+  - `timing.json` is derived from the committed smoke evidence by the frozen analyser, and the match wrapper
+    re-derives it and requires a byte-equal result.
 - **Shutdown:** every Node driver sets `process.exitCode`, never calls `process.exit()`, and must pass
   `server/test_ort_shutdown.js` before launch.
 
@@ -209,7 +251,7 @@ Mine, low confidence, stated before any build or game:
   - Basis: our search clearly adds strength (G3: 0.93 against legacy `hard` at 800 simulations), but how it compares
     with the teacher's raw policy has never been measured.
 
-## 11. What a build would contain (after approval only)
+## 11. What a build would contain (approved with revision 1)
 
 All model-free until launch:
 - **A teacher play process** (`scripts/GPU/alphazero/htb_bench_teacher.py`, teacher venv). It speaks JSON lines with
@@ -233,6 +275,39 @@ All model-free until launch:
     handling;
   - the gate, which must refuse while closed.
 - **Then** one launch review, then one run. The ledger is updated when the run is judged.
+
+### 11.1 Built (2026-11-14, under revision 1): the frozen files
+
+The analysis, frozen before any model load: teacher_bench_analyse.mjs sha256 `f3d40d457f0e25bd7d0034e45a089ec18ec734ad5bdc8e298a951b7425046034`.
+Both wrappers refuse to launch if the analyser differs from it.
+
+| File | sha256 |
+|---|---|
+| `tests/htb_integration/teacher_bench.mjs` (driver) | `8b9be42c68c691c27865da7fb0e14501f3797fb1c7ad8756c28ee6f5109ce6e9` |
+| `scripts/GPU/alphazero/htb_bench_teacher.py` (teacher process) | `1bd935ce1baea0e35b1cf011f5cc79dedcd35cb08ad358251475766129060d97` |
+| `tests/htb_integration/teacher_bench_authorization.mjs` (both gates closed) | `f1cd212eaa43daff78ea93b3ec4e09e154955040fc2a3be08e3b592caeef340f` |
+| `docs/superpowers/evidence/htb-teacher-bench-smoke-run/01_wrapper.sh` | `2b34bb29fbd13170d52ff23bd03cc78eb6ecbe2abe58ede861bb0436dcb716be` |
+| `docs/superpowers/evidence/htb-teacher-bench-match-run/01_wrapper.sh` | `1d4d719049c2407baa180b4a24dd51fe5c0a9b13be2aeb41d2b47521820be7c8` |
+
+- **Model-free tests:**
+  - `tests/htb_integration/test_teacher_bench.mjs`: 15 pass. Among them:
+    - the cross-language canonical digest at every ply of a 572-ply G3 draw and a decisive game;
+    - a full smoke schedule through the real Python serve loop, with twixtbot's `Game` in lockstep and a fake
+      network;
+    - arm P checked move for move against `protocolMove`.
+  - `tests/test_htb_bench_teacher.py`: 10 pass. Among them:
+    - the G3 `pair_0057_game_1` regression;
+    - an own-crossing bridge mismatch that stops;
+    - the mirror averaging, which is identical to Diagnostic O's label-path implementation.
+- **Measured check cost (fake network, model-free):** about 5 ms per ply for both lanes' checks in a 41-ply game,
+  rising to about 60 ms per ply late in a 572-ply draw (about 35 s for the whole replay). This is small against the
+  §9 estimate; the smoke measures the real cost.
+- **Each stage, in order:**
+  1. a one-line gate-open commit in a clean launch worktree;
+  2. its wrapper;
+  3. the evidence committed with the gate restored.
+  - The smoke's `timing.json` is derived by `teacher_bench_analyse.mjs timing` and committed before the match
+    wrapper will run.
 
 ## 12. What this card does not authorize
 

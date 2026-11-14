@@ -292,6 +292,7 @@ knob) is not a new hypothesis.
 > **Diagnostic O RUN; wrapper CRASHED (exit 134) after a COMPLETED record; the evidence accepted by the user; no signal fired (Post-closure entry 64, 2026-11-14).** One run on the 1,100 saved Black opening positions (`a41eabd0` → `b305bfa3` → `a1d22c0d`; 7,499 s against TERM 11,510 s; every move reproduced; gate restored, no survivors). Node aborted at `process.exit` after the last write; the user accepted the evidence and reproduced `analysis.json` byte for byte. Readout: 12/12 losses had share < 10% moves, at a mean of 9.83 positions in losses against 5.27 in wins (difference interval [3.84, 5.25]); the signal failed only its 2× ratio, which these data could not reach (at most 1.90). Teacher: AUC 0.922 against the student's 0.875 (paired [0.002, 0.097]); failed on student ≤ 0.60. Budget: no difference. Frozen rule: no signal, so the twixtbot benchmark card is the default. No cause assigned. See #194.
 > **Diagnostic O's exit 134 — cause verified; shutdown probe added (dated note, 2026-11-14).** The user matched the macOS crash report to the run's process and reproduced the abort on onnxruntime-node 1.23.2 (forced exit 3/3 crash, `process.exitCode` 3/3 clean; microsoft/onnxruntime#26445). Entry 64's records and results stand. Future drivers set `process.exitCode` and pass `server/test_ort_shutdown.js` (`156c991d`).
 > **Student–teacher benchmark card DRAFTED; returned for review; nothing built or played (decision note, 2026-11-14).** The current H-TB student against its pinned twixtbot teacher under our rules: one teacher configuration (the mirror-averaged raw policy, no search); arm N (student network, no search, 200 pairs) and arm P (student as shipped, 110 pairs); fresh openings and seeds; Hoeffding TRAILS/AHEAD/UNRESOLVED; ceiling 6.0 h. It needs a narrow #52 exception (twixtbot only as the student's teacher, this one configuration, one run) and approval of the card. Diagnostic O stays recorded as no signal fired.
+> **Student–teacher benchmark: card revision 1 and the model-free build; returned for one launch review; nothing loaded or played (build record, 2026-11-14).** The product's game-end rule is authoritative, and twixtbot's early-draw flag is recorded only (G3 draws: flag at plies 73–127, product end at 572). The Node–Python canonical state is compared every ply. Smoke ceiling 1,800 s; match cap 6.0 h, fixed; the 1.5× launch estimate is from the smoke. Arm N alone decides the training reading. The #52 scope is exactly 4 smoke and 620 scored games. Frozen analyser `f3d40d45…`. Correction: the shutdown test is run by name and by the wrappers, not in `test:server` (G3 binding).
 
 ## Historical proposal check — programme now closed
 
@@ -11303,3 +11304,39 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
   UNRESOLVED (about 0.5).
 - **Status:** a draft. The #52 exception and the card each need the user's approval. A build would return once for
   launch review.
+
+#### Build record — the student–teacher benchmark: card revision 1 and the model-free build; returned for one launch review (2026-11-14)
+
+- **The user's review (2026-11-14):** keep both arms, the fixed teacher configuration, the pair counts and the
+  thresholds. Revise the draw check, the timing and the training-decision wording. Approve the narrow #52 scope
+  (exactly 4 smoke games and 620 scored games, the one teacher configuration) together with the revised build. Review
+  the completed build once before launch.
+- **Card revision 1** (`docs/superpowers/2026-11-14-htb-teacher-benchmark-card.md`):
+  - **Draw check.** The product's game-end rule is authoritative. twixtbot's early-draw flag is recorded per game
+    (`tb_draw_flag_ply`) and never ends a game. My replay of G3's four draws matches the user's: the flag first comes
+    after plies 73, 80, 95 and 127, against the product's 572, and it is never set in the 216 decisive games.
+  - **Lockstep.** The adapter's divergence check runs on both lanes without its cap-free `terminal` line, plus a
+    direct rules-level terminal comparison.
+  - **Canonical state.** A full canonical state (pegs, bridges, side to move, legal set, winner, terminal) is hashed
+    in Node and in Python and compared every ply.
+  - **Timing.** The smoke has its own ceiling (1,800 s). The projection includes startup and the checks. The 1.5×
+    check is a launch estimate only, and the 6.0 h match cap is fixed.
+  - **Training decision.** Arm N decides it: TRAILS would justify proposing a fresh distillation experiment, and
+    UNRESOLVED leaves the question open. Arm P is product context only.
+- **Built:** the driver, teacher process, frozen analyser (sha256 `f3d40d45…`, written into card §11.1), gates (both
+  closed), smoke and match wrappers, and model-free tests (Node 15 pass, Python 10 pass). The tests include:
+  - the cross-language canonical digest at every ply of a 572-ply draw;
+  - a full smoke schedule through the real Python serve loop on twixtbot's `Game` with a fake network;
+  - the `pair_0057_game_1` regression;
+  - a stop on an own-crossing bridge mismatch.
+  Both wrappers refuse in an unclean tree and create nothing. **No model was loaded and no game was played.**
+- **Maintenance found while running the neighbouring suites:**
+  - **Correction to the dated note after entry 64:** that note says `server/test_ort_shutdown.js` is "now in `npm run
+    test:server`". That `package.json` line moved a file pinned by G3's execution binding (`tests/htb_integration/
+    test_g3.mjs`, "the committed binding equals a fresh computation"), so it is **reverted** here. The shutdown test
+    stays in the repository and is run by name. Both benchmark wrappers now run it as a launch precondition.
+  - Diagnostic O's test "run refuses while the gate is closed, and creates nothing" had asserted that the evidence
+    directory does not exist. It has existed since the run (`a1d22c0d`). The test now asserts that nothing new is
+    created; Diagnostic O's frozen files are unchanged.
+- **Status:** built, gates closed. Next: the user's launch review, then the smoke, its committed `timing.json`, and the
+  match, each through its own one-line gate-open commit.
