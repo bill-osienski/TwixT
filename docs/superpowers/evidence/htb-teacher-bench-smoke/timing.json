@@ -1,0 +1,19 @@
+{
+ "schema": "htb-teacher-bench-timing/1",
+ "startup_s": 2.513,
+ "n_game_s_mean": 0.732,
+ "p_game_s_mean": 24.614,
+ "smoke_plies": [
+  42,
+  37,
+  52,
+  31
+ ],
+ "projection_s": 5710.215,
+ "launch_factor": 1.5,
+ "launch_estimate_s": 8565.323,
+ "match_cap_s": 21600,
+ "verdict": "LAUNCH_OK",
+ "note": "an estimate from 2 games per arm; long draws can exceed it; the 6.0 h match cap is fixed",
+ "smoke_outcomes": "replay-validated on admission; excluded from scoring and from every report"
+}

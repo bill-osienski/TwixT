@@ -1,0 +1,64 @@
+{
+ "schema": "htb-teacher-bench-record/1",
+ "written_by": "script",
+ "status": "COMPLETED",
+ "stage": "smoke",
+ "started": "2026-11-14T18:13:02.827Z",
+ "ended": "2026-11-14T18:13:53.740Z",
+ "games": 4,
+ "pairs": {
+  "N": 1,
+  "P": 1
+ },
+ "startup_seconds": 2.512944542,
+ "arm_seconds": {
+  "N": 1.463250375,
+  "P": 49.227746833000005
+ },
+ "total_seconds": 53.414684333000004,
+ "student": {
+  "model_id": "78c16a31c3dba37f",
+  "onnx_sha256": "bc68a2742803a8466856fa353958b168becff1044dd387da001ddcaeb7e54f24",
+  "inference": "MirrorAveragingInference(AlphaZeroInference)",
+  "policy": {
+   "difficulty": "hard",
+   "nSims": 200,
+   "moveTemp": 1,
+   "search": "protocol"
+  }
+ },
+ "teacher": {
+  "identity": {
+   "commit": "83749f230a0bae1766b46a05bfde0ed87f0a9a0a",
+   "model_artifacts": 3,
+   "artifact_sha256": {
+    "model/pb/variables/variables.data-00000-of-00001": "1958f8476e9d56cbb87fa570db88f9cc9d389b30e20571fd66e8e779a4cefbab",
+    "model/pb/saved_model.pb": "e0c2b882bc97c4661ac92af47ae5ef78443e57b42d0cb7c9c3a8cb7e8d01993b",
+    "model/pb/variables/variables.index": "1d4073c4da30e515a984faef2c3cc9c8b8ba402353a01933c8bb80e1f279f8cd"
+   },
+   "tensorflow": "2.21.0",
+   "runtime_sha256": "32e4e14d5ca02c2cb2ad7a774def23138fb0ec7a5b83537680ec165a5045817e"
+  },
+  "pins": {
+   "repo": "github.com/stevens68/twixtbot-ui",
+   "commit": "83749f230a0bae1766b46a05bfde0ed87f0a9a0a",
+   "model_dir": "model/pb",
+   "weights_sha256": "1958f8476e9d56cbb87fa570db88f9cc9d389b30e20571fd66e8e779a4cefbab",
+   "saved_model_sha256": "e0c2b882bc97c4661ac92af47ae5ef78443e57b42d0cb7c9c3a8cb7e8d01993b",
+   "variables_index_sha256": "1d4073c4da30e515a984faef2c3cc9c8b8ba402353a01933c8bb80e1f279f8cd"
+  },
+  "load_seconds": 2.4300498962402344
+ },
+ "kill_s": 1800,
+ "head": "030f64d0bf320ef3ed687f5b76514101665650eb",
+ "pid": 49136,
+ "runtime": {
+  "node": "v24.22.0",
+  "onnxruntime_node": "1.23.2",
+  "teacher_env": {
+   "python": "3.13.15",
+   "tensorflow": "2.21.0",
+   "numpy": "2.5.2"
+  }
+ }
+}
