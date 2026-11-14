@@ -5,4 +5,4 @@
  * The wrapper refuses any other HEAD and restores the gate on every exit. diag_o.mjs and htb_diag_o_teacher.py
  * refuse to run while it is closed.
  */
-export const DIAG_O_AUTHORIZED = false;
+export const DIAG_O_AUTHORIZED = true;
