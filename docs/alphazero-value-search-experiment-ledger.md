@@ -295,6 +295,7 @@ knob) is not a new hypothesis.
 > **Student–teacher benchmark: card revision 1 and the model-free build; returned for one launch review; nothing loaded or played (build record, 2026-11-14).** The product's game-end rule is authoritative, and twixtbot's early-draw flag is recorded only (G3 draws: flag at plies 73–127, product end at 572). The Node–Python canonical state is compared every ply. Smoke ceiling 1,800 s; match cap 6.0 h, fixed; the 1.5× launch estimate is from the smoke. Arm N alone decides the training reading. The #52 scope is exactly 4 smoke and 620 scored games. Frozen analyser `f3d40d45…`. Correction: the shutdown test is run by name and by the wrappers, not in `test:server` (G3 binding).
 > **Student–teacher benchmark: launch checks repaired (Repair 1); returned for launch review; nothing loaded or played (repair record, 2026-11-14).** Evidence bound to its run (same launch commit, `pgid.txt` = driver PID, stage ceiling, committed smoke for the match). One row per played ply, and 200 simulations budgeted and 200 visits spent on every arm P student move (a 64-simulation smoke is now refused). ORT and teacher runtime versions checked before any model loads. The early-draw flag is purely observational. Re-pinned: analyser `b162323e…`. Unchanged: 4 smoke + 620 scored games, the 6.0 h cap, arm N decides.
 > **Student–teacher benchmark: non-finite student output now stops both arms (Repair 2); returned for launch review; nothing loaded or played (repair record, 2026-11-14).** Without a guard, a NaN value reached both arms' moves. Now every student evaluation is checked before selection or search, and a model-free NaN-value regression stops both arms before any move is returned. Driver re-pinned `7ba3c100…`; everything else unchanged.
+> **Student–teacher benchmark COMPLETED: arm N TRAILS, arm P TRAILS (Post-closure entry 65, 2026-11-14).** The H-TB student against its pinned twixtbot teacher (mirror-averaged raw policy, no search) under our rules, under the narrow #52 exception. Smoke `030f64d0`→`ed4f8567` (LAUNCH_OK); match `2c8fbb71`→`c9d110b1`, 620 of 620 games in 2.29 h against a fixed 6.0 h cap, clean. Arm N (student network, no search): 13-10-377, mean 0.045 [−0.051, 0.141], TRAILS. Arm P (shipped `hard`): 23-6-191, 0.118 [−0.011, 0.248], TRAILS. Prediction: arm N TRAILS (matched; mean below the expected range); arm P UNRESOLVED (missed). Only arm N decides: it supports **proposing** a fresh distillation experiment, which needs its own approval. An ordering under this protocol, not an Elo. See #195.
 
 ## Historical proposal check — programme now closed
 
@@ -2122,6 +2123,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 192. **G3 steps 1–3 are spent (2026-11-10, entry 62).** Do **not**: replay the browser check or the smoke pair, or rerun either to "refresh" the timing; re-derive the timing from anything but the committed smoke evidence, or hand-edit `htb-g3-smoke/timing.json`; read or report the smoke pair's outcomes, or count them in the match; run the match under any ceiling but KILL 42,420 s / TERM 42,410 s; or read the browser game (a deliberately weak human side) as strength evidence.
 193. **The G3 match is spent: PASS (2026-11-11, entry 63).** Do **not**: rerun, extend, top up or re-score the match, or rerun it to "confirm" the PASS; change the rule, the bound or the scoring of draws after the fact; drop or down-weight the duplicate games to reshape the verdict (the post-hoc sensitivity is exploratory only); read the result as matched-compute strength, or as covering `easy` or `medium`; or deploy, train or push on it without the user's separate deployment decision.
 194. **Diagnostic O is spent: no signal fired (2026-11-14, entry 64).** Do **not**: rerun it, or re-run its searches or teacher stage to "refresh" a number; change its thresholds, its count conditions or its 2× ratio and re-read the signals, or report the readout signal as having fired (a readout follow-up needs the user's own ruling, recorded as post hoc); assign causes to the losses from it; use its 1,100 positions, or any G3 game, as training data or as the evaluation set for a fit; or reuse its driver for a new run without the `process.exitCode` fix.
+195. **The student–teacher benchmark is spent: arm N TRAILS, arm P TRAILS (2026-11-14, entry 65).** Do **not**: rerun, extend, top up or re-score it, or rerun it to "confirm" either arm; change the teacher configuration, the arms, the openings, the thresholds or the game-end rule after the fact; read or report the four smoke games' outcomes; read the result as an Elo, a gap size, a lower bound, twixtbot's strength under its own rules, or a statement about any other checkpoint; use twixtbot as an anchor or play it in any other configuration (the #52 exception covered exactly these 4 + 620 games); use the benchmark's games or openings as training positions, or as the evaluation set of a fit; or start the fresh distillation experiment that arm N supports without its own card and approval.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -11411,3 +11413,76 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
   - `test_htb_bench_teacher.py` and the gate inventory: 20 pass;
   - both gates are closed. No model was loaded and no game was played.
 - **Status:** returned for launch review.
+
+#### Post-closure entry 65 — the student–teacher benchmark: the H-TB student against its pinned twixtbot teacher, under our rules — COMPLETED; arm N TRAILS, arm P TRAILS (2026-11-14)
+
+- **Test:** the user's approval of 2026-11-14, of one benchmark sequence under the narrow #52 exception. The frozen
+  card is `docs/superpowers/2026-11-14-htb-teacher-benchmark-card.md` at `49c0c1cd` (revision 1, Repairs 1–2).
+  - **The teacher**, the same in both arms: twixtbot-ui `83749f23`'s raw network through the H-TB label path's
+    wrapper, mirror-averaged, argmax over our legal moves, no search.
+  - **Arm N:** the student network (`78c16a31c3dba37f`), mirror-averaged policy argmax, no search; 200
+    colour-reversed pairs.
+  - **Arm P:** the student as shipped in `hard` (`protocolMove`, 200 simulations, T 1.0 readout through ply 19); 110
+    pairs on arm N's first 110 openings.
+  - **Openings:** supplied 4-ply openings, hash-generated and distinct up to reflection.
+  - **Game end:** the product's rule. twixtbot's early-draw flag was recorded only.
+  - **Score:** two-sided Hoeffding at 95% over pairs. TRAILS if mean + h < 0.5.
+- **Hypothesis:** the question was whether the student still trails its teacher under our rules, as a network
+  (arm N) and as the shipped player (arm P). Only arm N decides the training reading.
+- **Why it was plausible:** the H-TB fit check (entry 52) left the student at 65.1% top-1 agreement with the teacher
+  (policy KL 0.574). Diagnostic O (entry 64) found that the teacher's ply-19 value separated the G3 losses slightly
+  better than the student's (AUC 0.922 against 0.875). Diagnostic O's frozen rule made this card the default next
+  step.
+- **Prediction on record** (card §10, before any build or game; low confidence): **arm N TRAILS**, mean about 0.25
+  (expected range 0.05–0.45); **arm P UNRESOLVED**, mean about 0.5 (0.30–0.75).
+- **What ran** (launch worktree `TwixT_Game-bench`, branch `htb-bench-launch`; Unreal Editor closed, BOINC quit,
+  idle gate passed):
+  - **Smoke:** gate-open commit `030f64d0`. 4 games in 53 s against KILL 1,800 s; outer COMPLETED with exit 0, gate
+    restored, no survivors. The same launch commit is named in both records, and `pgid.txt` = the driver's PID 49136.
+    Evidence and `timing.json` were committed at `ed4f8567`.
+    - **Timing:** projection 5,710 s, launch estimate 8,565 s, **LAUNCH_OK** at the fixed 21,600 s cap.
+    - The smoke outcomes were replay-validated by the analyser and were neither read nor scored.
+  - **Match:** gate-open commit `2c8fbb71`. **620 of 620 games in 8,228 s (2.29 h)** against the fixed KILL 21,600 s:
+    - outer COMPLETED with exit 0, gate restored, no survivors;
+    - both records name the same launch commit, and `pgid.txt` = the driver's PID 49834;
+    - runtimes as pinned (onnxruntime-node 1.23.2; teacher Python 3.13.15, TensorFlow 2.21.0, NumPy 2.5.2);
+    - arm N 608 s, arm P 7,618 s;
+    - no lockstep, canonical-state, legality or non-finite stop.
+  - **Commits:** evidence `c9d110b1`, then the frozen analysis (`b162323e`), `analysis.json` sha256 `5077e5e5…`,
+    re-derived byte for byte, at `cc24a274`. `htb-integration-g1` was fast-forwarded to it. Nothing was pushed.
+- **Result** (student's score; 1 win, 0.5 draw, 0 loss):
+
+| Arm | Pairs | Student W / D / L | Mean pair score | 95% interval (Hoeffding) | Classification |
+|---|---|---|---|---|---|
+| **N** (network, no search) | 200 | 13 / 10 / 377 | **0.045** | [−0.051, 0.141] (h 0.0960) | **TRAILS** |
+| **P** (shipped `hard`) | 110 | 23 / 6 / 191 | **0.118** | [−0.011, 0.248] (h 0.1295) | **TRAILS** |
+
+  - **By colour, descriptive:**
+    - arm N: student as Red 0.068 (10 / 7 / 183), as Black 0.023 (3 / 3 / 194);
+    - arm P: as Red 0.191 (18 / 6 / 86), as Black 0.045 (5 / 0 / 105).
+  - **Arm P − arm N** on the 110 common openings: +0.070, descriptive.
+  - **Game lengths:** arm N mean 54.3 plies (median 41, range 29–572); arm P mean 53.9 (median 35, range 25–572).
+  - **twixtbot's early-draw flag:**
+    - set in all 16 draws (arm N 10, arm P 6), and in no decisive game;
+    - first set at plies 65–163, against the product's end at up to 572.
+    - Every draw went to the product's end rule, and no game was ended by the flag.
+- **Did it match the prediction?**
+  - **Arm N: yes in classification** (TRAILS). The mean, 0.045, fell just below my expected range (0.05–0.45): the
+    student's network trails by more than I expected.
+  - **Arm P: no.** I predicted UNRESOLVED around 0.5. The result was TRAILS at 0.118, and our 200-simulation search
+    closed little of the gap. Why is not identified: arm P mixes the network, our search and the T 1.0 opening sampling
+    (card §8).
+- **Conclusion / status:** COMPLETED. The benchmark is closed.
+  - **Under the card's rule, arm N TRAILS:** the student's raw policy still trails the policy it learned from, under
+    our rules. **That supports proposing a fresh distillation experiment.** Its conditions:
+    - training data from the student's own play, labelled by this teacher;
+    - fitted from the current student;
+    - training positions kept separate from evaluation;
+    - tested against the current student on fresh games.
+    - It needs its own card and approval; this result authorizes nothing beyond the proposal.
+  - **Arm P** is product context: the shipped `hard` also trails this teacher's unsearched policy under our rules.
+  - **What the result is not:**
+    - not an Elo, and not a size or lower bound for the gap (an ordering under this protocol);
+    - not twixtbot's strength under its own rules: it was trained with own-link crossings allowed;
+    - not a statement about any other checkpoint.
+  - See #195.
