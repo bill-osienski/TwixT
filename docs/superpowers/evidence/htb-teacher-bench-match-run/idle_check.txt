@@ -1,0 +1,49 @@
+t=    0.0s BUSY: load 3.72 >= 3.0
+t=    5.0s BUSY: load 3.43 >= 3.0
+t=   10.1s BUSY: load 3.15 >= 3.0
+t=   15.1s BUSY: load 3.06 >= 3.0
+t=   20.2s idle for 0.0s
+t=   25.2s idle for 5.1s
+t=   30.3s idle for 10.1s
+t=   35.3s idle for 15.2s
+t=   40.4s idle for 20.2s
+t=   45.4s idle for 25.2s
+t=   50.5s idle for 30.3s
+t=   55.5s idle for 35.3s
+t=   60.6s idle for 40.4s
+t=   65.6s idle for 45.4s
+t=   70.7s idle for 50.5s
+t=   75.7s BUSY: /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/corespotlightd at 180.4% CPU > 50.0%
+t=   80.8s idle for 0.0s
+t=   85.8s idle for 5.1s
+t=   90.9s idle for 10.1s
+t=   95.9s idle for 15.2s
+t=  101.0s idle for 20.2s
+t=  106.0s idle for 25.3s
+t=  111.1s idle for 30.3s
+t=  116.1s idle for 35.4s
+t=  121.2s idle for 40.4s
+t=  126.2s BUSY: /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/corespotlightd at 83.2% CPU > 50.0%
+t=  131.3s idle for 0.0s
+t=  136.4s idle for 5.1s
+t=  141.4s idle for 10.1s
+t=  146.5s idle for 15.2s
+t=  151.5s idle for 20.2s
+t=  156.6s idle for 25.3s
+t=  161.6s idle for 30.3s
+t=  166.7s idle for 35.4s
+t=  171.7s BUSY: /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/corespotlightd at 148.6% CPU > 50.0%
+t=  176.8s idle for 0.0s
+t=  181.8s idle for 5.1s
+t=  186.9s idle for 10.1s
+t=  191.9s idle for 15.1s
+t=  197.0s idle for 20.2s
+t=  202.0s idle for 25.3s
+t=  207.1s idle for 30.3s
+t=  212.1s idle for 35.4s
+t=  217.2s idle for 40.4s
+t=  222.2s idle for 45.5s
+t=  227.3s idle for 50.5s
+t=  232.3s idle for 55.6s
+t=  237.4s idle for 60.6s
+IDLE: held 60s (load < 3.0, no process > 50.0% CPU)
