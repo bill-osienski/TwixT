@@ -184,6 +184,26 @@ export const canonDigest = (state) => sha256(JSON.stringify(canonical(state)));
 
 // ---------------------------------------------------------------------------------------------------------- students
 
+/**
+ * The card's non-finite-output rule (§7), on the student: every evaluation is checked before its priors or value can
+ * reach the move selector (arm N) or the search (arm P, through protocolMove's MCTS, which calls only `evaluate`). A
+ * non-finite value, or a missing or non-finite prior for any legal move, stops the run (VOID). Local to the
+ * benchmark: the product's inference classes are unchanged.
+ */
+export function finiteGuard(inference) {
+  return {
+    async evaluate(boardTensorHWC, moves) {
+      const out = await inference.evaluate(boardTensorHWC, moves);
+      if (!Number.isFinite(out?.value)) throw new BenchStop('student', `non-finite student value ${out?.value}`);
+      for (const m of moves) {
+        const p = out.priors?.get(key(m));
+        if (!Number.isFinite(p)) throw new BenchStop('student', `non-finite or missing student prior ${p} for ${key(m)}`);
+      }
+      return out;
+    },
+  };
+}
+
 /** Arm N: the mirror-averaged policy argmax over legal moves, ties to the lower (row, col). No search. */
 export async function rawPolicyMove(inference, state) {
   const moves = state.legalMoves();
@@ -201,7 +221,8 @@ export async function rawPolicyMove(inference, state) {
   return { moveKey: key(best), prob: bestP };
 }
 
-export function makeStudent(arm, inference, policy) {
+export function makeStudent(arm, rawInference, policy) {
+  const inference = finiteGuard(rawInference); // both arms: nothing unchecked reaches selection or search
   if (arm === 'N') {
     return { arm, async move(state) {
       const { moveKey, prob } = await rawPolicyMove(inference, state);

@@ -294,6 +294,7 @@ knob) is not a new hypothesis.
 > **Student–teacher benchmark card DRAFTED; returned for review; nothing built or played (decision note, 2026-11-14).** The current H-TB student against its pinned twixtbot teacher under our rules: one teacher configuration (the mirror-averaged raw policy, no search); arm N (student network, no search, 200 pairs) and arm P (student as shipped, 110 pairs); fresh openings and seeds; Hoeffding TRAILS/AHEAD/UNRESOLVED; ceiling 6.0 h. It needs a narrow #52 exception (twixtbot only as the student's teacher, this one configuration, one run) and approval of the card. Diagnostic O stays recorded as no signal fired.
 > **Student–teacher benchmark: card revision 1 and the model-free build; returned for one launch review; nothing loaded or played (build record, 2026-11-14).** The product's game-end rule is authoritative, and twixtbot's early-draw flag is recorded only (G3 draws: flag at plies 73–127, product end at 572). The Node–Python canonical state is compared every ply. Smoke ceiling 1,800 s; match cap 6.0 h, fixed; the 1.5× launch estimate is from the smoke. Arm N alone decides the training reading. The #52 scope is exactly 4 smoke and 620 scored games. Frozen analyser `f3d40d45…`. Correction: the shutdown test is run by name and by the wrappers, not in `test:server` (G3 binding).
 > **Student–teacher benchmark: launch checks repaired (Repair 1); returned for launch review; nothing loaded or played (repair record, 2026-11-14).** Evidence bound to its run (same launch commit, `pgid.txt` = driver PID, stage ceiling, committed smoke for the match). One row per played ply, and 200 simulations budgeted and 200 visits spent on every arm P student move (a 64-simulation smoke is now refused). ORT and teacher runtime versions checked before any model loads. The early-draw flag is purely observational. Re-pinned: analyser `b162323e…`. Unchanged: 4 smoke + 620 scored games, the 6.0 h cap, arm N decides.
+> **Student–teacher benchmark: non-finite student output now stops both arms (Repair 2); returned for launch review; nothing loaded or played (repair record, 2026-11-14).** Without a guard, a NaN value reached both arms' moves. Now every student evaluation is checked before selection or search, and a model-free NaN-value regression stops both arms before any move is returned. Driver re-pinned `7ba3c100…`; everything else unchanged.
 
 ## Historical proposal check — programme now closed
 
@@ -11383,3 +11384,30 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
   - both wrappers refuse in the main checkout with exit 1, creating nothing.
   - **No model was loaded and no game was played.**
 - **Status:** returned for launch review. Both gates are closed.
+
+#### Repair record — the student–teacher benchmark's non-finite-output guard on the student (Repair 2), before either gate opens (2026-11-14)
+
+- **The user's review (2026-11-14):** enforce the card's existing non-finite-output rule (§7) on the student
+  evaluator in both arms, checking every evaluation before its priors or value reach the move selector or the search.
+  Keep the guard local to the benchmark. Add a model-free regression with finite priors and a NaN value, re-pin the
+  driver, and keep the schedule, caps, scoring and arm N decision rule as written.
+- **Found:** without a guard, a NaN student value was not stopped. Arm N's selector reads only the priors, so it
+  returned a move (`0,1` in the check). Arm P's `protocolMove` returned a move (`22,20`) with a NaN root value. The
+  search reaches the network only through `server/mcts.js:182`, and nothing on the path to `protocolMove` catches an
+  error.
+- **Repaired:** `finiteGuard` in `tests/htb_integration/teacher_bench.mjs` wraps the student's inference inside
+  `makeStudent`, so both arms always use it. Every evaluation's value and its prior for every legal move must be
+  finite and present; otherwise a `BenchStop` at step `student` stops the run (VOID). The product's inference classes
+  are unchanged.
+- **Regressions (model-free):**
+  - With finite priors and a NaN value, both arms stop at their first evaluation without returning a move, and inside
+    a game the stop reaches `playGame`.
+  - A NaN prior or a missing prior stops.
+  - A finite evaluation passes through unchanged.
+- **Re-pinned:** the driver, `7ba3c100…` (card §11.1). No other pinned file changed: analyser `b162323e…`, teacher
+  process `ea2bab26…`, both wrappers and the gate file are as in Repair 1.
+- **Focused results:**
+  - `test_teacher_bench.mjs`: 19 of 19 pass;
+  - `test_htb_bench_teacher.py` and the gate inventory: 20 pass;
+  - both gates are closed. No model was loaded and no game was played.
+- **Status:** returned for launch review.

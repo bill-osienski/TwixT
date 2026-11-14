@@ -45,6 +45,15 @@ the 620 scored games, the fixed 6.0 h cap and the arm N decision rule. The chang
 - **The early-draw flag is purely observational** in both lanes. The reflection-lane comparison that could stop the
   run on the flag alone is removed.
 
+**Repair 2 (2026-11-14, the user's review): §7's non-finite-output rule enforced on the student.** In both arms, every
+student evaluation is checked (`finiteGuard`, local to the benchmark driver) before its priors or value reach arm N's
+move selector or arm P's search. A non-finite value, or a missing or non-finite prior for any legal move, stops the run
+(VOID).
+- Without the guard, a NaN value was not stopped: arm N's selector ignores the value, and `protocolMove` returned a
+  move with a NaN root value. The model-free regression (finite priors, a NaN value) requires both arms to stop at the
+  first evaluation without returning a move.
+- Only the driver changed and is re-pinned. The schedule, caps, scoring and arm N decision rule are unchanged.
+
 ## 1. Question, and what this is not
 
 **Question:** does the current H-TB student still trail its teacher under our game rules?
@@ -331,14 +340,14 @@ Both wrappers refuse to launch if the analyser differs from it.
 
 | File | sha256 |
 |---|---|
-| `tests/htb_integration/teacher_bench.mjs` (driver) | `7ad449a80e545de7626dcedc7799b01323f5244e0082894ea4cdd204fa075bd7` |
+| `tests/htb_integration/teacher_bench.mjs` (driver; re-pinned after Repair 2) | `7ba3c100eb93f7738e7948f1bbd80b157f3c43b34f7833098257c69dc1cf3de8` |
 | `scripts/GPU/alphazero/htb_bench_teacher.py` (teacher process) | `ea2bab26be1af792616221853cc160bce5d06f91781e3778de843f2881f5c94f` |
 | `tests/htb_integration/teacher_bench_authorization.mjs` (both gates closed) | `f1cd212eaa43daff78ea93b3ec4e09e154955040fc2a3be08e3b592caeef340f` |
 | `docs/superpowers/evidence/htb-teacher-bench-smoke-run/01_wrapper.sh` | `56fb66de49ca453600f4635890cf891c45595d0f5760a3c5adc9d3cf3fa62d7c` |
 | `docs/superpowers/evidence/htb-teacher-bench-match-run/01_wrapper.sh` | `e075a8c2fd5707b4f2eab63be201a7903e3b4daa103e6dfcc51b0d690b1adc10` |
 
 - **Model-free tests:**
-  - `tests/htb_integration/test_teacher_bench.mjs`: 17 pass (after Repair 1). Among them:
+  - `tests/htb_integration/test_teacher_bench.mjs`: 19 pass (after Repair 2). Among them:
     - the cross-language canonical digest at every ply of a 572-ply G3 draw and a decisive game;
     - a full smoke schedule through the real Python serve loop, with twixtbot's `Game` in lockstep and a fake
       network;
@@ -348,7 +357,9 @@ Both wrappers refuse to launch if the analyser differs from it.
       control, with the smoke played at the real 200-simulation budget;
     - per-move evidence: a 64-simulation budget, fewer visits, a duplicate, missing or extra row, and a teacher row
       with a budget are each rejected; the old 64-simulation smoke fixture no longer yields an estimate;
-    - committed smoke evidence for the match, and the runtime pins.
+    - committed smoke evidence for the match, and the runtime pins;
+    - Repair 2: finite priors with a NaN value stop both arms at the first evaluation, before any move is returned;
+      a NaN or missing prior stops; a finite evaluation passes through unchanged.
   - `tests/test_htb_bench_teacher.py`: 12 pass (after Repair 1). Among them:
     - the G3 `pair_0057_game_1` regression;
     - an own-crossing bridge mismatch that stops;

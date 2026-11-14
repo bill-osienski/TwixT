@@ -358,3 +358,44 @@ test('end to end through the real serve loop: TeacherClient, Python lockstep on 
   await new Promise((resolve) => (t2.exited ? resolve() : t2.child.once('exit', resolve)));
   assert.equal(t2.exited.code, 3);
 });
+
+test('non-finite student output: finite priors with a NaN value stop both arms before a move is returned', async () => {
+  let calls = 0;
+  const nanValue = {
+    async evaluate(_h, moves) {
+      calls += 1;
+      return { priors: new Map(moves.map((m) => [`${m[0]},${m[1]}`, 1 / moves.length])), value: Number.NaN };
+    },
+  };
+  let s = new TwixtState();
+  for (const m of [[10, 10], [5, 5], [12, 11], [5, 8]]) s = s.applyMove(m);
+  for (const arm of ['N', 'P']) {
+    calls = 0;
+    const student = D.makeStudent(arm, nanValue, REAL);
+    let returned = null;
+    await assert.rejects(
+      (async () => {
+        returned = await student.move(s, { stage: 'match', pair: 0, game: 0 });
+      })(),
+      (e) => e instanceof D.BenchStop && e.step === 'student' && /non-finite student value/.test(e.message),
+      `arm ${arm}`,
+    );
+    assert.equal(returned, null, `arm ${arm} returned a move`);
+    assert.equal(calls, 1, `arm ${arm} evaluated past the first non-finite output`);
+  }
+  // and inside a game the stop reaches playGame, with no move applied
+  const task = D.schedule('smoke').find((t) => t.arm === 'P' && t.studentColour === 'red');
+  await assert.rejects(D.playGame({ stage: 'smoke', task, student: D.makeStudent('P', nanValue, REAL), teacher: fakeTeacher() }), (e) => e instanceof D.BenchStop && e.step === 'student');
+});
+
+test('non-finite student output: a NaN or missing prior also stops, and a finite evaluation passes through unchanged', async () => {
+  const s = new TwixtState().applyMove([10, 10]);
+  const moves = s.legalMoves();
+  const mk = (f) => ({ async evaluate(_h, mv) { return f(mv); } });
+  const g1 = D.finiteGuard(mk((mv) => ({ priors: new Map(mv.map((m, i) => [`${m[0]},${m[1]}`, i === 3 ? Number.NaN : 0.01])), value: 0.1 })));
+  await assert.rejects(g1.evaluate(null, moves), (e) => e instanceof D.BenchStop && /prior/.test(e.message));
+  const g2 = D.finiteGuard(mk((mv) => ({ priors: new Map(mv.slice(1).map((m) => [`${m[0]},${m[1]}`, 0.01])), value: 0.1 })));
+  await assert.rejects(g2.evaluate(null, moves), (e) => e instanceof D.BenchStop && /missing/.test(e.message));
+  const good = { priors: new Map(moves.map((m) => [`${m[0]},${m[1]}`, 0.01])), value: -0.2 };
+  assert.equal(await D.finiteGuard(mk(() => good)).evaluate(null, moves), good);
+});
