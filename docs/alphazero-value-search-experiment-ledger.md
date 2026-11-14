@@ -289,6 +289,7 @@ knob) is not a new hypothesis.
 > **H-TB integration — G3 match COMPLETED: verdict PASS; G3 complete; returned for review (Post-closure entry 63, 2026-11-11).** 110 fresh colour-reversed pairs of new `hard` (student `78c16a31c3dba37f`, protocol) against today's `hard` (`c34b7ff3297c785a`, 800 sims, argmax) on the product stack, under the product game-end rule (`755de852` → `637917ca`; outer COMPLETED with exit 0, gate restored, no survivors; 7.02 h against KILL 11.78 h). Mean pair score **0.9318**, lower bound **0.8151 > 0.5**; 203 wins, 13 losses, 4 board-full draws. Matches the prediction (0.93). Cost: 1.349 against 2.865 s per move (0.47×). Observation: 192/220 distinct games; all 28 copies are new-as-Red wins, consistent with a peaked opening policy; scoring them as losses still gives a lower bound of 0.688 (post hoc). Product settings, not matched compute. A PASS does not authorize deployment, training or pushing. See #193.
 > **H-TB integration — G3 passes independent review; deployment recommended; awaiting the user's authorization (decision note, 2026-11-11).** The review replayed all 222 games and verified the timing and cleanup records (203-13-4, 0.9318, lower bound 0.8151). Repetitions are a variety observation: as Red, 13 opening cells, with four cells accounting for 77 of 110; it recommends keeping the tested opening policy. Dated correction: the post-hoc sensitivity bound is 0.6879 (entry 63 truncated it to 0.6878). Recommended: deploy `0e28b048` with student `78c16a31c3dba37f` and the pinned runtime; rollback is a restart with `HARD_MODE=legacy`. Deployment and pushing not yet authorized.
 > **After G3 — read-only review of the non-wins and a next-experiment proposal; nothing run (2026-11-11).** A rules-only replay of all 220 games found no recurring losing position. All 12 losses as Black fell behind on a heuristic race measure between ply 3 and ply 13, inside the T 1.0 sampled opening, and every loss came from the 45 Black games 2 or more pegs behind after ply 19 (31 of those were won). Proposed first: Diagnostic O, about 2.1 h on CPU, which reproduces the 1,100 Black opening moves from their seeds and separates readout, search and network causes; a twixtbot benchmark card comes second. Awaiting approval.
+> **Diagnostic O RUN; wrapper CRASHED (exit 134) after a COMPLETED record; the evidence accepted by the user; no signal fired (Post-closure entry 64, 2026-11-14).** One run on the 1,100 saved Black opening positions (`a41eabd0` → `b305bfa3` → `a1d22c0d`; 7,499 s against TERM 11,510 s; every move reproduced; gate restored, no survivors). Node aborted at `process.exit` after the last write; the user accepted the evidence and reproduced `analysis.json` byte for byte. Readout: 12/12 losses had share < 10% moves, at a mean of 9.83 positions in losses against 5.27 in wins (difference interval [3.84, 5.25]); the signal failed only its 2× ratio, which these data could not reach (at most 1.90). Teacher: AUC 0.922 against the student's 0.875 (paired [0.002, 0.097]); failed on student ≤ 0.60. Budget: no difference. Frozen rule: no signal, so the twixtbot benchmark card is the default. No cause assigned. See #194.
 
 ## Historical proposal check — programme now closed
 
@@ -2115,6 +2116,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 191. **G3 is built, not launched (2026-11-09).** Do **not**: open either G3 gate or play any product game before the user's launch review; edit any bound file (`tests/htb_integration/g3_binding.json` lists them) without rebinding and a fresh review; resize the match, change its rule, seeds or ceiling formula, or reuse the smoke pair in it; launch the match on a hand-edited or `EXCEEDS_24H` timing; score a VOID, INVALID or partial run, or retry one; rerun G2's live check as V8a's server items (#190); or read a PASS as authorizing deployment, training or pushing.
 192. **G3 steps 1–3 are spent (2026-11-10, entry 62).** Do **not**: replay the browser check or the smoke pair, or rerun either to "refresh" the timing; re-derive the timing from anything but the committed smoke evidence, or hand-edit `htb-g3-smoke/timing.json`; read or report the smoke pair's outcomes, or count them in the match; run the match under any ceiling but KILL 42,420 s / TERM 42,410 s; or read the browser game (a deliberately weak human side) as strength evidence.
 193. **The G3 match is spent: PASS (2026-11-11, entry 63).** Do **not**: rerun, extend, top up or re-score the match, or rerun it to "confirm" the PASS; change the rule, the bound or the scoring of draws after the fact; drop or down-weight the duplicate games to reshape the verdict (the post-hoc sensitivity is exploratory only); read the result as matched-compute strength, or as covering `easy` or `medium`; or deploy, train or push on it without the user's separate deployment decision.
+194. **Diagnostic O is spent: no signal fired (2026-11-14, entry 64).** Do **not**: rerun it, or re-run its searches or teacher stage to "refresh" a number; change its thresholds, its count conditions or its 2× ratio and re-read the signals, or report the readout signal as having fired (a readout follow-up needs the user's own ruling, recorded as post hoc); assign causes to the losses from it; use its 1,100 positions, or any G3 game, as training data or as the evaluation set for a fit; or reuse its driver for a new run without the `process.exitCode` fix.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -11170,3 +11172,88 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
 - **Prediction on record (for Diagnostic O, before any run):** low confidence. The readout explains a minority of the
   losses, and the student's ply-19 value separates the losses less well than the teacher's.
 - **Status:** a proposal only. Diagnostic O, the benchmark and any training each need the user's approval.
+
+#### Post-closure entry 64 — Diagnostic O (opening attribution, revised): one run on the saved G3 Black openings; wrapper CRASHED (exit 134) after a COMPLETED record; evidence accepted; no signal fired (2026-11-14)
+
+- **Test:** the user's revised approval of 2026-11-12, frozen in `docs/superpowers/2026-11-12-htb-diagnostic-o-plan.md`
+  before any model was loaded. All 110 G3 games with the student (`78c16a31c3dba37f`) as Black; the positions before
+  plies 1, 3, …, 19 (1,100), with each recorded move reproduced from its saved seeds. Three separate measures:
+  - **readout:** the sampled move against the 200-simulation visit leader (rank and visit share);
+  - **search budget:** the 200- against the 800-simulation visit leader, same network, position, search seed and tie rule;
+  - **network evaluation:** the raw student against the pinned raw twixtbot teacher (mirror-averaged), values from
+    Black's side, with search values reported separately and alternatives compared on their resulting positions.
+  The unit is the game: losses (12) against wins (96), draws (2) shown separately; repeated within the "2 or more pegs
+  behind after ply 19" subgroup (L 12, W 31, D 2).
+- **Hypothesis:** none causal by design. The plan states it does not assign causes to the losses; the thresholds are
+  signals for choosing a follow-up.
+- **Why it was plausible:** the rules-only replay (2026-11-11 note) placed every Black loss's race deficit at plies
+  3–13, where the heuristic first showed persistent deficits, inside the T 1.0 sampled opening; the records held no
+  visit counts or values to separate readout, budget and evaluation.
+- **Prediction on record (2026-11-11, low confidence):** the readout explains a minority of the losses (the readout
+  signal does not fire); the student's ply-19 value separates the losses less well than the teacher's.
+- **What ran:**
+  - Build `a41eabd0` (gate closed; analyser sha256 `3ff51fc8…` frozen in the plan); gate-open commit `b305bfa3` in the
+    launch worktree `TwixT_Game-diag-o`; evidence and gate restoration `a1d22c0d` (`docs/superpowers/evidence/htb-diag-o/`
+    and `…/htb-diag-o-run/`). Nothing pushed.
+  - Launched 2026-11-14 03:34 UTC after the idle gate held 60 s, with BOINC quit and Unreal Editor closed.
+  - Student stage 7,371 s (200-sim searches 1,476 s, 800-sim 5,882 s); 1,100 positions, 1,100 reproduced. Teacher
+    stage 126 s (6,220 teacher calls; twixtbot commit `83749f23`); analysis 1.2 s. Wall 7,499 s against TERM 11,510 s.
+- **Outcome record:** the script wrote `record.json` (status COMPLETED) as its last write, after the teacher and the
+  analyser exited 0. `main()` then returned 0 and `process.exit(0)` aborted in libc++abi (`mutex lock failed: Invalid
+  argument`, ONNX Runtime teardown), so the wrapper recorded **outer CRASHED, exit 134**, gate restored, no survivors.
+  Both records stand. The defect is the driver's: G3's driver set `process.exitCode` instead. **Proposed fix for any
+  future driver: set `process.exitCode` and let the process end, never `process.exit()` with ONNX Runtime loaded.** The
+  evidence is left as written.
+  - The user accepted the evidence (2026-11-14) after reproducing `analysis.json` byte for byte with the frozen analyser
+    from the committed inputs; I reproduced it byte for byte as well (sha256 `86a9099f…`). No rerun.
+  - Integrity, checked before any result was read: 1,100 distinct (game, ply) positions; every played move equals the
+    game file; every search 200 or 800 visits; teacher records match the student's one for one, all candidate values
+    finite; code hashes equal the plan's.
+- **Result (all-games comparison, L − W, 95% stratified bootstrap over games, B 10,000, seed 20261112):**
+  - **Readout.** `R_low` (positions with played visit share < 10%): L 9.83 of 10, W 5.27, draws 10 and 10; difference
+    4.56 [3.84, 5.25]. `R_off` (played ≠ 200-sim leader): L 9.58, W 5.54. All 12 losses have `R_low` ≥ 1 (Wilson
+    [0.758, 1]). Played-move probability, mean over the 10 positions: teacher L 0.015 against W 0.285 (difference
+    −0.270 [−0.316, −0.223]); student prior L 0.018 against W 0.241. Teacher top-1 agreement: L 0.25 against W 3.52
+    positions. 21 of the 96 wins also had `R_low` = 10.
+  - **Search budget.** `B_diff` (800-sim leader ≠ 200-sim leader): L 2.75, W 2.28, draws 2 and 3; difference 0.47
+    [−0.33, 1.35].
+  - **Network evaluation, ply 19 (Black's side).** Means L / W / draws: raw student −0.93 / 0.10 / (−0.99, −0.97); raw
+    teacher −0.97 / 0.18 / (−1.00, −0.93); 200-sim root −0.97 / 0.19; 800-sim root −0.97 / 0.20. AUC (a lower value
+    marks a loss): student 0.875 [0.793, 0.944], teacher 0.922 [0.863, 0.968], teacher − student 0.047 [0.002, 0.097];
+    200-sim root 0.873, 800-sim root 0.887. At ply 9: student AUC 0.854, teacher 0.829.
+  - **Alternatives** (value after the leader − value after the played move, over positions where they differ): at 200
+    sims, L − W is 0.046 [−0.009, 0.101] for the raw student, 0.020 [−0.019, 0.056] for the teacher and 0.018
+    [−0.024, 0.059] for the search. Every evaluator prefers the leader by a similar margin in losses and wins. At 800
+    sims the search's margin is smaller in losses: −0.061 [−0.091, −0.031].
+  - **Subgroup, 2 or more behind after ply 19 (L 12, W 31, D 2).** `R_low` L 9.83, W 9.03, difference 0.80
+    [0.25, 1.41]; `B_diff` −0.02 [−0.92, 0.91]; AUC at ply 19: student 0.659, teacher 0.772, paired 0.113
+    [−0.019, 0.245].
+  - **By ply, descriptive.** The ply-1 position (after (18,19)) is the same in all 110 games: the played share was
+    below 10% in all 110, and the 800-sim leader differed from the 200-sim leader in all 110. From ply 3 to ply 19, the
+    played share was below 10% in 11–12 of 12 losses at every ply, against 64 of 96 wins at ply 3 falling to 36 at
+    ply 19. Losses and wins have equal values at ply 3 (student −0.445 against −0.429) and separate by ply 7 (−0.61
+    against −0.24) and ply 9 (−0.65 against −0.13).
+- **Signals under the frozen rule (§6):** **none fired**; `recommended` null.
+  - Readout: ≥ 8 of 12 met (12); interval above 0 met; mean L ≥ 2× W **not met** (ratio 1.87).
+  - Teacher: teacher AUC ≥ 0.75 met (0.922); paired interval above 0 met; student AUC ≤ 0.60 **not met** (0.875).
+  - Budget: ≥ 8 of 12 met (12); ratio **not met** (1.21); interval **not met**.
+  - Frozen consequence: the diagnostic singles out no follow-up, and the twixtbot benchmark card stands as the default.
+- **Defects in the frozen rule, recorded and not acted on (found after the results were read):**
+  - The readout's 2× ratio could not be met with these data: with W at 5.27 of 10, L would need more than 10. The
+    largest attainable ratio was 1.90.
+  - Both "≥ 8 of 12 losses" conditions were met by construction. Ply 1 is the same position in every game, and in all
+    110 games its played share was below 10% and its two leaders differed.
+  - The rule is unchanged, and the readout signal is not read as having fired.
+- **Did it match the prediction?**
+  - First half: **in letter, yes** (the readout signal did not fire). **In substance, no**: it failed only on an
+    unattainable condition, and every loss sampled a below-10% move at 9 or 10 of its 10 positions. The diagnostic
+    does not show that those moves caused the losses: 21 wins did the same, and within the behind subgroup the gap is
+    0.80 positions.
+  - Second half: **yes, narrowly**: teacher 0.922 against student 0.875, paired interval [0.002, 0.097]. By ply 19,
+    every evaluator already puts the losses near −1.
+- **Conclusion / status:** CLOSED as a measurement; no cause assigned.
+  - Under the frozen rule, the next step is the default: a twixtbot benchmark card, as a separate proposal.
+  - The strongest contrast is in the readout. In losses, the student played moves that both networks gave about 2% and
+    that the 200-sim search gave under 10% of its visits, at almost every opening position. Treating that as a readout
+    signal would be the user's post-hoc ruling, recorded as such.
+  - No game, label or training. See #194.
