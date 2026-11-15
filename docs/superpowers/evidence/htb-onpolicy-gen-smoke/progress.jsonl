@@ -1,0 +1,121 @@
+{"t": 1794763370.604, "event": "bg_check", "when": "before load", "ok": true, "hits": [], "error": null}
+{"t": 1794763370.624, "event": "game_start", "game": 0}
+{"t": 1794763386.509, "event": "game_end", "game": 0, "plies": 34, "counts": {"train": 30, "val": 0}}
+{"t": 1794763386.547, "event": "bg_check", "when": "after game 0", "ok": true, "hits": [], "error": null}
+{"t": 1794763386.547, "event": "game_start", "game": 1}
+{"t": 1794763400.546, "event": "game_end", "game": 1, "plies": 31, "counts": {"train": 30, "val": 27}}
+{"t": 1794763400.583, "event": "bg_check", "when": "after game 1", "ok": true, "hits": [], "error": null}
+{"t": 1794763400.583, "event": "game_start", "game": 2}
+{"t": 1794763415.663, "event": "game_end", "game": 2, "plies": 33, "counts": {"train": 59, "val": 27}}
+{"t": 1794763415.699, "event": "bg_check", "when": "after game 2", "ok": true, "hits": [], "error": null}
+{"t": 1794763415.699, "event": "game_start", "game": 3}
+{"t": 1794763428.607, "event": "game_end", "game": 3, "plies": 29, "counts": {"train": 59, "val": 52}}
+{"t": 1794763428.644, "event": "bg_check", "when": "after game 3", "ok": true, "hits": [], "error": null}
+{"t": 1794763428.644, "event": "game_start", "game": 4}
+{"t": 1794763441.055, "event": "game_end", "game": 4, "plies": 28, "counts": {"train": 83, "val": 52}}
+{"t": 1794763441.092, "event": "bg_check", "when": "after game 4", "ok": true, "hits": [], "error": null}
+{"t": 1794763441.092, "event": "game_start", "game": 5}
+{"t": 1794763454.182, "event": "game_end", "game": 5, "plies": 29, "counts": {"train": 83, "val": 77}}
+{"t": 1794763454.221, "event": "bg_check", "when": "after game 5", "ok": true, "hits": [], "error": null}
+{"t": 1794763454.221, "event": "game_start", "game": 6}
+{"t": 1794763469.389, "event": "game_end", "game": 6, "plies": 33, "counts": {"train": 112, "val": 77}}
+{"t": 1794763469.426, "event": "bg_check", "when": "after game 6", "ok": true, "hits": [], "error": null}
+{"t": 1794763469.426, "event": "game_start", "game": 7}
+{"t": 1794763482.497, "event": "game_end", "game": 7, "plies": 30, "counts": {"train": 112, "val": 103}}
+{"t": 1794763482.535, "event": "bg_check", "when": "after game 7", "ok": true, "hits": [], "error": null}
+{"t": 1794763482.535, "event": "game_start", "game": 8}
+{"t": 1794763495.496, "event": "game_end", "game": 8, "plies": 29, "counts": {"train": 137, "val": 103}}
+{"t": 1794763495.532, "event": "bg_check", "when": "after game 8", "ok": true, "hits": [], "error": null}
+{"t": 1794763495.532, "event": "game_start", "game": 9}
+{"t": 1794763511.688, "event": "game_end", "game": 9, "plies": 35, "counts": {"train": 137, "val": 134}}
+{"t": 1794763511.725, "event": "bg_check", "when": "after game 9", "ok": true, "hits": [], "error": null}
+{"t": 1794763511.725, "event": "game_start", "game": 10}
+{"t": 1794763524.756, "event": "game_end", "game": 10, "plies": 29, "counts": {"train": 162, "val": 134}}
+{"t": 1794763524.794, "event": "bg_check", "when": "after game 10", "ok": true, "hits": [], "error": null}
+{"t": 1794763524.794, "event": "game_start", "game": 11}
+{"t": 1794763537.713, "event": "game_end", "game": 11, "plies": 29, "counts": {"train": 162, "val": 159}}
+{"t": 1794763537.749, "event": "bg_check", "when": "after game 11", "ok": true, "hits": [], "error": null}
+{"t": 1794763537.749, "event": "game_start", "game": 12}
+{"t": 1794763550.604, "event": "game_end", "game": 12, "plies": 29, "counts": {"train": 187, "val": 159}}
+{"t": 1794763550.64, "event": "bg_check", "when": "after game 12", "ok": true, "hits": [], "error": null}
+{"t": 1794763550.64, "event": "game_start", "game": 13}
+{"t": 1794763564.626, "event": "game_end", "game": 13, "plies": 31, "counts": {"train": 187, "val": 186}}
+{"t": 1794763564.662, "event": "bg_check", "when": "after game 13", "ok": true, "hits": [], "error": null}
+{"t": 1794763564.662, "event": "game_start", "game": 14}
+{"t": 1794763577.539, "event": "game_end", "game": 14, "plies": 29, "counts": {"train": 212, "val": 186}}
+{"t": 1794763577.576, "event": "bg_check", "when": "after game 14", "ok": true, "hits": [], "error": null}
+{"t": 1794763577.577, "event": "game_start", "game": 15}
+{"t": 1794763588.331, "event": "game_end", "game": 15, "plies": 25, "counts": {"train": 212, "val": 207}}
+{"t": 1794763588.37, "event": "bg_check", "when": "after game 15", "ok": true, "hits": [], "error": null}
+{"t": 1794763588.37, "event": "game_start", "game": 16}
+{"t": 1794763600.234, "event": "game_end", "game": 16, "plies": 27, "counts": {"train": 235, "val": 207}}
+{"t": 1794763600.272, "event": "bg_check", "when": "after game 16", "ok": true, "hits": [], "error": null}
+{"t": 1794763600.272, "event": "game_start", "game": 17}
+{"t": 1794763612.045, "event": "game_end", "game": 17, "plies": 27, "counts": {"train": 235, "val": 230}}
+{"t": 1794763612.082, "event": "bg_check", "when": "after game 17", "ok": true, "hits": [], "error": null}
+{"t": 1794763612.082, "event": "game_start", "game": 18}
+{"t": 1794763623.836, "event": "game_end", "game": 18, "plies": 27, "counts": {"train": 258, "val": 230}}
+{"t": 1794763623.872, "event": "bg_check", "when": "after game 18", "ok": true, "hits": [], "error": null}
+{"t": 1794763623.872, "event": "game_start", "game": 19}
+{"t": 1794763635.624, "event": "game_end", "game": 19, "plies": 27, "counts": {"train": 258, "val": 253}}
+{"t": 1794763635.661, "event": "bg_check", "when": "after game 19", "ok": true, "hits": [], "error": null}
+{"t": 1794763635.661, "event": "game_start", "game": 20}
+{"t": 1794763648.619, "event": "game_end", "game": 20, "plies": 29, "counts": {"train": 283, "val": 253}}
+{"t": 1794763648.656, "event": "bg_check", "when": "after game 20", "ok": true, "hits": [], "error": null}
+{"t": 1794763648.656, "event": "game_start", "game": 21}
+{"t": 1794763661.52, "event": "game_end", "game": 21, "plies": 29, "counts": {"train": 283, "val": 278}}
+{"t": 1794763661.558, "event": "bg_check", "when": "after game 21", "ok": true, "hits": [], "error": null}
+{"t": 1794763661.558, "event": "game_start", "game": 22}
+{"t": 1794763674.423, "event": "game_end", "game": 22, "plies": 29, "counts": {"train": 308, "val": 278}}
+{"t": 1794763674.461, "event": "bg_check", "when": "after game 22", "ok": true, "hits": [], "error": null}
+{"t": 1794763674.461, "event": "game_start", "game": 23}
+{"t": 1794763687.375, "event": "game_end", "game": 23, "plies": 29, "counts": {"train": 308, "val": 303}}
+{"t": 1794763687.411, "event": "bg_check", "when": "after game 23", "ok": true, "hits": [], "error": null}
+{"t": 1794763687.412, "event": "game_start", "game": 24}
+{"t": 1794763701.412, "event": "game_end", "game": 24, "plies": 31, "counts": {"train": 335, "val": 303}}
+{"t": 1794763701.449, "event": "bg_check", "when": "after game 24", "ok": true, "hits": [], "error": null}
+{"t": 1794763701.449, "event": "game_start", "game": 25}
+{"t": 1794763714.373, "event": "game_end", "game": 25, "plies": 29, "counts": {"train": 335, "val": 328}}
+{"t": 1794763714.41, "event": "bg_check", "when": "after game 25", "ok": true, "hits": [], "error": null}
+{"t": 1794763714.41, "event": "game_start", "game": 26}
+{"t": 1794763731.257, "event": "game_end", "game": 26, "plies": 36, "counts": {"train": 367, "val": 328}}
+{"t": 1794763731.294, "event": "bg_check", "when": "after game 26", "ok": true, "hits": [], "error": null}
+{"t": 1794763731.294, "event": "game_start", "game": 27}
+{"t": 1794763745.299, "event": "game_end", "game": 27, "plies": 31, "counts": {"train": 367, "val": 355}}
+{"t": 1794763745.335, "event": "bg_check", "when": "after game 27", "ok": true, "hits": [], "error": null}
+{"t": 1794763745.335, "event": "game_start", "game": 28}
+{"t": 1794763758.273, "event": "game_end", "game": 28, "plies": 29, "counts": {"train": 392, "val": 355}}
+{"t": 1794763758.309, "event": "bg_check", "when": "after game 28", "ok": true, "hits": [], "error": null}
+{"t": 1794763758.309, "event": "game_start", "game": 29}
+{"t": 1794763776.408, "event": "game_end", "game": 29, "plies": 38, "counts": {"train": 392, "val": 389}}
+{"t": 1794763776.446, "event": "bg_check", "when": "after game 29", "ok": true, "hits": [], "error": null}
+{"t": 1794763776.446, "event": "game_start", "game": 30}
+{"t": 1794763792.802, "event": "game_end", "game": 30, "plies": 35, "counts": {"train": 423, "val": 389}}
+{"t": 1794763792.839, "event": "bg_check", "when": "after game 30", "ok": true, "hits": [], "error": null}
+{"t": 1794763792.84, "event": "game_start", "game": 31}
+{"t": 1794763808.015, "event": "game_end", "game": 31, "plies": 33, "counts": {"train": 423, "val": 418}}
+{"t": 1794763808.053, "event": "bg_check", "when": "after game 31", "ok": true, "hits": [], "error": null}
+{"t": 1794763808.053, "event": "game_start", "game": 32}
+{"t": 1794763819.847, "event": "game_end", "game": 32, "plies": 27, "counts": {"train": 446, "val": 418}}
+{"t": 1794763819.883, "event": "bg_check", "when": "after game 32", "ok": true, "hits": [], "error": null}
+{"t": 1794763819.883, "event": "game_start", "game": 33}
+{"t": 1794763832.759, "event": "game_end", "game": 33, "plies": 29, "counts": {"train": 446, "val": 443}}
+{"t": 1794763832.795, "event": "bg_check", "when": "after game 33", "ok": true, "hits": [], "error": null}
+{"t": 1794763832.795, "event": "game_start", "game": 34}
+{"t": 1794763845.225, "event": "game_end", "game": 34, "plies": 28, "counts": {"train": 470, "val": 443}}
+{"t": 1794763845.261, "event": "bg_check", "when": "after game 34", "ok": true, "hits": [], "error": null}
+{"t": 1794763845.261, "event": "game_start", "game": 35}
+{"t": 1794763857.111, "event": "game_end", "game": 35, "plies": 27, "counts": {"train": 470, "val": 466}}
+{"t": 1794763857.148, "event": "bg_check", "when": "after game 35", "ok": true, "hits": [], "error": null}
+{"t": 1794763857.148, "event": "game_start", "game": 36}
+{"t": 1794763872.208, "event": "game_end", "game": 36, "plies": 33, "counts": {"train": 499, "val": 466}}
+{"t": 1794763872.244, "event": "bg_check", "when": "after game 36", "ok": true, "hits": [], "error": null}
+{"t": 1794763872.245, "event": "game_start", "game": 37}
+{"t": 1794763885.17, "event": "game_end", "game": 37, "plies": 29, "counts": {"train": 499, "val": 491}}
+{"t": 1794763885.208, "event": "bg_check", "when": "after game 37", "ok": true, "hits": [], "error": null}
+{"t": 1794763885.208, "event": "game_start", "game": 38}
+{"t": 1794763898.043, "event": "game_end", "game": 38, "plies": 29, "counts": {"train": 524, "val": 491}}
+{"t": 1794763898.079, "event": "bg_check", "when": "after game 38", "ok": true, "hits": [], "error": null}
+{"t": 1794763898.079, "event": "game_start", "game": 39}
+{"t": 1794763919.809, "event": "game_end", "game": 39, "plies": 45, "counts": {"train": 524, "val": 532}}
+{"t": 1794763919.846, "event": "bg_check", "when": "after game 39", "ok": true, "hits": [], "error": null}

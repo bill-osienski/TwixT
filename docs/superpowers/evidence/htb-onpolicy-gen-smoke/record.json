@@ -1,0 +1,51 @@
+{
+ "admission": {},
+ "background_checks": 41,
+ "caps": {
+  "g_max": 4000,
+  "kill_s": 3600,
+  "smoke_games": 40
+ },
+ "card_sha256": "a2a5ba2f7fad3018c16df2abc98c9c5d3ab8e9095415b3c06f41cd35a5aef5f1",
+ "counts": {
+  "train": 524,
+  "val": 532
+ },
+ "exclusions": {
+  "E3_positions": 1100,
+  "E4_rows": 264000,
+  "games": {
+   "E1": 624,
+   "E2": 222
+  },
+  "keys": {
+   "E1": 31299,
+   "E2": 10079,
+   "E3": 949,
+   "E4": 264000
+  }
+ },
+ "games": 40,
+ "head": "e47ec3191ae43a630fb017192e8a7a659e2b0741",
+ "kill_s": 3600,
+ "kind": "htb-onpolicy-gen-smoke-record/1",
+ "loop_seconds": 549.219,
+ "module_sha256": "527dbfdf099d026842281bb8d83eead4566d08b259acbd2a3964f641c5b4903a",
+ "openings_sha256": "ca4e3bba05bfc6abddf782b1a1f68fc474bc3600410c7cbd4308073d306d3915",
+ "pid": 95950,
+ "stage": "gen-smoke",
+ "startup_s": 8.374,
+ "status": "COMPLETED",
+ "stopped_by": "smoke",
+ "student": {
+  "path": "/Users/bill/twixt-cache/htb-pilot/student.safetensors",
+  "sha256": "0e1cb6211aa0b3e2dec6ab6f39bec74ceb8c472c7dcf603e7d331b1d1c1c34e5",
+  "state_digest": "586dca4fcdb87c2611449099b4b7acfda460b13b6717c573a55011b8620a630b"
+ },
+ "versions": {
+  "mlx": "0.30.3",
+  "numpy": "2.4.1",
+  "python": "3.14.10"
+ },
+ "w": 13.730475000000002
+}
