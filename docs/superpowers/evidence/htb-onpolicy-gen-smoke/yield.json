@@ -1,0 +1,75 @@
+{
+ "T": 80372.844175,
+ "cap_s": 144000,
+ "card_sha256": "a2a5ba2f7fad3018c16df2abc98c9c5d3ab8e9095415b3c06f41cd35a5aef5f1",
+ "complete": true,
+ "conditions": {
+  "Y1": true,
+  "Y2": true,
+  "Y3": false,
+  "Y4": false,
+  "Y5": true
+ },
+ "exclusions": {
+  "E3_positions": 1100,
+  "E4_rows": 264000,
+  "games": {
+   "E1": 624,
+   "E2": 222
+  },
+  "keys": {
+   "E1": 31299,
+   "E2": 10079,
+   "E3": 949,
+   "E4": 264000
+  }
+ },
+ "failed": [
+  "Y3",
+  "Y4"
+ ],
+ "faults": [],
+ "g_max": 4000,
+ "games_to_exact_counts": {
+  "G_N": 5366,
+  "by_pool": {
+   "train": 5366,
+   "val": 4760
+  },
+  "set_by": "train"
+ },
+ "games_to_stop_targets": {
+  "G_stop": 5853,
+  "by_pool": {
+   "train": 5853,
+   "val": 5190
+  },
+  "set_by": "train"
+ },
+ "kind": "htb-onpolicy-yield/1",
+ "launch_estimate": 120559.26626250001,
+ "pools": {
+  "train": {
+   "f": 1.0,
+   "games": 20,
+   "searched_plies": 524,
+   "u": 26.2,
+   "u_lb": 24.847083496995264
+  },
+  "val": {
+   "f": 1.0,
+   "games": 20,
+   "searched_plies": 532,
+   "u": 26.6,
+   "u_lb": 25.247083496995266
+  }
+ },
+ "sigma": 3.6780708432825393,
+ "smoke_record_sha256": "f74cc908f8f3b5aa8f4b7a96e377e19eec1a374d7150b25c1d616bf1bd2cb1b0",
+ "smoke_searched_plies": 1056,
+ "t0": 8.374,
+ "truncate_at": 150,
+ "verdict": "REVIEW",
+ "w": 13.730475000000002,
+ "z": 1.645
+}
