@@ -1,4 +1,4 @@
-# Experiment card H-OP: distillation on fresh self-play from the current `hard`
+# Experiment card H-OP: distillation on fresh self-play from the current `hard` (revision 1)
 
 **Status:** DRAFT for review, 2026-11-14. **Nothing is built, generated, labelled, trained, exported or played under
 this card.** It follows the student–teacher benchmark (ledger entry 65, #195), whose arm N result, TRAILS, supports
@@ -7,27 +7,58 @@ proposing this experiment. That result authorizes nothing beyond the proposal.
 **Approvals this card needs before any work:** the card itself, and the narrow #53 and #87 exceptions in §2. A build
 would then return once for launch review. Every runtime step in §15 needs its own approval.
 
+**Revision 1 (2026-11-14, the user's review), before any build.** Unchanged: the row counts, the GPU generation path,
+the imitation thresholds and the 272-pair match.
+- **Rationale corrected (§1).**
+  - Arm N measured a playing-strength gap in raw-policy games. It did not measure agreement at positions from `hard`'s
+    self-play; that agreement is an open question, which the fit's reference scores answer first.
+  - GPU generation is described as self-play under the research implementation of `hard`'s protocol. G1 and
+    V2-R/V3 checked parts of that; real self-play trajectories are unverified (§4.1).
+- **Generation smoke checks usable data yield (§4.4, §12).**
+  - The smoke grows to 40 games. It estimates the yield of distinct, non-excluded keys per searched ply, and from it
+    the time and games needed to reach both pools' targets, under the actual exclusions and mirror deduplication.
+  - A low or uncertain estimate sends the plan back for review. The 4,000-game and 40 h caps stay.
+- **Match interpretation made precise (§10, §11, §14).**
+  - 0.60 is the planning target. A PASS establishes superiority over 0.50 under this protocol, and no more.
+  - The 80% power figure is model-based and assumes the match completes and clears its guards.
+  - The match tests the whole update: the new data source and the continued training together.
+- **Evaluation split and wording (§10, §14).**
+  - G3's openings are added to the match-opening exclusions.
+  - For consistency they are also added to the generation and smoke openings. G3's positions were already excluded
+    from both pools as E2.
+  - A gate failure is reported as the challenger missing the imitation gate, with each metric's movement.
+
 ## 1. Question, hypothesis and mechanism
 
 **The specific change.** The first H-TB fit learned from positions in `calib020_0001`'s old self-play corpus. This
-card labels positions that the current student reaches **in its own play as `hard`**, using the same teacher, and
-continues training the current student on them. Everything else stays as close to the first fit as practical (§7).
+card labels positions from **self-play under the research implementation of `hard`'s protocol**, using the same
+teacher, and continues training the current student on them. Everything else stays as close to the first fit as
+practical (§7).
 
 **Hypothesis H-OP.** A challenger, warm-started from the current student and fitted to the pinned teacher's
-mirror-averaged policy and value at positions from the current `hard`'s own self-play, beats the current `hard` in a
-fresh, colour-reversed match under the same 200-simulation protocol, with a true mean pair score of at least **0.60**.
+mirror-averaged policy and value at positions from that self-play, is **stronger than the current `hard`** (true mean
+pair score above 0.50) in a fresh, colour-reversed match under the same 200-simulation protocol. The **planning
+target** is a true mean pair score of **0.60** (§11). The test covers the whole update. The new data source and the
+continued training are not separated, so no result attributes an effect to either one alone.
 
 **Why it is plausible:**
-- **Distribution shift.** An imitator trained on someone else's positions makes its errors where it actually plays,
-  and those errors compound over a game (the standard argument for DAgger-style on-policy labelling). The first fit
-  never saw a position from the student's own play, so its play-time positions were never supervised.
-- **A large imitation gap remains where it plays.** In the benchmark, the student's raw policy scored **0.045**
-  against the raw teacher it imitates (arm N, entry 65). Its top-1 agreement with the teacher was 0.651 on the first
-  fit's validation rows (entry 52), and those were not its own positions.
-- **Search does not close the gap.** Arm P minus arm N was +0.070 on common openings, so improving the network is the
-  lever that remains.
+- **Distribution shift.** An imitator trained on someone else's positions can be wrong where it actually plays, and
+  those errors compound over a game. This is the standard argument for DAgger-style on-policy labelling. The first fit
+  never trained on a position from `hard`'s self-play.
+- **A playing-strength gap against the teacher remains.** In the benchmark's raw-policy games, the student's
+  mirror-averaged policy argmax scored **0.045** against the raw teacher it imitates (arm N, entry 65). That is a
+  measured gap in **play**.
+  - It is consistent with disagreement at the positions the student reaches, but it **does not measure** that.
+  - How well the student agrees with the teacher on `hard` self-play is **an open question**. It is answered first
+    by the reference arm's own scores in the fit: the start check, and KL_S, TOP_S and MSE_S on the 12,000 validation
+    rows (§8).
+  - The only agreement measured so far is top-1 0.651 on the first fit's validation rows (entry 52). Those were
+    `calib020` corpus positions.
+- **Search did not make up the difference.** Arm P minus arm N was +0.070 on common openings (descriptive).
 - **Imitating this teacher has transferred to play before.** The first fit's student beat the original proven
   combination by 0.989 (entry 54) and the previous `hard` by 0.932 (G3, entry 63).
+- **If agreement on `hard`'s positions turns out already high,** the room for this update is small. The gate's bar
+  (I1, a 10% KL cut) then decides whether a match is proposed at all.
 
 **What could make it fail, and what each outcome cannot separate:**
 - **Capacity.** The student is 128 channels × 6 blocks, the teacher 48 filters × 20 blocks with 5×5 kernels. The
@@ -35,9 +66,11 @@ fresh, colour-reversed match under the same 200-simulation protocol, with a true
 - **The teacher was trained with own-link crossings allowed** (benchmark card §3). Its labels may be mis-specified
   in a way more fitting cannot fix.
 - **Diminishing returns.** Closer imitation may no longer buy playing strength at this level.
-- **The imitation gate (§8) STOPs:** this cannot separate the dose, capacity and label quality.
-- **The gate passes and the match does not:** imitation improved without a gain we can detect. That does not show no
-  gain; there is 80% power at 0.60 and much less below it (§11).
+- **The challenger misses the imitation gate (§8):** this cannot separate the dose, capacity and label quality.
+- **The gate passes and the match does not:** imitation improved without a gain the match detected. That does not
+  show no gain. The planning power is about 80% at 0.60 and much less below it (§11).
+- **A PASS** shows the updated network beats the current one under this protocol. It does not show that on-policy
+  data, rather than continued training on teacher labels, caused the gain.
 
 **This card is not:** a change to the teacher, its configuration or its role. The teacher plays no game here, so no
 #52 exception is needed. It is also not a deployment step: PASS would only support proposing an integration decision
@@ -75,18 +108,27 @@ fresh, colour-reversed match under the same 200-simulation protocol, with a true
 
 ### 4.1 Player and path
 
-- **Both sides are the current student under the `hard` protocol**: mirror averaging, 200 simulations, T 1.0 sampling
-  through ply 19, root sequential halving from ply 20, the research tie rule.
-- **Path (recommended): the research MLX path on the GPU**, in one process, as the H-TB screen and confirmation test
-  ran it (`MirrorAveragingEvaluator` + `RootSequentialHalvingMCTS`, student loaded and digest-checked at load and at
-  the end, `MLX_ENABLE_TF32=0`).
-  - **Why:** measured at 0.536 s per searched ply (entry 54), against 1.346 s on the product's Node path (benchmark
-    arm P). That makes about 23 h of generation instead of about 57 h.
-  - **Fidelity:** G1 ported this exact protocol to Node, seed for seed (fixtures with ties included), and V2-R/V3
-    showed the ONNX pair agrees with this MLX student to about 2.4e-5 with 100% mirror-averaged top-1. Generation needs
-    `hard`'s position distribution, not byte equality. The **match** (§10) runs on the product path.
-  - The build reuses G1's seed-for-seed fixtures to check the generation driver's move function against
-    `protocolMove` with the fake evaluator.
+- **Self-play under the research implementation of `hard`'s protocol.** Both sides are the current student (MLX,
+  `0e1cb621…`) with mirror averaging, 200 simulations, T 1.0 sampling through ply 19, root sequential halving from
+  ply 20, and the research tie rule.
+- **Path (kept): the research MLX path on the GPU**, in one process, as the H-TB screen and confirmation test ran it.
+  It uses `MirrorAveragingEvaluator` and `RootSequentialHalvingMCTS`, checks the student's digest at load and at the
+  end, and sets `MLX_ENABLE_TF32=0`.
+  - **Why:** it was measured at 0.536 s per searched ply (entry 54), against 1.346 s on the product's Node path
+    (benchmark arm P).
+  - **What has been verified, and what has not:**
+    - **G1** showed move-for-move agreement between this protocol and the product's `protocolMove` **with fake
+      evaluators** (seed-for-seed fixtures, ties included).
+    - **V2-R and V3** showed close output parity between the MLX student and the ONNX pair **on sampled real
+      positions** (about 2.4e-5; mirror-averaged top-1 100%).
+    - **Neither verifies real self-play trajectories.** With real networks, a tiny numeric difference can flip a
+      close visit count or a T 1.0 sample, and the game then diverges. So the generated games are self-play under
+      the research implementation, not games the product would have played.
+    - The data needs `hard`'s position distribution, not its exact games. Whether the two implementations' position
+      distributions differ materially is not tested here. The **match** (§10) runs on the product path, so the test
+      of the update does not rest on this assumption.
+  - The build reruns G1's fixtures against the generation driver's move function, so the driver is checked against
+    `protocolMove` at the same (fake-evaluator) level.
 - **Rules and game end:** our rules (red first, no swap, `allow_scl=False`), and the product's end rule only: play
   until a connection, or a draw when no legal moves remain. No ply cap.
 
@@ -94,8 +136,10 @@ fresh, colour-reversed match under the same 200-simulation protocol, with a true
 
 - **Openings:** each game starts from a supplied 4-ply opening, by the benchmark's rule (benchmark card §6): cells in
   rows and columns 4–19, index `int(sha256("htb-onpolicy/20261114/gen opening <i>/ply <k>")[:12], 16) mod n`.
-  - Skipped if it equals, directly or reflected, an earlier generation opening **or any of the benchmark's openings**
-    (its 200 match openings and its smoke openings).
+  - Skipped if it equals, directly or reflected, an earlier generation opening, **any of the benchmark's openings**
+    (its 200 match openings and its smoke openings), or **any G3 opening**. A G3 opening is the first four plies of
+    each of G3's 220 match games and its smoke pair. G3 started from the empty board, so these are recorded moves,
+    not supplied openings.
   - Why openings at all: `hard`'s empty-board policy is peaked, and 28 of G3's 220 games were exact copies. Plies 0–3
     are never labelled.
 - **Seeds:** `sha256("htb-onpolicy/20261114/gen/game <i>/ply <k>")`. Hex digits 0–11 are the search seed and 12–23
@@ -113,9 +157,70 @@ fresh, colour-reversed match under the same 200-simulation protocol, with a true
   - in the validation games, leaving out any key already seen in a training game.
 - **Generation stops** after the first game at which both counts reach **1.15 × N** (138,000 and 13,800), or at
   **G_MAX = 4,000 games**, whichever comes first. The rule reads position counts only, never outcomes.
-- Planning figure: about **3,070 games** at 50 searched plies a game (G3 averaged 54.7 plies, benchmark arm P 53.9).
-  Reaching G_MAX is not a failure here; a short pool is refused at selection (§5.2).
-- **Smoke:** 8 games in a separate namespace (`…/gen smoke/…`), never used for training. Timing only (§12).
+- **Planning figure:** about 3,030 games, at G3's 50.7 searched plies a game (plies 4 to *n*−1).
+  - Game length is heavy-tailed. G3's median was 39 searched plies, and its four board-full draws supplied 20% of
+    all positions. Benchmark arm P's median was 31, with board-full draws supplying 31%.
+  - So the game count to reach the targets is uncertain, and the smoke (§4.4) estimates it before launch.
+- **Reaching G_MAX is not a failure in itself.** A pool short of N is refused at selection (§5.2).
+
+### 4.4 The generation smoke: usable data yield, time and games (frozen)
+
+**Smoke games:**
+- **40 games**, indices *j* = 0–39, in their own namespaces (`…/gen smoke opening <j>/…`, `…/gen smoke/game <j>/…`).
+- Openings are excluded exactly as the run's are (§4.2), and also from the run's own generation openings.
+- Arm labels follow the run's rule: *j* mod 10 = 9 is validation-like, giving 4 such games.
+- Smoke games are never used for training or evaluation. Their outcomes are not read; the analyser reads lengths,
+  keys and wall times only.
+
+**Measured, by the frozen analyser (`yield` command) from the committed smoke evidence:**
+
+| Quantity | Definition |
+|---|---|
+| x_j | searched plies in smoke game *j* (plies 4 to *n*−1) |
+| s | search wall seconds per searched ply, over all 40 games; t0 = startup seconds |
+| f_tr, f_val | counted keys per searched ply, in the training-like and validation-like games |
+| f | min(f_tr, f_val), applied to both pools (conservative) |
+| m | mean of x_j |
+| m_LB | mean of min(x_j, 150) − 1.645 × sd(min(x_j, 150)) / √40 |
+
+- **Counted keys** are computed exactly as the run's counter (§4.3) computes them:
+  - smoke games in index order, deduplicated by the mirror canonical key;
+  - net of E1–E4 (§5.3), with E4 applied to both kinds of game;
+  - validation-like keys leave out keys already seen in training-like games.
+- **Why m_LB is a lower bound:** truncating at 150 plies can only lower each game's length, so it bounds the true
+  mean from below. It also keeps rare 572-ply draws from inflating the spread. The 1.645 factor is a one-sided normal
+  approximation, a planning rule rather than a guarantee.
+
+**Derived:**
+- **Searched plies to the stop targets:** P_stop = max(138,000 / 0.9, 13,800 / 0.1) / f = 153,334 / f. This assumes
+  9 in 10 games are training games and both arms have the same mean length.
+- **Time projection:** T = t0 + P_stop × s. It does not depend on game length, because time and data both accrue per
+  searched ply.
+- **Games to the stop targets (point):** G_stop = ⌈P_stop / m⌉.
+- **Games to the exact counts (conservative):** G_N = ⌈(120,000 / 0.9) / (f × m_LB)⌉ = ⌈133,334 / (f × m_LB)⌉.
+  This is the number of games at which the training pool would hold N_TRAIN if the true mean length were only m_LB.
+
+**Verdict, frozen:** **LAUNCH_OK** needs every one of these. Otherwise **REVIEW**, which lists each failed
+condition with its numbers.
+
+| # | Condition | Guards against |
+|---|---|---|
+| Y1 | all 40 smoke games complete, one record per searched ply, and Σ x_j ≥ 800 | an unusable smoke |
+| Y2 | f ≥ 0.90 | low yield after exclusions and deduplication |
+| Y3 | G_N ≤ 4,000 | the G_MAX cap leaving a pool short of N at a conservative length |
+| Y4 | G_stop ≤ 4,000 | the stop targets lying beyond G_MAX even at the point estimate |
+| Y5 | 1.5 × T ≤ 144,000 s (40 h) | the fixed ceiling |
+
+- **REVIEW means no launch.** The smoke evidence and the yield record are committed, the plan returns to the user,
+  and nothing is rescaled, retried or relaunched without a reviewed decision.
+- **The caps stay:** G_MAX 4,000 and the fixed 40 h ceiling.
+- **Planning check, not a prediction.** I drew 4,000 random 40-game smokes with replacement from earlier match
+  lengths (searched plies = plies − 4, f = 1). Self-play length is unknown, so REVIEW is a real possible outcome.
+
+  | Lengths drawn from | Y3 passes | Y4 passes | median G_N |
+  |---|---|---|---|
+  | G3's 220 games | 100% | 97.5% | 3,456 |
+  | Benchmark arm P's 220 games | 45% | 69% | 4,033 |
 
 ## 5. Position selection and leakage
 
@@ -186,9 +291,23 @@ agreement, value MSE, for Q = the challenger C and Q = the current student S.
 - **I2:** TOP_C > TOP_S (strict)
 - **I3:** MSE_C ≤ MSE_S (no value regression)
 
-**ELIGIBLE** needs I1–I3, every check in §§5–7, and unchanged BatchNorm statistics. Otherwise **STOP**. The 0.90 and
-the no-regression bar are chosen, not derived. A fit that cannot cut its own-distribution KL by 10% is unlikely to
-produce a +0.10 pair score. The check costs about 15 minutes inside the fit run.
+**ELIGIBLE** needs I1–I3, every check in §§5–7, and unchanged BatchNorm statistics.
+- If every check passes but any of I1–I3 fails, the verdict is **STOP: the challenger missed the imitation gate.**
+- A failed check in §§5–7, or changed BatchNorm statistics, is a STOP for that reason, reported as such.
+
+**What is reported either way:**
+- all six values: KL_S, KL_C, TOP_S, TOP_C, MSE_S and MSE_C;
+- for each metric, C − S, the ratio C / S, and whether it moved toward the teacher, away from it, or not at all;
+- which of I1–I3 held.
+
+A missed gate is reported with these movements. It is never summarized as "no improvement" when some metrics moved
+toward the teacher.
+
+- **KL_S, TOP_S and MSE_S are the first measurement** of how well the current student agrees with the teacher on
+  self-play positions under the research implementation of `hard` (§1). They are reported in their own right.
+- **The bars are chosen, not derived:** the 0.90 for I1 and the no-regression bar for I3. A fit that cannot cut its
+  KL on these positions by 10% seems unlikely to produce a 0.60 match score.
+- The check costs about 15 minutes inside the fit run.
 
 **Descriptive only, never gated:** the same three metrics for C and S on the first fit's 24,000 validation rows, the
 labels already in `~/twixt-cache/htb-pilot/labels-val`, verified against their committed manifest. It reports any
@@ -210,15 +329,24 @@ forgetting of the old distribution.
 - **Players:** C's export and `78c16a31c3dba37f`, both through `protocolMove` (200 simulations, T 1.0 through ply 19,
   root halving from ply 20), in one Node process on the product path. This uses the G3 and benchmark driver pattern
   with `process.exitCode` set, never `process.exit()`.
-- **Openings:** fresh 4-ply openings, `…/match opening <i>/…`, by the same rule. Skipped if equal, directly or
-  reflected, to any benchmark opening, any generation opening, or an earlier match opening.
+- **Openings:** fresh 4-ply openings, `…/match opening <i>/…`, by the same rule. An opening is skipped if it
+  equals, directly or reflected, any of these:
+  - a benchmark opening;
+  - a **G3 opening** (§4.2: the first four plies of each G3 game);
+  - a generation opening or a generation-smoke opening;
+  - an earlier match opening.
 - **Pairs: 272** (544 games). Pair *p* plays opening *p* twice: game 0 with C as Red, game 1 with C as Black.
 - **Seeds:** `sha256("htb-onpolicy/20261114/match/pair <p>/game <g>/ply <k>")`, digits as above. Both players draw from
   the same per-ply seed, as in G3.
 - **Pair score:** C's mean over its two games (win 1, draw 0.5, loss 0). Game end by the product's rule only.
 - **Pass rule (one-sided Hoeffding, α = 0.05, over pairs):** **PASS** iff mean − √(ln 20 / 544) > 0.5. That is a
-  mean above 0.574208: **625/1088 = 0.5744 passes and 624/1088 = 0.5735 does not.** Anything else that completes and
-  passes the guards is **NON_PASS**.
+  mean above 0.574208: **625/1088 = 0.5744 passes and 624/1088 = 0.5735 does not** (the user verified this boundary).
+  Anything else that completes and passes the guards is **NON_PASS**.
+- **What a PASS establishes:** the challenger's true mean pair score against the current `hard` is **above 0.50**
+  under this protocol, at one-sided α = 0.05.
+  - It does **not** establish a score of 0.60 or any other size. 0.60 is the planning target (§11).
+  - It holds for **the whole update**: the new data source and the continued training from the current student,
+    under this recipe. It does not attribute the gain to either one.
 - **Reported, descriptive:** the two-sided 95% Hoeffding interval (half-width 0.0823), results by colour, draws, game
   lengths, and the number of distinct games.
 - **Guards (any failure means INVALID, which is not scored):**
@@ -238,8 +366,12 @@ forgetting of the old distribution.
     (about 40 h on the product path), against about 23 h for the generation that produced it.
   - A round of fine-tuning worth less than +70 Elo would not justify an integration cycle (export, parity, G-style
     match) on its own.
-- **Pair count:** the smallest n with 80% power at 0.60 under the conservative pair-score standard deviation of
-  0.50: **272 pairs**. These are normal-approximation planning figures:
+- **0.60 is a planning target, not a pass bar.** The pass bar is superiority over 0.50 (§10).
+- **Pair count:** the smallest n with about 80% power at 0.60, assuming a pair-score standard deviation of 0.50:
+  **272 pairs**.
+- **The power figures are model-based.** They come from a normal approximation at an assumed σ, not from a
+  distribution-free bound. They are conditional on the match completing and clearing its guards: a VOID or INVALID
+  run has no power. They are planning figures:
 
   | True mean | σ = 0.50 | σ = 0.35 |
   |---|---|---|
@@ -247,8 +379,9 @@ forgetting of the old distribution.
   | 0.60 | **80%** | 89% |
   | 0.65 | 99% | > 99% |
 
-- **The false-PASS rate at a true 0.5 is at most 5%** for any distribution of pair scores (Hoeffding). No sequential
-  look, top-up or pooling with the smoke.
+- **The false-PASS rate at a true 0.5 is at most 5%** for any distribution of pair scores (Hoeffding): the one
+  distribution-free guarantee here.
+- There is no sequential look, no top-up and no pooling with the smoke.
 
 ## 12. Compute guards and ceilings
 
@@ -258,8 +391,8 @@ forgetting of the old distribution.
 
 | Stage | Fixed ceiling | Launch rule |
 |---|---|---|
-| Generation smoke (8 games) | 1,800 s | — |
-| Generation | **40 h (144,000 s)** | LAUNCH_OK iff 1.5 × projection ≤ 40 h, where projection = startup + 3,070 × max(50, smoke mean searched plies) × smoke s/ply |
+| Generation smoke (40 games) | 3,600 s | — |
+| Generation | **40 h (144,000 s)**, G_MAX 4,000 | LAUNCH_OK iff Y1–Y5 all hold (§4.4); otherwise REVIEW, with no launch |
 | Labelling (132,000 rows) | 6,600 s | 1.5 × the first label run's 32.1 ms/row |
 | Fit + gate + descriptive scoring | 11,700 s | 1.5 × (7,500 × 0.708 s + scoring at the first fit's pace) |
 | Export + parity | 3,600 s | — |
@@ -275,8 +408,8 @@ forgetting of the old distribution.
 
 | Step | Estimate | Pace it rests on |
 |---|---|---|
-| Generation smoke | ~4 min | — |
-| Generation | **~23 h** (G_MAX bound ~30 h) | 0.536 s/ply on the GPU (entry 54), 50 plies a game |
+| Generation smoke | ~20 min | 40 games at G3-like lengths |
+| Generation | **~23 h** (153,334 / f searched plies, f ≈ 1; ceiling 40 h) | 0.536 s/ply on the GPU (entry 54) |
 | Labelling | ~1.2 h | 8,478 s for 264,000 rows (entry 52) |
 | Fit, gate and descriptive scoring | ~2.1 h | 0.708 s/update (T-fit); first fit's scoring pace |
 | Export and parity | ~0.3 h | V2-R |
@@ -296,11 +429,12 @@ forgetting of the old distribution.
 | Outcome | Reading | What it permits |
 |---|---|---|
 | Any stage VOID or INVALID | no result | nothing; no automatic retry |
+| Generation smoke **REVIEW** (any of Y1–Y5 fails) | the yield, games or time estimate is low or uncertain | no launch; the plan returns to the user with the numbers |
 | Selection refuses a short pool | no result; generation was too short for the counts | a reviewed decision; no silent rescale |
-| Imitation gate **STOP** | this recipe did not improve imitation on `hard`'s own positions; dose, capacity and labels not separated | the line closes; no export or match |
-| Gate **ELIGIBLE** | improved imitation on `hard`'s own positions, and nothing about play | proposing §9 and §10 (approval) |
-| Match **PASS** | the challenger is stronger than the current `hard` under this protocol (one-sided, α = 0.05) | proposing an integration decision (export pin, G2/G3-style checks), and nothing more |
-| Match **NON_PASS** | no gain shown; not evidence of no gain (80% power at 0.60 only) | the current `hard` stays; the line closes; no top-up or re-score |
+| Gate **STOP: the challenger missed the imitation gate** | the challenger did not clear I1–I3 on the validation positions. Report each metric's movement against the current student. Dose, capacity and labels are not separated | the line closes; no export or match |
+| Gate **ELIGIBLE** | the challenger cleared the imitation gate on these positions, and nothing about play | proposing §9 and §10 (approval) |
+| Match **PASS** | the updated challenger's true mean pair score against the current `hard` is above 0.50 under this protocol (one-sided, α = 0.05). This covers the whole update (data source and continued training together). It does not establish a gain of 0.60 | proposing an integration decision (export pin, G2/G3-style checks), and nothing more |
+| Match **NON_PASS** | superiority not shown. This is not evidence of no gain: the planning power, about 80% at 0.60, is model-based and assumes completion | the current `hard` stays; the line closes; no top-up or re-score |
 
 PASS authorizes no deployment, push or further training. A second on-policy round would need its own card.
 
@@ -309,7 +443,8 @@ PASS authorizes no deployment, push or further training. A second on-policy roun
 1. This card and the #53/#87 exceptions.
 2. The build: generation driver, selection, label adapter change, fit config, gate scoring, export glue, match driver
    and analyser, all behind closed gates; model-free tests. Returned once for launch review.
-3. Generation: smoke, then the run only on LAUNCH_OK.
+3. Generation: the 40-game smoke and its yield verdict (§4.4), then the run only on LAUNCH_OK. On REVIEW the plan
+   returns to the user.
 4. Labelling, then the fit with its gate (the fit admits only committed, COMPLETED label evidence).
 5. On ELIGIBLE: export and parity.
 6. Match: smoke, then the match only on LAUNCH_OK; then the analysis.
@@ -319,7 +454,8 @@ Steps 3–4 or 5–6 may be approved together if you prefer.
 ## 16. Prediction on record
 
 Low-to-moderate confidence, stated before any build:
-- **Imitation gate: ELIGIBLE,** with KL_C about 20–40% below KL_S on `hard`'s own positions.
+- **Imitation gate: ELIGIBLE,** with KL_C about 20–40% below KL_S on the validation positions. No
+  prediction is offered for KL_S itself.
 - **Match: mean pair score about 0.60** (plausible range 0.52–0.70). **PASS is roughly an even chance.**
 - **Descriptive retention:** the old-distribution KL changes by less than 10% either way.
 
@@ -328,11 +464,19 @@ Low-to-moderate confidence, stated before any build:
 - **Test:** H-OP, distillation on fresh self-play from the current `hard`: generation (§4), selection (§5), labels
   (§6), fit and gate (§7–8), export and parity (§9), match (§10).
 - **Hypothesis:** §1.
-- **Why it is plausible:** §1. On-policy labelling targets the student's errors where it actually plays. Arm N
-  (0.045) shows a large imitation gap at play-time positions, search closes little of it (P − N +0.070), and
-  imitating this teacher has transferred to play twice (entries 54, 63).
+- **Why it is plausible:** §1.
+  - On-policy labelling targets the student's errors at positions it reaches in play, and the first fit never
+    trained on such positions.
+  - Arm N (0.045) measured a playing-strength gap against the teacher in raw-policy games. Agreement on `hard`
+    self-play positions is an open question; the fit's reference scores measure it first.
+  - Search made up little of the gap (P − N +0.070).
+  - Imitating this teacher has transferred to play twice (entries 54, 63).
 - **Prediction on record:** §16.
-- **Decision rule:** §14. Gate I1–I3. Match PASS iff mean − √(ln 20 / 544) > 0.5 over 272 pairs.
+- **Decision rule:** §14.
+  - Generation smoke Y1–Y5, or REVIEW.
+  - Gate I1–I3, or the challenger missed the imitation gate.
+  - Match PASS iff mean − √(ln 20 / 544) > 0.5 over 272 pairs: superiority over 0.50 for the whole update; 0.60
+    is the planning target.
 - **What ran / result / match to prediction / conclusion:** to be written after each judged run.
 
 ## 18. What this card does not authorize
