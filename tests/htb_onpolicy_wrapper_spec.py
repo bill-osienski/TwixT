@@ -24,8 +24,9 @@ STAGES = {
     "generate": (FIT_PARENT, "htb-onpolicy-gen-run", "htb-onpolicy-gen", "htb_onpolicy_generate",
                  "HTB_ONPOLICY_GENERATE_AUTHORIZED", 143990, "htb-onpolicy-generate-record/1",
                  ('"$MODULE" run fit \\\n', '"$MODULE" run generate \\\n'),
-                 "the generation run (9:1, stopping at 1.15 x N or G_MAX 4,000) on the GPU research path; the module "
-                 "admits it only on a committed smoke whose yield verdict re-derives byte-equal and is LAUNCH_OK"),
+                 "the generation run (9:1, stopping at 1.15 x N or, under amendment 1, at 6,500 games) on the GPU "
+                 "research path; the module admits it only on the committed smoke and its REVIEW yield record as "
+                 "pinned by amendment 1 (docs/superpowers/2026-11-15-htb-onpolicy-cap-amendment.md)"),
     "label": (LABEL_PARENT, "htb-onpolicy-label-run", "htb-onpolicy-label", "htb_onpolicy_label",
               "HTB_ONPOLICY_LABEL_AUTHORIZED", 6590, "htb-onpolicy-label-record/1", None,
               "selection (120,000 + 12,000 rows, card §5) and the teacher's labels with the benchmark's lockstep "

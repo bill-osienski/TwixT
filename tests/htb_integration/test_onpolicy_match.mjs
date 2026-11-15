@@ -106,6 +106,33 @@ test('openings: Node re-derives the whole Python-built file, exclusions included
   }
 });
 
+test('openings (amendment 1): Node re-derives the generation extension -- the gen sequence continued past the frozen 4,000, distinct from every list', () => {
+  const EXT_REL = 'docs/superpowers/evidence/htb-onpolicy-openings/gen-extension.json';
+  const raw = readFileSync(join(D.REPO_ROOT, EXT_REL));
+  assert.equal(sha(raw), '578d34f371b238a9919a6eeb9f71c3b30eb286b7b08e95d1722e1fc17f270664');
+  const ext = JSON.parse(raw.toString('utf8'));
+  assert.equal(ext.base_openings_sha256, D.OPENINGS_SHA256);
+  assert.equal(ext.first_position, 4000);
+  const seq = (m) => JSON.stringify(m);
+  const refl = (m) => JSON.stringify(m.map(([r, c]) => [r, 23 - c]));
+  const excl = new Set();
+  for (const [kind, n] of [['opening', 200], ['smoke opening', 1]]) for (const o of TB.openingList(kind, n)) excl.add(seq(o.moves));
+  for (const d of ['docs/superpowers/evidence/htb-g3-match/games', 'docs/superpowers/evidence/htb-g3-smoke/games']) {
+    for (const f of readdirSync(join(D.REPO_ROOT, d)).filter((x) => x.endsWith('.json'))) {
+      excl.add(seq(JSON.parse(readFileSync(join(D.REPO_ROOT, d, f), 'utf8')).moves.slice(0, 4)));
+    }
+  }
+  for (const k of ['gen', 'gen_smoke', 'match', 'match_smoke']) for (const o of OPENINGS[k]) excl.add(seq(o.moves));
+  const out = [];
+  for (let i = OPENINGS.gen.at(-1).index + 1; out.length < 2500; i++) {
+    const m = AN.deriveOpening('gen opening', i);
+    if (excl.has(seq(m)) || excl.has(refl(m))) continue;
+    excl.add(seq(m));
+    out.push({ index: i, moves: m });
+  }
+  assert.deepEqual(out, ext.gen_extension);
+});
+
 test('schedule: 544 match games and 4 smoke games; pair p plays opening p, challenger Red in game 0', () => {
   const m = D.schedule('match', OPENINGS);
   assert.equal(m.length, 544);

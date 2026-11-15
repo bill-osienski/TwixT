@@ -1,6 +1,9 @@
-"""H-OP -- distillation on fresh self-play from the current `hard` (card revision 3).
+"""H-OP -- distillation on fresh self-play from the current `hard` (card revision 3, with amendment 1).
 
-Card: docs/superpowers/2026-11-14-htb-onpolicy-distillation-card.md, pinned below by sha256. This module is the card's
+Card: docs/superpowers/2026-11-14-htb-onpolicy-distillation-card.md, pinned below by sha256. Amendment 1
+(docs/superpowers/2026-11-15-htb-onpolicy-cap-amendment.md, also pinned) is cap-only: one generation run of up to
+6,500 games instead of 4,000, its schedule extended by 2,500 fresh openings, admitted on the committed smoke and its
+REVIEW yield record as written. This module is the card's and the amendment's
 model-free build: nothing runs on import, and importing it loads no MLX, TensorFlow or model. Every runtime entry is
 behind its own closed gate, read at call time:
 
@@ -51,10 +54,26 @@ SIMS = 200
 # ── card §4.3-4.4: counts, stopping rule, smoke ──
 N_TRAIN, N_VAL = 120_000, 12_000
 STOP = {"train": 138_000, "val": 13_800}                        # 1.15 x N
-G_MAX = 4_000
+G_MAX = 4_000                                                   # the card's cap: the smoke's yield verdict uses it
 SMOKE_GAMES = 40
 GEN_CAP_S, SMOKE_CAP_S = 144_000, 3_600
 TRUNC, Z_ONE_SIDED, F_MIN, MIN_SMOKE_PLIES = 150, 1.645, 0.90, 800
+
+# ── amendment 1 (2026-11-15, cap only): the generation run's cap, its extended schedule, its admission's binding ──
+AMENDMENT = "docs/superpowers/2026-11-15-htb-onpolicy-cap-amendment.md"
+AMENDMENT_SHA256 = "814036edea93ca2598290911421483caaee67a8e3e1ee25cfd46506f1271da48"
+G_MAX_RUN = 6_500                                               # the run's cap under amendment 1 (card: G_MAX)
+GEN_EXTENSION_REL = "docs/superpowers/evidence/htb-onpolicy-openings/gen-extension.json"
+GEN_EXTENSION_SHA256 = "578d34f371b238a9919a6eeb9f71c3b30eb286b7b08e95d1722e1fc17f270664"
+#: the committed smoke evidence the amended admission is bound to, exactly as written (entry 66)
+SMOKE_PINS = {"docs/superpowers/evidence/htb-onpolicy-gen-smoke/record.json":
+              "f74cc908f8f3b5aa8f4b7a96e377e19eec1a374d7150b25c1d616bf1bd2cb1b0",
+              "docs/superpowers/evidence/htb-onpolicy-gen-smoke/games.jsonl":
+              "eb9d2d4e5c60146be7d823de4c379bdec4512f605ba3fbf2de93bd7d0241d286",
+              "docs/superpowers/evidence/htb-onpolicy-gen-smoke-run/outer.json":
+              "a99df4307907c479246aae70edba9e60e9cdad29f7a9102c6d869d6f6f5e5847",
+              "docs/superpowers/evidence/htb-onpolicy-gen-smoke/yield.json":
+              "b8d8edb98a7b0a5e4b46d2f212fe144b85041d2bec5aa3a11be9d53b17d637b4"}
 
 # ── card §5 / §7 / §8 ──
 SELECT_TAG, FIT_TAG = "htb-onpolicy-select/1", "htb-onpolicy-fit/1"
@@ -174,6 +193,92 @@ def build_openings(root: pathlib.Path = ROOT, n_gen: int = G_MAX, n_smoke: int =
             "excluded": {"benchmark_openings": len(bench), "g3_openings": len(g3),
                          "benchmark_sha256": _jsha(bench), "g3_sha256": _jsha(g3)},
             "gen": gen, "gen_smoke": smoke, "match": match, "match_smoke": match_smoke}
+
+
+def build_gen_extension(root: pathlib.Path = ROOT, n: int = G_MAX_RUN - G_MAX) -> Dict[str, Any]:
+    """Amendment 1: the generation schedule's next `n` openings. The "gen opening" sequence continues past the frozen
+    list, each opening distinct, directly or reflected, from the benchmark's and G3's openings, from every frozen list
+    (generation, generation smoke, match, match smoke) and from each other. The frozen generation list re-derives as
+    the exact prefix, so the extension changes no position already scheduled."""
+    raw = (root / OPENINGS_REL).read_bytes()
+    if _sha(raw) != OPENINGS_SHA256:
+        raise Refused(f"{OPENINGS_REL} is not the pinned opening list")
+    base = json.loads(raw)
+    others = [e["moves"] for k in ("gen_smoke", "match", "match_smoke") for e in base[k]]
+    full = opening_list(NS, "gen opening", len(base["gen"]) + n, [*bench_openings(), *g3_openings(root), *others])
+    if full[:len(base["gen"])] != base["gen"]:
+        raise Refused("the frozen generation list does not re-derive as the extension's prefix")
+    return {"kind": "htb-onpolicy-gen-extension/1", "card_sha256": CARD_SHA256, "base_openings_sha256": OPENINGS_SHA256,
+            "namespace": NS, "first_position": len(base["gen"]),
+            "rule": "the 'gen opening' sequence continued past the frozen list (teacher_bench openingAt: rows and "
+                    "columns 4-19, sorted legal moves, sha256[:12] mod n); distinct directly or reflected from the "
+                    "benchmark's and G3's openings, every frozen list and each other",
+            "gen_extension": full[len(base["gen"]):]}
+
+
+def dump_extension(ext: Mapping[str, Any]) -> bytes:
+    return (json.dumps(ext, sort_keys=True, indent=1) + "\n").encode()
+
+
+def opening_problems(lists: Mapping[str, Sequence[Mapping[str, Any]]], forbidden: Iterable[Sequence[Sequence[int]]]
+                     ) -> List[str]:
+    """Every opening across every schedule: within rows and columns 4-19, OPENING_PLIES long, and distinct, directly or
+    reflected, from every other and from `forbidden` (the benchmark's and G3's). Empty when all hold."""
+    bad = {_seq(m) for m in forbidden}
+    seen: Dict[Tuple[Tuple[int, int], ...], str] = {}
+    out = []
+    for name, lst in lists.items():
+        for pos, e in enumerate(lst):
+            d, r = _seq(e["moves"]), _reflected(e["moves"])
+            where = f"{name}[{pos}]"
+            if len(d) != OPENING_PLIES or not all(CENTRAL_MIN <= a <= CENTRAL_MAX and CENTRAL_MIN <= b <= CENTRAL_MAX
+                                                  for a, b in d):
+                out.append(f"{where}: not {OPENING_PLIES} central plies")
+            if d in bad or r in bad:
+                out.append(f"{where}: a benchmark or G3 opening")
+            for k in (d, r):
+                if k in seen:
+                    out.append(f"{where}: repeats {seen[k]}")
+            seen.setdefault(d, where)
+    return out
+
+
+#: every schedule's seed paths: the generation run (amended), the generation smoke, and the Node match driver's
+#: `${NS}/${match|match smoke}/pair p/game g/ply k` (tests/htb_integration/onpolicy_match.mjs moveSeeds)
+MATCH_SEED_PAIRS = {"match": 272, "match smoke": 2}
+SEED_PLIES = range(OPENING_PLIES, 576)                          # every ply a search can be asked for on 24x24
+
+
+def seed_strings() -> Iterable[str]:
+    for i in range(G_MAX_RUN):
+        for k in SEED_PLIES:
+            yield f"{NS}/gen/game {i}/ply {k}"
+    for i in range(SMOKE_GAMES):
+        for k in SEED_PLIES:
+            yield f"{NS}/gen smoke/game {i}/ply {k}"
+    for path, pairs in MATCH_SEED_PAIRS.items():
+        for p in range(pairs):
+            for g in (0, 1):
+                for k in SEED_PLIES:
+                    yield f"{NS}/{path}/pair {p}/game {g}/ply {k}"
+
+
+def seed_uniqueness() -> Dict[str, int]:
+    """Across all schedules: the derivations, distinct (search, readout) pairs, and repeated 48-bit values."""
+    strings: Set[str] = set()
+    pairs: Set[str] = set()
+    values: Set[str] = set()
+    n = repeats = 0
+    for s in seed_strings():
+        h = _sha(s.encode())
+        strings.add(s)
+        pairs.add(h[:24])
+        for v in (h[:12], h[12:24]):
+            repeats += v in values
+            values.add(v)
+        n += 1
+    return {"derivations": n, "distinct_strings": len(strings), "distinct_pairs": len(pairs),
+            "values": 2 * n, "repeated_values": repeats}
 
 
 # ─────────────────────────────── seeds and arms (card §4.2, §4.4) ───────────────────────────────
@@ -518,6 +623,7 @@ class Config:
     head: Callable[[pathlib.Path], str] = head_of
     gate_open: Callable[[str], bool] = gate_open
     exclusions: Callable[[pathlib.Path], Exclusions] = build_exclusions
+    smoke_pins: Mapping[str, str] = dataclasses.field(default_factory=lambda: dict(SMOKE_PINS))
     tf32_required: bool = True
     memory_required_bytes: Optional[int] = FIT_MEMORY_REQUIRED
     label_memory_required_bytes: Optional[int] = LABEL_MEMORY_REQUIRED
@@ -542,6 +648,10 @@ def preconditions(stage: str, cfg: Config) -> None:
         raise Refused("the card is not the pinned one")
     if not cfg.committed(cfg.root, CARD):
         raise Refused("the card is not committed")
+    if stage in ("generate", "label"):                           # the stages amendment 1 changes
+        if not (cfg.root / AMENDMENT).is_file() or _sha((cfg.root / AMENDMENT).read_bytes()) != AMENDMENT_SHA256 \
+                or not cfg.committed(cfg.root, AMENDMENT):
+            raise Refused("the amendment is not the pinned, committed one")
     if cfg.tf32_required and os.environ.get("MLX_ENABLE_TF32") != "0":
         raise Refused("MLX_ENABLE_TF32 must be 0 in this process")
 
@@ -683,10 +793,10 @@ def play_game(seams: GenSeams, ev, path: str, i: int, opening: Sequence[Sequence
 def generate(stage: str, seams: GenSeams, out_dir: pathlib.Path, rec: Dict[str, Any], log, ex: Exclusions,
              openings: Sequence[Mapping[str, Any]], t_start: float) -> None:
     """Card §4: the generation loop -- play, then count keys, then write the game's records -- for the smoke (40
-    games, 20/20 alternating) and for the run (9:1, stopping on position counts at 1.15 x N, or at G_MAX)."""
+    games, 20/20 alternating) and for the run (9:1, stopping on position counts at 1.15 x N, or at G_MAX_RUN)."""
     smoke = stage == "gen-smoke"
     path, arm_of = ("gen smoke", smoke_arm) if smoke else ("gen", run_arm)
-    limit = SMOKE_GAMES if smoke else G_MAX
+    limit = SMOKE_GAMES if smoke else G_MAX_RUN                  # amendment 1: the run's cap is 6,500
     if len(openings) < limit:
         raise Stop("openings", f"{len(openings)} openings for {limit} games")
     rec["versions"] = seams.versions()
@@ -797,17 +907,60 @@ def load_openings(cfg: Config) -> Dict[str, Any]:
 OPENINGS_SHA256 = "ca4e3bba05bfc6abddf782b1a1f68fc474bc3600410c7cbd4308073d306d3915"
 
 
+def load_gen_schedule(cfg: Config) -> List[Dict[str, Any]]:
+    """Amendment 1: the run's 6,500 openings -- the frozen 4,000, then the pinned, committed extension's 2,500."""
+    base = load_openings(cfg)["gen"]
+    raw = (cfg.root / GEN_EXTENSION_REL).read_bytes() if (cfg.root / GEN_EXTENSION_REL).is_file() else b""
+    if _sha(raw) != GEN_EXTENSION_SHA256 or not cfg.committed(cfg.root, GEN_EXTENSION_REL):
+        raise Refused(f"{GEN_EXTENSION_REL} is not the committed, pinned extension")
+    ext = json.loads(raw)
+    if ext.get("base_openings_sha256") != OPENINGS_SHA256 or ext.get("first_position") != len(base):
+        raise Refused(f"{GEN_EXTENSION_REL} does not extend the frozen generation list")
+    out = [*base, *ext["gen_extension"]]
+    if len(out) != G_MAX_RUN:
+        raise Refused(f"the generation schedule holds {len(out)} openings, not {G_MAX_RUN}")
+    return out
+
+
+def amended_conditions(v: Mapping[str, Any]) -> Dict[str, bool]:
+    """Amendment 1, from the committed yield record as written: Y1, Y2 and Y5 as the record states them (unchanged
+    rules), Y3 and Y4 re-read against the run's cap G_MAX_RUN instead of G_MAX."""
+    c = v.get("conditions", {})
+    return {"Y1": c.get("Y1") is True, "Y2": c.get("Y2") is True,
+            "Y3": v["games_to_exact_counts"]["G_N"] <= G_MAX_RUN,
+            "Y4": v["games_to_stop_targets"]["G_stop"] <= G_MAX_RUN,
+            "Y5": c.get("Y5") is True and 1.5 * (v["t0"] + v["games_to_stop_targets"]["G_stop"] * v["w"]) <= GEN_CAP_S}
+
+
 def generation_admission(cfg: Config, ex: Exclusions) -> Dict[str, Any]:
-    """The run admits only a committed, clean smoke whose yield verdict re-derives byte-equal and is LAUNCH_OK."""
+    """Amendment 1 (cap only). The card admitted the run only on a LAUNCH_OK yield; the smoke's verdict is REVIEW,
+    failed Y3 and Y4 (entry 66), and stays as written. The run is admitted only on THAT smoke: a clean, committed
+    wrapper completion (stage_admission); the smoke's record, games, outer.json and yield record committed and equal
+    to the amendment's pinned bytes; the yield record re-deriving byte-equal from the committed smoke; the record being
+    the REVIEW the amendment answers (failed exactly Y3 and Y4, under G_MAX 4,000 and the 144,000 s cap); and Y1-Y5
+    holding with the run's cap G_MAX_RUN in place of G_MAX."""
     adm = stage_admission(cfg, "gen-smoke")
+    for rel, sha in cfg.smoke_pins.items():
+        f = cfg.root / rel
+        if not f.is_file() or not cfg.committed(cfg.root, rel) or _sha(f.read_bytes()) != sha:
+            raise Refused(f"{rel} is not the committed smoke evidence amendment 1 is bound to")
     committed_yield = read_committed_json(cfg, YIELD_REL)
     _v, raw = derive_yield(cfg, ex)
     if raw != (cfg.root / YIELD_REL).read_bytes():
         raise Refused(f"{YIELD_REL} does not re-derive byte-equal from the committed smoke")
-    if committed_yield.get("verdict") != "LAUNCH_OK":
-        raise Refused(f"the smoke's yield verdict is {committed_yield.get('verdict')}, failed "
-                      f"{committed_yield.get('failed')}: no launch (card §4.4)")
-    return {**adm, "yield_sha256": _sha(raw)}
+    v = committed_yield
+    if (v.get("verdict"), v.get("failed"), v.get("g_max"), v.get("cap_s"), v.get("card_sha256")) != \
+            ("REVIEW", ["Y3", "Y4"], G_MAX, GEN_CAP_S, CARD_SHA256):
+        raise Refused(f"the smoke's yield record is {v.get('verdict')}, failed {v.get('failed')}, at G_MAX "
+                      f"{v.get('g_max')}: not the REVIEW amendment 1 answers")
+    amended = amended_conditions(v)
+    if not all(amended.values()):
+        raise Refused(f"under amendment 1 the smoke still fails {[k for k, ok in amended.items() if not ok]}: no launch")
+    return {**adm, "yield_sha256": _sha(raw), "amendment_sha256": AMENDMENT_SHA256, "g_max_run": G_MAX_RUN,
+            "amended_conditions": amended, "G_N": v["games_to_exact_counts"]["G_N"],
+            "G_stop": v["games_to_stop_targets"]["G_stop"],
+            "launch_estimate_s": 1.5 * (v["t0"] + v["games_to_stop_targets"]["G_stop"] * v["w"]),
+            "at_cap_estimate_s": 1.5 * (v["t0"] + G_MAX_RUN * v["w"])}
 
 
 def run_gen(stage: str, cfg: Optional[Config] = None, seams: Optional[GenSeams] = None,
@@ -817,11 +970,11 @@ def run_gen(stage: str, cfg: Optional[Config] = None, seams: Optional[GenSeams] 
     preconditions(stage, cfg)
     out_dir = cfg.ev(stage)
     P._absent(out_dir)
-    openings = load_openings(cfg)["gen_smoke" if stage == "gen-smoke" else "gen"]
+    openings = load_openings(cfg)["gen_smoke"] if stage == "gen-smoke" else load_gen_schedule(cfg)
     ex = cfg.exclusions(cfg.root)
     admission = generation_admission(cfg, ex) if stage == "generate" else {}
     rec = _record(stage, cfg, admission=admission, openings_sha256=OPENINGS_SHA256, exclusions=ex.sources,
-                  caps={"g_max": G_MAX, "smoke_games": SMOKE_GAMES,
+                  caps={"g_max": G_MAX_RUN if stage == "generate" else G_MAX, "smoke_games": SMOKE_GAMES,
                         "kill_s": GEN_CAP_S if stage == "generate" else SMOKE_CAP_S})
     log_path = out_dir / "progress.jsonl"
 
@@ -880,7 +1033,7 @@ def run_label(clone_root: str, cfg: Optional[Config] = None, load_teacher: Calla
 
     def body(rec):
         games = gen_games(cfg)
-        faults = check_games(games, load_openings(cfg)["gen"], run_arm)
+        faults = check_games(games, load_gen_schedule(cfg), run_arm)
         if faults:
             raise Stop("games", f"{len(faults)} invalid generation games, e.g. {faults[:3]}")
         sel = select(games, cfg.exclusions(cfg.root), n_train=cfg.n_train, n_val=cfg.n_val)
@@ -1151,7 +1304,18 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             raw = (json.dumps(build_openings(), sort_keys=True, indent=1) + "\n").encode()
             same = raw == (ROOT / OPENINGS_REL).read_bytes()
             print(f"{OPENINGS_REL}: {'re-derives byte-equal' if same else 'DIFFERS'} ({_sha(raw)})")
-            return 0 if same else 3
+            ext_raw = dump_extension(build_gen_extension())        # amendment 1: the extension and every schedule
+            ext_same = ext_raw == (ROOT / GEN_EXTENSION_REL).read_bytes()
+            print(f"{GEN_EXTENSION_REL}: {'re-derives byte-equal' if ext_same else 'DIFFERS'} ({_sha(ext_raw)})")
+            base, ext = json.loads(raw), json.loads(ext_raw)
+            probs = opening_problems({"gen": [*base["gen"], *ext["gen_extension"]], "gen_smoke": base["gen_smoke"],
+                                      "match": base["match"], "match_smoke": base["match_smoke"]},
+                                     [*bench_openings(), *g3_openings()])
+            seeds = seed_uniqueness()
+            seeds_ok = seeds["distinct_strings"] == seeds["distinct_pairs"] == seeds["derivations"] and \
+                seeds["repeated_values"] == 0
+            print(f"openings across all schedules: {'distinct' if not probs else probs[:5]}; seeds: {seeds}")
+            return 0 if same and ext_same and not probs and seeds_ok else 3
         if a.cmd == "yield":                          # pure: write the verdict once, or confirm it re-derives
             rc, v = write_yield(Config())
             print(f"{YIELD_REL}: {v['verdict']} (failed {v['failed']}); "

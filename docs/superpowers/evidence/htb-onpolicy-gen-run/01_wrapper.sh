@@ -2,7 +2,7 @@
 # H-OP `run generate` -- OUTER WRAPPER (card docs/superpowers/2026-11-14-htb-onpolicy-distillation-card.md,
 # revision 3, §12, §15). Fixed ceiling: TERM at 143990 s, KILL 10 s later, 144000 s in all; cleanup
 # observation bounded through 144010 s. Idle waiting before launch (idle_gate) is NOT part of the ceiling.
-# Runs the generation run (9:1, stopping at 1.15 x N or G_MAX 4,000) on the GPU research path; the module admits it only on a committed smoke whose yield verdict re-derives byte-equal and is LAUNCH_OK.
+# Runs the generation run (9:1, stopping at 1.15 x N or, under amendment 1, at 6,500 games) on the GPU research path; the module admits it only on the committed smoke and its REVIEW yield record as pinned by amendment 1 (docs/superpowers/2026-11-15-htb-onpolicy-cap-amendment.md).
 # BUILT ONLY (the user's build approval, 2026-11-14): launching it is a separate approval. No automatic retry; a
 # run the ceiling stops is VOID and nothing from it is scored or used.
 # DERIVED by tests/htb_onpolicy_wrapper_spec.py from docs/superpowers/evidence/htb-fit-run/01_wrapper.sh (its text from `set -u` on), with exact-once

@@ -303,6 +303,7 @@ knob) is not a new hypothesis.
 > **H-OP BUILT (model-free); returned for launch review; nothing generated, loaded, labelled, trained, exported or played (build record, 2026-11-14).** `htb_onpolicy.py` (openings, seeds, keys, E1–E4, the stopping counter, the 20/20 smoke's yield verdict Y1–Y5, selection, labels with the benchmark's lockstep check, the fit with its own epoch namespace, the gate I1–I3), `htb_onpolicy_export.py` (export, structural check, canaries, S1–S4, V3), the Node match driver and analyser (272 pairs, 625/1088 passes), 7 wrappers, 5 new Python gates (71 in all) and 2 JS gates, all closed. Frozen openings `ca4e3bba…`. Tests: H-OP Python 65, gate inventory 8, neighbouring Python suites 245, Node match 17, benchmark 19 (one stale test fixed), Diagnostic O 11: all pass. See #200.
 > **H-OP handoff repair: clean, committed wrapper evidence at all three handoffs; returned for launch review; all gates closed; nothing run (repair record, 2026-11-14).** The standalone `yield` verifies the smoke's outer completion before writing a verdict; the fit verifies the label wrapper before reading any shard; match smoke and match verify the export wrapper before loading any model (the analyser re-checks it). One check, reused at every handoff: launch commit, pid, cleanup, the stage's ceiling, every wrapper file committed, nothing untracked or changed. Regressions: an inner success followed by an outer timeout is refused at each handoff. Card design and thresholds unchanged. Tests: H-OP Python 120, gate inventory 8, neighbours 245, Node match 19, benchmark 19, Diagnostic O 11. See #201.
 > **H-OP generation smoke COMPLETED; yield verdict REVIEW (Y3, Y4 failed); no launch; returned for the user's decision (Post-closure entry 66, 2026-11-15).** Gate `e47ec319` → evidence `f2af3591` → verdict `bc66a880`: 40/40 games (20/20 alternating) in 558 s wall under KILL 3,600 s, clean. Self-play games are short (mean 30.4 plies; G3's mean was 54.7), so usable rows per game are 26.2 (training, LB 24.85) and 26.6 (validation, LB 25.25), f = 1.00 in both pools. G_N 5,366 and G_stop 5,853, both set by training, exceed G_MAX 4,000. Y1, Y2 and Y5 hold (1.5 × T = 120,559 s ≤ 144,000 s). Nothing rescaled, retried or relaunched; see #202.
+> **H-OP amendment 1: the generation run's cap 4,000 → 6,500 (cap only); model-free build; returned for launch review; all gates closed; nothing run (amendment note, 2026-11-15, the user's approval).** `docs/superpowers/2026-11-15-htb-onpolicy-cap-amendment.md` (sha `814036ed…`). Kept: the 40 h ceiling, the stopping targets, N, the 9:1 split, the fit recipe, the imitation gate, the match rule; entry 66 and the REVIEW record stay as written. The admission is bound to the committed smoke's record, games, outer.json and yield record by sha, requires the yield to re-derive byte-equal and to be exactly that REVIEW, and re-reads Y3/Y4 at 6,500 (G_N 5,366, G_stop 5,853). 2,500 fresh openings extend the schedule (`gen-extension.json`, `578d34f3…`); openings distinct across all schedules; 4,054,336 seed derivations, no repeated 48-bit value. See #203.
 
 ## Historical proposal check — programme now closed
 
@@ -2138,6 +2139,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 200. **H-OP is built, not launched (2026-11-14).** Do **not**: open any H-OP gate (the five Python gates, `ONPOLICY_MATCH_SMOKE_AUTHORIZED`, `ONPOLICY_MATCH_AUTHORIZED`) or run any stage before the user's launch review and approval of that stage; edit `htb_pilot.py` (the H-TB screen pins it; H-OP carries its own fit copy, tested bitwise against it); change or regenerate the frozen openings `ca4e3bba…` (driver, analyser and tests pin them); edit a derived wrapper or V3 copy by hand rather than through its spec; launch generation on anything but a committed smoke whose yield verdict re-derives byte-equal and is LAUNCH_OK; label from games that fail replay validation; export a challenger whose fit missed the imitation gate; play the match on an export without a committed PARITY_PASS record; or retry, extend or score any VOID, STOP or INVALID stage.
 201. **The H-OP handoff repair (2026-11-14).** Do **not**: hand any stage's output to the next on the inner record alone; write a yield verdict, read label shards, or load a model for either match stage before the previous stage's wrapper evidence passes `stage_admission` (Python) or `exportWrapperFailures` plus the committed-and-clean checks (Node); read an inner COMPLETED with an outer TIMEOUT, CRASHED or unconfirmed cleanup as a completed stage; change a stage's ceiling (`KILL_S`, the wrappers' TERM_S) without changing both together; or weaken or drop the timeout regressions.
 202. **The H-OP generation smoke is spent: REVIEW, Y3 and Y4 failed (2026-11-15, entry 66).** Do **not**: rerun, extend or top up the smoke, or rerun it to "refresh" the yield; rewrite or re-derive yield.json under a changed estimator; open the generation gate (the generation admission refuses a REVIEW verdict, by design); raise G_MAX, the 40 h ceiling, or change N_TRAIN/N_VAL, the 1.15 stop factor, the split or the openings to make this smoke pass; or read the smoke's winners. Any continuation of H-OP needs a reviewed decision by the user first.
+203. **H-OP amendment 1 (2026-11-15) is cap-only and covers one generation run.** Do **not**: launch the generation run without the user's launch approval; raise the cap again, or apply 6,500 to any other run or stage; edit entry 66, yield.json or any pinned smoke file (the admission is bound to their bytes), or re-derive the yield under another rule; treat the REVIEW verdict as LAUNCH_OK anywhere but this admission; change, reorder or add to the frozen 4,000 openings or the 2,500 in `gen-extension.json`; or change the 40 h ceiling, the stopping targets, N, the split, the fit recipe, the imitation gate or the match rule under this amendment.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -11887,3 +11889,84 @@ The proposal note and revision 1 note above stay as written. This correction sup
   generation gate stays closed (its admission refuses a non-LAUNCH_OK verdict), and nothing is rescaled, retried or
   relaunched without a reviewed decision. All seven H-OP gates are closed. Returned to the user for a decision. See
   #202.
+
+#### Amendment note — H-OP amendment 1: the generation run's cap 4,000 → 6,500 (cap only) and its model-free build; returned for launch review; all gates closed; nothing run (2026-11-15, the user's approval)
+
+- **The user's approval (2026-11-15):** prepare a cap-only amendment and its model-free build for one H-OP generation
+  run of up to 6,500 games.
+  - Keep the 40-hour ceiling, the stopping targets, the 9:1 split, the fit recipe, the imitation gate and the match
+    rule.
+  - Preserve entry 66 and the original REVIEW verdict as written.
+  - Bind the amended admission to the committed smoke evidence and its yield record.
+  - Extend the frozen generation schedule with fresh openings, and check opening and seed uniqueness across all
+    schedules.
+  - The approval covers the amendment and the model-free build only.
+- **The amendment:** `docs/superpowers/2026-11-15-htb-onpolicy-cap-amendment.md` (sha256 `814036ed…`). The card
+  (revision 3, `a2a5ba2f…`) is unchanged. The one change is G_MAX_RUN = 6,500 for the generation run. The card's
+  G_MAX = 4,000 stays in the smoke's yield rule, so the committed verdict remains REVIEW.
+- **Rationale** (the amendment's §4, from the committed yield record):
+  - Only Y3 and Y4 failed, both set by the training pool. Exclusions and deduplication removed nothing (f = 1.00).
+    Short self-play games (mean 30.4 plies) give about 26 rows per game.
+  - G_N 5,366 lies 1,134 games under 6,500, and G_stop 5,853 lies 647 under.
+  - 6,500 holds G_N while training u_LB ≥ 20.5 and G_stop while training u ≥ 23.6 (smoke: 24.85 and 26.2).
+  - At 6,500 games the estimates give 153,270 / 17,290 rows (point) and 145,355 / 16,411 (conservative).
+  - Time: 1.5 × T at G_stop is 120,559 s; at the cap, 1.5 × (8.374 + 6,500 × 13.730) = 133,885 s. Both are under
+    the unchanged 144,000 s ceiling.
+  - Labelling is about as large as the card planned: the rows are unchanged (132,000), and the lockstep replay covers
+    roughly 6,000 games of about 30 plies, against about 3,000 G3-like games of about 55.
+  - None of these is a prediction of the run's outcome. They are planning figures from 20 games per pool.
+- **The extended schedule:**
+  - `docs/superpowers/evidence/htb-onpolicy-openings/gen-extension.json` (sha256 `578d34f3…`) holds the
+    `"gen opening"` sequence continued past the frozen list: candidate indices 4,000–6,499, none rejected, for run
+    positions 4,000–6,499.
+  - Each new opening is distinct, directly or reflected, from the benchmark's 201 and G3's 222 openings, from all four
+    frozen lists and from the others.
+  - Re-deriving to 6,500 under the full exclusion set reproduces the frozen 4,000 exactly as the prefix.
+    `openings.json` (`ca4e3bba…`) is unchanged.
+  - The Node test re-derives the extension independently with the match analyser's `deriveOpening`, continuing from
+    index 4,000, and matches.
+- **Uniqueness across all schedules:** generation 6,500 games, generation smoke 40, match 272 × 2, match smoke 2 × 2,
+  plies 4–575.
+  - Openings: none repeats, directly or reflected, and none is a benchmark or G3 opening (`opening_problems` empty).
+  - Seeds: 4,054,336 derivations, all distinct as strings and as (search, readout) pairs; none of the 8,108,672
+    48-bit values repeats.
+  - The `openings` command re-derives both files byte-equal and repeats both checks.
+- **The amended admission (`generation_admission`)**, in order:
+  1. the smoke's clean, committed wrapper completion (`stage_admission`, unchanged);
+  2. the smoke's record.json `f74cc908…`, games.jsonl `eb9d2d4e…`, outer.json `a99df430…` and yield.json `b8d8edb9…`,
+     each committed and equal to its pinned sha256;
+  3. the yield record re-deriving byte-equal from the committed smoke;
+  4. the record being exactly the REVIEW the amendment answers: failed Y3 and Y4, g_max 4,000, cap 144,000 s, the
+     card's sha;
+  5. Y1, Y2 and Y5 as recorded (Y5 also recomputed), with Y3 and Y4 re-read against 6,500.
+  - The generate and label stages also require the pinned, committed amendment, and the schedule loader requires the
+    pinned, committed extension.
+  - The label stage validates the run's games against the 6,500-opening schedule.
+  - The run's record carries the amendment's and the yield record's sha256, the cap, the amended conditions and both
+    time estimates.
+- **Files:**
+  - `htb_onpolicy.py` `da3c0fac…`: G_MAX_RUN, the pins, `build_gen_extension`, `opening_problems`, `seed_uniqueness`,
+    `load_gen_schedule`, `amended_conditions`, the amended `generation_admission`, and the `openings` command.
+  - The generate wrapper `602272bb…`, re-derived from its spec. Only its header line changed; TERM 143,990 / KILL
+    144,000 are unchanged.
+  - `test_htb_onpolicy.py` `a196f0cd…` and `test_onpolicy_match.mjs` `5cbdcaec…`.
+- **Tests (model-free):**
+  - the amendment, cap and pins (all four smoke files hash to their pins);
+  - the extension re-derives byte-equal, is pinned and keeps the prefix;
+  - openings distinct across all schedules, with five planted faults each caught;
+  - the seed counts;
+  - the `openings` command;
+  - the run refuses a 4,000-opening schedule and stops at G_MAX_RUN;
+  - admission of a pinned REVIEW smoke at the cap, with eight refusals: G_N or G_stop 6,501, Y5 beyond the ceiling,
+    LAUNCH_OK, failed [Y3, Y4, Y5], failed [Y3], g_max 6,500, another cap;
+  - binding to each of the four pinned files (another sha, or uncommitted);
+  - a non-byte-equal yield, a wrong pgid, and an inner success followed by an outer timeout, each refused;
+  - **the real committed smoke admitted as written** (Config(), real exclusions, git: G_N 5,366, G_stop 5,853, cap
+    6,500);
+  - the run through its gated entry under the amendment;
+  - generate and label refusing without the pinned amendment;
+  - the schedule loader.
+- **Results:** H-OP Python 143, gate inventory 8 (71 gates, all closed), neighbouring Python suites 245; Node: H-OP
+  match 20, benchmark 19, Diagnostic O 11. All pass.
+- **Status:** amended and built; returned for launch review. All seven H-OP gates are closed. Nothing generated,
+  loaded, labelled, trained, exported or played. See #203.

@@ -9,6 +9,7 @@ import json
 import math
 import pathlib
 import random
+import shutil
 
 import mlx.core as mx
 import numpy as np
@@ -50,6 +51,20 @@ def test_THE_FROZEN_NUMBERS_ARE_THE_CARDS():
     assert (H.SELECT_TAG, H.FIT_TAG) == ("htb-onpolicy-select/1", "htb-onpolicy-fit/1")
     assert H.LABEL_MEMORY_REQUIRED == 5_905_580_032 and H.FIT_MEMORY_REQUIRED == 12 * (1 << 30)
     assert H.STUDENT["sha256"].startswith("0e1cb621") and H.STUDENT["state_digest"].startswith("586dca4f")
+
+
+def test_AMENDMENT_1_CHANGES_ONLY_THE_RUNS_CAP_AND_IS_PINNED():
+    raw = (ROOT / H.AMENDMENT).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == H.AMENDMENT_SHA256 and H.CARD_SHA256.encode() in raw
+    assert (H.G_MAX, H.G_MAX_RUN, H.GEN_CAP_S, H.KILL_S["generate"]) == (4_000, 6_500, 144_000, 144_000)
+    assert H.SMOKE_PINS == {f"docs/superpowers/evidence/{rel}": sha for rel, sha in (
+        ("htb-onpolicy-gen-smoke/record.json", "f74cc908f8f3b5aa8f4b7a96e377e19eec1a374d7150b25c1d616bf1bd2cb1b0"),
+        ("htb-onpolicy-gen-smoke/games.jsonl", "eb9d2d4e5c60146be7d823de4c379bdec4512f605ba3fbf2de93bd7d0241d286"),
+        ("htb-onpolicy-gen-smoke-run/outer.json", "a99df4307907c479246aae70edba9e60e9cdad29f7a9102c6d869d6f6f5e5847"),
+        ("htb-onpolicy-gen-smoke/yield.json", "b8d8edb98a7b0a5e4b46d2f212fe144b85041d2bec5aa3a11be9d53b17d637b4"))}
+    for rel, sha in H.SMOKE_PINS.items():                     # the committed smoke evidence, as written (entry 66)
+        assert hashlib.sha256((ROOT / rel).read_bytes()).hexdigest() == sha, rel
+        assert sha in raw.decode(), rel
 
 
 @pytest.mark.parametrize("stage", sorted(GATE_FILES))
@@ -101,6 +116,63 @@ def test_NO_OPENING_REPEATS_ACROSS_OR_WITHIN_LISTS_OR_MEETS_A_BENCHMARK_OR_G3_OP
             assert d not in forbidden and r not in forbidden and d not in seen and r not in seen, (k, e)
             seen.add(d)
             assert all(H.CENTRAL_MIN <= a <= H.CENTRAL_MAX and H.CENTRAL_MIN <= b <= H.CENTRAL_MAX for a, b in e["moves"])
+
+
+def _ext():
+    return json.loads((ROOT / H.GEN_EXTENSION_REL).read_text())
+
+
+def test_THE_EXTENSION_RE_DERIVES_BYTE_EQUAL_IS_PINNED_AND_KEEPS_THE_FROZEN_LIST_AS_ITS_PREFIX():
+    raw = (ROOT / H.GEN_EXTENSION_REL).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == H.GEN_EXTENSION_SHA256
+    assert H.dump_extension(H.build_gen_extension()) == raw
+    ext = json.loads(raw)
+    assert (ext["first_position"], len(ext["gen_extension"]), ext["base_openings_sha256"]) == (4000, 2500,
+                                                                                               H.OPENINGS_SHA256)
+    base = json.loads((ROOT / H.OPENINGS_REL).read_text())["gen"]
+    assert [e["index"] for e in ext["gen_extension"]] == list(range(4000, 6500)) and base[-1]["index"] == 3999
+    full = H.opening_list(H.NS, "gen opening", 6500, [*H.bench_openings(), *H.g3_openings()] + [
+        e["moves"] for k in ("gen_smoke", "match", "match_smoke")
+        for e in json.loads((ROOT / H.OPENINGS_REL).read_text())[k]])
+    assert full == [*base, *ext["gen_extension"]]
+
+
+def test_EVERY_OPENING_ACROSS_ALL_SCHEDULES_IS_DISTINCT_AND_THE_CHECK_CATCHES_EACH_FAULT():
+    o = json.loads((ROOT / H.OPENINGS_REL).read_text())
+    lists = {"gen": [*o["gen"], *_ext()["gen_extension"]], "gen_smoke": o["gen_smoke"], "match": o["match"],
+             "match_smoke": o["match_smoke"]}
+    forbidden = [*H.bench_openings(), *H.g3_openings()]
+    assert [len(v) for v in lists.values()] == [6500, 40, 272, 2]
+    assert H.opening_problems(lists, forbidden) == []
+    ext0 = lists["gen"][4000]
+    for name, bad, want in (
+            ("repeat of the frozen list", {**lists, "gen": lists["gen"] + [lists["gen"][0]]}, "repeats gen[0]"),
+            ("reflection of a match opening", {**lists, "gen": lists["gen"] + [
+                {"index": -1, "moves": [list(m) for m in H._reflected(o["match"][5]["moves"])]}]}, "match[5]: repeats gen[6500]"),
+            ("extension opening reused by the match", {**lists, "match": lists["match"] + [ext0]}, "repeats gen[4000]"),
+            ("a benchmark opening", {**lists, "gen": lists["gen"] + [{"index": -1, "moves": forbidden[0]}]},
+             "a benchmark or G3 opening"),
+            ("off-centre", {**lists, "gen": lists["gen"] + [{"index": -1, "moves": [[0, 5], [6, 6], [7, 7], [8, 8]]}]},
+             "central plies")):
+        probs = H.opening_problems(bad, forbidden)
+        assert any(want in p for p in probs), (name, probs)
+
+
+def test_SEEDS_ARE_UNIQUE_ACROSS_ALL_SCHEDULES():
+    """The run's 6,500 games, the smoke's 40, the match's 272 pairs and the match smoke's 2, every ply 4-575: every
+    derivation string distinct, every (search, readout) pair distinct, and no 48-bit value repeated."""
+    assert H.seed_uniqueness() == {"derivations": 4_054_336, "distinct_strings": 4_054_336,
+                                   "distinct_pairs": 4_054_336, "values": 8_108_672, "repeated_values": 0}
+    assert 4_054_336 == (6_500 + 40 + 2 * 272 + 2 * 2) * len(H.SEED_PLIES)
+    it = H.seed_strings()                                     # the match paths are the Node driver's moveSeeds strings
+    assert next(it) == f"{H.NS}/gen/game 0/ply 4"
+    assert next(s for s in it if "/match/" in s) == "htb-onpolicy/20261114/match/pair 0/game 0/ply 4"
+
+
+def test_THE_OPENINGS_COMMAND_RE_DERIVES_BOTH_FILES_AND_CHECKS_EVERY_SCHEDULE(capsys):
+    assert H.main(["openings"]) == 0
+    out = capsys.readouterr().out
+    assert out.count("re-derives byte-equal") == 2 and "across all schedules: distinct" in out
 
 
 def test_AN_EXCLUDED_OPENING_IS_SKIPPED_DIRECTLY_AND_REFLECTED():
@@ -327,8 +399,9 @@ def _run_generate(tmp_path, stage, seams, ex=None, monkeypatch=None):
     out.mkdir()
     rec, events = {}, []
     o = json.loads((ROOT / H.OPENINGS_REL).read_text())
+    sched = o["gen_smoke"] if stage == "gen-smoke" else [*o["gen"], *_ext()["gen_extension"]]
     H.generate(stage, seams, out, rec, lambda e, **k: events.append((e, k)), ex or H.Exclusions.empty(),
-               o["gen_smoke" if stage == "gen-smoke" else "gen"], t_start=0.0)
+               sched, t_start=0.0)
     return rec, H.read_games(out / "games.jsonl"), events
 
 
@@ -350,8 +423,15 @@ def test_THE_RUN_STOPS_ON_BOTH_POSITION_COUNTS(tmp_path, monkeypatch):
     assert prev["train"] < 300 or prev["val"] < 30                     # it stopped at the FIRST game reaching both
 
 
-def test_THE_RUN_STOPS_AT_G_MAX(tmp_path, monkeypatch):
-    monkeypatch.setattr(H, "G_MAX", 12)
+def test_THE_RUN_PLAYS_THE_EXTENDED_SCHEDULE_AND_REFUSES_A_SHORT_ONE(tmp_path):
+    seams = _seams()
+    with pytest.raises(P.Stop, match="4000 openings for 6500 games"):
+        H.generate("generate", seams, tmp_path, {}, lambda e, **k: None, H.Exclusions.empty(),
+                   json.loads((ROOT / H.OPENINGS_REL).read_text())["gen"], t_start=0.0)
+
+
+def test_THE_RUN_STOPS_AT_G_MAX_RUN(tmp_path, monkeypatch):
+    monkeypatch.setattr(H, "G_MAX_RUN", 12)
     rec, games, _ = _run_generate(tmp_path, "generate", _seams())
     assert rec["stopped_by"] == "g_max" and rec["games"] == 12 and [g["arm"] for g in games].count("val") == 1
 
@@ -391,7 +471,7 @@ def test_REPLAY_VALIDATION_CATCHES_A_TAMPERED_GAME(tmp_path):
 def _tree(tmp_path):
     """A throwaway root with the card and the openings, every file treated as committed."""
     root = tmp_path / "root"
-    for rel in (H.CARD, H.OPENINGS_REL):
+    for rel in (H.CARD, H.OPENINGS_REL, H.AMENDMENT, H.GEN_EXTENSION_REL):
         (root / rel).parent.mkdir(parents=True, exist_ok=True)
         (root / rel).write_bytes((ROOT / rel).read_bytes())
     return root
@@ -443,45 +523,143 @@ def test_THE_SMOKE_RUNS_THROUGH_THE_GATED_ENTRY_AND_ITS_YIELD_RE_DERIVES(tmp_pat
     assert raw == H.derive_yield(cfg)[1]
 
 
-def test_GENERATION_ADMITS_ONLY_A_CLEAN_SMOKE_WITH_A_BYTE_EQUAL_LAUNCH_OK_YIELD(tmp_path, monkeypatch):
-    root = _tree(tmp_path)
+#: the shape of the committed smoke's REVIEW record (entry 66): only Y3 and Y4 failed, at G_MAX 4,000
+REVIEW_66 = {"verdict": "REVIEW", "failed": ["Y3", "Y4"], "g_max": 4_000, "cap_s": 144_000,
+             "conditions": {"Y1": True, "Y2": True, "Y3": False, "Y4": False, "Y5": True},
+             "games_to_exact_counts": {"G_N": 5_366, "by_pool": {"train": 5_366, "val": 4_760}, "set_by": "train"},
+             "games_to_stop_targets": {"G_stop": 5_853, "by_pool": {"train": 5_853, "val": 5_190}, "set_by": "train"},
+             "t0": 8.374, "w": 13.730475}
+
+
+@pytest.fixture(scope="module")
+def smoke_tree(tmp_path_factory):
+    """One fake smoke run through its gated entry, its wrapper evidence clean (played once per module)."""
+    root = _tree(tmp_path_factory.mktemp("smoke"))
     cfg = _cfg(root)
     assert H.run_gen("gen-smoke", cfg, _seams(), t_start=0.0) == 0
-    out = root / H.OUTER["gen-smoke"]
-    rec = json.loads((root / H.EV["gen-smoke"] / "record.json").read_text())
-    _outer(cfg, "gen-smoke", rec)
-    v, raw = H.derive_yield(cfg)
-    (root / H.YIELD_REL).write_bytes(raw)
-    if v["verdict"] == "LAUNCH_OK":
-        assert H.generation_admission(cfg, H.Exclusions.empty())["yield_sha256"] == hashlib.sha256(raw).hexdigest()
-    else:                                                    # the fake loop's timing can fail Y5: REVIEW refuses
-        with pytest.raises(P.Refused, match="no launch"):
-            H.generation_admission(cfg, H.Exclusions.empty())
-    monkeypatch.setattr(H, "yield_verdict", lambda *a, **k: {**v, "verdict": "LAUNCH_OK", "failed": []})
+    _outer(cfg, "gen-smoke")
+    return root, H.derive_yield(cfg)[0]                  # the smoke's own derivation, computed once
+
+
+def _amended_smoke(tmp_path, monkeypatch, smoke_tree, **over):
+    """A copy of the fake smoke, its yield record a REVIEW shaped like entry 66's (with `over`), and the amendment's
+    pins taken from these files."""
+    base, v = smoke_tree
+    root = tmp_path / "root"
+    shutil.copytree(base, root)
+    cfg = _cfg(root)
+    review = {**v, **REVIEW_66, **over}
+    monkeypatch.setattr(H, "yield_verdict", lambda *a, **k: json.loads(json.dumps(review)))
     (root / H.YIELD_REL).write_bytes(H.derive_yield(cfg)[1])
-    assert H.generation_admission(cfg, H.Exclusions.empty())
-    (root / H.YIELD_REL).write_bytes(raw + b" ")
-    with pytest.raises(P.Refused, match="byte-equal"):
+    pins = {rel: hashlib.sha256((root / rel).read_bytes()).hexdigest() for rel in H.SMOKE_PINS}
+    return root, _cfg(root, smoke_pins=pins)
+
+
+def test_AMENDMENT_1_ADMITS_THE_PINNED_REVIEW_SMOKE_AT_THE_RUNS_CAP(tmp_path, monkeypatch, smoke_tree):
+    root, cfg = _amended_smoke(tmp_path, monkeypatch, smoke_tree)
+    adm = H.generation_admission(cfg, H.Exclusions.empty())
+    assert adm["g_max_run"] == 6_500 and adm["amendment_sha256"] == H.AMENDMENT_SHA256
+    assert adm["amended_conditions"] == {"Y1": True, "Y2": True, "Y3": True, "Y4": True, "Y5": True}
+    assert (adm["G_N"], adm["G_stop"]) == (5_366, 5_853)
+    assert adm["yield_sha256"] == hashlib.sha256((root / H.YIELD_REL).read_bytes()).hexdigest()
+    assert adm["launch_estimate_s"] == pytest.approx(120_559.27, abs=0.01)
+    assert adm["at_cap_estimate_s"] == pytest.approx(133_884.69, abs=0.01)
+
+
+@pytest.mark.parametrize("over, match", [
+    ({"games_to_exact_counts": {"G_N": 6_501}}, r"still fails \['Y3'\]"),
+    ({"games_to_stop_targets": {"G_stop": 6_501}}, r"still fails \['Y4'\]"),
+    ({"w": 16.5}, r"still fails \['Y5'\]"),                         # 1.5 x (t0 + 5,853 w) > 144,000 s
+    ({"verdict": "LAUNCH_OK", "failed": []}, "not the REVIEW amendment 1 answers"),
+    ({"failed": ["Y3", "Y4", "Y5"]}, "not the REVIEW amendment 1 answers"),
+    ({"failed": ["Y3"]}, "not the REVIEW amendment 1 answers"),
+    ({"g_max": 6_500}, "not the REVIEW amendment 1 answers"),
+    ({"cap_s": 200_000}, "not the REVIEW amendment 1 answers")])
+def test_AMENDMENT_1_REFUSES_ANY_OTHER_YIELD_RECORD(tmp_path, monkeypatch, smoke_tree, over, match):
+    for k in ("games_to_exact_counts", "games_to_stop_targets"):
+        if k in over:
+            over = {**over, k: {**REVIEW_66[k], **over[k]}}
+    _root, cfg = _amended_smoke(tmp_path, monkeypatch, smoke_tree, **over)
+    with pytest.raises(P.Refused, match=match):
         H.generation_admission(cfg, H.Exclusions.empty())
-    (root / H.YIELD_REL).write_bytes(H.derive_yield(cfg)[1])
-    (out / "pgid.txt").write_text("1\n")
+
+
+@pytest.mark.parametrize("rel", sorted(H.SMOKE_PINS))
+def test_AMENDMENT_1_IS_BOUND_TO_EACH_PINNED_SMOKE_FILE(tmp_path, monkeypatch, smoke_tree, rel):
+    root, cfg = _amended_smoke(tmp_path, monkeypatch, smoke_tree)
+    assert H.generation_admission(cfg, H.Exclusions.empty())
+    other = _cfg(root, smoke_pins={**cfg.smoke_pins, rel: "0" * 64})          # another smoke's bytes
+    with pytest.raises(P.Refused, match="not the committed smoke evidence amendment 1 is bound to"):
+        H.generation_admission(other, H.Exclusions.empty())
+    uncommitted = H.Config(**{**cfg.__dict__, "committed": lambda r, x: x != rel and (r / x).exists()})
+    with pytest.raises(P.Refused, match="absent, uncommitted or changed|not the committed smoke evidence"):
+        H.generation_admission(uncommitted, H.Exclusions.empty())
+
+
+def test_AMENDMENT_1_STILL_REQUIRES_A_BYTE_EQUAL_YIELD_AND_A_CLEAN_SMOKE_WRAPPER(tmp_path, monkeypatch, smoke_tree):
+    root, cfg = _amended_smoke(tmp_path, monkeypatch, smoke_tree)
+    raw = (root / H.YIELD_REL).read_bytes()
+    (root / H.YIELD_REL).write_bytes(raw + b" ")
+    tampered = _cfg(root, smoke_pins={**cfg.smoke_pins, H.YIELD_REL: hashlib.sha256(raw + b" ").hexdigest()})
+    with pytest.raises(P.Refused, match="byte-equal"):
+        H.generation_admission(tampered, H.Exclusions.empty())
+    (root / H.YIELD_REL).write_bytes(raw)
+    rec = json.loads((root / H.EV["gen-smoke"] / "record.json").read_text())
+    (root / H.OUTER["gen-smoke"] / "pgid.txt").write_text("1\n")
     with pytest.raises(P.Refused, match="pgid"):
         H.generation_admission(cfg, H.Exclusions.empty())
-    _outer(cfg, "gen-smoke", rec, gate_restored=False)
+    _outer(cfg, "gen-smoke", rec, **OUTER_TIMEOUT)          # an inner success followed by an outer timeout
     with pytest.raises(P.Refused, match="not clean"):
         H.generation_admission(cfg, H.Exclusions.empty())
 
 
-def test_A_REVIEW_YIELD_REFUSES_THE_RUN(tmp_path, monkeypatch):
+def test_AMENDMENT_1_ADMITS_THE_REAL_COMMITTED_SMOKE_AS_WRITTEN():
+    """The real state: the committed smoke (entry 66) and its REVIEW record, with the real exclusions and git."""
+    v = json.loads((ROOT / H.YIELD_REL).read_text())
+    assert (v["verdict"], v["failed"], v["g_max"]) == ("REVIEW", ["Y3", "Y4"], 4_000)       # preserved as written
+    adm = H.generation_admission(H.Config(), H.build_exclusions(ROOT))
+    assert (adm["G_N"], adm["G_stop"], adm["g_max_run"]) == (5_366, 5_853, 6_500)
+    assert all(adm["amended_conditions"].values()) and adm["yield_sha256"] == H.SMOKE_PINS[H.YIELD_REL]
+    assert adm["at_cap_estimate_s"] < H.GEN_CAP_S
+
+
+def test_THE_RUN_RUNS_THROUGH_ITS_GATED_ENTRY_UNDER_AMENDMENT_1(tmp_path, monkeypatch, smoke_tree):
+    root, cfg = _amended_smoke(tmp_path, monkeypatch, smoke_tree)
+    monkeypatch.setattr(H, "STOP", {"train": 300, "val": 30})
+    assert H.run_gen("generate", cfg, _seams(), t_start=0.0) == 0
+    rec = json.loads((root / H.EV["generate"] / "record.json").read_text())
+    assert rec["status"] == "COMPLETED" and rec["stopped_by"] == "targets" and rec["caps"]["g_max"] == 6_500
+    assert rec["admission"]["amendment_sha256"] == H.AMENDMENT_SHA256 and rec["admission"]["g_max_run"] == 6_500
+    games = H.read_games(root / H.EV["generate"] / "games.jsonl")
+    assert H.check_games(games, H.load_gen_schedule(cfg), H.run_arm) == []
+
+
+@pytest.mark.parametrize("stage", ["generate", "label"])
+def test_THE_AMENDED_STAGES_REFUSE_WITHOUT_THE_PINNED_AMENDMENT(tmp_path, stage):
     root = _tree(tmp_path)
     cfg = _cfg(root)
-    assert H.run_gen("gen-smoke", cfg, _seams(), t_start=0.0) == 0
-    _outer(cfg, "gen-smoke")
-    monkeypatch.setattr(H, "yield_verdict", lambda *a, **k: {"verdict": "REVIEW", "failed": ["Y3", "Y4"]})
-    (root / H.YIELD_REL).write_bytes(H.derive_yield(cfg)[1])
-    with pytest.raises(P.Refused, match=r"REVIEW, failed \['Y3', 'Y4'\]: no launch"):
-        H.run_gen("generate", cfg, _seams(), t_start=0.0)
-    assert not (root / H.EV["generate"]).exists()
+    H.preconditions(stage, cfg)
+    (root / H.AMENDMENT).write_bytes((root / H.AMENDMENT).read_bytes() + b"\n")
+    with pytest.raises(P.Refused, match="the amendment is not the pinned, committed one"):
+        H.preconditions(stage, cfg)
+    (root / H.AMENDMENT).unlink()
+    with pytest.raises(P.Refused, match="the amendment is not the pinned, committed one"):
+        H.preconditions(stage, cfg)
+    H.preconditions("fit", cfg)                               # stages the amendment leaves alone do not read it
+
+
+def test_THE_GENERATION_SCHEDULE_IS_THE_FROZEN_LIST_THEN_THE_PINNED_EXTENSION(tmp_path):
+    root = _tree(tmp_path)
+    cfg = _cfg(root)
+    sched = H.load_gen_schedule(cfg)
+    assert len(sched) == 6_500 and sched[:4000] == json.loads((ROOT / H.OPENINGS_REL).read_text())["gen"]
+    assert sched[4000:] == _ext()["gen_extension"]
+    (root / H.GEN_EXTENSION_REL).write_bytes((root / H.GEN_EXTENSION_REL).read_bytes()[:-1])
+    with pytest.raises(P.Refused, match="not the committed, pinned extension"):
+        H.load_gen_schedule(cfg)
+    (root / H.GEN_EXTENSION_REL).unlink()
+    with pytest.raises(P.Refused, match="not the committed, pinned extension"):
+        H.load_gen_schedule(cfg)
 
 
 # ─────────────────────────────── labels (card §6) ───────────────────────────────
