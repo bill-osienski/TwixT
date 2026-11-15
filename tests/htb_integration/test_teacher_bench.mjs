@@ -5,7 +5,7 @@
  */
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -317,11 +317,14 @@ test('runtime pins and committed smoke evidence: checked before any model loads'
 });
 
 test('run refuses while the gate is closed, and creates nothing', () => {
+  // Since the run (2026-11-14, ed4f8567 and c9d110b1) both evidence directories exist; "nothing" now means nothing new.
   for (const stage of ['smoke', 'match']) {
+    const dir = join(D.REPO_ROOT, D.RUN_REL[stage]);
+    const before = existsSync(dir) ? readdirSync(dir).sort() : null;
     const r = spawnSync(process.execPath, [join(D.REPO_ROOT, 'tests/htb_integration/teacher_bench.mjs'), 'run', stage, '--teacher-python', 'x', '--clone-root', 'y', '--kill-s', String(D.KILL_S[stage])], { encoding: 'utf8' });
     assert.equal(r.status, 4);
     assert.match(r.stderr, /AUTHORIZED is closed/);
-    assert.equal(existsSync(join(D.REPO_ROOT, D.RUN_REL[stage])), false);
+    assert.deepEqual(existsSync(dir) ? readdirSync(dir).sort() : null, before);
   }
 });
 

@@ -300,6 +300,7 @@ knob) is not a new hypothesis.
 > **H-OP card REVISION 1 (proposal note revision, 2026-11-14, the user's review); still awaiting approval; nothing built or run.** Kept: row counts, GPU generation path, gate thresholds, 272-pair match. Corrected: arm N measured a playing-strength gap in raw-policy games, not agreement on `hard` self-play positions (an open question, measured first by the fit's reference scores); GPU generation is self-play under the research implementation of `hard`'s protocol (G1: fake evaluators; V2-R/V3: sampled real positions; real trajectories unverified). New: a frozen 40-game smoke yield verdict Y1–Y5 (yield after exclusions and mirror dedup, conservative games to N ≤ 4,000, 1.5 × time ≤ 40 h; else REVIEW, no launch). PASS = superiority over 0.50 for the whole update; 0.60 is the planning target; ~80% power is model-based and conditional on completion. G3 openings excluded from match openings. A gate failure reads "the challenger missed the imitation gate", with each metric's movement. See #197.
 > **H-OP card REVISION 2: the generation smoke's yield verdict corrected (dated correction, 2026-11-14, the user's review); returned for build approval; nothing built or run.** Revision 1's Y3/Y4 pooled one yield and one mean length over both arms and applied E4 to training, so a smoke with fast training games and slow validation games could return LAUNCH_OK (the 60/20-ply example: LAUNCH_OK under revision 1, G_stop 2,739). Now: usable rows per game estimated per pool, as selection counts them (E4 validation only; validation keys found in any training game, later ones included, removed); game counts projected with the actual 9:1 split, the slower pool setting them; Y5 on full-loop elapsed time (play, counting, recording). The 60/20 example is pinned as a model-free regression returning REVIEW (Y3, Y4 on validation). Planning check: Y3 and Y4 both pass in 42% of smokes resampled from G3 lengths, 2.5% from arm P lengths. 40-game smoke, caps, row targets, gate and match rule unchanged. See #198.
 > **H-OP: model-free build APPROVED with the narrow #53/#87 exceptions; card revision 3 (decision note, 2026-11-14, the user's approval).** The generation smoke's 40 games alternate training-like (even) and validation-like (odd), 20/20; the full run and every projection stay at 9:1. Kept: Y1–Y5, the row targets, both caps, the imitation gate, the 272-pair match rule. The 36/4 regression stays as a formula test; a 20/20 fixture covers the actual smoke. Planning check with the 20/20 split: Y3 and Y4 both pass 80% (G3 lengths), 7% (arm P lengths). The approval covers the build only. See #199.
+> **H-OP BUILT (model-free); returned for launch review; nothing generated, loaded, labelled, trained, exported or played (build record, 2026-11-14).** `htb_onpolicy.py` (openings, seeds, keys, E1–E4, the stopping counter, the 20/20 smoke's yield verdict Y1–Y5, selection, labels with the benchmark's lockstep check, the fit with its own epoch namespace, the gate I1–I3), `htb_onpolicy_export.py` (export, structural check, canaries, S1–S4, V3), the Node match driver and analyser (272 pairs, 625/1088 passes), 7 wrappers, 5 new Python gates (71 in all) and 2 JS gates, all closed. Frozen openings `ca4e3bba…`. Tests: H-OP Python 65, gate inventory 8, neighbouring Python suites 245, Node match 17, benchmark 19 (one stale test fixed), Diagnostic O 11: all pass. See #200.
 
 ## Historical proposal check — programme now closed
 
@@ -2132,6 +2133,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 197. **H-OP card revision 1 (2026-11-14): corrections to the 2026-11-14 proposal note's wording; still paper only.** Do **not** cite the original note's "Arm N's 0.045 shows a large imitation gap at play-time positions": arm N measured a playing-strength gap in raw-policy games, and agreement on `hard` self-play positions is unmeasured. Do **not** describe GPU-generated games as games the product would play, or G1/V2-R/V3 as verifying real self-play trajectories. Do **not** launch generation on anything but a committed smoke with a LAUNCH_OK yield verdict (Y1–Y5), or rescale counts, caps or the estimator after a REVIEW without a reviewed decision. Do **not** read a match PASS as a 0.60 gain or as caused by the data source alone, or the 80% power figure as distribution-free. Report a gate failure as the challenger missing the imitation gate, with every metric's movement.
 198. **H-OP card revision 2 (2026-11-14): the smoke's yield verdict corrected.** Do **not** cite revision 1's Y3/Y4 formulas (one pooled yield f and one mean length m, E4 applied to both arms, validation keys checked only against earlier training games) or its planning check (Y3 100% / Y4 97.5% on G3 lengths): they could pass a smoke whose validation pool cannot reach its target within G_MAX. Do **not** project games or time from a single pooled rate, apply E4 to training, or price Y5 from search time alone. Do **not** drop or weaken the pinned 60/20-ply regression (it must return REVIEW with exactly Y3 and Y4 failed on validation). Do **not** answer a REVIEW by relabelling the smoke, enlarging it, or relaxing the bound without a reviewed decision.
 199. **The H-OP build approval (2026-11-14).** The narrow #53 (twixtbot as a training source) and #87 (distillation) exceptions cover **this experiment only**: its card (revision 3), its model-free build, and later its runs, each once and each with its own approval. Do **not**: run the generation smoke, generation, labelling, the fit, the export or either match stage on this approval; open any H-OP gate except in a one-line launch commit after the user's launch approval; change the smoke's 20/20 alternating split, the run's 9:1 rule, Y1–Y5, the row targets, the caps, I1–I3 or the 272-pair rule without a reviewed revision; or cite the exceptions for a second round, another teacher configuration or another recipe.
+200. **H-OP is built, not launched (2026-11-14).** Do **not**: open any H-OP gate (the five Python gates, `ONPOLICY_MATCH_SMOKE_AUTHORIZED`, `ONPOLICY_MATCH_AUTHORIZED`) or run any stage before the user's launch review and approval of that stage; edit `htb_pilot.py` (the H-TB screen pins it; H-OP carries its own fit copy, tested bitwise against it); change or regenerate the frozen openings `ca4e3bba…` (driver, analyser and tests pin them); edit a derived wrapper or V3 copy by hand rather than through its spec; launch generation on anything but a committed smoke whose yield verdict re-derives byte-equal and is LAUNCH_OK; label from games that fail replay validation; export a challenger whose fit missed the imitation gate; play the match on an export without a committed PARITY_PASS record; or retry, extend or score any VOID, STOP or INVALID stage.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -11665,3 +11667,93 @@ The proposal note and revision 1 note above stay as written. This correction sup
   - This replaces revision 2's 42% and 2.5%.
 - **Status:** building. The build returns with model-free test results for launch review. Nothing is generated,
   loaded, labelled, trained or played. See #199.
+
+#### Build record — H-OP: the model-free build; returned for launch review; nothing generated, loaded, labelled, trained, exported or played (2026-11-14)
+
+- **Scope:** the user's approval of the model-free build and the narrow #53/#87 exceptions (decision note above; card
+  revision 3, `a2a5ba2f…`). Every runtime entry is behind its own closed gate, and nothing loaded a model or played a
+  game. The Node match side was built by a forked agent from my brief and reviewed before commit.
+- **Files (sha256):**
+
+  | File | sha256 | What it is |
+  |---|---|---|
+  | `scripts/GPU/alphazero/htb_onpolicy.py` | `63235b53…` | openings, seeds, keys, E1–E4, the stopping counter, the yield verdict, selection, labels, the fit, the gate; entries `run gen-smoke / generate / label / fit`, `yield`, `openings` |
+  | `scripts/GPU/alphazero/htb_onpolicy_export.py` | `e192fc2b…` | `run export`: ELIGIBLE-only admission, one export, structural check, both canaries, S1–S4, V3 |
+  | five `htb_onpolicy_*_authorization.py` | `d265f49d…` `9343f6b7…` `8f6dd719…` `88878c6a…` `396d8beb…` | gen-smoke, generate, label, fit, export; all closed |
+  | `docs/superpowers/evidence/htb-onpolicy-openings/openings.json` | `ca4e3bba…` | frozen openings: generation 4,000, generation smoke 40, match 272, match smoke 2 |
+  | five Python-stage `01_wrapper.sh` (gen-smoke, gen, label, fit, export) | `3e836b0a…` `d2c9deb7…` `4cce029f…` `f7d89a1c…` `983fb6a0…` | derived by `tests/htb_onpolicy_wrapper_spec.py` (`2b3bb4ae…`) from the first fit's and label's wrappers; TERM 3,590 / 143,990 / 6,590 / 11,690 / 3,590 s |
+  | `tests/parity/htb_onpolicy_mirror/{python_side.py,node_side.mjs}` | `b7806dd4…` `ad6c2ffe…` | V3 tools taking the challenger from the command line, derived by `tests/htb_onpolicy_v3_spec.py` (`8cd8b249…`); V3's comparator reused unmodified |
+  | `tests/htb_integration/onpolicy_authorization.mjs` | `52376177…` | `ONPOLICY_MATCH_SMOKE_AUTHORIZED`, `ONPOLICY_MATCH_AUTHORIZED`; both false |
+  | `tests/htb_integration/onpolicy_match.mjs` | `bb5d1a1b…` | the match driver: export-record admission, both players through `protocolMove`, 200/200 recorded per move |
+  | `tests/htb_integration/onpolicy_match_analyse.mjs` | `326cce47…` | timing (LAUNCH_OK iff 1.5 × projection ≤ 64,800 s) and the verdict (PASS iff mean − √(ln 20 / 544) > 0.5; guards → INVALID) |
+  | match-smoke and match `01_wrapper.sh` | `fe4fea57…` `b624a33f…` | derived from the benchmark's; TERM 1,790 / 64,790 s; analyser sha pinned |
+  | `tests/test_htb_onpolicy.py`, `tests/htb_integration/test_onpolicy_match.mjs` | `df2ee146…` `8cc0b6da…` | model-free tests |
+
+- **What the tests establish (model-free):**
+  - **Openings.** The Python port of the benchmark's rule reproduces all 200 match openings and its smoke opening
+    from the committed games. The frozen file re-derives byte-equal in Python and, independently, in Node.
+    - No opening repeats within or across lists, or meets any of the 201 benchmark or 222 G3 openings, directly or
+      reflected.
+    - The exclusions hit nothing: every list's indices are contiguous.
+  - **Exclusion sources** load with the card's counts: E1 624 games → 31,299 keys; E2 222 games → 10,079; E3 1,100
+    positions → 949 distinct keys; E4 264,000 rows.
+  - **The generation move reproduces all 27 of G1's fixture cases seed for seed,** plain readouts and halving choices,
+    with the fake and mirror-averaged fake evaluators, spending exactly the budgeted visits. This is the same
+    (fake-evaluator) level of check G1 made; real trajectories remain unverified (card §4.1).
+  - **The generation loop** plays to the product's end, enforces 200 budgeted and 200 spent on every search, and
+    stops on a changed student digest or BOINC. The run's counter stops at the first game reaching both 1.15 × N
+    targets, or at G_MAX. A validation key later found in a training game leaves the count, as in selection.
+  - **Yield regressions, pinned:**
+    - 36/4 formula test: REVIEW, Y3 and Y4 failed on validation (G_stop 6,900, G_N 12,000);
+    - 20/20 60/20 fixture: REVIEW, Y3 and Y4 on validation (G_stop 6,900, σ 20.255, u_val,LB 12.550, G_N 9,570);
+    - 20/20 all-60 fixture: LAUNCH_OK (G_stop 2,555, G_N 2,222, T 84,375 s);
+    - E4 counts for training but not validation; Y1, Y2 and Y5 each fail on their own.
+  - **Evidence chain.** The smoke runs through its gated entry and its yield re-derives. Generation admits only a
+    clean, bound smoke whose yield re-derives byte-equal and is LAUNCH_OK; a REVIEW refuses and writes nothing.
+  - **Labels.** On G3's 572-ply draw, the H-OP teacher's check (the benchmark's `bench_divergences`) labels plies 10,
+    72, 74, 300 and 571, where the first fit's unfiltered check STOPs at 74. A real bridge mismatch still STOPs. The
+    label run selects before loading the teacher, writes compact shards and binds.
+  - **Fit.** `htb_pilot.py` is not modified (the H-TB screen pins it). H-OP's fit copy, given the pilot's namespace,
+    reproduces `htb_pilot.fit` bitwise; with `htb-onpolicy-fit/1` only the order differs. The fit run binds the labels,
+    scores S then C, applies I1–I3, reports every metric's movement and the retention scores, and saves the challenger.
+    A miss reads "STOP: the challenger missed the imitation gate".
+  - **Export.**
+    - The model id formula reproduces `78c16a31c3dba37f`.
+    - The structural signature sees ops and shapes, not weights.
+    - The manifest keeps the contract.
+    - The qualification uses the unmodified S1–S4 tools in the isolated runtime and V3's own comparator.
+    - Any failed step STOPs at that step, and a different graph STOPs before parity.
+    - A missed gate or a changed challenger file refuses before anything runs.
+  - **Match (Node).**
+    - Both gates are closed, and the driver refuses while they are, creating nothing.
+    - Export-record admission refuses a missing, uncommitted or mismatched record, or the current model id.
+    - A 64-simulation budget, 199 visits, or a missing or duplicate row is INVALID.
+    - The boundary holds: 625/1088 passes and 624/1088 does not.
+    - The search-seconds guard makes the match INVALID before any outcome is read.
+    - One real 200-simulation game with fake networks yields a valid record.
+- **Fix outside H-OP:** `tests/htb_integration/test_teacher_bench.mjs`'s "creates nothing" test still asserted the
+  benchmark's evidence directories were absent; it went stale when the benchmark ran. It now asserts that nothing new
+  is created, as Diagnostic O's test does since its run.
+- **Choices made in the build, for review:**
+  - **Label memory requirement:** 5,905,580,032 B. This is the first run's 11 GiB scaled to 132,000 rows (card §12).
+  - **The match timing projection** is startup + mean smoke-game wall × 544, with no plies floor (card §12: "as in the
+    benchmark").
+  - **Stage records** use the first fit's statuses (COMPLETED, STOP, FAILED, INTERRUPTED; exit codes 0/3/4/5). The
+    wrappers write VOID on a timeout, crash or interruption.
+  - **Stage admission** binds each stage to the previous one: a COMPLETED record of this card, a clean outer.json,
+    pgid.txt equal to the recorded pid, and the same launch commit.
+- **Tests:**
+  - H-OP Python 65 and gate inventory 8 (71 gates, all closed);
+  - neighbouring Python suites `test_htb_pilot`, `test_htb_bench_teacher`, `test_htb_screen` and `test_htb_strength`:
+    245;
+  - Node: H-OP match 17, benchmark 19, Diagnostic O 11.
+  - All pass.
+- **Launch order, each stage its own approval (card §15):**
+  1. generation smoke (about 20 min, ceiling 3,600 s), then `yield`;
+  2. generation, only on LAUNCH_OK (about 23 h, ceiling 40 h);
+  3. labelling (about 1.2 h), then the fit and gate (about 2.1 h);
+  4. on ELIGIBLE: export and parity;
+  5. match smoke, then the match on LAUNCH_OK (about 10.2 h, ceiling 18 h).
+  - Each stage runs in a clean linked worktree, with BOINC quit and Unreal Editor closed.
+- **Status:** built; returned for launch review. Nothing generated, loaded, labelled, trained, exported or played.
+  See #200.
