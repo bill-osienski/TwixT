@@ -1,4 +1,4 @@
-# Experiment card H-OP: distillation on fresh self-play from the current `hard` (revision 2)
+# Experiment card H-OP: distillation on fresh self-play from the current `hard` (revision 3)
 
 **Status:** DRAFT for review, 2026-11-14. **Nothing is built, generated, labelled, trained, exported or played under
 this card.** It follows the student–teacher benchmark (ledger entry 65, #195), whose arm N result, TRAILS, supports
@@ -6,6 +6,14 @@ proposing this experiment. That result authorizes nothing beyond the proposal.
 
 **Approvals this card needs before any work:** the card itself, and the narrow #53 and #87 exceptions in §2. A build
 would then return once for launch review. Every runtime step in §15 needs its own approval.
+
+**Revision 3 (2026-11-14, the user's build approval): the smoke's split.** The user approved the model-free build and
+the narrow #53/#87 exceptions for this experiment. Before the smoke is implemented:
+- **The smoke's 40 games alternate:** *j* even is training-like and *j* odd is validation-like, a **20/20** split.
+- **The full run and every projection stay at 9:1.**
+- **Kept:** Y1–Y5, the row targets, both caps, the imitation gate and the 272-pair match rule.
+- **Tests:** the 36/4 regression stays as a formula test, and a 20/20 fixture covers the actual smoke configuration
+  (§4.4).
 
 **Revision 2 (2026-11-14, the user's review), before any build: the generation smoke (§4.3, §4.4).** Unchanged: the
 40-game smoke, G_MAX 4,000, the 40 h cap, the row targets, the imitation gate and the match rule.
@@ -174,12 +182,14 @@ continued training are not separated, so no result attributes an effect to eithe
   - So the game count to reach the targets is uncertain, and the smoke (§4.4) estimates it before launch.
 - **Reaching G_MAX is not a failure in itself.** A pool short of N is refused at selection (§5.2).
 
-### 4.4 The generation smoke: usable rows per game, by pool; games and time (frozen; revision 2)
+### 4.4 The generation smoke: usable rows per game, by pool; games and time (frozen; revision 3)
 
 **Smoke games:**
 - **40 games**, indices *j* = 0–39, in their own namespaces (`…/gen smoke opening <j>/…`, `…/gen smoke/game <j>/…`).
 - Openings are excluded exactly as the run's are (§4.2), and also from the run's own generation openings.
-- Arm labels follow the run's rule: *j* mod 10 = 9 is validation-like (4 games), the rest training-like (36 games).
+- **Arm labels alternate (revision 3):** *j* even is training-like and *j* odd is validation-like, 20 games each. The
+  smoke's 20/20 split exists only to measure both pools; the run keeps its 9:1 rule (§4.2), and so do all
+  projections below.
 - **The smoke runs the run's generation loop unchanged:** play, then count keys, then write the game's records.
 - Smoke games are never used for training or evaluation. Their outcomes are not read. The analyser reads lengths,
   keys and wall times only.
@@ -199,10 +209,10 @@ continued training are not separated, so no result attributes an effect to eithe
 | Quantity | Definition |
 |---|---|
 | x_j | searched plies in smoke game *j* (plies 4 to *n*−1) |
-| u_tr, u_val | usable rows per game: the mean of y_j over the 36 training-like and the 4 validation-like games |
+| u_tr, u_val | usable rows per game: the mean of y_j over the 20 training-like and the 20 validation-like games |
 | f_tr, f_val | Σ y_j / Σ x_j within each pool: usable rows per searched ply |
 | σ | the standard deviation of min(y_j, 150) over all 40 games, each game's y_j taken in its own pool |
-| u_tr,LB, u_val,LB | the pool's mean of min(y_j, 150), minus 1.645 × σ / √n_pool (n_pool = 36 and 4) |
+| u_tr,LB, u_val,LB | the pool's mean of min(y_j, 150), minus 1.645 × σ / √n_pool (n_pool = 20 and 20) |
 | t0 | startup: process start to the start of smoke game 0 (model load, digest checks, building E1–E4) |
 | w | loop seconds per game: the start of game 0 to the end of game 39's records, divided by 40 |
 
@@ -212,7 +222,7 @@ continued training are not separated, so no result attributes an effect to eithe
   - **Each pool keeps its own mean,** so a pool that is slower in the smoke is not averaged away (the 60/20 example
     below).
   - The **spread is pooled.** Arms are assigned by index before play, so their game lengths share one distribution
-    by construction, and four games alone give a very noisy spread.
+    by construction, and one pool's 20 games give a noisier spread than all 40.
   - 1.645 is a one-sided normal factor. This is a planning rule, not a guarantee.
 
 **Projected game counts, with the actual 9:1 split.** Among the first G games there are
@@ -244,36 +254,41 @@ with its numbers and the pool that set it.
   and nothing is rescaled, retried or relaunched without a reviewed decision.
 - **The caps stay:** G_MAX 4,000 and the fixed 40 h ceiling.
 
-**Pinned regression: the 60/20-ply example returns REVIEW (model-free; part of the build).** The `yield` analyser
-gets synthetic smoke evidence:
-- 36 training-like games of 60 searched plies and 4 validation-like games of 20 searched plies;
-- every key distinct and outside E1–E4;
-- t0 = 10 s and w = 1 s.
+**Pinned regressions (model-free; part of the build).** The yield functions take each pool's per-game rows as
+inputs, so the run's 9:1 projection is tested on any smoke shape. Three regressions are pinned:
 
-The test asserts:
-- u_tr = 60 and u_val = 20; f_tr = f_val = 1.
-- G_stop = 6,900, set by validation: 690 validation games are needed, and training alone would need 2,555.
-- G_N = 12,000, set by validation: u_val,LB = 20 − 1.645 × 12.153 / 2 = 10.004.
-- **Verdict REVIEW, with exactly Y3 and Y4 failed,** both naming the validation pool. Y1, Y2 and Y5 hold, with
-  T = 6,910 s.
+1. **The 36/4 formula test (revision 2's example, kept).** 36 training-like games of 60 searched plies and 4
+   validation-like games of 20, every key distinct and outside E1–E4, t0 = 10 s and w = 1 s. Asserts:
+   - u_tr = 60 and u_val = 20; G_stop = 6,900, set by validation (training alone needs 2,555);
+   - u_val,LB = 20 − 1.645 × 12.153 / 2 = 10.004, so G_N = 12,000, set by validation;
+   - **REVIEW, with exactly Y3 and Y4 failed** on validation; Y1, Y2 and Y5 hold (T = 6,910 s).
+2. **The 20/20 fixture: the 60/20 example in the actual smoke configuration.** Alternating games: *j* even has 60
+   searched plies, *j* odd has 20; t0 = 10 s and w = 1 s. Asserts:
+   - u_tr = 60 and u_val = 20; G_stop = 6,900, set by validation;
+   - σ = 20.255 and u_val,LB = 20 − 1.645 × 20.255 / √20 = 12.550, so G_N = 9,570, set by validation;
+   - **REVIEW, with exactly Y3 and Y4 failed** on validation.
+3. **A passing 20/20 fixture.** All 40 games have 60 searched plies; t0 = 60 s and w = 33 s. Asserts:
+   - G_stop = 2,555 (training) and G_N = 2,222 (training);
+   - T = 60 + 2,555 × 33 = 84,375 s, with 1.5 × T = 126,563 s ≤ 144,000;
+   - **LAUNCH_OK.**
 
-Revision 1's pooled formula would have returned LAUNCH_OK here (G_stop 2,739, G_N 2,524). It averaged the slow
-validation games into the fast training games.
+Revision 1's pooled formula would have returned LAUNCH_OK on the 60/20 example (G_stop 2,739, G_N 2,524). It averaged
+the slow validation games into the fast training games.
 
 The build adds two more model-free tests:
 - a key in E4 still counts for training but not for validation;
 - a validation key that first appears in a **later** training-like game is removed.
 
 **Planning check, not a prediction.** I drew 4,000 random 40-game smokes with replacement from earlier match lengths
-(searched plies = plies − 4, every key usable). Self-play length is unknown.
+(searched plies = plies − 4, every key usable), with the 20/20 alternating split and the 9:1 projections. Self-play
+length is unknown.
 
 | Lengths drawn from | Y3 passes | Y4 passes | Y3 and Y4 | median G_N |
 |---|---|---|---|---|
-| G3's 220 games | 44% | 88% | 42% | 4,150 |
-| Benchmark arm P's 220 games | 3% | 39% | 2.5% | 6,070 |
+| G3's 220 games | 84% | 91% | 80% | 3,676 |
+| Benchmark arm P's 220 games | 8% | 42% | 7% | 4,500 |
 
-**With only 4 validation-like games, the validation lower bound usually decides Y3,** and REVIEW is the more likely
-smoke outcome unless self-play games run longer than G3's.
+Revision 2's 36/4 smoke split gave 42% and 2.5% on the same draws.
 
 ## 5. Position selection and leakage
 
