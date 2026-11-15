@@ -1,4 +1,4 @@
-# Experiment card H-OP: distillation on fresh self-play from the current `hard` (revision 1)
+# Experiment card H-OP: distillation on fresh self-play from the current `hard` (revision 2)
 
 **Status:** DRAFT for review, 2026-11-14. **Nothing is built, generated, labelled, trained, exported or played under
 this card.** It follows the student–teacher benchmark (ledger entry 65, #195), whose arm N result, TRAILS, supports
@@ -6,6 +6,15 @@ proposing this experiment. That result authorizes nothing beyond the proposal.
 
 **Approvals this card needs before any work:** the card itself, and the narrow #53 and #87 exceptions in §2. A build
 would then return once for launch review. Every runtime step in §15 needs its own approval.
+
+**Revision 2 (2026-11-14, the user's review), before any build: the generation smoke (§4.3, §4.4).** Unchanged: the
+40-game smoke, G_MAX 4,000, the 40 h cap, the row targets, the imitation gate and the match rule.
+- **Y3 and Y4 now estimate usable rows per game separately for training and validation.** The game count is
+  projected with the actual 9:1 split, and the slower pool sets it.
+- **E4 applies only to validation,** as in final selection. A validation key found in any training game, later games
+  included, is removed.
+- **Y5 uses elapsed time for the full generation loop** (play, counting and recording), not search time per ply.
+- **The 60/20-ply example is pinned** as a model-free regression that must return REVIEW.
 
 **Revision 1 (2026-11-14, the user's review), before any build.** Unchanged: the row counts, the GPU generation path,
 the imitation thresholds and the 272-pair match.
@@ -152,9 +161,11 @@ continued training are not separated, so no result attributes an effect to eithe
 
 - Games are generated serially in index order, each one deterministic given its seeds.
 - After each game, the driver counts distinct canonical keys (§5.1) at plies 4 to *n*−1, net of the exclusion sets
-  (§5.3):
+  as selection applies them (§5.3: E1–E3 for training; E1–E4 for validation):
   - in the training games;
-  - in the validation games, leaving out any key already seen in a training game.
+  - in the validation games, leaving out any key found in **any** training game generated so far. A validation key
+    that first appears in a later training game leaves the count at that point.
+  - When generation stops there are no later games, so this count equals the final selection's validation pool.
 - **Generation stops** after the first game at which both counts reach **1.15 × N** (138,000 and 13,800), or at
   **G_MAX = 4,000 games**, whichever comes first. The rule reads position counts only, never outcomes.
 - **Planning figure:** about 3,030 games, at G3's 50.7 searched plies a game (plies 4 to *n*−1).
@@ -163,64 +174,106 @@ continued training are not separated, so no result attributes an effect to eithe
   - So the game count to reach the targets is uncertain, and the smoke (§4.4) estimates it before launch.
 - **Reaching G_MAX is not a failure in itself.** A pool short of N is refused at selection (§5.2).
 
-### 4.4 The generation smoke: usable data yield, time and games (frozen)
+### 4.4 The generation smoke: usable rows per game, by pool; games and time (frozen; revision 2)
 
 **Smoke games:**
 - **40 games**, indices *j* = 0–39, in their own namespaces (`…/gen smoke opening <j>/…`, `…/gen smoke/game <j>/…`).
 - Openings are excluded exactly as the run's are (§4.2), and also from the run's own generation openings.
-- Arm labels follow the run's rule: *j* mod 10 = 9 is validation-like, giving 4 such games.
-- Smoke games are never used for training or evaluation. Their outcomes are not read; the analyser reads lengths,
+- Arm labels follow the run's rule: *j* mod 10 = 9 is validation-like (4 games), the rest training-like (36 games).
+- **The smoke runs the run's generation loop unchanged:** play, then count keys, then write the game's records.
+- Smoke games are never used for training or evaluation. Their outcomes are not read. The analyser reads lengths,
   keys and wall times only.
+
+**Usable rows, counted as final selection counts them (§5.2, §5.3):**
+- **Training-like game *j*:** y_j is the number of keys at its plies 4 to *n*−1 that are:
+  - not in E1–E3 (**E4 does not apply to training**, as in selection);
+  - not already counted earlier in this game or in an earlier training-like smoke game (mirror canonical key,
+    first occurrence in index order).
+- **Validation-like game *j*:** y_j is the number of keys at its plies 4 to *n*−1 that are:
+  - not in E1–E4;
+  - **not present in any training-like smoke game, whatever its index, earlier or later**;
+  - not already counted earlier in this game or in an earlier validation-like smoke game.
 
 **Measured, by the frozen analyser (`yield` command) from the committed smoke evidence:**
 
 | Quantity | Definition |
 |---|---|
 | x_j | searched plies in smoke game *j* (plies 4 to *n*−1) |
-| s | search wall seconds per searched ply, over all 40 games; t0 = startup seconds |
-| f_tr, f_val | counted keys per searched ply, in the training-like and validation-like games |
-| f | min(f_tr, f_val), applied to both pools (conservative) |
-| m | mean of x_j |
-| m_LB | mean of min(x_j, 150) − 1.645 × sd(min(x_j, 150)) / √40 |
+| u_tr, u_val | usable rows per game: the mean of y_j over the 36 training-like and the 4 validation-like games |
+| f_tr, f_val | Σ y_j / Σ x_j within each pool: usable rows per searched ply |
+| σ | the standard deviation of min(y_j, 150) over all 40 games, each game's y_j taken in its own pool |
+| u_tr,LB, u_val,LB | the pool's mean of min(y_j, 150), minus 1.645 × σ / √n_pool (n_pool = 36 and 4) |
+| t0 | startup: process start to the start of smoke game 0 (model load, digest checks, building E1–E4) |
+| w | loop seconds per game: the start of game 0 to the end of game 39's records, divided by 40 |
 
-- **Counted keys** are computed exactly as the run's counter (§4.3) computes them:
-  - smoke games in index order, deduplicated by the mirror canonical key;
-  - net of E1–E4 (§5.3), with E4 applied to both kinds of game;
-  - validation-like keys leave out keys already seen in training-like games.
-- **Why m_LB is a lower bound:** truncating at 150 plies can only lower each game's length, so it bounds the true
-  mean from below. It also keeps rare 572-ply draws from inflating the spread. The 1.645 factor is a one-sided normal
-  approximation, a planning rule rather than a guarantee.
+- **Why the lower bounds have this form:**
+  - Truncating at 150 can only lower a game's count, so the truncated mean bounds the true mean from below. It also
+    keeps rare 572-ply draws from inflating σ.
+  - **Each pool keeps its own mean,** so a pool that is slower in the smoke is not averaged away (the 60/20 example
+    below).
+  - The **spread is pooled.** Arms are assigned by index before play, so their game lengths share one distribution
+    by construction, and four games alone give a very noisy spread.
+  - 1.645 is a one-sided normal factor. This is a planning rule, not a guarantee.
 
-**Derived:**
-- **Searched plies to the stop targets:** P_stop = max(138,000 / 0.9, 13,800 / 0.1) / f = 153,334 / f. This assumes
-  9 in 10 games are training games and both arms have the same mean length.
-- **Time projection:** T = t0 + P_stop × s. It does not depend on game length, because time and data both accrue per
-  searched ply.
-- **Games to the stop targets (point):** G_stop = ⌈P_stop / m⌉.
-- **Games to the exact counts (conservative):** G_N = ⌈(120,000 / 0.9) / (f × m_LB)⌉ = ⌈133,334 / (f × m_LB)⌉.
-  This is the number of games at which the training pool would hold N_TRAIN if the true mean length were only m_LB.
+**Projected game counts, with the actual 9:1 split.** Among the first G games there are
+n_tr(G) = G − ⌊G/10⌋ training games and n_val(G) = ⌊G/10⌋ validation games. The **slower pool sets the count**:
+- **Point, to the stop targets:** G_stop = max( min{G : n_tr(G) × u_tr ≥ 138,000}, min{G : n_val(G) × u_val ≥
+  13,800} ).
+- **Conservative, to the exact counts:** G_N = max( min{G : n_tr(G) × u_tr,LB ≥ 120,000}, min{G : n_val(G) ×
+  u_val,LB ≥ 12,000} ). A pool whose lower bound is ≤ 0 makes G_N infinite.
+- The record names the pool that sets each count.
 
-**Verdict, frozen:** **LAUNCH_OK** needs every one of these. Otherwise **REVIEW**, which lists each failed
-condition with its numbers.
+**Time, from elapsed time for the full generation loop:** T = t0 + G_stop × w.
+- w includes play, key counting against E1–E4 and the training keys, and writing records, because the smoke times
+  the run's loop exactly.
+- Counting at the run's scale (hash-set lookups over about 150,000 keys) is not measured by the smoke. The 1.5
+  factor covers it.
+
+**Verdict, frozen:** **LAUNCH_OK** needs every one of these. Otherwise **REVIEW**, which lists each failed condition
+with its numbers and the pool that set it.
 
 | # | Condition | Guards against |
 |---|---|---|
 | Y1 | all 40 smoke games complete, one record per searched ply, and Σ x_j ≥ 800 | an unusable smoke |
-| Y2 | f ≥ 0.90 | low yield after exclusions and deduplication |
-| Y3 | G_N ≤ 4,000 | the G_MAX cap leaving a pool short of N at a conservative length |
-| Y4 | G_stop ≤ 4,000 | the stop targets lying beyond G_MAX even at the point estimate |
-| Y5 | 1.5 × T ≤ 144,000 s (40 h) | the fixed ceiling |
+| Y2 | f_tr ≥ 0.90 and f_val ≥ 0.90 | low yield in either pool after exclusions and deduplication |
+| Y3 | G_N ≤ 4,000 | the G_MAX cap leaving either pool short of N at a conservative yield |
+| Y4 | G_stop ≤ 4,000 | either pool's stop target lying beyond G_MAX even at the point estimate |
+| Y5 | 1.5 × T ≤ 144,000 s (40 h) | the fixed ceiling, on full-loop time |
 
 - **REVIEW means no launch.** The smoke evidence and the yield record are committed, the plan returns to the user,
   and nothing is rescaled, retried or relaunched without a reviewed decision.
 - **The caps stay:** G_MAX 4,000 and the fixed 40 h ceiling.
-- **Planning check, not a prediction.** I drew 4,000 random 40-game smokes with replacement from earlier match
-  lengths (searched plies = plies − 4, f = 1). Self-play length is unknown, so REVIEW is a real possible outcome.
 
-  | Lengths drawn from | Y3 passes | Y4 passes | median G_N |
-  |---|---|---|---|
-  | G3's 220 games | 100% | 97.5% | 3,456 |
-  | Benchmark arm P's 220 games | 45% | 69% | 4,033 |
+**Pinned regression: the 60/20-ply example returns REVIEW (model-free; part of the build).** The `yield` analyser
+gets synthetic smoke evidence:
+- 36 training-like games of 60 searched plies and 4 validation-like games of 20 searched plies;
+- every key distinct and outside E1–E4;
+- t0 = 10 s and w = 1 s.
+
+The test asserts:
+- u_tr = 60 and u_val = 20; f_tr = f_val = 1.
+- G_stop = 6,900, set by validation: 690 validation games are needed, and training alone would need 2,555.
+- G_N = 12,000, set by validation: u_val,LB = 20 − 1.645 × 12.153 / 2 = 10.004.
+- **Verdict REVIEW, with exactly Y3 and Y4 failed,** both naming the validation pool. Y1, Y2 and Y5 hold, with
+  T = 6,910 s.
+
+Revision 1's pooled formula would have returned LAUNCH_OK here (G_stop 2,739, G_N 2,524). It averaged the slow
+validation games into the fast training games.
+
+The build adds two more model-free tests:
+- a key in E4 still counts for training but not for validation;
+- a validation key that first appears in a **later** training-like game is removed.
+
+**Planning check, not a prediction.** I drew 4,000 random 40-game smokes with replacement from earlier match lengths
+(searched plies = plies − 4, every key usable). Self-play length is unknown.
+
+| Lengths drawn from | Y3 passes | Y4 passes | Y3 and Y4 | median G_N |
+|---|---|---|---|---|
+| G3's 220 games | 44% | 88% | 42% | 4,150 |
+| Benchmark arm P's 220 games | 3% | 39% | 2.5% | 6,070 |
+
+**With only 4 validation-like games, the validation lower bound usually decides Y3,** and REVIEW is the more likely
+smoke outcome unless self-play games run longer than G3's.
 
 ## 5. Position selection and leakage
 
@@ -409,7 +462,7 @@ forgetting of the old distribution.
 | Step | Estimate | Pace it rests on |
 |---|---|---|
 | Generation smoke | ~20 min | 40 games at G3-like lengths |
-| Generation | **~23 h** (153,334 / f searched plies, f ≈ 1; ceiling 40 h) | 0.536 s/ply on the GPU (entry 54) |
+| Generation | **~23 h** at G3-like lengths (about 3,030 games; the smoke's T = t0 + G_stop × w decides; ceiling 40 h) | 0.536 s/ply on the GPU (entry 54), plus counting and recording |
 | Labelling | ~1.2 h | 8,478 s for 264,000 rows (entry 52) |
 | Fit, gate and descriptive scoring | ~2.1 h | 0.708 s/update (T-fit); first fit's scoring pace |
 | Export and parity | ~0.3 h | V2-R |
@@ -441,8 +494,9 @@ PASS authorizes no deployment, push or further training. A second on-policy roun
 ## 15. Steps; each needs the user's approval
 
 1. This card and the #53/#87 exceptions.
-2. The build: generation driver, selection, label adapter change, fit config, gate scoring, export glue, match driver
-   and analyser, all behind closed gates; model-free tests. Returned once for launch review.
+2. The build: generation driver, the smoke's `yield` analyser (with the §4.4 regressions), selection, the label
+   adapter change, fit config, gate scoring, export glue, match driver and analyser. All behind closed gates, with
+   model-free tests. Returned once for launch review.
 3. Generation: the 40-game smoke and its yield verdict (§4.4), then the run only on LAUNCH_OK. On REVIEW the plan
    returns to the user.
 4. Labelling, then the fit with its gate (the fit admits only committed, COMPLETED label evidence).

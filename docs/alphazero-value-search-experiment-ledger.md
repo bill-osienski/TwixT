@@ -298,6 +298,7 @@ knob) is not a new hypothesis.
 > **Student–teacher benchmark COMPLETED: arm N TRAILS, arm P TRAILS (Post-closure entry 65, 2026-11-14).** The H-TB student against its pinned twixtbot teacher (mirror-averaged raw policy, no search) under our rules, under the narrow #52 exception. Smoke `030f64d0`→`ed4f8567` (LAUNCH_OK); match `2c8fbb71`→`c9d110b1`, 620 of 620 games in 2.29 h against a fixed 6.0 h cap, clean. Arm N (student network, no search): 13-10-377, mean 0.045 [−0.051, 0.141], TRAILS. Arm P (shipped `hard`): 23-6-191, 0.118 [−0.011, 0.248], TRAILS. Prediction: arm N TRAILS (matched; mean below the expected range); arm P UNRESOLVED (missed). Only arm N decides: it supports **proposing** a fresh distillation experiment, which needs its own approval. An ordering under this protocol, not an Elo. See #195.
 > **H-OP card DRAFTED: distillation on fresh self-play from the current `hard`; returned for review; nothing built, generated, labelled, trained or played (proposal note, 2026-11-14).** Card `docs/superpowers/2026-11-14-htb-onpolicy-distillation-card.md`. Self-play by the current student as `hard` (research GPU path, 4-ply openings, split by game) → teacher labels at 120,000 / 12,000 deduplicated positions (benchmark, G3 and Diagnostic O positions excluded) → the first fit's recipe, warm-started from the current student, 7,500 updates → stop gate I1–I3 against the current student → export and parity → 272 fresh colour-reversed pairs against the current `hard` on the product path. Smallest gain worth pursuing: 0.60; PASS iff mean − √(ln 20 / 544) > 0.5. About 37 h in five approved runs. Needs the card and narrow #53/#87 exceptions approved. See #196.
 > **H-OP card REVISION 1 (proposal note revision, 2026-11-14, the user's review); still awaiting approval; nothing built or run.** Kept: row counts, GPU generation path, gate thresholds, 272-pair match. Corrected: arm N measured a playing-strength gap in raw-policy games, not agreement on `hard` self-play positions (an open question, measured first by the fit's reference scores); GPU generation is self-play under the research implementation of `hard`'s protocol (G1: fake evaluators; V2-R/V3: sampled real positions; real trajectories unverified). New: a frozen 40-game smoke yield verdict Y1–Y5 (yield after exclusions and mirror dedup, conservative games to N ≤ 4,000, 1.5 × time ≤ 40 h; else REVIEW, no launch). PASS = superiority over 0.50 for the whole update; 0.60 is the planning target; ~80% power is model-based and conditional on completion. G3 openings excluded from match openings. A gate failure reads "the challenger missed the imitation gate", with each metric's movement. See #197.
+> **H-OP card REVISION 2: the generation smoke's yield verdict corrected (dated correction, 2026-11-14, the user's review); returned for build approval; nothing built or run.** Revision 1's Y3/Y4 pooled one yield and one mean length over both arms and applied E4 to training, so a smoke with fast training games and slow validation games could return LAUNCH_OK (the 60/20-ply example: LAUNCH_OK under revision 1, G_stop 2,739). Now: usable rows per game estimated per pool, as selection counts them (E4 validation only; validation keys found in any training game, later ones included, removed); game counts projected with the actual 9:1 split, the slower pool setting them; Y5 on full-loop elapsed time (play, counting, recording). The 60/20 example is pinned as a model-free regression returning REVIEW (Y3, Y4 on validation). Planning check: Y3 and Y4 both pass in 42% of smokes resampled from G3 lengths, 2.5% from arm P lengths. 40-game smoke, caps, row targets, gate and match rule unchanged. See #198.
 
 ## Historical proposal check — programme now closed
 
@@ -2128,6 +2129,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 195. **The student–teacher benchmark is spent: arm N TRAILS, arm P TRAILS (2026-11-14, entry 65).** Do **not**: rerun, extend, top up or re-score it, or rerun it to "confirm" either arm; change the teacher configuration, the arms, the openings, the thresholds or the game-end rule after the fact; read or report the four smoke games' outcomes; read the result as an Elo, a gap size, a lower bound, twixtbot's strength under its own rules, or a statement about any other checkpoint; use twixtbot as an anchor or play it in any other configuration (the #52 exception covered exactly these 4 + 620 games); use the benchmark's games or openings as training positions, or as the evaluation set of a fit; or start the fresh distillation experiment that arm N supports without its own card and approval.
 196. **The H-OP card (2026-11-14): drafted, paper only, awaiting review.** Do **not**: build, generate self-play, load either model for it, label, train, export, play or open a gate for it without the user's approval of the card, the narrow #53/#87 exceptions and each step (card §15); change the hypothesis, the gate thresholds (I1 0.90, I2 strict, I3 no regression), the pass rule (272 pairs, one-sided Hoeffding at α = 0.05), the exclusion sets or the row counts after any data exists; use the benchmark's, G3's or Diagnostic O's games or openings for training or evaluation; overwrite or edit the validated student `0e1cb621…` or the pinned pair `78c16a31c3dba37f`; or read the draft's cost figures as funding.
 197. **H-OP card revision 1 (2026-11-14): corrections to the 2026-11-14 proposal note's wording; still paper only.** Do **not** cite the original note's "Arm N's 0.045 shows a large imitation gap at play-time positions": arm N measured a playing-strength gap in raw-policy games, and agreement on `hard` self-play positions is unmeasured. Do **not** describe GPU-generated games as games the product would play, or G1/V2-R/V3 as verifying real self-play trajectories. Do **not** launch generation on anything but a committed smoke with a LAUNCH_OK yield verdict (Y1–Y5), or rescale counts, caps or the estimator after a REVIEW without a reviewed decision. Do **not** read a match PASS as a 0.60 gain or as caused by the data source alone, or the 80% power figure as distribution-free. Report a gate failure as the challenger missing the imitation gate, with every metric's movement.
+198. **H-OP card revision 2 (2026-11-14): the smoke's yield verdict corrected.** Do **not** cite revision 1's Y3/Y4 formulas (one pooled yield f and one mean length m, E4 applied to both arms, validation keys checked only against earlier training games) or its planning check (Y3 100% / Y4 97.5% on G3 lengths): they could pass a smoke whose validation pool cannot reach its target within G_MAX. Do **not** project games or time from a single pooled rate, apply E4 to training, or price Y5 from search time alone. Do **not** drop or weaken the pinned 60/20-ply regression (it must return REVIEW with exactly Y3 and Y4 failed on validation). Do **not** answer a REVIEW by relabelling the smoke, enlarging it, or relaxing the bound without a reviewed decision.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -11597,3 +11599,43 @@ and its reading of the match, where they differ. Card: `docs/superpowers/2026-11
   ceiling.
 - **Status:** returned for approval of the revised card and the narrow #53/#87 exceptions. Nothing is authorized
   beyond that. See #197.
+
+#### Dated correction — H-OP card revision 2: the generation smoke's yield verdict (2026-11-14, the user's review); returned for build approval; nothing built or run
+
+The proposal note and revision 1 note above stay as written. This correction supersedes revision 1's Y3, Y4 and Y5
+(card §4.4) and its planning check.
+
+- **The defect (found by the user's review):** revision 1 estimated one yield per searched ply, f = min(f_tr, f_val),
+  and one mean length m over all 40 smoke games. It applied E4 to both arms, and checked validation keys only against
+  earlier training games.
+  - A smoke whose validation games are much shorter than its training games could therefore pass.
+  - **The 60/20-ply example:** 36 training-like games of 60 searched plies, 4 validation-like games of 20, all keys
+    usable. Revision 1 gives G_stop 2,739 and G_N 2,524, so LAUNCH_OK. In fact the validation pool needs 690
+    validation games, which is 6,900 games at the 9:1 split, beyond G_MAX.
+- **The correction (card §4.3, §4.4, revision 2):**
+  - **Usable rows per game, counted as selection counts them:**
+    - training: E1–E3, mirror deduplicated;
+    - validation: E1–E4, minus every key found in any training-like smoke game, later ones included.
+  - Each pool's mean is u_tr or u_val. Lower bounds use each pool's own truncated mean (at 150) minus 1.645 × σ /
+    √n_pool, with σ pooled over the 40 games.
+  - **Game counts with the actual split:** n_tr(G) = G − ⌊G/10⌋, n_val(G) = ⌊G/10⌋. The slower pool sets G_stop (point,
+    stop targets) and G_N (lower bounds, exact counts).
+  - **Y2** needs f ≥ 0.90 in each pool; Y3 G_N ≤ 4,000; Y4 G_stop ≤ 4,000.
+  - **Y5:** 1.5 × (t0 + G_stop × w) ≤ 40 h. Here w is the elapsed loop time per smoke game, covering play, counting and
+    recording.
+  - The run's stop counter (§4.3) now states the same rules. At the stop it equals the final selection's pools.
+- **Pinned regression (model-free, in the build):** the 60/20-ply example returns **REVIEW** with exactly Y3 and Y4
+  failed, both on validation. The pinned values: G_stop 6,900, G_N 12,000, u_val,LB 10.004; Y1, Y2 and Y5 hold, with
+  T 6,910 s. Two further tests:
+  - a key in E4 still counts for training but not for validation;
+  - a validation key that first appears in a later training-like game is removed.
+- **Planning check, recomputed** (4,000 resampled 40-game smokes, every key usable):
+  - from G3's lengths: Y3 44%, Y4 88%, both 42%, median G_N 4,150;
+  - from benchmark arm P's lengths: 3%, 39%, 2.5%, 6,070.
+  - With 4 validation-like games, the validation lower bound usually decides Y3. **REVIEW is the more likely smoke
+    outcome** unless self-play games run longer than G3's. That is a property of the frozen rule, recorded before
+    any game. Changing it needs a reviewed decision.
+- **Unchanged:** the 40-game smoke, G_MAX 4,000, the 40 h cap, N_TRAIN 120,000 and N_VAL 12,000, I1–I3, and the
+  272-pair match and its pass rule. The hypothesis, rationale and prediction are as in revision 1.
+- **Status:** the card (revision 2) is returned for build approval, together with the narrow #53/#87 exceptions.
+  Nothing is built, generated, labelled, trained or played. See #198.
