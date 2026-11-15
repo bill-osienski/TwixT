@@ -301,6 +301,7 @@ knob) is not a new hypothesis.
 > **H-OP card REVISION 2: the generation smoke's yield verdict corrected (dated correction, 2026-11-14, the user's review); returned for build approval; nothing built or run.** Revision 1's Y3/Y4 pooled one yield and one mean length over both arms and applied E4 to training, so a smoke with fast training games and slow validation games could return LAUNCH_OK (the 60/20-ply example: LAUNCH_OK under revision 1, G_stop 2,739). Now: usable rows per game estimated per pool, as selection counts them (E4 validation only; validation keys found in any training game, later ones included, removed); game counts projected with the actual 9:1 split, the slower pool setting them; Y5 on full-loop elapsed time (play, counting, recording). The 60/20 example is pinned as a model-free regression returning REVIEW (Y3, Y4 on validation). Planning check: Y3 and Y4 both pass in 42% of smokes resampled from G3 lengths, 2.5% from arm P lengths. 40-game smoke, caps, row targets, gate and match rule unchanged. See #198.
 > **H-OP: model-free build APPROVED with the narrow #53/#87 exceptions; card revision 3 (decision note, 2026-11-14, the user's approval).** The generation smoke's 40 games alternate training-like (even) and validation-like (odd), 20/20; the full run and every projection stay at 9:1. Kept: Y1–Y5, the row targets, both caps, the imitation gate, the 272-pair match rule. The 36/4 regression stays as a formula test; a 20/20 fixture covers the actual smoke. Planning check with the 20/20 split: Y3 and Y4 both pass 80% (G3 lengths), 7% (arm P lengths). The approval covers the build only. See #199.
 > **H-OP BUILT (model-free); returned for launch review; nothing generated, loaded, labelled, trained, exported or played (build record, 2026-11-14).** `htb_onpolicy.py` (openings, seeds, keys, E1–E4, the stopping counter, the 20/20 smoke's yield verdict Y1–Y5, selection, labels with the benchmark's lockstep check, the fit with its own epoch namespace, the gate I1–I3), `htb_onpolicy_export.py` (export, structural check, canaries, S1–S4, V3), the Node match driver and analyser (272 pairs, 625/1088 passes), 7 wrappers, 5 new Python gates (71 in all) and 2 JS gates, all closed. Frozen openings `ca4e3bba…`. Tests: H-OP Python 65, gate inventory 8, neighbouring Python suites 245, Node match 17, benchmark 19 (one stale test fixed), Diagnostic O 11: all pass. See #200.
+> **H-OP handoff repair: clean, committed wrapper evidence at all three handoffs; returned for launch review; all gates closed; nothing run (repair record, 2026-11-14).** The standalone `yield` verifies the smoke's outer completion before writing a verdict; the fit verifies the label wrapper before reading any shard; match smoke and match verify the export wrapper before loading any model (the analyser re-checks it). One check, reused at every handoff: launch commit, pid, cleanup, the stage's ceiling, every wrapper file committed, nothing untracked or changed. Regressions: an inner success followed by an outer timeout is refused at each handoff. Card design and thresholds unchanged. Tests: H-OP Python 120, gate inventory 8, neighbours 245, Node match 19, benchmark 19, Diagnostic O 11. See #201.
 
 ## Historical proposal check — programme now closed
 
@@ -2134,6 +2135,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 198. **H-OP card revision 2 (2026-11-14): the smoke's yield verdict corrected.** Do **not** cite revision 1's Y3/Y4 formulas (one pooled yield f and one mean length m, E4 applied to both arms, validation keys checked only against earlier training games) or its planning check (Y3 100% / Y4 97.5% on G3 lengths): they could pass a smoke whose validation pool cannot reach its target within G_MAX. Do **not** project games or time from a single pooled rate, apply E4 to training, or price Y5 from search time alone. Do **not** drop or weaken the pinned 60/20-ply regression (it must return REVIEW with exactly Y3 and Y4 failed on validation). Do **not** answer a REVIEW by relabelling the smoke, enlarging it, or relaxing the bound without a reviewed decision.
 199. **The H-OP build approval (2026-11-14).** The narrow #53 (twixtbot as a training source) and #87 (distillation) exceptions cover **this experiment only**: its card (revision 3), its model-free build, and later its runs, each once and each with its own approval. Do **not**: run the generation smoke, generation, labelling, the fit, the export or either match stage on this approval; open any H-OP gate except in a one-line launch commit after the user's launch approval; change the smoke's 20/20 alternating split, the run's 9:1 rule, Y1–Y5, the row targets, the caps, I1–I3 or the 272-pair rule without a reviewed revision; or cite the exceptions for a second round, another teacher configuration or another recipe.
 200. **H-OP is built, not launched (2026-11-14).** Do **not**: open any H-OP gate (the five Python gates, `ONPOLICY_MATCH_SMOKE_AUTHORIZED`, `ONPOLICY_MATCH_AUTHORIZED`) or run any stage before the user's launch review and approval of that stage; edit `htb_pilot.py` (the H-TB screen pins it; H-OP carries its own fit copy, tested bitwise against it); change or regenerate the frozen openings `ca4e3bba…` (driver, analyser and tests pin them); edit a derived wrapper or V3 copy by hand rather than through its spec; launch generation on anything but a committed smoke whose yield verdict re-derives byte-equal and is LAUNCH_OK; label from games that fail replay validation; export a challenger whose fit missed the imitation gate; play the match on an export without a committed PARITY_PASS record; or retry, extend or score any VOID, STOP or INVALID stage.
+201. **The H-OP handoff repair (2026-11-14).** Do **not**: hand any stage's output to the next on the inner record alone; write a yield verdict, read label shards, or load a model for either match stage before the previous stage's wrapper evidence passes `stage_admission` (Python) or `exportWrapperFailures` plus the committed-and-clean checks (Node); read an inner COMPLETED with an outer TIMEOUT, CRASHED or unconfirmed cleanup as a completed stage; change a stage's ceiling (`KILL_S`, the wrappers' TERM_S) without changing both together; or weaken or drop the timeout regressions.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -11757,3 +11759,72 @@ The proposal note and revision 1 note above stay as written. This correction sup
   - Each stage runs in a clean linked worktree, with BOINC quit and Unreal Editor closed.
 - **Status:** built; returned for launch review. Nothing generated, loaded, labelled, trained, exported or played.
   See #200.
+
+#### Repair record — H-OP: clean, committed wrapper evidence at all three handoffs; returned for launch review; all gates closed; nothing run (2026-11-14)
+
+- **The user's review:** require clean, committed wrapper evidence at all three handoffs.
+  - The standalone yield command must verify the smoke's outer completion before writing a verdict.
+  - The fit must verify the label wrapper before reading shards.
+  - Match smoke and match must verify the export wrapper before loading models.
+  - Reuse the existing checks for launch commit, PID, cleanup and stage ceiling. Add model-free regressions where an
+    inner success is followed by an outer timeout. Keep the card's design and thresholds fixed.
+- **The gap, stated exactly (my build):**
+  - `derive_yield` read only the smoke's record and games, and the CLI `yield` called it directly. Only the
+    generation run's admission checked the smoke's outer.json.
+  - `run_fit` checked only the label record and selection.
+  - The match driver and analyser checked only the export record.
+  - So in each case a stage whose script wrote COMPLETED but whose wrapper then timed out (the group outliving TERM),
+    crashed or left survivors would have been handed on. The label and export handoffs already used
+    `stage_admission`, but without the ceiling or a clean-tree check.
+- **The repair, one check reused at every handoff (Python `stage_admission`):**
+  - the record COMPLETED, of this card, committed;
+  - the wrapper's outer.json, pgid.txt, idle_check.txt and bg_check.txt committed, and nothing untracked or changed
+    under the stage's evidence and wrapper directories;
+  - outer.json a clean completion: inner and outer exit 0, COMPLETED, gate restored, no survivors, the record written
+    by the script;
+  - **the stage's ceiling:** outer TERM_S and grace equal the card's (KILL_S gen-smoke 3,600, generate 144,000,
+    label 6,600, fit 11,700, export 3,600 s), and the record's own `kill_s`, now written by every stage, equals it;
+  - the same launch commit in record and outer.json; pgid.txt equal to the recorded pid.
+  - **Where it now runs:**
+    - `derive_yield` calls it first, so the CLI `yield` (now `write_yield`) refuses before computing or writing a
+      verdict;
+    - `run_fit` calls it on the label stage before `check_label_binding` and before any shard is read;
+    - the label run (generation handoff) and the export (fit handoff) already called it and now get the ceiling and
+      clean-tree checks too.
+- **Node:**
+  - The frozen analyser gains `exportWrapperFailures`: the same outer fields, the export ceiling (TERM 3,590, grace
+    10, record `kill_s` 3,600), the launch commit and the pid. `admit` applies it at analysis.
+  - The driver's `exportRecordProblems`, which `run` calls for both stages before any model module is imported or
+    loaded, now also requires:
+    - the four export wrapper files committed;
+    - nothing untracked or changed under the export evidence;
+    - `exportWrapperFailures` empty.
+  - The analyser's sha changed (`326cce47…` → `18767061…`) and is re-pinned in both match wrappers.
+- **Regressions (model-free), an inner success followed by an outer timeout** (inner exit 124, outcome TIMEOUT, the
+  record COMPLETED and written by the script):
+  - smoke → `write_yield` refuses, and no yield.json exists; with a clean outer the same smoke writes and re-derives;
+  - label → `run_fit` refuses, with `check_label_binding`, the shard loader, the student loader and the save all
+    instrumented to fail if reached;
+  - generation → `run_label` refuses before reading the games or loading the teacher;
+  - fit → `run_export` refuses with no step run;
+  - export → `exportRecordProblems` refuses (both stages), and the analyser's `admit` refuses the same evidence.
+    A source-order test shows the check precedes every model import and load in `run`, for the smoke and the match
+    alike.
+- **Every handoff, every fault:** each of the five stages refuses, while its clean case admits, a wrong TERM_S, a
+  wrong grace, a wrong record `kill_s`, a wrong pid, another launch commit, a missing idle or background check,
+  untracked or changed evidence, survivors, or a wrapper-written record (50 cases). The Node test covers the same for
+  the export. A test also ties the module's ceilings to the wrapper spec's TERM_S.
+- **Files (sha256):**
+  - `htb_onpolicy.py` `527dbfdf…`
+  - `onpolicy_match.mjs` `bb7de7c5…`
+  - `onpolicy_match_analyse.mjs` `18767061…`
+  - match-smoke wrapper `3f96a22d…`, match wrapper `8bfd2a79…`
+  - `test_onpolicy_match.mjs` `5fa8f1f9…`, `test_htb_onpolicy.py` `5c868c7b…`
+  - The card, the openings, the Python wrappers, the export module and every threshold are unchanged.
+- **Tests:**
+  - H-OP Python 120, gate inventory 8 (71 gates, all closed);
+  - neighbouring Python suites 245;
+  - Node: H-OP match 19, benchmark 19, Diagnostic O 11.
+  - All pass. Both match gates are closed as well.
+- **Status:** repaired; returned for launch review. Nothing generated, loaded, labelled, trained, exported or played.
+  See #201.

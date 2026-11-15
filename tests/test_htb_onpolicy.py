@@ -398,20 +398,34 @@ def _tree(tmp_path):
 
 
 def _cfg(root, **kw):
-    return H.Config(root=root, data_root=root, cache=root / "cache", committed=lambda r, rel: True,
-                    head=lambda r: "f" * 40, gate_open=lambda s: True, exclusions=lambda r: H.Exclusions.empty(),
-                    tf32_required=False, **kw)
+    return H.Config(root=root, data_root=root, cache=root / "cache", committed=lambda r, rel: (r / rel).exists(),
+                    evidence_problems=lambda r, rels: [], head=lambda r: "f" * 40, gate_open=lambda s: True,
+                    exclusions=lambda r: H.Exclusions.empty(), tf32_required=False, **kw)
+
+
+def _outer(cfg, stage, rec=None, **over):
+    """The stage's wrapper evidence as its wrapper writes it on a clean completion; `over` changes outer.json."""
+    rec = rec or json.loads((cfg.root / H.EV[stage] / "record.json").read_text())
+    out = cfg.root / H.OUTER[stage]
+    out.mkdir(parents=True, exist_ok=True)
+    outer = {**dict(H.OUTER_OK), "head": rec["head"], "term_s": H.KILL_S[stage] - 10, "grace_s": 10, **over}
+    (out / "outer.json").write_text(json.dumps(outer))
+    (out / "pgid.txt").write_text(f"{rec['pid']}\n")
+    for f in ("idle_check.txt", "bg_check.txt"):
+        (out / f).write_text("ok\n")
+
+
+#: an inner success followed by an outer timeout: the script wrote COMPLETED, the group outlived TERM_S
+OUTER_TIMEOUT = {"inner_exit": 124, "outcome": "TIMEOUT", "outer_exit": 124}
 
 
 def _stage_evidence(cfg, stage, rec_extra=None, outer_extra=None):
     ev = cfg.root / H.EV[stage]
     ev.mkdir(parents=True, exist_ok=True)
-    rec = {"status": "COMPLETED", "card_sha256": H.CARD_SHA256, "pid": 4242, "head": "f" * 40, **(rec_extra or {})}
+    rec = {"status": "COMPLETED", "card_sha256": H.CARD_SHA256, "pid": 4242, "head": "f" * 40,
+           "kill_s": H.KILL_S[stage], **(rec_extra or {})}
     (ev / "record.json").write_text(json.dumps(rec))
-    out = cfg.root / H.OUTER[stage]
-    out.mkdir(parents=True, exist_ok=True)
-    (out / "outer.json").write_text(json.dumps({**dict(H.OUTER_OK), "head": "f" * 40, **(outer_extra or {})}))
-    (out / "pgid.txt").write_text("4242\n")
+    _outer(cfg, stage, rec, **(outer_extra or {}))
 
 
 def test_THE_SMOKE_RUNS_THROUGH_THE_GATED_ENTRY_AND_ITS_YIELD_RE_DERIVES(tmp_path):
@@ -422,6 +436,7 @@ def test_THE_SMOKE_RUNS_THROUGH_THE_GATED_ENTRY_AND_ITS_YIELD_RE_DERIVES(tmp_pat
     assert rec["status"] == "COMPLETED" and rec["games"] == 40 and rec["head"] == "f" * 40
     with pytest.raises(P.Refused, match="destination already exists"):
         H.run_gen("gen-smoke", cfg, _seams(), t_start=0.0)
+    _outer(cfg, "gen-smoke")
     v, raw = H.derive_yield(cfg)
     assert v["complete"] is True and v["faults"] == [] and v["pools"]["train"]["games"] == 20
     assert v["pools"]["train"]["f"] == pytest.approx(1.0, abs=0.05)              # fake games barely repeat
@@ -433,10 +448,8 @@ def test_GENERATION_ADMITS_ONLY_A_CLEAN_SMOKE_WITH_A_BYTE_EQUAL_LAUNCH_OK_YIELD(
     cfg = _cfg(root)
     assert H.run_gen("gen-smoke", cfg, _seams(), t_start=0.0) == 0
     out = root / H.OUTER["gen-smoke"]
-    out.mkdir(parents=True)
     rec = json.loads((root / H.EV["gen-smoke"] / "record.json").read_text())
-    (out / "outer.json").write_text(json.dumps({**dict(H.OUTER_OK), "head": rec["head"]}))
-    (out / "pgid.txt").write_text(f"{rec['pid']}\n")
+    _outer(cfg, "gen-smoke", rec)
     v, raw = H.derive_yield(cfg)
     (root / H.YIELD_REL).write_bytes(raw)
     if v["verdict"] == "LAUNCH_OK":
@@ -454,8 +467,7 @@ def test_GENERATION_ADMITS_ONLY_A_CLEAN_SMOKE_WITH_A_BYTE_EQUAL_LAUNCH_OK_YIELD(
     (out / "pgid.txt").write_text("1\n")
     with pytest.raises(P.Refused, match="pgid"):
         H.generation_admission(cfg, H.Exclusions.empty())
-    (out / "pgid.txt").write_text(f"{rec['pid']}\n")
-    (out / "outer.json").write_text(json.dumps({**dict(H.OUTER_OK), "head": rec["head"], "gate_restored": False}))
+    _outer(cfg, "gen-smoke", rec, gate_restored=False)
     with pytest.raises(P.Refused, match="not clean"):
         H.generation_admission(cfg, H.Exclusions.empty())
 
@@ -464,11 +476,7 @@ def test_A_REVIEW_YIELD_REFUSES_THE_RUN(tmp_path, monkeypatch):
     root = _tree(tmp_path)
     cfg = _cfg(root)
     assert H.run_gen("gen-smoke", cfg, _seams(), t_start=0.0) == 0
-    rec = json.loads((root / H.EV["gen-smoke"] / "record.json").read_text())
-    out = root / H.OUTER["gen-smoke"]
-    out.mkdir(parents=True)
-    (out / "outer.json").write_text(json.dumps({**dict(H.OUTER_OK), "head": rec["head"]}))
-    (out / "pgid.txt").write_text(f"{rec['pid']}\n")
+    _outer(cfg, "gen-smoke")
     monkeypatch.setattr(H, "yield_verdict", lambda *a, **k: {"verdict": "REVIEW", "failed": ["Y3", "Y4"]})
     (root / H.YIELD_REL).write_bytes(H.derive_yield(cfg)[1])
     with pytest.raises(P.Refused, match=r"REVIEW, failed \['Y3', 'Y4'\]: no launch"):
@@ -547,8 +555,7 @@ def test_THE_LABEL_RUN_REFUSES_WITHOUT_A_CLEAN_GENERATION(tmp_path):
     with pytest.raises(P.Refused, match="absent, uncommitted or changed"):
         H.run_label("x", cfg, load_teacher=lambda c: (_ for _ in ()).throw(AssertionError("loaded")))
     _generation(cfg)
-    (root / H.OUTER["generate"] / "outer.json").write_text(json.dumps({**dict(H.OUTER_OK), "outer_exit": 137,
-                                                                         "head": "f" * 40}))
+    _outer(cfg, "generate", outer_exit=137)
     with pytest.raises(P.Refused, match="not clean"):
         H.run_label("x", cfg, load_teacher=lambda c: (_ for _ in ()).throw(AssertionError("loaded")))
     assert not (root / H.EV["label"]).exists()
@@ -597,6 +604,7 @@ def test_THE_FIT_RUN_BINDS_LABELS_SCORES_BOTH_AND_SAVES_THE_CHALLENGER(tmp_path,
     _generation(cfg)
     monkeypatch.setattr(H, "check_games", lambda games, o, arm_of: [])
     assert H.run_label("u", cfg, load_teacher=lambda c: (TP.FakeTeacher(smooth=True), {})) == 0
+    _outer(cfg, "label")
     base = TP.tiny_net(3)
     saved = {}
 
@@ -789,3 +797,98 @@ def test_THE_EXPORT_REFUSES_A_MISSED_GATE_OR_A_CHANGED_CHALLENGER_BEFORE_ANYTHIN
         X.run_export(cfg2, runner=run, **_xargs(tmp_path / "two"))
     assert calls == [] and not (root / H.EV["export"]).exists()
     assert X.main(["run", "export"]) == P.EXIT["REFUSED"]                          # the real gate is closed
+
+
+# ─────────────────────────────── the handoff repair (2026-11-14): wrapper evidence at every handoff ───────────────
+
+def _boom(*a, **k):
+    raise AssertionError("reached past the handoff check")
+
+
+def test_REGRESSION_YIELD_INNER_SUCCESS_THEN_OUTER_TIMEOUT_WRITES_NO_VERDICT(tmp_path):
+    root = _tree(tmp_path)
+    cfg = _cfg(root)
+    assert H.run_gen("gen-smoke", cfg, _seams(), t_start=0.0) == 0
+    assert json.loads((root / H.EV["gen-smoke"] / "record.json").read_text())["status"] == "COMPLETED"
+    _outer(cfg, "gen-smoke", **OUTER_TIMEOUT)
+    with pytest.raises(P.Refused, match=r"outer.json is not clean.*TIMEOUT"):
+        H.write_yield(cfg)
+    assert not (root / H.YIELD_REL).exists()
+    _outer(cfg, "gen-smoke")                                  # the same smoke with a clean outer completion
+    rc, v = H.write_yield(cfg)
+    assert rc == 0 and (root / H.YIELD_REL).exists() and H.write_yield(cfg)[0] == 0      # then re-derives
+
+
+def test_REGRESSION_LABEL_INNER_SUCCESS_THEN_OUTER_TIMEOUT_THE_FIT_READS_NO_SHARD(tmp_path, monkeypatch):
+    root = _tree(tmp_path)
+    cfg = _cfg(root, available_memory=lambda: {"available_bytes": 1 << 40})
+    _stage_evidence(cfg, "label", outer_extra=OUTER_TIMEOUT)
+    monkeypatch.setattr(H, "check_label_binding", _boom)
+    monkeypatch.setattr(P, "load_label_compact", _boom)
+    with pytest.raises(P.Refused, match=r"htb-onpolicy-label-run/outer.json is not clean"):
+        H.run_fit(cfg, load_student=_boom, retention=_boom, save=_boom)
+    assert not (root / H.EV["fit"]).exists()
+
+
+def test_REGRESSION_GENERATION_INNER_SUCCESS_THEN_OUTER_TIMEOUT_THE_LABEL_RUN_LOADS_NOTHING(tmp_path, monkeypatch):
+    root = _tree(tmp_path)
+    cfg = _cfg(root, available_memory=lambda: {"available_bytes": 1 << 40})
+    _generation(cfg)
+    _outer(cfg, "generate", **OUTER_TIMEOUT)
+    monkeypatch.setattr(H, "gen_games", _boom)
+    with pytest.raises(P.Refused, match=r"htb-onpolicy-gen-run/outer.json is not clean"):
+        H.run_label("x", cfg, load_teacher=_boom)
+    assert not (root / H.EV["label"]).exists()
+
+
+def test_REGRESSION_FIT_INNER_SUCCESS_THEN_OUTER_TIMEOUT_THE_EXPORT_RUNS_NOTHING(tmp_path):
+    root = _tree(tmp_path)
+    cfg = _cfg(root)
+    _fit_evidence(cfg, tmp_path)
+    _outer(cfg, "fit", **OUTER_TIMEOUT)
+    run, calls = _fake_runner()
+    with pytest.raises(P.Refused, match=r"htb-onpolicy-fit-run/outer.json is not clean"):
+        X.run_export(cfg, runner=run, **_xargs(tmp_path))
+    assert calls == [] and not (root / H.EV["export"]).exists()
+
+
+@pytest.mark.parametrize("stage", ["gen-smoke", "generate", "label", "fit", "export"])
+@pytest.mark.parametrize("fault", ["term_s", "grace_s", "kill_s", "pgid", "head", "idle_check.txt", "bg_check.txt",
+                                   "dirty", "survivors", "record_by"])
+def test_EVERY_HANDOFF_CHECKS_COMMIT_PID_CLEANUP_AND_CEILING(tmp_path, stage, fault):
+    root = _tree(tmp_path)
+    dirty = []
+    cfg = _cfg(root)
+    cfg.evidence_problems = lambda r, rels: list(dirty)
+    _stage_evidence(cfg, stage)
+    assert H.stage_admission(cfg, stage)["head"] == "f" * 40                         # the clean case admits
+    out = root / H.OUTER[stage]
+    if fault in ("term_s", "grace_s"):
+        _outer(cfg, stage, **{fault: 99})
+    elif fault == "kill_s":
+        _stage_evidence(cfg, stage, rec_extra={"kill_s": H.KILL_S[stage] + 1})
+    elif fault == "pgid":
+        (out / "pgid.txt").write_text("1\n")
+    elif fault == "head":
+        _outer(cfg, stage, head="e" * 40)
+    elif fault.endswith(".txt"):
+        (out / fault).unlink()
+    elif fault == "dirty":
+        dirty.append("untracked evidence: ['x']")
+    elif fault == "survivors":
+        _outer(cfg, stage, survivors="unconfirmed cleanup: process group 4242 4243")
+    else:
+        _outer(cfg, stage, record_by="wrapper")
+    want = {"term_s": "ceiling", "grace_s": "ceiling", "kill_s": "ceiling", "pgid": "pgid", "head": "launch commit",
+            "dirty": "not clean", "survivors": "not clean", "record_by": "not clean"}.get(fault, "absent, uncommitted")
+    with pytest.raises(P.Refused, match=want):
+        H.stage_admission(cfg, stage)
+
+
+def test_EVERY_STAGE_RECORDS_ITS_CEILING_AND_THE_WRAPPERS_AGREE():
+    from tests import htb_onpolicy_wrapper_spec as W
+
+    assert H.KILL_S == {"gen-smoke": 3_600, "generate": 144_000, "label": 6_600, "fit": 11_700, "export": 3_600}
+    for stage, kill in H.KILL_S.items():
+        assert W.STAGES[stage][5] == kill - H.GRACE_S
+        assert H._record(stage, _cfg(ROOT))["kill_s"] == kill

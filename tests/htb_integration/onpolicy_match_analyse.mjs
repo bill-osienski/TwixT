@@ -38,6 +38,10 @@ const NS = 'htb-onpolicy/20261114';
 const OPENINGS_REL = 'docs/superpowers/evidence/htb-onpolicy-openings/openings.json';
 const OPENINGS_SHA256 = 'ca4e3bba05bfc6abddf782b1a1f68fc474bc3600410c7cbd4308073d306d3915';
 const EXPORT_REL = 'docs/superpowers/evidence/htb-onpolicy-export/record.json';
+/** The export stage's wrapper evidence and ceiling (card §9, §12; the handoff repair of 2026-11-14). */
+export const EXPORT_OUTER_REL = 'docs/superpowers/evidence/htb-onpolicy-export-run';
+export const EXPORT_KILL_S = 3600;
+export const WRAPPER_FILES = ['outer.json', 'pgid.txt', 'idle_check.txt', 'bg_check.txt'];
 export const PAIRS = { smoke: 2, match: 272 };
 export const MATCH_CAP_S = 64800;
 export const KILL_S = { smoke: 1800, match: 64800 };
@@ -157,6 +161,21 @@ export function validateGame(g, { stage, pair, game, opening }) {
   return g;
 }
 
+/**
+ * The export handoff (the repair of 2026-11-14): the export wrapper's outer.json is a clean completion under the export
+ * ceiling, bound to the export record by launch commit and pid. An inner success followed by an outer timeout fails.
+ * The same checks as `bindingFailures`, for the export stage. An empty list admits.
+ */
+export function exportWrapperFailures({ outer: o, pgid, exportRecord: r }) {
+  const f = [];
+  const want = { inner_exit: 0, outer_exit: 0, outcome: 'COMPLETED', gate_restored: true, survivors: '', record_by: 'script', term_s: EXPORT_KILL_S - GRACE_S, grace_s: GRACE_S };
+  for (const [k, v] of Object.entries(want)) if (o?.[k] !== v) f.push(`export outer ${k} ${JSON.stringify(o?.[k])}, expected ${JSON.stringify(v)}`);
+  if (r?.kill_s !== EXPORT_KILL_S) f.push(`export record kill_s ${r?.kill_s}, the card's export ceiling is ${EXPORT_KILL_S}`);
+  if (!/^[0-9a-f]{40}$/.test(r?.head ?? '') || o?.head !== r.head) f.push('the export record and its outer.json do not name the same launch commit');
+  if (!Number.isInteger(r?.pid) || pgid !== `${r.pid}\n`) f.push('the export pgid.txt is not the export record\'s pid');
+  return f;
+}
+
 /** G3's outer/inner binding, for this stage's ceiling and this match's players. An empty list admits. */
 export function bindingFailures({ outer: o, record: rec, pgid, stage, exportRecord }) {
   const f = [];
@@ -188,6 +207,9 @@ export function admit(stage, root = REPO_ROOT) {
   const pgidPath = join(root, outer, 'pgid.txt');
   const pgid = existsSync(pgidPath) ? readFileSync(pgidPath, 'utf8') : null;
   const bf = bindingFailures({ outer: o, record: rec, pgid, stage, exportRecord });
+  const ePgid = join(root, EXPORT_OUTER_REL, 'pgid.txt');
+  bf.push(...exportWrapperFailures({ outer: readJson(join(root, EXPORT_OUTER_REL, 'outer.json'), 'export outer.json'),
+    pgid: existsSync(ePgid) ? readFileSync(ePgid, 'utf8') : null, exportRecord }));
   if (bf.length) throw new Invalid(`the ${stage} evidence is not bound to its run: ${bf.join('; ')}`);
   const openings = stageOpenings(stage, root);
   const expected = [];

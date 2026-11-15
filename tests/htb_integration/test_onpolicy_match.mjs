@@ -178,8 +178,9 @@ async function evidenceTree(stage, nPairs) {
   writeFileSync(join(root, D.OPENINGS_REL), readFileSync(join(D.REPO_ROOT, D.OPENINGS_REL)));
   mkdirSync(join(root, 'docs/superpowers/evidence/htb-onpolicy-export'), { recursive: true });
   const challenger = { model_id: '0123456789abcdef', dir: '/tmp/x/0123456789abcdef', graph_sha256: 'g'.repeat(64), external_data_sha256: 'd'.repeat(64), source_sha256: 's'.repeat(64) };
-  const exportRecord = { kind: 'htb-onpolicy-export-record/1', status: 'COMPLETED', verdict: 'PARITY_PASS', challenger };
+  const exportRecord = { kind: 'htb-onpolicy-export-record/1', status: 'COMPLETED', verdict: 'PARITY_PASS', challenger, head: 'c'.repeat(40), pid: 5151, kill_s: 3600 };
   writeFileSync(join(root, D.EXPORT_REL), JSON.stringify(exportRecord));
+  putExportOuter(root, exportRecord);
   const games = {};
   const pl = stubs();
   for (const task of D.schedule(stage, OPENINGS).filter((t) => t.pair < nPairs)) {
@@ -195,7 +196,7 @@ async function evidenceTree(stage, nPairs) {
     writeFileSync(join(outer, 'outer.json'), JSON.stringify(o));
     writeFileSync(join(outer, 'pgid.txt'), pgid);
   };
-  return { root, games, record, outerRec, write };
+  return { root, games, record, outerRec, write, exportRecord };
 }
 
 test('end to end: one real game at 200 simulations, both sides fake networks through protocolMove, validates', async () => {
@@ -242,6 +243,11 @@ test('smoke admission binds the evidence to its run; timing reads wall times onl
     t.write();
     AN.admit('smoke', t.root);
   }
+  // the handoff repair: an export that completed inside but timed out outside fails admission at analysis too
+  putExportOuter(t.root, t.exportRecord, OUTER_TIMEOUT);
+  assert.throws(() => AN.admit('smoke', t.root), /export outer outcome "TIMEOUT"/);
+  putExportOuter(t.root, t.exportRecord);
+  AN.admit('smoke', t.root);
 });
 
 test('per-move evidence: a 64-sim or 199-visit row, a missing, duplicate or extra row, or wrong seeds are INVALID', async () => {
@@ -316,6 +322,17 @@ test('the search-seconds guard: above 1.10x the current hard is INVALID and noth
   assert.equal(AN.analyse({ games }).verdict, 'PASS');
 });
 
+/** The export wrapper's evidence as it writes it on a clean completion; `over` changes outer.json. */
+function putExportOuter(root, rec, over = {}) {
+  const dir = join(root, AN.EXPORT_OUTER_REL);
+  mkdirSync(dir, { recursive: true });
+  const outer = { inner_exit: 0, outer_exit: 0, outcome: 'COMPLETED', gate_restored: true, survivors: '', record_by: 'script', term_s: 3590, grace_s: 10, head: rec.head, ...over };
+  writeFileSync(join(dir, 'outer.json'), JSON.stringify(outer));
+  writeFileSync(join(dir, 'pgid.txt'), `${rec.pid}\n`);
+  for (const f of ['idle_check.txt', 'bg_check.txt']) writeFileSync(join(dir, f), 'ok\n');
+}
+const OUTER_TIMEOUT = { inner_exit: 124, outcome: 'TIMEOUT', outer_exit: 124 };
+
 test('export-record admission: missing, uncommitted, wrong sha, wrong dir, same model id as current are refused', () => {
   const root = mkdtempSync(join(tmpdir(), 'op-exp-'));
   const dir = join(root, 'pair');
@@ -326,9 +343,10 @@ test('export-record admission: missing, uncommitted, wrong sha, wrong dir, same 
   const c = { model_id: '0123456789abcdef', dir, graph_sha256: sha('graph'), external_data_sha256: sha('data'), source_sha256: 's'.repeat(64) };
   const man = { model_id: c.model_id, graph: { sha256: c.graph_sha256 }, external_data: { sha256: c.external_data_sha256 } };
   writeFileSync(join(dir, 'manifest.json'), JSON.stringify(man));
-  const rec = { kind: 'htb-onpolicy-export-record/1', status: 'COMPLETED', verdict: 'PARITY_PASS', challenger: c };
+  const rec = { kind: 'htb-onpolicy-export-record/1', status: 'COMPLETED', verdict: 'PARITY_PASS', challenger: c, head: 'f'.repeat(40), pid: 4242, kill_s: 3600 };
   const okGit = () => ({ status: 0, stdout: '' });
   const put = (r) => writeFileSync(join(root, D.EXPORT_REL), JSON.stringify(r));
+  putExportOuter(root, rec);
   const probs = (over = {}) => D.exportRecordProblems(over.dir ?? dir, { root, g: over.g ?? okGit });
   assert.ok(D.exportRecordProblems(dir, { root, g: okGit }).some((p) => /missing/.test(p)));
   put(rec);
@@ -394,4 +412,61 @@ test('the wrappers: ceilings, gate names, driver and the pinned analyser sha', (
   const m = readFileSync(join(D.REPO_ROOT, D.OUTER_REL.match, '01_wrapper.sh'), 'utf8');
   assert.match(m, /"\$NODE" "\$ANALYSER" timing/);
   assert.match(m, /t\.verdict === "LAUNCH_OK" && t\.match_cap_s === 64800/);
+});
+
+
+test('REGRESSION (handoff repair): an export that completed inside but timed out outside is refused before any model loads', () => {
+  const root = mkdtempSync(join(tmpdir(), 'op-exo-'));
+  const dir = join(root, 'pair');
+  mkdirSync(dir, { recursive: true });
+  mkdirSync(join(root, 'docs/superpowers/evidence/htb-onpolicy-export'), { recursive: true });
+  writeFileSync(join(dir, 'model.onnx'), 'graph');
+  writeFileSync(join(dir, 'model.onnx.data'), 'data');
+  const c = { model_id: '0123456789abcdef', dir, graph_sha256: sha('graph'), external_data_sha256: sha('data'), source_sha256: 's'.repeat(64) };
+  writeFileSync(join(dir, 'manifest.json'), JSON.stringify({ model_id: c.model_id, graph: { sha256: c.graph_sha256 }, external_data: { sha256: c.external_data_sha256 } }));
+  const rec = { kind: 'htb-onpolicy-export-record/1', status: 'COMPLETED', verdict: 'PARITY_PASS', challenger: c, head: 'f'.repeat(40), pid: 4242, kill_s: 3600 };
+  writeFileSync(join(root, D.EXPORT_REL), JSON.stringify(rec));
+  const okGit = () => ({ status: 0, stdout: '' });
+  const probs = (g = okGit) => D.exportRecordProblems(dir, { root, g });
+  putExportOuter(root, rec);
+  assert.deepEqual(probs(), []);
+  putExportOuter(root, rec, OUTER_TIMEOUT);                    // the record says COMPLETED, the wrapper timed out
+  assert.ok(probs().some((p) => /export outer outcome "TIMEOUT"/.test(p)));
+  assert.ok(probs().some((p) => /export outer inner_exit 124/.test(p)));
+  // the analyser refuses the same evidence at analysis time
+  const outer = JSON.parse(readFileSync(join(root, AN.EXPORT_OUTER_REL, 'outer.json'), 'utf8'));
+  assert.ok(AN.exportWrapperFailures({ outer, pgid: '4242\n', exportRecord: rec }).some((p) => /TIMEOUT/.test(p)));
+  // launch commit, pid, cleanup, ceiling, and every wrapper file committed and clean
+  const cases = [
+    [{ term_s: 1790 }, /export outer term_s/], [{ grace_s: 5 }, /export outer grace_s/], [{ head: 'e'.repeat(40) }, /launch commit/],
+    [{ survivors: 'unconfirmed cleanup: process group 4242 4243' }, /export outer survivors/], [{ gate_restored: false }, /gate_restored/],
+    [{ record_by: 'wrapper' }, /record_by/],
+  ];
+  for (const [over, re] of cases) {
+    putExportOuter(root, rec, over);
+    assert.ok(probs().some((p) => re.test(p)), JSON.stringify(over));
+  }
+  putExportOuter(root, rec);
+  writeFileSync(join(root, AN.EXPORT_OUTER_REL, 'pgid.txt'), '1\n');
+  assert.ok(probs().some((p) => /pgid.txt is not the export record's pid/.test(p)));
+  putExportOuter(root, { ...rec });
+  writeFileSync(join(root, D.EXPORT_REL), JSON.stringify({ ...rec, kill_s: 1800 }));
+  assert.ok(probs().some((p) => /export ceiling/.test(p)));
+  writeFileSync(join(root, D.EXPORT_REL), JSON.stringify(rec));
+  assert.ok(probs((...a) => ({ status: a[0] === 'ls-files' && a[1] === '--error-unmatch' && String(a[3]).endsWith('bg_check.txt') ? 1 : 0, stdout: '' })).some((p) => /bg_check.txt is not committed/.test(p)));
+  assert.ok(probs((...a) => ({ status: 0, stdout: a[1] === '--others' ? 'stray.json\n' : '' })).some((p) => /untracked export evidence/.test(p)));
+  assert.ok(probs((...a) => ({ status: a[0] === 'diff' ? 1 : 0, stdout: '' })).some((p) => /differs from HEAD/.test(p)));
+});
+
+test('both stages check the export wrapper before any model loads (source order in run)', () => {
+  const src = readFileSync(join(D.REPO_ROOT, 'tests/htb_integration/onpolicy_match.mjs'), 'utf8');
+  const body = src.slice(src.indexOf('async function run(stage, opts)'));
+  const check = body.indexOf('exportRecordProblems(');
+  assert.ok(check > 0);
+  for (const load of ["import('../../server/model_manifest.js')", "import('../../server/inference.js')", 'base.load()']) {
+    assert.ok(body.indexOf(load) > check, `${load} comes after the export check`);
+  }
+  assert.ok(check < body.indexOf("if (stage === 'match')"), 'the check applies to the smoke and the match alike');
+  const ana = readFileSync(join(D.REPO_ROOT, 'tests/htb_integration/onpolicy_match_analyse.mjs'), 'utf8');
+  assert.ok(ana.slice(ana.indexOf('export function admit(')).includes('exportWrapperFailures('));
 });

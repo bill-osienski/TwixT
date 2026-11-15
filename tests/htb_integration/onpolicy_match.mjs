@@ -23,6 +23,7 @@ import { performance } from 'node:perf_hooks';
 import { fileURLToPath } from 'node:url';
 
 import { TwixtState } from '../../server/gameLogic.js';
+import { EXPORT_OUTER_REL, WRAPPER_FILES, exportWrapperFailures } from './onpolicy_match_analyse.mjs';
 import { protocolMove } from '../../server/protocol_move.js';
 import { resolvePolicy } from '../../server/readout_policy.js';
 
@@ -202,6 +203,24 @@ export function exportRecordProblems(challengerDir, { root = REPO_ROOT, g = gitA
   for (const [k, v] of Object.entries(want)) if (rec?.[k] !== v) p.push(`export record ${k} ${JSON.stringify(rec?.[k])}, expected ${JSON.stringify(v)}`);
   const c = rec?.challenger ?? {};
   for (const k of ['model_id', 'dir', 'graph_sha256', 'external_data_sha256', 'source_sha256']) if (typeof c[k] !== 'string' || !c[k]) p.push(`export record challenger.${k} missing`);
+  // The export wrapper's evidence (the handoff repair, 2026-11-14): committed, clean, a clean outer completion under
+  // the export ceiling, bound to the record by launch commit and pid -- checked here, before any model loads.
+  for (const f of WRAPPER_FILES) {
+    const rel = `${EXPORT_OUTER_REL}/${f}`;
+    if (!existsSync(join(root, rel)) || g('ls-files', '--error-unmatch', '--', rel).status !== 0) p.push(`${rel} is not committed`);
+  }
+  const evDirs = [dirname(EXPORT_REL), EXPORT_OUTER_REL];
+  if (g('diff', '--quiet', 'HEAD', '--', ...evDirs).status !== 0) p.push('the export evidence differs from HEAD');
+  const others = g('ls-files', '--others', '--exclude-standard', '--', ...evDirs).stdout.trim();
+  if (others) p.push(`untracked export evidence: ${others.split('\n').slice(0, 3).join(', ')}`);
+  if (p.length) return p;
+  let outer = null;
+  try {
+    outer = JSON.parse(readFileSync(join(root, EXPORT_OUTER_REL, 'outer.json'), 'utf8'));
+  } catch {
+    return [...p, `${EXPORT_OUTER_REL}/outer.json is unparseable`];
+  }
+  p.push(...exportWrapperFailures({ outer, pgid: readFileSync(join(root, EXPORT_OUTER_REL, 'pgid.txt'), 'utf8'), exportRecord: rec }));
   if (p.length) return p;
   if (!/^[0-9a-f]{16}$/.test(c.model_id)) p.push(`challenger model_id ${c.model_id} is not 16 hex`);
   if (c.model_id === CURRENT_MODEL_ID) p.push(`the challenger is the current hard ${CURRENT_MODEL_ID}`);

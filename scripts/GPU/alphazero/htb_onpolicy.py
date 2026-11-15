@@ -466,6 +466,11 @@ FIT_MEMORY_REQUIRED = P.FIT_MEMORY_REQUIRED                             # 12 GiB
 LABEL_MEMORY_REQUIRED = P.LABEL_MEMORY_REQUIRED * (N_TRAIN + N_VAL) // (P.N_TRAIN + P.N_VAL)   # scaled: 5.5 GiB
 OUTER_OK = (("inner_exit", 0), ("outer_exit", 0), ("outcome", "COMPLETED"), ("gate_restored", True),
             ("survivors", ""), ("record_by", "script"))
+#: each stage's fixed ceiling (card §12): the wrapper's TERM_S + GRACE_S; recorded by the script, checked at handoff
+GRACE_S = 10
+KILL_S = {"gen-smoke": SMOKE_CAP_S, "generate": GEN_CAP_S, "label": 6_600, "fit": 11_700, "export": 3_600}
+#: the wrapper files every handoff requires committed (the benchmark's and G3's set)
+WRAPPER_FILES = ("outer.json", "pgid.txt", "idle_check.txt", "bg_check.txt")
 
 
 def gate_open(stage: str) -> bool:
@@ -478,6 +483,18 @@ def gate_open(stage: str) -> bool:
 
 def committed(root: pathlib.Path, rel: str) -> bool:
     return P._committed_git(root, rel)
+
+
+def evidence_problems(root: pathlib.Path, rels: Sequence[str]) -> List[str]:
+    """Anything in the evidence directories that is untracked or differs from HEAD."""
+    out = []
+    others = subprocess.run(["git", "-C", str(root), "ls-files", "--others", "--exclude-standard", "--", *rels],
+                            capture_output=True, text=True).stdout.split()
+    if others:
+        out.append(f"untracked evidence: {others[:3]}")
+    if subprocess.run(["git", "-C", str(root), "diff", "--quiet", "HEAD", "--", *rels]).returncode != 0:
+        out.append(f"evidence differs from HEAD under {list(rels)}")
+    return out
 
 
 def head_of(root: pathlib.Path) -> str:
@@ -497,6 +514,7 @@ class Config:
     start_rows: int = START_ROWS
     shard_rows: int = P.SHARD_ROWS
     committed: Callable[[pathlib.Path, str], bool] = committed
+    evidence_problems: Callable[[pathlib.Path, Sequence[str]], List[str]] = evidence_problems
     head: Callable[[pathlib.Path], str] = head_of
     gate_open: Callable[[str], bool] = gate_open
     exclusions: Callable[[pathlib.Path], Exclusions] = build_exclusions
@@ -535,15 +553,28 @@ def read_committed_json(cfg: Config, rel: str) -> Dict[str, Any]:
 
 
 def stage_admission(cfg: Config, stage: str) -> Dict[str, Any]:
-    """A completed earlier stage: its record COMPLETED and committed, its wrapper's outer.json clean and committed,
-    and the two bound to one run (the same launch commit; pgid.txt is the recorded pid)."""
+    """A completed earlier stage, at every handoff (the repair of 2026-11-14): its record COMPLETED and committed; its
+    wrapper's evidence committed, with nothing untracked or changed; outer.json a clean completion (inner and outer
+    exit 0, COMPLETED, gate restored, no survivors, the record written by the script) under the stage's own ceiling;
+    and the two bound to one run (the same launch commit; pgid.txt is the recorded pid). An inner success followed
+    by an outer timeout is refused."""
     rec = read_committed_json(cfg, f"{EV[stage]}/record.json")
     outer = read_committed_json(cfg, f"{OUTER[stage]}/outer.json")
+    for f in WRAPPER_FILES[1:]:
+        if not cfg.committed(cfg.root, f"{OUTER[stage]}/{f}"):
+            raise Refused(f"{OUTER[stage]}/{f} is absent, uncommitted or changed")
+    dirty = cfg.evidence_problems(cfg.root, [EV[stage], OUTER[stage]])
+    if dirty:
+        raise Refused(f"the {stage} evidence is not clean: {dirty}")
     bad = [k for k, v in OUTER_OK if outer.get(k) != v]
     if rec.get("status") != "COMPLETED" or rec.get("card_sha256") != CARD_SHA256:
         raise Refused(f"{EV[stage]}/record.json is not a COMPLETED record of this card")
     if bad:
-        raise Refused(f"{OUTER[stage]}/outer.json is not clean: {bad}")
+        raise Refused(f"{OUTER[stage]}/outer.json is not clean: {[(k, outer.get(k)) for k in bad]}")
+    if (outer.get("term_s"), outer.get("grace_s")) != (KILL_S[stage] - GRACE_S, GRACE_S) or \
+            rec.get("kill_s") != KILL_S[stage]:
+        raise Refused(f"the {stage} run was not under its ceiling: outer TERM {outer.get('term_s')} / grace "
+                      f"{outer.get('grace_s')}, record kill_s {rec.get('kill_s')}; the card's is {KILL_S[stage]} s")
     pgid_rel = f"{OUTER[stage]}/pgid.txt"
     if not cfg.committed(cfg.root, pgid_rel) or (cfg.root / pgid_rel).read_text().strip() != str(rec.get("pid")):
         raise Refused(f"{pgid_rel} is not the recorded pid {rec.get('pid')}")
@@ -554,7 +585,7 @@ def stage_admission(cfg: Config, stage: str) -> Dict[str, Any]:
 
 def _record(stage: str, cfg: Config, **extra) -> Dict[str, Any]:
     return {"kind": f"htb-onpolicy-{stage}-record/1", "card_sha256": CARD_SHA256, "stage": stage,
-            "head": cfg.head(cfg.root), "pid": os.getpid(),
+            "head": cfg.head(cfg.root), "pid": os.getpid(), "kill_s": KILL_S[stage],
             "module_sha256": _sha(pathlib.Path(__file__).read_bytes()), **extra}
 
 
@@ -737,7 +768,8 @@ def check_games(games: Sequence[Mapping[str, Any]], openings: Sequence[Mapping[s
 
 def derive_yield(cfg: Config, ex: Optional[Exclusions] = None) -> Tuple[Dict[str, Any], bytes]:
     """The smoke's yield verdict (card §4.4) from its committed evidence: the record, the games and the frozen
-    openings. Outcomes are never read."""
+    openings. Outcomes are never read. Refused unless the smoke's wrapper evidence shows a clean outer completion."""
+    adm = stage_admission(cfg, "gen-smoke")
     rec = read_committed_json(cfg, f"{EV['gen-smoke']}/record.json")
     games_rel = f"{EV['gen-smoke']}/games.jsonl"
     if not cfg.committed(cfg.root, games_rel):
@@ -750,7 +782,7 @@ def derive_yield(cfg: Config, ex: Optional[Exclusions] = None) -> Tuple[Dict[str
     rows = smoke_rows([{"index": g["index"], "arm": g["arm"], "keys": searched_keys(g["moves"])} for g in games], ex)
     v = yield_verdict(rows, float(rec.get("startup_s", math.inf)), float(rec.get("w", math.inf)), complete)
     v["faults"] = faults
-    v["smoke_record_sha256"] = _sha((cfg.root / EV["gen-smoke"] / "record.json").read_bytes())
+    v["smoke_record_sha256"] = adm["record_sha256"]
     v["exclusions"] = ex.sources
     return v, dump_yield(v)
 
@@ -1060,10 +1092,12 @@ def run_fit(cfg: Optional[Config] = None, load_student: Callable[[], Any] = _loa
     cfg = cfg or Config()
     preconditions("fit", cfg)
     P._absent(cfg.ev("fit"), cfg.challenger)
+    admission = stage_admission(cfg, "label")          # the label wrapper, before anything of the labels is read
     label, sel = check_label_binding(cfg)
     memory = P._check_available(cfg, cfg.memory_required_bytes, "fit")
     rows = load_bound_labels(cfg, label, sel)
-    rec = _record("fit", cfg, label_record_sha256=_sha((cfg.root / EV["label"] / "record.json").read_bytes()),
+    rec = _record("fit", cfg, admission=admission,
+                  label_record_sha256=_sha((cfg.root / EV["label"] / "record.json").read_bytes()),
                   selection_sha256=label["selection_sha256"], recipe=dataclasses.asdict(cfg.recipe),
                   epoch_tag=FIT_TAG, memory_at_start=memory, memory_required_bytes=cfg.memory_required_bytes)
 
@@ -1088,6 +1122,18 @@ def run_fit(cfg: Optional[Config] = None, load_student: Callable[[], Any] = _loa
     return P._terminal(cfg.ev("fit"), rec, body)
 
 
+def write_yield(cfg: Config) -> Tuple[int, Dict[str, Any]]:
+    """The standalone `yield` command: verify the smoke (its wrapper included), then write the verdict once,
+    create-only, or confirm that the committed one re-derives byte-equal."""
+    v, raw = derive_yield(cfg)
+    path = cfg.root / YIELD_REL
+    if path.exists():
+        return (0 if path.read_bytes() == raw else 3), v
+    with open(path, "xb") as fh:
+        fh.write(raw)
+    return 0, v
+
+
 # ─────────────────────────────── CLI ───────────────────────────────
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
@@ -1107,17 +1153,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             print(f"{OPENINGS_REL}: {'re-derives byte-equal' if same else 'DIFFERS'} ({_sha(raw)})")
             return 0 if same else 3
         if a.cmd == "yield":                          # pure: write the verdict once, or confirm it re-derives
-            cfg = Config()
-            v, raw = derive_yield(cfg)
-            path = ROOT / YIELD_REL
-            if path.exists():
-                same = path.read_bytes() == raw
-                print(f"{YIELD_REL}: {'re-derives byte-equal' if same else 'DIFFERS'}; verdict {v['verdict']}")
-                return 0 if same else 3
-            with open(path, "xb") as fh:
-                fh.write(raw)
-            print(f"wrote {YIELD_REL}: {v['verdict']} (failed {v['failed']})")
-            return 0
+            rc, v = write_yield(Config())
+            print(f"{YIELD_REL}: {v['verdict']} (failed {v['failed']}); "
+                  f"{'written or re-derives byte-equal' if rc == 0 else 'DIFFERS from the committed verdict'}")
+            return rc
         if a.what in ("gen-smoke", "generate"):
             return run_gen(a.what, t_start=t_start)
         if a.what == "label":
