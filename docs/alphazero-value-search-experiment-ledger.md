@@ -296,6 +296,7 @@ knob) is not a new hypothesis.
 > **Student–teacher benchmark: launch checks repaired (Repair 1); returned for launch review; nothing loaded or played (repair record, 2026-11-14).** Evidence bound to its run (same launch commit, `pgid.txt` = driver PID, stage ceiling, committed smoke for the match). One row per played ply, and 200 simulations budgeted and 200 visits spent on every arm P student move (a 64-simulation smoke is now refused). ORT and teacher runtime versions checked before any model loads. The early-draw flag is purely observational. Re-pinned: analyser `b162323e…`. Unchanged: 4 smoke + 620 scored games, the 6.0 h cap, arm N decides.
 > **Student–teacher benchmark: non-finite student output now stops both arms (Repair 2); returned for launch review; nothing loaded or played (repair record, 2026-11-14).** Without a guard, a NaN value reached both arms' moves. Now every student evaluation is checked before selection or search, and a model-free NaN-value regression stops both arms before any move is returned. Driver re-pinned `7ba3c100…`; everything else unchanged.
 > **Student–teacher benchmark COMPLETED: arm N TRAILS, arm P TRAILS (Post-closure entry 65, 2026-11-14).** The H-TB student against its pinned twixtbot teacher (mirror-averaged raw policy, no search) under our rules, under the narrow #52 exception. Smoke `030f64d0`→`ed4f8567` (LAUNCH_OK); match `2c8fbb71`→`c9d110b1`, 620 of 620 games in 2.29 h against a fixed 6.0 h cap, clean. Arm N (student network, no search): 13-10-377, mean 0.045 [−0.051, 0.141], TRAILS. Arm P (shipped `hard`): 23-6-191, 0.118 [−0.011, 0.248], TRAILS. Prediction: arm N TRAILS (matched; mean below the expected range); arm P UNRESOLVED (missed). Only arm N decides: it supports **proposing** a fresh distillation experiment, which needs its own approval. An ordering under this protocol, not an Elo. See #195.
+> **H-OP card DRAFTED: distillation on fresh self-play from the current `hard`; returned for review; nothing built, generated, labelled, trained or played (proposal note, 2026-11-14).** Card `docs/superpowers/2026-11-14-htb-onpolicy-distillation-card.md`. Self-play by the current student as `hard` (research GPU path, 4-ply openings, split by game) → teacher labels at 120,000 / 12,000 deduplicated positions (benchmark, G3 and Diagnostic O positions excluded) → the first fit's recipe, warm-started from the current student, 7,500 updates → stop gate I1–I3 against the current student → export and parity → 272 fresh colour-reversed pairs against the current `hard` on the product path. Smallest gain worth pursuing: 0.60; PASS iff mean − √(ln 20 / 544) > 0.5. About 37 h in five approved runs. Needs the card and narrow #53/#87 exceptions approved. See #196.
 
 ## Historical proposal check — programme now closed
 
@@ -2124,6 +2125,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 193. **The G3 match is spent: PASS (2026-11-11, entry 63).** Do **not**: rerun, extend, top up or re-score the match, or rerun it to "confirm" the PASS; change the rule, the bound or the scoring of draws after the fact; drop or down-weight the duplicate games to reshape the verdict (the post-hoc sensitivity is exploratory only); read the result as matched-compute strength, or as covering `easy` or `medium`; or deploy, train or push on it without the user's separate deployment decision.
 194. **Diagnostic O is spent: no signal fired (2026-11-14, entry 64).** Do **not**: rerun it, or re-run its searches or teacher stage to "refresh" a number; change its thresholds, its count conditions or its 2× ratio and re-read the signals, or report the readout signal as having fired (a readout follow-up needs the user's own ruling, recorded as post hoc); assign causes to the losses from it; use its 1,100 positions, or any G3 game, as training data or as the evaluation set for a fit; or reuse its driver for a new run without the `process.exitCode` fix.
 195. **The student–teacher benchmark is spent: arm N TRAILS, arm P TRAILS (2026-11-14, entry 65).** Do **not**: rerun, extend, top up or re-score it, or rerun it to "confirm" either arm; change the teacher configuration, the arms, the openings, the thresholds or the game-end rule after the fact; read or report the four smoke games' outcomes; read the result as an Elo, a gap size, a lower bound, twixtbot's strength under its own rules, or a statement about any other checkpoint; use twixtbot as an anchor or play it in any other configuration (the #52 exception covered exactly these 4 + 620 games); use the benchmark's games or openings as training positions, or as the evaluation set of a fit; or start the fresh distillation experiment that arm N supports without its own card and approval.
+196. **The H-OP card (2026-11-14): drafted, paper only, awaiting review.** Do **not**: build, generate self-play, load either model for it, label, train, export, play or open a gate for it without the user's approval of the card, the narrow #53/#87 exceptions and each step (card §15); change the hypothesis, the gate thresholds (I1 0.90, I2 strict, I3 no regression), the pass rule (272 pairs, one-sided Hoeffding at α = 0.05), the exclusion sets or the row counts after any data exists; use the benchmark's, G3's or Diagnostic O's games or openings for training or evaluation; overwrite or edit the validated student `0e1cb621…` or the pinned pair `78c16a31c3dba37f`; or read the draft's cost figures as funding.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -11486,3 +11488,54 @@ The addendum of 2026-11-04 called the 2.441 ms rebuilt-row figure an "upper boun
     - not twixtbot's strength under its own rules: it was trained with own-link crossings allowed;
     - not a statement about any other checkpoint.
   - See #195.
+
+#### Proposal note — H-OP: distillation on fresh self-play from the current `hard`; card drafted; returned for review; nothing built, generated, labelled, trained or played (2026-11-14)
+
+- **Request:** the user's. Draft one experiment card: self-play games by the frozen student under our rules, teacher
+  labels at selected positions, one challenger warm-started from the current student, recipe as close to the first
+  fit as practical, train and validation games separate with mirrored positions deduplicated across the split, the
+  benchmark's games and openings excluded; a cheap held-out imitation stop gate; a fresh colour-reversed match against
+  the current `hard` under the 200-simulation protocol; the smallest gain worth pursuing, pair count, pass rule,
+  compute guards and total cost.
+- **Card:** `docs/superpowers/2026-11-14-htb-onpolicy-distillation-card.md`.
+- **Test:** H-OP (card §§4–10).
+- **Hypothesis:** a challenger warm-started from the current student and fitted to the pinned teacher's
+  mirror-averaged policy and value at positions from the current `hard`'s own self-play beats the current `hard`
+  under the same protocol with a true mean pair score of at least 0.60.
+- **Why it is plausible:** on-policy labelling targets the student's errors where it actually plays, and the first
+  fit never saw such a position. Arm N's 0.045 (entry 65) shows a large imitation gap at play-time positions. Search
+  closes little of it (arm P − arm N +0.070). Imitating this teacher has transferred to play twice (entries 54, 63).
+  Against it: capacity (128 × 6 vs 48 × 20 with 5×5 kernels), the teacher's own-crossing training rules, and
+  diminishing returns.
+- **Design in brief:**
+  - **Generation:** both sides the current student under the `hard` protocol on the research GPU path (0.536 s/ply,
+    entry 54; G1 fixtures tie it to `protocolMove`), from fresh 4-ply openings (benchmark openings excluded), split by
+    game (*i* mod 10 = 9 is validation). It stops on position counts (1.15 × N), never outcomes, at G_MAX 4,000.
+  - **Selection:** the first fit's mirror canonical key; validation keys absent from every training game.
+    Exclusions: the benchmark's 624 games, G3's games, Diagnostic O's positions, and (validation only) the first
+    fit's 264,000 rows. N_TRAIN 120,000, N_VAL 12,000, and a short pool refuses.
+  - **Labels:** the first fit's teacher path. The one change is the lockstep check: the benchmark's
+    `bench_divergences`, because twixtbot's early-draw flag would STOP the unfiltered check on valid long draws.
+  - **Fit:** the first recipe (MLX CPU, eval-mode BN, CE + 1.0 MSE + 1e-4 L2, Adam 1e-4, clip 1.0, 32 × 2), 2 epochs =
+    7,500 updates, from `0e1cb621…`.
+  - **Stop gate on 12,000 validation rows, against the current student:** I1 KL_C ≤ 0.90 × KL_S, I2 TOP_C > TOP_S,
+    I3 MSE_C ≤ MSE_S. Retention on the first fit's 24,000 validation rows is descriptive.
+  - **Export and parity:** the unmodified exporter; V2-R/V3 surfaces and tolerances after the canary; identical graph
+    ops and shapes.
+  - **Match:** 272 fresh colour-reversed pairs, C's export against `78c16a31c3dba37f`, both `protocolMove` on the
+    product path. Guards: one row per ply, 200 budgeted and 200 spent both sides, search seconds ≤ 1.10×.
+- **Smallest gain worth pursuing:** 0.60. Detecting 0.55 at 80% would need about 1,080 pairs (about 40 h),
+  more than the generation that produces the challenger.
+- **Pass rule:** PASS iff mean − √(ln 20 / 544) > 0.5 (625/1088 passes, 624/1088 does not). Power about 80% at 0.60
+  (σ 0.50) and 89% (σ 0.35); false PASS ≤ 5% at 0.5.
+- **Cost (planning, from measured paces):** generation about 23 h (ceiling 40 h), labelling 1.2 h, fit and gate
+  2.1 h, export and parity 0.3 h, match about 10.2 h (ceiling 18 h). About 37 h in all. The row count is the main
+  lever.
+- **Prediction on record (in the card, before any build):** low-to-moderate confidence. Gate ELIGIBLE, with KL about
+  20–40% lower. Match mean about 0.60 (range 0.52–0.70), PASS roughly an even chance. Retention changes by less than
+  10%.
+- **Decision rule:** card §14. STOP closes the line. ELIGIBLE permits proposing export and the match. PASS permits
+  proposing an integration decision only. NON_PASS keeps the current `hard`, with no top-up. VOID or INVALID: no
+  automatic retry.
+- **Status:** a draft. The card and the narrow #53/#87 exceptions need the user's approval; each runtime step
+  needs its own. See #196.
