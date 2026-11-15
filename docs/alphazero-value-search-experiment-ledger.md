@@ -302,6 +302,7 @@ knob) is not a new hypothesis.
 > **H-OP: model-free build APPROVED with the narrow #53/#87 exceptions; card revision 3 (decision note, 2026-11-14, the user's approval).** The generation smoke's 40 games alternate training-like (even) and validation-like (odd), 20/20; the full run and every projection stay at 9:1. Kept: Y1–Y5, the row targets, both caps, the imitation gate, the 272-pair match rule. The 36/4 regression stays as a formula test; a 20/20 fixture covers the actual smoke. Planning check with the 20/20 split: Y3 and Y4 both pass 80% (G3 lengths), 7% (arm P lengths). The approval covers the build only. See #199.
 > **H-OP BUILT (model-free); returned for launch review; nothing generated, loaded, labelled, trained, exported or played (build record, 2026-11-14).** `htb_onpolicy.py` (openings, seeds, keys, E1–E4, the stopping counter, the 20/20 smoke's yield verdict Y1–Y5, selection, labels with the benchmark's lockstep check, the fit with its own epoch namespace, the gate I1–I3), `htb_onpolicy_export.py` (export, structural check, canaries, S1–S4, V3), the Node match driver and analyser (272 pairs, 625/1088 passes), 7 wrappers, 5 new Python gates (71 in all) and 2 JS gates, all closed. Frozen openings `ca4e3bba…`. Tests: H-OP Python 65, gate inventory 8, neighbouring Python suites 245, Node match 17, benchmark 19 (one stale test fixed), Diagnostic O 11: all pass. See #200.
 > **H-OP handoff repair: clean, committed wrapper evidence at all three handoffs; returned for launch review; all gates closed; nothing run (repair record, 2026-11-14).** The standalone `yield` verifies the smoke's outer completion before writing a verdict; the fit verifies the label wrapper before reading any shard; match smoke and match verify the export wrapper before loading any model (the analyser re-checks it). One check, reused at every handoff: launch commit, pid, cleanup, the stage's ceiling, every wrapper file committed, nothing untracked or changed. Regressions: an inner success followed by an outer timeout is refused at each handoff. Card design and thresholds unchanged. Tests: H-OP Python 120, gate inventory 8, neighbours 245, Node match 19, benchmark 19, Diagnostic O 11. See #201.
+> **H-OP generation smoke COMPLETED; yield verdict REVIEW (Y3, Y4 failed); no launch; returned for the user's decision (Post-closure entry 66, 2026-11-15).** Gate `e47ec319` → evidence `f2af3591` → verdict `bc66a880`: 40/40 games (20/20 alternating) in 558 s wall under KILL 3,600 s, clean. Self-play games are short (mean 30.4 plies; G3's mean was 54.7), so usable rows per game are 26.2 (training, LB 24.85) and 26.6 (validation, LB 25.25), f = 1.00 in both pools. G_N 5,366 and G_stop 5,853, both set by training, exceed G_MAX 4,000. Y1, Y2 and Y5 hold (1.5 × T = 120,559 s ≤ 144,000 s). Nothing rescaled, retried or relaunched; see #202.
 
 ## Historical proposal check — programme now closed
 
@@ -2136,6 +2137,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 199. **The H-OP build approval (2026-11-14).** The narrow #53 (twixtbot as a training source) and #87 (distillation) exceptions cover **this experiment only**: its card (revision 3), its model-free build, and later its runs, each once and each with its own approval. Do **not**: run the generation smoke, generation, labelling, the fit, the export or either match stage on this approval; open any H-OP gate except in a one-line launch commit after the user's launch approval; change the smoke's 20/20 alternating split, the run's 9:1 rule, Y1–Y5, the row targets, the caps, I1–I3 or the 272-pair rule without a reviewed revision; or cite the exceptions for a second round, another teacher configuration or another recipe.
 200. **H-OP is built, not launched (2026-11-14).** Do **not**: open any H-OP gate (the five Python gates, `ONPOLICY_MATCH_SMOKE_AUTHORIZED`, `ONPOLICY_MATCH_AUTHORIZED`) or run any stage before the user's launch review and approval of that stage; edit `htb_pilot.py` (the H-TB screen pins it; H-OP carries its own fit copy, tested bitwise against it); change or regenerate the frozen openings `ca4e3bba…` (driver, analyser and tests pin them); edit a derived wrapper or V3 copy by hand rather than through its spec; launch generation on anything but a committed smoke whose yield verdict re-derives byte-equal and is LAUNCH_OK; label from games that fail replay validation; export a challenger whose fit missed the imitation gate; play the match on an export without a committed PARITY_PASS record; or retry, extend or score any VOID, STOP or INVALID stage.
 201. **The H-OP handoff repair (2026-11-14).** Do **not**: hand any stage's output to the next on the inner record alone; write a yield verdict, read label shards, or load a model for either match stage before the previous stage's wrapper evidence passes `stage_admission` (Python) or `exportWrapperFailures` plus the committed-and-clean checks (Node); read an inner COMPLETED with an outer TIMEOUT, CRASHED or unconfirmed cleanup as a completed stage; change a stage's ceiling (`KILL_S`, the wrappers' TERM_S) without changing both together; or weaken or drop the timeout regressions.
+202. **The H-OP generation smoke is spent: REVIEW, Y3 and Y4 failed (2026-11-15, entry 66).** Do **not**: rerun, extend or top up the smoke, or rerun it to "refresh" the yield; rewrite or re-derive yield.json under a changed estimator; open the generation gate (the generation admission refuses a REVIEW verdict, by design); raise G_MAX, the 40 h ceiling, or change N_TRAIN/N_VAL, the 1.15 stop factor, the split or the openings to make this smoke pass; or read the smoke's winners. Any continuation of H-OP needs a reviewed decision by the user first.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -11828,3 +11830,60 @@ The proposal note and revision 1 note above stay as written. This correction sup
   - All pass. Both match gates are closed as well.
 - **Status:** repaired; returned for launch review. Nothing generated, loaded, labelled, trained, exported or played.
   See #201.
+
+#### Post-closure entry 66 — H-OP generation smoke: 40 self-play games by the current `hard` on the GPU research path; COMPLETED; yield verdict REVIEW, Y3 and Y4 failed; no launch (2026-11-15)
+
+- **Test:** the card's (revision 3, sha `a2a5ba2f…`) 40-game generation smoke (§4.4): the current student as `hard`
+  (mirror averaging + root sequential halving, 200 simulations, the frozen readout), frozen openings `ca4e3bba…`,
+  games alternating training-like (even) and validation-like (odd), 20/20; then the frozen yield verdict Y1–Y5,
+  projected at the run's 9:1 split.
+- **Hypothesis:** the smoke's usable rows per game, after E1–E4 and deduplication, project the generation run to both
+  row targets within G_MAX 4,000 games and the 40 h ceiling (LAUNCH_OK).
+- **Why it was plausible:** the card's planning check drew smokes from G3's game lengths (Y3 and Y4 both passed in 80%
+  of draws) — explicitly not a prediction, because self-play length was unknown. Drawn from benchmark arm P's lengths,
+  both passed in only 7%.
+- **Prediction on record:** None stated in advance. (The planning check and the §13 "~23 h at G3-like lengths, about
+  3,030 games" were planning figures, stated as such.)
+- **The user's approval (2026-11-15):** one generation smoke from `fe6c10bd`, the frozen 40-game schedule with the
+  20/20 split, from a clean worktree with BOINC quit and Unreal Editor closed, TERM 3,590 s / KILL 3,600 s; after a
+  clean wrapper completion and gate restoration, commit the evidence, run the frozen yield check and commit its
+  verdict; return for the user's decision even on LAUNCH_OK; on a failed run, preserve the evidence and stop without
+  retrying. The approval covers the smoke and the yield check only.
+- **What ran:**
+  - Before launch: the H-OP match suite re-run at `fe6c10bd`, 19/19 (the full suites as in the repair record); BOINC
+    absent (`background_compute check` CLEAR; only the exempt podman VM), no Unreal process; research runtime mlx
+    0.30.3 / numpy 2.4.1 / Python 3.14.10 as pinned; student file sha `0e1cb621…` as pinned.
+  - Launch worktree `/Users/bill/projects/TwixT_Game-hop`, branch `htb-onpolicy-launch` from `fe6c10bd`; the one-line
+    gate opening `e47ec319`.
+  - The wrapper waited 65.6 s for idle (outside the ceiling), passed the background check, and ran
+    `htb_onpolicy run gen-smoke` under MLX_ENABLE_TF32=0 (pid 95950).
+  - Outer: inner and outer exit 0, COMPLETED, gate restored, no survivors, record written by the script, 558 s wall
+    against KILL 3,600 s; stdout and stderr empty; 41 background checks during the run, all clear.
+  - Record (`f74cc908…`): 40 games, startup t0 = 8.374 s, loop 549.2 s, w = 13.730 s per game (play, counting and
+    recording); student sha and state digest verified before and after; module `527dbfdf…`; kill_s 3,600.
+  - After the run, at `bc66a880`: H-OP Python 120 and gate inventory 8 pass, H-OP match 19/19.
+  - Evidence and the restored gate committed at `f2af3591` (games.jsonl `eb9d2d4e…`). Then `htb_onpolicy yield` (its
+    `stage_admission` on the committed smoke and wrapper evidence passed) wrote yield.json (`b8d8edb9…`), committed
+    at `bc66a880`; re-running the command confirms it re-derives byte-equal. `htb-integration-g1` fast-forwarded to
+    `bc66a880` (local only).
+- **Result (yield.json; winners not read):**
+  - Lengths: 1,216 plies in 40 games, mean 30.4 (training-like 30.2, range 27–36; validation-like 30.6, range
+    25–45). For comparison, G3's 220 games had mean 54.65 and median 43 plies. Searched plies 1,056 (opening plies
+    excluded); 0.5185 s per searched move on average (entry 54's planning figure: 0.536 s per ply).
+  - Training pool: 20 games, 524 usable rows, f = 1.00, u = 26.2, u_LB = 24.847.
+  - Validation pool: 20 games, 532 usable rows, f = 1.00, u = 26.6, u_LB = 25.247. σ (pooled) = 3.678.
+  - G_N (conservative, to 120,000 / 12,000) = **5,366**, set by training (validation alone 4,760).
+  - G_stop (point, to 138,000 / 13,800) = **5,853**, set by training (validation alone 5,190).
+  - T = t0 + G_stop × w = 80,373 s; 1.5 × T = 120,559 s.
+  - **Y1** pass (complete; Σx = 1,056 ≥ 800) · **Y2** pass (f 1.00 / 1.00 ≥ 0.90) · **Y3 FAIL** (5,366 > 4,000) ·
+    **Y4 FAIL** (5,853 > 4,000) · **Y5** pass (120,559 ≤ 144,000 s).
+  - **Verdict: REVIEW, failed Y3 and Y4, both set by the training pool.** Arithmetic only, not part of the verdict: at
+    G_MAX 4,000 the point estimates give about 3,600 × 26.2 ≈ 94,300 training rows and 400 × 26.6 ≈ 10,600
+    validation rows, short of both N.
+- **Did it match the prediction:** no prediction was stated. Against the planning check, the smoke resembles neither
+  source: exclusions and deduplication removed nothing (f = 1.00), but self-play games by the current `hard` are much
+  shorter than G3's games against the incumbent, so rows per game are too few for G_MAX.
+- **Conclusion / status:** the smoke is spent and its verdict is REVIEW. Per card §4.4, REVIEW means no launch: the
+  generation gate stays closed (its admission refuses a non-LAUNCH_OK verdict), and nothing is rescaled, retried or
+  relaunched without a reviewed decision. All seven H-OP gates are closed. Returned to the user for a decision. See
+  #202.
