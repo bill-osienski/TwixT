@@ -304,6 +304,7 @@ knob) is not a new hypothesis.
 > **H-OP handoff repair: clean, committed wrapper evidence at all three handoffs; returned for launch review; all gates closed; nothing run (repair record, 2026-11-14).** The standalone `yield` verifies the smoke's outer completion before writing a verdict; the fit verifies the label wrapper before reading any shard; match smoke and match verify the export wrapper before loading any model (the analyser re-checks it). One check, reused at every handoff: launch commit, pid, cleanup, the stage's ceiling, every wrapper file committed, nothing untracked or changed. Regressions: an inner success followed by an outer timeout is refused at each handoff. Card design and thresholds unchanged. Tests: H-OP Python 120, gate inventory 8, neighbours 245, Node match 19, benchmark 19, Diagnostic O 11. See #201.
 > **H-OP generation smoke COMPLETED; yield verdict REVIEW (Y3, Y4 failed); no launch; returned for the user's decision (Post-closure entry 66, 2026-11-15).** Gate `e47ec319` → evidence `f2af3591` → verdict `bc66a880`: 40/40 games (20/20 alternating) in 558 s wall under KILL 3,600 s, clean. Self-play games are short (mean 30.4 plies; G3's mean was 54.7), so usable rows per game are 26.2 (training, LB 24.85) and 26.6 (validation, LB 25.25), f = 1.00 in both pools. G_N 5,366 and G_stop 5,853, both set by training, exceed G_MAX 4,000. Y1, Y2 and Y5 hold (1.5 × T = 120,559 s ≤ 144,000 s). Nothing rescaled, retried or relaunched; see #202.
 > **H-OP amendment 1: the generation run's cap 4,000 → 6,500 (cap only); model-free build; returned for launch review; all gates closed; nothing run (amendment note, 2026-11-15, the user's approval).** `docs/superpowers/2026-11-15-htb-onpolicy-cap-amendment.md` (sha `814036ed…`). Kept: the 40 h ceiling, the stopping targets, N, the 9:1 split, the fit recipe, the imitation gate, the match rule; entry 66 and the REVIEW record stay as written. The admission is bound to the committed smoke's record, games, outer.json and yield record by sha, requires the yield to re-derive byte-equal and to be exactly that REVIEW, and re-reads Y3/Y4 at 6,500 (G_N 5,366, G_stop 5,853). 2,500 fresh openings extend the schedule (`gen-extension.json`, `578d34f3…`); openings distinct across all schedules; 4,054,336 seed derivations, no repeated 48-bit value. See #203.
+> **H-OP generation run COMPLETED under amendment 1: both stopping targets reached at 5,197 games; the exact 120,000 / 12,000 selection is supported; labelling not authorized (Post-closure entry 67, 2026-11-16).** Gate `983fa370` → evidence `c8c7ea9d`: stopped_by targets after game 5,196 (cap 6,500 not reached), wall 80,669 s (22.4 h) under KILL 144,000 s; inner and outer exit 0, gate restored, no survivors, 5,198 background checks clear. Usable pools: training 138,021 (4,678 games, 29.5 per game), validation 15,130 (519 games, 29.2 per game); f = 1.00, no exclusion hits. All 5,197 games pass replay validation against the 6,500-opening schedule; a dry `select()` in memory returns 120,000 / 12,000 rows (nothing written). Not retried or extended; see #204.
 
 ## Historical proposal check — programme now closed
 
@@ -2140,6 +2141,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 201. **The H-OP handoff repair (2026-11-14).** Do **not**: hand any stage's output to the next on the inner record alone; write a yield verdict, read label shards, or load a model for either match stage before the previous stage's wrapper evidence passes `stage_admission` (Python) or `exportWrapperFailures` plus the committed-and-clean checks (Node); read an inner COMPLETED with an outer TIMEOUT, CRASHED or unconfirmed cleanup as a completed stage; change a stage's ceiling (`KILL_S`, the wrappers' TERM_S) without changing both together; or weaken or drop the timeout regressions.
 202. **The H-OP generation smoke is spent: REVIEW, Y3 and Y4 failed (2026-11-15, entry 66).** Do **not**: rerun, extend or top up the smoke, or rerun it to "refresh" the yield; rewrite or re-derive yield.json under a changed estimator; open the generation gate (the generation admission refuses a REVIEW verdict, by design); raise G_MAX, the 40 h ceiling, or change N_TRAIN/N_VAL, the 1.15 stop factor, the split or the openings to make this smoke pass; or read the smoke's winners. Any continuation of H-OP needs a reviewed decision by the user first.
 203. **H-OP amendment 1 (2026-11-15) is cap-only and covers one generation run.** Do **not**: launch the generation run without the user's launch approval; raise the cap again, or apply 6,500 to any other run or stage; edit entry 66, yield.json or any pinned smoke file (the admission is bound to their bytes), or re-derive the yield under another rule; treat the REVIEW verdict as LAUNCH_OK anywhere but this admission; change, reorder or add to the frozen 4,000 openings or the 2,500 in `gen-extension.json`; or change the 40 h ceiling, the stopping targets, N, the split, the fit recipe, the imitation gate or the match rule under this amendment.
+204. **The H-OP generation run is spent: COMPLETED, stopped by targets at 5,197 games (2026-11-16, entry 67).** Do **not**: rerun, extend, top up or resume generation, or play more games to enlarge either pool; reuse the generation gate or amendment 1's cap for any other run; edit, reorder, filter or regenerate `htb-onpolicy-gen/games.jsonl` or its record (the label stage reads them as committed); treat the in-memory dry selection of entry 67 as a label-stage output or commit it as `selection.json`; read the games' winners or results for any purpose outside the card; or label, fit, export or play either match stage without the user's approval of that stage.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -11970,3 +11972,64 @@ The proposal note and revision 1 note above stay as written. This correction sup
   match 20, benchmark 19, Diagnostic O 11. All pass.
 - **Status:** amended and built; returned for launch review. All seven H-OP gates are closed. Nothing generated,
   loaded, labelled, trained, exported or played. See #203.
+
+#### Post-closure entry 67 — H-OP generation run under amendment 1: 5,197 self-play games by the current `hard` on the GPU research path; COMPLETED, stopped by both targets; the exact selection is supported (2026-11-16)
+
+- **Test:** the card's (revision 3, sha `a2a5ba2f…`) generation run (§4.3) under amendment 1 (sha `814036ed…`): the
+  current student as `hard`, the frozen 4,000 openings plus the 2,500 of `gen-extension.json`, split 9:1 by game
+  (game i is validation iff i mod 10 = 9); stop after the first game at which both pools reach 138,000 / 13,800
+  usable positions, at 6,500 games, or at the 40 h ceiling.
+- **Hypothesis:** the run reaches both stopping targets within 6,500 games and the ceiling, so both pools can supply
+  the exact 120,000 / 12,000 selection.
+- **Why it was plausible:** the smoke's committed yield record (entry 66) projected G_stop 5,853 and G_N 5,366, both
+  set by training, and 1.5 × T = 120,559 s (amendment 1, §4).
+- **Prediction on record:** None stated in advance. The amendment's figures (G_stop 5,853, T ≈ 80,373 s, 153,270 /
+  17,290 rows at 6,500 games) were planning estimates, stated there as not a prediction. My mid-run projections in
+  chat (stop near game 5,170–5,450) are not predictions on record either.
+- **The user's approval (2026-11-15):** one H-OP generation run under amendment 1 from `4c7bbfc6`; a fresh clean
+  worktree; BOINC quit and Unreal Editor closed; only the generation gate opened, in the one-line launch commit; run
+  once; stop at both targets, at 6,500 games or at the ceiling; TERM 143,990 s / KILL 144,000 s; verify cleanup and
+  gate restoration, commit the evidence, update the ledger; on a failure or timeout, preserve the evidence and stop
+  without retrying. The approval covers generation only.
+- **What ran:**
+  - Before launch: BOINC absent (only the exempt podman VM), no Unreal process; load about 1.6.
+  - Launch worktree `/Users/bill/projects/TwixT_Game-hop-gen`, branch `htb-onpolicy-gen-launch` from `4c7bbfc6`; the
+    one-line gate opening `983fa370` (`HTB_ONPOLICY_GENERATE_AUTHORIZED = True`; the other H-OP gates closed).
+  - The wrapper was started detached (setsid + nohup) on 2026-11-15 at 15:08:38. Its idle gate found Spotlight
+    (`mds`, `mds_stores`) busy for its first 10 s, then held idle for 60 s (load < 3.0, no process > 50% CPU); the
+    background check was CLEAR. It ran `htb_onpolicy run generate` under MLX_ENABLE_TF32=0 (pid and pgid 3007).
+  - The admission passed: the smoke's committed wrapper evidence; the four pinned smoke files (record `f74cc908…`,
+    yield `b8d8edb9…` recorded in the run's record); the byte-equal yield; the exact REVIEW; amended Y1–Y5 all true
+    (G_N 5,366, G_stop 5,853, cap 6,500; launch estimate 120,559 s, at-cap estimate 133,885 s).
+  - Outer (`outer.json` `f42b57e8…`): inner and outer exit 0, COMPLETED, gate restored, no survivors (pgrep on pgid
+    3007 empty), record written by the script, wall 80,669 s against KILL 144,000 s; stdout and stderr empty. The
+    wrapper exited on 2026-11-16 at 13:34:18.
+  - Record (`record.json` `9a7a1584…`): status COMPLETED, **stopped_by targets**, 5,197 games, startup 9.094 s, loop
+    80,658.48 s, w = 15.520 s per game; 5,198 background checks, none failed; student sha `0e1cb621…` and state digest
+    `586dca4f…`; module `da3c0fac…`; mlx 0.30.3 / numpy 2.4.1 / Python 3.14.10. games.jsonl `391d40e8…`, progress.jsonl
+    `7666b924…`.
+  - The evidence and the restored gate committed by exact paths at `c8c7ea9d`; the gate file is identical to
+    `4c7bbfc6`'s and no H-OP gate is open. `htb-integration-g1` fast-forwarded to `c8c7ea9d` (local only).
+  - After the commit, model-free and in memory (nothing written): `gen_games` (committed games), `check_games` against
+    `load_gen_schedule` (the 6,500-opening schedule), and `select()` with the real exclusions at N 120,000 / 12,000.
+  - No code changed, so no test suite was re-run after the run; the last full runs at `4c7bbfc6` are the amendment
+    note's.
+- **Result (winners not read):**
+  - Games: 5,197 (training 4,678, validation 519). The validation target was first met after game 4,719 (13,814);
+    training set the stop after game 5,196.
+  - **Usable pools: training 138,021, validation 15,130**, both at or above 138,000 / 13,800. Usable rows per game:
+    training 29.50, validation 29.15 (smoke: 26.2 / 26.6). Every searched position was usable (searched plies 138,021
+    / 15,130, f = 1.00); selection's exclusion hits are 0 for E1–E3, E4 and validation positions found in training
+    games.
+  - Lengths: mean 33.5 plies (training; median 31) and 33.15 (validation; median 31), range 25–572. 14 games ran past
+    100 plies, 13 of them to 572.
+  - Replay validation: all 5,197 games valid (0 faults) against the 6,500-opening schedule.
+  - **The exact selection is supported:** `select()` returns pools 138,021 / 15,130 and exactly 120,000 / 12,000
+    rows, without refusal.
+  - Time: wall 80,669 s (22.41 h) of the 144,000 s ceiling; w 15.52 s per game against the smoke's 13.73.
+- **Did it match the prediction:** no prediction was stated. Against the planning figures: rows per game were higher
+  than the smoke's (29.5 against 26.2 for training), so the run stopped 656 games before G_stop 5,853; time per game
+  was higher (15.52 s against 13.73 s), so the elapsed time (80,669 s) came out close to the planning T (80,373 s).
+- **Conclusion / status:** the generation run COMPLETED cleanly and is spent. Both pools can support the exact
+  120,000 / 12,000 selection. Nothing labelled, fitted, exported or played; no label, fit, export or match stage is
+  authorized, and every H-OP gate is closed. Returned for the user's decision on labelling. See #204.
