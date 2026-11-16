@@ -1,0 +1,68 @@
+{
+ "admission": {
+  "G_N": 5366,
+  "G_stop": 5853,
+  "amended_conditions": {
+   "Y1": true,
+   "Y2": true,
+   "Y3": true,
+   "Y4": true,
+   "Y5": true
+  },
+  "amendment_sha256": "814036edea93ca2598290911421483caaee67a8e3e1ee25cfd46506f1271da48",
+  "at_cap_estimate_s": 133884.69225000002,
+  "g_max_run": 6500,
+  "head": "e47ec3191ae43a630fb017192e8a7a659e2b0741",
+  "launch_estimate_s": 120559.26626250001,
+  "record_sha256": "f74cc908f8f3b5aa8f4b7a96e377e19eec1a374d7150b25c1d616bf1bd2cb1b0",
+  "yield_sha256": "b8d8edb98a7b0a5e4b46d2f212fe144b85041d2bec5aa3a11be9d53b17d637b4"
+ },
+ "background_checks": 5198,
+ "caps": {
+  "g_max": 6500,
+  "kill_s": 144000,
+  "smoke_games": 40
+ },
+ "card_sha256": "a2a5ba2f7fad3018c16df2abc98c9c5d3ab8e9095415b3c06f41cd35a5aef5f1",
+ "counts": {
+  "train": 138021,
+  "val": 15130
+ },
+ "exclusions": {
+  "E3_positions": 1100,
+  "E4_rows": 264000,
+  "games": {
+   "E1": 624,
+   "E2": 222
+  },
+  "keys": {
+   "E1": 31299,
+   "E2": 10079,
+   "E3": 949,
+   "E4": 264000
+  }
+ },
+ "games": 5197,
+ "head": "983fa370b4478c268bc94a896fecbae33faf826f",
+ "kill_s": 144000,
+ "kind": "htb-onpolicy-generate-record/1",
+ "loop_seconds": 80658.48,
+ "module_sha256": "da3c0fac4e12f70ff35b05203d897552598ffd53ac043018ea26478b7f8da342",
+ "openings_sha256": "ca4e3bba05bfc6abddf782b1a1f68fc474bc3600410c7cbd4308073d306d3915",
+ "pid": 3007,
+ "stage": "generate",
+ "startup_s": 9.094,
+ "status": "COMPLETED",
+ "stopped_by": "targets",
+ "student": {
+  "path": "/Users/bill/twixt-cache/htb-pilot/student.safetensors",
+  "sha256": "0e1cb6211aa0b3e2dec6ab6f39bec74ceb8c472c7dcf603e7d331b1d1c1c34e5",
+  "state_digest": "586dca4fcdb87c2611449099b4b7acfda460b13b6717c573a55011b8620a630b"
+ },
+ "versions": {
+  "mlx": "0.30.3",
+  "numpy": "2.4.1",
+  "python": "3.14.10"
+ },
+ "w": 15.520200115451221
+}
