@@ -1,0 +1,57 @@
+{
+ "admission": {
+  "head": "983fa370b4478c268bc94a896fecbae33faf826f",
+  "record_sha256": "9a7a15843a16a0f56da21c9a41493ea5a9d832d33d0d52c82524344b3b976f4f"
+ },
+ "card_sha256": "a2a5ba2f7fad3018c16df2abc98c9c5d3ab8e9095415b3c06f41cd35a5aef5f1",
+ "counts": {
+  "train": 120000,
+  "val": 12000
+ },
+ "head": "4f2cc01ace55235e0bc8411d01ab4dd476d38fd0",
+ "kill_s": 6600,
+ "kind": "htb-onpolicy-label-record/1",
+ "label_memory_required_bytes": 5905580032,
+ "labels": [
+  {
+   "arm": "train",
+   "manifest_sha256": "b0ea21cb0a579705dd318e6662f314b7f2933e195e589d3884d54fc07f9ce933",
+   "n": 120000
+  },
+  {
+   "arm": "val",
+   "manifest_sha256": "66cfcaf2acd92e09ca6b089c376dbc455d346f7b777b32aa4de23927eab0cd59",
+   "n": 12000
+  }
+ ],
+ "memory_at_start": {
+  "available_bytes": 26857177088,
+  "page_size": 16384,
+  "physical_bytes": 51539607552
+ },
+ "module_sha256": "da3c0fac4e12f70ff35b05203d897552598ffd53ac043018ea26478b7f8da342",
+ "pid": 34495,
+ "runtime": {
+  "artifact_sha256": {
+   "model/pb/saved_model.pb": "e0c2b882bc97c4661ac92af47ae5ef78443e57b42d0cb7c9c3a8cb7e8d01993b",
+   "model/pb/variables/variables.data-00000-of-00001": "1958f8476e9d56cbb87fa570db88f9cc9d389b30e20571fd66e8e779a4cefbab",
+   "model/pb/variables/variables.index": "1d4073c4da30e515a984faef2c3cc9c8b8ba402353a01933c8bb80e1f279f8cd"
+  },
+  "commit": "83749f230a0bae1766b46a05bfde0ed87f0a9a0a",
+  "model_artifacts": 3,
+  "runtime_sha256": "32e4e14d5ca02c2cb2ad7a774def23138fb0ec7a5b83537680ec165a5045817e",
+  "tensorflow": "2.21.0"
+ },
+ "selection_sha256": "ecde66378fbd971ba44bed19cc91b7ad2085fc97ee98b85fdb8c12a8135375f3",
+ "stage": "label",
+ "status": "COMPLETED",
+ "teacher": {
+  "commit": "83749f230a0bae1766b46a05bfde0ed87f0a9a0a",
+  "model_dir": "model/pb",
+  "repo": "github.com/stevens68/twixtbot-ui",
+  "saved_model_sha256": "e0c2b882bc97c4661ac92af47ae5ef78443e57b42d0cb7c9c3a8cb7e8d01993b",
+  "variables_index_sha256": "1d4073c4da30e515a984faef2c3cc9c8b8ba402353a01933c8bb80e1f279f8cd",
+  "weights_sha256": "1958f8476e9d56cbb87fa570db88f9cc9d389b30e20571fd66e8e779a4cefbab"
+ },
+ "teacher_calls": 264000
+}
