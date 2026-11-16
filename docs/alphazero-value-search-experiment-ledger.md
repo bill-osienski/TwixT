@@ -305,6 +305,7 @@ knob) is not a new hypothesis.
 > **H-OP generation smoke COMPLETED; yield verdict REVIEW (Y3, Y4 failed); no launch; returned for the user's decision (Post-closure entry 66, 2026-11-15).** Gate `e47ec319` → evidence `f2af3591` → verdict `bc66a880`: 40/40 games (20/20 alternating) in 558 s wall under KILL 3,600 s, clean. Self-play games are short (mean 30.4 plies; G3's mean was 54.7), so usable rows per game are 26.2 (training, LB 24.85) and 26.6 (validation, LB 25.25), f = 1.00 in both pools. G_N 5,366 and G_stop 5,853, both set by training, exceed G_MAX 4,000. Y1, Y2 and Y5 hold (1.5 × T = 120,559 s ≤ 144,000 s). Nothing rescaled, retried or relaunched; see #202.
 > **H-OP amendment 1: the generation run's cap 4,000 → 6,500 (cap only); model-free build; returned for launch review; all gates closed; nothing run (amendment note, 2026-11-15, the user's approval).** `docs/superpowers/2026-11-15-htb-onpolicy-cap-amendment.md` (sha `814036ed…`). Kept: the 40 h ceiling, the stopping targets, N, the 9:1 split, the fit recipe, the imitation gate, the match rule; entry 66 and the REVIEW record stay as written. The admission is bound to the committed smoke's record, games, outer.json and yield record by sha, requires the yield to re-derive byte-equal and to be exactly that REVIEW, and re-reads Y3/Y4 at 6,500 (G_N 5,366, G_stop 5,853). 2,500 fresh openings extend the schedule (`gen-extension.json`, `578d34f3…`); openings distinct across all schedules; 4,054,336 seed derivations, no repeated 48-bit value. See #203.
 > **H-OP generation run COMPLETED under amendment 1: both stopping targets reached at 5,197 games; the exact 120,000 / 12,000 selection is supported; labelling not authorized (Post-closure entry 67, 2026-11-16).** Gate `983fa370` → evidence `c8c7ea9d`: stopped_by targets after game 5,196 (cap 6,500 not reached), wall 80,669 s (22.4 h) under KILL 144,000 s; inner and outer exit 0, gate restored, no survivors, 5,198 background checks clear. Usable pools: training 138,021 (4,678 games, 29.5 per game), validation 15,130 (519 games, 29.2 per game); f = 1.00, no exclusion hits. All 5,197 games pass replay validation against the 6,500-opening schedule; a dry `select()` in memory returns 120,000 / 12,000 rows (nothing written). Not retried or extended; see #204.
+> **H-OP labelling run COMPLETED: 120,000 / 12,000 rows labelled by the pinned CPU teacher, 264,000 teacher evaluations; verified; returned for fit approval (Post-closure entry 68, 2026-11-16).** Gate `4f2cc01a` → evidence `1ab6c45a`: wall 4,148 s under KILL 6,600 s; inner and outer exit 0, gate restored, no survivors. selection.json (`ecde6637…`) re-derives byte-equal; keys unique within each arm, training ∩ validation = 0, no exclusion hits; manifests train `b0ea21cb…` (15 shards) and val `66cfcaf2…` (2 shards), every shard and row-list hash matching and rows in selection order; the fit's loader and the label handoff admission accept them. Not retried; see #205.
 
 ## Historical proposal check — programme now closed
 
@@ -2142,6 +2143,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 202. **The H-OP generation smoke is spent: REVIEW, Y3 and Y4 failed (2026-11-15, entry 66).** Do **not**: rerun, extend or top up the smoke, or rerun it to "refresh" the yield; rewrite or re-derive yield.json under a changed estimator; open the generation gate (the generation admission refuses a REVIEW verdict, by design); raise G_MAX, the 40 h ceiling, or change N_TRAIN/N_VAL, the 1.15 stop factor, the split or the openings to make this smoke pass; or read the smoke's winners. Any continuation of H-OP needs a reviewed decision by the user first.
 203. **H-OP amendment 1 (2026-11-15) is cap-only and covers one generation run.** Do **not**: launch the generation run without the user's launch approval; raise the cap again, or apply 6,500 to any other run or stage; edit entry 66, yield.json or any pinned smoke file (the admission is bound to their bytes), or re-derive the yield under another rule; treat the REVIEW verdict as LAUNCH_OK anywhere but this admission; change, reorder or add to the frozen 4,000 openings or the 2,500 in `gen-extension.json`; or change the 40 h ceiling, the stopping targets, N, the split, the fit recipe, the imitation gate or the match rule under this amendment.
 204. **The H-OP generation run is spent: COMPLETED, stopped by targets at 5,197 games (2026-11-16, entry 67).** Do **not**: rerun, extend, top up or resume generation, or play more games to enlarge either pool; reuse the generation gate or amendment 1's cap for any other run; edit, reorder, filter or regenerate `htb-onpolicy-gen/games.jsonl` or its record (the label stage reads them as committed); treat the in-memory dry selection of entry 67 as a label-stage output or commit it as `selection.json`; read the games' winners or results for any purpose outside the card; or label, fit, export or play either match stage without the user's approval of that stage.
+205. **The H-OP labels are spent and pinned (2026-11-16, entry 68).** Do **not**: rerun, extend or relabel; edit, regenerate, reorder or re-shard `~/twixt-cache/htb-onpolicy/labels-train` or `labels-val` (the record pins manifests `b0ea21cb…` and `66cfcaf2…`, and the fit verifies every shard), or `htb-onpolicy-label/selection.json` (`ecde6637…`); label more positions, swap rows between pools, or use the 18,021 training and 3,130 validation positions the selection left out; load the teacher for any other purpose under this approval; or fit, export or play either match stage without the user's approval of that stage.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -12033,3 +12035,59 @@ The proposal note and revision 1 note above stay as written. This correction sup
 - **Conclusion / status:** the generation run COMPLETED cleanly and is spent. Both pools can support the exact
   120,000 / 12,000 selection. Nothing labelled, fitted, exported or played; no label, fit, export or match stage is
   authorized, and every H-OP gate is closed. Returned for the user's decision on labelling. See #204.
+
+#### Post-closure entry 68 — H-OP labelling run: 120,000 / 12,000 rows labelled by the pinned CPU teacher; COMPLETED; verified; returned for fit approval (2026-11-16)
+
+- **Test:** the card's (revision 3, sha `a2a5ba2f…`) label stage (§§5–6) under amendment 1 (sha `814036ed…`):
+  replay-validate the generation run's 5,197 games against the 6,500-opening schedule, select exactly 120,000
+  training and 12,000 validation positions (card §5.2), and label each with the pinned twixtbot-ui network on CPU,
+  evaluated on the position and its reflection in lockstep and averaged (card §6).
+- **Hypothesis:** the stage completes within its 6,600 s ceiling and produces exactly the selected rows, each
+  labelled once, in selection order, with the lockstep check passing throughout.
+- **Why it was plausible:** entry 67 showed both pools large enough (138,021 / 15,130) and every game replay-valid,
+  and a dry `select()` returned exactly 120,000 / 12,000.
+- **Prediction on record:** None stated in advance.
+- **The user's approval (2026-11-16):** one H-OP labelling run from `46b4923a`; a fresh clean worktree; BOINC quit and
+  Unreal Editor closed; only the label gate opened; the pinned CPU teacher; TERM 6,590 s / KILL 6,600 s; after clean
+  completion, verify the exact selection counts, disjoint position keys, shard hashes and row order, and 264,000
+  teacher evaluations; confirm gate restoration and cleanup, commit the evidence, update the ledger and return for
+  fit approval; on a failure or timeout, preserve the evidence and stop without retrying.
+- **What ran:**
+  - Before launch: BOINC absent (only the exempt podman VM), no Unreal process, load about 1.9; the teacher clone
+    `~/twixt-cache/htb-teacher/twixtbot-ui` clean at `83749f23…`; `~/twixt-cache/htb-onpolicy` absent.
+  - Launch worktree `/Users/bill/projects/TwixT_Game-hop-label`, branch `htb-onpolicy-label-launch` from `46b4923a`;
+    the one-line gate opening `4f2cc01a` (`HTB_ONPOLICY_LABEL_AUTHORIZED = True`; no other gate open).
+  - The wrapper was started detached (setsid + nohup) on 2026-11-16 at 17:30:28. Its idle gate held 60 s of idle at
+    151.5 s; the background check was CLEAR. It ran `htb_onpolicy run label` in the teacher venv
+    (TensorFlow 2.21.0, CPU) under MLX_ENABLE_TF32=0 (pid and pgid 34495).
+  - The label admission (`stage_admission(generate)`) passed on the committed generation record (`9a7a1584…`, head
+    `983fa370`).
+  - Outer (`outer.json` `d2d8ec0b…`): inner and outer exit 0, COMPLETED, gate restored, no survivors (pgrep on pgid
+    34495 empty), record written by the script, wall 4,148 s against KILL 6,600 s. stdout empty; stderr (473 bytes)
+    holds only TensorFlow's loader deprecation and MLIR notices.
+  - Record (`record.json` `d58351ad…`): status COMPLETED, counts 120,000 / 12,000, `teacher_calls` 264,000; teacher
+    commit `83749f23…`, saved_model `e0c2b882…`, weights `1958f847…`, index `1d4073c4…`, runtime `32e4e14d…`;
+    memory available at start 26.9 GB (5.9 GB required); module `da3c0fac…`.
+  - Outputs: `htb-onpolicy-label/selection.json` (`ecde6637…`) in the repository; label shards outside it, in
+    `~/twixt-cache/htb-onpolicy/labels-train` (15 shards, 280 MB, manifest `b0ea21cb…`) and `labels-val` (2 shards,
+    28 MB, manifest `66cfcaf2…`).
+  - The evidence and the restored gate committed by exact paths at `1ab6c45a`; the gate file is identical to
+    `46b4923a`'s. `htb-integration-g1` fast-forwarded to `1ab6c45a` (local only).
+- **Verification after the run (read-only):**
+  - **Selection counts:** exactly 120,000 training and 12,000 validation rows; `select()` re-run in memory on the
+    committed games reproduces selection.json byte-equal (pools 138,021 / 15,130; exclusion hits all 0).
+  - **Disjoint keys:** keys unique within each arm; training ∩ validation = 0; no validation key occurs in any
+    training game, none is in E4, and no selected key hits E1–E3.
+  - **Shard hashes:** each manifest's sha256 equals the record's; every shard's sha256 and every row list's hash equal
+    the manifest's; shard row counts sum to the manifest's n.
+  - **Row order:** the shards' row lists, concatenated, equal the selection's rows (game_id, ply, key) in order, and
+    each shard's `ply` array matches its row list.
+  - **Contents:** targets float32 (n, 576), non-negative, each summing to 1 within 2.4e-7; no non-finite value;
+    values in [−1, 1], each the mean of its identity and reflection evaluations.
+  - **Teacher evaluations:** 264,000 = 2 × 132,000 (each row on the position and its reflection).
+  - **Handoff:** the fit's loader (`load_label_compact`) accepts both pinned manifests, and `stage_admission(label)`
+    passes on the committed evidence.
+- **Result:** the label stage COMPLETED cleanly in 4,148 s (63% of its ceiling). Every requested check passes.
+- **Did it match the prediction:** no prediction was stated.
+- **Conclusion / status:** the labels exist, are pinned, and are verified. Nothing has been fitted, exported or
+  played. Every H-OP gate is closed. Returned for the user's decision on the fit stage (ceiling 11,700 s). See #205.
