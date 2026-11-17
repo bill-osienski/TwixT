@@ -1,0 +1,74 @@
+t=    0.0s BUSY: load 5.11 >= 3.0; /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mds_stores at 373.1% CPU > 50.0%; /Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/157.0.8103.78/Helpers/Codex (Aperitif Renderer).app/Contents/MacOS/Codex (Aperitif Renderer) at 51.6% CPU > 50.0%
+t=    5.0s BUSY: load 4.78 >= 3.0; /opt/homebrew/Cellar/python@3.14/3.14.10/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python at 88.0% CPU > 50.0%
+t=   10.1s BUSY: load 4.64 >= 3.0
+t=   15.1s BUSY: load 4.43 >= 3.0
+t=   20.1s BUSY: load 4.15 >= 3.0
+t=   25.2s BUSY: load 3.90 >= 3.0
+t=   30.2s BUSY: load 3.67 >= 3.0
+t=   35.2s BUSY: load 3.53 >= 3.0
+t=   40.2s BUSY: load 3.33 >= 3.0
+t=   45.3s BUSY: load 3.06 >= 3.0
+t=   50.3s idle for 0.0s
+t=   55.4s idle for 5.0s
+t=   60.4s idle for 10.1s
+t=   65.5s idle for 15.1s
+t=   70.5s idle for 20.2s
+t=   75.5s BUSY: /usr/libexec/opendirectoryd at 59.5% CPU > 50.0%
+t=   80.6s BUSY: /usr/libexec/coreduetd at 98.1% CPU > 50.0%
+t=   85.6s BUSY: /usr/libexec/coreduetd at 97.8% CPU > 50.0%
+t=   90.7s idle for 0.0s
+t=   95.7s idle for 5.0s
+t=  100.8s BUSY: /opt/homebrew/Cellar/python@3.14/3.14.10/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python at 80.4% CPU > 50.0%
+t=  105.8s idle for 0.0s
+t=  110.8s idle for 5.0s
+t=  115.9s idle for 10.1s
+t=  120.9s idle for 15.1s
+t=  126.0s idle for 20.2s
+t=  131.0s BUSY: /opt/homebrew/Cellar/python@3.14/3.14.10/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python at 80.4% CPU > 50.0%
+t=  136.0s idle for 0.0s
+t=  141.0s idle for 5.0s
+t=  146.1s BUSY: /opt/homebrew/Cellar/python@3.14/3.14.10/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python at 55.9% CPU > 50.0%
+t=  151.1s idle for 0.0s
+t=  156.1s idle for 5.0s
+t=  161.2s idle for 10.1s
+t=  166.2s idle for 15.1s
+t=  171.2s idle for 20.1s
+t=  176.3s idle for 25.2s
+t=  181.3s idle for 30.2s
+t=  186.4s idle for 35.2s
+t=  191.4s idle for 40.3s
+t=  196.4s BUSY: /opt/homebrew/Cellar/python@3.14/3.14.10/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python at 62.6% CPU > 50.0%
+t=  201.5s idle for 0.0s
+t=  206.5s idle for 5.0s
+t=  211.5s idle for 10.1s
+t=  216.6s idle for 15.1s
+t=  221.6s BUSY: /opt/homebrew/Cellar/python@3.14/3.14.10/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python at 85.7% CPU > 50.0%
+t=  226.7s idle for 0.0s
+t=  231.7s idle for 5.0s
+t=  236.8s idle for 10.1s
+t=  241.8s idle for 15.1s
+t=  246.8s idle for 20.2s
+t=  251.9s idle for 25.2s
+t=  256.9s BUSY: /opt/homebrew/Cellar/python@3.14/3.14.10/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python at 73.4% CPU > 50.0%
+t=  262.0s idle for 0.0s
+t=  267.0s idle for 5.0s
+t=  272.0s idle for 10.1s
+t=  277.0s BUSY: /opt/homebrew/Cellar/python@3.14/3.14.10/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python at 83.0% CPU > 50.0%
+t=  282.1s idle for 0.0s
+t=  287.1s idle for 5.0s
+t=  292.1s idle for 10.1s
+t=  297.1s BUSY: /opt/homebrew/Cellar/python@3.14/3.14.10/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python at 72.6% CPU > 50.0%
+t=  302.2s idle for 0.0s
+t=  307.2s idle for 5.0s
+t=  312.2s idle for 10.1s
+t=  317.3s idle for 15.1s
+t=  322.3s idle for 20.1s
+t=  327.3s idle for 25.1s
+t=  332.3s idle for 30.2s
+t=  337.4s idle for 35.2s
+t=  342.4s idle for 40.2s
+t=  347.5s idle for 45.3s
+t=  352.5s idle for 50.3s
+t=  357.6s idle for 55.4s
+t=  362.6s idle for 60.4s
+IDLE: held 60s (load < 3.0, no process > 50.0% CPU)
