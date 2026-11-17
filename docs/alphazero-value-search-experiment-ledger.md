@@ -306,6 +306,7 @@ knob) is not a new hypothesis.
 > **H-OP amendment 1: the generation run's cap 4,000 → 6,500 (cap only); model-free build; returned for launch review; all gates closed; nothing run (amendment note, 2026-11-15, the user's approval).** `docs/superpowers/2026-11-15-htb-onpolicy-cap-amendment.md` (sha `814036ed…`). Kept: the 40 h ceiling, the stopping targets, N, the 9:1 split, the fit recipe, the imitation gate, the match rule; entry 66 and the REVIEW record stay as written. The admission is bound to the committed smoke's record, games, outer.json and yield record by sha, requires the yield to re-derive byte-equal and to be exactly that REVIEW, and re-reads Y3/Y4 at 6,500 (G_N 5,366, G_stop 5,853). 2,500 fresh openings extend the schedule (`gen-extension.json`, `578d34f3…`); openings distinct across all schedules; 4,054,336 seed derivations, no repeated 48-bit value. See #203.
 > **H-OP generation run COMPLETED under amendment 1: both stopping targets reached at 5,197 games; the exact 120,000 / 12,000 selection is supported; labelling not authorized (Post-closure entry 67, 2026-11-16).** Gate `983fa370` → evidence `c8c7ea9d`: stopped_by targets after game 5,196 (cap 6,500 not reached), wall 80,669 s (22.4 h) under KILL 144,000 s; inner and outer exit 0, gate restored, no survivors, 5,198 background checks clear. Usable pools: training 138,021 (4,678 games, 29.5 per game), validation 15,130 (519 games, 29.2 per game); f = 1.00, no exclusion hits. All 5,197 games pass replay validation against the 6,500-opening schedule; a dry `select()` in memory returns 120,000 / 12,000 rows (nothing written). Not retried or extended; see #204.
 > **H-OP labelling run COMPLETED: 120,000 / 12,000 rows labelled by the pinned CPU teacher, 264,000 teacher evaluations; verified; returned for fit approval (Post-closure entry 68, 2026-11-16).** Gate `4f2cc01a` → evidence `1ab6c45a`: wall 4,148 s under KILL 6,600 s; inner and outer exit 0, gate restored, no survivors. selection.json (`ecde6637…`) re-derives byte-equal; keys unique within each arm, training ∩ validation = 0, no exclusion hits; manifests train `b0ea21cb…` (15 shards) and val `66cfcaf2…` (2 shards), every shard and row-list hash matching and rows in selection order; the fit's loader and the label handoff admission accept them. Not retried; see #205.
+> **H-OP CPU fit COMPLETED: imitation gate ELIGIBLE (I1, I2, I3 held); old-distribution retention fell (descriptive); returned for a separate export decision (Post-closure entry 69, 2026-11-16).** Gate `9e6dcb4f` → evidence `444efbb7`: 7,500 updates from the pinned student `0e1cb621…`, wall 6,526 s under KILL 11,700 s, clean. Held-out 12,000 rows, S → C: KL 0.7073 → 0.4176 (×0.590), top-1 0.5761 → 0.6789, value MSE 0.02578 → 0.01971. Start check KL 0.7167 ≥ 0.01. Retention on the first fit's 24,000 rows (never gated): KL 0.5745 → 0.6996 (+21.8%), top-1 0.6514 → 0.6101, MSE 0.0703 → 0.1147. Prediction: ELIGIBLE matched (KL cut 41.0% vs 20–40% predicted); retention (<10% KL change) missed. Challenger `5178a47c…` outside the repository. See #206.
 
 ## Historical proposal check — programme now closed
 
@@ -2144,6 +2145,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 203. **H-OP amendment 1 (2026-11-15) is cap-only and covers one generation run.** Do **not**: launch the generation run without the user's launch approval; raise the cap again, or apply 6,500 to any other run or stage; edit entry 66, yield.json or any pinned smoke file (the admission is bound to their bytes), or re-derive the yield under another rule; treat the REVIEW verdict as LAUNCH_OK anywhere but this admission; change, reorder or add to the frozen 4,000 openings or the 2,500 in `gen-extension.json`; or change the 40 h ceiling, the stopping targets, N, the split, the fit recipe, the imitation gate or the match rule under this amendment.
 204. **The H-OP generation run is spent: COMPLETED, stopped by targets at 5,197 games (2026-11-16, entry 67).** Do **not**: rerun, extend, top up or resume generation, or play more games to enlarge either pool; reuse the generation gate or amendment 1's cap for any other run; edit, reorder, filter or regenerate `htb-onpolicy-gen/games.jsonl` or its record (the label stage reads them as committed); treat the in-memory dry selection of entry 67 as a label-stage output or commit it as `selection.json`; read the games' winners or results for any purpose outside the card; or label, fit, export or play either match stage without the user's approval of that stage.
 205. **The H-OP labels are spent and pinned (2026-11-16, entry 68).** Do **not**: rerun, extend or relabel; edit, regenerate, reorder or re-shard `~/twixt-cache/htb-onpolicy/labels-train` or `labels-val` (the record pins manifests `b0ea21cb…` and `66cfcaf2…`, and the fit verifies every shard), or `htb-onpolicy-label/selection.json` (`ecde6637…`); label more positions, swap rows between pools, or use the 18,021 training and 3,130 validation positions the selection left out; load the teacher for any other purpose under this approval; or fit, export or play either match stage without the user's approval of that stage.
+206. **The H-OP fit is spent: ELIGIBLE (2026-11-16, entry 69).** Do **not**: rerun, resume, extend or re-seed the fit, or fit again with another recipe, learning rate, update count or row set; edit, overwrite or re-save `~/twixt-cache/htb-onpolicy/challenger.safetensors` (sha `5178a47c…`, state digest `db719d8d…`, pinned in the fit record); re-score the gate on other rows or re-judge I1–I3; gate, select or reject the challenger on the descriptive retention scores, or cite the gate as evidence of playing strength (only the 272-pair match tests that); or export, run parity or play either match stage without the user's approval of that stage.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -12091,3 +12093,78 @@ The proposal note and revision 1 note above stay as written. This correction sup
 - **Did it match the prediction:** no prediction was stated.
 - **Conclusion / status:** the labels exist, are pinned, and are verified. Nothing has been fitted, exported or
   played. Every H-OP gate is closed. Returned for the user's decision on the fit stage (ceiling 11,700 s). See #205.
+
+#### Post-closure entry 69 — H-OP CPU fit: 7,500 updates from the current student on the 120,000 labelled rows; COMPLETED; imitation gate ELIGIBLE; retention fell on the old distribution (descriptive); returned for an export decision (2026-11-16)
+
+- **Test:** the card's (revision 3, sha `a2a5ba2f…`) fit and imitation gate (§§7–8): warm-start from the pinned
+  current student (`0e1cb621…`, state digest `586dca4f…`), the first fit's frozen recipe (2 epochs × 120,000 rows /
+  32 = 7,500 updates, Adam lr 1e-4, value weight 1.0, L2 1e-4, clip 1.0; epoch namespace `htb-onpolicy-fit/1`) on
+  MLX's CPU in eval mode; score the student (S) and the challenger (C) on the 12,000 held-out validation rows; gate
+  I1 KL_C ≤ 0.90 × KL_S, I2 TOP_C > TOP_S, I3 MSE_C ≤ MSE_S; then score both, descriptively, on the first fit's
+  24,000 validation rows.
+- **Hypothesis:** card §1 — fitting the student to the teacher's labels on positions its own `hard` reaches moves it
+  toward the teacher on held-out such positions, enough to pass all of I1–I3.
+- **Why it was plausible:** card §§1, 8; the first fit never trained on self-play positions, and arm N (entry 65)
+  showed a playing-strength gap to the teacher.
+- **Prediction on record (card §16, stated before any build, low-to-moderate confidence):** imitation gate ELIGIBLE,
+  with KL_C about 20–40% below KL_S; descriptive retention: the old-distribution KL changes by less than 10% either
+  way. (The match prediction, about 0.60, is not tested here.)
+- **The user's approval (2026-11-16):** one H-OP CPU fit from `9ac82d30`; a clean worktree; BOINC quit and Unreal
+  Editor closed; only the fit gate opened; the 12 GiB memory check enforced; warm start from the pinned current
+  student; the frozen 7,500-update recipe; TERM 11,690 s / KILL 11,700 s; report the start check, all six held-out
+  metrics and their changes, I1–I3, the verdict and the descriptive retention scores; verify cleanup and gate
+  restoration, commit the evidence and update the ledger; on a failure, preserve the evidence and stop without
+  retrying; return for a separate export decision if ELIGIBLE.
+- **What ran:**
+  - Before launch: the student file matched its pin; recipe as above; the first fit's labels and the corpus present;
+    no challenger in the cache; 28.9 GB available; BOINC absent (only the exempt podman VM), no Unreal process.
+  - Launch worktree `/Users/bill/projects/TwixT_Game-hop-fit`, branch `htb-onpolicy-fit-launch` from `9ac82d30`; the
+    one-line gate opening `9e6dcb4f` (`HTB_ONPOLICY_FIT_AUTHORIZED = True`; no other gate open).
+  - The wrapper was started detached (setsid + nohup) on 2026-11-16 at 21:21:53; the idle gate held 60 s and the
+    background check was CLEAR. It ran `htb_onpolicy run fit` in the main .venv under MLX_ENABLE_TF32=0 (pid and pgid
+    54522).
+  - In order: preconditions; `stage_admission(label)` (record `d58351ad…`, head `4f2cc01a`); the label binding
+    (selection `ecde6637…`, exact counts, no repeated key); **the memory check: 31.2 GB available against 12 GiB
+    (12,884,901,888 B) required**; both manifests loaded and checked against the selection's rows in order; the
+    student loaded twice (reference and warm start), each checked against its sha and state digest.
+  - Outer (`outer.json` `765fe19c…`): inner and outer exit 0, COMPLETED, gate restored, no survivors (pgrep on pgid
+    54522 empty), record written by the script, wall 6,526 s against KILL 11,700 s; stdout and stderr empty.
+  - Record (`record.json` `8fd862d8…`): COMPLETED, verdict ELIGIBLE; 7,500 updates; Adam betas (0.9, 0.999), eps
+    1e-8, no bias correction (as `P.ADAM_DEFAULTS`); all 64 surface tensors changed; 28 BatchNorm running statistics
+    unchanged; reference digest `586dca4f…` (the pinned student), challenger digest `db719d8d…`.
+  - Challenger: `~/twixt-cache/htb-onpolicy/challenger.safetensors`, sha `5178a47c…` (re-hashed after the run: equal),
+    outside the repository. The pinned student file still hashes to `0e1cb621…`.
+  - The evidence and the restored gate committed by exact paths at `444efbb7`; the gate file is identical to
+    `9ac82d30`'s. `htb-integration-g1` fast-forwarded to `444efbb7` (local only). `stage_admission(fit)` passes on
+    the committed evidence (the export's handoff check).
+- **Result:**
+  - **Start check** (first 2,048 training rows in epoch-0 order, the reference against the teacher): KL 0.7167 ≥ the
+    floor 0.01, passed (top-1 0.5576, value MSE 0.02612).
+  - **Held-out validation, 12,000 rows (S = current student, C = challenger):**
+
+    | Metric | S | C | C − S | C / S | Direction |
+    |---|---|---|---|---|---|
+    | KL(T ‖ model) | 0.70735 | 0.41759 | −0.28975 | 0.5904 | toward the teacher |
+    | Top-1 agreement | 0.57608 | 0.67892 | +0.10283 | 1.1785 | toward the teacher |
+    | Value MSE | 0.025782 | 0.019712 | −0.006070 | 0.7646 | toward the teacher |
+
+  - **I1** held (0.41759 ≤ 0.90 × 0.70735 = 0.63661) · **I2** held (0.67892 > 0.57608) · **I3** held (0.019712 ≤
+    0.025782). **Verdict: ELIGIBLE.**
+  - **Descriptive retention, never gated** (the first fit's 24,000 validation rows):
+
+    | Metric | S | C | C − S | Change |
+    |---|---|---|---|---|
+    | KL(T ‖ model) | 0.57449 | 0.69959 | +0.12510 | +21.8% (away from the teacher) |
+    | Top-1 agreement | 0.65142 | 0.61013 | −0.04129 | −6.3% relative (away) |
+    | Value MSE | 0.070317 | 0.114715 | +0.044398 | +63.1% (away) |
+
+- **Did it match the prediction:**
+  - Gate: **matched** — ELIGIBLE. The KL cut was 41.0%, just past the predicted 20–40%.
+  - Retention: **missed** — the old-distribution KL rose 21.8%, not within 10%; top-1 and value MSE also moved away
+    from the teacher on those rows. Why is not established by this run: the two row sets differ in source (the first
+    fit's rows came from the earlier corpus, these from the student's own self-play), and no measurement here separates
+    forgetting from distribution shift. Not interpreted further.
+- **Conclusion / status:** the fit is spent and ELIGIBLE under the card's gate; the gate measures imitation on
+  self-play positions, not playing strength. The retention drop is descriptive and does not gate (card §8), but it is
+  material context for the export and match decisions. Nothing exported, parity-checked or played; every H-OP gate is
+  closed. Returned for the user's separate export decision (ceiling 3,600 s). See #206.
