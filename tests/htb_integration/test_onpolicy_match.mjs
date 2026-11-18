@@ -402,11 +402,14 @@ test('committed smoke evidence is checked before the match, through git', () => 
 });
 
 test('run refuses while the gate is closed, and creates nothing', () => {
+  // Since the smoke (2026-11-17, 5fb4a2d5) its evidence directory exists; "nothing" now means nothing new.
   for (const stage of ['smoke', 'match']) {
+    const dir = join(D.REPO_ROOT, D.RUN_REL[stage]);
+    const before = existsSync(dir) ? readdirSync(dir).sort() : null;
     const r = spawnSync(process.execPath, [join(D.REPO_ROOT, 'tests/htb_integration/onpolicy_match.mjs'), 'run', stage, '--challenger-dir', '/nonexistent', '--kill-s', String(D.KILL_S[stage])], { encoding: 'utf8' });
     assert.equal(r.status, 4);
     assert.match(r.stderr, /AUTHORIZED is closed/);
-    assert.equal(existsSync(join(D.REPO_ROOT, D.RUN_REL[stage])), false);
+    assert.deepEqual(existsSync(dir) ? readdirSync(dir).sort() : null, before);
   }
   const u = spawnSync(process.execPath, [join(D.REPO_ROOT, 'tests/htb_integration/onpolicy_match.mjs'), 'run', 'other'], { encoding: 'utf8' });
   assert.equal(u.status, 2);
