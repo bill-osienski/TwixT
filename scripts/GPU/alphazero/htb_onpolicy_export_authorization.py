@@ -4,4 +4,4 @@
 challenger with the unmodified exporter, then the V2-R surfaces and V3 parity. Opened for ONE approved run, in a
 one-line launch commit, and restored on every exit. Created closed. This file may hold ONLY this declaration.
 """
-HTB_ONPOLICY_EXPORT_AUTHORIZED = True
+HTB_ONPOLICY_EXPORT_AUTHORIZED = False

@@ -1,0 +1,24 @@
+t=    0.0s BUSY: load 4.55 >= 3.0; /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mds at 66.6% CPU > 50.0%
+t=    5.0s BUSY: load 4.75 >= 3.0; /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mds_stores at 330.1% CPU > 50.0%; /System/Library/PrivateFrameworks/MediaAnalysis.framework/Versions/A/mediaanalysisd at 111.8% CPU > 50.0%
+t=   10.1s BUSY: load 5.01 >= 3.0
+t=   15.1s BUSY: load 4.69 >= 3.0
+t=   20.2s BUSY: load 4.39 >= 3.0
+t=   25.3s BUSY: load 4.20 >= 3.0
+t=   30.3s BUSY: load 3.94 >= 3.0
+t=   35.4s BUSY: load 3.63 >= 3.0
+t=   40.4s BUSY: load 3.34 >= 3.0
+t=   45.5s BUSY: load 3.07 >= 3.0
+t=   50.5s idle for 0.0s
+t=   55.6s idle for 5.1s
+t=   60.6s idle for 10.1s
+t=   65.7s idle for 15.1s
+t=   70.7s idle for 20.2s
+t=   75.8s idle for 25.2s
+t=   80.8s idle for 30.3s
+t=   85.9s idle for 35.3s
+t=   90.9s idle for 40.4s
+t=   95.9s idle for 45.4s
+t=  101.0s idle for 50.5s
+t=  106.0s idle for 55.5s
+t=  111.1s idle for 60.6s
+IDLE: held 60s (load < 3.0, no process > 50.0% CPU)

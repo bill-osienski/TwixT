@@ -1,0 +1,44 @@
+{
+ "admission": {
+  "challenger": {
+   "path": "/Users/bill/twixt-cache/htb-onpolicy/challenger.safetensors",
+   "sha1": "72118a4e6193dad8a4973bb3879ae630a85a9c40",
+   "sha256": "5178a47cf5088bd52d1b3d552c8d1c0ab24dbec38ae257a90bae24b17eb6dd74",
+   "state_digest": "db719d8de0795282a3b1c72c02d72767b5d643e4893227253dc82fe730b5a940"
+  },
+  "head": "9e6dcb4f1723492a6cd494cabeb4ac2d7d2b8cbc",
+  "record_sha256": "8fd862d8ca06b1e79aa757024b50c87326fa4f7a62f9d672fbec38335645d23d"
+ },
+ "card_sha256": "a2a5ba2f7fad3018c16df2abc98c9c5d3ab8e9095415b3c06f41cd35a5aef5f1",
+ "challenger": {
+  "dir": "/Users/bill/twixt-cache/htb-onpolicy/export/a3c4fc0f49911d5b",
+  "external_data_sha256": "9d279d5387cf36f2615f337041593423509b68882551f3e71e068e30af699a9d",
+  "graph_sha256": "dfd8fb21823b9f8b31608cd0a60e3567975e19f3e98a660182d5af1cd65bc199",
+  "model_id": "a3c4fc0f49911d5b",
+  "source_sha256": "5178a47cf5088bd52d1b3d552c8d1c0ab24dbec38ae257a90bae24b17eb6dd74",
+  "source_state_digest": "db719d8de0795282a3b1c72c02d72767b5d643e4893227253dc82fe730b5a940"
+ },
+ "graph_signature_sha256": {
+  "challenger": "a022f29b8e0239b84d36aaa8ee7e338eec62bd887959d5675db58ac0bd31aa75",
+  "current": "a022f29b8e0239b84d36aaa8ee7e338eec62bd887959d5675db58ac0bd31aa75"
+ },
+ "head": "4c26fe7b4bd92704d545bea957d920ff84e0c2d2",
+ "kill_s": 3600,
+ "kind": "htb-onpolicy-export-record/1",
+ "module_sha256": "da3c0fac4e12f70ff35b05203d897552598ffd53ac043018ea26478b7f8da342",
+ "pid": 63479,
+ "runtime_versions": "python 3.14.10; mlx 0.30.3; mlx-metal 0.30.3; torch 2.10.0; onnx 1.20.1; numpy 2.4.1; node v24.22.0; onnxruntime-node 1.23.2",
+ "stage": "export",
+ "status": "COMPLETED",
+ "steps": {
+  "canary_node": 0,
+  "canary_python": 0,
+  "s_compare": 0,
+  "s_node": 0,
+  "s_python": 0,
+  "v3_compare": 0,
+  "v3_node": 0,
+  "v3_python": 0
+ },
+ "verdict": "PARITY_PASS"
+}
