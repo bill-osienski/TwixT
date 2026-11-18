@@ -1,0 +1,54 @@
+{
+ "schema": "htb-onpolicy-match-analysis/1",
+ "rule": "PASS iff mean pair score - sqrt(ln 20 / (2n)) > 0.5 over the n = 272 pairs (one-sided Hoeffding, alpha 0.05)",
+ "pairs": 272,
+ "games": 544,
+ "challenger": {
+  "W": 270,
+  "D": 2,
+  "L": 272
+ },
+ "mean_pair_score": 0.49816176470588236,
+ "pair_score_sum": 135.5,
+ "one_sided_half_width": 0.07420822593873436,
+ "lower_bound": 0.42395353876714803,
+ "verdict": "NON_PASS",
+ "search_seconds_guard": {
+  "challenger_s": 10408.73455326814,
+  "current_s": 10410.08478520887,
+  "ratio": 0.9998702957787001,
+  "limit": 1.1,
+  "within": true
+ },
+ "descriptive": {
+  "two_sided_95_half_width": 0.08234699999573558,
+  "two_sided_95_interval": [
+   0.4158147647101468,
+   0.5805087647016179
+  ],
+  "by_colour": {
+   "challenger_red": {
+    "W": 233,
+    "D": 2,
+    "L": 37,
+    "score": 0.8602941176470589
+   },
+   "challenger_black": {
+    "W": 37,
+    "D": 0,
+    "L": 235,
+    "score": 0.13602941176470587
+   }
+  },
+  "draws": 2,
+  "plies": {
+   "n": 544,
+   "mean": 33.80514705882353,
+   "median": 30,
+   "min": 25,
+   "max": 569
+  },
+  "distinct_games": 544
+ },
+ "reading": "NON_PASS: superiority over 0.50 is not shown. This is not evidence of no gain: the planning power (about 80% at a true 0.60) is model-based and assumes completion. The current hard stays; no top-up or re-score."
+}
