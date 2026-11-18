@@ -309,6 +309,7 @@ knob) is not a new hypothesis.
 > **H-OP CPU fit COMPLETED: imitation gate ELIGIBLE (I1, I2, I3 held); old-distribution retention fell (descriptive); returned for a separate export decision (Post-closure entry 69, 2026-11-16).** Gate `9e6dcb4f` → evidence `444efbb7`: 7,500 updates from the pinned student `0e1cb621…`, wall 6,526 s under KILL 11,700 s, clean. Held-out 12,000 rows, S → C: KL 0.7073 → 0.4176 (×0.590), top-1 0.5761 → 0.6789, value MSE 0.02578 → 0.01971. Start check KL 0.7167 ≥ 0.01. Retention on the first fit's 24,000 rows (never gated): KL 0.5745 → 0.6996 (+21.8%), top-1 0.6514 → 0.6101, MSE 0.0703 → 0.1147. Prediction: ELIGIBLE matched (KL cut 41.0% vs 20–40% predicted); retention (<10% KL change) missed. Challenger `5178a47c…` outside the repository. See #206.
 > **H-OP export and parity COMPLETED: PARITY_PASS; returned for separate match-smoke approval (Post-closure entry 70, 2026-11-17).** Gate `4c26fe7b` → evidence `d60fbaea`: challenger `5178a47c…` exported once to pair `a3c4fc0f49911d5b` (graph `dfd8fb21…`, data `9d279d53…`) in `~/twixt-cache/htb-onpolicy/export/`, outside the product manifest; `HARD_MODEL_ID` unchanged. Graph signature equal to `78c16a31c3dba37f`'s; Python (ORT 1.23.2) and Node canaries pass; S1–S4 PASS on 126 positions (S2/S4 max logit 1.9e-5, S3 exactly 0); V3 mirror-averaged PASS (max prior 1.3e-6, value 2.9e-6). Wall 12 s under KILL 3,600 s, clean. A chained `;` fast-forwarded `htb-integration-g1` to the gate-open commit for about a minute before the closing commit (nothing ran). See #207.
 > **H-OP match smoke COMPLETED; timing LAUNCH_OK; returned for a separate decision on the 272-pair match (Post-closure entry 71, 2026-11-17).** Gate `0f98d04e` → evidence `5fb4a2d5` → timing `77cb37c8` / `1af60786`: 4 games (2 colour-reversed pairs, 28–30 plies), challenger `a3c4fc0f49911d5b` vs current `78c16a31c3dba37f`, both 200 simulations; wall 129 s under KILL 1,800 s, clean. Frozen analyser: mean game 32.049 s, projection 17,434.8 s (4.84 h) for 544 games, 1.5 × = 26,152.2 s (7.26 h) ≤ 64,800 s. Outcomes unread. timing.json was first written to the wrapper folder by mistake, then re-derived byte-identical at the admission path. One stale test (smoke folder must not exist) now fails. See #208.
+> **H-OP match COMPLETED: NON_PASS; the current `hard` stays (Post-closure entry 72, 2026-11-18).** Test fix `1d02d202` → gate `079f1db8` → evidence `17650a1c` → analysis `449d6acf`: 272 colour-reversed pairs (544 games), challenger `a3c4fc0f49911d5b` vs current `78c16a31c3dba37f`, both 200 simulations; wall 20,821 s under KILL 64,800 s, clean. Guards all pass (search-seconds ratio 0.99987 ≤ 1.10). Challenger 270 W / 2 D / 272 L; **mean pair score 0.4982, one-sided lower bound 0.4240 ≤ 0.5**; two-sided 95% [0.416, 0.581]. Prediction on record (0.60, range 0.52–0.70) missed. Red scored about 0.86 in both seatings. The H-OP line is closed on this card. See #209.
 
 ## Historical proposal check — programme now closed
 
@@ -2150,6 +2151,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 206. **The H-OP fit is spent: ELIGIBLE (2026-11-16, entry 69).** Do **not**: rerun, resume, extend or re-seed the fit, or fit again with another recipe, learning rate, update count or row set; edit, overwrite or re-save `~/twixt-cache/htb-onpolicy/challenger.safetensors` (sha `5178a47c…`, state digest `db719d8d…`, pinned in the fit record); re-score the gate on other rows or re-judge I1–I3; gate, select or reject the challenger on the descriptive retention scores, or cite the gate as evidence of playing strength (only the 272-pair match tests that); or export, run parity or play either match stage without the user's approval of that stage.
 207. **The H-OP export is spent: PARITY_PASS (2026-11-17, entry 70).** Do **not**: re-export, re-run parity or any canary, or change a tolerance; edit, replace or re-place `~/twixt-cache/htb-onpolicy/export/a3c4fc0f49911d5b/` (the match driver admits the pair through the committed export record); copy the pair into `models/`, change `HARD_MODEL_ID` or serve the challenger as `hard`; read PARITY_PASS as a strength claim; play the match smoke or the match without the user's approval of that stage; or chain a fast-forward after a launch-worktree step with `;` (only after a checked commit of the restored gate).
 208. **The H-OP match smoke is spent: LAUNCH_OK (2026-11-17, entry 71).** Do **not**: rerun or extend the smoke, re-time it, or edit either committed timing.json (they are byte-identical; the match reads `htb-onpolicy-match-smoke/timing.json`); read, tally or report the smoke's outcomes (card §10: excluded from scoring and every report); count the smoke's games toward the match; play the 272-pair match without the user's approval; or delete the smoke folder to make the stale test at `tests/htb_integration/test_onpolicy_match.mjs:409` pass (fix the test's expectation instead, with approval).
+209. **H-OP is spent: the 272-pair match is NON_PASS (2026-11-18, entry 72).** Do **not**: top up, extend, replay or re-score the match (card §10: "no top-up or re-score"); re-analyse it under any other rule, subset, colour split or interval to find a gain; count the smoke's games; deploy challenger `a3c4fc0f49911d5b` or change HARD_MODEL_ID on this evidence; rerun any H-OP stage (generation, labelling, fit, export, match) under this card; or read the fit's held-out imitation gains (entry 69) as a strength result. Better imitation of the teacher on `hard`'s self-play positions did not show up as strength against the current `hard` here. A further on-policy attempt needs a new card that names a specific change and why it could improve play.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -12296,3 +12298,72 @@ The proposal note and revision 1 note above stay as written. This correction sup
 - **Conclusion / status:** the smoke is spent and the match is LAUNCH_OK by the frozen rule. Smoke outcomes are
   unread and excluded from every report. Every H-OP gate is closed. Returned for the user's separate decision on the
   272-pair match (ceiling 64,800 s). See #208.
+
+#### Post-closure entry 72 — H-OP match: 272 colour-reversed pairs, challenger `a3c4fc0f49911d5b` vs current `hard` `78c16a31c3dba37f`; COMPLETED; NON_PASS; the current `hard` stays (2026-11-18)
+
+- **Test:** the card's (revision 3, sha `a2a5ba2f…`) match (§10): the 272 frozen `match` openings, each played twice
+  with colours reversed (game 0 challenger Red, game 1 challenger Black), the challenger (the export qualified by entry
+  70) against the current `hard`, both through protocolMove at 200 simulations under the product's game-end rule. The
+  frozen analyser (sha256 `18767061…`) admits the run, applies the guards and the pass rule.
+- **Hypothesis (card §1):** the challenger, warm-started from the current student and fitted to the pinned teacher's
+  mirror-averaged policy and value at positions from `hard`'s self-play, is stronger than the current `hard` (true
+  mean pair score above 0.50) under this protocol. Planning target 0.60 (§11). The test covers the whole update; it
+  does not separate the new data source from the continued training.
+- **Why it was plausible (card §1):** distribution shift (DAgger-style argument: the first fit never trained on a
+  position from `hard`'s self-play); a measured play gap to the teacher (arm N, 0.045, entry 65); imitating this
+  teacher had transferred to play before. The fit (entry 69) was ELIGIBLE: held-out KL on `hard` self-play positions
+  0.7073 → 0.4176, top-1 0.5761 → 0.6789, value MSE 0.02578 → 0.01971.
+- **Prediction on record (card §16, before any build):** match mean pair score about **0.60** (plausible range
+  0.52–0.70); **PASS roughly an even chance**.
+- **The user's approval (2026-11-17):** the stale test fix and one H-OP match. Commit the test-only fix first and
+  verify the match suite passes; from that commit, a fresh clean worktree, BOINC quit and Unreal Editor closed, only
+  the full-match gate opened; the frozen 272 colour-reversed pairs (544 games), challenger `a3c4fc0f49911d5b` vs
+  current `hard` `78c16a31c3dba37f`, both 200 simulations; TERM 64,790 s / KILL 64,800 s; smoke games kept out of the
+  score; the frozen guard and verdict rules; report the verdict, the compute guard and, if valid, the mean pair score
+  and lower bound; verify cleanup and gate restoration, commit the evidence, update the ledger; on failure or timeout
+  preserve and stop without retrying. Nothing else (no deployment, no HARD_MODEL_ID change, no push).
+- **What ran:**
+  - **Test fix `1d02d202`** (test-only, on `htb-integration-g1`): the gate-closed refusal test in
+    `tests/htb_integration/test_onpolicy_match.mjs` now checks that nothing *new* is created in either stage's
+    evidence directory (the smoke's exists since `5fb4a2d5`), as the benchmark's suite does. No other file pins the
+    test file. `test_onpolicy_match.mjs` 20/20.
+  - Launch worktree `/Users/bill/projects/TwixT_Game-hop-match`, branch `htb-onpolicy-match-launch` from `1d02d202`,
+    `node_modules` APFS-cloned; the one-line gate opening `079f1db8` (`ONPOLICY_MATCH_AUTHORIZED = true`;
+    `ONPOLICY_MATCH_SMOKE_AUTHORIZED` false; no Python gate open).
+  - The wrapper was started detached (setsid + nohup) on 2026-11-17 at 19:56:28 EST. Preconditions passed (including
+    the committed smoke timing re-deriving under the frozen analyser). The idle gate first saw load 3.64 (Spotlight
+    `mds_stores` and `mediaanalysisd` busy), waited, and held 60 s idle at t = 75.9 s; background check CLEAR (no
+    BOINC process; only the exempt podman VM). It ran `onpolicy_match.mjs run match` (pid and pgid 76712), started
+    00:57:45Z, ended 06:44:46Z on 2026-11-18.
+  - Outer (`outer.json`): inner and outer exit 0, COMPLETED, gate restored, no survivors (pgrep on pgid 76712 empty),
+    record written by the script, **wall 20,821 s** (5.78 h) against KILL 64,800 s (smoke projection 17,434.8 s,
+    1.5 × 26,152.2 s); stderr empty; stdout only the two model-load banners.
+  - Record (`8a1447e7…`): COMPLETED, 544 games, 272 pairs; startup 0.028 s; total 20,820.6 s (mean 38.3 s a game);
+    challenger graph `dfd8fb21…`, data `9d279d53…`, source `5178a47c…`; current onnx `bc68a274…`; both
+    MirrorAveragingInference, `hard`, 200 simulations, protocol search, moveTemp 1; openings `ca4e3bba…`; node v24.22.0,
+    onnxruntime-node 1.23.2; head `079f1db8`. The smoke's 4 games are in a separate folder and were not admitted.
+  - Evidence and the restored gate committed by exact paths at `17650a1c` (553 files; checked: tree clean, gate line
+    false, gate file identical to `1d02d202`'s). Then the frozen analyser's `analyse`, once, stdout written create-only
+    to `htb-onpolicy-match/analysis.json` (`177ce2b5…`), exit 0; committed at `449d6acf`.
+  - `htb-integration-g1` fast-forwarded to `449d6acf` as a separate step after verifying the closing commits. Local
+    only; not pushed.
+- **Result (frozen analyser):**
+  - **Guards: all pass.** Admission (one row per played ply; 200-simulation budget and 200 root visits on both sides
+    at every move; launch commit, pgid and gate bound) raised nothing. **Search-seconds guard:** challenger 10,408.7 s,
+    current 10,410.1 s, **ratio 0.99987 ≤ 1.10**.
+  - Challenger **270 W, 2 D, 272 L** over 544 games; pair-score sum 135.5.
+  - **Mean pair score 0.49816**; one-sided half-width √(ln 20 / 544) = 0.07421; **lower bound 0.42395 ≤ 0.5.**
+    **Verdict: NON_PASS.**
+  - Descriptive: two-sided 95% Hoeffding interval [0.4158, 0.5805] (half-width 0.0823). By colour: challenger as Red
+    233 W 2 D 37 L (0.860), as Black 37 W 0 D 235 L (0.136); that is, Red scored about 0.86 whichever model held it.
+    Draws 2. Plies mean 33.8, median 30, min 25, max 569. Distinct games 544 of 544.
+- **Did it match the prediction:** no. The prediction was about 0.60 (range 0.52–0.70) with PASS an even chance. The
+  observed mean, 0.498, is below the range, and the two-sided 95% interval's upper end (0.581) is below 0.60. The
+  analysis does not establish why. What is measured: the fit's held-out imitation of the teacher on `hard`
+  self-play positions improved markedly (entry 69), and at matched compute (ratio 0.99987) that did not show up as a
+  measurable strength difference against the current `hard`. The colour effect is large, so most pairs' outcome was
+  set by the seat; the pair design cancels it but leaves less signal per pair. No further cause is claimed.
+- **Conclusion / status:** NON_PASS. By the card (§10), this is not evidence of no gain, but superiority over 0.50 is
+  not shown and a gain at the 0.60 planning target is not supported by the descriptive interval. **The current `hard`
+  (`78c16a31c3dba37f`) stays**; HARD_MODEL_ID unchanged; nothing deployed or pushed. No top-up, re-score or retry.
+  Every H-OP gate is closed. The H-OP line is closed on this card. See #209.
