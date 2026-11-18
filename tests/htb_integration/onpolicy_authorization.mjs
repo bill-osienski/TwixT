@@ -6,4 +6,4 @@
  * exit. onpolicy_match.mjs refuses to run a stage whose gate is closed.
  */
 export const ONPOLICY_MATCH_SMOKE_AUTHORIZED = false;
-export const ONPOLICY_MATCH_AUTHORIZED = false;
+export const ONPOLICY_MATCH_AUTHORIZED = true;
