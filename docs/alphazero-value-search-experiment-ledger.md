@@ -307,6 +307,7 @@ knob) is not a new hypothesis.
 > **H-OP generation run COMPLETED under amendment 1: both stopping targets reached at 5,197 games; the exact 120,000 / 12,000 selection is supported; labelling not authorized (Post-closure entry 67, 2026-11-16).** Gate `983fa370` → evidence `c8c7ea9d`: stopped_by targets after game 5,196 (cap 6,500 not reached), wall 80,669 s (22.4 h) under KILL 144,000 s; inner and outer exit 0, gate restored, no survivors, 5,198 background checks clear. Usable pools: training 138,021 (4,678 games, 29.5 per game), validation 15,130 (519 games, 29.2 per game); f = 1.00, no exclusion hits. All 5,197 games pass replay validation against the 6,500-opening schedule; a dry `select()` in memory returns 120,000 / 12,000 rows (nothing written). Not retried or extended; see #204.
 > **H-OP labelling run COMPLETED: 120,000 / 12,000 rows labelled by the pinned CPU teacher, 264,000 teacher evaluations; verified; returned for fit approval (Post-closure entry 68, 2026-11-16).** Gate `4f2cc01a` → evidence `1ab6c45a`: wall 4,148 s under KILL 6,600 s; inner and outer exit 0, gate restored, no survivors. selection.json (`ecde6637…`) re-derives byte-equal; keys unique within each arm, training ∩ validation = 0, no exclusion hits; manifests train `b0ea21cb…` (15 shards) and val `66cfcaf2…` (2 shards), every shard and row-list hash matching and rows in selection order; the fit's loader and the label handoff admission accept them. Not retried; see #205.
 > **H-OP CPU fit COMPLETED: imitation gate ELIGIBLE (I1, I2, I3 held); old-distribution retention fell (descriptive); returned for a separate export decision (Post-closure entry 69, 2026-11-16).** Gate `9e6dcb4f` → evidence `444efbb7`: 7,500 updates from the pinned student `0e1cb621…`, wall 6,526 s under KILL 11,700 s, clean. Held-out 12,000 rows, S → C: KL 0.7073 → 0.4176 (×0.590), top-1 0.5761 → 0.6789, value MSE 0.02578 → 0.01971. Start check KL 0.7167 ≥ 0.01. Retention on the first fit's 24,000 rows (never gated): KL 0.5745 → 0.6996 (+21.8%), top-1 0.6514 → 0.6101, MSE 0.0703 → 0.1147. Prediction: ELIGIBLE matched (KL cut 41.0% vs 20–40% predicted); retention (<10% KL change) missed. Challenger `5178a47c…` outside the repository. See #206.
+> **H-OP export and parity COMPLETED: PARITY_PASS; returned for separate match-smoke approval (Post-closure entry 70, 2026-11-17).** Gate `4c26fe7b` → evidence `d60fbaea`: challenger `5178a47c…` exported once to pair `a3c4fc0f49911d5b` (graph `dfd8fb21…`, data `9d279d53…`) in `~/twixt-cache/htb-onpolicy/export/`, outside the product manifest; `HARD_MODEL_ID` unchanged. Graph signature equal to `78c16a31c3dba37f`'s; Python (ORT 1.23.2) and Node canaries pass; S1–S4 PASS on 126 positions (S2/S4 max logit 1.9e-5, S3 exactly 0); V3 mirror-averaged PASS (max prior 1.3e-6, value 2.9e-6). Wall 12 s under KILL 3,600 s, clean. A chained `;` fast-forwarded `htb-integration-g1` to the gate-open commit for about a minute before the closing commit (nothing ran). See #207.
 
 ## Historical proposal check — programme now closed
 
@@ -2146,6 +2147,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 204. **The H-OP generation run is spent: COMPLETED, stopped by targets at 5,197 games (2026-11-16, entry 67).** Do **not**: rerun, extend, top up or resume generation, or play more games to enlarge either pool; reuse the generation gate or amendment 1's cap for any other run; edit, reorder, filter or regenerate `htb-onpolicy-gen/games.jsonl` or its record (the label stage reads them as committed); treat the in-memory dry selection of entry 67 as a label-stage output or commit it as `selection.json`; read the games' winners or results for any purpose outside the card; or label, fit, export or play either match stage without the user's approval of that stage.
 205. **The H-OP labels are spent and pinned (2026-11-16, entry 68).** Do **not**: rerun, extend or relabel; edit, regenerate, reorder or re-shard `~/twixt-cache/htb-onpolicy/labels-train` or `labels-val` (the record pins manifests `b0ea21cb…` and `66cfcaf2…`, and the fit verifies every shard), or `htb-onpolicy-label/selection.json` (`ecde6637…`); label more positions, swap rows between pools, or use the 18,021 training and 3,130 validation positions the selection left out; load the teacher for any other purpose under this approval; or fit, export or play either match stage without the user's approval of that stage.
 206. **The H-OP fit is spent: ELIGIBLE (2026-11-16, entry 69).** Do **not**: rerun, resume, extend or re-seed the fit, or fit again with another recipe, learning rate, update count or row set; edit, overwrite or re-save `~/twixt-cache/htb-onpolicy/challenger.safetensors` (sha `5178a47c…`, state digest `db719d8d…`, pinned in the fit record); re-score the gate on other rows or re-judge I1–I3; gate, select or reject the challenger on the descriptive retention scores, or cite the gate as evidence of playing strength (only the 272-pair match tests that); or export, run parity or play either match stage without the user's approval of that stage.
+207. **The H-OP export is spent: PARITY_PASS (2026-11-17, entry 70).** Do **not**: re-export, re-run parity or any canary, or change a tolerance; edit, replace or re-place `~/twixt-cache/htb-onpolicy/export/a3c4fc0f49911d5b/` (the match driver admits the pair through the committed export record); copy the pair into `models/`, change `HARD_MODEL_ID` or serve the challenger as `hard`; read PARITY_PASS as a strength claim; play the match smoke or the match without the user's approval of that stage; or chain a fast-forward after a launch-worktree step with `;` (only after a checked commit of the restored gate).
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -12168,3 +12170,68 @@ The proposal note and revision 1 note above stay as written. This correction sup
   self-play positions, not playing strength. The retention drop is descriptive and does not gate (card §8), but it is
   material context for the export and match decisions. Nothing exported, parity-checked or played; every H-OP gate is
   closed. Returned for the user's separate export decision (ceiling 3,600 s). See #206.
+
+#### Post-closure entry 70 — H-OP export and parity: challenger `5178a47c…` exported once to `a3c4fc0f49911d5b`; COMPLETED; PARITY_PASS; returned for match-smoke approval (2026-11-17)
+
+- **Test:** the card's (revision 3, sha `a2a5ba2f…`) export and parity stage (§9) on the ELIGIBLE fit (entry 69):
+  export the challenger once with the unmodified exporter and August's invocation; require its graph's ops, inputs,
+  outputs, initializer shapes and opsets to equal the current pair's (`78c16a31c3dba37f`); then the Python (ORT 1.23.2,
+  isolated venv) and Node runtime canaries, the V2-R surfaces S1–S4 with the unmodified tools and tolerances, and V3's
+  mirror-averaged parity. Any failure STOPs.
+- **Hypothesis:** the challenger exports to a pair of the current pair's shape that the product runtime evaluates as
+  the research path does, within the frozen tolerances.
+- **Why it was plausible:** the same exporter, architecture and tools qualified `78c16a31c3dba37f` (entries 58–59), and
+  the fit changes weights only.
+- **Prediction on record:** None stated in advance for this stage (card §16 covers the gate, the match and retention).
+- **The user's approval (2026-11-17):** one H-OP export and parity run from `f684c9eb`, using only challenger
+  `5178a47c…`; a clean worktree; BOINC quit and Unreal Editor closed; only the export gate opened; TERM 3,590 s / KILL
+  3,600 s; the frozen graph check, runtime canaries, S1–S4 and V3; preserve and commit the evidence, verify cleanup and
+  gate restoration, append the result to the ledger; on a failure or timeout, stop without retrying; return for
+  separate match-smoke approval if parity passes.
+- **What ran:**
+  - Before launch: challenger re-hashed `5178a47c…`; isolated venv ORT 1.23.2 / Python 3.13.15; main .venv onnx 1.20.1;
+    node v24.22.0, onnxruntime-node 1.23.2; no `export` or `export-scratch` in the cache; BOINC absent (only the exempt
+    podman VM), no Unreal process.
+  - Launch worktree `/Users/bill/projects/TwixT_Game-hop-export`, branch `htb-onpolicy-export-launch` from `f684c9eb`,
+    with `node_modules` APFS-cloned (`cp -c -R`, not a symlink; ignored, so the tree stayed clean); the one-line gate
+    opening `4c26fe7b` (`HTB_ONPOLICY_EXPORT_AUTHORIZED = True`; no other gate open).
+  - The wrapper was started detached (setsid + nohup) on 2026-11-17 at 19:35:20. The idle gate waited out Spotlight
+    and media analysis (load up to 5.0), then held 60 s; the background check was CLEAR. It ran
+    `htb_onpolicy_export run export` under MLX_ENABLE_TF32=0 (pid and pgid 63479).
+  - The fit admission passed: `stage_admission(fit)` (record `8fd862d8…`, head `9e6dcb4f`), verdict ELIGIBLE, the
+    challenger file re-hashed to the recorded `5178a47c…` (sha1 `72118a4e…`, state digest `db719d8d…`).
+  - Outer (`outer.json` `9fe9cafa…`): inner and outer exit 0, COMPLETED, gate restored, no survivors (pgrep on pgid
+    63479 empty), record written by the script, wall 12 s against KILL 3,600 s; stdout and stderr empty. Every step
+    exited 0: export, canary_python, canary_node, s_python, s_node, s_compare, v3_python, v3_node, v3_compare.
+  - Record (`record.json` `d7847a18…`): COMPLETED, verdict PARITY_PASS; runtime python 3.14.10, mlx 0.30.3, torch
+    2.10.0, onnx 1.20.1, numpy 2.4.1, node v24.22.0, onnxruntime-node 1.23.2; module `da3c0fac…`.
+  - Evidence and the restored gate committed by exact paths at `d60fbaea`; `htb-integration-g1` fast-forwarded to
+    `d60fbaea` (local only). `stage_admission(export)` passes on the committed evidence.
+- **Result:**
+  - **Export:** one export, no alternate. Pair `a3c4fc0f49911d5b` (graph `dfd8fb21…`, external data `9d279d53…`) in
+    `~/twixt-cache/htb-onpolicy/export/a3c4fc0f49911d5b/` with a manifest naming source `5178a47c…`. Checked after the
+    run: the files match the record and manifest, the model id recomputes, the scratch copy is identical, and the
+    challenger file is unchanged. Nothing under `models/` or `server/` changed; `HARD_MODEL_ID` is still
+    `78c16a31c3dba37f`.
+  - **Graph check:** signature sha `a022f29b…` for both the challenger and the current pair — equal.
+  - **Canaries:** Python, all 8 cases within 1e-3 (max error 2.2e-6), PASS; Node, 6/6 tests pass.
+  - **S1–S4** (`parity_result.json` `51c8174a…`, 126 positions; 120 primary, 6 edge): S1 encoding, legal moves and
+    masks exact; equivariance 10/10 for MLX, Python ORT and Node ORT. S2 max logit 1.907e-5 (tol 1e-4), mean 1.372e-6
+    (1e-5), max value 2.638e-6 (1e-4). S3 all exactly 0. S4 max logit 1.907e-5 (1.1e-4), mean 1.372e-6 (1.1e-5), max
+    value 2.638e-6 (1.1e-4). No top-1 disagreements, no exemptions used, top-k 100%, τ median 1.0; edge 6/6.
+    Red-perspective difference 0; no value-range violations. **PASS.**
+  - **V3** (`v3_result.json` `a81b037d…`): research MirrorAveragingEvaluator (state digest `db719d8d…`) against the
+    product MirrorAveragingInference (`a3c4fc0f49911d5b`): max prior 1.252e-6 (tol 1.1e-4), mean 2.747e-9 (1.1e-5), max
+    value 2.854e-6 (1.1e-4); no top-1 outside the band, no exemptions used, top-k 100%, τ median 1.0 (min 0.99998);
+    no sign disagreements or range violations. Edge top-1 5/6: the empty board's top two moves are a mirror pair 3.7e-9
+    apart (reported separately, not a failure, as in V3 for the current pair). **PASS.**
+- **Did it match the prediction:** no prediction was stated.
+- **Process note (dated, 2026-11-17):** after the run, my commit step's file-count guard was wrong (19 for 18 files)
+  and stopped the commit, but the same shell line ran `git merge --ff-only` after a `;`, fast-forwarding
+  `htb-integration-g1` to the gate-open commit `4c26fe7b`. The main checkout held `HTB_ONPOLICY_EXPORT_AUTHORIZED =
+  True` for about a minute; no H-OP process was running and nothing was launched. I committed the restored gate and
+  evidence in the worktree (`d60fbaea`) and fast-forwarded to it; history matches every earlier launch. This is the
+  failure mode of memory note "pipe hides a failure"; see #207.
+- **Conclusion / status:** the export is spent and qualified: PARITY_PASS. Parity is not a strength claim. Nothing has
+  been played; every H-OP gate is closed (Python and both JS match gates). Returned for the user's separate
+  match-smoke approval (ceiling 1,800 s). See #207.
