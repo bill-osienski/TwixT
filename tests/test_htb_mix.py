@@ -14,6 +14,7 @@ import pytest
 
 from scripts.GPU.alphazero import htb_mix as M
 from scripts.GPU.alphazero import htb_mix_export as XM
+from scripts.GPU.alphazero import htb_mix_recovery as R
 from scripts.GPU.alphazero import htb_onpolicy as H
 from scripts.GPU.alphazero import htb_onpolicy_export as X
 from scripts.GPU.alphazero import htb_pilot as P
@@ -67,13 +68,14 @@ def test_EVERY_GATE_IS_CLOSED_AND_ITS_FILE_HOLDS_ONLY_THE_DECLARATION(stage):
 
 
 def test_EVERY_ENTRY_REFUSES_WHILE_ITS_GATE_IS_CLOSED_AND_WRITES_NOTHING(capsys):
+    """The cache is compared before and after, not asserted absent: it exists once a run has prepared it."""
+    cache_before = M.CACHE.exists()
     assert M.main(["run", "fit"]) == P.EXIT["REFUSED"]
     assert XM.main(["run", "export"]) == P.EXIT["REFUSED"]
     err = capsys.readouterr().err
     assert "HTB_MIX_FIT_AUTHORIZED is closed" in err and "HTB_MIX_EXPORT_AUTHORIZED is closed" in err
-    for stage in ("fit", "export"):
-        assert not (ROOT / M.EV[stage]).exists()
-    assert not M.CACHE.exists()
+    assert not (ROOT / M.EV["export"]).exists()
+    assert M.CACHE.exists() == cache_before
 
 
 # ─────────────────────────────── openings and seeds (card §9) ───────────────────────────────
@@ -460,11 +462,25 @@ def _stage_evidence(cfg, stage, rec_extra=None, **outer_over):
         (out / f).write_text("ok\n")
 
 
-def _fit_evidence(cfg, tmp_path, verdict="ELIGIBLE", **outer_over):
+def _recovery_evidence(cfg, tmp_path, rec_over=None, ch_over=None, **outer_over):
+    """A clean, COMPLETED recovery (amendment §6) with a verified challenger file: what the export admits."""
     ch = tmp_path / "challenger.safetensors"
     ch.write_bytes(b"mixed challenger weights")
-    _stage_evidence(cfg, "fit", rec_extra={"verdict": verdict, "challenger": {
-        "path": str(ch), "sha256": hashlib.sha256(ch.read_bytes()).hexdigest(), "state_digest": "9" * 64}}, **outer_over)
+    ev, out = cfg.root / R.EV, cfg.root / R.OUTER
+    ev.mkdir(parents=True, exist_ok=True)
+    out.mkdir(parents=True, exist_ok=True)
+    rec = {"status": "COMPLETED", "kind": R.RECORD_KIND, "card_sha256": M.CARD_SHA256,
+           "amendment_sha256": R.AMENDMENT_SHA256, "pid": 4242, "head": "f" * 40, "kill_s": R.KILL_S,
+           "links": {"failed_record_sha256": R.FAILED["record_sha256"]}, "verdict": "ELIGIBLE",
+           "fit": {"student_digest": R.TARGET},
+           "challenger": {"path": str(ch), "sha256": hashlib.sha256(ch.read_bytes()).hexdigest(), "state_digest": R.TARGET,
+                          "reload_state_digest": R.TARGET, "verified": True, **(ch_over or {})}, **(rec_over or {})}
+    (ev / "record.json").write_text(json.dumps(rec))
+    (out / "outer.json").write_text(json.dumps({**dict(H.OUTER_OK), "head": rec["head"], "term_s": R.KILL_S - 10,
+                                                "grace_s": 10, **outer_over}))
+    (out / "pgid.txt").write_text(f"{rec['pid']}\n")
+    for f in ("idle_check.txt", "bg_check.txt"):
+        (out / f).write_text("ok\n")
     return ch
 
 
@@ -503,7 +519,7 @@ def test_THE_EXPORT_QUALIFIES_AN_ELIGIBLE_MIXED_CHALLENGER_WITH_H_OPS_UNMODIFIED
     root = _tree(tmp_path)
     _current(root)
     cfg = _cfg(root)
-    _fit_evidence(cfg, tmp_path)
+    _recovery_evidence(cfg, tmp_path)
     run, calls = _fake_runner()
     assert XM.run_export(cfg, runner=run, **_xargs(tmp_path)) == 0
     rec = json.loads((root / M.EV["export"] / "record.json").read_text())
@@ -525,7 +541,7 @@ def test_ANY_FAILED_EXPORT_STEP_STOPS_THERE_WITHOUT_RETRY(tmp_path, fail):
     root = _tree(tmp_path)
     _current(root)
     cfg = _cfg(root)
-    _fit_evidence(cfg, tmp_path)
+    _recovery_evidence(cfg, tmp_path)
     run, calls = _fake_runner(fail=fail)
     assert XM.run_export(cfg, runner=run, **_xargs(tmp_path)) == P.EXIT["STOP"]
     rec = json.loads((root / M.EV["export"] / "record.json").read_text())
@@ -536,7 +552,7 @@ def test_A_DIFFERENT_GRAPH_STOPS_BEFORE_ANY_PARITY_STEP(tmp_path):
     root = _tree(tmp_path)
     _current(root)
     cfg = _cfg(root)
-    _fit_evidence(cfg, tmp_path)
+    _recovery_evidence(cfg, tmp_path)
     run, calls = _fake_runner(graph=ROOT / "tests/fixtures/onnx_shutdown/tiny_add.onnx")
     assert XM.run_export(cfg, runner=run, **_xargs(tmp_path)) == P.EXIT["STOP"]
     assert json.loads((root / M.EV["export"] / "record.json").read_text())["stop"]["step"] == "graph" and calls == ["export"]
@@ -545,16 +561,16 @@ def test_A_DIFFERENT_GRAPH_STOPS_BEFORE_ANY_PARITY_STEP(tmp_path):
 def test_THE_EXPORT_REFUSES_A_MISSED_SCREEN_A_CHANGED_CHALLENGER_OR_AN_OUTER_TIMEOUT(tmp_path):
     run, calls = _fake_runner()
     cfg = _cfg(_tree(tmp_path / "a"))
-    _fit_evidence(cfg, tmp_path / "a", verdict=M.GATE_MISSED)
-    with pytest.raises(P.Refused, match="only an ELIGIBLE challenger"):
+    _recovery_evidence(cfg, tmp_path / "a", rec_over={"verdict": M.GATE_MISSED})
+    with pytest.raises(P.Refused, match="only an ELIGIBLE, verified challenger"):
         XM.run_export(cfg, runner=run, **_xargs(tmp_path / "a"))
     cfg = _cfg(_tree(tmp_path / "b"))
-    _fit_evidence(cfg, tmp_path / "b").write_bytes(b"tampered")
-    with pytest.raises(P.Refused, match="not the one the fit saved"):
+    _recovery_evidence(cfg, tmp_path / "b").write_bytes(b"tampered")
+    with pytest.raises(P.Refused, match="not the one the recovery saved and verified"):
         XM.run_export(cfg, runner=run, **_xargs(tmp_path / "b"))
     cfg = _cfg(_tree(tmp_path / "c"))
-    _fit_evidence(cfg, tmp_path / "c", inner_exit=124, outcome="TIMEOUT", outer_exit=124)
-    with pytest.raises(P.Refused, match=r"htb-mix-fit-run/outer.json is not clean"):
+    _recovery_evidence(cfg, tmp_path / "c", inner_exit=124, outcome="TIMEOUT", outer_exit=124)
+    with pytest.raises(P.Refused, match=r"htb-mix-recovery-run/outer.json is not clean"):
         XM.run_export(cfg, runner=run, **_xargs(tmp_path / "c"))
     assert calls == []
 

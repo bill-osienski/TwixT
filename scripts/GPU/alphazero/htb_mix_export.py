@@ -2,7 +2,10 @@
 
     MLX_ENABLE_TF32=0 python -m scripts.GPU.alphazero.htb_mix_export run export     # HTB_MIX_EXPORT_AUTHORIZED
 
-H-OP's §9, unchanged, for the H-MX challenger. On an ELIGIBLE fit only: export the challenger ONCE with the unmodified
+H-OP's §9, unchanged, for the H-MX challenger. Since recovery amendment 1
+(docs/superpowers/2026-11-19-htb-mix-recovery-amendment.md §6) the challenger is admitted ONLY from a clean, COMPLETED
+recovery whose saved file reloaded at the failed fit's trained-state digest (`htb_mix_recovery.admission`); the
+failed fit record (status FAILED, entry 73) is never admissible. Then: export the challenger ONCE with the unmodified
 exporter and August's invocation (only the weights path changes), place the pair by content address outside the
 product manifest (`~/twixt-cache/htb-mix/export/<id>/`), and qualify it before any game: identical graph ops, inputs,
 outputs and initializer shapes to `78c16a31c3dba37f`'s; both runtime canaries; V2-R's S1-S4 with the unmodified tools
@@ -25,6 +28,7 @@ import sys
 from typing import Any, Callable, Dict, Mapping, Optional, Sequence
 
 from . import htb_mix as M
+from . import htb_mix_recovery as R
 from . import htb_onpolicy_export as X
 from . import htb_pilot as P
 
@@ -49,21 +53,15 @@ def build_manifest(template: Mapping[str, Any], mid: str, graph: Mapping[str, An
     return m
 
 
-def fit_admission(cfg: M.Config) -> Dict[str, Any]:
-    """Only an ELIGIBLE fit is exported (card §13), from its committed record and clean wrapper, and only the very
-    challenger file it saved."""
-    adm = M.stage_admission(cfg, "fit")
-    rec = M.H.read_committed_json(cfg, f"{M.EV['fit']}/record.json")
-    if rec.get("verdict") != "ELIGIBLE":
-        raise Refused(f"the fit's verdict is {rec.get('verdict')!r}: only an ELIGIBLE challenger is exported (card §13)")
-    ch = rec.get("challenger") or {}
-    if not ch.get("path") or not pathlib.Path(ch["path"]).is_file():
-        raise Refused("the fit record names no challenger file that exists")
+def recovery_admission(cfg: M.Config) -> Dict[str, Any]:
+    """Amendment §6: only a clean, COMPLETED recovery with a verified challenger is exported (card §13's ELIGIBLE, by
+    the recovery), and only the very file it saved and reloaded."""
+    adm = R.admission(cfg)
+    ch = adm["challenger"]
     raw = pathlib.Path(ch["path"]).read_bytes()
-    if hashlib.sha256(raw).hexdigest() != ch.get("sha256"):
-        raise Refused("the challenger file is not the one the fit saved")
-    return {**adm, "challenger": {"path": ch["path"], "sha256": ch["sha256"], "state_digest": ch.get("state_digest"),
-                                  "sha1": hashlib.sha1(raw).hexdigest()}}
+    if hashlib.sha256(raw).hexdigest() != ch["sha256"]:
+        raise Refused("the challenger file is not the one the recovery saved and verified")
+    return {**adm, "challenger": {**ch, "sha1": hashlib.sha1(raw).hexdigest()}}
 
 
 def run_export(cfg: Optional[M.Config] = None, runner: Callable[..., int] = X._run_real,
@@ -73,7 +71,7 @@ def run_export(cfg: Optional[M.Config] = None, runner: Callable[..., int] = X._r
     M.preconditions("export", cfg)
     ev = cfg.ev("export")
     P._absent(ev, export_root, scratch)
-    adm = fit_admission(cfg)
+    adm = recovery_admission(cfg)
     ch = adm["challenger"]
     py = py or (P.main_checkout(cfg.root) / ".venv/bin/python")
     rec = M._record("export", cfg, admission=adm)
