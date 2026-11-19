@@ -1,0 +1,20 @@
+t=    0.0s BUSY: load 3.41 >= 3.0; /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mds_stores at 402.7% CPU > 50.0%
+t=    5.0s BUSY: load 3.21 >= 3.0
+t=   10.1s idle for 0.0s
+t=   15.1s idle for 5.0s
+t=   20.2s idle for 10.1s
+t=   25.2s BUSY: load 3.14 >= 3.0
+t=   30.3s idle for 0.0s
+t=   35.3s idle for 5.0s
+t=   40.4s idle for 10.1s
+t=   45.4s idle for 15.2s
+t=   50.5s idle for 20.2s
+t=   55.5s idle for 25.3s
+t=   60.6s idle for 30.3s
+t=   65.6s idle for 35.4s
+t=   70.7s idle for 40.4s
+t=   75.7s idle for 45.4s
+t=   80.8s idle for 50.5s
+t=   85.8s idle for 55.5s
+t=   90.9s idle for 60.6s
+IDLE: held 60s (load < 3.0, no process > 50.0% CPU)
