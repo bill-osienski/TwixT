@@ -310,6 +310,7 @@ knob) is not a new hypothesis.
 > **H-OP export and parity COMPLETED: PARITY_PASS; returned for separate match-smoke approval (Post-closure entry 70, 2026-11-17).** Gate `4c26fe7b` → evidence `d60fbaea`: challenger `5178a47c…` exported once to pair `a3c4fc0f49911d5b` (graph `dfd8fb21…`, data `9d279d53…`) in `~/twixt-cache/htb-onpolicy/export/`, outside the product manifest; `HARD_MODEL_ID` unchanged. Graph signature equal to `78c16a31c3dba37f`'s; Python (ORT 1.23.2) and Node canaries pass; S1–S4 PASS on 126 positions (S2/S4 max logit 1.9e-5, S3 exactly 0); V3 mirror-averaged PASS (max prior 1.3e-6, value 2.9e-6). Wall 12 s under KILL 3,600 s, clean. A chained `;` fast-forwarded `htb-integration-g1` to the gate-open commit for about a minute before the closing commit (nothing ran). See #207.
 > **H-OP match smoke COMPLETED; timing LAUNCH_OK; returned for a separate decision on the 272-pair match (Post-closure entry 71, 2026-11-17).** Gate `0f98d04e` → evidence `5fb4a2d5` → timing `77cb37c8` / `1af60786`: 4 games (2 colour-reversed pairs, 28–30 plies), challenger `a3c4fc0f49911d5b` vs current `78c16a31c3dba37f`, both 200 simulations; wall 129 s under KILL 1,800 s, clean. Frozen analyser: mean game 32.049 s, projection 17,434.8 s (4.84 h) for 544 games, 1.5 × = 26,152.2 s (7.26 h) ≤ 64,800 s. Outcomes unread. timing.json was first written to the wrapper folder by mistake, then re-derived byte-identical at the admission path. One stale test (smoke folder must not exist) now fails. See #208.
 > **H-OP match COMPLETED: NON_PASS; the current `hard` stays (Post-closure entry 72, 2026-11-18).** Test fix `1d02d202` → gate `079f1db8` → evidence `17650a1c` → analysis `449d6acf`: 272 colour-reversed pairs (544 games), challenger `a3c4fc0f49911d5b` vs current `78c16a31c3dba37f`, both 200 simulations; wall 20,821 s under KILL 64,800 s, clean. Guards all pass (search-seconds ratio 0.99987 ≤ 1.10). Challenger 270 W / 2 D / 272 L; **mean pair score 0.4982, one-sided lower bound 0.4240 ≤ 0.5**; two-sided 95% [0.416, 0.581]. Prediction on record (0.60, range 0.52–0.70) missed. Red scored about 0.86 in both seatings. The H-OP line is closed on this card. See #209.
+> **H-MX card FROZEN (revision 1, `d2c9b787…`): mixed-data distillation; model-free build APPROVED with narrow data-reuse exceptions (proposal and decision notes, 2026-11-18, the user's review).** 16 H-OP + 16 H-TB cached teacher-labelled rows per batch, 7,500 CPU updates from `0e1cb621…`; one-time fit screens M1–M6 on both cached validation sets (their earlier results informed the design, disclosed); on ELIGIBLE, a 400-pair colour-reversed match against `78c16a31c3dba37f`, exact one-sided sign test over decisive pairs plus a mean > 0.50 guard (about 80% power at q 0.691, d 0.114). Two H-OP match summary figures used for planning only. Dated correction: H-OP's match sensitivity under a planning model. Nothing built or run yet. See #210.
 
 ## Historical proposal check — programme now closed
 
@@ -2152,6 +2153,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 207. **The H-OP export is spent: PARITY_PASS (2026-11-17, entry 70).** Do **not**: re-export, re-run parity or any canary, or change a tolerance; edit, replace or re-place `~/twixt-cache/htb-onpolicy/export/a3c4fc0f49911d5b/` (the match driver admits the pair through the committed export record); copy the pair into `models/`, change `HARD_MODEL_ID` or serve the challenger as `hard`; read PARITY_PASS as a strength claim; play the match smoke or the match without the user's approval of that stage; or chain a fast-forward after a launch-worktree step with `;` (only after a checked commit of the restored gate).
 208. **The H-OP match smoke is spent: LAUNCH_OK (2026-11-17, entry 71).** Do **not**: rerun or extend the smoke, re-time it, or edit either committed timing.json (they are byte-identical; the match reads `htb-onpolicy-match-smoke/timing.json`); read, tally or report the smoke's outcomes (card §10: excluded from scoring and every report); count the smoke's games toward the match; play the 272-pair match without the user's approval; or delete the smoke folder to make the stale test at `tests/htb_integration/test_onpolicy_match.mjs:409` pass (fix the test's expectation instead, with approval).
 209. **H-OP is spent: the 272-pair match is NON_PASS (2026-11-18, entry 72).** Do **not**: top up, extend, replay or re-score the match (card §10: "no top-up or re-score"); re-analyse it under any other rule, subset, colour split or interval to find a gain; count the smoke's games; deploy challenger `a3c4fc0f49911d5b` or change HARD_MODEL_ID on this evidence; rerun any H-OP stage (generation, labelling, fit, export, match) under this card; or read the fit's held-out imitation gains (entry 69) as a strength result. Better imitation of the teacher on `hard`'s self-play positions did not show up as strength against the current `hard` here. A further on-policy attempt needs a new card that names a specific change and why it could improve play.
+210. **The H-MX card and its permissions (2026-11-18).** The card is frozen at revision 1 (`d2c9b787…`). The narrow #53/#87 exceptions and the data-reuse exceptions to #177, #178, #205 and #206 cover **H-MX only**: its model-free build and its runs, each once and each with its own approval. The cached validation sets are **one-time fit screens**, scored once inside the one fit. Do **not**: run, load a model for, fit, export, play or open a gate for H-MX without the user's approval of that stage; change the mix (16 + 16), the dose (7,500 updates), the E1–E3 drop, M1–M6, the 400 pairs, the openings rule or the pass rule (exact one-sided sign test over decisive pairs at 0.05, plus the mean > 0.50 guard) without a reviewed revision; re-score either validation set to revisit a screen verdict, or cite M1–M6 as fresh held-out estimates; edit, relabel, reorder or re-shard any H-TB or H-OP label, selection, manifest or corpus file; read anything from the H-OP match beyond the two planning figures (decisive-pair rate 31/272, pair-score SD 0.165), or present the planning model's Elo conversions or H-OP sensitivity figures as measurements; or cite these exceptions for another mix ratio, dose, round, recipe or teacher configuration.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -12367,3 +12369,111 @@ The proposal note and revision 1 note above stay as written. This correction sup
   not shown and a gain at the 0.60 planning target is not supported by the descriptive interval. **The current `hard`
   (`78c16a31c3dba37f`) stays**; HARD_MODEL_ID unchanged; nothing deployed or pushed. No top-up, re-score or retry.
   Every H-OP gate is closed. The H-OP line is closed on this card. See #209.
+
+#### Proposal note — H-MX: mixed-data distillation from the current student; card drafted; returned for review; nothing built or run (2026-11-18)
+
+- **Request:** the user's. Draft a card for mixed-data distillation:
+  - a warm start from the current `hard` checkpoint;
+  - a fixed 50/50 mix of the original H-TB and the H-OP teacher-labelled training rows, 16 of each per 32-row batch;
+  - H-OP's 7,500 CPU updates, architecture, optimizer and losses;
+  - checks that both cached datasets and their manifests can be reused as written;
+  - the narrow permissions needed;
+  - a cheap fit gate that requires improvement on H-OP validation and limits regression on the original validation
+    set;
+  - overlap checks, mirrors included;
+  - on a pass, a fresh colour-reversed match against `78c16a31c3dba37f` at 200 simulations, with its smallest gain,
+    pair count, pass rule, guards and cost.
+  - Paper design and read-only checks only.
+- **Card:** `docs/superpowers/2026-11-18-htb-mix-distillation-card.md`.
+- **Test:** H-MX (card §§4–10).
+- **Hypothesis:** training on both distributions keeps more of the original coverage while learning from positions
+  `hard` now reaches. The resulting challenger wins more decisive colour-reversed pairs than it loses against the
+  current `hard` under the same protocol.
+- **Why it is plausible:**
+  - H-OP cut teacher KL by 41.0% on held-out self-play positions, while KL rose 21.8% (value MSE +63.1%) on the
+    original validation rows (entry 69). Its challenger scored 0.4982 over 272 pairs (entry 72).
+  - Rehearsing old data is the standard remedy for that kind of interference.
+  - Against it:
+    - match positions resemble the H-OP distribution more than the corpus;
+    - each H-OP row is seen once, half H-OP's dose, so mixing and dose are confounded;
+    - the link between H-OP's retention loss and its match result is unmeasured.
+- **Read-only feasibility (2026-11-18):**
+  - All four label sets reload through the frozen loader with their committed manifests (`ec28e768…`, `5d3dcee9…`,
+    `b0ea21cb…`, `66cfcaf2…`), every shard and row-list hash verified.
+  - Each set's rows equal its committed selection, in order. Keys are distinct within each set.
+  - On a 2,048-row sample of each set, real examples were built and their keys re-derived on replay (C0 corpus digest
+    reproduced; 17,489 games).
+  - **Every pairwise key overlap among the four sets is 0.** The key is mirror-canonical, so this covers mirrored
+    positions.
+  - E1–E3 hit 11 H-TB training rows (plies 1–3) and no validation row. Those 11 rows are dropped.
+- **Prediction on record (card §15, before any build):** gate ELIGIBLE, about 55% (M6 the likeliest miss). Match
+  mean pair score about 0.51 (0.49–0.54), C winning 50–65% of decisive pairs. PASS about 15%.
+- **Decision rule (card §13):** below, as frozen.
+- **Status:** a draft, returned for review.
+
+#### Decision note — H-MX: card revision 1 frozen; the model-free build approved with narrow data-reuse exceptions (2026-11-18, the user's review)
+
+- **The user's decision (scope):** keep the proposed dose, data mix, cached validation sets and 400-pair match. Use
+  the exact sign test, with two corrections before freezing:
+  1. State what the test establishes and the assumptions behind its 5% bound. The mean > 0.50 condition is an
+     additional guard.
+  2. Recalculate the power table and minimum pair count from the specified inputs, and tie the Elo conversions and
+     the H-OP sensitivity estimate explicitly to the planning model.
+  - Use the cached validation sets as one-time fit screens, and disclose that their earlier results informed the
+    design.
+  - Record the narrow data-reuse exceptions and the planning-only use of H-OP's match summary.
+  - Update the ledger proposal fields.
+  - Proceed with the model-free build only, and return for launch review.
+- **Card revision 1** (`d2c9b787…`, commit `c97732af`) applies these. The draft's 82% at 400 pairs had used the
+  planning model's own decisive rate at +70 (0.120) in place of the specified 0.114. Recomputed from the specified
+  inputs at 400 pairs:
+
+  | q | d = 0.08 | d = 0.114 | d = 0.16 |
+  |---|---|---|---|
+  | 0.500 (false PASS) | 0.036 | 0.037 | 0.039 |
+  | 0.691 | 0.65 | 0.80 (0.7998) | 0.91 |
+
+  - The minimum for ≥ 80% at q = 0.691 is 401 at d = 0.114 (571 at 0.08; 285 at 0.16). 400 pairs are kept.
+- **Standard proposal fields, as frozen:**
+  - **Test:** 7,500 CPU updates from `0e1cb621…`, H-OP's recipe, each batch 16 H-OP rows (all 120,000, one pass) and
+    16 H-TB rows (the first 120,000 of 239,989 by `htb-mix-fit/1` order, E1–E3 dropped). Then the one-time fit
+    screens, export and parity, and the 400-pair match.
+  - **Hypothesis / why plausible / prediction:** as in the proposal note above.
+  - **Decision rule:**
+    - Screens on the 12,000 H-OP validation rows: M1 KL_C ≤ 0.90 × KL_S, M2 TOP_C > TOP_S, M3 MSE_C ≤ MSE_S.
+    - Screens on the 24,000 H-TB validation rows: M4 KL_C ≤ 1.05 × KL_S, M5 TOP_C ≥ TOP_S − 0.010,
+      M6 MSE_C ≤ 1.15 × MSE_S.
+    - S must reproduce H-OP's recorded S scores.
+    - Any screen missed: STOP, and the line closes.
+    - On ELIGIBLE: export and parity, then a 400-pair colour-reversed match (fresh openings `htb-mix/20261118/…`).
+    - **PASS** iff the exact one-sided sign test rejects (P(Binomial(m, ½) ≥ W) ≤ 0.05 over the m decisive pairs)
+      **and** the mean pair score exceeds 0.50.
+    - Guards: 200 simulations and 200 visits on both sides; search-seconds ratio ≤ 1.10; identical graphs.
+    - NON_PASS keeps the current `hard`, with no top-up or re-score.
+  - **What PASS establishes:** C wins more decisive pairs than it loses over the planned opening sample, at one-sided
+    α = 0.05, for the whole update.
+    - The bound assumes: independent pairs; exchangeable, fair win/loss signs under the null; a fixed design with no
+      sequential look; and the planned opening distribution as its scope.
+    - The mean guard can only remove a PASS.
+- **Exceptions recorded (H-MX only, each run once with its own approval):**
+  - **#53 and #87:** new narrow exceptions.
+  - **#177 and #178:**
+    - the 240,000 H-TB training labels as a training input;
+    - the 24,000 H-TB validation rows as a **one-time fit screen** (M4–M6).
+  - **#205 and #206:**
+    - the 120,000 H-OP training labels as input to a fit with another row set;
+    - the 12,000 H-OP validation rows as a **one-time fit screen** (M1–M3).
+  - **Disclosure:** both validation sets were scored before (the first fit's F1–F3; H-OP's I1–I3 and retention), and
+    those results informed this design, including the M1–M6 bars. The screens are not fresh held-out estimates.
+- **Planning-only use (#209):** two summary figures from the H-OP match, the decisive-pair rate 31/272 = 0.114 and
+  the pair-score SD 0.165, were read only to set the planning model and power. No win/loss split, colour result or
+  other figure from that match is used. H-OP's verdict is unchanged.
+- **Dated correction (2026-11-18), H-OP card §11's planning figures, tied to the planning model.**
+  - **The model:** per-opening Red advantage F_i ~ Normal(μ ≈ 725, s ≈ 583) Elo-equivalent, calibrated to P(Red
+    wins) 0.864 and a decisive-pair rate of 0.114 at parity.
+  - **Under that model only:**
+    - H-OP's 0.5742 bar corresponds to about +225 Elo-equivalent;
+    - the rule had about 1% power at +145 and 74% at +250;
+    - §11's "0.60 ≈ +70 Elo" with SD 0.50 does not hold for this protocol's first-move advantage.
+  - These are model figures, not measurements. Entry 72's NON_PASS stands as written.
+- **Status:** card frozen; building (model-free). Nothing loaded, fitted, exported or played. See #210.
