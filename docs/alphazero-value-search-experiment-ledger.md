@@ -312,6 +312,7 @@ knob) is not a new hypothesis.
 > **H-OP match COMPLETED: NON_PASS; the current `hard` stays (Post-closure entry 72, 2026-11-18).** Test fix `1d02d202` → gate `079f1db8` → evidence `17650a1c` → analysis `449d6acf`: 272 colour-reversed pairs (544 games), challenger `a3c4fc0f49911d5b` vs current `78c16a31c3dba37f`, both 200 simulations; wall 20,821 s under KILL 64,800 s, clean. Guards all pass (search-seconds ratio 0.99987 ≤ 1.10). Challenger 270 W / 2 D / 272 L; **mean pair score 0.4982, one-sided lower bound 0.4240 ≤ 0.5**; two-sided 95% [0.416, 0.581]. Prediction on record (0.60, range 0.52–0.70) missed. Red scored about 0.86 in both seatings. The H-OP line is closed on this card. See #209.
 > **H-MX card FROZEN (revision 1, `d2c9b787…`): mixed-data distillation; model-free build APPROVED with narrow data-reuse exceptions (proposal and decision notes, 2026-11-18, the user's review).** 16 H-OP + 16 H-TB cached teacher-labelled rows per batch, 7,500 CPU updates from `0e1cb621…`; one-time fit screens M1–M6 on both cached validation sets (their earlier results informed the design, disclosed); on ELIGIBLE, a 400-pair colour-reversed match against `78c16a31c3dba37f`, exact one-sided sign test over decisive pairs plus a mean > 0.50 guard (about 80% power at q 0.691, d 0.114). Two H-OP match summary figures used for planning only. Dated correction: H-OP's match sensitivity under a planning model. Nothing built or run yet. See #210.
 > **H-MX BUILT (model-free); returned for launch review; all gates closed; nothing loaded, fitted, exported or played (build record, 2026-11-18).** Build `896c43dd`: `htb_mix.py` (`79f210cf…`), `htb_mix_export.py`, frozen openings `f4ae110f…` (400 + 2, no exclusion hit), four wrappers (fit TERM 11,690 s, export 3,590 s, match smoke 1,790 s, match 64,790 s), Node driver and exact sign-test analyser (`b191ea03…`, pinned), 2 Python + 2 JS gates (inventory 73). Tests: H-MX Python 62, Node 20/20, H-OP Node 20/20; neighbouring Python suites 451 passed, 4 failed (a stale H-OP gate-closed test asserting `~/twixt-cache/htb-onpolicy` absent; the cache exists since entry 68; not H-MX; not changed). See #211.
+> **H-MX fit FAILED at the challenger save; no challenger exists; no retry (entry 73, 2026-11-19).** All 7,500 mixed updates ran; S reproduced H-OP's six recorded scores exactly; the one-time screens M1–M6 all held (H-OP val KL 0.7073 → 0.4515, top-1 0.5761 → 0.6594, MSE 0.02578 → 0.02025; H-TB val KL 0.5745 → 0.5398, top-1 0.6514 → 0.6600, MSE 0.07032 → 0.07295). Then `save_student` could not open its temporary file because `~/twixt-cache/htb-mix` had never been created (a build defect: the tests faked the save). Wall 6,527 s under KILL 11,700 s, clean, gate restored. Under card §13 a failed stage is no result: no export or match. A further fit needs a reviewed repair and the user's decision. See #212.
 
 ## Historical proposal check — programme now closed
 
@@ -2156,6 +2157,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 209. **H-OP is spent: the 272-pair match is NON_PASS (2026-11-18, entry 72).** Do **not**: top up, extend, replay or re-score the match (card §10: "no top-up or re-score"); re-analyse it under any other rule, subset, colour split or interval to find a gain; count the smoke's games; deploy challenger `a3c4fc0f49911d5b` or change HARD_MODEL_ID on this evidence; rerun any H-OP stage (generation, labelling, fit, export, match) under this card; or read the fit's held-out imitation gains (entry 69) as a strength result. Better imitation of the teacher on `hard`'s self-play positions did not show up as strength against the current `hard` here. A further on-policy attempt needs a new card that names a specific change and why it could improve play.
 210. **The H-MX card and its permissions (2026-11-18).** The card is frozen at revision 1 (`d2c9b787…`). The narrow #53/#87 exceptions and the data-reuse exceptions to #177, #178, #205 and #206 cover **H-MX only**: its model-free build and its runs, each once and each with its own approval. The cached validation sets are **one-time fit screens**, scored once inside the one fit. Do **not**: run, load a model for, fit, export, play or open a gate for H-MX without the user's approval of that stage; change the mix (16 + 16), the dose (7,500 updates), the E1–E3 drop, M1–M6, the 400 pairs, the openings rule or the pass rule (exact one-sided sign test over decisive pairs at 0.05, plus the mean > 0.50 guard) without a reviewed revision; re-score either validation set to revisit a screen verdict, or cite M1–M6 as fresh held-out estimates; edit, relabel, reorder or re-shard any H-TB or H-OP label, selection, manifest or corpus file; read anything from the H-OP match beyond the two planning figures (decisive-pair rate 31/272, pair-score SD 0.165), or present the planning model's Elo conversions or H-OP sensitivity figures as measurements; or cite these exceptions for another mix ratio, dose, round, recipe or teacher configuration.
 211. **H-MX is built, not launched (2026-11-18).** Do **not**: open any H-MX gate (`HTB_MIX_FIT_AUTHORIZED`, `HTB_MIX_EXPORT_AUTHORIZED`, `MIX_MATCH_SMOKE_AUTHORIZED`, `MIX_MATCH_AUTHORIZED`) or run any stage before the user's launch review and approval of that stage; edit `htb_mix.py`, `htb_mix_export.py`, the frozen openings (`f4ae110f…`), the analyser (`b191ea03…`, pinned in both match wrappers) or any wrapper without a rebuild, re-derivation and review; relax the S-reproduction tolerance (1e-9 relative), the overlap or E1–E3 checks, or the 239,989 pool count; edit any H-OP or H-TB file to make an H-MX check pass; or fix the stale H-OP gate-closed test (`tests/test_htb_onpolicy.py::test_EVERY_ENTRY_REFUSES_WHILE_ITS_GATE_IS_CLOSED_AND_WRITES_NOTHING`, failing since the H-OP cache was created) by deleting the cache: fix its expectation instead, with approval.
+212. **The H-MX fit FAILED at the save (2026-11-19, entry 73).** Do **not**: retry, rerun or resume the fit automatically; open the export gate, export, or play a match on this run (no challenger exists, and the record's status is FAILED, so stage admission refuses it); cite the record's ELIGIBLE verdict field, or M1–M6, as an ELIGIBLE fit or as fresh held-out estimates; re-score either cached validation set outside a reviewed decision (they have been scored once as screens, #210); repair the save by creating the cache directory by hand, or by editing `htb_pilot.py` or `search_distillation_d2.py`; any repair goes into `htb_mix.py` with a test that drives the real save into a missing cache directory, and is reviewed before any re-fit. A re-fit is a new approval, and the user decides whether it must first reproduce the trained state digest `adba50fb…` exactly.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -12575,3 +12577,62 @@ The proposal note and revision 1 note above stay as written. This correction sup
   4. the match on LAUNCH_OK (about 8.5 h, ceiling 64,800 s).
   - Each runs in a clean linked worktree, with BOINC quit and Unreal Editor closed.
 - **Status:** built; returned for launch review. All gates closed. Nothing loaded, fitted, exported or played. See #211.
+
+#### Post-closure entry 73 — H-MX CPU fit: 7,500 mixed updates from the current student; all six one-time screens held, then FAILED at the challenger save; no challenger exists; no retry (2026-11-19)
+
+- **Test:** H-MX card revision 1 (`d2c9b787…`) §6–§7, step 3 of §14: one CPU fit from the current student `0e1cb621…`
+  (state digest `586dca4f…`). 7,500 updates, each on 16 H-OP and 16 H-TB cached teacher-labelled rows. Before any
+  update, S must reproduce H-OP's six recorded scores to 1e-9 relative. After the fit, screens M1–M6 apply once on both
+  cached validation sets.
+- **Hypothesis (card §1):** mixing H-TB rows into H-OP's on-policy rows keeps H-OP's imitation gain on `hard`'s
+  self-play positions while limiting the retention loss H-OP showed on the original distribution (entry 69).
+- **Prediction on record (card §15, before any build; low confidence):** ELIGIBLE about 55%, M6 then M4 the likeliest
+  failures. H-OP validation KL 20–35% below S. H-TB validation KL within ±5%, top-1 within ±0.01, value MSE +0% to +20%.
+- **What ran:** the user's approval (2026-11-18), from `ff8e9784`. Clean linked worktree
+  `TwixT_Game-mix-fit` (branch `htb-mix-fit-launch`). Gate-opening commit `84ff36b1` (one line), wrapper
+  `docs/superpowers/evidence/htb-mix-fit-run/01_wrapper.sh` (TERM 11,690 s, KILL 11,700 s). BOINC quit (the check
+  exempted only the podman VM's gvproxy and krunkit) and Unreal Editor closed. The idle gate held 60 s before launch.
+  Memory check: 26,997,309,440 B available against 12 GiB required. MLX on the CPU, `MLX_ENABLE_TF32=0`, module
+  `htb_mix.py` `79f210cf…`, pid 92127. Closing commit `f22a5674` (evidence as written, gate restored).
+- **Result: FAILED (inner and outer exit 4).** Wall 6,527 s under KILL 11,700 s. No survivors; the gate restored
+  (`HTB_MIX_FIT_AUTHORIZED = False`, byte-identical to `ff8e9784`'s); run stdout and stderr empty; record written by
+  the script.
+  - **Integrity, inside the record boundary:** all six key overlaps zero (mirror-canonical keys); E1–E3 hits 11, all
+    in H-TB train; pool 239,989; 120,000 rows from each source (order sha256 H-OP `7d4ec8f2…`, H-TB `b05cbf98…`).
+  - **S reproduction: exact.** All six relative differences 0.0 (tolerance 1e-9).
+  - **The fit:** 7,500 updates, 16 + 16 rows per batch; 64 of 64 surface tensors changed; 28 BatchNorm running
+    statistics unchanged (evaluation mode); trained state digest `adba50fb2e241ec0388fa99998b392c3e0b431b55c10676800a546899aee34b2`.
+    The record's recipe field carries P.Recipe's `epochs: 2`, which the mixed plan does not use (one pass, 7,500
+    batches, checked against the card's count).
+  - **The twelve scores** (S → C):
+
+    | Set | Metric | S | C | Screen | Bar | Held |
+    |---|---|---|---|---|---|---|
+    | H-OP val (12,000) | KL | 0.707345 | 0.451546 (−36.2%) | M1: ≤ 0.90 × S | 0.636611 | yes |
+    | H-OP val | top-1 | 0.576083 | 0.659417 (+0.0833) | M2: > S | 0.576083 | yes |
+    | H-OP val | value MSE | 0.025782 | 0.020247 (−21.5%) | M3: ≤ S | 0.025782 | yes |
+    | H-TB val (24,000) | KL | 0.574491 | 0.539762 (−6.0%) | M4: ≤ 1.05 × S | 0.603215 | yes |
+    | H-TB val | top-1 | 0.651417 | 0.659958 (+0.0085) | M5: ≥ S − 0.010 | 0.641417 | yes |
+    | H-TB val | value MSE | 0.070317 | 0.072949 (+3.7%) | M6: ≤ 1.15 × S | 0.080865 | yes |
+
+    The record's verdict field reads ELIGIBLE (M1–M6 held, none failed). H-OP's challenger on the same rows,
+    descriptive and never gated: H-OP val KL 0.4176, top-1 0.6789, MSE 0.01971; H-TB val KL 0.6996, top-1 0.6101,
+    MSE 0.11471.
+  - **Then the save failed.** `save_student` writes a temporary file beside `~/twixt-cache/htb-mix/challenger.safetensors`
+    and MLX could not open it: `[save_safetensors] Failed to open file
+    /Users/bill/twixt-cache/htb-mix/.challenger.safetensors.92127.tmp.safetensors`. **Cause, verified:**
+    `~/twixt-cache/htb-mix` did not exist, and still does not. Nothing in H-MX creates it. H-OP's fit saved into
+    `~/twixt-cache/htb-onpolicy`, which its generation and labelling stages had already created; H-MX has no earlier
+    stage. The build's fit tests passed a fake `save` and a fixture cache, so the real save path never met a missing
+    directory. The trained weights lived only in the finished process: **no challenger file exists.**
+- **Did it match the prediction?** The screen values fell where predicted or slightly better: H-OP KL −36.2% against
+  20–35%, H-TB KL −6.0% against ±5%, H-TB top-1 and value MSE inside their ranges. But the run is FAILED, so it gives
+  no ELIGIBLE fit, and the prediction is not scored as met.
+- **Conclusion / status:** the build defect is mine: the fit never created its own cache directory, and the tests did
+  not exercise the real save. Under card §13 a failed stage is no result and permits nothing: no export, no match, no
+  automatic retry. The M1–M6 values are protocol facts of a run that left no challenger. They are not a fit verdict
+  that can be exported, and the cached validation sets have now been scored once as screens (#210). Any further H-MX
+  fit needs a reviewed repair and the user's decision. That includes whether a re-fit, which would score the
+  validation sets again, is acceptable, for example only if it reproduces the state digest `adba50fb…` exactly before
+  saving. Determinism of a full 7,500-update CPU fit across runs has not been measured. Branch `htb-integration-g1`
+  at `f22a5674` plus this entry; not pushed. See #212.
