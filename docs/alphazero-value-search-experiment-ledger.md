@@ -313,6 +313,7 @@ knob) is not a new hypothesis.
 > **H-MX card FROZEN (revision 1, `d2c9b787…`): mixed-data distillation; model-free build APPROVED with narrow data-reuse exceptions (proposal and decision notes, 2026-11-18, the user's review).** 16 H-OP + 16 H-TB cached teacher-labelled rows per batch, 7,500 CPU updates from `0e1cb621…`; one-time fit screens M1–M6 on both cached validation sets (their earlier results informed the design, disclosed); on ELIGIBLE, a 400-pair colour-reversed match against `78c16a31c3dba37f`, exact one-sided sign test over decisive pairs plus a mean > 0.50 guard (about 80% power at q 0.691, d 0.114). Two H-OP match summary figures used for planning only. Dated correction: H-OP's match sensitivity under a planning model. Nothing built or run yet. See #210.
 > **H-MX BUILT (model-free); returned for launch review; all gates closed; nothing loaded, fitted, exported or played (build record, 2026-11-18).** Build `896c43dd`: `htb_mix.py` (`79f210cf…`), `htb_mix_export.py`, frozen openings `f4ae110f…` (400 + 2, no exclusion hit), four wrappers (fit TERM 11,690 s, export 3,590 s, match smoke 1,790 s, match 64,790 s), Node driver and exact sign-test analyser (`b191ea03…`, pinned), 2 Python + 2 JS gates (inventory 73). Tests: H-MX Python 62, Node 20/20, H-OP Node 20/20; neighbouring Python suites 451 passed, 4 failed (a stale H-OP gate-closed test asserting `~/twixt-cache/htb-onpolicy` absent; the cache exists since entry 68; not H-MX; not changed). See #211.
 > **H-MX fit FAILED at the challenger save; no challenger exists; no retry (entry 73, 2026-11-19).** All 7,500 mixed updates ran; S reproduced H-OP's six recorded scores exactly; the one-time screens M1–M6 all held (H-OP val KL 0.7073 → 0.4515, top-1 0.5761 → 0.6594, MSE 0.02578 → 0.02025; H-TB val KL 0.5745 → 0.5398, top-1 0.6514 → 0.6600, MSE 0.07032 → 0.07295). Then `save_student` could not open its temporary file because `~/twixt-cache/htb-mix` had never been created (a build defect: the tests faked the save). Wall 6,527 s under KILL 11,700 s, clean, gate restored. Under card §13 a failed stage is no result: no export or match. A further fit needs a reviewed repair and the user's decision. See #212.
+> **H-MX recovery amendment 1 (draft, `8d6e3866…`) and its model-free build (`ddaa6181`); returned for replay approval; all gates closed; nothing run (amendment note, 2026-11-19).** One exact replay of the failed fit (entry 73), bound to its committed record (`6507d588…`): same pinned start, cached inputs, 16 + 16 order and 7,500 updates; `htb_mix.py` unchanged; runtime pinned; no validation scoring. It saves only if the whole fit record and the trained-state digest `adba50fb…` match, and publishes ELIGIBLE (M1–M6 copied from entry 73) only after a strict reload at that digest. The cache is prepared before anything loads. Export admits only a clean, verified recovery. Gate `HTB_MIX_RECOVERY_AUTHORIZED` (inventory 74). Tests: recovery 37, H-MX 62; five mutants caught. See #213.
 
 ## Historical proposal check — programme now closed
 
@@ -2158,6 +2159,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 210. **The H-MX card and its permissions (2026-11-18).** The card is frozen at revision 1 (`d2c9b787…`). The narrow #53/#87 exceptions and the data-reuse exceptions to #177, #178, #205 and #206 cover **H-MX only**: its model-free build and its runs, each once and each with its own approval. The cached validation sets are **one-time fit screens**, scored once inside the one fit. Do **not**: run, load a model for, fit, export, play or open a gate for H-MX without the user's approval of that stage; change the mix (16 + 16), the dose (7,500 updates), the E1–E3 drop, M1–M6, the 400 pairs, the openings rule or the pass rule (exact one-sided sign test over decisive pairs at 0.05, plus the mean > 0.50 guard) without a reviewed revision; re-score either validation set to revisit a screen verdict, or cite M1–M6 as fresh held-out estimates; edit, relabel, reorder or re-shard any H-TB or H-OP label, selection, manifest or corpus file; read anything from the H-OP match beyond the two planning figures (decisive-pair rate 31/272, pair-score SD 0.165), or present the planning model's Elo conversions or H-OP sensitivity figures as measurements; or cite these exceptions for another mix ratio, dose, round, recipe or teacher configuration.
 211. **H-MX is built, not launched (2026-11-18).** Do **not**: open any H-MX gate (`HTB_MIX_FIT_AUTHORIZED`, `HTB_MIX_EXPORT_AUTHORIZED`, `MIX_MATCH_SMOKE_AUTHORIZED`, `MIX_MATCH_AUTHORIZED`) or run any stage before the user's launch review and approval of that stage; edit `htb_mix.py`, `htb_mix_export.py`, the frozen openings (`f4ae110f…`), the analyser (`b191ea03…`, pinned in both match wrappers) or any wrapper without a rebuild, re-derivation and review; relax the S-reproduction tolerance (1e-9 relative), the overlap or E1–E3 checks, or the 239,989 pool count; edit any H-OP or H-TB file to make an H-MX check pass; or fix the stale H-OP gate-closed test (`tests/test_htb_onpolicy.py::test_EVERY_ENTRY_REFUSES_WHILE_ITS_GATE_IS_CLOSED_AND_WRITES_NOTHING`, failing since the H-OP cache was created) by deleting the cache: fix its expectation instead, with approval.
 212. **The H-MX fit FAILED at the save (2026-11-19, entry 73).** Do **not**: retry, rerun or resume the fit automatically; open the export gate, export, or play a match on this run (no challenger exists, and the record's status is FAILED, so stage admission refuses it); cite the record's ELIGIBLE verdict field, or M1–M6, as an ELIGIBLE fit or as fresh held-out estimates; re-score either cached validation set outside a reviewed decision (they have been scored once as screens, #210); repair the save by creating the cache directory by hand, or by editing `htb_pilot.py` or `search_distillation_d2.py`; any repair goes into `htb_mix.py` with a test that drives the real save into a missing cache directory, and is reviewed before any re-fit. A re-fit is a new approval, and the user decides whether it must first reproduce the trained state digest `adba50fb…` exactly.
+213. **H-MX recovery amendment 1 (2026-11-19).** Do **not**: open `HTB_MIX_RECOVERY_AUTHORIZED` or run the replay before the user's review of the amendment and approval of the replay; run more than one replay under any outcome; relax or replace the exact match (the whole fit record and the trained-state digest `adba50fb…`), the runtime pins or the code binding; edit `htb_mix.py` (`79f210cf…`), `htb_pilot.py`, `search_distillation_d2.py` or the failed evidence; score either validation set in the replay, or re-run M1–M6; publish or cite ELIGIBLE unless the saved file reloaded at `adba50fb…`; export from the failed fit record, or from a recovery that is not clean, COMPLETED and verified; create `~/twixt-cache/htb-mix` by hand; or, if the replay does not reproduce, re-fit with fresh screens under this card. A change to the amendment after review is re-pinned and rebuilt before any gate opens.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -12636,3 +12638,79 @@ The proposal note and revision 1 note above stay as written. This correction sup
   validation sets again, is acceptable, for example only if it reproduces the state digest `adba50fb…` exactly before
   saving. Determinism of a full 7,500-update CPU fit across runs has not been measured. Branch `htb-integration-g1`
   at `f22a5674` plus this entry; not pushed. See #212.
+
+#### Amendment note — H-MX recovery amendment 1 (draft) and its model-free build; returned for replay approval; all gates closed; nothing run (2026-11-19, the user's approval of the amendment and build)
+
+- **Why:** entry 73. The fit trained to the state `adba50fb…` and applied M1–M6 once (all held), then FAILED at the
+  save because `~/twixt-cache/htb-mix` had never been created. No challenger exists. The user asked for a narrow
+  recovery amendment and its repair, built for review, with the original failed record preserved.
+- **Amendment:** `docs/superpowers/2026-11-19-htb-mix-recovery-amendment.md`, sha256 `8d6e3866…` (draft for review,
+  pinned by the build). The card (revision 1, `d2c9b787…`) is unedited. The amendment adds one stage between card §14
+  steps 3 and 4. Its contents:
+  - **The repair (§2):** the cache directory is prepared (created and probed writable) before any label or model
+    loads. The save is H-OP's create-only `save_student`, followed by a strict reload with the student's own loader. The
+    reloaded state digest must equal `adba50fb…`, and the file's sha256 is recomputed. **ELIGIBLE is published only
+    after that.**
+  - **The replay (§3):** one exact repeat of the failed fit's training, with the same pinned start (`0e1cb621…`,
+    `586dca4f…`), the same cached inputs, the same 16 + 16 batch order and the same 7,500 updates. `htb_mix.py`
+    stays byte-identical (`79f210cf…`). Nothing else under `scripts/GPU/alphazero/` changes since the failed launch
+    commit `84ff36b1`, except four named files the fit does not import. The runtime is pinned: the main checkout's
+    `.venv`, Python 3.14.10, MLX 0.30.3 (installed 2026-05-09), numpy 2.4.1, and the sha256 of `libmlx.dylib` and MLX's
+    core extension.
+    - It is bound to the committed failed record (sha256 `6507d588…`) and `outer.json` (`bb8d768b…`).
+    - **Validation scoring is skipped.** The selection record, the start-check scores and the **whole fit record**
+      (300 logged steps, surface counts, reference digest) must equal the failed record's. **The trained-state
+      digest must be exactly `adba50fb…`.** Otherwise the run STOPs "not reproduced" and saves nothing.
+    - Only after the match and the verified save does the record copy M1–M6 from entry 73. Nothing is re-scored.
+  - **Outcomes (§4), fixed before any replay:** not reproduced → H-MX closes, with no second replay and no re-fit
+    with fresh screens. A save or reload failure, or VOID → a reviewed decision; no automatic retry. COMPLETED and
+    ELIGIBLE → propose export (card §8), with its own approval.
+  - **Evidence and gate (§5):** its own record, `docs/superpowers/evidence/htb-mix-recovery/record.json` (kind
+    `htb-mix-recovery-record/1`). The record carries the amendment's sha256, the failed record's sha256 and the link
+    to entry 73. The gate is `HTB_MIX_RECOVERY_AUTHORIZED` (closed; inventory 74). The wrapper is derived from the
+    H-MX fit wrapper (`run replay`; TERM 11,690 s, KILL 11,700 s). Expected cost about 6,400 s.
+  - **Export (§6):** admits only a clean, COMPLETED recovery of this card and amendment that is bound to the failed
+    record, has verdict ELIGIBLE and `verified: true`, and reloaded at `adba50fb…`, with the file's sha256 unchanged.
+    The failed fit record alone is not admissible.
+  - **Prediction on record (§7, before any replay; low confidence):** exact reproduction about 75%. If it reproduces,
+    the save and reload verify about 98%.
+- **Build:** `ddaa6181`. Files:
+  - `scripts/GPU/alphazero/htb_mix_recovery.py` (`3a0aeaed…`), new;
+  - `htb_mix_recovery_authorization.py` (closed), new;
+  - `htb_mix_export.py` (`f158b430…`; `fit_admission` replaced by `recovery_admission`; the steps are unchanged);
+  - the wrapper `docs/superpowers/evidence/htb-mix-recovery-run/01_wrapper.sh` (`cbcfa301…`), derived by
+    `tests/htb_mix_recovery_wrapper_spec.py`;
+  - tests: `tests/test_htb_mix_recovery.py` (new); `tests/test_htb_mix.py` (export fixtures now recovery records;
+    the gate-closed test compares the cache before and after instead of asserting it absent); the gate inventory
+    (74; "seventy-three" now stale).
+  - `htb_mix.py`, `htb_pilot.py`, `search_distillation_d2.py`, every H-OP and H-TB file and the failed evidence are
+    unchanged.
+- **What the tests establish (recovery 37/37):**
+  - **The real save path.** The real `save_student` into a missing parent directory fails with entry 73's error. After
+    `prepare_cache`, the real save and the real loader, on a full-size network, verify the digest and leave no
+    temporary or probe file. A reload at any other digest leaves `verified: false`.
+  - **The replay, end to end on fakes.** The failed record is made by the real `run_fit` with a save that fails as
+    the run did. The replay reproduces it, saves, reloads and only then publishes ELIGIBLE. It scores only the start
+    check's rows. The failed record's bytes are unchanged and the replay is one-shot.
+  - **Stops:** a different fit (another learning rate) STOPs "not reproduced" with nothing saved, no verdict and no
+    screens. A different start or selection STOPs before any update. A reload mismatch or a failed save publishes no
+    verdict.
+  - **Refusals before anything loads or the cache is prepared:** a changed failed record (bytes, status, screens,
+    digest, `outer.json`), another `htb_mix.py`, another imported file, another runtime, another amendment, a closed
+    gate or too little memory.
+  - **The export** refuses, without running any step, a missing recovery, a FAILED fit alone, a non-COMPLETED
+    recovery, an unclean `outer.json`, a wrong pgid or ceiling, an unverified challenger or a wrong reload digest, a
+    tampered file, an unbound record, another amendment, or a non-ELIGIBLE verdict.
+  - The wrapper is its derivation.
+  - The real committed failed record binds, the code binding holds against git, and the runtime on this machine
+    matches the pins.
+  - **Mutation check:** five deliberate breaks, each caught (removing the cache preparation, publishing ELIGIBLE
+    before the save, dropping the reproduction check, dropping the export's `verified` check, dropping its
+    failed-record binding).
+- **Other tests:** H-MX Python 62/62, gate inventory 8/8, H-MX Node match 20/20 (unchanged files). The neighbouring
+  suites (`test_htb_onpolicy`, `test_htb_pilot`, `test_htb_bench_teacher`, `test_htb_screen`, `test_htb_strength`)
+  gave 384 passed and **4 failed**: the same stale H-OP gate-closed test as in the build record. It is not changed
+  here.
+- **Status:** amendment drafted and pinned; build committed. All gates closed. Nothing loaded, replayed, saved,
+  exported or played. `~/twixt-cache/htb-mix` still does not exist. Returned for review of the amendment and
+  separate approval of the replay. See #213.
