@@ -311,6 +311,7 @@ knob) is not a new hypothesis.
 > **H-OP match smoke COMPLETED; timing LAUNCH_OK; returned for a separate decision on the 272-pair match (Post-closure entry 71, 2026-11-17).** Gate `0f98d04e` → evidence `5fb4a2d5` → timing `77cb37c8` / `1af60786`: 4 games (2 colour-reversed pairs, 28–30 plies), challenger `a3c4fc0f49911d5b` vs current `78c16a31c3dba37f`, both 200 simulations; wall 129 s under KILL 1,800 s, clean. Frozen analyser: mean game 32.049 s, projection 17,434.8 s (4.84 h) for 544 games, 1.5 × = 26,152.2 s (7.26 h) ≤ 64,800 s. Outcomes unread. timing.json was first written to the wrapper folder by mistake, then re-derived byte-identical at the admission path. One stale test (smoke folder must not exist) now fails. See #208.
 > **H-OP match COMPLETED: NON_PASS; the current `hard` stays (Post-closure entry 72, 2026-11-18).** Test fix `1d02d202` → gate `079f1db8` → evidence `17650a1c` → analysis `449d6acf`: 272 colour-reversed pairs (544 games), challenger `a3c4fc0f49911d5b` vs current `78c16a31c3dba37f`, both 200 simulations; wall 20,821 s under KILL 64,800 s, clean. Guards all pass (search-seconds ratio 0.99987 ≤ 1.10). Challenger 270 W / 2 D / 272 L; **mean pair score 0.4982, one-sided lower bound 0.4240 ≤ 0.5**; two-sided 95% [0.416, 0.581]. Prediction on record (0.60, range 0.52–0.70) missed. Red scored about 0.86 in both seatings. The H-OP line is closed on this card. See #209.
 > **H-MX card FROZEN (revision 1, `d2c9b787…`): mixed-data distillation; model-free build APPROVED with narrow data-reuse exceptions (proposal and decision notes, 2026-11-18, the user's review).** 16 H-OP + 16 H-TB cached teacher-labelled rows per batch, 7,500 CPU updates from `0e1cb621…`; one-time fit screens M1–M6 on both cached validation sets (their earlier results informed the design, disclosed); on ELIGIBLE, a 400-pair colour-reversed match against `78c16a31c3dba37f`, exact one-sided sign test over decisive pairs plus a mean > 0.50 guard (about 80% power at q 0.691, d 0.114). Two H-OP match summary figures used for planning only. Dated correction: H-OP's match sensitivity under a planning model. Nothing built or run yet. See #210.
+> **H-MX BUILT (model-free); returned for launch review; all gates closed; nothing loaded, fitted, exported or played (build record, 2026-11-18).** Build `896c43dd`: `htb_mix.py` (`79f210cf…`), `htb_mix_export.py`, frozen openings `f4ae110f…` (400 + 2, no exclusion hit), four wrappers (fit TERM 11,690 s, export 3,590 s, match smoke 1,790 s, match 64,790 s), Node driver and exact sign-test analyser (`b191ea03…`, pinned), 2 Python + 2 JS gates (inventory 73). Tests: H-MX Python 62, Node 20/20, H-OP Node 20/20; neighbouring Python suites 451 passed, 4 failed (a stale H-OP gate-closed test asserting `~/twixt-cache/htb-onpolicy` absent; the cache exists since entry 68; not H-MX; not changed). See #211.
 
 ## Historical proposal check — programme now closed
 
@@ -2154,6 +2155,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 208. **The H-OP match smoke is spent: LAUNCH_OK (2026-11-17, entry 71).** Do **not**: rerun or extend the smoke, re-time it, or edit either committed timing.json (they are byte-identical; the match reads `htb-onpolicy-match-smoke/timing.json`); read, tally or report the smoke's outcomes (card §10: excluded from scoring and every report); count the smoke's games toward the match; play the 272-pair match without the user's approval; or delete the smoke folder to make the stale test at `tests/htb_integration/test_onpolicy_match.mjs:409` pass (fix the test's expectation instead, with approval).
 209. **H-OP is spent: the 272-pair match is NON_PASS (2026-11-18, entry 72).** Do **not**: top up, extend, replay or re-score the match (card §10: "no top-up or re-score"); re-analyse it under any other rule, subset, colour split or interval to find a gain; count the smoke's games; deploy challenger `a3c4fc0f49911d5b` or change HARD_MODEL_ID on this evidence; rerun any H-OP stage (generation, labelling, fit, export, match) under this card; or read the fit's held-out imitation gains (entry 69) as a strength result. Better imitation of the teacher on `hard`'s self-play positions did not show up as strength against the current `hard` here. A further on-policy attempt needs a new card that names a specific change and why it could improve play.
 210. **The H-MX card and its permissions (2026-11-18).** The card is frozen at revision 1 (`d2c9b787…`). The narrow #53/#87 exceptions and the data-reuse exceptions to #177, #178, #205 and #206 cover **H-MX only**: its model-free build and its runs, each once and each with its own approval. The cached validation sets are **one-time fit screens**, scored once inside the one fit. Do **not**: run, load a model for, fit, export, play or open a gate for H-MX without the user's approval of that stage; change the mix (16 + 16), the dose (7,500 updates), the E1–E3 drop, M1–M6, the 400 pairs, the openings rule or the pass rule (exact one-sided sign test over decisive pairs at 0.05, plus the mean > 0.50 guard) without a reviewed revision; re-score either validation set to revisit a screen verdict, or cite M1–M6 as fresh held-out estimates; edit, relabel, reorder or re-shard any H-TB or H-OP label, selection, manifest or corpus file; read anything from the H-OP match beyond the two planning figures (decisive-pair rate 31/272, pair-score SD 0.165), or present the planning model's Elo conversions or H-OP sensitivity figures as measurements; or cite these exceptions for another mix ratio, dose, round, recipe or teacher configuration.
+211. **H-MX is built, not launched (2026-11-18).** Do **not**: open any H-MX gate (`HTB_MIX_FIT_AUTHORIZED`, `HTB_MIX_EXPORT_AUTHORIZED`, `MIX_MATCH_SMOKE_AUTHORIZED`, `MIX_MATCH_AUTHORIZED`) or run any stage before the user's launch review and approval of that stage; edit `htb_mix.py`, `htb_mix_export.py`, the frozen openings (`f4ae110f…`), the analyser (`b191ea03…`, pinned in both match wrappers) or any wrapper without a rebuild, re-derivation and review; relax the S-reproduction tolerance (1e-9 relative), the overlap or E1–E3 checks, or the 239,989 pool count; edit any H-OP or H-TB file to make an H-MX check pass; or fix the stale H-OP gate-closed test (`tests/test_htb_onpolicy.py::test_EVERY_ENTRY_REFUSES_WHILE_ITS_GATE_IS_CLOSED_AND_WRITES_NOTHING`, failing since the H-OP cache was created) by deleting the cache: fix its expectation instead, with approval.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -12477,3 +12479,99 @@ The proposal note and revision 1 note above stay as written. This correction sup
     - §11's "0.60 ≈ +70 Elo" with SD 0.50 does not hold for this protocol's first-move advantage.
   - These are model figures, not measurements. Entry 72's NON_PASS stands as written.
 - **Status:** card frozen; building (model-free). Nothing loaded, fitted, exported or played. See #210.
+
+#### Build record — H-MX: the model-free build; returned for launch review; nothing loaded, fitted, exported or played (2026-11-18)
+
+- **Scope:** the user's approval of the model-free build only (decision note above; card revision 1, `d2c9b787…`).
+  - Every runtime entry is behind its own closed gate.
+  - No model was loaded and no game was played.
+  - The Node match side was built by a forked agent from my brief. I re-ran its tests, checked that no H-OP file
+    changed, re-derived its wrappers and read the analyser's verdict code before commit.
+- **Commit:** `896c43dd`.
+- **Files (sha256):**
+
+  | File | sha256 | What it is |
+  |---|---|---|
+  | `scripts/GPU/alphazero/htb_mix.py` | `79f210cf…` | binds both cached label sets by their committed records, selections and manifests (pinned bytes); runs the overlap and E1–E3 checks; fixes the 16 + 16 mixed order; `fit_mixed`; S reproduction; screens M1–M6; entries `run fit` and `openings` |
+  | `scripts/GPU/alphazero/htb_mix_export.py` | `bcb15dd5…` | `run export`: ELIGIBLE-only admission, then H-OP's export, structural check, canaries, S1–S4 and V3, all unmodified |
+  | `htb_mix_fit_authorization.py`, `htb_mix_export_authorization.py` | `c8aee5a1…` `749fe685…` | both closed |
+  | `docs/superpowers/evidence/htb-mix-openings/openings.json` | `f4ae110f…` | 400 match + 2 smoke openings, `htb-mix/20261118` |
+  | fit and export `01_wrapper.sh` | `1f1364aa…` `67688c64…` | derived by `tests/htb_mix_wrapper_spec.py` from H-OP's (paths, gate, module and record kind only); TERM 11,690 / 3,590 s |
+  | match-smoke and match `01_wrapper.sh` | `df546c8d…` `054e9ea8…` | derived by `tests/htb_mix_match_wrapper_spec.py` from H-OP's; TERM 1,790 / 64,790 s; analyser sha pinned |
+  | `tests/htb_integration/mix_authorization.mjs` | `1bdccc04…` | `MIX_MATCH_SMOKE_AUTHORIZED`, `MIX_MATCH_AUTHORIZED`; both false |
+  | `tests/htb_integration/mix_match.mjs` | `b522aadd…` | the driver: export-record admission (kind `htb-mix-export-record/1`), both players through `protocolMove`, 200/200 recorded per move |
+  | `tests/htb_integration/mix_match_analyse.mjs` | `b191ea03…` | timing (LAUNCH_OK iff 1.5 × projection over 800 games ≤ 64,800 s) and the verdict (exact sign test plus the mean guard; guards → INVALID) |
+  | `tests/test_htb_mix.py`, `tests/htb_integration/test_mix_match.mjs` | `ba9fa11d…` `5ed38e13…` | model-free tests |
+
+- **What the tests establish (model-free):**
+  - **Cached inputs.** Every pinned record, selection, manifest, games file and H-OP fit record is the committed file.
+    - **Read-only, on the real caches (no model):** the four label sets load as written. The rows are the committed
+      selections' rows, in order.
+    - There is zero key overlap among the four sets. The E1–E3 drop is exactly 11, which leaves 239,989 rows, and the
+      plan has 7,500 batches.
+  - **Selection checks.** Each of the following STOPs, and inside the fit run it is a recorded STOP before any model
+    loads:
+    - a shared key between any two of the four sets (all six pairs tested);
+    - an E1–E3 key outside the H-TB training rows;
+    - a repeated key;
+    - a wrong pool or H-OP count.
+    - A mirrored position has the same key, so a mirrored copy is an overlap.
+  - **Fit loop.** Given H-OP's own one-pass batches, `fit_mixed` reproduces `htb_onpolicy.fit` bitwise (digest and
+    losses).
+    - Each mixed batch is half H-OP then half H-TB.
+    - A repeated row, a ragged batch, a non-copy and a shared object STOP. H-OP's two-pass plan is refused as a repeat.
+  - **Screens.**
+    - Each of M1–M6 fails on its own.
+    - The bars are inclusive where the card says "at most" or "at least"; M2 is strict.
+    - **H-OP's own challenger, from its pinned fit record, passes M1–M3 and fails M4–M6.**
+    - S reproduction passes exactly and STOPs at 2e-9 relative or on a row-count mismatch.
+    - CPU scoring repeats bitwise. A perturbed S STOPs the run before any update, and nothing is saved.
+  - **Fit run end to end on fakes.** Two fake cached sources, written as the label stages write them, go through the
+    gated entry: binding, selection, start check, S reproduction, the mixed fit, the screens and the save. An unpinned
+    record or a tampered shard is refused before anything loads.
+  - **Export.**
+    - An ELIGIBLE fit is qualified with H-OP's unmodified steps, and the manifest carries H-MX texts.
+    - A failed step STOPs there, and a different graph STOPs before parity.
+    - A missed screen, a changed challenger, or an inner success followed by an outer timeout refuses before anything
+      runs.
+    - The fit handoff checks the ceiling, pid, launch commit, wrapper files, survivors and card.
+  - **Openings and seeds.**
+    - The file re-derives byte-equal in Python and in Node.
+    - There is no repeat, and no meeting with any of the 201 benchmark, 222 G3 or 6,814 H-OP openings, directly or
+      reflected. Indices 0–399 are contiguous.
+    - 459,888 seed derivations, none repeated.
+  - **Match (Node).**
+    - Both gates are closed, and the driver refuses with each closed, creating nothing.
+    - Export-record admission refuses the faults tested.
+    - The sign test's critical W is 20, 26, 30, 32 and 37 at m = 30, 40, 46, 50 and 60. P(W ≥ 9 | 10) = 11/1024
+      exactly, and the rejection is decided in integers.
+    - PASS at 30 of 46, NON_PASS at 29 of 46.
+    - The mean guard turns a rejection into NON_PASS.
+    - A search-seconds ratio above 1.10, 199 visits, a 64-simulation budget, a missing or duplicate row, or H-OP's
+      schema, openings or export kind each make the match INVALID.
+    - The timing boundary is at 800 games.
+    - One real 200-simulation game with fake networks validates.
+- **Choices made in the build, for review:**
+  - The overlap and E1–E3 checks run inside the fit's record boundary, so a failure is a recorded STOP. Label binding
+    runs before it, so a binding failure is a refusal, as in H-OP.
+  - The start check scores the first 2,048 rows of the mixed order, which is the first 64 batches.
+  - V3 reuses H-OP's parameterized tools (`tests/parity/htb_onpolicy_mirror`). Their report's free-text side label
+    reads "H-OP challenger"; the record's sha256 and state digest identify the file compared.
+  - The analyser additionally requires the export record's kind. For m ≤ 4 no W can reject, so the verdict is
+    NON_PASS. Clopper–Pearson is descriptive only.
+  - Gate inventory: 73. The two JS match gates are outside the Python inventory, as H-OP's are.
+- **Tests:**
+  - H-MX Python 62/62 and gate inventory 8/8;
+  - Node: H-MX match 20/20, H-OP match 20/20 (unchanged);
+  - neighbouring Python suites (`test_htb_onpolicy`, `test_htb_pilot`, `test_htb_bench_teacher`, `test_htb_screen`,
+    `test_htb_strength`, with H-MX and the inventory): 451 passed, **4 failed**.
+  - **The 4 failures** are H-OP's `test_EVERY_ENTRY_REFUSES_WHILE_ITS_GATE_IS_CLOSED_AND_WRITES_NOTHING`, all four
+    parameters. It asserts `not H.CACHE.exists()`, and `~/twixt-cache/htb-onpolicy` exists since H-OP's labelling run
+    (entry 68). The failure is stale and independent of H-MX. It is not changed here, being outside this approval.
+- **Launch order, each stage its own approval (card §14):**
+  1. the fit with its screens (about 1.8 h, ceiling 11,700 s);
+  2. on ELIGIBLE, export and parity (ceiling 3,600 s);
+  3. on PARITY_PASS, the match smoke (ceiling 1,800 s), then the timing;
+  4. the match on LAUNCH_OK (about 8.5 h, ceiling 64,800 s).
+  - Each runs in a clean linked worktree, with BOINC quit and Unreal Editor closed.
+- **Status:** built; returned for launch review. All gates closed. Nothing loaded, fitted, exported or played. See #211.
