@@ -1,0 +1,1 @@
+{"kind": "htb-mix-export-record/1", "written_by": "wrapper", "status": "VOID", "void": {"step": "crashed", "detail": "inner exit 1; the script left no record.json (ceiling: TERM at 3590 s, KILL 10 s later)"}, "inner_exit": 1, "term_s": 3590, "grace_s": 10}

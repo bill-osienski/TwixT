@@ -4,4 +4,4 @@
 Opened for ONE approved run, in a one-line launch commit, and restored on every exit. Created closed. This file may
 hold ONLY this declaration.
 """
-HTB_MIX_EXPORT_AUTHORIZED = True
+HTB_MIX_EXPORT_AUTHORIZED = False
