@@ -1,0 +1,59 @@
+{
+ "verdict": "PASS",
+ "tolerance": 0.001,
+ "onnxruntime": "1.23.2",
+ "onnx": "1.20.1",
+ "numpy": "2.4.1",
+ "python": "3.13.15",
+ "executable": "/Users/bill/twixt-cache/ort-canary-1.23.2/venv/bin/python",
+ "results": [
+  {
+   "case": "control_dense",
+   "conv": 0,
+   "max_abs_err": 1.9648047691056547e-06,
+   "ok": true
+  },
+  {
+   "case": "control_dense",
+   "conv": 1,
+   "max_abs_err": 1.92145958549661e-06,
+   "ok": true
+  },
+  {
+   "case": "within_session",
+   "conv": 0,
+   "max_abs_err": 1.8108321553633733e-06,
+   "ok": true
+  },
+  {
+   "case": "within_session",
+   "conv": 1,
+   "max_abs_err": 2.222640630211714e-06,
+   "ok": true
+  },
+  {
+   "case": "within_session",
+   "conv": 2,
+   "max_abs_err": 1.5515319368164526e-06,
+   "ok": true
+  },
+  {
+   "case": "cross_session(first session, before the second exists)",
+   "conv": 0,
+   "max_abs_err": 1.9439594978187813e-06,
+   "ok": true
+  },
+  {
+   "case": "cross_session(second session)",
+   "conv": 0,
+   "max_abs_err": 1.7075314127645846e-06,
+   "ok": true
+  },
+  {
+   "case": "cross_session(first session, after the second)",
+   "conv": 0,
+   "max_abs_err": 1.9439594978187813e-06,
+   "ok": true
+  }
+ ]
+}

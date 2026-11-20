@@ -1,0 +1,27 @@
+t=    0.0s BUSY: load 6.18 >= 3.0; /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mds_stores at 242.3% CPU > 50.0%; /System/Library/PrivateFrameworks/MediaAnalysis.framework/Versions/A/mediaanalysisd at 75.0% CPU > 50.0%
+t=    5.0s BUSY: load 6.16 >= 3.0
+t=   10.1s BUSY: load 5.83 >= 3.0
+t=   15.1s BUSY: load 5.36 >= 3.0
+t=   20.2s BUSY: load 5.09 >= 3.0
+t=   25.2s BUSY: load 4.77 >= 3.0
+t=   30.3s BUSY: load 4.38 >= 3.0
+t=   35.3s BUSY: load 4.03 >= 3.0; /opt/homebrew/Cellar/python@3.14/3.14.10/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python at 51.9% CPU > 50.0%
+t=   40.4s BUSY: load 3.79 >= 3.0
+t=   45.4s BUSY: load 3.73 >= 3.0
+t=   50.5s BUSY: load 3.43 >= 3.0
+t=   55.5s BUSY: load 3.23 >= 3.0
+t=   60.6s BUSY: load 3.13 >= 3.0
+t=   65.6s idle for 0.0s
+t=   70.7s idle for 5.0s
+t=   75.7s idle for 10.1s
+t=   80.8s idle for 15.2s
+t=   85.8s idle for 20.2s
+t=   90.9s idle for 25.3s
+t=   95.9s idle for 30.3s
+t=  101.0s idle for 35.4s
+t=  106.0s idle for 40.4s
+t=  111.1s idle for 45.4s
+t=  116.1s idle for 50.5s
+t=  121.2s idle for 55.6s
+t=  126.3s idle for 60.6s
+IDLE: held 60s (load < 3.0, no process > 50.0% CPU)

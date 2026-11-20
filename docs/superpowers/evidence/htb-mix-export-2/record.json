@@ -1,0 +1,57 @@
+{
+ "admission": {
+  "challenger": {
+   "path": "/Users/bill/twixt-cache/htb-mix/challenger.safetensors",
+   "sha1": "1d70df49c8c5cd6c7adb9c030bdf79c014b0bd00",
+   "sha256": "5dafde1152bf83aff8d3c180396477eae625937619bd549ea04336f26c83d38a",
+   "state_digest": "adba50fb2e241ec0388fa99998b392c3e0b431b55c10676800a546899aee34b2"
+  },
+  "head": "be1b7aba3ce3a8a2acc3755ed416d49198abbe23",
+  "record_sha256": "bcd88f3b5a832b5d87827c6e5fdd970185a9f2d86263747b0a014f01c1e8f1ff"
+ },
+ "attempt": 2,
+ "attempt_1": {
+  "outer": "docs/superpowers/evidence/htb-mix-export-run/outer.json",
+  "outer_sha256": "7dab10720a6c13a6e1176e2b5fe607cd553a33182543914eb100c77a6ff2bcf7",
+  "record": "docs/superpowers/evidence/htb-mix-export/record.json",
+  "record_sha256": "127f0607cfa0bbd2b6b26b25e786d5f689b8c9cb79546be45d89cc7554f4febb",
+  "status": "VOID"
+ },
+ "card_sha256": "d2c9b787ff3b45f55d4a4bb3a6fa7029d83273885c71f64bf7118b887f3c936f",
+ "challenger": {
+  "dir": "/Users/bill/twixt-cache/htb-mix/export/627c8d774df838a8",
+  "external_data_sha256": "cf78b17f7e9368e5be850ded8b41d3c13921f32bf54c3fab0273cfcb8489822f",
+  "graph_sha256": "3beaeed15a97f28c69e639b6c5ab2466f961a1aa75f232755e581d592fcb55af",
+  "model_id": "627c8d774df838a8",
+  "source_sha256": "5dafde1152bf83aff8d3c180396477eae625937619bd549ea04336f26c83d38a",
+  "source_state_digest": "adba50fb2e241ec0388fa99998b392c3e0b431b55c10676800a546899aee34b2"
+ },
+ "export_amendment_sha256": "f8ce7792afc73fc3262ff0fb6aff58925d4b060d6b9a97b38fff94ea7c2ac032",
+ "graph_signature_sha256": {
+  "challenger": "a022f29b8e0239b84d36aaa8ee7e338eec62bd887959d5675db58ac0bd31aa75",
+  "current": "a022f29b8e0239b84d36aaa8ee7e338eec62bd887959d5675db58ac0bd31aa75"
+ },
+ "head": "79270161babeb2510e49b9fc54003adf62e5685c",
+ "kill_s": 3600,
+ "kind": "htb-mix-export-record/1",
+ "module_sha256": "79f210cf6025352dd12633772852a2d76f4b7a3b652ff9c2f77a95b5b5ffea94",
+ "node_dependency": {
+  "onnxruntime_node": "1.23.2",
+  "package": "/Users/bill/projects/TwixT_Game-mix-export-2/node_modules/onnxruntime-node/package.json"
+ },
+ "pid": 20122,
+ "runtime_versions": "python 3.14.10; mlx 0.30.3; mlx-metal 0.30.3; torch 2.10.0; onnx 1.20.1; numpy 2.4.1; node v24.22.0; onnxruntime-node 1.23.2",
+ "stage": "export",
+ "status": "COMPLETED",
+ "steps": {
+  "canary_node": 0,
+  "canary_python": 0,
+  "s_compare": 0,
+  "s_node": 0,
+  "s_python": 0,
+  "v3_compare": 0,
+  "v3_node": 0,
+  "v3_python": 0
+ },
+ "verdict": "PARITY_PASS"
+}

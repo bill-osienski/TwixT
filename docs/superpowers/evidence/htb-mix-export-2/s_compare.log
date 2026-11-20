@@ -1,0 +1,24 @@
+
+PARITY PASS  (126 positions)
+
+S1 encoding   exact: PASS
+   legal moves:      PASS
+masks         exact: PASS
+equivariance mlx       PASS (10/10)
+equivariance ort_py    PASS (10/10)
+equivariance ort_node  PASS (10/10)
+
+S2  maxlogit 1.431e-5 / 1.000e-4   meanlogit 1.385e-6 / 1.000e-5   maxvalue 1.729e-6 / 1.000e-4
+     top1 disagreements 0   near-tie exemptions 0/6   top-k 100.0%   tau median 1.000000   [primary 120 positions only]
+     edge (reported separately): top1 6/6   top-k 6/6   tau min 1.000000   failures 0
+S3  maxlogit 0 / 1.000e-5   meanlogit 0 / 1.000e-6   maxvalue 0 / 1.000e-5
+     top1 disagreements 0   near-tie exemptions 0/6   top-k 100.0%   tau median 1.000000   [primary 120 positions only]
+     edge (reported separately): top1 6/6   top-k 6/6   tau min 1.000000   failures 0
+S4  maxlogit 1.431e-5 / 1.100e-4   meanlogit 1.385e-6 / 1.100e-5   maxvalue 1.729e-6 / 1.100e-4
+     top1 disagreements 0   near-tie exemptions 0/6   top-k 100.0%   tau median 1.000000   [primary 120 positions only]
+     edge (reported separately): top1 6/6   top-k 6/6   tau min 1.000000   failures 0
+
+red-perspective max diff: 0 / 1.000e-6
+value range violations:   0
+
+wrote /Users/bill/projects/TwixT_Game-mix-export-2/docs/superpowers/evidence/htb-mix-export-2/parity_result.json

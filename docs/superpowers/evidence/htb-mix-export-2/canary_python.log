@@ -1,0 +1,9 @@
+  ok   control_dense                                           conv0  max abs err 1.96e-06
+  ok   control_dense                                           conv1  max abs err 1.92e-06
+  ok   within_session                                          conv0  max abs err 1.81e-06
+  ok   within_session                                          conv1  max abs err 2.22e-06
+  ok   within_session                                          conv2  max abs err 1.55e-06
+  ok   cross_session(first session, before the second exists)  conv0  max abs err 1.94e-06
+  ok   cross_session(second session)                           conv0  max abs err 1.71e-06
+  ok   cross_session(first session, after the second)          conv0  max abs err 1.94e-06
+CANARY PASS  (onnxruntime 1.23.2, python 3.13.15)

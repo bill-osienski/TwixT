@@ -1,0 +1,14 @@
+✔ the runtime under test is the pinned onnxruntime-node 1.23.2 (0.912958ms)
+✔ the generator matches its Python twin on fixed values (0.360292ms)
+✔ control: two dense Convs in one session are each correct (294.465125ms)
+✔ within one session: three Convs with an all-zero filter 0 are each correct (314.363792ms)
+✔ across sessions in one process: each zero-filter Conv stays its own (108.7135ms)
+✔ the check can fail: a conflated output is far outside the tolerance (105.614459ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1217.053

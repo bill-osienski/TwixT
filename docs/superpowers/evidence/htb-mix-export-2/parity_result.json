@@ -1,0 +1,386 @@
+{
+  "schema": "twixt-parity-result/1",
+  "specification": "docs/superpowers/2026-08-13-phase2-parity-specification.md",
+  "verdict": "PASS",
+  "positions_compared": 126,
+  "primary_compared": 120,
+  "edge_compared": 6,
+  "audit": {
+    "recompute": "node tests/parity/compare.mjs tests/parity/results/python_side.json.gz tests/parity/results/node_side.json.gz /tmp/verdict.json",
+    "note": "Reproduces this file byte for byte from the committed gzipped measurement halves; compare.mjs reads either form. This makes the VERDICT auditable from the repository alone. It does NOT make the measurement reproducible from scratch: the source checkpoint is untracked, so regenerating the halves requires calib020_0001 (SHA-1 209cf2d4fd24a48553d259dd71b4954867b9473e) from outside the repository."
+  },
+  "corpus_sha256": "3e5faab0680ea94169be44c4113bf21cc086a9f70e528e666c5f7a709e58099c",
+  "model_id": "627c8d774df838a8",
+  "graph_sha256": "3beaeed15a97f28c69e639b6c5ab2466f961a1aa75f232755e581d592fcb55af",
+  "source_checkpoint_sha1": "1d70df49c8c5cd6c7adb9c030bdf79c014b0bd00",
+  "scratch_export_path": "(not recorded)",
+  "node_loaded_through_manifest": true,
+  "environment": {
+    "python_side": {
+      "python": "3.13.15",
+      "platform": "darwin arm64",
+      "mlx": "0.30.3",
+      "mlx_metal": "0.30.3",
+      "torch": "2.10.0",
+      "onnx": "1.20.1",
+      "onnxruntime": "1.23.2",
+      "numpy": "2.4.1",
+      "onnx_producer": "pytorch 2.10.0",
+      "onnx_opset": 18,
+      "ort_providers": [
+        "CPUExecutionProvider"
+      ]
+    },
+    "node_side": {
+      "node": "v24.22.0",
+      "platform": "darwin arm64",
+      "onnxruntime_node": "1.23.2"
+    }
+  },
+  "gates": {
+    "s1_encoding": {
+      "positions": 126,
+      "encoding_mismatches": 0,
+      "legal_move_mismatches": 0,
+      "rule": "exact equality, tolerance zero",
+      "mechanism": "SHA-256 over canonical little-endian float32 NCHW bytes on both sides"
+    },
+    "masks": {
+      "violations": 0,
+      "rule": "every index >= n_legal is exactly -1e9",
+      "note": "Checked on both ONNX Runtime surfaces. Native MLX returns only n_legal logits and exposes no padded tail, so the check is not applicable there rather than skipped."
+    },
+    "equivariance": {
+      "mlx": {
+        "checked": 10,
+        "mismatches": []
+      },
+      "ort_py": {
+        "checked": 10,
+        "mismatches": []
+      },
+      "ort_node": {
+        "checked": 10,
+        "mismatches": []
+      }
+    },
+    "surfaces": {
+      "S2": {
+        "reference": "mlx",
+        "near_tie_band": 0.0002,
+        "max_abs_logit_diff": 0.00001430511474609375,
+        "max_abs_logit_at": "edge_one_move",
+        "mean_abs_logit_diff": 0.0000013848093404783454,
+        "max_abs_value_diff": 0.0000017285346984863281,
+        "max_abs_value_at": "midgame_08",
+        "top1_disagreements_outside_band": [],
+        "near_tie_exemptions": 0,
+        "near_tie_exemption_detail": [],
+        "topk_set_agreement": 1,
+        "kendall_tau_median": 1,
+        "kendall_tau_min": 0.9999688769237951,
+        "aggregate_gates_scope": "primary 120 positions only",
+        "edge_ordering": [
+          {
+            "id": "edge_empty_board",
+            "n_legal": 528,
+            "k": 5,
+            "top1_agree": true,
+            "top1_a": 257,
+            "top1_b": 257,
+            "ref_gap": 0.1735992431640625,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          },
+          {
+            "id": "edge_one_move",
+            "n_legal": 527,
+            "k": 5,
+            "top1_agree": true,
+            "top1_a": 449,
+            "top1_b": 449,
+            "ref_gap": 1.1125965118408203,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          },
+          {
+            "id": "edge_fewest_legal",
+            "n_legal": 1,
+            "k": 1,
+            "top1_agree": true,
+            "top1_a": 0,
+            "top1_b": 0,
+            "ref_gap": null,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          },
+          {
+            "id": "edge_over_512_legal",
+            "n_legal": 526,
+            "k": 5,
+            "top1_agree": true,
+            "top1_a": 249,
+            "top1_b": 249,
+            "ref_gap": 1.4380016326904297,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          },
+          {
+            "id": "edge_black_to_move",
+            "n_legal": 496,
+            "k": 5,
+            "top1_agree": true,
+            "top1_a": 173,
+            "top1_b": 173,
+            "ref_gap": 0.3661165237426758,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          },
+          {
+            "id": "edge_red_to_move",
+            "n_legal": 495,
+            "k": 5,
+            "top1_agree": true,
+            "top1_a": 256,
+            "top1_b": 256,
+            "ref_gap": 0.601146936416626,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          }
+        ],
+        "edge_ordering_note": "Reported individually, per the specification. These entries are deliberately extreme, so they are excluded from the percentage and median gates above; a top-1 flip outside the near-tie band is still a failure here, since that is a per-position rule rather than a rate.",
+        "edge_top1_failures": [],
+        "sign_mismatches": [],
+        "tolerances": {
+          "maxLogit": 0.0001,
+          "meanLogit": 0.00001,
+          "maxValue": 0.0001
+        },
+        "margins": {
+          "max_abs_logit": 0.00008569488525390625,
+          "mean_abs_logit": 0.000008615190659521655,
+          "max_abs_value": 0.00009827146530151368
+        }
+      },
+      "S3": {
+        "reference": "ort_py",
+        "near_tie_band": 0.00002,
+        "max_abs_logit_diff": 0,
+        "max_abs_logit_at": null,
+        "mean_abs_logit_diff": 0,
+        "max_abs_value_diff": 0,
+        "max_abs_value_at": null,
+        "top1_disagreements_outside_band": [],
+        "near_tie_exemptions": 0,
+        "near_tie_exemption_detail": [],
+        "topk_set_agreement": 1,
+        "kendall_tau_median": 1,
+        "kendall_tau_min": 0.9999812386259169,
+        "aggregate_gates_scope": "primary 120 positions only",
+        "edge_ordering": [
+          {
+            "id": "edge_empty_board",
+            "n_legal": 528,
+            "k": 5,
+            "top1_agree": true,
+            "top1_a": 257,
+            "top1_b": 257,
+            "ref_gap": 0.1735982894897461,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          },
+          {
+            "id": "edge_one_move",
+            "n_legal": 527,
+            "k": 5,
+            "top1_agree": true,
+            "top1_a": 449,
+            "top1_b": 449,
+            "ref_gap": 1.1125926971435547,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          },
+          {
+            "id": "edge_fewest_legal",
+            "n_legal": 1,
+            "k": 1,
+            "top1_agree": true,
+            "top1_a": 0,
+            "top1_b": 0,
+            "ref_gap": null,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          },
+          {
+            "id": "edge_over_512_legal",
+            "n_legal": 526,
+            "k": 5,
+            "top1_agree": true,
+            "top1_a": 249,
+            "top1_b": 249,
+            "ref_gap": 1.4380033016204834,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          },
+          {
+            "id": "edge_black_to_move",
+            "n_legal": 496,
+            "k": 5,
+            "top1_agree": true,
+            "top1_a": 173,
+            "top1_b": 173,
+            "ref_gap": 0.3661227226257324,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          },
+          {
+            "id": "edge_red_to_move",
+            "n_legal": 495,
+            "k": 5,
+            "top1_agree": true,
+            "top1_a": 256,
+            "top1_b": 256,
+            "ref_gap": 0.6011478900909424,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          }
+        ],
+        "edge_ordering_note": "Reported individually, per the specification. These entries are deliberately extreme, so they are excluded from the percentage and median gates above; a top-1 flip outside the near-tie band is still a failure here, since that is a per-position rule rather than a rate.",
+        "edge_top1_failures": [],
+        "sign_mismatches": [],
+        "tolerances": {
+          "maxLogit": 0.00001,
+          "meanLogit": 0.000001,
+          "maxValue": 0.00001
+        },
+        "margins": {
+          "max_abs_logit": 0.00001,
+          "mean_abs_logit": 0.000001,
+          "max_abs_value": 0.00001
+        }
+      },
+      "S4": {
+        "reference": "mlx",
+        "near_tie_band": 0.00022,
+        "max_abs_logit_diff": 0.00001430511474609375,
+        "max_abs_logit_at": "edge_one_move",
+        "mean_abs_logit_diff": 0.0000013848093404783454,
+        "max_abs_value_diff": 0.0000017285346984863281,
+        "max_abs_value_at": "midgame_08",
+        "top1_disagreements_outside_band": [],
+        "near_tie_exemptions": 0,
+        "near_tie_exemption_detail": [],
+        "topk_set_agreement": 1,
+        "kendall_tau_median": 1,
+        "kendall_tau_min": 0.9999688769237951,
+        "aggregate_gates_scope": "primary 120 positions only",
+        "edge_ordering": [
+          {
+            "id": "edge_empty_board",
+            "n_legal": 528,
+            "k": 5,
+            "top1_agree": true,
+            "top1_a": 257,
+            "top1_b": 257,
+            "ref_gap": 0.1735992431640625,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          },
+          {
+            "id": "edge_one_move",
+            "n_legal": 527,
+            "k": 5,
+            "top1_agree": true,
+            "top1_a": 449,
+            "top1_b": 449,
+            "ref_gap": 1.1125965118408203,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          },
+          {
+            "id": "edge_fewest_legal",
+            "n_legal": 1,
+            "k": 1,
+            "top1_agree": true,
+            "top1_a": 0,
+            "top1_b": 0,
+            "ref_gap": null,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          },
+          {
+            "id": "edge_over_512_legal",
+            "n_legal": 526,
+            "k": 5,
+            "top1_agree": true,
+            "top1_a": 249,
+            "top1_b": 249,
+            "ref_gap": 1.4380016326904297,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          },
+          {
+            "id": "edge_black_to_move",
+            "n_legal": 496,
+            "k": 5,
+            "top1_agree": true,
+            "top1_a": 173,
+            "top1_b": 173,
+            "ref_gap": 0.3661165237426758,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          },
+          {
+            "id": "edge_red_to_move",
+            "n_legal": 495,
+            "k": 5,
+            "top1_agree": true,
+            "top1_a": 256,
+            "top1_b": 256,
+            "ref_gap": 0.601146936416626,
+            "within_near_tie_band": false,
+            "topk_set_agree": true,
+            "kendall_tau": 1
+          }
+        ],
+        "edge_ordering_note": "Reported individually, per the specification. These entries are deliberately extreme, so they are excluded from the percentage and median gates above; a top-1 flip outside the near-tie band is still a failure here, since that is a per-position rule rather than a rate.",
+        "edge_top1_failures": [],
+        "sign_mismatches": [],
+        "tolerances": {
+          "maxLogit": 0.00011,
+          "meanLogit": 0.000011,
+          "maxValue": 0.00011
+        },
+        "margins": {
+          "max_abs_logit": 0.00009569488525390625,
+          "mean_abs_logit": 0.000009615190659521654,
+          "max_abs_value": 0.00010827146530151368
+        }
+      }
+    },
+    "value": {
+      "raw_range_violations": 0,
+      "red_perspective_max_abs_diff": 0,
+      "red_perspective_tolerance": 0.000001,
+      "note": "Both conversions are applied to the same fixed synthetic side-to-move values, so this isolates the conversion logic instead of re-measuring the S3 model difference."
+    }
+  },
+  "failures": []
+}

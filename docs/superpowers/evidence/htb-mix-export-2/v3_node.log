@@ -1,0 +1,4 @@
+ONNX model loaded: /Users/bill/twixt-cache/htb-mix/export/627c8d774df838a8/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+wrote /Users/bill/twixt-cache/htb-mix/export-scratch/v3_node.json (126 positions)
