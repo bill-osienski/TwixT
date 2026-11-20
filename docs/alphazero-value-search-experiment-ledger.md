@@ -318,6 +318,7 @@ knob) is not a new hypothesis.
 > **H-MX export and parity VOID before any export step; nothing exported; no retry (Post-closure entry 75, 2026-11-20).** Gate `09f5ad9a` → evidence `a7c2d2f2`: inner and outer exit 1 (CRASHED), wall 0 s, clean, gate restored, wrapper-written VOID record. `runtime_versions` could not read `node_modules/onnxruntime-node/package.json`: the launch worktree had no `node_modules` (H-OP's launches APFS-cloned it; this launch skipped that step — my procedural error). No exporter, canary or parity step ran; the challenger `5dafde11…` is unchanged. The stage's one-shot evidence now exists; a further attempt needs the user's reviewed decision. See #215.
 > **H-MX export amendment 1 (draft, `f8ce7792…`): export attempt 2, and its model-free build (`c63f8562`); returned for launch approval; all gates closed; nothing run (amendment note, 2026-11-20).** `run export-2` runs the unchanged export into fresh, create-only evidence (`htb-mix-export-2/`), bound to attempt 1's committed VOID record and outer.json, with the same gate, exporter, checks, tolerances and 3,600 s ceiling. Launch procedure: APFS-clone `node_modules` and verify from the worktree that Node resolves onnxruntime-node 1.23.2 there, before the gate commit; the derived wrapper repeats this as a preflight before the idle gate and refuses cleanly on a miss (tested by running the real wrapper). The match driver, analyser (re-pinned `80e741d0…`) and both match wrappers read attempt 2 only; attempt 1 cannot admit a match. Tests: export-2 26, H-MX 62, recovery 37, Node 21/21; eight mutants caught. See #216.
 > **H-MX export attempt 2 COMPLETED: PARITY_PASS; returned for separate match-smoke approval (Post-closure entry 76, 2026-11-20).** Gate `79270161` → evidence `eeee04b7`: `node_modules` APFS-cloned and onnxruntime-node 1.23.2 resolved from the worktree before the gate commit; preflight passed. Verified challenger `5dafde11…` (`adba50fb…`) exported once to pair `627c8d774df838a8` (graph `3beaeed1…`, data `cf78b17f…`) in `~/twixt-cache/htb-mix/export/`, outside the product manifest; `HARD_MODEL_ID` unchanged. Graph signature equal to `78c16a31c3dba37f`'s; Python (ORT 1.23.2) and Node canaries pass; S1–S4 PASS on 126 positions (S2/S4 max logit 1.43e-5, S3 exactly 0); V3 mirror-averaged PASS (max prior 1.07e-6, value 2.32e-6). Wall 9 s under KILL 3,600 s, clean. The match driver admits the record read-only. See #217.
+> **H-MX match smoke COMPLETED; timing LAUNCH_OK; returned for a separate decision on the 400-pair match (Post-closure entry 77, 2026-11-20).** Gate `089389b4` → evidence `561c8886` → timing `c5f1edf2`: `node_modules` APFS-cloned and onnxruntime-node 1.23.2 resolved from the worktree before the gate commit; 4 games (2 colour-reversed pairs, 25–31 plies), challenger `627c8d774df838a8` vs current `78c16a31c3dba37f`, both 200 simulations; wall 124 s under KILL 1,800 s, clean, gate restored. Frozen analyser (`80e741d0…`): mean game 31.004 s, projection 24,803.0 s (6.89 h) for 800 games, 1.5 × = 37,204.6 s (10.33 h) ≤ 64,800 s. timing.json committed beside the smoke record (re-derives byte-equal; driver admission clean). Outcomes unread. See #218.
 
 ## Historical proposal check — programme now closed
 
@@ -2168,6 +2169,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 215. **The H-MX export attempt is VOID (2026-11-20, entry 75).** Do **not**: relaunch the export automatically, or by deleting, moving or editing `docs/superpowers/evidence/htb-mix-export/` or `htb-mix-export-run/` to get past the one-shot checks; read the VOID record as a parity result in either direction; open `HTB_MIX_EXPORT_AUTHORIZED` again without the user's reviewed decision on how a second attempt is recorded; launch any stage that runs Node or reads `node_modules` from a linked worktree without first APFS-cloning `node_modules` into it (`cp -c -R`, not a symlink) before the gate-opening commit and checking that `node_modules/onnxruntime-node/package.json` exists; or touch the verified challenger (`5dafde11…`).
 216. **H-MX export amendment 1 (2026-11-20).** Do **not**: open `HTB_MIX_EXPORT_AUTHORIZED` or launch attempt 2 before the user's review of the amendment and approval of the launch; make the gate-opening commit before `node_modules` is APFS-cloned into the worktree and Node, run from it, resolves `<W>/node_modules/onnxruntime-node/package.json` at 1.23.2; symlink `node_modules` or accept another version; write, move or edit attempt 1's evidence or point any stage back at it; change the exporter, a qualification step, a tolerance or the ceiling; run a third export attempt under this amendment; or start a match stage from anything but a COMPLETED, PARITY_PASS attempt-2 record carrying `attempt: 2` and the amendment's sha256. A change to the amendment after review is re-pinned and rebuilt, with the analyser re-pinned in both match wrappers, before any gate opens.
 217. **H-MX export attempt 2 is spent: PARITY_PASS (2026-11-20, entry 76).** Do **not**: re-export, re-run parity or run a third export attempt; edit, move, re-place or overwrite pair `627c8d774df838a8` (graph `3beaeed1…`, data `cf78b17f…`), its manifest, the challenger `5dafde11…` or either export attempt's evidence; serve the pair, add it to the product manifest or change `HARD_MODEL_ID` on this evidence (parity qualifies the export for the match, and is no strength result); or open `MIX_MATCH_SMOKE_AUTHORIZED` or `MIX_MATCH_AUTHORIZED`, or play any game, before the user's approval of that stage. A match-stage launch worktree must APFS-clone `node_modules` and verify onnxruntime-node 1.23.2 from it before its gate commit (#215, #216).
+218. **The H-MX match smoke is spent (2026-11-20, entry 77).** Do **not**: re-run, extend or top up the smoke; read, report, count or score its four games' outcomes (they are replay-validated for admission and excluded from every report, card §9); edit, re-derive into another path or replace `htb-mix-match-smoke/timing.json` (`467136ac…`); read LAUNCH_OK as anything but a timing feasibility result; or open `MIX_MATCH_AUTHORIZED` or launch the 400-pair match before the user's separate approval. That launch needs a clean worktree with `node_modules` APFS-cloned and onnxruntime-node 1.23.2 verified from it before the gate commit, the frozen wrapper's re-derivation of timing.json, and its fixed 64,800 s ceiling (never raised).
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -12970,3 +12972,59 @@ The proposal note and revision 1 note above stay as written. This correction sup
   **proposing** the match smoke (§9, §11: 2 colour-reversed pairs, ceiling 1,800 s, gate `MIX_MATCH_SMOKE_AUTHORIZED`),
   which needs its own approval. Nothing has been played. `HARD_MODEL_ID` is unchanged. All gates are closed. Branch
   `htb-integration-g1` at `eeee04b7` plus this entry; not pushed. See #217.
+
+#### Post-closure entry 77 — H-MX match smoke: 2 colour-reversed pairs, challenger `627c8d774df838a8` vs current `hard` `78c16a31c3dba37f`; COMPLETED; timing LAUNCH_OK; returned for a decision on the 400-pair match (2026-11-20)
+
+- **Test:** H-MX card revision 1 §9 and §11, the match smoke. The two frozen `match_smoke` openings
+  (`htb-mix/20261118/match smoke/…`) are each played twice with colours reversed: the challenger (the export
+  qualified by entry 76, read through export attempt 2's record) against the current `hard`, both through
+  protocolMove at 200 simulations, under the product's game-end rule. The games are unscored. Then the frozen
+  analyser (`mix_match_analyse.mjs`, sha256 `80e741d0…`, pinned in both match wrappers) projects the 400-pair match
+  from wall times only.
+- **Hypothesis:** the 400-pair match fits its fixed 18 h ceiling: 1.5 × (startup + mean game time × 800) ≤ 64,800 s.
+- **Why it was plausible:** the card's planning figure was an 8.5 h match (§1), and H-OP's smoke (entry 71) measured
+  32.0 s per game with the same players' budget.
+- **Prediction on record:** none stated in advance (the 8.5 h was a planning figure).
+- **What ran:** the user's approval (2026-11-20), from `276bbd2c`.
+  - **Before launch:** BOINC absent (only the exempt podman VM), no Unreal process, load about 2.0. The exported pair
+    was present.
+  - **Launch worktree:** `/Users/bill/projects/TwixT_Game-mix-msmoke`, branch `htb-mix-match-smoke-launch`.
+    `node_modules` was APFS-cloned (a real directory). From the worktree, Node resolved
+    `onnxruntime-node/package.json` to the worktree's own copy, at 1.23.2. The tree was clean.
+  - **Gate commit:** one line, `089389b4` (`MIX_MATCH_SMOKE_AUTHORIZED = true`). `MIX_MATCH_AUTHORIZED` stayed false,
+    and no Python gate was open.
+  - **The frozen wrapper ran once.** Its preconditions passed: the pinned analyser, the committed PARITY_PASS attempt-2
+    export record naming the challenger directory, the ONNX Runtime shutdown test and onnxruntime-node 1.23.2. Then
+    the idle gate held 60 s and the background check was CLEAR. It ran `mix_match.mjs run smoke` (pid and pgid
+    21798).
+- **Result: COMPLETED (inner and outer exit 0).** Wall 124 s against KILL 1,800 s. Gate restored (file identical to
+  `276bbd2c`'s), no survivors (pgrep on pgid 21798 empty, no driver process), record written by the script, stderr
+  empty.
+  - **Record:** COMPLETED, 4 games, 2 pairs. Startup 0.026 s; total 124.0 s. Search seconds: challenger 61.98,
+    current 62.03.
+    - Challenger `627c8d774df838a8`: graph `3beaeed1…`, data `cf78b17f…`, source `5dafde11…`. The loaded graph
+      equals the export record's.
+    - Current `78c16a31c3dba37f` (onnx `bc68a274…`).
+    - Both MirrorAveragingInference, `hard`, 200 simulations, protocol search, moveTemp 1. Openings `f4ae110f…`.
+      Node v24.22.0, onnxruntime-node 1.23.2.
+    - **No outcome field was read.**
+  - **Commits:** the evidence and the restored gate, by exact paths, at `561c8886`. Checked: the tree clean, both gate
+    lines false, the gate file identical to `276bbd2c`'s. Fast-forwarded as its own step.
+  - **Timing:** the frozen analyser's `timing`, after checking its sha256 against the match wrapper's pin. It was
+    written create-only to `docs/superpowers/evidence/htb-mix-match-smoke/timing.json` (sha256 `467136ac…`). That is
+    beside the smoke's `record.json`, at the match wrapper's `TIMING_REL`. Committed at `c5f1edf2`, then
+    fast-forwarded.
+  - **Checks:** a second analyser run re-derives the file byte for byte (the match wrapper requires this), and the
+    driver's `smokeEvidenceProblems()` reports none.
+  - **Timing (wall times only):**
+    - mean game 31.004 s (smoke plies 31, 31, 25, 27);
+    - projection 24,803.0 s (6.89 h) for 800 games;
+    - **1.5 × = 37,204.6 s (10.33 h) ≤ 64,800 s: LAUNCH_OK.**
+- **Did it match the prediction?** None was stated. The projection (6.89 h) is below the card's 8.5 h planning figure.
+  The mean game (31.0 s) is close to H-OP's 32.0 s.
+- **Conclusion / status:** the 400-pair match is feasible under its fixed 18 h ceiling, by the frozen launch rule. This
+  is a timing result only. The smoke's four games are replay-validated on admission and excluded from scoring and
+  every report. The 400-pair match needs the user's separate approval. Gate `MIX_MATCH_AUTHORIZED`; wrapper
+  `htb-mix-match-run/01_wrapper.sh`, TERM 64,790 s / KILL 64,800 s; a launch worktree with `node_modules` APFS-cloned
+  and 1.23.2 verified before the gate commit. Nothing else has been played, `HARD_MODEL_ID` is unchanged, and all
+  gates are closed. Branch `htb-integration-g1` at `c5f1edf2` plus this entry; not pushed. See #218.
