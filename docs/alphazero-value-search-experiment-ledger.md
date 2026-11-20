@@ -317,6 +317,7 @@ knob) is not a new hypothesis.
 > **H-MX recovery replay COMPLETED, ELIGIBLE: the failed fit reproduced exactly and the challenger is saved and verified; returned for an export decision (Post-closure entry 74, 2026-11-20).** Gate `be1b7aba` → evidence `9a9910d6`: one exact replay under amendment 1 (`8d6e3866…`, approved as written), bound to entry 73's record `6507d588…`. Selection, start check and the whole fit record (300 logged steps) equal to the failed run's; trained-state digest `adba50fb…`. The run created `~/twixt-cache/htb-mix`; `challenger.safetensors` (sha256 `5dafde11…`) saved create-only, reloaded strictly at `adba50fb…`, sha256 verified. No validation scoring; M1–M6 carried forward from entry 73 (all held). Wall 5,875 s under KILL 11,700 s, clean, gate restored. Prediction (reproduction about 75%, save and reload about 98%) met. Export admission passes read-only; nothing exported. See #214.
 > **H-MX export and parity VOID before any export step; nothing exported; no retry (Post-closure entry 75, 2026-11-20).** Gate `09f5ad9a` → evidence `a7c2d2f2`: inner and outer exit 1 (CRASHED), wall 0 s, clean, gate restored, wrapper-written VOID record. `runtime_versions` could not read `node_modules/onnxruntime-node/package.json`: the launch worktree had no `node_modules` (H-OP's launches APFS-cloned it; this launch skipped that step — my procedural error). No exporter, canary or parity step ran; the challenger `5dafde11…` is unchanged. The stage's one-shot evidence now exists; a further attempt needs the user's reviewed decision. See #215.
 > **H-MX export amendment 1 (draft, `f8ce7792…`): export attempt 2, and its model-free build (`c63f8562`); returned for launch approval; all gates closed; nothing run (amendment note, 2026-11-20).** `run export-2` runs the unchanged export into fresh, create-only evidence (`htb-mix-export-2/`), bound to attempt 1's committed VOID record and outer.json, with the same gate, exporter, checks, tolerances and 3,600 s ceiling. Launch procedure: APFS-clone `node_modules` and verify from the worktree that Node resolves onnxruntime-node 1.23.2 there, before the gate commit; the derived wrapper repeats this as a preflight before the idle gate and refuses cleanly on a miss (tested by running the real wrapper). The match driver, analyser (re-pinned `80e741d0…`) and both match wrappers read attempt 2 only; attempt 1 cannot admit a match. Tests: export-2 26, H-MX 62, recovery 37, Node 21/21; eight mutants caught. See #216.
+> **H-MX export attempt 2 COMPLETED: PARITY_PASS; returned for separate match-smoke approval (Post-closure entry 76, 2026-11-20).** Gate `79270161` → evidence `eeee04b7`: `node_modules` APFS-cloned and onnxruntime-node 1.23.2 resolved from the worktree before the gate commit; preflight passed. Verified challenger `5dafde11…` (`adba50fb…`) exported once to pair `627c8d774df838a8` (graph `3beaeed1…`, data `cf78b17f…`) in `~/twixt-cache/htb-mix/export/`, outside the product manifest; `HARD_MODEL_ID` unchanged. Graph signature equal to `78c16a31c3dba37f`'s; Python (ORT 1.23.2) and Node canaries pass; S1–S4 PASS on 126 positions (S2/S4 max logit 1.43e-5, S3 exactly 0); V3 mirror-averaged PASS (max prior 1.07e-6, value 2.32e-6). Wall 9 s under KILL 3,600 s, clean. The match driver admits the record read-only. See #217.
 
 ## Historical proposal check — programme now closed
 
@@ -2166,6 +2167,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 214. **The H-MX recovery is spent and verified (2026-11-20, entry 74).** Do **not**: run the replay again, or re-fit H-MX under this card; re-score either cached validation set, or present M1–M6 as fresh held-out estimates (they are entry 73's one-time screens, carried forward to the same trained state); edit, move, re-save or overwrite `~/twixt-cache/htb-mix/challenger.safetensors` (sha256 `5dafde11…`, state `adba50fb…`), or export any other file as the H-MX challenger; open `HTB_MIX_EXPORT_AUTHORIZED`, export, run parity or play a match before the user's approval of that stage; deploy the challenger or change `HARD_MODEL_ID` on this evidence (ELIGIBLE is a screen verdict, not a strength result); or cite this single cross-process repeat as proof that MLX CPU fits are deterministic in general.
 215. **The H-MX export attempt is VOID (2026-11-20, entry 75).** Do **not**: relaunch the export automatically, or by deleting, moving or editing `docs/superpowers/evidence/htb-mix-export/` or `htb-mix-export-run/` to get past the one-shot checks; read the VOID record as a parity result in either direction; open `HTB_MIX_EXPORT_AUTHORIZED` again without the user's reviewed decision on how a second attempt is recorded; launch any stage that runs Node or reads `node_modules` from a linked worktree without first APFS-cloning `node_modules` into it (`cp -c -R`, not a symlink) before the gate-opening commit and checking that `node_modules/onnxruntime-node/package.json` exists; or touch the verified challenger (`5dafde11…`).
 216. **H-MX export amendment 1 (2026-11-20).** Do **not**: open `HTB_MIX_EXPORT_AUTHORIZED` or launch attempt 2 before the user's review of the amendment and approval of the launch; make the gate-opening commit before `node_modules` is APFS-cloned into the worktree and Node, run from it, resolves `<W>/node_modules/onnxruntime-node/package.json` at 1.23.2; symlink `node_modules` or accept another version; write, move or edit attempt 1's evidence or point any stage back at it; change the exporter, a qualification step, a tolerance or the ceiling; run a third export attempt under this amendment; or start a match stage from anything but a COMPLETED, PARITY_PASS attempt-2 record carrying `attempt: 2` and the amendment's sha256. A change to the amendment after review is re-pinned and rebuilt, with the analyser re-pinned in both match wrappers, before any gate opens.
+217. **H-MX export attempt 2 is spent: PARITY_PASS (2026-11-20, entry 76).** Do **not**: re-export, re-run parity or run a third export attempt; edit, move, re-place or overwrite pair `627c8d774df838a8` (graph `3beaeed1…`, data `cf78b17f…`), its manifest, the challenger `5dafde11…` or either export attempt's evidence; serve the pair, add it to the product manifest or change `HARD_MODEL_ID` on this evidence (parity qualifies the export for the match, and is no strength result); or open `MIX_MATCH_SMOKE_AUTHORIZED` or `MIX_MATCH_AUTHORIZED`, or play any game, before the user's approval of that stage. A match-stage launch worktree must APFS-clone `node_modules` and verify onnxruntime-node 1.23.2 from it before its gate commit (#215, #216).
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -12906,3 +12908,65 @@ The proposal note and revision 1 note above stay as written. This correction sup
 - **Status:** amendment drafted and pinned; build committed. All gates closed. Nothing exported, qualified or played.
   The challenger `5dafde11…` is unchanged. Returned for review of the amendment and separate approval of the
   attempt-2 launch. See #216.
+
+#### Post-closure entry 76 — H-MX export attempt 2: verified challenger `5dafde11…` exported once to `627c8d774df838a8`; COMPLETED; PARITY_PASS; returned for match-smoke approval (2026-11-20)
+
+- **Test:** H-MX card revision 1 §8, under export amendment 1 (`f8ce7792…`, approved as written 2026-11-20): one
+  export of the verified challenger (`~/twixt-cache/htb-mix/challenger.safetensors`, sha256 `5dafde11…`, state
+  `adba50fb…`, entry 74) with the unmodified exporter, placed outside the product manifest. Then the frozen
+  qualification: the graph signature against `78c16a31c3dba37f`'s, both runtime canaries, S1–S4 and V3
+  mirror-averaged parity. Fresh evidence (`htb-mix-export-2/`, `htb-mix-export-2-run/`); attempt 1 (entry 75)
+  untouched.
+- **Hypothesis:** the unmodified H-OP exporter and qualification tools export and qualify the H-MX challenger, as they
+  did H-OP's (entry 70).
+- **Prediction on record:** none stated in advance (card §15 predicts only the fit gate and the match).
+- **What ran:** the user's approval (2026-11-20), from `619bfa1d`. Clean linked worktree `TwixT_Game-mix-export-2`
+  (branch `htb-mix-export-2-launch`).
+  - **Before the gate commit (amendment §3):** `node_modules` was APFS-cloned (`cp -c -R`; a real directory, not a
+    symlink). From the worktree, Node resolved `onnxruntime-node/package.json` (starting from `server/inference.js`) to
+    the worktree's own `node_modules/onnxruntime-node/package.json`, at version 1.23.2. `git status --porcelain` was
+    empty.
+  - Gate-opening commit `79270161` (one line, `HTB_MIX_EXPORT_AUTHORIZED`), wrapper
+    `docs/superpowers/evidence/htb-mix-export-2-run/01_wrapper.sh` (TERM 3,590 s, KILL 3,600 s). The wrapper's Node
+    preflight passed. BOINC quit (the check exempted only the podman VM's gvproxy and krunkit) and Unreal Editor
+    closed. The idle gate held 60 s. pid 20122.
+  - Closing commit `eeee04b7` (evidence as written, gate restored), fast-forwarded into `htb-integration-g1`.
+- **Result: COMPLETED, PARITY_PASS (inner and outer exit 0).** Wall 9 s under KILL 3,600 s. No survivors; the gate
+  restored (byte-identical to `619bfa1d`'s); run stdout and stderr empty; record written by the script (sha256
+  `b2a1e17b…`; `outer.json` `4a72c582…`).
+  - **Bindings:** the recovery admission (record `bcd88f3b…`, challenger `5dafde11…`, sha1 `1d70df49…`, state
+    `adba50fb…`); attempt 1's VOID record (`127f0607…`) and `outer.json` (`7dab1072…`); amendment `f8ce7792…`;
+    `node_dependency` onnxruntime-node 1.23.2 from the worktree. Runtime: Python 3.14.10, MLX 0.30.3, torch 2.10.0,
+    onnx 1.20.1, numpy 2.4.1, Node v24.22.0, onnxruntime-node 1.23.2.
+  - **Export:** pair **`627c8d774df838a8`** (graph `3beaeed1…`, external data `cf78b17f…`) in
+    `~/twixt-cache/htb-mix/export/627c8d774df838a8/`, with an H-MX manifest. Scratch is kept in
+    `~/twixt-cache/htb-mix/export-scratch/`, as with H-OP's. `HARD_MODEL_ID`, the product manifest and every
+    tracked file outside the two evidence folders are unchanged.
+  - **Graph:** the signature (ops, inputs, outputs, initializer shapes) equals `78c16a31c3dba37f`'s (`a022f29b…`
+    both).
+  - **Canaries:** Python ORT 1.23.2 in the isolated venv PASS (8 cases, max error 2.2e-6 against 1e-3); Node
+    `test_ort_conv_canary.js` 6/6.
+  - **S1–S4 (V2-R, 126 positions: 120 primary, 6 edge): PASS.**
+    - S1: 0 encoding mismatches, 0 legal-move mismatches.
+    - Masks: 0 violations. Equivariance: 0 mismatches on each surface.
+    - S2/S4: max logit 1.43e-5 against 1.1e-4, mean 1.38e-6 against 1.1e-5, max value 1.73e-6. Top-1
+      disagreements 0, top-k 100%, minimum tau 0.99997.
+    - S3 (ORT Python against Node): exactly 0.
+    - Edge positions: 6/6 top-1. Red-perspective conversion diff 0. No failures.
+  - **V3 (mirror-averaged, research evaluator against product inference): PASS.** Max prior 1.07e-6 against 1.1e-4,
+    mean prior 2.5e-9, max value 2.32e-6. Top-1 outside band none, top-k agreement 1, minimum tau 0.99998, no sign
+    or range violations. The report's free-text side label reads "H-OP challenger", as the module docstring says
+    it would. The Python side's state digest `adba50fb…` and model id `627c8d774df838a8` identify the files
+    actually compared.
+  - **Independent checks after the run:**
+    - The pair's files hash to the record's and the manifest's values, and the challenger is still `5dafde11…`.
+    - Nothing was left running, and no tracked file outside the evidence changed.
+    - The match driver's `exportRecordProblems`, run read-only on the committed state with
+      `--challenger-dir ~/twixt-cache/htb-mix/export/627c8d774df838a8`, **admits** it. The analyser's export-wrapper
+      check is clean, and the record carries `attempt: 2` and the amendment's pin.
+- **Did it match the prediction?** None was stated. For reference, H-OP's export (entry 70) gave S2/S4 max logit
+  1.9e-5 and V3 1.3e-6 / 2.9e-6; this run is of the same order.
+- **Conclusion / status:** the H-MX challenger is exported and qualified, PARITY_PASS. Under card §13 this permits
+  **proposing** the match smoke (§9, §11: 2 colour-reversed pairs, ceiling 1,800 s, gate `MIX_MATCH_SMOKE_AUTHORIZED`),
+  which needs its own approval. Nothing has been played. `HARD_MODEL_ID` is unchanged. All gates are closed. Branch
+  `htb-integration-g1` at `eeee04b7` plus this entry; not pushed. See #217.
