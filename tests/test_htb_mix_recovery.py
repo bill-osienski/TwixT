@@ -67,10 +67,13 @@ def test_THE_GATE_IS_CLOSED_AND_THE_ENTRY_REFUSES_WRITING_NOTHING(capsys):
     text = (ROOT / "scripts/GPU/alphazero/htb_mix_recovery_authorization.py").read_text()
     assert [ln for ln in text.split('"""')[-1].splitlines() if ln.strip()] == ["HTB_MIX_RECOVERY_AUTHORIZED = False"]
     assert R.gate_open("recovery") is False
-    cache_before = M.CACHE.exists()
+    # compared before and after, not asserted absent: the recovery's evidence and the cache exist since entry 74
+    snap = lambda: [sorted(p.name for p in d.iterdir()) if d.exists() else None  # noqa: E731
+                    for d in (ROOT / R.EV, ROOT / R.OUTER, M.CACHE)]
+    before = snap()
     assert R.main(["run", "replay"]) == P.EXIT["REFUSED"]
     assert "HTB_MIX_RECOVERY_AUTHORIZED is closed" in capsys.readouterr().err
-    assert not (ROOT / R.EV).exists() and M.CACHE.exists() == cache_before
+    assert snap() == before
 
 
 def test_THE_WRAPPER_IS_ITS_DERIVATION_WITH_THE_FITS_CEILING():

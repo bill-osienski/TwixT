@@ -10,7 +10,9 @@
  * stage's ceiling (TERM = KILL - 10 s); outer and inner records name the same launch commit; pgid.txt is the driver's
  * pid; record.json is COMPLETED with the stage's kill_s, onnxruntime-node 1.23.2, the current hard 78c16a31c3dba37f, the
  * challenger the committed H-MX export record names, the 200-simulation protocol policy and the pinned openings file;
- * the export wrapper's evidence is a clean completion bound to the export record; every scheduled game file exists, and
+ * the export record is EXPORT ATTEMPT 2's (docs/superpowers/2026-11-20-htb-mix-export-attempt-2-amendment.md §4:
+ * htb-mix-export-2/, `attempt: 2`, that amendment's sha256; attempt 1, VOID, is never read) and its wrapper's evidence
+ * is a clean completion bound to it; every scheduled game file exists, and
  * nothing else; every game replays legally from the empty board under the product's game-end rule; its opening,
  * colours, result and score equal what is re-derived here; it has exactly one per-move row per played ply from ply 4,
  * in order, each carrying the re-derived seeds, a 200-simulation budget and 200 root visits spent, on BOTH sides.
@@ -44,10 +46,13 @@ export const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..
 const NS = 'htb-mix/20261118';
 const OPENINGS_REL = 'docs/superpowers/evidence/htb-mix-openings/openings.json';
 const OPENINGS_SHA256 = 'f4ae110ff9e7547e413b15fff29ca0ff94d34c5f21d5d8b7da76af6577ee3563';
-const EXPORT_REL = 'docs/superpowers/evidence/htb-mix-export/record.json';
-const EXPORT_KIND = 'htb-mix-export-record/1';
-/** The export stage's wrapper evidence (card §8, §11); its ceiling, 3,600 s, is H-OP's, checked by exportWrapperFailures. */
-export const EXPORT_OUTER_REL = 'docs/superpowers/evidence/htb-mix-export-run';
+/** Export attempt 2's record (export amendment 1, §4); attempt 1's (htb-mix-export/, VOID, entry 75) is never read. */
+export const EXPORT_REL = 'docs/superpowers/evidence/htb-mix-export-2/record.json';
+export const EXPORT_KIND = 'htb-mix-export-record/1';
+export const EXPORT_ATTEMPT = 2;
+export const EXPORT_AMENDMENT_SHA256 = 'f8ce7792afc73fc3262ff0fb6aff58925d4b060d6b9a97b38fff94ea7c2ac032';
+/** The export stage's wrapper evidence (card §8, §11; attempt 2); its ceiling, 3,600 s, is H-OP's, checked by exportWrapperFailures. */
+export const EXPORT_OUTER_REL = 'docs/superpowers/evidence/htb-mix-export-2-run';
 export const PAIRS = { smoke: 2, match: 400 };
 export const MATCH_CAP_S = 64800;
 export const KILL_S = { smoke: 1800, match: 64800 };
@@ -240,6 +245,7 @@ export function bindingFailures({ outer: o, record: rec, pgid, stage, exportReco
   if (rec?.openings_sha256 !== OPENINGS_SHA256) f.push('the record does not name the pinned openings');
   const c = exportRecord?.challenger;
   if (exportRecord?.kind !== EXPORT_KIND || exportRecord?.status !== 'COMPLETED' || exportRecord?.verdict !== 'PARITY_PASS') f.push('the export record is not a COMPLETED PARITY_PASS H-MX export record');
+  if (exportRecord?.attempt !== EXPORT_ATTEMPT || exportRecord?.export_amendment_sha256 !== EXPORT_AMENDMENT_SHA256) f.push('the export record is not export attempt 2 under its amendment');
   for (const k of ['model_id', 'dir', 'graph_sha256', 'external_data_sha256', 'source_sha256']) {
     if (!c?.[k] || rec?.challenger?.[k] !== c[k]) f.push(`challenger ${k} is not the export record's`);
   }

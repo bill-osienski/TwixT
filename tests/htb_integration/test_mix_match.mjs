@@ -6,9 +6,9 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 
 import { TwixtState } from '../../server/gameLogic.js';
@@ -182,6 +182,61 @@ function putExportOuter(root, rec, over = {}) {
   for (const f of ['idle_check.txt', 'bg_check.txt']) writeFileSync(join(dir, f), 'ok\n');
 }
 const OUTER_TIMEOUT = { inner_exit: 124, outcome: 'TIMEOUT', outer_exit: 124 };
+/** What export attempt 2's record carries (export amendment 1, §2, §4). */
+const ATTEMPT_2 = { attempt: 2, export_amendment_sha256: AN.EXPORT_AMENDMENT_SHA256 };
+/** Export attempt 1's committed evidence (ledger entry 75, VOID), never read by the match stages. */
+const A1_REC = 'docs/superpowers/evidence/htb-mix-export/record.json';
+const A1_OUTER = 'docs/superpowers/evidence/htb-mix-export-run';
+const copyA1 = (root, recRel, outerRel) => {
+  mkdirSync(join(root, dirname(recRel)), { recursive: true });
+  mkdirSync(join(root, outerRel), { recursive: true });
+  writeFileSync(join(root, recRel), readFileSync(join(D.REPO_ROOT, A1_REC)));
+  for (const f of readdirSync(join(D.REPO_ROOT, A1_OUTER))) writeFileSync(join(root, outerRel, f), readFileSync(join(D.REPO_ROOT, A1_OUTER, f)));
+};
+
+test('export attempt 1 (the committed VOID record, entry 75) can never admit a match: only attempt 2 is read', async () => {
+  // the paths: the driver, the analyser and both wrappers read attempt 2's evidence only
+  assert.equal(D.EXPORT_REL, 'docs/superpowers/evidence/htb-mix-export-2/record.json');
+  assert.equal(AN.EXPORT_REL, D.EXPORT_REL);
+  assert.equal(AN.EXPORT_OUTER_REL, 'docs/superpowers/evidence/htb-mix-export-2-run');
+  assert.equal(AN.EXPORT_ATTEMPT, 2);
+  assert.equal(AN.EXPORT_AMENDMENT_SHA256, sha(readFileSync(join(D.REPO_ROOT, 'docs/superpowers/2026-11-20-htb-mix-export-attempt-2-amendment.md'))));
+  for (const f of ['mix_match.mjs', 'mix_match_analyse.mjs']) {
+    const src = readFileSync(join(D.REPO_ROOT, 'tests/htb_integration', f), 'utf8');
+    assert.ok(!src.includes('evidence/htb-mix-export/') && !src.includes("evidence/htb-mix-export-run'"), f);
+  }
+  for (const stage of ['smoke', 'match']) {
+    const w = readFileSync(join(D.REPO_ROOT, D.OUTER_REL[stage], '01_wrapper.sh'), 'utf8');
+    assert.ok(!w.includes('evidence/htb-mix-export/') && !w.includes('evidence/htb-mix-export-run'), stage);
+  }
+  const voidRec = JSON.parse(readFileSync(join(D.REPO_ROOT, A1_REC), 'utf8'));
+  assert.equal(voidRec.status, 'VOID');
+  const okGit = () => ({ status: 0, stdout: '' });
+  // 1. attempt 1's real committed evidence at its own paths, nothing for attempt 2: the driver finds no export record
+  const root = mkdtempSync(join(tmpdir(), 'mx-a1-'));
+  copyA1(root, A1_REC, A1_OUTER);
+  assert.deepEqual(D.exportRecordProblems('/nonexistent', { root, g: okGit }), [`${D.EXPORT_REL} is missing`]);
+  // 2. the same VOID record and wrapper files copied into attempt 2's paths: refused on every count
+  copyA1(root, D.EXPORT_REL, AN.EXPORT_OUTER_REL);
+  const probs = D.exportRecordProblems('/nonexistent', { root, g: okGit });
+  for (const re of [/status "VOID"/, /verdict undefined/, /attempt undefined/, /export_amendment_sha256 undefined/, /challenger.model_id missing/]) {
+    assert.ok(probs.some((p) => re.test(p)), `${re} in ${probs.join('; ')}`);
+  }
+  // 3. the analyser's binding check, given the VOID record as the export record
+  const bf = AN.bindingFailures({ outer: {}, record: {}, pgid: null, stage: 'smoke', exportRecord: voidRec });
+  assert.ok(bf.includes('the export record is not a COMPLETED PARITY_PASS H-MX export record'));
+  assert.ok(bf.includes('the export record is not export attempt 2 under its amendment'));
+  // 4. an otherwise admissible smoke whose only export evidence is attempt 1's: admit() refuses
+  const t = await evidenceTree('smoke', 2);
+  t.write();
+  AN.admit('smoke', t.root);
+  rmSync(join(t.root, dirname(D.EXPORT_REL)), { recursive: true });
+  rmSync(join(t.root, AN.EXPORT_OUTER_REL), { recursive: true });
+  copyA1(t.root, A1_REC, A1_OUTER);
+  assert.throws(() => AN.admit('smoke', t.root), /export record missing/);
+  copyA1(t.root, D.EXPORT_REL, AN.EXPORT_OUTER_REL);
+  assert.throws(() => AN.admit('smoke', t.root), /not export attempt 2 under its amendment/);
+});
 
 /** A smoke or match evidence tree as the wrapper and driver would leave it; stub players. */
 async function evidenceTree(stage, nPairs) {
@@ -192,9 +247,9 @@ async function evidenceTree(stage, nPairs) {
   mkdirSync(outer, { recursive: true });
   mkdirSync(join(root, 'docs/superpowers/evidence/htb-mix-openings'), { recursive: true });
   writeFileSync(join(root, D.OPENINGS_REL), readFileSync(join(D.REPO_ROOT, D.OPENINGS_REL)));
-  mkdirSync(join(root, 'docs/superpowers/evidence/htb-mix-export'), { recursive: true });
+  mkdirSync(join(root, dirname(D.EXPORT_REL)), { recursive: true });
   const challenger = { model_id: '0123456789abcdef', dir: '/tmp/x/0123456789abcdef', graph_sha256: 'g'.repeat(64), external_data_sha256: 'd'.repeat(64), source_sha256: 's'.repeat(64) };
-  const exportRecord = { kind: D.EXPORT_KIND, status: 'COMPLETED', verdict: 'PARITY_PASS', challenger, head: 'c'.repeat(40), pid: 5151, kill_s: 3600 };
+  const exportRecord = { kind: D.EXPORT_KIND, status: 'COMPLETED', verdict: 'PARITY_PASS', challenger, head: 'c'.repeat(40), pid: 5151, kill_s: 3600, ...ATTEMPT_2 };
   writeFileSync(join(root, D.EXPORT_REL), JSON.stringify(exportRecord));
   putExportOuter(root, exportRecord);
   const games = {};
@@ -270,6 +325,12 @@ test('smoke admission binds the evidence to its run; timing reads wall times onl
   // an H-OP export record in the H-MX slot is refused
   writeFileSync(join(t.root, D.EXPORT_REL), JSON.stringify({ ...t.exportRecord, kind: 'htb-onpolicy-export-record/1' }));
   assert.throws(() => AN.admit('smoke', t.root), /H-MX export record/);
+  writeFileSync(join(t.root, D.EXPORT_REL), JSON.stringify(t.exportRecord));
+  // export attempt 2 only (export amendment 1 §4): another attempt number or no amendment pin is refused
+  for (const over of [{ attempt: 1 }, { attempt: undefined }, { export_amendment_sha256: 'f'.repeat(64) }]) {
+    writeFileSync(join(t.root, D.EXPORT_REL), JSON.stringify({ ...t.exportRecord, ...over }));
+    assert.throws(() => AN.admit('smoke', t.root), /not export attempt 2 under its amendment/, JSON.stringify(over));
+  }
   writeFileSync(join(t.root, D.EXPORT_REL), JSON.stringify(t.exportRecord));
   // the handoff repair: an export that completed inside but timed out outside fails admission at analysis too
   putExportOuter(t.root, t.exportRecord, OUTER_TIMEOUT);
@@ -404,13 +465,13 @@ test('export-record admission: missing, uncommitted, wrong kind or verdict, wron
   const root = mkdtempSync(join(tmpdir(), 'mx-exp-'));
   const dir = join(root, 'pair');
   mkdirSync(dir, { recursive: true });
-  mkdirSync(join(root, 'docs/superpowers/evidence/htb-mix-export'), { recursive: true });
+  mkdirSync(join(root, dirname(D.EXPORT_REL)), { recursive: true });
   writeFileSync(join(dir, 'model.onnx'), 'graph');
   writeFileSync(join(dir, 'model.onnx.data'), 'data');
   const c = { model_id: '0123456789abcdef', dir, graph_sha256: sha('graph'), external_data_sha256: sha('data'), source_sha256: 's'.repeat(64) };
   const man = { model_id: c.model_id, graph: { sha256: c.graph_sha256 }, external_data: { sha256: c.external_data_sha256 } };
   writeFileSync(join(dir, 'manifest.json'), JSON.stringify(man));
-  const rec = { kind: 'htb-mix-export-record/1', status: 'COMPLETED', verdict: 'PARITY_PASS', challenger: c, head: 'f'.repeat(40), pid: 4242, kill_s: 3600 };
+  const rec = { kind: 'htb-mix-export-record/1', status: 'COMPLETED', verdict: 'PARITY_PASS', challenger: c, head: 'f'.repeat(40), pid: 4242, kill_s: 3600, ...ATTEMPT_2 };
   const okGit = () => ({ status: 0, stdout: '' });
   const put = (r) => writeFileSync(join(root, D.EXPORT_REL), JSON.stringify(r));
   putExportOuter(root, rec);
@@ -427,6 +488,10 @@ test('export-record admission: missing, uncommitted, wrong kind or verdict, wron
   assert.ok(probs().some((p) => /export record kind/.test(p)));
   put({ ...rec, verdict: 'PARITY_FAIL' });
   assert.ok(probs().some((p) => /verdict/.test(p)));
+  put({ ...rec, attempt: 1 });
+  assert.ok(probs().some((p) => /export record attempt 1, expected 2/.test(p)));
+  put({ ...rec, export_amendment_sha256: undefined });
+  assert.ok(probs().some((p) => /export record export_amendment_sha256 undefined/.test(p)));
   put({ ...rec, challenger: { ...c, graph_sha256: 'f'.repeat(64) } });
   assert.ok(probs().some((p) => /model.onnx sha256/.test(p)));
   put({ ...rec, challenger: { ...c, model_id: '78c16a31c3dba37f' } });
@@ -504,7 +569,7 @@ test('the wrappers: their derivation, ceilings, gate names, driver and the pinne
     assert.match(w, /^DRIVER=tests\/htb_integration\/mix_match\.mjs$/m);
     assert.match(w, /^ANALYSER=tests\/htb_integration\/mix_match_analyse\.mjs$/m);
     assert.match(w, new RegExp(`^ANALYSER_SHA256=${analyserSha}$`, 'm'));
-    assert.match(w, /^EXPORT_REL=docs\/superpowers\/evidence\/htb-mix-export\/record\.json$/m);
+    assert.match(w, /^EXPORT_REL=docs\/superpowers\/evidence\/htb-mix-export-2\/record\.json$/m);
     assert.match(w, /^PLAN_REL=docs\/superpowers\/2026-11-18-htb-mix-distillation-card\.md$/m);
     assert.match(w, /^RECORD_KIND=htb-mix-match-record\/1$/m);
     assert.ok(!/onpolicy/.test(w.slice(w.indexOf('set -u'))), `${stage}: no H-OP path below the header`);

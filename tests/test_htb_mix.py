@@ -68,14 +68,18 @@ def test_EVERY_GATE_IS_CLOSED_AND_ITS_FILE_HOLDS_ONLY_THE_DECLARATION(stage):
 
 
 def test_EVERY_ENTRY_REFUSES_WHILE_ITS_GATE_IS_CLOSED_AND_WRITES_NOTHING(capsys):
-    """The cache is compared before and after, not asserted absent: it exists once a run has prepared it."""
-    cache_before = M.CACHE.exists()
+    """The cache and the export evidence are compared before and after, not asserted absent: the cache exists once a
+    run has prepared it, and export attempt 1's VOID evidence exists since entry 75."""
+    dirs = (M.EV["export"], M.OUTER["export"], XM.EV2, XM.OUTER2)
+    snap = lambda: ({d: sorted(p.name for p in (ROOT / d).iterdir()) if (ROOT / d).exists() else None  # noqa: E731
+                     for d in dirs}, M.CACHE.exists() and sorted(p.name for p in M.CACHE.iterdir()))
+    before = snap()
     assert M.main(["run", "fit"]) == P.EXIT["REFUSED"]
     assert XM.main(["run", "export"]) == P.EXIT["REFUSED"]
+    assert XM.main(["run", "export-2"]) == P.EXIT["REFUSED"]
     err = capsys.readouterr().err
-    assert "HTB_MIX_FIT_AUTHORIZED is closed" in err and "HTB_MIX_EXPORT_AUTHORIZED is closed" in err
-    assert not (ROOT / M.EV["export"]).exists()
-    assert M.CACHE.exists() == cache_before
+    assert "HTB_MIX_FIT_AUTHORIZED is closed" in err and err.count("HTB_MIX_EXPORT_AUTHORIZED is closed") == 2
+    assert snap() == before
 
 
 # ─────────────────────────────── openings and seeds (card §9) ───────────────────────────────

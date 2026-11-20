@@ -2,7 +2,8 @@
  * H-MX match driver. Card: docs/superpowers/2026-11-18-htb-mix-distillation-card.md (revision 1), §9, §11, §13.
  *
  * H-OP's driver (tests/htb_integration/onpolicy_match.mjs) with H-MX's constants: the challenger (the exported pair in
- * --challenger-dir, qualified by the committed H-MX export record) against the current hard (78c16a31c3dba37f,
+ * --challenger-dir, qualified by the committed H-MX export record of EXPORT ATTEMPT 2, export amendment 1 §4; attempt
+ * 1's VOID record is never read) against the current hard (78c16a31c3dba37f,
  * resolveHardModel), both as the product builds hard: MirrorAveragingInference(AlphaZeroInference) through protocolMove
  * (200 simulations, T 1.0 readout through ply 19, root halving from ply 20), each evaluation behind H-OP's non-finite
  * guard (imported unmodified). One Node process, serial.
@@ -26,7 +27,7 @@ import { fileURLToPath } from 'node:url';
 import { TwixtState } from '../../server/gameLogic.js';
 import { protocolMove } from '../../server/protocol_move.js';
 import { resolvePolicy } from '../../server/readout_policy.js';
-import { EXPORT_OUTER_REL, WRAPPER_FILES, exportWrapperFailures } from './mix_match_analyse.mjs';
+import { EXPORT_AMENDMENT_SHA256, EXPORT_ATTEMPT, EXPORT_OUTER_REL, WRAPPER_FILES, exportWrapperFailures } from './mix_match_analyse.mjs';
 import { MatchRefusal, MatchStop, finiteGuard } from './onpolicy_match.mjs';
 
 export { MatchRefusal, MatchStop, finiteGuard };
@@ -36,7 +37,7 @@ export const NS = 'htb-mix/20261118';
 export const CURRENT_MODEL_ID = '78c16a31c3dba37f';
 export const OPENINGS_REL = 'docs/superpowers/evidence/htb-mix-openings/openings.json';
 export const OPENINGS_SHA256 = 'f4ae110ff9e7547e413b15fff29ca0ff94d34c5f21d5d8b7da76af6577ee3563';
-export const EXPORT_REL = 'docs/superpowers/evidence/htb-mix-export/record.json';
+export const EXPORT_REL = 'docs/superpowers/evidence/htb-mix-export-2/record.json'; // export attempt 2 (amendment §4)
 export const EXPORT_KIND = 'htb-mix-export-record/1';
 export const PAIRS = { smoke: 2, match: 400 };
 export const KILL_S = { smoke: 1800, match: 64800 };
@@ -178,7 +179,7 @@ export function exportRecordProblems(challengerDir, { root = REPO_ROOT, g = gitA
   } catch {
     return [...p, `${EXPORT_REL} is unparseable`];
   }
-  const want = { kind: EXPORT_KIND, status: 'COMPLETED', verdict: 'PARITY_PASS' };
+  const want = { kind: EXPORT_KIND, status: 'COMPLETED', verdict: 'PARITY_PASS', attempt: EXPORT_ATTEMPT, export_amendment_sha256: EXPORT_AMENDMENT_SHA256 };
   for (const [k, v] of Object.entries(want)) if (rec?.[k] !== v) p.push(`export record ${k} ${JSON.stringify(rec?.[k])}, expected ${JSON.stringify(v)}`);
   const c = rec?.challenger ?? {};
   for (const k of ['model_id', 'dir', 'graph_sha256', 'external_data_sha256', 'source_sha256']) if (typeof c[k] !== 'string' || !c[k]) p.push(`export record challenger.${k} missing`);

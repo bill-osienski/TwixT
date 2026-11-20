@@ -16,6 +16,8 @@ ANALYSER = "tests/htb_integration/mix_match_analyse.mjs"
 OP_ANALYSER_SHA256 = "1876706130de56fe81ea44c8ef513fe2802440c0fa3d2c77eafce8ca07e6f7b7"
 OP_SMOKE = f"{EV}/htb-onpolicy-match-smoke"
 MX_SMOKE = f"{EV}/htb-mix-match-smoke"
+#: export attempt 2's record (export amendment 1, docs/superpowers/2026-11-20-htb-mix-export-attempt-2-amendment.md §4)
+EXPORT_REL = f"{EV}/htb-mix-export-2/record.json"
 
 #: stage -> (H-OP parent's dir, H-MX run dir, H-OP gate, H-MX gate)
 STAGES = {
@@ -44,7 +46,8 @@ HEADERS = {
 DERIVED_NOTE = (
     "# DERIVED by tests/htb_mix_match_wrapper_spec.py from {parent} (its text from `set -u` on), with exact-once\n"
     "# substitutions only: the paths, the card, the gate (a line of tests/htb_integration/mix_authorization.mjs), the\n"
-    "# driver (mix_match.mjs), the frozen H-MX analyser and its sha256 pinned HERE, the H-MX export record, the record\n"
+    "# driver (mix_match.mjs), the frozen H-MX analyser and its sha256 pinned HERE, the H-MX export record (EXPORT\n"
+    "# ATTEMPT 2, docs/superpowers/2026-11-20-htb-mix-export-attempt-2-amendment.md §4; attempt 1 is never read), the record\n"
     "# kind and the card's section numbers{smoke_note}. Everything else is H-OP's, unchanged: the idle gate, the BOINC\n"
     "# check, the one-line gate-open commit, the ONNX Runtime shutdown test (ledger entry 64), the onnxruntime-node pin,\n"
     "# the perl process-group supervisor, outer.json, and gate restoration.\n")
@@ -69,7 +72,7 @@ def derive(stage: str) -> str:
          "PLAN_REL=docs/superpowers/2026-11-18-htb-mix-distillation-card.md\n"),
         ("ANALYSER=tests/htb_integration/onpolicy_match_analyse.mjs\n", f"ANALYSER={ANALYSER}\n"),
         (f"ANALYSER_SHA256={OP_ANALYSER_SHA256}\n", f"ANALYSER_SHA256={analyser_sha256()}\n"),
-        (f"EXPORT_REL={EV}/htb-onpolicy-export/record.json\n", f"EXPORT_REL={EV}/htb-mix-export/record.json\n"),
+        (f"EXPORT_REL={EV}/htb-onpolicy-export/record.json\n", f"EXPORT_REL={EXPORT_REL}\n"),
         ("GATE_REL=tests/htb_integration/onpolicy_authorization.mjs\n",
          "GATE_REL=tests/htb_integration/mix_authorization.mjs\n"),
         (f"GATE={op_gate}\n", f"GATE={mx_gate}\n"),

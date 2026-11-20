@@ -15,10 +15,18 @@ Reused, never modified: `htb_onpolicy_export`'s model id, structural signature, 
 qualification commands. The qualification's V3 tools are H-OP's parameterized copies (`tests/parity/htb_onpolicy_mirror`),
 which take the challenger from the command line; their report's free-text "side" label reads "H-OP challenger", and the
 record's challenger sha256 and state digest identify the file actually compared.
+
+EXPORT ATTEMPT 2 (docs/superpowers/2026-11-20-htb-mix-export-attempt-2-amendment.md): attempt 1 (`run export`) is VOID
+(ledger entry 75; the launch worktree had no node_modules) and its evidence stays as written. `run export-2` runs the
+same `run_export` body into fresh, create-only evidence (`htb-mix-export-2/`), after binding attempt 1's committed VOID
+record and outer.json by their hashes and checking that onnxruntime-node 1.23.2 is installed in this tree:
+
+    MLX_ENABLE_TF32=0 python -m scripts.GPU.alphazero.htb_mix_export run export-2   # HTB_MIX_EXPORT_AUTHORIZED
 """
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import gzip
 import hashlib
 import json
@@ -66,7 +74,9 @@ def recovery_admission(cfg: M.Config) -> Dict[str, Any]:
 
 def run_export(cfg: Optional[M.Config] = None, runner: Callable[..., int] = X._run_real,
                py: Optional[pathlib.Path] = None, export_root: pathlib.Path = EXPORT_ROOT,
-               scratch: pathlib.Path = SCRATCH, versions: Callable[[pathlib.Path], str] = X.runtime_versions) -> int:
+               scratch: pathlib.Path = SCRATCH, versions: Callable[[pathlib.Path], str] = X.runtime_versions,
+               extra: Optional[Mapping[str, Any]] = None) -> int:
+    """Card §8. `extra` (attempt 2 only) adds the amendment's fields to the record; nothing else differs."""
     cfg = cfg or M.Config()
     M.preconditions("export", cfg)
     ev = cfg.ev("export")
@@ -77,6 +87,7 @@ def run_export(cfg: Optional[M.Config] = None, runner: Callable[..., int] = X._r
     rec = M._record("export", cfg, admission=adm)
     rec["kind"] = RECORD_KIND
     rec["runtime_versions"] = versions(cfg.root)
+    rec.update(extra or {})
 
     def body(rec):
         scratch.mkdir(parents=True)
@@ -124,13 +135,89 @@ def run_export(cfg: Optional[M.Config] = None, runner: Callable[..., int] = X._r
     return P._terminal(ev, rec, body)
 
 
+# ─────────────── export attempt 2 (docs/superpowers/2026-11-20-htb-mix-export-attempt-2-amendment.md) ───────────────
+
+AMENDMENT2 = "docs/superpowers/2026-11-20-htb-mix-export-attempt-2-amendment.md"
+AMENDMENT2_SHA256 = "f8ce7792afc73fc3262ff0fb6aff58925d4b060d6b9a97b38fff94ea7c2ac032"
+EV2 = "docs/superpowers/evidence/htb-mix-export-2"
+OUTER2 = "docs/superpowers/evidence/htb-mix-export-2-run"
+#: attempt 1 (ledger entry 75), preserved: bound by bytes and commit, never written (amendment §1)
+ATTEMPT_1 = {"record": f"{M.EV['export']}/record.json",
+             "record_sha256": "127f0607cfa0bbd2b6b26b25e786d5f689b8c9cb79546be45d89cc7554f4febb",
+             "outer": f"{M.OUTER['export']}/outer.json",
+             "outer_sha256": "7dab10720a6c13a6e1176e2b5fe607cd553a33182543914eb100c77a6ff2bcf7",
+             "status": "VOID"}
+ORT_NODE_VERSION = "1.23.2"
+ORT_PACKAGE = "node_modules/onnxruntime-node/package.json"
+
+
+def node_dependency(root: pathlib.Path) -> Dict[str, str]:
+    """Amendment §3, the Python side: a real (not symlinked) node_modules in THIS tree holding onnxruntime-node 1.23.2.
+    Refused otherwise, before the record opens and before `runtime_versions` reads the same file."""
+    nm = root / "node_modules"
+    if nm.is_symlink() or not nm.is_dir():
+        raise Refused(f"{nm} is not a real directory in this tree (clone it before the gate opens: amendment §3)")
+    pkg = root / ORT_PACKAGE
+    if pkg.is_symlink() or not pkg.is_file():
+        raise Refused(f"{pkg} is missing: onnxruntime-node is not installed in this tree")
+    try:
+        version = json.loads(pkg.read_text())["version"]
+    except (OSError, ValueError, KeyError, TypeError) as e:
+        raise Refused(f"{pkg} is unreadable: {e}") from None
+    if version != ORT_NODE_VERSION:
+        raise Refused(f"onnxruntime-node {version} in this tree; the amendment pins {ORT_NODE_VERSION}")
+    return {"onnxruntime_node": version, "package": str(pkg)}
+
+
+@dataclasses.dataclass
+class Attempt2Config(M.Config):
+    """The card's H-MX config with attempt 2's evidence directory and bindings. The defaults ARE the amendment. (Named
+    `export_amendment_sha256`, not `amendment_sha256`: the recovery admission reads the latter as ITS amendment.)"""
+    export_amendment_sha256: str = AMENDMENT2_SHA256
+    attempt_1: Mapping[str, str] = dataclasses.field(default_factory=lambda: ATTEMPT_1)
+    node_dependency: Callable[[pathlib.Path], Dict[str, str]] = node_dependency
+
+    def ev(self, stage: str) -> pathlib.Path:
+        return self.root / EV2 if stage == "export" else super().ev(stage)
+
+
+def attempt_2_bindings(cfg: Attempt2Config) -> Dict[str, Any]:
+    """Amendment §2, steps 1-4, in order: the card's preconditions, this amendment's pin, attempt 1's VOID evidence,
+    the Node dependency. Returns the record's added fields; refuses before anything is written."""
+    M.preconditions("export", cfg)
+    if cfg.ev("export") != cfg.root / EV2:
+        raise Refused(f"attempt 2 writes only under {EV2}")
+    M.read_pinned(cfg, AMENDMENT2, cfg.export_amendment_sha256)
+    a1 = cfg.attempt_1
+    try:
+        rec1 = json.loads(M.read_pinned(cfg, a1["record"], a1["record_sha256"]))
+    except ValueError as e:
+        raise Refused(f"{a1['record']} is unparseable: {e}") from None
+    M.read_pinned(cfg, a1["outer"], a1["outer_sha256"])
+    if rec1.get("status") != a1["status"]:
+        raise Refused(f"{a1['record']} is not attempt 1's {a1['status']} record")
+    dep = cfg.node_dependency(cfg.root)
+    return {"attempt": 2, "export_amendment_sha256": cfg.export_amendment_sha256, "attempt_1": dict(a1),
+            "node_dependency": dep}
+
+
+def run_export_2(cfg: Optional[Attempt2Config] = None, runner: Callable[..., int] = X._run_real,
+                 py: Optional[pathlib.Path] = None, export_root: pathlib.Path = EXPORT_ROOT,
+                 scratch: pathlib.Path = SCRATCH, versions: Callable[[pathlib.Path], str] = X.runtime_versions) -> int:
+    """Amendment §2: the bindings, then `run_export` unchanged into attempt 2's evidence directory."""
+    cfg = cfg or Attempt2Config()
+    extra = attempt_2_bindings(cfg)
+    return run_export(cfg, runner=runner, py=py, export_root=export_root, scratch=scratch, versions=versions,
+                      extra=extra)
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     ap = argparse.ArgumentParser(prog="htb_mix_export")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("run").add_argument("what", choices=("export",))
-    ap.parse_args(argv)
+    sub.add_parser("run").add_argument("what", choices=("export", "export-2"))
+    args = ap.parse_args(argv)
     try:
-        return run_export()
+        return run_export_2() if args.what == "export-2" else run_export()
     except Refused as e:
         print(f"REFUSED: {e}", file=sys.stderr)
         return P.EXIT["REFUSED"]

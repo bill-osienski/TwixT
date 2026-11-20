@@ -7,7 +7,8 @@
 # automatic retry. BUILT ONLY: launching it needs the user's launch review.
 # DERIVED by tests/htb_mix_match_wrapper_spec.py from docs/superpowers/evidence/htb-onpolicy-match-smoke-run/01_wrapper.sh (its text from `set -u` on), with exact-once
 # substitutions only: the paths, the card, the gate (a line of tests/htb_integration/mix_authorization.mjs), the
-# driver (mix_match.mjs), the frozen H-MX analyser and its sha256 pinned HERE, the H-MX export record, the record
+# driver (mix_match.mjs), the frozen H-MX analyser and its sha256 pinned HERE, the H-MX export record (EXPORT
+# ATTEMPT 2, docs/superpowers/2026-11-20-htb-mix-export-attempt-2-amendment.md §4; attempt 1 is never read), the record
 # kind and the card's section numbers. Everything else is H-OP's, unchanged: the idle gate, the BOINC
 # check, the one-line gate-open commit, the ONNX Runtime shutdown test (ledger entry 64), the onnxruntime-node pin,
 # the perl process-group supervisor, outer.json, and gate restoration.
@@ -16,8 +17,8 @@ OUT_REL=docs/superpowers/evidence/htb-mix-match-smoke-run
 RUN_REL=docs/superpowers/evidence/htb-mix-match-smoke
 PLAN_REL=docs/superpowers/2026-11-18-htb-mix-distillation-card.md
 ANALYSER=tests/htb_integration/mix_match_analyse.mjs
-ANALYSER_SHA256=b191ea03406fbf507f838cb6bd6bf5810fc5288c84748ab20dbc210b610ad52d
-EXPORT_REL=docs/superpowers/evidence/htb-mix-export/record.json
+ANALYSER_SHA256=80e741d01463acf51a19db23b0c862b5caf605eb9d0dc97bafeb14f09e528d59
+EXPORT_REL=docs/superpowers/evidence/htb-mix-export-2/record.json
 GATE_REL=tests/htb_integration/mix_authorization.mjs
 GATE=MIX_MATCH_SMOKE_AUTHORIZED
 DRIVER=tests/htb_integration/mix_match.mjs
