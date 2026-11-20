@@ -315,6 +315,7 @@ knob) is not a new hypothesis.
 > **H-MX fit FAILED at the challenger save; no challenger exists; no retry (entry 73, 2026-11-19).** All 7,500 mixed updates ran; S reproduced H-OP's six recorded scores exactly; the one-time screens M1–M6 all held (H-OP val KL 0.7073 → 0.4515, top-1 0.5761 → 0.6594, MSE 0.02578 → 0.02025; H-TB val KL 0.5745 → 0.5398, top-1 0.6514 → 0.6600, MSE 0.07032 → 0.07295). Then `save_student` could not open its temporary file because `~/twixt-cache/htb-mix` had never been created (a build defect: the tests faked the save). Wall 6,527 s under KILL 11,700 s, clean, gate restored. Under card §13 a failed stage is no result: no export or match. A further fit needs a reviewed repair and the user's decision. See #212.
 > **H-MX recovery amendment 1 (draft, `8d6e3866…`) and its model-free build (`ddaa6181`); returned for replay approval; all gates closed; nothing run (amendment note, 2026-11-19).** One exact replay of the failed fit (entry 73), bound to its committed record (`6507d588…`): same pinned start, cached inputs, 16 + 16 order and 7,500 updates; `htb_mix.py` unchanged; runtime pinned; no validation scoring. It saves only if the whole fit record and the trained-state digest `adba50fb…` match, and publishes ELIGIBLE (M1–M6 copied from entry 73) only after a strict reload at that digest. The cache is prepared before anything loads. Export admits only a clean, verified recovery. Gate `HTB_MIX_RECOVERY_AUTHORIZED` (inventory 74). Tests: recovery 37, H-MX 62; five mutants caught. See #213.
 > **H-MX recovery replay COMPLETED, ELIGIBLE: the failed fit reproduced exactly and the challenger is saved and verified; returned for an export decision (Post-closure entry 74, 2026-11-20).** Gate `be1b7aba` → evidence `9a9910d6`: one exact replay under amendment 1 (`8d6e3866…`, approved as written), bound to entry 73's record `6507d588…`. Selection, start check and the whole fit record (300 logged steps) equal to the failed run's; trained-state digest `adba50fb…`. The run created `~/twixt-cache/htb-mix`; `challenger.safetensors` (sha256 `5dafde11…`) saved create-only, reloaded strictly at `adba50fb…`, sha256 verified. No validation scoring; M1–M6 carried forward from entry 73 (all held). Wall 5,875 s under KILL 11,700 s, clean, gate restored. Prediction (reproduction about 75%, save and reload about 98%) met. Export admission passes read-only; nothing exported. See #214.
+> **H-MX export and parity VOID before any export step; nothing exported; no retry (Post-closure entry 75, 2026-11-20).** Gate `09f5ad9a` → evidence `a7c2d2f2`: inner and outer exit 1 (CRASHED), wall 0 s, clean, gate restored, wrapper-written VOID record. `runtime_versions` could not read `node_modules/onnxruntime-node/package.json`: the launch worktree had no `node_modules` (H-OP's launches APFS-cloned it; this launch skipped that step — my procedural error). No exporter, canary or parity step ran; the challenger `5dafde11…` is unchanged. The stage's one-shot evidence now exists; a further attempt needs the user's reviewed decision. See #215.
 
 ## Historical proposal check — programme now closed
 
@@ -2162,6 +2163,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 212. **The H-MX fit FAILED at the save (2026-11-19, entry 73).** Do **not**: retry, rerun or resume the fit automatically; open the export gate, export, or play a match on this run (no challenger exists, and the record's status is FAILED, so stage admission refuses it); cite the record's ELIGIBLE verdict field, or M1–M6, as an ELIGIBLE fit or as fresh held-out estimates; re-score either cached validation set outside a reviewed decision (they have been scored once as screens, #210); repair the save by creating the cache directory by hand, or by editing `htb_pilot.py` or `search_distillation_d2.py`; any repair goes into `htb_mix.py` with a test that drives the real save into a missing cache directory, and is reviewed before any re-fit. A re-fit is a new approval, and the user decides whether it must first reproduce the trained state digest `adba50fb…` exactly.
 213. **H-MX recovery amendment 1 (2026-11-19).** Do **not**: open `HTB_MIX_RECOVERY_AUTHORIZED` or run the replay before the user's review of the amendment and approval of the replay; run more than one replay under any outcome; relax or replace the exact match (the whole fit record and the trained-state digest `adba50fb…`), the runtime pins or the code binding; edit `htb_mix.py` (`79f210cf…`), `htb_pilot.py`, `search_distillation_d2.py` or the failed evidence; score either validation set in the replay, or re-run M1–M6; publish or cite ELIGIBLE unless the saved file reloaded at `adba50fb…`; export from the failed fit record, or from a recovery that is not clean, COMPLETED and verified; create `~/twixt-cache/htb-mix` by hand; or, if the replay does not reproduce, re-fit with fresh screens under this card. A change to the amendment after review is re-pinned and rebuilt before any gate opens.
 214. **The H-MX recovery is spent and verified (2026-11-20, entry 74).** Do **not**: run the replay again, or re-fit H-MX under this card; re-score either cached validation set, or present M1–M6 as fresh held-out estimates (they are entry 73's one-time screens, carried forward to the same trained state); edit, move, re-save or overwrite `~/twixt-cache/htb-mix/challenger.safetensors` (sha256 `5dafde11…`, state `adba50fb…`), or export any other file as the H-MX challenger; open `HTB_MIX_EXPORT_AUTHORIZED`, export, run parity or play a match before the user's approval of that stage; deploy the challenger or change `HARD_MODEL_ID` on this evidence (ELIGIBLE is a screen verdict, not a strength result); or cite this single cross-process repeat as proof that MLX CPU fits are deterministic in general.
+215. **The H-MX export attempt is VOID (2026-11-20, entry 75).** Do **not**: relaunch the export automatically, or by deleting, moving or editing `docs/superpowers/evidence/htb-mix-export/` or `htb-mix-export-run/` to get past the one-shot checks; read the VOID record as a parity result in either direction; open `HTB_MIX_EXPORT_AUTHORIZED` again without the user's reviewed decision on how a second attempt is recorded; launch any stage that runs Node or reads `node_modules` from a linked worktree without first APFS-cloning `node_modules` into it (`cp -c -R`, not a symlink) before the gate-opening commit and checking that `node_modules/onnxruntime-node/package.json` exists; or touch the verified challenger (`5dafde11…`).
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -12778,3 +12780,39 @@ The proposal note and revision 1 note above stay as written. This correction sup
   M1–M6 (entry 73) all held. Under amendment §4 and card §13, this permits **proposing** the export and parity stage
   (card §8), which needs its own approval. No export, parity or match has run. `HARD_MODEL_ID` is unchanged. All gates
   are closed. Branch `htb-integration-g1` at `9a9910d6` plus this entry; not pushed. See #214.
+
+#### Post-closure entry 75 — H-MX export and parity: VOID before any export step (the launch worktree had no `node_modules`); nothing exported; no retry (2026-11-20)
+
+- **Test:** H-MX card revision 1 §8, the export and parity of the verified challenger
+  (`~/twixt-cache/htb-mix/challenger.safetensors`, sha256 `5dafde11…`, state `adba50fb…`, entry 74). It was to export
+  once outside the product files, then apply the frozen graph check against `78c16a31c3dba37f`, both runtime
+  canaries, S1–S4 parity and V3 mirror-averaged parity.
+- **Hypothesis:** the unmodified H-OP exporter and qualification tools export and qualify the H-MX challenger, as they
+  did H-OP's (entry 70).
+- **Prediction on record:** none stated in advance for this stage (card §15 predicts only the fit gate and the match).
+- **What ran:** the user's approval (2026-11-20), from `5e2e73f8`. Clean linked worktree `TwixT_Game-mix-export`
+  (branch `htb-mix-export-launch`). Gate-opening commit `09f5ad9a` (one line, `HTB_MIX_EXPORT_AUTHORIZED`), wrapper
+  `docs/superpowers/evidence/htb-mix-export-run/01_wrapper.sh` (TERM 3,590 s, KILL 3,600 s). BOINC quit (the check
+  exempted only the podman VM's gvproxy and krunkit) and Unreal Editor closed. The idle gate held 60 s. Closing commit
+  `a7c2d2f2` (evidence as written, gate restored), fast-forwarded into `htb-integration-g1`.
+- **Result: VOID, CRASHED (inner and outer exit 1).** Wall 0 s under KILL 3,600 s. No survivors; the gate restored
+  (byte-identical to `5e2e73f8`'s). The script left no record; the wrapper wrote `htb-mix-export/record.json`
+  (`status: VOID`, step `crashed`).
+  - **The error** (`run.stderr.txt`): `FileNotFoundError: … TwixT_Game-mix-export/node_modules/onnxruntime-node/package.json`,
+    raised by `htb_onpolicy_export.runtime_versions`. `run_export` calls it after the gate, card and recovery admission
+    checks pass, and before `P._terminal` opens the record. So the crash was an unhandled exception outside the
+    record boundary, and the wrapper classified it.
+  - **Cause, verified:** `node_modules` is ignored by git, so a fresh linked worktree has none. H-OP's export, smoke
+    and match launches APFS-cloned it into the worktree (`cp -c -R`) before the gate-opening commit (entries 70–72).
+    This launch skipped that step. The error is mine, in the launch procedure. The H-MX build and the exporter are
+    not at fault.
+  - **What did not happen:** no exporter, canary, parity or Node process ran. No `export/` or `export-scratch/`
+    directory was created under `~/twixt-cache/htb-mix`. The challenger is unchanged (sha256 `5dafde11…`, rechecked
+    after the run). `HARD_MODEL_ID` and every product file are unchanged.
+- **Did it match the prediction?** None was stated. The run produced no export, so nothing is scored.
+- **Conclusion / status:** no export and no parity result. The stage's one-shot evidence paths
+  (`htb-mix-export/`, `htb-mix-export-run/outer.json`) now exist, so the built entry and wrapper refuse a second
+  launch as built. Any further export attempt needs the user's reviewed decision on how it is recorded: for example,
+  its own evidence paths under a dated note. Its launch must APFS-clone `node_modules` into the worktree before the
+  gate opens and check that `node_modules/onnxruntime-node/package.json` exists. The verified challenger stays as it is.
+  All gates are closed. Branch `htb-integration-g1` at `a7c2d2f2` plus this entry; not pushed. See #215.
