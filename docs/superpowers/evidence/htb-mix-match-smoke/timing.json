@@ -1,0 +1,19 @@
+{
+ "schema": "htb-mix-match-timing/1",
+ "startup_s": 0.026,
+ "game_s_mean": 31.004,
+ "smoke_plies": [
+  31,
+  31,
+  25,
+  27
+ ],
+ "match_games": 800,
+ "projection_s": 24803.045,
+ "launch_factor": 1.5,
+ "launch_estimate_s": 37204.568,
+ "match_cap_s": 64800,
+ "verdict": "LAUNCH_OK",
+ "note": "an estimate from 4 smoke games; long draws can exceed it; the 18 h match cap is fixed",
+ "smoke_outcomes": "replay-validated on admission; excluded from scoring and from every report"
+}
