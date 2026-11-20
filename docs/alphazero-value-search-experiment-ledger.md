@@ -12816,3 +12816,91 @@ The proposal note and revision 1 note above stay as written. This correction sup
   its own evidence paths under a dated note. Its launch must APFS-clone `node_modules` into the worktree before the
   gate opens and check that `node_modules/onnxruntime-node/package.json` exists. The verified challenger stays as it is.
   All gates are closed. Branch `htb-integration-g1` at `a7c2d2f2` plus this entry; not pushed. See #215.
+
+#### Amendment note — H-MX export amendment 1 (draft): export attempt 2 with fresh evidence and a Node dependency preflight, and its model-free build; returned for launch approval; all gates closed; nothing run (2026-11-20, the user's approval of the amendment and build)
+
+- **Why:** entry 75. Export attempt 1 was VOID at 0 s because the launch worktree had no `node_modules`. Its
+  one-shot evidence exists, so the built export refuses a second launch. The user asked for a narrow amendment and
+  model-free build for attempt 2. Attempt 1 is preserved. The exporter, the parity checks, the tolerances and the
+  3,600 s ceiling stay as written.
+- **Amendment:** `docs/superpowers/2026-11-20-htb-mix-export-attempt-2-amendment.md`, sha256 `f8ce7792…` (draft for
+  review, pinned in Python and in the analyser). The card (revision 1, `d2c9b787…`) and recovery amendment 1 are
+  unedited. Its contents:
+  - **§1 Attempt 1, preserved:** its VOID record (`127f0607…`) and `outer.json` (`7dab1072…`) are bound by bytes and
+    commit, and never written. Attempt 1's own entry and wrapper stay as built and refuse because their evidence
+    exists.
+  - **§2 Attempt 2:** `htb_mix_export run export-2` runs the same `run_export` body into fresh, create-only
+    evidence, `htb-mix-export-2/` and `htb-mix-export-2-run/`. The record kind is unchanged, plus `attempt: 2`, the
+    amendment's sha256, the attempt-1 binding and the onnxruntime-node version. The gate (`HTB_MIX_EXPORT_AUTHORIZED`,
+    inventory still 74), the exporter, the graph check, both canaries, S1–S4, V3, the tolerances, the recovery
+    admission and TERM 3,590 s / KILL 3,600 s are unchanged. The bindings run in this order: preconditions, amendment
+    pin, attempt-1 binding, Node dependency, empty paths, recovery admission. Each refuses before the record opens.
+  - **§3 The Node dependency:**
+    - **Procedure before the gate-opening commit:** APFS-clone `node_modules` into the worktree
+      (`cp -c -R`, never a symlink). From the worktree, Node must resolve `onnxruntime-node/package.json` from
+      `server/inference.js` to exactly `<W>/node_modules/…` at version `1.23.2`. `git status --porcelain` must be
+      empty.
+    - **Wrapper preflight**, after the one-shot checks and before the idle gate: `node` on the PATH, a real
+      `node_modules`, the resolved path inside the tree, version 1.23.2. A miss refuses cleanly: exit 1, no evidence,
+      no `outer.json`, nothing launched, the gate restored.
+    - **The Python entry repeats the check** (refusal, exit 2) for a launch without the wrapper.
+  - **§4 Match stages:** both match wrappers, the driver and the analyser read attempt 2's record and wrapper evidence
+    only, and require `attempt: 2` and the amendment's sha256. Attempt 1 cannot admit a match: it is at an unread
+    path, is VOID, and carries neither field.
+  - **§5 Outcomes:** refused → a reviewed decision. STOP at any export or parity check → nothing; no retry, re-export
+    or tolerance change. VOID → nothing. **PARITY_PASS → propose the match smoke**, with its own approval. There is no
+    third attempt under this amendment.
+- **Build:** `c63f8562`. Files:
+  - `scripts/GPU/alphazero/htb_mix_export.py` (`3ad7060f…`): `Attempt2Config`, `attempt_2_bindings`,
+    `node_dependency`, `run_export_2`, and `run export-2`. `run_export` only gains an `extra` mapping merged into the
+    record. Its steps are unchanged.
+  - The attempt-2 wrapper `docs/superpowers/evidence/htb-mix-export-2-run/01_wrapper.sh` (`0c969d95…`), derived by
+    `tests/htb_mix_export_2_wrapper_spec.py` from attempt 1's wrapper. The derivation changes the two paths and the
+    subcommand, and inserts the preflight.
+  - Driver `tests/htb_integration/mix_match.mjs` (`d4882b19…`) and analyser `mix_match_analyse.mjs`
+    (**`80e741d0…`**, replacing the build's `b191ea03…`).
+  - Both match wrappers re-derived by `tests/htb_mix_match_wrapper_spec.py`: match `a6ee7bea…`, smoke `9ed4940f…`.
+    Only the analyser pin, `EXPORT_REL` and one header line change.
+  - Tests: `tests/test_htb_mix_export_2.py` (new), `tests/htb_integration/test_mix_match.mjs`, and two stale H-MX
+    gate-closed tests. `test_htb_mix.py` asserted the export evidence absent, which has been false since entry 75.
+    `test_htb_mix_recovery.py` asserted the recovery evidence absent, which has been false since entry 74, and that
+    failure went unnoticed then. Both now compare before and after.
+  - `htb_mix.py` (`79f210cf…`), `htb_onpolicy_export.py`, `htb_pilot.py`, every H-OP and H-TB file, the recovery
+    evidence, the challenger and attempt 1's evidence are unchanged.
+- **What the tests establish:**
+  - **Export attempt 2: 26/26.**
+    - The amendment pin in Python and in the analyser.
+    - Attempt 1 committed, unchanged and VOID.
+    - The real bindings hold read-only in this checkout: the amendment, attempt 1, and the main checkout's
+      onnxruntime-node 1.23.2.
+    - On fakes, attempt 2 runs the card's nine steps unchanged into `htb-mix-export-2/` with the new fields, leaves
+      attempt 1's bytes unchanged, and is one-shot. Attempt 1's entry still refuses.
+    - Twelve faults each refuse before anything is written or run, with no export or scratch directory:
+      - a closed gate or a changed amendment;
+      - attempt 1's record changed, missing or not VOID, or its outer changed;
+      - no `node_modules`, a symlinked one, no package, version 1.23.1, or an unparseable package;
+      - a failed recovery.
+    - The recovery admission still reads its own amendment.
+    - The CLI refuses while the gate is closed and writes nothing.
+    - The wrapper is its derivation, with the preflight between the one-shot checks and the idle gate.
+    - **The real wrapper, run with bash, git and node in a throwaway repository,** refuses at the preflight on a
+      missing, symlinked, unresolvable or 1.23.1 dependency. The fake interpreter is never called, nothing is
+      written, and the gate is restored. With 1.23.2 installed it passes the preflight and stops at the idle gate,
+      still writing nothing.
+  - **Node match: 21/21.** A new test shows that attempt 1's real committed VOID evidence cannot admit a match:
+    - at its own paths, the driver finds no export record;
+    - copied into attempt 2's paths, it is refused for status, verdict, attempt, amendment and challenger;
+    - the analyser's binding check refuses it;
+    - `admit()` refuses a smoke tree whose only export evidence is attempt 1's.
+
+    Other attempt numbers or amendment pins are refused.
+  - **Mutation check:** eight deliberate breaks, each caught:
+    - Python: the Node check, the attempt-1 binding, the fresh evidence directory;
+    - wrapper: the version check, the symlink check (both caught by the real-run test alone);
+    - analyser and driver: the attempt check in each, and the driver reading attempt 1's path.
+- **Other tests:** H-MX 62/62, recovery 37/37, gate inventory 8/8 (74), H-OP Node match 20/20. The neighbouring
+  suites gave 384 passed and **4 failed**, the same stale H-OP gate-closed test. It is unchanged and awaits
+  approval.
+- **Status:** amendment drafted and pinned; build committed. All gates closed. Nothing exported, qualified or played.
+  The challenger `5dafde11…` is unchanged. Returned for review of the amendment and separate approval of the
+  attempt-2 launch. See #216.
