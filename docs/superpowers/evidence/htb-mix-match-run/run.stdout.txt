@@ -1,0 +1,6 @@
+ONNX model loaded: /Users/bill/twixt-cache/htb-mix/export/627c8d774df838a8/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value
+ONNX model loaded: /Users/bill/projects/TwixT_Game-mix-match/models/78c16a31c3dba37f/model.onnx
+  Inputs: board, move_rows, move_cols, move_mask
+  Outputs: policy_logits, value

@@ -1,0 +1,43 @@
+{
+ "schema": "htb-mix-match-record/1",
+ "written_by": "script",
+ "status": "COMPLETED",
+ "stage": "match",
+ "started": "2026-11-21T00:45:36.928Z",
+ "ended": "2026-11-21T08:58:37.659Z",
+ "games": 800,
+ "pairs": 400,
+ "startup_seconds": 0.025441000000000002,
+ "search_seconds": {
+  "challenger": 14813.018834840008,
+  "current": 14765.3453634949
+ },
+ "total_seconds": 29580.591368999998,
+ "challenger": {
+  "model_id": "627c8d774df838a8",
+  "dir": "/Users/bill/twixt-cache/htb-mix/export/627c8d774df838a8",
+  "graph_sha256": "3beaeed15a97f28c69e639b6c5ab2466f961a1aa75f232755e581d592fcb55af",
+  "external_data_sha256": "cf78b17f7e9368e5be850ded8b41d3c13921f32bf54c3fab0273cfcb8489822f",
+  "source_sha256": "5dafde1152bf83aff8d3c180396477eae625937619bd549ea04336f26c83d38a",
+  "onnx_sha256": "3beaeed15a97f28c69e639b6c5ab2466f961a1aa75f232755e581d592fcb55af"
+ },
+ "current": {
+  "model_id": "78c16a31c3dba37f",
+  "onnx_sha256": "bc68a2742803a8466856fa353958b168becff1044dd387da001ddcaeb7e54f24"
+ },
+ "inference": "MirrorAveragingInference(AlphaZeroInference), both",
+ "policy": {
+  "difficulty": "hard",
+  "nSims": 200,
+  "moveTemp": 1,
+  "search": "protocol"
+ },
+ "openings_sha256": "f4ae110ff9e7547e413b15fff29ca0ff94d34c5f21d5d8b7da76af6577ee3563",
+ "kill_s": 64800,
+ "head": "0738f8a2e8ce74554edec61823cd8b6263515732",
+ "pid": 25587,
+ "runtime": {
+  "node": "v24.22.0",
+  "onnxruntime_node": "1.23.2"
+ }
+}
