@@ -319,6 +319,7 @@ knob) is not a new hypothesis.
 > **H-MX export amendment 1 (draft, `f8ce7792…`): export attempt 2, and its model-free build (`c63f8562`); returned for launch approval; all gates closed; nothing run (amendment note, 2026-11-20).** `run export-2` runs the unchanged export into fresh, create-only evidence (`htb-mix-export-2/`), bound to attempt 1's committed VOID record and outer.json, with the same gate, exporter, checks, tolerances and 3,600 s ceiling. Launch procedure: APFS-clone `node_modules` and verify from the worktree that Node resolves onnxruntime-node 1.23.2 there, before the gate commit; the derived wrapper repeats this as a preflight before the idle gate and refuses cleanly on a miss (tested by running the real wrapper). The match driver, analyser (re-pinned `80e741d0…`) and both match wrappers read attempt 2 only; attempt 1 cannot admit a match. Tests: export-2 26, H-MX 62, recovery 37, Node 21/21; eight mutants caught. See #216.
 > **H-MX export attempt 2 COMPLETED: PARITY_PASS; returned for separate match-smoke approval (Post-closure entry 76, 2026-11-20).** Gate `79270161` → evidence `eeee04b7`: `node_modules` APFS-cloned and onnxruntime-node 1.23.2 resolved from the worktree before the gate commit; preflight passed. Verified challenger `5dafde11…` (`adba50fb…`) exported once to pair `627c8d774df838a8` (graph `3beaeed1…`, data `cf78b17f…`) in `~/twixt-cache/htb-mix/export/`, outside the product manifest; `HARD_MODEL_ID` unchanged. Graph signature equal to `78c16a31c3dba37f`'s; Python (ORT 1.23.2) and Node canaries pass; S1–S4 PASS on 126 positions (S2/S4 max logit 1.43e-5, S3 exactly 0); V3 mirror-averaged PASS (max prior 1.07e-6, value 2.32e-6). Wall 9 s under KILL 3,600 s, clean. The match driver admits the record read-only. See #217.
 > **H-MX match smoke COMPLETED; timing LAUNCH_OK; returned for a separate decision on the 400-pair match (Post-closure entry 77, 2026-11-20).** Gate `089389b4` → evidence `561c8886` → timing `c5f1edf2`: `node_modules` APFS-cloned and onnxruntime-node 1.23.2 resolved from the worktree before the gate commit; 4 games (2 colour-reversed pairs, 25–31 plies), challenger `627c8d774df838a8` vs current `78c16a31c3dba37f`, both 200 simulations; wall 124 s under KILL 1,800 s, clean, gate restored. Frozen analyser (`80e741d0…`): mean game 31.004 s, projection 24,803.0 s (6.89 h) for 800 games, 1.5 × = 37,204.6 s (10.33 h) ≤ 64,800 s. timing.json committed beside the smoke record (re-derives byte-equal; driver admission clean). Outcomes unread. See #218.
+> **H-MX match COMPLETED: PASS; returned for a separate integration decision (Post-closure entry 78, 2026-11-21).** Gate `0738f8a2` → evidence `26cc0c1d` → analysis `b4062d88`: `node_modules` APFS-cloned and onnxruntime-node 1.23.2 resolved from the worktree before the gate commit; 400 colour-reversed pairs (800 games), challenger `627c8d774df838a8` vs current `78c16a31c3dba37f`, both 200 simulations; wall 29,581 s (8.22 h) under KILL 64,800 s, clean, gate restored. Frozen analyser (`80e741d0…`), smoke games excluded: search-seconds ratio 1.00323 ≤ 1.10. Challenger 415 W / 1 D / 384 L; **decisive pairs 31 W / 15 L (m 46, 354 split), exact one-sided sign-test p = 0.012948 ≤ 0.05; mean pair score 0.519375 > 0.50: PASS.** It estimates no size of advantage; two-sided 95% Hoeffding [0.451, 0.587]. Prediction on record (PASS about 15%; mean 0.51, range 0.49–0.54; decisive win share 50–65%): mean inside its range, win share 0.674 above it. PASS permits proposing an integration decision only; `HARD_MODEL_ID` unchanged. See #219.
 
 ## Historical proposal check — programme now closed
 
@@ -2170,6 +2171,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 216. **H-MX export amendment 1 (2026-11-20).** Do **not**: open `HTB_MIX_EXPORT_AUTHORIZED` or launch attempt 2 before the user's review of the amendment and approval of the launch; make the gate-opening commit before `node_modules` is APFS-cloned into the worktree and Node, run from it, resolves `<W>/node_modules/onnxruntime-node/package.json` at 1.23.2; symlink `node_modules` or accept another version; write, move or edit attempt 1's evidence or point any stage back at it; change the exporter, a qualification step, a tolerance or the ceiling; run a third export attempt under this amendment; or start a match stage from anything but a COMPLETED, PARITY_PASS attempt-2 record carrying `attempt: 2` and the amendment's sha256. A change to the amendment after review is re-pinned and rebuilt, with the analyser re-pinned in both match wrappers, before any gate opens.
 217. **H-MX export attempt 2 is spent: PARITY_PASS (2026-11-20, entry 76).** Do **not**: re-export, re-run parity or run a third export attempt; edit, move, re-place or overwrite pair `627c8d774df838a8` (graph `3beaeed1…`, data `cf78b17f…`), its manifest, the challenger `5dafde11…` or either export attempt's evidence; serve the pair, add it to the product manifest or change `HARD_MODEL_ID` on this evidence (parity qualifies the export for the match, and is no strength result); or open `MIX_MATCH_SMOKE_AUTHORIZED` or `MIX_MATCH_AUTHORIZED`, or play any game, before the user's approval of that stage. A match-stage launch worktree must APFS-clone `node_modules` and verify onnxruntime-node 1.23.2 from it before its gate commit (#215, #216).
 218. **The H-MX match smoke is spent (2026-11-20, entry 77).** Do **not**: re-run, extend or top up the smoke; read, report, count or score its four games' outcomes (they are replay-validated for admission and excluded from every report, card §9); edit, re-derive into another path or replace `htb-mix-match-smoke/timing.json` (`467136ac…`); read LAUNCH_OK as anything but a timing feasibility result; or open `MIX_MATCH_AUTHORIZED` or launch the 400-pair match before the user's separate approval. That launch needs a clean worktree with `node_modules` APFS-cloned and onnxruntime-node 1.23.2 verified from it before the gate commit, the frozen wrapper's re-derivation of timing.json, and its fixed 64,800 s ceiling (never raised).
+219. **The H-MX match is spent: PASS (2026-11-21, entry 78).** Do **not**: top up, extend, replay or re-score the match; re-analyse it under another rule, subset, colour split or interval, or count the smoke's four games; edit or re-derive `htb-mix-match/analysis.json` (`2a58660e…`) into another path; read PASS as a size of advantage or an Elo figure (the rule shows only that the challenger wins more decisive pairs than it loses over the planned opening sample, under card §9's assumptions, for the whole update); change `HARD_MODEL_ID`, add pair `627c8d774df838a8` to the product manifest, serve, deploy or push on this evidence before the user approves a separate integration decision (card §13: export pin, G2/G3-style checks); or run another mix ratio, dose or round under this card (each needs its own card).
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -13028,3 +13030,68 @@ The proposal note and revision 1 note above stay as written. This correction sup
   `htb-mix-match-run/01_wrapper.sh`, TERM 64,790 s / KILL 64,800 s; a launch worktree with `node_modules` APFS-cloned
   and 1.23.2 verified before the gate commit. Nothing else has been played, `HARD_MODEL_ID` is unchanged, and all
   gates are closed. Branch `htb-integration-g1` at `c5f1edf2` plus this entry; not pushed. See #218.
+
+#### Post-closure entry 78 — H-MX match: 400 colour-reversed pairs, challenger `627c8d774df838a8` vs current `hard` `78c16a31c3dba37f`; COMPLETED; PASS; returned for a separate integration decision (2026-11-21)
+
+- **Test:** H-MX card revision 1 §9–§11 and §13, the match. The 400 frozen `match` openings are each played twice
+  with colours reversed: the challenger (the export qualified by entry 76, read through export attempt 2's record)
+  against the current `hard`, both through protocolMove at 200 simulations, under the product's game-end rule. The
+  frozen analyser (`mix_match_analyse.mjs`, sha256 `80e741d0…`, pinned in both match wrappers) admits the evidence,
+  applies the 1.10 search-seconds guard before reading any outcome, then the exact one-sided sign test over the
+  decisive pairs with the mean-pair-score guard. The smoke's four games are excluded.
+- **Hypothesis:** the H-MX update (H-OP's on-policy distillation targets mixed with rehearsed H-TB positions, card §1)
+  makes the challenger win more decisive pairs than it loses against the current `hard` at matched compute.
+- **Why it was plausible:** H-OP's challenger learned its targets but lost retention on the H-TB positions, and its
+  match was NON_PASS (entry 72). Rehearsing old data is the standard remedy for that interference, and the H-MX
+  challenger cleared all six fit bars (entry 73; reproduced and verified in entry 74), including the H-TB retention bars H-OP's would have failed.
+- **Prediction on record (card §15, stated before any build):** mean pair score about 0.51 (plausible range
+  0.49–0.54); the challenger winning about 50–65% of decisive pairs; **PASS about a 15% chance.** Power plan (§10):
+  about 80% at a decisive-pair win probability q = 0.691 and decisive rate d = 0.114.
+- **What ran:** the user's approval (2026-11-20), from `2962f161`.
+  - **Before launch:** BOINC absent (only the exempt podman VM), no Unreal process, load about 2.0.
+  - **Launch worktree:** `/Users/bill/projects/TwixT_Game-mix-match`, branch `htb-mix-match-launch`.
+    `node_modules` was APFS-cloned (a real directory). From the worktree, Node resolved
+    `onnxruntime-node/package.json` to the worktree's own copy, at 1.23.2. The tree was clean.
+  - **Gate commit:** one line, `0738f8a2` (`MIX_MATCH_AUTHORIZED = true`). `MIX_MATCH_SMOKE_AUTHORIZED` stayed false.
+  - **The frozen wrapper ran once** (`htb-mix-match-run/01_wrapper.sh`, `a6ee7bea…`, TERM 64,790 s / KILL 64,800 s).
+    Its preconditions passed: the pinned analyser, the committed PARITY_PASS attempt-2 export record naming the
+    challenger directory, the ONNX Runtime shutdown test, onnxruntime-node 1.23.2, the committed smoke evidence, and
+    the smoke `timing.json` re-derived byte-equal and LAUNCH_OK. The idle gate held 60 s and the background check was
+    CLEAR. It ran `mix_match.mjs run match` (pid and pgid 25587). Results were left unread until it exited.
+- **Result: COMPLETED (inner and outer exit 0).** Wall 29,581 s (8.22 h) against KILL 64,800 s. Gate restored (file
+  identical to `2962f161`'s), no survivors (pgrep on pgid 25587 empty, no driver process), record written by the
+  script, stderr empty.
+  - **Record** (`6bfa8bb6…`): COMPLETED, 800 games, 400 pairs, 2026-11-21 00:45:37Z → 08:58:38Z. Startup 0.025 s;
+    total 29,580.6 s (36.98 s per game, 1.19 × the smoke's projection of 24,803.0 s, inside the 1.5 × margin).
+    Challenger `627c8d774df838a8` (graph `3beaeed1…`, data `cf78b17f…`, source `5dafde11…`); current
+    `78c16a31c3dba37f` (onnx `bc68a274…`); both MirrorAveragingInference, `hard`, 200 simulations, protocol search;
+    openings `f4ae110f…`; node v24.22.0, onnxruntime-node 1.23.2.
+  - **Commits:** the evidence and the restored gate, by exact paths (809 files), at `26cc0c1d`; tree clean; then
+    fast-forwarded as its own step.
+  - **Analysis:** the frozen analyser's `analyse`, after checking its sha256 against the wrappers' pin, written
+    create-only to `docs/superpowers/evidence/htb-mix-match/analysis.json` (`2a58660e…`), exit 0. A second run
+    re-derives it byte for byte. Committed at `b4062d88`, then fast-forwarded. The p-value was re-checked
+    independently in exact integers (Python `fractions`).
+  - **Compute guard:** search seconds challenger 14,813.0, current 14,765.3; **ratio 1.00323 ≤ 1.10, within.**
+  - **Games (800, smoke excluded):** challenger **415 W / 1 D / 384 L**.
+  - **Decisive pairs:** **W 31, L 15, m 46**; 354 pairs split; decisive rate 0.115; win share 0.674 (Clopper–Pearson
+    95% [0.520, 0.805]).
+  - **Exact one-sided sign test:** P(Binomial(46, ½) ≥ 31) = 56,946,086,091 / 2^46 = **0.012948 ≤ 0.05** (critical
+    W 30): rejects.
+  - **Mean pair score: 0.519375** (sum 207.75 / 400) > 0.50: the guard holds.
+  - **Verdict: PASS.**
+  - **Descriptive only:** two-sided 95% Hoeffding interval [0.4515, 0.5873]. By colour: challenger as Red 351–0–49
+    (0.8775), as Black 64–1–335 (0.16125). One draw. Plies mean 32.9, median 31, range 25–572. 800 distinct games.
+- **Did it match the prediction?** Partly. The mean pair score (0.519) is inside the predicted range (0.49–0.54) and
+  near its centre (0.51). The decisive-pair win share (0.674) is above the predicted 50–65%, close to the planned
+  q = 0.691. The decisive rate (0.115) matched the planning input (0.114). The PASS itself was the less likely outcome
+  on record (about 15%). Why the share came out higher than predicted is not measured here; this match does not
+  separate the data mix, the dose and the continued training.
+- **Conclusion / status:** by the frozen rule, the challenger wins more decisive pairs than it loses against the
+  current `hard` over the planned opening sample, under this 200-simulation protocol, at matched compute. This holds
+  for the whole update and estimates no size of advantage; the 5% bound assumes card §9's (a)–(d). Card §13: PASS
+  permits proposing an integration decision (export pin, G2/G3-style checks), and nothing more. **`HARD_MODEL_ID` is
+  unchanged,** nothing is deployed or pushed, and all gates are closed. The integration decision needs the user's
+  separate approval. The stale H-OP test fix
+  (`tests/test_htb_onpolicy.py::test_EVERY_ENTRY_REFUSES_WHILE_ITS_GATE_IS_CLOSED_AND_WRITES_NOTHING`) remains a
+  separate, unapproved item. Branch `htb-integration-g1` at `b4062d88` plus this entry; not pushed. See #219.
