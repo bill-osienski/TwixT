@@ -1,0 +1,77 @@
+{
+ "schema": "htb-mix-match-analysis/1",
+ "rule": "PASS iff the exact one-sided sign test over the m decisive pairs rejects (m >= 1 and P(Binomial(m, 1/2) >= W) <= 0.05) and the mean pair score exceeds 0.50 (an additional guard), over the n = 400 pairs",
+ "pairs": 400,
+ "games": 800,
+ "challenger": {
+  "W": 415,
+  "D": 1,
+  "L": 384
+ },
+ "sign_test": {
+  "W": 31,
+  "L": 15,
+  "m": 46,
+  "p_one_sided": 0.012948040896617385,
+  "critical_W": 30,
+  "alpha": 0.05,
+  "rejects": true
+ },
+ "decisive_pairs": {
+  "W": 31,
+  "L": 15,
+  "m": 46,
+  "split": 354,
+  "rate": 0.115,
+  "win_share": 0.6739130434782609,
+  "clopper_pearson_95": [
+   0.5198279593624722,
+   0.8046745633261057
+  ]
+ },
+ "mean_pair_score": 0.519375,
+ "pair_score_sum": 207.75,
+ "mean_guard": {
+  "value": 0.519375,
+  "above_half": true
+ },
+ "verdict": "PASS",
+ "search_seconds_guard": {
+  "challenger_s": 14813.018834840008,
+  "current_s": 14765.3453634949,
+  "ratio": 1.0032287406878388,
+  "limit": 1.1,
+  "within": true
+ },
+ "descriptive": {
+  "two_sided_95_hoeffding_half_width": 0.06790507578703098,
+  "two_sided_95_hoeffding_interval": [
+   0.45146992421296905,
+   0.587280075787031
+  ],
+  "by_colour": {
+   "challenger_red": {
+    "W": 351,
+    "D": 0,
+    "L": 49,
+    "score": 0.8775
+   },
+   "challenger_black": {
+    "W": 64,
+    "D": 1,
+    "L": 335,
+    "score": 0.16125
+   }
+  },
+  "draws": 1,
+  "plies": {
+   "n": 800,
+   "mean": 32.94,
+   "median": 31,
+   "min": 25,
+   "max": 572
+  },
+  "distinct_games": 800
+ },
+ "reading": "PASS: the exact one-sided sign test rejects at alpha 0.05 and the mean pair score exceeds 0.50. Over the planned opening sample (fresh 4-ply openings by the frozen rule, each played twice with colours reversed, under this 200-simulation protocol) the challenger wins more decisive pairs than it loses against the current hard. This holds for the whole update (the data mix, the dose and the continued training together) and estimates no size of advantage. The 5% bound assumes (a) independent pairs, (b) exchangeable, fair win/loss signs under the null, (c) a fixed design with no sequential look, top-up or discarded pair, and (d) its scope is the planned opening distribution only. The mean condition is an additional guard that can only remove a PASS. It authorizes proposing an integration decision, nothing more."
+}
