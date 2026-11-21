@@ -6,4 +6,4 @@
  * exit. mix_match.mjs refuses to run a stage whose gate is closed.
  */
 export const MIX_MATCH_SMOKE_AUTHORIZED = false;
-export const MIX_MATCH_AUTHORIZED = false;
+export const MIX_MATCH_AUTHORIZED = true;
