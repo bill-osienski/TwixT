@@ -320,6 +320,7 @@ knob) is not a new hypothesis.
 > **H-MX export attempt 2 COMPLETED: PARITY_PASS; returned for separate match-smoke approval (Post-closure entry 76, 2026-11-20).** Gate `79270161` → evidence `eeee04b7`: `node_modules` APFS-cloned and onnxruntime-node 1.23.2 resolved from the worktree before the gate commit; preflight passed. Verified challenger `5dafde11…` (`adba50fb…`) exported once to pair `627c8d774df838a8` (graph `3beaeed1…`, data `cf78b17f…`) in `~/twixt-cache/htb-mix/export/`, outside the product manifest; `HARD_MODEL_ID` unchanged. Graph signature equal to `78c16a31c3dba37f`'s; Python (ORT 1.23.2) and Node canaries pass; S1–S4 PASS on 126 positions (S2/S4 max logit 1.43e-5, S3 exactly 0); V3 mirror-averaged PASS (max prior 1.07e-6, value 2.32e-6). Wall 9 s under KILL 3,600 s, clean. The match driver admits the record read-only. See #217.
 > **H-MX match smoke COMPLETED; timing LAUNCH_OK; returned for a separate decision on the 400-pair match (Post-closure entry 77, 2026-11-20).** Gate `089389b4` → evidence `561c8886` → timing `c5f1edf2`: `node_modules` APFS-cloned and onnxruntime-node 1.23.2 resolved from the worktree before the gate commit; 4 games (2 colour-reversed pairs, 25–31 plies), challenger `627c8d774df838a8` vs current `78c16a31c3dba37f`, both 200 simulations; wall 124 s under KILL 1,800 s, clean, gate restored. Frozen analyser (`80e741d0…`): mean game 31.004 s, projection 24,803.0 s (6.89 h) for 800 games, 1.5 × = 37,204.6 s (10.33 h) ≤ 64,800 s. timing.json committed beside the smoke record (re-derives byte-equal; driver admission clean). Outcomes unread. See #218.
 > **H-MX match COMPLETED: PASS; returned for a separate integration decision (Post-closure entry 78, 2026-11-21).** Gate `0738f8a2` → evidence `26cc0c1d` → analysis `b4062d88`: `node_modules` APFS-cloned and onnxruntime-node 1.23.2 resolved from the worktree before the gate commit; 400 colour-reversed pairs (800 games), challenger `627c8d774df838a8` vs current `78c16a31c3dba37f`, both 200 simulations; wall 29,581 s (8.22 h) under KILL 64,800 s, clean, gate restored. Frozen analyser (`80e741d0…`), smoke games excluded: search-seconds ratio 1.00323 ≤ 1.10. Challenger 415 W / 1 D / 384 L; **decisive pairs 31 W / 15 L (m 46, 354 split), exact one-sided sign-test p = 0.012948 ≤ 0.05; mean pair score 0.519375 > 0.50: PASS.** It estimates no size of advantage; two-sided 95% Hoeffding [0.451, 0.587]. Prediction on record (PASS about 15%; mean 0.51, range 0.49–0.54; decisive win share 50–65%): mean inside its range, win share 0.674 above it. PASS permits proposing an integration decision only; `HARD_MODEL_ID` unchanged. See #219.
+> **H-MX integration proposal DRAFTED: serve the tested export `627c8d774df838a8` as `hard`; returned for review; nothing built, copied, loaded or run (proposal note, 2026-11-22).** `docs/superpowers/2026-11-22-htb-mix-integration-proposal.md` (`b72593fa…`). One product line: `HARD_MODEL_ID` `78c16a31c3dba37f` → `627c8d774df838a8`, in its own revertible commit, after the three export files are tracked byte-identical in `models/627c8d774df838a8/` (`3beaeed1…`, `cf78b17f…`, manifest `abf3931d…`). The 200-simulation protocol search, the T 1.0 opening readout, root halving, `easy`/`medium`, `legacy` and the runtime are unchanged. No new match (the H-MX match already ran the product's own modules against today's `hard`). Checks, one gated run (about 2.5 h, ceiling 4 h): staged startup and live REST/WS; fixed-seed agreement with 845 recorded match rows in-process, over WS and over REST (exact, via a test-only seed preload; no product edit); easy/medium exact on 142 positions; rollback by restart (`HARD_MODEL_MANIFEST=models/78c16a31c3dba37f/manifest.json`, new artifact absent) and by revert, each reproducing today's `hard` exactly. Prediction: all PASS, about 90%. `HARD_MODEL_ID` unchanged. See #220.
 
 ## Historical proposal check — programme now closed
 
@@ -2172,6 +2173,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 217. **H-MX export attempt 2 is spent: PARITY_PASS (2026-11-20, entry 76).** Do **not**: re-export, re-run parity or run a third export attempt; edit, move, re-place or overwrite pair `627c8d774df838a8` (graph `3beaeed1…`, data `cf78b17f…`), its manifest, the challenger `5dafde11…` or either export attempt's evidence; serve the pair, add it to the product manifest or change `HARD_MODEL_ID` on this evidence (parity qualifies the export for the match, and is no strength result); or open `MIX_MATCH_SMOKE_AUTHORIZED` or `MIX_MATCH_AUTHORIZED`, or play any game, before the user's approval of that stage. A match-stage launch worktree must APFS-clone `node_modules` and verify onnxruntime-node 1.23.2 from it before its gate commit (#215, #216).
 218. **The H-MX match smoke is spent (2026-11-20, entry 77).** Do **not**: re-run, extend or top up the smoke; read, report, count or score its four games' outcomes (they are replay-validated for admission and excluded from every report, card §9); edit, re-derive into another path or replace `htb-mix-match-smoke/timing.json` (`467136ac…`); read LAUNCH_OK as anything but a timing feasibility result; or open `MIX_MATCH_AUTHORIZED` or launch the 400-pair match before the user's separate approval. That launch needs a clean worktree with `node_modules` APFS-cloned and onnxruntime-node 1.23.2 verified from it before the gate commit, the frozen wrapper's re-derivation of timing.json, and its fixed 64,800 s ceiling (never raised).
 219. **The H-MX match is spent: PASS (2026-11-21, entry 78).** Do **not**: top up, extend, replay or re-score the match; re-analyse it under another rule, subset, colour split or interval, or count the smoke's four games; edit or re-derive `htb-mix-match/analysis.json` (`2a58660e…`) into another path; read PASS as a size of advantage or an Elo figure (the rule shows only that the challenger wins more decisive pairs than it loses over the planned opening sample, under card §9's assumptions, for the whole update); change `HARD_MODEL_ID`, add pair `627c8d774df838a8` to the product manifest, serve, deploy or push on this evidence before the user approves a separate integration decision (card §13: export pin, G2/G3-style checks); or run another mix ratio, dose or round under this card (each needs its own card).
+220. **H-MX integration proposal (2026-11-22).** Do **not**: change `HARD_MODEL_ID`, copy the export into `models/`, load it in a server, or deploy, push or restart the product on it before the user approves the proposal, then the build, then the check run, then deployment, each separately; serve any file but the three tested ones (`3beaeed1…`, `cf78b17f…`, `abf3931d…` unless D1 chooses otherwise); change the 200-simulation protocol, the opening readout, root halving, `easy`, `medium`, `legacy` or the runtime as part of this swap; delete, move or edit `models/78c16a31c3dba37f/` (the restart rollback needs it); let commit (ii) reach `htb-integration-g1` before deployment is approved; accept a fixed-seed or rollback comparison with any tolerance or after a retry; or edit a spent research driver, binding or evidence to make a check pass. `HARD_MODE=legacy` is not the rollback to today's `hard`.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -13095,3 +13097,92 @@ The proposal note and revision 1 note above stay as written. This correction sup
   separate approval. The stale H-OP test fix
   (`tests/test_htb_onpolicy.py::test_EVERY_ENTRY_REFUSES_WHILE_ITS_GATE_IS_CLOSED_AND_WRITES_NOTHING`) remains a
   separate, unapproved item. Branch `htb-integration-g1` at `b4062d88` plus this entry; not pushed. See #219.
+
+#### Proposal note — H-MX integration: serve the tested export `627c8d774df838a8` as `hard`; G2/G3-style checks and a tested rollback; returned for review; nothing built, copied, loaded or run (2026-11-22)
+
+- **Request:** the user's (2026-11-22). Draft an integration proposal scoped to replacing the current `hard` model
+  `78c16a31c3dba37f` with the exact tested export `627c8d774df838a8`:
+  - pin the existing model files by hash;
+  - keep the 200-simulation search, the opening sampling and root halving unchanged;
+  - plan G2/G3-style checks: a staged server loads the pinned export, REST and WebSocket serve it correctly, and
+    fixed-seed moves agree with the match harness;
+  - check that `easy` and `medium` keep their behaviour;
+  - specify and test a rollback that restores `78c16a31c3dba37f` in protocol mode.
+
+  Proposal only. `HARD_MODEL_ID` stays unchanged, and the stale H-OP test fix stays separate.
+- **Proposal:** `docs/superpowers/2026-11-22-htb-mix-integration-proposal.md` (revision 0, sha256 `b72593fa…`).
+- **Test:** whether the served product, with only `HARD_MODEL_ID` changed, reproduces the player the H-MX match
+  tested, leaves `easy` and `medium` unchanged, and can be rolled back exactly to today's `hard` (proposal §5).
+- **Hypothesis:** the swap is a pin. The export's graph signature equals `78c16a31c3dba37f`'s (entry 76), and the
+  match (entry 78) played it in-process through the product's `protocolMove`, `PROTOCOL_HARD` and
+  `MirrorAveragingInference(AlphaZeroInference)`, built exactly as `server/index.js` builds `hard`. So a staged server
+  given the match's seeds plays the match's moves, and nothing outside `hard` moves.
+- **Why it is plausible:**
+  - same code, runtime (node v24.22.0, onnxruntime-node 1.23.2), machine and model bytes as the match;
+  - the server's only hard-model input is `HARD_MODEL_ID` (or its `HARD_MODEL_MANIFEST` override), and easy and
+    medium use the default session (`c34b7ff3297c785a`), which the swap does not touch;
+  - H-TB's G2 rollback checks (entry 61) were exact on all 142 positions.
+  - **Against it:** entries 59–60 found about 1e-7 value differences across Node versions, which would break exact
+    comparisons if the environment drifted. Here the Node version is the match's own.
+- **Read-only inspection (2026-11-22):**
+  - The export directory's three files hash to the export and match records' values:
+    - graph `3beaeed1…`, 84,233 bytes;
+    - data `cf78b17f…`, 7,493,120 bytes;
+    - manifest `abf3931d…`, 3,206 bytes, carrying every field the loader requires.
+  - `models/78c16a31c3dba37f/` hashes: manifest `81bbf545…`, graph `bc68a274…`, data `317d7a7c…`.
+  - `server/` last changed at `156c991d`.
+  - `protocolMove` takes seeds only as a test argument, and `server/index.js` never passes them.
+  - The match's per-move rows carry seeds, the move, `nSimulations` and visits (not values). The replay sample is
+    fixed now:
+    - challenger rows of pairs p ≡ 0 (mod 20), 561 moves;
+    - plus the longest game (`pair_0153_game_1`, 572 plies), 284 moves;
+    - 845 in all; the current-`hard` rows of the same 41 games number 844.
+  - Pins that move with `HARD_MODEL_ID`:
+    - `server/test_hard_model.js`;
+    - the golden current-HEAD stage (the `06b52aaa` pattern);
+    - the spent G3 binding test (`test_g3.mjs`, which lists `server/model_manifest.js`).
+  - The spent match drivers pin `78c16a31c3dba37f` and would refuse after the swap; that is intended, and they are
+    not edited.
+  - **Scratch probe, model-free:** a `node --import` preload that replaces `crypto.randomInt(0, 2**48 - 1)` from a
+    queue and calls `syncBuiltinESMExports()` fed a later-imported module's `import { randomInt }` in order, and
+    threw on exhaustion (node v24.22.0).
+- **Proposed changes (§3):**
+  - **Commit (i):** the three files byte-identical in `models/627c8d774df838a8/`, and pin tests.
+  - **Commit (ii), last on branch `hmx-integration`:** the one `HARD_MODEL_ID` line, its test pins, the golden
+    stage `protocol-hard-hmx`, and the G3 binding test's expected drift.
+  - **Model-free tooling:** a seed preload, a check driver, one new gate (`HMX_INTEGRATION_CHECK_AUTHORIZED`) and a
+    derived wrapper. No other product file changes.
+- **Checks (§4–§5):**
+  - **Build B1–B7:** artifact identity, a diff allowlist, pins, the golden stage, preload controls, suites and the
+    wrapper.
+  - **One gated run (TERM 14,390 s / KILL 14,400 s), all exact, no tolerance:**
+    - S1 staged startup (banner and model-info show `627c8d774df838a8`);
+    - S2 live REST and WS, L1–L9;
+    - S3 fixed-seed agreement on all 845 challenger rows, in-process (A0), over WS (A1) and over REST (A2);
+    - S4 easy and medium search outputs equal to today's server on 142 positions;
+    - R1 rollback by restart (`HARD_MODEL_MANIFEST=models/78c16a31c3dba37f/manifest.json`, with the new artifact
+      removed): the seeded 142-position capture equals today's server's, and the 844 current-`hard` rows are
+      reproduced;
+    - R2 rollback by reverting (ii), with the same comparisons and the suites passing.
+  - **G3-style, no new match:** per-move timing (informational) and one browser game as a smoke.
+- **Rollback (§6):**
+  1. Immediate: restart with `HARD_MODEL_MANIFEST=models/78c16a31c3dba37f/manifest.json` and protocol mode; it never
+     reads the new artifact.
+  2. Durable: `git revert` of commit (ii).
+  3. `HARD_MODE=legacy` is not the rollback to today's `hard`.
+- **Prediction on record (proposal §5.7, before any build):** all checks PASS, about 90%. The likeliest failure is
+  a harness defect in the new driver (preload ordering or the mid-game request shape).
+- **Decision rule (§5.7):**
+  - any check FAIL: nothing; a reviewed decision, with no silent repair or retry;
+  - VOID: no result, no automatic retry;
+  - all PASS: proposing deployment, with its own approval.
+- **Decisions for the user (§9):**
+  - D1: byte-identical manifest (recommended). Its `provenance_note` says `run export`; the run was attempt 2
+    (`run export-2`, the same body). This is a wording slip in the export's own file, left as written.
+  - D2: no new match (recommended).
+  - D3: the G3 binding test asserts the single expected drift (recommended).
+  - D4: who drives the browser smoke.
+- **What ran:** nothing. No model was copied, loaded or served, and no server was started.
+- **Result:** none (a proposal).
+- **Status:** a draft, returned for review. `HARD_MODEL_ID` is unchanged (`78c16a31c3dba37f`), all gates are closed,
+  nothing is pushed. The stale H-OP test fix remains a separate, unapproved item. See #220.
