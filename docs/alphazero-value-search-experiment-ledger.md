@@ -322,6 +322,7 @@ knob) is not a new hypothesis.
 > **H-MX match COMPLETED: PASS; returned for a separate integration decision (Post-closure entry 78, 2026-11-21).** Gate `0738f8a2` → evidence `26cc0c1d` → analysis `b4062d88`: `node_modules` APFS-cloned and onnxruntime-node 1.23.2 resolved from the worktree before the gate commit; 400 colour-reversed pairs (800 games), challenger `627c8d774df838a8` vs current `78c16a31c3dba37f`, both 200 simulations; wall 29,581 s (8.22 h) under KILL 64,800 s, clean, gate restored. Frozen analyser (`80e741d0…`), smoke games excluded: search-seconds ratio 1.00323 ≤ 1.10. Challenger 415 W / 1 D / 384 L; **decisive pairs 31 W / 15 L (m 46, 354 split), exact one-sided sign-test p = 0.012948 ≤ 0.05; mean pair score 0.519375 > 0.50: PASS.** It estimates no size of advantage; two-sided 95% Hoeffding [0.451, 0.587]. Prediction on record (PASS about 15%; mean 0.51, range 0.49–0.54; decisive win share 50–65%): mean inside its range, win share 0.674 above it. PASS permits proposing an integration decision only; `HARD_MODEL_ID` unchanged. See #219.
 > **H-MX integration proposal DRAFTED: serve the tested export `627c8d774df838a8` as `hard`; returned for review; nothing built, copied, loaded or run (proposal note, 2026-11-22).** `docs/superpowers/2026-11-22-htb-mix-integration-proposal.md` (`b72593fa…`). One product line: `HARD_MODEL_ID` `78c16a31c3dba37f` → `627c8d774df838a8`, in its own revertible commit, after the three export files are tracked byte-identical in `models/627c8d774df838a8/` (`3beaeed1…`, `cf78b17f…`, manifest `abf3931d…`). The 200-simulation protocol search, the T 1.0 opening readout, root halving, `easy`/`medium`, `legacy` and the runtime are unchanged. No new match (the H-MX match already ran the product's own modules against today's `hard`). Checks, one gated run (about 2.5 h, ceiling 4 h): staged startup and live REST/WS; fixed-seed agreement with 845 recorded match rows in-process, over WS and over REST (exact, via a test-only seed preload; no product edit); easy/medium exact on 142 positions; rollback by restart (`HARD_MODEL_MANIFEST=models/78c16a31c3dba37f/manifest.json`, new artifact absent) and by revert, each reproducing today's `hard` exactly. Prediction: all PASS, about 90%. `HARD_MODEL_ID` unchanged. See #220.
 > **H-MX integration proposal REVISED (revision 1) after review: D1–D4 decided; returned for build approval; nothing built, copied, loaded or run (proposal note, 2026-11-23).** Proposal `79f815f8…` supersedes revision 0 (`b72593fa…`). D1 byte-identical manifest; the export manifest's `provenance_note` ("`run export`") is corrected here: attempt 2's `run export-2` wrote it. D2 no new match. D3: the G3 binding test asserts the one changed bound file, `server/model_manifest.js` `ecde544b…` → `054f9434…`, and aggregate `da0b86bf…` → `aa04f04c…`; the historical binding and evidence stay intact. D4: I play a required browser game against the staged server, unseeded. Graph and data hashes cite both records; the manifest hash `abf3931d…` is in neither, so it is a packaging pin, checked to name the qualified pair. The build is model-free with exact commands; five model-loading suites move to the gated run. `htb-integration-g1` does not move until deployment. Prediction unchanged (all PASS, about 90%). `HARD_MODEL_ID` unchanged. See #221.
+> **H-MX integration BUILT (model-free) on branch `hmx-integration`; returned for approval of the gated checks and the browser smoke (Post-closure entry 79, 2026-11-23).** From `abaf20be`: (i) `1cb35192` tracks `models/627c8d774df838a8/` byte-identical (graph `3beaeed1…`, data `cf78b17f…`, manifest `abf3931d…`, a packaging pin) with B1; tooling `ea342450` (closed JS gate `HMX_INTEGRATION_CHECK_AUTHORIZED`, seed preload, driver, derived wrapper, model-free tests); (ii) `cb404cf0` the swap (`model_manifest.js` `ecde544b…` → `054f9434…`, G3 binding diff exactly that file, aggregate `da0b86bf…` → `aa04f04c…`, binding unedited); (ii-b) `78d69fad` golden stage `protocol-hard-hmx` (`1c34252d…`). B1–B7 PASS; B6 equal at base, pre-swap and swap heads except three tests that need `<tree>/.venv` and fail in any linked worktree (identical at the base). Deviation: the swap is two commits, so the code-revert rollback reverts both (probed: restores the pre-swap tree exactly). `htb-integration-g1` stays at `abaf20be`; nothing loaded, served, deployed or pushed. See #222.
 
 ## Historical proposal check — programme now closed
 
@@ -2176,6 +2177,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 219. **The H-MX match is spent: PASS (2026-11-21, entry 78).** Do **not**: top up, extend, replay or re-score the match; re-analyse it under another rule, subset, colour split or interval, or count the smoke's four games; edit or re-derive `htb-mix-match/analysis.json` (`2a58660e…`) into another path; read PASS as a size of advantage or an Elo figure (the rule shows only that the challenger wins more decisive pairs than it loses over the planned opening sample, under card §9's assumptions, for the whole update); change `HARD_MODEL_ID`, add pair `627c8d774df838a8` to the product manifest, serve, deploy or push on this evidence before the user approves a separate integration decision (card §13: export pin, G2/G3-style checks); or run another mix ratio, dose or round under this card (each needs its own card).
 220. **H-MX integration proposal (2026-11-22).** Do **not**: change `HARD_MODEL_ID`, copy the export into `models/`, load it in a server, or deploy, push or restart the product on it before the user approves the proposal, then the build, then the check run, then deployment, each separately; serve any file but the three tested ones (`3beaeed1…`, `cf78b17f…`, `abf3931d…` unless D1 chooses otherwise); change the 200-simulation protocol, the opening readout, root halving, `easy`, `medium`, `legacy` or the runtime as part of this swap; delete, move or edit `models/78c16a31c3dba37f/` (the restart rollback needs it); let commit (ii) reach `htb-integration-g1` before deployment is approved; accept a fixed-seed or rollback comparison with any tolerance or after a retry; or edit a spent research driver, binding or evidence to make a check pass. `HARD_MODE=legacy` is not the rollback to today's `hard`.
 221. **H-MX integration proposal, revision 1 (2026-11-23).** Adds to #220. Do **not**: cite the manifest hash `abf3931d…` as tested or recorded evidence (it is in neither the export record nor the match record; it is a packaging pin); edit the copied manifest to fix its `provenance_note` (the correction lives in this ledger); edit `tests/htb_integration/g3_binding.json` or any G3 evidence, or loosen §3.1's assertion, or change its literals (`ecde544b…`, `054f9434…`, `da0b86bf…`, `aa04f04c…`) to fit a build that differs from the proposal's diff; run `server/test_model_manifest.js`, `server/test_ort_conv_canary.js`, `server/test_ort_shutdown.js`, `tests/product_match/test_harness.mjs` or `tests/product_match/test_analyse.mjs` (or anything that creates an ONNX Runtime session or starts a server) during the build; recommend deployment without the browser smoke V's PASS, or run V with a seed preload or model environment override; commit on `htb-integration-g1` while `hmx-integration` is open.
+222. **H-MX integration build (2026-11-23, entry 79).** Do **not**: fast-forward `htb-integration-g1` to `hmx-integration`, restart the product on it, or open `HMX_INTEGRATION_CHECK_AUTHORIZED` before the user approves the gated checks (and then deployment, separately); revert only `cb404cf0` as the code rollback (revert `78d69fad` and `cb404cf0` together); edit the build's commits, the tracked artifact, `g3_binding.json` or the B2/D3 literals to make a later check pass; treat the three linked-worktree `.venv` failures as a product result or accept any other failure under that heading; link or create a `.venv` in a launch tree to hide them; or run the check from a tree whose `-ref` and `-revert` siblings are not the planned commits.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -13260,3 +13262,111 @@ The proposal note and revision 1 note above stay as written. This correction sup
 - **Result:** none (a proposal).
 - **Status:** revision 1, returned for the build approval. `HARD_MODEL_ID` is unchanged (`78c16a31c3dba37f`), all
   gates are closed, nothing is pushed. The stale H-OP test fix remains a separate, unapproved item. See #221.
+
+#### Post-closure entry 79 — H-MX integration build (model-free): the tested export tracked, the one-line swap, the check tooling; B1–B7 PASS; returned for approval of the gated checks and the browser smoke (2026-11-23)
+
+- **Test:** proposal revision 1 (`79f815f8…`) §3–§4, the build. Track the exact tested export, change only
+  `HARD_MODEL_ID`, add the model-free tooling for §5's gated run, and pass B1–B7 without loading a model.
+- **Hypothesis:** the swap is a pin. Tracking the export and changing one line moves no other production byte,
+  breaks no test except the pins that name the hard model, and can be reverted exactly.
+- **Why it was plausible:** the H-TB pin (`99b1feaf`, `06b52aaa`) moved the same line with the same set of pinned
+  tests. A read-only inspection (proposal note, revision 1) found no other test that pins the hard id, enumerates
+  `models/` or reads the changed files from Python.
+- **Prediction on record:** none stated in advance for the build itself. The proposal's prediction (all checks PASS,
+  about 90%) concerns the gated run.
+- **What ran:** the user's build approval (2026-11-23), from `abaf20be`, on branch `hmx-integration`.
+  - **Worktree:** `/Users/bill/projects/TwixT_Game-hmx-build`. `node_modules` was APFS-cloned, and onnxruntime-node
+    1.23.2 resolved from the worktree's copy. The tree was clean before each commit. Commits used exact paths.
+  - **Commit (i), `1cb35192`:** the three export files were copied byte-identically (`cmp`) into
+    `models/627c8d774df838a8/`:
+    - `model.onnx`, 84,233 bytes, `3beaeed1…`;
+    - `model.onnx.data`, 7,493,120 bytes, `cf78b17f…`;
+    - `manifest.json`, 3,206 bytes, `abf3931d…`, unedited (D1).
+
+    `server/test_hard_model.js` gained B1: 8 tests, including 4 tampered-copy controls and a wrong-record control.
+    The retained-pin loop gained `78c16a31c3dba37f` and `627c8d774df838a8`.
+  - **Tooling, `ea342450` (P, the pre-swap head):**
+    - the closed JavaScript gate `HMX_INTEGRATION_CHECK_AUTHORIZED` (`hmx_integration_authorization.mjs`);
+    - the test-only seed preload (`hmx_seed_preload.mjs`);
+    - the check driver (`hmx_integration_check.mjs`): G0, S1/S2 (G2's L1–L9 with the hard id as a parameter), A0–A2,
+      S4, R1, R2 (including the B6 and G0 suites in the revert tree) and T;
+    - the wrapper (`hmx-integration-check-run/01_wrapper.sh`, TERM 14,390 s / KILL 14,400 s), derived by
+      `tests/hmx_integration_wrapper_spec.py` from the H-MX match wrapper;
+    - `test_hmx_integration.mjs` (16 tests) and `test_hmx_integration_wrapper.py` (9 tests).
+  - **Commit (ii), `cb404cf0`, the swap:**
+    - `server/model_manifest.js` carries exactly the proposal §3 diff, `ecde544b…` → `054f9434…`;
+    - `test_hard_model.js` is re-pointed, with two rollback-by-restart tests (one in a tree without the new artifact);
+    - `test_g3.mjs` makes the five-point D3 assertion.
+  - **Commit (ii-b), `78d69fad`:** golden stage `protocol-hard-hmx`, surface `1c34252d…` at `cb404cf0`, not
+    re-measured (the `06b52aaa` pattern). The digest function gives `protocol-hard-pinned`'s recorded `61aacb5b…` at
+    `99b1feaf` as a control.
+  - **Build record:** `docs/superpowers/evidence/hmx-integration-build/record.json` (`f9a3bd55…`), with the three B6
+    summaries and the base integration log.
+- **Result: B1–B7 PASS.**
+  - **B1:** the graph and data hashes match **both** committed records. The manifest matches its packaging pin and
+    names the qualified pair. The product loader accepts the directory, and every control is refused.
+  - **B2:** checked against `abaf20be`, as tests in `test_hmx_integration.mjs`:
+    - production server code (`server/*.js` minus `test_*`) differs by exactly the planned hunk at the swap head,
+      and not at all at P;
+    - `server/test_hard_model.js` is the one server test file changed, explicitly allowed;
+    - every changed path is on the allowlist or under `docs/`;
+    - the three retained model directories are unchanged;
+    - `PROTOCOL_HARD`, `LEGACY_HARD`, easy, medium and `HALVING` are unchanged by value.
+  - **B3:** the pins and both rollback tests pass.
+  - **B4:** golden passes 140/140 under `protocol-hard-hmx`, and `protocol-hard-pinned` now refuses at HEAD. The D3
+    assertion holds on all five points: binding file `ef25d4da…` and digest `da0b86bf…` intact; the diff is exactly
+    `driver_files.server/model_manifest.js` and `digest`; old `ecde544b…`, new `054f9434…`; the fresh aggregate
+    `aa04f04c…` equals the predicted one.
+  - **B5:** the preload controls pass:
+    - it serves the queue in order to an ESM named import, logs every value, and passes other calls through;
+    - it throws on exhaustion, and refuses to load with no queue or any of five invalid queues;
+    - the real `protocolMove`, unseeded under the preload, equals explicit seeds before and after ply 20 (fake
+      evaluator), and without the preload it draws fresh seeds;
+    - no product file references it.
+  - **B6 (model-free commands, proposal §4):**
+
+    | run | server | parity | match | golden | integration | smoke | lint | wrapper |
+    |---|---|---|---|---|---|---|---|---|
+    | base `abaf20be` | 148/148 | 39/39 | 86/86 | 140/140 | 88/91 | 1/1 | 0 | n/a |
+    | P `ea342450` | 158/158 | 39/39 | 86/86 | 140/140 | 104/107 | 1/1 | 0 | 9/9 |
+    | swap `78d69fad` | 160/160 | 39/39 | 86/86 | 140/140 | 104/107 | 1/1 | 0 | 9/9 |
+
+    Nothing was skipped. The three integration failures are the same tests at all three heads; see the deviation
+    below.
+  - **B7:** the wrapper is byte-equal to its derivation, with 32 planned parent lines changed and nothing else. The
+    real wrapper in throwaway repos refuses a non-opening HEAD, a missing ref tree, a symlinked revert
+    `node_modules`, onnxruntime-node 1.23.1 and a tampered match record, and reaches the idle gate when everything is
+    met. Each case writes nothing and leaves the gate closed. Run from the clean worktree with
+    `/Users/bill/projects/TwixT_Game/.venv/bin/python`.
+  - **Revert probe:** in a throwaway detached worktree, `git revert 78d69fad cb404cf0` changes exactly the six swap
+    files and yields P's tree exactly, with `model_manifest.js` back at `ecde544b…`. The worktree was removed.
+- **Deviations from the proposal (recorded, not hidden):**
+  1. **The swap is two commits.** A golden stage's `surfaceCommit` must name a commit that produces its digest
+     (`test_falsify.mjs`), and no commit can name itself. So the stage is (ii-b) after (ii), as in
+     `99b1feaf` → `06b52aaa`. The code-revert rollback (proposal §6, step 2) and a declined deployment revert
+     `78d69fad` and `cb404cf0` together. The restart rollback is unchanged.
+  2. **Linked-worktree failures.** Three integration tests spawn `<tree>/.venv/bin/python`, which a linked worktree
+     lacks (`ENOENT`, or status `null`):
+     - `test_mix_match.mjs`'s wrapper-derivation test;
+     - two `test_teacher_bench.mjs` Python-lockstep tests.
+
+     They fail identically at the base, so they predate the build, and they test nothing it changed. I did not alter
+     the environment, because a `.venv` link is not ignored at the worktree root and would dirty the tree. B6's
+     "any failure stops the build" was applied as "no failure beyond the base set". The driver's R2 suite check
+     accepts exactly this set in the revert tree.
+  3. **Gate inventory.** The Python gate inventory scans only Python files, so it is not extended. Instead the Node
+     tests assert that the new JavaScript gate is closed and alone in its file, as the user instructed.
+  4. **REST and `nSimulations`.** REST answers carry no `nSimulations`, so A2 checks the root visit total, the model
+     and the search fields. A0 and A1 also check `nSimulations`.
+  5. **B2's lifetime.** B2's tests are pinned to `abaf20be` and will need retiring when production server code next
+     changes.
+  6. **R1's tree.** R1 runs from an APFS clone of the staged tree with `.git` and the new artifact removed, using the
+     relative `HARD_MODEL_MANIFEST` from that tree's root.
+  7. **The other trees.** The wrapper finds them by name: `<launch tree>-ref`, detached at `abaf20be`, and
+     `<launch tree>-revert`, the build head with both swap commits reverted and the gate closed.
+- **Did it match the prediction?** No prediction was stated for the build. The hypothesis held: one production byte
+  range moved, only the planned pins changed, and the revert is exact.
+- **Conclusion / status:** BUILT on `hmx-integration` (HEAD `78d69fad` plus this record and entry); not on
+  `htb-integration-g1`, which stays at `abaf20be`. All gates are closed. No model session was created, and no server
+  was started, deployed or pushed. The running server and the stale H-OP tests were left alone. The gated checks of
+  §5 and the browser smoke V need the user's separate approval, and deployment needs another. See #222.

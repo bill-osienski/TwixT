@@ -1,0 +1,227 @@
+{
+ "schema": "hmx-integration-build-record/1",
+ "written_by": "Claude, from the commands and outputs listed here",
+ "date": "2026-11-23",
+ "approval": "the user's build approval, 2026-11-23 (model-free build from abaf20be on hmx-integration; B1-B7; all gates closed)",
+ "proposal": {
+  "path": "docs/superpowers/2026-11-22-htb-mix-integration-proposal.md",
+  "revision": 1,
+  "sha256": "79f815f8e4d9bbe91a615f6e3ba0c250c78ad599e6ecd1a00cf6ff539c854a6c"
+ },
+ "base": "abaf20beddf70e7857b41667c34c4c5a6809f47d",
+ "branch": "hmx-integration",
+ "worktree": "/Users/bill/projects/TwixT_Game-hmx-build (node_modules APFS-cloned; onnxruntime-node 1.23.2 resolved from it; clean before every commit)",
+ "htb_integration_g1": "abaf20beddf70e7857b41667c34c4c5a6809f47d (not moved)",
+ "commits": {
+  "i_artifact": "1cb3519238b9a8827123c9a87147e24023dde444",
+  "tooling_P": "ea342450849906d7c33d1157c21832dacfb75591",
+  "ii_swap": "cb404cf00a58337f65ce2b3ce5e87c1c60e0d8bc",
+  "ii_b_golden_stage": "78d69fad9d0129aaca80ae4c8c0b85beb070b49e"
+ },
+ "artifact": {
+  "dir": "models/627c8d774df838a8",
+  "source": "/Users/bill/twixt-cache/htb-mix/export/627c8d774df838a8 (cmp byte-equal for all three files)",
+  "files": {
+   "model.onnx": {
+    "bytes": 84233,
+    "sha256": "3beaeed15a97f28c69e639b6c5ab2466f961a1aa75f232755e581d592fcb55af",
+    "git_blob": "db7f42efc95871211f90be79f61b68a6666248e0"
+   },
+   "model.onnx.data": {
+    "bytes": 7493120,
+    "sha256": "cf78b17f7e9368e5be850ded8b41d3c13921f32bf54c3fab0273cfcb8489822f",
+    "git_blob": "e0690cc037f6499bbbab4837fd209a0f988f4387"
+   },
+   "manifest.json": {
+    "bytes": 3206,
+    "sha256": "abf3931d920f788de146cf8dafbd213581f682a754b65df1520d42eae954071d",
+    "git_blob": "9bb574a392de716818916e2199d185f1dbe44409",
+    "pin": "packaging (in neither record)"
+   }
+  },
+  "model_id": "627c8d774df838a8"
+ },
+ "swap": {
+  "server/model_manifest.js": {
+   "old_sha256": "ecde544b03b4e50f673edaf89f73434c878bfbda0a147341adb9197d788fc511",
+   "new_sha256": "054f9434071d1502482550fb91ed34b57462ba5a29a02ab9cbcc559dab06f3c2",
+   "diff": "exactly proposal \u00a73 (8 insertions, 6 deletions; one file of production server code)"
+  },
+  "golden_stage": {
+   "name": "protocol-hard-hmx",
+   "surfaceSha256": "1c34252d1ea5c470f5a985094874e6da437e71d5f978050b94f588285769799a",
+   "surfaceCommit": "cb404cf00a58337f65ce2b3ce5e87c1c60e0d8bc",
+   "control": "the same digest function gives protocol-hard-pinned's recorded 61aacb5b at 99b1feaf"
+  },
+  "g3_binding": {
+   "file_sha256": "ef25d4da65f1d7d2321c00ea2d044fec3ba451085a9e84185bb2a9ced4405618 (unedited)",
+   "committed_digest": "da0b86bf4dcbdf4364d26a5f4a483fa97360b41c60ed3abae15778f7a636c04a",
+   "fresh_digest": "aa04f04c36cbcdb9a9db41e46ab401eff423625c579a9b902116c3e2d80fedae",
+   "diff": [
+    "driver_files.server/model_manifest.js",
+    "digest"
+   ]
+  }
+ },
+ "tooling_sha256": {
+  "tests/htb_integration/hmx_integration_check.mjs": "f01ea7ff34c6c22c5713ecc68125319a9bfebc4411169a0df5c61ee697e99315",
+  "tests/htb_integration/hmx_seed_preload.mjs": "2e82385e7efa9f627fb04d6abd14fd90ed463826f33127122213cc80df0c8a90",
+  "tests/htb_integration/hmx_integration_authorization.mjs": "682426691b1c7d2e74307d4a0e59f9e3219904bd3a1e5d9932fe0712c5225c75",
+  "tests/htb_integration/test_hmx_integration.mjs": "8d85cf7061f3ec7838023aa4fda406615c358af7e569c0d28ad0f7fae4563901",
+  "tests/hmx_integration_wrapper_spec.py": "cd18ecf49641b37c8cd58267744cdbc4f5cdd18952228ef28ae0e0b3aea9b51d",
+  "tests/test_hmx_integration_wrapper.py": "d2fec3954de88931c365bb3c94e87152296f9451ef7b21847bf21ff3c603a2ad",
+  "docs/superpowers/evidence/hmx-integration-check-run/01_wrapper.sh": "081224f5fb2bf69e41a7b1e8d6456c2bac035f8afa631cab19c4c3a5da9824c2"
+ },
+ "checks": {
+  "B1": {
+   "verdict": "PASS",
+   "where": "server/test_hard_model.js (describe 'H-MX integration B1'), 8 tests incl. 4 tampered-copy controls and a wrong-record control"
+  },
+  "B2": {
+   "verdict": "PASS",
+   "where": "tests/htb_integration/test_hmx_integration.mjs, 3 tests: production server code (server/*.js minus test_*) differs from abaf20be by exactly the planned hunk at the swap head and not at all at P; server/test_hard_model.js the one server test file allowed to change; every changed path on the allowlist or under docs/; models/78c16a31c3dba37f, c34b7ff3297c785a, 1d64027db521a50f unchanged; PROTOCOL_HARD, LEGACY_HARD, easy, medium and HALVING by value"
+  },
+  "B3": {
+   "verdict": "PASS",
+   "where": "server/test_hard_model.js at (ii): pins re-pointed; rollback by restart with HARD_MODEL_MANIFEST=models/78c16a31c3dba37f/manifest.json, also in a tree without models/627c8d774df838a8 (control: that tree cannot serve 627c)"
+  },
+  "B4": {
+   "verdict": "PASS",
+   "where": "golden suite 140/140 at the swap head with protocol-hard-hmx; test_g3.mjs D3 assertion, all five points"
+  },
+  "B5": {
+   "verdict": "PASS",
+   "where": "test_hmx_integration.mjs: queue order to an ESM named import, logging, pass-through, exhaustion, refusal without/with an invalid queue (5 cases), the real protocolMove unseeded under the preload equal to explicit seeds at plies <20 and >=20 (fake evaluator), control without the preload, no product file references it"
+  },
+  "B6": {
+   "verdict": "PASS (with the deviation below)",
+   "runs": {
+    "base_abaf20be": {
+     "server": [
+      148,
+      148
+     ],
+     "parity": [
+      39,
+      39
+     ],
+     "match": [
+      86,
+      86
+     ],
+     "golden": [
+      140,
+      140
+     ],
+     "integration": [
+      91,
+      88
+     ],
+     "smoke": [
+      1,
+      1
+     ],
+     "lint": "exit 0",
+     "wrapper_pytest": "not present",
+     "skipped": 0,
+     "integration_failures": [
+      "the wrappers: their derivation, ceilings, gate names, driver and the pinned analyser sha",
+      "canonical state: Node and our Python TwixtState give the same digest at every ply (G3 draw and a decisive game)",
+      "end to end through the real serve loop: TeacherClient, Python lockstep on twixtbot's Game, a fake network"
+     ]
+    },
+    "P_ea342450": {
+     "server": [
+      158,
+      158
+     ],
+     "parity": [
+      39,
+      39
+     ],
+     "match": [
+      86,
+      86
+     ],
+     "golden": [
+      140,
+      140
+     ],
+     "integration": [
+      107,
+      104
+     ],
+     "smoke": [
+      1,
+      1
+     ],
+     "lint": "exit 0",
+     "wrapper_pytest": "9 passed",
+     "skipped": 0,
+     "integration_failures": [
+      "the wrappers: their derivation, ceilings, gate names, driver and the pinned analyser sha",
+      "canonical state: Node and our Python TwixtState give the same digest at every ply (G3 draw and a decisive game)",
+      "end to end through the real serve loop: TeacherClient, Python lockstep on twixtbot's Game, a fake network"
+     ]
+    },
+    "swap_78d69fad": {
+     "server": [
+      160,
+      160
+     ],
+     "parity": [
+      39,
+      39
+     ],
+     "match": [
+      86,
+      86
+     ],
+     "golden": [
+      140,
+      140
+     ],
+     "integration": [
+      107,
+      104
+     ],
+     "smoke": [
+      1,
+      1
+     ],
+     "lint": "exit 0",
+     "wrapper_pytest": "9 passed",
+     "skipped": 0,
+     "integration_failures": [
+      "the wrappers: their derivation, ceilings, gate names, driver and the pinned analyser sha",
+      "canonical state: Node and our Python TwixtState give the same digest at every ply (G3 draw and a decisive game)",
+      "end to end through the real serve loop: TeacherClient, Python lockstep on twixtbot's Game, a fake network"
+     ]
+    }
+   }
+  },
+  "B7": {
+   "verdict": "PASS",
+   "where": "tests/test_hmx_integration_wrapper.py, 9 tests, run from the clean worktree with /Users/bill/projects/TwixT_Game/.venv/bin/python: derivation byte-equal, 32 planned parent lines changed and nothing else, the JS gate closed, real-wrapper refusals in throwaway repos (gate not opened, missing ref tree, symlinked revert node_modules, onnxruntime-node 1.23.1, tampered match record) and a run reaching the idle gate, each writing nothing and leaving the gate closed"
+  },
+  "revert_probe": {
+   "verdict": "PASS",
+   "detail": "a throwaway detached worktree at 78d69fad, `git revert 78d69fad cb404cf0`: differs from the swap head in exactly the six swap files, equals P (ea342450) exactly, model_manifest.js ecde544b; worktree removed"
+  }
+ },
+ "deviations": [
+  "Golden stage in its own commit (ii-b) after (ii): a stage's surfaceCommit must name a commit that produces its digest (test_falsify.mjs), and a commit cannot name itself (the 99b1feaf -> 06b52aaa precedent). The swap is therefore two commits; the code-revert rollback reverts both (78d69fad and cb404cf0), and a declined deployment reverts both.",
+  "B6 in a linked worktree: three integration tests spawn <tree>/.venv/bin/python, which a linked worktree lacks (ENOENT / status null). They fail identically at the base abaf20be, at P and at the swap head and test nothing the build changed; every other test passes. The environment was not altered (a .venv link is not ignored at the worktree root and would dirty the tree). The driver's R2 suite check accepts exactly this set in the revert tree and nothing else.",
+  "Gate inventory: the Python gate inventory scans only Python files, so it is not extended; test_hmx_integration.mjs asserts the new JavaScript gate is closed and alone in its file (the user's instruction; proposal \u00a73 said the inventory would derive the new count).",
+  "REST /api/move answers carry no nSimulations; A2 checks the root visit total (200) and the model and search fields; WS and in-process paths also check nSimulations.",
+  "B2 is implemented as tests pinned to abaf20be in test_hmx_integration.mjs; they will need retiring when production server code next changes.",
+  "R1 runs from an APFS clone of the staged tree in $TMPDIR with .git and models/627c8d774df838a8 removed, using the relative HARD_MODEL_MANIFEST=models/78c16a31c3dba37f/manifest.json from that tree's root.",
+  "The wrapper names the other trees by convention: <launch tree>-ref (detached at abaf20be) and <launch tree>-revert (the build head with 78d69fad and cb404cf0 reverted, gate closed); preparing them is part of the launch."
+ ],
+ "not_done": "no model session created, no server started, no gate opened, no deployment, no push; the stale H-OP tests untouched; the running server untouched",
+ "runtime": {
+  "node": "v24.22.0",
+  "onnxruntime_node": "1.23.2",
+  "python": "/Users/bill/projects/TwixT_Game/.venv/bin/python (3.14.10)"
+ }
+}

@@ -1,0 +1,56 @@
+head 78d69fad9d0129aaca80ae4c8c0b85beb070b49e status ''
+== server: node --test server/test_server.js server/test_readout_policy.js server/test_mcts.js server/test_alpha_zero_client.js server/test_py_random.js server/test_mirror_inference.js server/test_protocol_mcts.js server/test_protocol_move.js server/test_hard_model.js
+   exit 0
+ℹ tests 160
+ℹ pass 160
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+== parity: npm run test:parity
+   exit 0
+ℹ tests 39
+ℹ pass 39
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+== match: node --test tests/product_match/test_openings.mjs tests/product_match/test_timing.mjs
+   exit 0
+ℹ tests 86
+ℹ pass 86
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+== golden: npm run test:golden
+   exit 0
+ℹ tests 140
+ℹ pass 140
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+== integration: node --test tests/htb_integration/test_g3.mjs tests/htb_integration/test_mix_match.mjs tests/htb_integration/test_onpolicy_match.mjs tests/htb_integration/test_teacher_bench.mjs tests/htb_integration/test_diag_o.mjs tests/htb_integration/test_hmx_integration.mjs
+   exit 1
+ℹ tests 107
+ℹ pass 104
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+== smoke: npm test
+   exit 0
+ℹ tests 1
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+== lint: npm run lint
+   exit 0
+== wrapper: /Users/bill/projects/TwixT_Game/.venv/bin/python -m pytest -q tests/test_hmx_integration_wrapper.py
+   exit 0
+============================== 9 passed in 1.47s ===============================
+end status ''
+DONE
