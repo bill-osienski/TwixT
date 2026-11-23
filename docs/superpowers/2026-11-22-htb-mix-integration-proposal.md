@@ -1,10 +1,17 @@
 # H-MX integration proposal: serve the tested export `627c8d774df838a8` as `hard` (2026-11-22)
 
-**Status:** PROPOSAL, revision 0, for review. Nothing here is built, copied, loaded, run or deployed.
-`HARD_MODEL_ID` is still `78c16a31c3dba37f`.
+**Status:** PROPOSAL, revision 1 (2026-11-23), returned for build approval. Nothing here is built, copied, loaded, run
+or deployed. `HARD_MODEL_ID` is still `78c16a31c3dba37f`. Revision 0 (sha256 `b72593fa…`, commit `423374f6`) is
+superseded; what changed is listed in §11.
 
 **Authorized (the user, 2026-11-22):** writing this proposal and its ledger record. The read-only inspection it rests
 on: the server source, the export record, the match evidence, and a model-free scratch probe of the seed preload (§5.2).
+
+**Review of revision 0 (the user, 2026-11-23):** D1 and D2 accepted; D3 accepted with a precise binding assertion;
+D4: I drive the browser smoke against the staged server with its normal seed source, and it is a required check.
+Also: each hash cites the record that actually holds it, with the manifest pinned explicitly for packaging; the build
+stays model-free, with exact commands, and the model-loading suites move to the gated run. Revision 1 does this.
+Revision 1 is authorized as a document only; the build needs its own approval.
 
 **Not authorized:** copying the model into `models/`, editing `HARD_MODEL_ID` or any server file, loading a model,
 starting a server, playing or replaying any move, deploying, pushing. The stale H-OP test fix
@@ -50,14 +57,20 @@ checks below confirm that the served server reproduces the tested player and tha
 
 ## 2. What was tested, exactly
 
-| item | value | source |
+Each hash below cites the committed record that actually holds it. "Export record" is
+`docs/superpowers/evidence/htb-mix-export-2/record.json`; "match record" is
+`docs/superpowers/evidence/htb-mix-match/record.json` (`6bfa8bb6…`).
+
+| item | value | evidence |
 |---|---|---|
-| challenger | `627c8d774df838a8` | export attempt 2 record, `docs/superpowers/evidence/htb-mix-export-2/record.json` |
-| `model.onnx` | 84,233 bytes, sha256 `3beaeed15a97f28c69e639b6c5ab2466f961a1aa75f232755e581d592fcb55af` | export record; match record `challenger.graph_sha256` |
-| `model.onnx.data` | 7,493,120 bytes, sha256 `cf78b17f7e9368e5be850ded8b41d3c13921f32bf54c3fab0273cfcb8489822f` | same |
-| `manifest.json` | 3,206 bytes, sha256 `abf3931d920f788de146cf8dafbd213581f682a754b65df1520d42eae954071d` | `~/twixt-cache/htb-mix/export/627c8d774df838a8/` (read 2026-11-22) |
-| model id | sha256(graph_sha + ':' + data_sha)[:16] = `627c8d774df838a8` | `computeModelId` |
-| source | `challenger.safetensors` sha256 `5dafde11…`, state digest `adba50fb…` (entry 74) | manifest provenance |
+| challenger id | `627c8d774df838a8` | export record `challenger.model_id`; match record `challenger.model_id` |
+| `model.onnx` | sha256 `3beaeed15a97f28c69e639b6c5ab2466f961a1aa75f232755e581d592fcb55af` | export record `challenger.graph_sha256`; match record `challenger.graph_sha256` (and `onnx_sha256`). Both agree (checked by the user and by me, 2026-11-23) |
+| `model.onnx.data` | sha256 `cf78b17f7e9368e5be850ded8b41d3c13921f32bf54c3fab0273cfcb8489822f` | export record `challenger.external_data_sha256`; match record `challenger.external_data_sha256`. Both agree |
+| sizes | 84,233 and 7,493,120 bytes | **in neither record.** They come from the manifest and are checked against the files themselves by `validateArtifact` |
+| `manifest.json` | 3,206 bytes, sha256 `abf3931d920f788de146cf8dafbd213581f682a754b65df1520d42eae954071d` | **in neither record, and not tested evidence.** It is a **packaging pin**, set explicitly here, from the bytes in `~/twixt-cache/htb-mix/export/627c8d774df838a8/` (the export record's `challenger.dir`), read 2026-11-22 and re-read 2026-11-23. The match loaded the challenger through this directory's manifest (`mix_match.mjs:276`) but recorded no hash of it. So what makes it the tested artifact is that it names the qualified graph and data (B1), not its own hash |
+| model id | sha256(graph_sha + ':' + data_sha)[:16] = `627c8d774df838a8` | `computeModelId`, recomputed from the two record hashes |
+| source | `challenger.safetensors` sha256 `5dafde1152bf83af…` | export record `admission.challenger.sha256`; match record `challenger.source_sha256`; manifest `provenance.source_checkpoint_sha256` |
+| state digest | `adba50fb…` | manifest `provenance.source_state_digest`; entry 74 |
 | match | 400 colour-reversed pairs, 200 simulations each side, `MirrorAveragingInference(AlphaZeroInference), both`, protocol search, `moveTemp` 1 | `docs/superpowers/evidence/htb-mix-match/record.json` (`6bfa8bb6…`) |
 | result | PASS: decisive pairs 31–15, exact one-sided p = 0.012948; mean pair score 0.519375; compute ratio 1.00323 | `analysis.json` (`2a58660e…`), entry 78 |
 | construction | `tests/htb_integration/mix_match.mjs:276–292`: `loadManifest` + `validateArtifact` on the export directory, `new AlphaZeroInference(graphPath)`, `load()`, `new MirrorAveragingInference(base)` | the same calls as `server/index.js:674–704` |
@@ -76,8 +89,8 @@ The build has two commits so that the swap can be reverted alone.
 |---|---|
 | `models/627c8d774df838a8/model.onnx` | new; byte copy of the export (`3beaeed1…`) |
 | `models/627c8d774df838a8/model.onnx.data` | new; byte copy (`cf78b17f…`) |
-| `models/627c8d774df838a8/manifest.json` | new; byte copy (`abf3931d…`), **unedited** (decision D1) |
-| `server/test_hard_model.js` | the retained-pin loop gains `627c8d774df838a8` beside `c34b7ff…`, `1d64027…` and `HARD_MODEL_ID`; a new test checks the three files against the export record's hashes and the match record's `challenger` block, and recomputes the id |
+| `models/627c8d774df838a8/manifest.json` | new; byte copy (`abf3931d…`), **unedited** (D1, accepted) |
+| `server/test_hard_model.js` | the retained-pin loop gains `627c8d774df838a8` beside `c34b7ff…`, `1d64027…` and `HARD_MODEL_ID`; a new test does B1 (below) |
 
 The `.gitignore` exception (`!models/*/*.onnx*`) already admits the files. Commit (i) changes no execution-surface
 file, so no golden or binding pin moves.
@@ -86,10 +99,59 @@ file, so no golden or binding pin moves.
 
 | file | change |
 |---|---|
-| `server/model_manifest.js` | `HARD_MODEL_ID = '627c8d774df838a8'`; the doc comment above it names entry 76 (parity) and entry 78 (match PASS) and keeps `78c16a31c3dba37f` as the named rollback pin |
+| `server/model_manifest.js` | exactly the diff below: `HARD_MODEL_ID = '627c8d774df838a8'`, and the doc comment above it names entry 76 (parity), entry 78 (match PASS) and the rollback pin `78c16a31c3dba37f`. The file's sha256 goes from `ecde544b03b4e50f673edaf89f73434c878bfbda0a147341adb9197d788fc511` to **`054f9434071d1502482550fb91ed34b57462ba5a29a02ab9cbcc559dab06f3c2`** (computed on a scratch copy, 2026-11-23; the repository file is untouched) |
 | `server/test_hard_model.js` | `:112–113` and `:167–169` re-pointed to `627c8d774df838a8` and source sha256 `5dafde11…`; a new test that `HARD_MODEL_MANIFEST=models/78c16a31c3dba37f/manifest.json` resolves `78c16a31c3dba37f` under protocol, including in a fixture tree with `models/627c8d774df838a8/` absent (the rollback works when the new artifact is missing or damaged) |
 | `tests/mcts_golden/cases.mjs` (+ `test_capture.mjs`, `test_falsify.mjs`) | a new frozen stage `protocol-hard-hmx`, not re-measured, exactly the `06b52aaa` pattern: identical to `protocol-hard-pinned` except `HARD_MODEL_ID`; plain search files byte-identical; the current-HEAD capture and attribution tests re-pointed; earlier stages keep their digests |
-| `tests/htb_integration/test_g3.mjs` | "the committed binding equals a fresh computation" would fail, because the spent G3 binding (`g3_binding.json`) lists `server/model_manifest.js`. Proposed: the test asserts that the only difference is that one file's digest, and the binding itself stays as committed (decision D3) |
+| `tests/htb_integration/test_g3.mjs` | "the committed binding equals a fresh computation" (`:346–353`) would fail, because the spent G3 binding (`g3_binding.json`) hashes `server/model_manifest.js` among its 11 `driver_files`. That one test is rewritten to the precise assertion of §3.1 (D3, accepted). `g3_binding.json` and all G3 evidence stay byte-identical |
+
+**The exact change to `server/model_manifest.js`** (lines 61–67 today):
+
+```diff
+@@ -61,5 +61,7 @@
+- * The validated H-TB student's export, pinned after its export parity passed
+- * (V2-R, ledger Post-closure entry 58, under the approved amendment
+- * docs/superpowers/2026-11-09-htb-student-parity-amendment.md). Changing it is a
+- * tracked, reviewable diff, as for DEFAULT_MODEL_ID. HARD_MODE=legacy never
+- * reads it.
++ * The H-MX challenger's export, pinned after its export parity passed (ledger
++ * Post-closure entry 76) and its 400-pair match against 78c16a31c3dba37f passed
++ * (entry 78), under docs/superpowers/2026-11-22-htb-mix-integration-proposal.md.
++ * Rollback pin: 78c16a31c3dba37f, by a restart with
++ * HARD_MODEL_MANIFEST=models/78c16a31c3dba37f/manifest.json or a revert of this
++ * line. Changing it is a tracked, reviewable diff, as for DEFAULT_MODEL_ID.
++ * HARD_MODE=legacy never reads it.
+@@ -67 +69 @@
+-export const HARD_MODEL_ID = '78c16a31c3dba37f';
++export const HARD_MODEL_ID = '627c8d774df838a8';
+```
+
+### 3.1 The G3 binding assertion (D3)
+
+The committed binding `tests/htb_integration/g3_binding.json` (file sha256 `ef25d4da65f1d7d2…`, aggregate
+`digest` `da0b86bf4dcbdf4364d26a5f4a483fa97360b41c60ed3abae15778f7a636c04a`) is the H-TB G3 match's historical
+binding. It is kept, unedited. The aggregate is `sha256(JSON.stringify(body))` over the binding without its `digest`
+key (`g3_match.mjs:330–352`). The rewritten test asserts all of the following, each as a literal:
+
+1. **The historical binding is intact.** `g3_binding.json` hashes to `ef25d4da…`, its `digest` is `da0b86bf…`,
+   recomputing that digest from its own body gives `da0b86bf…`, and `A.selfCheck(committed)` is `[]`.
+2. **Exactly one bound file changed.** `bindingDiff(committed, computeBinding())` equals exactly
+   `['driver_files.server/model_manifest.js', 'digest']`. Every other path is identical, including the other
+   10 driver files, the analyser files, the 9 extra files, both model manifests, the Node executable and every file of
+   the two runtime packages.
+3. **The old and new hashes are the expected ones.** The committed entry is
+   `ecde544b03b4e50f673edaf89f73434c878bfbda0a147341adb9197d788fc511`, and the fresh entry is
+   `054f9434071d1502482550fb91ed34b57462ba5a29a02ab9cbcc559dab06f3c2`.
+4. **The resulting aggregate digest is the expected one.** Substituting only the new entry into the committed body
+   and hashing gives `aa04f04c36cbcdb9a9db41e46ab401eff423625c579a9b902116c3e2d80fedae`, and the fresh
+   `computeBinding().digest` equals it.
+5. **Kept as before:** the gate is not in `fresh.driver_files`, and the `match_seed` control still reports
+   `['match_seed']`.
+
+Points 3 and 4 were computed on 2026-11-23 from the committed binding and a scratch copy of `model_manifest.js`
+carrying exactly the diff above. Both are model-free, and no repository file was changed. If the build's file differs
+by one byte, point 3 fails, and the build stops for review; the literals are not adjusted to fit. G3 itself is spent:
+its driver would now refuse to run, which is intended, and its evidence and record are not touched. A revert of
+(ii) restores today's test with its `[]` assertion (R2).
 
 **New check tooling (model-free; used only by §5's run):**
 
@@ -99,6 +161,8 @@ file, so no golden or binding pin moves.
 | `tests/htb_integration/hmx_integration_check.mjs` (~400 lines) | the §5 driver: starts servers as child processes, replays the recorded rows, captures and compares; writes the record |
 | `tests/htb_integration/hmx_integration_authorization.mjs` | one new gate, `HMX_INTEGRATION_CHECK_AUTHORIZED = false`; the gate inventory test derives the new count |
 | `docs/superpowers/evidence/hmx-integration-check-run/01_wrapper.sh` | derived from the H-MX match wrapper (the idle gate, the BOINC check, the one-line gate commit, the ONNX Runtime shutdown test, the 1.23.2 pin and a real `node_modules`, the perl process-group supervisor, `outer.json`, gate restoration), with this stage's paths, driver and ceiling |
+| `tests/hmx_integration_wrapper_spec.py` | the wrapper's derivation spec (exact-once substitutions on the match wrapper), as `tests/htb_mix_match_wrapper_spec.py` is for the match |
+| `tests/test_hmx_integration_wrapper.py` | the derivation test and the refused-path tests on the real wrapper in a throwaway repo (B7) |
 | `tests/htb_integration/test_hmx_integration.mjs` | model-free tests of the preload, the replay selection, the comparators and the record admission, each against a clean control |
 
 **Not changed:** every other `server/` file (`index.js`, `protocol_move.js`, `protocol_mcts.js`, `root_halving.js`,
@@ -111,28 +175,99 @@ is the intended state for spent stages. They are not edited.
 
 ## 4. Build acceptance (model-free; the build approval)
 
-- **B1. Artifact identity:** the three files equal the export directory and the hashes of §2. `loadManifest` and
-  `validateArtifact` accept them in place. `computeModelId` gives `627c8d774df838a8`.
+**Model-free** here means: no process creates an ONNX Runtime session on any graph, real or synthetic; none runs a
+search on a real network; and none starts a server. Reading model files to hash them and parsing manifests is
+allowed, because that is B1 itself. Importing `server/inference.js`, which loads the `onnxruntime-node` library but
+no model, is also allowed.
+
+**Where:** a clean linked worktree `/Users/bill/projects/TwixT_Game-hmx-build` on branch `hmx-integration`, from the
+then-current `htb-integration-g1`. Its `node_modules` is APFS-cloned (`cp -c -R`), and Node, run from the worktree,
+must resolve `onnxruntime-node` 1.23.2 from that copy before any test runs. Lint and every suite that imports
+`server/inference.js` need it.
+
+**Commit order on `hmx-integration`:** (i) → tooling → **(ii)** → build record. `htb-integration-g1` does not move
+during the build or the check run (§5.1, §7).
+
+- **B1. Artifact identity (in `server/test_hard_model.js`):**
+  - The three tracked files are byte-equal to the export directory.
+  - Graph `3beaeed1…` and data `cf78b17f…` equal **both** records' `challenger.graph_sha256` and
+    `challenger.external_data_sha256`, read from the committed record files at test time.
+  - **Packaging pin:** `manifest.json` hashes to the literal `abf3931d920f788de146cf8dafbd213581f682a754b65df1520d42eae954071d`.
+  - **The manifest names the qualified pair:**
+    - `model_id` is `627c8d774df838a8` and equals both records' `challenger.model_id`;
+    - `graph.filename` is `model.onnx`, and `graph.sha256` equals the records' graph hash;
+    - `external_data.filename` is `model.onnx.data`, and `external_data.sha256` equals the records' data hash;
+    - `computeModelId(graph.sha256, external_data.sha256)` is `627c8d774df838a8`;
+    - `provenance.source_checkpoint_sha256` equals the export record's `admission.challenger.sha256` and the match
+      record's `challenger.source_sha256` (`5dafde11…`).
+  - `loadManifest` and `validateArtifact` accept the directory in place, which checks both sizes and both file
+    hashes against the manifest.
+  - Each assertion has a tampered-copy control (one byte of the manifest, one hash field, one filename), which must be
+    refused.
 - **B2. Diff allowlist:**
-  - Commit (ii)'s change to `server/` is exactly the `HARD_MODEL_ID` line and its comment, checked by a test on
-    `git diff -U0`.
+  - Between the base commit and (ii), the changed paths are exactly those of §3.
+  - (ii)'s change to `server/` is exactly the diff of §3, checked against `git diff -U0`, and the resulting
+    `server/model_manifest.js` hashes to `054f9434…`.
   - Every other `server/` file is byte-identical to the base commit.
   - `PROTOCOL_HARD` (200, `'protocol'`, 1.0), `LEGACY_HARD` (800, `'plain'`, 0), `HALVING` and the easy and medium
     entries are asserted unchanged by value.
+  - `models/78c16a31c3dba37f/`, `models/c34b7ff3297c785a/` and `models/1d64027db521a50f/` are byte-identical.
 - **B3. Pins:** the `test_hard_model.js` changes of §3, including the rollback-setting test with the new artifact
   absent.
-- **B4. Golden stage:** `protocol-hard-hmx` digest computed and frozen; earlier stages unchanged.
+- **B4. Golden stage and G3 binding:**
+  - The `protocol-hard-hmx` digest is computed and frozen, and earlier stages are unchanged.
+  - The §3.1 assertion holds, all five points.
 - **B5. Seed preload, against controls:**
   - it delivers a queued pair in order to `protocolMove`'s `freshSeed`;
   - it fails closed when the queue is exhausted;
   - it passes every other `randomInt` call through;
   - it refuses to load without its environment flag;
   - a grep guard shows no product file imports it.
-- **B6. Suites:** server, parity, golden, match and the `tests/test_htb_*` research suites, with counts recorded,
-  plus lint. The four known stale H-OP failures are listed and left alone; any other failure stops the build for
-  review.
-- **B7. Wrapper:** derived byte-for-byte by a spec module, as the match wrappers are, and refused-path tests run on
-  the real wrapper in a throwaway repo (the export-2 pattern).
+- **B6. Suites: the exact model-free commands.** These run from the build worktree root, twice: first at the
+  pre-swap head (commit (i) plus tooling), then at (ii). Counts are recorded each time, and any failure stops the
+  build for review.
+
+  ```sh
+  # server (npm run test:server minus test_model_manifest.js and test_ort_conv_canary.js)
+  node --test server/test_server.js server/test_readout_policy.js server/test_mcts.js \
+    server/test_alpha_zero_client.js server/test_py_random.js server/test_mirror_inference.js \
+    server/test_protocol_mcts.js server/test_protocol_move.js server/test_hard_model.js
+  # parity corpus and comparator (JSON only)
+  npm run test:parity
+  # product match (npm run test:match minus test_harness.mjs and test_analyse.mjs)
+  node --test tests/product_match/test_openings.mjs tests/product_match/test_timing.mjs
+  # golden: dry-run only (tests/mcts_golden/worker.mjs:24, "a dry-run process structurally cannot load a model")
+  npm run test:golden
+  # integration tests on fakes; spent drivers are exercised only with their gates closed
+  node --test tests/htb_integration/test_g3.mjs tests/htb_integration/test_mix_match.mjs \
+    tests/htb_integration/test_onpolicy_match.mjs tests/htb_integration/test_teacher_bench.mjs \
+    tests/htb_integration/test_diag_o.mjs tests/htb_integration/test_hmx_integration.mjs
+  npm test
+  npm run lint
+  # the new wrapper (B7)
+  .venv/bin/python -m pytest -q tests/test_hmx_integration_wrapper.py
+  ```
+
+  **Moved to the gated run (§5.3, G0), because they load models:**
+
+  | suite | why it is not model-free |
+  |---|---|
+  | `server/test_model_manifest.js` | creates a session on a real graph (`:332–334`), and starts `server/index.js` and `scripts/startServer.js` (`:851–925`) |
+  | `server/test_ort_conv_canary.js` | creates ORT sessions on synthetic graphs (`:128`) |
+  | `server/test_ort_shutdown.js` | spawns a probe that loads a 4-element ONNX model (`:7`, `:20`). Not in `test:server` |
+  | `tests/product_match/test_harness.mjs` | `loadModel` on two committed artifacts (`:91–92`) |
+  | `tests/product_match/test_analyse.mjs` | runs a real-model match through `runMatchWithExplicitP` (`:227`) |
+
+  `server/test_parity.js` (loads `server/test_model.onnx`) is in no npm script and is not run, as before.
+
+  **Not run in either step:** the Python research suites (`tests/test_htb_*.py`). The build changes no Python file,
+  and no Python test reads a file the build changes. A grep found no Python test reading `server/model_manifest.js`,
+  the golden files, `test_g3.mjs` or `g3_binding.json`. The one hit, `tests/htb_onpolicy_v3_spec.py`, rewrites an
+  import line in a copied driver and does not read the file. No test enumerates `models/`. B2's allowlist re-checks
+  this at build time. The four known stale H-OP failures are therefore not exercised, and they stay a separate,
+  unapproved item.
+- **B7. Wrapper:** derived byte-for-byte by `tests/hmx_integration_wrapper_spec.py`, as the match wrappers are, and
+  refused-path tests run on the real wrapper in a throwaway repo (the export-2 pattern).
 
 ## 5. The checks: G2/G3-style, one gated run (loads models; replays recorded positions; plays no new game)
 
@@ -148,12 +283,13 @@ is the intended state for spent stages. They are not edited.
   checks before starting it.
 - Then: the wrapper runs once in the background, with console output in the scratchpad. The closing commit uses exact
   paths and is verified, and the fast-forward is its own step. The ledger entry follows.
-- **Branch order:** on `hmx-integration` the commits run (i) → tooling → build record → **(ii) last**. So
-  `htb-integration-g1` can be fast-forwarded to the build without the swap. The gate, evidence and ledger commits
-  stack on (ii) and stay on `hmx-integration` until the deployment decision (§7, step 4).
-  - If deployment is approved, that branch is fast-forwarded.
-  - If it is declined, a `git revert` of (ii) is committed on top first, so the evidence lands linearly without the
-    swap.
+- **Branch order (revised):** on `hmx-integration`, (i) → tooling → (ii) → build record and its ledger entry → gate →
+  evidence → ledger. **`htb-integration-g1` does not move** until the deployment decision (§7, step 4). Nothing is
+  committed on it meanwhile, so the fast-forward stays possible. Revision 0 put (ii) after the build record, but the
+  build record has to report the B-checks run at (ii), so it now follows (ii).
+  - If deployment is approved, `htb-integration-g1` is fast-forwarded to `hmx-integration`.
+  - If it is declined, a `git revert` of (ii) is committed on top first, and then the fast-forward, so the build, the
+    evidence and the ledger land linearly without the swap.
 - **Ceiling:** TERM 14,390 s, KILL 14,400 s (4 h). The estimate is about 2.5 h (§5.6). A timeout or failure is
   VOID, with no automatic retry.
 
@@ -179,8 +315,18 @@ transport answers comparable with recorded rows **without editing product code**
 - **Limit, stated:** with the preload, the checks cover everything downstream of the seeds. Unseeded serving, the
   `crypto.randomInt` draw itself, is covered by S2's live requests (legality and fields), not by exact comparison.
 
-### 5.3 The staged server serves the pinned export (S1, S2)
+### 5.3 The staged server serves the pinned export (G0, S1, S2)
 
+- **G0. Model-loading suites (moved here from B6):** in `<W>`, after the gate commit, before any server starts:
+
+  ```sh
+  node --test server/test_model_manifest.js server/test_ort_conv_canary.js server/test_ort_shutdown.js
+  node --test tests/product_match/test_harness.mjs tests/product_match/test_analyse.mjs
+  ```
+
+  These run again in `<W>-revert` under R2. Each file must pass, with counts recorded. I read the suites for hard-id
+  pins and found none; they use the committed default and comparison artifacts and synthetic graphs. So they should
+  pass unchanged on both trees.
 - **S1. Startup:**
   - `<W>`'s server starts with no model environment (HARD_MODE, MODEL_MANIFEST and HARD_MODEL_MANIFEST cleared).
   - The banner shows `Hard mode: protocol`, `Hard model id: 627c8d774df838a8` and
@@ -256,8 +402,9 @@ WS, one difficulty at a time, `includeVisits`.
 - **R2. Rollback by code revert:**
   - `<W>-revert`, with no environment, serves `78c16a31c3dba37f` by default.
   - (a) and (b) as in R1, exact.
-  - The server, parity and golden suites pass in `<W>-revert`. The golden current-HEAD test passes against
-    `protocol-hard-pinned` again, because the revert restores `HARD_MODEL_ID`.
+  - In `<W>-revert`, the B6 model-free commands and the G0 model-loading suites all pass. The golden current-HEAD
+    test passes against `protocol-hard-pinned` again, because the revert restores `HARD_MODEL_ID`. `test_g3.mjs`
+    passes with today's `[]` assertion, and `model_manifest.js` hashes to `ecde544b…` again.
   - The throwaway branch and tree are then removed, not merged.
 
 ### 5.6 Timing and the browser (G3-style; no new match)
@@ -265,17 +412,31 @@ WS, one difficulty at a time, `includeVisits`.
 - **T. Per-move time:** recorded from A1 for plies < 20 and ≥ 20, against the match's recorded `ms` for the same
   rows. This is informational: the same graph signature and budget should give the same cost, and the match's
   compute ratio was 1.00323.
-- **V. Browser:** one game in the browser client against the staged server, on localhost:
-  - the banner and `/api/model-info`;
-  - every AI move arrives;
-  - the MCTS bar updates across ply 20;
-  - no client error;
-  - a normal game end.
-
-  This is a qualitative smoke, as in entry 62. It runs after the wrapper, outside the ceiling; you or I can drive it.
-- **Estimate:** reference and staged captures about 5 min each; S2 about 2 min; A0, A1 and A2 about 21 min each
-  (845 moves at the match's 1.49 s mean); R1 and R2 about 26 min each, plus R2's suites about 10 min. That is about
-  2.5 h in all, under the 4 h ceiling.
+- **V. Browser smoke: required (D4, accepted).** I drive one game through Claude in Chrome against the staged
+  server, on localhost, with its **normal seed source**:
+  - The server is `<W>`'s, started by `node server/index.js` with no `--import` preload, no `NODE_OPTIONS`, and
+    `HARD_MODE`, `MODEL_MANIFEST` and `HARD_MODEL_MANIFEST` unset, so each `hard` request draws fresh seeds from
+    `crypto.randomInt`. Its stdout and stderr go to `docs/superpowers/evidence/hmx-integration-check/v_server.log`.
+    Its argv and environment keys (`ps -o args=`, values not recorded) go to the V record, as proof that no preload
+    was present.
+  - It runs after the wrapper has exited, with the wrapper's process group empty and the gate restored, outside the
+    ceiling. It is the only server running.
+  - I play as one colour against `hard`, in a new tab of my own, from the empty board to the end of the game. The
+    game must reach ply 21 or later.
+  - **PASS requires all of:**
+    - the banner and `/api/model-info` show `hard_mode: 'protocol'`, `hard_model_id: '627c8d774df838a8'` and
+      `model_id: 'c34b7ff3297c785a'`;
+    - every AI move arrives, is legal and is drawn;
+    - the MCTS progress display updates on both sides of ply 20;
+    - no error appears in the client console (read with a pattern filter) or in `v_server.log`;
+    - the game ends through the client's normal end-of-game display.
+  - **Record:** `docs/superpowers/evidence/hmx-integration-check/v_record.json`, written from what I observe: the
+    model-info JSON, the move list, the ply count, the result, console-error count and the server argv. I also
+    record a GIF of the game, `hmx_browser_smoke.gif`.
+  - A V failure is a check FAIL (§5.7), not a VOID.
+- **Estimate:** reference and staged captures about 5 min each; G0 about 5 min per tree; S2 about 2 min; A0, A1 and
+  A2 about 21 min each (845 moves at the match's 1.49 s mean); R1 and R2 about 26 min each, plus R2's suites about
+  15 min. That is about 2.7 h in all, under the 4 h ceiling. V adds about 15 min after it.
 
 ### 5.7 Outcomes (fixed before the run)
 
@@ -283,7 +444,7 @@ WS, one difficulty at a time, `includeVisits`.
 |---|---|---|
 | any check FAIL | the served product does not reproduce the tested player, or the rollback does not restore today's `hard` | nothing; a reviewed decision; no silent repair or retry |
 | VOID (ceiling, crash, interruption) | no result | nothing; no automatic retry |
-| **all of S1–S4, A0–A2, R1, R2 PASS** (T informational; V a smoke) | the staged server serves the exact tested export through both transports, reproducing the match harness move for move; easy and medium are unchanged; both rollbacks restore today's `hard` exactly | proposing deployment (§7, step 4), with its own approval |
+| **all of G0, S1–S4, A0–A2, R1, R2 and V PASS** (T informational) | the staged server serves the exact tested export through both transports, reproducing the match harness move for move; easy and medium are unchanged; both rollbacks restore today's `hard` exactly; the unseeded server plays a full browser game normally | recommending deployment (§7, step 4), with its own approval. **No deployment is recommended without V's PASS** |
 
 **Prediction on record:** all checks PASS, about 90%. The likeliest failure is a harness defect in the new driver,
 not in the product: preload ordering, or the WS request shape for a mid-game position. Next likeliest is an
@@ -320,21 +481,23 @@ The override never reads `models/627c8d774df838a8/`, so it works even if that di
 **Not the rollback:** `HARD_MODE=legacy`. That serves `c34b7ff3297c785a` at 800 simulations with argmax, the
 pre-H-TB `hard`, not today's. It remains the deeper fallback, unchanged.
 
-## 7. Approvals, in order (none given)
+## 7. Approvals, in order
 
-1. **This proposal**, with decisions D1–D4.
-2. **Build:** commits (i) and (ii) and the tooling of §3, on branch `hmx-integration` from the then-current
-   `htb-integration-g1`, with B1–B7, in the order of §5.1. The swap commit (ii) **does not reach
-   `htb-integration-g1`**. Only commit (i), the tooling and the build record are fast-forwarded. All gates stay
-   closed. Returned for launch review.
-3. **The check run** of §5 (one wrapper run, 4 h ceiling), then the browser smoke V. Evidence and ledger entry
-   follow. Returned for review.
+1. **This proposal.** Revision 0 was reviewed on 2026-11-23: D1–D4 decided (§9). Revision 1 is returned for the
+   build approval.
+2. **Build:** commits (i) and (ii), the tooling of §3, the build record and its ledger entry, on branch
+   `hmx-integration` in the build worktree, in the order of §4, with B1–B7 (model-free only). **`htb-integration-g1`
+   does not move.** All gates stay closed. Returned for launch review.
+3. **The check run** of §5 (one wrapper run, 4 h ceiling), then the required browser smoke V. Evidence and ledger
+   entry follow, on `hmx-integration`. Returned for review, with a deployment recommendation only if every check,
+   V included, passed.
 4. **Deployment:**
-   - fast-forward `hmx-integration` (commit (ii) with the check evidence) into `htb-integration-g1`;
+   - fast-forward `htb-integration-g1` to `hmx-integration` (the build, commit (ii) and the check evidence);
    - restart your server with no override;
    - confirm the banner shows `627c8d774df838a8`.
 
-   Pushing remains a separate decision.
+   If deployment is declined, commit a revert of (ii) on `hmx-integration` first, then fast-forward. Pushing remains
+   a separate decision.
 
 ## 8. Product behaviour outside the tested evidence
 
@@ -349,7 +512,22 @@ pre-H-TB `hard`, not today's. It remains the deeper fallback, unchanged.
 5. **Caching:** protocol requests bypass the cache as before. The REST cache key for plain searches is unaffected.
 6. **Latency:** expected unchanged (same graph signature); measured by T.
 
-## 9. Decisions for the user
+## 9. Decisions (decided by the user, 2026-11-23)
+
+| | decision | in revision 1 |
+|---|---|---|
+| D1 | **(a) accepted:** byte-identical manifest | §3 commit (i); B1 pins `abf3931d…` as a packaging pin and checks that it names the qualified graph and data; the `provenance_note` slip is corrected in the ledger (proposal note, revision 1), not in the file |
+| D2 | **accepted:** no new strength match | §1 unchanged |
+| D3 | **(a) accepted, made precise:** only `server/model_manifest.js` changes, from `ecde544b…` to `054f9434…`; aggregate `da0b86bf…` → `aa04f04c…`; the historical binding and evidence stay intact | §3.1, B4 |
+| D4 | **I drive V** against the staged server with its normal seed source; V is required before recommending deployment | §5.6, §5.7, §7 |
+
+**The `provenance_note` correction (D1):** the export's manifest says "Exported once, to scratch, by `htb_mix_export
+run export`". The string is fixed text in `scripts/GPU/alphazero/htb_mix_export.py:57`, written the same way by both
+subcommands. The manifest at `abf3931d…` was written by export attempt 2, `htb_mix_export run export-2`
+(`docs/superpowers/evidence/htb-mix-export-2-run/01_wrapper.sh`, entry 76), under export amendment 1. The file stays
+byte-identical, because the hash is the pin. The correction is recorded in the ledger as dated text.
+
+The options as revision 0 put them, kept for the record:
 
 - **D1. The manifest file:**
   - (a) **Byte-identical copy (recommended).** It pins exactly the files the match tested, and its sha256 is the one
@@ -371,6 +549,25 @@ pre-H-TB `hard`, not today's. It remains the deeper fallback, unchanged.
 
 | step | work |
 |---|---|
-| build | 3 copied files; 1 product line + comment; ~60 test lines (`test_hard_model.js`); golden stage ~20 lines + 2 test files (the `06b52aaa` pattern); G3 test ~5 lines; preload ~50 lines; driver ~400 lines; wrapper spec + tests ~300 lines |
-| check run | ~2.5 h CPU under a 4 h ceiling; browser smoke ~10 min |
+| build | 3 copied files; 1 product line + comment; ~80 test lines (`test_hard_model.js`, B1 with controls); golden stage ~20 lines + 2 test files (the `06b52aaa` pattern); G3 test ~25 lines (§3.1); preload ~50 lines; driver ~400 lines; wrapper spec + tests ~300 lines; B6 run twice, about 15 min each |
+| check run | ~2.7 h CPU under a 4 h ceiling; browser smoke ~15 min after it |
 | deployment | a fast-forward and a restart |
+
+## 11. Revision log
+
+**Revision 1 (2026-11-23), after the user's review of revision 0:**
+
+- §2: each hash cites the record field that holds it. The sizes and the manifest hash are in neither record. The
+  manifest hash `abf3931d…` is a packaging pin, not tested evidence.
+- §3: the exact `model_manifest.js` diff, with its resulting hash `054f9434…`. §3.1 gives the precise G3 binding
+  assertion, D3. The wrapper spec and test files are named.
+- §4: model-free is defined. B1 checks that the manifest names the qualified pair against both records. B2 adds the
+  file hash and the unchanged model directories. B4 adds §3.1. B6 lists exact model-free commands, moves five
+  model-loading suites to G0, and leaves the Python research suites out of both steps. The build worktree with
+  cloned `node_modules` is named.
+- §5: the branch order is fixed: (ii) before the build record, and `htb-integration-g1` does not move until
+  deployment. G0 is added. R2 runs every suite. V is required, run by me, with the normal seed source and a written
+  record. The estimate is 2.7 h.
+- §7 and §9: approvals and the decided D1–D4.
+- The prediction is unchanged: all checks PASS, about 90%. G0's suites carry no hard-id pins, and V exercises the
+  path the match and S2 already exercise.

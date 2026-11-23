@@ -321,6 +321,7 @@ knob) is not a new hypothesis.
 > **H-MX match smoke COMPLETED; timing LAUNCH_OK; returned for a separate decision on the 400-pair match (Post-closure entry 77, 2026-11-20).** Gate `089389b4` → evidence `561c8886` → timing `c5f1edf2`: `node_modules` APFS-cloned and onnxruntime-node 1.23.2 resolved from the worktree before the gate commit; 4 games (2 colour-reversed pairs, 25–31 plies), challenger `627c8d774df838a8` vs current `78c16a31c3dba37f`, both 200 simulations; wall 124 s under KILL 1,800 s, clean, gate restored. Frozen analyser (`80e741d0…`): mean game 31.004 s, projection 24,803.0 s (6.89 h) for 800 games, 1.5 × = 37,204.6 s (10.33 h) ≤ 64,800 s. timing.json committed beside the smoke record (re-derives byte-equal; driver admission clean). Outcomes unread. See #218.
 > **H-MX match COMPLETED: PASS; returned for a separate integration decision (Post-closure entry 78, 2026-11-21).** Gate `0738f8a2` → evidence `26cc0c1d` → analysis `b4062d88`: `node_modules` APFS-cloned and onnxruntime-node 1.23.2 resolved from the worktree before the gate commit; 400 colour-reversed pairs (800 games), challenger `627c8d774df838a8` vs current `78c16a31c3dba37f`, both 200 simulations; wall 29,581 s (8.22 h) under KILL 64,800 s, clean, gate restored. Frozen analyser (`80e741d0…`), smoke games excluded: search-seconds ratio 1.00323 ≤ 1.10. Challenger 415 W / 1 D / 384 L; **decisive pairs 31 W / 15 L (m 46, 354 split), exact one-sided sign-test p = 0.012948 ≤ 0.05; mean pair score 0.519375 > 0.50: PASS.** It estimates no size of advantage; two-sided 95% Hoeffding [0.451, 0.587]. Prediction on record (PASS about 15%; mean 0.51, range 0.49–0.54; decisive win share 50–65%): mean inside its range, win share 0.674 above it. PASS permits proposing an integration decision only; `HARD_MODEL_ID` unchanged. See #219.
 > **H-MX integration proposal DRAFTED: serve the tested export `627c8d774df838a8` as `hard`; returned for review; nothing built, copied, loaded or run (proposal note, 2026-11-22).** `docs/superpowers/2026-11-22-htb-mix-integration-proposal.md` (`b72593fa…`). One product line: `HARD_MODEL_ID` `78c16a31c3dba37f` → `627c8d774df838a8`, in its own revertible commit, after the three export files are tracked byte-identical in `models/627c8d774df838a8/` (`3beaeed1…`, `cf78b17f…`, manifest `abf3931d…`). The 200-simulation protocol search, the T 1.0 opening readout, root halving, `easy`/`medium`, `legacy` and the runtime are unchanged. No new match (the H-MX match already ran the product's own modules against today's `hard`). Checks, one gated run (about 2.5 h, ceiling 4 h): staged startup and live REST/WS; fixed-seed agreement with 845 recorded match rows in-process, over WS and over REST (exact, via a test-only seed preload; no product edit); easy/medium exact on 142 positions; rollback by restart (`HARD_MODEL_MANIFEST=models/78c16a31c3dba37f/manifest.json`, new artifact absent) and by revert, each reproducing today's `hard` exactly. Prediction: all PASS, about 90%. `HARD_MODEL_ID` unchanged. See #220.
+> **H-MX integration proposal REVISED (revision 1) after review: D1–D4 decided; returned for build approval; nothing built, copied, loaded or run (proposal note, 2026-11-23).** Proposal `79f815f8…` supersedes revision 0 (`b72593fa…`). D1 byte-identical manifest; the export manifest's `provenance_note` ("`run export`") is corrected here: attempt 2's `run export-2` wrote it. D2 no new match. D3: the G3 binding test asserts the one changed bound file, `server/model_manifest.js` `ecde544b…` → `054f9434…`, and aggregate `da0b86bf…` → `aa04f04c…`; the historical binding and evidence stay intact. D4: I play a required browser game against the staged server, unseeded. Graph and data hashes cite both records; the manifest hash `abf3931d…` is in neither, so it is a packaging pin, checked to name the qualified pair. The build is model-free with exact commands; five model-loading suites move to the gated run. `htb-integration-g1` does not move until deployment. Prediction unchanged (all PASS, about 90%). `HARD_MODEL_ID` unchanged. See #221.
 
 ## Historical proposal check — programme now closed
 
@@ -2174,6 +2175,7 @@ Low overlap ⇒ D is likely a **broader value-head drift** problem, not a handfu
 218. **The H-MX match smoke is spent (2026-11-20, entry 77).** Do **not**: re-run, extend or top up the smoke; read, report, count or score its four games' outcomes (they are replay-validated for admission and excluded from every report, card §9); edit, re-derive into another path or replace `htb-mix-match-smoke/timing.json` (`467136ac…`); read LAUNCH_OK as anything but a timing feasibility result; or open `MIX_MATCH_AUTHORIZED` or launch the 400-pair match before the user's separate approval. That launch needs a clean worktree with `node_modules` APFS-cloned and onnxruntime-node 1.23.2 verified from it before the gate commit, the frozen wrapper's re-derivation of timing.json, and its fixed 64,800 s ceiling (never raised).
 219. **The H-MX match is spent: PASS (2026-11-21, entry 78).** Do **not**: top up, extend, replay or re-score the match; re-analyse it under another rule, subset, colour split or interval, or count the smoke's four games; edit or re-derive `htb-mix-match/analysis.json` (`2a58660e…`) into another path; read PASS as a size of advantage or an Elo figure (the rule shows only that the challenger wins more decisive pairs than it loses over the planned opening sample, under card §9's assumptions, for the whole update); change `HARD_MODEL_ID`, add pair `627c8d774df838a8` to the product manifest, serve, deploy or push on this evidence before the user approves a separate integration decision (card §13: export pin, G2/G3-style checks); or run another mix ratio, dose or round under this card (each needs its own card).
 220. **H-MX integration proposal (2026-11-22).** Do **not**: change `HARD_MODEL_ID`, copy the export into `models/`, load it in a server, or deploy, push or restart the product on it before the user approves the proposal, then the build, then the check run, then deployment, each separately; serve any file but the three tested ones (`3beaeed1…`, `cf78b17f…`, `abf3931d…` unless D1 chooses otherwise); change the 200-simulation protocol, the opening readout, root halving, `easy`, `medium`, `legacy` or the runtime as part of this swap; delete, move or edit `models/78c16a31c3dba37f/` (the restart rollback needs it); let commit (ii) reach `htb-integration-g1` before deployment is approved; accept a fixed-seed or rollback comparison with any tolerance or after a retry; or edit a spent research driver, binding or evidence to make a check pass. `HARD_MODE=legacy` is not the rollback to today's `hard`.
+221. **H-MX integration proposal, revision 1 (2026-11-23).** Adds to #220. Do **not**: cite the manifest hash `abf3931d…` as tested or recorded evidence (it is in neither the export record nor the match record; it is a packaging pin); edit the copied manifest to fix its `provenance_note` (the correction lives in this ledger); edit `tests/htb_integration/g3_binding.json` or any G3 evidence, or loosen §3.1's assertion, or change its literals (`ecde544b…`, `054f9434…`, `da0b86bf…`, `aa04f04c…`) to fit a build that differs from the proposal's diff; run `server/test_model_manifest.js`, `server/test_ort_conv_canary.js`, `server/test_ort_shutdown.js`, `tests/product_match/test_harness.mjs` or `tests/product_match/test_analyse.mjs` (or anything that creates an ONNX Runtime session or starts a server) during the build; recommend deployment without the browser smoke V's PASS, or run V with a seed preload or model environment override; commit on `htb-integration-g1` while `hmx-integration` is open.
 
 Also retired as *primary* strategies: global-weight sweeps, retention-weight sweeps, schedule-ratio sweeps, frozen-BN-as-the-fix reruns, raw-teacher weight/schedule tweaks, broad row-engineering, broader partial unfreeze, broad v10/v10b schedule-count sweeps, surgical B value-only root-clone manifest edits, projection-strength escalation, and adapter A-pressure cleanups. The active adapter-cleanup line is closed. The current default is to keep `calib020_0001`; any further calibration work requires a new written design.
 
@@ -13186,3 +13188,75 @@ The proposal note and revision 1 note above stay as written. This correction sup
 - **Result:** none (a proposal).
 - **Status:** a draft, returned for review. `HARD_MODEL_ID` is unchanged (`78c16a31c3dba37f`), all gates are closed,
   nothing is pushed. The stale H-OP test fix remains a separate, unapproved item. See #220.
+
+#### Proposal note — H-MX integration, revision 1: D1–D4 decided; hash evidence per record; model-free build with exact commands; precise G3 binding assertion; required browser smoke; returned for build approval; nothing built, copied, loaded or run (2026-11-23)
+
+- **Request:** the user's review of revision 0 (2026-11-23):
+  - Accept D1 and D2: copy the manifest byte for byte, document the export-2 provenance correction in this ledger,
+    and skip a new strength match.
+  - D4: I run the browser smoke against the staged server with its normal seed source, and it is a required check
+    before recommending deployment.
+  - (1) Use the right evidence for each hash. The graph and data hashes agree with both committed records; neither
+    record holds a manifest sha256. So pin `abf3931d…` explicitly for packaging, and check that the manifest names
+    the qualified graph and data.
+  - (2) Keep the build model-free: list exact commands, and move the model-loading suites (including
+    `test_model_manifest.js`) to the gated run.
+  - (3) Accept D3 with a precise binding assertion: the only changed bound file is `server/model_manifest.js`, with
+    the expected old and new hashes; check the resulting aggregate digest; leave the historical binding and evidence
+    intact.
+  - Keep the rollback to `78c16a31c3dba37f` in protocol mode. Then return for separate build approval.
+- **Proposal:** `docs/superpowers/2026-11-22-htb-mix-integration-proposal.md`, revision 1, sha256 `79f815f8…`,
+  superseding revision 0 (`b72593fa…`, commit `423374f6`). Its §11 lists the changes.
+- **Test, hypothesis, why plausible:** unchanged from the revision-0 note above.
+- **Correction (2026-11-23) to the H-MX export manifest's wording (D1):**
+  - The export's `manifest.json` (`abf3931d…`) says "Exported once, to scratch, by `htb_mix_export run export`".
+  - That string is fixed text in `scripts/GPU/alphazero/htb_mix_export.py:57`, written the same way by both
+    subcommands.
+  - The manifest was written by **export attempt 2, `htb_mix_export run export-2`**
+    (`docs/superpowers/evidence/htb-mix-export-2-run/01_wrapper.sh`, entry 76), under export amendment 1. Attempt 1
+    (`run export`) is VOID (entry 75).
+  - The file is copied unedited, because its hash is the packaging pin. This note is the correction.
+- **Read-only inspection (2026-11-23):**
+  - **Hash evidence:**
+    - The export record holds `challenger.graph_sha256` (`3beaeed1…`), `challenger.external_data_sha256`
+      (`cf78b17f…`), `challenger.model_id`, `challenger.dir` and `admission.challenger.sha256` (`5dafde11…`).
+    - The match record holds the same graph, data and id fields, plus `challenger.source_sha256`.
+    - Neither record, nor any other committed file except this ledger and the proposal, contains `abf3931d…` (a grep
+      of `docs/`, `tests/`, `server/` and `scripts/`). Neither record holds the file sizes either.
+    - The revision-0 note's "the three files hash to the export and match records' values" was therefore wrong for
+      the manifest. Only the graph and data hashes are in those records.
+  - **Model-loading suites:** these create ONNX Runtime sessions or start servers:
+    - `server/test_model_manifest.js` (a session at `:332–334`; it starts `server/index.js` and
+      `scripts/startServer.js`);
+    - `server/test_ort_conv_canary.js` (synthetic-graph sessions);
+    - `server/test_ort_shutdown.js` (a probe that loads a 4-element model);
+    - `tests/product_match/test_harness.mjs` (`loadModel`, `:91–92`);
+    - `tests/product_match/test_analyse.mjs` (a real-model match, `:227`).
+
+    The rest of the server, parity, product-match, golden (dry-run only) and integration suites use fakes, or hash and
+    parse files only. No Python test reads a file the build changes, and no test enumerates `models/`.
+  - **G3 binding:** `g3_binding.json` (`ef25d4da…`, digest `da0b86bf…`, recomputed equal) binds
+    `server/model_manifest.js` at `ecde544b…`. It is the only binding that covers that file.
+  - **Scratch computation (model-free; no repository file changed):** a scratch copy of `model_manifest.js`, carrying
+    exactly the proposal's §3 diff, hashes to `054f9434…`. Substituting it into the committed binding body gives
+    aggregate `aa04f04c…`.
+- **Changes in revision 1:**
+  - §2 cites each hash by record field, and marks the manifest hash as a packaging pin.
+  - §3 gives the exact swap diff; §3.1 gives the five-point D3 assertion.
+  - §4 defines model-free, and B1 checks that the manifest names the qualified pair against both records, with
+    controls.
+  - B6 lists exact commands and moves the five suites to a new G0 in the gated run (and R2). The Python research
+    suites are run in neither step.
+  - §5.1: (ii) now precedes the build record, and `htb-integration-g1` does not move until the deployment decision.
+  - §5.6: V is required, played by me through Claude in Chrome against `<W>`'s server started with no preload and no
+    model environment, and recorded in `v_record.json`.
+  - Estimate 2.7 h under the 4 h ceiling.
+- **Prediction on record:** unchanged, all checks PASS (now including G0 and V), about 90%.
+- **Decision rule:** unchanged, except that V is required. No deployment is recommended without its PASS.
+- **Rollback:** unchanged. Restart with `HARD_MODEL_MANIFEST=models/78c16a31c3dba37f/manifest.json` in protocol
+  mode, or revert (ii). `HARD_MODE=legacy` is not the rollback.
+- **What ran:** nothing on a model. Read-only greps and hashes, and one scratch file hash and JSON digest. No model
+  was copied, loaded or served, and no server was started.
+- **Result:** none (a proposal).
+- **Status:** revision 1, returned for the build approval. `HARD_MODEL_ID` is unchanged (`78c16a31c3dba37f`), all
+  gates are closed, nothing is pushed. The stale H-OP test fix remains a separate, unapproved item. See #221.
