@@ -48,12 +48,14 @@ const PROTOCOL_HARD_SURFACE =
   '998dfeab30358c879297579b9bd5bd7d39158e6ef5f878da5bfcaa13c97900ba';
 const PROTOCOL_HARD_PINNED_SURFACE =
   '61aacb5b440b69e059f8325ad1dd077aefaa8d80947cca266197a13a82226c75';
+const PROTOCOL_HARD_HMX_SURFACE =
+  '1c34252d1ea5c470f5a985094874e6da437e71d5f978050b94f588285769799a';
 /**
- * HEAD carries the PROTOCOL-HARD-PINNED surface (the H-TB integration with the
- * student pinned). Test attribution only — the committed falsification records
+ * HEAD carries the PROTOCOL-HARD-HMX surface (the H-TB integration with the H-MX
+ * export pinned). Test attribution only — the committed falsification records
  * still belong to `eager` and `lazy`, and nothing here re-runs a falsification.
  */
-const STAGE = 'protocol-hard-pinned';
+const STAGE = 'protocol-hard-hmx';
 
 /** A model whose session records that release() was called. */
 function fakeModel({ modelId, log }) {
@@ -217,6 +219,8 @@ test('every stage is frozen, with its own surface and required outcome', () => {
   assert.equal(STAGES['protocol-hard'].falsificationOutcome, 'satisfied');
   assert.equal(STAGES['protocol-hard-pinned'].surfaceSha256, PROTOCOL_HARD_PINNED_SURFACE);
   assert.equal(STAGES['protocol-hard-pinned'].falsificationOutcome, 'satisfied');
+  assert.equal(STAGES['protocol-hard-hmx'].surfaceSha256, PROTOCOL_HARD_HMX_SURFACE);
+  assert.equal(STAGES['protocol-hard-hmx'].falsificationOutcome, 'satisfied');
   // No two stages may share a surface: a duplicate would let a measurement be
   // attributed to either one.
   const surfaces = Object.values(STAGES).map((s) => s.surfaceSha256);
@@ -251,18 +255,18 @@ test('the golden suite runs its files SEQUENTIALLY', () => {
   );
 });
 
-test('at the CURRENT HEAD only protocol-hard-pinned is accepted; every older stage refuses', (t) => {
+test('at the CURRENT HEAD only protocol-hard-hmx is accepted; every older stage refuses', (t) => {
   if (!gitClean()) return t.skip('worktree dirty');
-  // HEAD carries the protocol-hard-pinned surface, so that is the only stage
-  // that may make a measurement here. Every older stage must REFUSE rather than
+  // HEAD carries the protocol-hard-hmx surface, so that is the only stage that
+  // may make a measurement here. Every older stage must REFUSE rather than
   // silently attribute a measurement of this code to the surface its
-  // committed evidence describes — including `protocol-hard`, which was HEAD's
-  // stage until the student was pinned.
-  const ok = assertStageSurface('protocol-hard-pinned', executionSurfaceDigest);
+  // committed evidence describes — including `protocol-hard-pinned`, which was
+  // HEAD's stage until the H-MX export was pinned.
+  const ok = assertStageSurface('protocol-hard-hmx', executionSurfaceDigest);
   assert.match(ok.head, /^[0-9a-f]{40}$/);
-  assert.equal(ok.digest, PROTOCOL_HARD_PINNED_SURFACE);
+  assert.equal(ok.digest, PROTOCOL_HARD_HMX_SURFACE);
 
-  for (const stale of ['eager', 'lazy', 'candidate-default', 'protocol-hard']) {
+  for (const stale of ['eager', 'lazy', 'candidate-default', 'protocol-hard', 'protocol-hard-pinned']) {
     assert.throws(
       () => assertStageSurface(stale, executionSurfaceDigest),
       (err) => err.code === 'EXECUTION_SURFACE_MOVED',
