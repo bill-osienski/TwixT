@@ -6,6 +6,7 @@
  * evidence, the timing formula, the verdict rule and the analyser's refusals are checked on scripted games.
  */
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -343,12 +344,33 @@ test('the binding covers the driver\'s and analyser\'s whole import closure, min
   assert.deepEqual(analyser, [D.ANALYSER_RELPATH, 'server/gameLogic.js'].sort());
 });
 
-test('the committed binding equals a fresh computation (no file in it has moved)', () => {
-  const committed = JSON.parse(readFileSync(new URL('./g3_binding.json', import.meta.url), 'utf8'));
-  const fresh = D.computeBinding();
-  assert.deepEqual(D.bindingDiff(committed, fresh), []);
-  assert.ok(!(D.GATE_RELPATH in fresh.driver_files));
+// The H-MX integration (proposal docs/superpowers/2026-11-22-htb-mix-integration-proposal.md, revision 1, §3.1, D3)
+// changed one bound file, server/model_manifest.js (HARD_MODEL_ID). G3 is spent; its binding and evidence stay as
+// committed, and this test pins exactly that one change, its old and new hashes and the resulting aggregate digest.
+test('the committed binding is intact, and the H-MX swap moved exactly one bound file, to the expected hash (D3)', () => {
+  const sha = (b) => createHash('sha256').update(b).digest('hex');
+  const OLD = 'ecde544b03b4e50f673edaf89f73434c878bfbda0a147341adb9197d788fc511';
+  const NEW = '054f9434071d1502482550fb91ed34b57462ba5a29a02ab9cbcc559dab06f3c2';
+  const raw = readFileSync(new URL('./g3_binding.json', import.meta.url));
+  // 1. the historical binding is intact
+  assert.equal(sha(raw), 'ef25d4da65f1d7d2321c00ea2d044fec3ba451085a9e84185bb2a9ced4405618');
+  const committed = JSON.parse(raw.toString('utf8'));
+  const { digest, ...body } = committed;
+  assert.equal(digest, 'da0b86bf4dcbdf4364d26a5f4a483fa97360b41c60ed3abae15778f7a636c04a');
+  assert.equal(sha(JSON.stringify(body)), digest);
   assert.deepEqual(A.selfCheck(committed), []);
+  // 2. exactly one bound file changed
+  const fresh = D.computeBinding();
+  assert.deepEqual(D.bindingDiff(committed, fresh), ['driver_files.server/model_manifest.js', 'digest']);
+  // 3. the old and new hashes are the expected ones
+  assert.equal(committed.driver_files['server/model_manifest.js'], OLD);
+  assert.equal(fresh.driver_files['server/model_manifest.js'], NEW);
+  // 4. the resulting aggregate digest is the expected one
+  const expected = { ...body, driver_files: { ...body.driver_files, 'server/model_manifest.js': NEW } };
+  assert.equal(sha(JSON.stringify(expected)), 'aa04f04c36cbcdb9a9db41e46ab401eff423625c579a9b902116c3e2d80fedae');
+  assert.equal(fresh.digest, 'aa04f04c36cbcdb9a9db41e46ab401eff423625c579a9b902116c3e2d80fedae');
+  // 5. kept as before
+  assert.ok(!(D.GATE_RELPATH in fresh.driver_files));
   assert.deepEqual(D.bindingDiff(fresh, { ...fresh, match_seed: 1 }), ['match_seed']);
 });
 

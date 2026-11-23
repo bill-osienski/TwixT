@@ -58,13 +58,15 @@ export const DEFAULT_MANIFEST_PATH = join(
  * The model served for `hard` under HARD_MODE=protocol (integration proposal
  * §4.7): its own selection path, separate from the default model's.
  *
- * The validated H-TB student's export, pinned after its export parity passed
- * (V2-R, ledger Post-closure entry 58, under the approved amendment
- * docs/superpowers/2026-11-09-htb-student-parity-amendment.md). Changing it is a
- * tracked, reviewable diff, as for DEFAULT_MODEL_ID. HARD_MODE=legacy never
- * reads it.
+ * The H-MX challenger's export, pinned after its export parity passed (ledger
+ * Post-closure entry 76) and its 400-pair match against 78c16a31c3dba37f passed
+ * (entry 78), under docs/superpowers/2026-11-22-htb-mix-integration-proposal.md.
+ * Rollback pin: 78c16a31c3dba37f, by a restart with
+ * HARD_MODEL_MANIFEST=models/78c16a31c3dba37f/manifest.json or a revert of this
+ * line. Changing it is a tracked, reviewable diff, as for DEFAULT_MODEL_ID.
+ * HARD_MODE=legacy never reads it.
  */
-export const HARD_MODEL_ID = '78c16a31c3dba37f';
+export const HARD_MODEL_ID = '627c8d774df838a8';
 
 export const SUPPORTED_MANIFEST_VERSION = 1;
 
