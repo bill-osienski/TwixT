@@ -4,4 +4,4 @@
  * file, `false` to `true`, and nothing else; the wrapper refuses any other HEAD and restores the gate on every exit.
  * hmx_integration_check.mjs refuses to run while it is closed.
  */
-export const HMX_INTEGRATION_CHECK_AUTHORIZED = false;
+export const HMX_INTEGRATION_CHECK_AUTHORIZED = true;
