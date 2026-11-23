@@ -2,10 +2,15 @@
  * The hard model's own selection path (integration proposal §4.7) and the
  * retained rollback pins (§8). Manifest resolution and file hashing only: no
  * ONNX session is created here.
+ *
+ * Also the H-MX integration's packaging check (proposal
+ * docs/superpowers/2026-11-22-htb-mix-integration-proposal.md, revision 1, B1):
+ * models/627c8d774df838a8/ holds the exact pair the export and match records
+ * qualify, under a manifest pinned by its own hash.
  */
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { after, before, describe, it } from 'node:test';
@@ -155,7 +160,7 @@ describe('the hard model has its own selection path', () => {
 });
 
 describe('the retained rollback pins and the pinned hard model are byte-identical (§8)', () => {
-  for (const id of [DEFAULT_MODEL_ID, '1d64027db521a50f', HARD_MODEL_ID]) {
+  for (const id of [DEFAULT_MODEL_ID, '1d64027db521a50f', '78c16a31c3dba37f', '627c8d774df838a8', HARD_MODEL_ID]) {
     it(`models/${id}: the manifest validates and both files hash to its pair`, async () => {
       const manifestPath = join(REPO_ROOT, 'models', id, 'manifest.json');
       const manifest = await loadManifest(manifestPath);
@@ -170,5 +175,145 @@ describe('the retained rollback pins and the pinned hard model are byte-identica
   });
   it('the served default is still c34b7ff3297c785a', () => {
     assert.equal(DEFAULT_MODEL_ID, 'c34b7ff3297c785a');
+  });
+});
+
+// --- H-MX integration, B1: the tracked artifact is the qualified pair --------
+//
+// Each hash is checked against the committed record that holds it. The graph
+// and data hashes are in both the export record (attempt 2) and the match
+// record. Neither record holds a manifest hash or the file sizes: the manifest
+// is pinned here by its own sha256 for packaging, and what makes it the tested
+// artifact is that it names the qualified pair (proposal revision 1, §2, B1).
+
+const HMX_ID = '627c8d774df838a8';
+const HMX_MANIFEST_SHA256 = 'abf3931d920f788de146cf8dafbd213581f682a754b65df1520d42eae954071d';
+const HMX_EXPORT_RECORD = 'docs/superpowers/evidence/htb-mix-export-2/record.json';
+const HMX_MATCH_RECORD = 'docs/superpowers/evidence/htb-mix-match/record.json';
+const HMX_EXPORT_DIR = join(process.env.HOME ?? '', 'twixt-cache', 'htb-mix', 'export', HMX_ID);
+
+/** Every way the directory fails to be the qualified pair; empty when it is. */
+async function qualifiedPairProblems(dir, exportRec, matchRec) {
+  const p = [];
+  const ex = exportRec.challenger;
+  const mx = matchRec.challenger;
+  for (const [k, a, b] of [
+    ['model_id', ex.model_id, mx.model_id],
+    ['graph_sha256', ex.graph_sha256, mx.graph_sha256],
+    ['external_data_sha256', ex.external_data_sha256, mx.external_data_sha256],
+  ]) {
+    if (a !== b) p.push(`the records disagree on ${k}`);
+  }
+  if (ex.model_id !== HMX_ID) p.push(`the records qualify ${ex.model_id}, not ${HMX_ID}`);
+  const raw = await readFile(join(dir, 'manifest.json'));
+  if (sha256(raw) !== HMX_MANIFEST_SHA256) p.push('manifest.json is not the pinned bytes');
+  let m;
+  try {
+    m = JSON.parse(raw.toString('utf8'));
+  } catch {
+    return [...p, 'manifest.json is unparseable'];
+  }
+  if (m.model_id !== ex.model_id) p.push('manifest model_id is not the qualified id');
+  if (m.graph?.filename !== 'model.onnx') p.push('manifest graph.filename is not model.onnx');
+  if (m.graph?.sha256 !== ex.graph_sha256) p.push('manifest graph.sha256 is not the qualified graph');
+  if (m.external_data?.filename !== 'model.onnx.data') p.push('manifest external_data.filename is not model.onnx.data');
+  if (m.external_data?.sha256 !== ex.external_data_sha256) p.push('manifest external_data.sha256 is not the qualified data');
+  if (computeModelId(m.graph?.sha256 ?? '', m.external_data?.sha256 ?? '') !== HMX_ID) p.push('the manifest pair does not compute to the id');
+  const src = m.provenance?.source_checkpoint_sha256;
+  if (src !== exportRec.admission?.challenger?.sha256 || src !== mx.source_sha256) p.push('manifest source checkpoint is not the recorded one');
+  for (const [f, want] of [['model.onnx', ex.graph_sha256], ['model.onnx.data', ex.external_data_sha256]]) {
+    if (sha256(await readFile(join(dir, f))) !== want) p.push(`${f} is not the qualified bytes`);
+  }
+  try {
+    await validateArtifact(m, dir); // sizes and both hashes against the manifest
+  } catch (e) {
+    p.push(`validateArtifact: ${e.code ?? e.message}`);
+  }
+  return p;
+}
+
+describe('H-MX integration B1: models/627c8d774df838a8 is the qualified pair', () => {
+  const dir = join(REPO_ROOT, 'models', HMX_ID);
+  let exportRec;
+  let matchRec;
+  let tmp;
+  before(async () => {
+    exportRec = JSON.parse(await readFile(join(REPO_ROOT, HMX_EXPORT_RECORD), 'utf8'));
+    matchRec = JSON.parse(await readFile(join(REPO_ROOT, HMX_MATCH_RECORD), 'utf8'));
+    tmp = await mkdtemp(join(tmpdir(), 'twixt-hmx-b1-'));
+  });
+  after(async () => rm(tmp, { recursive: true, force: true }));
+
+  it('the records qualify 627c8d774df838a8 by graph and data hash, and agree', () => {
+    assert.equal(exportRec.status, 'COMPLETED');
+    assert.equal(exportRec.verdict, 'PARITY_PASS');
+    assert.equal(exportRec.challenger.graph_sha256, '3beaeed15a97f28c69e639b6c5ab2466f961a1aa75f232755e581d592fcb55af');
+    assert.equal(exportRec.challenger.external_data_sha256, 'cf78b17f7e9368e5be850ded8b41d3c13921f32bf54c3fab0273cfcb8489822f');
+    assert.equal(matchRec.status, 'COMPLETED');
+    assert.deepEqual(
+      [matchRec.challenger.model_id, matchRec.challenger.graph_sha256, matchRec.challenger.external_data_sha256],
+      [exportRec.challenger.model_id, exportRec.challenger.graph_sha256, exportRec.challenger.external_data_sha256]
+    );
+    // Neither record carries a manifest hash: the pin below is a packaging pin.
+    assert.ok(!JSON.stringify(exportRec).includes(HMX_MANIFEST_SHA256));
+    assert.ok(!JSON.stringify(matchRec).includes(HMX_MANIFEST_SHA256));
+  });
+
+  it('the tracked directory is the qualified pair under the pinned manifest, and loads through the product path', async () => {
+    assert.deepEqual(await qualifiedPairProblems(dir, exportRec, matchRec), []);
+    const manifest = await loadManifest(join(dir, 'manifest.json'));
+    assert.equal(manifest.model_id, HMX_ID);
+    const hard = await resolveHardModel({ HARD_MODEL_MANIFEST: join(dir, 'manifest.json') });
+    assert.equal(hard.manifest.model_id, HMX_ID);
+  });
+
+  it('the tracked files are byte copies of the export directory, when it is present', async (t) => {
+    try {
+      await readFile(join(HMX_EXPORT_DIR, 'manifest.json'));
+    } catch {
+      return t.skip(`${HMX_EXPORT_DIR} absent`);
+    }
+    for (const f of ['model.onnx', 'model.onnx.data', 'manifest.json']) {
+      assert.equal(sha256(await readFile(join(dir, f))), sha256(await readFile(join(HMX_EXPORT_DIR, f))), f);
+    }
+  });
+
+  // Controls: each tamper is refused, against the untampered copy above.
+  const TAMPERS = {
+    'one manifest byte': async (d) => {
+      const raw = await readFile(join(d, 'manifest.json'));
+      raw[raw.length - 2] ^= 0x01;
+      await writeFile(join(d, 'manifest.json'), raw);
+    },
+    'the graph hash field': async (d) => {
+      const m = JSON.parse(await readFile(join(d, 'manifest.json'), 'utf8'));
+      m.graph.sha256 = 'f'.repeat(64);
+      await writeFile(join(d, 'manifest.json'), JSON.stringify(m, null, 2));
+    },
+    'the data filename': async (d) => {
+      const m = JSON.parse(await readFile(join(d, 'manifest.json'), 'utf8'));
+      m.external_data.filename = 'other.onnx.data';
+      await writeFile(join(d, 'manifest.json'), JSON.stringify(m, null, 2));
+    },
+    'one data byte': async (d) => {
+      const raw = await readFile(join(d, 'model.onnx.data'));
+      raw[0] ^= 0x01;
+      await writeFile(join(d, 'model.onnx.data'), raw);
+    },
+  };
+  for (const [name, tamper] of Object.entries(TAMPERS)) {
+    it(`a tampered copy is refused: ${name}`, async () => {
+      const d = join(tmp, name.replace(/\W+/g, '_'));
+      await cp(dir, d, { recursive: true });
+      assert.deepEqual(await qualifiedPairProblems(d, exportRec, matchRec), []); // the copy itself is clean
+      await tamper(d);
+      assert.ok((await qualifiedPairProblems(d, exportRec, matchRec)).length > 0, name);
+    });
+  }
+
+  it('a record that names another pair is refused', async () => {
+    const other = structuredClone(matchRec);
+    other.challenger.graph_sha256 = 'e'.repeat(64);
+    assert.ok((await qualifiedPairProblems(dir, exportRec, other)).length > 0);
   });
 });
