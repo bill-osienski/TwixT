@@ -118,25 +118,6 @@ export const STAGES = Object.freeze({
       'the H-TB integration surface with the student pinned as the hard model; ' +
       'identical to protocol-hard except HARD_MODEL_ID',
   }),
-  'protocol-hard-hmx': Object.freeze({
-    name: 'protocol-hard-hmx',
-    surfaceSha256: '1c34252d1ea5c470f5a985094874e6da437e71d5f978050b94f588285769799a',
-    surfaceCommit: 'cb404cf00a58337f65ce2b3ce5e87c1c60e0d8bc',
-    // NOT re-measured. `cb404cf0` (the H-MX integration's commit (ii)) changes
-    // exactly one execution-surface byte range relative to protocol-hard-pinned:
-    // HARD_MODEL_ID in server/model_manifest.js ('78c16a31c3dba37f' ->
-    // '627c8d774df838a8', after the H-MX export's parity PASS and its match PASS,
-    // ledger entries 76 and 78), with its doc comment. The plain search files are
-    // byte-identical, and this harness pins its models by directory, so the
-    // copy-count behaviour cannot differ. The comparisons under this stage are the
-    // H-MX integration check's (proposal 2026-11-22, revision 1, §5).
-    falsificationOutcome: 'satisfied',
-    artifactSchema: 'twixt-mcts-golden/2',
-    carriesStageField: true,
-    note:
-      'the H-TB integration surface with the H-MX export pinned as the hard model; ' +
-      'identical to protocol-hard-pinned except HARD_MODEL_ID',
-  }),
 });
 
 export const STAGE_NAMES = Object.freeze(Object.keys(STAGES));

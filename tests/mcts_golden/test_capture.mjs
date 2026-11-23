@@ -71,12 +71,12 @@ const git = (...a) => execFileSync('git', a, { cwd: REPO_ROOT }).toString().trim
 const gitClean = () => git('status', '--porcelain') === '';
 const HEAD = git('rev-parse', 'HEAD');
 /**
- * HEAD carries the PROTOCOL-HARD-HMX surface now (the H-TB integration with the
- * H-MX export pinned), so operational calls name that stage. This is TEST
+ * HEAD carries the PROTOCOL-HARD-PINNED surface now (the H-TB integration with
+ * the student pinned), so operational calls name that stage. This is TEST
  * ATTRIBUTION ONLY: the committed eager and lazy corpora are still judged under
  * their own stages below.
  */
-const STAGE = 'protocol-hard-hmx';
+const STAGE = 'protocol-hard-pinned';
 
 /** Derived once from the pinned sidecars; the validator's independent target. */
 const DERIVED_FIXTURES = deriveExpectedFixtures();
