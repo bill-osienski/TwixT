@@ -1,0 +1,214 @@
+{
+ "schema": "hmx-integration-check-v/1",
+ "written_by": "Claude, from observation (proposal revision 1, section 5.6)",
+ "date": "2026-11-24",
+ "server": {
+  "tree": "/Users/bill/projects/TwixT_Game-hmx-check",
+  "commit": "d1f709f8",
+  "argv": "node server/index.js",
+  "pid": 77822,
+  "port": 3001,
+  "started_with": "env -u NODE_OPTIONS -u HMX_SEED_QUEUE -u HARD_MODE -u MODEL_MANIFEST -u HARD_MODEL_MANIFEST -u PORT node server/index.js",
+  "env_keys_absent": [
+   "NODE_OPTIONS",
+   "HMX_SEED_QUEUE",
+   "HARD_MODE",
+   "MODEL_MANIFEST",
+   "HARD_MODEL_MANIFEST",
+   "PORT"
+  ],
+  "preload": null,
+  "seed_source": "crypto.randomInt (normal)",
+  "banner": [
+   "Model id:   c34b7ff3297c785a",
+   "Hard mode:  protocol",
+   "Hard model id:   627c8d774df838a8",
+   "Hard manifest:   /Users/bill/projects/TwixT_Game-hmx-check/models/627c8d774df838a8/manifest.json"
+  ],
+  "model_info": {
+   "model_id": "c34b7ff3297c785a",
+   "hard_mode": "protocol",
+   "hard_model_id": "627c8d774df838a8",
+   "engine": {
+    "server_git_sha": "d1f709f8",
+    "rules_version": "twixt_v1",
+    "evaluator_device": "cpu_onnx",
+    "dtype": "float32"
+   }
+  },
+  "log": "v_server.log (29 lines; no error, warning or exception line)",
+  "only_server_running": true
+ },
+ "page": {
+  "url": "http://127.0.0.1:5500/TwixT.html",
+  "static_host": "python -m http.server 5500 --bind 127.0.0.1 (the repo launcher scripts/startServer.js sets MODEL_MANIFEST, which section 5.6 requires unset, so it was not used)",
+  "static_host_log": "24 lines; all 200 except GET /favicon.ico 404",
+  "client_server_url": "http://127.0.0.1:3001 (defaultServerUrl: page hostname, port 3001)",
+  "browser": "Claude in Chrome, a new tab of its own"
+ },
+ "game": {
+  "mode": "1 Player, Hard; human Red, AI Black (Black started)",
+  "my_moves_by": "real clicks on the board canvas at the projected hole positions",
+  "plies": 27,
+  "result": "black (Hard) won",
+  "moves": [
+   "b7,11",
+   "r12,12",
+   "b9,12",
+   "r14,13",
+   "b7,7",
+   "r16,14",
+   "b9,16",
+   "r18,15",
+   "b7,3",
+   "r20,16",
+   "b10,18",
+   "r10,13",
+   "b10,14",
+   "r8,9",
+   "b6,9",
+   "r6,8",
+   "b6,5",
+   "r4,7",
+   "b9,20",
+   "r5,3",
+   "b6,1",
+   "r11,10",
+   "b8,0",
+   "r15,8",
+   "b10,22",
+   "r17,10",
+   "b8,23"
+  ],
+  "ai_moves": 14,
+  "ai_move_sources": "all 14 'alphazero' in the client move log (no heuristic fallback)",
+  "ai_bestmoves_observed": {
+   "note": "logged in-page by a read-only JSON.parse wrapper installed after the ply-0 AI move; fields from the server's WS bestmove",
+   "columns": [
+    "ply_before",
+    "id",
+    "row",
+    "col",
+    "valueRed"
+   ],
+   "modelId_all": "627c8d774df838a8",
+   "search_all": "protocol",
+   "nSimulations_all": 200,
+   "rows": [
+    [
+     2,
+     "req_2",
+     9,
+     12,
+     -0.627
+    ],
+    [
+     4,
+     "req_3",
+     7,
+     7,
+     -0.773
+    ],
+    [
+     6,
+     "req_4",
+     9,
+     16,
+     -0.965
+    ],
+    [
+     8,
+     "req_5",
+     7,
+     3,
+     -0.974
+    ],
+    [
+     10,
+     "req_6",
+     10,
+     18,
+     -0.981
+    ],
+    [
+     12,
+     "req_7",
+     10,
+     14,
+     -0.986
+    ],
+    [
+     14,
+     "req_8",
+     6,
+     9,
+     -0.984
+    ],
+    [
+     16,
+     "req_9",
+     6,
+     5,
+     -0.991
+    ],
+    [
+     18,
+     "req_10",
+     9,
+     20,
+     -0.993
+    ],
+    [
+     20,
+     "req_11",
+     6,
+     1,
+     -0.994
+    ],
+    [
+     22,
+     "req_12",
+     8,
+     0,
+     -0.995
+    ],
+    [
+     24,
+     "req_13",
+     10,
+     22,
+     -0.998
+    ],
+    [
+     26,
+     "req_14",
+     8,
+     23,
+     -1.0
+    ]
+   ]
+  },
+  "ws_progress_frames": {
+   "total": 202,
+   "per_request": "16 each for req_2..req_13, 10 for req_14"
+  },
+  "ws_error_frames": 0
+ },
+ "criteria": {
+  "banner_and_model_info": "PASS",
+  "every_ai_move_arrives_legal_drawn": "PASS (14/14 placed by the client's placePeg and drawn; screenshots and GIF)",
+  "mcts_display_both_sides_of_ply_20": "PASS as observed: the client wires no live in-search progress display (alphaZero.onProgress is never set; WS progress frames arrive and are dropped); its MCTS bar (#win-bar-mcts) updated after every AI move, plies 3-27, both sides of ply 20",
+  "no_error_in_v_server_log": "PASS",
+  "no_error_in_client_console": "NOT OBSERVED DURING PLAY: the console tool tracks only from its first call, which was after the game; that read found no errors or warnings, and the in-page log saw no error frames and no fallback, but errors during play cannot be ruled out from it",
+  "normal_end_of_game_display": "PASS: showWinner ran (winner-text 'Black Wins!'); it raises a blocking alert() before the winner modal, which froze the automation until the user dismissed it",
+  "ply_at_least_21": "PASS (27)"
+ },
+ "verdict": "INCOMPLETE",
+ "verdict_reason": "every V criterion observed passed, but the client-console criterion was not observed during play; section 5.6 requires all",
+ "gif": {
+  "file": "hmx_browser_smoke.gif",
+  "where": "/Users/bill/Downloads/hmx_browser_smoke.gif (not committed: 7,066,223 bytes)",
+  "sha256": "8a8ffb9c98a2b98ea012efd2bf5ac7e48bf5770f56afa02c62404550ed947d0a",
+  "frames": 29
+ }
+}
